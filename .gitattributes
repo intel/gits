@@ -1,0 +1,44 @@
+# Commit everything as LF, but on Windows checkout with CRLF.
+* text=auto
+
+# Git tries to detect if a file is a text file, but we can tell it
+# explicitly which files are text and which binaries.
+  # Cygwin (?) man files
+*.3x		text
+*.bat		text eol=crlf
+*.c		text
+*.cc		text
+*.cpp		text
+*.h		text
+*.hpp		text
+*.htm		text
+*.html		text
+  # implementation file - basically a C++ header
+*.ipp		text
+  # installer settings
+*.iss		text
+*.lua		text
+*.mak		text
+*.md		text
+*.pl		text
+*.py		text
+*.sh		text
+*.sln		text eol=crlf
+*.txt		text
+*.vcproj	text eol=crlf
+*.vcxproj	text eol=crlf
+AUTHORS		text
+CHANGES		text
+INSTALL		text
+LICENSE		text
+NEWS		text
+README		text
+TODO		text
+
+*.ico		binary
+*.jpg		binary
+*.pdf		binary
+*.png		binary
+*.pyc		binary
+*.so		binary
+

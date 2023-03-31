@@ -1,0 +1,98 @@
+### General rules
+
+# Visual Studio files
+*.vcproj.*
+[dD]ebug/
+[rR]elease/
+*.vcxproj.user
+*.ncb
+*.suo
+*.opensdf
+*.sdf
+*.db
+*.opendb
+*.dat
+ipch/
+.vs/
+.vscode/
+
+# Remains of Git merge conflicts
+*.orig
+
+# Eclipse metadata?
+*.metadata*
+
+# TeX and related files
+*.aux
+*.idx
+*.log
+*.out
+*.pdf
+*.dvi
+*synctex.gz*
+*.toc
+
+# Backup files
+*~
+*.bak
+
+# Vim swap files (we are being conservative, they can have more names)
+[._]*.sw[mnop]
+
+# Python bytecode files
+*.pyc
+
+# Python - Rope project directory (for Vim's python-mode)
+.ropeproject/
+
+# Klocwork (static code analysis tool)
+.klocwork
+
+
+### GITS-specific rules
+
+# General
+build/
+third_party/*
+!third_party/patch
+
+# GITS config
+recorder/gits_config.txt
+
+# OpenGL
+common/include/glIDswitch.h
+common/include/glIDs.h
+OpenGL/common/glFunctions.cpp
+OpenGL/common/include/glDrivers.h
+OpenGL/common/include/glFunctions.h
+OpenGL/recorder/include/openglRecorderWrapperAuto.h
+OpenGL/recorder/include/openglRecorderWrapperIfaceAuto.h
+OpenGL/recorder/openglRecorderWrapperAuto.cpp
+/OpenGL/GLIPlugin/gitsPluginPrePostAuto.cpp
+/OpenGL/GLIPlugin/GLIPlugin32.def
+/OpenGL/GLIPlugin/GLIPlugin64.def
+/OpenGL/GLIPlugin/include/gitsPluginPrePostAuto.h
+
+# Vulkan
+Vulkan/common/include/vulkanArgumentsAuto.h
+Vulkan/common/include/vulkanDriversAuto.inl
+Vulkan/common/include/vulkanFunctions.h
+Vulkan/common/include/vulkanHeader.h
+Vulkan/common/include/vulkanIDs.h
+Vulkan/common/include/vulkanIDswitch.h
+Vulkan/common/include/vulkanLogAuto.inl
+Vulkan/common/include/vulkanLuaEnums.h
+Vulkan/common/include/vulkanStructStorageAuto.h
+Vulkan/common/include/vulkanTracer.h
+Vulkan/common/vulkanArgumentsAuto.cpp
+Vulkan/common/vulkanLogAuto.cpp
+Vulkan/common/vulkanFunctions.cpp
+Vulkan/common/vulkanStructStorageAuto.cpp
+Vulkan/layer/VkLayer_vulkan_GITS_recorder.json
+Vulkan/layer/vkLayer.def
+Vulkan/interceptor/vkPlugin.def
+Vulkan/interceptor/vulkanPrePostAuto.cpp
+Vulkan/recorder/include/vulkanRecorderWrapperAuto.h
+Vulkan/recorder/include/vulkanRecorderWrapperIfaceAuto.h
+Vulkan/recorder/vulkanRecorderWrapperAuto.cpp
+CCodeFiles/src/include/vulkanCCodeArgumentsAuto.h

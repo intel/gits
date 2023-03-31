@@ -1,0 +1,82 @@
+#!/usr/bin/python
+
+# ===================== begin_copyright_notice ============================
+#
+# Copyright (C) 2023 Intel Corporation
+#
+# SPDX-License-Identifier: MIT
+#
+# ===================== end_copyright_notice ==============================
+
+
+Function description
+	name
+	version - default 0 - token version for backward compatibility.
+	enabled - disabled tokens throw exception when used.
+	custom - default False - token and recorder wrapper function defined manually.
+	type - allowed types (single API type may consist of multiple types for ie: "type1 | type2 | type 3"):
+		Render (glDrawArrays)
+		Fill (glClear, glBlitFramebuffer)
+		Copy (glCopyBufferSubData)
+		Get (glGetIntegerv, glReadPixels)
+		Maybe_gpu_work (extra draws specified by giraffe: glCopyTexImage2D, glCopyColorTable)
+		Resource_load (glTexImage2D, glBufferData)
+		Gen (glGenFramebuffers)
+		Bind (glBindFramebuffer)
+		Create (glCreateProgram)
+		Delete (glDeleteBuffers, glDelteProgram)
+		Param (glTexParameteriv)
+		Map (glMapBuffer, glUnmapBuffer)
+		Query (glGenQueires)
+		Exec (glFlush, glFinish)
+		Special (special functions)
+
+	stateTrack - default False - state tracking function name (generic for recorder and player).
+	runWrap - default False - function wrapping original function execution.
+	recWrap - default False - function wrapping original function schedule.
+	ccodeWrap - default False - function enables using wrapped API in ccode
+	runCond - default False - API execution condition function
+	recCond - default False - API recorder condition function
+
+	preToken - default "" - token to be scheduled before API schedule in recorder.
+	postToken - default "" - token to be scheduled after API schedule in recorder.
+
+	retV - return value
+		type - opengl type for instance: GLenum, GLint, GLsizei.
+		wrapType - default " 'C' + $type " - gits argument wrapper for this type
+		wrapParams - default "retVal"
+	argX - argument
+		name
+		type - opengl type for instance: GLenum, GLint, GLsizei.
+		wrapType - default "'C' + $type" - gits argument wrapper for this type. Default values:
+			non-pointer - "'C' + $type"
+			non void pointer - "'C' + $type + '::CSArray'"
+			void pointer - no default value
+		wrapParams - default "$name"
+	inheritFrom - default "" - specifies API name that described API inherites parameters from. All parameters are inherited excepting: "name", "enabled", "type" which has to be defined explicitly and rest of explicitly defined parameters.
+
+
+Special wrapTypes:
+	CAttribPtr, CIndexPtr - forces additional constructor for state resotore with bound buffer. Bound buffer together with pointer/offset should be passed to proper wrapType constructor.
+	CGLTexResource, CGLCompressedTexResource, CGLBitmapResource - forces additional constructor with resource hash instead of pointer. Hash should be passed to proper wrapType constructor.
+
+Run method schemes:
+Run() {
+  if (runCond)
+    wrapRun;
+  stateTrack;
+}
+Run() {
+  runWrap
+}
+
+
+openglRecorderWrapper.cpp schemes:
+CRecorderWrapper::API(...) {
+  if (recCond)
+    <schedule API>
+  stateTrack;
+}
+CRecorderWrapper::API(...) {
+  recWrap(...)
+}

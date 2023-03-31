@@ -1,0 +1,19 @@
+---
+Checks: -*,
+        modernize-deprecated-headers,
+        google-readability-namespace-comments,
+        modernize-use-nullptr,
+        clang-diagnostic-unused-but-set-variable,
+        modernize-pass-by-value,
+        modernize-loop-convert,
+        modernize-raw-string-literal,
+        clang-diagnostic-tautological-pointer-compare,
+        clang-diagnostic-unused-command-line-argument,
+        clang-diagnostic-unused-variable,
+        clang-diagnostic-switch,
+        clang-diagnostic-null-arithmetic,
+        clang-diagnostic-delete-non-abstract-non-virtual-dtor,
+WarningsAsErrors: '*'
+HeaderFilterRegex: '(?!third_party)'
+AnalyzeTemporaryDtors: false
+FormatStyle: file

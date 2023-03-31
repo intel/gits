@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# ===================== begin_copyright_notice ============================
+#
+# Copyright (C) 2023 Intel Corporation
+#
+# SPDX-License-Identifier: MIT
+#
+# ===================== end_copyright_notice ==============================
+
+num_cores=4
+if [ -x "$(command -v nproc)" ]; then  # If nproc is available.
+  num_cores="$(nproc)"
+fi
+
+rm -rf bld
+mkdir bld
+cd bld || { echo "Can't enter the build directory." ; exit 1; }
+if [ "$1" = "empty" ] ; then
+  echo "running empty build"
+  cmake .. -DEMPTY_BUILD=1
+else
+  cmake ..
+fi
+
+make -j "$num_cores"
+
+mv *.a ..
+mv CCodeProject ..
+cd ..
+chmod +x CCodeProject

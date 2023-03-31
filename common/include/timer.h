@@ -1,0 +1,39 @@
+// ===================== begin_copyright_notice ============================
+//
+// Copyright (C) 2023 Intel Corporation
+//
+// SPDX-License-Identifier: MIT
+//
+// ===================== end_copyright_notice ==============================
+
+#pragma once
+
+#include "pragmas.h"
+
+#include <cstdint>
+
+class Timer {
+public:
+  //sets up the timer, performs implicit Start() by default
+  explicit Timer(bool paused = false);
+
+  //will get time elasped since invocation of this member function
+  void Start();
+
+  //get time elapsed from last Start in nanoseconds
+  int64_t Get() const;
+
+  //pause the timer - don't measure time until Resume() is called
+  void Pause();
+
+  //timer is measuring the time again
+  void Resume();
+
+private:
+  void ResetStartTime();
+  int64_t GetElapsedTime() const;
+
+  int64_t start_time_;
+  int64_t cumulated_time_;
+  bool paused_;
+};

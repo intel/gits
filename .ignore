@@ -1,0 +1,11 @@
+# This is a gitignore-like file for tools other than Git, for example grep-like
+# tools like ack, ag (The Silver Searcher) or rg (ripgrep).
+
+# Non-GITS code
+third_party/
+
+# Build artifacts
+# (In case tool doesn't use .gitignore - e.g. because user told it so.)
+build/
+Debug/
+Release/

@@ -1,0 +1,14 @@
+BasedOnStyle: LLVM
+SortIncludes: false
+PointerAlignment: Left
+AlignConsecutiveMacros: true
+SpaceAroundPointerQualifiers: Before
+AlwaysBreakTemplateDeclarations: Yes
+BinPackParameters: false
+AllowAllParametersOfDeclarationOnNextLine: true
+PackConstructorInitializers: NextLine
+InsertBraces: true
+ColumnLimit: 100
+ReflowComments: false
+AllowShortFunctionsOnASingleLine: Empty
+PenaltyReturnTypeOnItsOwnLine: 999
