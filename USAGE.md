@@ -103,19 +103,20 @@ Sometimes GITS will crash during very long recordings. `Extras.Optimizations.Tok
 
 ##### Regular applications
 
-1. Set the environment variable `LD_LIBRARY_PATH`:
+1. Check `gits_config.txt` for your chosen API and edit it if necessary (for example, library paths might be different on your distro)
+2. Set the environment variable `LD_LIBRARY_PATH`:
     * for OpenCL workload: `export LD_LIBRARY_PATH=<GITS_DIR_PATH>/Recorder/OpenCL`
     * for OpenGL workload: `export LD_LIBRARY_PATH=<GITS_DIR_PATH>/Recorder/OpenGL`
     * for Vulkan workload: `export LD_LIBRARY_PATH=<GITS_DIR_PATH>/Recorder/Vulkan`
-2. Run the application
-3. Remove recording environment variable: `unset LD_LIBRARY_PATH`
-4. Find the dumped stream in the `dump` subdirectory of your GITS install and a log file in the target application directory. **Read the log file, it will list any errors, saving you time and stress.**
+3. Run the application
+4. Remove recording environment variable: `unset LD_LIBRARY_PATH`
+5. Find the dumped stream in the `dump` subdirectory of your GITS install and a log file in the target application directory. **Read the log file, it will list any errors, saving you time and stress.**
 
 ##### Steam applications
 
 Steam overwrites environment variables passed to games, so setting them normally won't work. Fortunately, you can set set them in custom launch options for a given Steam game. Syntax looks like this: `LD_LIBRARY_PATH=<GITS_DIR_PATH>/Recorder/OpenGL %command%`. Steam will replace `%command%` with game's executable.
 
-Some games, like Dota 2, might overwrite `LD_LIBRARY_PATH` with their own. In this case the above method won't work and you'll have to improvise. (For example, edit game launcher scripts.)
+Some games, like Dota 2, might overwrite `LD_LIBRARY_PATH` with their own. In this case the above method won't work and you'll have to improvise. (For example, use `LD_PRELOAD` or edit game launcher scripts.)
 
 ### Vulkan layer
 
