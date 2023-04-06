@@ -7,8 +7,8 @@
 # ===================== end_copyright_notice ==============================
 
 
-project(gits)
 cmake_minimum_required(VERSION 3.13)
+project(gits)
 
 find_package(Python3 COMPONENTS Interpreter)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
