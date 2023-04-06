@@ -2817,28 +2817,37 @@ inline void vkCmdBeginRendering_SD(VkCommandBuffer commandBuffer,
   auto beginRenderPassState =
       std::make_shared<CCommandBufferState::CBeginRenderPass>(pRenderingInfo);
   SD()._commandbufferstates[commandBuffer]->beginRenderPassesList.push_back(beginRenderPassState);
+
   if ((Config::Get().IsRecorder() ||
        (!Config::Get().player.captureVulkanSubmits.empty() ||
         !Config::Get().player.captureVulkanSubmitsResources.empty()))) {
+
     for (uint32_t i = 0; i < pRenderingInfo->colorAttachmentCount; i++) {
-      beginRenderPassState->imageViewStateStoreListKHR.push_back(
-          SD()._imageviewstates[pRenderingInfo->pColorAttachments[i].imageView]);
-      beginRenderPassState->imageLoadOp.push_back(pRenderingInfo->pColorAttachments[i].loadOp);
-      beginRenderPassState->imageStoreOp.push_back(pRenderingInfo->pColorAttachments[i].storeOp);
+      if (pRenderingInfo->pColorAttachments[i].imageView != VK_NULL_HANDLE) {
+        beginRenderPassState->imageViewStateStoreListKHR.push_back(
+            SD()._imageviewstates[pRenderingInfo->pColorAttachments[i].imageView]);
+        beginRenderPassState->imageLoadOp.push_back(pRenderingInfo->pColorAttachments[i].loadOp);
+        beginRenderPassState->imageStoreOp.push_back(pRenderingInfo->pColorAttachments[i].storeOp);
+      }
     }
-    if (pRenderingInfo->pDepthAttachment != NULL) {
+
+    if ((pRenderingInfo->pDepthAttachment != NULL) &&
+        (pRenderingInfo->pDepthAttachment->imageView != VK_NULL_HANDLE)) {
       beginRenderPassState->imageViewStateStoreListKHR.push_back(
           SD()._imageviewstates[pRenderingInfo->pDepthAttachment->imageView]);
       beginRenderPassState->imageLoadOp.push_back(pRenderingInfo->pDepthAttachment->loadOp);
       beginRenderPassState->imageStoreOp.push_back(pRenderingInfo->pDepthAttachment->storeOp);
     }
-    if (pRenderingInfo->pStencilAttachment != NULL) {
+
+    if ((pRenderingInfo->pStencilAttachment != NULL) &&
+        (pRenderingInfo->pStencilAttachment->imageView != VK_NULL_HANDLE)) {
       beginRenderPassState->imageViewStateStoreListKHR.push_back(
           SD()._imageviewstates[pRenderingInfo->pStencilAttachment->imageView]);
       beginRenderPassState->imageLoadOp.push_back(pRenderingInfo->pStencilAttachment->loadOp);
       beginRenderPassState->imageStoreOp.push_back(pRenderingInfo->pStencilAttachment->storeOp);
     }
   }
+
   if (Config::Get().IsRecorder()) {
     for (uint32_t i = 0; i < beginRenderPassState->imageViewStateStoreListKHR.size(); i++) {
       auto& imageState = beginRenderPassState->imageViewStateStoreListKHR[i]->imageStateStore;

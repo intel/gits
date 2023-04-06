@@ -2222,7 +2222,8 @@ BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam) {
     int32_t width = rect.right - rect.left;
     int32_t height = rect.bottom - rect.top;
 
-    if ((width == 0) || (height == 0)) {
+    // Workaround for finding too small, 1x1 windows.
+    if ((width < 2) || (height < 2)) {
       // Continue searching
       return TRUE;
     } else {

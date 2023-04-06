@@ -439,14 +439,6 @@ namespace Vulkan {
               content += " << (PNextPointerTypeTag)c.pNext << \", \" << "
             elif ('count' in var):
               content += ";\n"
-              is_pointer = False
-              dereference_pointer = ""
-
-              for argument in struct['vars']:
-                if (argument['name'].find(var['count']) != -1):
-                  if (argument['type'].find("*") != -1):
-                    is_pointer = True
-                    dereference_pointer = "*"
 
               content += "  if ((isTraceDataOptPresent(TraceData::VK_STRUCTS))"
               # Avoid nullptr checks for arrays on the stack.
@@ -454,12 +446,10 @@ namespace Vulkan {
                 content+= " && (c." + var['name'] + " != nullptr)"
               if ('logCondition' in var):
                 content += " && (" + var['logCondition'] + ")"
-              if is_pointer:
-                content += " && (c." + var['count'] + " != nullptr)"
               content += ") {\n"
 
               content += "    *this << \"{\";\n"
-              content += "    for (uint32_t i = 0; i < (uint32_t)c." + dereference_pointer + var['count'] + "; ++i) {\n"
+              content += "    for (uint32_t i = 0; i < (uint32_t)c." + var['count'] + "; ++i) {\n"
               content += "      *this << \" [\" << i << \"]:\" << " + type_cast + "c." + var['name'] + "[i];\n"
               content += "    }\n"
               content += "    *this << \" }\";\n"
@@ -492,6 +482,7 @@ namespace Vulkan {
   content = content.replace("\", \" << \" ", "\", ")
   content = content.replace("\"{\" << \" ", "\"{ ")
   content = content.replace("c.8", "8")
+  content = content.replace("c.6", "6")
   content = content.replace("c.4", "4")
   content = content.replace("c.3", "3")
   content = content.replace("c.2", "2")

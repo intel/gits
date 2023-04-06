@@ -285,6 +285,7 @@ void scheduleCopyToSwapchainAndPresent(VkDevice device, VkQueue queue, CRecorder
   {
     VkCommandBuffer commandBuffer = presentationData.commandBuffer;
     VkImage srcImage = offscreenApp.imageToPresent;
+    auto& srcImageState = SD()._imagestates[srcImage];
     VkImage dstImage = presentationData.swapchainImage;
 
     // Begin a command buffer for performing copy
@@ -341,31 +342,29 @@ void scheduleCopyToSwapchainAndPresent(VkDevice device, VkQueue queue, CRecorder
     }
     // Data copy
     {
-      VkImageCopy imageCopy = {{
+      VkImageBlit imageBlit = {{
                                    // VkImageSubresourceLayers srcSubresource;
                                    VK_IMAGE_ASPECT_COLOR_BIT, // VkImageAspectFlags aspectMask;
                                    0,                         // uint32_t mipLevel;
                                    0,                         // uint32_t baseArrayLayer;
                                    1                          // uint32_t layerCount;
                                },
-                               {0, 0, 0}, // VkOffset3D srcOffset;
+                               {// VkOffset3D srcOffsets[2];
+                                {0, 0, 0},
+                                {srcImageState->width, srcImageState->height, 1}},
                                {
                                    // VkImageSubresourceLayers dstSubresource;
                                    VK_IMAGE_ASPECT_COLOR_BIT, // VkImageAspectFlags aspectMask;
                                    0,                         // uint32_t mipLevel;
                                    0,                         // uint32_t baseArrayLayer;
-                                   1,                         // uint32_t layerCount;
+                                   1                          // uint32_t layerCount;
                                },
-                               {0, 0, 0}, // VkOffset3D dstOffset;
-                               {
-                                   // VkExtent3D extent;
-                                   vs.extent.width,  // uint32_t width;
-                                   vs.extent.height, // uint32_t height;
-                                   1                 // uint32_t depth;
-                               }};
-      recorder.Schedule(new CvkCmdCopyImage(commandBuffer, srcImage,
-                                            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstImage,
-                                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageCopy));
+                               {// VkOffset3D dstOffsets[2];
+                                {0, 0, 0},
+                                {(int32_t)vs.extent.width, (int32_t)vs.extent.height, 1}}};
+      recorder.Schedule(new CvkCmdBlitImage(
+          commandBuffer, srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstImage,
+          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageBlit, VK_FILTER_LINEAR));
     }
     // Post-copy, pre-present memory barriers
     {

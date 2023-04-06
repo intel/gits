@@ -6714,6 +6714,7 @@ VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRM_PROPERTIES_EXT', value='10003
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES', value='1000044003'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXCLUSIVE_SCISSOR_FEATURES_NV', value='1000205002'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_2_FEATURES_EXT', value='1000377000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_FEATURES_EXT', value='1000455000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT', value='1000267000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_BUFFER_INFO', value='1000071002'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_FENCE_INFO', value='1000112000'),
@@ -9625,7 +9626,7 @@ var4=VarDef(name='descriptorType', type='VkDescriptorType'),
 var5=VarDef(name='sampler', type='VkSampler')
 )
 
-Struct(name='VkImageViewMinLodCreateInfoEXT_', enabled=False,
+Struct(name='VkImageViewMinLodCreateInfoEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='minLod', type='float')
@@ -10442,6 +10443,42 @@ var4=VarDef(name='extendedDynamicState2LogicOp', type='VkBool32'),
 var5=VarDef(name='extendedDynamicState2PatchControlPoints', type='VkBool32')
 )
 
+Struct(name='VkPhysicalDeviceExtendedDynamicState3FeaturesEXT_', enabled=True,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='extendedDynamicState3TessellationDomainOrigin', type='VkBool32'),
+var4=VarDef(name='extendedDynamicState3DepthClampEnable', type='VkBool32'),
+var5=VarDef(name='extendedDynamicState3PolygonMode', type='VkBool32'),
+var6=VarDef(name='extendedDynamicState3RasterizationSamples', type='VkBool32'),
+var7=VarDef(name='extendedDynamicState3SampleMask', type='VkBool32'),
+var8=VarDef(name='extendedDynamicState3AlphaToCoverageEnable', type='VkBool32'),
+var9=VarDef(name='extendedDynamicState3AlphaToOneEnable', type='VkBool32'),
+var10=VarDef(name='extendedDynamicState3LogicOpEnable', type='VkBool32'),
+var11=VarDef(name='extendedDynamicState3ColorBlendEnable', type='VkBool32'),
+var12=VarDef(name='extendedDynamicState3ColorBlendEquation', type='VkBool32'),
+var13=VarDef(name='extendedDynamicState3ColorWriteMask', type='VkBool32'),
+var14=VarDef(name='extendedDynamicState3RasterizationStream', type='VkBool32'),
+var15=VarDef(name='extendedDynamicState3ConservativeRasterizationMode', type='VkBool32'),
+var16=VarDef(name='extendedDynamicState3ExtraPrimitiveOverestimationSize', type='VkBool32'),
+var17=VarDef(name='extendedDynamicState3DepthClipEnable', type='VkBool32'),
+var18=VarDef(name='extendedDynamicState3SampleLocationsEnable', type='VkBool32'),
+var19=VarDef(name='extendedDynamicState3ColorBlendAdvanced', type='VkBool32'),
+var20=VarDef(name='extendedDynamicState3ProvokingVertexMode', type='VkBool32'),
+var21=VarDef(name='extendedDynamicState3LineRasterizationMode', type='VkBool32'),
+var22=VarDef(name='extendedDynamicState3LineStippleEnable', type='VkBool32'),
+var23=VarDef(name='extendedDynamicState3DepthClipNegativeOneToOne', type='VkBool32'),
+var24=VarDef(name='extendedDynamicState3ViewportWScalingEnable', type='VkBool32'),
+var25=VarDef(name='extendedDynamicState3ViewportSwizzle', type='VkBool32'),
+var26=VarDef(name='extendedDynamicState3CoverageToColorEnable', type='VkBool32'),
+var27=VarDef(name='extendedDynamicState3CoverageToColorLocation', type='VkBool32'),
+var28=VarDef(name='extendedDynamicState3CoverageModulationMode', type='VkBool32'),
+var29=VarDef(name='extendedDynamicState3CoverageModulationTableEnable', type='VkBool32'),
+var30=VarDef(name='extendedDynamicState3CoverageModulationTable', type='VkBool32'),
+var31=VarDef(name='extendedDynamicState3CoverageReductionMode', type='VkBool32'),
+var32=VarDef(name='extendedDynamicState3RepresentativeFragmentTestEnable', type='VkBool32'),
+var33=VarDef(name='extendedDynamicState3ShadingRateImageEnable', type='VkBool32')
+)
+
 Struct(name='VkPhysicalDeviceExtendedDynamicStateFeaturesEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
@@ -10800,7 +10837,7 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='imageViewType', type='VkImageViewType')
 )
 
-Struct(name='VkPhysicalDeviceImageViewMinLodFeaturesEXT_', enabled=False,
+Struct(name='VkPhysicalDeviceImageViewMinLodFeaturesEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='minLod', type='VkBool32')
@@ -11166,7 +11203,7 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='mutableDescriptorType', type='VkBool32')
 )
 
-Struct(name='VkPhysicalDeviceNonSeamlessCubeMapFeaturesEXT_', enabled=False,
+Struct(name='VkPhysicalDeviceNonSeamlessCubeMapFeaturesEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='nonSeamlessCubeMap', type='VkBool32')
