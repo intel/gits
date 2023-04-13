@@ -141,6 +141,12 @@ void CRecorderWrapper::CloseRecorderIfRequired() {
   }
 }
 
+void CRecorderWrapper::MarkRecorderForDeletion() {
+  if (_recorder.Running() && _recorder.InstancePtr() != nullptr) {
+    _recorder.MarkForDeletion();
+  }
+}
+
 CDriver& CRecorderWrapper::Drivers() const {
   return drv;
 }

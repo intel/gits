@@ -46,8 +46,9 @@ namespace ocloc {
 void* get_proc_address(const char* name);
 
 IRecorderWrapper* CGitsPlugin::_recorderWrapper;
-std::unique_ptr<CGitsLoader> CGitsPlugin::_loader;
+std::unique_ptr<CGitsPlugin> CGitsPlugin::_loader;
 boost::mutex CGitsPlugin::_mutex;
+bool CGitsPlugin::_initialized = false;
 
 namespace {
 void fast_exit(int code) {
@@ -60,8 +61,7 @@ void fast_exit(int code) {
 } // namespace
 
 void CGitsPlugin::Initialize() {
-  static bool initialized = false;
-  if (initialized) {
+  if (_initialized) {
     return;
   }
 
@@ -74,7 +74,7 @@ void CGitsPlugin::Initialize() {
 
   try {
     boost::unique_lock<boost::mutex> lock(_mutex);
-    if (initialized) {
+    if (_initialized) {
       return;
     }
 
@@ -87,7 +87,7 @@ void CGitsPlugin::Initialize() {
       configPath = bfs::path(envConfigPath);
     }
 
-    _loader.reset(new CGitsLoader(configPath, "GITSRecorderOcloc"));
+    _loader.reset(new CGitsPlugin(configPath, "GITSRecorderOcloc"));
     _recorderWrapper = (decltype(_recorderWrapper))_loader->RecorderWrapperPtr();
 
     if (!_loader->Configuration().recorder.basic.enabled) {
@@ -96,7 +96,7 @@ void CGitsPlugin::Initialize() {
 
     CGitsPlugin::_recorderWrapper->StreamFinishedEvent(PrePostDisableOcloc);
 
-    initialized = true;
+    _initialized = true;
 
   } catch (const Exception& ex) {
     Log(ERR) << "Unhandled GITS exception: " << ex.what();
@@ -114,11 +114,18 @@ void CGitsPlugin::Initialize() {
 }
 
 void CGitsPlugin::ProcessTerminationDetected() {
-  _loader->ProcessTerminationDetected();
+  static_cast<CGitsLoader*>(_loader.get())->ProcessTerminationDetected();
+}
+
+CGitsPlugin::~CGitsPlugin() {
+  _recorderWrapper->MarkRecorderForDeletion();
+  _recorderWrapper->CloseRecorderIfRequired();
+  _initialized = false;
+  static_cast<CGitsLoader*>(_loader.get())->~CGitsLoader();
 }
 
 const Config& CGitsPlugin::Configuration() {
-  return _loader->Configuration();
+  return static_cast<CGitsLoader*>(_loader.get())->Configuration();
 }
 
 static int module_identification_token = 0;

@@ -24,6 +24,7 @@ public:
   virtual void CloseRecorderIfRequired() = 0;
   virtual CDriver& Drivers() const = 0;
   virtual void InitializeDriver() const = 0;
+  virtual void MarkRecorderForDeletion() = 0;
 
   virtual void oclocInvoke(int return_value,
                            unsigned int argc,

@@ -26,6 +26,7 @@ public:
   void CloseRecorderIfRequired() override;
   CDriver& Drivers() const override;
   void InitializeDriver() const override;
+  void MarkRecorderForDeletion() override;
 
   virtual void oclocInvoke(int return_value,
                            unsigned int argc,
