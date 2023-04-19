@@ -861,7 +861,7 @@ public:
     }
 
     _cargs.resize(1);
-    _cargs[0] = std::make_shared<TKeyArg>(&dictionary[0]);
+    _cargs[0] = std::shared_ptr<TKeyArg>(new TKeyArg(&dictionary[0]));
   }
   CStructArray(int size, const TKey* dictionary) {
     if ((size == 0) || (dictionary == NULL)) {
@@ -870,7 +870,7 @@ public:
 
     _cargs.resize(size);
     for (int i = 0; i < size; i++) {
-      _cargs[i] = std::make_shared<TKeyArg>(&dictionary[i]);
+      _cargs[i] = std::shared_ptr<TKeyArg>(new TKeyArg(&dictionary[i]));
     }
   }
   template <class WRAP_T2>
@@ -881,7 +881,7 @@ public:
 
     _cargs.resize(size);
     for (int i = 0; i < size; i++) {
-      _cargs[i] = std::make_shared<TKeyArg>(&dictionary[i], arg3);
+      _cargs[i] = std::shared_ptr<TKeyArg>(new TKeyArg(&dictionary[i], arg3));
     }
   }
   std::vector<std::shared_ptr<TKeyArg>>& Vector() {
