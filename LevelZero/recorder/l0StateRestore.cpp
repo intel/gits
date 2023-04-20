@@ -19,6 +19,7 @@
 #include "l0RecorderSubWrappers.h"
 #include "l0RecorderWrapper.h"
 #include "recorder.h"
+#include <cstdint>
 #ifdef WITH_OCLOC
 #include "oclocFunctions.h"
 #include "oclocStateDynamic.h"
@@ -65,6 +66,22 @@ inline void ScheduleOclocInvoke(CScheduler& scheduler, ocloc::COclocState& ocloc
       &outputDataLens, &outputNames));
 }
 #endif
+void ScheduleSplitMemoryCopyFromHostPtr(CScheduler& scheduler,
+                                        const void* srcPtr,
+                                        const ze_command_list_handle_t& commandList,
+                                        void* dstPtr,
+                                        const uintptr_t offset,
+                                        const size_t size) {
+  auto tmpSize = size;
+  if (size > UINT32_MAX) {
+    tmpSize = UINT32_MAX;
+    ScheduleSplitMemoryCopyFromHostPtr(scheduler, srcPtr, commandList, dstPtr, offset + UINT32_MAX,
+                                       size - UINT32_MAX);
+  }
+  scheduler.Register(new CzeCommandListAppendMemoryCopy(ZE_RESULT_SUCCESS, commandList, dstPtr,
+                                                        GetOffsetPointer((void*)srcPtr, offset),
+                                                        tmpSize, nullptr, 0, nullptr));
+}
 } // namespace
 void RestoreDrivers(CScheduler& scheduler, CStateDynamic& sd) {
   scheduler.Register(new CzeInit(ZE_RESULT_SUCCESS, ZE_INIT_FLAG_GPU_ONLY));
@@ -157,9 +174,8 @@ void RestorePointers(CScheduler& scheduler, CStateDynamic& sd) {
           std::vector<char> buffer(state.second->size);
           l0::drv.zeCommandListAppendMemoryCopy(commandList, buffer.data(), state.first,
                                                 buffer.size(), nullptr, 0, nullptr);
-          scheduler.Register(new CzeCommandListAppendMemoryCopy(
-              ZE_RESULT_SUCCESS, commandList, state.first, buffer.data(), buffer.size(), nullptr, 0,
-              nullptr));
+          ScheduleSplitMemoryCopyFromHostPtr(scheduler, buffer.data(), commandList, state.first, 0U,
+                                             buffer.size());
         }
         break;
       }
@@ -345,9 +361,8 @@ void RestoreCommandListBuffer(CScheduler& scheduler, CStateDynamic& sd) {
               const auto allocInfo = GetAllocFromRegion(arg.h_buf, sd);
               const auto allocState = sd.Get<CAllocState>(allocInfo.first, EXCEPTION_MESSAGE);
               if (allocState.memType == UnifiedMemoryType::device) {
-                scheduler.Register(new CzeCommandListAppendMemoryCopy(
-                    ZE_RESULT_SUCCESS, stateInstance, arg.h_buf, arg.buffer.data(),
-                    arg.buffer.size(), nullptr, 0, nullptr));
+                ScheduleSplitMemoryCopyFromHostPtr(scheduler, arg.buffer.data(), stateInstance,
+                                                   arg.h_buf, 0U, arg.buffer.size());
               } else {
                 scheduler.Register(
                     new CGitsL0MemoryRestore(arg.h_buf, arg.buffer.data(), arg.buffer.size()));
