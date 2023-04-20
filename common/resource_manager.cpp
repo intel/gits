@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "resource_manager.h"
+#include "exception.h"
 #include "key_value.h"
 #include "tools.h"
 #include "log.h"
@@ -212,6 +213,11 @@ mapped_file CResourceManager::get(hash_t hash) const {
 hash_t CResourceManager::put(uint32_t file_id, const void* data, size_t size) {
   if (data == nullptr || size == 0) {
     return EmptyHash;
+  }
+
+  if (size > UINT32_MAX) {
+    throw EOperationFailed("Cannot save resource due to size limitation, current size: " +
+                           std::to_string(size));
   }
 
   if (Config::Get().recorder.extras.optimizations.removeResourceHash) {
