@@ -698,6 +698,19 @@ bool gits::Config::Set(const boost::filesystem::path& cfgDir) {
   ReadRecorderOption(pt, "Vulkan.Utilities.UsePresentSrcLayoutTransitionAsAFrameBoundary",
                      cfg.recorder.vulkan.utilities.usePresentSrcLayoutTransitionAsAFrameBoundary,
                      GITS_PLATFORM_BIT_WINDOWS);
+  ReadRecorderOption(pt, "Vulkan.Utilities.RenderDocCompatibility",
+                     cfg.recorder.vulkan.utilities.renderDocCompatibility,
+                     GITS_PLATFORM_BIT_WINDOWS);
+  if (cfg.recorder.vulkan.utilities.renderDocCompatibility) {
+    auto& utilities = cfg.recorder.vulkan.utilities;
+    auto& rdocSuppressExtensions = utilities.renderDocCompatibilitySuppressedExtensions;
+    auto& suppressExtensions = utilities.suppressExtensions;
+    std::copy_if(rdocSuppressExtensions.begin(), rdocSuppressExtensions.end(),
+                 std::back_inserter(suppressExtensions), [suppressExtensions](std::string s) {
+                   return std::find(suppressExtensions.begin(), suppressExtensions.end(), s) ==
+                          suppressExtensions.end();
+                 });
+  }
   ReadRecorderOption(pt, "Vulkan.Performance.Benchmark", cfg.recorder.vulkan.performance.benchmark,
                      GITS_PLATFORM_BIT_WINDOWS | GITS_PLATFORM_BIT_X11);
   ReadRecorderOption(pt, "Vulkan.Images.DumpScreenshots",
