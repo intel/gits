@@ -443,6 +443,9 @@ void gits::CRecorder::Start() {
         state->Schedule(Scheduler());
         Scheduler().Register(new CTokenFrameNumber(CToken::ID_INIT_END, inst.CurrentFrame()));
         CGits::Instance().StateRestoreFinished();
+        if (gits::CGits::Instance().apis.Has3D()) {
+          api3dIface.Rec_StateRestoreFinished();
+        }
         state->PostSchedule(Scheduler());
         delete state;
       }

@@ -40,6 +40,7 @@ public:
   virtual void Play_SwapAfterPrepare() const;
   virtual void Play_StateRestoreBegin() const;
   virtual void Play_StateRestoreEnd() const;
+  virtual void Rec_StateRestoreFinished() const;
   virtual bool CfgRec_IsCmdBufferMode() const {
     return Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode ==
            Config::MODE_VKCOMMANDBUFFER;

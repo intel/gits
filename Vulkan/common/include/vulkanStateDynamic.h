@@ -15,6 +15,7 @@
 #pragma once
 
 #include <unordered_map>
+#include <unordered_set>
 #include <array>
 #include <cstdio>
 #include "vulkanStructStorageAuto.h"
@@ -259,7 +260,7 @@ struct CQueueState : public UniqueResourceHandle {
 struct CSwapchainKHRState : public UniqueResourceHandle {
   VkSwapchainKHR swapchainKHRHandle;
   CVkSwapchainCreateInfoKHRData swapchainCreateInfoKHRData;
-  std::set<uint32_t> acquiredImages;
+  std::unordered_set<uint32_t> acquiredImages;
   std::shared_ptr<CDeviceState> deviceStateStore;
   std::shared_ptr<CSurfaceKHRState> surfaceKHRStateStore;
   std::vector<std::shared_ptr<CImageState>> imageStateStoreList;
@@ -283,7 +284,7 @@ struct CDescriptorPoolState : public UniqueResourceHandle {
   VkDescriptorPool descriptorPoolHandle;
   CVkDescriptorPoolCreateInfoData descriptorPoolCreateInfoData;
   std::shared_ptr<CDeviceState> deviceStateStore;
-  std::set<std::shared_ptr<CDescriptorSetState>> descriptorSetStateStoreList;
+  std::unordered_set<std::shared_ptr<CDescriptorSetState>> descriptorSetStateStoreList;
 
   CDescriptorPoolState(VkDescriptorPool const* _pDescriptorPool,
                        VkDescriptorPoolCreateInfo const* _pCreateInfo,
@@ -311,7 +312,7 @@ struct CCommandPoolState : public UniqueResourceHandle {
   VkCommandPool commandPoolHandle;
   CVkCommandPoolCreateInfoData commandPoolCreateInfoData;
   std::shared_ptr<CDeviceState> deviceStateStore;
-  std::set<std::shared_ptr<CCommandBufferState>> commandBufferStateStoreList;
+  std::unordered_set<std::shared_ptr<CCommandBufferState>> commandBufferStateStoreList;
 
   CCommandPoolState(VkCommandPool const* _pCommandPool,
                     VkCommandPoolCreateInfo const* _pCreateInfo,
@@ -571,9 +572,10 @@ struct CBufferState : public UniqueResourceHandle {
   uint64_t timestamp;
   std::shared_ptr<CDeviceState> deviceStateStore;
 
-  static std::map<VkDeviceAddress, std::pair<VkDeviceAddress, std::shared_ptr<CBufferState>>>
+  static std::unordered_map<VkDeviceAddress,
+                            std::pair<VkDeviceAddress, std::shared_ptr<CBufferState>>>
       deviceAddressesMap;
-  static std::map<VkBuffer, std::shared_ptr<CBufferState>> shaderDeviceAddressBuffers;
+  static std::unordered_map<VkBuffer, std::shared_ptr<CBufferState>> shaderDeviceAddressBuffers;
 
   CBufferState(VkBuffer const* _pBuffer,
                VkBufferCreateInfo const* _pCreateInfo,
@@ -708,12 +710,13 @@ struct CDescriptorSetState : public UniqueResourceHandle {
 
   VkDescriptorSet descriptorSetHandle;
   CpNextWrapperData extensionsDataChain;
-  std::map<uint32_t, VkBuffer> descriptorBuffers;
-  std::map<uint32_t, VkImage> descriptorImages;
-  std::map<uint32_t, std::pair<VulkanResourceType, VkBuffer>> descriptorWriteBuffers;
-  std::map<uint32_t, std::pair<VulkanResourceType, VkImage>> descriptorWriteImages;
-  std::map<uint32_t, CDescriptorSetBindingData> descriptorSetBindings;
-  std::map<uint32_t, std::unordered_map<VkDeviceMemory, boost::icl::interval_set<std::uint64_t>>>
+  std::unordered_map<uint32_t, VkBuffer> descriptorBuffers;
+  std::unordered_map<uint32_t, VkImage> descriptorImages;
+  std::unordered_map<uint32_t, std::pair<VulkanResourceType, VkBuffer>> descriptorWriteBuffers;
+  std::unordered_map<uint32_t, std::pair<VulkanResourceType, VkImage>> descriptorWriteImages;
+  std::unordered_map<uint32_t, CDescriptorSetBindingData> descriptorSetBindings;
+  std::unordered_map<uint32_t,
+                     std::unordered_map<VkDeviceMemory, boost::icl::interval_set<std::uint64_t>>>
       descriptorMapMemory;
   std::shared_ptr<CDescriptorPoolState> descriptorPoolStateStore;
   std::shared_ptr<CDescriptorSetLayoutState> descriptorSetLayoutStateStore;
@@ -942,7 +945,7 @@ struct CPipelineState : public UniqueResourceHandle {
   VkPipeline pipelineHandle;
   CVkGraphicsPipelineCreateInfoData graphicsPipelineCreateInfoData;
   CVkComputePipelineCreateInfoData computePipelineCreateInfoData;
-  std::map<VkShaderStageFlagBits, uint32_t> stageShaderHashMapping;
+  std::unordered_map<VkShaderStageFlagBits, uint32_t> stageShaderHashMapping;
   std::shared_ptr<CDeviceState> deviceStateStore;
   std::shared_ptr<CPipelineLayoutState> pipelineLayoutStateStore;
   std::shared_ptr<CRenderPassState> renderPassStateStore;
@@ -1224,22 +1227,23 @@ struct CCommandBufferState : public UniqueResourceHandle {
   bool restored;
   VkPipeline currentPipeline;
   CLibrary::CVulkanCommandBufferTokensBuffer tokensBuffer;
-  std::map<VkEvent, bool> eventStatesAfterSubmit;
-  std::map<VkQueryPool, std::set<uint32_t>>
+  std::unordered_map<VkEvent, bool> eventStatesAfterSubmit;
+  std::unordered_map<VkQueryPool, std::unordered_set<uint32_t>>
       resetQueriesAfterSubmit; // per query pool, per query index
-  std::map<VkQueryPool, std::set<uint32_t>>
+  std::unordered_map<VkQueryPool, std::unordered_set<uint32_t>>
       usedQueriesAfterSubmit; // per query pool, per query index
-  std::map<VkImage, std::vector<std::vector<CImageLayoutAccessOwnershipState>>>
+  std::unordered_map<VkImage, std::vector<std::vector<CImageLayoutAccessOwnershipState>>>
       imageLayoutAfterSubmit; // per layer, per mipmap
   std::shared_ptr<CCommandPoolState> commandPoolStateStore;
-  std::map<VkDescriptorSet, std::shared_ptr<CDescriptorSetState>> descriptorSetStateStoreList;
-  std::map<VkPipeline, std::shared_ptr<CPipelineState>> pipelineStateStoreList;
-  std::map<VkCommandBuffer, std::shared_ptr<CCommandBufferState>>
+  std::unordered_map<VkDescriptorSet, std::shared_ptr<CDescriptorSetState>>
+      descriptorSetStateStoreList;
+  std::unordered_map<VkPipeline, std::shared_ptr<CPipelineState>> pipelineStateStoreList;
+  std::unordered_map<VkCommandBuffer, std::shared_ptr<CCommandBufferState>>
       secondaryCommandBuffersStateStoreList;
-  std::map<VkBuffer, VulkanResourceType> resourceWriteBuffers;
-  std::map<VkImage, VulkanResourceType> resourceWriteImages;
+  std::unordered_map<VkBuffer, VulkanResourceType> resourceWriteBuffers;
+  std::unordered_map<VkImage, VulkanResourceType> resourceWriteImages;
   std::vector<std::pair<uint64_t, bool>> touchedResources; // true for images, false for buffers
-  std::set<VkImage> clearedImages;
+  std::unordered_set<VkImage> clearedImages;
 
   CCommandBufferState(VkCommandBuffer const* _pCommandBuffer,
                       VkCommandBufferAllocateInfo const* _pAllocateInfo,
@@ -1368,14 +1372,15 @@ struct CInternalResources {
           commandBufferWithTransitionToPresentSRC(VK_NULL_HANDLE) {}
   };
 
-  using ScreenshotTakingResources = std::map<uint32_t, std::pair<VkCommandPool, VkCommandBuffer>>;
+  using ScreenshotTakingResources =
+      std::unordered_map<uint32_t, std::pair<VkCommandPool, VkCommandBuffer>>;
 
   uint64_t timestamp;
   bool attachedToGITS;
-  std::map<VkDevice, ScreenshotTakingResources> deviceResourcesMap;
-  std::map<VkDevice, VkPipelineCache> pipelineCacheHandles;
-  std::map<VkDevice, CVirtualSwapchain> virtualSwapchain;
-  std::map<VkDevice, COffscreenAppsSupport> offscreenApps;
+  std::unordered_map<VkDevice, ScreenshotTakingResources> deviceResourcesMap;
+  std::unordered_map<VkDevice, VkPipelineCache> pipelineCacheHandles;
+  std::unordered_map<VkDevice, CVirtualSwapchain> virtualSwapchain;
+  std::unordered_map<VkDevice, COffscreenAppsSupport> offscreenApps;
 
   CInternalResources() : timestamp(0), attachedToGITS(false) {}
 };
@@ -1466,13 +1471,13 @@ public:
   TQueryPoolStates _querypoolstates;
   TCommandBufferStates _commandbufferstates;
 
-  std::unordered_map<VkCommandBuffer, std::set<VkBuffer>> bindingBuffers;
-  std::unordered_map<VkCommandBuffer, std::set<VkImage>> bindingImages;
+  std::unordered_map<VkCommandBuffer, std::unordered_set<VkBuffer>> bindingBuffers;
+  std::unordered_map<VkCommandBuffer, std::unordered_set<VkImage>> bindingImages;
   std::unordered_map<VkCommandBuffer, CMemoryUpdateState> updatedMemoryInCmdBuffer;
   std::shared_ptr<CQueueSubmitState> lastQueueSubmit;
   std::set<uint64_t> objectsUsedInQueueSubmit;
   CInternalResources internalResources;
-  std::set<VkImage> nonDeterministicImages;
+  std::unordered_set<VkImage> nonDeterministicImages;
   std::unordered_map<VkImage, uint64_t> imageCounter;
   std::unordered_map<VkBuffer, uint64_t> bufferCounter;
   uint64_t currentlyAllocatedMemoryAll;
@@ -1480,6 +1485,7 @@ public:
   uint64_t currentlyAllocatedMemoryCPU_GPU;
   uint64_t currentlyMappedMemory;
   bool depthRangeUnrestrictedEXTEnabled;
+  bool stateRestoreFinished;
 
   ~CStateDynamic();
   static CStateDynamic& Get();

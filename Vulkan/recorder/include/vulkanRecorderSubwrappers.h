@@ -460,7 +460,7 @@ inline void vkQueuePresentKHR_RECWRAP(VkResult return_value,
                                       const VkPresentInfoKHR* pPresentInfo,
                                       CRecorder& recorder) {
   if (recorder.Running()) {
-    std::set<std::shared_ptr<CSurfaceKHRState>> surfacesStates;
+    std::unordered_set<std::shared_ptr<CSurfaceKHRState>> surfacesStates;
 
     for (size_t i = 0; i < pPresentInfo->swapchainCount; i++) {
       surfacesStates.insert(
@@ -550,11 +550,11 @@ inline void vkQueueSubmit_RECWRAP(VkResult return_value,
                                   const VkSubmitInfo* pSubmits,
                                   VkFence fence,
                                   CRecorder& recorder) {
-  std::set<VkDeviceMemory> _memoryToUpdate;
+  std::unordered_set<VkDeviceMemory> _memoryToUpdate;
 
   if (updateOnlyUsedMemory()) {
-    std::set<VkBuffer> updatedBuffers;
-    std::set<VkImage> updatedImages;
+    std::unordered_set<VkBuffer> updatedBuffers;
+    std::unordered_set<VkImage> updatedImages;
 
     for (uint32_t i = 0; i < submitCount; i++) {
       for (uint32_t j = 0; j < pSubmits[i].commandBufferCount; j++) {
@@ -691,11 +691,11 @@ inline void vkQueueSubmit2_RECWRAP(VkResult return_value,
                                    const VkSubmitInfo2* pSubmits,
                                    VkFence fence,
                                    CRecorder& recorder) {
-  std::set<VkDeviceMemory> _memoryToUpdate;
+  std::unordered_set<VkDeviceMemory> _memoryToUpdate;
 
   if (updateOnlyUsedMemory()) {
-    std::set<VkBuffer> updatedBuffers;
-    std::set<VkImage> updatedImages;
+    std::unordered_set<VkBuffer> updatedBuffers;
+    std::unordered_set<VkImage> updatedImages;
 
     for (uint32_t i = 0; i < submitCount; i++) {
       for (uint32_t j = 0; j < pSubmits[i].commandBufferInfoCount; j++) {

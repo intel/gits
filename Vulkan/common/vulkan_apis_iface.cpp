@@ -38,5 +38,8 @@ void VulkanApi::Play_StateRestoreBegin() const {
 void VulkanApi::Play_StateRestoreEnd() const {
   drvVk.vkGetInstanceProcAddr(VK_NULL_HANDLE, VK_STATE_RESTORE_END_GITS_FUNCTION_NAME);
 }
+void VulkanApi::Rec_StateRestoreFinished() const {
+  SD().stateRestoreFinished = true;
+}
 } // namespace Vulkan
 } // namespace gits

@@ -128,6 +128,7 @@ public:
     }
     virtual void Play_StateRestoreBegin() const {}
     virtual void Play_StateRestoreEnd() const {}
+    virtual void Rec_StateRestoreFinished() const {}
   };
 
   class ApiCompute : public ApiIface {

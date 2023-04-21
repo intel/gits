@@ -31,9 +31,12 @@ inline bool isRecorder() {
   return isRecorder;
 }
 
-inline bool isSubcapture() {
+inline bool isSubcaptureBeforeRestorationPhase() {
   static bool isSubcapture = CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture();
-  return isSubcapture;
+  if (!isSubcapture) {
+    return false;
+  }
+  return !SD().stateRestoreFinished;
 }
 
 inline bool updateOnlyUsedMemory() {
@@ -552,7 +555,7 @@ inline void vkDestroyCommandPool_SD(VkDevice device,
 
       if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
            Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-          CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+          isSubcaptureBeforeRestorationPhase()) {
         SD().bindingBuffers.erase(commandBufferState->commandBufferHandle);
         SD().bindingImages.erase(commandBufferState->commandBufferHandle);
       }
@@ -575,7 +578,7 @@ inline void vkCreateSampler_SD(VkResult return_value,
                                const VkAllocationCallbacks* pAllocator,
                                VkSampler* pSampler) {
   if (((Config::Get().IsPlayer()) && (Config::Get().player.cleanResourcesOnExit)) ||
-      (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+      (isSubcaptureBeforeRestorationPhase())) {
     if ((return_value == VK_SUCCESS) && (*pSampler != VK_NULL_HANDLE)) {
       SD()._samplerstates.emplace(
           *pSampler,
@@ -588,7 +591,7 @@ inline void vkDestroySampler_SD(VkDevice device,
                                 VkSampler sampler,
                                 const VkAllocationCallbacks* pAllocator) {
   if (((Config::Get().IsPlayer()) && (Config::Get().player.cleanResourcesOnExit)) ||
-      (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+      (isSubcaptureBeforeRestorationPhase())) {
     SD()._samplerstates.erase(sampler);
   }
 }
@@ -740,7 +743,7 @@ inline void vkCreateImage_SD(VkResult return_value,
 inline void vkDestroyImage_SD(VkDevice device,
                               VkImage image,
                               const VkAllocationCallbacks* pAllocator) {
-  if (Config::Get().IsRecorder() && CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+  if (Config::Get().IsRecorder() && isSubcaptureBeforeRestorationPhase()) {
     auto iterator = SD()._imagestates.find(image);
     if ((iterator != SD()._imagestates.end()) && (iterator->second->binding != nullptr)) {
       iterator->second->binding->deviceMemoryStateStore->aliasingTracker.RemoveImage(
@@ -784,7 +787,7 @@ void BindImageMemory_SDHelper(VkImage image, VkDeviceMemory memory, VkDeviceSize
   imageState->binding.reset(new CMemoryBinding(memOffset, imageState->memorySizeRequirement,
                                                SD()._devicememorystates[memory]));
 
-  if (Config::Get().IsRecorder() && CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+  if (Config::Get().IsRecorder() && isSubcaptureBeforeRestorationPhase()) {
     imageState->binding->deviceMemoryStateStore->aliasingTracker.AddImage(
         memOffset, imageState->memorySizeRequirement, image);
   }
@@ -861,7 +864,7 @@ inline void vkCreateBuffer_SD(VkResult return_value,
 inline void vkDestroyBuffer_SD(VkDevice device,
                                VkBuffer buffer,
                                const VkAllocationCallbacks* pAllocator) {
-  if (Config::Get().IsRecorder() && CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+  if (Config::Get().IsRecorder() && isSubcaptureBeforeRestorationPhase()) {
     auto iterator = SD()._bufferstates.find(buffer);
     if ((iterator != SD()._bufferstates.end()) && (iterator->second->binding != nullptr)) {
       iterator->second->binding->deviceMemoryStateStore->aliasingTracker.RemoveBuffer(
@@ -907,7 +910,7 @@ void BindBufferMemory_SDHelper(VkBuffer buffer, VkDeviceMemory memory, VkDeviceS
   bufferState->binding.reset(new CMemoryBinding(memOffset, bufferState->memorySizeRequirement,
                                                 SD()._devicememorystates[memory]));
 
-  if (Config::Get().IsRecorder() && CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+  if (Config::Get().IsRecorder() && isSubcaptureBeforeRestorationPhase()) {
     bufferState->binding->deviceMemoryStateStore->aliasingTracker.AddBuffer(
         memOffset, bufferState->memorySizeRequirement, buffer);
   }
@@ -1040,7 +1043,7 @@ inline void vkAllocateDescriptorSets_SD(VkResult return_value,
       SD()._descriptorpoolstates[pAllocateInfo->descriptorPool]->descriptorSetStateStoreList.insert(
           descriptorSetState);
 
-      if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+      if (isSubcaptureBeforeRestorationPhase()) {
         VkDescriptorSetLayoutCreateInfo* layoutCreateInfo =
             descriptorSetState->descriptorSetLayoutStateStore->descriptorSetLayoutCreateInfoData
                 .Value();
@@ -1101,7 +1104,7 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
       const auto descriptorType = pDescriptorWrites[i].descriptorType;
 
       if (descriptorType == VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK) {
-        if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+        if (isSubcaptureBeforeRestorationPhase()) {
           auto* descriptorSetBinding = &descriptorSetState->descriptorSetBindings[currentBinding];
           if (pDescriptorWrites[i].pNext != nullptr) {
             auto block = static_cast<const VkWriteDescriptorSetInlineUniformBlock*>(
@@ -1120,7 +1123,7 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
           auto* descriptorSetBinding = &descriptorSetState->descriptorSetBindings[currentBinding];
           CDescriptorSetState::CDescriptorSetBindingData::CDescriptorData* currentDescriptorData =
               nullptr;
-          if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+          if (isSubcaptureBeforeRestorationPhase()) {
             assert(descriptorSetBinding->descriptorData.size() > 0);
             while (descriptorSetBinding->descriptorCount <= currentArrayOffset) {
               currentArrayOffset =
@@ -1144,8 +1147,7 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
           case VK_DESCRIPTOR_TYPE_SAMPLER:
             if ((pDescriptorWrites[i].pImageInfo != nullptr) &&
                 (pDescriptorWrites[i].pImageInfo[j].sampler != VK_NULL_HANDLE) &&
-                (currentDescriptorData != nullptr) &&
-                (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+                isSubcaptureBeforeRestorationPhase() && (currentDescriptorData != nullptr)) {
               currentDescriptorData->pImageInfo.reset(new CVkDescriptorImageInfoData(
                   &pDescriptorWrites[i].pImageInfo[j], descriptorType));
               currentDescriptorData->samplerStateStore =
@@ -1162,8 +1164,7 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
                   SD()._imageviewstates[pDescriptorWrites[i].pImageInfo[j].imageView];
               auto& imageState = imageViewState->imageStateStore;
 
-              if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture() &&
-                  (currentDescriptorData != nullptr)) {
+              if (isSubcaptureBeforeRestorationPhase() && (currentDescriptorData != nullptr)) {
                 currentDescriptorData->pImageInfo.reset(new CVkDescriptorImageInfoData(
                     &pDescriptorWrites[i].pImageInfo[j], descriptorType));
                 currentDescriptorData->imageViewStateStore = imageViewState;
@@ -1176,7 +1177,7 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
 
               if ((Config::Get().recorder.vulkan.utilities.memoryUpdateState ==
                    TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED) ||
-                  (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+                  (isSubcaptureBeforeRestorationPhase())) {
                 descriptorSetState->descriptorImages[pDescriptorWrites[i].dstBinding] =
                     imageState->imageHandle;
               }
@@ -1213,8 +1214,7 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
               auto& bufferViewState =
                   SD()._bufferviewstates[pDescriptorWrites[i].pTexelBufferView[j]];
 
-              if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture() &&
-                  (currentDescriptorData != nullptr)) {
+              if (isSubcaptureBeforeRestorationPhase() && (currentDescriptorData != nullptr)) {
                 currentDescriptorData->pTexelBufferView.reset(
                     new CVkBufferViewDataArray(1, &pDescriptorWrites[i].pTexelBufferView[j]));
                 currentDescriptorData->bufferViewStateStore = bufferViewState;
@@ -1222,7 +1222,7 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
 
               if ((Config::Get().recorder.vulkan.utilities.memoryUpdateState ==
                    TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED) ||
-                  (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+                  (isSubcaptureBeforeRestorationPhase())) {
                 descriptorSetState->descriptorBuffers[pDescriptorWrites[i].dstBinding] =
                     bufferViewState->bufferStateStore->bufferHandle;
               }
@@ -1266,8 +1266,7 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
                 (pDescriptorWrites[i].pBufferInfo[j].buffer != VK_NULL_HANDLE)) {
               auto& bufferState = SD()._bufferstates[pDescriptorWrites[i].pBufferInfo[j].buffer];
 
-              if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture() &&
-                  (currentDescriptorData != nullptr)) {
+              if (isSubcaptureBeforeRestorationPhase() && (currentDescriptorData != nullptr)) {
                 currentDescriptorData->pBufferInfo.reset(
                     new CVkDescriptorBufferInfoData(&pDescriptorWrites[i].pBufferInfo[j]));
                 currentDescriptorData->bufferStateStore = bufferState;
@@ -1275,7 +1274,7 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
 
               if ((Config::Get().recorder.vulkan.utilities.memoryUpdateState ==
                    TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED) ||
-                  (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+                  (isSubcaptureBeforeRestorationPhase())) {
                 descriptorSetState->descriptorBuffers[pDescriptorWrites[i].dstBinding] =
                     pDescriptorWrites[i].pBufferInfo[j].buffer;
               }
@@ -1325,7 +1324,7 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
       auto& srcDescriptorSetState = SD()._descriptorsetstates[pDescriptorCopies[i].srcSet];
       auto& dstDescriptorSetState = SD()._descriptorsetstates[pDescriptorCopies[i].dstSet];
 
-      if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+      if (isSubcaptureBeforeRestorationPhase()) {
         uint32_t srcArrayOffset = pDescriptorCopies[i].srcArrayElement;
         uint32_t dstArrayOffset = pDescriptorCopies[i].dstArrayElement;
         auto& srcDescriptorSetBinding =
@@ -1355,7 +1354,7 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
 
       if ((Config::Get().recorder.vulkan.utilities.memoryUpdateState ==
            TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED) ||
-          (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+          (isSubcaptureBeforeRestorationPhase())) {
         for (auto obj : srcDescriptorSetState->descriptorBuffers) {
           dstDescriptorSetState->descriptorBuffers[obj.first] = obj.second;
         }
@@ -1556,7 +1555,7 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
         }
         CDescriptorSetState::CDescriptorSetBindingData::CDescriptorData* currentDescriptorData =
             nullptr;
-        if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+        if (isSubcaptureBeforeRestorationPhase()) {
 
           currentDescriptorData = &descriptorSetBinding.descriptorData[arrayOffset + j];
 
@@ -1571,7 +1570,7 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
 
         switch (descriptorType) {
         case VK_DESCRIPTOR_TYPE_SAMPLER:
-          if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+          if (isSubcaptureBeforeRestorationPhase()) {
             VkDescriptorImageInfo* descriptorImageInfo =
                 (VkDescriptorImageInfo*)((char*)pData +
                                          descriptorUpdateTemplateCreateInfoData
@@ -1607,8 +1606,7 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
           if (descriptorImageInfo->imageView != VK_NULL_HANDLE) {
             auto& imageViewState = SD()._imageviewstates[descriptorImageInfo->imageView];
 
-            if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture() &&
-                (currentDescriptorData != nullptr)) {
+            if (isSubcaptureBeforeRestorationPhase() && (currentDescriptorData != nullptr)) {
               currentDescriptorData->pImageInfo.reset(
                   new CVkDescriptorImageInfoData(descriptorImageInfo, descriptorType));
               currentDescriptorData->imageViewStateStore = imageViewState;
@@ -1623,7 +1621,7 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
 
             if ((Config::Get().recorder.vulkan.utilities.memoryUpdateState ==
                  TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED) ||
-                (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+                (isSubcaptureBeforeRestorationPhase())) {
               descriptorSetState->descriptorImages
                   [descriptorUpdateTemplateCreateInfoData->pDescriptorUpdateEntries[i].dstBinding] =
                   imageState->imageHandle;
@@ -1674,8 +1672,7 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
           if (*bufferView != VK_NULL_HANDLE) {
             auto& bufferViewState = SD()._bufferviewstates[*bufferView];
 
-            if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture() &&
-                (currentDescriptorData != nullptr)) {
+            if (isSubcaptureBeforeRestorationPhase() && (currentDescriptorData != nullptr)) {
               currentDescriptorData->pTexelBufferView.reset(
                   new CVkBufferViewDataArray(1, bufferView));
               currentDescriptorData->bufferViewStateStore = bufferViewState;
@@ -1683,7 +1680,7 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
 
             if ((Config::Get().recorder.vulkan.utilities.memoryUpdateState ==
                  TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED) ||
-                (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+                (isSubcaptureBeforeRestorationPhase())) {
               descriptorSetState->descriptorBuffers
                   [descriptorUpdateTemplateCreateInfoData->pDescriptorUpdateEntries[i].dstBinding] =
                   bufferViewState->bufferStateStore->bufferHandle;
@@ -1745,8 +1742,7 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
           if (descBufferInfo->buffer != VK_NULL_HANDLE) {
             auto& bufferState = SD()._bufferstates[descBufferInfo->buffer];
 
-            if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture() &&
-                (currentDescriptorData != nullptr)) {
+            if (isSubcaptureBeforeRestorationPhase() && (currentDescriptorData != nullptr)) {
               currentDescriptorData->pBufferInfo.reset(
                   new CVkDescriptorBufferInfoData(descBufferInfo));
               currentDescriptorData->bufferStateStore = bufferState;
@@ -1754,7 +1750,7 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
 
             if ((Config::Get().recorder.vulkan.utilities.memoryUpdateState ==
                  TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED) ||
-                (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+                (isSubcaptureBeforeRestorationPhase())) {
               descriptorSetState->descriptorBuffers
                   [descriptorUpdateTemplateCreateInfoData->pDescriptorUpdateEntries[i].dstBinding] =
                   descBufferInfo->buffer;
@@ -1826,7 +1822,7 @@ inline void vkCreatePipelineCache_SD(VkResult return_value,
                                      const VkAllocationCallbacks* pAllocator,
                                      VkPipelineCache* pPipelineCache) {
   if (((Config::Get().IsPlayer()) && (Config::Get().player.cleanResourcesOnExit)) ||
-      (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+      (isSubcaptureBeforeRestorationPhase())) {
     if ((return_value == VK_SUCCESS) && (*pPipelineCache != VK_NULL_HANDLE)) {
       SD()._pipelinecachestates.emplace(
           *pPipelineCache, std::make_shared<CPipelineCacheState>(pPipelineCache, pCreateInfo,
@@ -1839,7 +1835,7 @@ inline void vkDestroyPipelineCache_SD(VkDevice device,
                                       VkPipelineCache pipelineCache,
                                       const VkAllocationCallbacks* pAllocator) {
   if (((Config::Get().IsPlayer()) && (Config::Get().player.cleanResourcesOnExit)) ||
-      (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+      (isSubcaptureBeforeRestorationPhase())) {
     SD()._pipelinecachestates.erase(pipelineCache);
   }
 }
@@ -2173,7 +2169,7 @@ inline void vkCreateQueryPool_SD(VkResult return_value,
                                  const VkAllocationCallbacks* pAllocator,
                                  VkQueryPool* pQueryPool) {
   if (((Config::Get().IsPlayer()) && (Config::Get().player.cleanResourcesOnExit)) ||
-      (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+      (isSubcaptureBeforeRestorationPhase())) {
     if ((return_value == VK_SUCCESS) && (*pQueryPool != VK_NULL_HANDLE)) {
       SD()._querypoolstates.emplace(
           *pQueryPool,
@@ -2186,7 +2182,7 @@ inline void vkDestroyQueryPool_SD(VkDevice device,
                                   VkQueryPool queryPool,
                                   const VkAllocationCallbacks* pAllocator) {
   if (((Config::Get().IsPlayer()) && (Config::Get().player.cleanResourcesOnExit)) ||
-      (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+      (isSubcaptureBeforeRestorationPhase())) {
     SD()._querypoolstates.erase(queryPool);
   }
 }
@@ -2196,7 +2192,7 @@ inline void vkResetQueryPool_SD(VkDevice device,
                                 uint32_t firstQuery,
                                 uint32_t queryCount) {
   if (((Config::Get().IsPlayer()) && (Config::Get().player.cleanResourcesOnExit)) ||
-      (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+      (isSubcaptureBeforeRestorationPhase())) {
     auto& state = SD()._querypoolstates[queryPool];
     for (auto i = firstQuery; i < firstQuery + queryCount; i++) {
       state->resetQueries[i] = true;
@@ -2313,7 +2309,7 @@ inline void vkBeginCommandBuffer_SD(VkResult /* return_value */,
 
           if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
                Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-              CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+              isSubcaptureBeforeRestorationPhase()) {
             SD().bindingImages[cmdBuffer].insert(imageState->imageHandle);
           }
           if ((Config::Get().recorder.vulkan.utilities.memorySegmentSize ||
@@ -2344,7 +2340,7 @@ inline void vkEndCommandBuffer_SD(VkResult return_value, VkCommandBuffer command
 namespace {
 inline void vkQueueSubmit_setImageLayout(std::shared_ptr<CCommandBufferState>& commandBufferState,
                                          uint32_t queueFamilyIndex) {
-  if (((CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) &&
+  if (((isSubcaptureBeforeRestorationPhase()) &&
        (Config::Get().recorder.vulkan.utilities.crossPlatformStateRestoration.images)) ||
       (!Config::Get().player.captureVulkanSubmits.empty() ||
        !Config::Get().player.captureVulkanSubmitsResources.empty())) {
@@ -2372,7 +2368,7 @@ inline void vkQueueSubmit_setImageLayout(std::shared_ptr<CCommandBufferState>& c
 
 inline void vkQueueSubmit_setQueryPoolState(
     std::shared_ptr<CCommandBufferState>& commandBufferState) {
-  if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+  if (isSubcaptureBeforeRestorationPhase()) {
     for (auto& resetQueryAfterSubmit : commandBufferState->resetQueriesAfterSubmit) {
       auto& queryPoolState = SD()._querypoolstates[resetQueryAfterSubmit.first];
 
@@ -2393,7 +2389,7 @@ inline void vkQueueSubmit_setQueryPoolState(
 }
 
 inline void vkQueueSubmit_setTimestamps(std::shared_ptr<CCommandBufferState>& commandBufferState) {
-  if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+  if (isSubcaptureBeforeRestorationPhase()) {
     for (uint32_t i = 0; i < commandBufferState->touchedResources.size(); ++i) {
       auto& touchedResource = commandBufferState->touchedResources[i];
       if (touchedResource.second) {
@@ -2662,7 +2658,7 @@ inline void vkCmdBeginRenderPass_SD(VkCommandBuffer cmdBuffer,
 
         if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
              Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-            (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+            (isSubcaptureBeforeRestorationPhase())) {
           SD().bindingImages[cmdBuffer].insert(imageState->imageHandle);
         }
         if ((Config::Get().recorder.vulkan.utilities.memorySegmentSize ||
@@ -2684,7 +2680,7 @@ inline void vkCmdBeginRenderPass_SD(VkCommandBuffer cmdBuffer,
         auto& imageState = beginRenderPassState->imageViewStateStoreListKHR[i]->imageStateStore;
         if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
              Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-            (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+            (isSubcaptureBeforeRestorationPhase())) {
           SD().bindingImages[cmdBuffer].insert(imageState->imageHandle);
         }
         if ((Config::Get().recorder.vulkan.utilities.memorySegmentSize ||
@@ -2726,8 +2722,7 @@ inline void vkCmdBeginRenderPass2KHR_SD(VkCommandBuffer commandBuffer,
 }
 
 inline void vkCmdEndRenderPass_SD(VkCommandBuffer commandBuffer) {
-  if (((Config::Get().recorder.basic.enabled) &&
-       (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) &&
+  if (((Config::Get().recorder.basic.enabled) && (isSubcaptureBeforeRestorationPhase()) &&
        (Config::Get().recorder.vulkan.utilities.crossPlatformStateRestoration.images)) ||
       (!Config::Get().player.captureVulkanSubmits.empty() ||
        !Config::Get().player.captureVulkanSubmitsResources.empty())) {
@@ -2853,7 +2848,7 @@ inline void vkCmdBeginRendering_SD(VkCommandBuffer commandBuffer,
       auto& imageState = beginRenderPassState->imageViewStateStoreListKHR[i]->imageStateStore;
       if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
            Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-          (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+          (isSubcaptureBeforeRestorationPhase())) {
         SD().bindingImages[commandBuffer].insert(imageState->imageHandle);
       }
       if ((Config::Get().recorder.vulkan.utilities.memorySegmentSize ||
@@ -2880,7 +2875,7 @@ void BindVertexBuffers_SDHelper(VkCommandBuffer cmdBuffer,
                                 const VkBuffer* pBuffers) {
   if (Config::Get().IsRecorder() && ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
                                       Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-                                     CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+                                     isSubcaptureBeforeRestorationPhase())) {
     auto& bindingBuffers = SD().bindingBuffers[cmdBuffer];
     for (uint32_t i = 0; i < bindingCount; ++i) {
       if (pBuffers[i] != VK_NULL_HANDLE) {
@@ -2926,7 +2921,7 @@ inline void vkCmdBindIndexBuffer_SD(VkCommandBuffer cmdBuffer,
                                     VkIndexType indexType) {
   if (Config::Get().IsRecorder() && ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
                                       Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-                                     CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+                                     isSubcaptureBeforeRestorationPhase())) {
     SD().bindingBuffers[cmdBuffer].insert(buffer);
   }
 }
@@ -2939,7 +2934,7 @@ inline void vkCmdBindTransformFeedbackBuffersEXT_SD(VkCommandBuffer commandBuffe
                                                     const VkDeviceSize* pSizes) {
   if (Config::Get().IsRecorder() && ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
                                       Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-                                     CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+                                     isSubcaptureBeforeRestorationPhase())) {
     SD().bindingBuffers[commandBuffer].insert(pBuffers, pBuffers + bindingCount);
   }
 }
@@ -2969,7 +2964,7 @@ inline void vkCmdBindDescriptorSets_SD(VkCommandBuffer commandBuffer,
       auto& commandBufferState = SD()._commandbufferstates[commandBuffer];
       if ((Config::Get().recorder.vulkan.utilities.memoryUpdateState ==
            TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED) ||
-          CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+          isSubcaptureBeforeRestorationPhase()) {
         auto& descriptorSetState = SD()._descriptorsetstates[pDescriptorSets[i]];
 
         commandBufferState->descriptorSetStateStoreList.emplace(pDescriptorSets[i],
@@ -3015,7 +3010,7 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer commandBuffer,
   if (!Config::Get().IsRecorder()) {
     return;
   }
-  if (!CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+  if (!isSubcaptureBeforeRestorationPhase()) {
     return;
   }
 
@@ -3163,7 +3158,7 @@ inline void vkCmdDrawIndexedIndirect_SD(VkCommandBuffer commandBuffer,
                                         uint32_t stride) {
   if (Config::Get().IsRecorder() && ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
                                       Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-                                     CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+                                     isSubcaptureBeforeRestorationPhase())) {
     if (VK_NULL_HANDLE != buffer) {
       SD().bindingBuffers[commandBuffer].insert(buffer);
     }
@@ -3178,7 +3173,7 @@ inline void vkCmdDrawIndirect_SD(VkCommandBuffer commandBuffer,
                                  uint32_t stride) {
   if (Config::Get().IsRecorder() && ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
                                       Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-                                     CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+                                     isSubcaptureBeforeRestorationPhase())) {
     if (VK_NULL_HANDLE != buffer) {
       SD().bindingBuffers[commandBuffer].insert(buffer);
     }
@@ -3195,7 +3190,7 @@ inline void vkCmdDrawIndirectCountKHR_SD(VkCommandBuffer commandBuffer,
                                          uint32_t stride) {
   if (Config::Get().IsRecorder() && ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
                                       Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-                                     CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+                                     isSubcaptureBeforeRestorationPhase())) {
     if (VK_NULL_HANDLE != buffer) {
       SD().bindingBuffers[commandBuffer].insert(buffer);
     }
@@ -3215,7 +3210,7 @@ inline void vkCmdDrawIndexedIndirectCountKHR_SD(VkCommandBuffer commandBuffer,
                                                 uint32_t stride) {
   if (Config::Get().IsRecorder() && ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
                                       Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-                                     CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+                                     isSubcaptureBeforeRestorationPhase())) {
     if (VK_NULL_HANDLE != buffer) {
       SD().bindingBuffers[commandBuffer].insert(buffer);
     }
@@ -3244,7 +3239,7 @@ inline void vkCmdDrawMeshTasksIndirectEXT_SD(VkCommandBuffer commandBuffer,
                                              VkDeviceSize offset,
                                              uint32_t drawCount,
                                              uint32_t stride) {
-  if (isRecorder() && (updateOnlyUsedMemory() || isSubcapture())) {
+  if (isRecorder() && (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
     if (VK_NULL_HANDLE != buffer) {
       SD().bindingBuffers[commandBuffer].insert(buffer);
     }
@@ -3267,7 +3262,7 @@ inline void vkCmdDrawMeshTasksIndirectCountEXT_SD(VkCommandBuffer commandBuffer,
                                                   VkDeviceSize countBufferOffset,
                                                   uint32_t maxDrawCount,
                                                   uint32_t stride) {
-  if (isRecorder() && (updateOnlyUsedMemory() || isSubcapture())) {
+  if (isRecorder() && (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
     if (VK_NULL_HANDLE != buffer) {
       SD().bindingBuffers[commandBuffer].insert(buffer);
     }
@@ -3296,7 +3291,7 @@ inline void vkCmdDispatch_SD(VkCommandBuffer commandBuffer, uint32_t, uint32_t, 
 inline void vkCmdDispatchIndirect_SD(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize) {
   if (Config::Get().IsRecorder() && ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
                                       Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-                                     CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+                                     isSubcaptureBeforeRestorationPhase())) {
     if (VK_NULL_HANDLE != buffer) {
       SD().bindingBuffers[commandBuffer].insert(buffer);
     }
@@ -3314,7 +3309,7 @@ inline void vkCmdExecuteCommands_SD(VkCommandBuffer commandBuffer,
 
       if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
            Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-          (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+          (isSubcaptureBeforeRestorationPhase())) {
         auto& srcBindingImages = SD().bindingImages[pCommandBuffers[i]];
         SD().bindingImages[commandBuffer].insert(srcBindingImages.begin(), srcBindingImages.end());
 
@@ -3417,7 +3412,7 @@ inline void vkCmdPipelineBarrier_SD(VkCommandBuffer commandBuffer,
                                     uint32_t imageMemoryBarrierCount,
                                     const VkImageMemoryBarrier* pImageMemoryBarriers) {
   if (captureVulkanSubmits() || captureVulkanSubmitsResources() ||
-      (isRecorder() && ((updateOnlyUsedMemory()) || isSubcapture()))) {
+      (isRecorder() && ((updateOnlyUsedMemory()) || isSubcaptureBeforeRestorationPhase()))) {
 
     for (unsigned int i = 0; i < bufferMemoryBarrierCount; i++) {
       SD().bindingBuffers[commandBuffer].insert(pBufferMemoryBarriers[i].buffer);
@@ -3432,7 +3427,7 @@ inline void vkCmdPipelineBarrier_SD(VkCommandBuffer commandBuffer,
       }
 
       if (captureVulkanSubmits() || captureVulkanSubmitsResources() ||
-          (isSubcapture() && crossPlatformStateRestoration())) {
+          (isSubcaptureBeforeRestorationPhase() && crossPlatformStateRestoration())) {
         auto& imageState = SD()._imagestates[pImageMemoryBarriers[i].image];
         auto& imageLayout = imageState->currentLayout;
         if (!imageLayout.size()) {
@@ -3482,7 +3477,7 @@ inline void vkCmdPipelineBarrier_SD(VkCommandBuffer commandBuffer,
 inline void vkCmdPipelineBarrier2UnifiedGITS_SD(VkCommandBuffer commandBuffer,
                                                 const VkDependencyInfo* pDependencyInfo) {
   if (captureVulkanSubmits() || captureVulkanSubmitsResources() ||
-      (isRecorder() && (updateOnlyUsedMemory() || isSubcapture()))) {
+      (isRecorder() && (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()))) {
 
     for (unsigned int i = 0; i < pDependencyInfo->bufferMemoryBarrierCount; i++) {
       SD().bindingBuffers[commandBuffer].insert(pDependencyInfo->pBufferMemoryBarriers[i].buffer);
@@ -3497,7 +3492,7 @@ inline void vkCmdPipelineBarrier2UnifiedGITS_SD(VkCommandBuffer commandBuffer,
       }
 
       if (captureVulkanSubmits() || captureVulkanSubmitsResources() ||
-          (isSubcapture() && crossPlatformStateRestoration())) {
+          (isSubcaptureBeforeRestorationPhase() && crossPlatformStateRestoration())) {
         auto& imageState = SD()._imagestates[pDependencyInfo->pImageMemoryBarriers[i].image];
         auto& imageLayout = imageState->currentLayout;
         if (!imageLayout.size()) {
@@ -3640,7 +3635,7 @@ inline void vkCmdCopyQueryPoolResults_SD(VkCommandBuffer commandBuffer,
   if (Config::Get().IsRecorder()) {
     if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
          Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-        CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+        isSubcaptureBeforeRestorationPhase()) {
       SD().bindingBuffers[commandBuffer].insert(dstBuffer);
     }
 
@@ -3671,7 +3666,7 @@ inline void vkCmdUpdateBuffer_SD(VkCommandBuffer commandBuffer,
   if (Config::Get().IsRecorder()) {
     if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
          Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-        CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+        isSubcaptureBeforeRestorationPhase()) {
       if (VK_NULL_HANDLE != dstBuffer) {
         SD().bindingBuffers[commandBuffer].insert(dstBuffer);
       }
@@ -3704,7 +3699,7 @@ inline void vkCmdFillBuffer_SD(VkCommandBuffer commandBuffer,
   if (Config::Get().IsRecorder()) {
     if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
          Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-        CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+        isSubcaptureBeforeRestorationPhase()) {
       if (VK_NULL_HANDLE != dstBuffer) {
         SD().bindingBuffers[commandBuffer].insert(dstBuffer);
       }
@@ -3742,7 +3737,7 @@ inline void vkCmdCopyBuffer_SD(VkCommandBuffer commandBuffer,
   if (Config::Get().IsRecorder()) {
     if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
          Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-        CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+        isSubcaptureBeforeRestorationPhase()) {
       if (srcBuffer != NULL) {
         SD().bindingBuffers[commandBuffer].insert(srcBuffer);
       }
@@ -3781,7 +3776,7 @@ inline void vkCmdCopyBuffer2_SD(VkCommandBuffer commandBuffer,
   if (Config::Get().IsRecorder()) {
     if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
          Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-        CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+        isSubcaptureBeforeRestorationPhase()) {
       if (pCopyBufferInfo->srcBuffer != NULL) {
         SD().bindingBuffers[commandBuffer].insert(pCopyBufferInfo->srcBuffer);
       }
@@ -3825,7 +3820,7 @@ inline void vkCmdCopyBufferToImage_SD(VkCommandBuffer commandBuffer,
   if (Config::Get().IsRecorder()) {
     if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
          Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-        CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+        isSubcaptureBeforeRestorationPhase()) {
       if (srcBuffer != NULL) {
         SD().bindingBuffers[commandBuffer].insert(srcBuffer);
       }
@@ -3888,7 +3883,7 @@ inline void vkCmdCopyBufferToImage2_SD(VkCommandBuffer commandBuffer,
   if (Config::Get().IsRecorder()) {
     if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
          Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-        CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+        isSubcaptureBeforeRestorationPhase()) {
       if (pCopyBufferToImageInfo->srcBuffer != NULL) {
         SD().bindingBuffers[commandBuffer].insert(pCopyBufferToImageInfo->srcBuffer);
       }
@@ -3960,7 +3955,7 @@ inline void vkCmdCopyImage_SD(VkCommandBuffer commandBuffer,
   if (Config::Get().IsRecorder()) {
     if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
          Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-        CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+        isSubcaptureBeforeRestorationPhase()) {
       if (srcImage != NULL) {
         SD().bindingImages[commandBuffer].insert(srcImage);
       }
@@ -4022,7 +4017,7 @@ inline void vkCmdCopyImage2_SD(VkCommandBuffer commandBuffer,
   if (Config::Get().IsRecorder()) {
     if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
          Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-        CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+        isSubcaptureBeforeRestorationPhase()) {
       if (pCopyImageInfo->srcImage != NULL) {
         SD().bindingImages[commandBuffer].insert(pCopyImageInfo->srcImage);
       }
@@ -4094,7 +4089,7 @@ inline void vkCmdCopyImageToBuffer_SD(VkCommandBuffer commandBuffer,
   if (Config::Get().IsRecorder()) {
     if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
          Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-        CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+        isSubcaptureBeforeRestorationPhase()) {
       if (srcImage != NULL) {
         SD().bindingImages[commandBuffer].insert(srcImage);
       }
@@ -4154,7 +4149,7 @@ inline void vkCmdCopyImageToBuffer2_SD(VkCommandBuffer commandBuffer,
   if (Config::Get().IsRecorder()) {
     if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
          Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-        CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+        isSubcaptureBeforeRestorationPhase()) {
       if (pCopyImageToBufferInfo->srcImage != NULL) {
         SD().bindingImages[commandBuffer].insert(pCopyImageToBufferInfo->srcImage);
       }
@@ -4224,7 +4219,7 @@ inline void vkCmdBlitImage_SD(VkCommandBuffer commandBuffer,
   if (Config::Get().IsRecorder()) {
     if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
          Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-        CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+        isSubcaptureBeforeRestorationPhase()) {
       if (VK_NULL_HANDLE != srcImage) {
         SD().bindingImages[commandBuffer].insert(srcImage);
       }
@@ -4280,7 +4275,7 @@ inline void vkCmdBlitImage2_SD(VkCommandBuffer commandBuffer,
   if (Config::Get().IsRecorder()) {
     if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
          Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-        CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+        isSubcaptureBeforeRestorationPhase()) {
       if (VK_NULL_HANDLE != pBlitInfoImage->srcImage) {
         SD().bindingImages[commandBuffer].insert(pBlitInfoImage->srcImage);
       }
@@ -4342,7 +4337,7 @@ inline void vkCmdResolveImage_SD(VkCommandBuffer commandBuffer,
   if (Config::Get().IsRecorder()) {
     if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
          Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-        CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+        isSubcaptureBeforeRestorationPhase()) {
       if (VK_NULL_HANDLE != srcImage) {
         SD().bindingImages[commandBuffer].insert(srcImage);
       }
@@ -4399,7 +4394,7 @@ inline void vkCmdResolveImage2_SD(VkCommandBuffer commandBuffer,
   if (Config::Get().IsRecorder()) {
     if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
          Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-        CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+        isSubcaptureBeforeRestorationPhase()) {
       if (VK_NULL_HANDLE != pResolveImageInfo->srcImage) {
         SD().bindingImages[commandBuffer].insert(pResolveImageInfo->srcImage);
       }
@@ -4462,7 +4457,7 @@ inline void vkCmdClearColorImage_SD(VkCommandBuffer commandBuffer,
   if (Config::Get().IsRecorder()) {
     if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
          Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-        CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+        isSubcaptureBeforeRestorationPhase()) {
       SD().bindingImages[commandBuffer].insert(image);
     }
 
@@ -4500,7 +4495,7 @@ inline void vkCmdClearDepthStencilImage_SD(VkCommandBuffer commandBuffer,
   if (Config::Get().IsRecorder()) {
     if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
          Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
-        CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+        isSubcaptureBeforeRestorationPhase()) {
       SD().bindingImages[commandBuffer].insert(image);
     }
 

@@ -178,7 +178,7 @@ private:
   StreamingContext* _sc;
   TimerSet _timers;
 
-  std::map<void*, uint64_t> _ptrToOrderedId;
+  std::unordered_map<void*, uint64_t> _ptrToOrderedId;
 
   CGits();
   CGits(uint16_t v0, uint16_t v1, uint16_t v2, uint16_t v3);

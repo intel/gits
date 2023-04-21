@@ -19,9 +19,10 @@ namespace gits {
 namespace Vulkan {
 
 // Instantiation of static members
-std::map<VkDeviceAddress, std::pair<VkDeviceAddress, std::shared_ptr<CBufferState>>>
+std::unordered_map<VkDeviceAddress, std::pair<VkDeviceAddress, std::shared_ptr<CBufferState>>>
     CBufferState::deviceAddressesMap;
-std::map<VkBuffer, std::shared_ptr<CBufferState>> CBufferState::shaderDeviceAddressBuffers;
+std::unordered_map<VkBuffer, std::shared_ptr<CBufferState>>
+    CBufferState::shaderDeviceAddressBuffers;
 
 uint64_t CInternalResources::COffscreenAppsSupport::uniqueHandleCounter = 1;
 
@@ -31,7 +32,8 @@ CStateDynamic::CStateDynamic()
       currentlyAllocatedMemoryGPU(0),
       currentlyAllocatedMemoryCPU_GPU(0),
       currentlyMappedMemory(0),
-      depthRangeUnrestrictedEXTEnabled(false) {}
+      depthRangeUnrestrictedEXTEnabled(false),
+      stateRestoreFinished(false) {}
 
 CStateDynamic::~CStateDynamic() {}
 
