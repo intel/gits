@@ -78,9 +78,9 @@ void ScheduleSplitMemoryCopyFromHostPtr(CScheduler& scheduler,
     ScheduleSplitMemoryCopyFromHostPtr(scheduler, srcPtr, commandList, dstPtr, offset + UINT32_MAX,
                                        size - UINT32_MAX);
   }
-  scheduler.Register(new CzeCommandListAppendMemoryCopy(ZE_RESULT_SUCCESS, commandList, dstPtr,
-                                                        GetOffsetPointer((void*)srcPtr, offset),
-                                                        tmpSize, nullptr, 0, nullptr));
+  scheduler.Register(new CzeCommandListAppendMemoryCopy(
+      ZE_RESULT_SUCCESS, commandList, GetOffsetPointer(dstPtr, offset),
+      GetOffsetPointer((void*)srcPtr, offset), tmpSize, nullptr, 0, nullptr));
 }
 } // namespace
 void RestoreDrivers(CScheduler& scheduler, CStateDynamic& sd) {
