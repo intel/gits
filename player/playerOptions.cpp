@@ -1134,7 +1134,7 @@ bool configure_player(int argc, char** argv) {
   set_when_option_present(cfg.player.forcePortableWglDepthBits, optionForcePortableWglDepthBits);
 
   cfg.player.noOpenCL = optionNoOpenCL.Value();
-  cfg.player.applicationPath = options.AppPath();
+  cfg.player.applicationPath = bfs::absolute(options.AppPath()).string();
 
   set_when_option_present(cfg.player.traceGLBufferHashes, optionTraceGLBufferHashes);
 

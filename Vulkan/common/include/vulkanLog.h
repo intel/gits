@@ -37,14 +37,10 @@ public:
   CVkLog& operator<<(PFN_vkReallocationFunction c);
   CVkLog& operator<<(PFN_vkDebugReportCallbackEXT c);
   CVkLog& operator<<(PFN_vkFreeFunction c);
-  CVkLog& operator<<(PFN_vkWin32CreateAllocationNotificationINTEL c);
   CVkLog& operator<<(PFN_vkInternalAllocationNotification c);
   CVkLog& operator<<(PFN_vkDebugUtilsMessengerCallbackEXT c);
   CVkLog& operator<<(PFN_vkDeviceMemoryReportCallbackEXT c);
-  CVkLog& operator<<(PFN_vkWin32DestroyAllocationNotificationINTEL c);
-  CVkLog& operator<<(PFN_vkWin32MakeResidentControlINTEL c);
-  CVkLog& operator<<(PFN_vkWin32MakeResidentNotificationINTEL c);
-  CVkLog& operator<<(PFN_vkWin32EvictControlINTEL c);
+  CVkLog& operator<<(PFN_vkFaultCallbackFunction c);
   CVkLog& operator<<(PFN_vkVoidFunction c);
   CVkLog& operator<<(PFN_vkGetInstanceProcAddr c);
   CVkLog& operator<<(PFN_vkGetDeviceProcAddr c);

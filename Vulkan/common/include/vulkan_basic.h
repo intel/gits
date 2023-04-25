@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2015-2018 The Khronos Group Inc.
+** Copyright 2015-2023 The Khronos Group Inc.
 **
 ** Licensed under the Apache License, Version 2.0 (the "License");
 ** you may not use this file except in compliance with the License.
@@ -36,23 +36,23 @@ extern "C" {
   VK_MAKE_API_VERSION(0, 1, 0, 0) // Patch version should always be set to 0
 
 // Version of this file
-#define VK_HEADER_VERSION 229
+#define VK_HEADER_VERSION 248
 
 // Complete version of this file
 #define VK_HEADER_VERSION_COMPLETE VK_MAKE_API_VERSION(0, 1, 3, VK_HEADER_VERSION)
 
 // DEPRECATED: This define is deprecated. VK_API_VERSION_MAJOR should be used instead.
-#define VK_VERSION_MAJOR(version) ((uint32_t)(version) >> 22)
+#define VK_VERSION_MAJOR(version) ((uint32_t)(version) >> 22U)
 
 // DEPRECATED: This define is deprecated. VK_API_VERSION_MINOR should be used instead.
-#define VK_VERSION_MINOR(version) (((uint32_t)(version) >> 12) & 0x3FFU)
+#define VK_VERSION_MINOR(version) (((uint32_t)(version) >> 12U) & 0x3FFU)
 
 // DEPRECATED: This define is deprecated. VK_API_VERSION_PATCH should be used instead.
 #define VK_VERSION_PATCH(version) ((uint32_t)(version)&0xFFFU)
 
-#define VK_API_VERSION_VARIANT(version) ((uint32_t)(version) >> 29)
-#define VK_API_VERSION_MAJOR(version)   (((uint32_t)(version) >> 22) & 0x7FU)
-#define VK_API_VERSION_MINOR(version)   (((uint32_t)(version) >> 12) & 0x3FFU)
+#define VK_API_VERSION_VARIANT(version) ((uint32_t)(version) >> 29U)
+#define VK_API_VERSION_MAJOR(version)   (((uint32_t)(version) >> 22U) & 0x7FU)
+#define VK_API_VERSION_MINOR(version)   (((uint32_t)(version) >> 12U) & 0x3FFU)
 #define VK_API_VERSION_PATCH(version)   ((uint32_t)(version)&0xFFFU)
 
 #define VK_NULL_HANDLE 0
@@ -108,6 +108,9 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkIndirectCommandsLayoutNV)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkPrivateDataSlotEXT)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkVideoSessionKHR)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkVideoSessionParametersKHR)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkShaderEXT)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkMicromapEXT)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkOpticalFlowSessionNV)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkPrivateDataSlot)
 
 #define VK_LOD_CLAMP_NONE                1000.0f
@@ -328,6 +331,21 @@ typedef VkFlags VkVideoEncodeContentFlagsKHR;
 typedef VkFlags VkVideoSessionParametersCreateFlagsKHR;
 typedef VkFlags VkVideoCapabilityFlagsKHR;
 typedef VkFlags VkVideoDecodeUsageFlagsKHR;
+typedef VkFlags VkBuildMicromapFlagsEXT;
+typedef VkFlags VkVideoEncodeFeedbackFlagsKHR;
+typedef VkFlags VkRefreshObjectFlagsKHR;
+typedef VkFlags VkShaderCreateFlagsEXT;
+typedef VkFlags64 VkMemoryDecompressionMethodFlagsNV;
+typedef VkFlags VkDeviceAddressBindingFlagsEXT;
+typedef VkFlags VkDirectDriverLoadingFlagsLUNARG;
+typedef VkFlags VkMemoryUnmapFlagsKHR;
+typedef VkFlags VkOpticalFlowExecuteFlagsNV;
+typedef VkFlags VkOpticalFlowUsageFlagsNV;
+typedef VkFlags VkOpticalFlowGridSizeFlagsNV;
+typedef VkFlags VkOpticalFlowSessionCreateFlagsNV;
+typedef VkFlags VkPresentScalingFlagsEXT;
+typedef VkFlags VkPresentGravityFlagsEXT;
+typedef VkFlags VkMicromapCreateFlagsEXT;
 
 #define VK_KHR_surface 1
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkSurfaceKHR)
@@ -992,38 +1010,10 @@ typedef VkFlags VkWin32SurfaceCreateFlagsKHR;
 
 typedef VkFlags VkWaylandSurfaceCreateFlagsKHR;
 
-/*****************************************************************************\
-DEFINE: Driver type
-*****************************************************************************/
-#define VK_DRIVER_TYPE_INTEL 0x00000400 // TMetricApiType::API_TYPE_VULKAN
-
-/****************************************************************************\
-DEFINE: INTEL Performance API version
-*****************************************************************************/
-#define VK_PERFORMANCE_API_MAJOR_VERSION_INTEL 0
-#define VK_PERFORMANCE_API_MINOR_VERSION_INTEL 1
-
-/****************************************************************************\
-DEFINE: Extend VkStructureType enum with extension specific constants
-*****************************************************************************/
-#define VK_PERFORMANCE_API_EXTENSION_NUMBER_INTEL 5
-
-/****************************************************************************\
-DEFINE: VkQueryPoolINTEL
-*****************************************************************************/
-VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkQueryPoolINTEL)
-
 /****************************************************************************\
 DEFINE: VkPerformanceConfigurationINTEL
 *****************************************************************************/
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkPerformanceConfigurationINTEL)
-
-/*****************************************************************************\
-PROTOTYPE: Exclusive mode control interface.
-\*****************************************************************************/
-
-#define VK_INTEL_TEST_SUPPORT              1
-#define VK_INTEL_TEST_SUPPORT_SPEC_VERSION 1
 
 typedef VkFlags VkObjectMemoryUsageQueryFlags;
 

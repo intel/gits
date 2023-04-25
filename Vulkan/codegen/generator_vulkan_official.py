@@ -154,6 +154,15 @@ arg2=ArgDef(name='bindInfoCount', type='uint32_t'),
 arg3=ArgDef(name='pBindInfos', type='const VkBindImageMemoryInfo*', wrapType='CVkBindImageMemoryInfoArray', wrapParams='bindInfoCount, pBindInfos', count='bindInfoCount')
 )
 
+Function(name='vkBindOpticalFlowSessionImageNV', enabled=False, type=Param,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='session', type='VkOpticalFlowSessionNV'),
+arg3=ArgDef(name='bindingPoint', type='VkOpticalFlowSessionBindingPointNV'),
+arg4=ArgDef(name='view', type='VkImageView'),
+arg5=ArgDef(name='layout', type='VkImageLayout')
+)
+
 Function(name='vkBindVideoSessionMemoryKHR', enabled=False, type=Param,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
@@ -169,6 +178,14 @@ arg2=ArgDef(name='deferredOperation', type='VkDeferredOperationKHR'),
 arg3=ArgDef(name='infoCount', type='uint32_t'),
 arg4=ArgDef(name='pInfos', type='const VkAccelerationStructureBuildGeometryInfoKHR*'),
 arg5=ArgDef(name='ppBuildRangeInfos', type='const VkAccelerationStructureBuildRangeInfoKHR* const*')
+)
+
+Function(name='vkBuildMicromapsEXT', enabled=False, type=Param,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='deferredOperation', type='VkDeferredOperationKHR'),
+arg3=ArgDef(name='infoCount', type='uint32_t'),
+arg4=ArgDef(name='pInfos', type='const VkMicromapBuildInfoEXT*')
 )
 
 Function(name='vkCmdBeginConditionalRenderingEXT', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
@@ -248,6 +265,21 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pBeginInfo', type='const VkVideoBeginCodingInfoKHR*')
 )
 
+Function(name='vkCmdBindDescriptorBufferEmbeddedSamplersEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='pipelineBindPoint', type='VkPipelineBindPoint'),
+arg3=ArgDef(name='layout', type='VkPipelineLayout'),
+arg4=ArgDef(name='set', type='uint32_t')
+)
+
+Function(name='vkCmdBindDescriptorBuffersEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='bufferCount', type='uint32_t'),
+arg3=ArgDef(name='pBindingInfos', type='const VkDescriptorBufferBindingInfoEXT*')
+)
+
 Function(name='vkCmdBindDescriptorSets', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
@@ -281,6 +313,14 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pipelineBindPoint', type='VkPipelineBindPoint'),
 arg3=ArgDef(name='pipeline', type='VkPipeline'),
 arg4=ArgDef(name='groupIndex', type='uint32_t')
+)
+
+Function(name='vkCmdBindShadersEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='stageCount', type='uint32_t'),
+arg3=ArgDef(name='pStages', type='const VkShaderStageFlagBits*'),
+arg4=ArgDef(name='pShaders', type='const VkShaderEXT*')
 )
 
 Function(name='vkCmdBindShadingRateImageNV', enabled=False, type=Param,
@@ -384,6 +424,13 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='infoCount', type='uint32_t'),
 arg3=ArgDef(name='pInfos', type='const VkAccelerationStructureBuildGeometryInfoKHR*'),
 arg4=ArgDef(name='ppBuildRangeInfos', type='const VkAccelerationStructureBuildRangeInfoKHR* const*')
+)
+
+Function(name='vkCmdBuildMicromapsEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='infoCount', type='uint32_t'),
+arg3=ArgDef(name='pInfos', type='const VkMicromapBuildInfoEXT*')
 )
 
 Function(name='vkCmdClearAttachments', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
@@ -507,6 +554,16 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pCopyImageInfo', type='const VkCopyImageInfo2*')
 )
 
+Function(name='vkCmdCopyImageToBuffer', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='srcImage', type='VkImage'),
+arg3=ArgDef(name='srcImageLayout', type='VkImageLayout'),
+arg4=ArgDef(name='dstBuffer', type='VkBuffer'),
+arg5=ArgDef(name='regionCount', type='uint32_t'),
+arg6=ArgDef(name='pRegions', type='const VkBufferImageCopy*', wrapType='CVkBufferImageCopyArray', wrapParams='regionCount, pRegions', count='regionCount')
+)
+
 Function(name='vkCmdCopyImageToBuffer2', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
@@ -519,20 +576,47 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pCopyImageToBufferInfo', type='const VkCopyImageToBufferInfo2*')
 )
 
-Function(name='vkCmdCopyImageToBuffer', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdCopyMemoryIndirectNV', enabled=False, type=Param,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
-arg2=ArgDef(name='srcImage', type='VkImage'),
-arg3=ArgDef(name='srcImageLayout', type='VkImageLayout'),
-arg4=ArgDef(name='dstBuffer', type='VkBuffer'),
-arg5=ArgDef(name='regionCount', type='uint32_t'),
-arg6=ArgDef(name='pRegions', type='const VkBufferImageCopy*', wrapType='CVkBufferImageCopyArray', wrapParams='regionCount, pRegions', count='regionCount')
+arg2=ArgDef(name='copyBufferAddress', type='VkDeviceAddress'),
+arg3=ArgDef(name='copyCount', type='uint32_t'),
+arg4=ArgDef(name='stride', type='uint32_t')
 )
 
 Function(name='vkCmdCopyMemoryToAccelerationStructureKHR', enabled=False, type=Param,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pInfo', type='const VkCopyMemoryToAccelerationStructureInfoKHR*')
+)
+
+Function(name='vkCmdCopyMemoryToImageIndirectNV', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='copyBufferAddress', type='VkDeviceAddress'),
+arg3=ArgDef(name='copyCount', type='uint32_t'),
+arg4=ArgDef(name='stride', type='uint32_t'),
+arg5=ArgDef(name='dstImage', type='VkImage'),
+arg6=ArgDef(name='dstImageLayout', type='VkImageLayout'),
+arg7=ArgDef(name='pImageSubresources', type='const VkImageSubresourceLayers*')
+)
+
+Function(name='vkCmdCopyMemoryToMicromapEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='pInfo', type='const VkCopyMemoryToMicromapInfoEXT*')
+)
+
+Function(name='vkCmdCopyMicromapEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='pInfo', type='const VkCopyMicromapInfoEXT*')
+)
+
+Function(name='vkCmdCopyMicromapToMemoryEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='pInfo', type='const VkCopyMicromapToMemoryInfoEXT*')
 )
 
 Function(name='vkCmdCopyQueryPoolResults', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
@@ -568,6 +652,21 @@ Function(name='vkCmdDecodeVideoKHR', enabled=False, type=Param,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pDecodeInfo', type='const VkVideoDecodeInfoKHR*')
+)
+
+Function(name='vkCmdDecompressMemoryIndirectCountNV', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='indirectCommandsAddress', type='VkDeviceAddress'),
+arg3=ArgDef(name='indirectCommandsCountAddress', type='VkDeviceAddress'),
+arg4=ArgDef(name='stride', type='uint32_t')
+)
+
+Function(name='vkCmdDecompressMemoryNV', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='decompressRegionCount', type='uint32_t'),
+arg3=ArgDef(name='pDecompressMemoryRegions', type='const VkDecompressMemoryRegionNV*')
 )
 
 Function(name='vkCmdDispatch', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
@@ -919,6 +1018,13 @@ arg2=ArgDef(name='pSubpassBeginInfo', type='const VkSubpassBeginInfo*'),
 arg3=ArgDef(name='pSubpassEndInfo', type='const VkSubpassEndInfo*')
 )
 
+Function(name='vkCmdOpticalFlowExecuteNV', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='session', type='VkOpticalFlowSessionNV'),
+arg3=ArgDef(name='pExecuteInfo', type='const VkOpticalFlowExecuteInfoNV*')
+)
+
 Function(name='vkCmdPipelineBarrier', enabled=True, type=Param, stateTrack=True, recWrap=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer", ccodeWriteWrap=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
@@ -980,6 +1086,12 @@ arg4=ArgDef(name='set', type='uint32_t'),
 arg5=ArgDef(name='pData', type='const void*', wrapType='CUpdateDescriptorSetWithTemplateArray', wrapParams='descriptorUpdateTemplate, pData')
 )
 
+Function(name='vkCmdRefreshObjectsKHR', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='pRefreshObjects', type='const VkRefreshObjectListKHR*')
+)
+
 Function(name='vkCmdResetEvent', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
@@ -1032,6 +1144,18 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pResolveImageInfo', type='const VkResolveImageInfo2*')
 )
 
+Function(name='vkCmdSetAlphaToCoverageEnableEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='alphaToCoverageEnable', type='VkBool32')
+)
+
+Function(name='vkCmdSetAlphaToOneEnableEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='alphaToOneEnable', type='VkBool32')
+)
+
 Function(name='vkCmdSetBlendConstants', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
@@ -1052,11 +1176,86 @@ arg3=ArgDef(name='customSampleOrderCount', type='uint32_t'),
 arg4=ArgDef(name='pCustomSampleOrders', type='const VkCoarseSampleOrderCustomNV*')
 )
 
+Function(name='vkCmdSetColorBlendAdvancedEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='firstAttachment', type='uint32_t'),
+arg3=ArgDef(name='attachmentCount', type='uint32_t'),
+arg4=ArgDef(name='pColorBlendAdvanced', type='const VkColorBlendAdvancedEXT*')
+)
+
+Function(name='vkCmdSetColorBlendEnableEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='firstAttachment', type='uint32_t'),
+arg3=ArgDef(name='attachmentCount', type='uint32_t'),
+arg4=ArgDef(name='pColorBlendEnables', type='const VkBool32*')
+)
+
+Function(name='vkCmdSetColorBlendEquationEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='firstAttachment', type='uint32_t'),
+arg3=ArgDef(name='attachmentCount', type='uint32_t'),
+arg4=ArgDef(name='pColorBlendEquations', type='const VkColorBlendEquationEXT*')
+)
+
 Function(name='vkCmdSetColorWriteEnableEXT', enabled=False, type=Param,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='attachmentCount', type='uint32_t'),
 arg3=ArgDef(name='pColorWriteEnables', type='const VkBool32*')
+)
+
+Function(name='vkCmdSetColorWriteMaskEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='firstAttachment', type='uint32_t'),
+arg3=ArgDef(name='attachmentCount', type='uint32_t'),
+arg4=ArgDef(name='pColorWriteMasks', type='const VkColorComponentFlags*')
+)
+
+Function(name='vkCmdSetConservativeRasterizationModeEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='conservativeRasterizationMode', type='VkConservativeRasterizationModeEXT')
+)
+
+Function(name='vkCmdSetCoverageModulationModeNV', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='coverageModulationMode', type='VkCoverageModulationModeNV')
+)
+
+Function(name='vkCmdSetCoverageModulationTableEnableNV', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='coverageModulationTableEnable', type='VkBool32')
+)
+
+Function(name='vkCmdSetCoverageModulationTableNV', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='coverageModulationTableCount', type='uint32_t'),
+arg3=ArgDef(name='pCoverageModulationTable', type='const float*')
+)
+
+Function(name='vkCmdSetCoverageReductionModeNV', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='coverageReductionMode', type='VkCoverageReductionModeNV')
+)
+
+Function(name='vkCmdSetCoverageToColorEnableNV', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='coverageToColorEnable', type='VkBool32')
+)
+
+Function(name='vkCmdSetCoverageToColorLocationNV', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='coverageToColorLocation', type='uint32_t')
 )
 
 Function(name='vkCmdSetCullMode', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
@@ -1110,6 +1309,24 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='depthBoundsTestEnable', type='VkBool32')
 )
 
+Function(name='vkCmdSetDepthClampEnableEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='depthClampEnable', type='VkBool32')
+)
+
+Function(name='vkCmdSetDepthClipEnableEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='depthClipEnable', type='VkBool32')
+)
+
+Function(name='vkCmdSetDepthClipNegativeOneToOneEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='negativeOneToOne', type='VkBool32')
+)
+
 Function(name='vkCmdSetDepthCompareOp', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
@@ -1146,6 +1363,17 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='depthWriteEnable', type='VkBool32')
 )
 
+Function(name='vkCmdSetDescriptorBufferOffsetsEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='pipelineBindPoint', type='VkPipelineBindPoint'),
+arg3=ArgDef(name='layout', type='VkPipelineLayout'),
+arg4=ArgDef(name='firstSet', type='uint32_t'),
+arg5=ArgDef(name='setCount', type='uint32_t'),
+arg6=ArgDef(name='pBufferIndices', type='const uint32_t*'),
+arg7=ArgDef(name='pOffsets', type='const VkDeviceSize*')
+)
+
 Function(name='vkCmdSetDeviceMask', enabled=False, type=Param,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
@@ -1164,6 +1392,18 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='firstDiscardRectangle', type='uint32_t'),
 arg3=ArgDef(name='discardRectangleCount', type='uint32_t'),
 arg4=ArgDef(name='pDiscardRectangles', type='const VkRect2D*', count='discardRectangleCount')
+)
+
+Function(name='vkCmdSetDiscardRectangleEnableEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='discardRectangleEnable', type='VkBool32')
+)
+
+Function(name='vkCmdSetDiscardRectangleModeEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='discardRectangleMode', type='VkDiscardRectangleModeEXT')
 )
 
 Function(name='vkCmdSetEvent', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
@@ -1187,12 +1427,26 @@ arg2=ArgDef(name='event', type='VkEvent'),
 arg3=ArgDef(name='pDependencyInfo', type='const VkDependencyInfo*')
 )
 
+Function(name='vkCmdSetExclusiveScissorEnableNV', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='firstExclusiveScissor', type='uint32_t'),
+arg3=ArgDef(name='exclusiveScissorCount', type='uint32_t'),
+arg4=ArgDef(name='pExclusiveScissorEnables', type='const VkBool32*')
+)
+
 Function(name='vkCmdSetExclusiveScissorNV', enabled=False, type=Param,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='firstExclusiveScissor', type='uint32_t'),
 arg3=ArgDef(name='exclusiveScissorCount', type='uint32_t'),
 arg4=ArgDef(name='pExclusiveScissors', type='const VkRect2D*')
+)
+
+Function(name='vkCmdSetExtraPrimitiveOverestimationSizeEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='extraPrimitiveOverestimationSize', type='float')
 )
 
 Function(name='vkCmdSetFragmentShadingRateEnumNV', enabled=False, type=Param,
@@ -1221,11 +1475,23 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='frontFace', type='VkFrontFace')
 )
 
+Function(name='vkCmdSetLineRasterizationModeEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='lineRasterizationMode', type='VkLineRasterizationModeEXT')
+)
+
 Function(name='vkCmdSetLineStippleEXT', enabled=False, type=Param,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='lineStippleFactor', type='uint32_t'),
 arg3=ArgDef(name='lineStipplePattern', type='uint16_t')
+)
+
+Function(name='vkCmdSetLineStippleEnableEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='stippledLineEnable', type='VkBool32')
 )
 
 Function(name='vkCmdSetLineWidth', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
@@ -1238,6 +1504,12 @@ Function(name='vkCmdSetLogicOpEXT', enabled=False, type=Param,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='logicOp', type='VkLogicOp')
+)
+
+Function(name='vkCmdSetLogicOpEnableEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='logicOpEnable', type='VkBool32')
 )
 
 Function(name='vkCmdSetPatchControlPointsEXT', enabled=False, type=Param,
@@ -1264,6 +1536,12 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pMarkerInfo', type='const VkPerformanceStreamMarkerInfoINTEL*')
 )
 
+Function(name='vkCmdSetPolygonModeEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='polygonMode', type='VkPolygonMode')
+)
+
 Function(name='vkCmdSetPrimitiveRestartEnable', enabled=False, type=Param,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
@@ -1288,6 +1566,24 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='primitiveTopology', type='VkPrimitiveTopology')
 )
 
+Function(name='vkCmdSetProvokingVertexModeEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='provokingVertexMode', type='VkProvokingVertexModeEXT')
+)
+
+Function(name='vkCmdSetRasterizationSamplesEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='rasterizationSamples', type='VkSampleCountFlagBits')
+)
+
+Function(name='vkCmdSetRasterizationStreamEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='rasterizationStream', type='uint32_t')
+)
+
 Function(name='vkCmdSetRasterizerDiscardEnable', enabled=False, type=Param,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
@@ -1306,10 +1602,29 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pipelineStackSize', type='uint32_t')
 )
 
+Function(name='vkCmdSetRepresentativeFragmentTestEnableNV', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='representativeFragmentTestEnable', type='VkBool32')
+)
+
 Function(name='vkCmdSetSampleLocationsEXT', enabled=False, type=Param,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pSampleLocationsInfo', type='const VkSampleLocationsInfoEXT*')
+)
+
+Function(name='vkCmdSetSampleLocationsEnableEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='sampleLocationsEnable', type='VkBool32')
+)
+
+Function(name='vkCmdSetSampleMaskEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='samples', type='VkSampleCountFlagBits'),
+arg3=ArgDef(name='pSampleMask', type='const VkSampleMask*')
 )
 
 Function(name='vkCmdSetScissor', enabled=True, type=Param, runWrap=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
@@ -1332,6 +1647,12 @@ retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='scissorCount', type='uint32_t'),
 arg3=ArgDef(name='pScissors', type='const VkRect2D*')
+)
+
+Function(name='vkCmdSetShadingRateImageEnableNV', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='shadingRateImageEnable', type='VkBool32')
 )
 
 Function(name='vkCmdSetStencilCompareMask', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
@@ -1387,6 +1708,12 @@ arg2=ArgDef(name='faceMask', type='VkStencilFaceFlags'),
 arg3=ArgDef(name='writeMask', type='uint32_t')
 )
 
+Function(name='vkCmdSetTessellationDomainOriginEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='domainOrigin', type='VkTessellationDomainOrigin')
+)
+
 Function(name='vkCmdSetVertexInputEXT', enabled=False, type=Param,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
@@ -1410,6 +1737,20 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='firstViewport', type='uint32_t'),
 arg3=ArgDef(name='viewportCount', type='uint32_t'),
 arg4=ArgDef(name='pShadingRatePalettes', type='const VkShadingRatePaletteNV*')
+)
+
+Function(name='vkCmdSetViewportSwizzleNV', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='firstViewport', type='uint32_t'),
+arg3=ArgDef(name='viewportCount', type='uint32_t'),
+arg4=ArgDef(name='pViewportSwizzles', type='const VkViewportSwizzleNV*')
+)
+
+Function(name='vkCmdSetViewportWScalingEnableNV', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='viewportWScalingEnable', type='VkBool32')
 )
 
 Function(name='vkCmdSetViewportWScalingNV', enabled=False, type=Param,
@@ -1559,6 +1900,16 @@ arg4=ArgDef(name='dstOffset', type='VkDeviceSize'),
 arg5=ArgDef(name='marker', type='uint32_t')
 )
 
+Function(name='vkCmdWriteMicromapsPropertiesEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg2=ArgDef(name='micromapCount', type='uint32_t'),
+arg3=ArgDef(name='pMicromaps', type='const VkMicromapEXT*'),
+arg4=ArgDef(name='queryType', type='VkQueryType'),
+arg5=ArgDef(name='queryPool', type='VkQueryPool'),
+arg6=ArgDef(name='firstQuery', type='uint32_t')
+)
+
 Function(name='vkCmdWriteTimestamp', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
@@ -1609,6 +1960,27 @@ retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='deferredOperation', type='VkDeferredOperationKHR'),
 arg3=ArgDef(name='pInfo', type='const VkCopyMemoryToAccelerationStructureInfoKHR*')
+)
+
+Function(name='vkCopyMemoryToMicromapEXT', enabled=False, type=Param,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='deferredOperation', type='VkDeferredOperationKHR'),
+arg3=ArgDef(name='pInfo', type='const VkCopyMemoryToMicromapInfoEXT*')
+)
+
+Function(name='vkCopyMicromapEXT', enabled=False, type=Param,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='deferredOperation', type='VkDeferredOperationKHR'),
+arg3=ArgDef(name='pInfo', type='const VkCopyMicromapInfoEXT*')
+)
+
+Function(name='vkCopyMicromapToMemoryEXT', enabled=False, type=Param,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='deferredOperation', type='VkDeferredOperationKHR'),
+arg3=ArgDef(name='pInfo', type='const VkCopyMicromapToMemoryInfoEXT*')
 )
 
 Function(name='vkCreateAccelerationStructureKHR', enabled=False, type=Param,
@@ -1838,6 +2210,22 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*'),
 arg4=ArgDef(name='pSurface', type='VkSurfaceKHR*')
 )
 
+Function(name='vkCreateMicromapEXT', enabled=False, type=Param,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='pCreateInfo', type='const VkMicromapCreateInfoEXT*'),
+arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*'),
+arg4=ArgDef(name='pMicromap', type='VkMicromapEXT*')
+)
+
+Function(name='vkCreateOpticalFlowSessionNV', enabled=False, type=Param,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='pCreateInfo', type='const VkOpticalFlowSessionCreateInfoNV*'),
+arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*'),
+arg4=ArgDef(name='pSession', type='VkOpticalFlowSessionNV*')
+)
+
 Function(name='vkCreatePipelineCache', enabled=True, type=Param, stateTrack=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
@@ -1969,6 +2357,15 @@ arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pCreateInfo', type='const VkShaderModuleCreateInfo*'),
 arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper'),
 arg4=ArgDef(name='pShaderModule', type='VkShaderModule*', wrapType='CVkShaderModule::CSMapArray', wrapParams='1, pShaderModule')
+)
+
+Function(name='vkCreateShadersEXT', enabled=False, type=Param,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='createInfoCount', type='uint32_t'),
+arg3=ArgDef(name='pCreateInfos', type='const VkShaderCreateInfoEXT*'),
+arg4=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*'),
+arg5=ArgDef(name='pShaders', type='VkShaderEXT*')
 )
 
 Function(name='vkCreateSharedSwapchainsKHR', enabled=False, type=Param,
@@ -2212,6 +2609,20 @@ arg1=ArgDef(name='instance', type='VkInstance', removeMapping=True),
 arg2=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper')
 )
 
+Function(name='vkDestroyMicromapEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='micromap', type='VkMicromapEXT'),
+arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*')
+)
+
+Function(name='vkDestroyOpticalFlowSessionNV', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='session', type='VkOpticalFlowSessionNV'),
+arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*')
+)
+
 Function(name='vkDestroyPipeline', enabled=True, type=Param, stateTrack=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
@@ -2289,6 +2700,13 @@ arg2=ArgDef(name='semaphore', type='VkSemaphore', removeMapping=True),
 arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper')
 )
 
+Function(name='vkDestroyShaderEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='shader', type='VkShaderEXT'),
+arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*')
+)
+
 Function(name='vkDestroyShaderModule', enabled=True, type=Param, stateTrack=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
@@ -2334,13 +2752,6 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*')
 Function(name='vkDeviceWaitIdle', enabled=True, type=Param, stateTrack=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice')
-)
-
-Function(name='vkDisplayModeControlINTEL', enabled=False, type=Param, level=PrototypeLevel,
-retV=RetDef(type='VkResult'),
-arg1=ArgDef(name='swapchain', type='VkSwapchainKHR'),
-arg2=ArgDef(name='operation', type='DISPLAY_MODE_OPERATION'),
-arg3=ArgDef(name='waitForOperation', type='bool')
 )
 
 Function(name='vkDisplayPowerControlEXT', enabled=False, type=Param,
@@ -2478,6 +2889,13 @@ arg2=ArgDef(name='pInfo', type='const VkAccelerationStructureMemoryRequirementsI
 arg3=ArgDef(name='pMemoryRequirements', type='VkMemoryRequirements2*')
 )
 
+Function(name='vkGetAccelerationStructureOpaqueCaptureDescriptorDataEXT', enabled=False, type=Param,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='pInfo', type='const VkAccelerationStructureCaptureDescriptorDataInfoEXT*'),
+arg3=ArgDef(name='pData', type='void*')
+)
+
 Function(name='vkGetBufferDeviceAddress', enabled=False, type=Param, stateTrack=True, runWrap=True, recWrap=True,
 retV=RetDef(type='VkDeviceAddress'),
 arg1=ArgDef(name='device', type='VkDevice'),
@@ -2529,6 +2947,13 @@ arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pInfo', type='const VkBufferDeviceAddressInfo*')
 )
 
+Function(name='vkGetBufferOpaqueCaptureDescriptorDataEXT', enabled=False, type=Param,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='pInfo', type='const VkBufferCaptureDescriptorDataInfoEXT*'),
+arg3=ArgDef(name='pData', type='void*')
+)
+
 Function(name='vkGetCalibratedTimestampsEXT', enabled=False, type=Param,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
@@ -2536,6 +2961,14 @@ arg2=ArgDef(name='timestampCount', type='uint32_t'),
 arg3=ArgDef(name='pTimestampInfos', type='const VkCalibratedTimestampInfoEXT*'),
 arg4=ArgDef(name='pTimestamps', type='uint64_t*'),
 arg5=ArgDef(name='pMaxDeviation', type='uint64_t*')
+)
+
+Function(name='vkGetCommandPoolMemoryConsumption', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='commandPool', type='VkCommandPool'),
+arg3=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
+arg4=ArgDef(name='pConsumption', type='VkCommandPoolMemoryConsumption*')
 )
 
 Function(name='vkGetDeferredOperationMaxConcurrencyKHR', enabled=False, type=Param,
@@ -2548,6 +2981,29 @@ Function(name='vkGetDeferredOperationResultKHR', enabled=False, type=Param,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='operation', type='VkDeferredOperationKHR')
+)
+
+Function(name='vkGetDescriptorEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='pDescriptorInfo', type='const VkDescriptorGetInfoEXT*'),
+arg3=ArgDef(name='dataSize', type='size_t'),
+arg4=ArgDef(name='pDescriptor', type='void*')
+)
+
+Function(name='vkGetDescriptorSetLayoutBindingOffsetEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='layout', type='VkDescriptorSetLayout'),
+arg3=ArgDef(name='binding', type='uint32_t'),
+arg4=ArgDef(name='pOffset', type='VkDeviceSize*')
+)
+
+Function(name='vkGetDescriptorSetLayoutSizeEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='layout', type='VkDescriptorSetLayout'),
+arg3=ArgDef(name='pLayoutSizeInBytes', type='VkDeviceSize*')
 )
 
 Function(name='vkGetDescriptorSetLayoutSupport', enabled=False, type=Param,
@@ -2583,6 +3039,13 @@ retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pInfo', type='const VkDeviceBufferMemoryRequirements*'),
 arg3=ArgDef(name='pMemoryRequirements', type='VkMemoryRequirements2*')
+)
+
+Function(name='vkGetDeviceFaultInfoEXT', enabled=False, type=Param,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='pFaultCounts', type='VkDeviceFaultCountsEXT*'),
+arg3=ArgDef(name='pFaultInfo', type='VkDeviceFaultInfoEXT*')
 )
 
 Function(name='vkGetDeviceGroupPeerMemoryFeatures', enabled=False, type=Param,
@@ -2672,6 +3135,13 @@ arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pInfo', type='const VkDeviceMemoryOpaqueCaptureAddressInfo*')
 )
 
+Function(name='vkGetDeviceMicromapCompatibilityEXT', enabled=False, type=Param,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='pVersionInfo', type='const VkMicromapVersionInfoEXT*'),
+arg3=ArgDef(name='pCompatibility', type='VkAccelerationStructureCompatibilityKHR*')
+)
+
 Function(name='vkGetDeviceProcAddr', enabled=False, type=Param, recExecWrap=True, pluginWrap=True, customDriver=True,
 retV=RetDef(type='PFN_vkVoidFunction'),
 arg1=ArgDef(name='device', type='VkDevice'),
@@ -2746,6 +3216,15 @@ arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='event', type='VkEvent')
 )
 
+Function(name='vkGetFaultData', enabled=False, type=Param,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='faultQueryBehavior', type='VkFaultQueryBehavior'),
+arg3=ArgDef(name='pUnrecordedFaults', type='VkBool32*'),
+arg4=ArgDef(name='pFaultCount', type='uint32_t*'),
+arg5=ArgDef(name='pFaults', type='VkFaultData*')
+)
+
 Function(name='vkGetFenceFdKHR', enabled=False, type=Param,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
@@ -2801,6 +3280,13 @@ arg2=ArgDef(name='pInfo', type='const VkImageMemoryRequirementsInfo2*'),
 arg3=ArgDef(name='pMemoryRequirements', type='VkMemoryRequirements2*')
 )
 
+Function(name='vkGetImageOpaqueCaptureDescriptorDataEXT', enabled=False, type=Param,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='pInfo', type='const VkImageCaptureDescriptorDataInfoEXT*'),
+arg3=ArgDef(name='pData', type='void*')
+)
+
 Function(name='vkGetImageSparseMemoryRequirements', enabled=False, type=Param,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
@@ -2839,6 +3325,13 @@ arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='image', type='VkImage'),
 arg3=ArgDef(name='pSubresource', type='const VkImageSubresource2EXT*'),
 arg4=ArgDef(name='pLayout', type='VkSubresourceLayout2EXT*')
+)
+
+Function(name='vkGetImageViewOpaqueCaptureDescriptorDataEXT', enabled=False, type=Param,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='pInfo', type='const VkImageViewCaptureDescriptorDataInfoEXT*'),
+arg3=ArgDef(name='pData', type='void*')
 )
 
 Function(name='vkGetInstanceProcAddr', enabled=False, type=Param, recExecWrap=True, pluginWrap=True, customDriver=True, level=GlobalLevel,
@@ -2900,13 +3393,12 @@ arg3=ArgDef(name='handle', type='HANDLE'),
 arg4=ArgDef(name='pMemoryWin32HandleProperties', type='VkMemoryWin32HandlePropertiesKHR*')
 )
 
-Function(name='vkGetObjectMemoryUsageINTEL', enabled=False, type=Param,
+Function(name='vkGetMicromapBuildSizesEXT', enabled=False, type=Param,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
-arg2=ArgDef(name='objectType', type='VkObjectType'),
-arg3=ArgDef(name='objectHandle', type='uint64_t'),
-arg4=ArgDef(name='query', type='VkObjectMemoryUsageQueryFlags'),
-arg5=ArgDef(name='pSize', type='size_t*')
+arg2=ArgDef(name='buildType', type='VkAccelerationStructureBuildTypeKHR'),
+arg3=ArgDef(name='pBuildInfo', type='const VkMicromapBuildInfoEXT*'),
+arg4=ArgDef(name='pSizeInfo', type='VkMicromapBuildSizesInfoEXT*')
 )
 
 Function(name='vkGetPastPresentationTimingGOOGLE', enabled=False, type=Param,
@@ -3123,6 +3615,14 @@ arg2=ArgDef(name='samples', type='VkSampleCountFlagBits'),
 arg3=ArgDef(name='pMultisampleProperties', type='VkMultisamplePropertiesEXT*')
 )
 
+Function(name='vkGetPhysicalDeviceOpticalFlowImageFormatsNV', enabled=False, type=Param,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
+arg2=ArgDef(name='pOpticalFlowImageFormatInfo', type='const VkOpticalFlowImageFormatInfoNV*'),
+arg3=ArgDef(name='pFormatCount', type='uint32_t*'),
+arg4=ArgDef(name='pImageFormatProperties', type='VkOpticalFlowImageFormatPropertiesNV*')
+)
+
 Function(name='vkGetPhysicalDevicePresentRectanglesKHR', enabled=False, type=Param, level=InstanceLevel,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
@@ -3181,6 +3681,13 @@ retV=RetDef(type='void'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 arg2=ArgDef(name='pQueueFamilyPropertyCount', type='uint32_t*', wrapParams='1, pQueueFamilyPropertyCount'),
 arg3=ArgDef(name='pQueueFamilyProperties', type='VkQueueFamilyProperties2*', wrapType='CVkQueueFamilyProperties2Array', wrapParams='*pQueueFamilyPropertyCount, pQueueFamilyProperties', count='*pQueueFamilyPropertyCount')
+)
+
+Function(name='vkGetPhysicalDeviceRefreshableObjectTypesKHR', enabled=False, type=Param,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
+arg2=ArgDef(name='pRefreshableObjectTypeCount', type='uint32_t*'),
+arg3=ArgDef(name='pRefreshableObjectTypes', type='VkObjectType*')
 )
 
 Function(name='vkGetPhysicalDeviceSparseImageFormatProperties', enabled=False, type=Param, level=InstanceLevel,
@@ -3472,6 +3979,13 @@ arg2=ArgDef(name='renderPass', type='VkRenderPass'),
 arg3=ArgDef(name='pGranularity', type='VkExtent2D*')
 )
 
+Function(name='vkGetSamplerOpaqueCaptureDescriptorDataEXT', enabled=False, type=Param,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='pInfo', type='const VkSamplerCaptureDescriptorDataInfoEXT*'),
+arg3=ArgDef(name='pData', type='void*')
+)
+
 Function(name='vkGetSemaphoreCounterValue', enabled=True, type=Param, runWrap=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
@@ -3498,6 +4012,14 @@ retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pGetWin32HandleInfo', type='const VkSemaphoreGetWin32HandleInfoKHR*'),
 arg3=ArgDef(name='pHandle', type='HANDLE*')
+)
+
+Function(name='vkGetShaderBinaryDataEXT', enabled=False, type=Param,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='shader', type='VkShaderEXT'),
+arg3=ArgDef(name='pDataSize', type='size_t*'),
+arg4=ArgDef(name='pData', type='void*')
 )
 
 Function(name='vkGetShaderInfoAMD', enabled=False, type=Param,
@@ -3634,6 +4156,13 @@ arg5=ArgDef(name='flags', type='VkMemoryMapFlags'),
 arg6=ArgDef(name='ppData', type='void**', wrapType='CVoidPtr')
 )
 
+Function(name='vkMapMemory2KHR', enabled=False, type=Param,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='pMemoryMapInfo', type='const VkMemoryMapInfoKHR*'),
+arg3=ArgDef(name='ppData', type='void**')
+)
+
 Function(name='vkMergePipelineCaches', enabled=False, type=Param,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
@@ -3738,12 +4267,6 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*'),
 arg4=ArgDef(name='pFence', type='VkFence*')
 )
 
-Function(name='vkRegisterDeviceWin32ResidencyCallbacksINTEL', enabled=False, type=Param,
-retV=RetDef(type='void'),
-arg1=ArgDef(name='device', type='VkDevice'),
-arg2=ArgDef(name='pCallbacks', type='const VkWin32ResidencyCallbacksINTEL*')
-)
-
 Function(name='vkRegisterDisplayEventEXT', enabled=False, type=Param,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
@@ -3774,6 +4297,12 @@ arg2=ArgDef(name='configuration', type='VkPerformanceConfigurationINTEL')
 Function(name='vkReleaseProfilingLockKHR', enabled=False, type=Param,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice')
+)
+
+Function(name='vkReleaseSwapchainImagesEXT', enabled=False, type=Param,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='pReleaseInfo', type='const VkReleaseSwapchainImagesInfoEXT*')
 )
 
 Function(name='vkResetCommandBuffer', enabled=True, type=Param, stateTrack=True,
@@ -3865,24 +4394,6 @@ arg2=ArgDef(name='swapChain', type='VkSwapchainKHR'),
 arg3=ArgDef(name='localDimmingEnable', type='VkBool32')
 )
 
-Function(name='vkSetPerformanceConfigurationINTEL', enabled=False, type=Param,
-retV=RetDef(type='VkResult'),
-arg1=ArgDef(name='queue', type='VkQueue'),
-arg2=ArgDef(name='configuration', type='VkPerformanceConfigurationINTEL')
-)
-
-Function(name='vkSetPerformanceMarkerINTEL', enabled=False, type=Param,
-retV=RetDef(type='VkResult'),
-arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
-arg2=ArgDef(name='pMarkerInfo', type='const VkPerformanceMarkerInfoINTEL*')
-)
-
-Function(name='vkSetPerformanceOverrideINTEL', enabled=False, type=Param,
-retV=RetDef(type='VkResult'),
-arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
-arg2=ArgDef(name='pOverrideInfo', type='const VkPerformanceOverrideInfoINTEL*')
-)
-
 Function(name='vkSetPrivateData', enabled=False, type=Param,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
@@ -3944,6 +4455,12 @@ Function(name='vkUnmapMemory', enabled=True, type=Param, preToken='CGitsVkMemory
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='memory', type='VkDeviceMemory')
+)
+
+Function(name='vkUnmapMemory2KHR', enabled=False, type=Param,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='pMemoryUnmapInfo', type='const VkMemoryUnmapInfoKHR*')
 )
 
 Function(name='vkUpdateDescriptorSetWithTemplate', enabled=True, type=Param, stateTrack=True,
@@ -4025,6 +4542,17 @@ arg6=ArgDef(name='pData', type='void*'),
 arg7=ArgDef(name='stride', type='size_t')
 )
 
+Function(name='vkWriteMicromapsPropertiesEXT', enabled=False, type=Param,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='micromapCount', type='uint32_t'),
+arg3=ArgDef(name='pMicromaps', type='const VkMicromapEXT*'),
+arg4=ArgDef(name='queryType', type='VkQueryType'),
+arg5=ArgDef(name='dataSize', type='size_t'),
+arg6=ArgDef(name='pData', type='void*'),
+arg7=ArgDef(name='stride', type='size_t')
+)
+
 Function(name='vk_icdGetInstanceProcAddr', enabled=False, type=Param, level=PrototypeLevel,
 retV=RetDef(type='PFN_vkVoidFunction'),
 arg1=ArgDef(name='instance', type='VkInstance'),
@@ -4044,10 +4572,6 @@ arg1=ArgDef(name='pVersion', type='uint32_t*')
 
 ###############################################
 
-Enum(name='DISPLAY_MODE_OPERATION', enumerators = [
-VarDef(name='EXIT_EXCLUSIVE_MODE', value='0'),
-])
-
 Enum(name='VkAccelerationStructureBuildTypeKHR', enumerators = [
 VarDef(name='VK_ACCELERATION_STRUCTURE_BUILD_TYPE_HOST_KHR', value='0'),
 VarDef(name='VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR', value='1'),
@@ -4063,8 +4587,8 @@ VarDef(name='VK_ACCELERATION_STRUCTURE_COMPATIBILITY_MAX_ENUM_KHR', value='21474
 
 Enum(name='VkAccelerationStructureCreateFlagBitsKHR', enumerators = [
 VarDef(name='VK_ACCELERATION_STRUCTURE_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT_KHR', value='1'),
+VarDef(name='VK_ACCELERATION_STRUCTURE_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT', value='8'),
 VarDef(name='VK_ACCELERATION_STRUCTURE_CREATE_MOTION_BIT_NV', value='4'),
-VarDef(name='VK_ACCELERATION_STRUCTURE_CREATE_RESERVED_3_BIT_AMD', value='8'),
 VarDef(name='VK_ACCELERATION_STRUCTURE_CREATE_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
 ])
 
@@ -4150,15 +4674,19 @@ VarDef(name='VK_ACCESS_2_COLOR_ATTACHMENT_READ_NONCOHERENT_BIT_EXT', value='5242
 VarDef(name='VK_ACCESS_2_COMMAND_PREPROCESS_READ_BIT_NV', value='131072'),
 VarDef(name='VK_ACCESS_2_COMMAND_PREPROCESS_WRITE_BIT_NV', value='262144'),
 VarDef(name='VK_ACCESS_2_CONDITIONAL_RENDERING_READ_BIT_EXT', value='1048576'),
+VarDef(name='VK_ACCESS_2_DESCRIPTOR_BUFFER_READ_BIT_EXT', value='2199023255552'),
 VarDef(name='VK_ACCESS_2_FRAGMENT_DENSITY_MAP_READ_BIT_EXT', value='16777216'),
 VarDef(name='VK_ACCESS_2_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR', value='8388608'),
 VarDef(name='VK_ACCESS_2_INVOCATION_MASK_READ_BIT_HUAWEI', value='549755813888'),
-VarDef(name='VK_ACCESS_2_RESERVED_41_BIT_AMD', value='2199023255552'),
-VarDef(name='VK_ACCESS_2_RESERVED_42_BIT_NV', value='4398046511104'),
-VarDef(name='VK_ACCESS_2_RESERVED_43_BIT_NV', value='8796093022208'),
-VarDef(name='VK_ACCESS_2_RESERVED_44_BIT_NV', value='17592186044416'),
-VarDef(name='VK_ACCESS_2_RESERVED_45_BIT_NV', value='35184372088832'),
+VarDef(name='VK_ACCESS_2_MICROMAP_READ_BIT_EXT', value='17592186044416'),
+VarDef(name='VK_ACCESS_2_MICROMAP_WRITE_BIT_EXT', value='35184372088832'),
+VarDef(name='VK_ACCESS_2_OPTICAL_FLOW_READ_BIT_NV', value='4398046511104'),
+VarDef(name='VK_ACCESS_2_OPTICAL_FLOW_WRITE_BIT_NV', value='8796093022208'),
 VarDef(name='VK_ACCESS_2_RESERVED_46_BIT_EXT', value='70368744177664'),
+VarDef(name='VK_ACCESS_2_RESERVED_47_BIT_EXT', value='140737488355328'),
+VarDef(name='VK_ACCESS_2_RESERVED_48_BIT_EXT', value='281474976710656'),
+VarDef(name='VK_ACCESS_2_RESERVED_49_BIT_ARM', value='562949953421312'),
+VarDef(name='VK_ACCESS_2_RESERVED_50_BIT_ARM', value='1125899906842624'),
 VarDef(name='VK_ACCESS_2_SHADER_BINDING_TABLE_READ_BIT_KHR', value='1099511627776'),
 VarDef(name='VK_ACCESS_2_TRANSFORM_FEEDBACK_COUNTER_READ_BIT_EXT', value='67108864'),
 VarDef(name='VK_ACCESS_2_TRANSFORM_FEEDBACK_COUNTER_WRITE_BIT_EXT', value='134217728'),
@@ -4294,9 +4822,9 @@ Enum(name='VkBufferCreateFlagBits', enumerators = [
 VarDef(name='VK_BUFFER_CREATE_SPARSE_BINDING_BIT', value='1'),
 VarDef(name='VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT', value='2'),
 VarDef(name='VK_BUFFER_CREATE_SPARSE_ALIASED_BIT', value='4'),
+VarDef(name='VK_BUFFER_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT', value='32'),
 VarDef(name='VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT', value='16'),
 VarDef(name='VK_BUFFER_CREATE_PROTECTED_BIT', value='8'),
-VarDef(name='VK_BUFFER_CREATE_RESERVED_5_BIT_AMD', value='32'),
 VarDef(name='VK_BUFFER_CREATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
 ])
 
@@ -4313,12 +4841,13 @@ VarDef(name='VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT', value='256'),
 VarDef(name='VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR', value='524288'),
 VarDef(name='VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR', value='1048576'),
 VarDef(name='VK_BUFFER_USAGE_CONDITIONAL_RENDERING_BIT_EXT', value='512'),
+VarDef(name='VK_BUFFER_USAGE_MICROMAP_BUILD_INPUT_READ_ONLY_BIT_EXT', value='8388608'),
+VarDef(name='VK_BUFFER_USAGE_MICROMAP_STORAGE_BIT_EXT', value='16777216'),
+VarDef(name='VK_BUFFER_USAGE_PUSH_DESCRIPTORS_DESCRIPTOR_BUFFER_BIT_EXT', value='67108864'),
 VarDef(name='VK_BUFFER_USAGE_RESERVED_18_BIT_QCOM', value='262144'),
-VarDef(name='VK_BUFFER_USAGE_RESERVED_21_BIT_AMD', value='2097152'),
-VarDef(name='VK_BUFFER_USAGE_RESERVED_22_BIT_AMD', value='4194304'),
-VarDef(name='VK_BUFFER_USAGE_RESERVED_23_BIT_NV', value='8388608'),
-VarDef(name='VK_BUFFER_USAGE_RESERVED_24_BIT_NV', value='16777216'),
 VarDef(name='VK_BUFFER_USAGE_RESERVED_25_BIT_AMD', value='33554432'),
+VarDef(name='VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT', value='4194304'),
+VarDef(name='VK_BUFFER_USAGE_SAMPLER_DESCRIPTOR_BUFFER_BIT_EXT', value='2097152'),
 VarDef(name='VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR', value='1024'),
 VarDef(name='VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT', value='131072'),
 VarDef(name='VK_BUFFER_USAGE_TRANSFORM_FEEDBACK_BUFFER_BIT_EXT', value='2048'),
@@ -4336,11 +4865,11 @@ VarDef(name='VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR', value='2
 VarDef(name='VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR', value='4'),
 VarDef(name='VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR', value='8'),
 VarDef(name='VK_BUILD_ACCELERATION_STRUCTURE_LOW_MEMORY_BIT_KHR', value='16'),
+VarDef(name='VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_DISABLE_OPACITY_MICROMAPS_EXT', value='128'),
+VarDef(name='VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_DISPLACEMENT_MICROMAP_UPDATE_NV', value='512'),
+VarDef(name='VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_OPACITY_MICROMAP_DATA_UPDATE_EXT', value='256'),
+VarDef(name='VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_OPACITY_MICROMAP_UPDATE_EXT', value='64'),
 VarDef(name='VK_BUILD_ACCELERATION_STRUCTURE_MOTION_BIT_NV', value='32'),
-VarDef(name='VK_BUILD_ACCELERATION_STRUCTURE_RESERVED_6_BIT_NV', value='64'),
-VarDef(name='VK_BUILD_ACCELERATION_STRUCTURE_RESERVED_7_BIT_NV', value='128'),
-VarDef(name='VK_BUILD_ACCELERATION_STRUCTURE_RESERVED_BIT_10_NV', value='1024'),
-VarDef(name='VK_BUILD_ACCELERATION_STRUCTURE_RESERVED_BIT_9_NV', value='512'),
 VarDef(name='VK_BUILD_ACCELERATION_STRUCTURE_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
 ])
 
@@ -4348,6 +4877,18 @@ Enum(name='VkBuildAccelerationStructureModeKHR', enumerators = [
 VarDef(name='VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR', value='0'),
 VarDef(name='VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR', value='1'),
 VarDef(name='VK_BUILD_ACCELERATION_STRUCTURE_MODE_MAX_ENUM_KHR', value='2147483647'),
+])
+
+Enum(name='VkBuildMicromapFlagBitsEXT', enumerators = [
+VarDef(name='VK_BUILD_MICROMAP_PREFER_FAST_TRACE_BIT_EXT', value='1'),
+VarDef(name='VK_BUILD_MICROMAP_PREFER_FAST_BUILD_BIT_EXT', value='2'),
+VarDef(name='VK_BUILD_MICROMAP_ALLOW_COMPACTION_BIT_EXT', value='4'),
+VarDef(name='VK_BUILD_MICROMAP_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
+])
+
+Enum(name='VkBuildMicromapModeEXT', enumerators = [
+VarDef(name='VK_BUILD_MICROMAP_MODE_BUILD_EXT', value='0'),
+VarDef(name='VK_BUILD_MICROMAP_MODE_MAX_ENUM_EXT', value='2147483647'),
 ])
 
 Enum(name='VkChromaLocation', enumerators = [
@@ -4489,6 +5030,14 @@ VarDef(name='VK_COPY_ACCELERATION_STRUCTURE_MODE_DESERIALIZE_KHR', value='3'),
 VarDef(name='VK_COPY_ACCELERATION_STRUCTURE_MODE_MAX_ENUM_KHR', value='2147483647'),
 ])
 
+Enum(name='VkCopyMicromapModeEXT', enumerators = [
+VarDef(name='VK_COPY_MICROMAP_MODE_CLONE_EXT', value='0'),
+VarDef(name='VK_COPY_MICROMAP_MODE_SERIALIZE_EXT', value='1'),
+VarDef(name='VK_COPY_MICROMAP_MODE_DESERIALIZE_EXT', value='2'),
+VarDef(name='VK_COPY_MICROMAP_MODE_COMPACT_EXT', value='3'),
+VarDef(name='VK_COPY_MICROMAP_MODE_MAX_ENUM_EXT', value='2147483647'),
+])
+
 Enum(name='VkCoverageModulationModeNV', enumerators = [
 VarDef(name='VK_COVERAGE_MODULATION_MODE_NONE_NV', value='0'),
 VarDef(name='VK_COVERAGE_MODULATION_MODE_RGB_NV', value='1'),
@@ -4575,6 +5124,7 @@ Enum(name='VkDebugUtilsMessageTypeFlagBitsEXT', enumerators = [
 VarDef(name='VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT', value='1'),
 VarDef(name='VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT', value='2'),
 VarDef(name='VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT', value='4'),
+VarDef(name='VK_DEBUG_UTILS_MESSAGE_TYPE_DEVICE_ADDRESS_BINDING_BIT_EXT', value='8'),
 VarDef(name='VK_DEBUG_UTILS_MESSAGE_TYPE_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
 ])
 
@@ -4603,11 +5153,12 @@ VarDef(name='VK_DESCRIPTOR_POOL_CREATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
 ])
 
 Enum(name='VkDescriptorSetLayoutCreateFlagBits', enumerators = [
+VarDef(name='VK_DESCRIPTOR_SET_LAYOUT_CREATE_DESCRIPTOR_BUFFER_BIT_EXT', value='16'),
+VarDef(name='VK_DESCRIPTOR_SET_LAYOUT_CREATE_EMBEDDED_IMMUTABLE_SAMPLERS_BIT_EXT', value='32'),
 VarDef(name='VK_DESCRIPTOR_SET_LAYOUT_CREATE_HOST_ONLY_POOL_BIT_EXT', value='4'),
 VarDef(name='VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR', value='1'),
 VarDef(name='VK_DESCRIPTOR_SET_LAYOUT_CREATE_RESERVED_3_BIT_AMD', value='8'),
-VarDef(name='VK_DESCRIPTOR_SET_LAYOUT_CREATE_RESERVED_4_BIT_AMD', value='16'),
-VarDef(name='VK_DESCRIPTOR_SET_LAYOUT_CREATE_RESERVED_5_BIT_AMD', value='32'),
+VarDef(name='VK_DESCRIPTOR_SET_LAYOUT_CREATE_RESERVED_6_BIT_EXT', value='64'),
 VarDef(name='VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT', value='2'),
 VarDef(name='VK_DESCRIPTOR_SET_LAYOUT_CREATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
 ])
@@ -4639,6 +5190,17 @@ VarDef(name='VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_PUSH_DESCRIPTORS_KHR', value='1'
 VarDef(name='VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_MAX_ENUM', value='2147483647'),
 ])
 
+Enum(name='VkDeviceAddressBindingFlagBitsEXT', enumerators = [
+VarDef(name='VK_DEVICE_ADDRESS_BINDING_INTERNAL_OBJECT_BIT_EXT', value='1'),
+VarDef(name='VK_DEVICE_ADDRESS_BINDING_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
+])
+
+Enum(name='VkDeviceAddressBindingTypeEXT', enumerators = [
+VarDef(name='VK_DEVICE_ADDRESS_BINDING_TYPE_BIND_EXT', value='0'),
+VarDef(name='VK_DEVICE_ADDRESS_BINDING_TYPE_UNBIND_EXT', value='1'),
+VarDef(name='VK_DEVICE_ADDRESS_BINDING_TYPE_MAX_ENUM_EXT', value='2147483647'),
+])
+
 Enum(name='VkDeviceDiagnosticsConfigFlagBitsNV', enumerators = [
 VarDef(name='VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_SHADER_DEBUG_INFO_BIT_NV', value='1'),
 VarDef(name='VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_RESOURCE_TRACKING_BIT_NV', value='2'),
@@ -4650,6 +5212,22 @@ VarDef(name='VK_DEVICE_DIAGNOSTICS_CONFIG_FLAG_BITS_MAX_ENUM_NV', value='2147483
 Enum(name='VkDeviceEventTypeEXT', enumerators = [
 VarDef(name='VK_DEVICE_EVENT_TYPE_DISPLAY_HOTPLUG_EXT', value='0'),
 VarDef(name='VK_DEVICE_EVENT_TYPE_MAX_ENUM_EXT', value='2147483647'),
+])
+
+Enum(name='VkDeviceFaultAddressTypeEXT', enumerators = [
+VarDef(name='VK_DEVICE_FAULT_ADDRESS_TYPE_NONE_EXT', value='0'),
+VarDef(name='VK_DEVICE_FAULT_ADDRESS_TYPE_READ_INVALID_EXT', value='1'),
+VarDef(name='VK_DEVICE_FAULT_ADDRESS_TYPE_WRITE_INVALID_EXT', value='2'),
+VarDef(name='VK_DEVICE_FAULT_ADDRESS_TYPE_EXECUTE_INVALID_EXT', value='3'),
+VarDef(name='VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_UNKNOWN_EXT', value='4'),
+VarDef(name='VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_INVALID_EXT', value='5'),
+VarDef(name='VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_FAULT_EXT', value='6'),
+VarDef(name='VK_DEVICE_FAULT_ADDRESS_TYPE_MAX_ENUM_EXT', value='2147483647'),
+])
+
+Enum(name='VkDeviceFaultVendorBinaryHeaderVersionEXT', enumerators = [
+VarDef(name='VK_DEVICE_FAULT_VENDOR_BINARY_HEADER_VERSION_ONE_EXT', value='1'),
+VarDef(name='VK_DEVICE_FAULT_VENDOR_BINARY_HEADER_VERSION_MAX_ENUM_EXT', value='2147483647'),
 ])
 
 Enum(name='VkDeviceGroupPresentModeFlagBitsKHR', enumerators = [
@@ -4675,10 +5253,23 @@ VarDef(name='VK_DEVICE_QUEUE_CREATE_RESERVED_1_BIT_QCOM', value='2'),
 VarDef(name='VK_DEVICE_QUEUE_CREATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
 ])
 
+Enum(name='VkDirectDriverLoadingModeLUNARG', enumerators = [
+VarDef(name='VK_DIRECT_DRIVER_LOADING_MODE_EXCLUSIVE_LUNARG', value='0'),
+VarDef(name='VK_DIRECT_DRIVER_LOADING_MODE_INCLUSIVE_LUNARG', value='1'),
+VarDef(name='VK_DIRECT_DRIVER_LOADING_MODE_MAX_ENUM_LUNARG', value='2147483647'),
+])
+
 Enum(name='VkDiscardRectangleModeEXT', enumerators = [
 VarDef(name='VK_DISCARD_RECTANGLE_MODE_INCLUSIVE_EXT', value='0'),
 VarDef(name='VK_DISCARD_RECTANGLE_MODE_EXCLUSIVE_EXT', value='1'),
 VarDef(name='VK_DISCARD_RECTANGLE_MODE_MAX_ENUM_EXT', value='2147483647'),
+])
+
+Enum(name='VkDisplacementMicromapFormatNV', enumerators = [
+VarDef(name='VK_DISPLACEMENT_MICROMAP_FORMAT_64_TRIANGLES_64_BYTES_NV', value='1'),
+VarDef(name='VK_DISPLACEMENT_MICROMAP_FORMAT_256_TRIANGLES_128_BYTES_NV', value='2'),
+VarDef(name='VK_DISPLACEMENT_MICROMAP_FORMAT_1024_TRIANGLES_128_BYTES_NV', value='3'),
+VarDef(name='VK_DISPLACEMENT_MICROMAP_FORMAT_MAX_ENUM_NV', value='2147483647'),
 ])
 
 Enum(name='VkDisplayEventTypeEXT', enumerators = [
@@ -4725,6 +5316,8 @@ VarDef(name='VK_DRIVER_ID_MESA_PANVK', value='20'),
 VarDef(name='VK_DRIVER_ID_SAMSUNG_PROPRIETARY', value='21'),
 VarDef(name='VK_DRIVER_ID_MESA_VENUS', value='22'),
 VarDef(name='VK_DRIVER_ID_MESA_DOZEN', value='23'),
+VarDef(name='VK_DRIVER_ID_MESA_NVK', value='24'),
+VarDef(name='VK_DRIVER_ID_IMAGINATION_OPEN_SOURCE_MESA', value='25'),
 VarDef(name='VK_DRIVER_ID_MAX_ENUM', value='2147483647'),
 ])
 
@@ -4738,33 +5331,67 @@ VarDef(name='VK_DYNAMIC_STATE_DEPTH_BOUNDS', value='5'),
 VarDef(name='VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK', value='6'),
 VarDef(name='VK_DYNAMIC_STATE_STENCIL_WRITE_MASK', value='7'),
 VarDef(name='VK_DYNAMIC_STATE_STENCIL_REFERENCE', value='8'),
+VarDef(name='VK_DYNAMIC_STATE_ALPHA_TO_COVERAGE_ENABLE_EXT', value='1000455007'),
+VarDef(name='VK_DYNAMIC_STATE_ALPHA_TO_ONE_ENABLE_EXT', value='1000455008'),
+VarDef(name='VK_DYNAMIC_STATE_COLOR_BLEND_ADVANCED_EXT', value='1000455018'),
+VarDef(name='VK_DYNAMIC_STATE_COLOR_BLEND_ENABLE_EXT', value='1000455010'),
+VarDef(name='VK_DYNAMIC_STATE_COLOR_BLEND_EQUATION_EXT', value='1000455011'),
 VarDef(name='VK_DYNAMIC_STATE_COLOR_WRITE_ENABLE_EXT', value='1000381000'),
+VarDef(name='VK_DYNAMIC_STATE_COLOR_WRITE_MASK_EXT', value='1000455012'),
+VarDef(name='VK_DYNAMIC_STATE_CONSERVATIVE_RASTERIZATION_MODE_EXT', value='1000455014'),
+VarDef(name='VK_DYNAMIC_STATE_COVERAGE_MODULATION_MODE_NV', value='1000455027'),
+VarDef(name='VK_DYNAMIC_STATE_COVERAGE_MODULATION_TABLE_ENABLE_NV', value='1000455028'),
+VarDef(name='VK_DYNAMIC_STATE_COVERAGE_MODULATION_TABLE_NV', value='1000455029'),
+VarDef(name='VK_DYNAMIC_STATE_COVERAGE_REDUCTION_MODE_NV', value='1000455032'),
+VarDef(name='VK_DYNAMIC_STATE_COVERAGE_TO_COLOR_ENABLE_NV', value='1000455025'),
+VarDef(name='VK_DYNAMIC_STATE_COVERAGE_TO_COLOR_LOCATION_NV', value='1000455026'),
 VarDef(name='VK_DYNAMIC_STATE_CULL_MODE', value='1000267000'),
 VarDef(name='VK_DYNAMIC_STATE_DEPTH_BIAS_ENABLE', value='1000377002'),
 VarDef(name='VK_DYNAMIC_STATE_DEPTH_BOUNDS_TEST_ENABLE', value='1000267009'),
+VarDef(name='VK_DYNAMIC_STATE_DEPTH_CLAMP_ENABLE_EXT', value='1000455003'),
+VarDef(name='VK_DYNAMIC_STATE_DEPTH_CLIP_ENABLE_EXT', value='1000455016'),
+VarDef(name='VK_DYNAMIC_STATE_DEPTH_CLIP_NEGATIVE_ONE_TO_ONE_EXT', value='1000455022'),
 VarDef(name='VK_DYNAMIC_STATE_DEPTH_COMPARE_OP', value='1000267008'),
 VarDef(name='VK_DYNAMIC_STATE_DEPTH_TEST_ENABLE', value='1000267006'),
 VarDef(name='VK_DYNAMIC_STATE_DEPTH_WRITE_ENABLE', value='1000267007'),
+VarDef(name='VK_DYNAMIC_STATE_DISCARD_RECTANGLE_ENABLE_EXT', value='1000099001'),
 VarDef(name='VK_DYNAMIC_STATE_DISCARD_RECTANGLE_EXT', value='1000099000'),
+VarDef(name='VK_DYNAMIC_STATE_DISCARD_RECTANGLE_MODE_EXT', value='1000099002'),
+VarDef(name='VK_DYNAMIC_STATE_EXCLUSIVE_SCISSOR_ENABLE_NV', value='1000205000'),
 VarDef(name='VK_DYNAMIC_STATE_EXCLUSIVE_SCISSOR_NV', value='1000205001'),
+VarDef(name='VK_DYNAMIC_STATE_EXTRA_PRIMITIVE_OVERESTIMATION_SIZE_EXT', value='1000455015'),
 VarDef(name='VK_DYNAMIC_STATE_FRAGMENT_SHADING_RATE_KHR', value='1000226000'),
 VarDef(name='VK_DYNAMIC_STATE_FRONT_FACE', value='1000267001'),
+VarDef(name='VK_DYNAMIC_STATE_LINE_RASTERIZATION_MODE_EXT', value='1000455020'),
+VarDef(name='VK_DYNAMIC_STATE_LINE_STIPPLE_ENABLE_EXT', value='1000455021'),
 VarDef(name='VK_DYNAMIC_STATE_LINE_STIPPLE_EXT', value='1000259000'),
+VarDef(name='VK_DYNAMIC_STATE_LOGIC_OP_ENABLE_EXT', value='1000455009'),
 VarDef(name='VK_DYNAMIC_STATE_LOGIC_OP_EXT', value='1000377003'),
 VarDef(name='VK_DYNAMIC_STATE_PATCH_CONTROL_POINTS_EXT', value='1000377000'),
+VarDef(name='VK_DYNAMIC_STATE_POLYGON_MODE_EXT', value='1000455004'),
 VarDef(name='VK_DYNAMIC_STATE_PRIMITIVE_RESTART_ENABLE', value='1000377004'),
 VarDef(name='VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY', value='1000267002'),
+VarDef(name='VK_DYNAMIC_STATE_PROVOKING_VERTEX_MODE_EXT', value='1000455019'),
+VarDef(name='VK_DYNAMIC_STATE_RASTERIZATION_SAMPLES_EXT', value='1000455005'),
+VarDef(name='VK_DYNAMIC_STATE_RASTERIZATION_STREAM_EXT', value='1000455013'),
 VarDef(name='VK_DYNAMIC_STATE_RASTERIZER_DISCARD_ENABLE', value='1000377001'),
 VarDef(name='VK_DYNAMIC_STATE_RAY_TRACING_PIPELINE_STACK_SIZE_KHR', value='1000347000'),
+VarDef(name='VK_DYNAMIC_STATE_REPRESENTATIVE_FRAGMENT_TEST_ENABLE_NV', value='1000455031'),
+VarDef(name='VK_DYNAMIC_STATE_SAMPLE_LOCATIONS_ENABLE_EXT', value='1000455017'),
 VarDef(name='VK_DYNAMIC_STATE_SAMPLE_LOCATIONS_EXT', value='1000143000'),
+VarDef(name='VK_DYNAMIC_STATE_SAMPLE_MASK_EXT', value='1000455006'),
 VarDef(name='VK_DYNAMIC_STATE_SCISSOR_WITH_COUNT', value='1000267004'),
+VarDef(name='VK_DYNAMIC_STATE_SHADING_RATE_IMAGE_ENABLE_NV', value='1000455030'),
 VarDef(name='VK_DYNAMIC_STATE_STENCIL_OP', value='1000267011'),
 VarDef(name='VK_DYNAMIC_STATE_STENCIL_TEST_ENABLE', value='1000267010'),
+VarDef(name='VK_DYNAMIC_STATE_TESSELLATION_DOMAIN_ORIGIN_EXT', value='1000455002'),
 VarDef(name='VK_DYNAMIC_STATE_VERTEX_INPUT_BINDING_STRIDE', value='1000267005'),
 VarDef(name='VK_DYNAMIC_STATE_VERTEX_INPUT_EXT', value='1000352000'),
 VarDef(name='VK_DYNAMIC_STATE_VIEWPORT_COARSE_SAMPLE_ORDER_NV', value='1000164006'),
 VarDef(name='VK_DYNAMIC_STATE_VIEWPORT_SHADING_RATE_PALETTE_NV', value='1000164004'),
+VarDef(name='VK_DYNAMIC_STATE_VIEWPORT_SWIZZLE_NV', value='1000455024'),
 VarDef(name='VK_DYNAMIC_STATE_VIEWPORT_WITH_COUNT', value='1000267003'),
+VarDef(name='VK_DYNAMIC_STATE_VIEWPORT_W_SCALING_ENABLE_NV', value='1000455023'),
 VarDef(name='VK_DYNAMIC_STATE_VIEWPORT_W_SCALING_NV', value='1000087000'),
 VarDef(name='VK_DYNAMIC_STATE_MAX_ENUM', value='2147483647'),
 ])
@@ -4772,6 +5399,16 @@ VarDef(name='VK_DYNAMIC_STATE_MAX_ENUM', value='2147483647'),
 Enum(name='VkEventCreateFlagBits', enumerators = [
 VarDef(name='VK_EVENT_CREATE_DEVICE_ONLY_BIT', value='1'),
 VarDef(name='VK_EVENT_CREATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
+])
+
+Enum(name='VkExportMetalObjectTypeFlagBitsEXT', enumerators = [
+VarDef(name='VK_EXPORT_METAL_OBJECT_TYPE_METAL_DEVICE_BIT_EXT', value='1'),
+VarDef(name='VK_EXPORT_METAL_OBJECT_TYPE_METAL_COMMAND_QUEUE_BIT_EXT', value='2'),
+VarDef(name='VK_EXPORT_METAL_OBJECT_TYPE_METAL_BUFFER_BIT_EXT', value='4'),
+VarDef(name='VK_EXPORT_METAL_OBJECT_TYPE_METAL_TEXTURE_BIT_EXT', value='8'),
+VarDef(name='VK_EXPORT_METAL_OBJECT_TYPE_METAL_IOSURFACE_BIT_EXT', value='16'),
+VarDef(name='VK_EXPORT_METAL_OBJECT_TYPE_METAL_SHARED_EVENT_BIT_EXT', value='32'),
+VarDef(name='VK_EXPORT_METAL_OBJECT_TYPE_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
 ])
 
 Enum(name='VkExternalFenceFeatureFlagBits', enumerators = [
@@ -4785,8 +5422,8 @@ VarDef(name='VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT', value='1'),
 VarDef(name='VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_WIN32_BIT', value='2'),
 VarDef(name='VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT', value='4'),
 VarDef(name='VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT', value='8'),
-VarDef(name='VK_EXTERNAL_FENCE_HANDLE_TYPE_RESERVED_4_BIT_NV', value='16'),
-VarDef(name='VK_EXTERNAL_FENCE_HANDLE_TYPE_RESERVED_5_BIT_NV', value='32'),
+VarDef(name='VK_EXTERNAL_FENCE_HANDLE_TYPE_SCI_SYNC_FENCE_BIT_NV', value='32'),
+VarDef(name='VK_EXTERNAL_FENCE_HANDLE_TYPE_SCI_SYNC_OBJ_BIT_NV', value='16'),
 VarDef(name='VK_EXTERNAL_FENCE_HANDLE_TYPE_FLAG_BITS_MAX_ENUM', value='2147483647'),
 ])
 
@@ -4817,7 +5454,7 @@ VarDef(name='VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT', value='512'),
 VarDef(name='VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT', value='128'),
 VarDef(name='VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_MAPPED_FOREIGN_MEMORY_BIT_EXT', value='256'),
 VarDef(name='VK_EXTERNAL_MEMORY_HANDLE_TYPE_RDMA_ADDRESS_BIT_NV', value='4096'),
-VarDef(name='VK_EXTERNAL_MEMORY_HANDLE_TYPE_RESERVED_13_BIT_NV', value='8192'),
+VarDef(name='VK_EXTERNAL_MEMORY_HANDLE_TYPE_SCI_BUF_BIT_NV', value='8192'),
 VarDef(name='VK_EXTERNAL_MEMORY_HANDLE_TYPE_ZIRCON_VMO_BIT_FUCHSIA', value='2048'),
 VarDef(name='VK_EXTERNAL_MEMORY_HANDLE_TYPE_FLAG_BITS_MAX_ENUM', value='2147483647'),
 ])
@@ -4842,10 +5479,33 @@ VarDef(name='VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT', value='2'),
 VarDef(name='VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT', value='4'),
 VarDef(name='VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_D3D12_FENCE_BIT', value='8'),
 VarDef(name='VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT', value='16'),
-VarDef(name='VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_RESERVED_5_BIT_NV', value='32'),
-VarDef(name='VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_RESERVED_6_BIT_NV', value='64'),
+VarDef(name='VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SCI_SYNC_OBJ_BIT_NV', value='32'),
 VarDef(name='VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_ZIRCON_EVENT_BIT_FUCHSIA', value='128'),
 VarDef(name='VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FLAG_BITS_MAX_ENUM', value='2147483647'),
+])
+
+Enum(name='VkFaultLevel', enumerators = [
+VarDef(name='VK_FAULT_LEVEL_UNASSIGNED', value='0'),
+VarDef(name='VK_FAULT_LEVEL_CRITICAL', value='1'),
+VarDef(name='VK_FAULT_LEVEL_RECOVERABLE', value='2'),
+VarDef(name='VK_FAULT_LEVEL_WARNING', value='3'),
+VarDef(name='VK_FAULT_LEVEL_MAX_ENUM', value='2147483647'),
+])
+
+Enum(name='VkFaultQueryBehavior', enumerators = [
+VarDef(name='VK_FAULT_QUERY_BEHAVIOR_GET_AND_CLEAR_ALL_FAULTS', value='0'),
+VarDef(name='VK_FAULT_QUERY_BEHAVIOR_MAX_ENUM', value='2147483647'),
+])
+
+Enum(name='VkFaultType', enumerators = [
+VarDef(name='VK_FAULT_TYPE_INVALID', value='0'),
+VarDef(name='VK_FAULT_TYPE_UNASSIGNED', value='1'),
+VarDef(name='VK_FAULT_TYPE_IMPLEMENTATION', value='2'),
+VarDef(name='VK_FAULT_TYPE_SYSTEM', value='3'),
+VarDef(name='VK_FAULT_TYPE_PHYSICAL_DEVICE', value='4'),
+VarDef(name='VK_FAULT_TYPE_COMMAND_BUFFER_FULL', value='5'),
+VarDef(name='VK_FAULT_TYPE_INVALID_API_USAGE', value='6'),
+VarDef(name='VK_FAULT_TYPE_MAX_ENUM', value='2147483647'),
 ])
 
 Enum(name='VkFenceCreateFlagBits', enumerators = [
@@ -5143,6 +5803,7 @@ VarDef(name='VK_FORMAT_R10X6_UNORM_PACK16', value='1000156007'),
 VarDef(name='VK_FORMAT_R12X4G12X4B12X4A12X4_UNORM_4PACK16', value='1000156019'),
 VarDef(name='VK_FORMAT_R12X4G12X4_UNORM_2PACK16', value='1000156018'),
 VarDef(name='VK_FORMAT_R12X4_UNORM_PACK16', value='1000156017'),
+VarDef(name='VK_FORMAT_R16G16_S10_5_NV', value='1000464000'),
 VarDef(name='VK_FORMAT_MAX_ENUM', value='2147483647'),
 ])
 
@@ -5210,24 +5871,23 @@ VarDef(name='VK_FORMAT_FEATURE_2_STORAGE_READ_WITHOUT_FORMAT_BIT', value='214748
 VarDef(name='VK_FORMAT_FEATURE_2_STORAGE_WRITE_WITHOUT_FORMAT_BIT', value='4294967296'),
 VarDef(name='VK_FORMAT_FEATURE_2_SAMPLED_IMAGE_DEPTH_COMPARISON_BIT', value='8589934592'),
 VarDef(name='VK_FORMAT_FEATURE_2_ACCELERATION_STRUCTURE_VERTEX_BUFFER_BIT_KHR', value='536870912'),
+VarDef(name='VK_FORMAT_FEATURE_2_BLOCK_MATCHING_BIT_QCOM', value='68719476736'),
+VarDef(name='VK_FORMAT_FEATURE_2_BOX_FILTER_SAMPLED_BIT_QCOM', value='137438953472'),
 VarDef(name='VK_FORMAT_FEATURE_2_FRAGMENT_DENSITY_MAP_BIT_EXT', value='16777216'),
 VarDef(name='VK_FORMAT_FEATURE_2_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR', value='1073741824'),
 VarDef(name='VK_FORMAT_FEATURE_2_LINEAR_COLOR_ATTACHMENT_BIT_NV', value='274877906944'),
-VarDef(name='VK_FORMAT_FEATURE_2_RESERVED_34_BIT_QCOM', value='17179869184'),
-VarDef(name='VK_FORMAT_FEATURE_2_RESERVED_35_BIT_QCOM', value='34359738368'),
-VarDef(name='VK_FORMAT_FEATURE_2_RESERVED_36_BIT_QCOM', value='68719476736'),
-VarDef(name='VK_FORMAT_FEATURE_2_RESERVED_37_BIT_QCOM', value='137438953472'),
+VarDef(name='VK_FORMAT_FEATURE_2_OPTICAL_FLOW_COST_BIT_NV', value='4398046511104'),
+VarDef(name='VK_FORMAT_FEATURE_2_OPTICAL_FLOW_IMAGE_BIT_NV', value='1099511627776'),
+VarDef(name='VK_FORMAT_FEATURE_2_OPTICAL_FLOW_VECTOR_BIT_NV', value='2199023255552'),
 VarDef(name='VK_FORMAT_FEATURE_2_RESERVED_39_BIT_EXT', value='549755813888'),
-VarDef(name='VK_FORMAT_FEATURE_2_RESERVED_40_BIT_NV', value='1099511627776'),
-VarDef(name='VK_FORMAT_FEATURE_2_RESERVED_41_BIT_NV', value='2199023255552'),
-VarDef(name='VK_FORMAT_FEATURE_2_RESERVED_42_BIT_NV', value='4398046511104'),
-VarDef(name='VK_FORMAT_FEATURE_2_RESERVED_43_BIT_NV', value='8796093022208'),
 VarDef(name='VK_FORMAT_FEATURE_2_RESERVED_44_BIT_EXT', value='17592186044416'),
 VarDef(name='VK_FORMAT_FEATURE_2_RESERVED_45_BIT_EXT', value='35184372088832'),
 VarDef(name='VK_FORMAT_FEATURE_2_VIDEO_DECODE_DPB_BIT_KHR', value='67108864'),
 VarDef(name='VK_FORMAT_FEATURE_2_VIDEO_DECODE_OUTPUT_BIT_KHR', value='33554432'),
 VarDef(name='VK_FORMAT_FEATURE_2_VIDEO_ENCODE_DPB_BIT_KHR', value='268435456'),
 VarDef(name='VK_FORMAT_FEATURE_2_VIDEO_ENCODE_INPUT_BIT_KHR', value='134217728'),
+VarDef(name='VK_FORMAT_FEATURE_2_WEIGHT_IMAGE_BIT_QCOM', value='17179869184'),
+VarDef(name='VK_FORMAT_FEATURE_2_WEIGHT_SAMPLED_IMAGE_BIT_QCOM', value='34359738368'),
 VarDef(name='VK_FORMAT_FEATURE_2_FLAG_BITS_MAX_ENUM', value='2147483647'),
 ])
 
@@ -5292,8 +5952,8 @@ VarDef(name='VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR', value='
 VarDef(name='VK_GEOMETRY_INSTANCE_TRIANGLE_FLIP_FACING_BIT_KHR', value='2'),
 VarDef(name='VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR', value='4'),
 VarDef(name='VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR', value='8'),
-VarDef(name='VK_GEOMETRY_INSTANCE_RESERVED_4_BIT_NV', value='16'),
-VarDef(name='VK_GEOMETRY_INSTANCE_RESERVED_5_BIT_NV', value='32'),
+VarDef(name='VK_GEOMETRY_INSTANCE_DISABLE_OPACITY_MICROMAPS_EXT', value='32'),
+VarDef(name='VK_GEOMETRY_INSTANCE_FORCE_OPACITY_MICROMAP_2_STATE_EXT', value='16'),
 VarDef(name='VK_GEOMETRY_INSTANCE_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
 ])
 
@@ -5376,12 +6036,12 @@ VarDef(name='VK_IMAGE_CREATE_2D_VIEW_COMPATIBLE_BIT_EXT', value='131072'),
 VarDef(name='VK_IMAGE_CREATE_ALIAS_BIT', value='1024'),
 VarDef(name='VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT', value='128'),
 VarDef(name='VK_IMAGE_CREATE_CORNER_SAMPLED_BIT_NV', value='8192'),
+VarDef(name='VK_IMAGE_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT', value='65536'),
 VarDef(name='VK_IMAGE_CREATE_DISJOINT_BIT', value='512'),
 VarDef(name='VK_IMAGE_CREATE_EXTENDED_USAGE_BIT', value='256'),
 VarDef(name='VK_IMAGE_CREATE_FRAGMENT_DENSITY_MAP_OFFSET_BIT_QCOM', value='32768'),
 VarDef(name='VK_IMAGE_CREATE_MULTISAMPLED_RENDER_TO_SINGLE_SAMPLED_BIT_EXT', value='262144'),
 VarDef(name='VK_IMAGE_CREATE_PROTECTED_BIT', value='2048'),
-VarDef(name='VK_IMAGE_CREATE_RESERVED_16_BIT_AMD', value='65536'),
 VarDef(name='VK_IMAGE_CREATE_RESERVED_19_BIT_EXT', value='524288'),
 VarDef(name='VK_IMAGE_CREATE_SAMPLE_LOCATIONS_COMPATIBLE_DEPTH_BIT_EXT', value='4096'),
 VarDef(name='VK_IMAGE_CREATE_SPLIT_INSTANCE_BIND_REGIONS_BIT', value='64'),
@@ -5451,6 +6111,7 @@ VarDef(name='VK_IMAGE_USAGE_INVOCATION_MASK_BIT_HUAWEI', value='262144'),
 VarDef(name='VK_IMAGE_USAGE_RESERVED_16_BIT_QCOM', value='65536'),
 VarDef(name='VK_IMAGE_USAGE_RESERVED_17_BIT_QCOM', value='131072'),
 VarDef(name='VK_IMAGE_USAGE_RESERVED_22_BIT_EXT', value='4194304'),
+VarDef(name='VK_IMAGE_USAGE_RESERVED_23_BIT_EXT', value='8388608'),
 VarDef(name='VK_IMAGE_USAGE_SAMPLE_BLOCK_MATCH_BIT_QCOM', value='2097152'),
 VarDef(name='VK_IMAGE_USAGE_SAMPLE_WEIGHT_BIT_QCOM', value='1048576'),
 VarDef(name='VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR', value='4096'),
@@ -5463,10 +6124,9 @@ VarDef(name='VK_IMAGE_USAGE_FLAG_BITS_MAX_ENUM', value='2147483647'),
 ])
 
 Enum(name='VkImageViewCreateFlagBits', enumerators = [
+VarDef(name='VK_IMAGE_VIEW_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT', value='4'),
 VarDef(name='VK_IMAGE_VIEW_CREATE_FRAGMENT_DENSITY_MAP_DEFERRED_BIT_EXT', value='2'),
 VarDef(name='VK_IMAGE_VIEW_CREATE_FRAGMENT_DENSITY_MAP_DYNAMIC_BIT_EXT', value='1'),
-VarDef(name='VK_IMAGE_VIEW_CREATE_RESERVED_2_BIT_AMD', value='4'),
-VarDef(name='VK_IMAGE_VIEW_CREATE_RESERVED_3_BIT_EXT', value='8'),
 VarDef(name='VK_IMAGE_VIEW_CREATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
 ])
 
@@ -5496,14 +6156,6 @@ VarDef(name='VK_INDIRECT_COMMANDS_LAYOUT_USAGE_UNORDERED_SEQUENCES_BIT_NV', valu
 VarDef(name='VK_INDIRECT_COMMANDS_LAYOUT_USAGE_FLAG_BITS_MAX_ENUM_NV', value='2147483647'),
 ])
 
-Enum(name='VkIndirectCommandsLayoutUsageFlagBitsNVX', enumerators = [
-VarDef(name='VK_INDIRECT_COMMANDS_LAYOUT_USAGE_UNORDERED_SEQUENCES_BIT_NVX', value='1'),
-VarDef(name='VK_INDIRECT_COMMANDS_LAYOUT_USAGE_SPARSE_SEQUENCES_BIT_NVX', value='2'),
-VarDef(name='VK_INDIRECT_COMMANDS_LAYOUT_USAGE_EMPTY_EXECUTIONS_BIT_NVX', value='4'),
-VarDef(name='VK_INDIRECT_COMMANDS_LAYOUT_USAGE_INDEXED_SEQUENCES_BIT_NVX', value='8'),
-VarDef(name='VK_INDIRECT_COMMANDS_LAYOUT_USAGE_FLAG_BITS_MAX_ENUM_NVX', value='2147483647'),
-])
-
 Enum(name='VkIndirectCommandsTokenTypeNV', enumerators = [
 VarDef(name='VK_INDIRECT_COMMANDS_TOKEN_TYPE_SHADER_GROUP_NV', value='0'),
 VarDef(name='VK_INDIRECT_COMMANDS_TOKEN_TYPE_STATE_FLAGS_NV', value='1'),
@@ -5515,18 +6167,6 @@ VarDef(name='VK_INDIRECT_COMMANDS_TOKEN_TYPE_DRAW_NV', value='6'),
 VarDef(name='VK_INDIRECT_COMMANDS_TOKEN_TYPE_DRAW_TASKS_NV', value='7'),
 VarDef(name='VK_INDIRECT_COMMANDS_TOKEN_TYPE_DRAW_MESH_TASKS_NV', value='1000328000'),
 VarDef(name='VK_INDIRECT_COMMANDS_TOKEN_TYPE_MAX_ENUM_NV', value='2147483647'),
-])
-
-Enum(name='VkIndirectCommandsTokenTypeNVX', enumerators = [
-VarDef(name='VK_INDIRECT_COMMANDS_TOKEN_TYPE_PIPELINE_NVX', value='0'),
-VarDef(name='VK_INDIRECT_COMMANDS_TOKEN_TYPE_DESCRIPTOR_SET_NVX', value='1'),
-VarDef(name='VK_INDIRECT_COMMANDS_TOKEN_TYPE_INDEX_BUFFER_NVX', value='2'),
-VarDef(name='VK_INDIRECT_COMMANDS_TOKEN_TYPE_VERTEX_BUFFER_NVX', value='3'),
-VarDef(name='VK_INDIRECT_COMMANDS_TOKEN_TYPE_PUSH_CONSTANT_NVX', value='4'),
-VarDef(name='VK_INDIRECT_COMMANDS_TOKEN_TYPE_DRAW_INDEXED_NVX', value='5'),
-VarDef(name='VK_INDIRECT_COMMANDS_TOKEN_TYPE_DRAW_NVX', value='6'),
-VarDef(name='VK_INDIRECT_COMMANDS_TOKEN_TYPE_DISPATCH_NVX', value='7'),
-VarDef(name='VK_INDIRECT_COMMANDS_TOKEN_TYPE_MAX_ENUM_NVX', value='2147483647'),
 ])
 
 Enum(name='VkIndirectStateFlagBitsNV', enumerators = [
@@ -5579,10 +6219,15 @@ VarDef(name='VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT', value='4'),
 VarDef(name='VK_MEMORY_ALLOCATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
 ])
 
+Enum(name='VkMemoryDecompressionMethodFlagBitsNV', enumerators = [
+VarDef(name='VK_MEMORY_DECOMPRESSION_METHOD_GDEFLATE_1_0_BIT_NV', value='1'),
+VarDef(name='VK_MEMORY_DECOMPRESSION_METHOD_FLAG_BITS_MAX_ENUM_NV', value='2147483647'),
+])
+
 Enum(name='VkMemoryHeapFlagBits', enumerators = [
 VarDef(name='VK_MEMORY_HEAP_DEVICE_LOCAL_BIT', value='1'),
 VarDef(name='VK_MEMORY_HEAP_MULTI_INSTANCE_BIT', value='2'),
-VarDef(name='VK_MEMORY_HEAP_RESERVED_2_BIT_KHR', value='4'),
+VarDef(name='VK_MEMORY_HEAP_SEU_SAFE_BIT', value='4'),
 VarDef(name='VK_MEMORY_HEAP_FLAG_BITS_MAX_ENUM', value='2147483647'),
 ])
 
@@ -5606,30 +6251,15 @@ VarDef(name='VK_MEMORY_PROPERTY_RDMA_CAPABLE_BIT_NV', value='256'),
 VarDef(name='VK_MEMORY_PROPERTY_FLAG_BITS_MAX_ENUM', value='2147483647'),
 ])
 
-Enum(name='VkObjectEntryTypeNVX', enumerators = [
-VarDef(name='VK_OBJECT_ENTRY_TYPE_DESCRIPTOR_SET_NVX', value='0'),
-VarDef(name='VK_OBJECT_ENTRY_TYPE_PIPELINE_NVX', value='1'),
-VarDef(name='VK_OBJECT_ENTRY_TYPE_INDEX_BUFFER_NVX', value='2'),
-VarDef(name='VK_OBJECT_ENTRY_TYPE_VERTEX_BUFFER_NVX', value='3'),
-VarDef(name='VK_OBJECT_ENTRY_TYPE_PUSH_CONSTANT_NVX', value='4'),
-VarDef(name='VK_OBJECT_ENTRY_TYPE_MAX_ENUM_NVX', value='2147483647'),
+Enum(name='VkMicromapCreateFlagBitsEXT', enumerators = [
+VarDef(name='VK_MICROMAP_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT_EXT', value='1'),
+VarDef(name='VK_MICROMAP_CREATE_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
 ])
 
-Enum(name='VkObjectEntryUsageFlagBitsNVX', enumerators = [
-VarDef(name='VK_OBJECT_ENTRY_USAGE_GRAPHICS_BIT_NVX', value='1'),
-VarDef(name='VK_OBJECT_ENTRY_USAGE_COMPUTE_BIT_NVX', value='2'),
-VarDef(name='VK_OBJECT_ENTRY_USAGE_FLAG_BITS_MAX_ENUM_NVX', value='2147483647'),
-])
-
-Enum(name='VkObjectMemoryUsageQueryFlagBits', enumerators = [
-VarDef(name='VK_QUERY_MEMORY_USAGE_CB_BATCH_BUFFER_INTEL', value='8'),
-VarDef(name='VK_QUERY_MEMORY_USAGE_CB_BINDING_TABLE_AREA_INTEL', value='32'),
-VarDef(name='VK_QUERY_MEMORY_USAGE_CB_INDIRECT_STATE_HEAP_INTEL', value='16'),
-VarDef(name='VK_QUERY_MEMORY_USAGE_CB_LIST_ELEMENT_0_INTEL', value='1'),
-VarDef(name='VK_QUERY_MEMORY_USAGE_CB_LIST_ELEMENT_1_INTEL', value='2'),
-VarDef(name='VK_QUERY_MEMORY_USAGE_CB_LIST_ELEMENT_2_AND_ABOVE_INTEL', value='4'),
-VarDef(name='VK_QUERY_MEMORY_USAGE_SIZE_INTEL', value='64'),
-VarDef(name='VK_QUERY_MEMORY_USAGE_SIZE_USED_INTEL', value='128'),
+Enum(name='VkMicromapTypeEXT', enumerators = [
+VarDef(name='VK_MICROMAP_TYPE_OPACITY_MICROMAP_EXT', value='0'),
+VarDef(name='VK_MICROMAP_TYPE_DISPLACEMENT_MICROMAP_NV', value='1000397000'),
+VarDef(name='VK_MICROMAP_TYPE_MAX_ENUM_EXT', value='2147483647'),
 ])
 
 Enum(name='VkObjectType', enumerators = [
@@ -5671,15 +6301,87 @@ VarDef(name='VK_OBJECT_TYPE_DESCRIPTOR_UPDATE_TEMPLATE', value='1000085000'),
 VarDef(name='VK_OBJECT_TYPE_DISPLAY_KHR', value='1000002000'),
 VarDef(name='VK_OBJECT_TYPE_DISPLAY_MODE_KHR', value='1000002001'),
 VarDef(name='VK_OBJECT_TYPE_INDIRECT_COMMANDS_LAYOUT_NV', value='1000277000'),
+VarDef(name='VK_OBJECT_TYPE_MICROMAP_EXT', value='1000396000'),
+VarDef(name='VK_OBJECT_TYPE_OPTICAL_FLOW_SESSION_NV', value='1000464000'),
 VarDef(name='VK_OBJECT_TYPE_PERFORMANCE_CONFIGURATION_INTEL', value='1000210000'),
 VarDef(name='VK_OBJECT_TYPE_PRIVATE_DATA_SLOT', value='1000295000'),
 VarDef(name='VK_OBJECT_TYPE_SAMPLER_YCBCR_CONVERSION', value='1000156000'),
+VarDef(name='VK_OBJECT_TYPE_SEMAPHORE_SCI_SYNC_POOL_NV', value='1000489000'),
+VarDef(name='VK_OBJECT_TYPE_SHADER_EXT', value='1000482000'),
 VarDef(name='VK_OBJECT_TYPE_SURFACE_KHR', value='1000000000'),
 VarDef(name='VK_OBJECT_TYPE_SWAPCHAIN_KHR', value='1000001000'),
 VarDef(name='VK_OBJECT_TYPE_VALIDATION_CACHE_EXT', value='1000160000'),
 VarDef(name='VK_OBJECT_TYPE_VIDEO_SESSION_KHR', value='1000023000'),
 VarDef(name='VK_OBJECT_TYPE_VIDEO_SESSION_PARAMETERS_KHR', value='1000023001'),
 VarDef(name='VK_OBJECT_TYPE_MAX_ENUM', value='2147483647'),
+])
+
+Enum(name='VkOpacityMicromapFormatEXT', enumerators = [
+VarDef(name='VK_OPACITY_MICROMAP_FORMAT_2_STATE_EXT', value='1'),
+VarDef(name='VK_OPACITY_MICROMAP_FORMAT_4_STATE_EXT', value='2'),
+VarDef(name='VK_OPACITY_MICROMAP_FORMAT_MAX_ENUM_EXT', value='2147483647'),
+])
+
+Enum(name='VkOpacityMicromapSpecialIndexEXT', enumerators = [
+VarDef(name='VK_OPACITY_MICROMAP_SPECIAL_INDEX_FULLY_TRANSPARENT_EXT', value='-1'),
+VarDef(name='VK_OPACITY_MICROMAP_SPECIAL_INDEX_FULLY_OPAQUE_EXT', value='-2'),
+VarDef(name='VK_OPACITY_MICROMAP_SPECIAL_INDEX_FULLY_UNKNOWN_TRANSPARENT_EXT', value='-3'),
+VarDef(name='VK_OPACITY_MICROMAP_SPECIAL_INDEX_FULLY_UNKNOWN_OPAQUE_EXT', value='-4'),
+VarDef(name='VK_OPACITY_MICROMAP_SPECIAL_INDEX_MAX_ENUM_EXT', value='2147483647'),
+])
+
+Enum(name='VkOpticalFlowExecuteFlagBitsNV', enumerators = [
+VarDef(name='VK_OPTICAL_FLOW_EXECUTE_DISABLE_TEMPORAL_HINTS_BIT_NV', value='1'),
+VarDef(name='VK_OPTICAL_FLOW_EXECUTE_FLAG_BITS_MAX_ENUM_NV', value='2147483647'),
+])
+
+Enum(name='VkOpticalFlowGridSizeFlagBitsNV', enumerators = [
+VarDef(name='VK_OPTICAL_FLOW_GRID_SIZE_UNKNOWN_NV', value='0'),
+VarDef(name='VK_OPTICAL_FLOW_GRID_SIZE_1X1_BIT_NV', value='1'),
+VarDef(name='VK_OPTICAL_FLOW_GRID_SIZE_2X2_BIT_NV', value='2'),
+VarDef(name='VK_OPTICAL_FLOW_GRID_SIZE_4X4_BIT_NV', value='4'),
+VarDef(name='VK_OPTICAL_FLOW_GRID_SIZE_8X8_BIT_NV', value='8'),
+VarDef(name='VK_OPTICAL_FLOW_GRID_SIZE_FLAG_BITS_MAX_ENUM_NV', value='2147483647'),
+])
+
+Enum(name='VkOpticalFlowPerformanceLevelNV', enumerators = [
+VarDef(name='VK_OPTICAL_FLOW_PERFORMANCE_LEVEL_UNKNOWN_NV', value='0'),
+VarDef(name='VK_OPTICAL_FLOW_PERFORMANCE_LEVEL_SLOW_NV', value='1'),
+VarDef(name='VK_OPTICAL_FLOW_PERFORMANCE_LEVEL_MEDIUM_NV', value='2'),
+VarDef(name='VK_OPTICAL_FLOW_PERFORMANCE_LEVEL_FAST_NV', value='3'),
+VarDef(name='VK_OPTICAL_FLOW_PERFORMANCE_LEVEL_MAX_ENUM_NV', value='2147483647'),
+])
+
+Enum(name='VkOpticalFlowSessionBindingPointNV', enumerators = [
+VarDef(name='VK_OPTICAL_FLOW_SESSION_BINDING_POINT_UNKNOWN_NV', value='0'),
+VarDef(name='VK_OPTICAL_FLOW_SESSION_BINDING_POINT_INPUT_NV', value='1'),
+VarDef(name='VK_OPTICAL_FLOW_SESSION_BINDING_POINT_REFERENCE_NV', value='2'),
+VarDef(name='VK_OPTICAL_FLOW_SESSION_BINDING_POINT_HINT_NV', value='3'),
+VarDef(name='VK_OPTICAL_FLOW_SESSION_BINDING_POINT_FLOW_VECTOR_NV', value='4'),
+VarDef(name='VK_OPTICAL_FLOW_SESSION_BINDING_POINT_BACKWARD_FLOW_VECTOR_NV', value='5'),
+VarDef(name='VK_OPTICAL_FLOW_SESSION_BINDING_POINT_COST_NV', value='6'),
+VarDef(name='VK_OPTICAL_FLOW_SESSION_BINDING_POINT_BACKWARD_COST_NV', value='7'),
+VarDef(name='VK_OPTICAL_FLOW_SESSION_BINDING_POINT_GLOBAL_FLOW_NV', value='8'),
+VarDef(name='VK_OPTICAL_FLOW_SESSION_BINDING_POINT_MAX_ENUM_NV', value='2147483647'),
+])
+
+Enum(name='VkOpticalFlowSessionCreateFlagBitsNV', enumerators = [
+VarDef(name='VK_OPTICAL_FLOW_SESSION_CREATE_ENABLE_HINT_BIT_NV', value='1'),
+VarDef(name='VK_OPTICAL_FLOW_SESSION_CREATE_ENABLE_COST_BIT_NV', value='2'),
+VarDef(name='VK_OPTICAL_FLOW_SESSION_CREATE_ENABLE_GLOBAL_FLOW_BIT_NV', value='4'),
+VarDef(name='VK_OPTICAL_FLOW_SESSION_CREATE_ALLOW_REGIONS_BIT_NV', value='8'),
+VarDef(name='VK_OPTICAL_FLOW_SESSION_CREATE_BOTH_DIRECTIONS_BIT_NV', value='16'),
+VarDef(name='VK_OPTICAL_FLOW_SESSION_CREATE_FLAG_BITS_MAX_ENUM_NV', value='2147483647'),
+])
+
+Enum(name='VkOpticalFlowUsageFlagBitsNV', enumerators = [
+VarDef(name='VK_OPTICAL_FLOW_USAGE_UNKNOWN_NV', value='0'),
+VarDef(name='VK_OPTICAL_FLOW_USAGE_INPUT_BIT_NV', value='1'),
+VarDef(name='VK_OPTICAL_FLOW_USAGE_OUTPUT_BIT_NV', value='2'),
+VarDef(name='VK_OPTICAL_FLOW_USAGE_HINT_BIT_NV', value='4'),
+VarDef(name='VK_OPTICAL_FLOW_USAGE_COST_BIT_NV', value='8'),
+VarDef(name='VK_OPTICAL_FLOW_USAGE_GLOBAL_FLOW_BIT_NV', value='16'),
+VarDef(name='VK_OPTICAL_FLOW_USAGE_FLAG_BITS_MAX_ENUM_NV', value='2147483647'),
 ])
 
 Enum(name='VkPeerMemoryFeatureFlagBits', enumerators = [
@@ -5773,14 +6475,20 @@ VarDef(name='VK_PIPELINE_BIND_POINT_MAX_ENUM', value='2147483647'),
 
 Enum(name='VkPipelineCacheCreateFlagBits', enumerators = [
 VarDef(name='VK_PIPELINE_CACHE_CREATE_EXTERNALLY_SYNCHRONIZED_BIT', value='1'),
-VarDef(name='VK_PIPELINE_CACHE_CREATE_RESERVED_1_BIT_EXT', value='2'),
-VarDef(name='VK_PIPELINE_CACHE_CREATE_RESERVED_2_BIT_KHR', value='4'),
+VarDef(name='VK_PIPELINE_CACHE_CREATE_READ_ONLY_BIT', value='2'),
+VarDef(name='VK_PIPELINE_CACHE_CREATE_USE_APPLICATION_STORAGE_BIT', value='4'),
 VarDef(name='VK_PIPELINE_CACHE_CREATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
 ])
 
 Enum(name='VkPipelineCacheHeaderVersion', enumerators = [
 VarDef(name='VK_PIPELINE_CACHE_HEADER_VERSION_ONE', value='1'),
+VarDef(name='VK_PIPELINE_CACHE_HEADER_VERSION_SAFETY_CRITICAL_ONE', value='1000298001'),
 VarDef(name='VK_PIPELINE_CACHE_HEADER_VERSION_MAX_ENUM', value='2147483647'),
+])
+
+Enum(name='VkPipelineCacheValidationVersion', enumerators = [
+VarDef(name='VK_PIPELINE_CACHE_VALIDATION_VERSION_SAFETY_CRITICAL_ONE', value='1'),
+VarDef(name='VK_PIPELINE_CACHE_VALIDATION_VERSION_MAX_ENUM', value='2147483647'),
 ])
 
 Enum(name='VkPipelineColorBlendStateCreateFlagBits', enumerators = [
@@ -5801,27 +6509,27 @@ VarDef(name='VK_PIPELINE_CREATE_CAPTURE_STATISTICS_BIT_KHR', value='64'),
 VarDef(name='VK_PIPELINE_CREATE_COLOR_ATTACHMENT_FEEDBACK_LOOP_BIT_EXT', value='33554432'),
 VarDef(name='VK_PIPELINE_CREATE_DEFER_COMPILE_BIT_NV', value='32'),
 VarDef(name='VK_PIPELINE_CREATE_DEPTH_STENCIL_ATTACHMENT_FEEDBACK_LOOP_BIT_EXT', value='67108864'),
+VarDef(name='VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT', value='536870912'),
 VarDef(name='VK_PIPELINE_CREATE_DISPATCH_BASE_BIT', value='16'),
 VarDef(name='VK_PIPELINE_CREATE_EARLY_RETURN_ON_FAILURE_BIT', value='512'),
 VarDef(name='VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT', value='256'),
 VarDef(name='VK_PIPELINE_CREATE_INDIRECT_BINDABLE_BIT_NV', value='262144'),
 VarDef(name='VK_PIPELINE_CREATE_LIBRARY_BIT_KHR', value='2048'),
 VarDef(name='VK_PIPELINE_CREATE_LINK_TIME_OPTIMIZATION_BIT_EXT', value='1024'),
+VarDef(name='VK_PIPELINE_CREATE_NO_PROTECTED_ACCESS_BIT_EXT', value='134217728'),
+VarDef(name='VK_PIPELINE_CREATE_PROTECTED_ACCESS_ONLY_BIT_EXT', value='1073741824'),
 VarDef(name='VK_PIPELINE_CREATE_RAY_TRACING_ALLOW_MOTION_BIT_NV', value='1048576'),
+VarDef(name='VK_PIPELINE_CREATE_RAY_TRACING_DISPLACEMENT_MICROMAP_BIT_NV', value='268435456'),
 VarDef(name='VK_PIPELINE_CREATE_RAY_TRACING_NO_NULL_ANY_HIT_SHADERS_BIT_KHR', value='16384'),
 VarDef(name='VK_PIPELINE_CREATE_RAY_TRACING_NO_NULL_CLOSEST_HIT_SHADERS_BIT_KHR', value='32768'),
 VarDef(name='VK_PIPELINE_CREATE_RAY_TRACING_NO_NULL_INTERSECTION_SHADERS_BIT_KHR', value='131072'),
 VarDef(name='VK_PIPELINE_CREATE_RAY_TRACING_NO_NULL_MISS_SHADERS_BIT_KHR', value='65536'),
+VarDef(name='VK_PIPELINE_CREATE_RAY_TRACING_OPACITY_MICROMAP_BIT_EXT', value='16777216'),
 VarDef(name='VK_PIPELINE_CREATE_RAY_TRACING_SHADER_GROUP_HANDLE_CAPTURE_REPLAY_BIT_KHR', value='524288'),
 VarDef(name='VK_PIPELINE_CREATE_RAY_TRACING_SKIP_AABBS_BIT_KHR', value='8192'),
 VarDef(name='VK_PIPELINE_CREATE_RAY_TRACING_SKIP_TRIANGLES_BIT_KHR', value='4096'),
 VarDef(name='VK_PIPELINE_CREATE_RENDERING_FRAGMENT_DENSITY_MAP_ATTACHMENT_BIT_EXT', value='4194304'),
 VarDef(name='VK_PIPELINE_CREATE_RENDERING_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR', value='2097152'),
-VarDef(name='VK_PIPELINE_CREATE_RESERVED_24_BIT_NV', value='16777216'),
-VarDef(name='VK_PIPELINE_CREATE_RESERVED_27_BIT_EXT', value='134217728'),
-VarDef(name='VK_PIPELINE_CREATE_RESERVED_29_AMD', value='536870912'),
-VarDef(name='VK_PIPELINE_CREATE_RESERVED_30_BIT_EXT', value='1073741824'),
-VarDef(name='VK_PIPELINE_CREATE_RESERVED_BIT_28_NV', value='268435456'),
 VarDef(name='VK_PIPELINE_CREATE_RETAIN_LINK_TIME_OPTIMIZATION_INFO_BIT_EXT', value='8388608'),
 VarDef(name='VK_PIPELINE_CREATE_VIEW_INDEX_FROM_DEVICE_INDEX_BIT', value='8'),
 VarDef(name='VK_PIPELINE_CREATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
@@ -5854,6 +6562,11 @@ VarDef(name='VK_PIPELINE_LAYOUT_CREATE_RESERVED_0_BIT_AMD', value='1'),
 VarDef(name='VK_PIPELINE_LAYOUT_CREATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
 ])
 
+Enum(name='VkPipelineMatchControl', enumerators = [
+VarDef(name='VK_PIPELINE_MATCH_CONTROL_APPLICATION_UUID_EXACT_MATCH', value='0'),
+VarDef(name='VK_PIPELINE_MATCH_CONTROL_MAX_ENUM', value='2147483647'),
+])
+
 Enum(name='VkPipelineRobustnessBufferBehaviorEXT', enumerators = [
 VarDef(name='VK_PIPELINE_ROBUSTNESS_BUFFER_BEHAVIOR_DEVICE_DEFAULT_EXT', value='0'),
 VarDef(name='VK_PIPELINE_ROBUSTNESS_BUFFER_BEHAVIOR_DISABLED_EXT', value='1'),
@@ -5873,7 +6586,6 @@ VarDef(name='VK_PIPELINE_ROBUSTNESS_IMAGE_BEHAVIOR_MAX_ENUM_EXT', value='2147483
 Enum(name='VkPipelineShaderStageCreateFlagBits', enumerators = [
 VarDef(name='VK_PIPELINE_SHADER_STAGE_CREATE_ALLOW_VARYING_SUBGROUP_SIZE_BIT', value='1'),
 VarDef(name='VK_PIPELINE_SHADER_STAGE_CREATE_REQUIRE_FULL_SUBGROUPS_BIT', value='2'),
-VarDef(name='VK_PIPELINE_SHADER_STAGE_CREATE_RESERVED_2_BIT_NV', value='4'),
 VarDef(name='VK_PIPELINE_SHADER_STAGE_CREATE_RESERVED_3_BIT_KHR', value='8'),
 VarDef(name='VK_PIPELINE_SHADER_STAGE_CREATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
 ])
@@ -5937,15 +6649,18 @@ VarDef(name='VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT', value='13743895347
 VarDef(name='VK_PIPELINE_STAGE_2_PRE_RASTERIZATION_SHADERS_BIT', value='274877906944'),
 VarDef(name='VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR', value='33554432'),
 VarDef(name='VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_COPY_BIT_KHR', value='268435456'),
+VarDef(name='VK_PIPELINE_STAGE_2_CLUSTER_CULLING_SHADER_BIT_HUAWEI', value='2199023255552'),
 VarDef(name='VK_PIPELINE_STAGE_2_COMMAND_PREPROCESS_BIT_NV', value='131072'),
 VarDef(name='VK_PIPELINE_STAGE_2_CONDITIONAL_RENDERING_BIT_EXT', value='262144'),
 VarDef(name='VK_PIPELINE_STAGE_2_FRAGMENT_DENSITY_PROCESS_BIT_EXT', value='8388608'),
 VarDef(name='VK_PIPELINE_STAGE_2_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR', value='4194304'),
 VarDef(name='VK_PIPELINE_STAGE_2_INVOCATION_MASK_BIT_HUAWEI', value='1099511627776'),
 VarDef(name='VK_PIPELINE_STAGE_2_MESH_SHADER_BIT_EXT', value='1048576'),
+VarDef(name='VK_PIPELINE_STAGE_2_MICROMAP_BUILD_BIT_EXT', value='1073741824'),
+VarDef(name='VK_PIPELINE_STAGE_2_OPTICAL_FLOW_BIT_NV', value='536870912'),
 VarDef(name='VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR', value='2097152'),
-VarDef(name='VK_PIPELINE_STAGE_2_RESERVED_29_BIT_NV', value='536870912'),
-VarDef(name='VK_PIPELINE_STAGE_2_RESERVED_30_BIT_NV', value='1073741824'),
+VarDef(name='VK_PIPELINE_STAGE_2_RESERVED_42_BIT_EXT', value='4398046511104'),
+VarDef(name='VK_PIPELINE_STAGE_2_RESERVED_43_BIT_ARM', value='8796093022208'),
 VarDef(name='VK_PIPELINE_STAGE_2_SUBPASS_SHADING_BIT_HUAWEI', value='549755813888'),
 VarDef(name='VK_PIPELINE_STAGE_2_TASK_SHADER_BIT_EXT', value='524288'),
 VarDef(name='VK_PIPELINE_STAGE_2_TRANSFORM_FEEDBACK_BIT_EXT', value='16777216'),
@@ -5967,6 +6682,13 @@ VarDef(name='VK_POLYGON_MODE_FILL_RECTANGLE_NV', value='1000153000'),
 VarDef(name='VK_POLYGON_MODE_MAX_ENUM', value='2147483647'),
 ])
 
+Enum(name='VkPresentGravityFlagBitsEXT', enumerators = [
+VarDef(name='VK_PRESENT_GRAVITY_MIN_BIT_EXT', value='1'),
+VarDef(name='VK_PRESENT_GRAVITY_MAX_BIT_EXT', value='2'),
+VarDef(name='VK_PRESENT_GRAVITY_CENTERED_BIT_EXT', value='4'),
+VarDef(name='VK_PRESENT_GRAVITY_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
+])
+
 Enum(name='VkPresentModeKHR', enumerators = [
 VarDef(name='VK_PRESENT_MODE_IMMEDIATE_KHR', value='0'),
 VarDef(name='VK_PRESENT_MODE_MAILBOX_KHR', value='1'),
@@ -5975,6 +6697,13 @@ VarDef(name='VK_PRESENT_MODE_FIFO_RELAXED_KHR', value='3'),
 VarDef(name='VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR', value='1000111001'),
 VarDef(name='VK_PRESENT_MODE_SHARED_DEMAND_REFRESH_KHR', value='1000111000'),
 VarDef(name='VK_PRESENT_MODE_MAX_ENUM_KHR', value='2147483647'),
+])
+
+Enum(name='VkPresentScalingFlagBitsEXT', enumerators = [
+VarDef(name='VK_PRESENT_SCALING_ONE_TO_ONE_BIT_EXT', value='1'),
+VarDef(name='VK_PRESENT_SCALING_ASPECT_RATIO_STRETCH_BIT_EXT', value='2'),
+VarDef(name='VK_PRESENT_SCALING_STRETCH_BIT_EXT', value='4'),
+VarDef(name='VK_PRESENT_SCALING_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
 ])
 
 Enum(name='VkPrimitiveTopology', enumerators = [
@@ -5993,6 +6722,7 @@ VarDef(name='VK_PRIMITIVE_TOPOLOGY_MAX_ENUM', value='2147483647'),
 ])
 
 Enum(name='VkPrivateDataSlotCreateFlagBits', enumerators = [
+VarDef(name='VK_PRIVATE_DATA_SLOT_CREATE_RESERVED_0_BIT_NV', value='1'),
 VarDef(name='VK_PRIVATE_DATA_SLOT_CREATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
 ])
 
@@ -6019,6 +6749,7 @@ VarDef(name='VK_QUERY_PIPELINE_STATISTIC_FRAGMENT_SHADER_INVOCATIONS_BIT', value
 VarDef(name='VK_QUERY_PIPELINE_STATISTIC_TESSELLATION_CONTROL_SHADER_PATCHES_BIT', value='256'),
 VarDef(name='VK_QUERY_PIPELINE_STATISTIC_TESSELLATION_EVALUATION_SHADER_INVOCATIONS_BIT', value='512'),
 VarDef(name='VK_QUERY_PIPELINE_STATISTIC_COMPUTE_SHADER_INVOCATIONS_BIT', value='1024'),
+VarDef(name='VK_QUERY_PIPELINE_STATISTIC_CLUSTER_CULLING_SHADER_INVOCATIONS_BIT_HUAWEI', value='8192'),
 VarDef(name='VK_QUERY_PIPELINE_STATISTIC_MESH_SHADER_INVOCATIONS_BIT_EXT', value='4096'),
 VarDef(name='VK_QUERY_PIPELINE_STATISTIC_TASK_SHADER_INVOCATIONS_BIT_EXT', value='2048'),
 VarDef(name='VK_QUERY_PIPELINE_STATISTIC_FLAG_BITS_MAX_ENUM', value='2147483647'),
@@ -6027,12 +6758,6 @@ VarDef(name='VK_QUERY_PIPELINE_STATISTIC_FLAG_BITS_MAX_ENUM', value='2147483647'
 Enum(name='VkQueryPoolSamplingModeINTEL', enumerators = [
 VarDef(name='VK_QUERY_POOL_SAMPLING_MODE_MANUAL_INTEL', value='0'),
 VarDef(name='VK_QUERY_POOL_SAMPLING_MODE_MAX_ENUM_INTEL', value='2147483647'),
-])
-
-Enum(name='VkQueryPoolTypeINTEL', enumerators = [
-VarDef(name='VK_QUERY_POOL_TYPE_MAX_ENUM_INTEL', value='2147483647'),
-VarDef(name='VK_QUERY_POOL_TYPE_PERFORMANCE_COUNTERS_INTEL', value='0'),
-VarDef(name='VK_QUERY_POOL_TYPE_RANGE_SIZE_INTEL', value='1'),
 ])
 
 Enum(name='VkQueryResultFlagBits', enumerators = [
@@ -6051,15 +6776,6 @@ VarDef(name='VK_QUERY_RESULT_STATUS_COMPLETE_KHR', value='1'),
 VarDef(name='VK_QUERY_RESULT_STATUS_MAX_ENUM_KHR', value='2147483647'),
 ])
 
-Enum(name='VkQuerySamplingModeINTEL', enumerators = [
-VarDef(name='VK_SAMPLING_MODE_AUTO_INTEL', value='1'),
-VarDef(name='VK_SAMPLING_MODE_MANUAL_INTEL', value='0'),
-VarDef(name='VK_SAMPLING_MODE_MAX_ENUM_INTEL', value='2147483647'),
-VarDef(name='VK_SAMPLING_MODE_PTBR_PER_TILE_AGGREGATED_INTEL', value='3'),
-VarDef(name='VK_SAMPLING_MODE_PTBR_PER_TILE_INTEL', value='2'),
-VarDef(name='VK_SAMPLING_MODE_RANGE_SIZE_INTEL', value='4'),
-])
-
 Enum(name='VkQueryType', enumerators = [
 VarDef(name='VK_QUERY_TYPE_OCCLUSION', value='0'),
 VarDef(name='VK_QUERY_TYPE_PIPELINE_STATISTICS', value='1'),
@@ -6070,12 +6786,14 @@ VarDef(name='VK_QUERY_TYPE_ACCELERATION_STRUCTURE_SERIALIZATION_BOTTOM_LEVEL_POI
 VarDef(name='VK_QUERY_TYPE_ACCELERATION_STRUCTURE_SERIALIZATION_SIZE_KHR', value='1000150001'),
 VarDef(name='VK_QUERY_TYPE_ACCELERATION_STRUCTURE_SIZE_KHR', value='1000386001'),
 VarDef(name='VK_QUERY_TYPE_MESH_PRIMITIVES_GENERATED_EXT', value='1000328000'),
+VarDef(name='VK_QUERY_TYPE_MICROMAP_COMPACTED_SIZE_EXT', value='1000396001'),
+VarDef(name='VK_QUERY_TYPE_MICROMAP_SERIALIZATION_SIZE_EXT', value='1000396000'),
 VarDef(name='VK_QUERY_TYPE_PERFORMANCE_QUERY_INTEL', value='1000210000'),
 VarDef(name='VK_QUERY_TYPE_PERFORMANCE_QUERY_KHR', value='1000116000'),
 VarDef(name='VK_QUERY_TYPE_PRIMITIVES_GENERATED_EXT', value='1000382000'),
 VarDef(name='VK_QUERY_TYPE_RESULT_STATUS_ONLY_KHR', value='1000023000'),
 VarDef(name='VK_QUERY_TYPE_TRANSFORM_FEEDBACK_STREAM_EXT', value='1000028004'),
-VarDef(name='VK_QUERY_TYPE_VIDEO_ENCODE_BITSTREAM_BUFFER_RANGE_KHR', value='1000299000'),
+VarDef(name='VK_QUERY_TYPE_VIDEO_ENCODE_FEEDBACK_KHR', value='1000299000'),
 VarDef(name='VK_QUERY_TYPE_MAX_ENUM', value='2147483647'),
 ])
 
@@ -6084,9 +6802,11 @@ VarDef(name='VK_QUEUE_GRAPHICS_BIT', value='1'),
 VarDef(name='VK_QUEUE_COMPUTE_BIT', value='2'),
 VarDef(name='VK_QUEUE_TRANSFER_BIT', value='4'),
 VarDef(name='VK_QUEUE_SPARSE_BINDING_BIT', value='8'),
+VarDef(name='VK_QUEUE_OPTICAL_FLOW_BIT_NV', value='256'),
 VarDef(name='VK_QUEUE_PROTECTED_BIT', value='16'),
+VarDef(name='VK_QUEUE_RESERVED_10_BIT_EXT', value='1024'),
+VarDef(name='VK_QUEUE_RESERVED_11_BIT_ARM', value='2048'),
 VarDef(name='VK_QUEUE_RESERVED_7_BIT_QCOM', value='128'),
-VarDef(name='VK_QUEUE_RESERVED_8_BIT_NV', value='256'),
 VarDef(name='VK_QUEUE_RESERVED_9_BIT_EXT', value='512'),
 VarDef(name='VK_QUEUE_VIDEO_DECODE_BIT_KHR', value='32'),
 VarDef(name='VK_QUEUE_VIDEO_ENCODE_BIT_KHR', value='64'),
@@ -6107,11 +6827,21 @@ VarDef(name='VK_RASTERIZATION_ORDER_RELAXED_AMD', value='1'),
 VarDef(name='VK_RASTERIZATION_ORDER_MAX_ENUM_AMD', value='2147483647'),
 ])
 
+Enum(name='VkRayTracingInvocationReorderModeNV', enumerators = [
+VarDef(name='VK_RAY_TRACING_INVOCATION_REORDER_MODE_NONE_NV', value='0'),
+VarDef(name='VK_RAY_TRACING_INVOCATION_REORDER_MODE_REORDER_NV', value='1'),
+VarDef(name='VK_RAY_TRACING_INVOCATION_REORDER_MODE_MAX_ENUM_NV', value='2147483647'),
+])
+
 Enum(name='VkRayTracingShaderGroupTypeKHR', enumerators = [
 VarDef(name='VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR', value='0'),
 VarDef(name='VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR', value='1'),
 VarDef(name='VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR', value='2'),
 VarDef(name='VK_RAY_TRACING_SHADER_GROUP_TYPE_MAX_ENUM_KHR', value='2147483647'),
+])
+
+Enum(name='VkRefreshObjectFlagBitsKHR', enumerators = [
+VarDef(name='VK_REFRESH_OBJECT_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
 ])
 
 Enum(name='VkRenderPassCreateFlagBits', enumerators = [
@@ -6162,16 +6892,20 @@ VarDef(name='VK_ERROR_FRAGMENTATION', value='-1000161000'),
 VarDef(name='VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT', value='-1000255000'),
 VarDef(name='VK_ERROR_IMAGE_USAGE_NOT_SUPPORTED_KHR', value='-1000023000'),
 VarDef(name='VK_ERROR_INCOMPATIBLE_DISPLAY_KHR', value='-1000003001'),
+VarDef(name='VK_ERROR_INCOMPATIBLE_SHADER_BINARY_EXT', value='1000482000'),
 VarDef(name='VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT', value='-1000158000'),
 VarDef(name='VK_ERROR_INVALID_EXTERNAL_HANDLE', value='-1000072003'),
 VarDef(name='VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS', value='-1000257000'),
+VarDef(name='VK_ERROR_INVALID_PIPELINE_CACHE_DATA', value='-1000298000'),
 VarDef(name='VK_ERROR_INVALID_SHADER_NV', value='-1000012000'),
+VarDef(name='VK_ERROR_INVALID_VIDEO_STD_PARAMETERS_KHR', value='-1000299000'),
 VarDef(name='VK_ERROR_NATIVE_WINDOW_IN_USE_KHR', value='-1000000001'),
 VarDef(name='VK_ERROR_NOT_PERMITTED_KHR', value='-1000174001'),
+VarDef(name='VK_ERROR_NO_PIPELINE_MATCH', value='-1000298001'),
 VarDef(name='VK_ERROR_OUT_OF_DATE_KHR', value='-1000001004'),
 VarDef(name='VK_ERROR_OUT_OF_POOL_MEMORY', value='-1000069000'),
 VarDef(name='VK_ERROR_SURFACE_LOST_KHR', value='-1000000000'),
-VarDef(name='VK_ERROR_VALIDATION_FAILED_EXT', value='-1000011001'),
+VarDef(name='VK_ERROR_VALIDATION_FAILED', value='-1000011001'),
 VarDef(name='VK_ERROR_VIDEO_PICTURE_LAYOUT_NOT_SUPPORTED_KHR', value='-1000023001'),
 VarDef(name='VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR', value='-1000023004'),
 VarDef(name='VK_ERROR_VIDEO_PROFILE_FORMAT_NOT_SUPPORTED_KHR', value='-1000023003'),
@@ -6207,9 +6941,9 @@ VarDef(name='VK_SAMPLER_ADDRESS_MODE_MAX_ENUM', value='2147483647'),
 ])
 
 Enum(name='VkSamplerCreateFlagBits', enumerators = [
+VarDef(name='VK_SAMPLER_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT', value='8'),
 VarDef(name='VK_SAMPLER_CREATE_IMAGE_PROCESSING_BIT_QCOM', value='16'),
 VarDef(name='VK_SAMPLER_CREATE_NON_SEAMLESS_CUBE_MAP_BIT_EXT', value='4'),
-VarDef(name='VK_SAMPLER_CREATE_RESERVED_3_BIT_AMD', value='8'),
 VarDef(name='VK_SAMPLER_CREATE_SUBSAMPLED_BIT_EXT', value='1'),
 VarDef(name='VK_SAMPLER_CREATE_SUBSAMPLED_COARSE_RECONSTRUCTION_BIT_EXT', value='2'),
 VarDef(name='VK_SAMPLER_CREATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
@@ -6271,8 +7005,25 @@ VarDef(name='VK_SEMAPHORE_WAIT_ANY_BIT', value='1'),
 VarDef(name='VK_SEMAPHORE_WAIT_FLAG_BITS_MAX_ENUM', value='2147483647'),
 ])
 
+Enum(name='VkShaderCodeTypeEXT', enumerators = [
+VarDef(name='VK_SHADER_CODE_TYPE_BINARY_EXT', value='0'),
+VarDef(name='VK_SHADER_CODE_TYPE_SPIRV_EXT', value='1'),
+VarDef(name='VK_SHADER_CODE_TYPE_MAX_ENUM_EXT', value='2147483647'),
+])
+
 Enum(name='VkShaderCorePropertiesFlagBitsAMD', enumerators = [
 VarDef(name='VK_SHADER_CORE_PROPERTIES_FLAG_BITS_MAX_ENUM_AMD', value='2147483647'),
+])
+
+Enum(name='VkShaderCreateFlagBitsEXT', enumerators = [
+VarDef(name='VK_SHADER_CREATE_LINK_STAGE_BIT_EXT', value='1'),
+VarDef(name='VK_SHADER_CREATE_ALLOW_VARYING_SUBGROUP_SIZE_BIT_EXT', value='2'),
+VarDef(name='VK_SHADER_CREATE_DISPATCH_BASE_BIT_EXT', value='16'),
+VarDef(name='VK_SHADER_CREATE_FRAGMENT_DENSITY_MAP_ATTACHMENT_BIT_EXT', value='64'),
+VarDef(name='VK_SHADER_CREATE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_EXT', value='32'),
+VarDef(name='VK_SHADER_CREATE_NO_TASK_SHADER_BIT_EXT', value='8'),
+VarDef(name='VK_SHADER_CREATE_REQUIRE_FULL_SUBGROUPS_BIT_EXT', value='4'),
+VarDef(name='VK_SHADER_CREATE_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
 ])
 
 Enum(name='VkShaderFloatControlsIndependence', enumerators = [
@@ -6298,7 +7049,6 @@ VarDef(name='VK_SHADER_INFO_TYPE_MAX_ENUM_AMD', value='2147483647'),
 ])
 
 Enum(name='VkShaderModuleCreateFlagBits', enumerators = [
-VarDef(name='VK_SHADER_MODULE_CREATE_RESERVED_0_BIT_NV', value='1'),
 VarDef(name='VK_SHADER_MODULE_CREATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
 ])
 
@@ -6314,9 +7064,7 @@ VarDef(name='VK_SHADER_STAGE_ALL', value='2147483647'),
 VarDef(name='VK_SHADER_STAGE_ANY_HIT_BIT_KHR', value='512'),
 VarDef(name='VK_SHADER_STAGE_CALLABLE_BIT_KHR', value='8192'),
 VarDef(name='VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR', value='1024'),
-VarDef(name='VK_SHADER_STAGE_EXT_483_RESERVE_15', value='32768'),
-VarDef(name='VK_SHADER_STAGE_EXT_483_RESERVE_16', value='65536'),
-VarDef(name='VK_SHADER_STAGE_EXT_483_RESERVE_17', value='131072'),
+VarDef(name='VK_SHADER_STAGE_CLUSTER_CULLING_BIT_HUAWEI', value='524288'),
 VarDef(name='VK_SHADER_STAGE_INTERSECTION_BIT_KHR', value='4096'),
 VarDef(name='VK_SHADER_STAGE_MESH_BIT_EXT', value='128'),
 VarDef(name='VK_SHADER_STAGE_MISS_BIT_KHR', value='2048'),
@@ -6430,6 +7178,7 @@ VarDef(name='VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO', value='47'),
 VarDef(name='VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO', value='48'),
 VarDef(name='VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR', value='1000150000'),
 VarDef(name='VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR', value='1000150020'),
+VarDef(name='VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CAPTURE_DESCRIPTOR_DATA_INFO_EXT', value='1000316009'),
 VarDef(name='VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR', value='1000150017'),
 VarDef(name='VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_NV', value='1000165001'),
 VarDef(name='VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR', value='1000150002'),
@@ -6441,6 +7190,8 @@ VarDef(name='VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KH
 VarDef(name='VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_INFO_NV', value='1000165012'),
 VarDef(name='VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_NV', value='1000165008'),
 VarDef(name='VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MOTION_INFO_NV', value='1000327002'),
+VarDef(name='VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_TRIANGLES_DISPLACEMENT_MICROMAP_NV', value='1000397002'),
+VarDef(name='VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_TRIANGLES_OPACITY_MICROMAP_EXT', value='1000396009'),
 VarDef(name='VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_VERSION_INFO_KHR', value='1000150009'),
 VarDef(name='VK_STRUCTURE_TYPE_ACQUIRE_NEXT_IMAGE_INFO_KHR', value='1000060010'),
 VarDef(name='VK_STRUCTURE_TYPE_ACQUIRE_PROFILING_LOCK_INFO_KHR', value='1000116004'),
@@ -6450,6 +7201,7 @@ VarDef(name='VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_FORMAT_PROPERTIES_ANDROID
 VarDef(name='VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_PROPERTIES_ANDROID', value='1000129001'),
 VarDef(name='VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_USAGE_ANDROID', value='1000129000'),
 VarDef(name='VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR', value='1000008000'),
+VarDef(name='VK_STRUCTURE_TYPE_APPLICATION_PARAMETERS_EXT', value='1000435000'),
 VarDef(name='VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2', value='1000109000'),
 VarDef(name='VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_STENCIL_LAYOUT', value='1000241002'),
 VarDef(name='VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2', value='1000109001'),
@@ -6464,6 +7216,7 @@ VarDef(name='VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_SWAPCHAIN_INFO_KHR', value='100
 VarDef(name='VK_STRUCTURE_TYPE_BIND_IMAGE_PLANE_MEMORY_INFO', value='1000156002'),
 VarDef(name='VK_STRUCTURE_TYPE_BIND_VIDEO_SESSION_MEMORY_INFO_KHR', value='1000023004'),
 VarDef(name='VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2', value='1000337004'),
+VarDef(name='VK_STRUCTURE_TYPE_BUFFER_CAPTURE_DESCRIPTOR_DATA_INFO_EXT', value='1000316005'),
 VarDef(name='VK_STRUCTURE_TYPE_BUFFER_COLLECTION_BUFFER_CREATE_INFO_FUCHSIA', value='1000366005'),
 VarDef(name='VK_STRUCTURE_TYPE_BUFFER_COLLECTION_CONSTRAINTS_INFO_FUCHSIA', value='1000366009'),
 VarDef(name='VK_STRUCTURE_TYPE_BUFFER_COLLECTION_CREATE_INFO_FUCHSIA', value='1000366000'),
@@ -6485,6 +7238,8 @@ VarDef(name='VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_RENDERING_INFO', value
 VarDef(name='VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_RENDER_PASS_TRANSFORM_INFO_QCOM', value='1000282000'),
 VarDef(name='VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_VIEWPORT_SCISSOR_INFO_NV', value='1000278001'),
 VarDef(name='VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO', value='1000314006'),
+VarDef(name='VK_STRUCTURE_TYPE_COMMAND_POOL_MEMORY_CONSUMPTION', value='1000298004'),
+VarDef(name='VK_STRUCTURE_TYPE_COMMAND_POOL_MEMORY_RESERVATION_CREATE_INFO', value='1000298003'),
 VarDef(name='VK_STRUCTURE_TYPE_CONDITIONAL_RENDERING_BEGIN_INFO_EXT', value='1000081002'),
 VarDef(name='VK_STRUCTURE_TYPE_COOPERATIVE_MATRIX_PROPERTIES_NV', value='1000249001'),
 VarDef(name='VK_STRUCTURE_TYPE_COPY_ACCELERATION_STRUCTURE_INFO_KHR', value='1000150010'),
@@ -6495,6 +7250,9 @@ VarDef(name='VK_STRUCTURE_TYPE_COPY_COMMAND_TRANSFORM_INFO_QCOM', value='1000333
 VarDef(name='VK_STRUCTURE_TYPE_COPY_IMAGE_INFO_2', value='1000337001'),
 VarDef(name='VK_STRUCTURE_TYPE_COPY_IMAGE_TO_BUFFER_INFO_2', value='1000337003'),
 VarDef(name='VK_STRUCTURE_TYPE_COPY_MEMORY_TO_ACCELERATION_STRUCTURE_INFO_KHR', value='1000150012'),
+VarDef(name='VK_STRUCTURE_TYPE_COPY_MEMORY_TO_MICROMAP_INFO_EXT', value='1000396004'),
+VarDef(name='VK_STRUCTURE_TYPE_COPY_MICROMAP_INFO_EXT', value='1000396002'),
+VarDef(name='VK_STRUCTURE_TYPE_COPY_MICROMAP_TO_MEMORY_INFO_EXT', value='1000396003'),
 VarDef(name='VK_STRUCTURE_TYPE_CU_FUNCTION_CREATE_INFO_NVX', value='1000029001'),
 VarDef(name='VK_STRUCTURE_TYPE_CU_LAUNCH_INFO_NVX', value='1000029002'),
 VarDef(name='VK_STRUCTURE_TYPE_CU_MODULE_CREATE_INFO_NVX', value='1000029000'),
@@ -6512,6 +7270,10 @@ VarDef(name='VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_BUFFER_CREATE_INFO_NV', valu
 VarDef(name='VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_IMAGE_CREATE_INFO_NV', value='1000026000'),
 VarDef(name='VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_MEMORY_ALLOCATE_INFO_NV', value='1000026002'),
 VarDef(name='VK_STRUCTURE_TYPE_DEPENDENCY_INFO', value='1000314003'),
+VarDef(name='VK_STRUCTURE_TYPE_DESCRIPTOR_ADDRESS_INFO_EXT', value='1000316003'),
+VarDef(name='VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT', value='1000316011'),
+VarDef(name='VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_PUSH_DESCRIPTOR_BUFFER_HANDLE_EXT', value='1000316012'),
+VarDef(name='VK_STRUCTURE_TYPE_DESCRIPTOR_GET_INFO_EXT', value='1000316004'),
 VarDef(name='VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_INLINE_UNIFORM_BLOCK_CREATE_INFO', value='1000138003'),
 VarDef(name='VK_STRUCTURE_TYPE_DESCRIPTOR_SET_BINDING_REFERENCE_VALVE', value='1000420001'),
 VarDef(name='VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO', value='1000161000'),
@@ -6520,10 +7282,13 @@ VarDef(name='VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_SUPPORT', value='1000168001
 VarDef(name='VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO', value='1000161003'),
 VarDef(name='VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_LAYOUT_SUPPORT', value='1000161004'),
 VarDef(name='VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO', value='1000085000'),
+VarDef(name='VK_STRUCTURE_TYPE_DEVICE_ADDRESS_BINDING_CALLBACK_DATA_EXT', value='1000354001'),
 VarDef(name='VK_STRUCTURE_TYPE_DEVICE_BUFFER_MEMORY_REQUIREMENTS', value='1000413002'),
 VarDef(name='VK_STRUCTURE_TYPE_DEVICE_DEVICE_MEMORY_REPORT_CREATE_INFO_EXT', value='1000284001'),
 VarDef(name='VK_STRUCTURE_TYPE_DEVICE_DIAGNOSTICS_CONFIG_CREATE_INFO_NV', value='1000300001'),
 VarDef(name='VK_STRUCTURE_TYPE_DEVICE_EVENT_INFO_EXT', value='1000091001'),
+VarDef(name='VK_STRUCTURE_TYPE_DEVICE_FAULT_COUNTS_EXT', value='1000341001'),
+VarDef(name='VK_STRUCTURE_TYPE_DEVICE_FAULT_INFO_EXT', value='1000341002'),
 VarDef(name='VK_STRUCTURE_TYPE_DEVICE_GROUP_BIND_SPARSE_INFO', value='1000060006'),
 VarDef(name='VK_STRUCTURE_TYPE_DEVICE_GROUP_COMMAND_BUFFER_BEGIN_INFO', value='1000060004'),
 VarDef(name='VK_STRUCTURE_TYPE_DEVICE_GROUP_DEVICE_CREATE_INFO', value='1000070001'),
@@ -6536,10 +7301,14 @@ VarDef(name='VK_STRUCTURE_TYPE_DEVICE_IMAGE_MEMORY_REQUIREMENTS', value='1000413
 VarDef(name='VK_STRUCTURE_TYPE_DEVICE_MEMORY_OPAQUE_CAPTURE_ADDRESS_INFO', value='1000257004'),
 VarDef(name='VK_STRUCTURE_TYPE_DEVICE_MEMORY_OVERALLOCATION_CREATE_INFO_AMD', value='1000189000'),
 VarDef(name='VK_STRUCTURE_TYPE_DEVICE_MEMORY_REPORT_CALLBACK_DATA_EXT', value='1000284002'),
+VarDef(name='VK_STRUCTURE_TYPE_DEVICE_OBJECT_RESERVATION_CREATE_INFO', value='1000298002'),
 VarDef(name='VK_STRUCTURE_TYPE_DEVICE_PRIVATE_DATA_CREATE_INFO', value='1000295001'),
 VarDef(name='VK_STRUCTURE_TYPE_DEVICE_QUEUE_GLOBAL_PRIORITY_CREATE_INFO_KHR', value='1000174000'),
 VarDef(name='VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2', value='1000145003'),
+VarDef(name='VK_STRUCTURE_TYPE_DEVICE_SEMAPHORE_SCI_SYNC_POOL_RESERVATION_CREATE_INFO_NV', value='1000489003'),
 VarDef(name='VK_STRUCTURE_TYPE_DIRECTFB_SURFACE_CREATE_INFO_EXT', value='1000346000'),
+VarDef(name='VK_STRUCTURE_TYPE_DIRECT_DRIVER_LOADING_INFO_LUNARG', value='1000459000'),
+VarDef(name='VK_STRUCTURE_TYPE_DIRECT_DRIVER_LOADING_LIST_LUNARG', value='1000459001'),
 VarDef(name='VK_STRUCTURE_TYPE_DISPLAY_EVENT_INFO_EXT', value='1000091002'),
 VarDef(name='VK_STRUCTURE_TYPE_DISPLAY_MODE_CREATE_INFO_KHR', value='1000002000'),
 VarDef(name='VK_STRUCTURE_TYPE_DISPLAY_MODE_PROPERTIES_2_KHR', value='1000121002'),
@@ -6554,9 +7323,11 @@ VarDef(name='VK_STRUCTURE_TYPE_DISPLAY_SURFACE_CREATE_INFO_KHR', value='10000020
 VarDef(name='VK_STRUCTURE_TYPE_DRM_FORMAT_MODIFIER_PROPERTIES_LIST_2_EXT', value='1000158006'),
 VarDef(name='VK_STRUCTURE_TYPE_DRM_FORMAT_MODIFIER_PROPERTIES_LIST_EXT', value='1000158000'),
 VarDef(name='VK_STRUCTURE_TYPE_EXPORT_FENCE_CREATE_INFO', value='1000113000'),
+VarDef(name='VK_STRUCTURE_TYPE_EXPORT_FENCE_SCI_SYNC_INFO_NV', value='1000373001'),
 VarDef(name='VK_STRUCTURE_TYPE_EXPORT_FENCE_WIN32_HANDLE_INFO_KHR', value='1000114001'),
 VarDef(name='VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO', value='1000072002'),
 VarDef(name='VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_NV', value='1000056001'),
+VarDef(name='VK_STRUCTURE_TYPE_EXPORT_MEMORY_SCI_BUF_INFO_NV', value='1000374001'),
 VarDef(name='VK_STRUCTURE_TYPE_EXPORT_MEMORY_WIN32_HANDLE_INFO_KHR', value='1000073001'),
 VarDef(name='VK_STRUCTURE_TYPE_EXPORT_MEMORY_WIN32_HANDLE_INFO_NV', value='1000057001'),
 VarDef(name='VK_STRUCTURE_TYPE_EXPORT_METAL_BUFFER_INFO_EXT', value='1000311004'),
@@ -6568,6 +7339,7 @@ VarDef(name='VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT', value='1000
 VarDef(name='VK_STRUCTURE_TYPE_EXPORT_METAL_SHARED_EVENT_INFO_EXT', value='1000311010'),
 VarDef(name='VK_STRUCTURE_TYPE_EXPORT_METAL_TEXTURE_INFO_EXT', value='1000311006'),
 VarDef(name='VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO', value='1000077000'),
+VarDef(name='VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_SCI_SYNC_INFO_NV', value='1000373005'),
 VarDef(name='VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_WIN32_HANDLE_INFO_KHR', value='1000078001'),
 VarDef(name='VK_STRUCTURE_TYPE_EXTERNAL_BUFFER_PROPERTIES', value='1000071003'),
 VarDef(name='VK_STRUCTURE_TYPE_EXTERNAL_FENCE_PROPERTIES', value='1000112001'),
@@ -6577,7 +7349,10 @@ VarDef(name='VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO', value='10000
 VarDef(name='VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO', value='1000072001'),
 VarDef(name='VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO_NV', value='1000056000'),
 VarDef(name='VK_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_PROPERTIES', value='1000076001'),
+VarDef(name='VK_STRUCTURE_TYPE_FAULT_CALLBACK_INFO', value='1000298008'),
+VarDef(name='VK_STRUCTURE_TYPE_FAULT_DATA', value='1000298007'),
 VarDef(name='VK_STRUCTURE_TYPE_FENCE_GET_FD_INFO_KHR', value='1000115001'),
+VarDef(name='VK_STRUCTURE_TYPE_FENCE_GET_SCI_SYNC_INFO_NV', value='1000373002'),
 VarDef(name='VK_STRUCTURE_TYPE_FENCE_GET_WIN32_HANDLE_INFO_KHR', value='1000114002'),
 VarDef(name='VK_STRUCTURE_TYPE_FILTER_CUBIC_IMAGE_VIEW_IMAGE_FORMAT_PROPERTIES_EXT', value='1000170001'),
 VarDef(name='VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2', value='1000059002'),
@@ -6598,6 +7373,7 @@ VarDef(name='VK_STRUCTURE_TYPE_HDR_METADATA_EXT', value='1000105000'),
 VarDef(name='VK_STRUCTURE_TYPE_HEADLESS_SURFACE_CREATE_INFO_EXT', value='1000256000'),
 VarDef(name='VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA', value='1000214000'),
 VarDef(name='VK_STRUCTURE_TYPE_IMAGE_BLIT_2', value='1000337008'),
+VarDef(name='VK_STRUCTURE_TYPE_IMAGE_CAPTURE_DESCRIPTOR_DATA_INFO_EXT', value='1000316006'),
 VarDef(name='VK_STRUCTURE_TYPE_IMAGE_COMPRESSION_CONTROL_EXT', value='1000338001'),
 VarDef(name='VK_STRUCTURE_TYPE_IMAGE_COMPRESSION_PROPERTIES_EXT', value='1000338004'),
 VarDef(name='VK_STRUCTURE_TYPE_IMAGE_CONSTRAINTS_INFO_FUCHSIA', value='1000366006'),
@@ -6618,16 +7394,20 @@ VarDef(name='VK_STRUCTURE_TYPE_IMAGE_SUBRESOURCE_2_EXT', value='1000338003'),
 VarDef(name='VK_STRUCTURE_TYPE_IMAGE_SWAPCHAIN_CREATE_INFO_KHR', value='1000060008'),
 VarDef(name='VK_STRUCTURE_TYPE_IMAGE_VIEW_ADDRESS_PROPERTIES_NVX', value='1000030001'),
 VarDef(name='VK_STRUCTURE_TYPE_IMAGE_VIEW_ASTC_DECODE_MODE_EXT', value='1000067000'),
+VarDef(name='VK_STRUCTURE_TYPE_IMAGE_VIEW_CAPTURE_DESCRIPTOR_DATA_INFO_EXT', value='1000316007'),
 VarDef(name='VK_STRUCTURE_TYPE_IMAGE_VIEW_HANDLE_INFO_NVX', value='1000030000'),
 VarDef(name='VK_STRUCTURE_TYPE_IMAGE_VIEW_MIN_LOD_CREATE_INFO_EXT', value='1000391001'),
 VarDef(name='VK_STRUCTURE_TYPE_IMAGE_VIEW_SAMPLE_WEIGHT_CREATE_INFO_QCOM', value='1000440002'),
+VarDef(name='VK_STRUCTURE_TYPE_IMAGE_VIEW_SLICED_CREATE_INFO_EXT', value='1000418001'),
 VarDef(name='VK_STRUCTURE_TYPE_IMAGE_VIEW_USAGE_CREATE_INFO', value='1000117002'),
 VarDef(name='VK_STRUCTURE_TYPE_IMPORT_ANDROID_HARDWARE_BUFFER_INFO_ANDROID', value='1000129003'),
 VarDef(name='VK_STRUCTURE_TYPE_IMPORT_FENCE_FD_INFO_KHR', value='1000115000'),
+VarDef(name='VK_STRUCTURE_TYPE_IMPORT_FENCE_SCI_SYNC_INFO_NV', value='1000373000'),
 VarDef(name='VK_STRUCTURE_TYPE_IMPORT_FENCE_WIN32_HANDLE_INFO_KHR', value='1000114000'),
 VarDef(name='VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIA', value='1000366001'),
 VarDef(name='VK_STRUCTURE_TYPE_IMPORT_MEMORY_FD_INFO_KHR', value='1000074000'),
 VarDef(name='VK_STRUCTURE_TYPE_IMPORT_MEMORY_HOST_POINTER_INFO_EXT', value='1000178000'),
+VarDef(name='VK_STRUCTURE_TYPE_IMPORT_MEMORY_SCI_BUF_INFO_NV', value='1000374000'),
 VarDef(name='VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_KHR', value='1000073000'),
 VarDef(name='VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_NV', value='1000057000'),
 VarDef(name='VK_STRUCTURE_TYPE_IMPORT_MEMORY_ZIRCON_HANDLE_INFO_FUCHSIA', value='1000364000'),
@@ -6636,6 +7416,7 @@ VarDef(name='VK_STRUCTURE_TYPE_IMPORT_METAL_IO_SURFACE_INFO_EXT', value='1000311
 VarDef(name='VK_STRUCTURE_TYPE_IMPORT_METAL_SHARED_EVENT_INFO_EXT', value='1000311011'),
 VarDef(name='VK_STRUCTURE_TYPE_IMPORT_METAL_TEXTURE_INFO_EXT', value='1000311007'),
 VarDef(name='VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_FD_INFO_KHR', value='1000079000'),
+VarDef(name='VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_SCI_SYNC_INFO_NV', value='1000373004'),
 VarDef(name='VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_WIN32_HANDLE_INFO_KHR', value='1000078000'),
 VarDef(name='VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA', value='1000365000'),
 VarDef(name='VK_STRUCTURE_TYPE_INDIRECT_COMMANDS_LAYOUT_CREATE_INFO_NV', value='1000277004'),
@@ -6651,25 +7432,41 @@ VarDef(name='VK_STRUCTURE_TYPE_MEMORY_FD_PROPERTIES_KHR', value='1000074001'),
 VarDef(name='VK_STRUCTURE_TYPE_MEMORY_GET_ANDROID_HARDWARE_BUFFER_INFO_ANDROID', value='1000129004'),
 VarDef(name='VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR', value='1000074002'),
 VarDef(name='VK_STRUCTURE_TYPE_MEMORY_GET_REMOTE_ADDRESS_INFO_NV', value='1000371000'),
+VarDef(name='VK_STRUCTURE_TYPE_MEMORY_GET_SCI_BUF_INFO_NV', value='1000374002'),
 VarDef(name='VK_STRUCTURE_TYPE_MEMORY_GET_WIN32_HANDLE_INFO_KHR', value='1000073003'),
 VarDef(name='VK_STRUCTURE_TYPE_MEMORY_GET_ZIRCON_HANDLE_INFO_FUCHSIA', value='1000364002'),
 VarDef(name='VK_STRUCTURE_TYPE_MEMORY_HOST_POINTER_PROPERTIES_EXT', value='1000178001'),
+VarDef(name='VK_STRUCTURE_TYPE_MEMORY_MAP_INFO_KHR', value='1000271000'),
 VarDef(name='VK_STRUCTURE_TYPE_MEMORY_OPAQUE_CAPTURE_ADDRESS_ALLOCATE_INFO', value='1000257003'),
 VarDef(name='VK_STRUCTURE_TYPE_MEMORY_PRIORITY_ALLOCATE_INFO_EXT', value='1000238001'),
 VarDef(name='VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2', value='1000146003'),
+VarDef(name='VK_STRUCTURE_TYPE_MEMORY_SCI_BUF_PROPERTIES_NV', value='1000374003'),
+VarDef(name='VK_STRUCTURE_TYPE_MEMORY_UNMAP_INFO_KHR', value='1000271001'),
 VarDef(name='VK_STRUCTURE_TYPE_MEMORY_WIN32_HANDLE_PROPERTIES_KHR', value='1000073002'),
 VarDef(name='VK_STRUCTURE_TYPE_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA', value='1000364001'),
 VarDef(name='VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT', value='1000217000'),
+VarDef(name='VK_STRUCTURE_TYPE_MICROMAP_BUILD_INFO_EXT', value='1000396000'),
+VarDef(name='VK_STRUCTURE_TYPE_MICROMAP_BUILD_SIZES_INFO_EXT', value='1000396008'),
+VarDef(name='VK_STRUCTURE_TYPE_MICROMAP_CREATE_INFO_EXT', value='1000396007'),
+VarDef(name='VK_STRUCTURE_TYPE_MICROMAP_VERSION_INFO_EXT', value='1000396001'),
 VarDef(name='VK_STRUCTURE_TYPE_MULTISAMPLED_RENDER_TO_SINGLE_SAMPLED_INFO_EXT', value='1000376002'),
 VarDef(name='VK_STRUCTURE_TYPE_MULTISAMPLE_PROPERTIES_EXT', value='1000143004'),
 VarDef(name='VK_STRUCTURE_TYPE_MULTIVIEW_PER_VIEW_ATTRIBUTES_INFO_NVX', value='1000044009'),
+VarDef(name='VK_STRUCTURE_TYPE_MULTIVIEW_PER_VIEW_RENDER_AREAS_RENDER_PASS_BEGIN_INFO_QCOM', value='1000510001'),
 VarDef(name='VK_STRUCTURE_TYPE_MUTABLE_DESCRIPTOR_TYPE_CREATE_INFO_EXT', value='1000351002'),
 VarDef(name='VK_STRUCTURE_TYPE_NATIVE_BUFFER_ANDROID', value='1000010000'),
+VarDef(name='VK_STRUCTURE_TYPE_OPAQUE_CAPTURE_DESCRIPTOR_DATA_CREATE_INFO_EXT', value='1000316010'),
+VarDef(name='VK_STRUCTURE_TYPE_OPTICAL_FLOW_EXECUTE_INFO_NV', value='1000464005'),
+VarDef(name='VK_STRUCTURE_TYPE_OPTICAL_FLOW_IMAGE_FORMAT_INFO_NV', value='1000464002'),
+VarDef(name='VK_STRUCTURE_TYPE_OPTICAL_FLOW_IMAGE_FORMAT_PROPERTIES_NV', value='1000464003'),
+VarDef(name='VK_STRUCTURE_TYPE_OPTICAL_FLOW_SESSION_CREATE_INFO_NV', value='1000464004'),
+VarDef(name='VK_STRUCTURE_TYPE_OPTICAL_FLOW_SESSION_CREATE_PRIVATE_DATA_INFO_NV', value='1000464010'),
 VarDef(name='VK_STRUCTURE_TYPE_PERFORMANCE_CONFIGURATION_ACQUIRE_INFO_INTEL', value='1000210005'),
 VarDef(name='VK_STRUCTURE_TYPE_PERFORMANCE_COUNTER_DESCRIPTION_KHR', value='1000116006'),
 VarDef(name='VK_STRUCTURE_TYPE_PERFORMANCE_COUNTER_KHR', value='1000116005'),
 VarDef(name='VK_STRUCTURE_TYPE_PERFORMANCE_MARKER_INFO_INTEL', value='1000210002'),
 VarDef(name='VK_STRUCTURE_TYPE_PERFORMANCE_OVERRIDE_INFO_INTEL', value='1000210004'),
+VarDef(name='VK_STRUCTURE_TYPE_PERFORMANCE_QUERY_RESERVATION_INFO_KHR', value='1000116007'),
 VarDef(name='VK_STRUCTURE_TYPE_PERFORMANCE_QUERY_SUBMIT_INFO_KHR', value='1000116003'),
 VarDef(name='VK_STRUCTURE_TYPE_PERFORMANCE_STREAM_MARKER_INFO_INTEL', value='1000210003'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES', value='1000083000'),
@@ -6677,6 +7474,7 @@ VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_4444_FORMATS_FEATURES_EXT', value
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_8BIT_STORAGE_FEATURES', value='1000177000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR', value='1000150013'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR', value='1000150014'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ADDRESS_BINDING_REPORT_FEATURES_EXT', value='1000354000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_AMIGO_PROFILING_FEATURES_SEC', value='1000485000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ASTC_DECODE_FEATURES_EXT', value='1000067001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_FEATURES_EXT', value='1000339000'),
@@ -6685,6 +7483,8 @@ VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BLEND_OPERATION_ADVANCED_PROPERTI
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BORDER_COLOR_SWIZZLE_FEATURES_EXT', value='1000411000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES', value='1000257000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES_EXT', value='1000244000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CLUSTER_CULLING_SHADER_FEATURES_HUAWEI', value='1000404000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CLUSTER_CULLING_SHADER_PROPERTIES_HUAWEI', value='1000404001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COHERENT_MEMORY_FEATURES_AMD', value='1000229000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COLOR_WRITE_ENABLE_FEATURES_EXT', value='1000381000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COMPUTE_SHADER_DERIVATIVES_FEATURES_NV', value='1000201000'),
@@ -6692,6 +7492,8 @@ VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CONDITIONAL_RENDERING_FEATURES_EX
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CONSERVATIVE_RASTERIZATION_PROPERTIES_EXT', value='1000101000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COOPERATIVE_MATRIX_FEATURES_NV', value='1000249000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COOPERATIVE_MATRIX_PROPERTIES_NV', value='1000249002'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COPY_MEMORY_INDIRECT_FEATURES_NV', value='1000426000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COPY_MEMORY_INDIRECT_PROPERTIES_NV', value='1000426001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CORNER_SAMPLED_IMAGE_FEATURES_NV', value='1000050000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COVERAGE_REDUCTION_MODE_FEATURES_NV', value='1000250000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CUSTOM_BORDER_COLOR_FEATURES_EXT', value='1000287002'),
@@ -6701,6 +7503,9 @@ VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_CLAMP_ZERO_ONE_FEATURES_EXT
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_CLIP_CONTROL_FEATURES_EXT', value='1000355000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_CLIP_ENABLE_FEATURES_EXT', value='1000102000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_STENCIL_RESOLVE_PROPERTIES', value='1000199000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_DENSITY_MAP_PROPERTIES_EXT', value='1000316001'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_FEATURES_EXT', value='1000316002'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_PROPERTIES_EXT', value='1000316000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES', value='1000161001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES', value='1000161002'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_SET_HOST_MAPPING_FEATURES_VALVE', value='1000420000'),
@@ -6709,19 +7514,26 @@ VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEVICE_GENERATED_COMMANDS_PROPERT
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEVICE_MEMORY_REPORT_FEATURES_EXT', value='1000284000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DIAGNOSTICS_CONFIG_FEATURES_NV', value='1000300000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DISCARD_RECTANGLE_PROPERTIES_EXT', value='1000099000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DISPLACEMENT_MICROMAP_FEATURES_NV', value='1000397000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DISPLACEMENT_MICROMAP_PROPERTIES_NV', value='1000397001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES', value='1000196000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRM_PROPERTIES_EXT', value='1000353000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES', value='1000044003'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXCLUSIVE_SCISSOR_FEATURES_NV', value='1000205002'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_2_FEATURES_EXT', value='1000377000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_FEATURES_EXT', value='1000455000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_PROPERTIES_EXT', value='1000455001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT', value='1000267000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_BUFFER_INFO', value='1000071002'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_FENCE_INFO', value='1000112000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_IMAGE_FORMAT_INFO', value='1000071000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_MEMORY_HOST_PROPERTIES_EXT', value='1000178002'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_MEMORY_RDMA_FEATURES_NV', value='1000371001'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_MEMORY_SCI_BUF_FEATURES_NV', value='1000374004'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_SCI_SYNC_2_FEATURES_NV', value='1000489002'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_SCI_SYNC_FEATURES_NV', value='1000373007'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_SEMAPHORE_INFO', value='1000076000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_EXT', value='1000341000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2', value='1000059000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FLOAT_CONTROLS_PROPERTIES', value='1000197000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_2_FEATURES_EXT', value='1000332000'),
@@ -6730,6 +7542,8 @@ VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_FEATURES_EXT
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_OFFSET_FEATURES_QCOM', value='1000425000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_OFFSET_PROPERTIES_QCOM', value='1000425001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_PROPERTIES_EXT', value='1000218001'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_KHR', value='1000203000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_PROPERTIES_KHR', value='1000322000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_INTERLOCK_FEATURES_EXT', value='1000251000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_ENUMS_FEATURES_NV', value='1000326001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_ENUMS_PROPERTIES_NV', value='1000326000'),
@@ -6751,6 +7565,7 @@ VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2', value='1000
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_PROCESSING_FEATURES_QCOM', value='1000440000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_PROCESSING_PROPERTIES_QCOM', value='1000440001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_ROBUSTNESS_FEATURES', value='1000335000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_SLICED_VIEW_OF_3D_FEATURES_EXT', value='1000418000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_VIEW_IMAGE_FORMAT_INFO_EXT', value='1000170000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_VIEW_MIN_LOD_FEATURES_EXT', value='1000391000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INDEX_TYPE_UINT8_FEATURES_EXT', value='1000265000'),
@@ -6766,6 +7581,8 @@ VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_3_PROPERTIES', value=
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_FEATURES', value='1000413000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_PROPERTIES', value='1000413001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT', value='1000237000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_DECOMPRESSION_FEATURES_NV', value='1000427000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_DECOMPRESSION_PROPERTIES_NV', value='1000427001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PRIORITY_FEATURES_EXT', value='1000238000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2', value='1000059006'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT', value='1000328000'),
@@ -6775,24 +7592,33 @@ VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV', value
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTISAMPLED_RENDER_TO_SINGLE_SAMPLED_FEATURES_EXT', value='1000376000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES', value='1000053001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PER_VIEW_ATTRIBUTES_PROPERTIES_NVX', value='1000097000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PER_VIEW_RENDER_AREAS_FEATURES_QCOM', value='1000510000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PER_VIEW_VIEWPORTS_FEATURES_QCOM', value='1000488000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PROPERTIES', value='1000053002'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTI_DRAW_FEATURES_EXT', value='1000392000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTI_DRAW_PROPERTIES_EXT', value='1000392001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MUTABLE_DESCRIPTOR_TYPE_FEATURES_EXT', value='1000351000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_NON_SEAMLESS_CUBE_MAP_FEATURES_EXT', value='1000422000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_OPACITY_MICROMAP_FEATURES_EXT', value='1000396005'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_OPACITY_MICROMAP_PROPERTIES_EXT', value='1000396006'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_OPTICAL_FLOW_FEATURES_NV', value='1000464000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_OPTICAL_FLOW_PROPERTIES_NV', value='1000464001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PAGEABLE_DEVICE_LOCAL_MEMORY_FEATURES_EXT', value='1000412000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PCI_BUS_INFO_PROPERTIES_EXT', value='1000212000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PERFORMANCE_QUERY_FEATURES_KHR', value='1000116000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PERFORMANCE_QUERY_PROPERTIES_KHR', value='1000116001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_CREATION_CACHE_CONTROL_FEATURES', value='1000297000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_EXECUTABLE_PROPERTIES_FEATURES_KHR', value='1000269000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_LIBRARY_GROUP_HANDLES_FEATURES_EXT', value='1000498000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_PROPERTIES_FEATURES_EXT', value='1000372001'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_PROTECTED_ACCESS_FEATURES_EXT', value='1000466000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_ROBUSTNESS_FEATURES_EXT', value='1000068001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_ROBUSTNESS_PROPERTIES_EXT', value='1000068002'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_POINT_CLIPPING_PROPERTIES', value='1000117000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR', value='1000163000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_PROPERTIES_KHR', value='1000163001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENTATION_PROPERTIES_ANDROID', value='1000010002'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_BARRIER_FEATURES_NV', value='1000292000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR', value='1000294001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_WAIT_FEATURES_KHR', value='1000248000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRIMITIVES_GENERATED_QUERY_FEATURES_EXT', value='1000382000'),
@@ -6806,6 +7632,8 @@ VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROVOKING_VERTEX_PROPERTIES_EXT',
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PUSH_DESCRIPTOR_PROPERTIES_KHR', value='1000080000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RASTERIZATION_ORDER_ATTACHMENT_ACCESS_FEATURES_EXT', value='1000342000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR', value='1000348013'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_INVOCATION_REORDER_FEATURES_NV', value='1000490000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_INVOCATION_REORDER_PROPERTIES_NV', value='1000490001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_MAINTENANCE_1_FEATURES_KHR', value='1000386000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_MOTION_BLUR_FEATURES_NV', value='1000327001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR', value='1000347000'),
@@ -6824,8 +7652,11 @@ VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_FLOAT_2_FEATURES_EX
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_FLOAT_FEATURES_EXT', value='1000260000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES', value='1000180000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CLOCK_FEATURES_KHR', value='1000181000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CORE_BUILTINS_FEATURES_ARM', value='1000497000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CORE_BUILTINS_PROPERTIES_ARM', value='1000497001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CORE_PROPERTIES_2_AMD', value='1000227000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CORE_PROPERTIES_AMD', value='1000185000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CORE_PROPERTIES_ARM', value='1000415000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DEMOTE_TO_HELPER_INVOCATION_FEATURES', value='1000276000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES', value='1000063000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_EARLY_AND_LATE_FRAGMENT_TESTS_FEATURES_AMD', value='1000321000'),
@@ -6837,11 +7668,15 @@ VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_INTEGER_DOT_PRODUCT_PROPER
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_INTEGER_FUNCTIONS_2_FEATURES_INTEL', value='1000209000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_MODULE_IDENTIFIER_FEATURES_EXT', value='1000462000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_MODULE_IDENTIFIER_PROPERTIES_EXT', value='1000462001'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_OBJECT_FEATURES_EXT', value='1000482000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_OBJECT_PROPERTIES_EXT', value='1000482001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_SM_BUILTINS_FEATURES_NV', value='1000154000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_SM_BUILTINS_PROPERTIES_NV', value='1000154001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_SUBGROUP_EXTENDED_TYPES_FEATURES', value='1000175000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_SUBGROUP_UNIFORM_CONTROL_FLOW_FEATURES_KHR', value='1000323000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_TERMINATE_INVOCATION_FEATURES', value='1000215000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_TILE_IMAGE_FEATURES_EXT', value='1000395000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_TILE_IMAGE_PROPERTIES_EXT', value='1000395001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADING_RATE_IMAGE_FEATURES_NV', value='1000164001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADING_RATE_IMAGE_PROPERTIES_NV', value='1000164002'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SPARSE_IMAGE_FORMAT_INFO_2', value='1000059008'),
@@ -6852,6 +7687,7 @@ VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBPASS_MERGE_FEEDBACK_FEATURES_E
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBPASS_SHADING_FEATURES_HUAWEI', value='1000369001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBPASS_SHADING_PROPERTIES_HUAWEI', value='1000369002'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SURFACE_INFO_2_KHR', value='1000119000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SWAPCHAIN_MAINTENANCE_1_FEATURES_EXT', value='1000275000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES', value='1000314007'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TEXEL_BUFFER_ALIGNMENT_FEATURES_EXT', value='1000281000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TEXEL_BUFFER_ALIGNMENT_PROPERTIES', value='1000281001'),
@@ -6875,6 +7711,8 @@ VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES', value='52
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES', value='53'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_PROPERTIES', value='54'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES', value='1000211000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_SC_1_0_FEATURES', value='1000298000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_SC_1_0_PROPERTIES', value='1000298001'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_WORKGROUP_MEMORY_EXPLICIT_LAYOUT_FEATURES_KHR', value='1000336000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_YCBCR_2_PLANE_444_FORMATS_FEATURES_EXT', value='1000330000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_YCBCR_IMAGE_ARRAYS_FEATURES_EXT', value='1000252000'),
@@ -6895,6 +7733,8 @@ VarDef(name='VK_STRUCTURE_TYPE_PIPELINE_FRAGMENT_SHADING_RATE_ENUM_STATE_CREATE_
 VarDef(name='VK_STRUCTURE_TYPE_PIPELINE_FRAGMENT_SHADING_RATE_STATE_CREATE_INFO_KHR', value='1000226001'),
 VarDef(name='VK_STRUCTURE_TYPE_PIPELINE_INFO_KHR', value='1000269001'),
 VarDef(name='VK_STRUCTURE_TYPE_PIPELINE_LIBRARY_CREATE_INFO_KHR', value='1000290000'),
+VarDef(name='VK_STRUCTURE_TYPE_PIPELINE_OFFLINE_CREATE_INFO', value='1000298010'),
+VarDef(name='VK_STRUCTURE_TYPE_PIPELINE_POOL_SIZE', value='1000298005'),
 VarDef(name='VK_STRUCTURE_TYPE_PIPELINE_PROPERTIES_IDENTIFIER_EXT', value='1000372000'),
 VarDef(name='VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_CONSERVATIVE_STATE_CREATE_INFO_EXT', value='1000101001'),
 VarDef(name='VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_DEPTH_CLIP_STATE_CREATE_INFO_EXT', value='1000102001'),
@@ -6922,9 +7762,12 @@ VarDef(name='VK_STRUCTURE_TYPE_PRESENT_INFO_KHR', value='1000001001'),
 VarDef(name='VK_STRUCTURE_TYPE_PRESENT_REGIONS_KHR', value='1000084000'),
 VarDef(name='VK_STRUCTURE_TYPE_PRESENT_TIMES_INFO_GOOGLE', value='1000092000'),
 VarDef(name='VK_STRUCTURE_TYPE_PRIVATE_DATA_SLOT_CREATE_INFO', value='1000295002'),
+VarDef(name='VK_STRUCTURE_TYPE_PRIVATE_VENDOR_INFO_RESERVED_OFFSET_0_NV', value='1000051000'),
 VarDef(name='VK_STRUCTURE_TYPE_PROTECTED_SUBMIT_INFO', value='1000145000'),
+VarDef(name='VK_STRUCTURE_TYPE_QUERY_LOW_LATENCY_SUPPORT_NV', value='1000310000'),
 VarDef(name='VK_STRUCTURE_TYPE_QUERY_POOL_PERFORMANCE_CREATE_INFO_KHR', value='1000116002'),
 VarDef(name='VK_STRUCTURE_TYPE_QUERY_POOL_PERFORMANCE_QUERY_CREATE_INFO_INTEL', value='1000210000'),
+VarDef(name='VK_STRUCTURE_TYPE_QUERY_POOL_VIDEO_ENCODE_FEEDBACK_CREATE_INFO_KHR', value='1000299005'),
 VarDef(name='VK_STRUCTURE_TYPE_QUEUE_FAMILY_CHECKPOINT_PROPERTIES_2_NV', value='1000314008'),
 VarDef(name='VK_STRUCTURE_TYPE_QUEUE_FAMILY_CHECKPOINT_PROPERTIES_NV', value='1000206001'),
 VarDef(name='VK_STRUCTURE_TYPE_QUEUE_FAMILY_GLOBAL_PRIORITY_PROPERTIES_KHR', value='1000388001'),
@@ -6936,6 +7779,8 @@ VarDef(name='VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_NV', value='1000
 VarDef(name='VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_INTERFACE_CREATE_INFO_KHR', value='1000150018'),
 VarDef(name='VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR', value='1000150016'),
 VarDef(name='VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV', value='1000165011'),
+VarDef(name='VK_STRUCTURE_TYPE_REFRESH_OBJECT_LIST_KHR', value='1000308000'),
+VarDef(name='VK_STRUCTURE_TYPE_RELEASE_SWAPCHAIN_IMAGES_INFO_EXT', value='1000275005'),
 VarDef(name='VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO', value='1000044001'),
 VarDef(name='VK_STRUCTURE_TYPE_RENDERING_FRAGMENT_DENSITY_MAP_ATTACHMENT_INFO_EXT', value='1000044007'),
 VarDef(name='VK_STRUCTURE_TYPE_RENDERING_FRAGMENT_SHADING_RATE_ATTACHMENT_INFO_KHR', value='1000044006'),
@@ -6953,20 +7798,26 @@ VarDef(name='VK_STRUCTURE_TYPE_RENDER_PASS_TRANSFORM_BEGIN_INFO_QCOM', value='10
 VarDef(name='VK_STRUCTURE_TYPE_RESERVED_QCOM', value='1000309000'),
 VarDef(name='VK_STRUCTURE_TYPE_RESOLVE_IMAGE_INFO_2', value='1000337005'),
 VarDef(name='VK_STRUCTURE_TYPE_SAMPLER_BORDER_COLOR_COMPONENT_MAPPING_CREATE_INFO_EXT', value='1000411001'),
+VarDef(name='VK_STRUCTURE_TYPE_SAMPLER_CAPTURE_DESCRIPTOR_DATA_INFO_EXT', value='1000316008'),
 VarDef(name='VK_STRUCTURE_TYPE_SAMPLER_CUSTOM_BORDER_COLOR_CREATE_INFO_EXT', value='1000287000'),
 VarDef(name='VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO', value='1000130001'),
 VarDef(name='VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO', value='1000156000'),
 VarDef(name='VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_IMAGE_FORMAT_PROPERTIES', value='1000156005'),
 VarDef(name='VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO', value='1000156001'),
 VarDef(name='VK_STRUCTURE_TYPE_SAMPLE_LOCATIONS_INFO_EXT', value='1000143000'),
+VarDef(name='VK_STRUCTURE_TYPE_SCI_SYNC_ATTRIBUTES_INFO_NV', value='1000373003'),
 VarDef(name='VK_STRUCTURE_TYPE_SCREEN_SURFACE_CREATE_INFO_QNX', value='1000378000'),
 VarDef(name='VK_STRUCTURE_TYPE_SEMAPHORE_GET_FD_INFO_KHR', value='1000079001'),
+VarDef(name='VK_STRUCTURE_TYPE_SEMAPHORE_GET_SCI_SYNC_INFO_NV', value='1000373006'),
 VarDef(name='VK_STRUCTURE_TYPE_SEMAPHORE_GET_WIN32_HANDLE_INFO_KHR', value='1000078003'),
 VarDef(name='VK_STRUCTURE_TYPE_SEMAPHORE_GET_ZIRCON_HANDLE_INFO_FUCHSIA', value='1000365001'),
+VarDef(name='VK_STRUCTURE_TYPE_SEMAPHORE_SCI_SYNC_CREATE_INFO_NV', value='1000489001'),
+VarDef(name='VK_STRUCTURE_TYPE_SEMAPHORE_SCI_SYNC_POOL_CREATE_INFO_NV', value='1000489000'),
 VarDef(name='VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO', value='1000207005'),
 VarDef(name='VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO', value='1000314005'),
 VarDef(name='VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO', value='1000207002'),
 VarDef(name='VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO', value='1000207004'),
+VarDef(name='VK_STRUCTURE_TYPE_SHADER_CREATE_INFO_EXT', value='1000482002'),
 VarDef(name='VK_STRUCTURE_TYPE_SHADER_MODULE_IDENTIFIER_EXT', value='1000462003'),
 VarDef(name='VK_STRUCTURE_TYPE_SHADER_MODULE_VALIDATION_CACHE_CREATE_INFO_EXT', value='1000160001'),
 VarDef(name='VK_STRUCTURE_TYPE_SHARED_PRESENT_SURFACE_CAPABILITIES_KHR', value='1000111000'),
@@ -6986,14 +7837,23 @@ VarDef(name='VK_STRUCTURE_TYPE_SUBRESOURCE_LAYOUT_2_EXT', value='1000338002'),
 VarDef(name='VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_EXT', value='1000090000'),
 VarDef(name='VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_KHR', value='1000119001'),
 VarDef(name='VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_FULL_SCREEN_EXCLUSIVE_EXT', value='1000255002'),
+VarDef(name='VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_PRESENT_BARRIER_NV', value='1000292001'),
 VarDef(name='VK_STRUCTURE_TYPE_SURFACE_FORMAT_2_KHR', value='1000119002'),
 VarDef(name='VK_STRUCTURE_TYPE_SURFACE_FULL_SCREEN_EXCLUSIVE_INFO_EXT', value='1000255000'),
 VarDef(name='VK_STRUCTURE_TYPE_SURFACE_FULL_SCREEN_EXCLUSIVE_WIN32_INFO_EXT', value='1000255001'),
+VarDef(name='VK_STRUCTURE_TYPE_SURFACE_PRESENT_MODE_COMPATIBILITY_EXT', value='1000274002'),
+VarDef(name='VK_STRUCTURE_TYPE_SURFACE_PRESENT_MODE_EXT', value='1000274000'),
+VarDef(name='VK_STRUCTURE_TYPE_SURFACE_PRESENT_SCALING_CAPABILITIES_EXT', value='1000274001'),
 VarDef(name='VK_STRUCTURE_TYPE_SURFACE_PROTECTED_CAPABILITIES_KHR', value='1000239000'),
 VarDef(name='VK_STRUCTURE_TYPE_SWAPCHAIN_COUNTER_CREATE_INFO_EXT', value='1000091003'),
 VarDef(name='VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR', value='1000001000'),
 VarDef(name='VK_STRUCTURE_TYPE_SWAPCHAIN_DISPLAY_NATIVE_HDR_CREATE_INFO_AMD', value='1000213001'),
 VarDef(name='VK_STRUCTURE_TYPE_SWAPCHAIN_IMAGE_CREATE_INFO_ANDROID', value='1000010001'),
+VarDef(name='VK_STRUCTURE_TYPE_SWAPCHAIN_PRESENT_BARRIER_CREATE_INFO_NV', value='1000292002'),
+VarDef(name='VK_STRUCTURE_TYPE_SWAPCHAIN_PRESENT_FENCE_INFO_EXT', value='1000275001'),
+VarDef(name='VK_STRUCTURE_TYPE_SWAPCHAIN_PRESENT_MODES_CREATE_INFO_EXT', value='1000275002'),
+VarDef(name='VK_STRUCTURE_TYPE_SWAPCHAIN_PRESENT_MODE_INFO_EXT', value='1000275003'),
+VarDef(name='VK_STRUCTURE_TYPE_SWAPCHAIN_PRESENT_SCALING_CREATE_INFO_EXT', value='1000275004'),
 VarDef(name='VK_STRUCTURE_TYPE_SYSMEM_COLOR_SPACE_FUCHSIA', value='1000366008'),
 VarDef(name='VK_STRUCTURE_TYPE_TEXTURE_LOD_GATHER_FORMAT_PROPERTIES_AMD', value='1000041000'),
 VarDef(name='VK_STRUCTURE_TYPE_TILE_PROPERTIES_QCOM', value='1000484001'),
@@ -7007,40 +7867,36 @@ VarDef(name='VK_STRUCTURE_TYPE_VIDEO_BEGIN_CODING_INFO_KHR', value='1000023008')
 VarDef(name='VK_STRUCTURE_TYPE_VIDEO_CAPABILITIES_KHR', value='1000023001'),
 VarDef(name='VK_STRUCTURE_TYPE_VIDEO_CODING_CONTROL_INFO_KHR', value='1000023010'),
 VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_CAPABILITIES_KHR', value='1000024001'),
-VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_CAPABILITIES_EXT', value='1000040000'),
-VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_DPB_SLOT_INFO_EXT', value='1000040006'),
-VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_PICTURE_INFO_EXT', value='1000040001'),
-VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_PROFILE_INFO_EXT', value='1000040003'),
-VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_SESSION_PARAMETERS_ADD_INFO_EXT', value='1000040005'),
-VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_SESSION_PARAMETERS_CREATE_INFO_EXT', value='1000040004'),
-VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_H265_CAPABILITIES_EXT', value='1000187000'),
-VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_H265_DPB_SLOT_INFO_EXT', value='1000187005'),
-VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_H265_PICTURE_INFO_EXT', value='1000187004'),
-VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_H265_PROFILE_INFO_EXT', value='1000187003'),
-VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_H265_SESSION_PARAMETERS_ADD_INFO_EXT', value='1000187002'),
-VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_H265_SESSION_PARAMETERS_CREATE_INFO_EXT', value='1000187001'),
+VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_CAPABILITIES_KHR', value='1000040000'),
+VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_DPB_SLOT_INFO_KHR', value='1000040006'),
+VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_PICTURE_INFO_KHR', value='1000040001'),
+VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_PROFILE_INFO_KHR', value='1000040003'),
+VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_SESSION_PARAMETERS_ADD_INFO_KHR', value='1000040005'),
+VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_SESSION_PARAMETERS_CREATE_INFO_KHR', value='1000040004'),
+VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_H265_CAPABILITIES_KHR', value='1000187000'),
+VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_H265_DPB_SLOT_INFO_KHR', value='1000187005'),
+VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_H265_PICTURE_INFO_KHR', value='1000187004'),
+VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_H265_PROFILE_INFO_KHR', value='1000187003'),
+VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_H265_SESSION_PARAMETERS_ADD_INFO_KHR', value='1000187002'),
+VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_H265_SESSION_PARAMETERS_CREATE_INFO_KHR', value='1000187001'),
 VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_INFO_KHR', value='1000024000'),
 VarDef(name='VK_STRUCTURE_TYPE_VIDEO_DECODE_USAGE_INFO_KHR', value='1000024002'),
 VarDef(name='VK_STRUCTURE_TYPE_VIDEO_ENCODE_CAPABILITIES_KHR', value='1000299003'),
 VarDef(name='VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_CAPABILITIES_EXT', value='1000038000'),
 VarDef(name='VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_DPB_SLOT_INFO_EXT', value='1000038004'),
-VarDef(name='VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_EMIT_PICTURE_PARAMETERS_INFO_EXT', value='1000038006'),
 VarDef(name='VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_NALU_SLICE_INFO_EXT', value='1000038005'),
 VarDef(name='VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_PROFILE_INFO_EXT', value='1000038007'),
 VarDef(name='VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_RATE_CONTROL_INFO_EXT', value='1000038008'),
 VarDef(name='VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_RATE_CONTROL_LAYER_INFO_EXT', value='1000038009'),
-VarDef(name='VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_REFERENCE_LISTS_INFO_EXT', value='1000038010'),
 VarDef(name='VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_SESSION_PARAMETERS_ADD_INFO_EXT', value='1000038002'),
 VarDef(name='VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_SESSION_PARAMETERS_CREATE_INFO_EXT', value='1000038001'),
 VarDef(name='VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_VCL_FRAME_INFO_EXT', value='1000038003'),
 VarDef(name='VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_CAPABILITIES_EXT', value='1000039000'),
 VarDef(name='VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_DPB_SLOT_INFO_EXT', value='1000039004'),
-VarDef(name='VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_EMIT_PICTURE_PARAMETERS_INFO_EXT', value='1000039006'),
 VarDef(name='VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_NALU_SLICE_SEGMENT_INFO_EXT', value='1000039005'),
 VarDef(name='VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_PROFILE_INFO_EXT', value='1000039007'),
 VarDef(name='VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_RATE_CONTROL_INFO_EXT', value='1000039009'),
 VarDef(name='VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_RATE_CONTROL_LAYER_INFO_EXT', value='1000039010'),
-VarDef(name='VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_REFERENCE_LISTS_INFO_EXT', value='1000039008'),
 VarDef(name='VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_SESSION_PARAMETERS_ADD_INFO_EXT', value='1000039002'),
 VarDef(name='VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_SESSION_PARAMETERS_CREATE_INFO_EXT', value='1000039001'),
 VarDef(name='VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_VCL_FRAME_INFO_EXT', value='1000039003'),
@@ -7151,9 +8007,10 @@ VarDef(name='VK_SURFACE_TRANSFORM_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
 ])
 
 Enum(name='VkSwapchainCreateFlagBitsKHR', enumerators = [
+VarDef(name='VK_SWAPCHAIN_CREATE_DEFERRED_MEMORY_ALLOCATION_BIT_EXT', value='8'),
 VarDef(name='VK_SWAPCHAIN_CREATE_MUTABLE_FORMAT_BIT_KHR', value='4'),
 VarDef(name='VK_SWAPCHAIN_CREATE_PROTECTED_BIT_KHR', value='2'),
-VarDef(name='VK_SWAPCHAIN_CREATE_RESERVED_3_BIT_SEC', value='8'),
+VarDef(name='VK_SWAPCHAIN_CREATE_RESERVED_4_BIT_EXT', value='16'),
 VarDef(name='VK_SWAPCHAIN_CREATE_SPLIT_INSTANCE_BIND_REGIONS_BIT_KHR', value='1'),
 VarDef(name='VK_SWAPCHAIN_CREATE_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
 ])
@@ -7236,6 +8093,7 @@ VarDef(name='VK_VENDOR_ID_KAZAN', value='65539'),
 VarDef(name='VK_VENDOR_ID_CODEPLAY', value='65540'),
 VarDef(name='VK_VENDOR_ID_MESA', value='65541'),
 VarDef(name='VK_VENDOR_ID_POCL', value='65542'),
+VarDef(name='VK_VENDOR_ID_MOBILEYE', value='65543'),
 VarDef(name='VK_VENDOR_ID_MAX_ENUM', value='2147483647'),
 ])
 
@@ -7262,27 +8120,18 @@ VarDef(name='VK_VIDEO_CHROMA_SUBSAMPLING_FLAG_BITS_MAX_ENUM_KHR', value='2147483
 
 Enum(name='VkVideoCodecOperationFlagBitsKHR', enumerators = [
 VarDef(name='VK_VIDEO_CODEC_OPERATION_NONE_KHR', value='0'),
-VarDef(name='VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_EXT', value='1'),
-VarDef(name='VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_EXT', value='2'),
+VarDef(name='VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR', value='1'),
+VarDef(name='VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR', value='2'),
 VarDef(name='VK_VIDEO_CODEC_OPERATION_ENCODE_H264_BIT_EXT', value='65536'),
 VarDef(name='VK_VIDEO_CODEC_OPERATION_ENCODE_H265_BIT_EXT', value='131072'),
 VarDef(name='VK_VIDEO_CODEC_OPERATION_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
 ])
 
 Enum(name='VkVideoCodingControlFlagBitsKHR', enumerators = [
-VarDef(name='VK_VIDEO_CODING_CONTROL_DEFAULT_KHR', value='0'),
 VarDef(name='VK_VIDEO_CODING_CONTROL_RESET_BIT_KHR', value='1'),
 VarDef(name='VK_VIDEO_CODING_CONTROL_ENCODE_RATE_CONTROL_BIT_KHR', value='2'),
 VarDef(name='VK_VIDEO_CODING_CONTROL_ENCODE_RATE_CONTROL_LAYER_BIT_KHR', value='4'),
 VarDef(name='VK_VIDEO_CODING_CONTROL_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
-])
-
-Enum(name='VkVideoCodingQualityPresetFlagBitsKHR', enumerators = [
-VarDef(name='VK_VIDEO_CODING_QUALITY_PRESET_DEFAULT_BIT_KHR', value='0'),
-VarDef(name='VK_VIDEO_CODING_QUALITY_PRESET_NORMAL_BIT_KHR', value='1'),
-VarDef(name='VK_VIDEO_CODING_QUALITY_PRESET_POWER_BIT_KHR', value='2'),
-VarDef(name='VK_VIDEO_CODING_QUALITY_PRESET_QUALITY_BIT_KHR', value='4'),
-VarDef(name='VK_VIDEO_CODING_QUALITY_PRESET_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
 ])
 
 Enum(name='VkVideoComponentBitDepthFlagBitsKHR', enumerators = [
@@ -7294,23 +8143,16 @@ VarDef(name='VK_VIDEO_COMPONENT_BIT_DEPTH_FLAG_BITS_MAX_ENUM_KHR', value='214748
 ])
 
 Enum(name='VkVideoDecodeCapabilityFlagBitsKHR', enumerators = [
-VarDef(name='VK_VIDEO_DECODE_CAPABILITY_DEFAULT_KHR', value='0'),
 VarDef(name='VK_VIDEO_DECODE_CAPABILITY_DPB_AND_OUTPUT_COINCIDE_BIT_KHR', value='1'),
 VarDef(name='VK_VIDEO_DECODE_CAPABILITY_DPB_AND_OUTPUT_DISTINCT_BIT_KHR', value='2'),
 VarDef(name='VK_VIDEO_DECODE_CAPABILITY_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
 ])
 
-Enum(name='VkVideoDecodeFlagBitsKHR', enumerators = [
-VarDef(name='VK_VIDEO_DECODE_DEFAULT_KHR', value='0'),
-VarDef(name='VK_VIDEO_DECODE_RESERVED_0_BIT_KHR', value='1'),
-VarDef(name='VK_VIDEO_DECODE_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
-])
-
-Enum(name='VkVideoDecodeH264PictureLayoutFlagBitsEXT', enumerators = [
-VarDef(name='VK_VIDEO_DECODE_H264_PICTURE_LAYOUT_PROGRESSIVE_EXT', value='0'),
-VarDef(name='VK_VIDEO_DECODE_H264_PICTURE_LAYOUT_INTERLACED_INTERLEAVED_LINES_BIT_EXT', value='1'),
-VarDef(name='VK_VIDEO_DECODE_H264_PICTURE_LAYOUT_INTERLACED_SEPARATE_PLANES_BIT_EXT', value='2'),
-VarDef(name='VK_VIDEO_DECODE_H_PICTURE_LAYOUT_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
+Enum(name='VkVideoDecodeH264PictureLayoutFlagBitsKHR', enumerators = [
+VarDef(name='VK_VIDEO_DECODE_H264_PICTURE_LAYOUT_PROGRESSIVE_KHR', value='0'),
+VarDef(name='VK_VIDEO_DECODE_H264_PICTURE_LAYOUT_INTERLACED_INTERLEAVED_LINES_BIT_KHR', value='1'),
+VarDef(name='VK_VIDEO_DECODE_H264_PICTURE_LAYOUT_INTERLACED_SEPARATE_PLANES_BIT_KHR', value='2'),
+VarDef(name='VK_VIDEO_DECODE_H_PICTURE_LAYOUT_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
 ])
 
 Enum(name='VkVideoDecodeUsageFlagBitsKHR', enumerators = [
@@ -7322,7 +8164,6 @@ VarDef(name='VK_VIDEO_DECODE_USAGE_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
 ])
 
 Enum(name='VkVideoEncodeCapabilityFlagBitsKHR', enumerators = [
-VarDef(name='VK_VIDEO_ENCODE_CAPABILITY_DEFAULT_KHR', value='0'),
 VarDef(name='VK_VIDEO_ENCODE_CAPABILITY_PRECEDING_EXTERNALLY_ENCODED_BYTES_BIT_KHR', value='1'),
 VarDef(name='VK_VIDEO_ENCODE_CAPABILITY_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
 ])
@@ -7334,6 +8175,13 @@ VarDef(name='VK_VIDEO_ENCODE_CONTENT_DESKTOP_BIT_KHR', value='2'),
 VarDef(name='VK_VIDEO_ENCODE_CONTENT_RENDERED_BIT_KHR', value='4'),
 VarDef(name='VK_VIDEO_ENCODE_CONTENT_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
 ])
+
+Enum(name='VkVideoEncodeFeedbackFlagBitsKHR', enumerators = [
+VarDef(name='VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_BUFFER_OFFSET_BIT_KHR', value='1'),
+VarDef(name='VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_BYTES_WRITTEN_BIT_KHR', value='2'),
+VarDef(name='VK_VIDEO_ENCODE_FEEDBACK_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
+])
+
 Enum(name='VkVideoEncodeH264CapabilityFlagBitsEXT', enumerators = [
 VarDef(name='VK_VIDEO_ENCODE_H264_CAPABILITY_DIRECT_8X8_INFERENCE_ENABLED_BIT_EXT', value='1'),
 VarDef(name='VK_VIDEO_ENCODE_H264_CAPABILITY_DIRECT_8X8_INFERENCE_DISABLED_BIT_EXT', value='2'),
@@ -7360,21 +8208,8 @@ VarDef(name='VK_VIDEO_ENCODE_H264_CAPABILITY_SLICE_MB_COUNT_BIT_EXT', value='209
 VarDef(name='VK_VIDEO_ENCODE_H264_CAPABILITY_ROW_UNALIGNED_SLICE_BIT_EXT', value='4194304'),
 VarDef(name='VK_VIDEO_ENCODE_H264_CAPABILITY_DIFFERENT_SLICE_TYPE_BIT_EXT', value='8388608'),
 VarDef(name='VK_VIDEO_ENCODE_H264_CAPABILITY_B_FRAME_IN_L1_LIST_BIT_EXT', value='16777216'),
+VarDef(name='VK_VIDEO_ENCODE_H264_CAPABILITY_DIFFERENT_REFERENCE_FINAL_LISTS_BIT_EXT', value='33554432'),
 VarDef(name='VK_VIDEO_ENCODE_H264_CAPABILITY_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
-])
-
-Enum(name='VkVideoEncodeH264InputModeFlagBitsEXT', enumerators = [
-VarDef(name='VK_VIDEO_ENCODE_H264_INPUT_MODE_FRAME_BIT_EXT', value='1'),
-VarDef(name='VK_VIDEO_ENCODE_H264_INPUT_MODE_SLICE_BIT_EXT', value='2'),
-VarDef(name='VK_VIDEO_ENCODE_H264_INPUT_MODE_NON_VCL_BIT_EXT', value='4'),
-VarDef(name='VK_VIDEO_ENCODE_H264_INPUT_MODE_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
-])
-
-Enum(name='VkVideoEncodeH264OutputModeFlagBitsEXT', enumerators = [
-VarDef(name='VK_VIDEO_ENCODE_H264_OUTPUT_MODE_FRAME_BIT_EXT', value='1'),
-VarDef(name='VK_VIDEO_ENCODE_H264_OUTPUT_MODE_SLICE_BIT_EXT', value='2'),
-VarDef(name='VK_VIDEO_ENCODE_H264_OUTPUT_MODE_NON_VCL_BIT_EXT', value='4'),
-VarDef(name='VK_VIDEO_ENCODE_H264_OUTPUT_MODE_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
 ])
 
 Enum(name='VkVideoEncodeH264RateControlStructureEXT', enumerators = [
@@ -7411,6 +8246,7 @@ VarDef(name='VK_VIDEO_ENCODE_H265_CAPABILITY_ROW_UNALIGNED_SLICE_SEGMENT_BIT_EXT
 VarDef(name='VK_VIDEO_ENCODE_H265_CAPABILITY_DEPENDENT_SLICE_SEGMENT_BIT_EXT', value='8388608'),
 VarDef(name='VK_VIDEO_ENCODE_H265_CAPABILITY_DIFFERENT_SLICE_TYPE_BIT_EXT', value='16777216'),
 VarDef(name='VK_VIDEO_ENCODE_H265_CAPABILITY_B_FRAME_IN_L1_LIST_BIT_EXT', value='33554432'),
+VarDef(name='VK_VIDEO_ENCODE_H265_CAPABILITY_DIFFERENT_REFERENCE_FINAL_LISTS_BIT_EXT', value='67108864'),
 VarDef(name='VK_VIDEO_ENCODE_H265_CAPABILITY_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
 ])
 
@@ -7419,20 +8255,6 @@ VarDef(name='VK_VIDEO_ENCODE_H265_CTB_SIZE_16_BIT_EXT', value='1'),
 VarDef(name='VK_VIDEO_ENCODE_H265_CTB_SIZE_32_BIT_EXT', value='2'),
 VarDef(name='VK_VIDEO_ENCODE_H265_CTB_SIZE_64_BIT_EXT', value='4'),
 VarDef(name='VK_VIDEO_ENCODE_H_CTB_SIZE_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
-])
-
-Enum(name='VkVideoEncodeH265InputModeFlagBitsEXT', enumerators = [
-VarDef(name='VK_VIDEO_ENCODE_H265_INPUT_MODE_FRAME_BIT_EXT', value='1'),
-VarDef(name='VK_VIDEO_ENCODE_H265_INPUT_MODE_SLICE_SEGMENT_BIT_EXT', value='2'),
-VarDef(name='VK_VIDEO_ENCODE_H265_INPUT_MODE_NON_VCL_BIT_EXT', value='4'),
-VarDef(name='VK_VIDEO_ENCODE_H265_INPUT_MODE_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
-])
-
-Enum(name='VkVideoEncodeH265OutputModeFlagBitsEXT', enumerators = [
-VarDef(name='VK_VIDEO_ENCODE_H265_OUTPUT_MODE_FRAME_BIT_EXT', value='1'),
-VarDef(name='VK_VIDEO_ENCODE_H265_OUTPUT_MODE_SLICE_SEGMENT_BIT_EXT', value='2'),
-VarDef(name='VK_VIDEO_ENCODE_H265_OUTPUT_MODE_NON_VCL_BIT_EXT', value='4'),
-VarDef(name='VK_VIDEO_ENCODE_H265_OUTPUT_MODE_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
 ])
 
 Enum(name='VkVideoEncodeH265RateControlStructureEXT', enumerators = [
@@ -7451,9 +8273,10 @@ VarDef(name='VK_VIDEO_ENCODE_H265_TRANSFORM_BLOCK_SIZE_FLAG_BITS_MAX_ENUM_EXT', 
 ])
 
 Enum(name='VkVideoEncodeRateControlModeFlagBitsKHR', enumerators = [
-VarDef(name='VK_VIDEO_ENCODE_RATE_CONTROL_MODE_NONE_BIT_KHR', value='0'),
-VarDef(name='VK_VIDEO_ENCODE_RATE_CONTROL_MODE_CBR_BIT_KHR', value='1'),
-VarDef(name='VK_VIDEO_ENCODE_RATE_CONTROL_MODE_VBR_BIT_KHR', value='2'),
+VarDef(name='VK_VIDEO_ENCODE_RATE_CONTROL_MODE_DEFAULT_KHR', value='0'),
+VarDef(name='VK_VIDEO_ENCODE_RATE_CONTROL_MODE_DISABLED_BIT_KHR', value='1'),
+VarDef(name='VK_VIDEO_ENCODE_RATE_CONTROL_MODE_CBR_BIT_KHR', value='2'),
+VarDef(name='VK_VIDEO_ENCODE_RATE_CONTROL_MODE_VBR_BIT_KHR', value='4'),
 VarDef(name='VK_VIDEO_ENCODE_RATE_CONTROL_MODE_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
 ])
 
@@ -7476,7 +8299,6 @@ VarDef(name='VK_VIDEO_ENCODE_USAGE_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
 ])
 
 Enum(name='VkVideoSessionCreateFlagBitsKHR', enumerators = [
-VarDef(name='VK_VIDEO_SESSION_CREATE_DEFAULT_KHR', value='0'),
 VarDef(name='VK_VIDEO_SESSION_CREATE_PROTECTED_CONTENT_BIT_KHR', value='1'),
 VarDef(name='VK_VIDEO_SESSION_CREATE_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
 ])
@@ -7545,6 +8367,13 @@ var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='accelerationStructureSize', type='VkDeviceSize'),
 var4=VarDef(name='updateScratchSize', type='VkDeviceSize'),
 var5=VarDef(name='buildScratchSize', type='VkDeviceSize')
+)
+
+Struct(name='VkAccelerationStructureCaptureDescriptorDataInfoEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='accelerationStructure', type='VkAccelerationStructureKHR'),
+var4=VarDef(name='accelerationStructureNV', type='VkAccelerationStructureNV')
 )
 
 Struct(name='VkAccelerationStructureCreateInfoKHR_', enabled=False,
@@ -7669,11 +8498,17 @@ var3=VarDef(name='maxInstances', type='uint32_t'),
 var4=VarDef(name='flags', type='VkAccelerationStructureMotionInfoFlagsNV')
 )
 
-#Struct(name='VkAccelerationStructureMotionInstanceNV_', enabled=False,
-#var1=VarDef(name='type', type='VkAccelerationStructureMotionInstanceTypeNV'),
-#var2=VarDef(name='flags', type='VkAccelerationStructureMotionInstanceFlagsNV'),
-#var3=VarDef(name='data', type='VkAccelerationStructureMotionInstanceDataNV')
-#)
+Struct(name='VkAccelerationStructureMotionInstanceDataNV_', type='union', enabled=False,
+var1=VarDef(name='staticInstance', type='VkAccelerationStructureInstanceKHR'),
+var2=VarDef(name='matrixMotionInstance', type='VkAccelerationStructureMatrixMotionInstanceNV'),
+var3=VarDef(name='srtMotionInstance', type='VkAccelerationStructureSRTMotionInstanceNV')
+)
+
+Struct(name='VkAccelerationStructureMotionInstanceNV_', enabled=False,
+var1=VarDef(name='type', type='VkAccelerationStructureMotionInstanceTypeNV'),
+var2=VarDef(name='flags', type='VkAccelerationStructureMotionInstanceFlagsNV'),
+var3=VarDef(name='data', type='VkAccelerationStructureMotionInstanceDataNV')
+)
 
 Struct(name='VkAccelerationStructureSRTMotionInstanceNV_', enabled=False,
 var1=VarDef(name='transformT0', type='VkSRTDataNV'),
@@ -7683,6 +8518,40 @@ var4=VarDef(name='mask', type='uint32_t:8'),
 var5=VarDef(name='instanceShaderBindingTableRecordOffset', type='uint32_t:24'),
 var6=VarDef(name='flags', type='VkGeometryInstanceFlagsKHR:8'),
 var7=VarDef(name='accelerationStructureReference', type='uint64_t')
+)
+
+Struct(name='VkAccelerationStructureTrianglesDisplacementMicromapNV_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='displacementBiasAndScaleFormat', type='VkFormat'),
+var4=VarDef(name='displacementVectorFormat', type='VkFormat'),
+var5=VarDef(name='displacementBiasAndScaleBuffer', type='VkDeviceOrHostAddressConstKHR'),
+var6=VarDef(name='displacementBiasAndScaleStride', type='VkDeviceSize'),
+var7=VarDef(name='displacementVectorBuffer', type='VkDeviceOrHostAddressConstKHR'),
+var8=VarDef(name='displacementVectorStride', type='VkDeviceSize'),
+var9=VarDef(name='displacedMicromapPrimitiveFlags', type='VkDeviceOrHostAddressConstKHR'),
+var10=VarDef(name='displacedMicromapPrimitiveFlagsStride', type='VkDeviceSize'),
+var11=VarDef(name='indexType', type='VkIndexType'),
+var12=VarDef(name='indexBuffer', type='VkDeviceOrHostAddressConstKHR'),
+var13=VarDef(name='indexStride', type='VkDeviceSize'),
+var14=VarDef(name='baseTriangle', type='uint32_t'),
+var15=VarDef(name='usageCountsCount', type='uint32_t'),
+var16=VarDef(name='pUsageCounts', type='const VkMicromapUsageEXT*'),
+var17=VarDef(name='ppUsageCounts', type='const VkMicromapUsageEXT* const*'),
+var18=VarDef(name='micromap', type='VkMicromapEXT')
+)
+
+Struct(name='VkAccelerationStructureTrianglesOpacityMicromapEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='indexType', type='VkIndexType'),
+var4=VarDef(name='indexBuffer', type='VkDeviceOrHostAddressConstKHR'),
+var5=VarDef(name='indexStride', type='VkDeviceSize'),
+var6=VarDef(name='baseTriangle', type='uint32_t'),
+var7=VarDef(name='usageCountsCount', type='uint32_t'),
+var8=VarDef(name='pUsageCounts', type='const VkMicromapUsageEXT*'),
+var9=VarDef(name='ppUsageCounts', type='const VkMicromapUsageEXT* const*'),
+var10=VarDef(name='micromap', type='VkMicromapEXT')
 )
 
 Struct(name='VkAccelerationStructureVersionInfoKHR_', enabled=False,
@@ -7727,6 +8596,15 @@ var6=VarDef(name='engineVersion', type='uint32_t'),
 var7=VarDef(name='apiVersion', type='uint32_t')
 )
 
+Struct(name='VkApplicationParametersEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='vendorID', type='uint32_t'),
+var4=VarDef(name='deviceID', type='uint32_t'),
+var5=VarDef(name='key', type='uint32_t'),
+var6=VarDef(name='value', type='uint64_t')
+)
+
 Struct(name='VkAttachmentDescription_', enabled=True, declareArray=True,
 var1=VarDef(name='flags', type='VkAttachmentDescriptionFlags'),
 var2=VarDef(name='format', type='VkFormat'),
@@ -7766,6 +8644,7 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='stencilInitialLayout', type='VkImageLayout'),
 var4=VarDef(name='stencilFinalLayout', type='VkImageLayout')
 )
+
 Struct(name='VkAttachmentReference_', enabled=True, declareArray=True,
 var1=VarDef(name='attachment', type='uint32_t'),
 var2=VarDef(name='layout', type='VkImageLayout')
@@ -7929,6 +8808,12 @@ var8=VarDef(name='pRegions', type='const VkImageBlit2*', wrapType='CVkImageBlit2
 var9=VarDef(name='filter', type='VkFilter')
 )
 
+Struct(name='VkBufferCaptureDescriptorDataInfoEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='buffer', type='VkBuffer')
+)
+
 Struct(name='VkBufferCopy_', enabled=True, declareArray=True,
 var1=VarDef(name='srcOffset', type='VkDeviceSize'),
 var2=VarDef(name='dstOffset', type='VkDeviceSize'),
@@ -8090,29 +8975,6 @@ var1=VarDef(name='color', type='VkClearColorValue'),
 var2=VarDef(name='depthStencil', type='VkClearDepthStencilValue')
 )
 
-Struct(name='VkCmdProcessCommandsInfoNVX_', enabled=False,
-var1=VarDef(name='sType', type='VkStructureType'),
-var2=VarDef(name='pNext', type='const void*'),
-var3=VarDef(name='objectTable', type='VkObjectTableNVX'),
-var4=VarDef(name='indirectCommandsLayout', type='VkIndirectCommandsLayoutNVX'),
-var5=VarDef(name='indirectCommandsTokenCount', type='uint32_t'),
-var6=VarDef(name='pIndirectCommandsTokens', type='const VkIndirectCommandsTokenNVX*', count='indirectCommandsTokenCount'),
-var7=VarDef(name='maxSequencesCount', type='uint32_t'),
-var8=VarDef(name='targetCommandBuffer', type='VkCommandBuffer'),
-var9=VarDef(name='sequencesCountBuffer', type='VkBuffer'),
-var10=VarDef(name='sequencesCountOffset', type='VkDeviceSize'),
-var11=VarDef(name='sequencesIndexBuffer', type='VkBuffer'),
-var12=VarDef(name='sequencesIndexOffset', type='VkDeviceSize')
-)
-
-Struct(name='VkCmdReserveSpaceForCommandsInfoNVX_', enabled=False,
-var1=VarDef(name='sType', type='VkStructureType'),
-var2=VarDef(name='pNext', type='const void*'),
-var3=VarDef(name='objectTable', type='VkObjectTableNVX'),
-var4=VarDef(name='indirectCommandsLayout', type='VkIndirectCommandsLayoutNVX'),
-var5=VarDef(name='maxSequencesCount', type='uint32_t')
-)
-
 Struct(name='VkCoarseSampleLocationNV_', enabled=False,
 var1=VarDef(name='pixelX', type='uint32_t'),
 var2=VarDef(name='pixelY', type='uint32_t'),
@@ -8124,6 +8986,23 @@ var1=VarDef(name='shadingRate', type='VkShadingRatePaletteEntryNV'),
 var2=VarDef(name='sampleCount', type='uint32_t'),
 var3=VarDef(name='sampleLocationCount', type='uint32_t'),
 var4=VarDef(name='pSampleLocations', type='const VkCoarseSampleLocationNV*')
+)
+
+Struct(name='VkColorBlendAdvancedEXT_', enabled=False,
+var1=VarDef(name='advancedBlendOp', type='VkBlendOp'),
+var2=VarDef(name='srcPremultiplied', type='VkBool32'),
+var3=VarDef(name='dstPremultiplied', type='VkBool32'),
+var4=VarDef(name='blendOverlap', type='VkBlendOverlapEXT'),
+var5=VarDef(name='clampResults', type='VkBool32')
+)
+
+Struct(name='VkColorBlendEquationEXT_', enabled=False,
+var1=VarDef(name='srcColorBlendFactor', type='VkBlendFactor'),
+var2=VarDef(name='dstColorBlendFactor', type='VkBlendFactor'),
+var3=VarDef(name='colorBlendOp', type='VkBlendOp'),
+var4=VarDef(name='srcAlphaBlendFactor', type='VkBlendFactor'),
+var5=VarDef(name='dstAlphaBlendFactor', type='VkBlendFactor'),
+var6=VarDef(name='alphaBlendOp', type='VkBlendOp')
 )
 
 Struct(name='VkCommandBufferAllocateInfo_', enabled=True,
@@ -8209,6 +9088,21 @@ var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='flags', type='VkCommandPoolCreateFlags'),
 var4=VarDef(name='queueFamilyIndex', type='uint32_t')
+)
+
+Struct(name='VkCommandPoolMemoryConsumption_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='commandPoolAllocated', type='VkDeviceSize'),
+var4=VarDef(name='commandPoolReservedSize', type='VkDeviceSize'),
+var5=VarDef(name='commandBufferAllocated', type='VkDeviceSize')
+)
+
+Struct(name='VkCommandPoolMemoryReservationCreateInfo_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='commandPoolReservedSize', type='VkDeviceSize'),
+var4=VarDef(name='commandPoolMaxCommandBuffers', type='uint32_t')
 )
 
 Struct(name='VkComponentMapping_', enabled=True,
@@ -8330,12 +9224,51 @@ var6=VarDef(name='regionCount', type='uint32_t'),
 var7=VarDef(name='pRegions', type='const VkBufferImageCopy2*', wrapType='CVkBufferImageCopy2Array', wrapParams='copyimagetobufferinfo2->regionCount, copyimagetobufferinfo2->pRegions', count='regionCount')
 )
 
+Struct(name='VkCopyMemoryIndirectCommandNV_', enabled=False,
+var1=VarDef(name='srcAddress', type='VkDeviceAddress'),
+var2=VarDef(name='dstAddress', type='VkDeviceAddress'),
+var3=VarDef(name='size', type='VkDeviceSize')
+)
+
 Struct(name='VkCopyMemoryToAccelerationStructureInfoKHR_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='src', type='VkDeviceOrHostAddressConstKHR'),
 var4=VarDef(name='dst', type='VkAccelerationStructureKHR'),
 var5=VarDef(name='mode', type='VkCopyAccelerationStructureModeKHR')
+)
+
+Struct(name='VkCopyMemoryToImageIndirectCommandNV_', enabled=False,
+var1=VarDef(name='srcAddress', type='VkDeviceAddress'),
+var2=VarDef(name='bufferRowLength', type='uint32_t'),
+var3=VarDef(name='bufferImageHeight', type='uint32_t'),
+var4=VarDef(name='imageSubresource', type='VkImageSubresourceLayers'),
+var5=VarDef(name='imageOffset', type='VkOffset3D'),
+var6=VarDef(name='imageExtent', type='VkExtent3D')
+)
+
+Struct(name='VkCopyMemoryToMicromapInfoEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='src', type='VkDeviceOrHostAddressConstKHR'),
+var4=VarDef(name='dst', type='VkMicromapEXT'),
+var5=VarDef(name='mode', type='VkCopyMicromapModeEXT')
+)
+
+Struct(name='VkCopyMicromapInfoEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='src', type='VkMicromapEXT'),
+var4=VarDef(name='dst', type='VkMicromapEXT'),
+var5=VarDef(name='mode', type='VkCopyMicromapModeEXT')
+)
+
+Struct(name='VkCopyMicromapToMemoryInfoEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='src', type='VkMicromapEXT'),
+var4=VarDef(name='dst', type='VkDeviceOrHostAddressKHR'),
+var5=VarDef(name='mode', type='VkCopyMicromapModeEXT')
 )
 
 Struct(name='VkD3D12FenceSubmitInfoKHR_', enabled=False,
@@ -8430,6 +9363,14 @@ var6=VarDef(name='tagSize', type='size_t'),
 var7=VarDef(name='pTag', type='const void*')
 )
 
+Struct(name='VkDecompressMemoryRegionNV_', enabled=False,
+var1=VarDef(name='srcAddress', type='VkDeviceAddress'),
+var2=VarDef(name='dstAddress', type='VkDeviceAddress'),
+var3=VarDef(name='compressedSize', type='VkDeviceSize'),
+var4=VarDef(name='decompressedSize', type='VkDeviceSize'),
+var5=VarDef(name='decompressionMethod', type='VkMemoryDecompressionMethodFlagsNV')
+)
+
 Struct(name='VkDedicatedAllocationBufferCreateInfoNV_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
@@ -8461,10 +9402,50 @@ var8=VarDef(name='imageMemoryBarrierCount', type='uint32_t'),
 var9=VarDef(name='pImageMemoryBarriers', type='const VkImageMemoryBarrier2*', wrapType='CVkImageMemoryBarrier2Array', wrapParams='dependencyinfo->imageMemoryBarrierCount, dependencyinfo->pImageMemoryBarriers', count='imageMemoryBarrierCount')
 )
 
+Struct(name='VkDescriptorAddressInfoEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='address', type='VkDeviceAddress'),
+var4=VarDef(name='range', type='VkDeviceSize'),
+var5=VarDef(name='format', type='VkFormat')
+)
+
+Struct(name='VkDescriptorBufferBindingInfoEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='address', type='VkDeviceAddress'),
+var4=VarDef(name='usage', type='VkBufferUsageFlags')
+)
+
+Struct(name='VkDescriptorBufferBindingPushDescriptorBufferHandleEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='buffer', type='VkBuffer')
+)
+
+Struct(name='VkDescriptorDataEXT_', type='union', enabled=False,
+var1=VarDef(name='pSampler', type='VkSampler*'),
+var2=VarDef(name='pCombinedImageSampler', type='VkDescriptorImageInfo*'),
+var3=VarDef(name='pSampledImage', type='VkDescriptorImageInfo*'),
+var4=VarDef(name='pStorageImage', type='VkDescriptorImageInfo*'),
+var5=VarDef(name='pUniformTexelBuffer', type='VkDescriptorAddressInfoEXT*'),
+var6=VarDef(name='pStorageTexelBuffer', type='VkDescriptorAddressInfoEXT*'),
+var7=VarDef(name='pUniformBuffer', type='VkDescriptorAddressInfoEXT*'),
+var8=VarDef(name='pStorageBuffer', type='VkDescriptorAddressInfoEXT*'),
+var9=VarDef(name='accelerationStructure', type='VkDeviceAddress'),
+)
+
 Struct(name='VkDescriptorBufferInfo_', enabled=True, declareArray=True,
 var1=VarDef(name='buffer', type='VkBuffer'),
 var2=VarDef(name='offset', type='VkDeviceSize'),
 var3=VarDef(name='range', type='VkDeviceSize')
+)
+
+Struct(name='VkDescriptorGetInfoEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='type', type='VkDescriptorType'),
+var4=VarDef(name='data', type='VkDescriptorDataEXT')
 )
 
 Struct(name='VkDescriptorImageInfo_', enabled=True, declareArray=True, custom=True,
@@ -8580,6 +9561,15 @@ var5=VarDef(name='offset', type='size_t'),
 var6=VarDef(name='stride', type='size_t')
 )
 
+Struct(name='VkDeviceAddressBindingCallbackDataEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='flags', type='VkDeviceAddressBindingFlagsEXT'),
+var4=VarDef(name='baseAddress', type='VkDeviceAddress'),
+var5=VarDef(name='size', type='VkDeviceSize'),
+var6=VarDef(name='bindingType', type='VkDeviceAddressBindingTypeEXT')
+)
+
 Struct(name='VkDeviceBufferMemoryRequirements_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
@@ -8619,20 +9609,47 @@ var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='deviceEvent', type='VkDeviceEventTypeEXT')
 )
 
-Struct(name='VkDeviceGeneratedCommandsFeaturesNVX_', enabled=False,
-var1=VarDef(name='sType', type='VkStructureType'),
-var2=VarDef(name='pNext', type='const void*'),
-var3=VarDef(name='computeBindingPointSupport', type='VkBool32')
+Struct(name='VkDeviceFaultAddressInfoEXT_', enabled=False,
+var1=VarDef(name='addressType', type='VkDeviceFaultAddressTypeEXT'),
+var2=VarDef(name='reportedAddress', type='VkDeviceAddress'),
+var3=VarDef(name='addressPrecision', type='VkDeviceSize')
 )
 
-Struct(name='VkDeviceGeneratedCommandsLimitsNVX_', enabled=False,
+Struct(name='VkDeviceFaultCountsEXT_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
-var2=VarDef(name='pNext', type='const void*'),
-var3=VarDef(name='maxIndirectCommandsLayoutTokenCount', type='uint32_t'),
-var4=VarDef(name='maxObjectEntryCounts', type='uint32_t'),
-var5=VarDef(name='minSequenceCountBufferOffsetAlignment', type='uint32_t'),
-var6=VarDef(name='minSequenceIndexBufferOffsetAlignment', type='uint32_t'),
-var7=VarDef(name='minCommandsTokenBufferOffsetAlignment', type='uint32_t')
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='addressInfoCount', type='uint32_t'),
+var4=VarDef(name='vendorInfoCount', type='uint32_t'),
+var5=VarDef(name='vendorBinarySize', type='VkDeviceSize')
+)
+
+Struct(name='VkDeviceFaultInfoEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='description', type='char[256]'),
+var4=VarDef(name='pAddressInfos', type='VkDeviceFaultAddressInfoEXT*'),
+var5=VarDef(name='pVendorInfos', type='VkDeviceFaultVendorInfoEXT*'),
+var6=VarDef(name='pVendorBinaryData', type='void*')
+)
+
+Struct(name='VkDeviceFaultVendorBinaryHeaderVersionOneEXT_', enabled=False,
+var1=VarDef(name='headerSize', type='uint32_t'),
+var2=VarDef(name='headerVersion', type='VkDeviceFaultVendorBinaryHeaderVersionEXT'),
+var3=VarDef(name='vendorID', type='uint32_t'),
+var4=VarDef(name='deviceID', type='uint32_t'),
+var5=VarDef(name='driverVersion', type='uint32_t'),
+var6=VarDef(name='pipelineCacheUUID', type='uint8_t[16]'),
+var7=VarDef(name='applicationNameOffset', type='uint32_t'),
+var8=VarDef(name='applicationVersion', type='uint32_t'),
+var9=VarDef(name='engineNameOffset', type='uint32_t'),
+var10=VarDef(name='engineVersion', type='uint32_t'),
+var11=VarDef(name='apiVersion', type='uint32_t')
+)
+
+Struct(name='VkDeviceFaultVendorInfoEXT_', enabled=False,
+var1=VarDef(name='description', type='char[256]'),
+var2=VarDef(name='vendorFaultCode', type='uint64_t'),
+var3=VarDef(name='vendorFaultData', type='uint64_t')
 )
 
 Struct(name='VkDeviceGroupBindSparseInfo_', enabled=False,
@@ -8726,6 +9743,52 @@ var8=VarDef(name='objectHandle', type='uint64_t'),
 var9=VarDef(name='heapIndex', type='uint32_t')
 )
 
+Struct(name='VkDeviceObjectReservationCreateInfo_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='pipelineCacheCreateInfoCount', type='uint32_t'),
+var4=VarDef(name='pPipelineCacheCreateInfos', type='const VkPipelineCacheCreateInfo*'),
+var5=VarDef(name='pipelinePoolSizeCount', type='uint32_t'),
+var6=VarDef(name='pPipelinePoolSizes', type='const VkPipelinePoolSize*'),
+var7=VarDef(name='semaphoreRequestCount', type='uint32_t'),
+var8=VarDef(name='commandBufferRequestCount', type='uint32_t'),
+var9=VarDef(name='fenceRequestCount', type='uint32_t'),
+var10=VarDef(name='deviceMemoryRequestCount', type='uint32_t'),
+var11=VarDef(name='bufferRequestCount', type='uint32_t'),
+var12=VarDef(name='imageRequestCount', type='uint32_t'),
+var13=VarDef(name='eventRequestCount', type='uint32_t'),
+var14=VarDef(name='queryPoolRequestCount', type='uint32_t'),
+var15=VarDef(name='bufferViewRequestCount', type='uint32_t'),
+var16=VarDef(name='imageViewRequestCount', type='uint32_t'),
+var17=VarDef(name='layeredImageViewRequestCount', type='uint32_t'),
+var18=VarDef(name='pipelineCacheRequestCount', type='uint32_t'),
+var19=VarDef(name='pipelineLayoutRequestCount', type='uint32_t'),
+var20=VarDef(name='renderPassRequestCount', type='uint32_t'),
+var21=VarDef(name='graphicsPipelineRequestCount', type='uint32_t'),
+var22=VarDef(name='computePipelineRequestCount', type='uint32_t'),
+var23=VarDef(name='descriptorSetLayoutRequestCount', type='uint32_t'),
+var24=VarDef(name='samplerRequestCount', type='uint32_t'),
+var25=VarDef(name='descriptorPoolRequestCount', type='uint32_t'),
+var26=VarDef(name='descriptorSetRequestCount', type='uint32_t'),
+var27=VarDef(name='framebufferRequestCount', type='uint32_t'),
+var28=VarDef(name='commandPoolRequestCount', type='uint32_t'),
+var29=VarDef(name='samplerYcbcrConversionRequestCount', type='uint32_t'),
+var30=VarDef(name='surfaceRequestCount', type='uint32_t'),
+var31=VarDef(name='swapchainRequestCount', type='uint32_t'),
+var32=VarDef(name='displayModeRequestCount', type='uint32_t'),
+var33=VarDef(name='subpassDescriptionRequestCount', type='uint32_t'),
+var34=VarDef(name='attachmentDescriptionRequestCount', type='uint32_t'),
+var35=VarDef(name='descriptorSetLayoutBindingRequestCount', type='uint32_t'),
+var36=VarDef(name='descriptorSetLayoutBindingLimit', type='uint32_t'),
+var37=VarDef(name='maxImageViewMipLevels', type='uint32_t'),
+var38=VarDef(name='maxImageViewArrayLayers', type='uint32_t'),
+var39=VarDef(name='maxLayeredImageViewMipLevels', type='uint32_t'),
+var40=VarDef(name='maxOcclusionQueriesPerPool', type='uint32_t'),
+var41=VarDef(name='maxPipelineStatisticsQueriesPerPool', type='uint32_t'),
+var42=VarDef(name='maxTimestampQueriesPerPool', type='uint32_t'),
+var43=VarDef(name='maxImmutableSamplersPerDescriptorSetLayout', type='uint32_t')
+)
+
 Struct(name='VkDevicePrivateDataCreateInfo_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
@@ -8775,6 +9838,21 @@ var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='flags', type='VkDeviceQueueCreateFlags'),
 var4=VarDef(name='queueFamilyIndex', type='uint32_t'),
 var5=VarDef(name='queueIndex', type='uint32_t')
+)
+
+Struct(name='VkDirectDriverLoadingInfoLUNARG_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='flags', type='VkDirectDriverLoadingFlagsLUNARG'),
+var4=VarDef(name='pfnGetInstanceProcAddr', type='PFN_vkGetInstanceProcAddrLUNARG')
+)
+
+Struct(name='VkDirectDriverLoadingListLUNARG_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='mode', type='VkDirectDriverLoadingModeLUNARG'),
+var4=VarDef(name='driverCount', type='uint32_t'),
+var5=VarDef(name='pDrivers', type='const VkDirectDriverLoadingInfoLUNARG*')
 )
 
 #Struct(name='VkDirectFBSurfaceCreateInfoEXT_', enabled=False,
@@ -9099,6 +10177,21 @@ var4=VarDef(name='compatibleHandleTypes', type='VkExternalSemaphoreHandleTypeFla
 var5=VarDef(name='externalSemaphoreFeatures', type='VkExternalSemaphoreFeatureFlags')
 )
 
+Struct(name='VkFaultCallbackInfo_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='faultCount', type='uint32_t'),
+var4=VarDef(name='pFaults', type='VkFaultData*'),
+var5=VarDef(name='pfnFaultCallback', type='PFN_vkFaultCallbackFunction')
+)
+
+Struct(name='VkFaultData_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='faultLevel', type='VkFaultLevel'),
+var4=VarDef(name='faultType', type='VkFaultType')
+)
+
 Struct(name='VkFenceCreateInfo_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
@@ -9354,13 +10447,10 @@ var5=VarDef(name='dstSubresource', type='VkImageSubresourceLayers'),
 var6=VarDef(name='dstOffsets', type='VkOffset3D[2]', wrapType='CVkOffset3DArray', count='2')
 )
 
-Struct(name='VkImageBlit2KHR_', enabled=False,
+Struct(name='VkImageCaptureDescriptorDataInfoEXT_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
-var3=VarDef(name='srcSubresource', type='VkImageSubresourceLayers'),
-var4=VarDef(name='srcOffsets', type='VkOffset3D[2]'),
-var5=VarDef(name='dstSubresource', type='VkImageSubresourceLayers'),
-var6=VarDef(name='dstOffsets', type='VkOffset3D[2]')
+var3=VarDef(name='image', type='VkImage')
 )
 
 Struct(name='VkImageCompressionControlEXT_', enabled=False,
@@ -9607,6 +10697,12 @@ var3=VarDef(name='deviceAddress', type='VkDeviceAddress'),
 var4=VarDef(name='size', type='VkDeviceSize')
 )
 
+Struct(name='VkImageViewCaptureDescriptorDataInfoEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='imageView', type='VkImageView')
+)
+
 Struct(name='VkImageViewCreateInfo_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
@@ -9630,6 +10726,13 @@ Struct(name='VkImageViewMinLodCreateInfoEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='minLod', type='float')
+)
+
+Struct(name='VkImageViewSlicedCreateInfoEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='sliceOffset', type='uint32_t'),
+var4=VarDef(name='sliceCount', type='uint32_t')
 )
 
 Struct(name='VkImageViewUsageCreateInfo_', enabled=True,
@@ -9716,15 +10819,6 @@ var7=VarDef(name='streamCount', type='uint32_t'),
 var8=VarDef(name='pStreamStrides', type='const uint32_t*')
 )
 
-Struct(name='VkIndirectCommandsLayoutCreateInfoNVX_', enabled=False,
-var1=VarDef(name='sType', type='VkStructureType'),
-var2=VarDef(name='pNext', type='const void*'),
-var3=VarDef(name='pipelineBindPoint', type='VkPipelineBindPoint'),
-var4=VarDef(name='flags', type='VkIndirectCommandsLayoutUsageFlagsNVX'),
-var5=VarDef(name='tokenCount', type='uint32_t'),
-var6=VarDef(name='pTokens', type='const VkIndirectCommandsLayoutTokenNVX*', count='tokenCount')
-)
-
 Struct(name='VkIndirectCommandsLayoutTokenNV_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
@@ -9741,19 +10835,6 @@ var12=VarDef(name='indirectStateFlags', type='VkIndirectStateFlagsNV'),
 var13=VarDef(name='indexTypeCount', type='uint32_t'),
 var14=VarDef(name='pIndexTypes', type='const VkIndexType*'),
 var15=VarDef(name='pIndexTypeValues', type='const uint32_t*')
-)
-
-Struct(name='VkIndirectCommandsLayoutTokenNVX_', enabled=False,
-var1=VarDef(name='tokenType', type='VkIndirectCommandsTokenTypeNVX'),
-var2=VarDef(name='bindingUnit', type='uint32_t'),
-var3=VarDef(name='dynamicCount', type='uint32_t'),
-var4=VarDef(name='divisor', type='uint32_t')
-)
-
-Struct(name='VkIndirectCommandsTokenNVX_', enabled=False,
-var1=VarDef(name='tokenType', type='VkIndirectCommandsTokenTypeNVX'),
-var2=VarDef(name='buffer', type='VkBuffer'),
-var3=VarDef(name='offset', type='VkDeviceSize')
 )
 
 Struct(name='VkIndirectCommandsStreamNV_', enabled=False,
@@ -9897,6 +10978,15 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='memoryTypeBits', type='uint32_t')
 )
 
+Struct(name='VkMemoryMapInfoKHR_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='flags', type='VkMemoryMapFlags'),
+var4=VarDef(name='memory', type='VkDeviceMemory'),
+var5=VarDef(name='offset', type='VkDeviceSize'),
+var6=VarDef(name='size', type='VkDeviceSize')
+)
+
 Struct(name='VkMemoryOpaqueCaptureAddressAllocateInfo_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
@@ -9926,10 +11016,70 @@ var1=VarDef(name='propertyFlags', type='VkMemoryPropertyFlags'),
 var2=VarDef(name='heapIndex', type='uint32_t')
 )
 
+Struct(name='VkMemoryUnmapInfoKHR_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='flags', type='VkMemoryUnmapFlagsKHR'),
+var4=VarDef(name='memory', type='VkDeviceMemory')
+)
+
 Struct(name='VkMemoryWin32HandlePropertiesKHR_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='memoryTypeBits', type='uint32_t')
+)
+
+Struct(name='VkMicromapBuildInfoEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='type', type='VkMicromapTypeEXT'),
+var4=VarDef(name='flags', type='VkBuildMicromapFlagsEXT'),
+var5=VarDef(name='mode', type='VkBuildMicromapModeEXT'),
+var6=VarDef(name='dstMicromap', type='VkMicromapEXT'),
+var7=VarDef(name='usageCountsCount', type='uint32_t'),
+var8=VarDef(name='pUsageCounts', type='const VkMicromapUsageEXT*'),
+var9=VarDef(name='ppUsageCounts', type='const VkMicromapUsageEXT* const*'),
+var10=VarDef(name='data', type='VkDeviceOrHostAddressConstKHR'),
+var11=VarDef(name='scratchData', type='VkDeviceOrHostAddressKHR'),
+var12=VarDef(name='triangleArray', type='VkDeviceOrHostAddressConstKHR'),
+var13=VarDef(name='triangleArrayStride', type='VkDeviceSize')
+)
+
+Struct(name='VkMicromapBuildSizesInfoEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='micromapSize', type='VkDeviceSize'),
+var4=VarDef(name='buildScratchSize', type='VkDeviceSize'),
+var5=VarDef(name='discardable', type='VkBool32')
+)
+
+Struct(name='VkMicromapCreateInfoEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='createFlags', type='VkMicromapCreateFlagsEXT'),
+var4=VarDef(name='buffer', type='VkBuffer'),
+var5=VarDef(name='offset', type='VkDeviceSize'),
+var6=VarDef(name='size', type='VkDeviceSize'),
+var7=VarDef(name='type', type='VkMicromapTypeEXT'),
+var8=VarDef(name='deviceAddress', type='VkDeviceAddress')
+)
+
+Struct(name='VkMicromapTriangleEXT_', enabled=False,
+var1=VarDef(name='dataOffset', type='uint32_t'),
+var2=VarDef(name='subdivisionLevel', type='uint16_t'),
+var3=VarDef(name='format', type='uint16_t')
+)
+
+Struct(name='VkMicromapUsageEXT_', enabled=False,
+var1=VarDef(name='count', type='uint32_t'),
+var2=VarDef(name='subdivisionLevel', type='uint32_t'),
+var3=VarDef(name='format', type='uint32_t')
+)
+
+Struct(name='VkMicromapVersionInfoEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='pVersionData', type='const uint8_t*')
 )
 
 Struct(name='VkMultiDrawIndexedInfoEXT_', enabled=False,
@@ -9987,11 +11137,6 @@ var1=VarDef(name='descriptorTypeCount', type='uint32_t'),
 var2=VarDef(name='pDescriptorTypes', type='const VkDescriptorType*')
 )
 
-Struct(name='VkOaConfigurationLayoutINTEL_', enabled=False,
-var1=VarDef(name='pOaRegisters', type='VkRegisterInfoINTEL*'),
-var2=VarDef(name='oaRegisterCount', type='uint32_t')
-)
-
 Struct(name='VkOffset2D_', enabled=True,
 var1=VarDef(name='x', type='int32_t'),
 var2=VarDef(name='y', type='int32_t')
@@ -10001,6 +11146,54 @@ Struct(name='VkOffset3D_', enabled=True, declareArray=True,
 var1=VarDef(name='x', type='int32_t'),
 var2=VarDef(name='y', type='int32_t'),
 var3=VarDef(name='z', type='int32_t')
+)
+
+Struct(name='VkOpaqueCaptureDescriptorDataCreateInfoEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='opaqueCaptureDescriptorData', type='const void*')
+)
+
+Struct(name='VkOpticalFlowExecuteInfoNV_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='flags', type='VkOpticalFlowExecuteFlagsNV'),
+var4=VarDef(name='regionCount', type='uint32_t'),
+var5=VarDef(name='pRegions', type='const VkRect2D*')
+)
+
+Struct(name='VkOpticalFlowImageFormatInfoNV_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='usage', type='VkOpticalFlowUsageFlagsNV')
+)
+
+Struct(name='VkOpticalFlowImageFormatPropertiesNV_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='format', type='VkFormat')
+)
+
+Struct(name='VkOpticalFlowSessionCreateInfoNV_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='width', type='uint32_t'),
+var4=VarDef(name='height', type='uint32_t'),
+var5=VarDef(name='imageFormat', type='VkFormat'),
+var6=VarDef(name='flowVectorFormat', type='VkFormat'),
+var7=VarDef(name='costFormat', type='VkFormat'),
+var8=VarDef(name='outputGridSize', type='VkOpticalFlowGridSizeFlagsNV'),
+var9=VarDef(name='hintGridSize', type='VkOpticalFlowGridSizeFlagsNV'),
+var10=VarDef(name='performanceLevel', type='VkOpticalFlowPerformanceLevelNV'),
+var11=VarDef(name='flags', type='VkOpticalFlowSessionCreateFlagsNV')
+)
+
+Struct(name='VkOpticalFlowSessionCreatePrivateDataInfoNV_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='id', type='uint32_t'),
+var4=VarDef(name='size', type='uint32_t'),
+var5=VarDef(name='pPrivateData', type='const void*')
 )
 
 Struct(name='VkPastPresentationTimingGOOGLE_', enabled=False,
@@ -10035,12 +11228,6 @@ var5=VarDef(name='storage', type='VkPerformanceCounterStorageKHR'),
 var6=VarDef(name='uuid', type='uint8_t[16]')
 )
 
-Struct(name='VkPerformanceCountersLayoutINTEL_', enabled=False,
-var1=VarDef(name='sampling', type='VkQuerySamplingModeINTEL'),
-var2=VarDef(name='pUserCounters', type='const VkRegisterInfoINTEL*', count='userCountersCount'),
-var3=VarDef(name='userCountersCount', type='uint32_t')
-)
-
 Struct(name='VkPerformanceMarkerInfoINTEL_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
@@ -10053,6 +11240,12 @@ var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='type', type='VkPerformanceOverrideTypeINTEL'),
 var4=VarDef(name='enable', type='VkBool32'),
 var5=VarDef(name='parameter', type='uint64_t')
+)
+
+Struct(name='VkPerformanceQueryReservationInfoKHR_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='maxPerformanceQueriesPerPool', type='uint32_t')
 )
 
 Struct(name='VkPerformanceQuerySubmitInfoKHR_', enabled=False,
@@ -10130,6 +11323,12 @@ var7=VarDef(name='maxPerStageDescriptorUpdateAfterBindAccelerationStructures', t
 var8=VarDef(name='maxDescriptorSetAccelerationStructures', type='uint32_t'),
 var9=VarDef(name='maxDescriptorSetUpdateAfterBindAccelerationStructures', type='uint32_t'),
 var10=VarDef(name='minAccelerationStructureScratchOffsetAlignment', type='uint32_t')
+)
+
+Struct(name='VkPhysicalDeviceAddressBindingReportFeaturesEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='reportAddressBinding', type='VkBool32')
 )
 
 Struct(name='VkPhysicalDeviceAttachmentFeedbackLoopLayoutFeaturesEXT_', enabled=True,
@@ -10239,6 +11438,18 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='cooperativeMatrixSupportedStages', type='VkShaderStageFlags')
 )
 
+Struct(name='VkPhysicalDeviceCopyMemoryIndirectFeaturesNV_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='indirectCopy', type='VkBool32')
+)
+
+Struct(name='VkPhysicalDeviceCopyMemoryIndirectPropertiesNV_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='supportedQueues', type='VkQueueFlags')
+)
+
 Struct(name='VkPhysicalDeviceCornerSampledImageFeaturesNV_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
@@ -10295,6 +11506,59 @@ var3=VarDef(name='supportedDepthResolveModes', type='VkResolveModeFlags'),
 var4=VarDef(name='supportedStencilResolveModes', type='VkResolveModeFlags'),
 var5=VarDef(name='independentResolveNone', type='VkBool32'),
 var6=VarDef(name='independentResolve', type='VkBool32')
+)
+
+Struct(name='VkPhysicalDeviceDescriptorBufferDensityMapPropertiesEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='combinedImageSamplerDensityMapDescriptorSize', type='size_t')
+)
+
+Struct(name='VkPhysicalDeviceDescriptorBufferFeaturesEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='descriptorBuffer', type='VkBool32'),
+var4=VarDef(name='descriptorBufferCaptureReplay', type='VkBool32'),
+var5=VarDef(name='descriptorBufferImageLayoutIgnored', type='VkBool32'),
+var6=VarDef(name='descriptorBufferPushDescriptors', type='VkBool32')
+)
+
+Struct(name='VkPhysicalDeviceDescriptorBufferPropertiesEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='combinedImageSamplerDescriptorSingleArray', type='VkBool32'),
+var4=VarDef(name='bufferlessPushDescriptors', type='VkBool32'),
+var5=VarDef(name='allowSamplerImageViewPostSubmitCreation', type='VkBool32'),
+var6=VarDef(name='descriptorBufferOffsetAlignment', type='VkDeviceSize'),
+var7=VarDef(name='maxDescriptorBufferBindings', type='uint32_t'),
+var8=VarDef(name='maxResourceDescriptorBufferBindings', type='uint32_t'),
+var9=VarDef(name='maxSamplerDescriptorBufferBindings', type='uint32_t'),
+var10=VarDef(name='maxEmbeddedImmutableSamplerBindings', type='uint32_t'),
+var11=VarDef(name='maxEmbeddedImmutableSamplers', type='uint32_t'),
+var12=VarDef(name='bufferCaptureReplayDescriptorDataSize', type='size_t'),
+var13=VarDef(name='imageCaptureReplayDescriptorDataSize', type='size_t'),
+var14=VarDef(name='imageViewCaptureReplayDescriptorDataSize', type='size_t'),
+var15=VarDef(name='samplerCaptureReplayDescriptorDataSize', type='size_t'),
+var16=VarDef(name='accelerationStructureCaptureReplayDescriptorDataSize', type='size_t'),
+var17=VarDef(name='samplerDescriptorSize', type='size_t'),
+var18=VarDef(name='combinedImageSamplerDescriptorSize', type='size_t'),
+var19=VarDef(name='sampledImageDescriptorSize', type='size_t'),
+var20=VarDef(name='storageImageDescriptorSize', type='size_t'),
+var21=VarDef(name='uniformTexelBufferDescriptorSize', type='size_t'),
+var22=VarDef(name='robustUniformTexelBufferDescriptorSize', type='size_t'),
+var23=VarDef(name='storageTexelBufferDescriptorSize', type='size_t'),
+var24=VarDef(name='robustStorageTexelBufferDescriptorSize', type='size_t'),
+var25=VarDef(name='uniformBufferDescriptorSize', type='size_t'),
+var26=VarDef(name='robustUniformBufferDescriptorSize', type='size_t'),
+var27=VarDef(name='storageBufferDescriptorSize', type='size_t'),
+var28=VarDef(name='robustStorageBufferDescriptorSize', type='size_t'),
+var29=VarDef(name='inputAttachmentDescriptorSize', type='size_t'),
+var30=VarDef(name='accelerationStructureDescriptorSize', type='size_t'),
+var31=VarDef(name='maxSamplerDescriptorBufferRange', type='VkDeviceSize'),
+var32=VarDef(name='maxResourceDescriptorBufferRange', type='VkDeviceSize'),
+var33=VarDef(name='samplerDescriptorBufferAddressSpaceSize', type='VkDeviceSize'),
+var34=VarDef(name='resourceDescriptorBufferAddressSpaceSize', type='VkDeviceSize'),
+var35=VarDef(name='descriptorBufferAddressSpaceSize', type='VkDeviceSize')
 )
 
 Struct(name='VkPhysicalDeviceDescriptorIndexingFeatures_', enabled=True,
@@ -10388,6 +11652,18 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='maxDiscardRectangles', type='uint32_t')
 )
 
+Struct(name='VkPhysicalDeviceDisplacementMicromapFeaturesNV_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='displacementMicromap', type='VkBool32')
+)
+
+Struct(name='VkPhysicalDeviceDisplacementMicromapPropertiesNV_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='maxDisplacementMicromapSubdivisionLevel', type='uint32_t')
+)
+
 Struct(name='VkPhysicalDeviceDriverProperties_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
@@ -10479,6 +11755,12 @@ var32=VarDef(name='extendedDynamicState3RepresentativeFragmentTestEnable', type=
 var33=VarDef(name='extendedDynamicState3ShadingRateImageEnable', type='VkBool32')
 )
 
+Struct(name='VkPhysicalDeviceExtendedDynamicState3PropertiesEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='dynamicPrimitiveTopologyUnrestricted', type='VkBool32')
+)
+
 Struct(name='VkPhysicalDeviceExtendedDynamicStateFeaturesEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
@@ -10521,6 +11803,13 @@ Struct(name='VkPhysicalDeviceExternalSemaphoreInfo_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='handleType', type='VkExternalSemaphoreHandleTypeFlagBits')
+)
+
+Struct(name='VkPhysicalDeviceFaultFeaturesEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='deviceFault', type='VkBool32'),
+var4=VarDef(name='deviceFaultVendorBinary', type='VkBool32')
 )
 
 Struct(name='VkPhysicalDeviceFeatures_', enabled=True, declareArray=True,
@@ -10645,6 +11934,18 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='minFragmentDensityTexelSize', type='VkExtent2D'),
 var4=VarDef(name='maxFragmentDensityTexelSize', type='VkExtent2D'),
 var5=VarDef(name='fragmentDensityInvocations', type='VkBool32')
+)
+
+Struct(name='VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='fragmentShaderBarycentric', type='VkBool32')
+)
+
+Struct(name='VkPhysicalDeviceFragmentShaderBarycentricFeaturesNV_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='fragmentShaderBarycentric', type='VkBool32')
 )
 
 Struct(name='VkPhysicalDeviceFragmentShaderBarycentricPropertiesKHR_', enabled=False,
@@ -10829,6 +12130,12 @@ Struct(name='VkPhysicalDeviceImageRobustnessFeaturesEXT_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='robustImageAccess', type='VkBool32')
+)
+
+Struct(name='VkPhysicalDeviceImageSlicedViewOf3DFeaturesEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='imageSlicedViewOf3D', type='VkBool32')
 )
 
 Struct(name='VkPhysicalDeviceImageViewImageFormatInfoEXT_', enabled=False,
@@ -11071,6 +12378,19 @@ var3=VarDef(name='heapBudget', type='VkDeviceSize[16]'),
 var4=VarDef(name='heapUsage', type='VkDeviceSize[16]')
 )
 
+Struct(name='VkPhysicalDeviceMemoryDecompressionFeaturesNV_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='memoryDecompression', type='VkBool32')
+)
+
+Struct(name='VkPhysicalDeviceMemoryDecompressionPropertiesNV_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='decompressionMethods', type='VkMemoryDecompressionMethodFlagsNV'),
+var4=VarDef(name='maxDecompressionIndirectCount', type='uint64_t')
+)
+
 Struct(name='VkPhysicalDeviceMemoryPriorityFeaturesEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
@@ -11184,6 +12504,12 @@ var4=VarDef(name='multiviewGeometryShader', type='VkBool32'),
 var5=VarDef(name='multiviewTessellationShader', type='VkBool32')
 )
 
+Struct(name='VkPhysicalDeviceMultiviewPerViewAttributesPropertiesNVX_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='perViewPositionAllComponents', type='VkBool32')
+)
+
 Struct(name='VkPhysicalDeviceMultiviewProperties_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
@@ -11207,6 +12533,43 @@ Struct(name='VkPhysicalDeviceNonSeamlessCubeMapFeaturesEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='nonSeamlessCubeMap', type='VkBool32')
+)
+
+Struct(name='VkPhysicalDeviceOpacityMicromapFeaturesEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='micromap', type='VkBool32'),
+var4=VarDef(name='micromapCaptureReplay', type='VkBool32'),
+var5=VarDef(name='micromapHostCommands', type='VkBool32')
+)
+
+Struct(name='VkPhysicalDeviceOpacityMicromapPropertiesEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='maxOpacity2StateSubdivisionLevel', type='uint32_t'),
+var4=VarDef(name='maxOpacity4StateSubdivisionLevel', type='uint32_t')
+)
+
+Struct(name='VkPhysicalDeviceOpticalFlowFeaturesNV_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='opticalFlow', type='VkBool32')
+)
+
+Struct(name='VkPhysicalDeviceOpticalFlowPropertiesNV_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='supportedOutputGridSizes', type='VkOpticalFlowGridSizeFlagsNV'),
+var4=VarDef(name='supportedHintGridSizes', type='VkOpticalFlowGridSizeFlagsNV'),
+var5=VarDef(name='hintSupported', type='VkBool32'),
+var6=VarDef(name='costSupported', type='VkBool32'),
+var7=VarDef(name='bidirectionalFlowSupported', type='VkBool32'),
+var8=VarDef(name='globalFlowSupported', type='VkBool32'),
+var9=VarDef(name='minWidth', type='uint32_t'),
+var10=VarDef(name='minHeight', type='uint32_t'),
+var11=VarDef(name='maxWidth', type='uint32_t'),
+var12=VarDef(name='maxHeight', type='uint32_t'),
+var13=VarDef(name='maxNumRegionsOfInterest', type='uint32_t')
 )
 
 Struct(name='VkPhysicalDevicePCIBusInfoPropertiesEXT_', enabled=False,
@@ -11255,10 +12618,22 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='pipelineExecutableInfo', type='VkBool32')
 )
 
+Struct(name='VkPhysicalDevicePipelineLibraryGroupHandlesFeaturesEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='pipelineLibraryGroupHandles', type='VkBool32')
+)
+
 Struct(name='VkPhysicalDevicePipelinePropertiesFeaturesEXT_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='pipelinePropertiesIdentifier', type='VkBool32')
+)
+
+Struct(name='VkPhysicalDevicePipelineProtectedAccessFeaturesEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='pipelineProtectedAccess', type='VkBool32')
 )
 
 Struct(name='VkPhysicalDevicePipelineRobustnessFeaturesEXT_', enabled=False,
@@ -11306,6 +12681,12 @@ Struct(name='VkPhysicalDevicePortabilitySubsetPropertiesKHR_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='minVertexInputBindingStrideAlignment', type='uint32_t')
+)
+
+Struct(name='VkPhysicalDevicePresentBarrierFeaturesNV_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='presentBarrier', type='VkBool32')
 )
 
 Struct(name='VkPhysicalDevicePresentIdFeaturesKHR_', enabled=False,
@@ -11421,6 +12802,18 @@ Struct(name='VkPhysicalDeviceRayQueryFeaturesKHR_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='rayQuery', type='VkBool32')
+)
+
+Struct(name='VkPhysicalDeviceRayTracingInvocationReorderFeaturesNV_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='rayTracingInvocationReorder', type='VkBool32')
+)
+
+Struct(name='VkPhysicalDeviceRayTracingInvocationReorderPropertiesNV_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='rayTracingInvocationReorderReorderingHint', type='VkRayTracingInvocationReorderModeNV')
 )
 
 Struct(name='VkPhysicalDeviceRayTracingMaintenance1FeaturesKHR_', enabled=False,
@@ -11753,6 +13146,19 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='shaderModuleIdentifierAlgorithmUUID', type='uint8_t[16]')
 )
 
+Struct(name='VkPhysicalDeviceShaderObjectFeaturesEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='shaderObject', type='VkBool32')
+)
+
+Struct(name='VkPhysicalDeviceShaderObjectPropertiesEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='shaderBinaryUUID', type='uint8_t[16]'),
+var4=VarDef(name='shaderBinaryVersion', type='uint32_t')
+)
+
 Struct(name='VkPhysicalDeviceShaderSMBuiltinsFeaturesNV_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
@@ -11794,6 +13200,22 @@ Struct(name='VkPhysicalDeviceShaderTerminateInvocationFeaturesKHR_', enabled=Fal
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='shaderTerminateInvocation', type='VkBool32')
+)
+
+Struct(name='VkPhysicalDeviceShaderTileImageFeaturesEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='shaderTileImageColorReadAccess', type='VkBool32'),
+var4=VarDef(name='shaderTileImageDepthReadAccess', type='VkBool32'),
+var5=VarDef(name='shaderTileImageStencilReadAccess', type='VkBool32')
+)
+
+Struct(name='VkPhysicalDeviceShaderTileImagePropertiesEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='shaderTileImageCoherentReadAccelerated', type='VkBool32'),
+var4=VarDef(name='shaderTileImageReadSampleFromPixelRateInvocation', type='VkBool32'),
+var5=VarDef(name='shaderTileImageReadFromHelperInvocation', type='VkBool32')
 )
 
 Struct(name='VkPhysicalDeviceShadingRateImageFeaturesNV_', enabled=False,
@@ -11880,6 +13302,12 @@ Struct(name='VkPhysicalDeviceSurfaceInfo2KHR_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='surface', type='VkSurfaceKHR')
+)
+
+Struct(name='VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='swapchainMaintenance1', type='VkBool32')
 )
 
 Struct(name='VkPhysicalDeviceSynchronization2Features_', enabled=False,
@@ -12242,6 +13670,35 @@ var4=VarDef(name='vulkanMemoryModelDeviceScope', type='VkBool32'),
 var5=VarDef(name='vulkanMemoryModelAvailabilityVisibilityChains', type='VkBool32')
 )
 
+Struct(name='VkPhysicalDeviceVulkanSC10Features_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='shaderAtomicInstructions', type='VkBool32')
+)
+
+Struct(name='VkPhysicalDeviceVulkanSC10Properties_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='deviceNoDynamicHostAllocations', type='VkBool32'),
+var4=VarDef(name='deviceDestroyFreesMemory', type='VkBool32'),
+var5=VarDef(name='commandPoolMultipleCommandBuffersRecording', type='VkBool32'),
+var6=VarDef(name='commandPoolResetCommandBuffer', type='VkBool32'),
+var7=VarDef(name='commandBufferSimultaneousUse', type='VkBool32'),
+var8=VarDef(name='secondaryCommandBufferNullOrImagelessFramebuffer', type='VkBool32'),
+var9=VarDef(name='recycleDescriptorSetMemory', type='VkBool32'),
+var10=VarDef(name='recyclePipelineMemory', type='VkBool32'),
+var11=VarDef(name='maxRenderPassSubpasses', type='uint32_t'),
+var12=VarDef(name='maxRenderPassDependencies', type='uint32_t'),
+var13=VarDef(name='maxSubpassInputAttachments', type='uint32_t'),
+var14=VarDef(name='maxSubpassPreserveAttachments', type='uint32_t'),
+var15=VarDef(name='maxFramebufferAttachments', type='uint32_t'),
+var16=VarDef(name='maxDescriptorSetLayoutBindings', type='uint32_t'),
+var17=VarDef(name='maxQueryFaultCount', type='uint32_t'),
+var18=VarDef(name='maxCallbackFaultCount', type='uint32_t'),
+var19=VarDef(name='maxCommandPoolCommandBuffers', type='uint32_t'),
+var20=VarDef(name='maxCommandBufferSize', type='VkDeviceSize')
+)
+
 Struct(name='VkPhysicalDeviceWorkgroupMemoryExplicitLayoutFeaturesKHR_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
@@ -12297,6 +13754,30 @@ var2=VarDef(name='headerVersion', type='VkPipelineCacheHeaderVersion'),
 var3=VarDef(name='vendorID', type='uint32_t'),
 var4=VarDef(name='deviceID', type='uint32_t'),
 var5=VarDef(name='pipelineCacheUUID', type='uint8_t[16]')
+)
+
+Struct(name='VkPipelineCacheHeaderVersionSafetyCriticalOne_', enabled=False,
+var1=VarDef(name='headerVersionOne', type='VkPipelineCacheHeaderVersionOne'),
+var2=VarDef(name='validationVersion', type='VkPipelineCacheValidationVersion'),
+var3=VarDef(name='implementationData', type='uint32_t'),
+var4=VarDef(name='pipelineIndexCount', type='uint32_t'),
+var5=VarDef(name='pipelineIndexStride', type='uint32_t'),
+var6=VarDef(name='pipelineIndexOffset', type='uint64_t')
+)
+
+Struct(name='VkPipelineCacheSafetyCriticalIndexEntry_', enabled=False,
+var1=VarDef(name='pipelineIdentifier', type='uint8_t[16]'),
+var2=VarDef(name='pipelineMemorySize', type='uint64_t'),
+var3=VarDef(name='jsonSize', type='uint64_t'),
+var4=VarDef(name='jsonOffset', type='uint64_t'),
+var5=VarDef(name='stageIndexCount', type='uint32_t'),
+var6=VarDef(name='stageIndexStride', type='uint32_t'),
+var7=VarDef(name='stageIndexOffset', type='uint64_t')
+)
+
+Struct(name='VkPipelineCacheStageValidationIndexEntry_', enabled=False,
+var1=VarDef(name='codeSize', type='uint64_t'),
+var2=VarDef(name='codeOffset', type='uint64_t')
 )
 
 Struct(name='VkPipelineColorBlendAdvancedStateCreateInfoEXT_', enabled=False,
@@ -12529,6 +14010,21 @@ var6=VarDef(name='minSampleShading', type='float'),
 var7=VarDef(name='pSampleMask', type='const VkSampleMask*', wrapType='Cuint32_t::CSArray', wrapParams='1, (const uint32_t*)pipelinemultisamplestatecreateinfo->pSampleMask'),
 var8=VarDef(name='alphaToCoverageEnable', type='VkBool32'),
 var9=VarDef(name='alphaToOneEnable', type='VkBool32')
+)
+
+Struct(name='VkPipelineOfflineCreateInfo_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='pipelineIdentifier', type='uint8_t[16]'),
+var4=VarDef(name='matchControl', type='VkPipelineMatchControl'),
+var5=VarDef(name='poolEntrySize', type='VkDeviceSize')
+)
+
+Struct(name='VkPipelinePoolSize_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='poolEntrySize', type='VkDeviceSize'),
+var4=VarDef(name='poolEntryCount', type='uint32_t')
 )
 
 Struct(name='VkPipelinePropertiesIdentifierEXT_', enabled=False,
@@ -12812,6 +14308,12 @@ var2=VarDef(name='offset', type='uint32_t'),
 var3=VarDef(name='size', type='uint32_t')
 )
 
+Struct(name='VkQueryLowLatencySupportNV_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='pQueriedLowLatencyData', type='void*')
+)
+
 Struct(name='VkQueryPoolCreateInfo_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
@@ -12841,19 +14343,10 @@ var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='performanceCountersSampling', type='VkQueryPoolSamplingModeINTEL')
 )
 
-Struct(name='VkQueryPoolDataInfoINTEL_', enabled=False,
-var1=VarDef(name='pData', type='void*'),
-var2=VarDef(name='dataSize', type='uint32_t'),
-var3=VarDef(name='slot', type='uint32_t'),
-var4=VarDef(name='count', type='uint32_t')
-)
-
-Struct(name='VkQueryPoolIssueInfoINTEL_', enabled=False,
-var1=VarDef(name='slot', type='uint32_t')
-)
-
-Struct(name='VkQueryPoolResetInfoINTEL_', enabled=False,
-var1=VarDef(name='value', type='uint32_t')
+Struct(name='VkQueryPoolVideoEncodeFeedbackCreateInfoKHR_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='encodeFeedbackFlags', type='VkVideoEncodeFeedbackFlagsKHR')
 )
 
 Struct(name='VkQueueFamilyCheckpointProperties2NV_', enabled=False,
@@ -12987,10 +14480,25 @@ Struct(name='VkRefreshCycleDurationGOOGLE_', enabled=False,
 var1=VarDef(name='refreshDuration', type='uint64_t')
 )
 
-Struct(name='VkRegisterInfoINTEL_', enabled=False,
-var1=VarDef(name='offset', type='uint32_t'),
-var2=VarDef(name='value', type='uint32_t'),
-var3=VarDef(name='bitsize', type='uint32_t')
+Struct(name='VkRefreshObjectKHR_', enabled=False,
+var1=VarDef(name='objectType', type='VkObjectType'),
+var2=VarDef(name='objectHandle', type='uint64_t'),
+var3=VarDef(name='flags', type='VkRefreshObjectFlagsKHR')
+)
+
+Struct(name='VkRefreshObjectListKHR_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='objectCount', type='uint32_t'),
+var4=VarDef(name='pObjects', type='const VkRefreshObjectKHR*')
+)
+
+Struct(name='VkReleaseSwapchainImagesInfoEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='swapchain', type='VkSwapchainKHR'),
+var4=VarDef(name='imageIndexCount', type='uint32_t'),
+var5=VarDef(name='pImageIndices', type='const uint32_t*')
 )
 
 Struct(name='VkRenderPassAttachmentBeginInfo_', enabled=True,
@@ -13235,6 +14743,12 @@ var3=VarDef(name='components', type='VkComponentMapping'),
 var4=VarDef(name='srgb', type='VkBool32')
 )
 
+Struct(name='VkSamplerCaptureDescriptorDataInfoEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='sampler', type='VkSampler')
+)
+
 Struct(name='VkSamplerCreateInfo_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
@@ -13366,6 +14880,23 @@ Struct(name='VkSetStateFlagsIndirectCommandNV_', enabled=False,
 var1=VarDef(name='data', type='uint32_t')
 )
 
+Struct(name='VkShaderCreateInfoEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='flags', type='VkShaderCreateFlagsEXT'),
+var4=VarDef(name='stage', type='VkShaderStageFlagBits'),
+var5=VarDef(name='nextStage', type='VkShaderStageFlags'),
+var6=VarDef(name='codeType', type='VkShaderCodeTypeEXT'),
+var7=VarDef(name='codeSize', type='size_t'),
+var8=VarDef(name='pCode', type='const void*'),
+var9=VarDef(name='pName', type='const char*'),
+var10=VarDef(name='setLayoutCount', type='uint32_t'),
+var11=VarDef(name='pSetLayouts', type='const VkDescriptorSetLayout*'),
+var12=VarDef(name='pushConstantRangeCount', type='uint32_t'),
+var13=VarDef(name='pPushConstantRanges', type='const VkPushConstantRange*'),
+var14=VarDef(name='pSpecializationInfo', type='const VkSpecializationInfo*')
+)
+
 Struct(name='VkShaderModuleCreateInfo_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
@@ -13385,6 +14916,12 @@ Struct(name='VkShaderModuleValidationCacheCreateInfoEXT_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='validationCache', type='VkValidationCacheEXT')
+)
+
+Struct(name='VkShaderRequiredSubgroupSizeCreateInfoEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='requiredSubgroupSize', type='uint32_t')
 )
 
 Struct(name='VkShaderResourceUsageAMD_', enabled=False,
@@ -13679,6 +15216,12 @@ var9=VarDef(name='supportedCompositeAlpha', type='VkCompositeAlphaFlagsKHR'),
 var10=VarDef(name='supportedUsageFlags', type='VkImageUsageFlags')
 )
 
+Struct(name='VkSurfaceCapabilitiesPresentBarrierNV_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='presentBarrierSupported', type='VkBool32')
+)
+
 Struct(name='VkSurfaceFormat2KHR_', enabled=True, declareArray=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
@@ -13700,6 +15243,29 @@ Struct(name='VkSurfaceFullScreenExclusiveWin32InfoEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='hmonitor', type='HMONITOR', wrapType='CVkHMONITOR')
+)
+
+Struct(name='VkSurfacePresentModeCompatibilityEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='presentModeCount', type='uint32_t'),
+var4=VarDef(name='pPresentModes', type='VkPresentModeKHR*')
+)
+
+Struct(name='VkSurfacePresentModeEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='presentMode', type='VkPresentModeKHR')
+)
+
+Struct(name='VkSurfacePresentScalingCapabilitiesEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='supportedPresentScaling', type='VkPresentScalingFlagsEXT'),
+var4=VarDef(name='supportedPresentGravityX', type='VkPresentGravityFlagsEXT'),
+var5=VarDef(name='supportedPresentGravityY', type='VkPresentGravityFlagsEXT'),
+var6=VarDef(name='minScaledImageExtent', type='VkExtent2D'),
+var7=VarDef(name='maxScaledImageExtent', type='VkExtent2D')
 )
 
 Struct(name='VkSurfaceProtectedCapabilitiesKHR_', enabled=False,
@@ -13741,11 +15307,40 @@ var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='localDimmingEnable', type='VkBool32')
 )
 
-#Struct(name='VkSwapchainImageCreateInfoANDROID_', enabled=False,
-#var1=VarDef(name='sType', type='VkStructureType'),
-#var2=VarDef(name='pNext', type='const void*'),
-#var3=VarDef(name='usage', type='VkSwapchainImageUsageFlagsANDROID')
-#)
+Struct(name='VkSwapchainPresentBarrierCreateInfoNV_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='presentBarrierEnable', type='VkBool32')
+)
+
+Struct(name='VkSwapchainPresentFenceInfoEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='swapchainCount', type='uint32_t'),
+var4=VarDef(name='pFences', type='const VkFence*')
+)
+
+Struct(name='VkSwapchainPresentModeInfoEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='swapchainCount', type='uint32_t'),
+var4=VarDef(name='pPresentModes', type='const VkPresentModeKHR*')
+)
+
+Struct(name='VkSwapchainPresentModesCreateInfoEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='presentModeCount', type='uint32_t'),
+var4=VarDef(name='pPresentModes', type='const VkPresentModeKHR*')
+)
+
+Struct(name='VkSwapchainPresentScalingCreateInfoEXT_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='scalingBehavior', type='VkPresentScalingFlagsEXT'),
+var4=VarDef(name='presentGravityX', type='VkPresentGravityFlagsEXT'),
+var5=VarDef(name='presentGravityY', type='VkPresentGravityFlagsEXT')
+)
 
 Struct(name='VkTextureLODGatherFormatPropertiesAMD_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
@@ -13894,20 +15489,20 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='flags', type='VkVideoDecodeCapabilityFlagsKHR')
 )
 
-#Struct(name='VkVideoDecodeH264CapabilitiesEXT_', enabled=False,
+#Struct(name='VkVideoDecodeH264CapabilitiesKHR_', enabled=False,
 #var1=VarDef(name='sType', type='VkStructureType'),
 #var2=VarDef(name='pNext', type='void*'),
 #var3=VarDef(name='maxLevelIdc', type='StdVideoH264LevelIdc'),
 #var4=VarDef(name='fieldOffsetGranularity', type='VkOffset2D')
 #)
 
-#Struct(name='VkVideoDecodeH264DpbSlotInfoEXT_', enabled=False,
+#Struct(name='VkVideoDecodeH264DpbSlotInfoKHR_', enabled=False,
 #var1=VarDef(name='sType', type='VkStructureType'),
 #var2=VarDef(name='pNext', type='const void*'),
 #var3=VarDef(name='pStdReferenceInfo', type='const StdVideoDecodeH264ReferenceInfo*')
 #)
 
-#Struct(name='VkVideoDecodeH264PictureInfoEXT_', enabled=False,
+#Struct(name='VkVideoDecodeH264PictureInfoKHR_', enabled=False,
 #var1=VarDef(name='sType', type='VkStructureType'),
 #var2=VarDef(name='pNext', type='const void*'),
 #var3=VarDef(name='pStdPictureInfo', type='const StdVideoDecodeH264PictureInfo*'),
@@ -13915,14 +15510,14 @@ var3=VarDef(name='flags', type='VkVideoDecodeCapabilityFlagsKHR')
 #var5=VarDef(name='pSliceOffsets', type='const uint32_t*')
 #)
 
-#Struct(name='VkVideoDecodeH264ProfileInfoEXT_', enabled=False,
+#Struct(name='VkVideoDecodeH264ProfileInfoKHR_', enabled=False,
 #var1=VarDef(name='sType', type='VkStructureType'),
 #var2=VarDef(name='pNext', type='const void*'),
 #var3=VarDef(name='stdProfileIdc', type='StdVideoH264ProfileIdc'),
-#var4=VarDef(name='pictureLayout', type='VkVideoDecodeH264PictureLayoutFlagBitsEXT')
+#var4=VarDef(name='pictureLayout', type='VkVideoDecodeH264PictureLayoutFlagBitsKHR')
 #)
 
-#Struct(name='VkVideoDecodeH264SessionParametersAddInfoEXT_', enabled=False,
+#Struct(name='VkVideoDecodeH264SessionParametersAddInfoKHR_', enabled=False,
 #var1=VarDef(name='sType', type='VkStructureType'),
 #var2=VarDef(name='pNext', type='const void*'),
 #var3=VarDef(name='stdSPSCount', type='uint32_t'),
@@ -13931,41 +15526,41 @@ var3=VarDef(name='flags', type='VkVideoDecodeCapabilityFlagsKHR')
 #var6=VarDef(name='pStdPPSs', type='const StdVideoH264PictureParameterSet*')
 #)
 
-#Struct(name='VkVideoDecodeH264SessionParametersCreateInfoEXT_', enabled=False,
+#Struct(name='VkVideoDecodeH264SessionParametersCreateInfoKHR_', enabled=False,
 #var1=VarDef(name='sType', type='VkStructureType'),
 #var2=VarDef(name='pNext', type='const void*'),
 #var3=VarDef(name='maxStdSPSCount', type='uint32_t'),
 #var4=VarDef(name='maxStdPPSCount', type='uint32_t'),
-#var5=VarDef(name='pParametersAddInfo', type='const VkVideoDecodeH264SessionParametersAddInfoEXT*')
+#var5=VarDef(name='pParametersAddInfo', type='const VkVideoDecodeH264SessionParametersAddInfoKHR*')
 #)
 
-#Struct(name='VkVideoDecodeH265CapabilitiesEXT_', enabled=False,
+#Struct(name='VkVideoDecodeH265CapabilitiesKHR_', enabled=False,
 #var1=VarDef(name='sType', type='VkStructureType'),
 #var2=VarDef(name='pNext', type='void*'),
 #var3=VarDef(name='maxLevelIdc', type='StdVideoH265LevelIdc')
 #)
 
-#Struct(name='VkVideoDecodeH265DpbSlotInfoEXT_', enabled=False,
+#Struct(name='VkVideoDecodeH265DpbSlotInfoKHR_', enabled=False,
 #var1=VarDef(name='sType', type='VkStructureType'),
 #var2=VarDef(name='pNext', type='const void*'),
 #var3=VarDef(name='pStdReferenceInfo', type='const StdVideoDecodeH265ReferenceInfo*')
 #)
 
-#Struct(name='VkVideoDecodeH265PictureInfoEXT_', enabled=False,
+#Struct(name='VkVideoDecodeH265PictureInfoKHR_', enabled=False,
 #var1=VarDef(name='sType', type='VkStructureType'),
 #var2=VarDef(name='pNext', type='const void*'),
 #var3=VarDef(name='pStdPictureInfo', type='StdVideoDecodeH265PictureInfo*'),
-#var4=VarDef(name='sliceCount', type='uint32_t'),
-#var5=VarDef(name='pSliceDataOffsets', type='const uint32_t*')
+#var4=VarDef(name='sliceSegmentCount', type='uint32_t'),
+#var5=VarDef(name='pSliceSegmentOffsets', type='const uint32_t*')
 #)
 
-#Struct(name='VkVideoDecodeH265ProfileInfoEXT_', enabled=False,
+#Struct(name='VkVideoDecodeH265ProfileInfoKHR_', enabled=False,
 #var1=VarDef(name='sType', type='VkStructureType'),
 #var2=VarDef(name='pNext', type='const void*'),
 #var3=VarDef(name='stdProfileIdc', type='StdVideoH265ProfileIdc')
 #)
 
-#Struct(name='VkVideoDecodeH265SessionParametersAddInfoEXT_', enabled=False,
+#Struct(name='VkVideoDecodeH265SessionParametersAddInfoKHR_', enabled=False,
 #var1=VarDef(name='sType', type='VkStructureType'),
 #var2=VarDef(name='pNext', type='const void*'),
 #var3=VarDef(name='stdVPSCount', type='uint32_t'),
@@ -13976,13 +15571,13 @@ var3=VarDef(name='flags', type='VkVideoDecodeCapabilityFlagsKHR')
 #var8=VarDef(name='pStdPPSs', type='const StdVideoH265PictureParameterSet*')
 #)
 
-#Struct(name='VkVideoDecodeH265SessionParametersCreateInfoEXT_', enabled=False,
+#Struct(name='VkVideoDecodeH265SessionParametersCreateInfoKHR_', enabled=False,
 #var1=VarDef(name='sType', type='VkStructureType'),
 #var2=VarDef(name='pNext', type='const void*'),
 #var3=VarDef(name='maxStdVPSCount', type='uint32_t'),
 #var4=VarDef(name='maxStdSPSCount', type='uint32_t'),
 #var5=VarDef(name='maxStdPPSCount', type='uint32_t'),
-#var6=VarDef(name='pParametersAddInfo', type='const VkVideoDecodeH265SessionParametersAddInfoEXT*')')
+#var6=VarDef(name='pParametersAddInfo', type='const VkVideoDecodeH265SessionParametersAddInfoKHR*')
 #)
 
 Struct(name='VkVideoDecodeInfoKHR_', enabled=False,
@@ -14009,42 +15604,31 @@ var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='flags', type='VkVideoEncodeCapabilityFlagsKHR'),
 var4=VarDef(name='rateControlModes', type='VkVideoEncodeRateControlModeFlagsKHR'),
-var5=VarDef(name='rateControlLayerCount', type='uint8_t'),
-var6=VarDef(name='qualityLevelCount', type='uint8_t'),
-var7=VarDef(name='inputImageDataFillAlignment', type='VkExtent2D')
+var5=VarDef(name='maxRateControlLayers', type='uint32_t'),
+var6=VarDef(name='maxQualityLevels', type='uint32_t'),
+var7=VarDef(name='inputImageDataFillAlignment', type='VkExtent2D'),
+var8=VarDef(name='supportedEncodeFeedbackFlags', type='VkVideoEncodeFeedbackFlagsKHR')
 )
 
 Struct(name='VkVideoEncodeH264CapabilitiesEXT_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='flags', type='VkVideoEncodeH264CapabilityFlagsEXT'),
-var4=VarDef(name='inputModeFlags', type='VkVideoEncodeH264InputModeFlagsEXT'),
-var5=VarDef(name='outputModeFlags', type='VkVideoEncodeH264OutputModeFlagsEXT'),
-var6=VarDef(name='maxPPictureL0ReferenceCount', type='uint8_t'),
-var7=VarDef(name='maxBPictureL0ReferenceCount', type='uint8_t'),
-var8=VarDef(name='maxL1ReferenceCount', type='uint8_t'),
-var9=VarDef(name='motionVectorsOverPicBoundariesFlag', type='VkBool32'),
-var10=VarDef(name='maxBytesPerPicDenom', type='uint32_t'),
-var11=VarDef(name='maxBitsPerMbDenom', type='uint32_t'),
-var12=VarDef(name='log2MaxMvLengthHorizontal', type='uint32_t'),
-var13=VarDef(name='log2MaxMvLengthVertical', type='uint32_t')
+var4=VarDef(name='maxPPictureL0ReferenceCount', type='uint32_t'),
+var5=VarDef(name='maxBPictureL0ReferenceCount', type='uint32_t'),
+var6=VarDef(name='maxL1ReferenceCount', type='uint32_t'),
+var7=VarDef(name='motionVectorsOverPicBoundariesFlag', type='VkBool32'),
+var8=VarDef(name='maxBytesPerPicDenom', type='uint32_t'),
+var9=VarDef(name='maxBitsPerMbDenom', type='uint32_t'),
+var10=VarDef(name='log2MaxMvLengthHorizontal', type='uint32_t'),
+var11=VarDef(name='log2MaxMvLengthVertical', type='uint32_t')
 )
 
 #Struct(name='VkVideoEncodeH264DpbSlotInfoEXT_', enabled=False,
 #var1=VarDef(name='sType', type='VkStructureType'),
 #var2=VarDef(name='pNext', type='const void*'),
-#var3=VarDef(name='slotIndex', type='int8_t'),
-#var4=VarDef(name='pStdReferenceInfo', type='const StdVideoEncodeH264ReferenceInfo*')
+#var3=VarDef(name='pStdReferenceInfo', type='const StdVideoEncodeH264ReferenceInfo*')
 #)
-
-Struct(name='VkVideoEncodeH264EmitPictureParametersInfoEXT_', enabled=False,
-var1=VarDef(name='sType', type='VkStructureType'),
-var2=VarDef(name='pNext', type='const void*'),
-var3=VarDef(name='spsId', type='uint8_t'),
-var4=VarDef(name='emitSpsEnable', type='VkBool32'),
-var5=VarDef(name='ppsIdEntryCount', type='uint32_t'),
-var6=VarDef(name='ppsIdEntries', type='const uint8_t*')
-)
 
 Struct(name='VkVideoEncodeH264FrameSizeEXT_', enabled=False,
 var1=VarDef(name='frameISize', type='uint32_t'),
@@ -14079,13 +15663,13 @@ var3=VarDef(name='gopFrameCount', type='uint32_t'),
 var4=VarDef(name='idrPeriod', type='uint32_t'),
 var5=VarDef(name='consecutiveBFrameCount', type='uint32_t'),
 var6=VarDef(name='rateControlStructure', type='VkVideoEncodeH264RateControlStructureEXT'),
-var7=VarDef(name='temporalLayerCount', type='uint8_t')
+var7=VarDef(name='temporalLayerCount', type='uint32_t')
 )
 
 Struct(name='VkVideoEncodeH264RateControlLayerInfoEXT_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
-var3=VarDef(name='temporalLayerId', type='uint8_t'),
+var3=VarDef(name='temporalLayerId', type='uint32_t'),
 var4=VarDef(name='useInitialRcQp', type='VkBool32'),
 var5=VarDef(name='initialRcQp', type='VkVideoEncodeH264QpEXT'),
 var6=VarDef(name='useMinQp', type='VkBool32'),
@@ -14095,16 +15679,6 @@ var9=VarDef(name='maxQp', type='VkVideoEncodeH264QpEXT'),
 var10=VarDef(name='useMaxFrameSize', type='VkBool32'),
 var11=VarDef(name='maxFrameSize', type='VkVideoEncodeH264FrameSizeEXT')
 )
-
-#Struct(name='VkVideoEncodeH264ReferenceListsInfoEXT_', enabled=False,
-#var1=VarDef(name='sType', type='VkStructureType'),
-#var2=VarDef(name='pNext', type='const void*'),
-#var3=VarDef(name='referenceList0EntryCount', type='uint8_t'),
-#var4=VarDef(name='pReferenceList0Entries', type='const VkVideoEncodeH264DpbSlotInfoEXT*'),
-#var5=VarDef(name='referenceList1EntryCount', type='uint8_t'),
-#var6=VarDef(name='pReferenceList1Entries', type='const VkVideoEncodeH264DpbSlotInfoEXT*'),
-#var7=VarDef(name='pMemMgmtCtrlOperations', type='const StdVideoEncodeH264RefMemMgmtCtrlOperations*')
-#)
 
 #Struct(name='VkVideoEncodeH264SessionParametersAddInfoEXT_', enabled=False,
 #var1=VarDef(name='sType', type='VkStructureType'),
@@ -14136,44 +15710,30 @@ Struct(name='VkVideoEncodeH265CapabilitiesEXT_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='flags', type='VkVideoEncodeH265CapabilityFlagsEXT'),
-var4=VarDef(name='inputModeFlags', type='VkVideoEncodeH265InputModeFlagsEXT'),
-var5=VarDef(name='outputModeFlags', type='VkVideoEncodeH265OutputModeFlagsEXT'),
-var6=VarDef(name='ctbSizes', type='VkVideoEncodeH265CtbSizeFlagsEXT'),
-var7=VarDef(name='transformBlockSizes', type='VkVideoEncodeH265TransformBlockSizeFlagsEXT'),
-var8=VarDef(name='maxPPictureL0ReferenceCount', type='uint8_t'),
-var9=VarDef(name='maxBPictureL0ReferenceCount', type='uint8_t'),
-var10=VarDef(name='maxL1ReferenceCount', type='uint8_t'),
-var11=VarDef(name='maxSubLayersCount', type='uint8_t'),
-var12=VarDef(name='minLog2MinLumaCodingBlockSizeMinus3', type='uint8_t'),
-var13=VarDef(name='maxLog2MinLumaCodingBlockSizeMinus3', type='uint8_t'),
-var14=VarDef(name='minLog2MinLumaTransformBlockSizeMinus2', type='uint8_t'),
-var15=VarDef(name='maxLog2MinLumaTransformBlockSizeMinus2', type='uint8_t'),
-var16=VarDef(name='minMaxTransformHierarchyDepthInter', type='uint8_t'),
-var17=VarDef(name='maxMaxTransformHierarchyDepthInter', type='uint8_t'),
-var18=VarDef(name='minMaxTransformHierarchyDepthIntra', type='uint8_t'),
-var19=VarDef(name='maxMaxTransformHierarchyDepthIntra', type='uint8_t'),
-var20=VarDef(name='maxDiffCuQpDeltaDepth', type='uint8_t'),
-var21=VarDef(name='minMaxNumMergeCand', type='uint8_t'),
-var22=VarDef(name='maxMaxNumMergeCand', type='uint8_t')
+var4=VarDef(name='ctbSizes', type='VkVideoEncodeH265CtbSizeFlagsEXT'),
+var5=VarDef(name='transformBlockSizes', type='VkVideoEncodeH265TransformBlockSizeFlagsEXT'),
+var6=VarDef(name='maxPPictureL0ReferenceCount', type='uint32_t'),
+var7=VarDef(name='maxBPictureL0ReferenceCount', type='uint32_t'),
+var8=VarDef(name='maxL1ReferenceCount', type='uint32_t'),
+var9=VarDef(name='maxSubLayersCount', type='uint32_t'),
+var10=VarDef(name='minLog2MinLumaCodingBlockSizeMinus3', type='uint32_t'),
+var11=VarDef(name='maxLog2MinLumaCodingBlockSizeMinus3', type='uint32_t'),
+var12=VarDef(name='minLog2MinLumaTransformBlockSizeMinus2', type='uint32_t'),
+var13=VarDef(name='maxLog2MinLumaTransformBlockSizeMinus2', type='uint32_t'),
+var14=VarDef(name='minMaxTransformHierarchyDepthInter', type='uint32_t'),
+var15=VarDef(name='maxMaxTransformHierarchyDepthInter', type='uint32_t'),
+var16=VarDef(name='minMaxTransformHierarchyDepthIntra', type='uint32_t'),
+var17=VarDef(name='maxMaxTransformHierarchyDepthIntra', type='uint32_t'),
+var18=VarDef(name='maxDiffCuQpDeltaDepth', type='uint32_t'),
+var19=VarDef(name='minMaxNumMergeCand', type='uint32_t'),
+var20=VarDef(name='maxMaxNumMergeCand', type='uint32_t')
 )
 
 #Struct(name='VkVideoEncodeH265DpbSlotInfoEXT_', enabled=False,
 #var1=VarDef(name='sType', type='VkStructureType'),
 #var2=VarDef(name='pNext', type='const void*'),
-#var3=VarDef(name='slotIndex', type='int8_t'),
-#var4=VarDef(name='pStdReferenceInfo', type='const StdVideoEncodeH265ReferenceInfo*')
+#var3=VarDef(name='pStdReferenceInfo', type='const StdVideoEncodeH265ReferenceInfo*')
 #)
-
-Struct(name='VkVideoEncodeH265EmitPictureParametersInfoEXT_', enabled=False,
-var1=VarDef(name='sType', type='VkStructureType'),
-var2=VarDef(name='pNext', type='const void*'),
-var3=VarDef(name='vpsId', type='uint8_t'),
-var4=VarDef(name='spsId', type='uint8_t'),
-var5=VarDef(name='emitVpsEnable', type='VkBool32'),
-var6=VarDef(name='emitSpsEnable', type='VkBool32'),
-var7=VarDef(name='ppsIdEntryCount', type='uint32_t'),
-var8=VarDef(name='ppsIdEntries', type='const uint8_t*')
-)
 
 Struct(name='VkVideoEncodeH265FrameSizeEXT_', enabled=False,
 var1=VarDef(name='frameISize', type='uint32_t'),
@@ -14208,13 +15768,13 @@ var3=VarDef(name='gopFrameCount', type='uint32_t'),
 var4=VarDef(name='idrPeriod', type='uint32_t'),
 var5=VarDef(name='consecutiveBFrameCount', type='uint32_t'),
 var6=VarDef(name='rateControlStructure', type='VkVideoEncodeH265RateControlStructureEXT'),
-var7=VarDef(name='subLayerCount', type='uint8_t')
+var7=VarDef(name='subLayerCount', type='uint32_t')
 )
 
 Struct(name='VkVideoEncodeH265RateControlLayerInfoEXT_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
-var3=VarDef(name='temporalId', type='uint8_t'),
+var3=VarDef(name='temporalId', type='uint32_t'),
 var4=VarDef(name='useInitialRcQp', type='VkBool32'),
 var5=VarDef(name='initialRcQp', type='VkVideoEncodeH265QpEXT'),
 var6=VarDef(name='useMinQp', type='VkBool32'),
@@ -14224,16 +15784,6 @@ var9=VarDef(name='maxQp', type='VkVideoEncodeH265QpEXT'),
 var10=VarDef(name='useMaxFrameSize', type='VkBool32'),
 var11=VarDef(name='maxFrameSize', type='VkVideoEncodeH265FrameSizeEXT')
 )
-
-#Struct(name='VkVideoEncodeH265ReferenceListsInfoEXT_', enabled=False,
-#var1=VarDef(name='sType', type='VkStructureType'),
-#var2=VarDef(name='pNext', type='const void*'),
-#var3=VarDef(name='referenceList0EntryCount', type='uint8_t'),
-#var4=VarDef(name='pReferenceList0Entries', type='const VkVideoEncodeH265DpbSlotInfoEXT*'),
-#var5=VarDef(name='referenceList1EntryCount', type='uint8_t'),
-#var6=VarDef(name='pReferenceList1Entries', type='const VkVideoEncodeH265DpbSlotInfoEXT*'),
-#var7=VarDef(name='pReferenceModifications', type='const StdVideoEncodeH265ReferenceModifications*')
-#)
 
 #Struct(name='VkVideoEncodeH265SessionParametersAddInfoEXT_', enabled=False,
 #var1=VarDef(name='sType', type='VkStructureType'),
@@ -14269,9 +15819,9 @@ var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='flags', type='VkVideoEncodeFlagsKHR'),
 var4=VarDef(name='qualityLevel', type='uint32_t'),
-var5=VarDef(name='dstBitstreamBuffer', type='VkBuffer'),
-var6=VarDef(name='dstBitstreamBufferOffset', type='VkDeviceSize'),
-var7=VarDef(name='dstBitstreamBufferMaxRange', type='VkDeviceSize'),
+var5=VarDef(name='dstBuffer', type='VkBuffer'),
+var6=VarDef(name='dstBufferOffset', type='VkDeviceSize'),
+var7=VarDef(name='dstBufferRange', type='VkDeviceSize'),
 var8=VarDef(name='srcPictureResource', type='VkVideoPictureResourceInfoKHR'),
 var9=VarDef(name='pSetupReferenceSlot', type='const VkVideoReferenceSlotInfoKHR*'),
 var10=VarDef(name='referenceSlotCount', type='uint32_t'),
@@ -14284,15 +15834,15 @@ var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='flags', type='VkVideoEncodeRateControlFlagsKHR'),
 var4=VarDef(name='rateControlMode', type='VkVideoEncodeRateControlModeFlagBitsKHR'),
-var5=VarDef(name='layerCount', type='uint8_t'),
-var6=VarDef(name='pLayerConfigs', type='const VkVideoEncodeRateControlLayerInfoKHR*')
+var5=VarDef(name='layerCount', type='uint32_t'),
+var6=VarDef(name='pLayers', type='const VkVideoEncodeRateControlLayerInfoKHR*')
 )
 
 Struct(name='VkVideoEncodeRateControlLayerInfoKHR_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
-var3=VarDef(name='averageBitrate', type='uint32_t'),
-var4=VarDef(name='maxBitrate', type='uint32_t'),
+var3=VarDef(name='averageBitrate', type='uint64_t'),
+var4=VarDef(name='maxBitrate', type='uint64_t'),
 var5=VarDef(name='frameRateNumerator', type='uint32_t'),
 var6=VarDef(name='frameRateDenominator', type='uint32_t'),
 var7=VarDef(name='virtualBufferSizeInMs', type='uint32_t'),
@@ -14352,7 +15902,7 @@ var4=VarDef(name='pProfiles', type='const VkVideoProfileInfoKHR*')
 Struct(name='VkVideoReferenceSlotInfoKHR_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
-var3=VarDef(name='slotIndex', type='int8_t'),
+var3=VarDef(name='slotIndex', type='int32_t'),
 var4=VarDef(name='pPictureResource', type='const VkVideoPictureResourceInfoKHR*')
 )
 
@@ -14442,15 +15992,6 @@ var6=VarDef(name='pAcquireTimeoutMilliseconds', type='const uint32_t*', count='a
 var7=VarDef(name='releaseCount', type='uint32_t'),
 var8=VarDef(name='pReleaseSyncs', type='const VkDeviceMemory*', count='releaseCount'),
 var9=VarDef(name='pReleaseKeys', type='const uint64_t*', count='releaseCount')
-)
-
-Struct(name='VkWin32ResidencyCallbacksINTEL_', enabled=False,
-var1=VarDef(name='pUserData', type='void*'),
-var2=VarDef(name='pfnCreateAllocationNotification', type='PFN_vkWin32CreateAllocationNotificationINTEL'),
-var3=VarDef(name='pfnDestroyAllocationNotification', type='PFN_vkWin32DestroyAllocationNotificationINTEL'),
-var4=VarDef(name='pfnMakeResidentControl', type='PFN_vkWin32MakeResidentControlINTEL'),
-var5=VarDef(name='pfnMakeResidentNotification', type='PFN_vkWin32MakeResidentNotificationINTEL'),
-var6=VarDef(name='pfnEvictControl', type='PFN_vkWin32EvictControlINTEL')
 )
 
 Struct(name='VkWin32SurfaceCreateInfoKHR_', enabled=True,
@@ -14597,41 +16138,15 @@ arg1=ArgDef(name='pCallbackData', type='const VkDeviceMemoryReportCallbackDataEX
 arg2=ArgDef(name='pUserData', type='void*')
 )
 
-Function(name='vkWin32CreateAllocationNotificationINTEL', enabled=False, type=Param, level=PrototypeLevel,
-retV=RetDef(type='void'),
-arg1=ArgDef(name='pUserData', type='void*'),
-arg2=ArgDef(name='allocationOsHandle', type='uint32_t'),
-arg3=ArgDef(name='size', type='uint64_t'),
-arg4=ArgDef(name='memory', type='VkDeviceMemory')
+Function(name='vkGetInstanceProcAddrLUNARG', enabled=False, type=Param, level=GlobalLevel,
+retV=RetDef(type='PFN_vkVoidFunction'),
+arg1=ArgDef(name='instance', type='VkInstance'),
+arg2=ArgDef(name='pName', type='const char*')
 )
 
-Function(name='vkWin32DestroyAllocationNotificationINTEL', enabled=False, type=Param, level=PrototypeLevel,
+Function(name='vkFaultCallbackFunction', enabled=False, type=Param, level=PrototypeLevel,
 retV=RetDef(type='void'),
-arg1=ArgDef(name='pUserData', type='void*'),
-arg2=ArgDef(name='allocationOsHandleCount', type='uint32_t'),
-arg3=ArgDef(name='pAllocationOsHandles', type='const uint32_t*')
-)
-
-Function(name='vkWin32MakeResidentControlINTEL', enabled=False, type=Param, level=PrototypeLevel,
-retV=RetDef(type='void'),
-arg1=ArgDef(name='pUserData', type='void*'),
-arg2=ArgDef(name='pAllocationOsHandleCount', type='uint32_t*'),
-arg3=ArgDef(name='pAllocationOsHandles', type='const uint32_t*'),
-arg4=ArgDef(name='pNumBytesToTrim', type='uint64_t*')
-)
-
-Function(name='vkWin32MakeResidentNotificationINTEL', enabled=False, type=Param, level=PrototypeLevel,
-retV=RetDef(type='void'),
-arg1=ArgDef(name='pUserData', type='void*'),
-arg2=ArgDef(name='allocationOsHandleCount', type='uint32_t'),
-arg3=ArgDef(name='pAllocationOsHandles', type='const uint32_t*'),
-arg4=ArgDef(name='residentAllocationOsHandleCount', type='uint32_t')
-)
-
-Function(name='vkWin32EvictControlINTEL', enabled=False, type=Param, level=PrototypeLevel,
-retV=RetDef(type='void'),
-arg1=ArgDef(name='pUserData', type='void*'),
-arg2=ArgDef(name='allocationOsHandleCount', type='uint32_t'),
-arg3=ArgDef(name='pAllocationOsHandles', type='const uint32_t*'),
-arg4=ArgDef(name='pNumBytesToTrim', type='uint64_t*')
+arg1=ArgDef(name='unrecordedFaults', type='VkBool32'),
+arg2=ArgDef(name='faultCount', type='uint32_t'),
+arg3=ArgDef(name='pFaults', type='const VkFaultData*')
 )

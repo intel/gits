@@ -107,15 +107,6 @@ CVkLog& CVkLog::operator<<(PFN_vkFreeFunction c) {
   return *this;
 }
 
-CVkLog& CVkLog::operator<<(PFN_vkWin32CreateAllocationNotificationINTEL c) {
-  if (c != nullptr) {
-    _buffer << (void*)c;
-  } else {
-    _buffer << "0";
-  }
-  return *this;
-}
-
 CVkLog& CVkLog::operator<<(PFN_vkInternalAllocationNotification c) {
   if (c != nullptr) {
     _buffer << (void*)c;
@@ -143,34 +134,7 @@ CVkLog& CVkLog::operator<<(PFN_vkDeviceMemoryReportCallbackEXT c) {
   return *this;
 }
 
-CVkLog& CVkLog::operator<<(PFN_vkWin32DestroyAllocationNotificationINTEL c) {
-  if (c != nullptr) {
-    _buffer << (void*)c;
-  } else {
-    _buffer << "0";
-  }
-  return *this;
-}
-
-CVkLog& CVkLog::operator<<(PFN_vkWin32MakeResidentControlINTEL c) {
-  if (c != nullptr) {
-    _buffer << (void*)c;
-  } else {
-    _buffer << "0";
-  }
-  return *this;
-}
-
-CVkLog& CVkLog::operator<<(PFN_vkWin32MakeResidentNotificationINTEL c) {
-  if (c != nullptr) {
-    _buffer << (void*)c;
-  } else {
-    _buffer << "0";
-  }
-  return *this;
-}
-
-CVkLog& CVkLog::operator<<(PFN_vkWin32EvictControlINTEL c) {
+CVkLog& CVkLog::operator<<(PFN_vkFaultCallbackFunction c) {
   if (c != nullptr) {
     _buffer << (void*)c;
   } else {
