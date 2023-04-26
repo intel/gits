@@ -14127,7 +14127,7 @@ var5=VarDef(name='vertexInputs', type='VkPipelineRobustnessBufferBehaviorEXT'),
 var6=VarDef(name='images', type='VkPipelineRobustnessImageBehaviorEXT')
 )
 
-Struct(name='VkPipelineSampleLocationsStateCreateInfoEXT_', enabled=False,
+Struct(name='VkPipelineSampleLocationsStateCreateInfoEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='sampleLocationsEnable', type='VkBool32'),
@@ -14722,18 +14722,18 @@ var15=VarDef(name='ty', type='float'),
 var16=VarDef(name='tz', type='float')
 )
 
-Struct(name='VkSampleLocationEXT_', enabled=False,
+Struct(name='VkSampleLocationEXT_', enabled=True, declareArray=True,
 var1=VarDef(name='x', type='float'),
 var2=VarDef(name='y', type='float')
 )
 
-Struct(name='VkSampleLocationsInfoEXT_', enabled=False,
+Struct(name='VkSampleLocationsInfoEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='sampleLocationsPerPixel', type='VkSampleCountFlagBits'),
 var4=VarDef(name='sampleLocationGridSize', type='VkExtent2D'),
 var5=VarDef(name='sampleLocationsCount', type='uint32_t'),
-var6=VarDef(name='pSampleLocations', type='const VkSampleLocationEXT*', count='sampleLocationsCount')
+var6=VarDef(name='pSampleLocations', type='const VkSampleLocationEXT*', wrapType='CVkSampleLocationEXTArray', wrapParams='samplelocationsinfoext->sampleLocationsCount, samplelocationsinfoext->pSampleLocations', count='sampleLocationsCount')
 )
 
 Struct(name='VkSamplerBorderColorComponentMappingCreateInfoEXT_', enabled=False,
