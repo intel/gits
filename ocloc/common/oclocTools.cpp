@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "oclocTools.h"
+#include "tools_lite.h"
 
 namespace gits {
 namespace ocloc {
@@ -37,6 +38,7 @@ COclocLog& COclocLog::operator<<(char* c) {
   _buffer << (const void*)c;
   return *this;
 }
+
 void LogOclocInvokeInput(unsigned int argc,
                          const char** argv,
                          const uint32_t numSources,
@@ -98,7 +100,15 @@ void LogOclocInvokeOutput(int ret,
     if (dataOutputs != nullptr) {
       OclocLog(TRACEV, RAW) << ">>>> out dataOutputs: { ";
       for (uint32_t i = 0; i < *numOutputs; i++) {
-        OclocLog(TRACEV, RAW) << (*dataOutputs)[i] << ((i < *numOutputs - 1) ? ", " : " }\n");
+        const auto nameOutput = std::string(static_cast<const char*>((*nameOutputs)[i]));
+        if (StringEndsWith(nameOutput, std::string(".log")) ||
+            StringEndsWith(nameOutput, std::string(".txt"))) {
+          OclocLog(TRACEV, RAW) << static_cast<const uint8_t*>((*dataOutputs)[i])
+                                << ((i < *numOutputs - 1) ? ", " : " }\n");
+        } else {
+          OclocLog(TRACEV, RAW) << static_cast<const void*>((*dataOutputs)[i])
+                                << ((i < *numOutputs - 1) ? ", " : " }\n");
+        }
       }
     }
     if (lenOutputs != nullptr) {
@@ -110,7 +120,8 @@ void LogOclocInvokeOutput(int ret,
     if (nameOutputs != nullptr) {
       OclocLog(TRACEV, RAW) << ">>>> out nameOutputs: { ";
       for (uint32_t i = 0; i < *numOutputs; i++) {
-        OclocLog(TRACEV, RAW) << (*nameOutputs)[i] << ((i < *numOutputs - 1) ? ", " : " }\n");
+        OclocLog(TRACEV, RAW) << static_cast<const char*>((*nameOutputs)[i])
+                              << ((i < *numOutputs - 1) ? ", " : " }\n");
       }
     }
   }

@@ -19,6 +19,8 @@ CFunction* CFunction::Create(unsigned id) {
   switch (id) {
   case ID_OCLOC_INVOKE:
     return new CoclocInvoke;
+  case ID_OCLOC_INVOKE_V1:
+    return new CoclocInvoke_V1;
   case ID_OCLOC_FREE_OUTPUT:
     return new CoclocFreeOutput;
   default:;

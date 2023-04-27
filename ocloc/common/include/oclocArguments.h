@@ -36,6 +36,10 @@ public:
   const char** Value();
   const char** FileNames();
 
+  std::vector<CArgumentFileText> Files() const {
+    return _files;
+  };
+
   virtual const char* Name() const {
     return "const char**";
   }

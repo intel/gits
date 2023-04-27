@@ -12,6 +12,7 @@
 #include <vector>
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 #include <string>
 
 namespace gits {
@@ -20,15 +21,18 @@ struct COclocState {
   using type = uint64_t;
   using states_type = std::unordered_map<type, std::shared_ptr<COclocState>>;
   std::vector<std::string> args;
-  std::vector<const uint8_t*> sourceData;
+  std::vector<std::vector<uint8_t>> sourceData;
   std::vector<uint64_t> sourceLens;
-  std::vector<const char*> sourceNames;
-  std::vector<const uint8_t*> headerData;
+  std::vector<std::string> sourceNames;
+  std::vector<std::vector<uint8_t>> headerData;
   std::vector<uint64_t> headerLens;
-  std::vector<const char*> headerNames;
-  std::vector<uint8_t*> outputData;
+  std::vector<std::string> headerNames;
+  std::vector<std::vector<uint8_t>> outputData;
   std::vector<uint64_t> outputLens;
-  std::vector<char*> outputNames;
+  std::vector<std::string> outputNames;
+  std::unordered_set<std::string> savedFileNames;
+  std::vector<uint64_t> originalHashes;
+  std::vector<uint64_t> hashes;
 
 public:
   COclocState() = default;
@@ -50,10 +54,8 @@ private:
 public:
   ~CStateDynamic() = default;
 
-  // binary hash -> filename
-  std::unordered_map<uint64_t, std::string> recorder;
   // filename -> binary
-  std::unordered_map<std::string, std::vector<uint8_t>> player;
+  std::unordered_map<std::string, std::vector<uint8_t>> deprecatedPlayer;
   // binary hash -> oclocState
   typename COclocState::states_type oclocStates;
 

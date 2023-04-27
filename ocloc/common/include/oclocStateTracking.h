@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "argument.h"
+#include "function.h"
 #include "oclocArguments.h"
 #include "oclocDrivers.h"
 #include "oclocHeader.h"
@@ -27,7 +29,8 @@ std::vector<std::string> GetStringVector(const uint32_t count, const char** arr)
   return vector;
 }
 } // namespace
-inline void oclocInvoke_SD(int return_value,
+inline void oclocInvoke_SD(CFunction* token,
+                           int return_value,
                            unsigned int argc,
                            const char** argv,
                            const uint32_t numSources,
@@ -43,26 +46,27 @@ inline void oclocInvoke_SD(int return_value,
                            uint64_t** lenOutputs,
                            char*** nameOutputs) {
   if (return_value == 0 && dataOutputs != nullptr) {
+    const auto args = GetStringVector(argc, argv);
+    auto sharedPtr = std::make_shared<COclocState>(
+        args, std::vector<const uint8_t*>(sources, sources + numSources),
+        std::vector<uint64_t>(sourceLens, sourceLens + numSources),
+        std::vector<const char*>(sourcesNames, sourcesNames + numSources),
+        std::vector<const uint8_t*>(dataInputHeaders, dataInputHeaders + numInputHeaders),
+        std::vector<uint64_t>(lenInputHeaders, lenInputHeaders + numInputHeaders),
+        std::vector<const char*>(nameInputHeaders, nameInputHeaders + numInputHeaders),
+        std::vector<uint8_t*>(*dataOutputs, *dataOutputs + *numOutputs),
+        std::vector<uint64_t>(*lenOutputs, *lenOutputs + *numOutputs),
+        std::vector<char*>(*nameOutputs, *nameOutputs + *numOutputs));
     for (uint32_t i = 0; i < *numOutputs; ++i) {
       uint64_t hash = ComputeHash((*dataOutputs)[i], (*lenOutputs)[i], THashType::XX);
-      const auto args = GetStringVector(argc, argv);
-      if (Config::IsRecorder()) {
-        SD().recorder[hash] = std::string((*nameOutputs)[i]);
-      } else {
-        const auto moduleData =
-            std::vector<uint8_t>((*dataOutputs)[i], (*dataOutputs)[i] + (*lenOutputs)[i]);
-        SD().player[std::string((*nameOutputs)[i])] = moduleData;
+      SD().oclocStates[hash] = sharedPtr;
+      if (token != nullptr) {
+        SD().oclocStates[hash]->originalHashes = token->Argument<Cuint64_t::CSArray>(10U).Vector();
+        const auto savedFiles = token->Argument<CProgramSources>(3U).Files();
+        for (const auto& file : savedFiles) {
+          SD().oclocStates[hash]->savedFileNames.insert(file.FileName());
+        }
       }
-      SD().oclocStates[hash] = std::make_shared<COclocState>(
-          args, std::vector<const uint8_t*>(sources, sources + numSources),
-          std::vector<uint64_t>(sourceLens, sourceLens + numSources),
-          std::vector<const char*>(sourcesNames, sourcesNames + numSources),
-          std::vector<const uint8_t*>(dataInputHeaders, dataInputHeaders + numInputHeaders),
-          std::vector<uint64_t>(lenInputHeaders, lenInputHeaders + numInputHeaders),
-          std::vector<const char*>(nameInputHeaders, nameInputHeaders + numInputHeaders),
-          std::vector<uint8_t*>(*dataOutputs, *dataOutputs + *numOutputs),
-          std::vector<uint64_t>(*lenOutputs, *lenOutputs + *numOutputs),
-          std::vector<char*>(*nameOutputs, *nameOutputs + *numOutputs));
     }
   }
 }

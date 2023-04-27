@@ -15,29 +15,49 @@
 
 #include "oclocStateDynamic.h"
 
+#include <algorithm>
+#include <iterator>
 #include <utility>
 
 namespace gits {
 namespace ocloc {
 COclocState::COclocState(std::vector<std::string> arguments,
-                         std::vector<const uint8_t*> sourceData,
-                         std::vector<uint64_t> sourceLens,
-                         std::vector<const char*> sourceNames,
-                         std::vector<const uint8_t*> headerData,
-                         std::vector<uint64_t> headerLens,
-                         std::vector<const char*> headerNames,
-                         std::vector<uint8_t*> outputData,
-                         std::vector<uint64_t> outputLens,
-                         std::vector<char*> outputNames)
+                         std::vector<const uint8_t*> srcData,
+                         std::vector<uint64_t> srcLens,
+                         std::vector<const char*> srcNames,
+                         std::vector<const uint8_t*> hdrData,
+                         std::vector<uint64_t> hdrLens,
+                         std::vector<const char*> hdrNames,
+                         std::vector<uint8_t*> outData,
+                         std::vector<uint64_t> outLens,
+                         std::vector<char*> outNames)
     : args(std::move(arguments)),
-      sourceData(std::move(sourceData)),
-      sourceLens(std::move(sourceLens)),
-      sourceNames(std::move(sourceNames)),
-      headerData(std::move(headerData)),
-      headerLens(std::move(headerLens)),
-      headerNames(std::move(headerNames)),
-      outputData(std::move(outputData)),
-      outputLens(std::move(outputLens)),
-      outputNames(std::move(outputNames)) {}
+      sourceData(srcData.size()),
+      sourceLens(std::move(srcLens)),
+      headerData(hdrData.size()),
+      headerLens(std::move(hdrLens)),
+      outputData(outData.size()),
+      outputLens(std::move(outLens)) {
+  std::transform(
+      srcData.begin(), srcData.end(), sourceLens.begin(), sourceData.begin(),
+      [](const uint8_t* ptr, size_t size) { return std::vector<uint8_t>(ptr, ptr + size); });
+
+  std::transform(srcNames.begin(), srcNames.end(), std::back_inserter(sourceNames),
+                 [](const char* ptr) { return std::string(ptr); });
+
+  std::transform(
+      hdrData.begin(), hdrData.end(), headerLens.begin(), headerData.begin(),
+      [](const uint8_t* ptr, size_t size) { return std::vector<uint8_t>(ptr, ptr + size); });
+
+  std::transform(hdrNames.begin(), hdrNames.end(), std::back_inserter(headerNames),
+                 [](const char* ptr) { return std::string(ptr); });
+
+  std::transform(
+      outData.begin(), outData.end(), outputLens.begin(), outputData.begin(),
+      [](const uint8_t* ptr, size_t size) { return std::vector<uint8_t>(ptr, ptr + size); });
+
+  std::transform(outNames.begin(), outNames.end(), std::back_inserter(outputNames),
+                 [](const char* ptr) { return std::string(ptr); });
+}
 } // namespace ocloc
 } // namespace gits

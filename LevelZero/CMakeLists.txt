@@ -114,6 +114,7 @@ add_library(L0_common
   ${CMAKE_CURRENT_BINARY_DIR}/l0Log.h
   common/l0Log.cpp
   common/include/l0Structs.h
+  common/l0Structs.cpp
   common/include/l0StateDynamic.h
   common/include/l0StateTracking.h
   common/include/l0PlayerRunWrap.h

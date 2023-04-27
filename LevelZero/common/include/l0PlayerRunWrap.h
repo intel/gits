@@ -268,17 +268,6 @@ inline void zeModuleCreate_RUNWRAP(Cze_result_t& _return_value,
       drv.zeModuleCreate(*_hContext, *_hDevice, *_desc, *_phModule, *_phBuildLog);
   zeModuleCreate_SD(*_return_value, *_hContext, *_hDevice, *_desc, *_phModule, *_phBuildLog);
   HandleDumpSpv(*_desc);
-  const auto* desc = *_desc;
-  if (Config::Get().player.l0DumpSpv && desc != nullptr &&
-      desc->format == ZE_MODULE_FORMAT_IL_SPIRV && desc->pInputModule != nullptr &&
-      desc->inputSize != 0U) {
-    static int programSourceIdx = 0;
-    std::stringstream stream;
-    stream << "l0Programs/kernel_source_" << std::setfill('0') << std::setw(2) << programSourceIdx++
-           << ".spv";
-    CArgumentFileText(stream.str().c_str(), reinterpret_cast<const char*>(desc->pInputModule),
-                      static_cast<unsigned int>(desc->inputSize));
-  }
 }
 
 inline void zeModuleCreate_V1_RUNWRAP(Cze_result_t& _return_value,

@@ -54,16 +54,47 @@ inline void ScheduleOclocInvoke(CScheduler& scheduler, ocloc::COclocState& ocloc
   std::transform(oclocState.args.begin(), oclocState.args.end(), std::back_inserter(args),
                  [](auto& str) { return str.c_str(); });
   uint32_t outputNum = static_cast<uint32_t>(oclocState.outputData.size());
-  uint8_t** outputData = oclocState.outputData.data();
-  uint64_t* outputDataLens = oclocState.outputLens.data();
-  char** outputNames = oclocState.outputNames.data();
-  scheduler.Register(new ocloc::CoclocInvoke(
-      0, static_cast<unsigned int>(args.size()), args.data(),
-      static_cast<uint32_t>(oclocState.sourceData.size()), oclocState.sourceData.data(),
-      oclocState.sourceLens.data(), oclocState.sourceNames.data(),
-      static_cast<uint32_t>(oclocState.headerData.size()), oclocState.headerData.data(),
-      oclocState.headerLens.data(), oclocState.headerNames.data(), &outputNum, &outputData,
-      &outputDataLens, &outputNames));
+  std::vector<uint8_t*> outputData;
+  std::transform(oclocState.outputData.begin(), oclocState.outputData.end(),
+                 std::back_inserter(outputData),
+                 [](std::vector<uint8_t>& vector) { return vector.data(); });
+  uint8_t** outputDataPtr = outputData.data();
+
+  auto outputDataLens = oclocState.outputLens.data();
+  std::vector<char*> outputNames;
+  std::transform(oclocState.outputNames.begin(), oclocState.outputNames.end(),
+                 std::back_inserter(outputNames),
+                 [](std::string& str) { return const_cast<char*>(str.c_str()); });
+  auto outputNamesPtr = outputNames.data();
+  std::vector<const char*> headerNames;
+  std::transform(oclocState.headerNames.begin(), oclocState.headerNames.end(),
+                 std::back_inserter(headerNames), [](std::string& str) { return str.c_str(); });
+  const auto headerNamesPtr = headerNames.data();
+
+  std::vector<const char*> sourceNames;
+  std::transform(oclocState.sourceNames.begin(), oclocState.sourceNames.end(),
+                 std::back_inserter(sourceNames), [](std::string& str) { return str.c_str(); });
+  const auto sourceNamesPtr = sourceNames.data();
+
+  std::vector<const uint8_t*> sourceData;
+  std::transform(oclocState.sourceData.begin(), oclocState.sourceData.end(),
+                 std::back_inserter(sourceData),
+                 [](std::vector<uint8_t>& vector) { return vector.data(); });
+  const auto sourceDataPtr = sourceData.data();
+
+  std::vector<const uint8_t*> headerData;
+  std::transform(oclocState.headerData.begin(), oclocState.headerData.end(),
+                 std::back_inserter(headerData),
+                 [](std::vector<uint8_t>& vector) { return vector.data(); });
+  const auto headerDataPtr = headerData.data();
+
+  scheduler.Register(
+      new ocloc::CoclocInvoke_V1(0, static_cast<unsigned int>(args.size()), args.data(),
+                                 static_cast<uint32_t>(oclocState.sourceData.size()), sourceDataPtr,
+                                 oclocState.sourceLens.data(), sourceNamesPtr,
+                                 static_cast<uint32_t>(oclocState.headerData.size()), headerDataPtr,
+                                 oclocState.headerLens.data(), headerNamesPtr, &outputNum,
+                                 &outputDataPtr, &outputDataLens, &outputNamesPtr));
 }
 #endif
 void ScheduleSplitMemoryCopyFromHostPtr(CScheduler& scheduler,

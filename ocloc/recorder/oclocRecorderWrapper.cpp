@@ -253,24 +253,25 @@ void CRecorderWrapper::oclocInvoke(int return_value,
       std::vector<const char*> args;
       std::transform(arguments.begin(), arguments.end(), std::back_inserter(args),
                      [](auto& str) { return str.c_str(); });
-      _token = new CoclocInvoke(return_value, args.size(), args.data(), i, newSources.data(),
-                                newSourceLens.data(), newSourceNames.data(), numInputHeaders,
-                                dataInputHeaders, lenInputHeaders, nameInputHeaders, numOutputs,
-                                dataOutputs, lenOutputs, nameOutputs);
-      oclocInvoke_SD(return_value, args.size(), args.data(), i, newSources.data(),
+      _token = new CoclocInvoke_V1(return_value, args.size(), args.data(), i, newSources.data(),
+                                   newSourceLens.data(), newSourceNames.data(), numInputHeaders,
+                                   dataInputHeaders, lenInputHeaders, nameInputHeaders, numOutputs,
+                                   dataOutputs, lenOutputs, nameOutputs);
+      oclocInvoke_SD(_token, return_value, args.size(), args.data(), i, newSources.data(),
                      newSourceLens.data(), newSourceNames.data(), numInputHeaders, dataInputHeaders,
                      lenInputHeaders, nameInputHeaders, numOutputs, dataOutputs, lenOutputs,
                      nameOutputs);
       _recorder.Schedule(_token);
       return;
     } else {
-      _token = new CoclocInvoke(return_value, argc, argv, numSources, sources, sourceLens,
-                                sourcesNames, numInputHeaders, dataInputHeaders, lenInputHeaders,
-                                nameInputHeaders, numOutputs, dataOutputs, lenOutputs, nameOutputs);
+      _token =
+          new CoclocInvoke_V1(return_value, argc, argv, numSources, sources, sourceLens,
+                              sourcesNames, numInputHeaders, dataInputHeaders, lenInputHeaders,
+                              nameInputHeaders, numOutputs, dataOutputs, lenOutputs, nameOutputs);
     }
     _recorder.Schedule(_token);
   }
-  oclocInvoke_SD(return_value, argc, argv, numSources, sources, sourceLens, sourcesNames,
+  oclocInvoke_SD(_token, return_value, argc, argv, numSources, sources, sourceLens, sourcesNames,
                  numInputHeaders, dataInputHeaders, lenInputHeaders, nameInputHeaders, numOutputs,
                  dataOutputs, lenOutputs, nameOutputs);
 }
