@@ -270,18 +270,6 @@ inline void zeModuleCreate_RUNWRAP(Cze_result_t& _return_value,
   HandleDumpSpv(*_desc);
 }
 
-inline void zeModuleCreate_V1_RUNWRAP(Cze_result_t& _return_value,
-                                      Cze_context_handle_t& _hContext,
-                                      Cze_device_handle_t& _hDevice,
-                                      Cze_module_desc_t_V1::CSArray& _desc,
-                                      Cze_module_handle_t::CSMapArray& _phModule,
-                                      Cze_module_build_log_handle_t::CSMapArray& _phBuildLog) {
-  _return_value.Value() =
-      drv.zeModuleCreate(*_hContext, *_hDevice, *_desc, *_phModule, *_phBuildLog);
-  zeModuleCreate_SD(*_return_value, *_hContext, *_hDevice, *_desc, *_phModule, *_phBuildLog);
-  HandleDumpSpv(*_desc);
-}
-
 inline void zeCommandQueueCreate_RUNWRAP(Cze_result_t& _return_value,
                                          Cze_context_handle_t& _hContext,
                                          Cze_device_handle_t& _hDevice,

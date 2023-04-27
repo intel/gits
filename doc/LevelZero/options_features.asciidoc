@@ -64,7 +64,7 @@ May inject synchronization and buffer/image reads API calls.
 The xref:subcaptures.asciidoc#Nomenclature[nomenclature] is passed as second argument to the option.
 Each read is to allocated memory by GITS, which is freed after synchronization.
 
-* `--l0DumpSpv` - Dumps SPIRV files on zeModuleCreate API call directly from the `pInputModule` of size `inputSize` fields in descriptor to the `l0Programs` folder.
+* `--l0DumpSpv` - (DEPRECATED) Dumps SPIRV files on zeModuleCreate API call directly from the `pInputModule` of size `inputSize` fields in descriptor to the `l0Programs` folder.
 Requires module format: `ZE_MODULE_FORMAT_IL_SPIRV`.
 
 * `--l0CaptureAfterSubmit` - used with `--l0CaptureKernels`, modifies the way kernel arguments are dumped.

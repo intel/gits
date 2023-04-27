@@ -397,7 +397,7 @@ bool configure_player(int argc, char** argv) {
       "(implicitly to \"dump\" in stream directory)");
 
   TypedOption<bool> optionL0DumpSpv(options, OPTION_GROUP_PLAYBACK, 0, "l0DumpSpv",
-                                    "Dumps spirv files on zeModuleCreate api call");
+                                    "Option deprecated!");
 
   TypedOption<bool> optionL0CaptureAfterSubmit(
       options, OPTION_GROUP_PLAYBACK, 0, "l0CaptureAfterSubmit",
