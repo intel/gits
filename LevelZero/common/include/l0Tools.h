@@ -81,6 +81,7 @@ bool IsNullIndirectPointersInBufferEnabled(const Config& cfg);
 enum class AllocStateType : unsigned { pointer, global_pointer, function_pointer };
 bool IsControlledSubmission(const ze_command_queue_desc_t* desc);
 bool IsControlledSubmission(const ze_command_list_desc_t* desc);
+bool ShouldDumpSpv(bool dumpSpv, const ze_module_desc_t* desc);
 uint32_t GetMostCommonOrdinal(const ze_command_queue_group_property_flags_t& originalFlags,
                               const std::vector<ze_command_queue_group_properties_t>& currentProps,
                               const std::vector<uint32_t>& blockedOrdinals);

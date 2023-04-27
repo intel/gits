@@ -147,6 +147,17 @@ void ChooseQueueIndex(const ze_device_handle_t& hDevice, const uint32_t& ordinal
     *index = numQueues - 1U;
   }
 }
+
+inline void HandleDumpSpv(const ze_module_desc_t* desc) {
+  if (ShouldDumpSpv(Config::Get().player.l0DumpSpv, desc)) {
+    static int programSourceIdx = 0;
+    std::stringstream stream;
+    stream << "l0Programs/kernel_source_" << std::setfill('0') << std::setw(2) << programSourceIdx++
+           << ".spv";
+    CArgumentFileText(stream.str().c_str(), reinterpret_cast<const char*>(desc->pInputModule),
+                      static_cast<unsigned int>(desc->inputSize));
+  }
+}
 } // namespace
 
 inline void zeCommandListAppendLaunchKernel_RUNWRAP(Cze_result_t& _return_value,
@@ -256,6 +267,7 @@ inline void zeModuleCreate_RUNWRAP(Cze_result_t& _return_value,
   _return_value.Value() =
       drv.zeModuleCreate(*_hContext, *_hDevice, *_desc, *_phModule, *_phBuildLog);
   zeModuleCreate_SD(*_return_value, *_hContext, *_hDevice, *_desc, *_phModule, *_phBuildLog);
+  HandleDumpSpv(*_desc);
   const auto* desc = *_desc;
   if (Config::Get().player.l0DumpSpv && desc != nullptr &&
       desc->format == ZE_MODULE_FORMAT_IL_SPIRV && desc->pInputModule != nullptr &&
@@ -267,6 +279,18 @@ inline void zeModuleCreate_RUNWRAP(Cze_result_t& _return_value,
     CArgumentFileText(stream.str().c_str(), reinterpret_cast<const char*>(desc->pInputModule),
                       static_cast<unsigned int>(desc->inputSize));
   }
+}
+
+inline void zeModuleCreate_V1_RUNWRAP(Cze_result_t& _return_value,
+                                      Cze_context_handle_t& _hContext,
+                                      Cze_device_handle_t& _hDevice,
+                                      Cze_module_desc_t_V1::CSArray& _desc,
+                                      Cze_module_handle_t::CSMapArray& _phModule,
+                                      Cze_module_build_log_handle_t::CSMapArray& _phBuildLog) {
+  _return_value.Value() =
+      drv.zeModuleCreate(*_hContext, *_hDevice, *_desc, *_phModule, *_phBuildLog);
+  zeModuleCreate_SD(*_return_value, *_hContext, *_hDevice, *_desc, *_phModule, *_phBuildLog);
+  HandleDumpSpv(*_desc);
 }
 
 inline void zeCommandQueueCreate_RUNWRAP(Cze_result_t& _return_value,

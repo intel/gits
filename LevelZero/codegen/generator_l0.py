@@ -1388,12 +1388,28 @@ var2=VarDef(name='pConstantIds',type='const uint32_t*',tag='in'),
 var3=VarDef(name='pConstantValues',type='const void**',tag='in'),
 )
 
+Argument(name='ze_module_constants_t',custom=True,version=1,
+var1=VarDef(name='numConstants',type='uint32_t',tag='in'),
+var2=VarDef(name='pConstantIds',type='const uint32_t*',tag='in'),
+var3=VarDef(name='pConstantValues',type='const void**',tag='in'),
+)
+
 Argument(name='ze_module_desc_t',custom=True,
 var1=VarDef(name='stype',type='ze_structure_type_t',tag='in'),
 var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructCore'),
 var3=VarDef(name='format',type='ze_module_format_t',tag='in'),
 var4=VarDef(name='inputSize',type='size_t',tag='in'),
 var5=VarDef(name='pInputModule',type='const uint8_t*',tag='in'),
+var6=VarDef(name='pBuildFlags',type='const char*',tag='in'),
+var7=VarDef(name='pConstants',type='const ze_module_constants_t*',tag='in'),
+)
+
+Argument(name='ze_module_desc_t',custom=True,version=1,
+var1=VarDef(name='stype',type='ze_structure_type_t',tag='in'),
+var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructCore'),
+var3=VarDef(name='format',type='ze_module_format_t',tag='in'),
+var4=VarDef(name='inputSize',type='size_t',tag='in'),
+var5=VarDef(name='pInputModule',type='const uint8_t*',tag='in',wrapType='CProgramSource'),
 var6=VarDef(name='pBuildFlags',type='const char*',tag='in'),
 var7=VarDef(name='pConstants',type='const ze_module_constants_t*',tag='in'),
 )
@@ -3084,6 +3100,15 @@ retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
 arg3=ArgDef(name='desc',type='const ze_module_desc_t*',tag='in'),
+arg4=ArgDef(name='phModule',type='ze_module_handle_t*',tag='out'),
+arg5=ArgDef(name='phBuildLog',type='ze_module_build_log_handle_t*',tag='out',optional=True),
+)
+
+Function(name='zeModuleCreate',component='ze_module',enabled=True,stateTrack=True,runWrap=True,version=1,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
+arg2=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
+arg3=ArgDef(name='desc',type='const ze_module_desc_t*',tag='in',wrapType="Cze_module_desc_t_V1::CSArray"),
 arg4=ArgDef(name='phModule',type='ze_module_handle_t*',tag='out'),
 arg5=ArgDef(name='phBuildLog',type='ze_module_build_log_handle_t*',tag='out',optional=True),
 )

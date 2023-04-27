@@ -516,6 +516,11 @@ bool IsControlledSubmission(const ze_command_list_desc_t* desc) {
   return desc != nullptr && desc->commandQueueGroupOrdinal != 0U;
 }
 
+bool ShouldDumpSpv(bool dumpSpv, const ze_module_desc_t* desc) {
+  return (dumpSpv && desc != nullptr && desc->format == ZE_MODULE_FORMAT_IL_SPIRV &&
+          desc->pInputModule != nullptr && desc->inputSize != 0U);
+}
+
 uint32_t GetMostCommonOrdinal(const ze_command_queue_group_property_flags_t& originalFlags,
                               const std::vector<ze_command_queue_group_properties_t>& currentProps,
                               const std::vector<uint32_t>& blockedOrdinals) {

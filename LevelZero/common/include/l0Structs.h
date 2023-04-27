@@ -131,6 +131,55 @@ public:
   }
 };
 
+class Cze_module_constants_t_V1 : public CArgument {
+private:
+  typedef ze_module_constants_t L0Type;
+  L0Type _struct;
+  Cuint8_t _version;
+
+public:
+  typedef CL0StructArray<L0Type, Cze_module_constants_t_V1> CSArray;
+  static const char* NAME;
+  Cze_module_constants_t_V1() {}
+  Cze_module_constants_t_V1(const L0Type& value) : _version(0) {
+    if (value.numConstants > 0) {
+      Log(ERR) << "Specialization constants are not supported";
+      throw ENotImplemented(EXCEPTION_MESSAGE);
+    }
+  }
+  Cze_module_constants_t_V1(const L0Type* value) : Cze_module_constants_t_V1(*value) {}
+
+  virtual const char* Name() const {
+    return "ze_module_constants_t";
+  }
+  virtual void Write(CBinOStream& stream) const {
+    _version.Write(stream);
+  }
+  virtual void Read(CBinIStream& stream) {
+    _version.Read(stream);
+  }
+
+  virtual void Write(CCodeOStream& /*stream*/) const {
+    throw ENotImplemented(EXCEPTION_MESSAGE);
+  }
+  L0Type operator*() {
+    const auto* ptr = Ptr();
+    if (ptr == nullptr) {
+      throw EOperationFailed(EXCEPTION_MESSAGE);
+    }
+    return *ptr;
+  }
+  L0Type* Ptr() {
+    _struct.numConstants = 0U;
+    _struct.pConstantIds = nullptr;
+    _struct.pConstantValues = nullptr;
+    return &_struct;
+  }
+  virtual std::set<uint64_t> GetMappedPointers() {
+    return std::set<uint64_t>();
+  }
+};
+
 class Cze_module_desc_t : public CArgument {
 private:
   typedef ze_module_desc_t L0Type;
@@ -303,6 +352,113 @@ public:
     }
     _struct.pBuildFlags = *_pBuildFlags;
     _struct.pConstants = /*_pConstants.Ptr()*/ nullptr;
+    return &_struct;
+  }
+  virtual bool DeclarationNeeded() const {
+    return true;
+  }
+  virtual std::set<uint64_t> GetMappedPointers() {
+    return std::set<uint64_t>();
+  }
+};
+
+class Cze_module_desc_t_V1 : public CArgument {
+private:
+  typedef ze_module_desc_t L0Type;
+  L0Type _struct;
+  Cze_structure_type_t _stype;
+  CExtensionStructCore _pNext;
+  Cze_module_format_t _format;
+  Csize_t _inputSize;
+  CProgramSource _pInputModule;
+  Cchar::CSArray _pBuildFlags;
+  Cze_module_constants_t_V1::CSArray _pConstants;
+  std::string _filename;
+
+public:
+  typedef CL0StructArray<L0Type, Cze_module_desc_t_V1> CSArray;
+  static const char* NAME;
+  Cze_module_desc_t_V1() {}
+  Cze_module_desc_t_V1(const L0Type& value)
+      : _stype(value.stype),
+        _pNext(value.pNext),
+        _format(value.format),
+        _inputSize(value.inputSize),
+        _pInputModule(value.pInputModule, value.inputSize, value.format),
+        _pBuildFlags(value.pBuildFlags, 0, 1) {
+    if (value.pConstants != nullptr) {
+      _pConstants =
+          Cze_module_constants_t_V1::CSArray(value.pConstants->numConstants, value.pConstants);
+    } else {
+      _pConstants = Cze_module_constants_t_V1::CSArray();
+    }
+#ifdef WITH_OCLOC
+    uint64_t hash = ComputeHash(value.pInputModule, value.inputSize, THashType::XX);
+    if (ocloc::SD().recorder.find(hash) != ocloc::SD().recorder.end()) {
+      _filename = ocloc::SD().recorder.at(hash);
+    }
+#endif
+  }
+  Cze_module_desc_t_V1(const L0Type* value) : Cze_module_desc_t_V1(*value) {}
+  virtual const char* Name() const {
+    return "ze_module_desc_t";
+  }
+  virtual void Write(CBinOStream& stream) const {
+    _stype.Write(stream);
+    _pNext.Write(stream);
+    _format.Write(stream);
+#ifdef WITH_OCLOC
+    stream << '"' << _filename << '"';
+#endif
+    _inputSize.Write(stream);
+    _pInputModule.Write(stream);
+    _pBuildFlags.Write(stream);
+    _pConstants.Write(stream);
+  }
+  virtual void Read(CBinIStream& stream) {
+    _stype.Read(stream);
+    _pNext.Read(stream);
+    _format.Read(stream);
+#ifdef WITH_OCLOC
+    stream.get_delimited_string(_filename, '"');
+#endif
+    _inputSize.Read(stream);
+    _pInputModule.Read(stream);
+    _pBuildFlags.Read(stream);
+    _pConstants.Read(stream);
+  }
+  virtual void Declare(CCodeOStream& /*stream*/) const {
+    throw ENotImplemented(EXCEPTION_MESSAGE);
+  }
+  virtual void Write(CCodeOStream& /*stream*/) const {
+    throw EOperationFailed(EXCEPTION_MESSAGE);
+  }
+  L0Type operator*() {
+    const auto* ptr = Ptr();
+    if (ptr == nullptr) {
+      throw EOperationFailed(EXCEPTION_MESSAGE);
+    }
+    return *ptr;
+  }
+  L0Type* Ptr() {
+    _struct.stype = *_stype;
+    _struct.pNext = *_pNext;
+    _struct.format = *_format;
+    bool oclocHandle = false;
+#ifdef WITH_OCLOC
+    const auto* oclocInputModule = FindOclocInputModule(ocloc::SD(), _filename);
+    if (oclocInputModule != nullptr && !oclocInputModule->empty()) {
+      _struct.inputSize = oclocInputModule->size();
+      _struct.pInputModule = oclocInputModule->data();
+      oclocHandle = true;
+    }
+#endif
+    if (!oclocHandle) {
+      _struct.inputSize = *_inputSize;
+      _struct.pInputModule = *_pInputModule;
+    }
+    _struct.pBuildFlags = *_pBuildFlags;
+    _struct.pConstants = *_pConstants;
     return &_struct;
   }
   virtual bool DeclarationNeeded() const {

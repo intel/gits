@@ -492,5 +492,46 @@ struct CExtensionStructBase : public CArgument {
   virtual ~CExtensionStructBase() = default;
 };
 
+class CProgramSource : public CArgumentFileText {
+  static uint32_t _programSourceIdx;
+  static uint32_t _binarySourceIdx;
+  const char* text_cstr;
+  size_t text_length;
+
+public:
+  CProgramSource() {}
+  CProgramSource(const uint8_t* text, size_t size, ze_module_format_t format);
+
+  size_t* Length();
+  const char** Value();
+
+  struct PtrConverter {
+  private:
+    const char** _ptr;
+
+  public:
+    explicit PtrConverter(const char** ptr) : _ptr(ptr) {}
+    operator const char*() const {
+      return *_ptr;
+    }
+    operator const unsigned char*() const {
+      return reinterpret_cast<const unsigned char*>(*_ptr);
+    }
+    operator const char**() const {
+      return _ptr;
+    }
+    operator const void*() const {
+      return *_ptr;
+    }
+  };
+
+  PtrConverter operator*() {
+    return PtrConverter(Value());
+  }
+
+private:
+  std::string GetFileName(ze_module_format_t format);
+  std::string GetProgramBinary(const unsigned char* binary, const size_t length);
+};
 } // namespace l0
 } // namespace gits

@@ -210,9 +210,9 @@ void RestoreModules(CScheduler& scheduler, CStateDynamic& sd) {
       }
 #endif
       auto stateInstance = state.first;
-      scheduler.Register(new CzeModuleCreate(ZE_RESULT_SUCCESS, state.second->hContext,
-                                             state.second->hDevice, &state.second->desc,
-                                             &stateInstance, &state.second->hBuildLog));
+      scheduler.Register(new CzeModuleCreate_V1(ZE_RESULT_SUCCESS, state.second->hContext,
+                                                state.second->hDevice, &state.second->desc,
+                                                &stateInstance, &state.second->hBuildLog));
       state.second->RestoreFinished();
     }
   }

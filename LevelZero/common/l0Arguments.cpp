@@ -169,5 +169,41 @@ void CUSMPtr::Write(CCodeOStream& stream) const {
   stream << "(void*)" << stream.VariableName(ScopeKey());
 }
 
+/***************** CProgramSource ******************/
+uint32_t CProgramSource::_programSourceIdx = 0;
+uint32_t CProgramSource::_binarySourceIdx = 0;
+
+std::string CProgramSource::GetFileName(ze_module_format_t format) {
+  std::stringstream stream;
+  stream << "l0Programs/kernel_";
+  if (format == ZE_MODULE_FORMAT_IL_SPIRV) {
+    stream << "source_" << std::setfill('0') << std::setw(2) << _programSourceIdx++ << ".spv";
+  } else if (format == ZE_MODULE_FORMAT_NATIVE) {
+    stream << "binary_" << std::setfill('0') << std::setw(2) << _binarySourceIdx++ << ".bin";
+  } else {
+    Log(ERR) << "Module format " << ToStringHelper<ze_module_format_t>(format)
+             << " is not supported";
+    throw ENotImplemented(EXCEPTION_MESSAGE);
+  }
+  return stream.str();
+}
+
+std::string CProgramSource::GetProgramBinary(const unsigned char* binary, const size_t length) {
+  std::string shaderSource(binary, binary + length);
+  return shaderSource;
+}
+
+CProgramSource::CProgramSource(const uint8_t* text, size_t size, ze_module_format_t format)
+    : CArgumentFileText(GetFileName(format), GetProgramBinary(text, size)) {}
+
+const char** CProgramSource::Value() {
+  text_cstr = Text().c_str();
+  return &text_cstr;
+}
+
+size_t* CProgramSource::Length() {
+  text_length = Text().size();
+  return &text_length;
+}
 } // namespace l0
 } // namespace gits
