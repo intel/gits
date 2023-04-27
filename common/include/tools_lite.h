@@ -91,7 +91,7 @@ uint32_t MapPointer(void* ptr);
 
 std::vector<char> GetBinaryFileContents(const std::string& filename);
 void SaveBinaryFileContents(const std::string& filename, const std::vector<char>& data);
-
+bool StringEndsWith(const std::string& name, const std::string& suffix);
 /**
    * @brief Clears STL sequence container
    *

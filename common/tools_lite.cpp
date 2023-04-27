@@ -124,6 +124,13 @@ std::istream& uniGetLine(std::istream& is, std::string& line) {
   }
 }
 
+bool StringEndsWith(const std::string& name, const std::string& suffix) {
+  if (suffix.size() > name.size()) {
+    return false;
+  }
+  return std::equal(suffix.rbegin(), suffix.rend(), name.rbegin());
+}
+
 void sleep_millisec(int duration) {
   std::this_thread::sleep_for(std::chrono::milliseconds(duration));
 }
