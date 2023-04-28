@@ -3397,21 +3397,9 @@ void gits::Vulkan::PrepareVkQueueSubmits(CStateDynamic& sd) {
 
     if (nullptr != pSubmits) {
       auto queueHandle = sd.lastQueueSubmit->queueStateStore->queueHandle;
-      drvVk.vkQueueSubmit(queueHandle, submitCount, pSubmits, sd.lastQueueSubmit->fenceHandle);
-      for (uint32_t s = 0; s < submitCount; ++s) {
-        for (uint32_t c = 0; c < pSubmits[s].commandBufferCount; ++c) {
-          TODO("Do we need to track cmd buffer state here?")
-
-          auto& commandBufferState = sd._commandbufferstates[pSubmits[s].pCommandBuffers[c]];
-          commandBufferState->submitted = true;
-          for (auto& secCmdBuffer : commandBufferState->secondaryCommandBuffersStateStoreList) {
-            secCmdBuffer.second->submitted = true;
-          }
-
-          vkQueueSubmit_setImageLayout(commandBufferState,
-                                       sd._queuestates[queueHandle]->queueFamilyIndex);
-        }
-      }
+      VkResult retVal =
+          drvVk.vkQueueSubmit(queueHandle, submitCount, pSubmits, sd.lastQueueSubmit->fenceHandle);
+      vkQueueSubmit_SD(retVal, queueHandle, submitCount, pSubmits, sd.lastQueueSubmit->fenceHandle);
       drvVk.vkQueueWaitIdle(queueHandle);
     }
 
