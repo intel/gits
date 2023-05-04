@@ -367,26 +367,27 @@ inline void zeDeviceGetSubDevices_RUNWRAP(Cze_result_t& _return_value,
                                           Cze_device_handle_t& _hDevice,
                                           Cuint32_t::CSArray& _pCount,
                                           Cze_device_handle_t::CSMapArray& _phSubdevices) {
-  uint32_t numDevicesRet = 0;
+  uint32_t count = 0;
   if (_phSubdevices.Original() != nullptr) {
-    _return_value.Value() = drv.zeDeviceGetSubDevices(*_hDevice, &numDevicesRet, nullptr);
+    _return_value.Value() = drv.zeDeviceGetSubDevices(*_hDevice, &count, nullptr);
   } else {
     return;
   }
-  auto* pCount = *_pCount;
-  if (pCount != nullptr && *pCount > numDevicesRet) {
-    Log(WARN) << "Stream was recorded on the device that can be "
-                 "partitioned into more devices than this one: "
-              << ToStringHelper(numDevicesRet);
+  auto* pCountOriginal = *_pCount;
+  if (pCountOriginal != nullptr && *pCountOriginal > count) {
+    Log(WARN) << "Stream was recorded on the device that could be partitioned into more devices("
+              << ToStringHelper(*pCountOriginal) << ") than this one: " << ToStringHelper(count);
   }
-  _return_value.Value() = drv.zeDeviceGetSubDevices(*_hDevice, pCount, *_phSubdevices);
-  if (*_return_value != ZE_RESULT_SUCCESS && pCount != nullptr && *pCount > 0 &&
-      *_hDevice != nullptr && *_phSubdevices != nullptr) {
-    Log(WARN) << "Adding a mapping of the first out-device to the primary "
-                 "in-device";
-    Cze_device_handle_t::AddMapping(_phSubdevices._array[0], *_hDevice);
+  _return_value.Value() = drv.zeDeviceGetSubDevices(*_hDevice, &count, *_phSubdevices);
+  if (pCountOriginal != nullptr && *pCountOriginal > 0 && *_hDevice != nullptr &&
+      count < *pCountOriginal) {
+    Log(WARN) << "Adjusting " << ToStringHelper(static_cast<uint32_t>(*pCountOriginal) - count)
+              << " of out-devices mapping to the primary in-device ";
+    for (uint32_t i = count; i < static_cast<uint32_t>(*pCountOriginal); i++) {
+      Cze_device_handle_t::AddMapping(_phSubdevices._array[i], *_hDevice);
+    }
   }
-  zeDeviceGetSubDevices_SD(*_return_value, *_hDevice, pCount, *_phSubdevices);
+  zeDeviceGetSubDevices_SD(*_return_value, *_hDevice, &count, *_phSubdevices);
 }
 
 inline void zeCommandListCreate_RUNWRAP(Cze_result_t& _return_value,
