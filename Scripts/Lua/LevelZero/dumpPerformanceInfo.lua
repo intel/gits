@@ -170,6 +170,10 @@ end
 
 -- LUA HELPER FUNCTIONS --
 
+function Log(message)
+  print("Lua Log: "..message)
+end
+
 function GetObject(table, handle)
   for _, v in ipairs(table) do
     if v.handle == handle then
@@ -283,20 +287,25 @@ function AppendQueryEvent(hCommandList, hEvent)
 end
 
 function CalculateKernelStartTime(contextStartTime)
+  Log("Kernel Start Time: "..contextStartTime .. " * ".. TIMER_RESOLUTION .. " = ".. contextStartTime * TIMER_RESOLUTION)
   return contextStartTime * TIMER_RESOLUTION
 end
 
 function CalculateKernelEndTime(contextStartTime, contextEndTime)
   local endTime = contextEndTime
+  Log("> Context Start Time: "..contextStartTime)
+  Log("> Context End Time: "..contextEndTime)
   if endTime < contextStartTime then
     local timestampMaxValue = (1 << KERNEL_TIMESTAMP_VALID_BITS) - 1
     endTime = endTime + timestampMaxValue - contextStartTime;
   end
+  Log("Kernel End Time: "..endTime .. " * ".. TIMER_RESOLUTION .. " = ".. endTime * TIMER_RESOLUTION)
   return endTime * TIMER_RESOLUTION
 end
 
 function UpdateEvent(event, cqNumber)
   if not event.isCompleted then
+    Log("Updating event of kernel("..event.cqNumber.."_"..event.cmdListNumber.."_"..event.kernelLaunchNumber.."): "..event.kernel.name)
     if not event.gatheredData then
       drvl0.zeEventQueryKernelTimestamp(event.handle, event.appendTimestampResult)
     else
@@ -361,6 +370,8 @@ function ObtainTimerResolution(hDevice)
   if propRetVal == ZE_RESULT_SUCCESS and properties.type == ZE_DEVICE_TYPE_GPU then
     TIMER_RESOLUTION = properties.timerResolution
     KERNEL_TIMESTAMP_VALID_BITS = properties.kernelTimestampValidBits
+    Log("Timer Resolution: "..TIMER_RESOLUTION)
+    Log("Kernel Timestamp Valid Bits: "..KERNEL_TIMESTAMP_VALID_BITS)
   end
   drvl0.free(properties)
 end
@@ -482,9 +493,11 @@ end
 
 function zeDeviceGetProperties(hDevice, pDeviceProperties)
   local retVal = drvl0.zeDeviceGetProperties(hDevice, pDeviceProperties)
-  if TIMER_RESOLUTION == 0 and retVal == ZE_RESULT_SUCCESS and properties.type == ZE_DEVICE_TYPE_GPU then
+  if TIMER_RESOLUTION == 0 and retVal == ZE_RESULT_SUCCESS and pDeviceProperties.type == ZE_DEVICE_TYPE_GPU then
     TIMER_RESOLUTION = pDeviceProperties.timerResolution
-    KERNEL_TIMESTAMP_VALID_BITS = properties.kernelTimestampValidBits
+    KERNEL_TIMESTAMP_VALID_BITS = pDeviceProperties.kernelTimestampValidBits
+    Log("Timer Resolution: "..TIMER_RESOLUTION)
+    Log("Kernel Timestamp Valid Bits: "..KERNEL_TIMESTAMP_VALID_BITS)
   end
   return retVal
 end
