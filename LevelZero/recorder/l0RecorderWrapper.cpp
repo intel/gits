@@ -93,7 +93,8 @@ void CRecorderWrapper::UnProtectMemoryPointers(const ze_command_list_handle_t& h
       (hCommandList == nullptr)
           ? true
           : SD().Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE).isImmediate;
-  if (!isImmediate || _recorder.InstancePtr() == nullptr) {
+  if (!isImmediate || _recorder.InstancePtr() == nullptr ||
+      MemorySniffer::Get().IsOriginalSegvSignalInitialized()) {
     return;
   }
   const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
@@ -110,7 +111,8 @@ void CRecorderWrapper::ProtectMemoryPointers(const ze_command_list_handle_t& hCo
       (hCommandList == nullptr)
           ? true
           : SD().Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE).isImmediate;
-  if (!isImmediate || _recorder.InstancePtr() == nullptr) {
+  if (!isImmediate || _recorder.InstancePtr() == nullptr ||
+      MemorySniffer::Get().IsOriginalSegvSignalInitialized()) {
     return;
   }
   const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
