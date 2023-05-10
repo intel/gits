@@ -648,33 +648,34 @@ inline void vkQueueSubmit_RECWRAP(VkResult return_value,
         }
       }
     }
-
     recorder.Schedule(new CvkQueueSubmit(return_value, queue, submitCount, pSubmits, fence));
-
-    // Offscreen applications support
-    if (!SD().internalResources.attachedToGITS && usePresentSrcLayoutTransitionAsAFrameBoundary()) {
-      auto device = SD()._queuestates[queue]->deviceStateStore->deviceHandle;
-      auto& offscreenApp = SD().internalResources.offscreenApps[device];
-
-      bool continueLoop = true;
-      if (offscreenApp.commandBufferWithTransitionToPresentSRC != VK_NULL_HANDLE) {
-        for (uint32_t i = 0; (i < submitCount) && continueLoop; i++) {
-          for (uint32_t j = 0; (j < pSubmits[i].commandBufferCount) && continueLoop; j++) {
-            if (offscreenApp.commandBufferWithTransitionToPresentSRC ==
-                pSubmits[i].pCommandBuffers[j]) {
-              offscreenApp.commandBufferWithTransitionToPresentSRC = VK_NULL_HANDLE;
-
-              scheduleCopyToSwapchainAndPresent(device, queue, recorder);
-
-              continueLoop = false;
-            }
-          }
-        }
-      }
-    }
   } else if (Config::Get().recorder.vulkan.utilities.shadowMemory) {
     for (auto memory : _memoryToUpdate) {
       flushShadowMemory(memory, false);
+    }
+  }
+
+  // Offscreen applications support
+  if (!SD().internalResources.attachedToGITS && usePresentSrcLayoutTransitionAsAFrameBoundary()) {
+    auto device = SD()._queuestates[queue]->deviceStateStore->deviceHandle;
+    auto& offscreenApp = SD().internalResources.offscreenApps[device];
+
+    bool continueLoop = true;
+    if (offscreenApp.commandBufferWithTransitionToPresentSRC != VK_NULL_HANDLE) {
+      for (uint32_t i = 0; (i < submitCount) && continueLoop; i++) {
+        for (uint32_t j = 0; (j < pSubmits[i].commandBufferCount) && continueLoop; j++) {
+          if (offscreenApp.commandBufferWithTransitionToPresentSRC ==
+              pSubmits[i].pCommandBuffers[j]) {
+            offscreenApp.commandBufferWithTransitionToPresentSRC = VK_NULL_HANDLE;
+            if (recorder.Running()) {
+              scheduleCopyToSwapchainAndPresent(device, queue, recorder);
+            } else {
+              recorder.FrameEnd();
+            }
+            continueLoop = false;
+          }
+        }
+      }
     }
   }
 
@@ -790,33 +791,34 @@ inline void vkQueueSubmit2_RECWRAP(VkResult return_value,
         }
       }
     }
-
     recorder.Schedule(new CvkQueueSubmit2(return_value, queue, submitCount, pSubmits, fence));
-
-    // Offscreen applications support
-    if (!SD().internalResources.attachedToGITS && usePresentSrcLayoutTransitionAsAFrameBoundary()) {
-      auto device = SD()._queuestates[queue]->deviceStateStore->deviceHandle;
-      auto& offscreenApp = SD().internalResources.offscreenApps[device];
-
-      bool continueLoop = true;
-      if (offscreenApp.commandBufferWithTransitionToPresentSRC != VK_NULL_HANDLE) {
-        for (uint32_t i = 0; (i < submitCount) && continueLoop; i++) {
-          for (uint32_t j = 0; (j < pSubmits[i].commandBufferInfoCount) && continueLoop; j++) {
-            if (offscreenApp.commandBufferWithTransitionToPresentSRC ==
-                pSubmits[i].pCommandBufferInfos[j].commandBuffer) {
-              offscreenApp.commandBufferWithTransitionToPresentSRC = VK_NULL_HANDLE;
-
-              scheduleCopyToSwapchainAndPresent(device, queue, recorder);
-
-              continueLoop = false;
-            }
-          }
-        }
-      }
-    }
   } else if (Config::Get().recorder.vulkan.utilities.shadowMemory) {
     for (auto memory : _memoryToUpdate) {
       flushShadowMemory(memory, false);
+    }
+  }
+
+  // Offscreen applications support
+  if (!SD().internalResources.attachedToGITS && usePresentSrcLayoutTransitionAsAFrameBoundary()) {
+    auto device = SD()._queuestates[queue]->deviceStateStore->deviceHandle;
+    auto& offscreenApp = SD().internalResources.offscreenApps[device];
+
+    bool continueLoop = true;
+    if (offscreenApp.commandBufferWithTransitionToPresentSRC != VK_NULL_HANDLE) {
+      for (uint32_t i = 0; (i < submitCount) && continueLoop; i++) {
+        for (uint32_t j = 0; (j < pSubmits[i].commandBufferInfoCount) && continueLoop; j++) {
+          if (offscreenApp.commandBufferWithTransitionToPresentSRC ==
+              pSubmits[i].pCommandBufferInfos[j].commandBuffer) {
+            offscreenApp.commandBufferWithTransitionToPresentSRC = VK_NULL_HANDLE;
+            if (recorder.Running()) {
+              scheduleCopyToSwapchainAndPresent(device, queue, recorder);
+            } else {
+              recorder.FrameEnd();
+            }
+            continueLoop = false;
+          }
+        }
+      }
     }
   }
 
@@ -1084,7 +1086,7 @@ inline void barriers2HelperForOffscreenApplications(VkCommandBuffer commandBuffe
 
     for (unsigned int i = 0; i < pDependencyInfo->imageMemoryBarrierCount; i++) {
       if (pDependencyInfo->pImageMemoryBarriers[i].newLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
-        {
+        if (recorder.Running()) {
           auto pImageCreateInfo = SD()._imagestates[pDependencyInfo->pImageMemoryBarriers[i].image]
                                       ->imageCreateInfoData.Value();
           handleSwapchainCreationForOffscreenApplications(device, pImageCreateInfo, recorder);
@@ -1119,7 +1121,13 @@ inline void vkCmdPipelineBarrier_RECWRAP(VkCommandBuffer commandBuffer,
         commandBuffer, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount,
         pMemoryBarriers, bufferMemoryBarrierCount, pBufferMemoryBarriers, imageMemoryBarrierCount,
         pImageMemoryBarriers));
-
+  } else {
+    SD()._commandbufferstates[commandBuffer]->tokensBuffer.Add(new CvkCmdPipelineBarrier(
+        commandBuffer, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount,
+        pMemoryBarriers, bufferMemoryBarrierCount, pBufferMemoryBarriers, imageMemoryBarrierCount,
+        pImageMemoryBarriers));
+  }
+  if (!Config::Get().recorder.vulkan.utilities.scheduleCommandBuffersBeforeQueueSubmit) {
     // Offscreen applications support
     if (usePresentSrcLayoutTransitionAsAFrameBoundary()) {
       auto device = SD()._commandbufferstates[commandBuffer]
@@ -1127,7 +1135,7 @@ inline void vkCmdPipelineBarrier_RECWRAP(VkCommandBuffer commandBuffer,
 
       for (unsigned int i = 0; i < imageMemoryBarrierCount; i++) {
         if (pImageMemoryBarriers[i].newLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
-          {
+          if (recorder.Running()) {
             auto pImageCreateInfo =
                 SD()._imagestates[pImageMemoryBarriers[i].image]->imageCreateInfoData.Value();
             handleSwapchainCreationForOffscreenApplications(device, pImageCreateInfo, recorder);
@@ -1141,11 +1149,6 @@ inline void vkCmdPipelineBarrier_RECWRAP(VkCommandBuffer commandBuffer,
         }
       }
     }
-  } else {
-    SD()._commandbufferstates[commandBuffer]->tokensBuffer.Add(new CvkCmdPipelineBarrier(
-        commandBuffer, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount,
-        pMemoryBarriers, bufferMemoryBarrierCount, pBufferMemoryBarriers, imageMemoryBarrierCount,
-        pImageMemoryBarriers));
   }
   vkCmdPipelineBarrier_SD(commandBuffer, srcStageMask, dstStageMask, dependencyFlags,
                           memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount,
@@ -1158,11 +1161,12 @@ inline void vkCmdPipelineBarrier2UnifiedGITS_RECWRAP(VkCommandBuffer commandBuff
   if (recorder.Running() &&
       !Config::Get().recorder.vulkan.utilities.scheduleCommandBuffersBeforeQueueSubmit) {
     recorder.Schedule(new CvkCmdPipelineBarrier2UnifiedGITS(commandBuffer, pDependencyInfo));
-
-    barriers2HelperForOffscreenApplications(commandBuffer, pDependencyInfo, recorder);
   } else {
     SD()._commandbufferstates[commandBuffer]->tokensBuffer.Add(
         new CvkCmdPipelineBarrier2UnifiedGITS(commandBuffer, pDependencyInfo));
+  }
+  if (!Config::Get().recorder.vulkan.utilities.scheduleCommandBuffersBeforeQueueSubmit) {
+    barriers2HelperForOffscreenApplications(commandBuffer, pDependencyInfo, recorder);
   }
   vkCmdPipelineBarrier2UnifiedGITS_SD(commandBuffer, pDependencyInfo);
 }
@@ -1173,11 +1177,12 @@ inline void vkCmdPipelineBarrier2_RECWRAP(VkCommandBuffer commandBuffer,
   if (recorder.Running() &&
       !Config::Get().recorder.vulkan.utilities.scheduleCommandBuffersBeforeQueueSubmit) {
     recorder.Schedule(new CvkCmdPipelineBarrier2(commandBuffer, pDependencyInfo));
-
-    barriers2HelperForOffscreenApplications(commandBuffer, pDependencyInfo, recorder);
   } else {
     SD()._commandbufferstates[commandBuffer]->tokensBuffer.Add(
         new CvkCmdPipelineBarrier2(commandBuffer, pDependencyInfo));
+  }
+  if (!Config::Get().recorder.vulkan.utilities.scheduleCommandBuffersBeforeQueueSubmit) {
+    barriers2HelperForOffscreenApplications(commandBuffer, pDependencyInfo, recorder);
   }
   vkCmdPipelineBarrier2_SD(commandBuffer, pDependencyInfo);
 }
@@ -1188,11 +1193,12 @@ inline void vkCmdPipelineBarrier2KHR_RECWRAP(VkCommandBuffer commandBuffer,
   if (recorder.Running() &&
       !Config::Get().recorder.vulkan.utilities.scheduleCommandBuffersBeforeQueueSubmit) {
     recorder.Schedule(new CvkCmdPipelineBarrier2KHR(commandBuffer, pDependencyInfo));
-
-    barriers2HelperForOffscreenApplications(commandBuffer, pDependencyInfo, recorder);
   } else {
     SD()._commandbufferstates[commandBuffer]->tokensBuffer.Add(
         new CvkCmdPipelineBarrier2KHR(commandBuffer, pDependencyInfo));
+  }
+  if (!Config::Get().recorder.vulkan.utilities.scheduleCommandBuffersBeforeQueueSubmit) {
+    barriers2HelperForOffscreenApplications(commandBuffer, pDependencyInfo, recorder);
   }
   vkCmdPipelineBarrier2KHR_SD(commandBuffer, pDependencyInfo);
 }
@@ -1204,11 +1210,12 @@ inline void vkCmdSetEvent2_RECWRAP(VkCommandBuffer commandBuffer,
   if (recorder.Running() &&
       !Config::Get().recorder.vulkan.utilities.scheduleCommandBuffersBeforeQueueSubmit) {
     recorder.Schedule(new CvkCmdSetEvent2(commandBuffer, event, pDependencyInfo));
-
-    barriers2HelperForOffscreenApplications(commandBuffer, pDependencyInfo, recorder);
   } else {
     SD()._commandbufferstates[commandBuffer]->tokensBuffer.Add(
         new CvkCmdSetEvent2(commandBuffer, event, pDependencyInfo));
+  }
+  if (!Config::Get().recorder.vulkan.utilities.scheduleCommandBuffersBeforeQueueSubmit) {
+    barriers2HelperForOffscreenApplications(commandBuffer, pDependencyInfo, recorder);
   }
   vkCmdSetEvent2_SD(commandBuffer, event, pDependencyInfo);
 }
@@ -1220,11 +1227,12 @@ inline void vkCmdSetEvent2KHR_RECWRAP(VkCommandBuffer commandBuffer,
   if (recorder.Running() &&
       !Config::Get().recorder.vulkan.utilities.scheduleCommandBuffersBeforeQueueSubmit) {
     recorder.Schedule(new CvkCmdSetEvent2KHR(commandBuffer, event, pDependencyInfo));
-
-    barriers2HelperForOffscreenApplications(commandBuffer, pDependencyInfo, recorder);
   } else {
     SD()._commandbufferstates[commandBuffer]->tokensBuffer.Add(
         new CvkCmdSetEvent2KHR(commandBuffer, event, pDependencyInfo));
+  }
+  if (!Config::Get().recorder.vulkan.utilities.scheduleCommandBuffersBeforeQueueSubmit) {
+    barriers2HelperForOffscreenApplications(commandBuffer, pDependencyInfo, recorder);
   }
   vkCmdSetEvent2KHR_SD(commandBuffer, event, pDependencyInfo);
 }
