@@ -22,6 +22,7 @@
 namespace gits {
 namespace l0 {
 struct CKernelState;
+struct CKernelExecutionInfo;
 struct CKernelArgumentDump;
 class CStateDynamic;
 void SaveBuffer(const bfs::path& dir, const std::string name, const std::vector<char>& data);
@@ -33,11 +34,6 @@ void SaveImage(const bfs::path& dir,
                const std::string& name);
 size_t CalculateImageSize(ze_image_desc_t desc);
 enum class KernelArgType { pointer = 1, buffer, image };
-std::string BuildFileName(KernelArgType type,
-                          uint32_t queueSubmitNumber,
-                          uint32_t cmdListNumber,
-                          uint32_t kernelNumber,
-                          uint32_t kernelArgNumber);
 void PrepareArguments(const CKernelState& kernelState,
                       uint32_t kernelIndex,
                       std::vector<CKernelArgumentDump>& argDumpStates,
@@ -50,7 +46,9 @@ void DumpReadyArguments(std::vector<CKernelArgumentDump>& readyArgVector,
                         uint32_t cmdQueueNumber,
                         uint32_t cmdListNumber,
                         const Config& cfg,
-                        CStateDynamic& sd);
+                        CStateDynamic& sd,
+                        const CKernelExecutionInfo& kernelInfo,
+                        const CKernelState& kernelState);
 const bfs::path& GetDumpPath(const Config& cfg);
 bool CaptureKernels(const Config& cfg);
 bool CaptureImages(const Config& cfg);

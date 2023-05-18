@@ -151,9 +151,7 @@ CKernelState::CKernelState(ze_module_handle_t hModule, const ze_kernel_desc_t* k
   std::strcpy(const_cast<char*>(desc.pKernelName), kernelDesc->pKernelName);
 }
 
-void CKernelState::CKernelExecutionInfo::SetArgument(uint32_t index,
-                                                     size_t typeSize,
-                                                     const void* value) {
+void CKernelExecutionInfo::SetArgument(uint32_t index, size_t typeSize, const void* value) {
   args[index].originalValue = value;
   args[index].type = KernelArgType::pointer;
   if (value) {
@@ -177,13 +175,11 @@ void CKernelState::CKernelExecutionInfo::SetArgument(uint32_t index,
   args[index].typeSize = typeSize;
 }
 
-const std::map<uint32_t, CKernelState::ArgInfo>& CKernelState::CKernelExecutionInfo::GetArguments()
-    const {
+const std::map<uint32_t, ArgInfo>& CKernelExecutionInfo::GetArguments() const {
   return args;
 }
 
-const CKernelState::ArgInfo& CKernelState::CKernelExecutionInfo::GetArgument(
-    const uint32_t& index) const {
+const ArgInfo& CKernelExecutionInfo::GetArgument(const uint32_t& index) const {
   return args.at(index);
 }
 
@@ -281,8 +277,9 @@ void CKernelArgumentDump::UpdateIndexes(uint32_t kernelNum, uint32_t argIndex) {
 
 LayoutBuilder::LayoutBuilder() : layout(), latestFileName("") {}
 
-void LayoutBuilder::UpdateLayout(const CKernelState& ks,
-                                 const CKernelState::CKernelExecutionInfo& kernelInfo,
+void LayoutBuilder::UpdateLayout(const char* pKernelName,
+                                 const ze_module_handle_t& hModule,
+                                 const CKernelExecutionInfo& kernelInfo,
                                  const uint32_t& queueSubmitNum,
                                  const uint32_t& cmdListNum,
                                  const uint32_t& argIndex) {
@@ -290,7 +287,7 @@ void LayoutBuilder::UpdateLayout(const CKernelState& ks,
   if (queueSubmitNumber != queueSubmitNum || cmdListNumber != cmdListNum ||
       appendKernelNumber != kernelInfo.kernelNumber) {
 #ifdef WITH_OCLOC
-    AddBuildOptions(ks.desc.pKernelName, ks.hModule);
+    AddBuildOptions(pKernelName, hModule);
 #endif
     queueSubmitNumber = queueSubmitNum;
     cmdListNumber = cmdListNum;
@@ -299,9 +296,9 @@ void LayoutBuilder::UpdateLayout(const CKernelState& ks,
   if (arg.type == KernelArgType::image) {
     const auto& imgState = SD().Get<CImageState>(
         reinterpret_cast<ze_image_handle_t>(const_cast<void*>(arg.argValue)), EXCEPTION_MESSAGE);
-    AddImage(argIndex, imgState.desc, ks.desc.pKernelName);
+    AddImage(argIndex, imgState.desc, pKernelName);
   } else {
-    AddBuffer(argIndex, ks.desc.pKernelName);
+    AddBuffer(argIndex, pKernelName);
   }
 }
 

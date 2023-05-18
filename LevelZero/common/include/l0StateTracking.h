@@ -178,14 +178,8 @@ inline void SaveKernelArguments(const ze_event_handle_t& hSignalEvent,
   InjectReadsForArguments(readyArgVec, hCommandList, cmdListState.isImmediate ? false : callOnce,
                           syncNeeded ? cmdListState.hContext : nullptr);
   if (cmdListState.isImmediate && CheckWhetherDumpQueueSubmit(cmdListState.cmdQueueNumber)) {
-    for (const auto& arg : readyArgVec) {
-      if (kernelInfo.kernelNumber == arg.kernelNumber) {
-        sd.layoutBuilder.UpdateLayout(kernelState, kernelInfo, cmdListState.cmdQueueNumber,
-                                      cmdListState.cmdListNumber, arg.kernelArgIndex);
-      }
-    }
     DumpReadyArguments(readyArgVec, cmdListState.cmdQueueNumber, cmdListState.cmdListNumber, cfg,
-                       sd);
+                       sd, kernelInfo, kernelState);
     sd.Release<CKernelArgumentDump>(hCommandList);
   }
 }
@@ -426,14 +420,8 @@ inline void zeCommandQueueExecuteCommandLists_SD(ze_result_t return_value,
         auto& readyArgVec = sd.Map<CKernelArgumentDump>()[tmpList];
         PrepareArguments(kernelState, kernel.first, readyArgVec, true);
         InjectReadsForArguments(readyArgVec, tmpList, false, nullptr);
-        for (const auto& arg : readyArgVec) {
-          if (kernelInfo.kernelNumber == arg.kernelNumber) {
-            sd.layoutBuilder.UpdateLayout(kernelState, kernelInfo, cqState.cmdQueueNumber,
-                                          cmdListState.cmdListNumber, arg.kernelArgIndex);
-          }
-        }
-        DumpReadyArguments(readyArgVec, cqState.cmdQueueNumber, cmdListState.cmdListNumber, cfg,
-                           sd);
+        DumpReadyArguments(readyArgVec, cqState.cmdQueueNumber, cmdListState.cmdListNumber, cfg, sd,
+                           kernelInfo, kernelState);
         sd.Release<CKernelArgumentDump>(tmpList);
       }
     }
@@ -443,15 +431,10 @@ inline void zeCommandQueueExecuteCommandLists_SD(ze_result_t return_value,
         for (auto& kernel : cmdListState.appendedKernelsMap) {
           const auto& kernelState = sd.Get<CKernelState>(kernel.second, EXCEPTION_MESSAGE);
           const auto& kernelInfo = kernelState.executedKernels.at(kernel.first);
-          for (const auto& arg : sd.Map<CKernelArgumentDump>()[phCommandLists[i]]) {
-            if (kernelInfo.kernelNumber == arg.kernelNumber) {
-              sd.layoutBuilder.UpdateLayout(kernelState, kernelInfo, cqState.cmdQueueNumber,
-                                            cmdListState.cmdListNumber, arg.kernelArgIndex);
-            }
-          }
+          DumpReadyArguments(sd.Map<CKernelArgumentDump>()[phCommandLists[i]],
+                             cqState.cmdQueueNumber, cmdListState.cmdListNumber, cfg, sd,
+                             kernelInfo, kernelState);
         }
-        DumpReadyArguments(sd.Map<CKernelArgumentDump>()[phCommandLists[i]], cqState.cmdQueueNumber,
-                           cmdListState.cmdListNumber, cfg, sd);
       }
       sd.Release<CKernelArgumentDump>(phCommandLists[i]);
     }

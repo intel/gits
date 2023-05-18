@@ -83,6 +83,40 @@ public:
               AllocStateType allocType);
 };
 
+struct ArgInfo {
+  KernelArgType type = KernelArgType::pointer;
+  size_t argSize = 0U;
+  size_t typeSize = 0U;
+  const void* argValue = nullptr;
+  const void* originalValue = nullptr;
+  ze_image_desc_t desc = {};
+  ArgInfo() = default;
+};
+
+struct CKernelExecutionInfo {
+  ze_group_count_t launchFuncArgs = {};
+  ze_scheduling_hint_exp_flags_t schedulingHintflags =
+      static_cast<ze_scheduling_hint_exp_flags_t>(0U);
+  unsigned indirectUsmTypes = 0U;
+  uint32_t kernelNumber = 0U;
+  uint32_t groupSizeX = 0U;
+  uint32_t groupSizeY = 0U;
+  uint32_t groupSizeZ = 0U;
+  uint32_t offsetX = 0U;
+  uint32_t offsetY = 0U;
+  uint32_t offsetZ = 0U;
+
+private:
+  std::map<uint32_t, ArgInfo> args;
+  std::vector<std::shared_ptr<intptr_t>> pointers;
+
+public:
+  const std::map<uint32_t, ArgInfo>& GetArguments() const;
+  const ArgInfo& GetArgument(const uint32_t& index) const;
+  void SetArgument(uint32_t index, size_t typeSize, const void* value);
+  CKernelExecutionInfo() = default;
+};
+
 struct CKernelState : public CState {
   using type = ze_kernel_handle_t;
   using states_type = std::unordered_map<type, std::unique_ptr<CKernelState>>;
@@ -90,40 +124,6 @@ struct CKernelState : public CState {
   ze_kernel_desc_t desc = {};
   bool isGroupSizeSet = false;
   bool isOffsetSet = false;
-
-  struct ArgInfo {
-    KernelArgType type = KernelArgType::pointer;
-    size_t argSize = 0U;
-    size_t typeSize = 0U;
-    const void* argValue = nullptr;
-    const void* originalValue = nullptr;
-    ze_image_desc_t desc = {};
-    ArgInfo() = default;
-  };
-
-  struct CKernelExecutionInfo {
-    ze_group_count_t launchFuncArgs = {};
-    ze_scheduling_hint_exp_flags_t schedulingHintflags =
-        static_cast<ze_scheduling_hint_exp_flags_t>(0U);
-    unsigned indirectUsmTypes = 0U;
-    uint32_t kernelNumber = 0U;
-    uint32_t groupSizeX = 0U;
-    uint32_t groupSizeY = 0U;
-    uint32_t groupSizeZ = 0U;
-    uint32_t offsetX = 0U;
-    uint32_t offsetY = 0U;
-    uint32_t offsetZ = 0U;
-
-  private:
-    std::map<uint32_t, ArgInfo> args;
-    std::vector<std::shared_ptr<intptr_t>> pointers;
-
-  public:
-    const std::map<uint32_t, ArgInfo>& GetArguments() const;
-    const ArgInfo& GetArgument(const uint32_t& index) const;
-    void SetArgument(uint32_t index, size_t typeSize, const void* value);
-    CKernelExecutionInfo() = default;
-  };
 
   CKernelExecutionInfo currentKernelInfo;
   std::unordered_map<uint32_t, CKernelExecutionInfo> executedKernels;
@@ -334,8 +334,9 @@ private:
 
 public:
   LayoutBuilder();
-  void UpdateLayout(const CKernelState& ks,
-                    const CKernelState::CKernelExecutionInfo& kernelInfo,
+  void UpdateLayout(const char* pKernelName,
+                    const ze_module_handle_t& hModule,
+                    const CKernelExecutionInfo& kernelInfo,
                     const uint32_t& queueSubmitNum,
                     const uint32_t& cmdListNum,
                     const uint32_t& argIndex);

@@ -206,19 +206,6 @@ void SaveImage(const bfs::path& dir,
   }
 }
 
-std::string BuildFileName(KernelArgType type,
-                          uint32_t queueSubmitNumber,
-                          uint32_t cmdListNumber,
-                          uint32_t kernelNumber,
-                          uint32_t kernelArgNumber) {
-  static unsigned fileCounter = 1;
-  std::stringstream fileName;
-  fileName << "NDRange" << (type == KernelArgType::buffer ? "Buffer_" : "Image_")
-           << queueSubmitNumber << "_" << cmdListNumber << "_" << kernelNumber << "_arg_"
-           << kernelArgNumber << "_" << fileCounter++;
-  return fileName.str();
-}
-
 void PrepareArguments(const CKernelState& kernelState,
                       uint32_t kernelIndex,
                       std::vector<CKernelArgumentDump>& argDumpStates,
@@ -277,13 +264,19 @@ void DumpReadyArguments(std::vector<CKernelArgumentDump>& readyArgVector,
                         uint32_t cmdQueueNumber,
                         uint32_t cmdListNumber,
                         const Config& cfg,
-                        CStateDynamic& sd) {
+                        CStateDynamic& sd,
+                        const CKernelExecutionInfo& kernelInfo,
+                        const CKernelState& kernelState) {
   const auto path = GetDumpPath(cfg);
   const auto captureImages = CaptureImages(cfg);
   const auto nullIndirectBuffers = IsNullIndirectPointersInBufferEnabled(cfg);
   for (auto& argState : readyArgVector) {
-    std::string name = BuildFileName(argState.argType, cmdQueueNumber, cmdListNumber,
-                                     argState.kernelNumber, argState.kernelArgIndex);
+    if (argState.kernelNumber != kernelInfo.kernelNumber) {
+      continue;
+    }
+    sd.layoutBuilder.UpdateLayout(kernelState.desc.pKernelName, kernelState.hModule, kernelInfo,
+                                  cmdQueueNumber, cmdListNumber, argState.kernelArgIndex);
+    const auto name = sd.layoutBuilder.GetFileName();
     if (nullIndirectBuffers && argState.argType == KernelArgType::buffer) {
       auto allocInfo = GetAllocFromRegion(argState.h_buf, sd);
       const auto& indirectList =
