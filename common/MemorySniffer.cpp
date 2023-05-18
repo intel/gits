@@ -746,3 +746,12 @@ bool MemorySniffer::UnInstall() {
 }
 
 bool MemorySniffer::_isInstalled = false;
+
+MemorySniffer* MemorySniffer::_instance;
+
+MemorySniffer& MemorySniffer::Get() {
+  if (_instance == nullptr) {
+    _instance = new MemorySniffer;
+  }
+  return *_instance;
+}

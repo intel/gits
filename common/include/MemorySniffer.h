@@ -137,6 +137,7 @@ private:
   bool _originalSegvSignalFlag = false;
   bool _unveilWholeRegion = false;
   static bool _isInstalled;
+  static MemorySniffer* _instance;
 
   MemorySniffer() {}
   PagedMemoryRegionHandle StoreRegionInternal(const PagedMemoryRegion region);
@@ -165,8 +166,5 @@ public:
   void SetWholeMemoryRegionUnveiling() {
     _unveilWholeRegion = true;
   }
-  static MemorySniffer& Get() {
-    static MemorySniffer inst;
-    return inst;
-  }
+  static MemorySniffer& Get();
 };
