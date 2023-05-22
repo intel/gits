@@ -98,5 +98,6 @@ void* GetPointerFromOriginalGlobalAllocation(const void* originalPtr,
                                              const std::vector<char>& originalAllocation,
                                              std::vector<char>& currentAllocation);
 void* GetMappedGlobalPtrFromOriginalAllocation(CStateDynamic& sd, void* originalPtr);
+bool IsDumpOnlyLayoutEnabled(const Config& cfg);
 } // namespace l0
 } // namespace gits

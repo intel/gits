@@ -175,8 +175,11 @@ inline void SaveKernelArguments(const ze_event_handle_t& hSignalEvent,
   auto& sd = SD();
   auto& readyArgVec = sd.Map<CKernelArgumentDump>()[hCommandList];
   PrepareArguments(kernelState, kernelInfo.kernelNumber, readyArgVec);
-  InjectReadsForArguments(readyArgVec, hCommandList, cmdListState.isImmediate ? false : callOnce,
-                          syncNeeded ? cmdListState.hContext : nullptr);
+  if (!IsDumpOnlyLayoutEnabled(cfg)) {
+    InjectReadsForArguments(readyArgVec, hCommandList, cmdListState.isImmediate ? false : callOnce,
+                            syncNeeded ? cmdListState.hContext : nullptr);
+  }
+
   if (cmdListState.isImmediate && CheckWhetherDumpQueueSubmit(cmdListState.cmdQueueNumber)) {
     DumpReadyArguments(readyArgVec, cmdListState.cmdQueueNumber, cmdListState.cmdListNumber, cfg,
                        sd, kernelInfo, kernelState);
@@ -419,7 +422,9 @@ inline void zeCommandQueueExecuteCommandLists_SD(ze_result_t return_value,
         }
         auto& readyArgVec = sd.Map<CKernelArgumentDump>()[tmpList];
         PrepareArguments(kernelState, kernel.first, readyArgVec, true);
-        InjectReadsForArguments(readyArgVec, tmpList, false, nullptr);
+        if (!IsDumpOnlyLayoutEnabled(cfg)) {
+          InjectReadsForArguments(readyArgVec, tmpList, false, nullptr);
+        }
         DumpReadyArguments(readyArgVec, cqState.cmdQueueNumber, cmdListState.cmdListNumber, cfg, sd,
                            kernelInfo, kernelState);
         sd.Release<CKernelArgumentDump>(tmpList);

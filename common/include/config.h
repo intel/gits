@@ -441,6 +441,7 @@ struct Config {
     BitRange l0CaptureKernels;
     BitRange l0CaptureCommandLists;
     BitRange l0CaptureCommandQueues;
+    vi_bool l0DumpLayoutOnly;
     vi_bool l0CaptureAfterSubmit;
     vi_bool clOmitReadOnlyObjects;
     vi_bool clDumpLayoutOnly;

@@ -15,6 +15,7 @@
 
 #include "l0StateDynamic.h"
 #include "l0Header.h"
+#include "l0Tools.h"
 
 #ifdef WITH_OCLOC
 #include "oclocFunctions.h"
@@ -249,10 +250,20 @@ CFenceState::CFenceState(ze_command_queue_handle_t hCommandQueue, ze_fence_desc_
     : hCommandQueue(hCommandQueue), desc(desc) {}
 
 CKernelArgument::CKernelArgument(size_t allocSize, void* ptr)
-    : argType(KernelArgType::buffer), buffer(allocSize, '\0'), h_buf(ptr) {}
+    : argType(KernelArgType::buffer), h_buf(ptr) {
+  AllocateBuffer(allocSize);
+}
+
+void CKernelArgument::AllocateBuffer(const size_t& allocSize) {
+  if (!IsDumpOnlyLayoutEnabled(Config::Get())) {
+    buffer = std::vector<char>(allocSize, '\0');
+  }
+}
 
 CKernelArgument::CKernelArgument(size_t allocSize, ze_image_handle_t ptr)
-    : argType(KernelArgType::image), buffer(allocSize, '\0'), h_img(ptr) {}
+    : argType(KernelArgType::image), h_img(ptr) {
+  AllocateBuffer(allocSize);
+}
 
 CKernelArgumentDump::CKernelArgumentDump(size_t allocSize,
                                          void* ptr,
@@ -325,9 +336,8 @@ std::string LayoutBuilder::GetKeyName(const uint32_t& argNumber, const char* pKe
 }
 
 void LayoutBuilder::AddBuildOptions(const char* pKernelName, const ze_module_handle_t& hModule) {
-  std::string key(std::string(pKernelName) + ".ocloc_arguments");
-  std::string pathToBuildOptions(layout.get<std::string>(key, ""));
-  if (pathToBuildOptions.empty()) {
+  const std::string key(std::string(pKernelName) + ".ocloc_arguments");
+  if (!layout.get_child_optional(key)) {
     const auto& oclocState = SD().Get<CModuleState>(hModule, EXCEPTION_MESSAGE).oclocState;
     if (oclocState.get() != nullptr && !oclocState->args.empty()) {
       auto children = boost::property_tree::ptree();

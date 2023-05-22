@@ -449,6 +449,11 @@ bool configure_player(int argc, char** argv) {
       "Omits dumping injected buffers and images. Only layout.json file "
       "with structure of expected dumps. Takes effect only when --clCaptureKernels is used.");
 
+  TypedOption<bool> optionL0DumpLayoutOnly(
+      options, OPTION_GROUP_PLAYBACK, 0, "l0DumpLayoutOnly",
+      "Omits dumping injected buffers and images. Only dumps layout.json file "
+      "with structure of expected dumps. Takes effect only when --l0CaptureKernels is used.");
+
   TypedOption<unsigned> optionExitFrame(options, OPTION_GROUP_PLAYBACK, 0, "exitFrame",
                                         "Stop playback after this frame.");
 
@@ -1439,7 +1444,7 @@ bool configure_player(int argc, char** argv) {
   set_when_option_present(cfg.player.clDumpLayoutOnly, optionClDumpLayoutOnly);
   set_when_option_present(cfg.player.clInjectBufferResetAfterCreate,
                           optionClInjectBufferResetAfterCreate);
-
+  set_when_option_present(cfg.player.l0DumpLayoutOnly, optionL0DumpLayoutOnly);
   if (optionL0CaptureKernels.Present()) {
     const auto captureRange = optionL0CaptureKernels.Value();
     std::istringstream issL0ObjectsRange(captureRange);

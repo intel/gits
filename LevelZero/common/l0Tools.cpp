@@ -276,6 +276,9 @@ void DumpReadyArguments(std::vector<CKernelArgumentDump>& readyArgVector,
     }
     sd.layoutBuilder.UpdateLayout(kernelState.desc.pKernelName, kernelState.hModule, kernelInfo,
                                   cmdQueueNumber, cmdListNumber, argState.kernelArgIndex);
+    if (IsDumpOnlyLayoutEnabled(cfg)) {
+      continue;
+    }
     const auto name = sd.layoutBuilder.GetFileName();
     if (nullIndirectBuffers && argState.argType == KernelArgType::buffer) {
       auto allocInfo = GetAllocFromRegion(argState.h_buf, sd);
@@ -594,5 +597,9 @@ void* GetMappedGlobalPtrFromOriginalAllocation(CStateDynamic& sd, void* original
   }
   return nullptr;
 }
+bool IsDumpOnlyLayoutEnabled(const Config& cfg) {
+  return cfg.IsPlayer() && cfg.player.l0DumpLayoutOnly;
+}
+
 } // namespace l0
 } // namespace gits

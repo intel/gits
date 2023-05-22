@@ -289,6 +289,7 @@ struct CKernelArgument {
   std::vector<char> buffer;
   ze_image_handle_t h_img = nullptr;
   void* h_buf = nullptr;
+  void AllocateBuffer(const size_t& allocSize);
 
 public:
   CKernelArgument() = default;
