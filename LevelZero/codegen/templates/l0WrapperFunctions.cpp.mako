@@ -41,6 +41,8 @@ void CRecorderWrapper::${func.get('name')}(
   ${func.get('stateTrackName')}(${'' if func.get('type') == 'void' else 'return_value, '}${make_params(func['args'])});
       %endif
     %endif
+  %else:
+  Log(WARN) << "Function token C${func.get('name')} not implemented.";
   %endif
 }
 

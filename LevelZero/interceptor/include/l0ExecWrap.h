@@ -242,5 +242,21 @@ inline ze_result_t zeCommandQueueSynchronize_RECEXECWRAP(ze_command_queue_handle
   }
   return return_value;
 }
+
+inline ze_result_t zeMemFreeExt_RECEXECWRAP(ze_context_handle_t hContext,
+                                            const ze_memory_free_ext_desc_t* pMemFreeDesc,
+                                            void* ptr) {
+  GITS_ENTRY_L0
+  ze_result_t return_value = ZE_RESULT_SUCCESS;
+  GITS_WRAPPER_PRE
+  wrapper.DestroySniffedRegion(ptr);
+  return_value = driver.zeMemFreeExt(hContext, pMemFreeDesc, ptr);
+  wrapper.zeMemFreeExt(return_value, hContext, pMemFreeDesc, ptr);
+  GITS_WRAPPER_POST
+  else {
+    return_value = driver.zeMemFreeExt(hContext, pMemFreeDesc, ptr);
+  }
+  return return_value;
+}
 } // namespace l0
 } // namespace gits

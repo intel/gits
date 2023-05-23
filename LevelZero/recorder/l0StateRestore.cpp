@@ -254,7 +254,7 @@ void RestoreImages(CScheduler& scheduler, CStateDynamic& sd) {
     if (!state.second->Restored()) {
       auto stateInstance = state.first;
       if (state.second->imageView != nullptr) {
-        scheduler.Register(new CzeImageViewCreateExp(ZE_RESULT_SUCCESS, state.second->hContext,
+        scheduler.Register(new CzeImageViewCreateExt(ZE_RESULT_SUCCESS, state.second->hContext,
                                                      state.second->hDevice, &state.second->desc,
                                                      state.second->imageView, &stateInstance));
       } else {

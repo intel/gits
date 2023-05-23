@@ -805,5 +805,29 @@ inline void zeCommandListAppendMemoryCopy_SD(ze_result_t return_value,
   }
 }
 
+inline void zeImageViewCreateExt_SD(ze_result_t return_value,
+                                    ze_context_handle_t hContext,
+                                    ze_device_handle_t hDevice,
+                                    const ze_image_desc_t* desc,
+                                    ze_image_handle_t hImage,
+                                    ze_image_handle_t* phImageView) {
+  if (return_value == ZE_RESULT_SUCCESS) {
+    auto& imageState = SD().Map<CImageState>()[*phImageView];
+    imageState = std::make_unique<CImageState>(hContext, hDevice, *desc);
+    imageState->imageView = hImage;
+  }
+}
+
+inline void zeMemFreeExt_SD(ze_result_t return_value,
+                            ze_context_handle_t hContext,
+                            const ze_memory_free_ext_desc_t* pMemFreeDesc,
+                            void* ptr) {
+  (void)hContext;
+  (void)pMemFreeDesc;
+  if (return_value == ZE_RESULT_SUCCESS) {
+    SD().Release<CAllocState>(ptr);
+  }
+}
+
 } // namespace l0
 } // namespace gits

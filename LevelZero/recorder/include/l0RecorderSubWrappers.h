@@ -1038,5 +1038,15 @@ inline void zeCommandQueueCreate_RECWRAP(CRecorder& recorder,
   zeCommandQueueCreate_SD(return_value, hContext, hDevice, desc, phCommandQueue);
 }
 
+inline void zesInit_RECWRAP(CRecorder& recorder, ze_result_t return_value, zes_init_flags_t flags) {
+  if (recorder.Running()) {
+    recorder.Schedule(new CzesInit(return_value, flags));
+  }
+  const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
+  if (!l0IFace.MemorySnifferInstall()) {
+    Log(WARN) << "Memory Sniffer installation failed";
+  }
+}
+
 } // namespace l0
 } // namespace gits
