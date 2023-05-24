@@ -1313,6 +1313,9 @@ size_t CalculateChunkSize(size_t arraySize, size_t maxChunkSize, size_t arrayIte
   if (arraySize == 0) {
     return 0;
   }
+  if (arrayIterator > arraySize) {
+    return 0;
+  }
   size_t size = maxChunkSize;
   if (arrayIterator + maxChunkSize > arraySize) {
     size = arraySize - arrayIterator;

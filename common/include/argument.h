@@ -984,8 +984,6 @@ public:
   // Declares smaller parts of array, defined by start and end arguments.
   // Needed for dividing excessive chunks of code during writing to CCode.
   void Declare(CCodeOStream& stream, size_t start, size_t end) const {
-    const size_t length = _cargs.size();
-
     stream << "\n"; // For prettier printing of nested arrays.
 
     for (size_t i = start; i < end; i++) {
@@ -995,17 +993,15 @@ public:
     }
 
     stream.Indent() << Name();
-    if (length == 0) {
+    if (start == end) {
       stream << "* " << getVarName("arr_", this) << " = nullptr;\n";
     } else {
       stream << " " << getVarName("arr_", this) << "[] = { ";
-      size_t idx = 0;
       for (size_t i = start; i < end; i++) {
         stream << *_cargs[i];
-        if (idx < length - 1) {
+        if (i < end - 1) {
           stream << ", ";
         }
-        idx++;
       }
       stream << " };\n";
     }
