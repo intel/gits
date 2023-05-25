@@ -106,16 +106,14 @@ inline void clCreateContextFromType_RECWRAP(
     cl_int* errcode_ret) {
   std::vector<cl_context_properties> unsharingPropsVec;
   const cl_context_properties* props = properties;
-  if (props != nullptr) {
-    const auto opPlatform = ExtractPlatform(props);
-    const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
-    if (opPlatform.is_initialized() && opPlatform.get() == nullptr &&
-        !oclIFace.MemorySnifferInstall()) {
-      Log(WARN) << "Memory Sniffer installation failed";
-    }
-  }
   if (recorder.Running()) {
     if (props != nullptr) {
+      const auto opPlatform = ExtractPlatform(props);
+      const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
+      if (opPlatform.is_initialized() && opPlatform.get() == nullptr &&
+          !oclIFace.MemorySnifferInstall()) {
+        Log(WARN) << "Memory Sniffer installation failed";
+      }
       const auto& cfg = Config::Get();
       if (IsGLUnsharingEnabled(cfg)) {
         unsharingPropsVec = RemoveGLSharingContextProperties(props);
@@ -1992,6 +1990,12 @@ inline void clHostMemAllocINTEL_RECWRAP(CRecorder& recorder,
       }
     }
   }
+  if (recorder.Running() && return_value != nullptr) {
+    auto& sniffedRegionHandle =
+        SD().GetUSMAllocState(return_value, EXCEPTION_MESSAGE).sniffedRegionHandle;
+    const auto& oclIFace = CGits::Instance().apis.IfaceCompute();
+    oclIFace.EnableMemorySnifferForPointer(return_value, size, sniffedRegionHandle);
+  }
 }
 
 inline void clSVMAlloc_RECWRAP(CRecorder& recorder,
@@ -2021,6 +2025,12 @@ inline void clSVMAlloc_RECWRAP(CRecorder& recorder,
       }
     }
   }
+  if (recorder.Running() && return_value != nullptr && (flags & CL_MEM_SVM_FINE_GRAIN_BUFFER)) {
+    auto& sniffedRegionHandle =
+        SD().GetSVMAllocState(return_value, EXCEPTION_MESSAGE).sniffedRegionHandle;
+    const auto& oclIFace = CGits::Instance().apis.IfaceCompute();
+    oclIFace.EnableMemorySnifferForPointer(return_value, size, sniffedRegionHandle);
+  }
 }
 
 inline void clSharedMemAllocINTEL_RECWRAP(CRecorder& recorder,
@@ -2043,6 +2053,12 @@ inline void clSharedMemAllocINTEL_RECWRAP(CRecorder& recorder,
       ZeroInitializeUsm(commandQueue, return_value, size, UnifiedMemoryType::shared);
       recorder.Schedule(new CGitsClMemoryRestore(return_value, size));
     }
+  }
+  if (recorder.Running() && return_value != nullptr) {
+    auto& sniffedRegionHandle =
+        SD().GetUSMAllocState(return_value, EXCEPTION_MESSAGE).sniffedRegionHandle;
+    const auto& oclIFace = CGits::Instance().apis.IfaceCompute();
+    oclIFace.EnableMemorySnifferForPointer(return_value, size, sniffedRegionHandle);
   }
 }
 
@@ -2259,10 +2275,10 @@ inline void clGetPlatformIDs_RECWRAP(CRecorder& recorder,
                                      cl_uint* num_platforms) {
   if (recorder.Running()) {
     recorder.Schedule(new CclGetPlatformIDs(return_value, num_entries, platforms, num_platforms));
-  }
-  const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
-  if (!oclIFace.MemorySnifferInstall()) {
-    Log(WARN) << "Memory Sniffer installation failed";
+    const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
+    if (!oclIFace.MemorySnifferInstall()) {
+      Log(WARN) << "Memory Sniffer installation failed";
+    }
   }
   clGetPlatformIDs_SD(return_value, num_entries, platforms, num_platforms);
 }
@@ -2277,10 +2293,10 @@ inline void clGetDeviceIDs_RECWRAP(CRecorder& recorder,
   if (recorder.Running()) {
     recorder.Schedule(new CclGetDeviceIDs(return_value, platform, device_type, num_entries, devices,
                                           num_devices));
-  }
-  const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
-  if (platform == nullptr && !oclIFace.MemorySnifferInstall()) {
-    Log(WARN) << "Memory Sniffer installation failed";
+    const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
+    if (platform == nullptr && !oclIFace.MemorySnifferInstall()) {
+      Log(WARN) << "Memory Sniffer installation failed";
+    }
   }
   clGetDeviceIDs_SD(return_value, platform, device_type, num_entries, devices, num_devices);
 }

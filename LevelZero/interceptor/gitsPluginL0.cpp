@@ -93,9 +93,9 @@ void CGitsPlugin::Initialize() {
 
     if (!_loader->Configuration().recorder.basic.enabled) {
       PrePostDisableLevelZero();
+    } else {
+      CGitsPlugin::_recorderWrapper->StreamFinishedEvent(PrePostDisableLevelZero);
     }
-
-    CGitsPlugin::_recorderWrapper->StreamFinishedEvent(PrePostDisableLevelZero);
 
     _initialized = true;
 

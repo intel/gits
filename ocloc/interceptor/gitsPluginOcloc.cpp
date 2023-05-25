@@ -92,10 +92,9 @@ void CGitsPlugin::Initialize() {
 
     if (!_loader->Configuration().recorder.basic.enabled) {
       PrePostDisableOcloc();
+    } else {
+      CGitsPlugin::_recorderWrapper->StreamFinishedEvent(PrePostDisableOcloc);
     }
-
-    CGitsPlugin::_recorderWrapper->StreamFinishedEvent(PrePostDisableOcloc);
-
     _initialized = true;
 
   } catch (const Exception& ex) {

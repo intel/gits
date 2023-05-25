@@ -38,6 +38,9 @@ public:
     return false;
   }
   virtual void MemorySnifferUninstall() const {
+    if (!IsMemorySnifferInstalled()) {
+      return;
+    }
     for (auto& state : SD()._usmAllocStates) {
       auto& handle = state.second->sniffedRegionHandle;
       if (handle != nullptr) {

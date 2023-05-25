@@ -53,6 +53,9 @@ public:
     return Config::Get().recorder.levelZero.capture.kernel.kernelRange[kernelNumber];
   }
   virtual void MemorySnifferUninstall() const {
+    if (!IsMemorySnifferInstalled()) {
+      return;
+    }
     for (auto& state : SD().Map<CAllocState>()) {
       auto& handle = state.second->sniffedRegionHandle;
       if (handle != nullptr) {

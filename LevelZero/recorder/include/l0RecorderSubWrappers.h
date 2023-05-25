@@ -479,9 +479,11 @@ inline void zeMemAllocHost_RECWRAP(CRecorder& recorder,
       recorder.Schedule(new CGitsL0MemoryRestore(*pptr, size));
     }
   }
-  auto& sniffedRegionHandle = SD().Get<CAllocState>(*pptr, EXCEPTION_MESSAGE).sniffedRegionHandle;
-  const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
-  l0IFace.EnableMemorySnifferForPointer(*pptr, size, sniffedRegionHandle);
+  if (recorder.Running()) {
+    auto& sniffedRegionHandle = SD().Get<CAllocState>(*pptr, EXCEPTION_MESSAGE).sniffedRegionHandle;
+    const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
+    l0IFace.EnableMemorySnifferForPointer(*pptr, size, sniffedRegionHandle);
+  }
 }
 
 inline void zeMemAllocDevice_RECWRAP(CRecorder& recorder,
@@ -535,9 +537,11 @@ inline void zeMemAllocShared_RECWRAP(CRecorder& recorder,
       recorder.Schedule(new CGitsL0MemoryRestore(*pptr, size));
     }
   }
-  auto& sniffedRegionHandle = SD().Get<CAllocState>(*pptr, EXCEPTION_MESSAGE).sniffedRegionHandle;
-  const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
-  l0IFace.EnableMemorySnifferForPointer(*pptr, size, sniffedRegionHandle);
+  if (recorder.Running()) {
+    auto& sniffedRegionHandle = SD().Get<CAllocState>(*pptr, EXCEPTION_MESSAGE).sniffedRegionHandle;
+    const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
+    l0IFace.EnableMemorySnifferForPointer(*pptr, size, sniffedRegionHandle);
+  }
 }
 
 inline void zeImageCreate_RECWRAP(CRecorder& recorder,
@@ -948,12 +952,13 @@ inline void zetMetricGroupGet_RECWRAP(CRecorder& recorder,
 inline void zeInit_RECWRAP(CRecorder& recorder, ze_result_t return_value, ze_init_flags_t flags) {
   if (recorder.Running()) {
     recorder.Schedule(new CzeInit(return_value, flags));
-  }
-  const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
-  if (!l0IFace.MemorySnifferInstall()) {
-    Log(WARN) << "Memory Sniffer installation failed";
+    const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
+    if (!l0IFace.MemorySnifferInstall()) {
+      Log(WARN) << "Memory Sniffer installation failed";
+    }
   }
 }
+
 inline void zeGitsIndirectAllocationOffsets_RECWRAP(CRecorder& recorder,
                                                     void* pAlloc,
                                                     uint32_t numOffsets,
@@ -1041,10 +1046,10 @@ inline void zeCommandQueueCreate_RECWRAP(CRecorder& recorder,
 inline void zesInit_RECWRAP(CRecorder& recorder, ze_result_t return_value, zes_init_flags_t flags) {
   if (recorder.Running()) {
     recorder.Schedule(new CzesInit(return_value, flags));
-  }
-  const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
-  if (!l0IFace.MemorySnifferInstall()) {
-    Log(WARN) << "Memory Sniffer installation failed";
+    const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
+    if (!l0IFace.MemorySnifferInstall()) {
+      Log(WARN) << "Memory Sniffer installation failed";
+    }
   }
 }
 

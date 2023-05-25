@@ -12,7 +12,6 @@
 #include "openclDrivers.h"
 #include "openclStateDynamic.h"
 #include "openclTools.h"
-#include "MemorySniffer.h"
 
 namespace gits {
 namespace OpenCL {
@@ -1118,9 +1117,6 @@ inline void clEnqueueSVMFree_SD(cl_int return_value,
     auto& svmAllocState = SD().GetSVMAllocState(svm_pointers[i], EXCEPTION_MESSAGE);
     svmAllocState.Release();
     if (svmAllocState.GetRefCount() == 0) {
-      if (svmAllocState.sniffedRegionHandle) {
-        MemorySniffer::Get().RemoveRegion(svmAllocState.sniffedRegionHandle);
-      }
       SD()._svmAllocStates.erase(svm_pointers[i]);
     }
   }
@@ -1180,11 +1176,6 @@ inline void clSVMAlloc_SD(void* return_value,
     auto& svmAllocState = SD()._svmAllocStates[return_value];
     svmAllocState.reset(new CCLSVMAllocState(context, flags, size, alignment));
     svmAllocState->Retain();
-    if (Config::Get().IsRecorder() && (flags & CL_MEM_SVM_FINE_GRAIN_BUFFER)) {
-      const auto& oclIFace = CGits::Instance().apis.IfaceCompute();
-      oclIFace.EnableMemorySnifferForPointer(return_value, size,
-                                             svmAllocState->sniffedRegionHandle);
-    }
   }
 }
 
@@ -1199,10 +1190,6 @@ inline void clCreateUserEvent_SD(cl_event return_value, cl_context context, cl_i
 }
 
 inline void clSVMFree_SD(cl_context context, void* svm_pointer) {
-  auto& svmAllocState = SD().GetSVMAllocState(svm_pointer, EXCEPTION_MESSAGE);
-  if (svmAllocState.sniffedRegionHandle) {
-    MemorySniffer::Get().RemoveRegion(svmAllocState.sniffedRegionHandle);
-  }
   ReleaseResourceState(SD()._svmAllocStates, svm_pointer);
 }
 
@@ -1281,11 +1268,6 @@ inline void clHostMemAllocINTEL_SD(void* return_value,
     usmAllocState.reset(
         new CCLUSMAllocState(context, properties, size, alignment, UnifiedMemoryType::host));
     usmAllocState->Retain();
-    if (Config::Get().IsRecorder()) {
-      const auto& oclIFace = CGits::Instance().apis.IfaceCompute();
-      oclIFace.EnableMemorySnifferForPointer(return_value, usmAllocState->size,
-                                             usmAllocState->sniffedRegionHandle);
-    }
   }
 }
 
@@ -1316,11 +1298,6 @@ inline void clSharedMemAllocINTEL_SD(void* return_value,
     usmAllocState.reset(new CCLUSMAllocState(context, device, properties, size, alignment,
                                              UnifiedMemoryType::shared));
     usmAllocState->Retain();
-    if (Config::Get().IsRecorder()) {
-      const auto& oclIFace = CGits::Instance().apis.IfaceCompute();
-      oclIFace.EnableMemorySnifferForPointer(return_value, usmAllocState->size,
-                                             usmAllocState->sniffedRegionHandle);
-    }
   }
 }
 

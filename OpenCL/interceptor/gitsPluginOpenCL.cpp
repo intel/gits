@@ -98,10 +98,9 @@ void CGitsPluginOpenCL::Initialize() {
 
     if (!CGitsPluginOpenCL::_loader->Configuration().recorder.basic.enabled) {
       PrePostDisableOpenCL();
+    } else {
+      CGitsPluginOpenCL::_recorderWrapper->StreamFinishedEvent(PrePostDisableOpenCL);
     }
-
-    CGitsPluginOpenCL::_recorderWrapper->StreamFinishedEvent(PrePostDisableOpenCL);
-
     initialized = true;
 
   } catch (const Exception& ex) {
