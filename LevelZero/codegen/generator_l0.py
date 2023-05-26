@@ -2106,17 +2106,17 @@ var3=VarDef(name='pKernelTimestampsBuffer',type='ze_kernel_timestamp_result_t*',
 var4=VarDef(name='pSynchronizedTimestampsBuffer',type='ze_synchronized_timestamp_result_ext_t*',tag='inout',wrapType='COutArgument'),
 )
 
-Argument(name='zet_driver_handle_t',obj=True)
+Argument(name='zet_driver_handle_t',obj=True,alias='ze_driver_handle_t')
 
-Argument(name='zet_device_handle_t',obj=True)
+Argument(name='zet_device_handle_t',obj=True,alias='ze_device_handle_t')
 
-Argument(name='zet_context_handle_t',obj=True)
+Argument(name='zet_context_handle_t',obj=True,alias='ze_context_handle_t')
 
-Argument(name='zet_command_list_handle_t',obj=True)
+Argument(name='zet_command_list_handle_t',obj=True,alias='ze_command_list_handle_t')
 
-Argument(name='zet_module_handle_t',obj=True)
+Argument(name='zet_module_handle_t',obj=True,alias='ze_module_handle_t')
 
-Argument(name='zet_kernel_handle_t',obj=True)
+Argument(name='zet_kernel_handle_t',obj=True,alias='ze_kernel_handle_t')
 
 Argument(name='zet_metric_group_handle_t',obj=True)
 
@@ -2285,9 +2285,9 @@ var3=VarDef(name='timerResolution',type='uint64_t',tag='out'),
 var4=VarDef(name='timestampValidBits',type='uint64_t',tag='out'),
 )
 
-Argument(name='zes_driver_handle_t',obj=True)
+Argument(name='zes_driver_handle_t',obj=True,alias='ze_driver_handle_t')
 
-Argument(name='zes_device_handle_t',obj=True)
+Argument(name='zes_device_handle_t',obj=True,alias='ze_device_handle_t')
 
 Argument(name='zes_sched_handle_t',obj=True)
 

@@ -69,6 +69,28 @@ C${name}::L0Type* C${name}::Ptr() {
       %endfor
   return &_struct;
 }
+    %else:
+void C${arg.get('name')}::AddMutualMapping(${arg.get('name')} key, ${arg.get('name')} value) {
+      %for name in arg.get('mutual_mapping', []):
+  if (!C${name}::CheckMapping(reinterpret_cast<${name}>(key))) {
+    C${name}::AddMapping(reinterpret_cast<${name}>(key), reinterpret_cast<${name}>(value));
+  }
+      %endfor
+      %if not arg.get('mutual_mapping'):
+  (void)key;
+  (void)value;
+      %endif
+}
+void C${arg.get('name')}::RemoveMutualMapping(${arg.get('name')} key) {
+      %for name in arg.get('mutual_mapping', []):
+  if (C${name}::CheckMapping(reinterpret_cast<${name}>(key))) {
+    C${name}::RemoveMapping(reinterpret_cast<${name}>(key));
+  }
+      %endfor
+      %if not arg.get('mutual_mapping'):
+  (void)key;
+      %endif
+}
     %endif
   %endif
 %endfor

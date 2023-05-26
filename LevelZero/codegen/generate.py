@@ -106,7 +106,12 @@ def process_enums(enums):
 
 def process_arguments(arguments):
     for name in arguments.keys():
+        if arguments[name].get('obj'):
+            arguments[name]["mutual_mapping"] = []
         arguments[name]['version'] = arguments[name].get('version', 0)
+        if arguments[name].get('alias'):
+            arguments[arguments[name].get('alias')]['mutual_mapping'].append(name)
+            arguments[name]['mutual_mapping'].append(arguments[name].get('alias'))
         if not arguments[name].get('vars'):
             vars = [int(s.replace('var', '')) for s in arguments[name].keys() if s.startswith('var')]
             if vars:

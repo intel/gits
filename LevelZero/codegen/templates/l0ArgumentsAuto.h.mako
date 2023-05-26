@@ -102,6 +102,8 @@ namespace gits {
       C${name}() = default;
       C${name}(L0Type value) : CArgHandle(value) {}
       C${name}(L0Type* value) : CArgHandle(value) {}
+      static void AddMutualMapping(${arg.get('name')} key, ${arg.get('name')} value);
+      static void RemoveMutualMapping(${arg.get('name')} key);
       virtual std::string ToString() const { return ToStringHelper(Value()); }
     };
 %else:

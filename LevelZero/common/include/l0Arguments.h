@@ -82,6 +82,7 @@ public:
 
   static void AddMapping(T key, T value) {
     get_map()[key] = value;
+    T_WRAP::AddMutualMapping(key, value);
   }
 
   void AddMapping(T value) {
@@ -100,10 +101,9 @@ public:
 
   static void RemoveMapping(T key) {
     if (CheckMapping(key)) {
-      if (GetRefCount(GetMapping(key)) == 0) {
-        get_map().erase(key);
-      }
+      get_map().erase(key);
     }
+    T_WRAP::RemoveMutualMapping(key);
   }
 
   static void RemoveMapping(const T* keys, size_t num) {
@@ -350,6 +350,8 @@ public:
   CMappedPtr() : CArgHandle() {}
   CMappedPtr(void* arg) : CArgHandle(arg) {}
   CMappedPtr(const void* arg) : CArgHandle(const_cast<void*>(arg)) {}
+  static void AddMutualMapping(void* /*key*/, void* /*value*/){};
+  static void RemoveMutualMapping(void* /*key*/){};
 };
 
 /** @class CUSMPtr
