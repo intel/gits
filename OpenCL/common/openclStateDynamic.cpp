@@ -157,7 +157,8 @@ void CCLKernelState::SetArgument(cl_uint index, size_t size, const void* value) 
         }
       }
     }
-    if (size != 0 && (Config::IsRecorder() || !stream_older_than(GITS_OPENCL_SET_USM_ARG))) {
+    if (size == sizeof(value) &&
+        (Config::IsRecorder() || !stream_older_than(GITS_OPENCL_SET_USM_ARG))) {
       auto* ptr_value = reinterpret_cast<void*>(*reinterpret_cast<const uintptr_t*>(value));
       auto* ptr = GetSvmOrUsmFromRegion(ptr_value).first;
       if (SD().CheckIfUSMAllocExists(ptr)) {
