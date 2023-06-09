@@ -12,13 +12,13 @@ ${open(output_path, 'r').read()}\
 <% continue %>
   %endif
   %if func.get('recExecWrap'):
-inline ze_result_t ${func.get('recExecWrapName')}(${make_params_with_types(func['args'])}) {
+inline ze_result_t ${func.get('recExecWrapName')}(${make_params(func, with_types=True)}) {
 ${'     CGitsPlugin::Initialize();\n' if name == 'zeInit' else ''}\
   GITS_ENTRY_L0
 ${'     wrapper.InitializeDriver();\n' if name == 'zeInit' else ''}\
-  auto return_value = driver.${func.get('name')}(${make_params(func['args'])});
+  auto return_value = driver.${func.get('name')}(${make_params(func)});
   GITS_WRAPPER_PRE
-    wrapper.${func.get('name')}(return_value, ${make_params(func['args'])});
+    wrapper.${func.get('name')}(${make_params(func, with_retval=True)});
   GITS_WRAPPER_POST
   return return_value;
 }

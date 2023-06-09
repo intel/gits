@@ -112,15 +112,15 @@ gits::CArgument *AllocateExtensionStructure(Cuint32_t *version, const ${name} &s
       return new C${struct_name}(reinterpret_cast<${structure['struct']} *>(extendedProperties));
     } else {
             %for i in range(0, kwargs.get('version')+1):
-    if (**version == ${i}) {
-      return new C${cut_version(struct_name, kwargs.get('version'))}${f"_V{i}" if i else ""}();
-    }
+      if (**version == ${i}) {
+        return new C${cut_version(struct_name, kwargs.get('version'))}${f"_V{i}" if i else ""}();
+      }
             %endfor
     }
           %endif
         %endfor
     throw ENotImplemented("Extension-specific structure is not implemented: " + ToStringHelper(stype));
-      }
+  }
       %endfor
   }
   throw ENotImplemented("Extension-specific structure is not implemented: " + ToStringHelper(stype));

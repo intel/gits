@@ -102,7 +102,7 @@ private:
 namespace api {
 %for name, func in functions.items():
   %if is_latest_version(functions, func):
-  extern ${func.get('type')} (STDCALL *&${func.get('name')}) (${make_params_with_types(func['args'])});
+  extern ${func.get('type')} (STDCALL *&${func.get('name')}) (${make_params(func, with_types=True)});
   %endif
 %endfor
 }

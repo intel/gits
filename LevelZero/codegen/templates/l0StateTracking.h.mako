@@ -12,11 +12,13 @@ ${open(output_path, 'r').read()}\
 <% continue %>
   %endif
   %if func.get('stateTrack'):
-inline void ${func['stateTrackName']}(ze_result_t return_value, ${make_params_with_types(func['args'])}) {
+inline void ${func['stateTrackName']}(${make_params(func, with_types=True, with_retval=True)}) {
+    %if func['type'] != 'void':
   (void)return_value;
-  %for arg in func['args']:
+    %endif
+    %for arg in func['args']:
   (void)${arg['name']};
-  %endfor
+    %endfor
 }
 
   %endif

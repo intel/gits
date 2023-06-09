@@ -14,7 +14,7 @@
   %endif
      virtual void ${func.get('name')}(
   %if func.get('type') != 'void':
-        ze_result_t return_value,
+        ze_result_t return_value${',' if len(func['args']) > 0 else ''}
   %endif
   %for arg in func['args']:
         ${arg['type']} ${arg['name']}${'' if loop.last else ','}

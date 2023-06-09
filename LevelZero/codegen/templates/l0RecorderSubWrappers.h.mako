@@ -12,16 +12,13 @@ ${open(output_path, 'r').read()}\
 <% continue %>
   %endif
   %if func.get('recWrap'):
-    inline void ${func['recWrapName']}(CRecorder& recorder, ze_result_t return_value, \
-    %for arg in func['args']:
-${arg['type']} ${arg['name']}${') {' if loop.last else ', '}\
-    %endfor
+inline void ${func['recWrapName']}(CRecorder& recorder${make_params(func, with_retval=True, with_types=True, prepend_comma=True)}) {
   if (recorder.Running())
   {
-    recorder.Schedule(new C${name}(return_value, ${make_params(func['args'])}));
+    recorder.Schedule(new C${name}(${make_params(func, with_retval=True)}));
   }
   %if func.get('stateTrack'):
-  ${func.get('stateTrackName')}(return_value, ${make_params(func['args'])});
+  ${func.get('stateTrackName')}(${make_params(func, with_retval=True)});
   %endif
 }
 

@@ -22,7 +22,7 @@ namespace l0 {
 %endif
 void CRecorderWrapper::${func.get('name')}(
   %if func.get('type') != 'void':
-  ${'ze_result_t return_value' if func['enabled'] else 'ze_result_t'},
+  ${'ze_result_t return_value' if func['enabled'] else 'ze_result_t'}${',' if len(func['args']) > 0 else ''}
   %endif
   %for arg in func['args']:
   ${arg['type']}${' ' + arg['name'] if func['enabled'] else ''}${'' if loop.last else ','}
@@ -30,15 +30,15 @@ void CRecorderWrapper::${func.get('name')}(
 ) const {
   %if func['enabled']:
     %if func.get('recWrap'):
-  ${func.get('recWrapName')}(_recorder,${'' if func.get('type') == 'void' else 'return_value, '}${make_params(func['args'])});
+  ${func.get('recWrapName')}(_recorder${make_params(func, with_retval=True, prepend_comma=True)});
     %else:
   CFunction* _token = nullptr;
   if (_recorder.Running()) {
-    _token = new C${name}(${'' if func.get('type') == 'void' else 'return_value, '}${make_params(func['args'])});
+    _token = new C${name}(${make_params(func, with_retval=True)});
     _recorder.Schedule(_token);
   }
       %if func.get('stateTrack'):
-  ${func.get('stateTrackName')}(${'' if func.get('type') == 'void' else 'return_value, '}${make_params(func['args'])});
+  ${func.get('stateTrackName')}(${make_params(func, with_retval=True)});
       %endif
     %endif
   %else:

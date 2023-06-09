@@ -7,8 +7,8 @@
 -- ===================== end_copyright_notice ==============================
 
 %for name, func in functions.items():
-function ${func.get('name')}(${make_lua_params(func['args'])})
-  return drvl0.${func.get('name')}(${make_lua_params(func['args'])})
+function ${func.get('name')}(${make_lua_params(func)})
+  return drvl0.${func.get('name')}(${make_lua_params(func)})
 end
 
 %endfor

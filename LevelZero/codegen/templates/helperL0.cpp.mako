@@ -11,7 +11,7 @@
 namespace api {
 %for name, func in functions.items():
   %if is_latest_version(functions, func):
-  ${func.get('type')} (STDCALL *&${func.get('name')}) (${make_params_with_types(func['args'])}) = gits::l0::drv.${func.get('name')};
+  ${func.get('type')} (STDCALL *&${func.get('name')}) (${make_params(func, with_types=True)}) = gits::l0::drv.${func.get('name')};
   %endif
 %endfor
 }

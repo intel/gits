@@ -123,14 +123,29 @@ def process_arguments(arguments):
                         del arguments[name][idx]
 
 
-def make_params(args, prefix=str()):
-    return ', '.join([prefix + arg['name'] for arg in args])
+def make_params(
+    func, prefix=str(), with_retval=False, with_types=False, prepend_comma=False
+):
+    contain_args = len(func["args"]) > 0
+    str_params = ", " if prepend_comma and contain_args else ""
+    if with_retval and func.get("type") != "void":
+        if with_types:
+            str_params += f"{func['type']} "
+        str_params += prefix + "return_value"
+    if contain_args:
+        if with_retval and func.get("type") != "void":
+            str_params += ", "
+        str_params += ", ".join(
+            [
+                prefix + ((arg["type"] + " ") if with_types else "") + arg["name"]
+                for arg in func["args"]
+            ]
+        )
+    return str_params
 
-def make_lua_params(args, prefix=str()):
-    return make_params(args).replace("end", "end_")
 
-def make_params_with_types(args, prefix=str()):
-    return ', '.join([prefix + arg['type'] + ' ' + arg['name'] for arg in args])
+def make_lua_params(func):
+    return make_params(func).replace("end", "end_")
 
 def has_vars(argType, arguments):
     if "const " in argType:

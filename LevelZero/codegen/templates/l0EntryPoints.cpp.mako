@@ -18,17 +18,17 @@ extern "C" {
   %if not is_latest_version(functions, func):
 <% continue %>
   %endif
-VISIBLE ${func.get('type')} __zecall ${func.get('name')}(${make_params_with_types(func['args'])})
+VISIBLE ${func.get('type')} __zecall ${func.get('name')}(${make_params(func, with_types=True)})
 {
   %if func.get('recExecWrap'):
-  ${'' if func.get('type') == 'void' else 'return '}${func.get('recExecWrapName')}(${make_params(func['args'])});
+  ${'' if func.get('type') == 'void' else 'return '}${func.get('recExecWrapName')}(${make_params(func)});
   %else:
 ${'  CGitsPlugin::Initialize();\n' if func.get('name') == 'zeInit' else ''}\
   GITS_ENTRY_L0
 ${'  wrapper.InitializeDriver();\n' if func.get('name') == 'zeInit' else ''}\
-  ${'' if func.get('type') == 'void' else 'auto return_value = '}driver.${func.get('name')}(${make_params(func['args'])});
+  ${'' if func.get('type') == 'void' else 'auto return_value = '}driver.${func.get('name')}(${make_params(func)});
   GITS_WRAPPER_PRE
-    wrapper.${func.get('name')}(${'' if func.get('type') == 'void' else 'return_value, '}${make_params(func['args'])});
+    wrapper.${func.get('name')}(${make_params(func, with_retval=True)});
   GITS_WRAPPER_POST
     %if func.get('type') != 'void':
   return return_value;

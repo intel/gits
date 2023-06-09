@@ -18,32 +18,33 @@ namespace gits {
 namespace l0 {
 %for name, func in functions.items():
   %if func['enabled']:
+    %if (func.get('type') != 'void' or len(func['args']) > 0):
 C${name}::C${name}(
-    %if func.get('type') != 'void':
-  ze_result_t return_value,
-    %endif
-        %for arg in func['args']:
-  ${arg['type']} ${arg['name']}${'' if loop.last else ','}
-        %endfor
-) :
-    %if func.get('type') != 'void':
-  _return_value(return_value),
-    %endif
-    %for arg in func['args']:
-      %if arg.get('wrapParams'):
-  _${arg['name']}(${arg['wrapParams'].replace('{name}', arg['name'])})\
-      %elif arg.get('range'):
-  _${arg['name']}(${arg['range'].split(',')[1]}, ${arg['name']})\
-      %else:
-  _${arg['name']}(${arg['name']})\
+      %if func.get('type') != 'void':
+  ze_result_t return_value${',' if len(func['args']) > 0 else ''}
       %endif
+      %for arg in func['args']:
+  ${arg['type']} ${arg['name']}${'' if loop.last else ','}
+      %endfor
+) :
+      %if func.get('type') != 'void':
+  _return_value(return_value)${',' if len(func['args']) > 0 else ''}
+      %endif
+      %for arg in func['args']:
+        %if arg.get('wrapParams'):
+  _${arg['name']}(${arg['wrapParams'].replace('{name}', arg['name'])})\
+        %elif arg.get('range'):
+  _${arg['name']}(${arg['range'].split(',')[1]}, ${arg['name']})\
+        %else:
+  _${arg['name']}(${arg['name']})\
+        %endif
 ${'' if loop.last else ','}
-    %endfor
+      %endfor
 {
 }
-
+    %endif
 gits::CArgument& C${name}::Argument(unsigned idx) {
-  return get_cargument(__FUNCTION__, idx, ${make_params(func['args'], '_')});
+  return get_cargument(__FUNCTION__, idx${', ' if len(func['args']) > 0 else ''}${make_params(func, prefix='_')});
 }
     %if func.get('type') != 'void':
 gits::CArgument& C${name}::Result(unsigned idx) {
@@ -53,7 +54,7 @@ gits::CArgument& C${name}::Result(unsigned idx) {
 
 void C${name}::Run() {
     %if func.get('runWrap'):
-  ${func.get('runWrapName')}(${'' if func.get('type') == 'void' else '_return_value, '}${make_params(func['args'], '_')});
+  ${func.get('runWrapName')}(${'' if func.get('type') == 'void' else '_return_value, '}${make_params(func, prefix='_')});
     %else:
       %if name == 'zeInit':
   drv.Initialize();
@@ -61,9 +62,9 @@ void C${name}::Run() {
       %if func.get('skipRun'):
   Log(TRACE) << "Function ${func.get('name')} skipped";
       %else:
-  ${'_return_value.Value() = ' if func.get('type') != 'void' else ''}drv.${func.get('name')}(${make_params(func['args'], '*_')});
+  ${'_return_value.Value() = ' if func.get('type') != 'void' else ''}drv.${func.get('name')}(${make_params(func, prefix='*_')});
         %if func.get('stateTrack'):
-  ${func.get('stateTrackName')}(${'*_return_value, 'if func.get('type') != 'void' else ''}${make_params(func['args'], '*_')});
+  ${func.get('stateTrackName')}(${make_params(func, prefix='*_', with_retval=True)});
         %endif
       %endif
     %endif

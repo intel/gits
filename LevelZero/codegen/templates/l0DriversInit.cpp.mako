@@ -52,7 +52,7 @@ int lua_${func.get('name')}(lua_State* L) {
   auto ${arg['name']} = lua_to_ext<${arg['type']}>(L, ${loop.index+1});
     %endfor
   bypass_luascript = true;
-  ze_result_t ret = drv.${func.get('name')}(${make_params(func['args'])});
+  ze_result_t ret = drv.${func.get('name')}(${make_params(func)});
     %for arg in func['args']:
       %if 'out' in arg['tag'] and has_vars(arg['type'], arguments):
   lua_setTableFields(L, ${loop.index+1}, ${arg['name']});
@@ -103,16 +103,16 @@ ${func.get('type')} __zecall special_${func.get('name')}(
   }
 #endif
   if (call_orig) {
-    ret = drv.original.${func.get('name')}(${make_params(func['args'])});
+    ret = drv.original.${func.get('name')}(${make_params(func)});
     L0Log(TRACE, NO_PREFIX) << " = " << ret;
     %for arg in func['args']:
       %if 'out' in arg['tag']:
     L0Log(TRACEV, NO_PREFIX) << ">>>> ${arg['tag']} ${arg['name']}: " << \
-  %if arg.get('range'):
+        %if arg.get('range'):
 ToStringHelperArrayRange(${arg['name']}, ${arg['range']});
-  %else:
+        %else:
 ${arg['name']};
-  %endif
+        %endif
       %endif
     %endfor
   }

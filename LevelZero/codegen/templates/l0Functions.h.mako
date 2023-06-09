@@ -58,15 +58,17 @@ namespace gits {
       virtual unsigned ResultCount() const { return RESULT_NUM; }
 
     public:
-      C${name}() {}
+      C${name}() = default;
+    %if func.get('type') != 'void' or len(func['args']) > 0:
       C${name}(
-    %if func.get('type') != 'void':
-        ze_result_t return_value,
-    %endif
-    %for arg in func['args']:
+      %if func.get('type') != 'void':
+        ${func.get('type')} return_value${', ' if len(func['args']) > 0 else ''}
+      %endif
+      %for arg in func['args']:
         ${arg['type']} ${arg['name']}${'' if loop.last else ','}
-    %endfor
+      %endfor
       );
+    %endif
       virtual unsigned int Id() const { return ${func.get('id')}; }
       virtual const char* Name() const { return "${func.get('name')}"; }
       virtual unsigned Version() const { return ZE_API_VERSION_1_0; }
@@ -74,5 +76,5 @@ namespace gits {
     };
   %endif
 %endfor
-  }
-}
+  } // namespace l0
+} //namespace gits
