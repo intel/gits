@@ -258,5 +258,19 @@ inline ze_result_t zeMemFreeExt_RECEXECWRAP(ze_context_handle_t hContext,
   }
   return return_value;
 }
+
+inline void zeGitsStopRecording_RECEXECWRAP(ze_gits_recording_info_t properties) {
+  GITS_ENTRY_L0(void) driver;
+  GITS_WRAPPER_PRE
+  wrapper.zeGitsStopRecording(properties);
+  GITS_WRAPPER_POST
+}
+
+inline void zeGitsStartRecording_RECEXECWRAP(ze_gits_recording_info_t properties) {
+  GITS_ENTRY_L0(void) driver;
+  GITS_WRAPPER_PRE
+  wrapper.zeGitsStartRecording(properties);
+  GITS_WRAPPER_POST
+}
 } // namespace l0
 } // namespace gits

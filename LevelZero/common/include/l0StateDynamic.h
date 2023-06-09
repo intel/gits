@@ -367,6 +367,7 @@ private:
 public:
   LayoutBuilder layoutBuilder;
   std::unordered_set<ze_module_handle_t> scanningGlobalPointersMode;
+  bool nomenclatureCounting = true;
   ~CStateDynamic();
 
   template <typename State>

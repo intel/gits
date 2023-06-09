@@ -25,7 +25,7 @@ void SaveGlobalPointerAllocationToMemory(CStateDynamic& sd,
   ze_command_list_handle_t hCommandListImmediate =
       GetCommandListImmediate(sd, drv, commandListState.hContext);
   allocState.globalPtrAllocation.resize(allocState.size);
-  ze_result_t err = drv.zeCommandListAppendMemoryCopy(
+  ze_result_t err = drv.inject.zeCommandListAppendMemoryCopy(
       hCommandListImmediate, allocState.globalPtrAllocation.data(), globalPtr, allocState.size,
       nullptr, 0, nullptr);
   sd.scanningGlobalPointersMode.insert(allocState.hModule);
@@ -42,8 +42,7 @@ ze_event_pool_handle_t CreateGitsPoolEvent(const ze_context_handle_t hContext) {
   desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
   desc.pNext = nullptr;
   desc.count = 128;
-  drv.zeEventPoolCreate(hContext, &desc, 0, nullptr, &gitsPoolEventMap[hContext]);
-  Log(TRACE) << "^------------------ injected synchronization pool";
+  drv.inject.zeEventPoolCreate(hContext, &desc, 0, nullptr, &gitsPoolEventMap[hContext]);
   return gitsPoolEventMap[hContext];
 }
 ze_event_handle_t CreateGitsEvent(const ze_context_handle_t hContext) {
@@ -59,8 +58,7 @@ ze_event_handle_t CreateGitsEvent(const ze_context_handle_t hContext) {
   desc.index = static_cast<uint32_t>(gitsEventMap.size());
   desc.pNext = nullptr;
   desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
-  drv.zeEventCreate(eventPool, &desc, &gitsEventMap[hContext]);
-  Log(TRACE) << "^------------------ injected synchronization event";
+  drv.inject.zeEventCreate(eventPool, &desc, &gitsEventMap[hContext]);
   return gitsEventMap[hContext];
 }
 bool CheckWhetherDumpQueueSubmit(uint32_t queueSubmitNumber) {
@@ -138,23 +136,21 @@ inline void InjectReadsForArguments(std::vector<CKernelArgumentDump>& readyArgVe
     }
     argDump.injected = true;
     if (callBarrier) {
-      drv.zeCommandListAppendBarrier(cmdList, nullptr, 0, nullptr);
+      drv.inject.zeCommandListAppendBarrier(cmdList, nullptr, 0, nullptr);
     }
     if (argDump.argType == KernelArgType::buffer) {
-      drv.zeCommandListAppendMemoryCopy(cmdList, const_cast<char*>(argDump.buffer.data()),
-                                        argDump.h_buf, argDump.buffer.size(), eventHandle, 0,
-                                        nullptr);
+      drv.inject.zeCommandListAppendMemoryCopy(cmdList, const_cast<char*>(argDump.buffer.data()),
+                                               argDump.h_buf, argDump.buffer.size(), eventHandle, 0,
+                                               nullptr);
     } else if (argDump.argType == KernelArgType::image) {
-      drv.zeCommandListAppendImageCopyToMemory(cmdList, const_cast<char*>(argDump.buffer.data()),
-                                               argDump.h_img, nullptr, eventHandle, 0, nullptr);
+      drv.inject.zeCommandListAppendImageCopyToMemory(
+          cmdList, const_cast<char*>(argDump.buffer.data()), argDump.h_img, nullptr, eventHandle, 0,
+          nullptr);
     }
-    Log(TRACE) << "^------------------ injected" << (callBarrier ? " barrier with " : " ")
-               << "read";
     callBarrier = false;
     if (eventHandle != nullptr) {
-      drv.zeEventHostSynchronize(eventHandle, UINT64_MAX);
-      drv.zeEventHostReset(eventHandle);
-      Log(TRACE) << "^------------------ injected synchronization with event reset";
+      drv.inject.zeEventHostSynchronize(eventHandle, UINT64_MAX);
+      drv.inject.zeEventHostReset(eventHandle);
     }
   }
 }
@@ -169,8 +165,7 @@ inline void SaveKernelArguments(const ze_event_handle_t& hSignalEvent,
   const auto syncNeeded =
       CheckWhetherSync(cmdListState.isImmediate, cmdListState.isSync, hSignalEvent, callOnce);
   if (syncNeeded) {
-    drv.zeEventHostSynchronize(hSignalEvent, UINT64_MAX);
-    Log(TRACE) << "^------------------ injected synchronization";
+    drv.inject.zeEventHostSynchronize(hSignalEvent, UINT64_MAX);
   }
   auto& sd = SD();
   auto& readyArgVec = sd.Map<CKernelArgumentDump>()[hCommandList];
@@ -244,7 +239,6 @@ inline void zeCommandListCreate_SD(ze_result_t return_value,
                                    ze_device_handle_t hDevice,
                                    const ze_command_list_desc_t* desc,
                                    ze_command_list_handle_t* phCommandList) {
-  CGits::Instance().CommandListCountUp();
   if (return_value == ZE_RESULT_SUCCESS && phCommandList != nullptr && desc != nullptr) {
     auto& clState = SD().Map<CCommandListState>()[*phCommandList];
     clState = std::make_unique<CCommandListState>(hContext, hDevice, *desc);
@@ -257,8 +251,6 @@ inline void zeCommandListCreateImmediate_SD(ze_result_t return_value,
                                             ze_device_handle_t hDevice,
                                             const ze_command_queue_desc_t* altdesc,
                                             ze_command_list_handle_t* phCommandList) {
-  CGits::Instance().CommandListCountUp();
-  CGits::Instance().CommandQueueExecCountUp();
   if (return_value == ZE_RESULT_SUCCESS && phCommandList != nullptr && altdesc != nullptr) {
     auto& clState = SD().Map<CCommandListState>()[*phCommandList];
     clState = std::make_unique<CCommandListState>(hContext, hDevice, *altdesc);
@@ -397,8 +389,7 @@ inline void zeCommandQueueExecuteCommandLists_SD(ze_result_t return_value,
     cqState.cmdQueueNumber = gits::CGits::Instance().CurrentCommandQueueExecCount();
   }
   if (!cqState.isSync && CheckWhetherQueueRequiresSync(phCommandLists, numCommandLists)) {
-    drv.zeCommandQueueSynchronize(hCommandQueue, UINT64_MAX);
-    Log(TRACE) << "^------------------ injected synchronization";
+    drv.inject.zeCommandQueueSynchronize(hCommandQueue, UINT64_MAX);
   }
   ze_command_list_handle_t tmpList = nullptr;
   ze_result_t err = ZE_RESULT_ERROR_UNINITIALIZED;
@@ -416,9 +407,8 @@ inline void zeCommandQueueExecuteCommandLists_SD(ze_result_t return_value,
         if (!tmpList) {
           ze_command_queue_desc_t queueDesc = {};
           queueDesc.mode = ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS;
-          err = drv.zeCommandListCreateImmediate(cmdListState.hContext, cmdListState.hDevice,
-                                                 &queueDesc, &tmpList);
-          Log(TRACE) << "^------------------ injected command list";
+          err = drv.inject.zeCommandListCreateImmediate(cmdListState.hContext, cmdListState.hDevice,
+                                                        &queueDesc, &tmpList);
         }
         auto& readyArgVec = sd.Map<CKernelArgumentDump>()[tmpList];
         PrepareArguments(kernelState, kernel.first, readyArgVec, true);
@@ -445,8 +435,7 @@ inline void zeCommandQueueExecuteCommandLists_SD(ze_result_t return_value,
     }
   }
   if (err == ZE_RESULT_SUCCESS) {
-    drv.zeCommandListDestroy(tmpList);
-    Log(TRACE) << "^------------------ injected command list destroy";
+    drv.inject.zeCommandListDestroy(tmpList);
   }
 }
 
@@ -572,7 +561,7 @@ inline void zeContextDestroy_SD(ze_result_t return_value, ze_context_handle_t hC
   if (return_value == ZE_RESULT_SUCCESS) {
     const auto& list = SD().Get<CContextState>(hContext, EXCEPTION_MESSAGE).gitsImmediateList;
     if (list != nullptr) {
-      drv.zeCommandListDestroy(list);
+      drv.inject.zeCommandListDestroy(list);
     }
     for (auto& state : SD().Map<CCommandListState>()) {
       if (state.second->hContext == hContext) {

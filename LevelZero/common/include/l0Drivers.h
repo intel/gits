@@ -25,6 +25,7 @@ public:
     return lib_;
   }
   ze_dispatch_table_t original;
+  ze_dispatch_table_t inject;
 
 private:
   bool initialized_ = false;

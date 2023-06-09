@@ -1383,6 +1383,11 @@ var4=VarDef(name='ZET_VALUE_TYPE_FLOAT64',value='3'),
 var5=VarDef(name='ZET_VALUE_TYPE_BOOL8',value='4'),
 )
 
+Enum(name='ze_gits_recording_info_t',bitFields=True,
+var1=VarDef(name='ZE_GITS_RECORDING_DEFAULT',value='ZE_BIT(0)'),
+var2=VarDef(name='ZE_GITS_SWITCH_NOMENCLATURE_COUNTING',value='ZE_BIT(1)'),
+)
+
 Argument(name='ze_driver_handle_t',obj=True)
 
 Argument(name='ze_device_handle_t',obj=True)
@@ -2955,7 +2960,7 @@ arg8=ArgDef(name='numWaitEvents',type='uint32_t',tag='in',optional=True),
 arg9=ArgDef(name='phWaitEvents',type='ze_event_handle_t*',tag='in',range='0,numWaitEvents',optional=True),
 )
 
-Function(name='zeCommandListAppendLaunchCooperativeKernel',component='ze_command_list',enabled=True,stateTrack=True,recWrap=True,recExecWrap=True,runWrap=True,
+Function(name='zeCommandListAppendLaunchCooperativeKernel',component='ze_command_list',enabled=True,stateTrack=True,recWrap=True,recExecWrap=True,runWrap=True,nomenclatureModifier=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='hKernel',type='ze_kernel_handle_t',tag='in'),
@@ -2965,7 +2970,7 @@ arg5=ArgDef(name='numWaitEvents',type='uint32_t',tag='in',optional=True),
 arg6=ArgDef(name='phWaitEvents',type='ze_event_handle_t*',tag='in',range='0,numWaitEvents',optional=True),
 )
 
-Function(name='zeCommandListAppendLaunchKernel',component='ze_command_list',enabled=True,stateTrack=True,recWrap=True,recExecWrap=True,runWrap=True,
+Function(name='zeCommandListAppendLaunchKernel',component='ze_command_list',enabled=True,stateTrack=True,recWrap=True,recExecWrap=True,runWrap=True,nomenclatureModifier=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='hKernel',type='ze_kernel_handle_t',tag='in'),
@@ -2975,7 +2980,7 @@ arg5=ArgDef(name='numWaitEvents',type='uint32_t',tag='in',optional=True),
 arg6=ArgDef(name='phWaitEvents',type='ze_event_handle_t*',tag='in',range='0,numWaitEvents',optional=True),
 )
 
-Function(name='zeCommandListAppendLaunchKernelIndirect',component='ze_command_list',enabled=True,stateTrack=True,recWrap=True,recExecWrap=True,runWrap=True,
+Function(name='zeCommandListAppendLaunchKernelIndirect',component='ze_command_list',enabled=True,stateTrack=True,recWrap=True,recExecWrap=True,runWrap=True,nomenclatureModifier=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='hKernel',type='ze_kernel_handle_t',tag='in'),
@@ -2985,7 +2990,7 @@ arg5=ArgDef(name='numWaitEvents',type='uint32_t',tag='in',optional=True),
 arg6=ArgDef(name='phWaitEvents',type='ze_event_handle_t*',tag='in',range='0,numWaitEvents',optional=True),
 )
 
-Function(name='zeCommandListAppendLaunchMultipleKernelsIndirect',component='ze_command_list',enabled=True,stateTrack=True,recWrap=True,recExecWrap=True,runWrap=True,
+Function(name='zeCommandListAppendLaunchMultipleKernelsIndirect',component='ze_command_list',enabled=True,stateTrack=True,recWrap=True,recExecWrap=True,runWrap=True,nomenclatureModifier=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='numKernels',type='uint32_t',tag='in'),
@@ -3142,7 +3147,7 @@ retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 )
 
-Function(name='zeCommandListCreate',component='ze_command_list',enabled=True,stateTrack=True,runWrap=True,recWrap=True,
+Function(name='zeCommandListCreate',component='ze_command_list',enabled=True,stateTrack=True,runWrap=True,recWrap=True,nomenclatureModifier=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
@@ -3150,7 +3155,7 @@ arg3=ArgDef(name='desc',type='const ze_command_list_desc_t*',tag='in'),
 arg4=ArgDef(name='phCommandList',type='ze_command_list_handle_t*',tag='out'),
 )
 
-Function(name='zeCommandListCreateImmediate',component='ze_command_list',enabled=True,stateTrack=True,runWrap=True,recWrap=True,
+Function(name='zeCommandListCreateImmediate',component='ze_command_list',enabled=True,stateTrack=True,runWrap=True,recWrap=True,nomenclatureModifier=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
@@ -3187,7 +3192,7 @@ retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandQueue',type='ze_command_queue_handle_t',tag='in',release=True),
 )
 
-Function(name='zeCommandQueueExecuteCommandLists',component='ze_command_queue',enabled=True,stateTrack=True,recExecWrap=True,recWrap=True,runWrap=True,
+Function(name='zeCommandQueueExecuteCommandLists',component='ze_command_queue',enabled=True,stateTrack=True,recExecWrap=True,recWrap=True,runWrap=True,nomenclatureModifier=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandQueue',type='ze_command_queue_handle_t',tag='in'),
 arg2=ArgDef(name='numCommandLists',type='uint32_t',tag='in'),
@@ -5155,6 +5160,16 @@ retV=RetDef(type='void'),
 arg1=ArgDef(name='pAlloc',type='void*',tag='in',wrapType='CMappedPtr'),
 arg2=ArgDef(name='numOffsets',type='uint32_t',tag='in'),
 arg3=ArgDef(name='pOffsets',type='size_t*',tag='in'),
+)
+
+Function(name='zeGitsStopRecording',component='ze_gits_extension',extension=True,enabled=True,recWrap=True,skipRun=True,recExecWrap=True,log=False,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='properties',type='ze_gits_recording_info_t',tag='in'),
+)
+
+Function(name='zeGitsStartRecording',component='ze_gits_extension',extension=True,enabled=True,recWrap=True,skipRun=True,recExecWrap=True,log=False,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='properties',type='ze_gits_recording_info_t',tag='in'),
 )
 
 Function(name='zelTracerCreate',component='zel_tracer',enabled=False,

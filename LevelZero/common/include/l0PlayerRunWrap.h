@@ -62,13 +62,11 @@ void TranslatePointers(CStateDynamic& sd) {
       ze_command_list_handle_t list = GetCommandListImmediate(sd, drv, allocState.second->hContext);
       const auto size = allocState.second->size;
       auto* tmpBuffer = new char[size];
-      drv.zeCommandListAppendMemoryCopy(list, tmpBuffer, allocState.first, size, nullptr, 0,
-                                        nullptr);
-      Log(TRACEV) << "^------------------ injected read to fetch pointers";
+      drv.inject.zeCommandListAppendMemoryCopy(list, tmpBuffer, allocState.first, size, nullptr, 0,
+                                               nullptr);
       TranslatePointerOffsets(sd, tmpBuffer, indirectOffsets);
-      drv.zeCommandListAppendMemoryCopy(list, allocState.first, tmpBuffer, size, nullptr, 0,
-                                        nullptr);
-      Log(TRACEV) << "^------------------ injected write to fetch pointers";
+      drv.inject.zeCommandListAppendMemoryCopy(list, allocState.first, tmpBuffer, size, nullptr, 0,
+                                               nullptr);
       delete[] tmpBuffer;
     } else {
       TranslatePointerOffsets(sd, allocState.first, indirectOffsets);
@@ -81,10 +79,10 @@ bool UpdateDeviceQueueProperties(
     const ze_device_handle_t& hDevice,
     std::vector<ze_command_queue_group_properties_t>& groupProperties) {
   uint32_t numGroupProperties = 0U;
-  drv.zeDeviceGetCommandQueueGroupProperties(hDevice, &numGroupProperties, nullptr);
+  drv.inject.zeDeviceGetCommandQueueGroupProperties(hDevice, &numGroupProperties, nullptr);
   groupProperties.resize(numGroupProperties);
-  const auto ret = drv.zeDeviceGetCommandQueueGroupProperties(hDevice, &numGroupProperties,
-                                                              groupProperties.data());
+  const auto ret = drv.inject.zeDeviceGetCommandQueueGroupProperties(hDevice, &numGroupProperties,
+                                                                     groupProperties.data());
   return ret == ZE_RESULT_SUCCESS;
 }
 
@@ -408,6 +406,7 @@ inline void zeCommandListCreate_RUNWRAP(Cze_result_t& _return_value,
     }
   }
   _return_value.Value() = drv.zeCommandListCreate(*_hContext, *_hDevice, &desc, *_phCommandList);
+  CGits::Instance().CommandListCountUp();
   zeCommandListCreate_SD(*_return_value, *_hContext, *_hDevice, &desc, *_phCommandList);
 }
 
@@ -433,6 +432,8 @@ inline void zeCommandListCreateImmediate_RUNWRAP(
   }
   _return_value.Value() =
       drv.zeCommandListCreateImmediate(*_hContext, *_hDevice, &desc, *_phCommandList);
+  CGits::Instance().CommandListCountUp();
+  CGits::Instance().CommandQueueExecCountUp();
   zeCommandListCreateImmediate_SD(*_return_value, *_hContext, *_hDevice, &desc, *_phCommandList);
 }
 

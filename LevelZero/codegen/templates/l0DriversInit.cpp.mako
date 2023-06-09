@@ -30,7 +30,19 @@ bool load_l0_function_generic(void*& func, const char* name) {
     return false;
   }
   func = dl::load_symbol(lib, name);
-  return true;
+  return func != nullptr;
+}
+template <typename Func>
+struct NoopHelper;
+template <typename ReturnType, typename... Args>
+struct NoopHelper<ReturnType (*)(Args...)> {
+  static ReturnType noop_function(Args...) {
+    return ReturnType();
+  }
+};
+template <typename Func>
+auto noop(Func) {
+  return &NoopHelper<Func>::noop_function;
 }
 template<class T>
 bool load_l0_function(T& func, const char* name) {
@@ -73,11 +85,13 @@ ${func.get('type')} __zecall special_${func.get('name')}(
   %if func.get('type') != 'void':
   ze_result_t ret = ZE_RESULT_SUCCESS;
   %endif
+  %if func.get('log', True):
   L0Log(TRACE, NO_NEWLINE) << "${func.get('name')}(";
-  %for arg in func['args']:
+    %for arg in func['args']:
   L0Log(TRACE, RAW) << ${arg['name']}${'' if loop.last else ' << ", "'};
-  %endfor
+    %endfor
   L0Log(TRACE, ${'RAW' if func['type'] != 'void' else 'NO_PREFIX'}) << ")";
+  %endif
   %if func.get('component') != 'ze_gits_extension':
   bool call_orig = true;
 #ifndef BUILD_FOR_CCODE
@@ -104,18 +118,25 @@ ${func.get('type')} __zecall special_${func.get('name')}(
 #endif
   if (call_orig) {
     ret = drv.original.${func.get('name')}(${make_params(func)});
+    %if func.get('log', True):
     L0Log(TRACE, NO_PREFIX) << " = " << ret;
-    %for arg in func['args']:
-      %if 'out' in arg['tag']:
+      %for arg in func['args']:
+        %if 'out' in arg['tag']:
     L0Log(TRACEV, NO_PREFIX) << ">>>> ${arg['tag']} ${arg['name']}: " << \
-        %if arg.get('range'):
+          %if arg.get('range'):
 ToStringHelperArrayRange(${arg['name']}, ${arg['range']});
-        %else:
+          %else:
 ${arg['name']};
+          %endif
         %endif
-      %endif
-    %endfor
+      %endfor
+    %endif
   }
+  %else:
+  drv.original.${func.get('name')}(${make_params(func)});
+    %if func.get('type') != 'void' and func.get('log', True):
+  L0Log(TRACE, NO_PREFIX) << " = " << ret;
+    %endif
   %endif
   %if func.get('type') != 'void':
   return ret;
@@ -129,8 +150,9 @@ ${func.get('type')} __zecall default_${func.get('name')}(
 ) {
   %if func.get('component') == 'ze_gits_extension':
   if (!load_l0_function(drv.${func.get('name')}, "${func.get('name')}")) {
-    L0Log(ERR) << "Could not load ${func.get('name')} function.";
+    drv.${func.get('name')} = noop(static_cast<pfn_${func.get('name')}>(nullptr));
   }
+  drv.original.${func.get('name')} = drv.${func.get('name')};
   drv.${func.get('name')} = special_${func.get('name')};
   %else:
   if (!load_l0_function(drv.${func.get('name')}, "${func.get('name')}")) {
@@ -142,7 +164,19 @@ ${func.get('type')} __zecall default_${func.get('name')}(
     drv.${func.get('name')} = special_${func.get('name')};
   }
   %endif
-  ${'' if func.get('type') == 'void' else 'return '}drv.${func.get('name')}(${make_params(func['args'])});
+  ${'' if func.get('type') == 'void' else 'return '}drv.${func.get('name')}(${make_params(func)});
+}
+
+${func.get('type')} __zecall inject_${func.get('name')}(
+  %for arg in func['args']:
+  ${arg['type']} ${arg['name']}${'' if loop.last else ','}
+  %endfor
+) {
+  drv.zeGitsStopRecording(${"ZE_GITS_SWITCH_NOMENCLATURE_COUNTING" if func.get('nomenclatureModifier', False) else "ZE_GITS_RECORDING_DEFAULT"});
+  ${'' if func.get('type') == 'void' else 'const auto returnValue = '}drv.${func.get('name')}(${make_params(func)});
+  Log(TRACE) << "^------------------ injected";
+  drv.zeGitsStartRecording(${"ZE_GITS_SWITCH_NOMENCLATURE_COUNTING" if func.get('nomenclatureModifier', False) else "ZE_GITS_RECORDING_DEFAULT"});
+  ${'' if func.get('type') == 'void' else 'return returnValue;'}
 }
 
 %endfor
@@ -178,6 +212,12 @@ CDriver::CDriver() : initialized_(false), lib_(nullptr) {
 <% continue %>
   %endif
   drv.${func.get('name')} = default_${func.get('name')};
+%endfor
+%for name, func in functions.items():
+  %if not is_latest_version(functions, func):
+<% continue %>
+  %endif
+  drv.inject.${func.get('name')} = inject_${func.get('name')};
 %endfor
 #ifndef BUILD_FOR_CCODE
   CGits::Instance().RegisterLuaFunctionsRegistrator(RegisterLuaDriverFunctions);

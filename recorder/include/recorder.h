@@ -109,6 +109,8 @@ public:
   bool RecordingOverride() {
     return _recordingOverride;
   }
+  void Pause();
+  void Continue();
 
   // interface for proxy library
   void DrawBegin();

@@ -216,7 +216,6 @@ def makoWrite(inpath, outpath, **args):
         rendered = template.render(
             make_params=make_params,
             make_lua_params=make_lua_params,
-            make_params_with_types=make_params_with_types,
             has_vars=has_vars,
             get_wrap_type=get_wrap_type,
             get_field_type=get_field_type,

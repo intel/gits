@@ -81,10 +81,10 @@ void UpdateOriginalQueueGroupProperties(CDeviceState& deviceState,
   auto& groupProperties = deviceState.cqGroupProperties;
   if (deviceState.cqGroupProperties.empty()) {
     uint32_t numGroupProperties = 0U;
-    drv.zeDeviceGetCommandQueueGroupProperties(hDevice, &numGroupProperties, nullptr);
+    drv.inject.zeDeviceGetCommandQueueGroupProperties(hDevice, &numGroupProperties, nullptr);
     groupProperties.resize(numGroupProperties);
-    const auto result = drv.zeDeviceGetCommandQueueGroupProperties(hDevice, &numGroupProperties,
-                                                                   groupProperties.data());
+    const auto result = drv.inject.zeDeviceGetCommandQueueGroupProperties(
+        hDevice, &numGroupProperties, groupProperties.data());
     if (result != ZE_RESULT_SUCCESS) {
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
@@ -106,9 +106,8 @@ void SaveKernelArgumentsForStateRestore(CStateDynamic& sd,
       const auto& allocState = sd.Get<CAllocState>(allocInfo.first, EXCEPTION_MESSAGE);
       map.emplace_back(allocState.size - allocInfo.second, ptr);
       if (allocState.memType == UnifiedMemoryType::device) {
-        driver.zeCommandListAppendMemoryCopy(hCommandList, map.back().buffer.data(), ptr,
-                                             map.back().buffer.size(), nullptr, 0, nullptr);
-        Log(TRACE) << "^------------------ injected read";
+        driver.inject.zeCommandListAppendMemoryCopy(hCommandList, map.back().buffer.data(), ptr,
+                                                    map.back().buffer.size(), nullptr, 0, nullptr);
       } else {
         std::memcpy(map.back().buffer.data(), ptr, map.back().buffer.size());
       }
@@ -116,9 +115,8 @@ void SaveKernelArgumentsForStateRestore(CStateDynamic& sd,
       auto h_img = reinterpret_cast<ze_image_handle_t>(const_cast<void*>(arg.second.argValue));
       const auto& imageState = sd.Get<CImageState>(h_img, EXCEPTION_MESSAGE);
       map.emplace_back(CalculateImageSize(imageState.desc), h_img);
-      driver.zeCommandListAppendImageCopyToMemory(hCommandList, map.back().buffer.data(), h_img,
-                                                  nullptr, nullptr, 0, nullptr);
-      Log(TRACE) << "^------------------ injected read";
+      driver.inject.zeCommandListAppendImageCopyToMemory(hCommandList, map.back().buffer.data(),
+                                                         h_img, nullptr, nullptr, 0, nullptr);
     }
   }
   if (kernelState.currentKernelInfo.indirectUsmTypes != 0) {
@@ -128,10 +126,9 @@ void SaveKernelArgumentsForStateRestore(CStateDynamic& sd,
           restoredPtrs.count(allocState.first)) {
         map.emplace_back(allocState.second->size, allocState.first);
         if (allocState.second->memType == UnifiedMemoryType::device) {
-          driver.zeCommandListAppendMemoryCopy(hCommandList, map.back().buffer.data(),
-                                               allocState.first, allocState.second->size, nullptr,
-                                               0, nullptr);
-          Log(TRACE) << "^------------------ injected read";
+          driver.inject.zeCommandListAppendMemoryCopy(hCommandList, map.back().buffer.data(),
+                                                      allocState.first, allocState.second->size,
+                                                      nullptr, 0, nullptr);
         } else {
           std::memcpy(map.back().buffer.data(), allocState.first, allocState.second->size);
         }
@@ -153,17 +150,18 @@ inline void zeCommandListAppendLaunchKernel_RECWRAP_PRE(CRecorder& recorder,
   (void)hSignalEvent;
   (void)numWaitEvents;
   (void)phWaitEvents;
-  gits::CGits::Instance().KernelCountUp();
+  auto& sd = SD();
+  if (sd.nomenclatureCounting) {
+    gits::CGits::Instance().KernelCountUp();
+  }
   const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
   if (l0IFace.CfgRec_IsKernelsRangeMode() &&
       l0IFace.CfgRec_IsKernelToRecord(gits::CGits::Instance().CurrentKernelCount())) {
-    auto& sd = SD();
     auto& cmdListState = sd.Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
     const auto& isImmediate = cmdListState.isImmediate;
     const auto isAlreadySynchronized = isImmediate && cmdListState.isSync;
     if (!isAlreadySynchronized) {
-      drv.zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr);
-      Log(TRACE) << "^------------------ injected barrier";
+      drv.inject.zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr);
     }
     if (isImmediate) {
       const int kernelCount = gits::CGits::Instance().CurrentKernelCount();
@@ -385,11 +383,14 @@ inline void zeCommandQueueExecuteCommandLists_RECWRAP_PRE(CRecorder& recorder,
   (void)numCommandLists;
   (void)phCommandLists;
   (void)hFence;
-  gits::CGits::Instance().CommandQueueExecCountUp();
-  SD().Get<CCommandQueueState>(hCommandQueue, EXCEPTION_MESSAGE).cmdQueueNumber =
+  auto& sd = SD();
+  if (sd.nomenclatureCounting) {
+    gits::CGits::Instance().CommandQueueExecCountUp();
+  }
+  sd.Get<CCommandQueueState>(hCommandQueue, EXCEPTION_MESSAGE).cmdQueueNumber =
       gits::CGits::Instance().CurrentCommandQueueExecCount();
   if (recorder.Running()) {
-    for (auto& allocState : SD().Map<CAllocState>()) {
+    for (auto& allocState : sd.Map<CAllocState>()) {
       if (CheckWhetherUpdateUSM(allocState.first)) {
         recorder.Schedule(new CGitsL0MemoryUpdate(allocState.first));
       }
@@ -418,8 +419,7 @@ inline void zeCommandQueueExecuteCommandLists_RECWRAP(CRecorder& recorder,
       }
     }
     if (!cmdLists.empty()) {
-      drv.zeCommandQueueSynchronize(hCommandQueue, UINT64_MAX);
-      Log(TRACE) << "^------------------ injected synchronization";
+      drv.inject.zeCommandQueueSynchronize(hCommandQueue, UINT64_MAX);
       RestoreCommandListBuffer(recorder.Scheduler(), sd);
       recorder.Schedule(new CzeCommandQueueExecuteCommandLists(
           return_value, hCommandQueue, static_cast<uint32_t>(cmdLists.size()), cmdLists.data(),
@@ -986,9 +986,13 @@ inline void zeCommandListCreate_RECWRAP(CRecorder& recorder,
                                         ze_device_handle_t hDevice,
                                         const ze_command_list_desc_t* desc,
                                         ze_command_list_handle_t* phCommandList) {
+  auto& sd = SD();
+  if (sd.nomenclatureCounting) {
+    CGits::Instance().CommandListCountUp();
+  }
   if (recorder.Running()) {
     if (IsControlledSubmission(desc)) {
-      auto& deviceState = SD().Get<CDeviceState>(hDevice, EXCEPTION_MESSAGE);
+      auto& deviceState = sd.Get<CDeviceState>(hDevice, EXCEPTION_MESSAGE);
       if (deviceState.originalQueueGroupProperties.empty()) {
         UpdateOriginalQueueGroupProperties(deviceState, hDevice);
         recorder.Schedule(
@@ -1007,9 +1011,14 @@ inline void zeCommandListCreateImmediate_RECWRAP(CRecorder& recorder,
                                                  ze_device_handle_t hDevice,
                                                  const ze_command_queue_desc_t* altdesc,
                                                  ze_command_list_handle_t* phCommandList) {
+  auto& sd = SD();
+  if (sd.nomenclatureCounting) {
+    CGits::Instance().CommandListCountUp();
+    CGits::Instance().CommandQueueExecCountUp();
+  }
   if (recorder.Running()) {
     if (IsControlledSubmission(altdesc)) {
-      auto& deviceState = SD().Get<CDeviceState>(hDevice, EXCEPTION_MESSAGE);
+      auto& deviceState = sd.Get<CDeviceState>(hDevice, EXCEPTION_MESSAGE);
       if (deviceState.originalQueueGroupProperties.empty()) {
         UpdateOriginalQueueGroupProperties(deviceState, hDevice);
         recorder.Schedule(
@@ -1050,6 +1059,20 @@ inline void zesInit_RECWRAP(CRecorder& recorder, ze_result_t return_value, zes_i
     if (!l0IFace.MemorySnifferInstall()) {
       Log(WARN) << "Memory Sniffer installation failed";
     }
+  }
+}
+
+inline void zeGitsStopRecording_RECWRAP(CRecorder& recorder, ze_gits_recording_info_t properties) {
+  recorder.Pause();
+  if (properties & ZE_GITS_SWITCH_NOMENCLATURE_COUNTING) {
+    SD().nomenclatureCounting = false;
+  }
+}
+
+inline void zeGitsStartRecording_RECWRAP(CRecorder& recorder, ze_gits_recording_info_t properties) {
+  recorder.Continue();
+  if (properties & ZE_GITS_SWITCH_NOMENCLATURE_COUNTING) {
+    SD().nomenclatureCounting = true;
   }
 }
 

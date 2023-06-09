@@ -716,6 +716,14 @@ void gits::CRecorder::Close() {
   };
 }
 
+void gits::CRecorder::Pause() {
+  _running = false;
+}
+
+void gits::CRecorder::Continue() {
+  _running = true;
+}
+
 #ifdef GITS_PLATFORM_WINDOWS
 
 // Following is a hack to allow for graceful termination of GITS recorder.

@@ -341,9 +341,8 @@ bool ZeroInitializeUsm(CDriver& driver,
   }
   const auto zeroBuffer = std::vector<char>(size, 0);
   if (type == UnifiedMemoryType::device) {
-    driver.zeCommandListAppendMemoryCopy(commandList, ptr, zeroBuffer.data(), size, nullptr, 0,
-                                         nullptr);
-    Log(INFO) << "^------------------ injected zero-initialization write";
+    driver.inject.zeCommandListAppendMemoryCopy(commandList, ptr, zeroBuffer.data(), size, nullptr,
+                                                0, nullptr);
   } else {
     std::memcpy(ptr, zeroBuffer.data(), size);
   }
@@ -361,17 +360,16 @@ bool ZeroInitializeImage(CDriver& driver,
   const auto zeroBuffer = std::vector<char>(size, 0);
   const ze_image_region_t region = {
       0, 0, 0, static_cast<uint32_t>(desc->width), desc->height, desc->depth};
-  driver.zeCommandListAppendImageCopyFromMemory(commandList, *phImage, zeroBuffer.data(), &region,
-                                                nullptr, 0, nullptr);
-  Log(INFO) << "^------------------ injected zero-initialization write";
+  driver.inject.zeCommandListAppendImageCopyFromMemory(commandList, *phImage, zeroBuffer.data(),
+                                                       &region, nullptr, 0, nullptr);
   return true;
 }
 
 std::vector<ze_driver_handle_t> GetDrivers(const CDriver& cDriver) {
   uint32_t drivCount = 0;
-  cDriver.zeDriverGet(&drivCount, nullptr);
+  cDriver.inject.zeDriverGet(&drivCount, nullptr);
   std::vector<ze_driver_handle_t> drivers(drivCount);
-  ze_result_t result = cDriver.zeDriverGet(&drivCount, drivers.data());
+  ze_result_t result = cDriver.inject.zeDriverGet(&drivCount, drivers.data());
   zeDriverGet_SD(result, &drivCount, drivers.data());
   return result == ZE_RESULT_SUCCESS ? drivers : std::vector<ze_driver_handle_t>();
 }
@@ -379,9 +377,9 @@ std::vector<ze_driver_handle_t> GetDrivers(const CDriver& cDriver) {
 std::vector<ze_device_handle_t> GetDevices(const CDriver& cDriver,
                                            const ze_driver_handle_t& driver) {
   uint32_t devCount = 0;
-  cDriver.zeDeviceGet(driver, &devCount, nullptr);
+  cDriver.inject.zeDeviceGet(driver, &devCount, nullptr);
   std::vector<ze_device_handle_t> devices(devCount);
-  ze_result_t result = cDriver.zeDeviceGet(driver, &devCount, devices.data());
+  ze_result_t result = cDriver.inject.zeDeviceGet(driver, &devCount, devices.data());
   zeDeviceGet_SD(result, driver, &devCount, devices.data());
   return result == ZE_RESULT_SUCCESS ? devices : std::vector<ze_device_handle_t>();
 }
@@ -402,7 +400,7 @@ ze_device_handle_t GetGPUDevice(CStateDynamic& sd, const CDriver& cDriver) {
   for (auto& device : sd.Map<CDeviceState>()) {
     ze_device_properties_t deviceProperties = {};
     if (device.second->properties.deviceId == 0 &&
-        drv.zeDeviceGetProperties(device.first, &deviceProperties) == ZE_RESULT_SUCCESS &&
+        drv.inject.zeDeviceGetProperties(device.first, &deviceProperties) == ZE_RESULT_SUCCESS &&
         deviceProperties.type == ZE_DEVICE_TYPE_GPU) {
       sd.Get<CDeviceState>(device.first, EXCEPTION_MESSAGE).properties = deviceProperties;
       deviceHandle = device.first;
@@ -415,7 +413,7 @@ ze_device_handle_t GetGPUDevice(CStateDynamic& sd, const CDriver& cDriver) {
     std::vector<ze_device_handle_t> devices = GetDevices(cDriver, driver);
     for (auto& device : devices) {
       ze_device_properties_t deviceProperties = {};
-      if (drv.zeDeviceGetProperties(device, &deviceProperties) == ZE_RESULT_SUCCESS &&
+      if (drv.inject.zeDeviceGetProperties(device, &deviceProperties) == ZE_RESULT_SUCCESS &&
           deviceProperties.type == ZE_DEVICE_TYPE_GPU) {
         sd.Get<CDeviceState>(device, EXCEPTION_MESSAGE).properties = deviceProperties;
         deviceHandle = device;
@@ -444,7 +442,7 @@ ze_command_list_handle_t GetCommandListImmediate(CStateDynamic& sd,
   ze_command_list_handle_t handle;
   ze_command_queue_desc_t desc = {};
   desc.mode = ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS;
-  const auto errCode = driver.zeCommandListCreateImmediate(context, device, &desc, &handle);
+  const auto errCode = driver.inject.zeCommandListCreateImmediate(context, device, &desc, &handle);
   if (err != nullptr) {
     *err = errCode;
   }
