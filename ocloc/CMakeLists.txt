@@ -37,15 +37,20 @@ target_link_libraries(ocloc_recorder Boost::filesystem)
 
 include_directories(recorder)
 
-add_library(ocloc_interceptor SHARED
+list(APPEND ocloc_interceptor_files
   ../common/exception.cpp
   ../common/dynamic_linker.cpp
   ../recorder/gitsLoader.cpp
+  ../common/log.cpp
   interceptor/gitsPluginOcloc.cpp
   interceptor/include/gitsPluginOcloc.h
   interceptor/oclocEntryPoints.cpp
-  ../common/log.cpp
 )
+if(WIN32)
+  list(APPEND ocloc_interceptor_files ../common/tools_windows.cpp)
+endif()
+
+add_library(ocloc_interceptor SHARED ${ocloc_interceptor_files})
 include_directories(interceptor/include)
 target_link_libraries(ocloc_interceptor Boost::thread Boost::filesystem)
 

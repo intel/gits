@@ -98,26 +98,28 @@ if(MSVC)
   )
 endif()
 
+list(APPEND OpenCL_interceptor_external_cpps
+  ../common/exception.cpp
+  ../common/dynamic_linker.cpp
+  ../recorder/gitsLoader.cpp
+  ../common/log.cpp
+)
+if(WIN32)
+  list(APPEND OpenCL_interceptor_external_cpps ../common/tools_windows.cpp)
+endif()
+
 add_library(OpenCL_interceptor SHARED
   interceptor/include/gitsPluginOpenCL.h
   interceptor/include/openclExecWrap.h
 
-  ../common/exception.cpp
-  ../common/dynamic_linker.cpp
-  ../recorder/gitsLoader.cpp
+  ${OpenCL_interceptor_external_cpps}
   interceptor/gitsPluginOpenCL.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/openclPrePostAuto.cpp
-  ../common/log.cpp
   ${OpenCL_DEF}
 )
 
-source_group("External Files" FILES
-  ../common/exception.cpp
-  ../common/dynamic_linker.cpp
-  ../recorder/gitsLoader.cpp
-  ../common/log.cpp)
+source_group("External Files" FILES ${OpenCL_interceptor_external_cpps})
 source_group("Generated Files" FILES ${OpenCL_DEF} REGULAR_EXPRESSION ".*Auto.*")
-
 
 set_target_properties(OpenCL_interceptor PROPERTIES OUTPUT_NAME OpenCL)
 if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")

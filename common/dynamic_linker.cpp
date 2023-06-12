@@ -9,9 +9,11 @@
 #include "exception.h"
 #include "platform.h"
 #ifdef GITS_PLATFORM_WINDOWS
+#include "tools_windows.h"
 #include <windows.h>
 #include <psapi.h>
 #include <vector>
+#include <string>
 #else
 #include <dlfcn.h>
 #endif
@@ -54,10 +56,9 @@ void* load_symbol(SharedObject lib, const char* name) {
 }
 
 const char* last_error() {
-  static char buffer[1024];
-  FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, 0, last_error_value,
-                LOCALE_USER_DEFAULT, buffer, sizeof(buffer), 0);
-  return buffer;
+  static std::string err_str;
+  err_str = gits::Win32ErrorToString(last_error_value);
+  return err_str.c_str();
 }
 
 SharedObject symbol_library(const void* symbol) {

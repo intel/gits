@@ -19,25 +19,27 @@ endif()
 
 add_definitions(-DBUILD_FOR_VULKAN_LAYER)
 
+list(APPEND Vulkan_layer_external_cpps
+  ../../common/exception.cpp
+  ../../common/dynamic_linker.cpp
+  ../../recorder/gitsLoader.cpp
+  ../../common/log.cpp
+)
+if(WIN32)
+  list(APPEND Vulkan_layer_external_cpps ../../common/tools_windows.cpp)
+endif()
+
 add_library(Vulkan_layer SHARED
   ../interceptor/include/gitsPluginVulkan.h
   ../interceptor/include/vulkanExecWrap.h
 
-  ../../common/exception.cpp
-  ../../common/dynamic_linker.cpp
-  ../../recorder/gitsLoader.cpp
+  ${Vulkan_layer_external_cpps}
   ../interceptor/include/gitsPluginVulkan.cpp
   ../interceptor/vulkanPrePostAuto.cpp
-  ../../common/log.cpp
   ${VulkanLayer_DEF}
 )
 
-source_group("External Files" FILES
-  ../../common/exception.cpp
-  ../../common/dynamic_linker.cpp
-  ../../recorder/gitsLoader.cpp
-  ../../common/log.cpp
-)
+source_group("External Files" FILES ${Vulkan_layer_external_cpps})
 source_group("Generated Files" FILES ${VulkanLayer_DEF} REGULAR_EXPRESSION ".*Auto.*")
 
 if(MSVC)

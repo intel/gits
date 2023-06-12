@@ -82,6 +82,9 @@ FILE(GLOB CCodeProject_SOURCES
   ${PROJECT_SOURCE_DIR}/CCodeSource/helperVk.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/mapping.cpp
 )
+if(WIN32)
+  list(APPEND CCodeProject_SOURCES ${PROJECT_SOURCE_DIR}/CCodeSource/tools_windows.cpp)
+endif()
 
 add_executable(CCodeProject ${CCodeProject_SOURCES})
 if(MSVC)

@@ -143,7 +143,7 @@ add_library(L0_recorder
 )
 include_directories(recorder/include)
 
-set(L0_interceptor_sources 
+set(L0_interceptor_sources
   ../common/exception.cpp
   ../common/dynamic_linker.cpp
   ../recorder/gitsLoader.cpp
@@ -153,6 +153,9 @@ set(L0_interceptor_sources
   ${CMAKE_CURRENT_BINARY_DIR}/l0EntryPoints.cpp
   ../common/log.cpp
 )
+if(WIN32)
+  list(APPEND L0_interceptor_sources ../common/tools_windows.cpp)
+endif()
 
 if (NOT MSVC)
   set(L0_interceptor_sources

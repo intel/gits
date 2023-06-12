@@ -27,6 +27,17 @@ if(MSVC)
   endif()
 endif()
 
+list(APPEND OpenGL_interceptor_external_cpps
+  ../../common/exception.cpp
+  ../../common/timer.cpp
+  ../../common/dynamic_linker.cpp
+  ../../recorder/gitsLoader.cpp
+  ../../common/log.cpp
+)
+if(WIN32)
+  list(APPEND OpenGL_interceptor_external_cpps ../../common/tools_windows.cpp)
+endif()
+
 add_library(OpenGL_interceptor SHARED
   include/functionMap.h
   include/gitsPlugin.h
@@ -34,23 +45,14 @@ add_library(OpenGL_interceptor SHARED
   include/gitsPluginPrePostAuto.h
   include/openglInterceptorExecOverride.h
 
-  ../../common/exception.cpp
-  ../../common/timer.cpp
-  ../../common/dynamic_linker.cpp
-  ../../recorder/gitsLoader.cpp
+  ${OpenGL_interceptor_external_cpps}
   gitsPlugin.cpp
   gitsPluginPrePost.cpp
   gitsPluginPrePostAuto.cpp
-  ../../common/log.cpp
   ${OpenGL_DEF}
 )
 
-source_group("External Files" FILES
-  ../../common/exception.cpp
-  ../../common/timer.cpp
-  ../../common/dynamic_linker.cpp
-  ../../recorder/gitsLoader.cpp
-  ../../common/log.cpp)
+source_group("External Files" FILES ${OpenGL_interceptor_external_cpps})
 source_group("Generated Files" FILES ${OpenGL_DEF} REGULAR_EXPRESSION ".*Auto.*")
 
 if(NOT MSVC)
