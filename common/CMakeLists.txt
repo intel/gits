@@ -88,6 +88,12 @@ list(APPEND common_SOURCES
   ccodeWriteWrap.cpp
   renderDocUtil.cpp
 )
+if(WIN32)
+  list(APPEND common_SOURCES
+    include/tools_windows.h
+    tools_windows.cpp
+  )
+endif()
 
 add_library(common ${common_SOURCES})
 
@@ -114,6 +120,9 @@ set(common_CCode_SOURCES
   dynamic_linker.cpp
   keyEvents.cpp
   getopt.cpp)
+if(WIN32)
+  list(APPEND common_CCode_SOURCES tools_windows.cpp)
+endif()
 
 set(common_CCode_HEADERS
   include/timer.h
@@ -134,6 +143,9 @@ set(common_CCode_HEADERS
   include/bit_range.h
   include/keyEvents.h
   include/getopt_.h)
+if(WIN32)
+  list(APPEND common_CCode_HEADERS include/tools_windows.h)
+endif()
 
 install(FILES ${common_CCode_SOURCES} DESTINATION CCode/CCodeSource)
 install(FILES ${common_CCode_HEADERS} DESTINATION CCode/CCodeSource/include)
