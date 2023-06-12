@@ -14,6 +14,7 @@
 #include "openglDrivers.h"
 #ifdef GITS_PLATFORM_WINDOWS
 #include <Windows.h>
+#include "tools_windows.h"
 #endif
 
 #include "ptbl_wglLibrary.h"
@@ -354,7 +355,7 @@ BOOL wglMakeCurrent_checked(HDC hdc, HGLRC hglrc) {
 
   DWORD err = GetLastError();
   if (err != 0 || retval != TRUE) {
-    Log(WARN) << "wglMakeCurrent failed. Error: " << err;
+    Log(WARN) << "wglMakeCurrent failed. Error: " << Win32ErrorToString(err);
   }
   return retval;
 #else
@@ -662,7 +663,7 @@ void helperChoosePFWGL(PtblHandle hdc, PtblHandle pformat) {
   drv.wgl.wglChoosePixelFormatARB(hdc.True(), &pfattribs[0], NULL, 1, &pf, &num);
   DWORD err = GetLastError();
   if (num == 0 || pf == 0) {
-    Log(ERR) << "No pixel format chosen for passed attribs. Error: " << err;
+    Log(ERR) << "No pixel format chosen for passed attribs. Error: " << Win32ErrorToString(err);
     Log(ERR) << "Consider using the --minimalConfig option. See the user guide for more info.";
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
@@ -679,7 +680,8 @@ void helperSetPFWGL(PtblHandle hdc, PtblHandle pformat) {
   SetPixelFormat(hdc.True(), pformat.True(), &ppfd);
   DWORD err = GetLastError();
   if (err != 0) {
-    Log(ERR) << "SetPixelFormat failed for pf=" << (int)pformat.True() << ". Error: " << err;
+    Log(ERR) << "SetPixelFormat failed for pf=" << (int)pformat.True()
+             << ". Error: " << Win32ErrorToString(err);
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 }
@@ -748,7 +750,7 @@ void helperPrepareContextWGL(PtblHandle hdc, PtblHandle ctx) {
   HGLRC truectx = drv.wgl.wglCreateContextAttribsARB(hdc.True(), shareCtx, &params[0]);
   DWORD err = GetLastError();
   if (err != 0) {
-    Log(ERR) << "wglCreateContextAttribsARB failed. Error: " << err;
+    Log(ERR) << "wglCreateContextAttribsARB failed. Error: " << Win32ErrorToString(err);
     if (truectx == 0) {
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
@@ -796,7 +798,7 @@ void gits::OpenGL::execHelperCreatePBufferWGL(PtblHandle surf, PtblHandle format
       drv.wgl.wglCreatePbufferARB(baseHDC, format.True(), surfdata.width, surfdata.height, attribs);
   DWORD err = GetLastError();
   if (err != 0) {
-    Log(ERR) << "wglCreatePbufferARB failed. Error: " << err;
+    Log(ERR) << "wglCreatePbufferARB failed. Error: " << Win32ErrorToString(err);
     if (truePbuff == 0) {
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }

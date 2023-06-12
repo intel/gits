@@ -12,6 +12,7 @@
 #include "platform.h"
 #ifdef GITS_PLATFORM_WINDOWS
 #include <windows.h>
+#include "tools_windows.h"
 #else
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -144,7 +145,7 @@ bool SetPagesProtection(PageMemoryProtection access, void* ptr, size_t size) {
   DWORD prevProtection;
 
   if (VirtualProtect(rangeBeginPage, rangeSizeWholePages, winAccess, &prevProtection) == 0) {
-    DWORD result = GetLastError();
+    std::string errorStr = gits::Win32ErrorToString(GetLastError());
     std::string winAccessStr;
     switch (winAccess) {
     case PAGE_READONLY:
@@ -163,7 +164,7 @@ bool SetPagesProtection(PageMemoryProtection access, void* ptr, size_t size) {
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
     Log(WARN) << "VirtualProtect API failed on changing memory ptr: " << ptr << " of size: " << size
-              << " to " << winAccessStr << " with error: " << result << std::endl;
+              << " to " << winAccessStr << " with error: " << errorStr << std::endl;
     return false;
   }
   return true;

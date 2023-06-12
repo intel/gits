@@ -13,6 +13,7 @@
 #if defined GITS_PLATFORM_WINDOWS
 #include <Windows.h>
 #include <windowsx.h>
+#include "tools_windows.h"
 #endif
 
 #include "gits.h"
@@ -116,7 +117,7 @@ win_ptr_t CreateWin(int width, int height, int x, int y, bool show) {
   if (win == 0) {
     throw std::runtime_error("CreateWindowEx failed.\n"
                              "  GetLastError() = " +
-                             std::to_string(GetLastError()));
+                             gits::Win32ErrorToString(GetLastError()));
   }
 
   if (show && !gits::Config::Get().player.forceInvisibleWindows) {
@@ -137,7 +138,7 @@ void ResizeWin(win_ptr_t winptr, int width, int height) {
     throw std::runtime_error("Window_::set_size failed.\n"
                              "  SetWindowPos returned 0.\n"
                              "  GetLastError() = " +
-                             std::to_string(GetLastError()));
+                             gits::Win32ErrorToString(GetLastError()));
   }
   if (gits::Config::Get().player.windowMode == gits::Config::WindowMode::EXCLUSIVE_FULLSCREEN) {
     DEVMODE devMode = {};
@@ -163,7 +164,7 @@ void MoveWin(win_ptr_t winptr, int x, int y) {
       throw std::runtime_error("Window_::set_position failed.\n"
                                "  SetWindowPos returned 0.\n"
                                "  GetLastError() = " +
-                               std::to_string(GetLastError()));
+                               gits::Win32ErrorToString(GetLastError()));
     }
   }
 }
@@ -181,7 +182,7 @@ void WinTitle(win_ptr_t winptr, const std::string& title) {
     throw std::runtime_error("Window_::set_title failed.\n"
                              "  SetWindowText returned 0\n"
                              "  GetLastError() = " +
-                             std::to_string(GetLastError()));
+                             gits::Win32ErrorToString(GetLastError()));
   }
 }
 

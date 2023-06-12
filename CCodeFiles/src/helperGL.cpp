@@ -9,6 +9,7 @@
 #include "platform.h"
 #ifdef GITS_PLATFORM_WINDOWS
 #include <Windows.h>
+#include "tools_windows.h"
 #endif
 
 #include "helperGL.h"
@@ -538,7 +539,7 @@ BOOL wglMakeCurrent_wrap(ObjName org_hdc,
   UpdateWindows_(org_hwnd, winparams, wp_size, hwnd_del_list, dw_size);
   auto ret = api::wglMakeCurrent(UpdateHDC(org_hdc, org_hwnd), ctx);
   if (ret == 0) {
-    Log(WARN) << "wglMakeCurrent failed, GetLastError() == " << GetLastError();
+    Log(WARN) << "wglMakeCurrent failed, GetLastError() == " << Win32ErrorToString(GetLastError());
   } else {
     gits::OpenGL::SD().SetCurrentContext(ctx);
   }
