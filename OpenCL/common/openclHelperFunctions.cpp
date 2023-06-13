@@ -36,7 +36,11 @@ gits::OpenCL::CGitsClMemoryUpdate::CGitsClMemoryUpdate(void* ptr) {
   std::memcpy(buffer.data(), _ptr, buffer.size());
   _resource.reset(RESOURCE_DATA_RAW, (const char*)buffer.data(), buffer.size());
   (**handle).Reset();
-  oclIFace.MemorySnifferProtect(handle);
+  if (!(**handle).Protected()) {
+    // do nothing
+  } else {
+    oclIFace.MemorySnifferProtect(handle);
+  }
 }
 
 void gits::OpenCL::CGitsClMemoryUpdate::Write(CCodeOStream& stream) const {

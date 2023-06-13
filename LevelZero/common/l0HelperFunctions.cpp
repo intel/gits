@@ -24,7 +24,11 @@ gits::l0::CGitsL0MemoryUpdate::CGitsL0MemoryUpdate(const void* usmPtr) {
   auto& handle = memoryState.sniffedRegionHandle;
   (**handle).Reset();
   const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
-  l0IFace.MemorySnifferProtect(handle);
+  if (!(**handle).Protected()) {
+    // do nothing
+  } else {
+    l0IFace.MemorySnifferProtect(handle);
+  }
 }
 
 void gits::l0::CGitsL0MemoryUpdate::Write(CCodeOStream& /*stream*/) const {
