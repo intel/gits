@@ -280,7 +280,7 @@ class BoostLinuxArm(BoostLinux):
 
 class Lua(Repository):
     def set_branch(self):
-        self.branch = "v5.4.4"
+        self.branch = "v5.4.6"
 
     def init(self):
         self.name = "lua"
