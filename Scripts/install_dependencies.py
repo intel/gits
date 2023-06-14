@@ -77,6 +77,8 @@ class Repository:
         self.os = None
         self.long_paths = False
         self.modules = []
+        if not THIRD_PARTY_PATH.exists():
+            THIRD_PARTY_PATH.mkdir()
         self.set_branch()
         self.set_commit()
         self.init()
