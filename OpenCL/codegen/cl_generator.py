@@ -35,6 +35,8 @@ def _token_default_body(func):
         arguments_list_with_token = list(arguments_with_ret_deref)
         if func.get('passToken'):
             arguments_list_with_token.insert(0, ('CFunction*', 'this'))
+        elif func.get('passNullToken'):
+            arguments_list_with_token.insert(0, ('CFunction*', 'nullptr'))
         run += '\n  ' + cl_utils.format_function_call(func['stateTrackName'] + '_SD', arguments_list_with_token) + ';'
     return run
 

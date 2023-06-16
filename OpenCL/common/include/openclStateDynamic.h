@@ -157,6 +157,7 @@ public:
 class CCLProgramState : public CCLState {
 public:
   bool isBinary = false;
+  std::string fileName;
 
   CCLProgramState();
   // clCreateProgramFromSource
@@ -208,13 +209,12 @@ public:
   const size_t BinariesCount() const;
   const cl_uint DevicesCount() const;
   const std::string KernelNames() const;
-  const std::string Filename() const;
   const bool IsIL() const;
   const std::vector<std::string> HeaderIncludeNames() const;
   const std::vector<cl_program> InputProgramList() const;
   const std::vector<cl_program> InputHeaders() const;
   const bool HasHeaders() const;
-  const std::unordered_map<cl_program, std::shared_ptr<CCLProgramState>> GetProgramStates() const;
+  const std::map<cl_program, std::shared_ptr<CCLProgramState>> GetProgramStates() const;
   void ReallocBinaries();
   void AppendGlobalPointer(void* globalPtr);
   std::vector<void*> GetGlobalPointers() const;
@@ -257,8 +257,7 @@ private:
   std::vector<string> _headerIncludeNames;
   std::string _kernelNames;
   std::string _buildOptions;
-  std::string _filename;
-  std::unordered_map<cl_program, std::shared_ptr<CCLProgramState>> _stateProgs;
+  std::map<cl_program, std::shared_ptr<CCLProgramState>> _stateProgs;
   std::vector<void*> _globalPtrs;
   cl_program _prebuiltProgram = nullptr;
   std::vector<uint64_t> _binaryHash;
@@ -399,26 +398,32 @@ struct CCLMappedBufferState : public CCLState {
 class LayoutBuilder {
 private:
   boost::property_tree::ptree _layout;
-  const CCLKernelState* _kernelState = nullptr;
+  boost::property_tree::ptree _clKernels;
   std::string _latestFileName;
-  int _argNumber = 0;
   int _enqueueCallNumber = 0;
-  bool _buffer = false;
-  cl_image_format _image_format = {};
-  cl_image_desc _image_desc = {};
-  std::string _GetKeyName();
-  std::unordered_map<std::string, std::string> _buildOptions;
-  std::string _BuildFileName();
-  void _AddBuffer();
-  void _AddImage();
-  void _SaveBuildOptions();
+  std::string BuildFileName(const int argNumber, const bool isBuffer = true);
+  std::string GetExecutionKeyId();
+  boost::property_tree::ptree GetImageDescription(const cl_image_format& imageFormat,
+                                                  const cl_image_desc& imageDesc);
+  std::string ModifyRecorderBuildOptions(const std::string& options, const bool& hasHeaders);
 
 public:
   LayoutBuilder();
-  void AddBuildOptions(const CCLKernelState& ks);
   void UpdateLayout(const CCLKernelState& ks, int enqNum, int argNum);
-  std::string GetFileName();
+  std::string GetFileName() const;
   void SaveLayoutToJsonFile();
+  template <typename T, typename K>
+  void Add(const T& key, const K& value) {
+    std::stringstream ss;
+    ss << GetExecutionKeyId() << "." << key;
+    _clKernels.add(ss.str(), value);
+  }
+  template <typename T, typename K>
+  void AddChild(const T& key, const K& value) {
+    std::stringstream ss;
+    ss << GetExecutionKeyId() << "." << key;
+    _clKernels.add_child(ss.str(), value);
+  }
 };
 
 /************************************************************************/

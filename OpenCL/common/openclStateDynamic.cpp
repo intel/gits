@@ -16,6 +16,7 @@
 #include "openclStateDynamic.h"
 #include "gits.h"
 #include "openclTools.h"
+#include <string>
 
 namespace gits {
 namespace OpenCL {
@@ -200,10 +201,7 @@ CCLProgramState::CCLProgramState(cl_context context,
                                  const char** sources,
                                  const size_t* lengths,
                                  std::string filename)
-    : _uniqueStateID(GetUniqueStateID()),
-      _context(context),
-      _num_devices(0),
-      _filename(std::move(filename)) {
+    : fileName(std::move(filename)), _uniqueStateID(GetUniqueStateID()), _context(context) {
   Sources(num, sources, lengths);
   _headerIncludeNames =
       GetStringsWithRegex(*sources, R"((?<=^#include)\s*["<]([^">]+))", "\\s*[<\"]*");
@@ -328,10 +326,6 @@ const cl_uint CCLProgramState::SourcesCount() {
   return static_cast<cl_uint>(_cStrArray.size());
 }
 
-const std::string CCLProgramState::Filename() const {
-  return _filename;
-}
-
 const bool CCLProgramState::IsIL() const {
   return _il;
 }
@@ -437,8 +431,8 @@ void CCLProgramState::UpdateBinariesPtrs() {
   }
 }
 
-const std::unordered_map<cl_program, std::shared_ptr<CCLProgramState>> CCLProgramState::
-    GetProgramStates() const {
+const std::map<cl_program, std::shared_ptr<CCLProgramState>> CCLProgramState::GetProgramStates()
+    const {
   return _stateProgs;
 }
 
@@ -658,45 +652,89 @@ CCLMappedBufferState::CCLMappedBufferState(const size_t& size,
       commandQueue(commandQueue),
       mapFlags(mapFlags) {}
 
-LayoutBuilder::LayoutBuilder()
-    : _layout(),
-      _kernelState(nullptr),
-      _latestFileName(""),
-      _argNumber(0),
-      _enqueueCallNumber(0),
-      _buffer(true) {}
+LayoutBuilder::LayoutBuilder() {
+  _layout.add("version", "1.0");
+}
 
-void LayoutBuilder::UpdateLayout(const CCLKernelState& ks, int enqNum, int argNum) {
-  _kernelState = &ks;
-  _argNumber = argNum;
-  const auto& arg = ks.GetArgument(argNum);
-  if (_enqueueCallNumber != enqNum) {
-    AddBuildOptions(ks);
-    _SaveBuildOptions();
-    _enqueueCallNumber = enqNum;
+std::string LayoutBuilder::ModifyRecorderBuildOptions(const std::string& options,
+                                                      const bool& hasHeaders) {
+  std::string new_options = options;
+  if (Config::IsRecorder()) {
+    new_options = AppendKernelArgInfoOption(new_options);
+    new_options = AppendStreamPathToIncludePath(new_options, hasHeaders);
   }
+  return new_options;
+}
+
+void LayoutBuilder::UpdateLayout(const CCLKernelState& ks, int enqNum, int argIndex) {
+  _enqueueCallNumber = enqNum;
+  if (_clKernels.find(GetExecutionKeyId()) == _clKernels.not_found()) {
+    Add("kernel_name", ks.name);
+    if (!ks.programState->GetProgramStates().empty()) {
+      std::vector<std::string> fileNames;
+      boost::property_tree::ptree sources;
+      for (const auto& progState : ks.programState->GetProgramStates()) {
+        boost::property_tree::ptree linkFile;
+        linkFile.add("name", progState.second->fileName);
+        const auto options = ModifyRecorderBuildOptions(progState.second->BuildOptions(),
+                                                        ks.programState->HasHeaders());
+        linkFile.add("build_options", options);
+        sources.push_back(std::make_pair("", linkFile));
+      }
+      AddChild("kernel_source", sources);
+    } else {
+      Add("kernel_source", ks.programState->fileName);
+    }
+    const auto options =
+        ModifyRecorderBuildOptions(ks.programState->BuildOptions(), ks.programState->HasHeaders());
+    Add("build_options", options);
+  }
+
+  const auto& arg = ks.GetArgument(argIndex);
+  const auto argKey = "args." + std::to_string(argIndex);
   if (arg.type == KernelArgType::mem) {
     const auto& memState =
         SD().GetMemState(*reinterpret_cast<const cl_mem*>(arg.argValue), EXCEPTION_MESSAGE);
     if (memState.image) {
-      _image_desc = memState.image_desc;
-      _image_format = memState.image_format;
-      _buffer = false;
-      return _AddImage();
+      boost::property_tree::ptree imageArgument;
+      const auto imageDescription = GetImageDescription(memState.image_format, memState.image_desc);
+      imageArgument.add_child(BuildFileName(argIndex, false), imageDescription);
+      AddChild(argKey, imageArgument);
+      return;
     }
   }
-  _buffer = true;
-  return _AddBuffer();
+  Add(argKey, BuildFileName(argIndex));
 }
 
-std::string LayoutBuilder::GetFileName() {
+boost::property_tree::ptree LayoutBuilder::GetImageDescription(const cl_image_format& imageFormat,
+                                                               const cl_image_desc& imageDesc) {
+  boost::property_tree::ptree imageDescription;
+  const auto sizes = GetSimplifiedImageSizes(imageDesc);
+  const auto width = sizes[0];
+  const auto height = sizes[1];
+  const auto depth = sizes[2];
+  const std::string image_type =
+      get_texel_format_string(GetTexelToConvertFromImageFormat(imageFormat));
+  imageDescription.add("image_type", image_type);
+  imageDescription.add("image_width", width);
+  imageDescription.add("image_height", height);
+  imageDescription.add("image_depth", depth);
+  return imageDescription;
+}
+
+std::string LayoutBuilder::GetExecutionKeyId() {
+  return std::to_string(_enqueueCallNumber);
+}
+
+std::string LayoutBuilder::GetFileName() const {
   return _latestFileName;
 }
 
 void LayoutBuilder::SaveLayoutToJsonFile() {
-  if (_layout.empty()) {
+  if (_clKernels.empty()) {
     return;
   }
+  _layout.add_child("cl_kernels", _clKernels);
   const auto& cfg = Config::Get();
   bfs::path path =
       (cfg.player.outputDir.empty() ? cfg.common.streamDir / "dump" : cfg.player.outputDir) /
@@ -704,63 +742,16 @@ void LayoutBuilder::SaveLayoutToJsonFile() {
   SaveJsonFile(_layout, path);
 }
 
-std::string LayoutBuilder::_GetKeyName() {
-  std::stringstream ss;
-  ss << _kernelState->name << ".clEnqueueNDRangeKernel." << _enqueueCallNumber << ".arg_"
-     << _argNumber;
-  return ss.str();
-}
-
-void LayoutBuilder::AddBuildOptions(const CCLKernelState& ks) {
-  _kernelState = &ks;
-  if (_kernelState->programState->isBinary) {
-    return;
-  }
-
-  std::string options = _kernelState->programState->BuildOptions();
-  if (Config::Get().IsRecorder()) {
-    options = AppendKernelArgInfoOption(options);
-    options = AppendStreamPathToIncludePath(options, _kernelState->programState->HasHeaders());
-  }
-  _buildOptions[ks.name] = options;
-}
-
-void LayoutBuilder::_SaveBuildOptions() {
-  std::string key(_kernelState->name + ".build_options");
-  std::string pathToBuildOptions(_layout.get<std::string>(key, ""));
-  if (pathToBuildOptions.empty() && _buildOptions[_kernelState->name] != "") {
-    _layout.add(key, _buildOptions[_kernelState->name]);
-  }
-}
-
-std::string LayoutBuilder::_BuildFileName() {
+std::string LayoutBuilder::BuildFileName(const int argNumber, const bool isBuffer) {
   static int fileCounter = 1;
   std::stringstream fileName;
-  _buffer ? fileName << "NDRangeBuffer_" << _enqueueCallNumber << "_arg_" << _argNumber << "_"
-                     << fileCounter++
-          : fileName << "NDRangeImage_" << _enqueueCallNumber << "_arg_" << _argNumber << "_"
-                     << fileCounter++;
+  isBuffer ? fileName << "NDRangeBuffer_" << _enqueueCallNumber << "_arg_" << argNumber << "_"
+                      << fileCounter++
+           : fileName << "NDRangeImage_" << _enqueueCallNumber << "_arg_" << argNumber << "_"
+                      << fileCounter++;
   _latestFileName = fileName.str();
   return _latestFileName;
 }
 
-void LayoutBuilder::_AddBuffer() {
-  _layout.add(_GetKeyName(), _BuildFileName());
-}
-
-void LayoutBuilder::_AddImage() {
-  boost::property_tree::ptree ptTemp, imageDescription;
-  std::array<size_t, 3> sizes = GetSimplifiedImageSizes(_image_desc);
-  size_t width = sizes[0], height = sizes[1], depth = sizes[2];
-  std::string image_type = get_texel_format_string(GetTexelToConvertFromImageFormat(_image_format));
-
-  imageDescription.add("image_type", image_type);
-  imageDescription.add("image_width", width);
-  imageDescription.add("image_height", height);
-  imageDescription.add("image_depth", depth);
-
-  ptTemp.add_child(_BuildFileName(), imageDescription);
-  _layout.add_child(_GetKeyName(), ptTemp);
-}
 } // namespace OpenCL
 } // namespace gits

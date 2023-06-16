@@ -270,5 +270,6 @@ std::vector<uint64_t> HashBinaryData(const size_t& n,
                                      const size_t* lengths);
 cl_device_type GetDeviceType(const cl_device_id& device);
 std::pair<void*, uint32_t> GetOriginalMappedPtrFromRegion(void* originalPtr);
+std::string AppendBuildOption(const std::string& options, const std::string& optionToAppend);
 } // namespace OpenCL
 } // namespace gits

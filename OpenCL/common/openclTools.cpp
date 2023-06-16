@@ -1338,21 +1338,35 @@ cl_command_queue GetCommandQueue(const cl_context& context,
   return cq;
 }
 
+std::string AppendBuildOption(const std::string& options, const std::string& optionToAppend) {
+  if (options.find(optionToAppend) == std::string::npos) {
+    return options + " " + optionToAppend;
+  }
+  return options;
+}
+
 std::string AppendKernelArgInfoOption(const std::string& options) {
-  constexpr auto option = "-cl-kernel-arg-info";
-  if (Config::Get().player.clOmitReadOnlyObjects && options.find(option) == std::string::npos) {
-    return options + " " + option;
+  const std::string kernelArgInfoOption = "-cl-kernel-arg-info";
+  if (Config::Get().player.clOmitReadOnlyObjects) {
+    return AppendBuildOption(options, kernelArgInfoOption);
   }
   return options;
 }
 
 std::string AppendStreamPathToIncludePath(const std::string& options, const bool& hasHeaders) {
   const auto& cfg = Config::Get();
-  std::string new_options = options;
-  new_options += " -I \"" + cfg.common.streamDir.string() + "\"";
-  new_options += " -I \"" + (cfg.common.streamDir / "clPrograms").string() + "\"";
+
+  const std::string includeStreamDir = "-I \"" + cfg.common.streamDir.string() + "\"";
+  std::string new_options = AppendBuildOption(options, includeStreamDir);
+
+  const std::string includeClProgramsDir =
+      "-I \"" + (cfg.common.streamDir / "clPrograms").string() + "\"";
+  new_options = AppendBuildOption(new_options, includeClProgramsDir);
+
   if (hasHeaders) {
-    new_options += " -I \"" + (cfg.common.streamDir / "gitsFiles").string() + "\"";
+    const std::string includeGitsFiles =
+        "-I \"" + (cfg.common.streamDir / "gitsFiles").string() + "\"";
+    new_options = AppendBuildOption(new_options, includeGitsFiles);
   }
   return new_options;
 }

@@ -214,6 +214,7 @@ public:
   virtual std::string ToString() const {
     return "binaries";
   }
+  std::vector<std::string> FileNames() const;
 };
 
 /* *************************** POINTERS ******************************** */

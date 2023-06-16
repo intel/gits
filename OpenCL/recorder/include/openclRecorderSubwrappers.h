@@ -2382,8 +2382,8 @@ inline void clCreateProgramWithBinary_V1_RECWRAP(CRecorder& recorder,
                                               lengths, binaries, binary_status, errcode_ret);
     recorder.Schedule(token);
   }
-  clCreateProgramWithBinary_SD(return_value, context, num_devices, device_list, lengths, binaries,
-                               binary_status, errcode_ret);
+  clCreateProgramWithBinary_SD(token, return_value, context, num_devices, device_list, lengths,
+                               binaries, binary_status, errcode_ret);
   if (token != nullptr && ErrCodeSuccess(errcode_ret)) {
     auto& cBinaryArray = dynamic_cast<CBinariesArray_V1&>(token->Argument(4U));
     if (cBinaryArray.GetProgramBinaryLink() == ProgramBinaryLink::program) {

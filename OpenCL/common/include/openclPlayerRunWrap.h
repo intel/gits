@@ -1271,7 +1271,8 @@ inline void clGitsIndirectAllocationOffsets_RUNWRAP(CCLMappedPtr& _pAlloc,
   clGitsIndirectAllocationOffsets_SD(*_pAlloc, *_numOffsets, *_pOffsets);
 }
 
-inline void clCreateProgramWithBinary_V1_RUNWRAP(Ccl_program& _return_value,
+inline void clCreateProgramWithBinary_V1_RUNWRAP(CFunction* token,
+                                                 Ccl_program& _return_value,
                                                  Ccl_context& _context,
                                                  Ccl_uint& _num_devices,
                                                  Ccl_device_id::CSArray& _device_list,
@@ -1292,8 +1293,8 @@ inline void clCreateProgramWithBinary_V1_RUNWRAP(Ccl_program& _return_value,
   _return_value.Assign(drvOcl.clCreateProgramWithBinary(*_context, *_num_devices, *_device_list,
                                                         lengths, *_binaries, *_binary_status,
                                                         *_errcode_ret));
-  clCreateProgramWithBinary_SD(*_return_value, *_context, *_num_devices, *_device_list, lengths,
-                               *_binaries, *_binary_status, *_errcode_ret);
+  clCreateProgramWithBinary_SD(token, *_return_value, *_context, *_num_devices, *_device_list,
+                               lengths, *_binaries, *_binary_status, *_errcode_ret);
   if (program != nullptr) {
     SD().GetProgramState(*_return_value, EXCEPTION_MESSAGE).SetBinaryLinkedProgram(program);
   }

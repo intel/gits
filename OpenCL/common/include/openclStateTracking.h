@@ -38,8 +38,8 @@ inline void clBuildProgram_SD(cl_int return_value,
     if (programState->HasHeaders()) {
       CreateHeaderFiles(programState->HeaderIncludeNames(), GetIncludePaths(options));
     }
-    if (!programState->Filename().empty()) {
-      Log(TRACE) << "^------------- Building file " << programState->Filename();
+    if (!programState->fileName.empty()) {
+      Log(TRACE) << "^------------- Building file " << programState->fileName;
     }
     programState->BuildProgram(num_devices, options);
     auto* prog = programState->GetBinaryLinkedProgram();
@@ -309,9 +309,9 @@ inline void clCreateKernel_SD(cl_kernel return_value,
     auto& kernelState = SD()._kernelStates[return_value];
     kernelState.reset(new CCLKernelState(program, kernel_name));
     kernelState->Retain();
-    if (!SD().GetProgramState(program, EXCEPTION_MESSAGE).isBinary) {
-      SD().layoutBuilder.AddBuildOptions(*kernelState);
-    }
+    // if (!SD().GetProgramState(program, EXCEPTION_MESSAGE).isBinary) {
+    //   SD().layoutBuilder.AddBuildOptions(*kernelState);
+    // }
   }
 }
 
@@ -334,7 +334,8 @@ inline void clCreateKernelsInProgram_SD(cl_int return_value,
   }
 }
 
-inline void clCreateProgramWithBinary_SD(cl_program return_value,
+inline void clCreateProgramWithBinary_SD(CFunction* token,
+                                         cl_program return_value,
                                          cl_context context,
                                          cl_uint num_devices,
                                          const cl_device_id* device_list,
@@ -346,6 +347,10 @@ inline void clCreateProgramWithBinary_SD(cl_program return_value,
     auto& programState = SD()._programStates[return_value];
     programState.reset(new CCLProgramState(context, num_devices, device_list, binaries, lengths));
     programState->Retain();
+    if (token != nullptr) {
+      auto& cBinaryArray = dynamic_cast<CBinariesArray_V1&>(token->Argument(4U));
+      programState->fileName = cBinaryArray.FileNames()[0];
+    }
   }
 }
 
@@ -389,6 +394,9 @@ inline void clCreateProgramWithIL_SD(CFunction* token,
   if (ErrCodeSuccess(errcode_ret)) {
     auto& programState = SD()._programStates[return_value];
     programState.reset(new CCLProgramState(context, il, length));
+    if (token != nullptr) {
+      programState->fileName = static_cast<CProgramSource&>(token->Argument(1U)).FileName();
+    }
     programState->Retain();
   }
 }

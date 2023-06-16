@@ -202,7 +202,7 @@ arg3=ArgDef(name='kernels',type='cl_kernel*',wrapType='Ccl_kernel::CSMapArray',w
 arg4=ArgDef(name='num_kernels_ret',type='cl_uint*')
 )
 
-Function(name='clCreateProgramWithBinary',enabled=True,availableFrom='1.0',extension=False,type=Creator,stateTrack=True,
+Function(name='clCreateProgramWithBinary',enabled=True,availableFrom='1.0',extension=False,type=Creator,stateTrack=True,passNullToken=True,
 retV=RetDef(type='cl_program'),
 arg1=ArgDef(name='context',type='cl_context'),
 arg2=ArgDef(name='num_devices',type='cl_uint'),
@@ -213,7 +213,7 @@ arg6=ArgDef(name='binary_status',type='cl_int*',wrapType='CCLResult::CSArray',wr
 arg7=ArgDef(name='errcode_ret',type='cl_int*')
 )
 
-Function(name='clCreateProgramWithBinary',enabled=True,availableFrom='1.0',extension=False,type=Creator,version=1,stateTrack=True,runWrap=True,recWrap=True,
+Function(name='clCreateProgramWithBinary',enabled=True,availableFrom='1.0',extension=False,type=Creator,version=1,stateTrack=True,runWrap=True,recWrap=True,passToken=True,
 retV=RetDef(type='cl_program'),
 arg1=ArgDef(name='context',type='cl_context'),
 arg2=ArgDef(name='num_devices',type='cl_uint'),
