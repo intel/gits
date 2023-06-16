@@ -54,7 +54,7 @@ gits::CArgument& C${name}::Result(unsigned idx) {
 
 void C${name}::Run() {
     %if func.get('runWrap'):
-  ${func.get('runWrapName')}(${'' if func.get('type') == 'void' else '_return_value, '}${make_params(func, prefix='_')});
+  ${func.get('runWrapName')}(${'this, ' if func.get('passToken') else ''}${make_params(func, prefix='_', with_retval=True)});
     %else:
       %if name == 'zeInit':
   drv.Initialize();
@@ -64,7 +64,7 @@ void C${name}::Run() {
       %else:
   ${'_return_value.Value() = ' if func.get('type') != 'void' else ''}drv.${func.get('name')}(${make_params(func, prefix='*_')});
         %if func.get('stateTrack'):
-  ${func.get('stateTrackName')}(${make_params(func, prefix='*_', with_retval=True)});
+  ${func.get('stateTrackName')}(${'this, ' if func.get('passToken') else ''}${make_params(func, prefix='*_', with_retval=True)});
         %endif
       %endif
     %endif

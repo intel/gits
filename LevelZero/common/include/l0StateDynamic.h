@@ -12,6 +12,7 @@
 #include "l0Header.h"
 #include "l0Tools.h"
 #include "MemorySniffer.h"
+#include <utility>
 #ifdef WITH_OCLOC
 #include "oclocStateDynamic.h"
 #endif
@@ -27,6 +28,11 @@ namespace l0 {
 struct CState {
   CState() = default;
   virtual ~CState() = default;
+
+  CState(CState const&) = delete;
+  CState& operator=(CState const&) = delete;
+  CState& operator=(CState&&) = delete;
+  CState(CState&&) = delete;
 
   void RestoreReset() {
     _restored = false;
@@ -94,8 +100,9 @@ struct ArgInfo {
 };
 
 struct CKernelExecutionInfo {
+  ze_kernel_handle_t handle = nullptr;
   ze_group_count_t launchFuncArgs = {};
-  ze_scheduling_hint_exp_flags_t schedulingHintflags =
+  ze_scheduling_hint_exp_flags_t schedulingHintFlags =
       static_cast<ze_scheduling_hint_exp_flags_t>(0U);
   unsigned indirectUsmTypes = 0U;
   uint32_t kernelNumber = 0U;
@@ -105,6 +112,8 @@ struct CKernelExecutionInfo {
   uint32_t offsetX = 0U;
   uint32_t offsetY = 0U;
   uint32_t offsetZ = 0U;
+  bool isGroupSizeSet = false;
+  bool isOffsetSet = false;
 
 private:
   std::map<uint32_t, ArgInfo> args;
@@ -122,14 +131,12 @@ struct CKernelState : public CState {
   using states_type = std::unordered_map<type, std::unique_ptr<CKernelState>>;
   ze_module_handle_t hModule = nullptr;
   ze_kernel_desc_t desc = {};
-  bool isGroupSizeSet = false;
-  bool isOffsetSet = false;
 
   CKernelExecutionInfo currentKernelInfo;
-  std::unordered_map<uint32_t, CKernelExecutionInfo> executedKernels;
 
 public:
   CKernelState() = default;
+  ~CKernelState();
   CKernelState(ze_module_handle_t hModule, const ze_kernel_desc_t* kernelDesc);
 };
 
@@ -142,7 +149,7 @@ struct CCommandListState : public CState {
   ze_command_queue_desc_t queueDesc = {};
   bool isImmediate = false;
   bool isSync = false;
-  std::unordered_map<uint32_t, ze_kernel_handle_t> appendedKernelsMap;
+  std::vector<CKernelExecutionInfo> appendedKernels;
   uint32_t cmdListNumber = 0U;
   uint32_t cmdQueueNumber = 0U;
 
@@ -218,14 +225,19 @@ struct CModuleState : public CState {
 #ifdef WITH_OCLOC
   std::shared_ptr<ocloc::COclocState> oclocState = nullptr;
 #endif
+  std::string moduleFileName;
+  std::unordered_set<ze_module_handle_t> moduleLinks;
   ze_module_build_log_handle_t hBuildLog = nullptr;
 
 public:
   CModuleState() = default;
+  ~CModuleState();
   CModuleState(ze_context_handle_t hContext,
                ze_device_handle_t hDevice,
                ze_module_desc_t desc,
                ze_module_build_log_handle_t hBuildLog);
+  void AddModuleLinks(const uint32_t& numModules, const ze_module_handle_t* phModules);
+  bool IsModuleLinkUsed() const;
 };
 
 struct CContextState : public CState {
@@ -321,17 +333,18 @@ public:
 class LayoutBuilder {
 private:
   boost::property_tree::ptree layout;
+  boost::property_tree::ptree zeKernels;
   std::string latestFileName;
   uint32_t queueSubmitNumber = 0U;
   uint32_t cmdListNumber = 0U;
   uint32_t appendKernelNumber = 0U;
-  std::string GetKeyName(const uint32_t& argNumber, const char* pKernelName);
-  void AddBuildOptions(const char* pKernelName, const ze_module_handle_t& hModule);
+  std::string GetExecutionKeyId();
+  void AddOclocInfo(const ze_module_handle_t& hModule);
   std::string BuildFileName(const uint32_t& argNumber, bool isBuffer = true);
-  void AddBuffer(const uint32_t& argNumber, const char* pKernelName);
-  void AddImage(const uint32_t& argNumber,
-                const ze_image_desc_t& imageDesc,
-                const char* pKernelName);
+  boost::property_tree::ptree GetImageDescription(const ze_image_desc_t& imageDesc);
+  void UpdateExecutionKeyId(const uint32_t& queueSubmitNum,
+                            const uint32_t& cmdListNum,
+                            const uint32_t& kernelNumber);
 
 public:
   LayoutBuilder();
@@ -343,6 +356,31 @@ public:
                     const uint32_t& argIndex);
   std::string GetFileName();
   void SaveLayoutToJsonFile();
+  boost::property_tree::ptree GetModuleLinkInfoPtree(
+      CStateDynamic& sd, const std::unordered_set<ze_module_handle_t>& moduleLinks) const;
+  template <typename T, typename K>
+  void Add(const T& key, const K& value) {
+    std::stringstream ss;
+    ss << GetExecutionKeyId() << "." << key;
+    zeKernels.add(ss.str(), value);
+  }
+  template <typename T, typename K>
+  void AddChild(const T& key, const K& value) {
+    std::stringstream ss;
+    ss << GetExecutionKeyId() << "." << key;
+    zeKernels.add_child(ss.str(), value);
+  }
+
+  template <typename T, typename K>
+  void AddArray(const T& key, const K& array) {
+    auto ptree = boost::property_tree::ptree();
+    auto arrayTree = boost::property_tree::ptree();
+    for (const auto& val : array) {
+      ptree.put("", val);
+      arrayTree.push_back(std::make_pair("", ptree));
+    }
+    AddChild(key, arrayTree);
+  }
 };
 
 class CStateDynamic {

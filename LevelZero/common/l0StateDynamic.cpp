@@ -152,6 +152,10 @@ CKernelState::CKernelState(ze_module_handle_t hModule, const ze_kernel_desc_t* k
   std::strcpy(const_cast<char*>(desc.pKernelName), kernelDesc->pKernelName);
 }
 
+CKernelState::~CKernelState() {
+  delete[] desc.pKernelName;
+}
+
 void CKernelExecutionInfo::SetArgument(uint32_t index, size_t typeSize, const void* value) {
   args[index].originalValue = value;
   args[index].type = KernelArgType::pointer;
@@ -217,9 +221,14 @@ CDeviceState::CDeviceState(ze_device_handle_t hDevice) : hDevice(hDevice) {}
 
 CModuleState::CModuleState(ze_context_handle_t hContext,
                            ze_device_handle_t hDevice,
-                           ze_module_desc_t desc,
+                           ze_module_desc_t descriptor,
                            ze_module_build_log_handle_t hBuildLog)
-    : hContext(hContext), hDevice(hDevice), desc(desc), hBuildLog(hBuildLog) {
+    : hContext(hContext), hDevice(hDevice), desc(descriptor), hBuildLog(hBuildLog) {
+  desc.pInputModule = new uint8_t[desc.inputSize + 1];
+  std::memcpy((void*)desc.pInputModule, descriptor.pInputModule, desc.inputSize);
+  const auto buildFlagsSize = std::strlen(descriptor.pBuildFlags) + 1;
+  desc.pBuildFlags = new char[buildFlagsSize];
+  std::memcpy((void*)desc.pBuildFlags, descriptor.pBuildFlags, buildFlagsSize);
 #ifdef WITH_OCLOC
   const uint64_t hash = ComputeHash(desc.pInputModule, desc.inputSize, THashType::XX);
   if (!ocloc::SD().oclocStates.empty() &&
@@ -227,6 +236,21 @@ CModuleState::CModuleState(ze_context_handle_t hContext,
     oclocState = ocloc::SD().oclocStates.at(hash);
   }
 #endif
+}
+
+CModuleState::~CModuleState() {
+  delete[] desc.pInputModule;
+  delete[] desc.pBuildFlags;
+}
+
+void CModuleState::AddModuleLinks(const uint32_t& numModules, const ze_module_handle_t* phModules) {
+  for (auto i = 0U; i < numModules; i++) {
+    moduleLinks.insert(phModules[i]);
+  }
+}
+
+bool CModuleState::IsModuleLinkUsed() const {
+  return !moduleLinks.empty();
 }
 
 CContextState::CContextState(ze_driver_handle_t hDriver, ze_context_desc_t desc)
@@ -286,7 +310,22 @@ void CKernelArgumentDump::UpdateIndexes(uint32_t kernelNum, uint32_t argIndex) {
   this->kernelArgIndex = argIndex;
 }
 
-LayoutBuilder::LayoutBuilder() : layout(), latestFileName("") {}
+LayoutBuilder::LayoutBuilder() : layout(), latestFileName("") {
+  layout.add("version", "1.0");
+}
+
+boost::property_tree::ptree LayoutBuilder::GetModuleLinkInfoPtree(
+    CStateDynamic& sd, const std::unordered_set<ze_module_handle_t>& moduleLinks) const {
+  boost::property_tree::ptree modulesInfo;
+  for (const auto& module : moduleLinks) {
+    boost::property_tree::ptree moduleInfo;
+    const auto& moduleState = sd.Get<CModuleState>(module, EXCEPTION_MESSAGE);
+    moduleInfo.add("module_file", moduleState.moduleFileName);
+    moduleInfo.add("build_options", moduleState.desc.pBuildFlags);
+    modulesInfo.push_back(std::make_pair("", moduleInfo));
+  }
+  return modulesInfo;
+}
 
 void LayoutBuilder::UpdateLayout(const char* pKernelName,
                                  const ze_module_handle_t& hModule,
@@ -294,22 +333,35 @@ void LayoutBuilder::UpdateLayout(const char* pKernelName,
                                  const uint32_t& queueSubmitNum,
                                  const uint32_t& cmdListNum,
                                  const uint32_t& argIndex) {
-  const auto& arg = kernelInfo.GetArgument(argIndex);
-  if (queueSubmitNumber != queueSubmitNum || cmdListNumber != cmdListNum ||
-      appendKernelNumber != kernelInfo.kernelNumber) {
+  UpdateExecutionKeyId(queueSubmitNum, cmdListNum, kernelInfo.kernelNumber);
+  const auto executionKey = GetExecutionKeyId();
+  if (zeKernels.find(executionKey) == zeKernels.not_found()) {
+    Add("kernel_name", pKernelName);
+    auto& sd = SD();
+    const auto& moduleState = sd.Get<CModuleState>(hModule, EXCEPTION_MESSAGE);
+    if (moduleState.desc.pBuildFlags != nullptr) {
+      Add("build_options", moduleState.desc.pBuildFlags);
+    }
+    Add("module_file", moduleState.moduleFileName);
+    if (moduleState.IsModuleLinkUsed()) {
+      AddChild("module_link", GetModuleLinkInfoPtree(sd, moduleState.moduleLinks));
+    }
+
 #ifdef WITH_OCLOC
-    AddBuildOptions(pKernelName, hModule);
+    AddOclocInfo(hModule);
 #endif
-    queueSubmitNumber = queueSubmitNum;
-    cmdListNumber = cmdListNum;
-    appendKernelNumber = kernelInfo.kernelNumber;
   }
+  const auto& arg = kernelInfo.GetArgument(argIndex);
+  const auto argKey = "args." + std::to_string(argIndex);
   if (arg.type == KernelArgType::image) {
+    boost::property_tree::ptree imageArgument;
     const auto& imgState = SD().Get<CImageState>(
         reinterpret_cast<ze_image_handle_t>(const_cast<void*>(arg.argValue)), EXCEPTION_MESSAGE);
-    AddImage(argIndex, imgState.desc, pKernelName);
+    const auto imageDescription = GetImageDescription(imgState.desc);
+    imageArgument.add_child(BuildFileName(argIndex, false), imageDescription);
+    AddChild(argKey, imageArgument);
   } else {
-    AddBuffer(argIndex, pKernelName);
+    Add(argKey, BuildFileName(argIndex));
   }
 }
 
@@ -317,10 +369,20 @@ std::string LayoutBuilder::GetFileName() {
   return latestFileName;
 }
 
+void LayoutBuilder::UpdateExecutionKeyId(const uint32_t& queueSubmitNum,
+                                         const uint32_t& cmdListNum,
+                                         const uint32_t& kernelNumber) {
+  queueSubmitNumber = queueSubmitNum;
+  cmdListNumber = cmdListNum;
+  appendKernelNumber = kernelNumber;
+}
+
 void LayoutBuilder::SaveLayoutToJsonFile() {
-  if (layout.empty()) {
+  if (zeKernels.empty()) {
     return;
   }
+  layout.add_child("ze_kernels", zeKernels);
+
   const auto& cfg = Config::Get();
   const bfs::path path =
       (cfg.player.outputDir.empty() ? cfg.common.streamDir / "dump" : cfg.player.outputDir) /
@@ -328,64 +390,54 @@ void LayoutBuilder::SaveLayoutToJsonFile() {
   SaveJsonFile(layout, path);
 }
 
-std::string LayoutBuilder::GetKeyName(const uint32_t& argNumber, const char* pKernelName) {
+std::string LayoutBuilder::GetExecutionKeyId() {
   std::stringstream ss;
-  ss << pKernelName << ".ZeKernelLaunch." << queueSubmitNumber << "_" << cmdListNumber << "_"
-     << appendKernelNumber << ".arg_" << argNumber;
+  ss << queueSubmitNumber << "_" << cmdListNumber << "_" << appendKernelNumber;
   return ss.str();
 }
 
-void LayoutBuilder::AddBuildOptions(const char* pKernelName, const ze_module_handle_t& hModule) {
-  const std::string key(std::string(pKernelName) + ".ocloc_arguments");
-  if (!layout.get_child_optional(key)) {
-    const auto& oclocState = SD().Get<CModuleState>(hModule, EXCEPTION_MESSAGE).oclocState;
-    if (oclocState.get() != nullptr && !oclocState->args.empty()) {
-      auto children = boost::property_tree::ptree();
-      const auto size = oclocState->args.size();
-      for (auto i = 0U; i < size; i++) {
-        auto child = boost::property_tree::ptree();
-        child.put("", oclocState->args[i]);
-        children.push_back(std::make_pair("", child));
-        if (Config::Get().IsRecorder() && oclocState->args[i] == "-options") {
-          auto nextChild = boost::property_tree::ptree();
-          std::string options = oclocState->args[++i];
-          options += " -I \"" + Config::Get().common.streamDir.string() + "\"";
-          options += " -I \"" + (Config::Get().common.streamDir / "gitsFiles").string() + "\"";
-          nextChild.put("", options);
-          children.push_back(std::make_pair("", nextChild));
-        }
+void LayoutBuilder::AddOclocInfo(const ze_module_handle_t& hModule) {
+  const auto& oclocState = SD().Get<CModuleState>(hModule, EXCEPTION_MESSAGE).oclocState;
+  if (oclocState.get() != nullptr && !oclocState->args.empty()) {
+    auto children = boost::property_tree::ptree();
+    const auto size = oclocState->args.size();
+    for (auto i = 0U; i < size; i++) {
+      auto child = boost::property_tree::ptree();
+      child.put("", oclocState->args[i]);
+      children.push_back(std::make_pair("", child));
+      if (Config::Get().IsRecorder() && oclocState->args[i] == "-options") {
+        auto nextChild = boost::property_tree::ptree();
+        std::string options = oclocState->args[++i];
+        options += " -I \"" + Config::Get().common.streamDir.string() + "\"";
+        options += " -I \"" + (Config::Get().common.streamDir / "gitsFiles").string() + "\"";
+        nextChild.put("", options);
+        children.push_back(std::make_pair("", nextChild));
       }
-      layout.add_child(key, children);
     }
+    AddArray("ocloc.sources", oclocState->savedFileNames);
+    AddChild("ocloc.args", children);
   }
 }
 
 std::string LayoutBuilder::BuildFileName(const uint32_t& argNumber, bool isBuffer) {
   static int fileCounter = 1;
   std::stringstream fileName;
-  fileName << (isBuffer ? "NDRangeBuffer_" : "NDRangeImage_") << queueSubmitNumber << "_"
-           << cmdListNumber << "_" << appendKernelNumber << "_arg_" << argNumber << "_"
-           << fileCounter++;
+  fileName << (isBuffer ? "NDRangeBuffer_" : "NDRangeImage_");
+  fileName << queueSubmitNumber << "_" << cmdListNumber << "_";
+  fileName << appendKernelNumber << "_arg_" << argNumber << "_" << fileCounter++;
   latestFileName = fileName.str();
   return latestFileName;
 }
 
-void LayoutBuilder::AddBuffer(const uint32_t& argNumber, const char* pKernelName) {
-  layout.add(GetKeyName(argNumber, pKernelName), BuildFileName(argNumber));
-}
-
-void LayoutBuilder::AddImage(const uint32_t& argNumber,
-                             const ze_image_desc_t& imageDesc,
-                             const char* pKernelName) {
-  boost::property_tree::ptree ptTemp, imageDescription;
+boost::property_tree::ptree LayoutBuilder::GetImageDescription(const ze_image_desc_t& imageDesc) {
+  boost::property_tree::ptree imageDescription;
   std::string image_type = get_texel_format_string(
       GetTexelTypeArrayFromLayout(imageDesc.format.layout)[imageDesc.format.type]);
   imageDescription.add("image_type", image_type);
   imageDescription.add("image_width", imageDesc.width);
   imageDescription.add("image_height", imageDesc.height);
   imageDescription.add("image_depth", imageDesc.depth);
-  ptTemp.add_child(BuildFileName(argNumber, false), imageDescription);
-  layout.add_child(GetKeyName(argNumber, pKernelName), ptTemp);
+  return imageDescription;
 }
 } // namespace l0
 } // namespace gits

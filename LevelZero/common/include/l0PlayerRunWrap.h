@@ -16,6 +16,7 @@
 
 #include "l0Drivers.h"
 #include "l0Arguments.h"
+#include "l0Structs.h"
 #include "l0Header.h"
 #include "l0StateTracking.h"
 #include "l0ArgumentsAuto.h"
@@ -165,9 +166,10 @@ inline void zeCommandListAppendLaunchKernel_RUNWRAP(Cze_result_t& _return_value,
                                                     Cze_event_handle_t& _hSignalEvent,
                                                     Cuint32_t& _numWaitEvents,
                                                     Cze_event_handle_t::CSArray& _phWaitEvents) {
-  gits::CGits::Instance().KernelCountUp();
   auto& sd = SD();
-  if (IsCommandListImmediate(*_hCommandList, sd)) {
+  const auto isImmediate = IsCommandListImmediate(*_hCommandList, sd);
+  KernelCountUp(CGits::Instance());
+  if (isImmediate) {
     TranslatePointers(sd);
   }
   _return_value.Value() =
@@ -185,9 +187,10 @@ inline void zeCommandListAppendLaunchCooperativeKernel_RUNWRAP(
     Cze_event_handle_t& _hSignalEvent,
     Cuint32_t& _numWaitEvents,
     Cze_event_handle_t::CSArray& _phWaitEvents) {
-  gits::CGits::Instance().KernelCountUp();
   auto& sd = SD();
-  if (IsCommandListImmediate(*_hCommandList, sd)) {
+  const auto isImmediate = IsCommandListImmediate(*_hCommandList, sd);
+  KernelCountUp(CGits::Instance());
+  if (isImmediate) {
     TranslatePointers(sd);
   }
   _return_value.Value() = drv.zeCommandListAppendLaunchCooperativeKernel(
@@ -206,9 +209,10 @@ inline void zeCommandListAppendLaunchKernelIndirect_RUNWRAP(
     Cze_event_handle_t& _hSignalEvent,
     Cuint32_t& _numWaitEvents,
     Cze_event_handle_t::CSArray& _phWaitEvents) {
-  gits::CGits::Instance().KernelCountUp();
   auto& sd = SD();
-  if (IsCommandListImmediate(*_hCommandList, sd)) {
+  const auto isImmediate = IsCommandListImmediate(*_hCommandList, sd);
+  KernelCountUp(CGits::Instance());
+  if (isImmediate) {
     TranslatePointers(sd);
   }
   _return_value.Value() = drv.zeCommandListAppendLaunchKernelIndirect(
@@ -229,9 +233,10 @@ inline void zeCommandListAppendLaunchMultipleKernelsIndirect_RUNWRAP(
     Cze_event_handle_t& _hSignalEvent,
     Cuint32_t& _numWaitEvents,
     Cze_event_handle_t::CSArray& _phWaitEvents) {
-  gits::CGits::Instance().KernelCountUp();
   auto& sd = SD();
-  if (IsCommandListImmediate(*_hCommandList, sd)) {
+  const auto isImmediate = IsCommandListImmediate(*_hCommandList, sd);
+  KernelCountUp(CGits::Instance());
+  if (isImmediate) {
     TranslatePointers(sd);
   }
   _return_value.Value() = drv.zeCommandListAppendLaunchMultipleKernelsIndirect(
@@ -248,8 +253,9 @@ inline void zeCommandQueueExecuteCommandLists_RUNWRAP(
     Cuint32_t& _numCommandLists,
     Cze_command_list_handle_t::CSArray& _phCommandLists,
     Cze_fence_handle_t& _hFence) {
-  gits::CGits::Instance().CommandQueueExecCountUp();
-  TranslatePointers(SD());
+  auto& sd = SD();
+  CommandQueueExecCountUp(CGits::Instance());
+  TranslatePointers(sd);
   _return_value.Value() = drv.zeCommandQueueExecuteCommandLists(*_hCommandQueue, *_numCommandLists,
                                                                 *_phCommandLists, *_hFence);
   zeCommandQueueExecuteCommandLists_SD(*_return_value, *_hCommandQueue, *_numCommandLists,
@@ -266,6 +272,22 @@ inline void zeModuleCreate_RUNWRAP(Cze_result_t& _return_value,
       drv.zeModuleCreate(*_hContext, *_hDevice, *_desc, *_phModule, *_phBuildLog);
   zeModuleCreate_SD(*_return_value, *_hContext, *_hDevice, *_desc, *_phModule, *_phBuildLog);
   HandleDumpSpv(*_desc);
+}
+
+inline void zeModuleCreate_V1_RUNWRAP(Cze_result_t& _return_value,
+                                      Cze_context_handle_t& _hContext,
+                                      Cze_device_handle_t& _hDevice,
+                                      Cze_module_desc_t_V1::CSArray& _desc,
+                                      Cze_module_handle_t::CSMapArray& _phModule,
+                                      Cze_module_build_log_handle_t::CSMapArray& _phBuildLog) {
+  _return_value.Value() =
+      drv.zeModuleCreate(*_hContext, *_hDevice, *_desc, *_phModule, *_phBuildLog);
+  zeModuleCreate_SD(*_return_value, *_hContext, *_hDevice, *_desc, *_phModule, *_phBuildLog);
+  if (_return_value.Value() == ZE_RESULT_SUCCESS && *_phModule != nullptr && *_desc != nullptr &&
+      !_desc.Vector().empty()) {
+    const auto moduleFileName = _desc.Vector().front()->GetProgramSourceName();
+    SD().Get<CModuleState>(**_phModule, EXCEPTION_MESSAGE).moduleFileName = moduleFileName;
+  }
 }
 
 inline void zeCommandQueueCreate_RUNWRAP(Cze_result_t& _return_value,

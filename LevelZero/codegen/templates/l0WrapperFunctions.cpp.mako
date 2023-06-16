@@ -38,7 +38,7 @@ void CRecorderWrapper::${func.get('name')}(
     _recorder.Schedule(_token);
   }
       %if func.get('stateTrack'):
-  ${func.get('stateTrackName')}(${make_params(func, with_retval=True)});
+  ${func.get('stateTrackName')}(${'_token, ' if func.get('passToken') else ''}${make_params(func, with_retval=True)});
       %endif
     %endif
   %else:

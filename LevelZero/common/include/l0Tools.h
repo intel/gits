@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "gits.h"
 #include "l0Drivers.h"
 #include "l0Header.h"
 #include "config.h"
@@ -34,8 +35,7 @@ void SaveImage(const bfs::path& dir,
                const std::string& name);
 size_t CalculateImageSize(ze_image_desc_t desc);
 enum class KernelArgType { pointer = 1, buffer, image };
-void PrepareArguments(const CKernelState& kernelState,
-                      uint32_t kernelIndex,
+void PrepareArguments(const CKernelExecutionInfo& kernelInfo,
                       std::vector<CKernelArgumentDump>& argDumpStates,
                       bool dumpUnique = false);
 bool CheckWhetherSync(bool isImmediate,
@@ -98,6 +98,13 @@ void* GetPointerFromOriginalGlobalAllocation(const void* originalPtr,
                                              const std::vector<char>& originalAllocation,
                                              std::vector<char>& currentAllocation);
 void* GetMappedGlobalPtrFromOriginalAllocation(CStateDynamic& sd, void* originalPtr);
+bool IsNewNomenclature(const Config& cfg);
+bool CaptureAfterSubmit(const Config& cfg);
+bool CheckWhetherDumpQueueSubmit(const Config& cfg, const uint32_t& queueSubmitNumber);
+void CommandListCountUp(CGits& gitsInstance);
+void CommandQueueExecCountUp(CGits& gitsInstance);
+void KernelCountUp(CGits& gitsInstance);
 bool IsDumpOnlyLayoutEnabled(const Config& cfg);
+
 } // namespace l0
 } // namespace gits

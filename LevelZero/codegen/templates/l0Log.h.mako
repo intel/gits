@@ -210,5 +210,10 @@ namespace gits {
 #define GET_OVERLOAD(PLACEHOLDER1, PLACEHOLDER2, NAME, ...) NAME
 #define L0Log(...)                                                             ${'\\'}
   EXPAND(GET_OVERLOAD(__VA_ARGS__, L0Log2, L0Log1)(__VA_ARGS__))
-  }
-}
+    void LogAppendKernel(const uint32_t& kernelNumber, const char* pKernelName);
+    void LogKernelExecution(const uint32_t& kernelNumber,
+                            const char* kernelName,
+                            const uint32_t& cmdQueueNumber,
+                            const uint32_t& cmdListNumber);
+  } // namespace l0
+} // namespace gits

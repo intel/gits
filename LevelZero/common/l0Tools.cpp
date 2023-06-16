@@ -206,11 +206,9 @@ void SaveImage(const bfs::path& dir,
   }
 }
 
-void PrepareArguments(const CKernelState& kernelState,
-                      uint32_t kernelIndex,
+void PrepareArguments(const CKernelExecutionInfo& kernelInfo,
                       std::vector<CKernelArgumentDump>& argDumpStates,
                       bool dumpUnique) {
-  const auto& kernelInfo = kernelState.executedKernels.at(kernelIndex);
   for (const auto& arg : kernelInfo.GetArguments()) {
     if (arg.second.type == KernelArgType::buffer) {
       auto ptr = const_cast<void*>(arg.second.argValue);
@@ -503,7 +501,8 @@ bool IsNullIndirectPointersInBufferEnabled(const Config& cfg) {
 }
 bool IsControlledSubmission(const ze_command_queue_desc_t* desc) {
   // Apps ignore spec recommendation about setting `flags` properly.
-  return desc != nullptr && (desc->ordinal != 0U || desc->index != 0U);
+  return desc != nullptr && ((desc->ordinal != 0U || desc->index != 0U) ||
+                             desc->flags == ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY);
 }
 
 bool IsControlledSubmission(const ze_command_list_desc_t* desc) {
@@ -595,6 +594,30 @@ void* GetMappedGlobalPtrFromOriginalAllocation(CStateDynamic& sd, void* original
   }
   return nullptr;
 }
+
+bool CaptureAfterSubmit(const Config& cfg) {
+  return cfg.IsPlayer() ? cfg.player.l0CaptureAfterSubmit
+                        : cfg.recorder.levelZero.utilities.captureAfterSubmit;
+}
+
+bool CheckWhetherDumpQueueSubmit(const Config& cfg, const uint32_t& queueSubmitNumber) {
+  const auto& cmdQueueList = cfg.IsPlayer() ? cfg.player.l0CaptureCommandQueues
+                                            : cfg.recorder.levelZero.utilities.captureCommandQueues;
+  return !cmdQueueList.empty() ? cmdQueueList[queueSubmitNumber] : false;
+}
+
+void CommandListCountUp(CGits& gitsInstance) {
+  gitsInstance.CommandListCountUp();
+}
+
+void CommandQueueExecCountUp(CGits& gitsInstance) {
+  gitsInstance.CommandQueueExecCountUp();
+}
+
+void KernelCountUp(CGits& gitsInstance) {
+  gitsInstance.KernelCountUp();
+}
+
 bool IsDumpOnlyLayoutEnabled(const Config& cfg) {
   return cfg.IsPlayer() && cfg.player.l0DumpLayoutOnly;
 }

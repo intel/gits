@@ -3897,7 +3897,7 @@ arg4=ArgDef(name='phModule',type='ze_module_handle_t*',tag='out'),
 arg5=ArgDef(name='phBuildLog',type='ze_module_build_log_handle_t*',tag='out',optional=True),
 )
 
-Function(name='zeModuleCreate',component='ze_module',enabled=True,stateTrack=True,version=1,
+Function(name='zeModuleCreate',component='ze_module',enabled=True,stateTrack=True,runWrap=True,recWrap=True,version=1,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
@@ -3911,7 +3911,7 @@ retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hModule',type='ze_module_handle_t',tag='in',release=True),
 )
 
-Function(name='zeModuleDynamicLink',component='ze_module',enabled=True,
+Function(name='zeModuleDynamicLink',component='ze_module',enabled=True,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='numModules',type='uint32_t',tag='in'),
 arg2=ArgDef(name='phModules',type='ze_module_handle_t*',tag='in',range='0,numModules'),

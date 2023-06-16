@@ -21,6 +21,7 @@
 #include "l0StateTracking.h"
 #include "l0HelperFunctions.h"
 #include "l0Drivers.h"
+#include "l0Structs.h"
 #include "l0Tools.h"
 #include "openclTools.h"
 #include "recorder.h"
@@ -136,6 +137,39 @@ void SaveKernelArgumentsForStateRestore(CStateDynamic& sd,
     }
   }
 }
+std::vector<ze_command_list_handle_t> GetCommandListToRestore(
+    const ApisIface::ApiCompute& l0IFace,
+    CStateDynamic& sd,
+    uint32_t numCommandLists,
+    ze_command_list_handle_t* phCommandLists) {
+  std::vector<ze_command_list_handle_t> cmdLists;
+  for (auto i = 0u; i < numCommandLists; i++) {
+    const auto& cmdListState = sd.Get<CCommandListState>(phCommandLists[i], EXCEPTION_MESSAGE);
+    if (l0IFace.CfgRec_IsCommandListToRecord(cmdListState.cmdListNumber)) {
+      cmdLists.push_back(phCommandLists[i]);
+    }
+  }
+  return cmdLists;
+}
+bool IsObjectToRecord(
+    const ApisIface::ApiCompute& l0IFace,
+    CStateDynamic& sd,
+    uint32_t numCommandLists,
+    ze_command_list_handle_t* phCommandLists,
+    std::vector<ze_command_list_handle_t> cmdLists = std::vector<ze_command_list_handle_t>()) {
+  if (cmdLists.empty()) {
+    cmdLists = GetCommandListToRestore(l0IFace, sd, numCommandLists, phCommandLists);
+  }
+  for (const auto& cmdList : cmdLists) {
+    const auto& cmdListState = sd.Get<CCommandListState>(cmdList, EXCEPTION_MESSAGE);
+    for (const auto& kernel : cmdListState.appendedKernels) {
+      if (l0IFace.CfgRec_IsKernelToRecord(kernel.kernelNumber)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 } // namespace
 
 inline void zeCommandListAppendLaunchKernel_RECWRAP_PRE(CRecorder& recorder,
@@ -173,11 +207,10 @@ inline void zeCommandListAppendLaunchKernel_RECWRAP_PRE(CRecorder& recorder,
         if (pLaunchFuncArgs != nullptr) {
           kernelState.currentKernelInfo.launchFuncArgs = *pLaunchFuncArgs;
         }
-        kernelState.executedKernels[CGits::Instance().CurrentKernelCount()] =
-            kernelState.currentKernelInfo;
-        cmdListState.appendedKernelsMap[CGits::Instance().CurrentKernelCount()] = hKernel;
+        kernelState.currentKernelInfo.handle = hKernel;
+        cmdListState.appendedKernels.push_back(kernelState.currentKernelInfo);
         recorder.Start();
-        RestoreCommandListBuffer(recorder.Scheduler(), SD());
+        RestoreCommandListBuffer(recorder.Scheduler(), sd);
       }
       if (l0IFace.CfgRec_IsKernelsRangeMode() && l0IFace.CfgRec_StopKernel() == kernelCount) {
         recorder.Stop();
@@ -397,7 +430,8 @@ inline void zeCommandQueueExecuteCommandLists_RECWRAP_PRE(CRecorder& recorder,
     }
   }
   const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
-  if (l0IFace.CfgRec_IsStartQueueSubmit()) {
+  if (l0IFace.CfgRec_IsStartQueueSubmit() &&
+      IsObjectToRecord(l0IFace, sd, numCommandLists, phCommandLists)) {
     recorder.Start();
   }
 }
@@ -410,26 +444,24 @@ inline void zeCommandQueueExecuteCommandLists_RECWRAP(CRecorder& recorder,
                                                       ze_fence_handle_t hFence) {
   const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
   auto& sd = SD();
-  if (l0IFace.CfgRec_IsKernelsRangeMode() && l0IFace.CfgRec_IsObjectToRecord()) {
-    std::vector<ze_command_list_handle_t> cmdLists;
-    for (auto i = 0u; i < numCommandLists; i++) {
-      const auto& cmdListState = sd.Get<CCommandListState>(phCommandLists[i], EXCEPTION_MESSAGE);
-      if (l0IFace.CfgRec_IsCommandListToRecord(cmdListState.cmdListNumber)) {
-        cmdLists.push_back(phCommandLists[i]);
-      }
-    }
+  auto isStopQueueSubmit = false;
+  std::vector<ze_command_list_handle_t> cmdLists;
+  if (l0IFace.CfgRec_IsKernelsRangeMode()) {
+    cmdLists = GetCommandListToRestore(l0IFace, sd, numCommandLists, phCommandLists);
     if (!cmdLists.empty()) {
-      drv.inject.zeCommandQueueSynchronize(hCommandQueue, UINT64_MAX);
-      RestoreCommandListBuffer(recorder.Scheduler(), sd);
-      recorder.Schedule(new CzeCommandQueueExecuteCommandLists(
-          return_value, hCommandQueue, static_cast<uint32_t>(cmdLists.size()), cmdLists.data(),
-          hFence));
-      recorder.Schedule(
-          new CzeCommandQueueSynchronize(ZE_RESULT_SUCCESS, hCommandQueue, UINT64_MAX));
-      if (l0IFace.CfgRec_IsStopQueueSubmit()) {
-        recorder.Stop();
-        recorder.MarkForDeletion();
-      }
+      isStopQueueSubmit = IsObjectToRecord(l0IFace, sd, numCommandLists, phCommandLists, cmdLists);
+    }
+  }
+  if (isStopQueueSubmit) {
+    drv.inject.zeCommandQueueSynchronize(hCommandQueue, UINT64_MAX);
+    RestoreCommandListBuffer(recorder.Scheduler(), sd);
+    recorder.Schedule(new CzeCommandQueueExecuteCommandLists(return_value, hCommandQueue,
+                                                             static_cast<uint32_t>(cmdLists.size()),
+                                                             cmdLists.data(), hFence));
+    recorder.Schedule(new CzeCommandQueueSynchronize(ZE_RESULT_SUCCESS, hCommandQueue, UINT64_MAX));
+    if (l0IFace.CfgRec_IsStopQueueSubmit()) {
+      recorder.Stop();
+      recorder.MarkForDeletion();
     }
   } else if (recorder.Running()) {
     recorder.Schedule(new CzeCommandQueueExecuteCommandLists(
@@ -1073,6 +1105,26 @@ inline void zeGitsStartRecording_RECWRAP(CRecorder& recorder, ze_gits_recording_
   recorder.Continue();
   if (properties & ZE_GITS_SWITCH_NOMENCLATURE_COUNTING) {
     SD().nomenclatureCounting = true;
+  }
+}
+
+inline void zeModuleCreate_RECWRAP(CRecorder& recorder,
+                                   ze_result_t return_value,
+                                   ze_context_handle_t hContext,
+                                   ze_device_handle_t hDevice,
+                                   const ze_module_desc_t* desc,
+                                   ze_module_handle_t* phModule,
+                                   ze_module_build_log_handle_t* phBuildLog) {
+  CFunction* token = nullptr;
+  if (recorder.Running()) {
+    token = new CzeModuleCreate_V1(return_value, hContext, hDevice, desc, phModule, phBuildLog);
+    recorder.Schedule(token);
+  }
+  zeModuleCreate_SD(return_value, hContext, hDevice, desc, phModule, phBuildLog);
+  if (token != nullptr) {
+    const auto moduleFileName =
+        token->Argument<Cze_module_desc_t_V1::CSArray>(2U).Vector()[0]->GetProgramSourceName();
+    SD().Get<CModuleState>(*phModule, EXCEPTION_MESSAGE).moduleFileName = moduleFileName;
   }
 }
 
