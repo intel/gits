@@ -758,7 +758,7 @@ inline void vkDestroyImage_SD(VkDevice device,
 inline void vkGetImageMemoryRequirements_SD(VkDevice device,
                                             VkImage image,
                                             VkMemoryRequirements* pMemoryRequirements) {
-  SD()._imagestates[image]->memorySizeRequirement = pMemoryRequirements->size;
+  SD()._imagestates[image]->memoryRequirements = *pMemoryRequirements;
 }
 
 inline void vkGetImageMemoryRequirements2_SD(VkDevice device,
@@ -784,12 +784,12 @@ inline void vkGetImageMemoryRequirements2KHR_SD(VkDevice device,
 namespace {
 void BindImageMemory_SDHelper(VkImage image, VkDeviceMemory memory, VkDeviceSize memOffset) {
   auto& imageState = SD()._imagestates[image];
-  imageState->binding.reset(new CMemoryBinding(memOffset, imageState->memorySizeRequirement,
+  imageState->binding.reset(new CMemoryBinding(memOffset, imageState->memoryRequirements.size,
                                                SD()._devicememorystates[memory]));
 
   if (Config::Get().IsRecorder() && isSubcaptureBeforeRestorationPhase()) {
     imageState->binding->deviceMemoryStateStore->aliasingTracker.AddImage(
-        memOffset, imageState->memorySizeRequirement, image);
+        memOffset, imageState->memoryRequirements.size, image);
   }
 }
 } // namespace
@@ -881,7 +881,7 @@ inline void vkDestroyBuffer_SD(VkDevice device,
 inline void vkGetBufferMemoryRequirements_SD(VkDevice device,
                                              VkBuffer buffer,
                                              VkMemoryRequirements* pMemoryRequirements) {
-  SD()._bufferstates[buffer]->memorySizeRequirement = pMemoryRequirements->size;
+  SD()._bufferstates[buffer]->memoryRequirements = *pMemoryRequirements;
 }
 
 inline void vkGetBufferMemoryRequirements2_SD(VkDevice device,
@@ -907,12 +907,12 @@ inline void vkGetBufferMemoryRequirements2KHR_SD(VkDevice device,
 namespace {
 void BindBufferMemory_SDHelper(VkBuffer buffer, VkDeviceMemory memory, VkDeviceSize memOffset) {
   auto& bufferState = SD()._bufferstates[buffer];
-  bufferState->binding.reset(new CMemoryBinding(memOffset, bufferState->memorySizeRequirement,
+  bufferState->binding.reset(new CMemoryBinding(memOffset, bufferState->memoryRequirements.size,
                                                 SD()._devicememorystates[memory]));
 
   if (Config::Get().IsRecorder() && isSubcaptureBeforeRestorationPhase()) {
     bufferState->binding->deviceMemoryStateStore->aliasingTracker.AddBuffer(
-        memOffset, bufferState->memorySizeRequirement, buffer);
+        memOffset, bufferState->memoryRequirements.size, buffer);
   }
 }
 } // namespace

@@ -460,7 +460,7 @@ struct CImageState : public UniqueResourceHandle {
   std::vector<std::pair<std::shared_ptr<CVkSparseMemoryBindData>,
                         std::shared_ptr<CVkSparseImageMemoryBindData>>>
       sparseBindings;
-  VkDeviceSize memorySizeRequirement;
+  VkMemoryRequirements memoryRequirements;
   std::vector<std::vector<CImageLayoutAccessOwnershipState>> currentLayout; // per layer, per mipmap
   uint64_t timestamp;
   std::shared_ptr<CDeviceState> deviceStateStore;
@@ -478,7 +478,7 @@ struct CImageState : public UniqueResourceHandle {
         arrayLayers(_pCreateInfo->arrayLayers),
         imageFormat(_pCreateInfo->format),
         imageType(_pCreateInfo->imageType),
-        memorySizeRequirement(0),
+        memoryRequirements{},
         currentLayout(_pCreateInfo->arrayLayers),
         timestamp(0),
         deviceStateStore(_deviceState) {
@@ -566,7 +566,7 @@ struct CBufferState : public UniqueResourceHandle {
   VkBuffer bufferHandle;
   CVkBufferCreateInfoData bufferCreateInfoData;
   std::shared_ptr<CMemoryBinding> binding;
-  VkDeviceSize memorySizeRequirement;
+  VkMemoryRequirements memoryRequirements;
   std::vector<std::shared_ptr<CVkSparseMemoryBindData>> sparseBindings;
   VkDeviceAddress deviceAddress;
   uint64_t timestamp;
@@ -582,7 +582,7 @@ struct CBufferState : public UniqueResourceHandle {
                std::shared_ptr<CDeviceState> _deviceState)
       : bufferHandle(*_pBuffer),
         bufferCreateInfoData(_pCreateInfo),
-        memorySizeRequirement(0),
+        memoryRequirements{},
         deviceAddress(0),
         timestamp(0),
         deviceStateStore(_deviceState) {}

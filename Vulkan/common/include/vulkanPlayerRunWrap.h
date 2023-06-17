@@ -842,7 +842,7 @@ inline void vkGetSemaphoreCounterValueKHR_WRAPRUN(CVkResult& return_value,
 }
 
 inline void vkAllocateMemory_WRAPRUN(CVkResult& recorderSideReturnValue,
-                                     CVkDevice& device,
+                                     CVkDevice& deviceRef,
                                      CVkMemoryAllocateInfo& pAllocateInfo,
                                      CNullWrapper& pAllocator,
                                      CVkDeviceMemory::CSMapArray& pMemory) {
@@ -851,52 +851,79 @@ inline void vkAllocateMemory_WRAPRUN(CVkResult& recorderSideReturnValue,
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 
+  auto device = *deviceRef;
+
   auto dedicatedAllocation = (VkMemoryDedicatedAllocateInfo*)getPNextStructure(
       allocateInfoPtr->pNext, VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO);
   if (dedicatedAllocation) {
     if (dedicatedAllocation->image != VK_NULL_HANDLE) {
       auto& imageState = SD()._imagestates[dedicatedAllocation->image];
-      if (imageState->memorySizeRequirement == 0) {
+
+      // Get memory requirements for an image if there are none
+      if (imageState->memoryRequirements.size == 0) {
         VkMemoryRequirements requirements = {};
-        drvVk.vkGetImageMemoryRequirements(*device, dedicatedAllocation->image, &requirements);
-        vkGetImageMemoryRequirements_SD(*device, dedicatedAllocation->image, &requirements);
+        drvVk.vkGetImageMemoryRequirements(device, dedicatedAllocation->image, &requirements);
+        vkGetImageMemoryRequirements_SD(device, dedicatedAllocation->image, &requirements);
       }
-      if (imageState->memorySizeRequirement > allocateInfoPtr->allocationSize) {
-        allocateInfoPtr->allocationSize = imageState->memorySizeRequirement;
+
+      // Adjust memory object's allocation size
+      if (imageState->memoryRequirements.size > allocateInfoPtr->allocationSize) {
+        allocateInfoPtr->allocationSize = imageState->memoryRequirements.size;
+      }
+
+      // Adjust memory type from which memory object is allocated
+      if (!isBitSet(imageState->memoryRequirements.memoryTypeBits,
+                    1 << allocateInfoPtr->memoryTypeIndex)) {
+        allocateInfoPtr->memoryTypeIndex = findCompatibleMemoryTypeIndex(
+            imageState->deviceStateStore->physicalDeviceStateStore->physicalDeviceHandle,
+            allocateInfoPtr->memoryTypeIndex, imageState->memoryRequirements.memoryTypeBits);
       }
     }
+
     if (dedicatedAllocation->buffer != VK_NULL_HANDLE) {
       auto& bufferState = SD()._bufferstates[dedicatedAllocation->buffer];
-      if (bufferState->memorySizeRequirement == 0) {
+
+      // Get memory requirements for a buffer if there are none
+      if (bufferState->memoryRequirements.size == 0) {
         VkMemoryRequirements requirements = {};
-        drvVk.vkGetBufferMemoryRequirements(*device, dedicatedAllocation->buffer, &requirements);
-        vkGetBufferMemoryRequirements_SD(*device, dedicatedAllocation->buffer, &requirements);
+        drvVk.vkGetBufferMemoryRequirements(device, dedicatedAllocation->buffer, &requirements);
+        vkGetBufferMemoryRequirements_SD(device, dedicatedAllocation->buffer, &requirements);
       }
-      if (bufferState->memorySizeRequirement > allocateInfoPtr->allocationSize) {
-        allocateInfoPtr->allocationSize = bufferState->memorySizeRequirement;
+
+      // Adjust memory object's allocation size
+      if (bufferState->memoryRequirements.size > allocateInfoPtr->allocationSize) {
+        allocateInfoPtr->allocationSize = bufferState->memoryRequirements.size;
+      }
+
+      // Adjust memory type from which memory object is allocated
+      if (!isBitSet(bufferState->memoryRequirements.memoryTypeBits,
+                    1 << allocateInfoPtr->memoryTypeIndex)) {
+        allocateInfoPtr->memoryTypeIndex = findCompatibleMemoryTypeIndex(
+            bufferState->deviceStateStore->physicalDeviceStateStore->physicalDeviceHandle,
+            allocateInfoPtr->memoryTypeIndex, bufferState->memoryRequirements.memoryTypeBits);
       }
     }
   }
 
   VkResult playerSideReturnValue =
-      drvVk.vkAllocateMemory(*device, allocateInfoPtr, *pAllocator, *pMemory);
+      drvVk.vkAllocateMemory(device, allocateInfoPtr, *pAllocator, *pMemory);
   checkReturnValue(playerSideReturnValue, recorderSideReturnValue, "vkAllocateMemory");
   recorderSideReturnValue.Assign(playerSideReturnValue);
-  vkAllocateMemory_SD(playerSideReturnValue, *device, allocateInfoPtr, *pAllocator, *pMemory);
+  vkAllocateMemory_SD(playerSideReturnValue, device, allocateInfoPtr, *pAllocator, *pMemory);
 
   VkDeviceMemory* memoryPtr = *pMemory;
   if (memoryPtr == nullptr) {
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 
-  if (checkMemoryMappingFeasibility(*device, allocateInfoPtr->memoryTypeIndex, false)) {
+  if (checkMemoryMappingFeasibility(device, allocateInfoPtr->memoryTypeIndex, false)) {
     //clearMemory
     void* ptr = nullptr;
 
-    VkResult map_return_value = drvVk.vkMapMemory(*device, *memoryPtr, 0, VK_WHOLE_SIZE, 0, &ptr);
+    VkResult map_return_value = drvVk.vkMapMemory(device, *memoryPtr, 0, VK_WHOLE_SIZE, 0, &ptr);
     if (map_return_value == VK_SUCCESS) {
       memset(ptr, 0, (size_t)allocateInfoPtr->allocationSize);
-      drvVk.vkUnmapMemory(*device, *memoryPtr);
+      drvVk.vkUnmapMemory(device, *memoryPtr);
     } else {
       Log(WARN) << "vkMapMemory() was used to clear allocated memory but failed with the code: "
                 << map_return_value << ". It can cause rendering errors!";

@@ -2175,6 +2175,35 @@ bool checkMemoryMappingFeasibility(VkDevice device, uint32_t memoryTypeIndex, bo
   }
 }
 
+uint32_t findCompatibleMemoryTypeIndex(VkPhysicalDevice physicalDevice,
+                                       uint32_t originalMemoryTypeIndex,
+                                       uint32_t currentCompatibleMemoryTypes) {
+  static std::unordered_map<VkPhysicalDevice, VkPhysicalDeviceMemoryProperties>
+      currentPlatformMemoryPropertiesMap;
+  auto it = currentPlatformMemoryPropertiesMap.find(physicalDevice);
+
+  if (it == currentPlatformMemoryPropertiesMap.end()) {
+    VkPhysicalDeviceMemoryProperties memoryProperties;
+    drvVk.vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
+    it = currentPlatformMemoryPropertiesMap.insert({physicalDevice, memoryProperties}).first;
+  }
+
+  auto& originalPlatformProperties = SD()._physicaldevicestates[physicalDevice]->memoryProperties;
+  auto& currentPlatformProperties = it->second;
+
+  auto originalFlags =
+      originalPlatformProperties.memoryTypes[originalMemoryTypeIndex].propertyFlags;
+
+  for (uint32_t i = 0; i < currentPlatformProperties.memoryTypeCount; ++i) {
+    if ((currentCompatibleMemoryTypes & (1 << i)) &&
+        (currentPlatformProperties.memoryTypes[i].propertyFlags & originalFlags)) {
+      return i;
+    }
+  }
+
+  throw std::runtime_error("Cannot find a compatbile memory type for a resource. Exiting!");
+}
+
 std::shared_ptr<CBufferState> findBufferStateFromDeviceAddress(VkDeviceAddress deviceAddress) {
   auto isInRange =
       [&deviceAddress](

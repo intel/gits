@@ -123,6 +123,9 @@ bool checkMemoryMappingFeasibility(VkDevice device,
 bool checkMemoryMappingFeasibility(VkDevice device,
                                    uint32_t memoryTypeIndex,
                                    bool throwException = true);
+uint32_t findCompatibleMemoryTypeIndex(VkPhysicalDevice physicalDevice,
+                                       uint32_t originalMemoryTypeIndex,
+                                       uint32_t currentCompatibleMemoryTypes);
 std::shared_ptr<CBufferState> findBufferStateFromDeviceAddress(VkDeviceAddress deviceAddress);
 bool isVulkanAPIVersionSupported(uint32_t major, uint32_t minor, VkPhysicalDevice physicalDevice);
 void checkReturnValue(VkResult playerSideReturnValue,
