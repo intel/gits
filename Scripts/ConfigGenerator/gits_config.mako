@@ -300,7 +300,9 @@ Vulkan {
     MaxArraySizeForCCode         400
     UseCaptureReplayFeaturesForBuffersAndAccelerationStructures   False
     UseCaptureReplayFeaturesForRayTracingPipelines                True
+    %if platform == "win32":
     UsePresentSrcLayoutTransitionAsAFrameBoundary                 False     ; Dx9onVk workaround
+    %endif
     RenderDocCompatibility                                        True      ; supress extensions not supported by RenderDoc: VK_EXT_graphics_pipeline_library, VK_EXT_extended_dynamic_state3, VK_EXT_external_memory_host
   }
 

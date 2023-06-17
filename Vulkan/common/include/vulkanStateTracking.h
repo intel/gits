@@ -61,12 +61,13 @@ inline bool crossPlatformStateRestoration() {
       Config::Get().recorder.vulkan.utilities.crossPlatformStateRestoration.images;
   return crossPlatformStateRestoration;
 }
-
+#ifdef GITS_PLATFORM_WINDOWS
 inline bool usePresentSrcLayoutTransitionAsAFrameBoundary() {
   static bool usePresentSrcLayoutTransitionAsAFrameBoundary =
       Config::Get().recorder.vulkan.utilities.usePresentSrcLayoutTransitionAsAFrameBoundary;
   return usePresentSrcLayoutTransitionAsAFrameBoundary;
 }
+#endif
 
 } // namespace
 
@@ -80,6 +81,7 @@ inline void vkCreateInstance_SD(VkResult return_value,
                                 const VkInstanceCreateInfo* pCreateInfo,
                                 const VkAllocationCallbacks* pAllocator,
                                 VkInstance* pInstance) {
+#ifdef GITS_PLATFORM_WINDOWS
   auto offscreenApp =
       getPNextStructure(pCreateInfo->pNext, VK_STRUCTURE_TYPE_WIN32_INSTANCE_CREATE_INFO_INTEL);
   if (offscreenApp != nullptr) {
@@ -88,6 +90,7 @@ inline void vkCreateInstance_SD(VkResult return_value,
     cfg.recorder.vulkan.utilities.usePresentSrcLayoutTransitionAsAFrameBoundary = true;
     Config::Set(cfg);
   }
+#endif
 
   if ((return_value == VK_SUCCESS) && (*pInstance != VK_NULL_HANDLE)) {
     auto instanceState = std::make_shared<CInstanceState>(pInstance, pCreateInfo);

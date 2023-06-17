@@ -131,7 +131,6 @@ bool isVulkanAPIVersionSupported(uint32_t major, uint32_t minor, VkPhysicalDevic
 void checkReturnValue(VkResult playerSideReturnValue,
                       CVkResult& recorderSideReturnValue,
                       const char* functionName);
-void getWindowInstanceAndHandleAndSize(CWindowParameters& windowParameters);
 
 // Kudos to Piotr Horodecki
 class MemoryAliasingTracker {

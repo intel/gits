@@ -2240,44 +2240,6 @@ void checkReturnValue(VkResult playerSideReturnValue,
   }
 }
 
-#ifdef GITS_PLATFORM_WINDOWS
-
-BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam) {
-  DWORD parentWindowProcess;
-  GetWindowThreadProcessId(hwnd, &parentWindowProcess);
-  if (parentWindowProcess == GetCurrentProcessId()) {
-    RECT rect;
-    GetClientRect(hwnd, &rect);
-    int32_t width = rect.right - rect.left;
-    int32_t height = rect.bottom - rect.top;
-
-    // Workaround for finding too small, 1x1 windows.
-    if ((width < 2) || (height < 2)) {
-      // Continue searching
-      return TRUE;
-    } else {
-      // Stop searching
-      CWindowParameters* windowParameters = (CWindowParameters*)lParam;
-      windowParameters->hWnd = hwnd;
-      windowParameters->extent.width = width;
-      windowParameters->extent.height = height;
-      return FALSE;
-    }
-  }
-  return TRUE;
-}
-
-#endif
-
-void getWindowInstanceAndHandleAndSize(CWindowParameters& windowParameters) {
-#ifdef GITS_PLATFORM_WINDOWS
-
-  windowParameters.hInstance = GetModuleHandle(NULL);
-  EnumWindows(EnumWindowsProc, (LPARAM)(&windowParameters));
-
-#endif
-}
-
 // Code borrowed from development team's Piotr Horodecki
 bool MemoryAliasingTracker::Range::operator()(Range const& lRange, Range const& rRange) const {
   return lRange.offset < rRange.offset;

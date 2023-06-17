@@ -1346,7 +1346,6 @@ struct CInternalResources {
     VkExtent2D extent;
     VkQueue universalQueue;
     VkCommandPool commandPool;
-    bool readyToPresent;
 
     std::array<CPresentationData, imageCount> presentationData;
 
@@ -1354,8 +1353,9 @@ struct CInternalResources {
         : nextImage(0),
           swapchain(VK_NULL_HANDLE),
           extent{0, 0},
+          universalQueue(VK_NULL_HANDLE),
           commandPool(VK_NULL_HANDLE),
-          readyToPresent(false) {}
+          presentationData{} {}
   };
 
   struct COffscreenAppsSupport {

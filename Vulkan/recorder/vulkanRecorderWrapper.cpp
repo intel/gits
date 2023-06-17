@@ -410,8 +410,10 @@ void CRecorderWrapper::DisableConfigOptions() const {
     cfg.recorder.vulkan.utilities.memoryUpdateState.setFromString("UsingTags");
   }
 
+#ifdef GITS_PLATFORM_WINDOWS
   // Disable other options when recording (sub)streams from GITS streams
   cfg.recorder.vulkan.utilities.usePresentSrcLayoutTransitionAsAFrameBoundary = false;
+#endif
 
   gits::Config::Set(cfg);
 }

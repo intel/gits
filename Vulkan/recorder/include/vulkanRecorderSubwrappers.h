@@ -112,93 +112,76 @@ void handleSwapchainCreationForOffscreenApplications(VkDevice device,
                                                      CRecorder& recorder) {
   auto& vs = SD().internalResources.virtualSwapchain[device];
   auto& offscreenApp = SD().internalResources.offscreenApps[device];
-  CWindowParameters windowParameters = {nullptr, nullptr, {0, 0}};
 
-  // Surface / window management
-  {
-    getWindowInstanceAndHandleAndSize(windowParameters);
+  static bool init = [&]() {
+    CWindowParameters windowParameters = {(HINSTANCE)offscreenApp.uniqueHandleCounter++,
+                                          (HWND)offscreenApp.uniqueHandleCounter++,
+                                          {pCreateInfo->extent.width, pCreateInfo->extent.height}};
 
-    // hWnd is not changed (it still equals to null) when no window was found
-    // or if any of it's dimensions are 0 (so we don't have to check dimensions here).
-    if (!windowParameters.hWnd) {
-      return;
-    }
+    auto instance =
+        SD()._devicestates[device]->physicalDeviceStateStore->instanceStateStore->instanceHandle;
 
-    // Don't do anything if nothing changed
-    if ((offscreenApp.hwnd == windowParameters.hWnd) && (vs.extent.width > 0) &&
-        (vs.extent.height > 0)) {
-      return;
-    }
+    VkWin32SurfaceCreateInfoKHR surfaceCreateInfo = {
+        VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR, // VkStructureType sType;
+        nullptr,                                         // const void* pNext;
+        0,                                               // VkWin32SurfaceCreateFlagsKHR flags;
+        windowParameters.hInstance,                      // HINSTANCE hinstance;
+        windowParameters.hWnd                            // HWND hwnd;
+    };
 
-    // Create a surface during the first initialization but also when hwnd changed.
-    // The latter means that application's window was destroyed and a new one was created.
-    if (offscreenApp.hwnd != windowParameters.hWnd) {
-      auto instance =
-          SD()._devicestates[device]->physicalDeviceStateStore->instanceStateStore->instanceHandle;
+    offscreenApp.surface = (VkSurfaceKHR)offscreenApp.uniqueHandleCounter++;
 
-      if (offscreenApp.surface != VK_NULL_HANDLE) {
-        recorder.Schedule(new CvkDestroySurfaceKHR(instance, offscreenApp.surface, nullptr));
-        vkDestroySurfaceKHR_SD(instance, offscreenApp.surface, nullptr);
-        vs.readyToPresent = false;
-      }
+    recorder.Schedule(new CGitsVkCreateNativeWindow(
+        surfaceCreateInfo.hinstance, surfaceCreateInfo.hwnd, windowParameters.extent.width,
+        windowParameters.extent.height));
+    recorder.Schedule(new CvkCreateWin32SurfaceKHR(VK_SUCCESS, instance, &surfaceCreateInfo,
+                                                   nullptr, &offscreenApp.surface));
+    recorder.Schedule(new CGitsVkEnumerateDisplayMonitors(true));
 
-      VkWin32SurfaceCreateInfoKHR surfaceCreateInfo = {
-          VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR, // VkStructureType sType;
-          nullptr,                                         // const void* pNext;
-          0,                                               // VkWin32SurfaceCreateFlagsKHR flags;
-          windowParameters.hInstance,                      // HINSTANCE hinstance;
-          windowParameters.hWnd                            // HWND hwnd;
-      };
+    vkCreateWin32SurfaceKHR_SD(VK_SUCCESS, instance, &surfaceCreateInfo, nullptr,
+                               &offscreenApp.surface);
 
-      offscreenApp.surface = (VkSurfaceKHR)offscreenApp.uniqueHandleCounter++;
-      vkCreateWin32SurfaceKHR_SD(VK_SUCCESS, instance, &surfaceCreateInfo, nullptr,
-                                 &offscreenApp.surface);
-
-      recorder.Schedule(
-          new CGitsVkCreateNativeWindow(surfaceCreateInfo.hinstance, surfaceCreateInfo.hwnd));
-      recorder.Schedule(new CvkCreateWin32SurfaceKHR(VK_SUCCESS, instance, &surfaceCreateInfo,
-                                                     nullptr, &offscreenApp.surface));
-      recorder.Schedule(new CGitsVkEnumerateDisplayMonitors(true));
-      offscreenApp.hwnd = windowParameters.hWnd;
-    }
-  }
-
-  {
+    offscreenApp.hwnd = windowParameters.hWnd;
     vs.extent = windowParameters.extent;
 
-    if ((vs.extent.width == 0) || (vs.extent.height == 0)) {
-      vs.readyToPresent = false;
-      return;
-    }
-  }
-
-  // One-time initialization of resources that won't change
-  {
-    CALL_ONCE[&] {
-      // Select universal queue and command pool
-      {
-        auto& deviceState = SD()._devicestates[device];
-        for (auto& queueState : deviceState->queueStateStoreList) {
-          if ((queueState->queueFlags & VK_QUEUE_GRAPHICS_BIT) &&
-              (queueState->queueFlags & VK_QUEUE_COMPUTE_BIT) &&
-              (queueState->queueFlags & VK_QUEUE_TRANSFER_BIT)) {
-            vs.universalQueue = queueState->queueHandle;
-            vs.commandPool = createCommandPool(device, queueState->queueFamilyIndex, recorder);
-            break;
-          }
+    // One-time initialization of resources that won't change
+    // Select universal queue and command pool
+    {
+      auto& deviceState = SD()._devicestates[device];
+      for (auto& queueState : deviceState->queueStateStoreList) {
+        if ((queueState->queueFlags & VK_QUEUE_GRAPHICS_BIT) &&
+            (queueState->queueFlags & VK_QUEUE_COMPUTE_BIT) &&
+            (queueState->queueFlags & VK_QUEUE_TRANSFER_BIT)) {
+          vs.universalQueue = queueState->queueHandle;
+          vs.commandPool = createCommandPool(device, queueState->queueFamilyIndex, recorder);
+          break;
         }
       }
+    }
 
-      for (uint32_t i = 0; i < vs.imageCount; ++i) {
-        auto& data = vs.presentationData[i];
+    for (uint32_t i = 0; i < vs.imageCount; ++i) {
+      auto& data = vs.presentationData[i];
 
-        data.imageAcquiredSemaphore = createSemaphore(device, recorder);
-        data.readyToPresentSemaphore = createSemaphore(device, recorder);
-        data.fence = createFence(device, true, recorder);
-        data.commandBuffer = allocateCommandBuffer(device, vs.commandPool, recorder);
-      }
-      return true;
-    };
+      data.imageAcquiredSemaphore = createSemaphore(device, recorder);
+      data.readyToPresentSemaphore = createSemaphore(device, recorder);
+      data.fence = createFence(device, true, recorder);
+      data.commandBuffer = allocateCommandBuffer(device, vs.commandPool, recorder);
+    }
+    return true;
+  }();
+
+  // Image size has not changed and swapchain already created
+  if (vs.extent.width == pCreateInfo->extent.width &&
+      vs.extent.height == pCreateInfo->extent.height && vs.swapchain) {
+    return;
+  }
+
+  // Update window when image size chamged
+  if (vs.extent.width != pCreateInfo->extent.width ||
+      vs.extent.height != pCreateInfo->extent.height) {
+    vs.extent = {pCreateInfo->extent.width, pCreateInfo->extent.height};
+    recorder.Schedule(
+        new CGitsVkUpdateNativeWindow(offscreenApp.hwnd, vs.extent.width, vs.extent.height));
   }
 
   // Create a swapchain (replacing an old one if required after window size changed)
@@ -260,7 +243,6 @@ void handleSwapchainCreationForOffscreenApplications(VkDevice device,
   // will provide images in order, starting from 0.
   {
     vs.nextImage = 0;
-    vs.readyToPresent = true;
 
     recorder.Schedule(new CvkAcquireNextImageKHR(
         VK_SUCCESS, device, vs.swapchain, 9000000000,
@@ -272,10 +254,6 @@ void scheduleCopyToSwapchainAndPresent(VkDevice device, VkQueue queue, CRecorder
   auto& vs = SD().internalResources.virtualSwapchain[device];
   auto& offscreenApp = SD().internalResources.offscreenApps[device];
   auto& presentationData = vs.presentationData[vs.nextImage];
-
-  if (!vs.readyToPresent) {
-    return;
-  }
 
   recorder.Schedule(
       new CvkWaitForFences(VK_SUCCESS, device, 1, &presentationData.fence, VK_FALSE, 9000000000));
@@ -343,16 +321,14 @@ void scheduleCopyToSwapchainAndPresent(VkDevice device, VkQueue queue, CRecorder
     // Data copy
     {
       if (srcImageState->imageCreateInfoData.Value()->samples == VK_SAMPLE_COUNT_1_BIT) {
-        VkImageBlit imageBlit = {{
+        VkImageCopy imageCopy = {{
                                      // VkImageSubresourceLayers srcSubresource;
                                      VK_IMAGE_ASPECT_COLOR_BIT, // VkImageAspectFlags aspectMask;
                                      0,                         // uint32_t mipLevel;
                                      0,                         // uint32_t baseArrayLayer;
                                      1                          // uint32_t layerCount;
                                  },
-                                 {// VkOffset3D srcOffsets[2];
-                                  {0, 0, 0},
-                                  {srcImageState->width, srcImageState->height, 1}},
+                                 {0, 0, 0}, // VkOffset3D srcOffset;
                                  {
                                      // VkImageSubresourceLayers dstSubresource;
                                      VK_IMAGE_ASPECT_COLOR_BIT, // VkImageAspectFlags aspectMask;
@@ -360,12 +336,12 @@ void scheduleCopyToSwapchainAndPresent(VkDevice device, VkQueue queue, CRecorder
                                      0,                         // uint32_t baseArrayLayer;
                                      1                          // uint32_t layerCount;
                                  },
-                                 {// VkOffset3D dstOffsets[2];
-                                  {0, 0, 0},
-                                  {(int32_t)vs.extent.width, (int32_t)vs.extent.height, 1}}};
-        recorder.Schedule(new CvkCmdBlitImage(
-            commandBuffer, srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstImage,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageBlit, VK_FILTER_LINEAR));
+                                 {0, 0, 0}, // VkOffset3D dstOffset;
+                                 {static_cast<uint32_t>(srcImageState->width),
+                                  static_cast<uint32_t>(srcImageState->height), 1}};
+        recorder.Schedule(new CvkCmdCopyImage(commandBuffer, srcImage,
+                                              VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstImage,
+                                              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageCopy));
       } else {
         VkImageResolve region = {
             {
@@ -383,8 +359,9 @@ void scheduleCopyToSwapchainAndPresent(VkDevice device, VkQueue queue, CRecorder
                 0,                         // uint32_t baseArrayLayer;
                 1                          // uint32_t layerCount;
             },
-            {0, 0, 0},                                       //VkOffset3D dstOffset;
-            {srcImageState->width, srcImageState->height, 1} //VkExtent3D extent;
+            {0, 0, 0}, //VkOffset3D dstOffset;
+            {static_cast<uint32_t>(srcImageState->width),
+             static_cast<uint32_t>(srcImageState->height), 1} //VkExtent3D extent;
         };
         recorder.Schedule(new CvkCmdResolveImage(commandBuffer, srcImage,
                                                  VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstImage,
@@ -493,21 +470,23 @@ inline void vkQueuePresentKHR_RECWRAP(VkResult return_value,
     }
 
 #ifdef GITS_PLATFORM_WINDOWS
-    for (auto& surfaceState : surfacesStates) {
-      auto& hwndState = SD()._hwndstates[surfaceState->surfaceCreateInfoWin32Data.Value()->hwnd];
+    if (!Config::Get().recorder.vulkan.utilities.usePresentSrcLayoutTransitionAsAFrameBoundary) {
+      for (auto& surfaceState : surfacesStates) {
+        auto& hwndState = SD()._hwndstates[surfaceState->surfaceCreateInfoWin32Data.Value()->hwnd];
 
-      int x = hwndState->x;
-      int y = hwndState->y;
-      int w = hwndState->w;
-      int h = hwndState->h;
-      bool vis = hwndState->vis;
+        int x = hwndState->x;
+        int y = hwndState->y;
+        int w = hwndState->w;
+        int h = hwndState->h;
+        bool vis = hwndState->vis;
 
-      window_handle win(surfaceState->surfaceCreateInfoWin32Data.Value()->hwnd);
-      int xx, yy, ww, hh;
-      win.get_dimensions(xx, yy, ww, hh);
-      if ((xx != x) || (yy != y) || (ww != w) || (hh != h) || (win.is_visible() != vis)) {
-        recorder.Schedule(
-            new CGitsVkUpdateNativeWindow(surfaceState->surfaceCreateInfoWin32Data.Value()->hwnd));
+        window_handle win(surfaceState->surfaceCreateInfoWin32Data.Value()->hwnd);
+        int xx, yy, ww, hh;
+        win.get_dimensions(xx, yy, ww, hh);
+        if ((xx != x) || (yy != y) || (ww != w) || (hh != h) || (win.is_visible() != vis)) {
+          recorder.Schedule(new CGitsVkUpdateNativeWindow(
+              surfaceState->surfaceCreateInfoWin32Data.Value()->hwnd));
+        }
       }
     }
 #endif
@@ -680,6 +659,7 @@ inline void vkQueueSubmit_RECWRAP(VkResult return_value,
     }
   }
 
+#ifdef GITS_PLATFORM_WINDOWS
   // Offscreen applications support
   if (!SD().internalResources.attachedToGITS && usePresentSrcLayoutTransitionAsAFrameBoundary()) {
     auto device = SD()._queuestates[queue]->deviceStateStore->deviceHandle;
@@ -703,6 +683,7 @@ inline void vkQueueSubmit_RECWRAP(VkResult return_value,
       }
     }
   }
+#endif
 
   SD().lastQueueSubmit =
       std::make_shared<CQueueSubmitState>(&submitCount, pSubmits, fence, SD()._queuestates[queue]);
@@ -823,6 +804,7 @@ inline void vkQueueSubmit2_RECWRAP(VkResult return_value,
     }
   }
 
+#ifdef GITS_PLATFORM_WINDOWS
   // Offscreen applications support
   if (!SD().internalResources.attachedToGITS && usePresentSrcLayoutTransitionAsAFrameBoundary()) {
     auto device = SD()._queuestates[queue]->deviceStateStore->deviceHandle;
@@ -846,6 +828,7 @@ inline void vkQueueSubmit2_RECWRAP(VkResult return_value,
       }
     }
   }
+#endif
 
   //SD().lastQueueSubmit = std::make_shared<CQueueSubmitState>(&submitCount, pSubmits, fence, SD()._queuestates[queue]); //TODO
 
@@ -1098,6 +1081,7 @@ inline void vkAllocateMemory_RECWRAP(VkResult return_value,
   // vkAllocateMemory_SD() function is called inside recExecWrap_vkAllocateMemory() function
 }
 
+#ifdef GITS_PLATFORM_WINDOWS
 namespace {
 
 // Offscreen applications support
@@ -1128,6 +1112,7 @@ inline void barriers2HelperForOffscreenApplications(VkCommandBuffer commandBuffe
 }
 
 } // namespace
+#endif
 
 inline void vkCmdPipelineBarrier_RECWRAP(VkCommandBuffer commandBuffer,
                                          VkPipelineStageFlags srcStageMask,
@@ -1152,29 +1137,30 @@ inline void vkCmdPipelineBarrier_RECWRAP(VkCommandBuffer commandBuffer,
         pMemoryBarriers, bufferMemoryBarrierCount, pBufferMemoryBarriers, imageMemoryBarrierCount,
         pImageMemoryBarriers));
   }
-  if (!Config::Get().recorder.vulkan.utilities.scheduleCommandBuffersBeforeQueueSubmit) {
-    // Offscreen applications support
-    if (usePresentSrcLayoutTransitionAsAFrameBoundary()) {
-      auto device = SD()._commandbufferstates[commandBuffer]
-                        ->commandPoolStateStore->deviceStateStore->deviceHandle;
+#ifdef GITS_PLATFORM_WINDOWS
+  // Offscreen applications support
+  if (!Config::Get().recorder.vulkan.utilities.scheduleCommandBuffersBeforeQueueSubmit &&
+      usePresentSrcLayoutTransitionAsAFrameBoundary()) {
+    auto device = SD()._commandbufferstates[commandBuffer]
+                      ->commandPoolStateStore->deviceStateStore->deviceHandle;
 
-      for (unsigned int i = 0; i < imageMemoryBarrierCount; i++) {
-        if (pImageMemoryBarriers[i].newLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
-          if (recorder.Running()) {
-            auto pImageCreateInfo =
-                SD()._imagestates[pImageMemoryBarriers[i].image]->imageCreateInfoData.Value();
-            handleSwapchainCreationForOffscreenApplications(device, pImageCreateInfo, recorder);
-          }
-          {
-            auto& offscreenApp = SD().internalResources.offscreenApps[device];
-            offscreenApp.commandBufferWithTransitionToPresentSRC = commandBuffer;
-            offscreenApp.imageToPresent = pImageMemoryBarriers[i].image;
-          }
-          break;
+    for (unsigned int i = 0; i < imageMemoryBarrierCount; i++) {
+      if (pImageMemoryBarriers[i].newLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
+        if (recorder.Running()) {
+          auto pImageCreateInfo =
+              SD()._imagestates[pImageMemoryBarriers[i].image]->imageCreateInfoData.Value();
+          handleSwapchainCreationForOffscreenApplications(device, pImageCreateInfo, recorder);
         }
+        {
+          auto& offscreenApp = SD().internalResources.offscreenApps[device];
+          offscreenApp.commandBufferWithTransitionToPresentSRC = commandBuffer;
+          offscreenApp.imageToPresent = pImageMemoryBarriers[i].image;
+        }
+        break;
       }
     }
   }
+#endif
   vkCmdPipelineBarrier_SD(commandBuffer, srcStageMask, dstStageMask, dependencyFlags,
                           memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount,
                           pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
@@ -1190,9 +1176,11 @@ inline void vkCmdPipelineBarrier2UnifiedGITS_RECWRAP(VkCommandBuffer commandBuff
     SD()._commandbufferstates[commandBuffer]->tokensBuffer.Add(
         new CvkCmdPipelineBarrier2UnifiedGITS(commandBuffer, pDependencyInfo));
   }
+#ifdef GITS_PLATFORM_WINDOWS
   if (!Config::Get().recorder.vulkan.utilities.scheduleCommandBuffersBeforeQueueSubmit) {
     barriers2HelperForOffscreenApplications(commandBuffer, pDependencyInfo, recorder);
   }
+#endif
   vkCmdPipelineBarrier2UnifiedGITS_SD(commandBuffer, pDependencyInfo);
 }
 
@@ -1206,9 +1194,11 @@ inline void vkCmdPipelineBarrier2_RECWRAP(VkCommandBuffer commandBuffer,
     SD()._commandbufferstates[commandBuffer]->tokensBuffer.Add(
         new CvkCmdPipelineBarrier2(commandBuffer, pDependencyInfo));
   }
+#ifdef GITS_PLATFORM_WINDOWS
   if (!Config::Get().recorder.vulkan.utilities.scheduleCommandBuffersBeforeQueueSubmit) {
     barriers2HelperForOffscreenApplications(commandBuffer, pDependencyInfo, recorder);
   }
+#endif
   vkCmdPipelineBarrier2_SD(commandBuffer, pDependencyInfo);
 }
 
@@ -1222,9 +1212,11 @@ inline void vkCmdPipelineBarrier2KHR_RECWRAP(VkCommandBuffer commandBuffer,
     SD()._commandbufferstates[commandBuffer]->tokensBuffer.Add(
         new CvkCmdPipelineBarrier2KHR(commandBuffer, pDependencyInfo));
   }
+#ifdef GITS_PLATFORM_WINDOWS
   if (!Config::Get().recorder.vulkan.utilities.scheduleCommandBuffersBeforeQueueSubmit) {
     barriers2HelperForOffscreenApplications(commandBuffer, pDependencyInfo, recorder);
   }
+#endif
   vkCmdPipelineBarrier2KHR_SD(commandBuffer, pDependencyInfo);
 }
 
@@ -1239,9 +1231,11 @@ inline void vkCmdSetEvent2_RECWRAP(VkCommandBuffer commandBuffer,
     SD()._commandbufferstates[commandBuffer]->tokensBuffer.Add(
         new CvkCmdSetEvent2(commandBuffer, event, pDependencyInfo));
   }
+#ifdef GITS_PLATFORM_WINDOWS
   if (!Config::Get().recorder.vulkan.utilities.scheduleCommandBuffersBeforeQueueSubmit) {
     barriers2HelperForOffscreenApplications(commandBuffer, pDependencyInfo, recorder);
   }
+#endif
   vkCmdSetEvent2_SD(commandBuffer, event, pDependencyInfo);
 }
 
@@ -1256,9 +1250,11 @@ inline void vkCmdSetEvent2KHR_RECWRAP(VkCommandBuffer commandBuffer,
     SD()._commandbufferstates[commandBuffer]->tokensBuffer.Add(
         new CvkCmdSetEvent2KHR(commandBuffer, event, pDependencyInfo));
   }
+#ifdef GITS_PLATFORM_WINDOWS
   if (!Config::Get().recorder.vulkan.utilities.scheduleCommandBuffersBeforeQueueSubmit) {
     barriers2HelperForOffscreenApplications(commandBuffer, pDependencyInfo, recorder);
   }
+#endif
   vkCmdSetEvent2KHR_SD(commandBuffer, event, pDependencyInfo);
 }
 

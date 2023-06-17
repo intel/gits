@@ -59,6 +59,27 @@ public:
   {
   }
 #endif
+  CGitsVkCreateNativeWindow(HINSTANCE hinstance_in,
+                            HWND hwnd_in,
+                            int width,
+                            int height,
+                            int x_pos = 0,
+                            int y_pos = 0,
+                            bool visible = true)
+#if defined(GITS_PLATFORM_WINDOWS)
+      : hwnd(hwnd_in), hinstance(hinstance_in) {
+    x.Value() = x_pos;
+    y.Value() = y_pos;
+    w.Value() = width;
+    h.Value() = height;
+    vis.Value() = visible;
+    SD()._hwndstates.emplace(
+        hwnd_in, std::make_shared<CHWNDState>(x_pos, y_pos, width, height, visible, nullptr));
+  }
+#else
+  {
+  }
+#endif
   CGitsVkCreateNativeWindow(xcb_connection_t* connection, xcb_window_t window)
 #if defined(GITS_PLATFORM_X11)
       : hwnd(window), hinstance(connection) {
@@ -329,6 +350,17 @@ public:
     int xx, yy, ww, hh;
     win.get_dimensions(xx, yy, ww, hh);
     HelperSetValues(xx, yy, ww, hh, win.is_visible(), hwnd_in);
+  }
+#endif
+
+  CGitsVkUpdateNativeWindow(
+      HWND hwnd_in, int width, int height, int x_pos = 0, int y_pos = 0, bool visible = true)
+#if defined(GITS_PLATFORM_WINDOWS)
+      : hwnd(hwnd_in) {
+    HelperSetValues(x_pos, y_pos, width, height, visible, hwnd_in);
+  }
+#else
+  {
   }
 #endif
 #if defined(GITS_PLATFORM_X11)
