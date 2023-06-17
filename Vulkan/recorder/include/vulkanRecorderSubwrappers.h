@@ -342,29 +342,54 @@ void scheduleCopyToSwapchainAndPresent(VkDevice device, VkQueue queue, CRecorder
     }
     // Data copy
     {
-      VkImageBlit imageBlit = {{
-                                   // VkImageSubresourceLayers srcSubresource;
-                                   VK_IMAGE_ASPECT_COLOR_BIT, // VkImageAspectFlags aspectMask;
-                                   0,                         // uint32_t mipLevel;
-                                   0,                         // uint32_t baseArrayLayer;
-                                   1                          // uint32_t layerCount;
-                               },
-                               {// VkOffset3D srcOffsets[2];
-                                {0, 0, 0},
-                                {srcImageState->width, srcImageState->height, 1}},
-                               {
-                                   // VkImageSubresourceLayers dstSubresource;
-                                   VK_IMAGE_ASPECT_COLOR_BIT, // VkImageAspectFlags aspectMask;
-                                   0,                         // uint32_t mipLevel;
-                                   0,                         // uint32_t baseArrayLayer;
-                                   1                          // uint32_t layerCount;
-                               },
-                               {// VkOffset3D dstOffsets[2];
-                                {0, 0, 0},
-                                {(int32_t)vs.extent.width, (int32_t)vs.extent.height, 1}}};
-      recorder.Schedule(new CvkCmdBlitImage(
-          commandBuffer, srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstImage,
-          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageBlit, VK_FILTER_LINEAR));
+      if (srcImageState->imageCreateInfoData.Value()->samples == VK_SAMPLE_COUNT_1_BIT) {
+        VkImageBlit imageBlit = {{
+                                     // VkImageSubresourceLayers srcSubresource;
+                                     VK_IMAGE_ASPECT_COLOR_BIT, // VkImageAspectFlags aspectMask;
+                                     0,                         // uint32_t mipLevel;
+                                     0,                         // uint32_t baseArrayLayer;
+                                     1                          // uint32_t layerCount;
+                                 },
+                                 {// VkOffset3D srcOffsets[2];
+                                  {0, 0, 0},
+                                  {srcImageState->width, srcImageState->height, 1}},
+                                 {
+                                     // VkImageSubresourceLayers dstSubresource;
+                                     VK_IMAGE_ASPECT_COLOR_BIT, // VkImageAspectFlags aspectMask;
+                                     0,                         // uint32_t mipLevel;
+                                     0,                         // uint32_t baseArrayLayer;
+                                     1                          // uint32_t layerCount;
+                                 },
+                                 {// VkOffset3D dstOffsets[2];
+                                  {0, 0, 0},
+                                  {(int32_t)vs.extent.width, (int32_t)vs.extent.height, 1}}};
+        recorder.Schedule(new CvkCmdBlitImage(
+            commandBuffer, srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstImage,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageBlit, VK_FILTER_LINEAR));
+      } else {
+        VkImageResolve region = {
+            {
+                // VkImageSubresourceLayers srcSubresource;
+                VK_IMAGE_ASPECT_COLOR_BIT, // VkImageAspectFlags aspectMask;
+                0,                         // uint32_t mipLevel;
+                0,                         // uint32_t baseArrayLayer;
+                1                          // uint32_t layerCount;
+            },
+            {0, 0, 0}, //VkOffset3D srcOffset;
+            {
+                // VkImageSubresourceLayers dstSubresource;
+                VK_IMAGE_ASPECT_COLOR_BIT, // VkImageAspectFlags aspectMask;
+                0,                         // uint32_t mipLevel;
+                0,                         // uint32_t baseArrayLayer;
+                1                          // uint32_t layerCount;
+            },
+            {0, 0, 0},                                       //VkOffset3D dstOffset;
+            {srcImageState->width, srcImageState->height, 1} //VkExtent3D extent;
+        };
+        recorder.Schedule(new CvkCmdResolveImage(commandBuffer, srcImage,
+                                                 VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstImage,
+                                                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region));
+      }
     }
     // Post-copy, pre-present memory barriers
     {
