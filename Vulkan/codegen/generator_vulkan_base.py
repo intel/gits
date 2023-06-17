@@ -26,7 +26,12 @@ structs_table = []
 
 
 def Enum(**kwargs):
-  enums_table.append(kwargs)
+  found = [i for i,x in enumerate(enums_table) if x['name']==kwargs['name']]
+  if not found:
+    enums_table.append(kwargs)
+  else:
+    it = found[0]
+    enums_table[it]['enumerators'] = enums_table[it]['enumerators'][:-1] + kwargs['enumerators'] + [enums_table[it]['enumerators'][-1]]
 
 def Function(**kwargs):
   functions_table.append(kwargs)

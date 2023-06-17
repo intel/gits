@@ -158,6 +158,7 @@ uint32_t getFormatBytesPerPixel(VkFormat format) {
   case VK_FORMAT_R8_UNORM:
   case VK_FORMAT_R8_USCALED:
   case VK_FORMAT_S8_UINT:
+  case VK_FORMAT_CUSTOM_A8_UNORM_GITS:
     return 1;
     //case VK_FORMAT_ASTC_10x10_SRGB_BLOCK:
     //case VK_FORMAT_ASTC_10x10_UNORM_BLOCK:
@@ -360,6 +361,7 @@ uint32_t getFormatNumBlocks(VkFormat format, VkExtent3D size) {
   case VK_FORMAT_S8_UINT:
   case VK_FORMAT_A4B4G4R4_UNORM_PACK16:
   case VK_FORMAT_A4R4G4B4_UNORM_PACK16:
+  case VK_FORMAT_CUSTOM_A8_UNORM_GITS:
     return size.width * size.height * size.depth;
   case VK_FORMAT_ASTC_10x10_SRGB_BLOCK:
   case VK_FORMAT_ASTC_10x10_UNORM_BLOCK:
@@ -600,6 +602,7 @@ uint32_t getFormatDataSize(VkFormat format, VkExtent3D size) {
   case VK_FORMAT_R8_UNORM:
   case VK_FORMAT_R8_USCALED:
   case VK_FORMAT_S8_UINT:
+  case VK_FORMAT_CUSTOM_A8_UNORM_GITS:
     return 1 * size.width * size.height * size.depth;
   case VK_FORMAT_ASTC_10x10_SRGB_BLOCK:
   case VK_FORMAT_ASTC_10x10_UNORM_BLOCK:
@@ -858,6 +861,7 @@ uint32_t getFormatChannelCount(VkFormat format) {
   case VK_FORMAT_X8_D24_UNORM_PACK32:
   case VK_FORMAT_D16_UNORM:
   case VK_FORMAT_S8_UINT:
+  case VK_FORMAT_CUSTOM_A8_UNORM_GITS:
     return 1;
   //case VK_FORMAT_ASTC_10x10_SRGB_BLOCK:
   //case VK_FORMAT_ASTC_10x10_UNORM_BLOCK:
@@ -1101,6 +1105,7 @@ VkImageAspectFlags getFormatAspectFlags(VkFormat format) {
   case VK_FORMAT_PVRTC2_4BPP_UNORM_BLOCK_IMG:
   case VK_FORMAT_A4B4G4R4_UNORM_PACK16:
   case VK_FORMAT_A4R4G4B4_UNORM_PACK16:
+  case VK_FORMAT_CUSTOM_A8_UNORM_GITS:
     return VK_IMAGE_ASPECT_COLOR_BIT;
   case VK_FORMAT_D32_SFLOAT_S8_UINT:
   case VK_FORMAT_D24_UNORM_S8_UINT:

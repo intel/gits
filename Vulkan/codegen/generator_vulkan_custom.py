@@ -70,3 +70,9 @@ Struct(name='VkInitializeBufferDataGITS_', enabled=True, declareArray=True,
 var1=VarDef(name='buffer', type='VkBuffer'),
 var2=VarDef(name='bufferCopy', type='VkBufferCopy')
 )
+
+###############################################
+
+Enum(name='VkFormat', enumerators = [
+VarDef(name='VK_FORMAT_CUSTOM_A8_UNORM_GITS', value='2000000025'),
+])
