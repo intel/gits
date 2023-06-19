@@ -130,7 +130,7 @@ uint64_t ComputeHash(const void* data,
   } else {
     u32u64 val;
     if (type == THashType::XX || type == THashType::XXCRC32) {
-      val.u32[0] = XXH32(data, static_cast<int>(size), 0);
+      val.u32[0] = XXH32(data, size, 0);
     } else if (type == THashType::MURMUR) {
       MurmurHash3_x86_32(data, static_cast<int>(size), 0, &val.u32[0]);
     } else {
