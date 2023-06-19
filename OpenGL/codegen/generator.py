@@ -1023,7 +1023,7 @@ arg3=ArgDef(name='offset', type='GLintptr'),
 arg4=ArgDef(name='size', type='GLsizeiptr'),
 arg5=ArgDef(name='format', type='GLenum'),
 arg6=ArgDef(name='type', type='GLenum'),
-arg7=ArgDef(name='data', type='const void*', wrapType='CBinaryResource', wrapParams='RESOURCE_BUFFER, data, size')
+arg7=ArgDef(name='data', type='const void*', wrapType='CBinaryResource', wrapParams='RESOURCE_BUFFER, data, texelSize(format, type)')
 )
 
 Function(name='glClearBufferfi', enabled=True, type=Fill, execPostRecWrap=True,
