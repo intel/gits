@@ -1608,6 +1608,12 @@ arg2=ArgDef(name='device_timestamp',type='cl_ulong*'),
 arg3=ArgDef(name='host_timestamp',type='cl_ulong*')
 )
 
+Function(name='clGetHostTimer',enabled=True,availableFrom='2.1',extension=False,type=Info,
+retV=RetDef(type='cl_int'),
+arg1=ArgDef(name='device',type='cl_device_id'),
+arg2=ArgDef(name='host_timestamp',type='cl_ulong*')
+)
+
 Function(name='clCloneKernel',enabled=True,availableFrom='2.1',extension=False,type=Creator,stateTrack=True,
 retV=RetDef(type='cl_kernel'),
 arg1=ArgDef(name='source_kernel',type='cl_kernel'),
