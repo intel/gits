@@ -39,6 +39,8 @@ void stateObjRemoveFBOEXTAttachent(GLenum target, GLenum attachment);
 void OptionalBufferDataTrack(
     GLint buffer, GLintptr offset, GLsizeiptr size, const GLvoid* data, bool recording);
 void attributeIndexTrack(GLuint index);
+std::vector<uint8_t> GetBufferData(GLenum target, GLintptr offset, GLsizeiptr size);
+std::vector<uint8_t> GetNamedBufferData(GLuint buffer, GLintptr offset, GLsizeiptr size);
 
 inline void glColorPointerBounds_SD(GLint size,
                                     GLenum type,
@@ -1768,12 +1770,44 @@ inline void glClearBufferSubData_SD(GLenum target,
                                     const void* data,
                                     GLboolean recording = 0) {
   if (Config::Get().IsRecorder()) {
-    std::vector<uint8_t> tmpData(size);
-    uint8_t* pSrc = (uint8_t*)drv.gl.glMapBufferRange(target, offset, size, GL_MAP_READ_BIT);
-    memcpy(&tmpData[0], pSrc, size);
-    drv.gl.glUnmapBuffer(target);
+    std::vector<uint8_t> tmpData = GetBufferData(target, offset, size);
 
-    OptionalBufferDataTrack(boundBuff(target), offset, size, &tmpData[0], recording);
+    OptionalBufferDataTrack(boundBuff(target), offset, size, tmpData.data(), recording);
+  }
+}
+
+inline void glClearNamedBufferData_SD(GLuint buffer,
+                                      GLenum internalformat,
+                                      GLenum format,
+                                      GLenum type,
+                                      const void* data,
+                                      GLboolean recording = 0) {
+  if (Config::Get().IsRecorder()) {
+    auto* bufferStateData = SD().GetCurrentSharedStateData().Buffers().Get(buffer);
+    if (bufferStateData == nullptr) {
+      return;
+    }
+    auto size = bufferStateData->Size();
+    GLintptr offset = 0;
+
+    std::vector<uint8_t> tmpData = GetNamedBufferData(buffer, offset, size);
+
+    OptionalBufferDataTrack(buffer, offset, size, tmpData.data(), recording);
+  }
+}
+
+inline void glClearNamedBufferSubData_SD(GLuint buffer,
+                                         GLenum internalformat,
+                                         GLintptr offset,
+                                         GLsizeiptr size,
+                                         GLenum format,
+                                         GLenum type,
+                                         const void* data,
+                                         GLboolean recording = 0) {
+  if (Config::Get().IsRecorder()) {
+    std::vector<uint8_t> tmpData = GetNamedBufferData(buffer, offset, size);
+
+    OptionalBufferDataTrack(buffer, offset, size, tmpData.data(), recording);
   }
 }
 

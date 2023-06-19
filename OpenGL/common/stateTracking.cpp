@@ -170,3 +170,31 @@ void gits::OpenGL::attributeIndexTrack(GLuint index) {
     }
   }
 }
+
+std::vector<uint8_t> gits::OpenGL::GetBufferData(GLenum target, GLintptr offset, GLsizeiptr size) {
+  std::vector<uint8_t> tmpData(size);
+  uint8_t* pSrc = (uint8_t*)drv.gl.glMapBufferRange(target, offset, size, GL_MAP_READ_BIT);
+  if (pSrc == nullptr) {
+    Log(ERR) << "glMapBufferRange failed, cannot get data from GPU-side buffer.";
+    throw EOperationFailed(EXCEPTION_MESSAGE);
+  }
+  memcpy(tmpData.data(), pSrc, size);
+  drv.gl.glUnmapBuffer(target);
+
+  return tmpData;
+}
+
+std::vector<uint8_t> gits::OpenGL::GetNamedBufferData(GLuint buffer,
+                                                      GLintptr offset,
+                                                      GLsizeiptr size) {
+  std::vector<uint8_t> tmpData(size);
+  uint8_t* pSrc = (uint8_t*)drv.gl.glMapNamedBufferRange(buffer, offset, size, GL_MAP_READ_BIT);
+  if (pSrc == nullptr) {
+    Log(ERR) << "glMapNamedBufferRange failed, cannot get data from GPU-side buffer.";
+    throw EOperationFailed(EXCEPTION_MESSAGE);
+  }
+  memcpy(tmpData.data(), pSrc, size);
+  drv.gl.glUnmapNamedBuffer(buffer);
+
+  return tmpData;
+}

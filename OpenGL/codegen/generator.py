@@ -1012,7 +1012,7 @@ arg1=ArgDef(name='target', type='GLenum'),
 arg2=ArgDef(name='internalformat', type='GLenum'),
 arg3=ArgDef(name='format', type='GLenum'),
 arg4=ArgDef(name='type', type='GLenum'),
-arg5=ArgDef(name='data', type='const void*', wrapType='CBinaryResource')
+arg5=ArgDef(name='data', type='const void*', wrapType='CBinaryResource', wrapParams='RESOURCE_BUFFER, data, texelSize(format, type)')
 )
 
 Function(name='glClearBufferSubData', enabled=True, type=Resource, stateTrack=True,
@@ -1122,18 +1122,18 @@ retV=RetDef(type='void'),
 arg1=ArgDef(name='c', type='GLfloat')
 )
 
-Function(name='glClearNamedBufferData', enabled=False, type=None,
+Function(name='glClearNamedBufferData', enabled=True, type=Resource, stateTrack=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='buffer', type='GLuint', wrapType='CGLBuffer'),
 arg2=ArgDef(name='internalformat', type='GLenum'),
 arg3=ArgDef(name='format', type='GLenum'),
 arg4=ArgDef(name='type', type='GLenum'),
-arg5=ArgDef(name='data', type='const void*', wrapType='CBinaryResource')
+arg5=ArgDef(name='data', type='const void*', wrapType='CBinaryResource', wrapParams='RESOURCE_BUFFER, data, texelSize(format, type)')
 )
 
-Function(name='glClearNamedBufferDataEXT', enabled=False, type=None, inheritFrom='glClearNamedBufferData')
+Function(name='glClearNamedBufferDataEXT', enabled=False, type=Resource, inheritFrom='glClearNamedBufferData')
 
-Function(name='glClearNamedBufferSubData', enabled=False, type=None,
+Function(name='glClearNamedBufferSubData', enabled=True, type=Resource, stateTrack=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='buffer', type='GLuint', wrapType='CGLBuffer'),
 arg2=ArgDef(name='internalformat', type='GLenum'),
@@ -1141,10 +1141,11 @@ arg3=ArgDef(name='offset', type='GLintptr'),
 arg4=ArgDef(name='size', type='GLsizeiptr'),
 arg5=ArgDef(name='format', type='GLenum'),
 arg6=ArgDef(name='type', type='GLenum'),
-arg7=ArgDef(name='data', type='const void*', wrapType='CBinaryResource')
+arg7=ArgDef(name='data', type='const void*', wrapType='CBinaryResource', wrapParams='RESOURCE_BUFFER, data, texelSize(format, type)')
 )
 
-Function(name='glClearNamedBufferSubDataEXT', enabled=False, type=None,
+# TODO: Shouldn't it just inherit from the non-EXT function instead of defining its own arguments?
+Function(name='glClearNamedBufferSubDataEXT', enabled=False, type=Resource,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='buffer', type='GLuint'),
 arg2=ArgDef(name='internalformat', type='GLenum'),
@@ -6891,7 +6892,7 @@ arg3=ArgDef(name='pname', type='GLenum'),
 arg4=ArgDef(name='params', type='GLint*', wrapType='COutArgument')
 )
 
-Function(name='glGetQueryObjecti64v', enabled=True, type=Get|Query, runCond='ConditionQueries()', 
+Function(name='glGetQueryObjecti64v', enabled=True, type=Get|Query, runCond='ConditionQueries()',
 retV=RetDef(type='void'),
 arg1=ArgDef(name='id', type='GLuint', wrapType='CGLQuery'),
 arg2=ArgDef(name='pname', type='GLenum'),
