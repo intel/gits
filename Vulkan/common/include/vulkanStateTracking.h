@@ -45,9 +45,10 @@ inline bool updateOnlyUsedMemory() {
   return updateOnlyUsedMemory;
 }
 
-inline bool captureVulkanSubmits() {
-  static bool captureVulkanSubmits = !Config::Get().player.captureVulkanSubmits.empty();
-  return captureVulkanSubmits;
+inline bool captureRenderPasses() {
+  static bool captureRenderPasses = !Config::Get().player.captureVulkanSubmits.empty() ||
+                                    !Config::Get().player.captureVulkanRenderPasses.empty();
+  return captureRenderPasses;
 }
 
 inline bool captureVulkanSubmitsResources() {
@@ -404,6 +405,12 @@ inline void vkCreateSwapchainKHR_SD(VkResult return_value,
                                     swapchainImages.data());
 
       for (auto image : swapchainImages) {
+        if (SD().imageCounter.find(image) == SD().imageCounter.end()) {
+          CGits::Instance().vkCounters.ImageCountUp();
+          SD().imageCounter[image] = CGits::Instance().vkCounters.CurrentImageCount();
+          Log(TRACE) << "Image nr: " << SD().imageCounter[image] << " (Swapchain image: " << image
+                     << " )";
+        }
         auto imageState = std::make_shared<CImageState>(&image, swapchainState);
         SD()._imagestates.emplace(image, imageState);
         swapchainState->imageStateStoreList.push_back(imageState);
@@ -2018,31 +2025,6 @@ inline void vkCreateFramebuffer_SD(VkResult return_value,
       for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
         framebufferState->imageViewStateStoreList.push_back(
             SD()._imageviewstates[pCreateInfo->pAttachments[i]]);
-        VkAttachmentLoadOp loadOp;
-        VkAttachmentStoreOp storeOp;
-
-        auto& state = SD()._renderpassstates[pCreateInfo->renderPass];
-        if (getFormatAspectFlags(
-                SD()._imageviewstates[pCreateInfo->pAttachments[i]]->imageStateStore->imageFormat) &
-            VK_IMAGE_ASPECT_STENCIL_BIT) {
-          if (state->renderPassCreateInfoData.Value()) {
-            loadOp = state->renderPassCreateInfoData.Value()->pAttachments[i].stencilLoadOp;
-            storeOp = state->renderPassCreateInfoData.Value()->pAttachments[i].stencilStoreOp;
-          } else {
-            loadOp = state->renderPassCreateInfo2Data.Value()->pAttachments[i].stencilLoadOp;
-            storeOp = state->renderPassCreateInfo2Data.Value()->pAttachments[i].stencilStoreOp;
-          }
-        } else {
-          if (state->renderPassCreateInfoData.Value()) {
-            loadOp = state->renderPassCreateInfoData.Value()->pAttachments[i].loadOp;
-            storeOp = state->renderPassCreateInfoData.Value()->pAttachments[i].storeOp;
-          } else {
-            loadOp = state->renderPassCreateInfo2Data.Value()->pAttachments[i].loadOp;
-            storeOp = state->renderPassCreateInfo2Data.Value()->pAttachments[i].storeOp;
-          }
-        }
-        framebufferState->imageLoadOp.push_back(loadOp);
-        framebufferState->imageStoreOp.push_back(storeOp);
       }
     }
 
@@ -2276,6 +2258,7 @@ inline void vkResetCommandBuffer_SD(VkResult /* return_value */,
   commandBufferState->resourceWriteBuffers.clear();
   commandBufferState->resourceWriteImages.clear();
   commandBufferState->touchedResources.clear();
+  commandBufferState->secondaryCommandBuffers.clear();
 
   if (Config::Get().IsRecorder()) {
     SD().bindingBuffers[commandBuffer].clear();
@@ -2343,10 +2326,9 @@ inline void vkEndCommandBuffer_SD(VkResult return_value, VkCommandBuffer command
 namespace {
 inline void vkQueueSubmit_setImageLayout(std::shared_ptr<CCommandBufferState>& commandBufferState,
                                          uint32_t queueFamilyIndex) {
-  if (((isSubcaptureBeforeRestorationPhase()) &&
-       (Config::Get().recorder.vulkan.utilities.crossPlatformStateRestoration.images)) ||
-      (!Config::Get().player.captureVulkanSubmits.empty() ||
-       !Config::Get().player.captureVulkanSubmitsResources.empty())) {
+  if ((isSubcaptureBeforeRestorationPhase() &&
+       Config::Get().recorder.vulkan.utilities.crossPlatformStateRestoration.images) ||
+      captureRenderPasses() || !Config::Get().player.captureVulkanSubmitsResources.empty()) {
 
     for (auto& imageLayoutAfterSubmit : commandBufferState->imageLayoutAfterSubmit) {
       auto& imageState = SD()._imagestates[imageLayoutAfterSubmit.first];
@@ -2411,39 +2393,6 @@ inline void vkQueueSubmit_setTimestamps(std::shared_ptr<CCommandBufferState>& co
 inline void vkQueueSubmit_updateNonDeterministicImages(
     std::shared_ptr<CCommandBufferState>& commandBufferState) {
   if (Config::Get().player.skipNonDeterministicImages) {
-    for (uint32_t renderpass = 0; renderpass < commandBufferState->beginRenderPassesList.size();
-         ++renderpass) {
-      auto& framebufferState =
-          commandBufferState->beginRenderPassesList[renderpass]->framebufferStateStore;
-      uint32_t imageViewSize;
-      if (framebufferState && !(framebufferState->framebufferCreateInfoData.Value()->flags &
-                                VK_FRAMEBUFFER_CREATE_IMAGELESS_BIT)) {
-        imageViewSize = (uint32_t)framebufferState->imageViewStateStoreList.size();
-      } else {
-        imageViewSize = (uint32_t)commandBufferState->beginRenderPassesList[renderpass]
-                            ->imageViewStateStoreListKHR.size();
-      }
-      for (uint32_t imageview = 0; imageview < imageViewSize; ++imageview) {
-        std::string fileName;
-        VkImage imageHandle;
-        VkAttachmentLoadOp imageLoadOption;
-        if (framebufferState && !(framebufferState->framebufferCreateInfoData.Value()->flags &
-                                  VK_FRAMEBUFFER_CREATE_IMAGELESS_BIT)) {
-          imageHandle =
-              framebufferState->imageViewStateStoreList[imageview]->imageStateStore->imageHandle;
-          imageLoadOption = framebufferState->imageLoadOp[imageview];
-        } else {
-          imageHandle = commandBufferState->beginRenderPassesList[renderpass]
-                            ->imageViewStateStoreListKHR[imageview]
-                            ->imageStateStore->imageHandle;
-          imageLoadOption =
-              commandBufferState->beginRenderPassesList[renderpass]->imageLoadOp[imageview];
-        }
-        if (imageLoadOption == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-          commandBufferState->clearedImages.insert(imageHandle);
-        }
-      }
-    }
     for (auto obj : commandBufferState->clearedImages) {
       SD().nonDeterministicImages.erase(obj);
     }
@@ -2456,7 +2405,7 @@ inline void vkQueueSubmit_SD(VkResult return_value,
                              uint32_t submitCount,
                              const VkSubmitInfo* pSubmits,
                              VkFence fence) {
-  if (Config::Get().IsRecorder() || !Config::Get().player.captureVulkanSubmits.empty() ||
+  if (Config::Get().IsRecorder() || captureRenderPasses() ||
       !Config::Get().player.captureVulkanSubmitsResources.empty()) {
     if (pSubmits != NULL) {
       for (uint32_t s = 0; s < submitCount; ++s) {
@@ -2530,7 +2479,7 @@ inline void vkQueueSubmit2_SD(VkResult return_value,
                               uint32_t submitCount,
                               const VkSubmitInfo2* pSubmits,
                               VkFence fence) {
-  if (Config::Get().IsRecorder() || !Config::Get().player.captureVulkanSubmits.empty() ||
+  if (Config::Get().IsRecorder() || captureRenderPasses() ||
       !Config::Get().player.captureVulkanSubmitsResources.empty()) {
     if (pSubmits != NULL) {
       for (uint32_t s = 0; s < submitCount; ++s) {
@@ -2599,6 +2548,67 @@ inline void vkQueueSubmit2_SD(VkResult return_value,
   }
 }
 
+//RenderPass helper functions
+namespace {
+inline void vkEndRenderPass_setImageLayout(
+    std::shared_ptr<CCommandBufferState>& commandBufferState) {
+  if (!Config::Get().player.captureVulkanRenderPasses.empty()) {
+    for (auto& imageLayoutAfterSubmit : commandBufferState->imageLayoutAfterSubmit) {
+      auto& imageState = SD()._imagestates[imageLayoutAfterSubmit.first];
+
+      for (uint32_t l = 0; l < imageLayoutAfterSubmit.second.size(); ++l) {
+        for (uint32_t m = 0; m < imageLayoutAfterSubmit.second[l].size(); ++m) {
+          if (imageLayoutAfterSubmit.second[l][m].Layout != (VkImageLayout)-1) {
+            imageState->currentLayout[l][m].Layout = imageLayoutAfterSubmit.second[l][m].Layout;
+            imageState->currentLayout[l][m].Access = imageLayoutAfterSubmit.second[l][m].Access;
+          }
+        }
+      }
+    }
+  }
+}
+
+inline void vkEndRenderPass_updateNonDeterministicImages(
+    std::shared_ptr<CCommandBufferState>& commandBufferState) {
+  if (Config::Get().player.skipNonDeterministicImages &&
+      commandBufferState->beginRenderPassesList.size()) {
+    auto& framebufferState =
+        commandBufferState->beginRenderPassesList.back()->framebufferStateStore;
+    uint32_t imageViewSize;
+    if (framebufferState && !(framebufferState->framebufferCreateInfoData.Value()->flags &
+                              VK_FRAMEBUFFER_CREATE_IMAGELESS_BIT)) {
+      imageViewSize = (uint32_t)framebufferState->imageViewStateStoreList.size();
+    } else {
+      imageViewSize = (uint32_t)commandBufferState->beginRenderPassesList.back()
+                          ->imageViewStateStoreListKHR.size();
+    }
+    for (uint32_t imageview = 0; imageview < imageViewSize; ++imageview) {
+      std::string fileName;
+      VkImage imageHandle;
+      VkAttachmentLoadOp imageLoadOption =
+          commandBufferState->beginRenderPassesList.back()->imageLoadOp[imageview];
+      if (framebufferState && !(framebufferState->framebufferCreateInfoData.Value()->flags &
+                                VK_FRAMEBUFFER_CREATE_IMAGELESS_BIT)) {
+        imageHandle =
+            framebufferState->imageViewStateStoreList[imageview]->imageStateStore->imageHandle;
+      } else {
+        imageHandle = commandBufferState->beginRenderPassesList.back()
+                          ->imageViewStateStoreListKHR[imageview]
+                          ->imageStateStore->imageHandle;
+      }
+      if (imageLoadOption == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+        commandBufferState->clearedImages.insert(imageHandle);
+      }
+    }
+    if (!Config::Get().player.captureVulkanRenderPasses.empty()) {
+      for (auto obj : commandBufferState->clearedImages) {
+        SD().nonDeterministicImages.erase(obj);
+      }
+    }
+  }
+}
+} // namespace
+
 // Command buffer recording commands
 
 inline void vkCmdBeginRenderPass_SD(VkCommandBuffer cmdBuffer,
@@ -2612,42 +2622,74 @@ inline void vkCmdBeginRenderPass_SD(VkCommandBuffer cmdBuffer,
       pRenderPassBegin, &contents, SD()._renderpassstates[pRenderPassBegin->renderPass],
       SD()._framebufferstates[pRenderPassBegin->framebuffer]);
   SD()._commandbufferstates[cmdBuffer]->beginRenderPassesList.push_back(beginRenderPassState);
-  if ((Config::Get().IsRecorder() ||
-       (!Config::Get().player.captureVulkanSubmits.empty() ||
-        !Config::Get().player.captureVulkanSubmitsResources.empty())) &&
-      (SD()._framebufferstates[pRenderPassBegin->framebuffer]
-           ->framebufferCreateInfoData.Value()
-           ->flags &
-       VK_FRAMEBUFFER_CREATE_IMAGELESS_BIT)) {
-    VkRenderPassAttachmentBeginInfo* rpAttBeginInfo =
-        (VkRenderPassAttachmentBeginInfo*)pRenderPassBegin->pNext;
-    for (uint32_t i = 0; i < rpAttBeginInfo->attachmentCount; i++) {
-      beginRenderPassState->imageViewStateStoreListKHR.push_back(
-          SD()._imageviewstates[rpAttBeginInfo->pAttachments[i]]);
-      VkAttachmentLoadOp loadOp;
-      VkAttachmentStoreOp storeOp;
-      auto& state = SD()._renderpassstates[pRenderPassBegin->renderPass];
-      if (getFormatAspectFlags(SD()._imageviewstates[rpAttBeginInfo->pAttachments[i]]
-                                   ->imageStateStore->imageFormat) &
-          VK_IMAGE_ASPECT_STENCIL_BIT) {
-        if (state->renderPassCreateInfoData.Value()) {
-          loadOp = state->renderPassCreateInfoData.Value()->pAttachments[i].stencilLoadOp;
-          storeOp = state->renderPassCreateInfoData.Value()->pAttachments[i].stencilStoreOp;
+  if (Config::Get().IsRecorder() || captureRenderPasses() ||
+      !Config::Get().player.captureVulkanSubmitsResources.empty()) {
+    if (SD()._framebufferstates[pRenderPassBegin->framebuffer]
+            ->framebufferCreateInfoData.Value()
+            ->flags &
+        VK_FRAMEBUFFER_CREATE_IMAGELESS_BIT) {
+      VkRenderPassAttachmentBeginInfo* rpAttBeginInfo =
+          (VkRenderPassAttachmentBeginInfo*)pRenderPassBegin->pNext;
+      for (uint32_t i = 0; i < rpAttBeginInfo->attachmentCount; i++) {
+        beginRenderPassState->imageViewStateStoreListKHR.push_back(
+            SD()._imageviewstates[rpAttBeginInfo->pAttachments[i]]);
+        VkAttachmentLoadOp loadOp;
+        VkAttachmentStoreOp storeOp;
+        auto& state = SD()._renderpassstates[pRenderPassBegin->renderPass];
+        if (getFormatAspectFlags(SD()._imageviewstates[rpAttBeginInfo->pAttachments[i]]
+                                     ->imageStateStore->imageFormat) &
+            VK_IMAGE_ASPECT_STENCIL_BIT) {
+          if (state->renderPassCreateInfoData.Value()) {
+            loadOp = state->renderPassCreateInfoData.Value()->pAttachments[i].stencilLoadOp;
+            storeOp = state->renderPassCreateInfoData.Value()->pAttachments[i].stencilStoreOp;
+          } else {
+            loadOp = state->renderPassCreateInfo2Data.Value()->pAttachments[i].stencilLoadOp;
+            storeOp = state->renderPassCreateInfo2Data.Value()->pAttachments[i].stencilStoreOp;
+          }
         } else {
-          loadOp = state->renderPassCreateInfo2Data.Value()->pAttachments[i].stencilLoadOp;
-          storeOp = state->renderPassCreateInfo2Data.Value()->pAttachments[i].stencilStoreOp;
+          if (state->renderPassCreateInfoData.Value()) {
+            loadOp = state->renderPassCreateInfoData.Value()->pAttachments[i].loadOp;
+            storeOp = state->renderPassCreateInfoData.Value()->pAttachments[i].storeOp;
+          } else {
+            loadOp = state->renderPassCreateInfo2Data.Value()->pAttachments[i].loadOp;
+            storeOp = state->renderPassCreateInfo2Data.Value()->pAttachments[i].storeOp;
+          }
         }
-      } else {
-        if (state->renderPassCreateInfoData.Value()) {
-          loadOp = state->renderPassCreateInfoData.Value()->pAttachments[i].loadOp;
-          storeOp = state->renderPassCreateInfoData.Value()->pAttachments[i].storeOp;
-        } else {
-          loadOp = state->renderPassCreateInfo2Data.Value()->pAttachments[i].loadOp;
-          storeOp = state->renderPassCreateInfo2Data.Value()->pAttachments[i].storeOp;
-        }
+        beginRenderPassState->imageLoadOp.push_back(loadOp);
+        beginRenderPassState->imageStoreOp.push_back(storeOp);
       }
-      beginRenderPassState->imageLoadOp.push_back(loadOp);
-      beginRenderPassState->imageStoreOp.push_back(storeOp);
+    } else {
+      for (uint32_t i = 0;
+           i <
+           SD()._framebufferstates[pRenderPassBegin->framebuffer]->imageViewStateStoreList.size();
+           ++i) {
+        auto imageViewStateStore =
+            SD()._framebufferstates[pRenderPassBegin->framebuffer]->imageViewStateStoreList[i];
+        VkAttachmentLoadOp loadOp;
+        VkAttachmentStoreOp storeOp;
+
+        auto& state = SD()._renderpassstates[pRenderPassBegin->renderPass];
+        if (getFormatAspectFlags(imageViewStateStore->imageStateStore->imageFormat) &
+            VK_IMAGE_ASPECT_STENCIL_BIT) {
+          if (state->renderPassCreateInfoData.Value()) {
+            loadOp = state->renderPassCreateInfoData.Value()->pAttachments[i].stencilLoadOp;
+            storeOp = state->renderPassCreateInfoData.Value()->pAttachments[i].stencilStoreOp;
+          } else {
+            loadOp = state->renderPassCreateInfo2Data.Value()->pAttachments[i].stencilLoadOp;
+            storeOp = state->renderPassCreateInfo2Data.Value()->pAttachments[i].stencilStoreOp;
+          }
+        } else {
+          if (state->renderPassCreateInfoData.Value()) {
+            loadOp = state->renderPassCreateInfoData.Value()->pAttachments[i].loadOp;
+            storeOp = state->renderPassCreateInfoData.Value()->pAttachments[i].storeOp;
+          } else {
+            loadOp = state->renderPassCreateInfo2Data.Value()->pAttachments[i].loadOp;
+            storeOp = state->renderPassCreateInfo2Data.Value()->pAttachments[i].storeOp;
+          }
+        }
+        beginRenderPassState->imageLoadOp.push_back(loadOp);
+        beginRenderPassState->imageStoreOp.push_back(storeOp);
+      }
     }
   }
   if (Config::Get().IsRecorder()) {
@@ -2727,8 +2769,7 @@ inline void vkCmdBeginRenderPass2KHR_SD(VkCommandBuffer commandBuffer,
 inline void vkCmdEndRenderPass_SD(VkCommandBuffer commandBuffer) {
   if (((Config::Get().recorder.basic.enabled) && (isSubcaptureBeforeRestorationPhase()) &&
        (Config::Get().recorder.vulkan.utilities.crossPlatformStateRestoration.images)) ||
-      (!Config::Get().player.captureVulkanSubmits.empty() ||
-       !Config::Get().player.captureVulkanSubmitsResources.empty())) {
+      (captureRenderPasses() || !Config::Get().player.captureVulkanSubmitsResources.empty())) {
     auto& commandBufferState = SD()._commandbufferstates[commandBuffer];
 
     if (commandBufferState->beginRenderPassesList.size()) {
@@ -2797,6 +2838,8 @@ inline void vkCmdEndRenderPass_SD(VkCommandBuffer commandBuffer) {
         }
       }
     }
+    vkEndRenderPass_setImageLayout(commandBufferState);
+    vkEndRenderPass_updateNonDeterministicImages(commandBufferState);
   }
 }
 
@@ -2816,9 +2859,8 @@ inline void vkCmdBeginRendering_SD(VkCommandBuffer commandBuffer,
       std::make_shared<CCommandBufferState::CBeginRenderPass>(pRenderingInfo);
   SD()._commandbufferstates[commandBuffer]->beginRenderPassesList.push_back(beginRenderPassState);
 
-  if ((Config::Get().IsRecorder() ||
-       (!Config::Get().player.captureVulkanSubmits.empty() ||
-        !Config::Get().player.captureVulkanSubmitsResources.empty()))) {
+  if (Config::Get().IsRecorder() || captureRenderPasses() ||
+      !Config::Get().player.captureVulkanSubmitsResources.empty()) {
 
     for (uint32_t i = 0; i < pRenderingInfo->colorAttachmentCount; i++) {
       if (pRenderingInfo->pColorAttachments[i].imageView != VK_NULL_HANDLE) {
@@ -2869,6 +2911,12 @@ inline void vkCmdBeginRendering_SD(VkCommandBuffer commandBuffer,
       }
     }
   }
+}
+
+inline void vkCmdEndRendering_SD(VkCommandBuffer commandBuffer) {
+  auto& commandBufferState = SD()._commandbufferstates[commandBuffer];
+  vkEndRenderPass_setImageLayout(commandBufferState);
+  vkEndRenderPass_updateNonDeterministicImages(commandBufferState);
 }
 
 namespace {
@@ -3305,7 +3353,9 @@ inline void vkCmdDispatchIndirect_SD(VkCommandBuffer commandBuffer, VkBuffer buf
 inline void vkCmdExecuteCommands_SD(VkCommandBuffer commandBuffer,
                                     uint32_t commandBufferCount,
                                     const VkCommandBuffer* pCommandBuffers) {
-  if (Config::Get().IsRecorder() || !Config::Get().player.captureVulkanSubmitsResources.empty()) {
+  if (Config::Get().IsRecorder() || (!Config::Get().player.captureVulkanSubmitsResources.empty() ||
+                                     !Config::Get().player.captureVulkanRenderPasses.empty() ||
+                                     Config::Get().player.execCmdBuffsBeforeQueueSubmit)) {
     for (unsigned int i = 0; i < commandBufferCount; i++) {
       auto& primaryCommandBufferState = SD()._commandbufferstates[commandBuffer];
       auto& secondaryCommandBufferState = SD()._commandbufferstates[pCommandBuffers[i]];
@@ -3319,10 +3369,10 @@ inline void vkCmdExecuteCommands_SD(VkCommandBuffer commandBuffer,
         auto& srcBindingBuffers = SD().bindingBuffers[pCommandBuffers[i]];
         SD().bindingBuffers[commandBuffer].insert(srcBindingBuffers.begin(),
                                                   srcBindingBuffers.end());
-
-        primaryCommandBufferState->secondaryCommandBuffersStateStoreList[pCommandBuffers[i]] =
-            secondaryCommandBufferState;
       }
+
+      primaryCommandBufferState->secondaryCommandBuffersStateStoreList[pCommandBuffers[i]] =
+          secondaryCommandBufferState;
 
       // Track touched resources
       primaryCommandBufferState->touchedResources.insert(
@@ -3414,7 +3464,7 @@ inline void vkCmdPipelineBarrier_SD(VkCommandBuffer commandBuffer,
                                     const VkBufferMemoryBarrier* pBufferMemoryBarriers,
                                     uint32_t imageMemoryBarrierCount,
                                     const VkImageMemoryBarrier* pImageMemoryBarriers) {
-  if (captureVulkanSubmits() || captureVulkanSubmitsResources() ||
+  if (captureRenderPasses() || captureVulkanSubmitsResources() ||
       (isRecorder() && ((updateOnlyUsedMemory()) || isSubcaptureBeforeRestorationPhase()))) {
 
     for (unsigned int i = 0; i < bufferMemoryBarrierCount; i++) {
@@ -3429,7 +3479,7 @@ inline void vkCmdPipelineBarrier_SD(VkCommandBuffer commandBuffer,
         SD().nonDeterministicImages.insert(pImageMemoryBarriers[i].image);
       }
 
-      if (captureVulkanSubmits() || captureVulkanSubmitsResources() ||
+      if (captureRenderPasses() || captureVulkanSubmitsResources() ||
           (isSubcaptureBeforeRestorationPhase() && crossPlatformStateRestoration())) {
         auto& imageState = SD()._imagestates[pImageMemoryBarriers[i].image];
         auto& imageLayout = imageState->currentLayout;
@@ -3479,7 +3529,7 @@ inline void vkCmdPipelineBarrier_SD(VkCommandBuffer commandBuffer,
 
 inline void vkCmdPipelineBarrier2UnifiedGITS_SD(VkCommandBuffer commandBuffer,
                                                 const VkDependencyInfo* pDependencyInfo) {
-  if (captureVulkanSubmits() || captureVulkanSubmitsResources() ||
+  if (captureRenderPasses() || captureVulkanSubmitsResources() ||
       (isRecorder() && (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()))) {
 
     for (unsigned int i = 0; i < pDependencyInfo->bufferMemoryBarrierCount; i++) {
@@ -3494,7 +3544,7 @@ inline void vkCmdPipelineBarrier2UnifiedGITS_SD(VkCommandBuffer commandBuffer,
         SD().nonDeterministicImages.insert(pDependencyInfo->pImageMemoryBarriers[i].image);
       }
 
-      if (captureVulkanSubmits() || captureVulkanSubmitsResources() ||
+      if (captureRenderPasses() || captureVulkanSubmitsResources() ||
           (isSubcaptureBeforeRestorationPhase() && crossPlatformStateRestoration())) {
         auto& imageState = SD()._imagestates[pDependencyInfo->pImageMemoryBarriers[i].image];
         auto& imageLayout = imageState->currentLayout;
@@ -4484,7 +4534,7 @@ inline void vkCmdClearColorImage_SD(VkCommandBuffer commandBuffer,
       }
     }
   }
-  if (!Config::Get().player.captureVulkanSubmits.empty()) {
+  if (captureRenderPasses()) {
     SD()._commandbufferstates[commandBuffer]->clearedImages.insert(image);
   }
 }
@@ -4522,7 +4572,7 @@ inline void vkCmdClearDepthStencilImage_SD(VkCommandBuffer commandBuffer,
       }
     }
   }
-  if (!Config::Get().player.captureVulkanSubmits.empty()) {
+  if (captureRenderPasses()) {
     SD()._commandbufferstates[commandBuffer]->clearedImages.insert(image);
   }
 }
@@ -4532,7 +4582,7 @@ inline void vkCmdClearAttachments_SD(VkCommandBuffer commandBuffer,
                                      const VkClearAttachment* pAttachments,
                                      uint32_t rectCount,
                                      const VkClearRect* pRects) {
-  if (!Config::Get().player.captureVulkanSubmits.empty()) {
+  if (captureRenderPasses()) {
     auto& commandBufferState = SD()._commandbufferstates[commandBuffer];
     for (uint32_t i = 0; i < attachmentCount; ++i) {
       if (commandBufferState->beginRenderPassesList.size()) {

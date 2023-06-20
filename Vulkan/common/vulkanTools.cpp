@@ -127,6 +127,379 @@ std::string GetFileNameResourcesScreenshot(unsigned int frameNumber,
   return path.string();
 }
 
+#ifndef BUILD_FOR_CCODE
+bool operator==(const CGits::CCounter& counter, const Config::VulkanObjectRange& vulkanObjRange) {
+  if (vulkanObjRange.empty()) {
+    return false;
+  }
+  if (vulkanObjRange.objVector.size() > counter.countersTable.size()) {
+    return false;
+  }
+  for (size_t i = 0; i < vulkanObjRange.objVector.size(); i++) {
+    if (counter.countersTable[i] != vulkanObjRange.objVector[i]) {
+      return false;
+    }
+  }
+  if (vulkanObjRange.range[(size_t)counter.countersTable[vulkanObjRange.objVector.size()]]) {
+    return true;
+  }
+  return false;
+}
+
+bool vulkanCopyImage(VkCommandBuffer commandBuffer,
+                     VkImage imageHandle,
+                     VkAttachmentStoreOp imageStoreOption,
+                     std::string fileName) {
+  auto& imageState = SD()._imagestates[imageHandle];
+  if (Config::Get().player.skipNonDeterministicImages &&
+      (SD().nonDeterministicImages.find(imageHandle) != SD().nonDeterministicImages.end())) {
+    return false;
+  }
+
+  if (isFormatCompressed(imageState->imageFormat) ||
+      (imageStoreOption == VK_ATTACHMENT_STORE_OP_DONT_CARE)) {
+    return false;
+  }
+
+  uint32_t numArrayLayers = 1;
+  uint32_t numMipmapLevels = 1;
+  VkImageAspectFlags imageAspect = getFormatAspectFlags(imageState->imageFormat);
+  decltype(imageState->currentLayout) currentLayout;
+
+  if (imageState->swapchainKHRStateStore) {
+    numArrayLayers =
+        imageState->swapchainKHRStateStore->swapchainCreateInfoKHRData.Value()->imageArrayLayers;
+    numMipmapLevels = 1;
+  } else if (imageState->imageCreateInfoData.Value()) {
+    numArrayLayers = imageState->imageCreateInfoData.Value()->arrayLayers;
+    numMipmapLevels = imageState->imageCreateInfoData.Value()->mipLevels;
+  }
+  currentLayout = imageState->currentLayout;
+  for (uint32_t l = 0; l < numArrayLayers; ++l) {
+    for (uint32_t m = 0; m < numMipmapLevels; ++m) {
+      uint32_t width = std::max(1u, imageState->width / (uint32_t)std::pow<uint32_t>(2u, m));
+      uint32_t height = std::max(1u, imageState->height / (uint32_t)std::pow<uint32_t>(2u, m));
+      VkImageLayout layout = currentLayout[l][m].Layout;
+      VkAccessFlags access = currentLayout[l][m].Access;
+
+      if (layout != VK_IMAGE_LAYOUT_UNDEFINED) {
+
+        for (uint32_t a = 0; a < 3; ++a) {
+          VkImageAspectFlagBits aspect = static_cast<VkImageAspectFlagBits>(1 << a);
+
+          if (imageAspect & aspect) {
+            std::shared_ptr<RenderGenericAttachment> attachment(new RenderGenericAttachment());
+            attachment->aspect = aspect;
+            attachment->layer = l;
+            attachment->mipmap = m;
+            attachment->localCounter = SD().imageCounter[imageHandle];
+            attachment->fileName = fileName;
+            attachment->sourceImage = imageHandle;
+
+            // Create buffer
+            {
+              VkBufferCreateInfo bufferCreateInfo = {
+                  VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, // VkStructureType sType;
+                  nullptr,                              // const void* pNext;
+                  0,                                    // VkBufferCreateFlags flags;
+                  width * height *
+                      getFormatBytesPerPixel(imageState->imageFormat), // VkDeviceSize size;
+                  VK_BUFFER_USAGE_TRANSFER_DST_BIT,                    // VkBufferUsageFlags usage;
+                  VK_SHARING_MODE_EXCLUSIVE,                           // sharingMode;
+                  0,      // uint32_t queueFamilyIndexCount;
+                  nullptr // const uint32_t* pQueueFamilyIndices;
+              };
+
+              drvVk.vkCreateBuffer(imageState->deviceStateStore->deviceHandle, &bufferCreateInfo,
+                                   nullptr, &attachment->copiedBuffer);
+              if (VK_NULL_HANDLE == attachment->copiedBuffer) {
+                throw EOperationFailed("Could not create a buffer to store screenshot data.");
+              }
+            }
+
+            // Allocate buffer memory
+            {
+              VkMemoryRequirements memoryRequirements;
+              drvVk.vkGetBufferMemoryRequirements(imageState->deviceStateStore->deviceHandle,
+                                                  attachment->copiedBuffer, &memoryRequirements);
+
+              if (!memoryRequirements.size) {
+                throw EOperationFailed(
+                    "vkGetBufferMemoryRequirements() returned requirement with 0 size.");
+              }
+
+              // To maintain stream compatibility, use memory properties of the platform the (original) stream was recorded on
+              // If there are none, get memory properties of the current platform
+              auto& physicalDeviceState =
+                  SD()._devicestates[imageState->deviceStateStore->deviceHandle]
+                      ->physicalDeviceStateStore;
+              VkPhysicalDeviceMemoryProperties memoryProperties =
+                  physicalDeviceState->memoryProperties;
+              if (memoryProperties.memoryHeapCount == 0) {
+                drvVk.vkGetPhysicalDeviceMemoryProperties(physicalDeviceState->physicalDeviceHandle,
+                                                          &memoryProperties);
+              }
+              uint32_t requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+              for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i) {
+                if ((memoryProperties.memoryTypes[i].propertyFlags & requiredFlags) ==
+                    requiredFlags) {
+                  if (memoryRequirements.memoryTypeBits & (1 << i)) {
+                    VkMemoryAllocateInfo memInfo = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr,
+                                                    memoryRequirements.size, i};
+
+                    drvVk.vkAllocateMemory(imageState->deviceStateStore->deviceHandle, &memInfo,
+                                           nullptr, &attachment->devMemory);
+                    drvVk.vkBindBufferMemory(imageState->deviceStateStore->deviceHandle,
+                                             attachment->copiedBuffer, attachment->devMemory, 0);
+                    break;
+                  }
+                }
+              }
+              if (VK_NULL_HANDLE == attachment->devMemory) {
+                throw EOperationFailed("Could not allocate memory for a buffer.");
+              }
+            }
+            // Perform pre-copy image layout transition
+            {
+              VkImageMemoryBarrier preCopyImageBarrier = {
+                  VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, // VkStructureType sType;
+                  nullptr,                                // const void* pNext;
+                  access,                                 // VkAccessFlags srcAccessMask;
+                  VK_ACCESS_TRANSFER_READ_BIT,            // VkAccessFlags dstAccessMask;
+                  layout,                                 // VkImageLayout oldLayout;
+                  VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,   // VkImageLayout newLayout;
+                  VK_QUEUE_FAMILY_IGNORED,                // uint32_t srcQueueFamilyIndex;
+                  VK_QUEUE_FAMILY_IGNORED,                // uint32_t dstQueueFamilyIndex;
+                  imageHandle,                            // VkImage image;
+                  {
+                      // VkImageSubresourceRange subresourceRange;
+                      static_cast<VkImageAspectFlags>(
+                          imageAspect), // VkImageAspectFlags aspectMask;
+                      m,                // uint32_t baseMipLevel;
+                      1,                // uint32_t levelCount;
+                      l,                // uint32_t baseArrayLayer;
+                      1                 // uint32_t layerCount;
+                  }};
+              VkBufferMemoryBarrier preCopyBufferBarrier = {
+                  VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, // VkStructureType sType;
+                  nullptr,                                 // const void* pNext;
+                  0,                                       // VkAccessFlags srcAccessMask;
+                  VK_ACCESS_TRANSFER_WRITE_BIT,            // VkAccessFlags dstAccessMask;
+                  VK_QUEUE_FAMILY_IGNORED,                 // uint32_t srcQueueFamilyIndex;
+                  VK_QUEUE_FAMILY_IGNORED,                 // uint32_t dstQueueFamilyIndex;
+                  attachment->copiedBuffer,                // VkBuffer buffer;
+                  0,                                       // VkDeviceSize offset;
+                  VK_WHOLE_SIZE                            // VkDeviceSize size;
+              };
+              drvVk.vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                                         VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 1,
+                                         &preCopyBufferBarrier, 1, &preCopyImageBarrier);
+            }
+
+            // Copy image data from swapchain to buffer
+            {
+              VkBufferImageCopy bufferImageCopyRegion = {
+                  0, // VkDeviceSize bufferOffset;
+                  0, // uint32_t bufferRowLength;
+                  0, // uint32_t bufferImageHeight;
+                  {
+                      // VkImageSubresourceLayers imageSubresource;
+                      static_cast<VkImageAspectFlags>(aspect), // VkImageAspectFlags aspectMask;
+                      m,                                       // uint32_t mipLevel;
+                      l,                                       // uint32_t baseArrayLayer;
+                      1                                        // uint32_t layerCount;
+                  },
+                  {
+                      // VkOffset3D imageOffset;
+                      0, // int32_t x;
+                      0, // int32_t y;
+                      0  // int32_t z;
+                  },
+                  {
+                      // VkExtent3D imageExtent;
+                      width,  // uint32_t width;
+                      height, // uint32_t height;
+                      1       // uint32_t depth;
+                  }};
+              drvVk.vkCmdCopyImageToBuffer(commandBuffer, imageHandle,
+                                           VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                           attachment->copiedBuffer, 1, &bufferImageCopyRegion);
+            }
+
+            // Perform post-copy image layout transition
+            {
+              VkImageMemoryBarrier postCopyImageBarrier = {
+                  VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, // VkStructureType sType;
+                  nullptr,                                // const void* pNext;
+                  VK_ACCESS_TRANSFER_READ_BIT,            // VkAccessFlags srcAccessMask;
+                  access,                                 // VkAccessFlags dstAccessMask;
+                  VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,   // VkImageLayout oldLayout;
+                  layout,                                 // VkImageLayout newLayout;
+                  VK_QUEUE_FAMILY_IGNORED,                // uint32_t srcQueueFamilyIndex;
+                  VK_QUEUE_FAMILY_IGNORED,                // uint32_t dstQueueFamilyIndex;
+                  imageHandle,                            // VkImage image;
+                  {
+                      // VkImageSubresourceRange subresourceRange;
+                      static_cast<VkImageAspectFlags>(
+                          imageAspect), // VkImageAspectFlags aspectMask;
+                      m,                // uint32_t baseMipLevel;
+                      1,                // uint32_t levelCount;
+                      l,                // uint32_t baseArrayLayer;
+                      1                 // uint32_t layerCount;
+                  }};
+              VkBufferMemoryBarrier postCopyBufferBarrier = {
+                  VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, // VkStructureType sType;
+                  nullptr,                                 // const void* pNext;
+                  VK_ACCESS_TRANSFER_WRITE_BIT,            // VkAccessFlags srcAccessMask;
+                  VK_ACCESS_HOST_READ_BIT,                 // VkAccessFlags dstAccessMask;
+                  VK_QUEUE_FAMILY_IGNORED,                 // uint32_t srcQueueFamilyIndex;
+                  VK_QUEUE_FAMILY_IGNORED,                 // uint32_t dstQueueFamilyIndex;
+                  attachment->copiedBuffer,                // VkBuffer buffer;
+                  0,                                       // VkDeviceSize offset;
+                  VK_WHOLE_SIZE                            // VkDeviceSize size;
+              };
+              drvVk.vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                         VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 1,
+                                         &postCopyBufferBarrier, 1, &postCopyImageBarrier);
+            }
+            SD()._commandbufferstates[commandBuffer]->renderPassImages.push_back(attachment);
+          }
+        }
+      }
+    }
+  }
+  return true;
+}
+
+void vulkanScheduleCopyRenderPasses(VkCommandBuffer cmdBuffer,
+                                    uint64_t queueSubmitNumber,
+                                    uint32_t cmdBuffBatchNumber,
+                                    uint32_t cmdBuffNumber,
+                                    uint64_t renderPassNumber) {
+  auto& commandBufferState = SD()._commandbufferstates[cmdBuffer];
+  auto& framebufferState =
+      commandBufferState->beginRenderPassesList[renderPassNumber]->framebufferStateStore;
+  uint32_t imageViewSize;
+  if (framebufferState && !(framebufferState->framebufferCreateInfoData.Value()->flags &
+                            VK_FRAMEBUFFER_CREATE_IMAGELESS_BIT)) {
+    imageViewSize = (uint32_t)framebufferState->imageViewStateStoreList.size();
+  } else {
+    imageViewSize = (uint32_t)commandBufferState->beginRenderPassesList[renderPassNumber]
+                        ->imageViewStateStoreListKHR.size();
+  }
+  for (uint32_t imageview = 0; imageview < imageViewSize; ++imageview) {
+    VkImage imageHandle;
+    VkAttachmentStoreOp imageStoreOption =
+        commandBufferState->beginRenderPassesList[renderPassNumber]->imageStoreOp[imageview];
+    if (framebufferState && !(framebufferState->framebufferCreateInfoData.Value()->flags &
+                              VK_FRAMEBUFFER_CREATE_IMAGELESS_BIT)) {
+      imageHandle =
+          framebufferState->imageViewStateStoreList[imageview]->imageStateStore->imageHandle;
+    } else {
+      imageHandle = commandBufferState->beginRenderPassesList[renderPassNumber]
+                        ->imageViewStateStoreListKHR[imageview]
+                        ->imageStateStore->imageHandle;
+    }
+
+    std::string fileName = GetFileNameDrawcallScreenshot(
+        CGits::Instance().CurrentFrame(), queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
+        renderPassNumber, SD().imageCounter[imageHandle], false);
+    vulkanCopyImage(cmdBuffer, imageHandle, imageStoreOption, fileName);
+  }
+}
+
+void vulkanDumpRenderPasses(VkCommandBuffer cmdBuffer) {
+  for (auto attachment : SD()._commandbufferstates[cmdBuffer]->renderPassImages) {
+    VkImage image = attachment->sourceImage;
+    auto imageState = SD()._imagestates[image];
+    uint32_t width =
+        std::max(1u, imageState->width / (uint32_t)std::pow<uint32_t>(2u, attachment->mipmap));
+    uint32_t height =
+        std::max(1u, imageState->height / (uint32_t)std::pow<uint32_t>(2u, attachment->mipmap));
+
+    unsigned char* ptr;
+    drvVk.vkDeviceWaitIdle(imageState->deviceStateStore->deviceHandle);
+    drvVk.vkMapMemory(imageState->deviceStateStore->deviceHandle, attachment->devMemory, 0,
+                      width * height * getFormatBytesPerPixel(imageState->imageFormat), 0,
+                      (void**)&ptr);
+    std::vector<uint8_t> screenshotData(
+        ptr, ptr + (width * height * getFormatBytesPerPixel(imageState->imageFormat)));
+
+    try {
+      std::vector<uint8_t> convertedData(width * height * 4);
+      bool depthInProperRange = true;
+      if (attachment->aspect == VK_IMAGE_ASPECT_COLOR_BIT) {
+        convert_texture_data(getTexelToConvertFromImageFormat(imageState->imageFormat),
+                             screenshotData, texel_type::RGBA8, convertedData, width, height);
+      } else if (attachment->aspect == VK_IMAGE_ASPECT_DEPTH_BIT) {
+        auto fmt = imageState->imageFormat;
+        std::pair<double, double> minMaxValues(0.0, 0.0);
+        if (fmt == VK_FORMAT_D32_SFLOAT || fmt == VK_FORMAT_D32_SFLOAT_S8_UINT) {
+          minMaxValues = get_min_max_values(texel_type::R32f, screenshotData, width, height);
+          normalize_texture_data(texel_type::R32f, screenshotData, width, height);
+          convert_texture_data(texel_type::R32f, screenshotData, texel_type::RGBA8, convertedData,
+                               width, height);
+        } else if (fmt == VK_FORMAT_D24_UNORM_S8_UINT || fmt == VK_FORMAT_X8_D24_UNORM_PACK32) {
+          normalize_texture_data(texel_type::D24, screenshotData, width, height);
+          convert_texture_data(texel_type::D24, screenshotData, texel_type::RGBA8, convertedData,
+                               width, height);
+        } else if (fmt == VK_FORMAT_D16_UNORM || fmt == VK_FORMAT_D16_UNORM_S8_UINT) {
+          normalize_texture_data(texel_type::R16, screenshotData, width, height);
+          convert_texture_data(texel_type::R16, screenshotData, texel_type::RGBA8, convertedData,
+                               width, height);
+        }
+        if ((minMaxValues.first < 0.0 || minMaxValues.second > 1.0) &&
+            Config::Get().player.skipNonDeterministicImages &&
+            !SD().depthRangeUnrestrictedEXTEnabled) {
+          // When copying to a depth aspect, and the
+          // VK_EXT_depth_range_unrestricted extension is not enabled, the
+          // data in buffer memory (SFLOAT format) must be in the range
+          // [0,1], or the resulting values are undefined.
+          depthInProperRange = false;
+        }
+      } else if (attachment->aspect == VK_IMAGE_ASPECT_STENCIL_BIT) {
+        normalize_texture_data(texel_type::R8, screenshotData, width, height);
+        convert_texture_data(texel_type::R8, screenshotData, texel_type::RGBA8, convertedData,
+                             width, height);
+      }
+      {
+        std::stringstream nameSuffix;
+        if (attachment->layer > 1) {
+          nameSuffix << "_layer_" << std::setw(2) << std::setfill('0') << attachment->layer;
+        }
+        if (attachment->mipmap > 1) {
+          nameSuffix << "_mipmap_" << std::setw(2) << std::setfill('0') << attachment->mipmap;
+        }
+        switch (attachment->aspect) {
+        case VK_IMAGE_ASPECT_DEPTH_BIT:
+          nameSuffix << "_depth";
+          break;
+        case VK_IMAGE_ASPECT_STENCIL_BIT:
+          nameSuffix << "_stencil";
+          break;
+        default:
+          Log(TRACE) << "Not handled VkImageAspectFlagBits enumeration: " +
+                            std::to_string(attachment->aspect);
+          break;
+        }
+        nameSuffix << ".png";
+        if (depthInProperRange) {
+          CGits::Instance().WriteImage(attachment->fileName + nameSuffix.str(), width, height, true,
+                                       convertedData, false, false, false);
+        }
+      }
+    } catch (...) {
+      Log(ERR) << "Could not convert image data to RGBA8 format.";
+    }
+    drvVk.vkUnmapMemory(imageState->deviceStateStore->deviceHandle, attachment->devMemory);
+    drvVk.vkFreeMemory(imageState->deviceStateStore->deviceHandle, attachment->devMemory, nullptr);
+    drvVk.vkDestroyBuffer(imageState->deviceStateStore->deviceHandle, attachment->copiedBuffer,
+                          nullptr);
+  }
+  SD()._commandbufferstates[cmdBuffer]->renderPassImages.clear();
+}
+#endif
+
 bool writeScreenshotUtil(std::string fileName,
                          VkQueue& queue,
                          VkImage& sourceImage,
@@ -636,18 +1009,16 @@ void writeScreenshot(VkQueue queue,
       for (uint32_t imageview = 0; imageview < imageViewSize; ++imageview) {
         std::string fileName;
         VkImage imageHandle;
-        VkAttachmentStoreOp imageStoreOption;
+        VkAttachmentStoreOp imageStoreOption =
+            commandBufferState->beginRenderPassesList[renderpass]->imageStoreOp[imageview];
         if (framebufferState && !(framebufferState->framebufferCreateInfoData.Value()->flags &
                                   VK_FRAMEBUFFER_CREATE_IMAGELESS_BIT)) {
           imageHandle =
               framebufferState->imageViewStateStoreList[imageview]->imageStateStore->imageHandle;
-          imageStoreOption = framebufferState->imageStoreOp[imageview];
         } else {
           imageHandle = commandBufferState->beginRenderPassesList[renderpass]
                             ->imageViewStateStoreListKHR[imageview]
                             ->imageStateStore->imageHandle;
-          imageStoreOption =
-              commandBufferState->beginRenderPassesList[renderpass]->imageStoreOp[imageview];
         }
         if (Config::Get().player.captureVulkanSubmitsGroupType ==
             TCaptureGroupType::PER_COMMANDBUFFER) {
@@ -2237,6 +2608,17 @@ void checkReturnValue(VkResult playerSideReturnValue,
                << "\" error which is different than the \"" << *recorderSideReturnValue
                << "\" value returned during recording. Exiting!";
     throw std::runtime_error("Return value mismatch error occurred.");
+  }
+}
+
+bool isEndRenderPassToken(unsigned vulkanID) {
+  if (vulkanID == CFunction::ID_VK_CMD_END_RENDER_PASS ||
+      vulkanID == CFunction::ID_VK_CMD_END_RENDER_PASS2 ||
+      vulkanID == CFunction::ID_VK_CMD_END_RENDER_PASS2KHR ||
+      vulkanID == CFunction::ID_VK_CMD_END_RENDERING) {
+    return true;
+  } else {
+    return false;
   }
 }
 

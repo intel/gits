@@ -771,6 +771,9 @@ public:
   }
   virtual void Write(CCodeOStream& stream) const override;
   virtual void Run();
+  virtual void Exec();
+  virtual void StateTrack();
+  virtual void TokenBuffersUpdate();
   std::set<uint64_t> GetMappedPointers();
 };
 
@@ -817,6 +820,9 @@ public:
   }
   virtual void Write(CCodeOStream& stream) const override;
   virtual void Run();
+  virtual void Exec();
+  virtual void StateTrack();
+  virtual void TokenBuffersUpdate();
   std::set<uint64_t> GetMappedPointers();
 };
 
@@ -846,6 +852,9 @@ public:
   }
   virtual void Write(CCodeOStream& stream) const override;
   virtual void Run();
+  virtual void Exec();
+  virtual void StateTrack();
+  virtual void TokenBuffersUpdate();
   std::set<uint64_t> GetMappedPointers();
 };
 
@@ -856,6 +865,8 @@ class CGitsInitializeMultipleImages : public CFunction, gits::noncopyable {
   CVkBuffer _copySrcBuffer;
   Cuint32_t _imagesCount;
   CVkInitializeImageDataGITSArray _pInitializeImages;
+  VkBufferMemoryBarrier _copyFromBufferMemoryBarrierPre;
+  VkBufferMemoryBarrier _copyFromBufferMemoryBarrierPost;
 
   virtual CArgument& Argument(unsigned idx);
   virtual unsigned ArgumentCount() const {
@@ -879,6 +890,9 @@ public:
   }
   virtual void Write(CCodeOStream& stream) const override;
   virtual void Run();
+  virtual void Exec();
+  virtual void StateTrack();
+  virtual void TokenBuffersUpdate();
   std::set<uint64_t> GetMappedPointers();
 };
 
@@ -930,6 +944,9 @@ public:
   }
   virtual void Write(CCodeOStream& stream) const override;
   virtual void Run();
+  virtual void Exec();
+  virtual void StateTrack();
+  virtual void TokenBuffersUpdate();
   std::set<uint64_t> GetMappedPointers();
 };
 
@@ -940,6 +957,8 @@ class CGitsInitializeMultipleBuffers : public CFunction, gits::noncopyable {
   CVkBuffer _copySrcBuffer;
   Cuint32_t _buffersCount;
   CVkInitializeBufferDataGITSArray _pInitializeBuffers;
+  VkBufferMemoryBarrier _copyFromBufferMemoryBarrierPre;
+  VkBufferMemoryBarrier _copyFromBufferMemoryBarrierPost;
 
   virtual CArgument& Argument(unsigned idx);
   virtual unsigned ArgumentCount() const {
@@ -963,6 +982,9 @@ public:
   }
   virtual void Write(CCodeOStream& stream) const override;
   virtual void Run();
+  virtual void Exec();
+  virtual void StateTrack();
+  virtual void TokenBuffersUpdate();
   std::set<uint64_t> GetMappedPointers();
 };
 

@@ -71,6 +71,7 @@ Vulkan::CFunction* Vulkan::CLibrary::FunctionCreate(unsigned id) const {
 CLibrary& CLibrary::Get() {
   return static_cast<CLibrary&>(CGits::Instance().Library(ID_VULKAN));
 }
+
 std::set<uint64_t> CLibrary::CVulkanCommandBufferTokensBuffer::GetMappedPointers() {
   std::set<uint64_t> returnMap;
   for (auto elem : _tokensList) {
@@ -80,6 +81,33 @@ std::set<uint64_t> CLibrary::CVulkanCommandBufferTokensBuffer::GetMappedPointers
   }
   returnMap.erase(0); // 0 is not valid pointer.
   return returnMap;
+}
+
+void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndStateTrack() {
+  for (auto elem : _tokensList) {
+    elem->Exec();
+    elem->StateTrack();
+  }
+}
+
+void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(VkCommandBuffer cmdBuffer,
+                                                             uint64_t queueSubmitNumber,
+                                                             uint32_t cmdBuffBatchNumber,
+                                                             uint32_t cmdBuffNumber) {
+  uint64_t renderPassCount = 0;
+  for (auto elem : _tokensList) {
+    elem->Exec();
+    elem->StateTrack();
+    if (isEndRenderPassToken(elem->Id())) {
+      CGits::CCounter localCounter = {queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
+                                      renderPassCount};
+      if (localCounter == Config::Get().player.captureVulkanRenderPasses) {
+        vulkanScheduleCopyRenderPasses(cmdBuffer, queueSubmitNumber, cmdBuffBatchNumber,
+                                       cmdBuffNumber, renderPassCount);
+      }
+      renderPassCount++;
+    }
+  }
 }
 } //namespace Vulkan
 } //namespace gits

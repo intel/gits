@@ -17,6 +17,7 @@
 
 #include "library.h"
 #include "vkFunction.h"
+#include "vulkanDrivers.h"
 
 namespace gits {
 /**
@@ -52,6 +53,11 @@ public:
   class CVulkanCommandBufferTokensBuffer : public CTokensBuffer<Vulkan::CFunction> {
   public:
     std::set<uint64_t> GetMappedPointers();
+    void ExecAndStateTrack();
+    void ExecAndDump(VkCommandBuffer cmdBuffer,
+                     uint64_t queueSubmitNumber,
+                     uint32_t cmdBuffBatchNumber,
+                     uint32_t cmdBuffNumber);
   };
 };
 } // namespace Vulkan

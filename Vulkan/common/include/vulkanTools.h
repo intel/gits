@@ -131,6 +131,19 @@ bool isVulkanAPIVersionSupported(uint32_t major, uint32_t minor, VkPhysicalDevic
 void checkReturnValue(VkResult playerSideReturnValue,
                       CVkResult& recorderSideReturnValue,
                       const char* functionName);
+bool isEndRenderPassToken(unsigned vulkanID);
+bool operator==(const CGits::CCounter& counter, const Config::VulkanObjectRange& vulkanObjRange);
+bool vulkanCopyImage(VkCommandBuffer commandBuffer,
+                     VkImage imageHandle,
+                     VkAttachmentStoreOp imageStoreOption,
+                     std::string fileName);
+void vulkanScheduleCopyRenderPasses(VkCommandBuffer cmdBuffer,
+                                    uint64_t queueSubmitNumber,
+                                    uint32_t cmdBuffBatchNumber,
+                                    uint32_t cmdBuffNumber,
+                                    uint64_t renderPassNumber);
+
+void vulkanDumpRenderPasses(VkCommandBuffer commandBuffer);
 
 // Kudos to Piotr Horodecki
 class MemoryAliasingTracker {

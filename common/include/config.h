@@ -408,6 +408,7 @@ struct Config {
     BitRange captureVulkanSubmits;
     BitRange captureVulkanSubmitsResources;
     VKCaptureGroupTypeOpt captureVulkanSubmitsGroupType;
+    VulkanObjectRange captureVulkanRenderPasses;
     vi_bool skipNonDeterministicImages;
     vi_bool precacheResources;
     vi_bool forceWindowPos;
@@ -483,6 +484,7 @@ struct Config {
     vi_bool printStateRestoreLogsVk;
     vi_bool printMemUsageVk;
     vi_bool forceMultithreadedPipelineCompilation;
+    vi_bool execCmdBuffsBeforeQueueSubmit;
 #if defined(GITS_PLATFORM_WINDOWS)
     struct RenderDoc {
       vi_bool frameRecEnabled;

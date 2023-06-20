@@ -1016,8 +1016,6 @@ struct CFramebufferState : public UniqueResourceHandle {
   std::shared_ptr<CDeviceState> deviceStateStore;
   std::shared_ptr<CRenderPassState> renderPassStateStore;
   std::vector<std::shared_ptr<CImageViewState>> imageViewStateStoreList;
-  std::vector<VkAttachmentStoreOp> imageStoreOp;
-  std::vector<VkAttachmentLoadOp> imageLoadOp;
 
   CFramebufferState(VkFramebuffer const* _pFramebuffer,
                     VkFramebufferCreateInfo const* _pCreateInfo,
@@ -1167,6 +1165,26 @@ struct CQueryPoolState : public UniqueResourceHandle {
   }
 };
 
+struct RenderGenericAttachment {
+  VkBuffer copiedBuffer;
+  VkImage sourceImage;
+  VkDeviceMemory devMemory;
+  uint32_t localCounter;
+  uint32_t layer;
+  uint32_t mipmap;
+  VkImageAspectFlags aspect;
+  std::string fileName;
+  RenderGenericAttachment()
+      : copiedBuffer(0),
+        sourceImage(0),
+        devMemory(0),
+        localCounter(0),
+        layer(0),
+        mipmap(0),
+        aspect(0),
+        fileName() {}
+};
+
 // Command buffer
 
 struct CCommandBufferState : public UniqueResourceHandle {
@@ -1244,6 +1262,8 @@ struct CCommandBufferState : public UniqueResourceHandle {
   std::unordered_map<VkImage, VulkanResourceType> resourceWriteImages;
   std::vector<std::pair<uint64_t, bool>> touchedResources; // true for images, false for buffers
   std::unordered_set<VkImage> clearedImages;
+  std::vector<std::shared_ptr<RenderGenericAttachment>> renderPassImages;
+  std::vector<VkCommandBuffer> secondaryCommandBuffers;
 
   CCommandBufferState(VkCommandBuffer const* _pCommandBuffer,
                       VkCommandBufferAllocateInfo const* _pAllocateInfo,

@@ -64,6 +64,7 @@ public:
   }
   virtual void Run() = 0;
   virtual void Exec(){};
+  virtual void StateTrack(){};
 
   void Serialize(CBinOStream& stream);
   void Serialize(CCodeOStream& stream);

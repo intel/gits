@@ -483,10 +483,8 @@ void CGits::CCounter::operator++(int) {
 CGits::CCounter::CCounter() {
   countersTable.push_back(1);
 }
-CGits::CCounter::CCounter(std::vector<uint64_t> parentCounterTable) {
-  for (const auto& counter : parentCounterTable) {
-    countersTable.push_back(counter);
-  }
+
+CGits::CCounter::CCounter(std::initializer_list<uint64_t> init) : countersTable(init) {
   countersTable.push_back(0); //initial counter
 }
 

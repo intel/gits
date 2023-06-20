@@ -516,6 +516,7 @@ inline void HandleQueueSubmitRenderDocStart() {
   }
 #endif
 }
+
 inline void HandleQueueSubmitRenderDocStop() {
 #if defined(GITS_PLATFORM_WINDOWS)
   if (Config::Get().player.renderDoc.queuesubmitRecEnabled &&
@@ -536,6 +537,35 @@ inline void HandleQueueSubmitRenderDocStop() {
   }
 #endif
 }
+
+inline void ExecCmdBuffer(VkCommandBuffer commandBuffer,
+                          bool secondary,
+                          uint32_t cmdBuffBatchNumber = 0,
+                          uint32_t cmdBuffNumber = 0) {
+  auto& commandBuffState = SD()._commandbufferstates[commandBuffer];
+  if (commandBuffState->beginCommandBuffer) {
+    if (commandBuffState->restored) {
+      drvVk.vkResetCommandBuffer(commandBuffer, 0);
+    }
+    drvVk.vkBeginCommandBuffer(
+        commandBuffer, commandBuffState->beginCommandBuffer->commandBufferBeginInfoData.Value());
+    if (secondary) { // for now we didn't support image dumping in secondary cmdbuffer
+      commandBuffState->tokensBuffer.ExecAndStateTrack();
+    } else {
+      commandBuffState->tokensBuffer.ExecAndDump(
+          commandBuffer, CGits::Instance().vkCounters.CurrentQueueSubmitCount(), cmdBuffBatchNumber,
+          cmdBuffNumber);
+    }
+
+    if (commandBuffState->ended) {
+      drvVk.vkEndCommandBuffer(commandBuffer);
+    }
+    commandBuffState->restored = true;
+    if (commandBuffState->beginCommandBuffer->oneTimeSubmit) {
+      commandBuffState->tokensBuffer.Clear();
+    }
+  }
+}
 } // namespace
 
 inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
@@ -543,8 +573,22 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
                                   Cuint32_t& submitCount,
                                   CVkSubmitInfoArray& pSubmits,
                                   CVkFence& fence) {
+  if ((*submitCount > 0) && (Config::Get().player.execCmdBuffsBeforeQueueSubmit ||
+                             !Config::Get().player.captureVulkanRenderPasses.empty())) {
+    for (uint32_t i = 0; i < *submitCount; i++) {
+      auto pSubmitInfoArray = *pSubmits;
+      for (uint32_t j = 0; j < pSubmitInfoArray[i].commandBufferCount; j++) {
+        auto& commandBuffState = SD()._commandbufferstates[pSubmitInfoArray[i].pCommandBuffers[j]];
+        for (auto secondaryCmdBuffer : commandBuffState->secondaryCommandBuffers) {
+          ExecCmdBuffer(secondaryCmdBuffer, true);
+        }
+        ExecCmdBuffer(pSubmitInfoArray[i].pCommandBuffers[j], false, i, j);
+      }
+    }
+  }
   if ((*submitCount > 0) && (!Config::Get().player.captureVulkanSubmits.empty() ||
-                             !Config::Get().player.captureVulkanSubmitsResources.empty())) {
+                             !Config::Get().player.captureVulkanSubmitsResources.empty() ||
+                             !Config::Get().player.captureVulkanRenderPasses.empty())) {
     auto pSubmitInfoArray = *pSubmits;
     if (pSubmitInfoArray == nullptr) {
       throw std::runtime_error(EXCEPTION_MESSAGE);
@@ -611,8 +655,12 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
             Config::Get().player.captureVulkanSubmitsResources
                 [(size_t)CGits::Instance().vkCounters.CurrentQueueSubmitCount()];
 
+        bool captureVulkanRenderPassesCheck =
+            !Config::Get().player.captureVulkanRenderPasses.empty() &&
+            !SD()._commandbufferstates[cmdbuffer]->renderPassImages.empty();
+
         if (captureVulkanSubmitsCheck || captureVulkanSubmitsResourcesCheck ||
-            Config::Get().player.waitAfterQueueSubmitWA) {
+            captureVulkanRenderPassesCheck || Config::Get().player.waitAfterQueueSubmitWA) {
           drvVk.vkQueueWaitIdle(*queue);
         }
         if (captureVulkanSubmitsCheck) {
@@ -620,6 +668,9 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
         }
         if (captureVulkanSubmitsResourcesCheck) {
           writeResources(*queue, cmdbuffer, i, cmdBufIndex);
+        }
+        if (captureVulkanRenderPassesCheck) {
+          vulkanDumpRenderPasses(cmdbuffer);
         }
       }
     }
@@ -648,8 +699,23 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
                                    Cuint32_t& submitCount,
                                    CVkSubmitInfo2Array& pSubmits,
                                    CVkFence& fence) {
+  if ((*submitCount > 0) && (Config::Get().player.execCmdBuffsBeforeQueueSubmit ||
+                             !Config::Get().player.captureVulkanRenderPasses.empty())) {
+    for (uint32_t i = 0; i < *submitCount; i++) {
+      auto pSubmitInfoArray = *pSubmits;
+      for (uint32_t j = 0; j < pSubmitInfoArray[i].commandBufferInfoCount; j++) {
+        auto& commandBuffState =
+            SD()._commandbufferstates[pSubmitInfoArray[i].pCommandBufferInfos[j].commandBuffer];
+        for (auto secondaryCmdBuffer : commandBuffState->secondaryCommandBuffers) {
+          ExecCmdBuffer(secondaryCmdBuffer, true);
+        }
+        ExecCmdBuffer(pSubmitInfoArray[i].pCommandBufferInfos[j].commandBuffer, false, i, j);
+      }
+    }
+  }
   if ((*submitCount > 0) && (!Config::Get().player.captureVulkanSubmits.empty() ||
-                             !Config::Get().player.captureVulkanSubmitsResources.empty())) {
+                             !Config::Get().player.captureVulkanSubmitsResources.empty() ||
+                             !Config::Get().player.captureVulkanRenderPasses.empty())) {
     auto pSubmitInfo2Array = *pSubmits;
     if (pSubmitInfo2Array == nullptr) {
       throw std::runtime_error(EXCEPTION_MESSAGE);
@@ -717,8 +783,12 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
             Config::Get().player.captureVulkanSubmitsResources
                 [(size_t)CGits::Instance().vkCounters.CurrentQueueSubmitCount()];
 
+        bool captureVulkanRenderPassesCheck =
+            !Config::Get().player.captureVulkanRenderPasses.empty() &&
+            !SD()._commandbufferstates[cmdbufferSubmitInfo.commandBuffer]->renderPassImages.empty();
+
         if (captureVulkanSubmitsCheck || captureVulkanSubmitsResourcesCheck ||
-            Config::Get().player.waitAfterQueueSubmitWA) {
+            captureVulkanRenderPassesCheck || Config::Get().player.waitAfterQueueSubmitWA) {
           drvVk.vkQueueWaitIdle(*queue);
         }
         if (captureVulkanSubmitsCheck) {
@@ -726,6 +796,9 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
         }
         if (captureVulkanSubmitsResourcesCheck) {
           writeResources(*queue, cmdbufferSubmitInfo.commandBuffer, i, cmdBufIndex);
+        }
+        if (captureVulkanRenderPassesCheck) {
+          vulkanDumpRenderPasses(cmdbufferSubmitInfo.commandBuffer);
         }
       }
     }
@@ -1501,7 +1574,8 @@ inline void vkCreateSwapchainKHR_WRAPRUN(CVkResult& recorderSideReturnValue,
   }
   VkSwapchainCreateInfoKHR createInfo = *pCreateInfo;
   if (!Config::Get().player.captureFrames.empty() ||
-      !Config::Get().player.captureVulkanSubmits.empty()) {
+      !Config::Get().player.captureVulkanSubmits.empty() ||
+      !Config::Get().player.captureVulkanRenderPasses.empty()) {
     createInfo.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     Log(TRACE) << "Modifying swapchain usage for frames/render targets capturing!!";
   }
@@ -1665,7 +1739,14 @@ inline void vkCmdSetScissor_WRAPRUN(CVkCommandBuffer& commandBuffer,
       ForceScissor_Helper(&scissors[i]);
     }
   }
-  drvVk.vkCmdSetScissor(*commandBuffer, *firstScissor, *scissorCount, scissors);
+  if (Config::Get().player.execCmdBuffsBeforeQueueSubmit ||
+      !Config::Get().player.captureVulkanRenderPasses.empty()) {
+    SD()._commandbufferstates[*commandBuffer]->tokensBuffer.Add(
+        new CvkCmdSetScissor(commandBuffer.Original(), firstScissor.Original(),
+                             scissorCount.Original(), pScissors.Original()));
+  } else {
+    drvVk.vkCmdSetScissor(*commandBuffer, *firstScissor, *scissorCount, scissors);
+  }
 }
 
 inline void vkCreateImage_WRAPRUN(CVkResult& recorderSideReturnValue,
@@ -1678,7 +1759,8 @@ inline void vkCreateImage_WRAPRUN(CVkResult& recorderSideReturnValue,
   }
   VkImageCreateInfo createInfo = *pCreateInfo;
   if (!Config::Get().player.captureVulkanSubmits.empty() ||
-      !Config::Get().player.captureVulkanSubmitsResources.empty()) {
+      !Config::Get().player.captureVulkanSubmitsResources.empty() ||
+      !Config::Get().player.captureVulkanRenderPasses.empty()) {
     createInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     Log(TRACE) << "Modifying image usage for render targets capturing!!";
   }
@@ -1756,6 +1838,44 @@ inline void vkGetBufferDeviceAddressUnifiedGITS_WRAPRUN(Cuint64_t& _return_value
                                                         CVkBufferDeviceAddressInfo& _pInfo) {
   auto bufferDeviceAddress = drvVk.vkGetBufferDeviceAddressUnifiedGITS(*_device, *_pInfo);
   vkGetBufferDeviceAddressUnifiedGITS_SD(bufferDeviceAddress, *_device, *_pInfo);
+}
+
+inline void vkBeginCommandBuffer_WRAPRUN(CVkResult& return_value,
+                                         CVkCommandBuffer& commandBuffer,
+                                         CVkCommandBufferBeginInfo& pBeginInfo) {
+  if (!Config::Get().player.execCmdBuffsBeforeQueueSubmit &&
+      Config::Get().player.captureVulkanRenderPasses.empty()) {
+    return_value.Assign(drvVk.vkBeginCommandBuffer(*commandBuffer, *pBeginInfo));
+  }
+  // State Tracking is necessary also when using execCmdBuffsBeforeQueueSubmit or captureVulkanRenderPasses because we will call vkBeginCommandBuffer manually later.
+  vkBeginCommandBuffer_SD(*return_value, *commandBuffer, *pBeginInfo);
+}
+
+inline void vkEndCommandBuffer_WRAPRUN(CVkResult& return_value, CVkCommandBuffer& commandBuffer) {
+  if (!Config::Get().player.execCmdBuffsBeforeQueueSubmit &&
+      Config::Get().player.captureVulkanRenderPasses.empty()) {
+    return_value.Assign(drvVk.vkEndCommandBuffer(*commandBuffer));
+  }
+  // State Tracking is necessary also when using execCmdBuffsBeforeQueueSubmit or captureVulkanRenderPasses because we will call vkEndCommandBuffer manually later.
+  vkEndCommandBuffer_SD(*return_value, *commandBuffer);
+}
+
+inline void vkCmdExecuteCommands_WRAPRUN(CVkCommandBuffer& commandBuffer,
+                                         Cuint32_t& commandBufferCount,
+                                         CVkCommandBuffer::CSArray& pCommandBuffers) {
+  if (Config::Get().player.execCmdBuffsBeforeQueueSubmit ||
+      !Config::Get().player.captureVulkanRenderPasses.empty()) {
+    SD()._commandbufferstates[*commandBuffer]->tokensBuffer.Add(new CvkCmdExecuteCommands(
+        commandBuffer.Original(), commandBufferCount.Original(), pCommandBuffers.Original()));
+    for (unsigned i = 0; i < *commandBufferCount; i++) {
+      SD()._commandbufferstates[*commandBuffer]->secondaryCommandBuffers.push_back(
+          (*pCommandBuffers)[i]);
+    }
+
+  } else {
+    drvVk.vkCmdExecuteCommands(*commandBuffer, *commandBufferCount, *pCommandBuffers);
+    vkCmdExecuteCommands_SD(*commandBuffer, *commandBufferCount, *pCommandBuffers);
+  }
 }
 } // namespace Vulkan
 } // namespace gits

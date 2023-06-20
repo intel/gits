@@ -335,7 +335,7 @@ public:
     std::vector<uint64_t> countersTable;
     void operator++(int);
     CCounter();
-    CCounter(std::vector<uint64_t> parentCounterTable);
+    CCounter(std::initializer_list<uint64_t> init);
     std::vector<uint64_t> GetCountersTable() {
       return countersTable;
     }

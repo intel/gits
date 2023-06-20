@@ -1274,8 +1274,7 @@ namespace gits {
           Cnames.append('_' + arg['name'])
           typename = arg['type']#.strip(' *')
           if arg.get('removeMapping') is True:
-            if elem.get('runWrap') is not True:
-              remove_mapping += "\n  %(name)s.RemoveMapping();" % {'name': '_' + arg['name']}
+            remove_mapping += "\n  %(name)s.RemoveMapping();" % {'name': '_' + arg['name']}
           if arg.get('wrapType'):
             Ctypes.append(arg['wrapType'])
           elif typename.replace('const ', '').strip(' *') in vulkan_mapped_types_nondisp and '*' in typename and 'const' not in typename:
@@ -1357,14 +1356,17 @@ namespace gits {
         argInfos = argInfos.strip('\n ')
 
         argsCall = ""
+        argsCallOrig = ""
         wrapCall = ""
         stateTrackCall = ""
         for n in Cnames:
           if n != '_return_value':
             argsCall += '*' + n + ', '
+            argsCallOrig += n + '.Original(), '
           wrapCall += n + ', '
           stateTrackCall += '*' + n + ', '
         argsCall = argsCall.strip(', ')
+        argsCallOrig = argsCallOrig.strip(', ')
         wrapCall = wrapCall.strip(', ')
         stateTrackCall = stateTrackCall.strip(', ')
 
@@ -1421,7 +1423,11 @@ namespace gits {
       virtual unsigned Id() const override { return %(id)s; }
       virtual const char *Name() const override { return "%(unversioned_name)s"; }%(suffix)s%(ccodePostActionNeeded)s
       virtual void %(run_name)s() override;%(write_wrap_decl)s
+      virtual void Exec();
+      virtual void StateTrack();
+      virtual void RemoveMapping();
       virtual std::set<uint64_t> GetMappedPointers();
+      virtual void TokenBuffersUpdate();
     };""" % {'unversioned_name': key, 'versioned_name': versioned_name, 'return_override': return_override, 'id': make_id(key, func['version']), 'argc': len(func['args']), 'argd': argd, 'argsDecl': argsDecl, 'inherit_type': inherit_type, 'run_name': run_name, 'write_wrap_decl': write_wrap_decl, 'suffix': suffix, 'ccodePostActionNeeded': ccodePostActionNeeded}
         else:
           c = """
@@ -1437,7 +1443,11 @@ namespace gits {
       virtual unsigned Id() const override { return %(id)s; }
       virtual const char *Name() const override { return "%(unversioned_name)s"; }%(suffix)s
       virtual void %(run_name)s() override;%(write_wrap_decl)s
+      virtual void Exec();
+      virtual void StateTrack();
+      virtual void RemoveMapping();
       virtual std::set<uint64_t> GetMappedPointers();
+      virtual void TokenBuffersUpdate();
     };""" % {'unversioned_name': key, 'versioned_name': versioned_name, 'id': make_id(key, func['version']), 'argc': len(func['args']), 'argsDecl': argsDecl, 'inherit_type': inherit_type, 'run_name': run_name, 'write_wrap_decl': write_wrap_decl, 'suffix': suffix}
         tokens_h.write(c + '\n')
 
@@ -1471,24 +1481,32 @@ namespace gits {
           init = ''
         mapped_pointers += 'return returnMap;'
 
-        vk_cmd = ""
+        run_cmd = """Exec();
+  StateTrack();
+  RemoveMapping();"""
         if func.get('runWrap') is True:
-          vk_cmd = "%(name)s_WRAPRUN(%(wrapCall)s)" % {'name': func.get('runWrapName'), 'wrapCall': wrapCall}
-        else:
-          vk_cmd = "drvVk.%(name)s(%(argsCall)s)" % {'name': key, 'argsCall': argsCall}
+          run_cmd = "%(name)s_WRAPRUN(%(wrapCall)s);" % {'name': func.get('runWrapName'), 'wrapCall': wrapCall}
+        exec_cmd = "drvVk.%(name)s(%(argsCall)s)" % {'name': key, 'argsCall': argsCall}
         state_track = ""
-        if func.get('stateTrack') is True and (func.get('runWrap') is not True):
+        if func.get('stateTrack') is True:
           state_track = "\n  %(name)s_SD(%(argsCall)s);" % {'name': func.get('stateTrackName'), 'argsCall': stateTrackCall}
         return_value = ""
         return_value_end = ";"
-        if func.get('type') != 'void' and (func.get('runWrap') is not True):
+        if func.get('type') not in ('void', 'VkDeviceAddress'):
           return_value = "_return_value.Assign("
           return_value_end = ");"
-        if func.get('runCond') and (func.get('runWrap') is not True):
-           run = """if (%(func_name)s)
-        %(return_value)s%(vk_cmd)s%(return_value_end)s%(state_track)s%(remove_mapping)s""" % {'func_name': func.get('runCond'), 'vk_cmd': vk_cmd, 'state_track': state_track, 'return_value': return_value, 'return_value_end': return_value_end, 'remove_mapping': remove_mapping}
-        else:
-           run = """%(return_value)s%(vk_cmd)s%(return_value_end)s%(state_track)s%(remove_mapping)s""" % {'vk_cmd': vk_cmd, 'state_track': state_track, 'return_value': return_value, 'return_value_end': return_value_end, 'remove_mapping': remove_mapping}
+        token_buff_update = ""
+        if func.get('tokenCache') is not None:
+          token_buff_update = "\n  SD()._commandbufferstates[*_commandBuffer]->tokensBuffer.Add(new C%(name)s(%(argsCallOrig)s));" % {'name': versioned_name, 'argsCallOrig': argsCallOrig}
+          if func.get('runWrap') is not True:
+            run_cmd = """if (Config::Get().player.execCmdBuffsBeforeQueueSubmit ||
+      !Config::Get().player.captureVulkanRenderPasses.empty()) {
+    TokenBuffersUpdate();
+  } else {
+    Exec();
+    StateTrack();
+    RemoveMapping();
+  }"""
         c = ""
         if len(func['args']) > 0 or func['type'] != 'void':
           c = """
@@ -1523,8 +1541,25 @@ std::set<uint64_t> gits::Vulkan::C%(versioned_name)s::GetMappedPointers()
 
 void gits::Vulkan::C%(versioned_name)s::%(run_name)s()
 {
-  %(run)s
-}%(write_wrap_def)s""" % {'id': make_id(key, func['version']), 'versioned_name': versioned_name, 'cargument': cargument, 'argc': len(func['args']), 'argd': argd, 'argInfos': argInfos, 'init': init, 'run': run, 'run_name': run_name, 'write_wrap_def': write_wrap_def, 'mapped_pointers': mapped_pointers}
+  %(run_cmd)s
+}
+
+void gits::Vulkan::C%(versioned_name)s::Exec()
+{
+  %(return_value)s%(exec_cmd)s%(return_value_end)s
+}
+
+void gits::Vulkan::C%(versioned_name)s::StateTrack()
+{%(state_track)s
+}
+
+void gits::Vulkan::C%(versioned_name)s::TokenBuffersUpdate()
+{%(token_buff_update)s
+}
+
+void gits::Vulkan::C%(versioned_name)s::RemoveMapping()
+{%(remove_mapping)s
+}%(write_wrap_def)s""" % {'id': make_id(key, func['version']), 'versioned_name': versioned_name, 'cargument': cargument, 'argc': len(func['args']), 'argd': argd, 'argInfos': argInfos, 'init': init, 'run_name': run_name, 'write_wrap_def': write_wrap_def, 'mapped_pointers': mapped_pointers, 'exec_cmd': exec_cmd, 'state_track': state_track, 'return_value': return_value, 'return_value_end': return_value_end, 'remove_mapping': remove_mapping, 'run_cmd': run_cmd, 'token_buff_update': token_buff_update}
         else:
           c = """
 /* ***************************** %(id)s *************************** */
@@ -1601,21 +1636,22 @@ namespace Vulkan {
           post_token = "\n    _recorder.Schedule(new %(name)s);\n" % {'name': value.get('postToken')}
         rec_cond = ""
         if value.get('recCond') and (value.get('recWrap') is not True):
-          rec_cond = "if (%(recCond)s)\n  {" % {'recCond': value.get('recCond')}
+          rec_cond = "if (%(recCond)s) {" % {'recCond': value.get('recCond')}
         elif (value.get('recCond') is not True) and (value.get('tokenCache') is not None) and (value.get('recWrap') is not True):
-          rec_cond = "if (_recorder.Running() && !Config::Get().recorder.vulkan.utilities.scheduleCommandBuffersBeforeQueueSubmit)\n  {"
+          rec_cond = "if (_recorder.Running() && !Config::Get().recorder.vulkan.utilities.scheduleCommandBuffersBeforeQueueSubmit) {"
         elif (value.get('recCond') is not True) and (value.get('recWrap') is not True):
-          rec_cond = "if (_recorder.Running())\n  {"
+          rec_cond = "if (_recorder.Running()) {"
         state_track = ""
         rec_cond_end = ""
+        new_line = ""
         if value.get('stateTrack') is True and (value.get('recWrap') is not True):
-          rec_cond_end = "\n  }\n  "
-          state_track = "%(name)s_SD(%(argsCall)s);" % {'name': value.get('stateTrackName'), 'argsCall': arg_call(value)}
-        elif value.get('stateTrack') is not True and (value.get('recWrap') is not True):
-          rec_cond_end = "\n  }"
+          state_track = "\n  %(name)s_SD(%(argsCall)s);" % {'name': value.get('stateTrackName'), 'argsCall': arg_call(value)}
         rec_wrap = ""
         if (value.get('recWrap') is True):
-          rec_wrap = "  %(name)s_RECWRAP(%(argsCall)s, _recorder);" % {'name': value.get('recWrapName'), 'argsCall': arg_call(value)}
+          rec_wrap = "%(name)s_RECWRAP(%(argsCall)s, _recorder);" % {'name': value.get('recWrapName'), 'argsCall': arg_call(value)}
+        else:
+          rec_cond_end = "\n  }"
+          new_line = "\n    "
         schedule = ""
         versioned_name = add_version(key, value.get('version'))
 
@@ -1623,15 +1659,14 @@ namespace Vulkan {
           schedule = "_recorder.Schedule(new C%(name)s(%(arg_call)s));" % {'name': versioned_name, 'arg_call': arg_call(value)}
         tokenCache = ""
         if (value.get('tokenCache') is not None) and (value.get('recWrap') is not True):
-          tokenCache = "else\n  {\n    " + value.get('tokenCache')
+          tokenCache = " else {\n    " + value.get('tokenCache')
           tokenCache += ".Add(new C%(name)s(%(arg_call)s));" % {'name': versioned_name, 'arg_call': arg_call(value)}
-          tokenCache += "\n  }\n  "
+          tokenCache += "\n  }"
         wc = """
 void CRecorderWrapper::%(name)s(%(arg_decl)s) const
 {
-  %(wrapper_pre_post)s%(rec_cond)s%(rec_wrap)s
-    %(pre_schedule)s%(pre_token)s%(schedule)s%(post_token)s%(rec_cond_end)s%(tokenCache)s%(state_track)s
-}""" % {'name': key, 'arg_decl': arg_decl(value), 'pre_schedule': pre_schedule, 'pre_token': pre_token, 'post_token': post_token, 'rec_cond': rec_cond, 'state_track': state_track, 'rec_wrap': rec_wrap, 'schedule': schedule, 'tokenCache': tokenCache, 'rec_cond_end': rec_cond_end, 'wrapper_pre_post': wrapper_pre_post}
+  %(wrapper_pre_post)s%(rec_cond)s%(rec_wrap)s%(new_line)s%(pre_schedule)s%(pre_token)s%(schedule)s%(post_token)s%(rec_cond_end)s%(tokenCache)s%(state_track)s
+}""" % {'name': key, 'arg_decl': arg_decl(value), 'pre_schedule': pre_schedule, 'pre_token': pre_token, 'post_token': post_token, 'rec_cond': rec_cond, 'state_track': state_track, 'rec_wrap': rec_wrap, 'schedule': schedule, 'tokenCache': tokenCache, 'rec_cond_end': rec_cond_end, 'wrapper_pre_post': wrapper_pre_post, 'new_line': new_line}
         wrap_c.write(wc + '\n')
         wrap_h.write('void ' + key + '(' + arg_decl(value) + ') const override;\n')
         wrap_i.write('virtual void ' + key + '(' + arg_decl(value) + ') const = 0;\n')
@@ -2245,8 +2280,6 @@ for f in functions:
           function['stateTrackName'] = inherit_name
         if g.get('recCond') is not None:
           function['recCond'] = g.get('recCond')
-        if g.get('runCond') is not None:
-          function['runCond'] = g.get('runCond')
         if g.get('preSchedule') is not None:
           function['preSchedule'] = g.get('preSchedule')
         if g.get('recWrap') is not None:
@@ -2324,8 +2357,6 @@ for f in functions:
     function['stateTrackName'] = f.get('name')
   if f.get('recCond') is not None:
     function['recCond'] = f.get('recCond')
-  if f.get('runCond') is not None:
-    function['runCond'] = f.get('runCond')
   if f.get('preSchedule') is not None:
     function['preSchedule'] = f.get('preSchedule')
   if f.get('recWrap') is not None:

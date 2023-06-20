@@ -97,7 +97,7 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CN
 arg4=ArgDef(name='pMemory', type='VkDeviceMemory*', wrapType='CVkDeviceMemory::CSMapArray', wrapParams = '1, pMemory')
 )
 
-Function(name='vkBeginCommandBuffer', enabled=True, type=Param, stateTrack=True, recWrap=True,
+Function(name='vkBeginCommandBuffer', enabled=True, type=Param, stateTrack=True, recWrap=True, runWrap=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pBeginInfo', type='const VkCommandBufferBeginInfo*')
@@ -944,7 +944,7 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pSubpassEndInfo', type='const VkSubpassEndInfo*')
 )
 
-Function(name='vkCmdEndRendering', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdEndRendering', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer')
 )
@@ -969,7 +969,7 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pEndCodingInfo', type='const VkVideoEndCodingInfoKHR*')
 )
 
-Function(name='vkCmdExecuteCommands', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdExecuteCommands', enabled=True, type=Param, stateTrack=True, runWrap=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='commandBufferCount', type='uint32_t'),
@@ -2761,7 +2761,7 @@ arg2=ArgDef(name='display', type='VkDisplayKHR'),
 arg3=ArgDef(name='pDisplayPowerInfo', type='const VkDisplayPowerInfoEXT*')
 )
 
-Function(name='vkEndCommandBuffer', enabled=True, type=Param, stateTrack=True, recWrap=True,
+Function(name='vkEndCommandBuffer', enabled=True, type=Param, stateTrack=True, recWrap=True, runWrap=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer')
 )
