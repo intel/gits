@@ -22,6 +22,28 @@ VISIBLE ${func.get('type')} __zecall ${func.get('name')}(${make_params(func, wit
 {
   %if func.get('recExecWrap'):
   ${'' if func.get('type') == 'void' else 'return '}${func.get('recExecWrapName')}(${make_params(func)});
+  %elif func.get('component') == 'ze_dditable':
+  GITS_ENTRY_L0
+  auto return_value = driver.${func.get('name')}(${make_params(func)});
+  if (pDdiTable != nullptr) {
+      %for name, value in enums.items():
+        %if name == 'ze_api_version_t':
+    switch(version) {
+          %for var in value['vars']:
+    case ${var['name']}: {
+${print_ddi_table(func, functions, var['name'])}      break;
+    }
+          %endfor
+    default:
+      return_value = ZE_RESULT_ERROR_UNSUPPORTED_VERSION;
+      break;
+    }
+        %endif
+      %endfor
+  }
+  GITS_WRAPPER_PRE
+  GITS_WRAPPER_POST
+  return return_value;
   %else:
   GITS_ENTRY_L0
   ${'' if func.get('type') == 'void' else 'auto return_value = '}driver.${func.get('name')}(${make_params(func)});

@@ -47,6 +47,46 @@ def get_object_versions(arguments, name):
 def get_namespace(name):
     return name.split("_")[0]
 
+def get_api_version_from_string(api_version: str):
+    return api_version.replace('ZE_API_VERSION_', '').replace('_', '.')
+
+def is_function_included(api_version:str, function_version :str):
+    if function_version == '0':
+        return True
+    api_version = get_api_version_from_string(api_version)
+    if api_version >= function_version:
+        return True
+    return False
+
+def sort_dditable(functions_to_group, functions):
+    sorted_dditable = {}
+    for function in functions_to_group:
+        for name, func in functions.items():
+            if function == name:
+                if "ddi_pos" not in func:
+                    raise Exception("Please fill 'ddi_pos' inside generator_l0.py for function name:", function)
+                sorted_dditable[func['ddi_pos']] = function
+                continue
+    return dict(sorted(sorted_dditable.items(), key=lambda x:x[0])).values()
+
+
+def print_ddi_table(func, ddi_helper_functions, api_version:str):
+    ddi_struct_type = ''
+    for arg in func['args']:
+        if arg['name'] == 'pDdiTable':
+            ddi_struct_type = arg['type'].replace('*', '')
+    component = ddi_struct_type.replace('_dditable_t', '')
+    component_functions = set()
+    msg = ''
+    for name, tmp_func in ddi_helper_functions.items():
+        if not is_latest_version(ddi_helper_functions, tmp_func):
+            continue
+        if tmp_func.get('component') == component and is_function_included(api_version, tmp_func.get('api_version', '0')):
+            component_functions.add(cut_version(name, tmp_func.get('version')))
+    for function in component_functions:
+        msg += f'      pDdiTable->{function} = {function};\n'
+    return msg
+
 def process(functions):
     # add implicit properties
     for name, func in functions.items():
@@ -225,6 +265,8 @@ def makoWrite(inpath, outpath, **args):
             get_object_versions=get_object_versions,
             get_namespace=get_namespace,
             cut_version=cut_version,
+            print_ddi_table=print_ddi_table,
+            sort_dditable=sort_dditable,
             **args)
         rendered = re.sub(r"\r\n", r"\n", rendered)
 
@@ -236,7 +278,8 @@ def makoWrite(inpath, outpath, **args):
             print("%s(%s) : error in %s" % (filename, lineno, function))
             print(line, "\n")
         print("%s: %s" % (str(traceback.error.__class__.__name__), traceback.error))
-        return 0
+        return -1
+    return 0
 
 def prepare_dev_files(dir):
     files = [
@@ -287,7 +330,7 @@ def main():
                 dev_path = os.path.join(dir, proj, f)
                 if f.endswith('.h'):
                     dev_path = os.path.join(dir, proj, 'include', f)
-                makoWrite(
+                ret_val = makoWrite(
                     os.path.join(dir, 'codegen/templates', f + ".mako"),
                     dev_path,
                     output_path=dev_path,
@@ -295,6 +338,8 @@ def main():
                     enums=enums,
                     arguments=arguments,
                     constants=constants)
+                if ret_val != 0:
+                    sys.exit(ret_val)
         sys.exit(0)
 
     print("Generating %s..."%os.path.join(pathout, 'l0IDs.h'))
@@ -340,7 +385,7 @@ def main():
 
     for f in files:
         print("Generating %s..."%os.path.join(pathout, f))
-        makoWrite(
+        ret_val = makoWrite(
             os.path.join(pathin, 'templates', f + ".mako"),
             os.path.join(pathout, f),
             functions=functions,
@@ -348,6 +393,8 @@ def main():
             arguments=arguments,
             constants=constants,
             used_types=get_used_types(functions, arguments, enums))
+        if ret_val != 0:
+            sys.exit(ret_val)
 
 
 if __name__ == '__main__':

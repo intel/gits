@@ -1,3 +1,22 @@
+<%
+COMPONENTS_TO_OMIT = ['ze_gits_extension','ze_deprecated', 'ze_dditable', 'zel_tracer']
+components = {}
+all_functions = {}
+current_functions = {}
+for name, func in functions.items():
+    if not is_latest_version(functions, func):
+      continue
+    if func.get('component') not in COMPONENTS_TO_OMIT:
+        namespace = func['component'].split('_')[0]
+        component = func['component'] if func['component'] != namespace else namespace + '_global'
+        if not all_functions.get(component):
+            all_functions[component] = list()
+        all_functions[component].append(func.get('name'))
+        if not components.get(namespace):
+            components[namespace] = set()
+        components[namespace].add(component)
+        current_functions[component] = []
+%>\
 // ===================== begin_copyright_notice ============================
 //
 // Copyright (C) 2023 Intel Corporation
@@ -64,11 +83,25 @@ enum ${enum.get('name')} {
   %if not is_latest_version(functions, func):
 <% continue %>
   %endif
+<%
+if func['component'] not in COMPONENTS_TO_OMIT:
+  current_functions[func['component']].append(func.get('name'))
+%>\
 typedef ${func.get('type')} (__zecall *pfn_${func.get('name')})(
   %for arg in func['args']:
     ${arg['type']} ${arg['name']}${'' if loop.last else ','}
   %endfor
 );
+  %if func['component'] not in COMPONENTS_TO_OMIT and sorted(current_functions[func['component']]) == sorted(all_functions[func['component']]):
+    %if func['component'] in components[get_namespace(func['component'])]:
+<% current_functions.pop(func['component']) %>
+struct ${func['component']}_dditable_t {
+        %for function in sort_dditable(all_functions[func['component']], functions):
+    pfn_${function} ${function};
+        %endfor
+};
+    %endif
+  %endif
 %endfor
 
 %for name, arg in arguments.items():
@@ -94,45 +127,6 @@ struct ze_dispatch_table_t
 %endfor
 };
 
-<%
-components = {}
-func_grouped = {}
-for name, func in functions.items():
-    if not is_latest_version(functions, func):
-      continue
-    if func.get('component') != 'ze_gits_extension':
-        namespace = func['component'].split('_')[0]
-        component = func['component'] if func['component'] != namespace else namespace + '_global'
-        if not func_grouped.get(component):
-            func_grouped[component] = list()
-        func_grouped[component].append(func.get('name'))
-        if not components.get(namespace):
-            components[namespace] = set()
-        components[namespace].add(component)
-%>
-
-%for namespace in components.keys():
-  %for component in list(components[namespace]):
-struct ${component}_dditable_t {
-    %for func in func_grouped[component]:
-    pfn_${func} ${func};
-    %endfor
-};
-  %endfor
-
-struct ${namespace}_dditable_t {
-  %if 'ze_' in namespace:
-    ${namespace}_global_dditable_t Global;
-  %endif
-  %for component in sorted(list(components[namespace])):
-    %if not 'global' in component:
-    ${component}_dditable_t ${''.join(c.title() for c in component.split('_')[1:])};
-    %endif
-  %endfor
-};
-
-
-%endfor
 struct zel_base_properties_t {
     zel_structure_type_t stype;
     void* pNext;
