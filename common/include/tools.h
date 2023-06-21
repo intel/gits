@@ -192,6 +192,16 @@ int32_t ensure_signed32bit_representible(SRC value) {
 }
 
 unsigned int stoui(const std::string& str);
+std::vector<std::string> GetStringsWithRegex(std::string src,
+                                             const char* regex,
+                                             const char* rmRegex);
+
+std::vector<std::string> GetIncludePaths(const char* buildOptions);
+
+void CreateHeaderFiles(std::vector<std::string> sourceNamesToScan,
+                       std::vector<std::string> searchPaths,
+                       std::set<std::string> alreadyCreatedHeaders,
+                       bool includeMainFiles = false);
 
 } // namespace gits
 

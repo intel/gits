@@ -12,6 +12,7 @@
 #include "openclDrivers.h"
 #include "openclStateDynamic.h"
 #include "openclTools.h"
+#include "tools.h"
 
 namespace gits {
 namespace OpenCL {
@@ -36,7 +37,8 @@ inline void clBuildProgram_SD(cl_int return_value,
   if (ErrCodeSuccess(return_value)) {
     auto& programState = SD()._programStates[program];
     if (programState->HasHeaders()) {
-      CreateHeaderFiles(programState->HeaderIncludeNames(), GetIncludePaths(options));
+      CreateHeaderFiles(programState->HeaderIncludeNames(), GetIncludePaths(options),
+                        std::set<std::string>());
     }
     if (!programState->fileName.empty()) {
       Log(TRACE) << "^------------- Building file " << programState->fileName;
@@ -62,7 +64,8 @@ inline void clCompileProgram_SD(cl_int return_value,
   if (ErrCodeSuccess(return_value)) {
     auto& programState = SD()._programStates[program];
     if (programState->HasHeaders()) {
-      CreateHeaderFiles(programState->HeaderIncludeNames(), GetIncludePaths(options));
+      CreateHeaderFiles(programState->HeaderIncludeNames(), GetIncludePaths(options),
+                        std::set<std::string>());
     }
     programState->CompileProgram(num_devices, num_input_headers, input_headers,
                                  header_include_names, options);

@@ -971,41 +971,6 @@ bool ResourceExists(cl_context resource) {
   return SD()._contextStates.find(resource) != SD()._contextStates.end();
 }
 
-void CreateHeaderFiles(std::vector<std::string> headerNames, std::vector<std::string> searchPaths) {
-  for (const auto& header : headerNames) {
-    for (const auto& searchPath : searchPaths) {
-      bfs::path headerPath(bfs::path(searchPath) / header);
-      bfs::ifstream loadHeader(headerPath);
-      if (loadHeader.is_open()) {
-        const auto headerFileName = bfs::path(header).filename();
-        bfs::path path = bfs::path(Config::Get().common.streamDir) / "gitsFiles" / headerFileName;
-        if (!bfs::exists(path)) {
-          create_directories(path.parent_path());
-          bfs::copy_file(headerPath, path);
-        }
-        std::string srcHeader(std::istreambuf_iterator<char>(loadHeader),
-                              (std::istreambuf_iterator<char>()));
-        CreateHeaderFiles(
-            GetStringsWithRegex(srcHeader, R"((?<=^#include)\s*["<]([^">]+))", "\\s*[<\"]*"),
-            searchPaths);
-      }
-    }
-  }
-}
-
-std::vector<std::string> GetStringsWithRegex(std::string src,
-                                             const char* regex,
-                                             const char* rmRegex) {
-  std::vector<std::string> foundStrings;
-  boost::regex expr(regex);
-  boost::smatch what;
-  while (boost::regex_search(src, what, expr)) {
-    foundStrings.push_back(boost::regex_replace(what.str(0), boost::regex(rmRegex), ""));
-    src = what.suffix().str();
-  }
-  return foundStrings;
-}
-
 std::string RemoveDoubleDotHeaderSyntax(const std::string& src) {
   auto shaderSource = src;
   std::string finalShaderSource = "";
@@ -1024,15 +989,6 @@ std::string RemoveDoubleDotHeaderSyntax(const std::string& src) {
   }
   finalShaderSource += shaderSource;
   return finalShaderSource;
-}
-
-std::vector<std::string> GetIncludePaths(const char* options) {
-  std::vector<std::string> includePaths;
-  if (options) {
-    includePaths = GetStringsWithRegex(std::string(options), "(?<=-I)\\s*[^\\s]+", "\\s");
-  }
-  includePaths.push_back(bfs::current_path().string());
-  return includePaths;
 }
 
 std::string ToStringHelper(const void* handle) {

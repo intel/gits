@@ -11,6 +11,7 @@
 #include "gits.h"
 #include "log.h"
 #include "recorder.h"
+#include "tools.h"
 
 #include "oclocDrivers.h"
 #include "oclocLibrary.h"
@@ -28,7 +29,6 @@
 
 DISABLE_WARNINGS
 #include <boost/filesystem.hpp>
-#include <boost/regex.hpp>
 ENABLE_WARNINGS
 
 namespace bfs = boost::filesystem;
@@ -54,60 +54,6 @@ gits::ocloc::IRecorderWrapper* STDCALL GITSRecorderOcloc() {
 
 // TODO: move most of the functions to the common logic
 namespace {
-std::vector<std::string> GetStringsWithRegex(std::string src,
-                                             const char* regex,
-                                             const char* rmRegex) {
-  std::vector<std::string> foundStrings;
-  boost::regex expr(regex);
-  boost::smatch what;
-  while (boost::regex_search(src, what, expr)) {
-    foundStrings.push_back(boost::regex_replace(what.str(0), boost::regex(rmRegex), ""));
-    src = what.suffix().str();
-  }
-  return foundStrings;
-}
-void CreateHeaderFiles(std::vector<std::string> headerNames,
-                       std::vector<std::string> searchPaths,
-                       std::set<std::string> createdHeaders,
-                       bool includeMainFiles = false) {
-  for (const auto& header : headerNames) {
-    if (createdHeaders.find(header) != createdHeaders.end()) {
-      continue;
-    }
-    for (const auto& searchPath : searchPaths) {
-      bfs::path headerPath = header;
-      if (!bfs::exists(headerPath)) {
-        headerPath = bfs::path(searchPath) / header;
-      }
-      bfs::ifstream loadHeader(headerPath);
-      if (loadHeader.is_open()) {
-        if (includeMainFiles) {
-          const auto headerFileName = bfs::path(header).filename();
-          bfs::path path =
-              bfs::path(gits::Config::Get().common.streamDir) / "gitsFiles" / headerFileName;
-          if (!bfs::exists(path)) {
-            create_directories(path.parent_path());
-            bfs::copy_file(headerPath, path);
-          }
-        }
-        std::string srcHeader(std::istreambuf_iterator<char>(loadHeader),
-                              (std::istreambuf_iterator<char>()));
-        createdHeaders.insert(header);
-        CreateHeaderFiles(
-            GetStringsWithRegex(srcHeader, R"((?<=^#include)\s*["<]([^">]+))", "\\s*[<\"]*"),
-            searchPaths, createdHeaders, true);
-      }
-    }
-  }
-}
-std::vector<std::string> GetIncludePaths(const char* options) {
-  std::vector<std::string> includePaths;
-  if (options != nullptr) {
-    includePaths = GetStringsWithRegex(std::string(options), "(?<=-I)\\s*[^\\s]+", "\\s");
-  }
-  includePaths.push_back(bfs::current_path().string());
-  return includePaths;
-}
 bool CheckIfStringExists(const std::vector<const char*>& vecOfStrings, const std::string& str) {
   for (auto strCheck : vecOfStrings) {
     if (strCheck != nullptr && str.find(strCheck) != std::string::npos) {

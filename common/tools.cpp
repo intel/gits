@@ -35,6 +35,7 @@ ENABLE_WARNINGS
 DISABLE_WARNINGS
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/regex.hpp>
 ENABLE_WARNINGS
 
 #include <png.h>
@@ -451,6 +452,63 @@ unsigned int stoui(const std::string& str) {
   }
 
   return as_uint;
+}
+
+std::vector<std::string> GetStringsWithRegex(std::string src,
+                                             const char* regex,
+                                             const char* rmRegex) {
+  std::vector<std::string> foundStrings;
+  boost::regex expr(regex);
+  boost::smatch what;
+  while (boost::regex_search(src, what, expr)) {
+    foundStrings.push_back(boost::regex_replace(what.str(0), boost::regex(rmRegex), ""));
+    src = what.suffix().str();
+  }
+  return foundStrings;
+}
+
+std::vector<std::string> GetIncludePaths(const char* buildOptions) {
+  std::vector<std::string> includePaths;
+  if (buildOptions != nullptr) {
+    includePaths = GetStringsWithRegex(std::string(buildOptions), "(?<=-I)\\s*[^\\s]+", "\\s");
+  }
+  includePaths.push_back(bfs::current_path().string());
+  return includePaths;
+}
+
+void CreateHeaderFiles(std::vector<std::string> sourceNamesToScan,
+                       std::vector<std::string> searchPaths,
+                       std::set<std::string> alreadyCreatedHeaders,
+                       bool includeMainFiles) {
+  for (const auto& header : sourceNamesToScan) {
+    if (alreadyCreatedHeaders.find(header) != alreadyCreatedHeaders.end()) {
+      continue;
+    }
+    for (const auto& searchPath : searchPaths) {
+      bfs::path headerPath = header;
+      if (!bfs::exists(headerPath)) {
+        headerPath = bfs::path(searchPath) / header;
+      }
+      bfs::ifstream loadHeader(headerPath);
+      if (loadHeader.is_open()) {
+        if (includeMainFiles) {
+          const auto headerFileName = bfs::path(header).filename();
+          bfs::path path =
+              bfs::path(gits::Config::Get().common.streamDir) / "gitsFiles" / headerFileName;
+          if (!bfs::exists(path)) {
+            create_directories(path.parent_path());
+            bfs::copy_file(headerPath, path);
+          }
+        }
+        std::string srcHeader(std::istreambuf_iterator<char>(loadHeader),
+                              (std::istreambuf_iterator<char>()));
+        alreadyCreatedHeaders.insert(header);
+        CreateHeaderFiles(
+            GetStringsWithRegex(srcHeader, R"((?<=^#include)\s*["<]([^">]+))", "\\s*[<\"]*"),
+            searchPaths, alreadyCreatedHeaders, true);
+      }
+    }
+  }
 }
 
 } //namespace gits

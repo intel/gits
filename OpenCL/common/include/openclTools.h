@@ -188,12 +188,6 @@ void AddSignature(std::vector<char>& buffer, mem_signature_t signature);
 mem_signature_t GenerateSignature();
 bool ResourceExists(cl_context resource);
 
-void CreateHeaderFiles(std::vector<std::string> headerNames, std::vector<std::string> searchPaths);
-std::vector<std::string> GetStringsWithRegex(std::string src,
-                                             const char* regex,
-                                             const char* rmRegex = "");
-std::vector<std::string> GetIncludePaths(const char* options);
-
 std::string ToStringHelper(const void* handle);
 
 namespace {
