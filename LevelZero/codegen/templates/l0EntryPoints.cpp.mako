@@ -46,10 +46,25 @@ ${print_ddi_table(func, functions, var['name'])}      break;
   return return_value;
   %else:
   GITS_ENTRY_L0
+    %if func.get('unprotectLogic', False):
+      %if func.get('type') != 'void':
+  auto return_value = ZE_RESULT_SUCCESS;
+      %endif
+  GITS_WRAPPER_PRE
+  wrapper.UnProtectMemoryPointers();
+  ${'' if func.get('type') == 'void' else 'return_value = '}driver.${func.get('name')}(${make_params(func)});
+  wrapper.${func.get('name')}(${make_params(func, with_retval=True)});
+  wrapper.ProtectMemoryPointers();
+  GITS_WRAPPER_POST
+  else {
+    ${'' if func.get('type') == 'void' else 'return_value = '}driver.${func.get('name')}(${make_params(func)});
+  }
+    %else:
   ${'' if func.get('type') == 'void' else 'auto return_value = '}driver.${func.get('name')}(${make_params(func)});
   GITS_WRAPPER_PRE
-    wrapper.${func.get('name')}(${make_params(func, with_retval=True)});
+  wrapper.${func.get('name')}(${make_params(func, with_retval=True)});
   GITS_WRAPPER_POST
+    %endif
     %if func.get('type') != 'void':
   return return_value;
     %endif

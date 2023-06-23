@@ -227,22 +227,6 @@ inline ze_result_t zeMemFree_RECEXECWRAP(ze_context_handle_t hContext, void* ptr
   return return_value;
 }
 
-inline ze_result_t zeCommandQueueSynchronize_RECEXECWRAP(ze_command_queue_handle_t hCommandQueue,
-                                                         uint64_t timeout) {
-  GITS_ENTRY_L0
-  auto return_value = ZE_RESULT_SUCCESS;
-  GITS_WRAPPER_PRE
-  wrapper.UnProtectMemoryPointers();
-  return_value = driver.zeCommandQueueSynchronize(hCommandQueue, timeout);
-  wrapper.zeCommandQueueSynchronize(return_value, hCommandQueue, timeout);
-  wrapper.ProtectMemoryPointers();
-  GITS_WRAPPER_POST
-  else {
-    return_value = driver.zeCommandQueueSynchronize(hCommandQueue, timeout);
-  }
-  return return_value;
-}
-
 inline ze_result_t zeMemFreeExt_RECEXECWRAP(ze_context_handle_t hContext,
                                             const ze_memory_free_ext_desc_t* pMemFreeDesc,
                                             void* ptr) {
