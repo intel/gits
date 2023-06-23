@@ -3252,6 +3252,26 @@ inline void vkCmdDrawIndirectCountKHR_SD(VkCommandBuffer commandBuffer,
   printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
 }
 
+inline void vkCmdDrawIndexedIndirectCount_SD(VkCommandBuffer commandBuffer,
+                                             VkBuffer buffer,
+                                             VkDeviceSize offset,
+                                             VkBuffer countBuffer,
+                                             VkDeviceSize countBufferOffset,
+                                             uint32_t maxDrawCount,
+                                             uint32_t stride) {
+  if (Config::Get().IsRecorder() && ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
+                                      Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
+                                     isSubcaptureBeforeRestorationPhase())) {
+    if (VK_NULL_HANDLE != buffer) {
+      SD().bindingBuffers[commandBuffer].insert(buffer);
+    }
+    if (VK_NULL_HANDLE != countBuffer) {
+      SD().bindingBuffers[commandBuffer].insert(countBuffer);
+    }
+  }
+  printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
+}
+
 inline void vkCmdDrawIndexedIndirectCountKHR_SD(VkCommandBuffer commandBuffer,
                                                 VkBuffer buffer,
                                                 VkDeviceSize offset,

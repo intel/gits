@@ -734,7 +734,7 @@ arg4=ArgDef(name='drawCount', type='uint32_t'),
 arg5=ArgDef(name='stride', type='uint32_t')
 )
 
-Function(name='vkCmdDrawIndexedIndirectCount', enabled=False, type=Param,
+Function(name='vkCmdDrawIndexedIndirectCount', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='buffer', type='VkBuffer'),
