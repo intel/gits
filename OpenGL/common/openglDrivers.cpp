@@ -308,9 +308,8 @@ NOINLINE void LogFunctionNotFoundShutdown(const char* func) {
 #define DEFAULT_FUNCTION(b, c, d, e, load_func, drv_name)                                          \
   b STDCALL default_##c d {                                                                        \
     if (!load_func(drv_name.c, #c)) {                                                              \
-      Log(ERR) << "Application called the function " << #c                                         \
-               << ", but it "                                                                      \
-                  "couldn't be loaded. The driver call will be skipped.";                          \
+      Log(ERR) << "Application called the function " << #c << ", but it "                          \
+               << "couldn't be loaded. The driver call will be skipped.";                          \
       if (Config::Get().recorder.openGL.utilities.retryFunctionLoads) {                            \
         Log(ERR) << "Function load will be reattempted the next time "                             \
                     "application calls this function.";                                            \

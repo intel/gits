@@ -1342,7 +1342,7 @@ public:
   }
 };
 
-// Dummy argument used in palce of GL tokens that currently lack correct
+// Dummy argument used in place of GL tokens that currently lack correct
 // implementation
 class CBadArg : public gits::CArgument, private CInvalidArgument {
 public:
