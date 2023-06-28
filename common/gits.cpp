@@ -125,6 +125,8 @@ CGits::~CGits() {
     }
   }
 
+  // Create a buildable CCode project by automatically copying necessary files.
+  // TODO: extract it to a separate function.
   if (Config::Get().recorder.basic.enabled && Config::Get().recorder.basic.dumpCCode) {
     auto& dumpPath = Config::Get().common.streamDir;
     auto& installPath = Config::Get().common.installPath;
