@@ -1826,6 +1826,9 @@ inline void vkCreateCommandPool_WRAPRUN(CVkResult& recorderSideReturnValue,
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
   VkCommandPoolCreateInfo createInfo = *pCreateInfo;
+  if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
+    createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+  }
   VkResult playerSideReturnValue =
       drvVk.vkCreateCommandPool(*device, &createInfo, *pAllocator, *pCommandPool);
   checkReturnValue(playerSideReturnValue, recorderSideReturnValue, "vkCreateCommandPool");
