@@ -653,13 +653,13 @@ const char* DrawBufferToSuffixStr(GLenum buffer) {
   case GL_NONE:
     return "none";
   case GL_FRONT_LEFT:
-    return "_front";
+    return "_frontl";
   case GL_FRONT_RIGHT:
     return "_frontr";
   case GL_BACK_LEFT:
     return "_backl";
   case GL_BACK_RIGHT:
-    return "_backl";
+    return "_backr";
   case GL_FRONT:
     return "_front";
   case GL_BACK:
