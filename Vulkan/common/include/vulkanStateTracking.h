@@ -617,45 +617,43 @@ inline void vkMapMemory_SD(VkResult return_value,
                            void** ppData) {
   auto& memoryState = SD()._devicememorystates[memory];
 
+  if (VK_SUCCESS != return_value) {
+    return;
+  }
+
   uint64_t unmapSize = size;
-  if (VK_SUCCESS == return_value) {
-    if (unmapSize == 0xFFFFFFFFFFFFFFFF) {
-      unmapSize = memoryState->memoryAllocateInfoData.Value()->allocationSize - offset;
-    }
+  if (unmapSize == 0xFFFFFFFFFFFFFFFF) {
+    unmapSize = memoryState->memoryAllocateInfoData.Value()->allocationSize - offset;
+  }
 
-    memoryState->mapping.reset(
-        new CDeviceMemoryState::CMapping(&offset, &unmapSize, &flags, ppData));
-    if (Config::Get().player.printMemUsageVk) {
-      SD().currentlyMappedMemory += unmapSize;
-      Log(INFO) << "Currently Allocated Memory TOTAL: "
-                << SD().currentlyAllocatedMemoryAll / 1000000
-                << " MB; GPU_ONLY: " << SD().currentlyAllocatedMemoryGPU / 1000000
-                << " MB; CPU_GPU_Shared: " << SD().currentlyAllocatedMemoryCPU_GPU / 1000000
-                << " MB; Currently mapped memory: " << SD().currentlyMappedMemory / 1000000
-                << " MB";
-    }
+  memoryState->mapping.reset(new CDeviceMemoryState::CMapping(&offset, &unmapSize, &flags, ppData));
 
-    if (Config::Get().IsRecorder()) {
-      if (Config::Get().recorder.vulkan.utilities.useExternalMemoryExtension) {
-        ExternalMemoryRegion::ResetTouchedPages(*ppData, unmapSize);
-      } else if (Config::Get().recorder.vulkan.utilities.memoryAccessDetection) {
-        MemorySniffer::Install();
+  if (Config::Get().player.printMemUsageVk) {
+    SD().currentlyMappedMemory += unmapSize;
+    Log(INFO) << "Currently Allocated Memory TOTAL: " << SD().currentlyAllocatedMemoryAll / 1000000
+              << " MB; GPU_ONLY: " << SD().currentlyAllocatedMemoryGPU / 1000000
+              << " MB; CPU_GPU_Shared: " << SD().currentlyAllocatedMemoryCPU_GPU / 1000000
+              << " MB; Currently mapped memory: " << SD().currentlyMappedMemory / 1000000 << " MB";
+  }
 
-        memoryState->mapping->sniffedRegionHandle =
-            MemorySniffer::Get().CreateRegion(*ppData, (size_t)unmapSize);
-        if ((0 == memoryState->mapping->sniffedRegionHandle) ||
-            (0 == *memoryState->mapping->sniffedRegionHandle)) {
-          Log(ERR) << "MemorySniffer setup for memory: " << memory
-                   << " with mapped ptr: " << *ppData << " failed.";
-          throw std::runtime_error(EXCEPTION_MESSAGE);
-        }
-        if (!MemorySniffer::Get().Protect(memoryState->mapping->sniffedRegionHandle)) {
-          Log(ERR) << "Protecting memory region: "
-                   << (**memoryState->mapping->sniffedRegionHandle).BeginAddress() << " - "
-                   << (**memoryState->mapping->sniffedRegionHandle).EndAddress() << " FAILED!.";
-          if (!Config::Get().recorder.vulkan.utilities.shadowMemory) {
-            Log(ERR) << "Please try to record with enabled ShadowMemory option.";
-          }
+  if (Config::Get().IsRecorder()) {
+    if (Config::Get().recorder.vulkan.utilities.useExternalMemoryExtension) {
+      ExternalMemoryRegion::ResetTouchedPages(*ppData, unmapSize);
+    } else if (Config::Get().recorder.vulkan.utilities.memoryAccessDetection) {
+      MemorySniffer::Install();
+
+      auto& sniffedRegionHandle = memoryState->mapping->sniffedRegionHandle;
+      sniffedRegionHandle = MemorySniffer::Get().CreateRegion(*ppData, (size_t)unmapSize);
+      if ((0 == sniffedRegionHandle) || (0 == *sniffedRegionHandle)) {
+        Log(ERR) << "MemorySniffer setup for memory: " << memory << " with mapped ptr: " << *ppData
+                 << " failed.";
+        throw std::runtime_error(EXCEPTION_MESSAGE);
+      }
+      if (!MemorySniffer::Get().Protect(sniffedRegionHandle)) {
+        Log(ERR) << "Protecting memory region: " << (**sniffedRegionHandle).BeginAddress() << " - "
+                 << (**sniffedRegionHandle).EndAddress() << " FAILED!.";
+        if (!Config::Get().recorder.vulkan.utilities.shadowMemory) {
+          Log(ERR) << "Please try to record with enabled ShadowMemory option.";
         }
       }
     }
