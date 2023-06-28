@@ -22,7 +22,7 @@ namespace gits {
 namespace OpenGL {
 inline void coherentBufferUpdate_PS(CRecorder& recorder) {
   if (SD().GetCurrentSharedStateData().coherentBufferMapping == true &&
-      SD().GetCurrentContext() != 0) {
+      SD().GetCurrentContext() != nullptr) {
     recorder.Schedule(new CgitsCoherentBufferMapping(
         CCoherentBufferUpdate::TCoherentBufferData::TEXTURE_UPDATE,
         CCoherentBufferUpdate::TCoherentBufferData::UPDATE_BOUND,
