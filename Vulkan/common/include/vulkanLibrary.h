@@ -52,12 +52,16 @@ public:
   CResourceManager& ProgramBinaryManager();
   class CVulkanCommandBufferTokensBuffer : public CTokensBuffer<Vulkan::CFunction> {
   public:
-    std::set<uint64_t> GetMappedPointers();
+    std::set<uint64_t> GetMappedPointers(const BitRange& objRange,
+                                         Config::VulkanObjectMode objMode);
     void ExecAndStateTrack();
     void ExecAndDump(VkCommandBuffer cmdBuffer,
                      uint64_t queueSubmitNumber,
                      uint32_t cmdBuffBatchNumber,
                      uint32_t cmdBuffNumber);
+    void RestoreRenderPass(const BitRange& renderPassRange);
+    void ScheduleRenderPass(void (*schedulerFunc)(Vulkan::CFunction*),
+                            const BitRange& renderPassRange);
   };
 };
 } // namespace Vulkan

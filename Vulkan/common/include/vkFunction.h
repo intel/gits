@@ -10,6 +10,8 @@
 #include "function.h"
 #include "platform.h"
 
+#define GITS_BIT_AT_IDX(x) (1u << x)
+
 namespace gits {
 namespace Vulkan {
 enum class ArgType {
@@ -39,6 +41,18 @@ class CFunction : public gits::CFunction {
   virtual ArgInfo ArgumentInfo(unsigned idx) const = 0;
 
 public:
+  enum TApiType {
+    GITS_VULKAN_PARAM_APITYPE = GITS_BIT_AT_IDX(0),
+    GITS_VULKAN_QUEUE_SUBMIT_APITYPE = GITS_BIT_AT_IDX(1),
+    GITS_VULKAN_CREATE_IMAGE_APITYPE = GITS_BIT_AT_IDX(2),
+    GITS_VULKAN_CREATE_BUFFER_APITYPE = GITS_BIT_AT_IDX(3),
+    GITS_VULKAN_CMDBUFFER_SET_APITYPE = GITS_BIT_AT_IDX(4),
+    GITS_VULKAN_CMDBUFFER_BIND_APITYPE = GITS_BIT_AT_IDX(5),
+    GITS_VULKAN_CMDBUFFER_PUSH_APITYPE = GITS_BIT_AT_IDX(6),
+    GITS_VULKAN_BEGIN_RENDERPASS_APITYPE = GITS_BIT_AT_IDX(7),
+    GITS_VULKAN_END_RENDERPASS_APITYPE = GITS_BIT_AT_IDX(8)
+  };
+
   enum TId {
     BEGIN_VULKAN = CToken::ID_VULKAN,
     ID_GITS_VK_WINDOW_CREATOR,

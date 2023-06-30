@@ -108,6 +108,9 @@ public:
     virtual unsigned CfgRec_EndFrameSleep() const {
       return 0;
     }
+    virtual bool CfgRec_IsRenderPassMode() const {
+      return false;
+    }
     virtual bool CfgRec_IsCmdBufferMode() const {
       return false;
     }

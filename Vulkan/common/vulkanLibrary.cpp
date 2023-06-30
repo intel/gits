@@ -72,11 +72,29 @@ CLibrary& CLibrary::Get() {
   return static_cast<CLibrary&>(CGits::Instance().Library(ID_VULKAN));
 }
 
-std::set<uint64_t> CLibrary::CVulkanCommandBufferTokensBuffer::GetMappedPointers() {
+std::set<uint64_t> CLibrary::CVulkanCommandBufferTokensBuffer::GetMappedPointers(
+    const BitRange& objRange, Config::VulkanObjectMode objMode) {
   std::set<uint64_t> returnMap;
+  uint64_t renderPassCount = 0;
+  bool pre_renderpass = true;
+
   for (auto elem : _tokensList) {
+    if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
+      renderPassCount++;
+    }
+    if (objRange[renderPassCount] &&
+        (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDERPASS_APITYPE)) {
+      pre_renderpass = false;
+    }
     for (auto obj : elem->GetMappedPointers()) {
-      returnMap.insert((uint64_t)obj);
+      if (objMode == Config::MODE_VKQUEUESUBMIT || objMode == Config::MODE_VKCOMMANDBUFFER ||
+          (objMode == Config::MODE_VKRENDERPASS &&
+           (objRange[renderPassCount] ||
+            (pre_renderpass && (elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_SET_APITYPE ||
+                                elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_BIND_APITYPE ||
+                                elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_PUSH_APITYPE))))) {
+        returnMap.insert((uint64_t)obj);
+      }
     }
   }
   returnMap.erase(0); // 0 is not valid pointer.
@@ -98,7 +116,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(VkCommandBuffer cmd
   for (auto elem : _tokensList) {
     elem->Exec();
     elem->StateTrack();
-    if (isEndRenderPassToken(elem->Id())) {
+    if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
       CGits::CCounter localCounter = {queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
                                       renderPassCount};
       if (localCounter == Config::Get().player.captureVulkanRenderPasses) {
@@ -108,6 +126,60 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(VkCommandBuffer cmd
       renderPassCount++;
     }
   }
+}
+
+void CLibrary::CVulkanCommandBufferTokensBuffer::RestoreRenderPass(
+    const BitRange& renderPassRange) {
+  uint64_t renderPassCount = 0;
+
+  bool pre_renderpass = true;
+
+  for (auto elem : _tokensList) {
+    if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
+      renderPassCount++;
+    }
+    if (renderPassRange[renderPassCount] &&
+        (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDERPASS_APITYPE)) {
+      pre_renderpass = false;
+    }
+    if (pre_renderpass) {
+      elem->Exec();
+      elem->StateTrack();
+    }
+  }
+}
+
+void CLibrary::CVulkanCommandBufferTokensBuffer::ScheduleRenderPass(
+    void (*schedulerFunc)(Vulkan::CFunction*), const BitRange& renderPassRange) {
+  uint64_t renderPassCount = 0;
+  bool started = false;
+
+  for (auto elem : _tokensList) {
+    if (renderPassRange[renderPassCount] &&
+        (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDERPASS_APITYPE)) {
+      started = true;
+    }
+    if (renderPassRange[renderPassCount] && started) {
+      schedulerFunc(elem);
+    } else if ((elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_SET_APITYPE ||
+                elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_BIND_APITYPE ||
+                elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_PUSH_APITYPE) &&
+               !started) {
+      bool toSkip = false;
+      for (auto obj : elem->GetMappedPointers()) {
+        if (IsObjectToSkip(obj)) {
+          toSkip = true;
+        }
+      }
+      if (!toSkip) {
+        schedulerFunc(elem);
+      }
+    }
+    if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
+      renderPassCount++;
+    }
+  }
+  _tokensList.clear();
 }
 } //namespace Vulkan
 } //namespace gits

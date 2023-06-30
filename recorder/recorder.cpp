@@ -427,8 +427,8 @@ void gits::CRecorder::Start() {
   if ((api3dIface.CfgRec_IsFramesMode() && inst.CurrentFrame() != 1) ||
       (api3dIface.CfgRec_IsSingleDrawMode() && api3dIface.CfgRec_SingleDraw() != 1) ||
       (api3dIface.CfgRec_IsDrawsRangeMode()) || (api3dIface.CfgRec_IsCmdBufferMode()) ||
-      (api3dIface.CfgRec_IsEncodersRangeMode()) || (api3dIface.CfgRec_IsSubEncodersRangeMode()) ||
-      (api3dIface.CfgRec_IsQueueSubmitMode()) ||
+      (api3dIface.CfgRec_IsRenderPassMode()) || (api3dIface.CfgRec_IsEncodersRangeMode()) ||
+      (api3dIface.CfgRec_IsSubEncodersRangeMode()) || (api3dIface.CfgRec_IsQueueSubmitMode()) ||
       (apiComputeIface != nullptr && (apiComputeIface->CfgRec_IsSingleKernelMode() ||
                                       apiComputeIface->CfgRec_IsKernelsRangeMode()))) {
     Scheduler().Register(new CTokenFrameNumber(CToken::ID_PRE_RECORD_END, inst.CurrentFrame()));
@@ -620,7 +620,8 @@ void gits::CRecorder::CmdBufferEnd(gits::CGits::CCounter counter) {}
 
 void gits::CRecorder::QueueSubmitEnd() {
   auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
-  if ((api3dIface.CfgRec_IsQueueSubmitMode() || api3dIface.CfgRec_IsCmdBufferMode()) &&
+  if ((api3dIface.CfgRec_IsQueueSubmitMode() || api3dIface.CfgRec_IsCmdBufferMode() ||
+       api3dIface.CfgRec_IsRenderPassMode()) &&
       api3dIface.CfgRec_IsObjectToRecord()) {
     Start();
     Stop();

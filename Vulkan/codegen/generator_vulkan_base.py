@@ -13,6 +13,11 @@ Param=1
 QueueSubmit=2
 CreateImage=4
 CreateBuffer=8
+CmdBufferSet=16
+CmdBufferBind=32
+CmdBufferPush=64
+BeginRenderPass=128
+EndRenderPass=256
 
 
 # Vulkan API function level

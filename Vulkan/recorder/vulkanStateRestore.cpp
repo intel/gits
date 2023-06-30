@@ -28,17 +28,6 @@ void ScheduleTokens(gits::Vulkan::CFunction* token) {
   gits::CRecorder::Instance().Scheduler().Register(token);
 }
 
-bool IsObjectToSkip(uint64_t vulkanObject, gits::Vulkan::CStateDynamic& sd) {
-  auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
-  if (gits::Config::Get().recorder.vulkan.utilities.minimalStateRestore &&
-      (api3dIface.CfgRec_IsQueueSubmitMode() || api3dIface.CfgRec_IsCmdBufferMode()) &&
-      (sd.objectsUsedInQueueSubmit.find(vulkanObject) == sd.objectsUsedInQueueSubmit.end())) {
-    return true;
-  } else {
-    return false;
-  }
-}
-
 namespace {
 
 std::map<VkDevice, gits::Vulkan::TemporaryDeviceResourcesStruct> temporaryDeviceResources;
@@ -254,7 +243,7 @@ gits::Vulkan::TemporaryBufferStruct gits::Vulkan::GetTemporaryBuffer(
 void gits::Vulkan::RestoreVkInstances(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& instanceState : sd._instancestates) {
     VkInstance instance = instanceState.first;
-    if (IsObjectToSkip((uint64_t)instance, sd)) {
+    if (IsObjectToSkip((uint64_t)instance)) {
       continue;
     }
 
@@ -270,7 +259,7 @@ void gits::Vulkan::RestoreVkPhysicalDevices(CScheduler& scheduler, CStateDynamic
 
   for (auto& physicalDeviceState : sd._physicaldevicestates) {
     VkPhysicalDevice physicalDevice = physicalDeviceState.first;
-    if (IsObjectToSkip((uint64_t)physicalDevice, sd)) {
+    if (IsObjectToSkip((uint64_t)physicalDevice)) {
       continue;
     }
 
@@ -291,7 +280,7 @@ void gits::Vulkan::RestoreVkPhysicalDevices(CScheduler& scheduler, CStateDynamic
 void gits::Vulkan::RestoreSurfaceKHR(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& surfaceState : sd._surfacekhrstates) {
     VkSurfaceKHR surface = surfaceState.first;
-    if (IsObjectToSkip((uint64_t)surface, sd)) {
+    if (IsObjectToSkip((uint64_t)surface)) {
       continue;
     }
 
@@ -331,7 +320,7 @@ void gits::Vulkan::RestoreSurfaceKHR(CScheduler& scheduler, CStateDynamic& sd) {
 
 void gits::Vulkan::RestoreVkDevices(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& deviceState : sd._devicestates) {
-    if (IsObjectToSkip((uint64_t)deviceState.first, sd)) {
+    if (IsObjectToSkip((uint64_t)deviceState.first)) {
       continue;
     }
 
@@ -395,15 +384,14 @@ void gits::Vulkan::RestoreVkQueue(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& deviceState : sd._devicestates) {
     VkDevice device = deviceState.first;
 
-    if (IsObjectToSkip((uint64_t)device, sd)) {
+    if (IsObjectToSkip((uint64_t)device)) {
       continue;
     }
 
     for (auto queueState : deviceState.second->queueStateStoreList) {
       VkQueue queue = queueState->queueHandle;
 
-      if (IsObjectToSkip((uint64_t)queue, sd) &&
-          (queue != temporaryDeviceResources[device].queue)) {
+      if (IsObjectToSkip((uint64_t)queue) && (queue != temporaryDeviceResources[device].queue)) {
         continue;
       }
 
@@ -487,7 +475,7 @@ void gits::Vulkan::PrepareTemporaryResources(CScheduler& scheduler, CStateDynami
 
 void gits::Vulkan::RestoreSwapchainKHR(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& swapchainState : sd._swapchainkhrstates) {
-    if (IsObjectToSkip((uint64_t)swapchainState.first, sd)) {
+    if (IsObjectToSkip((uint64_t)swapchainState.first)) {
       continue;
     }
 
@@ -573,7 +561,7 @@ void gits::Vulkan::RestoreSwapchainKHR(CScheduler& scheduler, CStateDynamic& sd)
 void gits::Vulkan::RestoreVkDescriptorPool(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& descriptorPoolState : sd._descriptorpoolstates) {
     VkDescriptorPool descriptorPool = descriptorPoolState.first;
-    if (IsObjectToSkip((uint64_t)descriptorPool, sd)) {
+    if (IsObjectToSkip((uint64_t)descriptorPool)) {
       continue;
     }
     scheduler.Register(new CvkCreateDescriptorPool(
@@ -588,7 +576,7 @@ void gits::Vulkan::RestoreVkDescriptorPool(CScheduler& scheduler, CStateDynamic&
 void gits::Vulkan::RestoreVkCommandPool(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& commandPoolState : sd._commandpoolstates) {
     VkCommandPool commandPool = commandPoolState.first;
-    if (IsObjectToSkip((uint64_t)commandPool, sd)) {
+    if (IsObjectToSkip((uint64_t)commandPool)) {
       continue;
     }
     scheduler.Register(new CvkCreateCommandPool(
@@ -602,7 +590,7 @@ void gits::Vulkan::RestoreVkCommandPool(CScheduler& scheduler, CStateDynamic& sd
 void gits::Vulkan::RestoreSampler(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& samplerState : sd._samplerstates) {
     VkSampler sampler = samplerState.first;
-    if (IsObjectToSkip((uint64_t)sampler, sd)) {
+    if (IsObjectToSkip((uint64_t)sampler)) {
       continue;
     }
     scheduler.Register(new CvkCreateSampler(
@@ -616,7 +604,7 @@ void gits::Vulkan::RestoreSampler(CScheduler& scheduler, CStateDynamic& sd) {
 void gits::Vulkan::RestoreMemory(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& deviceMemoryState : sd._devicememorystates) {
     VkDeviceMemory memory = deviceMemoryState.first;
-    if (IsObjectToSkip((uint64_t)memory, sd)) {
+    if (IsObjectToSkip((uint64_t)memory)) {
       continue;
     }
     scheduler.Register(new CvkAllocateMemory(
@@ -627,7 +615,7 @@ void gits::Vulkan::RestoreMemory(CScheduler& scheduler, CStateDynamic& sd) {
 
 void gits::Vulkan::RestoreMappedMemory(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& deviceMemoryState : sd._devicememorystates) {
-    if (IsObjectToSkip((uint64_t)deviceMemoryState.first, sd)) {
+    if (IsObjectToSkip((uint64_t)deviceMemoryState.first)) {
       continue;
     }
 
@@ -658,7 +646,7 @@ void gits::Vulkan::RestoreMappedMemory(CScheduler& scheduler, CStateDynamic& sd)
 void gits::Vulkan::RestoreImage(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& imageState : sd._imagestates) {
     VkImage image = imageState.first;
-    if (IsObjectToSkip((uint64_t)image, sd)) {
+    if (IsObjectToSkip((uint64_t)image)) {
       continue;
     }
 
@@ -677,7 +665,7 @@ void gits::Vulkan::RestoreImage(CScheduler& scheduler, CStateDynamic& sd) {
 void gits::Vulkan::RestoreImageBindings(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& imageState : sd._imagestates) {
     VkImage image = imageState.first;
-    if (IsObjectToSkip((uint64_t)image, sd)) {
+    if (IsObjectToSkip((uint64_t)image)) {
       continue;
     }
 
@@ -775,7 +763,7 @@ void gits::Vulkan::RestoreImageView(CScheduler& scheduler, CStateDynamic& sd) {
   std::map<uint64_t, VkDevice> temporaryImages;
   for (auto& imageViewState : sd._imageviewstates) {
     VkImageView imageView = imageViewState.first;
-    if (IsObjectToSkip((uint64_t)imageView, sd)) {
+    if (IsObjectToSkip((uint64_t)imageView)) {
       continue;
     }
 
@@ -806,7 +794,7 @@ void gits::Vulkan::RestoreImageView(CScheduler& scheduler, CStateDynamic& sd) {
 
 void gits::Vulkan::RestoreBuffer(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& bufferState : sd._bufferstates) {
-    if (IsObjectToSkip((uint64_t)bufferState.first, sd)) {
+    if (IsObjectToSkip((uint64_t)bufferState.first)) {
       continue;
     }
 
@@ -827,7 +815,7 @@ void gits::Vulkan::RestoreBuffer(CScheduler& scheduler, CStateDynamic& sd) {
 
 void gits::Vulkan::RestoreBufferBindings(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& bufferState : sd._bufferstates) {
-    if (IsObjectToSkip((uint64_t)bufferState.first, sd)) {
+    if (IsObjectToSkip((uint64_t)bufferState.first)) {
       continue;
     }
 
@@ -898,7 +886,7 @@ void gits::Vulkan::RestoreBufferBindings(CScheduler& scheduler, CStateDynamic& s
 
 void gits::Vulkan::RestoreBufferView(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& bufferViewState : sd._bufferviewstates) {
-    if (IsObjectToSkip((uint64_t)bufferViewState.first, sd)) {
+    if (IsObjectToSkip((uint64_t)bufferViewState.first)) {
       continue;
     }
 
@@ -920,7 +908,7 @@ void gits::Vulkan::RestoreBufferView(CScheduler& scheduler, CStateDynamic& sd) {
 
 void gits::Vulkan::RestoreDescriptorSetLayout(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& descriptorSetLayoutState : sd._descriptorsetlayoutstates) {
-    if (IsObjectToSkip((uint64_t)descriptorSetLayoutState.first, sd)) {
+    if (IsObjectToSkip((uint64_t)descriptorSetLayoutState.first)) {
       continue;
     }
 
@@ -950,7 +938,7 @@ void gits::Vulkan::RestoreAllocatedDescriptorSet(CScheduler& scheduler, CStateDy
       descriptorSetAllocationData;
 
   for (auto& descriptorSetStatePair : sd._descriptorsetstates) {
-    if (IsObjectToSkip((uint64_t)descriptorSetStatePair.first, sd)) {
+    if (IsObjectToSkip((uint64_t)descriptorSetStatePair.first)) {
       continue;
     }
 
@@ -1046,7 +1034,7 @@ void gits::Vulkan::RestoreAllocatedDescriptorSet(CScheduler& scheduler, CStateDy
 
 void gits::Vulkan::RestoreDescriptorSetsUpdates(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& descriptorSetState : sd._descriptorsetstates) {
-    if (IsObjectToSkip((uint64_t)descriptorSetState.first, sd)) {
+    if (IsObjectToSkip((uint64_t)descriptorSetState.first)) {
       continue;
     }
 
@@ -1267,7 +1255,7 @@ void gits::Vulkan::RestoreDescriptorSetsUpdates(CScheduler& scheduler, CStateDyn
 void gits::Vulkan::RestorePipelineLayout(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& pipelineLayoutState : sd._pipelinelayoutstates) {
     VkPipelineLayout pipelineLayout = pipelineLayoutState.first;
-    if (IsObjectToSkip((uint64_t)pipelineLayout, sd) || pipelineLayout == VK_NULL_HANDLE) {
+    if (IsObjectToSkip((uint64_t)pipelineLayout) || pipelineLayout == VK_NULL_HANDLE) {
       continue;
     }
 
@@ -1319,7 +1307,7 @@ void gits::Vulkan::DestroyTemporaryDescriptorSetLayouts(CScheduler& scheduler, C
 
 void gits::Vulkan::RestoreDescriptorUpdateTemplate(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& descriptorUpdateTemplateState : sd._descriptorupdatetemplatestates) {
-    if (IsObjectToSkip((uint64_t)descriptorUpdateTemplateState.first, sd)) {
+    if (IsObjectToSkip((uint64_t)descriptorUpdateTemplateState.first)) {
       continue;
     }
 
@@ -1376,7 +1364,7 @@ void gits::Vulkan::RestoreDescriptorUpdateTemplate(CScheduler& scheduler, CState
 void gits::Vulkan::RestorePipelineCache(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& pipelineCacheState : sd._pipelinecachestates) {
     VkPipelineCache pipelineCache = pipelineCacheState.first;
-    if (IsObjectToSkip((uint64_t)pipelineCache, sd)) {
+    if (IsObjectToSkip((uint64_t)pipelineCache)) {
       continue;
     }
     scheduler.Register(new CvkCreatePipelineCache_V1(
@@ -1390,7 +1378,7 @@ void gits::Vulkan::RestorePipelineCache(CScheduler& scheduler, CStateDynamic& sd
 void gits::Vulkan::RestoreShaderModules(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& shaderModuleState : sd._shadermodulestates) {
     VkShaderModule shaderModule = shaderModuleState.first;
-    if (IsObjectToSkip((uint64_t)shaderModule, sd)) {
+    if (IsObjectToSkip((uint64_t)shaderModule)) {
       continue;
     }
     scheduler.Register(new CvkCreateShaderModule(
@@ -1404,7 +1392,7 @@ void gits::Vulkan::RestoreShaderModules(CScheduler& scheduler, CStateDynamic& sd
 void gits::Vulkan::RestoreRenderPass(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& renderPassState : sd._renderpassstates) {
     VkRenderPass renderPass = renderPassState.first;
-    if (IsObjectToSkip((uint64_t)renderPass, sd)) {
+    if (IsObjectToSkip((uint64_t)renderPass)) {
       continue;
     }
 
@@ -1597,7 +1585,7 @@ void gits::Vulkan::RestorePipelines(CScheduler& scheduler, CStateDynamic& sd) {
       std::vector<VkPipeline> computePipelines;
 
       for (auto& pipelineAndStatePair : sd._pipelinestates) {
-        if (IsObjectToSkip((uint64_t)pipelineAndStatePair.first, sd)) {
+        if (IsObjectToSkip((uint64_t)pipelineAndStatePair.first)) {
           continue;
         }
 
@@ -1676,7 +1664,7 @@ void gits::Vulkan::RestoreFramebuffer(CScheduler& scheduler, CStateDynamic& sd) 
   std::map<uint64_t, VkDevice> temporaryRenderPasses;
 
   for (auto& framebufferStatePair : sd._framebufferstates) {
-    if (IsObjectToSkip((uint64_t)framebufferStatePair.first, sd)) {
+    if (IsObjectToSkip((uint64_t)framebufferStatePair.first)) {
       continue;
     }
 
@@ -1845,7 +1833,7 @@ void gits::Vulkan::RestoreFramebuffer(CScheduler& scheduler, CStateDynamic& sd) 
 
 void gits::Vulkan::RestoreFences(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& fenceState : sd._fencestates) {
-    if (IsObjectToSkip((uint64_t)fenceState.first, sd)) {
+    if (IsObjectToSkip((uint64_t)fenceState.first)) {
       continue;
     }
     VkFence fence = fenceState.first;
@@ -1865,7 +1853,7 @@ void gits::Vulkan::RestoreFences(CScheduler& scheduler, CStateDynamic& sd) {
 
 void gits::Vulkan::RestoreEvents(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& eventState : sd._eventstates) {
-    if (IsObjectToSkip((uint64_t)eventState.first, sd)) {
+    if (IsObjectToSkip((uint64_t)eventState.first)) {
       continue;
     }
 
@@ -1886,7 +1874,7 @@ void gits::Vulkan::RestoreSemaphores(CScheduler& scheduler, CStateDynamic& sd) {
   std::map<VkDevice, std::vector<VkSemaphore>> semaphoresToSignal;
 
   for (auto& semaphoreState : sd._semaphorestates) {
-    if (IsObjectToSkip((uint64_t)semaphoreState.first, sd)) {
+    if (IsObjectToSkip((uint64_t)semaphoreState.first)) {
       continue;
     }
 
@@ -1942,7 +1930,7 @@ void gits::Vulkan::RestoreQueryPool(CScheduler& scheduler, CStateDynamic& sd) {
     auto submitableResources = GetSubmitableResources(scheduler, device);
 
     for (auto& queryPoolAndStatePair : sd._querypoolstates) {
-      if (IsObjectToSkip((uint64_t)queryPoolAndStatePair.first, sd) ||
+      if (IsObjectToSkip((uint64_t)queryPoolAndStatePair.first) ||
           (queryPoolAndStatePair.second->deviceStateStore->deviceHandle != device)) {
         continue;
       }
@@ -2007,7 +1995,7 @@ void gits::Vulkan::RestoreAllocatedCommandBuffers(CScheduler& scheduler, CStateD
 
   for (auto& commandBufferState : sd._commandbufferstates) {
     VkCommandBuffer commandBuffer = commandBufferState.first;
-    if (IsObjectToSkip((uint64_t)commandBuffer, sd)) {
+    if (IsObjectToSkip((uint64_t)commandBuffer)) {
       continue;
     }
     VkCommandBufferAllocateInfo* allocateInfo =
@@ -2040,7 +2028,9 @@ void gits::Vulkan::RestoreAllocatedCommandBuffers(CScheduler& scheduler, CStateD
 void gits::Vulkan::RestoreCommandBuffers(CScheduler& scheduler, CStateDynamic& sd, bool force) {
   auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
   if (Config::Get().recorder.vulkan.utilities.scheduleCommandBuffersBeforeQueueSubmit ||
-      ((api3dIface.CfgRec_IsQueueSubmitMode() || api3dIface.CfgRec_IsCmdBufferMode()) && !force)) {
+      ((api3dIface.CfgRec_IsQueueSubmitMode() || api3dIface.CfgRec_IsCmdBufferMode() ||
+        api3dIface.CfgRec_IsRenderPassMode()) &&
+       !force)) {
     return;
   }
 
@@ -2138,7 +2128,7 @@ void gits::Vulkan::RestoreCommandBuffers(CScheduler& scheduler, CStateDynamic& s
 
   // Restore all secondary command buffers
   for (auto& commandBufferState : sd._commandbufferstates) {
-    if (IsObjectToSkip((uint64_t)commandBufferState.first, sd)) {
+    if (IsObjectToSkip((uint64_t)commandBufferState.first)) {
       continue;
     }
     if (VK_COMMAND_BUFFER_LEVEL_SECONDARY ==
@@ -2149,7 +2139,7 @@ void gits::Vulkan::RestoreCommandBuffers(CScheduler& scheduler, CStateDynamic& s
 
   // Restore all primary command buffers
   for (auto& commandBufferState : sd._commandbufferstates) {
-    if (IsObjectToSkip((uint64_t)commandBufferState.first, sd)) {
+    if (IsObjectToSkip((uint64_t)commandBufferState.first)) {
       continue;
     }
     if (VK_COMMAND_BUFFER_LEVEL_PRIMARY ==
@@ -2196,7 +2186,7 @@ bool isResourceOmittedFromRestoration(uint64_t resource,
                                       bool isImage,
                                       gits::Vulkan::CStateDynamic& sd) {
   // Skip resources due to minimal state restore
-  if (IsObjectToSkip(resource, sd)) {
+  if (gits::Vulkan::IsObjectToSkip(resource)) {
     return true;
   }
 
@@ -2227,7 +2217,8 @@ bool isResourceOmittedFromRestoration(uint64_t resource,
       if (sd._devicememorystates.find(deviceMemory) == sd._devicememorystates.end()) {
         return true;
       }
-    } else if (imageState->sparseBindings.empty()) {
+    } else if (imageState->sparseBindings.empty() &&
+               !imageState->swapchainKHRStateStore) { // In swapchain images we don't need bindings
       return true;
     }
 
@@ -2683,7 +2674,7 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
 
     // Check the size of the largest buffer
     for (auto& bufferAndStatePair : sd._bufferstates) {
-      if (IsObjectToSkip((uint64_t)bufferAndStatePair.first, sd)) {
+      if (IsObjectToSkip((uint64_t)bufferAndStatePair.first)) {
         continue;
       }
 
@@ -3350,7 +3341,7 @@ void gits::Vulkan::RestoreBufferContents(CScheduler& scheduler, CStateDynamic& s
 
 void gits::Vulkan::FinishStateRestore(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& deviceState : sd._devicestates) {
-    if (IsObjectToSkip((uint64_t)deviceState.first, sd)) {
+    if (IsObjectToSkip((uint64_t)deviceState.first)) {
       continue;
     }
 
@@ -3386,7 +3377,8 @@ void gits::Vulkan::FinishStateRestore(CScheduler& scheduler, CStateDynamic& sd) 
 
 void gits::Vulkan::PrepareVkQueueSubmits(CStateDynamic& sd) {
   auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
-  if (api3dIface.CfgRec_IsQueueSubmitMode() || api3dIface.CfgRec_IsCmdBufferMode()) {
+  if (api3dIface.CfgRec_IsQueueSubmitMode() || api3dIface.CfgRec_IsCmdBufferMode() ||
+      api3dIface.CfgRec_IsRenderPassMode()) {
     CVkSubmitInfoDataArray submitInfoForPrepare = getSubmitInfoForPrepare(
         Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objVector,
         Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range,
@@ -3396,10 +3388,15 @@ void gits::Vulkan::PrepareVkQueueSubmits(CStateDynamic& sd) {
     auto pSubmits = submitInfoForPrepare.Value();
 
     if (nullptr != pSubmits) {
+      if (api3dIface.CfgRec_IsRenderPassMode()) {
+        restoreToSpecifiedRenderPass(
+            Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range, pSubmits);
+      }
       auto queueHandle = sd.lastQueueSubmit->queueStateStore->queueHandle;
       VkResult retVal =
           drvVk.vkQueueSubmit(queueHandle, submitCount, pSubmits, sd.lastQueueSubmit->fenceHandle);
-      vkQueueSubmit_SD(retVal, queueHandle, submitCount, pSubmits, sd.lastQueueSubmit->fenceHandle);
+      vkQueueSubmit_SD(retVal, queueHandle, submitCount, pSubmits, sd.lastQueueSubmit->fenceHandle,
+                       true);
       drvVk.vkQueueWaitIdle(queueHandle);
     }
 
@@ -3408,7 +3405,9 @@ void gits::Vulkan::PrepareVkQueueSubmits(CStateDynamic& sd) {
         Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range,
         Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode);
     sd.objectsUsedInQueueSubmit.clear();
-    sd.objectsUsedInQueueSubmit = getPointersUsedInQueueSubmit(submitInfoForSchedule);
+    sd.objectsUsedInQueueSubmit = getPointersUsedInQueueSubmit(
+        submitInfoForSchedule, Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range,
+        Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode);
 
     for (auto& state : sd._devicestates) {
       drvVk.vkDeviceWaitIdle(state.first);
@@ -3419,13 +3418,31 @@ void gits::Vulkan::PrepareVkQueueSubmits(CStateDynamic& sd) {
 void gits::Vulkan::PostRestoreVkQueueSubmits(CScheduler& scheduler, CStateDynamic& sd) {
   auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
 
-  if (api3dIface.CfgRec_IsQueueSubmitMode() || api3dIface.CfgRec_IsCmdBufferMode()) {
+  if (api3dIface.CfgRec_IsQueueSubmitMode() || api3dIface.CfgRec_IsCmdBufferMode() ||
+      api3dIface.CfgRec_IsRenderPassMode()) {
     scheduler.Register(new gits::CTokenFrameNumber(CToken::ID_FRAME_START, 1));
-    RestoreCommandBuffers(scheduler, sd, true);
     CVkSubmitInfoDataArray submitInfoForSchedule = getSubmitInfoForSchedule(
         Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objVector,
         Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range,
         Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode);
+    if (api3dIface.CfgRec_IsRenderPassMode()) {
+      auto submitInfoDataValues = submitInfoForSchedule.Value();
+      if (submitInfoDataValues != nullptr) {
+        VkCommandBuffer commandBuffer = submitInfoDataValues[0].pCommandBuffers[0];
+        auto commandBufferState = SD()._commandbufferstates[commandBuffer];
+        scheduler.Register(new CvkBeginCommandBuffer(
+            VK_SUCCESS, commandBuffer,
+            commandBufferState->beginCommandBuffer->commandBufferBeginInfoData.Value()));
+        commandBufferState->tokensBuffer.ScheduleRenderPass(
+            ScheduleTokens, Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range);
+        if (commandBufferState->ended) {
+          scheduler.Register(new CvkEndCommandBuffer(VK_SUCCESS, commandBuffer));
+        }
+      }
+    } else {
+      RestoreCommandBuffers(scheduler, sd, true);
+    }
+
     scheduler.Register(
         new CvkQueueSubmit(VK_SUCCESS, sd.lastQueueSubmit->queueStateStore->queueHandle,
                            (uint32_t)submitInfoForSchedule.size(), submitInfoForSchedule.Value(),

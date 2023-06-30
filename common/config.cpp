@@ -516,6 +516,9 @@ bool gits::Config::Set(const boost::filesystem::path& cfgDir) {
     std::string commandBuffersRange;
     ReadRecorderOption(pt, "Vulkan.Capture.CommandBuffersRange.Range", commandBuffersRange,
                        GITS_PLATFORM_BIT_WINDOWS | GITS_PLATFORM_BIT_X11);
+    std::string renderPassRange;
+    ReadRecorderOption(pt, "Vulkan.Capture.RenderPassRange.Range", renderPassRange,
+                       GITS_PLATFORM_BIT_WINDOWS | GITS_PLATFORM_BIT_X11);
 
     //init default
     cfg.recorder.vulkan.capture.frames.startFrame = static_cast<unsigned>(-1);
@@ -536,13 +539,16 @@ bool gits::Config::Set(const boost::filesystem::path& cfgDir) {
       cfg.recorder.vulkan.capture.frames.stopFrame = stopFrame;
       cfg.recorder.vulkan.capture.frames.startKeys.swap(startKeyCodes);
     } else if (cfg.recorder.vulkan.capture.mode.find("QueueSubmit") != std::string::npos ||
-               cfg.recorder.vulkan.capture.mode.find("CommandBuffersRange") != std::string::npos) {
+               cfg.recorder.vulkan.capture.mode.find("CommandBuffersRange") != std::string::npos ||
+               cfg.recorder.vulkan.capture.mode.find("RenderPassRange") != std::string::npos) {
       std::string objectRange;
       if (cfg.recorder.vulkan.capture.mode.find("QueueSubmit") != std::string::npos) {
         objectRange = queueSubmitNumber;
       } else if (cfg.recorder.vulkan.capture.mode.find("CommandBuffersRange") !=
                  std::string::npos) {
         objectRange = commandBuffersRange;
+      } else if (cfg.recorder.vulkan.capture.mode.find("RenderPassRange") != std::string::npos) {
+        objectRange = renderPassRange;
       }
       if (!objectRange.empty()) {
         std::istringstream issVulkanObjectsRange(objectRange);
@@ -565,6 +571,9 @@ bool gits::Config::Set(const boost::filesystem::path& cfgDir) {
         } else if (objectsTable.size() == 2 && cfg.recorder.vulkan.capture.mode.find(
                                                    "CommandBuffersRange") != std::string::npos) {
           cfg.recorder.vulkan.capture.objRange.rangeSpecial.objMode = MODE_VKCOMMANDBUFFER;
+        } else if (objectsTable.size() == 3 &&
+                   cfg.recorder.vulkan.capture.mode.find("RenderPassRange") != std::string::npos) {
+          cfg.recorder.vulkan.capture.objRange.rangeSpecial.objMode = MODE_VKRENDERPASS;
         } else {
           Log(ERR) << "Incorrect range for mode: " << cfg.recorder.vulkan.capture.mode;
           throw std::runtime_error(EXCEPTION_MESSAGE);
@@ -1195,7 +1204,7 @@ bool gits::isTraceDataOptPresent(gits::TraceData option) {
 bool gits::Config::VulkanObjectRange::operator[](uint64_t queueSubmitNumber) const {
   if (objMode == MODE_VKQUEUESUBMIT) {
     return range[(size_t)queueSubmitNumber];
-  } else if (objMode == MODE_VKCOMMANDBUFFER) {
+  } else if (objMode == MODE_VKCOMMANDBUFFER || objMode == MODE_VKRENDERPASS) {
     return objVector[0] == queueSubmitNumber;
   } else {
     return false;

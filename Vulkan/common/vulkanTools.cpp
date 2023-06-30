@@ -13,6 +13,7 @@ ENABLE_WARNINGS
 #ifndef BUILD_FOR_CCODE
 #include "vulkanStateDynamic.h"
 #include "vulkanFunctions.h"
+#include "vulkanStateTracking.h"
 #else
 #include "helperVk.h"
 #endif
@@ -2378,7 +2379,9 @@ std::set<uint64_t> getRelatedPointers(std::set<uint64_t>& originalSet) {
   return relatedPointers;
 }
 
-std::set<uint64_t> getPointersUsedInQueueSubmit(CVkSubmitInfoDataArray& submitInfoData) {
+std::set<uint64_t> getPointersUsedInQueueSubmit(CVkSubmitInfoDataArray& submitInfoData,
+                                                const BitRange& objRange,
+                                                gits::Config::VulkanObjectMode objMode) {
   std::set<uint64_t> pointers;
   auto submitInfoDataValues = submitInfoData.Value();
   if (submitInfoDataValues != nullptr) {
@@ -2386,13 +2389,14 @@ std::set<uint64_t> getPointersUsedInQueueSubmit(CVkSubmitInfoDataArray& submitIn
       for (uint32_t j = 0; j < submitInfoDataValues[i].commandBufferCount; j++) {
         auto& commandBufferState =
             SD()._commandbufferstates[submitInfoDataValues[i].pCommandBuffers[j]];
-        for (auto obj : commandBufferState->tokensBuffer.GetMappedPointers()) {
+        for (auto obj : commandBufferState->tokensBuffer.GetMappedPointers(objRange, objMode)) {
           pointers.insert((uint64_t)obj);
         }
 
         for (auto& secondaryCommandBufferState :
              commandBufferState->secondaryCommandBuffersStateStoreList) {
-          for (auto elem : secondaryCommandBufferState.second->tokensBuffer.GetMappedPointers()) {
+          for (auto elem : secondaryCommandBufferState.second->tokensBuffer.GetMappedPointers(
+                   objRange, objMode)) {
             pointers.insert((uint64_t)elem);
           }
         }
@@ -2422,18 +2426,26 @@ CVkSubmitInfoDataArray getSubmitInfoForPrepare(const std::vector<uint32_t>& coun
                                                const BitRange& objRange,
                                                Config::VulkanObjectMode objMode) {
   CVkSubmitInfoDataArray submitInfoDataVector;
-  if ((Config::MODE_VKCOMMANDBUFFER == objMode) &&
-      (countersTable.back() < SD().lastQueueSubmit->submitInfoDataArray.size())) {
+  if ((Config::MODE_VKCOMMANDBUFFER == objMode || Config::MODE_VKRENDERPASS == objMode) &&
+      (countersTable.at(1) < SD().lastQueueSubmit->submitInfoDataArray.size())) {
     auto submitInfoDataArrayValues = SD().lastQueueSubmit->submitInfoDataArray.Value();
     if (submitInfoDataArrayValues != nullptr) {
-      for (uint32_t i = 0; i < countersTable.back(); i++) {
+      for (uint32_t i = 0; i < countersTable.at(1); i++) {
         submitInfoDataVector.AddElem(&submitInfoDataArrayValues[i]);
       }
-      VkSubmitInfo submitInfoTemp = submitInfoDataArrayValues[countersTable.back()];
+      VkSubmitInfo submitInfoTemp = submitInfoDataArrayValues[countersTable.at(1)];
       std::vector<VkCommandBuffer> commandBufferVector;
 
-      for (uint32_t i = 0; (i < submitInfoTemp.commandBufferCount) && !objRange[i]; i++) {
-        commandBufferVector.push_back(submitInfoTemp.pCommandBuffers[i]);
+      if (Config::MODE_VKCOMMANDBUFFER == objMode) {
+        for (uint32_t i = 0; (i < submitInfoTemp.commandBufferCount) && !objRange[i]; i++) {
+          commandBufferVector.push_back(submitInfoTemp.pCommandBuffers[i]);
+        }
+      } else {
+        if (countersTable.at(2) < submitInfoTemp.commandBufferCount) {
+          for (uint32_t i = 0; i <= countersTable.at(2); i++) {
+            commandBufferVector.push_back(submitInfoTemp.pCommandBuffers[i]);
+          }
+        }
       }
 
       submitInfoTemp.commandBufferCount = (uint32_t)commandBufferVector.size();
@@ -2444,6 +2456,21 @@ CVkSubmitInfoDataArray getSubmitInfoForPrepare(const std::vector<uint32_t>& coun
     }
   }
   return submitInfoDataVector;
+}
+
+void restoreToSpecifiedRenderPass(const BitRange& objRange, VkSubmitInfo* submitInfo) {
+  if (submitInfo != nullptr) {
+    VkCommandBuffer lastCommandBuffer =
+        submitInfo->pCommandBuffers[submitInfo->commandBufferCount - 1];
+    auto commandBufferState = SD()._commandbufferstates[lastCommandBuffer];
+    drvVk.vkResetCommandBuffer(lastCommandBuffer, 0);
+    vkResetCommandBuffer_SD(VK_SUCCESS, lastCommandBuffer, 0, true);
+    drvVk.vkBeginCommandBuffer(
+        lastCommandBuffer,
+        commandBufferState->beginCommandBuffer->commandBufferBeginInfoData.Value());
+    commandBufferState->tokensBuffer.RestoreRenderPass(objRange);
+    drvVk.vkEndCommandBuffer(lastCommandBuffer);
+  }
 }
 
 CVkSubmitInfoDataArray getSubmitInfoForSchedule(const std::vector<uint32_t>& countersTable,
@@ -2468,6 +2495,15 @@ CVkSubmitInfoDataArray getSubmitInfoForSchedule(const std::vector<uint32_t>& cou
     submitInfoTemp.commandBufferCount = (uint32_t)commandBufferVector.size();
     submitInfoTemp.pCommandBuffers = &commandBufferVector[0];
     submitInfoDataVector.AddElem(&submitInfoTemp);
+  } else if ((Config::MODE_VKRENDERPASS == objMode) &&
+             (countersTable.at(1) < SD().lastQueueSubmit->submitInfoDataArray.size()) &&
+             submitInfoDataArrayValues != nullptr) {
+    VkSubmitInfo submitInfoTemp = submitInfoDataArrayValues[countersTable.at(1)];
+    if (countersTable.at(2) < submitInfoTemp.commandBufferCount) {
+      submitInfoTemp.commandBufferCount = 1;
+      submitInfoTemp.pCommandBuffers = &submitInfoTemp.pCommandBuffers[countersTable.at(2)];
+      submitInfoDataVector.AddElem(&submitInfoTemp);
+    }
   }
   return submitInfoDataVector;
 }
@@ -2616,6 +2652,18 @@ bool isEndRenderPassToken(unsigned vulkanID) {
       vulkanID == CFunction::ID_VK_CMD_END_RENDER_PASS2 ||
       vulkanID == CFunction::ID_VK_CMD_END_RENDER_PASS2KHR ||
       vulkanID == CFunction::ID_VK_CMD_END_RENDERING) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool IsObjectToSkip(uint64_t vulkanObject) {
+  auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
+  if (gits::Config::Get().recorder.vulkan.utilities.minimalStateRestore &&
+      (api3dIface.CfgRec_IsQueueSubmitMode() || api3dIface.CfgRec_IsCmdBufferMode() ||
+       api3dIface.CfgRec_IsRenderPassMode()) &&
+      (SD().objectsUsedInQueueSubmit.find(vulkanObject) == SD().objectsUsedInQueueSubmit.end())) {
     return true;
   } else {
     return false;

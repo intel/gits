@@ -41,6 +41,10 @@ public:
   virtual void Play_StateRestoreBegin() const;
   virtual void Play_StateRestoreEnd() const;
   virtual void Rec_StateRestoreFinished() const;
+  virtual bool CfgRec_IsRenderPassMode() const {
+    return Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode ==
+           Config::MODE_VKRENDERPASS;
+  }
   virtual bool CfgRec_IsCmdBufferMode() const {
     return Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode ==
            Config::MODE_VKCOMMANDBUFFER;
@@ -55,7 +59,8 @@ public:
         .rangeSpecial[CGits::Instance().vkCounters.CurrentQueueSubmitCount()];
   }
   virtual bool CfgRec_IsSubcapture() const {
-    return (CfgRec_IsFramesMode() || CfgRec_IsCmdBufferMode() || CfgRec_IsQueueSubmitMode());
+    return (CfgRec_IsFramesMode() || CfgRec_IsCmdBufferMode() || CfgRec_IsQueueSubmitMode() ||
+            CfgRec_IsRenderPassMode());
   }
   virtual ~VulkanApi() = default;
 };

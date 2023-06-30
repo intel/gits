@@ -76,9 +76,6 @@ gits::Vulkan::CVkClearColorValue::CVkClearColorValue(const VkClearColorValue* cl
 }
 
 VkClearColorValue* gits::Vulkan::CVkClearColorValue::Value() {
-  if (Config::Get().common.mode != Config::MODE_PLAYER) {
-    throw std::runtime_error(EXCEPTION_MESSAGE);
-  }
   if (*_isNullPtr) {
     return nullptr;
   }
@@ -98,9 +95,6 @@ VkClearColorValue* gits::Vulkan::CVkClearColorValue::Value() {
 }
 
 gits::Vulkan::CVkClearColorValue::PtrConverter gits::Vulkan::CVkClearColorValue::Original() {
-  if (Config::Get().common.mode != Config::MODE_PLAYER) {
-    throw std::runtime_error(EXCEPTION_MESSAGE);
-  }
   if (*_isNullPtr) {
     return PtrConverter(nullptr);
   }
@@ -189,9 +183,6 @@ gits::Vulkan::CVkClearValue::CVkClearValue(const VkClearValue* clearvalue)
 const char* gits::Vulkan::CVkClearValue::NAME = "VkClearValue";
 
 VkClearValue* gits::Vulkan::CVkClearValue::Value() {
-  if (Config::Get().common.mode != Config::MODE_PLAYER) {
-    throw std::runtime_error(EXCEPTION_MESSAGE);
-  }
   if (*_isNullPtr) {
     return nullptr;
   }
@@ -203,9 +194,6 @@ VkClearValue* gits::Vulkan::CVkClearValue::Value() {
 }
 
 gits::Vulkan::CVkClearValue::PtrConverter gits::Vulkan::CVkClearValue::Original() {
-  if (Config::Get().common.mode != Config::MODE_PLAYER) {
-    throw std::runtime_error(EXCEPTION_MESSAGE);
-  }
   if (*_isNullPtr) {
     return PtrConverter(nullptr);
   }
@@ -296,9 +284,6 @@ gits::Vulkan::CVkDescriptorImageInfo::CVkDescriptorImageInfo(
 const char* gits::Vulkan::CVkDescriptorImageInfo::NAME = "VkDescriptorImageInfo";
 
 VkDescriptorImageInfo* gits::Vulkan::CVkDescriptorImageInfo::Value() {
-  if (Config::Get().common.mode != Config::MODE_PLAYER) {
-    throw std::runtime_error(EXCEPTION_MESSAGE);
-  }
   if (*_isNullPtr) {
     return nullptr;
   }
@@ -313,9 +298,6 @@ VkDescriptorImageInfo* gits::Vulkan::CVkDescriptorImageInfo::Value() {
 
 gits::Vulkan::CVkDescriptorImageInfo::PtrConverter gits::Vulkan::CVkDescriptorImageInfo::
     Original() {
-  if (Config::Get().common.mode != Config::MODE_PLAYER) {
-    throw std::runtime_error(EXCEPTION_MESSAGE);
-  }
   if (*_isNullPtr) {
     return PtrConverter(nullptr);
   }
@@ -441,9 +423,6 @@ gits::Vulkan::CVkGenericArgument::CVkGenericArgument(const void* vkgenericargume
 }
 
 const void* gits::Vulkan::CVkGenericArgument::Value() {
-  if (Config::Get().common.mode != Config::MODE_PLAYER) {
-    throw std::runtime_error(EXCEPTION_MESSAGE);
-  }
   if (*_isNullPtr || **_skipped) {
     return nullptr;
   }
@@ -676,9 +655,6 @@ gits::Vulkan::CVkPipelineCacheCreateInfo_V1::CVkPipelineCacheCreateInfo_V1(
 const char* gits::Vulkan::CVkPipelineCacheCreateInfo_V1::NAME = "VkPipelineCacheCreateInfo";
 
 VkPipelineCacheCreateInfo* gits::Vulkan::CVkPipelineCacheCreateInfo_V1::Value() {
-  if (Config::Get().common.mode != Config::MODE_PLAYER) {
-    throw std::runtime_error(EXCEPTION_MESSAGE);
-  }
   if (*_isNullPtr) {
     return nullptr;
   }
@@ -697,9 +673,6 @@ VkPipelineCacheCreateInfo* gits::Vulkan::CVkPipelineCacheCreateInfo_V1::Value() 
 
 gits::Vulkan::CVkPipelineCacheCreateInfo_V1::PtrConverter gits::Vulkan::
     CVkPipelineCacheCreateInfo_V1::Original() {
-  if (Config::Get().common.mode != Config::MODE_PLAYER) {
-    throw std::runtime_error(EXCEPTION_MESSAGE);
-  }
   if (*_isNullPtr) {
     return PtrConverter(nullptr);
   }
@@ -853,9 +826,6 @@ gits::Vulkan::CVkDependencyInfo::CVkDependencyInfo(const VkDependencyInfo* depen
 const char* gits::Vulkan::CVkDependencyInfo::NAME = "VkDependencyInfo";
 
 VkDependencyInfo* gits::Vulkan::CVkDependencyInfo::Value() {
-  if (Config::Get().common.mode != Config::MODE_PLAYER) {
-    throw std::runtime_error(EXCEPTION_MESSAGE);
-  }
   if (*_isNullPtr) {
     return nullptr;
   }
@@ -875,9 +845,6 @@ VkDependencyInfo* gits::Vulkan::CVkDependencyInfo::Value() {
 }
 
 gits::Vulkan::CVkDependencyInfo::PtrConverter gits::Vulkan::CVkDependencyInfo::Original() {
-  if (Config::Get().common.mode != Config::MODE_PLAYER) {
-    throw std::runtime_error(EXCEPTION_MESSAGE);
-  }
   if (*_isNullPtr) {
     return PtrConverter(nullptr);
   }

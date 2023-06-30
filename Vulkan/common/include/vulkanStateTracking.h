@@ -543,7 +543,8 @@ inline void vkCreateCommandPool_SD(VkResult return_value,
 
 inline void vkResetCommandBuffer_SD(VkResult /* return_value */,
                                     VkCommandBuffer commandBuffer,
-                                    VkCommandBufferResetFlags /* flags */);
+                                    VkCommandBufferResetFlags /* flags */,
+                                    bool stateRestore = false);
 
 inline void vkResetCommandPool_SD(VkResult return_value,
                                   VkDevice device,
@@ -2236,16 +2237,20 @@ inline void vkFreeCommandBuffers_SD(VkDevice device,
 
 inline void vkResetCommandBuffer_SD(VkResult /* return_value */,
                                     VkCommandBuffer commandBuffer,
-                                    VkCommandBufferResetFlags /* flags */) {
+                                    VkCommandBufferResetFlags /* flags */,
+                                    bool stateRestore) {
   auto& commandBufferState = SD()._commandbufferstates[commandBuffer];
 
-  commandBufferState->beginCommandBuffer.reset();
+  if (!stateRestore) {
+    //in stateRestore tokenBuffer and beginCommandBuffer are used for RenderPass mode preparation. We can't reset them
+    commandBufferState->beginCommandBuffer.reset();
+    commandBufferState->tokensBuffer.Clear();
+    commandBufferState->ended = false;
+  }
   commandBufferState->beginRenderPassesList.clear();
-  commandBufferState->ended = false;
   commandBufferState->submitted = false;
   commandBufferState->restored = false;
   commandBufferState->currentPipeline = VK_NULL_HANDLE;
-  commandBufferState->tokensBuffer.Clear();
   commandBufferState->eventStatesAfterSubmit.clear();
   commandBufferState->resetQueriesAfterSubmit.clear(); // per query pool, per query index
   commandBufferState->usedQueriesAfterSubmit.clear();  // per query pool, per query index
@@ -2402,7 +2407,8 @@ inline void vkQueueSubmit_SD(VkResult return_value,
                              VkQueue queue,
                              uint32_t submitCount,
                              const VkSubmitInfo* pSubmits,
-                             VkFence fence) {
+                             VkFence fence,
+                             bool stateRestore = false) {
   if (Config::Get().IsRecorder() || captureRenderPasses() ||
       !Config::Get().player.captureVulkanSubmitsResources.empty()) {
     if (pSubmits != NULL) {
@@ -2416,8 +2422,10 @@ inline void vkQueueSubmit_SD(VkResult return_value,
                commandBufferState->secondaryCommandBuffersStateStoreList) {
             secondaryCommandBufferState.second->submitted = true;
           }
-          for (auto& eventState : commandBufferState->eventStatesAfterSubmit) {
-            SD()._eventstates[eventState.first]->eventUsed = eventState.second;
+          if (!stateRestore) {
+            for (auto& eventState : commandBufferState->eventStatesAfterSubmit) {
+              SD()._eventstates[eventState.first]->eventUsed = eventState.second;
+            }
           }
 
           // Query pool state
@@ -2434,28 +2442,30 @@ inline void vkQueueSubmit_SD(VkResult return_value,
           vkQueueSubmit_updateNonDeterministicImages(commandBufferState);
         }
 
-        // Semaphore state
-        for (uint32_t i = 0; i < pSubmits[s].waitSemaphoreCount; i++) {
-          SD()._semaphorestates[pSubmits[s].pWaitSemaphores[i]]->semaphoreUsed = false;
-        }
+        if (!stateRestore) {
+          // Semaphore state
+          for (uint32_t i = 0; i < pSubmits[s].waitSemaphoreCount; i++) {
+            SD()._semaphorestates[pSubmits[s].pWaitSemaphores[i]]->semaphoreUsed = false;
+          }
 
-        for (uint32_t i = 0; i < pSubmits[s].signalSemaphoreCount; i++) {
-          SD()._semaphorestates[pSubmits[s].pSignalSemaphores[i]]->semaphoreUsed = true;
-        }
+          for (uint32_t i = 0; i < pSubmits[s].signalSemaphoreCount; i++) {
+            SD()._semaphorestates[pSubmits[s].pSignalSemaphores[i]]->semaphoreUsed = true;
+          }
 
-        auto timelineSemaphoreSubmitInfo = (VkTimelineSemaphoreSubmitInfo*)getPNextStructure(
-            pSubmits[s].pNext, VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO);
-        if (timelineSemaphoreSubmitInfo) {
-          for (uint32_t t = 0; t < timelineSemaphoreSubmitInfo->signalSemaphoreValueCount; ++t) {
-            SD()._semaphorestates[pSubmits[s].pSignalSemaphores[t]]->timelineSemaphoreValue =
-                timelineSemaphoreSubmitInfo->pSignalSemaphoreValues[t];
+          auto timelineSemaphoreSubmitInfo = (VkTimelineSemaphoreSubmitInfo*)getPNextStructure(
+              pSubmits[s].pNext, VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO);
+          if (timelineSemaphoreSubmitInfo) {
+            for (uint32_t t = 0; t < timelineSemaphoreSubmitInfo->signalSemaphoreValueCount; ++t) {
+              SD()._semaphorestates[pSubmits[s].pSignalSemaphores[t]]->timelineSemaphoreValue =
+                  timelineSemaphoreSubmitInfo->pSignalSemaphoreValues[t];
+            }
           }
         }
       }
     }
   }
 
-  if (pSubmits != NULL) {
+  if (pSubmits != NULL && !stateRestore) {
     for (uint32_t s = 0; s < submitCount; ++s) {
       for (uint32_t c = 0; c < pSubmits[s].commandBufferCount; ++c) {
         auto& cmdBufferState = SD()._commandbufferstates[pSubmits[s].pCommandBuffers[c]];
@@ -2467,7 +2477,7 @@ inline void vkQueueSubmit_SD(VkResult return_value,
     }
   }
 
-  if (VK_NULL_HANDLE != fence) {
+  if (VK_NULL_HANDLE != fence && !stateRestore) {
     SD()._fencestates[fence]->fenceUsed = true;
   }
 }

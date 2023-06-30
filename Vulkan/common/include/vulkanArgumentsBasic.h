@@ -972,9 +972,6 @@ public:
   };
 
   const void* Value() {
-    if (Config::Get().common.mode != Config::MODE_PLAYER) {
-      throw std::runtime_error(EXCEPTION_MESSAGE);
-    }
     if (!_ptr) {
       return nullptr;
     }

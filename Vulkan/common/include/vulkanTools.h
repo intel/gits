@@ -110,10 +110,14 @@ void getRangesForMemoryUpdate(VkDeviceMemory memory,
                               bool unmap);
 void flushShadowMemory(VkDeviceMemory memory, bool unmap);
 std::set<uint64_t> getRelatedPointers(std::set<uint64_t>& originalSet);
-std::set<uint64_t> getPointersUsedInQueueSubmit(CVkSubmitInfoDataArray& submitInfoData);
+std::set<uint64_t> getPointersUsedInQueueSubmit(CVkSubmitInfoDataArray& submitInfoData,
+                                                const BitRange& objRange,
+                                                gits::Config::VulkanObjectMode objMode);
 CVkSubmitInfoDataArray getSubmitInfoForPrepare(const std::vector<uint32_t>& countersTable,
                                                const BitRange& objRange,
                                                gits::Config::VulkanObjectMode objMode);
+void restoreToSpecifiedRenderPass(const BitRange& objRange, VkSubmitInfo* submitInfo);
+
 CVkSubmitInfoDataArray getSubmitInfoForSchedule(const std::vector<uint32_t>& countersTable,
                                                 const BitRange& objRange,
                                                 gits::Config::VulkanObjectMode objMode);

@@ -217,28 +217,28 @@ arg4=ArgDef(name='flags', type='VkQueryControlFlags'),
 arg5=ArgDef(name='index', type='uint32_t')
 )
 
-Function(name='vkCmdBeginRenderPass', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdBeginRenderPass', enabled=True, type=BeginRenderPass, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pRenderPassBegin', type='const VkRenderPassBeginInfo*'),
 arg3=ArgDef(name='contents', type='VkSubpassContents')
 )
 
-Function(name='vkCmdBeginRenderPass2', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdBeginRenderPass2', enabled=True, type=BeginRenderPass, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pRenderPassBegin', type='const VkRenderPassBeginInfo*'),
 arg3=ArgDef(name='pSubpassBeginInfo', type='const VkSubpassBeginInfo*')
 )
 
-Function(name='vkCmdBeginRenderPass2KHR', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdBeginRenderPass2KHR', enabled=True, type=BeginRenderPass, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pRenderPassBegin', type='const VkRenderPassBeginInfo*'),
 arg3=ArgDef(name='pSubpassBeginInfo', type='const VkSubpassBeginInfo*')
 )
 
-Function(name='vkCmdBeginRendering', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdBeginRendering', enabled=True, type=BeginRenderPass, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pRenderingInfo', type='const VkRenderingInfo*')
@@ -280,7 +280,7 @@ arg2=ArgDef(name='bufferCount', type='uint32_t'),
 arg3=ArgDef(name='pBindingInfos', type='const VkDescriptorBufferBindingInfoEXT*')
 )
 
-Function(name='vkCmdBindDescriptorSets', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdBindDescriptorSets', enabled=True, type=CmdBufferBind, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pipelineBindPoint', type='VkPipelineBindPoint'),
@@ -292,7 +292,7 @@ arg7=ArgDef(name='dynamicOffsetCount', type='uint32_t'),
 arg8=ArgDef(name='pDynamicOffsets', type='const uint32_t*', wrapParams='dynamicOffsetCount, pDynamicOffsets', count='dynamicOffsetCount')
 )
 
-Function(name='vkCmdBindIndexBuffer', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdBindIndexBuffer', enabled=True, type=CmdBufferBind, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='buffer', type='VkBuffer'),
@@ -300,7 +300,7 @@ arg3=ArgDef(name='offset', type='VkDeviceSize'),
 arg4=ArgDef(name='indexType', type='VkIndexType')
 )
 
-Function(name='vkCmdBindPipeline', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdBindPipeline', enabled=True, type=CmdBufferBind, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pipelineBindPoint', type='VkPipelineBindPoint'),
@@ -330,7 +330,7 @@ arg2=ArgDef(name='imageView', type='VkImageView'),
 arg3=ArgDef(name='imageLayout', type='VkImageLayout')
 )
 
-Function(name='vkCmdBindTransformFeedbackBuffersEXT', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdBindTransformFeedbackBuffersEXT', enabled=True, type=CmdBufferBind, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='firstBinding', type='uint32_t'),
@@ -340,7 +340,7 @@ arg5=ArgDef(name='pOffsets', type='const VkDeviceSize*', wrapType='Cuint64_t::CS
 arg6=ArgDef(name='pSizes', type='const VkDeviceSize*', wrapType='Cuint64_t::CSArray', wrapParams='bindingCount, pSizes', count='bindingCount')
 )
 
-Function(name='vkCmdBindVertexBuffers', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdBindVertexBuffers', enabled=True, type=CmdBufferBind, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='firstBinding', type='uint32_t'),
@@ -349,7 +349,7 @@ arg4=ArgDef(name='pBuffers', type='const VkBuffer*', wrapParams='bindingCount, p
 arg5=ArgDef(name='pOffsets', type='const VkDeviceSize*', wrapType='Cuint64_t::CSArray', wrapParams='bindingCount, pOffsets', count='bindingCount')
 )
 
-Function(name='vkCmdBindVertexBuffers2', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdBindVertexBuffers2', enabled=True, type=CmdBufferBind, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='firstBinding', type='uint32_t'),
@@ -360,7 +360,7 @@ arg6=ArgDef(name='pSizes', type='const VkDeviceSize*', wrapType='Cuint64_t::CSAr
 arg7=ArgDef(name='pStrides', type='const VkDeviceSize*', wrapType='Cuint64_t::CSArray', wrapParams='bindingCount, pStrides', count='bindingCount')
 )
 
-Function(name='vkCmdBindVertexBuffers2EXT', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdBindVertexBuffers2EXT', enabled=True, type=CmdBufferBind, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='firstBinding', type='uint32_t'),
@@ -927,24 +927,24 @@ arg3=ArgDef(name='query', type='uint32_t'),
 arg4=ArgDef(name='index', type='uint32_t')
 )
 
-Function(name='vkCmdEndRenderPass', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdEndRenderPass', enabled=True, type=EndRenderPass, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer')
 )
 
-Function(name='vkCmdEndRenderPass2', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdEndRenderPass2', enabled=True, type=EndRenderPass, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pSubpassEndInfo', type='const VkSubpassEndInfo*')
 )
 
-Function(name='vkCmdEndRenderPass2KHR', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdEndRenderPass2KHR', enabled=True, type=EndRenderPass, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pSubpassEndInfo', type='const VkSubpassEndInfo*')
 )
 
-Function(name='vkCmdEndRendering', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdEndRendering', enabled=True, type=EndRenderPass, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer')
 )
@@ -1057,7 +1057,7 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pGeneratedCommandsInfo', type='const VkGeneratedCommandsInfoNV*')
 )
 
-Function(name='vkCmdPushConstants', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdPushConstants', enabled=True, type=CmdBufferPush, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='layout', type='VkPipelineLayout'),
@@ -1067,7 +1067,7 @@ arg5=ArgDef(name='size', type='uint32_t'),
 arg6=ArgDef(name='pValues', type='const void*', wrapType='Cuint8_t::CSArray', wrapParams='(size_t)(size), (const uint8_t *)pValues')
 )
 
-Function(name='vkCmdPushDescriptorSetKHR', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdPushDescriptorSetKHR', enabled=True, type=CmdBufferPush, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pipelineBindPoint', type='VkPipelineBindPoint'),
@@ -1156,7 +1156,7 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='alphaToOneEnable', type='VkBool32')
 )
 
-Function(name='vkCmdSetBlendConstants', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetBlendConstants', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='blendConstants', type='const float*', wrapType='Cfloat::CSArray', wrapParams='4, blendConstants', count='4')
@@ -1258,19 +1258,19 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='coverageToColorLocation', type='uint32_t')
 )
 
-Function(name='vkCmdSetCullMode', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetCullMode', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='cullMode', type='VkCullModeFlags')
 )
 
-Function(name='vkCmdSetCullModeEXT', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetCullModeEXT', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='cullMode', type='VkCullModeFlags')
 )
 
-Function(name='vkCmdSetDepthBias', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetDepthBias', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='depthBiasConstantFactor', type='float'),
@@ -1278,32 +1278,32 @@ arg3=ArgDef(name='depthBiasClamp', type='float'),
 arg4=ArgDef(name='depthBiasSlopeFactor', type='float')
 )
 
-Function(name='vkCmdSetDepthBiasEnable', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetDepthBiasEnable', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='depthBiasEnable', type='VkBool32')
 )
 
-Function(name='vkCmdSetDepthBiasEnableEXT', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetDepthBiasEnableEXT', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='depthBiasEnable', type='VkBool32')
 )
 
-Function(name='vkCmdSetDepthBounds', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetDepthBounds', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='minDepthBounds', type='float'),
 arg3=ArgDef(name='maxDepthBounds', type='float')
 )
 
-Function(name='vkCmdSetDepthBoundsTestEnable', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetDepthBoundsTestEnable', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='depthBoundsTestEnable', type='VkBool32')
 )
 
-Function(name='vkCmdSetDepthBoundsTestEnableEXT', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetDepthBoundsTestEnableEXT', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='depthBoundsTestEnable', type='VkBool32')
@@ -1327,37 +1327,37 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='negativeOneToOne', type='VkBool32')
 )
 
-Function(name='vkCmdSetDepthCompareOp', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetDepthCompareOp', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='depthCompareOp', type='VkCompareOp')
 )
 
-Function(name='vkCmdSetDepthCompareOpEXT', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetDepthCompareOpEXT', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='depthCompareOp', type='VkCompareOp')
 )
 
-Function(name='vkCmdSetDepthTestEnable', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetDepthTestEnable', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='depthTestEnable', type='VkBool32')
 )
 
-Function(name='vkCmdSetDepthTestEnableEXT', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetDepthTestEnableEXT', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='depthTestEnable', type='VkBool32')
 )
 
-Function(name='vkCmdSetDepthWriteEnable', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetDepthWriteEnable', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='depthWriteEnable', type='VkBool32')
 )
 
-Function(name='vkCmdSetDepthWriteEnableEXT', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetDepthWriteEnableEXT', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='depthWriteEnable', type='VkBool32')
@@ -1406,21 +1406,21 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='discardRectangleMode', type='VkDiscardRectangleModeEXT')
 )
 
-Function(name='vkCmdSetEvent', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetEvent', enabled=True, type=CmdBufferSet, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='event', type='VkEvent'),
 arg3=ArgDef(name='stageMask', type='VkPipelineStageFlags')
 )
 
-Function(name='vkCmdSetEvent2', enabled=True, type=Param, stateTrack=True, recWrap=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetEvent2', enabled=True, type=CmdBufferSet, stateTrack=True, recWrap=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='event', type='VkEvent'),
 arg3=ArgDef(name='pDependencyInfo', type='const VkDependencyInfo*')
 )
 
-Function(name='vkCmdSetEvent2KHR', enabled=True, type=Param, stateTrack=True, recWrap=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetEvent2KHR', enabled=True, type=CmdBufferSet, stateTrack=True, recWrap=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='event', type='VkEvent'),
@@ -1463,7 +1463,7 @@ arg2=ArgDef(name='pFragmentSize', type='const VkExtent2D*'),
 arg3=ArgDef(name='combinerOps', type='const VkFragmentShadingRateCombinerOpKHR[2]')
 )
 
-Function(name='vkCmdSetFrontFace', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetFrontFace', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='frontFace', type='VkFrontFace')
@@ -1494,7 +1494,7 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='stippledLineEnable', type='VkBool32')
 )
 
-Function(name='vkCmdSetLineWidth', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetLineWidth', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='lineWidth', type='float')
@@ -1627,7 +1627,7 @@ arg2=ArgDef(name='samples', type='VkSampleCountFlagBits'),
 arg3=ArgDef(name='pSampleMask', type='const VkSampleMask*')
 )
 
-Function(name='vkCmdSetScissor', enabled=True, type=Param, runWrap=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetScissor', enabled=True, type=CmdBufferSet, runWrap=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='firstScissor', type='uint32_t'),
@@ -1635,7 +1635,7 @@ arg3=ArgDef(name='scissorCount', type='uint32_t'),
 arg4=ArgDef(name='pScissors', type='const VkRect2D*', wrapType='CVkRect2DArray', wrapParams='scissorCount, pScissors', count='scissorCount')
 )
 
-Function(name='vkCmdSetScissorWithCount', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetScissorWithCount', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='scissorCount', type='uint32_t'),
@@ -1655,14 +1655,14 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='shadingRateImageEnable', type='VkBool32')
 )
 
-Function(name='vkCmdSetStencilCompareMask', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetStencilCompareMask', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='faceMask', type='VkStencilFaceFlags'),
 arg3=ArgDef(name='compareMask', type='uint32_t')
 )
 
-Function(name='vkCmdSetStencilOp', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetStencilOp', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='faceMask', type='VkStencilFaceFlags'),
@@ -1672,7 +1672,7 @@ arg5=ArgDef(name='depthFailOp', type='VkStencilOp'),
 arg6=ArgDef(name='compareOp', type='VkCompareOp')
 )
 
-Function(name='vkCmdSetStencilOpEXT', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetStencilOpEXT', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='faceMask', type='VkStencilFaceFlags'),
@@ -1682,26 +1682,26 @@ arg5=ArgDef(name='depthFailOp', type='VkStencilOp'),
 arg6=ArgDef(name='compareOp', type='VkCompareOp')
 )
 
-Function(name='vkCmdSetStencilReference', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetStencilReference', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='faceMask', type='VkStencilFaceFlags'),
 arg3=ArgDef(name='reference', type='uint32_t')
 )
 
-Function(name='vkCmdSetStencilTestEnable', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetStencilTestEnable', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='stencilTestEnable', type='VkBool32')
 )
 
-Function(name='vkCmdSetStencilTestEnableEXT', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetStencilTestEnableEXT', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='stencilTestEnable', type='VkBool32')
 )
 
-Function(name='vkCmdSetStencilWriteMask', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetStencilWriteMask', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='faceMask', type='VkStencilFaceFlags'),
@@ -1723,7 +1723,7 @@ arg4=ArgDef(name='vertexAttributeDescriptionCount', type='uint32_t'),
 arg5=ArgDef(name='pVertexAttributeDescriptions', type='const VkVertexInputAttributeDescription2EXT*')
 )
 
-Function(name='vkCmdSetViewport', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetViewport', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='firstViewport', type='uint32_t'),
@@ -1761,7 +1761,7 @@ arg3=ArgDef(name='viewportCount', type='uint32_t'),
 arg4=ArgDef(name='pViewportWScalings', type='const VkViewportWScalingNV*', count='viewportCount')
 )
 
-Function(name='vkCmdSetViewportWithCount', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdSetViewportWithCount', enabled=True, type=CmdBufferSet, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='viewportCount', type='uint32_t'),

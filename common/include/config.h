@@ -301,7 +301,12 @@ struct Config {
       return range.empty();
     }
   };
-  enum VulkanObjectMode { MODE_VKNONE, MODE_VKQUEUESUBMIT, MODE_VKCOMMANDBUFFER };
+  enum VulkanObjectMode {
+    MODE_VKNONE,
+    MODE_VKQUEUESUBMIT,
+    MODE_VKCOMMANDBUFFER,
+    MODE_VKRENDERPASS
+  };
   struct VulkanObjectRange : ObjectRange {
     VulkanObjectMode objMode;
 

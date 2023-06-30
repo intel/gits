@@ -297,6 +297,28 @@ def make_id(name, version):
   id_final = add_version(id_final, version)
   return id_final
 
+def make_type(fdata):
+  type = ""
+  if fdata['functionType']&Param:
+    type += "GITS_VULKAN_PARAM_APITYPE | "
+  if fdata['functionType']&QueueSubmit:
+    type += "GITS_VULKAN_QUEUE_SUBMIT_APITYPE | "
+  if fdata['functionType']&CreateImage:
+    type += "GITS_VULKAN_CREATE_IMAGE_APITYPE | "
+  if fdata['functionType']&CreateBuffer:
+    type += "GITS_VULKAN_CREATE_BUFFER_APITYPE | "
+  if fdata['functionType']&CmdBufferSet:
+    type += "GITS_VULKAN_CMDBUFFER_SET_APITYPE | "
+  if fdata['functionType']&CmdBufferBind:
+    type += "GITS_VULKAN_CMDBUFFER_BIND_APITYPE | "
+  if fdata['functionType']&CmdBufferPush:
+    type += "GITS_VULKAN_CMDBUFFER_PUSH_APITYPE | "
+  if fdata['functionType']&BeginRenderPass:
+    type += "GITS_VULKAN_BEGIN_RENDERPASS_APITYPE | "
+  if fdata['functionType']&EndRenderPass:
+    type += "GITS_VULKAN_END_RENDERPASS_APITYPE | "
+  type = type.strip(" | ")
+  return type
 
 def arg_call(fdata, prePostExec=False, vkDrivers=False):
   content = ""
@@ -1421,6 +1443,7 @@ namespace gits {
       C%(versioned_name)s();
       C%(versioned_name)s(%(argd)s);
       virtual unsigned Id() const override { return %(id)s; }
+      virtual unsigned Type() const { return %(type)s;}
       virtual const char *Name() const override { return "%(unversioned_name)s"; }%(suffix)s%(ccodePostActionNeeded)s
       virtual void %(run_name)s() override;%(write_wrap_decl)s
       virtual void Exec();
@@ -1428,7 +1451,7 @@ namespace gits {
       virtual void RemoveMapping();
       virtual std::set<uint64_t> GetMappedPointers();
       virtual void TokenBuffersUpdate();
-    };""" % {'unversioned_name': key, 'versioned_name': versioned_name, 'return_override': return_override, 'id': make_id(key, func['version']), 'argc': len(func['args']), 'argd': argd, 'argsDecl': argsDecl, 'inherit_type': inherit_type, 'run_name': run_name, 'write_wrap_decl': write_wrap_decl, 'suffix': suffix, 'ccodePostActionNeeded': ccodePostActionNeeded}
+    };""" % {'unversioned_name': key, 'versioned_name': versioned_name, 'return_override': return_override, 'id': make_id(key, func['version']), 'argc': len(func['args']), 'argd': argd, 'argsDecl': argsDecl, 'inherit_type': inherit_type, 'run_name': run_name, 'write_wrap_decl': write_wrap_decl, 'suffix': suffix, 'ccodePostActionNeeded': ccodePostActionNeeded, 'type': make_type(func)}
         else:
           c = """
     class C%(versioned_name)s : public %(inherit_type)s, gits::noncopyable {
@@ -1441,6 +1464,7 @@ namespace gits {
     public:
       C%(versioned_name)s();
       virtual unsigned Id() const override { return %(id)s; }
+      virtual unsigned Type() const { return %(type)s;}
       virtual const char *Name() const override { return "%(unversioned_name)s"; }%(suffix)s
       virtual void %(run_name)s() override;%(write_wrap_decl)s
       virtual void Exec();
@@ -1448,7 +1472,7 @@ namespace gits {
       virtual void RemoveMapping();
       virtual std::set<uint64_t> GetMappedPointers();
       virtual void TokenBuffersUpdate();
-    };""" % {'unversioned_name': key, 'versioned_name': versioned_name, 'id': make_id(key, func['version']), 'argc': len(func['args']), 'argsDecl': argsDecl, 'inherit_type': inherit_type, 'run_name': run_name, 'write_wrap_decl': write_wrap_decl, 'suffix': suffix}
+    };""" % {'unversioned_name': key, 'versioned_name': versioned_name, 'id': make_id(key, func['version']), 'argc': len(func['args']), 'argsDecl': argsDecl, 'inherit_type': inherit_type, 'run_name': run_name, 'write_wrap_decl': write_wrap_decl, 'suffix': suffix, 'type': make_type(func)}
         tokens_h.write(c + '\n')
 
         cargument = 'return get_cargument(__FUNCTION__, idx, '
@@ -2043,16 +2067,12 @@ gits::Vulkan::C%(versioned_name)s::C%(versioned_name)s(%(argd)s): %(key_decl)s(n
 const char* gits::Vulkan::C%(versioned_name)s::NAME = "%(unversioned_name)s";
 
 %(unversioned_name)s* gits::Vulkan::C%(versioned_name)s::Value() {
-  if (Config::Get().common.mode != Config::MODE_PLAYER)
-    throw std::runtime_error(EXCEPTION_MESSAGE);
   if (*_isNullPtr)
     return nullptr;
 %(function_operator)s
 }
 
 gits::Vulkan::C%(versioned_name)s::PtrConverter gits::Vulkan::C%(versioned_name)s::Original() {
-  if (Config::Get().common.mode != Config::MODE_PLAYER)
-    throw std::runtime_error(EXCEPTION_MESSAGE);
   if (*_isNullPtr)
     return PtrConverter(nullptr);
 %(function_original)s
