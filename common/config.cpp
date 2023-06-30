@@ -529,25 +529,29 @@ bool gits::Config::Set(const boost::filesystem::path& cfgDir) {
 
     ReadRecorderOption(pt, "Vulkan.Capture.All.ExitFrame", exitFrameVulkan,
                        GITS_PLATFORM_BIT_WINDOWS | GITS_PLATFORM_BIT_X11);
-    if (cfg.recorder.vulkan.capture.mode.find("All") != std::string::npos) {
+    bool foundAllMode = cfg.recorder.vulkan.capture.mode.find("All") != std::string::npos;
+    bool foundFramesMode = cfg.recorder.vulkan.capture.mode.find("Frames") != std::string::npos;
+    bool foundQueueSubmitMode =
+        cfg.recorder.vulkan.capture.mode.find("QueueSubmit") != std::string::npos;
+    bool foundCommandBuffersRangeMode =
+        cfg.recorder.vulkan.capture.mode.find("CommandBuffersRange") != std::string::npos;
+    bool foundRenderPassRangeMode =
+        cfg.recorder.vulkan.capture.mode.find("RenderPassRange") != std::string::npos;
+    if (foundAllMode) {
       cfg.recorder.vulkan.capture.frames.startFrame = 1;
       cfg.recorder.vulkan.capture.all.exitFrame = exitFrameVulkan;
-    } else if (cfg.recorder.vulkan.capture.mode.find("Frames") !=
-               std::string::npos) //Choose frame range basing on mode and params
+    } else if (foundFramesMode) //Choose frame range basing on mode and params
     {
       cfg.recorder.vulkan.capture.frames.startFrame = startFrame;
       cfg.recorder.vulkan.capture.frames.stopFrame = stopFrame;
       cfg.recorder.vulkan.capture.frames.startKeys.swap(startKeyCodes);
-    } else if (cfg.recorder.vulkan.capture.mode.find("QueueSubmit") != std::string::npos ||
-               cfg.recorder.vulkan.capture.mode.find("CommandBuffersRange") != std::string::npos ||
-               cfg.recorder.vulkan.capture.mode.find("RenderPassRange") != std::string::npos) {
+    } else if (foundQueueSubmitMode || foundCommandBuffersRangeMode || foundRenderPassRangeMode) {
       std::string objectRange;
-      if (cfg.recorder.vulkan.capture.mode.find("QueueSubmit") != std::string::npos) {
+      if (foundQueueSubmitMode) {
         objectRange = queueSubmitNumber;
-      } else if (cfg.recorder.vulkan.capture.mode.find("CommandBuffersRange") !=
-                 std::string::npos) {
+      } else if (foundCommandBuffersRangeMode) {
         objectRange = commandBuffersRange;
-      } else if (cfg.recorder.vulkan.capture.mode.find("RenderPassRange") != std::string::npos) {
+      } else if (foundRenderPassRangeMode) {
         objectRange = renderPassRange;
       }
       if (!objectRange.empty()) {
@@ -565,14 +569,12 @@ bool gits::Config::Set(const boost::filesystem::path& cfgDir) {
           cfg.recorder.vulkan.capture.objRange.rangeSpecial.objVector.push_back(
               std::stoul(obj, nullptr, 0));
         }
-        if (objectsTable.size() == 0 &&
-            cfg.recorder.vulkan.capture.mode.find("QueueSubmit") != std::string::npos) {
+
+        if (objectsTable.size() == 0 && foundQueueSubmitMode) {
           cfg.recorder.vulkan.capture.objRange.rangeSpecial.objMode = MODE_VKQUEUESUBMIT;
-        } else if (objectsTable.size() == 2 && cfg.recorder.vulkan.capture.mode.find(
-                                                   "CommandBuffersRange") != std::string::npos) {
+        } else if (objectsTable.size() == 2 && foundCommandBuffersRangeMode) {
           cfg.recorder.vulkan.capture.objRange.rangeSpecial.objMode = MODE_VKCOMMANDBUFFER;
-        } else if (objectsTable.size() == 3 &&
-                   cfg.recorder.vulkan.capture.mode.find("RenderPassRange") != std::string::npos) {
+        } else if (objectsTable.size() == 3 && foundRenderPassRangeMode) {
           cfg.recorder.vulkan.capture.objRange.rangeSpecial.objMode = MODE_VKRENDERPASS;
         } else {
           Log(ERR) << "Incorrect range for mode: " << cfg.recorder.vulkan.capture.mode;

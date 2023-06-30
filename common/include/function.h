@@ -24,6 +24,8 @@ DISABLE_WARNINGS
 #include <boost/optional.hpp>
 ENABLE_WARNINGS
 
+#define GITS_BIT_AT_IDX(x) (1u << x)
+
 namespace gits {
 class CArgument;
 typedef boost::optional<CArgument&> MaybeCArgRef;

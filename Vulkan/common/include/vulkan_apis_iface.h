@@ -62,6 +62,9 @@ public:
     return (CfgRec_IsFramesMode() || CfgRec_IsCmdBufferMode() || CfgRec_IsQueueSubmitMode() ||
             CfgRec_IsRenderPassMode());
   }
+  virtual bool CfgRec_IsSubFrameMode() const {
+    return (CfgRec_IsCmdBufferMode() || CfgRec_IsQueueSubmitMode() || CfgRec_IsRenderPassMode());
+  }
   virtual ~VulkanApi() = default;
 };
 } // namespace Vulkan

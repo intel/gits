@@ -620,9 +620,7 @@ void gits::CRecorder::CmdBufferEnd(gits::CGits::CCounter counter) {}
 
 void gits::CRecorder::QueueSubmitEnd() {
   auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
-  if ((api3dIface.CfgRec_IsQueueSubmitMode() || api3dIface.CfgRec_IsCmdBufferMode() ||
-       api3dIface.CfgRec_IsRenderPassMode()) &&
-      api3dIface.CfgRec_IsObjectToRecord()) {
+  if (api3dIface.CfgRec_IsSubFrameMode() && api3dIface.CfgRec_IsObjectToRecord()) {
     Start();
     Stop();
     Close();

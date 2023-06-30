@@ -2028,9 +2028,7 @@ void gits::Vulkan::RestoreAllocatedCommandBuffers(CScheduler& scheduler, CStateD
 void gits::Vulkan::RestoreCommandBuffers(CScheduler& scheduler, CStateDynamic& sd, bool force) {
   auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
   if (Config::Get().recorder.vulkan.utilities.scheduleCommandBuffersBeforeQueueSubmit ||
-      ((api3dIface.CfgRec_IsQueueSubmitMode() || api3dIface.CfgRec_IsCmdBufferMode() ||
-        api3dIface.CfgRec_IsRenderPassMode()) &&
-       !force)) {
+      (api3dIface.CfgRec_IsSubFrameMode() && !force)) {
     return;
   }
 
@@ -2137,14 +2135,17 @@ void gits::Vulkan::RestoreCommandBuffers(CScheduler& scheduler, CStateDynamic& s
     }
   }
 
-  // Restore all primary command buffers
-  for (auto& commandBufferState : sd._commandbufferstates) {
-    if (IsObjectToSkip((uint64_t)commandBufferState.first)) {
-      continue;
-    }
-    if (VK_COMMAND_BUFFER_LEVEL_PRIMARY ==
-        commandBufferState.second->commandBufferAllocateInfoData.Value()->level) {
-      RestoreCommandBuffer(commandBufferState.first);
+  // In RenderPass mode, we restore the command buffer later.
+  if (!api3dIface.CfgRec_IsRenderPassMode()) {
+    // Restore all primary command buffers
+    for (auto& commandBufferState : sd._commandbufferstates) {
+      if (IsObjectToSkip((uint64_t)commandBufferState.first)) {
+        continue;
+      }
+      if (VK_COMMAND_BUFFER_LEVEL_PRIMARY ==
+          commandBufferState.second->commandBufferAllocateInfoData.Value()->level) {
+        RestoreCommandBuffer(commandBufferState.first);
+      }
     }
   }
 }
@@ -2218,7 +2219,7 @@ bool isResourceOmittedFromRestoration(uint64_t resource,
         return true;
       }
     } else if (imageState->sparseBindings.empty() &&
-               !imageState->swapchainKHRStateStore) { // In swapchain images we don't need bindings
+               !imageState->swapchainKHRStateStore) { // We don't need bindings in swapchain images.
       return true;
     }
 
@@ -3377,30 +3378,36 @@ void gits::Vulkan::FinishStateRestore(CScheduler& scheduler, CStateDynamic& sd) 
 
 void gits::Vulkan::PrepareVkQueueSubmits(CStateDynamic& sd) {
   auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
-  if (api3dIface.CfgRec_IsQueueSubmitMode() || api3dIface.CfgRec_IsCmdBufferMode() ||
-      api3dIface.CfgRec_IsRenderPassMode()) {
-    CVkSubmitInfoDataArray submitInfoForPrepare = getSubmitInfoForPrepare(
+  if (api3dIface.CfgRec_IsSubFrameMode()) {
+    CVkSubmitInfoArrayWrap submitInfoForPrepare = getSubmitInfoForPrepare(
         Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objVector,
         Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range,
         Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode);
+    if (api3dIface.CfgRec_IsRenderPassMode()) {
+      restoreToSpecifiedRenderPass(
+          Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range, submitInfoForPrepare);
+    }
+    auto queueHandle = sd.lastQueueSubmit->queueStateStore->queueHandle;
+    if (nullptr != submitInfoForPrepare.submitInfoData.Value()) {
+      uint32_t submitCount = (uint32_t)submitInfoForPrepare.submitInfoData.size();
+      auto pSubmits = submitInfoForPrepare.submitInfoData.Value();
 
-    uint32_t submitCount = (uint32_t)submitInfoForPrepare.size();
-    auto pSubmits = submitInfoForPrepare.Value();
-
-    if (nullptr != pSubmits) {
-      if (api3dIface.CfgRec_IsRenderPassMode()) {
-        restoreToSpecifiedRenderPass(
-            Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range, pSubmits);
-      }
-      auto queueHandle = sd.lastQueueSubmit->queueStateStore->queueHandle;
       VkResult retVal =
           drvVk.vkQueueSubmit(queueHandle, submitCount, pSubmits, sd.lastQueueSubmit->fenceHandle);
       vkQueueSubmit_SD(retVal, queueHandle, submitCount, pSubmits, sd.lastQueueSubmit->fenceHandle,
                        true);
-      drvVk.vkQueueWaitIdle(queueHandle);
-    }
+    } else if (nullptr != submitInfoForPrepare.submitInfo2Data.Value()) {
+      uint32_t submitCount = (uint32_t)submitInfoForPrepare.submitInfo2Data.size();
+      auto pSubmits2 = submitInfoForPrepare.submitInfo2Data.Value();
 
-    CVkSubmitInfoDataArray submitInfoForSchedule = getSubmitInfoForSchedule(
+      VkResult retVal = drvVk.vkQueueSubmit2(queueHandle, submitCount, pSubmits2,
+                                             sd.lastQueueSubmit->fenceHandle);
+      vkQueueSubmit2_SD(retVal, queueHandle, submitCount, pSubmits2,
+                        sd.lastQueueSubmit->fenceHandle, true);
+    }
+    drvVk.vkQueueWaitIdle(queueHandle);
+
+    CVkSubmitInfoArrayWrap submitInfoForSchedule = getSubmitInfoForSchedule(
         Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objVector,
         Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range,
         Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode);
@@ -3418,18 +3425,24 @@ void gits::Vulkan::PrepareVkQueueSubmits(CStateDynamic& sd) {
 void gits::Vulkan::PostRestoreVkQueueSubmits(CScheduler& scheduler, CStateDynamic& sd) {
   auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
 
-  if (api3dIface.CfgRec_IsQueueSubmitMode() || api3dIface.CfgRec_IsCmdBufferMode() ||
-      api3dIface.CfgRec_IsRenderPassMode()) {
+  if (api3dIface.CfgRec_IsSubFrameMode()) {
     scheduler.Register(new gits::CTokenFrameNumber(CToken::ID_FRAME_START, 1));
-    CVkSubmitInfoDataArray submitInfoForSchedule = getSubmitInfoForSchedule(
+    CVkSubmitInfoArrayWrap submitInfoForSchedule = getSubmitInfoForSchedule(
         Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objVector,
         Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range,
         Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode);
+    auto submitInfoDataValues = submitInfoForSchedule.submitInfoData.Value();
+    auto submitInfo2DataValues = submitInfoForSchedule.submitInfo2Data.Value();
+    RestoreCommandBuffers(scheduler, sd, true);
     if (api3dIface.CfgRec_IsRenderPassMode()) {
-      auto submitInfoDataValues = submitInfoForSchedule.Value();
+      VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
       if (submitInfoDataValues != nullptr) {
-        VkCommandBuffer commandBuffer = submitInfoDataValues[0].pCommandBuffers[0];
-        auto commandBufferState = SD()._commandbufferstates[commandBuffer];
+        commandBuffer = submitInfoDataValues[0].pCommandBuffers[0];
+      } else if (submitInfo2DataValues != nullptr) {
+        commandBuffer = submitInfo2DataValues[0].pCommandBufferInfos[0].commandBuffer;
+      }
+      if (commandBuffer != VK_NULL_HANDLE) {
+        auto& commandBufferState = SD()._commandbufferstates[commandBuffer];
         scheduler.Register(new CvkBeginCommandBuffer(
             VK_SUCCESS, commandBuffer,
             commandBufferState->beginCommandBuffer->commandBufferBeginInfoData.Value()));
@@ -3439,14 +3452,20 @@ void gits::Vulkan::PostRestoreVkQueueSubmits(CScheduler& scheduler, CStateDynami
           scheduler.Register(new CvkEndCommandBuffer(VK_SUCCESS, commandBuffer));
         }
       }
-    } else {
-      RestoreCommandBuffers(scheduler, sd, true);
     }
 
-    scheduler.Register(
-        new CvkQueueSubmit(VK_SUCCESS, sd.lastQueueSubmit->queueStateStore->queueHandle,
-                           (uint32_t)submitInfoForSchedule.size(), submitInfoForSchedule.Value(),
-                           sd.lastQueueSubmit->fenceHandle));
+    if (submitInfoDataValues != nullptr) {
+      scheduler.Register(new CvkQueueSubmit(
+          VK_SUCCESS, sd.lastQueueSubmit->queueStateStore->queueHandle,
+          (uint32_t)submitInfoForSchedule.submitInfoData.size(),
+          submitInfoForSchedule.submitInfoData.Value(), sd.lastQueueSubmit->fenceHandle));
+    } else if (submitInfo2DataValues != nullptr) {
+      scheduler.Register(new CvkQueueSubmit2(
+          VK_SUCCESS, sd.lastQueueSubmit->queueStateStore->queueHandle,
+          (uint32_t)submitInfoForSchedule.submitInfo2Data.size(),
+          submitInfoForSchedule.submitInfo2Data.Value(), sd.lastQueueSubmit->fenceHandle));
+    }
+
     scheduler.Register(new gits::CTokenFrameNumber(CToken::ID_FRAME_END, 1));
   }
 }

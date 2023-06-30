@@ -830,7 +830,8 @@ inline void vkQueueSubmit2_RECWRAP(VkResult return_value,
   }
 #endif
 
-  //SD().lastQueueSubmit = std::make_shared<CQueueSubmitState>(&submitCount, pSubmits, fence, SD()._queuestates[queue]); //TODO
+  SD().lastQueueSubmit =
+      std::make_shared<CQueueSubmitState>(&submitCount, pSubmits, fence, SD()._queuestates[queue]);
 
   recorder.QueueSubmitEnd();
   vkQueueSubmit2_SD(return_value, queue, submitCount, pSubmits, fence);

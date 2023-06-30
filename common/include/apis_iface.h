@@ -126,6 +126,9 @@ public:
     virtual bool CfgRec_IsSubcapture() const {
       return false;
     };
+    virtual bool CfgRec_IsSubFrameMode() const {
+      return false;
+    };
     virtual void Play_SwapAfterPrepare() const {
       throw ENotImplemented(EXCEPTION_MESSAGE);
     }

@@ -1229,9 +1229,17 @@ struct CCommandBufferState : public UniqueResourceHandle {
 
     std::set<uint64_t> GetMappedPointers() {
       std::set<uint64_t> pointers;
-      for (auto obj : renderPassBeginInfoData.GetMappedPointers()) {
-        pointers.insert((uint64_t)obj);
+      if (renderPassBeginInfoData.Value()) {
+        for (auto obj : renderPassBeginInfoData.GetMappedPointers()) {
+          pointers.insert((uint64_t)obj);
+        }
       }
+      if (renderingInfoData.Value()) {
+        for (auto obj : renderingInfoData.GetMappedPointers()) {
+          pointers.insert((uint64_t)obj);
+        }
+      }
+
       return pointers;
     }
   };
@@ -1303,6 +1311,7 @@ struct CCommandBufferState : public UniqueResourceHandle {
 struct CQueueSubmitState {
   uint32_t submitCount;
   CVkSubmitInfoDataArray submitInfoDataArray;
+  CVkSubmitInfo2DataArray submitInfo2DataArray;
   VkFence fenceHandle;
   std::shared_ptr<CQueueState> queueStateStore;
 
@@ -1312,21 +1321,15 @@ struct CQueueSubmitState {
                     std::shared_ptr<CQueueState> _queueState)
       : submitCount(*_pSubmitCount),
         submitInfoDataArray(*_pSubmitCount, _pSubmits),
+        submitInfo2DataArray(),
         fenceHandle(_fence),
         queueStateStore(_queueState) {}
-};
-
-struct CQueueSubmit2State {
-  uint32_t submitCount;
-  CVkSubmitInfo2DataArray submitInfo2DataArray;
-  VkFence fenceHandle;
-  std::shared_ptr<CQueueState> queueStateStore;
-
-  CQueueSubmit2State(uint32_t const* _pSubmitCount,
-                     VkSubmitInfo2 const* _pSubmits,
-                     VkFence _fence,
-                     std::shared_ptr<CQueueState> _queueState)
+  CQueueSubmitState(uint32_t const* _pSubmitCount,
+                    VkSubmitInfo2 const* _pSubmits,
+                    VkFence _fence,
+                    std::shared_ptr<CQueueState> _queueState)
       : submitCount(*_pSubmitCount),
+        submitInfoDataArray(),
         submitInfo2DataArray(*_pSubmitCount, _pSubmits),
         fenceHandle(_fence),
         queueStateStore(_queueState) {}

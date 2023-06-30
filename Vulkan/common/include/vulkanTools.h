@@ -110,15 +110,23 @@ void getRangesForMemoryUpdate(VkDeviceMemory memory,
                               bool unmap);
 void flushShadowMemory(VkDeviceMemory memory, bool unmap);
 std::set<uint64_t> getRelatedPointers(std::set<uint64_t>& originalSet);
-std::set<uint64_t> getPointersUsedInQueueSubmit(CVkSubmitInfoDataArray& submitInfoData,
+struct CVkSubmitInfoArrayWrap {
+  CVkSubmitInfoDataArray submitInfoData;
+  CVkSubmitInfo2DataArray submitInfo2Data;
+  CVkSubmitInfoArrayWrap();
+  CVkSubmitInfoArrayWrap(uint32_t submitCount, VkSubmitInfo* submitInfo);
+  CVkSubmitInfoArrayWrap(uint32_t submitCount, VkSubmitInfo2* submit2Info);
+  CVkSubmitInfoArrayWrap(const CVkSubmitInfoArrayWrap& wrap);
+};
+std::set<uint64_t> getPointersUsedInQueueSubmit(CVkSubmitInfoArrayWrap& submitInfoData,
                                                 const BitRange& objRange,
                                                 gits::Config::VulkanObjectMode objMode);
-CVkSubmitInfoDataArray getSubmitInfoForPrepare(const std::vector<uint32_t>& countersTable,
+CVkSubmitInfoArrayWrap getSubmitInfoForPrepare(const std::vector<uint32_t>& countersTable,
                                                const BitRange& objRange,
                                                gits::Config::VulkanObjectMode objMode);
-void restoreToSpecifiedRenderPass(const BitRange& objRange, VkSubmitInfo* submitInfo);
+void restoreToSpecifiedRenderPass(const BitRange& objRange, CVkSubmitInfoArrayWrap& submitInfoData);
 
-CVkSubmitInfoDataArray getSubmitInfoForSchedule(const std::vector<uint32_t>& countersTable,
+CVkSubmitInfoArrayWrap getSubmitInfoForSchedule(const std::vector<uint32_t>& countersTable,
                                                 const BitRange& objRange,
                                                 gits::Config::VulkanObjectMode objMode);
 bool checkMemoryMappingFeasibility(VkDevice device,
@@ -135,7 +143,7 @@ bool isVulkanAPIVersionSupported(uint32_t major, uint32_t minor, VkPhysicalDevic
 void checkReturnValue(VkResult playerSideReturnValue,
                       CVkResult& recorderSideReturnValue,
                       const char* functionName);
-bool isEndRenderPassToken(unsigned vulkanID);
+bool IsObjectToSkip(uint64_t vulkanObject);
 bool operator==(const CGits::CCounter& counter, const Config::VulkanObjectRange& vulkanObjRange);
 bool vulkanCopyImage(VkCommandBuffer commandBuffer,
                      VkImage imageHandle,

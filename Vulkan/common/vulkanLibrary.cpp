@@ -169,6 +169,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ScheduleRenderPass(
       for (auto obj : elem->GetMappedPointers()) {
         if (IsObjectToSkip(obj)) {
           toSkip = true;
+          break;
         }
       }
       if (!toSkip) {

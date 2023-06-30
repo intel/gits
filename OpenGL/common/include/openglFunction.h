@@ -19,8 +19,6 @@
 #include "function.h"
 #include "platform.h"
 
-#define GITS_BIT_AT_IDX(x) (1u << x)
-
 namespace gits {
 namespace OpenGL {
 /**
