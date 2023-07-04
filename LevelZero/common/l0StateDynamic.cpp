@@ -226,9 +226,11 @@ CModuleState::CModuleState(ze_context_handle_t hContext,
     : hContext(hContext), hDevice(hDevice), desc(descriptor), hBuildLog(hBuildLog) {
   desc.pInputModule = new uint8_t[desc.inputSize + 1];
   std::memcpy((void*)desc.pInputModule, descriptor.pInputModule, desc.inputSize);
-  const auto buildFlagsSize = std::strlen(descriptor.pBuildFlags) + 1;
-  desc.pBuildFlags = new char[buildFlagsSize];
-  std::memcpy((void*)desc.pBuildFlags, descriptor.pBuildFlags, buildFlagsSize);
+  if (descriptor.pBuildFlags != nullptr) {
+    const auto buildFlagsSize = std::strlen(descriptor.pBuildFlags) + 1;
+    desc.pBuildFlags = new char[buildFlagsSize];
+    std::memcpy((void*)desc.pBuildFlags, descriptor.pBuildFlags, buildFlagsSize);
+  }
 #ifdef WITH_OCLOC
   const uint64_t hash = ComputeHash(desc.pInputModule, desc.inputSize, THashType::XX);
   if (!ocloc::SD().oclocStates.empty() &&
@@ -240,7 +242,9 @@ CModuleState::CModuleState(ze_context_handle_t hContext,
 
 CModuleState::~CModuleState() {
   delete[] desc.pInputModule;
-  delete[] desc.pBuildFlags;
+  if (desc.pBuildFlags != nullptr) {
+    delete[] desc.pBuildFlags;
+  }
 }
 
 void CModuleState::AddModuleLinks(const uint32_t& numModules, const ze_module_handle_t* phModules) {
