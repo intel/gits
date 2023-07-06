@@ -669,14 +669,17 @@ void gits::Vulkan::RestoreImageBindings(CScheduler& scheduler, CStateDynamic& sd
       continue;
     }
 
-    if (imageState.second->binding &&
-        (sd._devicememorystates.find(
-             imageState.second->binding->deviceMemoryStateStore->deviceMemoryHandle) !=
-         sd._devicememorystates.end())) {
-      scheduler.Register(new CvkBindImageMemory(
-          VK_SUCCESS, imageState.second->deviceStateStore->deviceHandle, image,
-          imageState.second->binding->deviceMemoryStateStore->deviceMemoryHandle,
-          imageState.second->binding->memoryOffset));
+    if (imageState.second->binding) {
+      auto it = sd._devicememorystates.find(
+          imageState.second->binding->deviceMemoryStateStore->deviceMemoryHandle);
+      if ((it != sd._devicememorystates.end()) &&
+          imageState.second->binding->deviceMemoryStateStore->GetUniqueStateID() ==
+              it->second->GetUniqueStateID()) {
+        scheduler.Register(new CvkBindImageMemory(
+            VK_SUCCESS, imageState.second->deviceStateStore->deviceHandle, image,
+            imageState.second->binding->deviceMemoryStateStore->deviceMemoryHandle,
+            imageState.second->binding->memoryOffset));
+      }
     }
 
     if (imageState.second->sparseBindings.size() > 0) {
