@@ -2461,6 +2461,33 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
           continue;
         }
 
+        VkExtent3D imageExtent = {
+            std::max(1u, imageState->width / (uint32_t)std::pow<uint32_t>(2u, m)),
+            std::max(1u, imageState->height / (uint32_t)std::pow<uint32_t>(2u, m)),
+            std::max(1u, imageState->depth / (uint32_t)std::pow<uint32_t>(2u, m))};
+
+        VkDeviceSize sliceSize = 0;
+
+        for (uint32_t a = 1; a <= 4; a <<= 1) {
+          if (getFormatAspectFlags(format) & a) {
+
+            // Image data for all layers, mipmaps and aspects is copied using
+            // one big buffer Buffer offset for each layer, mipmap and aspect is
+            // calculated as the nearest multiple of a page size greater than
+            // the size calculated so far
+            VkDeviceSize currentOffset =
+                calculateCurrentOffset(imageSize, GetVirtualMemoryPageSize());
+            VkDeviceSize aspectSize =
+                getFormatAspectDataSize(format, (VkImageAspectFlagBits)a, imageExtent);
+            imageSize = currentOffset + aspectSize;
+            sliceSize += aspectSize;
+          }
+        }
+
+        if (sliceSize == 0) {
+          continue;
+        }
+
         // Image barriers for all existing images
 
         // Recorder-side pre-transfer layout transition
@@ -2537,26 +2564,6 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
              image,                 // VkImage                 image;
              {                      // VkImageSubresourceRange subresourceRange;
               getFormatAspectFlags(format), m, 1, l, 1}});
-
-        VkExtent3D imageExtent = {
-            std::max(1u, imageState->width / (uint32_t)std::pow<uint32_t>(2u, m)),
-            std::max(1u, imageState->height / (uint32_t)std::pow<uint32_t>(2u, m)),
-            std::max(1u, imageState->depth / (uint32_t)std::pow<uint32_t>(2u, m))};
-
-        for (uint32_t a = 1; a <= 4; a <<= 1) {
-          if (getFormatAspectFlags(format) & a) {
-
-            // Image data for all layers, mipmaps and aspects is copied using
-            // one big buffer Buffer offset for each layer, mipmap and aspect is
-            // calculated as the nearest multiple of a page size greater than
-            // the size calculated so far
-            VkDeviceSize currentOffset =
-                calculateCurrentOffset(imageSize, GetVirtualMemoryPageSize());
-            VkDeviceSize size =
-                getFormatAspectDataSize(format, (VkImageAspectFlagBits)a, imageExtent);
-            imageSize = currentOffset + size;
-          }
-        }
       }
     }
 
