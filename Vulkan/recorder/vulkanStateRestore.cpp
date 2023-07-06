@@ -2742,6 +2742,13 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
 
       for (uint32_t l = 0; l < arrayLayers; ++l) {
         for (uint32_t m = 0; m < mipLevels; ++m) {
+
+          // Ignore all the images in undefined or preinitialized state
+          if ((imageState->currentLayout[l][m].Layout == VK_IMAGE_LAYOUT_UNDEFINED) ||
+              (imageState->currentLayout[l][m].Layout == VK_IMAGE_LAYOUT_PREINITIALIZED)) {
+            continue;
+          }
+
           VkExtent3D imageExtent = {
               std::max(1u, imageState->width / (uint32_t)std::pow<uint32_t>(2u, m)),
               std::max(1u, imageState->height / (uint32_t)std::pow<uint32_t>(2u, m)),
