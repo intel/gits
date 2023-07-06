@@ -2218,7 +2218,10 @@ bool isResourceOmittedFromRestoration(uint64_t resource,
     // Skip restoring images whose memory objects are already destroyed
     if (imageState->binding) {
       auto deviceMemory = imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-      if (sd._devicememorystates.find(deviceMemory) == sd._devicememorystates.end()) {
+      auto it = sd._devicememorystates.find(deviceMemory);
+      if ((it == sd._devicememorystates.end()) ||
+          (it->second->GetUniqueStateID() !=
+           imageState->binding->deviceMemoryStateStore->GetUniqueStateID())) {
         return true;
       }
     } else if (imageState->sparseBindings.empty() &&
@@ -2299,7 +2302,10 @@ bool isResourceOmittedFromRestoration(uint64_t resource,
     // Skip restoring buffers whose memory objects are already destroyed
     if (bufferState->binding) {
       auto deviceMemory = bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-      if (sd._devicememorystates.find(deviceMemory) == sd._devicememorystates.end()) {
+      auto it = sd._devicememorystates.find(deviceMemory);
+      if ((it == sd._devicememorystates.end()) ||
+          (it->second->GetUniqueStateID() !=
+           bufferState->binding->deviceMemoryStateStore->GetUniqueStateID())) {
         return true;
       }
     } else if (bufferState->sparseBindings.empty()) {
