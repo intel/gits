@@ -77,7 +77,8 @@ typedef enum _VulkanResourceType {
   VULKAN_COMBINED_IMAGE_SAMPLER,
   //WRITE
   VULKAN_BLIT_DESTINATION_BUFFER,
-  VULKAN_BLIT_DESTINATION_IMAGE
+  VULKAN_BLIT_DESTINATION_IMAGE,
+  VULKAN_RESOLVE_IMAGE
 } VulkanResourceType;
 texel_type getTexelToConvertFromImageFormat(VkFormat format);
 void suppressPhysicalDeviceFeatures(std::vector<std::string> const& suppressFeatures,

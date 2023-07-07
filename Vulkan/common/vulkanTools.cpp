@@ -118,6 +118,8 @@ std::string GetFileNameResourcesScreenshot(unsigned int frameNumber,
     suffix << "_blitDestinationImage_";
   } else if (resType == VULKAN_BLIT_DESTINATION_BUFFER) {
     suffix << "_blitDestinationBuffer_";
+  } else if (resType == VULKAN_RESOLVE_IMAGE) {
+    suffix << "_resolveImage_";
   }
   std::stringstream fileName;
   fileName << "frame" << std::setw(4) << std::setfill('0') << frameNumber;

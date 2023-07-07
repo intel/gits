@@ -3090,6 +3090,8 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer commandBuffer,
           if (VK_DESCRIPTOR_TYPE_STORAGE_IMAGE == descriptorType) {
             SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back(
                 (uint64_t)imageState->imageHandle, true);
+            SD()._commandbufferstates[commandBuffer]->resourceWriteImages[imageState->imageHandle] =
+                VULKAN_STORAGE_IMAGE;
           }
 
           if (Config::Get().recorder.vulkan.utilities.memoryUpdateState ==
@@ -3121,6 +3123,8 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer commandBuffer,
           if (VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER == descriptorType) {
             SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back(
                 (uint64_t)bufferState->bufferHandle, false);
+            SD()._commandbufferstates[commandBuffer]
+                ->resourceWriteBuffers[bufferState->bufferHandle] = VULKAN_STORAGE_TEXEL_BUFFER;
           }
 
           if (Config::Get().recorder.vulkan.utilities.memoryUpdateState ==
@@ -3163,6 +3167,8 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer commandBuffer,
               (VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC == descriptorType)) {
             SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back(
                 (uint64_t)buffer, false);
+            SD()._commandbufferstates[commandBuffer]->resourceWriteBuffers[buffer] =
+                VULKAN_STORAGE_BUFFER_DYNAMIC;
           }
 
           if (Config::Get().recorder.vulkan.utilities.memoryUpdateState ==
@@ -3744,6 +3750,10 @@ inline void vkCmdUpdateBuffer_SD(VkCommandBuffer commandBuffer,
                                  VkDeviceSize dstOffset,
                                  VkDeviceSize dataSize,
                                  const void* pData) {
+  if (Config::Get().IsPlayer() && captureRenderPassesResources() && (dstBuffer != NULL)) {
+    SD()._commandbufferstates[commandBuffer]->resourceWriteBuffers[dstBuffer] =
+        VULKAN_BLIT_DESTINATION_BUFFER;
+  }
   if (Config::Get().IsRecorder()) {
     if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
          Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
@@ -3777,6 +3787,10 @@ inline void vkCmdFillBuffer_SD(VkCommandBuffer commandBuffer,
                                VkDeviceSize dstOffset,
                                VkDeviceSize size,
                                uint32_t data) {
+  if (Config::Get().IsPlayer() && captureRenderPassesResources() && (dstBuffer != NULL)) {
+    SD()._commandbufferstates[commandBuffer]->resourceWriteBuffers[dstBuffer] =
+        VULKAN_BLIT_DESTINATION_BUFFER;
+  }
   if (Config::Get().IsRecorder()) {
     if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
          Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
@@ -4293,6 +4307,10 @@ inline void vkCmdBlitImage_SD(VkCommandBuffer commandBuffer,
                               uint32_t regionCount,
                               const VkImageBlit* pRegions,
                               VkFilter filter) {
+  if (Config::Get().IsPlayer() && captureRenderPassesResources() && (dstImage != VK_NULL_HANDLE)) {
+    SD()._commandbufferstates[commandBuffer]->resourceWriteImages[dstImage] =
+        VULKAN_BLIT_DESTINATION_IMAGE;
+  }
   if (Config::Get().IsRecorder()) {
     if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
          Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
@@ -4349,6 +4367,11 @@ inline void vkCmdBlitImage_SD(VkCommandBuffer commandBuffer,
 
 inline void vkCmdBlitImage2_SD(VkCommandBuffer commandBuffer,
                                const VkBlitImageInfo2* pBlitInfoImage) {
+  if (Config::Get().IsPlayer() && captureRenderPassesResources() &&
+      (pBlitInfoImage->dstImage != VK_NULL_HANDLE)) {
+    SD()._commandbufferstates[commandBuffer]->resourceWriteImages[pBlitInfoImage->dstImage] =
+        VULKAN_BLIT_DESTINATION_IMAGE;
+  }
   if (Config::Get().IsRecorder()) {
     if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
          Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
@@ -4411,6 +4434,9 @@ inline void vkCmdResolveImage_SD(VkCommandBuffer commandBuffer,
                                  VkImageLayout dstImageLayout,
                                  uint32_t regionCount,
                                  const VkImageResolve* pRegions) {
+  if (Config::Get().IsPlayer() && captureRenderPassesResources() && (dstImage != VK_NULL_HANDLE)) {
+    SD()._commandbufferstates[commandBuffer]->resourceWriteImages[dstImage] = VULKAN_RESOLVE_IMAGE;
+  }
   if (Config::Get().IsRecorder()) {
     if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
          Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
@@ -4468,6 +4494,11 @@ inline void vkCmdResolveImage_SD(VkCommandBuffer commandBuffer,
 
 inline void vkCmdResolveImage2_SD(VkCommandBuffer commandBuffer,
                                   const VkResolveImageInfo2* pResolveImageInfo) {
+  if (Config::Get().IsPlayer() && captureRenderPassesResources() &&
+      (pResolveImageInfo->dstImage != VK_NULL_HANDLE)) {
+    SD()._commandbufferstates[commandBuffer]->resourceWriteImages[pResolveImageInfo->dstImage] =
+        VULKAN_RESOLVE_IMAGE;
+  }
   if (Config::Get().IsRecorder()) {
     if ((TMemoryUpdateStates::MEMORY_STATE_UPDATE_ONLY_USED ==
          Config::Get().recorder.vulkan.utilities.memoryUpdateState) ||
