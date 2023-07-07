@@ -214,6 +214,10 @@ bool vulkanCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer bufferHandle, std:
                                           memoryRequirements.size, i};
 
           drvVk.vkAllocateMemory(device, &memInfo, nullptr, &localMemory);
+          if (localMemory == VK_NULL_HANDLE) {
+            Log(ERR) << "Could not allocate memory for a buffer.";
+            throw std::runtime_error(EXCEPTION_MESSAGE);
+          }
           drvVk.vkBindBufferMemory(device, localBuffer, localMemory, 0);
           break;
         }
@@ -402,14 +406,15 @@ bool vulkanCopyImage(VkCommandBuffer commandBuffer,
 
                     drvVk.vkAllocateMemory(imageState->deviceStateStore->deviceHandle, &memInfo,
                                            nullptr, &attachment->devMemory);
+                    if (attachment->devMemory == VK_NULL_HANDLE) {
+                      Log(ERR) << "Could not allocate memory for a buffer.";
+                      throw std::runtime_error(EXCEPTION_MESSAGE);
+                    }
                     drvVk.vkBindBufferMemory(imageState->deviceStateStore->deviceHandle,
                                              attachment->copiedBuffer, attachment->devMemory, 0);
                     break;
                   }
                 }
-              }
-              if (VK_NULL_HANDLE == attachment->devMemory) {
-                throw EOperationFailed("Could not allocate memory for a buffer.");
               }
             }
             // Perform pre-copy image layout transition

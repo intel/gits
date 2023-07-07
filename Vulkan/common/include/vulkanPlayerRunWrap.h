@@ -573,18 +573,6 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
                                   Cuint32_t& submitCount,
                                   CVkSubmitInfoArray& pSubmits,
                                   CVkFence& fence) {
-  if ((*submitCount > 0) && Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
-    for (uint32_t i = 0; i < *submitCount; i++) {
-      auto pSubmitInfoArray = *pSubmits;
-      for (uint32_t j = 0; j < pSubmitInfoArray[i].commandBufferCount; j++) {
-        auto& commandBuffState = SD()._commandbufferstates[pSubmitInfoArray[i].pCommandBuffers[j]];
-        for (auto secondaryCmdBuffer : commandBuffState->secondaryCommandBuffers) {
-          ExecCmdBuffer(secondaryCmdBuffer, true);
-        }
-        ExecCmdBuffer(pSubmitInfoArray[i].pCommandBuffers[j], false, i, j);
-      }
-    }
-  }
   if ((*submitCount > 0) && (!Config::Get().player.captureVulkanSubmits.empty() ||
                              !Config::Get().player.captureVulkanSubmitsResources.empty() ||
                              !Config::Get().player.captureVulkanRenderPasses.empty() ||
@@ -616,6 +604,13 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
       for (uint32_t cmdBufIndex = 0; cmdBufIndex < submitInfoOrig.commandBufferCount;
            cmdBufIndex++) {
         const VkCommandBuffer& cmdbuffer = submitInfoOrig.pCommandBuffers[cmdBufIndex];
+        if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
+          auto& commandBuffState = SD()._commandbufferstates[cmdbuffer];
+          for (auto secondaryCmdBuffer : commandBuffState->secondaryCommandBuffers) {
+            ExecCmdBuffer(secondaryCmdBuffer, true);
+          }
+          ExecCmdBuffer(cmdbuffer, false, i, cmdBufIndex);
+        }
         VkSubmitInfo submitInfoNew;
         if (cmdBufIndex ==
             submitInfoOrig.commandBufferCount -
@@ -684,6 +679,19 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
       }
     }
   } else {
+    if ((*submitCount > 0) && Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
+      for (uint32_t i = 0; i < *submitCount; i++) {
+        auto pSubmitInfoArray = *pSubmits;
+        for (uint32_t j = 0; j < pSubmitInfoArray[i].commandBufferCount; j++) {
+          auto& commandBuffState =
+              SD()._commandbufferstates[pSubmitInfoArray[i].pCommandBuffers[j]];
+          for (auto secondaryCmdBuffer : commandBuffState->secondaryCommandBuffers) {
+            ExecCmdBuffer(secondaryCmdBuffer, true);
+          }
+          ExecCmdBuffer(pSubmitInfoArray[i].pCommandBuffers[j], false, i, j);
+        }
+      }
+    }
     HandleQueueSubmitRenderDocStart();
     return_value.Assign(drvVk.vkQueueSubmit(*queue, *submitCount, *pSubmits, *fence));
     if (*return_value != VK_SUCCESS) {
@@ -708,19 +716,6 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
                                    Cuint32_t& submitCount,
                                    CVkSubmitInfo2Array& pSubmits,
                                    CVkFence& fence) {
-  if ((*submitCount > 0) && Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
-    for (uint32_t i = 0; i < *submitCount; i++) {
-      auto pSubmitInfoArray = *pSubmits;
-      for (uint32_t j = 0; j < pSubmitInfoArray[i].commandBufferInfoCount; j++) {
-        auto& commandBuffState =
-            SD()._commandbufferstates[pSubmitInfoArray[i].pCommandBufferInfos[j].commandBuffer];
-        for (auto secondaryCmdBuffer : commandBuffState->secondaryCommandBuffers) {
-          ExecCmdBuffer(secondaryCmdBuffer, true);
-        }
-        ExecCmdBuffer(pSubmitInfoArray[i].pCommandBufferInfos[j].commandBuffer, false, i, j);
-      }
-    }
-  }
   if ((*submitCount > 0) && (!Config::Get().player.captureVulkanSubmits.empty() ||
                              !Config::Get().player.captureVulkanSubmitsResources.empty() ||
                              !Config::Get().player.captureVulkanRenderPasses.empty() ||
@@ -753,6 +748,13 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
            cmdBufIndex++) {
         const VkCommandBufferSubmitInfo& cmdbufferSubmitInfo =
             submitInfoOrig.pCommandBufferInfos[cmdBufIndex];
+        if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
+          auto& commandBuffState = SD()._commandbufferstates[cmdbufferSubmitInfo.commandBuffer];
+          for (auto secondaryCmdBuffer : commandBuffState->secondaryCommandBuffers) {
+            ExecCmdBuffer(secondaryCmdBuffer, true);
+          }
+          ExecCmdBuffer(cmdbufferSubmitInfo.commandBuffer, false, i, cmdBufIndex);
+        }
         VkSubmitInfo2 submitInfoNew;
         if (cmdBufIndex ==
             submitInfoOrig.commandBufferInfoCount -
@@ -823,6 +825,19 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
       }
     }
   } else {
+    if ((*submitCount > 0) && Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
+      for (uint32_t i = 0; i < *submitCount; i++) {
+        auto pSubmitInfoArray = *pSubmits;
+        for (uint32_t j = 0; j < pSubmitInfoArray[i].commandBufferInfoCount; j++) {
+          auto& commandBuffState =
+              SD()._commandbufferstates[pSubmitInfoArray[i].pCommandBufferInfos[j].commandBuffer];
+          for (auto secondaryCmdBuffer : commandBuffState->secondaryCommandBuffers) {
+            ExecCmdBuffer(secondaryCmdBuffer, true);
+          }
+          ExecCmdBuffer(pSubmitInfoArray[i].pCommandBufferInfos[j].commandBuffer, false, i, j);
+        }
+      }
+    }
     HandleQueueSubmitRenderDocStart();
     return_value.Assign(drvVk.vkQueueSubmit2(*queue, *submitCount, *pSubmits, *fence));
     if (*return_value != VK_SUCCESS) {
