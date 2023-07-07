@@ -414,6 +414,7 @@ struct Config {
     BitRange captureVulkanSubmitsResources;
     VKCaptureGroupTypeOpt captureVulkanSubmitsGroupType;
     VulkanObjectRange captureVulkanRenderPasses;
+    VulkanObjectRange captureVulkanRenderPassesResources;
     vi_bool skipNonDeterministicImages;
     vi_bool precacheResources;
     vi_bool forceWindowPos;

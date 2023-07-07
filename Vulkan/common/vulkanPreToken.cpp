@@ -860,8 +860,7 @@ void gits::Vulkan::CGitsInitializeImage::Run() {
                    "samples greater than one is against specification.";
     };
   }
-  if (Config::Get().player.execCmdBuffsBeforeQueueSubmit ||
-      !Config::Get().player.captureVulkanRenderPasses.empty()) {
+  if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
     TokenBuffersUpdate();
   } else {
     Exec();
@@ -1060,8 +1059,7 @@ gits::Vulkan::CGitsVkCmdInsertMemoryBarriers::CGitsVkCmdInsertMemoryBarriers(
       _PImageMemoryBarriers(ImageMemoryBarrierCount, PImageMemoryBarriers) {}
 
 void gits::Vulkan::CGitsVkCmdInsertMemoryBarriers::Run() {
-  if (Config::Get().player.execCmdBuffsBeforeQueueSubmit ||
-      !Config::Get().player.captureVulkanRenderPasses.empty()) {
+  if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
     TokenBuffersUpdate();
   } else {
     Exec();
@@ -1176,8 +1174,7 @@ gits::Vulkan::CGitsVkCmdInsertMemoryBarriers2::CGitsVkCmdInsertMemoryBarriers2(
     : _commandBuffer(commandBuffer), _dependencyInfo(pDependencyInfo) {}
 
 void gits::Vulkan::CGitsVkCmdInsertMemoryBarriers2::Run() {
-  if (Config::Get().player.execCmdBuffsBeforeQueueSubmit ||
-      !Config::Get().player.captureVulkanRenderPasses.empty()) {
+  if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
     TokenBuffersUpdate();
   } else {
     Exec();
@@ -1293,8 +1290,7 @@ void gits::Vulkan::CGitsInitializeMultipleImages::Run() {
       VK_WHOLE_SIZE                            // VkDeviceSize size;
   };
 
-  if (Config::Get().player.execCmdBuffsBeforeQueueSubmit ||
-      !Config::Get().player.captureVulkanRenderPasses.empty()) {
+  if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
     TokenBuffersUpdate();
   } else {
     Exec();
@@ -1548,8 +1544,7 @@ gits::Vulkan::CGitsInitializeBuffer::CGitsInitializeBuffer() {}
 gits::Vulkan::CGitsInitializeBuffer::~CGitsInitializeBuffer() {}
 
 void gits::Vulkan::CGitsInitializeBuffer::Run() {
-  if (Config::Get().player.execCmdBuffsBeforeQueueSubmit ||
-      !Config::Get().player.captureVulkanRenderPasses.empty()) {
+  if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
     TokenBuffersUpdate();
   } else {
     Exec();
@@ -1751,8 +1746,7 @@ void gits::Vulkan::CGitsInitializeMultipleBuffers::Run() {
       0,                                       // VkDeviceSize offset
       VK_WHOLE_SIZE                            // VkDeviceSize size;
   };
-  if (Config::Get().player.execCmdBuffsBeforeQueueSubmit ||
-      !Config::Get().player.captureVulkanRenderPasses.empty()) {
+  if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
     TokenBuffersUpdate();
   } else {
     Exec();

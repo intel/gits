@@ -89,8 +89,10 @@ std::string GetFileNameResourcesScreenshot(unsigned int frameNumber,
                                            unsigned int submitNumber,
                                            unsigned int cmdBufferBatchNumber,
                                            unsigned int cmdBufferNumber,
+                                           unsigned int renderpass,
                                            uint64_t objectNumber,
-                                           VulkanResourceType resType) {
+                                           VulkanResourceType resType,
+                                           bool perCommandBuffer) {
   auto path = Config::Get().player.outputDir;
   if (path.empty()) {
     path = Config::Get().common.streamDir / "gitsScreenshots";
@@ -122,6 +124,9 @@ std::string GetFileNameResourcesScreenshot(unsigned int frameNumber,
   fileName << "_queueSubmit_" << submitNumber;
   fileName << "_commandbufferBatch_" << cmdBufferBatchNumber;
   fileName << "_commandbuffer_" << cmdBufferNumber;
+  if (!perCommandBuffer) {
+    fileName << "_renderpass_" << renderpass;
+  }
   fileName << suffix.str() << objectNumber;
   bfs::create_directories(path);
   path /= fileName.str();
@@ -147,10 +152,156 @@ bool operator==(const CGits::CCounter& counter, const Config::VulkanObjectRange&
   return false;
 }
 
+bool vulkanCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer bufferHandle, std::string fileName) {
+  auto& bufferState = SD()._bufferstates[bufferHandle];
+  if ((!bufferState->bufferCreateInfoData.Value()) ||
+      (bufferState->bufferCreateInfoData.Value()->size == 0) || (!bufferState->binding)) {
+    return false;
+  }
+
+  VkBufferCreateInfo* targetBufferCreateInfo = bufferState->bufferCreateInfoData.Value();
+
+  VkBufferCopy bufferCopy = {
+      0,                           // VkDeviceSize   srcOffset
+      0,                           // VkDeviceSize   dstOffset
+      targetBufferCreateInfo->size // VkDeviceSize   size
+  };
+  VkBuffer localBuffer;
+  VkDeviceMemory localMemory = VK_NULL_HANDLE;
+  VkDevice device = bufferState->deviceStateStore->deviceHandle;
+  // Create local buffer
+  {
+    VkBufferCreateInfo localBufferCreateInfo = {
+        VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, // VkStructureType sType;
+        nullptr,                              // const void* pNext;
+        0,                                    // VkBufferCreateFlags flags;
+        targetBufferCreateInfo->size,         // VkDeviceSize size;
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT,     // VkBufferUsageFlags usage;
+        VK_SHARING_MODE_EXCLUSIVE,            // VkSharingMode sharingMode;
+        0,                                    // uint32_t queueFamilyIndexCount;
+        nullptr                               // const uint32_t* pQueueFamilyIndices;
+    };
+    VkResult result = drvVk.vkCreateBuffer(device, &localBufferCreateInfo, nullptr, &localBuffer);
+    if (result != VK_SUCCESS) {
+      VkLog(ERR) << "Could not create buffer: " << result << "!!!";
+      throw EOperationFailed(EXCEPTION_MESSAGE);
+    }
+  }
+  VkMemoryRequirements memoryRequirements;
+  // Allocate buffer memory
+  {
+    drvVk.vkGetBufferMemoryRequirements(device, localBuffer, &memoryRequirements);
+
+    if (!memoryRequirements.size) {
+      throw EOperationFailed("vkGetBufferMemoryRequirements() returned requirement with 0 size.");
+    }
+    // To maintain stream compatibility, use memory properties of the platform
+    // the (original) stream was recorded on If there are none, get memory
+    // properties of the current platform
+    auto& physicalDeviceState = SD()._devicestates[device]->physicalDeviceStateStore;
+    VkPhysicalDeviceMemoryProperties memoryProperties = physicalDeviceState->memoryProperties;
+    if (memoryProperties.memoryHeapCount == 0) {
+      drvVk.vkGetPhysicalDeviceMemoryProperties(physicalDeviceState->physicalDeviceHandle,
+                                                &memoryProperties);
+    }
+    uint32_t requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i) {
+      if ((memoryProperties.memoryTypes[i].propertyFlags & requiredFlags) == requiredFlags) {
+        if (memoryRequirements.memoryTypeBits & (1 << i)) {
+          VkMemoryAllocateInfo memInfo = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr,
+                                          memoryRequirements.size, i};
+
+          drvVk.vkAllocateMemory(device, &memInfo, nullptr, &localMemory);
+          drvVk.vkBindBufferMemory(device, localBuffer, localMemory, 0);
+          break;
+        }
+      }
+    }
+  }
+
+#define ALL_VULKAN_BUFFER_ACCESS_BITS                                                              \
+  VK_ACCESS_INDIRECT_COMMAND_READ_BIT | VK_ACCESS_INDEX_READ_BIT |                                 \
+      VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_UNIFORM_READ_BIT |                           \
+      VK_ACCESS_INPUT_ATTACHMENT_READ_BIT | VK_ACCESS_SHADER_READ_BIT |                            \
+      VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |                           \
+      VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |         \
+      VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_TRANSFER_READ_BIT |                 \
+      VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_HOST_READ_BIT | VK_ACCESS_HOST_WRITE_BIT
+
+  // Pre-transfer buffer memory barriers
+  std::vector<VkBufferMemoryBarrier> dataAcquisitionBufferMemoryBarriersPre = {
+      {
+          VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, // VkStructureType sType
+          nullptr,                                 // const void* pNext
+          VK_ACCESS_HOST_READ_BIT,                 // VkAccessFlags srcAccessMask
+          VK_ACCESS_TRANSFER_WRITE_BIT,            // VkAccessFlags dstAccessMask
+          VK_QUEUE_FAMILY_IGNORED,                 // uint32_t srcQueueFamilyIndex
+          VK_QUEUE_FAMILY_IGNORED,                 // uint32_t dstQueueFamilyIndex
+          localBuffer,                             // VkBuffer buffer
+          0,                                       // VkDeviceSize offset
+          VK_WHOLE_SIZE                            // VkDeviceSize size;
+      },
+      {
+          VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, // VkStructureType sType
+          nullptr,                                 // const void* pNext
+          ALL_VULKAN_BUFFER_ACCESS_BITS,           // VkAccessFlags srcAccessMask
+          VK_ACCESS_TRANSFER_READ_BIT,             // VkAccessFlags dstAccessMask
+          VK_QUEUE_FAMILY_IGNORED,                 // uint32_t srcQueueFamilyIndex
+          VK_QUEUE_FAMILY_IGNORED,                 // uint32_t dstQueueFamilyIndex
+          bufferHandle,                            // VkBuffer buffer
+          0,                                       // VkDeviceSize offset
+          VK_WHOLE_SIZE                            // VkDeviceSize size;
+      }};
+
+  // Post-transfer buffer memory barriers
+  std::vector<VkBufferMemoryBarrier> dataAcquisitionBufferMemoryBarriersPost = {
+      {
+          VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, // VkStructureType sType
+          nullptr,                                 // const void* pNext
+          VK_ACCESS_TRANSFER_WRITE_BIT,            // VkAccessFlags srcAccessMask
+          VK_ACCESS_HOST_READ_BIT,                 // VkAccessFlags dstAccessMask
+          VK_QUEUE_FAMILY_IGNORED,                 // uint32_t srcQueueFamilyIndex
+          VK_QUEUE_FAMILY_IGNORED,                 // uint32_t dstQueueFamilyIndex
+          localBuffer,                             // VkBuffer buffer
+          0,                                       // VkDeviceSize offset
+          VK_WHOLE_SIZE                            // VkDeviceSize size;
+      },
+      {
+          VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, // VkStructureType sType
+          nullptr,                                 // const void* pNext
+          VK_ACCESS_TRANSFER_READ_BIT,             // VkAccessFlags srcAccessMask
+          ALL_VULKAN_BUFFER_ACCESS_BITS,           // VkAccessFlags dstAccessMask
+          VK_QUEUE_FAMILY_IGNORED,                 // uint32_t srcQueueFamilyIndex
+          VK_QUEUE_FAMILY_IGNORED,                 // uint32_t dstQueueFamilyIndex
+          bufferHandle,                            // VkBuffer buffer
+          0,                                       // VkDeviceSize offset
+          VK_WHOLE_SIZE                            // VkDeviceSize size;
+      }};
+
+  // Set barriers and acquire data
+  drvVk.vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0,
+                             nullptr, (uint32_t)dataAcquisitionBufferMemoryBarriersPre.size(),
+                             dataAcquisitionBufferMemoryBarriersPre.data(), 0, nullptr);
+  drvVk.vkCmdCopyBuffer(commandBuffer, bufferHandle, localBuffer, 1, &bufferCopy);
+  drvVk.vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0,
+                             nullptr, (uint32_t)dataAcquisitionBufferMemoryBarriersPost.size(),
+                             dataAcquisitionBufferMemoryBarriersPost.data(), 0, nullptr);
+  std::shared_ptr<RenderGenericAttachment> attachment(new RenderGenericAttachment());
+  attachment->sourceBuffer = bufferHandle;
+  attachment->copiedBuffer = localBuffer;
+  attachment->fileName = fileName;
+  attachment->devMemory = localMemory;
+  SD()._commandbufferstates[commandBuffer]->renderPassResourceBuffers.push_back(attachment);
+  return true;
+}
+
 bool vulkanCopyImage(VkCommandBuffer commandBuffer,
                      VkImage imageHandle,
-                     VkAttachmentStoreOp imageStoreOption,
-                     std::string fileName) {
+                     std::string fileName,
+                     bool isResource,
+                     VkAttachmentStoreOp imageStoreOption) {
   auto& imageState = SD()._imagestates[imageHandle];
   if (Config::Get().player.skipNonDeterministicImages &&
       (SD().nonDeterministicImages.find(imageHandle) != SD().nonDeterministicImages.end())) {
@@ -193,7 +344,6 @@ bool vulkanCopyImage(VkCommandBuffer commandBuffer,
             attachment->aspect = aspect;
             attachment->layer = l;
             attachment->mipmap = m;
-            attachment->localCounter = SD().imageCounter[imageHandle];
             attachment->fileName = fileName;
             attachment->sourceImage = imageHandle;
 
@@ -363,13 +513,43 @@ bool vulkanCopyImage(VkCommandBuffer commandBuffer,
                                          VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 1,
                                          &postCopyBufferBarrier, 1, &postCopyImageBarrier);
             }
-            SD()._commandbufferstates[commandBuffer]->renderPassImages.push_back(attachment);
+            if (isResource) {
+              SD()._commandbufferstates[commandBuffer]->renderPassResourceImages.push_back(
+                  attachment);
+            } else {
+              SD()._commandbufferstates[commandBuffer]->renderPassImages.push_back(attachment);
+            }
           }
         }
       }
     }
   }
   return true;
+}
+
+void vulkanScheduleCopyResources(VkCommandBuffer cmdBuffer,
+                                 uint64_t queueSubmitNumber,
+                                 uint32_t cmdBuffBatchNumber,
+                                 uint32_t cmdBuffNumber,
+                                 uint64_t renderPassNumber) {
+  if (SD()._commandbufferstates.find(cmdBuffer) != SD()._commandbufferstates.end()) {
+    auto& commandBufferState = SD()._commandbufferstates[cmdBuffer];
+
+    for (auto obj : commandBufferState->resourceWriteBuffers) {
+      VkBuffer swapBuffer = obj.first;
+      std::string fileName = GetFileNameResourcesScreenshot(
+          CGits::Instance().CurrentFrame(), queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
+          renderPassNumber, SD().bufferCounter[swapBuffer], obj.second, false);
+      vulkanCopyBuffer(cmdBuffer, swapBuffer, fileName);
+    }
+    for (auto obj : commandBufferState->resourceWriteImages) {
+      VkImage swapImg = obj.first;
+      std::string fileName = GetFileNameResourcesScreenshot(
+          CGits::Instance().CurrentFrame(), queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
+          renderPassNumber, SD().imageCounter[swapImg], obj.second, false);
+      vulkanCopyImage(cmdBuffer, swapImg, fileName, true);
+    }
+  }
 }
 
 void vulkanScheduleCopyRenderPasses(VkCommandBuffer cmdBuffer,
@@ -405,99 +585,156 @@ void vulkanScheduleCopyRenderPasses(VkCommandBuffer cmdBuffer,
     std::string fileName = GetFileNameDrawcallScreenshot(
         CGits::Instance().CurrentFrame(), queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
         renderPassNumber, SD().imageCounter[imageHandle], false);
-    vulkanCopyImage(cmdBuffer, imageHandle, imageStoreOption, fileName);
+    vulkanCopyImage(cmdBuffer, imageHandle, fileName, false, imageStoreOption);
   }
+}
+
+void vulkanDumpBuffer(std::shared_ptr<RenderGenericAttachment> attachment) {
+  VkBuffer bufferHandle = attachment->sourceBuffer;
+  auto& bufferState = SD()._bufferstates[bufferHandle];
+  VkDevice device = bufferState->deviceStateStore->deviceHandle;
+  drvVk.vkDeviceWaitIdle(device);
+  VkMemoryRequirements memoryRequirements;
+  drvVk.vkGetBufferMemoryRequirements(device, attachment->copiedBuffer, &memoryRequirements);
+  FILE* outFile = nullptr;
+  std::vector<char> bufferData;
+  bufferData.resize(bufferState->bufferCreateInfoData.Value()->size);
+  if (attachment->devMemory == VK_NULL_HANDLE) {
+    Log(ERR) << "Could not allocate memory for a buffer to dump.";
+    throw std::runtime_error(EXCEPTION_MESSAGE);
+  }
+  unsigned char* ptr;
+  drvVk.vkMapMemory(device, attachment->devMemory, 0, memoryRequirements.size, 0, (void**)&ptr);
+  memcpy(bufferData.data(), ptr, bufferState->bufferCreateInfoData.Value()->size);
+
+  std::string outputFileNameBin = attachment->fileName;
+  if (outputFileNameBin.empty()) {
+    Log(ERR) << "Could not generate a name for the buffer to be dumped.";
+    throw std::runtime_error(EXCEPTION_MESSAGE);
+  }
+  outputFileNameBin.append(".bin");
+
+  const char* binaryFileName = outputFileNameBin.c_str();
+  if (binaryFileName == nullptr) {
+    throw std::runtime_error(EXCEPTION_MESSAGE);
+  }
+
+  outFile = fopen(binaryFileName, "wb");
+  if (outFile == nullptr) {
+    Log(ERR) << "Could not open a file: " << outputFileNameBin;
+    throw std::runtime_error(EXCEPTION_MESSAGE);
+  }
+  fwrite(&bufferData[0], sizeof(uint8_t), bufferState->bufferCreateInfoData.Value()->size, outFile);
+  fclose(outFile);
+  drvVk.vkUnmapMemory(device, attachment->devMemory);
+  drvVk.vkFreeMemory(device, attachment->devMemory, nullptr);
+  drvVk.vkDestroyBuffer(device, attachment->copiedBuffer, nullptr);
+}
+
+void vulkanDumpImage(std::shared_ptr<RenderGenericAttachment> attachment) {
+  VkImage image = attachment->sourceImage;
+  auto imageState = SD()._imagestates[image];
+  uint32_t width =
+      std::max(1u, imageState->width / (uint32_t)std::pow<uint32_t>(2u, attachment->mipmap));
+  uint32_t height =
+      std::max(1u, imageState->height / (uint32_t)std::pow<uint32_t>(2u, attachment->mipmap));
+
+  unsigned char* ptr;
+  drvVk.vkDeviceWaitIdle(imageState->deviceStateStore->deviceHandle);
+  drvVk.vkMapMemory(imageState->deviceStateStore->deviceHandle, attachment->devMemory, 0,
+                    width * height * getFormatBytesPerPixel(imageState->imageFormat), 0,
+                    (void**)&ptr);
+  std::vector<uint8_t> screenshotData(
+      ptr, ptr + (width * height * getFormatBytesPerPixel(imageState->imageFormat)));
+
+  try {
+    std::vector<uint8_t> convertedData(width * height * 4);
+    bool depthInProperRange = true;
+    if (attachment->aspect == VK_IMAGE_ASPECT_COLOR_BIT) {
+      convert_texture_data(getTexelToConvertFromImageFormat(imageState->imageFormat),
+                           screenshotData, texel_type::RGBA8, convertedData, width, height);
+    } else if (attachment->aspect == VK_IMAGE_ASPECT_DEPTH_BIT) {
+      auto fmt = imageState->imageFormat;
+      std::pair<double, double> minMaxValues(0.0, 0.0);
+      if (fmt == VK_FORMAT_D32_SFLOAT || fmt == VK_FORMAT_D32_SFLOAT_S8_UINT) {
+        minMaxValues = get_min_max_values(texel_type::R32f, screenshotData, width, height);
+        normalize_texture_data(texel_type::R32f, screenshotData, width, height);
+        convert_texture_data(texel_type::R32f, screenshotData, texel_type::RGBA8, convertedData,
+                             width, height);
+      } else if (fmt == VK_FORMAT_D24_UNORM_S8_UINT || fmt == VK_FORMAT_X8_D24_UNORM_PACK32) {
+        normalize_texture_data(texel_type::D24, screenshotData, width, height);
+        convert_texture_data(texel_type::D24, screenshotData, texel_type::RGBA8, convertedData,
+                             width, height);
+      } else if (fmt == VK_FORMAT_D16_UNORM || fmt == VK_FORMAT_D16_UNORM_S8_UINT) {
+        normalize_texture_data(texel_type::R16, screenshotData, width, height);
+        convert_texture_data(texel_type::R16, screenshotData, texel_type::RGBA8, convertedData,
+                             width, height);
+      }
+      if ((minMaxValues.first < 0.0 || minMaxValues.second > 1.0) &&
+          Config::Get().player.skipNonDeterministicImages &&
+          !SD().depthRangeUnrestrictedEXTEnabled) {
+        // When copying to a depth aspect, and the
+        // VK_EXT_depth_range_unrestricted extension is not enabled, the
+        // data in buffer memory (SFLOAT format) must be in the range
+        // [0,1], or the resulting values are undefined.
+        depthInProperRange = false;
+      }
+    } else if (attachment->aspect == VK_IMAGE_ASPECT_STENCIL_BIT) {
+      normalize_texture_data(texel_type::R8, screenshotData, width, height);
+      convert_texture_data(texel_type::R8, screenshotData, texel_type::RGBA8, convertedData, width,
+                           height);
+    }
+    {
+      std::stringstream nameSuffix;
+      if (attachment->layer > 1) {
+        nameSuffix << "_layer_" << std::setw(2) << std::setfill('0') << attachment->layer;
+      }
+      if (attachment->mipmap > 1) {
+        nameSuffix << "_mipmap_" << std::setw(2) << std::setfill('0') << attachment->mipmap;
+      }
+      switch (attachment->aspect) {
+      case VK_IMAGE_ASPECT_DEPTH_BIT:
+        nameSuffix << "_depth";
+        break;
+      case VK_IMAGE_ASPECT_STENCIL_BIT:
+        nameSuffix << "_stencil";
+        break;
+      default:
+        Log(TRACE) << "Not handled VkImageAspectFlagBits enumeration: " +
+                          std::to_string(attachment->aspect);
+        break;
+      }
+      nameSuffix << ".png";
+      if (depthInProperRange) {
+        CGits::Instance().WriteImage(attachment->fileName + nameSuffix.str(), width, height, true,
+                                     convertedData, false, false, false);
+      }
+    }
+  } catch (...) {
+    Log(ERR) << "Could not convert image data to RGBA8 format.";
+  }
+  drvVk.vkUnmapMemory(imageState->deviceStateStore->deviceHandle, attachment->devMemory);
+  drvVk.vkFreeMemory(imageState->deviceStateStore->deviceHandle, attachment->devMemory, nullptr);
+  drvVk.vkDestroyBuffer(imageState->deviceStateStore->deviceHandle, attachment->copiedBuffer,
+                        nullptr);
 }
 
 void vulkanDumpRenderPasses(VkCommandBuffer cmdBuffer) {
   for (auto attachment : SD()._commandbufferstates[cmdBuffer]->renderPassImages) {
-    VkImage image = attachment->sourceImage;
-    auto imageState = SD()._imagestates[image];
-    uint32_t width =
-        std::max(1u, imageState->width / (uint32_t)std::pow<uint32_t>(2u, attachment->mipmap));
-    uint32_t height =
-        std::max(1u, imageState->height / (uint32_t)std::pow<uint32_t>(2u, attachment->mipmap));
-
-    unsigned char* ptr;
-    drvVk.vkDeviceWaitIdle(imageState->deviceStateStore->deviceHandle);
-    drvVk.vkMapMemory(imageState->deviceStateStore->deviceHandle, attachment->devMemory, 0,
-                      width * height * getFormatBytesPerPixel(imageState->imageFormat), 0,
-                      (void**)&ptr);
-    std::vector<uint8_t> screenshotData(
-        ptr, ptr + (width * height * getFormatBytesPerPixel(imageState->imageFormat)));
-
-    try {
-      std::vector<uint8_t> convertedData(width * height * 4);
-      bool depthInProperRange = true;
-      if (attachment->aspect == VK_IMAGE_ASPECT_COLOR_BIT) {
-        convert_texture_data(getTexelToConvertFromImageFormat(imageState->imageFormat),
-                             screenshotData, texel_type::RGBA8, convertedData, width, height);
-      } else if (attachment->aspect == VK_IMAGE_ASPECT_DEPTH_BIT) {
-        auto fmt = imageState->imageFormat;
-        std::pair<double, double> minMaxValues(0.0, 0.0);
-        if (fmt == VK_FORMAT_D32_SFLOAT || fmt == VK_FORMAT_D32_SFLOAT_S8_UINT) {
-          minMaxValues = get_min_max_values(texel_type::R32f, screenshotData, width, height);
-          normalize_texture_data(texel_type::R32f, screenshotData, width, height);
-          convert_texture_data(texel_type::R32f, screenshotData, texel_type::RGBA8, convertedData,
-                               width, height);
-        } else if (fmt == VK_FORMAT_D24_UNORM_S8_UINT || fmt == VK_FORMAT_X8_D24_UNORM_PACK32) {
-          normalize_texture_data(texel_type::D24, screenshotData, width, height);
-          convert_texture_data(texel_type::D24, screenshotData, texel_type::RGBA8, convertedData,
-                               width, height);
-        } else if (fmt == VK_FORMAT_D16_UNORM || fmt == VK_FORMAT_D16_UNORM_S8_UINT) {
-          normalize_texture_data(texel_type::R16, screenshotData, width, height);
-          convert_texture_data(texel_type::R16, screenshotData, texel_type::RGBA8, convertedData,
-                               width, height);
-        }
-        if ((minMaxValues.first < 0.0 || minMaxValues.second > 1.0) &&
-            Config::Get().player.skipNonDeterministicImages &&
-            !SD().depthRangeUnrestrictedEXTEnabled) {
-          // When copying to a depth aspect, and the
-          // VK_EXT_depth_range_unrestricted extension is not enabled, the
-          // data in buffer memory (SFLOAT format) must be in the range
-          // [0,1], or the resulting values are undefined.
-          depthInProperRange = false;
-        }
-      } else if (attachment->aspect == VK_IMAGE_ASPECT_STENCIL_BIT) {
-        normalize_texture_data(texel_type::R8, screenshotData, width, height);
-        convert_texture_data(texel_type::R8, screenshotData, texel_type::RGBA8, convertedData,
-                             width, height);
-      }
-      {
-        std::stringstream nameSuffix;
-        if (attachment->layer > 1) {
-          nameSuffix << "_layer_" << std::setw(2) << std::setfill('0') << attachment->layer;
-        }
-        if (attachment->mipmap > 1) {
-          nameSuffix << "_mipmap_" << std::setw(2) << std::setfill('0') << attachment->mipmap;
-        }
-        switch (attachment->aspect) {
-        case VK_IMAGE_ASPECT_DEPTH_BIT:
-          nameSuffix << "_depth";
-          break;
-        case VK_IMAGE_ASPECT_STENCIL_BIT:
-          nameSuffix << "_stencil";
-          break;
-        default:
-          Log(TRACE) << "Not handled VkImageAspectFlagBits enumeration: " +
-                            std::to_string(attachment->aspect);
-          break;
-        }
-        nameSuffix << ".png";
-        if (depthInProperRange) {
-          CGits::Instance().WriteImage(attachment->fileName + nameSuffix.str(), width, height, true,
-                                       convertedData, false, false, false);
-        }
-      }
-    } catch (...) {
-      Log(ERR) << "Could not convert image data to RGBA8 format.";
-    }
-    drvVk.vkUnmapMemory(imageState->deviceStateStore->deviceHandle, attachment->devMemory);
-    drvVk.vkFreeMemory(imageState->deviceStateStore->deviceHandle, attachment->devMemory, nullptr);
-    drvVk.vkDestroyBuffer(imageState->deviceStateStore->deviceHandle, attachment->copiedBuffer,
-                          nullptr);
+    vulkanDumpImage(attachment);
   }
   SD()._commandbufferstates[cmdBuffer]->renderPassImages.clear();
+}
+
+void vulkanDumpRenderPassResources(VkCommandBuffer cmdBuffer) {
+  for (auto attachment : SD()._commandbufferstates[cmdBuffer]->renderPassResourceImages) {
+    vulkanDumpImage(attachment);
+  }
+  SD()._commandbufferstates[cmdBuffer]->renderPassResourceImages.clear();
+  for (auto attachment : SD()._commandbufferstates[cmdBuffer]->renderPassResourceBuffers) {
+    vulkanDumpBuffer(attachment);
+  }
+  SD()._commandbufferstates[cmdBuffer]->renderPassResourceBuffers.clear();
 }
 #endif
 
@@ -1082,7 +1319,8 @@ void writeResources(VkQueue queue,
       std::string fileName = GetFileNameResourcesScreenshot(
           CGits::Instance().CurrentFrame(),
           (uint32_t)CGits::Instance().vkCounters.CurrentQueueSubmitCount(),
-          commandBufferBatchNumber, cmdBufferNumber, SD().bufferCounter[swapBuffer], obj.second);
+          commandBufferBatchNumber, cmdBufferNumber, 0, SD().bufferCounter[swapBuffer], obj.second,
+          true);
       writeBufferUtil(fileName, queue, swapBuffer);
     }
     for (auto obj : commandBufferState->resourceWriteImages) {
@@ -1090,7 +1328,8 @@ void writeResources(VkQueue queue,
       std::string fileName = GetFileNameResourcesScreenshot(
           CGits::Instance().CurrentFrame(),
           (uint32_t)CGits::Instance().vkCounters.CurrentQueueSubmitCount(),
-          commandBufferBatchNumber, cmdBufferNumber, SD().imageCounter[swapImg], obj.second);
+          commandBufferBatchNumber, cmdBufferNumber, 0, SD().imageCounter[swapImg], obj.second,
+          true);
       writeScreenshotUtil(fileName, queue, swapImg, VULKAN_MODE_RESOURCES);
     }
   }

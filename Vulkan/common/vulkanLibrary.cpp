@@ -123,6 +123,10 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(VkCommandBuffer cmd
         vulkanScheduleCopyRenderPasses(cmdBuffer, queueSubmitNumber, cmdBuffBatchNumber,
                                        cmdBuffNumber, renderPassCount);
       }
+      if (localCounter == Config::Get().player.captureVulkanRenderPassesResources) {
+        vulkanScheduleCopyResources(cmdBuffer, queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
+                                    renderPassCount);
+      }
       renderPassCount++;
     }
   }

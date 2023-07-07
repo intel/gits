@@ -51,10 +51,11 @@ inline bool captureRenderPasses() {
   return captureRenderPasses;
 }
 
-inline bool captureVulkanSubmitsResources() {
-  static bool captureVulkanSubmitsResources =
-      !Config::Get().player.captureVulkanSubmitsResources.empty();
-  return captureVulkanSubmitsResources;
+inline bool captureRenderPassesResources() {
+  static bool captureRenderPassesResources =
+      !Config::Get().player.captureVulkanSubmitsResources.empty() ||
+      !Config::Get().player.captureVulkanRenderPassesResources.empty();
+  return captureRenderPassesResources;
 }
 
 inline bool crossPlatformStateRestoration() {
@@ -506,7 +507,7 @@ inline void vkResetDescriptorPool_SD(VkResult return_value,
                                      VkDevice device,
                                      VkDescriptorPool descriptorPool,
                                      VkDescriptorPoolResetFlags flags) {
-  if (Config::Get().IsRecorder() || !Config::Get().player.captureVulkanSubmitsResources.empty()) {
+  if (Config::Get().IsRecorder() || captureRenderPassesResources()) {
     auto& descriptorSetStateList =
         SD()._descriptorpoolstates[descriptorPool]->descriptorSetStateStoreList;
 
@@ -1014,7 +1015,7 @@ inline void vkAllocateDescriptorSets_SD(VkResult return_value,
                                         VkDevice device,
                                         const VkDescriptorSetAllocateInfo* pAllocateInfo,
                                         VkDescriptorSet* pDescriptorSets) {
-  if ((Config::Get().IsRecorder() || !Config::Get().player.captureVulkanSubmitsResources.empty()) &&
+  if ((Config::Get().IsRecorder() || captureRenderPassesResources()) &&
       (return_value == VK_SUCCESS)) {
 
     const VkDescriptorSetVariableDescriptorCountAllocateInfo* variableDescriptorCount =
@@ -1104,7 +1105,7 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
                                       const VkWriteDescriptorSet* pDescriptorWrites,
                                       uint32_t descriptorCopyCount,
                                       const VkCopyDescriptorSet* pDescriptorCopies) {
-  if (Config::Get().IsRecorder() || !Config::Get().player.captureVulkanSubmitsResources.empty()) {
+  if (Config::Get().IsRecorder() || captureRenderPassesResources()) {
     for (unsigned int i = 0; i < descriptorWriteCount; i++) {
       auto& descriptorSetState = SD()._descriptorsetstates[pDescriptorWrites[i].dstSet];
 
@@ -1399,7 +1400,7 @@ inline void vkFreeDescriptorSets_SD(VkResult return_value,
                                     VkDescriptorPool descriptorPool,
                                     uint32_t descriptorSetCount,
                                     const VkDescriptorSet* pDescriptorSets) {
-  if (Config::Get().IsRecorder() || !Config::Get().player.captureVulkanSubmitsResources.empty()) {
+  if (Config::Get().IsRecorder() || captureRenderPassesResources()) {
     for (unsigned int i = 0; i < descriptorSetCount; i++) {
       TODO("Check if descriptor set is properly removed (if std::shared_ptr may be used correctly "
            "with std::set")
@@ -1478,8 +1479,7 @@ inline void vkCreateDescriptorUpdateTemplate_SD(
     const VkAllocationCallbacks* pAllocator,
     VkDescriptorUpdateTemplate* pDescriptorUpdateTemplate) {
   if (((Config::Get().IsPlayer()) &&
-       (Config::Get().player.cleanResourcesOnExit ||
-        !Config::Get().player.captureVulkanSubmitsResources.empty())) ||
+       (Config::Get().player.cleanResourcesOnExit || captureRenderPassesResources())) ||
       (Config::Get().IsRecorder())) {
     if ((return_value == VK_SUCCESS) && (*pDescriptorUpdateTemplate != VK_NULL_HANDLE)) {
       CreateDescriptorUpdateTemplate_SDHelper(
@@ -1495,8 +1495,7 @@ inline void vkCreateDescriptorUpdateTemplateKHR_SD(
     const VkAllocationCallbacks* pAllocator,
     VkDescriptorUpdateTemplate* pDescriptorUpdateTemplate) {
   if (((Config::Get().IsPlayer()) &&
-       (Config::Get().player.cleanResourcesOnExit ||
-        !Config::Get().player.captureVulkanSubmitsResources.empty())) ||
+       (Config::Get().player.cleanResourcesOnExit || captureRenderPassesResources())) ||
       (Config::Get().IsRecorder())) {
     if ((return_value == VK_SUCCESS) && (*pDescriptorUpdateTemplate != VK_NULL_HANDLE)) {
       CreateDescriptorUpdateTemplate_SDHelper(device, pCreateInfo, pAllocator,
@@ -1531,7 +1530,7 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
     VkDescriptorSet descriptorSet,
     VkDescriptorUpdateTemplate descriptorUpdateTemplate,
     const void* pData) {
-  if (Config::Get().IsRecorder() || !Config::Get().player.captureVulkanSubmitsResources.empty()) {
+  if (Config::Get().IsRecorder() || captureRenderPassesResources()) {
     auto& descriptorSetState = SD()._descriptorsetstates[descriptorSet];
     auto& descriptorUpdateTemplateState =
         SD()._descriptorupdatetemplatestates[descriptorUpdateTemplate];
@@ -2331,7 +2330,7 @@ inline void vkQueueSubmit_setImageLayout(std::shared_ptr<CCommandBufferState>& c
                                          uint32_t queueFamilyIndex) {
   if ((isSubcaptureBeforeRestorationPhase() &&
        Config::Get().recorder.vulkan.utilities.crossPlatformStateRestoration.images) ||
-      captureRenderPasses() || !Config::Get().player.captureVulkanSubmitsResources.empty()) {
+      captureRenderPasses() || captureRenderPassesResources()) {
 
     for (auto& imageLayoutAfterSubmit : commandBufferState->imageLayoutAfterSubmit) {
       auto& imageState = SD()._imagestates[imageLayoutAfterSubmit.first];
@@ -2409,8 +2408,7 @@ inline void vkQueueSubmit_SD(VkResult return_value,
                              const VkSubmitInfo* pSubmits,
                              VkFence fence,
                              bool stateRestore = false) {
-  if (Config::Get().IsRecorder() || captureRenderPasses() ||
-      !Config::Get().player.captureVulkanSubmitsResources.empty()) {
+  if (Config::Get().IsRecorder() || captureRenderPasses() || captureRenderPassesResources()) {
     if (pSubmits != NULL) {
       for (uint32_t s = 0; s < submitCount; ++s) {
         for (uint32_t c = 0; c < pSubmits[s].commandBufferCount; ++c) {
@@ -2488,8 +2486,7 @@ inline void vkQueueSubmit2_SD(VkResult return_value,
                               const VkSubmitInfo2* pSubmits,
                               VkFence fence,
                               bool stateRestore = false) {
-  if (Config::Get().IsRecorder() || captureRenderPasses() ||
-      !Config::Get().player.captureVulkanSubmitsResources.empty()) {
+  if (Config::Get().IsRecorder() || captureRenderPasses() || captureRenderPassesResources()) {
     if (pSubmits != NULL) {
       for (uint32_t s = 0; s < submitCount; ++s) {
         for (uint32_t c = 0; c < pSubmits[s].commandBufferInfoCount; ++c) {
@@ -2635,8 +2632,7 @@ inline void vkCmdBeginRenderPass_SD(VkCommandBuffer cmdBuffer,
       pRenderPassBegin, &contents, SD()._renderpassstates[pRenderPassBegin->renderPass],
       SD()._framebufferstates[pRenderPassBegin->framebuffer]);
   SD()._commandbufferstates[cmdBuffer]->beginRenderPassesList.push_back(beginRenderPassState);
-  if (Config::Get().IsRecorder() || captureRenderPasses() ||
-      !Config::Get().player.captureVulkanSubmitsResources.empty()) {
+  if (Config::Get().IsRecorder() || captureRenderPasses() || captureRenderPassesResources()) {
     if (SD()._framebufferstates[pRenderPassBegin->framebuffer]
             ->framebufferCreateInfoData.Value()
             ->flags &
@@ -2782,7 +2778,7 @@ inline void vkCmdBeginRenderPass2KHR_SD(VkCommandBuffer commandBuffer,
 inline void vkCmdEndRenderPass_SD(VkCommandBuffer commandBuffer) {
   if (((Config::Get().recorder.basic.enabled) && (isSubcaptureBeforeRestorationPhase()) &&
        (Config::Get().recorder.vulkan.utilities.crossPlatformStateRestoration.images)) ||
-      (captureRenderPasses() || !Config::Get().player.captureVulkanSubmitsResources.empty())) {
+      (captureRenderPasses() || captureRenderPassesResources())) {
     auto& commandBufferState = SD()._commandbufferstates[commandBuffer];
 
     if (commandBufferState->beginRenderPassesList.size()) {
@@ -2872,8 +2868,7 @@ inline void vkCmdBeginRendering_SD(VkCommandBuffer commandBuffer,
       std::make_shared<CCommandBufferState::CBeginRenderPass>(pRenderingInfo);
   SD()._commandbufferstates[commandBuffer]->beginRenderPassesList.push_back(beginRenderPassState);
 
-  if (Config::Get().IsRecorder() || captureRenderPasses() ||
-      !Config::Get().player.captureVulkanSubmitsResources.empty()) {
+  if (Config::Get().IsRecorder() || captureRenderPasses() || captureRenderPassesResources()) {
 
     for (uint32_t i = 0; i < pRenderingInfo->colorAttachmentCount; i++) {
       if (pRenderingInfo->pColorAttachments[i].imageView != VK_NULL_HANDLE) {
@@ -3019,7 +3014,7 @@ inline void vkCmdBindDescriptorSets_SD(VkCommandBuffer commandBuffer,
                                        const VkDescriptorSet* pDescriptorSets,
                                        uint32_t dynamicOffsetCount,
                                        const uint32_t* pDynamicOffsets) {
-  if (Config::Get().IsRecorder() || !Config::Get().player.captureVulkanSubmitsResources.empty()) {
+  if (Config::Get().IsRecorder() || captureRenderPassesResources()) {
     for (unsigned int i = 0; i < descriptorSetCount; i++) {
       if (pDescriptorSets[i] == VK_NULL_HANDLE) {
         continue;
@@ -3386,9 +3381,9 @@ inline void vkCmdDispatchIndirect_SD(VkCommandBuffer commandBuffer, VkBuffer buf
 inline void vkCmdExecuteCommands_SD(VkCommandBuffer commandBuffer,
                                     uint32_t commandBufferCount,
                                     const VkCommandBuffer* pCommandBuffers) {
-  if (Config::Get().IsRecorder() || (!Config::Get().player.captureVulkanSubmitsResources.empty() ||
-                                     !Config::Get().player.captureVulkanRenderPasses.empty() ||
-                                     Config::Get().player.execCmdBuffsBeforeQueueSubmit)) {
+  if (Config::Get().IsRecorder() ||
+      (captureRenderPassesResources() || !Config::Get().player.captureVulkanRenderPasses.empty() ||
+       Config::Get().player.execCmdBuffsBeforeQueueSubmit)) {
     for (unsigned int i = 0; i < commandBufferCount; i++) {
       auto& primaryCommandBufferState = SD()._commandbufferstates[commandBuffer];
       auto& secondaryCommandBufferState = SD()._commandbufferstates[pCommandBuffers[i]];
@@ -3466,7 +3461,7 @@ inline void vkCmdExecuteCommands_SD(VkCommandBuffer commandBuffer,
           }
         }
       }
-      if (!Config::Get().player.captureVulkanSubmitsResources.empty()) {
+      if (captureRenderPassesResources()) {
         for (auto obj : secondaryCommandBufferState->resourceWriteBuffers) {
           primaryCommandBufferState->resourceWriteBuffers[obj.first] = obj.second;
         }
@@ -3497,7 +3492,7 @@ inline void vkCmdPipelineBarrier_SD(VkCommandBuffer commandBuffer,
                                     const VkBufferMemoryBarrier* pBufferMemoryBarriers,
                                     uint32_t imageMemoryBarrierCount,
                                     const VkImageMemoryBarrier* pImageMemoryBarriers) {
-  if (captureRenderPasses() || captureVulkanSubmitsResources() ||
+  if (captureRenderPasses() || captureRenderPassesResources() ||
       (isRecorder() && ((updateOnlyUsedMemory()) || isSubcaptureBeforeRestorationPhase()))) {
 
     for (unsigned int i = 0; i < bufferMemoryBarrierCount; i++) {
@@ -3512,7 +3507,7 @@ inline void vkCmdPipelineBarrier_SD(VkCommandBuffer commandBuffer,
         SD().nonDeterministicImages.insert(pImageMemoryBarriers[i].image);
       }
 
-      if (captureRenderPasses() || captureVulkanSubmitsResources() ||
+      if (captureRenderPasses() || captureRenderPassesResources() ||
           (isSubcaptureBeforeRestorationPhase() && crossPlatformStateRestoration())) {
         auto& imageState = SD()._imagestates[pImageMemoryBarriers[i].image];
         auto& imageLayout = imageState->currentLayout;
@@ -3562,7 +3557,7 @@ inline void vkCmdPipelineBarrier_SD(VkCommandBuffer commandBuffer,
 
 inline void vkCmdPipelineBarrier2UnifiedGITS_SD(VkCommandBuffer commandBuffer,
                                                 const VkDependencyInfo* pDependencyInfo) {
-  if (captureRenderPasses() || captureVulkanSubmitsResources() ||
+  if (captureRenderPasses() || captureRenderPassesResources() ||
       (isRecorder() && (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()))) {
 
     for (unsigned int i = 0; i < pDependencyInfo->bufferMemoryBarrierCount; i++) {
@@ -3577,7 +3572,7 @@ inline void vkCmdPipelineBarrier2UnifiedGITS_SD(VkCommandBuffer commandBuffer,
         SD().nonDeterministicImages.insert(pDependencyInfo->pImageMemoryBarriers[i].image);
       }
 
-      if (captureRenderPasses() || captureVulkanSubmitsResources() ||
+      if (captureRenderPasses() || captureRenderPassesResources() ||
           (isSubcaptureBeforeRestorationPhase() && crossPlatformStateRestoration())) {
         auto& imageState = SD()._imagestates[pDependencyInfo->pImageMemoryBarriers[i].image];
         auto& imageLayout = imageState->currentLayout;
@@ -3815,8 +3810,7 @@ inline void vkCmdCopyBuffer_SD(VkCommandBuffer commandBuffer,
                                VkBuffer dstBuffer,
                                uint32_t regionCount,
                                const VkBufferCopy* pRegions) {
-  if (Config::Get().IsPlayer() && !Config::Get().player.captureVulkanSubmitsResources.empty() &&
-      (dstBuffer != NULL)) {
+  if (Config::Get().IsPlayer() && captureRenderPassesResources() && (dstBuffer != NULL)) {
     SD()._commandbufferstates[commandBuffer]->resourceWriteBuffers[dstBuffer] =
         VULKAN_BLIT_DESTINATION_BUFFER;
   }
@@ -3854,7 +3848,7 @@ inline void vkCmdCopyBuffer_SD(VkCommandBuffer commandBuffer,
 
 inline void vkCmdCopyBuffer2_SD(VkCommandBuffer commandBuffer,
                                 const VkCopyBufferInfo2* pCopyBufferInfo) {
-  if (Config::Get().IsPlayer() && !Config::Get().player.captureVulkanSubmitsResources.empty() &&
+  if (Config::Get().IsPlayer() && captureRenderPassesResources() &&
       (pCopyBufferInfo->dstBuffer != NULL)) {
     SD()._commandbufferstates[commandBuffer]->resourceWriteBuffers[pCopyBufferInfo->dstBuffer] =
         VULKAN_BLIT_DESTINATION_BUFFER;
@@ -3898,8 +3892,7 @@ inline void vkCmdCopyBufferToImage_SD(VkCommandBuffer commandBuffer,
                                       VkImageLayout dstImageLayout,
                                       uint32_t regionCount,
                                       const VkBufferImageCopy* pRegions) {
-  if (Config::Get().IsPlayer() && !Config::Get().player.captureVulkanSubmitsResources.empty() &&
-      (dstImage != NULL)) {
+  if (Config::Get().IsPlayer() && captureRenderPassesResources() && (dstImage != NULL)) {
     SD()._commandbufferstates[commandBuffer]->resourceWriteImages[dstImage] =
         VULKAN_BLIT_DESTINATION_IMAGE;
   }
@@ -3961,7 +3954,7 @@ inline void vkCmdCopyBufferToImage_SD(VkCommandBuffer commandBuffer,
 
 inline void vkCmdCopyBufferToImage2_SD(VkCommandBuffer commandBuffer,
                                        const VkCopyBufferToImageInfo2* pCopyBufferToImageInfo) {
-  if (Config::Get().IsPlayer() && !Config::Get().player.captureVulkanSubmitsResources.empty() &&
+  if (Config::Get().IsPlayer() && captureRenderPassesResources() &&
       (pCopyBufferToImageInfo->dstImage != NULL)) {
     SD()._commandbufferstates[commandBuffer]
         ->resourceWriteImages[pCopyBufferToImageInfo->dstImage] = VULKAN_BLIT_DESTINATION_IMAGE;
@@ -4033,8 +4026,7 @@ inline void vkCmdCopyImage_SD(VkCommandBuffer commandBuffer,
                               VkImageLayout dstImageLayout,
                               uint32_t regionCount,
                               const VkImageCopy* pRegions) {
-  if (Config::Get().IsPlayer() && !Config::Get().player.captureVulkanSubmitsResources.empty() &&
-      (dstImage != NULL)) {
+  if (Config::Get().IsPlayer() && captureRenderPassesResources() && (dstImage != NULL)) {
     SD()._commandbufferstates[commandBuffer]->resourceWriteImages[dstImage] =
         VULKAN_BLIT_DESTINATION_IMAGE;
   }
@@ -4095,7 +4087,7 @@ inline void vkCmdCopyImage_SD(VkCommandBuffer commandBuffer,
 
 inline void vkCmdCopyImage2_SD(VkCommandBuffer commandBuffer,
                                const VkCopyImageInfo2* pCopyImageInfo) {
-  if (Config::Get().IsPlayer() && !Config::Get().player.captureVulkanSubmitsResources.empty() &&
+  if (Config::Get().IsPlayer() && captureRenderPassesResources() &&
       (pCopyImageInfo->dstImage != NULL)) {
     SD()._commandbufferstates[commandBuffer]->resourceWriteImages[pCopyImageInfo->dstImage] =
         VULKAN_BLIT_DESTINATION_IMAGE;
@@ -4167,8 +4159,7 @@ inline void vkCmdCopyImageToBuffer_SD(VkCommandBuffer commandBuffer,
                                       VkBuffer dstBuffer,
                                       uint32_t regionCount,
                                       const VkBufferImageCopy* pRegions) {
-  if (Config::Get().IsPlayer() && !Config::Get().player.captureVulkanSubmitsResources.empty() &&
-      (dstBuffer != NULL)) {
+  if (Config::Get().IsPlayer() && captureRenderPassesResources() && (dstBuffer != NULL)) {
     SD()._commandbufferstates[commandBuffer]->resourceWriteBuffers[dstBuffer] =
         VULKAN_BLIT_DESTINATION_BUFFER;
   }
@@ -4227,7 +4218,7 @@ inline void vkCmdCopyImageToBuffer_SD(VkCommandBuffer commandBuffer,
 
 inline void vkCmdCopyImageToBuffer2_SD(VkCommandBuffer commandBuffer,
                                        const VkCopyImageToBufferInfo2* pCopyImageToBufferInfo) {
-  if (Config::Get().IsPlayer() && !Config::Get().player.captureVulkanSubmitsResources.empty() &&
+  if (Config::Get().IsPlayer() && captureRenderPassesResources() &&
       (pCopyImageToBufferInfo->dstBuffer != VK_NULL_HANDLE)) {
     SD()._commandbufferstates[commandBuffer]
         ->resourceWriteBuffers[pCopyImageToBufferInfo->dstBuffer] = VULKAN_BLIT_DESTINATION_BUFFER;

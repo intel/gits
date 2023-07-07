@@ -1168,8 +1168,8 @@ struct CQueryPoolState : public UniqueResourceHandle {
 struct RenderGenericAttachment {
   VkBuffer copiedBuffer;
   VkImage sourceImage;
+  VkBuffer sourceBuffer;
   VkDeviceMemory devMemory;
-  uint32_t localCounter;
   uint32_t layer;
   uint32_t mipmap;
   VkImageAspectFlags aspect;
@@ -1177,8 +1177,8 @@ struct RenderGenericAttachment {
   RenderGenericAttachment()
       : copiedBuffer(0),
         sourceImage(0),
+        sourceBuffer(0),
         devMemory(0),
-        localCounter(0),
         layer(0),
         mipmap(0),
         aspect(0),
@@ -1271,6 +1271,8 @@ struct CCommandBufferState : public UniqueResourceHandle {
   std::vector<std::pair<uint64_t, bool>> touchedResources; // true for images, false for buffers
   std::unordered_set<VkImage> clearedImages;
   std::vector<std::shared_ptr<RenderGenericAttachment>> renderPassImages;
+  std::vector<std::shared_ptr<RenderGenericAttachment>> renderPassResourceImages;
+  std::vector<std::shared_ptr<RenderGenericAttachment>> renderPassResourceBuffers;
   std::vector<VkCommandBuffer> secondaryCommandBuffers;
 
   CCommandBufferState(VkCommandBuffer const* _pCommandBuffer,

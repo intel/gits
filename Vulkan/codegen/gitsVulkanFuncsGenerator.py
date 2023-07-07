@@ -1523,8 +1523,7 @@ namespace gits {
         if func.get('tokenCache') is not None:
           token_buff_update = "\n  SD()._commandbufferstates[*_commandBuffer]->tokensBuffer.Add(new C%(name)s(%(argsCallOrig)s));" % {'name': versioned_name, 'argsCallOrig': argsCallOrig}
           if func.get('runWrap') is not True:
-            run_cmd = """if (Config::Get().player.execCmdBuffsBeforeQueueSubmit ||
-      !Config::Get().player.captureVulkanRenderPasses.empty()) {
+            run_cmd = """if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
     TokenBuffersUpdate();
   } else {
     Exec();

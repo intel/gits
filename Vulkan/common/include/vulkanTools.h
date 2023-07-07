@@ -58,6 +58,7 @@ void writeResources(VkQueue queue,
                     uint32_t cmdBufferNumber);
 void writeBufferUtil(std::string fileName, VkQueue& queue, VkBuffer& sourceBuffer);
 typedef enum _VulkanResourceType {
+  VULKAN_NONE_RESOURCE,
   //READ_WRITE
   VULKAN_STORAGE_IMAGE,
   VULKAN_STORAGE_BUFFER,
@@ -145,10 +146,17 @@ void checkReturnValue(VkResult playerSideReturnValue,
                       const char* functionName);
 bool IsObjectToSkip(uint64_t vulkanObject);
 bool operator==(const CGits::CCounter& counter, const Config::VulkanObjectRange& vulkanObjRange);
+bool vulkanCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer bufferHandle, std::string fileName);
 bool vulkanCopyImage(VkCommandBuffer commandBuffer,
                      VkImage imageHandle,
-                     VkAttachmentStoreOp imageStoreOption,
-                     std::string fileName);
+                     std::string fileName,
+                     bool isResource = false,
+                     VkAttachmentStoreOp imageStoreOption = VK_ATTACHMENT_STORE_OP_STORE);
+void vulkanScheduleCopyResources(VkCommandBuffer cmdBuffer,
+                                 uint64_t queueSubmitNumber,
+                                 uint32_t cmdBuffBatchNumber,
+                                 uint32_t cmdBuffNumber,
+                                 uint64_t renderPassNumber);
 void vulkanScheduleCopyRenderPasses(VkCommandBuffer cmdBuffer,
                                     uint64_t queueSubmitNumber,
                                     uint32_t cmdBuffBatchNumber,
@@ -156,6 +164,7 @@ void vulkanScheduleCopyRenderPasses(VkCommandBuffer cmdBuffer,
                                     uint64_t renderPassNumber);
 
 void vulkanDumpRenderPasses(VkCommandBuffer commandBuffer);
+void vulkanDumpRenderPassResources(VkCommandBuffer cmdBuffer);
 
 // Kudos to Piotr Horodecki
 class MemoryAliasingTracker {
