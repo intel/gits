@@ -307,7 +307,7 @@ Vulkan {
     %if platform == "win32":
     UsePresentSrcLayoutTransitionAsAFrameBoundary                 False     ; Offscreen applications workaround
     %endif
-    RenderDocCompatibility                                        True      ; supress extensions not supported by RenderDoc: VK_EXT_graphics_pipeline_library, VK_EXT_extended_dynamic_state3, VK_EXT_external_memory_host
+    RenderDocCompatibility                                        True      ; supress extensions not supported by RenderDoc: VK_EXT_graphics_pipeline_library, VK_EXT_extended_dynamic_state3, VK_EXT_external_memory_host, VK_KHR_map_memory2
   }
 
   Performance {
