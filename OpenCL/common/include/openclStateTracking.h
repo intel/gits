@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "exception.h"
+#include "oclFunction.h"
 #include "openclArguments.h"
 #include "openclDrivers.h"
 #include "openclStateDynamic.h"
@@ -352,6 +354,9 @@ inline void clCreateProgramWithBinary_SD(CFunction* token,
     programState->Retain();
     if (token != nullptr) {
       auto& cBinaryArray = dynamic_cast<CBinariesArray_V1&>(token->Argument(4U));
+      if (cBinaryArray.FileNames().empty()) {
+        throw EOperationFailed(EXCEPTION_MESSAGE);
+      }
       programState->fileName = cBinaryArray.FileNames()[0];
     }
   }

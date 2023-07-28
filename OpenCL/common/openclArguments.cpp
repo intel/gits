@@ -438,8 +438,17 @@ gits::OpenCL::CBinariesArray_V1::CBinariesArray_V1(const cl_uint& count,
 
 std::vector<std::string> gits::OpenCL::CBinariesArray_V1::FileNames() const {
   std::vector<std::string> fileNames;
-  for (const auto& binary : _binaries) {
-    fileNames.push_back(binary->FileName());
+  if (_linkMode == ProgramBinaryLink::program) {
+    auto program = _programOriginal;
+    if (Config::IsPlayer()) {
+      program = Ccl_program::GetMapping(_programOriginal);
+    }
+    const auto fileName = SD().GetProgramState(program, EXCEPTION_MESSAGE).fileName;
+    fileNames.push_back(fileName);
+  } else {
+    for (const auto& binary : _binaries) {
+      fileNames.push_back(binary->FileName());
+    }
   }
   return fileNames;
 }

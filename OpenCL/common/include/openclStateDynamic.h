@@ -195,7 +195,6 @@ public:
   void GetProgramInfoBinarySizes(size_t size, void* value);
   void GetProgramInfoNumDevices(cl_uint num_devices);
   void GetProgramInfoBinaries(const size_t& size, void* value);
-  void SetProgramBinaryHash(const std::vector<uint64_t>& hash);
   std::vector<uint64_t> GetBinaryHash() const;
 
   const cl_context Context() const;

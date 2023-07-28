@@ -448,10 +448,6 @@ void CCLProgramState::SetBuildOptions(const std::string& options) {
   _buildOptions = options;
 }
 
-void CCLProgramState::SetProgramBinaryHash(const std::vector<uint64_t>& hash) {
-  _binaryHash = hash;
-}
-
 std::vector<uint64_t> CCLProgramState::GetBinaryHash() const {
   return _binaryHash;
 }
