@@ -86,7 +86,7 @@ CFunction* CreateProgramToken(cl_program stateInstance, CCLProgramState program)
                                            program.Sources(), program.SourceLengths(), nullptr);
   } else if (program.BinariesCount() > 0) {
     if (!program.IsIL()) {
-      token = new CclCreateProgramWithBinary(
+      token = new CclCreateProgramWithBinary_V1(
           stateInstance, program.Context(), program.DevicesCount(), program.DeviceList(),
           program.BinarySizes(), program.Binaries(), nullptr, nullptr);
     } else {
