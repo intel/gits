@@ -105,6 +105,8 @@ CGits::CGits(uint16_t v0, uint16_t v1, uint16_t v2, uint16_t v3)
       _ccodePreRecord(false),
       _ccodeStateRestore(false),
       _sc(nullptr),
+      _currentLocalMemoryUsage(0),
+      _maxLocalMemoryUsage(0),
       traceGLAPIBypass(false) {
   _ptrToOrderedId[nullptr] = 0;
 }
@@ -161,6 +163,21 @@ CGits::~CGits() {
       }
     }
   }
+}
+
+void CGits::AddLocalMemoryUsage(const size_t& size) {
+  _currentLocalMemoryUsage += size;
+  if (_currentLocalMemoryUsage > _maxLocalMemoryUsage) {
+    _maxLocalMemoryUsage = _currentLocalMemoryUsage;
+  }
+}
+
+void CGits::SubtractLocalMemoryUsage(const size_t& size) {
+  _currentLocalMemoryUsage -= size;
+}
+
+size_t CGits::GetMaxLocalMemoryUsage() const {
+  return _maxLocalMemoryUsage;
 }
 
 zipFile CGits::OpenZipFileGLPrograms() {

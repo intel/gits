@@ -110,7 +110,9 @@ CAllocState::CAllocState(ze_context_handle_t hContext,
       size(size),
       alignment(alignment),
       hDevice(hDevice),
-      memType(UnifiedMemoryType::shared) {}
+      memType(UnifiedMemoryType::shared) {
+  CGits::Instance().AddLocalMemoryUsage(size);
+}
 
 CAllocState::CAllocState(ze_context_handle_t hContext,
                          ze_device_mem_alloc_desc_t device_desc,
@@ -121,7 +123,9 @@ CAllocState::CAllocState(ze_context_handle_t hContext,
       device_desc(device_desc),
       size(size),
       alignment(alignment),
-      hDevice(hDevice) {}
+      hDevice(hDevice) {
+  CGits::Instance().AddLocalMemoryUsage(size);
+}
 
 CAllocState::CAllocState(ze_module_handle_t hModule,
                          const char* ptrName,
@@ -131,7 +135,9 @@ CAllocState::CAllocState(ze_module_handle_t hModule,
       name(std::string(ptrName)),
       size(size),
       memType(UnifiedMemoryType::device),
-      allocType(allocType) {}
+      allocType(allocType) {
+  CGits::Instance().AddLocalMemoryUsage(size);
+}
 
 CAllocState::CAllocState(ze_context_handle_t hContext,
                          ze_host_mem_alloc_desc_t host_desc,
@@ -142,6 +148,12 @@ CAllocState::CAllocState(ze_context_handle_t hContext,
       size(size),
       alignment(alignment),
       memType(UnifiedMemoryType::host) {}
+
+CAllocState::~CAllocState() {
+  if (memType == UnifiedMemoryType::device || memType == UnifiedMemoryType::shared) {
+    CGits::Instance().SubtractLocalMemoryUsage(size);
+  }
+}
 
 CKernelState::CKernelState(ze_module_handle_t hModule, const ze_kernel_desc_t* kernelDesc)
     : hModule(hModule) {
@@ -205,7 +217,13 @@ CCommandListState::CCommandListState(ze_context_handle_t hContext,
 CImageState::CImageState(ze_context_handle_t hContext,
                          ze_device_handle_t hDevice,
                          ze_image_desc_t desc)
-    : hContext(hContext), hDevice(hDevice), desc(desc) {}
+    : hContext(hContext), hDevice(hDevice), desc(desc) {
+  CGits::Instance().AddLocalMemoryUsage(CalculateImageSize(desc));
+}
+
+CImageState::~CImageState() {
+  CGits::Instance().SubtractLocalMemoryUsage(CalculateImageSize(desc));
+}
 
 CCommandQueueState::CCommandQueueState(ze_context_handle_t hContext,
                                        ze_device_handle_t hDevice,

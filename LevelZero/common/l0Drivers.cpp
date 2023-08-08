@@ -11,6 +11,10 @@
 #include "config.h"
 #include "gits.h"
 
+#ifndef BUILD_FOR_CCODE
+#include "l0ApisIface.h"
+#endif
+
 #include <string>
 
 DISABLE_WARNINGS
@@ -232,6 +236,9 @@ void CDriver::Initialize() {
   }
   std::string path = gits::Config::Get().common.libL0.string();
   Log(INFO) << "Initializing LevelZero API";
+#ifndef BUILD_FOR_CCODE
+  gits::CGits::Instance().apis.UseApiComputeIface(std::make_shared<Api>());
+#endif
   if (OpenLibrary(path)) {
     return;
   }

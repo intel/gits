@@ -107,6 +107,7 @@ void gits::CRecorder::Dispose() {
   if (gits::CGits::Instance().apis.HasCompute()) {
     const auto& computeIface = gits::CGits::Instance().apis.IfaceCompute();
     computeIface.MemorySnifferUninstall();
+    computeIface.PrintMaxLocalMemoryUsage();
   }
   CGits::Instance().Dispose();
 }

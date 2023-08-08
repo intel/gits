@@ -87,6 +87,7 @@ public:
               const char* ptrName,
               size_t size,
               AllocStateType allocType);
+  ~CAllocState();
 };
 
 struct ArgInfo {
@@ -174,6 +175,7 @@ struct CImageState : public CState {
 public:
   CImageState() = default;
   CImageState(ze_context_handle_t hContext, ze_device_handle_t hDevice, ze_image_desc_t desc);
+  ~CImageState();
 };
 
 struct CCommandQueueState : public CState {

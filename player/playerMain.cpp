@@ -261,6 +261,10 @@ int MainBody(int argc, char* argv[]) {
     Log(INFO, NO_PREFIX) << "Played back in: " << (playbackTime - loadingTime) / 1e6 << "ms";
     Log(INFO, NO_PREFIX) << "Total runtime: " << programTime / 1e6 << "ms";
 
+    if (gits::CGits::Instance().apis.HasCompute()) {
+      gits::CGits::Instance().apis.IfaceCompute().PrintMaxLocalMemoryUsage();
+    }
+
     // Writes performance results to .csv file
     if (cfg.player.benchmark) {
       bfs::path outBench =

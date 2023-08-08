@@ -99,8 +99,7 @@ inline void clCreateBufferWithPropertiesINTEL_SD(cl_mem return_value,
                                                  cl_int* errcode_ret) {
   if (ErrCodeSuccess(errcode_ret)) {
     auto& memState = SD()._memStates[return_value];
-    memState.reset(new CCLMemState(context, properties, size, host_ptr));
-    memState->flags = flags;
+    memState.reset(new CCLMemState(context, flags, properties, size, host_ptr));
     memState->Retain();
     if (host_ptr &&
         ((properties != nullptr && FlagUseHostPtr(GetPropertyVal(properties, CL_MEM_FLAGS))) ||

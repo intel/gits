@@ -14,6 +14,7 @@
  */
 
 #include "apis_iface.h"
+#include "gits.h"
 #include "MemorySniffer.h"
 
 namespace gits {
@@ -78,5 +79,10 @@ void ApisIface::ApiCompute::EnableMemorySnifferForPointer(void* ptr,
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   MemorySnifferProtect(handle);
+}
+
+void ApisIface::ApiCompute::PrintMaxLocalMemoryUsage() const {
+  const auto maxLocalMemoryUsage = CGits::Instance().GetMaxLocalMemoryUsage();
+  Log(INFO, NO_PREFIX) << "Maximum local memory usage: " << maxLocalMemoryUsage << " bytes";
 }
 } // namespace gits

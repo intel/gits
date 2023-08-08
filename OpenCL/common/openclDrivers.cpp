@@ -18,6 +18,7 @@
 #include "openclArgumentsAuto.h"
 #include "openclTools.h"
 #include "lua_bindings.h"
+#include "opencl_apis_iface.h"
 
 #include <tuple>
 #include <type_traits>
@@ -272,6 +273,9 @@ void COclDriver::Initialize() {
     Log(ERR) << dl::last_error();
   }
   _initialized = true;
+#ifndef BUILD_FOR_CCODE
+  CGits::Instance().apis.UseApiComputeIface(std::make_shared<OpenCL::OpenCLApi>());
+#endif
 }
 
 static bool bypass_luascript;

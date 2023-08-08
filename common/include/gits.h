@@ -178,6 +178,9 @@ private:
   StreamingContext* _sc;
   TimerSet _timers;
 
+  uint64_t _currentLocalMemoryUsage;
+  uint64_t _maxLocalMemoryUsage;
+
   std::unordered_map<void*, uint64_t> _ptrToOrderedId;
 
   CGits();
@@ -314,6 +317,10 @@ public:
   bool IsCCodeStateRestore() {
     return _ccodeStateRestore;
   }
+
+  void AddLocalMemoryUsage(const size_t& size);
+  void SubtractLocalMemoryUsage(const size_t& size);
+  size_t GetMaxLocalMemoryUsage() const;
 
   zipFile OpenZipFileGLPrograms();
   void CloseZipFileGLPrograms();

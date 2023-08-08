@@ -309,6 +309,7 @@ public:
   CCLMemState();
   CCLMemState(cl_context context, cl_mem_flags flags, size_t size, void* host_ptr = nullptr);
   CCLMemState(cl_context context,
+              cl_mem_flags flags,
               cl_mem_properties_intel* props,
               size_t size,
               void* host_ptr = nullptr);
@@ -333,6 +334,7 @@ public:
               cl_uint pipe_packet_size,
               cl_uint pipe_max_packets,
               const cl_pipe_properties* properties);
+  ~CCLMemState();
 };
 
 struct CCLSVMAllocState : public CCLState {
@@ -345,6 +347,7 @@ struct CCLSVMAllocState : public CCLState {
   std::map<size_t, bool> indirectPointersOffsets;
 
   CCLSVMAllocState(cl_context context, cl_svm_mem_flags flags, size_t size, cl_uint alignment);
+  ~CCLSVMAllocState();
 };
 
 struct CCLUSMAllocState : public CCLState {
@@ -378,6 +381,7 @@ struct CCLUSMAllocState : public CCLState {
                    UnifiedMemoryType type,
                    cl_program program,
                    const char* global_variable_name);
+  ~CCLUSMAllocState();
 };
 
 struct CCLMappedBufferState : public CCLState {

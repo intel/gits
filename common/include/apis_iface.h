@@ -188,6 +188,7 @@ public:
     virtual bool IsMemorySnifferInstalled() const {
       return MemorySniffer::Get().IsInstalled();
     }
+    virtual void PrintMaxLocalMemoryUsage() const;
   };
 
 private:

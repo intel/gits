@@ -493,14 +493,16 @@ CCLMemState::CCLMemState(cl_context context, cl_mem_flags flags, size_t size, vo
       pipe_packet_size(0),
       pipe_max_packets(0) {
   index = ++count();
+  CGits::Instance().AddLocalMemoryUsage(size);
 }
 
 CCLMemState::CCLMemState(cl_context context,
+                         cl_mem_flags flags,
                          cl_mem_properties_intel* props,
                          size_t size,
                          void* host_ptr)
     : context(context),
-      flags(0),
+      flags(flags),
       intel_mem_properties(props, props + GetNullTermArraySize(props, 2) + 1),
       size(size),
       buffer(true),
@@ -509,6 +511,7 @@ CCLMemState::CCLMemState(cl_context context,
       pipe_packet_size(0),
       pipe_max_packets(0) {
   index = ++count();
+  CGits::Instance().AddLocalMemoryUsage(size);
 }
 
 CCLMemState::CCLMemState(cl_context context,
@@ -528,6 +531,7 @@ CCLMemState::CCLMemState(cl_context context,
   index = ++count();
   this->image_format = *image_format;
   this->image_desc = *image_desc;
+  CGits::Instance().AddLocalMemoryUsage(size);
 }
 
 CCLMemState::CCLMemState(cl_context context,
@@ -548,6 +552,7 @@ CCLMemState::CCLMemState(cl_context context,
   index = ++count();
   this->image_format = *image_format;
   this->image_desc = *image_desc;
+  CGits::Instance().AddLocalMemoryUsage(size);
 }
 
 CCLMemState::CCLMemState(cl_mem buffer,
@@ -562,6 +567,7 @@ CCLMemState::CCLMemState(cl_mem buffer,
       image(false),
       pipe(false) {
   index = ++count();
+  CGits::Instance().AddLocalMemoryUsage(size);
   if (buffer_create_type == CL_BUFFER_CREATE_TYPE_REGION) {
     const cl_buffer_region* region = static_cast<const cl_buffer_region*>(buffer_create_info);
     size = region->size;
@@ -576,12 +582,14 @@ CCLMemState::CCLMemState(cl_context context,
                          const cl_pipe_properties* properties)
     : context(context),
       flags(flags),
+      size(pipe_packet_size * pipe_max_packets),
       buffer(false),
       image(false),
       pipe(true),
       pipe_packet_size(pipe_packet_size),
       pipe_max_packets(pipe_max_packets) {
   index = ++count();
+  CGits::Instance().AddLocalMemoryUsage(size);
   if (properties) {
     for (size_t i = 0; properties[i] != 0; i += 2) {
       this->pipe_properties.push_back(properties[i]);
@@ -589,6 +597,10 @@ CCLMemState::CCLMemState(cl_context context,
     }
   }
   this->pipe_properties.push_back(0);
+}
+
+CCLMemState::~CCLMemState() {
+  CGits::Instance().SubtractLocalMemoryUsage(size);
 }
 
 CCLSVMAllocState::CCLSVMAllocState(cl_context context,
@@ -599,7 +611,17 @@ CCLSVMAllocState::CCLSVMAllocState(cl_context context,
       flags(flags),
       size(size),
       alignment(alignment),
-      sniffedRegionHandle(nullptr) {}
+      sniffedRegionHandle(nullptr) {
+  if (!(flags & CL_MEM_SVM_FINE_GRAIN_BUFFER)) {
+    CGits::Instance().AddLocalMemoryUsage(size);
+  }
+}
+
+CCLSVMAllocState::~CCLSVMAllocState() {
+  if (!(flags & CL_MEM_SVM_FINE_GRAIN_BUFFER)) {
+    CGits::Instance().SubtractLocalMemoryUsage(size);
+  }
+}
 
 CCLUSMAllocState::CCLUSMAllocState(cl_context context,
                                    cl_mem_properties_intel* properties,
@@ -607,6 +629,9 @@ CCLUSMAllocState::CCLUSMAllocState(cl_context context,
                                    cl_uint alignment,
                                    UnifiedMemoryType type)
     : context(context), size(size), alignment(alignment), type(type), sniffedRegionHandle(nullptr) {
+  if (type == UnifiedMemoryType::device || type == UnifiedMemoryType::shared) {
+    CGits::Instance().AddLocalMemoryUsage(size);
+  }
   if (properties) {
     for (size_t i = 0; properties[i] != 0; i += 2) {
       this->properties.push_back(properties[i]);
@@ -634,6 +659,12 @@ CCLUSMAllocState::CCLUSMAllocState(cl_device_id device,
     : CCLUSMAllocState(nullptr, device, nullptr, size, 0, type) {
   this->program = program;
   this->global_variable_name = global_variable_name;
+}
+
+CCLUSMAllocState::~CCLUSMAllocState() {
+  if (type == UnifiedMemoryType::device || type == UnifiedMemoryType::shared) {
+    CGits::Instance().SubtractLocalMemoryUsage(size);
+  }
 }
 
 CCLMappedBufferState::CCLMappedBufferState() : buffer(0) {}
