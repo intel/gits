@@ -80,6 +80,12 @@ inline void clCreateContext_RECWRAP(
   const cl_context_properties* props = properties;
   if (recorder.Running()) {
     if (props != nullptr) {
+      const auto opPlatform = ExtractPlatform(props);
+      const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
+      if (opPlatform.is_initialized() && opPlatform.get() == nullptr &&
+          !oclIFace.MemorySnifferInstall()) {
+        Log(WARN) << "Memory Sniffer installation failed";
+      }
       const auto& cfg = Config::Get();
       if (IsGLUnsharingEnabled(cfg)) {
         unsharingPropsVec = RemoveGLSharingContextProperties(props);
