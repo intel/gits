@@ -763,7 +763,7 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
           if (i == (*submitCount - 1)) { //last submit in QueueSubmit (restoring original fence)
             fenceNew = *fence;
           }
-          submitInfoNew = {VK_STRUCTURE_TYPE_SUBMIT_INFO,
+          submitInfoNew = {VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
                            submitInfoOrig.pNext,
                            submitInfoOrig.flags,
                            submitInfoOrig.waitSemaphoreInfoCount,
@@ -773,8 +773,15 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
                            submitInfoOrig.signalSemaphoreInfoCount,
                            submitInfoOrig.pSignalSemaphoreInfos};
         } else {
-          submitInfoNew = {VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0,      0, nullptr, 1,
-                           &cmdbufferSubmitInfo,          0,       nullptr};
+          submitInfoNew = {VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+                           nullptr,
+                           0,
+                           0,
+                           nullptr,
+                           1,
+                           &cmdbufferSubmitInfo,
+                           0,
+                           nullptr};
         }
         return_value.Assign(drvVk.vkQueueSubmit2(*queue, 1, &submitInfoNew, fenceNew));
         if (*return_value != VK_SUCCESS) {

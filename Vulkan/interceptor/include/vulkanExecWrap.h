@@ -195,9 +195,15 @@ VkResult recExecWrap_vkQueueSubmit2(VkQueue queue,
            cmdBufIndex++) {
         const VkCommandBufferSubmitInfo& cmdbufferSubmitInfo =
             submitInfoOrig.pCommandBufferInfos[cmdBufIndex];
-        VkSubmitInfo2 submitInfoNew = {
-            VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0,      0, nullptr, 1,
-            &cmdbufferSubmitInfo,          0,       nullptr};
+        VkSubmitInfo2 submitInfoNew = {VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+                                       nullptr,
+                                       0,
+                                       0,
+                                       nullptr,
+                                       1,
+                                       &cmdbufferSubmitInfo,
+                                       0,
+                                       nullptr};
         return_value = drvVk.vkQueueSubmit2(queue, 1, &submitInfoNew, VK_NULL_HANDLE);
         CGitsPluginVulkan::RecorderWrapper().dumpScreenshot(
             queue, cmdbufferSubmitInfo.commandBuffer, i, cmdBufIndex);
