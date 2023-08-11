@@ -105,6 +105,9 @@ void CommandListCountUp(CGits& gitsInstance);
 void CommandQueueExecCountUp(CGits& gitsInstance);
 void KernelCountUp(CGits& gitsInstance);
 bool IsDumpOnlyLayoutEnabled(const Config& cfg);
-
+void DumpQueueSubmit(const Config& cfg,
+                     CStateDynamic& sd,
+                     const ze_command_queue_handle_t& hCommandQueue,
+                     const CDriver& driver);
 } // namespace l0
 } // namespace gits

@@ -3120,13 +3120,13 @@ arg7=ArgDef(name='numWaitEvents',type='uint32_t',tag='in',optional=True),
 arg8=ArgDef(name='phWaitEvents',type='ze_event_handle_t*',tag='in',range='0,numWaitEvents',optional=True),
 )
 
-Function(name='zeCommandListAppendSignalEvent',component='ze_command_list',enabled=True,ddi_pos=18,
+Function(name='zeCommandListAppendSignalEvent',component='ze_command_list',enabled=True,ddi_pos=18,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='hEvent',type='ze_event_handle_t',tag='in'),
 )
 
-Function(name='zeCommandListAppendWaitOnEvents',component='ze_command_list',enabled=True,ddi_pos=19,
+Function(name='zeCommandListAppendWaitOnEvents',component='ze_command_list',enabled=True,ddi_pos=19,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='numEvents',type='uint32_t',tag='in'),
@@ -3200,7 +3200,7 @@ arg3=ArgDef(name='phCommandLists',type='ze_command_list_handle_t*',tag='in',rang
 arg4=ArgDef(name='hFence',type='ze_fence_handle_t',tag='in',optional=True),
 )
 
-Function(name='zeCommandQueueSynchronize',component='ze_command_queue',enabled=True,ddi_pos=3,unprotectLogic=True,
+Function(name='zeCommandQueueSynchronize',component='ze_command_queue',enabled=True,ddi_pos=3,unprotectLogic=True,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandQueue',type='ze_command_queue_handle_t',tag='in'),
 arg2=ArgDef(name='timeout',type='uint64_t',tag='in'),
@@ -3605,7 +3605,7 @@ retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hFence',type='ze_fence_handle_t',tag='in',release=True),
 )
 
-Function(name='zeFenceHostSynchronize',component='ze_fence',enabled=True,ddi_pos=2,
+Function(name='zeFenceHostSynchronize',component='ze_fence',enabled=True,ddi_pos=2,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hFence',type='ze_fence_handle_t',tag='in'),
 arg2=ArgDef(name='timeout',type='uint64_t',tag='in'),

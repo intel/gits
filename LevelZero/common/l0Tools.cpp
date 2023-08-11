@@ -268,8 +268,10 @@ void DumpReadyArguments(std::vector<CKernelArgumentDump>& readyArgVector,
   const auto path = GetDumpPath(cfg);
   const auto captureImages = CaptureImages(cfg);
   const auto nullIndirectBuffers = IsNullIndirectPointersInBufferEnabled(cfg);
+  std::vector<CKernelArgumentDump> copyVector;
   for (auto& argState : readyArgVector) {
     if (argState.kernelNumber != kernelInfo.kernelNumber) {
+      copyVector.push_back(argState);
       continue;
     }
     sd.layoutBuilder.UpdateLayout(kernelState.desc.pKernelName, kernelState.hModule, kernelInfo,
@@ -296,7 +298,7 @@ void DumpReadyArguments(std::vector<CKernelArgumentDump>& readyArgVector,
       SaveImage(path, argState.buffer.data(), argState.imageDesc, name);
     }
   }
-  readyArgVector.clear();
+  readyArgVector = copyVector;
 }
 
 const bfs::path& GetDumpPath(const Config& cfg) {
@@ -622,5 +624,52 @@ bool IsDumpOnlyLayoutEnabled(const Config& cfg) {
   return cfg.IsPlayer() && cfg.player.l0DumpLayoutOnly;
 }
 
+void DumpQueueSubmit(const Config& cfg,
+                     CStateDynamic& sd,
+                     const ze_command_queue_handle_t& hCommandQueue,
+                     const CDriver& driver) {
+  auto& cqState = sd.Get<CCommandQueueState>(hCommandQueue, EXCEPTION_MESSAGE);
+  ze_command_list_handle_t tmpList = nullptr;
+  ze_result_t err = ZE_RESULT_ERROR_UNINITIALIZED;
+  for (const auto& cmdListInfoPair : cqState.cmdListDumpState) {
+    for (const auto& cmdList : cmdListInfoPair.second) {
+      const auto& cmdListState = sd.Get<CCommandListState>(cmdList, EXCEPTION_MESSAGE);
+      if (CaptureAfterSubmit(cfg) && !cmdListState.isImmediate &&
+          CheckWhetherDumpQueueSubmit(cfg, cqState.cmdQueueNumber)) {
+        for (const auto& kernelInfo : cmdListState.appendedKernels) {
+          CheckWhetherDumpKernel(kernelInfo.kernelNumber, cmdListState.cmdListNumber);
+          if (!tmpList) {
+            tmpList = GetCommandListImmediate(sd, drv, cmdListState.hContext, &err);
+          }
+          auto& readyArgVec = sd.Map<CKernelArgumentDump>()[tmpList];
+          PrepareArguments(kernelInfo, readyArgVec, true);
+          if (!IsDumpOnlyLayoutEnabled(cfg)) {
+            InjectReadsForArguments(readyArgVec, tmpList, false, nullptr, nullptr);
+          }
+          const auto& kernelState = sd.Get<CKernelState>(kernelInfo.handle, EXCEPTION_MESSAGE);
+          DumpReadyArguments(readyArgVec, cqState.cmdQueueNumber, cmdListState.cmdListNumber, cfg,
+                             sd, kernelInfo, kernelState);
+        }
+        if (tmpList) {
+          sd.Release<CKernelArgumentDump>(tmpList);
+        }
+      }
+      if (sd.Exists<CKernelArgumentDump>(cmdList)) {
+        if (CheckWhetherDumpQueueSubmit(cfg, cmdListInfoPair.first)) {
+          for (auto& kernelInfo : cmdListState.appendedKernels) {
+            const auto& kernelState = sd.Get<CKernelState>(kernelInfo.handle, EXCEPTION_MESSAGE);
+            DumpReadyArguments(sd.Map<CKernelArgumentDump>()[cmdList], cmdListInfoPair.first,
+                               cmdListState.cmdListNumber, cfg, sd, kernelInfo, kernelState);
+          }
+        }
+        sd.Release<CKernelArgumentDump>(cmdList);
+      }
+    }
+  }
+  if (err == ZE_RESULT_SUCCESS) {
+    driver.inject.zeCommandListDestroy(tmpList);
+  }
+  cqState.cmdListDumpState.clear();
+}
 } // namespace l0
 } // namespace gits

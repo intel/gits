@@ -153,6 +153,7 @@ struct CCommandListState : public CState {
   std::vector<CKernelExecutionInfo> appendedKernels;
   uint32_t cmdListNumber = 0U;
   uint32_t cmdQueueNumber = 0U;
+  bool containEventDependencies = false;
 
 public:
   CCommandListState() = default;
@@ -186,6 +187,7 @@ struct CCommandQueueState : public CState {
   ze_command_queue_desc_t desc = {};
   bool isSync = false;
   uint32_t cmdQueueNumber = 0U;
+  std::unordered_map<uint32_t, std::set<ze_command_list_handle_t>> cmdListDumpState;
 
 public:
   CCommandQueueState() = default;
