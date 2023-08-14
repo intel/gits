@@ -84,6 +84,10 @@ void UpdateOriginalQueueGroupProperties(CDeviceState& deviceState,
     uint32_t numGroupProperties = 0U;
     drv.inject.zeDeviceGetCommandQueueGroupProperties(hDevice, &numGroupProperties, nullptr);
     groupProperties.resize(numGroupProperties);
+    for (auto& property : groupProperties) {
+      property.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_GROUP_PROPERTIES;
+      property.pNext = nullptr;
+    }
     const auto result = drv.inject.zeDeviceGetCommandQueueGroupProperties(
         hDevice, &numGroupProperties, groupProperties.data());
     if (result != ZE_RESULT_SUCCESS) {

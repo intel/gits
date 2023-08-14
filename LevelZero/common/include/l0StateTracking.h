@@ -697,8 +697,10 @@ inline void zeDeviceGetCommandQueueGroupProperties_SD(
   if (return_value == ZE_RESULT_SUCCESS && pCommandQueueGroupProperties != nullptr &&
       pCount != nullptr) {
     auto& deviceState = SD().Get<CDeviceState>(hDevice, EXCEPTION_MESSAGE);
-    deviceState.cqGroupProperties.assign(pCommandQueueGroupProperties,
-                                         pCommandQueueGroupProperties + *pCount);
+    deviceState.cqGroupProperties.clear();
+    for (auto i = 0U; i < *pCount; i++) {
+      deviceState.cqGroupProperties.push_back(pCommandQueueGroupProperties[i]);
+    }
   }
 }
 
