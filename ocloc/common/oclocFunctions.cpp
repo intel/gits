@@ -77,7 +77,11 @@ void CoclocInvoke::Run() {
   for (unsigned int i = 0; i < *_argc; i++) {
     arguments.push_back(argV[i]);
     if (std::string(argV[i]) == "-options" && i + 1 < *_argc) {
-      arguments.push_back(std::string(argV[++i]) + " -I" + Config::Get().common.streamDir.string() +
+      std::string argument = std::string(argV[++i]);
+#ifdef GITS_PLATFORM_WINDOWS
+      std::replace(argument.begin(), argument.end(), '\'', '"');
+#endif
+      arguments.push_back(argument + " -I" + Config::Get().common.streamDir.string() +
                           "/gitsFiles");
     }
 #ifdef WITH_LEVELZERO
@@ -178,7 +182,11 @@ void CoclocInvoke_V1::Run() {
   for (uint32_t i = 0U; i < *_argc; i++) {
     arguments.push_back(argV[i]);
     if (std::string(argV[i]) == "-options" && i + 1 < *_argc) {
-      arguments.push_back(std::string(argV[++i]) + " -I" + Config::Get().common.streamDir.string() +
+      std::string argument = std::string(argV[++i]);
+#ifdef GITS_PLATFORM_WINDOWS
+      std::replace(argument.begin(), argument.end(), '\'', '"');
+#endif
+      arguments.push_back(argument + " -I" + Config::Get().common.streamDir.string() +
                           "/gitsFiles");
     }
 #ifdef WITH_LEVELZERO
