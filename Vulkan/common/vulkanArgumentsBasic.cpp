@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "vulkanArgumentsAuto.h"
-#include "vulkanStateDynamic.h"
+#include "vulkanTools.h"
 #include "vulkanLog.h"
 
 template <>

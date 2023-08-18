@@ -186,5 +186,136 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ScheduleRenderPass(
   }
   _tokensList.clear();
 }
+
+#ifndef BUILD_FOR_CCODE
+// Code borrowed from development team's Piotr Horodecki
+bool MemoryAliasingTracker::Range::operator()(Range const& lRange, Range const& rRange) const {
+  return lRange.offset < rRange.offset;
+}
+
+MemoryAliasingTracker::RangeSetType::iterator MemoryAliasingTracker::GetRange(uint64_t offset) {
+  // Get an iterator to the first offset greater than given offset
+  auto iterator = MemoryRanges.upper_bound({offset, 0, {}});
+  // Decrement to obtain an iterator to the range which includes given offset
+  iterator--;
+  return iterator;
+}
+
+void MemoryAliasingTracker::SplitRange(uint64_t offset) {
+  auto existingRangeIterator = GetRange(offset);
+  if (existingRangeIterator->offset < offset) {
+    // Create two new ranges: left range and right range by cutting existing range at offset
+    Range leftRange = {existingRangeIterator->offset, offset - existingRangeIterator->offset,
+                       existingRangeIterator->resources};
+    Range rightRange = {offset, existingRangeIterator->size - leftRange.size, leftRange.resources};
+    assert(leftRange.size > 0);
+    assert(rightRange.size > 0);
+    // Remove existing range
+    MemoryRanges.erase(existingRangeIterator);
+    // Insert two new ranges
+    MemoryRanges.insert(leftRange);
+    MemoryRanges.insert(rightRange);
+  }
+}
+
+void MemoryAliasingTracker::AddResource(uint64_t offset,
+                                        uint64_t size,
+                                        std::pair<uint64_t, bool> const& resource) {
+  // Split range if needed on the resource beginning.
+  SplitRange(offset);
+
+  // Split range if needed on the resource end.
+  SplitRange(offset + size);
+
+  auto beginIterator = GetRange(offset);
+  auto endIterator = GetRange(offset + size);
+
+  // Update counters in ranges occupied by the resource.
+  for (auto i = beginIterator; i->offset < endIterator->offset; i++) {
+    i->resources.insert(resource);
+  }
+}
+
+void MemoryAliasingTracker::RemoveResource(uint64_t offset,
+                                           uint64_t size,
+                                           std::pair<uint64_t, bool> const& resource) {
+  auto beginIterator = GetRange(offset);
+  auto endIterator = GetRange(offset + size);
+
+  // Update counters in ranges occupied by the resource.
+  for (auto i = beginIterator; i->offset < endIterator->offset; i++) {
+    i->resources.erase(resource);
+  }
+
+  for (auto current = beginIterator; current->offset < endIterator->offset;) {
+    auto next = current;
+    next++;
+
+    if ((next->offset < endIterator->offset) && (current->resources == next->resources)) {
+      Range newRange = {current->offset, current->size + next->size, current->resources};
+      MemoryRanges.erase(current);
+      MemoryRanges.erase(next);
+      MemoryRanges.insert(newRange);
+
+      beginIterator = GetRange(offset);
+      endIterator = GetRange(offset + size);
+      current = beginIterator;
+    } else {
+      current++;
+    }
+  }
+}
+
+std::set<std::pair<uint64_t, bool>> MemoryAliasingTracker::GetAliasedResourcesForResource(
+    uint64_t offset, uint64_t size, std::pair<uint64_t, bool> const& resource) {
+  std::set<std::pair<uint64_t, bool>> aliasedResources;
+
+  auto beginIterator = GetRange(offset);
+  auto endIterator = GetRange(offset + size);
+
+  for (auto i = beginIterator; i->offset < endIterator->offset; ++i) {
+    aliasedResources.insert(i->resources.begin(), i->resources.end());
+  }
+
+  aliasedResources.erase(resource);
+
+  return aliasedResources;
+}
+
+MemoryAliasingTracker::MemoryAliasingTracker(uint64_t size) {
+  // Add whole device memory range.
+  MemoryRanges.insert({0, size, {}});
+  // Add "after whole device memory empty range" (fake) with offset == size of
+  // vkDeviceMemory and size == 0. This allows to use SplitRange() method in
+  // case of splitting range at the end of adding resource.
+  MemoryRanges.insert({size, 0, {}});
+}
+
+void MemoryAliasingTracker::AddImage(uint64_t offset, uint64_t size, VkImage image) {
+  AddResource(offset, size, {(uint64_t)image, true});
+}
+
+void MemoryAliasingTracker::AddBuffer(uint64_t offset, uint64_t size, VkBuffer buffer) {
+  AddResource(offset, size, {(uint64_t)buffer, false});
+}
+
+void MemoryAliasingTracker::RemoveImage(uint64_t offset, uint64_t size, VkImage image) {
+  RemoveResource(offset, size, {(uint64_t)image, true});
+}
+
+void MemoryAliasingTracker::RemoveBuffer(uint64_t offset, uint64_t size, VkBuffer buffer) {
+  RemoveResource(offset, size, {(uint64_t)buffer, false});
+}
+
+std::set<std::pair<uint64_t, bool>> MemoryAliasingTracker::GetAliasedResourcesForImage(
+    uint64_t offset, uint64_t size, VkImage image) {
+  return GetAliasedResourcesForResource(offset, size, {(uint64_t)image, true});
+}
+
+std::set<std::pair<uint64_t, bool>> MemoryAliasingTracker::GetAliasedResourcesForBuffer(
+    uint64_t offset, uint64_t size, VkBuffer buffer) {
+  return GetAliasedResourcesForResource(offset, size, {(uint64_t)buffer, false});
+}
+#endif
 } //namespace Vulkan
 } //namespace gits

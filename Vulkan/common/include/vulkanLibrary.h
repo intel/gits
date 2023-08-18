@@ -64,5 +64,44 @@ public:
                             const BitRange& renderPassRange);
   };
 };
+
+#ifndef BUILD_FOR_CCODE
+// Kudos to Piotr Horodecki
+class MemoryAliasingTracker {
+  struct Range {
+    uint64_t offset;
+    uint64_t size;
+
+    mutable std::set<std::pair<uint64_t, bool>> resources;
+
+    // We make this struct a functor, so it can be used as a comparator.
+    bool operator()(Range const& lRange, Range const& rRange) const;
+  };
+
+  // The set contains Ranges and uses Range->operator() to compare them.
+  using RangeSetType = std::set<Range, Range>;
+  RangeSetType MemoryRanges;
+
+  RangeSetType::iterator GetRange(uint64_t offset);
+  void SplitRange(uint64_t offset);
+  void AddResource(uint64_t offset, uint64_t size, std::pair<uint64_t, bool> const& resource);
+  void RemoveResource(uint64_t offset, uint64_t size, std::pair<uint64_t, bool> const& resource);
+  std::set<std::pair<uint64_t, bool>> GetAliasedResourcesForResource(
+      uint64_t offset, uint64_t size, std::pair<uint64_t, bool> const& resource);
+
+public:
+  MemoryAliasingTracker(uint64_t size);
+  void AddImage(uint64_t offset, uint64_t size, VkImage image);
+  void AddBuffer(uint64_t offset, uint64_t size, VkBuffer buffer);
+  void RemoveImage(uint64_t offset, uint64_t size, VkImage image);
+  void RemoveBuffer(uint64_t offset, uint64_t size, VkBuffer buffer);
+  std::set<std::pair<uint64_t, bool>> GetAliasedResourcesForImage(uint64_t offset,
+                                                                  uint64_t size,
+                                                                  VkImage image);
+  std::set<std::pair<uint64_t, bool>> GetAliasedResourcesForBuffer(uint64_t offset,
+                                                                   uint64_t size,
+                                                                   VkBuffer buffer);
+};
+#endif
 } // namespace Vulkan
 } // namespace gits

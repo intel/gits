@@ -11,6 +11,7 @@
 #include "vulkanTools_lite.h"
 #include "texture_converter.h"
 #ifndef BUILD_FOR_CCODE
+#include "vulkanStateDynamic.h"
 #include "vulkanArgumentsAuto.h"
 #include "vulkanStructStorageAuto.h"
 #include "config.h"
@@ -57,29 +58,6 @@ void writeResources(VkQueue queue,
                     uint32_t commandBufferBatchNumber,
                     uint32_t cmdBufferNumber);
 void writeBufferUtil(std::string fileName, VkQueue& queue, VkBuffer& sourceBuffer);
-typedef enum _VulkanResourceType {
-  VULKAN_NONE_RESOURCE,
-  //READ_WRITE
-  VULKAN_STORAGE_IMAGE,
-  VULKAN_STORAGE_BUFFER,
-  VULKAN_STORAGE_TEXEL_BUFFER,
-  VULKAN_STORAGE_BUFFER_DYNAMIC,
-  //READ_ONLY
-  VULKAN_SAMPLED_IMAGE,
-  VULKAN_UNIFORM_TEXEL_BUFFER,
-  VULKAN_UNIFORM_BUFFER,
-  VULKAN_UNIFORM_BUFFER_DYNAMIC,
-  VULKAN_INLINE_UNIFORM_BLOCK_EXT,
-  VULKAN_INPUT_ATTACHMENT,
-  VULKAN_ACCELARATION_STRUCTURE_KHR,
-  VULKAN_ACCELARATION_STRUCTURE_NV,
-  VULKAN_SAMPLER,
-  VULKAN_COMBINED_IMAGE_SAMPLER,
-  //WRITE
-  VULKAN_BLIT_DESTINATION_BUFFER,
-  VULKAN_BLIT_DESTINATION_IMAGE,
-  VULKAN_RESOLVE_IMAGE
-} VulkanResourceType;
 texel_type getTexelToConvertFromImageFormat(VkFormat format);
 void suppressPhysicalDeviceFeatures(std::vector<std::string> const& suppressFeatures,
                                     VkPhysicalDeviceFeatures* features);
@@ -166,43 +144,6 @@ void vulkanScheduleCopyRenderPasses(VkCommandBuffer cmdBuffer,
 
 void vulkanDumpRenderPasses(VkCommandBuffer commandBuffer);
 void vulkanDumpRenderPassResources(VkCommandBuffer cmdBuffer);
-
-// Kudos to Piotr Horodecki
-class MemoryAliasingTracker {
-  struct Range {
-    uint64_t offset;
-    uint64_t size;
-
-    mutable std::set<std::pair<uint64_t, bool>> resources;
-
-    // We make this struct a functor, so it can be used as a comparator.
-    bool operator()(Range const& lRange, Range const& rRange) const;
-  };
-
-  // The set contains Ranges and uses Range->operator() to compare them.
-  using RangeSetType = std::set<Range, Range>;
-  RangeSetType MemoryRanges;
-
-  RangeSetType::iterator GetRange(uint64_t offset);
-  void SplitRange(uint64_t offset);
-  void AddResource(uint64_t offset, uint64_t size, std::pair<uint64_t, bool> const& resource);
-  void RemoveResource(uint64_t offset, uint64_t size, std::pair<uint64_t, bool> const& resource);
-  std::set<std::pair<uint64_t, bool>> GetAliasedResourcesForResource(
-      uint64_t offset, uint64_t size, std::pair<uint64_t, bool> const& resource);
-
-public:
-  MemoryAliasingTracker(uint64_t size);
-  void AddImage(uint64_t offset, uint64_t size, VkImage image);
-  void AddBuffer(uint64_t offset, uint64_t size, VkBuffer buffer);
-  void RemoveImage(uint64_t offset, uint64_t size, VkImage image);
-  void RemoveBuffer(uint64_t offset, uint64_t size, VkBuffer buffer);
-  std::set<std::pair<uint64_t, bool>> GetAliasedResourcesForImage(uint64_t offset,
-                                                                  uint64_t size,
-                                                                  VkImage image);
-  std::set<std::pair<uint64_t, bool>> GetAliasedResourcesForBuffer(uint64_t offset,
-                                                                   uint64_t size,
-                                                                   VkBuffer buffer);
-};
 #endif
 
 } // namespace Vulkan
