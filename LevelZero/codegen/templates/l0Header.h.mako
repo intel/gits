@@ -70,6 +70,10 @@ typedef void(__zecall *ze_host_pfn_t)(
 typedef void* zet_core_callbacks_t;
 typedef void* zet_experimental_callbacks_t;
 typedef void* zel_core_callbacks_t;
+typedef uint8_t ze_rtas_builder_packed_input_data_format_exp_t;
+typedef uint8_t ze_rtas_builder_packed_geometry_exp_flags_t;
+typedef uint8_t ze_rtas_builder_packed_geometry_type_exp_t;
+typedef uint8_t ze_rtas_builder_packed_instance_exp_flags_t;
 
 %for name, enum in enums.items():
 enum ${enum.get('name')} {

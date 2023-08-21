@@ -155,11 +155,13 @@ ${func.get('type')} __zecall default_${func.get('name')}(
   drv.original.${func.get('name')} = drv.${func.get('name')};
   drv.${func.get('name')} = special_${func.get('name')};
   %else:
-  if (!load_l0_function(drv.${func.get('name')}, "${func.get('name')}")) {
-    L0Log(ERR) << "Could not load ${func.get('name')} function.";
-    return ZE_RESULT_ERROR_UNINITIALIZED;
+  if (drv.original.${func.get('name')} == nullptr) {
+    if (!load_l0_function(drv.${func.get('name')}, "${func.get('name')}")) {
+      L0Log(ERR) << "Could not load ${func.get('name')} function.";
+      return ZE_RESULT_ERROR_UNINITIALIZED;
+    }
+    drv.original.${func.get('name')} = drv.${func.get('name')};
   }
-  drv.original.${func.get('name')} = drv.${func.get('name')};
   if (ShouldLog(TRACE) || Config::Get().common.useEvents) {
     drv.${func.get('name')} = special_${func.get('name')};
   }
@@ -218,6 +220,7 @@ CDriver::CDriver() : initialized_(false), lib_(nullptr) {
 <% continue %>
   %endif
   drv.inject.${func.get('name')} = inject_${func.get('name')};
+  drv.original.${func.get('name')} = nullptr;
 %endfor
 #ifndef BUILD_FOR_CCODE
   CGits::Instance().RegisterLuaFunctionsRegistrator(RegisterLuaDriverFunctions);

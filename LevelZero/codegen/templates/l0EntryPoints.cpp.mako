@@ -31,7 +31,11 @@ VISIBLE ${func.get('type')} __zecall ${func.get('name')}(${make_params(func, wit
     switch(version) {
           %for var in value['vars']:
     case ${var['name']}: {
-${print_ddi_table(func, functions, var['name'])}      break;
+            %for function in get_ddi_table_functions(func, functions, var['name']):
+      driver.original.${function} = pDdiTable->${function};
+      pDdiTable->${function} = ${function};
+            %endfor
+      break;
     }
           %endfor
     default:

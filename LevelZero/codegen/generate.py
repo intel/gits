@@ -70,22 +70,22 @@ def sort_dditable(functions_to_group, functions):
     return dict(sorted(sorted_dditable.items(), key=lambda x:x[0])).values()
 
 
-def print_ddi_table(func, ddi_helper_functions, api_version:str):
-    ddi_struct_type = ''
-    for arg in func['args']:
-        if arg['name'] == 'pDdiTable':
-            ddi_struct_type = arg['type'].replace('*', '')
-    component = ddi_struct_type.replace('_dditable_t', '')
+def get_ddi_table_functions(func, ddi_helper_functions, api_version: str):
+    ddi_struct_type = ""
+    for arg in func["args"]:
+        if arg["name"] == "pDdiTable":
+            ddi_struct_type = arg["type"].replace("*", "")
+    component = ddi_struct_type.replace("_dditable_t", "")
     component_functions = set()
-    msg = ''
     for name, tmp_func in ddi_helper_functions.items():
         if not is_latest_version(ddi_helper_functions, tmp_func):
             continue
-        if tmp_func.get('component') == component and is_function_included(api_version, tmp_func.get('api_version', '0')):
-            component_functions.add(cut_version(name, tmp_func.get('version')))
-    for function in component_functions:
-        msg += f'      pDdiTable->{function} = {function};\n'
-    return msg
+        if tmp_func.get("component") == component and is_function_included(
+            api_version, tmp_func.get("api_version", "0")
+        ):
+            component_functions.add(cut_version(name, tmp_func.get("version")))
+    return component_functions
+
 
 def process(functions):
     # add implicit properties
@@ -222,7 +222,16 @@ def get_field_array_size(argument):
     return split_field_name(argument['name'])[1]
 
 def extract_type(type):
-    return type.replace('const ', '').replace('*', '').replace('ze_bool_t', 'uint8_t')
+    return (
+        type.replace("const ", "")
+        .replace("*", "")
+        .replace("ze_bool_t", "uint8_t")
+        .replace("ze_rtas_builder_packed_input_data_format_exp_t", "uint8_t")
+        .replace("ze_rtas_builder_packed_geometry_exp_flags_t", "uint8_t")
+        .replace("ze_rtas_builder_packed_geometry_type_exp_t", "uint8_t")
+        .replace("ze_rtas_builder_packed_instance_exp_flags_t", "uint8_t")
+    )
+
 
 def get_field_type(argument):
     type = argument['type']
@@ -267,7 +276,7 @@ def makoWrite(inpath, outpath, **args):
             get_object_versions=get_object_versions,
             get_namespace=get_namespace,
             cut_version=cut_version,
-            print_ddi_table=print_ddi_table,
+            get_ddi_table_functions=get_ddi_table_functions,
             sort_dditable=sort_dditable,
             **args)
         rendered = re.sub(r"\r\n", r"\n", rendered)

@@ -66,6 +66,12 @@ namespace gits {
       lua_setfield(L, pos, "${get_name(var['name'])}");
     %endfor
     }
+    inline void lua_setTableFields(lua_State* L, int pos, ${arg.get('name')}** val) {
+      if (val == nullptr) {
+        throw EOperationFailed(EXCEPTION_MESSAGE);
+      }
+      lua_setTableFields(L, pos, *val);
+    }
     template<>
     inline ${arg.get('name')} lua_to_ext(lua_State* L, int pos) {
       const auto type = lua_type(L, pos);
