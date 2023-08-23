@@ -15,6 +15,9 @@
 #include "l0StateDynamic.h"
 #include "l0Tools.h"
 #include "l0Drivers.h"
+#include "mockListExecutor.h"
+#include <unordered_map>
+#include <utility>
 
 namespace gits {
 namespace l0 {
@@ -81,6 +84,8 @@ inline void CommandListKernelInit(const ze_command_list_handle_t& commandList,
   auto& kernelState = SD().Get<CKernelState>(kernel, EXCEPTION_MESSAGE);
   auto& cmdListState = SD().Get<CCommandListState>(commandList, EXCEPTION_MESSAGE);
   kernelState.currentKernelInfo.handle = kernel;
+  kernelState.currentKernelInfo.hModule = kernelState.hModule;
+  kernelState.currentKernelInfo.pKernelName = std::string(kernelState.desc.pKernelName);
   kernelState.currentKernelInfo.kernelNumber = CGits::Instance().CurrentKernelCount();
   LogAppendKernel(kernelState.currentKernelInfo.kernelNumber, kernelState.desc.pKernelName);
   if (cmdListState.isImmediate) {
@@ -99,14 +104,14 @@ inline void InjectReadsForArguments(std::vector<CKernelArgumentDump>& readyArgVe
                                     ze_context_handle_t hContext,
                                     ze_event_handle_t hSignalEvent) {
   const auto eventHandle = CreateGitsEvent(hContext);
+  if (useBarrier && hSignalEvent == nullptr) {
+    drv.inject.zeCommandListAppendBarrier(cmdList, nullptr, 0, nullptr);
+  }
   for (auto& argDump : readyArgVec) {
     if (argDump.injected) {
       continue;
     }
     argDump.injected = true;
-    if (useBarrier && hSignalEvent == nullptr) {
-      drv.inject.zeCommandListAppendBarrier(cmdList, nullptr, 0, nullptr);
-    }
     if (argDump.argType == KernelArgType::buffer) {
       drv.inject.zeCommandListAppendMemoryCopy(
           cmdList, const_cast<char*>(argDump.buffer.data()), argDump.h_buf, argDump.buffer.size(),
@@ -143,13 +148,55 @@ inline void SaveKernelArguments(const ze_event_handle_t& hSignalEvent,
                             syncNeeded ? cmdListState.hContext : nullptr, hSignalEvent);
   }
 
-  if (cmdListState.isImmediate &&
-      CheckWhetherDumpQueueSubmit(Config::Get(), cmdListState.cmdQueueNumber)) {
+  if (cmdListState.isImmediate && CheckWhetherDumpQueueSubmit(cfg, cmdListState.cmdQueueNumber)) {
     DumpReadyArguments(readyArgVec, cmdListState.cmdQueueNumber, cmdListState.cmdListNumber, cfg,
-                       sd, kernelInfo, kernelState);
+                       sd, kernelInfo);
     sd.Release<CKernelArgumentDump>(hCommandList);
   }
 }
+
+bool CheckWhetherQueueCanBeSynced(const Config& cfg,
+                                  CStateDynamic& sd,
+                                  CDriver& driver,
+                                  const ze_command_queue_handle_t& hCommandQueue) {
+  std::vector<ze_command_list_handle_t> commandListsToSynchronize;
+  std::vector<ze_command_list_handle_t> submittedCommandList;
+  if (CaptureKernels(cfg)) {
+    const auto& cmdQueueState = sd.Get<CCommandQueueState>(hCommandQueue, EXCEPTION_MESSAGE);
+    for (const auto& queueSubmission : cmdQueueState.notSyncedSubmissions) {
+      commandListsToSynchronize.push_back(queueSubmission->hCommandList);
+    }
+    for (auto& otherCqState : sd.Map<CCommandQueueState>()) {
+      if (otherCqState.first != hCommandQueue) {
+        const auto& otherCmdQueueState =
+            sd.Get<CCommandQueueState>(otherCqState.first, EXCEPTION_MESSAGE);
+        for (const auto& queueSubmission : otherCmdQueueState.notSyncedSubmissions) {
+          submittedCommandList.push_back(queueSubmission->hCommandList);
+        }
+      }
+    }
+    auto mockListExecutor =
+        MockListExecutor(sd, driver, commandListsToSynchronize, submittedCommandList);
+    const auto isCommandQueueEligibleForSynchronization = mockListExecutor.Run();
+    if (!isCommandQueueEligibleForSynchronization) {
+      Log(WARN) << "Dumping kernels from command queue: " << ToStringHelper(hCommandQueue)
+                << " will be delayed to the original application synchronization due to "
+                   "not completable event dependencies";
+    }
+    return isCommandQueueEligibleForSynchronization;
+  }
+  return true;
+}
+
+void RegisterEvents(CStateDynamic& sd,
+                    const ze_command_list_handle_t& hCommandList,
+                    const ze_event_handle_t& signalEvent,
+                    const uint32_t& numWaitEvents,
+                    ze_event_handle_t* phWaitEvents) {
+  auto& cmdListState = sd.Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
+  cmdListState.AddAction(signalEvent, numWaitEvents, phWaitEvents);
+}
+
 } // namespace
 
 inline void zeMemAllocShared_SD(ze_result_t return_value,
@@ -228,23 +275,23 @@ inline void zeCommandListCreateImmediate_SD(ze_result_t return_value,
   }
 }
 inline void AppendLaunchKernel(ze_result_t return_value,
-                               ze_command_list_handle_t hCommandList,
-                               ze_kernel_handle_t hKernel,
+                               const ze_command_list_handle_t& hCommandList,
+                               const ze_kernel_handle_t& hKernel,
                                const ze_group_count_t* pLaunchFuncArgs,
-                               ze_event_handle_t hSignalEvent,
-                               uint32_t numWaitEvents,
+                               const ze_event_handle_t& hSignalEvent,
+                               const uint32_t& numWaitEvents,
                                ze_event_handle_t* phWaitEvents) {
   (void)return_value;
-  (void)numWaitEvents;
-  (void)phWaitEvents;
+  auto& sd = SD();
   CommandListKernelInit(hCommandList, hKernel, pLaunchFuncArgs);
-  const auto& cmdListState = SD().Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
-  auto& kernelState = SD().Get<CKernelState>(hKernel, EXCEPTION_MESSAGE);
+  auto& cmdListState = sd.Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
+  auto& kernelState = sd.Get<CKernelState>(hKernel, EXCEPTION_MESSAGE);
   if (CheckWhetherDumpKernel(kernelState.currentKernelInfo.kernelNumber,
                              cmdListState.cmdListNumber) &&
       (cmdListState.isImmediate || !CaptureAfterSubmit(Config::Get()))) {
     SaveKernelArguments(hSignalEvent, hCommandList, kernelState, cmdListState);
   }
+  RegisterEvents(sd, hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
 }
 inline void zeCommandListAppendLaunchKernel_SD(ze_result_t return_value,
                                                ze_command_list_handle_t hCommandList,
@@ -292,13 +339,12 @@ inline void zeCommandListAppendLaunchMultipleKernelsIndirect_SD(
     ze_event_handle_t* phWaitEvents) {
   (void)return_value;
   (void)pCountBuffer;
-  (void)numWaitEvents;
-  (void)phWaitEvents;
+  auto& sd = SD();
   bool callOnce = true;
-  const auto& cmdListState = SD().Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
+  const auto& cmdListState = sd.Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
   for (auto i = 0u; i < numKernels; i++) {
     CommandListKernelInit(hCommandList, phKernels[i], pLaunchArgumentsBuffer);
-    auto& kernelState = SD().Get<CKernelState>((phKernels)[i], EXCEPTION_MESSAGE);
+    auto& kernelState = sd.Get<CKernelState>((phKernels)[i], EXCEPTION_MESSAGE);
 
     if (CheckWhetherDumpKernel(kernelState.currentKernelInfo.kernelNumber,
                                cmdListState.cmdListNumber) &&
@@ -307,6 +353,7 @@ inline void zeCommandListAppendLaunchMultipleKernelsIndirect_SD(
       callOnce = false;
     }
   }
+  RegisterEvents(sd, hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
 }
 
 inline void zeKernelSetArgumentValue_SD(ze_result_t return_value,
@@ -357,6 +404,7 @@ inline void zeCommandQueueExecuteCommandLists_SD(ze_result_t return_value,
   if (cfg.IsPlayer()) {
     cqState.cmdQueueNumber = gits::CGits::Instance().CurrentCommandQueueExecCount();
   }
+  bool containsAppendedKernelsToDump = false;
   for (auto i = 0u; i < numCommandLists; i++) {
     const auto& cmdListState = sd.Get<CCommandListState>(phCommandLists[i], EXCEPTION_MESSAGE);
     for (const auto& kernelInfo : cmdListState.appendedKernels) {
@@ -365,13 +413,26 @@ inline void zeCommandQueueExecuteCommandLists_SD(ze_result_t return_value,
                          cqState.cmdQueueNumber, cmdListState.cmdListNumber);
       if (CheckWhetherDumpQueueSubmit(cfg, cqState.cmdQueueNumber) &&
           CheckWhetherDumpKernel(kernelInfo.kernelNumber, cmdListState.cmdListNumber)) {
-        cqState.cmdListDumpState[cqState.cmdQueueNumber].insert(phCommandLists[i]);
-        if (!cmdListState.containEventDependencies) {
-          drv.inject.zeCommandQueueSynchronize(hCommandQueue, UINT64_MAX);
-          DumpQueueSubmit(cfg, sd, hCommandQueue, drv);
+        containsAppendedKernelsToDump = true;
+        auto& readyArgVector = sd.Map<CKernelArgumentDump>()[phCommandLists[i]];
+        cqState.queueSubmissionDumpState.push_back(std::make_unique<QueueSubmissionSnapshot>(
+            phCommandLists[i], cmdListState.isImmediate, cmdListState.appendedKernels,
+            cmdListState.cmdListNumber, cmdListState.hContext, cqState.cmdQueueNumber,
+            &readyArgVector));
+        if (CaptureAfterSubmit(cfg)) {
+          sd.Release<CKernelArgumentDump>(phCommandLists[i]);
         }
       }
     }
+    cqState.notSyncedSubmissions.push_back(std::make_unique<QueueSubmissionSnapshot>(
+        phCommandLists[i], cmdListState.isImmediate, cmdListState.appendedKernels,
+        cmdListState.cmdListNumber, cmdListState.hContext, cqState.cmdQueueNumber, nullptr));
+  }
+  if (containsAppendedKernelsToDump && CheckWhetherQueueCanBeSynced(cfg, sd, drv, hCommandQueue)) {
+    drv.inject.zeCommandQueueSynchronize(hCommandQueue, UINT64_MAX);
+    DumpQueueSubmit(cfg, sd, hCommandQueue);
+    cqState.notSyncedSubmissions.clear();
+    cqState.queueSubmissionDumpState.clear();
   }
 }
 
@@ -518,7 +579,7 @@ inline void zeCommandListReset_SD(ze_result_t return_value, ze_command_list_hand
   auto& cmdListState = SD().Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
   cmdListState.RestoreReset();
   cmdListState.appendedKernels.clear();
-  cmdListState.containEventDependencies = false;
+  cmdListState.mockList.clear();
 }
 
 inline void zeEventCreate_SD(ze_result_t return_value,
@@ -714,11 +775,9 @@ inline void zeCommandListAppendMemoryCopy_SD(ze_result_t return_value,
                                              ze_event_handle_t* phWaitEvents) {
   (void)dstptr;
   (void)size;
-  (void)hSignalEvent;
-  (void)numWaitEvents;
-  (void)phWaitEvents;
   if (return_value == ZE_RESULT_SUCCESS) {
     auto& sd = SD();
+    RegisterEvents(sd, hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
     if (sd.Exists<CAllocState>(const_cast<void*>(srcptr))) {
       auto& allocState = sd.Get<CAllocState>(const_cast<void*>(srcptr), EXCEPTION_MESSAGE);
       if (allocState.allocType == AllocStateType::global_pointer) {
@@ -767,56 +826,235 @@ inline void zeModuleDynamicLink_SD(ze_result_t return_value,
 inline void zeCommandQueueSynchronize_SD(ze_result_t return_value,
                                          ze_command_queue_handle_t hCommandQueue,
                                          uint64_t timeout) {
-  const auto& cfg = Config::Get();
-  if (CaptureKernels(cfg)) {
+  if (return_value == ZE_RESULT_SUCCESS) {
+    const auto& cfg = Config::Get();
     auto& sd = SD();
-    for (const auto& cmdQueueListsInfo :
-         sd.Get<CCommandQueueState>(hCommandQueue, EXCEPTION_MESSAGE).cmdListDumpState) {
-      if (CheckWhetherDumpQueueSubmit(cfg, cmdQueueListsInfo.first)) {
-        if (return_value != ZE_RESULT_SUCCESS && timeout != UINT64_MAX) {
-          drv.inject.zeCommandQueueSynchronize(hCommandQueue, UINT64_MAX);
+    auto& cqState = sd.Get<CCommandQueueState>(hCommandQueue, EXCEPTION_MESSAGE);
+    if (CaptureKernels(cfg)) {
+      for (const auto& cmdQueueListsInfo : cqState.queueSubmissionDumpState) {
+        if (CheckWhetherDumpQueueSubmit(cfg, cmdQueueListsInfo->cmdQueueNumber)) {
+          if (return_value != ZE_RESULT_SUCCESS && timeout != UINT64_MAX) {
+            drv.inject.zeCommandQueueSynchronize(hCommandQueue, UINT64_MAX);
+          }
+          DumpQueueSubmit(cfg, sd, hCommandQueue);
+          break;
         }
-        DumpQueueSubmit(cfg, sd, hCommandQueue, drv);
-        return;
       }
     }
+    cqState.notSyncedSubmissions.clear();
+    cqState.queueSubmissionDumpState.clear();
   }
 }
 
 inline void zeFenceHostSynchronize_SD(ze_result_t return_value,
                                       ze_fence_handle_t hFence,
                                       uint64_t timeout) {
-  const auto& cfg = Config::Get();
-  if (CaptureKernels(cfg)) {
+  if (return_value == ZE_RESULT_SUCCESS) {
+    const auto& cfg = Config::Get();
     auto& sd = SD();
     const auto& fenceState = sd.Get<CFenceState>(hFence, EXCEPTION_MESSAGE);
-    for (const auto& cmdQueueListsInfo :
-         sd.Get<CCommandQueueState>(fenceState.hCommandQueue, EXCEPTION_MESSAGE).cmdListDumpState) {
-      if (CheckWhetherDumpQueueSubmit(cfg, cmdQueueListsInfo.first)) {
-        if (return_value != ZE_RESULT_SUCCESS && timeout != UINT64_MAX) {
-          drv.inject.zeFenceHostSynchronize(hFence, UINT64_MAX);
+    auto& cqState = sd.Get<CCommandQueueState>(fenceState.hCommandQueue, EXCEPTION_MESSAGE);
+    if (CaptureKernels(cfg)) {
+      for (const auto& cmdQueueListsInfo : cqState.queueSubmissionDumpState) {
+        if (CheckWhetherDumpQueueSubmit(cfg, cmdQueueListsInfo->cmdQueueNumber)) {
+          if (return_value != ZE_RESULT_SUCCESS && timeout != UINT64_MAX) {
+            drv.inject.zeFenceHostSynchronize(hFence, UINT64_MAX);
+          }
+          DumpQueueSubmit(cfg, sd, fenceState.hCommandQueue);
+          break;
         }
-        DumpQueueSubmit(cfg, sd, fenceState.hCommandQueue, drv);
-        return;
       }
     }
+    cqState.notSyncedSubmissions.clear();
+    cqState.queueSubmissionDumpState.clear();
   }
 }
 
 inline void zeCommandListAppendSignalEvent_SD(ze_result_t return_value,
                                               ze_command_list_handle_t hCommandList,
-                                              ze_event_handle_t /*hEvent*/) {
+                                              ze_event_handle_t hEvent) {
   if (return_value == ZE_RESULT_SUCCESS) {
-    SD().Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE).containEventDependencies = true;
+    auto& cmdListState = SD().Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
+    cmdListState.AddAction(hEvent, 0, nullptr, CCommandListState::Action::Type::Signal);
   }
 }
 
 inline void zeCommandListAppendWaitOnEvents_SD(ze_result_t return_value,
                                                ze_command_list_handle_t hCommandList,
-                                               uint32_t /*numEvents*/,
-                                               ze_event_handle_t* /*phEvents*/) {
+                                               uint32_t numEvents,
+                                               ze_event_handle_t* phEvents) {
   if (return_value == ZE_RESULT_SUCCESS) {
-    SD().Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE).containEventDependencies = true;
+    auto& cmdListState = SD().Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
+    cmdListState.AddAction(nullptr, numEvents, phEvents);
+  }
+}
+
+inline void zeCommandListAppendBarrier_SD(ze_result_t /* return_value */,
+                                          ze_command_list_handle_t hCommandList,
+                                          ze_event_handle_t hSignalEvent,
+                                          uint32_t numWaitEvents,
+                                          ze_event_handle_t* phWaitEvents) {
+  RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
+}
+
+inline void zeCommandListAppendImageCopy_SD(ze_result_t /* return_value */,
+                                            ze_command_list_handle_t hCommandList,
+                                            ze_image_handle_t /* hDstImage */,
+                                            ze_image_handle_t /* hSrcImage */,
+                                            ze_event_handle_t hSignalEvent,
+                                            uint32_t numWaitEvents,
+                                            ze_event_handle_t* phWaitEvents) {
+  RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
+}
+
+inline void zeCommandListAppendImageCopyFromMemory_SD(ze_result_t /* return_value */,
+                                                      ze_command_list_handle_t hCommandList,
+                                                      ze_image_handle_t /* hDstImage */,
+                                                      const void* /* srcptr */,
+                                                      const ze_image_region_t* /* pDstRegion */,
+                                                      ze_event_handle_t hSignalEvent,
+                                                      uint32_t numWaitEvents,
+                                                      ze_event_handle_t* phWaitEvents) {
+  RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
+}
+
+inline void zeCommandListAppendImageCopyFromMemoryExt_SD(ze_result_t /* return_value */,
+                                                         ze_command_list_handle_t hCommandList,
+                                                         ze_image_handle_t /* hDstImage */,
+                                                         const void* /* srcptr */,
+                                                         const ze_image_region_t* /* pDstRegion */,
+                                                         uint32_t /* srcRowPitch */,
+                                                         uint32_t /* srcSlicePitch */,
+                                                         ze_event_handle_t hSignalEvent,
+                                                         uint32_t numWaitEvents,
+                                                         ze_event_handle_t* phWaitEvents) {
+  RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
+}
+
+inline void zeCommandListAppendImageCopyRegion_SD(ze_result_t /* return_value */,
+                                                  ze_command_list_handle_t hCommandList,
+                                                  ze_image_handle_t /* hDstImage */,
+                                                  ze_image_handle_t /* hSrcImage */,
+                                                  const ze_image_region_t* /* pDstRegion */,
+                                                  const ze_image_region_t* /* pSrcRegion */,
+                                                  ze_event_handle_t hSignalEvent,
+                                                  uint32_t numWaitEvents,
+                                                  ze_event_handle_t* phWaitEvents) {
+  RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
+}
+
+inline void zeCommandListAppendImageCopyToMemory_SD(ze_result_t /* return_value */,
+                                                    ze_command_list_handle_t hCommandList,
+                                                    void* /* dstptr */,
+                                                    ze_image_handle_t /* hSrcImage */,
+                                                    const ze_image_region_t* /* pSrcRegion */,
+                                                    ze_event_handle_t hSignalEvent,
+                                                    uint32_t numWaitEvents,
+                                                    ze_event_handle_t* phWaitEvents) {
+  RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
+}
+
+inline void zeCommandListAppendImageCopyToMemoryExt_SD(ze_result_t /* return_value */,
+                                                       ze_command_list_handle_t hCommandList,
+                                                       void* /* dstptr */,
+                                                       ze_image_handle_t /* hSrcImage */,
+                                                       const ze_image_region_t* /* pSrcRegion */,
+                                                       uint32_t /* destRowPitch */,
+                                                       uint32_t /* destSlicePitch */,
+                                                       ze_event_handle_t hSignalEvent,
+                                                       uint32_t numWaitEvents,
+                                                       ze_event_handle_t* phWaitEvents) {
+  RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
+}
+
+inline void zeCommandListAppendMemoryCopyFromContext_SD(ze_result_t /* return_value */,
+                                                        ze_command_list_handle_t hCommandList,
+                                                        void* /* dstptr */,
+                                                        ze_context_handle_t /* hContextSrc */,
+                                                        const void* /* srcptr */,
+                                                        size_t /* size */,
+                                                        ze_event_handle_t hSignalEvent,
+                                                        uint32_t numWaitEvents,
+                                                        ze_event_handle_t* phWaitEvents) {
+  RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
+}
+
+inline void zeCommandListAppendMemoryCopyRegion_SD(ze_result_t /* return_value */,
+                                                   ze_command_list_handle_t hCommandList,
+                                                   void* /* dstptr */,
+                                                   const ze_copy_region_t* /* dstRegion */,
+                                                   uint32_t /* dstPitch */,
+                                                   uint32_t /* dstSlicePitch */,
+                                                   const void* /* srcptr */,
+                                                   const ze_copy_region_t* /* srcRegion */,
+                                                   uint32_t /* srcPitch */,
+                                                   uint32_t /* srcSlicePitch */,
+                                                   ze_event_handle_t hSignalEvent,
+                                                   uint32_t numWaitEvents,
+                                                   ze_event_handle_t* phWaitEvents) {
+  RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
+}
+
+inline void zeCommandListAppendMemoryFill_SD(ze_result_t /* return_value */,
+                                             ze_command_list_handle_t hCommandList,
+                                             void* /* ptr */,
+                                             const void* /* pattern */,
+                                             size_t /* pattern_size */,
+                                             size_t /* size */,
+                                             ze_event_handle_t hSignalEvent,
+                                             uint32_t numWaitEvents,
+                                             ze_event_handle_t* phWaitEvents) {
+  RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
+}
+
+inline void zeCommandListAppendMemoryRangesBarrier_SD(ze_result_t /* return_value */,
+                                                      ze_command_list_handle_t hCommandList,
+                                                      uint32_t /* numRanges */,
+                                                      const size_t* /* pRangeSizes */,
+                                                      const void** /* pRanges */,
+                                                      ze_event_handle_t hSignalEvent,
+                                                      uint32_t numWaitEvents,
+                                                      ze_event_handle_t* phWaitEvents) {
+  RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
+}
+
+inline void zeCommandListAppendQueryKernelTimestamps_SD(ze_result_t /* return_value */,
+                                                        ze_command_list_handle_t hCommandList,
+                                                        uint32_t /* numEvents */,
+                                                        ze_event_handle_t* /* phEvents */,
+                                                        void* /* dstptr */,
+                                                        const size_t* /* pOffsets */,
+                                                        ze_event_handle_t hSignalEvent,
+                                                        uint32_t numWaitEvents,
+                                                        ze_event_handle_t* phWaitEvents) {
+  RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
+}
+
+inline void zeCommandListAppendWriteGlobalTimestamp_SD(ze_result_t /* return_value */,
+                                                       ze_command_list_handle_t hCommandList,
+                                                       uint64_t* /* dstptr */,
+                                                       ze_event_handle_t hSignalEvent,
+                                                       uint32_t numWaitEvents,
+                                                       ze_event_handle_t* phWaitEvents) {
+  RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
+}
+
+inline void zetCommandListAppendMetricQueryEnd_SD(ze_result_t /* return_value */,
+                                                  zet_command_list_handle_t hCommandList,
+                                                  zet_metric_query_handle_t /* hMetricQuery */,
+                                                  ze_event_handle_t hSignalEvent,
+                                                  uint32_t numWaitEvents,
+                                                  ze_event_handle_t* phWaitEvents) {
+  RegisterEvents(SD(), reinterpret_cast<ze_command_list_handle_t>(hCommandList), hSignalEvent,
+                 numWaitEvents, phWaitEvents);
+}
+
+inline void zeCommandListAppendEventReset_SD(ze_result_t return_value,
+                                             ze_command_list_handle_t hCommandList,
+                                             ze_event_handle_t hEvent) {
+  if (return_value == ZE_RESULT_SUCCESS) {
+    auto& cmdListState = SD().Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
+    cmdListState.AddAction(hEvent, 0, nullptr, CCommandListState::Action::Type::Reset);
   }
 }
 

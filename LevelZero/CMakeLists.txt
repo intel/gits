@@ -123,6 +123,8 @@ add_library(L0_common
   common/l0Tools.cpp
   common/include/l0HelperFunctions.h
   common/l0HelperFunctions.cpp
+  common/include/mockListExecutor.h
+  common/mockListExecutor.cpp
 )
 include_directories(common/include)
 if(MSVC)

@@ -47,8 +47,7 @@ void DumpReadyArguments(std::vector<CKernelArgumentDump>& readyArgVector,
                         uint32_t cmdListNumber,
                         const Config& cfg,
                         CStateDynamic& sd,
-                        const CKernelExecutionInfo& kernelInfo,
-                        const CKernelState& kernelState);
+                        const CKernelExecutionInfo& kernelInfo);
 const bfs::path& GetDumpPath(const Config& cfg);
 bool CaptureKernels(const Config& cfg);
 bool CaptureImages(const Config& cfg);
@@ -107,7 +106,6 @@ void KernelCountUp(CGits& gitsInstance);
 bool IsDumpOnlyLayoutEnabled(const Config& cfg);
 void DumpQueueSubmit(const Config& cfg,
                      CStateDynamic& sd,
-                     const ze_command_queue_handle_t& hCommandQueue,
-                     const CDriver& driver);
+                     const ze_command_queue_handle_t& hCommandQueue);
 } // namespace l0
 } // namespace gits

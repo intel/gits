@@ -10,6 +10,7 @@
 
 #include "exception.h"
 #include "l0Header.h"
+#include "l0Log.h"
 #include "l0Tools.h"
 #include "MemorySniffer.h"
 #include <utility>
@@ -115,6 +116,8 @@ struct CKernelExecutionInfo {
   uint32_t offsetZ = 0U;
   bool isGroupSizeSet = false;
   bool isOffsetSet = false;
+  ze_module_handle_t hModule = nullptr;
+  std::string pKernelName;
 
 private:
   std::map<uint32_t, ArgInfo> args;
@@ -153,7 +156,13 @@ struct CCommandListState : public CState {
   std::vector<CKernelExecutionInfo> appendedKernels;
   uint32_t cmdListNumber = 0U;
   uint32_t cmdQueueNumber = 0U;
-  bool containEventDependencies = false;
+  struct Action {
+    enum Type { Normal, Reset, Signal };
+    Type type = Type::Normal;
+    ze_event_handle_t signalEvent = nullptr;
+    std::vector<ze_event_handle_t> waitEvents;
+  };
+  std::vector<Action> mockList;
 
 public:
   CCommandListState() = default;
@@ -163,6 +172,18 @@ public:
   CCommandListState(ze_context_handle_t hContext,
                     ze_device_handle_t hDevice,
                     ze_command_queue_desc_t altdesc);
+  void AddAction(const ze_event_handle_t& signalEvent,
+                 const uint32_t& numWaitEvents,
+                 ze_event_handle_t* phWaitEvents,
+                 Action::Type type = Action::Type::Normal) {
+    Action action = {};
+    action.signalEvent = signalEvent;
+    action.type = type;
+    for (auto i = 0U; i < numWaitEvents; i++) {
+      action.waitEvents.push_back(phWaitEvents[i]);
+    }
+    mockList.push_back(action);
+  }
 };
 
 struct CImageState : public CState {
@@ -179,6 +200,23 @@ public:
   ~CImageState();
 };
 
+class QueueSubmissionSnapshot {
+public:
+  std::vector<CKernelExecutionInfo> kernelsExecutionInfo;
+  uint32_t cmdListNumber = 0U;
+  uint32_t cmdQueueNumber = 0U;
+  ze_context_handle_t hContext = nullptr;
+  ze_command_list_handle_t hCommandList = nullptr;
+  std::vector<CKernelArgumentDump>* readyArgVector = nullptr;
+  QueueSubmissionSnapshot(const ze_command_list_handle_t& cmdListHandle,
+                          const bool& isImmediate,
+                          const std::vector<CKernelExecutionInfo>& appendedKernels,
+                          const uint32_t& cmdListNum,
+                          const ze_context_handle_t& cmdListContext,
+                          const uint32_t& submissionNum,
+                          std::vector<CKernelArgumentDump>* argumentsVector);
+};
+
 struct CCommandQueueState : public CState {
   using type = ze_command_queue_handle_t;
   using states_type = std::unordered_map<type, std::unique_ptr<CCommandQueueState>>;
@@ -187,7 +225,8 @@ struct CCommandQueueState : public CState {
   ze_command_queue_desc_t desc = {};
   bool isSync = false;
   uint32_t cmdQueueNumber = 0U;
-  std::unordered_map<uint32_t, std::set<ze_command_list_handle_t>> cmdListDumpState;
+  std::vector<std::unique_ptr<QueueSubmissionSnapshot>> queueSubmissionDumpState;
+  std::vector<std::unique_ptr<QueueSubmissionSnapshot>> notSyncedSubmissions;
 
 public:
   CCommandQueueState() = default;
@@ -342,23 +381,25 @@ private:
   uint32_t queueSubmitNumber = 0U;
   uint32_t cmdListNumber = 0U;
   uint32_t appendKernelNumber = 0U;
-  std::string GetExecutionKeyId();
+  std::string GetExecutionKeyId() const;
   void AddOclocInfo(const ze_module_handle_t& hModule);
   std::string BuildFileName(const uint32_t& argNumber, bool isBuffer = true);
-  boost::property_tree::ptree GetImageDescription(const ze_image_desc_t& imageDesc);
+  boost::property_tree::ptree GetImageDescription(const ze_image_desc_t& imageDesc) const;
   void UpdateExecutionKeyId(const uint32_t& queueSubmitNum,
                             const uint32_t& cmdListNum,
                             const uint32_t& kernelNumber);
 
 public:
   LayoutBuilder();
-  void UpdateLayout(const char* pKernelName,
-                    const ze_module_handle_t& hModule,
-                    const CKernelExecutionInfo& kernelInfo,
+  void UpdateLayout(const CKernelExecutionInfo& kernelInfo,
                     const uint32_t& queueSubmitNum,
                     const uint32_t& cmdListNum,
                     const uint32_t& argIndex);
-  std::string GetFileName();
+  bool Exists(const uint32_t& queueSubmitNumber,
+              const uint32_t& cmdListNumber,
+              const uint32_t& appendKernelNumber,
+              const uint32_t& kernelArgIndex) const;
+  std::string GetFileName() const;
   void SaveLayoutToJsonFile();
   boost::property_tree::ptree GetModuleLinkInfoPtree(
       CStateDynamic& sd, const std::unordered_set<ze_module_handle_t>& moduleLinks) const;

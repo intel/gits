@@ -16,6 +16,7 @@
 #include "l0StateDynamic.h"
 #include "l0Header.h"
 #include "l0Tools.h"
+#include <string>
 
 #ifdef WITH_OCLOC
 #include "oclocFunctions.h"
@@ -349,18 +350,16 @@ boost::property_tree::ptree LayoutBuilder::GetModuleLinkInfoPtree(
   return modulesInfo;
 }
 
-void LayoutBuilder::UpdateLayout(const char* pKernelName,
-                                 const ze_module_handle_t& hModule,
-                                 const CKernelExecutionInfo& kernelInfo,
+void LayoutBuilder::UpdateLayout(const CKernelExecutionInfo& kernelInfo,
                                  const uint32_t& queueSubmitNum,
                                  const uint32_t& cmdListNum,
                                  const uint32_t& argIndex) {
   UpdateExecutionKeyId(queueSubmitNum, cmdListNum, kernelInfo.kernelNumber);
   const auto executionKey = GetExecutionKeyId();
   if (zeKernels.find(executionKey) == zeKernels.not_found()) {
-    Add("kernel_name", pKernelName);
+    Add("kernel_name", kernelInfo.pKernelName);
     auto& sd = SD();
-    const auto& moduleState = sd.Get<CModuleState>(hModule, EXCEPTION_MESSAGE);
+    const auto& moduleState = sd.Get<CModuleState>(kernelInfo.hModule, EXCEPTION_MESSAGE);
     if (moduleState.desc.pBuildFlags != nullptr) {
       Add("build_options", moduleState.desc.pBuildFlags);
     }
@@ -370,7 +369,7 @@ void LayoutBuilder::UpdateLayout(const char* pKernelName,
     }
 
 #ifdef WITH_OCLOC
-    AddOclocInfo(hModule);
+    AddOclocInfo(kernelInfo.hModule);
 #endif
   }
   const auto& arg = kernelInfo.GetArgument(argIndex);
@@ -387,7 +386,29 @@ void LayoutBuilder::UpdateLayout(const char* pKernelName,
   }
 }
 
-std::string LayoutBuilder::GetFileName() {
+bool LayoutBuilder::Exists(const uint32_t& queueSubmitNum,
+                           const uint32_t& cmdListNum,
+                           const uint32_t& kernelNumber,
+                           const uint32_t& kernelArgIndex) const {
+  std::stringstream ss;
+  ss << queueSubmitNum << "_" << cmdListNum << "_" << kernelNumber;
+  const auto key = ss.str();
+  if (zeKernels.find(key) == zeKernels.not_found()) {
+    return false;
+  }
+  const auto pickedZeKernel = zeKernels.get_child(key);
+  if (pickedZeKernel.find("args") == pickedZeKernel.not_found()) {
+    return false;
+  }
+  for (const auto& arg : pickedZeKernel.get_child("args")) {
+    if (arg.first == std::to_string(kernelArgIndex)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+std::string LayoutBuilder::GetFileName() const {
   return latestFileName;
 }
 
@@ -412,7 +433,7 @@ void LayoutBuilder::SaveLayoutToJsonFile() {
   SaveJsonFile(layout, path);
 }
 
-std::string LayoutBuilder::GetExecutionKeyId() {
+std::string LayoutBuilder::GetExecutionKeyId() const {
   std::stringstream ss;
   ss << queueSubmitNumber << "_" << cmdListNumber << "_" << appendKernelNumber;
   return ss.str();
@@ -451,15 +472,36 @@ std::string LayoutBuilder::BuildFileName(const uint32_t& argNumber, bool isBuffe
   return latestFileName;
 }
 
-boost::property_tree::ptree LayoutBuilder::GetImageDescription(const ze_image_desc_t& imageDesc) {
+boost::property_tree::ptree LayoutBuilder::GetImageDescription(
+    const ze_image_desc_t& imageDesc) const {
   boost::property_tree::ptree imageDescription;
-  std::string image_type = get_texel_format_string(
+  const std::string image_type = get_texel_format_string(
       GetTexelTypeArrayFromLayout(imageDesc.format.layout)[imageDesc.format.type]);
   imageDescription.add("image_type", image_type);
   imageDescription.add("image_width", imageDesc.width);
   imageDescription.add("image_height", imageDesc.height);
   imageDescription.add("image_depth", imageDesc.depth);
   return imageDescription;
+}
+
+QueueSubmissionSnapshot::QueueSubmissionSnapshot(
+    const ze_command_list_handle_t& cmdListHandle,
+    const bool& isImmediate,
+    const std::vector<CKernelExecutionInfo>& appendedKernels,
+    const uint32_t& cmdListNum,
+    const ze_context_handle_t& cmdListContext,
+    const uint32_t& submissionNum,
+    std::vector<CKernelArgumentDump>* argumentsVector) {
+  if (isImmediate) {
+    throw EOperationFailed(
+        "Application used illegal operation by submitting immediate command list");
+  }
+  hCommandList = cmdListHandle;
+  cmdQueueNumber = submissionNum;
+  kernelsExecutionInfo = appendedKernels;
+  cmdListNumber = cmdListNum;
+  hContext = cmdListContext;
+  readyArgVector = argumentsVector;
 }
 } // namespace l0
 } // namespace gits

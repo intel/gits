@@ -466,5 +466,23 @@ inline void zeDriverGetLastErrorDescription_RUNWRAP(Cze_result_t& _return_value,
   _return_value.Value() = drv.zeDriverGetLastErrorDescription(*_hDriver, &ppString);
 }
 
+inline void zeCommandListAppendQueryKernelTimestamps_RUNWRAP(
+    Cze_result_t& _return_value,
+    Cze_command_list_handle_t& _hCommandList,
+    Cuint32_t& _numEvents,
+    Cze_event_handle_t::CSArray& _phEvents,
+    CvoidPtr& _dstptr,
+    Csize_t::CSArray& _pOffsets,
+    Cze_event_handle_t& _hSignalEvent,
+    Cuint32_t& _numWaitEvents,
+    Cze_event_handle_t::CSArray& _phWaitEvents) {
+  if (*_hSignalEvent != nullptr) {
+    drv.inject.zeEventHostSignal(*_hSignalEvent);
+  }
+  zeCommandListAppendQueryKernelTimestamps_SD(*_return_value, *_hCommandList, *_numEvents,
+                                              *_phEvents, *_dstptr, *_pOffsets, *_hSignalEvent,
+                                              *_numWaitEvents, *_phWaitEvents);
+}
+
 } // namespace l0
 } // namespace gits

@@ -3223,7 +3223,7 @@ var11=VarDef(name='limit',type='int32_t',tag='inout'),
 # var4=VarDef(name='defaultLimit',type='zes_power_limit_ext_desc_t*',tag='out'),
 # )
 
-Function(name='zeCommandListAppendBarrier',component='ze_command_list',enabled=True,ddi_pos=6,
+Function(name='zeCommandListAppendBarrier',component='ze_command_list',enabled=True,ddi_pos=6,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='hSignalEvent',type='ze_event_handle_t',tag='in',optional=True),
@@ -3231,13 +3231,13 @@ arg3=ArgDef(name='numWaitEvents',type='uint32_t',tag='in',optional=True),
 arg4=ArgDef(name='phWaitEvents',type='ze_event_handle_t*',tag='in',range='0,numWaitEvents',optional=True),
 )
 
-Function(name='zeCommandListAppendEventReset',component='ze_command_list',enabled=True,ddi_pos=20,
+Function(name='zeCommandListAppendEventReset',component='ze_command_list',enabled=True,ddi_pos=20,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='hEvent',type='ze_event_handle_t',tag='in'),
 )
 
-Function(name='zeCommandListAppendImageCopy',component='ze_command_list',enabled=True,ddi_pos=12,
+Function(name='zeCommandListAppendImageCopy',component='ze_command_list',enabled=True,ddi_pos=12,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='hDstImage',type='ze_image_handle_t',tag='in'),
@@ -3247,7 +3247,7 @@ arg5=ArgDef(name='numWaitEvents',type='uint32_t',tag='in',optional=True),
 arg6=ArgDef(name='phWaitEvents',type='ze_event_handle_t*',tag='in',range='0,numWaitEvents',optional=True),
 )
 
-Function(name='zeCommandListAppendImageCopyFromMemory',component='ze_command_list',enabled=True,recWrap=True,ddi_pos=15,
+Function(name='zeCommandListAppendImageCopyFromMemory',component='ze_command_list',enabled=True,recWrap=True,ddi_pos=15,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='hDstImage',type='ze_image_handle_t',tag='in'),
@@ -3258,7 +3258,7 @@ arg6=ArgDef(name='numWaitEvents',type='uint32_t',tag='in',optional=True),
 arg7=ArgDef(name='phWaitEvents',type='ze_event_handle_t*',tag='in',range='0,numWaitEvents',optional=True),
 )
 
-Function(name='zeCommandListAppendImageCopyFromMemoryExt',component='ze_command_list',enabled=False,api_version='1.3',ddi_pos=27,
+Function(name='zeCommandListAppendImageCopyFromMemoryExt',component='ze_command_list',enabled=False,api_version='1.3',ddi_pos=27,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='hDstImage',type='ze_image_handle_t',tag='in',wrapType='CUSMPtr',wrapParams='{name}, hDstImage'),
@@ -3271,7 +3271,7 @@ arg8=ArgDef(name='numWaitEvents',type='uint32_t',tag='in',optional=True),
 arg9=ArgDef(name='phWaitEvents',type='ze_event_handle_t*',tag='in',range='0,numWaitEvents',optional=True),
 )
 
-Function(name='zeCommandListAppendImageCopyRegion',component='ze_command_list',enabled=True,ddi_pos=13,
+Function(name='zeCommandListAppendImageCopyRegion',component='ze_command_list',enabled=True,ddi_pos=13,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='hDstImage',type='ze_image_handle_t',tag='in'),
@@ -3283,7 +3283,7 @@ arg7=ArgDef(name='numWaitEvents',type='uint32_t',tag='in',optional=True),
 arg8=ArgDef(name='phWaitEvents',type='ze_event_handle_t*',tag='in',range='0,numWaitEvents',optional=True),
 )
 
-Function(name='zeCommandListAppendImageCopyToMemory',component='ze_command_list',enabled=True,ddi_pos=14,
+Function(name='zeCommandListAppendImageCopyToMemory',component='ze_command_list',enabled=True,ddi_pos=14,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='dstptr',type='void*',tag='in',wrapType='CUSMPtr',wrapParams='{name}, hSrcImage'),
@@ -3294,7 +3294,7 @@ arg6=ArgDef(name='numWaitEvents',type='uint32_t',tag='in',optional=True),
 arg7=ArgDef(name='phWaitEvents',type='ze_event_handle_t*',tag='in',range='0,numWaitEvents',optional=True),
 )
 
-Function(name='zeCommandListAppendImageCopyToMemoryExt',component='ze_command_list',enabled=False,api_version='1.3',ddi_pos=26,
+Function(name='zeCommandListAppendImageCopyToMemoryExt',component='ze_command_list',enabled=False,api_version='1.3',ddi_pos=26,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='dstptr',type='void*',tag='in',wrapType='CUSMPtr',wrapParams='{name}, hSrcImage'),
@@ -3369,7 +3369,7 @@ arg6=ArgDef(name='numWaitEvents',type='uint32_t',tag='in',optional=True),
 arg7=ArgDef(name='phWaitEvents',type='ze_event_handle_t*',tag='in',range='0,numWaitEvents',optional=True),
 )
 
-Function(name='zeCommandListAppendMemoryCopyFromContext',component='ze_command_list',enabled=True,recWrap=True,ddi_pos=11,unprotectLogic=True,
+Function(name='zeCommandListAppendMemoryCopyFromContext',component='ze_command_list',enabled=True,recWrap=True,ddi_pos=11,unprotectLogic=True,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='dstptr',type='void*',tag='in',wrapType='CUSMPtr',wrapParams='size, {name}'),
@@ -3397,7 +3397,7 @@ arg11=ArgDef(name='numWaitEvents',type='uint32_t',tag='in',optional=True),
 arg12=ArgDef(name='phWaitEvents',type='ze_event_handle_t*',tag='in',range='0,numWaitEvents',optional=True),
 )
 
-Function(name='zeCommandListAppendMemoryCopyRegion',component='ze_command_list',enabled=True,recWrap=True,version=1,ddi_pos=10,unprotectLogic=True,
+Function(name='zeCommandListAppendMemoryCopyRegion',component='ze_command_list',enabled=True,recWrap=True,version=1,ddi_pos=10,unprotectLogic=True,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='dstptr',type='void*',tag='in',wrapType='CUSMPtr',wrapParams='GetSizeFromCopyRegion(dstRegion), {name}'),
@@ -3425,7 +3425,7 @@ arg7=ArgDef(name='numWaitEvents',type='uint32_t',tag='in',optional=True),
 arg8=ArgDef(name='phWaitEvents',type='ze_event_handle_t*',tag='in',range='0,numWaitEvents',optional=True),
 )
 
-Function(name='zeCommandListAppendMemoryFill',component='ze_command_list',enabled=True,recWrap=True,version=1,ddi_pos=9,
+Function(name='zeCommandListAppendMemoryFill',component='ze_command_list',enabled=True,recWrap=True,version=1,ddi_pos=9,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='ptr',type='void*',tag='in',wrapType='CUSMPtr'),
@@ -3444,7 +3444,7 @@ arg2=ArgDef(name='ptr',type='const void*',tag='in'),
 arg3=ArgDef(name='size',type='size_t',tag='in'),
 )
 
-Function(name='zeCommandListAppendMemoryRangesBarrier',component='ze_command_list',enabled=True,ddi_pos=7,
+Function(name='zeCommandListAppendMemoryRangesBarrier',component='ze_command_list',enabled=True,ddi_pos=7,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='numRanges',type='uint32_t',tag='in'),
@@ -3455,7 +3455,7 @@ arg6=ArgDef(name='numWaitEvents',type='uint32_t',tag='in',optional=True),
 arg7=ArgDef(name='phWaitEvents',type='ze_event_handle_t*',tag='in',range='0,numWaitEvents',optional=True),
 )
 
-Function(name='zeCommandListAppendQueryKernelTimestamps',component='ze_command_list',enabled=True,skipRun=True,ddi_pos=21,
+Function(name='zeCommandListAppendQueryKernelTimestamps',component='ze_command_list',enabled=True,runWrap=True,ddi_pos=21,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='numEvents',type='uint32_t',tag='in'),
@@ -3480,7 +3480,7 @@ arg2=ArgDef(name='numEvents',type='uint32_t',tag='in'),
 arg3=ArgDef(name='phEvents',type='ze_event_handle_t*',tag='in',range='0,numEvents'),
 )
 
-Function(name='zeCommandListAppendWriteGlobalTimestamp',component='ze_command_list',enabled=True,ddi_pos=5,
+Function(name='zeCommandListAppendWriteGlobalTimestamp',component='ze_command_list',enabled=True,ddi_pos=5,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='dstptr',type='uint64_t*',tag='inout'),
@@ -5338,7 +5338,7 @@ arg1=ArgDef(name='hCommandList',type='zet_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='hMetricQuery',type='zet_metric_query_handle_t',tag='in'),
 )
 
-Function(name='zetCommandListAppendMetricQueryEnd',component='zet_command_list',enabled=True,ddi_pos=2,
+Function(name='zetCommandListAppendMetricQueryEnd',component='zet_command_list',enabled=True,ddi_pos=2,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='zet_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='hMetricQuery',type='zet_metric_query_handle_t',tag='in'),
