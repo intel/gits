@@ -90,8 +90,14 @@ CFunction* CreateProgramToken(cl_program stateInstance, CCLProgramState program)
           stateInstance, program.Context(), program.DevicesCount(), program.DeviceList(),
           program.BinarySizes(), program.Binaries(), nullptr, nullptr);
     } else {
-      token = new CclCreateProgramWithIL(stateInstance, program.Context(), program.Binaries()[0],
-                                         program.BinarySizes()[0], nullptr);
+      if (program.isKhrApi) {
+        token =
+            new CclCreateProgramWithILKHR(stateInstance, program.Context(), program.Binaries()[0],
+                                          program.BinarySizes()[0], nullptr);
+      } else {
+        token = new CclCreateProgramWithIL(stateInstance, program.Context(), program.Binaries()[0],
+                                           program.BinarySizes()[0], nullptr);
+      }
     }
   } else {
     token = new CclCreateProgramWithBuiltInKernels(stateInstance, program.Context(),

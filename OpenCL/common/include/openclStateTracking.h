@@ -1687,5 +1687,18 @@ inline void clGetPlatformInfo_SD(cl_int return_value,
   }
 }
 
+inline void clCreateProgramWithILKHR_SD(CFunction* token,
+                                        cl_program return_value,
+                                        cl_context context,
+                                        const void* il,
+                                        size_t length,
+                                        cl_int* errcode_ret) {
+  clCreateProgramWithIL_SD(token, return_value, context, il, length, errcode_ret);
+  if (ErrCodeSuccess(errcode_ret)) {
+    auto& programState = SD().GetProgramState(return_value, EXCEPTION_MESSAGE);
+    programState.isKhrApi = true;
+  }
+}
+
 } // namespace OpenCL
 } // namespace gits

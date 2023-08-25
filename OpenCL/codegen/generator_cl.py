@@ -1601,6 +1601,14 @@ arg3=ArgDef(name='length',type='size_t'),
 arg4=ArgDef(name='errcode_ret',type='cl_int*')
 )
 
+Function(name='clCreateProgramWithILKHR',enabled=True,availableFrom='2.0',extension=True,type=Creator,passToken=True,stateTrack=True,
+retV=RetDef(type='cl_program'),
+arg1=ArgDef(name='context',type='cl_context'),
+arg2=ArgDef(name='il',type='const void*',wrapType='CProgramSource', wrapParams='{name}, length'),
+arg3=ArgDef(name='length',type='size_t'),
+arg4=ArgDef(name='errcode_ret',type='cl_int*')
+)
+
 Function(name='clGetDeviceAndHostTimer',enabled=True,availableFrom='2.1',extension=False,type=Creator,passToken=True,
 retV=RetDef(type='cl_int'),
 arg1=ArgDef(name='device',type='cl_device_id'),

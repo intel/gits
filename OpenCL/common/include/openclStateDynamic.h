@@ -158,6 +158,7 @@ class CCLProgramState : public CCLState {
 public:
   bool isBinary = false;
   std::string fileName;
+  bool isKhrApi = false;
 
   CCLProgramState();
   // clCreateProgramFromSource
