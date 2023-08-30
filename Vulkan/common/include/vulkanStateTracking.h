@@ -452,25 +452,35 @@ inline void vkAcquireNextImageKHR_SD(VkResult return_value,
   if (VK_NULL_HANDLE != fence) {
     SD()._fencestates[fence]->fenceUsed = true;
   }
-  SD()._swapchainkhrstates[swapchain]->acquiredImages.insert(*pImageIndex);
+  if (pImageIndex != nullptr) {
+    SD()._swapchainkhrstates[swapchain]->acquiredImages.insert(*pImageIndex);
+  }
 }
 
 inline void vkAcquireNextImage2KHR_SD(VkResult return_value,
                                       VkDevice device,
                                       const VkAcquireNextImageInfoKHR* pAcquireInfo,
                                       uint32_t* pImageIndex) {
+  if (pAcquireInfo == nullptr) {
+    throw std::runtime_error(EXCEPTION_MESSAGE);
+  }
   if (VK_NULL_HANDLE != pAcquireInfo->semaphore) {
     SD()._semaphorestates[pAcquireInfo->semaphore]->semaphoreUsed = true;
   }
   if (VK_NULL_HANDLE != pAcquireInfo->fence) {
     SD()._fencestates[pAcquireInfo->fence]->fenceUsed = true;
   }
-  SD()._swapchainkhrstates[pAcquireInfo->swapchain]->acquiredImages.insert(*pImageIndex);
+  if (pImageIndex != nullptr) {
+    SD()._swapchainkhrstates[pAcquireInfo->swapchain]->acquiredImages.insert(*pImageIndex);
+  }
 }
 
 inline void vkQueuePresentKHR_SD(VkResult return_value,
                                  VkQueue queue,
                                  const VkPresentInfoKHR* pPresentInfo) {
+  if (pPresentInfo == nullptr) {
+    throw std::runtime_error(EXCEPTION_MESSAGE);
+  }
   for (uint32_t i = 0; i < pPresentInfo->waitSemaphoreCount; i++) {
     SD()._semaphorestates[pPresentInfo->pWaitSemaphores[i]]->semaphoreUsed = false;
   }
@@ -768,6 +778,9 @@ inline void vkDestroyImage_SD(VkDevice device,
 inline void vkGetImageMemoryRequirements_SD(VkDevice device,
                                             VkImage image,
                                             VkMemoryRequirements* pMemoryRequirements) {
+  if (pMemoryRequirements == nullptr) {
+    throw std::runtime_error(EXCEPTION_MESSAGE);
+  }
   SD()._imagestates[image]->memoryRequirements = *pMemoryRequirements;
 }
 
@@ -891,6 +904,9 @@ inline void vkDestroyBuffer_SD(VkDevice device,
 inline void vkGetBufferMemoryRequirements_SD(VkDevice device,
                                              VkBuffer buffer,
                                              VkMemoryRequirements* pMemoryRequirements) {
+  if (pMemoryRequirements == nullptr) {
+    throw std::runtime_error(EXCEPTION_MESSAGE);
+  }
   SD()._bufferstates[buffer]->memoryRequirements = *pMemoryRequirements;
 }
 

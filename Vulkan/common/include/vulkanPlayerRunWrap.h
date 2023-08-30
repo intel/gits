@@ -682,6 +682,9 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
     if ((*submitCount > 0) && Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
       for (uint32_t i = 0; i < *submitCount; i++) {
         auto pSubmitInfoArray = *pSubmits;
+        if (pSubmitInfoArray == nullptr) {
+          throw std::runtime_error(EXCEPTION_MESSAGE);
+        }
         for (uint32_t j = 0; j < pSubmitInfoArray[i].commandBufferCount; j++) {
           auto& commandBuffState =
               SD()._commandbufferstates[pSubmitInfoArray[i].pCommandBuffers[j]];
@@ -835,6 +838,9 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
     if ((*submitCount > 0) && Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
       for (uint32_t i = 0; i < *submitCount; i++) {
         auto pSubmitInfoArray = *pSubmits;
+        if (pSubmitInfoArray == nullptr) {
+          throw std::runtime_error(EXCEPTION_MESSAGE);
+        }
         for (uint32_t j = 0; j < pSubmitInfoArray[i].commandBufferInfoCount; j++) {
           auto& commandBuffState =
               SD()._commandbufferstates[pSubmitInfoArray[i].pCommandBufferInfos[j].commandBuffer];
@@ -1910,11 +1916,16 @@ inline void vkCmdExecuteCommands_WRAPRUN(CVkCommandBuffer& commandBuffer,
   if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
     SD()._commandbufferstates[*commandBuffer]->tokensBuffer.Add(new CvkCmdExecuteCommands(
         commandBuffer.Original(), commandBufferCount.Original(), pCommandBuffers.Original()));
-    for (unsigned i = 0; i < *commandBufferCount; i++) {
-      SD()._commandbufferstates[*commandBuffer]->secondaryCommandBuffers.push_back(
-          (*pCommandBuffers)[i]);
+    if (*commandBufferCount > 0) {
+      auto commandBuffersVector = *pCommandBuffers;
+      if (commandBuffersVector == nullptr) {
+        throw std::runtime_error(EXCEPTION_MESSAGE);
+      }
+      for (unsigned i = 0; i < *commandBufferCount; i++) {
+        SD()._commandbufferstates[*commandBuffer]->secondaryCommandBuffers.push_back(
+            commandBuffersVector[i]);
+      }
     }
-
   } else {
     drvVk.vkCmdExecuteCommands(*commandBuffer, *commandBufferCount, *pCommandBuffers);
     vkCmdExecuteCommands_SD(*commandBuffer, *commandBufferCount, *pCommandBuffers);
