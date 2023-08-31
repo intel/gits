@@ -826,14 +826,15 @@ inline void zeModuleDynamicLink_SD(ze_result_t return_value,
 inline void zeCommandQueueSynchronize_SD(ze_result_t return_value,
                                          ze_command_queue_handle_t hCommandQueue,
                                          uint64_t timeout) {
-  if (return_value == ZE_RESULT_SUCCESS) {
+  const auto failedSyncAttempt = return_value != ZE_RESULT_SUCCESS && timeout != UINT64_MAX;
+  if (return_value == ZE_RESULT_SUCCESS || failedSyncAttempt) {
     const auto& cfg = Config::Get();
     auto& sd = SD();
     auto& cqState = sd.Get<CCommandQueueState>(hCommandQueue, EXCEPTION_MESSAGE);
     if (CaptureKernels(cfg)) {
       for (const auto& cmdQueueListsInfo : cqState.queueSubmissionDumpState) {
         if (CheckWhetherDumpQueueSubmit(cfg, cmdQueueListsInfo->cmdQueueNumber)) {
-          if (return_value != ZE_RESULT_SUCCESS && timeout != UINT64_MAX) {
+          if (failedSyncAttempt) {
             drv.inject.zeCommandQueueSynchronize(hCommandQueue, UINT64_MAX);
           }
           DumpQueueSubmit(cfg, sd, hCommandQueue);
@@ -849,7 +850,8 @@ inline void zeCommandQueueSynchronize_SD(ze_result_t return_value,
 inline void zeFenceHostSynchronize_SD(ze_result_t return_value,
                                       ze_fence_handle_t hFence,
                                       uint64_t timeout) {
-  if (return_value == ZE_RESULT_SUCCESS) {
+  const auto failedSyncAttempt = return_value != ZE_RESULT_SUCCESS && timeout != UINT64_MAX;
+  if (return_value == ZE_RESULT_SUCCESS || failedSyncAttempt) {
     const auto& cfg = Config::Get();
     auto& sd = SD();
     const auto& fenceState = sd.Get<CFenceState>(hFence, EXCEPTION_MESSAGE);
@@ -857,7 +859,7 @@ inline void zeFenceHostSynchronize_SD(ze_result_t return_value,
     if (CaptureKernels(cfg)) {
       for (const auto& cmdQueueListsInfo : cqState.queueSubmissionDumpState) {
         if (CheckWhetherDumpQueueSubmit(cfg, cmdQueueListsInfo->cmdQueueNumber)) {
-          if (return_value != ZE_RESULT_SUCCESS && timeout != UINT64_MAX) {
+          if (failedSyncAttempt) {
             drv.inject.zeFenceHostSynchronize(hFence, UINT64_MAX);
           }
           DumpQueueSubmit(cfg, sd, fenceState.hCommandQueue);
