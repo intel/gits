@@ -78,15 +78,17 @@ inline void clCreateContext_RECWRAP(
     cl_int* errcode_ret) {
   std::vector<cl_context_properties> unsharingPropsVec;
   const cl_context_properties* props = properties;
+  const auto& cfg = Config::Get();
+  if (cfg.recorder.basic.enabled && props != nullptr) {
+    const auto opPlatform = ExtractPlatform(props);
+    const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
+    if (opPlatform.is_initialized() && opPlatform.get() == nullptr &&
+        !oclIFace.MemorySnifferInstall()) {
+      Log(WARN) << "Memory Sniffer installation failed";
+    }
+  }
   if (recorder.Running()) {
     if (props != nullptr) {
-      const auto opPlatform = ExtractPlatform(props);
-      const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
-      if (opPlatform.is_initialized() && opPlatform.get() == nullptr &&
-          !oclIFace.MemorySnifferInstall()) {
-        Log(WARN) << "Memory Sniffer installation failed";
-      }
-      const auto& cfg = Config::Get();
       if (IsGLUnsharingEnabled(cfg)) {
         unsharingPropsVec = RemoveGLSharingContextProperties(props);
         props = unsharingPropsVec.data();
@@ -112,15 +114,17 @@ inline void clCreateContextFromType_RECWRAP(
     cl_int* errcode_ret) {
   std::vector<cl_context_properties> unsharingPropsVec;
   const cl_context_properties* props = properties;
+  const auto& cfg = Config::Get();
+  if (cfg.recorder.basic.enabled && props != nullptr) {
+    const auto opPlatform = ExtractPlatform(props);
+    const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
+    if (opPlatform.is_initialized() && opPlatform.get() == nullptr &&
+        !oclIFace.MemorySnifferInstall()) {
+      Log(WARN) << "Memory Sniffer installation failed";
+    }
+  }
   if (recorder.Running()) {
     if (props != nullptr) {
-      const auto opPlatform = ExtractPlatform(props);
-      const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
-      if (opPlatform.is_initialized() && opPlatform.get() == nullptr &&
-          !oclIFace.MemorySnifferInstall()) {
-        Log(WARN) << "Memory Sniffer installation failed";
-      }
-      const auto& cfg = Config::Get();
       if (IsGLUnsharingEnabled(cfg)) {
         unsharingPropsVec = RemoveGLSharingContextProperties(props);
         props = unsharingPropsVec.data();
@@ -2281,6 +2285,8 @@ inline void clGetPlatformIDs_RECWRAP(CRecorder& recorder,
                                      cl_uint* num_platforms) {
   if (recorder.Running()) {
     recorder.Schedule(new CclGetPlatformIDs(return_value, num_entries, platforms, num_platforms));
+  }
+  if (Config::Get().recorder.basic.enabled) {
     const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
     if (!oclIFace.MemorySnifferInstall()) {
       Log(WARN) << "Memory Sniffer installation failed";
@@ -2299,6 +2305,8 @@ inline void clGetDeviceIDs_RECWRAP(CRecorder& recorder,
   if (recorder.Running()) {
     recorder.Schedule(new CclGetDeviceIDs(return_value, platform, device_type, num_entries, devices,
                                           num_devices));
+  }
+  if (Config::Get().recorder.basic.enabled) {
     const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
     if (platform == nullptr && !oclIFace.MemorySnifferInstall()) {
       Log(WARN) << "Memory Sniffer installation failed";

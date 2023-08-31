@@ -988,6 +988,8 @@ inline void zetMetricGroupGet_RECWRAP(CRecorder& recorder,
 inline void zeInit_RECWRAP(CRecorder& recorder, ze_result_t return_value, ze_init_flags_t flags) {
   if (recorder.Running()) {
     recorder.Schedule(new CzeInit(return_value, flags));
+  }
+  if (Config::Get().recorder.basic.enabled) {
     const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
     if (!l0IFace.MemorySnifferInstall()) {
       Log(WARN) << "Memory Sniffer installation failed";
@@ -1091,6 +1093,8 @@ inline void zeCommandQueueCreate_RECWRAP(CRecorder& recorder,
 inline void zesInit_RECWRAP(CRecorder& recorder, ze_result_t return_value, zes_init_flags_t flags) {
   if (recorder.Running()) {
     recorder.Schedule(new CzesInit(return_value, flags));
+  }
+  if (Config::Get().recorder.basic.enabled) {
     const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
     if (!l0IFace.MemorySnifferInstall()) {
       Log(WARN) << "Memory Sniffer installation failed";
