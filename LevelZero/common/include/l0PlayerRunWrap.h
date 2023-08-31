@@ -288,7 +288,8 @@ inline void zeModuleCreate_V1_RUNWRAP(Cze_result_t& _return_value,
     const auto moduleFileName = _desc.Vector().front()->GetProgramSourceName();
     ze_module_handle_t* hModule = *_phModule;
     if (hModule != nullptr) {
-      SD().Get<CModuleState>(**_phModule, EXCEPTION_MESSAGE).moduleFileName = moduleFileName;
+      auto& moduleState = SD().Get<CModuleState>(*hModule, EXCEPTION_MESSAGE);
+      moduleState.moduleFileName = moduleFileName;
     }
   }
 }
