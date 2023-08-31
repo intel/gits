@@ -710,8 +710,8 @@ inline void zeKernelSetGlobalOffsetExp_SD(ze_result_t return_value,
   if (return_value == ZE_RESULT_SUCCESS) {
     auto& kernelState = SD().Get<CKernelState>(hKernel, EXCEPTION_MESSAGE);
     kernelState.currentKernelInfo.offsetX = offsetX;
-    kernelState.currentKernelInfo.offsetX = offsetY;
-    kernelState.currentKernelInfo.offsetX = offsetZ;
+    kernelState.currentKernelInfo.offsetY = offsetY;
+    kernelState.currentKernelInfo.offsetZ = offsetZ;
     kernelState.currentKernelInfo.isOffsetSet = true;
   }
 }
