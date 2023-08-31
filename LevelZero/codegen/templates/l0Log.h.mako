@@ -95,7 +95,12 @@ namespace gits {
     template <class T>
     inline std::string ToStringHelperArrayRange(T& arg, const size_t &begin, const size_t &end) {
       std::stringstream result;
-      result << arg << ": {";
+      if (arg) {
+        result << arg;
+      } else {
+        result << "nullptr";
+      }
+      result << ": {";
       for (auto i = begin; i < end && arg != nullptr; i++) {
         result << "\n\t[" << i << "]: " << ToStringHelper(arg + i);
       }
