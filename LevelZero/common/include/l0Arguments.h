@@ -497,8 +497,8 @@ struct CExtensionStructBase : public CArgument {
 class CProgramSource : public CArgumentFileText {
   static uint32_t _programSourceIdx;
   static uint32_t _binarySourceIdx;
-  const char* text_cstr;
-  size_t text_length;
+  const char* textCstr = nullptr;
+  size_t textLength = 0U;
 
 public:
   CProgramSource() {}

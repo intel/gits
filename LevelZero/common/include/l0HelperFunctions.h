@@ -18,7 +18,7 @@ namespace l0 {
 class CGitsL0MemoryUpdate : public CFunction {
   static constexpr unsigned ARG_NUM = 2U;
 
-  void* _usmPtr;
+  void* _usmPtr = nullptr;
   CBinaryResource _resource;
 
   virtual unsigned ArgumentCount() const override {
@@ -44,7 +44,7 @@ public:
 
 class CGitsL0MemoryRestore : public CFunction {
   static constexpr unsigned ARG_NUM = 2U;
-  void* _usmPtr;
+  void* _usmPtr = nullptr;
   CBinaryResource _resource;
   virtual unsigned ArgumentCount() const override {
     return ARG_NUM;

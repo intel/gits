@@ -197,13 +197,13 @@ CProgramSource::CProgramSource(const uint8_t* text, size_t size, ze_module_forma
     : CArgumentFileText(GetFileName(format), GetProgramBinary(text, size)) {}
 
 const char** CProgramSource::Value() {
-  text_cstr = Text().c_str();
-  return &text_cstr;
+  textCstr = Text().c_str();
+  return &textCstr;
 }
 
 size_t* CProgramSource::Length() {
-  text_length = Text().size();
-  return &text_length;
+  textLength = Text().size();
+  return &textLength;
 }
 } // namespace l0
 } // namespace gits

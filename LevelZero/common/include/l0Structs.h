@@ -24,7 +24,7 @@ namespace l0 {
 class Cze_module_constants_t : public CArgument {
 private:
   typedef ze_module_constants_t L0Type;
-  L0Type _struct;
+  L0Type _struct = {};
   Cuint32_t _numConstants;
   Cuint32_t::CSArray _constantIds;
   CvoidPtr::CSArray _constantValues;
@@ -49,7 +49,7 @@ public:
 class Cze_module_constants_t_V1 : public CArgument {
 private:
   typedef ze_module_constants_t L0Type;
-  L0Type _struct;
+  L0Type _struct = {};
   Cuint8_t _version;
 
 public:
@@ -71,7 +71,7 @@ public:
 class Cze_module_desc_t : public CArgument {
 private:
   typedef ze_module_desc_t L0Type;
-  L0Type _struct;
+  L0Type _struct = {};
   Cze_structure_type_t _stype;
   CExtensionStructCore _pNext;
   Cze_module_format_t _format;
@@ -101,7 +101,7 @@ public:
 class Cze_module_desc_t_V1 : public CArgument {
 private:
   typedef ze_module_desc_t L0Type;
-  L0Type _struct;
+  L0Type _struct = {};
   Cze_structure_type_t _stype;
   CExtensionStructCore _pNext;
   Cze_module_format_t _format;

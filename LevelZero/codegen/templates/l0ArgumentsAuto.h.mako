@@ -113,7 +113,7 @@ namespace gits {
       %for field in arg['vars']:
       ${get_field_type(field)} _${get_field_name(field)};
       %endfor
-      L0Type _struct;
+      L0Type _struct = {};
     public:
       typedef CL0StructArray<L0Type, C${name}> CSArray;
       static const char* NAME;
