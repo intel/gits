@@ -476,10 +476,10 @@ std::vector<std::string> GetIncludePaths(const char* buildOptions) {
   return includePaths;
 }
 
-void CreateHeaderFiles(std::vector<std::string> sourceNamesToScan,
-                       std::vector<std::string> searchPaths,
-                       std::set<std::string> alreadyCreatedHeaders,
-                       bool includeMainFiles) {
+void CreateHeaderFiles(const std::vector<std::string>& sourceNamesToScan,
+                       const std::vector<std::string>& searchPaths,
+                       std::set<std::string>& alreadyCreatedHeaders,
+                       const bool includeMainFiles) {
   for (const auto& header : sourceNamesToScan) {
     if (alreadyCreatedHeaders.find(header) != alreadyCreatedHeaders.end()) {
       continue;
@@ -503,9 +503,9 @@ void CreateHeaderFiles(std::vector<std::string> sourceNamesToScan,
         std::string srcHeader(std::istreambuf_iterator<char>(loadHeader),
                               (std::istreambuf_iterator<char>()));
         alreadyCreatedHeaders.insert(header);
-        CreateHeaderFiles(
-            GetStringsWithRegex(srcHeader, R"((?<=^#include)\s*["<]([^">]+))", "\\s*[<\"]*"),
-            searchPaths, alreadyCreatedHeaders, true);
+        const auto otherIncludeFiles =
+            GetStringsWithRegex(srcHeader, R"((?<=^#include)\s*["<]([^">]+))", "\\s*[<\"]*");
+        CreateHeaderFiles(otherIncludeFiles, searchPaths, alreadyCreatedHeaders, true);
       }
     }
   }

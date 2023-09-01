@@ -57,7 +57,7 @@ namespace OpenCL {
 CRecorderWrapper::CRecorderWrapper(CRecorder& recorder) : _recorder(recorder) {}
 
 void CRecorderWrapper::StreamFinishedEvent(std::function<void()> event) {
-  _recorder.RegisterDisposeEvent(event);
+  _recorder.RegisterDisposeEvent(std::move(event));
 }
 
 void CRecorderWrapper::CloseRecorderIfRequired() {

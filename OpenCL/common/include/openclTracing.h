@@ -79,7 +79,7 @@ struct Printer<Base, Wrapper, true> {
     std::function<std::string(const Base)> print = [](const Base value) {
       return Wrapper(value).ToString();
     };
-    return PrintElementsBase(size, array, print);
+    return PrintElementsBase(size, array, std::move(print));
   }
 };
 
@@ -91,7 +91,7 @@ struct Printer<Base, Wrapper, false> {
     std::function<std::string(const Base)> print = [](const Base value) {
       return ToStringHelper(value);
     };
-    return PrintElementsBase(size, array, print);
+    return PrintElementsBase(size, array, std::move(print));
   }
 };
 
@@ -104,13 +104,15 @@ struct Printer<void, void, false> {
   static std::string PrintElements(size_t size, const void* array) {
     if (size == 4) {
       auto print = [](const int32_t value) { return hex(value).ToString(); };
-      return PrintElementsBase<int32_t>(1, reinterpret_cast<const int32_t*>(array), print);
+      return PrintElementsBase<int32_t>(1, reinterpret_cast<const int32_t*>(array),
+                                        std::move(print));
     } else if (size == 8) {
       auto print = [](const int64_t value) { return hex(value).ToString(); };
-      return PrintElementsBase<int64_t>(1, reinterpret_cast<const int64_t*>(array), print);
+      return PrintElementsBase<int64_t>(1, reinterpret_cast<const int64_t*>(array),
+                                        std::move(print));
     }
     auto print = [](const char value) { return hex((const unsigned char)value).ToString(); };
-    return PrintElementsBase<const char>(size, static_cast<const char*>(array), print);
+    return PrintElementsBase<const char>(size, static_cast<const char*>(array), std::move(print));
   }
 };
 } // namespace

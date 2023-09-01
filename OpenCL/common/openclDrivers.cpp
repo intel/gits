@@ -117,9 +117,9 @@ struct Tracer {
 
   template <class Head, class... Rest>
   NOINLINE void print_args(COclLog& s, Head h, Rest... r) {
-    print_args(s, h);
+    print_args(s, std::move(h));
     s << ", ";
-    print_args(s, r...);
+    print_args(s, std::move(r)...);
   }
 
   Tracer(const char* nameStr) : name(nameStr) {}
@@ -129,7 +129,7 @@ struct Tracer {
     if (ShouldLog(level)) {
       auto log = COclLog(level, RAW);
       log << "(";
-      print_args(log, args...);
+      print_args(log, std::move(args)...);
       log << ")";
     }
   }
@@ -139,7 +139,7 @@ struct Tracer {
     if (ShouldLog(level)) {
       auto log = COclLog(level, NO_PREFIX);
       log << "(";
-      print_args(log, args...);
+      print_args(log, std::move(args)...);
       log << ") Lua begin";
     }
   }

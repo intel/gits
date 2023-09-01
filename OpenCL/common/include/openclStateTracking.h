@@ -39,8 +39,9 @@ inline void clBuildProgram_SD(cl_int return_value,
   if (ErrCodeSuccess(return_value)) {
     auto& programState = SD()._programStates[program];
     if (programState->HasHeaders()) {
+      auto alreadyCreatedHeaders = std::set<std::string>();
       CreateHeaderFiles(programState->HeaderIncludeNames(), GetIncludePaths(options),
-                        std::set<std::string>());
+                        alreadyCreatedHeaders);
     }
     if (!programState->fileName.empty()) {
       Log(TRACE) << "^------------- Building file " << programState->fileName;
@@ -66,8 +67,9 @@ inline void clCompileProgram_SD(cl_int return_value,
   if (ErrCodeSuccess(return_value)) {
     auto& programState = SD()._programStates[program];
     if (programState->HasHeaders()) {
+      auto alreadyCreatedHeaders = std::set<std::string>();
       CreateHeaderFiles(programState->HeaderIncludeNames(), GetIncludePaths(options),
-                        std::set<std::string>());
+                        alreadyCreatedHeaders);
     }
     programState->CompileProgram(num_devices, num_input_headers, input_headers,
                                  header_include_names, options);
@@ -650,7 +652,7 @@ inline void clEnqueueNDRangeKernel_SD(cl_int return_value,
     if (error) {
       kernelName = "UNKNOWN_" + std::to_string(CGits::Instance().CurrentKernelCount());
     }
-    SD()._kernelStates[kernel]->name = kernelName;
+    SD()._kernelStates[kernel]->name = std::move(kernelName);
   }
   Log(TRACE) << "--- kernel call #" << CGits::Instance().CurrentKernelCount() << ", kernel name \""
              << SD()._kernelStates[kernel]->name << "\" ---";

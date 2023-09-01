@@ -196,8 +196,8 @@ void CCLKernelState::SetArgSetType(const cl_uint& index, const KernelSetType& ty
 
 CCLProgramState::CCLProgramState() {}
 
-CCLProgramState::CCLProgramState(cl_context context,
-                                 cl_uint num,
+CCLProgramState::CCLProgramState(const cl_context& context,
+                                 const cl_uint& num,
                                  const char** sources,
                                  const size_t* lengths,
                                  std::string filename)
@@ -208,8 +208,8 @@ CCLProgramState::CCLProgramState(cl_context context,
   _hasHeaders = !_headerIncludeNames.empty();
 }
 
-CCLProgramState::CCLProgramState(cl_context context,
-                                 cl_uint num,
+CCLProgramState::CCLProgramState(const cl_context& context,
+                                 const cl_uint& num,
                                  const cl_device_id* device_list,
                                  const unsigned char** binaries,
                                  const size_t* lengths)
@@ -218,13 +218,13 @@ CCLProgramState::CCLProgramState(cl_context context,
   Binaries(num, binaries, lengths);
 }
 
-CCLProgramState::CCLProgramState(cl_context context, const void* il, const size_t length)
+CCLProgramState::CCLProgramState(const cl_context& context, const void* il, const size_t& length)
     : _uniqueStateID(GetUniqueStateID()), _context(context) {
   IL(il, length);
 }
 
-CCLProgramState::CCLProgramState(cl_context context,
-                                 cl_uint num,
+CCLProgramState::CCLProgramState(const cl_context& context,
+                                 const cl_uint& num,
                                  const cl_device_id* device_list,
                                  const char* kernelNames)
     : _uniqueStateID(GetUniqueStateID()),
@@ -234,8 +234,8 @@ CCLProgramState::CCLProgramState(cl_context context,
   _deviceList.assign(device_list, device_list + num);
 }
 
-CCLProgramState::CCLProgramState(cl_context context,
-                                 cl_uint num,
+CCLProgramState::CCLProgramState(const cl_context& context,
+                                 const cl_uint& num,
                                  const cl_program* inputPrograms,
                                  const char* options)
     : _uniqueStateID(GetUniqueStateID()),
@@ -251,15 +251,15 @@ CCLProgramState::CCLProgramState(cl_context context,
   }
 }
 
-void CCLProgramState::BuildProgram(cl_uint num_devices, const char* options) {
+void CCLProgramState::BuildProgram(const cl_uint& num_devices, const char* options) {
   _num_devices = num_devices;
   if (options != nullptr) {
     _buildOptions.assign(options);
   }
 }
 
-void CCLProgramState::CompileProgram(cl_uint num_devices,
-                                     cl_uint num,
+void CCLProgramState::CompileProgram(const cl_uint& num_devices,
+                                     const cl_uint& num,
                                      const cl_program* inputHeaders,
                                      const char** headerIncludeNames,
                                      const char* options) {
@@ -274,14 +274,14 @@ void CCLProgramState::CompileProgram(cl_uint num_devices,
   }
 }
 
-void CCLProgramState::GetProgramInfoBinarySizes(size_t size, void* value) {
+void CCLProgramState::GetProgramInfoBinarySizes(const size_t& size, void* value) {
   if (value != nullptr) {
     const auto* v = reinterpret_cast<size_t*>(value);
     _binarySizes.assign(v, v + (size / sizeof(size_t)));
   }
 }
 
-void CCLProgramState::GetProgramInfoNumDevices(cl_uint num_devices) {
+void CCLProgramState::GetProgramInfoNumDevices(const cl_uint& num_devices) {
   _num_devices = num_devices;
 }
 
@@ -393,7 +393,7 @@ void CCLProgramState::Binaries(const cl_uint num,
   UpdateBinaries(num, lengths);
 }
 
-void CCLProgramState::IL(const void* il, const size_t length) {
+void CCLProgramState::IL(const void* il, const size_t& length) {
   const unsigned char* ilBuffer = static_cast<const unsigned char*>(il);
   _binaries.resize(1);
   _binaries[0].assign(ilBuffer, ilBuffer + length);
@@ -401,7 +401,7 @@ void CCLProgramState::IL(const void* il, const size_t length) {
   UpdateBinaries(1, &length);
 }
 
-void CCLProgramState::Update(cl_uint num, const size_t* lengths) {
+void CCLProgramState::Update(const cl_uint& num, const size_t* lengths) {
   if (num > 0) {
     if (lengths != nullptr) {
       _sourceLengths = std::vector<size_t>(lengths, lengths + num);
@@ -416,7 +416,7 @@ void CCLProgramState::UpdateSourcePtrs() {
   }
 }
 
-void CCLProgramState::UpdateBinaries(cl_uint num, const size_t* lengths) {
+void CCLProgramState::UpdateBinaries(const cl_uint& num, const size_t* lengths) {
   if (num > 0) {
     if (lengths != nullptr) {
       _binarySizes = std::vector<size_t>(lengths, lengths + num);

@@ -78,7 +78,7 @@ namespace ocloc {
 CRecorderWrapper::CRecorderWrapper(CRecorder& recorder) : _recorder(recorder) {}
 
 void CRecorderWrapper::StreamFinishedEvent(std::function<void()> event) {
-  _recorder.RegisterDisposeEvent(event);
+  _recorder.RegisterDisposeEvent(std::move(event));
 }
 
 void CRecorderWrapper::CloseRecorderIfRequired() {
@@ -143,15 +143,16 @@ void CRecorderWrapper::oclocInvoke(int return_value,
         arguments.push_back(argv[i]);
       }
     }
+    std::set<std::string> alreadyCreatedHeaders;
     for (auto i = 0U; i < numSources; i++) {
       const auto src = std::string(sources[i], sources[i] + sourceLens[i] - 1);
       const auto headerFiles =
           GetStringsWithRegex(src, R"((?<=^#include)\s*["<]([^">]+))", "\\s*[<\"]*");
       if (!headerFiles.empty()) {
-        CreateHeaderFiles(headerFiles, includePaths, std::set<std::string>(), true);
+        CreateHeaderFiles(headerFiles, includePaths, alreadyCreatedHeaders, true);
       }
     }
-    CreateHeaderFiles(sourceFilesToScan, includePaths, std::set<std::string>());
+    CreateHeaderFiles(sourceFilesToScan, includePaths, alreadyCreatedHeaders);
 
     if (files.size() > 0) {
       const uint32_t newNumSources = numSources + files.size();

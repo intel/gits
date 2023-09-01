@@ -198,10 +198,10 @@ std::vector<std::string> GetStringsWithRegex(std::string src,
 
 std::vector<std::string> GetIncludePaths(const char* buildOptions);
 
-void CreateHeaderFiles(std::vector<std::string> sourceNamesToScan,
-                       std::vector<std::string> searchPaths,
-                       std::set<std::string> alreadyCreatedHeaders,
-                       bool includeMainFiles = false);
+void CreateHeaderFiles(const std::vector<std::string>& sourceNamesToScan,
+                       const std::vector<std::string>& searchPaths,
+                       std::set<std::string>& alreadyCreatedHeaders,
+                       const bool includeMainFiles = false);
 
 } // namespace gits
 

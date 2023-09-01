@@ -25,7 +25,8 @@ namespace OpenCL {
     *
     * CLibrary class constructor.
     */
-CLibrary::CLibrary(gits::CLibrary::state_creator_t stc) : gits::CLibrary(ID_OPENCL, stc) {}
+CLibrary::CLibrary(gits::CLibrary::state_creator_t stc)
+    : gits::CLibrary(ID_OPENCL, std::move(stc)) {}
 
 CLibrary::~CLibrary() {}
 

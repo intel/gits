@@ -338,7 +338,7 @@ void SaveImage(char* image,
   }
 }
 
-void SaveBuffer(const std::string name, const std::vector<char>& data) {
+void SaveBuffer(const std::string& name, const std::vector<char>& data) {
   auto& cfg = Config::Get();
   std::string filename = name + ".dat";
   bfs::path path =
@@ -350,7 +350,7 @@ void SaveBuffer(const std::string name, const std::vector<char>& data) {
   binStream.close();
 }
 
-void SaveBuffer(const std::string name, const CBinaryResource& data) {
+void SaveBuffer(const std::string& name, const CBinaryResource& data) {
   auto& cfg = Config::Get();
   std::string filename = name + ".dat";
   bfs::path path =

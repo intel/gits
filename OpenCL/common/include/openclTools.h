@@ -68,8 +68,8 @@ void SaveImage(char* image,
                const cl_image_format& format,
                const cl_image_desc& desc,
                const std::string& name);
-void SaveBuffer(const std::string name, const std::vector<char>& data);
-void SaveBuffer(const std::string name, const CBinaryResource& data);
+void SaveBuffer(const std::string& name, const std::vector<char>& data);
+void SaveBuffer(const std::string& name, const CBinaryResource& data);
 void D3DWarning();
 size_t CountImageSize(const cl_image_format& imageFormat,
                       size_t imageWidth,

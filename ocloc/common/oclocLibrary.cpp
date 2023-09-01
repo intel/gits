@@ -27,7 +27,8 @@ namespace ocloc {
     *
     * CLibrary class constructor.
     */
-CLibrary::CLibrary(gits::CLibrary::state_creator_t stc) : gits::CLibrary(ID_LEVELZERO, stc) {}
+CLibrary::CLibrary(gits::CLibrary::state_creator_t stc)
+    : gits::CLibrary(ID_LEVELZERO, std::move(stc)) {}
 
 CLibrary::~CLibrary() {}
 

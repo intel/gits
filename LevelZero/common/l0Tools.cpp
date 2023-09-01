@@ -370,7 +370,7 @@ std::vector<ze_driver_handle_t> GetDrivers(const CDriver& cDriver) {
   std::vector<ze_driver_handle_t> drivers(drivCount);
   ze_result_t result = cDriver.inject.zeDriverGet(&drivCount, drivers.data());
   zeDriverGet_SD(result, &drivCount, drivers.data());
-  return result == ZE_RESULT_SUCCESS ? drivers : std::vector<ze_driver_handle_t>();
+  return result == ZE_RESULT_SUCCESS ? std::move(drivers) : std::vector<ze_driver_handle_t>();
 }
 
 std::vector<ze_device_handle_t> GetDevices(const CDriver& cDriver,
@@ -380,7 +380,7 @@ std::vector<ze_device_handle_t> GetDevices(const CDriver& cDriver,
   std::vector<ze_device_handle_t> devices(devCount);
   ze_result_t result = cDriver.inject.zeDeviceGet(driver, &devCount, devices.data());
   zeDeviceGet_SD(result, driver, &devCount, devices.data());
-  return result == ZE_RESULT_SUCCESS ? devices : std::vector<ze_device_handle_t>();
+  return result == ZE_RESULT_SUCCESS ? std::move(devices) : std::vector<ze_device_handle_t>();
 }
 
 ze_device_handle_t GetGPUDevice(CStateDynamic& sd, const CDriver& cDriver) {

@@ -162,39 +162,39 @@ public:
 
   CCLProgramState();
   // clCreateProgramFromSource
-  CCLProgramState(cl_context context,
-                  cl_uint num,
+  CCLProgramState(const cl_context& context,
+                  const cl_uint& num,
                   const char** sources,
                   const size_t* lengths,
                   std::string filename);
   // clCreateProgramFromBinary
-  CCLProgramState(cl_context context,
-                  cl_uint num,
+  CCLProgramState(const cl_context& context,
+                  const cl_uint& num,
                   const cl_device_id* device_list,
                   const unsigned char** binaries,
                   const size_t* lengths);
   // clCreateProgramFromIL
-  CCLProgramState(cl_context context, const void* il, const size_t length);
+  CCLProgramState(const cl_context& context, const void* il, const size_t& length);
   // clCreateProgramFromBuiltInKernels
-  CCLProgramState(cl_context context,
-                  cl_uint num,
+  CCLProgramState(const cl_context& context,
+                  const cl_uint& num,
                   const cl_device_id* device_list,
                   const char* kernelNames);
   // clLinkProgram
-  CCLProgramState(cl_context context,
-                  cl_uint num,
+  CCLProgramState(const cl_context& context,
+                  const cl_uint& num,
                   const cl_program* inputPrograms,
                   const char* options);
 
-  void BuildProgram(cl_uint num_devices, const char* options);
-  void CompileProgram(cl_uint num_devices,
-                      cl_uint num,
+  void BuildProgram(const cl_uint& num_devices, const char* options);
+  void CompileProgram(const cl_uint& num_devices,
+                      const cl_uint& num,
                       const cl_program* inputHeaders,
                       const char** headerIncludeNames,
                       const char* options);
 
-  void GetProgramInfoBinarySizes(size_t size, void* value);
-  void GetProgramInfoNumDevices(cl_uint num_devices);
+  void GetProgramInfoBinarySizes(const size_t& size, void* value);
+  void GetProgramInfoNumDevices(const cl_uint& num_devices);
   void GetProgramInfoBinaries(const size_t& size, void* value);
   std::vector<uint64_t> GetBinaryHash() const;
 
@@ -224,7 +224,7 @@ public:
 
   void Sources(const cl_uint num, const char** sources, const size_t* lengths);
   void Binaries(const cl_uint num, const unsigned char* const* binaries, const size_t* lengths);
-  void IL(const void* il, const size_t length);
+  void IL(const void* il, const size_t& length);
 
   uint64_t ID() {
     return _uniqueStateID;
@@ -234,9 +234,9 @@ private:
   typedef std::basic_string<char> string;
   typedef std::basic_string<unsigned char> ustring;
 
-  void Update(cl_uint num, const size_t* lengths);
+  void Update(const cl_uint& num, const size_t* lengths);
   void UpdateSourcePtrs();
-  void UpdateBinaries(cl_uint num, const size_t* lengths);
+  void UpdateBinaries(const cl_uint& num, const size_t* lengths);
   void UpdateBinariesPtrs();
 
   uint64_t _uniqueStateID = 0ULL;
