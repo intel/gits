@@ -900,17 +900,9 @@ namespace Vulkan {
       C%(name_data)s(%(argd)s);
       ~C%(name_data)s();
       %(unversioned_name)s* Value();
-      struct PtrConverter {
-      private:
-        %(unversioned_name)s* _ptr;
-      public:
-        explicit PtrConverter(%(unversioned_name)s* ptr) : _ptr(ptr) {}
-        operator %(unversioned_name)s*() const { return _ptr; }
-        operator %(unversioned_name)s() const { return *_ptr; }
-      };
 
-      PtrConverter operator*() {
-        return PtrConverter(Value());
+      PtrConverter<%(unversioned_name)s> operator*() {
+        return PtrConverter<%(unversioned_name)s>(Value());
       }
       void * GetPtrType() override { return (void *)Value(); }
       std::set<uint64_t> GetMappedPointers();
@@ -1926,7 +1918,7 @@ namespace Vulkan {
         else:
           init = ''
         function_operator += '\n  return ' + key_decl + ';'
-        function_original += '\n  return PtrConverter(' + key_decl_original + ');'
+        function_original += '\n  return PtrConverter<' + key_name + '>(' + key_decl_original + ');'
         mapped_pointers += 'return returnMap;'
         for n in Cnames:
           if n not in ('_return_value', '_self'):
@@ -2032,19 +2024,11 @@ namespace Vulkan {
       static const char* NAME;
       virtual const char* Name() const override { return NAME; }
       %(unversioned_name)s* Value();
-      struct PtrConverter {
-      private:
-        %(unversioned_name)s* _ptr;
-      public:
-        explicit PtrConverter(%(unversioned_name)s* ptr) : _ptr(ptr) {}
-        operator %(unversioned_name)s*() const { return _ptr; }
-        operator %(unversioned_name)s() const { return *_ptr; }
-      };
 
-      PtrConverter operator*() {
-        return PtrConverter(Value());
+      PtrConverter<%(unversioned_name)s> operator*() {
+        return PtrConverter<%(unversioned_name)s>(Value());
       }
-      PtrConverter Original();
+      PtrConverter<%(unversioned_name)s> Original();
       void * GetPtrType() override { return (void *)Value(); }
       virtual std::set<uint64_t> GetMappedPointers();
       virtual void Write(CBinOStream& stream) const override;
@@ -2071,9 +2055,9 @@ const char* gits::Vulkan::C%(versioned_name)s::NAME = "%(unversioned_name)s";
 %(function_operator)s
 }
 
-gits::Vulkan::C%(versioned_name)s::PtrConverter gits::Vulkan::C%(versioned_name)s::Original() {
+gits::PtrConverter<%(unversioned_name)s> gits::Vulkan::C%(versioned_name)s::Original() {
   if (*_isNullPtr)
-    return PtrConverter(nullptr);
+    return PtrConverter<%(unversioned_name)s>(nullptr);
 %(function_original)s
 }
 

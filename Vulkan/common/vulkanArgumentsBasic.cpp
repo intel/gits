@@ -94,9 +94,9 @@ VkClearColorValue* gits::Vulkan::CVkClearColorValue::Value() {
   return _ClearColorValue;
 }
 
-gits::Vulkan::CVkClearColorValue::PtrConverter gits::Vulkan::CVkClearColorValue::Original() {
+gits::PtrConverter<VkClearColorValue> gits::Vulkan::CVkClearColorValue::Original() {
   if (*_isNullPtr) {
-    return PtrConverter(nullptr);
+    return PtrConverter<VkClearColorValue>(nullptr);
   }
   if (_ClearColorValueOriginal == nullptr) {
     _ClearColorValueOriginal = new VkClearColorValue;
@@ -110,7 +110,7 @@ gits::Vulkan::CVkClearColorValue::PtrConverter gits::Vulkan::CVkClearColorValue:
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
   }
-  return PtrConverter(_ClearColorValueOriginal);
+  return PtrConverter<VkClearColorValue>(_ClearColorValueOriginal);
 }
 
 void gits::Vulkan::CVkClearColorValue::Write(CBinOStream& stream) const {
@@ -193,15 +193,15 @@ VkClearValue* gits::Vulkan::CVkClearValue::Value() {
   return _ClearValue;
 }
 
-gits::Vulkan::CVkClearValue::PtrConverter gits::Vulkan::CVkClearValue::Original() {
+gits::PtrConverter<VkClearValue> gits::Vulkan::CVkClearValue::Original() {
   if (*_isNullPtr) {
-    return PtrConverter(nullptr);
+    return PtrConverter<VkClearValue>(nullptr);
   }
   if (_ClearValueOriginal == nullptr) {
     _ClearValueOriginal = new VkClearValue;
     _ClearValueOriginal->color = _color->Original();
   }
-  return PtrConverter(_ClearValueOriginal);
+  return PtrConverter<VkClearValue>(_ClearValueOriginal);
 }
 
 void gits::Vulkan::CVkClearValue::Write(CBinOStream& stream) const {
@@ -296,10 +296,9 @@ VkDescriptorImageInfo* gits::Vulkan::CVkDescriptorImageInfo::Value() {
   return _DescriptorImageInfo;
 }
 
-gits::Vulkan::CVkDescriptorImageInfo::PtrConverter gits::Vulkan::CVkDescriptorImageInfo::
-    Original() {
+gits::PtrConverter<VkDescriptorImageInfo> gits::Vulkan::CVkDescriptorImageInfo::Original() {
   if (*_isNullPtr) {
-    return PtrConverter(nullptr);
+    return PtrConverter<VkDescriptorImageInfo>(nullptr);
   }
   if (_DescriptorImageInfoOriginal == nullptr) {
     _DescriptorImageInfoOriginal = new VkDescriptorImageInfo;
@@ -307,7 +306,7 @@ gits::Vulkan::CVkDescriptorImageInfo::PtrConverter gits::Vulkan::CVkDescriptorIm
     _DescriptorImageInfoOriginal->imageView = _imageView->Original();
     _DescriptorImageInfoOriginal->imageLayout = _imageLayout->Original();
   }
-  return PtrConverter(_DescriptorImageInfoOriginal);
+  return PtrConverter<VkDescriptorImageInfo>(_DescriptorImageInfoOriginal);
 }
 
 void gits::Vulkan::CVkDescriptorImageInfo::Write(CBinOStream& stream) const {
@@ -671,10 +670,10 @@ VkPipelineCacheCreateInfo* gits::Vulkan::CVkPipelineCacheCreateInfo_V1::Value() 
   return _PipelineCacheCreateInfo;
 }
 
-gits::Vulkan::CVkPipelineCacheCreateInfo_V1::PtrConverter gits::Vulkan::
-    CVkPipelineCacheCreateInfo_V1::Original() {
+gits::PtrConverter<VkPipelineCacheCreateInfo> gits::Vulkan::CVkPipelineCacheCreateInfo_V1::
+    Original() {
   if (*_isNullPtr) {
-    return PtrConverter(nullptr);
+    return PtrConverter<VkPipelineCacheCreateInfo>(nullptr);
   }
   if (_PipelineCacheCreateInfoOriginal == nullptr) {
     _PipelineCacheCreateInfoOriginal = new VkPipelineCacheCreateInfo;
@@ -686,7 +685,7 @@ gits::Vulkan::CVkPipelineCacheCreateInfo_V1::PtrConverter gits::Vulkan::
     memcpy(_initialData.data(), **_pInitialData, **_initialDataSize);
     _PipelineCacheCreateInfoOriginal->pInitialData = _initialData.data();
   }
-  return PtrConverter(_PipelineCacheCreateInfoOriginal);
+  return PtrConverter<VkPipelineCacheCreateInfo>(_PipelineCacheCreateInfoOriginal);
 }
 
 std::set<uint64_t> gits::Vulkan::CVkPipelineCacheCreateInfo_V1::GetMappedPointers() {
@@ -844,9 +843,9 @@ VkDependencyInfo* gits::Vulkan::CVkDependencyInfo::Value() {
   return _DependencyInfo;
 }
 
-gits::Vulkan::CVkDependencyInfo::PtrConverter gits::Vulkan::CVkDependencyInfo::Original() {
+gits::PtrConverter<VkDependencyInfo> gits::Vulkan::CVkDependencyInfo::Original() {
   if (*_isNullPtr) {
-    return PtrConverter(nullptr);
+    return PtrConverter<VkDependencyInfo>(nullptr);
   }
   if (_DependencyInfoOriginal == nullptr) {
     _DependencyInfoOriginal = new VkDependencyInfo;
@@ -860,7 +859,7 @@ gits::Vulkan::CVkDependencyInfo::PtrConverter gits::Vulkan::CVkDependencyInfo::O
     _DependencyInfoOriginal->imageMemoryBarrierCount = _imageMemoryBarrierCount->Original();
     _DependencyInfoOriginal->pImageMemoryBarriers = _pImageMemoryBarriers->Original();
   }
-  return PtrConverter(_DependencyInfoOriginal);
+  return PtrConverter<VkDependencyInfo>(_DependencyInfoOriginal);
 }
 
 std::set<uint64_t> gits::Vulkan::CVkDependencyInfo::GetMappedPointers() {

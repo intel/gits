@@ -251,4 +251,21 @@ private:
   size_t _width;
 };
 std::ostream& operator<<(std::ostream& stream, const hex& h);
+
+// This PtrConverter is for the basic conversion between a type and a type pointer. Some classes
+// will have their own specialized PtrConverters with more conversions or more complicated ones.
+template <typename T>
+class PtrConverter {
+  T* _ptr;
+
+public:
+  explicit PtrConverter(T* ptr) : _ptr(ptr) {}
+  operator T*() const {
+    return _ptr;
+  }
+  operator T() const {
+    return *_ptr;
+  }
+};
+
 } // namespace gits

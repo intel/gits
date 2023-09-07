@@ -192,14 +192,6 @@ public:
   T Value() {
     return data;
   }
-  /*struct PtrConverter {
-      private:
-      T* _ptr;
-      public:
-      explicit PtrConverter(T* ptr) : _ptr(ptr) {}
-      operator T*() const { return _ptr; }
-      operator T() const { return *_ptr; }
-      };*/
 
   T operator*() {
     return Value();
@@ -255,17 +247,9 @@ public:
         data = T(handle);
         return &data;
       }
-      struct PtrConverter {
-      private:
-        T* _ptr;
-      public:
-        explicit PtrConverter(T* ptr) : _ptr(ptr) {}
-        operator T*() const { return _ptr; }
-        operator T() const { return *_ptr; }
-      };
 
-      PtrConverter operator*() {
-        return PtrConverter(Value());
+      PtrConverter<T> operator*() {
+        return PtrConverter<T>(Value());
       }
     };*/
 
@@ -685,22 +669,9 @@ public:
   CVkClearColorValueData(const VkClearColorValue* clearcolorvalue);
   ~CVkClearColorValueData();
   VkClearColorValue* Value();
-  struct PtrConverter {
-  private:
-    VkClearColorValue* _ptr;
 
-  public:
-    explicit PtrConverter(VkClearColorValue* ptr) : _ptr(ptr) {}
-    operator VkClearColorValue*() const {
-      return _ptr;
-    }
-    operator VkClearColorValue() const {
-      return *_ptr;
-    }
-  };
-
-  PtrConverter operator*() {
-    return PtrConverter(Value());
+  PtrConverter<VkClearColorValue> operator*() {
+    return PtrConverter<VkClearColorValue>(Value());
   }
   void* GetPtrType() {
     return (void*)Value();
@@ -717,22 +688,9 @@ public:
   CVkClearValueData(const VkClearValue* clearvalue);
   ~CVkClearValueData();
   VkClearValue* Value();
-  struct PtrConverter {
-  private:
-    VkClearValue* _ptr;
 
-  public:
-    explicit PtrConverter(VkClearValue* ptr) : _ptr(ptr) {}
-    operator VkClearValue*() const {
-      return _ptr;
-    }
-    operator VkClearValue() const {
-      return *_ptr;
-    }
-  };
-
-  PtrConverter operator*() {
-    return PtrConverter(Value());
+  PtrConverter<VkClearValue> operator*() {
+    return PtrConverter<VkClearValue>(Value());
   }
   void* GetPtrType() {
     return (void*)Value();
@@ -759,22 +717,9 @@ public:
                              const VkDescriptorType descriptorType);
   ~CVkDescriptorImageInfoData();
   VkDescriptorImageInfo* Value();
-  struct PtrConverter {
-  private:
-    VkDescriptorImageInfo* _ptr;
 
-  public:
-    explicit PtrConverter(VkDescriptorImageInfo* ptr) : _ptr(ptr) {}
-    operator VkDescriptorImageInfo*() const {
-      return _ptr;
-    }
-    operator VkDescriptorImageInfo() const {
-      return *_ptr;
-    }
-  };
-
-  PtrConverter operator*() {
-    return PtrConverter(Value());
+  PtrConverter<VkDescriptorImageInfo> operator*() {
+    return PtrConverter<VkDescriptorImageInfo>(Value());
   }
   void* GetPtrType() {
     return (void*)Value();

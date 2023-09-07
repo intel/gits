@@ -541,24 +541,10 @@ public:
   }
   VkClearColorValue* Value();
 
-  struct PtrConverter {
-  private:
-    VkClearColorValue* _ptr;
-
-  public:
-    explicit PtrConverter(VkClearColorValue* ptr) : _ptr(ptr) {}
-    operator VkClearColorValue*() const {
-      return _ptr;
-    }
-    operator VkClearColorValue() const {
-      return *_ptr;
-    }
-  };
-
-  PtrConverter operator*() {
-    return PtrConverter(Value());
+  PtrConverter<VkClearColorValue> operator*() {
+    return PtrConverter<VkClearColorValue>(Value());
   }
-  PtrConverter Original();
+  PtrConverter<VkClearColorValue> Original();
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
   virtual void Write(CCodeOStream& stream) const;
@@ -583,24 +569,11 @@ public:
     return NAME;
   }
   VkClearValue* Value();
-  struct PtrConverter {
-  private:
-    VkClearValue* _ptr;
 
-  public:
-    explicit PtrConverter(VkClearValue* ptr) : _ptr(ptr) {}
-    operator VkClearValue*() const {
-      return _ptr;
-    }
-    operator VkClearValue() const {
-      return *_ptr;
-    }
-  };
-
-  PtrConverter operator*() {
-    return PtrConverter(Value());
+  PtrConverter<VkClearValue> operator*() {
+    return PtrConverter<VkClearValue>(Value());
   }
-  PtrConverter Original();
+  PtrConverter<VkClearValue> Original();
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
   virtual void Write(CCodeOStream& stream) const;
@@ -637,24 +610,11 @@ public:
     return NAME;
   }
   VkDescriptorImageInfo* Value();
-  struct PtrConverter {
-  private:
-    VkDescriptorImageInfo* _ptr;
 
-  public:
-    explicit PtrConverter(VkDescriptorImageInfo* ptr) : _ptr(ptr) {}
-    operator VkDescriptorImageInfo*() const {
-      return _ptr;
-    }
-    operator VkDescriptorImageInfo() const {
-      return *_ptr;
-    }
-  };
-
-  PtrConverter operator*() {
-    return PtrConverter(Value());
+  PtrConverter<VkDescriptorImageInfo> operator*() {
+    return PtrConverter<VkDescriptorImageInfo>(Value());
   }
-  PtrConverter Original();
+  PtrConverter<VkDescriptorImageInfo> Original();
   void* GetPtrType() override {
     return (void*)Value();
   }
@@ -1140,24 +1100,11 @@ public:
     return NAME;
   }
   VkPipelineCacheCreateInfo* Value();
-  struct PtrConverter {
-  private:
-    VkPipelineCacheCreateInfo* _ptr;
 
-  public:
-    explicit PtrConverter(VkPipelineCacheCreateInfo* ptr) : _ptr(ptr) {}
-    operator VkPipelineCacheCreateInfo*() const {
-      return _ptr;
-    }
-    operator VkPipelineCacheCreateInfo() const {
-      return *_ptr;
-    }
-  };
-
-  PtrConverter operator*() {
-    return PtrConverter(Value());
+  PtrConverter<VkPipelineCacheCreateInfo> operator*() {
+    return PtrConverter<VkPipelineCacheCreateInfo>(Value());
   }
-  PtrConverter Original();
+  PtrConverter<VkPipelineCacheCreateInfo> Original();
   void* GetPtrType() override {
     return (void*)Value();
   }
@@ -1251,24 +1198,11 @@ public:
     return NAME;
   }
   VkDependencyInfo* Value();
-  struct PtrConverter {
-  private:
-    VkDependencyInfo* _ptr;
 
-  public:
-    explicit PtrConverter(VkDependencyInfo* ptr) : _ptr(ptr) {}
-    operator VkDependencyInfo*() const {
-      return _ptr;
-    }
-    operator VkDependencyInfo() const {
-      return *_ptr;
-    }
-  };
-
-  PtrConverter operator*() {
-    return PtrConverter(Value());
+  PtrConverter<VkDependencyInfo> operator*() {
+    return PtrConverter<VkDependencyInfo>(Value());
   }
-  PtrConverter Original();
+  PtrConverter<VkDependencyInfo> Original();
   void* GetPtrType() override {
     return (void*)Value();
   }
