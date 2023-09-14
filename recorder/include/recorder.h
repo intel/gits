@@ -28,7 +28,6 @@
 
 DISABLE_WARNINGS
 #include <boost/thread.hpp>
-#include <boost/filesystem/path.hpp>
 ENABLE_WARNINGS
 
 namespace gits {

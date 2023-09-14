@@ -125,7 +125,7 @@ set_target_properties(OpenCL_interceptor PROPERTIES OUTPUT_NAME OpenCL)
 if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   target_link_libraries(OpenCL_interceptor dl pthread)
 endif()
-target_link_libraries(OpenCL_interceptor Boost::thread Boost::filesystem)
+target_link_libraries(OpenCL_interceptor Boost::thread)
 
 add_dependencies(OpenCL_common common OpenCL_codegen)
 add_dependencies(OpenCL_recorder OpenCL_codegen)

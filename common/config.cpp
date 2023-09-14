@@ -16,10 +16,10 @@
 
 #include <regex>
 #include <chrono>
+#include <filesystem>
 
 DISABLE_WARNINGS
 #include <boost/property_tree/info_parser.hpp>
-#include <boost/filesystem.hpp>
 ENABLE_WARNINGS
 
 #ifdef GITS_PLATFORM_WINDOWS
@@ -30,11 +30,12 @@ ENABLE_WARNINGS
 using namespace std;
 
 namespace {
-std::string read_file(const boost::filesystem::path& file_name) {
-  boost::filesystem::ifstream file(file_name, std::ios::binary | std::ios::in);
+std::string read_file(const std::filesystem::path& file_name) {
+  std::ifstream file(file_name, std::ios::binary | std::ios::in);
   if (file.is_open()) {
     std::stringstream str;
     str << file.rdbuf();
+    file.close();
     return str.str();
   }
   return "";
@@ -124,7 +125,7 @@ void gits::Config::Set(const Config& cfg) {
 
 #ifndef BUILD_FOR_CCODE
 
-bool gits::Config::Set(const boost::filesystem::path& cfgDir) {
+bool gits::Config::Set(const std::filesystem::path& cfgDir) {
   static bool configured = false;
   if (configured) {
     return true;
@@ -935,7 +936,7 @@ bool gits::Config::Set(const boost::filesystem::path& cfgDir) {
   std::string eventScript;
   ReadRecorderOption(pt, "Extras.Utilities.EventScript", eventScript, GITS_PLATFORM_BIT_ALL);
   if (!eventScript.empty()) {
-    boost::filesystem::path scriptPath(eventScript);
+    std::filesystem::path scriptPath(eventScript);
     if (!exists(scriptPath) || !is_regular_file(scriptPath)) {
       throw std::runtime_error("could not find file: " + eventScript);
     }
@@ -984,7 +985,7 @@ bool gits::Config::Set(const boost::filesystem::path& cfgDir) {
   return true;
 }
 
-void gits::GetConfigPtree(const boost::filesystem::path& cfgPath, boost::property_tree::ptree& pt) {
+void gits::GetConfigPtree(const std::filesystem::path& cfgPath, boost::property_tree::ptree& pt) {
   auto string = cfgPath.string();
   std::ifstream cfgFile(string.c_str());
   if (!cfgFile.good()) {
@@ -1060,11 +1061,11 @@ void gits::ReadRecorderOption<std::string>(const boost::property_tree::ptree& pt
 }
 
 template <>
-void gits::ReadRecorderOption<boost::filesystem::path>(const boost::property_tree::ptree& pt,
-                                                       const char* name,
-                                                       boost::filesystem::path& value,
-                                                       unsigned supportedPlatforms,
-                                                       bool hide) {
+void gits::ReadRecorderOption<std::filesystem::path>(const boost::property_tree::ptree& pt,
+                                                     const char* name,
+                                                     std::filesystem::path& value,
+                                                     unsigned supportedPlatforms,
+                                                     bool hide) {
   if (!(supportedPlatforms & GITS_PLATFORM_BIT_CURRENT)) {
     return;
   }

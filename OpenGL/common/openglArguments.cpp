@@ -35,11 +35,6 @@
 #include <sstream>
 #include <iomanip>
 
-DISABLE_WARNINGS
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
-ENABLE_WARNINGS
-
 /* *********************************** E N U M ********************************* */
 
 const char* gits::OpenGL::CGLenum::NAME = "GLenum";

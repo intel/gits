@@ -34,8 +34,6 @@ DISABLE_WARNINGS
 #include <boost/property_tree/xml_parser.hpp>
 ENABLE_WARNINGS
 
-namespace bfs = boost::filesystem;
-
 namespace gits {
 // Developer builds are of the form: dd.dd.dd.999
 #ifndef VERSION_4
@@ -132,34 +130,33 @@ CGits::~CGits() {
   if (Config::Get().recorder.basic.enabled && Config::Get().recorder.basic.dumpCCode) {
     auto& dumpPath = Config::Get().common.streamDir;
     auto& installPath = Config::Get().common.installPath;
-    boost::filesystem::path ccodePath =
-        boost::filesystem::path(installPath.parent_path().string()) / "CCode";
-    boost::filesystem::path ccodeFiles[] = {dumpPath / "stream_externs.cpp",
-                                            dumpPath / "stream_externs.h",
-                                            dumpPath / "stream_main.cpp"};
+    std::filesystem::path ccodePath = installPath.parent_path() / "CCode";
+    std::filesystem::path ccodeFiles[] = {dumpPath / "stream_externs.cpp",
+                                          dumpPath / "stream_externs.h",
+                                          dumpPath / "stream_main.cpp"};
 
-    boost::filesystem::path streamFramesFilePath = dumpPath / "stream_frames.cpp";
-    boost::filesystem::path streamStateRestorePath = dumpPath / "stream_state_restore.cpp";
-    boost::filesystem::path streamPreRecorderPath = dumpPath / "stream_pre_recorder.cpp";
-    boost::filesystem::path ccodeFilesDest = dumpPath / "CCodeSource/StreamFiles";
+    std::filesystem::path streamFramesFilePath = dumpPath / "stream_frames.cpp";
+    std::filesystem::path streamStateRestorePath = dumpPath / "stream_state_restore.cpp";
+    std::filesystem::path streamPreRecorderPath = dumpPath / "stream_pre_recorder.cpp";
+    std::filesystem::path ccodeFilesDest = dumpPath / "CCodeSource/StreamFiles";
 
-    CopyDirectoryRecursively(ccodePath, dumpPath);
-    boost::filesystem::create_directory(ccodeFilesDest);
+    std::filesystem::copy(ccodePath, dumpPath, std::filesystem::copy_options::recursive);
+    std::filesystem::create_directory(ccodeFilesDest);
 
     for (const auto& file : ccodeFiles) {
-      boost::filesystem::rename(file, ccodeFilesDest / file.filename().string());
+      std::filesystem::rename(file, ccodeFilesDest / file.filename());
     }
 
     int fileDividerInBytes = 1048576; // each file after splitting is approximately 1 MB
-    boost::filesystem::path filesForDivide[] = {streamFramesFilePath, streamStateRestorePath,
-                                                streamPreRecorderPath};
+    std::filesystem::path filesForDivide[] = {streamFramesFilePath, streamStateRestorePath,
+                                              streamPreRecorderPath};
     for (const auto& file : filesForDivide) {
-      int divideCount = boost::filesystem::file_size(file) / fileDividerInBytes;
+      int divideCount = std::filesystem::file_size(file) / fileDividerInBytes;
       if (divideCount > 1) {
         auto breakPoints = scopeAnalyze(file);
         divideFile(file, ccodeFilesDest, breakPoints);
       } else {
-        boost::filesystem::rename(file, ccodeFilesDest / file.filename().string());
+        std::filesystem::rename(file, ccodeFilesDest / file.filename());
       }
     }
   }
@@ -185,7 +182,7 @@ zipFile CGits::OpenZipFileGLPrograms() {
     return _glProgramsZipFile;
   }
 
-  bfs::path path = bfs::path(Config::Get().common.streamDir) / std::string("gitsPrograms.zip");
+  std::filesystem::path path = Config::Get().common.streamDir / "gitsPrograms.zip";
   auto zipName = path.string();
 
   _glProgramsZipFile = zipOpen(zipName.c_str(), APPEND_STATUS_ADDINZIP);
@@ -255,7 +252,7 @@ void CGits::OpenUnZipFileGLPrograms() {
   }
 
   //Open zip file
-  bfs::path arch_path = bfs::path(Config::Get().common.streamDir) / "gitsPrograms.zip";
+  std::filesystem::path arch_path = Config::Get().common.streamDir / "gitsPrograms.zip";
   _glProgramsUnZipFile = unzOpen(arch_path.string().c_str());
   if (_glProgramsUnZipFile == nullptr) {
     throw std::runtime_error("failed to open zip archive");
@@ -527,7 +524,7 @@ pt::ptree& CFile::GetPropertyTree() const {
   return *_properties;
 }
 
-void CGits::ResourceManagerInit(const bfs::path& dump_dir) {
+void CGits::ResourceManagerInit(const std::filesystem::path& dump_dir) {
   const auto& mappings = resource_filenames(dump_dir);
   const auto& ph = Config::Get().recorder.extras.optimizations.partialHash;
   auto type = Config::Get().recorder.extras.optimizations.hashType;

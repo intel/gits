@@ -17,12 +17,6 @@
 
 #include <string>
 
-DISABLE_WARNINGS
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
-#include <boost/filesystem/path.hpp>
-ENABLE_WARNINGS
-
 #ifdef GITS_PLATFORM_WINDOWS
 #include <initguid.h>
 #include <Windows.h>

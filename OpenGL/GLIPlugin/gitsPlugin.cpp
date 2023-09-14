@@ -43,7 +43,6 @@ DISABLE_WARNINGS
 #include <boost/thread.hpp>
 ENABLE_WARNINGS
 
-namespace bfs = boost::filesystem;
 void PrePostDisableGL();
 
 namespace gits {
@@ -90,11 +89,11 @@ void CGitsPlugin::Initialize() {
 
     const char* envConfigPath = getenv("GITS_CONFIG_DIR");
 
-    bfs::path libPath = dl::this_library_path();
-    bfs::path configPath = libPath.parent_path();
+    std::filesystem::path libPath = dl::this_library_path();
+    std::filesystem::path configPath = libPath.parent_path();
 
     if (envConfigPath) {
-      configPath = bfs::path(envConfigPath);
+      configPath = std::filesystem::path(envConfigPath);
     }
 
     _loader.reset(new CGitsLoader(configPath, "GITSRecorderOpenGL"));
@@ -179,10 +178,10 @@ std::vector<PROC> getAllProcsByOrdinal(HMODULE module) {
   return procs;
 }
 
-bfs::path ModuleDir(HMODULE module) {
+std::filesystem::path ModuleDir(HMODULE module) {
   char dllName[1024] = {0};
   GetModuleFileName(module, dllName, 1023);
-  return bfs::path(dllName).parent_path();
+  return std::filesystem::path(dllName).parent_path();
 }
 
 void routeEntryPoints(const std::vector<PROC>& src, const std::vector<PROC>& dst) {

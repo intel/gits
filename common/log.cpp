@@ -20,10 +20,10 @@
 #endif
 #include <iostream>
 #include <vector>
+#include <fstream>
 #ifndef BUILD_FOR_CCODE
 DISABLE_WARNINGS
 #include <boost/thread.hpp>
-#include <boost/filesystem/fstream.hpp>
 ENABLE_WARNINGS
 #endif
 
@@ -34,7 +34,7 @@ ENABLE_WARNINGS
 
 namespace {
 #ifndef BUILD_FOR_CCODE
-std::unique_ptr<boost::filesystem::ofstream> _file;
+std::unique_ptr<std::ofstream> _file;
 #endif
 gits::CLog::FPrintf* _func = nullptr;
 std::ostream* _log = &std::cout;
@@ -61,7 +61,7 @@ gits::CLog::CLog(LogLevel lvl, LogStyle style)
     _mutex.reset(new boost::mutex());
   }
   if (!_file.get()) {
-    _file.reset(new boost::filesystem::ofstream);
+    _file.reset(new std::ofstream);
   }
 #endif
   if (_style != NO_PREFIX && _style != RAW) {
@@ -100,7 +100,7 @@ gits::CLog::CLog(const CLog& rhs)
     _mutex.reset(new boost::mutex());
   }
   if (!_file.get()) {
-    _file.reset(new boost::filesystem::ofstream);
+    _file.reset(new std::ofstream);
   }
 #endif
 }
@@ -110,9 +110,9 @@ void gits::CLog::SetLogLevel(LogLevel lvl) {
 }
 
 #ifndef BUILD_FOR_CCODE
-void gits::CLog::LogFile(const boost::filesystem::path& dir) {
+void gits::CLog::LogFile(const std::filesystem::path& dir) {
   if (_file.get() == nullptr) {
-    _file.reset(new boost::filesystem::ofstream);
+    _file.reset(new std::ofstream);
   }
 
   _log_to_file = true;
@@ -122,7 +122,7 @@ void gits::CLog::LogFile(const boost::filesystem::path& dir) {
     std::stringstream str;
     str << "gits_";
     str << getpid();
-    boost::filesystem::path logPath(dir);
+    std::filesystem::path logPath(dir);
     const auto logPathEnv = getenv("GITS_CUSTOM_LOG_PATH");
     if (logPathEnv != nullptr) {
       logPath = logPathEnv;
@@ -142,9 +142,9 @@ void gits::CLog::LogFunction(FPrintf* func) {
   _log_player_err = nullptr;
 }
 
-void gits::CLog::LogFilePlayer(const boost::filesystem::path& dir) {
+void gits::CLog::LogFilePlayer(const std::filesystem::path& dir) {
   if (_file.get() == nullptr) {
-    _file.reset(new boost::filesystem::ofstream);
+    _file.reset(new std::ofstream);
   }
 
   _log_to_file = true;

@@ -422,7 +422,6 @@ def generate_gits_wrapper(functions):
 #include <algorithm>
 
 DISABLE_WARNINGS
-#include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 ENABLE_WARNINGS
 

@@ -22,11 +22,6 @@
 
 #include <iomanip>
 
-DISABLE_WARNINGS
-#include <boost/filesystem/fstream.hpp>
-#include <boost/filesystem/convenience.hpp>
-ENABLE_WARNINGS
-
 std::vector<cl_context_properties> gits::OpenCL::MapContextProperties(
     const Ccl_context_properties::CSArray& props) {
   std::vector<cl_context_properties> properties(props.Vector());

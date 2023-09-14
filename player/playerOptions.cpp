@@ -24,7 +24,6 @@
 #include "ptblLibrary.h"
 
 DISABLE_WARNINGS
-#include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 ENABLE_WARNINGS
 
@@ -32,8 +31,7 @@ ENABLE_WARNINGS
 #include <vector>
 #include <fstream>
 #include <sstream>
-
-namespace bfs = boost::filesystem;
+#include <filesystem>
 
 namespace gits {
 
@@ -103,8 +101,8 @@ void fixup_args(std::vector<std::string>& input_args,
   separate line - arguments with embedded spaces should not be enclosed with ".
 */
 void response_file_args_override(int& argc, char**& argv) {
-  bfs::path rspFile = "gitsPlayer.rsp";
-  std::ifstream file(rspFile.string().c_str());
+  std::filesystem::path rspFile = "gitsPlayer.rsp";
+  std::ifstream file(rspFile);
   if (argc == 1 && file.is_open()) {
     Log(INFO)
         << "No command line parameters passed and 'gitsPlayer.rsp' exists - using response file";
@@ -292,9 +290,9 @@ bool configure_player(int argc, char** argv) {
                                               "If specified, structured exceptions raised during "
                                               "playback will be passed to system unhandled.");
 
-  TypedOption<bfs::path> optionOutputDir(options, OPTION_GROUP_GENERAL, 0, "outputDir",
-                                         "Specifies directory where all the artifacts "
-                                         "will be stored.");
+  TypedOption<std::filesystem::path> optionOutputDir(options, OPTION_GROUP_GENERAL, 0, "outputDir",
+                                                     "Specifies directory where all the artifacts "
+                                                     "will be stored.");
 
   TypedOption<bool> optionRecorderDiags(
       options, OPTION_GROUP_GENERAL, 0, "recorderDiags",
@@ -371,7 +369,7 @@ bool configure_player(int argc, char** argv) {
       "in the form of buffer objects hashes used for specified draw-call execution. "
       "inspecting current VAO state - enabled attributes and element array buffer binding");
 
-  TypedOption<bfs::path> optionOutputTracePath(
+  TypedOption<std::filesystem::path> optionOutputTracePath(
       options, OPTION_GROUP_GENERAL, 0, "outputTracePath",
       "Specifies file path where gits traces will be stored.");
 
@@ -584,7 +582,7 @@ bool configure_player(int argc, char** argv) {
       options, OPTION_GROUP_PLAYBACK, 0, "forceWaylandWindow",
       "Forces using Wayland windows instead of X11.", GITS_PLATFORM_BIT_X11);
 
-  TypedOption<bfs::path> optionEventScript(
+  TypedOption<std::filesystem::path> optionEventScript(
       options, OPTION_GROUP_PLAYBACK, 0, "eventScript",
       "Path to lua event script. "
       "Following functions can be provided in script file for event handlers:\n"
@@ -947,7 +945,7 @@ bool configure_player(int argc, char** argv) {
       options, OPTION_GROUP_MUTATORS, 0, "destroyContextsOnExit",
       "Playing additional API calls in the end of the stream to delete all existing contexts.");
 
-  TypedOption<bfs::path> optionOverrideVKPipelineCache(
+  TypedOption<std::filesystem::path> optionOverrideVKPipelineCache(
       options, OPTION_GROUP_MUTATORS, 0, "overrideVKPipelineCache",
       "Overrides all pipeline cache uses with a single, global pipeline cache object. Initial and "
       "final data is loaded from and stored in a specified file.");
@@ -1035,9 +1033,10 @@ bool configure_player(int argc, char** argv) {
       options, OPTION_GROUP_INTERNAL, 0, "waitForEnter",
       "Before and after playing back the stream, wait for ENTER keypress.");
 
-  TypedOption<bfs::path> optionLibOCLPath(options, OPTION_GROUP_INTERNAL, 0, "libOCLPath",
-                                          "Use a custom path to the OpenCL shared library.",
-                                          GITS_PLATFORM_BIT_WINDOWS | GITS_PLATFORM_BIT_X11);
+  TypedOption<std::filesystem::path> optionLibOCLPath(
+      options, OPTION_GROUP_INTERNAL, 0, "libOCLPath",
+      "Use a custom path to the OpenCL shared library.",
+      GITS_PLATFORM_BIT_WINDOWS | GITS_PLATFORM_BIT_X11);
 
   TypedOption<bool> optionNoOpenCL(options, OPTION_GROUP_INTERNAL, 0, "noOpenCL",
                                    "Do not initialize OpenCL subsystem. This will cause GITS to "
@@ -1053,25 +1052,29 @@ bool configure_player(int argc, char** argv) {
       "Before createing an EGL window, prints all attributes it "
       "was created with.");
 
-  TypedOption<bfs::path> optionLibEGL(options, OPTION_GROUP_INTERNAL, 0, "libEGLPath",
-                                      "Override for library containing EGL functions",
-                                      GITS_PLATFORM_BIT_WINDOWS | GITS_PLATFORM_BIT_X11);
+  TypedOption<std::filesystem::path> optionLibEGL(options, OPTION_GROUP_INTERNAL, 0, "libEGLPath",
+                                                  "Override for library containing EGL functions",
+                                                  GITS_PLATFORM_BIT_WINDOWS |
+                                                      GITS_PLATFORM_BIT_X11);
 
-  TypedOption<bfs::path> optionLibGLESv1(options, OPTION_GROUP_INTERNAL, 0, "libGLESv1Path",
-                                         "Override for library path containing GLES 1 functions",
-                                         GITS_PLATFORM_BIT_WINDOWS | GITS_PLATFORM_BIT_X11);
+  TypedOption<std::filesystem::path> optionLibGLESv1(
+      options, OPTION_GROUP_INTERNAL, 0, "libGLESv1Path",
+      "Override for library path containing GLES 1 functions",
+      GITS_PLATFORM_BIT_WINDOWS | GITS_PLATFORM_BIT_X11);
 
-  TypedOption<bfs::path> optionLibGLESv2(options, OPTION_GROUP_INTERNAL, 0, "libGLESv2Path",
-                                         "Override for library path containing GLES 2 functions",
-                                         GITS_PLATFORM_BIT_WINDOWS | GITS_PLATFORM_BIT_X11);
+  TypedOption<std::filesystem::path> optionLibGLESv2(
+      options, OPTION_GROUP_INTERNAL, 0, "libGLESv2Path",
+      "Override for library path containing GLES 2 functions",
+      GITS_PLATFORM_BIT_WINDOWS | GITS_PLATFORM_BIT_X11);
 
-  TypedOption<bfs::path> optionLibGL(options, OPTION_GROUP_INTERNAL, 0, "libGLPath",
-                                     "Override for library path containing GL functions",
-                                     GITS_PLATFORM_BIT_WINDOWS | GITS_PLATFORM_BIT_X11);
+  TypedOption<std::filesystem::path> optionLibGL(
+      options, OPTION_GROUP_INTERNAL, 0, "libGLPath",
+      "Override for library path containing GL functions",
+      GITS_PLATFORM_BIT_WINDOWS | GITS_PLATFORM_BIT_X11);
 
-  TypedOption<bfs::path> optionLibVK(options, OPTION_GROUP_INTERNAL, 0, "libVKPath",
-                                     "Override for Vulkan Loader library path.",
-                                     GITS_PLATFORM_BIT_WINDOWS | GITS_PLATFORM_BIT_X11);
+  TypedOption<std::filesystem::path> optionLibVK(options, OPTION_GROUP_INTERNAL, 0, "libVKPath",
+                                                 "Override for Vulkan Loader library path.",
+                                                 GITS_PLATFORM_BIT_WINDOWS | GITS_PLATFORM_BIT_X11);
 
   TypedOption<bool> optionSignStream(
       options, OPTION_GROUP_INTERNAL, 0, "signStream",
@@ -1108,7 +1111,7 @@ bool configure_player(int argc, char** argv) {
       "Option cannot be combined with option 'renderDocCaptureFrames'",
       GITS_PLATFORM_BIT_WINDOWS);
 
-  TypedOption<bfs::path> optionRenderDocDllPath(
+  TypedOption<std::filesystem::path> optionRenderDocDllPath(
       options, OPTION_GROUP_PLAYBACK, 0, "renderDocDllPath",
       "By default, RenderDoc is found automatically, "
       "and this option is not necessary. However, if RenderDoc cannot be found, "
@@ -1184,39 +1187,39 @@ bool configure_player(int argc, char** argv) {
   cfg.player.waitAfterQueueSubmitWA = optionWaitAfterQueueSubmitWA.Value();
 
   if (optionOverrideVKPipelineCache.Present()) {
-    bfs::path pipelineCachePath = optionOverrideVKPipelineCache.Value();
-    cfg.player.overrideVKPipelineCache = bfs::absolute(pipelineCachePath).string();
+    std::filesystem::path pipelineCachePath = optionOverrideVKPipelineCache.Value();
+    cfg.player.overrideVKPipelineCache = std::filesystem::absolute(pipelineCachePath);
   }
 
   set_when_option_present(cfg.player.forcePortableWglDepthBits, optionForcePortableWglDepthBits);
 
   cfg.player.noOpenCL = optionNoOpenCL.Value();
-  cfg.player.applicationPath = bfs::absolute(options.AppPath()).string();
+  cfg.player.applicationPath = std::filesystem::absolute(options.AppPath());
 
   set_when_option_present(cfg.player.traceGLBufferHashes, optionTraceGLBufferHashes);
 
   if (optionOutputDir.Present()) {
-    bfs::path outputPath = optionOutputDir.Value();
-    cfg.player.outputDir = bfs::absolute(outputPath).string();
+    std::filesystem::path outputPath = optionOutputDir.Value();
+    cfg.player.outputDir = std::filesystem::absolute(outputPath);
   }
 
   if (optionOutputTracePath.Present()) {
-    bfs::path outputPath = optionOutputTracePath.Value();
+    std::filesystem::path outputPath = optionOutputTracePath.Value();
     // If output path is just a file name (has no parent path), then create the
     // trace file in output dir path if present, rather than the working
     // directory
     if (!outputPath.has_parent_path() && optionOutputDir.Present()) {
       outputPath = optionOutputDir.Value() / outputPath;
     }
-    cfg.player.outputTracePath = bfs::absolute(outputPath).string();
+    cfg.player.outputTracePath = std::filesystem::absolute(outputPath);
   }
 
   if (optionScriptArgsString.Present()) {
     cfg.common.scriptArgsStr = optionScriptArgsString.StrValue();
   }
   if (optionEventScript.Present()) {
-    bfs::path scriptPath = optionEventScript.Value();
-    if (!exists(scriptPath) || !is_regular_file(scriptPath)) {
+    std::filesystem::path scriptPath = optionEventScript.Value();
+    if (!std::filesystem::exists(scriptPath) || !std::filesystem::is_regular_file(scriptPath)) {
       throw std::runtime_error("could not find file: " + optionEventScript.Value().string());
     }
 
@@ -1464,8 +1467,8 @@ bool configure_player(int argc, char** argv) {
   }
 
   if (optionRenderDocDllPath.Present()) {
-    bfs::path renderDocDllPath = optionRenderDocDllPath.Value();
-    cfg.player.renderDoc.dllPath = bfs::absolute(renderDocDllPath).string();
+    std::filesystem::path renderDocDllPath = optionRenderDocDllPath.Value();
+    cfg.player.renderDoc.dllPath = std::filesystem::absolute(renderDocDllPath);
   }
 
   if (optionRenderDocContinuousCapture.Present()) {
@@ -1492,8 +1495,8 @@ bool configure_player(int argc, char** argv) {
   set_when_option_present(cfg.common.libGLESv1, optionLibGLESv2);
   set_when_option_present(cfg.common.libGL, optionLibGL);
   if (optionLibVK.Present()) {
-    bfs::path libVKPath = optionLibVK.Value();
-    if (bfs::is_directory(libVKPath)) {
+    std::filesystem::path libVKPath = optionLibVK.Value();
+    if (std::filesystem::is_directory(libVKPath)) {
       libVKPath /= cfg.common.libVK;
     }
     cfg.common.libVK = libVKPath;
@@ -1617,25 +1620,24 @@ bool configure_player(int argc, char** argv) {
 
   // There is exactly one unrecognized non-option string in cmdline. Its stream path.
   if (!options.NotConsumed().empty()) {
-    bfs::path stream_path = bfs::absolute(options.NotConsumed()[0]);
+    std::filesystem::path stream_path = std::filesystem::absolute(options.NotConsumed()[0]);
 
-    if (!bfs::exists(stream_path)) {
+    if (!std::filesystem::exists(stream_path)) {
       throw std::runtime_error("Specified stream path: '" + stream_path.string() +
                                "' does not exist");
     }
 
-    if (bfs::is_directory(stream_path)) {
+    if (std::filesystem::is_directory(stream_path)) {
       Log(INFO) << "Specified stream path: '" << stream_path
                 << "' is a directory, attempting to find a stream file.";
-      std::vector<std::string> matching_paths;
-      for (auto dirIter = bfs::directory_iterator(stream_path);
-           dirIter != bfs::directory_iterator(); ++dirIter) {
-        auto entryName = dirIter->path().string();
-        if (bfs::is_directory(entryName)) {
+      std::vector<std::filesystem::path> matching_paths;
+      for (const auto& dirEntry : std::filesystem::directory_iterator(stream_path)) {
+        if (std::filesystem::is_directory(dirEntry)) {
           continue;
         }
-        if (ends_with(entryName, ".gits2") || ends_with(entryName, ".gits2.gz")) {
-          matching_paths.push_back(entryName);
+        auto entryPathStr = dirEntry.path().string();
+        if (ends_with(entryPathStr, ".gits2") || ends_with(entryPathStr, ".gits2.gz")) {
+          matching_paths.push_back(dirEntry.path());
         }
       }
 
@@ -1650,8 +1652,8 @@ bool configure_player(int argc, char** argv) {
       Log(INFO) << "Using stream file '" << stream_path << "'\n";
     }
 
-    cfg.player.streamPath = stream_path.string();
-    cfg.common.streamDir = stream_path.parent_path().string();
+    cfg.player.streamPath = stream_path;
+    cfg.common.streamDir = stream_path.parent_path();
   }
   Config::Set(cfg);
 

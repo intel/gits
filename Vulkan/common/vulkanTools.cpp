@@ -7,9 +7,6 @@
 // ===================== end_copyright_notice ==============================
 
 #include "vulkanTools.h"
-DISABLE_WARNINGS
-#include <boost/filesystem.hpp>
-ENABLE_WARNINGS
 #ifndef BUILD_FOR_CCODE
 #include "vulkanStateDynamic.h"
 #include "vulkanFunctions.h"
@@ -46,7 +43,7 @@ std::string GetFileNameFrameScreenshot(unsigned int frameNumber) {
   }
   std::stringstream fileName;
   fileName << "frame" << std::setw(8) << std::setfill('0') << frameNumber;
-  bfs::create_directories(path);
+  std::filesystem::create_directories(path);
   path /= fileName.str();
   return path.string();
 }
@@ -79,7 +76,7 @@ std::string GetFileNameDrawcallScreenshot(unsigned int frameNumber,
     fileName << "_renderpass_" << renderpass;
   }
   fileName << "_image_" << image;
-  bfs::create_directories(path);
+  std::filesystem::create_directories(path);
   path /= fileName.str();
   return path.string();
 }
@@ -130,7 +127,7 @@ std::string GetFileNameResourcesScreenshot(unsigned int frameNumber,
     fileName << "_renderpass_" << renderpass;
   }
   fileName << suffix.str() << objectNumber;
-  bfs::create_directories(path);
+  std::filesystem::create_directories(path);
   path /= fileName.str();
   return path.string();
 }

@@ -16,13 +16,13 @@
 #include <string>
 #include <limits>
 #include <memory>
+#include <filesystem>
 
 DISABLE_WARNINGS
 #ifdef check
 #undef check
 #endif
 #include <boost/thread.hpp>
-#include <boost/filesystem/path.hpp>
 ENABLE_WARNINGS
 
 namespace boost {
@@ -40,9 +40,9 @@ enum TResourceType {
   RESOURCE_DATA_RAW
 };
 CLog& operator<<(CLog& log, TResourceType rt);
-std::unordered_map<uint32_t, boost::filesystem::path> resource_filenames(
-    const boost::filesystem::path& prefix);
-void precache_resources(const boost::filesystem::path& prefix);
+std::unordered_map<uint32_t, std::filesystem::path> resource_filenames(
+    const std::filesystem::path& prefix);
+void precache_resources(const std::filesystem::path& prefix);
 
 struct TResourceHandle {
   uint64_t offset;
@@ -73,7 +73,7 @@ typedef uint64_t hash_t;
 
 class CResourceManager {
 public:
-  CResourceManager(const std::unordered_map<uint32_t, boost::filesystem::path>& filename_mapping,
+  CResourceManager(const std::unordered_map<uint32_t, std::filesystem::path>& filename_mapping,
                    uint32_t asyncBufferMaxCost,
                    THashType hashType,
                    bool hashPartially,
@@ -92,9 +92,9 @@ public:
 
 private:
   bool dirty_;
-  boost::filesystem::path index_filename_;
+  std::filesystem::path index_filename_;
   std::unordered_map<hash_t, TResourceHandle> index_;
-  std::unordered_map<uint32_t, boost::filesystem::path> filenames_map_;
+  std::unordered_map<uint32_t, std::filesystem::path> filenames_map_;
   std::unordered_map<uint32_t, uint64_t> file_sizes_;
   std::unordered_map<uint32_t, std::shared_ptr<boost::interprocess::file_mapping>> mappings_map_;
 

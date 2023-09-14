@@ -36,12 +36,7 @@
 #include "windowContextState.h"
 #include "windowing.h"
 #endif
-
-DISABLE_WARNINGS
-#include <boost/filesystem.hpp>
-ENABLE_WARNINGS
-
-namespace bfs = boost::filesystem;
+#include <filesystem>
 
 namespace gits {
 namespace OpenGL {
@@ -227,7 +222,7 @@ bool IsEsProfile() {
 #endif
 
 void capture_drawbuffer(
-    const bfs::path& directory,
+    const std::filesystem::path& directory,
     const std::string& file_name,
     bool force_back_buffer,
     bool dump_depth,
@@ -260,8 +255,8 @@ void capture_drawbuffer(
       suffix << ".png";
     }
     // Create path.
-    bfs::path path_color = directory;
-    bfs::create_directories(path_color);
+    std::filesystem::path path_color = directory;
+    std::filesystem::create_directories(path_color);
     path_color /= file_name + suffix.str();
 #ifndef BUILD_FOR_CCODE
     // The image will be deleted in ImageWriter class after it is consumed
@@ -341,7 +336,9 @@ void capture_drawbuffer(
 }
 
 #ifdef GITS_PLATFORM_WINDOWS
-void captureScreenshot(HWND hWND, const bfs::path& directory, const std::string& file_name) {
+void captureScreenshot(HWND hWND,
+                       const std::filesystem::path& directory,
+                       const std::string& file_name) {
   RECT rc;
   GetClientRect(hWND, &rc);
   int appWidth = rc.right - rc.left;
@@ -370,8 +367,8 @@ void captureScreenshot(HWND hWND, const bfs::path& directory, const std::string&
   CImage img;
   img.Attach(hBMPdestination);
 
-  bfs::path finalPath = directory;
-  bfs::create_directories(finalPath);
+  std::filesystem::path finalPath = directory;
+  std::filesystem::create_directories(finalPath);
   std::stringstream suffix;
   suffix << ".png";
   finalPath /= file_name + suffix.str();
@@ -384,7 +381,7 @@ void captureScreenshot(HWND hWND, const bfs::path& directory, const std::string&
 }
 #endif
 
-boost::filesystem::path GetPathForImageDumping() {
+std::filesystem::path GetPathForImageDumping() {
   auto path = Config::Get().player.outputDir;
   if (path.empty()) {
     path = Config::Get().common.streamDir / "gitsScreenshots";
@@ -425,7 +422,7 @@ void ScreenshotSave(unsigned frameNumber, HWND hWND) {
 
 #ifndef BUILD_FOR_CCODE
 void capture_bound_texture2D(GLenum target,
-                             const boost::filesystem::path& directory,
+                             const std::filesystem::path& directory,
                              const std::string& file_name) {
   PackPixelStoreStateStash pixelStoreStateStash;
   std::map<GLenum, GLint> pixelStoreSetup;
@@ -469,8 +466,8 @@ void capture_bound_texture2D(GLenum target,
   }
 
   // Create path.
-  bfs::path path = directory;
-  bfs::create_directories(path);
+  std::filesystem::path path = directory;
+  std::filesystem::create_directories(path);
 
   //Capture
   if (internalFormat != GL_DEPTH24_STENCIL8 && internalFormat != GL_DEPTH_COMPONENT24 &&

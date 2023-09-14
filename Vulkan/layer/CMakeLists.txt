@@ -48,7 +48,7 @@ else()
   set_target_properties(Vulkan_layer PROPERTIES OUTPUT_NAME VkLayer_vulkan_GITS_recorder)
   target_link_libraries(Vulkan_layer pthread dl)
 endif()
-target_link_libraries(Vulkan_layer Boost::thread Boost::filesystem)
+target_link_libraries(Vulkan_layer Boost::thread)
 
 set_target_properties(Vulkan_layer PROPERTIES FOLDER Vulkan)
 

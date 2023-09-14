@@ -29,6 +29,7 @@
 #include <memory>
 #include <unordered_map>
 #include <vector>
+#include <filesystem>
 
 DISABLE_WARNINGS
 #ifdef check
@@ -36,7 +37,6 @@ DISABLE_WARNINGS
 #endif
 #include <boost/property_tree/ptree_fwd.hpp>
 #include <boost/thread.hpp>
-#include <boost/filesystem/path.hpp>
 ENABLE_WARNINGS
 #include <unzip.h>
 #include <zip.h>
@@ -230,7 +230,7 @@ public:
   void Register(std::shared_ptr<CLibrary> library);
   void Register(std::unique_ptr<CFile> file);
 
-  void ResourceManagerInit(const boost::filesystem::path& dump_dir);
+  void ResourceManagerInit(const std::filesystem::path& dump_dir);
   void ResourceManagerDispose() {
     _resources.reset();
   }

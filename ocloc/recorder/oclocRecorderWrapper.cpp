@@ -26,12 +26,7 @@
 #include <string>
 #include <vector>
 #include <set>
-
-DISABLE_WARNINGS
-#include <boost/filesystem.hpp>
-ENABLE_WARNINGS
-
-namespace bfs = boost::filesystem;
+#include <filesystem>
 
 static gits::ocloc::CRecorderWrapper* wrapper = nullptr;
 
@@ -165,7 +160,7 @@ void CRecorderWrapper::oclocInvoke(int return_value,
       for (; i < numSources; ++i) {
         newSources[i] = sources[i];
         newSourceLens.at(i) = sourceLens[i];
-        std::string filePath = bfs::path(sourcesNames[i]).filename().string();
+        std::string filePath = std::filesystem::path(sourcesNames[i]).filename().string();
         srcHeaderNames[i].reserve(filePath.size());
         std::copy_n(filePath.c_str(), filePath.size(), srcHeaderNames[i].data());
         srcHeaderNames[i].push_back('\0');

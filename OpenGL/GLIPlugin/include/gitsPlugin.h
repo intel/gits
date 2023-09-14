@@ -21,10 +21,6 @@
 
 #include <string>
 
-DISABLE_WARNINGS
-#include <boost/filesystem.hpp>
-ENABLE_WARNINGS
-
 namespace gits {
 
 class CRecorder;

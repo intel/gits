@@ -14,11 +14,11 @@
 
 DISABLE_WARNINGS
 #include <boost/lexical_cast.hpp>
-#include <boost/filesystem/convenience.hpp>
-#include <boost/range/iterator_range.hpp>
 #include <boost/regex.hpp>
 ENABLE_WARNINGS
-namespace bfs = boost::filesystem;
+
+#include <regex>
+#include <fstream>
 
 namespace gits {
 
@@ -38,7 +38,7 @@ static const std::vector<boost::regex> SKIPPED_FILES = {
     boost::regex(".*\\.(h|cpp|sw[mnop]|bak|ini|csv)"), // various file extensions
 };
 
-std::string file_xxhash(const bfs::path& filename) {
+std::string file_xxhash(const std::filesystem::path& filename) {
   FILE* file = fopen(filename.string().c_str(), "rb");
   if (file == nullptr) {
     throw std::runtime_error("Failed to open file for checksum calculation: " + filename.string());
@@ -71,12 +71,11 @@ struct Signature {
   std::map<std::string, std::string> hashes;
 };
 
-static Signature calculateSig(const bfs::path& dir) {
+static Signature calculateSig(const std::filesystem::path& dir) {
   std::map<std::string, std::string> hashes;
-  const auto dirRange = boost::make_iterator_range(bfs::recursive_directory_iterator(dir), {});
-  for (const bfs::path& path : dirRange) {
-    const std::string relPathStr = bfs::relative(path, dir).string();
-    if (bfs::is_regular_file(path)) {
+  for (const auto& dirEntry : std::filesystem::directory_iterator(dir)) {
+    const std::string relPathStr = std::filesystem::relative(dirEntry, dir).string();
+    if (dirEntry.is_regular_file()) {
       bool excluded = false;
       for (const boost::regex& exclude : SKIPPED_FILES) {
         if (boost::regex_match(relPathStr, exclude)) {
@@ -86,7 +85,7 @@ static Signature calculateSig(const bfs::path& dir) {
       }
 
       if (!excluded) {
-        hashes[relPathStr] = file_xxhash(path);
+        hashes[relPathStr] = file_xxhash(dirEntry);
       }
     }
   }
@@ -94,16 +93,16 @@ static Signature calculateSig(const bfs::path& dir) {
   return Signature{NEWEST_SIG_FORMAT_VERSION, hashes};
 }
 
-static Signature readSigFromDir(const bfs::path& dir) {
+static Signature readSigFromDir(const std::filesystem::path& dir) {
   unsigned int version;
   std::map<std::string, std::string> hashes;
   std::string line;
 
   // Find the newest signature file.
-  bfs::path filepath = dir / SIG_FILE_NAME;
-  bfs::path oldFilepath = dir / OLD_SIG_FILE_NAME;
-  if (!bfs::exists(filepath)) {
-    if (!bfs::exists(oldFilepath)) {
+  std::filesystem::path filepath = dir / SIG_FILE_NAME;
+  std::filesystem::path oldFilepath = dir / OLD_SIG_FILE_NAME;
+  if (!std::filesystem::exists(filepath)) {
+    if (!std::filesystem::exists(oldFilepath)) {
       Log(ERR) << "Signature file not found. This usually means the game/app "
                   "process was terminated before recorder could finish writing the "
                   "stream to disk. Possible fixes and workarounds are described in "
@@ -115,7 +114,7 @@ static Signature readSigFromDir(const bfs::path& dir) {
   }
 
   // Open the file.
-  std::ifstream sigFile(filepath.string().c_str());
+  std::ifstream sigFile(filepath);
   if (!sigFile.is_open()) {
     throw std::runtime_error("Couldn't open the signature file: " + filepath.string());
   }
@@ -142,18 +141,18 @@ static Signature readSigFromDir(const bfs::path& dir) {
   return Signature{version, hashes};
 }
 
-void sign_directory(const bfs::path& dir) {
-  if (!is_directory(dir) && !is_symlink(dir)) {
-    // TODO: to check if the symlink actually points to a directory,
-    // we need bfs::read_symlink, which is available in bfs v3, but we
-    // still have the v2 hardcoded.
+void sign_directory(const std::filesystem::path& dir) {
+  bool isDir = std::filesystem::is_directory(dir);
+  bool isSymlinkToDir = std::filesystem::is_symlink(dir) &&
+                        std::filesystem::is_directory(std::filesystem::read_symlink(dir));
+  if (!isDir && !isSymlinkToDir) {
     throw std::runtime_error("Can't generate the signature file, path is not a directory: " +
                              dir.string());
   }
 
   const Signature sig = calculateSig(dir);
-  bfs::path filepath = dir / SIG_FILE_NAME;
-  std::ofstream sigFile(filepath.string().c_str(), std::ios::out | std::ios::binary);
+  std::filesystem::path filepath = dir / SIG_FILE_NAME;
+  std::ofstream sigFile(filepath, std::ios::out | std::ios::binary);
   if (!sigFile.is_open()) {
     throw std::runtime_error("Couldn't create a file with signatures: " + filepath.string());
   }
@@ -164,7 +163,7 @@ void sign_directory(const bfs::path& dir) {
   }
 }
 
-void verify_directory(const bfs::path& dir) {
+void verify_directory(const std::filesystem::path& dir) {
   Signature sig = readSigFromDir(dir);
 
   Log(INFO) << "Signature file format version " << sig.fileFormatVersion;

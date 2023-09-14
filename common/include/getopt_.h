@@ -21,12 +21,9 @@
 #include <string>
 #include <stdexcept>
 #include <vector>
+#include <filesystem>
 
 #include "pragmas.h"
-
-DISABLE_WARNINGS
-#include <boost/filesystem.hpp>
-ENABLE_WARNINGS
 
 namespace {
 template <typename Target, typename Source>
@@ -214,7 +211,7 @@ public:
 };
 
 template <>
-class TypedOption<boost::filesystem::path> : public COption {
+class TypedOption<std::filesystem::path> : public COption {
 public:
   TypedOption(CGetOpt& parser,
               OptionGroup group,
@@ -232,10 +229,10 @@ public:
   bool Present() const {
     return Valid();
   }
-  boost::filesystem::path Value() const {
+  std::filesystem::path Value() const {
     const std::string* value = Argument();
     if (value) {
-      return boost::filesystem::path(*value);
+      return std::filesystem::path(*value);
     }
     throw std::runtime_error("Value of unavailable argument requested");
   }

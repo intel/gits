@@ -30,12 +30,7 @@
 #include <iterator>
 #include <memory>
 #include <iomanip>
-
-DISABLE_WARNINGS
-#include <boost/filesystem.hpp>
-ENABLE_WARNINGS
-
-namespace bfs = boost::filesystem;
+#include <filesystem>
 
 namespace gits {
 namespace OpenGL {
@@ -55,7 +50,7 @@ gits::CResourceManager& gits::OpenGL::CLibrary::ProgramBinaryManager() {
     return *_progBinManager;
   }
 
-  std::unordered_map<uint32_t, bfs::path> the_map;
+  std::unordered_map<uint32_t, std::filesystem::path> the_map;
   the_map[RESOURCE_INDEX] = "gitsPlayerDataIndex.dat";
   the_map[RESOURCE_BUFFER] = "gitsPlayerBuffers.dat";
 

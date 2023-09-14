@@ -16,13 +16,13 @@
 
 #include <string>
 #include <sstream>
+#include <filesystem>
 
 DISABLE_WARNINGS
 #include <boost/property_tree/ptree.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include <boost/filesystem.hpp>
 ENABLE_WARNINGS
 
 #if defined GITS_ARCH_X86
@@ -33,6 +33,10 @@ ENABLE_WARNINGS
 #define GITS_ARCH_STR "ARM"
 #elif defined GITS_ARCH_A64
 #define GITS_ARCH_STR "AARCH64"
+#endif
+
+#ifdef GITS_PLATFORM_WINDOWS
+#pragma comment(lib, "bcrypt.lib")
 #endif
 
 namespace gits {
@@ -352,9 +356,9 @@ void gather_diagnostic_info(pt::ptree& node) {
   {
     char exePathArr[MAX_PATH];
     GetModuleFileName(NULL, exePathArr, sizeof(exePathArr));
-    bfs::path exePath(exePathArr);
-    if (bfs::exists(exePath)) {
-      std::string exeHash = file_xxhash(exePath.string());
+    std::filesystem::path exePath(exePathArr);
+    if (std::filesystem::exists(exePath)) {
+      std::string exeHash = file_xxhash(exePath);
       std::string exeName = exePath.filename().string();
       node.add("diag.app.name", exeName);
       node.add("diag.app.path", exePath);

@@ -8,14 +8,12 @@
 
 #pragma once
 
-DISABLE_WARNINGS
-#include <boost/filesystem/path.hpp>
-ENABLE_WARNINGS
+#include <filesystem>
 
 #ifndef BUILD_FOR_CCODE
 namespace gits {
-std::string file_xxhash(const bfs::path& filename);
-void sign_directory(const boost::filesystem::path& dir);
-void verify_directory(const boost::filesystem::path& dir);
+std::string file_xxhash(const std::filesystem::path& filename);
+void sign_directory(const std::filesystem::path& dir);
+void verify_directory(const std::filesystem::path& dir);
 } // namespace gits
 #endif

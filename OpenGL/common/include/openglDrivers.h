@@ -16,10 +16,6 @@
 #include "openglTools.h"
 #include "dynamic_linker.h"
 
-DISABLE_WARNINGS
-#include <boost/filesystem/path.hpp>
-ENABLE_WARNINGS
-
 #ifndef VOID_T_DEFINED
 #define VOID_T_DEFINED
 typedef struct void_type_tag {

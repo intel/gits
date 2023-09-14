@@ -32,9 +32,7 @@
 #include <unistd.h>
 #endif
 
-DISABLE_WARNINGS
-#include <boost/filesystem.hpp>
-ENABLE_WARNINGS
+#include <filesystem>
 
 namespace gits {}
 using namespace gits;
@@ -104,13 +102,15 @@ int main(int argc, char* argv[]) {
         options, OPTION_GROUP_GENERAL, 0, "dumpDrawsPre",
         "Causes 'dumpDraws' to capture "
         "drawbuffer content not only after specified drawcall, but also before it.");
-    TypedOption<bfs::path> optionOutputDir(options, OPTION_GROUP_GENERAL, 0, "outputDir",
-                                           "Specifies directory where all the artifacts "
-                                           "will be stored.");
+    TypedOption<std::filesystem::path> optionOutputDir(
+        options, OPTION_GROUP_GENERAL, 0, "outputDir",
+        "Specifies directory where all the artifacts "
+        "will be stored.");
 
-    TypedOption<bfs::path> optionStreamDir(options, OPTION_GROUP_GENERAL, 0, "streamDir",
-                                           "Specifies stream resources location - should be "
-                                           "specified if it is not a current working directory");
+    TypedOption<std::filesystem::path> optionStreamDir(
+        options, OPTION_GROUP_GENERAL, 0, "streamDir",
+        "Specifies stream resources location - should be "
+        "specified if it is not a current working directory");
 
     TypedOption<bool> optionWaitForEnter(
         options, OPTION_GROUP_GENERAL, 0, "waitForEnter",
@@ -187,9 +187,9 @@ int main(int argc, char* argv[]) {
       return 0;
     }
     if (optionOutputDir.Present()) {
-      cfg.ccode.outputPath = bfs::absolute(optionOutputDir.Value());
+      cfg.ccode.outputPath = std::filesystem::absolute(optionOutputDir.Value());
     } else {
-      cfg.ccode.outputPath = bfs::current_path();
+      cfg.ccode.outputPath = std::filesystem::current_path();
     }
 
     // CCode for Vulkan uses functions from vulkanTools.cpp (common code) to
@@ -198,7 +198,7 @@ int main(int argc, char* argv[]) {
     cfg.player.outputDir = cfg.ccode.outputPath;
 
     if (optionStreamDir.Present()) {
-      cfg.common.streamDir = bfs::absolute(optionStreamDir.Value()) / "";
+      cfg.common.streamDir = std::filesystem::absolute(optionStreamDir.Value()) / "";
     }
 
     if (optionWaitForEnter.Present()) {

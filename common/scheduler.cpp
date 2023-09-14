@@ -24,18 +24,13 @@
 #include "pragmas.h"
 
 #include <iostream>
-
-DISABLE_WARNINGS
-#include <boost/filesystem.hpp>
-ENABLE_WARNINGS
+#include <filesystem>
 
 //#define GITS_DEBUG_TOKEN_SIZE
 #ifdef GITS_DEBUG_TOKEN_SIZE
 #include <map>
 std::map<const char*, uint64_t> token_size;
 #endif
-
-namespace bfs = boost::filesystem;
 
 namespace gits {
 
@@ -323,7 +318,7 @@ void CScheduler::WriteAll() {
 void CScheduler::Stream(CBinIStream* stream) {
   // Empirically calculated from 'random' stream constant value.
   const uint32_t averageTokenSize = 13;
-  const uint64_t estimatedTokenNum = bfs::file_size(stream->Path()) / averageTokenSize;
+  const uint64_t estimatedTokenNum = std::filesystem::file_size(stream->Path()) / averageTokenSize;
 
   _checkpointSize = estimatedTokenNum / 30;
   _checkpointSize = (_checkpointSize == 0) ? 1 : _checkpointSize;

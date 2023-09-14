@@ -21,10 +21,6 @@
 #include <unordered_map>
 #include <algorithm>
 
-DISABLE_WARNINGS
-#include <boost/filesystem.hpp>
-ENABLE_WARNINGS
-
 namespace gits {
 namespace l0 {
 namespace {
@@ -57,11 +53,13 @@ size_t CalculateImageSize(ze_image_desc_t desc) {
          BitsPerPixel(desc.format.layout) / 8;
 }
 
-void SaveBuffer(const bfs::path& dir, const std::string name, const std::vector<char>& data) {
+void SaveBuffer(const std::filesystem::path& dir,
+                const std::string name,
+                const std::vector<char>& data) {
   std::string filename = name + ".dat";
-  bfs::path path = dir / filename;
-  bfs::create_directory(path.parent_path());
-  bfs::ofstream binStream(path, bfs::ofstream::binary);
+  std::filesystem::path path = dir / filename;
+  std::filesystem::create_directory(path.parent_path());
+  std::ofstream binStream(path, std::ofstream::binary);
   binStream.write(data.data(), data.size());
   binStream.close();
 }
@@ -173,12 +171,12 @@ std::array<texel_type, 5> GetTexelTypeArrayFromLayout(ze_image_format_layout_t l
   }
 }
 
-void SaveImage(const bfs::path& dir,
+void SaveImage(const std::filesystem::path& dir,
                const char* image,
                const ze_image_desc_t& desc,
                const std::string& name) {
   const unsigned rgba8TexelSize = 4;
-  bfs::create_directory(dir);
+  std::filesystem::create_directory(dir);
   const size_t imagesMemorySize = CalculateImageSize(desc);
   try {
     auto texelType = GetTexelTypeArrayFromLayout(desc.format.layout)[desc.format.type];
@@ -197,7 +195,7 @@ void SaveImage(const bfs::path& dir,
       convert_texture_data(texelType, frame, texel_type::BGRA8, convertedData,
                            static_cast<int>(desc.width), static_cast<int>(desc.height));
       std::string fileName = (desc.depth == 1 ? name : name + "-" + std::to_string(i)) + ".png";
-      bfs::path path = dir / fileName;
+      std::filesystem::path path = dir / fileName;
       CGits::Instance().WriteImage(path.string(), static_cast<size_t>(desc.width), desc.height,
                                    true, frame, false, true);
     }
@@ -300,8 +298,8 @@ void DumpReadyArguments(std::vector<CKernelArgumentDump>& readyArgVector,
   }
 }
 
-const bfs::path& GetDumpPath(const Config& cfg) {
-  static const bfs::path path =
+const std::filesystem::path& GetDumpPath(const Config& cfg) {
+  static const std::filesystem::path path =
       cfg.player.outputDir.empty() ? cfg.common.streamDir / "dump" : cfg.player.outputDir;
   return path;
 }

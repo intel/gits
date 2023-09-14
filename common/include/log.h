@@ -19,15 +19,7 @@
 #include "pragmas.h"
 #include <sstream>
 #include <type_traits>
-
-#ifndef BUILD_FOR_CCODE
-#ifdef check
-#undef check
-#endif
-DISABLE_WARNINGS
-#include <boost/filesystem/path.hpp>
-ENABLE_WARNINGS
-#endif
+#include <filesystem>
 
 #ifdef GITS_PLATFORM_WINDOWS
 
@@ -97,9 +89,9 @@ public:
 
   static void SetLogLevel(LogLevel lvl) HIDDEN;
 #ifndef BUILD_FOR_CCODE
-  static void LogFile(const boost::filesystem::path& dir) HIDDEN;
+  static void LogFile(const std::filesystem::path& dir) HIDDEN;
   static void LogFunction(FPrintf* func) HIDDEN;
-  static void LogFilePlayer(const boost::filesystem::path& dir) HIDDEN;
+  static void LogFilePlayer(const std::filesystem::path& dir) HIDDEN;
 #endif
 
 protected:

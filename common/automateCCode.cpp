@@ -14,7 +14,7 @@
 
 namespace gits {
 
-std::map<int, std::string> scopeAnalyze(const boost::filesystem::path& path) {
+std::map<int, std::string> scopeAnalyze(const std::filesystem::path& path) {
   std::map<int, std::string> breaks;
   int fileDivider = 1048576;
   int nestLevel = 0;
@@ -23,7 +23,7 @@ std::map<int, std::string> scopeAnalyze(const boost::filesystem::path& path) {
   std::string currentFunction = "";
   int prevLevel = 0;
   bool needsBreak = false;
-  std::ifstream file(path.string());
+  std::ifstream file(path);
   std::string line;
   auto startPosition = file.tellg();
   while (std::getline(file, line)) {
@@ -73,24 +73,24 @@ std::map<std::string, std::vector<int>> calculateContinuations(
   return continuations;
 }
 
-std::string getOutputFileName(const boost::filesystem::path& path, int num) {
+std::string getOutputFileName(const std::filesystem::path& path, int num) {
   std::stringstream outputFileName;
   outputFileName << path.stem().string() << std::setfill('0') << std::setw(6) << std::dec << num
                  << ".cpp";
   return outputFileName.str();
 }
 
-void divideFile(const boost::filesystem::path& path,
-                const boost::filesystem::path& outputPath,
+void divideFile(const std::filesystem::path& path,
+                const std::filesystem::path& outputPath,
                 std::map<int, std::string>& breakPoints) {
   auto continuations = calculateContinuations(breakPoints);
   int currentLine = 1;
   int currentFile = 1;
-  boost::filesystem::path outputFilePath = outputPath / getOutputFileName(path, currentFile);
-  std::ofstream outputFile(outputFilePath.string());
+  std::filesystem::path outputFilePath = outputPath / getOutputFileName(path, currentFile);
+  std::ofstream outputFile(outputFilePath);
   std::string prevFunction = "";
 
-  std::ifstream inputFile(path.string());
+  std::ifstream inputFile(path);
   std::string line;
   while (std::getline(inputFile, line)) {
     outputFile << line << "\n";
@@ -110,7 +110,7 @@ void divideFile(const boost::filesystem::path& path,
       outputFile << "}\n";
       outputFile.close();
       outputFilePath = outputPath / getOutputFileName(path, currentFile);
-      outputFile = std::ofstream(outputFilePath.string());
+      outputFile = std::ofstream(outputFilePath);
       outputFile << "#include \"gitsApi.h\"\n";
       outputFile << "#include \"stream_externs.h\"\n";
       outputFile << "#include \"helperVk.h\"\n";

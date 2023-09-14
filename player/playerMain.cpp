@@ -54,13 +54,11 @@
 #include <map>
 #include <string>
 #include <memory>
+#include <filesystem>
 
 DISABLE_WARNINGS
 #include <boost/property_tree/info_parser.hpp>
-#include <boost/filesystem.hpp>
 ENABLE_WARNINGS
-
-namespace bfs = boost::filesystem;
 
 namespace gits {
 // Gits player message loop
@@ -267,11 +265,11 @@ int MainBody(int argc, char* argv[]) {
 
     // Writes performance results to .csv file
     if (cfg.player.benchmark) {
-      bfs::path outBench =
+      std::filesystem::path outBench =
           cfg.player.outputDir.empty() ? cfg.player.applicationPath : cfg.player.outputDir;
-      create_directories(outBench);
+      std::filesystem::create_directories(outBench);
       outBench /= "benchmark.csv";
-      bfs::ofstream timeDataFile(outBench, std::ios::binary | std::ios::out);
+      std::ofstream timeDataFile(outBench, std::ios::binary | std::ios::out);
       CGits::Instance().TimeSheet().OutputTimeData(timeDataFile, true);
     }
 

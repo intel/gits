@@ -27,9 +27,7 @@
 #include "config.h"
 #include "gits.h"
 
-DISABLE_WARNINGS
-#include <boost/filesystem/path.hpp>
-ENABLE_WARNINGS
+#include <filesystem>
 
 namespace gits {
 namespace OpenCL {
@@ -265,8 +263,7 @@ void COclDriver::Initialize() {
   if (_initialized) {
     return;
   }
-  boost::filesystem::path path;
-  path = gits::Config::Get().common.libClPath;
+  std::filesystem::path path = gits::Config::Get().common.libClPath;
   Log(INFO) << "Initializing OpenCL API";
   _lib = dl::open_library(path.string().c_str());
   if (_lib == nullptr) {

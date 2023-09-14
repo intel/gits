@@ -175,7 +175,7 @@ set_target_properties(L0_interceptor PROPERTIES OUTPUT_NAME ze_loader)
 if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   target_link_libraries(L0_interceptor dl pthread)
 endif()
-target_link_libraries(L0_interceptor Boost::thread Boost::filesystem)
+target_link_libraries(L0_interceptor Boost::thread)
 
 add_dependencies(L0_common common L0_codegen)
 add_dependencies(L0_recorder L0_codegen)

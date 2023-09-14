@@ -29,6 +29,7 @@
 #endif
 
 #include <iostream>
+#include <fstream>
 
 namespace gits {}
 using namespace gits;
@@ -171,14 +172,14 @@ class TextFile {
 
 public:
   TextFile(const char* filename) : _filename(filename) {
-    std::string filePath = Config::Get().common.streamDir.string() + _filename;
+    std::filesystem::path filePath = Config::Get().common.streamDir / _filename;
     uint64_t fileSize = FileSize(_filename);
 
     if (fileSize > 0) {
       _source.resize((unsigned)fileSize + 1, 0);
     }
 
-    std::ifstream file(filePath.c_str(), std::ios::binary);
+    std::ifstream file(filePath, std::ios::binary);
     if (!file.is_open()) {
       std::cerr << "Failed to open file: " << filePath << "\n";
     }

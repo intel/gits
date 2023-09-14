@@ -18,10 +18,6 @@
 #include "pragmas.h"
 #include "dynamic_linker.h"
 
-DISABLE_WARNINGS
-#include <boost/filesystem/path.hpp>
-ENABLE_WARNINGS
-
 namespace gits {
 
 struct Config;
@@ -34,7 +30,7 @@ class CGitsLoader {
   CGitsLoader& operator=(const CGitsLoader&); /**< @brief Disallowed */
 
 public:
-  CGitsLoader(const boost::filesystem::path& path, const char* recorderWrapperFactoryName);
+  CGitsLoader(const std::filesystem::path& path, const char* recorderWrapperFactoryName);
   ~CGitsLoader();
 
   const Config& Configuration() const;

@@ -22,10 +22,7 @@
 #include <map>
 #include <deque>
 #include <cstdio>
-
-DISABLE_WARNINGS
-#include <boost/filesystem/path.hpp>
-ENABLE_WARNINGS
+#include <filesystem>
 
 namespace gits {
 template <int Value>
@@ -91,7 +88,7 @@ public:
   CBinOStream& operator=(const CBinOStream&) = delete;
   CBinOStream(CBinOStream&&) = delete;
   CBinOStream& operator=(CBinOStream&&) = delete;
-  CBinOStream(const boost::filesystem::path& fileName);
+  CBinOStream(const std::filesystem::path& fileName);
   ~CBinOStream();
 };
 
@@ -102,7 +99,7 @@ public:
    */
 class CBinIStream /*: public std::istream*/ {
   FILE* _file;
-  boost::filesystem::path _path;
+  std::filesystem::path _path;
 
 public:
   bool read(char*, size_t);
@@ -110,13 +107,13 @@ public:
   void get_delimited_string(std::string& s, char d);
   bool eof() const;
 
-  CBinIStream(const boost::filesystem::path& fileName);
+  CBinIStream(const std::filesystem::path& fileName);
   CBinIStream(const CBinIStream&) = delete;
   CBinIStream& operator=(const CBinIStream&) = delete;
   CBinIStream(CBinIStream&&) = delete;
   CBinIStream& operator=(CBinIStream&&) = delete;
   ~CBinIStream();
-  const boost::filesystem::path& Path() const {
+  const std::filesystem::path& Path() const {
     return _path;
   }
 };

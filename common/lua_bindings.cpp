@@ -26,7 +26,7 @@ namespace gits {
 namespace OpenGL {
 std::string GetCurrentProgramShaderText(unsigned shtype);
 std::string GetShaderSource(int name);
-void capture_drawbuffer(const boost::filesystem::path& directory,
+void capture_drawbuffer(const std::filesystem::path& directory,
                         const std::string& file_name,
                         bool force_back_buffer,
                         bool dump_depth = true,

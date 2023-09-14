@@ -59,7 +59,7 @@ gits::CPlayer::TState gits::CPlayer::State() const {
  *
  * @param fileName Name of a file to use
  */
-void gits::CPlayer::Load(const boost::filesystem::path& fileName) {
+void gits::CPlayer::Load(const std::filesystem::path& fileName) {
   // open file
   _sc.iBinStream.reset(new CBinIStream(fileName));
 

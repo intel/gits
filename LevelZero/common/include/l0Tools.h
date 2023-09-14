@@ -19,6 +19,7 @@
 #include <array>
 #include <map>
 #include <unordered_map>
+#include <filesystem>
 
 namespace gits {
 namespace l0 {
@@ -26,10 +27,12 @@ struct CKernelState;
 struct CKernelExecutionInfo;
 struct CKernelArgumentDump;
 class CStateDynamic;
-void SaveBuffer(const bfs::path& dir, const std::string name, const std::vector<char>& data);
+void SaveBuffer(const std::filesystem::path& dir,
+                const std::string name,
+                const std::vector<char>& data);
 size_t BitsPerPixel(ze_image_format_layout_t imageFormat);
 std::array<texel_type, 5> GetTexelTypeArrayFromLayout(ze_image_format_layout_t layout);
-void SaveImage(const bfs::path& dir,
+void SaveImage(const std::filesystem::path& dir,
                const char* image,
                const ze_image_desc_t& desc,
                const std::string& name);
@@ -48,7 +51,7 @@ void DumpReadyArguments(std::vector<CKernelArgumentDump>& readyArgVector,
                         const Config& cfg,
                         CStateDynamic& sd,
                         const CKernelExecutionInfo& kernelInfo);
-const bfs::path& GetDumpPath(const Config& cfg);
+const std::filesystem::path& GetDumpPath(const Config& cfg);
 bool CaptureKernels(const Config& cfg);
 bool CaptureImages(const Config& cfg);
 enum class UnifiedMemoryType : unsigned { host = 1 << 0, device = 1 << 1, shared = 1 << 2 };

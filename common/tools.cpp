@@ -18,6 +18,7 @@
 #include "xxhash.h"
 
 #include <cstdint>
+#include <filesystem>
 
 #ifndef BUILD_FOR_CCODE
 #include "MemorySniffer.h"
@@ -34,7 +35,6 @@ ENABLE_WARNINGS
 #endif
 DISABLE_WARNINGS
 #include <boost/property_tree/json_parser.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
 ENABLE_WARNINGS
 
@@ -287,11 +287,11 @@ bool SavePng(const std::string& filename,
   return true;
 }
 
-void SaveJsonFile(const boost::property_tree::ptree& pt, const bfs::path& path) {
+void SaveJsonFile(const boost::property_tree::ptree& pt, const std::filesystem::path& path) {
   try {
-    bfs::create_directory(path.parent_path());
+    std::filesystem::create_directory(path.parent_path());
     write_json(path.string(), pt);
-  } catch (bfs::filesystem_error& fe) {
+  } catch (std::filesystem::filesystem_error& fe) {
     Log(ERR) << "Exception during creating directory. System error code: " << fe.code();
   } catch (boost::property_tree::json_parser_error& jpe) {
     Log(ERR) << "Exception during writing buffers layout to file." << jpe.message();
@@ -299,7 +299,7 @@ void SaveJsonFile(const boost::property_tree::ptree& pt, const bfs::path& path) 
 }
 
 void CheckMinimumAvailableDiskSize() {
-  auto diskSpaceInfo = bfs::space(bfs::path(Config::Get().common.streamDir));
+  auto diskSpaceInfo = std::filesystem::space(Config::Get().common.streamDir);
   uintmax_t minDiskSize = 104857600;
   if (diskSpaceInfo.available <= minDiskSize) {
     auto mebiByteSize = diskSpaceInfo.available >> 20;
@@ -313,30 +313,6 @@ void fast_exit(int code) {
 #else
   _Exit(code);
 #endif
-}
-
-void CopyDirectoryRecursively(const boost::filesystem::path& from,
-                              const boost::filesystem::path& to) {
-  if (!boost::filesystem::exists(from) || !boost::filesystem::is_directory(from)) {
-    throw std::runtime_error("Source directory " + from.string() +
-                             " does not exist or is not directory!");
-  }
-  if (!boost::filesystem::exists(to) || !boost::filesystem::is_directory(to)) {
-    throw std::runtime_error("Destination directory " + from.string() +
-                             " does not exist or is not directory!");
-  }
-  for (const auto& entry :
-       boost::make_iterator_range(boost::filesystem::recursive_directory_iterator{from}, {})) {
-    auto& path = entry.path();
-    auto relativepathstr = path.string();
-    relativepathstr.replace(relativepathstr.find(from.string()), from.string().size(), "")
-        .erase(0, 1);
-    if (boost::filesystem::is_directory(path)) {
-      boost::filesystem::copy_directory(path, to / relativepathstr);
-    } else {
-      boost::filesystem::copy_file(path, to / relativepathstr);
-    }
-  }
 }
 
 #ifdef GITS_PLATFORM_X11
@@ -472,7 +448,7 @@ std::vector<std::string> GetIncludePaths(const char* buildOptions) {
   if (buildOptions != nullptr) {
     includePaths = GetStringsWithRegex(std::string(buildOptions), "(?<=-I)\\s*[^\\s]+", "\\s");
   }
-  includePaths.push_back(bfs::current_path().string());
+  includePaths.push_back(std::filesystem::current_path().string());
   return includePaths;
 }
 
@@ -485,19 +461,19 @@ void CreateHeaderFiles(const std::vector<std::string>& sourceNamesToScan,
       continue;
     }
     for (const auto& searchPath : searchPaths) {
-      bfs::path headerPath = header;
-      if (!bfs::exists(headerPath)) {
-        headerPath = bfs::path(searchPath) / header;
+      std::filesystem::path headerPath = header;
+      if (!std::filesystem::exists(headerPath)) {
+        headerPath = std::filesystem::path(searchPath) / header;
       }
-      bfs::ifstream loadHeader(headerPath);
+      std::ifstream loadHeader(headerPath);
       if (loadHeader.is_open()) {
         if (includeMainFiles) {
-          const auto headerFileName = bfs::path(header).filename();
-          bfs::path path =
-              bfs::path(gits::Config::Get().common.streamDir) / "gitsFiles" / headerFileName;
-          if (!bfs::exists(path)) {
-            create_directories(path.parent_path());
-            bfs::copy_file(headerPath, path);
+          const auto headerFileName = headerPath.filename();
+          std::filesystem::path path =
+              gits::Config::Get().common.streamDir / "gitsFiles" / headerFileName;
+          if (!std::filesystem::exists(path)) {
+            std::filesystem::create_directories(path.parent_path());
+            std::filesystem::copy_file(headerPath, path);
           }
         }
         std::string srcHeader(std::istreambuf_iterator<char>(loadHeader),

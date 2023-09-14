@@ -17,20 +17,13 @@
 #include <fstream>
 #include <stdexcept>
 #include "tools.h"
-
-DISABLE_WARNINGS
-#ifdef check
-#undef check
-#endif
-#include <boost/filesystem/path.hpp>
-#include <boost/filesystem/fstream.hpp>
-ENABLE_WARNINGS
+#include <filesystem>
 
 namespace gits {
 template <typename T>
-void write_map(const boost::filesystem::path& filename, const T& m) {
+void write_map(const std::filesystem::path& filename, const T& m) {
 #ifndef BUILD_FOR_CCODE
-  boost::filesystem::ofstream file(filename, std::ios::binary);
+  std::ofstream file(filename, std::ios::binary);
   if (!file.is_open()) {
     CheckMinimumAvailableDiskSize();
     throw std::runtime_error("couldn't create file: " + filename.string());
@@ -45,9 +38,9 @@ void write_map(const boost::filesystem::path& filename, const T& m) {
 }
 
 template <typename T>
-T read_map(const boost::filesystem::path& filename) {
+T read_map(const std::filesystem::path& filename) {
   T retval;
-  boost::filesystem::ifstream file(filename, std::ios::binary);
+  std::ifstream file(filename, std::ios::binary);
   if (!file.is_open()) {
     throw std::runtime_error("corrupted key-val store (couldn't open file): " + filename.string());
   }

@@ -17,17 +17,15 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <filesystem>
 
 DISABLE_WARNINGS
 #ifdef check
 #undef check
 #endif
 #include <boost/property_tree/ptree.hpp>
-#include <boost/filesystem/fstream.hpp>
 #include <boost/optional.hpp>
 ENABLE_WARNINGS
-
-namespace bfs = boost::filesystem;
 
 namespace gits {
 namespace detail {
@@ -321,24 +319,24 @@ struct Config {
     return *config;
   }
   static void Set(const Config& cfg);
-  static bool Set(const bfs::path& cfgDir);
+  static bool Set(const std::filesystem::path& cfgDir);
 
   static bool IsRecorder();
   static bool IsPlayer();
 
   struct Common {
     TMode mode;
-    bfs::path installPath;
-    bfs::path streamDir;
-    bfs::path libClPath;
-    bfs::path libGL;
-    bfs::path libEGL;
-    bfs::path libGLESv1;
-    bfs::path libGLESv2;
-    bfs::path libVK;
-    bfs::path libL0;
-    bfs::path libL0Driver;
-    bfs::path libOcloc;
+    std::filesystem::path installPath;
+    std::filesystem::path streamDir;
+    std::filesystem::path libClPath;
+    std::filesystem::path libGL;
+    std::filesystem::path libEGL;
+    std::filesystem::path libGLESv1;
+    std::filesystem::path libGLESv2;
+    std::filesystem::path libVK;
+    std::filesystem::path libL0;
+    std::filesystem::path libL0Driver;
+    std::filesystem::path libOcloc;
     LogLevel thresholdLogLevel;
     std::set<TraceData> traceDataOpts;
 
@@ -355,7 +353,7 @@ struct Config {
   } common;
 
   struct CCode {
-    bfs::path outputPath;
+    std::filesystem::path outputPath;
     vi_uint benchmarkStartFrame;
   } ccode;
 
@@ -366,7 +364,7 @@ struct Config {
     vi_uint exitCommandBuffer;
     vi_bool exitOnError;
     vi_bool exitOnVkQueueSubmitFail;
-    bfs::path streamPath;
+    std::filesystem::path streamPath;
     vi_bool interactive;
     vi_bool errors;
     std::string plugin;
@@ -376,9 +374,9 @@ struct Config {
     vi_bool escalatePriority;
     vi_bool swapAfterPrepare;
     vi_bool skipQueries;
-    bfs::path outputDir;
-    bfs::path outputTracePath;
-    bfs::path applicationPath;
+    std::filesystem::path outputDir;
+    std::filesystem::path outputTracePath;
+    std::filesystem::path applicationPath;
     float scaleFactor;
     vi_bool logFncs;
     vi_bool logLoadedTokens;
@@ -483,7 +481,7 @@ struct Config {
     vi_bool forceDesktopResolution;
     std::vector<int> forcedDesktopResolution;
     uint32_t maxAllowedVkSwapchainRewinds;
-    bfs::path overrideVKPipelineCache;
+    std::filesystem::path overrideVKPipelineCache;
     vi_uint vulkanForcedPhysicalDeviceIndex;
     std::string vulkanForcedPhysicalDeviceName;
     DeviceTypeOpt vulkanForcedPhysicalDeviceType;
@@ -496,7 +494,7 @@ struct Config {
       vi_bool frameRecEnabled;
       vi_bool queuesubmitRecEnabled;
       BitRange captureRange;
-      bfs::path dllPath;
+      std::filesystem::path dllPath;
       vi_bool enableUI;
       vi_bool continuousCapture;
     } renderDoc;
@@ -739,7 +737,7 @@ private:
   static Config* config;
 };
 
-void GetConfigPtree(const boost::filesystem::path& cfgPath, boost::property_tree::ptree& pt);
+void GetConfigPtree(const std::filesystem::path& cfgPath, boost::property_tree::ptree& pt);
 
 bool isTraceDataOptPresent(TraceData option);
 
@@ -796,11 +794,11 @@ void ReadRecorderOption<std::string>(const boost::property_tree::ptree& pt,
                                      unsigned supportedPlatforms,
                                      bool hide);
 template <>
-void ReadRecorderOption<boost::filesystem::path>(const boost::property_tree::ptree& pt,
-                                                 const char* name,
-                                                 boost::filesystem::path& value,
-                                                 unsigned supportedPlatforms,
-                                                 bool hide);
+void ReadRecorderOption<std::filesystem::path>(const boost::property_tree::ptree& pt,
+                                               const char* name,
+                                               std::filesystem::path& value,
+                                               unsigned supportedPlatforms,
+                                               bool hide);
 template <>
 void ReadRecorderOption<vi_uint>(const boost::property_tree::ptree& pt,
                                  const char* name,

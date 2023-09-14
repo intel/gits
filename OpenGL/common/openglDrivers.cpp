@@ -495,9 +495,7 @@ dl::SharedObject CEglDriver::Library() {
 
   //EGL is loaded into global namespace so its easier on
   //frame capturing tools to perform their job
-  auto libEGL = gits::Config::Get().common.libEGL;
-
-  boost::filesystem::path path = libEGL;
+  std::filesystem::path path = gits::Config::Get().common.libEGL;
   _lib_egl = dl::open_library(path.string().c_str());
 
   if (_lib_egl == nullptr) {
@@ -620,7 +618,7 @@ void CGlDriver::Initialize(TApiType api) {
   }
 
   // Use defaults if no library options are given
-  boost::filesystem::path path;
+  std::filesystem::path path;
   switch (api) {
   case API_GL:
     path = gits::Config::Get().common.libGL;

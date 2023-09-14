@@ -23,11 +23,9 @@
 
 DISABLE_WARNINGS
 #include <boost/interprocess/file_mapping.hpp>
-#include <boost/filesystem.hpp>
 ENABLE_WARNINGS
 
 using boost::interprocess::file_mapping;
-namespace bfs = boost::filesystem;
 
 namespace gits {
 CLog& operator<<(CLog& log, TResourceType rt) {
@@ -56,8 +54,8 @@ CLog& operator<<(CLog& log, TResourceType rt) {
 
 namespace {
 
-const std::unordered_map<uint32_t, bfs::path>& base_resource_filenames() {
-  typedef std::unordered_map<uint32_t, bfs::path> map_t;
+const std::unordered_map<uint32_t, std::filesystem::path>& base_resource_filenames() {
+  typedef std::unordered_map<uint32_t, std::filesystem::path> map_t;
   INIT_NEW_STATIC_OBJ(the_map, map_t)
 
   if (the_map.empty()) {
@@ -72,7 +70,8 @@ const std::unordered_map<uint32_t, bfs::path>& base_resource_filenames() {
 
 } // namespace
 
-std::unordered_map<uint32_t, bfs::path> resource_filenames(const bfs::path& prefix) {
+std::unordered_map<uint32_t, std::filesystem::path> resource_filenames(
+    const std::filesystem::path& prefix) {
   auto base_names = base_resource_filenames();
   auto iter = base_names.begin();
   decltype(base_names) the_map;
@@ -84,11 +83,11 @@ std::unordered_map<uint32_t, bfs::path> resource_filenames(const bfs::path& pref
   return the_map;
 }
 
-void precache_resources(const bfs::path& dirname) {
+void precache_resources(const std::filesystem::path& dirname) {
   static const int FILE_WARMUP_CYCLES = 2;
 
   for (auto& res_file : resource_filenames(dirname)) {
-    bfs::ifstream file(res_file.second, std::ios::binary | std::ios::in);
+    std::ifstream file(res_file.second, std::ios::binary | std::ios::in);
 
     for (int file_warmup_cnt = 0; file_warmup_cnt < FILE_WARMUP_CYCLES; file_warmup_cnt++) {
       if (file.is_open()) {
@@ -108,7 +107,7 @@ void precache_resources(const bfs::path& dirname) {
 }
 
 CResourceManager::CResourceManager(
-    const std::unordered_map<uint32_t, boost::filesystem::path>& filename_mapping,
+    const std::unordered_map<uint32_t, std::filesystem::path>& filename_mapping,
     uint32_t asyncBufferMaxCost,
     THashType hashType,
     bool hashPartially,
@@ -127,14 +126,14 @@ CResourceManager::CResourceManager(
       asyncBufferMaxCost_(asyncBufferMaxCost),
       fakeHash_(0) {
   for (const auto& one_mapping : filename_mapping) {
-    if (bfs::exists(one_mapping.second)) {
+    if (std::filesystem::exists(one_mapping.second)) {
       std::shared_ptr<file_mapping> mapping = std::make_shared<file_mapping>(
           one_mapping.second.string().c_str(), boost::interprocess::read_only);
       mappings_map_[one_mapping.first] = mapping;
     }
   }
 
-  if (bfs::exists(index_filename_)) {
+  if (std::filesystem::exists(index_filename_)) {
     typedef std::unordered_map<uint64_t, TResourceHandle> map64_t;
     auto index = read_map<map64_t>(index_filename_);
     index_.swap(index);
@@ -263,8 +262,8 @@ hash_t CResourceManager::put(uint32_t file_id, const void* data, size_t size, ha
   }
 
   // Keep track of this file size, initialize to current size on disk.
-  if (file_sizes_[file_id] == 0 && bfs::exists(file_name)) {
-    file_sizes_[file_id] = bfs::file_size(file_name);
+  if (file_sizes_[file_id] == 0 && std::filesystem::exists(file_name)) {
+    file_sizes_[file_id] = std::filesystem::file_size(file_name);
   }
 
   TResourceHandle resource;
@@ -291,7 +290,7 @@ hash_t CResourceManager::put(uint32_t file_id, const void* data, size_t size, ha
     fileWriter_.queue().produce(prod);
   } else {
     if (!Config::Get().recorder.extras.utilities.nullIO) {
-      bfs::ofstream file(file_name, std::ios::binary | std::ios::app | std::ios::out);
+      std::ofstream file(file_name, std::ios::binary | std::ios::app | std::ios::out);
       file.write(static_cast<const char*>(data), size);
     }
   }

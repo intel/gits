@@ -183,18 +183,11 @@ void UpdatePointer(PointerDescr& pointer,
 }
 
 uint64_t FileSize(const std::string& fileName) {
-  uint64_t fileSize = 0;
-  std::string filePath = Config::Get().common.streamDir.string() + fileName;
-  std::ifstream file(filePath.c_str(), std::ios::binary);
-
-  if (file.is_open()) {
-    file.seekg(0, std::ios_base::end);
-    fileSize = file.tellg();
-    file.close();
-  } else {
-    std::cerr << "Failed to open file: " << filePath << "\n";
+  std::filesystem::path filePath = Config::Get().common.streamDir / fileName;
+  if (!std::filesystem::exists(filePath)) {
+    std::cerr << "File: " << filePath << " does not exist!";
   }
-
+  uint64_t fileSize = std::filesystem::file_size(filePath);
   return fileSize;
 }
 

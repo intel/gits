@@ -23,9 +23,9 @@
 
 #include <array>
 #include <utility>
+#include <filesystem>
 
 DISABLE_WARNINGS
-#include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
 ENABLE_WARNINGS
 
@@ -309,9 +309,9 @@ void SaveImage(char* image,
                const std::string& name) {
   auto& cfg = Config::Get();
   const unsigned rgba8TexelSize = 4;
-  bfs::path dir =
+  std::filesystem::path dir =
       cfg.player.outputDir.empty() ? cfg.common.streamDir / "dump" : cfg.player.outputDir;
-  bfs::create_directories(dir);
+  std::filesystem::create_directories(dir);
 
   const size_t imagesMemorySize = CountImageSize(format, desc);
   const std::array<size_t, 3> sizes = GetSimplifiedImageSizes(desc);
@@ -330,7 +330,7 @@ void SaveImage(char* image,
                            static_cast<int>(width), static_cast<int>(height));
 
       std::string fileName = (depth == 1 ? name : name + "-" + std::to_string(i)) + ".png";
-      bfs::path path = dir / fileName;
+      std::filesystem::path path = dir / fileName;
       CGits::Instance().WriteImage(path.string(), width, height, true, convertedData, false, true);
     }
   } catch (const ENotImplemented& ex) {
@@ -341,11 +341,11 @@ void SaveImage(char* image,
 void SaveBuffer(const std::string& name, const std::vector<char>& data) {
   auto& cfg = Config::Get();
   std::string filename = name + ".dat";
-  bfs::path path =
+  std::filesystem::path path =
       (cfg.player.outputDir.empty() ? cfg.common.streamDir / "dump" : cfg.player.outputDir) /
       filename;
-  create_directories(path.parent_path());
-  bfs::ofstream binStream(path, bfs::ofstream::binary);
+  std::filesystem::create_directories(path.parent_path());
+  std::ofstream binStream(path, std::ofstream::binary);
   binStream.write(data.data(), data.size());
   binStream.close();
 }
@@ -353,11 +353,11 @@ void SaveBuffer(const std::string& name, const std::vector<char>& data) {
 void SaveBuffer(const std::string& name, const CBinaryResource& data) {
   auto& cfg = Config::Get();
   std::string filename = name + ".dat";
-  bfs::path path =
+  std::filesystem::path path =
       (cfg.player.outputDir.empty() ? cfg.common.streamDir / "dump" : cfg.player.outputDir) /
       filename;
-  create_directories(path.parent_path());
-  bfs::ofstream binStream(path, bfs::ofstream::binary);
+  std::filesystem::create_directories(path.parent_path());
+  std::ofstream binStream(path, std::ofstream::binary);
   binStream.write((const char*)data.Data(), data.Data().Size());
   binStream.close();
 }
@@ -980,7 +980,7 @@ std::string RemoveDoubleDotHeaderSyntax(const std::string& src) {
     finalShaderSource += what.prefix().str();
     std::string header = what.str(1);
     if (header.find("..") != std::string::npos) {
-      header = bfs::path(header).filename().string();
+      header = std::filesystem::path(header).filename().string();
       finalShaderSource += " \"" + header;
     } else {
       finalShaderSource += what.str(0);

@@ -41,14 +41,12 @@
 #include "openglRecorderWrapper.h"
 
 #include <memory>
+#include <filesystem>
+#include <fstream>
 
 DISABLE_WARNINGS
 #include <boost/thread.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
 ENABLE_WARNINGS
-
-namespace bfs = boost::filesystem;
 
 #ifndef GITS_PLATFORM_WINDOWS
 static void detach() __attribute__((destructor(101)));
@@ -161,7 +159,7 @@ gits::CRecorder::CRecorder()
 
   // create file data and regisapi3dIfaceter it in GITS
   if (config.recorder.basic.enabled) {
-    bfs::create_directories(config.common.streamDir);
+    std::filesystem::create_directories(config.common.streamDir);
 #if defined(GITS_PLATFORM_X11)
     struct sigaction action;
     memset(&action, 0, sizeof(struct sigaction));
@@ -270,7 +268,7 @@ gits::CRecorder::~CRecorder() {
   const Config& config = Config::Get();
   auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
   if (api3dIface.CfgRec_IsBenchmark() && config.recorder.basic.enabled) {
-    bfs::ofstream out_file(config.common.streamDir / "benchmark.csv");
+    std::ofstream out_file(config.common.streamDir / "benchmark.csv");
     CGits::Instance().TimeSheet().OutputTimeData(out_file, true);
   }
 

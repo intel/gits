@@ -17,11 +17,9 @@
 
 #include <string>
 #include <deque>
+#include <filesystem>
 
 #include "openglTypes.h"
-DISABLE_WARNINGS
-#include <boost/filesystem/path.hpp>
-ENABLE_WARNINGS
 #include "tools.h"
 
 #ifndef BUILD_FOR_CCODE
@@ -42,18 +40,18 @@ bool ReadPixelsWrapper(GLint x,
 #ifdef BUILD_FOR_CCODE
 bool IsEsProfile();
 #endif
-void capture_drawbuffer(const boost::filesystem::path& directory,
+void capture_drawbuffer(const std::filesystem::path& directory,
                         const std::string& file_name,
                         bool force_back_buffer,
                         bool dump_depth = true,
                         bool dump_stencil = true);
-boost::filesystem::path GetPathForImageDumping();
+std::filesystem::path GetPathForImageDumping();
 void FrameBufferSave(unsigned frameNumber);
 #ifdef GITS_PLATFORM_WINDOWS
 void ScreenshotSave(unsigned frameNumber, HWND hWND);
 #endif
 void capture_bound_texture2D(GLenum target,
-                             const boost::filesystem::path& directory,
+                             const std::filesystem::path& directory,
                              const std::string& file_name);
 #ifndef BUILD_FOR_CCODE
 void RestoreFramebufferEXT(

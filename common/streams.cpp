@@ -24,29 +24,19 @@
 #include <algorithm>
 #include <iomanip>
 
-DISABLE_WARNINGS
-#include <boost/filesystem.hpp>
-ENABLE_WARNINGS
-
 namespace {
-std::streambuf* initialize_gits_streambuf(const boost::filesystem::path& fileName,
+std::streambuf* initialize_gits_streambuf(const std::filesystem::path& fileName,
                                           std::ios::openmode mode) {
-  std::unique_ptr<std::streambuf> ptr;
-
-  if (boost::filesystem::is_directory(fileName)) {
+  if (std::filesystem::is_directory(fileName)) {
     Log(ERR) << "Expected stream file path, got a directory.";
     throw gits::EOperationFailed(EXCEPTION_MESSAGE);
   }
-
-  boost::filesystem::filebuf* file = new boost::filesystem::filebuf;
-  bool opened = file->open(fileName, mode);
-  ptr.reset(file);
-
+  std::filebuf* fileBuf = new std::filebuf;
+  bool opened = fileBuf->open(fileName, mode);
   if (!opened) {
     throw gits::EOperationFailed(EXCEPTION_MESSAGE);
   }
-
-  return ptr.release();
+  return fileBuf;
 }
 } // namespace
 
@@ -66,7 +56,7 @@ void gits::check_uint_conversion_possibility(uint64_t value) {
   }
 }
 
-gits::CBinOStream::CBinOStream(const boost::filesystem::path& fileName)
+gits::CBinOStream::CBinOStream(const std::filesystem::path& fileName)
     : std::ostream(nullptr), _buf(nullptr) {
   CheckMinimumAvailableDiskSize();
   std::ios::openmode mode = std::ios::binary | std::ios::trunc | std::ios::out;
@@ -86,7 +76,7 @@ gits::CBinOStream::~CBinOStream() {
  *
  * @param fileName Name of a file to create.
  */
-gits::CBinIStream::CBinIStream(const boost::filesystem::path& fileName)
+gits::CBinIStream::CBinIStream(const std::filesystem::path& fileName)
     : _file(nullptr), _path(fileName) {
   _file = fopen(fileName.string().c_str(), "rb"
 #ifdef GITS_PLATFORM_WINDOWS

@@ -24,6 +24,7 @@
 
 #include <set>
 #include <deque>
+#include <filesystem>
 
 #ifdef GITS_PLATFORM_X11
 #include <X11/Xlib.h>
@@ -32,7 +33,6 @@
 
 DISABLE_WARNINGS
 #include <boost/thread.hpp>
-#include <boost/filesystem/path.hpp>
 #include <boost/property_tree/ptree.hpp>
 ENABLE_WARNINGS
 
@@ -60,7 +60,7 @@ bool SavePng(const std::string& filename,
              bool sRGB = false,
              bool bgr = false);
 
-void SaveJsonFile(const boost::property_tree::ptree& pt, const boost::filesystem::path& path);
+void SaveJsonFile(const boost::property_tree::ptree& pt, const std::filesystem::path& path);
 
 void CheckMinimumAvailableDiskSize();
 
@@ -79,9 +79,6 @@ inline uint64_t ComputeHash(const void* data, size_t size, THashType type) {
 std::string CommandOutput(const std::string& command, bool isRecorder);
 
 void fast_exit(int);
-
-void CopyDirectoryRecursively(const boost::filesystem::path& from,
-                              const boost::filesystem::path& to);
 
 template <class T>
 size_t GetTermArraySize(const T* arr, const T terminator, const int term_pos = 1) {

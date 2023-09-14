@@ -64,7 +64,7 @@ if(MSVC)
 else()
   set_target_properties(OpenGL_interceptor PROPERTIES OUTPUT_NAME GitsGLCapture)
 endif()
-target_link_libraries(OpenGL_interceptor Boost::thread Boost::filesystem Boost::container)
+target_link_libraries(OpenGL_interceptor Boost::thread Boost::container)
 
 if(NOT MSVC)
   target_link_libraries(OpenGL_interceptor "-Wl,-Bsymbolic")

@@ -50,7 +50,7 @@ public:
   }
 
   TState State() const;
-  void Load(const boost::filesystem::path& fileName);
+  void Load(const std::filesystem::path& fileName);
   CScheduler& Scheduler() {
     return *_sc.scheduler;
   }

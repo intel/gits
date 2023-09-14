@@ -16,10 +16,7 @@
 #include "platform.h"
 #include <cstdarg>
 #include <iostream>
-
-DISABLE_WARNINGS
-#include <boost/filesystem/fstream.hpp>
-ENABLE_WARNINGS
+#include <fstream>
 
 #include "gitsLoader.h"
 #include "recorderIface.h"
@@ -27,15 +24,14 @@ ENABLE_WARNINGS
 #include "exception.h"
 #include "log.h"
 
-namespace bfs = boost::filesystem;
-
 #if defined GITS_PLATFORM_WINDOWS
 const char* RECORDER_LIB_NAME = "gitsRecorder.dll";
 #else
 const char* RECORDER_LIB_NAME = "libGitsRecorder.so";
 #endif
 
-gits::CGitsLoader::CGitsLoader(const bfs::path& path, const char* recorderWrapperFactoryName)
+gits::CGitsLoader::CGitsLoader(const std::filesystem::path& path,
+                               const char* recorderWrapperFactoryName)
     : _config(nullptr) {
   CLog::LogFile(path);
 
@@ -44,7 +40,7 @@ gits::CGitsLoader::CGitsLoader(const bfs::path& path, const char* recorderWrappe
   // would crash with any output. we assume that first "InstallationPath" string
   // in a config file is option name followed by the path to the Recorder.
   auto cfgPath = path / "gits_config.txt";
-  std::ifstream cfgFile(cfgPath.string().c_str());
+  std::ifstream cfgFile(cfgPath);
   if (!cfgFile.good()) {
     static const char* msg = "Error: GITS config file not found.\n";
     std::cerr << msg;
@@ -69,7 +65,7 @@ gits::CGitsLoader::CGitsLoader(const bfs::path& path, const char* recorderWrappe
 
   // load GITS Recorder DLL
   auto path_cstr = recorderPath.c_str();
-  bfs::path gitsPath(path_cstr + pos_f, path_cstr + pos_l + 1);
+  std::filesystem::path gitsPath(path_cstr + pos_f, path_cstr + pos_l + 1);
   gitsPath /= RECORDER_LIB_NAME;
 
   _sharedLib = dl::open_library(gitsPath.string().c_str());

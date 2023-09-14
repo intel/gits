@@ -17,8 +17,6 @@
 #include "vulkanTools.h"
 #include "gits.h"
 
-namespace bfs = boost::filesystem;
-
 namespace gits {
 namespace Vulkan {
 
@@ -40,7 +38,7 @@ gits::CResourceManager& gits::Vulkan::CLibrary::ProgramBinaryManager() {
     return *_progBinManager;
   }
 
-  std::unordered_map<uint32_t, bfs::path> the_map;
+  std::unordered_map<uint32_t, std::filesystem::path> the_map;
   the_map[RESOURCE_INDEX] = "gitsPlayerDataIndex.dat";
   the_map[RESOURCE_BUFFER] = "gitsPlayerBuffers.dat";
 

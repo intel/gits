@@ -24,13 +24,7 @@
 #include "tools.h"
 
 #include <string>
-
-DISABLE_WARNINGS
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
-ENABLE_WARNINGS
-
-namespace bfs = boost::filesystem;
+#include <filesystem>
 
 /* ******************************* A R G U M E N T ***************************** */
 
@@ -90,8 +84,7 @@ void gits::CArgumentFileText::init(const char* fileName, const char* text, unsig
   if (Config::Get().recorder.extras.utilities.nullIO) {
     return;
   }
-
-  bfs::path path = bfs::path(Config::Get().common.streamDir) / _fileName;
+  std::filesystem::path path = Config::Get().common.streamDir / _fileName;
   if (Config::Get().recorder.extras.utilities.zipTextFiles) {
     auto f = CGits::Instance().OpenZipFileGLPrograms();
     int r = zipOpenNewFileInZip(f, fileName, nullptr, nullptr, 0, nullptr, 0, nullptr, 0, 0);
@@ -108,8 +101,8 @@ void gits::CArgumentFileText::init(const char* fileName, const char* text, unsig
       throw std::runtime_error("failed closing zip archive file");
     }
   } else {
-    create_directories(path.parent_path());
-    bfs::ofstream textStream(path, std::ios::binary);
+    std::filesystem::create_directories(path.parent_path());
+    std::ofstream textStream(path, std::ios::binary);
     if (!textStream) {
       CheckMinimumAvailableDiskSize();
       Log(ERR) << "Cannot create file '" << path << "'!!!";
@@ -130,8 +123,8 @@ void gits::CArgumentFileText::Read(CBinIStream& stream) {
   stream.get_delimited_string(_fileName, '"');
 
   // load text from a file
-  bfs::path path = bfs::path(Config::Get().common.streamDir) / _fileName;
-  bfs::ifstream textStream(path, std::ios::binary);
+  std::filesystem::path path = Config::Get().common.streamDir / _fileName;
+  std::ifstream textStream(path, std::ios::binary);
 
   // check if file was opened
   if (textStream) {

@@ -44,10 +44,7 @@
 #include <string>
 #include <sstream>
 #include <algorithm>
-
-DISABLE_WARNINGS
-#include <boost/filesystem.hpp>
-ENABLE_WARNINGS
+#include <filesystem>
 
 static gits::OpenGL::CRecorderWrapper* wrapper = nullptr;
 
@@ -92,7 +89,7 @@ DrawCallWrapperPrePost::~DrawCallWrapperPrePost() {
   if (Config::Get()
           .recorder.openGL.images.dumpDrawsFromFrames[gits::CGits::Instance().CurrentFrame()]) {
     //Dump screenshots after drawcalls
-    boost::filesystem::path path =
+    std::filesystem::path path =
         Config::Get().common.streamDir / "gitsScreenshots" / "gitsRecorder" / "draws";
     capture_drawbuffer(
         path, "drawcall-" + std::to_string(CGits::Instance().CurrentDrawCount()) + "-pre", true);
