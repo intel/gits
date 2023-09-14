@@ -10,7 +10,6 @@
 #include "openglDrivers.h"
 #if defined GITS_PLATFORM_WINDOWS
 #include <windows.h>
-using namespace std;
 #include <atlimage.h>
 #elif defined GITS_PLATFORM_X11
 #include <X11/Xlib.h>

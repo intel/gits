@@ -24,7 +24,6 @@ ENABLE_WARNINGS
 #if defined(GITS_PLATFORM_WINDOWS) && !defined(BUILD_FOR_CCODE)
 
 #include <Windows.h>
-using namespace std;
 #include <atlimage.h>
 
 #endif

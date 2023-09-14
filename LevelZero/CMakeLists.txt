@@ -185,7 +185,7 @@ set_target_properties(
   L0_codegen L0_common L0_recorder L0_interceptor
   PROPERTIES
   FOLDER LevelZero
-  CXX_STANDARD 14)
+  CXX_STANDARD 17)
 set_target_properties(L0_interceptor PROPERTIES FOLDER LevelZero SOVERSION 1)
 
 set(warnings
