@@ -18,6 +18,9 @@ CmdBufferBind=32
 CmdBufferPush=64
 BeginRenderPass=128
 EndRenderPass=256
+Draw=512
+Blit=1024
+Dispatch=2048
 
 
 # Vulkan API function level

@@ -317,6 +317,12 @@ def make_type(fdata):
     type += "GITS_VULKAN_BEGIN_RENDERPASS_APITYPE | "
   if fdata['functionType']&EndRenderPass:
     type += "GITS_VULKAN_END_RENDERPASS_APITYPE | "
+  if fdata['functionType']&Draw:
+    type += "GITS_VULKAN_DRAW_APITYPE | "
+  if fdata['functionType']&Blit:
+    type += "GITS_VULKAN_BLIT_APITYPE | "
+  if fdata['functionType']&Dispatch:
+    type += "GITS_VULKAN_DISPATCH_APITYPE | "
   type = type.strip(" | ")
   return type
 

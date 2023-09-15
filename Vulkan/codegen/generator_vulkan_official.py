@@ -371,7 +371,7 @@ arg6=ArgDef(name='pSizes', type='const VkDeviceSize*', wrapType='Cuint64_t::CSAr
 arg7=ArgDef(name='pStrides', type='const VkDeviceSize*', wrapType='Cuint64_t::CSArray', wrapParams='bindingCount, pStrides', count='bindingCount')
 )
 
-Function(name='vkCmdBlitImage', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdBlitImage', enabled=True, type=Blit, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='srcImage', type='VkImage'),
@@ -383,13 +383,13 @@ arg7=ArgDef(name='pRegions', type='const VkImageBlit*', wrapType='CVkImageBlitAr
 arg8=ArgDef(name='filter', type='VkFilter')
 )
 
-Function(name='vkCmdBlitImage2', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdBlitImage2', enabled=True, type=Blit, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pBlitImageInfo', type='const VkBlitImageInfo2*')
 )
 
-Function(name='vkCmdBlitImage2KHR', enabled=False, type=Param,
+Function(name='vkCmdBlitImage2KHR', enabled=False, type=Blit,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pBlitImageInfo', type='const VkBlitImageInfo2*')
@@ -488,7 +488,7 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pInfo', type='const VkCopyAccelerationStructureToMemoryInfoKHR*')
 )
 
-Function(name='vkCmdCopyBuffer', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdCopyBuffer', enabled=True, type=Blit, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='srcBuffer', type='VkBuffer'),
@@ -497,19 +497,19 @@ arg4=ArgDef(name='regionCount', type='uint32_t'),
 arg5=ArgDef(name='pRegions', type='const VkBufferCopy*', wrapType='CVkBufferCopyArray', wrapParams='regionCount, pRegions', count='regionCount')
 )
 
-Function(name='vkCmdCopyBuffer2', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdCopyBuffer2', enabled=True, type=Blit, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pCopyBufferInfo', type='const VkCopyBufferInfo2*')
 )
 
-Function(name='vkCmdCopyBuffer2KHR', enabled=False, type=Param,
+Function(name='vkCmdCopyBuffer2KHR', enabled=False, type=Blit,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pCopyBufferInfo', type='const VkCopyBufferInfo2*')
 )
 
-Function(name='vkCmdCopyBufferToImage', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdCopyBufferToImage', enabled=True, type=Blit, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='srcBuffer', type='VkBuffer'),
@@ -519,19 +519,19 @@ arg5=ArgDef(name='regionCount', type='uint32_t'),
 arg6=ArgDef(name='pRegions', type='const VkBufferImageCopy*', wrapType='CVkBufferImageCopyArray', wrapParams='regionCount, pRegions', count='regionCount')
 )
 
-Function(name='vkCmdCopyBufferToImage2', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdCopyBufferToImage2', enabled=True, type=Blit, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pCopyBufferToImageInfo', type='const VkCopyBufferToImageInfo2*')
 )
 
-Function(name='vkCmdCopyBufferToImage2KHR', enabled=False, type=Param,
+Function(name='vkCmdCopyBufferToImage2KHR', enabled=False, type=Blit,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pCopyBufferToImageInfo', type='const VkCopyBufferToImageInfo2*')
 )
 
-Function(name='vkCmdCopyImage', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdCopyImage', enabled=True, type=Blit, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='srcImage', type='VkImage'),
@@ -542,19 +542,19 @@ arg6=ArgDef(name='regionCount', type='uint32_t'),
 arg7=ArgDef(name='pRegions', type='const VkImageCopy*', wrapType='CVkImageCopyArray', wrapParams='regionCount, pRegions', count='regionCount')
 )
 
-Function(name='vkCmdCopyImage2', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdCopyImage2', enabled=True, type=Blit, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pCopyImageInfo', type='const VkCopyImageInfo2*')
 )
 
-Function(name='vkCmdCopyImage2KHR', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdCopyImage2KHR', enabled=True, type=Blit, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pCopyImageInfo', type='const VkCopyImageInfo2*')
 )
 
-Function(name='vkCmdCopyImageToBuffer', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdCopyImageToBuffer', enabled=True, type=Blit, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='srcImage', type='VkImage'),
@@ -564,13 +564,13 @@ arg5=ArgDef(name='regionCount', type='uint32_t'),
 arg6=ArgDef(name='pRegions', type='const VkBufferImageCopy*', wrapType='CVkBufferImageCopyArray', wrapParams='regionCount, pRegions', count='regionCount')
 )
 
-Function(name='vkCmdCopyImageToBuffer2', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdCopyImageToBuffer2', enabled=True, type=Blit, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pCopyImageToBufferInfo', type='const VkCopyImageToBufferInfo2*')
 )
 
-Function(name='vkCmdCopyImageToBuffer2KHR', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdCopyImageToBuffer2KHR', enabled=True, type=Blit, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pCopyImageToBufferInfo', type='const VkCopyImageToBufferInfo2*')
@@ -669,7 +669,7 @@ arg2=ArgDef(name='decompressRegionCount', type='uint32_t'),
 arg3=ArgDef(name='pDecompressMemoryRegions', type='const VkDecompressMemoryRegionNV*')
 )
 
-Function(name='vkCmdDispatch', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdDispatch', enabled=True, type=Dispatch, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='groupCountX', type='uint32_t'),
@@ -677,7 +677,7 @@ arg3=ArgDef(name='groupCountY', type='uint32_t'),
 arg4=ArgDef(name='groupCountZ', type='uint32_t')
 )
 
-Function(name='vkCmdDispatchBase', enabled=False, type=Param,
+Function(name='vkCmdDispatchBase', enabled=False, type=Dispatch,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='baseGroupX', type='uint32_t'),
@@ -688,7 +688,7 @@ arg6=ArgDef(name='groupCountY', type='uint32_t'),
 arg7=ArgDef(name='groupCountZ', type='uint32_t')
 )
 
-Function(name='vkCmdDispatchBaseKHR', enabled=False, type=Param,
+Function(name='vkCmdDispatchBaseKHR', enabled=False, type=Dispatch,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='baseGroupX', type='uint32_t'),
@@ -699,14 +699,14 @@ arg6=ArgDef(name='groupCountY', type='uint32_t'),
 arg7=ArgDef(name='groupCountZ', type='uint32_t')
 )
 
-Function(name='vkCmdDispatchIndirect', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdDispatchIndirect', enabled=True, type=Dispatch, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='buffer', type='VkBuffer'),
 arg3=ArgDef(name='offset', type='VkDeviceSize')
 )
 
-Function(name='vkCmdDraw', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdDraw', enabled=True, type=Draw, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='vertexCount', type='uint32_t'),
@@ -715,7 +715,7 @@ arg4=ArgDef(name='firstVertex', type='uint32_t'),
 arg5=ArgDef(name='firstInstance', type='uint32_t')
 )
 
-Function(name='vkCmdDrawIndexed', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdDrawIndexed', enabled=True, type=Draw, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='indexCount', type='uint32_t'),
@@ -725,7 +725,7 @@ arg5=ArgDef(name='vertexOffset', type='int32_t'),
 arg6=ArgDef(name='firstInstance', type='uint32_t')
 )
 
-Function(name='vkCmdDrawIndexedIndirect', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdDrawIndexedIndirect', enabled=True, type=Draw, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='buffer', type='VkBuffer'),
@@ -734,7 +734,7 @@ arg4=ArgDef(name='drawCount', type='uint32_t'),
 arg5=ArgDef(name='stride', type='uint32_t')
 )
 
-Function(name='vkCmdDrawIndexedIndirectCount', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdDrawIndexedIndirectCount', enabled=True, type=Draw, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='buffer', type='VkBuffer'),
@@ -745,7 +745,7 @@ arg6=ArgDef(name='maxDrawCount', type='uint32_t'),
 arg7=ArgDef(name='stride', type='uint32_t')
 )
 
-Function(name='vkCmdDrawIndexedIndirectCountAMD', enabled=False, type=Param,
+Function(name='vkCmdDrawIndexedIndirectCountAMD', enabled=False, type=Draw,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='buffer', type='VkBuffer'),
@@ -756,7 +756,7 @@ arg6=ArgDef(name='maxDrawCount', type='uint32_t'),
 arg7=ArgDef(name='stride', type='uint32_t')
 )
 
-Function(name='vkCmdDrawIndexedIndirectCountKHR', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdDrawIndexedIndirectCountKHR', enabled=True, type=Draw, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='buffer', type='VkBuffer'),
@@ -767,7 +767,7 @@ arg6=ArgDef(name='maxDrawCount', type='uint32_t'),
 arg7=ArgDef(name='stride', type='uint32_t')
 )
 
-Function(name='vkCmdDrawIndirect', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdDrawIndirect', enabled=True, type=Draw, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='buffer', type='VkBuffer'),
@@ -776,7 +776,7 @@ arg4=ArgDef(name='drawCount', type='uint32_t'),
 arg5=ArgDef(name='stride', type='uint32_t')
 )
 
-Function(name='vkCmdDrawIndirectByteCountEXT', enabled=False, type=Param,
+Function(name='vkCmdDrawIndirectByteCountEXT', enabled=False, type=Draw,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='instanceCount', type='uint32_t'),
@@ -787,7 +787,7 @@ arg6=ArgDef(name='counterOffset', type='uint32_t'),
 arg7=ArgDef(name='vertexStride', type='uint32_t')
 )
 
-Function(name='vkCmdDrawIndirectCount', enabled=False, type=Param,
+Function(name='vkCmdDrawIndirectCount', enabled=False, type=Draw,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='buffer', type='VkBuffer'),
@@ -798,7 +798,7 @@ arg6=ArgDef(name='maxDrawCount', type='uint32_t'),
 arg7=ArgDef(name='stride', type='uint32_t')
 )
 
-Function(name='vkCmdDrawIndirectCountAMD', enabled=False, type=Param,
+Function(name='vkCmdDrawIndirectCountAMD', enabled=False, type=Draw,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='buffer', type='VkBuffer'),
@@ -809,7 +809,7 @@ arg6=ArgDef(name='maxDrawCount', type='uint32_t'),
 arg7=ArgDef(name='stride', type='uint32_t')
 )
 
-Function(name='vkCmdDrawIndirectCountKHR', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdDrawIndirectCountKHR', enabled=True, type=Draw, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='buffer', type='VkBuffer'),
@@ -820,7 +820,7 @@ arg6=ArgDef(name='maxDrawCount', type='uint32_t'),
 arg7=ArgDef(name='stride', type='uint32_t')
 )
 
-Function(name='vkCmdDrawMeshTasksEXT', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdDrawMeshTasksEXT', enabled=True, type=Draw, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='groupCountX', type='uint32_t'),
@@ -828,7 +828,7 @@ arg3=ArgDef(name='groupCountY', type='uint32_t'),
 arg4=ArgDef(name='groupCountZ', type='uint32_t')
 )
 
-Function(name='vkCmdDrawMeshTasksIndirectCountEXT', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdDrawMeshTasksIndirectCountEXT', enabled=True, type=Draw, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='buffer', type='VkBuffer'),
@@ -839,7 +839,7 @@ arg6=ArgDef(name='maxDrawCount', type='uint32_t'),
 arg7=ArgDef(name='stride', type='uint32_t')
 )
 
-Function(name='vkCmdDrawMeshTasksIndirectCountNV', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdDrawMeshTasksIndirectCountNV', enabled=True, type=Draw, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='buffer', type='VkBuffer'),
@@ -850,7 +850,7 @@ arg6=ArgDef(name='maxDrawCount', type='uint32_t'),
 arg7=ArgDef(name='stride', type='uint32_t')
 )
 
-Function(name='vkCmdDrawMeshTasksIndirectEXT', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdDrawMeshTasksIndirectEXT', enabled=True, type=Draw, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='buffer', type='VkBuffer'),
@@ -859,7 +859,7 @@ arg4=ArgDef(name='drawCount', type='uint32_t'),
 arg5=ArgDef(name='stride', type='uint32_t')
 )
 
-Function(name='vkCmdDrawMeshTasksIndirectNV', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdDrawMeshTasksIndirectNV', enabled=True, type=Draw, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='buffer', type='VkBuffer'),
@@ -868,14 +868,14 @@ arg4=ArgDef(name='drawCount', type='uint32_t'),
 arg5=ArgDef(name='stride', type='uint32_t')
 )
 
-Function(name='vkCmdDrawMeshTasksNV', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdDrawMeshTasksNV', enabled=True, type=Draw, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='taskCount', type='uint32_t'),
 arg3=ArgDef(name='firstTask', type='uint32_t')
 )
 
-Function(name='vkCmdDrawMultiEXT', enabled=False, type=Param,
+Function(name='vkCmdDrawMultiEXT', enabled=False, type=Draw,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='drawCount', type='uint32_t'),
@@ -885,7 +885,7 @@ arg5=ArgDef(name='firstInstance', type='uint32_t'),
 arg6=ArgDef(name='stride', type='uint32_t')
 )
 
-Function(name='vkCmdDrawMultiIndexedEXT', enabled=False, type=Param,
+Function(name='vkCmdDrawMultiIndexedEXT', enabled=False, type=Draw,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='drawCount', type='uint32_t'),
@@ -983,7 +983,7 @@ arg2=ArgDef(name='isPreprocessed', type='VkBool32'),
 arg3=ArgDef(name='pGeneratedCommandsInfo', type='const VkGeneratedCommandsInfoNV*')
 )
 
-Function(name='vkCmdFillBuffer', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdFillBuffer', enabled=True, type=Blit, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='dstBuffer', type='VkBuffer'),
@@ -1822,7 +1822,7 @@ arg14=ArgDef(name='height', type='uint32_t'),
 arg15=ArgDef(name='depth', type='uint32_t')
 )
 
-Function(name='vkCmdUpdateBuffer', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdUpdateBuffer', enabled=True, type=Blit, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='dstBuffer', type='VkBuffer'),
