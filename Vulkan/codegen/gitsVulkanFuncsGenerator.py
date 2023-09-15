@@ -323,6 +323,8 @@ def make_type(fdata):
     type += "GITS_VULKAN_BLIT_APITYPE | "
   if fdata['functionType']&Dispatch:
     type += "GITS_VULKAN_DISPATCH_APITYPE | "
+  if fdata['functionType']&NextSubpass:
+    type += "GITS_VULKAN_NEXT_SUBPASS_APITYPE | "
   type = type.strip(" | ")
   return type
 

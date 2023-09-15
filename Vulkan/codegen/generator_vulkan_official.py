@@ -998,20 +998,20 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pLabelInfo', type='const VkDebugUtilsLabelEXT*')
 )
 
-Function(name='vkCmdNextSubpass', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdNextSubpass', enabled=True, type=NextSubpass, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='contents', type='VkSubpassContents')
 )
 
-Function(name='vkCmdNextSubpass2', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdNextSubpass2', enabled=True, type=NextSubpass, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pSubpassBeginInfo', type='const VkSubpassBeginInfo*'),
 arg3=ArgDef(name='pSubpassEndInfo', type='const VkSubpassEndInfo*')
 )
 
-Function(name='vkCmdNextSubpass2KHR', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdNextSubpass2KHR', enabled=True, type=NextSubpass, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pSubpassBeginInfo', type='const VkSubpassBeginInfo*'),

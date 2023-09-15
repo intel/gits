@@ -113,6 +113,22 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::FinishCommandBufferAndRestoreSe
     uint64_t renderPassNumber,
     uint64_t drawNumber,
     VkCommandBuffer cmdBuffer) {
+  uint64_t drawCount = 0;
+  uint64_t renderPassCount = 0;
+  // restoring subpasses - we need the same number of subpasses as in original VkRenderPass
+  for (auto elem : _tokensList) {
+    if ((elem->Type() & CFunction::GITS_VULKAN_NEXT_SUBPASS_APITYPE) && (drawCount >= drawNumber) &&
+        (renderPassCount == renderPassNumber)) {
+      elem->Exec();
+    } else if (elem->Type() & CFunction::GITS_VULKAN_DRAW_APITYPE) {
+      drawCount++;
+    } else if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
+      renderPassCount++;
+    } else if (renderPassCount > renderPassNumber) {
+      break;
+    }
+  }
+
   if (token->Type() & CFunction::GITS_VULKAN_DRAW_APITYPE) {
     VkRenderPassBeginInfo* renderPassBeginInfo = SD()._commandbufferstates[cmdBuffer]
                                                      ->beginRenderPassesList.back()
@@ -155,14 +171,18 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::FinishCommandBufferAndRestoreSe
   drvVk.vkBeginCommandBuffer(newCmdBuffer,
                              SD()._commandbufferstates[newCmdBuffer]
                                  ->beginCommandBuffer->commandBufferBeginInfoData.Value());
-  uint64_t drawCount = 0;
-  uint64_t renderPassCount = 0;
+  drawCount = 0;
+  renderPassCount = 0;
   for (auto elem : _tokensList) {
     if ((elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_SET_APITYPE ||
          elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_BIND_APITYPE ||
          elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_PUSH_APITYPE) &&
         (drawCount < drawNumber)) {
       // restoring VkCommandBuffer settings
+      elem->Exec();
+    } else if ((elem->Type() & CFunction::GITS_VULKAN_NEXT_SUBPASS_APITYPE) &&
+               (drawCount < drawNumber) && (renderPassCount == renderPassNumber)) {
+      // restoring subpasses - we need the same number of subpasses as in original VkRenderPass
       elem->Exec();
     } else if (elem->Type() & CFunction::GITS_VULKAN_DRAW_APITYPE) {
       drawCount++;
@@ -215,6 +235,8 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::FinishCommandBufferAndRestoreSe
         }
         drvVk.vkCmdBeginRendering(newCmdBuffer, &renderingInfo);
       }
+    } else if (renderPassCount > renderPassNumber) {
+      break;
     }
   }
 }

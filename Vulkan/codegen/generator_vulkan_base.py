@@ -21,6 +21,7 @@ EndRenderPass=256
 Draw=512
 Blit=1024
 Dispatch=2048
+NextSubpass=4096
 
 
 # Vulkan API function level
