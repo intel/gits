@@ -482,6 +482,7 @@ struct Config {
     std::vector<int> forcedDesktopResolution;
     uint32_t maxAllowedVkSwapchainRewinds;
     std::filesystem::path overrideVKPipelineCache;
+    vi_bool oneVulkanDrawPerCommandBuffer;
     vi_uint vulkanForcedPhysicalDeviceIndex;
     std::string vulkanForcedPhysicalDeviceName;
     DeviceTypeOpt vulkanForcedPhysicalDeviceType;

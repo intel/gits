@@ -542,7 +542,7 @@ inline void ExecCmdBuffer(VkCommandBuffer commandBuffer,
                           bool secondary,
                           uint32_t cmdBuffBatchNumber = 0,
                           uint32_t cmdBuffNumber = 0) {
-  auto& commandBuffState = SD()._commandbufferstates[commandBuffer];
+  auto commandBuffState = SD()._commandbufferstates[commandBuffer];
   if (commandBuffState->beginCommandBuffer) {
     if (commandBuffState->restored) {
       drvVk.vkResetCommandBuffer(commandBuffer, 0);
@@ -553,8 +553,8 @@ inline void ExecCmdBuffer(VkCommandBuffer commandBuffer,
       commandBuffState->tokensBuffer.ExecAndStateTrack();
     } else {
       commandBuffState->tokensBuffer.ExecAndDump(
-          commandBuffer, CGits::Instance().vkCounters.CurrentQueueSubmitCount(), cmdBuffBatchNumber,
-          cmdBuffNumber);
+          CGits::Instance().vkCounters.CurrentQueueSubmitCount(), cmdBuffBatchNumber, cmdBuffNumber,
+          commandBuffer);
     }
 
     if (commandBuffState->ended) {
@@ -576,7 +576,8 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
   if ((*submitCount > 0) && (!Config::Get().player.captureVulkanSubmits.empty() ||
                              !Config::Get().player.captureVulkanSubmitsResources.empty() ||
                              !Config::Get().player.captureVulkanRenderPasses.empty() ||
-                             !Config::Get().player.captureVulkanRenderPassesResources.empty())) {
+                             !Config::Get().player.captureVulkanRenderPassesResources.empty() ||
+                             Config::Get().player.oneVulkanDrawPerCommandBuffer)) {
     auto pSubmitInfoArray = *pSubmits;
     if (pSubmitInfoArray == nullptr) {
       throw std::runtime_error(EXCEPTION_MESSAGE);
@@ -603,7 +604,7 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
       }
       for (uint32_t cmdBufIndex = 0; cmdBufIndex < submitInfoOrig.commandBufferCount;
            cmdBufIndex++) {
-        const VkCommandBuffer& cmdbuffer = submitInfoOrig.pCommandBuffers[cmdBufIndex];
+        VkCommandBuffer cmdbuffer = submitInfoOrig.pCommandBuffers[cmdBufIndex];
         if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
           auto& commandBuffState = SD()._commandbufferstates[cmdbuffer];
           for (auto secondaryCmdBuffer : commandBuffState->secondaryCommandBuffers) {
@@ -612,6 +613,9 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
           ExecCmdBuffer(cmdbuffer, false, i, cmdBufIndex);
         }
         VkSubmitInfo submitInfoNew;
+        // VkCommandBuffer can be recreated inside method ExecCmdBuffer(), so we want to get actual pointer below
+        cmdbuffer =
+            CVkCommandBuffer::GetMapping(pSubmits.Original()[i].pCommandBuffers[cmdBufIndex]);
         if (cmdBufIndex ==
             submitInfoOrig.commandBufferCount -
                 1) //last command buffer in queue submit (restoring original settings)
@@ -722,7 +726,8 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
   if ((*submitCount > 0) && (!Config::Get().player.captureVulkanSubmits.empty() ||
                              !Config::Get().player.captureVulkanSubmitsResources.empty() ||
                              !Config::Get().player.captureVulkanRenderPasses.empty() ||
-                             !Config::Get().player.captureVulkanRenderPassesResources.empty())) {
+                             !Config::Get().player.captureVulkanRenderPassesResources.empty() ||
+                             Config::Get().player.oneVulkanDrawPerCommandBuffer)) {
     auto pSubmitInfo2Array = *pSubmits;
     if (pSubmitInfo2Array == nullptr) {
       throw std::runtime_error(EXCEPTION_MESSAGE);
@@ -749,7 +754,7 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
       }
       for (uint32_t cmdBufIndex = 0; cmdBufIndex < submitInfoOrig.commandBufferInfoCount;
            cmdBufIndex++) {
-        const VkCommandBufferSubmitInfo& cmdbufferSubmitInfo =
+        VkCommandBufferSubmitInfo cmdbufferSubmitInfo =
             submitInfoOrig.pCommandBufferInfos[cmdBufIndex];
         if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
           auto& commandBuffState = SD()._commandbufferstates[cmdbufferSubmitInfo.commandBuffer];
@@ -759,6 +764,9 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
           ExecCmdBuffer(cmdbufferSubmitInfo.commandBuffer, false, i, cmdBufIndex);
         }
         VkSubmitInfo2 submitInfoNew;
+        // VkCommandBuffer can be recreated inside method ExecCmdBuffer(), so we want to get actual pointer below
+        cmdbufferSubmitInfo.commandBuffer = CVkCommandBuffer::GetMapping(
+            pSubmits.Original()[i].pCommandBufferInfos[cmdBufIndex].commandBuffer);
         if (cmdBufIndex ==
             submitInfoOrig.commandBufferInfoCount -
                 1) //last command buffer in queue submit (restoring original settings)
@@ -1930,6 +1938,179 @@ inline void vkCmdExecuteCommands_WRAPRUN(CVkCommandBuffer& commandBuffer,
     drvVk.vkCmdExecuteCommands(*commandBuffer, *commandBufferCount, *pCommandBuffers);
     vkCmdExecuteCommands_SD(*commandBuffer, *commandBufferCount, *pCommandBuffers);
   }
+}
+
+VkResult _vkCreateRenderPass_Helper(VkDevice device,
+                                    const VkRenderPassCreateInfo* pCreateInfo,
+                                    const VkAllocationCallbacks* pAllocator,
+                                    VkRenderPass& pRenderPass,
+                                    CreationFunction createdWith) {
+  return drvVk.vkCreateRenderPass(device, pCreateInfo, pAllocator, &pRenderPass);
+}
+
+VkResult _vkCreateRenderPass_Helper(VkDevice device,
+                                    const VkRenderPassCreateInfo2* pCreateInfo,
+                                    const VkAllocationCallbacks* pAllocator,
+                                    VkRenderPass& pRenderPass,
+                                    CreationFunction createdWith) {
+  if (createdWith == CreationFunction::KHR_EXTENSION) {
+    return drvVk.vkCreateRenderPass2KHR(device, pCreateInfo, pAllocator, &pRenderPass);
+  } else {
+    return drvVk.vkCreateRenderPass2(device, pCreateInfo, pAllocator, &pRenderPass);
+  }
+}
+
+template <typename T, typename attDesc>
+void CreateRenderPasses_helper(VkDevice device,
+                               VkRenderPass renderPass,
+                               T pCreateInfo,
+                               CreationFunction createdWith) {
+  if (Config::Get().player.oneVulkanDrawPerCommandBuffer) {
+    // For executing each Vulkan draw in separate VkCommandBuffer we need some additional VkRenderPasses:
+    // - storeNoLoadRenderPassHandle - for modyfying original VkRenderPass - changing storeOp to STORE, loadOp is original
+    // - loadAndStoreRenderPassHandle - after draw execution subsequent draw will load result from previous and store it (loadOp = LOAD, storeOp = STORE)
+    // - restoreRenderPassHandle - for restoration of original settings and the end of RenderPass - loadOp = LOAD, storeOp is original
+    T renderPassCreateInfo = pCreateInfo;
+    std::vector<attDesc> attDescLoadAndStoreVector;
+    std::vector<attDesc> attDescRestoreVector;
+    std::vector<attDesc> attDescStoreNoLoadVector;
+    bool loadAndStoreChanged = false;
+    bool restoreChanged = false;
+    bool storeNoLoadChanged = false;
+
+    for (uint32_t i = 0; i < renderPassCreateInfo.attachmentCount; i++) {
+      VkImageAspectFlags aspect = getFormatAspectFlags(renderPassCreateInfo.pAttachments[i].format);
+      attDesc attDescLoadAndStore = renderPassCreateInfo.pAttachments[i];
+      attDesc attDescRestore = renderPassCreateInfo.pAttachments[i];
+      attDesc attDescStoreNoLoad = renderPassCreateInfo.pAttachments[i];
+      if (aspect & VK_IMAGE_ASPECT_COLOR_BIT || aspect & VK_IMAGE_ASPECT_DEPTH_BIT) {
+        if (renderPassCreateInfo.pAttachments[i].loadOp != VK_ATTACHMENT_LOAD_OP_LOAD) {
+          attDescLoadAndStore.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+          attDescRestore.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+          if (renderPassCreateInfo.pAttachments[i].initialLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
+            // We can't set loadOp to VK_ATTACHMENT_LOAD_OP_LOAD when initial layout is VK_IMAGE_LAYOUT_UNDEFINED
+            // As we are in the middle (or at the end) of original VkRenderPass execution we are setting initialLayout to finalLayout
+            attDescLoadAndStore.initialLayout = attDescLoadAndStore.finalLayout;
+            attDescRestore.initialLayout = attDescRestore.finalLayout;
+          }
+          loadAndStoreChanged = true;
+          restoreChanged = true;
+        }
+        if (renderPassCreateInfo.pAttachments[i].storeOp != VK_ATTACHMENT_STORE_OP_STORE) {
+          attDescLoadAndStore.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+          attDescStoreNoLoad.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+          loadAndStoreChanged = true;
+          storeNoLoadChanged = true;
+        }
+      }
+      if (aspect & VK_IMAGE_ASPECT_STENCIL_BIT) {
+        if (renderPassCreateInfo.pAttachments[i].stencilLoadOp != VK_ATTACHMENT_LOAD_OP_LOAD) {
+          attDescLoadAndStore.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+          attDescRestore.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+          if (renderPassCreateInfo.pAttachments[i].initialLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
+            // We can't set loadOp to VK_ATTACHMENT_LOAD_OP_LOAD when initial layout is VK_IMAGE_LAYOUT_UNDEFINED
+            // As we are in the middle (or at the end) of original VkRenderPass execution we are setting initialLayout to finalLayout
+            attDescLoadAndStore.initialLayout = attDescLoadAndStore.finalLayout;
+            attDescRestore.initialLayout = attDescRestore.finalLayout;
+          }
+          loadAndStoreChanged = true;
+          restoreChanged = true;
+        }
+        if (renderPassCreateInfo.pAttachments[i].stencilStoreOp != VK_ATTACHMENT_STORE_OP_STORE) {
+          attDescLoadAndStore.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+          attDescStoreNoLoad.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+          loadAndStoreChanged = true;
+          storeNoLoadChanged = true;
+        }
+      }
+      attDescLoadAndStoreVector.push_back(attDescLoadAndStore);
+      attDescRestoreVector.push_back(attDescRestore);
+      attDescStoreNoLoadVector.push_back(attDescStoreNoLoad);
+    }
+    if (loadAndStoreChanged) {
+      renderPassCreateInfo.pAttachments = attDescLoadAndStoreVector.data();
+      _vkCreateRenderPass_Helper(device, &renderPassCreateInfo, nullptr,
+                                 SD()._renderpassstates[renderPass]->loadAndStoreRenderPassHandle,
+                                 createdWith);
+
+    } else {
+      SD()._renderpassstates[renderPass]->loadAndStoreRenderPassHandle = renderPass;
+    }
+    if (restoreChanged) {
+      renderPassCreateInfo.pAttachments = attDescRestoreVector.data();
+      _vkCreateRenderPass_Helper(device, &renderPassCreateInfo, nullptr,
+                                 SD()._renderpassstates[renderPass]->restoreRenderPassHandle,
+                                 createdWith);
+    } else {
+      SD()._renderpassstates[renderPass]->restoreRenderPassHandle = renderPass;
+    }
+    if (storeNoLoadChanged) {
+      renderPassCreateInfo.pAttachments = attDescStoreNoLoadVector.data();
+      _vkCreateRenderPass_Helper(device, &renderPassCreateInfo, nullptr,
+                                 SD()._renderpassstates[renderPass]->storeNoLoadRenderPassHandle,
+                                 createdWith);
+    } else {
+      SD()._renderpassstates[renderPass]->storeNoLoadRenderPassHandle = renderPass;
+    }
+  }
+}
+
+inline void vkCreateRenderPass_WRAPRUN(CVkResult& return_value,
+                                       CVkDevice& device,
+                                       CVkRenderPassCreateInfo& pCreateInfo,
+                                       CNullWrapper& pAllocator,
+                                       CVkRenderPass::CSMapArray& pRenderPass) {
+  return_value.Assign(drvVk.vkCreateRenderPass(*device, *pCreateInfo, *pAllocator, *pRenderPass));
+  vkCreateRenderPass_SD(*return_value, *device, *pCreateInfo, *pAllocator, *pRenderPass);
+  CreateRenderPasses_helper<VkRenderPassCreateInfo, VkAttachmentDescription>(
+      *device, **pRenderPass, *pCreateInfo, SD()._renderpassstates[**pRenderPass]->createdWith);
+}
+
+inline void vkCreateRenderPass2_WRAPRUN(CVkResult& return_value,
+                                        CVkDevice& device,
+                                        CVkRenderPassCreateInfo2& pCreateInfo,
+                                        CNullWrapper& pAllocator,
+                                        CVkRenderPass::CSMapArray& pRenderPass) {
+  return_value.Assign(drvVk.vkCreateRenderPass2(*device, *pCreateInfo, *pAllocator, *pRenderPass));
+  vkCreateRenderPass2_SD(*return_value, *device, *pCreateInfo, *pAllocator, *pRenderPass);
+  CreateRenderPasses_helper<VkRenderPassCreateInfo2, VkAttachmentDescription2>(
+      *device, **pRenderPass, *pCreateInfo, SD()._renderpassstates[**pRenderPass]->createdWith);
+}
+
+inline void vkCreateRenderPass2KHR_WRAPRUN(CVkResult& return_value,
+                                           CVkDevice& device,
+                                           CVkRenderPassCreateInfo2& pCreateInfo,
+                                           CNullWrapper& pAllocator,
+                                           CVkRenderPass::CSMapArray& pRenderPass) {
+  return_value.Assign(
+      drvVk.vkCreateRenderPass2KHR(*device, *pCreateInfo, *pAllocator, *pRenderPass));
+  vkCreateRenderPass2KHR_SD(*return_value, *device, *pCreateInfo, *pAllocator, *pRenderPass);
+  CreateRenderPasses_helper<VkRenderPassCreateInfo2, VkAttachmentDescription2>(
+      *device, **pRenderPass, *pCreateInfo, SD()._renderpassstates[**pRenderPass]->createdWith);
+}
+
+inline void vkDestroyRenderPass_WRAPRUN(CVkDevice& device,
+                                        CVkRenderPass& renderPass,
+                                        CNullWrapper& pAllocator) {
+  drvVk.vkDestroyRenderPass(*device, *renderPass, *pAllocator);
+  if (Config::Get().player.oneVulkanDrawPerCommandBuffer) {
+    if (SD()._renderpassstates[*renderPass]->loadAndStoreRenderPassHandle != *renderPass) {
+      drvVk.vkDestroyRenderPass(*device,
+                                SD()._renderpassstates[*renderPass]->loadAndStoreRenderPassHandle,
+                                VK_NULL_HANDLE);
+    }
+    if (SD()._renderpassstates[*renderPass]->restoreRenderPassHandle != *renderPass) {
+      drvVk.vkDestroyRenderPass(
+          *device, SD()._renderpassstates[*renderPass]->restoreRenderPassHandle, VK_NULL_HANDLE);
+    }
+    if (SD()._renderpassstates[*renderPass]->storeNoLoadRenderPassHandle != *renderPass) {
+      drvVk.vkDestroyRenderPass(*device,
+                                SD()._renderpassstates[*renderPass]->storeNoLoadRenderPassHandle,
+                                VK_NULL_HANDLE);
+    }
+  }
+  vkDestroyRenderPass_SD(*device, *renderPass, *pAllocator);
+  renderPass.RemoveMapping();
 }
 } // namespace Vulkan
 } // namespace gits

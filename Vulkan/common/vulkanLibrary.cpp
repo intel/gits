@@ -16,6 +16,8 @@
 #include "vulkanLibrary.h"
 #include "vulkanTools.h"
 #include "gits.h"
+#include "vulkanStateDynamic.h"
+#include "vulkanFunctions.h"
 
 namespace gits {
 namespace Vulkan {
@@ -106,15 +108,241 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndStateTrack() {
   }
 }
 
-void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(VkCommandBuffer cmdBuffer,
-                                                             uint64_t queueSubmitNumber,
-                                                             uint32_t cmdBuffBatchNumber,
-                                                             uint32_t cmdBuffNumber) {
+void CLibrary::CVulkanCommandBufferTokensBuffer::FinishCommandBufferAndRestoreSettings(
+    Vulkan::CFunction* token,
+    uint64_t renderPassNumber,
+    uint64_t drawNumber,
+    VkCommandBuffer cmdBuffer) {
+  if (token->Type() & CFunction::GITS_VULKAN_DRAW_APITYPE) {
+    VkRenderPassBeginInfo* renderPassBeginInfo = SD()._commandbufferstates[cmdBuffer]
+                                                     ->beginRenderPassesList.back()
+                                                     ->renderPassBeginInfoData.Value();
+    VkRenderingInfo* renderingInfo = SD()._commandbufferstates[cmdBuffer]
+                                         ->beginRenderPassesList.back()
+                                         ->renderingInfoData.Value();
+    if (renderPassBeginInfo) {
+      drvVk.vkCmdEndRenderPass(cmdBuffer);
+    } else if (renderingInfo) {
+      drvVk.vkCmdEndRendering(cmdBuffer);
+    }
+  }
+  drvVk.vkEndCommandBuffer(cmdBuffer);
+
+  VkCommandPool cmdPool =
+      SD()._commandbufferstates[cmdBuffer]->commandBufferAllocateInfoData.Value()->commandPool;
+  VkCommandBuffer newCmdBuffer;
+  VkCommandBufferAllocateInfo commandBufferAllocateInfo = {
+      VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, // VkStructureType sType;
+      nullptr,                                        // const void* pNext;
+      cmdPool,                                        // VkCommandPool commandPool;
+      VK_COMMAND_BUFFER_LEVEL_PRIMARY,                // VkCommandBufferLevel level;
+      1                                               // uint32_t commandBufferCount;
+  };
+  VkSubmitInfo submitInfoNew = {
+      VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 1, &cmdBuffer, 0, nullptr};
+  VkQueue queue =
+      SD()._commandpoolstates[cmdPool]->deviceStateStore->queueStateStoreList[0]->queueHandle;
+  drvVk.vkQueueSubmit(queue, 1, &submitInfoNew, VK_NULL_HANDLE);
+  drvVk.vkQueueWaitIdle(queue);
+  VkDevice device = SD()._commandpoolstates[cmdPool]->deviceStateStore->deviceHandle;
+  drvVk.vkFreeCommandBuffers(device, cmdPool, 1, &cmdBuffer);
+  drvVk.vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &newCmdBuffer);
+  if (newCmdBuffer != cmdBuffer) {
+    SD()._commandbufferstates[cmdBuffer].swap(SD()._commandbufferstates[newCmdBuffer]);
+    SD()._commandbufferstates.erase(cmdBuffer);
+    CVkCommandBuffer::AddMapping(token->CommandBuffer(), newCmdBuffer);
+  }
+  drvVk.vkBeginCommandBuffer(newCmdBuffer,
+                             SD()._commandbufferstates[newCmdBuffer]
+                                 ->beginCommandBuffer->commandBufferBeginInfoData.Value());
+  uint64_t drawCount = 0;
   uint64_t renderPassCount = 0;
   for (auto elem : _tokensList) {
-    elem->Exec();
-    elem->StateTrack();
+    if ((elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_SET_APITYPE ||
+         elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_BIND_APITYPE ||
+         elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_PUSH_APITYPE) &&
+        (drawCount < drawNumber)) {
+      // restoring VkCommandBuffer settings
+      elem->Exec();
+    } else if (elem->Type() & CFunction::GITS_VULKAN_DRAW_APITYPE) {
+      drawCount++;
+    } else if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
+      renderPassCount++;
+    } else if ((elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDERPASS_APITYPE) &&
+               (renderPassCount == renderPassNumber) &&
+               (token->Type() & CFunction::GITS_VULKAN_DRAW_APITYPE)) {
+      // Setting loadOp to LOAD, and storeOp to STORE
+      VkRenderPassBeginInfo* renderPassBeginInfoPtr = SD()._commandbufferstates[newCmdBuffer]
+                                                          ->beginRenderPassesList.back()
+                                                          ->renderPassBeginInfoData.Value();
+      VkRenderingInfo* renderingInfoPtr = SD()._commandbufferstates[newCmdBuffer]
+                                              ->beginRenderPassesList.back()
+                                              ->renderingInfoData.Value();
+      if (renderPassBeginInfoPtr) {
+        VkRenderPassBeginInfo renderPassBeginInfo = *renderPassBeginInfoPtr;
+        renderPassBeginInfo.renderPass = SD()._commandbufferstates[newCmdBuffer]
+                                             ->beginRenderPassesList.back()
+                                             ->renderPassStateStore->loadAndStoreRenderPassHandle;
+        drvVk.vkCmdBeginRenderPass(newCmdBuffer, &renderPassBeginInfo,
+                                   SD()._commandbufferstates[newCmdBuffer]
+                                       ->beginRenderPassesList.back()
+                                       ->subpassContentsData.Value());
+      } else if (renderingInfoPtr) {
+        VkRenderingInfo renderingInfo = *renderingInfoPtr;
+        std::vector<VkRenderingAttachmentInfo> renderingAttInfoVector;
+        for (uint32_t i = 0; i < renderingInfo.colorAttachmentCount; i++) {
+          VkRenderingAttachmentInfo renderingAttInfo = renderingInfo.pColorAttachments[i];
+          renderingAttInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+          renderingAttInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+          renderingAttInfoVector.push_back(renderingAttInfo);
+        }
+        if (renderingInfo.colorAttachmentCount > 0) {
+          renderingInfo.pColorAttachments = renderingAttInfoVector.data();
+        }
+        VkRenderingAttachmentInfo depthAttInfo;
+        if (renderingInfo.pDepthAttachment != VK_NULL_HANDLE) {
+          depthAttInfo = *renderingInfo.pDepthAttachment;
+          depthAttInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+          depthAttInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+          renderingInfo.pDepthAttachment = &depthAttInfo;
+        }
+        VkRenderingAttachmentInfo stencilAttInfo;
+        if (renderingInfo.pStencilAttachment != VK_NULL_HANDLE) {
+          stencilAttInfo = *renderingInfo.pStencilAttachment;
+          stencilAttInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+          stencilAttInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+          renderingInfo.pStencilAttachment = &stencilAttInfo;
+        }
+        drvVk.vkCmdBeginRendering(newCmdBuffer, &renderingInfo);
+      }
+    }
+  }
+}
+
+void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmitNumber,
+                                                             uint32_t cmdBuffBatchNumber,
+                                                             uint32_t cmdBuffNumber,
+                                                             VkCommandBuffer& cmdBuffer) {
+  uint64_t renderPassCount = 0;
+  uint64_t drawCount = 0;
+  for (auto elem : _tokensList) {
+    cmdBuffer = CVkCommandBuffer::GetMapping(elem->CommandBuffer());
+    if (Config::Get().player.oneVulkanDrawPerCommandBuffer &&
+        elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDERPASS_APITYPE) {
+      //  For executing each Vulkan draw in separate VkCommandBuffer we need to modify original storeOp (set it to STORE)
+      elem->StateTrack();
+      VkRenderPassBeginInfo* renderPassBeginInfoPtr = SD()._commandbufferstates[cmdBuffer]
+                                                          ->beginRenderPassesList.back()
+                                                          ->renderPassBeginInfoData.Value();
+      VkRenderingInfo* renderingInfoPtr = SD()._commandbufferstates[cmdBuffer]
+                                              ->beginRenderPassesList.back()
+                                              ->renderingInfoData.Value();
+      if (renderPassBeginInfoPtr) {
+        VkRenderPassBeginInfo renderPassBeginInfo = *renderPassBeginInfoPtr;
+        renderPassBeginInfo.renderPass = SD()._commandbufferstates[cmdBuffer]
+                                             ->beginRenderPassesList.back()
+                                             ->renderPassStateStore->storeNoLoadRenderPassHandle;
+        drvVk.vkCmdBeginRenderPass(cmdBuffer, &renderPassBeginInfo,
+                                   SD()._commandbufferstates[cmdBuffer]
+                                       ->beginRenderPassesList.back()
+                                       ->subpassContentsData.Value());
+      } else if (renderingInfoPtr) {
+        VkRenderingInfo renderingInfo = *renderingInfoPtr;
+        std::vector<VkRenderingAttachmentInfo> renderingAttInfoVector;
+        for (uint32_t i = 0; i < renderingInfo.colorAttachmentCount; i++) {
+          VkRenderingAttachmentInfo renderingAttInfo = renderingInfo.pColorAttachments[i];
+          renderingAttInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+          renderingAttInfoVector.push_back(renderingAttInfo);
+        }
+        if (renderingInfo.colorAttachmentCount > 0) {
+          renderingInfo.pColorAttachments = renderingAttInfoVector.data();
+        }
+        VkRenderingAttachmentInfo depthAttInfo;
+        if (renderingInfo.pDepthAttachment != VK_NULL_HANDLE) {
+          depthAttInfo = *renderingInfo.pDepthAttachment;
+          depthAttInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+          renderingInfo.pDepthAttachment = &depthAttInfo;
+        }
+        VkRenderingAttachmentInfo stencilAttInfo;
+        if (renderingInfo.pStencilAttachment != VK_NULL_HANDLE) {
+          stencilAttInfo = *renderingInfo.pStencilAttachment;
+          stencilAttInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+          renderingInfo.pStencilAttachment = &stencilAttInfo;
+        }
+        drvVk.vkCmdBeginRendering(cmdBuffer, &renderingInfo);
+      }
+    } else {
+      elem->Exec();
+      elem->StateTrack();
+    }
+
+    if (Config::Get().player.oneVulkanDrawPerCommandBuffer &&
+        (elem->Type() & CFunction::GITS_VULKAN_DRAW_APITYPE)) {
+      ++drawCount;
+      FinishCommandBufferAndRestoreSettings(elem, renderPassCount, drawCount, cmdBuffer);
+      cmdBuffer = CVkCommandBuffer::GetMapping(elem->CommandBuffer());
+    }
     if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
+      if (Config::Get().player.oneVulkanDrawPerCommandBuffer) {
+        VkRenderPassBeginInfo* renderPassBeginInfoPtr = SD()._commandbufferstates[cmdBuffer]
+                                                            ->beginRenderPassesList.back()
+                                                            ->renderPassBeginInfoData.Value();
+        VkRenderingInfo* renderingInfoPtr = SD()._commandbufferstates[cmdBuffer]
+                                                ->beginRenderPassesList.back()
+                                                ->renderingInfoData.Value();
+        if (renderPassBeginInfoPtr) {
+          VkRenderPassBeginInfo renderPassBeginInfo = *renderPassBeginInfoPtr;
+          VkRenderPass restoreRenderPassHandle =
+              SD()._commandbufferstates[cmdBuffer]
+                  ->beginRenderPassesList.back()
+                  ->renderPassStateStore->restoreRenderPassHandle;
+          if (renderPassBeginInfo.renderPass != restoreRenderPassHandle) {
+            renderPassBeginInfo.renderPass = restoreRenderPassHandle;
+            drvVk.vkCmdBeginRenderPass(cmdBuffer, &renderPassBeginInfo,
+                                       SD()._commandbufferstates[cmdBuffer]
+                                           ->beginRenderPassesList.back()
+                                           ->subpassContentsData.Value());
+            drvVk.vkCmdEndRenderPass(cmdBuffer);
+          }
+        } else if (renderingInfoPtr) {
+          VkRenderingInfo renderingInfo = *renderingInfoPtr;
+          std::vector<VkRenderingAttachmentInfo> renderingAttInfoVector;
+          bool changed = false;
+          for (uint32_t i = 0; i < renderingInfo.colorAttachmentCount; i++) {
+            VkRenderingAttachmentInfo renderingAttInfo = renderingInfo.pColorAttachments[i];
+            if (renderingInfo.pColorAttachments[i].loadOp != VK_ATTACHMENT_LOAD_OP_LOAD) {
+              renderingAttInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+              changed = true;
+            }
+            renderingAttInfoVector.push_back(renderingAttInfo);
+          }
+          if (renderingInfo.colorAttachmentCount > 0) {
+            renderingInfo.pColorAttachments = renderingAttInfoVector.data();
+          }
+          VkRenderingAttachmentInfo depthAttInfo;
+          if (renderingInfo.pDepthAttachment != VK_NULL_HANDLE) {
+            depthAttInfo = *renderingInfo.pDepthAttachment;
+            if (renderingInfo.pDepthAttachment->loadOp != VK_ATTACHMENT_LOAD_OP_LOAD) {
+              depthAttInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+              changed = true;
+            }
+            renderingInfo.pDepthAttachment = &depthAttInfo;
+          }
+          VkRenderingAttachmentInfo stencilAttInfo;
+          if (renderingInfo.pStencilAttachment != VK_NULL_HANDLE) {
+            stencilAttInfo = *renderingInfo.pStencilAttachment;
+            if (renderingInfo.pStencilAttachment->loadOp != VK_ATTACHMENT_LOAD_OP_LOAD) {
+              stencilAttInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+              changed = true;
+            }
+            renderingInfo.pStencilAttachment = &stencilAttInfo;
+          }
+          if (changed) {
+            drvVk.vkCmdBeginRendering(cmdBuffer, &renderingInfo);
+            drvVk.vkCmdEndRendering(cmdBuffer);
+          }
+        }
+      }
       CGits::CCounter localCounter = {queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
                                       renderPassCount};
       if (localCounter == Config::Get().player.captureVulkanRenderPasses) {

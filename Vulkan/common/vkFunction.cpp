@@ -75,6 +75,10 @@ CArgument& CFunction::Result(unsigned idx) {
   throw EOperationFailed(EXCEPTION_MESSAGE);
 }
 
+VkCommandBuffer CFunction::CommandBuffer() {
+  return VK_NULL_HANDLE;
+}
+
 /**
      * @brief Saves function data to a C code file
      *

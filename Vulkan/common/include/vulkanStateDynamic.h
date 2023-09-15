@@ -915,6 +915,9 @@ struct CRenderPassState : public UniqueResourceHandle {
   CreationFunction createdWith;
   std::vector<VkImageLayout> finalImageLayoutList;
   std::shared_ptr<CDeviceState> deviceStateStore;
+  VkRenderPass loadAndStoreRenderPassHandle;
+  VkRenderPass restoreRenderPassHandle;
+  VkRenderPass storeNoLoadRenderPassHandle;
 
   CRenderPassState(VkRenderPass const* _pRenderPass,
                    VkRenderPassCreateInfo const* _pCreateInfo,

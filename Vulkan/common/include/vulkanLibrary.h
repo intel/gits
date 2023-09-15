@@ -55,10 +55,14 @@ public:
     std::set<uint64_t> GetMappedPointers(const BitRange& objRange,
                                          Config::VulkanObjectMode objMode);
     void ExecAndStateTrack();
-    void ExecAndDump(VkCommandBuffer cmdBuffer,
-                     uint64_t queueSubmitNumber,
+    void ExecAndDump(uint64_t queueSubmitNumber,
                      uint32_t cmdBuffBatchNumber,
-                     uint32_t cmdBuffNumber);
+                     uint32_t cmdBuffNumber,
+                     VkCommandBuffer& cmdBuffer);
+    void FinishCommandBufferAndRestoreSettings(Vulkan::CFunction* token,
+                                               uint64_t renderPassNumber,
+                                               uint64_t drawNumber,
+                                               VkCommandBuffer cmdBuffer);
     void RestoreRenderPass(const BitRange& renderPassRange);
     void ScheduleRenderPass(void (*schedulerFunc)(Vulkan::CFunction*),
                             const BitRange& renderPassRange);

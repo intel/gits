@@ -10,6 +10,8 @@
 #include "function.h"
 #include "platform.h"
 
+typedef struct VkCommandBuffer_T* VkCommandBuffer;
+
 namespace gits {
 namespace Vulkan {
 enum class ArgType {
@@ -89,6 +91,7 @@ public:
   virtual CLibrary::TId LibraryId() const override {
     return CLibrary::ID_VULKAN;
   }
+  virtual VkCommandBuffer CommandBuffer();
 
   virtual void Write(CCodeOStream& stream) const override;
   virtual std::set<uint64_t> GetMappedPointers() = 0;

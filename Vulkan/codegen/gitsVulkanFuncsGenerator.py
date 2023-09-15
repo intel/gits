@@ -1382,7 +1382,7 @@ namespace gits {
         for n in Cnames:
           if n != '_return_value':
             argsCall += '*' + n + ', '
-            argsCallOrig += n + '.Original(), '
+          argsCallOrig += n + '.Original(), '
           wrapCall += n + ', '
           stateTrackCall += '*' + n + ', '
         argsCall = argsCall.strip(', ')
@@ -1427,6 +1427,13 @@ namespace gits {
             raise RuntimeError("If ccodeWriteWrap is enabled, ccodeWrap does "
                                "not do anything. Having both enabled "
                                "indicates a logic error.")
+        command_buffer_decl = ""
+        command_buffer_def = ""
+        if func.get('tokenCache') is not None:
+          command_buffer_decl = '\n      virtual VkCommandBuffer CommandBuffer();'
+          command_buffer_def = '\n\nVkCommandBuffer gits::Vulkan::C' + versioned_name + '::CommandBuffer() {'
+          command_buffer_def += '\n  return _commandBuffer.Original();'
+          command_buffer_def += '\n}'
 
         if len(func['args']) > 0 or func['type'] != 'void':
           c = """
@@ -1443,13 +1450,13 @@ namespace gits {
       virtual unsigned Id() const override { return %(id)s; }
       virtual unsigned Type() const { return %(type)s;}
       virtual const char *Name() const override { return "%(unversioned_name)s"; }%(suffix)s%(ccodePostActionNeeded)s
-      virtual void %(run_name)s() override;%(write_wrap_decl)s
+      virtual void %(run_name)s() override;%(write_wrap_decl)s%(command_buffer_decl)s
       virtual void Exec();
       virtual void StateTrack();
       virtual void RemoveMapping();
       virtual std::set<uint64_t> GetMappedPointers();
       virtual void TokenBuffersUpdate();
-    };""" % {'unversioned_name': key, 'versioned_name': versioned_name, 'return_override': return_override, 'id': make_id(key, func['version']), 'argc': len(func['args']), 'argd': argd, 'argsDecl': argsDecl, 'inherit_type': inherit_type, 'run_name': run_name, 'write_wrap_decl': write_wrap_decl, 'suffix': suffix, 'ccodePostActionNeeded': ccodePostActionNeeded, 'type': make_type(func)}
+    };""" % {'unversioned_name': key, 'versioned_name': versioned_name, 'return_override': return_override, 'id': make_id(key, func['version']), 'argc': len(func['args']), 'argd': argd, 'argsDecl': argsDecl, 'inherit_type': inherit_type, 'run_name': run_name, 'write_wrap_decl': write_wrap_decl, 'command_buffer_decl': command_buffer_decl, 'suffix': suffix, 'ccodePostActionNeeded': ccodePostActionNeeded, 'type': make_type(func)}
         else:
           c = """
     class C%(versioned_name)s : public %(inherit_type)s, gits::noncopyable {
@@ -1464,13 +1471,13 @@ namespace gits {
       virtual unsigned Id() const override { return %(id)s; }
       virtual unsigned Type() const { return %(type)s;}
       virtual const char *Name() const override { return "%(unversioned_name)s"; }%(suffix)s
-      virtual void %(run_name)s() override;%(write_wrap_decl)s
+      virtual void %(run_name)s() override;%(write_wrap_decl)s%(command_buffer_decl)s
       virtual void Exec();
       virtual void StateTrack();
       virtual void RemoveMapping();
       virtual std::set<uint64_t> GetMappedPointers();
       virtual void TokenBuffersUpdate();
-    };""" % {'unversioned_name': key, 'versioned_name': versioned_name, 'id': make_id(key, func['version']), 'argc': len(func['args']), 'argsDecl': argsDecl, 'inherit_type': inherit_type, 'run_name': run_name, 'write_wrap_decl': write_wrap_decl, 'suffix': suffix, 'type': make_type(func)}
+    };""" % {'unversioned_name': key, 'versioned_name': versioned_name, 'id': make_id(key, func['version']), 'argc': len(func['args']), 'argsDecl': argsDecl, 'inherit_type': inherit_type, 'run_name': run_name, 'write_wrap_decl': write_wrap_decl, 'command_buffer_decl': command_buffer_decl, 'suffix': suffix, 'type': make_type(func)}
         tokens_h.write(c + '\n')
 
         cargument = 'return get_cargument(__FUNCTION__, idx, '
@@ -1580,7 +1587,7 @@ void gits::Vulkan::C%(versioned_name)s::TokenBuffersUpdate()
 
 void gits::Vulkan::C%(versioned_name)s::RemoveMapping()
 {%(remove_mapping)s
-}%(write_wrap_def)s""" % {'id': make_id(key, func['version']), 'versioned_name': versioned_name, 'cargument': cargument, 'argc': len(func['args']), 'argd': argd, 'argInfos': argInfos, 'init': init, 'run_name': run_name, 'write_wrap_def': write_wrap_def, 'mapped_pointers': mapped_pointers, 'exec_cmd': exec_cmd, 'state_track': state_track, 'return_value': return_value, 'return_value_end': return_value_end, 'remove_mapping': remove_mapping, 'run_cmd': run_cmd, 'token_buff_update': token_buff_update}
+}%(write_wrap_def)s%(command_buffer_def)s""" % {'id': make_id(key, func['version']), 'versioned_name': versioned_name, 'cargument': cargument, 'argc': len(func['args']), 'argd': argd, 'argInfos': argInfos, 'init': init, 'run_name': run_name, 'write_wrap_def': write_wrap_def, 'command_buffer_def': command_buffer_def, 'mapped_pointers': mapped_pointers, 'exec_cmd': exec_cmd, 'state_track': state_track, 'return_value': return_value, 'return_value_end': return_value_end, 'remove_mapping': remove_mapping, 'run_cmd': run_cmd, 'token_buff_update': token_buff_update}
         else:
           c = """
 /* ***************************** %(id)s *************************** */
@@ -1610,7 +1617,7 @@ std::set<uint64_t> gits::Vulkan::C%(versioned_name)s::GetMappedPointers()
 void gits::Vulkan::C%(versioned_name)s::%(run_name)s()
 {
   %(run)s
-}%(write_wrap_def)s""" % {'id': make_id(key, func['version']), 'versioned_name': versioned_name, 'cargument': cargument, 'argc': len(func['args']), 'argInfos': argInfos, 'run': run, 'run_name': run_name, 'write_wrap_def': write_wrap_def, 'mapped_pointers': mapped_pointers}
+}%(write_wrap_def)s%(command_buffer_def)s""" % {'id': make_id(key, func['version']), 'versioned_name': versioned_name, 'cargument': cargument, 'argc': len(func['args']), 'argInfos': argInfos, 'run': run, 'run_name': run_name, 'write_wrap_def': write_wrap_def, 'command_buffer_def': command_buffer_def, 'mapped_pointers': mapped_pointers}
         tokens_c.write(c + '\n')
   tokens_h_end = """  } // namespace Vulkan
 } // namespace gits

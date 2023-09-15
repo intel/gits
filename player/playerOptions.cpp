@@ -644,6 +644,12 @@ bool configure_player(int argc, char** argv) {
   TypedOption<bool> optionCheckCrossPlatformCompatibility(
       options, OPTION_GROUP_PLAYBACK, 0, "checkCrossPlatformCompatibility", "Option deprecated!");
 
+  TypedOption<bool> optionOneVulkanDrawPerCommandBuffer(
+      options, OPTION_GROUP_PLAYBACK, 0, "oneVulkanDrawPerCommandBuffer",
+      "Force to split command buffers. Each draw will "
+      "be executed in separate command buffer. It affects performance.",
+      GITS_PLATFORM_BIT_WINDOWS);
+
   TypedOption<unsigned> optionUseVKPhysicalDeviceIndex(
       options, OPTION_GROUP_PLAYBACK, 0, "useVKPhysicalDeviceIndex",
       "Forces selected physical device index to be used for logical device creation.",
@@ -1336,9 +1342,12 @@ bool configure_player(int argc, char** argv) {
           std::stoul(obj, nullptr, 0));
     }
   }
+  set_when_option_present(cfg.player.oneVulkanDrawPerCommandBuffer,
+                          optionOneVulkanDrawPerCommandBuffer);
 
   if (optionCaptureVulkanRenderPasses.Present() ||
-      optionCaptureVulkanRenderPassesResources.Present()) {
+      optionCaptureVulkanRenderPassesResources.Present() ||
+      optionOneVulkanDrawPerCommandBuffer.Present()) {
     cfg.player.execCmdBuffsBeforeQueueSubmit = true;
   }
 
