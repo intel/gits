@@ -27,7 +27,8 @@ set_source_files_properties(
   ${CMAKE_CURRENT_SOURCE_DIR}/interceptor/vulkanPrePostAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/common/include/vulkanLogAuto.inl
   ${CMAKE_CURRENT_SOURCE_DIR}/common/vulkanLogAuto.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/common/include/vulkanTracer.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/common/include/vulkanTracerAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/common/vulkanTracerAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/common/include/vulkanHeader.h
   ${CMAKE_CURRENT_SOURCE_DIR}/common/include/vulkanDriversAuto.inl
   ${CMAKE_CURRENT_SOURCE_DIR}/interceptor/vkPlugin.def
@@ -61,6 +62,7 @@ set(Vulkan_CCode_SOURCES
   common/vulkanDrivers.cpp
   common/vulkanLog.cpp
   common/vulkanLogAuto.cpp
+  common/vulkanTracerAuto.cpp
   common/vulkanTools.cpp
   common/vulkanTools_lite.cpp
 )
@@ -77,7 +79,7 @@ set(Vulkan_CCode_HEADERS
   common/include/vulkanLogAuto.inl
   common/include/vulkanTools.h
   common/include/vulkanTools_lite.h
-  common/include/vulkanTracer.h
+  common/include/vulkanTracerAuto.h
   common/include/vulkanTypes.h
   common/include/vulkanPNextWrappers.inl
 )

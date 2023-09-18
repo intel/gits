@@ -302,12 +302,12 @@ protected:
 
 public:
   CArgumentFixedArray() {
-    for (int i = 0; i < N; ++i) {
+    for (int i = 0; i < N; i++) {
       _array[i] = 0;
     }
   }
   CArgumentFixedArray(const T array[]) {
-    for (int i = 0; i < N; ++i) {
+    for (int i = 0; i < N; i++) {
       _array[i] = array[i];
     }
   }
@@ -861,7 +861,7 @@ public:
     }
 
     _cargs.resize(1);
-    _cargs[0] = std::shared_ptr<TKeyArg>(new TKeyArg(&dictionary[0]));
+    _cargs[0] = std::make_shared<TKeyArg>(&dictionary[0]);
   }
   CStructArray(int size, const TKey* dictionary) {
     if ((size == 0) || (dictionary == NULL)) {
@@ -870,7 +870,7 @@ public:
 
     _cargs.resize(size);
     for (int i = 0; i < size; i++) {
-      _cargs[i] = std::shared_ptr<TKeyArg>(new TKeyArg(&dictionary[i]));
+      _cargs[i] = std::make_shared<TKeyArg>(&dictionary[i]);
     }
   }
   template <class WRAP_T2>
@@ -881,7 +881,7 @@ public:
 
     _cargs.resize(size);
     for (int i = 0; i < size; i++) {
-      _cargs[i] = std::shared_ptr<TKeyArg>(new TKeyArg(&dictionary[i], arg3));
+      _cargs[i] = std::make_shared<TKeyArg>(&dictionary[i], arg3);
     }
   }
   template <class WRAP_T2, class WRAP_T3>
@@ -892,7 +892,7 @@ public:
 
     _cargs.resize(size);
     for (int i = 0; i < size; i++) {
-      _cargs[i] = std::shared_ptr<TKeyArg>(new TKeyArg(&dictionary[i], arg3[i], arg4));
+      _cargs[i] = std::make_shared<TKeyArg>(&dictionary[i], arg3[i], arg4);
     }
   }
   std::vector<std::shared_ptr<TKeyArg>>& Vector() {
@@ -909,7 +909,7 @@ public:
 
     if (_data.size() == 0) { // Generate if not generated yet.
       _data.resize(_cargs.size());
-      for (unsigned i = 0; i < _cargs.size(); ++i) {
+      for (unsigned i = 0; i < _cargs.size(); i++) {
         _data[i] = **_cargs[i];
       }
     }
@@ -929,7 +929,7 @@ public:
 
     if (_originalData.size() == 0) { // Generate if not generated yet.
       _originalData.resize(_cargs.size());
-      for (unsigned i = 0; i < _cargs.size(); ++i) {
+      for (unsigned i = 0; i < _cargs.size(); i++) {
         _originalData[i] = _cargs[i]->Original();
       }
     }
@@ -1068,7 +1068,7 @@ public:
     _cargs.resize(size);
     for (int i = 0; i < size; i++) {
       _cargs[i].resize(1);
-      _cargs[i][0] = std::shared_ptr<TKeyArg>(new TKeyArg(dictionary[i]));
+      _cargs[i][0] = std::make_shared<TKeyArg>(dictionary[i]);
     }
   }
 
@@ -1081,7 +1081,7 @@ public:
     _cargs.resize(size);
     for (int i = 0; i < size; i++) {
       _cargs[i].resize(1);
-      _cargs[i][0] = std::shared_ptr<TKeyArg>(new TKeyArg(dictionary[i], arg3));
+      _cargs[i][0] = std::make_shared<TKeyArg>(dictionary[i], arg3);
     }
   }
 
@@ -1097,7 +1097,7 @@ public:
     _cargs.resize(size);
     for (int i = 0; i < size; i++) {
       _cargs[i].resize(1);
-      _cargs[i][0] = std::shared_ptr<TKeyArg>(new TKeyArg(dictionary[i], arg3[i], arg4));
+      _cargs[i][0] = std::make_shared<TKeyArg>(dictionary[i], arg3[i], arg4);
     }
   }
 
@@ -1110,7 +1110,7 @@ public:
     for (size_t i = 0; i < sizes.size(); i++) {
       _cargs[i].resize(sizes[i]);
       for (uint32_t j = 0; j < sizes[i]; j++) {
-        _cargs[i][j] = std::shared_ptr<TKeyArg>(new TKeyArg(&dictionary[i][j]));
+        _cargs[i][j] = std::make_shared<TKeyArg>(&dictionary[i][j]);
       }
     }
   }
@@ -1127,7 +1127,7 @@ public:
     for (size_t i = 0; i < sizes.size(); i++) {
       _cargs[i].resize(sizes[i]);
       for (uint32_t j = 0; j < sizes[i]; j++) {
-        _cargs[i][j] = std::shared_ptr<TKeyArg>(new TKeyArg(&dictionary[i][j], arg3));
+        _cargs[i][j] = std::make_shared<TKeyArg>(&dictionary[i][j], arg3);
       }
     }
   }
@@ -1147,10 +1147,10 @@ public:
     if (_data.size() == 0) { // Generate if not generated yet.
       _dataStorage.resize(_cargs.size());
       _data.resize(_cargs.size());
-      for (unsigned i = 0; i < _cargs.size(); ++i) {
+      for (unsigned i = 0; i < _cargs.size(); i++) {
         _dataStorage[i].resize(_cargs[i].size());
 
-        for (unsigned j = 0; j < _cargs[i].size(); ++j) {
+        for (unsigned j = 0; j < _cargs[i].size(); j++) {
           _dataStorage[i][j] = **_cargs[i][j];
         }
         _data[i] = _dataStorage[i].data();
@@ -1170,10 +1170,10 @@ public:
     if (_originalData.size() == 0) { // Generate if not generated yet.
       _originalDataStorage.resize(_cargs.size());
       _originalData.resize(_cargs.size());
-      for (unsigned i = 0; i < _cargs.size(); ++i) {
+      for (unsigned i = 0; i < _cargs.size(); i++) {
         _originalDataStorage[i].resize(_cargs[i].size());
 
-        for (unsigned j = 0; j < _cargs[i].size(); ++j) {
+        for (unsigned j = 0; j < _cargs[i].size(); j++) {
           _originalDataStorage[i][j] = _cargs[i][j]->Original();
         }
         _originalData[i] = _originalDataStorage[i].data();
@@ -1250,7 +1250,7 @@ public:
   virtual std::set<T_GET_MAPPED_POINTERS> GetMappedPointers() {
     std::set<T_GET_MAPPED_POINTERS> returnMap;
     for (unsigned outer = 0; outer < _cargs.size(); outer++) {
-      for (unsigned inner = 0; inner < _cargs[outer].size(); ++inner) {
+      for (unsigned inner = 0; inner < _cargs[outer].size(); inner++) {
         for (T_GET_MAPPED_POINTERS obj : _cargs[outer][inner]->GetMappedPointers()) {
           returnMap.insert(obj);
         }
@@ -1683,7 +1683,7 @@ gits::CArgumentSizedArrayBase<T, T_WRAP>::CArgumentSizedArrayBase(size_t num, co
   }
 
   _array.resize(num);
-  for (size_t i = 0; i < num; ++i) {
+  for (size_t i = 0; i < num; i++) {
     _array[i] = init[i];
   }
 }
@@ -1700,7 +1700,7 @@ gits::CArgumentSizedArrayBase<T, T_WRAP>::CArgumentSizedArrayBase(const T* init,
     return;
   }
 
-  for (size_t i = 0;; ++i) {
+  for (size_t i = 0;; i++) {
     _array.push_back(init[i]);
     if ((i % term_pos == 0) && (_array.back() == terminator)) {
       //we just pushed the terminator, exit
@@ -1793,7 +1793,7 @@ void gits::CArgumentSizedArray<char, T_WRAP>::Declare(CCodeOStream& stream) cons
     if ((int)_sizedArray.Vector().size() == 0) {
       stream << "0";
     } else {
-      for (auto iter = _sizedArray.Vector().begin(); iter != _sizedArray.Vector().end(); ++iter) {
+      for (auto iter = _sizedArray.Vector().begin(); iter != _sizedArray.Vector().end(); iter++) {
         CGLtype wrapper_(*iter);
         stream << wrapper_;
         if (iter < _sizedArray.Vector().end() - 1) {
@@ -1818,7 +1818,7 @@ gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::CArgumentMappedSizedArray(
   }
 
   _array.resize(num);
-  for (size_t i = 0; i < num; ++i) {
+  for (size_t i = 0; i < num; i++) {
     _array[i] = array[i];
   }
 }
@@ -1837,7 +1837,7 @@ gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::CArgumentMappedSizedArray(
     return;
   }
 
-  for (size_t i = 0;; ++i) {
+  for (size_t i = 0;; i++) {
     _array.push_back(array[i]);
     if ((i % term_pos == 0) && (_array.back() == terminator)) {
       // we just pushed the terminator, exit
@@ -1914,7 +1914,7 @@ void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::WriteArray(CCodeOStre
   } else {
     // Declare an array.
     stream << " = { ";
-    for (auto iter = _array.begin(); iter != _array.end(); ++iter) {
+    for (auto iter = _array.begin(); iter != _array.end(); iter++) {
       if (valtype == MAPPEDS) {
         CGLtype wrapper_(*iter);
         stream << wrapper_;
@@ -1956,7 +1956,7 @@ void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::WritePartArray(
   } else {
     // Declare an array.
     stream << " = { ";
-    for (auto iter = _array.begin() + start; iter != _array.begin() + end; ++iter) {
+    for (auto iter = _array.begin() + start; iter != _array.begin() + end; iter++) {
       if (valtype == MAPPEDS) {
         CGLtype wrapper_(*iter);
         stream << wrapper_;
@@ -2112,7 +2112,7 @@ void gits::CArgumentFixedArray<T, N, T_WRAP>::Declare(CCodeOStream& stream) cons
   // declare an array
   stream << "{ ";
 
-  for (int i = 0; i < N; ++i) {
+  for (int i = 0; i < N; i++) {
     CGLtype wrapper_(_array[i]);
     stream << wrapper_;
     if (i < N - 1) {

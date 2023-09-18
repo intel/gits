@@ -11,14 +11,14 @@
 *
 * @brief
 */
-#include "vulkanDrivers.h"
-#include "vulkanTracer.h"
-#include "exception.h"
 
-#if !defined(BUILD_FOR_CCODE)
-#include "lua_bindings.h"
+#include "vk_layer.h"
+#include "vulkanDrivers.h"
+#include "vulkanTracerAuto.h"
+
 #include "gits.h"
-#include <tuple>
+#ifndef BUILD_FOR_CCODE
+#include "lua_bindings.h"
 
 namespace gits {
 namespace lua {
@@ -40,7 +40,7 @@ NOINLINE void LogFunctionBeforeContext(const char* func) {
 // LUA
 //==========================================================================================================//
 
-#if !defined(BUILD_FOR_CCODE)
+#ifndef BUILD_FOR_CCODE
 
 using namespace lua;
 static bool bypass_luascript;
@@ -234,7 +234,7 @@ void_t STDCALL default_vkContinueRecordingGITS() {
 // Special dispatch functions (lua script calling and tracing)
 //==========================================================================================================//
 
-#if !defined(BUILD_FOR_CCODE)
+#ifndef BUILD_FOR_CCODE
 
 NOINLINE bool UseSpecial(const char* func) {
   const auto& cfg = Config::Get();
@@ -359,7 +359,7 @@ CVkDriver::CVkDriver() : _lib(nullptr), Mode(DriverMode::INTERCEPTOR), GlobalDis
 
 #include "vulkanDriversAuto.inl"
 
-#if !defined(BUILD_FOR_CCODE)
+#ifndef BUILD_FOR_CCODE
   CGits::Instance().RegisterLuaFunctionsRegistrator(RegisterLuaVulkanDriverFunctions);
 #endif
 }
@@ -416,7 +416,7 @@ void CVkDriver::Initialize() {
 #include "vulkanDriversAuto.inl"
     }
 
-#if !defined(BUILD_FOR_CCODE)
+#ifndef BUILD_FOR_CCODE
     // Inform GITS recorder that this is the GITS Player
     if (GlobalDispatchTable.vkIAmGITS) {
       GlobalDispatchTable.vkIAmGITS();

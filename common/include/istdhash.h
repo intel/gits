@@ -6,6 +6,7 @@
 //
 // ===================== end_copyright_notice ==============================
 
+#include <vector>
 #include <cstdint>
 #include <cstring>
 

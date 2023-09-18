@@ -16,8 +16,8 @@
 #pragma once
 
 #include "recorder.h"
-#include "vulkanFunctions.h"
 #include "vulkanPreToken.h"
+#include "vulkanFunctions.h"
 #include "vulkanStateTracking.h"
 
 namespace gits {
@@ -1175,11 +1175,11 @@ inline void vkCreateRayTracingPipelinesKHR_RECWRAP(
 
       if (Config::Get().recorder.vulkan.utilities.useCaptureReplayFeaturesForRayTracingPipelines) {
         auto& currentGroup = groupsForCurrentCreateInfo.back();
+        auto handleSize = getRayTracingShaderGroupCaptureReplayHandleSize(device);
 
-        std::vector<uint8_t> handle(getRayTracingShaderGroupCaptureReplayHandleSize(device));
-        drvVk.vkGetRayTracingCaptureReplayShaderGroupHandlesKHR(
-            device, pPipelines[p], g, 1, getRayTracingShaderGroupCaptureReplayHandleSize(device),
-            handle.data());
+        std::vector<uint8_t> handle(handleSize);
+        drvVk.vkGetRayTracingCaptureReplayShaderGroupHandlesKHR(device, pPipelines[p], g, 1,
+                                                                handleSize, handle.data());
         pipelineCaptureReplayHandles.push_back(handle);
 
         currentGroup.pShaderGroupCaptureReplayHandle = pipelineCaptureReplayHandles.back().data();

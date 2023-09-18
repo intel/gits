@@ -10,8 +10,6 @@
 
 #include "log.h"
 #include "vulkanHeader.h"
-#include "vulkanTools_lite.h"
-#include "config.h"
 
 namespace gits {
 namespace Vulkan {

@@ -247,8 +247,7 @@ hash_t CResourceManager::put(
   }
 
   if (!overwrite) {
-    std::unordered_map<hash_t, TResourceHandle>::iterator it;
-    it = index_.find(hash);
+    auto it = index_.find(hash);
 
     // Already in the index, nothing else to do.
     if (it != index_.end()) {

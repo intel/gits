@@ -8,18 +8,11 @@
 
 #pragma once
 
-#include "vulkanTools_lite.h"
 #include "texture_converter.h"
 #ifndef BUILD_FOR_CCODE
-#include "vulkanStateDynamic.h"
 #include "vulkanArgumentsAuto.h"
 #include "vulkanStructStorageAuto.h"
-#include "config.h"
-#include <set>
 #endif
-#include <functional>
-#include <string>
-#include <vector>
 
 namespace gits {
 
@@ -143,6 +136,18 @@ VkDeviceAddress getBufferDeviceAddress(VkDevice device, VkBuffer buffer);
 VkBuffer findBufferFromDeviceAddress(VkDeviceAddress deviceAddress);
 VkDeviceAddress getAccelerationStructureDeviceAddress(
     VkDevice device, VkAccelerationStructureKHR accelerationStructure);
+VkAccelerationStructureBuildControlDataGITS prepareAccelerationStructureControlData(
+    VkCommandBuffer commandBuffer);
+VkAccelerationStructureBuildControlDataGITS prepareAccelerationStructureControlData(
+    VkAccelerationStructureBuildControlDataGITS controlData,
+    const VkAccelerationStructureBuildGeometryInfoKHR* buildInfo);
+VkAccelerationStructureBuildControlDataGITS prepareAccelerationStructureControlData(
+    VkAccelerationStructureBuildControlDataGITS controlData, VkStructureType sType);
+uint64_t prepareStateTrackingHash(const VkAccelerationStructureBuildControlDataGITS& controlData,
+                                  VkDeviceAddress deviceAddress,
+                                  uint32_t offset,
+                                  uint64_t stride,
+                                  uint32_t count);
 VkPipelineLayout createInternalPipelineLayout(VkDevice device);
 VkPipeline createInternalPipeline(VkDevice device,
                                   VkPipelineLayout layout,

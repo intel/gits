@@ -6,11 +6,13 @@
 //
 // ===================== end_copyright_notice ==============================
 
+#include "gits.h"
 #include "vulkan_apis_iface.h"
-#include "vulkanStateTracking.h"
+#include "vulkanStateDynamic.h"
 
 namespace gits {
 namespace Vulkan {
+
 void VulkanApi::Play_SwapAfterPrepare() const {
   auto swapchain = SD()._swapchainkhrstates.begin();
   auto device = swapchain->second->deviceStateStore->deviceHandle;
@@ -32,14 +34,24 @@ void VulkanApi::Play_SwapAfterPrepare() const {
                           &presentInfo);
   drvVk.vkDeviceWaitIdle(device);
 }
+
 void VulkanApi::Play_StateRestoreBegin() const {
   drvVk.vkGetInstanceProcAddr(VK_NULL_HANDLE, VK_STATE_RESTORE_BEGIN_GITS_FUNCTION_NAME);
 }
+
 void VulkanApi::Play_StateRestoreEnd() const {
   drvVk.vkGetInstanceProcAddr(VK_NULL_HANDLE, VK_STATE_RESTORE_END_GITS_FUNCTION_NAME);
 }
+
 void VulkanApi::Rec_StateRestoreFinished() const {
   SD().stateRestoreFinished = true;
 }
+
+bool VulkanApi::CfgRec_IsObjectToRecord() const {
+  return Config::Get()
+      .recorder.vulkan.capture.objRange
+      .rangeSpecial[CGits::Instance().vkCounters.CurrentQueueSubmitCount()];
+}
+
 } // namespace Vulkan
 } // namespace gits

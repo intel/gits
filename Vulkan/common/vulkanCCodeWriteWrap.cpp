@@ -16,10 +16,8 @@
 * call it wraps. The manual overrides allow us to write anything to the CCode.
 */
 
+#include "vulkanTools_lite.h"
 #include "vulkanCCodeWriteWrap.h"
-
-#include <cstddef>
-#include <iostream>
 
 namespace gits {
 namespace Vulkan {

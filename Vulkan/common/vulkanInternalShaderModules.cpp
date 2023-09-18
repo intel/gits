@@ -13,7 +13,6 @@
 *
 */
 
-#include <vector>
 #include "vulkanInternalShaderModules.h"
 
 namespace gits {
@@ -23,65 +22,65 @@ namespace Vulkan {
 //
 // glslangValidator.exe -V -H -o GITS_shader.h --vn code PrepareDeviceAddressesForPatching.comp
 //
-// Compilied from the following source code:
+// Compiled from the following source code:
 //
 // --------------------------------------------------------------------------------------------
 //
 // #version 450
-// 
+//
 // #extension GL_EXT_buffer_reference : require
 // #extension GL_EXT_buffer_reference_uvec2 : require
-// 
+//
 // layout(local_size_x = 1, local_size_y = 1) in;
-// 
+//
 // struct InputDataStruct {
 //   uvec2 address;
 //   uint offset;
 //   uint padding;
 // };
-// 
+//
 // struct OutputDataStruct {
 //   uvec2 dVA;
 //   uvec2 REF;
 // };
-// 
+//
 // layout(buffer_reference,
 //        std430,
 //        buffer_reference_align = 16) readonly buffer PushConstantAddressOfInputData {
 //   InputDataStruct inputData[];
 // };
-// 
+//
 // layout(buffer_reference,
 //        std430,
 //        buffer_reference_align = 16) writeonly buffer PushConstantAddressOfOutputData {
 //   OutputDataStruct outputData[];
 // };
-// 
+//
 // layout(buffer_reference, std430, buffer_reference_align = 8) readonly buffer DeviceAddress {
 //   uvec2 value;
 // };
-// 
+//
 // layout(push_constant) uniform PushConstants {
 //   PushConstantAddressOfInputData AddressOfInputData;
 //   PushConstantAddressOfOutputData AddressOfOutputData;
 // };
-// 
+//
 // uvec2 uadd_64_32(uvec2 address, uint offset) {
 //   uint carry;
 //   address.x = uaddCarry(address.x, offset, carry);
 //   address.y += carry;
 //   return address;
 // }
-// 
+//
 // void main() {
 //   InputDataStruct inputData = AddressOfInputData.inputData[gl_GlobalInvocationID.x];
-// 
+//
 //   uvec2 iVA = inputData.address;
 //   uvec2 address = DeviceAddress(iVA).value;
-// 
+//
 //   uvec2 dVA = uadd_64_32(address, inputData.offset);
 //   uvec2 REF = DeviceAddress(dVA).value;
-// 
+//
 //   AddressOfOutputData.outputData[gl_GlobalInvocationID.x] = OutputDataStruct(dVA, REF);
 // }
 
@@ -217,7 +216,7 @@ std::vector<uint32_t> getPrepareDeviceAddressesForPatchingShaderModuleSource() {
 //
 // glslangValidator.exe -V -H -o GITS_shader.h --vn code PatchDeviceAddresses.comp
 //
-// Compilied from the following source code:
+// Compiled from the following source code:
 //
 // --------------------------------------------------------------------------------------------
 //
@@ -258,10 +257,10 @@ std::vector<uint32_t> getPrepareDeviceAddressesForPatchingShaderModuleSource() {
 // void main() {
 //   uvec2 location = AddressOfLocations.locations[gl_GlobalInvocationID.x];
 //   uvec2 storedValue = DeviceAddress(location).value;
-// 
+//
 //   for (uint i = 0; i < NumMapElements; ++i) {
 //     DeviceAddressPatchGITS addressPatch = AddressOfPatchesMap.patches[i];
-// 
+//
 //     if (all(equal(storedValue, addressPatch.originalValue))) {
 //       DeviceAddress(location).value = addressPatch.newValue;
 //       return;

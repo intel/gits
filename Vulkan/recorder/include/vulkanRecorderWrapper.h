@@ -14,8 +14,8 @@
 
 #pragma once
 
-#include "vulkanRecorderWrapperIface.h"
 #include "tools_lite.h"
+#include "vulkanRecorderWrapperIface.h"
 
 namespace gits {
 class VulkanQueueSubmitPrePost : private gits::noncopyable {

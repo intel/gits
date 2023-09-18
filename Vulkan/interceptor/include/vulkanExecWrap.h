@@ -15,7 +15,10 @@
 
 #pragma once
 
+#include "gitsPluginVulkan.h"
+#include "vulkanTools_lite.h"
 #include "vulkanRecorderWrapper.h"
+
 #if defined GITS_PLATFORM_X11
 #include <dlfcn.h>
 #endif
@@ -495,7 +498,7 @@ VkResult recExecWrap_vkCreateDevice(VkPhysicalDevice physicalDevice,
 
       CALL_ONCE[] {
         Log(WARN) << "Capture/replay feature for recording ray tracing pipeline handles is by "
-                     "default disabled on a non-Intel hardware.";
+                     "default disabled on non-Intel hardware.";
       };
     }
   }
@@ -836,16 +839,15 @@ VkResult recExecWrap_vkCreateBuffer(VkDevice device,
     VkBufferCreateInfo* originalCreateInfo = const_cast<VkBufferCreateInfo*>(pCreateInfo);
 
     // Make sure that a device address for buffers used as a storage for AS can be retrieved and saved in a stream
-    if ((originalCreateInfo->usage & VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR) ==
-        VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR) {
+    if (isBitSet(originalCreateInfo->usage,
+                 VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR)) {
       originalCreateInfo->usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
     }
 
-    if (((originalCreateInfo->usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) ==
-         VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) &&
-        (CGitsPluginVulkan::Configuration()
-             .recorder.vulkan.utilities
-             .useCaptureReplayFeaturesForBuffersAndAccelerationStructures)) {
+    if (isBitSet(originalCreateInfo->usage, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) &&
+        CGitsPluginVulkan::Configuration()
+            .recorder.vulkan.utilities
+            .useCaptureReplayFeaturesForBuffersAndAccelerationStructures) {
       originalCreateInfo->flags |= VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
     }
     originalCreateInfo->usage |= static_cast<VkBufferUsageFlags>(
@@ -897,14 +899,17 @@ VkResult recExecWrap_vkCreateSwapchainKHR(VkDevice device,
 }
 
 VkResult recExecWrap_vkCreateRayTracingPipelinesKHR(
-    VkDevice device, VkDeferredOperationKHR deferredOperation, VkPipelineCache pipelineCache,
-    uint32_t createInfoCount, const VkRayTracingPipelineCreateInfoKHR* pCreateInfos,
-    const VkAllocationCallbacks* pAllocator, VkPipeline* pPipelines) {
+    VkDevice device,
+    VkDeferredOperationKHR deferredOperation,
+    VkPipelineCache pipelineCache,
+    uint32_t createInfoCount,
+    const VkRayTracingPipelineCreateInfoKHR* pCreateInfos,
+    const VkAllocationCallbacks* pAllocator,
+    VkPipeline* pPipelines) {
   if (CGitsPluginVulkan::Configuration()
           .recorder.vulkan.utilities.useCaptureReplayFeaturesForRayTracingPipelines) {
     for (uint32_t i = 0; i < createInfoCount; ++i) {
-      VkRayTracingPipelineCreateInfoKHR& originalCreateInfo =
-          const_cast<VkRayTracingPipelineCreateInfoKHR&>(pCreateInfos[i]);
+      auto& originalCreateInfo = const_cast<VkRayTracingPipelineCreateInfoKHR&>(pCreateInfos[i]);
       originalCreateInfo.flags |=
           VK_PIPELINE_CREATE_RAY_TRACING_SHADER_GROUP_HANDLE_CAPTURE_REPLAY_BIT_KHR;
     }
@@ -1092,9 +1097,11 @@ void recExecWrap_vkGetBufferMemoryRequirements2KHR(VkDevice device,
 }
 
 void recExecWrap_vkGetAccelerationStructureBuildSizesKHR(
-    VkDevice device, VkAccelerationStructureBuildTypeKHR buildType,
+    VkDevice device,
+    VkAccelerationStructureBuildTypeKHR buildType,
     const VkAccelerationStructureBuildGeometryInfoKHR* pBuildInfo,
-    const uint32_t* pMaxPrimitiveCounts, VkAccelerationStructureBuildSizesInfoKHR* pSizeInfo) {
+    const uint32_t* pMaxPrimitiveCounts,
+    VkAccelerationStructureBuildSizesInfoKHR* pSizeInfo) {
   CGitsPluginVulkan::RecorderWrapper().Drivers().vkGetAccelerationStructureBuildSizesKHR(
       device, buildType, pBuildInfo, pMaxPrimitiveCounts, pSizeInfo);
 

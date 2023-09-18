@@ -7,16 +7,14 @@
 // ===================== end_copyright_notice ==============================
 
 #include "platform.h"
+#include "vkWindowing.h"
+
 #if defined GITS_PLATFORM_WINDOWS
 #include <windows.h>
 #elif defined GITS_PLATFORM_X11
 #define XVisualInfo XVisualInfo_
 #undef XVisualInfo
-#endif
 
-#include "vkWindowing.h"
-
-#if defined GITS_PLATFORM_X11
 #include <xcb/xcb.h>
 #include <cstring>
 #include "log.h"

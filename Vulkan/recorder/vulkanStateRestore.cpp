@@ -13,16 +13,12 @@
 *
 */
 
-#include "vulkanStateRestore.h"
-#include "vulkanFunctions.h"
 #include "recorder.h"
-#include "vulkanDrivers.h"
 #include "vulkanLog.h"
 #include "vulkanPreToken.h"
-#include "vulkanTools_lite.h"
+#include "vulkanFunctions.h"
+#include "vulkanStateRestore.h"
 #include "vulkanStateTracking.h"
-
-#include <functional>
 
 void ScheduleTokens(gits::Vulkan::CFunction* token) {
   gits::CRecorder::Instance().Scheduler().Register(token);
@@ -32,6 +28,7 @@ namespace {
 
 std::map<VkDevice, gits::Vulkan::TemporaryDeviceResourcesStruct> temporaryDeviceResources;
 std::map<uint64_t, VkDevice> temporaryDescriptorSetLayouts;
+const uint64_t globalTimeoutValue = 3000000000;
 
 } // namespace
 
@@ -44,14 +41,14 @@ gits::Vulkan::SubmittableResourcesStruct const& gits::Vulkan::GetSubmitableResou
   // Wait until previous submission ends
   {
     auto result =
-        drvVk.vkWaitForFences(device, 1, &submitableResources.fence, VK_FALSE, 3000000000);
+        drvVk.vkWaitForFences(device, 1, &submitableResources.fence, VK_FALSE, globalTimeoutValue);
     if (result != VK_SUCCESS) {
       throw std::runtime_error("Waiting on a temporary fence failed!");
     }
     drvVk.vkResetFences(device, 1, &submitableResources.fence);
 
     scheduler.Register(new CvkWaitForFences(VK_SUCCESS, device, 1, &submitableResources.fence,
-                                            VK_FALSE, 3000000000));
+                                            VK_FALSE, globalTimeoutValue));
     scheduler.Register(new CvkResetFences(VK_SUCCESS, device, 1, &submitableResources.fence));
 
     // Reset state of all previously used buffers
@@ -468,6 +465,66 @@ void gits::Vulkan::PrepareTemporaryResources(CScheduler& scheduler, CStateDynami
       // Store queue handle
       deviceResources.submitableResources[i].queue = deviceResources.queue;
     }
+
+    // Calculate a max size for temporary buffers used to restore contents of resources.
+    // Temporary buffers are created only when needed (in RestoreImageContents(),
+    // RestoreBufferContents() and RestoreAccelerationStructureContents()) but their
+    // size is checked here for convenience.
+    deviceResources.maxBufferSize = 0;
+
+    // Check the size of the largest buffer
+    for (auto& bufferAndStatePair : sd._bufferstates) {
+      if (IsObjectToSkip((uint64_t)bufferAndStatePair.first)) {
+        continue;
+      }
+
+      auto& bufferState = bufferAndStatePair.second;
+      auto* pCreateInfo = bufferState->bufferCreateInfoData.Value();
+      if ((pCreateInfo == nullptr) || (pCreateInfo->size == 0) ||
+          (bufferState->binding == nullptr) ||
+          (bufferState->deviceStateStore->deviceHandle != device)) {
+        continue;
+      }
+
+      if ((TBufferStateRestoration::BUFFER_STATE_RESTORATION_WITH_NON_HOST_VISIBLE_MEMORY_ONLY ==
+           Config::Get().recorder.vulkan.utilities.crossPlatformStateRestoration.buffers) &&
+          (checkMemoryMappingFeasibility(
+              device,
+              bufferState->binding->deviceMemoryStateStore->memoryAllocateInfoData.Value()
+                  ->memoryTypeIndex,
+              false))) {
+        continue;
+      }
+
+      if (pCreateInfo->size > deviceResources.maxBufferSize) {
+        deviceResources.maxBufferSize = pCreateInfo->size;
+      }
+    }
+
+    for (auto& accelerationStructureAndStatePair : sd._accelerationstructurekhrstates) {
+      if (IsObjectToSkip((uint64_t)accelerationStructureAndStatePair.first)) {
+        continue;
+      }
+
+      auto& accelerationStructureState = accelerationStructureAndStatePair.second;
+
+      if ((accelerationStructureState->bufferStateStore->deviceStateStore->deviceHandle !=
+           device) ||
+          (!accelerationStructureState->buildInfo)) {
+        continue;
+      }
+
+      if (accelerationStructureState->buildSizeInfo.accelerationStructureSize >
+          deviceResources.maxBufferSize) {
+        deviceResources.maxBufferSize =
+            accelerationStructureState->buildSizeInfo.accelerationStructureSize;
+      }
+    }
+
+    deviceResources.maxBufferSize = std::max(
+        static_cast<VkDeviceSize>(
+            Config::Get().recorder.vulkan.utilities.reusableStateRestoreBufferSize * 1000000),
+        deviceResources.maxBufferSize);
   }
 }
 
@@ -796,16 +853,33 @@ void gits::Vulkan::RestoreImageView(CScheduler& scheduler, CStateDynamic& sd) {
 // Buffer
 
 void gits::Vulkan::RestoreBuffer(CScheduler& scheduler, CStateDynamic& sd) {
-  for (auto& bufferState : sd._bufferstates) {
-    if (IsObjectToSkip((uint64_t)bufferState.first)) {
+  std::vector<std::pair<uint64_t, VkBuffer>> sortedBuffersToRestore;
+  sortedBuffersToRestore.reserve(sd._bufferstates.size());
+
+  for (auto& bufferAndState : sd._bufferstates) {
+    VkBuffer buffer = bufferAndState.first;
+    if (IsObjectToSkip((uint64_t)buffer)) {
       continue;
     }
 
-    auto buffer = bufferState.first;
-    auto device = bufferState.second->deviceStateStore->deviceHandle;
+    VkDevice device = bufferAndState.second->deviceStateStore->deviceHandle;
+    if (temporaryDeviceResources.find(device) == temporaryDeviceResources.end()) {
+      continue;
+    }
+    sortedBuffersToRestore.emplace_back(bufferAndState.second->GetUniqueStateID(), buffer);
+  }
 
+  // Buffers which use shader device address and capture/replay opaque handle
+  // must be restored in the same order as they were created in the original workload.
+  std::sort(sortedBuffersToRestore.begin(), sortedBuffersToRestore.end(),
+            [](const auto& a, const auto& b) { return a.first < b.first; });
+
+  for (auto& uniqueIdAndBuffer : sortedBuffersToRestore) {
+    auto buffer = uniqueIdAndBuffer.second;
+    auto& bufferState = sd._bufferstates[buffer];
+    auto device = bufferState->deviceStateStore->deviceHandle;
     {
-      auto bufferCreateInfo = *bufferState.second->bufferCreateInfoData.Value();
+      auto bufferCreateInfo = *bufferState->bufferCreateInfoData.Value();
       if (TBufferStateRestoration::BUFFER_STATE_RESTORATION_NONE !=
           Config::Get().recorder.vulkan.utilities.crossPlatformStateRestoration.buffers) {
         bufferCreateInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
@@ -903,6 +977,71 @@ void gits::Vulkan::RestoreBufferView(CScheduler& scheduler, CStateDynamic& sd) {
       auto createInfo = bufferViewState.second->bufferViewCreateInfoData.Value();
       scheduler.Register(
           new CvkCreateBufferView(VK_SUCCESS, device, createInfo, nullptr, &bufferView));
+    }
+  }
+}
+
+// Deferred operation
+
+void gits::Vulkan::RestoreDeferredOperations(CScheduler& scheduler, CStateDynamic& sd) {
+  for (auto& deferredOperationAndState : sd._deferredoperationkhrstates) {
+    VkDeferredOperationKHR deferredOperation = deferredOperationAndState.first;
+
+    if (IsObjectToSkip((uint64_t)deferredOperation)) {
+      continue;
+    }
+
+    VkDevice device = deferredOperationAndState.second->deviceStateStore->deviceHandle;
+    if (temporaryDeviceResources.find(device) == temporaryDeviceResources.end()) {
+      continue;
+    }
+
+    scheduler.Register(
+        new CvkCreateDeferredOperationKHR(VK_SUCCESS, device, nullptr, &deferredOperation));
+  }
+}
+
+// Acceleration structure
+
+void gits::Vulkan::RestoreAccelerationStructure(CScheduler& scheduler, CStateDynamic& sd) {
+  for (auto& deviceAndResources : temporaryDeviceResources) {
+    VkDevice device = deviceAndResources.first;
+
+    std::vector<std::tuple<VkAccelerationStructureKHR, VkBuffer, VkDeviceMemory>>
+        temporaryAccelerationStructures;
+
+    std::vector<std::pair<uint64_t, VkAccelerationStructureKHR>>
+        sortedAccelerationStructuresToRestore;
+    sortedAccelerationStructuresToRestore.reserve(sd._accelerationstructurekhrstates.size());
+
+    for (auto& accelerationStructureAndState : sd._accelerationstructurekhrstates) {
+      auto accelerationStructure = accelerationStructureAndState.first;
+      if (IsObjectToSkip((uint64_t)accelerationStructure)) {
+        continue;
+      }
+
+      if (accelerationStructureAndState.second->bufferStateStore->deviceStateStore->deviceHandle !=
+          device) {
+        continue;
+      }
+
+      sortedAccelerationStructuresToRestore.emplace_back(
+          accelerationStructureAndState.second->GetUniqueStateID(), accelerationStructure);
+    }
+
+    // Acceleration structures similarly to buffers are restored in the same order
+    // as they were created in the original workload.
+    std::sort(sortedAccelerationStructuresToRestore.begin(),
+              sortedAccelerationStructuresToRestore.end(),
+              [](const auto& a, const auto& b) { return a.first < b.first; });
+
+    for (auto& uniqueIdAndAccelerationStructure : sortedAccelerationStructuresToRestore) {
+      auto accelerationStructure = uniqueIdAndAccelerationStructure.second;
+      auto& accelerationStructureState = sd._accelerationstructurekhrstates[accelerationStructure];
+      auto pCreateInfo = accelerationStructureState->accelerationStructureCreateInfoData.Value();
+
+      scheduler.Register(new CvkCreateAccelerationStructureKHR(VK_SUCCESS, device, pCreateInfo,
+                                                               nullptr, &accelerationStructure));
     }
   }
 }
@@ -1067,6 +1206,25 @@ void gits::Vulkan::RestoreDescriptorSetsUpdates(CScheduler& scheduler, CStateDyn
             nullptr                                   // const VkBufferView* pTexelBufferView;
         };
         descriptorWrites.push_back(descriptorWrite);
+      } else if (descriptorSetBinding.descriptorType ==
+                 VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR) {
+        if (descriptorSetBinding.descriptorData[0].accelerationStructureWrite) {
+          VkWriteDescriptorSet descriptorWrite = {
+              VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, // VkStructureType                sType;
+              descriptorSetBinding.descriptorData[0]
+                  .accelerationStructureWrite->Value(), // const void                   * pNext;
+              descriptorSetState.first,                 // VkDescriptorSet                dstSet;
+              descriptorSetBindingIterator.first, // uint32_t                       dstBinding;
+              0,                                  // uint32_t                       dstArrayElement;
+              descriptorSetBinding
+                  .descriptorCount, // uint32_t                       descriptorCount;
+              descriptorSetBinding.descriptorType, // VkDescriptorType               descriptorType;
+              nullptr,                             // const VkDescriptorImageInfo  * pImageInfo;
+              nullptr,                             // const VkDescriptorBufferInfo * pBufferInfo;
+              nullptr // const VkBufferView           * pTexelBufferView;
+          };
+          descriptorWrites.push_back(descriptorWrite);
+        }
       } else {
         for (size_t arrayIndex = 0; arrayIndex < descriptorSetBinding.descriptorData.size();
              ++arrayIndex) {
@@ -1581,11 +1739,31 @@ void gits::Vulkan::RestorePipelines(CScheduler& scheduler, CStateDynamic& sd) {
       return computePipelineCreateInfo;
     };
 
+    // Prepare create info for ray tracing pipelines
+    auto prepareRayTracingPipelineCreateInfo = [&](std::shared_ptr<CPipelineState>& pipelineState) {
+      VkRayTracingPipelineCreateInfoKHR rayTracingPipelineCreateInfo =
+          *pipelineState->rayTracingPipelineCreateInfoData;
+      rayTracingPipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
+      rayTracingPipelineCreateInfo.basePipelineIndex = -1;
+      rayTracingPipelineCreateInfo.layout =
+          getOrRestorePipelineLayout(pipelineState->pipelineLayoutStateStore);
+
+      auto shaderModulesHandles =
+          getOrRestoreShaderModules(pipelineState->shaderModuleStateStoreList);
+      for (uint32_t i = 0; i < rayTracingPipelineCreateInfo.stageCount; ++i) {
+        const_cast<VkPipelineShaderStageCreateInfo*>(rayTracingPipelineCreateInfo.pStages)[i]
+            .module = shaderModulesHandles[i];
+      }
+      return rayTracingPipelineCreateInfo;
+    };
+
     auto restorePipelines = [&](bool restorePipelineLibraries) {
       std::vector<VkGraphicsPipelineCreateInfo> graphicsPipelinesCreateInfos;
       std::vector<VkPipeline> graphicsPipelines;
       std::vector<VkComputePipelineCreateInfo> computePipelinesCreateInfos;
       std::vector<VkPipeline> computePipelines;
+      std::vector<VkRayTracingPipelineCreateInfoKHR> rayTracingPipelinesCreateInfos;
+      std::vector<VkPipeline> rayTracingPipelines;
 
       for (auto& pipelineAndStatePair : sd._pipelinestates) {
         if (IsObjectToSkip((uint64_t)pipelineAndStatePair.first)) {
@@ -1619,6 +1797,19 @@ void gits::Vulkan::RestorePipelines(CScheduler& scheduler, CStateDynamic& sd) {
             computePipelines.push_back(pipelineState->pipelineHandle);
           }
         }
+
+        // Prepare ray tracing pipeline creation data
+        {
+          auto* rayTracingPipelineCreateInfo =
+              pipelineState->rayTracingPipelineCreateInfoData.Value();
+          if (rayTracingPipelineCreateInfo &&
+              (restorePipelineLibraries ==
+               (bool)(rayTracingPipelineCreateInfo->flags & VK_PIPELINE_CREATE_LIBRARY_BIT_KHR))) {
+            rayTracingPipelinesCreateInfos.push_back(
+                prepareRayTracingPipelineCreateInfo(pipelineState));
+            rayTracingPipelines.push_back(pipelineState->pipelineHandle);
+          }
+        }
       }
 
       // Restore graphics pipelines
@@ -1634,6 +1825,13 @@ void gits::Vulkan::RestorePipelines(CScheduler& scheduler, CStateDynamic& sd) {
             VK_SUCCESS, device, pipelineCache,
             static_cast<uint32_t>(computePipelinesCreateInfos.size()),
             computePipelinesCreateInfos.data(), nullptr, computePipelines.data()));
+      }
+      // Restore ray tracing pipelines
+      if (!rayTracingPipelinesCreateInfos.empty()) {
+        scheduler.Register(new CvkCreateRayTracingPipelinesKHR(
+            VK_SUCCESS, device, VK_NULL_HANDLE, pipelineCache,
+            static_cast<uint32_t>(rayTracingPipelinesCreateInfos.size()),
+            rayTracingPipelinesCreateInfos.data(), nullptr, rayTracingPipelines.data()));
       }
     };
 
@@ -2634,7 +2832,7 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
           nullptr                             // const VkSemaphore*          pSignalSemaphores;
       };
       drvVk.vkQueueSubmit(submitableResources.queue, 1, &submitInfo, submitableResources.fence);
-      drvVk.vkWaitForFences(device, 1, &submitableResources.fence, VK_FALSE, 3000000000);
+      drvVk.vkWaitForFences(device, 1, &submitableResources.fence, VK_FALSE, globalTimeoutValue);
 
       if (useSynchronization2(physicalDevice, device)) {
         VkDependencyInfo dstDependencyInfo = {
@@ -2679,50 +2877,18 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
 
     // Images are restored in bundles - temporary buffers are created, data is
     // copied for as many images as each buffer can store
-    VkDeviceSize maxBufferSize = 0;
 
     // Check the size of the largest image
     if (imagesToRestore.size() > 0) {
-      maxBufferSize = std::max(
-          static_cast<VkDeviceSize>(
-              Config::Get().recorder.vulkan.utilities.reusableStateRestoreBufferSize * 1000000),
-          imagesToRestore[0].second);
-    }
-
-    // Check the size of the largest buffer
-    for (auto& bufferAndStatePair : sd._bufferstates) {
-      if (IsObjectToSkip((uint64_t)bufferAndStatePair.first)) {
-        continue;
-      }
-
-      auto& bufferState = bufferAndStatePair.second;
-      auto* pCreateInfo = bufferState->bufferCreateInfoData.Value();
-      if ((pCreateInfo == nullptr) || (pCreateInfo->size == 0) ||
-          (bufferState->binding == nullptr) ||
-          (bufferState->deviceStateStore->deviceHandle != device)) {
-        continue;
-      }
-
-      if ((TBufferStateRestoration::BUFFER_STATE_RESTORATION_WITH_NON_HOST_VISIBLE_MEMORY_ONLY ==
-           Config::Get().recorder.vulkan.utilities.crossPlatformStateRestoration.buffers) &&
-          (checkMemoryMappingFeasibility(
-              device,
-              bufferState->binding->deviceMemoryStateStore->memoryAllocateInfoData.Value()
-                  ->memoryTypeIndex,
-              false))) {
-        continue;
-      }
-
-      if (pCreateInfo->size > maxBufferSize) {
-        maxBufferSize = pCreateInfo->size;
-      }
+      deviceAndResourcesPair.second.maxBufferSize =
+          std::max(imagesToRestore[0].second, deviceAndResourcesPair.second.maxBufferSize);
     }
 
     // Create temporary buffers used for contents restoration
-    if (maxBufferSize > 0) {
+    if (deviceAndResourcesPair.second.maxBufferSize > 0) {
       uint32_t count = Config::Get().recorder.vulkan.utilities.reusableStateRestoreResourcesCount;
       for (uint32_t i = 0; i < count; ++i) {
-        CreateTemporaryBuffer(scheduler, device, maxBufferSize);
+        CreateTemporaryBuffer(scheduler, device, deviceAndResourcesPair.second.maxBufferSize);
       }
     }
 
@@ -2842,7 +3008,7 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
       if ((totalSize > 0) && ((i == (imagesToRestore.size() - 1)) ||
                               (calculateCurrentOffset(totalSize, GetVirtualMemoryPageSize()) +
                                    imagesToRestore[i + 1].second >
-                               maxBufferSize))) {
+                               deviceAndResourcesPair.second.maxBufferSize))) {
 
         // Get temporary command buffer and begin it
         auto submitableResources = GetSubmitableResources(scheduler, device);
@@ -2911,7 +3077,7 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
             nullptr                             // const VkSemaphore*          pSignalSemaphores
         };
         drvVk.vkQueueSubmit(submitableResources.queue, 1, &submitInfo, submitableResources.fence);
-        drvVk.vkWaitForFences(device, 1, &submitableResources.fence, VK_FALSE, 3000000000);
+        drvVk.vkWaitForFences(device, 1, &submitableResources.fence, VK_FALSE, globalTimeoutValue);
 
         // Get image data from memory
         scheduler.Register(new CGitsVkMemoryRestore(device, temporaryBuffer.memory, totalSize,
@@ -2980,7 +3146,7 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
           nullptr                             // const VkSemaphore*          pSignalSemaphores;
       };
       drvVk.vkQueueSubmit(submitableResources.queue, 1, &submitInfo, submitableResources.fence);
-      drvVk.vkWaitForFences(device, 1, &submitableResources.fence, VK_FALSE, 3000000000);
+      drvVk.vkWaitForFences(device, 1, &submitableResources.fence, VK_FALSE, globalTimeoutValue);
 
       if (useSynchronization2(physicalDevice, device)) {
         VkDependencyInfo dstDependencyInfo = {
@@ -3139,18 +3305,11 @@ void gits::Vulkan::RestoreBufferContents(CScheduler& scheduler, CStateDynamic& s
     //////////////////////////////////////////////////////////////////
 
     // When image contents restoration was skipped, create temporary buffers here
-    if ((deviceResources.temporaryBuffers.empty()) && (buffersToRestore.size() > 0)) {
-      VkDeviceSize maxBufferSize = std::max(
-          static_cast<VkDeviceSize>(
-              Config::Get().recorder.vulkan.utilities.reusableStateRestoreBufferSize * 1000000),
-          buffersToRestore.front().second);
-
-      // Create temporary buffers used for contents restoration
-      if (maxBufferSize > 0) {
-        uint32_t count = Config::Get().recorder.vulkan.utilities.reusableStateRestoreResourcesCount;
-        for (uint32_t i = 0; i < count; ++i) {
-          CreateTemporaryBuffer(scheduler, device, maxBufferSize);
-        }
+    if ((deviceResources.temporaryBuffers.empty()) && (buffersToRestore.size() > 0) &&
+        deviceResources.maxBufferSize > 0) {
+      uint32_t count = Config::Get().recorder.vulkan.utilities.reusableStateRestoreResourcesCount;
+      for (uint32_t i = 0; i < count; ++i) {
+        CreateTemporaryBuffer(scheduler, device, deviceResources.maxBufferSize);
       }
     }
 
@@ -3183,7 +3342,7 @@ void gits::Vulkan::RestoreBufferContents(CScheduler& scheduler, CStateDynamic& s
           nullptr                             // const VkSemaphore*          pSignalSemaphores;
       };
       drvVk.vkQueueSubmit(submitableResources.queue, 1, &submitInfo, submitableResources.fence);
-      drvVk.vkWaitForFences(device, 1, &submitableResources.fence, VK_FALSE, 3000000000);
+      drvVk.vkWaitForFences(device, 1, &submitableResources.fence, VK_FALSE, globalTimeoutValue);
 
       scheduler.Register(new CGitsVkCmdInsertMemoryBarriers(
           submitableResources.commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
@@ -3204,9 +3363,6 @@ void gits::Vulkan::RestoreBufferContents(CScheduler& scheduler, CStateDynamic& s
     //////////////////////////////////////////////////////////////////
 
     VkDeviceSize totalSize = 0;
-    VkDeviceSize maxBufferSize = (deviceResources.temporaryBuffers.size() > 0)
-                                     ? (*deviceResources.temporaryBuffers.begin()).second.size
-                                     : 0; // All temporary buffers have the same size
     std::vector<VkInitializeBufferDataGITS> acquireBuffersData;
     std::vector<VkInitializeBufferDataGITS> restoreBuffersData;
 
@@ -3236,7 +3392,7 @@ void gits::Vulkan::RestoreBufferContents(CScheduler& scheduler, CStateDynamic& s
       if ((totalSize > 0) && ((i == (buffersToRestore.size() - 1)) ||
                               (calculateCurrentOffset(totalSize, GetVirtualMemoryPageSize()) +
                                    buffersToRestore[i + 1].second >
-                               maxBufferSize))) {
+                               deviceResources.maxBufferSize))) {
         // Get temporary command buffer and begin it
         auto submitableResources = GetSubmitableResources(scheduler, device);
 
@@ -3303,7 +3459,7 @@ void gits::Vulkan::RestoreBufferContents(CScheduler& scheduler, CStateDynamic& s
             nullptr                             // const VkSemaphore*          pSignalSemaphores;
         };
         drvVk.vkQueueSubmit(submitableResources.queue, 1, &submitInfo, submitableResources.fence);
-        drvVk.vkWaitForFences(device, 1, &submitableResources.fence, VK_FALSE, 3000000000);
+        drvVk.vkWaitForFences(device, 1, &submitableResources.fence, VK_FALSE, globalTimeoutValue);
 
         scheduler.Register(new CGitsVkMemoryRestore(device, temporaryBuffer.memory, totalSize,
                                                     temporaryBuffer.mappedPtr));
@@ -3348,7 +3504,7 @@ void gits::Vulkan::RestoreBufferContents(CScheduler& scheduler, CStateDynamic& s
           nullptr                             // const VkSemaphore*          pSignalSemaphores;
       };
       drvVk.vkQueueSubmit(submitableResources.queue, 1, &submitInfo, submitableResources.fence);
-      drvVk.vkWaitForFences(device, 1, &submitableResources.fence, VK_FALSE, 3000000000);
+      drvVk.vkWaitForFences(device, 1, &submitableResources.fence, VK_FALSE, globalTimeoutValue);
 
       scheduler.Register(new CGitsVkCmdInsertMemoryBarriers(
           submitableResources.commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -3358,6 +3514,241 @@ void gits::Vulkan::RestoreBufferContents(CScheduler& scheduler, CStateDynamic& s
 
       SubmitWork(scheduler, submitableResources);
     }
+  }
+}
+
+// Acceleration structure contents
+
+void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, CStateDynamic& sd) {
+  for (auto& deviceResourcesPair : temporaryDeviceResources) {
+    VkDevice device = deviceResourcesPair.first;
+    auto& deviceResources = deviceResourcesPair.second;
+
+    std::vector<std::tuple<VkAccelerationStructureKHR, VkBuffer, VkDeviceMemory>>
+        temporaryAccelerationStructures;
+
+    std::vector<std::pair<VkDeviceSize, VkAccelerationStructureKHR>>
+        accelerationStructuresToRestore;
+    accelerationStructuresToRestore.reserve(sd._accelerationstructurekhrstates.size());
+
+    for (auto& accelerationStructureState : sd._accelerationstructurekhrstates) {
+      if (IsObjectToSkip((uint64_t)accelerationStructureState.first)) {
+        continue;
+      }
+
+      if (temporaryDeviceResources.find(device) == temporaryDeviceResources.end()) {
+        continue;
+      }
+
+      if ((accelerationStructureState.second->buildSizeInfo.accelerationStructureSize == 0) ||
+          (!accelerationStructureState.second->buildInfo &&
+           !accelerationStructureState.second->copyInfo)) {
+        continue;
+      }
+
+      accelerationStructuresToRestore.emplace_back(
+          accelerationStructureState.second->buildSizeInfo.accelerationStructureSize,
+          accelerationStructureState.first);
+    }
+
+    std::sort(accelerationStructuresToRestore.begin(), accelerationStructuresToRestore.end(),
+              [](const auto& a, const auto& b) { return a.first > b.first; });
+
+    // When image and buffer contents restoration was skipped, create temporary buffers here
+    if ((deviceResources.temporaryBuffers.empty()) &&
+        (accelerationStructuresToRestore.size() > 0) && (deviceResources.maxBufferSize > 0)) {
+      uint32_t count = Config::Get().recorder.vulkan.utilities.reusableStateRestoreResourcesCount;
+      for (uint32_t i = 0; i < count; ++i) {
+        CreateTemporaryBuffer(scheduler, device, deviceResources.maxBufferSize);
+      }
+    }
+
+    auto scheduleBuild = [&](std::shared_ptr<CAccelerationStructureKHRState::CBuildInfo> buildInfo,
+                             VkCommandBuffer commandBuffer, VkDevice device) {
+      if (buildInfo) {
+        auto pBuildGeometryInfo = buildInfo->buildGeometryInfoData.Value();
+        auto pBuildRangeInfo = buildInfo->buildRangeInfoDataArray.Value();
+
+        //if (pBuildGeometryInfo->mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR) {
+        //}
+        //pBuildGeometryInfo->srcAccelerationStructure = VK_NULL_HANDLE;
+        //pBuildGeometryInfo->mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+
+        if (buildInfo->controlData.executionSide == VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS) {
+          scheduler.Register(new CvkCmdBuildAccelerationStructuresKHR(
+              commandBuffer, 1, pBuildGeometryInfo, &pBuildRangeInfo));
+        } else /* VK_COMMAND_EXECUTION_SIDE_HOST_GITS */ {
+
+          //scheduler.Register(new CvkBuildAccelerationStructuresKHR(
+          //    VK_SUCCESS, device, VK_NULL_HANDLE, 1, pBuildGeometryInfo, &pBuildRangeInfo));
+          throw std::runtime_error(
+              "Restoring ray tracing-related resources built on host is not yet supported.");
+        }
+      }
+    };
+
+    auto scheduleTemporaryAccelerationStructureCreation =
+        [&](CAccelerationStructureKHRState& accelerationStructureState,
+            VkCommandBuffer commandBuffer) {
+          VkAccelerationStructureKHR accelerationStructure =
+              (VkAccelerationStructureKHR)accelerationStructureState.GetUniqueStateID();
+          auto createInfo = *accelerationStructureState.accelerationStructureCreateInfoData.Value();
+          auto pBufferCreateInfo =
+              accelerationStructureState.bufferStateStore->bufferCreateInfoData.Value();
+          auto temporaryBuffer = createTemporaryBuffer(
+              device, accelerationStructureState.buildSizeInfo.accelerationStructureSize,
+              pBufferCreateInfo->usage);
+
+          VkDeviceMemory temporaryMemoryHandle =
+              (VkDeviceMemory)temporaryBuffer.first->GetUniqueStateID();
+          VkBuffer temporaryBufferHandle = (VkBuffer)temporaryBuffer.second->GetUniqueStateID();
+
+          createInfo.offset = 0;
+          createInfo.deviceAddress = 0;
+          createInfo.buffer = temporaryBufferHandle;
+
+          scheduler.Register(new CvkCreateBuffer(
+              VK_SUCCESS, device, temporaryBuffer.second->bufferCreateInfoData.Value(), nullptr,
+              &temporaryBufferHandle));
+          scheduler.Register(new CvkAllocateMemory(
+              VK_SUCCESS, device, temporaryBuffer.first->memoryAllocateInfoData.Value(), nullptr,
+              &temporaryMemoryHandle));
+          scheduler.Register(new CvkBindBufferMemory(VK_SUCCESS, device, temporaryBufferHandle,
+                                                     temporaryMemoryHandle, 0));
+          scheduler.Register(new CvkCreateAccelerationStructureKHR(
+              VK_SUCCESS, device, &createInfo, nullptr, &accelerationStructure));
+
+          temporaryAccelerationStructures.emplace_back(accelerationStructure, temporaryBufferHandle,
+                                                       temporaryMemoryHandle);
+
+          drvVk.vkDestroyBuffer(device, temporaryBuffer.second->bufferHandle, nullptr);
+          drvVk.vkFreeMemory(device, temporaryBuffer.first->deviceMemoryHandle, nullptr);
+
+          // Schedule build commands
+          if (accelerationStructureState.buildInfo) {
+            auto pBuildGeometryInfo =
+                accelerationStructureState.buildInfo->buildGeometryInfoData.Value();
+            pBuildGeometryInfo->dstAccelerationStructure = accelerationStructure;
+            scheduleBuild(accelerationStructureState.buildInfo, commandBuffer, device);
+          }
+
+          // Schedule build with update commands
+          if (accelerationStructureState.updateInfo) {
+            auto pBuildGeometryInfo =
+                accelerationStructureState.updateInfo->buildGeometryInfoData.Value();
+            pBuildGeometryInfo->dstAccelerationStructure = accelerationStructure;
+            scheduleBuild(accelerationStructureState.updateInfo, commandBuffer, device);
+          }
+
+          return accelerationStructure;
+        };
+
+    // auto scheduleUpdate = [&](std::shared_ptr<CAccelerationStructureKHRState::CBuildInfo> buildInfo,
+    //                           VkCommandBuffer commandBuffer, VkDevice device) {
+    //   if (buildInfo) {
+    //     auto pBuildGeometryInfo = buildInfo->buildGeometryInfoData.Value();
+    //     auto pBuildRangeInfo = buildInfo->buildRangeInfoDataArray.Value();
+    //
+    //     auto accelerationStructureIterator =
+    //         sd._accelerationstructurekhrstates.find(pBuildGeometryInfo->srcAccelerationStructure);
+    //     if ((accelerationStructureIterator == sd._accelerationstructurekhrstates.end()) ||
+    //         (accelerationStructureIterator->second->GetUniqueStateID() !=
+    //          buildInfo->srcAccelerationStructureStateStore->GetUniqueStateID())) {
+    //       pBuildGeometryInfo->srcAccelerationStructure =
+    //           scheduleTemporaryAccelerationStructureCreation(
+    //               *buildInfo->srcAccelerationStructureStateStore, commandBuffer);
+    //     }
+    //
+    //     if (buildInfo->controlData.executionSide == VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS) {
+    //       scheduler.Register(new CvkCmdBuildAccelerationStructuresKHR(
+    //           commandBuffer, 1, pBuildGeometryInfo, &pBuildRangeInfo));
+    //     } else /* VK_COMMAND_EXECUTION_SIDE_HOST_GITS */ {
+    //       //scheduler.Register(new CvkBuildAccelerationStructuresKHR(
+    //       //    VK_SUCCESS, device, VK_NULL_HANDLE, 1, pBuildGeometryInfo, &pBuildRangeInfo));
+    //       throw std::runtime_error(
+    //           "Restoring ray tracing-related resources built on host is not yet supported.");
+    //     }
+    //   }
+    // };
+
+    auto scheduleCopy = [&](std::shared_ptr<CAccelerationStructureKHRState::CCopyInfo> copyInfo,
+                            VkCommandBuffer commandBuffer, VkDevice device) {
+      if (!copyInfo) {
+        return;
+      }
+
+      VkCopyAccelerationStructureInfoKHR info =
+          *copyInfo->copyAccelerationStructureInfoData.Value();
+      auto& srcAccelerationStructureStateStore = copyInfo->srcAccelerationStructureStateStore;
+      auto accelerationStructureIterator = sd._accelerationstructurekhrstates.find(
+          srcAccelerationStructureStateStore->accelerationStructureHandle);
+
+      if ((accelerationStructureIterator == sd._accelerationstructurekhrstates.end()) ||
+          (accelerationStructureIterator->second->GetUniqueStateID() !=
+           srcAccelerationStructureStateStore->GetUniqueStateID())) {
+        info.src = scheduleTemporaryAccelerationStructureCreation(
+            *srcAccelerationStructureStateStore, commandBuffer);
+      }
+
+      if (copyInfo->executionSide == VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS) {
+        scheduler.Register(new CvkCmdCopyAccelerationStructureKHR(commandBuffer, &info));
+      } else /* VK_COMMAND_EXECUTION_SIDE_HOST_GITS */ {
+        scheduler.Register(new CvkCopyAccelerationStructureKHR(
+            VK_SUCCESS,
+            srcAccelerationStructureStateStore->bufferStateStore->deviceStateStore->deviceHandle,
+            VK_NULL_HANDLE, &info));
+      }
+    };
+
+    // Function for scheduling AS building commands
+    auto scheduleAccelerationStructuresBuilds = [&](VkAccelerationStructureTypeKHR type) {
+      for (auto& accelerationStructurePair : accelerationStructuresToRestore) {
+        auto& accelerationStructureState =
+            sd._accelerationstructurekhrstates[accelerationStructurePair.second];
+
+        if (accelerationStructureState->accelerationStructureCreateInfoData.Value()->type != type) {
+          continue;
+        }
+
+        VkDevice device =
+            accelerationStructureState->bufferStateStore->deviceStateStore->deviceHandle;
+
+        auto submittableResources = GetSubmitableResources(scheduler, device);
+        VkCommandBuffer commandBuffer = submittableResources.commandBuffer;
+
+        // Schedule build commands
+        scheduleBuild(accelerationStructureState->buildInfo, commandBuffer, device);
+
+        // Schedule build with update commands
+        //scheduleBuild(accelerationStructureState->updateInfo, commandBuffer, device);
+
+        // Schedule copy commands
+        scheduleCopy(accelerationStructureState->copyInfo, commandBuffer, device);
+
+        drvVk.vkQueueSubmit(submittableResources.queue, 0, nullptr, submittableResources.fence);
+        SubmitWork(scheduler, submittableResources);
+
+        scheduler.Register(new CvkWaitForFences(VK_SUCCESS, device, 1, &submittableResources.fence,
+                                                VK_FALSE, globalTimeoutValue));
+
+        for (auto& tuple : temporaryAccelerationStructures) {
+          auto accelerationStructure = std::get<0>(tuple);
+          auto buffer = std::get<1>(tuple);
+          auto memory = std::get<2>(tuple);
+
+          scheduler.Register(new CvkDestroyBuffer(device, buffer, nullptr));
+          scheduler.Register(new CvkFreeMemory(device, memory, nullptr));
+          scheduler.Register(
+              new CvkDestroyAccelerationStructureKHR(device, accelerationStructure, nullptr));
+        }
+      }
+    };
+
+    // First, restore only bottom level acceleration structures
+    scheduleAccelerationStructuresBuilds(VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR);
+
+    // Next, restore top level acceleration structures
+    scheduleAccelerationStructuresBuilds(VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR);
   }
 }
 

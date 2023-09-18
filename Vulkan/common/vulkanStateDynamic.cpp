@@ -13,6 +13,7 @@
 *
 */
 
+#include "vulkanTools.h"
 #include "vulkanStateDynamic.h"
 #include "vulkanInternalShaderModules.h"
 
@@ -23,12 +24,13 @@ namespace Vulkan {
 
 uint64_t CInternalResources::COffscreenAppsSupport::uniqueHandleCounter = 1;
 
-std::set<CBufferState::DeviceAddressRangeState, CBufferState::DeviceAddressRangeState>
-    CBufferState::deviceAddresses;
 std::unordered_map<VkDeviceAddress, VkAccelerationStructureKHR>
     CAccelerationStructureKHRState::deviceAddresses;
-std::unordered_map<VkDeviceAddress, VkBuffer> CBufferState::deviceAddressesQuickLook;
 uint32_t CAccelerationStructureKHRState::globalAccelerationStructureBuildCommandIndex = 0;
+
+std::set<CBufferState::DeviceAddressRangeState, CBufferState::DeviceAddressRangeState>
+    CBufferState::deviceAddresses;
+std::unordered_map<VkDeviceAddress, VkBuffer> CBufferState::deviceAddressesQuickLook;
 
 // BUFFER DEVICE ADDRESS GROUP COMMENT TOKEN
 // Please, (un)comment all the areas with the above token together, at the same time

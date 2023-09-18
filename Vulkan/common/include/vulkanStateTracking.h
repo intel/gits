@@ -12,12 +12,13 @@
 * @brief Functions for tracking current state of Vulkan resources
 *
 */
+
 #pragma once
 
-#include "vulkanStateDynamic.h"
-#include "vulkanDrivers.h"
 #include "istdhash.h"
-#include "gits.h"
+#include "vulkanTools.h"
+#include "vulkanTools_lite.h"
+#include "vulkanStateDynamic.h"
 
 namespace gits {
 
@@ -739,31 +740,30 @@ inline void vkAllocateMemory_SD(VkResult return_value,
 inline void vkFreeMemory_SD(VkDevice device,
                             VkDeviceMemory memory,
                             const VkAllocationCallbacks* pAllocator) {
-  if (memory != VK_NULL_HANDLE) {
-    vkUnmapMemory_SD(device, memory);
-
-    if (Config::Get().player.printMemUsageVk) {
-      SD().currentlyAllocatedMemoryAll -=
-          SD()._devicememorystates[memory]->memoryAllocateInfoData.Value()->allocationSize;
-      if (checkMemoryMappingFeasibility(
-              device,
-              SD()._devicememorystates[memory]->memoryAllocateInfoData.Value()->memoryTypeIndex,
-              false)) {
-        SD().currentlyAllocatedMemoryCPU_GPU -=
-            SD()._devicememorystates[memory]->memoryAllocateInfoData.Value()->allocationSize;
-      } else {
-        SD().currentlyAllocatedMemoryGPU -=
-            SD()._devicememorystates[memory]->memoryAllocateInfoData.Value()->allocationSize;
-      }
-      Log(INFO) << "Currently Allocated Memory TOTAL: "
-                << SD().currentlyAllocatedMemoryAll / 1000000
-                << " MB; GPU_ONLY: " << SD().currentlyAllocatedMemoryGPU / 1000000
-                << " MB; CPU_GPU_Shared: " << SD().currentlyAllocatedMemoryCPU_GPU / 1000000
-                << " MB; Currently mapped memory: " << SD().currentlyMappedMemory / 1000000
-                << " MB";
-    }
-    SD()._devicememorystates.erase(memory); // Stardust
+  if (memory == VK_NULL_HANDLE) {
+    return;
   }
+  vkUnmapMemory_SD(device, memory);
+
+  if (Config::Get().player.printMemUsageVk) {
+    SD().currentlyAllocatedMemoryAll -=
+        SD()._devicememorystates[memory]->memoryAllocateInfoData.Value()->allocationSize;
+    if (checkMemoryMappingFeasibility(
+            device,
+            SD()._devicememorystates[memory]->memoryAllocateInfoData.Value()->memoryTypeIndex,
+            false)) {
+      SD().currentlyAllocatedMemoryCPU_GPU -=
+          SD()._devicememorystates[memory]->memoryAllocateInfoData.Value()->allocationSize;
+    } else {
+      SD().currentlyAllocatedMemoryGPU -=
+          SD()._devicememorystates[memory]->memoryAllocateInfoData.Value()->allocationSize;
+    }
+    Log(INFO) << "Currently Allocated Memory TOTAL: " << SD().currentlyAllocatedMemoryAll / 1000000
+              << " MB; GPU_ONLY: " << SD().currentlyAllocatedMemoryGPU / 1000000
+              << " MB; CPU_GPU_Shared: " << SD().currentlyAllocatedMemoryCPU_GPU / 1000000
+              << " MB; Currently mapped memory: " << SD().currentlyMappedMemory / 1000000 << " MB";
+  }
+  SD()._devicememorystates.erase(memory); // Stardust
 }
 
 // Image
@@ -910,43 +910,50 @@ inline void vkCreateBuffer_SD(VkResult return_value,
 inline void vkDestroyBuffer_SD(VkDevice device,
                                VkBuffer buffer,
                                const VkAllocationCallbacks* pAllocator) {
-  if (buffer != VK_NULL_HANDLE) {
-    if (Config::Get().IsRecorder()) {
-      auto iterator = SD()._bufferstates.find(buffer);
-
-      if (isSubcaptureBeforeRestorationPhase()) {
-        if ((iterator != SD()._bufferstates.end()) && (iterator->second->binding != nullptr)) {
-          iterator->second->binding->deviceMemoryStateStore->aliasingTracker.RemoveBuffer(
-              iterator->second->binding->memoryOffset,
-              iterator->second->binding->memorySizeRequirement, buffer);
-        }
-      }
-
-      {
-        VkDeviceAddress deviceAddress = iterator->second->deviceAddress;
-        auto it =
-            std::find_if(CBufferState::deviceAddresses.begin(), CBufferState::deviceAddresses.end(),
-                         [&deviceAddress](auto const& element) {
-                           return (deviceAddress >= element.start) && (deviceAddress < element.end);
-                         });
-
-        if (it != CBufferState::deviceAddresses.end()) {
-          CBufferState::deviceAddresses.erase(it);
-        }
-
-        for (auto address : iterator->second->deviceAddressesToErase) {
-          CBufferState::deviceAddressesQuickLook.erase(address);
-        }
-      }
-
-      // BUFFER DEVICE ADDRESS GROUP COMMENT TOKEN
-      // Please, (un)comment all the areas with the above token together, at the same time
-      //
-      // CBufferState::shaderDeviceAddressBuffers.erase(buffer);
+  if (buffer == VK_NULL_HANDLE) {
+    return;
+  }
+  if (Config::Get().IsRecorder()) {
+    auto iterator = SD()._bufferstates.find(buffer);
+    if (iterator == SD()._bufferstates.end()) {
+      Log(WARN) << "Unknown buffer destroyed: " << buffer;
+      return;
     }
 
-    SD()._bufferstates.erase(buffer); //SDK
+    auto& bufferState = iterator->second;
+
+    if (isSubcaptureBeforeRestorationPhase()) {
+      if (bufferState->binding != nullptr) {
+        bufferState->binding->deviceMemoryStateStore->aliasingTracker.RemoveBuffer(
+            bufferState->binding->memoryOffset, bufferState->binding->memorySizeRequirement,
+            buffer);
+      }
+    }
+
+    {
+      VkDeviceAddress deviceAddress = bufferState->deviceAddress;
+      auto it =
+          std::find_if(CBufferState::deviceAddresses.begin(), CBufferState::deviceAddresses.end(),
+                       [&deviceAddress](auto const& element) {
+                         return (deviceAddress >= element.start) && (deviceAddress < element.end);
+                       });
+
+      if (it != CBufferState::deviceAddresses.end()) {
+        CBufferState::deviceAddresses.erase(it);
+      }
+
+      for (auto address : bufferState->deviceAddressesToErase) {
+        CBufferState::deviceAddressesQuickLook.erase(address);
+      }
+    }
+
+    // BUFFER DEVICE ADDRESS GROUP COMMENT TOKEN
+    // Please, (un)comment all the areas with the above token together, at the same time
+    //
+    // CBufferState::shaderDeviceAddressBuffers.erase(buffer);
   }
+
+  SD()._bufferstates.erase(buffer); //SDK
 }
 
 inline void vkGetBufferMemoryRequirements_SD(VkDevice device,
@@ -1202,8 +1209,7 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
             throw std::runtime_error(EXCEPTION_MESSAGE);
           }
         }
-      } else if (pDescriptorWrites[i].descriptorType ==
-                 VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR) {
+      } else if (descriptorType == VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR) {
         auto accelerationStructureWrite =
             static_cast<const VkWriteDescriptorSetAccelerationStructureKHR*>(getPNextStructure(
                 pDescriptorWrites[i].pNext,
@@ -1214,20 +1220,20 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
           throw std::runtime_error(EXCEPTION_MESSAGE);
         }
 
-        if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+        if (isSubcaptureBeforeRestorationPhase()) {
           auto* descriptorSetBinding = &descriptorSetState->descriptorSetBindings[currentBinding];
           descriptorSetBinding->descriptorData[0].accelerationStructureWrite.reset(
               new CVkWriteDescriptorSetAccelerationStructureKHRData(accelerationStructureWrite));
         }
 
-        if (updateOnlyUsedMemory() || (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
+        if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
           for (uint32_t i = 0; i < accelerationStructureWrite->accelerationStructureCount; ++i) {
             auto accelerationStructure = accelerationStructureWrite->pAccelerationStructures[i];
 
             if (accelerationStructure != VK_NULL_HANDLE) {
               auto& accelerationStructureState =
                   SD()._accelerationstructurekhrstates[accelerationStructure];
-              descriptorSetState->descriptorBuffers[pDescriptorWrites[i].dstBinding] =
+              descriptorSetState->descriptorBuffers[currentBinding] =
                   accelerationStructureState->bufferStateStore->bufferHandle;
             }
           }
@@ -2501,8 +2507,7 @@ inline void vkCreateAccelerationStructureKHR_SD(
     VkAccelerationStructureKHR* pAccelerationStructure) {
   if ((return_value == VK_SUCCESS) && (*pAccelerationStructure != VK_NULL_HANDLE)) {
     auto accelerationStructureState = std::make_shared<CAccelerationStructureKHRState>(
-        pAccelerationStructure, pCreateInfo, SD()._devicestates[device],
-        SD()._bufferstates[pCreateInfo->buffer]);
+        pAccelerationStructure, pCreateInfo, SD()._bufferstates[pCreateInfo->buffer]);
     accelerationStructureState->deviceAddress =
         getAccelerationStructureDeviceAddress(device, *pAccelerationStructure);
 
@@ -2550,136 +2555,122 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
     uint32_t infoCount,
     const VkAccelerationStructureBuildGeometryInfoKHR* pInfos,
     const VkAccelerationStructureBuildRangeInfoKHR* const* ppBuildRangeInfos) {
-
   CAccelerationStructureKHRState::globalAccelerationStructureBuildCommandIndex++;
 
-  if (Config::Get().IsRecorder()) {
-    auto device = SD()._commandbufferstates[commandBuffer]
-                      ->commandPoolStateStore->deviceStateStore->deviceHandle;
+  if (!Config::Get().IsRecorder()) {
+    return;
+  }
+  auto device = SD()._commandbufferstates[commandBuffer]
+                    ->commandPoolStateStore->deviceStateStore->deviceHandle;
 
-    for (uint32_t acc = 0; acc < infoCount; ++acc) {
-      auto buildInfo = pInfos[acc];
-      auto* pRangeInfos = ppBuildRangeInfos[acc];
-      auto& accelerationStructureState =
-          SD()._accelerationstructurekhrstates[buildInfo.dstAccelerationStructure];
+  for (uint32_t acc = 0; acc < infoCount; ++acc) {
+    auto buildInfo = pInfos[acc];
+    auto* pRangeInfos = ppBuildRangeInfos[acc];
+    auto& accelerationStructureState =
+        SD()._accelerationstructurekhrstates[buildInfo.dstAccelerationStructure];
 
-      if (isSubcaptureBeforeRestorationPhase()) {
-        VkAccelerationStructureBuildSizesInfoKHR buildSizeInfo = {
-            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, // VkStructureType sType;
-            nullptr,                                                       // const void* pNext;
-            0, // VkDeviceSize accelerationStructureSize;
-            0, // VkDeviceSize updateScratchSize;
-            0  // VkDeviceSize buildScratchSize;
-        };
+    if (isSubcaptureBeforeRestorationPhase()) {
+      VkAccelerationStructureBuildSizesInfoKHR buildSizeInfo = {
+          VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, // VkStructureType sType;
+          nullptr,                                                       // const void* pNext;
+          0, // VkDeviceSize accelerationStructureSize;
+          0, // VkDeviceSize updateScratchSize;
+          0  // VkDeviceSize buildScratchSize;
+      };
 
-        std::vector<uint32_t> primitivesCount(buildInfo.geometryCount);
+      std::vector<uint32_t> primitivesCount(buildInfo.geometryCount);
 
-        for (uint32_t g = 0; g < buildInfo.geometryCount; ++g) {
-          primitivesCount[g] = pRangeInfos[g].primitiveCount;
-        }
-
-        drvVk.vkGetAccelerationStructureBuildSizesKHR(
-            device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo,
-            primitivesCount.data(), &buildSizeInfo);
-        accelerationStructureState->buildSizeInfo = buildSizeInfo;
+      for (uint32_t g = 0; g < buildInfo.geometryCount; ++g) {
+        primitivesCount[g] = pRangeInfos[g].primitiveCount;
       }
 
-      buildInfo.scratchData.deviceAddress = 0;
-      if (buildInfo.mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR) {
-        accelerationStructureState->buildInfo.reset(new CAccelerationStructureKHRState::CBuildInfo(
-            &buildInfo, pRangeInfos, prepareAccelerationStructureControlData(commandBuffer)));
-        accelerationStructureState->updateInfo.reset();
-      } else if (buildInfo.mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR) {
-        auto& srcAccelerationStructureState =
-            SD()._accelerationstructurekhrstates[buildInfo.srcAccelerationStructure];
-        accelerationStructureState->updateInfo.reset(new CAccelerationStructureKHRState::CBuildInfo(
-            &buildInfo, pRangeInfos, prepareAccelerationStructureControlData(commandBuffer),
-            srcAccelerationStructureState));
-      }
-      accelerationStructureState->copyInfo.reset();
+      drvVk.vkGetAccelerationStructureBuildSizesKHR(
+          device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo,
+          primitivesCount.data(), &buildSizeInfo);
+      accelerationStructureState->buildSizeInfo = buildSizeInfo;
     }
 
-    if (updateOnlyUsedMemory() || CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
-      auto& bindingBuffers = SD().bindingBuffers[commandBuffer];
-      for (uint32_t acc = 0; acc < infoCount; ++acc) {
-        auto buildInfo = &pInfos[acc];
-        auto buildRangeInfos = ppBuildRangeInfos[acc];
+    buildInfo.scratchData.deviceAddress = 0;
+    if (buildInfo.mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR) {
+      accelerationStructureState->buildInfo.reset(new CAccelerationStructureKHRState::CBuildInfo(
+          &buildInfo, pRangeInfos, prepareAccelerationStructureControlData(commandBuffer)));
+      accelerationStructureState->updateInfo.reset();
+    } else if (buildInfo.mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR) {
+      auto& srcAccelerationStructureState =
+          SD()._accelerationstructurekhrstates[buildInfo.srcAccelerationStructure];
+      accelerationStructureState->updateInfo.reset(new CAccelerationStructureKHRState::CBuildInfo(
+          &buildInfo, pRangeInfos, prepareAccelerationStructureControlData(commandBuffer),
+          srcAccelerationStructureState));
+    }
+    accelerationStructureState->copyInfo.reset();
+  }
 
-        auto& accelerationStructureState =
-            SD()._accelerationstructurekhrstates[buildInfo->dstAccelerationStructure];
-        bindingBuffers.insert(accelerationStructureState->bufferStateStore->bufferHandle);
+  if (!(updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
+    return;
+  }
 
-        if (buildInfo->geometryCount == 0) {
-          continue;
+  auto& bindingBuffers = SD().bindingBuffers[commandBuffer];
+
+  for (uint32_t acc = 0; acc < infoCount; ++acc) {
+    auto buildInfo = &pInfos[acc];
+    auto buildRangeInfos = ppBuildRangeInfos[acc];
+
+    auto& accelerationStructureState =
+        SD()._accelerationstructurekhrstates[buildInfo->dstAccelerationStructure];
+    bindingBuffers.insert(accelerationStructureState->bufferStateStore->bufferHandle);
+
+    if (buildInfo->geometryCount == 0) {
+      continue;
+    }
+
+    auto addBindingBuffer = [&bindingBuffers](VkDeviceAddress deviceAddress) {
+      auto buffer = findBufferFromDeviceAddress(deviceAddress);
+      if (buffer) {
+        bindingBuffers.insert(buffer);
+      }
+    };
+
+    for (uint32_t geom = 0; geom < buildInfo->geometryCount; ++geom) {
+      const VkAccelerationStructureGeometryKHR* pGeometry = (buildInfo->pGeometries != nullptr)
+                                                                ? (&buildInfo->pGeometries[geom])
+                                                                : (buildInfo->ppGeometries[geom]);
+      auto& buildRangeInfo = buildRangeInfos[geom];
+
+      switch (pGeometry->geometryType) {
+      case VK_GEOMETRY_TYPE_TRIANGLES_KHR: {
+        auto& trianglesData = pGeometry->geometry.triangles;
+
+        if (trianglesData.indexType != VK_INDEX_TYPE_NONE_KHR) {
+          // Index buffer
+          addBindingBuffer(trianglesData.indexData.deviceAddress + buildRangeInfo.primitiveOffset);
+          // Vertex buffer
+          addBindingBuffer(trianglesData.vertexData.deviceAddress + trianglesData.maxVertex);
+        } else {
+          // Vertex buffer
+          addBindingBuffer(trianglesData.vertexData.deviceAddress + buildRangeInfo.primitiveOffset +
+                           (trianglesData.vertexStride * buildRangeInfo.firstVertex));
         }
 
-        for (uint32_t geom = 0; geom < buildInfo->geometryCount; ++geom) {
-          const VkAccelerationStructureGeometryKHR* pGeometry =
-              (buildInfo->pGeometries != nullptr) ? (&buildInfo->pGeometries[geom])
-                                                  : (buildInfo->ppGeometries[geom]);
-          auto& buildRangeInfo = buildRangeInfos[geom];
+        // Transform buffer
+        addBindingBuffer(trianglesData.transformData.deviceAddress +
+                         buildRangeInfo.transformOffset);
+      } break;
 
-          switch (pGeometry->geometryType) {
-          case VK_GEOMETRY_TYPE_TRIANGLES_KHR: {
-            if (pGeometry->geometry.triangles.indexType != VK_INDEX_TYPE_NONE_KHR) {
+      case VK_GEOMETRY_TYPE_AABBS_KHR: {
+        // AABBs data buffer
+        addBindingBuffer(pGeometry->geometry.aabbs.data.deviceAddress +
+                         buildRangeInfo.primitiveOffset);
+      } break;
 
-              // Indexed geometry
+      case VK_GEOMETRY_TYPE_INSTANCES_KHR: {
+        // Instance data buffer
+        addBindingBuffer(pGeometry->geometry.instances.data.deviceAddress +
+                         buildRangeInfo.primitiveOffset);
+      } break;
 
-              auto indexBuffer = findBufferFromDeviceAddress(
-                  pGeometry->geometry.triangles.indexData.deviceAddress +
-                  buildRangeInfo.primitiveOffset);
-              if (indexBuffer) {
-                bindingBuffers.insert(indexBuffer);
-              }
-
-              TODO("Acquire buffer handle for a vertex data.")
-              // Doing it in the same way as for non-indexed geometry won't work.
-              // Applications can use device addresses with a negative offset
-              // in which case GITS is unable to find a source buffer (without
-              // using a compute shader)
-
-            } else {
-
-              // Non-indexed geometry
-
-              auto vertexBuffer = findBufferFromDeviceAddress(
-                  pGeometry->geometry.triangles.vertexData.deviceAddress +
-                  buildRangeInfo.primitiveOffset +
-                  (pGeometry->geometry.triangles.vertexStride * buildRangeInfo.firstVertex));
-              if (vertexBuffer) {
-                bindingBuffers.insert(vertexBuffer);
-              }
-            }
-
-            auto transformBuffer = findBufferFromDeviceAddress(
-                pGeometry->geometry.triangles.transformData.deviceAddress +
-                buildRangeInfo.transformOffset);
-            if (transformBuffer) {
-              bindingBuffers.insert(transformBuffer);
-            }
-          } break;
-
-          case VK_GEOMETRY_TYPE_AABBS_KHR: {
-            auto abbsBuffer = findBufferFromDeviceAddress(
-                pGeometry->geometry.aabbs.data.deviceAddress + buildRangeInfo.primitiveOffset);
-            if (abbsBuffer) {
-              bindingBuffers.insert(abbsBuffer);
-            }
-          } break;
-
-          case VK_GEOMETRY_TYPE_INSTANCES_KHR: {
-            auto instanceBuffer = findBufferFromDeviceAddress(
-                pGeometry->geometry.instances.data.deviceAddress + buildRangeInfo.primitiveOffset);
-            if (instanceBuffer) {
-              bindingBuffers.insert(instanceBuffer);
-            }
-          } break;
-
-          default:
-            throw std::runtime_error("Unknown geometry type provided!");
-            break;
-          }
-        }
+      default:
+        throw std::runtime_error("Unknown geometry type provided!");
+        break;
       }
     }
   }
@@ -3773,35 +3764,23 @@ inline void vkCmdTraceRaysKHR_SD(VkCommandBuffer commandBuffer,
                                  uint32_t /* height */,
                                  uint32_t /* depth */) {
   if (Config::Get().IsRecorder() &&
-      (updateOnlyUsedMemory() || CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture())) {
-    if ((pRaygenShaderBindingTable != nullptr) && (pRaygenShaderBindingTable->deviceAddress != 0)) {
-      auto raygenBuffer = findBufferFromDeviceAddress(pRaygenShaderBindingTable->deviceAddress);
-      if (raygenBuffer) {
-        SD().bindingBuffers[commandBuffer].insert(raygenBuffer);
-      }
-    }
+      (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
+    auto& bindingBuffers = SD().bindingBuffers[commandBuffer];
 
-    if ((pMissShaderBindingTable != nullptr) && (pMissShaderBindingTable->deviceAddress != 0)) {
-      auto missBuffer = findBufferFromDeviceAddress(pMissShaderBindingTable->deviceAddress);
-      if (missBuffer) {
-        SD().bindingBuffers[commandBuffer].insert(missBuffer);
-      }
-    }
+    auto addBindingBuffer = [&bindingBuffers](const VkStridedDeviceAddressRegionKHR* SBTtable) {
+      if ((SBTtable != nullptr) && (SBTtable->deviceAddress != 0)) {
+        auto buffer = findBufferFromDeviceAddress(SBTtable->deviceAddress);
 
-    if ((pHitShaderBindingTable != nullptr) && (pHitShaderBindingTable->deviceAddress != 0)) {
-      auto hitBuffer = findBufferFromDeviceAddress(pHitShaderBindingTable->deviceAddress);
-      if (hitBuffer) {
-        SD().bindingBuffers[commandBuffer].insert(hitBuffer);
+        if (buffer) {
+          bindingBuffers.insert(buffer);
+        }
       }
-    }
+    };
 
-    if ((pCallableShaderBindingTable != nullptr) &&
-        (pCallableShaderBindingTable->deviceAddress != 0)) {
-      auto callableBuffer = findBufferFromDeviceAddress(pCallableShaderBindingTable->deviceAddress);
-      if (callableBuffer) {
-        SD().bindingBuffers[commandBuffer].insert(callableBuffer);
-      }
-    }
+    addBindingBuffer(pRaygenShaderBindingTable);
+    addBindingBuffer(pMissShaderBindingTable);
+    addBindingBuffer(pHitShaderBindingTable);
+    addBindingBuffer(pCallableShaderBindingTable);
   }
 
   printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);

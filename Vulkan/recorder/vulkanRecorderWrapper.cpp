@@ -12,12 +12,11 @@
 * @brief Definition of Vulkan recorder wrapper.
 */
 
-#include "vulkanRecorderWrapper.h"
-#include "vulkanStateTracking.h"
-#include "vulkanStateRestore.h"
-#include "vulkan_apis_iface.h"
-#include "vulkanLibrary.h"
 #include "recorder.h"
+#include "vulkan_apis_iface.h"
+#include "vulkanStateRestore.h"
+#include "vulkanStateTracking.h"
+#include "vulkanRecorderWrapper.h"
 
 static gits::Vulkan::CRecorderWrapper* wrapper = nullptr;
 
@@ -138,6 +137,20 @@ void CRecorderWrapper::dumpScreenshot(VkQueue queue,
   }
 }
 
+namespace {
+void ProcessOnQueueSubmitEndMessageReceivers(
+    std::shared_ptr<CCommandBufferState>& commandBufferState, VkQueue queue, bool& waitVar) {
+  if (!commandBufferState->queueSubmitEndMessageReceivers.empty() && !waitVar) {
+    drvVk.vkQueueWaitIdle(queue);
+    waitVar = true;
+  }
+
+  for (auto receiver : commandBufferState->queueSubmitEndMessageReceivers) {
+    receiver->OnQueueSubmitEnd();
+  }
+}
+} // namespace
+
 void CRecorderWrapper::resetMemoryAfterQueueSubmit(VkQueue queue,
                                                    uint32_t submitCount,
                                                    const VkSubmitInfo* pSubmits) {
@@ -249,14 +262,7 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit(VkQueue queue,
     for (uint32_t j = 0; j < pSubmits[i].commandBufferCount; j++) {
       auto& commandBufferState = SD()._commandbufferstates[pSubmits[i].pCommandBuffers[j]];
 
-      if ((commandBufferState->addressPatchers.size() > 0) && !queueWaitIdleAlreadyUsed) {
-        drvVk.vkQueueWaitIdle(queue);
-        queueWaitIdleAlreadyUsed = true;
-      }
-
-      for (auto receiver : commandBufferState->queueSubmitEndMessageReceivers) {
-        receiver->OnQueueSubmitEnd();
-      }
+      ProcessOnQueueSubmitEndMessageReceivers(commandBufferState, queue, queueWaitIdleAlreadyUsed);
     }
   }
 }
@@ -374,15 +380,7 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit2(VkQueue queue,
       auto& commandBufferState =
           SD()._commandbufferstates[pSubmits[i].pCommandBufferInfos[j].commandBuffer];
 
-      if ((commandBufferState->queueSubmitEndMessageReceivers.size() > 0) &&
-          !queueWaitIdleAlreadyUsed) {
-        drvVk.vkQueueWaitIdle(queue);
-        queueWaitIdleAlreadyUsed = true;
-      }
-
-      for (auto& receiver : commandBufferState->queueSubmitEndMessageReceivers) {
-        receiver->OnQueueSubmitEnd();
-      }
+      ProcessOnQueueSubmitEndMessageReceivers(commandBufferState, queue, queueWaitIdleAlreadyUsed);
     }
   }
 }

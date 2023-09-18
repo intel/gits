@@ -6,9 +6,8 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "vulkanTools_lite.h"
 #include "exception.h"
-#include "vulkanStateDynamic.h"
+#include "vulkanTools_lite.h"
 
 #include <cmath>
 
@@ -1302,7 +1301,7 @@ const void* ignoreLoaderSpecificStructureTypes(const void* pNext) {
     }
 
 #ifdef GITS_PLATFORM_WINDOWS
-  } __except (EXCEPTION_EXECUTE_HANDLER) {
+  } __except (1) { // from excpt.h: #define EXCEPTION_EXECUTE_HANDLER 1
     return nullptr;
   }
 #endif
@@ -1357,58 +1356,6 @@ std::vector<uint32_t> getRayTracingArraySizes(
     sizes[i] = pInfos[i].geometryCount;
   }
   return sizes;
-}
-
-VkAccelerationStructureBuildControlDataGITS prepareAccelerationStructureControlData(
-    VkCommandBuffer commandBuffer) {
-  return {
-      CAccelerationStructureKHRState::
-          globalAccelerationStructureBuildCommandIndex, // uint32_t buildCommandIndex
-      VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,   // VkBuildAccelerationStructureModeKHR mode
-      VK_ACCELERATION_STRUCTURE_TYPE_GENERIC_KHR,       // VkAccelerationStructureTypeKHR type
-      SD()._commandbufferstates[commandBuffer]
-          ->commandPoolStateStore->deviceStateStore->deviceHandle, // VkDevice device;
-      VK_NULL_HANDLE,                         // VkAccelerationStructureKHR accelerationStructure
-      commandBuffer,                          // VkCommandBuffer commandBuffer;
-      getCommandExecutionSide(commandBuffer), // VkCommandExecutionSideGITS executionSide;
-  };
-}
-
-VkAccelerationStructureBuildControlDataGITS prepareAccelerationStructureControlData(
-    VkAccelerationStructureBuildControlDataGITS controlData,
-    const VkAccelerationStructureBuildGeometryInfoKHR* buildInfo) {
-  controlData.mode = buildInfo->mode;
-  controlData.accelerationStructureType = buildInfo->type;
-  controlData.accelerationStructure = buildInfo->dstAccelerationStructure;
-
-  return controlData;
-}
-
-VkAccelerationStructureBuildControlDataGITS prepareAccelerationStructureControlData(
-    VkAccelerationStructureBuildControlDataGITS controlData, VkStructureType sType) {
-  controlData.sType = sType;
-
-  return controlData;
-}
-
-uint64_t prepareStateTrackingHash(const VkAccelerationStructureBuildControlDataGITS& controlData,
-                                  VkDeviceAddress deviceAddress,
-                                  uint32_t offset,
-                                  uint64_t stride,
-                                  uint32_t count) {
-  CAccelerationStructureKHRState::HashGenerator hashGenerator = {
-      controlData.accelerationStructure,     // VkAccelerationStructureKHR accelerationStructure;
-      deviceAddress,                         // VkDeviceAddress deviceAddress;
-      stride,                                // uint64_t stride;
-      controlData.buildCommandIndex,         // uint32_t buildCommandIndex;
-      controlData.mode,                      // VkBuildAccelerationStructureModeKHR mode;
-      controlData.accelerationStructureType, // VkAccelerationStructureTypeKHR type;
-      controlData.sType,                     // VkStructureType sType;
-      offset,                                // uint32_t offset;
-      count                                  // uint32_t count;
-  };
-  return CGits::Instance().ResourceManager().getHash(RESOURCE_DATA_RAW, &hashGenerator,
-                                                     sizeof(hashGenerator));
 }
 
 VkCommandExecutionSideGITS getCommandExecutionSide(VkCommandBuffer commandBuffer) {

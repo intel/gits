@@ -8,11 +8,9 @@
 
 #pragma once
 
-#include <array>
-
-#include "vkFunction.h"
 #include "vulkanArgumentsAuto.h"
 #include "vulkanStateDynamic.h"
+#include "vkWindowing.h"
 
 namespace gits {
 namespace Vulkan {
@@ -384,7 +382,7 @@ public:
   const char* Name() const {
     return "CGitsVkUpdateNativeWindow";
   }
-  virtual void Write(CBinOStream& stream) const {
+  virtual void Write(CBinOStream& stream) const override {
     x.Write(stream);
     y.Write(stream);
     w.Write(stream);
@@ -392,7 +390,7 @@ public:
     vis.Write(stream);
     hwnd.Write(stream);
   }
-  virtual void Read(CBinIStream& stream) {
+  virtual void Read(CBinIStream& stream) override {
     x.Read(stream);
     y.Read(stream);
     w.Read(stream);
@@ -471,8 +469,8 @@ public:
   virtual const char* Name() const {
     return "CGitsVkMemoryUpdate";
   }
-  virtual void Write(CBinOStream& stream) const;
-  virtual void Read(CBinIStream& stream);
+  virtual void Write(CBinOStream& stream) const override;
+  virtual void Read(CBinIStream& stream) override;
   virtual void Run();
   std::set<uint64_t> GetMappedPointers() {
     std::set<uint64_t> returnMap;
@@ -571,8 +569,8 @@ public:
   virtual const char* Name() const {
     return "CGitsVkMemoryRestore";
   }
-  virtual void Write(CBinOStream& stream) const;
-  virtual void Read(CBinIStream& stream);
+  virtual void Write(CBinOStream& stream) const override;
+  virtual void Read(CBinIStream& stream) override;
   virtual void Run();
   std::set<uint64_t> GetMappedPointers() {
     std::set<uint64_t> returnMap;
@@ -630,7 +628,7 @@ class CGitsVkCmdPatchDeviceAddresses : public CFunction {
   static const unsigned ARG_NUM = 3;
   Cuint32_t* _count;
   CVkCommandBuffer* _commandBuffer;
-  CDeclaredBinaryResource* _resource;
+  CDeclaredBinaryResource* _resource; // An array of VkBufferDeviceAddressPatchGITS structures
 
   virtual CArgument& Argument(unsigned idx);
   virtual unsigned ArgumentCount() const {

@@ -8,10 +8,6 @@
 
 #pragma once
 
-#include <map>
-#include <vector>
-#include <sstream>
-
 #include "message_pump.h"
 
 namespace gits {

@@ -8,12 +8,11 @@
 
 #pragma once
 
-#include <unordered_map>
-#include <memory>
-
+#include "vulkanHeader.h"
 #include "dynamic_linker.h"
-#include "vk_layer.h"
-#include "platform.h"
+
+#include <memory>
+#include <unordered_map>
 
 #ifndef VOID_T_DEFINED
 #define VOID_T_DEFINED

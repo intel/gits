@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "vulkanPreToken.h"
-#include "vulkanDrivers.h"
+#include "vulkanFunctions.h"
 #include "vulkanStateTracking.h"
 #include "vulkanCCodeWriteWrap.h"
 
@@ -659,7 +659,7 @@ void gits::Vulkan::CGitsVkMemoryReset::Write(CCodeOStream& stream) const {
   stream.Indent() << "}\n";
 }
 
-// For building top-level acceleraiton structures, application needs to pass data about all the bottom-level
+// For building top-level acceleration structures, application needs to pass data about all the bottom-level
 // acceleration structures (BLASs in short) which will be built in the top level one. BLASs are referenced
 // via their device addresses. The list of BLASs/device addresses is stored in a buffer which is also provided
 // via a device address. Unfortunately, device addresses may change from run to run. Each time stream is
@@ -702,7 +702,7 @@ gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::~CGitsVkCmdPatchDeviceAddresses() 
 gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::CGitsVkCmdPatchDeviceAddresses(
     VkCommandBuffer commandBuffer, CDeviceAddressPatcher& patcher)
     : _count(new Cuint32_t(patcher.Count())), _commandBuffer(new CVkCommandBuffer(commandBuffer)) {
-  // Any data uniquely indentifying this very acceleration structure build command.
+  // Any data uniquely identifying this very acceleration structure build command.
   // It is used only to generate a hash key.
   // This key is used later in a post-vkQueueSubmit() operation to store data.
 
@@ -756,29 +756,29 @@ void gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::Run() {
 
       if (preBarriers) {
         preBarriers->push_back({
-            VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, // VkStructureType sType;
-            nullptr,                                 // const void* pNext;
-            ALL_VULKAN_BUFFER_ACCESS_BITS,           // VkAccessFlags srcAccessMask;
-            VK_ACCESS_SHADER_WRITE_BIT,              // VkAccessFlags dstAccessMask;
-            VK_QUEUE_FAMILY_IGNORED,                 // uint32_t srcQueueFamilyIndex;
-            VK_QUEUE_FAMILY_IGNORED,                 // uint32_t dstQueueFamilyIndex;
-            buffer,                                  // VkBuffer buffer;
-            0,                                       // VkDeviceSize offset;
-            VK_WHOLE_SIZE                            // VkDeviceSize size;
+            VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, // VkStructureType   sType;
+            nullptr,                                 // const void      * pNext;
+            ALL_VULKAN_BUFFER_ACCESS_BITS,           // VkAccessFlags     srcAccessMask;
+            VK_ACCESS_SHADER_WRITE_BIT,              // VkAccessFlags     dstAccessMask;
+            VK_QUEUE_FAMILY_IGNORED,                 // uint32_t          srcQueueFamilyIndex;
+            VK_QUEUE_FAMILY_IGNORED,                 // uint32_t          dstQueueFamilyIndex;
+            buffer,                                  // VkBuffer          buffer;
+            0,                                       // VkDeviceSize      offset;
+            VK_WHOLE_SIZE                            // VkDeviceSize      size;
         });
       }
 
       if (postBarriers) {
         postBarriers->push_back({
-            VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, // VkStructureType sType;
-            nullptr,                                 // const void* pNext;
-            VK_ACCESS_SHADER_WRITE_BIT,              // VkAccessFlags srcAccessMask;
-            ALL_VULKAN_BUFFER_ACCESS_BITS,           // VkAccessFlags dstAccessMask;
-            VK_QUEUE_FAMILY_IGNORED,                 // uint32_t srcQueueFamilyIndex;
-            VK_QUEUE_FAMILY_IGNORED,                 // uint32_t dstQueueFamilyIndex;
-            buffer,                                  // VkBuffer buffer;
-            0,                                       // VkDeviceSize offset;
-            VK_WHOLE_SIZE                            // VkDeviceSize size;
+            VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, // VkStructureType   sType;
+            nullptr,                                 // const void      * pNext;
+            VK_ACCESS_SHADER_WRITE_BIT,              // VkAccessFlags     srcAccessMask;
+            ALL_VULKAN_BUFFER_ACCESS_BITS,           // VkAccessFlags     dstAccessMask;
+            VK_QUEUE_FAMILY_IGNORED,                 // uint32_t          srcQueueFamilyIndex;
+            VK_QUEUE_FAMILY_IGNORED,                 // uint32_t          dstQueueFamilyIndex;
+            buffer,                                  // VkBuffer          buffer;
+            0,                                       // VkDeviceSize      offset;
+            VK_WHOLE_SIZE                            // VkDeviceSize      size;
         });
       }
 
@@ -820,15 +820,15 @@ void gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::Run() {
         getBufferDeviceAddress(device, locationsMemoryBufferPair.second->bufferHandle);
 
     preMemoryBarriers.push_back({
-        VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,        // VkStructureType sType;
-        nullptr,                                        // const void* pNext;
-        VK_ACCESS_HOST_WRITE_BIT,                       // VkAccessFlags srcAccessMask;
-        VK_ACCESS_SHADER_READ_BIT,                      // VkAccessFlags dstAccessMask;
-        VK_QUEUE_FAMILY_IGNORED,                        // uint32_t srcQueueFamilyIndex;
-        VK_QUEUE_FAMILY_IGNORED,                        // uint32_t dstQueueFamilyIndex;
-        locationsMemoryBufferPair.second->bufferHandle, // VkBuffer buffer;
-        0,                                              // VkDeviceSize offset;
-        VK_WHOLE_SIZE                                   // VkDeviceSize size;
+        VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,        // VkStructureType   sType;
+        nullptr,                                        // const void      * pNext;
+        VK_ACCESS_HOST_WRITE_BIT,                       // VkAccessFlags     srcAccessMask;
+        VK_ACCESS_SHADER_READ_BIT,                      // VkAccessFlags     dstAccessMask;
+        VK_QUEUE_FAMILY_IGNORED,                        // uint32_t          srcQueueFamilyIndex;
+        VK_QUEUE_FAMILY_IGNORED,                        // uint32_t          dstQueueFamilyIndex;
+        locationsMemoryBufferPair.second->bufferHandle, // VkBuffer          buffer;
+        0,                                              // VkDeviceSize      offset;
+        VK_WHOLE_SIZE                                   // VkDeviceSize      size;
     });
   }
 
@@ -844,15 +844,15 @@ void gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::Run() {
         getBufferDeviceAddress(device, patchesMapMemoryBufferPair.second->bufferHandle);
 
     preMemoryBarriers.push_back({
-        VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,         // VkStructureType sType;
-        nullptr,                                         // const void* pNext;
-        VK_ACCESS_HOST_WRITE_BIT,                        // VkAccessFlags srcAccessMask;
-        VK_ACCESS_SHADER_READ_BIT,                       // VkAccessFlags dstAccessMask;
-        VK_QUEUE_FAMILY_IGNORED,                         // uint32_t srcQueueFamilyIndex;
-        VK_QUEUE_FAMILY_IGNORED,                         // uint32_t dstQueueFamilyIndex;
-        patchesMapMemoryBufferPair.second->bufferHandle, // VkBuffer buffer;
-        0,                                               // VkDeviceSize offset;
-        VK_WHOLE_SIZE                                    // VkDeviceSize size;
+        VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,         // VkStructureType   sType;
+        nullptr,                                         // const void      * pNext;
+        VK_ACCESS_HOST_WRITE_BIT,                        // VkAccessFlags     srcAccessMask;
+        VK_ACCESS_SHADER_READ_BIT,                       // VkAccessFlags     dstAccessMask;
+        VK_QUEUE_FAMILY_IGNORED,                         // uint32_t          srcQueueFamilyIndex;
+        VK_QUEUE_FAMILY_IGNORED,                         // uint32_t          dstQueueFamilyIndex;
+        patchesMapMemoryBufferPair.second->bufferHandle, // VkBuffer          buffer;
+        0,                                               // VkDeviceSize      offset;
+        VK_WHOLE_SIZE                                    // VkDeviceSize      size;
     });
   }
 
@@ -904,7 +904,9 @@ void gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::Read(CBinIStream& stream) {
   }
 }
 
-void gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::Write(CCodeOStream& stream) const {}
+void gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::Write(CCodeOStream& stream) const {
+  throw std::runtime_error("Ray tracing in CCode is not yet supported.");
+}
 
 const std::array<gits::Vulkan::ArgInfo, 1>
     gits::Vulkan::CDestroyVulkanDescriptorSets::argumentInfos_ = {{

@@ -6,9 +6,11 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "vulkanArgumentsAuto.h"
-#include "vulkanTools.h"
 #include "vulkanLog.h"
+#include "vulkanTools.h"
+#include "vulkanTools_lite.h"
+#include "vulkanStateDynamic.h"
+#include "vulkanArgumentsAuto.h"
 
 template <>
 const char* gits::Vulkan::CVulkanObj<HWND, gits::Vulkan::HWNDTypeTag>::NAME = "HWND";
@@ -631,8 +633,8 @@ void gits::Vulkan::CVkPipelineCacheCreateInfo_V1::Declare(CCodeOStream& stream) 
   }
 }
 
-gits::Vulkan::CBufferDeviceAddressObject::CBufferDeviceAddressObject(
-    VkDeviceAddress deviceAddress) {
+gits::Vulkan::CBufferDeviceAddressObject::CBufferDeviceAddressObject(VkDeviceAddress deviceAddress)
+    : _deviceAddress(0) {
   VkBuffer buffer = VK_NULL_HANDLE;
   int64_t offset = 0;
 
@@ -643,22 +645,18 @@ gits::Vulkan::CBufferDeviceAddressObject::CBufferDeviceAddressObject(
     }
   }
 
-  _originalDeviceAddress = new Cuint64_t(deviceAddress);
-  _buffer = new CVkBuffer(buffer);
-  _offset = new Cint64_t(offset);
+  _originalDeviceAddress = std::make_unique<Cuint64_t>(deviceAddress);
+  _buffer = std::make_unique<CVkBuffer>(buffer);
+  _offset = std::make_unique<Cint64_t>(offset);
 }
 
 gits::Vulkan::CBufferDeviceAddressObject::CBufferDeviceAddressObject(
-    gits::Vulkan::CBufferDeviceAddressObjectData& bufferDeviceAddressObject) {
-  _originalDeviceAddress = new Cuint64_t(bufferDeviceAddressObject._originalDeviceAddress);
-  _buffer = new CVkBuffer(bufferDeviceAddressObject._buffer);
-  _offset = new Cint64_t(bufferDeviceAddressObject._offset);
-}
-
-gits::Vulkan::CBufferDeviceAddressObject::~CBufferDeviceAddressObject() {
-  delete _originalDeviceAddress;
-  delete _buffer;
-  delete _offset;
+    gits::Vulkan::CBufferDeviceAddressObjectData& bufferDeviceAddressObject)
+    : _deviceAddress(0) {
+  _originalDeviceAddress =
+      std::make_unique<Cuint64_t>(bufferDeviceAddressObject._originalDeviceAddress);
+  _buffer = std::make_unique<CVkBuffer>(bufferDeviceAddressObject._buffer);
+  _offset = std::make_unique<Cint64_t>(bufferDeviceAddressObject._offset);
 }
 
 VkDeviceAddress gits::Vulkan::CBufferDeviceAddressObject::Value() {
@@ -678,11 +676,7 @@ VkDeviceAddress gits::Vulkan::CBufferDeviceAddressObject::Value() {
 }
 
 std::set<uint64_t> gits::Vulkan::CBufferDeviceAddressObject::GetMappedPointers() {
-  std::set<uint64_t> returnMap;
-  for (auto obj : _buffer->GetMappedPointers()) {
-    returnMap.insert((uint64_t)obj);
-  }
-  return returnMap;
+  return _buffer->GetMappedPointers();
 }
 
 gits::Vulkan::CVkDeviceOrHostAddressConstKHR::CVkDeviceOrHostAddressConstKHR(
@@ -756,8 +750,8 @@ VkDeviceOrHostAddressConstKHR* gits::Vulkan::CVkDeviceOrHostAddressConstKHR::Val
   return _DeviceOrHostAddress.get();
 }
 
-gits::Vulkan::CVkDeviceOrHostAddressConstKHR::PtrConverter gits::Vulkan::
-    CVkDeviceOrHostAddressConstKHR::Original() {
+gits::PtrConverter<VkDeviceOrHostAddressConstKHR> gits::Vulkan::CVkDeviceOrHostAddressConstKHR::
+    Original() {
   if (Config::Get().common.mode != Config::MODE_PLAYER) {
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
@@ -776,7 +770,7 @@ gits::Vulkan::CVkDeviceOrHostAddressConstKHR::PtrConverter gits::Vulkan::
     }
   }
 
-  return PtrConverter(_DeviceOrHostAddressOriginal.get());
+  return PtrConverter<VkDeviceOrHostAddressConstKHR>(_DeviceOrHostAddressOriginal.get());
 }
 
 void gits::Vulkan::CVkDeviceOrHostAddressConstKHR::Write(CBinOStream& stream) const {
@@ -1063,90 +1057,6 @@ gits::Vulkan::CpNextWrapper::~CpNextWrapper() {
   delete _data;
 }
 
-gits::Vulkan::CVkTransformMatrixKHR::CVkTransformMatrixKHR(
-    const VkTransformMatrixKHR* transformmatrixkhr)
-    : _TransformMatrixKHR(nullptr),
-      _TransformMatrixKHROriginal(nullptr),
-      _isNullPtr(transformmatrixkhr == nullptr) {
-  if (!*_isNullPtr) {
-    _matrix = std::make_unique<Cfloat::CSArray>(12, &transformmatrixkhr->matrix[0][0]);
-  }
-}
-
-VkTransformMatrixKHR* gits::Vulkan::CVkTransformMatrixKHR::Value() {
-  if (Config::Get().common.mode != Config::MODE_PLAYER) {
-    throw std::runtime_error(EXCEPTION_MESSAGE);
-  }
-  if (*_isNullPtr) {
-    return nullptr;
-  }
-  if (_TransformMatrixKHR == nullptr) {
-    _TransformMatrixKHR = std::make_unique<VkTransformMatrixKHR>();
-    float* ptr = &_TransformMatrixKHR->matrix[0][0];
-    for (uint32_t i = 0; i < 12; ++i) {
-      ptr[i] = (**_matrix)[i];
-    }
-  }
-  return _TransformMatrixKHR.get();
-}
-
-gits::Vulkan::CVkTransformMatrixKHR::PtrConverter gits::Vulkan::CVkTransformMatrixKHR::Original() {
-  if (Config::Get().common.mode != Config::MODE_PLAYER) {
-    throw std::runtime_error(EXCEPTION_MESSAGE);
-  }
-  if (*_isNullPtr) {
-    return PtrConverter(nullptr);
-  }
-  if (_TransformMatrixKHROriginal == nullptr) {
-    _TransformMatrixKHROriginal = std::make_unique<VkTransformMatrixKHR>();
-    float* ptr = &_TransformMatrixKHROriginal->matrix[0][0];
-    for (uint32_t i = 0; i < 12; i++) {
-      ptr[i] = (_matrix->Original())[i];
-    }
-  }
-  return PtrConverter(_TransformMatrixKHROriginal.get());
-}
-
-std::set<uint64_t> gits::Vulkan::CVkTransformMatrixKHR::GetMappedPointers() {
-
-  std::set<uint64_t> returnMap;
-  return returnMap;
-}
-
-void gits::Vulkan::CVkTransformMatrixKHR::Write(CBinOStream& stream) const {
-  _isNullPtr.Write(stream);
-  if (!*_isNullPtr) {
-    _matrix->Write(stream);
-  }
-}
-
-void gits::Vulkan::CVkTransformMatrixKHR::Read(CBinIStream& stream) {
-  _isNullPtr.Read(stream);
-  if (!*_isNullPtr) {
-    _matrix->Read(stream);
-  }
-}
-
-void gits::Vulkan::CVkTransformMatrixKHR::Write(CCodeOStream& stream) const {
-  if (*_isNullPtr) {
-    stream << "nullptr";
-  } else {
-    stream << getVarName("vkTransformMatrixKHR_", this);
-  }
-}
-
-bool gits::Vulkan::CVkTransformMatrixKHR::AmpersandNeeded() const {
-  return !*_isNullPtr;
-}
-
-void gits::Vulkan::CVkTransformMatrixKHR::Declare(CCodeOStream& stream) const {
-  if (!*_isNullPtr) {
-
-    TODO("Implement CCode support!")
-    
-  }
-}
-
 gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHR::
     CVkAccelerationStructureGeometryInstancesDataKHR(
         const VkAccelerationStructureGeometryInstancesDataKHR*
@@ -1193,17 +1103,9 @@ gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHR::
     break;
   case VK_COMMAND_EXECUTION_SIDE_HOST_GITS:
     throw std::runtime_error("Ray tracing operations on host are not yet supported!");
-    //_count = std::make_unique<Cuint32_t>(geometryInstancesData->_inputData.size());
-    //_data.resize(deviceOrHostAddressData->_dataSize);
-    //memcpy(_data.data(), deviceOrHostAddressData->_inputData.data(),
-    //       deviceOrHostAddressData->_dataSize);
-    //_resource = std::make_unique<CDeclaredBinaryResource>(hash);
     break;
   }
 }
-
-const char* gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHR::NAME =
-    "VkAccelerationStructureGeometryInstancesDataKHR";
 
 VkAccelerationStructureGeometryInstancesDataKHR* gits::Vulkan::
     CVkAccelerationStructureGeometryInstancesDataKHR::Value() {
@@ -1235,7 +1137,7 @@ VkAccelerationStructureGeometryInstancesDataKHR* gits::Vulkan::
   return _AccelerationStructureGeometryInstancesDataKHR.get();
 }
 
-gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHR::PtrConverter gits::Vulkan::
+gits::PtrConverter<VkAccelerationStructureGeometryInstancesDataKHR> gits::Vulkan::
     CVkAccelerationStructureGeometryInstancesDataKHR::Original() {
   if (Config::Get().common.mode != Config::MODE_PLAYER) {
     throw std::runtime_error(EXCEPTION_MESSAGE);
@@ -1263,7 +1165,8 @@ gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHR::PtrConverter git
         _arrayOfPointers->Original();
     _AccelerationStructureGeometryInstancesDataKHROriginal->data = address;
   }
-  return PtrConverter(_AccelerationStructureGeometryInstancesDataKHROriginal.get());
+  return PtrConverter<VkAccelerationStructureGeometryInstancesDataKHR>(
+      _AccelerationStructureGeometryInstancesDataKHROriginal.get());
 }
 
 std::set<uint64_t> gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHR::
@@ -1271,7 +1174,7 @@ std::set<uint64_t> gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKH
   switch (**_commandExecutionSideGITS) {
   case VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS:
     return _bufferDeviceAddress->GetMappedPointers();
-  case VK_COMMAND_EXECUTION_SIDE_HOST_GITS:
+  default:
     return {};
   }
 }
@@ -1318,8 +1221,7 @@ void gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHR::Read(CBinIS
 }
 
 void gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHR::Write(
-    CCodeOStream& stream) const {
-}
+    CCodeOStream& stream) const {}
 
 bool gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHR::AmpersandNeeded() const {
   return !*_isNullPtr;
@@ -1327,9 +1229,8 @@ bool gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHR::AmpersandNe
 
 void gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHR::Declare(
     CCodeOStream& stream) const {
+  throw ENotImplemented(EXCEPTION_MESSAGE);
 }
-
-gits::Vulkan::CVkAccelerationStructureGeometryDataKHR::~CVkAccelerationStructureGeometryDataKHR() {}
 
 gits::Vulkan::CVkAccelerationStructureGeometryDataKHR::CVkAccelerationStructureGeometryDataKHR(
     VkGeometryTypeKHR geometryType,
@@ -1340,6 +1241,8 @@ gits::Vulkan::CVkAccelerationStructureGeometryDataKHR::CVkAccelerationStructureG
       _triangles(nullptr),
       _aabbs(nullptr),
       _instances(nullptr),
+      _AccelerationStructureGeometryDataKHR(nullptr),
+      _AccelerationStructureGeometryDataKHROriginal(nullptr),
       _isNullPtr(accelerationstructuregeometrydatakhr == nullptr) {
   if (!*_isNullPtr) {
     _geometryType = std::make_unique<CVkGeometryTypeKHR>(geometryType);
@@ -1397,58 +1300,46 @@ VkAccelerationStructureGeometryDataKHR* gits::Vulkan::CVkAccelerationStructureGe
   return _AccelerationStructureGeometryDataKHR;
 }
 
-gits::Vulkan::CVkAccelerationStructureGeometryDataKHR::PtrConverter gits::Vulkan::
+gits::PtrConverter<VkAccelerationStructureGeometryDataKHR> gits::Vulkan::
     CVkAccelerationStructureGeometryDataKHR::Original() {
   if (Config::Get().common.mode != Config::MODE_PLAYER) {
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
   if (*_isNullPtr) {
-    return PtrConverter(nullptr);
+    return PtrConverter<VkAccelerationStructureGeometryDataKHR>(nullptr);
   }
   if (_AccelerationStructureGeometryDataKHROriginal == nullptr) {
     _AccelerationStructureGeometryDataKHROriginal = new VkAccelerationStructureGeometryDataKHR();
     switch (**_geometryType) {
     case VK_GEOMETRY_TYPE_TRIANGLES_KHR:
-      _AccelerationStructureGeometryDataKHROriginal->triangles = **_triangles;
+      _AccelerationStructureGeometryDataKHROriginal->triangles = _triangles->Original();
       break;
     case VK_GEOMETRY_TYPE_AABBS_KHR:
-      _AccelerationStructureGeometryDataKHROriginal->aabbs = **_aabbs;
+      _AccelerationStructureGeometryDataKHROriginal->aabbs = _aabbs->Original();
       break;
     case VK_GEOMETRY_TYPE_INSTANCES_KHR:
-      _AccelerationStructureGeometryDataKHROriginal->instances = **_instances;
+      _AccelerationStructureGeometryDataKHROriginal->instances = _instances->Original();
       break;
     default:
       throw std::runtime_error("Unknown geometry type provided!");
       break;
     }
   }
-  return PtrConverter(_AccelerationStructureGeometryDataKHROriginal);
+  return PtrConverter<VkAccelerationStructureGeometryDataKHR>(
+      _AccelerationStructureGeometryDataKHROriginal);
 }
 
 std::set<uint64_t> gits::Vulkan::CVkAccelerationStructureGeometryDataKHR::GetMappedPointers() {
-
-  std::set<uint64_t> returnMap;
   switch (**_geometryType) {
   case VK_GEOMETRY_TYPE_TRIANGLES_KHR:
-    for (auto obj : _triangles->GetMappedPointers()) {
-      returnMap.insert((uint64_t)obj);
-    }
-    break;
+    return _triangles->GetMappedPointers();
   case VK_GEOMETRY_TYPE_AABBS_KHR:
-    for (auto obj : _aabbs->GetMappedPointers()) {
-      returnMap.insert((uint64_t)obj);
-    }
-    break;
+    return _aabbs->GetMappedPointers();
   case VK_GEOMETRY_TYPE_INSTANCES_KHR:
-    for (auto obj : _instances->GetMappedPointers()) {
-      returnMap.insert((uint64_t)obj);
-    }
-    break;
+    return _instances->GetMappedPointers();
   default:
     throw std::runtime_error("Unknown geometry type provided!");
-    break;
   }
-  return returnMap;
 }
 
 void gits::Vulkan::CVkAccelerationStructureGeometryDataKHR::Write(CBinOStream& stream) const {
@@ -1506,7 +1397,7 @@ bool gits::Vulkan::CVkAccelerationStructureGeometryDataKHR::AmpersandNeeded() co
 }
 
 void gits::Vulkan::CVkAccelerationStructureGeometryDataKHR::Declare(CCodeOStream& stream) const {
-
   TODO("Implement proper handling in CCode - important for ray tracing")
 
+  throw ENotImplemented(EXCEPTION_MESSAGE);
 }

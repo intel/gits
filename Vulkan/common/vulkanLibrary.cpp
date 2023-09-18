@@ -13,9 +13,9 @@
 *
 */
 
-#include "vulkanTools.h"
-#include "vulkanLibrary.h"
 #include "gits.h"
+#include "vulkanTools.h"
+#include "vulkanStateDynamic.h"
 #include "vulkanStateDynamic.h"
 #include "vulkanFunctions.h"
 
@@ -565,6 +565,8 @@ std::set<std::pair<uint64_t, bool>> MemoryAliasingTracker::GetAliasedResourcesFo
   return GetAliasedResourcesForResource(offset, size, {(uint64_t)buffer, false});
 }
 
+COnQueueSubmitEnd::~COnQueueSubmitEnd() {}
+
 // Patches value which is found in a memory pointed to by the 'address'.
 void CDeviceAddressPatcher::AddDirectAddress(VkDeviceAddress address) {
   _directAddresses.push_back(address);
@@ -646,17 +648,17 @@ void CDeviceAddressPatcher::PrepareData(VkCommandBuffer commandBuffer, hash_t ha
   auto device = commandBufferState->commandPoolStateStore->deviceStateStore->deviceHandle;
 
   VkMemoryBarrier inputMemoryBarrier = {
-      VK_STRUCTURE_TYPE_MEMORY_BARRIER, // VkStructureType sType;
-      nullptr,                          // const void* pNext;
-      VK_ACCESS_MEMORY_WRITE_BIT,       // VkAccessFlags srcAccessMask;
-      VK_ACCESS_SHADER_READ_BIT         // VkAccessFlags dstAccessMask;
+      VK_STRUCTURE_TYPE_MEMORY_BARRIER, // VkStructureType   sType;
+      nullptr,                          // const void      * pNext;
+      VK_ACCESS_MEMORY_WRITE_BIT,       // VkAccessFlags     srcAccessMask;
+      VK_ACCESS_SHADER_READ_BIT         // VkAccessFlags     dstAccessMask;
   };
 
   VkMemoryBarrier outputMemoryBarrier = {
-      VK_STRUCTURE_TYPE_MEMORY_BARRIER,                      // VkStructureType sType;
-      nullptr,                                               // const void* pNext;
-      VK_ACCESS_SHADER_READ_BIT,                             // VkAccessFlags srcAccessMask;
-      VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT // VkAccessFlags dstAccessMask;
+      VK_STRUCTURE_TYPE_MEMORY_BARRIER,                      // VkStructureType   sType;
+      nullptr,                                               // const void      * pNext;
+      VK_ACCESS_SHADER_READ_BIT,                             // VkAccessFlags     srcAccessMask;
+      VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT // VkAccessFlags     dstAccessMask;
   };
 
   VkBufferMemoryBarrier outputBufferBarrier;
@@ -675,11 +677,11 @@ void CDeviceAddressPatcher::PrepareData(VkCommandBuffer commandBuffer, hash_t ha
         getBufferDeviceAddress(device, indirectMemoryBufferPair.second->bufferHandle);
 
     VkMappedMemoryRange range = {
-        VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,              // VkStructureType sType;
-        nullptr,                                            // const void* pNext;
-        indirectMemoryBufferPair.first->deviceMemoryHandle, // VkDeviceMemory memory;
-        0,                                                  // VkDeviceSize offset;
-        VK_WHOLE_SIZE                                       // VkDeviceSize size;
+        VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,              // VkStructureType  sType;
+        nullptr,                                            // const void     * pNext;
+        indirectMemoryBufferPair.first->deviceMemoryHandle, // VkDeviceMemory   memory;
+        0,                                                  // VkDeviceSize     offset;
+        VK_WHOLE_SIZE                                       // VkDeviceSize     size;
     };
     drvVk.vkFlushMappedMemoryRanges(device, 1, &range);
   }
@@ -689,8 +691,8 @@ void CDeviceAddressPatcher::PrepareData(VkCommandBuffer commandBuffer, hash_t ha
 
   // Prepare an input list for the compute shader with the indirect addresses and offsets.
   uint32_t s = 0;
-  for (uint32_t a = 0; a < _indirectAddresses.size(); ++a) {
-    inputData[s++] = {_indirectAddresses[a].first, _indirectAddresses[a].second, 0};
+  for (auto& addressAndOffset : _indirectAddresses) {
+    inputData[s++] = {addressAndOffset.first, addressAndOffset.second, 0};
   }
 
   // To simplify the compute shader, all direct addresses are converted to indirect addresses by
@@ -724,15 +726,15 @@ void CDeviceAddressPatcher::PrepareData(VkCommandBuffer commandBuffer, hash_t ha
     _device = device;
     _outputDeviceMemory = outputMemBuffPair.first->deviceMemoryHandle;
     outputBufferBarrier = {
-        VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, // VkStructureType sType;
-        nullptr,                                 // const void* pNext;
-        VK_ACCESS_SHADER_WRITE_BIT,              // VkAccessFlags srcAccessMask;
-        VK_ACCESS_HOST_READ_BIT,                 // VkAccessFlags dstAccessMask;
-        VK_QUEUE_FAMILY_IGNORED,                 // uint32_t srcQueueFamilyIndex;
-        VK_QUEUE_FAMILY_IGNORED,                 // uint32_t dstQueueFamilyIndex;
-        outputMemBuffPair.second->bufferHandle,  // VkBuffer buffer;
-        0,                                       // VkDeviceSize offset;
-        VK_WHOLE_SIZE                            // VkDeviceSize size;
+        VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, // VkStructureType   sType;
+        nullptr,                                 // const void      * pNext;
+        VK_ACCESS_SHADER_WRITE_BIT,              // VkAccessFlags     srcAccessMask;
+        VK_ACCESS_HOST_READ_BIT,                 // VkAccessFlags     dstAccessMask;
+        VK_QUEUE_FAMILY_IGNORED,                 // uint32_t          srcQueueFamilyIndex;
+        VK_QUEUE_FAMILY_IGNORED,                 // uint32_t          dstQueueFamilyIndex;
+        outputMemBuffPair.second->bufferHandle,  // VkBuffer          buffer;
+        0,                                       // VkDeviceSize      offset;
+        VK_WHOLE_SIZE                            // VkDeviceSize      size;
     };
   }
 
@@ -775,11 +777,11 @@ void CDeviceAddressPatcher::OnQueueSubmitEnd() {
     CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
 
     VkMappedMemoryRange range = {
-        VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, // VkStructureType sType;
-        nullptr,                               // const void* pNext;
-        _outputDeviceMemory,                   // VkDeviceMemory memory;
-        0,                                     // VkDeviceSize offset;
-        VK_WHOLE_SIZE                          // VkDeviceSize size;
+        VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, // VkStructureType   sType;
+        nullptr,                               // const void      * pNext;
+        _outputDeviceMemory,                   // VkDeviceMemory    memory;
+        0,                                     // VkDeviceSize      offset;
+        VK_WHOLE_SIZE                          // VkDeviceSize      size;
     };
     drvVk.vkInvalidateMappedMemoryRanges(_device, 1, &range);
     void* src;
@@ -787,7 +789,6 @@ void CDeviceAddressPatcher::OnQueueSubmitEnd() {
     memcpy(outputData.data(), src, outputData.size() * sizeof(outputData[0]));
   }
 
-  uint32_t i = 0;
   for (auto& element : outputData) {
     // Memory location at which a value must be replaced
     CBufferDeviceAddressObjectData locationData(element.dVA);

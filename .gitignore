@@ -83,11 +83,12 @@ Vulkan/common/include/vulkanIDswitch.h
 Vulkan/common/include/vulkanLogAuto.inl
 Vulkan/common/include/vulkanLuaEnums.h
 Vulkan/common/include/vulkanStructStorageAuto.h
-Vulkan/common/include/vulkanTracer.h
+Vulkan/common/include/vulkanTracerAuto.h
 Vulkan/common/vulkanArgumentsAuto.cpp
 Vulkan/common/vulkanLogAuto.cpp
 Vulkan/common/vulkanFunctions.cpp
 Vulkan/common/vulkanStructStorageAuto.cpp
+Vulkan/common/vulkanTracerAuto.cpp
 Vulkan/layer/VkLayer_vulkan_GITS_recorder.json
 Vulkan/layer/vkLayer.def
 Vulkan/interceptor/vkPlugin.def

@@ -7,13 +7,14 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+
 #include "function.h"
-#include "platform.h"
 
 typedef struct VkCommandBuffer_T* VkCommandBuffer;
 
 namespace gits {
 namespace Vulkan {
+
 enum class ArgType {
   PRIMITIVE_TYPE,
   ENUM,
@@ -22,6 +23,7 @@ enum class ArgType {
   // Add variants above.
   OTHER,
 };
+
 struct ArgInfo {
   ArgType type;
   uint32_t numPtr;           // 0 for T, 1 for T*, 2 for T**, etc.
@@ -98,6 +100,7 @@ public:
   virtual void Write(CCodeOStream& stream) const override;
   virtual std::set<uint64_t> GetMappedPointers() = 0;
 };
+
 class CQueueSubmitFunction : public CFunction {
 public:
   CQueueSubmitFunction();
@@ -107,6 +110,7 @@ public:
   void CountUp();
   virtual void Trace();
 };
+
 class CImageFunction : public CFunction {
 public:
   CImageFunction();
@@ -116,6 +120,7 @@ public:
   void CountUp();
   virtual void Trace();
 };
+
 class CBufferFunction : public CFunction {
 public:
   CBufferFunction();
@@ -125,5 +130,6 @@ public:
   void CountUp();
   virtual void Trace();
 };
+
 } // namespace Vulkan
 } // namespace gits

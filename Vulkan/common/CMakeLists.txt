@@ -11,7 +11,8 @@ set_source_files_properties(
   ${CMAKE_CURRENT_SOURCE_DIR}/include/vulkanIDs.h
   ${CMAKE_CURRENT_SOURCE_DIR}/include/vulkanLogAuto.inl
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkanLogAuto.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/vulkanTracer.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/vulkanTracerAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/vulkanTracerAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/vulkanHeader.h
   ${CMAKE_CURRENT_SOURCE_DIR}/include/vulkanDriversAuto.inl
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkanArgumentsAuto.cpp
@@ -50,7 +51,7 @@ add_library(Vulkan_common
   include/vulkanStructStorageBasic.h
   include/vulkanTools.h
   include/vulkanTools_lite.h
-  include/vulkanTracer.h
+  include/vulkanTracerAuto.h
   include/vulkanTypes.h
   include/vulkan_apis_iface.h
   include/vulkan_basic.h
@@ -76,6 +77,7 @@ add_library(Vulkan_common
   vulkanStructStorageWrap.cpp
   vulkanTools.cpp
   vulkanTools_lite.cpp
+  vulkanTracerAuto.cpp
   vulkanCCodeWriteWrap.cpp
   vulkanInternalShaderModules.cpp
 )

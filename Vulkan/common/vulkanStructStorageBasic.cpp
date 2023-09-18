@@ -8,8 +8,6 @@
 
 #include "vulkanLog.h"
 #include "vulkanStateTracking.h"
-#include "vulkanStructStorageAuto.h"
-#include "gits.h"
 
 gits::Vulkan::CBinaryResourceData::CBinaryResourceData(TResourceType _,
                                                        const void* data,
@@ -196,8 +194,8 @@ void gits::Vulkan::CVkDeviceOrHostAddressConstKHRData::Initialize(
                                 commandBufferState.get(), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
       auto srcBuffer = _bufferDeviceAddress._buffer;
       VkDeviceSize srcBufferOffset = _bufferDeviceAddress._offset + offset;
-      tmpMemory = memoryBufferPair.first->deviceMemoryHandle;
-      tmpBuffer = memoryBufferPair.second->bufferHandle;
+      _tmpMemory = memoryBufferPair.first->deviceMemoryHandle;
+      _tmpBuffer = memoryBufferPair.second->bufferHandle;
 
       {
         std::vector<VkBufferMemoryBarrier> preBarriers = {
@@ -219,7 +217,7 @@ void gits::Vulkan::CVkDeviceOrHostAddressConstKHRData::Initialize(
                 VK_ACCESS_TRANSFER_WRITE_BIT,            // VkAccessFlags dstAccessMask;
                 VK_QUEUE_FAMILY_IGNORED,                 // uint32_t srcQueueFamilyIndex;
                 VK_QUEUE_FAMILY_IGNORED,                 // uint32_t dstQueueFamilyIndex;
-                tmpBuffer,                               // VkBuffer buffer;
+                _tmpBuffer,                              // VkBuffer buffer;
                 0,                                       // VkDeviceSize offset;
                 _dataSize                                // VkDeviceSize size;
             }};
@@ -235,7 +233,7 @@ void gits::Vulkan::CVkDeviceOrHostAddressConstKHRData::Initialize(
             0,               // VkDeviceSize dstOffset;
             _dataSize        // VkDeviceSize size;
         };
-        drvVk.vkCmdCopyBuffer(commandBuffer, srcBuffer, tmpBuffer, 1, &region);
+        drvVk.vkCmdCopyBuffer(commandBuffer, srcBuffer, _tmpBuffer, 1, &region);
       }
       {
         std::vector<VkBufferMemoryBarrier> postBarriers = {
@@ -257,7 +255,7 @@ void gits::Vulkan::CVkDeviceOrHostAddressConstKHRData::Initialize(
                 VK_ACCESS_HOST_READ_BIT,                 // VkAccessFlags dstAccessMask;
                 VK_QUEUE_FAMILY_IGNORED,                 // uint32_t srcQueueFamilyIndex;
                 VK_QUEUE_FAMILY_IGNORED,                 // uint32_t dstQueueFamilyIndex;
-                tmpBuffer,                               // VkBuffer buffer;
+                _tmpBuffer,                              // VkBuffer buffer;
                 0,                                       // VkDeviceSize offset;
                 _dataSize                                // VkDeviceSize size;
             }};
@@ -302,7 +300,7 @@ void gits::Vulkan::CVkDeviceOrHostAddressConstKHRData::OnQueueSubmitEnd() {
     auto device = SD()._commandbufferstates[_controlData.commandBuffer]
                       ->commandPoolStateStore->deviceStateStore->deviceHandle;
 
-    mapMemoryAndCopyData(_inputData.data(), device, tmpMemory, 0, _dataSize);
+    mapMemoryAndCopyData(_inputData.data(), device, _tmpMemory, 0, _dataSize);
   }
 }
 
@@ -435,36 +433,6 @@ void gits::Vulkan::CDeviceOrHostAddressAccelerationStructureVertexDataGITSData::
   }
 }
 
-gits::Vulkan::CVkTransformMatrixKHRData::CVkTransformMatrixKHRData(
-    const VkTransformMatrixKHR* transformmatrixkhr)
-    : _TransformMatrixKHR(nullptr),
-      _TransformMatrixKHROriginal(nullptr),
-      _isNullPtr(transformmatrixkhr == nullptr) {
-  if (!*_isNullPtr) {
-    _matrix = std::make_unique<CfloatDataArray>(12, &transformmatrixkhr->matrix[0][0]);
-  }
-}
-
-VkTransformMatrixKHR* gits::Vulkan::CVkTransformMatrixKHRData::Value() {
-  if (*_isNullPtr) {
-    return nullptr;
-  }
-  if (_TransformMatrixKHR == nullptr) {
-    _TransformMatrixKHR = std::make_unique<VkTransformMatrixKHR>();
-    float* ptr = &_TransformMatrixKHR->matrix[0][0];
-    for (uint32_t i = 0; i < 12; ++i) {
-      ptr[i] = (**_matrix)[i];
-    }
-  }
-  return _TransformMatrixKHR.get();
-}
-
-std::set<uint64_t> gits::Vulkan::CVkTransformMatrixKHRData::GetMappedPointers() {
-
-  std::set<uint64_t> returnMap;
-  return returnMap;
-}
-
 gits::Vulkan::CVkAccelerationStructureGeometryDataKHRData::
     CVkAccelerationStructureGeometryDataKHRData(
         VkGeometryTypeKHR geometryType,
@@ -522,29 +490,16 @@ VkAccelerationStructureGeometryDataKHR* gits::Vulkan::CVkAccelerationStructureGe
 }
 
 std::set<uint64_t> gits::Vulkan::CVkAccelerationStructureGeometryDataKHRData::GetMappedPointers() {
-  std::set<uint64_t> returnMap;
   switch (**_geometryType) {
   case VK_GEOMETRY_TYPE_TRIANGLES_KHR:
-    for (auto obj : _triangles->GetMappedPointers()) {
-      returnMap.insert((uint64_t)obj);
-    }
-    break;
+    return _triangles->GetMappedPointers();
   case VK_GEOMETRY_TYPE_AABBS_KHR:
-    for (auto obj : _aabbs->GetMappedPointers()) {
-      returnMap.insert((uint64_t)obj);
-    }
-    break;
+    return _aabbs->GetMappedPointers();
   case VK_GEOMETRY_TYPE_INSTANCES_KHR:
-    for (auto obj : _instances->GetMappedPointers()) {
-      returnMap.insert((uint64_t)obj);
-    }
-    break;
+    return _instances->GetMappedPointers();
   default:
     throw std::runtime_error("Unknown geometry type provided!");
-    break;
   }
-
-  return returnMap;
 }
 
 gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHRData::
@@ -624,9 +579,9 @@ gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHRData::
       } else if (_bufferDeviceAddress._buffer) {
         // Simple copy operation
         VkBufferCopy region = {
-            _bufferDeviceAddress._offset, // VkDeviceSize srcOffset;
-            0,                            // VkDeviceSize dstOffset;
-            dataSize                      // VkDeviceSize size;
+            static_cast<VkDeviceSize>(_bufferDeviceAddress._offset), // VkDeviceSize srcOffset;
+            0,                                                       // VkDeviceSize dstOffset;
+            dataSize                                                 // VkDeviceSize size;
         };
         drvVk.vkCmdCopyBuffer(controlData.commandBuffer, _bufferDeviceAddress._buffer,
                               memoryBufferPair.second->bufferHandle, 1, &region);
@@ -659,7 +614,7 @@ VkAccelerationStructureGeometryInstancesDataKHR* gits::Vulkan::
     return nullptr;
   }
   if (_AccelerationStructureGeometryInstancesDataKHR == nullptr) {
-    VkDeviceOrHostAddressConstKHR address;
+    VkDeviceOrHostAddressConstKHR address = {0};
 
     switch (_executionSide) {
     case VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS:
@@ -690,7 +645,12 @@ VkAccelerationStructureGeometryInstancesDataKHR* gits::Vulkan::
 
 std::set<uint64_t> gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHRData::
     GetMappedPointers() {
-  return _bufferDeviceAddress.GetMappedPointers();
+  switch (_executionSide) {
+  case VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS:
+    return _bufferDeviceAddress.GetMappedPointers();
+  default:
+    return {};
+  }
 }
 
 gits::Vulkan::CcharDataArray::~CcharDataArray() {

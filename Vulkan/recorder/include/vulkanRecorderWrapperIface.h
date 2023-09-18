@@ -14,9 +14,9 @@
 
 #pragma once
 
-#include "recorderIface.h"
+#include "config.h"
 #include "vulkanDrivers.h"
-#include <vector>
+
 #include <functional>
 
 namespace gits {

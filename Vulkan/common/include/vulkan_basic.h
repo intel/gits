@@ -20,6 +20,7 @@
 */
 
 #define VK_VERSION_1_0 1
+
 #include "vk_platform.h"
 #include "vulkanTypes.h"
 

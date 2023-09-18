@@ -40,6 +40,7 @@ struct TemporaryDeviceResourcesStruct {
   uint32_t queueFamilyIndex;
   VkCommandPool commandPool;
   uint32_t currentResourceIndex;
+  VkDeviceSize maxBufferSize;
   std::vector<SubmittableResourcesStruct> submitableResources;
   std::map<VkBuffer, TemporaryBufferStruct> temporaryBuffers;
   std::set<VkBuffer> freeBuffers;
@@ -78,6 +79,8 @@ void RestoreImageView(CScheduler& scheduler, CStateDynamic& sd);
 void RestoreBuffer(CScheduler& scheduler, CStateDynamic& sd);
 void RestoreBufferBindings(CScheduler& scheduler, CStateDynamic& sd);
 void RestoreBufferView(CScheduler& scheduler, CStateDynamic& sd);
+void RestoreDeferredOperations(CScheduler& scheduler, CStateDynamic& sd);
+void RestoreAccelerationStructure(CScheduler& scheduler, CStateDynamic& sd);
 void RestoreDescriptorSetLayout(CScheduler& scheduler, CStateDynamic& sd);
 void RestoreAllocatedDescriptorSet(CScheduler& scheduler, CStateDynamic& sd);
 void RestoreDescriptorSetsUpdates(CScheduler& scheduler, CStateDynamic& sd);
@@ -97,6 +100,7 @@ void RestoreAllocatedCommandBuffers(CScheduler& scheduler, CStateDynamic& sd);
 void RestoreCommandBuffers(CScheduler& scheduler, CStateDynamic& sd, bool force = false);
 void RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd);
 void RestoreBufferContents(CScheduler& scheduler, CStateDynamic& sd);
+void RestoreAccelerationStructureContents(CScheduler& scheduler, CStateDynamic& sd);
 void FinishStateRestore(CScheduler& scheduler, CStateDynamic& sd);
 void PrepareVkQueueSubmits(CStateDynamic& sd);
 void PostRestoreVkQueueSubmits(CScheduler& scheduler, CStateDynamic& sd);
@@ -135,6 +139,8 @@ public:
     RestoreBufferBindings(scheduler, sd);
     RestoreImageView(scheduler, sd);
     RestoreBufferView(scheduler, sd);
+    RestoreDeferredOperations(scheduler, sd);
+    RestoreAccelerationStructure(scheduler, sd);
     RestoreDescriptorSetLayout(scheduler, sd);
     RestoreAllocatedDescriptorSet(scheduler, sd);
     StateRestoreInfoEnd(scheduler, "Resources restored", 0);
@@ -169,6 +175,9 @@ public:
     StateRestoreInfoStart(scheduler, "Restoring contents of buffers...");
     RestoreBufferContents(scheduler, sd);
     StateRestoreInfoEnd(scheduler, "Contents of buffers restored", 7);
+    StateRestoreInfoStart(scheduler, "Restoring contents of acceleration structures...");
+    RestoreAccelerationStructureContents(scheduler, sd);
+    StateRestoreInfoEnd(scheduler, "Contents of acceleration structures restored", 7);
     FinishStateRestore(scheduler, sd);
   }
 

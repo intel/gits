@@ -1862,11 +1862,11 @@ arg3=ArgDef(name='pEvents', type='const VkEvent*'),
 arg4=ArgDef(name='pDependencyInfos', type='const VkDependencyInfo*')
 )
 
-Function(name='vkCmdWriteAccelerationStructuresPropertiesKHR', enabled=False, type=Param,
+Function(name='vkCmdWriteAccelerationStructuresPropertiesKHR', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='accelerationStructureCount', type='uint32_t'),
-arg3=ArgDef(name='pAccelerationStructures', type='const VkAccelerationStructureKHR*'),
+arg3=ArgDef(name='pAccelerationStructures', type='const VkAccelerationStructureKHR*', wrapParams='accelerationStructureCount, pAccelerationStructures', count='accelerationStructureCount'),
 arg4=ArgDef(name='queryType', type='VkQueryType'),
 arg5=ArgDef(name='queryPool', type='VkQueryPool'),
 arg6=ArgDef(name='firstQuery', type='uint32_t')
@@ -15400,7 +15400,7 @@ var2=VarDef(name='height', type='uint32_t'),
 var3=VarDef(name='depth', type='uint32_t')
 )
 
-Struct(name='VkTransformMatrixKHR_', enabled=True, custom=True,
+Struct(name='VkTransformMatrixKHR_', enabled=False,
 var1=VarDef(name='matrix', type='float[3][4]')
 )
 

@@ -7,9 +7,8 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
+
 #include "apis_iface.h"
-#include "config.h"
-#include "gits.h"
 
 namespace gits {
 namespace Vulkan {
@@ -53,11 +52,7 @@ public:
     return Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode ==
            Config::MODE_VKQUEUESUBMIT;
   }
-  virtual bool CfgRec_IsObjectToRecord() const {
-    return Config::Get()
-        .recorder.vulkan.capture.objRange
-        .rangeSpecial[CGits::Instance().vkCounters.CurrentQueueSubmitCount()];
-  }
+  virtual bool CfgRec_IsObjectToRecord() const;
   virtual bool CfgRec_IsSubcapture() const {
     return (CfgRec_IsFramesMode() || CfgRec_IsCmdBufferMode() || CfgRec_IsQueueSubmitMode() ||
             CfgRec_IsRenderPassMode());

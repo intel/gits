@@ -16,7 +16,7 @@
 #pragma once
 
 #include <vector>
-#include "vk_platform.h"
+#include <cstdint>
 
 namespace gits {
 namespace Vulkan {

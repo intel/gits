@@ -14,19 +14,16 @@
 */
 #pragma once
 
-#include <unordered_map>
-#include <unordered_set>
-#include <array>
-#include <cstdio>
-#include "vulkanTools.h"
 #include "vkWindowing.h"
-#include "tools.h"
-#include "token.h"
 #include "MemorySniffer.h"
+#include "vulkanStructStorageAuto.h"
+
 DISABLE_WARNINGS
 #include <boost/icl/interval_set.hpp>
 ENABLE_WARNINGS
-#include "vulkanLibrary.h"
+
+#include <array>
+#include <unordered_set>
 
 namespace gits {
 
@@ -1411,10 +1408,10 @@ struct CAccelerationStructureKHRState : public UniqueResourceHandle {
                const VkAccelerationStructureBuildRangeInfoKHR* _pBuildRangeInfos,
                VkAccelerationStructureBuildControlDataGITS _controlData,
                std::shared_ptr<CAccelerationStructureKHRState> _srcAccelerationStructureState = {})
-        : buildGeometryInfoData(_pBuildGeometryInfo, _pBuildRangeInfos, _controlData),
+        : srcAccelerationStructureStateStore(_srcAccelerationStructureState),
+          buildGeometryInfoData(_pBuildGeometryInfo, _pBuildRangeInfos, _controlData),
           buildRangeInfoDataArray(_pBuildGeometryInfo->geometryCount, _pBuildRangeInfos),
-          controlData(_controlData),
-          srcAccelerationStructureStateStore(_srcAccelerationStructureState) {}
+          controlData(_controlData) {}
   };
 
   struct CCopyInfo {
@@ -1457,7 +1454,6 @@ struct CAccelerationStructureKHRState : public UniqueResourceHandle {
 
   CAccelerationStructureKHRState(VkAccelerationStructureKHR const* _pAccelerationStructure,
                                  VkAccelerationStructureCreateInfoKHR const* _pCreateInfo,
-                                 std::shared_ptr<CDeviceState> _deviceState,
                                  std::shared_ptr<CBufferState> _bufferState)
       : accelerationStructureHandle(*_pAccelerationStructure),
         accelerationStructureCreateInfoData(_pCreateInfo),

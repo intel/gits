@@ -8,8 +8,9 @@
 
 #pragma once
 
-#include <vector>
 #include "vulkanHeader.h"
+
+#include <vector>
 
 namespace gits {
 namespace Vulkan {
@@ -31,18 +32,6 @@ bool isBufferDescriptor(VkDescriptorType descriptorType);
 bool isTexelBufferDescriptor(VkDescriptorType descriptorType);
 std::vector<uint32_t> getRayTracingArraySizes(
     uint32_t count, VkAccelerationStructureBuildGeometryInfoKHR const* pInfos);
-VkAccelerationStructureBuildControlDataGITS prepareAccelerationStructureControlData(
-    VkCommandBuffer commandBuffer);
-VkAccelerationStructureBuildControlDataGITS prepareAccelerationStructureControlData(
-    VkAccelerationStructureBuildControlDataGITS controlData,
-    const VkAccelerationStructureBuildGeometryInfoKHR* buildInfo);
-VkAccelerationStructureBuildControlDataGITS prepareAccelerationStructureControlData(
-    VkAccelerationStructureBuildControlDataGITS controlData, VkStructureType sType);
-uint64_t prepareStateTrackingHash(const VkAccelerationStructureBuildControlDataGITS& controlData,
-                                  VkDeviceAddress deviceAddress,
-                                  uint32_t offset,
-                                  uint64_t stride,
-                                  uint32_t count);
 VkCommandExecutionSideGITS getCommandExecutionSide(VkCommandBuffer commandBuffer);
 inline bool isBitSet(VkFlags64 flags, VkFlags64 bit) {
   return (flags & bit) == bit;

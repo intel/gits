@@ -72,7 +72,7 @@ public:
 #ifndef BUILD_FOR_CCODE
 
 class CAutoCaller {
-  using FunctionPtr = void_t (*)(void);
+  using FunctionPtr = void_t(STDCALL*)(void);
 
   FunctionPtr onDestructor;
 
@@ -125,7 +125,7 @@ public:
 
 class COnQueueSubmitEnd {
 protected:
-  virtual ~COnQueueSubmitEnd() = 0 {}
+  virtual ~COnQueueSubmitEnd() = 0;
 
 public:
   virtual void OnQueueSubmitEnd() = 0;
@@ -152,7 +152,8 @@ class CDeviceAddressPatcher : public COnQueueSubmitEnd {
   hash_t _hash;
 
 public:
-  CDeviceAddressPatcher() : _hash(0) {}
+  CDeviceAddressPatcher()
+      : _device(VK_NULL_HANDLE), _outputDeviceMemory(VK_NULL_HANDLE), _hash(0) {}
   ~CDeviceAddressPatcher() {}
 
   void AddDirectAddress(VkDeviceAddress address);

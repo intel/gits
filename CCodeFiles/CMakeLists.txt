@@ -71,6 +71,7 @@ FILE(GLOB CCodeProject_SOURCES
   ${PROJECT_SOURCE_DIR}/CCodeSource/vulkanDrivers.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/vulkanLog.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/vulkanLogAuto.cpp
+  ${PROJECT_SOURCE_DIR}/CCodeSource/vulkanTracerAuto.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/vulkanTools.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/keyEvents.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/vulkanTools_lite.cpp

@@ -436,8 +436,9 @@ def generate_vulkan_log(structs, enums):
   vk_log_auto_cpp.write(copyright_header)
   vk_log_auto_inl.write(copyright_header)
 
-  vk_log_auto_cpp.write("""
+  vk_log_auto_cpp.write("""#include "config.h"
 #include "vulkanLog.h"
+#include "vulkanTools_lite.h"
 
 namespace gits {
 namespace Vulkan {
@@ -643,13 +644,15 @@ namespace Vulkan {
 
 
 def generate_vulkan_tracer(functions, enums):
-  vk_tracer = open('vulkanTracer.h', 'w')
-  vk_tracer.write(copyright_header)
+  vk_tracer_h = open('vulkanTracerAuto.h', 'w')
+  vk_tracer_h.write(copyright_header)
+  vk_tracer_cpp = open('vulkanTracerAuto.cpp', 'w')
+  vk_tracer_cpp.write(copyright_header)
 
-  content = """\
-#pragma once
+  content_h = """#pragma once
 
 #include "vulkanLog.h"
+#include "vulkanDrivers.h"
 
 namespace gits {
 
@@ -665,18 +668,27 @@ namespace gits {
 
 """
 
+  content_cpp = """#include "config.h"
+#include "vulkanLog.h"
+
+namespace gits {
+
+"""
+
   for name in sorted(functions.keys()):
     function = functions[name][0]  # 0 because we only need the base version.
-    content += "  void " + name + "_trace("
 
+    content = "  void " + name + "_trace("
     content += arg_decl(function, False, True)
+    content += ")"
 
-    content += ") {\n"
-    content += "    VkLog(TRACE, RAW) << \"(\""
+    content_h += content + ";\n"
+    content_cpp += content + " {\n"
+    content_cpp += "    VkLog(TRACE, RAW) << \"(\""
 
     for arg in function['args']:
       if (arg['type'] != 'void'):
-        content += " << \" " + arg['type'] + " " + arg['name'] + "=\""
+        content_cpp += " << \" " + arg['type'] + " " + arg['name'] + "=\""
 
         type_cast = arg['type'].replace("Flags", "FlagBits")
         if (arg['type'].find("Flags") != -1) and (type_cast in enums):
@@ -685,7 +697,7 @@ namespace gits {
           type_cast = ""
 
         if ('count' in arg):
-          content += ";\n"
+          content_cpp += ";\n"
           is_pointer = False
           dereference_pointer = ""
 
@@ -695,36 +707,38 @@ namespace gits {
                 is_pointer = True
                 dereference_pointer = "*"
 
-          content += "    if ((isTraceDataOptPresent(TraceData::VK_STRUCTS)) && (" + arg['name'] + " != nullptr)"
+          content_cpp += "    if ((isTraceDataOptPresent(TraceData::VK_STRUCTS)) && (" + arg['name'] + " != nullptr)"
           if is_pointer:
-            content += " && (" + arg['count'] + " != nullptr)"
-          content += ") {\n"
+            content_cpp += " && (" + arg['count'] + " != nullptr)"
+          content_cpp += ") {\n"
 
-          content += "      VkLog(TRACE, RAW) << \"{\";\n"
-          content += "      for (uint32_t i = 0; i < (uint32_t)" + dereference_pointer + arg['count'] + "; ++i) {\n"
-          content += "        VkLog(TRACE, RAW) << \" [\" << i << \"]:\" << " + type_cast + arg['name'] + "[i];\n"
-          content += "      }\n"
-          content += "      VkLog(TRACE, RAW) << \" }\";\n"
-          content += "    } else {\n"
-          content += "      VkLog(TRACE, RAW) << " + arg['name'] + ";\n"
-          content += "    }\n"
-          content += "    VkLog(TRACE, RAW) << \",\""
+          content_cpp += "      VkLog(TRACE, RAW) << \"{\";\n"
+          content_cpp += "      for (uint32_t i = 0; i < (uint32_t)" + dereference_pointer + arg['count'] + "; ++i) {\n"
+          content_cpp += "        VkLog(TRACE, RAW) << \" [\" << i << \"]:\" << " + type_cast + arg['name'] + "[i];\n"
+          content_cpp += "      }\n"
+          content_cpp += "      VkLog(TRACE, RAW) << \" }\";\n"
+          content_cpp += "    } else {\n"
+          content_cpp += "      VkLog(TRACE, RAW) << " + arg['name'] + ";\n"
+          content_cpp += "    }\n"
+          content_cpp += "    VkLog(TRACE, RAW) << \",\""
         else:
-          content += " << " + type_cast + arg['name'] + " << \",\""
+          content_cpp += " << " + type_cast + arg['name'] + " << \",\""
 
-    if content.rfind("<< \",\"", len(content)-7) > 0:
-      content = content[:-7]
+    if content_cpp.rfind("<< \",\"", len(content_cpp)-7) > 0:
+      content_cpp = content_cpp[:-7]
 
-    content += " << \" )\";\n"
-    content += "  };\n"
-    content += "\n"
+    content_cpp += " << \" )\";\n"
+    content_cpp += "  };\n"
+    content_cpp += "\n"
 
-  content += "} // namespace gits\n"
+  content_h +="} // namespace gits\n"
+  content_cpp += "} // namespace gits\n"
 
-  content = content.replace("\",\" << \" ", "\", ")
-  content = content.replace("\"(\" << \" ", "\"( ")
+  content_cpp = content_cpp.replace("\",\" << \" ", "\", ")
+  content_cpp = content_cpp.replace("\"(\" << \" ", "\"( ")
 
-  vk_tracer.write(content)
+  vk_tracer_h.write(content_h)
+  vk_tracer_cpp.write(content_cpp)
 
 
 def generate_vulkan_struct_storage(structs, enums):
@@ -737,13 +751,12 @@ def generate_vulkan_struct_storage(structs, enums):
   vk_struct_storage_cpp.write(copyright_header)
 
   begin_cpp = """#include "vulkanTools.h"
+#include "vulkanTools_lite.h"
 #include "vulkanStructStorageAuto.h"
 
 """
   begin_h = """#pragma once
 
-#include <vector>
-#include <memory>
 #include "vulkanStructStorageBasic.h"
 
 namespace gits{
@@ -794,7 +807,7 @@ namespace Vulkan {
 
               for var in elem['vars']:
                 Cnames.append('_' + var['name'])
-                typename = re.sub(r'\:[0-9_]+', '', var['type'])
+                typename = re.sub(r'\:[0-9_]+', '', var['type'])    # get the base type without array brackets
                 if var.get('wrapType'):
                   wrapType = ""
                   if '::CSArray' in var['wrapType'] or '::CSMapArray' in var['wrapType']:
@@ -839,7 +852,7 @@ namespace Vulkan {
               key_variable = key_name.replace('Vk', '').lower()
               key_decl = '_' + key_name.replace('Vk', '')
               argd = 'const ' + key_name + '* ' + key_variable
-              if elem.get('constructorArgs') != None:
+              if elem.get('constructorArgs') is not None:
                 argd = elem.get('constructorArgs')
               argd_decl = key_name + '* ' + key_decl
 
@@ -1048,9 +1061,11 @@ typedef _SECURITY_ATTRIBUTES SECURITY_ATTRIBUTES;
               bit_field_found = re.search(r':([A-Za-z0-9_]+)', var_type)
               var_type = re.sub(r':([A-Za-z0-9_]+)', '', var_type)
               var_name += bit_field_found.group(0)
-            if re.search(r'(\[([A-Za-z0-9_]+)\])+', var_type):
-              tmp = re.search(r'(\[([A-Za-z0-9_]+)\])+', var_type)
-              output += "  " + re.sub(r'(\[([A-Za-z0-9_]+)\])+', '', var_type) + " " + var_name + tmp.group(0) + ";\n"
+
+            regex_string = r'(\[([A-Za-z0-9_]+)\])+'
+            regex_result = re.search(regex_string, var_type)
+            if regex_result:
+              output += "  " + re.sub(regex_string, '', var_type) + " " + var_name + regex_result.group(0) + ";\n"
             else:
               output += "  " + var_type + " " + var_name + ";\n"
           output += "}" + ";\n\n"
@@ -1109,10 +1124,6 @@ def generate_prepost(functions):
   prepost_c = open('vulkanPrePostAuto.cpp', 'w')
   prepost_c.write(copyright_header)
   prepost_c_include = """
-#include "vulkanRecorderWrapper.h"
-#include "gitsPluginVulkan.h"
-#include "log.h"
-#include "exception.h"
 #include "vulkanExecWrap.h"
 """
   prepost_c.write(prepost_c_include)
@@ -1745,9 +1756,10 @@ namespace Vulkan {
 } // namespace Vulkan
 } // namespace gits
 """
-  arguments_cpp_include = """
+  arguments_cpp_include = """#include "vulkanTools.h"
+#include "vulkanTools_lite.h"
 #include "vulkanArgumentsAuto.h"
-#include "vulkanTools.h"
+
 """
   arguments_cpp.write(arguments_cpp_include)
   arguments_h.write(arguments_h_include)
@@ -1864,7 +1876,7 @@ namespace Vulkan {
         key_decl = '_' + key_name.replace('Vk', '')
         key_decl_original = key_decl + 'Original'
         argd = 'const ' + key_name + '* ' + key_variable
-        if elem.get('constructorArgs') != None:
+        if elem.get('constructorArgs') is not None:
           argd = elem.get('constructorArgs')
         argd_decl = key_name + '* ' + key_decl
         argd_decl_original = key_name + '* ' + key_decl_original
@@ -2486,7 +2498,8 @@ copy_file('vulkanIDs.h', 'common/include')
 move_file('vulkanPrePostAuto.cpp', 'interceptor')
 move_file('vulkanLogAuto.cpp', 'common')
 move_file('vulkanLogAuto.inl', 'common/include')
-move_file('vulkanTracer.h', 'common/include')
+move_file('vulkanTracerAuto.h', 'common/include')
+move_file('vulkanTracerAuto.cpp', 'common')
 move_file('vulkanHeader.h', 'common/include')
 move_file('vulkanDriversAuto.inl', 'common/include')
 move_file('vkPlugin.def', 'interceptor')
