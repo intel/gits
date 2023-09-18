@@ -2279,6 +2279,26 @@ void destroyDeviceLevelResources(VkDevice device) {
             SD().internalResources.pipelineCacheHandles.erase(device);
           }
         }
+        // Injected pipelines
+        {
+          for (auto& deviceInternalPipelinePair :
+               SD().internalResources.internalPipelines.pipelinesMap) {
+            if ((device == VK_NULL_HANDLE) || (device == deviceInternalPipelinePair.first)) {
+              drvVk.vkDestroyPipeline(
+                  deviceInternalPipelinePair.first,
+                  deviceInternalPipelinePair.second.prepareDeviceAddressesForPatching, nullptr);
+              deviceInternalPipelinePair.second.prepareDeviceAddressesForPatching = VK_NULL_HANDLE;
+              drvVk.vkDestroyPipelineLayout(deviceInternalPipelinePair.first,
+                                            deviceInternalPipelinePair.second.layout, nullptr);
+              deviceInternalPipelinePair.second.layout = VK_NULL_HANDLE;
+            }
+          }
+          if (device == VK_NULL_HANDLE) {
+            SD().internalResources.internalPipelines.pipelinesMap.clear();
+          } else {
+            SD().internalResources.internalPipelines.pipelinesMap.erase(device);
+          }
+        }
       }
     } // if (Config::Get().player.cleanResourcesOnExit)
 
@@ -2976,21 +2996,351 @@ uint32_t findCompatibleMemoryTypeIndex(VkPhysicalDevice physicalDevice,
   throw std::runtime_error("Cannot find a compatbile memory type for a resource. Exiting!");
 }
 
-std::shared_ptr<CBufferState> findBufferStateFromDeviceAddress(VkDeviceAddress deviceAddress) {
-  auto isInRange =
-      [&deviceAddress](
-          std::pair<VkDeviceAddress, std::pair<VkDeviceAddress, std::shared_ptr<CBufferState>>>
-              element) {
-        return (deviceAddress >= element.first) && (deviceAddress < element.second.first);
+VkDeviceAddress getBufferDeviceAddress(VkDevice device, VkBuffer buffer) {
+  VkBufferDeviceAddressInfo addressInfo = {
+      VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO, // VkStructureType    sType;
+      nullptr,                                      // const void       * pNext;
+      buffer                                        // VkBuffer           buffer;
+  };
+  return drvVk.vkGetBufferDeviceAddressUnifiedGITS(device, &addressInfo);
+}
+
+VkBuffer findBufferFromDeviceAddress(VkDeviceAddress deviceAddress) {
+  if (deviceAddress == 0) {
+    return VK_NULL_HANDLE;
+  }
+
+  // Quick search
+  {
+    auto it = CBufferState::deviceAddressesQuickLook.find(deviceAddress);
+    if (it != CBufferState::deviceAddressesQuickLook.end()) {
+      return it->second;
+    }
+  }
+
+  // Full search
+  {
+    auto it =
+        std::find_if(CBufferState::deviceAddresses.begin(), CBufferState::deviceAddresses.end(),
+                     [&deviceAddress](auto const& element) {
+                       return (deviceAddress >= element.start) && (deviceAddress < element.end);
+                     });
+
+    if (it != CBufferState::deviceAddresses.end()) {
+      CBufferState::deviceAddressesQuickLook.insert(std::make_pair(deviceAddress, it->buffer));
+      SD()._bufferstates[it->buffer]->deviceAddressesToErase.insert(deviceAddress);
+      return it->buffer;
+    }
+  }
+
+  // No element found
+  Log(WARN) << "Trying to find a buffer from an unknown address space: " << deviceAddress;
+  return VK_NULL_HANDLE;
+}
+
+uint32_t getRayTracingShaderGroupCaptureReplayHandleSize(VkDevice device) {
+  static std::map<VkDevice, uint32_t> shaderGroupCaptureReplayHandleSize;
+
+  auto it = shaderGroupCaptureReplayHandleSize.find(device);
+  if (it == shaderGroupCaptureReplayHandleSize.end()) {
+    VkPhysicalDeviceRayTracingPipelinePropertiesKHR rayTracingPipelineProperties = {
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR, // VkStructureType sType;
+        nullptr,                                                               // void* pNext;
+        0, // uint32_t shaderGroupHandleSize;
+        0, // uint32_t maxRayRecursionDepth;
+        0, // uint32_t maxShaderGroupStride;
+        0, // uint32_t shaderGroupBaseAlignment;
+        0, // uint32_t shaderGroupHandleCaptureReplaySize;
+        0, // uint32_t maxRayDispatchInvocationCount;
+        0, // uint32_t shaderGroupHandleAlignment;
+        0  // uint32_t maxRayHitAttributeSize;
+    };
+
+    VkPhysicalDeviceProperties2 physicalDeviceProperties = {
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, // VkStructureType sType;
+        &rayTracingPipelineProperties,                  // void* pNext;
+        {}                                              // VkPhysicalDeviceProperties properties;
+    };
+    drvVk.vkGetPhysicalDeviceProperties2(
+        SD()._devicestates[device]->physicalDeviceStateStore->physicalDeviceHandle,
+        &physicalDeviceProperties);
+
+    it = shaderGroupCaptureReplayHandleSize
+             .insert(std::make_pair(
+                 device, rayTracingPipelineProperties.shaderGroupHandleCaptureReplaySize))
+             .first;
+  }
+
+  return it->second;
+}
+
+std::pair<std::shared_ptr<CDeviceMemoryState>, std::shared_ptr<CBufferState>> createTemporaryBuffer(
+    VkDevice device,
+    VkDeviceSize size,
+    VkBufferUsageFlags bufferUsage,
+    CCommandBufferState* commandBufferState,
+    VkMemoryPropertyFlags requiredMemoryPropertyFlags,
+    void* hostPointer) {
+  auto& deviceState = SD()._devicestates[device];
+
+  // Create buffer
+  VkBuffer buffer;
+  VkBufferCreateInfo bufferCreateInfo = {
+      VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, // VkStructureType        sType;
+      nullptr,                              // const void           * pNext;
+      0,                                    // VkBufferCreateFlags    flags;
+      size,                                 // VkDeviceSize           size;
+      bufferUsage,                          // VkBufferUsageFlags     usage;
+      VK_SHARING_MODE_EXCLUSIVE,            // VkSharingMode          sharingMode;
+      0,                                    // uint32_t               queueFamilyIndexCount;
+      nullptr                               // const uint32_t       * pQueueFamilyIndices;
+  };
+  if (drvVk.vkCreateBuffer(deviceState->deviceHandle, &bufferCreateInfo, nullptr, &buffer) !=
+      VK_SUCCESS) {
+    throw std::runtime_error("Could not create a temporary buffer! Exiting!!");
+  }
+
+  VkMemoryRequirements bufferMemoryRequirements;
+  drvVk.vkGetBufferMemoryRequirements(deviceState->deviceHandle, buffer, &bufferMemoryRequirements);
+
+  // Get memory properties of the platform the (original) stream was recorded on
+  // If there are none, get memory properties of the current platform
+  VkPhysicalDeviceMemoryProperties memoryProperties =
+      deviceState->physicalDeviceStateStore->memoryProperties;
+  if (memoryProperties.memoryHeapCount == 0) {
+    drvVk.vkGetPhysicalDeviceMemoryProperties(
+        deviceState->physicalDeviceStateStore->physicalDeviceHandle, &memoryProperties);
+  }
+
+  VkDeviceMemory memory;
+  VkMemoryAllocateInfo memoryAllocateInfo;
+  void* pNext = nullptr;
+  // Find appropriate memory type index
+  for (uint32_t type = 0; type < memoryProperties.memoryTypeCount; ++type) {
+    if ((bufferMemoryRequirements.memoryTypeBits & (1 << type)) &&
+        ((memoryProperties.memoryTypes[type].propertyFlags & requiredMemoryPropertyFlags) ==
+         requiredMemoryPropertyFlags)) {
+
+      VkMemoryAllocateFlagsInfo memoryAllocateFlags = {
+          VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO, // VkStructureType          sType;
+          nullptr,                                      // const void             * pNext;
+          VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT,        // VkMemoryAllocateFlags    flags;
+          1                                             // uint32_t                 deviceMask;
       };
 
-  auto it = std::find_if(CBufferState::deviceAddressesMap.begin(),
-                         CBufferState::deviceAddressesMap.end(), isInRange);
+      if (bufferUsage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) {
+        pNext = &memoryAllocateFlags;
+      }
 
-  if (it == CBufferState::deviceAddressesMap.end()) {
-    throw std::runtime_error("Trying to find a buffer from an unknown address space. Exiting!");
+      VkImportMemoryHostPointerInfoEXT hostPointerInfo = {
+          VK_STRUCTURE_TYPE_IMPORT_MEMORY_HOST_POINTER_INFO_EXT, // VkStructureType sType;
+          pNext,                                                 // const void* pNext;
+          VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT, // VkExternalMemoryHandleTypeFlagBits handleType;
+          hostPointer                                             // void* pHostPointer;
+      };
+
+      if (hostPointer) {
+        pNext = &hostPointerInfo;
+      }
+
+      memoryAllocateInfo = {
+          VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, // VkStructureType    sType
+          pNext,                                  // const void       * pNext
+          bufferMemoryRequirements.size,          // VkDeviceSize       allocationSize
+          type                                    // uint32_t           memoryTypeIndex
+      };
+
+      VkResult result =
+          drvVk.vkAllocateMemory(deviceState->deviceHandle, &memoryAllocateInfo, nullptr, &memory);
+      if (VK_SUCCESS == result) {
+        break;
+      }
+    }
+  }
+  if (memory == VK_NULL_HANDLE) {
+    throw std::runtime_error("Could not allocate memory for a buffer.");
+  }
+
+  // Bind memory to the buffer
+  {
+    if (VK_SUCCESS != drvVk.vkBindBufferMemory(deviceState->deviceHandle, buffer, memory, 0)) {
+      throw std::runtime_error("Could not bind memory object to a buffer.");
+    }
+  }
+
+  auto temporaryMemoryState =
+      std::make_shared<CDeviceMemoryState>(&memory, &memoryAllocateInfo, deviceState, nullptr);
+  auto temporaryBufferState =
+      std::make_shared<CBufferState>(&buffer, &bufferCreateInfo, deviceState);
+  auto memoryBufferPair = std::make_pair(temporaryMemoryState, temporaryBufferState);
+
+  if (commandBufferState) {
+    commandBufferState->temporaryBuffers.insert(memoryBufferPair);
+  }
+
+  return memoryBufferPair;
+}
+
+void mapMemoryAndCopyData(VkDevice device,
+                          VkDeviceMemory destination,
+                          VkDeviceSize offset,
+                          void* source,
+                          VkDeviceSize dataSize) {
+  void* dst;
+  if (drvVk.vkMapMemory(device, destination, offset, VK_WHOLE_SIZE, 0, &dst) != VK_SUCCESS) {
+    throw std::runtime_error("Could not map and copy data.");
+  }
+  memcpy(dst, source, dataSize);
+
+  VkMappedMemoryRange range = {
+      VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, // VkStructureType sType;
+      nullptr,                               // const void* pNext;
+      destination,                           // VkDeviceMemory memory;
+      0,                                     // VkDeviceSize offset;
+      dataSize                               // VkDeviceSize size;
+  };
+  drvVk.vkFlushMappedMemoryRanges(device, 1, &range);
+}
+
+void mapMemoryAndCopyData(void* destination,
+                          VkDevice device,
+                          VkDeviceMemory source,
+                          VkDeviceSize offset,
+                          VkDeviceSize dataSize) {
+  void* src;
+  if (drvVk.vkMapMemory(device, source, offset, VK_WHOLE_SIZE, 0, &src) != VK_SUCCESS) {
+    throw std::runtime_error("Could not map and copy data.");
+  }
+
+  VkMappedMemoryRange range = {
+      VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, // VkStructureType sType;
+      nullptr,                               // const void* pNext;
+      source,                                // VkDeviceMemory memory;
+      0,                                     // VkDeviceSize offset;
+      dataSize                               // VkDeviceSize size;
+  };
+  drvVk.vkInvalidateMappedMemoryRanges(device, 1, &range);
+
+  memcpy(destination, src, dataSize);
+}
+
+VkDeviceAddress getAccelerationStructureDeviceAddress(
+    VkDevice device, VkAccelerationStructureKHR accelerationStructure) {
+  VkAccelerationStructureDeviceAddressInfoKHR addressInfo = {
+      VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR, // VkStructureType              sType;
+      nullptr,              // const void                 * pNext;
+      accelerationStructure // VkAccelerationStructureKHR   accelerationStructure;
+  };
+  return drvVk.vkGetAccelerationStructureDeviceAddressUnifiedGITS(device, &addressInfo);
+}
+
+namespace {
+
+VkShaderModule createShaderModule(VkDevice device, uint32_t codeSize, uint32_t const* codePtr) {
+  VkShaderModuleCreateInfo shaderModuleCreateInfo = {
+      VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, // VkStructureType                      sType
+      nullptr,                                     // const void                         * pNext
+      0,                                           // VkShaderModuleCreateFlags            flags
+      codeSize,                                    // size_t                               codeSize
+      codePtr                                      // const uint32_t                     * pCode
+  };
+
+  VkShaderModule shaderModule = VK_NULL_HANDLE;
+  if ((drvVk.vkCreateShaderModule(device, &shaderModuleCreateInfo, nullptr, &shaderModule) !=
+       VK_SUCCESS) ||
+      (shaderModule == VK_NULL_HANDLE)) {
+    throw std::runtime_error("Could not create a shader module for an injected pipeline. Retry "
+                             "recording or use capture/replay features instead.");
+  }
+
+  return shaderModule;
+}
+
+} // namespace
+
+VkPipelineLayout createInternalPipelineLayout(VkDevice device) {
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
+  VkPushConstantRange pushConstantsRange = {
+      VK_SHADER_STAGE_COMPUTE_BIT, // VkShaderStageFlags     stageFlags
+      0,                           // uint32_t               offset
+      4 * sizeof(VkDeviceAddress)  // uint32_t               size
+  };
+
+  VkPipelineLayoutCreateInfo layoutCreateInfo = {
+      VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, // VkStructureType                sType
+      nullptr,                                       // const void                    *pNext
+      0,                                             // VkPipelineLayoutCreateFlags    flags
+      0,                  // uint32_t                       setLayoutCount
+      nullptr,            // const VkDescriptorSetLayout   *pSetLayouts
+      1,                  // uint32_t                       pushConstantRangeCount
+      &pushConstantsRange // const VkPushConstantRange     *pPushConstantRanges
+  };
+
+  VkPipelineLayout layout;
+  if ((drvVk.vkCreatePipelineLayout(device, &layoutCreateInfo, nullptr, &layout) != VK_SUCCESS) ||
+      (layout == VK_NULL_HANDLE)) {
+    throw std::runtime_error("Could not create a pipeline layout used by injected pipelines. "
+                             "Retry recording or use capture/replay features instead.");
+  }
+
+  return layout;
+}
+
+VkPipeline createInternalPipeline(VkDevice device,
+                                  VkPipelineLayout layout,
+                                  const std::vector<uint32_t>& code) {
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
+  auto size = code.size() * sizeof(uint32_t);
+
+  VkShaderModule shaderModule = createShaderModule(device, size, code.data());
+
+  VkPipelineShaderStageCreateInfo shaderStageCreateInfo = {
+      VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, // VkStructureType                      sType
+      nullptr,                     // const void                         * pNext
+      0,                           // VkPipelineShaderStageCreateFlags     flags
+      VK_SHADER_STAGE_COMPUTE_BIT, // VkShaderStageFlagBits                stage
+      shaderModule,                // VkShaderModule                       module
+      "main",                      // const char                         * pName
+      nullptr                      // const VkSpecializationInfo         * pSpecializationInfo
+  };
+
+  VkComputePipelineCreateInfo pipelineCreateInfo = {
+      VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO, // VkStructureType                      sType;
+      nullptr,                                        // const void                         * pNext;
+      0,                                              // VkPipelineCreateFlags                flags;
+      shaderStageCreateInfo,                          // VkPipelineShaderStageCreateInfo      stage;
+      layout,         // VkPipelineLayout                     layout;
+      VK_NULL_HANDLE, // VkPipeline                           basePipelineHandle;
+      -1              // int32_t                              basePipelineIndex;
+  };
+
+  VkPipeline pipeline;
+  if ((drvVk.vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr,
+                                      &pipeline) != VK_SUCCESS) ||
+      (pipeline == VK_NULL_HANDLE)) {
+    throw std::runtime_error("Could not create a compute pipeline for injected metada copies. "
+                             "Retry recording or use capture/replay features instead.");
+  }
+
+  drvVk.vkDestroyShaderModule(device, shaderModule, nullptr);
+
+  return pipeline;
+}
+
+bool getStructStorageFromHash(hash_t hash,
+                              VkAccelerationStructureKHR accelerationStructure,
+                              void** ptr) {
+  auto& accelerationStructureState = SD()._accelerationstructurekhrstates[accelerationStructure];
+  auto it = accelerationStructureState->stateTrackingHashMap.find(hash);
+
+  if (it != accelerationStructureState->stateTrackingHashMap.end()) {
+    *ptr = it->second;
+    return true;
   } else {
-    return it->second.second;
+    *ptr = nullptr;
+    return false;
   }
 }
 
@@ -3022,6 +3372,7 @@ bool IsObjectToSkip(uint64_t vulkanObject) {
     return false;
   }
 }
+
 #endif
 } // namespace Vulkan
 } // namespace gits

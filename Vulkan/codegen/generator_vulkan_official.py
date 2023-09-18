@@ -171,13 +171,13 @@ arg3=ArgDef(name='bindSessionMemoryInfoCount', type='uint32_t'),
 arg4=ArgDef(name='pBindSessionMemoryInfos', type='const VkBindVideoSessionMemoryInfoKHR*')
 )
 
-Function(name='vkBuildAccelerationStructuresKHR', enabled=False, type=Param,
+Function(name='vkBuildAccelerationStructuresKHR', enabled=False, type=Param, runWrap=True, stateTrack=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='deferredOperation', type='VkDeferredOperationKHR'),
 arg3=ArgDef(name='infoCount', type='uint32_t'),
-arg4=ArgDef(name='pInfos', type='const VkAccelerationStructureBuildGeometryInfoKHR*'),
-arg5=ArgDef(name='ppBuildRangeInfos', type='const VkAccelerationStructureBuildRangeInfoKHR* const*')
+arg4=ArgDef(name='pInfos', type='const VkAccelerationStructureBuildGeometryInfoKHR*', wrapType='CVkAccelerationStructureBuildGeometryInfoKHRArray', wrapParams='infoCount, pInfos, ppBuildRangeInfos, VK_NULL_HANDLE', count='infoCount'),
+arg5=ArgDef(name='ppBuildRangeInfos', type='const VkAccelerationStructureBuildRangeInfoKHR* const*', wrapType='CVkAccelerationStructureBuildRangeInfoKHRArrayOfArrays', wrapParams='getRayTracingArraySizes(infoCount, pInfos), ppBuildRangeInfos', count='infoCount')
 )
 
 Function(name='vkBuildMicromapsEXT', enabled=False, type=Param,
@@ -418,12 +418,12 @@ arg5=ArgDef(name='pIndirectStrides', type='const uint32_t*'),
 arg6=ArgDef(name='ppMaxPrimitiveCounts', type='const uint32_t* const*')
 )
 
-Function(name='vkCmdBuildAccelerationStructuresKHR', enabled=False, type=Param,
+Function(name='vkCmdBuildAccelerationStructuresKHR', enabled=True, type=Param, runWrap=True, stateTrack=True, recWrap=True, execPostRecWrap=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='infoCount', type='uint32_t'),
-arg3=ArgDef(name='pInfos', type='const VkAccelerationStructureBuildGeometryInfoKHR*'),
-arg4=ArgDef(name='ppBuildRangeInfos', type='const VkAccelerationStructureBuildRangeInfoKHR* const*')
+arg3=ArgDef(name='pInfos', type='const VkAccelerationStructureBuildGeometryInfoKHR*', wrapType='CVkAccelerationStructureBuildGeometryInfoKHRArray', wrapParams='infoCount, pInfos, ppBuildRangeInfos, prepareAccelerationStructureControlData(commandBuffer)', count='infoCount'),
+arg4=ArgDef(name='ppBuildRangeInfos', type='const VkAccelerationStructureBuildRangeInfoKHR* const*', wrapType='CVkAccelerationStructureBuildRangeInfoKHRArrayOfArrays', wrapParams='getRayTracingArraySizes(infoCount, pInfos), ppBuildRangeInfos', count='infoCount')
 )
 
 Function(name='vkCmdBuildMicromapsEXT', enabled=False, type=Param,
@@ -468,7 +468,7 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pCodingControlInfo', type='const VkVideoCodingControlInfoKHR*')
 )
 
-Function(name='vkCmdCopyAccelerationStructureKHR', enabled=False, type=Param,
+Function(name='vkCmdCopyAccelerationStructureKHR', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pInfo', type='const VkCopyAccelerationStructureInfoKHR*')
@@ -1791,7 +1791,7 @@ arg5=ArgDef(name='pCallableShaderBindingTable', type='const VkStridedDeviceAddre
 arg6=ArgDef(name='indirectDeviceAddress', type='VkDeviceAddress')
 )
 
-Function(name='vkCmdTraceRaysKHR', enabled=False, type=Param,
+Function(name='vkCmdTraceRaysKHR', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pRaygenShaderBindingTable', type='const VkStridedDeviceAddressRegionKHR*'),
@@ -1941,7 +1941,7 @@ arg2=ArgDef(name='pipeline', type='VkPipeline'),
 arg3=ArgDef(name='shader', type='uint32_t')
 )
 
-Function(name='vkCopyAccelerationStructureKHR', enabled=False, type=Param,
+Function(name='vkCopyAccelerationStructureKHR', enabled=True, type=Param, stateTrack=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='deferredOperation', type='VkDeferredOperationKHR'),
@@ -1983,12 +1983,12 @@ arg2=ArgDef(name='deferredOperation', type='VkDeferredOperationKHR'),
 arg3=ArgDef(name='pInfo', type='const VkCopyMicromapToMemoryInfoEXT*')
 )
 
-Function(name='vkCreateAccelerationStructureKHR', enabled=False, type=Param,
+Function(name='vkCreateAccelerationStructureKHR', enabled=True, type=Param, stateTrack=True, recWrap=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pCreateInfo', type='const VkAccelerationStructureCreateInfoKHR*'),
-arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*'),
-arg4=ArgDef(name='pAccelerationStructure', type='VkAccelerationStructureKHR*')
+arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper'),
+arg4=ArgDef(name='pAccelerationStructure', type='VkAccelerationStructureKHR*', wrapType='CVkAccelerationStructureKHR::CSMapArray', wrapParams='1, pAccelerationStructure')
 )
 
 Function(name='vkCreateAccelerationStructureNV', enabled=False, type=Param,
@@ -2049,11 +2049,11 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*'),
 arg4=ArgDef(name='pMessenger', type='VkDebugUtilsMessengerEXT*')
 )
 
-Function(name='vkCreateDeferredOperationKHR', enabled=False, type=Param,
+Function(name='vkCreateDeferredOperationKHR', enabled=True, type=Param, stateTrack=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
-arg2=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*'),
-arg3=ArgDef(name='pDeferredOperation', type='VkDeferredOperationKHR*')
+arg2=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper'),
+arg3=ArgDef(name='pDeferredOperation', type='VkDeferredOperationKHR*', wrapType='CVkDeferredOperationKHR::CSMapArray', wrapParams='1, pDeferredOperation')
 )
 
 Function(name='vkCreateDescriptorPool', enabled=True, type=Param, stateTrack=True,
@@ -2274,15 +2274,15 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CN
 arg4=ArgDef(name='pQueryPool', type='VkQueryPool*', wrapType='CVkQueryPool::CSMapArray', wrapParams='1, pQueryPool')
 )
 
-Function(name='vkCreateRayTracingPipelinesKHR', enabled=False, type=Param,
+Function(name='vkCreateRayTracingPipelinesKHR', enabled=True, type=Param, stateTrack=True, recExecWrap=True, recWrap=True, runWrap=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='deferredOperation', type='VkDeferredOperationKHR'),
 arg3=ArgDef(name='pipelineCache', type='VkPipelineCache'),
 arg4=ArgDef(name='createInfoCount', type='uint32_t'),
-arg5=ArgDef(name='pCreateInfos', type='const VkRayTracingPipelineCreateInfoKHR*'),
-arg6=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*'),
-arg7=ArgDef(name='pPipelines', type='VkPipeline*')
+arg5=ArgDef(name='pCreateInfos', type='const VkRayTracingPipelineCreateInfoKHR*', wrapType='CVkRayTracingPipelineCreateInfoKHRArray', wrapParams='createInfoCount, pCreateInfos, device', count='createInfoCount'),
+arg6=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper'),
+arg7=ArgDef(name='pPipelines', type='VkPipeline*', wrapType='CVkPipeline::CSMapArray', wrapParams='createInfoCount, pPipelines', count='createInfoCount')
 )
 
 Function(name='vkCreateRayTracingPipelinesNV', enabled=False, type=Param,
@@ -2465,17 +2465,17 @@ arg7=ArgDef(name='pLayerPrefix', type='const char*'),
 arg8=ArgDef(name='pMessage', type='const char*')
 )
 
-Function(name='vkDeferredOperationJoinKHR', enabled=False, type=Param,
+Function(name='vkDeferredOperationJoinKHR', enabled=True, type=Param,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='operation', type='VkDeferredOperationKHR')
 )
 
-Function(name='vkDestroyAccelerationStructureKHR', enabled=False, type=Param,
+Function(name='vkDestroyAccelerationStructureKHR', enabled=True, type=Param, stateTrack=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
-arg2=ArgDef(name='accelerationStructure', type='VkAccelerationStructureKHR'),
-arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*')
+arg2=ArgDef(name='accelerationStructure', type='VkAccelerationStructureKHR', removeMapping=True),
+arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper')
 )
 
 Function(name='vkDestroyAccelerationStructureNV', enabled=False, type=Param,
@@ -2520,11 +2520,11 @@ arg2=ArgDef(name='messenger', type='VkDebugUtilsMessengerEXT'),
 arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*')
 )
 
-Function(name='vkDestroyDeferredOperationKHR', enabled=False, type=Param,
+Function(name='vkDestroyDeferredOperationKHR', enabled=True, type=Param, stateTrack=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
-arg2=ArgDef(name='operation', type='VkDeferredOperationKHR'),
-arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*')
+arg2=ArgDef(name='operation', type='VkDeferredOperationKHR', removeMapping=True),
+arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper')
 )
 
 Function(name='vkDestroyDescriptorPool', enabled=True, type=Param, stateTrack=True, recWrap=True,
@@ -2859,7 +2859,7 @@ arg2=ArgDef(name='memory', type='VkDeviceMemory', removeMapping=True),
 arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper')
 )
 
-Function(name='vkGetAccelerationStructureBuildSizesKHR', enabled=False, type=Param,
+Function(name='vkGetAccelerationStructureBuildSizesKHR', enabled=False, type=Param, recExecWrap=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='buildType', type='VkAccelerationStructureBuildTypeKHR'),
@@ -2868,7 +2868,7 @@ arg4=ArgDef(name='pMaxPrimitiveCounts', type='const uint32_t*'),
 arg5=ArgDef(name='pSizeInfo', type='VkAccelerationStructureBuildSizesInfoKHR*')
 )
 
-Function(name='vkGetAccelerationStructureDeviceAddressKHR', enabled=False, type=Param,
+Function(name='vkGetAccelerationStructureDeviceAddressKHR', enabled=False, type=Param, stateTrack=True, runWrap=True, recWrap=True,
 retV=RetDef(type='VkDeviceAddress'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pInfo', type='const VkAccelerationStructureDeviceAddressInfoKHR*')
@@ -2977,7 +2977,7 @@ arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='operation', type='VkDeferredOperationKHR')
 )
 
-Function(name='vkGetDeferredOperationResultKHR', enabled=False, type=Param,
+Function(name='vkGetDeferredOperationResultKHR', enabled=True, type=Param,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='operation', type='VkDeferredOperationKHR')
@@ -3937,7 +3937,7 @@ arg5=ArgDef(name='dataSize', type='size_t'),
 arg6=ArgDef(name='pData', type='void*')
 )
 
-Function(name='vkGetRayTracingShaderGroupHandlesKHR', enabled=False, type=Param,
+Function(name='vkGetRayTracingShaderGroupHandlesKHR', enabled=False, type=Param, stateTrack=True, runWrap=True, recExecWrap=False,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pipeline', type='VkPipeline'),
@@ -8351,7 +8351,7 @@ var5=VarDef(name='maxY', type='float'),
 var6=VarDef(name='maxZ', type='float')
 )
 
-Struct(name='VkAccelerationStructureBuildGeometryInfoKHR_', enabled=False,
+Struct(name='VkAccelerationStructureBuildGeometryInfoKHR_', enabled=True, declareArray=True, constructorArgs='const VkAccelerationStructureBuildGeometryInfoKHR* accelerationstructurebuildgeometryinfokhr, const VkAccelerationStructureBuildRangeInfoKHR* pBuildRangeInfos, VkAccelerationStructureBuildControlDataGITS controlData',
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='type', type='VkAccelerationStructureTypeKHR'),
@@ -8360,19 +8360,19 @@ var5=VarDef(name='mode', type='VkBuildAccelerationStructureModeKHR'),
 var6=VarDef(name='srcAccelerationStructure', type='VkAccelerationStructureKHR'),
 var7=VarDef(name='dstAccelerationStructure', type='VkAccelerationStructureKHR'),
 var8=VarDef(name='geometryCount', type='uint32_t'),
-var9=VarDef(name='pGeometries', type='const VkAccelerationStructureGeometryKHR*'),
-var10=VarDef(name='ppGeometries', type='const VkAccelerationStructureGeometryKHR* const*'),
-var11=VarDef(name='scratchData', type='VkDeviceOrHostAddressKHR')
+var9=VarDef(name='pGeometries', type='const VkAccelerationStructureGeometryKHR*', wrapType='CVkAccelerationStructureGeometryKHRArray', wrapParams='accelerationstructurebuildgeometryinfokhr->geometryCount, accelerationstructurebuildgeometryinfokhr->pGeometries, pBuildRangeInfos, prepareAccelerationStructureControlData(controlData, accelerationstructurebuildgeometryinfokhr)', count='geometryCount'),
+var10=VarDef(name='ppGeometries', type='const VkAccelerationStructureGeometryKHR* const*', wrapType='CVkAccelerationStructureGeometryKHRArrayOfArrays', wrapParams='accelerationstructurebuildgeometryinfokhr->geometryCount, accelerationstructurebuildgeometryinfokhr->ppGeometries, pBuildRangeInfos, prepareAccelerationStructureControlData(controlData, accelerationstructurebuildgeometryinfokhr)', count='geometryCount'),
+var11=VarDef(name='scratchData', type='VkDeviceOrHostAddressKHR', wrapType='CBufferDeviceAddressObject', wrapParams='/* void */')
 )
 
-Struct(name='VkAccelerationStructureBuildRangeInfoKHR_', enabled=False,
+Struct(name='VkAccelerationStructureBuildRangeInfoKHR_', enabled=True, declareArray=True, declareArrayOfArrays=True,
 var1=VarDef(name='primitiveCount', type='uint32_t'),
 var2=VarDef(name='primitiveOffset', type='uint32_t'),
 var3=VarDef(name='firstVertex', type='uint32_t'),
 var4=VarDef(name='transformOffset', type='uint32_t')
 )
 
-Struct(name='VkAccelerationStructureBuildSizesInfoKHR_', enabled=False,
+Struct(name='VkAccelerationStructureBuildSizesInfoKHR_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='accelerationStructureSize', type='VkDeviceSize'),
@@ -8387,7 +8387,7 @@ var3=VarDef(name='accelerationStructure', type='VkAccelerationStructureKHR'),
 var4=VarDef(name='accelerationStructureNV', type='VkAccelerationStructureNV')
 )
 
-Struct(name='VkAccelerationStructureCreateInfoKHR_', enabled=False,
+Struct(name='VkAccelerationStructureCreateInfoKHR_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='createFlags', type='VkAccelerationStructureCreateFlagsKHR'),
@@ -8405,31 +8405,31 @@ var3=VarDef(name='compactedSize', type='VkDeviceSize'),
 var4=VarDef(name='info', type='VkAccelerationStructureInfoNV')
 )
 
-Struct(name='VkAccelerationStructureDeviceAddressInfoKHR_', enabled=False,
+Struct(name='VkAccelerationStructureDeviceAddressInfoKHR_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='accelerationStructure', type='VkAccelerationStructureKHR')
 )
 
-Struct(name='VkAccelerationStructureGeometryAabbsDataKHR_', enabled=False,
+Struct(name='VkAccelerationStructureGeometryAabbsDataKHR_', enabled=True, constructorArgs='const VkAccelerationStructureGeometryAabbsDataKHR* accelerationstructuregeometryaabbsdatakhr, const VkAccelerationStructureBuildRangeInfoKHR& buildRangeInfo, const VkAccelerationStructureBuildControlDataGITS& controlData',
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
-var3=VarDef(name='data', type='VkDeviceOrHostAddressConstKHR'),
+var3=VarDef(name='data', type='VkDeviceOrHostAddressConstKHR', wrapParams='accelerationstructuregeometryaabbsdatakhr->data, buildRangeInfo.primitiveOffset, accelerationstructuregeometryaabbsdatakhr->stride, buildRangeInfo.primitiveCount, prepareAccelerationStructureControlData(controlData, accelerationstructuregeometryaabbsdatakhr->sType)'),
 var4=VarDef(name='stride', type='VkDeviceSize')
 )
 
-Struct(name='VkAccelerationStructureGeometryInstancesDataKHR_', enabled=False,
+Struct(name='VkAccelerationStructureGeometryInstancesDataKHR_', enabled=True, custom=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='arrayOfPointers', type='VkBool32'),
 var4=VarDef(name='data', type='VkDeviceOrHostAddressConstKHR')
 )
 
-Struct(name='VkAccelerationStructureGeometryKHR_', enabled=False,
+Struct(name='VkAccelerationStructureGeometryKHR_', enabled=True, declareArray=True, declareArrayOfArrays=True, constructorArgs='const VkAccelerationStructureGeometryKHR* accelerationstructuregeometrykhr, const VkAccelerationStructureBuildRangeInfoKHR& buildRangeInfo, VkAccelerationStructureBuildControlDataGITS controlData',
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='geometryType', type='VkGeometryTypeKHR'),
-var4=VarDef(name='geometry', type='VkAccelerationStructureGeometryDataKHR'),
+var4=VarDef(name='geometry', type='VkAccelerationStructureGeometryDataKHR', wrapParams='accelerationstructuregeometrykhr->geometryType, &accelerationstructuregeometrykhr->geometry, buildRangeInfo, controlData'),
 var5=VarDef(name='flags', type='VkGeometryFlagsKHR')
 )
 
@@ -8445,16 +8445,16 @@ var2=VarDef(name='aabbs', type='VkAccelerationStructureGeometryAabbsDataKHR'),
 var3=VarDef(name='instances', type='VkAccelerationStructureGeometryInstancesDataKHR'),
 )
 
-Struct(name='VkAccelerationStructureGeometryTrianglesDataKHR_', enabled=False,
+Struct(name='VkAccelerationStructureGeometryTrianglesDataKHR_', enabled=True, constructorArgs='const VkAccelerationStructureGeometryTrianglesDataKHR* accelerationstructuregeometrytrianglesdatakhr, const VkAccelerationStructureBuildRangeInfoKHR& buildRangeInfo, const VkAccelerationStructureBuildControlDataGITS& controlData',
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='vertexFormat', type='VkFormat'),
-var4=VarDef(name='vertexData', type='VkDeviceOrHostAddressConstKHR'),
+var4=VarDef(name='vertexData', type='VkDeviceOrHostAddressConstKHR', wrapType='CDeviceOrHostAddressAccelerationStructureVertexDataGITS', wrapParams='accelerationstructuregeometrytrianglesdatakhr->vertexData, buildRangeInfo.primitiveOffset, accelerationstructuregeometrytrianglesdatakhr->vertexStride, buildRangeInfo.primitiveCount * 3, buildRangeInfo.firstVertex, accelerationstructuregeometrytrianglesdatakhr->maxVertex, accelerationstructuregeometrytrianglesdatakhr->indexData, accelerationstructuregeometrytrianglesdatakhr->indexType, prepareAccelerationStructureControlData(controlData, accelerationstructuregeometrytrianglesdatakhr->sType)'),
 var5=VarDef(name='vertexStride', type='VkDeviceSize'),
 var6=VarDef(name='maxVertex', type='uint32_t'),
 var7=VarDef(name='indexType', type='VkIndexType'),
-var8=VarDef(name='indexData', type='VkDeviceOrHostAddressConstKHR'),
-var9=VarDef(name='transformData', type='VkDeviceOrHostAddressConstKHR')
+var8=VarDef(name='indexData', type='VkDeviceOrHostAddressConstKHR', wrapParams='accelerationstructuregeometrytrianglesdatakhr->indexData, buildRangeInfo.primitiveOffset, getIndexElementSize(accelerationstructuregeometrytrianglesdatakhr->indexType), buildRangeInfo.primitiveCount * 3, prepareAccelerationStructureControlData(controlData, accelerationstructuregeometrytrianglesdatakhr->sType)'),
+var9=VarDef(name='transformData', type='VkDeviceOrHostAddressConstKHR', wrapParams='accelerationstructuregeometrytrianglesdatakhr->transformData, buildRangeInfo.transformOffset, sizeof(VkTransformMatrixKHR), 1, prepareAccelerationStructureControlData(controlData, accelerationstructuregeometrytrianglesdatakhr->sType)')
 )
 
 Struct(name='VkAccelerationStructureInfoNV_', enabled=False,
@@ -9161,7 +9161,7 @@ var9=VarDef(name='DType', type='VkComponentTypeNV'),
 var10=VarDef(name='scope', type='VkScopeNV')
 )
 
-Struct(name='VkCopyAccelerationStructureInfoKHR_', enabled=False,
+Struct(name='VkCopyAccelerationStructureInfoKHR_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='src', type='VkAccelerationStructureKHR'),
@@ -9459,10 +9459,10 @@ var3=VarDef(name='type', type='VkDescriptorType'),
 var4=VarDef(name='data', type='VkDescriptorDataEXT')
 )
 
-Struct(name='VkDescriptorImageInfo_', enabled=True, declareArray=True, custom=True,
-var1=VarDef(name='sampler', type='VkSampler'),
-var2=VarDef(name='imageView', type='VkImageView'),
-var3=VarDef(name='imageLayout', type='VkImageLayout')
+Struct(name='VkDescriptorImageInfo_', enabled=True, declareArray=True, constructorArgs='const VkDescriptorImageInfo* descriptorimageinfo, const VkDescriptorType descriptorType', declarationNeededWrap=True,
+var1=VarDef(name='sampler', type='VkSampler', wrapParams='isSamplerDescriptor(descriptorType) ? descriptorimageinfo->sampler : VK_NULL_HANDLE'),
+var2=VarDef(name='imageView', type='VkImageView', wrapParams='isImageDescriptor(descriptorType) ? descriptorimageinfo->imageView : VK_NULL_HANDLE'),
+var3=VarDef(name='imageLayout', type='VkImageLayout', wrapParams='isImageDescriptor(descriptorType) ? descriptorimageinfo->imageLayout : (VkImageLayout)0')
 )
 
 Struct(name='VkDescriptorPoolCreateInfo_', enabled=True,
@@ -10066,7 +10066,7 @@ var4=VarDef(name='dwAccess', type='DWORD'),
 var5=VarDef(name='name', type='LPCWSTR')
 )
 
-Struct(name='VkExportMemoryAllocateInfo_', enabled=False,
+Struct(name='VkExportMemoryAllocateInfo_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='handleTypes', type='VkExternalMemoryHandleTypeFlags')
@@ -10156,13 +10156,13 @@ var3=VarDef(name='exportFromImportedHandleTypes', type='VkExternalMemoryHandleTy
 var4=VarDef(name='compatibleHandleTypes', type='VkExternalMemoryHandleTypeFlagsNV')
 )
 
-Struct(name='VkExternalMemoryBufferCreateInfo_', enabled=False,
+Struct(name='VkExternalMemoryBufferCreateInfo_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='handleTypes', type='VkExternalMemoryHandleTypeFlags')
 )
 
-Struct(name='VkExternalMemoryImageCreateInfo_', enabled=False,
+Struct(name='VkExternalMemoryImageCreateInfo_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='handleTypes', type='VkExternalMemoryHandleTypeFlags')
@@ -10778,11 +10778,11 @@ var3=VarDef(name='handleType', type='VkExternalMemoryHandleTypeFlagBits'),
 var4=VarDef(name='fd', type='int')
 )
 
-Struct(name='VkImportMemoryHostPointerInfoEXT_', enabled=False,
+Struct(name='VkImportMemoryHostPointerInfoEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='handleType', type='VkExternalMemoryHandleTypeFlagBits'),
-var4=VarDef(name='pHostPointer', type='void*')
+var4=VarDef(name='pHostPointer', type='void*', wrapType='CVoidPtr')
 )
 
 Struct(name='VkImportMemoryWin32HandleInfoKHR_', enabled=False,
@@ -11313,7 +11313,7 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='decodeModeSharedExponent', type='VkBool32')
 )
 
-Struct(name='VkPhysicalDeviceAccelerationStructureFeaturesKHR_', enabled=False,
+Struct(name='VkPhysicalDeviceAccelerationStructureFeaturesKHR_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='accelerationStructure', type='VkBool32'),
@@ -12809,7 +12809,7 @@ var4=VarDef(name='rasterizationOrderDepthAttachmentAccess', type='VkBool32'),
 var5=VarDef(name='rasterizationOrderStencilAttachmentAccess', type='VkBool32')
 )
 
-Struct(name='VkPhysicalDeviceRayQueryFeaturesKHR_', enabled=False,
+Struct(name='VkPhysicalDeviceRayQueryFeaturesKHR_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='rayQuery', type='VkBool32')
@@ -12841,7 +12841,7 @@ var3=VarDef(name='rayTracingMotionBlur', type='VkBool32'),
 var4=VarDef(name='rayTracingMotionBlurPipelineTraceRaysIndirect', type='VkBool32')
 )
 
-Struct(name='VkPhysicalDeviceRayTracingPipelineFeaturesKHR_', enabled=False,
+Struct(name='VkPhysicalDeviceRayTracingPipelineFeaturesKHR_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='rayTracingPipeline', type='VkBool32'),
@@ -12956,7 +12956,7 @@ var13=VarDef(name='shaderImageFloat32AtomicMinMax', type='VkBool32'),
 var14=VarDef(name='sparseImageFloat32AtomicMinMax', type='VkBool32')
 )
 
-Struct(name='VkPhysicalDeviceShaderAtomicFloatFeaturesEXT_', enabled=False,
+Struct(name='VkPhysicalDeviceShaderAtomicFloatFeaturesEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='shaderBufferFloat32Atomics', type='VkBool32'),
@@ -12980,7 +12980,7 @@ var3=VarDef(name='shaderBufferInt64Atomics', type='VkBool32'),
 var4=VarDef(name='shaderSharedInt64Atomics', type='VkBool32')
 )
 
-Struct(name='VkPhysicalDeviceShaderClockFeaturesKHR_', enabled=False,
+Struct(name='VkPhysicalDeviceShaderClockFeaturesKHR_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='shaderSubgroupClock', type='VkBool32'),
@@ -13321,7 +13321,7 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='swapchainMaintenance1', type='VkBool32')
 )
 
-Struct(name='VkPhysicalDeviceSynchronization2Features_', enabled=False,
+Struct(name='VkPhysicalDeviceSynchronization2Features_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='synchronization2', type='VkBool32')
@@ -14004,7 +14004,7 @@ var6=VarDef(name='pushConstantRangeCount', type='uint32_t'),
 var7=VarDef(name='pPushConstantRanges', type='const VkPushConstantRange*', wrapType='CVkPushConstantRangeArray', wrapParams='pipelinelayoutcreateinfo->pushConstantRangeCount, pipelinelayoutcreateinfo->pPushConstantRanges', count='pushConstantRangeCount')
 )
 
-Struct(name='VkPipelineLibraryCreateInfoKHR_', enabled=True,
+Struct(name='VkPipelineLibraryCreateInfoKHR_', enabled=True, declareArray=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='libraryCount', type='uint32_t'),
@@ -14417,18 +14417,18 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='videoCodecOperations', type='VkVideoCodecOperationFlagsKHR')
 )
 
-Struct(name='VkRayTracingPipelineCreateInfoKHR_', enabled=False,
+Struct(name='VkRayTracingPipelineCreateInfoKHR_', enabled=True, declareArray=True, constructorArgs='const VkRayTracingPipelineCreateInfoKHR* raytracingpipelinecreateinfokhr, VkDevice device',
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='flags', type='VkPipelineCreateFlags'),
 var4=VarDef(name='stageCount', type='uint32_t'),
-var5=VarDef(name='pStages', type='const VkPipelineShaderStageCreateInfo*'),
+var5=VarDef(name='pStages', type='const VkPipelineShaderStageCreateInfo*', wrapType='CVkPipelineShaderStageCreateInfoArray', wrapParams='raytracingpipelinecreateinfokhr->stageCount, raytracingpipelinecreateinfokhr->pStages', count='stageCount'),
 var6=VarDef(name='groupCount', type='uint32_t'),
-var7=VarDef(name='pGroups', type='const VkRayTracingShaderGroupCreateInfoKHR*'),
+var7=VarDef(name='pGroups', type='const VkRayTracingShaderGroupCreateInfoKHR*', wrapType='CVkRayTracingShaderGroupCreateInfoKHRArray', wrapParams='raytracingpipelinecreateinfokhr->groupCount, raytracingpipelinecreateinfokhr->pGroups, device', count='groupCount'),
 var8=VarDef(name='maxPipelineRayRecursionDepth', type='uint32_t'),
-var9=VarDef(name='pLibraryInfo', type='const VkPipelineLibraryCreateInfoKHR*'),
-var10=VarDef(name='pLibraryInterface', type='const VkRayTracingPipelineInterfaceCreateInfoKHR*'),
-var11=VarDef(name='pDynamicState', type='const VkPipelineDynamicStateCreateInfo*'),
+var9=VarDef(name='pLibraryInfo', type='const VkPipelineLibraryCreateInfoKHR*', wrapType='CVkPipelineLibraryCreateInfoKHRArray', wrapParams='1, raytracingpipelinecreateinfokhr->pLibraryInfo', count='1'),
+var10=VarDef(name='pLibraryInterface', type='const VkRayTracingPipelineInterfaceCreateInfoKHR*', wrapType='CVkRayTracingPipelineInterfaceCreateInfoKHRArray', wrapParams='1, raytracingpipelinecreateinfokhr->pLibraryInterface', count='1'),
+var11=VarDef(name='pDynamicState', type='const VkPipelineDynamicStateCreateInfo*', wrapType='CVkPipelineDynamicStateCreateInfoArray', wrapParams='1, raytracingpipelinecreateinfokhr->pDynamicState', count='1'),
 var12=VarDef(name='layout', type='VkPipelineLayout'),
 var13=VarDef(name='basePipelineHandle', type='VkPipeline'),
 var14=VarDef(name='basePipelineIndex', type='int32_t')
@@ -14448,14 +14448,14 @@ var10=VarDef(name='basePipelineHandle', type='VkPipeline'),
 var11=VarDef(name='basePipelineIndex', type='int32_t')
 )
 
-Struct(name='VkRayTracingPipelineInterfaceCreateInfoKHR_', enabled=False,
+Struct(name='VkRayTracingPipelineInterfaceCreateInfoKHR_', enabled=True, declareArray=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='maxPipelineRayPayloadSize', type='uint32_t'),
 var4=VarDef(name='maxPipelineRayHitAttributeSize', type='uint32_t')
 )
 
-Struct(name='VkRayTracingShaderGroupCreateInfoKHR_', enabled=False,
+Struct(name='VkRayTracingShaderGroupCreateInfoKHR_', enabled=True, declareArray=True, constructorArgs='const VkRayTracingShaderGroupCreateInfoKHR* raytracingshadergroupcreateinfokhr, VkDevice device',
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='type', type='VkRayTracingShaderGroupTypeKHR'),
@@ -14463,7 +14463,7 @@ var4=VarDef(name='generalShader', type='uint32_t'),
 var5=VarDef(name='closestHitShader', type='uint32_t'),
 var6=VarDef(name='anyHitShader', type='uint32_t'),
 var7=VarDef(name='intersectionShader', type='uint32_t'),
-var8=VarDef(name='pShaderGroupCaptureReplayHandle', type='const void*')
+var8=VarDef(name='pShaderGroupCaptureReplayHandle', type='const void*', wrapType='Cuint8_t::CSArray', wrapParams='getRayTracingShaderGroupCaptureReplayHandleSize(device), (const uint8_t*)raytracingshadergroupcreateinfokhr->pShaderGroupCaptureReplayHandle')
 )
 
 Struct(name='VkRayTracingShaderGroupCreateInfoNV_', enabled=False,
@@ -15055,8 +15055,8 @@ var7=VarDef(name='reference', type='uint32_t')
 #var4=VarDef(name='streamDescriptor', type='GgpStreamDescriptor')
 #)
 
-Struct(name='VkStridedDeviceAddressRegionKHR_', enabled=False,
-var1=VarDef(name='deviceAddress', type='VkDeviceAddress'),
+Struct(name='VkStridedDeviceAddressRegionKHR_', enabled=True,
+var1=VarDef(name='deviceAddress', type='VkDeviceAddress', wrapType='CBufferDeviceAddressObject'),
 var2=VarDef(name='stride', type='VkDeviceSize'),
 var3=VarDef(name='size', type='VkDeviceSize')
 )
@@ -15400,7 +15400,7 @@ var2=VarDef(name='height', type='uint32_t'),
 var3=VarDef(name='depth', type='uint32_t')
 )
 
-Struct(name='VkTransformMatrixKHR_', enabled=False,
+Struct(name='VkTransformMatrixKHR_', enabled=True, custom=True,
 var1=VarDef(name='matrix', type='float[3][4]')
 )
 
@@ -16021,16 +16021,16 @@ var4=VarDef(name='dstBinding', type='uint32_t'),
 var5=VarDef(name='dstArrayElement', type='uint32_t'),
 var6=VarDef(name='descriptorCount', type='uint32_t'),
 var7=VarDef(name='descriptorType', type='VkDescriptorType'),
-var8=VarDef(name='pImageInfo', type='const VkDescriptorImageInfo*', wrapType='CVkDescriptorImageInfoArray', wrapParams='isImageDescriptor(writedescriptorset->descriptorType) ? writedescriptorset->descriptorCount : 0, isImageDescriptor(writedescriptorset->descriptorType) ? writedescriptorset->pImageInfo : nullptr, writedescriptorset->descriptorType', count='descriptorCount', logCondition='isImageDescriptor(c.descriptorType)'),
+var8=VarDef(name='pImageInfo', type='const VkDescriptorImageInfo*', wrapType='CVkDescriptorImageInfoArray', wrapParams='(isImageDescriptor(writedescriptorset->descriptorType) || isSamplerDescriptor(writedescriptorset->descriptorType)) ? writedescriptorset->descriptorCount : 0, (isImageDescriptor(writedescriptorset->descriptorType) || isSamplerDescriptor(writedescriptorset->descriptorType)) ? writedescriptorset->pImageInfo : nullptr, writedescriptorset->descriptorType', count='descriptorCount', logCondition='isImageDescriptor(c.descriptorType) || isSamplerDescriptor(c.descriptorType)'),
 var9=VarDef(name='pBufferInfo', type='const VkDescriptorBufferInfo*', wrapType='CVkDescriptorBufferInfoArray', wrapParams='isBufferDescriptor(writedescriptorset->descriptorType) ? writedescriptorset->descriptorCount : 0, isBufferDescriptor(writedescriptorset->descriptorType) ? writedescriptorset->pBufferInfo : nullptr', count='descriptorCount', logCondition='isBufferDescriptor(c.descriptorType)'),
 var10=VarDef(name='pTexelBufferView', type='const VkBufferView*', wrapType='CVkBufferView::CSArray', wrapParams='isTexelBufferDescriptor(writedescriptorset->descriptorType) ? writedescriptorset->descriptorCount : 0, isTexelBufferDescriptor(writedescriptorset->descriptorType) ? writedescriptorset->pTexelBufferView : nullptr', count='descriptorCount', logCondition='isTexelBufferDescriptor(c.descriptorType)')
 )
 
-Struct(name='VkWriteDescriptorSetAccelerationStructureKHR_', enabled=False,
+Struct(name='VkWriteDescriptorSetAccelerationStructureKHR_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='accelerationStructureCount', type='uint32_t'),
-var4=VarDef(name='pAccelerationStructures', type='const VkAccelerationStructureKHR*')
+var4=VarDef(name='pAccelerationStructures', type='const VkAccelerationStructureKHR*', wrapType='CVkAccelerationStructureKHR::CSArray', wrapParams='writedescriptorsetaccelerationstructurekhr->accelerationStructureCount, writedescriptorsetaccelerationstructurekhr->pAccelerationStructures', count='accelerationStructureCount')
 )
 
 Struct(name='VkWriteDescriptorSetAccelerationStructureNV_', enabled=False,

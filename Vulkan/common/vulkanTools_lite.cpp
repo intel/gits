@@ -8,6 +8,7 @@
 
 #include "vulkanTools_lite.h"
 #include "exception.h"
+#include "vulkanStateDynamic.h"
 
 #include <cmath>
 
@@ -1153,6 +1154,20 @@ VkAccessFlags getLayoutAccessFlags(VkImageLayout layout) {
   }
 }
 
+uint32_t getIndexElementSize(VkIndexType indexType) {
+  switch (indexType) {
+  default:
+  case VK_INDEX_TYPE_NONE_KHR:
+    return 0;
+  case VK_INDEX_TYPE_UINT8_EXT:
+    return 1;
+  case VK_INDEX_TYPE_UINT16:
+    return 2;
+  case VK_INDEX_TYPE_UINT32:
+    return 4;
+  }
+}
+
 bool isFormatFloat(VkFormat format) {
   switch (format) {
   case VK_FORMAT_R64G64B64A64_SFLOAT:
@@ -1250,41 +1265,62 @@ bool isFormatCompressed(VkFormat format) {
 }
 
 const void* ignoreLoaderSpecificStructureTypes(const void* pNext) {
-  bool found = false;
-  while (!found && (pNext != nullptr)) {
-    switch (*(VkStructureType*)pNext) {
-    case VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO:
-    case VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO:
-    case VK_STRUCTURE_TYPE_WIN32_INSTANCE_CREATE_INFO_INTEL:
-    case VK_STRUCTURE_TYPE_WIN32_DEVICE_CREATE_INFO_INTEL:
-    case VK_STRUCTURE_TYPE_WIN32_IMAGE_CREATE_INFO_INTEL:
-    case VK_STRUCTURE_TYPE_WIN32_IMAGE_CREATE_INFO_REFLECTION_INTEL:
-    case VK_STRUCTURE_TYPE_GET_RESOURCE_LAYOUT_INTEL:
-    case VK_STRUCTURE_TYPE_WIN32_BUFFER_CREATE_INFO_INTEL:
-    case VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_BUFFER_VIEW_INFO_INTEL:
-    case VK_STRUCTURE_TYPE_IMPORT_WIN32_HANDLES_INTEL:
-    case VK_STRUCTURE_TYPE_WIN32_RESIDENCY_INFO_INTEL:
-    case VK_STRUCTURE_TYPE_WIN32_SEMAPHORE_CREATE_INFO_REFLECTION_INTEL:
-    case VK_STRUCTURE_TYPE_FRAGMENT_SHADER_WRAP_COORDINATES_INTEL:
-    case VK_STRUCTURE_TYPE_WIN32_RESOURCE_INFO_INTEL:
-    case VK_STRUCTURE_TYPE_FORCED_SAMPLE_COUNT_INTEL:
-    case VK_STRUCTURE_TYPE_COPY_IMAGE_INFO_FLAGS_INTEL:
-    case VK_STRUCTURE_TYPE_IMAGE_SAMPLE_PATTERN_INFO_INTEL:
-    case VK_STRUCTURE_TYPE_WIN32_RESOURCE_REFLECTION_INFO_INTEL:
-    case VK_STRUCTURE_TYPE_MULTISAMPLE_STATE_CREATE_INFO_INTEL:
-      pNext = ((const VkBaseInStructure*)pNext)->pNext;
-      break;
-    default:
-      found = true;
-      break;
+#ifdef GITS_PLATFORM_WINDOWS
+  // Added try-catch clause because some applications provide trash/incorrect pointer data
+  __try {
+#endif
+
+    bool found = false;
+    while (!found && (pNext != nullptr)) {
+      switch (*(VkStructureType*)pNext) {
+      case VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO:
+      case VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO:
+      case VK_STRUCTURE_TYPE_WIN32_INSTANCE_CREATE_INFO_INTEL:
+      case VK_STRUCTURE_TYPE_WIN32_DEVICE_CREATE_INFO_INTEL:
+      case VK_STRUCTURE_TYPE_WIN32_IMAGE_CREATE_INFO_INTEL:
+      case VK_STRUCTURE_TYPE_WIN32_IMAGE_CREATE_INFO_REFLECTION_INTEL:
+      case VK_STRUCTURE_TYPE_GET_RESOURCE_LAYOUT_INTEL:
+      case VK_STRUCTURE_TYPE_WIN32_BUFFER_CREATE_INFO_INTEL:
+      case VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_BUFFER_VIEW_INFO_INTEL:
+      case VK_STRUCTURE_TYPE_IMPORT_WIN32_HANDLES_INTEL:
+      case VK_STRUCTURE_TYPE_WIN32_RESIDENCY_INFO_INTEL:
+      case VK_STRUCTURE_TYPE_WIN32_SEMAPHORE_CREATE_INFO_REFLECTION_INTEL:
+      case VK_STRUCTURE_TYPE_FRAGMENT_SHADER_WRAP_COORDINATES_INTEL:
+      case VK_STRUCTURE_TYPE_WIN32_RESOURCE_INFO_INTEL:
+      case VK_STRUCTURE_TYPE_FORCED_SAMPLE_COUNT_INTEL:
+      case VK_STRUCTURE_TYPE_COPY_IMAGE_INFO_FLAGS_INTEL:
+      case VK_STRUCTURE_TYPE_IMAGE_SAMPLE_PATTERN_INFO_INTEL:
+      case VK_STRUCTURE_TYPE_WIN32_RESOURCE_REFLECTION_INFO_INTEL:
+      case VK_STRUCTURE_TYPE_MULTISAMPLE_STATE_CREATE_INFO_INTEL:
+      case VK_STRUCTURE_TYPE_QUERY_LOW_LATENCY_SUPPORT_NV:
+        pNext = ((const VkBaseInStructure*)pNext)->pNext;
+        break;
+      default:
+        found = true;
+        break;
+      }
     }
+
+#ifdef GITS_PLATFORM_WINDOWS
+  } __except (EXCEPTION_EXECUTE_HANDLER) {
+    return nullptr;
   }
+#endif
+
   return pNext;
 }
 
-bool isImageDescriptor(VkDescriptorType descriptorType) {
+bool isSamplerDescriptor(VkDescriptorType descriptorType) {
   if ((descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER) ||
-      (descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) ||
+      (descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool isImageDescriptor(VkDescriptorType descriptorType) {
+  if ((descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) ||
       (descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE) ||
       (descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) ||
       (descriptorType == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)) {
@@ -1311,6 +1347,75 @@ bool isTexelBufferDescriptor(VkDescriptorType descriptorType) {
     return true;
   } else {
     return false;
+  }
+}
+
+std::vector<uint32_t> getRayTracingArraySizes(
+    uint32_t count, VkAccelerationStructureBuildGeometryInfoKHR const* pInfos) {
+  std::vector<uint32_t> sizes(count);
+  for (uint32_t i = 0; i < count; ++i) {
+    sizes[i] = pInfos[i].geometryCount;
+  }
+  return sizes;
+}
+
+VkAccelerationStructureBuildControlDataGITS prepareAccelerationStructureControlData(
+    VkCommandBuffer commandBuffer) {
+  return {
+      CAccelerationStructureKHRState::
+          globalAccelerationStructureBuildCommandIndex, // uint32_t buildCommandIndex
+      VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,   // VkBuildAccelerationStructureModeKHR mode
+      VK_ACCELERATION_STRUCTURE_TYPE_GENERIC_KHR,       // VkAccelerationStructureTypeKHR type
+      SD()._commandbufferstates[commandBuffer]
+          ->commandPoolStateStore->deviceStateStore->deviceHandle, // VkDevice device;
+      VK_NULL_HANDLE,                         // VkAccelerationStructureKHR accelerationStructure
+      commandBuffer,                          // VkCommandBuffer commandBuffer;
+      getCommandExecutionSide(commandBuffer), // VkCommandExecutionSideGITS executionSide;
+  };
+}
+
+VkAccelerationStructureBuildControlDataGITS prepareAccelerationStructureControlData(
+    VkAccelerationStructureBuildControlDataGITS controlData,
+    const VkAccelerationStructureBuildGeometryInfoKHR* buildInfo) {
+  controlData.mode = buildInfo->mode;
+  controlData.accelerationStructureType = buildInfo->type;
+  controlData.accelerationStructure = buildInfo->dstAccelerationStructure;
+
+  return controlData;
+}
+
+VkAccelerationStructureBuildControlDataGITS prepareAccelerationStructureControlData(
+    VkAccelerationStructureBuildControlDataGITS controlData, VkStructureType sType) {
+  controlData.sType = sType;
+
+  return controlData;
+}
+
+uint64_t prepareStateTrackingHash(const VkAccelerationStructureBuildControlDataGITS& controlData,
+                                  VkDeviceAddress deviceAddress,
+                                  uint32_t offset,
+                                  uint64_t stride,
+                                  uint32_t count) {
+  CAccelerationStructureKHRState::HashGenerator hashGenerator = {
+      controlData.accelerationStructure,     // VkAccelerationStructureKHR accelerationStructure;
+      deviceAddress,                         // VkDeviceAddress deviceAddress;
+      stride,                                // uint64_t stride;
+      controlData.buildCommandIndex,         // uint32_t buildCommandIndex;
+      controlData.mode,                      // VkBuildAccelerationStructureModeKHR mode;
+      controlData.accelerationStructureType, // VkAccelerationStructureTypeKHR type;
+      controlData.sType,                     // VkStructureType sType;
+      offset,                                // uint32_t offset;
+      count                                  // uint32_t count;
+  };
+  return CGits::Instance().ResourceManager().getHash(RESOURCE_DATA_RAW, &hashGenerator,
+                                                     sizeof(hashGenerator));
+}
+
+VkCommandExecutionSideGITS getCommandExecutionSide(VkCommandBuffer commandBuffer) {
+  if (commandBuffer != VK_NULL_HANDLE) {
+    return VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS;
+  } else {
+    return VK_COMMAND_EXECUTION_SIDE_HOST_GITS;
   }
 }
 

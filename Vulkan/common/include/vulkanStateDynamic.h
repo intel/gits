@@ -18,7 +18,7 @@
 #include <unordered_set>
 #include <array>
 #include <cstdio>
-#include "vulkanStructStorageAuto.h"
+#include "vulkanTools.h"
 #include "vkWindowing.h"
 #include "tools.h"
 #include "token.h"
@@ -65,6 +65,8 @@ struct CEventState;
 struct CSemaphoreState;
 struct CQueryPoolState;
 struct CCommandBufferState;
+struct CDeferredOperationKHRState;
+struct CAccelerationStructureKHRState;
 struct CQueueSubmitState;
 struct CMemoryUpdateState;
 
@@ -594,13 +596,26 @@ struct CBufferState : public UniqueResourceHandle {
   VkMemoryRequirements memoryRequirements;
   std::vector<std::shared_ptr<CVkSparseMemoryBindData>> sparseBindings;
   VkDeviceAddress deviceAddress;
+  std::unordered_set<VkDeviceAddress> deviceAddressesToErase;
   uint64_t timestamp;
   std::shared_ptr<CDeviceState> deviceStateStore;
 
-  static std::unordered_map<VkDeviceAddress,
-                            std::pair<VkDeviceAddress, std::shared_ptr<CBufferState>>>
-      deviceAddressesMap;
-  static std::unordered_map<VkBuffer, std::shared_ptr<CBufferState>> shaderDeviceAddressBuffers;
+  struct DeviceAddressRangeState {
+    VkDeviceAddress start;
+    VkDeviceAddress end;
+    VkBuffer buffer;
+
+    bool operator()(DeviceAddressRangeState const& x, DeviceAddressRangeState const& y) const {
+      return x.start < y.start;
+    }
+  };
+  static std::set<DeviceAddressRangeState, DeviceAddressRangeState> deviceAddresses;
+  static std::unordered_map<VkDeviceAddress, VkBuffer> deviceAddressesQuickLook;
+
+  // BUFFER DEVICE ADDRESS GROUP COMMENT TOKEN
+  // Please, (un)comment all the areas with the above token together, at the same time
+  //
+  // static std::unordered_map<VkBuffer, std::shared_ptr<CBufferState>> shaderDeviceAddressBuffers;
 
   CBufferState(VkBuffer const* _pBuffer,
                VkBufferCreateInfo const* _pCreateInfo,
@@ -704,6 +719,7 @@ struct CDescriptorSetState : public UniqueResourceHandle {
       std::shared_ptr<CBufferViewState> bufferViewStateStore;
 
       std::vector<unsigned char> inlineUniformBlockData;
+      std::shared_ptr<CVkWriteDescriptorSetAccelerationStructureKHRData> accelerationStructureWrite;
     };
 
     VkDescriptorType descriptorType;
@@ -973,6 +989,7 @@ struct CPipelineState : public UniqueResourceHandle {
   VkPipeline pipelineHandle;
   CVkGraphicsPipelineCreateInfoData graphicsPipelineCreateInfoData;
   CVkComputePipelineCreateInfoData computePipelineCreateInfoData;
+  CVkRayTracingPipelineCreateInfoKHRData rayTracingPipelineCreateInfoData;
   std::unordered_map<VkShaderStageFlagBits, uint32_t> stageShaderHashMapping;
   std::shared_ptr<CDeviceState> deviceStateStore;
   std::shared_ptr<CPipelineLayoutState> pipelineLayoutStateStore;
@@ -987,9 +1004,11 @@ struct CPipelineState : public UniqueResourceHandle {
       : pipelineHandle(*_pPipeline),
         graphicsPipelineCreateInfoData(_pCreateInfo),
         computePipelineCreateInfoData(nullptr),
+        rayTracingPipelineCreateInfoData(nullptr, VK_NULL_HANDLE),
         deviceStateStore(_deviceState),
         pipelineLayoutStateStore(_pipelineLayoutState),
         renderPassStateStore(_renderPassState) {}
+
   CPipelineState(VkPipeline const* _pPipeline,
                  VkComputePipelineCreateInfo const* _pCreateInfo,
                  std::shared_ptr<CDeviceState> _deviceState,
@@ -997,6 +1016,18 @@ struct CPipelineState : public UniqueResourceHandle {
       : pipelineHandle(*_pPipeline),
         graphicsPipelineCreateInfoData(nullptr),
         computePipelineCreateInfoData(_pCreateInfo),
+        rayTracingPipelineCreateInfoData(nullptr, VK_NULL_HANDLE),
+        deviceStateStore(_deviceState),
+        pipelineLayoutStateStore(_pipelineLayoutState) {}
+
+  CPipelineState(VkPipeline const* _pPipeline,
+                 VkRayTracingPipelineCreateInfoKHR const* _pCreateInfo,
+                 std::shared_ptr<CDeviceState> _deviceState,
+                 std::shared_ptr<CPipelineLayoutState> _pipelineLayoutState)
+      : pipelineHandle(*_pPipeline),
+        graphicsPipelineCreateInfoData(nullptr),
+        computePipelineCreateInfoData(nullptr),
+        rayTracingPipelineCreateInfoData(_pCreateInfo, _deviceState->deviceHandle),
         deviceStateStore(_deviceState),
         pipelineLayoutStateStore(_pipelineLayoutState) {}
 
@@ -1029,6 +1060,11 @@ struct CPipelineState : public UniqueResourceHandle {
     }
     if (computePipelineCreateInfoData.Value()) {
       for (auto obj : computePipelineCreateInfoData.GetMappedPointers()) {
+        pointers.insert((uint64_t)obj);
+      }
+    }
+    if (rayTracingPipelineCreateInfoData.Value()) {
+      for (auto obj : rayTracingPipelineCreateInfoData.GetMappedPointers()) {
         pointers.insert((uint64_t)obj);
       }
     }
@@ -1280,6 +1316,7 @@ struct CCommandBufferState : public UniqueResourceHandle {
   bool submitted;
   bool restored;
   VkPipeline currentPipeline;
+  VkPipelineBindPoint currentPipelineBindPoint;
   CLibrary::CVulkanCommandBufferTokensBuffer tokensBuffer;
   std::unordered_map<VkEvent, bool> eventStatesAfterSubmit;
   std::unordered_map<VkQueryPool, std::unordered_set<uint32_t>>
@@ -1302,6 +1339,10 @@ struct CCommandBufferState : public UniqueResourceHandle {
   std::vector<std::shared_ptr<RenderGenericAttachment>> renderPassResourceImages;
   std::vector<std::shared_ptr<RenderGenericAttachment>> renderPassResourceBuffers;
   std::vector<VkCommandBuffer> secondaryCommandBuffers;
+  std::set<std::pair<std::shared_ptr<CDeviceMemoryState>, std::shared_ptr<CBufferState>>>
+      temporaryBuffers; // To be deleted when cmdbuffer is reset or destroyed
+  std::unordered_map<uint32_t, CDeviceAddressPatcher> addressPatchers;
+  std::vector<COnQueueSubmitEnd*> queueSubmitEndMessageReceivers;
 
   CCommandBufferState(VkCommandBuffer const* _pCommandBuffer,
                       VkCommandBufferAllocateInfo const* _pAllocateInfo,
@@ -1312,6 +1353,7 @@ struct CCommandBufferState : public UniqueResourceHandle {
         submitted(false),
         restored(false),
         currentPipeline(VK_NULL_HANDLE),
+        currentPipelineBindPoint(VK_PIPELINE_BIND_POINT_GRAPHICS),
         tokensBuffer(),
         commandPoolStateStore(_commandPoolState) {}
 
@@ -1331,6 +1373,106 @@ struct CCommandBufferState : public UniqueResourceHandle {
       for (auto obj : beginRenderPass->GetMappedPointers()) {
         pointers.insert((uint64_t)obj);
       }
+    }
+    return pointers;
+  }
+};
+
+// Deferred operation
+
+struct CDeferredOperationKHRState : public UniqueResourceHandle {
+  VkDeferredOperationKHR deferredOperationKHRHandle;
+  std::shared_ptr<CDeviceState> deviceStateStore;
+
+  CDeferredOperationKHRState(VkDeferredOperationKHR const* _pDeferredOperation,
+                             std::shared_ptr<CDeviceState> _deviceState)
+      : deferredOperationKHRHandle(*_pDeferredOperation), deviceStateStore(_deviceState) {}
+
+  std::set<uint64_t> GetMappedPointers() {
+    std::set<uint64_t> pointers;
+    pointers.insert((uint64_t)deviceStateStore->deviceHandle);
+    for (auto obj : deviceStateStore->GetMappedPointers()) {
+      pointers.insert((uint64_t)obj);
+    }
+    return pointers;
+  }
+};
+
+// Acceleration structure
+
+struct CAccelerationStructureKHRState : public UniqueResourceHandle {
+  struct CBuildInfo {
+    std::shared_ptr<CAccelerationStructureKHRState> srcAccelerationStructureStateStore;
+    CVkAccelerationStructureBuildGeometryInfoKHRData buildGeometryInfoData;
+    CVkAccelerationStructureBuildRangeInfoKHRDataArray buildRangeInfoDataArray;
+    VkAccelerationStructureBuildControlDataGITS controlData;
+
+    CBuildInfo(const VkAccelerationStructureBuildGeometryInfoKHR* _pBuildGeometryInfo,
+               const VkAccelerationStructureBuildRangeInfoKHR* _pBuildRangeInfos,
+               VkAccelerationStructureBuildControlDataGITS _controlData,
+               std::shared_ptr<CAccelerationStructureKHRState> _srcAccelerationStructureState = {})
+        : buildGeometryInfoData(_pBuildGeometryInfo, _pBuildRangeInfos, _controlData),
+          buildRangeInfoDataArray(_pBuildGeometryInfo->geometryCount, _pBuildRangeInfos),
+          controlData(_controlData),
+          srcAccelerationStructureStateStore(_srcAccelerationStructureState) {}
+  };
+
+  struct CCopyInfo {
+    std::shared_ptr<CAccelerationStructureKHRState> srcAccelerationStructureStateStore;
+    CVkCopyAccelerationStructureInfoKHRData copyAccelerationStructureInfoData;
+    VkCommandExecutionSideGITS executionSide;
+
+    CCopyInfo(const VkCopyAccelerationStructureInfoKHR* _pCopyInfo,
+              std::shared_ptr<CAccelerationStructureKHRState> _srcAccelerationStructureState,
+              VkCommandExecutionSideGITS _executionSide)
+        : srcAccelerationStructureStateStore(_srcAccelerationStructureState),
+          copyAccelerationStructureInfoData(_pCopyInfo),
+          executionSide(_executionSide) {}
+  };
+
+  VkAccelerationStructureKHR accelerationStructureHandle;
+  CVkAccelerationStructureCreateInfoKHRData accelerationStructureCreateInfoData;
+  VkDeviceAddress deviceAddress;
+  std::shared_ptr<CBufferState> bufferStateStore;
+  std::shared_ptr<CBuildInfo> buildInfo;
+  std::shared_ptr<CBuildInfo> updateInfo;
+  std::shared_ptr<CCopyInfo> copyInfo;
+  VkAccelerationStructureBuildSizesInfoKHR buildSizeInfo;
+
+  struct HashGenerator {
+    VkAccelerationStructureKHR accelerationStructure;
+    VkDeviceAddress deviceAddress;
+    uint64_t stride;
+    uint32_t buildCommandIndex;
+    VkBuildAccelerationStructureModeKHR mode;
+    VkAccelerationStructureTypeKHR type;
+    VkStructureType sType;
+    uint32_t offset;
+    uint32_t count;
+  };
+  std::unordered_map<hash_t, void*> stateTrackingHashMap;
+
+  static std::unordered_map<VkDeviceAddress, VkAccelerationStructureKHR> deviceAddresses;
+  static uint32_t globalAccelerationStructureBuildCommandIndex; // used for generating hashes
+
+  CAccelerationStructureKHRState(VkAccelerationStructureKHR const* _pAccelerationStructure,
+                                 VkAccelerationStructureCreateInfoKHR const* _pCreateInfo,
+                                 std::shared_ptr<CDeviceState> _deviceState,
+                                 std::shared_ptr<CBufferState> _bufferState)
+      : accelerationStructureHandle(*_pAccelerationStructure),
+        accelerationStructureCreateInfoData(_pCreateInfo),
+        deviceAddress(0),
+        bufferStateStore(_bufferState),
+        buildSizeInfo{} {}
+
+  std::set<uint64_t> GetMappedPointers() {
+    std::set<uint64_t> pointers;
+    pointers.insert((uint64_t)bufferStateStore->bufferHandle);
+    for (auto obj : bufferStateStore->GetMappedPointers()) {
+      pointers.insert((uint64_t)obj);
+    }
+    for (auto obj : accelerationStructureCreateInfoData.GetMappedPointers()) {
+      pointers.insert((uint64_t)obj);
     }
     return pointers;
   }
@@ -1377,6 +1519,40 @@ struct CMemoryUpdateState {
 };
 
 // Internal resources
+
+struct InternalPipelinesManager {
+  struct InternalPipelines {
+    VkDevice device;
+    VkPipelineLayout layout;
+    VkPipeline prepareDeviceAddressesForPatching;
+    VkPipeline patchDeviceAddressesPipeline;
+
+    InternalPipelines(VkDevice _device);
+
+    VkPipelineLayout getLayout();
+    VkPipeline getPrepareDeviceAddressesForPatchingPipeline();
+    VkPipeline getPatchDeviceAddressesPipeline();
+  };
+
+  VkPipelineLayout universalComputePipelineLayout;
+  VkPipeline prepareDeviceAddressesForPatching;
+  VkPipeline patchDeviceAddresses;
+  VkPipeline copyAccelerationStructureInstanceData;
+  VkPipeline copyAccelerationStructureTrianglesData;
+
+  std::unordered_map<VkDevice, InternalPipelines> pipelinesMap;
+
+  InternalPipelinesManager() {}
+
+  InternalPipelines& operator[](VkDevice device) {
+    auto it = pipelinesMap.find(device);
+    if (it == pipelinesMap.end()) {
+      it = pipelinesMap.insert(std::make_pair(device, InternalPipelines(device))).first;
+    }
+
+    return it->second;
+  }
+};
 
 struct CInternalResources {
   struct CPresentationData {
@@ -1425,15 +1601,22 @@ struct CInternalResources {
           commandBufferWithTransitionToPresentSRC(VK_NULL_HANDLE) {}
   };
 
+  // (Queue family index) -> (command pool, command buffer) map used for capturing swapchain images
   using ScreenshotTakingResources =
       std::unordered_map<uint32_t, std::pair<VkCommandPool, VkCommandBuffer>>;
 
+  // Timestamp used to mark an order in which resources are being used
   uint64_t timestamp;
   bool attachedToGITS;
   std::unordered_map<VkDevice, ScreenshotTakingResources> deviceResourcesMap;
+
+  // Pipeline cache handles used when --overrideVKPipelineCache player options is being used
   std::unordered_map<VkDevice, VkPipelineCache> pipelineCacheHandles;
   std::unordered_map<VkDevice, CVirtualSwapchain> virtualSwapchain;
   std::unordered_map<VkDevice, COffscreenAppsSupport> offscreenApps;
+
+  // Additional pipelines which are injected by GITS
+  InternalPipelinesManager internalPipelines;
 
   CInternalResources() : timestamp(0), attachedToGITS(false) {}
 };
@@ -1493,6 +1676,11 @@ public:
   typedef std::unordered_map<VkQueryPool, std::shared_ptr<CQueryPoolState>> TQueryPoolStates;
   typedef std::unordered_map<VkCommandBuffer, std::shared_ptr<CCommandBufferState>>
       TCommandBufferStates;
+  typedef std::unordered_map<VkDeferredOperationKHR, std::shared_ptr<CDeferredOperationKHRState>>
+      TDeferredOperationKHRStates;
+  typedef std::unordered_map<VkAccelerationStructureKHR,
+                             std::shared_ptr<CAccelerationStructureKHRState>>
+      TAccelerationStructureKHRStates;
 
   THWNDStates _hwndstates;
   TInstanceStates _instancestates;
@@ -1523,6 +1711,8 @@ public:
   TSemaphoreStates _semaphorestates;
   TQueryPoolStates _querypoolstates;
   TCommandBufferStates _commandbufferstates;
+  TDeferredOperationKHRStates _deferredoperationkhrstates;
+  TAccelerationStructureKHRStates _accelerationstructurekhrstates;
 
   std::unordered_map<VkCommandBuffer, std::unordered_set<VkBuffer>> bindingBuffers;
   std::unordered_map<VkCommandBuffer, std::unordered_set<VkImage>> bindingImages;

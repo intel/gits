@@ -985,6 +985,8 @@ inline void vkAllocateMemory_WRAPRUN(CVkResult& recorderSideReturnValue,
   auto dedicatedAllocation = (VkMemoryDedicatedAllocateInfo*)getPNextStructure(
       allocateInfoPtr->pNext, VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO);
   if (dedicatedAllocation) {
+    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
     if (dedicatedAllocation->image != VK_NULL_HANDLE) {
       auto& imageState = SD()._imagestates[dedicatedAllocation->image];
 
@@ -1046,6 +1048,8 @@ inline void vkAllocateMemory_WRAPRUN(CVkResult& recorderSideReturnValue,
   }
 
   if (checkMemoryMappingFeasibility(device, allocateInfoPtr->memoryTypeIndex, false)) {
+    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
     //clearMemory
     void* ptr = nullptr;
 
@@ -1306,6 +1310,7 @@ inline void vkWaitForFences_WRAPRUN(CVkResult& return_value,
         drvVk.vkWaitForFences(*device, (uint32_t)fences.size(), &fences[0], *waitAll, *timeout));
 
     if (*return_value != VK_SUCCESS && (*return_value != recRetVal)) {
+      CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
       return_value.Assign(drvVk.vkWaitForFences(*device, (uint32_t)fences.size(), &fences[0],
                                                 VK_TRUE, 0xFFFFFFFFFFFFFFFF));
     }
@@ -1321,6 +1326,7 @@ inline void vkWaitSemaphores_WRAPRUN(CVkResult& return_value,
   return_value.Assign(drvVk.vkWaitSemaphores(*device, *pWaitInfo, *timeout));
 
   if ((*return_value != VK_SUCCESS) && (*return_value != recRetVal)) {
+    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
     return_value.Assign(drvVk.vkWaitSemaphores(*device, *pWaitInfo, 0xFFFFFFFFFFFFFFFF));
   }
 }
@@ -1334,6 +1340,7 @@ inline void vkWaitSemaphoresKHR_WRAPRUN(CVkResult& return_value,
   return_value.Assign(drvVk.vkWaitSemaphoresKHR(*device, *pWaitInfo, *timeout));
 
   if ((*return_value != VK_SUCCESS) && (*return_value != recRetVal)) {
+    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
     return_value.Assign(drvVk.vkWaitSemaphoresKHR(*device, *pWaitInfo, 0xFFFFFFFFFFFFFFFF));
   }
 }
@@ -1343,6 +1350,8 @@ void BindBufferMemory_WRAPRUNHelper(VkDevice device,
                                     VkBuffer buffer,
                                     VkDeviceMemory memory,
                                     uint64_t memoryOffset) {
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
   VkMemoryRequirements memRequirements;
   drvVk.vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
   auto memAllocateInfo = SD()._devicememorystates[memory]->memoryAllocateInfoData.Value();
@@ -1438,6 +1447,8 @@ void BindImageMemory_WRAPRUNHelper(VkDevice device,
                                    VkImage image,
                                    VkDeviceMemory memory,
                                    uint64_t memoryOffset) {
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
   VkMemoryRequirements memRequirements;
   drvVk.vkGetImageMemoryRequirements(device, image, &memRequirements);
   auto memAllocateInfo = SD()._devicememorystates[memory]->memoryAllocateInfoData.Value();
@@ -1599,6 +1610,8 @@ inline void vkCreateDevice_WRAPRUN(CVkResult& recorderSideReturnValue,
 #endif
 
   if (!Config::Get().player.overrideVKPipelineCache.empty()) {
+    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
     auto initialData = GetBinaryFileContents(Config::Get().player.overrideVKPipelineCache.string());
 
     VkPipelineCacheCreateInfo cacheCreateInfo = {
@@ -1671,6 +1684,22 @@ void ForceScissor_Helper(VkRect2D* originalScissorRect) {
     originalScissorRect->extent.width = std::min(static_cast<uint32_t>(rect[2]), extent.width);
     originalScissorRect->extent.height = std::min(static_cast<uint32_t>(rect[3]), extent.height);
   }
+}
+
+// Helper function used to reduce the number of arguments passed to a driver.
+// This is necessary for the CreatePipelines_Helper template to accept the call.
+// Besides, for now GITS doesn't support deferred operations so we need to
+// pass VK_NULL_HANDLE anyway.
+VkResult STDCALL
+CreateRayTracingPipelinesArgumentWrapper(VkDevice device,
+                                         VkPipelineCache pipelineCache,
+                                         uint32_t createInfoCount,
+                                         const VkRayTracingPipelineCreateInfoKHR* pCreateInfos,
+                                         const VkAllocationCallbacks* pAllocator,
+                                         VkPipeline* pPipelines) {
+  return drvVk.vkCreateRayTracingPipelinesKHR(device, VK_NULL_HANDLE /* *deferredOperation */,
+                                              pipelineCache, createInfoCount, pCreateInfos,
+                                              pAllocator, pPipelines);
 }
 
 template <class CREATE_INFO>
@@ -1785,6 +1814,26 @@ inline void vkCreateComputePipelines_WRAPRUN(CVkResult& recorderSideReturnValue,
                               *pCreateInfos, *pAllocator, *pPipelines);
 }
 
+inline void vkCreateRayTracingPipelinesKHR_WRAPRUN(
+    CVkResult& recorderSideReturnValue,
+    CVkDevice& device,
+    CVkDeferredOperationKHR& deferredOperation,
+    CVkPipelineCache& pipelineCache,
+    Cuint32_t& createInfoCount,
+    CVkRayTracingPipelineCreateInfoKHRArray& pCreateInfos,
+    CNullWrapper& pAllocator,
+    CVkPipeline::CSMapArray& pPipelines) {
+  VkResult playerSideReturnValue =
+      CreatePipelines_Helper(CreateRayTracingPipelinesArgumentWrapper, *device, *pipelineCache,
+                             *createInfoCount, *pCreateInfos, *pAllocator, *pPipelines);
+  checkReturnValue(playerSideReturnValue, recorderSideReturnValue,
+                   "vkCreateRayTracingPipelinesKHR");
+  recorderSideReturnValue.Assign(playerSideReturnValue);
+  vkCreateRayTracingPipelinesKHR_SD(playerSideReturnValue, *device, *deferredOperation,
+                                    *pipelineCache, *createInfoCount, *pCreateInfos, *pAllocator,
+                                    *pPipelines);
+}
+
 inline void vkCmdSetScissor_WRAPRUN(CVkCommandBuffer& commandBuffer,
                                     Cuint32_t& firstScissor,
                                     Cuint32_t& scissorCount,
@@ -1896,8 +1945,8 @@ inline void vkCreateCommandPool_WRAPRUN(CVkResult& recorderSideReturnValue,
 inline void vkGetBufferDeviceAddressUnifiedGITS_WRAPRUN(Cuint64_t& _return_value,
                                                         CVkDevice& _device,
                                                         CVkBufferDeviceAddressInfo& _pInfo) {
-  auto bufferDeviceAddress = drvVk.vkGetBufferDeviceAddressUnifiedGITS(*_device, *_pInfo);
-  vkGetBufferDeviceAddressUnifiedGITS_SD(bufferDeviceAddress, *_device, *_pInfo);
+  auto deviceAddress = drvVk.vkGetBufferDeviceAddressUnifiedGITS(*_device, *_pInfo);
+  vkGetBufferDeviceAddressUnifiedGITS_SD(deviceAddress, *_device, *_pInfo);
 }
 
 inline void vkBeginCommandBuffer_WRAPRUN(CVkResult& return_value,
@@ -2112,5 +2161,117 @@ inline void vkDestroyRenderPass_WRAPRUN(CVkDevice& device,
   vkDestroyRenderPass_SD(*device, *renderPass, *pAllocator);
   renderPass.RemoveMapping();
 }
+
+inline void vkGetAccelerationStructureDeviceAddressUnifiedGITS_WRAPRUN(
+    Cuint64_t& _return_value,
+    CVkDevice& _device,
+    CVkAccelerationStructureDeviceAddressInfoKHR& _pInfo) {
+  auto deviceAddress = drvVk.vkGetAccelerationStructureDeviceAddressUnifiedGITS(*_device, *_pInfo);
+  vkGetAccelerationStructureDeviceAddressUnifiedGITS_SD(deviceAddress, *_device, *_pInfo);
+}
+
+inline void vkBuildAccelerationStructuresKHR_WRAPRUN(
+    CVkResult& return_value,
+    CVkDevice& device,
+    CVkDeferredOperationKHR& deferredOperation,
+    Cuint32_t& infoCount,
+    CVkAccelerationStructureBuildGeometryInfoKHRArray& pInfos,
+    CVkAccelerationStructureBuildRangeInfoKHRArrayOfArrays& ppBuildRangeInfos) {
+  auto buildInfos = *pInfos;
+  auto buildRangeInfos = *ppBuildRangeInfos;
+  std::vector<std::vector<char>> scratchSpace(*infoCount);
+
+  {
+    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
+    for (uint32_t i = 0; i < *infoCount; ++i) {
+      // Prepare scratch space if stream doesn't contain it
+      if (buildInfos[i].scratchData.hostAddress != nullptr) {
+        continue;
+      }
+
+      std::vector<uint32_t> primitivesCount(buildInfos[i].geometryCount);
+
+      for (uint32_t g = 0; g < buildInfos[i].geometryCount; ++g) {
+        primitivesCount[g] = buildRangeInfos[i][g].primitiveCount;
+      }
+      VkAccelerationStructureBuildSizesInfoKHR buildSizesInfoKHR = {
+          VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, // VkStructureType    sType;
+          nullptr, // const void       * pNext;
+          0,       // VkDeviceSize       accelerationStructureSize;
+          0,       // VkDeviceSize       updateScratchSize;
+          0        // VkDeviceSize       buildScratchSize;
+      };
+      drvVk.vkGetAccelerationStructureBuildSizesKHR(
+          *device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_HOST_KHR, &buildInfos[i],
+          primitivesCount.data(), &buildSizesInfoKHR);
+
+      if (buildInfos[i].mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR) {
+        scratchSpace[i].resize(buildSizesInfoKHR.buildScratchSize);
+      } else if (buildInfos[i].mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR) {
+        scratchSpace[i].resize(buildSizesInfoKHR.updateScratchSize);
+      }
+
+      buildInfos[i].scratchData.hostAddress = scratchSpace[i].data();
+    }
+  }
+  return_value.Assign(drvVk.vkBuildAccelerationStructuresKHR(
+      *device, *deferredOperation, *infoCount, buildInfos, buildRangeInfos));
+}
+
+inline void vkCmdBuildAccelerationStructuresKHR_WRAPRUN(
+    CVkCommandBuffer& commandBuffer,
+    Cuint32_t& infoCount,
+    CVkAccelerationStructureBuildGeometryInfoKHRArray& pInfos,
+    CVkAccelerationStructureBuildRangeInfoKHRArrayOfArrays& ppBuildRangeInfos) {
+  auto buildInfos = *pInfos;
+  auto buildRangeInfos = *ppBuildRangeInfos;
+
+  {
+    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
+    auto commandBufferState = SD()._commandbufferstates[*commandBuffer];
+    VkDevice device = commandBufferState->commandPoolStateStore->deviceStateStore->deviceHandle;
+
+    // Due to changes in scratch space size requirements on various platforms which can
+    // affect stream cross-platform compatibility and to simplify state tracking code,
+    // scratch space is always prepared adhoc during stream replay.
+    for (uint32_t i = 0; i < *infoCount; ++i) {
+      std::vector<uint32_t> primitivesCount(buildInfos[i].geometryCount);
+
+      for (uint32_t g = 0; g < buildInfos[i].geometryCount; ++g) {
+        primitivesCount[g] = buildRangeInfos[i][g].primitiveCount;
+      }
+      VkAccelerationStructureBuildSizesInfoKHR buildSizesInfoKHR = {
+          VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, // VkStructureType    sType;
+          nullptr, // const void       * pNext;
+          0,       // VkDeviceSize       accelerationStructureSize;
+          0,       // VkDeviceSize       updateScratchSize;
+          0        // VkDeviceSize       buildScratchSize;
+      };
+      drvVk.vkGetAccelerationStructureBuildSizesKHR(
+          device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfos[i],
+          primitivesCount.data(), &buildSizesInfoKHR);
+
+      VkDeviceSize size = 0;
+      if (buildInfos[i].mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR) {
+        size = buildSizesInfoKHR.buildScratchSize;
+      } else if (buildInfos[i].mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR) {
+        size = buildSizesInfoKHR.updateScratchSize;
+      }
+
+      auto memoryBufferPair = createTemporaryBuffer(device, size,
+                                                    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+                                                        VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+                                                    commandBufferState.get());
+      buildInfos[i].scratchData.deviceAddress =
+          getBufferDeviceAddress(device, memoryBufferPair.second->bufferHandle);
+    }
+  }
+
+  drvVk.vkCmdBuildAccelerationStructuresKHR(*commandBuffer, *infoCount, buildInfos,
+                                            buildRangeInfos);
+}
+
 } // namespace Vulkan
 } // namespace gits

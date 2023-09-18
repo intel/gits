@@ -61,8 +61,17 @@ gits::Vulkan::IRecorderWrapper* STDCALL GITSRecorderVulkan() {
 
 namespace gits {
 namespace Vulkan {
+
 CRecorderWrapper::CRecorderWrapper(CRecorder& recorder)
     : _recorder(recorder), _ignoreNextQueuePresentGITS(false) {}
+
+void CRecorderWrapper::PauseRecording() {
+  _recorder.Pause();
+}
+
+void CRecorderWrapper::ContinueRecording() {
+  _recorder.Continue();
+}
 
 void CRecorderWrapper::StreamFinishedEvent(std::function<void()> event) {
   _recorder.RegisterDisposeEvent(event);
@@ -132,6 +141,8 @@ void CRecorderWrapper::dumpScreenshot(VkQueue queue,
 void CRecorderWrapper::resetMemoryAfterQueueSubmit(VkQueue queue,
                                                    uint32_t submitCount,
                                                    const VkSubmitInfo* pSubmits) {
+  bool queueWaitIdleAlreadyUsed = false;
+
   if (Config::Get().recorder.vulkan.utilities.memorySegmentSize ||
       Config::Get().recorder.vulkan.utilities.shadowMemory) {
     CMemoryUpdateState toUpdate;
@@ -173,21 +184,25 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit(VkQueue queue,
       }
     }
 
-    for (auto& bufferState : CBufferState::shaderDeviceAddressBuffers) {
-      if (bufferState.second->binding != nullptr) {
-        auto& memoryState = bufferState.second->binding->deviceMemoryStateStore;
-        if ((SD()._devicememorystates.find(memoryState->deviceMemoryHandle) !=
-             SD()._devicememorystates.end()) &&
-            memoryState->IsMapped()) {
-          toUpdate.AddToMap(memoryState->deviceMemoryHandle,
-                            bufferState.second->binding->memoryOffset,
-                            bufferState.second->binding->memorySizeRequirement);
-        }
-      }
-    }
+    // BUFFER DEVICE ADDRESS GROUP COMMENT TOKEN
+    // Please, (un)comment all the areas with the above token together, at the same time
+    //
+    // for (auto& bufferState : CBufferState::shaderDeviceAddressBuffers) {
+    //   if (bufferState.second->binding != nullptr) {
+    //     auto& memoryState = bufferState.second->binding->deviceMemoryStateStore;
+    //     if ((SD()._devicememorystates.find(memoryState->deviceMemoryHandle) !=
+    //          SD()._devicememorystates.end()) &&
+    //         memoryState->IsMapped()) {
+    //       toUpdate.AddToMap(memoryState->deviceMemoryHandle,
+    //                         bufferState.second->binding->memoryOffset,
+    //                         bufferState.second->binding->memorySizeRequirement);
+    //     }
+    //   }
+    // }
 
     if (toUpdate.intervalMapMemory.size() > 0) {
       drvVk.vkQueueWaitIdle(queue);
+      queueWaitIdleAlreadyUsed = true;
     }
 
     for (auto obj2 : toUpdate.intervalMapMemory) {
@@ -228,11 +243,29 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit(VkQueue queue,
       }
     }
   }
+
+  // Perform tasks which were waiting for queue submit end (i.e. acceleration structure building data acquisition)
+  for (uint32_t i = 0; i < submitCount; i++) {
+    for (uint32_t j = 0; j < pSubmits[i].commandBufferCount; j++) {
+      auto& commandBufferState = SD()._commandbufferstates[pSubmits[i].pCommandBuffers[j]];
+
+      if ((commandBufferState->addressPatchers.size() > 0) && !queueWaitIdleAlreadyUsed) {
+        drvVk.vkQueueWaitIdle(queue);
+        queueWaitIdleAlreadyUsed = true;
+      }
+
+      for (auto receiver : commandBufferState->queueSubmitEndMessageReceivers) {
+        receiver->OnQueueSubmitEnd();
+      }
+    }
+  }
 }
 
 void CRecorderWrapper::resetMemoryAfterQueueSubmit2(VkQueue queue,
                                                     uint32_t submitCount,
                                                     const VkSubmitInfo2* pSubmits) {
+  bool queueWaitIdleAlreadyUsed = false;
+
   if (Config::Get().recorder.vulkan.utilities.memorySegmentSize ||
       Config::Get().recorder.vulkan.utilities.shadowMemory) {
     CMemoryUpdateState toUpdate;
@@ -275,21 +308,25 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit2(VkQueue queue,
       }
     }
 
-    for (auto& bufferState : CBufferState::shaderDeviceAddressBuffers) {
-      if (bufferState.second->binding != nullptr) {
-        auto& memoryState = bufferState.second->binding->deviceMemoryStateStore;
-        if ((SD()._devicememorystates.find(memoryState->deviceMemoryHandle) !=
-             SD()._devicememorystates.end()) &&
-            memoryState->IsMapped()) {
-          toUpdate.AddToMap(memoryState->deviceMemoryHandle,
-                            bufferState.second->binding->memoryOffset,
-                            bufferState.second->binding->memorySizeRequirement);
-        }
-      }
-    }
+    // BUFFER DEVICE ADDRESS GROUP COMMENT TOKEN
+    // Please, (un)comment all the areas with the above token together, at the same time
+    //
+    // for (auto& bufferState : CBufferState::shaderDeviceAddressBuffers) {
+    //   if (bufferState.second->binding != nullptr) {
+    //     auto& memoryState = bufferState.second->binding->deviceMemoryStateStore;
+    //     if ((SD()._devicememorystates.find(memoryState->deviceMemoryHandle) !=
+    //          SD()._devicememorystates.end()) &&
+    //         memoryState->IsMapped()) {
+    //       toUpdate.AddToMap(memoryState->deviceMemoryHandle,
+    //                         bufferState.second->binding->memoryOffset,
+    //                         bufferState.second->binding->memorySizeRequirement);
+    //     }
+    //   }
+    // }
 
     if (toUpdate.intervalMapMemory.size() > 0) {
       drvVk.vkQueueWaitIdle(queue);
+      queueWaitIdleAlreadyUsed = true;
     }
 
     for (auto obj2 : toUpdate.intervalMapMemory) {
@@ -327,6 +364,24 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit2(VkQueue queue,
         } else {
           Log(WARN) << "Updating memory after QueueSubmit failed. Invalid values.";
         }
+      }
+    }
+  }
+
+  // Perform tasks which were waiting for queue submit end (i.e. acceleration structure building data acquisition)
+  for (uint32_t i = 0; i < submitCount; i++) {
+    for (uint32_t j = 0; j < pSubmits[i].commandBufferInfoCount; j++) {
+      auto& commandBufferState =
+          SD()._commandbufferstates[pSubmits[i].pCommandBufferInfos[j].commandBuffer];
+
+      if ((commandBufferState->queueSubmitEndMessageReceivers.size() > 0) &&
+          !queueWaitIdleAlreadyUsed) {
+        drvVk.vkQueueWaitIdle(queue);
+        queueWaitIdleAlreadyUsed = true;
+      }
+
+      for (auto& receiver : commandBufferState->queueSubmitEndMessageReceivers) {
+        receiver->OnQueueSubmitEnd();
       }
     }
   }
@@ -485,6 +540,10 @@ bool CRecorderWrapper::IsVulkanAPIVersionSupported(uint32_t major,
                                                    uint32_t minor,
                                                    VkPhysicalDevice physicalDevice) const {
   return isVulkanAPIVersionSupported(major, minor, physicalDevice);
+}
+
+void CRecorderWrapper::SetConfig(Config const& cfg) const {
+  Config::Set(cfg);
 }
 
 } // namespace Vulkan

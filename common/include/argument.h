@@ -884,6 +884,17 @@ public:
       _cargs[i] = std::shared_ptr<TKeyArg>(new TKeyArg(&dictionary[i], arg3));
     }
   }
+  template <class WRAP_T2, class WRAP_T3>
+  CStructArray(int size, const TKey* dictionary, const WRAP_T2* arg3, const WRAP_T3 arg4) {
+    if ((size == 0) || (dictionary == NULL)) {
+      return;
+    }
+
+    _cargs.resize(size);
+    for (int i = 0; i < size; i++) {
+      _cargs[i] = std::shared_ptr<TKeyArg>(new TKeyArg(&dictionary[i], arg3[i], arg4));
+    }
+  }
   std::vector<std::shared_ptr<TKeyArg>>& Vector() {
     return _cargs;
   }
@@ -1033,6 +1044,222 @@ public:
   }
 };
 
+//************************** CStructArrayOfArrays ***********************************
+template <class T, class WRAP_T, class T_GET_MAPPED_POINTERS = uint64_t>
+class CStructArrayOfArrays : public CArgument {
+public:
+  typedef T TKey;
+  typedef WRAP_T TKeyArg;
+
+private:
+  std::vector<std::vector<std::shared_ptr<TKeyArg>>> _cargs; // wrapped data
+  std::vector<std::vector<TKey>> _dataStorage;               // array of arrays of elements
+  std::vector<TKey*> _data;                            // array of pointers to individual elements
+  std::vector<std::vector<TKey>> _originalDataStorage; // array of arrays of original values
+  std::vector<TKey*> _originalData;                    // array of pointers to original elements
+public:
+  CStructArrayOfArrays() {}
+
+  CStructArrayOfArrays(int size, const TKey* const* dictionary) {
+    if ((size == 0) || (dictionary == nullptr)) {
+      return;
+    }
+
+    _cargs.resize(size);
+    for (int i = 0; i < size; i++) {
+      _cargs[i].resize(1);
+      _cargs[i][0] = std::shared_ptr<TKeyArg>(new TKeyArg(dictionary[i]));
+    }
+  }
+
+  template <class WRAP_T2>
+  CStructArrayOfArrays(int size, const TKey* const* dictionary, const WRAP_T2 arg3) {
+    if ((size == 0) || (dictionary == nullptr)) {
+      return;
+    }
+
+    _cargs.resize(size);
+    for (int i = 0; i < size; i++) {
+      _cargs[i].resize(1);
+      _cargs[i][0] = std::shared_ptr<TKeyArg>(new TKeyArg(dictionary[i], arg3));
+    }
+  }
+
+  template <class WRAP_T2, class WRAP_T3>
+  CStructArrayOfArrays(int size,
+                       const TKey* const* dictionary,
+                       const WRAP_T2* arg3,
+                       const WRAP_T3 arg4) {
+    if ((size == 0) || (dictionary == nullptr)) {
+      return;
+    }
+
+    _cargs.resize(size);
+    for (int i = 0; i < size; i++) {
+      _cargs[i].resize(1);
+      _cargs[i][0] = std::shared_ptr<TKeyArg>(new TKeyArg(dictionary[i], arg3[i], arg4));
+    }
+  }
+
+  CStructArrayOfArrays(std::vector<uint32_t> const& sizes, const TKey* const* dictionary) {
+    if ((sizes.size() == 0) || (dictionary == nullptr)) {
+      return;
+    }
+
+    _cargs.resize(sizes.size());
+    for (size_t i = 0; i < sizes.size(); i++) {
+      _cargs[i].resize(sizes[i]);
+      for (uint32_t j = 0; j < sizes[i]; j++) {
+        _cargs[i][j] = std::shared_ptr<TKeyArg>(new TKeyArg(&dictionary[i][j]));
+      }
+    }
+  }
+
+  template <class WRAP_T2>
+  CStructArrayOfArrays(std::vector<uint32_t> const& sizes,
+                       const TKey* const* dictionary,
+                       const WRAP_T2 arg3) {
+    if ((sizes.size() == 0) || (dictionary == nullptr)) {
+      return;
+    }
+
+    _cargs.resize(sizes.size());
+    for (size_t i = 0; i < sizes.size(); i++) {
+      _cargs[i].resize(sizes[i]);
+      for (uint32_t j = 0; j < sizes[i]; j++) {
+        _cargs[i][j] = std::shared_ptr<TKeyArg>(new TKeyArg(&dictionary[i][j], arg3));
+      }
+    }
+  }
+
+  std::vector<std::shared_ptr<TKeyArg>>& Vector() {
+    return _cargs;
+  }
+  const std::vector<std::shared_ptr<TKeyArg>>& Vector() const {
+    return _cargs;
+  }
+
+  TKey* const* Value() {
+    if (_cargs.size() == 0) {
+      return nullptr;
+    }
+
+    if (_data.size() == 0) { // Generate if not generated yet.
+      _dataStorage.resize(_cargs.size());
+      _data.resize(_cargs.size());
+      for (unsigned i = 0; i < _cargs.size(); ++i) {
+        _dataStorage[i].resize(_cargs[i].size());
+
+        for (unsigned j = 0; j < _cargs[i].size(); ++j) {
+          _dataStorage[i][j] = **_cargs[i][j];
+        }
+        _data[i] = _dataStorage[i].data();
+      }
+    }
+
+    return _data.data();
+  }
+  TKey* const* operator*() {
+    return Value();
+  }
+  TKey* const* Original() {
+    if (_cargs.size() == 0) {
+      return nullptr;
+    }
+
+    if (_originalData.size() == 0) { // Generate if not generated yet.
+      _originalDataStorage.resize(_cargs.size());
+      _originalData.resize(_cargs.size());
+      for (unsigned i = 0; i < _cargs.size(); ++i) {
+        _originalDataStorage[i].resize(_cargs[i].size());
+
+        for (unsigned j = 0; j < _cargs[i].size(); ++j) {
+          _originalDataStorage[i][j] = _cargs[i][j]->Original();
+        }
+        _originalData[i] = _originalDataStorage[i].data();
+      }
+    }
+
+    return _originalData.data();
+  }
+
+  const char* Name() const {
+    // Not every CArgument has ::NAME, so add it manually if needed.
+    // We can't just call Name() on the first argument of the vector because it may be empty.
+    return TKeyArg::NAME;
+  }
+
+  virtual void Write(CBinOStream& stream) const {
+    write_name_to_stream(stream, (unsigned)_cargs.size());
+    for (auto& outer : _cargs) {
+      write_name_to_stream(stream, (unsigned)outer.size());
+      for (auto& inner : outer) {
+        inner->Write(stream);
+      }
+    }
+  }
+
+  virtual void Read(CBinIStream& stream) {
+    unsigned outerDictSize;
+    read_name_from_stream(stream, outerDictSize);
+    _cargs.resize(outerDictSize);
+
+    for (unsigned i = 0; i < outerDictSize; i++) {
+      unsigned innerDictSize;
+      read_name_from_stream(stream, innerDictSize);
+      _cargs[i].resize(innerDictSize);
+
+      for (unsigned j = 0; j < innerDictSize; j++) {
+        std::shared_ptr<TKeyArg> keyArgPtr(new TKeyArg());
+        keyArgPtr->Read(stream);
+        _cargs[i][j] = keyArgPtr;
+      }
+    }
+  }
+
+  virtual void Write(CCodeOStream& stream) const {
+    stream << getVarName("arr_", this);
+  }
+  virtual bool DeclarationNeeded() const {
+    return true;
+  }
+
+  void Declare(CCodeOStream& stream) const {
+    TODO("Finish declaration for CCode - important for ray tracing")
+  }
+
+  virtual bool PostActionNeeded() const {
+    for (const auto& outer : _cargs) {
+      for (const auto& inner : outer) {
+        if (inner->PostActionNeeded()) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  virtual void PostAction(CCodeOStream& stream) const {
+    for (const auto& outer : _cargs) {
+      for (const auto& inner : outer) {
+        inner->PostAction(stream);
+      }
+    }
+  }
+
+  virtual std::set<T_GET_MAPPED_POINTERS> GetMappedPointers() {
+    std::set<T_GET_MAPPED_POINTERS> returnMap;
+    for (unsigned outer = 0; outer < _cargs.size(); outer++) {
+      for (unsigned inner = 0; inner < _cargs[outer].size(); ++inner) {
+        for (T_GET_MAPPED_POINTERS obj : _cargs[outer][inner]->GetMappedPointers()) {
+          returnMap.insert(obj);
+        }
+      }
+    }
+    return returnMap;
+  }
+};
+
 /**
   * @brief Wrapper for int type
   *
@@ -1044,8 +1271,8 @@ class Cint : public CArgument {
 
 public:
   typedef CArgumentSizedArray<int, Cint> CSArray;
-  Cint();
-  Cint(int);
+  Cint() : _value(0) {}
+  Cint(int value) : _value(value) {}
   static const unsigned LENGTH = sizeof(int);
   static const char* NAME;
 
@@ -1077,7 +1304,7 @@ class Cuint64_t : public CArgument {
 public:
   static const char* NAME;
   typedef CArgumentSizedArray<uint64_t, Cuint64_t> CSArray;
-  Cuint64_t() {}
+  Cuint64_t() : _uint64(0) {}
   Cuint64_t(uint64_t uint) : _uint64(uint) {}
   uint64_t operator*() const {
     return _uint64;
@@ -1106,7 +1333,7 @@ class Cint64_t : public CArgument {
 public:
   static const char* NAME;
   typedef CArgumentSizedArray<int64_t, Cint64_t> CSArray;
-  Cint64_t() {}
+  Cint64_t() : _value(0) {}
   Cint64_t(int64_t value) : _value(value) {}
   int64_t operator*() const {
     return _value;
@@ -1135,7 +1362,7 @@ class Cdouble : public CArgument {
 public:
   static const char* NAME;
   typedef CArgumentSizedArray<double, Cdouble> CSArray;
-  Cdouble() {}
+  Cdouble() : _double(0.0) {}
   Cdouble(double uint) : _double(uint) {}
   double operator*() const {
     return _double;
@@ -1164,8 +1391,8 @@ class Cfloat : public CArgument {
 public:
   static const char* NAME;
   typedef CArgumentSizedArray<float, Cfloat> CSArray;
-  Cfloat() {}
-  Cfloat(float uint) : _float(uint) {}
+  Cfloat() : _float(0.0f) {}
+  Cfloat(float value) : _float(value) {}
   float operator*() const {
     return _float;
   }
@@ -1199,7 +1426,7 @@ public:
   static const char* NAME;
   typedef CArgumentSizedArray<uint8_t, Cuint8_t> CSArray;
 
-  Cuint8_t() {}
+  Cuint8_t() : _uint8(0u) {}
   Cuint8_t(uint8_t uint) : _uint8(uint) {}
   uint8_t operator*() const {
     return _uint8;
@@ -1230,7 +1457,7 @@ public:
   static const char* NAME;
   typedef CArgumentSizedArray<int8_t, Cint8_t> CSArray;
 
-  Cint8_t() {}
+  Cint8_t() : _value(0) {}
   Cint8_t(int8_t value) : _value(value) {}
   int8_t operator*() const {
     return _value;
@@ -1261,7 +1488,7 @@ public:
   static const char* NAME;
   typedef CArgumentSizedArray<uint16_t, Cuint16_t> CSArray;
 
-  Cuint16_t() {}
+  Cuint16_t() : _uint16(0u) {}
   Cuint16_t(uint16_t uint) : _uint16(uint) {}
   uint16_t operator*() const {
     return _uint16;
@@ -1322,7 +1549,7 @@ public:
   static const char* NAME;
   typedef CArgumentSizedArray<uint32_t, Cuint32_t> CSArray;
 
-  Cuint32_t() {}
+  Cuint32_t() : _uint32(0u) {}
   Cuint32_t(uint32_t uint) : _uint32(uint) {}
   uint32_t operator*() const {
     return _uint32;
@@ -1382,7 +1609,8 @@ protected:
 public:
   static const char* NAME;
   typedef CArgumentSizedArray<size_t, Csize_t> CSArray;
-  Csize_t() {}
+
+  Csize_t() : _size(0u) {}
   Csize_t(size_t size) : _size(size) {}
   size_t operator*() const {
     return _size;
@@ -1409,7 +1637,7 @@ class Cbool : public CArgument {
   bool _BOOL;
 
 public:
-  Cbool() {}
+  Cbool() : _BOOL(false) {}
   Cbool(bool bool_) : _BOOL(bool_) {}
   bool& Value() {
     return _BOOL;

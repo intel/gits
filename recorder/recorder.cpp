@@ -140,6 +140,7 @@ void InterruptHandler(int sig) {
 gits::CRecorder::CRecorder()
     : _recordingOverride(false),
       _running(false),
+      _runningStarted(false),
       _isMarkedForDeletion(false),
       _exitHotKeyId(0),
       _startHotKeyId(0) {
@@ -468,6 +469,7 @@ void gits::CRecorder::Start() {
   // update running flag
   //if (Config::Get().recorder.basic.enabled)
   _running = true;
+  _runningStarted = true;
 }
 
 /**
@@ -505,6 +507,7 @@ void gits::CRecorder::Stop() {
         new gits::CTokenFrameNumber(CToken::ID_CCODE_FINISH, CGits::Instance().CurrentFrame()));
   }
   _running = false;
+  _runningStarted = false;
 }
 
 /**
@@ -563,6 +566,7 @@ void gits::CRecorder::FrameEnd() {
   if (api3dIface.CfgRec_IsFramesMode()) {
     if (_running && !Behavior().ShouldCapture()) {
       _running = false;
+      _runningStarted = false;
     }
     if (!_running && Behavior().ShouldCapture()) {
       Start();
@@ -719,7 +723,7 @@ void gits::CRecorder::Pause() {
 }
 
 void gits::CRecorder::Continue() {
-  _running = true;
+  _running = _runningStarted;
 }
 
 #ifdef GITS_PLATFORM_WINDOWS

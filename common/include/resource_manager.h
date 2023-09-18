@@ -83,8 +83,9 @@ public:
   ~CResourceManager();
 
   mapped_file get(hash_t hash) const;
+  hash_t getHash(uint32_t file_id, const void* data, size_t size) const;
   hash_t put(uint32_t file_id, const void* data, size_t size);
-  hash_t put(uint32_t file_id, const void* data, size_t size, hash_t hash);
+  hash_t put(uint32_t file_id, const void* data, size_t size, hash_t hash, bool overwrite = false);
 
   TResourceHandle get_resource_handle(hash_t);
 

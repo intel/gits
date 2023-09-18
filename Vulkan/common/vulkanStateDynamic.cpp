@@ -14,17 +14,26 @@
 */
 
 #include "vulkanStateDynamic.h"
+#include "vulkanInternalShaderModules.h"
 
 namespace gits {
 namespace Vulkan {
 
 // Instantiation of static members
-std::unordered_map<VkDeviceAddress, std::pair<VkDeviceAddress, std::shared_ptr<CBufferState>>>
-    CBufferState::deviceAddressesMap;
-std::unordered_map<VkBuffer, std::shared_ptr<CBufferState>>
-    CBufferState::shaderDeviceAddressBuffers;
 
 uint64_t CInternalResources::COffscreenAppsSupport::uniqueHandleCounter = 1;
+
+std::set<CBufferState::DeviceAddressRangeState, CBufferState::DeviceAddressRangeState>
+    CBufferState::deviceAddresses;
+std::unordered_map<VkDeviceAddress, VkAccelerationStructureKHR>
+    CAccelerationStructureKHRState::deviceAddresses;
+std::unordered_map<VkDeviceAddress, VkBuffer> CBufferState::deviceAddressesQuickLook;
+uint32_t CAccelerationStructureKHRState::globalAccelerationStructureBuildCommandIndex = 0;
+
+// BUFFER DEVICE ADDRESS GROUP COMMENT TOKEN
+// Please, (un)comment all the areas with the above token together, at the same time
+//
+// std::unordered_map<VkBuffer, std::shared_ptr<CBufferState>> CBufferState::shaderDeviceAddressBuffers;
 
 //------------------------------- STATE DYNAMIC ---------------------------------
 CStateDynamic::CStateDynamic()
@@ -64,5 +73,37 @@ std::set<uint64_t> CSwapchainKHRState::GetMappedPointers() {
   }
   return pointers;
 }
+
+InternalPipelinesManager::InternalPipelines::InternalPipelines(VkDevice _device)
+    : device(_device),
+      layout(VK_NULL_HANDLE),
+      prepareDeviceAddressesForPatching(VK_NULL_HANDLE),
+      patchDeviceAddressesPipeline(VK_NULL_HANDLE) {
+  layout = createInternalPipelineLayout(device);
+}
+
+VkPipelineLayout InternalPipelinesManager::InternalPipelines::getLayout() {
+  return layout;
+}
+
+VkPipeline InternalPipelinesManager::InternalPipelines::
+    getPrepareDeviceAddressesForPatchingPipeline() {
+  if (prepareDeviceAddressesForPatching == VK_NULL_HANDLE) {
+    prepareDeviceAddressesForPatching = createInternalPipeline(
+        device, layout, getPrepareDeviceAddressesForPatchingShaderModuleSource());
+  }
+
+  return prepareDeviceAddressesForPatching;
+}
+
+VkPipeline InternalPipelinesManager::InternalPipelines::getPatchDeviceAddressesPipeline() {
+  if (patchDeviceAddressesPipeline == VK_NULL_HANDLE) {
+    patchDeviceAddressesPipeline =
+        createInternalPipeline(device, layout, getPatchDeviceAddressesShaderModuleSource());
+  }
+
+  return patchDeviceAddressesPipeline;
+}
+
 } // namespace Vulkan
 } // namespace gits

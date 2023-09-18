@@ -209,6 +209,19 @@ mapped_file CResourceManager::get(hash_t hash) const {
   return mapped_file(*mapping, r.offset, r.size);
 }
 
+hash_t CResourceManager::getHash(uint32_t file_id, const void* data, size_t size) const {
+  if (data == nullptr || size == 0) {
+    return EmptyHash;
+  }
+
+  if (Config::Get().IsRecorder()) {
+    return ComputeHash(data, size, hashType_, hashPartially_, partialHashCutoff_,
+                       partialHashChunks_, partialHashRatio_);
+  } else {
+    return ComputeHash(data, size, THashType::CRC32ISH, false, 8192, 10, 20);
+  }
+}
+
 hash_t CResourceManager::put(uint32_t file_id, const void* data, size_t size) {
   if (data == nullptr || size == 0) {
     return EmptyHash;
@@ -223,31 +236,27 @@ hash_t CResourceManager::put(uint32_t file_id, const void* data, size_t size) {
     return put(file_id, data, size, ++fakeHash_);
   }
 
-  hash_t hash;
-  if (Config::Get().IsRecorder()) {
-    hash = ComputeHash(data, size, hashType_, hashPartially_, partialHashCutoff_,
-                       partialHashChunks_, partialHashRatio_);
-  } else {
-    hash = ComputeHash(data, size, THashType::CRC32ISH, false, 8192, 10, 20);
-  }
-  return put(file_id, data, size, hash);
+  return put(file_id, data, size, getHash(file_id, data, size));
 }
 
-hash_t CResourceManager::put(uint32_t file_id, const void* data, size_t size, hash_t hash) {
+hash_t CResourceManager::put(
+    uint32_t file_id, const void* data, size_t size, hash_t hash, bool overwrite) {
   if (data == nullptr || size == 0 || hash == EmptyHash) {
     throw std::runtime_error("Error in ResourceManager::put - can't insert empty data / empty hash "
                              "when explicitly providing hash value.");
   }
 
-  std::unordered_map<hash_t, TResourceHandle>::iterator it;
-  it = index_.find(hash);
+  if (!overwrite) {
+    std::unordered_map<hash_t, TResourceHandle>::iterator it;
+    it = index_.find(hash);
 
-  // Already in the index, nothing else to do.
-  if (it != index_.end()) {
-    if (it->second.size == size) {
-      return hash;
-    } else {
-      throw std::runtime_error("Error in ResourceManager::put - hash collision.");
+    // Already in the index, nothing else to do.
+    if (it != index_.end()) {
+      if (it->second.size == size) {
+        return hash;
+      } else {
+        throw std::runtime_error("Error in ResourceManager::put - hash collision.");
+      }
     }
   }
 

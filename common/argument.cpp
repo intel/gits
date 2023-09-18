@@ -343,10 +343,6 @@ template class gits::CByteStringArray<unsigned char>;
 
 const char* gits::Cint::NAME = "int";
 
-gits::Cint::Cint() {}
-
-gits::Cint::Cint(int value) : _value(value) {}
-
 void gits::Cint::Write(CBinOStream& stream) const {
   write_to_stream(stream, _value);
 }

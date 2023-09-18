@@ -626,6 +626,43 @@ public:
   }
 };
 
+class CGitsVkCmdPatchDeviceAddresses : public CFunction {
+  static const unsigned ARG_NUM = 3;
+  Cuint32_t* _count;
+  CVkCommandBuffer* _commandBuffer;
+  CDeclaredBinaryResource* _resource;
+
+  virtual CArgument& Argument(unsigned idx);
+  virtual unsigned ArgumentCount() const {
+    return ARG_NUM;
+  }
+  static const std::array<ArgInfo, ARG_NUM> argumentInfos_;
+  virtual ArgInfo ArgumentInfo(unsigned idx) const override;
+
+public:
+  CGitsVkCmdPatchDeviceAddresses();
+  ~CGitsVkCmdPatchDeviceAddresses();
+  CGitsVkCmdPatchDeviceAddresses(VkCommandBuffer commandBuffer, CDeviceAddressPatcher& patcher);
+
+  virtual unsigned Id() const {
+    return ID_GITS_VK_CMD_PATCH_DEVICE_ADDRESSES;
+  }
+  virtual const char* Name() const {
+    return "CGitsVkCmdPatchDeviceAddresses";
+  }
+  virtual void Write(CBinOStream& stream) const override;
+  virtual void Read(CBinIStream& stream) override;
+  virtual void Write(CCodeOStream& stream) const override;
+  virtual void Run();
+  std::set<uint64_t> GetMappedPointers() {
+    std::set<uint64_t> returnMap;
+    for (auto obj : _commandBuffer->GetMappedPointers()) {
+      returnMap.insert((uint64_t)obj);
+    }
+    return returnMap;
+  }
+};
+
 class CDestroyVulkanDescriptorSets : public CFunction, gits::noncopyable {
   CVkDescriptorSet::CSArray _descSetsArray;
 

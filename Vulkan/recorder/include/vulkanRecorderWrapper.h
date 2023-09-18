@@ -51,6 +51,8 @@ class CRecorderWrapper : public IRecorderWrapper {
 
 public:
   CRecorderWrapper(CRecorder& recorder);
+  void PauseRecording() override;
+  void ContinueRecording() override;
   void StreamFinishedEvent(std::function<void()> e);
   void CloseRecorderIfRequired() override;
   CVkDriver& Drivers() const override;
@@ -99,6 +101,7 @@ public:
   bool IsVulkanAPIVersionSupported(uint32_t major,
                                    uint32_t minor,
                                    VkPhysicalDevice physicalDevice) const override;
+  void SetConfig(Config const& cfg) const override;
 #include "vulkanRecorderWrapperAuto.h"
 };
 } // namespace Vulkan

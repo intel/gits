@@ -659,6 +659,253 @@ void gits::Vulkan::CGitsVkMemoryReset::Write(CCodeOStream& stream) const {
   stream.Indent() << "}\n";
 }
 
+// For building top-level acceleraiton structures, application needs to pass data about all the bottom-level
+// acceleration structures (BLASs in short) which will be built in the top level one. BLASs are referenced
+// via their device addresses. The list of BLASs/device addresses is stored in a buffer which is also provided
+// via a device address. Unfortunately, device addresses may change from run to run. Each time stream is
+// being replayed, driver may assign different device addresses. That's why, during replay, we need to update
+// those addresses with values returned by a driver.
+//
+// We can do this by capturing and storing additional metadata during stream recording - a list of all
+// acceleration structure handles built into the TLASes (which are retrieved from device addresses).
+// This way, during replay, we can take this list and convert handles to proper device addresses. Then,
+// these device addresses are place in the original location provided to build command. This is done with
+// a compute shader just before the build command.
+
+const std::array<gits::Vulkan::ArgInfo, gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::ARG_NUM>
+    gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::argumentInfos_ = {{
+        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint64_t (_count)
+        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // VkCommandBuffer (_commandBuffer)
+        {gits::Vulkan::ArgType::OTHER, 1, false},          // void* (CDeclaredBinaryResource)
+    }};
+
+gits::Vulkan::ArgInfo gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::ArgumentInfo(
+    unsigned idx) const {
+  return argumentInfos_[idx];
+}
+
+gits::CArgument& gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::Argument(unsigned idx) {
+  return get_cargument(__FUNCTION__, idx, *_count, *_commandBuffer, *_resource);
+}
+
+gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::CGitsVkCmdPatchDeviceAddresses()
+    : _count(new Cuint32_t()),
+      _commandBuffer(new CVkCommandBuffer()),
+      _resource(new CDeclaredBinaryResource()) {}
+
+gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::~CGitsVkCmdPatchDeviceAddresses() {
+  delete _count;
+  delete _commandBuffer;
+  delete _resource;
+}
+
+gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::CGitsVkCmdPatchDeviceAddresses(
+    VkCommandBuffer commandBuffer, CDeviceAddressPatcher& patcher)
+    : _count(new Cuint32_t(patcher.Count())), _commandBuffer(new CVkCommandBuffer(commandBuffer)) {
+  // Any data uniquely indentifying this very acceleration structure build command.
+  // It is used only to generate a hash key.
+  // This key is used later in a post-vkQueueSubmit() operation to store data.
+
+  struct HashGenerator {
+    uint64_t buildCommandID;
+    VkCommandBuffer commandBuffer;
+    TId tokenID;
+  } hashGenerator = {CAccelerationStructureKHRState::globalAccelerationStructureBuildCommandIndex,
+                     commandBuffer, ID_GITS_VK_CMD_PATCH_DEVICE_ADDRESSES};
+
+  hash_t hash = CGits::Instance().ResourceManager().getHash(RESOURCE_DATA_RAW, &hashGenerator,
+                                                            sizeof(hashGenerator));
+
+  _resource = new CDeclaredBinaryResource(hash);
+  patcher.PrepareData(commandBuffer, hash);
+}
+
+// Elements in some memory locations may appear in a random order.
+// That's why patching is not done by placing a new values at same
+// place as it was located during recording. Patching is performed
+// using a simple map - compute shader reads an old value in a given
+// memory location, finds it in a map, takes a new value from the
+// map and stores it in the same memory location.
+void gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::Run() {
+  auto count = **_count;
+  if (count == 0) {
+    return;
+  }
+
+  struct DeviceAddressPatchGITS {
+    VkDeviceAddress originalValue;
+    VkDeviceAddress newValue;
+  };
+
+  std::vector<VkDeviceAddress> locations;
+  std::vector<DeviceAddressPatchGITS> patchesMap;
+  std::vector<VkBufferMemoryBarrier> preMemoryBarriers;
+  std::vector<VkBufferMemoryBarrier> postMemoryBarriers;
+
+  locations.resize(count);
+  [&](const void* source) {
+
+#define ALL_VULKAN_BUFFER_ACCESS_BITS VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT
+    auto* data = (const VkBufferDeviceAddressPatchGITS*)source;
+    std::unordered_map<VkDeviceAddress, VkDeviceAddress> tmpMap;
+
+    auto getAddress = [](const VkBufferDeviceAddressGITS& patch,
+                         std::vector<VkBufferMemoryBarrier>* preBarriers = nullptr,
+                         std::vector<VkBufferMemoryBarrier>* postBarriers = nullptr) {
+      VkBuffer buffer = CVkBuffer::GetMapping(patch.buffer);
+
+      if (preBarriers) {
+        preBarriers->push_back({
+            VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, // VkStructureType sType;
+            nullptr,                                 // const void* pNext;
+            ALL_VULKAN_BUFFER_ACCESS_BITS,           // VkAccessFlags srcAccessMask;
+            VK_ACCESS_SHADER_WRITE_BIT,              // VkAccessFlags dstAccessMask;
+            VK_QUEUE_FAMILY_IGNORED,                 // uint32_t srcQueueFamilyIndex;
+            VK_QUEUE_FAMILY_IGNORED,                 // uint32_t dstQueueFamilyIndex;
+            buffer,                                  // VkBuffer buffer;
+            0,                                       // VkDeviceSize offset;
+            VK_WHOLE_SIZE                            // VkDeviceSize size;
+        });
+      }
+
+      if (postBarriers) {
+        postBarriers->push_back({
+            VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, // VkStructureType sType;
+            nullptr,                                 // const void* pNext;
+            VK_ACCESS_SHADER_WRITE_BIT,              // VkAccessFlags srcAccessMask;
+            ALL_VULKAN_BUFFER_ACCESS_BITS,           // VkAccessFlags dstAccessMask;
+            VK_QUEUE_FAMILY_IGNORED,                 // uint32_t srcQueueFamilyIndex;
+            VK_QUEUE_FAMILY_IGNORED,                 // uint32_t dstQueueFamilyIndex;
+            buffer,                                  // VkBuffer buffer;
+            0,                                       // VkDeviceSize offset;
+            VK_WHOLE_SIZE                            // VkDeviceSize size;
+        });
+      }
+
+      return SD()._bufferstates[buffer]->deviceAddress + patch.offset;
+    };
+
+    // Prepare a patches map and memory locations to update
+    for (uint32_t i = 0; i < count; ++i) {
+      auto location = getAddress(data[i].location, &preMemoryBarriers, &postMemoryBarriers);
+      auto originalValue = data[i].patchedValue.originalDeviceAddress;
+      auto patchedValue = getAddress(data[i].patchedValue);
+
+      tmpMap[originalValue] = patchedValue;
+      locations[i] = location;
+    }
+
+    // Convert map to a vector for use in the compute shader
+    patchesMap.reserve(tmpMap.size());
+    for (auto& element : tmpMap) {
+      patchesMap.push_back({element.first, element.second});
+    }
+  }(**_resource);
+
+  VkCommandBuffer commandBuffer = **_commandBuffer;
+  auto& commandBufferState = SD()._commandbufferstates[commandBuffer];
+  VkDevice device = commandBufferState->commandPoolStateStore->deviceStateStore->deviceHandle;
+
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
+  VkDeviceAddress locationsDataAddress = 0;
+  {
+    uint64_t locationsDataSize = locations.size() * sizeof(locations[0]);
+    auto locationsMemoryBufferPair =
+        createTemporaryBuffer(device, locationsDataSize, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+                              commandBufferState.get(), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    mapMemoryAndCopyData(device, locationsMemoryBufferPair.first->deviceMemoryHandle, 0,
+                         locations.data(), locationsDataSize);
+    locationsDataAddress =
+        getBufferDeviceAddress(device, locationsMemoryBufferPair.second->bufferHandle);
+
+    preMemoryBarriers.push_back({
+        VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,        // VkStructureType sType;
+        nullptr,                                        // const void* pNext;
+        VK_ACCESS_HOST_WRITE_BIT,                       // VkAccessFlags srcAccessMask;
+        VK_ACCESS_SHADER_READ_BIT,                      // VkAccessFlags dstAccessMask;
+        VK_QUEUE_FAMILY_IGNORED,                        // uint32_t srcQueueFamilyIndex;
+        VK_QUEUE_FAMILY_IGNORED,                        // uint32_t dstQueueFamilyIndex;
+        locationsMemoryBufferPair.second->bufferHandle, // VkBuffer buffer;
+        0,                                              // VkDeviceSize offset;
+        VK_WHOLE_SIZE                                   // VkDeviceSize size;
+    });
+  }
+
+  VkDeviceAddress patchesMapDataAddress = 0;
+  {
+    uint64_t patchesMapDataSize = patchesMap.size() * sizeof(patchesMap[0]);
+    auto patchesMapMemoryBufferPair =
+        createTemporaryBuffer(device, patchesMapDataSize, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+                              commandBufferState.get(), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    mapMemoryAndCopyData(device, patchesMapMemoryBufferPair.first->deviceMemoryHandle, 0,
+                         patchesMap.data(), patchesMapDataSize);
+    patchesMapDataAddress =
+        getBufferDeviceAddress(device, patchesMapMemoryBufferPair.second->bufferHandle);
+
+    preMemoryBarriers.push_back({
+        VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,         // VkStructureType sType;
+        nullptr,                                         // const void* pNext;
+        VK_ACCESS_HOST_WRITE_BIT,                        // VkAccessFlags srcAccessMask;
+        VK_ACCESS_SHADER_READ_BIT,                       // VkAccessFlags dstAccessMask;
+        VK_QUEUE_FAMILY_IGNORED,                         // uint32_t srcQueueFamilyIndex;
+        VK_QUEUE_FAMILY_IGNORED,                         // uint32_t dstQueueFamilyIndex;
+        patchesMapMemoryBufferPair.second->bufferHandle, // VkBuffer buffer;
+        0,                                               // VkDeviceSize offset;
+        VK_WHOLE_SIZE                                    // VkDeviceSize size;
+    });
+  }
+
+  drvVk.vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr,
+                             static_cast<uint32_t>(preMemoryBarriers.size()),
+                             preMemoryBarriers.data(), 0, nullptr);
+
+  struct PushConstants {
+    VkDeviceAddress AddressOfLocations;
+    VkDeviceAddress AddressOfPatchesMap;
+    uint32_t numMapElements;
+  } pushConstants = {locationsDataAddress, patchesMapDataAddress, (uint32_t)patchesMap.size()};
+
+  drvVk.vkCmdBindPipeline(
+      commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+      SD().internalResources.internalPipelines[device].getPatchDeviceAddressesPipeline());
+
+  drvVk.vkCmdPushConstants(commandBuffer,
+                           SD().internalResources.internalPipelines[device].getLayout(),
+                           VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &pushConstants);
+
+  drvVk.vkCmdDispatch(commandBuffer, count, 1, 1);
+
+  drvVk.vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr,
+                             static_cast<uint32_t>(postMemoryBarriers.size()),
+                             postMemoryBarriers.data(), 0, nullptr);
+
+  if (commandBufferState->currentPipeline != VK_NULL_HANDLE) {
+    drvVk.vkCmdBindPipeline(commandBuffer, commandBufferState->currentPipelineBindPoint,
+                            commandBufferState->currentPipeline);
+  }
+}
+
+void gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::Write(CBinOStream& stream) const {
+  _count->Write(stream);
+  if (**_count > 0) {
+    _commandBuffer->Write(stream);
+    _resource->Write(stream);
+  }
+}
+
+void gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::Read(CBinIStream& stream) {
+  _count->Read(stream);
+  if (**_count > 0) {
+    _commandBuffer->Read(stream);
+    _resource->Read(stream);
+  }
+}
+
+void gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::Write(CCodeOStream& stream) const {}
+
 const std::array<gits::Vulkan::ArgInfo, 1>
     gits::Vulkan::CDestroyVulkanDescriptorSets::argumentInfos_ = {{
         {gits::Vulkan::ArgType::OPAQUE_HANDLE, 1, false}, // VkDescriptorSet*

@@ -63,6 +63,8 @@ CFunction* CFunction::Create(unsigned id) {
     return new CGitsVkCreateXlibWindow;
   case ID_GITS_VK_CMD_INSERT_MEMORY_BARRIERS_2:
     return new CGitsVkCmdInsertMemoryBarriers2;
+  case ID_GITS_VK_CMD_PATCH_DEVICE_ADDRESSES:
+    return new CGitsVkCmdPatchDeviceAddresses;
 #include "vulkanIDswitch.h"
   default:;
   }

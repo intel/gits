@@ -9,6 +9,7 @@
 #pragma once
 #include "vulkanHeader.h"
 #include "resource_manager.h"
+#include "vulkanLibrary.h"
 #include <vector>
 #include <memory>
 #include <set>
@@ -16,6 +17,7 @@
 
 namespace gits {
 namespace Vulkan {
+
 template <class T1, class WRAP_T1>
 class CDataArray {
 public:
@@ -57,6 +59,17 @@ public:
       _cargsDict.push_back(obj);
     }
   }
+  template <class WRAP_T2, class WRAP_T3>
+  CDataArray(int size, const TKey* dictionary, const WRAP_T2* arg3, const WRAP_T3 arg4) {
+    if ((size == 0) || (dictionary == NULL)) {
+      return;
+    }
+
+    _cargsDict.resize(size);
+    for (int i = 0; i < size; i++) {
+      _cargsDict[i] = std::make_shared<TKeyArg>(&dictionary[i], arg3[i], arg4);
+    }
+  }
   CDataArray(size_t size, TKey* dictionary) {
     if (dictionary == NULL) {
       return;
@@ -96,6 +109,149 @@ public:
     for (unsigned i = 0; i < _cargsDict.size(); i++) {
       for (uint64_t elem : _cargsDict[i]->GetMappedPointers()) {
         pointers.insert(elem);
+      }
+    }
+    return pointers;
+  }
+};
+
+template <class T1, class WRAP_T1>
+class CDataArrayOfArrays {
+public:
+  typedef T1 TKey;
+  typedef WRAP_T1 TKeyArg;
+
+private:
+  std::vector<std::vector<std::shared_ptr<TKeyArg>>> _cargsDict;
+  std::vector<std::vector<TKey>> _dataStorage;
+  std::vector<TKey*> _data;
+
+public:
+  CDataArrayOfArrays() {}
+  CDataArrayOfArrays(size_t size, const TKey* const* dictionary) {
+    if ((size == 0) || (dictionary == nullptr)) {
+      return;
+    }
+
+    _cargsDict.resize(size);
+    for (int i = 0; i < size; i++) {
+      _cargsDict[i].resize(1);
+      _cargsDict[i][0] = std::make_shared<TKeyArg>(dictionary[i]);
+    }
+  }
+
+  //void AddElem(const TKey* elem) {
+  //  if (elem == NULL)
+  //    return;
+  //
+  //  auto obj = std::make_shared<TKeyArg>(elem);
+  //  _cargsDict.push_back(obj);
+  //}
+
+  template <class WRAP_T2>
+  CDataArrayOfArrays(size_t size, const TKey* const* dictionary, const WRAP_T2 arg3) {
+    if ((size == 0) || (dictionary == nullptr)) {
+      return;
+    }
+
+    _cargsDict.resize(size);
+    for (int i = 0; i < size; i++) {
+      _cargsDict[i].resize(1);
+      _cargsDict[i][0] = std::make_shared<TKeyArg>(dictionary[i], arg3);
+    }
+  }
+
+  template <class WRAP_T2, class WRAP_T3>
+  CDataArrayOfArrays(int size,
+                     const TKey* const* dictionary,
+                     const WRAP_T2* arg3,
+                     const WRAP_T3 arg4) {
+    if ((size == 0) || (dictionary == nullptr)) {
+      return;
+    }
+
+    _cargsDict.resize(size);
+    for (int i = 0; i < size; i++) {
+      _cargsDict[i].resize(1);
+      _cargsDict[i][0] = std::make_shared<TKeyArg>(dictionary[i], arg3[i], arg4);
+    }
+  }
+
+  CDataArrayOfArrays(std::vector<uint32_t> const& sizes, const TKey* const* dictionary) {
+    if ((sizes.size() == 0) || (dictionary == nullptr)) {
+      return;
+    }
+
+    _cargsDict.resize(sizes.size());
+    for (int i = 0; i < sizes.size(); i++) {
+      _cargsDict[i].resize(sizes[i]);
+      for (int j = 0; j < sizes[i]; j++) {
+        _cargsDict[i][j] = std::make_shared<TKeyArg>(&dictionary[i][j]);
+      }
+    }
+  }
+
+  template <class WRAP_T2>
+  CDataArrayOfArrays(std::vector<uint32_t> const& sizes,
+                     const TKey* const* dictionary,
+                     const WRAP_T2 arg3) {
+    if ((sizes.size() == 0) || (dictionary == nullptr)) {
+      return;
+    }
+
+    _cargsDict.resize(sizes.size());
+    for (int i = 0; i < sizes.size(); i++) {
+      _cargsDict[i].resize(sizes[i]);
+      for (int j = 0; j < sizes[i]; j++) {
+        _cargsDict[i][j] = std::make_shared<TKeyArg>(&dictionary[i][j], arg3);
+      }
+    }
+  }
+
+  std::vector<std::vector<std::shared_ptr<TKeyArg>>>& Vector() {
+    return _cargsDict;
+  }
+  const std::vector<std::vector<std::shared_ptr<TKeyArg>>>& Vector() const {
+    return _cargsDict;
+  }
+
+  TKey* const* Value() {
+    if (_cargsDict.size() == 0) {
+      return nullptr;
+    }
+
+    if (_data.size() == 0) { // Generate if not generated yet.
+      _dataStorage.resize(_cargsDict.size());
+      _data.resize(_cargsDict.size());
+      for (unsigned i = 0; i < _cargsDict.size(); ++i) {
+        _dataStorage[i].resize(_cargsDict[i].size());
+
+        for (unsigned j = 0; j < _cargsDict[i].size(); ++j) {
+          _dataStorage[i][j] = **_cargsDict[i][j];
+        }
+        _data[i] = _dataStorage[i].data();
+      }
+    }
+
+    return _data.data();
+  }
+
+  uint64_t size() {
+    return _cargsDict.size();
+  }
+
+  TKey* const* operator*() {
+    return Value();
+  }
+
+  std::set<uint64_t> GetMappedPointers() {
+    std::set<uint64_t> pointers;
+
+    for (unsigned i = 0; i < _cargsDict.size(); i++) {
+      for (unsigned j = 0; j < _cargsDict[i].size(); ++j) {
+        for (uint64_t elem : _cargsDict[i][j]->GetMappedPointers()) {
+          pointers.insert(elem);
+        }
       }
     }
     return pointers;
@@ -700,60 +856,324 @@ public:
   }
 };
 typedef CDataArray<VkClearValue, CVkClearValueData> CVkClearValueDataArray;
-typedef CSimpleMappedData<VkSampler> CVkSamplerData;
-typedef CSimpleMappedData<VkImageView> CVkImageViewData;
-typedef CSimpleData<VkImageLayout> CVkImageLayoutData;
 
-class CVkDescriptorImageInfoData : public CBaseDataStruct, gits::noncopyable {
-  CVkSamplerData* _sampler;
-  CVkImageViewData* _imageView;
-  CVkImageLayoutData* _imageLayout;
+class CBufferDeviceAddressObjectData : public CBaseDataStruct, gits::noncopyable {
+public:
+  uint64_t _originalDeviceAddress;
+  VkBuffer _buffer;
+  int64_t _offset;
 
-  VkDescriptorImageInfo* _DescriptorImageInfo;
+  CBufferDeviceAddressObjectData()
+      : _originalDeviceAddress(0), _buffer(VK_NULL_HANDLE), _offset(0) {}
+  CBufferDeviceAddressObjectData(VkDeviceAddress originalDeviceAddress,
+                                 int64_t additionalOffset = 0);
+  CBufferDeviceAddressObjectData& operator=(CBufferDeviceAddressObjectData&& other) noexcept;
+  ~CBufferDeviceAddressObjectData() {}
+
+  void* GetPtrType() {
+    return (void*)_originalDeviceAddress;
+  }
+  std::set<uint64_t> GetMappedPointers();
+
+  struct PtrConverter {
+  private:
+    VkDeviceAddress _deviceAddress;
+
+  public:
+    explicit PtrConverter(VkDeviceAddress deviceAddress) : _deviceAddress(deviceAddress) {}
+    operator VkDeviceAddress() const {
+      return _deviceAddress;
+    }
+    operator VkDeviceOrHostAddressKHR() const {
+      return {_deviceAddress};
+    }
+  };
+
+  PtrConverter operator*() {
+    return PtrConverter(_originalDeviceAddress);
+  }
+};
+
+typedef CSimpleData<VkCommandExecutionSideGITS> CVkCommandExecutionSideGITSData;
+
+struct CVkDeviceOrHostAddressConstKHRData : public CBaseDataStruct, public COnQueueSubmitEnd {
+  size_t _dataSize;
+  VkAccelerationStructureBuildControlDataGITS _controlData;
+  CBufferDeviceAddressObjectData _bufferDeviceAddress;
+  int64_t _hostOffset;
+  std::vector<uint8_t> _inputData;
+
+  std::unique_ptr<VkDeviceOrHostAddressConstKHR> _DeviceOrHostAddressConst;
+
+protected:
+  VkBuffer tmpBuffer;       // Destroyed automatically
+  VkDeviceMemory tmpMemory; // Destroyed automatically
+
+public:
+  CVkDeviceOrHostAddressConstKHRData()
+      : _dataSize(0),
+        _controlData(),
+        _bufferDeviceAddress(),
+        _hostOffset(0),
+        _inputData(),
+        _DeviceOrHostAddressConst(nullptr) {}
+
+  CVkDeviceOrHostAddressConstKHRData(
+      const VkDeviceOrHostAddressConstKHR deviceorhostaddress,
+      uint32_t offset,
+      uint64_t stride,
+      uint32_t count,
+      const VkAccelerationStructureBuildControlDataGITS& controlData);
+
+  ~CVkDeviceOrHostAddressConstKHRData() {}
+
+  void Initialize(const VkDeviceOrHostAddressConstKHR deviceorhostaddress,
+                  uint32_t offset,
+                  uint64_t stride,
+                  uint32_t count);
+
+  VkDeviceOrHostAddressConstKHR* Value();
+
+  struct PtrConverter {
+  private:
+    VkDeviceOrHostAddressConstKHR* _ptr;
+
+  public:
+    explicit PtrConverter(VkDeviceOrHostAddressConstKHR* ptr) : _ptr(ptr) {}
+    operator VkDeviceOrHostAddressConstKHR*() const {
+      return _ptr;
+    }
+    operator VkDeviceOrHostAddressConstKHR() const {
+      return *_ptr;
+    }
+  };
+
+  PtrConverter operator*() {
+    return PtrConverter(Value());
+  }
+
+  void* GetPtrType() override {
+    return (void*)Value();
+  }
+
+  virtual std::set<uint64_t> GetMappedPointers();
+
+  virtual void OnQueueSubmitEnd() override;
+};
+
+struct CDeviceOrHostAddressAccelerationStructureVertexDataGITSData
+    : public CVkDeviceOrHostAddressConstKHRData {
+
+  CDeviceOrHostAddressAccelerationStructureVertexDataGITSData()
+      : CVkDeviceOrHostAddressConstKHRData() {}
+
+  CDeviceOrHostAddressAccelerationStructureVertexDataGITSData(
+      VkDeviceOrHostAddressConstKHR vertexData,
+      uint32_t offset,
+      uint64_t stride,
+      uint32_t count,
+      uint32_t firstVertex,
+      uint32_t maxVertex,
+      VkDeviceOrHostAddressConstKHR indexData,
+      VkIndexType indexType,
+      const VkAccelerationStructureBuildControlDataGITS& controlData);
+
+  ~CDeviceOrHostAddressAccelerationStructureVertexDataGITSData() {}
+
+  void InitializeIndexedVertexDataOnDevice(VkDeviceOrHostAddressConstKHR vertexData,
+                                           uint32_t offset,
+                                           uint64_t stride,
+                                           uint32_t count,
+                                           uint32_t firstVertex,
+                                           uint32_t maxVertex,
+                                           VkDeviceOrHostAddressConstKHR indexData,
+                                           VkIndexType indexType);
+
+  void InitializeIndexedVertexDataOnHost(VkDeviceOrHostAddressConstKHR vertexData,
+                                         uint32_t offset,
+                                         uint64_t stride,
+                                         uint32_t count,
+                                         uint32_t firstVertex,
+                                         VkDeviceOrHostAddressConstKHR indexData,
+                                         VkIndexType indexType);
+
+  void OnQueueSubmitEnd() override;
+
+  struct PtrConverter {
+  private:
+    VkDeviceOrHostAddressConstKHR* _ptr;
+
+  public:
+    explicit PtrConverter(VkDeviceOrHostAddressConstKHR* ptr) : _ptr(ptr) {}
+    operator VkDeviceOrHostAddressConstKHR*() const {
+      return _ptr;
+    }
+    operator VkDeviceOrHostAddressConstKHR() const {
+      return *_ptr;
+    }
+  };
+
+  PtrConverter operator*() {
+    return PtrConverter(Value());
+  }
+
+  void* GetPtrType() override {
+    return (void*)Value();
+  }
+};
+
+class CVkTransformMatrixKHRData : public CBaseDataStruct {
+  std::unique_ptr<CfloatDataArray> _matrix;
+
+  std::unique_ptr<VkTransformMatrixKHR> _TransformMatrixKHR;
+  std::unique_ptr<VkTransformMatrixKHR> _TransformMatrixKHROriginal;
   CboolData _isNullPtr;
 
 public:
-  CVkDescriptorImageInfoData(const VkDescriptorImageInfo* descriptorimageinfo,
-                             const VkDescriptorType descriptorType);
-  ~CVkDescriptorImageInfoData();
-  VkDescriptorImageInfo* Value();
+  CVkTransformMatrixKHRData(const VkTransformMatrixKHR* transformmatrixkhr);
+  ~CVkTransformMatrixKHRData() {}
 
-  PtrConverter<VkDescriptorImageInfo> operator*() {
-    return PtrConverter<VkDescriptorImageInfo>(Value());
+  VkTransformMatrixKHR* Value();
+  struct PtrConverter {
+  private:
+    VkTransformMatrixKHR* _ptr;
+
+  public:
+    explicit PtrConverter(VkTransformMatrixKHR* ptr) : _ptr(ptr) {}
+    operator VkTransformMatrixKHR*() const {
+      return _ptr;
+    }
+    operator VkTransformMatrixKHR() const {
+      return *_ptr;
+    }
+  };
+
+  PtrConverter operator*() {
+    return PtrConverter(Value());
+  }
+  void* GetPtrType() override {
+    return (void*)Value();
+  }
+  std::set<uint64_t> GetMappedPointers();
+};
+
+struct CVkAccelerationStructureGeometryInstancesDataKHRData : public CBaseDataStruct {
+  VkStructureType _sType;
+  std::unique_ptr<CpNextWrapperData> _pNext;
+  VkCommandExecutionSideGITS _executionSide;
+  bool _arrayOfPointers;
+  CBufferDeviceAddressObjectData _bufferDeviceAddress;
+  std::vector<VkAccelerationStructureInstanceKHR> _inputData;
+  std::vector<void*> _pointers;
+
+  std::unique_ptr<VkAccelerationStructureGeometryInstancesDataKHR>
+      _AccelerationStructureGeometryInstancesDataKHR;
+  CboolData _isNullPtr;
+
+  CVkAccelerationStructureGeometryInstancesDataKHRData(
+      const VkAccelerationStructureGeometryInstancesDataKHR*
+          accelerationstructuregeometryinstancesdatakhr,
+      const VkAccelerationStructureBuildRangeInfoKHR& buildRangeInfo,
+      const VkAccelerationStructureBuildControlDataGITS& controlData);
+  ~CVkAccelerationStructureGeometryInstancesDataKHRData() {}
+
+  VkAccelerationStructureGeometryInstancesDataKHR* Value();
+  VkAccelerationStructureGeometryInstancesDataKHR* operator*() {
+    return Value();
   }
   void* GetPtrType() {
     return (void*)Value();
   }
-  std::set<uint64_t> GetMappedPointers() {
-    std::set<uint64_t> pointers;
-    for (auto obj : _sampler->GetMappedPointers()) {
-      pointers.insert((uint64_t)obj);
-    }
-    for (auto obj : _imageView->GetMappedPointers()) {
-      pointers.insert((uint64_t)obj);
-    }
-    for (auto obj : _imageLayout->GetMappedPointers()) {
-      pointers.insert((uint64_t)obj);
-    }
-    return pointers;
-  }
+  std::set<uint64_t> GetMappedPointers();
 };
-typedef CDataArray<VkDescriptorImageInfo, CVkDescriptorImageInfoData>
-    CVkDescriptorImageInfoDataArray;
 
-class CBufferDeviceAddressObjectData : public CBaseDataStruct, gits::noncopyable {
-private:
-  Cuint64_tData* _deviceAddress;
+typedef CSimpleData<VkGeometryTypeKHR> CVkGeometryTypeKHRData;
+struct CVkAccelerationStructureGeometryTrianglesDataKHRData;
+struct CVkAccelerationStructureGeometryAabbsDataKHRData;
+struct CVkAccelerationStructureGeometryDataKHRData : public CBaseDataStruct {
+  std::unique_ptr<CVkGeometryTypeKHRData> _geometryType;
+  std::unique_ptr<CVkAccelerationStructureGeometryTrianglesDataKHRData> _triangles;
+  std::unique_ptr<CVkAccelerationStructureGeometryAabbsDataKHRData> _aabbs;
+  std::unique_ptr<CVkAccelerationStructureGeometryInstancesDataKHRData> _instances;
+
+  std::unique_ptr<VkAccelerationStructureGeometryDataKHR> _AccelerationStructureGeometryDataKHR;
+  CboolData _isNullPtr;
+
+  CVkAccelerationStructureGeometryDataKHRData(
+      VkGeometryTypeKHR geometryType,
+      const VkAccelerationStructureGeometryDataKHR* accelerationstructuregeometrydatakhr,
+      const VkAccelerationStructureBuildRangeInfoKHR& buildRangeInfo,
+      const VkAccelerationStructureBuildControlDataGITS& controlData);
+  ~CVkAccelerationStructureGeometryDataKHRData() {}
+
+  VkAccelerationStructureGeometryDataKHR* Value();
+
+  struct PtrConverter {
+  private:
+    VkAccelerationStructureGeometryDataKHR* _ptr;
+
+  public:
+    explicit PtrConverter(VkAccelerationStructureGeometryDataKHR* ptr) : _ptr(ptr) {}
+    operator VkAccelerationStructureGeometryDataKHR*() const {
+      return _ptr;
+    }
+    operator VkAccelerationStructureGeometryDataKHR() const {
+      return *_ptr;
+    }
+  };
+
+  PtrConverter operator*() {
+    return PtrConverter(Value());
+  }
+  void* GetPtrType() override {
+    return (void*)Value();
+  }
+  std::set<uint64_t> GetMappedPointers();
+};
+
+class CVoidPtrData : public CBaseDataStruct {
+  std::uint64_t _ptr;
+  int _type; // 1 = pointer, 2 = pointer to pointer, etc.
 
 public:
-  CBufferDeviceAddressObjectData(VkDeviceAddress deviceAddress);
-  ~CBufferDeviceAddressObjectData();
+  CVoidPtrData() {}
+  CVoidPtrData(const void* ptr) : _ptr((std::uint64_t)ptr), _type(1) {}
+  CVoidPtrData(void* ptr) : _ptr((std::uint64_t)ptr), _type(1) {}
+  CVoidPtrData(const void** ptr) : _ptr((std::uint64_t)ptr), _type(2) {}
+  CVoidPtrData(void** ptr) : _ptr((std::uint64_t)ptr), _type(2) {}
+  struct PtrConverter {
+  private:
+    void** _ptr;
 
-  VkDeviceAddress operator*() {
-    return Value();
+  public:
+    explicit PtrConverter(void** ptr) : _ptr(ptr) {}
+    explicit PtrConverter(void* ptr) : _ptr(&ptr) {}
+    operator void*() const {
+      return *_ptr;
+    }
+    operator void**() const {
+      return _ptr;
+    }
+  };
+
+  PtrConverter operator*() {
+    if (_type == 2) {
+      return PtrConverter((void**)_ptr);
+    } else {
+      return PtrConverter((void*)_ptr);
+    }
   }
-
-  VkDeviceAddress Value();
+  PtrConverter Original() {
+    if (_type == 2) {
+      return PtrConverter((void**)_ptr);
+    } else {
+      return PtrConverter((void*)_ptr);
+    }
+  }
+  std::set<uint64_t> GetMappedPointers() {
+    return std::set<uint64_t>();
+  }
 };
+
 } // namespace Vulkan
 } // namespace gits

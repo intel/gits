@@ -70,6 +70,22 @@ public:
 };
 
 #ifndef BUILD_FOR_CCODE
+
+class CAutoCaller {
+  using FunctionPtr = void_t (*)(void);
+
+  FunctionPtr onDestructor;
+
+public:
+  CAutoCaller(FunctionPtr _onConstructor, FunctionPtr _onDestructor) : onDestructor(_onDestructor) {
+    _onConstructor();
+  }
+
+  ~CAutoCaller() {
+    onDestructor();
+  }
+};
+
 // Kudos to Piotr Horodecki
 class MemoryAliasingTracker {
   struct Range {
@@ -106,6 +122,47 @@ public:
                                                                    uint64_t size,
                                                                    VkBuffer buffer);
 };
+
+class COnQueueSubmitEnd {
+protected:
+  virtual ~COnQueueSubmitEnd() = 0 {}
+
+public:
+  virtual void OnQueueSubmitEnd() = 0;
+};
+
+class CDeviceAddressPatcher : public COnQueueSubmitEnd {
+  typedef uint64_t hash_t;
+
+  struct InputDataStruct {
+    VkDeviceAddress address;
+    uint32_t offset;
+    uint32_t padding;
+  };
+
+  struct OutputDataStruct {
+    VkDeviceAddress dVA;
+    VkDeviceAddress REF;
+  };
+
+  std::vector<VkDeviceAddress> _directAddresses;
+  std::vector<std::pair<VkDeviceAddress, uint32_t>> _indirectAddresses;
+  VkDevice _device;
+  VkDeviceMemory _outputDeviceMemory;
+  hash_t _hash;
+
+public:
+  CDeviceAddressPatcher() : _hash(0) {}
+  ~CDeviceAddressPatcher() {}
+
+  void AddDirectAddress(VkDeviceAddress address);
+  void AddIndirectAddress(VkDeviceAddress address, uint32_t offset);
+  void PrepareData(VkCommandBuffer commandBuffer, hash_t hash);
+  void OnQueueSubmitEnd() override;
+
+  uint32_t Count() const;
+};
+
 #endif
 } // namespace Vulkan
 } // namespace gits

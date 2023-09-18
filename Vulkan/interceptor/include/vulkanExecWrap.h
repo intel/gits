@@ -55,6 +55,18 @@ void recExecWrap_vkIAmGITS() {
   CGitsPluginVulkan::RecorderWrapper().DisableConfigOptions();
 }
 
+// vkPauseRecordingGITS
+
+void recExecWrap_vkPauseRecordingGITS() {
+  CGitsPluginVulkan::RecorderWrapper().PauseRecording();
+}
+
+// vkContinueRecordingGITS
+
+void recExecWrap_vkContinueRecordingGITS() {
+  CGitsPluginVulkan::RecorderWrapper().ContinueRecording();
+}
+
 // vkGetDeviceProcAddr
 
 PFN_vkVoidFunction recExecWrap_vkGetDeviceProcAddr(VkDevice device, const char* pName) {
@@ -93,7 +105,9 @@ PFN_vkVoidFunction recExecWrap_vkGetInstanceProcAddr(VkInstance instance, const 
   PFN_vkVoidFunction return_value =
       CGitsPluginVulkan::RecorderWrapper().Drivers().vkGetInstanceProcAddr(instance, pName);
   if ((strcmp(VK_PASS_PHYSICAL_DEVICE_MEMORY_PROPERTIES_GITS_FUNCTION_NAME, pName) == 0) ||
-      (strcmp(VK_I_AM_GITS_FUNCTION_NAME, pName) == 0)) {
+      (strcmp(VK_I_AM_GITS_FUNCTION_NAME, pName) == 0) ||
+      (strcmp(VK_PAUSE_RECORDING_GITS_FUNCTION_NAME, pName) == 0) ||
+      (strcmp(VK_CONTINUE_RECORDING_GITS_FUNCTION_NAME, pName) == 0)) {
     // These are special, GITS internal functions which are not available in any
     // Vulkan driver. They are used for player <-> recorder communication so we
     // need to provide function pointers even though driver returns NULL for
@@ -475,9 +489,13 @@ VkResult recExecWrap_vkCreateDevice(VkPhysicalDevice physicalDevice,
         rayTracingPipelineFeatures->rayTracingPipelineShaderGroupHandleCaptureReplay = VK_TRUE;
       }
     } else {
+      auto cfg = CGitsPluginVulkan::Configuration();
+      cfg.recorder.vulkan.utilities.useCaptureReplayFeaturesForRayTracingPipelines = false;
+      CGitsPluginVulkan::RecorderWrapper().SetConfig(cfg);
+
       CALL_ONCE[] {
         Log(WARN) << "Capture/replay feature for recording ray tracing pipeline handles is by "
-                     "default not enabled on non-Intel hardware.";
+                     "default disabled on a non-Intel hardware.";
       };
     }
   }
@@ -817,6 +835,12 @@ VkResult recExecWrap_vkCreateBuffer(VkDevice device,
   {
     VkBufferCreateInfo* originalCreateInfo = const_cast<VkBufferCreateInfo*>(pCreateInfo);
 
+    // Make sure that a device address for buffers used as a storage for AS can be retrieved and saved in a stream
+    if ((originalCreateInfo->usage & VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR) ==
+        VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR) {
+      originalCreateInfo->usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+    }
+
     if (((originalCreateInfo->usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) ==
          VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) &&
         (CGitsPluginVulkan::Configuration()
@@ -870,6 +894,24 @@ VkResult recExecWrap_vkCreateSwapchainKHR(VkDevice device,
   }
   return CGitsPluginVulkan::RecorderWrapper().Drivers().vkCreateSwapchainKHR(
       device, &localCreateInfo, pAllocator, pSwapchain);
+}
+
+VkResult recExecWrap_vkCreateRayTracingPipelinesKHR(
+    VkDevice device, VkDeferredOperationKHR deferredOperation, VkPipelineCache pipelineCache,
+    uint32_t createInfoCount, const VkRayTracingPipelineCreateInfoKHR* pCreateInfos,
+    const VkAllocationCallbacks* pAllocator, VkPipeline* pPipelines) {
+  if (CGitsPluginVulkan::Configuration()
+          .recorder.vulkan.utilities.useCaptureReplayFeaturesForRayTracingPipelines) {
+    for (uint32_t i = 0; i < createInfoCount; ++i) {
+      VkRayTracingPipelineCreateInfoKHR& originalCreateInfo =
+          const_cast<VkRayTracingPipelineCreateInfoKHR&>(pCreateInfos[i]);
+      originalCreateInfo.flags |=
+          VK_PIPELINE_CREATE_RAY_TRACING_SHADER_GROUP_HANDLE_CAPTURE_REPLAY_BIT_KHR;
+    }
+  }
+  return CGitsPluginVulkan::RecorderWrapper().Drivers().vkCreateRayTracingPipelinesKHR(
+      device, VK_NULL_HANDLE /* deferredOperation */, pipelineCache, createInfoCount, pCreateInfos,
+      pAllocator, pPipelines);
 }
 
 namespace {
@@ -1047,6 +1089,30 @@ void recExecWrap_vkGetBufferMemoryRequirements2KHR(VkDevice device,
   CGitsPluginVulkan::RecorderWrapper().Drivers().vkGetBufferMemoryRequirements2KHR(
       device, pInfo, pMemoryRequirements);
   ProcessBufferMemoryRequirements(&pMemoryRequirements->memoryRequirements);
+}
+
+void recExecWrap_vkGetAccelerationStructureBuildSizesKHR(
+    VkDevice device, VkAccelerationStructureBuildTypeKHR buildType,
+    const VkAccelerationStructureBuildGeometryInfoKHR* pBuildInfo,
+    const uint32_t* pMaxPrimitiveCounts, VkAccelerationStructureBuildSizesInfoKHR* pSizeInfo) {
+  CGitsPluginVulkan::RecorderWrapper().Drivers().vkGetAccelerationStructureBuildSizesKHR(
+      device, buildType, pBuildInfo, pMaxPrimitiveCounts, pSizeInfo);
+
+  auto& config = CGitsPluginVulkan::Configuration();
+  if (config.recorder.basic.enabled) {
+    pSizeInfo->accelerationStructureSize = GetOverriddenMemorySize(
+        pSizeInfo->accelerationStructureSize,
+        config.recorder.vulkan.utilities.increaseAccelerationStructureMemorySizeRequirement
+            .accelerationStructureSize);
+    pSizeInfo->buildScratchSize = GetOverriddenMemorySize(
+        pSizeInfo->buildScratchSize,
+        config.recorder.vulkan.utilities.increaseAccelerationStructureMemorySizeRequirement
+            .buildScratchSize);
+    pSizeInfo->updateScratchSize = GetOverriddenMemorySize(
+        pSizeInfo->updateScratchSize,
+        config.recorder.vulkan.utilities.increaseAccelerationStructureMemorySizeRequirement
+            .updateScratchSize);
+  }
 }
 
 void recExecWrap_vkGetPhysicalDeviceProperties(VkPhysicalDevice physicalDevice,

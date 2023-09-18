@@ -29,7 +29,7 @@ public:
   typedef CArgumentMappedSizedArray<T, CVulkanObj, gits::ADD_MAPPING> CSMapArray;
   typedef CArgumentMappedSizedArray<T, CVulkanObj, gits::NO_ACTION> CSArray;
 
-  CVulkanObj() {}
+  CVulkanObj() : key_(VK_NULL_HANDLE) {}
   CVulkanObj(T arg) : key_(arg) {}
   CVulkanObj(T* arg) : key_(*arg) {}
 
@@ -585,51 +585,6 @@ public:
   }
 };
 
-// See above in this file for explanation of type tags.
-typedef struct VkSampler_T* VkSamplerTypeTag;
-typedef CVulkanObj<VkSampler, VkSamplerTypeTag> CVkSampler;
-typedef struct VkImageView_T* VkImageViewTypeTag;
-typedef CVulkanObj<VkImageView, VkImageViewTypeTag> CVkImageView;
-typedef CVulkanEnum<VkImageLayout> CVkImageLayout;
-class CVkDescriptorImageInfo : public CArgument, gits::noncopyable {
-  CVkSampler* _sampler;
-  CVkImageView* _imageView;
-  CVkImageLayout* _imageLayout;
-
-  VkDescriptorImageInfo* _DescriptorImageInfo;
-  VkDescriptorImageInfo* _DescriptorImageInfoOriginal;
-  Cbool _isNullPtr;
-
-public:
-  CVkDescriptorImageInfo();
-  ~CVkDescriptorImageInfo();
-  CVkDescriptorImageInfo(const VkDescriptorImageInfo* descriptorimageinfo,
-                         const VkDescriptorType descriptorType);
-  static const char* NAME;
-  virtual const char* Name() const override {
-    return NAME;
-  }
-  VkDescriptorImageInfo* Value();
-
-  PtrConverter<VkDescriptorImageInfo> operator*() {
-    return PtrConverter<VkDescriptorImageInfo>(Value());
-  }
-  PtrConverter<VkDescriptorImageInfo> Original();
-  void* GetPtrType() override {
-    return (void*)Value();
-  }
-  virtual void Write(CBinOStream& stream) const override;
-  virtual void Read(CBinIStream& stream) override;
-  virtual void Write(CCodeOStream& stream) const override;
-  virtual bool AmpersandNeeded() const override;
-  virtual bool DeclarationNeeded() const override;
-  virtual void Declare(CCodeOStream& stream) const override;
-  virtual std::set<uint64_t> GetMappedPointers() {
-    return std::set<uint64_t>();
-  }
-};
-typedef CStructArray<VkDescriptorImageInfo, CVkDescriptorImageInfo> CVkDescriptorImageInfoArray;
-
 typedef CVulkanEnum<VkStructureType> CVkStructureType;
 class CVkGenericArgument : public CArgument, gits::noncopyable {
   CVkStructureType* _sType;
@@ -1121,40 +1076,59 @@ public:
 
 typedef struct VkBuffer_T* VkBufferTypeTag;
 typedef CVulkanObj<VkBuffer, VkBufferTypeTag> CVkBuffer;
+class CBufferDeviceAddressObjectData;
 
 class CBufferDeviceAddressObject : public CArgument, gits::noncopyable {
-private:
-  CVkBuffer* _buffer;
   Cuint64_t* _originalDeviceAddress;
-  Cuint64_t* _offset;
+  CVkBuffer* _buffer;
+  Cint64_t* _offset;
+  VkDeviceAddress _deviceAddress;
 
 public:
   CBufferDeviceAddressObject()
-      : _buffer(new CVkBuffer()),
-        _originalDeviceAddress(new Cuint64_t()),
-        _offset(new Cuint64_t()) {}
-  CBufferDeviceAddressObject(VkDeviceAddress deviceAddress);
-  ~CBufferDeviceAddressObject();
+      : _originalDeviceAddress(new Cuint64_t()),
+        _buffer(new CVkBuffer()),
+        _offset(new Cint64_t()),
+        _deviceAddress(0) {}
 
-  VkDeviceAddress operator*() {
-    return Value();
-  }
+  CBufferDeviceAddressObject(VkDeviceAddress deviceAddress);
+  CBufferDeviceAddressObject(CBufferDeviceAddressObjectData& bufferDeviceAddressObject);
+  ~CBufferDeviceAddressObject();
 
   VkDeviceAddress Value();
 
-  VkDeviceAddress Original() {
-    return **_originalDeviceAddress;
+  struct PtrConverter {
+  private:
+    VkDeviceAddress _deviceAddress;
+
+  public:
+    explicit PtrConverter(VkDeviceAddress deviceAddress) : _deviceAddress(deviceAddress) {}
+    operator VkDeviceAddress() const {
+      return _deviceAddress;
+    }
+    operator VkDeviceOrHostAddressKHR() const {
+      return {_deviceAddress};
+    }
+  };
+
+  PtrConverter operator*() {
+    return PtrConverter(Value());
+  }
+  PtrConverter Original() {
+    return PtrConverter(**_originalDeviceAddress);
   }
 
-  virtual void Write(CBinOStream& stream) const {
-    _buffer->Write(stream);
+  virtual std::set<uint64_t> GetMappedPointers();
+
+  virtual void Write(CBinOStream& stream) const override {
     _originalDeviceAddress->Write(stream);
+    _buffer->Write(stream);
     _offset->Write(stream);
   }
 
-  virtual void Read(CBinIStream& stream) {
-    _buffer->Read(stream);
+  virtual void Read(CBinIStream& stream) override {
     _originalDeviceAddress->Read(stream);
+    _buffer->Read(stream);
     _offset->Read(stream);
   }
 
@@ -1165,6 +1139,308 @@ public:
   virtual void Write(CCodeOStream& stream) const {
     throw ENotImplemented(EXCEPTION_MESSAGE);
   }
+};
+
+typedef CVulkanEnum<VkCommandExecutionSideGITS> CVkCommandExecutionSideGITS;
+
+class CVkDeviceOrHostAddressConstKHR : public CArgument {
+  std::unique_ptr<CVkCommandExecutionSideGITS> _commandExecutionSideGITS;
+  std::unique_ptr<CBufferDeviceAddressObject> _bufferDeviceAddress;
+
+  std::unique_ptr<Csize_t> _dataSize;
+  std::unique_ptr<CDeclaredBinaryResource> _resource;
+  std::vector<uint8_t> _data;
+
+  std::unique_ptr<VkDeviceOrHostAddressConstKHR> _DeviceOrHostAddress;
+  std::unique_ptr<VkDeviceOrHostAddressConstKHR> _DeviceOrHostAddressOriginal;
+
+public:
+  CVkDeviceOrHostAddressConstKHR()
+      : _commandExecutionSideGITS(std::make_unique<CVkCommandExecutionSideGITS>()),
+        _bufferDeviceAddress(std::make_unique<CBufferDeviceAddressObject>()),
+        _dataSize(std::make_unique<Csize_t>()),
+        _resource(std::make_unique<CDeclaredBinaryResource>()),
+        _data(),
+        _DeviceOrHostAddress(nullptr),
+        _DeviceOrHostAddressOriginal(nullptr) {}
+
+  CVkDeviceOrHostAddressConstKHR(const VkDeviceOrHostAddressConstKHR deviceorhostaddress,
+                                 uint32_t offset,
+                                 uint64_t stride,
+                                 uint32_t count,
+                                 const VkAccelerationStructureBuildControlDataGITS& controlData);
+
+  virtual ~CVkDeviceOrHostAddressConstKHR() {}
+
+  virtual const char* Name() const override {
+    return "VkDeviceOrHostAddressConstKHR";
+  }
+
+  VkDeviceOrHostAddressConstKHR* Value();
+
+  struct PtrConverter {
+  private:
+    VkDeviceOrHostAddressConstKHR* _ptr;
+
+  public:
+    explicit PtrConverter(VkDeviceOrHostAddressConstKHR* ptr) : _ptr(ptr) {}
+    operator VkDeviceOrHostAddressConstKHR*() const {
+      return _ptr;
+    }
+    operator VkDeviceOrHostAddressConstKHR() const {
+      return *_ptr;
+    }
+  };
+
+  PtrConverter operator*() {
+    return PtrConverter(Value());
+  }
+
+  PtrConverter Original();
+
+  void* GetPtrType() override {
+    return (void*)Value();
+  }
+  virtual std::set<uint64_t> GetMappedPointers() {
+    std::set<uint64_t> returnMap;
+    //for (auto obj : _deviceAddress->GetMappedPointers()) {
+    //  returnMap.insert((uint64_t)obj);
+    //}
+    return returnMap;
+  }
+
+  virtual void Write(CBinOStream& stream) const override;
+
+  virtual void Read(CBinIStream& stream) override;
+
+  virtual void Write(CCodeOStream& stream) const override {
+    TODO("Implement proper CCode support.")
+  }
+
+  virtual bool DeclarationNeeded() const override {
+    return true;
+  }
+
+  virtual void Declare(CCodeOStream& stream) const override {
+    TODO("Implement proper CCode support.")
+  }
+};
+
+class CDeviceOrHostAddressAccelerationStructureVertexDataGITS
+    : public CVkDeviceOrHostAddressConstKHR {
+
+public:
+  CDeviceOrHostAddressAccelerationStructureVertexDataGITS() : CVkDeviceOrHostAddressConstKHR() {}
+
+  CDeviceOrHostAddressAccelerationStructureVertexDataGITS(
+      VkDeviceOrHostAddressConstKHR vertexData,
+      uint32_t offset,
+      uint64_t stride,
+      uint32_t count,
+      uint32_t firstVertex,
+      uint32_t maxVertex,
+      VkDeviceOrHostAddressConstKHR indexData,
+      VkIndexType indexType,
+      const VkAccelerationStructureBuildControlDataGITS& controlData)
+      : CVkDeviceOrHostAddressConstKHR(vertexData, offset, stride, count, controlData) {
+    // Implementation of this class is exactly the same as CVkDeviceOrHostAddressConstKHR.
+    // The difference is in the struct storage counterpart.
+  }
+
+  ~CDeviceOrHostAddressAccelerationStructureVertexDataGITS() {}
+
+  virtual const char* Name() const override {
+    return "CDeviceOrHostAddressAccelerationStructureVertexDataGITS";
+  }
+};
+
+class CVkTransformMatrixKHR : public CArgument {
+  std::unique_ptr<Cfloat::CSArray> _matrix;
+
+  std::unique_ptr<VkTransformMatrixKHR> _TransformMatrixKHR;
+  std::unique_ptr<VkTransformMatrixKHR> _TransformMatrixKHROriginal;
+  Cbool _isNullPtr;
+
+public:
+  CVkTransformMatrixKHR()
+      : _matrix(),
+        _TransformMatrixKHR(nullptr),
+        _TransformMatrixKHROriginal(nullptr),
+        _isNullPtr(false) {}
+  CVkTransformMatrixKHR(const VkTransformMatrixKHR* transformmatrixkhr);
+  ~CVkTransformMatrixKHR() {}
+  virtual const char* Name() const override {
+    return "VkTransformMatrixKHR";
+  }
+  VkTransformMatrixKHR* Value();
+  struct PtrConverter {
+  private:
+    VkTransformMatrixKHR* _ptr;
+
+  public:
+    explicit PtrConverter(VkTransformMatrixKHR* ptr) : _ptr(ptr) {}
+    operator VkTransformMatrixKHR*() const {
+      return _ptr;
+    }
+    operator VkTransformMatrixKHR() const {
+      return *_ptr;
+    }
+  };
+
+  PtrConverter operator*() {
+    return PtrConverter(Value());
+  }
+  PtrConverter Original();
+  void* GetPtrType() override {
+    return (void*)Value();
+  }
+  virtual std::set<uint64_t> GetMappedPointers();
+  virtual void Write(CBinOStream& stream) const override;
+  virtual void Read(CBinIStream& stream) override;
+  virtual void Write(CCodeOStream& stream) const override;
+  virtual bool AmpersandNeeded() const override;
+  virtual bool DeclarationNeeded() const override {
+    return true;
+  }
+  virtual void Declare(CCodeOStream& stream) const override;
+};
+
+class CVkAccelerationStructureGeometryInstancesDataKHR : public CArgument {
+  std::unique_ptr<CVkStructureType> _sType;
+  std::unique_ptr<CpNextWrapper> _pNext;
+  std::unique_ptr<CVkCommandExecutionSideGITS> _commandExecutionSideGITS;
+  std::unique_ptr<Cuint32_t> _arrayOfPointers;
+  std::unique_ptr<CBufferDeviceAddressObject> _bufferDeviceAddress;
+
+  std::unique_ptr<Cuint32_t> _count;
+  std::unique_ptr<CDeclaredBinaryResource> _resource;
+  std::vector<VkAccelerationStructureInstanceKHR> _inputData;
+
+  std::unique_ptr<VkAccelerationStructureGeometryInstancesDataKHR>
+      _AccelerationStructureGeometryInstancesDataKHR;
+  std::unique_ptr<VkAccelerationStructureGeometryInstancesDataKHR>
+      _AccelerationStructureGeometryInstancesDataKHROriginal;
+  Cbool _isNullPtr;
+
+public:
+  CVkAccelerationStructureGeometryInstancesDataKHR()
+      : _sType(std::make_unique<CVkStructureType>()),
+        _pNext(std::make_unique<CpNextWrapper>()),
+        _commandExecutionSideGITS(std::make_unique<CVkCommandExecutionSideGITS>()),
+        _arrayOfPointers(std::make_unique<Cuint32_t>()),
+        _bufferDeviceAddress(std::make_unique<CBufferDeviceAddressObject>()),
+        _count(std::make_unique<Cuint32_t>()),
+        _inputData(),
+        _AccelerationStructureGeometryInstancesDataKHR(nullptr),
+        _AccelerationStructureGeometryInstancesDataKHROriginal(nullptr),
+        _isNullPtr(false) {}
+  CVkAccelerationStructureGeometryInstancesDataKHR(
+      const VkAccelerationStructureGeometryInstancesDataKHR*
+          accelerationstructuregeometryinstancesdatakhr,
+      const VkAccelerationStructureBuildRangeInfoKHR& buildRangeInfo,
+      const VkAccelerationStructureBuildControlDataGITS& controlData);
+  ~CVkAccelerationStructureGeometryInstancesDataKHR() {}
+  static const char* NAME;
+  virtual const char* Name() const override {
+    return NAME;
+  }
+  VkAccelerationStructureGeometryInstancesDataKHR* Value();
+  struct PtrConverter {
+  private:
+    VkAccelerationStructureGeometryInstancesDataKHR* _ptr;
+
+  public:
+    explicit PtrConverter(VkAccelerationStructureGeometryInstancesDataKHR* ptr) : _ptr(ptr) {}
+    operator VkAccelerationStructureGeometryInstancesDataKHR*() const {
+      return _ptr;
+    }
+    operator VkAccelerationStructureGeometryInstancesDataKHR() const {
+      return *_ptr;
+    }
+  };
+
+  PtrConverter operator*() {
+    return PtrConverter(Value());
+  }
+  PtrConverter Original();
+  void* GetPtrType() override {
+    return (void*)Value();
+  }
+  virtual std::set<uint64_t> GetMappedPointers();
+  virtual void Write(CBinOStream& stream) const override;
+  virtual void Read(CBinIStream& stream) override;
+  virtual void Write(CCodeOStream& stream) const override;
+  virtual bool AmpersandNeeded() const override;
+  virtual bool DeclarationNeeded() const override {
+    return true;
+  }
+  virtual void Declare(CCodeOStream& stream) const override;
+};
+
+typedef CVulkanEnum<VkGeometryTypeKHR> CVkGeometryTypeKHR;
+class CVkAccelerationStructureGeometryTrianglesDataKHR;
+class CVkAccelerationStructureGeometryAabbsDataKHR;
+class CVkAccelerationStructureGeometryInstancesDataKHR;
+
+class CVkAccelerationStructureGeometryDataKHR : public CArgument {
+  std::unique_ptr<CVkGeometryTypeKHR> _geometryType;
+  std::unique_ptr<CVkAccelerationStructureGeometryTrianglesDataKHR> _triangles;
+  std::unique_ptr<CVkAccelerationStructureGeometryAabbsDataKHR> _aabbs;
+  std::unique_ptr<CVkAccelerationStructureGeometryInstancesDataKHR> _instances;
+
+  VkAccelerationStructureGeometryDataKHR* _AccelerationStructureGeometryDataKHR;
+  VkAccelerationStructureGeometryDataKHR* _AccelerationStructureGeometryDataKHROriginal;
+  Cbool _isNullPtr;
+
+public:
+  CVkAccelerationStructureGeometryDataKHR()
+      : _geometryType(std::make_unique<CVkGeometryTypeKHR>()),
+        _triangles(std::make_unique<CVkAccelerationStructureGeometryTrianglesDataKHR>()),
+        _aabbs(std::make_unique<CVkAccelerationStructureGeometryAabbsDataKHR>()),
+        _instances(std::make_unique<CVkAccelerationStructureGeometryInstancesDataKHR>()),
+        _AccelerationStructureGeometryDataKHR(nullptr),
+        _AccelerationStructureGeometryDataKHROriginal(nullptr),
+        _isNullPtr(false) {}
+  CVkAccelerationStructureGeometryDataKHR(
+      VkGeometryTypeKHR geometryType,
+      const VkAccelerationStructureGeometryDataKHR* accelerationstructuregeometrydatakhr,
+      const VkAccelerationStructureBuildRangeInfoKHR& buildRangeInfo,
+      VkAccelerationStructureBuildControlDataGITS controlData);
+  ~CVkAccelerationStructureGeometryDataKHR();
+  virtual const char* Name() const override {
+    return "VkAccelerationStructureGeometryDataKHR";
+  }
+  VkAccelerationStructureGeometryDataKHR* Value();
+  struct PtrConverter {
+  private:
+    VkAccelerationStructureGeometryDataKHR* _ptr;
+
+  public:
+    explicit PtrConverter(VkAccelerationStructureGeometryDataKHR* ptr) : _ptr(ptr) {}
+    operator VkAccelerationStructureGeometryDataKHR*() const {
+      return _ptr;
+    }
+    operator VkAccelerationStructureGeometryDataKHR() const {
+      return *_ptr;
+    }
+  };
+
+  PtrConverter operator*() {
+    return PtrConverter(Value());
+  }
+  PtrConverter Original();
+  void* GetPtrType() override {
+    return (void*)Value();
+  }
+  virtual std::set<uint64_t> GetMappedPointers();
+  virtual void Write(CBinOStream& stream) const override;
+  virtual void Read(CBinIStream& stream) override;
+  virtual void Write(CCodeOStream& stream) const override;
+  virtual bool AmpersandNeeded() const override;
+  virtual bool DeclarationNeeded() const override {
+    return true;
+  }
+  virtual void Declare(CCodeOStream& stream) const override;
 };
 
 class CVkMemoryBarrier2;

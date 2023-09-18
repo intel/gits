@@ -46,6 +46,31 @@ Function(name='vkIAmGITS', enabled=False, type=Param, recExecWrap=True, stateTra
 retV=RetDef(type='void')
 )
 
+Function(name='vkGetAccelerationStructureDeviceAddressUnifiedGITS', enabled=True, type=Param, stateTrack=True, recWrap=False, runWrap=True,
+retV=RetDef(type='VkDeviceAddress'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='pInfo', type='const VkAccelerationStructureDeviceAddressInfoKHR*')
+)
+
+Function(name='vkPauseRecordingGITS', enabled=False, type=Param, recExecWrap=True, level=GlobalLevel, customDriver=True,
+retV=RetDef(type='void')
+)
+
+Function(name='vkContinueRecordingGITS', enabled=False, type=Param, recExecWrap=True, level=GlobalLevel, customDriver=True,
+retV=RetDef(type='void')
+)
+
+###############################################
+
+Enum(name='VkFormat', enumerators = [
+VarDef(name='VK_FORMAT_CUSTOM_A8_UNORM_GITS', value='2000000025'),
+])
+
+Enum(name='VkCommandExecutionSideGITS', enumerators = [
+VarDef(name='VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS', value='0'),
+VarDef(name='VK_COMMAND_EXECUTION_SIDE_HOST_GITS', value='1')
+])
+
 ###############################################
 
 Struct(name='VkInitializeImageGITS_', enabled=True, declareArray=True,
@@ -71,8 +96,24 @@ var1=VarDef(name='buffer', type='VkBuffer'),
 var2=VarDef(name='bufferCopy', type='VkBufferCopy')
 )
 
-###############################################
+Struct(name='VkBufferDeviceAddressGITS_', enabled=False,
+var1=VarDef(name='originalDeviceAddress', type='uint64_t'),
+var2=VarDef(name='buffer', type='VkBuffer'),
+var3=VarDef(name='offset', type='int64_t')
+)
 
-Enum(name='VkFormat', enumerators = [
-VarDef(name='VK_FORMAT_CUSTOM_A8_UNORM_GITS', value='2000000025'),
-])
+Struct(name='VkBufferDeviceAddressPatchGITS_', enabled=False,
+var1=VarDef(name='location', type='VkBufferDeviceAddressGITS'),
+var2=VarDef(name='patchedValue', type='VkBufferDeviceAddressGITS')
+)
+
+Struct(name='VkAccelerationStructureBuildControlDataGITS_', enabled=False,
+var1=VarDef(name='buildCommandIndex', type='uint32_t'),
+var2=VarDef(name='mode', type='VkBuildAccelerationStructureModeKHR'),
+var3=VarDef(name='accelerationStructureType', type='VkAccelerationStructureTypeKHR'),
+var4=VarDef(name='device', type='VkDevice'),
+var5=VarDef(name='accelerationStructure', type='VkAccelerationStructureKHR'),
+var6=VarDef(name='commandBuffer', type='VkCommandBuffer'),
+var7=VarDef(name='executionSide', type='VkCommandExecutionSideGITS'),
+var8=VarDef(name='sType', type='VkStructureType')
+)

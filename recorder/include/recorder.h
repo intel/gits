@@ -67,6 +67,7 @@ class CRecorder : private gits::noncopyable {
   static CRecorder* _instance;
   bool _recordingOverride;
   bool _running;
+  bool _runningStarted;
   bool _isMarkedForDeletion;
   InputListener::CInputListener _inputListener;
   uint _exitHotKeyId;

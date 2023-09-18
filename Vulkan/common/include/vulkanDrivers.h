@@ -153,5 +153,7 @@ extern CVkDriver drvVk;
   "vkPassPhysicalDeviceMemoryPropertiesGITS"
 #define VK_TAG_MEMORY_CONTENTS_UPDATE_GITS_FUNCTION_NAME "vkTagMemoryContentsUpdateGITS"
 #define VK_I_AM_GITS_FUNCTION_NAME                       "vkIAmGITS"
+#define VK_PAUSE_RECORDING_GITS_FUNCTION_NAME            "vkPauseRecordingGITS"
+#define VK_CONTINUE_RECORDING_GITS_FUNCTION_NAME         "vkContinueRecordingGITS"
 } // namespace Vulkan
 } // namespace gits

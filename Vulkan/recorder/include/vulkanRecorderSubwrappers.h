@@ -600,16 +600,19 @@ inline void vkQueueSubmit_RECWRAP(VkResult return_value,
       }
     }
 
-    for (auto& bufferState : CBufferState::shaderDeviceAddressBuffers) {
-      if ((bufferState.second->binding != nullptr) &&
-          (SD()._devicememorystates.find(
-               bufferState.second->binding->deviceMemoryStateStore->deviceMemoryHandle) !=
-           SD()._devicememorystates.end()) &&
-          bufferState.second->binding->deviceMemoryStateStore->IsMapped()) {
-        _memoryToUpdate.insert(
-            bufferState.second->binding->deviceMemoryStateStore->deviceMemoryHandle);
-      }
-    }
+    // BUFFER DEVICE ADDRESS GROUP COMMENT TOKEN
+    // Please, (un)comment all the areas with the above token together, at the same time
+    //
+    // for (auto& bufferState : CBufferState::shaderDeviceAddressBuffers) {
+    //   if ((bufferState.second->binding != nullptr) &&
+    //       (SD()._devicememorystates.find(
+    //            bufferState.second->binding->deviceMemoryStateStore->deviceMemoryHandle) !=
+    //        SD()._devicememorystates.end()) &&
+    //       bufferState.second->binding->deviceMemoryStateStore->IsMapped()) {
+    //     _memoryToUpdate.insert(
+    //         bufferState.second->binding->deviceMemoryStateStore->deviceMemoryHandle);
+    //   }
+    // }
   } else if (TMemoryUpdateStates::MEMORY_STATE_UPDATE_ALL_MAPPED ==
              Config::Get().recorder.vulkan.utilities.memoryUpdateState) {
     for (auto& memoryState : SD()._devicememorystates) {
@@ -744,16 +747,19 @@ inline void vkQueueSubmit2_RECWRAP(VkResult return_value,
       }
     }
 
-    for (auto& bufferState : CBufferState::shaderDeviceAddressBuffers) {
-      if ((bufferState.second->binding != nullptr) &&
-          (SD()._devicememorystates.find(
-               bufferState.second->binding->deviceMemoryStateStore->deviceMemoryHandle) !=
-           SD()._devicememorystates.end()) &&
-          bufferState.second->binding->deviceMemoryStateStore->IsMapped()) {
-        _memoryToUpdate.insert(
-            bufferState.second->binding->deviceMemoryStateStore->deviceMemoryHandle);
-      }
-    }
+    // BUFFER DEVICE ADDRESS GROUP COMMENT TOKEN
+    // Please, (un)comment all the areas with the above token together, at the same time
+    //
+    // for (auto& bufferState : CBufferState::shaderDeviceAddressBuffers) {
+    //   if ((bufferState.second->binding != nullptr) &&
+    //       (SD()._devicememorystates.find(
+    //            bufferState.second->binding->deviceMemoryStateStore->deviceMemoryHandle) !=
+    //        SD()._devicememorystates.end()) &&
+    //       bufferState.second->binding->deviceMemoryStateStore->IsMapped()) {
+    //     _memoryToUpdate.insert(
+    //         bufferState.second->binding->deviceMemoryStateStore->deviceMemoryHandle);
+    //   }
+    // }
   } else if (TMemoryUpdateStates::MEMORY_STATE_UPDATE_ALL_MAPPED ==
              Config::Get().recorder.vulkan.utilities.memoryUpdateState) {
     for (auto& memoryState : SD()._devicememorystates) {
@@ -863,16 +869,18 @@ inline void vkDestroyDescriptorPool_RECWRAP(VkDevice device,
                                             const VkAllocationCallbacks* pAllocator,
                                             CRecorder& recorder) {
   if (recorder.Running()) {
-    std::vector<VkDescriptorSet> descriptorSets;
+    if (descriptorPool != VK_NULL_HANDLE) {
+      std::vector<VkDescriptorSet> descriptorSets;
 
-    for (auto& descriptorSetState :
-         SD()._descriptorpoolstates[descriptorPool]->descriptorSetStateStoreList) {
-      descriptorSets.push_back(descriptorSetState->descriptorSetHandle);
-    }
+      for (auto& descriptorSetState :
+           SD()._descriptorpoolstates[descriptorPool]->descriptorSetStateStoreList) {
+        descriptorSets.push_back(descriptorSetState->descriptorSetHandle);
+      }
 
-    if (descriptorSets.size() > 0) {
-      recorder.Schedule(
-          new CDestroyVulkanDescriptorSets((size_t)descriptorSets.size(), descriptorSets.data()));
+      if (descriptorSets.size() > 0) {
+        recorder.Schedule(
+            new CDestroyVulkanDescriptorSets((size_t)descriptorSets.size(), descriptorSets.data()));
+      }
     }
 
     recorder.Schedule(new CvkDestroyDescriptorPool(device, descriptorPool, pAllocator));
@@ -907,7 +915,7 @@ inline void vkDestroyCommandPool_RECWRAP(VkDevice device,
                                          VkCommandPool commandPool,
                                          const VkAllocationCallbacks* pAllocator,
                                          CRecorder& recorder) {
-  if (recorder.Running() && (commandPool != 0)) {
+  if (recorder.Running() && (commandPool != VK_NULL_HANDLE)) {
     std::vector<VkCommandBuffer> commandBuffers;
 
     for (auto& commandBufferState :
@@ -979,35 +987,39 @@ inline void vkCreateBuffer_RECWRAP(VkResult return_value,
                                    const VkAllocationCallbacks* pAllocator,
                                    VkBuffer* pBuffer,
                                    CRecorder& recorder) {
-  if (recorder.Running()) {
-    auto bufferCreateInfo = *pCreateInfo;
+  auto bufferCreateInfo = *pCreateInfo;
 
-    // Core 1.2 or KHR version
-    VkBufferOpaqueCaptureAddressCreateInfo opaqueAddressCreateInfo = {
-        VK_STRUCTURE_TYPE_BUFFER_OPAQUE_CAPTURE_ADDRESS_CREATE_INFO, // VkStructureType    sType;
-        bufferCreateInfo.pNext,                                      // const void       * pNext;
-        0 // uint64_t           opaqueCaptureAddress;
+  // Core 1.2 or KHR version
+  VkBufferOpaqueCaptureAddressCreateInfo opaqueAddressCreateInfo = {
+      VK_STRUCTURE_TYPE_BUFFER_OPAQUE_CAPTURE_ADDRESS_CREATE_INFO, // VkStructureType    sType;
+      bufferCreateInfo.pNext,                                      // const void       * pNext;
+      0 // uint64_t           opaqueCaptureAddress;
+  };
+
+  // EXT version
+  VkBufferDeviceAddressCreateInfoEXT deviceAddressCreateInfo = {
+      VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_CREATE_INFO_EXT, // VkStructureType    sType;
+      bufferCreateInfo.pNext,                                  // const void       * pNext;
+      0                                                        // VkDeviceAddress    deviceAddress;
+  };
+
+  // Record opaque/capture device address only when requested
+  if ((Config::Get()
+           .recorder.vulkan.utilities
+           .useCaptureReplayFeaturesForBuffersAndAccelerationStructures) &&
+      isBitSet(pCreateInfo->flags, VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT)) {
+    VkBufferDeviceAddressInfo addressInfo = {
+        VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO, // VkStructureType    sType;
+        nullptr,                                      // const void       * pNext;
+        *pBuffer                                      // VkBuffer           buffer;
     };
 
-    // EXT version
-    VkBufferDeviceAddressCreateInfoEXT deviceAddressCreateInfo = {
-        VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_CREATE_INFO_EXT, // VkStructureType    sType;
-        bufferCreateInfo.pNext,                                  // const void       * pNext;
-        0 // VkDeviceAddress    deviceAddress;
-    };
-
-    // Record opaque/capture device address only when requested
-    if ((Config::Get()
-             .recorder.vulkan.utilities
-             .useCaptureReplayFeaturesForBuffersAndAccelerationStructures) &&
-        ((pCreateInfo->flags & VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT) ==
-         VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT)) {
-      VkBufferDeviceAddressInfo addressInfo = {
-          VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO, // VkStructureType    sType;
-          nullptr,                                      // const void       * pNext;
-          *pBuffer                                      // VkBuffer           buffer;
-      };
-
+    // If no device address is assigned to a buffer
+    if ((getPNextStructure(bufferCreateInfo.pNext,
+                           VK_STRUCTURE_TYPE_BUFFER_OPAQUE_CAPTURE_ADDRESS_CREATE_INFO) ==
+         nullptr) &&
+        (getPNextStructure(bufferCreateInfo.pNext,
+                           VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_CREATE_INFO_EXT) == nullptr)) {
       // Core 1.2 or KHR version
       if (drvVk.GetDeviceDispatchTable(device).vkGetBufferOpaqueCaptureAddressUnifiedGITS) {
         opaqueAddressCreateInfo.opaqueCaptureAddress =
@@ -1021,10 +1033,14 @@ inline void vkCreateBuffer_RECWRAP(VkResult return_value,
         bufferCreateInfo.pNext = &deviceAddressCreateInfo;
       }
     }
+  }
+
+  if (recorder.Running()) {
     recorder.Schedule(
         new CvkCreateBuffer(return_value, device, &bufferCreateInfo, pAllocator, pBuffer));
   }
-  vkCreateBuffer_SD(return_value, device, pCreateInfo, pAllocator, pBuffer);
+
+  vkCreateBuffer_SD(return_value, device, &bufferCreateInfo, pAllocator, pBuffer);
 }
 
 inline void vkGetBufferDeviceAddressUnifiedGITS_RECWRAP(VkDeviceAddress return_value,
@@ -1080,6 +1096,160 @@ inline void vkAllocateMemory_RECWRAP(VkResult return_value,
         new CvkAllocateMemory(return_value, device, pAllocateInfo, pAllocator, pMemory));
   }
   // vkAllocateMemory_SD() function is called inside recExecWrap_vkAllocateMemory() function
+}
+
+inline void vkCreateAccelerationStructureKHR_RECWRAP(
+    VkResult return_value,
+    VkDevice device,
+    const VkAccelerationStructureCreateInfoKHR* pCreateInfo,
+    const VkAllocationCallbacks* pAllocator,
+    VkAccelerationStructureKHR* pAccelerationStructure,
+    CRecorder& recorder) {
+  auto accelerationStructureCreateInfo = *pCreateInfo;
+
+  if (Config::Get()
+          .recorder.vulkan.utilities.useCaptureReplayFeaturesForBuffersAndAccelerationStructures) {
+    VkAccelerationStructureDeviceAddressInfoKHR addressInfo = {
+        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR, // VkStructureType              sType;
+        nullptr,                // const void                 * pNext;
+        *pAccelerationStructure // VkAccelerationStructureKHR   accelerationStructure;
+    };
+
+    accelerationStructureCreateInfo.createFlags |=
+        VK_ACCELERATION_STRUCTURE_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT_KHR;
+    accelerationStructureCreateInfo.deviceAddress =
+        drvVk.vkGetAccelerationStructureDeviceAddressUnifiedGITS(device, &addressInfo);
+  }
+  if (recorder.Running()) {
+    recorder.Schedule(new CvkCreateAccelerationStructureKHR(return_value, device,
+                                                            &accelerationStructureCreateInfo,
+                                                            pAllocator, pAccelerationStructure));
+  }
+  vkCreateAccelerationStructureKHR_SD(return_value, device, &accelerationStructureCreateInfo,
+                                      pAllocator, pAccelerationStructure);
+}
+
+inline void vkGetAccelerationStructureDeviceAddressUnifiedGITS_RECWRAP(
+    VkDeviceAddress return_value,
+    VkDevice device,
+    const VkAccelerationStructureDeviceAddressInfoKHR* pInfo,
+    CRecorder& recorder) {
+  if (recorder.Running()) {
+    recorder.Schedule(
+        new CvkGetAccelerationStructureDeviceAddressUnifiedGITS(return_value, device, pInfo));
+    vkGetAccelerationStructureDeviceAddressUnifiedGITS_SD(return_value, device, pInfo);
+  }
+}
+
+inline void vkGetAccelerationStructureDeviceAddressKHR_RECWRAP(
+    VkDeviceAddress return_value,
+    VkDevice device,
+    const VkAccelerationStructureDeviceAddressInfoKHR* pInfo,
+    CRecorder& recorder) {
+  vkGetAccelerationStructureDeviceAddressUnifiedGITS_RECWRAP(return_value, device, pInfo, recorder);
+}
+
+inline void vkCreateRayTracingPipelinesKHR_RECWRAP(
+    VkResult return_value,
+    VkDevice device,
+    VkDeferredOperationKHR deferredOperation,
+    VkPipelineCache pipelineCache,
+    uint32_t createInfoCount,
+    const VkRayTracingPipelineCreateInfoKHR* pCreateInfos,
+    const VkAllocationCallbacks* pAllocator,
+    VkPipeline* pPipelines,
+    CRecorder& recorder) {
+  std::vector<std::vector<uint8_t>> pipelineCaptureReplayHandles;
+  std::vector<VkRayTracingPipelineCreateInfoKHR> allCreateInfos;
+  std::vector<std::vector<VkRayTracingShaderGroupCreateInfoKHR>> allShaderGroups;
+
+  for (uint32_t p = 0; p < createInfoCount; ++p) {
+    allCreateInfos.emplace_back(pCreateInfos[p]);
+    allShaderGroups.emplace_back();
+
+    auto& currentCreateInfo = allCreateInfos.back();
+    auto& groupsForCurrentCreateInfo = allShaderGroups.back();
+
+    for (uint32_t g = 0; g < currentCreateInfo.groupCount; ++g) {
+      groupsForCurrentCreateInfo.emplace_back(currentCreateInfo.pGroups[g]);
+
+      if (Config::Get().recorder.vulkan.utilities.useCaptureReplayFeaturesForRayTracingPipelines) {
+        auto& currentGroup = groupsForCurrentCreateInfo.back();
+
+        std::vector<uint8_t> handle(getRayTracingShaderGroupCaptureReplayHandleSize(device));
+        drvVk.vkGetRayTracingCaptureReplayShaderGroupHandlesKHR(
+            device, pPipelines[p], g, 1, getRayTracingShaderGroupCaptureReplayHandleSize(device),
+            handle.data());
+        pipelineCaptureReplayHandles.push_back(handle);
+
+        currentGroup.pShaderGroupCaptureReplayHandle = pipelineCaptureReplayHandles.back().data();
+      }
+    }
+
+    currentCreateInfo.pGroups = groupsForCurrentCreateInfo.data();
+  }
+
+  if (recorder.Running()) {
+    recorder.Schedule(new CvkCreateRayTracingPipelinesKHR(
+        return_value, device, VK_NULL_HANDLE /* deferredOperation */, pipelineCache,
+        createInfoCount, allCreateInfos.data(), pAllocator, pPipelines));
+  }
+  vkCreateRayTracingPipelinesKHR_SD(return_value, device, deferredOperation, pipelineCache,
+                                    createInfoCount, allCreateInfos.data(), pAllocator, pPipelines);
+}
+
+void vkCmdBuildAccelerationStructuresKHR_RECWRAP(
+    VkCommandBuffer commandBuffer,
+    uint32_t infoCount,
+    const VkAccelerationStructureBuildGeometryInfoKHR* pInfos,
+    const VkAccelerationStructureBuildRangeInfoKHR* const* ppBuildRangeInfos,
+    CRecorder& recorder) {
+  // When capture/replay features are used, all the device addresses are supposed to remain unchanged,
+  // even during replay, so they don't need to be updated and we don't need to do anything with them...
+  //
+  // unless substreams are recorded. State restoration phase of substream requires contents of input
+  // buffers to be kept for each acceleration structure so building commands can be recreated.
+  //
+  // But when capture/replay features are NOT used and/or when substreams are being recorded, then
+  // metadata for all the device addresses needs to be prepared as well so it is possible to update,
+  // recreate those addresses during a stream replay. Single metadata contains:
+  // - original device address value
+  // - a handle of a buffer from which a device address was retrieved
+  // - an offset from the beggining of a buffer
+  //
+  // How this metadata is acquired depends on the origins of each device address. In most cases, device
+  // addresses point directly to a buffer so metadata acquisition is straightforward - GITS just needs
+  // to find a resource associated with a provided address. But in case of vertex data - final device
+  // address depends also on a value of a vertex index which is added to the base device address.
+  // That's why a vertex index needs to be retrieved before the buffer can be found from the specified
+  // address. The index is copied and the final device address calculations are performed on a CPU -
+  // - acquired vertex index is multiplied by a vertex stride and added to the base device address;
+  // this value is then used to find a source buffer with a vertex data.
+  //
+  // Another exception is an instance data buffer provided for building top-level acceleration structures.
+  // This buffer contains device addresses of all bottom-level acceleration structures built into the TLAS.
+  // When capture/replay features are not used, GITS needs to translate/update those device addresses during
+  // stream replay, so first it needs to gather information about handles of all the bottom-level acceleration
+  // structures. In order to do this, it needs to copy instance data buffer contents from memory locations
+  // pointed to by a device address and then look through it. The buffer contains device addresses, so
+  // acceleration structures associated with them need to be find and their handles need to be acquired.
+
+  vkCmdBuildAccelerationStructuresKHR_SD(commandBuffer, infoCount, pInfos, ppBuildRangeInfos);
+
+  if (recorder.Running()) {
+    // Schedule a token which updates/patches a list of device addresses
+    if (!useCaptureReplayFeaturesForBuffersAndAccelerationStructures()) {
+      auto& addressPatchers = SD()._commandbufferstates[commandBuffer]->addressPatchers;
+      auto it = addressPatchers.find(
+          CAccelerationStructureKHRState::globalAccelerationStructureBuildCommandIndex);
+      if ((it != addressPatchers.end()) && (it->second.Count() > 0)) {
+        recorder.Schedule(new CGitsVkCmdPatchDeviceAddresses(commandBuffer, it->second));
+      }
+    }
+
+    recorder.Schedule(new CvkCmdBuildAccelerationStructuresKHR(commandBuffer, infoCount, pInfos,
+                                                               ppBuildRangeInfos));
+  }
 }
 
 #ifdef GITS_PLATFORM_WINDOWS

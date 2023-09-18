@@ -26,6 +26,8 @@ namespace gits {
 namespace Vulkan {
 
 struct CBufferState;
+struct CDeviceMemoryState;
+struct CCommandBufferState;
 
 struct CWindowParameters {
   HINSTANCE hInstance;
@@ -119,6 +121,35 @@ uint32_t findCompatibleMemoryTypeIndex(VkPhysicalDevice physicalDevice,
                                        uint32_t originalMemoryTypeIndex,
                                        uint32_t currentCompatibleMemoryTypes);
 std::shared_ptr<CBufferState> findBufferStateFromDeviceAddress(VkDeviceAddress deviceAddress);
+uint32_t getRayTracingShaderGroupCaptureReplayHandleSize(VkDevice device);
+std::pair<std::shared_ptr<CDeviceMemoryState>, std::shared_ptr<CBufferState>> createTemporaryBuffer(
+    VkDevice device,
+    VkDeviceSize size,
+    VkBufferUsageFlags bufferUsage,
+    CCommandBufferState* commandBufferState = nullptr,
+    VkMemoryPropertyFlags requiredMemoryPropertyFlags = 0,
+    void* hostPointer = nullptr);
+void mapMemoryAndCopyData(VkDevice device,
+                          VkDeviceMemory destination,
+                          VkDeviceSize offset,
+                          void* source,
+                          VkDeviceSize dataSize);
+void mapMemoryAndCopyData(void* destination,
+                          VkDevice device,
+                          VkDeviceMemory source,
+                          VkDeviceSize offset,
+                          VkDeviceSize dataSize);
+VkDeviceAddress getBufferDeviceAddress(VkDevice device, VkBuffer buffer);
+VkBuffer findBufferFromDeviceAddress(VkDeviceAddress deviceAddress);
+VkDeviceAddress getAccelerationStructureDeviceAddress(
+    VkDevice device, VkAccelerationStructureKHR accelerationStructure);
+VkPipelineLayout createInternalPipelineLayout(VkDevice device);
+VkPipeline createInternalPipeline(VkDevice device,
+                                  VkPipelineLayout layout,
+                                  const std::vector<uint32_t>& code);
+bool getStructStorageFromHash(hash_t hash,
+                              VkAccelerationStructureKHR accelerationStructure,
+                              void** ptr);
 bool isVulkanAPIVersionSupported(uint32_t major, uint32_t minor, VkPhysicalDevice physicalDevice);
 void checkReturnValue(VkResult playerSideReturnValue,
                       CVkResult& recorderSideReturnValue,
@@ -144,6 +175,7 @@ void vulkanScheduleCopyRenderPasses(VkCommandBuffer cmdBuffer,
 
 void vulkanDumpRenderPasses(VkCommandBuffer commandBuffer);
 void vulkanDumpRenderPassResources(VkCommandBuffer cmdBuffer);
+
 #endif
 
 } // namespace Vulkan

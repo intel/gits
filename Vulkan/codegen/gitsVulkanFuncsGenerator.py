@@ -135,6 +135,11 @@ vulkan_flags = [
   'VkSubmitFlags',
   'VkRenderingFlags',
   'VkGraphicsPipelineLibraryFlagsEXT',
+  'VkAccelerationStructureCreateFlagsKHR',
+  'VkBuildAccelerationStructureFlagsKHR',
+  'VkGeometryFlagsKHR',
+  'VkGeometryInstanceFlagsKHR',
+  'VkExternalMemoryHandleTypeFlags'
 ]
 
 vulkan_uint32 = vulkan_flags + [
@@ -225,6 +230,8 @@ opaque_nondispatchable_handles = [
   'VkPerformanceConfigurationINTEL',
   'VkVideoSessionKHR',
   'VkVideoSessionParametersKHR',
+  'VkAccelerationStructureKHR',
+  'VkDeferredOperationKHR'
 ]
 
 other_opaque_handles = [
@@ -729,8 +736,8 @@ def generate_vulkan_struct_storage(structs, enums):
   vk_struct_storage_cpp = open('vulkanStructStorageAuto.cpp', 'w')
   vk_struct_storage_cpp.write(copyright_header)
 
-  begin_cpp = """#include "vulkanStructStorageAuto.h"
-#include "vulkanTools_lite.h"
+  begin_cpp = """#include "vulkanTools.h"
+#include "vulkanStructStorageAuto.h"
 
 """
   begin_h = """#pragma once
@@ -787,11 +794,13 @@ namespace Vulkan {
 
               for var in elem['vars']:
                 Cnames.append('_' + var['name'])
-                typename = var['type']
+                typename = re.sub(r'\:[0-9_]+', '', var['type'])
                 if var.get('wrapType'):
                   wrapType = ""
                   if '::CSArray' in var['wrapType'] or '::CSMapArray' in var['wrapType']:
                     wrapType = var['wrapType'].replace('::CSArray', 'DataArray').replace('::CSMapArray', 'DataArray')
+                  elif 'ArrayOfArrays' in var['wrapType']:
+                    wrapType = var['wrapType'].replace('ArrayOfArrays', 'DataArrayOfArrays')
                   elif 'Array' in var['wrapType']:
                     wrapType = var['wrapType'].replace('Array', 'DataArray')
                   else:
@@ -830,6 +839,8 @@ namespace Vulkan {
               key_variable = key_name.replace('Vk', '').lower()
               key_decl = '_' + key_name.replace('Vk', '')
               argd = 'const ' + key_name + '* ' + key_variable
+              if elem.get('constructorArgs') != None:
+                argd = elem.get('constructorArgs')
               argd_decl = key_name + '* ' + key_decl
 
               argsDecl = ""
@@ -841,19 +852,19 @@ namespace Vulkan {
               function_delete = ''
               function_operator = ''
               init = ''
-              mapped_pointers = '\n  std::set<uint64_t> returnMap;\n  '
+              mapped_pointers = '  std::set<uint64_t> returnMap;\n  if (!*_isNullPtr) {\n  '
               if len(elem['vars']) > 0:
                 init = '  if (!*_isNullPtr)  {\n'
                 init_to_nullptr = '  } else {\n'
                 init_default = ''
-                function_operator = 'if (' + key_decl + ' == nullptr)  {\n'
+                function_operator = 'if (' + key_decl + ' == nullptr) {\n'
               function_operator += '    ' + key_decl + ' = new ' + key_name + ';\n'
               for n, w, t, s, ot in zip(Cnames, Cwraps, Ctypes, Csize, types):
                 if t != 'COutArgument':
                   counter += 1
 
                   if (ot not in primitive_types):
-                    mapped_pointers += 'for (auto obj : ' + n + '->GetMappedPointers())\n    returnMap.insert((uint64_t)obj);\n  '
+                    mapped_pointers += '  for (auto obj : ' + n + '->GetMappedPointers())\n      returnMap.insert((uint64_t)obj);\n  '
 
                   if w == '':
                     struct_type = t[1:].replace("Data", "") + '_'
@@ -886,7 +897,7 @@ namespace Vulkan {
                   function_delete += '  delete ' + n + ';\n'
 
               function_delete += '  delete ' + key_decl + ';\n'
-              mapped_pointers += 'return returnMap;'
+              mapped_pointers += '}\n  return returnMap;'
               if len(elem['vars']) > 0:
                 init += init_to_nullptr
                 init += '  }'
@@ -899,12 +910,11 @@ namespace Vulkan {
               function_operator += '\n  return ' + key_decl + ';'
               key_name_data = versioned_name + "Data"
               if len(elem['vars']) > 0:
-                content += """    class C%(name_data)s : public CBaseDataStruct, gits::noncopyable {
+                content += """    struct C%(name_data)s : public CBaseDataStruct, gits::noncopyable {
 %(argsDecl)s
       %(argd_decl)s;
       CboolData _isNullPtr;
 
-    public:
       C%(name_data)s(%(argd)s);
       ~C%(name_data)s();
       %(unversioned_name)s* Value();
@@ -916,10 +926,17 @@ namespace Vulkan {
       std::set<uint64_t> GetMappedPointers();
     };
 """ % {'unversioned_name': key_name, 'name_data': key_name_data, 'argd': argd, 'argsDecl': argsDecl, 'argd_decl': argd_decl}
-                content += "    typedef CDataArray<" + key_name + ", C" + key_name_data + "> C" + key_name_data + "Array;\n\n\n"
-                content_cpp += """gits::Vulkan::C%(name_data)s::C%(name_data)s(%(argd)s) : %(key_decl)s(nullptr), _isNullPtr(%(key_variable)s == nullptr) {
+                content += "    typedef CDataArray<" + key_name + ", C" + key_name_data + "> C" + key_name_data + "Array;\n"
+                content += "    typedef CDataArrayOfArrays<" + key_name + ", C" + key_name_data + "> C" + key_name_data + "ArrayOfArrays;\n\n\n"
+
+                constructor = """gits::Vulkan::C%(name_data)s::C%(name_data)s(%(argd)s) : %(key_decl)s(nullptr), _isNullPtr(%(key_variable)s == nullptr) {
 %(init)s
-}
+}""" % {'name_data' : key_name_data, 'argd': argd, 'key_decl': key_decl, 'key_variable': key_variable, 'init': init}
+
+                if elem.get('constructorWrap') is True:
+                  constructor = '// for constructor see vulkanStructStorageWrap.cpp'
+
+                content_cpp += """%(constructor)s
 
 gits::Vulkan::C%(name_data)s::~C%(name_data)s() {
 %(function_delete)s
@@ -935,7 +952,7 @@ std::set<uint64_t> gits::Vulkan::C%(name_data)s::GetMappedPointers() {
 %(mapped_pointers)s
 }
 
-""" % {'unversioned_name': key_name, 'name_data': key_name_data, 'argd': argd, 'init': init, 'function_operator': function_operator, 'function_delete': function_delete, 'key_variable': key_variable, 'key_decl': key_decl, 'mapped_pointers': mapped_pointers}
+""" % {'constructor': constructor, 'unversioned_name': key_name, 'name_data': key_name_data, 'function_operator': function_operator, 'function_delete': function_delete, 'mapped_pointers': mapped_pointers}
 
             declared_structs.append(key)
   vk_struct_storage_cpp.write(content_cpp)
@@ -1031,9 +1048,9 @@ typedef _SECURITY_ATTRIBUTES SECURITY_ATTRIBUTES;
               bit_field_found = re.search(r':([A-Za-z0-9_]+)', var_type)
               var_type = re.sub(r':([A-Za-z0-9_]+)', '', var_type)
               var_name += bit_field_found.group(0)
-            if re.search(r'\[([A-Za-z0-9_]+)\]', var_type):
-              tmp = re.search(r'\[([A-Za-z0-9_]+)\]', var_type)
-              output += "  " + re.sub(r'\[([A-Za-z0-9_]+)\]', '', var_type) + " " + var_name + "[" + tmp.group(1) + "];\n"
+            if re.search(r'(\[([A-Za-z0-9_]+)\])+', var_type):
+              tmp = re.search(r'(\[([A-Za-z0-9_]+)\])+', var_type)
+              output += "  " + re.sub(r'(\[([A-Za-z0-9_]+)\])+', '', var_type) + " " + var_name + tmp.group(0) + ";\n"
             else:
               output += "  " + var_type + " " + var_name + ";\n"
           output += "}" + ";\n\n"
@@ -1730,6 +1747,7 @@ namespace Vulkan {
 """
   arguments_cpp_include = """
 #include "vulkanArgumentsAuto.h"
+#include "vulkanTools.h"
 """
   arguments_cpp.write(arguments_cpp_include)
   arguments_h.write(arguments_h_include)
@@ -1793,6 +1811,8 @@ namespace Vulkan {
         arguments_h.write(class_def)
       if elem.get('declareArray'):
         arguments_h.write('    typedef CStructArray<' + key_name + ', C' + versioned_name + '> C' + versioned_name + 'Array;\n')
+      if elem.get('declareArrayOfArrays'):
+        arguments_h.write('    typedef CStructArrayOfArrays<' + key_name + ', C' + versioned_name + '> C' + versioned_name + 'ArrayOfArrays;\n')
 
   for key in sorted(structs.keys()):
     for elem in structs[key]:
@@ -1808,8 +1828,7 @@ namespace Vulkan {
       if elem.get('custom') is not True:
         for arg in elem['vars']:
           Cnames.append('_' + arg['name'])
-          typename = arg['type']#.strip(' *')
-          #typename = typename.replace('const ', '')
+          typename = re.sub(r'\:[0-9_]+', '', arg['type'])
           if arg.get('wrapType'):
             Ctypes.append(arg['wrapType'])
           elif typename.replace('const ', '').strip(' *') in vulkan_mapped_types_nondisp and '*' in typename and 'const' not in typename:
@@ -1845,6 +1864,8 @@ namespace Vulkan {
         key_decl = '_' + key_name.replace('Vk', '')
         key_decl_original = key_decl + 'Original'
         argd = 'const ' + key_name + '* ' + key_variable
+        if elem.get('constructorArgs') != None:
+          argd = elem.get('constructorArgs')
         argd_decl = key_name + '* ' + key_decl
         argd_decl_original = key_name + '* ' + key_decl_original
 
@@ -1861,7 +1882,7 @@ namespace Vulkan {
         function_operator = ''
         function_original = ''
         init = ''
-        mapped_pointers = '\n  std::set<uint64_t> returnMap;\n  '
+        mapped_pointers = '\n  std::set<uint64_t> returnMap;\n  if (!*_isNullPtr) {\n  '
         if len(func['vars']) > 0:
           init = '  if (!*_isNullPtr) {\n'
           init_to_nullptr = '  } else {\n'
@@ -1877,7 +1898,7 @@ namespace Vulkan {
             counter += 1
 
             if (ot not in primitive_types):
-              mapped_pointers += 'for (auto obj : ' + n + '->GetMappedPointers())\n    returnMap.insert((uint64_t)obj);\n  '
+              mapped_pointers += '  for (auto obj : ' + n + '->GetMappedPointers())\n      returnMap.insert((uint64_t)obj);\n  '
 
             if w == '':
               struct_type = t[1:] + '_'
@@ -1934,7 +1955,7 @@ namespace Vulkan {
           init = ''
         function_operator += '\n  return ' + key_decl + ';'
         function_original += '\n  return PtrConverter<' + key_name + '>(' + key_decl_original + ');'
-        mapped_pointers += 'return returnMap;'
+        mapped_pointers += '}\n  return returnMap;'
         for n in Cnames:
           if n not in ('_return_value', '_self'):
             argsCall += re.sub('[_]', '', n) + ': *' + n + ' '
@@ -1950,7 +1971,10 @@ namespace Vulkan {
           ampersand_define += '  return !*_isNullPtr;\n'
           ampersand_define += '}\n'
 
-          decl_declare = '\n      virtual bool DeclarationNeeded() const override { return true; }'
+          declarationImplementation = ' { return true; }';
+          if elem.get('declarationNeededWrap') is True:
+            declarationImplementation = '; // see vulkanArgumentsWrap.cpp for definition'
+          decl_declare = '\n      virtual bool DeclarationNeeded() const override' + declarationImplementation
           decl_declare += '\n      virtual void Declare(CCodeOStream &stream) const override;'
 
           decl_define = 'void gits::Vulkan::C' + type_name + '::Declare(CCodeOStream &stream) const {\n'
@@ -2050,6 +2074,13 @@ namespace Vulkan {
       virtual void Read(CBinIStream& stream) override;
       virtual void Write(CCodeOStream& stream) const override;%(ampersand_declare)s%(decl_declare)s
     };""" % {'versioned_name': versioned_name, 'unversioned_name': key_name, 'argd': argd, 'argsDecl': argsDecl, 'inherit_type': inherit_type, 'argd_decl': argd_decl, 'argd_decl_original': argd_decl_original, 'ampersand_declare': ampersand_declare, 'decl_declare': decl_declare, }
+
+          constructor = """gits::Vulkan::C%(versioned_name)s::C%(versioned_name)s(%(argd)s): %(key_decl)s(nullptr), %(key_decl_original)s(nullptr), _isNullPtr(%(key_variable)s == nullptr) {
+%(init)s
+}""" % {'versioned_name': versioned_name, 'argd': argd, 'key_decl': key_decl, 'key_decl_original': key_decl_original, 'key_variable': key_variable, 'init': init}
+          if elem.get('constructorWrap') is True:
+            constructor = '// for constructor see vulkanArgumentsWrap.cpp'
+
           d = """
 gits::Vulkan::C%(versioned_name)s::C%(versioned_name)s(): %(init_default)s, %(key_decl)s(nullptr), %(key_decl_original)s(nullptr), _isNullPtr(false) {
 }
@@ -2058,9 +2089,7 @@ gits::Vulkan::C%(versioned_name)s::~C%(versioned_name)s() {
 %(function_delete)s
 }
 
-gits::Vulkan::C%(versioned_name)s::C%(versioned_name)s(%(argd)s): %(key_decl)s(nullptr), %(key_decl_original)s(nullptr), _isNullPtr(%(key_variable)s == nullptr) {
-%(init)s
-}
+%(constructor)s
 
 const char* gits::Vulkan::C%(versioned_name)s::NAME = "%(unversioned_name)s";
 
@@ -2096,7 +2125,7 @@ void gits::Vulkan::C%(versioned_name)s::Write(CCodeOStream& stream) const {
 
 %(ampersand_define)s
 %(decl_define)s
-""" % {'versioned_name': versioned_name, 'unversioned_name': key_name, 'argd': argd, 'init': init, 'function_operator': function_operator, 'function_read': function_read, 'function_write': function_write, 'function_ccode_write': function_ccode_write, 'ampersand_define': ampersand_define, 'decl_define': decl_define, 'function_delete': function_delete, 'key_variable': key_variable, 'key_decl': key_decl, 'init_default': init_default, 'function_original': function_original, 'key_decl_original': key_decl_original, 'mapped_pointers': mapped_pointers}
+""" % {'versioned_name': versioned_name, 'unversioned_name': key_name, 'constructor': constructor, 'function_operator': function_operator, 'function_read': function_read, 'function_write': function_write, 'function_ccode_write': function_ccode_write, 'ampersand_define': ampersand_define, 'decl_define': decl_define, 'function_delete': function_delete, 'key_decl': key_decl, 'init_default': init_default, 'function_original': function_original, 'key_decl_original': key_decl_original, 'mapped_pointers': mapped_pointers}
 
         arguments_h.write(c + '\n')
         arguments_cpp.write(d+'\n')
@@ -2211,8 +2240,16 @@ for s in structs:
     struct['type'] = s.get('type')
   if (s.get('custom')):
     struct['custom'] = s.get('custom')
+  if (s.get('constructorWrap')):
+    struct['constructorWrap'] = s.get('constructorWrap')
+  if (s.get('declarationNeededWrap')):
+    struct['declarationNeededWrap'] = s.get('declarationNeededWrap')
+  if (s.get('constructorArgs')):
+    struct['constructorArgs'] = s.get('constructorArgs')
   if (s.get('declareArray')):
     struct['declareArray'] = s.get('declareArray')
+  if (s.get('declareArrayOfArrays')):
+    struct['declareArrayOfArrays'] = s.get('declareArrayOfArrays')
   if (s.get('version')):
     struct['version'] = s.get('version')
   else:

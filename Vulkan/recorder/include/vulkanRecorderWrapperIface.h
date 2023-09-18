@@ -23,6 +23,8 @@ namespace gits {
 namespace Vulkan {
 class IRecorderWrapper {
 public:
+  virtual void PauseRecording() = 0;
+  virtual void ContinueRecording() = 0;
   virtual void StreamFinishedEvent(std::function<void()> e) = 0;
   virtual void CloseRecorderIfRequired() = 0;
   virtual CVkDriver& Drivers() const = 0;
@@ -74,6 +76,7 @@ public:
   virtual bool IsVulkanAPIVersionSupported(uint32_t major,
                                            uint32_t minor,
                                            VkPhysicalDevice physicalDevice) const = 0;
+  virtual void SetConfig(Config const& cfg) const = 0;
 #include "vulkanRecorderWrapperIfaceAuto.h"
 };
 } // namespace Vulkan

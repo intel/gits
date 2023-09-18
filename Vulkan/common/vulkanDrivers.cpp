@@ -179,6 +179,22 @@ void_t STDCALL default_vkTagMemoryContentsUpdateGITS(VkDevice device,
   return nullptr;
 }
 
+void_t STDCALL default_vkPauseRecordingGITS() {
+  auto& dispatchTable = drvVk.GetGlobalDispatchTable();
+  if (dispatchTable.vkPauseRecordingGITS) {
+    dispatchTable.vkPauseRecordingGITS();
+  }
+  return nullptr;
+}
+
+void_t STDCALL default_vkContinueRecordingGITS() {
+  auto& dispatchTable = drvVk.GetGlobalDispatchTable();
+  if (dispatchTable.vkContinueRecordingGITS) {
+    dispatchTable.vkContinueRecordingGITS();
+  }
+  return nullptr;
+}
+
 #define DEFAULT_FUNCTION(return_type, function_name, function_arguments, arguments_call, level,    \
                          first_argument_name, drv_initialization)                                  \
   return_type STDCALL default_##function_name function_arguments {                                 \
@@ -568,6 +584,18 @@ void CVkDriver::InitializeUnifiedAPI(const VkDeviceCreateInfo* pCreateInfo,
     if (strcmp(element, VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME) == 0) {
       deviceDispatchTable.vkCmdPipelineBarrier2UnifiedGITS =
           deviceDispatchTable.vkCmdPipelineBarrier2KHR;
+      break;
+    }
+  }
+
+  // Ray tracing - only KHR version available at the moment, but core version expected to be added in the future
+
+  for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; ++i) {
+    auto element = pCreateInfo->ppEnabledExtensionNames[i];
+    // KHR version
+    if (strcmp(element, VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME) == 0) {
+      deviceDispatchTable.vkGetAccelerationStructureDeviceAddressUnifiedGITS =
+          deviceDispatchTable.vkGetAccelerationStructureDeviceAddressKHR;
       break;
     }
   }

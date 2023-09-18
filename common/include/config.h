@@ -649,6 +649,11 @@ struct Config {
         vi_uint addBufferUsageFlags;
         vi_bool scheduleCommandBuffersBeforeQueueSubmit;
         MemorySizeRequirementOverride increaseImageMemorySizeRequirement;
+        struct IncreaseAccelerationStructureMemorySizeRequirement {
+          MemorySizeRequirementOverride accelerationStructureSize;
+          MemorySizeRequirementOverride buildScratchSize;
+          MemorySizeRequirementOverride updateScratchSize;
+        } increaseAccelerationStructureMemorySizeRequirement;
         std::vector<std::string> suppressPhysicalDeviceFeatures;
         struct MemoryOffsetAlignmentOverride {
           vi_uint images;

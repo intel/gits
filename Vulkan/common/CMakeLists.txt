@@ -56,11 +56,13 @@ add_library(Vulkan_common
   include/vulkan_basic.h
   include/vulkanCCodeWriteWrap.h
   include/vulkanPNextWrappers.inl
+  include/vulkanInternalShaderModules.h
 
   vkFunction.cpp
   vkWindowing.cpp
   vulkan_apis_iface.cpp
   vulkanArgumentsBasic.cpp
+  vulkanArgumentsWrap.cpp
   vulkanArgumentsAuto.cpp
   vulkanDrivers.cpp
   vulkanFunctions.cpp
@@ -71,9 +73,11 @@ add_library(Vulkan_common
   vulkanPreToken.cpp
   vulkanStateDynamic.cpp
   vulkanStructStorageBasic.cpp
+  vulkanStructStorageWrap.cpp
   vulkanTools.cpp
   vulkanTools_lite.cpp
   vulkanCCodeWriteWrap.cpp
+  vulkanInternalShaderModules.cpp
 )
 
 source_group("Generated Files" REGULAR_EXPRESSION ".*Auto.*")
