@@ -118,8 +118,8 @@ set(GITS_CONFIG "gits_config.txt")
 set(CONFIG_OUTPUT "${CONFIG_GENERATOR_DIR}/${GITS_CONFIG}")
 set(CONFIG_GENERATOR "${CONFIG_GENERATOR_DIR}/gits_config_generator.py")
 set(CONFIG_TEMPLATE "${CONFIG_GENERATOR_DIR}/gits_config.mako")
-install(CODE "execute_process(COMMAND ${Python3_EXECUTABLE} ${CONFIG_GENERATOR} --templatepath ${CONFIG_TEMPLATE} \
-  --outputpath ${CONFIG_OUTPUT} --platform ${PLATFORM} --installpath \${CMAKE_INSTALL_PREFIX})")
+install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" \"${CONFIG_GENERATOR}\" --templatepath \"${CONFIG_TEMPLATE}\" \
+  --outputpath \"${CONFIG_OUTPUT}\" --platform ${PLATFORM} --installpath \"\${CMAKE_INSTALL_PREFIX}\")")
 
 if(MSVC)
   install(FILES $<TARGET_PDB_FILE:GitsRecorder> DESTINATION Recorder OPTIONAL)
