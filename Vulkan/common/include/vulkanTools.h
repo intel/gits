@@ -34,6 +34,13 @@ typedef enum _VulkanWriteScreenshotMode {
   VULKAN_MODE_RESOURCES
 } VulkanWriteScreenshotMode;
 
+typedef enum _VulkanDumpingMode {
+  VULKAN_NONE,
+  VULKAN_PER_COMMANDBUFFER,
+  VULKAN_PER_RENDERPASS,
+  VULKAN_PER_DRAW
+} VulkanDumpingMode;
+
 bool writeScreenshotUtil(std::string fileName,
                          VkQueue& queue,
                          VkImage& sourceImage,
@@ -165,18 +172,21 @@ bool vulkanCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer bufferHandle, std:
 bool vulkanCopyImage(VkCommandBuffer commandBuffer,
                      VkImage imageHandle,
                      std::string fileName,
-                     bool isResource = false,
-                     VkAttachmentStoreOp imageStoreOption = VK_ATTACHMENT_STORE_OP_STORE);
+                     bool isResource,
+                     VkAttachmentStoreOp imageStoreOption,
+                     VulkanDumpingMode dumpingMode);
 void vulkanScheduleCopyResources(VkCommandBuffer cmdBuffer,
                                  uint64_t queueSubmitNumber,
                                  uint32_t cmdBuffBatchNumber,
                                  uint32_t cmdBuffNumber,
-                                 uint64_t renderPassNumber);
+                                 uint64_t renderPassNumber,
+                                 uint64_t drawNumber = 0);
 void vulkanScheduleCopyRenderPasses(VkCommandBuffer cmdBuffer,
                                     uint64_t queueSubmitNumber,
                                     uint32_t cmdBuffBatchNumber,
                                     uint32_t cmdBuffNumber,
-                                    uint64_t renderPassNumber);
+                                    uint64_t renderPassNumber,
+                                    uint64_t drawNumber = 0);
 
 void vulkanDumpRenderPasses(VkCommandBuffer commandBuffer);
 void vulkanDumpRenderPassResources(VkCommandBuffer cmdBuffer);

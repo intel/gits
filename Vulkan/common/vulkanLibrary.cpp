@@ -18,6 +18,7 @@
 #include "vulkanStateDynamic.h"
 #include "vulkanStateDynamic.h"
 #include "vulkanFunctions.h"
+#include "vulkanStateTracking.h"
 
 namespace gits {
 namespace Vulkan {
@@ -108,11 +109,9 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndStateTrack() {
   }
 }
 
-void CLibrary::CVulkanCommandBufferTokensBuffer::FinishCommandBufferAndRestoreSettings(
-    Vulkan::CFunction* token,
-    uint64_t renderPassNumber,
-    uint64_t drawNumber,
-    VkCommandBuffer cmdBuffer) {
+void CLibrary::CVulkanCommandBufferTokensBuffer::FinishRenderPass(uint64_t renderPassNumber,
+                                                                  uint64_t drawNumber,
+                                                                  VkCommandBuffer cmdBuffer) {
   uint64_t drawCount = 0;
   uint64_t renderPassCount = 0;
   // restoring subpasses - we need the same number of subpasses as in original VkRenderPass
@@ -129,20 +128,41 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::FinishCommandBufferAndRestoreSe
     }
   }
 
-  if (token->Type() & CFunction::GITS_VULKAN_DRAW_APITYPE) {
-    VkRenderPassBeginInfo* renderPassBeginInfo = SD()._commandbufferstates[cmdBuffer]
-                                                     ->beginRenderPassesList.back()
-                                                     ->renderPassBeginInfoData.Value();
-    VkRenderingInfo* renderingInfo = SD()._commandbufferstates[cmdBuffer]
-                                         ->beginRenderPassesList.back()
-                                         ->renderingInfoData.Value();
-    if (renderPassBeginInfo) {
-      drvVk.vkCmdEndRenderPass(cmdBuffer);
-    } else if (renderingInfo) {
-      drvVk.vkCmdEndRendering(cmdBuffer);
-    }
+  VkRenderPassBeginInfo* renderPassBeginInfo = SD()._commandbufferstates[cmdBuffer]
+                                                   ->beginRenderPassesList.back()
+                                                   ->renderPassBeginInfoData.Value();
+  VkRenderingInfo* renderingInfo =
+      SD()._commandbufferstates[cmdBuffer]->beginRenderPassesList.back()->renderingInfoData.Value();
+  if (renderPassBeginInfo) {
+    drvVk.vkCmdEndRenderPass(cmdBuffer);
+    vkCmdEndRenderPass_SD(cmdBuffer);
+  } else if (renderingInfo) {
+    drvVk.vkCmdEndRendering(cmdBuffer);
+    vkCmdEndRendering_SD(cmdBuffer);
   }
+}
+
+void CLibrary::CVulkanCommandBufferTokensBuffer::FinishCommandBufferAndSubmit(
+    VkCommandBuffer cmdBuffer) {
   drvVk.vkEndCommandBuffer(cmdBuffer);
+
+  VkCommandPool cmdPool =
+      SD()._commandbufferstates[cmdBuffer]->commandBufferAllocateInfoData.Value()->commandPool;
+  VkSubmitInfo submitInfoNew = {
+      VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 1, &cmdBuffer, 0, nullptr};
+  VkQueue queue =
+      SD()._commandpoolstates[cmdPool]->deviceStateStore->queueStateStoreList[0]->queueHandle;
+  drvVk.vkQueueSubmit(queue, 1, &submitInfoNew, VK_NULL_HANDLE);
+  drvVk.vkQueueWaitIdle(queue);
+  VkDevice device = SD()._commandpoolstates[cmdPool]->deviceStateStore->deviceHandle;
+  drvVk.vkFreeCommandBuffers(device, cmdPool, 1, &cmdBuffer);
+}
+
+void CLibrary::CVulkanCommandBufferTokensBuffer::CreateNewCommandBufferAndRestoreSettings(
+    Vulkan::CFunction* token,
+    uint64_t renderPassNumber,
+    uint64_t drawNumber,
+    VkCommandBuffer cmdBuffer) {
 
   VkCommandPool cmdPool =
       SD()._commandbufferstates[cmdBuffer]->commandBufferAllocateInfoData.Value()->commandPool;
@@ -154,14 +174,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::FinishCommandBufferAndRestoreSe
       VK_COMMAND_BUFFER_LEVEL_PRIMARY,                // VkCommandBufferLevel level;
       1                                               // uint32_t commandBufferCount;
   };
-  VkSubmitInfo submitInfoNew = {
-      VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 1, &cmdBuffer, 0, nullptr};
-  VkQueue queue =
-      SD()._commandpoolstates[cmdPool]->deviceStateStore->queueStateStoreList[0]->queueHandle;
-  drvVk.vkQueueSubmit(queue, 1, &submitInfoNew, VK_NULL_HANDLE);
-  drvVk.vkQueueWaitIdle(queue);
   VkDevice device = SD()._commandpoolstates[cmdPool]->deviceStateStore->deviceHandle;
-  drvVk.vkFreeCommandBuffers(device, cmdPool, 1, &cmdBuffer);
   drvVk.vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &newCmdBuffer);
   if (newCmdBuffer != cmdBuffer) {
     SD()._commandbufferstates[cmdBuffer].swap(SD()._commandbufferstates[newCmdBuffer]);
@@ -171,8 +184,8 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::FinishCommandBufferAndRestoreSe
   drvVk.vkBeginCommandBuffer(newCmdBuffer,
                              SD()._commandbufferstates[newCmdBuffer]
                                  ->beginCommandBuffer->commandBufferBeginInfoData.Value());
-  drawCount = 0;
-  renderPassCount = 0;
+  uint64_t drawCount = 0;
+  uint64_t renderPassCount = 0;
   for (auto elem : _tokensList) {
     if ((elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_SET_APITYPE ||
          elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_BIND_APITYPE ||
@@ -247,6 +260,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
                                                              VkCommandBuffer& cmdBuffer) {
   uint64_t renderPassCount = 0;
   uint64_t drawCount = 0;
+  uint64_t drawInRenderPass = 0;
   for (auto elem : _tokensList) {
     cmdBuffer = CVkCommandBuffer::GetMapping(elem->CommandBuffer());
     if (Config::Get().player.oneVulkanDrawPerCommandBuffer &&
@@ -300,8 +314,20 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
 
     if (Config::Get().player.oneVulkanDrawPerCommandBuffer &&
         (elem->Type() & CFunction::GITS_VULKAN_DRAW_APITYPE)) {
+      ++drawInRenderPass;
       ++drawCount;
-      FinishCommandBufferAndRestoreSettings(elem, renderPassCount, drawCount, cmdBuffer);
+      FinishRenderPass(renderPassCount, drawCount, cmdBuffer);
+      CGits::CCounter localCounter = {queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
+                                      renderPassCount, drawInRenderPass};
+      if (localCounter == Config::Get().player.captureVulkanDraws) {
+        vulkanScheduleCopyRenderPasses(cmdBuffer, queueSubmitNumber, cmdBuffBatchNumber,
+                                       cmdBuffNumber, renderPassCount, drawInRenderPass);
+      }
+      FinishCommandBufferAndSubmit(cmdBuffer);
+      if (!SD()._commandbufferstates[cmdBuffer]->drawImages.empty()) {
+        vulkanDumpRenderPasses(cmdBuffer);
+      }
+      CreateNewCommandBufferAndRestoreSettings(elem, renderPassCount, drawCount, cmdBuffer);
       cmdBuffer = CVkCommandBuffer::GetMapping(elem->CommandBuffer());
     }
     if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
@@ -376,6 +402,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
                                     renderPassCount);
       }
       renderPassCount++;
+      drawInRenderPass = 0;
     }
   }
 }

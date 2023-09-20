@@ -413,6 +413,7 @@ struct Config {
     VKCaptureGroupTypeOpt captureVulkanSubmitsGroupType;
     VulkanObjectRange captureVulkanRenderPasses;
     VulkanObjectRange captureVulkanRenderPassesResources;
+    VulkanObjectRange captureVulkanDraws;
     vi_bool skipNonDeterministicImages;
     vi_bool precacheResources;
     vi_bool forceWindowPos;

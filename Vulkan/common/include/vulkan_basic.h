@@ -49,12 +49,12 @@ extern "C" {
 #define VK_VERSION_MINOR(version) (((uint32_t)(version) >> 12U) & 0x3FFU)
 
 // DEPRECATED: This define is deprecated. VK_API_VERSION_PATCH should be used instead.
-#define VK_VERSION_PATCH(version) ((uint32_t)(version)&0xFFFU)
+#define VK_VERSION_PATCH(version) ((uint32_t)(version) & 0xFFFU)
 
 #define VK_API_VERSION_VARIANT(version) ((uint32_t)(version) >> 29U)
 #define VK_API_VERSION_MAJOR(version)   (((uint32_t)(version) >> 22U) & 0x7FU)
 #define VK_API_VERSION_MINOR(version)   (((uint32_t)(version) >> 12U) & 0x3FFU)
-#define VK_API_VERSION_PATCH(version)   ((uint32_t)(version)&0xFFFU)
+#define VK_API_VERSION_PATCH(version)   ((uint32_t)(version) & 0xFFFU)
 
 #define VK_NULL_HANDLE 0
 

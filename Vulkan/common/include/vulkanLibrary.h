@@ -59,10 +59,14 @@ public:
                      uint32_t cmdBuffBatchNumber,
                      uint32_t cmdBuffNumber,
                      VkCommandBuffer& cmdBuffer);
-    void FinishCommandBufferAndRestoreSettings(Vulkan::CFunction* token,
-                                               uint64_t renderPassNumber,
-                                               uint64_t drawNumber,
-                                               VkCommandBuffer cmdBuffer);
+    void FinishRenderPass(uint64_t renderPassNumber,
+                          uint64_t drawNumber,
+                          VkCommandBuffer cmdBuffer);
+    void FinishCommandBufferAndSubmit(VkCommandBuffer cmdBuffer);
+    void CreateNewCommandBufferAndRestoreSettings(Vulkan::CFunction* token,
+                                                  uint64_t renderPassNumber,
+                                                  uint64_t drawNumber,
+                                                  VkCommandBuffer cmdBuffer);
     void RestoreRenderPass(const BitRange& renderPassRange);
     void ScheduleRenderPass(void (*schedulerFunc)(Vulkan::CFunction*),
                             const BitRange& renderPassRange);

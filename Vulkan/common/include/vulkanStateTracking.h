@@ -47,7 +47,8 @@ inline bool updateOnlyUsedMemory() {
 
 inline bool captureRenderPasses() {
   static bool captureRenderPasses = !Config::Get().player.captureVulkanSubmits.empty() ||
-                                    !Config::Get().player.captureVulkanRenderPasses.empty();
+                                    !Config::Get().player.captureVulkanRenderPasses.empty() ||
+                                    !Config::Get().player.captureVulkanDraws.empty();
   return captureRenderPasses;
 }
 
@@ -2949,7 +2950,8 @@ inline void vkQueueSubmit2_SD(VkResult return_value,
 namespace {
 inline void vkEndRenderPass_setImageLayout(
     std::shared_ptr<CCommandBufferState>& commandBufferState) {
-  if (!Config::Get().player.captureVulkanRenderPasses.empty()) {
+  if (!Config::Get().player.captureVulkanRenderPasses.empty() ||
+      !Config::Get().player.captureVulkanDraws.empty()) {
     for (auto& imageLayoutAfterSubmit : commandBufferState->imageLayoutAfterSubmit) {
       auto& imageState = SD()._imagestates[imageLayoutAfterSubmit.first];
 
@@ -2997,7 +2999,8 @@ inline void vkEndRenderPass_updateNonDeterministicImages(
         commandBufferState->clearedImages.insert(imageHandle);
       }
     }
-    if (!Config::Get().player.captureVulkanRenderPasses.empty()) {
+    if (!Config::Get().player.captureVulkanRenderPasses.empty() ||
+        !Config::Get().player.captureVulkanDraws.empty()) {
       for (auto obj : commandBufferState->clearedImages) {
         SD().nonDeterministicImages.erase(obj);
       }

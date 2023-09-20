@@ -1335,6 +1335,7 @@ struct CCommandBufferState : public UniqueResourceHandle {
   std::vector<std::shared_ptr<RenderGenericAttachment>> renderPassImages;
   std::vector<std::shared_ptr<RenderGenericAttachment>> renderPassResourceImages;
   std::vector<std::shared_ptr<RenderGenericAttachment>> renderPassResourceBuffers;
+  std::vector<std::shared_ptr<RenderGenericAttachment>> drawImages;
   std::vector<VkCommandBuffer> secondaryCommandBuffers;
   std::set<std::pair<std::shared_ptr<CDeviceMemoryState>, std::shared_ptr<CBufferState>>>
       temporaryBuffers; // To be deleted when cmdbuffer is reset or destroyed

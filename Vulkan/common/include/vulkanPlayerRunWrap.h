@@ -1647,7 +1647,8 @@ inline void vkCreateSwapchainKHR_WRAPRUN(CVkResult& recorderSideReturnValue,
   if (!Config::Get().player.captureFrames.empty() ||
       !Config::Get().player.captureVulkanSubmits.empty() ||
       !Config::Get().player.captureVulkanRenderPasses.empty() ||
-      !Config::Get().player.captureVulkanRenderPassesResources.empty()) {
+      !Config::Get().player.captureVulkanRenderPassesResources.empty() ||
+      !Config::Get().player.captureVulkanDraws.empty()) {
     createInfo.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     Log(TRACE) << "Modifying swapchain usage for frames/render targets capturing!!";
   }
@@ -1868,7 +1869,8 @@ inline void vkCreateImage_WRAPRUN(CVkResult& recorderSideReturnValue,
   if (!Config::Get().player.captureVulkanSubmits.empty() ||
       !Config::Get().player.captureVulkanSubmitsResources.empty() ||
       !Config::Get().player.captureVulkanRenderPasses.empty() ||
-      !Config::Get().player.captureVulkanRenderPassesResources.empty()) {
+      !Config::Get().player.captureVulkanRenderPassesResources.empty() ||
+      !Config::Get().player.captureVulkanDraws.empty()) {
     createInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     Log(TRACE) << "Modifying image usage for render targets capturing!!";
   }
