@@ -616,6 +616,6 @@ bool stream_older_than(uint64_t version) {
   return CGits::Instance().File().Version().version() < version;
 }
 
-TimerSet::TimerSet() : restoration(true) {}
+TimerSet::TimerSet() : playback(true), restoration(true) {}
 
 } // namespace gits

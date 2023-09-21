@@ -186,6 +186,7 @@ static void OnFrameEndImpl() {
 void CTokenFrameNumber::Run() {
   using namespace OpenGL;
   auto& cfg = Config::Get();
+  static bool playbackTimerStarted = false;
 
   switch (_id) {
   case CToken::ID_INIT_START:
@@ -221,7 +222,6 @@ void CTokenFrameNumber::Run() {
     }
 
     CGits::Instance().Timers().restoration.Pause();
-    CGits::Instance().Timers().playback.Start();
     break;
 
   case CToken::ID_FRAME_START:
@@ -236,6 +236,11 @@ void CTokenFrameNumber::Run() {
 #endif
 
     CGits::Instance().Timers().init.Pause();
+    // One time playback timer start call
+    if (!playbackTimerStarted) {
+      CGits::Instance().Timers().playback.Start();
+      playbackTimerStarted = true;
+    }
     OnFrameBeginImpl();
 
     if (cfg.common.useEvents) {
