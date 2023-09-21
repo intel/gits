@@ -11,6 +11,7 @@
 #include "pragmas.h"
 
 #include <cstdint>
+#include <chrono>
 
 class Timer {
 public:
@@ -30,10 +31,11 @@ public:
   void Resume();
 
 private:
+  std::chrono::steady_clock::time_point GetCurrentTime() const;
   void ResetStartTime();
   int64_t GetElapsedTime() const;
 
-  int64_t start_time_;
+  std::chrono::steady_clock::time_point start_time_;
   int64_t cumulated_time_;
   bool paused_;
 };

@@ -6,39 +6,11 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "platform.h"
-#if defined GITS_PLATFORM_UNIX
-#include <ctime>
-#include <sys/time.h>
-#elif defined GITS_PLATFORM_WINDOWS
-#include <windows.h>
-#endif
-
 #include "timer.h"
 
-namespace {
-int64_t CurrentTime() {
-#if defined GITS_PLATFORM_WINDOWS
-  static int64_t tick_duration;
-  if (tick_duration == 0) {
-    static LARGE_INTEGER freq;
-    QueryPerformanceFrequency(&freq);
-    tick_duration = static_cast<int64_t>(1e9 / freq.QuadPart);
-  }
-  LARGE_INTEGER current;
-  QueryPerformanceCounter(&current);
-  return current.QuadPart * tick_duration;
-#elif defined GITS_PLATFORM_LINUX
-  timespec current;
-  clock_gettime(CLOCK_MONOTONIC_RAW, &current);
-  return current.tv_sec * 1000000000ll + current.tv_nsec;
-#else
-  timeval current;
-  gettimeofday(&current, 0);
-  return current.tv_sec * 1000000000ll + current.tv_usec * 1000ll;
-#endif
+std::chrono::steady_clock::time_point Timer::GetCurrentTime() const {
+  return std::chrono::steady_clock::now();
 }
-} // namespace
 
 Timer::Timer(bool paused) : paused_(paused) {
   Start();
@@ -50,11 +22,12 @@ void Timer::Start() {
 }
 
 int64_t Timer::GetElapsedTime() const {
-  return CurrentTime() - start_time_;
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(GetCurrentTime() - start_time_)
+      .count();
 }
 
 void Timer::ResetStartTime() {
-  start_time_ = CurrentTime();
+  start_time_ = GetCurrentTime();
 }
 
 int64_t Timer::Get() const {
