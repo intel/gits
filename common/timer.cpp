@@ -12,13 +12,16 @@ std::chrono::steady_clock::time_point Timer::GetCurrentTime() const {
   return std::chrono::steady_clock::now();
 }
 
-Timer::Timer(bool paused) : paused_(paused) {
+Timer::Timer(bool paused) : cumulated_time_(0), paused_(paused) {
+  if (paused) {
+    return;
+  }
   Start();
 }
 
 void Timer::Start() {
   ResetStartTime();
-  cumulated_time_ = 0;
+  paused_ = false;
 }
 
 int64_t Timer::GetElapsedTime() const {
