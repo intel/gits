@@ -579,7 +579,7 @@ void gits::CRecorder::FrameEnd() {
 
     //frame start time stamp
     if (api3dIface.CfgRec_IsBenchmark()) {
-      CGits::Instance().Timers().frame.Start();
+      CGits::Instance().Timers().frame.Restart();
     }
   }
 

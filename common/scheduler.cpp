@@ -292,7 +292,7 @@ bool CScheduler::LoadChunk() {
   // playing (issuing API calls), so this time does not affect
   // playback performance of the API.
   CALL_ONCE[&] {
-    CGits::Instance().Timers().loading.Start();
+    CGits::Instance().Timers().loading.Restart();
   };
   CGits::Instance().Timers().loading.Pause();
 

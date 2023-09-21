@@ -18,8 +18,12 @@ public:
   //sets up the timer, performs implicit Start() by default
   explicit Timer(bool paused = false);
 
-  //will get time elasped since invocation of this member function
+  //will get time elapsed since invocation of this member function
+  //function is idempotent
   void Start();
+
+  //reset cumulated time and start counting again
+  void Restart();
 
   //get time elapsed from last Start in nanoseconds
   int64_t Get() const;

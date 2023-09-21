@@ -240,7 +240,7 @@ int MainBody(int argc, char* argv[]) {
     GitsMessagePump pump(player);
 
     int64_t tillInitTime = CGits::Instance().Timers().program.Get();
-    CGits::Instance().Timers().init.Start();
+    CGits::Instance().Timers().init.Restart();
     pump.process_messages();
     player.GLResourceCleanup();
     player.GLContextsCleanup();
