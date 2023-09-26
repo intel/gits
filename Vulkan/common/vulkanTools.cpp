@@ -2681,12 +2681,17 @@ CVkSubmitInfoArrayWrap::CVkSubmitInfoArrayWrap(const CVkSubmitInfoArrayWrap& wra
     : submitInfoData(wrap.submitInfoData), submitInfo2Data(wrap.submitInfo2Data) {}
 
 std::set<uint64_t> getPointersUsedInQueueSubmit(CVkSubmitInfoArrayWrap& submitInfoData,
+                                                const std::vector<uint32_t>& countersTable,
                                                 const BitRange& objRange,
                                                 gits::Config::VulkanObjectMode objMode) {
   std::set<uint64_t> pointers;
   auto submitInfoDataValues = submitInfoData.submitInfoData.Value();
   auto submitInfo2DataValues = submitInfoData.submitInfo2Data.Value();
   uint32_t submitInfoSize = 0;
+  uint32_t objNumber = 0;
+  if (objMode == Config::MODE_VKDRAW) {
+    objNumber = countersTable.back();
+  }
 
   if (submitInfoDataValues != nullptr) {
     submitInfoSize = submitInfoData.submitInfoData.size();
@@ -2694,14 +2699,14 @@ std::set<uint64_t> getPointersUsedInQueueSubmit(CVkSubmitInfoArrayWrap& submitIn
       for (uint32_t j = 0; j < submitInfoDataValues[i].commandBufferCount; j++) {
         auto& commandBufferState =
             SD()._commandbufferstates[submitInfoDataValues[i].pCommandBuffers[j]];
-        for (auto obj : commandBufferState->tokensBuffer.GetMappedPointers(objRange, objMode)) {
+        for (auto obj :
+             commandBufferState->tokensBuffer.GetMappedPointers(objRange, objMode, objNumber)) {
           pointers.insert((uint64_t)obj);
         }
 
         for (auto& secondaryCommandBufferState :
              commandBufferState->secondaryCommandBuffersStateStoreList) {
-          for (auto elem : secondaryCommandBufferState.second->tokensBuffer.GetMappedPointers(
-                   objRange, objMode)) {
+          for (auto elem : secondaryCommandBufferState.second->tokensBuffer.GetMappedPointers()) {
             pointers.insert((uint64_t)elem);
           }
         }
@@ -2720,14 +2725,14 @@ std::set<uint64_t> getPointersUsedInQueueSubmit(CVkSubmitInfoArrayWrap& submitIn
         auto& commandBufferState =
             SD()._commandbufferstates
                 [submitInfo2DataValues[i].pCommandBufferInfos[j].commandBuffer];
-        for (auto obj : commandBufferState->tokensBuffer.GetMappedPointers(objRange, objMode)) {
+        for (auto obj :
+             commandBufferState->tokensBuffer.GetMappedPointers(objRange, objMode, objNumber)) {
           pointers.insert((uint64_t)obj);
         }
 
         for (auto& secondaryCommandBufferState :
              commandBufferState->secondaryCommandBuffersStateStoreList) {
-          for (auto elem : secondaryCommandBufferState.second->tokensBuffer.GetMappedPointers(
-                   objRange, objMode)) {
+          for (auto elem : secondaryCommandBufferState.second->tokensBuffer.GetMappedPointers()) {
             pointers.insert((uint64_t)elem);
           }
         }
@@ -2767,7 +2772,8 @@ CVkSubmitInfoArrayWrap getSubmitInfoForPrepare(const std::vector<uint32_t>& coun
     commandBufferBatchNumber = countersTable.at(1);
   }
   if (submitInfoDataArrayValues != nullptr) {
-    if ((Config::MODE_VKCOMMANDBUFFER == objMode || Config::MODE_VKRENDERPASS == objMode) &&
+    if ((Config::MODE_VKCOMMANDBUFFER == objMode || Config::MODE_VKRENDERPASS == objMode ||
+         Config::MODE_VKDRAW == objMode) &&
         (commandBufferBatchNumber < SD().lastQueueSubmit->submitInfoDataArray.size())) {
       for (uint32_t i = 0; i < commandBufferBatchNumber; i++) {
         submitInfoDataArray.submitInfoData.AddElem(&submitInfoDataArrayValues[i]);
@@ -2794,7 +2800,8 @@ CVkSubmitInfoArrayWrap getSubmitInfoForPrepare(const std::vector<uint32_t>& coun
       }
     }
   } else if (submitInfo2DataArrayValues != nullptr) {
-    if ((Config::MODE_VKCOMMANDBUFFER == objMode || Config::MODE_VKRENDERPASS == objMode) &&
+    if ((Config::MODE_VKCOMMANDBUFFER == objMode || Config::MODE_VKRENDERPASS == objMode ||
+         Config::MODE_VKDRAW == objMode) &&
         (commandBufferBatchNumber < SD().lastQueueSubmit->submitInfo2DataArray.size())) {
       for (uint32_t i = 0; i < commandBufferBatchNumber; i++) {
         submitInfoDataArray.submitInfo2Data.AddElem(&submitInfo2DataArrayValues[i]);
@@ -2825,8 +2832,7 @@ CVkSubmitInfoArrayWrap getSubmitInfoForPrepare(const std::vector<uint32_t>& coun
   return submitInfoDataArray;
 }
 
-void restoreToSpecifiedRenderPass(const BitRange& objRange,
-                                  CVkSubmitInfoArrayWrap& submitInfoData) {
+VkCommandBuffer GetLastCommandBuffer(CVkSubmitInfoArrayWrap& submitInfoData) {
   VkCommandBuffer lastCommandBuffer = VK_NULL_HANDLE;
   auto submitInfoDataArrayValues = submitInfoData.submitInfoData.Value();
   auto submitInfo2DataArrayValues = submitInfoData.submitInfo2Data.Value();
@@ -2839,6 +2845,12 @@ void restoreToSpecifiedRenderPass(const BitRange& objRange,
             ->pCommandBufferInfos[submitInfo2DataArrayValues->commandBufferInfoCount - 1]
             .commandBuffer;
   }
+  return lastCommandBuffer;
+}
+
+void restoreToSpecifiedRenderPass(const BitRange& objRange,
+                                  CVkSubmitInfoArrayWrap& submitInfoData) {
+  VkCommandBuffer lastCommandBuffer = GetLastCommandBuffer(submitInfoData);
   if (lastCommandBuffer != VK_NULL_HANDLE) {
     auto commandBufferState = SD()._commandbufferstates[lastCommandBuffer];
     drvVk.vkResetCommandBuffer(lastCommandBuffer, 0);
@@ -2847,6 +2859,22 @@ void restoreToSpecifiedRenderPass(const BitRange& objRange,
         lastCommandBuffer,
         commandBufferState->beginCommandBuffer->commandBufferBeginInfoData.Value());
     commandBufferState->tokensBuffer.RestoreRenderPass(objRange);
+    drvVk.vkEndCommandBuffer(lastCommandBuffer);
+  }
+}
+
+void restoreToSpecifiedDraw(const uint64_t renderPassNumber,
+                            const BitRange& objRange,
+                            CVkSubmitInfoArrayWrap& submitInfoData) {
+  VkCommandBuffer lastCommandBuffer = GetLastCommandBuffer(submitInfoData);
+  if (lastCommandBuffer != VK_NULL_HANDLE) {
+    auto commandBufferState = SD()._commandbufferstates[lastCommandBuffer];
+    drvVk.vkResetCommandBuffer(lastCommandBuffer, 0);
+    vkResetCommandBuffer_SD(VK_SUCCESS, lastCommandBuffer, 0, true);
+    drvVk.vkBeginCommandBuffer(
+        lastCommandBuffer,
+        commandBufferState->beginCommandBuffer->commandBufferBeginInfoData.Value());
+    commandBufferState->tokensBuffer.RestoreDraw(renderPassNumber, objRange);
     drvVk.vkEndCommandBuffer(lastCommandBuffer);
   }
 }
@@ -2883,7 +2911,7 @@ CVkSubmitInfoArrayWrap getSubmitInfoForSchedule(const std::vector<uint32_t>& cou
       submitInfoTemp.commandBufferCount = (uint32_t)commandBufferVector.size();
       submitInfoTemp.pCommandBuffers = &commandBufferVector[0];
       submitInfoDataArray.submitInfoData.AddElem(&submitInfoTemp);
-    } else if ((Config::MODE_VKRENDERPASS == objMode) &&
+    } else if ((Config::MODE_VKRENDERPASS == objMode || Config::MODE_VKDRAW == objMode) &&
                (commandBufferBatchNumber < SD().lastQueueSubmit->submitInfoDataArray.size())) {
       VkSubmitInfo submitInfoTemp = submitInfoDataArrayValues[commandBufferBatchNumber];
       if (commandBufferNumber < submitInfoTemp.commandBufferCount) {
@@ -2909,7 +2937,7 @@ CVkSubmitInfoArrayWrap getSubmitInfoForSchedule(const std::vector<uint32_t>& cou
       submitInfo2Temp.commandBufferInfoCount = (uint32_t)commandBufferSubmitInfoVector.size();
       submitInfo2Temp.pCommandBufferInfos = &commandBufferSubmitInfoVector[0];
       submitInfoDataArray.submitInfo2Data.AddElem(&submitInfo2Temp);
-    } else if ((Config::MODE_VKRENDERPASS == objMode) &&
+    } else if ((Config::MODE_VKRENDERPASS == objMode || Config::MODE_VKDRAW == objMode) &&
                (commandBufferBatchNumber < SD().lastQueueSubmit->submitInfo2DataArray.size())) {
       VkSubmitInfo2 submitInfo2Temp = submitInfo2DataArrayValues[commandBufferBatchNumber];
       if (commandBufferNumber < submitInfo2Temp.commandBufferInfoCount) {
@@ -3451,6 +3479,26 @@ bool IsObjectToSkip(uint64_t vulkanObject) {
     return true;
   } else {
     return false;
+  }
+}
+
+VkResult _vkCreateRenderPass_Helper(VkDevice device,
+                                    const VkRenderPassCreateInfo* pCreateInfo,
+                                    const VkAllocationCallbacks* pAllocator,
+                                    VkRenderPass& pRenderPass,
+                                    CreationFunction createdWith) {
+  return drvVk.vkCreateRenderPass(device, pCreateInfo, pAllocator, &pRenderPass);
+}
+
+VkResult _vkCreateRenderPass_Helper(VkDevice device,
+                                    const VkRenderPassCreateInfo2* pCreateInfo,
+                                    const VkAllocationCallbacks* pAllocator,
+                                    VkRenderPass& pRenderPass,
+                                    CreationFunction createdWith) {
+  if (createdWith == CreationFunction::KHR_EXTENSION) {
+    return drvVk.vkCreateRenderPass2KHR(device, pCreateInfo, pAllocator, &pRenderPass);
+  } else {
+    return drvVk.vkCreateRenderPass2(device, pCreateInfo, pAllocator, &pRenderPass);
   }
 }
 

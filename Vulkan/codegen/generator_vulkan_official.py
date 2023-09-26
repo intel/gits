@@ -2295,7 +2295,7 @@ arg5=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*'),
 arg6=ArgDef(name='pPipelines', type='VkPipeline*')
 )
 
-Function(name='vkCreateRenderPass', enabled=True, type=Param, stateTrack=True, runWrap=True,
+Function(name='vkCreateRenderPass', enabled=True, type=Param, stateTrack=True, runWrap=True, recWrap=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pCreateInfo', type='const VkRenderPassCreateInfo*'),
@@ -2303,7 +2303,7 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CN
 arg4=ArgDef(name='pRenderPass', type='VkRenderPass*', wrapType='CVkRenderPass::CSMapArray', wrapParams='1, pRenderPass')
 )
 
-Function(name='vkCreateRenderPass2', enabled=True, type=Param, stateTrack=True, runWrap=True,
+Function(name='vkCreateRenderPass2', enabled=True, type=Param, stateTrack=True, runWrap=True, recWrap=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pCreateInfo', type='const VkRenderPassCreateInfo2*'),
@@ -2311,7 +2311,7 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CN
 arg4=ArgDef(name='pRenderPass', type='VkRenderPass*', wrapType='CVkRenderPass::CSMapArray', wrapParams='1, pRenderPass')
 )
 
-Function(name='vkCreateRenderPass2KHR', enabled=True, type=Param, stateTrack=True, runWrap=True,
+Function(name='vkCreateRenderPass2KHR', enabled=True, type=Param, stateTrack=True, runWrap=True, recWrap=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pCreateInfo', type='const VkRenderPassCreateInfo2*'),

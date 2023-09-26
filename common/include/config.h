@@ -303,7 +303,8 @@ struct Config {
     MODE_VKNONE,
     MODE_VKQUEUESUBMIT,
     MODE_VKCOMMANDBUFFER,
-    MODE_VKRENDERPASS
+    MODE_VKRENDERPASS,
+    MODE_VKDRAW
   };
   struct VulkanObjectRange : ObjectRange {
     VulkanObjectMode objMode;

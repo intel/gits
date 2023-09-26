@@ -73,27 +73,50 @@ CLibrary& CLibrary::Get() {
   return static_cast<CLibrary&>(CGits::Instance().Library(ID_VULKAN));
 }
 
+std::set<uint64_t> CLibrary::CVulkanCommandBufferTokensBuffer::GetMappedPointers() {
+  std::set<uint64_t> returnMap;
+
+  for (auto elem : _tokensList) {
+    for (auto obj : elem->GetMappedPointers()) {
+      returnMap.insert((uint64_t)obj);
+    }
+  }
+  returnMap.erase(0); // 0 is not valid pointer.
+  return returnMap;
+}
+
 std::set<uint64_t> CLibrary::CVulkanCommandBufferTokensBuffer::GetMappedPointers(
-    const BitRange& objRange, Config::VulkanObjectMode objMode) {
+    const BitRange& objRange, Config::VulkanObjectMode objMode, const uint64_t objNumber) {
   std::set<uint64_t> returnMap;
   uint64_t renderPassCount = 0;
+  uint64_t drawInRenderPass = 0;
   bool pre_renderpass = true;
+  bool pre_draw = true;
+  bool isRenderPassMode = objMode == Config::MODE_VKRENDERPASS;
+  bool isDrawMode = objMode == Config::MODE_VKDRAW;
 
   for (auto elem : _tokensList) {
     if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
+      drawInRenderPass = 0;
       renderPassCount++;
+    } else if (elem->Type() & CFunction::GITS_VULKAN_DRAW_APITYPE) {
+      drawInRenderPass++;
     }
     if (objRange[renderPassCount] &&
         (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDERPASS_APITYPE)) {
       pre_renderpass = false;
     }
-    for (auto obj : elem->GetMappedPointers()) {
-      if (objMode == Config::MODE_VKQUEUESUBMIT || objMode == Config::MODE_VKCOMMANDBUFFER ||
-          (objMode == Config::MODE_VKRENDERPASS &&
-           (objRange[renderPassCount] ||
-            (pre_renderpass && (elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_SET_APITYPE ||
-                                elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_BIND_APITYPE ||
-                                elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_PUSH_APITYPE))))) {
+    if (renderPassCount == objNumber && objRange[drawInRenderPass]) {
+      pre_draw = false;
+    }
+    if (objMode == Config::MODE_VKQUEUESUBMIT || objMode == Config::MODE_VKCOMMANDBUFFER ||
+        (isRenderPassMode && objRange[renderPassCount]) ||
+        (isDrawMode && renderPassCount == objNumber && objRange[drawInRenderPass]) ||
+        (((isRenderPassMode && pre_renderpass) || (isDrawMode && pre_draw)) &&
+         (elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_SET_APITYPE ||
+          elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_BIND_APITYPE ||
+          elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_PUSH_APITYPE))) {
+      for (auto obj : elem->GetMappedPointers()) {
         returnMap.insert((uint64_t)obj);
       }
     }
@@ -456,6 +479,165 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ScheduleRenderPass(
       }
     }
     if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
+      renderPassCount++;
+    }
+  }
+  _tokensList.clear();
+}
+void CLibrary::CVulkanCommandBufferTokensBuffer::RestoreDraw(const uint64_t renderPassNumber,
+                                                             const BitRange& drawsRange) {
+  uint64_t renderPassCount = 0;
+  uint64_t drawInRenderPass = 0;
+
+  bool pre_draw = true;
+
+  for (auto elem : _tokensList) {
+    if (renderPassCount == renderPassNumber && drawsRange[drawInRenderPass]) {
+      pre_draw = false;
+    }
+    if (pre_draw || (renderPassCount == renderPassNumber &&
+                     (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE ||
+                      elem->Type() & CFunction::GITS_VULKAN_NEXT_SUBPASS_APITYPE))) {
+      elem->Exec();
+      elem->StateTrack();
+    }
+    if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
+      drawInRenderPass = 0;
+      renderPassCount++;
+    } else if (elem->Type() & CFunction::GITS_VULKAN_DRAW_APITYPE) {
+      drawInRenderPass++;
+    } else if (renderPassCount == renderPassNumber &&
+               (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDERPASS_APITYPE)) {
+      //  For executing each Vulkan draw in separate VkCommandBuffer we need to modify original storeOp (set it to STORE)
+      elem->StateTrack();
+      VkCommandBuffer cmdBuffer = CVkCommandBuffer::GetMapping(elem->CommandBuffer());
+      VkRenderPassBeginInfo* renderPassBeginInfoPtr = SD()._commandbufferstates[cmdBuffer]
+                                                          ->beginRenderPassesList.back()
+                                                          ->renderPassBeginInfoData.Value();
+      VkRenderingInfo* renderingInfoPtr = SD()._commandbufferstates[cmdBuffer]
+                                              ->beginRenderPassesList.back()
+                                              ->renderingInfoData.Value();
+      if (renderPassBeginInfoPtr) {
+        VkRenderPassBeginInfo renderPassBeginInfo = *renderPassBeginInfoPtr;
+        renderPassBeginInfo.renderPass = SD()._commandbufferstates[cmdBuffer]
+                                             ->beginRenderPassesList.back()
+                                             ->renderPassStateStore->storeNoLoadRenderPassHandle;
+        drvVk.vkCmdBeginRenderPass(cmdBuffer, &renderPassBeginInfo,
+                                   SD()._commandbufferstates[cmdBuffer]
+                                       ->beginRenderPassesList.back()
+                                       ->subpassContentsData.Value());
+      } else if (renderingInfoPtr) {
+        VkRenderingInfo renderingInfo = *renderingInfoPtr;
+        std::vector<VkRenderingAttachmentInfo> renderingAttInfoVector;
+        for (uint32_t i = 0; i < renderingInfo.colorAttachmentCount; i++) {
+          VkRenderingAttachmentInfo renderingAttInfo = renderingInfo.pColorAttachments[i];
+          renderingAttInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+          renderingAttInfoVector.push_back(renderingAttInfo);
+        }
+        if (renderingInfo.colorAttachmentCount > 0) {
+          renderingInfo.pColorAttachments = renderingAttInfoVector.data();
+        }
+        VkRenderingAttachmentInfo depthAttInfo;
+        if (renderingInfo.pDepthAttachment != VK_NULL_HANDLE) {
+          depthAttInfo = *renderingInfo.pDepthAttachment;
+          depthAttInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+          renderingInfo.pDepthAttachment = &depthAttInfo;
+        }
+        VkRenderingAttachmentInfo stencilAttInfo;
+        if (renderingInfo.pStencilAttachment != VK_NULL_HANDLE) {
+          stencilAttInfo = *renderingInfo.pStencilAttachment;
+          stencilAttInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+          renderingInfo.pStencilAttachment = &stencilAttInfo;
+        }
+        drvVk.vkCmdBeginRendering(cmdBuffer, &renderingInfo);
+      }
+    }
+  }
+}
+void CLibrary::CVulkanCommandBufferTokensBuffer::ScheduleDraw(
+    void (*schedulerFunc)(Vulkan::CFunction*),
+    const uint64_t renderPassNumber,
+    const BitRange& drawsRange) {
+  uint64_t renderPassCount = 0;
+  uint64_t drawInRenderPass = 0;
+  bool started = false;
+
+  for (auto elem : _tokensList) {
+    if (elem->Type() & CFunction::GITS_VULKAN_DRAW_APITYPE) {
+      drawInRenderPass++;
+    } else if (renderPassCount == renderPassNumber &&
+               (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDERPASS_APITYPE)) {
+      VkCommandBuffer cmdBuffer = CVkCommandBuffer::GetMapping(elem->CommandBuffer());
+      VkRenderPassBeginInfo* renderPassBeginInfoPtr = SD()._commandbufferstates[cmdBuffer]
+                                                          ->beginRenderPassesList.back()
+                                                          ->renderPassBeginInfoData.Value();
+      VkRenderingInfo* renderingInfoPtr = SD()._commandbufferstates[cmdBuffer]
+                                              ->beginRenderPassesList.back()
+                                              ->renderingInfoData.Value();
+      if (renderPassBeginInfoPtr) {
+        VkRenderPassBeginInfo renderPassBeginInfo = *renderPassBeginInfoPtr;
+        schedulerFunc(new CvkCmdBeginRenderPass(cmdBuffer, &renderPassBeginInfo,
+                                                SD()._commandbufferstates[cmdBuffer]
+                                                    ->beginRenderPassesList.back()
+                                                    ->subpassContentsData.Value()));
+
+      } else if (renderingInfoPtr) {
+        VkRenderingInfo renderingInfo = *renderingInfoPtr;
+        std::vector<VkRenderingAttachmentInfo> renderingAttInfoVector;
+        for (uint32_t i = 0; i < renderingInfo.colorAttachmentCount; i++) {
+          VkRenderingAttachmentInfo renderingAttInfo = renderingInfo.pColorAttachments[i];
+          if (renderingInfo.pColorAttachments[i].loadOp != VK_ATTACHMENT_LOAD_OP_LOAD) {
+            renderingAttInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+          }
+          renderingAttInfoVector.push_back(renderingAttInfo);
+        }
+        if (renderingInfo.colorAttachmentCount > 0) {
+          renderingInfo.pColorAttachments = renderingAttInfoVector.data();
+        }
+        VkRenderingAttachmentInfo depthAttInfo;
+        if (renderingInfo.pDepthAttachment != VK_NULL_HANDLE) {
+          depthAttInfo = *renderingInfo.pDepthAttachment;
+          if (renderingInfo.pDepthAttachment->loadOp != VK_ATTACHMENT_LOAD_OP_LOAD) {
+            depthAttInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+          }
+          renderingInfo.pDepthAttachment = &depthAttInfo;
+        }
+        VkRenderingAttachmentInfo stencilAttInfo;
+        if (renderingInfo.pStencilAttachment != VK_NULL_HANDLE) {
+          stencilAttInfo = *renderingInfo.pStencilAttachment;
+          if (renderingInfo.pStencilAttachment->loadOp != VK_ATTACHMENT_LOAD_OP_LOAD) {
+            stencilAttInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+          }
+          renderingInfo.pStencilAttachment = &stencilAttInfo;
+        }
+        schedulerFunc(new CvkCmdBeginRendering(cmdBuffer, &renderingInfo));
+      }
+    }
+    if (renderPassCount == renderPassNumber && drawsRange[drawInRenderPass]) {
+      started = true;
+    }
+    if (renderPassCount == renderPassNumber &&
+        ((drawsRange[drawInRenderPass] && started) ||
+         elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE ||
+         elem->Type() & CFunction::GITS_VULKAN_NEXT_SUBPASS_APITYPE)) {
+      schedulerFunc(elem);
+    } else if ((elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_SET_APITYPE ||
+                elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_BIND_APITYPE ||
+                elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_PUSH_APITYPE) &&
+               !started) {
+      bool toSkip = false;
+      for (auto obj : elem->GetMappedPointers()) {
+        if (IsObjectToSkip(obj)) {
+          toSkip = true;
+          break;
+        }
+      }
+      if (!toSkip) {
+        schedulerFunc(elem);
+      }
+    }
+    if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
+      drawInRenderPass = 0;
       renderPassCount++;
     }
   }

@@ -1551,27 +1551,32 @@ void gits::Vulkan::RestoreShaderModules(CScheduler& scheduler, CStateDynamic& sd
 // Render pass
 
 void gits::Vulkan::RestoreRenderPass(CScheduler& scheduler, CStateDynamic& sd) {
-  for (auto& renderPassState : sd._renderpassstates) {
-    VkRenderPass renderPass = renderPassState.first;
+  for (auto& renderPassObj : sd._renderpassstates) {
+    VkRenderPass renderPass = renderPassObj.first;
+    auto& renderPassState = renderPassObj.second;
     if (IsObjectToSkip((uint64_t)renderPass)) {
       continue;
     }
+    if (gits::CGits::Instance().apis.Iface3D().CfgRec_IsDrawsRangeMode() &&
+        renderPassObj.second->restoreRenderPassStateStore) {
+      renderPassState = renderPassObj.second->restoreRenderPassStateStore;
+    }
 
-    switch (renderPassState.second->createdWith) {
+    switch (renderPassState->createdWith) {
     case CreationFunction::KHR_EXTENSION:
       scheduler.Register(new CvkCreateRenderPass2KHR(
-          VK_SUCCESS, renderPassState.second->deviceStateStore->deviceHandle,
-          renderPassState.second->renderPassCreateInfo2Data.Value(), nullptr, &renderPass));
+          VK_SUCCESS, renderPassState->deviceStateStore->deviceHandle,
+          renderPassState->renderPassCreateInfo2Data.Value(), nullptr, &renderPass));
       break;
     case CreationFunction::CORE_1_0:
       scheduler.Register(new CvkCreateRenderPass(
-          VK_SUCCESS, renderPassState.second->deviceStateStore->deviceHandle,
-          renderPassState.second->renderPassCreateInfoData.Value(), nullptr, &renderPass));
+          VK_SUCCESS, renderPassState->deviceStateStore->deviceHandle,
+          renderPassState->renderPassCreateInfoData.Value(), nullptr, &renderPass));
       break;
     case CreationFunction::CORE_1_2:
       scheduler.Register(new CvkCreateRenderPass2(
-          VK_SUCCESS, renderPassState.second->deviceStateStore->deviceHandle,
-          renderPassState.second->renderPassCreateInfo2Data.Value(), nullptr, &renderPass));
+          VK_SUCCESS, renderPassState->deviceStateStore->deviceHandle,
+          renderPassState->renderPassCreateInfo2Data.Value(), nullptr, &renderPass));
       break;
     default:
       throw std::runtime_error("VkRenderPass created with an unknown method!");
@@ -2336,8 +2341,8 @@ void gits::Vulkan::RestoreCommandBuffers(CScheduler& scheduler, CStateDynamic& s
     }
   }
 
-  // In RenderPass mode, we restore the command buffer later.
-  if (!api3dIface.CfgRec_IsRenderPassMode()) {
+  // In RenderPass and Draws mode, we restore the command buffer later.
+  if (!api3dIface.CfgRec_IsRenderPassMode() && !api3dIface.CfgRec_IsDrawsRangeMode()) {
     // Restore all primary command buffers
     for (auto& commandBufferState : sd._commandbufferstates) {
       if (IsObjectToSkip((uint64_t)commandBufferState.first)) {
@@ -3800,6 +3805,10 @@ void gits::Vulkan::PrepareVkQueueSubmits(CStateDynamic& sd) {
     if (api3dIface.CfgRec_IsRenderPassMode()) {
       restoreToSpecifiedRenderPass(
           Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range, submitInfoForPrepare);
+    } else if (api3dIface.CfgRec_IsDrawsRangeMode()) {
+      restoreToSpecifiedDraw(
+          Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objVector.back(),
+          Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range, submitInfoForPrepare);
     }
     auto queueHandle = sd.lastQueueSubmit->queueStateStore->queueHandle;
     if (nullptr != submitInfoForPrepare.submitInfoData.Value()) {
@@ -3827,7 +3836,9 @@ void gits::Vulkan::PrepareVkQueueSubmits(CStateDynamic& sd) {
         Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode);
     sd.objectsUsedInQueueSubmit.clear();
     sd.objectsUsedInQueueSubmit = getPointersUsedInQueueSubmit(
-        submitInfoForSchedule, Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range,
+        submitInfoForSchedule,
+        Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objVector,
+        Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range,
         Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode);
 
     for (auto& state : sd._devicestates) {
@@ -3848,7 +3859,7 @@ void gits::Vulkan::PostRestoreVkQueueSubmits(CScheduler& scheduler, CStateDynami
     auto submitInfoDataValues = submitInfoForSchedule.submitInfoData.Value();
     auto submitInfo2DataValues = submitInfoForSchedule.submitInfo2Data.Value();
     RestoreCommandBuffers(scheduler, sd, true);
-    if (api3dIface.CfgRec_IsRenderPassMode()) {
+    if (api3dIface.CfgRec_IsRenderPassMode() || api3dIface.CfgRec_IsDrawsRangeMode()) {
       VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
       if (submitInfoDataValues != nullptr) {
         commandBuffer = submitInfoDataValues[0].pCommandBuffers[0];
@@ -3860,8 +3871,16 @@ void gits::Vulkan::PostRestoreVkQueueSubmits(CScheduler& scheduler, CStateDynami
         scheduler.Register(new CvkBeginCommandBuffer(
             VK_SUCCESS, commandBuffer,
             commandBufferState->beginCommandBuffer->commandBufferBeginInfoData.Value()));
-        commandBufferState->tokensBuffer.ScheduleRenderPass(
-            ScheduleTokens, Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range);
+        if (api3dIface.CfgRec_IsRenderPassMode()) {
+          commandBufferState->tokensBuffer.ScheduleRenderPass(
+              ScheduleTokens, Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range);
+        } else {
+          commandBufferState->tokensBuffer.ScheduleDraw(
+              ScheduleTokens,
+              Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objVector.back(),
+              Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range);
+        }
+
         if (commandBufferState->ended) {
           scheduler.Register(new CvkEndCommandBuffer(VK_SUCCESS, commandBuffer));
         }

@@ -8,8 +8,10 @@
 
 #pragma once
 
+#include "vulkanTools_lite.h"
 #include "texture_converter.h"
 #ifndef BUILD_FOR_CCODE
+#include "vulkanStateDynamic.h"
 #include "vulkanArgumentsAuto.h"
 #include "vulkanStructStorageAuto.h"
 #endif
@@ -101,12 +103,17 @@ struct CVkSubmitInfoArrayWrap {
   CVkSubmitInfoArrayWrap(const CVkSubmitInfoArrayWrap& wrap);
 };
 std::set<uint64_t> getPointersUsedInQueueSubmit(CVkSubmitInfoArrayWrap& submitInfoData,
+                                                const std::vector<uint32_t>& countersTable,
                                                 const BitRange& objRange,
                                                 gits::Config::VulkanObjectMode objMode);
 CVkSubmitInfoArrayWrap getSubmitInfoForPrepare(const std::vector<uint32_t>& countersTable,
                                                const BitRange& objRange,
                                                gits::Config::VulkanObjectMode objMode);
+VkCommandBuffer GetLastCommandBuffer(CVkSubmitInfoArrayWrap& submitInfoData);
 void restoreToSpecifiedRenderPass(const BitRange& objRange, CVkSubmitInfoArrayWrap& submitInfoData);
+void restoreToSpecifiedDraw(const uint64_t renderPassNumber,
+                            const BitRange& objRange,
+                            CVkSubmitInfoArrayWrap& submitInfoData);
 
 CVkSubmitInfoArrayWrap getSubmitInfoForSchedule(const std::vector<uint32_t>& countersTable,
                                                 const BitRange& objRange,
@@ -190,7 +197,119 @@ void vulkanScheduleCopyRenderPasses(VkCommandBuffer cmdBuffer,
 
 void vulkanDumpRenderPasses(VkCommandBuffer commandBuffer);
 void vulkanDumpRenderPassResources(VkCommandBuffer cmdBuffer);
+VkResult _vkCreateRenderPass_Helper(VkDevice device,
+                                    const VkRenderPassCreateInfo* pCreateInfo,
+                                    const VkAllocationCallbacks* pAllocator,
+                                    VkRenderPass& pRenderPass,
+                                    CreationFunction createdWith);
+VkResult _vkCreateRenderPass_Helper(VkDevice device,
+                                    const VkRenderPassCreateInfo2* pCreateInfo,
+                                    const VkAllocationCallbacks* pAllocator,
+                                    VkRenderPass& pRenderPass,
+                                    CreationFunction createdWith);
+template <typename T, typename attDesc>
+void CreateRenderPasses_helper(VkDevice device,
+                               VkRenderPass renderPass,
+                               T pCreateInfo,
+                               CreationFunction createdWith) {
+  if ((Config::Get().IsPlayer() && Config::Get().player.oneVulkanDrawPerCommandBuffer) ||
+      (Config::Get().IsRecorder() &&
+       gits::CGits::Instance().apis.Iface3D().CfgRec_IsDrawsRangeMode())) {
+    // For executing each Vulkan draw in separate VkCommandBuffer we need some additional VkRenderPasses:
+    // - storeNoLoadRenderPassHandle - for modyfying original VkRenderPass - changing storeOp to STORE, loadOp is original
+    // - loadAndStoreRenderPassHandle - after draw execution subsequent draw will load result from previous and store it (loadOp = LOAD, storeOp = STORE)
+    // - restoreRenderPassHandle - for restoration of original settings and the end of RenderPass - loadOp = LOAD, storeOp is original
+    T renderPassCreateInfo = pCreateInfo;
+    std::vector<attDesc> attDescLoadAndStoreVector;
+    std::vector<attDesc> attDescRestoreVector;
+    std::vector<attDesc> attDescStoreNoLoadVector;
+    bool loadAndStoreChanged = false;
+    bool restoreChanged = false;
+    bool storeNoLoadChanged = false;
 
+    for (uint32_t i = 0; i < renderPassCreateInfo.attachmentCount; i++) {
+      VkImageAspectFlags aspect = getFormatAspectFlags(renderPassCreateInfo.pAttachments[i].format);
+      attDesc attDescLoadAndStore = renderPassCreateInfo.pAttachments[i];
+      attDesc attDescRestore = renderPassCreateInfo.pAttachments[i];
+      attDesc attDescStoreNoLoad = renderPassCreateInfo.pAttachments[i];
+      if (aspect & VK_IMAGE_ASPECT_COLOR_BIT || aspect & VK_IMAGE_ASPECT_DEPTH_BIT) {
+        if (renderPassCreateInfo.pAttachments[i].loadOp != VK_ATTACHMENT_LOAD_OP_LOAD) {
+          attDescLoadAndStore.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+          attDescRestore.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+          if (renderPassCreateInfo.pAttachments[i].initialLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
+            // We can't set loadOp to VK_ATTACHMENT_LOAD_OP_LOAD when initial layout is VK_IMAGE_LAYOUT_UNDEFINED
+            // As we are in the middle (or at the end) of original VkRenderPass execution we are setting initialLayout to finalLayout
+            attDescLoadAndStore.initialLayout = attDescLoadAndStore.finalLayout;
+            attDescRestore.initialLayout = attDescRestore.finalLayout;
+          }
+          loadAndStoreChanged = true;
+          restoreChanged = true;
+        }
+        if (renderPassCreateInfo.pAttachments[i].storeOp != VK_ATTACHMENT_STORE_OP_STORE) {
+          attDescLoadAndStore.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+          attDescStoreNoLoad.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+          loadAndStoreChanged = true;
+          storeNoLoadChanged = true;
+        }
+      }
+      if (aspect & VK_IMAGE_ASPECT_STENCIL_BIT) {
+        if (renderPassCreateInfo.pAttachments[i].stencilLoadOp != VK_ATTACHMENT_LOAD_OP_LOAD) {
+          attDescLoadAndStore.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+          attDescRestore.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+          if (renderPassCreateInfo.pAttachments[i].initialLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
+            // We can't set loadOp to VK_ATTACHMENT_LOAD_OP_LOAD when initial layout is VK_IMAGE_LAYOUT_UNDEFINED
+            // As we are in the middle (or at the end) of original VkRenderPass execution we are setting initialLayout to finalLayout
+            attDescLoadAndStore.initialLayout = attDescLoadAndStore.finalLayout;
+            attDescRestore.initialLayout = attDescRestore.finalLayout;
+          }
+          loadAndStoreChanged = true;
+          restoreChanged = true;
+        }
+        if (renderPassCreateInfo.pAttachments[i].stencilStoreOp != VK_ATTACHMENT_STORE_OP_STORE) {
+          attDescLoadAndStore.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+          attDescStoreNoLoad.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+          loadAndStoreChanged = true;
+          storeNoLoadChanged = true;
+        }
+      }
+      attDescLoadAndStoreVector.push_back(attDescLoadAndStore);
+      attDescRestoreVector.push_back(attDescRestore);
+      attDescStoreNoLoadVector.push_back(attDescStoreNoLoad);
+    }
+    if (loadAndStoreChanged) {
+      renderPassCreateInfo.pAttachments = attDescLoadAndStoreVector.data();
+      _vkCreateRenderPass_Helper(device, &renderPassCreateInfo, nullptr,
+                                 SD()._renderpassstates[renderPass]->loadAndStoreRenderPassHandle,
+                                 createdWith);
+
+    } else {
+      SD()._renderpassstates[renderPass]->loadAndStoreRenderPassHandle = renderPass;
+    }
+    if (restoreChanged) {
+      renderPassCreateInfo.pAttachments = attDescRestoreVector.data();
+      _vkCreateRenderPass_Helper(device, &renderPassCreateInfo, nullptr,
+                                 SD()._renderpassstates[renderPass]->restoreRenderPassHandle,
+                                 createdWith);
+      if (Config::Get().IsRecorder()) {
+        auto restoreRenderPassState = std::make_shared<CRenderPassState>(
+            &SD()._renderpassstates[renderPass]->restoreRenderPassHandle, &renderPassCreateInfo,
+            createdWith, SD()._devicestates[device]);
+
+        SD()._renderpassstates[renderPass]->restoreRenderPassStateStore = restoreRenderPassState;
+      }
+    } else {
+      SD()._renderpassstates[renderPass]->restoreRenderPassHandle = renderPass;
+    }
+    if (storeNoLoadChanged) {
+      renderPassCreateInfo.pAttachments = attDescStoreNoLoadVector.data();
+      _vkCreateRenderPass_Helper(device, &renderPassCreateInfo, nullptr,
+                                 SD()._renderpassstates[renderPass]->storeNoLoadRenderPassHandle,
+                                 createdWith);
+    } else {
+      SD()._renderpassstates[renderPass]->storeNoLoadRenderPassHandle = renderPass;
+    }
+  }
+}
 #endif
 
 } // namespace Vulkan

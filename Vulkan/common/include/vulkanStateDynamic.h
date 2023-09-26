@@ -930,6 +930,7 @@ struct CRenderPassState : public UniqueResourceHandle {
   std::shared_ptr<CDeviceState> deviceStateStore;
   VkRenderPass loadAndStoreRenderPassHandle;
   VkRenderPass restoreRenderPassHandle;
+  std::shared_ptr<CRenderPassState> restoreRenderPassStateStore;
   VkRenderPass storeNoLoadRenderPassHandle;
 
   CRenderPassState(VkRenderPass const* _pRenderPass,

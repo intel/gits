@@ -1429,5 +1429,47 @@ inline void vkCmdSetEvent2KHR_RECWRAP(VkCommandBuffer commandBuffer,
   vkCmdSetEvent2KHR_SD(commandBuffer, event, pDependencyInfo);
 }
 
+inline void vkCreateRenderPass_RECWRAP(VkResult return_value,
+                                       VkDevice device,
+                                       const VkRenderPassCreateInfo* pCreateInfo,
+                                       const VkAllocationCallbacks* pAllocator,
+                                       VkRenderPass* pRenderPass,
+                                       CRecorder& recorder) {
+  if (recorder.Running()) {
+    recorder.Schedule(
+        new CvkCreateRenderPass(return_value, device, pCreateInfo, pAllocator, pRenderPass));
+  }
+  vkCreateRenderPass_SD(return_value, device, pCreateInfo, pAllocator, pRenderPass);
+  CreateRenderPasses_helper<VkRenderPassCreateInfo, VkAttachmentDescription>(
+      device, *pRenderPass, *pCreateInfo, SD()._renderpassstates[*pRenderPass]->createdWith);
+}
+inline void vkCreateRenderPass2_RECWRAP(VkResult return_value,
+                                        VkDevice device,
+                                        const VkRenderPassCreateInfo2* pCreateInfo,
+                                        const VkAllocationCallbacks* pAllocator,
+                                        VkRenderPass* pRenderPass,
+                                        CRecorder& recorder) {
+  if (recorder.Running()) {
+    recorder.Schedule(
+        new CvkCreateRenderPass2(return_value, device, pCreateInfo, pAllocator, pRenderPass));
+  }
+  vkCreateRenderPass2_SD(return_value, device, pCreateInfo, pAllocator, pRenderPass);
+  CreateRenderPasses_helper<VkRenderPassCreateInfo2, VkAttachmentDescription2>(
+      device, *pRenderPass, *pCreateInfo, SD()._renderpassstates[*pRenderPass]->createdWith);
+}
+inline void vkCreateRenderPass2KHR_RECWRAP(VkResult return_value,
+                                           VkDevice device,
+                                           const VkRenderPassCreateInfo2* pCreateInfo,
+                                           const VkAllocationCallbacks* pAllocator,
+                                           VkRenderPass* pRenderPass,
+                                           CRecorder& recorder) {
+  if (recorder.Running()) {
+    recorder.Schedule(
+        new CvkCreateRenderPass2KHR(return_value, device, pCreateInfo, pAllocator, pRenderPass));
+  }
+  vkCreateRenderPass2KHR_SD(return_value, device, pCreateInfo, pAllocator, pRenderPass);
+  CreateRenderPasses_helper<VkRenderPassCreateInfo2, VkAttachmentDescription2>(
+      device, *pRenderPass, *pCreateInfo, SD()._renderpassstates[*pRenderPass]->createdWith);
+}
 } // namespace Vulkan
 } // namespace gits
