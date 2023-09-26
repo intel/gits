@@ -55,6 +55,7 @@ public:
     RestoreEvents(scheduler, sd);
     RestoreCommandQueue(scheduler, sd);
     RestoreFences(scheduler, sd);
+    RestoreCommandListBuffer(scheduler, sd);
   }
   void Finish(CScheduler& scheduler) const;
 };

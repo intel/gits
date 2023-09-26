@@ -49,6 +49,45 @@ protected:
   bool _restored = false;
 };
 
+/** @brief
+     * state responsible for saving pre-executed kernel arguments
+     */
+struct CKernelArgument {
+  using type = ze_kernel_handle_t;
+  using states_type = std::unordered_map<type, std::vector<CKernelArgument>>;
+  KernelArgType argType = KernelArgType::pointer;
+  std::vector<char> buffer;
+  ze_image_handle_t h_img = nullptr;
+  void* h_buf = nullptr;
+  void AllocateBuffer(const size_t& allocSize);
+
+public:
+  CKernelArgument() = default;
+  CKernelArgument(size_t allocSize, void* ptr);
+  CKernelArgument(size_t allocSize, ze_image_handle_t ptr);
+};
+/** @brief
+     * state responsible for kernel argument dumps
+     */
+struct CKernelArgumentDump : public CKernelArgument {
+  using type = ze_command_list_handle_t;
+  using states_type = std::unordered_map<type, std::vector<CKernelArgumentDump>>;
+  ze_image_desc_t imageDesc = {};
+  uint32_t kernelNumber = 0U;
+  uint32_t kernelArgIndex = 0U;
+
+public:
+  bool injected = false;
+  CKernelArgumentDump() = default;
+  CKernelArgumentDump(size_t allocSize, void* ptr, uint32_t kernelNumber, uint32_t kernelArgIndex);
+  CKernelArgumentDump(ze_image_desc_t imageDesc,
+                      size_t allocSize,
+                      ze_image_handle_t ptr,
+                      uint32_t kernelNumber,
+                      uint32_t kernelArgIndex);
+  void UpdateIndexes(uint32_t kernelNum, uint32_t argIndex);
+};
+
 struct CAllocState : public CState {
   using type = void*;
   using states_type = std::unordered_map<type, std::unique_ptr<CAllocState>>;
@@ -118,6 +157,7 @@ struct CKernelExecutionInfo {
   bool isOffsetSet = false;
   ze_module_handle_t hModule = nullptr;
   std::string pKernelName;
+  std::vector<std::unique_ptr<CKernelArgument>> stateRestoreBuffers;
 
 private:
   std::map<uint32_t, ArgInfo> args;
@@ -128,6 +168,25 @@ public:
   const ArgInfo& GetArgument(const uint32_t& index) const;
   void SetArgument(uint32_t index, size_t typeSize, const void* value);
   CKernelExecutionInfo() = default;
+  CKernelExecutionInfo(const std::unique_ptr<CKernelExecutionInfo>& ptr) {
+    handle = ptr->handle;
+    launchFuncArgs = ptr->launchFuncArgs;
+    schedulingHintFlags = ptr->schedulingHintFlags;
+    indirectUsmTypes = ptr->indirectUsmTypes;
+    kernelNumber = ptr->kernelNumber;
+    groupSizeX = ptr->groupSizeX;
+    groupSizeY = ptr->groupSizeY;
+    groupSizeZ = ptr->groupSizeZ;
+    offsetX = ptr->offsetX;
+    offsetY = ptr->offsetY;
+    offsetZ = ptr->offsetZ;
+    isGroupSizeSet = ptr->isGroupSizeSet;
+    isOffsetSet = ptr->isOffsetSet;
+    hModule = ptr->hModule;
+    pKernelName = ptr->pKernelName;
+    args = ptr->args;
+    pointers = ptr->pointers;
+  };
 };
 
 struct CKernelState : public CState {
@@ -136,7 +195,7 @@ struct CKernelState : public CState {
   ze_module_handle_t hModule = nullptr;
   ze_kernel_desc_t desc = {};
 
-  CKernelExecutionInfo currentKernelInfo;
+  std::unique_ptr<CKernelExecutionInfo> currentKernelInfo;
 
 public:
   CKernelState() = default;
@@ -153,7 +212,7 @@ struct CCommandListState : public CState {
   ze_command_queue_desc_t queueDesc = {};
   bool isImmediate = false;
   bool isSync = false;
-  std::vector<CKernelExecutionInfo> appendedKernels;
+  std::vector<std::shared_ptr<CKernelExecutionInfo>> appendedKernels;
   uint32_t cmdListNumber = 0U;
   uint32_t cmdQueueNumber = 0U;
   struct Action {
@@ -202,7 +261,7 @@ public:
 
 class QueueSubmissionSnapshot {
 public:
-  std::vector<CKernelExecutionInfo> kernelsExecutionInfo;
+  std::vector<std::shared_ptr<CKernelExecutionInfo>> kernelsExecutionInfo;
   uint32_t cmdListNumber = 0U;
   uint32_t cmdQueueNumber = 0U;
   ze_context_handle_t hContext = nullptr;
@@ -210,7 +269,7 @@ public:
   std::vector<CKernelArgumentDump>* readyArgVector = nullptr;
   QueueSubmissionSnapshot(const ze_command_list_handle_t& cmdListHandle,
                           const bool& isImmediate,
-                          const std::vector<CKernelExecutionInfo>& appendedKernels,
+                          const std::vector<std::shared_ptr<CKernelExecutionInfo>>& appendedKernels,
                           const uint32_t& cmdListNum,
                           const ze_context_handle_t& cmdListContext,
                           const uint32_t& submissionNum,
@@ -334,45 +393,6 @@ public:
   CFenceState(ze_command_queue_handle_t hCommandQueue, ze_fence_desc_t desc);
 };
 
-/** @brief
-     * state responsible for saving pre-executed kernel arguments
-     */
-struct CKernelArgument {
-  using type = ze_kernel_handle_t;
-  using states_type = std::unordered_map<type, std::vector<CKernelArgument>>;
-  KernelArgType argType = KernelArgType::pointer;
-  std::vector<char> buffer;
-  ze_image_handle_t h_img = nullptr;
-  void* h_buf = nullptr;
-  void AllocateBuffer(const size_t& allocSize);
-
-public:
-  CKernelArgument() = default;
-  CKernelArgument(size_t allocSize, void* ptr);
-  CKernelArgument(size_t allocSize, ze_image_handle_t ptr);
-};
-/** @brief
-     * state responsible for kernel argument dumps
-     */
-struct CKernelArgumentDump : public CKernelArgument {
-  using type = ze_command_list_handle_t;
-  using states_type = std::unordered_map<type, std::vector<CKernelArgumentDump>>;
-  ze_image_desc_t imageDesc = {};
-  uint32_t kernelNumber = 0U;
-  uint32_t kernelArgIndex = 0U;
-
-public:
-  bool injected = false;
-  CKernelArgumentDump() = default;
-  CKernelArgumentDump(size_t allocSize, void* ptr, uint32_t kernelNumber, uint32_t kernelArgIndex);
-  CKernelArgumentDump(ze_image_desc_t imageDesc,
-                      size_t allocSize,
-                      ze_image_handle_t ptr,
-                      uint32_t kernelNumber,
-                      uint32_t kernelArgIndex);
-  void UpdateIndexes(uint32_t kernelNum, uint32_t argIndex);
-};
-
 class LayoutBuilder {
 private:
   boost::property_tree::ptree layout;
@@ -391,7 +411,7 @@ private:
 
 public:
   LayoutBuilder();
-  void UpdateLayout(const CKernelExecutionInfo& kernelInfo,
+  void UpdateLayout(const CKernelExecutionInfo* kernelInfo,
                     const uint32_t& queueSubmitNum,
                     const uint32_t& cmdListNum,
                     const uint32_t& argIndex);
@@ -443,7 +463,6 @@ private:
   typename CEventPoolState::states_type eventPoolStates_;
   typename CEventState::states_type eventStates_;
   typename CFenceState::states_type fenceStates_;
-  typename CKernelArgument::states_type kernelArguments_;
   typename CKernelArgumentDump::states_type kernelArgumentDumps_;
   static CStateDynamic* instance;
 
@@ -451,6 +470,7 @@ public:
   LayoutBuilder layoutBuilder;
   std::unordered_set<ze_module_handle_t> scanningGlobalPointersMode;
   bool nomenclatureCounting = true;
+  bool stateRestoreFinished = false;
   ~CStateDynamic();
 
   template <typename State>
@@ -495,8 +515,6 @@ template <>
 typename CAllocState::states_type& CStateDynamic::Map<CAllocState>();
 template <>
 typename CKernelArgumentDump::states_type& CStateDynamic::Map<CKernelArgumentDump>();
-template <>
-typename CKernelArgument::states_type& CStateDynamic::Map<CKernelArgument>();
 template <>
 typename CEventPoolState::states_type& CStateDynamic::Map<CEventPoolState>();
 template <>

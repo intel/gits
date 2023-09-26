@@ -5999,7 +5999,7 @@ Function(name='zeGitsIndirectAllocationOffsets',component='ze_gits_extension',ex
 retV=RetDef(type='void'),
 arg1=ArgDef(name='pAlloc',type='void*',tag='in',wrapType='CMappedPtr'),
 arg2=ArgDef(name='numOffsets',type='uint32_t',tag='in'),
-arg3=ArgDef(name='pOffsets',type='size_t*',tag='in'),
+arg3=ArgDef(name='pOffsets',type='size_t*',tag='in',wrapParams='numOffsets, {name}'),
 )
 
 Function(name='zeGitsStopRecording',component='ze_gits_extension',extension=True,enabled=True,recWrap=True,skipRun=True,recExecWrap=True,log=False,

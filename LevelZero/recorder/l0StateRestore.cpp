@@ -42,7 +42,8 @@ ze_command_list_handle_t GetImmediateCommandList(CScheduler& scheduler,
     ze_command_queue_desc_t desc = {};
     desc.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
     desc.mode = ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS;
-    l0::drv.zeCommandListCreateImmediate(hContext, hDevice, &desc, &gitsImmediateCommandList);
+    l0::drv.inject.zeCommandListCreateImmediate(hContext, hDevice, &desc,
+                                                &gitsImmediateCommandList);
     scheduler.Register(new CzeCommandListCreateImmediate(ZE_RESULT_SUCCESS, hContext, hDevice,
                                                          &desc, &gitsImmediateCommandList));
   }
@@ -113,6 +114,21 @@ void ScheduleSplitMemoryCopyFromHostPtr(CScheduler& scheduler,
       ZE_RESULT_SUCCESS, commandList, GetOffsetPointer(dstPtr, offset),
       GetOffsetPointer((void*)srcPtr, offset), tmpSize, nullptr, 0, nullptr));
 }
+
+ze_event_handle_t GetAvailableSignalEvent(CScheduler& scheduler) {
+  if (availableEvents.empty()) {
+    return nullptr;
+  }
+  for (auto& event : availableEvents) {
+    if (!event.second) {
+      event.second = true;
+      return event.first;
+    }
+  }
+  auto firstEventPair = availableEvents.begin();
+  scheduler.Register(new CzeEventHostReset(ZE_RESULT_SUCCESS, firstEventPair->first));
+  return firstEventPair->first;
+}
 } // namespace
 void RestoreDrivers(CScheduler& scheduler, CStateDynamic& sd) {
   scheduler.Register(new CzeInit(ZE_RESULT_SUCCESS, ZE_INIT_FLAG_GPU_ONLY));
@@ -175,14 +191,11 @@ void RestorePointers(CScheduler& scheduler, CStateDynamic& sd) {
       auto stateInstance = state.first;
       switch (state.second->memType) {
       case UnifiedMemoryType::device: {
-        switch (state.second->allocType) {
-        case AllocStateType::pointer: {
+        if (state.second->allocType == AllocStateType::pointer) {
           scheduler.Register(new CzeMemAllocDevice(
               ZE_RESULT_SUCCESS, state.second->hContext, &state.second->device_desc,
               state.second->size, state.second->alignment, state.second->hDevice, &stateInstance));
-          break;
-        }
-        case AllocStateType::global_pointer: {
+        } else if (state.second->allocType == AllocStateType::global_pointer) {
           scheduler.Register(new CzeModuleGetGlobalPointer(ZE_RESULT_SUCCESS, state.second->hModule,
                                                            state.second->name.c_str(),
                                                            &state.second->size, &stateInstance));
@@ -190,15 +203,71 @@ void RestorePointers(CScheduler& scheduler, CStateDynamic& sd) {
             scheduler.Register(
                 new CGitsL0MemoryRestore(state.first, state.second->globalPtrAllocation));
           }
-          break;
-        }
-        case AllocStateType::function_pointer: {
+        } else if (state.second->allocType == AllocStateType::function_pointer) {
           scheduler.Register(
               new CzeModuleGetFunctionPointer(ZE_RESULT_SUCCESS, state.second->hModule,
                                               state.second->name.c_str(), &stateInstance));
-          break;
         }
+        break;
+      }
+      case UnifiedMemoryType::host: {
+        scheduler.Register(new CzeMemAllocHost(ZE_RESULT_SUCCESS, state.second->hContext,
+                                               &state.second->host_desc, state.second->size,
+                                               state.second->alignment, &stateInstance));
+        break;
+      }
+      case UnifiedMemoryType::shared: {
+        scheduler.Register(new CzeMemAllocShared(
+            ZE_RESULT_SUCCESS, state.second->hContext, &state.second->device_desc,
+            &state.second->host_desc, state.second->size, state.second->alignment,
+            state.second->hDevice, &stateInstance));
+        break;
+      }
+      }
+    }
+  }
+
+  const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
+  for (const auto& state : sd.Map<CCommandListState>()) {
+    const auto commandList =
+        GetImmediateCommandList(scheduler, state.second->hContext, state.second->hDevice);
+    if (l0IFace.CfgRec_IsCommandListToRecord(state.second->cmdListNumber)) {
+      auto& appendedKernels = state.second->appendedKernels;
+      for (auto& kernelInfo : appendedKernels) {
+        if (l0IFace.CfgRec_IsKernelToRecord(kernelInfo->kernelNumber)) {
+          auto& stateOfBuffersBeforeKernelLaunch = kernelInfo->stateRestoreBuffers;
+          for (const auto& arg : stateOfBuffersBeforeKernelLaunch) {
+            if (arg->argType == KernelArgType::buffer) {
+              const auto allocInfo = GetAllocFromRegion(arg->h_buf, sd);
+              auto& allocState = sd.Get<CAllocState>(allocInfo.first, EXCEPTION_MESSAGE);
+              if (allocState.memType == UnifiedMemoryType::device) {
+                ScheduleSplitMemoryCopyFromHostPtr(scheduler, arg->buffer.data(), commandList,
+                                                   arg->h_buf, 0U, arg->buffer.size());
+              } else {
+                scheduler.Register(
+                    new CGitsL0MemoryRestore(arg->h_buf, arg->buffer.data(), arg->buffer.size()));
+              }
+              allocState.RestoreFinished();
+            } else if (arg->argType == KernelArgType::image) {
+              scheduler.Register(new CzeCommandListAppendImageCopyFromMemory(
+                  ZE_RESULT_SUCCESS, commandList, arg->h_img, arg->buffer.data(), nullptr, nullptr,
+                  0, nullptr));
+            }
+          }
+          if (!stateOfBuffersBeforeKernelLaunch.empty()) {
+            scheduler.Register(new CzeCommandListAppendBarrier(ZE_RESULT_SUCCESS, commandList,
+                                                               nullptr, 0, nullptr));
+            stateOfBuffersBeforeKernelLaunch.clear();
+          }
         }
+      }
+    }
+  }
+
+  for (auto& state : sd.Map<CAllocState>()) {
+    if (!state.second->Restored()) {
+      auto stateInstance = state.first;
+      if (state.second->memType == UnifiedMemoryType::device) {
         if (state.second->allocType != AllocStateType::function_pointer) {
           const auto commandList =
               GetImmediateCommandList(scheduler, state.second->hContext, state.second->hDevice);
@@ -208,25 +277,21 @@ void RestorePointers(CScheduler& scheduler, CStateDynamic& sd) {
           ScheduleSplitMemoryCopyFromHostPtr(scheduler, buffer.data(), commandList, state.first, 0U,
                                              buffer.size());
         }
-        break;
-      }
-      case UnifiedMemoryType::host: {
-        scheduler.Register(new CzeMemAllocHost(ZE_RESULT_SUCCESS, state.second->hContext,
-                                               &state.second->host_desc, state.second->size,
-                                               state.second->alignment, &stateInstance));
+      } else {
         scheduler.Register(new CGitsL0MemoryRestore(stateInstance, state.second->size));
-        break;
-      }
-      case UnifiedMemoryType::shared: {
-        scheduler.Register(new CzeMemAllocShared(
-            ZE_RESULT_SUCCESS, state.second->hContext, &state.second->device_desc,
-            &state.second->host_desc, state.second->size, state.second->alignment,
-            state.second->hDevice, &stateInstance));
-        scheduler.Register(new CGitsL0MemoryRestore(stateInstance, state.second->size));
-        break;
-      }
       }
       state.second->RestoreFinished();
+    }
+  }
+
+  for (const auto& state : sd.Map<CAllocState>()) {
+    if (!state.second->indirectPointersOffsets.empty()) {
+      std::vector<size_t> indirectPointersOffsets;
+      for (const auto& indirectInfo : state.second->indirectPointersOffsets) {
+        indirectPointersOffsets.push_back(indirectInfo.first);
+      }
+      scheduler.Register(new CzeGitsIndirectAllocationOffsets(
+          state.first, indirectPointersOffsets.size(), indirectPointersOffsets.data()));
     }
   }
 }
@@ -292,7 +357,6 @@ void RestoreEvents(CScheduler& scheduler, CStateDynamic& sd) {
 
 void RestoreKernels(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& state : sd.Map<CKernelState>()) {
-    const auto kernelInfo = state.second->currentKernelInfo;
     if (!state.second->Restored()) {
       auto stateInstance = state.first;
       scheduler.Register(new CzeKernelCreate(ZE_RESULT_SUCCESS, state.second->hModule,
@@ -329,20 +393,7 @@ void RestoreCommandList(CScheduler& scheduler, CStateDynamic& sd) {
     state.second->RestoreFinished();
   }
 }
-ze_event_handle_t GetAvailableSignalEvent(CScheduler& scheduler) {
-  if (availableEvents.empty()) {
-    return nullptr;
-  }
-  for (auto& event : availableEvents) {
-    if (!event.second) {
-      event.second = true;
-      return event.first;
-    }
-  }
-  auto firstEventPair = availableEvents.begin();
-  scheduler.Register(new CzeEventHostReset(ZE_RESULT_SUCCESS, firstEventPair->first));
-  return firstEventPair->first;
-}
+
 void RestoreCommandListBuffer(CScheduler& scheduler, CStateDynamic& sd) {
   const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
   for (auto& state : sd.Map<CCommandListState>()) {
@@ -352,63 +403,40 @@ void RestoreCommandListBuffer(CScheduler& scheduler, CStateDynamic& sd) {
       const auto& appendedKernels = state.second->appendedKernels;
       std::unordered_map<ze_kernel_handle_t, ze_event_handle_t> kernelToEventMap;
       for (const auto& kernelInfo : appendedKernels) {
-        if (l0IFace.CfgRec_IsKernelToRecord(kernelInfo.kernelNumber)) {
-          if (kernelInfo.isGroupSizeSet) {
+        if (l0IFace.CfgRec_IsKernelToRecord(kernelInfo->kernelNumber)) {
+          if (kernelInfo->isGroupSizeSet) {
             scheduler.Register(new CzeKernelSetGroupSize(
-                ZE_RESULT_SUCCESS, kernelInfo.handle, kernelInfo.groupSizeX, kernelInfo.groupSizeY,
-                kernelInfo.groupSizeZ));
+                ZE_RESULT_SUCCESS, kernelInfo->handle, kernelInfo->groupSizeX,
+                kernelInfo->groupSizeY, kernelInfo->groupSizeZ));
           }
-          if (kernelInfo.isOffsetSet) {
+          if (kernelInfo->isOffsetSet) {
             scheduler.Register(new CzeKernelSetGlobalOffsetExp(
-                ZE_RESULT_SUCCESS, kernelInfo.handle, kernelInfo.offsetX, kernelInfo.offsetY,
-                kernelInfo.offsetZ));
+                ZE_RESULT_SUCCESS, kernelInfo->handle, kernelInfo->offsetX, kernelInfo->offsetY,
+                kernelInfo->offsetZ));
           }
-          if (kernelInfo.indirectUsmTypes != 0) {
+          if (kernelInfo->indirectUsmTypes != 0) {
             const auto flags =
-                static_cast<ze_kernel_indirect_access_flags_t>(kernelInfo.indirectUsmTypes);
+                static_cast<ze_kernel_indirect_access_flags_t>(kernelInfo->indirectUsmTypes);
             scheduler.Register(
-                new CzeKernelSetIndirectAccess(ZE_RESULT_SUCCESS, kernelInfo.handle, flags));
+                new CzeKernelSetIndirectAccess(ZE_RESULT_SUCCESS, kernelInfo->handle, flags));
           }
-          if (kernelInfo.schedulingHintFlags != 0) {
+          if (kernelInfo->schedulingHintFlags != 0) {
             ze_scheduling_hint_exp_desc_t desc = {};
             desc.stype = ZE_STRUCTURE_TYPE_SCHEDULING_HINT_EXP_DESC;
             desc.pNext = nullptr;
-            desc.flags = kernelInfo.schedulingHintFlags;
+            desc.flags = kernelInfo->schedulingHintFlags;
             scheduler.Register(
-                new CzeKernelSchedulingHintExp(ZE_RESULT_SUCCESS, kernelInfo.handle, &desc));
+                new CzeKernelSchedulingHintExp(ZE_RESULT_SUCCESS, kernelInfo->handle, &desc));
           }
           auto signalEvent = GetAvailableSignalEvent(scheduler);
-          auto& preparedArguments = sd.Map<CKernelArgument>()[kernelInfo.handle];
-          for (const auto& arg : preparedArguments) {
-            if (arg.argType == KernelArgType::buffer) {
-              const auto allocInfo = GetAllocFromRegion(arg.h_buf, sd);
-              const auto& allocState = sd.Get<CAllocState>(allocInfo.first, EXCEPTION_MESSAGE);
-              if (allocState.memType == UnifiedMemoryType::device) {
-                ScheduleSplitMemoryCopyFromHostPtr(scheduler, arg.buffer.data(), stateInstance,
-                                                   arg.h_buf, 0U, arg.buffer.size());
-              } else {
-                scheduler.Register(
-                    new CGitsL0MemoryRestore(arg.h_buf, arg.buffer.data(), arg.buffer.size()));
-              }
-            } else if (arg.argType == KernelArgType::image) {
-              scheduler.Register(new CzeCommandListAppendImageCopyFromMemory(
-                  ZE_RESULT_SUCCESS, stateInstance, arg.h_img, arg.buffer.data(), nullptr, nullptr,
-                  0, nullptr));
-            }
-          }
-          if (!preparedArguments.empty()) {
-            scheduler.Register(new CzeCommandListAppendBarrier(ZE_RESULT_SUCCESS, stateInstance,
-                                                               nullptr, 0, nullptr));
-            preparedArguments.clear();
-          }
-          for (const auto& arg : kernelInfo.GetArguments()) {
-            scheduler.Register(new CzeKernelSetArgumentValue(ZE_RESULT_SUCCESS, kernelInfo.handle,
+          for (const auto& arg : kernelInfo->GetArguments()) {
+            scheduler.Register(new CzeKernelSetArgumentValue(ZE_RESULT_SUCCESS, kernelInfo->handle,
                                                              arg.first, arg.second.typeSize,
                                                              arg.second.originalValue));
           }
-          const auto& launchArgs = kernelInfo.launchFuncArgs;
+          const auto& launchArgs = kernelInfo->launchFuncArgs;
           scheduler.Register(new CzeCommandListAppendLaunchKernel(ZE_RESULT_SUCCESS, stateInstance,
-                                                                  kernelInfo.handle, &launchArgs,
+                                                                  kernelInfo->handle, &launchArgs,
                                                                   signalEvent, 0, nullptr));
           if (isImmediate && !state.second->isSync) {
             scheduler.Register(

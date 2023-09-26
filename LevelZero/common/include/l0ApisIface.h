@@ -66,6 +66,9 @@ public:
     }
     MemorySniffer::UnInstall();
   }
+  virtual void Rec_StateRestoreFinished() const {
+    SD().stateRestoreFinished = true;
+  }
   virtual ~Api() = default; // Fixes the -Wdelete-non-virtual-dtor warning.
 };
 } // namespace l0

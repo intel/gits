@@ -68,10 +68,6 @@ typename CKernelArgumentDump::states_type& CStateDynamic::Map<CKernelArgumentDum
   return kernelArgumentDumps_;
 }
 template <>
-typename CKernelArgument::states_type& CStateDynamic::Map<CKernelArgument>() {
-  return kernelArguments_;
-}
-template <>
 typename CEventPoolState::states_type& CStateDynamic::Map<CEventPoolState>() {
   return eventPoolStates_;
 }
@@ -163,6 +159,7 @@ CKernelState::CKernelState(ze_module_handle_t hModule, const ze_kernel_desc_t* k
   desc.flags = kernelDesc->flags;
   desc.pKernelName = new char[std::strlen(kernelDesc->pKernelName) + 1];
   std::strcpy(const_cast<char*>(desc.pKernelName), kernelDesc->pKernelName);
+  currentKernelInfo = std::make_unique<CKernelExecutionInfo>();
 }
 
 CKernelState::~CKernelState() {
@@ -350,16 +347,16 @@ boost::property_tree::ptree LayoutBuilder::GetModuleLinkInfoPtree(
   return modulesInfo;
 }
 
-void LayoutBuilder::UpdateLayout(const CKernelExecutionInfo& kernelInfo,
+void LayoutBuilder::UpdateLayout(const CKernelExecutionInfo* kernelInfo,
                                  const uint32_t& queueSubmitNum,
                                  const uint32_t& cmdListNum,
                                  const uint32_t& argIndex) {
-  UpdateExecutionKeyId(queueSubmitNum, cmdListNum, kernelInfo.kernelNumber);
+  UpdateExecutionKeyId(queueSubmitNum, cmdListNum, kernelInfo->kernelNumber);
   const auto executionKey = GetExecutionKeyId();
   if (zeKernels.find(executionKey) == zeKernels.not_found()) {
-    Add("kernel_name", kernelInfo.pKernelName);
+    Add("kernel_name", kernelInfo->pKernelName);
     auto& sd = SD();
-    const auto& moduleState = sd.Get<CModuleState>(kernelInfo.hModule, EXCEPTION_MESSAGE);
+    const auto& moduleState = sd.Get<CModuleState>(kernelInfo->hModule, EXCEPTION_MESSAGE);
     if (moduleState.desc.pBuildFlags != nullptr) {
       Add("build_options", moduleState.desc.pBuildFlags);
     }
@@ -369,10 +366,10 @@ void LayoutBuilder::UpdateLayout(const CKernelExecutionInfo& kernelInfo,
     }
 
 #ifdef WITH_OCLOC
-    AddOclocInfo(kernelInfo.hModule);
+    AddOclocInfo(kernelInfo->hModule);
 #endif
   }
-  const auto& arg = kernelInfo.GetArgument(argIndex);
+  const auto& arg = kernelInfo->GetArgument(argIndex);
   const auto argKey = "args." + std::to_string(argIndex);
   if (arg.type == KernelArgType::image) {
     boost::property_tree::ptree imageArgument;
@@ -487,7 +484,7 @@ boost::property_tree::ptree LayoutBuilder::GetImageDescription(
 QueueSubmissionSnapshot::QueueSubmissionSnapshot(
     const ze_command_list_handle_t& cmdListHandle,
     const bool& isImmediate,
-    const std::vector<CKernelExecutionInfo>& appendedKernels,
+    const std::vector<std::shared_ptr<CKernelExecutionInfo>>& appendedKernels,
     const uint32_t& cmdListNum,
     const ze_context_handle_t& cmdListContext,
     const uint32_t& submissionNum,

@@ -204,22 +204,22 @@ void SaveImage(const std::filesystem::path& dir,
   }
 }
 
-void PrepareArguments(const CKernelExecutionInfo& kernelInfo,
+void PrepareArguments(const CKernelExecutionInfo* kernelInfo,
                       std::vector<CKernelArgumentDump>& argDumpStates,
                       bool dumpUnique) {
-  for (const auto& arg : kernelInfo.GetArguments()) {
+  for (const auto& arg : kernelInfo->GetArguments()) {
     if (arg.second.type == KernelArgType::buffer) {
       auto ptr = const_cast<void*>(arg.second.argValue);
       if (dumpUnique) {
         auto it = std::find_if(argDumpStates.begin(), argDumpStates.end(),
                                [ptr](const CKernelArgumentDump& p) { return p.h_buf == ptr; });
         if (it != argDumpStates.end()) {
-          it->UpdateIndexes(kernelInfo.kernelNumber, arg.first);
+          it->UpdateIndexes(kernelInfo->kernelNumber, arg.first);
           continue;
         }
       }
       auto argDump = std::make_shared<CKernelArgumentDump>(arg.second.argSize, ptr,
-                                                           kernelInfo.kernelNumber, arg.first);
+                                                           kernelInfo->kernelNumber, arg.first);
       argDumpStates.push_back(*argDump);
     } else if (arg.second.type == KernelArgType::image) {
       auto ptr = reinterpret_cast<ze_image_handle_t>(const_cast<void*>(arg.second.argValue));
@@ -227,13 +227,13 @@ void PrepareArguments(const CKernelExecutionInfo& kernelInfo,
         auto it = std::find_if(argDumpStates.begin(), argDumpStates.end(),
                                [ptr](const CKernelArgumentDump& p) { return p.h_img == ptr; });
         if (it != argDumpStates.end()) {
-          it->UpdateIndexes(kernelInfo.kernelNumber, arg.first);
+          it->UpdateIndexes(kernelInfo->kernelNumber, arg.first);
           continue;
         }
       }
       auto argDump = std::make_shared<CKernelArgumentDump>(arg.second.desc,
                                                            CalculateImageSize(arg.second.desc), ptr,
-                                                           kernelInfo.kernelNumber, arg.first);
+                                                           kernelInfo->kernelNumber, arg.first);
       argDumpStates.push_back(*argDump);
     }
   }
@@ -261,13 +261,13 @@ void DumpReadyArguments(std::vector<CKernelArgumentDump>& readyArgVector,
                         uint32_t cmdListNumber,
                         const Config& cfg,
                         CStateDynamic& sd,
-                        const CKernelExecutionInfo& kernelInfo) {
+                        const CKernelExecutionInfo* kernelInfo) {
   const auto path = GetDumpPath(cfg);
   const auto captureImages = CaptureImages(cfg);
   const auto nullIndirectBuffers = IsNullIndirectPointersInBufferEnabled(cfg);
   for (auto& argState : readyArgVector) {
-    if (argState.kernelNumber != kernelInfo.kernelNumber ||
-        sd.layoutBuilder.Exists(cmdQueueNumber, cmdListNumber, kernelInfo.kernelNumber,
+    if (argState.kernelNumber != kernelInfo->kernelNumber ||
+        sd.layoutBuilder.Exists(cmdQueueNumber, cmdListNumber, kernelInfo->kernelNumber,
                                 argState.kernelArgIndex)) {
       continue;
     }
@@ -632,17 +632,17 @@ void DumpQueueSubmit(const Config& cfg,
     }
     if (CaptureAfterSubmit(cfg)) {
       for (const auto& kernelInfo : queueSubmissionState->kernelsExecutionInfo) {
-        if (CheckWhetherDumpKernel(kernelInfo.kernelNumber, queueSubmissionState->cmdListNumber)) {
+        if (CheckWhetherDumpKernel(kernelInfo->kernelNumber, queueSubmissionState->cmdListNumber)) {
           if (!tmpList) {
             tmpList = GetCommandListImmediate(sd, drv, queueSubmissionState->hContext);
           }
           auto& readyArgVec = sd.Map<CKernelArgumentDump>()[tmpList];
-          PrepareArguments(kernelInfo, readyArgVec, true);
+          PrepareArguments(kernelInfo.get(), readyArgVec, true);
           if (!IsDumpOnlyLayoutEnabled(cfg)) {
             InjectReadsForArguments(readyArgVec, tmpList, false, nullptr, nullptr);
           }
           DumpReadyArguments(readyArgVec, queueSubmissionState->cmdQueueNumber,
-                             queueSubmissionState->cmdListNumber, cfg, sd, kernelInfo);
+                             queueSubmissionState->cmdListNumber, cfg, sd, kernelInfo.get());
         }
       }
       if (tmpList) {
@@ -651,10 +651,10 @@ void DumpQueueSubmit(const Config& cfg,
     } else {
       if (queueSubmissionState->readyArgVector != nullptr &&
           !queueSubmissionState->readyArgVector->empty()) {
-        for (auto& kernelInfo : queueSubmissionState->kernelsExecutionInfo) {
+        for (const auto& kernelInfo : queueSubmissionState->kernelsExecutionInfo) {
           DumpReadyArguments(*queueSubmissionState->readyArgVector,
                              queueSubmissionState->cmdQueueNumber,
-                             queueSubmissionState->cmdListNumber, cfg, sd, kernelInfo);
+                             queueSubmissionState->cmdListNumber, cfg, sd, kernelInfo.get());
         }
       }
     }
