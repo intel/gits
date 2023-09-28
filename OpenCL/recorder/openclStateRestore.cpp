@@ -379,6 +379,16 @@ void gits::OpenCL::RestoreUsm(CScheduler& scheduler, CStateDynamic& sd) {
     }
     state.second->RestoreFinished();
   }
+  for (const auto& state : sd._usmAllocStates) {
+    if (!state.second->indirectPointersOffsets.empty()) {
+      std::vector<size_t> indirectPointersOffsets;
+      for (const auto& indirectInfo : state.second->indirectPointersOffsets) {
+        indirectPointersOffsets.push_back(indirectInfo.first);
+      }
+      scheduler.Register(new CclGitsIndirectAllocationOffsets(
+          state.first, indirectPointersOffsets.size(), indirectPointersOffsets.data()));
+    }
+  }
 }
 
 void gits::OpenCL::RestoreSvm(CScheduler& scheduler, CStateDynamic& sd) {
@@ -401,6 +411,16 @@ void gits::OpenCL::RestoreSvm(CScheduler& scheduler, CStateDynamic& sd) {
                                                     nullptr));
     }
     state.second->RestoreFinished();
+  }
+  for (const auto& state : sd._svmAllocStates) {
+    if (!state.second->indirectPointersOffsets.empty()) {
+      std::vector<size_t> indirectPointersOffsets;
+      for (const auto& indirectInfo : state.second->indirectPointersOffsets) {
+        indirectPointersOffsets.push_back(indirectInfo.first);
+      }
+      scheduler.Register(new CclGitsIndirectAllocationOffsets(
+          state.first, indirectPointersOffsets.size(), indirectPointersOffsets.data()));
+    }
   }
 }
 

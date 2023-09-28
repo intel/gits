@@ -1581,7 +1581,7 @@ Function(name='clGitsIndirectAllocationOffsets',enabled=True,availableFrom='1.0'
 retV=RetDef(type='void'),
 arg1=ArgDef(name='pAlloc',type='void*',wrapType='CCLMappedPtr'),
 arg2=ArgDef(name='numOffsets',type='uint32_t'),
-arg3=ArgDef(name='pOffsets',type='size_t*')
+arg3=ArgDef(name='pOffsets',type='size_t*',wrapParams='numOffsets, {name}')
 )
 
 Function(name='clSetProgramSpecializationConstant',enabled=True,availableFrom='2.2',extension=True,type=Set,
