@@ -446,6 +446,9 @@ void gits::CRecorder::Start() {
         if (gits::CGits::Instance().apis.Has3D()) {
           api3dIface.Rec_StateRestoreFinished();
         }
+        if (gits::CGits::Instance().apis.HasCompute() && apiComputeIface != nullptr) {
+          apiComputeIface->Rec_StateRestoreFinished();
+        }
         state->PostSchedule(Scheduler());
         delete state;
       }
