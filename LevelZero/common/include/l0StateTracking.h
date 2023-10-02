@@ -403,6 +403,7 @@ inline void zeCommandQueueExecuteCommandLists_SD(ze_result_t return_value,
   if (hFence != nullptr) {
     auto& fenceState = sd.Get<CFenceState>(hFence, EXCEPTION_MESSAGE);
     fenceState.canBeSynced = true;
+    fenceState.executionIsSynced = false;
   }
   auto& cqState = sd.Get<CCommandQueueState>(hCommandQueue, EXCEPTION_MESSAGE);
   if (cfg.IsPlayer()) {
@@ -428,9 +429,11 @@ inline void zeCommandQueueExecuteCommandLists_SD(ze_result_t return_value,
         }
       }
     }
-    cqState.notSyncedSubmissions.push_back(std::make_unique<QueueSubmissionSnapshot>(
-        phCommandLists[i], cmdListState.isImmediate, cmdListState.appendedKernels,
-        cmdListState.cmdListNumber, cmdListState.hContext, cqState.cmdQueueNumber, nullptr));
+    if (CaptureKernels(cfg)) {
+      cqState.notSyncedSubmissions.push_back(std::make_unique<QueueSubmissionSnapshot>(
+          phCommandLists[i], cmdListState.isImmediate, cmdListState.appendedKernels,
+          cmdListState.cmdListNumber, cmdListState.hContext, cqState.cmdQueueNumber, nullptr));
+    }
   }
   if (containsAppendedKernelsToDump && CheckWhetherQueueCanBeSynced(cfg, sd, drv, hCommandQueue)) {
     drv.inject.zeCommandQueueSynchronize(hCommandQueue, UINT64_MAX);
@@ -831,19 +834,17 @@ inline void zeCommandQueueSynchronize_SD(ze_result_t return_value,
                                          ze_command_queue_handle_t hCommandQueue,
                                          uint64_t timeout) {
   const auto failedSyncAttempt = return_value != ZE_RESULT_SUCCESS && timeout != UINT64_MAX;
-  if (return_value == ZE_RESULT_SUCCESS || failedSyncAttempt) {
-    const auto& cfg = Config::Get();
+  const auto& cfg = Config::Get();
+  if ((return_value == ZE_RESULT_SUCCESS || failedSyncAttempt) && CaptureKernels(cfg)) {
     auto& sd = SD();
     auto& cqState = sd.Get<CCommandQueueState>(hCommandQueue, EXCEPTION_MESSAGE);
-    if (CaptureKernels(cfg)) {
-      for (const auto& cmdQueueListsInfo : cqState.queueSubmissionDumpState) {
-        if (CheckWhetherDumpQueueSubmit(cfg, cmdQueueListsInfo->cmdQueueNumber)) {
-          if (failedSyncAttempt) {
-            drv.inject.zeCommandQueueSynchronize(hCommandQueue, UINT64_MAX);
-          }
-          DumpQueueSubmit(cfg, sd, hCommandQueue);
-          break;
+    for (const auto& cmdQueueListsInfo : cqState.queueSubmissionDumpState) {
+      if (CheckWhetherDumpQueueSubmit(cfg, cmdQueueListsInfo->cmdQueueNumber)) {
+        if (failedSyncAttempt) {
+          drv.inject.zeCommandQueueSynchronize(hCommandQueue, UINT64_MAX);
         }
+        DumpQueueSubmit(cfg, sd, hCommandQueue);
+        break;
       }
     }
     cqState.notSyncedSubmissions.clear();
@@ -855,24 +856,25 @@ inline void zeFenceHostSynchronize_SD(ze_result_t return_value,
                                       ze_fence_handle_t hFence,
                                       uint64_t timeout) {
   const auto failedSyncAttempt = return_value != ZE_RESULT_SUCCESS && timeout != UINT64_MAX;
-  if (return_value == ZE_RESULT_SUCCESS || failedSyncAttempt) {
-    const auto& cfg = Config::Get();
-    auto& sd = SD();
-    const auto& fenceState = sd.Get<CFenceState>(hFence, EXCEPTION_MESSAGE);
+  const auto& cfg = Config::Get();
+  auto& sd = SD();
+  auto& fenceState = sd.Get<CFenceState>(hFence, EXCEPTION_MESSAGE);
+  if ((return_value == ZE_RESULT_SUCCESS || failedSyncAttempt) && CaptureKernels(cfg)) {
     auto& cqState = sd.Get<CCommandQueueState>(fenceState.hCommandQueue, EXCEPTION_MESSAGE);
-    if (CaptureKernels(cfg)) {
-      for (const auto& cmdQueueListsInfo : cqState.queueSubmissionDumpState) {
-        if (CheckWhetherDumpQueueSubmit(cfg, cmdQueueListsInfo->cmdQueueNumber)) {
-          if (failedSyncAttempt) {
-            drv.inject.zeFenceHostSynchronize(hFence, UINT64_MAX);
-          }
-          DumpQueueSubmit(cfg, sd, fenceState.hCommandQueue);
-          break;
+    for (const auto& cmdQueueListsInfo : cqState.queueSubmissionDumpState) {
+      if (CheckWhetherDumpQueueSubmit(cfg, cmdQueueListsInfo->cmdQueueNumber)) {
+        if (failedSyncAttempt) {
+          return_value = drv.inject.zeFenceHostSynchronize(hFence, UINT64_MAX);
         }
+        DumpQueueSubmit(cfg, sd, fenceState.hCommandQueue);
+        break;
       }
     }
     cqState.notSyncedSubmissions.clear();
     cqState.queueSubmissionDumpState.clear();
+  }
+  if (return_value == ZE_RESULT_SUCCESS && fenceState.canBeSynced) {
+    fenceState.executionIsSynced = true;
   }
 }
 
@@ -1061,6 +1063,28 @@ inline void zeCommandListAppendEventReset_SD(ze_result_t return_value,
   if (return_value == ZE_RESULT_SUCCESS) {
     auto& cmdListState = SD().Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
     cmdListState.AddAction(hEvent, 0, nullptr, CCommandListState::Action::Type::Reset);
+  }
+}
+
+inline void zeFenceQueryStatus_SD(ze_result_t return_value, ze_fence_handle_t hFence) {
+  if (return_value == ZE_RESULT_SUCCESS) {
+    auto& sd = SD();
+    auto& fenceState = sd.Get<CFenceState>(hFence, EXCEPTION_MESSAGE);
+    const auto& cfg = Config::Get();
+    if (!fenceState.executionIsSynced && fenceState.canBeSynced) {
+      if (CaptureKernels(cfg)) {
+        auto& cqState = sd.Get<CCommandQueueState>(fenceState.hCommandQueue, EXCEPTION_MESSAGE);
+        for (const auto& cmdQueueListsInfo : cqState.queueSubmissionDumpState) {
+          if (CheckWhetherDumpQueueSubmit(cfg, cmdQueueListsInfo->cmdQueueNumber)) {
+            DumpQueueSubmit(cfg, sd, fenceState.hCommandQueue);
+            break;
+          }
+        }
+        cqState.notSyncedSubmissions.clear();
+        cqState.queueSubmissionDumpState.clear();
+      }
+      fenceState.executionIsSynced = true;
+    }
   }
 }
 

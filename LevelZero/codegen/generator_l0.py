@@ -3981,7 +3981,7 @@ arg1=ArgDef(name='hFence',type='ze_fence_handle_t',tag='in'),
 arg2=ArgDef(name='timeout',type='uint64_t',tag='in'),
 )
 
-Function(name='zeFenceQueryStatus',component='ze_fence',enabled=True,runWrap=True,ddi_pos=3,
+Function(name='zeFenceQueryStatus',component='ze_fence',enabled=True,runWrap=True,ddi_pos=3,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hFence',type='ze_fence_handle_t',tag='in'),
 )

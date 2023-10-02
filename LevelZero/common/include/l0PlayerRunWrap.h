@@ -381,9 +381,9 @@ inline void zeImageCreate_RUNWRAP(Cze_result_t& _return_value,
 
 inline void zeFenceQueryStatus_RUNWRAP(Cze_result_t& _return_value, Cze_fence_handle_t& _hFence) {
   _return_value.Value() = drv.zeFenceQueryStatus(*_hFence);
-  if (_return_value.Value() != ZE_RESULT_SUCCESS &&
+  if (_return_value.Value() != ZE_RESULT_SUCCESS && _return_value.Original() == ZE_RESULT_SUCCESS &&
       SD().Get<CFenceState>(*_hFence, EXCEPTION_MESSAGE).canBeSynced) {
-    drv.zeFenceHostSynchronize(*_hFence, UINT64_MAX);
+    drv.inject.zeFenceHostSynchronize(*_hFence, UINT64_MAX);
   }
 }
 

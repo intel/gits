@@ -387,6 +387,7 @@ struct CFenceState : public CState {
   ze_command_queue_handle_t hCommandQueue = nullptr;
   ze_fence_desc_t desc = {};
   bool canBeSynced = false;
+  bool executionIsSynced = false;
 
 public:
   CFenceState() = default;
