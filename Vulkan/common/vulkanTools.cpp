@@ -317,8 +317,15 @@ bool vulkanCopyImage(VkCommandBuffer commandBuffer,
     return false;
   }
 
+  // Skip dumping:
+  // - images with compressed format
+  // - images with storeOp VK_ATTACHMENT_STORE_OP_DONT_CARE
+  // - multisampled images (spec forbids copying data to/from multisampled images)
   if (isFormatCompressed(imageState->imageFormat) ||
-      (imageStoreOption == VK_ATTACHMENT_STORE_OP_DONT_CARE)) {
+      (imageStoreOption == VK_ATTACHMENT_STORE_OP_DONT_CARE) ||
+      (!imageState->swapchainKHRStateStore &&
+       (!imageState->imageCreateInfoData.Value() ||
+        imageState->imageCreateInfoData.Value()->samples != VK_SAMPLE_COUNT_1_BIT))) {
     return false;
   }
 
@@ -782,6 +789,10 @@ bool writeScreenshotUtil(std::string fileName,
   uint32_t queueFamilyIndex = queueState->queueFamilyIndex;
   auto& imageState = SD()._imagestates[sourceImage];
   auto& internalResources = SD().internalResources;
+  bool isMultisampleImage =
+      !imageState->swapchainKHRStateStore &&
+      (!imageState->imageCreateInfoData.Value() ||
+       imageState->imageCreateInfoData.Value()->samples != VK_SAMPLE_COUNT_1_BIT);
 
   if (Config::Get().player.skipNonDeterministicImages &&
       (SD().nonDeterministicImages.find(sourceImage) != SD().nonDeterministicImages.end())) {
@@ -793,10 +804,17 @@ bool writeScreenshotUtil(std::string fileName,
   uint32_t queueFamilyIndex = queueState.deviceQueueList.front().queueFamilyIndex;
   auto& imageState = globalState.imageStates.at(sourceImage);
   auto& internalResources = globalState.internalResources;
+  bool isMultisampleImage = !imageState->swapchainCreateInfo &&
+                            (!imageState->imageCreateInfo ||
+                             imageState->imageCreateInfo->samples != VK_SAMPLE_COUNT_1_BIT);
 #endif
 
+  // Skip dumping:
+  // - images with compressed format
+  // - images with storeOp VK_ATTACHMENT_STORE_OP_DONT_CARE
+  // - multisampled images (spec forbids copying data to/from multisampled images)
   if (isFormatCompressed(imageState->imageFormat) ||
-      (storeOp == VK_ATTACHMENT_STORE_OP_DONT_CARE)) {
+      (storeOp == VK_ATTACHMENT_STORE_OP_DONT_CARE) || isMultisampleImage) {
     return false;
   }
 
