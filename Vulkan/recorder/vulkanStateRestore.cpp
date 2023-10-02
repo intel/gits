@@ -3898,8 +3898,6 @@ void gits::Vulkan::PostRestoreVkQueueSubmits(CScheduler& scheduler, CStateDynami
           (uint32_t)submitInfoForSchedule.submitInfo2Data.size(),
           submitInfoForSchedule.submitInfo2Data.Value(), sd.lastQueueSubmit->fenceHandle));
     }
-
-    scheduler.Register(new gits::CTokenFrameNumber(CToken::ID_FRAME_END, 1));
   }
 }
 
