@@ -492,22 +492,14 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::RestoreDraw(const uint64_t rend
   bool pre_draw = true;
 
   for (auto elem : _tokensList) {
+    if (elem->Type() & CFunction::GITS_VULKAN_DRAW_APITYPE) {
+      drawInRenderPass++;
+    }
     if (renderPassCount == renderPassNumber && drawsRange[drawInRenderPass]) {
       pre_draw = false;
     }
-    if (pre_draw || (renderPassCount == renderPassNumber &&
-                     (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE ||
-                      elem->Type() & CFunction::GITS_VULKAN_NEXT_SUBPASS_APITYPE))) {
-      elem->Exec();
-      elem->StateTrack();
-    }
-    if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
-      drawInRenderPass = 0;
-      renderPassCount++;
-    } else if (elem->Type() & CFunction::GITS_VULKAN_DRAW_APITYPE) {
-      drawInRenderPass++;
-    } else if (renderPassCount == renderPassNumber &&
-               (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDERPASS_APITYPE)) {
+    if (renderPassCount == renderPassNumber &&
+        (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDERPASS_APITYPE)) {
       //  For executing each Vulkan draw in separate VkCommandBuffer we need to modify original storeOp (set it to STORE)
       elem->StateTrack();
       VkCommandBuffer cmdBuffer = CVkCommandBuffer::GetMapping(elem->CommandBuffer());
@@ -551,6 +543,15 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::RestoreDraw(const uint64_t rend
         }
         drvVk.vkCmdBeginRendering(cmdBuffer, &renderingInfo);
       }
+    } else if (pre_draw || (renderPassCount == renderPassNumber &&
+                            (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE ||
+                             elem->Type() & CFunction::GITS_VULKAN_NEXT_SUBPASS_APITYPE))) {
+      elem->Exec();
+      elem->StateTrack();
+    }
+    if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
+      drawInRenderPass = 0;
+      renderPassCount++;
     }
   }
 }
@@ -565,8 +566,12 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ScheduleDraw(
   for (auto elem : _tokensList) {
     if (elem->Type() & CFunction::GITS_VULKAN_DRAW_APITYPE) {
       drawInRenderPass++;
-    } else if (renderPassCount == renderPassNumber &&
-               (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDERPASS_APITYPE)) {
+    }
+    if (renderPassCount == renderPassNumber && drawsRange[drawInRenderPass]) {
+      started = true;
+    }
+    if (renderPassCount == renderPassNumber &&
+        (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDERPASS_APITYPE)) {
       VkCommandBuffer cmdBuffer = CVkCommandBuffer::GetMapping(elem->CommandBuffer());
       VkRenderPassBeginInfo* renderPassBeginInfoPtr = SD()._commandbufferstates[cmdBuffer]
                                                           ->beginRenderPassesList.back()
@@ -612,14 +617,10 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ScheduleDraw(
         }
         schedulerFunc(new CvkCmdBeginRendering(cmdBuffer, &renderingInfo));
       }
-    }
-    if (renderPassCount == renderPassNumber && drawsRange[drawInRenderPass]) {
-      started = true;
-    }
-    if (renderPassCount == renderPassNumber &&
-        ((drawsRange[drawInRenderPass] && started) ||
-         elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE ||
-         elem->Type() & CFunction::GITS_VULKAN_NEXT_SUBPASS_APITYPE)) {
+    } else if (renderPassCount == renderPassNumber &&
+               ((drawsRange[drawInRenderPass] && started) ||
+                elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE ||
+                elem->Type() & CFunction::GITS_VULKAN_NEXT_SUBPASS_APITYPE)) {
       schedulerFunc(elem);
     } else if ((elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_SET_APITYPE ||
                 elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_BIND_APITYPE ||
