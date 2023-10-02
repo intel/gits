@@ -485,6 +485,7 @@ struct Config {
     uint32_t maxAllowedVkSwapchainRewinds;
     std::filesystem::path overrideVKPipelineCache;
     vi_bool oneVulkanDrawPerCommandBuffer;
+    vi_bool oneVulkanRenderPassPerCommandBuffer;
     vi_uint vulkanForcedPhysicalDeviceIndex;
     std::string vulkanForcedPhysicalDeviceName;
     DeviceTypeOpt vulkanForcedPhysicalDeviceType;

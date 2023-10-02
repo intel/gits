@@ -579,7 +579,8 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
                              !Config::Get().player.captureVulkanSubmitsResources.empty() ||
                              !Config::Get().player.captureVulkanRenderPasses.empty() ||
                              !Config::Get().player.captureVulkanRenderPassesResources.empty() ||
-                             Config::Get().player.oneVulkanDrawPerCommandBuffer)) {
+                             Config::Get().player.oneVulkanDrawPerCommandBuffer ||
+                             Config::Get().player.oneVulkanRenderPassPerCommandBuffer)) {
     auto pSubmitInfoArray = *pSubmits;
     if (pSubmitInfoArray == nullptr) {
       throw std::runtime_error(EXCEPTION_MESSAGE);
@@ -656,17 +657,7 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
             Config::Get().player.captureVulkanSubmitsResources
                 [(size_t)CGits::Instance().vkCounters.CurrentQueueSubmitCount()];
 
-        bool captureVulkanRenderPassesCheck =
-            !Config::Get().player.captureVulkanRenderPasses.empty() &&
-            !SD()._commandbufferstates[cmdbuffer]->renderPassImages.empty();
-
-        bool captureVulkanRenderPassesResourcesCheck =
-            !Config::Get().player.captureVulkanRenderPassesResources.empty() &&
-            (!SD()._commandbufferstates[cmdbuffer]->renderPassResourceImages.empty() ||
-             !SD()._commandbufferstates[cmdbuffer]->renderPassResourceBuffers.empty());
-
         if (captureVulkanSubmitsCheck || captureVulkanSubmitsResourcesCheck ||
-            captureVulkanRenderPassesCheck || captureVulkanRenderPassesResourcesCheck ||
             Config::Get().player.waitAfterQueueSubmitWA) {
           drvVk.vkQueueWaitIdle(*queue);
         }
@@ -675,12 +666,6 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
         }
         if (captureVulkanSubmitsResourcesCheck) {
           writeResources(*queue, cmdbuffer, i, cmdBufIndex);
-        }
-        if (captureVulkanRenderPassesCheck) {
-          vulkanDumpRenderPasses(cmdbuffer);
-        }
-        if (captureVulkanRenderPassesResourcesCheck) {
-          vulkanDumpRenderPassResources(cmdbuffer);
         }
       }
     }
@@ -729,7 +714,8 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
                              !Config::Get().player.captureVulkanSubmitsResources.empty() ||
                              !Config::Get().player.captureVulkanRenderPasses.empty() ||
                              !Config::Get().player.captureVulkanRenderPassesResources.empty() ||
-                             Config::Get().player.oneVulkanDrawPerCommandBuffer)) {
+                             Config::Get().player.oneVulkanDrawPerCommandBuffer ||
+                             Config::Get().player.oneVulkanRenderPassPerCommandBuffer)) {
     auto pSubmitInfo2Array = *pSubmits;
     if (pSubmitInfo2Array == nullptr) {
       throw std::runtime_error(EXCEPTION_MESSAGE);
@@ -814,19 +800,7 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
             Config::Get().player.captureVulkanSubmitsResources
                 [(size_t)CGits::Instance().vkCounters.CurrentQueueSubmitCount()];
 
-        bool captureVulkanRenderPassesCheck =
-            !Config::Get().player.captureVulkanRenderPasses.empty() &&
-            !SD()._commandbufferstates[cmdbufferSubmitInfo.commandBuffer]->renderPassImages.empty();
-
-        bool captureVulkanRenderPassesResourcesCheck =
-            !Config::Get().player.captureVulkanRenderPassesResources.empty() &&
-            (!SD()._commandbufferstates[cmdbufferSubmitInfo.commandBuffer]
-                  ->renderPassResourceImages.empty() ||
-             !SD()._commandbufferstates[cmdbufferSubmitInfo.commandBuffer]
-                  ->renderPassResourceBuffers.empty());
-
         if (captureVulkanSubmitsCheck || captureVulkanSubmitsResourcesCheck ||
-            captureVulkanRenderPassesCheck || captureVulkanRenderPassesResourcesCheck ||
             Config::Get().player.waitAfterQueueSubmitWA) {
           drvVk.vkQueueWaitIdle(*queue);
         }
@@ -835,12 +809,6 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
         }
         if (captureVulkanSubmitsResourcesCheck) {
           writeResources(*queue, cmdbufferSubmitInfo.commandBuffer, i, cmdBufIndex);
-        }
-        if (captureVulkanRenderPassesCheck) {
-          vulkanDumpRenderPasses(cmdbufferSubmitInfo.commandBuffer);
-        }
-        if (captureVulkanRenderPassesResourcesCheck) {
-          vulkanDumpRenderPassResources(cmdbufferSubmitInfo.commandBuffer);
         }
       }
     }

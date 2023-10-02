@@ -181,11 +181,8 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::FinishCommandBufferAndSubmit(
   drvVk.vkFreeCommandBuffers(device, cmdPool, 1, &cmdBuffer);
 }
 
-void CLibrary::CVulkanCommandBufferTokensBuffer::CreateNewCommandBufferAndRestoreSettings(
-    Vulkan::CFunction* token,
-    uint64_t renderPassNumber,
-    uint64_t drawNumber,
-    VkCommandBuffer cmdBuffer) {
+void CLibrary::CVulkanCommandBufferTokensBuffer::CreateNewCommandBuffer(Vulkan::CFunction* token,
+                                                                        VkCommandBuffer cmdBuffer) {
 
   VkCommandPool cmdPool =
       SD()._commandbufferstates[cmdBuffer]->commandBufferAllocateInfoData.Value()->commandPool;
@@ -207,6 +204,31 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::CreateNewCommandBufferAndRestor
   drvVk.vkBeginCommandBuffer(newCmdBuffer,
                              SD()._commandbufferstates[newCmdBuffer]
                                  ->beginCommandBuffer->commandBufferBeginInfoData.Value());
+}
+
+void CLibrary::CVulkanCommandBufferTokensBuffer::RestoreSettingsToSpecifiedRenderPass(
+    uint64_t renderPassNumber) {
+  uint64_t renderPassCount = 0;
+  for (auto elem : _tokensList) {
+    if ((elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_SET_APITYPE ||
+         elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_BIND_APITYPE ||
+         elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_PUSH_APITYPE) &&
+        (renderPassCount < renderPassNumber)) {
+      // restoring VkCommandBuffer settings
+      elem->Exec();
+    } else if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
+      renderPassCount++;
+    } else if (renderPassCount >= renderPassNumber) {
+      break;
+    }
+  }
+}
+
+void CLibrary::CVulkanCommandBufferTokensBuffer::RestoreSettingsToSpecifiedDraw(
+    Vulkan::CFunction* token,
+    uint64_t renderPassNumber,
+    uint64_t drawNumber,
+    VkCommandBuffer cmdBuffer) {
   uint64_t drawCount = 0;
   uint64_t renderPassCount = 0;
   for (auto elem : _tokensList) {
@@ -228,19 +250,19 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::CreateNewCommandBufferAndRestor
                (renderPassCount == renderPassNumber) &&
                (token->Type() & CFunction::GITS_VULKAN_DRAW_APITYPE)) {
       // Setting loadOp to LOAD, and storeOp to STORE
-      VkRenderPassBeginInfo* renderPassBeginInfoPtr = SD()._commandbufferstates[newCmdBuffer]
+      VkRenderPassBeginInfo* renderPassBeginInfoPtr = SD()._commandbufferstates[cmdBuffer]
                                                           ->beginRenderPassesList.back()
                                                           ->renderPassBeginInfoData.Value();
-      VkRenderingInfo* renderingInfoPtr = SD()._commandbufferstates[newCmdBuffer]
+      VkRenderingInfo* renderingInfoPtr = SD()._commandbufferstates[cmdBuffer]
                                               ->beginRenderPassesList.back()
                                               ->renderingInfoData.Value();
       if (renderPassBeginInfoPtr) {
         VkRenderPassBeginInfo renderPassBeginInfo = *renderPassBeginInfoPtr;
-        renderPassBeginInfo.renderPass = SD()._commandbufferstates[newCmdBuffer]
+        renderPassBeginInfo.renderPass = SD()._commandbufferstates[cmdBuffer]
                                              ->beginRenderPassesList.back()
                                              ->renderPassStateStore->loadAndStoreRenderPassHandle;
-        drvVk.vkCmdBeginRenderPass(newCmdBuffer, &renderPassBeginInfo,
-                                   SD()._commandbufferstates[newCmdBuffer]
+        drvVk.vkCmdBeginRenderPass(cmdBuffer, &renderPassBeginInfo,
+                                   SD()._commandbufferstates[cmdBuffer]
                                        ->beginRenderPassesList.back()
                                        ->subpassContentsData.Value());
       } else if (renderingInfoPtr) {
@@ -269,7 +291,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::CreateNewCommandBufferAndRestor
           stencilAttInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
           renderingInfo.pStencilAttachment = &stencilAttInfo;
         }
-        drvVk.vkCmdBeginRendering(newCmdBuffer, &renderingInfo);
+        drvVk.vkCmdBeginRendering(cmdBuffer, &renderingInfo);
       }
     } else if (renderPassCount > renderPassNumber) {
       break;
@@ -350,8 +372,9 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
       if (!SD()._commandbufferstates[cmdBuffer]->drawImages.empty()) {
         vulkanDumpRenderPasses(cmdBuffer);
       }
-      CreateNewCommandBufferAndRestoreSettings(elem, renderPassCount, drawCount, cmdBuffer);
+      CreateNewCommandBuffer(elem, cmdBuffer);
       cmdBuffer = CVkCommandBuffer::GetMapping(elem->CommandBuffer());
+      RestoreSettingsToSpecifiedDraw(elem, renderPassCount, drawCount, cmdBuffer);
     }
     if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
       if (Config::Get().player.oneVulkanDrawPerCommandBuffer) {
@@ -426,6 +449,26 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
       }
       renderPassCount++;
       drawInRenderPass = 0;
+      if (Config::Get().player.oneVulkanRenderPassPerCommandBuffer) {
+        FinishCommandBufferAndSubmit(cmdBuffer);
+        bool captureVulkanRenderPassesCheck =
+            !Config::Get().player.captureVulkanRenderPasses.empty() &&
+            !SD()._commandbufferstates[cmdBuffer]->renderPassImages.empty();
+
+        bool captureVulkanRenderPassesResourcesCheck =
+            !Config::Get().player.captureVulkanRenderPassesResources.empty() &&
+            (!SD()._commandbufferstates[cmdBuffer]->renderPassResourceImages.empty() ||
+             !SD()._commandbufferstates[cmdBuffer]->renderPassResourceBuffers.empty());
+        if (captureVulkanRenderPassesCheck) {
+          vulkanDumpRenderPasses(cmdBuffer);
+        }
+        if (captureVulkanRenderPassesResourcesCheck) {
+          vulkanDumpRenderPassResources(cmdBuffer);
+        }
+        CreateNewCommandBuffer(elem, cmdBuffer);
+        cmdBuffer = CVkCommandBuffer::GetMapping(elem->CommandBuffer());
+        RestoreSettingsToSpecifiedRenderPass(renderPassCount);
+      }
     }
   }
 }

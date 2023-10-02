@@ -672,6 +672,12 @@ bool configure_player(int argc, char** argv) {
       "be executed in separate command buffer. It affects performance.",
       GITS_PLATFORM_BIT_WINDOWS);
 
+  TypedOption<bool> optionOneVulkanRenderPassPerCommandBuffer(
+      options, OPTION_GROUP_PLAYBACK, 0, "oneVulkanRenderPassPerCommandBuffer",
+      "Force to split command buffers. Each render pass will "
+      "be executed in separate command buffer. It affects performance.",
+      GITS_PLATFORM_BIT_WINDOWS);
+
   TypedOption<unsigned> optionUseVKPhysicalDeviceIndex(
       options, OPTION_GROUP_PLAYBACK, 0, "useVKPhysicalDeviceIndex",
       "Forces selected physical device index to be used for logical device creation.",
@@ -1384,14 +1390,23 @@ bool configure_player(int argc, char** argv) {
   set_when_option_present(cfg.player.oneVulkanDrawPerCommandBuffer,
                           optionOneVulkanDrawPerCommandBuffer);
 
+  set_when_option_present(cfg.player.oneVulkanRenderPassPerCommandBuffer,
+                          optionOneVulkanRenderPassPerCommandBuffer);
+
   if (optionCaptureVulkanRenderPasses.Present() ||
       optionCaptureVulkanRenderPassesResources.Present() ||
-      optionOneVulkanDrawPerCommandBuffer.Present() || optionCaptureVulkanDraws.Present()) {
+      optionOneVulkanDrawPerCommandBuffer.Present() ||
+      optionOneVulkanRenderPassPerCommandBuffer.Present() || optionCaptureVulkanDraws.Present()) {
     cfg.player.execCmdBuffsBeforeQueueSubmit = true;
   }
 
   if (optionCaptureVulkanDraws.Present()) {
     cfg.player.oneVulkanDrawPerCommandBuffer = true;
+  }
+
+  if (optionCaptureVulkanRenderPasses.Present() ||
+      optionCaptureVulkanRenderPassesResources.Present()) {
+    cfg.player.oneVulkanRenderPassPerCommandBuffer = true;
   }
 
   cfg.player.traceVKShaderHashes = optionTraceVKShaderHashes.Value();
