@@ -358,8 +358,8 @@ public:
     HelperSetValues(x_pos, y_pos, width, height, visible, hwnd_in);
   }
 #else
-  {
-  }
+    {
+    }
 #endif
 #if defined(GITS_PLATFORM_X11)
   CGitsVkUpdateNativeWindow(xcb_window_t window) : hwnd(window) {

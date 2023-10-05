@@ -173,12 +173,8 @@ static void OnFrameBeginImpl() {
 }
 
 static void OnFrameEndImpl() {
-
   if (Config::Get().player.benchmark) {
     CGits::Instance().TimeSheet().add_frame_time("stamp", CGits::Instance().Timers().program.Get());
-  }
-
-  if (Config::Get().player.benchmark) {
     CGits::Instance().TimeSheet().add_frame_time("cpu", CGits::Instance().Timers().frame.Get());
   }
 }

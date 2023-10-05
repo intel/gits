@@ -17,13 +17,13 @@ import shutil
 
 special_types = ['CIndexPtr', 'CAttribPtr', 'CGLTexResource', 'CGLCompressedTexResource']
 
-copyright_header = """//====================== begin_copyright_notice ============================
+copyright_header = """// ====================== begin_copyright_notice ============================
 //
 // Copyright (C) 2023 Intel Corporation
 //
 // SPDX-License-Identifier: MIT
 //
-//====================== end_copyright_notice ==============================
+// ====================== end_copyright_notice ==============================
 
 """
 

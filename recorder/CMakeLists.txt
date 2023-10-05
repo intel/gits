@@ -35,7 +35,7 @@ if(MSVC)
   endif()
 endif()
 
-add_library(GitsRecorder SHARED
+list(APPEND recorder_SOURCES
   include/gitsLoader.h
   include/recorder.h
   include/recorderBehaviors.h
@@ -49,6 +49,8 @@ add_library(GitsRecorder SHARED
   ${control_handler}
   ${recorder_DEF}
 )
+
+add_library(GitsRecorder SHARED ${recorder_SOURCES})
 
 add_definitions(-DGITS_RECORDER_EXPORTS)
 

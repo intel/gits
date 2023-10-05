@@ -427,8 +427,8 @@ bool vulkanCopyImage(VkCommandBuffer commandBuffer,
                 }
               }
             }
-            // Perform pre-copy image layout transition
             {
+              // Perform pre-copy image layout transition
               VkImageMemoryBarrier preCopyImageBarrier = {
                   VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, // VkStructureType sType;
                   nullptr,                                // const void* pNext;
@@ -993,8 +993,8 @@ bool writeScreenshotUtil(std::string fileName,
                 throw EOperationFailed("Could not allocate memory for a buffer.");
               }
             }
-            // Perform pre-copy image layout transition
             {
+              // Perform pre-copy image layout transition
               VkImageMemoryBarrier preCopyImageBarrier = {
                   VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, // VkStructureType sType;
                   nullptr,                                // const void* pNext;

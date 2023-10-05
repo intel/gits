@@ -255,13 +255,13 @@ types_not_needing_declaration = vulkan_enums + vulkan_uint32 + vulkan_uint64 + v
 vulkan_mapped_types = opaque_dispatchable_handles
 vulkan_mapped_types_nondisp = opaque_nondispatchable_handles
 
-copyright_header = """//====================== begin_copyright_notice ============================
+copyright_header = """// ====================== begin_copyright_notice ============================
 //
 // Copyright (C) 2023 Intel Corporation
 //
 // SPDX-License-Identifier: MIT
 //
-//====================== end_copyright_notice ==============================
+// ====================== end_copyright_notice ==============================
 
 """
 
@@ -436,14 +436,14 @@ def generate_vulkan_log(structs, enums):
   vk_log_auto_cpp.write(copyright_header)
   vk_log_auto_inl.write(copyright_header)
 
-  vk_log_auto_cpp.write("""#include "config.h"
-#include "vulkanLog.h"
-#include "vulkanTools_lite.h"
-
-namespace gits {
-namespace Vulkan {
-
-""")
+  includes = "#include \"config.h\"\n"     \
+  "#include \"vulkanLog.h\"\n"             \
+  "#include \"vulkanTools_lite.h\"\n\n"  
+  vk_log_auto_cpp.write(includes)
+  
+  namespaces = "namespace gits {\n"  \
+  "namespace Vulkan {\n\n"
+  vk_log_auto_cpp.write(namespaces)
 
   content = ""
   content_inl = ""
@@ -668,12 +668,10 @@ namespace gits {
 
 """
 
-  content_cpp = """#include "config.h"
-#include "vulkanLog.h"
-
-namespace gits {
-
-"""
+  includes = "#include \"config.h\"\n"           \
+  "#include \"vulkanLog.h\"\n\n"
+  namespaces = "namespace gits {\n\n"
+  content_cpp = includes + namespaces
 
   for name in sorted(functions.keys()):
     function = functions[name][0]  # 0 because we only need the base version.
@@ -1123,9 +1121,7 @@ def generate_layer_json():
 def generate_prepost(functions):
   prepost_c = open('vulkanPrePostAuto.cpp', 'w')
   prepost_c.write(copyright_header)
-  prepost_c_include = """
-#include "vulkanExecWrap.h"
-"""
+  prepost_c_include = "\n#include \"vulkanExecWrap.h\"\n"
   prepost_c.write(prepost_c_include)
   prepost_c_static = """
 namespace {
