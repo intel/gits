@@ -17,6 +17,7 @@
 #ifndef BUILD_FOR_CCODE
 #include "l0Lua.h"
 #endif
+#include "l0Tools.h"
 namespace gits {
 namespace l0 {
 namespace {
@@ -24,12 +25,27 @@ namespace {
 using namespace lua;
 static bool bypass_luascript;
 #endif
-bool load_l0_function_generic(void*& func, const char* name) {
+bool load_l0_function_from_original_library_generic(void*& func, const char* name) {
   auto lib = drv.Library();
   if (lib == nullptr) {
     return false;
   }
   func = dl::load_symbol(lib, name);
+  return func != nullptr;
+}
+bool load_l0_function_generic(void*& func, const char* name) {
+  if (drv.Library() == nullptr) {
+    return false;
+  }
+  load_l0_function_from_original_library_generic(func, name);
+  if (func == nullptr) {
+    const auto hDrivers = GetDrivers(drv);
+    for (const auto& hDriver : hDrivers) {
+      if (drv.inject.zeDriverGetExtensionFunctionAddress(hDriver, name, &func) == ZE_RESULT_SUCCESS) {
+        return true;
+      }
+    }
+  }
   return func != nullptr;
 }
 template <typename Func>
@@ -47,6 +63,10 @@ auto noop(Func) {
 template<class T>
 bool load_l0_function(T& func, const char* name) {
   return load_l0_function_generic(reinterpret_cast<void*&>(func), name);
+}
+template<class T>
+bool load_l0_function_from_original_library(T& func, const char* name) {
+  return load_l0_function_from_original_library_generic(reinterpret_cast<void*&>(func), name);
 }
 %for name, func in functions.items():
   %if not is_latest_version(functions, func):
@@ -149,24 +169,23 @@ ${func.get('type')} __zecall default_${func.get('name')}(
   %endfor
 ) {
   %if func.get('component') == 'ze_gits_extension':
-  if (!load_l0_function(drv.${func.get('name')}, "${func.get('name')}")) {
-    drv.${func.get('name')} = noop(static_cast<pfn_${func.get('name')}>(nullptr));
+  if (!load_l0_function_from_original_library(drv.original.${func.get('name')}, "${func.get('name')}")) {
+    drv.original.${func.get('name')} = noop(static_cast<pfn_${func.get('name')}>(nullptr));
   }
-  drv.original.${func.get('name')} = drv.${func.get('name')};
   drv.${func.get('name')} = special_${func.get('name')};
   %else:
   if (drv.original.${func.get('name')} == nullptr) {
-    if (!load_l0_function(drv.${func.get('name')}, "${func.get('name')}")) {
+    if (!load_l0_function(drv.original.${func.get('name')}, "${func.get('name')}")) {
       L0Log(ERR) << "Could not load ${func.get('name')} function.";
       return ZE_RESULT_ERROR_UNINITIALIZED;
     }
-    drv.original.${func.get('name')} = drv.${func.get('name')};
   }
   if (ShouldLog(TRACE) || Config::Get().common.useEvents) {
     drv.${func.get('name')} = special_${func.get('name')};
+    return drv.${func.get('name')}(${make_params(func)});
   }
   %endif
-  ${'' if func.get('type') == 'void' else 'return '}drv.${func.get('name')}(${make_params(func)});
+  ${'' if func.get('type') == 'void' else 'return '}drv.original.${func.get('name')}(${make_params(func)});
 }
 
 ${func.get('type')} __zecall inject_${func.get('name')}(

@@ -363,12 +363,20 @@ bool ZeroInitializeImage(CDriver& driver,
 }
 
 std::vector<ze_driver_handle_t> GetDrivers(const CDriver& cDriver) {
-  uint32_t drivCount = 0;
-  cDriver.inject.zeDriverGet(&drivCount, nullptr);
-  std::vector<ze_driver_handle_t> drivers(drivCount);
-  ze_result_t result = cDriver.inject.zeDriverGet(&drivCount, drivers.data());
-  zeDriverGet_SD(result, &drivCount, drivers.data());
-  return result == ZE_RESULT_SUCCESS ? std::move(drivers) : std::vector<ze_driver_handle_t>();
+  const auto& driverMap = SD().Map<CDriverState>();
+  if (driverMap.empty()) {
+    uint32_t drivCount = 0;
+    cDriver.inject.zeDriverGet(&drivCount, nullptr);
+    std::vector<ze_driver_handle_t> drivers(drivCount);
+    ze_result_t result = cDriver.inject.zeDriverGet(&drivCount, drivers.data());
+    zeDriverGet_SD(result, &drivCount, drivers.data());
+    return result == ZE_RESULT_SUCCESS ? drivers : std::vector<ze_driver_handle_t>();
+  }
+  std::vector<ze_driver_handle_t> drivers;
+  for (const auto& driverState : driverMap) {
+    drivers.push_back(driverState.first);
+  }
+  return drivers;
 }
 
 std::vector<ze_device_handle_t> GetDevices(const CDriver& cDriver,
