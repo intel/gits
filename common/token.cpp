@@ -212,6 +212,9 @@ void CTokenFrameNumber::Run() {
         CGits::Instance().apis.Iface3D().Play_SwapAfterPrepare();
       }
     }
+    if (CGits::Instance().apis.HasCompute()) {
+      CGits::Instance().apis.IfaceCompute().Play_StateRestoreEnd();
+    }
     if (cfg.common.useEvents) {
       CGits::Instance().PlaybackEvents().stateRestoreEnd();
     }
