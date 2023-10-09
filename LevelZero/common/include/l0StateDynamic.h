@@ -336,7 +336,7 @@ public:
   ~CModuleState();
   CModuleState(ze_context_handle_t hContext,
                ze_device_handle_t hDevice,
-               ze_module_desc_t desc,
+               const ze_module_desc_t* desc,
                ze_module_build_log_handle_t hBuildLog);
   void AddModuleLinks(const uint32_t& numModules, const ze_module_handle_t* phModules);
   bool IsModuleLinkUsed() const;

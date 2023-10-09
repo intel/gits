@@ -481,7 +481,7 @@ inline void zeModuleCreate_SD(ze_result_t return_value,
                               ze_module_build_log_handle_t* phBuildLog) {
   if (return_value == ZE_RESULT_SUCCESS && phModule != nullptr && desc != nullptr) {
     auto& moduleState = SD().Map<CModuleState>()[*phModule];
-    moduleState = std::make_unique<CModuleState>(hContext, hDevice, *desc,
+    moduleState = std::make_unique<CModuleState>(hContext, hDevice, desc,
                                                  phBuildLog != nullptr ? *phBuildLog : nullptr);
   }
 }

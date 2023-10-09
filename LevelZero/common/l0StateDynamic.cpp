@@ -237,15 +237,18 @@ CDeviceState::CDeviceState(ze_device_handle_t hDevice) : hDevice(hDevice) {}
 
 CModuleState::CModuleState(ze_context_handle_t hContext,
                            ze_device_handle_t hDevice,
-                           ze_module_desc_t descriptor,
+                           const ze_module_desc_t* descriptor,
                            ze_module_build_log_handle_t hBuildLog)
-    : hContext(hContext), hDevice(hDevice), desc(descriptor), hBuildLog(hBuildLog) {
+    : hContext(hContext), hDevice(hDevice), desc(*descriptor), hBuildLog(hBuildLog) {
   desc.pInputModule = new uint8_t[desc.inputSize + 1];
-  std::memcpy((void*)desc.pInputModule, descriptor.pInputModule, desc.inputSize);
-  if (descriptor.pBuildFlags != nullptr) {
-    const auto buildFlagsSize = std::strlen(descriptor.pBuildFlags) + 1;
+  std::memcpy((void*)desc.pInputModule, descriptor->pInputModule, desc.inputSize);
+  if (descriptor->pBuildFlags != nullptr) {
+    const auto buildFlagsSize = std::strlen(descriptor->pBuildFlags) + 1;
     desc.pBuildFlags = new char[buildFlagsSize];
-    std::memcpy((void*)desc.pBuildFlags, descriptor.pBuildFlags, buildFlagsSize);
+    std::memcpy((void*)desc.pBuildFlags, descriptor->pBuildFlags, buildFlagsSize);
+  }
+  if (descriptor->pConstants != nullptr && descriptor->pConstants->numConstants == 0) {
+    desc.pConstants = nullptr;
   }
 #ifdef WITH_OCLOC
   const uint64_t hash = ComputeHash(desc.pInputModule, desc.inputSize, THashType::XX);
