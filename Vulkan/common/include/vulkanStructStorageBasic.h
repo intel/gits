@@ -420,40 +420,39 @@ typedef CSimpleData<void*> CvoidPtrData;
 //typedef CSimpleData<const void*> CVkGenericArgumentData; //TODO
 
 class CcharDataArray : gits::noncopyable {
-  std::string* stringData;
+  std::unique_ptr<std::string> stringData;
   const char* outData;
   CboolData _isNullPtr;
 
 public:
   CcharDataArray(const char* srcData) : _isNullPtr(srcData == 0) {
     if (!*_isNullPtr) {
-      stringData = new std::string(srcData);
+      stringData = std::make_unique<std::string>(srcData);
     } else {
       stringData = nullptr;
     }
   }
   CcharDataArray(const char** srcData) : _isNullPtr(srcData == 0) {
     if (!*_isNullPtr) {
-      stringData = new std::string(*srcData);
+      stringData = std::make_unique<std::string>(*srcData);
     } else {
       stringData = nullptr;
     }
   }
   CcharDataArray(const char* srcData, char terminator, int term_pos) : _isNullPtr(srcData == 0) {
     if (!*_isNullPtr) {
-      stringData = new std::string(srcData);
+      stringData = std::make_unique<std::string>(srcData);
     } else {
       stringData = nullptr;
     }
   }
   CcharDataArray(size_t num, const char* srcData) : _isNullPtr(srcData == 0) {
     if (!*_isNullPtr) {
-      stringData = new std::string(srcData);
+      stringData = std::make_unique<std::string>(srcData);
     } else {
       stringData = nullptr;
     }
   }
-  ~CcharDataArray();
   const char* Value() {
     if (*_isNullPtr) {
       return 0;
@@ -547,10 +546,9 @@ public:
 
 typedef CSimpleData<VkStructureType> CVkStructureTypeData;
 class CVkGenericArgumentData : gits::noncopyable {
-  CBaseDataStruct* _argument;
+  std::unique_ptr<CBaseDataStruct> _argument;
 
 public:
-  ~CVkGenericArgumentData();
   CVkGenericArgumentData(const void* vkgenericargumentdata);
 
   const void* Value();
@@ -812,14 +810,13 @@ public:
 };
 
 class CVkClearColorValueData : public CBaseDataStruct, gits::noncopyable {
-  Cuint32_tDataArray* _uint32;
+  std::unique_ptr<Cuint32_tDataArray> _uint32;
 
-  VkClearColorValue* _ClearColorValue;
+  std::unique_ptr<VkClearColorValue> _ClearColorValue;
   CboolData _isNullPtr;
 
 public:
   CVkClearColorValueData(const VkClearColorValue* clearcolorvalue);
-  ~CVkClearColorValueData();
   VkClearColorValue* Value();
 
   PtrConverter<VkClearColorValue> operator*() {
@@ -831,14 +828,13 @@ public:
 };
 typedef CDataArray<VkClearColorValue, CVkClearColorValueData> CVkClearColorValueDataArray;
 class CVkClearValueData : public CBaseDataStruct, gits::noncopyable {
-  CVkClearColorValueData* _color;
+  std::unique_ptr<CVkClearColorValueData> _color;
 
-  VkClearValue* _ClearValue;
+  std::unique_ptr<VkClearValue> _ClearValue;
   CboolData _isNullPtr;
 
 public:
   CVkClearValueData(const VkClearValue* clearvalue);
-  ~CVkClearValueData();
   VkClearValue* Value();
 
   PtrConverter<VkClearValue> operator*() {

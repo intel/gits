@@ -18,10 +18,6 @@ gits::Vulkan::CBinaryResourceData::PointerProxy gits::Vulkan::CBinaryResourceDat
   return PointerProxy(_data.data(), _data.size());
 }
 
-gits::Vulkan::CVkGenericArgumentData::~CVkGenericArgumentData() {
-  delete _argument;
-}
-
 gits::Vulkan::CVkGenericArgumentData::CVkGenericArgumentData(const void* vkgenericargumentdata)
     : _argument(nullptr) {
   vkgenericargumentdata = ignoreLoaderSpecificStructureTypes(vkgenericargumentdata);
@@ -31,7 +27,7 @@ gits::Vulkan::CVkGenericArgumentData::CVkGenericArgumentData(const void* vkgener
 
 #define PNEXT_WRAPPER(STRUCTURE_TYPE, structure, ...)                                              \
   case STRUCTURE_TYPE:                                                                             \
-    _argument = new C##structure##Data((structure*)vkgenericargumentdata);                         \
+    _argument = std::make_unique<C##structure##Data>((structure*)vkgenericargumentdata);           \
     break;
 
 #include "vulkanPNextWrappers.inl"
@@ -61,21 +57,18 @@ gits::Vulkan::CVkClearColorValueData::CVkClearColorValueData(
     const VkClearColorValue* clearcolorvalue)
     : _ClearColorValue(nullptr), _isNullPtr(clearcolorvalue == nullptr) {
   if (!*_isNullPtr) {
-    _uint32 = new Cuint32_tDataArray(4, clearcolorvalue->uint32);
+    _uint32 = std::make_unique<Cuint32_tDataArray>(4, clearcolorvalue->uint32);
   } else {
     _uint32 = nullptr;
   }
 }
-gits::Vulkan::CVkClearColorValueData::~CVkClearColorValueData() {
-  delete _uint32;
-  delete _ClearColorValue;
-}
+
 VkClearColorValue* gits::Vulkan::CVkClearColorValueData::Value() {
   if (*_isNullPtr) {
     return nullptr;
   }
   if (_ClearColorValue == nullptr) {
-    _ClearColorValue = new VkClearColorValue;
+    _ClearColorValue = std::make_unique<VkClearColorValue>();
     auto uint32Values = **_uint32;
     if (uint32Values != nullptr) {
       for (int i = 0; i < 4; i++) {
@@ -86,30 +79,27 @@ VkClearColorValue* gits::Vulkan::CVkClearColorValueData::Value() {
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
   }
-  return _ClearColorValue;
+  return _ClearColorValue.get();
 }
 
 gits::Vulkan::CVkClearValueData::CVkClearValueData(const VkClearValue* clearvalue)
     : _ClearValue(nullptr), _isNullPtr(clearvalue == nullptr) {
   if (!*_isNullPtr) {
-    _color = new CVkClearColorValueData(&clearvalue->color);
+    _color = std::make_unique<CVkClearColorValueData>(&clearvalue->color);
   } else {
     _color = nullptr;
   }
 }
-gits::Vulkan::CVkClearValueData::~CVkClearValueData() {
-  delete _color;
-  delete _ClearValue;
-}
+
 VkClearValue* gits::Vulkan::CVkClearValueData::Value() {
   if (*_isNullPtr) {
     return nullptr;
   }
   if (_ClearValue == nullptr) {
-    _ClearValue = new VkClearValue;
+    _ClearValue = std::make_unique<VkClearValue>();
     _ClearValue->color = **_color;
   }
-  return _ClearValue;
+  return _ClearValue.get();
 }
 
 gits::Vulkan::CBufferDeviceAddressObjectData::CBufferDeviceAddressObjectData(
@@ -651,8 +641,4 @@ std::set<uint64_t> gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKH
   default:
     return {};
   }
-}
-
-gits::Vulkan::CcharDataArray::~CcharDataArray() {
-  delete stringData;
 }

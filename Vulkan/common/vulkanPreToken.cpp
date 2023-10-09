@@ -79,15 +79,6 @@ gits::Vulkan::CGitsVkMemoryUpdate::CGitsVkMemoryUpdate()
       _length(new Cuint64_t()),
       _resource(new CDeclaredBinaryResource()) {}
 
-gits::Vulkan::CGitsVkMemoryUpdate::~CGitsVkMemoryUpdate() {
-  delete _device;
-  delete _mem;
-  delete _offset;
-  if (**_length != 0) {
-    delete _resource;
-  }
-  delete _length;
-}
 void gits::Vulkan::CGitsVkMemoryUpdate::GetDiffSubRange(const std::vector<char>& oldData,
                                                         const std::vector<char>& newRangeData,
                                                         std::uint64_t& length,
@@ -118,7 +109,7 @@ void gits::Vulkan::CGitsVkMemoryUpdate::GetDiffSubRange(const std::vector<char>&
 gits::Vulkan::CGitsVkMemoryUpdate::CGitsVkMemoryUpdate(VkDevice device,
                                                        VkDeviceMemory mem,
                                                        bool unmap)
-    : _device(new CVkDevice(device)), _mem(new CVkDeviceMemory(mem)) {
+    : _device(std::make_unique<CVkDevice>(device)), _mem(std::make_unique<CVkDeviceMemory>(mem)) {
 
   auto& memoryState = SD()._devicememorystates[mem];
   if (device == memoryState->deviceStateStore->deviceHandle) {
@@ -146,9 +137,9 @@ gits::Vulkan::CGitsVkMemoryUpdate::CGitsVkMemoryUpdate(VkDevice device,
       unmapSize = subRange.second;
 
       if (unmapSize == 0) {
-        _offset = new Cuint64_t(0);
-        _length = new Cuint64_t(0);
-        _resource = new CDeclaredBinaryResource();
+        _offset = std::make_unique<Cuint64_t>(0);
+        _length = std::make_unique<Cuint64_t>(0);
+        _resource = std::make_unique<CDeclaredBinaryResource>();
         return;
       }
     }
@@ -160,26 +151,26 @@ gits::Vulkan::CGitsVkMemoryUpdate::CGitsVkMemoryUpdate(VkDevice device,
       std::uint64_t lengthNew = unmapSize;
       std::uint64_t offsetNew = offset;
       GetDiffSubRange(memoryState->mapping->compareData, mappedMemCopy, lengthNew, offsetNew);
-      _offset = new Cuint64_t(offset + offsetNew);
-      _length = new Cuint64_t(lengthNew);
+      _offset = std::make_unique<Cuint64_t>(offset + offsetNew);
+      _length = std::make_unique<Cuint64_t>(lengthNew);
 
       if (lengthNew > 0) {
         memcpy(&memoryState->mapping->compareData[(size_t) * *_offset],
                &mappedMemCopy[(size_t)offsetNew], (size_t)lengthNew);
-        _resource = new CDeclaredBinaryResource(
+        _resource = std::make_unique<CDeclaredBinaryResource>(
             RESOURCE_DATA_RAW, &mappedMemCopy[(size_t)offsetNew], (size_t) * *_length);
       } else {
-        _resource = new CDeclaredBinaryResource();
+        _resource = std::make_unique<CDeclaredBinaryResource>();
       }
 
     } else {
-      _offset = new Cuint64_t(offset);
-      _length = new Cuint64_t(unmapSize);
+      _offset = std::make_unique<Cuint64_t>(offset);
+      _length = std::make_unique<Cuint64_t>(unmapSize);
       if (**_length != 0) {
-        _resource = new CDeclaredBinaryResource(RESOURCE_DATA_RAW, (char*)pointer + **_offset,
-                                                (size_t) * *_length);
+        _resource = std::make_unique<CDeclaredBinaryResource>(
+            RESOURCE_DATA_RAW, (char*)pointer + **_offset, (size_t) * *_length);
       } else {
-        _resource = new CDeclaredBinaryResource();
+        _resource = std::make_unique<CDeclaredBinaryResource>();
       }
     }
     if (Config::Get().recorder.vulkan.utilities.shadowMemory) {
@@ -237,21 +228,13 @@ gits::CArgument& gits::Vulkan::CGitsVkMemoryUpdate2::Argument(unsigned idx) {
 }
 
 gits::Vulkan::CGitsVkMemoryUpdate2::CGitsVkMemoryUpdate2()
-    : _mem(new CVkDeviceMemory()),
-      _size(new Cuint64_t()),
-      _offset(std::vector<Cuint64_t*>()),
-      _length(std::vector<Cuint64_t*>()),
-      _resource(std::vector<CDeclaredBinaryResource*>()) {}
-
-gits::Vulkan::CGitsVkMemoryUpdate2::~CGitsVkMemoryUpdate2() {
-  delete _mem;
-  delete _size;
-}
+    : _mem(std::make_unique<CVkDeviceMemory>()), _size(std::make_unique<Cuint64_t>()) {}
 
 gits::Vulkan::CGitsVkMemoryUpdate2::CGitsVkMemoryUpdate2(VkDeviceMemory memory,
                                                          uint32_t regionCount,
                                                          const VkBufferCopy* pRegions)
-    : _mem(new CVkDeviceMemory(memory)), _size(new Cuint64_t(regionCount)) {
+    : _mem(std::make_unique<CVkDeviceMemory>(memory)),
+      _size(std::make_unique<Cuint64_t>(regionCount)) {
 
   auto& memoryState = SD()._devicememorystates[memory];
   void* pointer = (char*)memoryState->mapping->ppDataData.Value();
@@ -262,8 +245,8 @@ gits::Vulkan::CGitsVkMemoryUpdate2::CGitsVkMemoryUpdate2(VkDeviceMemory memory,
     char* pointerToData = (char*)pointer + offset;
     std::vector<char> mappedMemCopy;
 
-    _offset.push_back(new Cuint64_t(offset));
-    _length.push_back(new Cuint64_t(length));
+    _offset.push_back(std::make_shared<Cuint64_t>(offset));
+    _length.push_back(std::make_shared<Cuint64_t>(length));
     if (!Config::Get().recorder.vulkan.utilities.useExternalMemoryExtension &&
         !Config::Get().recorder.vulkan.utilities.shadowMemory) {
       // Operations on non-shadow memory are slow, so we operate on a copy.
@@ -271,7 +254,8 @@ gits::Vulkan::CGitsVkMemoryUpdate2::CGitsVkMemoryUpdate2(VkDeviceMemory memory,
       memcpy(mappedMemCopy.data(), pointerToData, length);
       pointerToData = mappedMemCopy.data();
     }
-    _resource.push_back(new CDeclaredBinaryResource(RESOURCE_DATA_RAW, pointerToData, length));
+    _resource.push_back(
+        std::make_shared<CDeclaredBinaryResource>(RESOURCE_DATA_RAW, pointerToData, length));
 
     if (Config::Get().recorder.vulkan.utilities.shadowMemory) {
       size_t offset_flush = offset;
@@ -332,18 +316,18 @@ void gits::Vulkan::CGitsVkMemoryUpdate2::Read(CBinIStream& stream) {
   _mem->Read(stream);
   _size->Read(stream);
   for (uint64_t i = 0; i < **_size; i++) {
-    Cuint64_t* offsetPtr(new Cuint64_t());
+    auto offsetPtr(std::make_shared<Cuint64_t>());
     offsetPtr->Read(stream);
     _offset.push_back(offsetPtr);
   }
   for (uint64_t i = 0; i < **_size; i++) {
-    Cuint64_t* lengthPtr(new Cuint64_t());
+    auto lengthPtr(std::make_shared<Cuint64_t>());
     lengthPtr->Read(stream);
     _length.push_back(lengthPtr);
   }
 
   for (uint64_t i = 0; i < **_size; i++) {
-    CDeclaredBinaryResource* binaryPtr(new CDeclaredBinaryResource());
+    auto binaryPtr(std::make_shared<CDeclaredBinaryResource>());
     binaryPtr->Read(stream);
     _resource.push_back(binaryPtr);
   }
@@ -414,26 +398,16 @@ gits::CArgument& gits::Vulkan::CGitsVkMemoryRestore::Argument(unsigned idx) {
 }
 
 gits::Vulkan::CGitsVkMemoryRestore::CGitsVkMemoryRestore()
-    : _device(new CVkDevice()),
-      _mem(new CVkDeviceMemory()),
-      _length(new Cuint64_t()),
-      _offset(new Cuint64_t()),
-      _resource(new CDeclaredBinaryResource()) {}
-
-gits::Vulkan::CGitsVkMemoryRestore::~CGitsVkMemoryRestore() {
-  delete _device;
-  delete _mem;
-  delete _offset;
-  if (**_length != 0) {
-    delete _resource;
-  }
-  delete _length;
-}
+    : _device(std::make_unique<CVkDevice>()),
+      _mem(std::make_unique<CVkDeviceMemory>()),
+      _length(std::make_unique<Cuint64_t>()),
+      _offset(std::make_unique<Cuint64_t>()),
+      _resource(std::make_unique<CDeclaredBinaryResource>()) {}
 
 gits::Vulkan::CGitsVkMemoryRestore::CGitsVkMemoryRestore(VkDevice device,
                                                          VkDeviceMemory mem,
                                                          std::uint64_t size)
-    : _device(new CVkDevice(device)), _mem(new CVkDeviceMemory(mem)) {
+    : _device(std::make_unique<CVkDevice>(device)), _mem(std::make_unique<CVkDeviceMemory>(mem)) {
   assert((size > 0) && "Restoring empty memory!\n");
 
   auto& memoryState = SD()._devicememorystates[mem];
@@ -465,17 +439,17 @@ gits::Vulkan::CGitsVkMemoryRestore::CGitsVkMemoryRestore(VkDevice device,
   std::uint64_t offsetNew = 0;
   std::uint64_t lengthNew = size;
   GetDiffFromZero(rangeCopy, lengthNew, offsetNew);
-  _offset = new Cuint64_t(offsetNew);
-  _length = new Cuint64_t(lengthNew);
+  _offset = std::make_unique<Cuint64_t>(offsetNew);
+  _length = std::make_unique<Cuint64_t>(lengthNew);
   if (lengthNew > 0) {
     if (Config::Get().recorder.vulkan.utilities.memorySegmentSize && memoryState->IsMapped()) {
       memcpy(memoryState->mapping->compareData.data(), memoryState->mapping->ppDataData.Value(),
              (size_t)memoryState->mapping->sizeData.Value());
     }
-    _resource = new CDeclaredBinaryResource(RESOURCE_DATA_RAW, &rangeCopy[(size_t)offsetNew],
-                                            (size_t)lengthNew);
+    _resource = std::make_unique<CDeclaredBinaryResource>(
+        RESOURCE_DATA_RAW, &rangeCopy[(size_t)offsetNew], (size_t)lengthNew);
   } else {
-    _resource = new CDeclaredBinaryResource();
+    _resource = std::make_unique<CDeclaredBinaryResource>();
   }
 
   if (Config::Get().recorder.vulkan.utilities.shadowMemory && memoryState->IsMapped()) {
@@ -491,7 +465,7 @@ gits::Vulkan::CGitsVkMemoryRestore::CGitsVkMemoryRestore(VkDevice device,
                                                          VkDeviceMemory mem,
                                                          std::uint64_t size,
                                                          void* mappedPtr)
-    : _device(new CVkDevice(device)), _mem(new CVkDeviceMemory(mem)) {
+    : _device(std::make_unique<CVkDevice>(device)), _mem(std::make_unique<CVkDeviceMemory>(mem)) {
   assert((mappedPtr != nullptr) && "Trying to copy memory contents from nullptr!\n");
 
   std::vector<char> rangeCopy(size);
@@ -499,13 +473,13 @@ gits::Vulkan::CGitsVkMemoryRestore::CGitsVkMemoryRestore(VkDevice device,
   std::uint64_t offsetNew = 0;
   std::uint64_t lengthNew = size;
   GetDiffFromZero(rangeCopy, lengthNew, offsetNew);
-  _offset = new Cuint64_t(offsetNew);
-  _length = new Cuint64_t(lengthNew);
+  _offset = std::make_unique<Cuint64_t>(offsetNew);
+  _length = std::make_unique<Cuint64_t>(lengthNew);
   if (lengthNew > 0) {
-    _resource = new CDeclaredBinaryResource(RESOURCE_DATA_RAW, &rangeCopy[(size_t)offsetNew],
-                                            (size_t)lengthNew);
+    _resource = std::make_unique<CDeclaredBinaryResource>(
+        RESOURCE_DATA_RAW, &rangeCopy[(size_t)offsetNew], (size_t)lengthNew);
   } else {
-    _resource = new CDeclaredBinaryResource();
+    _resource = std::make_unique<CDeclaredBinaryResource>();
   }
 }
 
@@ -579,21 +553,17 @@ gits::CArgument& gits::Vulkan::CGitsVkMemoryReset::Argument(unsigned idx) {
 }
 
 gits::Vulkan::CGitsVkMemoryReset::CGitsVkMemoryReset()
-    : _device(new CVkDevice()), _mem(new CVkDeviceMemory()), _length(new Cuint64_t()) {}
-
-gits::Vulkan::CGitsVkMemoryReset::~CGitsVkMemoryReset() {
-  delete _device;
-  delete _mem;
-  delete _length;
-}
+    : _device(std::make_unique<CVkDevice>()),
+      _mem(std::make_unique<CVkDeviceMemory>()),
+      _length(std::make_unique<Cuint64_t>()) {}
 
 gits::Vulkan::CGitsVkMemoryReset::CGitsVkMemoryReset(VkDevice device,
                                                      VkDeviceMemory memory,
                                                      std::uint64_t size,
                                                      void* mappedPtr)
-    : _device(new CVkDevice(device)),
-      _mem(new CVkDeviceMemory(memory)),
-      _length(new Cuint64_t(size)) {
+    : _device(std::make_unique<CVkDevice>(device)),
+      _mem(std::make_unique<CVkDeviceMemory>(memory)),
+      _length(std::make_unique<Cuint64_t>(size)) {
   VkBufferCopy updatedRegion = {
       0,   // VkDeviceSize srcOffset;
       0,   // VkDeviceSize dstOffset;
@@ -689,19 +659,14 @@ gits::CArgument& gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::Argument(unsigned
 }
 
 gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::CGitsVkCmdPatchDeviceAddresses()
-    : _count(new Cuint32_t()),
-      _commandBuffer(new CVkCommandBuffer()),
-      _resource(new CDeclaredBinaryResource()) {}
-
-gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::~CGitsVkCmdPatchDeviceAddresses() {
-  delete _count;
-  delete _commandBuffer;
-  delete _resource;
-}
+    : _count(std::make_unique<Cuint32_t>()),
+      _commandBuffer(std::make_unique<CVkCommandBuffer>()),
+      _resource(std::make_unique<CDeclaredBinaryResource>()) {}
 
 gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::CGitsVkCmdPatchDeviceAddresses(
     VkCommandBuffer commandBuffer, CDeviceAddressPatcher& patcher)
-    : _count(new Cuint32_t(patcher.Count())), _commandBuffer(new CVkCommandBuffer(commandBuffer)) {
+    : _count(std::make_unique<Cuint32_t>(patcher.Count())),
+      _commandBuffer(std::make_unique<CVkCommandBuffer>(commandBuffer)) {
   // Any data uniquely identifying this very acceleration structure build command.
   // It is used only to generate a hash key.
   // This key is used later in a post-vkQueueSubmit() operation to store data.
@@ -716,7 +681,7 @@ gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::CGitsVkCmdPatchDeviceAddresses(
   hash_t hash = CGits::Instance().ResourceManager().getHash(RESOURCE_DATA_RAW, &hashGenerator,
                                                             sizeof(hashGenerator));
 
-  _resource = new CDeclaredBinaryResource(hash);
+  _resource = std::make_unique<CDeclaredBinaryResource>(hash);
   patcher.PrepareData(commandBuffer, hash);
 }
 
@@ -2203,17 +2168,17 @@ gits::CArgument& gits::Vulkan::CGitsVkStateRestoreInfo::Argument(unsigned idx) {
 }
 
 gits::Vulkan::CGitsVkStateRestoreInfo::CGitsVkStateRestoreInfo()
-    : _phaseInfo(new Cchar::CSArray()), _timerIndex(-1), _timerOn(false) {}
-
-gits::Vulkan::CGitsVkStateRestoreInfo::~CGitsVkStateRestoreInfo() {
-  delete _phaseInfo;
-}
+    : _phaseInfo(std::make_unique<Cchar::CSArray>()), _timerIndex(-1), _timerOn(false) {}
 
 gits::Vulkan::CGitsVkStateRestoreInfo::CGitsVkStateRestoreInfo(const char* phaseInfo)
-    : _phaseInfo(new Cchar::CSArray(phaseInfo, '\0', 1)), _timerIndex(-1), _timerOn(false) {}
+    : _phaseInfo(std::make_unique<Cchar::CSArray>(phaseInfo, '\0', 1)),
+      _timerIndex(-1),
+      _timerOn(false) {}
 
 gits::Vulkan::CGitsVkStateRestoreInfo::CGitsVkStateRestoreInfo(const char* phaseInfo, int index)
-    : _phaseInfo(new Cchar::CSArray(phaseInfo, '\0', 1)), _timerIndex(index), _timerOn(true) {}
+    : _phaseInfo(std::make_unique<Cchar::CSArray>(phaseInfo, '\0', 1)),
+      _timerIndex(index),
+      _timerOn(true) {}
 
 void gits::Vulkan::CGitsVkStateRestoreInfo::Run() {
   if (Config::Get().player.printStateRestoreLogsVk) {

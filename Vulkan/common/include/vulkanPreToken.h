@@ -441,11 +441,11 @@ public:
 
 class CGitsVkMemoryUpdate : public CFunction, gits::noncopyable {
   static const unsigned ARG_NUM = 5;
-  CVkDevice* _device;
-  CVkDeviceMemory* _mem;
-  Cuint64_t* _offset;
-  Cuint64_t* _length;
-  CDeclaredBinaryResource* _resource;
+  std::unique_ptr<CVkDevice> _device;
+  std::unique_ptr<CVkDeviceMemory> _mem;
+  std::unique_ptr<Cuint64_t> _offset;
+  std::unique_ptr<Cuint64_t> _length;
+  std::unique_ptr<CDeclaredBinaryResource> _resource;
 
   virtual CArgument& Argument(unsigned idx);
   virtual unsigned ArgumentCount() const {
@@ -456,7 +456,6 @@ class CGitsVkMemoryUpdate : public CFunction, gits::noncopyable {
 
 public:
   CGitsVkMemoryUpdate();
-  ~CGitsVkMemoryUpdate();
   CGitsVkMemoryUpdate(VkDevice device, VkDeviceMemory mem, bool unmap = false);
   virtual void GetDiffSubRange(const std::vector<char>& oldData,
                                const std::vector<char>& newRangeData,
@@ -486,10 +485,10 @@ public:
 
 template <class T_WRAP>
 class CVectorPrintHelper {
-  const std::vector<T_WRAP*>& vec_;
+  const std::vector<std::shared_ptr<T_WRAP>>& vec_;
 
 public:
-  CVectorPrintHelper(const std::vector<T_WRAP*>& vec) : vec_(vec) {}
+  CVectorPrintHelper(const std::vector<std::shared_ptr<T_WRAP>>& vec) : vec_(vec) {}
   intptr_t ScopeKey() const {
     return reinterpret_cast<intptr_t>(this);
   }
@@ -502,11 +501,11 @@ public:
 
 class CGitsVkMemoryUpdate2 : public CFunction, gits::noncopyable {
   static const unsigned ARG_NUM = 5;
-  CVkDeviceMemory* _mem;
-  Cuint64_t* _size;
-  std::vector<Cuint64_t*> _offset;
-  std::vector<Cuint64_t*> _length;
-  std::vector<CDeclaredBinaryResource*> _resource;
+  std::unique_ptr<CVkDeviceMemory> _mem;
+  std::unique_ptr<Cuint64_t> _size;
+  std::vector<std::shared_ptr<Cuint64_t>> _offset;
+  std::vector<std::shared_ptr<Cuint64_t>> _length;
+  std::vector<std::shared_ptr<CDeclaredBinaryResource>> _resource;
 
   virtual CArgument& Argument(unsigned idx) override;
   virtual unsigned ArgumentCount() const override {
@@ -517,7 +516,6 @@ class CGitsVkMemoryUpdate2 : public CFunction, gits::noncopyable {
 
 public:
   CGitsVkMemoryUpdate2();
-  ~CGitsVkMemoryUpdate2();
   CGitsVkMemoryUpdate2(VkDeviceMemory memory, uint32_t regionCount, const VkBufferCopy* pRegions);
 
   virtual unsigned Id() const override {
@@ -541,11 +539,11 @@ public:
 
 class CGitsVkMemoryRestore : public CFunction, gits::noncopyable {
   static const unsigned ARG_NUM = 5;
-  CVkDevice* _device;
-  CVkDeviceMemory* _mem;
-  Cuint64_t* _length;
-  Cuint64_t* _offset;
-  CDeclaredBinaryResource* _resource;
+  std::unique_ptr<CVkDevice> _device;
+  std::unique_ptr<CVkDeviceMemory> _mem;
+  std::unique_ptr<Cuint64_t> _length;
+  std::unique_ptr<Cuint64_t> _offset;
+  std::unique_ptr<CDeclaredBinaryResource> _resource;
 
   virtual CArgument& Argument(unsigned idx);
   virtual unsigned ArgumentCount() const {
@@ -556,7 +554,6 @@ class CGitsVkMemoryRestore : public CFunction, gits::noncopyable {
 
 public:
   CGitsVkMemoryRestore();
-  ~CGitsVkMemoryRestore();
   CGitsVkMemoryRestore(VkDevice device, VkDeviceMemory mem, std::uint64_t size);
   CGitsVkMemoryRestore(VkDevice device, VkDeviceMemory mem, std::uint64_t size, void* mappedPtr);
   virtual void GetDiffFromZero(const std::vector<char>& oldData,
@@ -586,9 +583,9 @@ public:
 
 class CGitsVkMemoryReset : public CFunction, gits::noncopyable {
   static const unsigned ARG_NUM = 3;
-  CVkDevice* _device;
-  CVkDeviceMemory* _mem;
-  Cuint64_t* _length;
+  std::unique_ptr<CVkDevice> _device;
+  std::unique_ptr<CVkDeviceMemory> _mem;
+  std::unique_ptr<Cuint64_t> _length;
 
   virtual CArgument& Argument(unsigned idx);
   virtual unsigned ArgumentCount() const {
@@ -599,7 +596,6 @@ class CGitsVkMemoryReset : public CFunction, gits::noncopyable {
 
 public:
   CGitsVkMemoryReset();
-  ~CGitsVkMemoryReset();
   CGitsVkMemoryReset(VkDevice device, VkDeviceMemory mem, std::uint64_t size, void* mappedPtr);
 
   virtual unsigned Id() const {
@@ -626,9 +622,10 @@ public:
 
 class CGitsVkCmdPatchDeviceAddresses : public CFunction {
   static const unsigned ARG_NUM = 3;
-  Cuint32_t* _count;
-  CVkCommandBuffer* _commandBuffer;
-  CDeclaredBinaryResource* _resource; // An array of VkBufferDeviceAddressPatchGITS structures
+  std::unique_ptr<Cuint32_t> _count;
+  std::unique_ptr<CVkCommandBuffer> _commandBuffer;
+  std::unique_ptr<CDeclaredBinaryResource>
+      _resource; // An array of VkBufferDeviceAddressPatchGITS structures
 
   virtual CArgument& Argument(unsigned idx);
   virtual unsigned ArgumentCount() const {
@@ -639,7 +636,6 @@ class CGitsVkCmdPatchDeviceAddresses : public CFunction {
 
 public:
   CGitsVkCmdPatchDeviceAddresses();
-  ~CGitsVkCmdPatchDeviceAddresses();
   CGitsVkCmdPatchDeviceAddresses(VkCommandBuffer commandBuffer, CDeviceAddressPatcher& patcher);
 
   virtual unsigned Id() const {
@@ -1025,7 +1021,7 @@ public:
 
 class CGitsVkStateRestoreInfo : public CFunction, gits::noncopyable {
   static const unsigned ARG_NUM = 3;
-  Cchar::CSArray* _phaseInfo;
+  std::unique_ptr<Cchar::CSArray> _phaseInfo;
   Cint _timerIndex;
   Cbool _timerOn;
 
@@ -1038,7 +1034,6 @@ class CGitsVkStateRestoreInfo : public CFunction, gits::noncopyable {
 
 public:
   CGitsVkStateRestoreInfo();
-  ~CGitsVkStateRestoreInfo();
   CGitsVkStateRestoreInfo(const char* phaseInfo);
   CGitsVkStateRestoreInfo(const char* phaseInfo, int index);
 

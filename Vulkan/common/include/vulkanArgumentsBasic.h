@@ -525,15 +525,14 @@ public:
 };
 
 class CVkClearColorValue : public CArgument, gits::noncopyable {
-  Cuint32_t::CSArray* _uint32;
+  std::unique_ptr<Cuint32_t::CSArray> _uint32;
 
-  VkClearColorValue* _ClearColorValue;
-  VkClearColorValue* _ClearColorValueOriginal;
+  std::unique_ptr<VkClearColorValue> _ClearColorValue;
+  std::unique_ptr<VkClearColorValue> _ClearColorValueOriginal;
   Cbool _isNullPtr;
 
 public:
   CVkClearColorValue();
-  ~CVkClearColorValue();
   CVkClearColorValue(const VkClearColorValue* clearcolorvalue);
   virtual const char* Name() const {
     return "VkClearColorValue";
@@ -553,15 +552,14 @@ public:
 };
 
 class CVkClearValue : public CArgument, gits::noncopyable {
-  CVkClearColorValue* _color;
+  std::unique_ptr<CVkClearColorValue> _color;
 
-  VkClearValue* _ClearValue;
-  VkClearValue* _ClearValueOriginal;
+  std::unique_ptr<VkClearValue> _ClearValue;
+  std::unique_ptr<VkClearValue> _ClearValueOriginal;
   Cbool _isNullPtr;
 
 public:
   CVkClearValue();
-  ~CVkClearValue();
   CVkClearValue(const VkClearValue* clearvalue);
   static const char* NAME;
   virtual const char* Name() const {
@@ -586,14 +584,13 @@ public:
 
 typedef CVulkanEnum<VkStructureType> CVkStructureType;
 class CVkGenericArgument : public CArgument, gits::noncopyable {
-  CVkStructureType* _sType;
-  CArgument* _argument;
-  Cbool* _skipped;
+  std::unique_ptr<CVkStructureType> _sType;
+  std::unique_ptr<CArgument> _argument;
+  std::unique_ptr<Cbool> _skipped;
   Cbool _isNullPtr;
 
 public:
   CVkGenericArgument();
-  ~CVkGenericArgument();
   CVkGenericArgument(const void* vkgenericargument);
   void InitArgument(uint32_t type);
   void CreateArgument(uint32_t type, const void* vkgenericargument);
@@ -864,12 +861,11 @@ public:
 
 class CpNextWrapper : public CArgument, gits::noncopyable {
   std::uint64_t _ptr;
-  CVkGenericArgument* _data;
+  std::unique_ptr<CVkGenericArgument> _data;
 
 public:
   CpNextWrapper() : _ptr(0), _data(nullptr) {}
   CpNextWrapper(const void* ptr);
-  ~CpNextWrapper();
 
   struct PtrConverter {
   private:
@@ -911,7 +907,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _ptr);
     if (_ptr) {
-      _data = new CVkGenericArgument();
+      _data = std::make_unique<CVkGenericArgument>();
       _data->Read(stream);
     }
   }
@@ -933,19 +929,20 @@ typedef CVulkanEnum<VkDescriptorType> CVkDescriptorType;
 
 class CDescriptorUpdateTemplateObject : public CArgument, gits::noncopyable {
 private:
-  CArgument* _argument;
-  CVkDescriptorType* _descType;
-  Cuint64_t* _offset;
-  Cuint64_t* _size;
+  std::unique_ptr<CArgument> _argument;
+  std::unique_ptr<CVkDescriptorType> _descType;
+  std::unique_ptr<Cuint64_t> _offset;
+  std::unique_ptr<Cuint64_t> _size;
   std::vector<char> _data;
 
 public:
   CDescriptorUpdateTemplateObject()
-      : _descType(new CVkDescriptorType()), _offset(new Cuint64_t), _size(new Cuint64_t()) {}
+      : _descType(std::make_unique<CVkDescriptorType>()),
+        _offset(std::make_unique<Cuint64_t>()),
+        _size(std::make_unique<Cuint64_t>()) {}
   CDescriptorUpdateTemplateObject(VkDescriptorType descType,
                                   const void* pData,
                                   std::uint64_t offset);
-  ~CDescriptorUpdateTemplateObject();
   const void* Value() {
     _data.clear();
     _data.resize((size_t) * *_size);
@@ -985,13 +982,12 @@ class CUpdateDescriptorSetWithTemplateArray : public CArgument, gits::noncopyabl
 private:
   std::vector<std::shared_ptr<CDescriptorUpdateTemplateObject>> _cgenericargsDict;
   std::vector<char> _data;
-  Cuint64_t* _size;
+  std::unique_ptr<Cuint64_t> _size;
 
 public:
-  CUpdateDescriptorSetWithTemplateArray() : _size(new Cuint64_t()) {}
+  CUpdateDescriptorSetWithTemplateArray() : _size(std::make_unique<Cuint64_t>()) {}
   CUpdateDescriptorSetWithTemplateArray(VkDescriptorUpdateTemplate descriptorUpdateTemplateKHR,
                                         const void* pData);
-  ~CUpdateDescriptorSetWithTemplateArray();
 
   const void* Value();
   const void* operator*() {
@@ -1034,20 +1030,19 @@ public:
 };
 
 class CVkPipelineCacheCreateInfo_V1 : public CArgument, gits::noncopyable {
-  CVkStructureType* _sType;
-  CpNextWrapper* _pNext;
-  Cuint32_t* _flags;
-  Csize_t* _initialDataSize;
-  CDeclaredBinaryResource* _pInitialData;
+  std::unique_ptr<CVkStructureType> _sType;
+  std::unique_ptr<CpNextWrapper> _pNext;
+  std::unique_ptr<Cuint32_t> _flags;
+  std::unique_ptr<Csize_t> _initialDataSize;
+  std::unique_ptr<CDeclaredBinaryResource> _pInitialData;
   std::vector<uint8_t> _initialData;
 
-  VkPipelineCacheCreateInfo* _PipelineCacheCreateInfo;
-  VkPipelineCacheCreateInfo* _PipelineCacheCreateInfoOriginal;
+  std::unique_ptr<VkPipelineCacheCreateInfo> _PipelineCacheCreateInfo;
+  std::unique_ptr<VkPipelineCacheCreateInfo> _PipelineCacheCreateInfoOriginal;
   Cbool _isNullPtr;
 
 public:
   CVkPipelineCacheCreateInfo_V1();
-  ~CVkPipelineCacheCreateInfo_V1();
   CVkPipelineCacheCreateInfo_V1(const VkPipelineCacheCreateInfo* pipelinecachecreateinfo);
   static const char* NAME;
   virtual const char* Name() const override {
@@ -1309,8 +1304,9 @@ class CVkAccelerationStructureGeometryDataKHR : public CArgument {
   std::unique_ptr<CVkAccelerationStructureGeometryAabbsDataKHR> _aabbs;
   std::unique_ptr<CVkAccelerationStructureGeometryInstancesDataKHR> _instances;
 
-  VkAccelerationStructureGeometryDataKHR* _AccelerationStructureGeometryDataKHR;
-  VkAccelerationStructureGeometryDataKHR* _AccelerationStructureGeometryDataKHROriginal;
+  std::unique_ptr<VkAccelerationStructureGeometryDataKHR> _AccelerationStructureGeometryDataKHR;
+  std::unique_ptr<VkAccelerationStructureGeometryDataKHR>
+      _AccelerationStructureGeometryDataKHROriginal;
   Cbool _isNullPtr;
 
 public:
@@ -1363,23 +1359,22 @@ class CVkImageMemoryBarrier2;
 typedef CStructArray<VkImageMemoryBarrier2, CVkImageMemoryBarrier2> CVkImageMemoryBarrier2Array;
 
 class CVkDependencyInfo : public CArgument, gits::noncopyable {
-  CVkStructureType* _sType;
-  CpNextWrapper* _pNext;
-  Cuint32_t* _dependencyFlags;
-  Cuint32_t* _memoryBarrierCount;
-  CVkMemoryBarrier2Array* _pMemoryBarriers;
-  Cuint32_t* _bufferMemoryBarrierCount;
-  CVkBufferMemoryBarrier2Array* _pBufferMemoryBarriers;
-  Cuint32_t* _imageMemoryBarrierCount;
-  CVkImageMemoryBarrier2Array* _pImageMemoryBarriers;
+  std::unique_ptr<CVkStructureType> _sType;
+  std::unique_ptr<CpNextWrapper> _pNext;
+  std::unique_ptr<Cuint32_t> _dependencyFlags;
+  std::unique_ptr<Cuint32_t> _memoryBarrierCount;
+  std::unique_ptr<CVkMemoryBarrier2Array> _pMemoryBarriers;
+  std::unique_ptr<Cuint32_t> _bufferMemoryBarrierCount;
+  std::unique_ptr<CVkBufferMemoryBarrier2Array> _pBufferMemoryBarriers;
+  std::unique_ptr<Cuint32_t> _imageMemoryBarrierCount;
+  std::unique_ptr<CVkImageMemoryBarrier2Array> _pImageMemoryBarriers;
 
-  VkDependencyInfo* _DependencyInfo;
-  VkDependencyInfo* _DependencyInfoOriginal;
+  std::unique_ptr<VkDependencyInfo> _DependencyInfo;
+  std::unique_ptr<VkDependencyInfo> _DependencyInfoOriginal;
   Cbool _isNullPtr;
 
 public:
   CVkDependencyInfo();
-  ~CVkDependencyInfo();
   CVkDependencyInfo(const VkDependencyInfo* dependencyinfo);
   static const char* NAME;
   virtual const char* Name() const override {

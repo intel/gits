@@ -55,23 +55,17 @@ void gits::Vulkan::CDeclaredBinaryResource::Write(CCodeOStream& stream) const {
 }
 
 gits::Vulkan::CVkClearColorValue::CVkClearColorValue()
-    : _uint32(new Cuint32_t::CSArray()),
+    : _uint32(std::make_unique<Cuint32_t::CSArray>()),
       _ClearColorValue(nullptr),
       _ClearColorValueOriginal(nullptr),
       _isNullPtr(false) {}
-
-gits::Vulkan::CVkClearColorValue::~CVkClearColorValue() {
-  delete _uint32;
-  delete _ClearColorValue;
-  delete _ClearColorValueOriginal;
-}
 
 gits::Vulkan::CVkClearColorValue::CVkClearColorValue(const VkClearColorValue* clearcolorvalue)
     : _ClearColorValue(nullptr),
       _ClearColorValueOriginal(nullptr),
       _isNullPtr(clearcolorvalue == nullptr) {
   if (!*_isNullPtr) {
-    _uint32 = new Cuint32_t::CSArray(4, clearcolorvalue->uint32);
+    _uint32 = std::make_unique<Cuint32_t::CSArray>(4, clearcolorvalue->uint32);
   } else {
     _uint32 = nullptr;
   }
@@ -82,7 +76,7 @@ VkClearColorValue* gits::Vulkan::CVkClearColorValue::Value() {
     return nullptr;
   }
   if (_ClearColorValue == nullptr) {
-    _ClearColorValue = new VkClearColorValue;
+    _ClearColorValue = std::make_unique<VkClearColorValue>();
     auto uint32Values = **_uint32;
     if (uint32Values != nullptr) {
       for (int i = 0; i < 4; i++) {
@@ -93,7 +87,7 @@ VkClearColorValue* gits::Vulkan::CVkClearColorValue::Value() {
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
   }
-  return _ClearColorValue;
+  return _ClearColorValue.get();
 }
 
 gits::PtrConverter<VkClearColorValue> gits::Vulkan::CVkClearColorValue::Original() {
@@ -101,7 +95,7 @@ gits::PtrConverter<VkClearColorValue> gits::Vulkan::CVkClearColorValue::Original
     return PtrConverter<VkClearColorValue>(nullptr);
   }
   if (_ClearColorValueOriginal == nullptr) {
-    _ClearColorValueOriginal = new VkClearColorValue;
+    _ClearColorValueOriginal = std::make_unique<VkClearColorValue>();
     auto uint32ValuesOriginal = _uint32->Original();
     if (uint32ValuesOriginal != nullptr) {
       for (int i = 0; i < 4; i++) {
@@ -112,7 +106,7 @@ gits::PtrConverter<VkClearColorValue> gits::Vulkan::CVkClearColorValue::Original
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
   }
-  return PtrConverter<VkClearColorValue>(_ClearColorValueOriginal);
+  return PtrConverter<VkClearColorValue>(_ClearColorValueOriginal.get());
 }
 
 void gits::Vulkan::CVkClearColorValue::Write(CBinOStream& stream) const {
@@ -162,21 +156,15 @@ bool gits::Vulkan::CVkClearColorValue::DeclarationNeeded() const {
 }
 
 gits::Vulkan::CVkClearValue::CVkClearValue()
-    : _color(new CVkClearColorValue()),
+    : _color(std::make_unique<CVkClearColorValue>()),
       _ClearValue(nullptr),
       _ClearValueOriginal(nullptr),
       _isNullPtr(false) {}
 
-gits::Vulkan::CVkClearValue::~CVkClearValue() {
-  delete _color;
-  delete _ClearValue;
-  delete _ClearValueOriginal;
-}
-
 gits::Vulkan::CVkClearValue::CVkClearValue(const VkClearValue* clearvalue)
     : _ClearValue(nullptr), _ClearValueOriginal(nullptr), _isNullPtr(clearvalue == nullptr) {
   if (!*_isNullPtr) {
-    _color = new CVkClearColorValue(&clearvalue->color);
+    _color = std::make_unique<CVkClearColorValue>(&clearvalue->color);
   } else {
     _color = nullptr;
   }
@@ -189,10 +177,10 @@ VkClearValue* gits::Vulkan::CVkClearValue::Value() {
     return nullptr;
   }
   if (_ClearValue == nullptr) {
-    _ClearValue = new VkClearValue;
+    _ClearValue = std::make_unique<VkClearValue>();
     _ClearValue->color = **_color;
   }
-  return _ClearValue;
+  return _ClearValue.get();
 }
 
 gits::PtrConverter<VkClearValue> gits::Vulkan::CVkClearValue::Original() {
@@ -200,10 +188,10 @@ gits::PtrConverter<VkClearValue> gits::Vulkan::CVkClearValue::Original() {
     return PtrConverter<VkClearValue>(nullptr);
   }
   if (_ClearValueOriginal == nullptr) {
-    _ClearValueOriginal = new VkClearValue;
+    _ClearValueOriginal = std::make_unique<VkClearValue>();
     _ClearValueOriginal->color = _color->Original();
   }
-  return PtrConverter<VkClearValue>(_ClearValueOriginal);
+  return PtrConverter<VkClearValue>(_ClearValueOriginal.get());
 }
 
 void gits::Vulkan::CVkClearValue::Write(CBinOStream& stream) const {
@@ -238,29 +226,23 @@ bool gits::Vulkan::CVkClearValue::DeclarationNeeded() const {
 }
 
 gits::Vulkan::CVkGenericArgument::CVkGenericArgument()
-    : _sType(new CVkStructureType()),
+    : _sType(std::make_unique<CVkStructureType>()),
       _argument(nullptr),
-      _skipped(new Cbool()),
+      _skipped(std::make_unique<Cbool>()),
       _isNullPtr(false) {}
-
-gits::Vulkan::CVkGenericArgument::~CVkGenericArgument() {
-  delete _sType;
-  delete _argument;
-  delete _skipped;
-}
 
 void gits::Vulkan::CVkGenericArgument::InitArgument(uint32_t type) {
   switch (type) {
 
 #define PNEXT_WRAPPER(STRUCTURE_TYPE, structure, ...)                                              \
   case STRUCTURE_TYPE:                                                                             \
-    _argument = new C##structure##__VA_ARGS__;                                                     \
+    _argument = std::make_unique<C##structure##__VA_ARGS__>();                                     \
     break;
 
 #include "vulkanPNextWrappers.inl"
 
   default:
-    _skipped = new Cbool(true);
+    _skipped = std::make_unique<Cbool>(true);
     Log(ERR) << "Unknown enum value: " << type << " for CVkGenericArgument";
     break;
   }
@@ -272,13 +254,13 @@ void gits::Vulkan::CVkGenericArgument::CreateArgument(uint32_t type,
 
 #define PNEXT_WRAPPER(STRUCTURE_TYPE, structure, ...)                                              \
   case STRUCTURE_TYPE:                                                                             \
-    _argument = new C##structure##__VA_ARGS__((structure*)vkgenericargument);                      \
+    _argument = std::make_unique<C##structure##__VA_ARGS__>((structure*)vkgenericargument);        \
     break;
 
 #include "vulkanPNextWrappers.inl"
 
   default:
-    _skipped = new Cbool(true);
+    _skipped = std::make_unique<Cbool>(true);
     Log(ERR) << "Unknown enum value: " << type << " for CVkGenericArgument";
     break;
   }
@@ -290,10 +272,10 @@ gits::Vulkan::CVkGenericArgument::CVkGenericArgument(const void* vkgenericargume
   _isNullPtr = (vkgenericargument == nullptr);
 
   if (!*_isNullPtr) {
-    _sType = new CVkStructureType(*(uint32_t*)vkgenericargument);
+    _sType = std::make_unique<CVkStructureType>(*(uint32_t*)vkgenericargument);
     CreateArgument(**_sType, vkgenericargument);
     if (!_skipped) {
-      _skipped = new Cbool(false);
+      _skipped = std::make_unique<Cbool>(false);
     }
   } else {
     _sType = nullptr;
@@ -388,11 +370,7 @@ gits::Vulkan::CUpdateDescriptorSetWithTemplateArray::CUpdateDescriptorSetWithTem
       _cgenericargsDict.push_back(obj);
     }
   }
-  _size = new Cuint64_t(max_length);
-}
-
-gits::Vulkan::CUpdateDescriptorSetWithTemplateArray::~CUpdateDescriptorSetWithTemplateArray() {
-  delete _size;
+  _size = std::make_unique<Cuint64_t>(max_length);
 }
 
 const void* gits::Vulkan::CUpdateDescriptorSetWithTemplateArray::Value() {
@@ -420,34 +398,36 @@ void gits::Vulkan::CUpdateDescriptorSetWithTemplateArray::Read(CBinIStream& stre
 
 gits::Vulkan::CDescriptorUpdateTemplateObject::CDescriptorUpdateTemplateObject(
     VkDescriptorType descType, const void* pData, std::uint64_t offset)
-    : _descType(new CVkDescriptorType(descType)), _offset(new Cuint64_t(offset)) {
+    : _descType(std::make_unique<CVkDescriptorType>(descType)),
+      _offset(std::make_unique<Cuint64_t>(offset)) {
 
   switch (descType) {
   case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
   case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
   case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
   case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-    _size = new Cuint64_t(sizeof(VkDescriptorBufferInfo));
-    _argument = new CVkDescriptorBufferInfo((VkDescriptorBufferInfo*)((char*)pData + offset));
+    _size = std::make_unique<Cuint64_t>(sizeof(VkDescriptorBufferInfo));
+    _argument =
+        std::make_unique<CVkDescriptorBufferInfo>((VkDescriptorBufferInfo*)((char*)pData + offset));
     break;
   case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
   case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-    _size = new Cuint64_t(sizeof(VkBufferView));
-    _argument = new CVkBufferView((VkBufferView*)((char*)pData + offset));
+    _size = std::make_unique<Cuint64_t>(sizeof(VkBufferView));
+    _argument = std::make_unique<CVkBufferView>((VkBufferView*)((char*)pData + offset));
     break;
   case VK_DESCRIPTOR_TYPE_SAMPLER:
   case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
   case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
   case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
   case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-    _size = new Cuint64_t(sizeof(VkDescriptorImageInfo));
-    _argument =
-        new CVkDescriptorImageInfo((VkDescriptorImageInfo*)((char*)pData + offset), descType);
+    _size = std::make_unique<Cuint64_t>(sizeof(VkDescriptorImageInfo));
+    _argument = std::make_unique<CVkDescriptorImageInfo>(
+        (VkDescriptorImageInfo*)((char*)pData + offset), descType);
     break;
   case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
-    _size = new Cuint64_t(sizeof(VkAccelerationStructureKHR));
-    _argument =
-        new CVkAccelerationStructureKHR((VkAccelerationStructureKHR*)((char*)pData + offset));
+    _size = std::make_unique<Cuint64_t>(sizeof(VkAccelerationStructureKHR));
+    _argument = std::make_unique<CVkAccelerationStructureKHR>(
+        (VkAccelerationStructureKHR*)((char*)pData + offset));
     break;
   default:
     VkLog(WARN) << "Unknown descriptor type " << descType
@@ -455,13 +435,6 @@ gits::Vulkan::CDescriptorUpdateTemplateObject::CDescriptorUpdateTemplateObject(
     _size = nullptr;
     _argument = nullptr;
   }
-}
-
-gits::Vulkan::CDescriptorUpdateTemplateObject::~CDescriptorUpdateTemplateObject() {
-  delete _argument;
-  delete _descType;
-  delete _offset;
-  delete _size;
 }
 
 void gits::Vulkan::CDescriptorUpdateTemplateObject::Read(CBinIStream& stream) {
@@ -473,21 +446,21 @@ void gits::Vulkan::CDescriptorUpdateTemplateObject::Read(CBinIStream& stream) {
   case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
   case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
   case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-    _argument = new CVkDescriptorBufferInfo();
+    _argument = std::make_unique<CVkDescriptorBufferInfo>();
     break;
   case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
   case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-    _argument = new CVkBufferView();
+    _argument = std::make_unique<CVkBufferView>();
     break;
   case VK_DESCRIPTOR_TYPE_SAMPLER:
   case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
   case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
   case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
   case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-    _argument = new CVkDescriptorImageInfo();
+    _argument = std::make_unique<CVkDescriptorImageInfo>();
     break;
   case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
-    _argument = new CVkAccelerationStructureKHR();
+    _argument = std::make_unique<CVkAccelerationStructureKHR>();
     break;
   default:
     Log(TRACE) << "Not handled CDescriptorUpdateTemplateObject enumeration: " +
@@ -498,24 +471,14 @@ void gits::Vulkan::CDescriptorUpdateTemplateObject::Read(CBinIStream& stream) {
 }
 
 gits::Vulkan::CVkPipelineCacheCreateInfo_V1::CVkPipelineCacheCreateInfo_V1()
-    : _sType(new CVkStructureType()),
-      _pNext(new CpNextWrapper()),
-      _flags(new Cuint32_t()),
-      _initialDataSize(new Csize_t()),
-      _pInitialData(new CDeclaredBinaryResource()),
+    : _sType(std::make_unique<CVkStructureType>()),
+      _pNext(std::make_unique<CpNextWrapper>()),
+      _flags(std::make_unique<Cuint32_t>()),
+      _initialDataSize(std::make_unique<Csize_t>()),
+      _pInitialData(std::make_unique<CDeclaredBinaryResource>()),
       _PipelineCacheCreateInfo(nullptr),
       _PipelineCacheCreateInfoOriginal(nullptr),
       _isNullPtr(false) {}
-
-gits::Vulkan::CVkPipelineCacheCreateInfo_V1::~CVkPipelineCacheCreateInfo_V1() {
-  delete _sType;
-  delete _pNext;
-  delete _flags;
-  delete _initialDataSize;
-  delete _pInitialData;
-  delete _PipelineCacheCreateInfo;
-  delete _PipelineCacheCreateInfoOriginal;
-}
 
 gits::Vulkan::CVkPipelineCacheCreateInfo_V1::CVkPipelineCacheCreateInfo_V1(
     const VkPipelineCacheCreateInfo* pipelinecachecreateinfo)
@@ -523,13 +486,13 @@ gits::Vulkan::CVkPipelineCacheCreateInfo_V1::CVkPipelineCacheCreateInfo_V1(
       _PipelineCacheCreateInfoOriginal(nullptr),
       _isNullPtr(pipelinecachecreateinfo == nullptr) {
   if (!*_isNullPtr) {
-    _sType = new CVkStructureType(pipelinecachecreateinfo->sType);
-    _pNext = new CpNextWrapper(pipelinecachecreateinfo->pNext);
-    _flags = new Cuint32_t(pipelinecachecreateinfo->flags);
-    _initialDataSize = new Csize_t(pipelinecachecreateinfo->initialDataSize);
-    _pInitialData =
-        new CDeclaredBinaryResource(RESOURCE_DATA_RAW, pipelinecachecreateinfo->pInitialData,
-                                    pipelinecachecreateinfo->initialDataSize);
+    _sType = std::make_unique<CVkStructureType>(pipelinecachecreateinfo->sType);
+    _pNext = std::make_unique<CpNextWrapper>(pipelinecachecreateinfo->pNext);
+    _flags = std::make_unique<Cuint32_t>(pipelinecachecreateinfo->flags);
+    _initialDataSize = std::make_unique<Csize_t>(pipelinecachecreateinfo->initialDataSize);
+    _pInitialData = std::make_unique<CDeclaredBinaryResource>(
+        RESOURCE_DATA_RAW, pipelinecachecreateinfo->pInitialData,
+        pipelinecachecreateinfo->initialDataSize);
   } else {
     _sType = nullptr;
     _pNext = nullptr;
@@ -546,7 +509,7 @@ VkPipelineCacheCreateInfo* gits::Vulkan::CVkPipelineCacheCreateInfo_V1::Value() 
     return nullptr;
   }
   if (_PipelineCacheCreateInfo == nullptr) {
-    _PipelineCacheCreateInfo = new VkPipelineCacheCreateInfo;
+    _PipelineCacheCreateInfo = std::make_unique<VkPipelineCacheCreateInfo>();
     _PipelineCacheCreateInfo->sType = **_sType;
     _PipelineCacheCreateInfo->pNext = **_pNext;
     _PipelineCacheCreateInfo->flags = **_flags;
@@ -555,7 +518,7 @@ VkPipelineCacheCreateInfo* gits::Vulkan::CVkPipelineCacheCreateInfo_V1::Value() 
     memcpy(_initialData.data(), **_pInitialData, **_initialDataSize);
     _PipelineCacheCreateInfo->pInitialData = _initialData.data();
   }
-  return _PipelineCacheCreateInfo;
+  return _PipelineCacheCreateInfo.get();
 }
 
 gits::PtrConverter<VkPipelineCacheCreateInfo> gits::Vulkan::CVkPipelineCacheCreateInfo_V1::
@@ -564,7 +527,7 @@ gits::PtrConverter<VkPipelineCacheCreateInfo> gits::Vulkan::CVkPipelineCacheCrea
     return PtrConverter<VkPipelineCacheCreateInfo>(nullptr);
   }
   if (_PipelineCacheCreateInfoOriginal == nullptr) {
-    _PipelineCacheCreateInfoOriginal = new VkPipelineCacheCreateInfo;
+    _PipelineCacheCreateInfoOriginal = std::make_unique<VkPipelineCacheCreateInfo>();
     _PipelineCacheCreateInfoOriginal->sType = _sType->Original();
     _PipelineCacheCreateInfoOriginal->pNext = _pNext->Original();
     _PipelineCacheCreateInfoOriginal->flags = _flags->Original();
@@ -573,7 +536,7 @@ gits::PtrConverter<VkPipelineCacheCreateInfo> gits::Vulkan::CVkPipelineCacheCrea
     memcpy(_initialData.data(), **_pInitialData, **_initialDataSize);
     _PipelineCacheCreateInfoOriginal->pInitialData = _initialData.data();
   }
-  return PtrConverter<VkPipelineCacheCreateInfo>(_PipelineCacheCreateInfoOriginal);
+  return PtrConverter<VkPipelineCacheCreateInfo>(_PipelineCacheCreateInfoOriginal.get());
 }
 
 std::set<uint64_t> gits::Vulkan::CVkPipelineCacheCreateInfo_V1::GetMappedPointers() {
@@ -810,50 +773,37 @@ void gits::Vulkan::CVkDeviceOrHostAddressConstKHR::Read(CBinIStream& stream) {
 }
 
 gits::Vulkan::CVkDependencyInfo::CVkDependencyInfo()
-    : _sType(new CVkStructureType()),
-      _pNext(new CpNextWrapper()),
-      _dependencyFlags(new Cuint32_t()),
-      _memoryBarrierCount(new Cuint32_t()),
-      _pMemoryBarriers(new CVkMemoryBarrier2Array()),
-      _bufferMemoryBarrierCount(new Cuint32_t()),
-      _pBufferMemoryBarriers(new CVkBufferMemoryBarrier2Array()),
-      _imageMemoryBarrierCount(new Cuint32_t()),
-      _pImageMemoryBarriers(new CVkImageMemoryBarrier2Array()),
+    : _sType(std::make_unique<CVkStructureType>()),
+      _pNext(std::make_unique<CpNextWrapper>()),
+      _dependencyFlags(std::make_unique<Cuint32_t>()),
+      _memoryBarrierCount(std::make_unique<Cuint32_t>()),
+      _pMemoryBarriers(std::make_unique<CVkMemoryBarrier2Array>()),
+      _bufferMemoryBarrierCount(std::make_unique<Cuint32_t>()),
+      _pBufferMemoryBarriers(std::make_unique<CVkBufferMemoryBarrier2Array>()),
+      _imageMemoryBarrierCount(std::make_unique<Cuint32_t>()),
+      _pImageMemoryBarriers(std::make_unique<CVkImageMemoryBarrier2Array>()),
       _DependencyInfo(nullptr),
       _DependencyInfoOriginal(nullptr),
       _isNullPtr(false) {}
-
-gits::Vulkan::CVkDependencyInfo::~CVkDependencyInfo() {
-  delete _sType;
-  delete _pNext;
-  delete _dependencyFlags;
-  delete _memoryBarrierCount;
-  delete _pMemoryBarriers;
-  delete _bufferMemoryBarrierCount;
-  delete _pBufferMemoryBarriers;
-  delete _imageMemoryBarrierCount;
-  delete _pImageMemoryBarriers;
-  delete _DependencyInfo;
-  delete _DependencyInfoOriginal;
-}
 
 gits::Vulkan::CVkDependencyInfo::CVkDependencyInfo(const VkDependencyInfo* dependencyinfo)
     : _DependencyInfo(nullptr),
       _DependencyInfoOriginal(nullptr),
       _isNullPtr(dependencyinfo == nullptr) {
   if (!*_isNullPtr) {
-    _sType = new CVkStructureType(dependencyinfo->sType);
-    _pNext = new CpNextWrapper(dependencyinfo->pNext);
-    _dependencyFlags = new Cuint32_t(dependencyinfo->dependencyFlags);
-    _memoryBarrierCount = new Cuint32_t(dependencyinfo->memoryBarrierCount);
-    _pMemoryBarriers = new CVkMemoryBarrier2Array(dependencyinfo->memoryBarrierCount,
-                                                  dependencyinfo->pMemoryBarriers);
-    _bufferMemoryBarrierCount = new Cuint32_t(dependencyinfo->bufferMemoryBarrierCount);
-    _pBufferMemoryBarriers = new CVkBufferMemoryBarrier2Array(
+    _sType = std::make_unique<CVkStructureType>(dependencyinfo->sType);
+    _pNext = std::make_unique<CpNextWrapper>(dependencyinfo->pNext);
+    _dependencyFlags = std::make_unique<Cuint32_t>(dependencyinfo->dependencyFlags);
+    _memoryBarrierCount = std::make_unique<Cuint32_t>(dependencyinfo->memoryBarrierCount);
+    _pMemoryBarriers = std::make_unique<CVkMemoryBarrier2Array>(dependencyinfo->memoryBarrierCount,
+                                                                dependencyinfo->pMemoryBarriers);
+    _bufferMemoryBarrierCount =
+        std::make_unique<Cuint32_t>(dependencyinfo->bufferMemoryBarrierCount);
+    _pBufferMemoryBarriers = std::make_unique<CVkBufferMemoryBarrier2Array>(
         dependencyinfo->bufferMemoryBarrierCount, dependencyinfo->pBufferMemoryBarriers);
-    _imageMemoryBarrierCount = new Cuint32_t(dependencyinfo->imageMemoryBarrierCount);
-    _pImageMemoryBarriers = new CVkImageMemoryBarrier2Array(dependencyinfo->imageMemoryBarrierCount,
-                                                            dependencyinfo->pImageMemoryBarriers);
+    _imageMemoryBarrierCount = std::make_unique<Cuint32_t>(dependencyinfo->imageMemoryBarrierCount);
+    _pImageMemoryBarriers = std::make_unique<CVkImageMemoryBarrier2Array>(
+        dependencyinfo->imageMemoryBarrierCount, dependencyinfo->pImageMemoryBarriers);
   } else {
     _sType = nullptr;
     _pNext = nullptr;
@@ -874,7 +824,7 @@ VkDependencyInfo* gits::Vulkan::CVkDependencyInfo::Value() {
     return nullptr;
   }
   if (_DependencyInfo == nullptr) {
-    _DependencyInfo = new VkDependencyInfo;
+    _DependencyInfo = std::make_unique<VkDependencyInfo>();
     _DependencyInfo->sType = **_sType;
     _DependencyInfo->pNext = **_pNext;
     _DependencyInfo->dependencyFlags = **_dependencyFlags;
@@ -885,7 +835,7 @@ VkDependencyInfo* gits::Vulkan::CVkDependencyInfo::Value() {
     _DependencyInfo->imageMemoryBarrierCount = **_imageMemoryBarrierCount;
     _DependencyInfo->pImageMemoryBarriers = **_pImageMemoryBarriers;
   }
-  return _DependencyInfo;
+  return _DependencyInfo.get();
 }
 
 gits::PtrConverter<VkDependencyInfo> gits::Vulkan::CVkDependencyInfo::Original() {
@@ -893,7 +843,7 @@ gits::PtrConverter<VkDependencyInfo> gits::Vulkan::CVkDependencyInfo::Original()
     return PtrConverter<VkDependencyInfo>(nullptr);
   }
   if (_DependencyInfoOriginal == nullptr) {
-    _DependencyInfoOriginal = new VkDependencyInfo;
+    _DependencyInfoOriginal = std::make_unique<VkDependencyInfo>();
     _DependencyInfoOriginal->sType = _sType->Original();
     _DependencyInfoOriginal->pNext = _pNext->Original();
     _DependencyInfoOriginal->dependencyFlags = _dependencyFlags->Original();
@@ -904,7 +854,7 @@ gits::PtrConverter<VkDependencyInfo> gits::Vulkan::CVkDependencyInfo::Original()
     _DependencyInfoOriginal->imageMemoryBarrierCount = _imageMemoryBarrierCount->Original();
     _DependencyInfoOriginal->pImageMemoryBarriers = _pImageMemoryBarriers->Original();
   }
-  return PtrConverter<VkDependencyInfo>(_DependencyInfoOriginal);
+  return PtrConverter<VkDependencyInfo>(_DependencyInfoOriginal.get());
 }
 
 std::set<uint64_t> gits::Vulkan::CVkDependencyInfo::GetMappedPointers() {
@@ -1047,14 +997,10 @@ gits::Vulkan::CpNextWrapper::CpNextWrapper(const void* ptr) : _ptr(0) {
   ptr = ignoreLoaderSpecificStructureTypes(ptr);
   if (ptr) {
     _ptr = (std::uint64_t)ptr;
-    _data = new CVkGenericArgument(ptr);
+    _data = std::make_unique<CVkGenericArgument>(ptr);
   } else {
     _data = nullptr;
   }
-}
-
-gits::Vulkan::CpNextWrapper::~CpNextWrapper() {
-  delete _data;
 }
 
 gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHR::
@@ -1281,7 +1227,8 @@ VkAccelerationStructureGeometryDataKHR* gits::Vulkan::CVkAccelerationStructureGe
     return nullptr;
   }
   if (_AccelerationStructureGeometryDataKHR == nullptr) {
-    _AccelerationStructureGeometryDataKHR = new VkAccelerationStructureGeometryDataKHR();
+    _AccelerationStructureGeometryDataKHR =
+        std::make_unique<VkAccelerationStructureGeometryDataKHR>();
     switch (**_geometryType) {
     case VK_GEOMETRY_TYPE_TRIANGLES_KHR:
       _AccelerationStructureGeometryDataKHR->triangles = **_triangles;
@@ -1297,7 +1244,7 @@ VkAccelerationStructureGeometryDataKHR* gits::Vulkan::CVkAccelerationStructureGe
       break;
     }
   }
-  return _AccelerationStructureGeometryDataKHR;
+  return _AccelerationStructureGeometryDataKHR.get();
 }
 
 gits::PtrConverter<VkAccelerationStructureGeometryDataKHR> gits::Vulkan::
@@ -1309,7 +1256,8 @@ gits::PtrConverter<VkAccelerationStructureGeometryDataKHR> gits::Vulkan::
     return PtrConverter<VkAccelerationStructureGeometryDataKHR>(nullptr);
   }
   if (_AccelerationStructureGeometryDataKHROriginal == nullptr) {
-    _AccelerationStructureGeometryDataKHROriginal = new VkAccelerationStructureGeometryDataKHR();
+    _AccelerationStructureGeometryDataKHROriginal =
+        std::make_unique<VkAccelerationStructureGeometryDataKHR>();
     switch (**_geometryType) {
     case VK_GEOMETRY_TYPE_TRIANGLES_KHR:
       _AccelerationStructureGeometryDataKHROriginal->triangles = _triangles->Original();
@@ -1326,7 +1274,7 @@ gits::PtrConverter<VkAccelerationStructureGeometryDataKHR> gits::Vulkan::
     }
   }
   return PtrConverter<VkAccelerationStructureGeometryDataKHR>(
-      _AccelerationStructureGeometryDataKHROriginal);
+      _AccelerationStructureGeometryDataKHROriginal.get());
 }
 
 std::set<uint64_t> gits::Vulkan::CVkAccelerationStructureGeometryDataKHR::GetMappedPointers() {
