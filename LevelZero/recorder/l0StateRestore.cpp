@@ -272,8 +272,8 @@ void RestorePointers(CScheduler& scheduler, CStateDynamic& sd) {
           const auto commandList =
               GetImmediateCommandList(scheduler, state.second->hContext, state.second->hDevice);
           std::vector<char> buffer(state.second->size);
-          l0::drv.zeCommandListAppendMemoryCopy(commandList, buffer.data(), state.first,
-                                                buffer.size(), nullptr, 0, nullptr);
+          l0::drv.inject.zeCommandListAppendMemoryCopy(commandList, buffer.data(), state.first,
+                                                       buffer.size(), nullptr, 0, nullptr);
           ScheduleSplitMemoryCopyFromHostPtr(scheduler, buffer.data(), commandList, state.first, 0U,
                                              buffer.size());
         }
