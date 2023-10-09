@@ -668,5 +668,34 @@ void DumpQueueSubmit(const Config& cfg,
     }
   }
 }
+
+void CommandListKernelInit(CStateDynamic& sd,
+                           const ze_command_list_handle_t& commandList,
+                           const ze_kernel_handle_t& kernel,
+                           const ze_group_count_t*& pLaunchFuncArgs) {
+  auto& kernelState = sd.Get<CKernelState>(kernel, EXCEPTION_MESSAGE);
+  auto& cmdListState = sd.Get<CCommandListState>(commandList, EXCEPTION_MESSAGE);
+  if (cmdListState.isImmediate &&
+      kernelState.currentKernelInfo->kernelNumber ==
+          static_cast<uint32_t>(CGits::Instance().CurrentKernelCount())) {
+    return;
+  }
+  kernelState.currentKernelInfo->handle = kernel;
+  kernelState.currentKernelInfo->hModule = kernelState.hModule;
+  kernelState.currentKernelInfo->pKernelName = std::string(kernelState.desc.pKernelName);
+  kernelState.currentKernelInfo->kernelNumber = CGits::Instance().CurrentKernelCount();
+  LogAppendKernel(kernelState.currentKernelInfo->kernelNumber, kernelState.desc.pKernelName);
+  if (cmdListState.isImmediate) {
+    LogKernelExecution(kernelState.currentKernelInfo->kernelNumber, kernelState.desc.pKernelName,
+                       cmdListState.cmdQueueNumber, cmdListState.cmdListNumber);
+  }
+  if (pLaunchFuncArgs != nullptr) {
+    kernelState.currentKernelInfo->launchFuncArgs = *pLaunchFuncArgs;
+  }
+  std::unique_ptr<CKernelExecutionInfo> pointer =
+      std::make_unique<CKernelExecutionInfo>(kernelState.currentKernelInfo);
+  cmdListState.appendedKernels.push_back(std::move(kernelState.currentKernelInfo));
+  kernelState.currentKernelInfo = std::move(pointer);
+}
 } // namespace l0
 } // namespace gits

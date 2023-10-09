@@ -110,5 +110,9 @@ bool IsDumpOnlyLayoutEnabled(const Config& cfg);
 void DumpQueueSubmit(const Config& cfg,
                      CStateDynamic& sd,
                      const ze_command_queue_handle_t& hCommandQueue);
+void CommandListKernelInit(CStateDynamic& sd,
+                           const ze_command_list_handle_t& commandList,
+                           const ze_kernel_handle_t& kernel,
+                           const ze_group_count_t*& pLaunchFuncArgs);
 } // namespace l0
 } // namespace gits

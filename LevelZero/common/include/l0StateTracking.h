@@ -78,30 +78,6 @@ bool CheckWhetherDumpKernel(uint32_t kernelNumber, uint32_t cmdListNumber) {
              : false;
 }
 
-inline void CommandListKernelInit(const ze_command_list_handle_t& commandList,
-                                  const ze_kernel_handle_t& kernel,
-                                  const ze_group_count_t*& pLaunchFuncArgs) {
-  auto& kernelState = SD().Get<CKernelState>(kernel, EXCEPTION_MESSAGE);
-  auto& cmdListState = SD().Get<CCommandListState>(commandList, EXCEPTION_MESSAGE);
-
-  kernelState.currentKernelInfo->handle = kernel;
-  kernelState.currentKernelInfo->hModule = kernelState.hModule;
-  kernelState.currentKernelInfo->pKernelName = std::string(kernelState.desc.pKernelName);
-  kernelState.currentKernelInfo->kernelNumber = CGits::Instance().CurrentKernelCount();
-  LogAppendKernel(kernelState.currentKernelInfo->kernelNumber, kernelState.desc.pKernelName);
-  if (cmdListState.isImmediate) {
-    LogKernelExecution(kernelState.currentKernelInfo->kernelNumber, kernelState.desc.pKernelName,
-                       cmdListState.cmdQueueNumber, cmdListState.cmdListNumber);
-  }
-  if (pLaunchFuncArgs != nullptr) {
-    kernelState.currentKernelInfo->launchFuncArgs = *pLaunchFuncArgs;
-  }
-  std::unique_ptr<CKernelExecutionInfo> pointer =
-      std::make_unique<CKernelExecutionInfo>(kernelState.currentKernelInfo);
-  cmdListState.appendedKernels.push_back(std::move(kernelState.currentKernelInfo));
-  kernelState.currentKernelInfo = std::move(pointer);
-}
-
 inline void InjectReadsForArguments(std::vector<CKernelArgumentDump>& readyArgVec,
                                     const ze_command_list_handle_t& cmdList,
                                     const bool useBarrier,
@@ -287,7 +263,7 @@ inline void AppendLaunchKernel(ze_result_t return_value,
                                ze_event_handle_t* phWaitEvents) {
   (void)return_value;
   auto& sd = SD();
-  CommandListKernelInit(hCommandList, hKernel, pLaunchFuncArgs);
+  CommandListKernelInit(sd, hCommandList, hKernel, pLaunchFuncArgs);
   auto& cmdListState = sd.Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
   auto& kernelState = sd.Get<CKernelState>(hKernel, EXCEPTION_MESSAGE);
   if (CheckWhetherDumpKernel(kernelState.currentKernelInfo->kernelNumber,
@@ -347,7 +323,7 @@ inline void zeCommandListAppendLaunchMultipleKernelsIndirect_SD(
   bool callOnce = true;
   const auto& cmdListState = sd.Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
   for (auto i = 0u; i < numKernels; i++) {
-    CommandListKernelInit(hCommandList, phKernels[i], pLaunchArgumentsBuffer);
+    CommandListKernelInit(sd, hCommandList, phKernels[i], pLaunchArgumentsBuffer);
     auto& kernelState = sd.Get<CKernelState>((phKernels)[i], EXCEPTION_MESSAGE);
 
     if (CheckWhetherDumpKernel(kernelState.currentKernelInfo->kernelNumber,

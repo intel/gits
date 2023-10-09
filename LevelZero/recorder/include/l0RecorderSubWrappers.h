@@ -27,6 +27,7 @@
 #include "openclTools.h"
 #include "recorder.h"
 #include "l0StateRestore.h"
+#include <cstdint>
 #include <vector>
 
 namespace gits {
@@ -178,13 +179,18 @@ std::vector<ze_command_list_handle_t> GetCommandListsToSubcapture(
 void SubcaptureLogicForImmediateCommandLists(CRecorder& recorder,
                                              const ApisIface::ApiCompute& l0IFace,
                                              CStateDynamic& sd,
-                                             ze_command_list_handle_t hCommandList) {
+                                             ze_command_list_handle_t hCommandList,
+                                             ze_event_handle_t hEventSignal) {
   if (l0IFace.CfgRec_IsKernelsRangeMode() &&
       l0IFace.CfgRec_IsKernelToRecord(gits::CGits::Instance().CurrentKernelCount())) {
     auto& cmdListState = sd.Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
     if (cmdListState.isImmediate) {
       if (!cmdListState.isSync) {
-        drv.inject.zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr);
+        if (hEventSignal != nullptr) {
+          drv.inject.zeEventHostSynchronize(hEventSignal, UINT64_MAX);
+        } else {
+          drv.inject.zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr);
+        }
       }
       const auto kernelCount = gits::CGits::Instance().CurrentKernelCount();
       if (l0IFace.CfgRec_StartKernel() == kernelCount) {
@@ -215,10 +221,25 @@ inline void zeCommandListAppendLaunchKernel_RECWRAP_PRE(CRecorder& recorder,
   if (sd.nomenclatureCounting) {
     gits::CGits::Instance().KernelCountUp();
   }
+  const auto kernelCount = gits::CGits::Instance().CurrentKernelCount();
   const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
-  if (l0IFace.CfgRec_IsKernelsRangeMode() &&
-      l0IFace.CfgRec_IsKernelToRecord(gits::CGits::Instance().CurrentKernelCount())) {
-    SaveKernelArgumentsForStateRestore(sd, drv, hKernel, hCommandList, numWaitEvents, phWaitEvents);
+  if (l0IFace.CfgRec_IsKernelsRangeMode() && l0IFace.CfgRec_IsKernelToRecord(kernelCount)) {
+    if (sd.Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE).isImmediate) {
+      if (l0IFace.CfgRec_StartKernel() == kernelCount) {
+        for (auto i = 0U; i < numWaitEvents; i++) {
+          drv.inject.zeEventHostSynchronize(phWaitEvents[i], UINT64_MAX);
+        }
+        CommandListKernelInit(sd, hCommandList, hKernel, pLaunchFuncArgs);
+        recorder.Start();
+      }
+      if (l0IFace.CfgRec_StopKernel() == kernelCount) {
+        recorder.Stop();
+        recorder.MarkForDeletion();
+      }
+    } else {
+      SaveKernelArgumentsForStateRestore(sd, drv, hKernel, hCommandList, numWaitEvents,
+                                         phWaitEvents);
+    }
   }
 }
 
@@ -240,8 +261,6 @@ inline void zeCommandListAppendLaunchKernel_RECWRAP(CRecorder& recorder,
   }
   zeCommandListAppendLaunchKernel_SD(return_value, hCommandList, hKernel, pLaunchFuncArgs,
                                      hSignalEvent, numWaitEvents, phWaitEvents);
-  const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
-  SubcaptureLogicForImmediateCommandLists(recorder, l0IFace, SD(), hCommandList);
 }
 
 inline void zeCommandListAppendMemoryCopy_RECWRAP(CRecorder& recorder,
@@ -319,8 +338,6 @@ inline void zeCommandListAppendLaunchCooperativeKernel_RECWRAP(
   zeCommandListAppendLaunchCooperativeKernel_SD(return_value, hCommandList, hKernel,
                                                 pLaunchFuncArgs, hSignalEvent, numWaitEvents,
                                                 phWaitEvents);
-  const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
-  SubcaptureLogicForImmediateCommandLists(recorder, l0IFace, SD(), hCommandList);
 }
 
 inline void zeCommandListAppendLaunchKernelIndirect_RECWRAP(
@@ -403,8 +420,6 @@ inline void zeCommandListAppendLaunchMultipleKernelsIndirect_RECWRAP(
   zeCommandListAppendLaunchMultipleKernelsIndirect_SD(
       return_value, hCommandList, numKernels, phKernels, pCountBuffer, pLaunchArgumentsBuffer,
       hSignalEvent, numWaitEvents, phWaitEvents);
-  const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
-  SubcaptureLogicForImmediateCommandLists(recorder, l0IFace, SD(), hCommandList);
 }
 
 inline void zeCommandListAppendImageCopyFromMemory_RECWRAP(CRecorder& recorder,
