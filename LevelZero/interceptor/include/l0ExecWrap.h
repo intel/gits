@@ -177,11 +177,9 @@ inline ze_result_t zeCommandListAppendLaunchMultipleKernelsIndirect_RECEXECWRAP(
   auto return_value = ZE_RESULT_SUCCESS;
   GITS_WRAPPER_PRE
   wrapper.UnProtectMemoryPointers(hCommandList);
-  for (auto i = 0u; i < numKernels; i++) {
-    wrapper.zeCommandListAppendLaunchKernel_pre(return_value, hCommandList, phKernels[i],
-                                                pLaunchArgumentsBuffer, hSignalEvent, numWaitEvents,
-                                                phWaitEvents);
-  }
+  wrapper.zeCommandListAppendLaunchMultipleKernelsIndirect_pre(
+      return_value, hCommandList, numKernels, phKernels, pCountBuffer, pLaunchArgumentsBuffer,
+      hSignalEvent, numWaitEvents, phWaitEvents);
   return_value = driver.zeCommandListAppendLaunchMultipleKernelsIndirect(
       hCommandList, numKernels, phKernels, pCountBuffer, pLaunchArgumentsBuffer, hSignalEvent,
       numWaitEvents, phWaitEvents);

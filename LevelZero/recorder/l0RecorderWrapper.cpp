@@ -88,6 +88,21 @@ void CRecorderWrapper::zeCommandListAppendLaunchKernel_pre(ze_result_t return_va
                                               phWaitEvents);
 }
 
+void CRecorderWrapper::zeCommandListAppendLaunchMultipleKernelsIndirect_pre(
+    ze_result_t return_value,
+    ze_command_list_handle_t hCommandList,
+    uint32_t numKernels,
+    ze_kernel_handle_t* phKernels,
+    const uint32_t* pCountBuffer,
+    const ze_group_count_t* pLaunchArgumentsBuffer,
+    ze_event_handle_t hSignalEvent,
+    uint32_t numWaitEvents,
+    ze_event_handle_t* phWaitEvents) const {
+  zeCommandListAppendLaunchMultipleKernelsIndirect_RECWRAP_PRE(
+      _recorder, return_value, hCommandList, numKernels, phKernels, pCountBuffer,
+      pLaunchArgumentsBuffer, hSignalEvent, numWaitEvents, phWaitEvents);
+}
+
 void CRecorderWrapper::UnProtectMemoryPointers(const ze_command_list_handle_t& hCommandList) const {
   const auto isImmediate =
       (hCommandList == nullptr)

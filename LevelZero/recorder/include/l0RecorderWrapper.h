@@ -40,6 +40,16 @@ public:
                                            ze_event_handle_t hSignalEvent,
                                            uint32_t numWaitEvents,
                                            ze_event_handle_t* phWaitEvents) const override;
+  void zeCommandListAppendLaunchMultipleKernelsIndirect_pre(
+      ze_result_t return_value,
+      ze_command_list_handle_t hCommandList,
+      uint32_t numKernels,
+      ze_kernel_handle_t* phKernels,
+      const uint32_t* pCountBuffer,
+      const ze_group_count_t* pLaunchArgumentsBuffer,
+      ze_event_handle_t hSignalEvent,
+      uint32_t numWaitEvents,
+      ze_event_handle_t* phWaitEvents) const override;
   void UnProtectMemoryPointers(
       const ze_command_list_handle_t& hCommandList = nullptr) const override;
   void ProtectMemoryPointers(const ze_command_list_handle_t& hCommandList = nullptr) const override;

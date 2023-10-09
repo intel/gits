@@ -343,8 +343,40 @@ inline void zeCommandListAppendLaunchKernelIndirect_RECWRAP(
   zeCommandListAppendLaunchKernelIndirect_SD(return_value, hCommandList, hKernel,
                                              pLaunchArgumentsBuffer, hSignalEvent, numWaitEvents,
                                              phWaitEvents);
+}
+
+inline void zeCommandListAppendLaunchMultipleKernelsIndirect_RECWRAP_PRE(
+    CRecorder& recorder,
+    ze_result_t return_value,
+    ze_command_list_handle_t hCommandList,
+    uint32_t numKernels,
+    ze_kernel_handle_t* phKernels,
+    const uint32_t* pCountBuffer,
+    const ze_group_count_t* pLaunchArgumentsBuffer,
+    ze_event_handle_t hSignalEvent,
+    uint32_t numWaitEvents,
+    ze_event_handle_t* phWaitEvents) {
+  std::ignore = recorder;
+  std::ignore = return_value;
+  std::ignore = hCommandList;
+  std::ignore = phKernels;
+  std::ignore = pCountBuffer;
+  std::ignore = pLaunchArgumentsBuffer;
+  std::ignore = hSignalEvent;
+  std::ignore = numWaitEvents;
+  std::ignore = phWaitEvents;
+  auto& sd = SD();
   const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
-  SubcaptureLogicForImmediateCommandLists(recorder, l0IFace, SD(), hCommandList);
+  if (sd.nomenclatureCounting) {
+    for (auto i = 0U; i < numKernels; i++) {
+      gits::CGits::Instance().KernelCountUp();
+      const auto kernelCount = gits::CGits::Instance().CurrentKernelCount();
+      if (l0IFace.CfgRec_IsKernelsRangeMode() && l0IFace.CfgRec_IsKernelToRecord(kernelCount)) {
+        throw ENotImplemented(
+            "Subcapturing from zeCommandListAppendLaunchMultipleKernelsIndirect is not supported");
+      }
+    }
+  }
 }
 
 inline void zeCommandListAppendLaunchMultipleKernelsIndirect_RECWRAP(
