@@ -349,6 +349,10 @@ void RestoreEvents(CScheduler& scheduler, CStateDynamic& sd) {
       auto stateInstance = state.first;
       scheduler.Register(new CzeEventCreate(ZE_RESULT_SUCCESS, state.second->hEventPool,
                                             &state.second->desc, &stateInstance));
+      const auto eventStatus = drv.inject.zeEventQueryStatus(stateInstance);
+      if (eventStatus == ZE_RESULT_SUCCESS) {
+        scheduler.Register(new CzeEventHostSignal(ZE_RESULT_SUCCESS, stateInstance));
+      }
       availableEvents[stateInstance] = false;
       state.second->RestoreFinished();
     }
