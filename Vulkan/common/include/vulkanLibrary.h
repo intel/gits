@@ -166,7 +166,6 @@ class CDeviceAddressPatcher : public COnQueueSubmitEnd {
 public:
   CDeviceAddressPatcher()
       : _device(VK_NULL_HANDLE), _outputDeviceMemory(VK_NULL_HANDLE), _hash(0) {}
-  ~CDeviceAddressPatcher() {}
 
   void AddDirectAddress(VkDeviceAddress address);
   void AddIndirectAddress(VkDeviceAddress address, uint32_t offset);

@@ -97,7 +97,6 @@ public:
   {
   }
 #endif
-  ~CGitsVkCreateNativeWindow() {}
 
   const char* Name() const {
     return "CGitsVkCreateNativeWindow";
@@ -219,7 +218,6 @@ public:
   {
   }
 #endif
-  ~CGitsVkCreateXlibWindow() {}
 
   const char* Name() const {
     return "CGitsVkCreateXlibWindow";
@@ -377,7 +375,6 @@ public:
   }
 
 #endif
-  ~CGitsVkUpdateNativeWindow() {}
 
   const char* Name() const {
     return "CGitsVkUpdateNativeWindow";
@@ -730,7 +727,6 @@ class CGitsVkEnumerateDisplayMonitors : public CFunction, gits::noncopyable {
 
 public:
   CGitsVkEnumerateDisplayMonitors();
-  ~CGitsVkEnumerateDisplayMonitors();
   CGitsVkEnumerateDisplayMonitors(bool);
 
   virtual unsigned Id() const override {
@@ -792,7 +788,6 @@ class CGitsInitializeImage : public CFunction, gits::noncopyable {
 
 public:
   CGitsInitializeImage();
-  ~CGitsInitializeImage();
 
   virtual unsigned Id() const {
     return ID_GITS_VK_CMD_INITIALIZE_IMAGE_INTEL;
@@ -831,7 +826,6 @@ class CGitsVkCmdInsertMemoryBarriers : public CFunction, gits::noncopyable {
 
 public:
   CGitsVkCmdInsertMemoryBarriers();
-  ~CGitsVkCmdInsertMemoryBarriers();
   CGitsVkCmdInsertMemoryBarriers(VkCommandBuffer commandBuffer,
                                  VkPipelineStageFlags SrcStageMask,
                                  VkPipelineStageFlags DstStageMask,
@@ -871,7 +865,6 @@ class CGitsVkCmdInsertMemoryBarriers2 : public CFunction, gits::noncopyable {
 
 public:
   CGitsVkCmdInsertMemoryBarriers2();
-  ~CGitsVkCmdInsertMemoryBarriers2();
   CGitsVkCmdInsertMemoryBarriers2(VkCommandBuffer commandBuffer,
                                   const VkDependencyInfo* pDependencyInfo);
 
@@ -908,7 +901,6 @@ class CGitsInitializeMultipleImages : public CFunction, gits::noncopyable {
 
 public:
   CGitsInitializeMultipleImages();
-  ~CGitsInitializeMultipleImages();
   CGitsInitializeMultipleImages(VkCommandBuffer commandBuffer,
                                 VkBuffer copySrcBuffer,
                                 std::vector<VkInitializeImageDataGITS> const& initializeImages);
@@ -965,7 +957,6 @@ class CGitsInitializeBuffer : public CFunction, gits::noncopyable {
 
 public:
   CGitsInitializeBuffer();
-  ~CGitsInitializeBuffer();
 
   virtual unsigned Id() const {
     return ID_GITS_VK_CMD_INITIALIZE_BUFFER_INTEL;
@@ -1000,7 +991,6 @@ class CGitsInitializeMultipleBuffers : public CFunction, gits::noncopyable {
 
 public:
   CGitsInitializeMultipleBuffers();
-  ~CGitsInitializeMultipleBuffers();
   CGitsInitializeMultipleBuffers(VkCommandBuffer commandBuffer,
                                  VkBuffer copySrcBuffer,
                                  std::vector<VkInitializeBufferDataGITS> const& initializeBuffers);

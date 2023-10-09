@@ -972,8 +972,6 @@ gits::CArgument& gits::Vulkan::CGitsVkEnumerateDisplayMonitors::Argument(unsigne
 
 gits::Vulkan::CGitsVkEnumerateDisplayMonitors::CGitsVkEnumerateDisplayMonitors() : _monitors() {}
 
-gits::Vulkan::CGitsVkEnumerateDisplayMonitors::~CGitsVkEnumerateDisplayMonitors() {}
-
 gits::Vulkan::CGitsVkEnumerateDisplayMonitors::CGitsVkEnumerateDisplayMonitors(bool) {
 #if defined(GITS_PLATFORM_WINDOWS)
   std::vector<HMONITOR> monitors;
@@ -1062,8 +1060,6 @@ gits::CArgument& gits::Vulkan::CGitsInitializeImage::Argument(unsigned idx) {
 }
 
 gits::Vulkan::CGitsInitializeImage::CGitsInitializeImage() {}
-
-gits::Vulkan::CGitsInitializeImage::~CGitsInitializeImage() {}
 
 void gits::Vulkan::CGitsInitializeImage::Run() {
   auto& state = SD()._imagestates[*_copyDstImage];
@@ -1248,8 +1244,6 @@ gits::CArgument& gits::Vulkan::CGitsVkCmdInsertMemoryBarriers::Argument(unsigned
 
 gits::Vulkan::CGitsVkCmdInsertMemoryBarriers::CGitsVkCmdInsertMemoryBarriers() {}
 
-gits::Vulkan::CGitsVkCmdInsertMemoryBarriers::~CGitsVkCmdInsertMemoryBarriers() {}
-
 gits::Vulkan::CGitsVkCmdInsertMemoryBarriers::CGitsVkCmdInsertMemoryBarriers(
     VkCommandBuffer commandBuffer,
     VkPipelineStageFlags SrcStageMask,
@@ -1381,8 +1375,6 @@ gits::CArgument& gits::Vulkan::CGitsVkCmdInsertMemoryBarriers2::Argument(unsigne
 
 gits::Vulkan::CGitsVkCmdInsertMemoryBarriers2::CGitsVkCmdInsertMemoryBarriers2() {}
 
-gits::Vulkan::CGitsVkCmdInsertMemoryBarriers2::~CGitsVkCmdInsertMemoryBarriers2() {}
-
 gits::Vulkan::CGitsVkCmdInsertMemoryBarriers2::CGitsVkCmdInsertMemoryBarriers2(
     VkCommandBuffer commandBuffer, const VkDependencyInfo* pDependencyInfo)
     : _commandBuffer(commandBuffer), _dependencyInfo(pDependencyInfo) {}
@@ -1451,8 +1443,6 @@ gits::CArgument& gits::Vulkan::CGitsInitializeMultipleImages::Argument(unsigned 
 }
 
 gits::Vulkan::CGitsInitializeMultipleImages::CGitsInitializeMultipleImages() {}
-
-gits::Vulkan::CGitsInitializeMultipleImages::~CGitsInitializeMultipleImages() {}
 
 gits::Vulkan::CGitsInitializeMultipleImages::CGitsInitializeMultipleImages(
     VkCommandBuffer commandBuffer,
@@ -1755,8 +1745,6 @@ gits::CArgument& gits::Vulkan::CGitsInitializeBuffer::Argument(unsigned idx) {
 
 gits::Vulkan::CGitsInitializeBuffer::CGitsInitializeBuffer() {}
 
-gits::Vulkan::CGitsInitializeBuffer::~CGitsInitializeBuffer() {}
-
 void gits::Vulkan::CGitsInitializeBuffer::Run() {
   if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
     TokenBuffersUpdate();
@@ -1919,8 +1907,6 @@ gits::CArgument& gits::Vulkan::CGitsInitializeMultipleBuffers::Argument(unsigned
 }
 
 gits::Vulkan::CGitsInitializeMultipleBuffers::CGitsInitializeMultipleBuffers() {}
-
-gits::Vulkan::CGitsInitializeMultipleBuffers::~CGitsInitializeMultipleBuffers() {}
 
 gits::Vulkan::CGitsInitializeMultipleBuffers::CGitsInitializeMultipleBuffers(
     VkCommandBuffer commandBuffer,
