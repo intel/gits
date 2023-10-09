@@ -16,8 +16,8 @@
 #include "l0Log.h"
 #ifndef BUILD_FOR_CCODE
 #include "l0Lua.h"
-#endif
 #include "l0Tools.h"
+#endif
 namespace gits {
 namespace l0 {
 namespace {
@@ -38,6 +38,7 @@ bool load_l0_function_generic(void*& func, const char* name) {
     return false;
   }
   load_l0_function_from_original_library_generic(func, name);
+#ifndef BUILD_FOR_CCODE
   if (func == nullptr) {
     const auto hDrivers = GetDrivers(drv);
     for (const auto& hDriver : hDrivers) {
@@ -46,6 +47,7 @@ bool load_l0_function_generic(void*& func, const char* name) {
       }
     }
   }
+#endif
   return func != nullptr;
 }
 template <typename Func>
