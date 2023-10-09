@@ -852,15 +852,14 @@ namespace Vulkan {
               argd = 'const ' + key_name + '* ' + key_variable
               if elem.get('constructorArgs') is not None:
                 argd = elem.get('constructorArgs')
-              argd_decl = key_name + '* ' + key_decl
+              argd_decl = 'std::unique_ptr<' + key_name + '> ' + key_decl
 
               argsDecl = ""
               for n, t in zip(Cnames, Ctypes):
-                argsDecl += '      ' + t + '* ' + n + ';\n'
+                argsDecl += '      std::unique_ptr<' + t + '> ' + n + ';\n'
 
               counter = 0
 
-              function_delete = ''
               function_operator = ''
               init = ''
               mapped_pointers = '  std::set<uint64_t> returnMap;\n  if (!*_isNullPtr) {\n  '
@@ -869,7 +868,7 @@ namespace Vulkan {
                 init_to_nullptr = '  } else {\n'
                 init_default = ''
                 function_operator = 'if (' + key_decl + ' == nullptr) {\n'
-              function_operator += '    ' + key_decl + ' = new ' + key_name + ';\n'
+              function_operator += '    ' + key_decl + ' = std::make_unique<' + key_name + '>();\n'
               for n, w, t, s, ot in zip(Cnames, Cwraps, Ctypes, Csize, types):
                 if t != 'COutArgument':
                   counter += 1
@@ -880,20 +879,20 @@ namespace Vulkan {
                   if w == '':
                     struct_type = t[1:].replace("Data", "") + '_'
                     if (struct_type) in structs.keys():
-                      init += '    ' + n + ' = new ' + t + '(&' + key_variable + '->' + n.strip('_') + ');\n'
+                      init += '    ' + n + ' = std::make_unique<' + t + '>(&' + key_variable + '->' + n.strip('_') + ');\n'
                     elif t[1:].strip(' *') in vulkan_mapped_types_nondisp:
-                      init += '    ' + n + ' = new ' + t + '(' + key_variable + '->' + n.strip('_') + ');\n'
+                      init += '    ' + n + ' = std::make_unique<' + t + '>(' + key_variable + '->' + n.strip('_') + ');\n'
                     elif t[1:].strip(' *') in vulkan_mapped_types:
-                      init += '    ' + n + ' = new ' + t + '(' + key_variable + '->' + n.strip('_') + ');\n'  # uint64_t cast
+                      init += '    ' + n + ' = std::make_unique<' + t + '>(' + key_variable + '->' + n.strip('_') + ');\n'  # uint64_t cast
                     elif s != '1':
-                      init += '    ' + n + ' = new ' + t + '(' + s + ', ' + key_variable + '->' + n.strip('_') + ');\n'
+                      init += '    ' + n + ' = std::make_unique<' + t + '>(' + s + ', ' + key_variable + '->' + n.strip('_') + ');\n'
                     else:
-                      init += '    ' + n + ' = new ' + t + '(' + key_variable + '->' + n.strip('_') + ');\n'
+                      init += '    ' + n + ' = std::make_unique<' + t + '>(' + key_variable + '->' + n.strip('_') + ');\n'
                   else:
-                    init += '    ' + n + ' = new ' + t + '(' + w + ');\n'
+                    init += '    ' + n + ' = std::make_unique<' + t + '>(' + w + ');\n'
 
                   init_to_nullptr += '    ' + n + ' = nullptr;\n'
-                  init_default += n + '(new ' + t + '()), '
+                  init_default += n + '(std::make_unique<' + t + '>()), '
                   if s != '1':
                     function_operator += '    auto ' + n.strip('_') + 'Values = **' + n + ';\n'
                     function_operator += '    if (' + n.strip('_') + 'Values != nullptr) {\n'
@@ -905,20 +904,16 @@ namespace Vulkan {
                   else:
                     function_operator += '    ' + key_decl + '->' + n.strip('_') + ' = **' + n + ';\n'
 
-                  function_delete += '  delete ' + n + ';\n'
-
-              function_delete += '  delete ' + key_decl + ';\n'
               mapped_pointers += '}\n  return returnMap;'
               if len(elem['vars']) > 0:
                 init += init_to_nullptr
                 init += '  }'
                 function_operator += '  }'
               if counter > 0:
-                function_delete = function_delete.strip('\n')
                 init_default = init_default.strip(', ')
               else:
                 init = ''
-              function_operator += '\n  return ' + key_decl + ';'
+              function_operator += '\n  return ' + key_decl + '.get();'
               key_name_data = versioned_name + "Data"
               if len(elem['vars']) > 0:
                 content += """    struct C%(name_data)s : public CBaseDataStruct, gits::noncopyable {
@@ -927,7 +922,6 @@ namespace Vulkan {
       CboolData _isNullPtr;
 
       C%(name_data)s(%(argd)s);
-      ~C%(name_data)s();
       %(unversioned_name)s* Value();
 
       PtrConverter<%(unversioned_name)s> operator*() {
@@ -949,10 +943,6 @@ namespace Vulkan {
 
                 content_cpp += """%(constructor)s
 
-gits::Vulkan::C%(name_data)s::~C%(name_data)s() {
-%(function_delete)s
-}
-
 %(unversioned_name)s* gits::Vulkan::C%(name_data)s::Value() {
   if (*_isNullPtr)
     return nullptr;
@@ -963,7 +953,7 @@ std::set<uint64_t> gits::Vulkan::C%(name_data)s::GetMappedPointers() {
 %(mapped_pointers)s
 }
 
-""" % {'constructor': constructor, 'unversioned_name': key_name, 'name_data': key_name_data, 'function_operator': function_operator, 'function_delete': function_delete, 'mapped_pointers': mapped_pointers}
+""" % {'constructor': constructor, 'unversioned_name': key_name, 'name_data': key_name_data, 'function_operator': function_operator, 'mapped_pointers': mapped_pointers}
 
             declared_structs.append(key)
   vk_struct_storage_cpp.write(content_cpp)
@@ -1874,19 +1864,18 @@ namespace Vulkan {
         argd = 'const ' + key_name + '* ' + key_variable
         if elem.get('constructorArgs') is not None:
           argd = elem.get('constructorArgs')
-        argd_decl = key_name + '* ' + key_decl
-        argd_decl_original = key_name + '* ' + key_decl_original
+        argd_decl = 'std::unique_ptr<' + key_name + '> ' + key_decl
+        argd_decl_original = 'std::unique_ptr<' + key_name + '> ' + key_decl_original
 
         argsDecl = ""
         for n, t in zip(Cnames, Ctypes):
-          argsDecl += '      ' + t + '* ' + n + ';\n'
+          argsDecl += '      std::unique_ptr<' + t + '> ' + n + ';\n'
 
         argsCall = ""
         counter = 0
 
         function_read = ''
         function_write = ''
-        function_delete = ''
         function_operator = ''
         function_original = ''
         init = ''
@@ -1899,8 +1888,8 @@ namespace Vulkan {
           function_write = '  if (!*_isNullPtr) {\n'
           function_operator = '  if (' + key_decl + ' == nullptr) {\n'
           function_original = '  if (' + key_decl_original + ' == nullptr) {\n'
-        function_operator += '    ' + key_decl + ' = new ' + key_name + ';\n'
-        function_original += '    ' + key_decl_original + ' = new ' + key_name + ';\n'
+        function_operator += '    ' + key_decl + ' = std::make_unique<' + key_name + '>();\n'
+        function_original += '    ' + key_decl_original + ' = std::make_unique<' + key_name + '>();\n'
         for n, w, t, s, ot in zip(Cnames, Cwraps, Ctypes, Csize, types):
           if t != 'COutArgument':
             counter += 1
@@ -1911,16 +1900,16 @@ namespace Vulkan {
             if w == '':
               struct_type = t[1:] + '_'
               if (struct_type) in structs.keys():
-                init += '    ' + n + ' = new ' + t + '(&' + key_variable + '->' + n.strip('_') + ');\n'
+                init += '    ' + n + ' = std::make_unique<' + t + '>(&' + key_variable + '->' + n.strip('_') + ');\n'
               elif s != '1':
-                init += '    ' + n + ' = new ' + t + '(' + s + ', ' + key_variable + '->' + n.strip('_') + ');\n'
+                init += '    ' + n + ' = std::make_unique<' + t + '>(' + s + ', ' + key_variable + '->' + n.strip('_') + ');\n'
               else:
-                init += '    ' + n + ' = new ' + t + '(' + key_variable + '->' + n.strip('_') + ');\n'
+                init += '    ' + n + ' = std::make_unique<' + t + '>(' + key_variable + '->' + n.strip('_') + ');\n'
             else:
-              init += '    ' + n + ' = new ' + t + '(' + w + ');\n'
+              init += '    ' + n + ' = std::make_unique<' + t + '>(' + w + ');\n'
 
             init_to_nullptr += '    ' + n + ' = nullptr;\n'
-            init_default += n + '(new ' + t + '()), '
+            init_default += n + '(std::make_unique<' + t + '>()), '
             if s != '1':
               decayed_type = re.sub(r'\[([0-9_]+)\]', '*', ot) # Turn arrays to pointers.
               function_operator += '    ' + decayed_type + ' ' + n.strip('_') + 'Values = **' + n + ';\n'
@@ -1941,12 +1930,9 @@ namespace Vulkan {
               function_operator += '    ' + key_decl + '->' + n.strip('_') + ' = **' + n + ';\n'
               function_original += '    ' + key_decl_original + '->' + n.strip('_') + ' = ' + n + '->Original();\n'
 
-            function_delete += '  delete ' + n + ';\n'
             function_read += '    ' + n + '->Read(stream);\n'
             function_write += '    ' + n + '->Write(stream);\n'
 
-        function_delete += '  delete ' + key_decl + ';\n'
-        function_delete += '  delete ' + key_decl_original + ';\n'
         if len(func['vars']) > 0:
           init += init_to_nullptr
           init += '  }'
@@ -1957,12 +1943,11 @@ namespace Vulkan {
         if counter > 0:
           function_read = function_read.strip('\n')
           function_write = function_write.strip('\n')
-          function_delete = function_delete.strip('\n')
           init_default = init_default.strip(', ')
         else:
           init = ''
-        function_operator += '\n  return ' + key_decl + ';'
-        function_original += '\n  return PtrConverter<' + key_name + '>(' + key_decl_original + ');'
+        function_operator += '\n  return ' + key_decl + '.get();'
+        function_original += '\n  return PtrConverter<' + key_name + '>(' + key_decl_original + '.get());'
         mapped_pointers += '}\n  return returnMap;'
         for n in Cnames:
           if n not in ('_return_value', '_self'):
@@ -2066,7 +2051,6 @@ namespace Vulkan {
 
     public:
       C%(versioned_name)s();
-      ~C%(versioned_name)s();
       C%(versioned_name)s(%(argd)s);
       static const char* NAME;
       virtual const char* Name() const override { return NAME; }
@@ -2091,10 +2075,6 @@ namespace Vulkan {
 
           d = """
 gits::Vulkan::C%(versioned_name)s::C%(versioned_name)s(): %(init_default)s, %(key_decl)s(nullptr), %(key_decl_original)s(nullptr), _isNullPtr(false) {
-}
-
-gits::Vulkan::C%(versioned_name)s::~C%(versioned_name)s() {
-%(function_delete)s
 }
 
 %(constructor)s
@@ -2133,7 +2113,7 @@ void gits::Vulkan::C%(versioned_name)s::Write(CCodeOStream& stream) const {
 
 %(ampersand_define)s
 %(decl_define)s
-""" % {'versioned_name': versioned_name, 'unversioned_name': key_name, 'constructor': constructor, 'function_operator': function_operator, 'function_read': function_read, 'function_write': function_write, 'function_ccode_write': function_ccode_write, 'ampersand_define': ampersand_define, 'decl_define': decl_define, 'function_delete': function_delete, 'key_decl': key_decl, 'init_default': init_default, 'function_original': function_original, 'key_decl_original': key_decl_original, 'mapped_pointers': mapped_pointers}
+""" % {'versioned_name': versioned_name, 'unversioned_name': key_name, 'constructor': constructor, 'function_operator': function_operator, 'function_read': function_read, 'function_write': function_write, 'function_ccode_write': function_ccode_write, 'ampersand_define': ampersand_define, 'decl_define': decl_define, 'key_decl': key_decl, 'init_default': init_default, 'function_original': function_original, 'key_decl_original': key_decl_original, 'mapped_pointers': mapped_pointers}
 
         arguments_h.write(c + '\n')
         arguments_cpp.write(d+'\n')
