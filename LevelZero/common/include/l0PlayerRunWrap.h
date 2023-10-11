@@ -424,7 +424,7 @@ inline void zeCommandListCreate_RUNWRAP(Cze_result_t& _return_value,
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   ze_command_list_desc_t desc = *descPtr;
-  if (desc.commandQueueGroupOrdinal != 0U) {
+  if (IsControlledSubmission(descPtr)) {
     const auto result =
         RedirectToOriginalQueueSubmission(*_hDevice, &desc.commandQueueGroupOrdinal);
     if (!result) {
@@ -447,7 +447,7 @@ inline void zeCommandListCreateImmediate_RUNWRAP(
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   ze_command_queue_desc_t desc = *descPtr;
-  if (desc.ordinal != 0U) {
+  if (IsControlledSubmission(descPtr)) {
     const auto result = RedirectToOriginalQueueSubmission(*_hDevice, &desc.ordinal);
     if (!result) {
       RedirectToDefaultQueueFamily(*_hDevice, &desc.ordinal);
