@@ -134,7 +134,7 @@ inline void vkDestroyInstance_SD(VkInstance instance, const VkAllocationCallback
         physicalDevicesToRemove.push_back(physicalDeviceState.first);
       }
     }
-    for (auto physicalDevice : physicalDevicesToRemove) {
+    for (auto& physicalDevice : physicalDevicesToRemove) {
       SD()._physicaldevicestates.erase(physicalDevice);
     }
   }
@@ -1468,30 +1468,30 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
       }
 
       if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-        for (auto obj : srcDescriptorSetState->descriptorBuffers) {
+        for (auto& obj : srcDescriptorSetState->descriptorBuffers) {
           dstDescriptorSetState->descriptorBuffers[obj.first] = obj.second;
         }
 
-        for (auto obj : srcDescriptorSetState->descriptorImages) {
+        for (auto& obj : srcDescriptorSetState->descriptorImages) {
           dstDescriptorSetState->descriptorImages[obj.first] = obj.second;
         }
       }
       if (Config::Get().recorder.vulkan.utilities.memorySegmentSize ||
           Config::Get().recorder.vulkan.utilities.shadowMemory) {
-        for (auto binding : srcDescriptorSetState->descriptorMapMemory) {
+        for (auto& binding : srcDescriptorSetState->descriptorMapMemory) {
           dstDescriptorSetState->descriptorMapMemory[binding.first].clear();
-          for (auto obj : binding.second) {
-            for (auto obj2 : obj.second) {
+          for (auto& obj : binding.second) {
+            for (auto& obj2 : obj.second) {
               dstDescriptorSetState->descriptorMapMemory[binding.first][obj.first].insert(obj2);
             }
           }
         }
       }
 
-      for (auto obj : srcDescriptorSetState->descriptorWriteBuffers) {
+      for (auto& obj : srcDescriptorSetState->descriptorWriteBuffers) {
         dstDescriptorSetState->descriptorWriteBuffers[obj.first] = obj.second;
       }
-      for (auto obj : srcDescriptorSetState->descriptorWriteImages) {
+      for (auto& obj : srcDescriptorSetState->descriptorWriteImages) {
         dstDescriptorSetState->descriptorWriteImages[obj.first] = obj.second;
       }
     }
@@ -2783,7 +2783,7 @@ inline void vkQueueSubmit_setTimestamps(std::shared_ptr<CCommandBufferState>& co
 inline void vkQueueSubmit_updateNonDeterministicImages(
     std::shared_ptr<CCommandBufferState>& commandBufferState) {
   if (Config::Get().player.skipNonDeterministicImages) {
-    for (auto obj : commandBufferState->clearedImages) {
+    for (auto& obj : commandBufferState->clearedImages) {
       SD().nonDeterministicImages.erase(obj);
     }
   }
@@ -3001,7 +3001,7 @@ inline void vkEndRenderPass_updateNonDeterministicImages(
     }
     if (!Config::Get().player.captureVulkanRenderPasses.empty() ||
         !Config::Get().player.captureVulkanDraws.empty()) {
-      for (auto obj : commandBufferState->clearedImages) {
+      for (auto& obj : commandBufferState->clearedImages) {
         SD().nonDeterministicImages.erase(obj);
       }
     }
@@ -3412,11 +3412,11 @@ inline void vkCmdBindDescriptorSets_SD(VkCommandBuffer commandBuffer,
         commandBufferState->descriptorSetStateStoreList.emplace(pDescriptorSets[i],
                                                                 descriptorSetState);
 
-        for (auto obj : descriptorSetState->descriptorBuffers) {
+        for (auto& obj : descriptorSetState->descriptorBuffers) {
           SD().bindingBuffers[commandBuffer].insert(obj.second);
         }
 
-        for (auto obj : descriptorSetState->descriptorImages) {
+        for (auto& obj : descriptorSetState->descriptorImages) {
           SD().bindingImages[commandBuffer].insert(obj.second);
         }
       }
@@ -3431,8 +3431,8 @@ inline void vkCmdBindDescriptorSets_SD(VkCommandBuffer commandBuffer,
       if (Config::Get().recorder.vulkan.utilities.memorySegmentSize ||
           Config::Get().recorder.vulkan.utilities.shadowMemory) {
         for (auto& binding : SD()._descriptorsetstates[pDescriptorSets[i]]->descriptorMapMemory) {
-          for (auto mem : binding.second) {
-            for (auto obj : mem.second) {
+          for (auto& mem : binding.second) {
+            for (auto& obj : mem.second) {
               SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(mem.first, obj.lower(),
                                                                     obj.upper() - obj.lower());
             }
@@ -3871,17 +3871,17 @@ inline void vkCmdExecuteCommands_SD(VkCommandBuffer commandBuffer,
         }
       }
       if (captureRenderPassesResources()) {
-        for (auto obj : secondaryCommandBufferState->resourceWriteBuffers) {
+        for (auto& obj : secondaryCommandBufferState->resourceWriteBuffers) {
           primaryCommandBufferState->resourceWriteBuffers[obj.first] = obj.second;
         }
-        for (auto obj : secondaryCommandBufferState->resourceWriteImages) {
+        for (auto& obj : secondaryCommandBufferState->resourceWriteImages) {
           primaryCommandBufferState->resourceWriteImages[obj.first] = obj.second;
         }
       }
       if (Config::Get().recorder.vulkan.utilities.memorySegmentSize ||
           Config::Get().recorder.vulkan.utilities.shadowMemory) {
-        for (auto obj3 : SD().updatedMemoryInCmdBuffer[pCommandBuffers[i]].intervalMapMemory) {
-          for (auto obj4 : obj3.second) {
+        for (auto& obj3 : SD().updatedMemoryInCmdBuffer[pCommandBuffers[i]].intervalMapMemory) {
+          for (auto& obj4 : obj3.second) {
             SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(obj3.first, obj4.lower(),
                                                                   obj4.upper() - obj4.lower());
           }

@@ -442,7 +442,7 @@ void gits::OpenGL::ClientArraysUpdate::DumpAttribsUpdate(GLuint frontindex,
   }
 
   // Create diffs
-  for (auto range : memRanges) {
+  for (auto& range : memRanges) {
     _update.Diff(range.attrPtr, range.dataBegin, range.dataEnd - range.dataBegin);
   }
 }

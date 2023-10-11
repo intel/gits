@@ -191,7 +191,7 @@ void CStateDynamic::WriteClientSizes() {
   }
 
   std::map<uint64_t, uint64_t> mapAreasSizes;
-  for (auto area : _memTracker) {
+  for (auto& area : _memTracker) {
     mapAreasSizes[area.first] = area.second.size();
   }
 #ifndef BUILD_FOR_CCODE
@@ -628,7 +628,7 @@ CStateDynamicNative& CStateDynamicNative::Get() {
 CStateDynamicNative::CStateDynamicNative() {}
 
 CStateDynamicNative::~CStateDynamicNative() {
-  for (auto window : _winMapPlay) {
+  for (auto& window : _winMapPlay) {
     delete window.second;
   }
 }

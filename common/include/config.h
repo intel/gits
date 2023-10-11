@@ -73,7 +73,7 @@ struct NamedValuesBase {
       output << "Invalid named value '" << std::string(n) << "' for type "
              << std::string(readable_name()) << ".\n";
       output << "Available values are:";
-      for (auto val : values()) {
+      for (auto& val : values()) {
         output << "\n - " << val.first;
       }
       throw std::runtime_error(output.str());

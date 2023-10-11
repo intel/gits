@@ -26,7 +26,7 @@
 //****************** Helper functions ***************************
 gits::OpenGL::GLXPFAttribs gits::OpenGL::PtblToGLXARBAttribs(const PtblPFAttribs& ptblattribs) {
   GLXPFAttribs glxattribs;
-  for (auto ptblattr : ptblattribs) {
+  for (auto& ptblattr : ptblattribs) {
     switch (ptblattr.first) {
     case ptblPFDoubleBuffer:
       if (ptblattr.second > 0) {
@@ -296,7 +296,7 @@ gits::OpenGL::GLXCtxParams gits::OpenGL::PtblToGLXCtxParams(const PtblCtxParams&
 
   // Translate params to GLX
   GLXCtxParams glxparams;
-  for (auto param : ptblParamsMod) {
+  for (auto& param : ptblParamsMod) {
     switch (param.first) {
     case Profile:
       glxparams.push_back(GLX_CONTEXT_PROFILE_MASK_ARB);

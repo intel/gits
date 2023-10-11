@@ -385,7 +385,7 @@ void gits::Vulkan::RestoreVkQueue(CScheduler& scheduler, CStateDynamic& sd) {
       continue;
     }
 
-    for (auto queueState : deviceState.second->queueStateStoreList) {
+    for (auto& queueState : deviceState.second->queueStateStoreList) {
       VkQueue queue = queueState->queueHandle;
 
       if (IsObjectToSkip((uint64_t)queue) && (queue != temporaryDeviceResources[device].queue)) {

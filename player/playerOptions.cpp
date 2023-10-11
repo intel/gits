@@ -1348,7 +1348,7 @@ bool configure_player(int argc, char** argv) {
     cfg.player.captureVulkanRenderPasses.range = BitRange(resourceTable.back());
     resourceTable.pop_back();
 
-    for (auto obj : resourceTable) {
+    for (auto& obj : resourceTable) {
       cfg.player.captureVulkanRenderPasses.objVector.push_back(std::stoul(obj, nullptr, 0));
     }
   }
@@ -1365,7 +1365,7 @@ bool configure_player(int argc, char** argv) {
     cfg.player.captureVulkanRenderPassesResources.range = BitRange(resourceTable.back());
     resourceTable.pop_back();
 
-    for (auto obj : resourceTable) {
+    for (auto& obj : resourceTable) {
       cfg.player.captureVulkanRenderPassesResources.objVector.push_back(
           std::stoul(obj, nullptr, 0));
     }
@@ -1382,7 +1382,7 @@ bool configure_player(int argc, char** argv) {
     cfg.player.captureVulkanDraws.range = BitRange(resourceTable.back());
     resourceTable.pop_back();
 
-    for (auto obj : resourceTable) {
+    for (auto& obj : resourceTable) {
       cfg.player.captureVulkanDraws.objVector.push_back(std::stoul(obj, nullptr, 0));
     }
   }

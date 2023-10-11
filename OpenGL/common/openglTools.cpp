@@ -1422,18 +1422,18 @@ void GLQueryWrapper::GetResults() {
 }
 void GLQueryWrapper::PrintToLog() {
   GLLog(INFO) << "Per draw query results for " << _queryType;
-  for (auto query : _queries) {
+  for (auto& query : _queries) {
     Log(INFO) << "  Draw: " << query.drawNr << " result: " << query.result;
   }
   Log(INFO, NO_NEWLINE) << "  Draws with result greater than 0: ";
-  for (auto query : _queries) {
+  for (auto& query : _queries) {
     if (query.result > 0) {
       Log(INFO, NO_NEWLINE) << query.drawNr << ",";
     }
   }
   Log(INFO) << "";
   Log(INFO, NO_NEWLINE) << " Drawcalls like glBlitFramebuffer or glClear: ";
-  for (auto query : _queries) {
+  for (auto& query : _queries) {
     if (query.clearOrBlit) {
       Log(INFO, NO_NEWLINE) << query.drawNr << ",";
     }

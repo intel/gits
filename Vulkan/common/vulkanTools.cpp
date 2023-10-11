@@ -562,14 +562,14 @@ void vulkanScheduleCopyResources(VkCommandBuffer cmdBuffer,
     } else {
       dumpingMode = VulkanDumpingMode::VULKAN_PER_RENDERPASS;
     }
-    for (auto obj : commandBufferState->resourceWriteBuffers) {
+    for (auto& obj : commandBufferState->resourceWriteBuffers) {
       VkBuffer swapBuffer = obj.first;
       std::string fileName = GetFileNameResourcesScreenshot(
           CGits::Instance().CurrentFrame(), queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
           renderPassNumber, SD().bufferCounter[swapBuffer], obj.second, dumpingMode);
       vulkanCopyBuffer(cmdBuffer, swapBuffer, fileName);
     }
-    for (auto obj : commandBufferState->resourceWriteImages) {
+    for (auto& obj : commandBufferState->resourceWriteImages) {
       VkImage swapImg = obj.first;
       std::string fileName = GetFileNameResourcesScreenshot(
           CGits::Instance().CurrentFrame(), queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
@@ -668,7 +668,7 @@ void vulkanDumpBuffer(std::shared_ptr<RenderGenericAttachment> attachment) {
 
 void vulkanDumpImage(std::shared_ptr<RenderGenericAttachment> attachment) {
   VkImage image = attachment->sourceImage;
-  auto imageState = SD()._imagestates[image];
+  auto& imageState = SD()._imagestates[image];
   uint32_t width =
       std::max(1u, imageState->width / (uint32_t)std::pow<uint32_t>(2u, attachment->mipmap));
   uint32_t height =
@@ -756,22 +756,22 @@ void vulkanDumpImage(std::shared_ptr<RenderGenericAttachment> attachment) {
 
 void vulkanDumpRenderPasses(VkCommandBuffer cmdBuffer) {
   auto& commandBufferState = SD()._commandbufferstates[cmdBuffer];
-  for (auto attachment : commandBufferState->renderPassImages) {
+  for (auto& attachment : commandBufferState->renderPassImages) {
     vulkanDumpImage(attachment);
   }
   commandBufferState->renderPassImages.clear();
-  for (auto attachment : commandBufferState->drawImages) {
+  for (auto& attachment : commandBufferState->drawImages) {
     vulkanDumpImage(attachment);
   }
   commandBufferState->drawImages.clear();
 }
 
 void vulkanDumpRenderPassResources(VkCommandBuffer cmdBuffer) {
-  for (auto attachment : SD()._commandbufferstates[cmdBuffer]->renderPassResourceImages) {
+  for (auto& attachment : SD()._commandbufferstates[cmdBuffer]->renderPassResourceImages) {
     vulkanDumpImage(attachment);
   }
   SD()._commandbufferstates[cmdBuffer]->renderPassResourceImages.clear();
-  for (auto attachment : SD()._commandbufferstates[cmdBuffer]->renderPassResourceBuffers) {
+  for (auto& attachment : SD()._commandbufferstates[cmdBuffer]->renderPassResourceBuffers) {
     vulkanDumpBuffer(attachment);
   }
   SD()._commandbufferstates[cmdBuffer]->renderPassResourceBuffers.clear();
@@ -1367,7 +1367,7 @@ void writeResources(VkQueue queue,
   if (SD()._commandbufferstates.find(cmdbuffer) != SD()._commandbufferstates.end()) {
     auto& commandBufferState = SD()._commandbufferstates[cmdbuffer];
 
-    for (auto obj : commandBufferState->resourceWriteBuffers) {
+    for (auto& obj : commandBufferState->resourceWriteBuffers) {
       VkBuffer swapBuffer = obj.first;
       std::string fileName = GetFileNameResourcesScreenshot(
           CGits::Instance().CurrentFrame(),
@@ -1376,7 +1376,7 @@ void writeResources(VkQueue queue,
           VulkanDumpingMode::VULKAN_PER_COMMANDBUFFER);
       writeBufferUtil(fileName, queue, swapBuffer);
     }
-    for (auto obj : commandBufferState->resourceWriteImages) {
+    for (auto& obj : commandBufferState->resourceWriteImages) {
       VkImage swapImg = obj.first;
       std::string fileName = GetFileNameResourcesScreenshot(
           CGits::Instance().CurrentFrame(),
@@ -2416,7 +2416,7 @@ void getRangesForMemoryUpdate(VkDeviceMemory memory,
     auto touchedPages = ExternalMemoryRegion::GetTouchedPagesAndReset(
         (char*)memoryState->externalMemory + mapping->offsetData.Value(), unmapSize);
 
-    for (auto page : touchedPages) {
+    for (auto& page : touchedPages) {
       VkDeviceSize offset = (char*)page.first - (char*)pointer;
       VkDeviceSize size = page.second;
 
@@ -2565,124 +2565,124 @@ std::set<uint64_t> getRelatedPointers(std::set<uint64_t>& originalSet) {
   std::set<uint64_t> relatedPointers;
   for (uint64_t obj : originalSet) {
     if (SD()._instancestates.find((VkInstance)obj) != SD()._instancestates.end()) {
-      for (auto elem : SD()._instancestates[(VkInstance)obj]->GetMappedPointers()) {
+      for (auto& elem : SD()._instancestates[(VkInstance)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._physicaldevicestates.find((VkPhysicalDevice)obj) !=
                SD()._physicaldevicestates.end()) {
-      for (auto elem : SD()._physicaldevicestates[(VkPhysicalDevice)obj]->GetMappedPointers()) {
+      for (auto& elem : SD()._physicaldevicestates[(VkPhysicalDevice)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._surfacekhrstates.find((VkSurfaceKHR)obj) != SD()._surfacekhrstates.end()) {
-      for (auto elem : SD()._surfacekhrstates[(VkSurfaceKHR)obj]->GetMappedPointers()) {
+      for (auto& elem : SD()._surfacekhrstates[(VkSurfaceKHR)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._devicestates.find((VkDevice)obj) != SD()._devicestates.end()) {
-      for (auto elem : SD()._devicestates[(VkDevice)obj]->GetMappedPointers()) {
+      for (auto& elem : SD()._devicestates[(VkDevice)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._swapchainkhrstates.find((VkSwapchainKHR)obj) !=
                SD()._swapchainkhrstates.end()) {
-      for (auto elem : SD()._swapchainkhrstates[(VkSwapchainKHR)obj]->GetMappedPointers()) {
+      for (auto& elem : SD()._swapchainkhrstates[(VkSwapchainKHR)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._descriptorpoolstates.find((VkDescriptorPool)obj) !=
                SD()._descriptorpoolstates.end()) {
-      for (auto elem : SD()._descriptorpoolstates[(VkDescriptorPool)obj]->GetMappedPointers()) {
+      for (auto& elem : SD()._descriptorpoolstates[(VkDescriptorPool)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._commandpoolstates.find((VkCommandPool)obj) != SD()._commandpoolstates.end()) {
-      for (auto elem : SD()._commandpoolstates[(VkCommandPool)obj]->GetMappedPointers()) {
+      for (auto& elem : SD()._commandpoolstates[(VkCommandPool)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._samplerstates.find((VkSampler)obj) != SD()._samplerstates.end()) {
-      for (auto elem : SD()._samplerstates[(VkSampler)obj]->GetMappedPointers()) {
+      for (auto& elem : SD()._samplerstates[(VkSampler)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._devicememorystates.find((VkDeviceMemory)obj) !=
                SD()._devicememorystates.end()) {
-      for (auto elem : SD()._devicememorystates[(VkDeviceMemory)obj]->GetMappedPointers()) {
+      for (auto& elem : SD()._devicememorystates[(VkDeviceMemory)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._imagestates.find((VkImage)obj) != SD()._imagestates.end()) {
-      for (auto elem : SD()._imagestates[(VkImage)obj]->GetMappedPointers()) {
+      for (auto& elem : SD()._imagestates[(VkImage)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._imageviewstates.find((VkImageView)obj) != SD()._imageviewstates.end()) {
-      for (auto elem : SD()._imageviewstates[(VkImageView)obj]->GetMappedPointers()) {
+      for (auto& elem : SD()._imageviewstates[(VkImageView)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._bufferstates.find((VkBuffer)obj) != SD()._bufferstates.end()) {
-      for (auto elem : SD()._bufferstates[(VkBuffer)obj]->GetMappedPointers()) {
+      for (auto& elem : SD()._bufferstates[(VkBuffer)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._bufferviewstates.find((VkBufferView)obj) != SD()._bufferviewstates.end()) {
-      for (auto elem : SD()._bufferviewstates[(VkBufferView)obj]->GetMappedPointers()) {
+      for (auto& elem : SD()._bufferviewstates[(VkBufferView)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._descriptorsetlayoutstates.find((VkDescriptorSetLayout)obj) !=
                SD()._descriptorsetlayoutstates.end()) {
-      for (auto elem :
+      for (auto& elem :
            SD()._descriptorsetlayoutstates[(VkDescriptorSetLayout)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._descriptorsetstates.find((VkDescriptorSet)obj) !=
                SD()._descriptorsetstates.end()) {
-      for (auto elem : SD()._descriptorsetstates[(VkDescriptorSet)obj]->GetMappedPointers()) {
+      for (auto& elem : SD()._descriptorsetstates[(VkDescriptorSet)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._pipelinelayoutstates.find((VkPipelineLayout)obj) !=
                SD()._pipelinelayoutstates.end()) {
-      for (auto elem : SD()._pipelinelayoutstates[(VkPipelineLayout)obj]->GetMappedPointers()) {
+      for (auto& elem : SD()._pipelinelayoutstates[(VkPipelineLayout)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._descriptorupdatetemplatestates.find((VkDescriptorUpdateTemplate)obj) !=
                SD()._descriptorupdatetemplatestates.end()) {
-      for (auto elem : SD()._descriptorupdatetemplatestates[(VkDescriptorUpdateTemplate)obj]
-                           ->GetMappedPointers()) {
+      for (auto& elem : SD()._descriptorupdatetemplatestates[(VkDescriptorUpdateTemplate)obj]
+                            ->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._pipelinecachestates.find((VkPipelineCache)obj) !=
                SD()._pipelinecachestates.end()) {
-      for (auto elem : SD()._pipelinecachestates[(VkPipelineCache)obj]->GetMappedPointers()) {
+      for (auto& elem : SD()._pipelinecachestates[(VkPipelineCache)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._shadermodulestates.find((VkShaderModule)obj) !=
                SD()._shadermodulestates.end()) {
-      for (auto elem : SD()._shadermodulestates[(VkShaderModule)obj]->GetMappedPointers()) {
+      for (auto& elem : SD()._shadermodulestates[(VkShaderModule)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._renderpassstates.find((VkRenderPass)obj) != SD()._renderpassstates.end()) {
-      for (auto elem : SD()._renderpassstates[(VkRenderPass)obj]->GetMappedPointers()) {
+      for (auto& elem : SD()._renderpassstates[(VkRenderPass)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._pipelinestates.find((VkPipeline)obj) != SD()._pipelinestates.end()) {
-      for (auto elem : SD()._pipelinestates[(VkPipeline)obj]->GetMappedPointers()) {
+      for (auto& elem : SD()._pipelinestates[(VkPipeline)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._framebufferstates.find((VkFramebuffer)obj) != SD()._framebufferstates.end()) {
-      for (auto elem : SD()._framebufferstates[(VkFramebuffer)obj]->GetMappedPointers()) {
+      for (auto& elem : SD()._framebufferstates[(VkFramebuffer)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._fencestates.find((VkFence)obj) != SD()._fencestates.end()) {
-      for (auto elem : SD()._fencestates[(VkFence)obj]->GetMappedPointers()) {
+      for (auto& elem : SD()._fencestates[(VkFence)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._eventstates.find((VkEvent)obj) != SD()._eventstates.end()) {
-      for (auto elem : SD()._eventstates[(VkEvent)obj]->GetMappedPointers()) {
+      for (auto& elem : SD()._eventstates[(VkEvent)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._semaphorestates.find((VkSemaphore)obj) != SD()._semaphorestates.end()) {
-      for (auto elem : SD()._semaphorestates[(VkSemaphore)obj]->GetMappedPointers()) {
+      for (auto& elem : SD()._semaphorestates[(VkSemaphore)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._querypoolstates.find((VkQueryPool)obj) != SD()._querypoolstates.end()) {
-      for (auto elem : SD()._querypoolstates[(VkQueryPool)obj]->GetMappedPointers()) {
+      for (auto& elem : SD()._querypoolstates[(VkQueryPool)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     } else if (SD()._commandbufferstates.find((VkCommandBuffer)obj) !=
                SD()._commandbufferstates.end()) {
-      for (auto elem : SD()._commandbufferstates[(VkCommandBuffer)obj]->GetMappedPointers()) {
+      for (auto& elem : SD()._commandbufferstates[(VkCommandBuffer)obj]->GetMappedPointers()) {
         relatedPointers.insert(elem);
       }
     }
@@ -2717,14 +2717,14 @@ std::set<uint64_t> getPointersUsedInQueueSubmit(CVkSubmitInfoArrayWrap& submitIn
       for (uint32_t j = 0; j < submitInfoDataValues[i].commandBufferCount; j++) {
         auto& commandBufferState =
             SD()._commandbufferstates[submitInfoDataValues[i].pCommandBuffers[j]];
-        for (auto obj :
+        for (auto& obj :
              commandBufferState->tokensBuffer.GetMappedPointers(objRange, objMode, objNumber)) {
           pointers.insert((uint64_t)obj);
         }
 
         for (auto& secondaryCommandBufferState :
              commandBufferState->secondaryCommandBuffersStateStoreList) {
-          for (auto elem : secondaryCommandBufferState.second->tokensBuffer.GetMappedPointers()) {
+          for (auto& elem : secondaryCommandBufferState.second->tokensBuffer.GetMappedPointers()) {
             pointers.insert((uint64_t)elem);
           }
         }
@@ -2733,7 +2733,7 @@ std::set<uint64_t> getPointersUsedInQueueSubmit(CVkSubmitInfoArrayWrap& submitIn
     auto temporaryQueueSubmitToken = std::make_shared<CvkQueueSubmit>(
         VK_SUCCESS, SD().lastQueueSubmit->queueStateStore->queueHandle, submitInfoSize,
         submitInfoDataValues, SD().lastQueueSubmit->fenceHandle);
-    for (auto obj : temporaryQueueSubmitToken->GetMappedPointers()) {
+    for (auto& obj : temporaryQueueSubmitToken->GetMappedPointers()) {
       pointers.insert((uint64_t)obj);
     }
   } else if (submitInfo2DataValues != nullptr) {
@@ -2743,14 +2743,14 @@ std::set<uint64_t> getPointersUsedInQueueSubmit(CVkSubmitInfoArrayWrap& submitIn
         auto& commandBufferState =
             SD()._commandbufferstates
                 [submitInfo2DataValues[i].pCommandBufferInfos[j].commandBuffer];
-        for (auto obj :
+        for (auto& obj :
              commandBufferState->tokensBuffer.GetMappedPointers(objRange, objMode, objNumber)) {
           pointers.insert((uint64_t)obj);
         }
 
         for (auto& secondaryCommandBufferState :
              commandBufferState->secondaryCommandBuffersStateStoreList) {
-          for (auto elem : secondaryCommandBufferState.second->tokensBuffer.GetMappedPointers()) {
+          for (auto& elem : secondaryCommandBufferState.second->tokensBuffer.GetMappedPointers()) {
             pointers.insert((uint64_t)elem);
           }
         }
@@ -2759,7 +2759,7 @@ std::set<uint64_t> getPointersUsedInQueueSubmit(CVkSubmitInfoArrayWrap& submitIn
     auto temporaryQueueSubmitToken = std::make_shared<CvkQueueSubmit2>(
         VK_SUCCESS, SD().lastQueueSubmit->queueStateStore->queueHandle, submitInfoSize,
         submitInfo2DataValues, SD().lastQueueSubmit->fenceHandle);
-    for (auto obj : temporaryQueueSubmitToken->GetMappedPointers()) {
+    for (auto& obj : temporaryQueueSubmitToken->GetMappedPointers()) {
       pointers.insert((uint64_t)obj);
     }
   }
@@ -2870,7 +2870,7 @@ void restoreToSpecifiedRenderPass(const BitRange& objRange,
                                   CVkSubmitInfoArrayWrap& submitInfoData) {
   VkCommandBuffer lastCommandBuffer = GetLastCommandBuffer(submitInfoData);
   if (lastCommandBuffer != VK_NULL_HANDLE) {
-    auto commandBufferState = SD()._commandbufferstates[lastCommandBuffer];
+    auto& commandBufferState = SD()._commandbufferstates[lastCommandBuffer];
     drvVk.vkResetCommandBuffer(lastCommandBuffer, 0);
     vkResetCommandBuffer_SD(VK_SUCCESS, lastCommandBuffer, 0, true);
     drvVk.vkBeginCommandBuffer(
@@ -2886,7 +2886,7 @@ void restoreToSpecifiedDraw(const uint64_t renderPassNumber,
                             CVkSubmitInfoArrayWrap& submitInfoData) {
   VkCommandBuffer lastCommandBuffer = GetLastCommandBuffer(submitInfoData);
   if (lastCommandBuffer != VK_NULL_HANDLE) {
-    auto commandBufferState = SD()._commandbufferstates[lastCommandBuffer];
+    auto& commandBufferState = SD()._commandbufferstates[lastCommandBuffer];
     drvVk.vkResetCommandBuffer(lastCommandBuffer, 0);
     vkResetCommandBuffer_SD(VK_SUCCESS, lastCommandBuffer, 0, true);
     drvVk.vkBeginCommandBuffer(

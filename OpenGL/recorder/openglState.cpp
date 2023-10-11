@@ -3808,7 +3808,7 @@ void gits::OpenGL::CVariableProgramInfo::Schedule(CScheduler& scheduler,
   // todo: check for repeating parameters
   for (auto& envElem : _envParams) {
     GLenum target = envElem.first;
-    for (auto envParamElem : envElem.second) {
+    for (auto& envParamElem : envElem.second) {
       GLuint index = envParamElem.first;
       const float* p = envParamElem.second.p;
       scheduler.Register(new CglProgramEnvParameter4fvARB(target, index, p));
@@ -6536,7 +6536,7 @@ void gits::OpenGL::CVariableMappedTexture::Schedule(CScheduler& scheduler,
          "This may cause error or corruptions if texture was created with different parameter.";
 
   auto toAdd = SD().GetCurrentSharedStateData().GetMappedTextures().ReturnNewTextures();
-  for (auto addTex : toAdd) {
+  for (auto& addTex : toAdd) {
     scheduler.Register(new CglMapTexture2DINTEL(
         (void*)true, addTex.texture, addTex.level, addTex.access,
         reinterpret_cast<GLint*>(addTex.stride), reinterpret_cast<GLenum*>(addTex.layout)));

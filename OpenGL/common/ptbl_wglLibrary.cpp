@@ -26,7 +26,7 @@
 void gits::OpenGL::PtblToWGLPFDAttribs(PIXELFORMATDESCRIPTOR* pfd,
                                        const PtblPFAttribs& ptblattribs) {
   //Choose convert direction
-  for (auto ptblattr : ptblattribs) {
+  for (auto& ptblattr : ptblattribs) {
     switch (ptblattr.first) {
     case ptblPFDoubleBuffer:
       if (ptblattr.second > 0) {
@@ -81,7 +81,7 @@ void gits::OpenGL::WGLPFDToPtblAttribs(const PIXELFORMATDESCRIPTOR* pfd,
 
 gits::OpenGL::WGLARBPFAttribs gits::OpenGL::PtblToWGLARBAttribs(const PtblPFAttribs& ptblattribs) {
   WGLARBPFAttribs wglattribs;
-  for (auto ptblattr : ptblattribs) {
+  for (auto& ptblattr : ptblattribs) {
     switch (ptblattr.first) {
     case ptblPFDoubleBuffer:
       if (ptblattr.second > 0) {
@@ -315,7 +315,7 @@ gits::OpenGL::WGLCtxParams gits::OpenGL::PtblToWGLCtxParams(const PtblCtxParams&
 
   //Translate params to WGL
   WGLCtxParams wglparams;
-  for (auto param : ptblParamsMod) {
+  for (auto& param : ptblParamsMod) {
     switch (param.first) {
     case Profile:
       wglparams.push_back(WGL_CONTEXT_PROFILE_MASK_ARB);

@@ -19,7 +19,7 @@
 
 gits::OpenGL::EGLPFAttribs gits::OpenGL::PtblToEGLAttribs(const PtblPFAttribs& ptblattribs) {
   EGLPFAttribs eglattribs;
-  for (auto ptblattr : ptblattribs) {
+  for (auto& ptblattr : ptblattribs) {
     switch (ptblattr.first) {
     case ptblPFAccelerated:
       if (ptblattr.second == 0) {
@@ -519,7 +519,7 @@ void gits::OpenGL::execSetContextEGL(PtblHandle ctx) {
 
   //Create fake EGLSurface
   PtblHandle ptblEglSurf;
-  for (auto elem : pstate.helper.mapEglSurfWin) {
+  for (auto& elem : pstate.helper.mapEglSurfWin) {
     if (elem.second == ptblSurf) {
       ptblEglSurf = elem.first;
     }
@@ -574,7 +574,7 @@ void gits::OpenGL::execBufferSwapEGL(PtblHandle ctx) {
   auto& pstate = PortableState::Instance();
   PtblHandle ptblSurf = pstate.ctxs[ctx].surf;
   PtblHandle ptblEglSurf;
-  for (auto elem : pstate.helper.mapEglSurfWin) {
+  for (auto& elem : pstate.helper.mapEglSurfWin) {
     if (elem.second == ptblSurf) {
       ptblEglSurf = elem.first;
     }

@@ -163,13 +163,13 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit(VkQueue queue,
 
     for (uint32_t i = 0; i < submitCount; i++) {
       for (uint32_t j = 0; j < pSubmits[i].commandBufferCount; j++) {
-        for (auto obj2 :
+        for (auto& obj2 :
              SD().updatedMemoryInCmdBuffer[pSubmits[i].pCommandBuffers[j]].intervalMapMemory) {
           auto memoryStatePair = SD()._devicememorystates.find(obj2.first);
           if (memoryStatePair != SD()._devicememorystates.end()) {
             auto& memoryState = memoryStatePair->second;
             if (memoryState->IsMapped()) {
-              for (auto obj3 : obj2.second) {
+              for (auto& obj3 : obj2.second) {
                 uint64_t offset = std::max(obj3.lower(), memoryState->mapping->offsetData.Value());
                 uint64_t size = 0;
                 uint64_t high_value = obj3.upper();
@@ -218,11 +218,11 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit(VkQueue queue,
       queueWaitIdleAlreadyUsed = true;
     }
 
-    for (auto obj2 : toUpdate.intervalMapMemory) {
+    for (auto& obj2 : toUpdate.intervalMapMemory) {
       auto& memoryState = SD()._devicememorystates[obj2.first];
       void* pointer = (char*)memoryState->mapping->ppDataData.Value();
 
-      for (auto obj3 : obj2.second) {
+      for (auto& obj3 : obj2.second) {
         uint64_t offset = obj3.lower() - memoryState->mapping->offsetData.Value();
         uint64_t size = obj3.upper() - obj3.lower();
 
@@ -279,14 +279,14 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit2(VkQueue queue,
 
     for (uint32_t i = 0; i < submitCount; i++) {
       for (uint32_t j = 0; j < pSubmits[i].commandBufferInfoCount; j++) {
-        for (auto obj2 :
+        for (auto& obj2 :
              SD().updatedMemoryInCmdBuffer[pSubmits[i].pCommandBufferInfos[j].commandBuffer]
                  .intervalMapMemory) {
           auto memoryStatePair = SD()._devicememorystates.find(obj2.first);
           if (memoryStatePair != SD()._devicememorystates.end()) {
             auto& memoryState = memoryStatePair->second;
             if (memoryState->IsMapped()) {
-              for (auto obj3 : obj2.second) {
+              for (auto& obj3 : obj2.second) {
                 uint64_t offset = std::max(obj3.lower(), memoryState->mapping->offsetData.Value());
                 uint64_t size = 0;
                 uint64_t high_value = obj3.upper();
@@ -335,11 +335,11 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit2(VkQueue queue,
       queueWaitIdleAlreadyUsed = true;
     }
 
-    for (auto obj2 : toUpdate.intervalMapMemory) {
+    for (auto& obj2 : toUpdate.intervalMapMemory) {
       auto& memoryState = SD()._devicememorystates[obj2.first];
       void* pointer = (char*)memoryState->mapping->ppDataData.Value();
 
-      for (auto obj3 : obj2.second) {
+      for (auto& obj3 : obj2.second) {
         uint64_t offset = obj3.lower() - memoryState->mapping->offsetData.Value();
         uint64_t size = obj3.upper() - obj3.lower();
 

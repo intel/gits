@@ -2970,7 +2970,7 @@ void gits::OpenGL::CDataUpdate::Read(CBinIStream& stream) {
 }
 
 void gits::OpenGL::CDataUpdate::Write(CCodeOStream& stream) const {
-  for (auto i : _updates) {
+  for (auto& i : _updates) {
     stream.Indent() << "DataUpdate(" << std::hex << i.area << ", " << std::dec << i.offset << ", "
                     << std::hex << i.hash << ");\n";
   }

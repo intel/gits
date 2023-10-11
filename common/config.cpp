@@ -574,7 +574,7 @@ bool gits::Config::Set(const std::filesystem::path& cfgDir) {
         cfg.recorder.vulkan.capture.objRange.rangeSpecial.range = BitRange(objectsTable.back());
         objectsTable.pop_back();
 
-        for (auto obj : objectsTable) {
+        for (auto& obj : objectsTable) {
           cfg.recorder.vulkan.capture.objRange.rangeSpecial.objVector.push_back(
               std::stoul(obj, nullptr, 0));
         }
