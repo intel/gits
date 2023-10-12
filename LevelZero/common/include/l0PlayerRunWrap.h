@@ -304,7 +304,7 @@ inline void zeCommandQueueCreate_RUNWRAP(Cze_result_t& _return_value,
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   ze_command_queue_desc_t desc = *descPtr;
-  if (desc.ordinal != 0) {
+  if (IsControlledSubmission(descPtr)) {
     const auto result = RedirectToOriginalQueueSubmission(*_hDevice, &desc.ordinal);
     if (!result) {
       RedirectToDefaultQueueFamily(*_hDevice, &desc.ordinal);

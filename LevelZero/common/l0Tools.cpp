@@ -30,7 +30,7 @@ std::vector<uint32_t> FilterQueueFamily(
     const std::vector<uint32_t>& blockedOrdinals) {
   std::vector<uint32_t> matchingOrdinals;
   for (auto i = 0U; i < currentProps.size(); i++) {
-    const auto flagsMatching = (currentProps.at(i).flags & filteredFlags) != 0U;
+    const auto flagsMatching = currentProps.at(i).flags == filteredFlags;
     const auto isOrdinalBlocked =
         !blockedOrdinals.empty() &&
         std::find(blockedOrdinals.begin(), blockedOrdinals.end(), i) != blockedOrdinals.end();
@@ -513,7 +513,8 @@ bool IsControlledSubmission(const ze_command_queue_desc_t* desc) {
 }
 
 bool IsControlledSubmission(const ze_command_list_desc_t* desc) {
-  return desc != nullptr && desc->commandQueueGroupOrdinal != 0U;
+  return desc != nullptr && (desc->commandQueueGroupOrdinal != 0U ||
+                             desc->flags == ZE_COMMAND_LIST_FLAG_EXPLICIT_ONLY);
 }
 
 bool ShouldDumpSpv(bool dumpSpv, const ze_module_desc_t* desc) {
