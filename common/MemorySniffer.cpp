@@ -94,18 +94,18 @@ void PagedMemoryRegion::TouchPageInternal(const void* ptr) {
   }
 }
 const PagedMemoryRegion::TouchedPages PagedMemoryRegion::GetTouchedPages() const {
-  boost::unique_lock<boost::recursive_mutex> lock(MemorySniffer::Get()._regionsMutex);
+  std::unique_lock<std::recursive_mutex> lock(MemorySniffer::Get()._regionsMutex);
   return _touchedPages;
 }
 const PagedMemoryRegion::TouchedPages PagedMemoryRegion::GetTouchedPagesAndReset() {
-  boost::unique_lock<boost::recursive_mutex> lock(MemorySniffer::Get()._regionsMutex);
+  std::unique_lock<std::recursive_mutex> lock(MemorySniffer::Get()._regionsMutex);
   PagedMemoryRegion::TouchedPages _copy;
   _copy.swap(_touchedPages);
   return _copy;
 }
 
 void PagedMemoryRegion::Reset() {
-  boost::unique_lock<boost::recursive_mutex> lock(MemorySniffer::Get()._regionsMutex);
+  std::unique_lock<std::recursive_mutex> lock(MemorySniffer::Get()._regionsMutex);
   _touchedPages.clear();
 }
 
@@ -359,7 +359,7 @@ std::set<PagedMemoryRegionHandle> MemorySniffer::GetPageRegionsInternal(const vo
 //
 //**************************************************************************************************
 PagedMemoryRegionHandle MemorySniffer::CreateRegion(const void* ptr, size_t size) {
-  boost::unique_lock<boost::recursive_mutex> lock(_regionsMutex);
+  std::unique_lock<std::recursive_mutex> lock(_regionsMutex);
 
   //Validate new region
   PagedMemoryRegion newRegion(ptr, size);
@@ -392,7 +392,7 @@ PagedMemoryRegionHandle MemorySniffer::CreateRegion(const void* ptr, size_t size
 //
 //**************************************************************************************************
 bool MemorySniffer::RemoveRegion(PagedMemoryRegionHandle handle) {
-  boost::unique_lock<boost::recursive_mutex> lock(_regionsMutex);
+  std::unique_lock<std::recursive_mutex> lock(_regionsMutex);
   assert(handle);
   if (*handle == nullptr) {
     return false;
@@ -420,7 +420,7 @@ bool MemorySniffer::RemoveRegion(PagedMemoryRegionHandle handle) {
 //
 //**************************************************************************************************
 bool MemorySniffer::Protect(PagedMemoryRegionHandle handle) {
-  boost::unique_lock<boost::recursive_mutex> lock(_regionsMutex);
+  std::unique_lock<std::recursive_mutex> lock(_regionsMutex);
 
   //Validate region
   assert(handle);
@@ -443,7 +443,7 @@ bool MemorySniffer::Protect(PagedMemoryRegionHandle handle) {
 //
 //**************************************************************************************************
 bool MemorySniffer::ReadProtect(PagedMemoryRegionHandle handle) {
-  boost::unique_lock<boost::recursive_mutex> lock(_regionsMutex);
+  std::unique_lock<std::recursive_mutex> lock(_regionsMutex);
 
   //Validate region
   assert(handle);
@@ -467,7 +467,7 @@ bool MemorySniffer::ReadProtect(PagedMemoryRegionHandle handle) {
 //
 //**************************************************************************************************
 bool MemorySniffer::UnProtect(PagedMemoryRegionHandle handle) {
-  boost::unique_lock<boost::recursive_mutex> lock(_regionsMutex);
+  std::unique_lock<std::recursive_mutex> lock(_regionsMutex);
 
   //Validate region
   assert(handle);
@@ -517,7 +517,7 @@ bool MemorySniffer::UnProtect(PagedMemoryRegionHandle handle) {
 //
 //**************************************************************************************************
 bool MemorySniffer::WriteCallback(void* addr) {
-  std::unique_lock<boost::recursive_mutex> lock(_regionsMutex);
+  std::unique_lock<std::recursive_mutex> lock(_regionsMutex);
   void* pageAddr = GetPage(addr);
   auto pageRegionHandles = GetPageRegionsInternal(pageAddr);
   if (pageRegionHandles.size() == 0) {
@@ -552,7 +552,7 @@ bool MemorySniffer::WriteCallback(void* addr) {
 //
 //**************************************************************************************************
 bool MemorySniffer::WriteRange(void* addr, size_t size) {
-  std::unique_lock<boost::recursive_mutex> lock(_regionsMutex);
+  std::unique_lock<std::recursive_mutex> lock(_regionsMutex);
   size_t pageSize = GetVirtualMemoryPageSize();
   char* rangeBegin = (char*)addr;
   char* rangeBeginPage = (char*)GetPage(rangeBegin);
@@ -609,11 +609,11 @@ LONG WINAPI MemorySnifferExceptionFilter(EXCEPTION_POINTERS* ExceptionInfo) {
 static void MemorySnifferSignalHandler(int sig, siginfo_t* si, void* unused);
 
 namespace {
-boost::mutex signalMutex;
+std::mutex signalMutex;
 bool originalSegvInitialized = false, originalBusInitialized = false;
 struct sigaction originalSigactionSegv = {}, originalSigactionBus = {};
 void CaptureOriginalSigBusHandler() {
-  boost::unique_lock<boost::mutex> lock(signalMutex);
+  std::unique_lock<std::mutex> lock(signalMutex);
   struct sigaction saBus = {};
   errno = 0;
   if (sigaction(SIGBUS, nullptr, &saBus) == -1) {
@@ -628,7 +628,7 @@ void CaptureOriginalSigBusHandler() {
   }
 }
 void CaptureOriginalSigSegvHandler() {
-  boost::unique_lock<boost::mutex> lock(signalMutex);
+  std::unique_lock<std::mutex> lock(signalMutex);
   struct sigaction saSegv = {};
   errno = 0;
   if (sigaction(SIGSEGV, nullptr, &saSegv) == -1) {
@@ -645,7 +645,7 @@ void CaptureOriginalSigSegvHandler() {
 }
 
 void CallOriginalSignalHandler(int sig, siginfo_t* si, void* unused) {
-  boost::unique_lock<boost::mutex> lock(signalMutex);
+  std::unique_lock<std::mutex> lock(signalMutex);
   struct sigaction* act = nullptr;
   if (sig == SIGSEGV && originalSegvInitialized) {
     act = &originalSigactionSegv;

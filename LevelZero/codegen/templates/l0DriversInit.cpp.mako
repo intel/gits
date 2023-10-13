@@ -77,7 +77,7 @@ bool load_l0_function_from_original_library(T& func, const char* name) {
   %if func.get('component') != 'ze_gits_extension':
 #ifndef BUILD_FOR_CCODE
 int lua_${func.get('name')}(lua_State* L) {
-  boost::unique_lock<boost::recursive_mutex> lock(luaMutex);
+  std::unique_lock<std::recursive_mutex> lock(luaMutex);
   int top = lua_gettop(L);
   if (top != ${len(func['args'])}) {
     luaL_error(L, "invalid number of parameters");
@@ -121,7 +121,7 @@ ${func.get('type')} __zecall special_${func.get('name')}(
     auto L = CGits::Instance().GetLua().get();
     bool exists = FunctionExists("${func.get('name')}", L);
     if (exists) {
-      boost::unique_lock<boost::recursive_mutex> lock(luaMutex);
+      std::unique_lock<std::recursive_mutex> lock(luaMutex);
       L0Log(TRACE, NO_PREFIX) << " Lua begin";
       lua_getglobal(L, "${func.get('name')}");
     %for arg in func['args']:

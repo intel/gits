@@ -37,10 +37,11 @@
 #include <cstdio>
 #include <new>
 #include <cstdarg>
+#include <thread>
+#include <mutex>
 
 DISABLE_WARNINGS
 #include <boost/property_tree/ptree.hpp>
-#include <boost/thread.hpp>
 ENABLE_WARNINGS
 
 void PrePostDisableGL();
@@ -56,7 +57,7 @@ namespace OpenGL {
 
 IRecorderWrapper* CGitsPlugin::_recorderWrapper;
 std::unique_ptr<CGitsLoader> CGitsPlugin::_loader;
-boost::mutex CGitsPlugin::_mutex;
+std::mutex CGitsPlugin::_mutex;
 
 namespace {
 void fast_exit(int code) {
@@ -77,12 +78,11 @@ void CGitsPlugin::Initialize() {
   // Sleep on initialization to allow for easier attaching to the process
   // during debugging.
   if (getenv("GITS_SLEEP")) {
-    using namespace boost;
-    this_thread::sleep(posix_time::millisec(10000));
+    std::this_thread::sleep_for(std::chrono::seconds(10));
   }
 
   try {
-    boost::unique_lock<boost::mutex> lock(_mutex);
+    std::unique_lock<std::mutex> lock(_mutex);
     if (initialized) {
       return;
     }

@@ -208,7 +208,7 @@ class Boost(Repository):
     def build(self):
         boost_dir = THIRD_PARTY_PATH / self.version_name
         self.execute(
-            f"./b2 address-model={self.address_model} install cxxflags=-fPIC runtime-link=static --with-container --with-regex --with-thread --prefix=\"{str(THIRD_PARTY_PATH / self.name)}\" -j8 -d0 --hash",
+            f"./b2 address-model={self.address_model} install cxxflags=-fPIC runtime-link=static --with-container --with-regex --prefix=\"{str(THIRD_PARTY_PATH / self.name)}\" -j8 -d0 --hash",
             cwd=boost_dir,
         )
 

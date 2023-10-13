@@ -14,6 +14,7 @@ def get_array_size(name):
 #include "l0Header.h"
 #include "lua_bindings.h"
 #include "exception.h"
+#include <cstring>
 
 namespace gits {
   namespace l0 {

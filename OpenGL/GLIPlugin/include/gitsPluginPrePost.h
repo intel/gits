@@ -19,16 +19,14 @@
 #include "gitsPluginPrePostAuto.h"
 #include "pragmas.h"
 
-DISABLE_WARNINGS
-#include <boost/thread.hpp>
-ENABLE_WARNINGS
+#include <mutex>
 
 #ifdef GITS_PLATFORM_X11
 #include <dlfcn.h>
 #endif
 
 // Avoid recording API - recursive functions.
-extern boost::recursive_mutex globalMutex;
+extern std::recursive_mutex globalMutex;
 extern thread_local uint32_t recursionDepth;
 extern const uint32_t disableDepth;
 

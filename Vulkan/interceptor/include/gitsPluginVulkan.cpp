@@ -15,9 +15,8 @@
 #include "gitsPluginVulkan.h"
 #include "vulkanRecorderWrapperIface.h"
 
-DISABLE_WARNINGS
-#include <boost/thread.hpp>
-ENABLE_WARNINGS
+#include <thread>
+#include <mutex>
 
 void PrePostDisableVulkan();
 
@@ -26,7 +25,7 @@ namespace Vulkan {
 
 IRecorderWrapper* CGitsPluginVulkan::_recorderWrapper;
 std::unique_ptr<CGitsLoader> CGitsPluginVulkan::_loader;
-boost::mutex CGitsPluginVulkan::_mutex;
+std::mutex CGitsPluginVulkan::_mutex;
 bool CGitsPluginVulkan::_recorderFinished = false;
 
 namespace {
@@ -48,11 +47,11 @@ void CGitsPluginVulkan::Initialize() {
   // Sleep on initialization to allow for easier attaching to the process
   // during debugging.
   if (getenv("GITS_SLEEP")) {
-    boost::this_thread::sleep(boost::posix_time::millisec(10000));
+    std::this_thread::sleep_for(std::chrono::seconds(10));
   }
 
   try {
-    boost::unique_lock<boost::mutex> lock(_mutex);
+    std::unique_lock<std::mutex> lock(_mutex);
     if (initialized) {
       return;
     }

@@ -18,13 +18,6 @@
 #include <memory>
 #include <filesystem>
 
-DISABLE_WARNINGS
-#ifdef check
-#undef check
-#endif
-#include <boost/thread.hpp>
-ENABLE_WARNINGS
-
 namespace boost {
 namespace interprocess {
 class file_mapping;

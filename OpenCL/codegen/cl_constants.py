@@ -84,7 +84,7 @@ RECEXECWRAP_START = """
 #include <map>
 
 namespace {
-  boost::recursive_mutex globalMutex;
+  std::recursive_mutex globalMutex;
 }
 
 using gits::Log;
@@ -122,7 +122,7 @@ void PrePostDisableOpenCL() {
   COclDriver &drvOcl = wrapper.Drivers();                           \
   wrapper.InitializeDriver();
 
-#define GITS_MUTEX boost::unique_lock<boost::recursive_mutex> lock(globalMutex);
+#define GITS_MUTEX std::unique_lock<std::recursive_mutex> lock(globalMutex);
 #define GITS_ENTRY_OCL GITS_MUTEX GITS_ENTRY
 
 namespace gits {

@@ -21,15 +21,13 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
-#ifndef BUILD_FOR_CCODE
-DISABLE_WARNINGS
-#include <boost/thread.hpp>
-ENABLE_WARNINGS
-#endif
+#include <mutex>
 
 #ifdef GITS_PLATFORM_WINDOWS
 #include <process.h>
 #define getpid _getpid
+#else
+#include <unistd.h>
 #endif
 
 namespace {
@@ -44,7 +42,7 @@ bool _log_to_file = false;
 // store the level in a global variable instead.
 gits::LogLevel _thresholdLogLevel = gits::LogLevel::INFO;
 #ifndef BUILD_FOR_CCODE
-std::unique_ptr<boost::mutex> _mutex;
+std::unique_ptr<std::mutex> _mutex;
 #endif
 } // namespace
 
@@ -58,7 +56,7 @@ gits::CLog::CLog(LogLevel lvl, LogStyle style)
     : _logLevel(lvl), _style(style), _localPrintFunc(nullptr) {
 #ifndef BUILD_FOR_CCODE
   if (!_mutex.get()) {
-    _mutex.reset(new boost::mutex());
+    _mutex.reset(new std::mutex());
   }
   if (!_file.get()) {
     _file.reset(new std::ofstream);
@@ -97,7 +95,7 @@ gits::CLog::CLog(const CLog& rhs)
     : _buffer(rhs._buffer.str()), _style(rhs._style), _localPrintFunc(rhs._localPrintFunc) {
 #ifndef BUILD_FOR_CCODE
   if (!_mutex.get()) {
-    _mutex.reset(new boost::mutex());
+    _mutex.reset(new std::mutex());
   }
   if (!_file.get()) {
     _file.reset(new std::ofstream);
@@ -160,7 +158,7 @@ void gits::CLog::LogFilePlayer(const std::filesystem::path& dir) {
 
 gits::CLog::~CLog() {
 #ifndef BUILD_FOR_CCODE
-  boost::unique_lock<boost::mutex> lock(*_mutex);
+  std::unique_lock<std::mutex> lock(*_mutex);
 #endif
   if (_style == NORMAL || _style == NO_PREFIX) {
     _buffer << std::endl;

@@ -57,7 +57,7 @@ private:
   CCodeOStream* _oCodeStream;
   CBinIStream* _iBinStream;
 
-  boost::mutex _tokenRegisterMutex;
+  std::mutex _tokenRegisterMutex;
 
   bool LoadChunk();
   boost::optional<CToken&> Token();

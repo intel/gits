@@ -26,10 +26,6 @@
 #include <vector>
 #include <string>
 
-DISABLE_WARNINGS
-#include <boost/thread.hpp>
-ENABLE_WARNINGS
-
 namespace gits {
 class CScheduler;
 class CToken;

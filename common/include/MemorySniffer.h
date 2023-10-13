@@ -16,9 +16,7 @@
 #include <exception>
 #include <stdint.h>
 #include <mutex>
-DISABLE_WARNINGS
-#include <boost/thread.hpp>
-ENABLE_WARNINGS
+#include <vector>
 #ifndef _DEBUG
 #ifndef NDEBUG
 #define NDEBUG 1
@@ -133,7 +131,7 @@ private:
   typedef std::map<PagedMemoryRegionPtr, PagedMemoryRegionHandle> RegionsPointersToHandles;
   PagedMemoryRegions _memRegions;
   RegionsPointersToHandles _regionPointersToHandles;
-  boost::recursive_mutex _regionsMutex;
+  std::recursive_mutex _regionsMutex;
   bool _originalSegvSignalFlag = false;
   bool _unveilWholeRegion = false;
   static bool _isInstalled;

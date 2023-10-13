@@ -34,7 +34,7 @@ public:
   void operator()() {
     try {
       for (;;) {
-        boost::unique_lock<boost::mutex> localLock(_seqExec._mutex);
+        std::unique_lock<std::mutex> localLock(_seqExec._mutex);
 
         // wait for action for this thread
         while (!(_seqExec._syncThreadId == _threadId && _seqExec._token != nullptr)) {
@@ -50,8 +50,6 @@ public:
         _seqExec._token = nullptr;
         _seqExec._condition.notify_all();
       }
-    } catch (boost::thread_interrupted const&) {
-      Log(ERR) << "Exiting thread: " << _threadId;
     } catch (gits::Exception& ex) {
       Log(ERR) << "Unhandled exception: " << ex.what() << " on thread: " << _threadId;
       fast_exit(1);
@@ -68,12 +66,15 @@ public:
 } // namespace gits
 
 gits::CSequentialExecutor::~CSequentialExecutor() {
-  _executionThreads.interrupt_all();
-  _executionThreads.join_all();
+  for (auto& t : _executionThreads) {
+    if (t.joinable()) {
+      t.join();
+    }
+  }
 }
 
 void gits::CSequentialExecutor::Dispatch(CToken& token, int thread) {
-  boost::unique_lock<boost::mutex> localLock(_mutex);
+  std::unique_lock<std::mutex> localLock(_mutex);
 
   // Set target thread and action
   _syncThreadId = thread;
@@ -98,7 +99,7 @@ void gits::CSequentialExecutor::Run(CToken& token) {
     // create additional thread if needed
     if (find(begin(_activeThreadsIdList), end(_activeThreadsIdList), threadId) ==
         end(_activeThreadsIdList)) {
-      _executionThreads.create_thread(CThreadLoop(*this, threadId));
+      _executionThreads.emplace_back(CThreadLoop(*this, threadId));
       _activeThreadsIdList.push_back(threadId);
     }
 

@@ -51,7 +51,6 @@ endif()
 
 add_library(ocloc_interceptor SHARED ${ocloc_interceptor_files})
 include_directories(interceptor/include)
-target_link_libraries(ocloc_interceptor Boost::thread)
 
 set_target_properties(ocloc_interceptor PROPERTIES OUTPUT_NAME ocloc)
 if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")

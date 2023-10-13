@@ -20,7 +20,7 @@ void* get_proc_address(const char* name);
 }
 } // namespace gits
 
-boost::recursive_mutex globalMutex;
+std::recursive_mutex globalMutex;
 // Avoid recording API - recursive functions.
 thread_local uint32_t recursionDepth = 0;
 const uint32_t disableDepth = 1000;

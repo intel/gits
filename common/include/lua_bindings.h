@@ -17,10 +17,7 @@ extern "C" {
 
 #include <cstdint>
 #include <functional>
-
-DISABLE_WARNINGS
-#include <boost/thread/recursive_mutex.hpp>
-ENABLE_WARNINGS
+#include <mutex>
 
 namespace gits {
 namespace lua {
@@ -188,7 +185,7 @@ R call_tuple(Callable callable, std::tuple<T...>& tuple) {
 }
 
 namespace {
-boost::recursive_mutex luaMutex;
+std::recursive_mutex luaMutex;
 }
 
 #define LUA_CALL_FUNCTION(luas, name, callargs, declargs)                                          \

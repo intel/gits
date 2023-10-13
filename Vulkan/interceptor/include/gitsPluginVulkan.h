@@ -27,7 +27,7 @@ class IRecorderWrapper;
 class CGitsPluginVulkan {
   static IRecorderWrapper* _recorderWrapper;
   static std::unique_ptr<CGitsLoader> _loader;
-  static boost::mutex _mutex;
+  static std::mutex _mutex;
 
 public:
   static bool _recorderFinished;

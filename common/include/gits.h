@@ -36,7 +36,6 @@ DISABLE_WARNINGS
 #undef check
 #endif
 #include <boost/property_tree/ptree_fwd.hpp>
-#include <boost/thread.hpp>
 ENABLE_WARNINGS
 #include <unzip.h>
 #include <zip.h>

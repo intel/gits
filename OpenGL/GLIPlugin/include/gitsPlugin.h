@@ -33,7 +33,7 @@ class IRecorderWrapper;
 class CGitsPlugin {
   static IRecorderWrapper* _recorderWrapper;
   static std::unique_ptr<CGitsLoader> _loader;
-  static boost::mutex _mutex;
+  static std::mutex _mutex;
 
 public:
   static void Initialize();

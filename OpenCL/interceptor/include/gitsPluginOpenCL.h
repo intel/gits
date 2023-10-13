@@ -31,7 +31,7 @@ class IRecorderWrapper;
 class CGitsPluginOpenCL {
   static IRecorderWrapper* _recorderWrapper;
   static std::unique_ptr<CGitsLoader> _loader;
-  static boost::mutex _mutex;
+  static std::mutex _mutex;
 
   CGitsPluginOpenCL(const CGitsPluginOpenCL&) = delete;
   CGitsPluginOpenCL(CGitsPluginOpenCL&&) = delete;

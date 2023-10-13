@@ -32,7 +32,7 @@ class CGitsPlugin : public CGitsLoader {
   using CGitsLoader::CGitsLoader;
   static IRecorderWrapper* _recorderWrapper;
   static std::unique_ptr<CGitsPlugin> _loader;
-  static boost::mutex _mutex;
+  static std::mutex _mutex;
   static bool _initialized;
 
   CGitsPlugin(const CGitsPlugin&) = delete;

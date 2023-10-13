@@ -18,7 +18,6 @@
 #include "xxhash.h"
 
 #include <cstdint>
-#include <filesystem>
 
 #ifndef BUILD_FOR_CCODE
 #include "MemorySniffer.h"

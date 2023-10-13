@@ -48,7 +48,6 @@ else()
   set_target_properties(Vulkan_interceptor PROPERTIES OUTPUT_NAME Vulkan)
   target_link_libraries(Vulkan_interceptor pthread dl)
 endif()
-target_link_libraries(Vulkan_interceptor Boost::thread)
 
 set_target_properties(Vulkan_interceptor PROPERTIES FOLDER Vulkan)
 

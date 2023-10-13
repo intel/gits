@@ -41,10 +41,7 @@
 
 #include <iostream>
 #include <string>
-
-DISABLE_WARNINGS
-#include <boost/thread.hpp>
-ENABLE_WARNINGS
+#include <thread>
 
 namespace gits {
 
@@ -316,8 +313,7 @@ void CTokenPlayerRecorderSync::Run() {
   static uint64_t base = CGits::Instance().Timers().program.Get() / 1000;
   for (uint64_t current = CGits::Instance().Timers().program.Get() / 1000;
        current - base < _timeStamp; current = CGits::Instance().Timers().program.Get() / 1000) {
-    using namespace boost;
-    this_thread::sleep(posix_time::microsec(_timeStamp - (current - base)));
+    std::this_thread::sleep_for(std::chrono::microseconds(_timeStamp - (current - base)));
   }
 }
 

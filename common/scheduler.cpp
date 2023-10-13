@@ -260,7 +260,7 @@ void CScheduler::Register(CToken* token) {
   // has its own api-mutex and thus don't serialize access to scheduler
   // for multi api applications. Proper solution would require sharing
   // single api-mutex among all recorded apis interceptors.
-  boost::unique_lock<boost::mutex> lock(_tokenRegisterMutex);
+  std::unique_lock<std::mutex> lock(_tokenRegisterMutex);
   _tokenList.push_back(token);
   if (Config::Get().recorder.extras.utilities.highIntegrity) {
     WriteChunk(false);

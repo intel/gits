@@ -44,10 +44,6 @@
 #include <filesystem>
 #include <fstream>
 
-DISABLE_WARNINGS
-#include <boost/thread.hpp>
-ENABLE_WARNINGS
-
 #ifndef GITS_PLATFORM_WINDOWS
 static void detach() __attribute__((destructor(101)));
 #endif

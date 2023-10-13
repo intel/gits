@@ -103,7 +103,7 @@ int __ocloccall special_oclocInvoke(unsigned int argc,
     auto L = CGits::Instance().GetLua().get();
     bool exists = gits::lua::FunctionExists("oclocInvoke", L);
     if (exists) {
-      boost::unique_lock<boost::recursive_mutex> lock(gits::lua::luaMutex);
+      std::unique_lock<std::recursive_mutex> lock(gits::lua::luaMutex);
       OclocLog(TRACE, NO_PREFIX) << " Lua begin";
       lua_getglobal(L, "oclocInvoke");
       gits::lua::lua_push(L, argc);
@@ -176,7 +176,7 @@ int __ocloccall special_oclocFreeOutput(uint32_t* numOutputs,
     auto L = CGits::Instance().GetLua().get();
     bool exists = gits::lua::FunctionExists("oclocFreeOutput", L);
     if (exists) {
-      boost::unique_lock<boost::recursive_mutex> lock(gits::lua::luaMutex);
+      std::unique_lock<std::recursive_mutex> lock(gits::lua::luaMutex);
       OclocLog(TRACE, NO_PREFIX) << " Lua begin";
       lua_getglobal(L, "oclocFreeOutput");
       lua_pushlightuserdata(L, (void*)numOutputs);
@@ -216,7 +216,7 @@ int __ocloccall default_oclocFreeOutput(uint32_t* numOutputs,
 } // namespace
 #ifndef BUILD_FOR_CCODE
 int lua_oclocInvoke(lua_State* L) {
-  boost::unique_lock<boost::recursive_mutex> lock(gits::lua::luaMutex);
+  std::unique_lock<std::recursive_mutex> lock(gits::lua::luaMutex);
   int top = lua_gettop(L);
   if (top != 14) {
     luaL_error(L, "invalid number of parameters");
@@ -264,7 +264,7 @@ int lua_oclocInvoke(lua_State* L) {
 
 int lua_oclocFreeOutput(lua_State* L) {
   int ret = 0;
-  boost::unique_lock<boost::recursive_mutex> lock(gits::lua::luaMutex);
+  std::unique_lock<std::recursive_mutex> lock(gits::lua::luaMutex);
   int top = lua_gettop(L);
   if (top != 4) {
     luaL_error(L, "invalid number of parameters");

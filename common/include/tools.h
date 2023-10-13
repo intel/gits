@@ -25,6 +25,12 @@
 #include <set>
 #include <deque>
 #include <filesystem>
+#include <climits>
+#include <thread>
+#include <mutex>
+#include <shared_mutex>
+#include <condition_variable>
+#include <vector>
 
 #ifdef GITS_PLATFORM_X11
 #include <X11/Xlib.h>
@@ -32,7 +38,6 @@
 #endif
 
 DISABLE_WARNINGS
-#include <boost/thread.hpp>
 #include <boost/property_tree/ptree.hpp>
 ENABLE_WARNINGS
 
@@ -219,7 +224,7 @@ public:
   // producer is exhausted - no product is generated in such
   // event.
   bool consume(Product& product) {
-    boost::unique_lock<boost::mutex> lock(mutex_);
+    std::unique_lock<std::mutex> lock(mutex_);
 
     // Wait for loader thread to load up a chunk.
     while (products_.empty()) {
@@ -245,7 +250,7 @@ public:
 
   // If queue accepted the product, returns true.
   bool produce(Product& product) {
-    boost::unique_lock<boost::mutex> lock(mutex_);
+    std::unique_lock<std::mutex> lock(mutex_);
 
     // Can't accept any more products ever.
     if (exhausted_) {
@@ -272,7 +277,7 @@ public:
   }
 
   void break_pipe() {
-    boost::unique_lock<boost::mutex> lock(mutex_);
+    std::unique_lock<std::mutex> lock(mutex_);
     exhausted_ = true;
 
     lock.unlock();
@@ -280,8 +285,8 @@ public:
   }
 
 private:
-  boost::mutex mutex_;
-  boost::condition_variable cond_;
+  std::mutex mutex_;
+  std::condition_variable cond_;
   std::deque<Product> products_;
   bool exhausted_;
   int cost_capacity_;
@@ -315,16 +320,19 @@ public:
   template <class T>
   void start(T func) {
     assert(thread_.size() == 0);
-    thread_.create_thread(TaskFunction<WorkUnit>(queue_, func));
+    thread_.emplace_back(TaskFunction<WorkUnit>(queue_, func));
   }
   bool running() const {
     return thread_.size() != 0;
   }
   void finish() {
     queue_.break_pipe();
-    if (thread_.size() != 0) {
-      thread_.join_all();
+    for (auto& t : thread_) {
+      if (t.joinable()) {
+        t.join();
+      }
     }
+    thread_.clear();
   }
 
   ProducerConsumer<WorkUnit>& queue() {
@@ -335,7 +343,7 @@ public:
   }
 
 private:
-  boost::thread_group thread_;
+  std::vector<std::thread> thread_;
   ProducerConsumer<WorkUnit> queue_;
 };
 
@@ -492,91 +500,6 @@ public:
   }
 };
 #endif
-
-template <class KEY,
-          class VAL,
-          class CMP = std::less<KEY>,
-          class ALLOC = std::allocator<std::pair<const KEY, VAL>>>
-class concurrentMap {
-  std::map<KEY, VAL, CMP, ALLOC> _map;
-  mutable boost::shared_mutex _mutex;
-
-public:
-  concurrentMap() = default;
-  concurrentMap(const concurrentMap&) = delete;
-  concurrentMap& operator=(const concurrentMap&) = delete;
-  concurrentMap(concurrentMap&&) = delete;
-  concurrentMap& operator=(concurrentMap&&) = delete;
-  void insert(const std::pair<KEY, VAL> val) {
-    boost::unique_lock<boost::shared_mutex> lock(_mutex);
-    _map.insert(val);
-  }
-  void set(KEY key, VAL val) {
-    boost::unique_lock<boost::shared_mutex> lock(_mutex);
-    _map[key] = val;
-  }
-  size_t erase(const KEY& key) {
-    boost::unique_lock<boost::shared_mutex> lock(_mutex);
-    return _map.erase(key);
-  }
-  void clear() {
-    boost::unique_lock<boost::shared_mutex> lock(_mutex);
-    _map.clear();
-  }
-  std::map<KEY, VAL, CMP, ALLOC> copy() {
-    boost::unique_lock<boost::shared_mutex> lock(_mutex);
-    return _map;
-  }
-  const VAL& at(const KEY& key) const {
-    boost::shared_lock<boost::shared_mutex> lock(_mutex);
-    return _map.at(key);
-  }
-  bool has(const KEY& key) const {
-    boost::shared_lock<boost::shared_mutex> lock(_mutex);
-    return _map.find(key) != _map.end();
-  }
-  bool size() const {
-    boost::shared_lock<boost::shared_mutex> lock(_mutex);
-    return _map.size();
-  }
-};
-
-template <class KEY, class CMP = std::less<KEY>, class ALLOC = std::allocator<KEY>>
-class concurrentSet {
-  std::set<KEY, CMP, ALLOC> _set;
-  mutable boost::shared_mutex _mutex;
-
-public:
-  concurrentSet() = default;
-  concurrentSet(const concurrentSet&) = delete;
-  concurrentSet& operator=(const concurrentSet&) = delete;
-  concurrentSet(concurrentSet&&) = delete;
-  concurrentSet& operator=(concurrentSet&&) = delete;
-  void insert(const KEY key) {
-    boost::unique_lock<boost::shared_mutex> lock(_mutex);
-    _set.insert(key);
-  }
-  size_t erase(const KEY& key) {
-    boost::unique_lock<boost::shared_mutex> lock(_mutex);
-    return _set.erase(key);
-  }
-  void clear() {
-    boost::unique_lock<boost::shared_mutex> lock(_mutex);
-    _set.clear();
-  }
-  std::set<KEY, CMP, ALLOC> copy() {
-    boost::unique_lock<boost::shared_mutex> lock(_mutex);
-    return _set;
-  }
-  bool has(const KEY& key) const {
-    boost::shared_lock<boost::shared_mutex> lock(_mutex);
-    return _set.find(key) != _set.end();
-  }
-  bool size() const {
-    boost::shared_lock<boost::shared_mutex> lock(_mutex);
-    return _set.size();
-  }
-};
 
 #if defined(GITS_PLATFORM_WINDOWS)
 std::string GetRenderDocDllPath();

@@ -311,7 +311,7 @@ inline void clGetEventInfo_RUNWRAP(CCLResult& _return_value,
     // bigger than the one captured during recording
     if (*_return_value == CL_SUCCESS && old_status != -1 &&
         old_status < *static_cast<cl_int*>(*_param_value)) {
-      boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
     } else {
       break;
     }

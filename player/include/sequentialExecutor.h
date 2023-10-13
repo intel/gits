@@ -17,6 +17,11 @@
 
 #include "runner.h"
 
+#include <vector>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+
 namespace gits {
 
 // Sequentially executes actions on threads and manage them
@@ -24,10 +29,10 @@ class CSequentialExecutor : public CAction {
   typedef std::vector<int> CThreadsIdList;
   class CThreadLoop;
 
-  boost::mutex _mutex;
-  boost::condition_variable _condition;
-  boost::unique_lock<boost::mutex> _actionLock;
-  boost::thread_group _executionThreads;
+  std::mutex _mutex;
+  std::condition_variable _condition;
+  std::unique_lock<std::mutex> _actionLock;
+  std::vector<std::thread> _executionThreads;
   CThreadsIdList _activeThreadsIdList;
 
   // variables shared between threads

@@ -315,7 +315,7 @@ NOINLINE void LogFunctionBeforeContext(const char* func) {
       if (exists) {                                                                                \
         if (doTrace)                                                                               \
           tracer.trace_lua trace_args;                                                             \
-        boost::unique_lock<boost::recursive_mutex> lock(gits::lua::luaMutex);                      \
+        std::unique_lock<std::recursive_mutex> lock(gits::lua::luaMutex);                          \
         LUA_CALL_FUNCTION(L, #name, call_args, decl_args)                                          \
         call_orig = false;                                                                         \
         int top = lua_gettop(L);                                                                   \
@@ -340,7 +340,7 @@ using namespace lua;
 
 #define LUA_FUNCTION(RET, NAME, ARGS_DECL, DRV)                                                    \
   int lua_##NAME(lua_State* L) {                                                                   \
-    boost::unique_lock<boost::recursive_mutex> lock(gits::lua::luaMutex);                          \
+    std::unique_lock<std::recursive_mutex> lock(gits::lua::luaMutex);                              \
     int top = lua_gettop(L);                                                                       \
     if (top != Argnum<RET ARGS_DECL>::value)                                                       \
       luaL_error(L, "invalid number of parameters");                                               \

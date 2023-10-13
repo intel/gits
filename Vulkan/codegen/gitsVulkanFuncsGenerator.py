@@ -1115,25 +1115,25 @@ def generate_prepost(functions):
   prepost_c.write(prepost_c_include)
   prepost_c_static = """
 namespace {
-  boost::recursive_mutex globalMutex;
+  std::recursive_mutex globalMutex;
 } // namespace
 
 using namespace gits::Vulkan;
 
 void thread_tracker() {
-  static std::map<boost::thread::id, int> threadIdMap;
+  static std::map<std::thread::id, int> threadIdMap;
   static int currentThreadId = 0;
   static int generatedThreadId = 0;
 
   //Add thread to map if not mapped
-  if (threadIdMap.find(boost::this_thread::get_id()) == threadIdMap.end()) {
-    threadIdMap[boost::this_thread::get_id()] = generatedThreadId;
+  if (threadIdMap.find(std::this_thread::get_id()) == threadIdMap.end()) {
+    threadIdMap[std::this_thread::get_id()] = generatedThreadId;
     generatedThreadId++;
   }
 
   //If thread changed schedule thread change
-  if (currentThreadId != threadIdMap[boost::this_thread::get_id()]) {
-    currentThreadId = threadIdMap[boost::this_thread::get_id()];
+  if (currentThreadId != threadIdMap[std::this_thread::get_id()]) {
+    currentThreadId = threadIdMap[std::this_thread::get_id()];
     Log(TRACE) << "ThreadID: " << currentThreadId;
   }
 }
@@ -1179,7 +1179,7 @@ void CloseRecorderIfRequired() {
   thread_tracker();                                                 \\
   IRecorderWrapper& wrapper = CGitsPluginVulkan::RecorderWrapper();
 
-#define GITS_MUTEX boost::unique_lock<boost::recursive_mutex> lock(globalMutex);
+#define GITS_MUTEX std::unique_lock<std::recursive_mutex> lock(globalMutex);
 #define GITS_ENTRY_VK GITS_MUTEX GITS_ENTRY
 """
   extern_str = "\nextern \"C\" {\n"
