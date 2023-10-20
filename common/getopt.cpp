@@ -35,15 +35,12 @@ namespace gits {
 CGetOpt::CGetOpt(int& argc, char**& argv)
     : _argcRef(argc), _argc(argc), _argvRef(argv), _argv(argv) {
   // obtain application path and name
-  std::string argStr = _argv[0];
-  std::string::size_type pathEnd = argStr.find_last_of("/\\");
-  if (pathEnd != std::string::npos) {
-    _appPath = argStr.substr(0, pathEnd);
-    _appName = argStr.substr(pathEnd + 1);
-  }
+  std::filesystem::path argPath = std::filesystem::absolute(_argv[0]);
+  _appPath = argPath.parent_path();
+  _appName = argPath.filename().string();
 }
 
-const std::string& CGetOpt::AppPath() const {
+const std::filesystem::path& CGetOpt::AppPath() const {
   return _appPath;
 }
 

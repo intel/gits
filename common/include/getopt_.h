@@ -75,12 +75,12 @@ private:
   static const unsigned int ARGS_WIDTH =
       10; /**< @brief space needed to write option argument in usage screen */
 
-  std::string _appPath; /**< @brief application path string */
-  std::string _appName; /**< @brief application name string */
-  int& _argcRef;        /**< @brief reference of application arguments number */
-  const int _argc;      /**< @brief local copy of original arguments number */
-  char**& _argvRef;     /**< @brief reference to application start of arguments table */
-  char** const _argv;   /**< @brief local copy of original start of arguments table */
+  std::filesystem::path _appPath; /**< @brief application path */
+  std::string _appName;           /**< @brief application name string */
+  int& _argcRef;                  /**< @brief reference of application arguments number */
+  const int _argc;                /**< @brief local copy of original arguments number */
+  char**& _argvRef;               /**< @brief reference to application start of arguments table */
+  char** const _argv;             /**< @brief local copy of original start of arguments table */
   std::vector<COption*>
       _optionsList; /**< @brief the list of options allowed for that application */
   std::vector<std::string> _notConsumed;
@@ -96,7 +96,7 @@ private:
 public:
   CGetOpt(int& argc, char**& argv);
 
-  const std::string& AppPath() const;
+  const std::filesystem::path& AppPath() const;
   const std::string& AppName() const;
 
   void OptionAdd(COption& option);
