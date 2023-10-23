@@ -215,7 +215,7 @@ public:
     }
   }
 
-  void RegisterPlaybackEvents(std::shared_ptr<lua_State> L, const Events& e) {
+  void RegisterPlaybackEvents(std::shared_ptr<lua_State>& L, const Events& e) {
     _lua = L;
     _playbackEvents = e;
   }

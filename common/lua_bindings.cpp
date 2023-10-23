@@ -71,14 +71,14 @@ bool FunctionExists(const char* name, lua_State* L) {
   return status;
 }
 
-std::function<void()> CreateWrapper(lua_ptr L, const char* name) {
+std::function<void()> CreateWrapper(lua_ptr& L, const char* name) {
   // If there is not such function in the script, return empty handler.
   if (!FunctionExists(name, L.get())) {
     return [] {};
   }
 
   std::string name2(name);
-  return [=]() -> void {
+  return [&name2, L]() -> void {
     lua_getglobal(L.get(), name2.c_str());
     if (lua_pcall(L.get(), 0, 0, 0) != 0) {
       RaiseHookError(name2.c_str(), L.get());
@@ -87,14 +87,14 @@ std::function<void()> CreateWrapper(lua_ptr L, const char* name) {
 }
 
 template <class T0>
-std::function<void(T0)> CreateWrapper(lua_ptr L, const char* name) {
+std::function<void(T0)> CreateWrapper(lua_ptr& L, const char* name) {
   // If there is not such function in the script, return empty handler.
   if (!FunctionExists(name, L.get())) {
     return [](T0) {};
   }
 
   std::string name2(name);
-  return [=](T0 t0) -> void {
+  return [&name2, L](T0 t0) -> void {
     lua_getglobal(L.get(), name2.c_str());
     lua_push(L.get(), t0);
     if (lua_pcall(L.get(), 1, 0, 0) != 0) {
@@ -104,14 +104,14 @@ std::function<void(T0)> CreateWrapper(lua_ptr L, const char* name) {
 }
 
 template <class T0, class T1>
-std::function<void(T0, T1)> CreateWrapper(lua_ptr L, const char* name) {
+std::function<void(T0, T1)> CreateWrapper(lua_ptr& L, const char* name) {
   // If there is not such function in the script, return empty handler.
   if (!FunctionExists(name, L.get())) {
     return [](T0, T1) {};
   }
 
   std::string name2(name);
-  return [=](T0 t0, T1 t1) -> void {
+  return [&name2, L](T0 t0, T1 t1) -> void {
     lua_getglobal(L.get(), name2.c_str());
     lua_push(L.get(), t0);
     lua_push(L.get(), t1);
@@ -122,7 +122,7 @@ std::function<void(T0, T1)> CreateWrapper(lua_ptr L, const char* name) {
 }
 
 template <class T0, class T1, class T2>
-std::function<void(T0, T1, T2)> CreateWrapper(lua_ptr L, const char* name) {
+std::function<void(T0, T1, T2)> CreateWrapper(lua_ptr& L, const char* name) {
   // If there is not such function in the script, return empty handler.
   if (!FunctionExists(name, L.get())) {
     return [](T0, T1, T2) {};

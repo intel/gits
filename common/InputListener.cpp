@@ -27,7 +27,7 @@ int CInputListener::AddHotKey(const std::vector<uint>& keys) {
 void CInputListener::AddHotKeyEvent(uint hotKeyId, HotKeyHolder::HotKeyEvent clickEvent) {
   HotKeyOptional hotKey = GetHotKey(hotKeyId);
   if (hotKey) {
-    hotKey->AddClickedEvent(clickEvent);
+    hotKey->AddClickedEvent(std::move(clickEvent));
   }
 }
 

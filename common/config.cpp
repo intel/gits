@@ -555,13 +555,13 @@ bool gits::Config::Set(const std::filesystem::path& cfgDir) {
                foundDrawsRangeMode) {
       std::string objectRange;
       if (foundQueueSubmitMode) {
-        objectRange = queueSubmitNumber;
+        objectRange = std::move(queueSubmitNumber);
       } else if (foundCommandBuffersRangeMode) {
-        objectRange = commandBuffersRange;
+        objectRange = std::move(commandBuffersRange);
       } else if (foundRenderPassRangeMode) {
-        objectRange = renderPassRange;
+        objectRange = std::move(renderPassRange);
       } else if (foundDrawsRangeMode) {
-        objectRange = drawsRange;
+        objectRange = std::move(drawsRange);
       }
       if (!objectRange.empty()) {
         std::istringstream issVulkanObjectsRange(objectRange);

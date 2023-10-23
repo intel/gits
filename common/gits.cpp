@@ -148,8 +148,9 @@ CGits::~CGits() {
     }
 
     int fileDividerInBytes = 1048576; // each file after splitting is approximately 1 MB
-    std::filesystem::path filesForDivide[] = {streamFramesFilePath, streamStateRestorePath,
-                                              streamPreRecorderPath};
+    std::filesystem::path filesForDivide[] = {std::move(streamFramesFilePath),
+                                              std::move(streamStateRestorePath),
+                                              std::move(streamPreRecorderPath)};
     for (const auto& file : filesForDivide) {
       int divideCount = std::filesystem::file_size(file) / fileDividerInBytes;
       if (divideCount > 1) {
@@ -333,7 +334,7 @@ uint64_t CGits::GetOrderedIdFromPtr(void* ptr) {
  * @param library Library class to register
  */
 void CGits::Register(std::shared_ptr<CLibrary> library) {
-  _libraryList.push_back(library);
+  _libraryList.push_back(std::move(library));
 }
 
 /**

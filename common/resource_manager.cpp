@@ -129,7 +129,7 @@ CResourceManager::CResourceManager(
     if (std::filesystem::exists(one_mapping.second)) {
       std::shared_ptr<file_mapping> mapping = std::make_shared<file_mapping>(
           one_mapping.second.string().c_str(), boost::interprocess::read_only);
-      mappings_map_[one_mapping.first] = mapping;
+      mappings_map_[one_mapping.first] = std::move(mapping);
     }
   }
 

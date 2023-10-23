@@ -41,7 +41,7 @@ namespace OpenGL {
  * CLibrary class constructor.
  */
 CLibrary::CLibrary(gits::CLibrary::state_creator_t stc)
-    : gits::CLibrary(ID_OPENGL, stc), _linkProgramNo(0) {}
+    : gits::CLibrary(ID_OPENGL, std::move(stc)), _linkProgramNo(0) {}
 
 CLibrary::~CLibrary() {}
 

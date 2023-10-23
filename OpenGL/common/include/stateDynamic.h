@@ -95,7 +95,7 @@ public:
 
   template <typename Function>
   void EraseIfNot(
-      Function
+      Function&
           fnc) { //Used by recordDrawCall option to remove objects not tied with recorded drawcall
     for (auto iter = _list.begin(); iter != _list.end();) {
       if (iter->Name() == 0 || iter->LastBindEnum() == 0 ||

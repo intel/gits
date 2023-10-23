@@ -73,7 +73,7 @@ void CRecorderWrapper::ContinueRecording() {
 }
 
 void CRecorderWrapper::StreamFinishedEvent(std::function<void()> event) {
-  _recorder.RegisterDisposeEvent(event);
+  _recorder.RegisterDisposeEvent(std::move(event));
 }
 
 void CRecorderWrapper::CloseRecorderIfRequired() {

@@ -298,7 +298,7 @@ gits::CLibrary* gits::CRecorder::Library(CLibrary::TId id) {
 }
 
 void gits::CRecorder::Register(std::shared_ptr<CLibrary> library) {
-  CGits::Instance().Register(library);
+  CGits::Instance().Register(std::move(library));
 }
 
 gits::CScheduler& gits::CRecorder::Scheduler() const {

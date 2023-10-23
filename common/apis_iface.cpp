@@ -22,7 +22,7 @@ void ApisIface::UseApi3dIface(std::shared_ptr<Api3d> iface) {
   assert(iface.get() != 0);
   if (iface->Type() == A3D) {
     if (_3d.get() == nullptr) {
-      _3d = iface;
+      _3d = std::move(iface);
     } else if (iface->Api() != _3d->Api()) {
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
@@ -35,7 +35,7 @@ void ApisIface::UseApiComputeIface(std::shared_ptr<ApiCompute> iface) {
   assert(iface.get() != 0);
   if (iface->Type() == ACompute) {
     if (_compute.get() == nullptr) {
-      _compute = iface;
+      _compute = std::move(iface);
     } else if (iface->Api() != _compute->Api()) {
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }

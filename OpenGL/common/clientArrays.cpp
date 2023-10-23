@@ -100,7 +100,7 @@ gits::OpenGL::ClientArraysUpdate::ClientArraysUpdate(GLenum type,
   }
 
   // Dump attribs updates in optimized ranges
-  DumpAttribsUpdateOptimized(indicesSorted, 0, 0);
+  DumpAttribsUpdateOptimized(std::move(indicesSorted), 0, 0);
 }
 
 gits::OpenGL::ClientArraysUpdate::ClientArraysUpdate(GLsizei count,
@@ -146,7 +146,7 @@ gits::OpenGL::ClientArraysUpdate::ClientArraysUpdate(GLsizei count,
   }
 
   // Dump attribs updates in optimized ranges
-  DumpAttribsUpdateOptimized(indicesSorted, instances, baseinstance);
+  DumpAttribsUpdateOptimized(std::move(indicesSorted), instances, baseinstance);
 }
 
 void gits::OpenGL::ClientArraysUpdate::DumpIndicesUpdate(

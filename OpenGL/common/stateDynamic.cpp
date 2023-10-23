@@ -519,12 +519,13 @@ void CStateDynamic::EraseNonCurrentData() {
     };
 
     // Specialized renderbuffers check binding function
-    auto CheckBindingRenderbuffer = [=](GLenum bindEnum, GLint name) -> bool {
+    auto CheckBindingRenderbuffer = [&fboRbos](GLenum bindEnum, GLint name) -> bool {
       return (fboRbos.find(name) != fboRbos.end());
     };
 
     // Specialized textures and sampler check binding function
-    auto CheckBindingForAllTexUnits = [=](GLenum bindEnum, GLint name) -> bool {
+    auto CheckBindingForAllTexUnits = [&fboTexs, &maxTexUnits, &activeTexUnit](GLenum bindEnum,
+                                                                               GLint name) -> bool {
       GLint boundName = 0;
       if (fboTexs.find(name) != fboTexs.end()) {
         return true;
@@ -574,7 +575,9 @@ void CStateDynamic::EraseNonCurrentData() {
         boundShaderStorageBuffers.insert(buff);
       }
     }
-    auto CheckBindingForBuffers = [=](GLenum bindEnum, GLint name) -> bool {
+    auto CheckBindingForBuffers = [&boundArrayBuffers, &boundUniformBuffers,
+                                   &boundShaderStorageBuffers](GLenum bindEnum,
+                                                               GLint name) -> bool {
       if (bindEnum == GL_ARRAY_BUFFER_BINDING &&
           boundArrayBuffers.find(name) != boundArrayBuffers.end()) {
         return true;

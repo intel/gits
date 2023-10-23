@@ -955,7 +955,7 @@ public:
     for (unsigned i = 0; i < dictSize; i++) {
       std::shared_ptr<TKeyArg> keyArgPtr(new TKeyArg());
       keyArgPtr->Read(stream);
-      _cargs[i] = keyArgPtr;
+      _cargs[i] = std::move(keyArgPtr);
     }
   }
   virtual void Write(CCodeOStream& stream) const {
@@ -1212,7 +1212,7 @@ public:
       for (unsigned j = 0; j < innerDictSize; j++) {
         std::shared_ptr<TKeyArg> keyArgPtr(new TKeyArg());
         keyArgPtr->Read(stream);
-        _cargs[i][j] = keyArgPtr;
+        _cargs[i][j] = std::move(keyArgPtr);
       }
     }
   }

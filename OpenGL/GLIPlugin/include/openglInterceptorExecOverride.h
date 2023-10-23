@@ -85,7 +85,7 @@ const GLubyte* execWrap_glGetString(GLenum name) {
           str.replace(pos, extStr.length() + 1, "");
         }
       }
-      resultStrings[return_value] = str;
+      resultStrings[return_value] = std::move(str);
     }
     return_value = (const GLubyte*)resultStrings[return_value].c_str();
   }

@@ -51,7 +51,7 @@ class CAsciiTable {
 public:
   // Accepting only a fixed-size array to avoid length checking.
   CAsciiTable(std::array<std::string, NUMCOLS> headers) {
-    columnHeaders = headers;
+    columnHeaders = std::move(headers);
     for (size_t col = 0; col < NUMCOLS; ++col) {
       columnWidths[col] = columnHeaders[col].length();
     }
@@ -66,7 +66,7 @@ public:
   }
 
   void AddOneCellRow(std::string cellContents) {
-    const Row properRow{cellContents};
+    const Row properRow{std::move(cellContents)};
     rows.push_back(properRow);
   }
 
@@ -153,7 +153,7 @@ private:
 
     out << v;
     const bool leftAligned = true;
-    printCell(out, row, rowWidth, leftAligned);
+    printCell(out, std::move(row), rowWidth, leftAligned);
     out << v << std::endl;
   }
 };

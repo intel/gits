@@ -28,7 +28,8 @@ namespace Vulkan {
     *
     * CLibrary class constructor.
     */
-CLibrary::CLibrary(gits::CLibrary::state_creator_t stc) : gits::CLibrary(ID_VULKAN, stc) {}
+CLibrary::CLibrary(gits::CLibrary::state_creator_t stc)
+    : gits::CLibrary(ID_VULKAN, std::move(stc)) {}
 
 CLibrary::~CLibrary() {
   waitForAllDevices();

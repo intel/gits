@@ -478,8 +478,8 @@ void CreateHeaderFiles(const std::vector<std::string>& sourceNamesToScan,
         std::string srcHeader(std::istreambuf_iterator<char>(loadHeader),
                               (std::istreambuf_iterator<char>()));
         alreadyCreatedHeaders.insert(header);
-        const auto otherIncludeFiles =
-            GetStringsWithRegex(srcHeader, R"((?<=^#include)\s*["<]([^">]+))", "\\s*[<\"]*");
+        const auto otherIncludeFiles = GetStringsWithRegex(
+            std::move(srcHeader), R"((?<=^#include)\s*["<]([^">]+))", "\\s*[<\"]*");
         CreateHeaderFiles(otherIncludeFiles, searchPaths, alreadyCreatedHeaders, true);
       }
     }

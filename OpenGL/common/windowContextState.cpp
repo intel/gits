@@ -173,8 +173,8 @@ void GlxRecorderMngr::UpdateWindow(std::vector<int>& winparams) {
   ReadWindowParams(winparamsCurrent);
 
   if (winparamsCurrent != _winparamsLast) {
-    winparams = winparamsCurrent;      // Copy contents.
-    _winparamsLast = winparamsCurrent; // Move contents.
+    winparams = winparamsCurrent;                 // Copy contents.
+    _winparamsLast = std::move(winparamsCurrent); // Move contents.
   }
 }
 
@@ -235,7 +235,7 @@ void GlxRecorderMngr::UpdateWindowHandle() {
     std::shared_ptr<window_handle> foundWindow = FindWindow(currentWindow);
 
     if (foundWindow) {
-      _windowHandle = foundWindow;
+      _windowHandle = std::move(foundWindow);
     } else {
       _windowHandle = std::make_shared<window_handle>(currentWindow);
     }

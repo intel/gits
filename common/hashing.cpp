@@ -90,7 +90,7 @@ static Signature calculateSig(const std::filesystem::path& dir) {
     }
   }
 
-  return Signature{NEWEST_SIG_FORMAT_VERSION, hashes};
+  return Signature{NEWEST_SIG_FORMAT_VERSION, std::move(hashes)};
 }
 
 static Signature readSigFromDir(const std::filesystem::path& dir) {
@@ -109,7 +109,7 @@ static Signature readSigFromDir(const std::filesystem::path& dir) {
                   "User Guide section \"Streams are not being finished properly\".";
       throw std::runtime_error("Signature file not found.");
     } else {
-      filepath = oldFilepath;
+      filepath = std::move(oldFilepath);
     }
   }
 
@@ -138,7 +138,7 @@ static Signature readSigFromDir(const std::filesystem::path& dir) {
     hashes[line.substr(spacePos + 1)] = line.substr(0, spacePos);
   }
 
-  return Signature{version, hashes};
+  return Signature{version, std::move(hashes)};
 }
 
 void sign_directory(const std::filesystem::path& dir) {

@@ -27,7 +27,7 @@ public:
   class HotKeyHolder {
   public:
     typedef std::function<void()> HotKeyEvent;
-    HotKeyHolder(std::vector<uint> keys, uint maxId) : _id(maxId), _keys(keys) {}
+    HotKeyHolder(std::vector<uint> keys, uint maxId) : _id(maxId), _keys(std::move(keys)) {}
     uint Id() const {
       return _id;
     }

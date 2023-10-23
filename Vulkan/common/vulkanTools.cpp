@@ -299,7 +299,7 @@ bool vulkanCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer bufferHandle, std:
   std::shared_ptr<RenderGenericAttachment> attachment(new RenderGenericAttachment());
   attachment->sourceBuffer = bufferHandle;
   attachment->copiedBuffer = localBuffer;
-  attachment->fileName = fileName;
+  attachment->fileName = std::move(fileName);
   attachment->devMemory = localMemory;
   SD()._commandbufferstates[commandBuffer]->renderPassResourceBuffers.push_back(attachment);
   return true;
@@ -567,14 +567,14 @@ void vulkanScheduleCopyResources(VkCommandBuffer cmdBuffer,
       std::string fileName = GetFileNameResourcesScreenshot(
           CGits::Instance().CurrentFrame(), queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
           renderPassNumber, SD().bufferCounter[swapBuffer], obj.second, dumpingMode);
-      vulkanCopyBuffer(cmdBuffer, swapBuffer, fileName);
+      vulkanCopyBuffer(cmdBuffer, swapBuffer, std::move(fileName));
     }
     for (auto& obj : commandBufferState->resourceWriteImages) {
       VkImage swapImg = obj.first;
       std::string fileName = GetFileNameResourcesScreenshot(
           CGits::Instance().CurrentFrame(), queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
           renderPassNumber, SD().imageCounter[swapImg], obj.second, dumpingMode);
-      vulkanCopyImage(cmdBuffer, swapImg, fileName, true, VK_ATTACHMENT_STORE_OP_STORE,
+      vulkanCopyImage(cmdBuffer, swapImg, std::move(fileName), true, VK_ATTACHMENT_STORE_OP_STORE,
                       dumpingMode);
     }
   }
@@ -620,7 +620,8 @@ void vulkanScheduleCopyRenderPasses(VkCommandBuffer cmdBuffer,
     std::string fileName = GetFileNameDrawcallScreenshot(
         CGits::Instance().CurrentFrame(), queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
         renderPassNumber, drawNumber, SD().imageCounter[imageHandle], dumpingMode);
-    vulkanCopyImage(cmdBuffer, imageHandle, fileName, false, imageStoreOption, dumpingMode);
+    vulkanCopyImage(cmdBuffer, imageHandle, std::move(fileName), false, imageStoreOption,
+                    dumpingMode);
   }
 }
 
@@ -1318,7 +1319,7 @@ void writeScreenshot(VkQueue queue,
               VulkanDumpingMode::VULKAN_PER_COMMANDBUFFER);
           if (dumpedImagesFromCmdBuff.find(imageHandle) == dumpedImagesFromCmdBuff.end()) {
             bool dumped =
-                writeScreenshotUtil(fileName, queue, imageHandle,
+                writeScreenshotUtil(std::move(fileName), queue, imageHandle,
                                     VULKAN_MODE_RENDER_PASS_ATTACHMENTS, imageStoreOption);
             if (dumped) {
               dumpedImagesFromCmdBuff.insert(imageHandle);
@@ -1330,8 +1331,8 @@ void writeScreenshot(VkQueue queue,
               (uint32_t)CGits::Instance().vkCounters.CurrentQueueSubmitCount(),
               commandBufferBatchNumber, cmdBufferNumber, renderpass, 0, imageview,
               VulkanDumpingMode::VULKAN_PER_RENDERPASS);
-          writeScreenshotUtil(fileName, queue, imageHandle, VULKAN_MODE_RENDER_PASS_ATTACHMENTS,
-                              imageStoreOption);
+          writeScreenshotUtil(std::move(fileName), queue, imageHandle,
+                              VULKAN_MODE_RENDER_PASS_ATTACHMENTS, imageStoreOption);
         }
       }
     }
@@ -1374,7 +1375,7 @@ void writeResources(VkQueue queue,
           (uint32_t)CGits::Instance().vkCounters.CurrentQueueSubmitCount(),
           commandBufferBatchNumber, cmdBufferNumber, 0, SD().bufferCounter[swapBuffer], obj.second,
           VulkanDumpingMode::VULKAN_PER_COMMANDBUFFER);
-      writeBufferUtil(fileName, queue, swapBuffer);
+      writeBufferUtil(std::move(fileName), queue, swapBuffer);
     }
     for (auto& obj : commandBufferState->resourceWriteImages) {
       VkImage swapImg = obj.first;
@@ -1383,7 +1384,7 @@ void writeResources(VkQueue queue,
           (uint32_t)CGits::Instance().vkCounters.CurrentQueueSubmitCount(),
           commandBufferBatchNumber, cmdBufferNumber, 0, SD().imageCounter[swapImg], obj.second,
           VulkanDumpingMode::VULKAN_PER_COMMANDBUFFER);
-      writeScreenshotUtil(fileName, queue, swapImg, VULKAN_MODE_RESOURCES);
+      writeScreenshotUtil(std::move(fileName), queue, swapImg, VULKAN_MODE_RESOURCES);
     }
   }
 }
@@ -1612,21 +1613,20 @@ void writeBufferUtil(std::string fileName, VkQueue& queue, VkBuffer& sourceBuffe
   drvVk.vkMapMemory(device, localMemory, 0, memoryRequirements.size, 0, (void**)&ptr);
   memcpy(bufferData.data(), ptr, targetBufferCreateInfo->size);
 
-  std::string outputFileNameBin = fileName;
-  if (outputFileNameBin.empty()) {
+  if (fileName.empty()) {
     Log(ERR) << "Could not generate a name for the buffer to be dumped.";
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
-  outputFileNameBin.append(".bin");
+  fileName.append(".bin");
 
-  const char* binaryFileName = outputFileNameBin.c_str();
+  const char* binaryFileName = fileName.c_str();
   if (binaryFileName == nullptr) {
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 
   outFile = fopen(binaryFileName, "wb");
   if (outFile == nullptr) {
-    Log(ERR) << "Could not open a file: " << outputFileNameBin;
+    Log(ERR) << "Could not open a file: " << fileName;
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
   fwrite(&bufferData[0], sizeof(uint8_t), targetBufferCreateInfo->size, outFile);

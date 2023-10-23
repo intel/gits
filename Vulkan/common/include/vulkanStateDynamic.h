@@ -161,7 +161,7 @@ struct CPhysicalDeviceState : public UniqueResourceHandle {
   std::shared_ptr<CInstanceState> instanceStateStore;
 
   CPhysicalDeviceState(VkPhysicalDevice _physicalDevice,
-                       std::shared_ptr<CInstanceState> _instanceState)
+                       std::shared_ptr<CInstanceState>& _instanceState)
       : physicalDeviceHandle(_physicalDevice),
         memoryProperties(),
         instanceStateStore(_instanceState) {}
@@ -187,7 +187,7 @@ struct CSurfaceKHRState : public UniqueResourceHandle {
 
   CSurfaceKHRState(VkSurfaceKHR const* _pSurface,
                    VkWin32SurfaceCreateInfoKHR const* _pCreateInfo,
-                   std::shared_ptr<CInstanceState> _instanceState)
+                   std::shared_ptr<CInstanceState>& _instanceState)
       : surfaceKHRHandle(*_pSurface),
         surfaceCreateInfoWin32Data(_pCreateInfo),
         surfaceCreateInfoXcbData(nullptr),
@@ -195,7 +195,7 @@ struct CSurfaceKHRState : public UniqueResourceHandle {
         instanceStateStore(_instanceState) {}
   CSurfaceKHRState(VkSurfaceKHR const* _pSurface,
                    VkXcbSurfaceCreateInfoKHR const* _pCreateInfo,
-                   std::shared_ptr<CInstanceState> _instanceState)
+                   std::shared_ptr<CInstanceState>& _instanceState)
       : surfaceKHRHandle(*_pSurface),
         surfaceCreateInfoWin32Data(nullptr),
         surfaceCreateInfoXcbData(_pCreateInfo),
@@ -203,7 +203,7 @@ struct CSurfaceKHRState : public UniqueResourceHandle {
         instanceStateStore(_instanceState) {}
   CSurfaceKHRState(VkSurfaceKHR const* _pSurface,
                    VkXlibSurfaceCreateInfoKHR const* _pCreateInfo,
-                   std::shared_ptr<CInstanceState> _instanceState)
+                   std::shared_ptr<CInstanceState>& _instanceState)
       : surfaceKHRHandle(*_pSurface),
         surfaceCreateInfoWin32Data(nullptr),
         surfaceCreateInfoXcbData(nullptr),
@@ -240,7 +240,7 @@ struct CDeviceState : public UniqueResourceHandle {
 
   CDeviceState(VkDevice const* _pDevice,
                VkDeviceCreateInfo const* _pCreateInfo,
-               std::shared_ptr<CPhysicalDeviceState> _physicalDeviceState)
+               std::shared_ptr<CPhysicalDeviceState>& _physicalDeviceState)
       : deviceHandle(*_pDevice),
         deviceCreateInfoData(_pCreateInfo),
         physicalDeviceStateStore(_physicalDeviceState) {}
@@ -271,7 +271,7 @@ struct CQueueState : public UniqueResourceHandle {
               uint32_t _queueFamilyIndex,
               uint32_t _queueIndex,
               VkQueueFlags _queueFlags,
-              std::shared_ptr<CDeviceState> _deviceState)
+              std::shared_ptr<CDeviceState>& _deviceState)
       : queueHandle(*_pQueue),
         queueFamilyIndex(_queueFamilyIndex),
         queueIndex(_queueIndex),
@@ -291,8 +291,8 @@ struct CSwapchainKHRState : public UniqueResourceHandle {
 
   CSwapchainKHRState(VkSwapchainKHR const* _pSwapchain,
                      VkSwapchainCreateInfoKHR const* _pCreateInfo,
-                     std::shared_ptr<CDeviceState> _deviceState,
-                     std::shared_ptr<CSurfaceKHRState> _surfaceState)
+                     std::shared_ptr<CDeviceState>& _deviceState,
+                     std::shared_ptr<CSurfaceKHRState>& _surfaceState)
       : swapchainKHRHandle(*_pSwapchain),
         swapchainCreateInfoKHRData(_pCreateInfo),
         deviceStateStore(_deviceState),
@@ -312,7 +312,7 @@ struct CDescriptorPoolState : public UniqueResourceHandle {
 
   CDescriptorPoolState(VkDescriptorPool const* _pDescriptorPool,
                        VkDescriptorPoolCreateInfo const* _pCreateInfo,
-                       std::shared_ptr<CDeviceState> _deviceState)
+                       std::shared_ptr<CDeviceState>& _deviceState)
       : descriptorPoolHandle(*_pDescriptorPool),
         descriptorPoolCreateInfoData(_pCreateInfo),
         deviceStateStore(_deviceState) {}
@@ -340,7 +340,7 @@ struct CCommandPoolState : public UniqueResourceHandle {
 
   CCommandPoolState(VkCommandPool const* _pCommandPool,
                     VkCommandPoolCreateInfo const* _pCreateInfo,
-                    std::shared_ptr<CDeviceState> _deviceState)
+                    std::shared_ptr<CDeviceState>& _deviceState)
       : commandPoolHandle(*_pCommandPool),
         commandPoolCreateInfoData(_pCreateInfo),
         deviceStateStore(_deviceState) {}
@@ -367,7 +367,7 @@ struct CSamplerState : public UniqueResourceHandle {
 
   CSamplerState(VkSampler const* _pSampler,
                 VkSamplerCreateInfo const* _pCreateInfo,
-                std::shared_ptr<CDeviceState> _deviceState)
+                std::shared_ptr<CDeviceState>& _deviceState)
       : samplerHandle(*_pSampler),
         samplerCreateInfoData(_pCreateInfo),
         deviceStateStore(_deviceState) {}
@@ -424,7 +424,7 @@ struct CDeviceMemoryState : public UniqueResourceHandle {
 
   CDeviceMemoryState(VkDeviceMemory const* _pDeviceMemory,
                      VkMemoryAllocateInfo const* _pAllocateInfo,
-                     std::shared_ptr<CDeviceState> _deviceState,
+                     std::shared_ptr<CDeviceState>& _deviceState,
                      void* _externalMemory)
       : deviceMemoryHandle(*_pDeviceMemory),
         memoryAllocateInfoData(_pAllocateInfo),
@@ -456,7 +456,7 @@ struct CMemoryBinding {
 
   CMemoryBinding(VkDeviceSize _memoryOffset,
                  VkDeviceSize _memorySizeRequirement,
-                 std::shared_ptr<CDeviceMemoryState> _deviceMemoryState)
+                 std::shared_ptr<CDeviceMemoryState>& _deviceMemoryState)
       : memoryOffset(_memoryOffset),
         memorySizeRequirement(_memorySizeRequirement),
         deviceMemoryStateStore(_deviceMemoryState) {}
@@ -492,7 +492,7 @@ struct CImageState : public UniqueResourceHandle {
 
   CImageState(VkImage const* _pImage,
               VkImageCreateInfo const* _pCreateInfo,
-              std::shared_ptr<CDeviceState> _deviceState)
+              std::shared_ptr<CDeviceState>& _deviceState)
       : imageHandle(*_pImage),
         imageCreateInfoData(_pCreateInfo),
         width(_pCreateInfo->extent.width),
@@ -512,7 +512,7 @@ struct CImageState : public UniqueResourceHandle {
     }
   }
 
-  CImageState(VkImage const* _pImage, std::shared_ptr<CSwapchainKHRState> _swapchainKHRState)
+  CImageState(VkImage const* _pImage, std::shared_ptr<CSwapchainKHRState>& _swapchainKHRState)
       : imageHandle(*_pImage),
         imageCreateInfoData(nullptr),
         width(_swapchainKHRState->swapchainCreateInfoKHRData.Value()->imageExtent.width),
@@ -564,8 +564,8 @@ struct CImageViewState : public UniqueResourceHandle {
 
   CImageViewState(VkImageView const* _pImageView,
                   const VkImageViewCreateInfo* _pCreateInfo,
-                  std::shared_ptr<CDeviceState> _deviceState,
-                  std::shared_ptr<CImageState> _imageState)
+                  std::shared_ptr<CDeviceState>& _deviceState,
+                  std::shared_ptr<CImageState>& _imageState)
       : imageViewHandle(*_pImageView),
         imageViewCreateInfoData(_pCreateInfo),
         deviceStateStore(_deviceState),
@@ -616,7 +616,7 @@ struct CBufferState : public UniqueResourceHandle {
 
   CBufferState(VkBuffer const* _pBuffer,
                VkBufferCreateInfo const* _pCreateInfo,
-               std::shared_ptr<CDeviceState> _deviceState)
+               std::shared_ptr<CDeviceState>& _deviceState)
       : bufferHandle(*_pBuffer),
         bufferCreateInfoData(_pCreateInfo),
         memoryRequirements{},
@@ -653,8 +653,8 @@ struct CBufferViewState : public UniqueResourceHandle {
 
   CBufferViewState(VkBufferView const* _pBufferView,
                    const VkBufferViewCreateInfo* _pCreateInfo,
-                   std::shared_ptr<CDeviceState> _deviceState,
-                   std::shared_ptr<CBufferState> _bufferState)
+                   std::shared_ptr<CDeviceState>& _deviceState,
+                   std::shared_ptr<CBufferState>& _bufferState)
       : bufferViewHandle(*_pBufferView),
         bufferViewCreateInfoData(_pCreateInfo),
         deviceStateStore(_deviceState),
@@ -682,7 +682,7 @@ struct CDescriptorSetLayoutState : public UniqueResourceHandle {
 
   CDescriptorSetLayoutState(VkDescriptorSetLayout const* _pDescriptorSetLayout,
                             VkDescriptorSetLayoutCreateInfo const* _pCreateInfo,
-                            std::shared_ptr<CDeviceState> _deviceState)
+                            std::shared_ptr<CDeviceState>& _deviceState)
       : descriptorSetLayoutHandle(*_pDescriptorSetLayout),
         descriptorSetLayoutCreateInfoData(_pCreateInfo),
         deviceStateStore(_deviceState) {}
@@ -761,8 +761,8 @@ struct CDescriptorSetState : public UniqueResourceHandle {
 
   CDescriptorSetState(VkDescriptorSet const* _pDescriptorSet,
                       const void* _pNextChain,
-                      std::shared_ptr<CDescriptorPoolState> _descriptorPoolState,
-                      std::shared_ptr<CDescriptorSetLayoutState> _descriptorSetLayoutState)
+                      std::shared_ptr<CDescriptorPoolState>& _descriptorPoolState,
+                      std::shared_ptr<CDescriptorSetLayoutState>& _descriptorSetLayoutState)
       : descriptorSetHandle(*_pDescriptorSet),
         extensionsDataChain(_pNextChain),
         descriptorPoolStateStore(_descriptorPoolState),
@@ -797,7 +797,7 @@ struct CPipelineLayoutState : public UniqueResourceHandle {
 
   CPipelineLayoutState(VkPipelineLayout const* _pPipelineLayout,
                        VkPipelineLayoutCreateInfo const* _pCreateInfo,
-                       std::shared_ptr<CDeviceState> _deviceState)
+                       std::shared_ptr<CDeviceState>& _deviceState)
       : pipelineLayoutHandle(*_pPipelineLayout),
         pipelineLayoutCreateInfoData(_pCreateInfo),
         deviceStateStore(_deviceState) {}
@@ -827,7 +827,7 @@ struct CDescriptorUpdateTemplateState : public UniqueResourceHandle {
   CDescriptorUpdateTemplateState(VkDescriptorUpdateTemplate const* _pDescriptorUpdateTemplate,
                                  VkDescriptorUpdateTemplateCreateInfo const* _pCreateInfo,
                                  CreationFunction _createdWith,
-                                 std::shared_ptr<CDeviceState> _deviceState)
+                                 std::shared_ptr<CDeviceState>& _deviceState)
       : descriptorUpdateTemplateHandle(*_pDescriptorUpdateTemplate),
         descriptorUpdateTemplateCreateInfoData(_pCreateInfo),
         createdWith(_createdWith),
@@ -835,7 +835,7 @@ struct CDescriptorUpdateTemplateState : public UniqueResourceHandle {
   CDescriptorUpdateTemplateState(VkDescriptorUpdateTemplate const* _pDescriptorUpdateTemplate,
                                  VkDescriptorUpdateTemplateCreateInfo const* _pCreateInfo,
                                  CreationFunction _createdWith,
-                                 std::shared_ptr<CPipelineLayoutState> _pipelineLayoutState)
+                                 std::shared_ptr<CPipelineLayoutState>& _pipelineLayoutState)
       : descriptorUpdateTemplateHandle(*_pDescriptorUpdateTemplate),
         descriptorUpdateTemplateCreateInfoData(_pCreateInfo),
         createdWith(_createdWith),
@@ -871,7 +871,7 @@ struct CPipelineCacheState : public UniqueResourceHandle {
 
   CPipelineCacheState(VkPipelineCache const* _pPipelineCache,
                       VkPipelineCacheCreateInfo const* _pCreateInfo,
-                      std::shared_ptr<CDeviceState> _deviceState)
+                      std::shared_ptr<CDeviceState>& _deviceState)
       : pipelineCacheHandle(*_pPipelineCache),
         pipelineCacheCreateInfoData(_pCreateInfo),
         deviceStateStore(_deviceState) {}
@@ -900,7 +900,7 @@ struct CShaderModuleState : public UniqueResourceHandle {
   CShaderModuleState(VkShaderModule const* _pShaderModule,
                      VkShaderModuleCreateInfo const* _pCreateInfo,
                      uint32_t _hash,
-                     std::shared_ptr<CDeviceState> _deviceState)
+                     std::shared_ptr<CDeviceState>& _deviceState)
       : shaderModuleHandle(*_pShaderModule),
         shaderModuleCreateInfoData(_pCreateInfo),
         shaderHash(_hash),
@@ -936,7 +936,7 @@ struct CRenderPassState : public UniqueResourceHandle {
   CRenderPassState(VkRenderPass const* _pRenderPass,
                    VkRenderPassCreateInfo const* _pCreateInfo,
                    CreationFunction _createdWith,
-                   std::shared_ptr<CDeviceState> _deviceState)
+                   std::shared_ptr<CDeviceState>& _deviceState)
       : renderPassHandle(*_pRenderPass),
         renderPassCreateInfoData(_pCreateInfo),
         renderPassCreateInfo2Data(nullptr),
@@ -950,7 +950,7 @@ struct CRenderPassState : public UniqueResourceHandle {
   CRenderPassState(VkRenderPass const* _pRenderPass,
                    VkRenderPassCreateInfo2 const* _pCreateInfo,
                    CreationFunction _createdWith,
-                   std::shared_ptr<CDeviceState> _deviceState)
+                   std::shared_ptr<CDeviceState>& _deviceState)
       : renderPassHandle(*_pRenderPass),
         renderPassCreateInfoData(nullptr),
         renderPassCreateInfo2Data(_pCreateInfo),
@@ -996,9 +996,9 @@ struct CPipelineState : public UniqueResourceHandle {
 
   CPipelineState(VkPipeline const* _pPipeline,
                  VkGraphicsPipelineCreateInfo const* _pCreateInfo,
-                 std::shared_ptr<CDeviceState> _deviceState,
-                 std::shared_ptr<CPipelineLayoutState> _pipelineLayoutState,
-                 std::shared_ptr<CRenderPassState> _renderPassState)
+                 std::shared_ptr<CDeviceState>& _deviceState,
+                 std::shared_ptr<CPipelineLayoutState>& _pipelineLayoutState,
+                 std::shared_ptr<CRenderPassState>& _renderPassState)
       : pipelineHandle(*_pPipeline),
         graphicsPipelineCreateInfoData(_pCreateInfo),
         computePipelineCreateInfoData(nullptr),
@@ -1009,8 +1009,8 @@ struct CPipelineState : public UniqueResourceHandle {
 
   CPipelineState(VkPipeline const* _pPipeline,
                  VkComputePipelineCreateInfo const* _pCreateInfo,
-                 std::shared_ptr<CDeviceState> _deviceState,
-                 std::shared_ptr<CPipelineLayoutState> _pipelineLayoutState)
+                 std::shared_ptr<CDeviceState>& _deviceState,
+                 std::shared_ptr<CPipelineLayoutState>& _pipelineLayoutState)
       : pipelineHandle(*_pPipeline),
         graphicsPipelineCreateInfoData(nullptr),
         computePipelineCreateInfoData(_pCreateInfo),
@@ -1020,8 +1020,8 @@ struct CPipelineState : public UniqueResourceHandle {
 
   CPipelineState(VkPipeline const* _pPipeline,
                  VkRayTracingPipelineCreateInfoKHR const* _pCreateInfo,
-                 std::shared_ptr<CDeviceState> _deviceState,
-                 std::shared_ptr<CPipelineLayoutState> _pipelineLayoutState)
+                 std::shared_ptr<CDeviceState>& _deviceState,
+                 std::shared_ptr<CPipelineLayoutState>& _pipelineLayoutState)
       : pipelineHandle(*_pPipeline),
         graphicsPipelineCreateInfoData(nullptr),
         computePipelineCreateInfoData(nullptr),
@@ -1081,8 +1081,8 @@ struct CFramebufferState : public UniqueResourceHandle {
 
   CFramebufferState(VkFramebuffer const* _pFramebuffer,
                     VkFramebufferCreateInfo const* _pCreateInfo,
-                    std::shared_ptr<CDeviceState> _deviceState,
-                    std::shared_ptr<CRenderPassState> _renderPassState)
+                    std::shared_ptr<CDeviceState>& _deviceState,
+                    std::shared_ptr<CRenderPassState>& _renderPassState)
       : framebufferHandle(*_pFramebuffer),
         framebufferCreateInfoData(_pCreateInfo),
         deviceStateStore(_deviceState),
@@ -1112,7 +1112,7 @@ struct CFenceState : public UniqueResourceHandle {
 
   CFenceState(VkFence const* _pFence,
               VkFenceCreateInfo const* _pCreateInfo,
-              std::shared_ptr<CDeviceState> _deviceState)
+              std::shared_ptr<CDeviceState>& _deviceState)
       : fenceHandle(*_pFence),
         fenceCreateInfoData(_pCreateInfo),
         fenceUsed(_pCreateInfo->flags & VK_FENCE_CREATE_SIGNALED_BIT),
@@ -1144,7 +1144,7 @@ struct CEventState : public UniqueResourceHandle {
 
   CEventState(VkEvent const* _pEvent,
               VkEventCreateInfo const* _pCreateInfo,
-              std::shared_ptr<CDeviceState> _deviceState)
+              std::shared_ptr<CDeviceState>& _deviceState)
       : eventHandle(*_pEvent),
         eventCreateInfoData(_pCreateInfo),
         eventUsed(false),
@@ -1175,7 +1175,7 @@ struct CSemaphoreState : public UniqueResourceHandle {
 
   CSemaphoreState(VkSemaphore const* _pSemaphore,
                   VkSemaphoreCreateInfo const* _pCreateInfo,
-                  std::shared_ptr<CDeviceState> _deviceState)
+                  std::shared_ptr<CDeviceState>& _deviceState)
       : semaphoreHandle(*_pSemaphore),
         semaphoreCreateInfoData(_pCreateInfo),
         semaphoreUsed(false),
@@ -1207,7 +1207,7 @@ struct CQueryPoolState : public UniqueResourceHandle {
 
   CQueryPoolState(VkQueryPool const* _pQueryPool,
                   VkQueryPoolCreateInfo const* _pCreateInfo,
-                  std::shared_ptr<CDeviceState> _deviceState)
+                  std::shared_ptr<CDeviceState>& _deviceState)
       : queryPoolHandle(*_pQueryPool),
         queryPoolCreateInfoData(_pCreateInfo),
         resetQueries(_pCreateInfo->queryCount, false),
@@ -1279,8 +1279,8 @@ struct CCommandBufferState : public UniqueResourceHandle {
 
     CBeginRenderPass(VkRenderPassBeginInfo const* _pRenderPassBeginInfo,
                      VkSubpassContents const* _pSubpassContents,
-                     std::shared_ptr<CRenderPassState> _renderPassState,
-                     std::shared_ptr<CFramebufferState> _framebufferState)
+                     std::shared_ptr<CRenderPassState>& _renderPassState,
+                     std::shared_ptr<CFramebufferState>& _framebufferState)
         : renderPassBeginInfoData(_pRenderPassBeginInfo),
           renderingInfoData(0),
           subpassContentsData(_pSubpassContents),
@@ -1345,7 +1345,7 @@ struct CCommandBufferState : public UniqueResourceHandle {
 
   CCommandBufferState(VkCommandBuffer const* _pCommandBuffer,
                       VkCommandBufferAllocateInfo const* _pAllocateInfo,
-                      std::shared_ptr<CCommandPoolState> _commandPoolState)
+                      std::shared_ptr<CCommandPoolState>& _commandPoolState)
       : commandBufferHandle(*_pCommandBuffer),
         commandBufferAllocateInfoData(_pAllocateInfo),
         ended(false),
@@ -1384,7 +1384,7 @@ struct CDeferredOperationKHRState : public UniqueResourceHandle {
   std::shared_ptr<CDeviceState> deviceStateStore;
 
   CDeferredOperationKHRState(VkDeferredOperationKHR const* _pDeferredOperation,
-                             std::shared_ptr<CDeviceState> _deviceState)
+                             std::shared_ptr<CDeviceState>& _deviceState)
       : deferredOperationKHRHandle(*_pDeferredOperation), deviceStateStore(_deviceState) {}
 
   std::set<uint64_t> GetMappedPointers() {
@@ -1410,7 +1410,7 @@ struct CAccelerationStructureKHRState : public UniqueResourceHandle {
                const VkAccelerationStructureBuildRangeInfoKHR* _pBuildRangeInfos,
                VkAccelerationStructureBuildControlDataGITS _controlData,
                std::shared_ptr<CAccelerationStructureKHRState> _srcAccelerationStructureState = {})
-        : srcAccelerationStructureStateStore(_srcAccelerationStructureState),
+        : srcAccelerationStructureStateStore(std::move(_srcAccelerationStructureState)),
           buildGeometryInfoData(_pBuildGeometryInfo, _pBuildRangeInfos, _controlData),
           buildRangeInfoDataArray(_pBuildGeometryInfo->geometryCount, _pBuildRangeInfos),
           controlData(_controlData) {}
@@ -1422,7 +1422,7 @@ struct CAccelerationStructureKHRState : public UniqueResourceHandle {
     VkCommandExecutionSideGITS executionSide;
 
     CCopyInfo(const VkCopyAccelerationStructureInfoKHR* _pCopyInfo,
-              std::shared_ptr<CAccelerationStructureKHRState> _srcAccelerationStructureState,
+              std::shared_ptr<CAccelerationStructureKHRState>& _srcAccelerationStructureState,
               VkCommandExecutionSideGITS _executionSide)
         : srcAccelerationStructureStateStore(_srcAccelerationStructureState),
           copyAccelerationStructureInfoData(_pCopyInfo),
@@ -1456,7 +1456,7 @@ struct CAccelerationStructureKHRState : public UniqueResourceHandle {
 
   CAccelerationStructureKHRState(VkAccelerationStructureKHR const* _pAccelerationStructure,
                                  VkAccelerationStructureCreateInfoKHR const* _pCreateInfo,
-                                 std::shared_ptr<CBufferState> _bufferState)
+                                 std::shared_ptr<CBufferState>& _bufferState)
       : accelerationStructureHandle(*_pAccelerationStructure),
         accelerationStructureCreateInfoData(_pCreateInfo),
         deviceAddress(0),
@@ -1488,7 +1488,7 @@ struct CQueueSubmitState {
   CQueueSubmitState(uint32_t const* _pSubmitCount,
                     VkSubmitInfo const* _pSubmits,
                     VkFence _fence,
-                    std::shared_ptr<CQueueState> _queueState)
+                    std::shared_ptr<CQueueState>& _queueState)
       : submitCount(*_pSubmitCount),
         submitInfoDataArray(*_pSubmitCount, _pSubmits),
         submitInfo2DataArray(),
@@ -1497,7 +1497,7 @@ struct CQueueSubmitState {
   CQueueSubmitState(uint32_t const* _pSubmitCount,
                     VkSubmitInfo2 const* _pSubmits,
                     VkFence _fence,
-                    std::shared_ptr<CQueueState> _queueState)
+                    std::shared_ptr<CQueueState>& _queueState)
       : submitCount(*_pSubmitCount),
         submitInfoDataArray(),
         submitInfo2DataArray(*_pSubmitCount, _pSubmits),

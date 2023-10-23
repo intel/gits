@@ -295,7 +295,8 @@ void CreateRenderPasses_helper(VkDevice device,
             &SD()._renderpassstates[renderPass]->restoreRenderPassHandle, &renderPassCreateInfo,
             createdWith, SD()._devicestates[device]);
 
-        SD()._renderpassstates[renderPass]->restoreRenderPassStateStore = restoreRenderPassState;
+        SD()._renderpassstates[renderPass]->restoreRenderPassStateStore =
+            std::move(restoreRenderPassState);
       }
     } else {
       SD()._renderpassstates[renderPass]->restoreRenderPassHandle = renderPass;

@@ -56,7 +56,7 @@ bool parse_vector(const std::string& s, std::vector<T>& vector, int size) {
     str.ignore();
   }
   if ((unsigned)size == vec.size()) {
-    vector = vec;
+    vector = std::move(vec);
     return true;
   }
   return false;
@@ -1566,7 +1566,7 @@ bool configure_player(int argc, char** argv) {
     if (std::filesystem::is_directory(libVKPath)) {
       libVKPath /= cfg.common.libVK;
     }
-    cfg.common.libVK = libVKPath;
+    cfg.common.libVK = std::move(libVKPath);
   }
 
   set_when_option_present(cfg.player.captureFinishFrame, optionCaptureFinishFrame);

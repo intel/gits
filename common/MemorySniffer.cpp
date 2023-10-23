@@ -383,7 +383,7 @@ PagedMemoryRegionHandle MemorySniffer::CreateRegion(const void* ptr, size_t size
   }
 
   //Store region
-  return StoreRegionInternal(newRegion);
+  return StoreRegionInternal(std::move(newRegion));
 }
 
 //**************************************************************************************************
