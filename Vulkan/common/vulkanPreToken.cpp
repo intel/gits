@@ -73,11 +73,11 @@ gits::CArgument& gits::Vulkan::CGitsVkMemoryUpdate::Argument(unsigned idx) {
 }
 
 gits::Vulkan::CGitsVkMemoryUpdate::CGitsVkMemoryUpdate()
-    : _device(new CVkDevice()),
-      _mem(new CVkDeviceMemory()),
-      _offset(new Cuint64_t()),
-      _length(new Cuint64_t()),
-      _resource(new CDeclaredBinaryResource()) {}
+    : _device(std::make_unique<CVkDevice>()),
+      _mem(std::make_unique<CVkDeviceMemory>()),
+      _offset(std::make_unique<Cuint64_t>()),
+      _length(std::make_unique<Cuint64_t>()),
+      _resource(std::make_unique<CDeclaredBinaryResource>()) {}
 
 void gits::Vulkan::CGitsVkMemoryUpdate::GetDiffSubRange(const std::vector<char>& oldData,
                                                         const std::vector<char>& newRangeData,
