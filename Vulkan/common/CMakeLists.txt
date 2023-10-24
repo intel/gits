@@ -58,6 +58,7 @@ add_library(Vulkan_common
   include/vulkanCCodeWriteWrap.h
   include/vulkanPNextWrappers.inl
   include/vulkanInternalShaderModules.h
+  include/vulkanRenderDocUtil.h
 
   vkFunction.cpp
   vkWindowing.cpp
@@ -80,6 +81,7 @@ add_library(Vulkan_common
   vulkanTracerAuto.cpp
   vulkanCCodeWriteWrap.cpp
   vulkanInternalShaderModules.cpp
+  vulkanRenderDocUtil.cpp
 )
 
 source_group("Generated Files" REGULAR_EXPRESSION ".*Auto.*")

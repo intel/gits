@@ -16,10 +16,9 @@
 #include "platform.h"
 #ifdef GITS_PLATFORM_WINDOWS
 #include <Windows.h>
+#ifdef WITH_VULKAN
+#include "vulkanRenderDocUtil.h"
 #endif
-
-#if defined(GITS_PLATFORM_WINDOWS)
-#include "renderDocUtil.h"
 #endif
 
 #include "token.h"
@@ -224,9 +223,8 @@ void CTokenFrameNumber::Run() {
 
 #if defined(GITS_PLATFORM_WINDOWS)
     if (cfg.player.renderDoc.frameRecEnabled &&
-        cfg.player.renderDoc.captureRange[CGits::Instance().CurrentFrame()] &&
-        CGits::Instance().CurrentFrame() != 1) {
-      RenderDocUtil::GetInstance().StartRecording();
+        cfg.player.renderDoc.captureRange[CGits::Instance().CurrentFrame()]) {
+      Vulkan::RenderDocUtil::GetInstance().StartRecording();
     }
 #endif
 
@@ -266,10 +264,10 @@ void CTokenFrameNumber::Run() {
                     !cfg.player.renderDoc
                          .captureRange[static_cast<uint64_t>(CGits::Instance().CurrentFrame()) + 1];
       if (!cfg.player.renderDoc.continuousCapture || isLast) {
-        RenderDocUtil::GetInstance().StopRecording();
+        Vulkan::RenderDocUtil::GetInstance().StopRecording();
       }
       if (cfg.player.renderDoc.enableUI && isLast) {
-        RenderDocUtil::GetInstance().LaunchRenderDocUI();
+        Vulkan::RenderDocUtil::GetInstance().LaunchRenderDocUI();
       }
     }
 #endif

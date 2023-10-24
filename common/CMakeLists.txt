@@ -49,7 +49,6 @@ list(APPEND common_SOURCES
   include/zone_allocator.h
   include/automateCCode.h
   include/ccodeWriteWrap.h
-  include/renderDocUtil.h
 
   apis_iface.cpp
   argument.cpp
@@ -86,7 +85,6 @@ list(APPEND common_SOURCES
   texture_converter.cpp
   automateCCode.cpp
   ccodeWriteWrap.cpp
-  renderDocUtil.cpp
 )
 if(WIN32)
   list(APPEND common_SOURCES

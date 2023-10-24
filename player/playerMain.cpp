@@ -17,7 +17,9 @@
 #if defined GITS_PLATFORM_WINDOWS
 #include "StackWalker.h"
 #include <psapi.h>
-#include "renderDocUtil.h"
+#ifdef WITH_VULKAN
+#include "vulkanRenderDocUtil.h"
+#endif
 #endif
 
 #include "gits.h"
@@ -157,11 +159,11 @@ int MainBody(int argc, char* argv[]) {
 
     if (cfg.player.renderDoc.frameRecEnabled || cfg.player.renderDoc.queuesubmitRecEnabled) {
       if (!cfg.player.renderDoc.dllPath.empty()) {
-        RenderDocUtil::dllpath = cfg.player.renderDoc.dllPath.string();
+        Vulkan::RenderDocUtil::dllpath = cfg.player.renderDoc.dllPath.string();
       } else {
-        RenderDocUtil::dllpath = GetRenderDocDllPath();
+        Vulkan::RenderDocUtil::dllpath = GetRenderDocDllPath();
       }
-      RenderDocUtil::GetInstance();
+      Vulkan::RenderDocUtil::GetInstance();
     }
 #endif
 

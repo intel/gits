@@ -18,26 +18,42 @@
 #include "renderdoc_app.h"
 
 #include <string>
+#include <unordered_map>
 
-namespace gits {
+namespace gits::Vulkan {
 class RenderDocUtil : gits::noncopyable {
 private:
-  RENDERDOC_API_1_0_0* rdoc;
+  class RenderDocCapturer {
+  private:
+    static uint32_t ID;
+    uint32_t capturerID;
+    VkInstance vkInstance;
+    RENDERDOC_DevicePointer device;
+    bool isRecording;
+    void SetCapturePath();
+
+  public:
+    RenderDocCapturer(VkInstance instance);
+    void Start();
+    void Stop();
+    void LaunchUI();
+  };
+
+  static RENDERDOC_API_1_0_0* rdoc;
   HMODULE renderDocLibrary;
-  static RenderDocUtil* instance;
-  RENDERDOC_DevicePointer pRenderDocDevice;
-  bool isValid;
-  void SetOutputName();
+  std::unordered_map<VkInstance, RenderDocCapturer> rdocCapturers;
   RenderDocUtil();
 
 public:
   static std::string dllpath;
   static RenderDocUtil& GetInstance();
-  ~RenderDocUtil();
+  RenderDocCapturer& GetCapturer(VkInstance instance);
+  void AddCapturer(VkInstance instance);
+  void DeleteCapturer(VkInstance instance);
   void StartRecording();
   void StopRecording();
   void LaunchRenderDocUI();
-  void SetRenderDocDevice(VkInstance vkInstance);
+  ~RenderDocUtil();
 };
-} // namespace gits
+} // namespace gits::Vulkan
 #endif // GITS_PLATFORM_WINDOWS

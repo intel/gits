@@ -16,7 +16,7 @@
 #include <thread>
 
 #if defined(GITS_PLATFORM_WINDOWS)
-#include "renderDocUtil.h"
+#include "vulkanRenderDocUtil.h"
 #endif
 
 namespace gits {
@@ -448,6 +448,13 @@ inline void vkCreateInstance_WRAPRUN(CVkResult& recorderSideReturnValue,
   checkReturnValue(playerSideReturnValue, recorderSideReturnValue, "vkCreateInstance");
   recorderSideReturnValue.Assign(playerSideReturnValue);
   vkCreateInstance_SD(playerSideReturnValue, createInfoPtrOrig, *pAllocator, *pInstance);
+
+#if defined(GITS_PLATFORM_WINDOWS)
+  if (Config::Get().player.renderDoc.frameRecEnabled &&
+      Config::Get().player.renderDoc.captureRange[CGits::Instance().CurrentFrame()]) {
+    RenderDocUtil::GetInstance().AddCapturer(**pInstance);
+  }
+#endif
 }
 
 inline void vkQueuePresentKHR_WRAPRUN(CVkResult& recorderSideReturnValue,
@@ -1566,15 +1573,8 @@ inline void vkCreateDevice_WRAPRUN(CVkResult& recorderSideReturnValue,
   vkCreateDevice_SD(playerSideReturnValue, *physicalDevice, *pCreateInfo, *pAllocator, *pDevice);
 
 #if defined(GITS_PLATFORM_WINDOWS)
-  if (Config::Get().player.renderDoc.frameRecEnabled ||
-      Config::Get().player.renderDoc.queuesubmitRecEnabled) {
-    auto vkInstance =
-        SD()._physicaldevicestates[*physicalDevice]->instanceStateStore->instanceHandle;
-    RenderDocUtil::GetInstance().SetRenderDocDevice(vkInstance);
-  }
   if (Config::Get().player.renderDoc.frameRecEnabled &&
-      Config::Get().player.renderDoc.captureRange[CGits::Instance().CurrentFrame()] &&
-      CGits::Instance().CurrentFrame() == 1) {
+      Config::Get().player.renderDoc.captureRange[CGits::Instance().CurrentFrame()]) {
     RenderDocUtil::GetInstance().StartRecording();
   }
 #endif
@@ -1887,6 +1887,12 @@ inline void vkDestroyDevice_WRAPRUN(CVkDevice& device, CNullWrapper& pAllocator)
 }
 
 inline void vkDestroyInstance_WRAPRUN(CVkInstance& instance, CNullWrapper& pAllocator) {
+#ifdef GITS_PLATFORM_WINDOWS
+  if (Config::Get().player.renderDoc.frameRecEnabled ||
+      Config::Get().player.renderDoc.queuesubmitRecEnabled) {
+    RenderDocUtil::GetInstance().DeleteCapturer(*instance);
+  }
+#endif
   // If vkDestroyInstance() function is recorded and replayed, then we need to destroy all the instance-level resources before the instance destruction
   destroyInstanceLevelResources(*instance);
 
