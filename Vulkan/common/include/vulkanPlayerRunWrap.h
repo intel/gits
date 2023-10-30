@@ -856,6 +856,14 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
   }
 }
 
+inline void vkQueueSubmit2KHR_WRAPRUN(CVkResult& return_value,
+                                      CVkQueue& queue,
+                                      Cuint32_t& submitCount,
+                                      CVkSubmitInfo2Array& pSubmits,
+                                      CVkFence& fence) {
+  vkQueueSubmit2_WRAPRUN(return_value, queue, submitCount, pSubmits, fence);
+}
+
 inline void vkMapMemory_WRAPRUN(CVkResult& recorderSideReturnValue,
                                 CVkDevice& device,
                                 CVkDeviceMemory& mem,

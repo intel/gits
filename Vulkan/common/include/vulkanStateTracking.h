@@ -2946,6 +2946,15 @@ inline void vkQueueSubmit2_SD(VkResult return_value,
   }
 }
 
+inline void vkQueueSubmit2KHR_SD(VkResult return_value,
+                                 VkQueue queue,
+                                 uint32_t submitCount,
+                                 const VkSubmitInfo2* pSubmits,
+                                 VkFence fence,
+                                 bool stateRestore = false) {
+  vkQueueSubmit2_SD(return_value, queue, submitCount, pSubmits, fence, stateRestore);
+}
+
 //RenderPass helper functions
 namespace {
 inline void vkEndRenderPass_setImageLayout(

@@ -843,6 +843,15 @@ inline void vkQueueSubmit2_RECWRAP(VkResult return_value,
   vkQueueSubmit2_SD(return_value, queue, submitCount, pSubmits, fence);
 }
 
+inline void vkQueueSubmit2KHR_RECWRAP(VkResult return_value,
+                                      VkQueue queue,
+                                      uint32_t submitCount,
+                                      const VkSubmitInfo2* pSubmits,
+                                      VkFence fence,
+                                      CRecorder& recorder) {
+  vkQueueSubmit2_RECWRAP(return_value, queue, submitCount, pSubmits, fence, recorder);
+}
+
 inline void vkBeginCommandBuffer_RECWRAP(VkResult return_value,
                                          VkCommandBuffer commandBuffer,
                                          const VkCommandBufferBeginInfo* pBeginInfo,

@@ -4246,11 +4246,11 @@ arg3=ArgDef(name='pSubmits', type='const VkSubmitInfo2*', wrapType='CVkSubmitInf
 arg4=ArgDef(name='fence', type='VkFence')
 )
 
-Function(name='vkQueueSubmit2KHR', enabled=False, type=Param,
+Function(name='vkQueueSubmit2KHR', enabled=True, type=QueueSubmit, stateTrack=True, recWrap=True, runWrap=True, recExecWrap=True, execPostRecWrap=True, ccodeWrap=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='queue', type='VkQueue'),
 arg2=ArgDef(name='submitCount', type='uint32_t'),
-arg3=ArgDef(name='pSubmits', type='const VkSubmitInfo2*'),
+arg3=ArgDef(name='pSubmits', type='const VkSubmitInfo2*', wrapType='CVkSubmitInfo2Array', wrapParams='submitCount, pSubmits', count='submitCount'),
 arg4=ArgDef(name='fence', type='VkFence')
 )
 

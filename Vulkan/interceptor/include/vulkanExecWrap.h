@@ -234,6 +234,14 @@ VkResult recExecWrap_vkQueueSubmit2(VkQueue queue,
   return return_value;
 }
 
+VkResult recExecWrap_vkQueueSubmit2KHR(VkQueue queue,
+                                       uint32_t submitCount,
+                                       const VkSubmitInfo2* pSubmits,
+                                       VkFence fence) {
+  auto return_value = recExecWrap_vkQueueSubmit2(queue, submitCount, pSubmits, fence);
+  return return_value;
+}
+
 // vkMapMemory
 
 VkResult recExecWrap_vkMapMemory(VkDevice device,
