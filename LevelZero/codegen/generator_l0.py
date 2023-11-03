@@ -4328,14 +4328,14 @@ arg3=ArgDef(name='pSize',type='size_t*',tag='inout',optional=True),
 arg4=ArgDef(name='pptr',type='void**',tag='inout',optional=True,wrapType='CMappedPtr::CSMapArray'),
 )
 
-Function(name='zeModuleGetKernelNames',component='ze_module',enabled=True,recWrap=True,runSkip=True,ddi_pos=5,
+Function(name='zeModuleGetKernelNames',component='ze_module',enabled=True,recWrap=True,skipRun=True,ddi_pos=5,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hModule',type='ze_module_handle_t',tag='in'),
 arg2=ArgDef(name='pCount',type='uint32_t*',tag='inout'),
 arg3=ArgDef(name='pNames',type='const char**',tag='inout',range='0,*pCount',optional=True,wrapType='COutArgument'),
 )
 
-Function(name='zeModuleGetNativeBinary',component='ze_module',enabled=True,ddi_pos=3,
+Function(name='zeModuleGetNativeBinary',component='ze_module',enabled=True,ddi_pos=3,skipRun=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hModule',type='ze_module_handle_t',tag='in'),
 arg2=ArgDef(name='pSize',type='size_t*',tag='inout'),
