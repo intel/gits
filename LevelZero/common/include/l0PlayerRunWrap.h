@@ -380,9 +380,9 @@ inline void zeImageCreate_RUNWRAP(Cze_result_t& _return_value,
 }
 
 inline void zeFenceQueryStatus_RUNWRAP(Cze_result_t& _return_value, Cze_fence_handle_t& _hFence) {
+  const auto originalRetValue = _return_value.Original();
   _return_value.Value() = drv.zeFenceQueryStatus(*_hFence);
-  if (_return_value.Value() != ZE_RESULT_SUCCESS && _return_value.Original() == ZE_RESULT_SUCCESS &&
-      SD().Get<CFenceState>(*_hFence, EXCEPTION_MESSAGE).canBeSynced) {
+  if (_return_value.Value() != ZE_RESULT_SUCCESS && originalRetValue == ZE_RESULT_SUCCESS) {
     drv.inject.zeFenceHostSynchronize(*_hFence, UINT64_MAX);
   }
 }
