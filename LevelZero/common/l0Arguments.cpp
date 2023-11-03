@@ -136,6 +136,24 @@ const void* CKernelArgValue::operator*() {
         _obj = Cze_image_handle_t::GetMapping(h_img);
         return &_obj;
       }
+    } else if (Length() > sizeof(void*)) {
+      uintptr_t potentialPointer = 0U;
+      size_t i = 0U;
+      while (_size > i && _size - i > sizeof(void*)) {
+        std::memcpy(&potentialPointer, _buffer.data() + i, sizeof(uintptr_t));
+        const auto allocPair =
+            GetAllocFromOriginalPtr(reinterpret_cast<void*>(potentialPointer), SD());
+        if (allocPair.first != nullptr) {
+          potentialPointer =
+              reinterpret_cast<uintptr_t>(GetOffsetPointer(allocPair.first, allocPair.second));
+          std::memcpy(_buffer.data() + i, &potentialPointer, sizeof(uintptr_t));
+          Log(TRACEV) << "Fetching pointer("
+                      << ToStringHelper(reinterpret_cast<void*>(potentialPointer)) << ") on offset "
+                      << std::to_string(i) << " inside local memory.";
+          i += sizeof(void*) - 1;
+        }
+        i++;
+      }
     }
   }
   return Value();
