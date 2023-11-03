@@ -78,7 +78,7 @@ std::function<void()> CreateWrapper(lua_ptr& L, const char* name) {
   }
 
   std::string name2(name);
-  return [&name2, L]() -> void {
+  return [=]() -> void {
     lua_getglobal(L.get(), name2.c_str());
     if (lua_pcall(L.get(), 0, 0, 0) != 0) {
       RaiseHookError(name2.c_str(), L.get());
@@ -94,7 +94,7 @@ std::function<void(T0)> CreateWrapper(lua_ptr& L, const char* name) {
   }
 
   std::string name2(name);
-  return [&name2, L](T0 t0) -> void {
+  return [=](T0 t0) -> void {
     lua_getglobal(L.get(), name2.c_str());
     lua_push(L.get(), t0);
     if (lua_pcall(L.get(), 1, 0, 0) != 0) {
@@ -111,7 +111,7 @@ std::function<void(T0, T1)> CreateWrapper(lua_ptr& L, const char* name) {
   }
 
   std::string name2(name);
-  return [&name2, L](T0 t0, T1 t1) -> void {
+  return [=](T0 t0, T1 t1) -> void {
     lua_getglobal(L.get(), name2.c_str());
     lua_push(L.get(), t0);
     lua_push(L.get(), t1);
