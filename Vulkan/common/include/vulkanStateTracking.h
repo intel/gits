@@ -490,7 +490,9 @@ inline void vkAcquireNextImage2KHR_SD(VkResult return_value,
 inline void vkQueuePresentKHR_SD(VkResult return_value,
                                  VkQueue queue,
                                  const VkPresentInfoKHR* pPresentInfo) {
-  if (pPresentInfo == nullptr) {
+  if (pPresentInfo == nullptr ||
+      (pPresentInfo->waitSemaphoreCount > 0 && pPresentInfo->pWaitSemaphores == nullptr) ||
+      (pPresentInfo->swapchainCount > 0 && pPresentInfo->pSwapchains == nullptr)) {
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
   for (uint32_t i = 0; i < pPresentInfo->waitSemaphoreCount; i++) {

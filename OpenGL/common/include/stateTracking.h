@@ -2475,7 +2475,9 @@ inline void glRenderbufferStorageMultisampleEXT_SD(GLenum target,
       // WA for Oculus Samsung Galaxy S7 and Unity3D 2018.1 engine
       renderbufferStateObj = SD().GetCurrentSharedStateData().Renderbuffers().Get(rbo);
     }
-    renderbufferStateObj->Data().track.samples = samples;
+    if (renderbufferStateObj != nullptr) {
+      renderbufferStateObj->Data().track.samples = samples;
+    }
   }
 }
 

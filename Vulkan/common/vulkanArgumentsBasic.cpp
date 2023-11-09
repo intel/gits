@@ -267,9 +267,8 @@ void gits::Vulkan::CVkGenericArgument::CreateArgument(uint32_t type,
 }
 
 gits::Vulkan::CVkGenericArgument::CVkGenericArgument(const void* vkgenericargument)
-    : _skipped(nullptr) {
+    : _skipped(nullptr), _isNullPtr(vkgenericargument == nullptr) {
   vkgenericargument = ignoreLoaderSpecificStructureTypes(vkgenericargument);
-  _isNullPtr = (vkgenericargument == nullptr);
 
   if (!*_isNullPtr) {
     _sType = std::make_unique<CVkStructureType>(*(uint32_t*)vkgenericargument);
