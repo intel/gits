@@ -184,7 +184,8 @@ uint32_t ensure_unsigned32bit_representible(SRC value) {
 template <class SRC>
 int32_t ensure_signed32bit_representible(SRC value) {
   // Only interested in numeric values. So explicit casting to integral types.
-  if (static_cast<int64_t>(value) >= LONG_MIN && static_cast<int64_t>(value) <= LONG_MAX) {
+  if (static_cast<int64_t>(value) >= std::numeric_limits<int32_t>::min() &&
+      static_cast<int64_t>(value) <= std::numeric_limits<int32_t>::max()) {
     return static_cast<int32_t>(value);
   } else {
     Log(INFO) << "Value cannot be represented as a 32 bit signed integer!";
