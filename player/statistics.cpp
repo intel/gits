@@ -112,6 +112,10 @@ void gits::CStatistics::Get(CScheduler& scheduler, CStatsComputer& comp) {
     std::unique_ptr<CFunction> function(
         dynamic_cast<CFunction*>(inst.TokenCreate(CId(static_cast<uint16_t>(skip.first)))));
 
+    if (function == nullptr) {
+      throw EOperationFailed(EXCEPTION_MESSAGE);
+    }
+
     // create statistic tree data for that API call
     auto& callStats = _libraryStats[function->LibraryId()];
     TCall& call = callStats[function->Name()];

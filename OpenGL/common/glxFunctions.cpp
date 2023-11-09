@@ -252,6 +252,10 @@ gits::OpenGL::CglXMakeCurrent::CglXMakeCurrent(Bool return_value,
 
   // Get Window data.
   GlxRecorderMngr* glxRecorderMngr = dynamic_cast<GlxRecorderMngr*>(ctxManager);
+  if (glxRecorderMngr == nullptr) {
+    Log(ERR) << "GlxRecorderMngr is not properly set.";
+    throw EOperationFailed(EXCEPTION_MESSAGE);
+  }
   glxRecorderMngr->UpdateWindowHandle();
   glxRecorderMngr->UpdateWindow(_winparams.Vector());
   glxRecorderMngr->GetWindowParams(_winparams.Vector());
@@ -1031,7 +1035,10 @@ gits::OpenGL::CglXMakeContextCurrent::CglXMakeContextCurrent(
   }
   // Get Window data.
   GlxRecorderMngr* glxRecorderMngr = dynamic_cast<GlxRecorderMngr*>(ctxManager);
-
+  if (glxRecorderMngr == nullptr) {
+    Log(ERR) << "GlxRecorderMngr is not properly set.";
+    throw EOperationFailed(EXCEPTION_MESSAGE);
+  }
   glxRecorderMngr->UpdateWindowHandle();
   glxRecorderMngr->UpdateWindow(_winparams.Vector());
   glxRecorderMngr->GetWindowParams(_winparams.Vector());

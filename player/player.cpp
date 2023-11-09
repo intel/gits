@@ -158,6 +158,9 @@ void gits::CPlayer::NotSupportedFunctionsPrint() const {
     for (const auto& skipped : skippedCalls) {
       std::unique_ptr<CFunction> function(
           dynamic_cast<CFunction*>(inst.TokenCreate(CId(static_cast<uint16_t>(skipped.first)))));
+      if (function == nullptr) {
+        throw EOperationFailed(EXCEPTION_MESSAGE);
+      }
       Log(INFO) << " - " << function->Name();
     }
   }
