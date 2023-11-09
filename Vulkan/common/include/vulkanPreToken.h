@@ -889,8 +889,8 @@ class CGitsInitializeMultipleImages : public CFunction, gits::noncopyable {
   CVkBuffer _copySrcBuffer;
   Cuint32_t _imagesCount;
   CVkInitializeImageDataGITSArray _pInitializeImages;
-  VkBufferMemoryBarrier _copyFromBufferMemoryBarrierPre;
-  VkBufferMemoryBarrier _copyFromBufferMemoryBarrierPost;
+  std::unique_ptr<CVkBufferMemoryBarrierData> _copyFromBufferMemoryBarrierPre;
+  std::unique_ptr<CVkBufferMemoryBarrierData> _copyFromBufferMemoryBarrierPost;
 
   virtual CArgument& Argument(unsigned idx);
   virtual unsigned ArgumentCount() const {
@@ -979,8 +979,8 @@ class CGitsInitializeMultipleBuffers : public CFunction, gits::noncopyable {
   CVkBuffer _copySrcBuffer;
   Cuint32_t _buffersCount;
   CVkInitializeBufferDataGITSArray _pInitializeBuffers;
-  VkBufferMemoryBarrier _copyFromBufferMemoryBarrierPre;
-  VkBufferMemoryBarrier _copyFromBufferMemoryBarrierPost;
+  std::unique_ptr<CVkBufferMemoryBarrierData> _copyFromBufferMemoryBarrierPre;
+  std::unique_ptr<CVkBufferMemoryBarrierData> _copyFromBufferMemoryBarrierPost;
 
   virtual CArgument& Argument(unsigned idx);
   virtual unsigned ArgumentCount() const {

@@ -425,28 +425,29 @@ class CcharDataArray : gits::noncopyable {
   CboolData _isNullPtr;
 
 public:
-  CcharDataArray(const char* srcData) : _isNullPtr(srcData == 0) {
+  CcharDataArray(const char* srcData) : outData(0), _isNullPtr(srcData == 0) {
     if (!*_isNullPtr) {
       stringData = std::make_unique<std::string>(srcData);
     } else {
       stringData = nullptr;
     }
   }
-  CcharDataArray(const char** srcData) : _isNullPtr(srcData == 0) {
+  CcharDataArray(const char** srcData) : outData(0), _isNullPtr(srcData == 0) {
     if (!*_isNullPtr) {
       stringData = std::make_unique<std::string>(*srcData);
     } else {
       stringData = nullptr;
     }
   }
-  CcharDataArray(const char* srcData, char terminator, int term_pos) : _isNullPtr(srcData == 0) {
+  CcharDataArray(const char* srcData, char terminator, int term_pos)
+      : outData(0), _isNullPtr(srcData == 0) {
     if (!*_isNullPtr) {
       stringData = std::make_unique<std::string>(srcData);
     } else {
       stringData = nullptr;
     }
   }
-  CcharDataArray(size_t num, const char* srcData) : _isNullPtr(srcData == 0) {
+  CcharDataArray(size_t num, const char* srcData) : outData(0), _isNullPtr(srcData == 0) {
     if (!*_isNullPtr) {
       stringData = std::make_unique<std::string>(srcData);
     } else {

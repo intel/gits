@@ -1470,7 +1470,7 @@ void gits::Vulkan::CGitsInitializeMultipleImages::Run() {
     }
   }
 
-  _copyFromBufferMemoryBarrierPre = {
+  VkBufferMemoryBarrier copyFromBufferMemoryBarrierPre = {
       VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, // VkStructureType sType
       nullptr,                                 // const void* pNext
       VK_ACCESS_HOST_WRITE_BIT,                // VkAccessFlags srcAccessMask
@@ -1482,7 +1482,10 @@ void gits::Vulkan::CGitsInitializeMultipleImages::Run() {
       VK_WHOLE_SIZE                            // VkDeviceSize size;
   };
 
-  _copyFromBufferMemoryBarrierPost = {
+  _copyFromBufferMemoryBarrierPre =
+      std::make_unique<CVkBufferMemoryBarrierData>(&copyFromBufferMemoryBarrierPre);
+
+  VkBufferMemoryBarrier copyFromBufferMemoryBarrierPost = {
       VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, // VkStructureType sType
       nullptr,                                 // const void* pNext
       VK_ACCESS_TRANSFER_READ_BIT,             // VkAccessFlags srcAccessMask
@@ -1493,6 +1496,9 @@ void gits::Vulkan::CGitsInitializeMultipleImages::Run() {
       0,                                       // VkDeviceSize offset
       VK_WHOLE_SIZE                            // VkDeviceSize size;
   };
+
+  _copyFromBufferMemoryBarrierPost =
+      std::make_unique<CVkBufferMemoryBarrierData>(&copyFromBufferMemoryBarrierPost);
 
   if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
     TokenBuffersUpdate();
@@ -1529,7 +1535,7 @@ void gits::Vulkan::CGitsInitializeMultipleImages::StateTrack() {
 
   vkCmdPipelineBarrier_SD(*_commandBuffer, VK_PIPELINE_STAGE_HOST_BIT,
                           VK_PIPELINE_STAGE_TRANSFER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr,
-                          1, &_copyFromBufferMemoryBarrierPre, 0, nullptr);
+                          1, _copyFromBufferMemoryBarrierPre.get()->Value(), 0, nullptr);
   for (uint32_t i = 0; i < *_imagesCount; ++i) {
     vkCmdCopyBufferToImage_SD(*_commandBuffer, *_copySrcBuffer, initializeImages[i].image,
                               initializeImages[i].layout, initializeImages[i].copyRegionsCount,
@@ -1537,7 +1543,7 @@ void gits::Vulkan::CGitsInitializeMultipleImages::StateTrack() {
   }
   vkCmdPipelineBarrier_SD(*_commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
                           VK_PIPELINE_STAGE_HOST_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1,
-                          &_copyFromBufferMemoryBarrierPost, 0, nullptr);
+                          _copyFromBufferMemoryBarrierPost.get()->Value(), 0, nullptr);
 }
 
 void gits::Vulkan::CGitsInitializeMultipleImages::TokenBuffersUpdate() {
@@ -1923,7 +1929,7 @@ void gits::Vulkan::CGitsInitializeMultipleBuffers::Run() {
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 
-  _copyFromBufferMemoryBarrierPre = {
+  VkBufferMemoryBarrier copyFromBufferMemoryBarrierPre = {
       VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, // VkStructureType sType
       nullptr,                                 // const void* pNext
       VK_ACCESS_HOST_WRITE_BIT,                // VkAccessFlags srcAccessMask
@@ -1935,7 +1941,10 @@ void gits::Vulkan::CGitsInitializeMultipleBuffers::Run() {
       VK_WHOLE_SIZE                            // VkDeviceSize size;
   };
 
-  _copyFromBufferMemoryBarrierPost = {
+  _copyFromBufferMemoryBarrierPre =
+      std::make_unique<CVkBufferMemoryBarrierData>(&copyFromBufferMemoryBarrierPre);
+
+  VkBufferMemoryBarrier copyFromBufferMemoryBarrierPost = {
       VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, // VkStructureType sType
       nullptr,                                 // const void* pNext
       VK_ACCESS_TRANSFER_READ_BIT,             // VkAccessFlags srcAccessMask
@@ -1946,6 +1955,10 @@ void gits::Vulkan::CGitsInitializeMultipleBuffers::Run() {
       0,                                       // VkDeviceSize offset
       VK_WHOLE_SIZE                            // VkDeviceSize size;
   };
+
+  _copyFromBufferMemoryBarrierPost =
+      std::make_unique<CVkBufferMemoryBarrierData>(&copyFromBufferMemoryBarrierPost);
+
   if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
     TokenBuffersUpdate();
   } else {
@@ -1977,14 +1990,14 @@ void gits::Vulkan::CGitsInitializeMultipleBuffers::StateTrack() {
   }
   vkCmdPipelineBarrier_SD(*_commandBuffer, VK_PIPELINE_STAGE_HOST_BIT,
                           VK_PIPELINE_STAGE_TRANSFER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr,
-                          1, &_copyFromBufferMemoryBarrierPre, 0, nullptr);
+                          1, _copyFromBufferMemoryBarrierPre.get()->Value(), 0, nullptr);
   for (uint32_t i = 0; i < *_buffersCount; ++i) {
     vkCmdCopyBuffer_SD(*_commandBuffer, *_copySrcBuffer, initializeBuffers[i].buffer, 1,
                        &initializeBuffers[i].bufferCopy);
   }
   vkCmdPipelineBarrier_SD(*_commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
                           VK_PIPELINE_STAGE_HOST_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1,
-                          &_copyFromBufferMemoryBarrierPost, 0, nullptr);
+                          _copyFromBufferMemoryBarrierPost.get()->Value(), 0, nullptr);
 }
 void gits::Vulkan::CGitsInitializeMultipleBuffers::TokenBuffersUpdate() {
   auto initializeBuffers = _pInitializeBuffers.Original();

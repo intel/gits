@@ -381,7 +381,7 @@ gits::OpenGL::CSharedState::CSharedState() {
  * Contructor of gits::OpenGL::CState class.
  */
 
-gits::OpenGL::CState::CState() {
+gits::OpenGL::CState::CState() : _originalContext(nullptr) {
   _stateDataObsoleted.sharedState = new CSharedState;
   _stateDataObsoleted.contextState = new CContextState;
 }

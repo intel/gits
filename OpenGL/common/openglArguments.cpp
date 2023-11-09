@@ -2527,16 +2527,19 @@ gits::OpenGL::CShaderSource::CShaderSource(GLuint shaderObj,
                                            const GLint* length,
                                            ShaderType shaderType)
     : CArgumentFileText(GetFileName(shaderType, 0, 0, shaderObj),
-                        GetShaderSource(string, count, length)) {}
+                        GetShaderSource(string, count, length)),
+      text_cstr(nullptr) {}
 
 gits::OpenGL::CShaderSource::CShaderSource(
     const GLchar* string, GLsizei length, ShaderType shaderType, GLenum target, GLenum format)
-    : CArgumentFileText(GetFileName(shaderType, target, format, 0), std::string(string, length)) {}
+    : CArgumentFileText(GetFileName(shaderType, target, format, 0), std::string(string, length)),
+      text_cstr(nullptr) {}
 
 gits::OpenGL::CShaderSource::CShaderSource(GLsizei count,
                                            const GLchar* const* string,
                                            ShaderType shaderType)
-    : CArgumentFileText(GetFileName(shaderType, 0, 0, 0), GetShaderSource(string, count)) {}
+    : CArgumentFileText(GetFileName(shaderType, 0, 0, 0), GetShaderSource(string, count)),
+      text_cstr(nullptr) {}
 
 const char** gits::OpenGL::CShaderSource::Value() {
   text_cstr = Text().c_str();

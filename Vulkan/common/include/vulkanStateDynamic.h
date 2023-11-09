@@ -1540,7 +1540,12 @@ struct InternalPipelinesManager {
 
   std::unordered_map<VkDevice, InternalPipelines> pipelinesMap;
 
-  InternalPipelinesManager() {}
+  InternalPipelinesManager()
+      : universalComputePipelineLayout(VK_NULL_HANDLE),
+        prepareDeviceAddressesForPatching(VK_NULL_HANDLE),
+        patchDeviceAddresses(VK_NULL_HANDLE),
+        copyAccelerationStructureInstanceData(VK_NULL_HANDLE),
+        copyAccelerationStructureTrianglesData(VK_NULL_HANDLE) {}
 
   InternalPipelines& operator[](VkDevice device) {
     auto it = pipelinesMap.find(device);

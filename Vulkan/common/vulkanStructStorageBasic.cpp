@@ -147,7 +147,9 @@ gits::Vulkan::CVkDeviceOrHostAddressConstKHRData::CVkDeviceOrHostAddressConstKHR
       _bufferDeviceAddress(),
       _hostOffset(0),
       _inputData(),
-      _DeviceOrHostAddressConst(nullptr) {
+      _DeviceOrHostAddressConst(nullptr),
+      _tmpBuffer(VK_NULL_HANDLE),
+      _tmpMemory(VK_NULL_HANDLE) {
   if ((deviceorhostaddress.deviceAddress == 0) || (count == 0) || (stride == 0)) {
     return;
   }

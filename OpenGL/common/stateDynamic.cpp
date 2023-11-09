@@ -37,7 +37,7 @@ CSharedStateDynamic& CSharedStateDynamic::GetStatic() {
 }
 
 CSharedStateDynamic::CSharedStateDynamic()
-    : coherentBufferMapping(false), coherentBufferFrameNumber(0) {
+    : coherentBufferMapping(false), coherentBufferFrameNumber(0), _owner(nullptr) {
   // In OGL, textures bound by default have the name zero.
   Textures().Add(CTextureStateObj(0, GL_TEXTURE_1D));
   Textures().Add(CTextureStateObj(0, GL_TEXTURE_2D));
@@ -68,7 +68,9 @@ CContextStateDynamic::CContextStateDynamic()
       restartIndexValue(4294967295u),
       _version(-1),
       _isEs(-1),
-      _profileMask(-1) {}
+      _isNvidia(-1),
+      _profileMask(-1),
+      _schedulerStatePtr(nullptr) {}
 
 CContextStateDynamic::~CContextStateDynamic() {}
 
@@ -176,6 +178,8 @@ CStateDynamic::CStateDynamic()
     : _ctxToSharedGroupIdMap(),
       _currentContextUpdateNeeded(true),
       _currentThread(), // No thread in particular.
+      _contextStateData(nullptr),
+      _currentContext(nullptr),
       _contextToSharedGroup(_ctxToSharedGroupIdMap.end()) {}
 
 CStateDynamic::~CStateDynamic() {}

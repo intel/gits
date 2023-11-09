@@ -148,7 +148,7 @@ public:
   typedef CArgumentMappedSizedArray<Type, CMappedArgument, gits::REMOVE_MAPPING> CSUnmapArray;
 
   static const int MapId = MapObjectId;
-  CMappedArgument() {}
+  CMappedArgument() : key_(0) {}
   CMappedArgument(Type arg) : key_(arg) {}
 
   static void AddMapping(Type key, Type value) {

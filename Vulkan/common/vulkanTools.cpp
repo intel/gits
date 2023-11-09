@@ -3189,7 +3189,7 @@ std::pair<std::shared_ptr<CDeviceMemoryState>, std::shared_ptr<CBufferState>> cr
         deviceState->physicalDeviceStateStore->physicalDeviceHandle, &memoryProperties);
   }
 
-  VkDeviceMemory memory;
+  VkDeviceMemory memory = VK_NULL_HANDLE;
   VkMemoryAllocateInfo memoryAllocateInfo;
 
   // Find appropriate memory type index

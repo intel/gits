@@ -1379,7 +1379,7 @@ class CShaderSource : public CArgumentFileText {
 
 public:
   enum ShaderType { SHADER_SOURCE, SHADER_PROGRAM, PROGRAM_STRING };
-  CShaderSource() {}
+  CShaderSource() : text_cstr(nullptr) {}
   CShaderSource(GLuint shaderObj,
                 GLsizei count,
                 const GLchar* const* string,

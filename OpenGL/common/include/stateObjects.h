@@ -984,12 +984,26 @@ struct CVertexArraysStateData {
       GLint binding;
       GLint relativeOffset;
       GLvoid* pointer;
+      TAttribState()
+          : arrayBufferBinding(0),
+            enabled(0),
+            size(0),
+            stride(0),
+            type(0),
+            normalized(0),
+            integer(0),
+            divisor(0),
+            binding(0),
+            relativeOffset(0),
+            pointer(nullptr) {}
     };
     struct TBindingPointState {
       GLint arrayBufferBinding;
       GLint bindingOffset;
       GLint bindingStride;
       GLint bindingDivisor;
+      TBindingPointState()
+          : arrayBufferBinding(0), bindingOffset(0), bindingStride(0), bindingDivisor(0) {}
     };
     struct TColorState {
       GLboolean enabled;
@@ -997,6 +1011,7 @@ struct CVertexArraysStateData {
       GLint type;
       GLsizei stride;
       GLvoid* pointer;
+      TColorState() : enabled(false), size(0), type(0), stride(0), pointer(nullptr) {}
     };
     struct TSecondaryColorState {
       GLboolean enabled;
@@ -1004,6 +1019,7 @@ struct CVertexArraysStateData {
       GLint type;
       GLsizei stride;
       GLvoid* pointer;
+      TSecondaryColorState() : enabled(false), size(0), type(0), stride(0), pointer(nullptr) {}
     };
     struct TVertexPointerState {
       GLboolean enabled;
@@ -1012,6 +1028,8 @@ struct CVertexArraysStateData {
       GLsizei stride;
       GLvoid* pointer;
       GLint boundBuffer;
+      TVertexPointerState()
+          : enabled(false), size(0), type(0), stride(0), pointer(nullptr), boundBuffer(0) {}
     };
     struct TNormalPointerState {
       GLboolean enabled;
@@ -1019,6 +1037,8 @@ struct CVertexArraysStateData {
       GLsizei stride;
       GLvoid* pointer;
       GLint boundBuffer;
+      TNormalPointerState()
+          : enabled(false), type(0), stride(0), pointer(nullptr), boundBuffer(0) {}
     };
     struct TTexCoordState {
       GLboolean enabled;
@@ -1027,6 +1047,8 @@ struct CVertexArraysStateData {
       GLint stride;
       GLint boundBuffer;
       GLvoid* pointer;
+      TTexCoordState()
+          : enabled(false), size(0), type(0), stride(0), boundBuffer(0), pointer(nullptr) {}
     };
 
     typedef std::map<unsigned, TAttribState> CAttribsMap;
@@ -1044,7 +1066,14 @@ struct CVertexArraysStateData {
     GLint maxTexCoords;
 
     GLint elementArrayBufferBinding;
-    Restored() : elementArrayBufferBinding(0) {}
+    Restored()
+        : colorState(),
+          secondaryColorState(),
+          vertexPointerState(),
+          normalPointerState(),
+          clientActiveTexture(0),
+          maxTexCoords(0),
+          elementArrayBufferBinding(0) {}
   } restore;
   CVertexArraysStateData(GLint name) : track(name), restore() {}
 };
