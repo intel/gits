@@ -286,11 +286,12 @@ std::pair<uint64_t, uint64_t> GetAttribMemRange(int frontindex,
 
   // Evaluate data size
   uint64_t dataSize;
-  unsigned count = backindex - frontindex + 1;
+  uint64_t count = backindex - frontindex + 1;
   if (attrParams.stride > 0) {
-    dataSize = attrParams.stride * (count - 1) + attrParams.size * DataTypeSize(attrParams.type);
+    dataSize = attrParams.stride * (count - 1) +
+               static_cast<uint64_t>(attrParams.size) * DataTypeSize(attrParams.type);
   } else {
-    dataSize = attrParams.size * DataTypeSize(attrParams.type) * count;
+    dataSize = static_cast<uint64_t>(attrParams.size) * DataTypeSize(attrParams.type) * count;
   }
   uint64_t dataEnd = dataBegin + dataSize;
 
