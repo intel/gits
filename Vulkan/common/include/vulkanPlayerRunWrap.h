@@ -1082,7 +1082,7 @@ inline void vkGetImageSubresourceLayout_WRAPRUN(CVkDevice& device,
 namespace {
 void GetBufferMemoryRequirementsHelper(VkDeviceSize originalAlignment,
                                        VkDeviceSize currentAlignment) {
-  if ((originalAlignment % currentAlignment) != 0) {
+  if ((currentAlignment != 0) && (originalAlignment % currentAlignment) != 0) {
     CALL_ONCE[&] {
       Log(WARN) << "Stream recorded on a platform with alignment: " << originalAlignment
                 << " Current alignment: " << currentAlignment
@@ -1169,7 +1169,7 @@ inline void vkGetBufferMemoryRequirements2KHR_WRAPRUN(CVkDevice& device,
 namespace {
 void GetImageMemoryRequirementsHelper(VkDeviceSize originalAlignment,
                                       VkDeviceSize currentAlignment) {
-  if ((originalAlignment % currentAlignment) != 0) {
+  if ((currentAlignment != 0) && (originalAlignment % currentAlignment) != 0) {
     CALL_ONCE[&] {
       Log(WARN) << "Stream recorded on a platform with alignment: " << originalAlignment
                 << " Current alignment: " << currentAlignment
