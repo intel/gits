@@ -352,5 +352,4 @@ std::string gits::CCodeOStream::VariableName(intptr_t key) const {
   }
   Log(ERR) << "Key '" << std::hex << key << std::dec << "' not found!!!";
   throw EOperationFailed(EXCEPTION_MESSAGE);
-  return "";
 }

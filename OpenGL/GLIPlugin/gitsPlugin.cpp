@@ -298,8 +298,7 @@ void* get_proc_address(const char* name) {
   // replacement. To handle this correctly we should provide only 'core'
   // function in dlsym, but that requires yet another table of functions.
   return nullptr;
-#endif
-
+#else
   // The function isn't provided by GITS wrappers - this will with high
   // probability cause recording error. Log the event, only mention such event
   // once for each function.
@@ -334,6 +333,7 @@ void* get_proc_address(const char* name) {
   }
 
   return proc;
+#endif
 }
 } // namespace OpenGL
 } // namespace gits
