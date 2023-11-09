@@ -3191,10 +3191,10 @@ std::pair<std::shared_ptr<CDeviceMemoryState>, std::shared_ptr<CBufferState>> cr
 
   VkDeviceMemory memory;
   VkMemoryAllocateInfo memoryAllocateInfo;
-  void* pNext = nullptr;
 
   // Find appropriate memory type index
   for (uint32_t type = 0; type < memoryProperties.memoryTypeCount; ++type) {
+    void* pNext = nullptr;
     if (isBitSet(bufferMemoryRequirements.memoryTypeBits, 1 << type) &&
         isBitSet(memoryProperties.memoryTypes[type].propertyFlags, requiredMemoryPropertyFlags)) {
 
