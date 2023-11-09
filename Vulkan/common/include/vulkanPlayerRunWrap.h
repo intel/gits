@@ -243,7 +243,7 @@ void HandlePhysicalDeviceMapping(std::vector<VkPhysicalDevice> const& recorderSi
   VkPhysicalDeviceProperties& physicalDeviceProperties =
       playerSideDevicesProperties[selectedPhysicalDeviceIndex];
 
-  CALL_ONCE[physicalDeviceProperties] {
+  CALL_ONCE[&physicalDeviceProperties] {
     Log(INFO) << "Playing stream on a"
               << ((physicalDeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
                       ? ("n integrated")

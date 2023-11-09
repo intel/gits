@@ -150,7 +150,7 @@ void gits::CStatistics::Print(bool verbose) const {
   cout << endl;
 
   std::array<string, 5> columnHeaders = {{"Name", "Num", "FrNum", "MINpFr", "MAXpFr"}};
-  CAsciiTable<5> table(std::move(columnHeaders));
+  CAsciiTable<5> table(columnHeaders);
   for (const auto& lib : _libraryStats) {
     const auto& library = CGits::Instance().Library(lib.first);
     table.AddOneCellRow(library.Name()); // Library name is e.g. "Vulkan" or "OpenCL".
@@ -170,7 +170,7 @@ void gits::CStatistics::Print(bool verbose) const {
         row[4] = std::to_string(call.second.numPerFrameMax);
       }
 
-      table.AddRow(std::move(row));
+      table.AddRow(row);
     }
   }
   table.Print(cout);

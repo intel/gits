@@ -50,14 +50,14 @@ class CAsciiTable {
 
 public:
   // Accepting only a fixed-size array to avoid length checking.
-  CAsciiTable(std::array<std::string, NUMCOLS> headers) {
+  CAsciiTable(std::array<std::string, NUMCOLS>& headers) {
     columnHeaders = std::move(headers);
     for (size_t col = 0; col < NUMCOLS; ++col) {
       columnWidths[col] = columnHeaders[col].length();
     }
   }
 
-  void AddRow(std::array<std::string, NUMCOLS> row) {
+  void AddRow(std::array<std::string, NUMCOLS>& row) {
     for (size_t col = 0; col < NUMCOLS; ++col) {
       columnWidths[col] = std::max(columnWidths[col], row[col].length());
     }

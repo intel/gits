@@ -58,7 +58,7 @@ public:
     }
   }
 
-  void Add(Object object) {
+  void Add(const Object& object) {
     _list.insert(object);
   }
 
