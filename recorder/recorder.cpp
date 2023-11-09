@@ -262,29 +262,33 @@ void CloseApplicationOnStopRecording() {
  * Destructor of gits::CRecorder class.
  */
 gits::CRecorder::~CRecorder() {
-  const Config& config = Config::Get();
-  auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
-  if (api3dIface.CfgRec_IsBenchmark() && config.recorder.basic.enabled) {
-    std::ofstream out_file(config.common.streamDir / "benchmark.csv");
-    CGits::Instance().TimeSheet().OutputTimeData(out_file, true);
+  try {
+    const Config& config = Config::Get();
+    auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
+    if (api3dIface.CfgRec_IsBenchmark() && config.recorder.basic.enabled) {
+      std::ofstream out_file(config.common.streamDir / "benchmark.csv");
+      CGits::Instance().TimeSheet().OutputTimeData(out_file, true);
+    }
+
+    if (config.recorder.extras.utilities.forceDumpOnError) {
+      Exception::Callback(nullptr, nullptr);
+    }
+
+    if (config.recorder.extras.utilities.closeAppOnStopRecording) {
+      CloseApplicationOnStopRecording();
+    }
+
+    Close();
+    Save();
+
+    for (auto& e : _disposeEvents) {
+      e();
+    }
+
+    _instance = nullptr;
+  } catch (...) {
+    topmost_exception_handler("CRecorder::~CRecorder");
   }
-
-  if (config.recorder.extras.utilities.forceDumpOnError) {
-    Exception::Callback(nullptr, nullptr);
-  }
-
-  if (config.recorder.extras.utilities.closeAppOnStopRecording) {
-    CloseApplicationOnStopRecording();
-  }
-
-  Close();
-  Save();
-
-  for (auto& e : _disposeEvents) {
-    e();
-  }
-
-  _instance = nullptr;
 }
 
 gits::CLibrary* gits::CRecorder::Library(CLibrary::TId id) {

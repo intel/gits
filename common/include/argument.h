@@ -643,11 +643,15 @@ public:
     ProxyArray(std::vector<T>& arr, std::vector<T>& mappedarr, MappedArrayAction action)
         : _mappedArray(&mappedarr), _array(&arr), _action(action) {}
     ~ProxyArray() {
-      if (_action == ADD_MAPPING) {
-        // Add mapping
-        for (size_t i = 0; i < _array->size(); i++) {
-          CGLtype::AddMapping((*_array)[i], (*_mappedArray)[i]);
+      try {
+        if (_action == ADD_MAPPING) {
+          // Add mapping
+          for (size_t i = 0; i < _array->size(); i++) {
+            CGLtype::AddMapping((*_array)[i], (*_mappedArray)[i]);
+          }
         }
+      } catch (...) {
+        topmost_exception_handler("ProxyArray::~ProxyArray");
       }
     }
     operator T*() {

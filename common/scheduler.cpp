@@ -215,27 +215,31 @@ CScheduler::CScheduler(unsigned tokenLimit, unsigned tokenBurstNum)
 }
 
 CScheduler::~CScheduler() {
-  // Delete any tokens owned by scheduler.
-  Purge(_tokenList);
+  try {
+    // Delete any tokens owned by scheduler.
+    Purge(_tokenList);
 
-  // Wait for the shredder to dispose of any outstanding tokens.
-  _tokenShredder.finish();
+    // Wait for the shredder to dispose of any outstanding tokens.
+    _tokenShredder.finish();
 
-  // Scheduler is responsible for playing back all the tokens.
-  // Thus it owns any abandoned tokens that are stuck in the queue
-  // of stream loader task due to early exit of player.
-  // Can be done more elegantly if payload is pushed in unique_ptr's.
-  _streamLoader.finish();
-  for (;;) {
-    CTokenList leftovers;
-    bool done = !_streamLoader.queue().consume(leftovers);
-    Purge(leftovers);
-    if (done) {
-      break;
+    // Scheduler is responsible for playing back all the tokens.
+    // Thus it owns any abandoned tokens that are stuck in the queue
+    // of stream loader task due to early exit of player.
+    // Can be done more elegantly if payload is pushed in unique_ptr's.
+    _streamLoader.finish();
+    for (;;) {
+      CTokenList leftovers;
+      bool done = !_streamLoader.queue().consume(leftovers);
+      Purge(leftovers);
+      if (done) {
+        break;
+      }
     }
-  }
 
-  _streamWriter.finish();
+    _streamWriter.finish();
+  } catch (...) {
+    topmost_exception_handler("CScheduler::~CScheduler");
+  }
 }
 
 /**

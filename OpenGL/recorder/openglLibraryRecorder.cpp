@@ -23,7 +23,11 @@ namespace OpenGL {
 CLibraryRecorder::CLibraryRecorder() : CLibrary([] { return new CState; }) {}
 
 CLibraryRecorder::~CLibraryRecorder() {
-  SD().WriteClientSizes();
+  try {
+    SD().WriteClientSizes();
+  } catch (...) {
+    topmost_exception_handler("CLibraryRecorder::~CLibraryRecorder");
+  }
 }
 
 } // namespace OpenGL

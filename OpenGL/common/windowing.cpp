@@ -371,7 +371,11 @@ Window_::Window_(EGLConfig pf, GLint width, GLint height, GLint x, GLint y, bool
     : _window(gits::ptblCreateWin(pf, width, height, x, y, show)) {}
 
 Window_::~Window_() {
-  gits::ptblRemoveWin(_window);
+  try {
+    gits::ptblRemoveWin(_window);
+  } catch (...) {
+    topmost_exception_handler("Window_::~Window_");
+  }
 }
 
 void Window_::set_position(int x, int y) {

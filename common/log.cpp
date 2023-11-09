@@ -160,33 +160,37 @@ void gits::CLog::LogFilePlayer(const std::filesystem::path& dir) {
 #endif
 
 gits::CLog::~CLog() {
+  try {
 #ifndef BUILD_FOR_CCODE
-  std::unique_lock<std::mutex> lock(*_mutex);
+    std::unique_lock<std::mutex> lock(*_mutex);
 #endif
-  if (_style == NORMAL || _style == NO_PREFIX) {
-    _buffer << std::endl;
-  }
+    if (_style == NORMAL || _style == NO_PREFIX) {
+      _buffer << std::endl;
+    }
 #ifdef GITS_COMMON_PROJ
-  if (gits::Config::Get().common.useEvents && gits::CGits::InstancePtr() != nullptr) {
-    gits::CGits::Instance().PlaybackEvents().logging(_buffer.str().c_str());
-  }
+    if (gits::Config::Get().common.useEvents && gits::CGits::InstancePtr() != nullptr) {
+      gits::CGits::Instance().PlaybackEvents().logging(_buffer.str().c_str());
+    }
 #endif
 
-  if (_localPrintFunc) {
-    _localPrintFunc(_buffer.str().c_str());
-  } else if (_func) {
-    _func(_buffer.str().c_str());
-  } else {
-    // At first these point to stdout and stderr respectively; we print
-    // warnings to the latter. If logging to file is requested, we point _log
-    // to that file and print everything there.
-    if (_log_to_file || _logLevel < LogLevel::WARN) {
-      *_log << _buffer.str();
-      _log->flush();
+    if (_localPrintFunc) {
+      _localPrintFunc(_buffer.str().c_str());
+    } else if (_func) {
+      _func(_buffer.str().c_str());
     } else {
-      *_log_player_err << _buffer.str();
-      _log_player_err->flush();
+      // At first these point to stdout and stderr respectively; we print
+      // warnings to the latter. If logging to file is requested, we point _log
+      // to that file and print everything there.
+      if (_log_to_file || _logLevel < LogLevel::WARN) {
+        *_log << _buffer.str();
+        _log->flush();
+      } else {
+        *_log_player_err << _buffer.str();
+        _log_player_err->flush();
+      }
     }
+  } catch (...) {
+    topmost_exception_handler("CLog::~CLog");
   }
 }
 

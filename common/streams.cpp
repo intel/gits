@@ -178,11 +178,15 @@ gits::CCodeOStream::CCodeOStream(const std::string& base_filename)
 }
 
 gits::CCodeOStream::~CCodeOStream() {
-  //output some closing stuff
-  OnFilesClose();
+  try {
+    //output some closing stuff
+    OnFilesClose();
 
-  for (auto& fileBuffer : _fileBuffers) {
-    fileBuffer.close();
+    for (auto& fileBuffer : _fileBuffers) {
+      fileBuffer.close();
+    }
+  } catch (...) {
+    topmost_exception_handler("CCodeOStream::~CCodeOStream");
   }
 }
 

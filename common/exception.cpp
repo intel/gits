@@ -66,8 +66,8 @@ void gits::Exception::Callback(FCallback callback, void* userData) {
 gits::Exception::Exception() throw() {
   if (_callback && !_inCallback) {
     _inCallback = true;
-    Log(ERR) << "Exception: " << what();
-    Log(ERR) << "Running user GITS exception callback";
+    fprintf(stderr, "Err: Exception: %s\n", what());
+    fprintf(stderr, "Err: Running user GITS exception callback\n");
     (*_callback)(_userData);
     _inCallback = false;
   }
@@ -76,8 +76,8 @@ gits::Exception::Exception() throw() {
 gits::Exception::Exception(std::string message) throw() : _msg(std::move(message)) {
   if (_callback && !_inCallback) {
     _inCallback = true;
-    Log(ERR) << "Exception: " << what();
-    Log(ERR) << "Running user GITS exception callback";
+    fprintf(stderr, "Err: Exception: %s\n", what());
+    fprintf(stderr, "Err: Running user GITS exception callback\n");
     (*_callback)(_userData);
     _inCallback = false;
   }
@@ -135,17 +135,15 @@ void fast_exit(int code) {
 } // namespace
 
 void topmost_exception_handler(const char* funcName) {
-  char msg[1024];
   try {
     throw;
   } catch (gits::Exception& ex) {
-    sprintf(msg, "Unhandled GITS exception: %s caught in: %s!!!", ex.what(), funcName);
+    fprintf(stderr, "Unhandled GITS exception: %s caught in: %s!!!\n", ex.what(), funcName);
   } catch (std::exception& ex) {
-    sprintf(msg, "Unhandled system exception: %s caught in: %s!!!", ex.what(), funcName);
+    fprintf(stderr, "Unhandled system exception: %s caught in: %s!!!\n", ex.what(), funcName);
   } catch (...) {
-    sprintf(msg, "Unhandled exception caught in: %s", funcName);
+    fprintf(stderr, "Unhandled exception caught in: %s\n", funcName);
   }
-  Log(ERR) << "" << msg;
   fast_exit(1);
 }
 

@@ -110,56 +110,56 @@ CGits::CGits(uint16_t v0, uint16_t v1, uint16_t v2, uint16_t v3)
 }
 
 CGits::~CGits() {
-  // Release all resources explicitly, before signature creation.
-  _imageWriter.finish();
-  _file.reset();
-  _libraryList.clear();
-  _resources.reset();
+  try {
+    // Release all resources explicitly, before signature creation.
+    _imageWriter.finish();
+    _file.reset();
+    _libraryList.clear();
+    _resources.reset();
 
-  // Only create signature when recording, player can opt in through option.
-  if (Config::Get().IsRecorder() && Config::Get().recorder.basic.enabled) {
-    try {
+    // Only create signature when recording, player can opt in through option.
+    if (Config::Get().IsRecorder() && Config::Get().recorder.basic.enabled) {
       sign_directory(Config::Get().common.streamDir);
-    } catch (...) {
-      topmost_exception_handler("CGits::~CGits");
-    }
-  }
-
-  // Create a buildable CCode project by automatically copying necessary files.
-  // TODO: extract it to a separate function.
-  if (Config::Get().recorder.basic.enabled && Config::Get().recorder.basic.dumpCCode) {
-    auto& dumpPath = Config::Get().common.streamDir;
-    auto& installPath = Config::Get().common.installPath;
-    std::filesystem::path ccodePath = installPath.parent_path() / "CCode";
-    std::filesystem::path ccodeFiles[] = {dumpPath / "stream_externs.cpp",
-                                          dumpPath / "stream_externs.h",
-                                          dumpPath / "stream_main.cpp"};
-
-    std::filesystem::path streamFramesFilePath = dumpPath / "stream_frames.cpp";
-    std::filesystem::path streamStateRestorePath = dumpPath / "stream_state_restore.cpp";
-    std::filesystem::path streamPreRecorderPath = dumpPath / "stream_pre_recorder.cpp";
-    std::filesystem::path ccodeFilesDest = dumpPath / "CCodeSource/StreamFiles";
-
-    std::filesystem::copy(ccodePath, dumpPath, std::filesystem::copy_options::recursive);
-    std::filesystem::create_directory(ccodeFilesDest);
-
-    for (const auto& file : ccodeFiles) {
-      std::filesystem::rename(file, ccodeFilesDest / file.filename());
     }
 
-    int fileDividerInBytes = 1048576; // each file after splitting is approximately 1 MB
-    std::filesystem::path filesForDivide[] = {std::move(streamFramesFilePath),
-                                              std::move(streamStateRestorePath),
-                                              std::move(streamPreRecorderPath)};
-    for (const auto& file : filesForDivide) {
-      int divideCount = std::filesystem::file_size(file) / fileDividerInBytes;
-      if (divideCount > 1) {
-        auto breakPoints = scopeAnalyze(file);
-        divideFile(file, ccodeFilesDest, breakPoints);
-      } else {
+    // Create a buildable CCode project by automatically copying necessary files.
+    // TODO: extract it to a separate function.
+    if (Config::Get().recorder.basic.enabled && Config::Get().recorder.basic.dumpCCode) {
+      auto& dumpPath = Config::Get().common.streamDir;
+      auto& installPath = Config::Get().common.installPath;
+      std::filesystem::path ccodePath = installPath.parent_path() / "CCode";
+      std::filesystem::path ccodeFiles[] = {dumpPath / "stream_externs.cpp",
+                                            dumpPath / "stream_externs.h",
+                                            dumpPath / "stream_main.cpp"};
+
+      std::filesystem::path streamFramesFilePath = dumpPath / "stream_frames.cpp";
+      std::filesystem::path streamStateRestorePath = dumpPath / "stream_state_restore.cpp";
+      std::filesystem::path streamPreRecorderPath = dumpPath / "stream_pre_recorder.cpp";
+      std::filesystem::path ccodeFilesDest = dumpPath / "CCodeSource/StreamFiles";
+
+      std::filesystem::copy(ccodePath, dumpPath, std::filesystem::copy_options::recursive);
+      std::filesystem::create_directory(ccodeFilesDest);
+
+      for (const auto& file : ccodeFiles) {
         std::filesystem::rename(file, ccodeFilesDest / file.filename());
       }
+
+      int fileDividerInBytes = 1048576; // each file after splitting is approximately 1 MB
+      std::filesystem::path filesForDivide[] = {std::move(streamFramesFilePath),
+                                                std::move(streamStateRestorePath),
+                                                std::move(streamPreRecorderPath)};
+      for (const auto& file : filesForDivide) {
+        int divideCount = std::filesystem::file_size(file) / fileDividerInBytes;
+        if (divideCount > 1) {
+          auto breakPoints = scopeAnalyze(file);
+          divideFile(file, ccodeFilesDest, breakPoints);
+        } else {
+          std::filesystem::rename(file, ccodeFilesDest / file.filename());
+        }
+      }
     }
+  } catch (...) {
+    topmost_exception_handler("CGits::~CGits");
   }
 }
 

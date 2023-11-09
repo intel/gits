@@ -1194,12 +1194,16 @@ MapBuffer::MapBuffer(GLenum target, GLint buffer) : _target(target) {
 }
 
 MapBuffer::~MapBuffer() {
-  if (curctx::IsOgl() || ESBufferState() != TBuffersState::BUFFERS_STATE_CAPTURE_ALWAYS) {
-    auto func_unmap = drv.gl.glUnmapBuffer;
-    if (drv.gl.HasExtension("GL_OES_mapbuffer")) {
-      func_unmap = drv.gl.glUnmapBufferOES;
+  try {
+    if (curctx::IsOgl() || ESBufferState() != TBuffersState::BUFFERS_STATE_CAPTURE_ALWAYS) {
+      auto func_unmap = drv.gl.glUnmapBuffer;
+      if (drv.gl.HasExtension("GL_OES_mapbuffer")) {
+        func_unmap = drv.gl.glUnmapBufferOES;
+      }
+      func_unmap(_target);
     }
-    func_unmap(_target);
+  } catch (...) {
+    topmost_exception_handler("MapBuffer::~MapBuffer");
   }
 }
 

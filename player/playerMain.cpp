@@ -368,5 +368,9 @@ int main2(int argc, char* argv[]) {
 
 // Normal program entry point.
 int main(int argc, char* argv[]) {
-  return main2(argc, argv);
+  try {
+    return main2(argc, argv);
+  } catch (...) {
+    topmost_exception_handler("main");
+  }
 }

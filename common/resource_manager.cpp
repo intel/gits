@@ -187,12 +187,16 @@ private:
 };
 
 CResourceManager::~CResourceManager() {
-  //If we have put anything in the manager index needs to be rewritten.
-  if (dirty_ && !Config::Get().recorder.extras.utilities.nullIO) {
-    write_map(index_filename_, index_);
-  }
+  try {
+    //If we have put anything in the manager index needs to be rewritten.
+    if (dirty_ && !Config::Get().recorder.extras.utilities.nullIO) {
+      write_map(index_filename_, index_);
+    }
 
-  fileWriter_.finish();
+    fileWriter_.finish();
+  } catch (...) {
+    topmost_exception_handler("CResourceManager::~CResourceManager");
+  }
 }
 
 mapped_file CResourceManager::get(hash_t hash) const {

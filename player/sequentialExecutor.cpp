@@ -66,10 +66,14 @@ public:
 } // namespace gits
 
 gits::CSequentialExecutor::~CSequentialExecutor() {
-  for (auto& t : _executionThreads) {
-    if (t.joinable()) {
-      t.join();
+  try {
+    for (auto& t : _executionThreads) {
+      if (t.joinable()) {
+        t.join();
+      }
     }
+  } catch (...) {
+    topmost_exception_handler("CSequentialExecutor::~CSequentialExecutor");
   }
 }
 

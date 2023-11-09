@@ -340,7 +340,11 @@ public:
     return queue_;
   }
   ~Task() {
-    finish();
+    try {
+      finish();
+    } catch (...) {
+      topmost_exception_handler("Task::~Task");
+    }
   }
 
 private:

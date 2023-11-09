@@ -86,15 +86,19 @@ DrawCallWrapperPrePost::DrawCallWrapperPrePost(gits::CRecorder& rec) : _recorder
 DrawCallWrapperPrePost::~DrawCallWrapperPrePost() {
   using namespace gits;
   using namespace OpenGL;
-  if (Config::Get()
-          .recorder.openGL.images.dumpDrawsFromFrames[gits::CGits::Instance().CurrentFrame()]) {
-    //Dump screenshots after drawcalls
-    std::filesystem::path path =
-        Config::Get().common.streamDir / "gitsScreenshots" / "gitsRecorder" / "draws";
-    capture_drawbuffer(
-        path, "drawcall-" + std::to_string(CGits::Instance().CurrentDrawCount()) + "-pre", true);
+  try {
+    if (Config::Get()
+            .recorder.openGL.images.dumpDrawsFromFrames[gits::CGits::Instance().CurrentFrame()]) {
+      //Dump screenshots after drawcalls
+      std::filesystem::path path =
+          Config::Get().common.streamDir / "gitsScreenshots" / "gitsRecorder" / "draws";
+      capture_drawbuffer(
+          path, "drawcall-" + std::to_string(CGits::Instance().CurrentDrawCount()) + "-pre", true);
+    }
+    _recorder.DrawEnd();
+  } catch (...) {
+    topmost_exception_handler("DrawCallWrapperPrePost::~DrawCallWrapperPrePost");
   }
-  _recorder.DrawEnd();
 }
 
 } // namespace gits
