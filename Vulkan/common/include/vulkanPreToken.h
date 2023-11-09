@@ -418,7 +418,7 @@ public:
       height = Config::Get().player.windowSize.second;
     }
 #if defined(GITS_PLATFORM_WINDOWS) || defined(GITS_PLATFORM_X11)
-    Window_* win = SD()._hwndstates[*hwnd]->window;
+    Window_* win = SD()._hwndstates[*hwnd]->window.get();
     win->set_size(width, height);
     win->set_position(xpos, ypos);
     win->set_visibility(visible);

@@ -120,12 +120,13 @@ private:
 struct CHWNDState {
   int x, y, w, h;
   bool vis;
-  Window_* window;
+  std::unique_ptr<Window_> window;
 
   CHWNDState(int _x, int _y, int _w, int _h, bool _vis, Window_* _window)
-      : x(_x), y(_y), w(_w), h(_h), vis(_vis), window(_window) {}
-  ~CHWNDState() {
-    delete window;
+      : x(_x), y(_y), w(_w), h(_h), vis(_vis) {
+    if (_window != nullptr) {
+      window = std::make_unique<Window_>(*_window);
+    }
   }
 };
 
