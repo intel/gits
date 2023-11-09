@@ -1989,7 +1989,9 @@ public:
     stream >> _mask;
   }
   virtual void Write(CCodeOStream& stream) const {
+    std::ios_base::fmtflags streamFlags(stream.flags());
     stream << std::hex << _access << " & " << _mask;
+    stream.flags(streamFlags);
   }
 };
 
@@ -2021,7 +2023,9 @@ public:
     stream >> _mask;
   }
   virtual void Write(CCodeOStream& stream) const {
+    std::ios_base::fmtflags streamFlags(stream.flags());
     stream << std::hex << _flags;
+    stream.flags(streamFlags);
   }
 };
 

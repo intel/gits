@@ -216,6 +216,7 @@ void CGetOpt::UsageOptions(const std::string& groupName,
                            unsigned descIndent,
                            unsigned argsWidth) const {
   using namespace std;
+  std::ios_base::fmtflags origFlags(cout.flags());
 
   auto opts = _optionsList;
   std::sort(opts.begin(), opts.end(),
@@ -320,6 +321,7 @@ void CGetOpt::UsageOptions(const std::string& groupName,
     }
     cout << "\n";
   }
+  cout.flags(origFlags);
 }
 
 /**

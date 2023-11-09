@@ -23,7 +23,9 @@ CEGLint::CEGLint() {}
 CEGLint::CEGLint(EGLint value) : CGLtype<GLtype, type>(value) {}
 
 void CEGLint::Write(CCodeOStream& stream) const {
+  std::ios_base::fmtflags streamFlags(stream.flags());
   stream << std::dec << Value();
+  stream.flags(streamFlags);
 }
 
 /* ******************************** EGLboolean ****************************** */
@@ -45,7 +47,9 @@ CEGLenum::CEGLenum() {}
 CEGLenum::CEGLenum(EGLenum value) : CGLtype<GLtype, type>(value) {}
 
 void CEGLenum::Write(CCodeOStream& stream) const {
+  std::ios_base::fmtflags streamFlags(stream.flags());
   stream << std::hex << Value();
+  stream.flags(streamFlags);
 }
 
 /* ******************************** EGLConfig ****************************** */

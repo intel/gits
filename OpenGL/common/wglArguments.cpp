@@ -47,7 +47,9 @@ gits::OpenGL::CLPVOID::CLPVOID() : CGLtype<GLtype, type>() {}
 gits::OpenGL::CLPVOID::CLPVOID(void* value) : CGLtype<GLtype, type>(value) {}
 
 void gits::OpenGL::CLPVOID::Write(CCodeOStream& stream) const {
+  std::ios_base::fmtflags streamFlags(stream.flags());
   stream << std::hex << Value();
+  stream.flags(streamFlags);
 }
 
 /* ********************************** HVIDEOOUTPUTDEVICENV ******************************** */
@@ -60,7 +62,9 @@ gits::OpenGL::CHVIDEOOUTPUTDEVICENV::CHVIDEOOUTPUTDEVICENV(void* value)
     : CGLtype<GLtype, type>(value) {}
 
 void gits::OpenGL::CHVIDEOOUTPUTDEVICENV::Write(CCodeOStream& stream) const {
+  std::ios_base::fmtflags streamFlags(stream.flags());
   stream << "(HVIDEOOUTPUTDEVICENV)0x" << std::hex << Value();
+  stream.flags(streamFlags);
 }
 
 /* ********************************** HPVIDEODEV ******************************** */
@@ -72,7 +76,9 @@ gits::OpenGL::CHPVIDEODEV::CHPVIDEODEV() : CGLtype<GLtype, type>() {}
 gits::OpenGL::CHPVIDEODEV::CHPVIDEODEV(void* value) : CGLtype<GLtype, type>(value) {}
 
 void gits::OpenGL::CHPVIDEODEV::Write(CCodeOStream& stream) const {
+  std::ios_base::fmtflags streamFlags(stream.flags());
   stream << "(HPVIDEODEV)0x" << std::hex << Value();
+  stream.flags(streamFlags);
 }
 
 /* ********************************** HPGPUNV ******************************** */
@@ -84,7 +90,9 @@ gits::OpenGL::CHPGPUNV::CHPGPUNV() : CGLtype<GLtype, type>() {}
 gits::OpenGL::CHPGPUNV::CHPGPUNV(void* value) : CGLtype<GLtype, type>(value) {}
 
 void gits::OpenGL::CHPGPUNV::Write(CCodeOStream& stream) const {
+  std::ios_base::fmtflags streamFlags(stream.flags());
   stream << "(HPGPUNV)0x" << std::hex << Value();
+  stream.flags(streamFlags);
 }
 
 /* ********************************** HGPUNV ******************************** */
@@ -96,7 +104,9 @@ gits::OpenGL::CHGPUNV::CHGPUNV() : CGLtype<GLtype, type>() {}
 gits::OpenGL::CHGPUNV::CHGPUNV(void* value) : CGLtype<GLtype, type>(value) {}
 
 void gits::OpenGL::CHGPUNV::Write(CCodeOStream& stream) const {
+  std::ios_base::fmtflags streamFlags(stream.flags());
   stream << "(HGPUNV)0x" << std::hex << Value();
+  stream.flags(streamFlags);
 }
 
 /* ********************************** HVIDEOINPUTDEVICENV ******************************** */
@@ -109,7 +119,9 @@ gits::OpenGL::CHVIDEOINPUTDEVICENV::CHVIDEOINPUTDEVICENV(void* value)
     : CGLtype<GLtype, type>(value) {}
 
 void gits::OpenGL::CHVIDEOINPUTDEVICENV::Write(CCodeOStream& stream) const {
+  std::ios_base::fmtflags streamFlags(stream.flags());
   stream << "(HVIDEOINPUTDEVICENV)0x" << std::hex << Value();
+  stream.flags(streamFlags);
 }
 
 /* ********************************** PIXELFORMATDESCRIPTOR ******************************** */
