@@ -162,6 +162,7 @@ gits::OpenGL::PtblPFAttribs gits::OpenGL::WGLARBToPtblAttribs(const int* wglattr
     case WGL_DRAW_TO_PBUFFER_ARB:
       ptr++;
       ptblattribs[ptblPFPBuffer] = *ptr;
+      break;
     case WGL_RED_BITS_ARB:
       ptr++;
       ptblattribs[ptblPFRedSize] = *ptr;

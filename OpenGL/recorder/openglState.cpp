@@ -3476,6 +3476,7 @@ void gits::OpenGL::CVariableTextureInfo::Get() {
       break;
     case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
       texture = new CTexture2DMultisampleArray(it->Target(), it->Name());
+      break;
     case GL_TEXTURE_3D:
     case GL_TEXTURE_CUBE_MAP_ARRAY:
       texture = new CTexture3D(it->Target(), it->Name());
