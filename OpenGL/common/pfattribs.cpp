@@ -38,10 +38,10 @@ void gits::GetAttribsFromPFD(const PIXELFORMATDESCRIPTOR* pfd,
   }
 
   int pfdPixTypeTranslation = 0;
-  if (pfd->iPixelType & PFD_TYPE_RGBA) {
+  if (pfd->iPixelType == PFD_TYPE_RGBA) {
     pfdPixTypeTranslation = WGL_TYPE_RGBA_ARB;
   }
-  if (pfd->iPixelType & PFD_TYPE_COLORINDEX) {
+  if (pfd->iPixelType == PFD_TYPE_COLORINDEX) {
     pfdPixTypeTranslation = WGL_TYPE_COLORINDEX_ARB;
   }
 
