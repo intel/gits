@@ -627,8 +627,9 @@ struct CFramebufferStateData {
   } track;
   struct Restored {
     GLint readBuffer;
+    Restored() : readBuffer(0) {}
   } restore;
-  CFramebufferStateData(GLuint name, GLenum target = 0) : track(name, target) {}
+  CFramebufferStateData(GLuint name, GLenum target = 0) : track(name, target), restore() {}
 };
 /**
     *
@@ -1125,8 +1126,21 @@ struct CSamplerStateData {
     GLint _textureCompareFunc;
     GLfloat _textureMaxLevelOfAnisotropyEXT;
     GLint _textureSrgbDecode;
+    Restored()
+        : _minificationFunction(0),
+          _magnificationFunction(0),
+          _texcoordSWrapMode(0),
+          _texcoordTWrapMode(0),
+          _texcoordRWrapMode(0),
+          _minimumLevelOfDetail(0),
+          _maximumLevelOfDetail(0),
+          _textureLevelOfDetail(0),
+          _textureCompareMode(0),
+          _textureCompareFunc(0),
+          _textureMaxLevelOfAnisotropyEXT(0),
+          _textureSrgbDecode(0) {}
   } restore;
-  CSamplerStateData(GLuint name) : track(name) {}
+  CSamplerStateData(GLuint name) : track(name), restore() {}
 };
 
 class CSamplerStateObj {
@@ -1165,7 +1179,7 @@ struct CClientArrayStateData {
     GLenum type;
     GLsizei stride;
     const GLvoid* ptr;
-    Tracked() : enabled(false), isBuff(false), size(0), divisor(0), type(0), ptr(0) {}
+    Tracked() : enabled(false), isBuff(false), size(0), divisor(0), type(0), stride(0), ptr(0) {}
   } track;
 
   CClientArrayStateData() : track() {}

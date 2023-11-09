@@ -334,7 +334,7 @@ private:
   T data;
 
 public:
-  CSimpleData() {}
+  CSimpleData() : data() {}
   CSimpleData(const T srcData) {
     data = srcData;
   }

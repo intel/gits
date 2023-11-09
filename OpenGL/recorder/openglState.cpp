@@ -5285,7 +5285,18 @@ bool firstLess(const T& lhs, const T& rhs) {
 /****************************** DEFAULT FRAMEBUFER  I N F O **********************/
 
 gits::OpenGL::CVariableDefaultFramebuffer::CVariableDefaultFramebuffer()
-    : _supported(false), _width(0), _height(0), _csDatahash(0), _colorDatahash(0) {
+    : _supported(false),
+      _width(0),
+      _height(0),
+      _csDatahash(0),
+      _colorDatahash(0),
+      _dsInternalformat(0),
+      _dsFormat(0),
+      _dsType(0),
+      _dsAttachment(0),
+      _colorInternalformat(0),
+      _colorFormat(0),
+      _colorType(0) {
   if (Config::Get().recorder.openGL.utilities.restoreDefaulFB &&
       (curctx::IsOgl() &&
        (curctx::Version() >= 300 || drv.gl.HasExtension("GL_ARB_framebuffer_object")))) {
@@ -5631,7 +5642,8 @@ void gits::OpenGL::CVariableRenderbufferEXTInfo::Schedule(CScheduler& scheduler,
 
 bool gits::OpenGL::CVariableRenderbufferEXTBinding::_supported = false;
 
-gits::OpenGL::CVariableRenderbufferEXTBinding::CVariableRenderbufferEXTBinding() {
+gits::OpenGL::CVariableRenderbufferEXTBinding::CVariableRenderbufferEXTBinding()
+    : _boundRenderbufferEXT(0) {
   _supported = drv.gl.HasExtension("GL_EXT_framebuffer_object");
 }
 
@@ -5869,7 +5881,7 @@ void gits::OpenGL::CVariableRenderbufferInfo::Schedule(CScheduler& scheduler,
 
 bool gits::OpenGL::CVariableRenderbufferBinding::_supported = false;
 
-gits::OpenGL::CVariableRenderbufferBinding::CVariableRenderbufferBinding() {
+gits::OpenGL::CVariableRenderbufferBinding::CVariableRenderbufferBinding() : _boundRenderbuffer(0) {
   if (curctx::IsEs2Plus() ||
       (curctx::IsOgl() &&
        (curctx::Version() >= 300 || drv.gl.HasExtension("GL_ARB_framebuffer_object")))) {

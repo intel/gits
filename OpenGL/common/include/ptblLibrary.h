@@ -204,7 +204,7 @@ struct PortableState {
     std::string title;
 
     PtblHandle pf;
-    SurfData() : ispbuff(false) {}
+    SurfData() : ispbuff(false), x(0), y(0), width(0), height(0), vis(false) {}
   };
 
   struct CtxData {

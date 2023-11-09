@@ -92,7 +92,10 @@ gits::CLog::CLog(LogLevel lvl, LogStyle style)
 }
 
 gits::CLog::CLog(const CLog& rhs)
-    : _buffer(rhs._buffer.str()), _style(rhs._style), _localPrintFunc(rhs._localPrintFunc) {
+    : _buffer(rhs._buffer.str()),
+      _logLevel(rhs._logLevel),
+      _style(rhs._style),
+      _localPrintFunc(rhs._localPrintFunc) {
 #ifndef BUILD_FOR_CCODE
   if (!_mutex.get()) {
     _mutex.reset(new std::mutex());

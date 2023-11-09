@@ -502,7 +502,7 @@ void CBufferStateObj::CalculateMapChange(GLintptr& mapoffset,
   mapoffset = minPrePtr - mapOffset - &_data.restore.buffer.front();
 }
 
-CBindingStateData::Tracked::Tracked() : glslProgram(0) {
+CBindingStateData::Tracked::Tracked() : glslProgram(0), glslPipeline(0) {
   boundBuffers[GL_ARRAY_BUFFER] = 0;
   boundBuffers[GL_ELEMENT_ARRAY_BUFFER] = 0;
   boundBuffers[GL_PIXEL_PACK_BUFFER] = 0;

@@ -212,7 +212,7 @@ gits::hash_t gits::CBinaryResource::GetResourceHash() const {
 
 const char* gits::Cchar::NAME = "char";
 
-gits::Cchar::Cchar() {}
+gits::Cchar::Cchar() : _value() {}
 
 gits::Cchar::Cchar(char value) : _value(value) {}
 

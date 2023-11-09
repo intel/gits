@@ -1034,7 +1034,7 @@ void DrawBuffersStateStash::Restore() {
   }
 }
 
-ReadBufferStateStash::ReadBufferStateStash() {
+ReadBufferStateStash::ReadBufferStateStash() : _data(0) {
   if (curctx::IsOgl()) {
     drv.gl.glGetIntegerv(GL_READ_BUFFER, (GLint*)&_data);
   }
@@ -1104,7 +1104,7 @@ GLint FboBindStateStash::DrawName() {
   return (_extFboBlitSupport) ? _data[GL_DRAW_FRAMEBUFFER] : _data[GL_FRAMEBUFFER];
 }
 
-RboBindStateStash::RboBindStateStash() {
+RboBindStateStash::RboBindStateStash() : _data(0) {
   if (!curctx::IsEs1()) {
     drv.gl.glGetIntegerv(GL_RENDERBUFFER_BINDING, &_data);
   }
@@ -1117,6 +1117,7 @@ void RboBindStateStash::Restore() {
 }
 
 TextureBindStateStash::TextureBindStateStash(GLenum target) {
+  _data.name = 0;
   _data.target = target;
   if (!curctx::IsEs1()) {
     drv.gl.glGetIntegerv(GetBindingEnum(_data.target), &_data.name);

@@ -54,7 +54,7 @@ public:
 
 public:
   typedef boost::optional<HotKeyHolder&> HotKeyOptional;
-  CInputListener() : _threadHandle(), _maxRegisteredHotKeyID(0) {}
+  CInputListener() : _threadHandle(), _maxRegisteredHotKeyID(0), _useMessageLoop(false) {}
   ~CInputListener(void);
   int AddHotKey(const std::vector<uint>& keys);
   void AddHotKeyEvent(uint hotKeyId, HotKeyHolder::HotKeyEvent clickEvent);

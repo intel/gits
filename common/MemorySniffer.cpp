@@ -727,7 +727,7 @@ bool MemorySniffer::UnInstall() {
   }
   return true;
 #else
-  struct sigaction sa;
+  struct sigaction sa = {};
   sa.sa_flags = SA_SIGINFO;
   sa.sa_sigaction = nullptr;
   errno = 0;

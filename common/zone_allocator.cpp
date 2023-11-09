@@ -11,7 +11,7 @@
 #include <cstdlib>
 #include "config.h"
 
-zone_allocator::zone_allocator() {}
+zone_allocator::zone_allocator() : curr_alloc_zone_(0), zone_size_(0) {}
 
 zone_allocator::zone_allocator(size_t zones, size_t zone_size) {
   reinitialize(zones, zone_size);
