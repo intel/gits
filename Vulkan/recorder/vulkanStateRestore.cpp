@@ -2480,11 +2480,12 @@ bool isResourceOmittedFromRestoration(uint64_t resource,
   } else {
     VkBuffer buffer = (VkBuffer)resource;
     auto& bufferState = sd._bufferstates[buffer];
-    VkDevice device = bufferState->deviceStateStore->deviceHandle;
 
     if (!bufferState) {
       return true;
     }
+
+    VkDevice device = bufferState->deviceStateStore->deviceHandle;
 
     if ((!bufferState->bufferCreateInfoData.Value()) ||
         (bufferState->bufferCreateInfoData.Value()->size == 0) || (!bufferState->binding)) {
