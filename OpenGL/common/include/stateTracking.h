@@ -2456,7 +2456,9 @@ inline void glRenderbufferStorageMultisample_SD(GLenum target,
     drv.gl.glGetIntegerv(GL_RENDERBUFFER_BINDING, &rbo);
     CRenderbufferStateObj* renderbufferStateObj =
         SD().GetCurrentSharedStateData().Renderbuffers().Get(rbo);
-    renderbufferStateObj->Data().track.samples = samples;
+    if (renderbufferStateObj != nullptr) {
+      renderbufferStateObj->Data().track.samples = samples;
+    }
   }
 }
 
