@@ -2695,8 +2695,6 @@ CVkSubmitInfoArrayWrap::CVkSubmitInfoArrayWrap(uint32_t submitCount, VkSubmitInf
     : submitInfoData(submitCount, submitInfo), submitInfo2Data() {}
 CVkSubmitInfoArrayWrap::CVkSubmitInfoArrayWrap(uint32_t submitCount, VkSubmitInfo2* submit2Info)
     : submitInfoData(), submitInfo2Data(submitCount, submit2Info) {}
-CVkSubmitInfoArrayWrap::CVkSubmitInfoArrayWrap(const CVkSubmitInfoArrayWrap& wrap)
-    : submitInfoData(wrap.submitInfoData), submitInfo2Data(wrap.submitInfo2Data) {}
 
 std::set<uint64_t> getPointersUsedInQueueSubmit(CVkSubmitInfoArrayWrap& submitInfoData,
                                                 const std::vector<uint32_t>& countersTable,

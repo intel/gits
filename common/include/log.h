@@ -74,6 +74,7 @@ public:
 
   CLog(LogLevel lvl, LogStyle style) HIDDEN;
   CLog(const CLog& rhs) HIDDEN;
+  CLog& operator=(const CLog& rhs) HIDDEN;
   ~CLog() HIDDEN;
 
   template <class T>

@@ -100,7 +100,6 @@ struct CVkSubmitInfoArrayWrap {
   CVkSubmitInfoArrayWrap();
   CVkSubmitInfoArrayWrap(uint32_t submitCount, VkSubmitInfo* submitInfo);
   CVkSubmitInfoArrayWrap(uint32_t submitCount, VkSubmitInfo2* submit2Info);
-  CVkSubmitInfoArrayWrap(const CVkSubmitInfoArrayWrap& wrap);
 };
 std::set<uint64_t> getPointersUsedInQueueSubmit(CVkSubmitInfoArrayWrap& submitInfoData,
                                                 const std::vector<uint32_t>& countersTable,

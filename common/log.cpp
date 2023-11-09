@@ -106,6 +106,24 @@ gits::CLog::CLog(const CLog& rhs)
 #endif
 }
 
+gits::CLog& gits::CLog::operator=(const CLog& rhs) {
+  if (this != &rhs) {
+    _buffer.str(rhs._buffer.str());
+    _logLevel = rhs._logLevel;
+    _style = rhs._style;
+    _localPrintFunc = rhs._localPrintFunc;
+#ifndef BUILD_FOR_CCODE
+    if (!_mutex.get()) {
+      _mutex.reset(new std::mutex());
+    }
+    if (!_file.get()) {
+      _file.reset(new std::ofstream);
+    }
+#endif
+  }
+  return *this;
+}
+
 void gits::CLog::SetLogLevel(LogLevel lvl) {
   _thresholdLogLevel = lvl;
 }
