@@ -1516,7 +1516,8 @@ void gits::Vulkan::CGitsInitializeMultipleImages::Exec() {
 
   drvVk.vkCmdPipelineBarrier(*_commandBuffer, VK_PIPELINE_STAGE_HOST_BIT,
                              VK_PIPELINE_STAGE_TRANSFER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0,
-                             nullptr, 1, &_copyFromBufferMemoryBarrierPre, 0, nullptr);
+                             nullptr, 1, _copyFromBufferMemoryBarrierPre.get()->Value(), 0,
+                             nullptr);
   for (uint32_t i = 0; i < *_imagesCount; ++i) {
     drvVk.vkCmdCopyBufferToImage(*_commandBuffer, *_copySrcBuffer, initializeImages[i].image,
                                  initializeImages[i].layout, initializeImages[i].copyRegionsCount,
@@ -1524,7 +1525,7 @@ void gits::Vulkan::CGitsInitializeMultipleImages::Exec() {
   }
   drvVk.vkCmdPipelineBarrier(*_commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
                              VK_PIPELINE_STAGE_HOST_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1,
-                             &_copyFromBufferMemoryBarrierPost, 0, nullptr);
+                             _copyFromBufferMemoryBarrierPost.get()->Value(), 0, nullptr);
 }
 
 void gits::Vulkan::CGitsInitializeMultipleImages::StateTrack() {
@@ -1974,14 +1975,15 @@ void gits::Vulkan::CGitsInitializeMultipleBuffers::Exec() {
   }
   drvVk.vkCmdPipelineBarrier(*_commandBuffer, VK_PIPELINE_STAGE_HOST_BIT,
                              VK_PIPELINE_STAGE_TRANSFER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0,
-                             nullptr, 1, &_copyFromBufferMemoryBarrierPre, 0, nullptr);
+                             nullptr, 1, _copyFromBufferMemoryBarrierPre.get()->Value(), 0,
+                             nullptr);
   for (uint32_t i = 0; i < *_buffersCount; ++i) {
     drvVk.vkCmdCopyBuffer(*_commandBuffer, *_copySrcBuffer, initializeBuffers[i].buffer, 1,
                           &initializeBuffers[i].bufferCopy);
   }
   drvVk.vkCmdPipelineBarrier(*_commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
                              VK_PIPELINE_STAGE_HOST_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1,
-                             &_copyFromBufferMemoryBarrierPost, 0, nullptr);
+                             _copyFromBufferMemoryBarrierPost.get()->Value(), 0, nullptr);
 }
 void gits::Vulkan::CGitsInitializeMultipleBuffers::StateTrack() {
   auto initializeBuffers = *_pInitializeBuffers;
