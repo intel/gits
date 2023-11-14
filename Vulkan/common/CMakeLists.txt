@@ -84,7 +84,14 @@ add_library(Vulkan_common
   vulkanRenderDocUtil.cpp
 )
 
-source_group("Generated Files" REGULAR_EXPRESSION ".*Auto.*")
+source_group("Generated Files" FILES
+  include/vulkanFunctions.h
+  include/vulkanHeader.h
+  include/vulkanIDs.h
+  include/vulkanIDswitch.h
+  include/vulkanLuaEnums.h
+  vulkanFunctions.cpp
+  REGULAR_EXPRESSION ".*Auto.*")
 
 target_link_libraries(Vulkan_common common)
 
