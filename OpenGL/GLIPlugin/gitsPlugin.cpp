@@ -141,15 +141,20 @@ const Config& CGitsPlugin::Configuration() {
 
 namespace {
 std::vector<HMODULE> getProcessModules(HANDLE process) {
-  std::vector<HMODULE> modules(1);
-  DWORD needed = 0;
-  EnumProcessModules(process, &modules[0], sizeof(HMODULE), &needed);
+  try {
+    std::vector<HMODULE> modules(1);
+    DWORD needed = 0;
+    EnumProcessModules(process, &modules[0], sizeof(HMODULE), &needed);
 
-  modules.resize(needed / sizeof(HMODULE));
-  EnumProcessModules(
-      process, &modules[0],
-      gits::ensure_unsigned32bit_representible<size_t>(sizeof(HMODULE) * modules.size()), &needed);
-  return modules;
+    modules.resize(needed / sizeof(HMODULE));
+    EnumProcessModules(
+        process, &modules[0],
+        gits::ensure_unsigned32bit_representible<size_t>(sizeof(HMODULE) * modules.size()),
+        &needed);
+    return modules;
+  } catch (...) {
+    topmost_exception_handler("getProcessModules");
+  }
 }
 
 void routeEntryPoint(PROC src, PROC dst) {
@@ -179,9 +184,13 @@ std::vector<PROC> getAllProcsByOrdinal(HMODULE module) {
 }
 
 std::filesystem::path ModuleDir(HMODULE module) {
-  char dllName[1024] = {0};
-  GetModuleFileName(module, dllName, 1023);
-  return std::filesystem::path(dllName).parent_path();
+  try {
+    char dllName[1024] = {0};
+    GetModuleFileName(module, dllName, 1023);
+    return std::filesystem::path(dllName).parent_path();
+  } catch (...) {
+    topmost_exception_handler("ModuleDir");
+  }
 }
 
 void routeEntryPoints(const std::vector<PROC>& src, const std::vector<PROC>& dst) {

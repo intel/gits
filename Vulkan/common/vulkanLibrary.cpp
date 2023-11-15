@@ -32,9 +32,13 @@ CLibrary::CLibrary(gits::CLibrary::state_creator_t stc)
     : gits::CLibrary(ID_VULKAN, std::move(stc)) {}
 
 CLibrary::~CLibrary() {
-  waitForAllDevices();
-  destroyDeviceLevelResources();
-  destroyInstanceLevelResources();
+  try {
+    waitForAllDevices();
+    destroyDeviceLevelResources();
+    destroyInstanceLevelResources();
+  } catch (...) {
+    topmost_exception_handler("CLibrary::~CLibrary()");
+  }
 }
 
 gits::CResourceManager& gits::Vulkan::CLibrary::ProgramBinaryManager() {
