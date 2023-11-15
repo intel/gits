@@ -726,7 +726,7 @@ struct CDescriptorSetState : public UniqueResourceHandle {
 
     std::set<uint64_t> GetMappedPointers() {
       std::set<uint64_t> pointers;
-      for (auto obj : descriptorData) {
+      for (auto& obj : descriptorData) {
         if (obj.pImageInfo) {
           for (auto elem : obj.pImageInfo->GetMappedPointers()) {
             pointers.insert((uint64_t)elem);
@@ -779,7 +779,7 @@ struct CDescriptorSetState : public UniqueResourceHandle {
     for (auto obj : descriptorSetLayoutStateStore->GetMappedPointers()) {
       pointers.insert((uint64_t)obj);
     }
-    for (auto elem : descriptorSetBindings) {
+    for (auto& elem : descriptorSetBindings) {
       for (uint64_t obj : elem.second.GetMappedPointers()) {
         pointers.insert(obj);
       }
