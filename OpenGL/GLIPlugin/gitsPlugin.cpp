@@ -285,15 +285,14 @@ void* get_proc_address(const char* name) {
   static auto thisModule = dl::symbol_library(&module_identification_token);
   void* proc = dl::load_symbol(thisModule, name);
 
-  static const char* exclusionList[] = {
+  std::vector<std::string> exclusionList = {
       "glCreateDebugObjectMESA",    "glGetDebugLogLengthMESA",  "glCreateSyncFromCLeventARB",
       "glClearDebugLogMESA",        "glFramebufferTextureFace", "glGetDebugLogMESA",
       "glGetProgramRegisterfvMESA", "glGetQueryObjectui64vARB", "glXGetCurrentContext",
   };
-  const char** exclusionListEnd = exclusionList + size(exclusionList);
 
-  auto pos = std::find(exclusionList, exclusionListEnd, std::string(name));
-  if (pos != exclusionListEnd) {
+  auto pos = std::find(exclusionList.begin(), exclusionList.end(), std::string(name));
+  if (pos != exclusionList.end()) {
     Log(WARN) << "Explicitly ignored function load request for: " << *pos;
     proc = nullptr;
   }
