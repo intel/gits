@@ -24,6 +24,7 @@
 #endif
 
 #include "MemorySniffer.h"
+#include "gits.h"
 #include <cinttypes>
 #include <string>
 #include <iostream>
@@ -524,7 +525,14 @@ bool MemorySniffer::WriteCallback(void* addr) {
     return false;
   }
 
-  if (!_unveilWholeRegion) {
+  auto unveilWholeRegion = false;
+  if (_unveilWholeRegion) {
+    const auto& computeIFace = gits::CGits::Instance().apis.IfaceCompute();
+    if (computeIFace.VerifyAllocation(addr)) {
+      unveilWholeRegion = _unveilWholeRegion;
+    }
+  }
+  if (!unveilWholeRegion) {
     SetPagesProtection(READ_WRITE, addr);
   }
   for (auto& handle : pageRegionHandles) {
@@ -533,7 +541,7 @@ bool MemorySniffer::WriteCallback(void* addr) {
     bool result = false;
     auto& region = **handle;
     region.TouchPageInternal(pageAddr);
-    if (_unveilWholeRegion) {
+    if (unveilWholeRegion) {
       result =
           SetPagesProtection(READ_WRITE, const_cast<void*>(region.BeginAddress()), region.Size());
     }

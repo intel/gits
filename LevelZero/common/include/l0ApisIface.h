@@ -12,6 +12,7 @@
 #include "config.h"
 #include "l0StateDynamic.h"
 #include "gits.h"
+#include "l0Tools.h"
 
 namespace gits {
 namespace l0 {
@@ -68,6 +69,12 @@ public:
   }
   virtual void Rec_StateRestoreFinished() const {
     SD().stateRestoreFinished = true;
+  }
+  virtual bool VerifyAllocation(void* address) const {
+    auto& sd = SD();
+    const auto allocInfo = GetAllocFromRegion(address, sd);
+    const auto isComputeAllocation = allocInfo.first != nullptr;
+    return isComputeAllocation;
   }
   virtual ~Api() = default; // Fixes the -Wdelete-non-virtual-dtor warning.
 };

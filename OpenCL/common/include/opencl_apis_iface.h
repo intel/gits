@@ -9,6 +9,7 @@
 #pragma once
 #include "apis_iface.h"
 #include "config.h"
+#include "openclTools.h"
 #include "openclStateDynamic.h"
 
 namespace gits {
@@ -58,6 +59,10 @@ public:
       }
     }
     MemorySniffer::UnInstall();
+  }
+  virtual bool VerifyAllocation(void* address) const {
+    const auto allocInfo = GetSvmOrUsmFromRegion(address);
+    return allocInfo.first != nullptr;
   }
   virtual ~OpenCLApi() = default; // Fixes the -Wdelete-non-virtual-dtor warning.
 };
