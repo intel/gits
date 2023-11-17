@@ -478,7 +478,7 @@ inline void zeCommandQueueExecuteCommandLists_RECWRAP_PRE(CRecorder& recorder,
   sd.Get<CCommandQueueState>(hCommandQueue, EXCEPTION_MESSAGE).cmdQueueNumber =
       gits::CGits::Instance().CurrentCommandQueueExecCount();
   if (recorder.Running()) {
-    for (auto& allocState : sd.Map<CAllocState>()) {
+    for (const auto& allocState : sd.Map<CAllocState>()) {
       if (CheckWhetherUpdateUSM(allocState.first)) {
         recorder.Schedule(new CGitsL0MemoryUpdate(allocState.first));
       }

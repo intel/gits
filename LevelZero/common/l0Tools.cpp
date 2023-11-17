@@ -395,14 +395,14 @@ ze_device_handle_t GetGPUDevice(CStateDynamic& sd, const CDriver& cDriver) {
     return deviceHandle;
   }
 
-  for (auto& device : sd.Map<CDeviceState>()) {
+  for (const auto& device : sd.Map<CDeviceState>()) {
     if (device.second->properties.type == ZE_DEVICE_TYPE_GPU) {
       deviceHandle = device.first;
       return deviceHandle;
     }
   }
 
-  for (auto& device : sd.Map<CDeviceState>()) {
+  for (const auto& device : sd.Map<CDeviceState>()) {
     ze_device_properties_t deviceProperties = {};
     if (device.second->properties.deviceId == 0 &&
         drv.inject.zeDeviceGetProperties(device.first, &deviceProperties) == ZE_RESULT_SUCCESS &&
@@ -414,9 +414,9 @@ ze_device_handle_t GetGPUDevice(CStateDynamic& sd, const CDriver& cDriver) {
   }
 
   std::vector<ze_driver_handle_t> drivers = GetDrivers(cDriver);
-  for (auto& driver : drivers) {
+  for (const auto& driver : drivers) {
     std::vector<ze_device_handle_t> devices = GetDevices(cDriver, driver);
-    for (auto& device : devices) {
+    for (const auto& device : devices) {
       ze_device_properties_t deviceProperties = {};
       if (drv.inject.zeDeviceGetProperties(device, &deviceProperties) == ZE_RESULT_SUCCESS &&
           deviceProperties.type == ZE_DEVICE_TYPE_GPU) {

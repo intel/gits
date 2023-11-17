@@ -144,7 +144,7 @@ bool CheckWhetherQueueCanBeSynced(const Config& cfg,
     for (const auto& queueSubmission : cmdQueueState.notSyncedSubmissions) {
       commandListsToSynchronize.push_back(queueSubmission->hCommandList);
     }
-    for (auto& otherCqState : sd.Map<CCommandQueueState>()) {
+    for (const auto& otherCqState : sd.Map<CCommandQueueState>()) {
       if (otherCqState.first != hCommandQueue) {
         const auto& otherCmdQueueState =
             sd.Get<CCommandQueueState>(otherCqState.first, EXCEPTION_MESSAGE);
@@ -508,7 +508,7 @@ inline void zeModuleDestroy_SD(ze_result_t return_value, ze_module_handle_t hMod
     auto& sd = SD();
     sd.scanningGlobalPointersMode.erase(hModule);
     std::vector<void*> globalPtrs;
-    for (auto& allocState : sd.Map<CAllocState>()) {
+    for (const auto& allocState : sd.Map<CAllocState>()) {
       if (allocState.second->allocType == AllocStateType::global_pointer &&
           allocState.second->hModule == hModule) {
         globalPtrs.push_back(allocState.first);
@@ -536,7 +536,7 @@ inline void zeContextDestroy_SD(ze_result_t return_value, ze_context_handle_t hC
     if (list != nullptr) {
       drv.inject.zeCommandListDestroy(list);
     }
-    for (auto& state : SD().Map<CCommandListState>()) {
+    for (const auto& state : SD().Map<CCommandListState>()) {
       if (state.second->hContext == hContext) {
         SD().Release<CCommandListState>(state.first);
       }
