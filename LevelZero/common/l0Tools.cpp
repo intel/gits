@@ -404,6 +404,7 @@ ze_device_handle_t GetGPUDevice(CStateDynamic& sd, const CDriver& cDriver) {
 
   for (const auto& device : sd.Map<CDeviceState>()) {
     ze_device_properties_t deviceProperties = {};
+    deviceProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
     if (device.second->properties.deviceId == 0 &&
         drv.inject.zeDeviceGetProperties(device.first, &deviceProperties) == ZE_RESULT_SUCCESS &&
         deviceProperties.type == ZE_DEVICE_TYPE_GPU) {
@@ -418,6 +419,7 @@ ze_device_handle_t GetGPUDevice(CStateDynamic& sd, const CDriver& cDriver) {
     std::vector<ze_device_handle_t> devices = GetDevices(cDriver, driver);
     for (const auto& device : devices) {
       ze_device_properties_t deviceProperties = {};
+      deviceProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
       if (drv.inject.zeDeviceGetProperties(device, &deviceProperties) == ZE_RESULT_SUCCESS &&
           deviceProperties.type == ZE_DEVICE_TYPE_GPU) {
         sd.Get<CDeviceState>(device, EXCEPTION_MESSAGE).properties = deviceProperties;
@@ -444,8 +446,9 @@ ze_command_list_handle_t GetCommandListImmediate(CStateDynamic& sd,
     }
   }
   const auto device = GetGPUDevice(sd, driver);
-  ze_command_list_handle_t handle;
+  ze_command_list_handle_t handle = nullptr;
   ze_command_queue_desc_t desc = {};
+  desc.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
   desc.mode = ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS;
   const auto errCode = driver.inject.zeCommandListCreateImmediate(context, device, &desc, &handle);
   if (err != nullptr) {
