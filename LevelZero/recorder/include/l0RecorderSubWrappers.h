@@ -316,6 +316,9 @@ inline void zeCommandListAppendMemoryCopyRegion_RECWRAP(CRecorder& recorder,
         return_value, hCommandList, dstptr, dstRegion, dstPitch, dstSlicePitch, srcptr, srcRegion,
         srcPitch, srcSlicePitch, hSignalEvent, numWaitEvents, phWaitEvents));
   }
+  zeCommandListAppendMemoryCopyRegion_SD(return_value, hCommandList, dstptr, dstRegion, dstPitch,
+                                         dstSlicePitch, srcptr, srcRegion, srcPitch, srcSlicePitch,
+                                         hSignalEvent, numWaitEvents, phWaitEvents);
 }
 
 inline void zeCommandListAppendLaunchCooperativeKernel_RECWRAP(
@@ -439,6 +442,8 @@ inline void zeCommandListAppendImageCopyFromMemory_RECWRAP(CRecorder& recorder,
         return_value, hCommandList, hDstImage, srcptr, pDstRegion, hSignalEvent, numWaitEvents,
         phWaitEvents));
   }
+  zeCommandListAppendImageCopyFromMemory_SD(return_value, hCommandList, hDstImage, srcptr,
+                                            pDstRegion, hSignalEvent, numWaitEvents, phWaitEvents);
 }
 
 inline void zeCommandListAppendMemoryFill_RECWRAP(CRecorder& recorder,
@@ -459,6 +464,8 @@ inline void zeCommandListAppendMemoryFill_RECWRAP(CRecorder& recorder,
         return_value, hCommandList, ptr, pattern, pattern_size, size, hSignalEvent, numWaitEvents,
         phWaitEvents));
   }
+  zeCommandListAppendMemoryFill_SD(return_value, hCommandList, ptr, pattern, pattern_size, size,
+                                   hSignalEvent, numWaitEvents, phWaitEvents);
 }
 
 inline void zeCommandQueueExecuteCommandLists_RECWRAP_PRE(CRecorder& recorder,
@@ -537,6 +544,9 @@ inline void zeCommandListAppendMemoryCopyFromContext_RECWRAP(CRecorder& recorder
         return_value, hCommandList, dstptr, hContextSrc, srcptr, size, hSignalEvent, numWaitEvents,
         phWaitEvents));
   }
+  zeCommandListAppendMemoryCopyFromContext_SD(return_value, hCommandList, dstptr, hContextSrc,
+                                              srcptr, size, hSignalEvent, numWaitEvents,
+                                              phWaitEvents);
 }
 
 inline void zeMemAllocHost_RECWRAP(CRecorder& recorder,
