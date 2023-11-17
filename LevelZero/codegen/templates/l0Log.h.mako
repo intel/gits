@@ -40,6 +40,15 @@ namespace gits {
       return ss.str();
     }
     template<>
+    inline std::string ToStringHelper(uint64_t* val) {
+      std::stringstream ss;
+      ss << ToStringHelper(reinterpret_cast<const void*>(val));
+      if (val != nullptr && gits::ShouldLog(LogLevel::TRACEV)) {
+        ss << " { " << ToStringHelper(*val) << " }";
+      }
+      return ss.str();
+    }
+    template<>
     inline std::string ToStringHelper(const void** val) {
       std::stringstream ss;
       ss << ToStringHelper(reinterpret_cast<const void*>(val));

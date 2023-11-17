@@ -4374,7 +4374,7 @@ Function(name='zeRTASBuilderBuildExp',component='ze_rtas_builder_exp',enabled=Fa
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hBuilder',type='ze_rtas_builder_exp_handle_t',tag='in'),
 arg2=ArgDef(name='pBuildOpDescriptor',type='const ze_rtas_builder_build_op_exp_desc_t*',tag='in',wrapType='COutArgument'),
-arg3=ArgDef(name='pScratchBuffer',type='void*',tag='in',range='0,`scratchBufferSizeBytes`'),
+arg3=ArgDef(name='pScratchBuffer',type='void*',tag='in'),
 arg4=ArgDef(name='scratchBufferSizeBytes',type='size_t',tag='in'),
 arg5=ArgDef(name='pRtasBuffer',type='void*',tag='in'),
 arg6=ArgDef(name='rtasBufferSizeBytes',type='size_t',tag='in'),
@@ -5999,7 +5999,7 @@ Function(name='zeGitsIndirectAllocationOffsets',component='ze_gits_extension',ex
 retV=RetDef(type='void'),
 arg1=ArgDef(name='pAlloc',type='void*',tag='in',wrapType='CMappedPtr'),
 arg2=ArgDef(name='numOffsets',type='uint32_t',tag='in'),
-arg3=ArgDef(name='pOffsets',type='size_t*',tag='in',wrapParams='numOffsets, {name}'),
+arg3=ArgDef(name='pOffsets',type='size_t*',tag='in',range='0,numOffsets'),
 )
 
 Function(name='zeGitsStopRecording',component='ze_gits_extension',extension=True,enabled=True,recWrap=True,skipRun=True,recExecWrap=True,log=False,

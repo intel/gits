@@ -110,7 +110,7 @@ ${func.get('type')} __zecall special_${func.get('name')}(
   %if func.get('log', True):
   L0Log(TRACE, NO_NEWLINE) << "${func.get('name')}(";
     %for arg in func['args']:
-  L0Log(TRACE, RAW) << ${arg['name']}${'' if loop.last else ' << ", "'};
+  L0Log(TRACE, RAW) << ${f"ToStringHelperArrayRange({arg['name']}, {arg['range']})" if arg.get('range') else arg['name']}${'' if loop.last else ' << ", "'};
     %endfor
   L0Log(TRACE, ${'RAW' if func['type'] != 'void' else 'NO_PREFIX'}) << ")";
   %endif
