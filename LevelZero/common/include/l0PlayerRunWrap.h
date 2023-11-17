@@ -465,7 +465,7 @@ inline void zeCommandListCreateImmediate_RUNWRAP(
 
 inline void zeDriverGetLastErrorDescription_RUNWRAP(Cze_result_t& _return_value,
                                                     Cze_driver_handle_t& _hDriver,
-                                                    COutArgument& /*_ppString*/) {
+                                                    [[maybe_unused]] COutArgument& _ppString) {
   const char* ppString = nullptr;
   _return_value.Value() = drv.zeDriverGetLastErrorDescription(*_hDriver, &ppString);
 }

@@ -115,7 +115,7 @@ void Cze_module_constants_t::Declare(CCodeOStream& stream) const {
   stream << ";\n";
 }
 
-void Cze_module_constants_t::Write(CCodeOStream& /*stream*/) const {}
+void Cze_module_constants_t::Write([[maybe_unused]] CCodeOStream& stream) const {}
 
 Cze_module_constants_t::L0Type Cze_module_constants_t::operator*() {
   const auto* ptr = Ptr();
@@ -162,7 +162,7 @@ void Cze_module_constants_t_V1::Read(CBinIStream& stream) {
   _version.Read(stream);
 }
 
-void Cze_module_constants_t_V1::Write(CCodeOStream& /*stream*/) const {
+void Cze_module_constants_t_V1::Write([[maybe_unused]] CCodeOStream& stream) const {
   throw ENotImplemented(EXCEPTION_MESSAGE);
 }
 
@@ -312,7 +312,7 @@ void Cze_module_desc_t::Declare(CCodeOStream& stream) const {
   stream << ";\n";
 }
 
-void Cze_module_desc_t::Write(CCodeOStream& /*stream*/) const {}
+void Cze_module_desc_t::Write([[maybe_unused]] CCodeOStream& stream) const {}
 
 Cze_module_desc_t::L0Type Cze_module_desc_t::operator*() {
   const auto* ptr = Ptr();
@@ -393,11 +393,11 @@ void Cze_module_desc_t_V1::Read(CBinIStream& stream) {
   _pConstants.Read(stream);
 }
 
-void Cze_module_desc_t_V1::Declare(CCodeOStream& /*stream*/) const {
+void Cze_module_desc_t_V1::Declare([[maybe_unused]] CCodeOStream& stream) const {
   throw ENotImplemented(EXCEPTION_MESSAGE);
 }
 
-void Cze_module_desc_t_V1::Write(CCodeOStream& /*stream*/) const {
+void Cze_module_desc_t_V1::Write([[maybe_unused]] CCodeOStream& stream) const {
   throw EOperationFailed(EXCEPTION_MESSAGE);
 }
 

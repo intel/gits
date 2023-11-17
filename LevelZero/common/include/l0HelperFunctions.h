@@ -89,7 +89,7 @@ public:
   }
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& /*stream*/) const {}
+  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
   virtual void Run();
 };
 
@@ -116,7 +116,7 @@ public:
   }
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& /*stream*/) const {}
+  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
   virtual void Run();
 };
 

@@ -251,9 +251,9 @@ public:
   virtual const char* Name() const {
     return "<out_arg>";
   }
-  virtual void Write(CBinOStream& /*stream*/) const { /* Do nothing */
+  virtual void Write([[maybe_unused]] CBinOStream& stream) const { /* Do nothing */
   }
-  virtual void Read(CBinIStream& /*stream*/) { /* Do nothing */
+  virtual void Read([[maybe_unused]] CBinIStream& stream) { /* Do nothing */
   }
   virtual void Write(CCodeOStream& stream) const {
     stream << "outArg()";
@@ -271,15 +271,15 @@ public:
   virtual const char* Name() const {
     return NAME;
   }
-  virtual void Write(CBinOStream& /*stream*/) const { /* Do nothing */
+  virtual void Write([[maybe_unused]] CBinOStream& stream) const { /* Do nothing */
   }
-  virtual void Read(CBinIStream& /*stream*/) { /* Do nothing */
+  virtual void Read([[maybe_unused]] CBinIStream& stream) { /* Do nothing */
   }
   virtual void Write(CCodeOStream& stream) const;
 
   struct PtrConverter {
   public:
-    explicit PtrConverter(void* /*ptr*/) {}
+    explicit PtrConverter([[maybe_unused]] void* ptr) {}
     operator void**() {
       return nullptr;
     }
@@ -350,8 +350,8 @@ public:
   CMappedPtr() : CArgHandle() {}
   CMappedPtr(void* arg) : CArgHandle(arg) {}
   CMappedPtr(const void* arg) : CArgHandle(const_cast<void*>(arg)) {}
-  static void AddMutualMapping(void* /*key*/, void* /*value*/){};
-  static void RemoveMutualMapping(void* /*key*/){};
+  static void AddMutualMapping([[maybe_unused]] void* key, [[maybe_unused]] void* value){};
+  static void RemoveMutualMapping([[maybe_unused]] void* key){};
 };
 
 /** @class CUSMPtr

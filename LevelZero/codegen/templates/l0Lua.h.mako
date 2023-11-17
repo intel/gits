@@ -20,10 +20,10 @@ namespace gits {
   namespace l0 {
     template<class T> void lua_push_ext(lua_State* L, T value) { gits::lua::lua_push(L, value); }
     template<class T> T lua_to_ext(lua_State* L, int pos) { return gits::lua::lua_to<T>(L, pos); }
-    template<typename T> void *lua_to_extension_struct(lua_State * /*L*/, int /*pos*/) {
+    template<typename T> void *lua_to_extension_struct([[maybe_unused]] lua_State * L, [[maybe_unused]] int pos) {
       throw ENotImplemented(EXCEPTION_MESSAGE);
     }
-    template<typename T> void lua_push_extension_struct(lua_State * /*L*/, const void* /*pNext*/) {
+    template<typename T> void lua_push_extension_struct([[maybe_unused]] lua_State * L,[[maybe_unused]] const void* pNext) {
       throw ENotImplemented(EXCEPTION_MESSAGE);
     }
 %for name, enum in enums.items():

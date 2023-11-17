@@ -31,7 +31,7 @@ gits::l0::CGitsL0MemoryUpdate::CGitsL0MemoryUpdate(const void* usmPtr) {
   }
 }
 
-void gits::l0::CGitsL0MemoryUpdate::Write(CCodeOStream& /*stream*/) const {
+void gits::l0::CGitsL0MemoryUpdate::Write([[maybe_unused]] CCodeOStream& stream) const {
   throw ENotImplemented("CGitsL0MemoryUpdate not implemented for CCode.\nSet CCode to False in "
                         "gits_config.txt to skip CCode dumping.");
 }
@@ -76,7 +76,7 @@ gits::l0::CGitsL0MemoryRestore::CGitsL0MemoryRestore(const void* globalPointer,
   _resource.reset(RESOURCE_DATA_RAW, globalPtrAllocation.data(), globalPtrAllocation.size());
 }
 
-void gits::l0::CGitsL0MemoryRestore::Write(CCodeOStream& /*stream*/) const {
+void gits::l0::CGitsL0MemoryRestore::Write([[maybe_unused]] CCodeOStream& stream) const {
   throw ENotImplemented("CGitsL0MemoryRestore not implemented for CCode.\nSet CCode to False in "
                         "gits_config.txt to skip CCode dumping.");
 }

@@ -78,7 +78,7 @@ namespace gits {
           _pNext->Read(stream);
         }
       }
-      virtual void Write(CCodeOStream & /*stream*/) const {};
+      virtual void Write([[maybe_unused]] CCodeOStream & stream) const {};
       void *operator*() {
         if (_stype.Value() != static_cast<StructureType>(0U)) {
           return _pNext->GetPtrType();
@@ -123,7 +123,7 @@ namespace gits {
       virtual const char* Name() const { return "${arg.get('name')}"; }
       virtual void Write(CBinOStream& stream) const;
       virtual void Read(CBinIStream& stream);
-      virtual void Write(CCodeOStream& /*stream*/) const {};
+      virtual void Write([[maybe_unused]] CCodeOStream& stream) const {};
       virtual void Declare(CCodeOStream& stream) const;
       virtual bool DeclarationNeeded() const { return true; }
       L0Type operator*() {

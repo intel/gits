@@ -205,18 +205,15 @@ void SubcaptureLogicForImmediateCommandLists(CRecorder& recorder,
 }
 } // namespace
 
-inline void zeCommandListAppendLaunchKernel_RECWRAP_PRE(CRecorder& recorder,
-                                                        ze_result_t return_value,
-                                                        ze_command_list_handle_t hCommandList,
-                                                        ze_kernel_handle_t hKernel,
-                                                        const ze_group_count_t* pLaunchFuncArgs,
-                                                        ze_event_handle_t hSignalEvent,
-                                                        uint32_t numWaitEvents,
-                                                        ze_event_handle_t* phWaitEvents) {
-  std::ignore = return_value;
-  std::ignore = hSignalEvent;
-  std::ignore = recorder;
-  std::ignore = pLaunchFuncArgs;
+inline void zeCommandListAppendLaunchKernel_RECWRAP_PRE(
+    CRecorder& recorder,
+    [[maybe_unused]] ze_result_t return_value,
+    ze_command_list_handle_t hCommandList,
+    ze_kernel_handle_t hKernel,
+    const ze_group_count_t* pLaunchFuncArgs,
+    [[maybe_unused]] ze_event_handle_t hSignalEvent,
+    uint32_t numWaitEvents,
+    ze_event_handle_t* phWaitEvents) {
   auto& sd = SD();
   if (sd.nomenclatureCounting) {
     gits::CGits::Instance().KernelCountUp();
@@ -366,25 +363,16 @@ inline void zeCommandListAppendLaunchKernelIndirect_RECWRAP(
 }
 
 inline void zeCommandListAppendLaunchMultipleKernelsIndirect_RECWRAP_PRE(
-    CRecorder& recorder,
-    ze_result_t return_value,
-    ze_command_list_handle_t hCommandList,
+    [[maybe_unused]] CRecorder& recorder,
+    [[maybe_unused]] ze_result_t return_value,
+    [[maybe_unused]] ze_command_list_handle_t hCommandList,
     uint32_t numKernels,
-    ze_kernel_handle_t* phKernels,
-    const uint32_t* pCountBuffer,
-    const ze_group_count_t* pLaunchArgumentsBuffer,
-    ze_event_handle_t hSignalEvent,
-    uint32_t numWaitEvents,
-    ze_event_handle_t* phWaitEvents) {
-  std::ignore = recorder;
-  std::ignore = return_value;
-  std::ignore = hCommandList;
-  std::ignore = phKernels;
-  std::ignore = pCountBuffer;
-  std::ignore = pLaunchArgumentsBuffer;
-  std::ignore = hSignalEvent;
-  std::ignore = numWaitEvents;
-  std::ignore = phWaitEvents;
+    [[maybe_unused]] ze_kernel_handle_t* phKernels,
+    [[maybe_unused]] const uint32_t* pCountBuffer,
+    [[maybe_unused]] const ze_group_count_t* pLaunchArgumentsBuffer,
+    [[maybe_unused]] ze_event_handle_t hSignalEvent,
+    [[maybe_unused]] uint32_t numWaitEvents,
+    [[maybe_unused]] ze_event_handle_t* phWaitEvents) {
   auto& sd = SD();
   const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
   if (sd.nomenclatureCounting) {
@@ -468,16 +456,13 @@ inline void zeCommandListAppendMemoryFill_RECWRAP(CRecorder& recorder,
                                    hSignalEvent, numWaitEvents, phWaitEvents);
 }
 
-inline void zeCommandQueueExecuteCommandLists_RECWRAP_PRE(CRecorder& recorder,
-                                                          ze_result_t return_value,
-                                                          ze_command_queue_handle_t hCommandQueue,
-                                                          uint32_t numCommandLists,
-                                                          ze_command_list_handle_t* phCommandLists,
-                                                          ze_fence_handle_t hFence) {
-  std::ignore = return_value;
-  std::ignore = numCommandLists;
-  std::ignore = phCommandLists;
-  std::ignore = hFence;
+inline void zeCommandQueueExecuteCommandLists_RECWRAP_PRE(
+    CRecorder& recorder,
+    [[maybe_unused]] ze_result_t return_value,
+    ze_command_queue_handle_t hCommandQueue,
+    [[maybe_unused]] uint32_t numCommandLists,
+    [[maybe_unused]] ze_command_list_handle_t* phCommandLists,
+    [[maybe_unused]] ze_fence_handle_t hFence) {
   auto& sd = SD();
   if (sd.nomenclatureCounting) {
     gits::CGits::Instance().CommandQueueExecCountUp();

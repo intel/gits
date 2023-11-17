@@ -13,12 +13,6 @@ ${open(output_path, 'r').read()}\
   %endif
   %if func.get('stateTrack'):
 inline void ${func['stateTrackName']}(${make_params(func, with_types=True, with_retval=True)}) {
-    %if func['type'] != 'void':
-  (void)return_value;
-    %endif
-    %for arg in func['args']:
-  (void)${arg['name']};
-    %endfor
 }
 
   %endif

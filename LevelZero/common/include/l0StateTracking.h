@@ -252,7 +252,7 @@ inline void zeCommandListCreateImmediate_SD(ze_result_t return_value,
     clState->cmdQueueNumber = CGits::Instance().CurrentCommandQueueExecCount();
   }
 }
-inline void AppendLaunchKernel(ze_result_t return_value,
+inline void AppendLaunchKernel([[maybe_unused]] ze_result_t return_value,
                                const ze_command_list_handle_t& hCommandList,
                                const ze_kernel_handle_t& hKernel,
                                const ze_group_count_t* pLaunchFuncArgs,
@@ -306,17 +306,15 @@ inline void zeCommandListAppendLaunchKernelIndirect_SD(
 }
 
 inline void zeCommandListAppendLaunchMultipleKernelsIndirect_SD(
-    ze_result_t return_value,
+    [[maybe_unused]] ze_result_t return_value,
     ze_command_list_handle_t hCommandList,
     uint32_t numKernels,
     ze_kernel_handle_t* phKernels,
-    const uint32_t* pCountBuffer,
+    [[maybe_unused]] const uint32_t* pCountBuffer,
     const ze_group_count_t* pLaunchArgumentsBuffer,
     ze_event_handle_t hSignalEvent,
     uint32_t numWaitEvents,
     ze_event_handle_t* phWaitEvents) {
-  (void)return_value;
-  (void)pCountBuffer;
   auto& sd = SD();
   bool callOnce = true;
   const auto& cmdListState = sd.Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
@@ -334,12 +332,11 @@ inline void zeCommandListAppendLaunchMultipleKernelsIndirect_SD(
   RegisterEvents(sd, hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
 }
 
-inline void zeKernelSetArgumentValue_SD(ze_result_t return_value,
+inline void zeKernelSetArgumentValue_SD([[maybe_unused]] ze_result_t return_value,
                                         ze_kernel_handle_t hKernel,
                                         uint32_t argIndex,
                                         size_t argSize,
                                         const void* pArgValue) {
-  (void)return_value;
   SD().Get<CKernelState>(hKernel, EXCEPTION_MESSAGE)
       .currentKernelInfo->SetArgument(argIndex, argSize, pArgValue);
 }
@@ -366,12 +363,11 @@ inline void zeCommandQueueCreate_SD(ze_result_t return_value,
   }
 }
 
-inline void zeCommandQueueExecuteCommandLists_SD(ze_result_t return_value,
+inline void zeCommandQueueExecuteCommandLists_SD([[maybe_unused]] ze_result_t return_value,
                                                  ze_command_queue_handle_t hCommandQueue,
                                                  uint32_t numCommandLists,
                                                  ze_command_list_handle_t* phCommandLists,
                                                  ze_fence_handle_t hFence) {
-  (void)return_value;
   const auto& cfg = Config::Get();
   auto& sd = SD();
   if (hFence != nullptr) {
@@ -417,8 +413,9 @@ inline void zeCommandQueueExecuteCommandLists_SD(ze_result_t return_value,
   }
 }
 
-inline void zeMemFree_SD(ze_result_t return_value, ze_context_handle_t hContext, void* ptr) {
-  (void)hContext;
+inline void zeMemFree_SD(ze_result_t return_value,
+                         [[maybe_unused]] ze_context_handle_t hContext,
+                         void* ptr) {
   if (return_value == ZE_RESULT_SUCCESS) {
     SD().Release<CAllocState>(ptr);
   }
@@ -555,8 +552,8 @@ inline void zeContextCreate_SD(ze_result_t return_value,
   }
 }
 
-inline void zeCommandListReset_SD(ze_result_t return_value, ze_command_list_handle_t hCommandList) {
-  (void)return_value;
+inline void zeCommandListReset_SD([[maybe_unused]] ze_result_t return_value,
+                                  ze_command_list_handle_t hCommandList) {
   auto& cmdListState = SD().Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
   cmdListState.RestoreReset();
   cmdListState.appendedKernels.clear();
@@ -588,11 +585,9 @@ inline void zeEventDestroy_SD(ze_result_t return_value, ze_event_handle_t hEvent
 inline void zeEventPoolCreate_SD(ze_result_t return_value,
                                  ze_context_handle_t hContext,
                                  const ze_event_pool_desc_t* desc,
-                                 uint32_t numDevices,
-                                 ze_device_handle_t* phDevices,
+                                 [[maybe_unused]] uint32_t numDevices,
+                                 [[maybe_unused]] ze_device_handle_t* phDevices,
                                  ze_event_pool_handle_t* phEventPool) {
-  (void)numDevices;
-  (void)phDevices;
   if (return_value == ZE_RESULT_SUCCESS) {
     auto& eventPoolState = SD().Map<CEventPoolState>()[*phEventPool];
     eventPoolState = std::make_unique<CEventPoolState>(hContext, *desc);
@@ -748,14 +743,12 @@ inline void zeDeviceGetCommandQueueGroupProperties_SD(
 
 inline void zeCommandListAppendMemoryCopy_SD(ze_result_t return_value,
                                              ze_command_list_handle_t hCommandList,
-                                             void* dstptr,
+                                             [[maybe_unused]] void* dstptr,
                                              const void* srcptr,
-                                             size_t size,
+                                             [[maybe_unused]] size_t size,
                                              ze_event_handle_t hSignalEvent,
                                              uint32_t numWaitEvents,
                                              ze_event_handle_t* phWaitEvents) {
-  (void)dstptr;
-  (void)size;
   if (return_value == ZE_RESULT_SUCCESS) {
     auto& sd = SD();
     RegisterEvents(sd, hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
@@ -782,11 +775,9 @@ inline void zeImageViewCreateExt_SD(ze_result_t return_value,
 }
 
 inline void zeMemFreeExt_SD(ze_result_t return_value,
-                            ze_context_handle_t hContext,
-                            const ze_memory_free_ext_desc_t* pMemFreeDesc,
+                            [[maybe_unused]] ze_context_handle_t hContext,
+                            [[maybe_unused]] const ze_memory_free_ext_desc_t* pMemFreeDesc,
                             void* ptr) {
-  (void)hContext;
-  (void)pMemFreeDesc;
   if (return_value == ZE_RESULT_SUCCESS) {
     SD().Release<CAllocState>(ptr);
   }
@@ -795,7 +786,7 @@ inline void zeMemFreeExt_SD(ze_result_t return_value,
 inline void zeModuleDynamicLink_SD(ze_result_t return_value,
                                    uint32_t numModules,
                                    ze_module_handle_t* phModules,
-                                   ze_module_build_log_handle_t* /*phLinkLog*/) {
+                                   [[maybe_unused]] ze_module_build_log_handle_t* phLinkLog) {
   if (return_value == ZE_RESULT_SUCCESS) {
     auto& sd = SD();
     for (auto i = 0U; i < numModules; i++) {
@@ -871,7 +862,7 @@ inline void zeCommandListAppendWaitOnEvents_SD(ze_result_t return_value,
   }
 }
 
-inline void zeCommandListAppendBarrier_SD(ze_result_t /* return_value */,
+inline void zeCommandListAppendBarrier_SD([[maybe_unused]] ze_result_t return_value,
                                           ze_command_list_handle_t hCommandList,
                                           ze_event_handle_t hSignalEvent,
                                           uint32_t numWaitEvents,
@@ -879,154 +870,163 @@ inline void zeCommandListAppendBarrier_SD(ze_result_t /* return_value */,
   RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
 }
 
-inline void zeCommandListAppendImageCopy_SD(ze_result_t /* return_value */,
+inline void zeCommandListAppendImageCopy_SD([[maybe_unused]] ze_result_t return_value,
                                             ze_command_list_handle_t hCommandList,
-                                            ze_image_handle_t /* hDstImage */,
-                                            ze_image_handle_t /* hSrcImage */,
+                                            [[maybe_unused]] ze_image_handle_t hDstImage,
+                                            [[maybe_unused]] ze_image_handle_t hSrcImage,
                                             ze_event_handle_t hSignalEvent,
                                             uint32_t numWaitEvents,
                                             ze_event_handle_t* phWaitEvents) {
   RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
 }
 
-inline void zeCommandListAppendImageCopyFromMemory_SD(ze_result_t /* return_value */,
-                                                      ze_command_list_handle_t hCommandList,
-                                                      ze_image_handle_t /* hDstImage */,
-                                                      const void* /* srcptr */,
-                                                      const ze_image_region_t* /* pDstRegion */,
-                                                      ze_event_handle_t hSignalEvent,
-                                                      uint32_t numWaitEvents,
-                                                      ze_event_handle_t* phWaitEvents) {
+inline void zeCommandListAppendImageCopyFromMemory_SD(
+    [[maybe_unused]] ze_result_t return_value,
+    ze_command_list_handle_t hCommandList,
+    [[maybe_unused]] ze_image_handle_t hDstImage,
+    [[maybe_unused]] const void* srcptr,
+    [[maybe_unused]] const ze_image_region_t* pDstRegion,
+    ze_event_handle_t hSignalEvent,
+    uint32_t numWaitEvents,
+    ze_event_handle_t* phWaitEvents) {
   RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
 }
 
-inline void zeCommandListAppendImageCopyFromMemoryExt_SD(ze_result_t /* return_value */,
-                                                         ze_command_list_handle_t hCommandList,
-                                                         ze_image_handle_t /* hDstImage */,
-                                                         const void* /* srcptr */,
-                                                         const ze_image_region_t* /* pDstRegion */,
-                                                         uint32_t /* srcRowPitch */,
-                                                         uint32_t /* srcSlicePitch */,
-                                                         ze_event_handle_t hSignalEvent,
-                                                         uint32_t numWaitEvents,
-                                                         ze_event_handle_t* phWaitEvents) {
+inline void zeCommandListAppendImageCopyFromMemoryExt_SD(
+    [[maybe_unused]] ze_result_t return_value,
+    ze_command_list_handle_t hCommandList,
+    [[maybe_unused]] ze_image_handle_t hDstImage,
+    [[maybe_unused]] const void* srcptr,
+    [[maybe_unused]] const ze_image_region_t* pDstRegion,
+    [[maybe_unused]] uint32_t srcRowPitch,
+    [[maybe_unused]] uint32_t srcSlicePitch,
+    ze_event_handle_t hSignalEvent,
+    uint32_t numWaitEvents,
+    ze_event_handle_t* phWaitEvents) {
   RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
 }
 
-inline void zeCommandListAppendImageCopyRegion_SD(ze_result_t /* return_value */,
-                                                  ze_command_list_handle_t hCommandList,
-                                                  ze_image_handle_t /* hDstImage */,
-                                                  ze_image_handle_t /* hSrcImage */,
-                                                  const ze_image_region_t* /* pDstRegion */,
-                                                  const ze_image_region_t* /* pSrcRegion */,
-                                                  ze_event_handle_t hSignalEvent,
-                                                  uint32_t numWaitEvents,
-                                                  ze_event_handle_t* phWaitEvents) {
+inline void zeCommandListAppendImageCopyRegion_SD(
+    [[maybe_unused]] ze_result_t return_value,
+    ze_command_list_handle_t hCommandList,
+    [[maybe_unused]] ze_image_handle_t hDstImage,
+    [[maybe_unused]] ze_image_handle_t hSrcImage,
+    [[maybe_unused]] const ze_image_region_t* pDstRegion,
+    [[maybe_unused]] const ze_image_region_t* pSrcRegion,
+    ze_event_handle_t hSignalEvent,
+    uint32_t numWaitEvents,
+    ze_event_handle_t* phWaitEvents) {
   RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
 }
 
-inline void zeCommandListAppendImageCopyToMemory_SD(ze_result_t /* return_value */,
-                                                    ze_command_list_handle_t hCommandList,
-                                                    void* /* dstptr */,
-                                                    ze_image_handle_t /* hSrcImage */,
-                                                    const ze_image_region_t* /* pSrcRegion */,
-                                                    ze_event_handle_t hSignalEvent,
-                                                    uint32_t numWaitEvents,
-                                                    ze_event_handle_t* phWaitEvents) {
+inline void zeCommandListAppendImageCopyToMemory_SD(
+    [[maybe_unused]] ze_result_t return_value,
+    ze_command_list_handle_t hCommandList,
+    [[maybe_unused]] void* dstptr,
+    [[maybe_unused]] ze_image_handle_t hSrcImage,
+    [[maybe_unused]] const ze_image_region_t* pSrcRegion,
+    ze_event_handle_t hSignalEvent,
+    uint32_t numWaitEvents,
+    ze_event_handle_t* phWaitEvents) {
   RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
 }
 
-inline void zeCommandListAppendImageCopyToMemoryExt_SD(ze_result_t /* return_value */,
-                                                       ze_command_list_handle_t hCommandList,
-                                                       void* /* dstptr */,
-                                                       ze_image_handle_t /* hSrcImage */,
-                                                       const ze_image_region_t* /* pSrcRegion */,
-                                                       uint32_t /* destRowPitch */,
-                                                       uint32_t /* destSlicePitch */,
-                                                       ze_event_handle_t hSignalEvent,
-                                                       uint32_t numWaitEvents,
-                                                       ze_event_handle_t* phWaitEvents) {
+inline void zeCommandListAppendImageCopyToMemoryExt_SD(
+    [[maybe_unused]] ze_result_t return_value,
+    ze_command_list_handle_t hCommandList,
+    [[maybe_unused]] void* dstptr,
+    [[maybe_unused]] ze_image_handle_t hSrcImage,
+    [[maybe_unused]] const ze_image_region_t* pSrcRegion,
+    [[maybe_unused]] uint32_t destRowPitch,
+    [[maybe_unused]] uint32_t destSlicePitch,
+    ze_event_handle_t hSignalEvent,
+    uint32_t numWaitEvents,
+    ze_event_handle_t* phWaitEvents) {
   RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
 }
 
-inline void zeCommandListAppendMemoryCopyFromContext_SD(ze_result_t /* return_value */,
-                                                        ze_command_list_handle_t hCommandList,
-                                                        void* /* dstptr */,
-                                                        ze_context_handle_t /* hContextSrc */,
-                                                        const void* /* srcptr */,
-                                                        size_t /* size */,
-                                                        ze_event_handle_t hSignalEvent,
-                                                        uint32_t numWaitEvents,
-                                                        ze_event_handle_t* phWaitEvents) {
+inline void zeCommandListAppendMemoryCopyFromContext_SD(
+    [[maybe_unused]] ze_result_t return_value,
+    ze_command_list_handle_t hCommandList,
+    [[maybe_unused]] void* dstptr,
+    [[maybe_unused]] ze_context_handle_t hContextSrc,
+    [[maybe_unused]] const void* srcptr,
+    [[maybe_unused]] size_t size,
+    ze_event_handle_t hSignalEvent,
+    uint32_t numWaitEvents,
+    ze_event_handle_t* phWaitEvents) {
   RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
 }
 
-inline void zeCommandListAppendMemoryCopyRegion_SD(ze_result_t /* return_value */,
-                                                   ze_command_list_handle_t hCommandList,
-                                                   void* /* dstptr */,
-                                                   const ze_copy_region_t* /* dstRegion */,
-                                                   uint32_t /* dstPitch */,
-                                                   uint32_t /* dstSlicePitch */,
-                                                   const void* /* srcptr */,
-                                                   const ze_copy_region_t* /* srcRegion */,
-                                                   uint32_t /* srcPitch */,
-                                                   uint32_t /* srcSlicePitch */,
-                                                   ze_event_handle_t hSignalEvent,
-                                                   uint32_t numWaitEvents,
-                                                   ze_event_handle_t* phWaitEvents) {
+inline void zeCommandListAppendMemoryCopyRegion_SD(
+    [[maybe_unused]] ze_result_t return_value,
+    ze_command_list_handle_t hCommandList,
+    [[maybe_unused]] void* dstptr,
+    [[maybe_unused]] const ze_copy_region_t* dstRegion,
+    [[maybe_unused]] uint32_t dstPitch,
+    [[maybe_unused]] uint32_t dstSlicePitch,
+    [[maybe_unused]] const void* srcptr,
+    [[maybe_unused]] const ze_copy_region_t* srcRegion,
+    [[maybe_unused]] uint32_t srcPitch,
+    [[maybe_unused]] uint32_t srcSlicePitch,
+    ze_event_handle_t hSignalEvent,
+    uint32_t numWaitEvents,
+    ze_event_handle_t* phWaitEvents) {
   RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
 }
 
-inline void zeCommandListAppendMemoryFill_SD(ze_result_t /* return_value */,
+inline void zeCommandListAppendMemoryFill_SD([[maybe_unused]] ze_result_t return_value,
                                              ze_command_list_handle_t hCommandList,
-                                             void* /* ptr */,
-                                             const void* /* pattern */,
-                                             size_t /* pattern_size */,
-                                             size_t /* size */,
+                                             [[maybe_unused]] void* ptr,
+                                             [[maybe_unused]] const void* pattern,
+                                             [[maybe_unused]] size_t pattern_size,
+                                             [[maybe_unused]] size_t size,
                                              ze_event_handle_t hSignalEvent,
                                              uint32_t numWaitEvents,
                                              ze_event_handle_t* phWaitEvents) {
   RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
 }
 
-inline void zeCommandListAppendMemoryRangesBarrier_SD(ze_result_t /* return_value */,
+inline void zeCommandListAppendMemoryRangesBarrier_SD([[maybe_unused]] ze_result_t return_value,
                                                       ze_command_list_handle_t hCommandList,
-                                                      uint32_t /* numRanges */,
-                                                      const size_t* /* pRangeSizes */,
-                                                      const void** /* pRanges */,
+                                                      [[maybe_unused]] uint32_t numRanges,
+                                                      [[maybe_unused]] const size_t* pRangeSizes,
+                                                      [[maybe_unused]] const void** pRanges,
                                                       ze_event_handle_t hSignalEvent,
                                                       uint32_t numWaitEvents,
                                                       ze_event_handle_t* phWaitEvents) {
   RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
 }
 
-inline void zeCommandListAppendQueryKernelTimestamps_SD(ze_result_t /* return_value */,
-                                                        ze_command_list_handle_t hCommandList,
-                                                        uint32_t /* numEvents */,
-                                                        ze_event_handle_t* /* phEvents */,
-                                                        void* /* dstptr */,
-                                                        const size_t* /* pOffsets */,
-                                                        ze_event_handle_t hSignalEvent,
-                                                        uint32_t numWaitEvents,
-                                                        ze_event_handle_t* phWaitEvents) {
+inline void zeCommandListAppendQueryKernelTimestamps_SD(
+    [[maybe_unused]] ze_result_t return_value,
+    ze_command_list_handle_t hCommandList,
+    [[maybe_unused]] uint32_t numEvents,
+    [[maybe_unused]] ze_event_handle_t* phEvents,
+    [[maybe_unused]] void* dstptr,
+    [[maybe_unused]] const size_t* pOffsets,
+    ze_event_handle_t hSignalEvent,
+    uint32_t numWaitEvents,
+    ze_event_handle_t* phWaitEvents) {
   RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
 }
 
-inline void zeCommandListAppendWriteGlobalTimestamp_SD(ze_result_t /* return_value */,
+inline void zeCommandListAppendWriteGlobalTimestamp_SD([[maybe_unused]] ze_result_t return_value,
                                                        ze_command_list_handle_t hCommandList,
-                                                       uint64_t* /* dstptr */,
+                                                       [[maybe_unused]] uint64_t* dstptr,
                                                        ze_event_handle_t hSignalEvent,
                                                        uint32_t numWaitEvents,
                                                        ze_event_handle_t* phWaitEvents) {
   RegisterEvents(SD(), hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
 }
 
-inline void zetCommandListAppendMetricQueryEnd_SD(ze_result_t /* return_value */,
-                                                  zet_command_list_handle_t hCommandList,
-                                                  zet_metric_query_handle_t /* hMetricQuery */,
-                                                  ze_event_handle_t hSignalEvent,
-                                                  uint32_t numWaitEvents,
-                                                  ze_event_handle_t* phWaitEvents) {
+inline void zetCommandListAppendMetricQueryEnd_SD(
+    [[maybe_unused]] ze_result_t return_value,
+    zet_command_list_handle_t hCommandList,
+    [[maybe_unused]] zet_metric_query_handle_t hMetricQuery,
+    ze_event_handle_t hSignalEvent,
+    uint32_t numWaitEvents,
+    ze_event_handle_t* phWaitEvents) {
   RegisterEvents(SD(), reinterpret_cast<ze_command_list_handle_t>(hCommandList), hSignalEvent,
                  numWaitEvents, phWaitEvents);
 }
