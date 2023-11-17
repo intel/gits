@@ -86,7 +86,7 @@ int lua_${func.get('name')}(lua_State* L) {
   auto ${arg['name']} = lua_to_ext<${arg['type']}>(L, ${loop.index+1});
     %endfor
   bypass_luascript = true;
-  ze_result_t ret = drv.${func.get('name')}(${make_params(func)});
+  ze_result_t ret = drv.inject.${func.get('name')}(${make_params(func)});
     %for arg in func['args']:
       %if 'out' in arg['tag'] and has_vars(arg['type'], arguments):
   lua_setTableFields(L, ${loop.index+1}, ${arg['name']});
@@ -155,7 +155,7 @@ ${arg['name']};
     %endif
   }
   %else:
-  drv.original.${func.get('name')}(${make_params(func)});
+  ${'' if func.get('type') == 'void' else 'ret = '}drv.original.${func.get('name')}(${make_params(func)});
     %if func.get('type') != 'void' and func.get('log', True):
   L0Log(TRACE, NO_PREFIX) << " = " << ret;
     %endif
@@ -174,7 +174,6 @@ ${func.get('type')} __zecall default_${func.get('name')}(
   if (!load_l0_function_from_original_library(drv.original.${func.get('name')}, "${func.get('name')}")) {
     drv.original.${func.get('name')} = noop(static_cast<pfn_${func.get('name')}>(nullptr));
   }
-  drv.${func.get('name')} = special_${func.get('name')};
   %else:
   if (drv.original.${func.get('name')} == nullptr) {
     if (!load_l0_function(drv.original.${func.get('name')}, "${func.get('name')}")) {
@@ -182,12 +181,12 @@ ${func.get('type')} __zecall default_${func.get('name')}(
       return ZE_RESULT_ERROR_UNINITIALIZED;
     }
   }
+  %endif
   if (ShouldLog(TRACE) || Config::Get().common.useEvents) {
     drv.${func.get('name')} = special_${func.get('name')};
     return drv.${func.get('name')}(${make_params(func)});
   }
-  %endif
-  ${'' if func.get('type') == 'void' else 'return '}drv.original.${func.get('name')}(${make_params(func)});
+  return drv.original.${func.get('name')}(${make_params(func)});
 }
 
 ${func.get('type')} __zecall inject_${func.get('name')}(
