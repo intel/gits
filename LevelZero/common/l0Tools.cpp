@@ -457,10 +457,12 @@ ze_command_list_handle_t GetCommandListImmediate(CStateDynamic& sd,
   list = handle;
   return handle;
 }
-bool IsCommandListImmediate(const ze_command_list_handle_t& handle, CStateDynamic& sd) {
+
+bool IsCommandListImmediate(const ze_command_list_handle_t& handle, const CStateDynamic& sd) {
   return sd.Get<CCommandListState>(handle, EXCEPTION_MESSAGE).isImmediate;
 }
-std::pair<void*, uintptr_t> GetAllocFromRegion(void* pAlloc, CStateDynamic& sd) {
+
+std::pair<void*, uintptr_t> GetAllocFromRegion(void* pAlloc, const CStateDynamic& sd) {
   if (sd.Exists<CAllocState>(pAlloc)) {
     return std::make_pair(pAlloc, 0U);
   }
@@ -475,10 +477,12 @@ std::pair<void*, uintptr_t> GetAllocFromRegion(void* pAlloc, CStateDynamic& sd) 
   }
   return std::make_pair(nullptr, 0);
 }
+
 void* GetOffsetPointer(void* ptr, const uintptr_t& offset) {
   return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(ptr) + offset);
 }
-std::pair<void*, uintptr_t> GetAllocFromOriginalPtr(void* originalPtr, CStateDynamic& sd) {
+
+std::pair<void*, uintptr_t> GetAllocFromOriginalPtr(void* originalPtr, const CStateDynamic& sd) {
   if (CMappedPtr::CheckMapping(originalPtr)) {
     void* ptr = CMappedPtr::GetMapping(originalPtr);
     if (!sd.Exists<CAllocState>(ptr)) {
@@ -498,16 +502,18 @@ std::pair<void*, uintptr_t> GetAllocFromOriginalPtr(void* originalPtr, CStateDyn
   }
   return std::make_pair(nullptr, 0);
 }
+
 size_t GetSizeFromCopyRegion(const ze_copy_region_t* region) {
   return region->depth != 0U ? region->width * region->height * region->depth
                              : region->width * region->height;
 }
+
 bool IsNullIndirectPointersInBufferEnabled(const Config& cfg) {
   return cfg.IsPlayer() ? !cfg.player.l0DisableNullIndirectPointersInBuffer
                         : cfg.recorder.levelZero.utilities.nullIndirectPointersInBuffer;
 }
+
 bool IsControlledSubmission(const ze_command_queue_desc_t* desc) {
-  // Apps ignore spec recommendation about setting `flags` properly.
   return desc != nullptr && ((desc->ordinal != 0U || desc->index != 0U) ||
                              desc->flags == ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY);
 }
@@ -588,7 +594,7 @@ void* GetPointerFromOriginalGlobalAllocation(const void* originalPtr,
   return nullptr;
 }
 
-void* GetMappedGlobalPtrFromOriginalAllocation(CStateDynamic& sd, void* originalPtr) {
+void* GetMappedGlobalPtrFromOriginalAllocation(const CStateDynamic& sd, void* originalPtr) {
   for (const auto& allocState : sd.Map<CAllocState>()) {
     if (allocState.second->allocType == AllocStateType::global_pointer &&
         !allocState.second->originalGlobalPtrAllocation.empty()) {

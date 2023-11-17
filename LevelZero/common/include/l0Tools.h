@@ -72,10 +72,10 @@ ze_command_list_handle_t GetCommandListImmediate(CStateDynamic& sd,
                                                  const CDriver& driver,
                                                  const ze_context_handle_t& context,
                                                  ze_result_t* err = nullptr);
-bool IsCommandListImmediate(const ze_command_list_handle_t& handle, CStateDynamic& sd);
-std::pair<void*, uintptr_t> GetAllocFromRegion(void* pAlloc, CStateDynamic& sd);
+bool IsCommandListImmediate(const ze_command_list_handle_t& handle, const CStateDynamic& sd);
+std::pair<void*, uintptr_t> GetAllocFromRegion(void* pAlloc, const CStateDynamic& sd);
 void* GetOffsetPointer(void* ptr, const uintptr_t& offset);
-std::pair<void*, uintptr_t> GetAllocFromOriginalPtr(void* originalPtr, CStateDynamic& sd);
+std::pair<void*, uintptr_t> GetAllocFromOriginalPtr(void* originalPtr, const CStateDynamic& sd);
 size_t GetSizeFromCopyRegion(const ze_copy_region_t* region);
 bool IsNullIndirectPointersInBufferEnabled(const Config& cfg);
 enum class AllocStateType : unsigned { pointer, global_pointer, function_pointer };
@@ -99,7 +99,7 @@ bool IsPointerInsideAllocation(const void* pointer, const std::vector<char>& all
 void* GetPointerFromOriginalGlobalAllocation(const void* originalPtr,
                                              const std::vector<char>& originalAllocation,
                                              std::vector<char>& currentAllocation);
-void* GetMappedGlobalPtrFromOriginalAllocation(CStateDynamic& sd, void* originalPtr);
+void* GetMappedGlobalPtrFromOriginalAllocation(const CStateDynamic& sd, void* originalPtr);
 bool IsNewNomenclature(const Config& cfg);
 bool CaptureAfterSubmit(const Config& cfg);
 bool CheckWhetherDumpQueueSubmit(const Config& cfg, const uint32_t& queueSubmitNumber);

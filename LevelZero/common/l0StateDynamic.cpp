@@ -44,52 +44,104 @@ CStateDynamic::~CStateDynamic() {
 }
 
 template <>
+const typename CDriverState::states_type& CStateDynamic::Map<CDriverState>() const {
+  return driverStates_;
+}
+template <>
 typename CDriverState::states_type& CStateDynamic::Map<CDriverState>() {
   return driverStates_;
+}
+template <>
+const typename CDeviceState::states_type& CStateDynamic::Map<CDeviceState>() const {
+  return deviceStates_;
 }
 template <>
 typename CDeviceState::states_type& CStateDynamic::Map<CDeviceState>() {
   return deviceStates_;
 }
 template <>
+const typename CKernelState::states_type& CStateDynamic::Map<CKernelState>() const {
+  return kernelStates_;
+}
+template <>
 typename CKernelState::states_type& CStateDynamic::Map<CKernelState>() {
   return kernelStates_;
+}
+template <>
+const typename CModuleState::states_type& CStateDynamic::Map<CModuleState>() const {
+  return moduleStates_;
 }
 template <>
 typename CModuleState::states_type& CStateDynamic::Map<CModuleState>() {
   return moduleStates_;
 }
 template <>
+const typename CAllocState::states_type& CStateDynamic::Map<CAllocState>() const {
+  return allocStates_;
+}
+template <>
 typename CAllocState::states_type& CStateDynamic::Map<CAllocState>() {
   return allocStates_;
+}
+template <>
+const typename CKernelArgumentDump::states_type& CStateDynamic::Map<CKernelArgumentDump>() const {
+  return kernelArgumentDumps_;
 }
 template <>
 typename CKernelArgumentDump::states_type& CStateDynamic::Map<CKernelArgumentDump>() {
   return kernelArgumentDumps_;
 }
 template <>
+const typename CEventPoolState::states_type& CStateDynamic::Map<CEventPoolState>() const {
+  return eventPoolStates_;
+}
+template <>
 typename CEventPoolState::states_type& CStateDynamic::Map<CEventPoolState>() {
   return eventPoolStates_;
+}
+template <>
+const typename CFenceState::states_type& CStateDynamic::Map<CFenceState>() const {
+  return fenceStates_;
 }
 template <>
 typename CFenceState::states_type& CStateDynamic::Map<CFenceState>() {
   return fenceStates_;
 }
 template <>
+const typename CEventState::states_type& CStateDynamic::Map<CEventState>() const {
+  return eventStates_;
+}
+template <>
 typename CEventState::states_type& CStateDynamic::Map<CEventState>() {
   return eventStates_;
+}
+template <>
+const typename CContextState::states_type& CStateDynamic::Map<CContextState>() const {
+  return contextStates_;
 }
 template <>
 typename CContextState::states_type& CStateDynamic::Map<CContextState>() {
   return contextStates_;
 }
 template <>
+const typename CImageState::states_type& CStateDynamic::Map<CImageState>() const {
+  return imageStates_;
+}
+template <>
 typename CImageState::states_type& CStateDynamic::Map<CImageState>() {
   return imageStates_;
 }
 template <>
+const typename CCommandListState::states_type& CStateDynamic::Map<CCommandListState>() const {
+  return commandListStates_;
+}
+template <>
 typename CCommandListState::states_type& CStateDynamic::Map<CCommandListState>() {
   return commandListStates_;
+}
+template <>
+const typename CCommandQueueState::states_type& CStateDynamic::Map<CCommandQueueState>() const {
+  return commandQueueStates_;
 }
 template <>
 typename CCommandQueueState::states_type& CStateDynamic::Map<CCommandQueueState>() {

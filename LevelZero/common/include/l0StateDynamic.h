@@ -481,7 +481,22 @@ public:
   }
 
   template <typename State>
+  const typename State::states_type& Map() const {
+    static typename State::states_type map;
+    return map;
+  }
+
+  template <typename State>
   State& Get(const typename State::type key, CExceptionMessageInfo exception_message) {
+    auto& map = Map<State>();
+    auto iter = map.find(key);
+    if (iter == map.end()) {
+      throw std::runtime_error(exception_message);
+    }
+    return *(iter->second);
+  }
+  template <typename State>
+  const State& Get(const typename State::type key, CExceptionMessageInfo exception_message) const {
     const auto& map = Map<State>();
     auto iter = map.find(key);
     if (iter == map.end()) {
@@ -491,7 +506,7 @@ public:
   }
 
   template <typename State>
-  bool Exists(const typename State::type key) {
+  bool Exists(const typename State::type key) const {
     const auto& map = Map<State>();
     return map.find(key) != map.end();
   }
@@ -507,29 +522,55 @@ public:
 template <>
 typename CDriverState::states_type& CStateDynamic::Map<CDriverState>();
 template <>
+const typename CDriverState::states_type& CStateDynamic::Map<CDriverState>() const;
+template <>
 typename CDeviceState::states_type& CStateDynamic::Map<CDeviceState>();
+template <>
+const typename CDeviceState::states_type& CStateDynamic::Map<CDeviceState>() const;
 template <>
 typename CKernelState::states_type& CStateDynamic::Map<CKernelState>();
 template <>
+const typename CKernelState::states_type& CStateDynamic::Map<CKernelState>() const;
+template <>
 typename CModuleState::states_type& CStateDynamic::Map<CModuleState>();
+template <>
+const typename CModuleState::states_type& CStateDynamic::Map<CModuleState>() const;
 template <>
 typename CAllocState::states_type& CStateDynamic::Map<CAllocState>();
 template <>
+const typename CAllocState::states_type& CStateDynamic::Map<CAllocState>() const;
+template <>
 typename CKernelArgumentDump::states_type& CStateDynamic::Map<CKernelArgumentDump>();
+template <>
+const typename CKernelArgumentDump::states_type& CStateDynamic::Map<CKernelArgumentDump>() const;
 template <>
 typename CEventPoolState::states_type& CStateDynamic::Map<CEventPoolState>();
 template <>
+const typename CEventPoolState::states_type& CStateDynamic::Map<CEventPoolState>() const;
+template <>
 typename CFenceState::states_type& CStateDynamic::Map<CFenceState>();
+template <>
+const typename CFenceState::states_type& CStateDynamic::Map<CFenceState>() const;
 template <>
 typename CEventState::states_type& CStateDynamic::Map<CEventState>();
 template <>
+const typename CEventState::states_type& CStateDynamic::Map<CEventState>() const;
+template <>
 typename CContextState::states_type& CStateDynamic::Map<CContextState>();
+template <>
+const typename CContextState::states_type& CStateDynamic::Map<CContextState>() const;
 template <>
 typename CImageState::states_type& CStateDynamic::Map<CImageState>();
 template <>
+const typename CImageState::states_type& CStateDynamic::Map<CImageState>() const;
+template <>
 typename CCommandListState::states_type& CStateDynamic::Map<CCommandListState>();
 template <>
+const typename CCommandListState::states_type& CStateDynamic::Map<CCommandListState>() const;
+template <>
 typename CCommandQueueState::states_type& CStateDynamic::Map<CCommandQueueState>();
+template <>
+const typename CCommandQueueState::states_type& CStateDynamic::Map<CCommandQueueState>() const;
 inline CStateDynamic& SD() {
   return CStateDynamic::Instance();
 }
