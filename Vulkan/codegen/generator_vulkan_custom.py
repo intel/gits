@@ -10,7 +10,7 @@
 
 from generator_vulkan_base import *
 
-Function(name='vkPassPhysicalDeviceMemoryPropertiesGITS', enabled=True, type=Param, stateTrack=True, runWrap=True, recExecWrap=True, recWrap=True, customDriver=True, level=InstanceLevel,
+Function(name='vkPassPhysicalDeviceMemoryPropertiesGITS', enabled=True, type=Param, runWrap=True, customDriver=True, level=InstanceLevel,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 arg2=ArgDef(name='pMemoryProperties', type='VkPhysicalDeviceMemoryProperties*')

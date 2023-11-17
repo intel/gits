@@ -1177,11 +1177,5 @@ void recExecWrap_vkGetPhysicalDeviceFeatures2KHR(VkPhysicalDevice physicalDevice
       CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.suppressPhysicalDeviceFeatures,
       &pFeatures->features);
 }
-
-void recExecWrap_vkPassPhysicalDeviceMemoryPropertiesGITS(
-    VkPhysicalDevice physicalDevice, VkPhysicalDeviceMemoryProperties* pMemoryProperties) {
-  // Ignore call - internal GITS function used to pass memory properties of the
-  // original platform the stream was recorded on
-}
 } // namespace Vulkan
 } // namespace gits

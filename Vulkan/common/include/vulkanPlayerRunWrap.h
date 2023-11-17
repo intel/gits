@@ -966,6 +966,9 @@ inline void vkAllocateMemory_WRAPRUN(CVkResult& recorderSideReturnValue,
   }
 
   auto device = *deviceRef;
+  // Memory type index matching between recorded and current platform based on VkMemoryPropertyFlags
+  allocateInfoPtr->memoryTypeIndex =
+      getMappedMemoryTypeIndex(device, allocateInfoPtr->memoryTypeIndex);
 
   auto dedicatedAllocation = (VkMemoryDedicatedAllocateInfo*)getPNextStructure(
       allocateInfoPtr->pNext, VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO);
@@ -986,14 +989,6 @@ inline void vkAllocateMemory_WRAPRUN(CVkResult& recorderSideReturnValue,
       if (imageState->memoryRequirements.size > allocateInfoPtr->allocationSize) {
         allocateInfoPtr->allocationSize = imageState->memoryRequirements.size;
       }
-
-      // Adjust memory type from which memory object is allocated
-      if (!isBitSet(imageState->memoryRequirements.memoryTypeBits,
-                    1 << allocateInfoPtr->memoryTypeIndex)) {
-        allocateInfoPtr->memoryTypeIndex = findCompatibleMemoryTypeIndex(
-            imageState->deviceStateStore->physicalDeviceStateStore->physicalDeviceHandle,
-            allocateInfoPtr->memoryTypeIndex, imageState->memoryRequirements.memoryTypeBits);
-      }
     }
 
     if (dedicatedAllocation->buffer != VK_NULL_HANDLE) {
@@ -1009,14 +1004,6 @@ inline void vkAllocateMemory_WRAPRUN(CVkResult& recorderSideReturnValue,
       // Adjust memory object's allocation size
       if (bufferState->memoryRequirements.size > allocateInfoPtr->allocationSize) {
         allocateInfoPtr->allocationSize = bufferState->memoryRequirements.size;
-      }
-
-      // Adjust memory type from which memory object is allocated
-      if (!isBitSet(bufferState->memoryRequirements.memoryTypeBits,
-                    1 << allocateInfoPtr->memoryTypeIndex)) {
-        allocateInfoPtr->memoryTypeIndex = findCompatibleMemoryTypeIndex(
-            bufferState->deviceStateStore->physicalDeviceStateStore->physicalDeviceHandle,
-            allocateInfoPtr->memoryTypeIndex, bufferState->memoryRequirements.memoryTypeBits);
       }
     }
   }
@@ -1555,7 +1542,7 @@ inline void vkCreateDevice_WRAPRUN(CVkResult& recorderSideReturnValue,
   VkLog(TRACE) << "Memory properties of the platform the (original) stream was recorded on: "
                   "VkPhysicalDevice physicalDevice="
                << *physicalDevice << ", VkPhysicalDeviceMemoryProperties* pMemoryProperties="
-               << &SD()._physicaldevicestates[*physicalDevice]->memoryProperties;
+               << &SD()._physicaldevicestates[*physicalDevice]->memoryPropertiesOriginal;
 
   allSupported &= checkForSupportForPhysicalDeviceFeatures(
       *physicalDevice, const_cast<VkPhysicalDeviceFeatures*>(createInfo.pEnabledFeatures));
@@ -1878,11 +1865,12 @@ inline void vkCreateBuffer_WRAPRUN(CVkResult& recorderSideReturnValue,
 
 inline void vkPassPhysicalDeviceMemoryPropertiesGITS_WRAPRUN(
     CVkPhysicalDevice& physicalDevice, CVkPhysicalDeviceMemoryProperties& pMemoryProperties) {
-  // If the function is available, it means GITS Recorder is attached and we need to pass memory properties from the original platform the stream was recorded on
-  // If the function is not available, internal GITS mechanism will prevent null-ptr function call
-  drvVk.vkPassPhysicalDeviceMemoryPropertiesGITS(*physicalDevice, *pMemoryProperties);
-
-  vkPassPhysicalDeviceMemoryPropertiesGITS_SD(*physicalDevice, *pMemoryProperties);
+  if (*pMemoryProperties == nullptr) {
+    throw std::runtime_error(EXCEPTION_MESSAGE);
+  }
+  SD()._physicaldevicestates[*physicalDevice]->memoryPropertiesOriginal = *pMemoryProperties;
+  SD()._physicaldevicestates[*physicalDevice]->correspondingMemoryTypeIndexes =
+      matchCorrespondingMemoryTypeIndexes(*physicalDevice);
 }
 
 inline void vkDestroyDevice_WRAPRUN(CVkDevice& device, CNullWrapper& pAllocator) {

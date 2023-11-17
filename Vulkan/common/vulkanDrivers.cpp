@@ -149,10 +149,7 @@ PFN_vkVoidFunction STDCALL default_vkGetDeviceProcAddr(VkDevice device, const ch
 
 void_t STDCALL default_vkPassPhysicalDeviceMemoryPropertiesGITS(
     VkPhysicalDevice physicalDevice, VkPhysicalDeviceMemoryProperties* pMemoryProperties) {
-  auto& dispatchTable = drvVk.GetInstanceDispatchTable(physicalDevice);
-  if (dispatchTable.vkPassPhysicalDeviceMemoryPropertiesGITS) {
-    dispatchTable.vkPassPhysicalDeviceMemoryPropertiesGITS(physicalDevice, pMemoryProperties);
-  }
+  // After added mapping for memory type indexes function is ignored
   return nullptr;
 }
 

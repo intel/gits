@@ -199,15 +199,8 @@ bool vulkanCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer bufferHandle, std:
     if (!memoryRequirements.size) {
       throw EOperationFailed("vkGetBufferMemoryRequirements() returned requirement with 0 size.");
     }
-    // To maintain stream compatibility, use memory properties of the platform
-    // the (original) stream was recorded on If there are none, get memory
-    // properties of the current platform
-    auto& physicalDeviceState = SD()._devicestates[device]->physicalDeviceStateStore;
-    VkPhysicalDeviceMemoryProperties memoryProperties = physicalDeviceState->memoryProperties;
-    if (memoryProperties.memoryHeapCount == 0) {
-      drvVk.vkGetPhysicalDeviceMemoryProperties(physicalDeviceState->physicalDeviceHandle,
-                                                &memoryProperties);
-    }
+    VkPhysicalDeviceMemoryProperties memoryProperties =
+        SD()._devicestates[device]->physicalDeviceStateStore->memoryPropertiesCurrent;
     uint32_t requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i) {
       if ((memoryProperties.memoryTypes[i].propertyFlags & requiredFlags) == requiredFlags) {
@@ -394,18 +387,9 @@ bool vulkanCopyImage(VkCommandBuffer commandBuffer,
                 throw EOperationFailed(
                     "vkGetBufferMemoryRequirements() returned requirement with 0 size.");
               }
-
-              // To maintain stream compatibility, use memory properties of the platform the (original) stream was recorded on
-              // If there are none, get memory properties of the current platform
-              auto& physicalDeviceState =
-                  SD()._devicestates[imageState->deviceStateStore->deviceHandle]
-                      ->physicalDeviceStateStore;
               VkPhysicalDeviceMemoryProperties memoryProperties =
-                  physicalDeviceState->memoryProperties;
-              if (memoryProperties.memoryHeapCount == 0) {
-                drvVk.vkGetPhysicalDeviceMemoryProperties(physicalDeviceState->physicalDeviceHandle,
-                                                          &memoryProperties);
-              }
+                  SD()._devicestates[imageState->deviceStateStore->deviceHandle]
+                      ->physicalDeviceStateStore->memoryPropertiesCurrent;
               uint32_t requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
               for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i) {
                 if ((memoryProperties.memoryTypes[i].propertyFlags & requiredFlags) ==
@@ -959,22 +943,14 @@ bool writeScreenshotUtil(std::string fileName,
                 throw EOperationFailed(
                     "vkGetBufferMemoryRequirements() returned requirement with 0 size.");
               }
-
 #ifndef BUILD_FOR_CCODE
-              // To maintain stream compatibility, use memory properties of the platform the (original) stream was recorded on
-              // If there are none, get memory properties of the current platform
-              auto& physicalDeviceState = SD()._devicestates[device]->physicalDeviceStateStore;
               VkPhysicalDeviceMemoryProperties memoryProperties =
-                  physicalDeviceState->memoryProperties;
-              if (memoryProperties.memoryHeapCount == 0) {
-                drvVk.vkGetPhysicalDeviceMemoryProperties(physicalDeviceState->physicalDeviceHandle,
-                                                          &memoryProperties);
-              }
+                  SD()._devicestates[device]->physicalDeviceStateStore->memoryPropertiesCurrent;
 #else
               VkPhysicalDeviceMemoryProperties memoryProperties;
               drvVk.vkGetPhysicalDeviceMemoryProperties(
                   globalState.deviceStates[device].physicalDevice, &memoryProperties);
-#endif
+#endif // !BUILD_FOR_CCODE
               uint32_t requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
               for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i) {
                 if ((memoryProperties.memoryTypes[i].propertyFlags & requiredFlags) ==
@@ -1496,20 +1472,13 @@ void writeBufferUtil(std::string fileName, VkQueue& queue, VkBuffer& sourceBuffe
       throw EOperationFailed("vkGetBufferMemoryRequirements() returned requirement with 0 size.");
     }
 #ifndef BUILD_FOR_CCODE
-    // To maintain stream compatibility, use memory properties of the platform
-    // the (original) stream was recorded on If there are none, get memory
-    // properties of the current platform
-    auto& physicalDeviceState = SD()._devicestates[device]->physicalDeviceStateStore;
-    VkPhysicalDeviceMemoryProperties memoryProperties = physicalDeviceState->memoryProperties;
-    if (memoryProperties.memoryHeapCount == 0) {
-      drvVk.vkGetPhysicalDeviceMemoryProperties(physicalDeviceState->physicalDeviceHandle,
-                                                &memoryProperties);
-    }
+    VkPhysicalDeviceMemoryProperties memoryProperties =
+        SD()._devicestates[device]->physicalDeviceStateStore->memoryPropertiesCurrent;
 #else
     VkPhysicalDeviceMemoryProperties memoryProperties;
     drvVk.vkGetPhysicalDeviceMemoryProperties(globalState.deviceStates[device].physicalDevice,
                                               &memoryProperties);
-#endif
+#endif // !BUILD_FOR_CCODE
     uint32_t requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i) {
       if ((memoryProperties.memoryTypes[i].propertyFlags & requiredFlags) == requiredFlags) {
@@ -2969,53 +2938,39 @@ CVkSubmitInfoArrayWrap getSubmitInfoForSchedule(const std::vector<uint32_t>& cou
 }
 
 namespace {
-std::vector<bool>& IsMemoryMappable(VkDevice device) {
-  // Prepare mappable memory data
-  static std::vector<bool> isMemoryMappable = [&]() {
-    auto& physicalDeviceState = SD()._devicestates[device]->physicalDeviceStateStore;
+std::vector<bool> getMemoryMappingFeasibility(VkPhysicalDevice physicalDevice) {
+  VkPhysicalDeviceMemoryProperties memoryProperties;
+  drvVk.vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
+  std::vector<bool> mappableMemory(memoryProperties.memoryTypeCount);
+  for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++) {
+    mappableMemory[i] = isBitSet(memoryProperties.memoryTypes[i].propertyFlags,
+                                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+  }
+  return mappableMemory;
+}
 
-    VkPhysicalDeviceMemoryProperties originalPlatformMemoryProperties =
-        physicalDeviceState->memoryProperties;
-    VkPhysicalDeviceMemoryProperties currentPlatformMemoryProperties;
-    drvVk.vkGetPhysicalDeviceMemoryProperties(physicalDeviceState->physicalDeviceHandle,
-                                              &currentPlatformMemoryProperties);
-
-    std::vector<bool> _mappableMemory(std::max(originalPlatformMemoryProperties.memoryTypeCount,
-                                               currentPlatformMemoryProperties.memoryTypeCount),
-                                      false);
-
-    // Check which memory type is mappable on a current platform
-    for (uint32_t i = 0; i < currentPlatformMemoryProperties.memoryTypeCount; ++i) {
-      _mappableMemory[i] =
-          ((currentPlatformMemoryProperties.memoryTypes[i].propertyFlags &
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-    }
-    // If the same memory type was not mappable on the platform the stream was
-    // recorded on, there is no point in mapping it on a current platform.
-    // COMPATIBILITY NOTE: if the stream does not contain memory properties of
-    // the original platform, these properties are cleared (count is set to 0),
-    // so the below check is omitted and only current platform properties are
-    // used.
-    for (uint32_t i = 0; i < originalPlatformMemoryProperties.memoryTypeCount; ++i) {
-      _mappableMemory[i] =
-          _mappableMemory[i] &
-          ((originalPlatformMemoryProperties.memoryTypes[i].propertyFlags &
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-    }
-    return _mappableMemory;
-  }();
-
-  return isMemoryMappable;
+bool isMemoryMappable(VkDevice device, uint32_t memoryTypeIndex) {
+  auto& physicalDeviceHandle =
+      SD()._devicestates[device]->physicalDeviceStateStore->physicalDeviceHandle;
+  static std::unordered_map<VkPhysicalDevice, std::vector<bool>> memoryMappableMap;
+  auto it = memoryMappableMap.find(physicalDeviceHandle);
+  if (it == memoryMappableMap.end()) {
+    it = memoryMappableMap
+             .insert({physicalDeviceHandle, getMemoryMappingFeasibility(physicalDeviceHandle)})
+             .first;
+  }
+  return (*it).second[memoryTypeIndex];
 }
 } // namespace
 
 bool checkMemoryMappingFeasibility(VkDevice device, VkDeviceMemory memory, bool throwException) {
-  if (!IsMemoryMappable(device)
-          [SD()._devicememorystates[memory]->memoryAllocateInfoData.Value()->memoryTypeIndex]) {
+  auto memoryIndex =
+      SD()._devicememorystates[memory]->memoryAllocateInfoData.Value()->memoryTypeIndex;
+  if (!isMemoryMappable(device, memoryIndex)) {
     if (throwException) {
       Log(ERR) << "Stream tries to map memory object " << memory
                << " which was allocated from a non-host-visible memory type at index "
-               << SD()._devicememorystates[memory]->memoryAllocateInfoData.Value()->memoryTypeIndex;
+               << memoryIndex;
       if (!Config::Get().player.ignoreVKCrossPlatformIncompatibilitiesWA) {
         throw std::runtime_error("Memory object cannot be mapped on a current platform. Exiting!!");
       }
@@ -3027,7 +2982,7 @@ bool checkMemoryMappingFeasibility(VkDevice device, VkDeviceMemory memory, bool 
 }
 
 bool checkMemoryMappingFeasibility(VkDevice device, uint32_t memoryTypeIndex, bool throwException) {
-  if (!IsMemoryMappable(device)[memoryTypeIndex]) {
+  if (!isMemoryMappable(device, memoryTypeIndex)) {
     if (throwException) {
       Log(ERR) << "Stream tries to map memory object which was allocated from a non-host-visible "
                   "memory type at index "
@@ -3042,33 +2997,55 @@ bool checkMemoryMappingFeasibility(VkDevice device, uint32_t memoryTypeIndex, bo
   }
 }
 
-uint32_t findCompatibleMemoryTypeIndex(VkPhysicalDevice physicalDevice,
-                                       uint32_t originalMemoryTypeIndex,
-                                       uint32_t currentCompatibleMemoryTypes) {
-  static std::unordered_map<VkPhysicalDevice, VkPhysicalDeviceMemoryProperties>
-      currentPlatformMemoryPropertiesMap;
-  auto it = currentPlatformMemoryPropertiesMap.find(physicalDevice);
+std::unordered_map<uint32_t, uint32_t> matchCorrespondingMemoryTypeIndexes(
+    VkPhysicalDevice physicalDevice) {
+  auto& originalPlatformProperties =
+      SD()._physicaldevicestates[physicalDevice]->memoryPropertiesOriginal;
+  auto& currentPlatformProperties =
+      SD()._physicaldevicestates[physicalDevice]->memoryPropertiesCurrent;
 
-  if (it == currentPlatformMemoryPropertiesMap.end()) {
-    VkPhysicalDeviceMemoryProperties memoryProperties;
-    drvVk.vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
-    it = currentPlatformMemoryPropertiesMap.insert({physicalDevice, memoryProperties}).first;
-  }
+  std::unordered_map<uint32_t, uint32_t> memoryTypeIndexes;
 
-  auto& originalPlatformProperties = SD()._physicaldevicestates[physicalDevice]->memoryProperties;
-  auto& currentPlatformProperties = it->second;
-
-  auto originalFlags =
-      originalPlatformProperties.memoryTypes[originalMemoryTypeIndex].propertyFlags;
-
-  for (uint32_t i = 0; i < currentPlatformProperties.memoryTypeCount; ++i) {
-    if ((currentCompatibleMemoryTypes & (1 << i)) &&
-        (currentPlatformProperties.memoryTypes[i].propertyFlags & originalFlags)) {
-      return i;
+  for (uint32_t i = 0; i < originalPlatformProperties.memoryTypeCount; i++) {
+    bool foundMapping = false;
+    // firstly look for the 1:1 match of property flags
+    for (uint32_t j = 0; j < currentPlatformProperties.memoryTypeCount; j++) {
+      if (originalPlatformProperties.memoryTypes[i].propertyFlags ==
+          currentPlatformProperties.memoryTypes[j].propertyFlags) {
+        memoryTypeIndexes.insert({i, j});
+        foundMapping = true;
+        break;
+      }
+    }
+    // then look for a mapping in which the original flags are contained in the current ones
+    if (!foundMapping) {
+      for (uint32_t j = 0; j < currentPlatformProperties.memoryTypeCount; j++) {
+        if (isBitSet(currentPlatformProperties.memoryTypes[j].propertyFlags,
+                     originalPlatformProperties.memoryTypes[i].propertyFlags)) {
+          memoryTypeIndexes.insert({i, j});
+          foundMapping = true;
+          break;
+        }
+      }
     }
   }
+  return memoryTypeIndexes;
+}
 
-  throw std::runtime_error("Cannot find a compatible memory type for a resource. Exiting!");
+uint32_t getMappedMemoryTypeIndex(VkDevice device, uint32_t memoryTypeIndexOriginal) {
+  auto& correspondingMemoryTypeIndexes =
+      SD()._devicestates[device]->physicalDeviceStateStore->correspondingMemoryTypeIndexes;
+
+  if (correspondingMemoryTypeIndexes.empty()) {
+    Log(ERR) << "Memory type index mapping does not exist for this stream. The reason is that "
+                "there is no vkPassPhysicalDeviceMemoryPropertiesGITS token recorded. The solution "
+                "is to record a new stream.";
+    Log(ERR) << "Skipping mapping and returning orignal index of memory type.";
+    return memoryTypeIndexOriginal;
+  }
+
+  auto mappedMemoryTypeIndex = correspondingMemoryTypeIndexes.at(memoryTypeIndexOriginal);
+  return mappedMemoryTypeIndex;
 }
 
 VkDeviceAddress getBufferDeviceAddress(VkDevice device, VkBuffer buffer) {
@@ -3178,14 +3155,8 @@ std::pair<std::shared_ptr<CDeviceMemoryState>, std::shared_ptr<CBufferState>> cr
   VkMemoryRequirements bufferMemoryRequirements;
   drvVk.vkGetBufferMemoryRequirements(device, buffer, &bufferMemoryRequirements);
 
-  // Get memory properties of the platform the (original) stream was recorded on
-  // If there are none, get memory properties of the current platform
   VkPhysicalDeviceMemoryProperties memoryProperties =
-      deviceState->physicalDeviceStateStore->memoryProperties;
-  if (memoryProperties.memoryHeapCount == 0) {
-    drvVk.vkGetPhysicalDeviceMemoryProperties(
-        deviceState->physicalDeviceStateStore->physicalDeviceHandle, &memoryProperties);
-  }
+      deviceState->physicalDeviceStateStore->memoryPropertiesCurrent;
 
   VkDeviceMemory memory = VK_NULL_HANDLE;
   VkMemoryAllocateInfo memoryAllocateInfo;

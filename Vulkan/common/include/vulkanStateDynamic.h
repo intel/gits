@@ -158,14 +158,19 @@ struct CInstanceState : public UniqueResourceHandle {
 struct CPhysicalDeviceState : public UniqueResourceHandle {
   VkPhysicalDevice physicalDeviceHandle;
   std::vector<std::string> supportedExtensions;
-  VkPhysicalDeviceMemoryProperties memoryProperties;
+  VkPhysicalDeviceMemoryProperties memoryPropertiesOriginal;
+  VkPhysicalDeviceMemoryProperties memoryPropertiesCurrent;
   std::shared_ptr<CInstanceState> instanceStateStore;
+  // mapping original memory type index into current platform memory type index
+  std::unordered_map<uint32_t, uint32_t> correspondingMemoryTypeIndexes;
 
   CPhysicalDeviceState(VkPhysicalDevice _physicalDevice,
                        std::shared_ptr<CInstanceState>& _instanceState)
       : physicalDeviceHandle(_physicalDevice),
-        memoryProperties(),
-        instanceStateStore(_instanceState) {}
+        memoryPropertiesOriginal(),
+        instanceStateStore(_instanceState) {
+    drvVk.vkGetPhysicalDeviceMemoryProperties(_physicalDevice, &memoryPropertiesCurrent);
+  }
 
   std::set<uint64_t> GetMappedPointers() {
     std::set<uint64_t> pointers;
