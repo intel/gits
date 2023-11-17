@@ -441,7 +441,7 @@ ze_command_list_handle_t GetCommandListImmediate(CStateDynamic& sd,
     return list;
   }
   for (const auto& state : sd.Map<CCommandListState>()) {
-    if (state.second->isImmediate) {
+    if (state.second->isImmediate && state.second->isSync && state.second->hContext == context) {
       return state.first;
     }
   }
