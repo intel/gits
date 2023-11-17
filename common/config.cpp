@@ -947,7 +947,7 @@ bool gits::Config::Set(const std::filesystem::path& cfgDir) {
   ReadRecorderOption(pt, "Extras.Utilities.EventScript", eventScript, GITS_PLATFORM_BIT_ALL);
   if (!eventScript.empty()) {
     std::filesystem::path scriptPath(eventScript);
-    if (!exists(scriptPath) || !is_regular_file(scriptPath)) {
+    if (!std::filesystem::exists(scriptPath) || !std::filesystem::is_regular_file(scriptPath)) {
       throw std::runtime_error("could not find file: " + eventScript);
     }
 
