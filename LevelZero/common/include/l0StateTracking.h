@@ -23,12 +23,10 @@ namespace gits {
 namespace l0 {
 namespace {
 void SaveGlobalPointerAllocationToMemory(CStateDynamic& sd,
-                                         const ze_command_list_handle_t& hCommandList,
                                          CAllocState& allocState,
                                          const void* globalPtr) {
-  const auto& commandListState = sd.Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
   ze_command_list_handle_t hCommandListImmediate =
-      GetCommandListImmediate(sd, drv, commandListState.hContext);
+      GetCommandListImmediate(sd, drv, allocState.hContext);
   allocState.globalPtrAllocation.resize(allocState.size);
   ze_result_t err = drv.inject.zeCommandListAppendMemoryCopy(
       hCommandListImmediate, allocState.globalPtrAllocation.data(), globalPtr, allocState.size,
@@ -764,7 +762,7 @@ inline void zeCommandListAppendMemoryCopy_SD(ze_result_t return_value,
     if (sd.Exists<CAllocState>(const_cast<void*>(srcptr))) {
       auto& allocState = sd.Get<CAllocState>(const_cast<void*>(srcptr), EXCEPTION_MESSAGE);
       if (allocState.allocType == AllocStateType::global_pointer) {
-        SaveGlobalPointerAllocationToMemory(sd, hCommandList, allocState, srcptr);
+        SaveGlobalPointerAllocationToMemory(sd, allocState, srcptr);
       }
     }
   }
