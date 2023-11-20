@@ -96,17 +96,24 @@ namespace gits {
   %endif
     }
 %endfor
-    template<typename T>
+    template<typename T, typename = std::enable_if_t<(sizeof(T) == 1U || (std::is_array_v<T> && sizeof(std::remove_all_extents_t<T>) == 1))>>
     inline std::string ToStringHelperArray(const T& handle, int size) {
       std::stringstream ss;
       ss << ToStringHelper(reinterpret_cast<const void*>(handle));
-      auto maxSize = 8;
+      constexpr auto maxSize = 8;
       size = maxSize < size ? maxSize : size;
       ss << " : { ";
       for (auto i = 0; i < size;) {
         ss << ToStringHelper(handle[i]);
         ss << ((++i < size) ? ", " : i >= maxSize ? ", ... }" : " }");
       }
+      return ss.str();
+    }
+    template<typename T, typename = std::enable_if_t<(sizeof(T) > 1U)>>
+    inline std::string ToStringHelperArray(const T& handle, [[maybe_unused]] size_t size) {
+      std::stringstream ss;
+      ss << ToStringHelper(reinterpret_cast<const void*>(handle));
+      ss << " : { ... }";
       return ss.str();
     }
     template <class T>
