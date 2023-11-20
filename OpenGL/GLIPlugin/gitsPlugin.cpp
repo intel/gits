@@ -217,6 +217,10 @@ bool hookToExistingModule(HMODULE hModule, const char* idTokenName) {
     }
   }
 
+  if (firstIntercept == -1) {
+    throw std::runtime_error(EXCEPTION_MESSAGE);
+  }
+
   // this is first loaded glintercept, don't reroute anything
   if (modules[firstIntercept] == hModule) {
     return false;
@@ -245,7 +249,11 @@ BOOL APIENTRY DllMain(HANDLE hModule, DWORD ul_reason_for_call, LPVOID lpReserve
   using namespace gits::OpenGL;
   switch (ul_reason_for_call) {
   case DLL_PROCESS_ATTACH: {
-    hookToExistingModule((HMODULE)hModule, "GITSIdentificationToken");
+    try {
+      hookToExistingModule((HMODULE)hModule, "GITSIdentificationToken");
+    } catch (...) {
+      topmost_exception_handler("DllMain");
+    }
     break;
   }
   case DLL_THREAD_ATTACH: {
