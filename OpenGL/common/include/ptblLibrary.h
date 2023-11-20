@@ -132,7 +132,9 @@ class PtblHandle {
 public:
   PtblHandle() : _fake(0) {}
   PtblHandle& operator=(const PtblHandle& other) {
-    this->_fake = other._fake;
+    if (this != &other) {
+      this->_fake = other._fake;
+    }
     return *this;
   }
   bool operator<(const PtblHandle cmp) const {
