@@ -14,22 +14,30 @@
 
 namespace gits {
   namespace l0 {
+    template <typename T>
+    struct IsPtrOrPtrPtr {
+        static constexpr bool value = std::is_pointer_v<T> || std::is_pointer_v<std::remove_pointer_t<T>>;
+    };
     std::string ToStringHelperExtensionStructs(const void* pNext);
     template <typename T,
               std::enable_if_t<std::is_arithmetic<T>::value, bool> = true>
-    inline std::string ToStringHelperArithmetic(T handle) {
+    inline std::string ToStringHelperArithmetic(const T& handle) {
       return std::to_string(handle);
     }
     template <typename T,
               std::enable_if_t<!std::is_arithmetic<T>::value, bool> = true>
-    inline std::string ToStringHelperArithmetic(T handle) {
+    inline std::string ToStringHelperArithmetic(const T& handle) {
       if (!handle) {
         return "0";
       }
       return gits::hex(handle).ToString();
     }
-    template<typename T>
-    inline std::string ToStringHelper(T handle) { return ToStringHelperArithmetic(handle); }
+
+   template <typename T, typename = std::enable_if_t<!IsPtrOrPtrPtr<T>::value>>
+   inline std::string ToStringHelper(const T& handle) { return ToStringHelperArithmetic(handle); }
+   template <typename T, typename = std::enable_if_t<IsPtrOrPtrPtr<T>::value>>
+   inline std::string ToStringHelper(T handle) { return ToStringHelperArithmetic(handle); }
+
     template<>
     inline std::string ToStringHelper(void** val) {
       std::stringstream ss;
@@ -68,7 +76,7 @@ namespace gits {
     }
 %for name, enum in enums.items():
     template<>
-    inline std::string ToStringHelper(${name} val) {
+    inline std::string ToStringHelper(const ${name}& val) {
   %if 'bitFields' in enum:
       std::stringstream ss;
       auto enumVal = static_cast<unsigned>(val);
@@ -89,7 +97,7 @@ namespace gits {
     }
 %endfor
     template<typename T>
-    inline std::string ToStringHelperArray(T handle, int size) {
+    inline std::string ToStringHelperArray(const T& handle, int size) {
       std::stringstream ss;
       ss << ToStringHelper(reinterpret_cast<const void*>(handle));
       auto maxSize = 8;
@@ -102,7 +110,7 @@ namespace gits {
       return ss.str();
     }
     template <class T>
-    inline std::string ToStringHelperArrayRange(T& arg, const size_t &begin, const size_t &end) {
+    inline std::string ToStringHelperArrayRange(const T& arg, const size_t &begin, const size_t &end) {
       std::stringstream result;
       if (arg) {
         result << arg;
@@ -142,7 +150,7 @@ namespace gits {
   %if 'vars' in arg:
     %if name in used_types:
     template<>
-    inline std::string ToStringHelper(${name} val) {\
+    inline std::string ToStringHelper(const ${name}& val) {\
       ${struct_body(name, arg, 0)}
     }
     %endif
