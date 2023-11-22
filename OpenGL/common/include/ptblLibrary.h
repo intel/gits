@@ -131,6 +131,8 @@ class PtblHandle {
 
 public:
   PtblHandle() : _fake(0) {}
+  PtblHandle(const PtblHandle& other) : _fake(other._fake) {}
+  ~PtblHandle() = default;
   PtblHandle& operator=(const PtblHandle& other) {
     if (this != &other) {
       this->_fake = other._fake;

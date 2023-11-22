@@ -399,6 +399,8 @@ public:
     RecorderProgramOverride(GLint program) {
       CGLUniformLocation::ProgramOverride() = program;
     }
+    RecorderProgramOverride(const RecorderProgramOverride& other) = delete;
+    RecorderProgramOverride& operator=(const RecorderProgramOverride& other) = delete;
     ~RecorderProgramOverride() {
       CGLUniformLocation::ProgramOverride() = 0;
     }

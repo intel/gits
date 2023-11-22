@@ -43,6 +43,8 @@ class CRunner::CHandler : private gits::noncopyable {
 public:
   enum TSkipType { SKIP_YES, SKIP_NO, SKIP_FORCE };
 
+  CHandler(const CHandler& other) = delete;
+  CHandler& operator=(const CHandler& other) = delete;
   virtual ~CHandler() {}
   virtual bool Match(const CFunction& func) = 0;
   virtual CRunner::TResultType PreHandler(CFunction& func) = 0;

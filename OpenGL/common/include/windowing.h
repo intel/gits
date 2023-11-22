@@ -27,6 +27,8 @@ public:
   Window_(GLint width, GLint height, GLint x, GLint y, bool show);
   Window_(GLXFBConfig pf, XVisualInfo* vi, GLint width, GLint height, GLint x, GLint y, bool show);
   Window_(EGLConfig pf, GLint width, GLint height, GLint x, GLint y, bool show);
+  Window_(const Window_& other) = delete;
+  Window_& operator=(const Window_& other) = delete;
   ~Window_();
   void set_position(int x, int y);
   void set_size(int width, int height);

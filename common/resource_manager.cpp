@@ -182,8 +182,7 @@ struct FileWriter {
     Log(INFO) << "Resource writer thread finished.";
   }
 
-private:
-  FileWriter& operator=(const FileWriter&); // disabled
+  FileWriter& operator=(const FileWriter& other) = delete;
 };
 
 CResourceManager::~CResourceManager() {

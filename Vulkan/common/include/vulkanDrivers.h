@@ -61,6 +61,8 @@ public:
   enum class DriverMode { INTERCEPTOR, LAYER };
   CVkDriver();
   ~CVkDriver();
+  CVkDriver(const CVkDriver& other) = delete;
+  CVkDriver& operator=(const CVkDriver& other) = delete;
 
   void Initialize();
   VkResult Initialize(const VkInstanceCreateInfo* pCreateInfo,

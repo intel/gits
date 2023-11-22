@@ -272,9 +272,6 @@ public:
   void* const& operator*() const {
     return _value;
   }
-
-private:
-  void operator=(const CvoidPtr&); //no implementation
 };
 
 /**

@@ -45,6 +45,8 @@ public:
   virtual void idle();
   virtual void key_down(int code);
   static MessagePump* get();
+  MessagePump(const MessagePump& other) = delete;
+  MessagePump& operator=(const MessagePump& other) = delete;
 
 private:
   bool leave_;
@@ -53,8 +55,6 @@ private:
   //this should eventually be changing to per'
   //per thread pointer (at least for windows case)
   static MessagePump* current_;
-
-  void operator=(const MessagePump&);
 };
 
 win_ptr_t CreateWin(int width, int height, int x, int y, bool show);

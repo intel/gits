@@ -41,6 +41,8 @@ class CLibrary : public gits::CLibrary {
 public:
   static CLibrary& Get();
   CLibrary(gits::CLibrary::state_creator_t stc = gits::CLibrary::state_creator_t());
+  CLibrary(const CLibrary& other) = delete;
+  CLibrary& operator=(const CLibrary& other) = delete;
   ~CLibrary();
 
   Vulkan::CFunction* FunctionCreate(unsigned id) const override;

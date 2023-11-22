@@ -86,6 +86,8 @@ private:
 class GlxRecorderMngr : public GlxWinCtxMngr {
 public:
   GlxRecorderMngr(native_disp_t glxDpy, GLXContext glxCtx);
+  GlxRecorderMngr(const GlxRecorderMngr& other) = delete;
+  GlxRecorderMngr& operator=(const GlxRecorderMngr& other) = delete;
   virtual ~GlxRecorderMngr();
 
   void UpdateWindowHandle();

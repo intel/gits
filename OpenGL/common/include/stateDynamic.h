@@ -396,6 +396,8 @@ public:
     }
     SD().GetCurrentContextStateData()._schedulerStatePtr = this;
   }
+  CSchedulerState(const CSchedulerState& other) = delete;
+  CSchedulerState& operator=(const CSchedulerState& other) = delete;
   ~CSchedulerState() {
     SD().GetCurrentContextStateData()._schedulerStatePtr = 0;
   }
@@ -430,6 +432,8 @@ private:
 
 public:
   CStateDynamicNative();
+  CStateDynamicNative(const CStateDynamicNative& other) = delete;
+  CStateDynamicNative& operator=(const CStateDynamicNative& other) = delete;
   ~CStateDynamicNative();
   static CStateDynamicNative& Get();
 

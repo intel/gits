@@ -303,11 +303,11 @@ public:
   void operator()() {
     function_(queue_);
   }
+  TaskFunction& operator=(const TaskFunction& other) = delete;
 
 private:
   std::function<void(Queue&)> function_;
   Queue& queue_;
-  void operator=(const TaskFunction&);
 };
 
 template <class WorkUnit>
@@ -426,9 +426,7 @@ public:
       fast_exit(1);
     }
   }
-
-private:
-  void operator=(ImageWriter&);
+  ImageWriter& operator=(const ImageWriter& other) = delete;
 };
 
 #ifndef BUILD_FOR_CCODE
@@ -440,6 +438,8 @@ class ShadowBuffer {
 
 public:
   ShadowBuffer() : _orig(0), _size(0), _pagealigned(false) {}
+  ShadowBuffer(const ShadowBuffer& other) = delete;
+  ShadowBuffer& operator=(const ShadowBuffer& other) = delete;
   ~ShadowBuffer();
   void* GetData(size_t offset = 0) {
     if (_shadow.get() != 0) {
@@ -477,6 +477,9 @@ public:
   ~CTokensBuffer() {
     Clear();
   }
+  CTokensBuffer() {}
+  CTokensBuffer(const CTokensBuffer& other) = delete;
+  CTokensBuffer& operator=(const CTokensBuffer& other) = delete;
 
   void Exec() {
     for (auto elem : _tokensList) {

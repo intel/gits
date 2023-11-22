@@ -65,6 +65,8 @@ class CState : public gits::CState {
 public:
   CState();
   ~CState();
+  CState(const CState& other) = delete;
+  CState& operator=(const CState& other) = delete;
 
   void Get();
   void Schedule(CScheduler& scheduler) const;
@@ -520,6 +522,8 @@ class CVariableFog : public gits::CComponentState::CVariable {
 
 public:
   CVariableFog();
+  CVariableFog(const CVariableFog& other) = delete;
+  CVariableFog& operator=(const CVariableFog& other) = delete;
   ~CVariableFog();
   virtual void Get();
   virtual void Schedule(CScheduler& scheduler, const CVariable& lastValue) const;
@@ -568,6 +572,8 @@ class CVariableHint : public gits::CComponentState::CVariable {
 public:
   CVariableHint();
   ~CVariableHint();
+  CVariableHint(const CVariableHint& other) = delete;
+  CVariableHint& operator=(const CVariableHint& other) = delete;
   virtual void Get();
   virtual void Schedule(CScheduler& scheduler, const CVariable& lastValue) const;
 };
@@ -609,6 +615,8 @@ class CVariableLight : public gits::CComponentState::CVariable {
 
 public:
   CVariableLight(GLenum light);
+  CVariableLight(const CVariableLight& other) = delete;
+  CVariableLight& operator=(const CVariableLight& other) = delete;
   ~CVariableLight();
   virtual void Get();
   virtual void Schedule(CScheduler& scheduler, const CVariable& lastValue) const;
@@ -917,6 +925,8 @@ class CVariableTexEnv : public gits::CComponentState::CVariable {
   GLenum _originalUnit;  // this is unit actually active active
 public:
   CVariableTexEnv(GLenum textureUnit);
+  CVariableTexEnv(const CVariableTexEnv& other) = delete;
+  CVariableTexEnv& operator=(const CVariableTexEnv& other) = delete;
   ~CVariableTexEnv();
   virtual void Get();
   virtual void Schedule(CScheduler& scheduler, const CVariable& lastValue) const;
@@ -1539,6 +1549,8 @@ class CVariableTextureInfo : public gits::CComponentState::CVariable {
 
 public:
   CVariableTextureInfo();
+  CVariableTextureInfo(const CVariableTextureInfo& other) = delete;
+  CVariableTextureInfo& operator=(const CVariableTextureInfo& other) = delete;
   ~CVariableTextureInfo();
   virtual void Get();
   virtual void Schedule(CScheduler& scheduler, const CVariable& lastValue) const;
@@ -1618,6 +1630,8 @@ class CVariableProgramInfo : public gits::CComponentState::CVariable {
 
 public:
   CVariableProgramInfo();
+  CVariableProgramInfo(const CVariableProgramInfo& other) = delete;
+  CVariableProgramInfo& operator=(const CVariableProgramInfo& other) = delete;
   ~CVariableProgramInfo();
   virtual void Get();
   virtual void Schedule(CScheduler& scheduler, const CVariable& lastValue) const;
@@ -1747,6 +1761,8 @@ class CVariableMap1 : public gits::CComponentState::CVariable {
 
 public:
   CVariableMap1();
+  CVariableMap1(const CVariableMap1& other) = delete;
+  CVariableMap1& operator=(const CVariableMap1& other) = delete;
   ~CVariableMap1();
   virtual void Get();
   virtual void Schedule(CScheduler& scheduler, const CVariable& lastValue) const;
@@ -1780,6 +1796,8 @@ class CVariableMap2 : public gits::CComponentState::CVariable {
 public:
   CVariableMap2();
   ~CVariableMap2();
+  CVariableMap2(const CVariableMap2& other) = delete;
+  CVariableMap2& operator=(const CVariableMap2& other) = delete;
   virtual void Get();
   virtual void Schedule(CScheduler& scheduler, const CVariable& lastValue) const;
 };

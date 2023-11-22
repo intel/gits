@@ -640,6 +640,8 @@ public:
     MappedArrayAction _action;
     typedef T_WRAP CGLtype;
 
+    ProxyArray(const ProxyArray& other) = delete;
+    ProxyArray& operator=(const ProxyArray& other) = delete;
     ProxyArray(std::vector<T>& arr, std::vector<T>& mappedarr, MappedArrayAction action)
         : _mappedArray(&mappedarr), _array(&arr), _action(action) {}
     ~ProxyArray() {
@@ -795,6 +797,8 @@ class CByteStringArray : public CArgument {
 
 public:
   CByteStringArray();
+  CByteStringArray(const CByteStringArray& other) = delete;
+  CByteStringArray& operator=(const CByteStringArray& other) = delete;
   ~CByteStringArray();
   CByteStringArray(uint32_t, const T**);
   CByteStringArray(uint32_t, T**);

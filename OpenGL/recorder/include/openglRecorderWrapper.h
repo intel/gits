@@ -27,6 +27,8 @@ private:
 
 public:
   DrawCallWrapperPrePost(gits::CRecorder& rec);
+  DrawCallWrapperPrePost(const DrawCallWrapperPrePost& other) = delete;
+  DrawCallWrapperPrePost& operator=(const DrawCallWrapperPrePost& other) = delete;
   ~DrawCallWrapperPrePost();
 };
 } // namespace gits
@@ -57,10 +59,9 @@ class CRecorderWrapper : public IRecorderWrapper {
   void UpdateMappedTextures() const;
   void TrackThread() const;
 
-  CRecorderWrapper(const CRecorderWrapper& ref);            // do not allow copy construction
-  CRecorderWrapper& operator=(const CRecorderWrapper& ref); // do not allow class assignment
-
 public:
+  CRecorderWrapper(const CRecorderWrapper& ref) = delete;
+  CRecorderWrapper& operator=(const CRecorderWrapper& ref) = delete;
   void StreamFinishedEvent(std::function<void()> e);
   CRecorderWrapper(CRecorder& recorder);
 

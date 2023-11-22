@@ -25,9 +25,8 @@ class CSequentialExecutor::CThreadLoop {
   int _threadId;
   CSequentialExecutor& _seqExec;
 
-  CThreadLoop& operator=(const CThreadLoop&);
-
 public:
+  CThreadLoop& operator=(const CThreadLoop& other) = delete;
   CThreadLoop(CSequentialExecutor& seqexec, int threadId)
       : _threadId(threadId), _seqExec(seqexec) {}
 

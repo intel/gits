@@ -90,11 +90,10 @@ private:
                     unsigned descIndent,
                     unsigned argsWidth) const;
 
-  CGetOpt(const CGetOpt&);
-  const CGetOpt& operator=(const CGetOpt&);
-
 public:
   CGetOpt(int& argc, char**& argv);
+  CGetOpt(const CGetOpt& other) = delete;
+  CGetOpt& operator=(const CGetOpt& other) = delete;
 
   const std::filesystem::path& AppPath() const;
   const std::string& AppName() const;

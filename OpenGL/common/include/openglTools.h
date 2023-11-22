@@ -203,6 +203,8 @@ class MapBuffer {
 
 public:
   MapBuffer(GLenum target, GLint buffer);
+  MapBuffer(const MapBuffer& other) = delete;
+  MapBuffer& operator=(const MapBuffer& other) = delete;
   ~MapBuffer();
   void* Data() {
     return _ptr;

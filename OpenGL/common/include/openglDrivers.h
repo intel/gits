@@ -797,6 +797,8 @@ namespace OpenGL {
 class CEglDriver {
 public:
   CEglDriver();
+  CEglDriver(const CEglDriver& other) = delete;
+  CEglDriver& operator=(const CEglDriver& other) = delete;
   ~CEglDriver();
   dl::SharedObject Library();
   void Used(bool value) {
@@ -829,6 +831,8 @@ private:
 class CWglDriver {
 public:
   CWglDriver();
+  CWglDriver(const CWglDriver& other) = delete;
+  CWglDriver& operator=(const CWglDriver& other) = delete;
   ~CWglDriver();
   dl::SharedObject Library();
 
@@ -884,6 +888,8 @@ private:
 class CGlDriver {
 public:
   CGlDriver();
+  CGlDriver(const CGlDriver& other) = delete;
+  CGlDriver& operator=(const CGlDriver& other) = delete;
   ~CGlDriver();
   enum TApiType { API_GL, API_GLES1, API_GLES2, API_NULL };
 

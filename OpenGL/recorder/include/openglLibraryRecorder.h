@@ -23,6 +23,8 @@ namespace OpenGL {
 class CLibraryRecorder : public CLibrary {
 public:
   CLibraryRecorder();
+  CLibraryRecorder(const CLibraryRecorder& other) = delete;
+  CLibraryRecorder& operator=(const CLibraryRecorder& other) = delete;
   virtual ~CLibraryRecorder();
 };
 } // namespace OpenGL

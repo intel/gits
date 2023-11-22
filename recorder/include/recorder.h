@@ -73,6 +73,8 @@ class CRecorder : private gits::noncopyable {
   StreamingContext _sc;
 
   CRecorder();
+  CRecorder(const CRecorder& other) = delete;
+  CRecorder& operator=(const CRecorder& other) = delete;
   ~CRecorder();
 
 public:

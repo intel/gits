@@ -45,6 +45,8 @@ class CSequentialExecutor : public CAction {
 public:
   CSequentialExecutor() : _syncThreadId(0), _token(0) {}
   ~CSequentialExecutor();
+  CSequentialExecutor(const CSequentialExecutor& other) = delete;
+  CSequentialExecutor& operator=(const CSequentialExecutor& other) = delete;
   void Run(CToken& token) override;
   const CThreadsIdList& ActiveThreadsIdList() const {
     return _activeThreadsIdList;

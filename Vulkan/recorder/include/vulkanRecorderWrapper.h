@@ -46,11 +46,10 @@ class CRecorderWrapper : public IRecorderWrapper {
   CRecorder& _recorder;
   bool _ignoreNextQueuePresentGITS;
 
-  CRecorderWrapper(const CRecorderWrapper& ref);            // do not allow copy construction
-  CRecorderWrapper& operator=(const CRecorderWrapper& ref); // do not allow class assignment
-
 public:
   CRecorderWrapper(CRecorder& recorder);
+  CRecorderWrapper(const CRecorderWrapper& ref) = delete;
+  CRecorderWrapper& operator=(const CRecorderWrapper& ref) = delete;
   void PauseRecording() override;
   void ContinueRecording() override;
   void StreamFinishedEvent(std::function<void()> e);

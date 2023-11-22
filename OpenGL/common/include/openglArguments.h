@@ -1292,9 +1292,6 @@ public:
   GLvoid* Original() {
     return reinterpret_cast<GLvoid*>(_value);
   }
-
-private:
-  void operator=(const CGLvoidPtr&); // no implementation
 };
 
 /**
@@ -1872,6 +1869,8 @@ public:
     }
   }
 
+  CStringArray(const CStringArray& other) = delete;
+  CStringArray& operator=(const CStringArray& other) = delete;
   ~CStringArray() {
     for (unsigned idx = 0; idx < _array.size(); idx++) {
       delete _array[idx];

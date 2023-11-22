@@ -187,6 +187,8 @@ private:
   ~CGits();
 
 public:
+  CGits(const CGits& other) = delete;
+  CGits& operator=(const CGits& other) = delete;
   static CGits& Instance() {
     if (!_instance) {
       _instance = new CGits();

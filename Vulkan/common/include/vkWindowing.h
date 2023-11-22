@@ -26,6 +26,8 @@ public:
           int y,
           bool show,
           DisplayProtocol dispProtocol = DisplayProtocol::NONE);
+  Window_(const Window_& other) : _window(other._window) {}
+  Window_& operator=(const Window_& other) = delete;
   ~Window_();
   void set_position(int x, int y);
   void set_size(int width, int height);

@@ -73,6 +73,8 @@ public:
                    uint32_t partialHashCutoff,
                    uint32_t partialHashChunks,
                    uint32_t partialHashRatio);
+  CResourceManager(const CResourceManager& other) = delete;
+  CResourceManager& operator=(const CResourceManager& other) = delete;
   ~CResourceManager();
 
   mapped_file get(hash_t hash) const;

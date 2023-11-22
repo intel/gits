@@ -71,6 +71,9 @@ protected:
 
 public:
   virtual ~CComponentState() = 0;
+  CComponentState() {}
+  CComponentState(const CComponentState& other) = delete;
+  CComponentState& operator=(const CComponentState& other) = delete;
 
   void Get();
   void Schedule(CScheduler& scheduler, const CComponentState& lastState) const;
