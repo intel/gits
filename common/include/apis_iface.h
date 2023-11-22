@@ -87,6 +87,12 @@ public:
     virtual bool CfgRec_IsDrawsRangeMode() const {
       return false;
     }
+    virtual bool CfgRec_IsBlitRangeMode() const {
+      return false;
+    }
+    virtual bool CfgRec_IsDispatchRangeMode() const {
+      return false;
+    }
     virtual bool CfgRec_IsEncodersRangeMode() const {
       return false;
     }

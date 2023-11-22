@@ -429,6 +429,7 @@ void gits::CRecorder::Start() {
       (api3dIface.CfgRec_IsDrawsRangeMode()) || (api3dIface.CfgRec_IsCmdBufferMode()) ||
       (api3dIface.CfgRec_IsRenderPassMode()) || (api3dIface.CfgRec_IsEncodersRangeMode()) ||
       (api3dIface.CfgRec_IsSubEncodersRangeMode()) || (api3dIface.CfgRec_IsQueueSubmitMode()) ||
+      (api3dIface.CfgRec_IsBlitRangeMode()) || (api3dIface.CfgRec_IsDispatchRangeMode()) ||
       (apiComputeIface != nullptr && (apiComputeIface->CfgRec_IsSingleKernelMode() ||
                                       apiComputeIface->CfgRec_IsKernelsRangeMode()))) {
     Scheduler().Register(new CTokenFrameNumber(CToken::ID_PRE_RECORD_END, inst.CurrentFrame()));

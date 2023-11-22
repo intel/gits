@@ -95,10 +95,13 @@ std::set<uint64_t> CLibrary::CVulkanCommandBufferTokensBuffer::GetMappedPointers
   std::set<uint64_t> returnMap;
   uint64_t renderPassCount = 0;
   uint64_t drawInRenderPass = 0;
-  bool pre_renderpass = true;
-  bool pre_draw = true;
+  uint64_t blitCount = 0;
+  uint64_t dispatchCount = 0;
+  bool pre_recording = true;
   bool isRenderPassMode = objMode == Config::MODE_VKRENDERPASS;
   bool isDrawMode = objMode == Config::MODE_VKDRAW;
+  bool isBlitMode = objMode == Config::MODE_VKBLIT;
+  bool isDispatchMode = objMode == Config::MODE_VKDISPATCH;
 
   for (auto elem : _tokensList) {
     if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
@@ -106,18 +109,22 @@ std::set<uint64_t> CLibrary::CVulkanCommandBufferTokensBuffer::GetMappedPointers
       renderPassCount++;
     } else if (elem->Type() & CFunction::GITS_VULKAN_DRAW_APITYPE) {
       drawInRenderPass++;
+    } else if (elem->Type() & CFunction::GITS_VULKAN_BLIT_APITYPE) {
+      blitCount++;
+    } else if (elem->Type() & CFunction::GITS_VULKAN_DISPATCH_APITYPE) {
+      dispatchCount++;
     }
-    if (objRange[renderPassCount] &&
-        (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDERPASS_APITYPE)) {
-      pre_renderpass = false;
-    }
-    if (renderPassCount == objNumber && objRange[drawInRenderPass]) {
-      pre_draw = false;
+    if ((isRenderPassMode && objRange[renderPassCount] &&
+         (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDERPASS_APITYPE)) ||
+        (isDrawMode && renderPassCount == objNumber && objRange[drawInRenderPass]) ||
+        (isBlitMode && objRange[blitCount]) || (isDispatchMode && objRange[dispatchCount])) {
+      pre_recording = false;
     }
     if (objMode == Config::MODE_VKQUEUESUBMIT || objMode == Config::MODE_VKCOMMANDBUFFER ||
         (isRenderPassMode && objRange[renderPassCount]) ||
         (isDrawMode && renderPassCount == objNumber && objRange[drawInRenderPass]) ||
-        (((isRenderPassMode && pre_renderpass) || (isDrawMode && pre_draw)) &&
+        (isBlitMode && objRange[blitCount]) || (isDispatchMode && objRange[dispatchCount]) ||
+        (((isRenderPassMode || isDrawMode || isBlitMode || isDispatchMode) && pre_recording) &&
          (elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_SET_APITYPE ||
           elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_BIND_APITYPE ||
           elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_PUSH_APITYPE))) {
@@ -478,38 +485,63 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
   }
 }
 
-void CLibrary::CVulkanCommandBufferTokensBuffer::RestoreRenderPass(
-    const BitRange& renderPassRange) {
+void CLibrary::CVulkanCommandBufferTokensBuffer::RestoreToSpecifiedObject(
+    const BitRange& objRange, Config::VulkanObjectMode objMode) {
   uint64_t renderPassCount = 0;
+  uint64_t blitCount = 0;
+  uint64_t dispatchCount = 0;
+  bool isRenderPassMode = objMode == Config::MODE_VKRENDERPASS;
+  bool isBlitMode = objMode == Config::MODE_VKBLIT;
+  bool isDispatchMode = objMode == Config::MODE_VKDISPATCH;
 
-  bool pre_renderpass = true;
+  bool pre_recording = true;
 
   for (auto elem : _tokensList) {
     if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
       renderPassCount++;
+    } else if (elem->Type() & CFunction::GITS_VULKAN_BLIT_APITYPE) {
+      blitCount++;
+    } else if (elem->Type() & CFunction::GITS_VULKAN_DISPATCH_APITYPE) {
+      dispatchCount++;
     }
-    if (renderPassRange[renderPassCount] &&
-        (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDERPASS_APITYPE)) {
-      pre_renderpass = false;
+    if ((isRenderPassMode && objRange[renderPassCount] &&
+         (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDERPASS_APITYPE)) ||
+        (isBlitMode && objRange[blitCount]) || (isDispatchMode && objRange[dispatchCount])) {
+      pre_recording = false;
     }
-    if (pre_renderpass) {
+    if (pre_recording) {
       elem->Exec();
       elem->StateTrack();
     }
   }
 }
 
-void CLibrary::CVulkanCommandBufferTokensBuffer::ScheduleRenderPass(
-    void (*schedulerFunc)(Vulkan::CFunction*), const BitRange& renderPassRange) {
+void CLibrary::CVulkanCommandBufferTokensBuffer::ScheduleObject(
+    void (*schedulerFunc)(Vulkan::CFunction*),
+    const BitRange& objRange,
+    Config::VulkanObjectMode objMode) {
   uint64_t renderPassCount = 0;
+  uint64_t blitCount = 0;
+  uint64_t dispatchCount = 0;
+  bool isRenderPassMode = objMode == Config::MODE_VKRENDERPASS;
+  bool isBlitMode = objMode == Config::MODE_VKBLIT;
+  bool isDispatchMode = objMode == Config::MODE_VKDISPATCH;
   bool started = false;
 
   for (auto elem : _tokensList) {
-    if (renderPassRange[renderPassCount] &&
-        (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDERPASS_APITYPE)) {
+    if (elem->Type() & CFunction::GITS_VULKAN_BLIT_APITYPE) {
+      blitCount++;
+    } else if (elem->Type() & CFunction::GITS_VULKAN_DISPATCH_APITYPE) {
+      dispatchCount++;
+    }
+    if ((isRenderPassMode && objRange[renderPassCount] &&
+         (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDERPASS_APITYPE)) ||
+        (isBlitMode && objRange[blitCount]) || (isDispatchMode && objRange[dispatchCount])) {
       started = true;
     }
-    if (renderPassRange[renderPassCount] && started) {
+    if (((isRenderPassMode && objRange[renderPassCount]) || (isBlitMode && objRange[blitCount]) ||
+         (isDispatchMode && objRange[dispatchCount])) &&
+        started) {
       schedulerFunc(elem);
     } else if ((elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_SET_APITYPE ||
                 elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_BIND_APITYPE ||

@@ -2327,8 +2327,9 @@ void gits::Vulkan::RestoreCommandBuffers(CScheduler& scheduler, CStateDynamic& s
     }
   }
 
-  // In RenderPass and Draws mode, we restore the command buffer later.
-  if (!api3dIface.CfgRec_IsRenderPassMode() && !api3dIface.CfgRec_IsDrawsRangeMode()) {
+  // In RenderPass, Draws, Blit and Dispatch recording modes, we restore the command buffer later.
+  if (!api3dIface.CfgRec_IsRenderPassMode() && !api3dIface.CfgRec_IsDrawsRangeMode() &&
+      !api3dIface.CfgRec_IsBlitRangeMode() && !api3dIface.CfgRec_IsDispatchRangeMode()) {
     // Restore all primary command buffers
     for (auto& commandBufferState : sd._commandbufferstates) {
       if (IsObjectToSkip((uint64_t)commandBufferState.first)) {
@@ -3789,13 +3790,16 @@ void gits::Vulkan::PrepareVkQueueSubmits(CStateDynamic& sd) {
         Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objVector,
         Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range,
         Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode);
-    if (api3dIface.CfgRec_IsRenderPassMode()) {
-      restoreToSpecifiedRenderPass(
-          Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range, submitInfoForPrepare);
+    if (api3dIface.CfgRec_IsRenderPassMode() || api3dIface.CfgRec_IsBlitRangeMode() ||
+        api3dIface.CfgRec_IsDispatchRangeMode()) {
+      restoreCommandBufferSettings(
+          Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range, submitInfoForPrepare,
+          Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode);
     } else if (api3dIface.CfgRec_IsDrawsRangeMode()) {
-      restoreToSpecifiedDraw(
-          Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objVector.back(),
-          Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range, submitInfoForPrepare);
+      restoreCommandBufferSettings(
+          Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range, submitInfoForPrepare,
+          Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode,
+          Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objVector.back());
     }
     auto queueHandle = sd.lastQueueSubmit->queueStateStore->queueHandle;
     if (nullptr != submitInfoForPrepare.submitInfoData.Value()) {
@@ -3846,7 +3850,8 @@ void gits::Vulkan::PostRestoreVkQueueSubmits(CScheduler& scheduler, CStateDynami
     auto submitInfoDataValues = submitInfoForSchedule.submitInfoData.Value();
     auto submitInfo2DataValues = submitInfoForSchedule.submitInfo2Data.Value();
     RestoreCommandBuffers(scheduler, sd, true);
-    if (api3dIface.CfgRec_IsRenderPassMode() || api3dIface.CfgRec_IsDrawsRangeMode()) {
+    if (api3dIface.CfgRec_IsRenderPassMode() || api3dIface.CfgRec_IsDrawsRangeMode() ||
+        api3dIface.CfgRec_IsBlitRangeMode() || api3dIface.CfgRec_IsDispatchRangeMode()) {
       VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
       if (submitInfoDataValues != nullptr) {
         commandBuffer = submitInfoDataValues[0].pCommandBuffers[0];
@@ -3858,14 +3863,15 @@ void gits::Vulkan::PostRestoreVkQueueSubmits(CScheduler& scheduler, CStateDynami
         scheduler.Register(new CvkBeginCommandBuffer(
             VK_SUCCESS, commandBuffer,
             commandBufferState->beginCommandBuffer->commandBufferBeginInfoData.Value()));
-        if (api3dIface.CfgRec_IsRenderPassMode()) {
-          commandBufferState->tokensBuffer.ScheduleRenderPass(
-              ScheduleTokens, Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range);
-        } else {
+        if (api3dIface.CfgRec_IsDrawsRangeMode()) {
           commandBufferState->tokensBuffer.ScheduleDraw(
               ScheduleTokens,
               Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objVector.back(),
               Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range);
+        } else {
+          commandBufferState->tokensBuffer.ScheduleObject(
+              ScheduleTokens, Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.range,
+              Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode);
         }
 
         if (commandBufferState->ended) {

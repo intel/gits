@@ -44,6 +44,14 @@ public:
     return Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode ==
            Config::MODE_VKDRAW;
   }
+  virtual bool CfgRec_IsBlitRangeMode() const {
+    return Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode ==
+           Config::MODE_VKBLIT;
+  }
+  virtual bool CfgRec_IsDispatchRangeMode() const {
+    return Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode ==
+           Config::MODE_VKDISPATCH;
+  }
   virtual bool CfgRec_IsRenderPassMode() const {
     return Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode ==
            Config::MODE_VKRENDERPASS;
@@ -62,7 +70,7 @@ public:
   }
   virtual bool CfgRec_IsSubFrameMode() const {
     return (CfgRec_IsCmdBufferMode() || CfgRec_IsQueueSubmitMode() || CfgRec_IsRenderPassMode() ||
-            CfgRec_IsDrawsRangeMode());
+            CfgRec_IsDrawsRangeMode() || CfgRec_IsBlitRangeMode() || CfgRec_IsDispatchRangeMode());
   }
   virtual ~VulkanApi() = default;
 };

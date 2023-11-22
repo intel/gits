@@ -229,7 +229,7 @@ OpenCL {
 
 Vulkan {
   Capture {
-    Mode                  All              ; All / Frames / QueueSubmit / CommandBuffersRange / RenderPassRange / DrawsRange
+    Mode                  All              ; All / Frames / QueueSubmit / CommandBuffersRange / RenderPassRange / DrawsRange / DispatchRange / BlitRange
 
     All {
       ExitFrame           1000000
@@ -255,6 +255,14 @@ Vulkan {
 
     DrawsRange {
       Range               1/0/0/0/0        ; QueueSubmitNumber/CommandBufferBatchNumber/CommandBufferNumber/RenderPassNumber/DrawsRange
+    }
+
+    DispatchRange {
+      Range               1/0/0/0          ; QueueSubmitNumber/CommandBufferBatchNumber/CommandBufferNumber/DispatchRange
+    }
+
+    BlitRange {
+      Range               1/0/0/0          ; QueueSubmitNumber/CommandBufferBatchNumber/CommandBufferNumber/BlitRange
     }
   }
 
@@ -673,7 +681,7 @@ Extras {
 ;  OpenCL.Utilities.NullIndirectPointersInBuffer         - Nullifies output buffer's indirection pointers in order to produce deterministic results on verification step.
 ##
 %if platform in ["win32", "lnx_32", "lnx_64", "lnx_arm"]:
-;  Vulkan.Capture.Mode                                        - Specifies mode of operation and triggering behaviour of GITS recorder. Valid modes are All, Frames, QueueSubmit, CommandBuffersRange, RenderPassRange, DrawsRange.
+;  Vulkan.Capture.Mode                                        - Specifies mode of operation and triggering behaviour of GITS recorder. Valid modes are All, Frames, QueueSubmit, CommandBuffersRange, RenderPassRange, DrawsRange, DispatchRange, BlitRange.
 ;                                                               This also selects option group in Vulkan.Capture that is active.
 ;
 ;  Vulkan.Capture.All.ExitFrame                               - After this frame, recorder will stop operation and write the stream to filesystem.
@@ -695,6 +703,10 @@ Extras {
 ;  Vulkan.Capture.RenderPassRange.Range                       - Only these render passes will be recorded. The format is "queue_submit_number/command_buffer_batch_number/command_buffer_number/render_pass_range"
 ;
 ;  Vulkan.Capture.DrawsRange.Range                            - Only these draws will be recorded. The format is "queue_submit_number/command_buffer_batch_number/command_buffer_number/render_pass_number/draws_range"
+;
+;  Vulkan.Capture.DispatchRange.Range                         - Only these dispatches will be recorded. The format is "queue_submit_number/command_buffer_batch_number/command_buffer_number/dispatch_range"
+;
+;  Vulkan.Capture.BlitRange.Range                             - Only these blits will be recorded. The format is "queue_submit_number/command_buffer_batch_number/command_buffer_number/blit_range"
 ;
 ;  Vulkan.Utilities.TraceVKStructs                            - Trace values of Vulkan structs instead of tracing pointers.
 ;

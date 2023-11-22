@@ -1121,7 +1121,7 @@ arg3=ArgDef(name='firstQuery', type='uint32_t'),
 arg4=ArgDef(name='queryCount', type='uint32_t')
 )
 
-Function(name='vkCmdResolveImage', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdResolveImage', enabled=True, type=Blit, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='srcImage', type='VkImage'),
@@ -1132,13 +1132,13 @@ arg6=ArgDef(name='regionCount', type='uint32_t'),
 arg7=ArgDef(name='pRegions', type='const VkImageResolve*', wrapType='CVkImageResolveArray', wrapParams='regionCount, pRegions', count='regionCount')
 )
 
-Function(name='vkCmdResolveImage2', enabled=True, type=Param, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdResolveImage2', enabled=True, type=Blit, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pResolveImageInfo', type='const VkResolveImageInfo2*')
 )
 
-Function(name='vkCmdResolveImage2KHR', enabled=False, type=Param,
+Function(name='vkCmdResolveImage2KHR', enabled=False, type=Blit,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pResolveImageInfo', type='const VkResolveImageInfo2*')

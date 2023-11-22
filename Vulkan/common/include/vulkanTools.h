@@ -109,10 +109,10 @@ CVkSubmitInfoArrayWrap getSubmitInfoForPrepare(const std::vector<uint32_t>& coun
                                                const BitRange& objRange,
                                                gits::Config::VulkanObjectMode objMode);
 VkCommandBuffer GetLastCommandBuffer(CVkSubmitInfoArrayWrap& submitInfoData);
-void restoreToSpecifiedRenderPass(const BitRange& objRange, CVkSubmitInfoArrayWrap& submitInfoData);
-void restoreToSpecifiedDraw(const uint64_t renderPassNumber,
-                            const BitRange& objRange,
-                            CVkSubmitInfoArrayWrap& submitInfoData);
+void restoreCommandBufferSettings(const BitRange& objRange,
+                                  CVkSubmitInfoArrayWrap& submitInfoData,
+                                  gits::Config::VulkanObjectMode objMode,
+                                  uint64_t renderPassNumber = 0);
 
 CVkSubmitInfoArrayWrap getSubmitInfoForSchedule(const std::vector<uint32_t>& countersTable,
                                                 const BitRange& objRange,

@@ -523,6 +523,12 @@ bool gits::Config::Set(const std::filesystem::path& cfgDir) {
     std::string drawsRange;
     ReadRecorderOption(pt, "Vulkan.Capture.DrawsRange.Range", drawsRange,
                        GITS_PLATFORM_BIT_WINDOWS | GITS_PLATFORM_BIT_X11);
+    std::string dispatchRange;
+    ReadRecorderOption(pt, "Vulkan.Capture.DispatchRange.Range", dispatchRange,
+                       GITS_PLATFORM_BIT_WINDOWS | GITS_PLATFORM_BIT_X11);
+    std::string blitRange;
+    ReadRecorderOption(pt, "Vulkan.Capture.BlitRange.Range", blitRange,
+                       GITS_PLATFORM_BIT_WINDOWS | GITS_PLATFORM_BIT_X11);
 
     //init default
     cfg.recorder.vulkan.capture.frames.startFrame = static_cast<unsigned>(-1);
@@ -543,6 +549,10 @@ bool gits::Config::Set(const std::filesystem::path& cfgDir) {
         cfg.recorder.vulkan.capture.mode.find("RenderPassRange") != std::string::npos;
     bool foundDrawsRangeMode =
         cfg.recorder.vulkan.capture.mode.find("DrawsRange") != std::string::npos;
+    bool foundDispatchRangeMode =
+        cfg.recorder.vulkan.capture.mode.find("DispatchRange") != std::string::npos;
+    bool foundBlitRangeMode =
+        cfg.recorder.vulkan.capture.mode.find("BlitRange") != std::string::npos;
     if (foundAllMode) {
       cfg.recorder.vulkan.capture.frames.startFrame = 1;
       cfg.recorder.vulkan.capture.all.exitFrame = exitFrameVulkan;
@@ -552,7 +562,7 @@ bool gits::Config::Set(const std::filesystem::path& cfgDir) {
       cfg.recorder.vulkan.capture.frames.stopFrame = stopFrame;
       cfg.recorder.vulkan.capture.frames.startKeys.swap(startKeyCodes);
     } else if (foundQueueSubmitMode || foundCommandBuffersRangeMode || foundRenderPassRangeMode ||
-               foundDrawsRangeMode) {
+               foundDrawsRangeMode || foundDispatchRangeMode || foundBlitRangeMode) {
       std::string objectRange;
       if (foundQueueSubmitMode) {
         objectRange = std::move(queueSubmitNumber);
@@ -562,6 +572,10 @@ bool gits::Config::Set(const std::filesystem::path& cfgDir) {
         objectRange = std::move(renderPassRange);
       } else if (foundDrawsRangeMode) {
         objectRange = std::move(drawsRange);
+      } else if (foundDispatchRangeMode) {
+        objectRange = std::move(dispatchRange);
+      } else if (foundBlitRangeMode) {
+        objectRange = std::move(blitRange);
       }
       if (!objectRange.empty()) {
         std::istringstream issVulkanObjectsRange(objectRange);
@@ -587,6 +601,10 @@ bool gits::Config::Set(const std::filesystem::path& cfgDir) {
           cfg.recorder.vulkan.capture.objRange.rangeSpecial.objMode = MODE_VKRENDERPASS;
         } else if (objectsTable.size() == 4 && foundDrawsRangeMode) {
           cfg.recorder.vulkan.capture.objRange.rangeSpecial.objMode = MODE_VKDRAW;
+        } else if (objectsTable.size() == 3 && foundDispatchRangeMode) {
+          cfg.recorder.vulkan.capture.objRange.rangeSpecial.objMode = MODE_VKDISPATCH;
+        } else if (objectsTable.size() == 3 && foundBlitRangeMode) {
+          cfg.recorder.vulkan.capture.objRange.rangeSpecial.objMode = MODE_VKBLIT;
         } else {
           Log(ERR) << "Incorrect range for mode: " << cfg.recorder.vulkan.capture.mode;
           throw std::runtime_error(EXCEPTION_MESSAGE);
@@ -1218,7 +1236,7 @@ bool gits::Config::VulkanObjectRange::operator[](uint64_t queueSubmitNumber) con
   if (objMode == MODE_VKQUEUESUBMIT) {
     return range[(size_t)queueSubmitNumber];
   } else if (objMode == MODE_VKCOMMANDBUFFER || objMode == MODE_VKRENDERPASS ||
-             objMode == MODE_VKDRAW) {
+             objMode == MODE_VKDRAW || objMode == MODE_VKBLIT || objMode == MODE_VKDISPATCH) {
     return objVector[0] == queueSubmitNumber;
   } else {
     return false;

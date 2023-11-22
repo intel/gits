@@ -73,9 +73,10 @@ public:
                                         uint64_t renderPassNumber,
                                         uint64_t drawNumber,
                                         VkCommandBuffer cmdBuffer);
-    void RestoreRenderPass(const BitRange& renderPassRange);
-    void ScheduleRenderPass(void (*schedulerFunc)(Vulkan::CFunction*),
-                            const BitRange& renderPassRange);
+    void RestoreToSpecifiedObject(const BitRange& objRange, Config::VulkanObjectMode objMode);
+    void ScheduleObject(void (*schedulerFunc)(Vulkan::CFunction*),
+                        const BitRange& renderPassRange,
+                        Config::VulkanObjectMode objMode);
     void RestoreDraw(const uint64_t renderPassNumber, const BitRange& drawsRange);
     void ScheduleDraw(void (*schedulerFunc)(Vulkan::CFunction*),
                       const uint64_t renderPassNumber,
