@@ -388,10 +388,14 @@ void gits::Vulkan::CUpdateDescriptorSetWithTemplateArray::Read(CBinIStream& stre
   unsigned dictSize = 0;
   read_name_from_stream(stream, dictSize);
   _size->Read(stream);
-  for (unsigned i = 0; i < dictSize; i++) {
-    auto keyArgPtr = std::make_shared<CDescriptorUpdateTemplateObject>();
-    keyArgPtr->Read(stream);
-    _cgenericargsDict.push_back(keyArgPtr);
+  if (dictSize <= _cgenericargsDict.max_size()) {
+    for (unsigned i = 0; i < dictSize; i++) {
+      auto keyArgPtr = std::make_shared<CDescriptorUpdateTemplateObject>();
+      keyArgPtr->Read(stream);
+      _cgenericargsDict.push_back(keyArgPtr);
+    }
+  } else {
+    throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 }
 

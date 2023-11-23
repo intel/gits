@@ -292,11 +292,16 @@ template <typename T>
 void gits::CByteStringArray<T>::Read(CBinIStream& stream) {
   unsigned tableSize;
   read_name_from_stream(stream, tableSize);
-  for (unsigned i = 0; i < tableSize; i++) {
-    Cchar::CSArray* argPtr(new Cchar::CSArray());
-    argPtr->Read(stream);
-    _cStringTable.push_back(argPtr);
-    _lengthsArray.push_back(argPtr->Vector().size());
+  uint64_t max_size = std::min(_cStringTable.max_size(), _lengthsArray.max_size());
+  if (tableSize <= max_size) {
+    for (unsigned i = 0; i < tableSize; i++) {
+      Cchar::CSArray* argPtr(new Cchar::CSArray());
+      argPtr->Read(stream);
+      _cStringTable.push_back(argPtr);
+      _lengthsArray.push_back(argPtr->Vector().size());
+    }
+  } else {
+    throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 }
 

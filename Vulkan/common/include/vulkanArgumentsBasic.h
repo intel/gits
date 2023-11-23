@@ -848,10 +848,14 @@ public:
   virtual void Read(CBinIStream& stream) {
     unsigned dictSize;
     read_name_from_stream(stream, dictSize);
-    for (unsigned i = 0; i < dictSize; i++) {
-      std::shared_ptr<CVkGenericArgument> keyArgPtr(new CVkGenericArgument());
-      keyArgPtr->Read(stream);
-      _cgenericargsDict.push_back(keyArgPtr);
+    if (dictSize <= _cgenericargsDict.max_size()) {
+      for (unsigned i = 0; i < dictSize; i++) {
+        std::shared_ptr<CVkGenericArgument> keyArgPtr(new CVkGenericArgument());
+        keyArgPtr->Read(stream);
+        _cgenericargsDict.push_back(keyArgPtr);
+      }
+    } else {
+      throw std::runtime_error(EXCEPTION_MESSAGE);
     }
   }
   virtual void Write(CCodeOStream& stream) const {
