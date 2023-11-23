@@ -959,11 +959,15 @@ public:
   virtual void Read(CBinIStream& stream) {
     unsigned dictSize = 0;
     read_name_from_stream(stream, dictSize);
-    _cargs.resize(dictSize);
-    for (unsigned i = 0; i < dictSize; i++) {
-      std::shared_ptr<TKeyArg> keyArgPtr(new TKeyArg());
-      keyArgPtr->Read(stream);
-      _cargs[i] = std::move(keyArgPtr);
+    if (dictSize <= _cargs.max_size()) {
+      _cargs.resize(dictSize);
+      for (unsigned i = 0; i < dictSize; i++) {
+        std::shared_ptr<TKeyArg> keyArgPtr(new TKeyArg());
+        keyArgPtr->Read(stream);
+        _cargs[i] = std::move(keyArgPtr);
+      }
+    } else {
+      throw std::runtime_error(EXCEPTION_MESSAGE);
     }
   }
   virtual void Write(CCodeOStream& stream) const {
@@ -1210,18 +1214,27 @@ public:
   virtual void Read(CBinIStream& stream) {
     unsigned outerDictSize;
     read_name_from_stream(stream, outerDictSize);
-    _cargs.resize(outerDictSize);
 
-    for (unsigned i = 0; i < outerDictSize; i++) {
-      unsigned innerDictSize;
-      read_name_from_stream(stream, innerDictSize);
-      _cargs[i].resize(innerDictSize);
+    if (outerDictSize <= _cargs.max_size()) {
+      _cargs.resize(outerDictSize);
 
-      for (unsigned j = 0; j < innerDictSize; j++) {
-        std::shared_ptr<TKeyArg> keyArgPtr(new TKeyArg());
-        keyArgPtr->Read(stream);
-        _cargs[i][j] = std::move(keyArgPtr);
+      for (unsigned i = 0; i < outerDictSize; i++) {
+        unsigned innerDictSize;
+        read_name_from_stream(stream, innerDictSize);
+        if (innerDictSize <= _cargs[i].max_size()) {
+          _cargs[i].resize(innerDictSize);
+
+          for (unsigned j = 0; j < innerDictSize; j++) {
+            std::shared_ptr<TKeyArg> keyArgPtr(new TKeyArg());
+            keyArgPtr->Read(stream);
+            _cargs[i][j] = std::move(keyArgPtr);
+          }
+        } else {
+          throw std::runtime_error(EXCEPTION_MESSAGE);
+        }
       }
+    } else {
+      throw std::runtime_error(EXCEPTION_MESSAGE);
     }
   }
 

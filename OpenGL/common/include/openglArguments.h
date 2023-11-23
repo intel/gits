@@ -1905,7 +1905,8 @@ public:
   virtual void Read(CBinIStream& stream) {
     uint32_t sz;
     stream.read((char*)&sz, sizeof(sz));
-    if (sz != 0) {
+    uint64_t max_size = std::min(_array.max_size(), _rawarray.max_size());
+    if (sz <= max_size) {
       _array.resize(sz);
       _rawarray.resize(sz);
 
@@ -1914,6 +1915,8 @@ public:
         stream >> (*_array[idx]);
         _rawarray[idx] = **_array[idx];
       }
+    } else {
+      throw std::runtime_error(EXCEPTION_MESSAGE);
     }
   }
 
@@ -2274,11 +2277,13 @@ public:
     size_t size = 0;
     _params.Read(stream);
     read_from_stream(stream, size);
-    if (size > 0) {
+    if (size <= _locations.max_size()) {
       _locations.resize(size);
       for (size_t i = 0; i < size; ++i) {
         _locations[i].Read(stream);
       }
+    } else {
+      throw std::runtime_error(EXCEPTION_MESSAGE);
     }
   }
   virtual void Write(CCodeOStream& stream) const {

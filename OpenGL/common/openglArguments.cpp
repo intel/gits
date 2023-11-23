@@ -3497,9 +3497,13 @@ void gits::OpenGL::CGLIndirectCmds::Read(CBinIStream& stream) {
   read_from_stream(stream, count_);
   read_from_stream(stream, buffer_);
   if (buffer_ == 0) {
-    cmds_.resize(count_);
-    for (uint32_t i = 0; i < count_; ++i) {
-      read_from_stream(stream, cmds_[i]);
+    if (count_ <= cmds_.max_size()) {
+      cmds_.resize(count_);
+      for (uint32_t i = 0; i < count_; ++i) {
+        read_from_stream(stream, cmds_[i]);
+      }
+    } else {
+      throw std::runtime_error(EXCEPTION_MESSAGE);
     }
   }
 }
