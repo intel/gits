@@ -39,15 +39,25 @@ namespace Vulkan {
 VkResult recExecWrap_vkNegotiateLoaderLayerInterfaceVersion(
     VkNegotiateLayerInterface* pVersionStruct) {
   if (pVersionStruct->loaderLayerInterfaceVersion >= 2) {
-    pVersionStruct->pfnGetInstanceProcAddr =
-        (PFN_vkGetInstanceProcAddr)interceptorExportedFunctions.find("vkGetInstanceProcAddr")
-            ->second;
-    pVersionStruct->pfnGetDeviceProcAddr =
-        (PFN_vkGetDeviceProcAddr)interceptorExportedFunctions.find("vkGetDeviceProcAddr")->second;
-    pVersionStruct->pfnGetPhysicalDeviceProcAddr =
-        (PFN_GetPhysicalDeviceProcAddr)interceptorExportedFunctions
-            .find("GetPhysicalDeviceProcAddr")
-            ->second;
+    auto get_instance = interceptorExportedFunctions.find("vkGetInstanceProcAddr");
+    if (get_instance != interceptorExportedFunctions.end()) {
+      pVersionStruct->pfnGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)get_instance->second;
+    } else {
+      throw std::runtime_error(EXCEPTION_MESSAGE);
+    }
+    auto get_device = interceptorExportedFunctions.find("vkGetDeviceProcAddr");
+    if (get_device != interceptorExportedFunctions.end()) {
+      pVersionStruct->pfnGetDeviceProcAddr = (PFN_vkGetDeviceProcAddr)get_device->second;
+    } else {
+      throw std::runtime_error(EXCEPTION_MESSAGE);
+    }
+    auto get_physical_device = interceptorExportedFunctions.find("GetPhysicalDeviceProcAddr");
+    if (get_physical_device != interceptorExportedFunctions.end()) {
+      pVersionStruct->pfnGetPhysicalDeviceProcAddr =
+          (PFN_GetPhysicalDeviceProcAddr)get_physical_device->second;
+    } else {
+      throw std::runtime_error(EXCEPTION_MESSAGE);
+    }
   }
   return VK_SUCCESS;
 }
