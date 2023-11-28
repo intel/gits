@@ -96,6 +96,9 @@ public:
     _onConstructor();
   }
 
+  CAutoCaller(CAutoCaller&) = delete;
+  CAutoCaller& operator=(CAutoCaller&) = delete;
+
   ~CAutoCaller() {
     onDestructor();
   }

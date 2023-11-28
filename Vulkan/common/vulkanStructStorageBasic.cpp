@@ -306,12 +306,10 @@ gits::Vulkan::CDeviceOrHostAddressAccelerationStructureVertexDataGITSData::
         uint32_t maxVertex,
         VkDeviceOrHostAddressConstKHR indexData,
         VkIndexType indexType,
-        const VkAccelerationStructureBuildControlDataGITS& controlData) {
+        const VkAccelerationStructureBuildControlDataGITS& controlData)
+    : CVkDeviceOrHostAddressConstKHRData() {
   _dataSize = count * stride;
   _controlData = controlData;
-  _bufferDeviceAddress = CBufferDeviceAddressObjectData(0);
-  _hostOffset = 0;
-  _DeviceOrHostAddressConst = nullptr;
 
   if ((vertexData.deviceAddress == 0) || (count == 0) || (stride == 0)) {
     return;
@@ -500,20 +498,24 @@ gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHRData::
             accelerationstructuregeometryinstancesdatakhr,
         const VkAccelerationStructureBuildRangeInfoKHR& buildRangeInfo,
         const VkAccelerationStructureBuildControlDataGITS& controlData)
-    : _sType(accelerationstructuregeometryinstancesdatakhr->sType),
-      _pNext(std::make_unique<CpNextWrapperData>(
-          accelerationstructuregeometryinstancesdatakhr->pNext)),
-      _executionSide(controlData.executionSide),
-      _arrayOfPointers(accelerationstructuregeometryinstancesdatakhr->arrayOfPointers),
-      _AccelerationStructureGeometryInstancesDataKHR(nullptr),
+    : _sType(VK_STRUCTURE_TYPE_MAX_ENUM),
+      _pNext(),
+      _executionSide(VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS),
+      _arrayOfPointers(false),
+      _bufferDeviceAddress(),
+      _inputData(),
+      _pointers(),
+      _AccelerationStructureGeometryInstancesDataKHR(),
       _isNullPtr(accelerationstructuregeometryinstancesdatakhr == nullptr) {
-  if (*_isNullPtr) {
+  if (*_isNullPtr || (buildRangeInfo.primitiveCount == 0)) {
     return;
   }
 
-  if (buildRangeInfo.primitiveCount == 0) {
-    return;
-  }
+  _sType = accelerationstructuregeometryinstancesdatakhr->sType;
+  _pNext =
+      std::make_unique<CpNextWrapperData>(accelerationstructuregeometryinstancesdatakhr->pNext);
+  _executionSide = controlData.executionSide;
+  _arrayOfPointers = accelerationstructuregeometryinstancesdatakhr->arrayOfPointers;
 
   switch (_executionSide) {
   case VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS: {

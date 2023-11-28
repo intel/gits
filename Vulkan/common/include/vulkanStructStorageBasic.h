@@ -861,6 +861,11 @@ public:
   CBufferDeviceAddressObjectData(VkDeviceAddress originalDeviceAddress,
                                  int64_t additionalOffset = 0);
   CBufferDeviceAddressObjectData& operator=(CBufferDeviceAddressObjectData&& other) noexcept;
+  ~CBufferDeviceAddressObjectData() = default;
+
+  CBufferDeviceAddressObjectData(CBufferDeviceAddressObjectData&&) = delete;
+  CBufferDeviceAddressObjectData(const CBufferDeviceAddressObjectData&) = delete;
+  CBufferDeviceAddressObjectData& operator=(const CBufferDeviceAddressObjectData&) = delete;
 
   void* GetPtrType() {
     return (void*)_originalDeviceAddress;
