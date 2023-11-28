@@ -710,10 +710,5 @@ bool CGlDriver::CanReadWriteonlyMappings() const {
 
 CDrivers drv;
 
-std::string GetCtxInfoStr() {
-  std::stringstream info;
-  return info.str();
-}
-
 } // namespace OpenGL
 } // namespace gits

@@ -26,10 +26,6 @@ typedef struct wl_display wl_display;
 typedef struct wl_buffer wl_buffer;
 
 namespace gits {
-namespace OpenGL {
-std::string GetCtxInfoStr();
-}
-
 #ifndef BUILD_FOR_CCODE
 struct Tracer {
   template <class T>
@@ -59,7 +55,7 @@ struct Tracer {
   template <class... Args>
   NOINLINE void trace(Args... args) {
     auto log = OpenGL::CGLLog(TRACE, NO_NEWLINE);
-    log << OpenGL::GetCtxInfoStr() << name << "(";
+    log << name << "(";
     print_args(log, args...);
     log << ")";
   }
