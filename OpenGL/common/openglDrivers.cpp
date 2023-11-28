@@ -28,7 +28,7 @@ namespace OpenGL {
 namespace {
 
 NOINLINE bool load_gl_function_generic(void*& func, const char* name) {
-  auto lib = drv.gl.Library();
+  const auto lib = drv.gl.Library();
   if (lib == nullptr) {
     return false;
   }
@@ -176,7 +176,7 @@ using namespace lua;
 
 #define LUA_FUNCTION(RET, NAME, ARGS_DECL, DRV)                                                    \
   int lua_##NAME(lua_State* L) {                                                                   \
-    int top = lua_gettop(L);                                                                       \
+    const int top = lua_gettop(L);                                                                 \
     if (top != Argnum<RET ARGS_DECL>::value)                                                       \
       luaL_error(L, "invalid number of parameters");                                               \
                                                                                                    \
@@ -235,19 +235,19 @@ static NOINLINE lua_State* GetLuaState() {
   b STDCALL logging_##c d {                                                                        \
     err_fun();                                                                                     \
     const Config& gits_cfg = Config::Get();                                                        \
-    bool doTrace = ShouldLog(TRACE);                                                               \
+    const bool doTrace = ShouldLog(TRACE);                                                         \
     if (doTrace && (!CGits::Instance().traceGLAPIBypass || gits_cfg.player.traceGitsInternal)) {   \
       Tracer(#c).trace e;                                                                          \
     }                                                                                              \
     b gits_ret = (b)0;                                                                             \
     bool call_shd = true;                                                                          \
     if (gits_cfg.common.useEvents && !bypass_luascript) {                                          \
-      auto L = GetLuaState();                                                                      \
-      bool exists = !doTrace || lua::FunctionExists(#c, L);                                        \
+      const auto L = GetLuaState();                                                                \
+      const bool exists = !doTrace || lua::FunctionExists(#c, L);                                  \
       if (exists) {                                                                                \
         LUA_CALL_FUNCTION(L, #c, e, d)                                                             \
         call_shd = false;                                                                          \
-        int top_ = lua_gettop(L);                                                                  \
+        const int top_ = lua_gettop(L);                                                            \
         gits_ret = lua::lua_to<b>(L, top_);                                                        \
         lua_pop(L, top_);                                                                          \
       }                                                                                            \
@@ -280,8 +280,8 @@ void CheckForRecursion(dl::SharedObject library) {
       (dl::load_symbol(library, "GITSIdentificationToken") !=
        nullptr)) { // This token is exposed only by proxy i.e. gits library
     Log(ERR) << "Recursion detected while loading the library.";
-    Log(ERR) << "LibDirectory value not set correctly in gits.ini file. Please refer \"OpenGL "
-                "Options\" section in gits.ini for more details.";
+    Log(ERR) << "LibDirectory value not set correctly in gits.ini file. Please refer to the "
+                "\"OpenGL Options\" section in gits.ini for more details.";
     exit(EXIT_FAILURE);
   }
 }
@@ -456,7 +456,7 @@ const luaL_Reg exports[] = {GL_FUNCTIONS(LUA_EXPORT_) DRAW_FUNCTIONS(LUA_EXPORT_
 
 void RegisterLuaDriverFunctions() {
 #ifndef BUILD_FOR_CCODE
-  auto L = CGits::Instance().GetLua();
+  const auto L = CGits::Instance().GetLua();
   luaL_newlib(L.get(), exports);
   lua_setglobal(L.get(), "drv");
 #endif
@@ -512,7 +512,7 @@ dl::SharedObject CEglDriver::Library() {
 #if defined GITS_PLATFORM_X11
 //#define LOAD_PTR_GLX_FUNCTION(a, b, c) b = (a (STDCALL *) c) dl::load_symbol(lib_gl, #b); if (b == 0) b= (a (STDCALL *) c) drv.glx.glXGetProcAddress((GLubyte*)(#b));
 
-CGlxDriver::CGlxDriver() : _initialized(false) {
+CGlxDriver::CGlxDriver() : _initialized(false), _lib(nullptr) {
 #define INITIALIZE_GLX_FUNCTION(b, c, d, e)                                                        \
   c = default_##c;                                                                                 \
   shd_##c = nullptr;
@@ -525,7 +525,7 @@ dl::SharedObject CGlxDriver::Library() {
     return _lib;
   }
   _initialized = true;
-  auto libGL = gits::Config::Get().common.libGL;
+  const auto& libGL = gits::Config::Get().common.libGL;
   printf("library path: %s\n", libGL.string().c_str());
 
   _lib = dl::open_library(libGL.string().c_str());
@@ -568,7 +568,7 @@ bool check_gl_function_availability(const char* name) {
 
 #if defined GITS_PLATFORM_WINDOWS
 
-CWglDriver::CWglDriver() : _initialized(false) {
+CWglDriver::CWglDriver() : _initialized(false), _lib(nullptr) {
 #define INITIALIZE_WGL_FUNCTION(b, c, d, e)                                                        \
   c = default_##c;                                                                                 \
   shd_##c = nullptr;
@@ -591,11 +591,11 @@ dl::SharedObject CWglDriver::Library() {
   }
   _initialized = true;
 
-  auto libGL = gits::Config::Get().common.libGL;
+  const auto& libGL = gits::Config::Get().common.libGL;
 
   _lib = dl::open_library(libGL.string().c_str());
 
-  if (_lib == 0) {
+  if (_lib == nullptr) {
     Log(ERR) << "Couldn't open WGL library: " << libGL.string();
     exit(1);
   }
@@ -698,7 +698,7 @@ bool CGlDriver::CanReadWriteonlyMappings() const {
     func_unmap = drv.gl.glUnmapBufferOES;
   }
 
-  char* ptr = (char*)func_map(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+  const char* const ptr = (char*)func_map(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
   can_read = (strcmp(data, ptr) == 0);
   Log(WARN) << "Reading from writeonly buffer mappings " << (can_read ? "" : "im") << "possible";
   func_unmap(GL_ARRAY_BUFFER);
