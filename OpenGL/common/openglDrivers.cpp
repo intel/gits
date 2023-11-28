@@ -477,7 +477,9 @@ void RegisterLuaDriverFunctions() {
 #undef LOGGING_GLX_FUNCTION
 
 CEglDriver::CEglDriver() : _initialized(false), _lib_egl(nullptr), _egl_used(false) {
-#define INITIALIZE_EGL_FUNCTION(b, c, d, e) drv.egl.c = default_##c;
+#define INITIALIZE_EGL_FUNCTION(b, c, d, e)                                                        \
+  c = default_##c;                                                                                 \
+  shd_##c = nullptr;
   EGL_FUNCTIONS(INITIALIZE_)
 #undef INITIALIZE_EGL_FUNCTION
 }
@@ -511,7 +513,9 @@ dl::SharedObject CEglDriver::Library() {
 //#define LOAD_PTR_GLX_FUNCTION(a, b, c) b = (a (STDCALL *) c) dl::load_symbol(lib_gl, #b); if (b == 0) b= (a (STDCALL *) c) drv.glx.glXGetProcAddress((GLubyte*)(#b));
 
 CGlxDriver::CGlxDriver() : _initialized(false) {
-#define INITIALIZE_GLX_FUNCTION(b, c, d, e) drv.glx.c = default_##c;
+#define INITIALIZE_GLX_FUNCTION(b, c, d, e)                                                        \
+  c = default_##c;                                                                                 \
+  shd_##c = nullptr;
   GLX_FUNCTIONS(INITIALIZE_)
 #undef INITIALIZE_GLX_FUNCTION
 }
@@ -565,8 +569,12 @@ bool check_gl_function_availability(const char* name) {
 #if defined GITS_PLATFORM_WINDOWS
 
 CWglDriver::CWglDriver() : _initialized(false) {
-#define INITIALIZE_WGL_FUNCTION(b, c, d, e)     drv.wgl.c = default_##c;
-#define INITIALIZE_WGL_EXT_FUNCTION(b, c, d, e) drv.wgl.c = default_##c;
+#define INITIALIZE_WGL_FUNCTION(b, c, d, e)                                                        \
+  c = default_##c;                                                                                 \
+  shd_##c = nullptr;
+#define INITIALIZE_WGL_EXT_FUNCTION(b, c, d, e)                                                    \
+  c = default_##c;                                                                                 \
+  shd_##c = nullptr;
   WGL_FUNCTIONS(INITIALIZE_)
   WGL_EXT_FUNCTIONS(INITIALIZE_)
 #undef INITIALIZE_WGL_EXT_FUNCTION
@@ -599,8 +607,12 @@ dl::SharedObject CWglDriver::Library() {
 #endif
 
 CGlDriver::CGlDriver() : _api(API_NULL), _initialized(false), _lib(nullptr) {
-#define INITIALIZE_GL_FUNCTION(b, c, d, e)      drv.gl.c = default_##c;
-#define INITIALIZE_GL_DRAW_FUNCTION(b, c, d, e) drv.gl.c = draw_##c;
+#define INITIALIZE_GL_FUNCTION(b, c, d, e)                                                         \
+  c = default_##c;                                                                                 \
+  shd_##c = nullptr;
+#define INITIALIZE_GL_DRAW_FUNCTION(b, c, d, e)                                                    \
+  c = draw_##c;                                                                                    \
+  shd_##c = nullptr;
   GL_FUNCTIONS(INITIALIZE_)
   DRAW_FUNCTIONS(INITIALIZE_)
 #undef INITIALIZE_GL_FUNCTION
