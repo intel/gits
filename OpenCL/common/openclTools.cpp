@@ -736,8 +736,8 @@ cl_mem_object_type TextureGLEnumToCLMemType(cl_GLenum textureEnum) {
   return type;
 }
 
-boost::optional<cl_platform_id> ExtractPlatform(const cl_context_properties* props) {
-  boost::optional<cl_platform_id> platform;
+cl_platform_id ExtractPlatform(const cl_context_properties* props) {
+  cl_platform_id platform = nullptr;
   auto propsVec = PropertiesVectorWrapZeroEnded(props);
   for (size_t i = 0; i < propsVec.size(); i += 2) {
     if (propsVec[i] == CL_CONTEXT_PLATFORM) {

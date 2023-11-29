@@ -80,10 +80,9 @@ inline void clCreateContext_RECWRAP(
   const cl_context_properties* props = properties;
   const auto& cfg = Config::Get();
   if (cfg.recorder.basic.enabled && props != nullptr) {
-    const auto opPlatform = ExtractPlatform(props);
+    const auto platform = ExtractPlatform(props);
     const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
-    if (opPlatform.is_initialized() && opPlatform.get() == nullptr &&
-        !oclIFace.MemorySnifferInstall()) {
+    if (platform == nullptr && !oclIFace.MemorySnifferInstall()) {
       Log(WARN) << "Memory Sniffer installation failed";
     }
   }
@@ -116,10 +115,9 @@ inline void clCreateContextFromType_RECWRAP(
   const cl_context_properties* props = properties;
   const auto& cfg = Config::Get();
   if (cfg.recorder.basic.enabled && props != nullptr) {
-    const auto opPlatform = ExtractPlatform(props);
+    const auto platform = ExtractPlatform(props);
     const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
-    if (opPlatform.is_initialized() && opPlatform.get() == nullptr &&
-        !oclIFace.MemorySnifferInstall()) {
+    if (platform == nullptr && !oclIFace.MemorySnifferInstall()) {
       Log(WARN) << "Memory Sniffer installation failed";
     }
   }
@@ -376,8 +374,8 @@ inline void clGetGLContextInfoKHR_RECWRAP(CRecorder& recorder,
       //Unsharing enabled - need to replace GL device query by standard device query for the same platform.
       if (return_value == CL_SUCCESS && (param_name == CL_DEVICES_FOR_GL_CONTEXT_KHR ||
                                          param_name == CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR)) {
-        if (auto optionalPlatform = ExtractPlatform(properties)) {
-          auto platform = *optionalPlatform;
+        const auto platform = ExtractPlatform(properties);
+        if (platform != nullptr) {
           recorder.Schedule(NewTokenPtrGetDevices(platform));
         }
       }

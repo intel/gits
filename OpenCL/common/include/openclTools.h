@@ -134,7 +134,7 @@ void clGetContextInfo_SetMapping(cl_device_id* old_devices,
                                  size_t paramValueSize,
                                  size_t* paramValueRetSize);
 cl_mem_object_type TextureGLEnumToCLMemType(cl_GLenum textureEnum);
-boost::optional<cl_platform_id> ExtractPlatform(const cl_context_properties* props);
+cl_platform_id ExtractPlatform(const cl_context_properties* props);
 gits::CFunction* NewTokenPtrCreateCLMem(cl_context context,
                                         cl_mem mem,
                                         cl_mem_flags flags,
