@@ -966,6 +966,7 @@ inline void vkAllocateMemory_WRAPRUN(CVkResult& recorderSideReturnValue,
   }
 
   auto device = *deviceRef;
+  auto originalMemoryTypeIndex = allocateInfoPtr->memoryTypeIndex;
   // Memory type index matching between recorded and current platform based on VkMemoryPropertyFlags
   allocateInfoPtr->memoryTypeIndex =
       getMappedMemoryTypeIndex(device, allocateInfoPtr->memoryTypeIndex);
@@ -989,6 +990,22 @@ inline void vkAllocateMemory_WRAPRUN(CVkResult& recorderSideReturnValue,
       if (imageState->memoryRequirements.size > allocateInfoPtr->allocationSize) {
         allocateInfoPtr->allocationSize = imageState->memoryRequirements.size;
       }
+
+      // Adjust memory type from which memory object is allocated
+      if (!isBitSet(imageState->memoryRequirements.memoryTypeBits,
+                    1 << allocateInfoPtr->memoryTypeIndex)) {
+        auto physicalDevice =
+            imageState->deviceStateStore->physicalDeviceStateStore->physicalDeviceHandle;
+        auto originalMemoryTypePropertyFlags =
+            SD()._physicaldevicestates[physicalDevice]
+                ->memoryPropertiesOriginal.memoryTypes[originalMemoryTypeIndex]
+                .propertyFlags;
+        auto currentPlatformProperties =
+            SD()._physicaldevicestates[physicalDevice]->memoryPropertiesCurrent;
+        allocateInfoPtr->memoryTypeIndex = findCompatibleMemoryTypeIndex(
+            originalMemoryTypePropertyFlags, currentPlatformProperties,
+            imageState->memoryRequirements.memoryTypeBits);
+      }
     }
 
     if (dedicatedAllocation->buffer != VK_NULL_HANDLE) {
@@ -1004,6 +1021,22 @@ inline void vkAllocateMemory_WRAPRUN(CVkResult& recorderSideReturnValue,
       // Adjust memory object's allocation size
       if (bufferState->memoryRequirements.size > allocateInfoPtr->allocationSize) {
         allocateInfoPtr->allocationSize = bufferState->memoryRequirements.size;
+      }
+
+      // Adjust memory type from which memory object is allocated
+      if (!isBitSet(bufferState->memoryRequirements.memoryTypeBits,
+                    1 << allocateInfoPtr->memoryTypeIndex)) {
+        auto physicalDevice =
+            bufferState->deviceStateStore->physicalDeviceStateStore->physicalDeviceHandle;
+        auto originalMemoryTypePropertyFlags =
+            SD()._physicaldevicestates[physicalDevice]
+                ->memoryPropertiesOriginal.memoryTypes[originalMemoryTypeIndex]
+                .propertyFlags;
+        auto currentPlatformProperties =
+            SD()._physicaldevicestates[physicalDevice]->memoryPropertiesCurrent;
+        allocateInfoPtr->memoryTypeIndex = findCompatibleMemoryTypeIndex(
+            originalMemoryTypePropertyFlags, currentPlatformProperties,
+            bufferState->memoryRequirements.memoryTypeBits);
       }
     }
   }

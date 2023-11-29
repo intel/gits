@@ -3052,6 +3052,19 @@ uint32_t getMappedMemoryTypeIndex(VkDevice device, uint32_t memoryTypeIndexOrigi
   return mappedMemoryTypeIndex;
 }
 
+uint32_t findCompatibleMemoryTypeIndex(VkMemoryPropertyFlags originalMemoryPropertyFlags,
+                                       VkPhysicalDeviceMemoryProperties currentMemoryProperties,
+                                       uint32_t requirementsMemoryTypeBits) {
+  for (uint32_t i = 0; currentMemoryProperties.memoryTypeCount; i++) {
+    if ((requirementsMemoryTypeBits & (1 << i)) &&
+        (currentMemoryProperties.memoryTypes[i].propertyFlags & originalMemoryPropertyFlags)) {
+      return i;
+    }
+  }
+
+  throw std::runtime_error("Cannot find a compatible memory type for a resource. Exiting!");
+}
+
 VkDeviceAddress getBufferDeviceAddress(VkDevice device, VkBuffer buffer) {
   VkBufferDeviceAddressInfo addressInfo = {
       VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO, // VkStructureType    sType;

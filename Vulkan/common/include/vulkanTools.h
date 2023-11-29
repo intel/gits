@@ -126,6 +126,9 @@ bool checkMemoryMappingFeasibility(VkDevice device,
 std::unordered_map<uint32_t, uint32_t> matchCorrespondingMemoryTypeIndexes(
     VkPhysicalDevice physicalDevice);
 uint32_t getMappedMemoryTypeIndex(VkDevice device, uint32_t memoryTypeIndexOriginal);
+uint32_t findCompatibleMemoryTypeIndex(VkMemoryPropertyFlags originalMemoryPropertyFlags,
+                                       VkPhysicalDeviceMemoryProperties currentMemoryProperties,
+                                       uint32_t requirementsMemoryTypeBits);
 std::shared_ptr<CBufferState> findBufferStateFromDeviceAddress(VkDeviceAddress deviceAddress);
 uint32_t getRayTracingShaderGroupCaptureReplayHandleSize(VkDevice device);
 std::pair<std::shared_ptr<CDeviceMemoryState>, std::shared_ptr<CBufferState>> createTemporaryBuffer(
