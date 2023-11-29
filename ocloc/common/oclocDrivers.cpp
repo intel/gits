@@ -290,7 +290,7 @@ void RegisterLuaDriverFunctions() {
 }
 #endif
 
-CDriver::CDriver() : initialized_(false), lib_(nullptr) {
+CDriver::CDriver() {
   oclocInvoke = default_oclocInvoke;
   oclocFreeOutput = default_oclocFreeOutput;
 #ifndef BUILD_FOR_CCODE

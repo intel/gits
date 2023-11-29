@@ -24,14 +24,14 @@ public:
   dl::SharedObject Library() const {
     return lib_;
   }
-  pfn_oclocInvoke orig_oclocInvoke;
+  pfn_oclocInvoke orig_oclocInvoke = nullptr;
   pfn_oclocInvoke oclocInvoke;
-  pfn_oclocFreeOutput orig_oclocFreeOutput;
+  pfn_oclocFreeOutput orig_oclocFreeOutput = nullptr;
   pfn_oclocFreeOutput oclocFreeOutput;
 
 private:
-  bool initialized_;
-  dl::SharedObject lib_;
+  bool initialized_ = false;
+  dl::SharedObject lib_ = nullptr;
 };
 
 extern CDriver drv;

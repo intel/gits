@@ -30,8 +30,8 @@ namespace OpenCL {
 
 #define OCL_FUNCTION(a, b, c, d, e, f) a##OCL_FUNCTION(b, c, d, e, f)
 #define DECLARE_PTR_OCL_FUNCTION(a, b, c, e, f)                                                    \
-  a(STDCALL* b) c;                                                                                 \
-  a(STDCALL* orig_##b) c;
+  a(STDCALL* b) c = nullptr;                                                                       \
+  a(STDCALL* orig_##b) c = nullptr;
 
 class COclDriver {
 public:
