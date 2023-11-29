@@ -389,7 +389,7 @@ inline void clCreateProgramWithSource_SD(CFunction* token,
     if (token != nullptr) {
       filename = static_cast<CProgramSource&>(token->Argument(2)).FileName();
     }
-    programState.reset(new CCLProgramState(context, count, strings, lengths, filename));
+    programState.reset(new CCLProgramState(context, count, strings, lengths, std::move(filename)));
     programState->Retain();
   }
 }

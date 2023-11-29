@@ -369,7 +369,7 @@ std::vector<ze_driver_handle_t> GetDrivers(const CDriver& cDriver) {
     cDriver.inject.zeDriverGet(&drivCount, nullptr);
     std::vector<ze_driver_handle_t> drivers(drivCount);
     ze_result_t result = cDriver.inject.zeDriverGet(&drivCount, drivers.data());
-    zeDriverGet_SD(result, &drivCount, drivers.data());
+    zeDriverGet_SD(result, &drivCount, std::move(drivers).data());
     return result == ZE_RESULT_SUCCESS ? drivers : std::vector<ze_driver_handle_t>();
   }
   std::vector<ze_driver_handle_t> drivers;
