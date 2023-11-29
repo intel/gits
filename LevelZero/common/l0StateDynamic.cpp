@@ -40,7 +40,11 @@ CStateDynamic* CStateDynamic::InstancePtr() {
 }
 
 CStateDynamic::~CStateDynamic() {
-  layoutBuilder.SaveLayoutToJsonFile();
+  try {
+    layoutBuilder.SaveLayoutToJsonFile();
+  } catch (...) {
+    topmost_exception_handler("CStateDynamic::~CStateDynamic");
+  }
 }
 
 template <>
@@ -199,8 +203,12 @@ CAllocState::CAllocState(ze_context_handle_t hContext,
       memType(UnifiedMemoryType::host) {}
 
 CAllocState::~CAllocState() {
-  if (memType == UnifiedMemoryType::device || memType == UnifiedMemoryType::shared) {
-    CGits::Instance().SubtractLocalMemoryUsage(size);
+  try {
+    if (memType == UnifiedMemoryType::device || memType == UnifiedMemoryType::shared) {
+      CGits::Instance().SubtractLocalMemoryUsage(size);
+    }
+  } catch (...) {
+    topmost_exception_handler("CAllocState::~CAllocState");
   }
 }
 
@@ -272,7 +280,11 @@ CImageState::CImageState(ze_context_handle_t hContext,
 }
 
 CImageState::~CImageState() {
-  CGits::Instance().SubtractLocalMemoryUsage(CalculateImageSize(desc));
+  try {
+    CGits::Instance().SubtractLocalMemoryUsage(CalculateImageSize(desc));
+  } catch (...) {
+    topmost_exception_handler("CImageState::~CImageState");
+  }
 }
 
 CCommandQueueState::CCommandQueueState(ze_context_handle_t hContext,

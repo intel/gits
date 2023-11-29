@@ -30,7 +30,11 @@ uint64_t GetUniqueStateID() {
 CStateDynamic::CStateDynamic() {}
 
 CStateDynamic::~CStateDynamic() {
-  layoutBuilder.SaveLayoutToJsonFile();
+  try {
+    layoutBuilder.SaveLayoutToJsonFile();
+  } catch (...) {
+    topmost_exception_handler("CStateDynamic::~CStateDynamic");
+  }
 }
 
 CStateDynamic& CStateDynamic::Get() {
@@ -600,7 +604,11 @@ CCLMemState::CCLMemState(cl_context context,
 }
 
 CCLMemState::~CCLMemState() {
-  CGits::Instance().SubtractLocalMemoryUsage(size);
+  try {
+    CGits::Instance().SubtractLocalMemoryUsage(size);
+  } catch (...) {
+    topmost_exception_handler("CCLMemState::~CCLMemState");
+  }
 }
 
 CCLSVMAllocState::CCLSVMAllocState(cl_context context,
@@ -618,8 +626,12 @@ CCLSVMAllocState::CCLSVMAllocState(cl_context context,
 }
 
 CCLSVMAllocState::~CCLSVMAllocState() {
-  if (!(flags & CL_MEM_SVM_FINE_GRAIN_BUFFER)) {
-    CGits::Instance().SubtractLocalMemoryUsage(size);
+  try {
+    if (!(flags & CL_MEM_SVM_FINE_GRAIN_BUFFER)) {
+      CGits::Instance().SubtractLocalMemoryUsage(size);
+    }
+  } catch (...) {
+    topmost_exception_handler("CCLSVMAllocState::~CCLSVMAllocState");
   }
 }
 
@@ -662,8 +674,12 @@ CCLUSMAllocState::CCLUSMAllocState(cl_device_id device,
 }
 
 CCLUSMAllocState::~CCLUSMAllocState() {
-  if (type == UnifiedMemoryType::device || type == UnifiedMemoryType::shared) {
-    CGits::Instance().SubtractLocalMemoryUsage(size);
+  try {
+    if (type == UnifiedMemoryType::device || type == UnifiedMemoryType::shared) {
+      CGits::Instance().SubtractLocalMemoryUsage(size);
+    }
+  } catch (...) {
+    topmost_exception_handler("CCLUSMAllocState::~CCLUSMAllocState");
   }
 }
 
