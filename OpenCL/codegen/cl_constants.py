@@ -646,6 +646,10 @@ ARGUMENTS_TOSTRING_BITFIELD_CASE = """  if(value & {0}) {{
     MaskAppend(text, "{1}");
     res |= {0};
   }}"""
+ARGUMENTS_TOSTRING_BITFIELD_CASE_ZERO = """  if(value == {0}) {{
+    MaskAppend(text, "{1}");
+    res |= {0};
+  }}"""
 
 ARGUMENTS_ARGUMENT_DECLARATION = """
     class C{0} : public CCLArg{4}<{1}, C{0}> {{

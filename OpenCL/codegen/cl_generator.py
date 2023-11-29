@@ -463,7 +463,9 @@ def generate_arguments(enums, arguments):
                 cases.append(cl_constants.ARGUMENTS_TOSTRING_BITFIELD_ALL)
                 vars_arr = vars_arr[:-1] # cut off last value
             for var in vars_arr:
-                if enum.get('bitfield'):
+                if enum.get('bitfield') and var['value'] == '0':
+                    cases.append(cl_constants.ARGUMENTS_TOSTRING_BITFIELD_CASE_ZERO.format('static_cast<cl_bitfield>('+var['value']+')', var['name']))
+                elif enum.get('bitfield'):
                     cases.append(cl_constants.ARGUMENTS_TOSTRING_BITFIELD_CASE.format('static_cast<cl_bitfield>('+var['value']+')', var['name']))
                 else:
                     cases.append(cl_constants.ARGUMENTS_TOSTRING_CASE.format(var['value'], var['name']))
