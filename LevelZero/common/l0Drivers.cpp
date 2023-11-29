@@ -140,7 +140,8 @@ bool GetIntelDriverStoreFullPath(wchar_t* pDriverStorePath,
           static_cast<unsigned long>(wcsnlen_s(driverStorePath, ARRAYSIZE(driverStorePath)));
       // get service name for a display adapter
       if (GetPropertyFromDevice(pDevInfo, &devInfoData, &DEVPKEY_Device_Manufacturer,
-                                &pPropertyDevServiceName, &propertyDevServiceNameLength) == false) {
+                                &pPropertyDevServiceName, &propertyDevServiceNameLength) == false ||
+          pPropertyDevServiceName == nullptr) {
         goto END;
       }
       // to read DEVPKEY_Device_Service property value correctly just cast

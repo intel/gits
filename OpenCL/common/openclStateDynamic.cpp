@@ -507,7 +507,6 @@ CCLMemState::CCLMemState(cl_context context,
                          void* host_ptr)
     : context(context),
       flags(flags),
-      intel_mem_properties(props, props + GetNullTermArraySize(props, 2) + 1),
       size(size),
       buffer(true),
       image(false),
@@ -516,6 +515,11 @@ CCLMemState::CCLMemState(cl_context context,
       pipe_max_packets(0) {
   index = ++count();
   CGits::Instance().AddLocalMemoryUsage(size);
+
+  if (props != nullptr) {
+    std::copy(props, props + GetNullTermArraySize(props, 2) + 1,
+              std::back_inserter(intel_mem_properties));
+  }
 }
 
 CCLMemState::CCLMemState(cl_context context,
