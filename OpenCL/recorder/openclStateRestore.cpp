@@ -79,7 +79,7 @@ cl_command_queue GetCommandQueue(CScheduler& scheduler,
   return sd._commandQueueStates.begin()->first;
 }
 
-CFunction* CreateProgramToken(cl_program stateInstance, CCLProgramState program) {
+CFunction* CreateProgramToken(const cl_program& stateInstance, CCLProgramState& program) {
   CFunction* token;
   if (program.SourcesCount() > 0) {
     token = new CclCreateProgramWithSource(stateInstance, program.Context(), program.SourcesCount(),
