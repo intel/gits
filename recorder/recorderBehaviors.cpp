@@ -46,7 +46,7 @@ CBehavior::CBehavior(CRecorder& recorder, bool captureOnKeypress)
  *
  */
 void CBehavior::OnFrameEnd() {
-  // Capture is not initiated -> exit imidietely.
+  // Capture is not initiated -> exit immediately.
   if (_captureState == CAP_NOT_INITIATED) {
     return;
   }

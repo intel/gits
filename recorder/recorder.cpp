@@ -154,7 +154,7 @@ gits::CRecorder::CRecorder()
   CGits& inst = CGits::Instance();
   const Config& config = Config::Get();
 
-  // create file data and regisapi3dIfaceter it in GITS
+  // create file data and register it in GITS
   if (config.recorder.basic.enabled) {
     std::filesystem::create_directories(config.common.streamDir);
 #if defined(GITS_PLATFORM_X11)

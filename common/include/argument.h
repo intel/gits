@@ -789,7 +789,7 @@ public:
 
 template <typename T>
 class CByteStringArray : public CArgument {
-  static_assert(sizeof(T) == 1, "CByteStringArray must use a type which size is 1 byte");
+  static_assert(sizeof(T) == 1, "CByteStringArray must use a type whose size is 1 byte");
 
   std::vector<Cchar::CSArray*> _cStringTable;
   std::vector<const T*> _constCharArray;
