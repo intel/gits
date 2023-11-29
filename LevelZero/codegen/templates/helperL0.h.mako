@@ -94,7 +94,7 @@ private:
   static name_map_t& get_map() {
     INIT_NEW_STATIC_OBJ(objects_map, name_map_t)
       static bool initialized = false;
-    if (!initialized) 
+    if (!initialized)
       objects_map[0] = 0;
     return objects_map;
   }
