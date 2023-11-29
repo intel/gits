@@ -298,7 +298,7 @@ class MurmurHash(Repository):
 
 class Zlib(Repository):
     def set_branch(self):
-        self.branch = "v1.2.13"
+        self.branch = "v1.3"
 
     def init(self):
         self.name = "zlib"
@@ -307,7 +307,7 @@ class Zlib(Repository):
 
 class LibPng(Repository):
     def set_branch(self):
-        self.branch = "v1.6.37"
+        self.branch = "v1.6.40"
 
     def init(self):
         self.name = "libpng"
