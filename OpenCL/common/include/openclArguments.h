@@ -97,8 +97,8 @@ public:
 class CProgramSource : public CArgumentFileText {
   static unsigned _programSourceIdx;
   static unsigned _binarySourceIdx;
-  const char* text_cstr;
-  size_t text_length;
+  const char* text_cstr = nullptr;
+  size_t text_length = 0;
 
 public:
   enum ProgramType { PROGRAM_SOURCE, PROGRAM_BINARY };
@@ -609,7 +609,7 @@ private:
   Ccl_mem _mem_object;
   Ccl_resource_barrier_type _type;
   Ccl_resource_memory_scope _scope;
-  CLType _struct;
+  CLType _struct = {};
 
 public:
   typedef CStructArray<CLType, Ccl_resource_barrier_descriptor_intel> CSArray;

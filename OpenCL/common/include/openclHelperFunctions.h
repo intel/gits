@@ -18,7 +18,7 @@ namespace OpenCL {
 class CGitsClMemoryUpdate : public CFunction {
   static constexpr unsigned ARG_NUM = 2U;
 
-  void* _ptr;
+  void* _ptr = nullptr;
   CBinaryResource _resource;
 
   virtual unsigned ArgumentCount() const override {
@@ -27,7 +27,7 @@ class CGitsClMemoryUpdate : public CFunction {
   virtual CArgument& Argument(unsigned idx) override;
 
 public:
-  CGitsClMemoryUpdate() {}
+  CGitsClMemoryUpdate() = default;
   CGitsClMemoryUpdate(void* ptr);
 
   virtual unsigned Id() const override {
@@ -45,8 +45,8 @@ public:
 class CGitsClMemoryRestore : public CFunction {
   static constexpr unsigned ARG_NUM = 3U;
 
-  void* _ptr;
-  uint64_t _length;
+  void* _ptr = nullptr;
+  uint64_t _length = 0;
   CBinaryResource _resource;
 
   virtual unsigned ArgumentCount() const override {
@@ -72,9 +72,9 @@ public:
 
 class CGitsClMemoryRegionRestore : public CFunction {
   static constexpr unsigned ARG_NUM = 4U;
-  void* _ptr;
-  uint64_t _length;
-  uint64_t _offset;
+  void* _ptr = nullptr;
+  uint64_t _length = 0;
+  uint64_t _offset = 0;
   CBinaryResource _resource;
 
   virtual unsigned ArgumentCount() const override {

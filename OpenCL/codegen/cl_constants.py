@@ -474,7 +474,7 @@ namespace gits {
       typedef CArgumentMappedSizedArray<T, T_WRAP, gits::ADD_MAPPING> CSMapArray;
       typedef CArgumentMappedSizedArray<T, T_WRAP, gits::NO_ACTION> CSArray;
 
-      CCLArgObj() {}
+      CCLArgObj() = default;
       CCLArgObj(T arg) : key_(arg) {}
       CCLArgObj(T* arg) : key_(*arg) {}
 

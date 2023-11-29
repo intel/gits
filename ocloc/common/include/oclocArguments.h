@@ -20,9 +20,9 @@ namespace gits {
 namespace ocloc {
 class CProgramSources : public CArgument {
   static unsigned _programSourceIdx;
-  const char** _sources_array;
-  size_t* _sources_lengths_array;
-  const char** _filenames_array;
+  const char** _sources_array = nullptr;
+  size_t* _sources_lengths_array = nullptr;
+  const char** _filenames_array = nullptr;
   std::vector<CArgumentFileText> _files;
 
 public:

@@ -362,7 +362,7 @@ struct CCLUSMAllocState : public CCLState {
   std::unordered_map<cl_kernel, bool> toUpdate;
   // cl_intel_global_variable_pointers
   cl_program program = nullptr;
-  const char* global_variable_name;
+  const char* global_variable_name = nullptr;
   // clGitsIndirectAllocationOffsets
   std::map<size_t, bool> indirectPointersOffsets;
 
