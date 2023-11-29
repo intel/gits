@@ -20,7 +20,6 @@
 
 GlobalState globalState;
 
-ImageState::ImageState() : currentLayout(VK_IMAGE_LAYOUT_UNDEFINED) {}
 ImageState::ImageState(VkDevice device, const VkImageCreateInfo* imageCreateInfo)
     : width(imageCreateInfo->extent.width),
       height(imageCreateInfo->extent.height),

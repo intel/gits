@@ -18,7 +18,7 @@ struct PlaybackTimer {
   Timer timer;
   uint32_t frameStart;
   int64_t lastFrameTime;
-  PlaybackTimer() : frameStart(0) {}
+  PlaybackTimer() : frameStart(0), lastFrameTime(0) {}
 };
 
 struct CGits {
@@ -33,7 +33,7 @@ public:
     return cg;
   }
 
-  CGits() : traceGLAPIBypass(false) {}
+  CGits() : _frameNo(0), traceGLAPIBypass(false) {}
   bool IsStateRestoration() const {
     return false;
   }

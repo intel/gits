@@ -1164,7 +1164,7 @@ void BufferStateStash::Restore() {
   }
 }
 
-MapBuffer::MapBuffer(GLenum target, GLint buffer) : _target(target) {
+MapBuffer::MapBuffer(GLenum target, GLint buffer) : _target(target), _ptr(nullptr) {
   if (curctx::IsOgl() || ESBufferState() != TBuffersState::BUFFERS_STATE_CAPTURE_ALWAYS) {
     auto func_map = drv.gl.glMapBuffer;
     if (drv.gl.HasExtension("GL_OES_mapbuffer")) {

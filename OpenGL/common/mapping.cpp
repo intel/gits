@@ -124,7 +124,7 @@ CGLUniformSubroutineLocation::CGLUniformSubroutineLocation()
 CGLUniformSubroutineLocation::CGLUniformSubroutineLocation(current_program_tag_t,
                                                            GLenum type,
                                                            GLint location)
-    : type_(type), location_(location) {
+    : program_(0), type_(type), location_(location) {
   drv.gl.glGetIntegerv(GL_CURRENT_PROGRAM, &program_);
 }
 
