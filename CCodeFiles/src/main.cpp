@@ -247,6 +247,8 @@ int main(int argc, char* argv[]) {
   } catch (const std::runtime_error& e) {
     std::cout << "Error during command line parsing:\n" << e.what() << "\n";
     return 1;
+  } catch (...) {
+    topmost_exception_handler("main");
   }
 
   if (Config::Get().player.waitForEnter) {
@@ -268,17 +270,21 @@ int main(int argc, char* argv[]) {
   blockTimingMask = (argc >= 2) ? atoi(argv[1]) : blockTimingMask;
   runCycles = (argc == 3) ? atoi(argv[2]) : runCycles;
 #endif
+  try {
 #ifdef GITS_API_L0
-  InitL0();
+    InitL0();
 #endif
 
 #if defined GITS_API_OCL && !defined CCODE_FOR_EGL
-  CLInit();
+    CLInit();
 #endif
 
 #if defined GITS_API_VK
-  InitVk();
+    InitVk();
 #endif
+  } catch (...) {
+    topmost_exception_handler("main - API Initialization");
+  }
 
 #if defined GITS_PLATFORM_WINDOWS
   if (Config::Get().player.escalatePriority) {

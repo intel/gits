@@ -50,8 +50,12 @@ BinaryResource::BinaryResource(size_t size, size_t offset, const char* filename)
 }
 
 BinaryResource::~BinaryResource() {
-  if (!LoadResourcesImmediately::GetInstance().initialized) {
-    FreeMem((const char*)_ptr);
+  try {
+    if (!LoadResourcesImmediately::GetInstance().initialized) {
+      FreeMem((const char*)_ptr);
+    }
+  } catch (...) {
+    topmost_exception_handler("BinaryResource::~BinaryResource");
   }
 }
 
