@@ -273,11 +273,11 @@ public:
 
 class CCLMappedPtr : public CCLArgObj<void*, CCLMappedPtr> {
   CBinaryResource _data;
-  bool _hasData;
+  bool _hasData = false;
 
 public:
   static const char* NAME;
-  CCLMappedPtr() : _hasData(false) {}
+  CCLMappedPtr() = default;
   // onlyMap determines whether data will be dumped in this argument.
   // Data is dumped only in EnqueueUnmap, but we need to remember the mapped
   // pointer in EnqueueMap calls too.
@@ -325,7 +325,7 @@ public:
 
 class CCLKernelExecInfo_V1 : CCLArg<void*, CCLKernelExecInfo_V1> {
 private:
-  KernelExecInfoType type;
+  KernelExecInfoType type = KernelExecInfoType::boolean;
   std::unique_ptr<CCLMappedPtr::CSArray> param_ptrs;
   Ccl_bool param_bool;
   Ccl_uint param_uint;
@@ -492,7 +492,7 @@ public:
 
 class CSVMPtr : CCLArg<void*, CSVMPtr> {
 private:
-  bool _createdByCLSVMAlloc;
+  bool _createdByCLSVMAlloc = false;
   CCLMappedPtr _mappedPtr;
   CAsyncBinaryData _hostPtr;
 
@@ -522,10 +522,10 @@ public:
 
 class CSVMPtr_V1 : CCLArg<void*, CSVMPtr_V1> {
 private:
-  bool _createdByCLSVMAlloc;
+  bool _createdByCLSVMAlloc = false;
   CCLMappedPtr _mappedPtr;
   CBinaryData _hostPtr;
-  uintptr_t _offset;
+  uintptr_t _offset = 0;
 
 public:
   CSVMPtr_V1() {}
@@ -550,10 +550,10 @@ std::vector<cl_mem_properties_intel> MapMemPropertiesIntel(
 
 class CBuildOptions : public Cchar::CSArray {
 private:
-  bool _hasHeaders;
+  bool _hasHeaders = false;
 
 public:
-  CBuildOptions() {}
+  CBuildOptions() = default;
   CBuildOptions(const char* array, bool hasHeaders)
       : Cchar::CSArray(array, 0, 1), _hasHeaders(hasHeaders){};
   void Declare(CCodeOStream& stream) const;
@@ -561,10 +561,10 @@ public:
 
 class CGetContextInfoOutArgument : public CBinaryData {
 private:
-  bool _isPostActionNeeded;
+  bool _isPostActionNeeded = false;
 
 public:
-  CGetContextInfoOutArgument() {}
+  CGetContextInfoOutArgument() = default;
   CGetContextInfoOutArgument(const size_t size, const void* buffer, cl_context_info param_info);
   virtual bool PostActionNeeded() const {
     return _isPostActionNeeded;
@@ -575,10 +575,10 @@ public:
 
 class CUSMPtr : CCLArg<void*, CUSMPtr> {
 private:
-  bool _createdByCLUSMAlloc;
+  bool _createdByCLUSMAlloc = false;
   CBinaryData _hostPtr;
   CCLMappedPtr _mappedPtr;
-  uintptr_t _offset;
+  uintptr_t _offset = 0;
   void SetMappedOffset(void* ptr);
 
 public:

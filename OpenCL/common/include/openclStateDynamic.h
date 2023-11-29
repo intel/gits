@@ -111,7 +111,7 @@ struct CCLCommandQueueState : public CCLState {
   bool commandQueue2_0 = false;
   // deprecated from 2.0 (Replaced by properties)
   // valid if commandQueue2_0 == false
-  cl_command_queue_properties queueProperties1_2;
+  cl_command_queue_properties queueProperties1_2 = 0;
   // valid if commandQueue2_0 == true
   std::vector<cl_queue_properties> properties2_0;
   std::vector<std::shared_ptr<CCLEventState>> eventArray;
