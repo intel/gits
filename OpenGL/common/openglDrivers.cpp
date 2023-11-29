@@ -337,14 +337,14 @@ NOINLINE void LogFunctionNotFoundShutdown(const char* func) {
 void DumpPreDrawCall() {
   static int PreDrawCallCnt = 0;
   if (Config::Get().player.captureDrawsPre) {
-    capture_drawbuffer(Config::Get().ccode.outputPath.string().c_str(),
+    capture_drawbuffer(Config::Get().ccode.outputPath,
                        "drawcall-" + std::to_string(++PreDrawCallCnt) + "-pre", false);
   }
 }
 
 void DumpPostDrawCall() {
   static int PostDrawCallCnt = 0;
-  capture_drawbuffer(Config::Get().ccode.outputPath.string().c_str(),
+  capture_drawbuffer(Config::Get().ccode.outputPath,
                      "drawcall-" + std::to_string(++PostDrawCallCnt) + "-post", false);
 }
 

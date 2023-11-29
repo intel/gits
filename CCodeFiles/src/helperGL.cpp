@@ -84,7 +84,7 @@ void handle_mapping_remove(int kind, MappingContext& ctx) {
 #define GENERATE_CAPTURE_FRAME_CODE(option)                                                        \
   if (!Config::Get().player.option.empty()) {                                                      \
     static unsigned frame_num = 1;                                                                 \
-    const char* path = Config::Get().ccode.outputPath.string().c_str();                            \
+    const auto& path = Config::Get().ccode.outputPath;                                             \
     const std::string fileName = getDumpFrameFileName(frame_num);                                  \
     gits::OpenGL::capture_drawbuffer(path, fileName, true);                                        \
     frame_num++;                                                                                   \
@@ -688,7 +688,7 @@ BOOL wglShareLists_wrap(ObjName lhs, ObjName rhs, bool ret_val) {
 void eglSwapBuffers_wrap(ObjName org_dpy, ObjName org_surf) {
   OnFrameEnd();
   if (Config::Get().player.captureFrames[CGits::Instance().CurrentFrame()]) {
-    const char* path = Config::Get().ccode.outputPath.string().c_str();
+    const auto& path = Config::Get().ccode.outputPath;
     const std::string fileName = getDumpFrameFileName(CGits::Instance().CurrentFrame());
     gits::OpenGL::capture_drawbuffer(path, fileName, true);
   }
