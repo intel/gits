@@ -472,6 +472,8 @@ public:
   std::unordered_set<ze_module_handle_t> scanningGlobalPointersMode;
   bool nomenclatureCounting = true;
   bool stateRestoreFinished = false;
+  CStateDynamic(const CStateDynamic& other) = delete;
+  CStateDynamic& operator=(const CStateDynamic& other) = delete;
   ~CStateDynamic();
 
   template <typename State>

@@ -36,6 +36,8 @@ namespace OpenCL {
 class COclDriver {
 public:
   COclDriver();
+  COclDriver(const COclDriver& other) = delete;
+  COclDriver& operator=(const COclDriver& other) = delete;
   ~COclDriver();
   void Initialize();
   dl::SharedObject Library() const {

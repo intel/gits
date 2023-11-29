@@ -17,6 +17,8 @@ namespace ocloc {
 class CDriver {
 public:
   CDriver();
+  CDriver(const CDriver& other) = delete;
+  CDriver& operator=(const CDriver& other) = delete;
   ~CDriver();
   void Initialize();
   dl::SharedObject Library() const {

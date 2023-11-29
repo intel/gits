@@ -18,6 +18,8 @@ namespace l0 {
 class CDriver : public ze_dispatch_table_t {
 public:
   CDriver();
+  CDriver(const CDriver& other) = delete;
+  CDriver& operator=(const CDriver& other) = delete;
   ~CDriver();
   void Initialize();
   bool OpenLibrary(const std::string& path);

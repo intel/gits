@@ -335,6 +335,8 @@ public:
               cl_uint pipe_packet_size,
               cl_uint pipe_max_packets,
               const cl_pipe_properties* properties);
+  CCLMemState(const CCLMemState& other) = default;
+  CCLMemState& operator=(const CCLMemState& other) = delete;
   ~CCLMemState();
 };
 
@@ -348,6 +350,8 @@ struct CCLSVMAllocState : public CCLState {
   std::map<size_t, bool> indirectPointersOffsets;
 
   CCLSVMAllocState(cl_context context, cl_svm_mem_flags flags, size_t size, cl_uint alignment);
+  CCLSVMAllocState(const CCLSVMAllocState& other) = delete;
+  CCLSVMAllocState& operator=(const CCLSVMAllocState& other) = delete;
   ~CCLSVMAllocState();
 };
 
@@ -382,6 +386,8 @@ struct CCLUSMAllocState : public CCLState {
                    UnifiedMemoryType type,
                    cl_program program,
                    const char* global_variable_name);
+  CCLUSMAllocState(const CCLUSMAllocState& other) = delete;
+  CCLUSMAllocState& operator=(const CCLUSMAllocState& other) = delete;
   ~CCLUSMAllocState();
 };
 
@@ -436,6 +442,8 @@ public:
 class CStateDynamic {
 private:
   CStateDynamic();
+  CStateDynamic(const CStateDynamic& other) = delete;
+  CStateDynamic& operator=(const CStateDynamic& other) = delete;
 
 public:
   typedef std::map<cl_platform_id, std::shared_ptr<CCLPlatformIDState>> CCLPlatformIDStates;

@@ -40,6 +40,7 @@ class CRecorderWrapper : public IRecorderWrapper {
 
 public:
   CRecorderWrapper(CRecorder& recorder);
+  ~CRecorderWrapper() = default;
   void StreamFinishedEvent(std::function<void()> e);
   void CloseRecorderIfRequired() override;
   COclDriver& Drivers() const override;
