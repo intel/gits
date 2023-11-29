@@ -107,7 +107,7 @@ void CTextureStateObj::SetTexLevelParams(GLint level,
   //We need to check it here and update compressed value if needed
   if (!compressed && (curctx::IsOgl() || IsGlGetTexAndCompressedTexImagePresentOnGLES())) {
     //OpenGL
-    GLint boundName;
+    GLint boundName = 0;
 
     if (Config::Get().recorder.openGL.utilities.trackTextureBindingWA) {
       auto unit =

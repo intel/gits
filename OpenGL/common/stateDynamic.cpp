@@ -548,7 +548,7 @@ void CStateDynamic::EraseNonCurrentData() {
 
     // Specialized array buffers check binding function
     std::set<GLint> boundArrayBuffers;
-    GLint maxVertexAttribs;
+    GLint maxVertexAttribs = 0;
     drv.gl.glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxVertexAttribs);
     for (GLint i = 0; i < maxVertexAttribs; i++) {
       GLint buff;
@@ -559,7 +559,7 @@ void CStateDynamic::EraseNonCurrentData() {
     }
     // Specialized uniform buffers check binding function
     std::set<GLint> boundUniformBuffers;
-    GLint maxUniformBufferBindings;
+    GLint maxUniformBufferBindings = 0;
     drv.gl.glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &maxUniformBufferBindings);
     for (GLint i = 0; i < maxUniformBufferBindings; i++) {
       GLint buff;
@@ -570,7 +570,7 @@ void CStateDynamic::EraseNonCurrentData() {
     }
     // Specialized shader storage buffers check binding function
     std::set<GLint> boundShaderStorageBuffers;
-    GLint maxShaderStorageBindings;
+    GLint maxShaderStorageBindings = 0;
     drv.gl.glGetIntegerv(GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS, &maxShaderStorageBindings);
     for (GLint i = 0; i < maxShaderStorageBindings; i++) {
       GLint buff;
@@ -594,7 +594,7 @@ void CStateDynamic::EraseNonCurrentData() {
           boundShaderStorageBuffers.find(name) != boundShaderStorageBuffers.end()) {
         return true;
       }
-      GLint boundName;
+      GLint boundName = 0;
       drv.gl.glGetIntegerv(bindEnum, &boundName);
       return (boundName == name);
     };

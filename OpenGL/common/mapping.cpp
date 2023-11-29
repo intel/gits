@@ -48,7 +48,7 @@ bool isMappingRequired(MapObjects mapObject, int legacy) {
 
 CGLUniformLocation::CGLUniformLocation() : program_(0), location_(0) {}
 CGLUniformLocation::CGLUniformLocation(current_program_tag_t, GLint location)
-    : location_(location) {
+    : program_(0), location_(location) {
   auto version = SD().GetCurrentContextStateData().Version();
   if (ProgramOverride() == 0 && !CGits::Instance().IsStateRestoration()) {
     drv.gl.glGetIntegerv(GL_CURRENT_PROGRAM, &program_);

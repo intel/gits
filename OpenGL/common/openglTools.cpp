@@ -1009,7 +1009,7 @@ void PackPixelBufferBindStateStash::Restore() {
   if (!curctx::IsOgl()) {
     return;
   }
-  GLint packBuffer;
+  GLint packBuffer = 0;
   drv.gl.glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &packBuffer);
   if (_data != packBuffer) {
     drv.gl.glBindBuffer(GL_PIXEL_PACK_BUFFER, _data);
@@ -1018,10 +1018,10 @@ void PackPixelBufferBindStateStash::Restore() {
 
 DrawBuffersStateStash::DrawBuffersStateStash() {
   if (curctx::IsOgl() || curctx::IsEs3Plus()) {
-    GLint maxDrawBuffers;
+    GLint maxDrawBuffers = 0;
     drv.gl.glGetIntegerv(GL_MAX_DRAW_BUFFERS, &maxDrawBuffers);
     for (GLint i = 0; i < maxDrawBuffers; ++i) {
-      GLint drawBuffer;
+      GLint drawBuffer = 0;
       drv.gl.glGetIntegerv(GL_DRAW_BUFFER0 + i, &drawBuffer);
       _data.push_back(drawBuffer);
     }
@@ -1405,7 +1405,7 @@ void GLQueryWrapper::Begin(GLuint drawnr, bool clearblit) {
   if (_queries.size() != 0 && _queries.back().ended == false) {
     return;
   }
-  GLuint query;
+  GLuint query = 0;
   (*genQueries)(1, &query);
   (*beginQuery)(_queryType, query);
   _queries.push_back(Data(query, drawnr));
@@ -1659,13 +1659,13 @@ bool IsGlGetTexImagePresentOnGLES() {
   if (!presenceChecked) {
     if (Config::Get().recorder.openGL.utilities.useGlGetTexImageAndRestoreBuffersWhenPossibleES &&
         check_gl_function_availability("glGetTexImage")) {
-      GLint oldBinding;
+      GLint oldBinding = 0;
       drv.gl.glGetIntegerv(GL_TEXTURE_BINDING_2D, &oldBinding);
 
       GLuint pixelsWrite = 0xAAAAAADD;
-      GLuint pixelsRead;
+      GLuint pixelsRead = 0;
 
-      GLuint texture;
+      GLuint texture = 0;
       drv.gl.glGenTextures(1, &texture);
       drv.gl.glBindTexture(GL_TEXTURE_2D, texture);
       drv.gl.glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, 1, 1, 0, GL_DEPTH_STENCIL,
@@ -1695,10 +1695,10 @@ bool IsGlGetCompressedTexImagePresentOnGLES() {
   if (!presenceChecked) {
     if (Config::Get().recorder.openGL.utilities.useGlGetTexImageAndRestoreBuffersWhenPossibleES &&
         check_gl_function_availability("glGetCompressedTexImage")) {
-      GLint oldBinding;
+      GLint oldBinding = 0;
       drv.gl.glGetIntegerv(GL_TEXTURE_BINDING_2D, &oldBinding);
 
-      GLint compressedFormatsCount;
+      GLint compressedFormatsCount = 0;
       drv.gl.glGetIntegerv(GL_NUM_COMPRESSED_TEXTURE_FORMATS, &compressedFormatsCount);
 
       std::vector<GLint> compressedFormats(compressedFormatsCount);
@@ -1722,7 +1722,7 @@ bool IsGlGetCompressedTexImagePresentOnGLES() {
       std::vector<GLubyte> bytesWrite(8, 0xA5);
       std::vector<GLubyte> bytesRead(8, 0x00);
 
-      GLuint texture;
+      GLuint texture = 0;
       drv.gl.glGenTextures(1, &texture);
       drv.gl.glBindTexture(GL_TEXTURE_2D, texture);
       drv.gl.glCompressedTexImage2D(GL_TEXTURE_2D, 0, formatToCheck, 4, 4, 0, 8, &bytesWrite[0]);
@@ -1755,7 +1755,7 @@ bool IsGlGetTexAndCompressedTexImagePresentOnGLES() {
 StatePrinter::RBO::RBO(GLint name) : _name(name) {
   RboBindStateStash rboBindStateStash;
   drv.gl.glBindRenderbuffer(GL_RENDERBUFFER, name);
-  GLint param;
+  GLint param = 0;
   drv.gl.glGetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_INTERNAL_FORMAT, &param);
   _internalFormat = param;
   drv.gl.glGetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_SAMPLES, &param);
@@ -1772,7 +1772,7 @@ StatePrinter::Texture::Texture(GLenum target, GLint name, GLenum texture)
   TextureBindStateStash texBindStateStash(target);
   if (curctx::IsOgl()) {
     drv.gl.glBindTexture(target, name);
-    GLint param;
+    GLint param = 0;
     drv.gl.glGetTexLevelParameteriv(target, 0, GL_TEXTURE_INTERNAL_FORMAT, &param);
     _internalFormat = param;
     drv.gl.glGetTexLevelParameteriv(target, 0, GL_TEXTURE_SAMPLES, &param);
@@ -1816,7 +1816,7 @@ StatePrinter::FBO::FBO(GLenum target, GLint name) : _name(name), _target(target)
     }
   }
   if (!curctx::IsEs1()) {
-    GLint param;
+    GLint param = 0;
     GLenum depthAttach = GL_DEPTH_STENCIL_ATTACHMENT;
     drv.gl.glGetFramebufferAttachmentParameteriv(_target, depthAttach,
                                                  GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE, &param);
@@ -1832,10 +1832,10 @@ StatePrinter::FBO::FBO(GLenum target, GLint name) : _name(name), _target(target)
 
   //Save attachments data
   for (auto attachm : attachments) {
-    GLint atttype;
+    GLint atttype = 0;
     drv.gl.glGetFramebufferAttachmentParameteriv(_target, attachm,
                                                  GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE, &atttype);
-    GLint attname;
+    GLint attname = 0;
     drv.gl.glGetFramebufferAttachmentParameteriv(_target, attachm,
                                                  GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME, &attname);
     if (atttype == GL_RENDERBUFFER) {

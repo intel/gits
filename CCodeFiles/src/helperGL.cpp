@@ -895,8 +895,8 @@ int getOpenGLVersion() {
 }
 
 EGLConfig find_config(EGLDisplay dpy, const std::vector<EGLint>& attribs) {
-  EGLConfig config;
-  EGLint configs;
+  EGLConfig config = nullptr;
+  EGLint configs = 0;
 
   // zero terminate attrib list
   std::vector<EGLint> attributes = attribs;
