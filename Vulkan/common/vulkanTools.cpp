@@ -3053,7 +3053,7 @@ uint32_t getMappedMemoryTypeIndex(VkDevice device, uint32_t memoryTypeIndexOrigi
 }
 
 uint32_t findCompatibleMemoryTypeIndex(VkMemoryPropertyFlags originalMemoryPropertyFlags,
-                                       VkPhysicalDeviceMemoryProperties currentMemoryProperties,
+                                       VkPhysicalDeviceMemoryProperties& currentMemoryProperties,
                                        uint32_t requirementsMemoryTypeBits) {
   for (uint32_t i = 0; currentMemoryProperties.memoryTypeCount; i++) {
     if ((requirementsMemoryTypeBits & (1 << i)) &&
