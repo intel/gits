@@ -117,7 +117,10 @@ class Repository:
             logger.error(process.stdout)
             logger.error(process.stderr)
         if must_pass:
-            process.check_returncode()
+            try:
+                process.check_returncode()
+            except:
+                exit(1)
         return process
 
     def apply_patches(self):
