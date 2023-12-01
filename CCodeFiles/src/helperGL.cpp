@@ -344,7 +344,7 @@ void* glMapTexture2DINTEL_wrap(GLuint texture,
 
   glGetTexLevelParameteriv(GL_TEXTURE_2D, level, GL_TEXTURE_COMPRESSED, &compressed);
   if (compressed == GL_FALSE) {
-    GLint height;
+    GLint height = 0;
     glGetTexLevelParameteriv(GL_TEXTURE_2D, level, GL_TEXTURE_HEIGHT, &height);
     size = stride * height;
   } else {
@@ -427,7 +427,7 @@ HWND CreateWindow_(int winparams[], size_t size) {
 // SELECT PIXEL FORMAT
 int SelectPixelFormat(HDC dc, int attribs[], int values[], size_t size) {
 #ifdef GITS_PLATFORM_WINDOWS
-  int piFormat;
+  int piFormat = 0;
   UINT numFormats;
 
   if (api::wglGetProcAddress("wglChoosePixelFormatARB") == 0) {
