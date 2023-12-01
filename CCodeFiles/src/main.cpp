@@ -251,26 +251,27 @@ int main(int argc, char* argv[]) {
     topmost_exception_handler("main");
   }
 
-  if (Config::Get().player.waitForEnter) {
-    Log(INFO) << "Waiting for ENTER press ...";
-    std::cin.get();
-  }
+  try {
+    if (Config::Get().player.waitForEnter) {
+      Log(INFO) << "Waiting for ENTER press ...";
+      std::cin.get();
+    }
 
 #ifdef _PERF_MODE_
-  LoadGitsRawFile("gitsData.raw");
+    LoadGitsRawFile("gitsData.raw");
 #endif
-  if (Config::Get().player.precacheResources) {
-    Log(INFO, NO_PREFIX) << "\nPrecaching ...";
-    Timer precache;
-    precache_resources(Config::Get().common.streamDir);
-    Log(INFO, NO_PREFIX) << "Precaching completed in " << precache.Get() / 1e6 << " ms";
-  }
+    if (Config::Get().player.precacheResources) {
+      Log(INFO, NO_PREFIX) << "\nPrecaching ...";
+      Timer precache;
+      precache_resources(Config::Get().common.streamDir);
+      Log(INFO, NO_PREFIX) << "Precaching completed in " << precache.Get() / 1e6 << " ms";
+    }
 
 #ifdef _TIMING_MASK_AND_FRAME_LOOP_
-  blockTimingMask = (argc >= 2) ? atoi(argv[1]) : blockTimingMask;
-  runCycles = (argc == 3) ? atoi(argv[2]) : runCycles;
+    blockTimingMask = (argc >= 2) ? atoi(argv[1]) : blockTimingMask;
+    runCycles = (argc == 3) ? atoi(argv[2]) : runCycles;
 #endif
-  try {
+
 #ifdef GITS_API_L0
     InitL0();
 #endif
@@ -282,20 +283,21 @@ int main(int argc, char* argv[]) {
 #if defined GITS_API_VK
     InitVk();
 #endif
-  } catch (...) {
-    topmost_exception_handler("main - API Initialization");
-  }
 
 #if defined GITS_PLATFORM_WINDOWS
-  if (Config::Get().player.escalatePriority) {
-    if (SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS)) {
-      Log(INFO) << "Escalated process priority to realtime priority";
-    } else {
-      Log(WARN) << "Priority escalation failed";
+    if (Config::Get().player.escalatePriority) {
+      if (SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS)) {
+        Log(INFO) << "Escalated process priority to realtime priority";
+      } else {
+        Log(WARN) << "Priority escalation failed";
+      }
     }
-  }
-  SetProcessDPIAware();
+    SetProcessDPIAware();
 #endif
+  } catch (...) {
+    topmost_exception_handler("main - Initialization");
+  }
+
   try {
 #ifndef _EMPTY_BUILD
     RunFrames();
@@ -303,31 +305,35 @@ int main(int argc, char* argv[]) {
   } catch (const std::runtime_error& e) {
     std::cout << "Runtime Error: " << e.what() << "\n";
   }
-  uint32_t currentFrame = CGits::Instance().CurrentFrame();
-  Log(OFF, NO_PREFIX) << "Rendered frames : " << currentFrame;
-  if (currentFrame > Config::Get().ccode.benchmarkStartFrame) {
-    int64_t timeElapsed = CGits::Instance().GetLastFrameTime();
-    float averageFPS = CGits::Instance().GetFPS();
-    Log(OFF, NO_PREFIX) << "Rendering Time: " << timeElapsed / 1e9
-                        << " s; Average FPS: " << averageFPS;
-  }
+  try {
+    uint32_t currentFrame = CGits::Instance().CurrentFrame();
+    Log(OFF, NO_PREFIX) << "Rendered frames : " << currentFrame;
+    if (currentFrame > Config::Get().ccode.benchmarkStartFrame) {
+      int64_t timeElapsed = CGits::Instance().GetLastFrameTime();
+      float averageFPS = CGits::Instance().GetFPS();
+      Log(OFF, NO_PREFIX) << "Rendering Time: " << timeElapsed / 1e9
+                          << " s; Average FPS: " << averageFPS;
+    }
 
 #if defined GITS_API_VK
-  ReleaseVk();
+    ReleaseVk();
 #endif
 
-  Log(OFF, NO_PREFIX) << "Finished";
+    Log(OFF, NO_PREFIX) << "Finished";
 
-  if (Config::Get().player.waitForEnter) {
-    Log(WARN) << "Waiting for ENTER press ...";
-    std::cin.get();
-  }
+    if (Config::Get().player.waitForEnter) {
+      Log(WARN) << "Waiting for ENTER press ...";
+      std::cin.get();
+    }
 
 #ifdef _PERF_MODE_
-  if (gitsRawBuffer) {
-    delete[] gitsRawBuffer;
-  }
+    if (gitsRawBuffer) {
+      delete[] gitsRawBuffer;
+    }
 #endif
+  } catch (...) {
+    topmost_exception_handler("main - Finishing");
+  }
 
   return 0;
 }
