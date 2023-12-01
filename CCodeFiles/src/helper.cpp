@@ -24,8 +24,6 @@
 #include "l0Drivers.h"
 #endif
 
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <cstdio>
 #include <iomanip>
 #include <png.h>
@@ -70,10 +68,9 @@ LoadResourcesImmediately::~LoadResourcesImmediately() {
   ReleaseResources();
 }
 
-char* LoadResourcesImmediately::LoadFile(const std::string& fileName) {
-  struct stat filestatus;
-  stat(fileName.c_str(), &filestatus);
-  return LoadFileDense(fileName, 0, (unsigned)filestatus.st_size);
+char* LoadResourcesImmediately::LoadFile(const std::string& filePath) {
+  const std::uintmax_t size = std::filesystem::file_size(filePath);
+  return LoadFileDense(filePath, 0, size);
 }
 
 void LoadResourcesImmediately::ReleaseResources() {
