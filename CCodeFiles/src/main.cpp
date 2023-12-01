@@ -239,7 +239,7 @@ int main(int argc, char* argv[]) {
       CLog::SetLogLevel(cfg.common.thresholdLogLevel);
     }
 
-    if (optionEscalatePriority.Value() || optionPerformance.Present()) {
+    if (optionEscalatePriority.Present() || optionPerformance.Present()) {
       cfg.player.escalatePriority = true;
     }
 
