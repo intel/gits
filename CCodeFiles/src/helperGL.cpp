@@ -856,8 +856,9 @@ void CMappedTextures::UpdateTexture(GLint name, GLint level, unsigned int offset
   std::pair<map_t::iterator, map_t::iterator> textureLevels = mapped_.equal_range(name);
   for (map_t::iterator it = textureLevels.first; it != textureLevels.second; ++it) {
     if (it->second.level == level && it->second.pointer != NULL) {
-      void* mapping = LoadFileDense("gitsTextures.dat", offset, it->second.size);
+      char* mapping = LoadFileDense("gitsTextures.dat", offset, it->second.size);
       memcpy(it->second.pointer, mapping, it->second.size);
+      FreeMem(mapping);
     }
   }
 }
