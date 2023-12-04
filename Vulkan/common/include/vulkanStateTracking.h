@@ -48,7 +48,8 @@ inline bool updateOnlyUsedMemory() {
 inline bool captureRenderPasses() {
   static bool captureRenderPasses = !Config::Get().player.captureVulkanSubmits.empty() ||
                                     !Config::Get().player.captureVulkanRenderPasses.empty() ||
-                                    !Config::Get().player.captureVulkanDraws.empty();
+                                    !Config::Get().player.captureVulkanDraws.empty() ||
+                                    !Config::Get().recorder.vulkan.images.dumpSubmits.empty();
   return captureRenderPasses;
 }
 

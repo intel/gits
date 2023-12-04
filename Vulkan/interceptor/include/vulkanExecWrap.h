@@ -187,15 +187,49 @@ VkResult recExecWrap_vkQueueSubmit(VkQueue queue,
       CGitsPluginVulkan::Configuration().recorder.basic.enabled &&
       !CGitsPluginVulkan::_recorderFinished) {
     for (uint32_t i = 0; i < submitCount; i++) {
+      VkFence fenceNew = VK_NULL_HANDLE;
       VkSubmitInfo const& submitInfoOrig = pSubmits[i];
+
+      if (submitInfoOrig.commandBufferCount == 0) {
+        // last submit in QueueSubmit (restoring original fence)
+        if (i == (submitCount - 1)) {
+          fenceNew = fence;
+        }
+        return_value = drvVk.vkQueueSubmit(queue, 1, &submitInfoOrig, fenceNew);
+        if (return_value != VK_SUCCESS) {
+          Log(WARN) << "vkQueueSubmit failed.";
+        }
+      }
 
       for (uint32_t cmdBufIndex = 0; cmdBufIndex < submitInfoOrig.commandBufferCount;
            cmdBufIndex++) {
         const VkCommandBuffer& cmdbuffer = submitInfoOrig.pCommandBuffers[cmdBufIndex];
-        VkSubmitInfo submitInfoNew = {
-            VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, 0, 1, &cmdbuffer, 0, nullptr};
-        return_value = drvVk.vkQueueSubmit(queue, 1, &submitInfoNew, VK_NULL_HANDLE);
-        CGitsPluginVulkan::RecorderWrapper().dumpScreenshot(queue, cmdbuffer, i, cmdBufIndex);
+        VkSubmitInfo submitInfoNew;
+        // last command buffer in queue submit (restoring original settings)
+        if (cmdBufIndex == (submitInfoOrig.commandBufferCount - 1)) {
+          // last submit in QueueSubmit (restoring original fence)
+          if (i == (submitCount - 1)) {
+            fenceNew = fence;
+          }
+          submitInfoNew = {VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                           submitInfoOrig.pNext,
+                           submitInfoOrig.waitSemaphoreCount,
+                           submitInfoOrig.pWaitSemaphores,
+                           submitInfoOrig.pWaitDstStageMask,
+                           1,
+                           &cmdbuffer,
+                           submitInfoOrig.signalSemaphoreCount,
+                           submitInfoOrig.pSignalSemaphores};
+        } else {
+          submitInfoNew = {
+              VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, 0, 1, &cmdbuffer, 0, nullptr};
+        }
+        return_value = drvVk.vkQueueSubmit(queue, 1, &submitInfoNew, fenceNew);
+        if (return_value != VK_SUCCESS) {
+          Log(WARN) << "vkQueueSubmit failed. Cannot dump submit image.";
+        } else {
+          CGitsPluginVulkan::RecorderWrapper().dumpScreenshot(queue, cmdbuffer, i, cmdBufIndex);
+        }
       }
     }
   } else {
@@ -216,24 +250,58 @@ VkResult recExecWrap_vkQueueSubmit2(VkQueue queue,
       CGitsPluginVulkan::Configuration().recorder.basic.enabled &&
       !CGitsPluginVulkan::_recorderFinished) {
     for (uint32_t i = 0; i < submitCount; i++) {
+      VkFence fenceNew = VK_NULL_HANDLE;
       VkSubmitInfo2 const& submitInfoOrig = pSubmits[i];
+
+      if (submitInfoOrig.commandBufferInfoCount == 0) {
+        // last submit in QueueSubmit (restoring original fence)
+        if (i == (submitCount - 1)) {
+          fenceNew = fence;
+        }
+        return_value = drvVk.vkQueueSubmit2(queue, 1, &submitInfoOrig, fenceNew);
+        if (return_value != VK_SUCCESS) {
+          Log(WARN) << "vkQueueSubmit2 failed.";
+        }
+      }
 
       for (uint32_t cmdBufIndex = 0; cmdBufIndex < submitInfoOrig.commandBufferInfoCount;
            cmdBufIndex++) {
         const VkCommandBufferSubmitInfo& cmdbufferSubmitInfo =
             submitInfoOrig.pCommandBufferInfos[cmdBufIndex];
-        VkSubmitInfo2 submitInfoNew = {VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
-                                       nullptr,
-                                       0,
-                                       0,
-                                       nullptr,
-                                       1,
-                                       &cmdbufferSubmitInfo,
-                                       0,
-                                       nullptr};
-        return_value = drvVk.vkQueueSubmit2(queue, 1, &submitInfoNew, VK_NULL_HANDLE);
-        CGitsPluginVulkan::RecorderWrapper().dumpScreenshot(
-            queue, cmdbufferSubmitInfo.commandBuffer, i, cmdBufIndex);
+        VkSubmitInfo2 submitInfoNew;
+        // last command buffer in queue submit (restoring original settings)
+        if (cmdBufIndex == (submitInfoOrig.commandBufferInfoCount - 1)) {
+          // last submit in QueueSubmit (restoring original fence)
+          if (i == (submitCount - 1)) {
+            fenceNew = fence;
+          }
+          submitInfoNew = {VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+                           submitInfoOrig.pNext,
+                           submitInfoOrig.flags,
+                           submitInfoOrig.waitSemaphoreInfoCount,
+                           submitInfoOrig.pWaitSemaphoreInfos,
+                           1,
+                           &cmdbufferSubmitInfo,
+                           submitInfoOrig.signalSemaphoreInfoCount,
+                           submitInfoOrig.pSignalSemaphoreInfos};
+        } else {
+          submitInfoNew = {VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+                           nullptr,
+                           0,
+                           0,
+                           nullptr,
+                           1,
+                           &cmdbufferSubmitInfo,
+                           0,
+                           nullptr};
+        }
+        return_value = drvVk.vkQueueSubmit2(queue, 1, &submitInfoNew, fenceNew);
+        if (return_value != VK_SUCCESS) {
+          Log(WARN) << "vkQueueSubmit2 failed. Cannot dump submit image.";
+        } else {
+          CGitsPluginVulkan::RecorderWrapper().dumpScreenshot(
+              queue, cmdbufferSubmitInfo.commandBuffer, i, cmdBufIndex);
+        }
       }
     }
   } else {
