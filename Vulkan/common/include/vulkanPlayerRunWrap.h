@@ -584,8 +584,6 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
                                   CVkFence& fence) {
   if ((*submitCount > 0) && (!Config::Get().player.captureVulkanSubmits.empty() ||
                              !Config::Get().player.captureVulkanSubmitsResources.empty() ||
-                             !Config::Get().player.captureVulkanRenderPasses.empty() ||
-                             !Config::Get().player.captureVulkanRenderPassesResources.empty() ||
                              Config::Get().player.oneVulkanDrawPerCommandBuffer ||
                              Config::Get().player.oneVulkanRenderPassPerCommandBuffer)) {
     auto pSubmitInfoArray = *pSubmits;
@@ -719,8 +717,6 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
                                    CVkFence& fence) {
   if ((*submitCount > 0) && (!Config::Get().player.captureVulkanSubmits.empty() ||
                              !Config::Get().player.captureVulkanSubmitsResources.empty() ||
-                             !Config::Get().player.captureVulkanRenderPasses.empty() ||
-                             !Config::Get().player.captureVulkanRenderPassesResources.empty() ||
                              Config::Get().player.oneVulkanDrawPerCommandBuffer ||
                              Config::Get().player.oneVulkanRenderPassPerCommandBuffer)) {
     auto pSubmitInfo2Array = *pSubmits;
