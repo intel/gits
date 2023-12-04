@@ -385,6 +385,29 @@ bool configure_player(int argc, char** argv) {
       "buffers from 1 to 20, command buffer 30 and even numbered command buffers between 40 and 50 "
       "(all ranges are inclusive).");
 
+  TypedOption<std::string> optionCaptureVulkanResources(
+      options, OPTION_GROUP_IMAGE, 0, "captureVulkanResources",
+      "List of Vulkan draws, blits, dispatches, whose storage buffers, storage images, destination "
+      "buffers  and destination textures be captured during playback.\n"
+      "The format consists of a hierarchy of numbers:\n"
+      "queue_submit_number/command_buffer_batch_number/command_buffer_number "
+      "which can be adapted. User may omit elements, starting from the rightmost (e.g. omit "
+      "command buffer number and use the "
+      "queue_submit_number/command_buffer_batch_number form or even omit "
+      "everything except the queue submit number). Additionally "
+      "the rightmost number may be replaced with an elemspec (creating a "
+      "number/number/number/elemspec form or even a form consisting of just a single "
+      "elemspec specifying queues).\n"
+
+      "Example elemspecs:\n"
+      " * \"1/2/3/4\" specifies queue submit number 1, command buffer batch number 2, "
+      "commandbuffer number 3, render pass number 4,\n"
+      " * \"3,5-10\" specifies queue submit number 3 and queue submits from 5 to 10 (it's actually "
+      "a normal elemspec),\n"
+      " * \"7/2/1-20,30,40-50:2\" specifies queue submit number 7, command buffer batch 2, command "
+      "buffers from 1 to 20, command buffer 30 and even numbered command buffers between 40 and 50 "
+      "(all ranges are inclusive).");
+
   TypedOption<BitRange> optionTraceGLBufferHashes(
       options, OPTION_GROUP_GENERAL, 0, "traceGLBufferHashes",
       "Together with --loglevel TRACEVERBOSE causes additional info to be printed "
@@ -1387,6 +1410,22 @@ bool configure_player(int argc, char** argv) {
     }
   }
 
+  if (optionCaptureVulkanResources.Present()) {
+    std::istringstream issVulkanResources(optionCaptureVulkanResources.Value());
+    std::vector<std::string> resourceTable;
+
+    std::string strObj;
+    while (std::getline(issVulkanResources, strObj, '/')) {
+      resourceTable.push_back(strObj);
+    }
+    cfg.player.captureVulkanResources.range = BitRange(resourceTable.back());
+    resourceTable.pop_back();
+
+    for (auto& obj : resourceTable) {
+      cfg.player.captureVulkanResources.objVector.push_back(std::stoul(obj, nullptr, 0));
+    }
+  }
+
   set_when_option_present(cfg.player.oneVulkanDrawPerCommandBuffer,
                           optionOneVulkanDrawPerCommandBuffer);
 
@@ -1396,11 +1435,12 @@ bool configure_player(int argc, char** argv) {
   if (optionCaptureVulkanRenderPasses.Present() ||
       optionCaptureVulkanRenderPassesResources.Present() ||
       optionOneVulkanDrawPerCommandBuffer.Present() ||
-      optionOneVulkanRenderPassPerCommandBuffer.Present() || optionCaptureVulkanDraws.Present()) {
+      optionOneVulkanRenderPassPerCommandBuffer.Present() || optionCaptureVulkanDraws.Present() ||
+      optionCaptureVulkanResources.Present()) {
     cfg.player.execCmdBuffsBeforeQueueSubmit = true;
   }
 
-  if (optionCaptureVulkanDraws.Present()) {
+  if (optionCaptureVulkanDraws.Present() || optionCaptureVulkanResources.Present()) {
     cfg.player.oneVulkanDrawPerCommandBuffer = true;
   }
 

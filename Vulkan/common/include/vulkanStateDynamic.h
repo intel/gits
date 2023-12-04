@@ -1361,6 +1361,22 @@ struct CCommandBufferState : public UniqueResourceHandle {
         currentPipelineBindPoint(VK_PIPELINE_BIND_POINT_GRAPHICS),
         tokensBuffer(),
         commandPoolStateStore(_commandPoolState) {}
+  void removeBlitsFromResourceMap() {
+    for (auto obj = begin(resourceWriteBuffers); obj != end(resourceWriteBuffers);) {
+      if (obj->second == VULKAN_BLIT_DESTINATION_BUFFER) {
+        obj = resourceWriteBuffers.erase(obj);
+      } else {
+        ++obj;
+      }
+    }
+    for (auto obj = begin(resourceWriteImages); obj != end(resourceWriteImages);) {
+      if (obj->second == VULKAN_BLIT_DESTINATION_IMAGE || obj->second == VULKAN_RESOLVE_IMAGE) {
+        obj = resourceWriteImages.erase(obj);
+      } else {
+        ++obj;
+      }
+    }
+  }
 
   std::set<uint64_t> GetMappedPointers() {
     std::set<uint64_t> pointers;

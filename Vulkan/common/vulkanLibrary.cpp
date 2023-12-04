@@ -218,20 +218,29 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::CreateNewCommandBuffer(Vulkan::
                                  ->beginCommandBuffer->commandBufferBeginInfoData.Value());
 }
 
-void CLibrary::CVulkanCommandBufferTokensBuffer::RestoreSettingsToSpecifiedRenderPass(
-    uint64_t renderPassNumber) {
+void CLibrary::CVulkanCommandBufferTokensBuffer::RestoreSettingsToSpecifiedObject(
+    uint64_t objNumber, Config::VulkanObjectMode objMode) {
+  uint64_t blitCount = 0;
+  uint64_t dispatchCount = 0;
+  bool isRenderPassMode = objMode == Config::MODE_VKRENDERPASS;
+  bool isBlitMode = objMode == Config::MODE_VKBLIT;
+  bool isDispatchMode = objMode == Config::MODE_VKDISPATCH;
+
   uint64_t renderPassCount = 0;
   for (auto elem : _tokensList) {
     if ((elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_SET_APITYPE ||
          elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_BIND_APITYPE ||
          elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_PUSH_APITYPE) &&
-        (renderPassCount < renderPassNumber)) {
+        ((isRenderPassMode && renderPassCount < objNumber) ||
+         (isBlitMode && blitCount < objNumber) || (isDispatchMode && dispatchCount < objNumber))) {
       // restoring VkCommandBuffer settings
       elem->Exec();
     } else if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
       renderPassCount++;
-    } else if (renderPassCount >= renderPassNumber) {
-      break;
+    } else if (elem->Type() & CFunction::GITS_VULKAN_BLIT_APITYPE) {
+      blitCount++;
+    } else if (elem->Type() & CFunction::GITS_VULKAN_DISPATCH_APITYPE) {
+      dispatchCount++;
     }
   }
 }
@@ -318,6 +327,8 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
   uint64_t renderPassCount = 0;
   uint64_t drawCount = 0;
   uint64_t drawInRenderPass = 0;
+  uint64_t blitCount = 0;
+  uint64_t dispatchCount = 0;
   for (auto elem : _tokensList) {
     cmdBuffer = CVkCommandBuffer::GetMapping(elem->CommandBuffer());
     if (Config::Get().player.oneVulkanDrawPerCommandBuffer &&
@@ -380,13 +391,54 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
         vulkanScheduleCopyRenderPasses(cmdBuffer, queueSubmitNumber, cmdBuffBatchNumber,
                                        cmdBuffNumber, renderPassCount, drawInRenderPass);
       }
+      if (localCounter == Config::Get().player.captureVulkanResources) {
+        vulkanScheduleCopyResources(cmdBuffer, queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
+                                    renderPassCount, VulkanDumpingMode::VULKAN_PER_DRAW,
+                                    drawInRenderPass);
+      }
       FinishCommandBufferAndSubmit(cmdBuffer);
       if (!SD()._commandbufferstates[cmdBuffer]->drawImages.empty()) {
         vulkanDumpRenderPasses(cmdBuffer);
       }
+      bool capturesResourcesCheck =
+          !Config::Get().player.captureVulkanResources.empty() &&
+          (!SD()._commandbufferstates[cmdBuffer]->renderPassResourceImages.empty() ||
+           !SD()._commandbufferstates[cmdBuffer]->renderPassResourceBuffers.empty());
+      if (capturesResourcesCheck) {
+        vulkanDumpRenderPassResources(cmdBuffer);
+      }
       CreateNewCommandBuffer(elem, cmdBuffer);
       cmdBuffer = CVkCommandBuffer::GetMapping(elem->CommandBuffer());
       RestoreSettingsToSpecifiedDraw(elem, renderPassCount, drawCount, cmdBuffer);
+    } else if (elem->Type() & CFunction::GITS_VULKAN_BLIT_APITYPE) {
+      blitCount++;
+      CGits::CCounter localCounter = {queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
+                                      blitCount};
+      if (localCounter == Config::Get().player.captureVulkanResources) {
+        vulkanScheduleCopyResources(cmdBuffer, queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
+                                    blitCount, VulkanDumpingMode::VULKAN_PER_BLIT);
+      }
+      // can't finish commandBuffer on blit (e.g. barriers). Will dump resources on next draw/dispatch
+    } else if (elem->Type() & CFunction::GITS_VULKAN_DISPATCH_APITYPE) {
+      dispatchCount++;
+      CGits::CCounter localCounter = {queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
+                                      dispatchCount};
+      if (localCounter == Config::Get().player.captureVulkanResources) {
+        vulkanScheduleCopyResources(cmdBuffer, queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
+                                    dispatchCount, VulkanDumpingMode::VULKAN_PER_DISPATCH);
+      }
+
+      bool capturesResourcesCheck =
+          !Config::Get().player.captureVulkanResources.empty() &&
+          (!SD()._commandbufferstates[cmdBuffer]->renderPassResourceImages.empty() ||
+           !SD()._commandbufferstates[cmdBuffer]->renderPassResourceBuffers.empty());
+      if (capturesResourcesCheck) {
+        FinishCommandBufferAndSubmit(cmdBuffer);
+        vulkanDumpRenderPassResources(cmdBuffer);
+        CreateNewCommandBuffer(elem, cmdBuffer);
+        cmdBuffer = CVkCommandBuffer::GetMapping(elem->CommandBuffer());
+        RestoreSettingsToSpecifiedObject(dispatchCount, Config::MODE_VKDISPATCH);
+      }
     }
     if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
       if (Config::Get().player.oneVulkanDrawPerCommandBuffer) {
@@ -457,7 +509,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
       }
       if (localCounter == Config::Get().player.captureVulkanRenderPassesResources) {
         vulkanScheduleCopyResources(cmdBuffer, queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
-                                    renderPassCount);
+                                    renderPassCount, VulkanDumpingMode::VULKAN_PER_RENDERPASS);
       }
       renderPassCount++;
       drawInRenderPass = 0;
@@ -479,7 +531,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
         }
         CreateNewCommandBuffer(elem, cmdBuffer);
         cmdBuffer = CVkCommandBuffer::GetMapping(elem->CommandBuffer());
-        RestoreSettingsToSpecifiedRenderPass(renderPassCount);
+        RestoreSettingsToSpecifiedObject(renderPassCount, Config::MODE_VKRENDERPASS);
       }
     }
   }

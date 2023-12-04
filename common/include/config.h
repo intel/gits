@@ -417,6 +417,7 @@ struct Config {
     VulkanObjectRange captureVulkanRenderPasses;
     VulkanObjectRange captureVulkanRenderPassesResources;
     VulkanObjectRange captureVulkanDraws;
+    VulkanObjectRange captureVulkanResources;
     vi_bool skipNonDeterministicImages;
     vi_bool precacheResources;
     vi_bool forceWindowPos;

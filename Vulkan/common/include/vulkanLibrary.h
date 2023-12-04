@@ -68,7 +68,7 @@ public:
                           VkCommandBuffer cmdBuffer);
     void FinishCommandBufferAndSubmit(VkCommandBuffer cmdBuffer);
     void CreateNewCommandBuffer(Vulkan::CFunction* token, VkCommandBuffer cmdBuffer);
-    void RestoreSettingsToSpecifiedRenderPass(uint64_t renderPassNumber);
+    void RestoreSettingsToSpecifiedObject(uint64_t objNumber, Config::VulkanObjectMode objMode);
     void RestoreSettingsToSpecifiedDraw(Vulkan::CFunction* token,
                                         uint64_t renderPassNumber,
                                         uint64_t drawNumber,

@@ -55,7 +55,8 @@ inline bool captureRenderPasses() {
 inline bool captureRenderPassesResources() {
   static bool captureRenderPassesResources =
       !Config::Get().player.captureVulkanSubmitsResources.empty() ||
-      !Config::Get().player.captureVulkanRenderPassesResources.empty();
+      !Config::Get().player.captureVulkanRenderPassesResources.empty() ||
+      !Config::Get().player.captureVulkanResources.empty();
   return captureRenderPassesResources;
 }
 

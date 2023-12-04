@@ -662,8 +662,13 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
             Config::Get().player.captureVulkanSubmitsResources
                 [(size_t)CGits::Instance().vkCounters.CurrentQueueSubmitCount()];
 
+        bool capturesResourcesCheck =
+            !Config::Get().player.captureVulkanResources.empty() &&
+            (!SD()._commandbufferstates[cmdbuffer]->renderPassResourceImages.empty() ||
+             !SD()._commandbufferstates[cmdbuffer]->renderPassResourceBuffers.empty());
+
         if (captureVulkanSubmitsCheck || captureVulkanSubmitsResourcesCheck ||
-            Config::Get().player.waitAfterQueueSubmitWA) {
+            capturesResourcesCheck || Config::Get().player.waitAfterQueueSubmitWA) {
           drvVk.vkQueueWaitIdle(*queue);
         }
         if (captureVulkanSubmitsCheck) {
@@ -671,6 +676,9 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
         }
         if (captureVulkanSubmitsResourcesCheck) {
           writeResources(*queue, cmdbuffer, i, cmdBufIndex);
+        }
+        if (capturesResourcesCheck) {
+          vulkanDumpRenderPassResources(cmdbuffer);
         }
       }
     }
@@ -803,8 +811,14 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
             Config::Get().player.captureVulkanSubmitsResources
                 [(size_t)CGits::Instance().vkCounters.CurrentQueueSubmitCount()];
 
+        bool capturesResourcesCheck = !Config::Get().player.captureVulkanResources.empty() &&
+                                      (!SD()._commandbufferstates[cmdbufferSubmitInfo.commandBuffer]
+                                            ->renderPassResourceImages.empty() ||
+                                       !SD()._commandbufferstates[cmdbufferSubmitInfo.commandBuffer]
+                                            ->renderPassResourceBuffers.empty());
+
         if (captureVulkanSubmitsCheck || captureVulkanSubmitsResourcesCheck ||
-            Config::Get().player.waitAfterQueueSubmitWA) {
+            capturesResourcesCheck || Config::Get().player.waitAfterQueueSubmitWA) {
           drvVk.vkQueueWaitIdle(*queue);
         }
         if (captureVulkanSubmitsCheck) {
@@ -812,6 +826,9 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
         }
         if (captureVulkanSubmitsResourcesCheck) {
           writeResources(*queue, cmdbufferSubmitInfo.commandBuffer, i, cmdBufIndex);
+        }
+        if (capturesResourcesCheck) {
+          vulkanDumpRenderPassResources(cmdbufferSubmitInfo.commandBuffer);
         }
       }
     }
@@ -1640,7 +1657,8 @@ inline void vkCreateSwapchainKHR_WRAPRUN(CVkResult& recorderSideReturnValue,
       !Config::Get().player.captureVulkanSubmits.empty() ||
       !Config::Get().player.captureVulkanRenderPasses.empty() ||
       !Config::Get().player.captureVulkanRenderPassesResources.empty() ||
-      !Config::Get().player.captureVulkanDraws.empty()) {
+      !Config::Get().player.captureVulkanDraws.empty() ||
+      !Config::Get().player.captureVulkanResources.empty()) {
     createInfo.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     Log(TRACE) << "Modifying swapchain usage for frames/render targets capturing!!";
   }
@@ -1862,7 +1880,8 @@ inline void vkCreateImage_WRAPRUN(CVkResult& recorderSideReturnValue,
       !Config::Get().player.captureVulkanSubmitsResources.empty() ||
       !Config::Get().player.captureVulkanRenderPasses.empty() ||
       !Config::Get().player.captureVulkanRenderPassesResources.empty() ||
-      !Config::Get().player.captureVulkanDraws.empty()) {
+      !Config::Get().player.captureVulkanDraws.empty() ||
+      !Config::Get().player.captureVulkanResources.empty()) {
     createInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     Log(TRACE) << "Modifying image usage for render targets capturing!!";
   }
@@ -1881,7 +1900,9 @@ inline void vkCreateBuffer_WRAPRUN(CVkResult& recorderSideReturnValue,
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
   VkBufferCreateInfo createInfo = *pCreateInfo;
-  if (!Config::Get().player.captureVulkanSubmitsResources.empty()) {
+  if (!Config::Get().player.captureVulkanSubmitsResources.empty() ||
+      !Config::Get().player.captureVulkanRenderPassesResources.empty() ||
+      !Config::Get().player.captureVulkanResources.empty()) {
     createInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     Log(TRACE) << "Modifying buffer usage for resource capturing!!";
   }

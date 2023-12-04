@@ -40,7 +40,9 @@ typedef enum _VulkanDumpingMode {
   VULKAN_NONE,
   VULKAN_PER_COMMANDBUFFER,
   VULKAN_PER_RENDERPASS,
-  VULKAN_PER_DRAW
+  VULKAN_PER_DRAW,
+  VULKAN_PER_BLIT,
+  VULKAN_PER_DISPATCH
 } VulkanDumpingMode;
 
 bool writeScreenshotUtil(std::string fileName,
@@ -189,6 +191,7 @@ void vulkanScheduleCopyResources(VkCommandBuffer cmdBuffer,
                                  uint32_t cmdBuffBatchNumber,
                                  uint32_t cmdBuffNumber,
                                  uint64_t renderPassNumber,
+                                 VulkanDumpingMode dumpingMode,
                                  uint64_t drawNumber = 0);
 void vulkanScheduleCopyRenderPasses(VkCommandBuffer cmdBuffer,
                                     uint64_t queueSubmitNumber,
