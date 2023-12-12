@@ -315,9 +315,6 @@ inline void clCreateKernel_SD(cl_kernel return_value,
     auto& kernelState = SD()._kernelStates[return_value];
     kernelState.reset(new CCLKernelState(program, kernel_name));
     kernelState->Retain();
-    // if (!SD().GetProgramState(program, EXCEPTION_MESSAGE).isBinary) {
-    //   SD().layoutBuilder.AddBuildOptions(*kernelState);
-    // }
   }
 }
 
