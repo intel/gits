@@ -391,6 +391,7 @@ inline void clCreateProgramWithSource_SD(CFunction* token,
     }
     programState.reset(new CCLProgramState(context, count, strings, lengths, std::move(filename)));
     programState->Retain();
+    programState->isKernelArgInfoAvailable = true;
   }
 }
 

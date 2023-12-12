@@ -48,8 +48,9 @@ bool IsReadOnlyObject(cl_kernel kernel, cl_uint index) {
   auto isReadOnly = false;
   if ((cfg.IsPlayer() ? cfg.player.clOmitReadOnlyObjects
                       : cfg.recorder.openCL.utilities.omitReadOnlyObjects)) {
-    const auto& arg = SD().GetKernelState(kernel, EXCEPTION_MESSAGE).GetArgument(index);
-    if (CheckArgTypeInfo(kernel, index)) {
+    const auto& kernelState = SD().GetKernelState(kernel, EXCEPTION_MESSAGE);
+    const auto& arg = kernelState.GetArgument(index);
+    if (kernelState.programState->isKernelArgInfoAvailable && CheckArgTypeInfo(kernel, index)) {
       isReadOnly = true;
     } else if (arg.type == KernelArgType::mem) {
       const cl_mem memObj = *reinterpret_cast<const cl_mem*>(arg.argValue);

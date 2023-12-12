@@ -159,6 +159,7 @@ public:
   bool isBinary = false;
   std::string fileName;
   bool isKhrApi = false;
+  bool isKernelArgInfoAvailable = false;
 
   CCLProgramState();
   // clCreateProgramFromSource
