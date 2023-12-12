@@ -294,15 +294,8 @@ inline void vkCreateDevice_SD(VkResult return_value,
     auto deviceState = std::make_shared<CDeviceState>(pDevice, pCreateInfo,
                                                       SD()._physicaldevicestates[physicalDevice]);
 
-    std::vector<VkQueueFamilyProperties> queueFamilies;
-    {
-      uint32_t queueFamiliesCount = 0;
-      drvVk.vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamiliesCount, nullptr);
-
-      queueFamilies.resize(queueFamiliesCount);
-      drvVk.vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamiliesCount,
-                                                     queueFamilies.data());
-    }
+    const auto& queueFamilies =
+        SD()._physicaldevicestates[physicalDevice]->queueFamilyPropertiesCurrent;
 
     for (uint32_t qci = 0; qci < pCreateInfo->queueCreateInfoCount; ++qci) {
       for (uint32_t qc = 0; qc < pCreateInfo->pQueueCreateInfos[qci].queueCount; ++qc) {

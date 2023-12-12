@@ -2017,20 +2017,15 @@ bool checkForSupportForPhysicalDeviceFeatures(VkPhysicalDevice physicalDevice,
   return true;
 }
 
+#ifndef BUILD_FOR_CCODE
 bool checkForSupportForQueues(VkPhysicalDevice physicalDevice,
                               uint32_t requestedQueueCreateInfoCount,
                               VkDeviceQueueCreateInfo const* requestedQueueCreateInfos) {
-  uint32_t availableQueueFamiliesCount = 0;
-  drvVk.vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &availableQueueFamiliesCount,
-                                                 nullptr);
-  if (availableQueueFamiliesCount == 0) {
-    throw std::runtime_error("No queue family available on the current platform. Potential driver "
-                             "bug or driver installation issues. Exiting!");
-  }
-
-  std::vector<VkQueueFamilyProperties> availableQueueFamilies(availableQueueFamiliesCount);
-  drvVk.vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &availableQueueFamiliesCount,
-                                                 availableQueueFamilies.data());
+  const auto& availableQueueFamilies =
+      SD()._physicaldevicestates[physicalDevice]->queueFamilyPropertiesCurrent;
+  const auto availableQueueFamiliesCount = availableQueueFamilies.size();
+  const auto& queueFamilyPropertiesOriginal =
+      SD()._physicaldevicestates[physicalDevice]->queueFamilyPropertiesOriginal;
 
   for (uint32_t i = 0; i < requestedQueueCreateInfoCount; ++i) {
     uint32_t requestedQueueFamilyIndex = requestedQueueCreateInfos[i].queueFamilyIndex;
@@ -2053,13 +2048,20 @@ bool checkForSupportForQueues(VkPhysicalDevice physicalDevice,
                  << " queue(s) for family index: " << requestedQueueFamilyIndex << ".";
       }
       return false;
+    } else if (!isBitSet(availableQueueFamilies[i].queueFlags,
+                         queueFamilyPropertiesOriginal[i].queueFlags)) {
+      Log(ERR) << "Queue families are not compatible!";
+      VkLog(ERR) << "Original queue family flags at index " << i << ": "
+                 << queueFamilyPropertiesOriginal[i].queueFlags;
+      VkLog(ERR) << "Current platform queue family flags at index " << i << ": "
+                 << availableQueueFamilies[i].queueFlags;
+      return false;
     }
   }
 
   return true;
 }
 
-#ifndef BUILD_FOR_CCODE
 bool areDeviceExtensionsSupported(VkPhysicalDevice physicalDevice,
                                   uint32_t requestedExtensionsCount,
                                   char const* const* requestedExtensions,

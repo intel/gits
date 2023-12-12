@@ -2180,5 +2180,61 @@ inline void vkCmdBuildAccelerationStructuresKHR_WRAPRUN(
                                             buildRangeInfos);
 }
 
+inline void vkGetPhysicalDeviceQueueFamilyProperties_WRAPRUN(
+    CVkPhysicalDevice& _physicalDevice,
+    Cuint32_t::CSArray& _pQueueFamilyPropertyCount,
+    CVkQueueFamilyPropertiesArray& _pQueueFamilyProperties) {
+  if (*_pQueueFamilyProperties != nullptr) {
+    auto& physicalDeviceState = SD()._physicaldevicestates[*_physicalDevice];
+    auto originalProperties = _pQueueFamilyProperties.Original();
+    auto queueFamilyPropertyCount = **_pQueueFamilyPropertyCount;
+
+    for (uint32_t i = 0; i < queueFamilyPropertyCount; i++) {
+      physicalDeviceState->queueFamilyPropertiesOriginal.push_back(originalProperties[i]);
+    }
+  }
+
+  drvVk.vkGetPhysicalDeviceQueueFamilyProperties(*_physicalDevice, *_pQueueFamilyPropertyCount,
+                                                 *_pQueueFamilyProperties);
+}
+
+inline void vkGetPhysicalDeviceQueueFamilyProperties2_WRAPRUN(
+    CVkPhysicalDevice& _physicalDevice,
+    Cuint32_t::CSArray& _pQueueFamilyPropertyCount,
+    CVkQueueFamilyProperties2Array& _pQueueFamilyProperties) {
+  if (*_pQueueFamilyProperties != nullptr) {
+    auto& physicalDeviceState = SD()._physicaldevicestates[*_physicalDevice];
+    auto originalProperties = _pQueueFamilyProperties.Original();
+    auto queueFamilyPropertyCount = **_pQueueFamilyPropertyCount;
+
+    for (uint32_t i = 0; i < queueFamilyPropertyCount; i++) {
+      physicalDeviceState->queueFamilyPropertiesOriginal.push_back(
+          originalProperties[i].queueFamilyProperties);
+    }
+  }
+
+  drvVk.vkGetPhysicalDeviceQueueFamilyProperties2(*_physicalDevice, *_pQueueFamilyPropertyCount,
+                                                  *_pQueueFamilyProperties);
+}
+
+inline void vkGetPhysicalDeviceQueueFamilyProperties2KHR_WRAPRUN(
+    CVkPhysicalDevice& _physicalDevice,
+    Cuint32_t::CSArray& _pQueueFamilyPropertyCount,
+    CVkQueueFamilyProperties2Array& _pQueueFamilyProperties) {
+  if (*_pQueueFamilyProperties != nullptr) {
+    const auto& physicalDeviceState = SD()._physicaldevicestates[*_physicalDevice];
+    auto originalProperties = _pQueueFamilyProperties.Original();
+    auto queueFamilyPropertyCount = **_pQueueFamilyPropertyCount;
+
+    for (uint32_t i = 0; i < queueFamilyPropertyCount; i++) {
+      physicalDeviceState->queueFamilyPropertiesOriginal.push_back(
+          originalProperties[i].queueFamilyProperties);
+    }
+  }
+
+  drvVk.vkGetPhysicalDeviceQueueFamilyProperties2KHR(*_physicalDevice, *_pQueueFamilyPropertyCount,
+                                                     *_pQueueFamilyProperties);
+}
+
 } // namespace Vulkan
 } // namespace gits

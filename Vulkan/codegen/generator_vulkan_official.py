@@ -3662,21 +3662,21 @@ arg2=ArgDef(name='pPerformanceQueryCreateInfo', type='const VkQueryPoolPerforman
 arg3=ArgDef(name='pNumPasses', type='uint32_t*')
 )
 
-Function(name='vkGetPhysicalDeviceQueueFamilyProperties', enabled=True, type=Param, level=InstanceLevel,
+Function(name='vkGetPhysicalDeviceQueueFamilyProperties', enabled=True, type=Param, runWrap=True, level=InstanceLevel,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 arg2=ArgDef(name='pQueueFamilyPropertyCount', type='uint32_t*', wrapParams='1, pQueueFamilyPropertyCount'),
 arg3=ArgDef(name='pQueueFamilyProperties', type='VkQueueFamilyProperties*', wrapType='CVkQueueFamilyPropertiesArray', wrapParams='*pQueueFamilyPropertyCount, pQueueFamilyProperties', count='*pQueueFamilyPropertyCount')
 )
 
-Function(name='vkGetPhysicalDeviceQueueFamilyProperties2', enabled=True, type=Param, level=InstanceLevel,
+Function(name='vkGetPhysicalDeviceQueueFamilyProperties2', enabled=True, type=Param, runWrap=True, level=InstanceLevel,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 arg2=ArgDef(name='pQueueFamilyPropertyCount', type='uint32_t*', wrapParams='1, pQueueFamilyPropertyCount'),
 arg3=ArgDef(name='pQueueFamilyProperties', type='VkQueueFamilyProperties2*', wrapType='CVkQueueFamilyProperties2Array', wrapParams='*pQueueFamilyPropertyCount, pQueueFamilyProperties', count='*pQueueFamilyPropertyCount')
 )
 
-Function(name='vkGetPhysicalDeviceQueueFamilyProperties2KHR', enabled=True, type=Param, level=InstanceLevel,
+Function(name='vkGetPhysicalDeviceQueueFamilyProperties2KHR', enabled=True, type=Param, runWrap=True, level=InstanceLevel,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 arg2=ArgDef(name='pQueueFamilyPropertyCount', type='uint32_t*', wrapParams='1, pQueueFamilyPropertyCount'),

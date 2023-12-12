@@ -163,13 +163,17 @@ struct CPhysicalDeviceState : public UniqueResourceHandle {
   std::shared_ptr<CInstanceState> instanceStateStore;
   // mapping original memory type index into current platform memory type index
   std::unordered_map<uint32_t, uint32_t> correspondingMemoryTypeIndexes;
+  std::vector<VkQueueFamilyProperties> queueFamilyPropertiesOriginal;
+  std::vector<VkQueueFamilyProperties> queueFamilyPropertiesCurrent;
 
   CPhysicalDeviceState(VkPhysicalDevice _physicalDevice,
                        std::shared_ptr<CInstanceState>& _instanceState)
       : physicalDeviceHandle(_physicalDevice),
         memoryPropertiesOriginal(),
         instanceStateStore(_instanceState) {
+    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
     drvVk.vkGetPhysicalDeviceMemoryProperties(_physicalDevice, &memoryPropertiesCurrent);
+    getCurrentQueueFamilyProperties();
   }
 
   std::set<uint64_t> GetMappedPointers() {
@@ -179,6 +183,21 @@ struct CPhysicalDeviceState : public UniqueResourceHandle {
       pointers.insert((uint64_t)obj);
     }
     return pointers;
+  }
+
+private:
+  void getCurrentQueueFamilyProperties() {
+    uint32_t queueFamilyCount = 0;
+    drvVk.vkGetPhysicalDeviceQueueFamilyProperties(physicalDeviceHandle, &queueFamilyCount,
+                                                   nullptr);
+    if (queueFamilyCount == 0) {
+      throw std::runtime_error(
+          "No queue family available on the current platform. Potential driver "
+          "bug or driver installation issues. Exiting!");
+    }
+    queueFamilyPropertiesCurrent.resize(queueFamilyCount);
+    drvVk.vkGetPhysicalDeviceQueueFamilyProperties(physicalDeviceHandle, &queueFamilyCount,
+                                                   queueFamilyPropertiesCurrent.data());
   }
 };
 

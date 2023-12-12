@@ -76,10 +76,10 @@ bool checkForSupportForInstanceLayers(uint32_t requestedLayersCount,
                                       char const* const* requestedLayers);
 bool checkForSupportForPhysicalDeviceFeatures(VkPhysicalDevice physicalDevice,
                                               VkPhysicalDeviceFeatures* enabledFeatures);
+#ifndef BUILD_FOR_CCODE
 bool checkForSupportForQueues(VkPhysicalDevice physicalDevice,
                               uint32_t requestedQueueCreateInfoCount,
                               VkDeviceQueueCreateInfo const* requestedQueueCreateInfos);
-#ifndef BUILD_FOR_CCODE
 bool areDeviceExtensionsSupported(VkPhysicalDevice physicalDevice,
                                   uint32_t extensionsCount,
                                   char const* const* extensions,
