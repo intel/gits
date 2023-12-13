@@ -157,6 +157,7 @@ int MainBody(int argc, char* argv[]) {
       ChangeDisplaySettings(&devmode, 0);
     }
 
+#ifdef WITH_VULKAN
     if (cfg.player.renderDoc.frameRecEnabled || cfg.player.renderDoc.queuesubmitRecEnabled) {
       if (!cfg.player.renderDoc.dllPath.empty()) {
         Vulkan::RenderDocUtil::dllpath = cfg.player.renderDoc.dllPath.string();
@@ -165,6 +166,7 @@ int MainBody(int argc, char* argv[]) {
       }
       Vulkan::RenderDocUtil::GetInstance();
     }
+#endif
 #endif
 
     if (cfg.common.useEvents) {

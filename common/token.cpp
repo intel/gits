@@ -221,7 +221,7 @@ void CTokenFrameNumber::Run() {
   case CToken::ID_FRAME_START:
     // If this is stream without state restore, init finishes on begin of first frame.
 
-#if defined(GITS_PLATFORM_WINDOWS)
+#if defined(GITS_PLATFORM_WINDOWS) && defined(WITH_VULKAN)
     if (cfg.player.renderDoc.frameRecEnabled &&
         cfg.player.renderDoc.captureRange[CGits::Instance().CurrentFrame()]) {
       Vulkan::RenderDocUtil::GetInstance().StartRecording();
@@ -257,7 +257,7 @@ void CTokenFrameNumber::Run() {
     }
 #endif
 
-#if defined(GITS_PLATFORM_WINDOWS)
+#if defined(GITS_PLATFORM_WINDOWS) && defined(WITH_VULKAN)
     if (cfg.player.renderDoc.frameRecEnabled &&
         cfg.player.renderDoc.captureRange[CGits::Instance().CurrentFrame()]) {
       bool isLast = cfg.player.renderDoc.captureRange[CGits::Instance().CurrentFrame()] &&
