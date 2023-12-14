@@ -371,3 +371,106 @@ const char* gits::Cint64_t::NAME = "int64_t";
 const char* gits::Cfloat::NAME = "float";
 const char* gits::Cdouble::NAME = "double";
 const char* gits::Csize_t::NAME = "size_t";
+
+gits::CMappedHandle::CMappedHandle() : version_(0), handle_(nullptr) {}
+
+gits::CMappedHandle::CMappedHandle(void* arg) : version_(currentVersion_), handle_(arg) {}
+
+const char* gits::CMappedHandle::NAME = "void*"; // Most if not all handle types are void* typedefs.
+
+const char* gits::CMappedHandle::Name() const {
+  return NAME;
+}
+
+const char* gits::CMappedHandle::TypeNameStr() {
+  return NAME;
+}
+
+const char* gits::CMappedHandle::WrapTypeNameStr() {
+  return "CMappedHandle";
+}
+
+void gits::CMappedHandle::Write(CBinOStream& stream) const {
+  assert(*version_ == currentVersion_);
+  version_.Write(stream);
+  write_name_to_stream(stream, handle_);
+}
+
+void gits::CMappedHandle::Read(CBinIStream& stream) {
+  version_.Read(stream);
+  switch (*version_) {
+  case 0:
+    read_name_from_stream(stream, handle_);
+    return;
+  default:
+    if (*version_ > currentVersion_) {
+      Log(ERR) << "This stream uses version " << *version_
+               << " of the CMappedHandle argument, but "
+                  "the highest version this GITS build supports is "
+               << currentVersion_
+               << ". Get the latest "
+                  "GITS and try again.";
+      throw ENotSupported(EXCEPTION_MESSAGE);
+    } else {
+      Log(ERR) << "Unknown CMappedHandle argument version: " << *version_;
+      throw ENotSupported(EXCEPTION_MESSAGE);
+    }
+  }
+}
+
+void gits::CMappedHandle::Write(CCodeOStream& stream) const {
+  Log(ERR) << "External memory handles are not yet implemented in CCode.";
+  throw ENotImplemented(EXCEPTION_MESSAGE);
+}
+
+void* gits::CMappedHandle::Original() const {
+  return handle_;
+}
+
+void* gits::CMappedHandle::Value() const {
+  return GetMapping(handle_);
+}
+
+void* gits::CMappedHandle::operator*() const {
+  return Value();
+}
+
+std::set<uint64_t> gits::CMappedHandle::GetMappedPointers() {
+  Log(ERR) << "CMappedHandle::GetMappedPointers() is not implemented yet.";
+  throw ENotImplemented(EXCEPTION_MESSAGE);
+}
+
+void gits::CMappedHandle::AddMapping(void* key, void* value) {
+  get_map()[key] = value;
+}
+
+void gits::CMappedHandle::RemoveMapping(void* key) {
+  if (CheckMapping(key)) {
+    get_map().erase(key);
+  }
+}
+
+void* gits::CMappedHandle::GetMapping(void* key) {
+  const auto& the_map = get_map();
+  const auto iter = the_map.find(key);
+  if (iter == the_map.end()) {
+    Log(ERR) << "Couldn't map handle: " << key;
+    throw std::runtime_error(EXCEPTION_MESSAGE);
+  }
+  return iter->second;
+}
+
+bool gits::CMappedHandle::CheckMapping(void* key) {
+  const auto& the_map = get_map();
+  return the_map.find(key) != the_map.end();
+}
+
+gits::CMappedHandle::handle_map_t& gits::CMappedHandle::get_map() {
+  INIT_NEW_STATIC_OBJ(handles_map, handle_map_t)
+  static bool initialized = false;
+  if (!initialized) {
+    handles_map[nullptr] = nullptr;
+    initialized = true;
+  }
+  return handles_map;
+}

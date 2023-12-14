@@ -3370,11 +3370,11 @@ arg2=ArgDef(name='pMemoryGetRemoteAddressInfo', type='const VkMemoryGetRemoteAdd
 arg3=ArgDef(name='pAddress', type='VkRemoteAddressNV*')
 )
 
-Function(name='vkGetMemoryWin32HandleKHR', enabled=False, type=Param,
+Function(name='vkGetMemoryWin32HandleKHR', enabled=True, type=Param,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pGetWin32HandleInfo', type='const VkMemoryGetWin32HandleInfoKHR*'),
-arg3=ArgDef(name='pHandle', type='HANDLE*')
+arg3=ArgDef(name='pHandle', type='HANDLE*', wrapType='CMappedHandle::CSMapArray')
 )
 
 Function(name='vkGetMemoryWin32HandleNV', enabled=False, type=Param,
@@ -10978,7 +10978,7 @@ var3=VarDef(name='memory', type='VkDeviceMemory'),
 var4=VarDef(name='handleType', type='VkExternalMemoryHandleTypeFlagBits')
 )
 
-Struct(name='VkMemoryGetWin32HandleInfoKHR_', enabled=False,
+Struct(name='VkMemoryGetWin32HandleInfoKHR_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='memory', type='VkDeviceMemory'),

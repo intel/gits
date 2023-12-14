@@ -1683,6 +1683,51 @@ public:
   }
 };
 
+// **************************  CMappedHandle  **************************
+// Maps external memory handles used in recorder to player handles.
+class CMappedHandle : public CArgument {
+  static const uint32_t currentVersion_ = 0;
+  Cuint32_t version_;
+  void* handle_;
+
+public:
+  typedef CArgumentMappedSizedArray<void*, CMappedHandle, gits::ADD_MAPPING> CSMapArray;
+  typedef CArgumentMappedSizedArray<void*, CMappedHandle, gits::NO_ACTION> CSArray;
+
+  CMappedHandle();
+  CMappedHandle(void* arg);
+
+  static const char* NAME;
+
+  virtual const char* Name() const override;
+  static const char* TypeNameStr();
+  static const char* WrapTypeNameStr();
+
+  virtual void Write(CBinOStream& stream) const override;
+  virtual void Read(CBinIStream& stream) override;
+  virtual void Write([[maybe_unused]] CCodeOStream& stream) const override;
+
+  void* Original() const;
+  void* Value() const;
+  void* operator*() const;
+
+  std::set<uint64_t> GetMappedPointers();
+
+  // Mapping methods:
+  // TODO: the mapping logic should be in one class; every other mapping class should inherit it
+  // instead of copy-pasting it. Perhaps some classes could even be typedefs.
+  static void AddMapping(void* key, void* value);
+  static void RemoveMapping(void* key);
+  static void* GetMapping(void* key);
+  static bool CheckMapping(void* key);
+  // NOTE: If you are getting collisions of different handle types, separate the types by making
+  // this class a template parametrized by type tags.
+
+private:
+  typedef std::unordered_map<void*, void*> handle_map_t;
+  static handle_map_t& get_map();
+};
+
 } // namespace gits
 
 template <class T, class T_WRAP>

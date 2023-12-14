@@ -1878,7 +1878,7 @@ Argument(name='ze_external_memory_import_win32_handle_t',
 var1=VarDef(name='stype',type='ze_structure_type_t',tag='in'),
 var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructCore'),
 var3=VarDef(name='flags',type='ze_external_memory_type_flags_t',tag='in'),
-var4=VarDef(name='handle',type='void*',tag='in'),
+var4=VarDef(name='handle',type='void*',tag='in',wrapType='CMappedHandle'),
 var5=VarDef(name='name',type='const void*',tag='in'),
 )
 
