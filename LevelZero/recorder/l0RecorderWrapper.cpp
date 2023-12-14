@@ -18,7 +18,6 @@
 #include "l0Functions.h"
 #include "l0RecorderSubWrappers.h"
 #include "l0StateRestore.h"
-#include "opengl_apis_iface.h"
 
 static gits::l0::CRecorderWrapper* wrapper = nullptr;
 
@@ -26,10 +25,7 @@ gits::l0::IRecorderWrapper* STDCALL GITSRecorderL0() {
   if (wrapper == nullptr) {
     try {
       // library not set - perform initialization
-      // apis_iface.h:127 if(_3d.get() == 0) throw
       // TODO: figure out how to have two ComputeApis (L0 supports OCL interop)
-      gits::CGits::Instance().apis.UseApi3dIface(
-          std::make_shared<gits::OpenGL::OpenGLApi>()); //LevelZero coexists with OpenGL
       gits::CGits::Instance().apis.UseApiComputeIface(std::make_shared<gits::l0::Api>());
       gits::CRecorder& recorder = gits::CRecorder::Instance();
       wrapper = new gits::l0::CRecorderWrapper(recorder);
