@@ -163,8 +163,9 @@ void CTokenFrameNumber::Write(CCodeOStream& stream) const {
 }
 
 static void OnFrameBeginImpl() {
+  auto& gits = CGits::Instance();
   if (Config::Get().player.benchmark) {
-    CGits::Instance().Timers().frame.Restart();
+    gits.Timers().frame.Restart();
   }
 }
 

@@ -140,10 +140,13 @@ gits::CRecorder::CRecorder()
       _isMarkedForDeletion(false),
       _exitHotKeyId(0),
       _startHotKeyId(0) {
-  CGits::Instance().SetSC(&this->_sc);
+  CGits& inst = CGits::Instance();
+  const Config& config = Config::Get();
+
+  inst.SetSC(&this->_sc);
 
   Log(INFO) << "-----------------------------------------------------";
-  Log(INFO) << " GITS Recorder (" << CGits::Instance().Version() << ")";
+  Log(INFO) << " GITS Recorder (" << inst.Version() << ")";
   Log(INFO) << "-----------------------------------------------------";
 
 #ifdef GITS_PLATFORM_WINDOWS
@@ -151,8 +154,6 @@ gits::CRecorder::CRecorder()
   SignalsHandler();
 #endif
   forceExit = false;
-  CGits& inst = CGits::Instance();
-  const Config& config = Config::Get();
 
   // create file data and register it in GITS
   if (config.recorder.basic.enabled) {
@@ -165,53 +166,55 @@ gits::CRecorder::CRecorder()
 #endif
     inst.ResourceManagerInit(config.common.streamDir);
   }
+
   // register behaviors
+  const bool captureOnKeypress =
+      inst.apis.Has3D() && !inst.apis.Iface3D().CfgRec_StartKeys().empty();
   Log(INFO) << "Recorder mode: ";
-
-  // register behavior that dumps ranges of frames
-  auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
   std::ostringstream message;
-  bool captureOnKeypress = !api3dIface.CfgRec_StartKeys().empty();
   if (!config.recorder.basic.enabled) {
-    Log(INFO) << " - Off";
-  } else if (api3dIface.CfgRec_IsFramesMode()) {
-    message << " Start:" << api3dIface.CfgRec_StartFrame()
-            << " Stop:" << api3dIface.CfgRec_StopFrame();
-    Log(INFO) << " - Frames " << message.str();
-    if (captureOnKeypress) {
-      Log(INFO) << " - Initiate capture on user request. ";
+    message << " - Off";
+  } else {
+    if (inst.apis.Has3D()) {
+      const auto& api3dIface = inst.apis.Iface3D();
+      if (api3dIface.CfgRec_IsAllMode()) {
+        message << " - All";
+      } else if (api3dIface.CfgRec_IsFramesMode()) {
+        message << " - Frames ";
+        message << " Start:" << api3dIface.CfgRec_StartFrame()
+                << " Stop:" << api3dIface.CfgRec_StopFrame();
+        if (captureOnKeypress) {
+          message << "\n - Initiate capture on user request. ";
+        }
+      } else if (api3dIface.CfgRec_IsSingleDrawMode()) {
+        message << " - SingleDraw ";
+        message << " Number:" << api3dIface.CfgRec_SingleDraw();
+      } else if (api3dIface.CfgRec_IsDrawsRangeMode()) {
+        message << " - DrawsRange ";
+        message << " Start:" << api3dIface.CfgRec_StartDraw()
+                << " Stop:" << api3dIface.CfgRec_StopDraw()
+                << " Frame:" << api3dIface.CfgRec_Frame();
+      }
     }
-  } else if (api3dIface.CfgRec_IsAllMode()) {
-    Log(INFO) << " - All";
-  } else if (api3dIface.CfgRec_IsSingleDrawMode()) {
-    message << " Number:" << api3dIface.CfgRec_SingleDraw();
 
-    Log(INFO) << " - SingleDraw " << message.str();
-  } else if (api3dIface.CfgRec_IsDrawsRangeMode()) {
-    message << " Start:" << api3dIface.CfgRec_StartDraw()
-            << " Stop:" << api3dIface.CfgRec_StopDraw() << " Frame:" << api3dIface.CfgRec_Frame();
-
-    Log(INFO) << " - DrawsRange " << message.str();
+    if (inst.apis.HasCompute()) {
+      const auto& apiCompute = inst.apis.IfaceCompute();
+      if (apiCompute.CfgRec_IsAllMode()) {
+        message << " - All";
+      } else if (apiCompute.CfgRec_IsSingleKernelMode()) {
+        message << " - SingleKernel ";
+        message << " Number:" << apiCompute.CfgRec_SingleKernel();
+      } else if (apiCompute.CfgRec_IsKernelsRangeMode()) {
+        message << " - KernelsRange";
+        if (apiCompute.Api() != gits::ApisIface::TApi::LevelZero) {
+          message << " Start:" << apiCompute.CfgRec_StartKernel()
+                  << " Stop:" << apiCompute.CfgRec_StopKernel();
+        }
+      }
+    }
   }
+  Log(INFO) << message.str();
   Register(std::unique_ptr<CBehavior>(new CBehavior(*this, captureOnKeypress)));
-
-  if (gits::CGits::Instance().apis.HasCompute()) {
-    auto& apiCompute = gits::CGits::Instance().apis.IfaceCompute();
-    std::ostringstream message2;
-    if (apiCompute.CfgRec_IsAllMode()) {
-      Log(INFO) << " - All";
-    } else if (apiCompute.CfgRec_IsSingleKernelMode()) {
-      message2 << " Number:" << apiCompute.CfgRec_SingleKernel();
-
-      Log(INFO) << " - SingleKernel " << message2.str();
-    } else if (apiCompute.CfgRec_IsKernelsRangeMode()) {
-      message2 << " Start:" << apiCompute.CfgRec_StartKernel()
-               << " Stop:" << apiCompute.CfgRec_StopKernel();
-
-      Log(INFO) << " - KernelsRange"
-                << (apiCompute.Api() != gits::ApisIface::TApi::LevelZero ? message2.str() : "");
-    }
-  }
 
   if (config.recorder.extras.utilities.forceDumpOnError) {
 #ifdef _WIN32
@@ -262,33 +265,32 @@ void CloseApplicationOnStopRecording() {
  * Destructor of gits::CRecorder class.
  */
 gits::CRecorder::~CRecorder() {
-  try {
-    const Config& config = Config::Get();
-    auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
+  const Config& config = Config::Get();
+
+  if (gits::CGits::Instance().apis.Has3D()) {
+    const auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
     if (api3dIface.CfgRec_IsBenchmark() && config.recorder.basic.enabled) {
       std::ofstream out_file(config.common.streamDir / "benchmark.csv");
       CGits::Instance().TimeSheet().OutputTimeData(out_file, true);
     }
-
-    if (config.recorder.extras.utilities.forceDumpOnError) {
-      Exception::Callback(nullptr, nullptr);
-    }
-
-    if (config.recorder.extras.utilities.closeAppOnStopRecording) {
-      CloseApplicationOnStopRecording();
-    }
-
-    Close();
-    Save();
-
-    for (auto& e : _disposeEvents) {
-      e();
-    }
-
-    _instance = nullptr;
-  } catch (...) {
-    topmost_exception_handler("CRecorder::~CRecorder");
   }
+
+  if (config.recorder.extras.utilities.forceDumpOnError) {
+    Exception::Callback(nullptr, nullptr);
+  }
+
+  if (config.recorder.extras.utilities.closeAppOnStopRecording) {
+    CloseApplicationOnStopRecording();
+  }
+
+  Close();
+  Save();
+
+  for (auto& e : _disposeEvents) {
+    e();
+  }
+
+  _instance = nullptr;
 }
 
 gits::CLibrary* gits::CRecorder::Library(CLibrary::TId id) {
@@ -367,12 +369,14 @@ void gits::CRecorder::Register(std::unique_ptr<CBehavior> behavior) {
   auto& cmm = Config::Get().common;
   auto& rec = Config::Get().recorder;
 
-  auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
-  _exitHotKeyId = _inputListener.AddHotKey(rec.basic.exitKeys);
-  _inputListener.AddHotKeyEvent(_exitHotKeyId, ExitHotKeyPressed);
-  _startHotKeyId = _inputListener.AddHotKey(api3dIface.CfgRec_StartKeys());
-  _inputListener.StartHotKeyListener(rec.extras.utilities.windowsKeyHandling ==
-                                     TWindowsKeyHandling::MESSAGE_LOOP);
+  if (gits::CGits::Instance().apis.Has3D()) {
+    const auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
+    _exitHotKeyId = _inputListener.AddHotKey(rec.basic.exitKeys);
+    _inputListener.AddHotKeyEvent(_exitHotKeyId, ExitHotKeyPressed);
+    _startHotKeyId = _inputListener.AddHotKey(api3dIface.CfgRec_StartKeys());
+    _inputListener.StartHotKeyListener(rec.extras.utilities.windowsKeyHandling ==
+                                       TWindowsKeyHandling::MESSAGE_LOOP);
+  }
 
   if (rec.basic.enabled) {
     _sc.scheduler.reset(new CScheduler(cmm.tokenBurst, cmm.tokenBurstNum));
@@ -418,37 +422,47 @@ void gits::CRecorder::Register(std::unique_ptr<CBehavior> behavior) {
  * @exception ENotFound Specified behavior class was not found.
  */
 void gits::CRecorder::Start() {
-  const CGits& inst = CGits::Instance();
+  CGits& inst = CGits::Instance();
 
   // If you are looking for OpenCL state restoration, it is implemented in OpenCL wrapper, in clEnqueueNDRangeKernel.
   // If we started capture on frame other than the first one or recording mode is 'SingleDraw', state restoration is needed.
-  auto& api3dIface = inst.apis.Iface3D();
-  auto apiComputeIface = inst.apis.HasCompute() ? &inst.apis.IfaceCompute() : nullptr;
-  if ((api3dIface.CfgRec_IsFramesMode() && inst.CurrentFrame() != 1) ||
-      (api3dIface.CfgRec_IsSingleDrawMode() && api3dIface.CfgRec_SingleDraw() != 1) ||
-      (api3dIface.CfgRec_IsDrawsRangeMode()) || (api3dIface.CfgRec_IsCmdBufferMode()) ||
-      (api3dIface.CfgRec_IsRenderPassMode()) || (api3dIface.CfgRec_IsEncodersRangeMode()) ||
-      (api3dIface.CfgRec_IsSubEncodersRangeMode()) || (api3dIface.CfgRec_IsQueueSubmitMode()) ||
-      (api3dIface.CfgRec_IsBlitRangeMode()) || (api3dIface.CfgRec_IsDispatchRangeMode()) ||
-      (apiComputeIface != nullptr && (apiComputeIface->CfgRec_IsSingleKernelMode() ||
-                                      apiComputeIface->CfgRec_IsKernelsRangeMode()))) {
+  bool shouldRestore3DState = false;
+  if (inst.apis.Has3D()) {
+    const auto& api3dIface = inst.apis.Iface3D();
+    shouldRestore3DState =
+        (api3dIface.CfgRec_IsFramesMode() && inst.CurrentFrame() != 1) ||
+        (api3dIface.CfgRec_IsSingleDrawMode() && api3dIface.CfgRec_SingleDraw() != 1) ||
+        api3dIface.CfgRec_IsDrawsRangeMode() || api3dIface.CfgRec_IsCmdBufferMode() ||
+        api3dIface.CfgRec_IsRenderPassMode() || api3dIface.CfgRec_IsEncodersRangeMode() ||
+        api3dIface.CfgRec_IsSubEncodersRangeMode() || api3dIface.CfgRec_IsQueueSubmitMode() ||
+        api3dIface.CfgRec_IsBlitRangeMode() || api3dIface.CfgRec_IsDispatchRangeMode();
+  }
+  bool shouldRestoreComputeState = false;
+  if (inst.apis.HasCompute()) {
+    const auto& apiComputeIface = inst.apis.IfaceCompute();
+    shouldRestoreComputeState =
+        apiComputeIface.CfgRec_IsSingleKernelMode() || apiComputeIface.CfgRec_IsKernelsRangeMode();
+  }
+  const bool stateNeedsRestoring = shouldRestore3DState || shouldRestoreComputeState;
+
+  if (stateNeedsRestoring) {
     Scheduler().Register(new CTokenFrameNumber(CToken::ID_PRE_RECORD_END, inst.CurrentFrame()));
     for (auto it = inst.LibraryBegin(); it != inst.LibraryEnd(); ++it) {
       // schedule current library state only if not init frame number
       auto state((*it)->StateCreate());
       if (state) {
-        CGits::Instance().StateRestoreStarted();
+        inst.StateRestoreStarted();
         state->Prepare();
         state->Get();
         Scheduler().Register(new CTokenFrameNumber(CToken::ID_INIT_START, inst.CurrentFrame()));
         state->Schedule(Scheduler());
         Scheduler().Register(new CTokenFrameNumber(CToken::ID_INIT_END, inst.CurrentFrame()));
-        CGits::Instance().StateRestoreFinished();
-        if (gits::CGits::Instance().apis.Has3D()) {
-          api3dIface.Rec_StateRestoreFinished();
+        inst.StateRestoreFinished();
+        if (inst.apis.Has3D()) {
+          inst.apis.Iface3D().Rec_StateRestoreFinished();
         }
-        if (gits::CGits::Instance().apis.HasCompute() && apiComputeIface != nullptr) {
-          apiComputeIface->Rec_StateRestoreFinished();
+        if (inst.apis.HasCompute()) {
+          inst.apis.IfaceCompute().Rec_StateRestoreFinished();
         }
         state->PostSchedule(Scheduler());
         delete state;
@@ -456,17 +470,15 @@ void gits::CRecorder::Start() {
     }
   }
 
-  auto api = inst.apis.Iface3D().Api();
-  if (CGits::Instance().CurrentFrame() == 1 &&
-      (!Config::Get().recorder.basic.dumpCCode ||
-       api != inst.apis.Vulkan)) //first frame is special case
-  {
+  bool isVulkan = inst.apis.Has3D() && inst.apis.Iface3D().Api() == inst.apis.Vulkan;
+  // First frame is a special case.
+  // TODO: Make it so that any frame number logic is not necessary in compute-only streams.
+  if (inst.CurrentFrame() == 1 && (!Config::Get().recorder.basic.dumpCCode || !isVulkan)) {
     Scheduler().Register(new CTokenFrameNumber(CToken::ID_PRE_RECORD_END, inst.CurrentFrame()));
     Scheduler().Register(new CTokenFrameNumber(CToken::ID_FRAME_START, 1));
-    auto& api3dIface_ = gits::CGits::Instance().apis.Iface3D();
     //first frame start time stamp
-    if (api3dIface_.CfgRec_IsBenchmark()) {
-      CGits::Instance().Timers().frame.Start();
+    if (inst.apis.Has3D() && inst.apis.Iface3D().CfgRec_IsBenchmark()) {
+      inst.Timers().frame.Start();
     }
   }
 
@@ -487,14 +499,22 @@ void gits::CRecorder::Start() {
 void gits::CRecorder::Stop() {
   if (_running) {
     const CGits& inst = CGits::Instance();
-    auto& api3dIface = inst.apis.Iface3D();
-    auto apiComputeIface = inst.apis.HasCompute() ? &inst.apis.IfaceCompute() : nullptr;
-    if (api3dIface.CfgRec_IsFramesMode() || api3dIface.CfgRec_IsSingleDrawMode() ||
-        api3dIface.CfgRec_IsDrawsRangeMode() ||
-        (apiComputeIface != nullptr && (apiComputeIface->CfgRec_IsSingleKernelMode() ||
-                                        apiComputeIface->CfgRec_IsKernelsRangeMode()))) {
-      if (apiComputeIface != nullptr) {
-        apiComputeIface->MemorySnifferUninstall();
+    bool modeCondition3D = false;
+    bool modeConditionCompute = false;
+    if (inst.apis.Has3D()) {
+      const auto& api3dIface = inst.apis.Iface3D();
+      modeCondition3D = api3dIface.CfgRec_IsFramesMode() || api3dIface.CfgRec_IsSingleDrawMode() ||
+                        api3dIface.CfgRec_IsDrawsRangeMode();
+    }
+    if (inst.apis.HasCompute()) {
+      const auto& apiComputeIface = inst.apis.IfaceCompute();
+      modeConditionCompute = apiComputeIface.CfgRec_IsSingleKernelMode() ||
+                             apiComputeIface.CfgRec_IsKernelsRangeMode();
+    }
+
+    if (modeCondition3D || modeConditionCompute) {
+      if (inst.apis.HasCompute()) {
+        inst.apis.IfaceCompute().MemorySnifferUninstall();
       }
       for (auto it = inst.LibraryBegin(); it != inst.LibraryEnd(); ++it) {
         // FIXME OpenGL crashes here if enabled
@@ -507,8 +527,7 @@ void gits::CRecorder::Stop() {
         }
       }
     }
-    Scheduler().Register(
-        new gits::CTokenFrameNumber(CToken::ID_CCODE_FINISH, CGits::Instance().CurrentFrame()));
+    Scheduler().Register(new gits::CTokenFrameNumber(CToken::ID_CCODE_FINISH, inst.CurrentFrame()));
   }
   _running = false;
   _runningStarted = false;
@@ -544,103 +563,114 @@ void gits::CRecorder::Save() {
  * frame is finished.
  */
 void gits::CRecorder::FrameEnd() {
-  auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
+  CGits& inst = CGits::Instance();
+  if (inst.apis.Has3D()) {
+    const auto& api3dIface = inst.apis.Iface3D();
 
-  if (Running()) {
-    Schedule(new CTokenFrameNumber(CToken::ID_FRAME_END, CGits::Instance().CurrentFrame()));
+    if (Running()) {
+      Schedule(new CTokenFrameNumber(CToken::ID_FRAME_END, inst.CurrentFrame()));
 
-    if (api3dIface.CfgRec_EndFrameSleep() > 0) {
-      sleep_millisec(api3dIface.CfgRec_EndFrameSleep());
+      if (api3dIface.CfgRec_EndFrameSleep() > 0) {
+        sleep_millisec(api3dIface.CfgRec_EndFrameSleep());
+      }
+
+      Schedule(new CTokenPlayerRecorderSync);
+
+      //frame end time stamp
+      if (api3dIface.CfgRec_IsBenchmark()) {
+        inst.TimeSheet().add_frame_time("stamp", inst.Timers().program.Get());
+        inst.TimeSheet().add_frame_time("cpu", inst.Timers().frame.Get());
+      }
     }
 
-    Schedule(new CTokenPlayerRecorderSync);
+    Behavior().OnFrameEnd();
 
-    //frame end time stamp
-    if (api3dIface.CfgRec_IsBenchmark()) {
-      CGits::Instance().TimeSheet().add_frame_time("stamp",
-                                                   CGits::Instance().Timers().program.Get());
-      CGits::Instance().TimeSheet().add_frame_time("cpu", CGits::Instance().Timers().frame.Get());
+    // increment current frame number
+    inst.FrameCountUp();
+    if (api3dIface.CfgRec_IsFramesMode()) {
+      if (_running && !Behavior().ShouldCapture()) {
+        _running = false;
+        _runningStarted = false;
+      }
+      if (!_running && Behavior().ShouldCapture()) {
+        Start();
+      }
     }
-  }
 
-  Behavior().OnFrameEnd();
+    // we are at the next frame
+    if (Running()) {
+      Schedule(new gits::CTokenFrameNumber(CToken::ID_FRAME_START, inst.CurrentFrame()));
 
-  // increment current frame number
-  CGits::Instance().FrameCountUp();
-  if (api3dIface.CfgRec_IsFramesMode()) {
-    if (_running && !Behavior().ShouldCapture()) {
-      _running = false;
-      _runningStarted = false;
+      //frame start time stamp
+      if (api3dIface.CfgRec_IsBenchmark()) {
+        inst.Timers().frame.Restart();
+      }
     }
-    if (!_running && Behavior().ShouldCapture()) {
-      Start();
+
+    if (inst.CurrentFrame() - 1 == api3dIface.CfgRec_ExitFrame() ||
+        _inputListener.WasPressed(_exitHotKeyId) || Behavior().CaptureFinished() || forceExit) {
+      MarkForDeletion();
     }
-  }
-
-  // we are at the next frame
-  if (Running()) {
-    Schedule(new gits::CTokenFrameNumber(CToken::ID_FRAME_START, CGits::Instance().CurrentFrame()));
-
-    //frame start time stamp
-    if (api3dIface.CfgRec_IsBenchmark()) {
-      CGits::Instance().Timers().frame.Restart();
-    }
-  }
-
-  if (CGits::Instance().CurrentFrame() - 1 == api3dIface.CfgRec_ExitFrame() ||
-      _inputListener.WasPressed(_exitHotKeyId) || Behavior().CaptureFinished() || forceExit) {
-    MarkForDeletion();
   }
 }
 
 void gits::CRecorder::DrawBegin() {
-  auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
-  const int drawCount = gits::CGits::Instance().CurrentDrawCount();
-  const int drawInFrameCount = gits::CGits::Instance().CurrentDrawInFrameCount();
-  const int frameCount = gits::CGits::Instance().CurrentFrame();
-  if ((api3dIface.CfgRec_SingleDraw() == drawCount ||
-       (api3dIface.CfgRec_StartDraw() == drawCount && api3dIface.CfgRec_Frame() == 0) ||
-       (api3dIface.CfgRec_StartDraw() == drawInFrameCount &&
-        api3dIface.CfgRec_Frame() == frameCount)) &&
-      drawCount != 0) {
-    Start();
-    Schedule(new gits::CTokenFrameNumber(CToken::ID_FRAME_START, CGits::Instance().CurrentFrame()));
+  const CGits& inst = CGits::Instance();
+  if (inst.apis.Has3D()) {
+    const auto& api3dIface = inst.apis.Iface3D();
+    const int drawCount = inst.CurrentDrawCount();
+    const int drawInFrameCount = inst.CurrentDrawInFrameCount();
+    const int frameCount = inst.CurrentFrame();
+    if ((api3dIface.CfgRec_SingleDraw() == drawCount ||
+         (api3dIface.CfgRec_StartDraw() == drawCount && api3dIface.CfgRec_Frame() == 0) ||
+         (api3dIface.CfgRec_StartDraw() == drawInFrameCount &&
+          api3dIface.CfgRec_Frame() == frameCount)) &&
+        drawCount != 0) {
+      Start();
+      Schedule(new gits::CTokenFrameNumber(CToken::ID_FRAME_START, inst.CurrentFrame()));
+    }
   }
 }
 
 void gits::CRecorder::DrawEnd() {
-  auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
-  const int drawCount = gits::CGits::Instance().CurrentDrawCount();
-  const int drawInFrameCount = gits::CGits::Instance().CurrentDrawInFrameCount();
-  const int frameCount = gits::CGits::Instance().CurrentFrame();
-  if ((api3dIface.CfgRec_SingleDraw() == drawCount ||
-       (api3dIface.CfgRec_StopDraw() == drawCount && api3dIface.CfgRec_Frame() == 0) ||
-       (api3dIface.CfgRec_StopDraw() == drawInFrameCount &&
-        api3dIface.CfgRec_Frame() == frameCount)) &&
-      drawCount != 0) {
-    Stop();
-    Close();
+  const CGits& inst = CGits::Instance();
+  if (inst.apis.Has3D()) {
+    const auto& api3dIface = inst.apis.Iface3D();
+    const int drawCount = inst.CurrentDrawCount();
+    const int drawInFrameCount = inst.CurrentDrawInFrameCount();
+    const int frameCount = inst.CurrentFrame();
+    if ((api3dIface.CfgRec_SingleDraw() == drawCount ||
+         (api3dIface.CfgRec_StopDraw() == drawCount && api3dIface.CfgRec_Frame() == 0) ||
+         (api3dIface.CfgRec_StopDraw() == drawInFrameCount &&
+          api3dIface.CfgRec_Frame() == frameCount)) &&
+        drawCount != 0) {
+      Stop();
+      Close();
+    }
   }
 }
 
 void gits::CRecorder::CmdBufferEnd(gits::CGits::CCounter counter) {}
 
 void gits::CRecorder::QueueSubmitEnd() {
-  auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
-  if (api3dIface.CfgRec_IsSubFrameMode() && api3dIface.CfgRec_IsObjectToRecord()) {
-    Start();
-    Stop();
-    Close();
+  const CGits& inst = CGits::Instance();
+  if (inst.apis.Has3D()) {
+    const auto& api3dIface = inst.apis.Iface3D();
+    if (api3dIface.CfgRec_IsSubFrameMode() && api3dIface.CfgRec_IsObjectToRecord()) {
+      Start();
+      Stop();
+      Close();
+    }
   }
 }
 
 void gits::CRecorder::KernelBegin() {
-  bool hasCompute = gits::CGits::Instance().apis.HasCompute();
-  if (!hasCompute) {
+  const CGits& inst = CGits::Instance();
+  if (!inst.apis.HasCompute()) {
     return;
   }
-  auto& apiComputeIface = gits::CGits::Instance().apis.IfaceCompute();
-  const int kernelCount = gits::CGits::Instance().CurrentKernelCount();
+  const auto& apiComputeIface = inst.apis.IfaceCompute();
+  const int kernelCount = inst.CurrentKernelCount();
   if (((apiComputeIface.CfgRec_IsSingleKernelMode() &&
         apiComputeIface.CfgRec_SingleKernel() == kernelCount) ||
        (apiComputeIface.CfgRec_IsKernelsRangeMode() &&
@@ -651,12 +681,12 @@ void gits::CRecorder::KernelBegin() {
 }
 
 void gits::CRecorder::KernelEnd() {
-  bool hasCompute = gits::CGits::Instance().apis.HasCompute();
-  if (!hasCompute) {
+  const CGits& inst = CGits::Instance();
+  if (!inst.apis.HasCompute()) {
     return;
   }
-  auto& apiComputeIface = gits::CGits::Instance().apis.IfaceCompute();
-  const int kernelCount = gits::CGits::Instance().CurrentKernelCount();
+  const auto& apiComputeIface = inst.apis.IfaceCompute();
+  const int kernelCount = inst.CurrentKernelCount();
   if (((apiComputeIface.CfgRec_IsSingleKernelMode() &&
         apiComputeIface.CfgRec_SingleKernel() == kernelCount) ||
        (apiComputeIface.CfgRec_IsKernelsRangeMode() &&

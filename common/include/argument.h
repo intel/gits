@@ -2019,6 +2019,7 @@ void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::Declare(CCodeOStream&
 template <class T, class T_WRAP, gits::MappedArrayAction T_ACTION>
 void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::PostAction(CCodeOStream& stream) const {
   static bool mappingsAreFreeFunctions =
+      gits::CGits::Instance().apis.Has3D() &&
       gits::CGits::Instance().apis.Iface3D().Api() == ApisIface::Vulkan;
 
   if (_array.size() == 0) {
@@ -2051,6 +2052,7 @@ void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::PostAction(CCodeOStre
                                                                       size_t start,
                                                                       size_t end) const {
   static bool mappingsAreFreeFunctions =
+      gits::CGits::Instance().apis.Has3D() &&
       gits::CGits::Instance().apis.Iface3D().Api() == ApisIface::Vulkan;
 
   if (_array.size() == 0) {
