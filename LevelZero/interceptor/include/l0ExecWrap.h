@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "l0Drivers.h"
+#include "l0Header.h"
 #include "l0RecorderWrapperIface.h"
 #include "gitsPluginL0.h"
 
@@ -196,11 +197,9 @@ inline ze_result_t zeCommandListAppendLaunchMultipleKernelsIndirect_RECEXECWRAP(
   return return_value;
 }
 
-inline ze_result_t zeDriverGetExtensionFunctionAddress_RECEXECWRAP(ze_driver_handle_t hDriver,
-                                                                   const char* name,
-                                                                   void** ppFunctionAddress) {
+inline ze_result_t zeDriverGetExtensionFunctionAddress_RECEXECWRAP(
+    [[maybe_unused]] ze_driver_handle_t hDriver, const char* name, void** ppFunctionAddress) {
   GITS_ENTRY_L0(void) driver; // unused variable WA
-  (void)hDriver;
   auto return_value = ZE_RESULT_SUCCESS;
   *ppFunctionAddress = GetExtensionFunction(name);
   if (*ppFunctionAddress == nullptr) {
@@ -253,6 +252,11 @@ inline void zeGitsStartRecording_RECEXECWRAP(ze_gits_recording_info_t properties
   GITS_WRAPPER_PRE
   wrapper.zeGitsStartRecording(properties);
   GITS_WRAPPER_POST
+}
+
+inline ze_result_t zesDriverGetExtensionFunctionAddress_RECEXECWRAP(
+    [[maybe_unused]] zes_driver_handle_t hDriver, const char* name, void** ppFunctionAddress) {
+  return zeDriverGetExtensionFunctionAddress_RECEXECWRAP(nullptr, name, ppFunctionAddress);
 }
 } // namespace l0
 } // namespace gits
