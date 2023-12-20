@@ -2031,6 +2031,17 @@ bool checkForSupportForQueues(VkPhysicalDevice physicalDevice,
     uint32_t requestedQueueFamilyIndex = requestedQueueCreateInfos[i].queueFamilyIndex;
     uint32_t requestedQueueCountForFamily = requestedQueueCreateInfos[i].queueCount;
 
+    auto currentFlags = availableQueueFamilies[i].queueFlags;
+    auto originalFlags = queueFamilyPropertiesOriginal[i].queueFlags;
+
+#ifdef GITS_PLATFORM_WINDOWS
+    if (Config::Get().player.renderDoc.frameRecEnabled ||
+        Config::Get().player.renderDoc.queuesubmitRecEnabled) {
+      currentFlags &= ~VK_QUEUE_PROTECTED_BIT;
+      originalFlags &= ~VK_QUEUE_PROTECTED_BIT;
+    }
+#endif
+
     if ((requestedQueueFamilyIndex > availableQueueFamiliesCount - 1) ||
         (requestedQueueCountForFamily >
          availableQueueFamilies[requestedQueueFamilyIndex].queueCount)) {
@@ -2048,8 +2059,7 @@ bool checkForSupportForQueues(VkPhysicalDevice physicalDevice,
                  << " queue(s) for family index: " << requestedQueueFamilyIndex << ".";
       }
       return false;
-    } else if (!isBitSet(availableQueueFamilies[i].queueFlags,
-                         queueFamilyPropertiesOriginal[i].queueFlags)) {
+    } else if (!isBitSet(currentFlags, originalFlags)) {
       Log(ERR) << "Queue families are not compatible!";
       VkLog(ERR) << "Original queue family flags at index " << i << ": "
                  << queueFamilyPropertiesOriginal[i].queueFlags;
