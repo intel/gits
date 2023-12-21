@@ -1686,7 +1686,7 @@ public:
 // **************************  CMappedHandle  **************************
 // Maps external memory handles used in recorder to player handles.
 class CMappedHandle : public CArgument {
-  static const uint32_t currentVersion_ = 0;
+  static constexpr uint32_t currentVersion_ = 0;
   Cuint32_t version_;
   void* handle_;
 
