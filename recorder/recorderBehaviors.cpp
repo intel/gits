@@ -49,6 +49,9 @@ CBehavior::CBehavior(CRecorder& recorder, bool captureOnKeypress)
       _captureBeginFrame = static_cast<unsigned>(-1);
       _captureState = CAP_INITIATED;
     }
+  } else {
+    Log(ERR) << "There are no 3D nor compute APIs.";
+    throw ENotSupported(EXCEPTION_MESSAGE);
   }
   // Subcaptures of 3D+Compute streams are not supported.
 }
