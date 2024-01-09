@@ -48,6 +48,9 @@ CBehavior::CBehavior(CRecorder& recorder, bool captureOnKeypress)
       // Compute-only subcaptures.
       _captureBeginFrame = static_cast<unsigned>(-1);
       _captureState = CAP_INITIATED;
+    } else {
+      Log(ERR) << "Unknown compute recording mode.";
+      throw ENotImplemented(EXCEPTION_MESSAGE);
     }
   } else {
     Log(ERR) << "There are no 3D nor compute APIs.";
