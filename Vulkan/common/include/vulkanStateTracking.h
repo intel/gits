@@ -1,6 +1,6 @@
 // ===================== begin_copyright_notice ============================
 //
-// Copyright (C) 2023 Intel Corporation
+// Copyright (C) 2023-2024 Intel Corporation
 //
 // SPDX-License-Identifier: MIT
 //
@@ -2031,9 +2031,12 @@ inline void vkCreateGraphicsPipelines_SD(VkResult return_value,
       if (createInfo->renderPass) {
         renderPassObj = SD()._renderpassstates[createInfo->renderPass];
       }
+      std::shared_ptr<CPipelineLayoutState> pipelineLayoutObj = NULL;
+      if (createInfo->layout) {
+        pipelineLayoutObj = SD()._pipelinelayoutstates[createInfo->layout];
+      }
       auto pipelineState = std::make_shared<CPipelineState>(
-          &pPipelines[i], createInfo, SD()._devicestates[device],
-          SD()._pipelinelayoutstates[createInfo->layout], renderPassObj);
+          &pPipelines[i], createInfo, SD()._devicestates[device], pipelineLayoutObj, renderPassObj);
 
       for (unsigned int j = 0; j < createInfo->stageCount; j++) {
         auto& stageInfo = createInfo->pStages[j];

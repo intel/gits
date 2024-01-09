@@ -3,7 +3,7 @@
 
 # ===================== begin_copyright_notice ============================
 #
-# Copyright (C) 2023 Intel Corporation
+# Copyright (C) 2023-2024 Intel Corporation
 #
 # SPDX-License-Identifier: MIT
 #
@@ -11,7 +11,7 @@
 
 COPYRIGHT_HEADER = """//====================== begin_copyright_notice ============================
 //
-// Copyright (C) 2023 Intel Corporation
+// Copyright (C) 2023-2024 Intel Corporation
 //
 // SPDX-License-Identifier: MIT
 //

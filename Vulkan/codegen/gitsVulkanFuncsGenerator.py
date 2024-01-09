@@ -2,7 +2,7 @@
 
 # ===================== begin_copyright_notice ============================
 #
-# Copyright (C) 2023 Intel Corporation
+# Copyright (C) 2023-2024 Intel Corporation
 #
 # SPDX-License-Identifier: MIT
 #
@@ -257,7 +257,7 @@ vulkan_mapped_types_nondisp = opaque_nondispatchable_handles
 
 copyright_header = """// ====================== begin_copyright_notice ============================
 //
-// Copyright (C) 2023 Intel Corporation
+// Copyright (C) 2023-2024 Intel Corporation
 //
 // SPDX-License-Identifier: MIT
 //
@@ -1067,7 +1067,7 @@ def generate_vulkan_def(functions, def_filename, library_name):
   plugin_def = open(def_filename, 'w')
   header_def = """;====================== begin_copyright_notice ============================
 ;
-; Copyright (C) 2023 Intel Corporation
+; Copyright (C) 2023-2024 Intel Corporation
 ;
 ; SPDX-License-Identifier: MIT
 ;

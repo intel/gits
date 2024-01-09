@@ -2,7 +2,7 @@
 
 # ===================== begin_copyright_notice ============================
 #
-# Copyright (C) 2023 Intel Corporation
+# Copyright (C) 2023-2024 Intel Corporation
 #
 # SPDX-License-Identifier: MIT
 #
@@ -19,7 +19,7 @@ special_types = ['CIndexPtr', 'CAttribPtr', 'CGLTexResource', 'CGLCompressedTexR
 
 copyright_header = """// ====================== begin_copyright_notice ============================
 //
-// Copyright (C) 2023 Intel Corporation
+// Copyright (C) 2023-2024 Intel Corporation
 //
 // SPDX-License-Identifier: MIT
 //
