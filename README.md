@@ -24,7 +24,7 @@ For more info, see [BUILDING.md](BUILDING.md)
 
 To record an application, you will have to inject our dynamic library (called the interceptor) into it. On Windows, this is typically done by copying a DLL into the app directory. On Linux, by manipulating loader environment variables. When recording Vulkan, it is also possible to use GITS as a Vulkan layer instead.
 
-To play back the stream, pass it as an argument to the gitsPlayer executable. See the player's built-in help (`gitsPlayer --help`) for usage info.
+To replay the stream, pass it as an argument to the gitsPlayer executable. See the player's built-in help (`gitsPlayer --help`) for usage info.
 
 GITS allows recording streams containing only a subset of API calls made by the application (e.g., only select frames). We call them substreams or subcaptures.
 
