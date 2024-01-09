@@ -1332,7 +1332,7 @@ inline void clGetDeviceInfo_RUNWRAP(CCLResult& _return_value,
           for (const auto& originalMap : SD().originalPlaybackPlatforms) {
             for (const auto& deviceOriginal : originalMap.second) {
               if (_device.Original() == deviceOriginal) {
-                Log(TRACEV) << "Original application recieved different "
+                Log(TRACEV) << "Original application received different "
                                "device type info, "
                                "changing device and platform mapping";
                 Ccl_platform_id::AddMapping(originalMap.first, state.first);
