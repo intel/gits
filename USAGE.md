@@ -108,6 +108,7 @@ Sometimes GITS will crash during very long recordings. `Extras.Optimizations.Tok
     * for OpenCL workload: `export LD_LIBRARY_PATH=<GITS_DIR_PATH>/Recorder/OpenCL`
     * for OpenGL workload: `export LD_LIBRARY_PATH=<GITS_DIR_PATH>/Recorder/OpenGL`
     * for Vulkan workload: `export LD_LIBRARY_PATH=<GITS_DIR_PATH>/Recorder/Vulkan`
+    * for LevelZero workload: `export LD_LIBRARY_PATH=<GITS_DIR_PATH>/Recorder/LevelZero`
 3. Run the application
 4. Remove recording environment variable: `unset LD_LIBRARY_PATH`
 5. Find the dumped stream in the `dump` subdirectory of your GITS install and a log file in the target application directory. **Read the log file, it will list any errors, saving you time and stress.**
