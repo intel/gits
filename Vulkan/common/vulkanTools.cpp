@@ -3049,6 +3049,20 @@ std::unordered_map<uint32_t, uint32_t> matchCorrespondingMemoryTypeIndexes(
       }
     }
   }
+
+  if (originalPlatformProperties.memoryTypeCount != memoryTypeIndexes.size()) {
+    VkLog(ERR) << "Cannot find proper mapping for memory type indexes";
+    VkLog(ERR) << "Original memory types: ";
+    for (uint32_t i = 0; i < originalPlatformProperties.memoryTypeCount; i++) {
+      VkLog(ERR) << "[" << i << "]: " << originalPlatformProperties.memoryTypes[i];
+    }
+    VkLog(ERR) << "Current platform memory types: ";
+    for (uint32_t i = 0; i < currentPlatformProperties.memoryTypeCount; i++) {
+      VkLog(ERR) << "[" << i << "]: " << currentPlatformProperties.memoryTypes[i];
+    }
+    throw std::runtime_error("Cannot find proper mapping for memory type indexes");
+  }
+
   return memoryTypeIndexes;
 }
 
