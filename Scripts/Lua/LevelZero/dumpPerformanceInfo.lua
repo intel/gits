@@ -394,13 +394,15 @@ end
 
 function ResetEventsInCmdList(hCommandQueue, cmdList, cqNumber)
   for _, v in ipairs(cmdList.events) do
-    if v == ev.hKernel and v.hCommandList == cmdList and v.isCompleted then
-      drvl0.zeEventHostReset(ev.handle)
-      local e = DeepCopy(ev)
-      e.isCompleted = false
-      e.hCommandQueue = hCommandQueue
-      e.cqNumber = cqNumber
-      table.insert(EVENT_LIST, e)
+    for _, ev in ipairs(EVENT_LIST) do
+      if v == ev.hKernel and v.hCommandList == cmdList and v.isCompleted then
+        drvl0.zeEventHostReset(ev.handle)
+        local e = DeepCopy(ev)
+        e.isCompleted = false
+        e.hCommandQueue = hCommandQueue
+        e.cqNumber = cqNumber
+        table.insert(EVENT_LIST, e)
+      end
     end
   end
 end
