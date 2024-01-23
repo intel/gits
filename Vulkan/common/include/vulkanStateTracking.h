@@ -3308,10 +3308,19 @@ inline void vkCmdBeginRendering_SD(VkCommandBuffer commandBuffer,
   }
 }
 
+inline void vkCmdBeginRenderingKHR_SD(VkCommandBuffer commandBuffer,
+                                      const VkRenderingInfo* pRenderingInfo) {
+  vkCmdBeginRendering_SD(commandBuffer, pRenderingInfo);
+}
+
 inline void vkCmdEndRendering_SD(VkCommandBuffer commandBuffer) {
   auto& commandBufferState = SD()._commandbufferstates[commandBuffer];
   vkEndRenderPass_setImageLayout(commandBufferState);
   vkEndRenderPass_updateNonDeterministicImages(commandBufferState);
+}
+
+inline void vkCmdEndRenderingKHR_SD(VkCommandBuffer commandBuffer) {
+  vkCmdEndRendering_SD(commandBuffer);
 }
 
 namespace {

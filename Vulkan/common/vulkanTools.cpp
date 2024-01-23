@@ -3536,6 +3536,92 @@ VkResult _vkCreateRenderPass_Helper(VkDevice device,
   }
 }
 
+unsigned int getBeginRenderFunctionID(unsigned int endFuncID) {
+  static std::unordered_map<unsigned int, unsigned int> correspondingFunctionsIDs = {
+      {CFunction::ID_VK_CMD_END_RENDER_PASS, CFunction::ID_VK_CMD_BEGIN_RENDER_PASS},
+      {CFunction::ID_VK_CMD_END_RENDER_PASS2, CFunction::ID_VK_CMD_BEGIN_RENDER_PASS2},
+      {CFunction::ID_VK_CMD_END_RENDER_PASS2KHR, CFunction::ID_VK_CMD_BEGIN_RENDER_PASS2KHR},
+      {CFunction::ID_VK_CMD_END_RENDERING, CFunction::ID_VK_CMD_BEGIN_RENDERING},
+      {CFunction::ID_VK_CMD_END_RENDERING_KHR, CFunction::ID_VK_CMD_BEGIN_RENDERING_KHR}};
+  return correspondingFunctionsIDs.at(endFuncID);
+}
+
+void callvkCmdBeginRenderingByID(unsigned int ID,
+                                 const VkCommandBuffer& commandBuffer,
+                                 const VkRenderingInfo* pRenderingInfo) {
+  if (ID == CFunction::ID_VK_CMD_BEGIN_RENDERING) {
+    drvVk.vkCmdBeginRendering(commandBuffer, pRenderingInfo);
+  } else if (ID == CFunction::ID_VK_CMD_BEGIN_RENDERING_KHR) {
+    drvVk.vkCmdBeginRenderingKHR(commandBuffer, pRenderingInfo);
+  }
+}
+
+void callvkCmdEndRenderingByID(unsigned int ID, const VkCommandBuffer& commandBuffer) {
+  if (ID == CFunction::ID_VK_CMD_END_RENDERING) {
+    drvVk.vkCmdEndRendering(commandBuffer);
+  } else if (ID == CFunction::ID_VK_CMD_END_RENDERING_KHR) {
+    drvVk.vkCmdEndRenderingKHR(commandBuffer);
+  }
+}
+
+void callvkCmdBeginRenderPassByID(unsigned int ID,
+                                  const VkCommandBuffer& commandBuffer,
+                                  const VkRenderPassBeginInfo* pRenderPassBegin,
+                                  const VkSubpassContents& contents) {
+  if (ID == CFunction::ID_VK_CMD_BEGIN_RENDER_PASS) {
+    drvVk.vkCmdBeginRenderPass(commandBuffer, pRenderPassBegin, contents);
+  } else {
+    VkSubpassBeginInfo subpassBeginInfo = {VK_STRUCTURE_TYPE_SUBPASS_BEGIN_INFO, nullptr, contents};
+    if (ID == CFunction::ID_VK_CMD_BEGIN_RENDER_PASS2) {
+      drvVk.vkCmdBeginRenderPass2(commandBuffer, pRenderPassBegin, &subpassBeginInfo);
+    } else if (ID == CFunction::ID_VK_CMD_BEGIN_RENDER_PASS2KHR) {
+      drvVk.vkCmdBeginRenderPass2KHR(commandBuffer, pRenderPassBegin, &subpassBeginInfo);
+    }
+  }
+}
+
+void callvkCmdEndRenderPassByID(unsigned int ID, const VkCommandBuffer& commandBuffer) {
+  if (ID == CFunction::ID_VK_CMD_END_RENDER_PASS) {
+    drvVk.vkCmdEndRenderPass(commandBuffer);
+  } else {
+    VkSubpassEndInfo subpassEndInfo = {VK_STRUCTURE_TYPE_SUBPASS_END_INFO, nullptr};
+    if (ID == CFunction::ID_VK_CMD_END_RENDER_PASS2) {
+      drvVk.vkCmdEndRenderPass2(commandBuffer, &subpassEndInfo);
+    } else if (ID == CFunction::ID_VK_CMD_END_RENDER_PASS2KHR) {
+      drvVk.vkCmdEndRenderPass2KHR(commandBuffer, &subpassEndInfo);
+    }
+  }
+}
+
+void schedulevkCmdBeginRenderPassByID(unsigned int ID,
+                                      void (*schedulerFunc)(Vulkan::CFunction*),
+                                      const VkCommandBuffer& commandBuffer,
+                                      const VkRenderPassBeginInfo* pRenderPassBegin,
+                                      const VkSubpassContents& contents) {
+  if (ID == CFunction::ID_VK_CMD_BEGIN_RENDER_PASS) {
+    schedulerFunc(new CvkCmdBeginRenderPass(commandBuffer, pRenderPassBegin, contents));
+  } else {
+    VkSubpassBeginInfo subpassBeginInfo = {VK_STRUCTURE_TYPE_SUBPASS_BEGIN_INFO, nullptr, contents};
+    if (ID == CFunction::ID_VK_CMD_BEGIN_RENDER_PASS2) {
+      schedulerFunc(new CvkCmdBeginRenderPass2(commandBuffer, pRenderPassBegin, &subpassBeginInfo));
+    } else if (ID == CFunction::ID_VK_CMD_BEGIN_RENDER_PASS2KHR) {
+      schedulerFunc(
+          new CvkCmdBeginRenderPass2KHR(commandBuffer, pRenderPassBegin, &subpassBeginInfo));
+    }
+  }
+}
+
+void schedulevkCmdBeginRenderingByID(unsigned int ID,
+                                     void (*schedulerFunc)(Vulkan::CFunction*),
+                                     const VkCommandBuffer& commandBuffer,
+                                     const VkRenderingInfo* pRenderingInfo) {
+  if (ID == CFunction::ID_VK_CMD_BEGIN_RENDERING) {
+    schedulerFunc(new CvkCmdBeginRendering(commandBuffer, pRenderingInfo));
+  } else if (ID == CFunction::ID_VK_CMD_BEGIN_RENDERING_KHR) {
+    schedulerFunc(new CvkCmdBeginRenderingKHR(commandBuffer, pRenderingInfo));
+  }
+}
+
 #endif
 } // namespace Vulkan
 } // namespace gits

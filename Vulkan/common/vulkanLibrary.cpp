@@ -149,6 +149,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::FinishRenderPass(uint64_t rende
                                                                   VkCommandBuffer cmdBuffer) {
   uint64_t drawCount = 0;
   uint64_t renderPassCount = 0;
+  unsigned int endRenderID = 0;
   // restoring subpasses - we need the same number of subpasses as in original VkRenderPass
   for (auto elem : _tokensList) {
     if ((elem->Type() & CFunction::GITS_VULKAN_NEXT_SUBPASS_APITYPE) && (drawCount >= drawNumber) &&
@@ -158,6 +159,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::FinishRenderPass(uint64_t rende
       drawCount++;
     } else if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
       renderPassCount++;
+      endRenderID = elem->Id();
     } else if (renderPassCount > renderPassNumber) {
       break;
     }
@@ -169,10 +171,10 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::FinishRenderPass(uint64_t rende
   VkRenderingInfo* renderingInfo =
       SD()._commandbufferstates[cmdBuffer]->beginRenderPassesList.back()->renderingInfoData.Value();
   if (renderPassBeginInfo) {
-    drvVk.vkCmdEndRenderPass(cmdBuffer);
+    callvkCmdEndRenderPassByID(endRenderID, cmdBuffer);
     vkCmdEndRenderPass_SD(cmdBuffer);
   } else if (renderingInfo) {
-    drvVk.vkCmdEndRendering(cmdBuffer);
+    callvkCmdEndRenderingByID(endRenderID, cmdBuffer);
     vkCmdEndRendering_SD(cmdBuffer);
   }
 }
@@ -282,10 +284,10 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::RestoreSettingsToSpecifiedDraw(
         renderPassBeginInfo.renderPass = SD()._commandbufferstates[cmdBuffer]
                                              ->beginRenderPassesList.back()
                                              ->renderPassStateStore->loadAndStoreRenderPassHandle;
-        drvVk.vkCmdBeginRenderPass(cmdBuffer, &renderPassBeginInfo,
-                                   SD()._commandbufferstates[cmdBuffer]
-                                       ->beginRenderPassesList.back()
-                                       ->subpassContentsData.Value());
+        callvkCmdBeginRenderPassByID(elem->Id(), cmdBuffer, &renderPassBeginInfo,
+                                     SD()._commandbufferstates[cmdBuffer]
+                                         ->beginRenderPassesList.back()
+                                         ->subpassContentsData.Value());
       } else if (renderingInfoPtr) {
         VkRenderingInfo renderingInfo = *renderingInfoPtr;
         std::vector<VkRenderingAttachmentInfo> renderingAttInfoVector;
@@ -312,7 +314,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::RestoreSettingsToSpecifiedDraw(
           stencilAttInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
           renderingInfo.pStencilAttachment = &stencilAttInfo;
         }
-        drvVk.vkCmdBeginRendering(cmdBuffer, &renderingInfo);
+        callvkCmdBeginRenderingByID(elem->Id(), cmdBuffer, &renderingInfo);
       }
     } else if (renderPassCount > renderPassNumber) {
       break;
@@ -346,10 +348,10 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
         renderPassBeginInfo.renderPass = SD()._commandbufferstates[cmdBuffer]
                                              ->beginRenderPassesList.back()
                                              ->renderPassStateStore->storeNoLoadRenderPassHandle;
-        drvVk.vkCmdBeginRenderPass(cmdBuffer, &renderPassBeginInfo,
-                                   SD()._commandbufferstates[cmdBuffer]
-                                       ->beginRenderPassesList.back()
-                                       ->subpassContentsData.Value());
+        callvkCmdBeginRenderPassByID(elem->Id(), cmdBuffer, &renderPassBeginInfo,
+                                     SD()._commandbufferstates[cmdBuffer]
+                                         ->beginRenderPassesList.back()
+                                         ->subpassContentsData.Value());
       } else if (renderingInfoPtr) {
         VkRenderingInfo renderingInfo = *renderingInfoPtr;
         std::vector<VkRenderingAttachmentInfo> renderingAttInfoVector;
@@ -373,7 +375,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
           stencilAttInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
           renderingInfo.pStencilAttachment = &stencilAttInfo;
         }
-        drvVk.vkCmdBeginRendering(cmdBuffer, &renderingInfo);
+        callvkCmdBeginRenderingByID(elem->Id(), cmdBuffer, &renderingInfo);
       }
     } else {
       elem->Exec();
@@ -456,11 +458,12 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
                   ->renderPassStateStore->restoreRenderPassHandle;
           if (renderPassBeginInfo.renderPass != restoreRenderPassHandle) {
             renderPassBeginInfo.renderPass = restoreRenderPassHandle;
-            drvVk.vkCmdBeginRenderPass(cmdBuffer, &renderPassBeginInfo,
-                                       SD()._commandbufferstates[cmdBuffer]
-                                           ->beginRenderPassesList.back()
-                                           ->subpassContentsData.Value());
-            drvVk.vkCmdEndRenderPass(cmdBuffer);
+            callvkCmdBeginRenderPassByID(getBeginRenderFunctionID(elem->Id()), cmdBuffer,
+                                         &renderPassBeginInfo,
+                                         SD()._commandbufferstates[cmdBuffer]
+                                             ->beginRenderPassesList.back()
+                                             ->subpassContentsData.Value());
+            callvkCmdEndRenderPassByID(elem->Id(), cmdBuffer);
           }
         } else if (renderingInfoPtr) {
           VkRenderingInfo renderingInfo = *renderingInfoPtr;
@@ -496,8 +499,9 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
             renderingInfo.pStencilAttachment = &stencilAttInfo;
           }
           if (changed) {
-            drvVk.vkCmdBeginRendering(cmdBuffer, &renderingInfo);
-            drvVk.vkCmdEndRendering(cmdBuffer);
+            callvkCmdBeginRenderingByID(getBeginRenderFunctionID(elem->Id()), cmdBuffer,
+                                        &renderingInfo);
+            callvkCmdEndRenderingByID(elem->Id(), cmdBuffer);
           }
         }
       }
@@ -646,10 +650,10 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::RestoreDraw(const uint64_t rend
         renderPassBeginInfo.renderPass = SD()._commandbufferstates[cmdBuffer]
                                              ->beginRenderPassesList.back()
                                              ->renderPassStateStore->storeNoLoadRenderPassHandle;
-        drvVk.vkCmdBeginRenderPass(cmdBuffer, &renderPassBeginInfo,
-                                   SD()._commandbufferstates[cmdBuffer]
-                                       ->beginRenderPassesList.back()
-                                       ->subpassContentsData.Value());
+        callvkCmdBeginRenderPassByID(elem->Id(), cmdBuffer, &renderPassBeginInfo,
+                                     SD()._commandbufferstates[cmdBuffer]
+                                         ->beginRenderPassesList.back()
+                                         ->subpassContentsData.Value());
       } else if (renderingInfoPtr) {
         VkRenderingInfo renderingInfo = *renderingInfoPtr;
         std::vector<VkRenderingAttachmentInfo> renderingAttInfoVector;
@@ -673,7 +677,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::RestoreDraw(const uint64_t rend
           stencilAttInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
           renderingInfo.pStencilAttachment = &stencilAttInfo;
         }
-        drvVk.vkCmdBeginRendering(cmdBuffer, &renderingInfo);
+        callvkCmdBeginRenderingByID(elem->Id(), cmdBuffer, &renderingInfo);
       }
     } else if (pre_draw || (renderPassCount == renderPassNumber &&
                             (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE ||
@@ -713,11 +717,10 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ScheduleDraw(
                                               ->renderingInfoData.Value();
       if (renderPassBeginInfoPtr) {
         VkRenderPassBeginInfo renderPassBeginInfo = *renderPassBeginInfoPtr;
-        schedulerFunc(new CvkCmdBeginRenderPass(cmdBuffer, &renderPassBeginInfo,
-                                                SD()._commandbufferstates[cmdBuffer]
-                                                    ->beginRenderPassesList.back()
-                                                    ->subpassContentsData.Value()));
-
+        schedulevkCmdBeginRenderPassByID(elem->Id(), schedulerFunc, cmdBuffer, &renderPassBeginInfo,
+                                         SD()._commandbufferstates[cmdBuffer]
+                                             ->beginRenderPassesList.back()
+                                             ->subpassContentsData.Value());
       } else if (renderingInfoPtr) {
         VkRenderingInfo renderingInfo = *renderingInfoPtr;
         std::vector<VkRenderingAttachmentInfo> renderingAttInfoVector;
@@ -747,7 +750,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ScheduleDraw(
           }
           renderingInfo.pStencilAttachment = &stencilAttInfo;
         }
-        schedulerFunc(new CvkCmdBeginRendering(cmdBuffer, &renderingInfo));
+        schedulevkCmdBeginRenderingByID(elem->Id(), schedulerFunc, cmdBuffer, &renderingInfo);
       }
     } else if (renderPassCount == renderPassNumber &&
                ((drawsRange[drawInRenderPass] && started) ||

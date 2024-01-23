@@ -244,7 +244,7 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pRenderingInfo', type='const VkRenderingInfo*')
 )
 
-Function(name='vkCmdBeginRenderingKHR', enabled=False, type=Param,
+Function(name='vkCmdBeginRenderingKHR', enabled=True, type=BeginRenderPass, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pRenderingInfo', type='const VkRenderingInfo*')
@@ -949,7 +949,7 @@ retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer')
 )
 
-Function(name='vkCmdEndRenderingKHR', enabled=False, type=Param,
+Function(name='vkCmdEndRenderingKHR', enabled=True, type=EndRenderPass, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer')
 )
@@ -11711,7 +11711,7 @@ var7=VarDef(name='renderMajor', type='int64_t'),
 var8=VarDef(name='renderMinor', type='int64_t')
 )
 
-Struct(name='VkPhysicalDeviceDynamicRenderingFeatures_', enabled=False,
+Struct(name='VkPhysicalDeviceDynamicRenderingFeatures_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='dynamicRendering', type='VkBool32')

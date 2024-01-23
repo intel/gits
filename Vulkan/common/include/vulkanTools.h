@@ -316,6 +316,25 @@ void CreateRenderPasses_helper(VkDevice device,
     }
   }
 }
+unsigned int getBeginRenderFunctionID(unsigned int endFuncID);
+void callvkCmdBeginRenderingByID(unsigned int ID,
+                                 const VkCommandBuffer& commandBuffer,
+                                 const VkRenderingInfo* pRenderingInfo);
+void callvkCmdEndRenderingByID(unsigned int ID, const VkCommandBuffer& commandBuffer);
+void callvkCmdBeginRenderPassByID(unsigned int ID,
+                                  const VkCommandBuffer& commandBuffer,
+                                  const VkRenderPassBeginInfo* pRenderPassBegin,
+                                  const VkSubpassContents& contents);
+void callvkCmdEndRenderPassByID(unsigned int ID, const VkCommandBuffer& commandBuffer);
+void schedulevkCmdBeginRenderPassByID(unsigned int ID,
+                                      void (*schedulerFunc)(Vulkan::CFunction*),
+                                      const VkCommandBuffer& commandBuffer,
+                                      const VkRenderPassBeginInfo* pRenderPassBegin,
+                                      const VkSubpassContents& contents);
+void schedulevkCmdBeginRenderingByID(unsigned int ID,
+                                     void (*schedulerFunc)(Vulkan::CFunction*),
+                                     const VkCommandBuffer& commandBuffer,
+                                     const VkRenderingInfo* pRenderingInfo);
 #endif
 
 } // namespace Vulkan
