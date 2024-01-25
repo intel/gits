@@ -487,6 +487,42 @@ inline void zeCommandListAppendQueryKernelTimestamps_RUNWRAP(
                                               *_phEvents, *_dstptr, *_pOffsets, *_hSignalEvent,
                                               *_numWaitEvents, *_phWaitEvents);
 }
+inline void zeDriverGet_RUNWRAP(Cze_result_t& _return_value,
+                                Cuint32_t::CSArray& _pCount,
+                                Cze_driver_handle_t::CSMapArray& _phDrivers) {
+  const auto originalCount = **_pCount;
+  _return_value.Value() = drv.zeDriverGet(*_pCount, *_phDrivers);
+  const auto currentCount = **_pCount;
+  if (_return_value.Value() == ZE_RESULT_SUCCESS && _phDrivers.Size() > 0U &&
+      originalCount > currentCount) {
+    Log(WARN) << "Original application was recorded using more drivers.";
+    const auto firstDriver = (*_phDrivers)[0];
+    for (auto i = currentCount; i < originalCount; i++) {
+      const auto originalDrivers = _phDrivers.Original();
+      Cze_driver_handle_t::AddMapping(originalDrivers[i], firstDriver);
+    }
+  }
+  zeDriverGet_SD(*_return_value, *_pCount, *_phDrivers);
+}
+
+inline void zeDeviceGet_RUNWRAP(Cze_result_t& _return_value,
+                                Cze_driver_handle_t& _hDriver,
+                                Cuint32_t::CSArray& _pCount,
+                                Cze_device_handle_t::CSMapArray& _phDevices) {
+  const auto originalCount = **_pCount;
+  _return_value.Value() = drv.zeDeviceGet(*_hDriver, *_pCount, *_phDevices);
+  const auto currentCount = **_pCount;
+  if (_return_value.Value() == ZE_RESULT_SUCCESS && _phDevices.Size() > 0U &&
+      originalCount > currentCount) {
+    Log(WARN) << "Original application was recorded using more devices.";
+    const auto gpuDevice = GetGPUDevice(SD(), drv);
+    for (auto i = currentCount; i < originalCount; i++) {
+      const auto originalDevices = _phDevices.Original();
+      Cze_device_handle_t::AddMapping(originalDevices[i], gpuDevice);
+    }
+  }
+  zeDeviceGet_SD(*_return_value, *_hDriver, *_pCount, *_phDevices);
+}
 
 } // namespace l0
 } // namespace gits

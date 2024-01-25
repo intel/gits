@@ -3743,7 +3743,7 @@ arg2=ArgDef(name='hPeerDevice',type='ze_device_handle_t',tag='in'),
 arg3=ArgDef(name='value',type='ze_bool_t*',tag='out'),
 )
 
-Function(name='zeDeviceGet',component='ze_device',enabled=True,stateTrack=True,recWrap=True,ddi_pos=0,
+Function(name='zeDeviceGet',component='ze_device',enabled=True,stateTrack=True,recWrap=True,ddi_pos=0,runWrap=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hDriver',type='ze_driver_handle_t',tag='in'),
 arg2=ArgDef(name='pCount',type='uint32_t*',tag='inout'),
@@ -3883,7 +3883,7 @@ arg3=ArgDef(name='regionSize',type='size_t',tag='in'),
 arg4=ArgDef(name='cacheRegion',type='ze_cache_ext_region_t',tag='in'),
 )
 
-Function(name='zeDriverGet',component='ze_driver',enabled=True,stateTrack=True,recWrap=True,ddi_pos=0,
+Function(name='zeDriverGet',component='ze_driver',enabled=True,stateTrack=True,recWrap=True,ddi_pos=0,runWrap=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='pCount',type='uint32_t*',tag='inout'),
 arg2=ArgDef(name='phDrivers',type='ze_driver_handle_t*',tag='inout',range='0,*pCount',optional=True),
