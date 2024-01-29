@@ -52,7 +52,13 @@ endif()
 add_library(ocloc_interceptor SHARED ${ocloc_interceptor_files})
 include_directories(interceptor/include)
 
-set_target_properties(ocloc_interceptor PROPERTIES OUTPUT_NAME ocloc)
+if(WIN32)
+  set(OCLOC_LIBRARY_NAME ocloc64)
+else()
+  set(OCLOC_LIBRARY_NAME ocloc)
+endif()
+
+set_target_properties(ocloc_interceptor PROPERTIES OUTPUT_NAME ${OCLOC_LIBRARY_NAME})
 if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   target_link_libraries(ocloc_interceptor dl pthread)
 endif()
@@ -64,7 +70,7 @@ set_target_properties(ocloc_recorder PROPERTIES FOLDER ocloc)
 set_target_properties(ocloc_interceptor PROPERTIES FOLDER ocloc)
 
 if(MSVC)
-  install(FILES $<TARGET_PDB_FILE:ocloc_interceptor> DESTINATION Recorder/${L0_INSTALL_SUBDIR} OPTIONAL)
+  install(FILES $<TARGET_PDB_FILE:ocloc_interceptor> RENAME ${OCLOC_LIBRARY_NAME}.pdb DESTINATION Recorder/${L0_INSTALL_SUBDIR} OPTIONAL)
 endif()
 
 install(TARGETS ocloc_interceptor
