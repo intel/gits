@@ -1061,6 +1061,19 @@ inline void zeFenceQueryStatus_SD(ze_result_t return_value, ze_fence_handle_t hF
     }
   }
 }
+inline void zeGitsOriginalQueueFamilyInfo_SD(
+    [[maybe_unused]] ze_result_t return_value,
+    ze_device_handle_t hDevice,
+    uint32_t count,
+    const ze_command_queue_group_properties_t* cqGroupProperties) {
+  Log(TRACE) << "Updating original command queue group properties...";
+  auto& originalQueueGroupProps =
+      SD().Get<CDeviceState>(hDevice, EXCEPTION_MESSAGE).originalQueueGroupProperties;
+  originalQueueGroupProps.clear();
+  for (auto i = 0U; i < count; i++) {
+    originalQueueGroupProps.push_back(cqGroupProperties[i]);
+  }
+}
 
 } // namespace l0
 } // namespace gits

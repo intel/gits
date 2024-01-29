@@ -378,8 +378,12 @@ void RestoreCommandList(CScheduler& scheduler, CStateDynamic& sd) {
         IsControlledSubmission(&state.second->queueDesc)) {
       const auto& deviceState = sd.Get<CDeviceState>(state.second->hDevice, EXCEPTION_MESSAGE);
       if (!deviceState.originalQueueGroupProperties.empty()) {
-        scheduler.Register(new CGitsL0OriginalQueueFamilyInfo(
-            state.second->hDevice, deviceState.originalQueueGroupProperties));
+        scheduler.Register(new CzeGitsOriginalQueueFamilyInfo(
+            ZE_RESULT_SUCCESS, state.second->hDevice,
+            static_cast<uint32_t>(deviceState.originalQueueGroupProperties.size()),
+            deviceState.originalQueueGroupProperties.data()));
+      } else {
+        throw EOperationFailed("Recorder did not capture original queue group properties.");
       }
     }
     if (isImmediate) {
@@ -462,8 +466,10 @@ void RestoreCommandQueue(CScheduler& scheduler, CStateDynamic& sd) {
       if (IsControlledSubmission(&state.second->desc)) {
         const auto& deviceState = sd.Get<CDeviceState>(state.second->hDevice, EXCEPTION_MESSAGE);
         if (!deviceState.originalQueueGroupProperties.empty()) {
-          scheduler.Register(new CGitsL0OriginalQueueFamilyInfo(
-              state.second->hDevice, deviceState.originalQueueGroupProperties));
+          scheduler.Register(
+              new CzeGitsOriginalQueueFamilyInfo(ZE_RESULT_SUCCESS, state.second->hDevice,
+                                                 deviceState.originalQueueGroupProperties.size(),
+                                                 deviceState.originalQueueGroupProperties.data()));
         }
       }
       scheduler.Register(new CzeCommandQueueCreate(ZE_RESULT_SUCCESS, state.second->hContext,

@@ -1072,8 +1072,9 @@ inline void zeCommandListCreate_RECWRAP(CRecorder& recorder,
       auto& deviceState = sd.Get<CDeviceState>(hDevice, EXCEPTION_MESSAGE);
       if (deviceState.originalQueueGroupProperties.empty()) {
         UpdateOriginalQueueGroupProperties(deviceState, hDevice);
-        recorder.Schedule(
-            new CGitsL0OriginalQueueFamilyInfo(hDevice, deviceState.originalQueueGroupProperties));
+        recorder.Schedule(new CzeGitsOriginalQueueFamilyInfo(
+            ZE_RESULT_SUCCESS, hDevice, deviceState.originalQueueGroupProperties.size(),
+            deviceState.originalQueueGroupProperties.data()));
       }
     }
     recorder.Schedule(
@@ -1098,8 +1099,9 @@ inline void zeCommandListCreateImmediate_RECWRAP(CRecorder& recorder,
       auto& deviceState = sd.Get<CDeviceState>(hDevice, EXCEPTION_MESSAGE);
       if (deviceState.originalQueueGroupProperties.empty()) {
         UpdateOriginalQueueGroupProperties(deviceState, hDevice);
-        recorder.Schedule(
-            new CGitsL0OriginalQueueFamilyInfo(hDevice, deviceState.originalQueueGroupProperties));
+        recorder.Schedule(new CzeGitsOriginalQueueFamilyInfo(
+            ZE_RESULT_SUCCESS, hDevice, deviceState.originalQueueGroupProperties.size(),
+            deviceState.originalQueueGroupProperties.data()));
       }
     }
     recorder.Schedule(
@@ -1119,8 +1121,9 @@ inline void zeCommandQueueCreate_RECWRAP(CRecorder& recorder,
       auto& deviceState = SD().Get<CDeviceState>(hDevice, EXCEPTION_MESSAGE);
       if (deviceState.originalQueueGroupProperties.empty()) {
         UpdateOriginalQueueGroupProperties(deviceState, hDevice);
-        recorder.Schedule(
-            new CGitsL0OriginalQueueFamilyInfo(hDevice, deviceState.originalQueueGroupProperties));
+        recorder.Schedule(new CzeGitsOriginalQueueFamilyInfo(
+            ZE_RESULT_SUCCESS, hDevice, deviceState.originalQueueGroupProperties.size(),
+            deviceState.originalQueueGroupProperties.data()));
       }
     }
     recorder.Schedule(

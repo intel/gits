@@ -166,11 +166,18 @@ void gits::l0::CGitsL0OriginalQueueFamilyInfo::Read(CBinIStream& stream) {
 }
 
 void gits::l0::CGitsL0OriginalQueueFamilyInfo::Run() {
-  Log(TRACE) << "Updating original command queue group properties...";
-  auto& originalQueueGroupProps =
-      SD().Get<CDeviceState>(_hDevice.Value(), EXCEPTION_MESSAGE).originalQueueGroupProperties;
-  const auto size = _cqGroupProperties.Vector().size();
-  for (auto i = 0U; i < size; i++) {
-    originalQueueGroupProps.push_back(_cqGroupProperties.Value()[i]);
+  void* pFunctionAddress = nullptr;
+  const auto drivers = GetDrivers(drv);
+  for (const auto& driver : drivers) {
+    if (drv.inject.zeDriverGetExtensionFunctionAddress(driver, "zeGitsOriginalQueueFamilyInfo",
+                                                       &pFunctionAddress) == ZE_RESULT_SUCCESS) {
+      drv.zeGitsOriginalQueueFamilyInfo(_hDevice.Value(),
+                                        static_cast<uint32_t>(_cqGroupProperties.Vector().size()),
+                                        _cqGroupProperties.Value());
+      break;
+    }
   }
+  zeGitsOriginalQueueFamilyInfo_SD(ZE_RESULT_SUCCESS, _hDevice.Value(),
+                                   static_cast<uint32_t>(_cqGroupProperties.Vector().size()),
+                                   _cqGroupProperties.Value());
 }

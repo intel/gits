@@ -6162,6 +6162,13 @@ retV=RetDef(type='void'),
 arg1=ArgDef(name='properties',type='ze_gits_recording_info_t',tag='in'),
 )
 
+Function(name='zeGitsOriginalQueueFamilyInfo',component='ze_gits_extension',extension=True,enabled=True,log=False,stateTrack=True,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
+arg2=ArgDef(name='count',type='uint32_t',tag='in'),
+arg3=ArgDef(name='cqGroupProperties',type='const ze_command_queue_group_properties_t*',tag='in')
+)
+
 Function(name='zelTracerCreate',component='zel_tracer',enabled=False,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='desc',type='const zel_tracer_desc_t*',tag='in'),
