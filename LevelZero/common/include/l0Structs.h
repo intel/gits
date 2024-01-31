@@ -51,6 +51,10 @@ private:
   typedef ze_module_constants_t L0Type;
   L0Type _struct = {};
   Cuint8_t _version;
+  Cuint32_t _numConstants;
+  Cuint32_t::CSArray _constantIds;
+  Cuint64_t::CSArray _constantValues;
+  std::vector<std::shared_ptr<uintptr_t>> pointers;
 
 public:
   typedef CL0StructArray<L0Type, Cze_module_constants_t_V1> CSArray;

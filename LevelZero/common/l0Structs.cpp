@@ -140,10 +140,15 @@ std::set<uint64_t> Cze_module_constants_t::GetMappedPointers() {
   return std::set<uint64_t>();
 }
 
-Cze_module_constants_t_V1::Cze_module_constants_t_V1(const L0Type& value) : _version(0) {
-  if (value.numConstants > 0) {
-    Log(ERR) << "Specialization constants are not supported";
-    throw ENotImplemented(EXCEPTION_MESSAGE);
+Cze_module_constants_t_V1::Cze_module_constants_t_V1(const L0Type& value)
+    : _version(1U),
+      _numConstants(value.numConstants),
+      _constantIds(value.numConstants, value.pConstantIds) {
+  if (value.numConstants > 0U && value.pConstantValues != nullptr) {
+    _constantValues = Cuint64_t::CSArray(
+        value.numConstants, *reinterpret_cast<const uint64_t**>(value.pConstantValues));
+  } else {
+    _constantValues = Cuint64_t::CSArray();
   }
 }
 
@@ -156,10 +161,20 @@ const char* Cze_module_constants_t_V1::Name() const {
 
 void Cze_module_constants_t_V1::Write(CBinOStream& stream) const {
   _version.Write(stream);
+  if (*_version == 1U) {
+    _numConstants.Write(stream);
+    _constantIds.Write(stream);
+    _constantValues.Write(stream);
+  }
 }
 
 void Cze_module_constants_t_V1::Read(CBinIStream& stream) {
   _version.Read(stream);
+  if (*_version == 1U) {
+    _numConstants.Read(stream);
+    _constantIds.Read(stream);
+    _constantValues.Read(stream);
+  }
 }
 
 void Cze_module_constants_t_V1::Write([[maybe_unused]] CCodeOStream& stream) const {
@@ -175,9 +190,23 @@ Cze_module_constants_t_V1::L0Type Cze_module_constants_t_V1::operator*() {
 }
 
 Cze_module_constants_t_V1::L0Type* Cze_module_constants_t_V1::Ptr() {
-  _struct.numConstants = 0U;
-  _struct.pConstantIds = nullptr;
-  _struct.pConstantValues = nullptr;
+  if (*_version == 0U) {
+    _struct.numConstants = 0U;
+    _struct.pConstantIds = nullptr;
+    _struct.pConstantValues = nullptr;
+  } else if (*_version == 1U) {
+    _struct.numConstants = *_numConstants;
+    if (_struct.numConstants > 0U) {
+      _struct.pConstantIds = *_constantIds;
+      pointers.push_back(std::make_shared<uintptr_t>());
+      const void* ptr = _constantValues.Vector().data();
+      std::memcpy(pointers.back().get(), &ptr, sizeof(uintptr_t));
+      _struct.pConstantValues = (const void**)pointers.back().get();
+    }
+  } else {
+    Log(ERR) << "Not implemented Cze_module_constants version: " << ToStringHelper(*_version);
+    throw ENotImplemented(EXCEPTION_MESSAGE);
+  }
   return &_struct;
 }
 
@@ -358,16 +387,17 @@ Cze_module_desc_t_V1::Cze_module_desc_t_V1(const L0Type& value)
       _format(value.format),
       _inputSize(value.inputSize),
       _pInputModule(value.pInputModule, value.inputSize, value.format),
-      _pBuildFlags(value.pBuildFlags, 0, 1) {
-  if (value.pConstants != nullptr) {
-    _pConstants =
-        Cze_module_constants_t_V1::CSArray(value.pConstants->numConstants, value.pConstants);
-  } else {
-    _pConstants = Cze_module_constants_t_V1::CSArray();
-  }
-}
+      _pBuildFlags(value.pBuildFlags, 0, 1),
+      _pConstants(value.pConstants != nullptr ? 1U : 0U, value.pConstants) {}
 
-Cze_module_desc_t_V1::Cze_module_desc_t_V1(const L0Type* value) : Cze_module_desc_t_V1(*value) {}
+Cze_module_desc_t_V1::Cze_module_desc_t_V1(const L0Type* value)
+    : _stype(value->stype),
+      _pNext(value->pNext),
+      _format(value->format),
+      _inputSize(value->inputSize),
+      _pInputModule(value->pInputModule, value->inputSize, value->format),
+      _pBuildFlags(value->pBuildFlags, 0, 1),
+      _pConstants(value->pConstants != nullptr ? 1U : 0U, value->pConstants) {}
 
 const char* Cze_module_desc_t_V1::Name() const {
   return Cze_module_desc_t_V1::NAME;
@@ -428,6 +458,9 @@ Cze_module_desc_t_V1::L0Type* Cze_module_desc_t_V1::Ptr() {
   }
   _struct.pBuildFlags = *_pBuildFlags;
   _struct.pConstants = *_pConstants;
+  if (_struct.pConstants != nullptr && _struct.pConstants->numConstants == 0U) {
+    _struct.pConstants = nullptr;
+  }
   return &_struct;
 }
 
