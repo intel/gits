@@ -19,6 +19,7 @@
 
 #include <cstdint>
 #include <regex>
+#include <fstream>
 
 #ifndef BUILD_FOR_CCODE
 #include "MemorySniffer.h"
@@ -33,9 +34,6 @@ DISABLE_WARNINGS
 #include <boost/lexical_cast.hpp>
 ENABLE_WARNINGS
 #endif
-DISABLE_WARNINGS
-#include <boost/property_tree/json_parser.hpp>
-ENABLE_WARNINGS
 
 #include <png.h>
 #include <pngpriv.h>
@@ -286,16 +284,19 @@ bool SavePng(const std::string& filename,
   return true;
 }
 
-void SaveJsonFile(const boost::property_tree::ptree& pt, const std::filesystem::path& path) {
+#ifndef BUILD_FOR_CCODE
+void SaveJsonFile(const nlohmann::ordered_json& json, const std::filesystem::path& path) {
   try {
     std::filesystem::create_directory(path.parent_path());
-    write_json(path.string(), pt);
+    std::ofstream file(path);
+    constexpr auto indent = 4U;
+    file << json.dump(indent);
+    file.close();
   } catch (std::filesystem::filesystem_error& fe) {
     Log(ERR) << "Exception during creating directory. System error code: " << fe.code();
-  } catch (boost::property_tree::json_parser_error& jpe) {
-    Log(ERR) << "Exception during writing buffers layout to file." << jpe.message();
   }
 }
+#endif
 
 void CheckMinimumAvailableDiskSize() {
   auto diskSpaceInfo = std::filesystem::space(Config::Get().common.streamDir);

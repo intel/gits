@@ -354,6 +354,15 @@ class RenderDoc(Repository):
         self.url = "https://github.com/baldurk/renderdoc.git"
 
 
+class NlohmannJson(Repository):
+    def set_branch(self):
+        self.branch = "v3.11.3"
+
+    def init(self):
+        self.name = "json"
+        self.url = "https://github.com/nlohmann/json.git"
+
+
 class Repositories:
     def __init__(self, args) -> None:
         self.repos = []
@@ -385,6 +394,8 @@ class Repositories:
             self.repos.append(ClHeaders())
         if args.with_all or args.with_renderdoc:
             self.repos.append(RenderDoc())
+        if args.with_all or args.with_json:
+            self.repos.append(NlohmannJson())
 
     def __iter__(self):
         for value in self.repos:
@@ -423,6 +434,7 @@ def setup_parser(root_parser):
     root_parser.add_argument("--with-stackwalker", action="store_true")
     root_parser.add_argument("--with-clheaders", action="store_true")
     root_parser.add_argument("--with-renderdoc", action="store_true")
+    root_parser.add_argument("--with-json", action="store_true")
 
 
 def install_dependencies(args):

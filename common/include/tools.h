@@ -41,6 +41,10 @@ DISABLE_WARNINGS
 #include <boost/property_tree/ptree.hpp>
 ENABLE_WARNINGS
 
+#ifndef BUILD_FOR_CCODE
+#include "nlohmann/json.hpp"
+#endif
+
 #ifndef _DEBUG
 #ifndef NDEBUG
 #define NDEBUG 1
@@ -65,7 +69,9 @@ bool SavePng(const std::string& filename,
              bool sRGB = false,
              bool bgr = false);
 
-void SaveJsonFile(const boost::property_tree::ptree& pt, const std::filesystem::path& path);
+#ifndef BUILD_FOR_CCODE
+void SaveJsonFile(const nlohmann::ordered_json& json, const std::filesystem::path& path);
+#endif
 
 void CheckMinimumAvailableDiskSize();
 

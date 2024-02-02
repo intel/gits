@@ -24,6 +24,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "nlohmann/json.hpp"
+
 namespace gits {
 namespace l0 {
 struct CState {
@@ -396,8 +398,8 @@ public:
 
 class LayoutBuilder {
 private:
-  boost::property_tree::ptree layout;
-  boost::property_tree::ptree zeKernels;
+  nlohmann::ordered_json layout;
+  nlohmann::ordered_json zeKernels;
   std::string latestFileName;
   uint32_t queueSubmitNumber = 0U;
   uint32_t cmdListNumber = 0U;
@@ -405,7 +407,7 @@ private:
   std::string GetExecutionKeyId() const;
   void AddOclocInfo(const ze_module_handle_t& hModule);
   std::string BuildFileName(const uint32_t& argNumber, bool isBuffer = true);
-  boost::property_tree::ptree GetImageDescription(const ze_image_desc_t& imageDesc) const;
+  nlohmann::ordered_json GetImageDescription(const ze_image_desc_t& imageDesc) const;
   void UpdateExecutionKeyId(const uint32_t& queueSubmitNum,
                             const uint32_t& cmdListNum,
                             const uint32_t& kernelNumber);
@@ -422,30 +424,15 @@ public:
               const uint32_t& kernelArgIndex) const;
   std::string GetFileName() const;
   void SaveLayoutToJsonFile();
-  boost::property_tree::ptree GetModuleLinkInfoPtree(
+  nlohmann::ordered_json GetModuleLinkInfo(
       CStateDynamic& sd, const std::unordered_set<ze_module_handle_t>& moduleLinks) const;
   template <typename T, typename K>
   void Add(const T& key, const K& value) {
-    std::stringstream ss;
-    ss << GetExecutionKeyId() << "." << key;
-    zeKernels.add(ss.str(), value);
+    zeKernels[GetExecutionKeyId()][key] = value;
   }
-  template <typename T, typename K>
-  void AddChild(const T& key, const K& value) {
-    std::stringstream ss;
-    ss << GetExecutionKeyId() << "." << key;
-    zeKernels.add_child(ss.str(), value);
-  }
-
-  template <typename T, typename K>
-  void AddArray(const T& key, const K& array) {
-    auto ptree = boost::property_tree::ptree();
-    auto arrayTree = boost::property_tree::ptree();
-    for (const auto& val : array) {
-      ptree.put("", val);
-      arrayTree.push_back(std::make_pair("", ptree));
-    }
-    AddChild(key, arrayTree);
+  template <typename T1, typename T2, typename K>
+  void Add(const T1& key1, const T2& key2, const K& value) {
+    zeKernels[GetExecutionKeyId()][key1][key2] = value;
   }
 };
 

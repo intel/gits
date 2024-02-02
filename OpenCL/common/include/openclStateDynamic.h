@@ -26,6 +26,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "nlohmann/json.hpp"
+
 namespace gits {
 class CArgument;
 class CFunction;
@@ -408,14 +410,14 @@ struct CCLMappedBufferState : public CCLState {
 
 class LayoutBuilder {
 private:
-  boost::property_tree::ptree _layout;
-  boost::property_tree::ptree _clKernels;
+  nlohmann::ordered_json _layout;
+  nlohmann::ordered_json _clKernels;
   std::string _latestFileName;
   int _enqueueCallNumber = 0;
   std::string BuildFileName(const int argNumber, const bool isBuffer = true);
   std::string GetExecutionKeyId();
-  boost::property_tree::ptree GetImageDescription(const cl_image_format& imageFormat,
-                                                  const cl_image_desc& imageDesc);
+  nlohmann::ordered_json GetImageDescription(const cl_image_format& imageFormat,
+                                             const cl_image_desc& imageDesc);
   std::string ModifyRecorderBuildOptions(const std::string& options, const bool& hasHeaders);
 
 public:
@@ -425,15 +427,11 @@ public:
   void SaveLayoutToJsonFile();
   template <typename T, typename K>
   void Add(const T& key, const K& value) {
-    std::stringstream ss;
-    ss << GetExecutionKeyId() << "." << key;
-    _clKernels.add(ss.str(), value);
+    _clKernels[GetExecutionKeyId()][key] = value;
   }
-  template <typename T, typename K>
-  void AddChild(const T& key, const K& value) {
-    std::stringstream ss;
-    ss << GetExecutionKeyId() << "." << key;
-    _clKernels.add_child(ss.str(), value);
+  template <typename T1, typename T2, typename K>
+  void Add(const T1& key1, const T2& key2, const K& value) {
+    _clKernels[GetExecutionKeyId()][key1][key2] = value;
   }
 };
 

@@ -700,7 +700,7 @@ CCLMappedBufferState::CCLMappedBufferState(const size_t& size,
       mapFlags(mapFlags) {}
 
 LayoutBuilder::LayoutBuilder() {
-  _layout.add("version", "1.0");
+  _layout["version"] = "1.0";
 }
 
 std::string LayoutBuilder::ModifyRecorderBuildOptions(const std::string& options,
@@ -715,20 +715,20 @@ std::string LayoutBuilder::ModifyRecorderBuildOptions(const std::string& options
 
 void LayoutBuilder::UpdateLayout(const CCLKernelState& ks, int enqNum, int argIndex) {
   _enqueueCallNumber = enqNum;
-  if (_clKernels.find(GetExecutionKeyId()) == _clKernels.not_found()) {
+  if (_clKernels.find(GetExecutionKeyId()) == _clKernels.end()) {
     Add("kernel_name", ks.name);
     if (!ks.programState->GetProgramStates().empty()) {
       std::vector<std::string> fileNames;
-      boost::property_tree::ptree sources;
+      nlohmann::ordered_json sources = nlohmann::ordered_json::array();
       for (const auto& progState : ks.programState->GetProgramStates()) {
-        boost::property_tree::ptree linkFile;
-        linkFile.add("name", progState.second->fileName);
+        nlohmann::ordered_json linkFile;
+        linkFile["name"] = progState.second->fileName;
         const auto options = ModifyRecorderBuildOptions(progState.second->BuildOptions(),
                                                         ks.programState->HasHeaders());
-        linkFile.add("build_options", options);
-        sources.push_back(std::make_pair("", linkFile));
+        linkFile["build_options"] = options;
+        sources.push_back(linkFile);
       }
-      AddChild("kernel_source", sources);
+      Add("kernel_source", sources);
     } else {
       Add("kernel_source", ks.programState->fileName);
     }
@@ -738,34 +738,33 @@ void LayoutBuilder::UpdateLayout(const CCLKernelState& ks, int enqNum, int argIn
   }
 
   const auto& arg = ks.GetArgument(argIndex);
-  const auto argKey = "args." + std::to_string(argIndex);
   if (arg.type == KernelArgType::mem) {
     const auto& memState =
         SD().GetMemState(*reinterpret_cast<const cl_mem*>(arg.argValue), EXCEPTION_MESSAGE);
     if (memState.image) {
-      boost::property_tree::ptree imageArgument;
+      nlohmann::ordered_json imageArgument;
       const auto imageDescription = GetImageDescription(memState.image_format, memState.image_desc);
-      imageArgument.add_child(BuildFileName(argIndex, false), imageDescription);
-      AddChild(argKey, imageArgument);
+      imageArgument[BuildFileName(argIndex, false)] = imageDescription;
+      Add("args", std::to_string(argIndex), imageArgument);
       return;
     }
   }
-  Add(argKey, BuildFileName(argIndex));
+  Add("args", std::to_string(argIndex), BuildFileName(argIndex));
 }
 
-boost::property_tree::ptree LayoutBuilder::GetImageDescription(const cl_image_format& imageFormat,
-                                                               const cl_image_desc& imageDesc) {
-  boost::property_tree::ptree imageDescription;
+nlohmann::ordered_json LayoutBuilder::GetImageDescription(const cl_image_format& imageFormat,
+                                                          const cl_image_desc& imageDesc) {
+  nlohmann::ordered_json imageDescription;
   const auto sizes = GetSimplifiedImageSizes(imageDesc);
   const auto width = sizes[0];
   const auto height = sizes[1];
   const auto depth = sizes[2];
   const std::string image_type =
       get_texel_format_string(GetTexelToConvertFromImageFormat(imageFormat));
-  imageDescription.add("image_type", image_type);
-  imageDescription.add("image_width", width);
-  imageDescription.add("image_height", height);
-  imageDescription.add("image_depth", depth);
+  imageDescription["image_type"] = image_type;
+  imageDescription["image_width"] = width;
+  imageDescription["image_height"] = height;
+  imageDescription["image_depth"] = depth;
   return imageDescription;
 }
 
@@ -781,7 +780,7 @@ void LayoutBuilder::SaveLayoutToJsonFile() {
   if (_clKernels.empty()) {
     return;
   }
-  _layout.add_child("cl_kernels", _clKernels);
+  _layout["cl_kernels"] = _clKernels;
   const auto& cfg = Config::Get();
   std::filesystem::path path =
       (cfg.player.outputDir.empty() ? cfg.common.streamDir / "dump" : cfg.player.outputDir) /

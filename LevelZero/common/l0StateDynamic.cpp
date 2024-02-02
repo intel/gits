@@ -398,18 +398,18 @@ void CKernelArgumentDump::UpdateIndexes(uint32_t kernelNum, uint32_t argIndex) {
 }
 
 LayoutBuilder::LayoutBuilder() : layout(), latestFileName("") {
-  layout.add("version", "1.0");
+  layout["version"] = "1.0";
 }
 
-boost::property_tree::ptree LayoutBuilder::GetModuleLinkInfoPtree(
+nlohmann::ordered_json LayoutBuilder::GetModuleLinkInfo(
     CStateDynamic& sd, const std::unordered_set<ze_module_handle_t>& moduleLinks) const {
-  boost::property_tree::ptree modulesInfo;
+  nlohmann::ordered_json modulesInfo = nlohmann::ordered_json::array();
   for (const auto& module : moduleLinks) {
-    boost::property_tree::ptree moduleInfo;
+    nlohmann::ordered_json moduleInfo;
     const auto& moduleState = sd.Get<CModuleState>(module, EXCEPTION_MESSAGE);
-    moduleInfo.add("module_file", moduleState.moduleFileName);
-    moduleInfo.add("build_options", moduleState.desc.pBuildFlags);
-    modulesInfo.push_back(std::make_pair("", moduleInfo));
+    moduleInfo["module_file"] = moduleState.moduleFileName;
+    moduleInfo["build_options"] = moduleState.desc.pBuildFlags;
+    modulesInfo.push_back(moduleInfo);
   }
   return modulesInfo;
 }
@@ -420,7 +420,7 @@ void LayoutBuilder::UpdateLayout(const CKernelExecutionInfo* kernelInfo,
                                  const uint32_t& argIndex) {
   UpdateExecutionKeyId(queueSubmitNum, cmdListNum, kernelInfo->kernelNumber);
   const auto executionKey = GetExecutionKeyId();
-  if (zeKernels.find(executionKey) == zeKernels.not_found()) {
+  if (zeKernels.find(executionKey) == zeKernels.end()) {
     Add("kernel_name", kernelInfo->pKernelName);
     auto& sd = SD();
     const auto& moduleState = sd.Get<CModuleState>(kernelInfo->hModule, EXCEPTION_MESSAGE);
@@ -429,7 +429,7 @@ void LayoutBuilder::UpdateLayout(const CKernelExecutionInfo* kernelInfo,
     }
     Add("module_file", moduleState.moduleFileName);
     if (moduleState.IsModuleLinkUsed()) {
-      AddChild("module_link", GetModuleLinkInfoPtree(sd, moduleState.moduleLinks));
+      Add("module_link", GetModuleLinkInfo(sd, moduleState.moduleLinks));
     }
 
 #ifdef WITH_OCLOC
@@ -437,16 +437,15 @@ void LayoutBuilder::UpdateLayout(const CKernelExecutionInfo* kernelInfo,
 #endif
   }
   const auto& arg = kernelInfo->GetArgument(argIndex);
-  const auto argKey = "args." + std::to_string(argIndex);
   if (arg.type == KernelArgType::image) {
-    boost::property_tree::ptree imageArgument;
+    nlohmann::ordered_json imageArgument;
     const auto& imgState = SD().Get<CImageState>(
         reinterpret_cast<ze_image_handle_t>(const_cast<void*>(arg.argValue)), EXCEPTION_MESSAGE);
     const auto imageDescription = GetImageDescription(imgState.desc);
-    imageArgument.add_child(BuildFileName(argIndex, false), imageDescription);
-    AddChild(argKey, imageArgument);
+    imageArgument[BuildFileName(argIndex, false)] = imageDescription;
+    Add("args", std::to_string(argIndex), imageArgument);
   } else {
-    Add(argKey, BuildFileName(argIndex));
+    Add("args", std::to_string(argIndex), BuildFileName(argIndex));
   }
 }
 
@@ -457,15 +456,15 @@ bool LayoutBuilder::Exists(const uint32_t& queueSubmitNum,
   std::stringstream ss;
   ss << queueSubmitNum << "_" << cmdListNum << "_" << kernelNumber;
   const auto key = ss.str();
-  if (zeKernels.find(key) == zeKernels.not_found()) {
+  if (zeKernels.find(key) == zeKernels.end()) {
     return false;
   }
-  const auto pickedZeKernel = zeKernels.get_child(key);
-  if (pickedZeKernel.find("args") == pickedZeKernel.not_found()) {
+  const auto pickedZeKernel = zeKernels[key];
+  if (pickedZeKernel.find("args") == pickedZeKernel.end()) {
     return false;
   }
-  for (const auto& arg : pickedZeKernel.get_child("args")) {
-    if (arg.first == std::to_string(kernelArgIndex)) {
+  for (const auto& arg : pickedZeKernel["args"].items()) {
+    if (arg.key() == std::to_string(kernelArgIndex)) {
       return true;
     }
   }
@@ -488,7 +487,7 @@ void LayoutBuilder::SaveLayoutToJsonFile() {
   if (zeKernels.empty()) {
     return;
   }
-  layout.add_child("ze_kernels", zeKernels);
+  layout["ze_kernels"] = zeKernels;
 
   const auto& cfg = Config::Get();
   const std::filesystem::path path =
@@ -506,23 +505,19 @@ std::string LayoutBuilder::GetExecutionKeyId() const {
 void LayoutBuilder::AddOclocInfo(const ze_module_handle_t& hModule) {
   const auto& oclocState = SD().Get<CModuleState>(hModule, EXCEPTION_MESSAGE).oclocState;
   if (oclocState.get() != nullptr && !oclocState->args.empty()) {
-    auto children = boost::property_tree::ptree();
+    nlohmann::ordered_json children = nlohmann::ordered_json::array();
     const auto size = oclocState->args.size();
     for (auto i = 0U; i < size; i++) {
-      auto child = boost::property_tree::ptree();
-      child.put("", oclocState->args[i]);
-      children.push_back(std::make_pair("", child));
+      children.push_back(oclocState->args[i]);
       if (Config::Get().IsRecorder() && oclocState->args[i] == "-options") {
-        auto nextChild = boost::property_tree::ptree();
         std::string options = oclocState->args[++i];
         options += " -I \"" + Config::Get().common.streamDir.string() + "\"";
         options += " -I \"" + (Config::Get().common.streamDir / "gitsFiles").string() + "\"";
-        nextChild.put("", options);
-        children.push_back(std::make_pair("", nextChild));
+        children.push_back(options);
       }
     }
-    AddArray("ocloc.sources", oclocState->savedFileNames);
-    AddChild("ocloc.args", children);
+    Add("ocloc", "sources", oclocState->savedFileNames);
+    Add("ocloc", "args", children);
   }
 }
 
@@ -536,15 +531,14 @@ std::string LayoutBuilder::BuildFileName(const uint32_t& argNumber, bool isBuffe
   return latestFileName;
 }
 
-boost::property_tree::ptree LayoutBuilder::GetImageDescription(
-    const ze_image_desc_t& imageDesc) const {
-  boost::property_tree::ptree imageDescription;
+nlohmann::ordered_json LayoutBuilder::GetImageDescription(const ze_image_desc_t& imageDesc) const {
+  nlohmann::ordered_json imageDescription;
   const std::string image_type = get_texel_format_string(
       GetTexelTypeArrayFromLayout(imageDesc.format.layout)[imageDesc.format.type]);
-  imageDescription.add("image_type", image_type);
-  imageDescription.add("image_width", imageDesc.width);
-  imageDescription.add("image_height", imageDesc.height);
-  imageDescription.add("image_depth", imageDesc.depth);
+  imageDescription["image_type"] = image_type;
+  imageDescription["image_width"] = imageDesc.width;
+  imageDescription["image_height"] = imageDesc.height;
+  imageDescription["image_depth"] = imageDesc.depth;
   return imageDescription;
 }
 

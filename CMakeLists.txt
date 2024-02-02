@@ -105,6 +105,7 @@ endif()
 include(import_clheaders)
 include(import_murmurhash)
 include(import_renderdoc)
+include(import_json)
 
 include_directories(common/include)
 include_directories(OpenGL/common/include)
