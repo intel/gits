@@ -142,6 +142,10 @@ void CRecorderWrapper::MarkRecorderForDeletion() {
 }
 
 void CRecorderWrapper::DestroySniffedRegion(void* ptr) const {
+  if (ptr == nullptr) {
+    Log(ERR) << "Memory deallocation is being called on a nullptr.";
+    throw EOperationFailed(EXCEPTION_MESSAGE);
+  }
   auto& allocState = SD().Get<CAllocState>(ptr, EXCEPTION_MESSAGE);
   if (allocState.sniffedRegionHandle != nullptr) {
     MemorySniffer::Get().RemoveRegion(allocState.sniffedRegionHandle);
