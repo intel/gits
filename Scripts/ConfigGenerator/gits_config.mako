@@ -48,7 +48,7 @@ Basic {
     LibGLES2               "C:\\Windows\\System32\\libGLESv2.dll"
     LibCL                  "C:\\Windows\\System32\\OpenCL.dll"
     LibVK                  "C:\\Windows\\System32\\vulkan-1.dll"
-    LibOcloc               "C:\\Windows\\System32\\ocloc.dll"
+    LibOcloc               "C:\\Windows\\System32\\ocloc64.dll"
     LibL0                  "C:\\Windows\\System32\\ze_loader.dll"
 
     InstallationPath       "${install_path}\\Recorder"
