@@ -24,10 +24,7 @@
 #include <array>
 #include <utility>
 #include <filesystem>
-
-DISABLE_WARNINGS
-#include <boost/regex.hpp>
-ENABLE_WARNINGS
+#include <regex>
 
 namespace gits {
 namespace OpenCL {
@@ -975,14 +972,14 @@ bool ResourceExists(cl_context resource) {
 std::string RemoveDoubleDotHeaderSyntax(const std::string& src) {
   auto shaderSource = src;
   std::string finalShaderSource = "";
-  const boost::regex expr(R"((?<=^#include)\s*["<]([^">]+))");
-  boost::smatch what;
-  while (boost::regex_search(shaderSource, what, expr) && what.size() >= 2) {
+  const std::regex expr(R"(#include\s*["<]([^">]+))");
+  std::smatch what;
+  while (std::regex_search(shaderSource, what, expr) && what.size() >= 2) {
     finalShaderSource += what.prefix().str();
     std::string header = what.str(1);
     if (header.find("..") != std::string::npos) {
       header = std::filesystem::path(header).filename().string();
-      finalShaderSource += " \"" + header;
+      finalShaderSource += "#include \"" + header;
     } else {
       finalShaderSource += what.str(0);
     }

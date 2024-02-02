@@ -12,11 +12,6 @@
 #include "log.h"
 #include "tools.h"
 
-DISABLE_WARNINGS
-#include <boost/lexical_cast.hpp>
-#include <boost/regex.hpp>
-ENABLE_WARNINGS
-
 #include <regex>
 #include <fstream>
 
@@ -28,14 +23,14 @@ static const unsigned int NEWEST_SIG_FORMAT_VERSION = 1;
 static const std::string FFV_STRING = "File format version: ";
 static const std::string SIG_FILE_NAME = "gitsSignature.hash";
 static const std::string OLD_SIG_FILE_NAME = "gitsSignature.md5";
-static const std::vector<boost::regex> SKIPPED_FILES = {
-    boost::regex(".*\\.(hash|md5)"),                   // old and new signature files
-    boost::regex("(gits)?Screenshots/.*"),             // contents of GITS screenshot directories
-    boost::regex(".*gitsPlayer"),                      // gitsPlayer executable
-    boost::regex(".*CCodeProject"),                    // compiled CCode - executable
-    boost::regex("\\.DS_Store|desktop\\.ini"),         // OS-specific metadata
-    boost::regex(".*~"),                               // unix backup files (e.g. "something~")
-    boost::regex(".*\\.(h|cpp|sw[mnop]|bak|ini|csv)"), // various file extensions
+static const std::vector<std::regex> SKIPPED_FILES = {
+    std::regex(".*\\.(hash|md5)"),                   // old and new signature files
+    std::regex("(gits)?Screenshots/.*"),             // contents of GITS screenshot directories
+    std::regex(".*gitsPlayer"),                      // gitsPlayer executable
+    std::regex(".*CCodeProject"),                    // compiled CCode - executable
+    std::regex("\\.DS_Store|desktop\\.ini"),         // OS-specific metadata
+    std::regex(".*~"),                               // unix backup files (e.g. "something~")
+    std::regex(".*\\.(h|cpp|sw[mnop]|bak|ini|csv)"), // various file extensions
 };
 
 std::string file_xxhash(const std::filesystem::path& filename) {
@@ -77,8 +72,8 @@ static Signature calculateSig(const std::filesystem::path& dir) {
     const std::string relPathStr = std::filesystem::relative(dirEntry, dir).string();
     if (dirEntry.is_regular_file()) {
       bool excluded = false;
-      for (const boost::regex& exclude : SKIPPED_FILES) {
-        if (boost::regex_match(relPathStr, exclude)) {
+      for (const std::regex& exclude : SKIPPED_FILES) {
+        if (std::regex_match(relPathStr, exclude)) {
           excluded = true;
           break;
         }

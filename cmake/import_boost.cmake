@@ -33,6 +33,6 @@ set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME ON)
 set(Boost_DIR "${BOOST_ROOT}/lib/cmake/Boost-1.81.0")
 
-find_package(Boost 1.81 CONFIG REQUIRED COMPONENTS container regex)
+find_package(Boost 1.81 CONFIG REQUIRED COMPONENTS container)
 
 include_directories(SYSTEM ${Boost_INCLUDE_DIRS})

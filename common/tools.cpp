@@ -18,6 +18,7 @@
 #include "xxhash.h"
 
 #include <cstdint>
+#include <regex>
 
 #ifndef BUILD_FOR_CCODE
 #include "MemorySniffer.h"
@@ -34,7 +35,6 @@ ENABLE_WARNINGS
 #endif
 DISABLE_WARNINGS
 #include <boost/property_tree/json_parser.hpp>
-#include <boost/regex.hpp>
 ENABLE_WARNINGS
 
 #include <png.h>
@@ -433,10 +433,10 @@ std::vector<std::string> GetStringsWithRegex(std::string src,
                                              const char* regex,
                                              const char* rmRegex) {
   std::vector<std::string> foundStrings;
-  boost::regex expr(regex);
-  boost::smatch what;
-  while (boost::regex_search(src, what, expr)) {
-    foundStrings.push_back(boost::regex_replace(what.str(0), boost::regex(rmRegex), ""));
+  std::regex expr(regex);
+  std::smatch what;
+  while (std::regex_search(src, what, expr)) {
+    foundStrings.push_back(std::regex_replace(what.str(0), std::regex(rmRegex), ""));
     src = what.suffix().str();
   }
   return foundStrings;
@@ -445,7 +445,7 @@ std::vector<std::string> GetStringsWithRegex(std::string src,
 std::vector<std::string> GetIncludePaths(const char* buildOptions) {
   std::vector<std::string> includePaths;
   if (buildOptions != nullptr) {
-    includePaths = GetStringsWithRegex(std::string(buildOptions), "(?<=-I)\\s*[^\\s]+", "\\s");
+    includePaths = GetStringsWithRegex(std::string(buildOptions), "-I\\s*[^\\s]+", "-I\\s*");
   }
   includePaths.push_back(std::filesystem::current_path().string());
   return includePaths;
@@ -479,7 +479,7 @@ void CreateHeaderFiles(const std::vector<std::string>& sourceNamesToScan,
                               (std::istreambuf_iterator<char>()));
         alreadyCreatedHeaders.insert(header);
         const auto otherIncludeFiles = GetStringsWithRegex(
-            std::move(srcHeader), R"((?<=^#include)\s*["<]([^">]+))", "\\s*[<\"]*");
+            std::move(srcHeader), R"(#include\s*["<]([^">]+))", "#include\\s*[<\"]*");
         CreateHeaderFiles(otherIncludeFiles, searchPaths, alreadyCreatedHeaders, true);
       }
     }

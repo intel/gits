@@ -208,7 +208,7 @@ CCLProgramState::CCLProgramState(const cl_context& context,
     : fileName(std::move(filename)), _uniqueStateID(GetUniqueStateID()), _context(context) {
   Sources(num, sources, lengths);
   _headerIncludeNames =
-      GetStringsWithRegex(*sources, R"((?<=^#include)\s*["<]([^">]+))", "\\s*[<\"]*");
+      GetStringsWithRegex(*sources, R"(#include\s*["<]([^">]+))", "#include\\s*[<\"]*");
   _hasHeaders = !_headerIncludeNames.empty();
 }
 
