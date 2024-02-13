@@ -83,13 +83,13 @@ int lua_${func.get('name')}(lua_State* L) {
     luaL_error(L, "invalid number of parameters");
   }
     %for arg in func['args']:
-  auto ${arg['name']} = lua_to_ext<${arg['type']}>(L, ${loop.index+1});
+  auto ${get_arg_name(arg['name'])} = lua_to_ext<${get_arg_type(arg['name'], arg['type'])}>(L, ${loop.index+1});
     %endfor
   bypass_luascript = true;
   ze_result_t ret = drv.inject.${func.get('name')}(${make_params(func)});
     %for arg in func['args']:
       %if 'out' in arg['tag'] and has_vars(arg['type'], arguments):
-  lua_setTableFields(L, ${loop.index+1}, ${arg['name']});
+  lua_setTableFields(L, ${loop.index+1}, ${get_arg_name(arg['name'])});
       %endif
     %endfor
   lua_pop(L, lua_gettop(L));
@@ -195,7 +195,7 @@ ${func.get('type')} __zecall inject_${func.get('name')}(
   %endfor
 ) {
   drv.zeGitsStopRecording(${"ZE_GITS_SWITCH_NOMENCLATURE_COUNTING" if func.get('nomenclatureModifier', False) else "ZE_GITS_RECORDING_DEFAULT"});
-  ${'' if func.get('type') == 'void' else 'const auto returnValue = '}drv.${func.get('name')}(${make_params(func)});
+  ${'' if func.get('type') == 'void' else 'const auto returnValue = '}drv.${func.get('name')}(${make_params(func, )});
   Log(TRACE) << "^------------------ injected";
   drv.zeGitsStartRecording(${"ZE_GITS_SWITCH_NOMENCLATURE_COUNTING" if func.get('nomenclatureModifier', False) else "ZE_GITS_RECORDING_DEFAULT"});
   ${'' if func.get('type') == 'void' else 'return returnValue;'}

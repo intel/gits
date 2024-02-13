@@ -1186,5 +1186,31 @@ inline void zeModuleCreate_RECWRAP(CRecorder& recorder,
   }
 }
 
+inline void zeCommandListImmediateAppendCommandListsExp_RECWRAP(
+    CRecorder& recorder,
+    [[maybe_unused]] ze_result_t return_value,
+    [[maybe_unused]] ze_command_list_handle_t hCommandListImmediate,
+    [[maybe_unused]] uint32_t numCommandLists,
+    [[maybe_unused]] ze_command_list_handle_t* phCommandLists,
+    [[maybe_unused]] ze_event_handle_t hSignalEvent,
+    [[maybe_unused]] uint32_t numWaitEvents,
+    [[maybe_unused]] ze_event_handle_t* phWaitEvents) {
+  if (recorder.Running()) {
+    Log(ERR) << "zeCommandListImmediateAppendCommandListsExp is not implemented.";
+    throw ENotImplemented(EXCEPTION_MESSAGE);
+  }
+}
+
+inline void zeCommandListCreateCloneExp_RECWRAP(
+    CRecorder& recorder,
+    [[maybe_unused]] ze_result_t return_value,
+    [[maybe_unused]] ze_command_list_handle_t hCommandList,
+    [[maybe_unused]] ze_command_list_handle_t* phClonedCommandList) {
+  if (recorder.Running()) {
+    Log(ERR) << "zeCommandListCreateCloneExp is not implemented.";
+    throw ENotImplemented(EXCEPTION_MESSAGE);
+  }
+}
+
 } // namespace l0
 } // namespace gits

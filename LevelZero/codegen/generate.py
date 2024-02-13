@@ -164,9 +164,18 @@ def process_arguments(arguments):
                         arguments[name]['vars'].append(arguments[name][idx])
                         del arguments[name][idx]
 
+def get_arg_name(arg_name: str):
+    if '[' in arg_name:
+        return arg_name.split('[')[0]
+    return arg_name
+
+def get_arg_type(arg_name: str, arg_type: str):
+    if '[' in arg_name:
+        return arg_type + '*'
+    return arg_type
 
 def make_params(
-    func, prefix=str(), with_retval=False, with_types=False, prepend_comma=False
+    func, prefix=str(), with_retval=False, with_types=False, prepend_comma=False, with_array=False
 ):
     contain_args = len(func["args"]) > 0
     str_params = ", " if prepend_comma and contain_args else ""
@@ -179,7 +188,7 @@ def make_params(
             str_params += ", "
         str_params += ", ".join(
             [
-                prefix + ((arg["type"] + " ") if with_types else "") + arg["name"]
+                prefix + ((arg["type"] + " ") if with_types else "") + (arg["name"] if with_array else get_arg_name(arg["name"]))
                 for arg in func["args"]
             ]
         )
@@ -215,8 +224,11 @@ def get_used_types(functions, arguments, enums):
 def split_field_name(name):
     return name[:-1].split('[') if '[' in name else [name, '']
 
-def get_field_name(argument):
-    return split_field_name(argument['name'])[0]
+def get_field_name(argument, prefix='', wrap_params=None):
+    if wrap_params:
+        name = wrap_params.replace("{name}", prefix + split_field_name(argument['name'])[0])
+        return prefix + name
+    return prefix + split_field_name(argument['name'])[0]
 
 def get_field_array_size(argument):
     return split_field_name(argument['name'])[1]
@@ -278,6 +290,8 @@ def makoWrite(inpath, outpath, **args):
             cut_version=cut_version,
             get_ddi_table_functions=get_ddi_table_functions,
             sort_dditable=sort_dditable,
+            get_arg_name=get_arg_name,
+            get_arg_type=get_arg_type,
             **args)
         rendered = re.sub(r"\r\n", r"\n", rendered)
 

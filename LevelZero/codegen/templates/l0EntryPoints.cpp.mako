@@ -18,7 +18,7 @@ extern "C" {
   %if not is_latest_version(functions, func):
 <% continue %>
   %endif
-VISIBLE ${func.get('type')} __zecall ${func.get('name')}(${make_params(func, with_types=True)})
+VISIBLE ${func.get('type')} __zecall ${func.get('name')}(${make_params(func, with_types=True, with_array=True)})
 {
   %if func.get('recExecWrap'):
   ${'' if func.get('type') == 'void' else 'return '}${func.get('recExecWrapName')}(${make_params(func)});

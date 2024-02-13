@@ -25,7 +25,7 @@ void CRecorderWrapper::${func.get('name')}(
   ${'ze_result_t return_value' if func['enabled'] else 'ze_result_t'}${',' if len(func['args']) > 0 else ''}
   %endif
   %for arg in func['args']:
-  ${arg['type']}${' ' + arg['name'] if func['enabled'] else ''}${'' if loop.last else ','}
+  ${get_arg_type(arg['name'], arg['type'])}${' ' + arg['name'] if func['enabled'] else ''}${'' if loop.last else ','}
   %endfor
 ) const {
   %if func['enabled']:

@@ -18,43 +18,43 @@ const char* C${name}::NAME = "${arg.get('name')}";
 C${name}::C${name}() {}
 C${name}::C${name}(const L0Type& value) :
       %for field in arg['vars']:
-  _${get_field_name(field)}(value.${get_field_name(field)})${'' if loop.last else ','}
+  ${get_field_name(field, prefix='_')}(${get_field_name(field, prefix='value.', wrap_params=field.get('wrapParams'))})${'' if loop.last else ','}
       %endfor
 {}
 C${name}::C${name}(const L0Type* value) :
       %for field in arg['vars']:
-  _${get_field_name(field)}(value->${get_field_name(field)})${'' if loop.last else ','}
+  ${get_field_name(field, prefix='_')}(${get_field_name(field, prefix='value->', wrap_params=field.get('wrapParams'))})${'' if loop.last else ','}
       %endfor
 {}
 void C${name}::Write(CBinOStream& stream) const {
       %for field in arg['vars']:
-  _${get_field_name(field)}.Write(stream);
+  ${get_field_name(field, prefix='_')}.Write(stream);
       %endfor
 }
 void C${name}::Read(CBinIStream& stream) {
       %for field in arg['vars']:
-  _${get_field_name(field)}.Read(stream);
+  ${get_field_name(field, prefix='_')}.Read(stream);
       %endfor
 }
 void C${name}::Declare(CCodeOStream& stream) const {
   VariableNameRegister(stream, false);
       %for field in arg['vars']:
-  if (_${get_field_name(field)}.DeclarationNeeded()) {
-    _${get_field_name(field)}.VariableNameRegister(stream, false);
-    _${get_field_name(field)}.Declare(stream);
+  if (${get_field_name(field, prefix='_')}.DeclarationNeeded()) {
+    ${get_field_name(field, prefix='_')}.VariableNameRegister(stream, false);
+    ${get_field_name(field, prefix='_')}.Declare(stream);
   }
       %endfor
   std::string varName = stream.VariableName(ScopeKey());
   stream.Indent() << Name() << " " << varName << ";\n";
       %for field in arg['vars']:
   stream.Indent() << varName << ".${get_field_name(field)} = ";
-  if (_${get_field_name(field)}.DeclarationNeeded()) {
-    if (dynamic_cast<const CSArray*>(&_${get_field_name(field)})) {
+  if (${get_field_name(field, prefix='_')}.DeclarationNeeded()) {
+    if (dynamic_cast<const CSArray*>(&${get_field_name(field, prefix='_')})) {
       stream << "&";
     }
-    stream << stream.VariableName(_${get_field_name(field)}.ScopeKey());
+    stream << stream.VariableName(${get_field_name(field, prefix='_')}.ScopeKey());
   } else {
-    _${get_field_name(field)}.Write(stream);
+    ${get_field_name(field, prefix='_')}.Write(stream);
   }
   stream << ";\n";
       %endfor
@@ -62,9 +62,9 @@ void C${name}::Declare(CCodeOStream& stream) const {
 C${name}::L0Type* C${name}::Ptr() {
       %for field in arg['vars']:
         %if '[' not in field['name']:
-  _struct.${get_field_name(field)} = *_${get_field_name(field)};
+  ${get_field_name(field, prefix='_struct.')} = ${get_field_name(field, prefix='*_')};
         %else:
-  std::copy_n(*_${get_field_name(field)}, ${get_field_array_size(field)}, _struct.${get_field_name(field)});
+  std::copy_n(${get_field_name(field, prefix='*_')}, ${get_field_array_size(field)}, ${get_field_name(field, '_struct.')});
         %endif
       %endfor
   return &_struct;
