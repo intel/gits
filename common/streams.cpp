@@ -277,7 +277,9 @@ void gits::CCodeOStream::OnFilesOpen() {
     stream << "#include \"helperVk.h\"" << std::endl;
     stream << "#include \"helperCL.h\"" << std::endl;
 #ifdef WITH_LEVELZERO
+    stream << "#ifdef WITH_LEVELZERO" << std::endl;
     stream << "#include \"helperL0.h\"" << std::endl;
+    stream << "#endif" << std::endl;
 #endif
   }
 

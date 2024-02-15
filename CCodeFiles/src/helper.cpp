@@ -20,7 +20,7 @@
 #if defined GITS_API_OCL
 #include "openclDrivers.h"
 #endif
-#ifdef GITS_API_L0
+#if defined WITH_LEVELZERO and defined GITS_API_L0
 #include "l0Drivers.h"
 #endif
 
@@ -361,9 +361,11 @@ void CLInit() {
 
 #endif /* GITS_API_OCL */
 
+#ifdef WITH_LEVELZERO
 void InitL0() {
   gits::l0::drv.Initialize();
 }
+#endif
 
 const std::string getDumpFrameFileName(int frameNumber) {
   std::stringstream fileName;

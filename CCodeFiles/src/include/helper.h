@@ -24,7 +24,7 @@
 #endif /* GITS_API_OCL */
 
 #include "openglDrivers.h"
-#ifdef GITS_API_L0
+#if defined WITH_LEVELZERO and defined GITS_API_L0
 #include "l0Drivers.h"
 #endif
 
@@ -99,7 +99,9 @@ void SleepIf(bool exprResult, float miliseconds);
 
 #endif /* GITS_API_OCL */
 
+#ifdef WITH_LEVELZERO
 void InitL0();
+#endif
 
 template <typename T>
 void read_from_stream2(std::istream& i, T& value) {

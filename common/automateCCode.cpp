@@ -115,7 +115,9 @@ void divideFile(const std::filesystem::path& path,
       outputFile << "#include \"stream_externs.h\"\n";
       outputFile << "#include \"helperVk.h\"\n";
       outputFile << "#include \"helperCL.h\"\n";
+      outputFile << "#ifdef WITH_LEVELZERO\n";
       outputFile << "#include \"helperL0.h\"\n";
+      outputFile << "#endif\n";
       outputFile << "#include \"helperGL.h\"\n";
       outputFile << "void " << breakPoint->second << "_cont_" << currentFile << "()\n";
       outputFile << "{\n";

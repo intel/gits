@@ -13,6 +13,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 set(CMAKE_CXX_STANDARD 17)
 
+option(WITH_LEVELZERO "Build LevelZero component" OFF)
+
 if(MSVC)
   add_compile_options(/MP /bigobj /W3 /wd4005 /wd4065 /wd4100 /wd4480 /wd4481 /wd4482 /wd4503 /wd4505 /wd4611 /wd4702 /wd4800 /wd4838 /wd4996 /wd4267 /wd4067 /wd4312 /wd4722 /wd4018 /wd4305)
   add_compile_options("/MT$<$<CONFIG:Debug>:d>")
@@ -38,6 +40,15 @@ include(import_xxhash)
 include(import_clheaders)
 include(import_murmurhash)
 
+if(WITH_LEVELZERO)
+  set(L0_CCode_SOURCES
+    ${PROJECT_SOURCE_DIR}/CCodeSource/helperL0.cpp
+    ${PROJECT_SOURCE_DIR}/CCodeSource/l0DriversInit.cpp
+    ${PROJECT_SOURCE_DIR}/CCodeSource/l0Drivers.cpp
+    ${PROJECT_SOURCE_DIR}/CCodeSource/l0Log.cpp
+  )
+endif()
+
 FILE(GLOB CCodeProject_SOURCES
   ${PROJECT_SOURCE_DIR}/CCodeSource/StreamFiles/*.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/bit_range.cpp
@@ -50,9 +61,6 @@ FILE(GLOB CCodeProject_SOURCES
   ${PROJECT_SOURCE_DIR}/CCodeSource/mapped_file.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/message_pump.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/openclDrivers.cpp
-  ${PROJECT_SOURCE_DIR}/CCodeSource/l0DriversInit.cpp
-  ${PROJECT_SOURCE_DIR}/CCodeSource/l0Drivers.cpp
-  ${PROJECT_SOURCE_DIR}/CCodeSource/l0Log.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/openglDrivers.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/openglTools.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/openglCommon.cpp
@@ -79,9 +87,9 @@ FILE(GLOB CCodeProject_SOURCES
   ${PROJECT_SOURCE_DIR}/CCodeSource/helper.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/helperGL.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/helperCL.cpp
-  ${PROJECT_SOURCE_DIR}/CCodeSource/helperL0.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/helperVk.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/mapping.cpp
+  ${L0_CCode_SOURCES}
 )
 if(WIN32)
   list(APPEND CCodeProject_SOURCES ${PROJECT_SOURCE_DIR}/CCodeSource/tools_windows.cpp)

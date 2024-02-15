@@ -272,7 +272,7 @@ int main(int argc, char* argv[]) {
     runCycles = (argc == 3) ? atoi(argv[2]) : runCycles;
 #endif
 
-#ifdef GITS_API_L0
+#if defined WITH_LEVELZERO and defined GITS_API_L0
     InitL0();
 #endif
 
