@@ -110,7 +110,7 @@ ${func.get('type')} __zecall special_${func.get('name')}(
   %if func.get('log', True):
   L0Log(TRACE, NO_NEWLINE) << "${func.get('name')}(";
     %for arg in func['args']:
-  L0Log(TRACE, RAW) << ${f"ToStringHelperArrayRange({arg['name']}, {arg['range']})" if arg.get('range') else arg['name']}${'' if loop.last else ' << ", "'};
+  L0Log(TRACE, RAW) << ${f"ToStringHelperArrayRange({get_arg_name(arg['name'])}, {arg['range']})" if arg.get('range') else get_arg_name(arg['name'])}${'' if loop.last else ' << ", "'};
     %endfor
   L0Log(TRACE, ${'RAW' if func['type'] != 'void' else 'NO_PREFIX'}) << ")";
   %endif
@@ -125,7 +125,7 @@ ${func.get('type')} __zecall special_${func.get('name')}(
       L0Log(TRACE, NO_PREFIX) << " Lua begin";
       lua_getglobal(L, "${func.get('name')}");
     %for arg in func['args']:
-      lua_push_ext(L, ${arg['name']});
+      lua_push_ext(L, ${get_arg_name(arg['name'])});
     %endfor
       if (lua_pcall(L, ${len(func['args'])}, 1, 0) != 0) {
         RaiseHookError("${func.get('name')}", L);
@@ -144,11 +144,11 @@ ${func.get('type')} __zecall special_${func.get('name')}(
     L0Log(TRACE, NO_PREFIX) << " = " << ret;
       %for arg in func['args']:
         %if 'out' in arg['tag']:
-    L0Log(TRACEV, NO_PREFIX) << ">>>> ${arg['tag']} ${arg['name']}: " << \
+    L0Log(TRACEV, NO_PREFIX) << ">>>> ${arg['tag']} ${get_arg_name(arg['name'])}: " << \
           %if arg.get('range'):
-ToStringHelperArrayRange(${arg['name']}, ${arg['range']});
+ToStringHelperArrayRange(${get_arg_name(arg['name'])}, ${arg['range']});
           %else:
-${arg['name']};
+${get_arg_name(arg['name'])};
           %endif
         %endif
       %endfor
