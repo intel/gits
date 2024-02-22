@@ -145,8 +145,13 @@ Cze_module_constants_t_V1::Cze_module_constants_t_V1(const L0Type& value)
       _numConstants(value.numConstants),
       _constantIds(value.numConstants, value.pConstantIds) {
   if (value.numConstants > 0U && value.pConstantValues != nullptr) {
-    _constantValues = Cuint64_t::CSArray(
-        value.numConstants, *reinterpret_cast<const uint64_t**>(value.pConstantValues));
+    std::vector<uint64_t> specConstValues(value.numConstants);
+    for (auto i = 0U; i < value.numConstants; i++) {
+      const uint64_t* ptr = reinterpret_cast<const uint64_t*>(value.pConstantValues[i]);
+      const uint64_t ptrValue = *ptr;
+      specConstValues[i] = ptrValue;
+    }
+    _constantValues = Cuint64_t::CSArray(value.numConstants, specConstValues.data());
   } else {
     _constantValues = Cuint64_t::CSArray();
   }
@@ -198,10 +203,12 @@ Cze_module_constants_t_V1::L0Type* Cze_module_constants_t_V1::Ptr() {
     _struct.numConstants = *_numConstants;
     if (_struct.numConstants > 0U) {
       _struct.pConstantIds = *_constantIds;
-      pointers.push_back(std::make_shared<uintptr_t>());
-      const void* ptr = _constantValues.Vector().data();
-      std::memcpy(pointers.back().get(), &ptr, sizeof(uintptr_t));
-      _struct.pConstantValues = (const void**)pointers.back().get();
+      pPointers.push_back(std::make_unique<uintptr_t[]>(_struct.numConstants));
+      for (auto i = 0U; i < _struct.numConstants; i++) {
+        const void* ptr = &_constantValues.Vector()[i];
+        std::memcpy(&pPointers.back().get()[i], &ptr, sizeof(uintptr_t));
+      }
+      _struct.pConstantValues = (const void**)pPointers.back().get();
     }
   } else {
     Log(ERR) << "Not implemented Cze_module_constants version: " << ToStringHelper(*_version);

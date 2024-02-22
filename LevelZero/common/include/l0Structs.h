@@ -54,7 +54,7 @@ private:
   Cuint32_t _numConstants;
   Cuint32_t::CSArray _constantIds;
   Cuint64_t::CSArray _constantValues;
-  std::vector<std::shared_ptr<uintptr_t>> pointers;
+  std::vector<std::unique_ptr<uintptr_t[]>> pPointers;
 
 public:
   typedef CL0StructArray<L0Type, Cze_module_constants_t_V1> CSArray;
