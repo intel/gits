@@ -113,17 +113,20 @@ inline void SaveKernelArguments(const ze_event_handle_t& hSignalEvent,
                                 bool callOnce = true) {
   const auto& kernelInfo = kernelState.currentKernelInfo;
   const auto& cfg = Config::Get();
-  const auto syncNeeded =
-      CheckWhetherSync(cmdListState.isImmediate, cmdListState.isSync, hSignalEvent, callOnce);
-  if (syncNeeded) {
-    drv.inject.zeEventHostSynchronize(hSignalEvent, UINT64_MAX);
+  const auto needsSync = cmdListState.isImmediate && callOnce && !cmdListState.isSync;
+  if (needsSync) {
+    if (hSignalEvent) {
+      drv.inject.zeEventHostSynchronize(hSignalEvent, UINT64_MAX);
+    } else {
+      drv.inject.zeCommandListHostSynchronize(hCommandList, UINT64_MAX);
+    }
   }
   auto& sd = SD();
   auto& readyArgVec = sd.Map<CKernelArgumentDump>()[hCommandList];
   PrepareArguments(kernelInfo.get(), readyArgVec);
   if (!IsDumpOnlyLayoutEnabled(cfg)) {
     InjectReadsForArguments(readyArgVec, hCommandList, cmdListState.isImmediate ? false : callOnce,
-                            syncNeeded ? cmdListState.hContext : nullptr, hSignalEvent);
+                            needsSync ? cmdListState.hContext : nullptr, hSignalEvent);
   }
 
   if (cmdListState.isImmediate && CheckWhetherDumpQueueSubmit(cfg, cmdListState.cmdQueueNumber)) {

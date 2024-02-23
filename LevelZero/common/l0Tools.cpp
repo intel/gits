@@ -239,23 +239,6 @@ void PrepareArguments(const CKernelExecutionInfo* kernelInfo,
   }
 }
 
-bool CheckWhetherSync(bool isImmediate,
-                      bool isSync,
-                      const ze_event_handle_t& eventSignal,
-                      bool callOnce) {
-  if (isImmediate && callOnce) {
-    if (!isSync) {
-      if (eventSignal) {
-        return true;
-      } else {
-        throw ENotSupported(
-            "Dumping from async immediate command list without a signal event is not supported");
-      }
-    }
-  }
-  return false;
-}
-
 void DumpReadyArguments(std::vector<CKernelArgumentDump>& readyArgVector,
                         uint32_t cmdQueueNumber,
                         uint32_t cmdListNumber,

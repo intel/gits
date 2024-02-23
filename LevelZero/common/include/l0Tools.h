@@ -41,10 +41,6 @@ enum class KernelArgType { pointer = 1, buffer, image };
 void PrepareArguments(const CKernelExecutionInfo* kernelInfo,
                       std::vector<CKernelArgumentDump>& argDumpStates,
                       bool dumpUnique = false);
-bool CheckWhetherSync(bool isImmediate,
-                      bool isSync,
-                      const ze_event_handle_t& eventSignal,
-                      bool callOnce = false);
 void DumpReadyArguments(std::vector<CKernelArgumentDump>& readyArgVector,
                         uint32_t cmdQueueNumber,
                         uint32_t cmdListNumber,
