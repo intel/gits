@@ -238,6 +238,11 @@ inline void zeCommandListAppendLaunchKernel_RECWRAP_PRE(
                                          phWaitEvents);
     }
   }
+  if (recorder.Running()) {
+    for (const auto ptr : GetPointersToUpdate(hKernel)) {
+      recorder.Schedule(new CGitsL0MemoryUpdate(ptr));
+    }
+  }
 }
 
 inline void zeCommandListAppendLaunchKernel_RECWRAP(CRecorder& recorder,
@@ -249,9 +254,6 @@ inline void zeCommandListAppendLaunchKernel_RECWRAP(CRecorder& recorder,
                                                     uint32_t numWaitEvents,
                                                     ze_event_handle_t* phWaitEvents) {
   if (recorder.Running()) {
-    for (const auto ptr : GetPointersToUpdate(hKernel)) {
-      recorder.Schedule(new CGitsL0MemoryUpdate(ptr));
-    }
     recorder.Schedule(new CzeCommandListAppendLaunchKernel(return_value, hCommandList, hKernel,
                                                            pLaunchFuncArgs, hSignalEvent,
                                                            numWaitEvents, phWaitEvents));
@@ -328,9 +330,6 @@ inline void zeCommandListAppendLaunchCooperativeKernel_RECWRAP(
     uint32_t numWaitEvents,
     ze_event_handle_t* phWaitEvents) {
   if (recorder.Running()) {
-    for (const auto ptr : GetPointersToUpdate(hKernel)) {
-      recorder.Schedule(new CGitsL0MemoryUpdate(ptr));
-    }
     recorder.Schedule(new CzeCommandListAppendLaunchCooperativeKernel(
         return_value, hCommandList, hKernel, pLaunchFuncArgs, hSignalEvent, numWaitEvents,
         phWaitEvents));
@@ -350,9 +349,6 @@ inline void zeCommandListAppendLaunchKernelIndirect_RECWRAP(
     uint32_t numWaitEvents,
     ze_event_handle_t* phWaitEvents) {
   if (recorder.Running()) {
-    for (const auto ptr : GetPointersToUpdate(hKernel)) {
-      recorder.Schedule(new CGitsL0MemoryUpdate(ptr));
-    }
     recorder.Schedule(new CzeCommandListAppendLaunchKernelIndirect(
         return_value, hCommandList, hKernel, pLaunchArgumentsBuffer, hSignalEvent, numWaitEvents,
         phWaitEvents));
@@ -363,11 +359,11 @@ inline void zeCommandListAppendLaunchKernelIndirect_RECWRAP(
 }
 
 inline void zeCommandListAppendLaunchMultipleKernelsIndirect_RECWRAP_PRE(
-    [[maybe_unused]] CRecorder& recorder,
+    CRecorder& recorder,
     [[maybe_unused]] ze_result_t return_value,
     [[maybe_unused]] ze_command_list_handle_t hCommandList,
     uint32_t numKernels,
-    [[maybe_unused]] ze_kernel_handle_t* phKernels,
+    ze_kernel_handle_t* phKernels,
     [[maybe_unused]] const uint32_t* pCountBuffer,
     [[maybe_unused]] const ze_group_count_t* pLaunchArgumentsBuffer,
     [[maybe_unused]] ze_event_handle_t hSignalEvent,
@@ -385,6 +381,13 @@ inline void zeCommandListAppendLaunchMultipleKernelsIndirect_RECWRAP_PRE(
       }
     }
   }
+  if (recorder.Running()) {
+    for (auto i = 0u; i < numKernels; i++) {
+      for (const auto ptr : GetPointersToUpdate(phKernels[i])) {
+        recorder.Schedule(new CGitsL0MemoryUpdate(ptr));
+      }
+    }
+  }
 }
 
 inline void zeCommandListAppendLaunchMultipleKernelsIndirect_RECWRAP(
@@ -399,11 +402,6 @@ inline void zeCommandListAppendLaunchMultipleKernelsIndirect_RECWRAP(
     uint32_t numWaitEvents,
     ze_event_handle_t* phWaitEvents) {
   if (recorder.Running()) {
-    for (auto i = 0u; i < numKernels; i++) {
-      for (const auto ptr : GetPointersToUpdate(phKernels[i])) {
-        recorder.Schedule(new CGitsL0MemoryUpdate(ptr));
-      }
-    }
     recorder.Schedule(new CzeCommandListAppendLaunchMultipleKernelsIndirect(
         return_value, hCommandList, numKernels, phKernels, pCountBuffer, pLaunchArgumentsBuffer,
         hSignalEvent, numWaitEvents, phWaitEvents));
@@ -434,6 +432,24 @@ inline void zeCommandListAppendImageCopyFromMemory_RECWRAP(CRecorder& recorder,
                                             pDstRegion, hSignalEvent, numWaitEvents, phWaitEvents);
 }
 
+inline void zeCommandListAppendMemoryFill_RECWRAP_PRE(
+    CRecorder& recorder,
+    [[maybe_unused]] ze_result_t return_value,
+    [[maybe_unused]] ze_command_list_handle_t hCommandList,
+    void* ptr,
+    [[maybe_unused]] const void* pattern,
+    [[maybe_unused]] size_t pattern_size,
+    [[maybe_unused]] size_t size,
+    [[maybe_unused]] ze_event_handle_t hSignalEvent,
+    [[maybe_unused]] uint32_t numWaitEvents,
+    [[maybe_unused]] ze_event_handle_t* phWaitEvents) {
+  if (recorder.Running()) {
+    if (CheckWhetherUpdateUSM(ptr)) {
+      recorder.Schedule(new CGitsL0MemoryUpdate(ptr));
+    }
+  }
+}
+
 inline void zeCommandListAppendMemoryFill_RECWRAP(CRecorder& recorder,
                                                   ze_result_t return_value,
                                                   ze_command_list_handle_t hCommandList,
@@ -445,9 +461,6 @@ inline void zeCommandListAppendMemoryFill_RECWRAP(CRecorder& recorder,
                                                   uint32_t numWaitEvents,
                                                   ze_event_handle_t* phWaitEvents) {
   if (recorder.Running()) {
-    if (CheckWhetherUpdateUSM(ptr)) {
-      recorder.Schedule(new CGitsL0MemoryUpdate(ptr));
-    }
     recorder.Schedule(new CzeCommandListAppendMemoryFill_V1(
         return_value, hCommandList, ptr, pattern, pattern_size, size, hSignalEvent, numWaitEvents,
         phWaitEvents));

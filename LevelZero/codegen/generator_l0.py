@@ -3842,7 +3842,7 @@ arg7=ArgDef(name='numWaitEvents',type='uint32_t',tag='in',optional=True),
 arg8=ArgDef(name='phWaitEvents',type='ze_event_handle_t*',tag='in',range='0,numWaitEvents',optional=True),
 )
 
-Function(name='zeCommandListAppendMemoryFill',component='ze_command_list',enabled=True,recWrap=True,version=1,ddi_pos=9,stateTrack=True,
+Function(name='zeCommandListAppendMemoryFill',component='ze_command_list',enabled=True,recWrap=True,version=1,ddi_pos=9,stateTrack=True,recExecWrap=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='ptr',type='void*',tag='in',wrapType='CUSMPtr'),

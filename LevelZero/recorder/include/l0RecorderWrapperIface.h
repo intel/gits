@@ -48,6 +48,15 @@ public:
       ze_event_handle_t hSignalEvent,
       uint32_t numWaitEvents,
       ze_event_handle_t* phWaitEvents) const = 0;
+  virtual void zeCommandListAppendMemoryFill_pre(ze_result_t return_value,
+                                                 ze_command_list_handle_t hCommandList,
+                                                 void* ptr,
+                                                 const void* pattern,
+                                                 size_t pattern_size,
+                                                 size_t size,
+                                                 ze_event_handle_t hSignalEvent,
+                                                 uint32_t numWaitEvents,
+                                                 ze_event_handle_t* phWaitEvents) const = 0;
   virtual void UnProtectMemoryPointers(
       const ze_command_list_handle_t& hCommandList = nullptr) const = 0;
   virtual void ProtectMemoryPointers(

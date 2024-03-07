@@ -197,6 +197,31 @@ inline ze_result_t zeCommandListAppendLaunchMultipleKernelsIndirect_RECEXECWRAP(
   return return_value;
 }
 
+inline ze_result_t zeCommandListAppendMemoryFill_RECEXECWRAP(ze_command_list_handle_t hCommandList,
+                                                             void* ptr,
+                                                             const void* pattern,
+                                                             size_t pattern_size,
+                                                             size_t size,
+                                                             ze_event_handle_t hSignalEvent,
+                                                             uint32_t numWaitEvents,
+                                                             ze_event_handle_t* phWaitEvents) {
+  GITS_ENTRY_L0
+  auto return_value = ZE_RESULT_SUCCESS;
+  GITS_WRAPPER_PRE
+  wrapper.zeCommandListAppendMemoryFill_pre(return_value, hCommandList, ptr, pattern, pattern_size,
+                                            size, hSignalEvent, numWaitEvents, phWaitEvents);
+  return_value = driver.zeCommandListAppendMemoryFill(
+      hCommandList, ptr, pattern, pattern_size, size, hSignalEvent, numWaitEvents, phWaitEvents);
+  wrapper.zeCommandListAppendMemoryFill(return_value, hCommandList, ptr, pattern, pattern_size,
+                                        size, hSignalEvent, numWaitEvents, phWaitEvents);
+  GITS_WRAPPER_POST
+  else {
+    return_value = driver.zeCommandListAppendMemoryFill(
+        hCommandList, ptr, pattern, pattern_size, size, hSignalEvent, numWaitEvents, phWaitEvents);
+  }
+  return return_value;
+}
+
 inline ze_result_t zeDriverGetExtensionFunctionAddress_RECEXECWRAP(
     [[maybe_unused]] ze_driver_handle_t hDriver, const char* name, void** ppFunctionAddress) {
   GITS_ENTRY_L0(void) driver; // unused variable WA
