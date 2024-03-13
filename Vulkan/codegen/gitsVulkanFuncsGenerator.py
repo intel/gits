@@ -1420,7 +1420,7 @@ namespace gits {
           run_name = 'RunImpl'
         return_override = ""
         if func['type'] != 'void':
-          return_override = "\n      virtual MaybeConstCArgRef Return() const { return (stream_older_than(GITS_VULKAN_RETURN_VALUE_FIX) && Config::IsPlayer()) ? CFunction::Return() : _return_value; }"
+          return_override = "\n      virtual const CArgument* Return() const { return (stream_older_than(GITS_VULKAN_RETURN_VALUE_FIX) && Config::IsPlayer()) ? CFunction::Return() : &_return_value; }"
 
         ccodePostActionNeeded = ""
         if func.get('ccodePostActionNeeded') is False:

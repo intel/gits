@@ -168,12 +168,12 @@ const gits::CArgument& gits::CFunction::Result(unsigned idx) const {
   return nonConst.Result(idx);
 }
 
-boost::optional<gits::CArgument&> gits::CFunction::Return() {
+gits::CArgument* gits::CFunction::Return() {
   const CFunction& func = const_cast<const CFunction&>(*this);
   if (func.Return()) {
-    return const_cast<gits::CArgument&>(*func.Return());
+    return const_cast<gits::CArgument*>(func.Return());
   } else {
-    return boost::optional<CArgument&>();
+    return nullptr;
   }
 }
 

@@ -20,16 +20,10 @@
 #include "library.h"
 #include "pragmas.h"
 
-DISABLE_WARNINGS
-#include <boost/optional.hpp>
-ENABLE_WARNINGS
-
 #define GITS_BIT_AT_IDX(x) (1u << x)
 
 namespace gits {
 class CArgument;
-typedef boost::optional<CArgument&> MaybeCArgRef;
-typedef boost::optional<const CArgument&> MaybeConstCArgRef;
 
 /**
    * @brief Library function call wrapper
@@ -56,8 +50,8 @@ public:
     return dynamic_cast<const T&>(Argument(idx));
   }
 
-  virtual MaybeCArgRef Return();
-  virtual MaybeConstCArgRef Return() const = 0;
+  virtual CArgument* Return();
+  virtual const CArgument* Return() const = 0;
   template <class T>
   T& Return() {
     return dynamic_cast<T&>(*Return());

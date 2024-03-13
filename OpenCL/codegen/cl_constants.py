@@ -220,11 +220,6 @@ TOKENS_HEADER_START = """
 #include "openclLibrary.h"
 #include "pragmas.h"
 
-DISABLE_WARNINGS
-#include <boost/optional.hpp>
-ENABLE_WARNINGS
-
-
 namespace gits {
 namespace OpenCL {
 """
@@ -252,7 +247,7 @@ TOKENS_HEADER_TEMPLATE = """
 
       virtual unsigned ArgumentCount() const {{ return ARG_NUM; }}
       virtual CArgument &Argument(unsigned idx);
-      virtual boost::optional<const CArgument &> Return() const {{ return _return_value; }}
+      virtual const CArgument* Return() const {{ return &_return_value; }}
       virtual unsigned ResultCount() const {{ return RESULT_NUM; }}
       virtual CArgument &Result(unsigned idx);
 
@@ -275,7 +270,7 @@ TOKENS_HEADER_TEMPLATE_VOID = """
 
       virtual unsigned ArgumentCount() const {{ return ARG_NUM; }}
       virtual CArgument &Argument(unsigned idx);
-      virtual boost::optional<const CArgument &> Return() const {{ return boost::none; }}
+      virtual const CArgument* Return() const {{ return nullptr; }}
       virtual unsigned ResultCount() const {{ return RESULT_NUM; }}
       virtual CArgument &Result(unsigned idx);
 

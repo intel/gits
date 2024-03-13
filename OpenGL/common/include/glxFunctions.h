@@ -38,8 +38,8 @@ class CglXChooseVisual : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -77,8 +77,8 @@ class CglXCreateContext : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 6;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -146,8 +146,8 @@ class CglXMakeCurrent : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -246,8 +246,8 @@ class CglXCreateGLXPixmap : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -313,8 +313,8 @@ class CglXQueryExtension : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -349,8 +349,8 @@ class CglXQueryVersion : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -384,8 +384,8 @@ class CglXIsDirect : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -421,8 +421,8 @@ class CglXGetConfig : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -454,8 +454,8 @@ class CglXGetCurrentContext : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 0;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -487,8 +487,8 @@ class CglXGetCurrentDrawable : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 0;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -611,8 +611,8 @@ class CglXQueryExtensionsString : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -647,8 +647,8 @@ class CglXQueryServerString : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -682,8 +682,8 @@ class CglXGetClientString : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -715,8 +715,8 @@ class CglXGetCurrentDisplay : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 0;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -752,8 +752,8 @@ class CglXChooseFBConfig : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -790,8 +790,8 @@ class CglXGetFBConfigAttrib : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -827,8 +827,8 @@ class CglXGetFBConfigs : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -862,8 +862,8 @@ class CglXGetVisualFromFBConfig : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -899,8 +899,8 @@ class CglXCreateWindow : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -968,8 +968,8 @@ class CglXCreatePixmap : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1039,8 +1039,8 @@ class CglXCreatePbuffer : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1145,8 +1145,8 @@ class CglXCreateNewContext : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 6;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
   void AddFbConfigAttrib(Display* dpy, GLXFBConfig config, int attribute);
@@ -1191,8 +1191,8 @@ class CglXMakeContextCurrent : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 5;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1225,8 +1225,8 @@ class CglXGetCurrentReadDrawable : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 0;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1262,8 +1262,8 @@ class CglXQueryContext : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1360,8 +1360,8 @@ class CglXGetProcAddressARB : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1394,8 +1394,8 @@ class CglXGetProcAddress : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1431,8 +1431,8 @@ class CglXAllocateMemoryNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1498,8 +1498,8 @@ class CglXBindTexImageARB : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1534,8 +1534,8 @@ class CglXReleaseTexImageARB : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1570,8 +1570,8 @@ class CglXDrawableAttribARB : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1606,8 +1606,8 @@ class CglXGetFrameUsageMESA : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1641,8 +1641,8 @@ class CglXBeginFrameTrackingMESA : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1676,8 +1676,8 @@ class CglXEndFrameTrackingMESA : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1714,8 +1714,8 @@ class CglXQueryFrameTrackingMESA : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 5;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1753,8 +1753,8 @@ class CglXSwapIntervalMESA : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1786,8 +1786,8 @@ class CglXGetSwapIntervalMESA : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 0;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1890,8 +1890,8 @@ class CglXCreateContextAttribsARB : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 6;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
   void AddFbConfigAttrib(Display* dpy, GLXFBConfig config, int attribute);
@@ -1932,8 +1932,8 @@ class CglXSwapIntervalSGI : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:

@@ -84,8 +84,8 @@ public:
     ID_FUNCTION_END
   };
   static CFunction* Create(unsigned id);
-  virtual MaybeConstCArgRef Return() const override {
-    return MaybeConstCArgRef();
+  virtual const CArgument* Return() const override {
+    return nullptr;
   }
   virtual unsigned ResultCount() const override {
     return 0;

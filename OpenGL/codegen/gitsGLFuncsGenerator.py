@@ -720,7 +720,7 @@ gits::OpenGL::C%(name)s::C%(name)s%(argd_special)s%(init_special)s
 
         arg_ref = ""
         if func.get('type') != 'void':
-          arg_ref = "      virtual MaybeConstCArgRef Return() const { return _return_value; }\n"
+          arg_ref = "      virtual const CArgument* Return() const { return &_return_value; }\n"
 
         c = ""
         if len(func['args']) > 0 or func['type'] != 'void':

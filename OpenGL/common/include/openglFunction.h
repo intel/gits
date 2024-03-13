@@ -358,8 +358,8 @@ public:
   };
 
   static CFunction* Create(unsigned id);
-  virtual MaybeConstCArgRef Return() const {
-    return MaybeConstCArgRef();
+  virtual const CArgument* Return() const {
+    return nullptr;
   }
   virtual unsigned ResultCount() const {
     return 0;

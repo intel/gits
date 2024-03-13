@@ -34,8 +34,8 @@ class CeglGetError : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 0;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -68,8 +68,8 @@ class CeglGetDisplay : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -104,8 +104,8 @@ class CeglInitialize : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -138,8 +138,8 @@ class CeglTerminate : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -172,8 +172,8 @@ class CeglQueryString : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -209,8 +209,8 @@ class CeglGetConfigs : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -251,8 +251,8 @@ class CeglChooseConfig : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 5;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -293,8 +293,8 @@ class CeglGetConfigAttrib : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -333,8 +333,8 @@ class CeglCreateWindowSurface : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 6;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -374,8 +374,8 @@ class CeglCreatePbufferSurface : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -414,8 +414,8 @@ class CeglCreatePixmapSurface : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -452,8 +452,8 @@ class CeglDestroySurface : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -488,8 +488,8 @@ class CeglQuerySurface : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -523,8 +523,8 @@ class CeglBindAPI : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -556,8 +556,8 @@ class CeglQueryAPI : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 0;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -588,8 +588,8 @@ class CeglWaitClient : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 0;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -620,8 +620,8 @@ class CeglReleaseThread : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 0;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -657,8 +657,8 @@ class CeglCreatePbufferFromClientBuffer : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 5;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -698,8 +698,8 @@ class CeglSurfaceAttrib : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -734,8 +734,8 @@ class CeglBindTexImage : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -769,8 +769,8 @@ class CeglReleaseTexImage : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -803,8 +803,8 @@ class CeglSwapInterval : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -840,8 +840,8 @@ class CeglCreateContext : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 5;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -879,8 +879,8 @@ class CeglDestroyContext : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -915,8 +915,8 @@ class CeglMakeCurrent : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -951,8 +951,8 @@ class CeglGetCurrentContext : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 0;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -984,8 +984,8 @@ class CeglGetCurrentSurface : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1017,8 +1017,8 @@ class CeglGetCurrentDisplay : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 0;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1053,8 +1053,8 @@ class CeglQueryContext : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1086,8 +1086,8 @@ class CeglWaitGL : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 0;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1119,8 +1119,8 @@ class CeglWaitNative : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1153,8 +1153,8 @@ class CeglSwapBuffers : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1189,8 +1189,8 @@ class CeglCopyBuffers : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1225,8 +1225,8 @@ class CeglGetProcAddress : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1362,11 +1362,11 @@ class CeglCreateImageKHR : public CFunction {
 
   virtual CArgument& Argument(unsigned idx);
   virtual unsigned ArgumentCount() const;
-  virtual MaybeConstCArgRef Return() const {
+  virtual const CArgument* Return() const {
     if (stream_older_than(GITS_EGL_IMAGE_MAPPING)) {
-      return MaybeConstCArgRef();
+      return nullptr;
     } else {
-      return _return_value;
+      return &_return_value;
     }
   }
 
@@ -1503,8 +1503,8 @@ class CeglCreateSyncKHR : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2180,8 +2180,8 @@ class CeglGetPlatformDisplayEXT : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2215,8 +2215,8 @@ class CeglCreatePlatformWindowSurfaceEXT : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 6;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:

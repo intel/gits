@@ -83,8 +83,8 @@ class CwglSetPixelFormat : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 6;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -120,8 +120,8 @@ class CwglGetPixelFormat : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -161,8 +161,8 @@ class CwglDescribePixelFormat : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 5;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -197,8 +197,8 @@ class CwglCopyContext : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -231,8 +231,8 @@ class CwglCreateContext : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -269,8 +269,8 @@ class CwglCreateLayerContext : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -302,8 +302,8 @@ class CwglDeleteContext : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -422,8 +422,8 @@ class CwglMakeCurrent : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 5;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -459,8 +459,8 @@ class CwglShareLists : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -501,8 +501,8 @@ class CwglUseFontBitmapsA : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 7;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -549,8 +549,8 @@ class CwglUseFontBitmapsW : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 7;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -595,8 +595,8 @@ class CwglSwapLayerBuffers : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 5;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -631,8 +631,8 @@ class CwglSwapBuffers : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -671,8 +671,8 @@ class CwglSwapMultipleBuffers : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 5;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -713,8 +713,8 @@ class CwglUseFontOutlinesA : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 10;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -768,8 +768,8 @@ class CwglUseFontOutlinesW : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 10;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -817,8 +817,8 @@ class CwglCreateBufferRegionARB : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -886,8 +886,8 @@ class CwglSaveBufferRegionARB : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 5;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -925,8 +925,8 @@ class CwglRestoreBufferRegionARB : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 7;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1080,8 +1080,8 @@ class CwglChoosePixelFormatARB : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 7;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1122,8 +1122,8 @@ class CwglMakeContextCurrentARB : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1188,8 +1188,8 @@ class CwglCreatePbufferARB : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 7;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1229,8 +1229,8 @@ class CwglGetPbufferDCARB : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1263,8 +1263,8 @@ class CwglReleasePbufferDCARB : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1296,8 +1296,8 @@ class CwglDestroyPbufferARB : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1361,8 +1361,8 @@ class CwglBindTexImageARB : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1395,8 +1395,8 @@ class CwglReleaseTexImageARB : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1429,8 +1429,8 @@ class CwglSetPbufferAttribARB : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1465,8 +1465,8 @@ class CwglCreateContextAttribsARB : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1504,8 +1504,8 @@ class CwglCreateDisplayColorTableEXT : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1538,8 +1538,8 @@ class CwglLoadDisplayColorTableEXT : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1571,8 +1571,8 @@ class CwglBindDisplayColorTableEXT : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1632,8 +1632,8 @@ class CwglGetExtensionsStringEXT : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 0;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1669,8 +1669,8 @@ class CwglMakeContextCurrentEXT : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1735,8 +1735,8 @@ class CwglCreatePbufferEXT : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 7;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1773,8 +1773,8 @@ class CwglGetPbufferDCEXT : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1807,8 +1807,8 @@ class CwglReleasePbufferDCEXT : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -1840,8 +1840,8 @@ class CwglDestroyPbufferEXT : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2026,8 +2026,8 @@ class CwglSwapIntervalEXT : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2058,8 +2058,8 @@ class CwglGetSwapIntervalEXT : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 0;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2094,8 +2094,8 @@ class CwglAllocateMemoryNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2161,8 +2161,8 @@ class CwglGetSyncValuesOML : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 5;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2197,8 +2197,8 @@ class CwglGetMscRateOML : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2234,8 +2234,8 @@ class CwglSwapBuffersMscOML : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 5;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2273,8 +2273,8 @@ class CwglSwapLayerBuffersMscOML : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 6;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2314,8 +2314,8 @@ class CwglWaitForMscOML : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 8;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2359,8 +2359,8 @@ class CwglWaitForSbcOML : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 6;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2396,8 +2396,8 @@ class CwglGetDigitalVideoParametersI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2432,8 +2432,8 @@ class CwglSetDigitalVideoParametersI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2469,8 +2469,8 @@ class CwglGetGammaTableParametersI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2505,8 +2505,8 @@ class CwglSetGammaTableParametersI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2543,8 +2543,8 @@ class CwglGetGammaTableI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 6;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2582,8 +2582,8 @@ class CwglSetGammaTableI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 6;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2621,8 +2621,8 @@ class CwglEnableGenlockI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2656,8 +2656,8 @@ class CwglDisableGenlockI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2691,8 +2691,8 @@ class CwglIsEnabledGenlockI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2726,8 +2726,8 @@ class CwglGenlockSourceI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2761,8 +2761,8 @@ class CwglGetGenlockSourceI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2796,8 +2796,8 @@ class CwglGenlockSourceEdgeI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2831,8 +2831,8 @@ class CwglGetGenlockSourceEdgeI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2866,8 +2866,8 @@ class CwglGenlockSampleRateI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2901,8 +2901,8 @@ class CwglGetGenlockSampleRateI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2936,8 +2936,8 @@ class CwglGenlockSourceDelayI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -2971,8 +2971,8 @@ class CwglGetGenlockSourceDelayI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3007,8 +3007,8 @@ class CwglQueryGenlockMaxSourceDelayI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3046,8 +3046,8 @@ class CwglCreateImageBufferI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3081,8 +3081,8 @@ class CwglDestroyImageBufferI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3119,8 +3119,8 @@ class CwglAssociateImageBufferEventsI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 6;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3160,8 +3160,8 @@ class CwglReleaseImageBufferEventsI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3192,8 +3192,8 @@ class CwglEnableFrameLockI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 0;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3224,8 +3224,8 @@ class CwglDisableFrameLockI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 0;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3257,8 +3257,8 @@ class CwglIsEnabledFrameLockI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3290,8 +3290,8 @@ class CwglQueryFrameLockMasterI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3323,8 +3323,8 @@ class CwglGetFrameUsageI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3355,8 +3355,8 @@ class CwglBeginFrameTrackingI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 0;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3387,8 +3387,8 @@ class CwglEndFrameTrackingI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 0;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3422,8 +3422,8 @@ class CwglQueryFrameTrackingI3D : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3460,8 +3460,8 @@ class CwglSetStereoEmitterState3DL : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3495,8 +3495,8 @@ class CwglEnumerateVideoDevicesNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3532,8 +3532,8 @@ class CwglBindVideoDeviceNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 5;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3570,8 +3570,8 @@ class CwglQueryCurrentContextNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3606,8 +3606,8 @@ class CwglGetVideoDeviceNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3639,8 +3639,8 @@ class CwglReleaseVideoDeviceNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3674,8 +3674,8 @@ class CwglBindVideoImageNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3711,8 +3711,8 @@ class CwglReleaseVideoImageNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3747,8 +3747,8 @@ class CwglSendPbufferToVideoNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3786,8 +3786,8 @@ class CwglGetVideoInfoNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3824,8 +3824,8 @@ class CwglJoinSwapGroupNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3858,8 +3858,8 @@ class CwglBindSwapBarrierNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3894,8 +3894,8 @@ class CwglQuerySwapGroupNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3930,8 +3930,8 @@ class CwglQueryMaxSwapGroupsNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 4;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3965,8 +3965,8 @@ class CwglQueryFrameCountNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -3999,8 +3999,8 @@ class CwglResetFrameCountNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -4033,8 +4033,8 @@ class CwglEnumGpusNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -4068,8 +4068,8 @@ class CwglEnumGpuDevicesNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -4101,8 +4101,8 @@ class CwglCreateAffinityDCNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -4136,8 +4136,8 @@ class CwglEnumGpusFromAffinityDCNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -4169,8 +4169,8 @@ class CwglDeleteDCNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -4203,8 +4203,8 @@ class CwglGetGPUIDsAMD : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -4240,8 +4240,8 @@ class CwglGetGPUInfoAMD : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 5;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -4274,8 +4274,8 @@ class CwglGetContextGPUIDAMD : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -4307,8 +4307,8 @@ class CwglCreateAssociatedContextAMD : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -4342,8 +4342,8 @@ class CwglCreateAssociatedContextAttribsAMD : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -4378,8 +4378,8 @@ class CwglDeleteAssociatedContextAMD : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -4411,8 +4411,8 @@ class CwglMakeAssociatedContextCurrentAMD : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 1;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -4443,8 +4443,8 @@ class CwglGetCurrentAssociatedContextAMD : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 0;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -4526,8 +4526,8 @@ class CwglBindVideoCaptureDeviceNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 2;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -4561,8 +4561,8 @@ class CwglEnumerateVideoCaptureDevicesNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -4596,8 +4596,8 @@ class CwglLockVideoCaptureDeviceNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -4633,8 +4633,8 @@ class CwglQueryVideoCaptureDeviceNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 5;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:
@@ -4669,8 +4669,8 @@ class CwglReleaseVideoCaptureDeviceNV : public CFunction {
   virtual unsigned ArgumentCount() const {
     return 3;
   }
-  virtual MaybeConstCArgRef Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
 
 public:

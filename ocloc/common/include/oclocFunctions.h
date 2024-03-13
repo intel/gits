@@ -45,8 +45,8 @@ class CoclocInvoke : public CFunction {
     return ARG_NUM;
   }
   virtual CArgument& Argument(unsigned idx);
-  virtual boost::optional<const CArgument&> Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
   virtual unsigned ResultCount() const {
     return RESULT_NUM;
@@ -103,8 +103,8 @@ class CoclocInvoke_V1 : public CFunction {
     return ARG_NUM;
   }
   virtual CArgument& Argument(unsigned idx);
-  virtual boost::optional<const CArgument&> Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
   virtual unsigned ResultCount() const {
     return RESULT_NUM;
@@ -151,8 +151,8 @@ class CoclocFreeOutput : public CFunction {
     return ARG_NUM;
   }
   virtual CArgument& Argument(unsigned idx);
-  virtual boost::optional<const CArgument&> Return() const {
-    return _return_value;
+  virtual const CArgument* Return() const {
+    return &_return_value;
   }
   virtual unsigned ResultCount() const {
     return RESULT_NUM;

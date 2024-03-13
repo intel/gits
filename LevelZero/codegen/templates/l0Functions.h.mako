@@ -27,10 +27,6 @@ using namespace gits::OpenCL;
 #define Ccl_command_queue COutArgument
 #endif
 
-DISABLE_WARNINGS
-#include <boost/optional.hpp>
-ENABLE_WARNINGS
-
 namespace gits {
   namespace l0 {
 %for name, func in functions.items():
@@ -52,7 +48,7 @@ namespace gits {
       virtual unsigned ArgumentCount() const { return ARG_NUM; }
       virtual CArgument& Argument(unsigned idx);
     %if func.get('type') != 'void':
-      virtual boost::optional<const CArgument&> Return() const { return _return_value; }
+      virtual const CArgument* Return() const { return &_return_value; }
       virtual CArgument& Result(unsigned idx);
     %endif
       virtual unsigned ResultCount() const { return RESULT_NUM; }
