@@ -22,11 +22,14 @@ public:
   virtual bool CfgRec_IsAllMode() const {
     return Config::Get().recorder.levelZero.capture.mode.find("All") != std::string::npos;
   }
-  virtual bool CfgRec_IsKernelsRangeMode() const {
+  virtual bool CfgRec_IsSubcapture() const {
     return Config::Get().recorder.levelZero.capture.mode.find("Kernel") != std::string::npos;
   }
+  virtual bool CfgRec_IsKernelsRangeMode() const {
+    return CfgRec_IsSubcapture() && !Config::Get().recorder.levelZero.capture.kernel.singleCapture;
+  }
   virtual bool CfgRec_IsSingleKernelMode() const {
-    return Config::Get().recorder.levelZero.capture.kernel.singleCapture;
+    return CfgRec_IsSubcapture() && Config::Get().recorder.levelZero.capture.kernel.singleCapture;
   }
   virtual int CfgRec_StartKernel() const {
     return Config::Get().recorder.levelZero.capture.kernel.startKernel;
@@ -34,24 +37,30 @@ public:
   virtual int CfgRec_StopKernel() const {
     return Config::Get().recorder.levelZero.capture.kernel.stopKernel;
   }
+  virtual unsigned int CfgRec_StartCommandList() const {
+    return Config::Get().recorder.levelZero.capture.kernel.startCommandList;
+  }
+  virtual unsigned int CfgRec_StopCommandList() const {
+    return Config::Get().recorder.levelZero.capture.kernel.stopCommandList;
+  }
+  virtual unsigned int CfgRec_StartCommandQueueSubmit() const {
+    return Config::Get().recorder.levelZero.capture.kernel.startCommandQueueSubmit;
+  }
+  virtual unsigned int CfgRec_StopCommandQueueSubmit() const {
+    return Config::Get().recorder.levelZero.capture.kernel.stopCommandQueueSubmit;
+  }
   virtual bool CfgRec_IsStartQueueSubmit() const {
-    return Config::Get().recorder.levelZero.capture.kernel.minQueueSubmitNumber ==
+    return Config::Get().recorder.levelZero.capture.kernel.startCommandQueueSubmit ==
            CGits::Instance().CurrentCommandQueueExecCount();
   }
   virtual bool CfgRec_IsStopQueueSubmit() const {
-    return Config::Get().recorder.levelZero.capture.kernel.maxQueueSubmitNumber ==
+    return Config::Get().recorder.levelZero.capture.kernel.stopCommandQueueSubmit ==
            CGits::Instance().CurrentCommandQueueExecCount();
   }
-  virtual bool CfgRec_IsObjectToRecord() const {
-    return Config::Get()
-        .recorder.levelZero.capture.kernel
-        .queueRange[CGits::Instance().CurrentCommandQueueExecCount()];
-  }
-  virtual bool CfgRec_IsCommandListToRecord(uint32_t cmdListNumber) const {
-    return Config::Get().recorder.levelZero.capture.kernel.cmdListRange[cmdListNumber];
-  }
-  virtual bool CfgRec_IsKernelToRecord(uint32_t kernelNumber) const {
-    return Config::Get().recorder.levelZero.capture.kernel.kernelRange[kernelNumber];
+  virtual bool CfgRec_IsStopOfSubcapture(const uint32_t cmdListNumber,
+                                         const uint32_t kernelNumber) const {
+    return CfgRec_IsStopQueueSubmit() && CfgRec_StopCommandList() == cmdListNumber &&
+           static_cast<uint32_t>(CfgRec_StopKernel()) == kernelNumber;
   }
   virtual void MemorySnifferUninstall() const {
     if (!IsMemorySnifferInstalled()) {

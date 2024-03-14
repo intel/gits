@@ -203,12 +203,22 @@ gits::CRecorder::CRecorder()
         message << " - All";
       } else if (apiCompute.CfgRec_IsSingleKernelMode()) {
         message << " - SingleKernel ";
-        message << " Number:" << apiCompute.CfgRec_SingleKernel();
+        if (apiCompute.Api() != gits::ApisIface::TApi::LevelZero) {
+          message << " Number:" << apiCompute.CfgRec_SingleKernel();
+        } else {
+          message << " Number: " << apiCompute.CfgRec_StartCommandQueueSubmit() << "/"
+                  << apiCompute.CfgRec_StartCommandList() << "/" << apiCompute.CfgRec_StartKernel();
+        }
       } else if (apiCompute.CfgRec_IsKernelsRangeMode()) {
         message << " - KernelsRange";
         if (apiCompute.Api() != gits::ApisIface::TApi::LevelZero) {
           message << " Start:" << apiCompute.CfgRec_StartKernel()
                   << " Stop:" << apiCompute.CfgRec_StopKernel();
+        } else {
+          message << " Start: " << apiCompute.CfgRec_StartCommandQueueSubmit() << "/"
+                  << apiCompute.CfgRec_StartCommandList() << "/" << apiCompute.CfgRec_StartKernel()
+                  << " Stop: " << apiCompute.CfgRec_StopCommandQueueSubmit() << "/"
+                  << apiCompute.CfgRec_StopCommandList() << "/" << apiCompute.CfgRec_StopKernel();
         }
       }
     }

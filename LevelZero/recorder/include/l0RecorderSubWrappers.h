@@ -145,63 +145,57 @@ void SaveKernelArgumentsForStateRestore(CStateDynamic& sd,
   }
   driver.inject.zeCommandListAppendBarrier(hCommandList, nullptr, numEvents, waitList);
 }
-std::vector<ze_command_list_handle_t> GetCommandListToRestore(
+void SaveAllBuffersForStateRestore(CStateDynamic& sd,
+                                   const CDriver& driver,
+                                   const ze_kernel_handle_t& hKernel,
+                                   const ze_command_list_handle_t& hCommandList,
+                                   const uint32_t numEvents,
+                                   ze_event_handle_t* waitList) {
+  auto& kernelState = sd.Get<CKernelState>(hKernel, EXCEPTION_MESSAGE);
+  auto& stateRestoreBuffersSnapshot = kernelState.currentKernelInfo->stateRestoreBuffers;
+  for (const auto& allocState : sd.Map<CAllocState>()) {
+    if (!allocState.second->savedForStateRestore) {
+      stateRestoreBuffersSnapshot.emplace_back(
+          std::make_unique<CKernelArgument>(allocState.second->size, allocState.first));
+      driver.inject.zeCommandListAppendMemoryCopy(
+          hCommandList, stateRestoreBuffersSnapshot.back()->buffer.data(), allocState.first,
+          allocState.second->size, nullptr, numEvents, waitList);
+      allocState.second->savedForStateRestore = true;
+    }
+  }
+  for (const auto& imageState : sd.Map<CImageState>()) {
+    if (!imageState.second->savedForStateRestore) {
+      stateRestoreBuffersSnapshot.emplace_back(std::make_unique<CKernelArgument>(
+          CalculateImageSize(imageState.second->desc), imageState.first));
+      driver.inject.zeCommandListAppendImageCopyToMemory(
+          hCommandList, stateRestoreBuffersSnapshot.back()->buffer.data(), imageState.first,
+          nullptr, nullptr, numEvents, waitList);
+      imageState.second->savedForStateRestore = true;
+    }
+  }
+  driver.inject.zeCommandListAppendBarrier(hCommandList, nullptr, numEvents, waitList);
+}
+std::vector<ze_command_list_handle_t> GetCommandListsToSubcapture(
+    bool isRecorderRunning,
     const ApisIface::ApiCompute& l0IFace,
     CStateDynamic& sd,
     uint32_t numCommandLists,
     ze_command_list_handle_t* phCommandLists) {
   std::vector<ze_command_list_handle_t> cmdLists;
+  bool record = isRecorderRunning;
   for (auto i = 0u; i < numCommandLists; i++) {
     const auto& cmdListState = sd.Get<CCommandListState>(phCommandLists[i], EXCEPTION_MESSAGE);
-    if (l0IFace.CfgRec_IsCommandListToRecord(cmdListState.cmdListNumber)) {
-      cmdLists.push_back(phCommandLists[i]);
+    if (cmdListState.cmdListNumber == l0IFace.CfgRec_StartCommandList()) {
+      record = true;
     }
-  }
-  return cmdLists;
-}
-std::vector<ze_command_list_handle_t> GetCommandListsToSubcapture(
-    const ApisIface::ApiCompute& l0IFace,
-    CStateDynamic& sd,
-    uint32_t numCommandLists,
-    ze_command_list_handle_t* phCommandLists) {
-  const auto cmdLists = GetCommandListToRestore(l0IFace, sd, numCommandLists, phCommandLists);
-  for (const auto& cmdList : cmdLists) {
-    const auto& cmdListState = sd.Get<CCommandListState>(cmdList, EXCEPTION_MESSAGE);
-    for (const auto& kernelInfo : cmdListState.appendedKernels) {
-      if (l0IFace.CfgRec_IsKernelToRecord(kernelInfo->kernelNumber)) {
+    if (record) {
+      cmdLists.push_back(phCommandLists[i]);
+      if (cmdListState.cmdListNumber == l0IFace.CfgRec_StopCommandList()) {
         return cmdLists;
       }
     }
   }
   return cmdLists;
-}
-
-void SubcaptureLogicForImmediateCommandLists(CRecorder& recorder,
-                                             const ApisIface::ApiCompute& l0IFace,
-                                             CStateDynamic& sd,
-                                             ze_command_list_handle_t hCommandList,
-                                             ze_event_handle_t hEventSignal) {
-  if (l0IFace.CfgRec_IsKernelsRangeMode() &&
-      l0IFace.CfgRec_IsKernelToRecord(gits::CGits::Instance().CurrentKernelCount())) {
-    auto& cmdListState = sd.Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
-    if (cmdListState.isImmediate) {
-      if (!cmdListState.isSync) {
-        if (hEventSignal != nullptr) {
-          drv.inject.zeEventHostSynchronize(hEventSignal, UINT64_MAX);
-        } else {
-          drv.inject.zeCommandListAppendBarrier(hCommandList, nullptr, 0, nullptr);
-        }
-      }
-      const auto kernelCount = gits::CGits::Instance().CurrentKernelCount();
-      if (l0IFace.CfgRec_StartKernel() == kernelCount) {
-        recorder.Start();
-      }
-      if (l0IFace.CfgRec_StopKernel() == kernelCount) {
-        recorder.Stop();
-        recorder.MarkForDeletion();
-      }
-    }
-  }
 }
 } // namespace
 
@@ -220,22 +214,35 @@ inline void zeCommandListAppendLaunchKernel_RECWRAP_PRE(
   }
   const auto kernelCount = gits::CGits::Instance().CurrentKernelCount();
   const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
-  if (l0IFace.CfgRec_IsKernelsRangeMode() && l0IFace.CfgRec_IsKernelToRecord(kernelCount)) {
-    if (sd.Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE).isImmediate) {
-      if (l0IFace.CfgRec_StartKernel() == kernelCount) {
+  auto& cmdListState = sd.Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
+  if (!sd.stateRestoreFinished && l0IFace.CfgRec_IsSubcapture()) {
+    if (l0IFace.CfgRec_IsSingleKernelMode() && kernelCount == l0IFace.CfgRec_StartKernel()) {
+      if (cmdListState.isImmediate) {
         for (auto i = 0U; i < numWaitEvents; i++) {
           drv.inject.zeEventHostSynchronize(phWaitEvents[i], UINT64_MAX);
         }
         CommandListKernelInit(sd, hCommandList, hKernel, pLaunchFuncArgs);
         recorder.Start();
-      }
-      if (l0IFace.CfgRec_StopKernel() == kernelCount) {
         recorder.Stop();
         recorder.MarkForDeletion();
+      } else {
+        SaveKernelArgumentsForStateRestore(sd, drv, hKernel, hCommandList, numWaitEvents,
+                                           phWaitEvents);
       }
     } else {
-      SaveKernelArgumentsForStateRestore(sd, drv, hKernel, hCommandList, numWaitEvents,
-                                         phWaitEvents);
+      if (kernelCount == l0IFace.CfgRec_StartKernel() && cmdListState.isImmediate) {
+        auto& kernelState = sd.Get<CKernelState>(hKernel, EXCEPTION_MESSAGE);
+        kernelState.currentKernelInfo->handle = hKernel;
+        kernelState.currentKernelInfo->hModule = kernelState.hModule;
+        kernelState.currentKernelInfo->pKernelName = std::string(kernelState.desc.pKernelName);
+        if (pLaunchFuncArgs != nullptr) {
+          kernelState.currentKernelInfo->launchFuncArgs = *pLaunchFuncArgs;
+        }
+        recorder.Start();
+      } else if (kernelCount >= l0IFace.CfgRec_StartKernel() &&
+                 kernelCount <= l0IFace.CfgRec_StopKernel()) {
+        SaveAllBuffersForStateRestore(sd, drv, hKernel, hCommandList, numWaitEvents, phWaitEvents);
+      }
     }
   }
   if (recorder.Running()) {
@@ -254,9 +261,17 @@ inline void zeCommandListAppendLaunchKernel_RECWRAP(CRecorder& recorder,
                                                     uint32_t numWaitEvents,
                                                     ze_event_handle_t* phWaitEvents) {
   if (recorder.Running()) {
+    const auto& gitsInstance = gits::CGits::Instance();
     recorder.Schedule(new CzeCommandListAppendLaunchKernel(return_value, hCommandList, hKernel,
                                                            pLaunchFuncArgs, hSignalEvent,
                                                            numWaitEvents, phWaitEvents));
+    if (IsCommandListImmediate(hCommandList, SD()) &&
+        gitsInstance.apis.IfaceCompute().CfgRec_StopKernel() == gitsInstance.CurrentKernelCount()) {
+      recorder.Schedule(
+          new CzeCommandListHostSynchronize(ZE_RESULT_SUCCESS, hCommandList, UINT64_MAX));
+      recorder.Stop();
+      recorder.MarkForDeletion();
+    }
   }
   zeCommandListAppendLaunchKernel_SD(return_value, hCommandList, hKernel, pLaunchFuncArgs,
                                      hSignalEvent, numWaitEvents, phWaitEvents);
@@ -330,9 +345,17 @@ inline void zeCommandListAppendLaunchCooperativeKernel_RECWRAP(
     uint32_t numWaitEvents,
     ze_event_handle_t* phWaitEvents) {
   if (recorder.Running()) {
+    const auto& gitsInstance = gits::CGits::Instance();
     recorder.Schedule(new CzeCommandListAppendLaunchCooperativeKernel(
         return_value, hCommandList, hKernel, pLaunchFuncArgs, hSignalEvent, numWaitEvents,
         phWaitEvents));
+    if (IsCommandListImmediate(hCommandList, SD()) &&
+        gitsInstance.apis.IfaceCompute().CfgRec_StopKernel() == gitsInstance.CurrentKernelCount()) {
+      recorder.Schedule(
+          new CzeCommandListHostSynchronize(ZE_RESULT_SUCCESS, hCommandList, UINT64_MAX));
+      recorder.Stop();
+      recorder.MarkForDeletion();
+    }
   }
   zeCommandListAppendLaunchCooperativeKernel_SD(return_value, hCommandList, hKernel,
                                                 pLaunchFuncArgs, hSignalEvent, numWaitEvents,
@@ -349,9 +372,17 @@ inline void zeCommandListAppendLaunchKernelIndirect_RECWRAP(
     uint32_t numWaitEvents,
     ze_event_handle_t* phWaitEvents) {
   if (recorder.Running()) {
+    const auto& gitsInstance = gits::CGits::Instance();
     recorder.Schedule(new CzeCommandListAppendLaunchKernelIndirect(
         return_value, hCommandList, hKernel, pLaunchArgumentsBuffer, hSignalEvent, numWaitEvents,
         phWaitEvents));
+    if (IsCommandListImmediate(hCommandList, SD()) &&
+        gitsInstance.apis.IfaceCompute().CfgRec_StopKernel() == gitsInstance.CurrentKernelCount()) {
+      recorder.Schedule(
+          new CzeCommandListHostSynchronize(ZE_RESULT_SUCCESS, hCommandList, UINT64_MAX));
+      recorder.Stop();
+      recorder.MarkForDeletion();
+    }
   }
   zeCommandListAppendLaunchKernelIndirect_SD(return_value, hCommandList, hKernel,
                                              pLaunchArgumentsBuffer, hSignalEvent, numWaitEvents,
@@ -375,7 +406,7 @@ inline void zeCommandListAppendLaunchMultipleKernelsIndirect_RECWRAP_PRE(
     for (auto i = 0U; i < numKernels; i++) {
       gits::CGits::Instance().KernelCountUp();
       const auto kernelCount = gits::CGits::Instance().CurrentKernelCount();
-      if (l0IFace.CfgRec_IsKernelsRangeMode() && l0IFace.CfgRec_IsKernelToRecord(kernelCount)) {
+      if (l0IFace.CfgRec_IsSubcapture() && l0IFace.CfgRec_StartKernel() == kernelCount) {
         throw ENotImplemented(
             "Subcapturing from zeCommandListAppendLaunchMultipleKernelsIndirect is not supported");
       }
@@ -499,26 +530,51 @@ inline void zeCommandQueueExecuteCommandLists_RECWRAP(CRecorder& recorder,
                                                       ze_fence_handle_t hFence) {
   const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
   auto& sd = SD();
-  const auto subcaptureMode = l0IFace.CfgRec_IsKernelsRangeMode();
-  if (subcaptureMode) {
-    auto cmdLists = GetCommandListsToSubcapture(l0IFace, sd, numCommandLists, phCommandLists);
+  const auto subcaptureMode = l0IFace.CfgRec_IsSubcapture();
+  if (!recorder.Running() && subcaptureMode && l0IFace.CfgRec_IsStartQueueSubmit()) {
+    auto cmdLists = GetCommandListsToSubcapture(recorder.Running(), l0IFace, sd, numCommandLists,
+                                                phCommandLists);
     if (!cmdLists.empty()) {
-      if (l0IFace.CfgRec_IsStartQueueSubmit()) {
-        recorder.Start();
+      recorder.Start();
+      recorder.Schedule(new CzeCommandQueueExecuteCommandLists(
+          return_value, hCommandQueue, static_cast<uint32_t>(cmdLists.size()), cmdLists.data(),
+          hFence));
+      recorder.Schedule(
+          new CzeCommandQueueSynchronize(ZE_RESULT_SUCCESS, hCommandQueue, UINT64_MAX));
+    } else {
+      Log(ERR) << "Incorrect config LevelZero.Capture.Kernel.Range. The command list "
+               << l0IFace.CfgRec_StartCommandList()
+               << " doesn't exist inside command queue submission "
+               << l0IFace.CfgRec_StartCommandQueueSubmit();
+      throw EOperationFailed(EXCEPTION_MESSAGE);
+    }
+    if (l0IFace.CfgRec_IsStopQueueSubmit()) {
+      recorder.Stop();
+      recorder.MarkForDeletion();
+    }
+  } else if (recorder.Running()) {
+    if (subcaptureMode && l0IFace.CfgRec_IsStopQueueSubmit()) {
+      auto cmdLists = GetCommandListsToSubcapture(recorder.Running(), l0IFace, sd, numCommandLists,
+                                                  phCommandLists);
+      if (!cmdLists.empty()) {
         recorder.Schedule(new CzeCommandQueueExecuteCommandLists(
             return_value, hCommandQueue, static_cast<uint32_t>(cmdLists.size()), cmdLists.data(),
             hFence));
         recorder.Schedule(
             new CzeCommandQueueSynchronize(ZE_RESULT_SUCCESS, hCommandQueue, UINT64_MAX));
+      } else {
+        Log(ERR) << "Incorrect config LevelZero.Capture.Kernel.Range. The command list "
+                 << l0IFace.CfgRec_StopCommandList()
+                 << " doesn't exist inside command queue submission "
+                 << l0IFace.CfgRec_StopCommandQueueSubmit();
+        throw EOperationFailed(EXCEPTION_MESSAGE);
       }
-      if (l0IFace.CfgRec_IsStopQueueSubmit()) {
-        recorder.Stop();
-        recorder.MarkForDeletion();
-      }
+      recorder.Stop();
+      recorder.MarkForDeletion();
+    } else {
+      recorder.Schedule(new CzeCommandQueueExecuteCommandLists(
+          return_value, hCommandQueue, numCommandLists, phCommandLists, hFence));
     }
-  } else if (recorder.Running()) {
-    recorder.Schedule(new CzeCommandQueueExecuteCommandLists(
-        return_value, hCommandQueue, numCommandLists, phCommandLists, hFence));
   }
   zeCommandQueueExecuteCommandLists_SD(return_value, hCommandQueue, numCommandLists, phCommandLists,
                                        hFence);

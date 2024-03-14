@@ -692,11 +692,10 @@ struct Config {
         struct Kernel {
           vi_uint startKernel;
           vi_uint stopKernel;
-          vi_uint maxQueueSubmitNumber;
-          vi_uint minQueueSubmitNumber;
-          BitRange kernelRange;
-          BitRange cmdListRange;
-          BitRange queueRange;
+          vi_uint stopCommandList;
+          vi_uint startCommandList;
+          vi_uint stopCommandQueueSubmit;
+          vi_uint startCommandQueueSubmit;
           vi_bool singleCapture;
         } kernel;
       } capture;

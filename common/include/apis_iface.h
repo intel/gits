@@ -149,6 +149,9 @@ public:
     virtual bool CfgRec_IsAllMode() const {
       return true;
     }
+    virtual bool CfgRec_IsSubcapture() const {
+      return false;
+    }
     virtual bool CfgRec_IsSingleKernelMode() const {
       return false;
     }
@@ -170,16 +173,26 @@ public:
     virtual bool CfgRec_IsStopQueueSubmit() const {
       return false;
     }
+    virtual unsigned int CfgRec_StartCommandList() const {
+      return 1;
+    }
+    virtual unsigned int CfgRec_StopCommandList() const {
+      return 1;
+    }
+    virtual unsigned int CfgRec_StartCommandQueueSubmit() const {
+      return 1;
+    }
+    virtual unsigned int CfgRec_StopCommandQueueSubmit() const {
+      return 1;
+    }
     virtual bool CfgRec_IsBenchmark() const {
       return false;
     }
-    virtual bool CfgRec_IsObjectToRecord() const {
+    virtual bool CfgRec_IsStopOfSubcapture([[maybe_unused]] const uint32_t cmdListNumber,
+                                           [[maybe_unused]] const uint32_t kernelNumber) const {
       return false;
     }
-    virtual bool CfgRec_IsCommandListToRecord(uint32_t /*cmdListNumber*/) const {
-      return false;
-    }
-    virtual bool CfgRec_IsKernelToRecord(uint32_t /*kernelNumber*/) const {
+    virtual bool CfgRec_IsObjectToRecord() {
       return false;
     }
     virtual bool MemorySnifferInstall() const;

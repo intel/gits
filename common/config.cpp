@@ -40,6 +40,82 @@ std::string read_file(const std::filesystem::path& file_name) {
   }
   return "";
 }
+
+void LoadLevelZeroSubcaptureSettings(gits::Config& cfg, std::string kernelInfo) {
+  if (!kernelInfo.empty()) {
+    // WA (trigger for _captureState to be CAP_INITIATED for delaying recorder.Start())
+    cfg.recorder.openGL.capture.frames.startFrame = static_cast<unsigned>(-1);
+    std::istringstream issL0ObjectsRange(kernelInfo);
+    std::vector<std::string> objectsTable;
+    std::string strObj;
+    while (std::getline(issL0ObjectsRange, strObj, '/')) {
+      objectsTable.push_back(strObj);
+    }
+    if (objectsTable.size() != 3) {
+      Log(ERR) << "Incorrect config LevelZero.Capture.Kernel.Range";
+      throw gits::EOperationFailed(EXCEPTION_MESSAGE);
+    }
+
+    auto pattern = std::regex("(\\d+)");
+    auto iter = std::sregex_iterator(objectsTable[0].begin(), objectsTable[0].end(), pattern);
+    auto end = std::sregex_iterator();
+    auto size = std::distance(iter, end);
+    auto& startCommandQueueSubmit = cfg.recorder.levelZero.capture.kernel.startCommandQueueSubmit;
+    auto& stopCommandQueueSubmit = cfg.recorder.levelZero.capture.kernel.stopCommandQueueSubmit;
+    startCommandQueueSubmit = (unsigned)std::stoul((*iter++)[0], nullptr);
+    if (size == 2U) {
+      stopCommandQueueSubmit = (unsigned)std::stoul((*iter)[0], nullptr);
+    } else if (size == 1U) {
+      stopCommandQueueSubmit = startCommandQueueSubmit;
+    } else {
+      Log(ERR) << "Incorrect config LevelZero.Capture.Kernel.Range command queue submission";
+      throw gits::EOperationFailed(EXCEPTION_MESSAGE);
+    }
+    if (startCommandQueueSubmit > stopCommandQueueSubmit) {
+      Log(ERR) << "Incorrect config LevelZero.Capture.Kernel.Range start command queue submission "
+                  "can't be "
+                  "greater then stop command queue submission";
+      throw gits::EOperationFailed(EXCEPTION_MESSAGE);
+    }
+
+    iter = std::sregex_iterator(objectsTable[1].begin(), objectsTable[1].end(), pattern);
+    size = std::distance(iter, end);
+    auto& startCommandList = cfg.recorder.levelZero.capture.kernel.startCommandList;
+    auto& stopCommandList = cfg.recorder.levelZero.capture.kernel.stopCommandList;
+    startCommandList = (unsigned)std::stoul((*iter++)[0], nullptr);
+    if (size == 2U) {
+      stopCommandList = (unsigned)std::stoul((*iter)[0], nullptr);
+    } else if (size == 1U) {
+      stopCommandList = startCommandList;
+    } else {
+      Log(ERR) << "Incorrect config LevelZero.Capture.Kernel.Range command list";
+      throw gits::EOperationFailed(EXCEPTION_MESSAGE);
+    }
+
+    iter = std::sregex_iterator(objectsTable[2].begin(), objectsTable[2].end(), pattern);
+    size = std::distance(iter, end);
+    auto& startKernel = cfg.recorder.levelZero.capture.kernel.startKernel;
+    auto& stopKernel = cfg.recorder.levelZero.capture.kernel.stopKernel;
+    startKernel = (unsigned)std::stoul((*iter++)[0], nullptr);
+    if (size == 2U) {
+      stopKernel = (unsigned)std::stoul((*iter)[0], nullptr);
+    } else if (size == 1U) {
+      stopKernel = startKernel;
+    } else {
+      Log(ERR) << "Incorrect config LevelZero.Capture.Kernel.Range kernel";
+      throw gits::EOperationFailed(EXCEPTION_MESSAGE);
+    }
+    if (startKernel > stopKernel) {
+      Log(ERR) << "In config LevelZero.Capture.Kernel.Range start kernel "
+                  "greater then stop kernel is not supported";
+      throw gits::EOperationFailed(EXCEPTION_MESSAGE);
+    }
+
+    cfg.recorder.levelZero.capture.kernel.singleCapture =
+        (startCommandQueueSubmit == stopCommandQueueSubmit) &&
+        (startCommandList == stopCommandList) && (startKernel == stopKernel);
+  }
+}
 } // namespace
 
 gits::Config* gits::Config::config = new Config;
@@ -824,51 +900,7 @@ bool gits::Config::Set(const std::filesystem::path& cfgDir) {
   {
     if (cfg.recorder.levelZero.capture.mode.find("Kernel") != std::string::npos) {
       ReadRecorderOption(pt, "LevelZero.Capture.Kernel.Range", kernelInfo, GITS_PLATFORM_BIT_ALL);
-      if (!kernelInfo.empty()) {
-        // WA (trigger for _captureState to be CAP_INITIATED for delaying recorder.Start())
-        cfg.recorder.openGL.capture.frames.startFrame = static_cast<unsigned>(-1);
-        std::istringstream issL0ObjectsRange(kernelInfo);
-        std::vector<std::string> objectsTable;
-        std::string strObj;
-        while (std::getline(issL0ObjectsRange, strObj, '/')) {
-          objectsTable.push_back(strObj);
-        }
-        if (objectsTable.size() != 3) {
-          Log(ERR) << "Incorrect config LevelZero.Capture.Kernel.Range";
-          throw EOperationFailed(EXCEPTION_MESSAGE);
-        }
-        cfg.recorder.levelZero.capture.kernel.queueRange = BitRange(objectsTable[0]);
-        auto& maxQueueSubmitNumber = cfg.recorder.levelZero.capture.kernel.maxQueueSubmitNumber;
-        auto& minQueueSubmitNumber = cfg.recorder.levelZero.capture.kernel.minQueueSubmitNumber;
-        minQueueSubmitNumber = std::numeric_limits<unsigned>::max();
-        maxQueueSubmitNumber = 0;
-        auto pattern = std::regex("(\\d+)");
-        auto iter = std::sregex_iterator(objectsTable[0].begin(), objectsTable[0].end(), pattern);
-        auto end = std::sregex_iterator();
-        while (iter != end) {
-          minQueueSubmitNumber =
-              std::min((unsigned)minQueueSubmitNumber, (unsigned)std::stoul((*iter)[0], nullptr));
-          maxQueueSubmitNumber =
-              std::max((unsigned)maxQueueSubmitNumber, (unsigned)std::stoul((*iter++)[0], nullptr));
-        }
-        cfg.recorder.levelZero.capture.kernel.cmdListRange = BitRange(objectsTable[1]);
-        cfg.recorder.levelZero.capture.kernel.kernelRange = BitRange(objectsTable[2]);
-        auto& startKernel = cfg.recorder.levelZero.capture.kernel.startKernel;
-        auto& stopKernel = cfg.recorder.levelZero.capture.kernel.stopKernel;
-        startKernel = 0;
-        iter = std::sregex_iterator(objectsTable[2].begin(), objectsTable[2].end(), pattern);
-        while (iter != end) {
-          stopKernel = std::max((unsigned)stopKernel, (unsigned)std::stoul((*iter)[0], nullptr));
-          startKernel =
-              std::min((unsigned)startKernel, (unsigned)std::stoul((*iter++)[0], nullptr));
-        }
-        if (startKernel == 0) {
-          startKernel = stopKernel;
-        }
-        pattern = std::regex(R"(^\d/\d/\d$)");
-        iter = std::sregex_iterator(kernelInfo.begin(), kernelInfo.end(), pattern);
-        cfg.recorder.levelZero.capture.kernel.singleCapture = (iter != end);
-      }
+      LoadLevelZeroSubcaptureSettings(cfg, kernelInfo);
     }
     {
       std::string kernelDumpInfo;

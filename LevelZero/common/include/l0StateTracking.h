@@ -340,8 +340,8 @@ inline void zeKernelSetArgumentValue_SD([[maybe_unused]] ze_result_t return_valu
                                         uint32_t argIndex,
                                         size_t argSize,
                                         const void* pArgValue) {
-  SD().Get<CKernelState>(hKernel, EXCEPTION_MESSAGE)
-      .currentKernelInfo->SetArgument(argIndex, argSize, pArgValue);
+  auto& kernelState = SD().Get<CKernelState>(hKernel, EXCEPTION_MESSAGE);
+  kernelState.currentKernelInfo->SetArgument(argIndex, argSize, pArgValue);
 }
 
 inline void zeImageCreate_SD(ze_result_t return_value,
@@ -555,12 +555,20 @@ inline void zeContextCreate_SD(ze_result_t return_value,
   }
 }
 
+inline void zeCommandListClose_SD(ze_result_t return_value, ze_command_list_handle_t hCommandList) {
+  if (return_value == ZE_RESULT_SUCCESS) {
+    auto& cmdListState = SD().Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
+    cmdListState.isClosed = true;
+  }
+}
+
 inline void zeCommandListReset_SD([[maybe_unused]] ze_result_t return_value,
                                   ze_command_list_handle_t hCommandList) {
   auto& cmdListState = SD().Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
   cmdListState.RestoreReset();
   cmdListState.appendedKernels.clear();
   cmdListState.mockList.clear();
+  cmdListState.isClosed = false;
 }
 
 inline void zeEventCreate_SD(ze_result_t return_value,

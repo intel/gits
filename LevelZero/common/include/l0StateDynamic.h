@@ -107,6 +107,7 @@ struct CAllocState : public CState {
   AllocStateType allocType = AllocStateType::pointer;
   std::vector<char> globalPtrAllocation;
   std::vector<char> originalGlobalPtrAllocation;
+  bool savedForStateRestore = false;
 
 public:
   CAllocState() = default;
@@ -214,6 +215,7 @@ struct CCommandListState : public CState {
   ze_command_queue_desc_t queueDesc = {};
   bool isImmediate = false;
   bool isSync = false;
+  bool isClosed = false;
   std::vector<std::shared_ptr<CKernelExecutionInfo>> appendedKernels;
   uint32_t cmdListNumber = 0U;
   uint32_t cmdQueueNumber = 0U;
@@ -254,6 +256,7 @@ struct CImageState : public CState {
   ze_device_handle_t hDevice = nullptr;
   ze_image_desc_t desc = {};
   ze_image_handle_t imageView = nullptr;
+  bool savedForStateRestore = false;
 
 public:
   CImageState() = default;

@@ -3906,7 +3906,7 @@ arg4=ArgDef(name='numWaitEvents',type='uint32_t',tag='in',optional=True),
 arg5=ArgDef(name='phWaitEvents',type='ze_event_handle_t*',tag='in',range='0,numWaitEvents',optional=True),
 )
 
-Function(name='zeCommandListClose',component='ze_command_list',enabled=True,ddi_pos=3,
+Function(name='zeCommandListClose',component='ze_command_list',enabled=True,ddi_pos=3,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 )
