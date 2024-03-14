@@ -2062,9 +2062,9 @@ bool checkForSupportForQueues(VkPhysicalDevice physicalDevice,
     } else if (!isBitSet(currentFlags, originalFlags)) {
       Log(ERR) << "Queue families are not compatible!";
       VkLog(ERR) << "Original queue family flags at index " << i << ": "
-                 << queueFamilyPropertiesOriginal[i].queueFlags;
+                 << (VkQueueFlagBits)originalFlags;
       VkLog(ERR) << "Current platform queue family flags at index " << i << ": "
-                 << availableQueueFamilies[i].queueFlags;
+                 << (VkQueueFlagBits)currentFlags;
       return false;
     }
   }
