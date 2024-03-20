@@ -31,16 +31,9 @@
 #include <vector>
 #include <filesystem>
 
-DISABLE_WARNINGS
-#ifdef check
-#undef check
-#endif
-#include <boost/property_tree/ptree_fwd.hpp>
-ENABLE_WARNINGS
 #include <unzip.h>
 #include <zip.h>
-
-namespace pt = boost::property_tree;
+#include "nlohmann/json.hpp"
 
 #define GITS_FILE_COMPAT_64BIT_HASHES                                                              \
   GITS_MAKE_VERSION3(1, 2, 23) //64-bit hashes in resource manager
@@ -70,7 +63,8 @@ private:
   std::string _dumpDirectory;
   std::string _dataFileName;
   CSkippedCalls _skippedCalls;
-  std::shared_ptr<pt::ptree> _properties;
+  std::string _formerProperties;
+  std::shared_ptr<nlohmann::ordered_json> _properties;
 
 public:
   explicit CFile(const CVersion& version);
@@ -79,7 +73,8 @@ public:
   void SkippedCallAdd(unsigned id);
   const CSkippedCalls& SkippedCalls() const;
 
-  pt::ptree& GetPropertyTree() const;
+  nlohmann::ordered_json& GetProperties() const;
+  std::string ReadProperties() const;
 
   friend CBinOStream& operator<<(CBinOStream& stream, const CFile& file);
   friend CBinIStream& operator>>(CBinIStream& stream, CFile& file);

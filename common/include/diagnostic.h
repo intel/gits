@@ -18,5 +18,5 @@ ENABLE_WARNINGS
 namespace pt = boost::property_tree;
 
 namespace gits {
-void gather_diagnostic_info(pt::ptree& node);
+void gather_diagnostic_info(nlohmann::ordered_json& node);
 }

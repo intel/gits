@@ -507,7 +507,8 @@ CGits::CCounter::CCounter(std::initializer_list<uint64_t> init) : countersTable(
 
 /* **************************** F I L E ********************************* */
 
-CFile::CFile(const CVersion& version) : _version(version), _properties(new pt::ptree) {}
+CFile::CFile(const CVersion& version)
+    : _version(version), _properties(new nlohmann::ordered_json) {}
 
 const CVersion& CFile::Version() const {
   return _version;
@@ -521,8 +522,15 @@ const CFile::CSkippedCalls& CFile::SkippedCalls() const {
   return _skippedCalls;
 }
 
-pt::ptree& CFile::GetPropertyTree() const {
+nlohmann::ordered_json& CFile::GetProperties() const {
   return *_properties;
+}
+
+std::string CFile::ReadProperties() const {
+  if (!_formerProperties.empty()) {
+    return _formerProperties;
+  }
+  return _properties->dump(2);
 }
 
 void CGits::ResourceManagerInit(const std::filesystem::path& dump_dir) {
@@ -568,18 +576,27 @@ CBinOStream& operator<<(CBinOStream& stream, const CFile& file) {
   }
 
   //Write properties to the stream file.
-  std::stringstream prop_tree;
-  write_xml(prop_tree, file.GetPropertyTree());
-  std::string prop_tree_str = prop_tree.str();
   //First size in bytes, than the string
-  write_to_stream<uint32_t>(stream,
-                            ensure_unsigned32bit_representible<size_t>(prop_tree_str.size()));
+  auto properties = file._properties->dump();
+  write_to_stream<uint32_t>(stream, ensure_unsigned32bit_representible<size_t>(properties.size()));
   if (!Config::Get().recorder.extras.utilities.nullIO) {
-    stream.write(prop_tree_str.c_str(), prop_tree_str.size());
+    stream.write(properties.c_str(), properties.size());
   }
 
   return stream;
 }
+
+namespace {
+bool parse_json_recorder_diags(const std::string& properties,
+                               nlohmann::ordered_json& outProperties) {
+  nlohmann::ordered_json j = nlohmann::ordered_json::parse(properties, nullptr, false);
+  if (j.is_discarded()) {
+    return false;
+  }
+  outProperties = j;
+  return true;
+}
+} // namespace
 
 CBinIStream& operator>>(CBinIStream& stream, CFile& file) {
   uint32_t skipNum = 0U;
@@ -601,11 +618,15 @@ CBinIStream& operator>>(CBinIStream& stream, CFile& file) {
   if (propsLength <= UINT32_MAX) {
     std::string props(propsLength, '\0');
     stream.read(&props[0], propsLength);
-    std::stringstream str(props);
-    try {
-      read_xml(str, *file._properties);
-    } catch (boost::property_tree::xml_parser_error& e) {
-      Log(ERR) << "Exception thrown when parsing diagnostic information: " << e.message();
+    bool result = false;
+    if (props.find("<?xml version") != std::string::npos) {
+      file._formerProperties = props;
+      result = true;
+    } else {
+      result = parse_json_recorder_diags(props, *file._properties);
+    }
+    if (!result) {
+      Log(ERR) << "Exception thrown when parsing diagnostic information";
       Log(ERR) << "Disabling Extras.Utilities.ExtendedDiagnostic might help.";
     }
   }

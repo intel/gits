@@ -1035,9 +1035,10 @@ bool gits::Config::Set(const std::filesystem::path& cfgDir) {
     CGits& inst = CGits::Instance();
     std::unique_ptr<CFile> file(new CFile(inst.Version()));
 
-    gather_diagnostic_info(file->GetPropertyTree());
-    file->GetPropertyTree().add("diag.gits.config_path", cfgPath);
-    file->GetPropertyTree().add("diag.gits.config", read_file(cfgPath));
+    auto& properties = file->GetProperties();
+    gather_diagnostic_info(properties);
+    properties["diag"]["gits"]["config_path"] = cfgPath;
+    properties["diag"]["gits"]["config"] = read_file(cfgPath);
     inst.Register(std::move(file));
   }
 

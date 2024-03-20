@@ -18,13 +18,6 @@
 #include <sstream>
 #include <filesystem>
 
-DISABLE_WARNINGS
-#include <boost/property_tree/ptree.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/uuid/random_generator.hpp>
-#include <boost/uuid/uuid_io.hpp>
-ENABLE_WARNINGS
-
 #if defined GITS_ARCH_X86
 #define GITS_ARCH_STR "x86"
 #elif defined GITS_ARCH_X64
@@ -41,14 +34,11 @@ ENABLE_WARNINGS
 
 namespace gits {
 namespace {
-void gather_generic_diags(pt::ptree& node) {
-  node.add("diag.gits.version", boost::lexical_cast<std::string>(CGits::Instance().Version()));
-  node.add("diag.gits.arch", GITS_ARCH_STR);
-
-  boost::uuids::random_generator rug;
-  std::stringstream str;
-  str << rug();
-  node.add("diag.gits.uuid", str.str());
+void gather_generic_diags(nlohmann::ordered_json& properties) {
+  std::stringstream ver;
+  ver << CGits::Instance().Version();
+  properties["diag"]["gits"]["version"] = ver.str();
+  properties["diag"]["gits"]["arch"] = GITS_ARCH_STR;
 }
 } // namespace
 #ifdef GITS_PLATFORM_WINDOWS
@@ -296,7 +286,9 @@ public:
     if (FAILED(hres)) {
       return "<couldn't obtain property>";
     } else {
-      std::string retval = boost::lexical_cast<std::string>(vtProp);
+      std::stringstream retValstream;
+      retValstream << vtProp;
+      std::string retval = retValstream.str();
       VariantClear(&vtProp);
       return retval;
     }
@@ -332,26 +324,31 @@ public:
   IWbemClassObject* pclsObj;
 };
 
-void DescribeClassImpl(
-    WMIConnection& con, const char* name, const char** props, int size, pt::ptree& tree) {
+void DescribeClassImpl(WMIConnection& con,
+                       const char* name,
+                       const char** props,
+                       int size,
+                       nlohmann::ordered_json& properties) {
   WMIClass cl(con, name);
   while (cl.next_result()) {
-    pt::ptree child;
+    properties["diag"]["os_specific"];
     for (int i = 0; i < size; ++i) {
-      child.add(props[i], cl.get(props[i]));
+      properties["diag"]["os_specific"][name][props[i]] = cl.get(props[i]);
     }
-    tree.add_child(name, child);
   }
 }
 
 template <int S>
-void DescribeClass(WMIConnection& con, const char* name, const char* (&props)[S], pt::ptree& tree) {
-  DescribeClassImpl(con, name, props, S, tree);
+void DescribeClass(WMIConnection& con,
+                   const char* name,
+                   const char* (&props)[S],
+                   nlohmann::ordered_json& properties) {
+  DescribeClassImpl(con, name, props, S, properties);
 }
 
 } // namespace
 
-void gather_diagnostic_info(pt::ptree& node) {
+void gather_diagnostic_info(nlohmann::ordered_json& properties) {
 
   {
     char exePathArr[MAX_PATH];
@@ -360,27 +357,29 @@ void gather_diagnostic_info(pt::ptree& node) {
     if (std::filesystem::exists(exePath)) {
       std::string exeHash = file_xxhash(exePath);
       std::string exeName = exePath.filename().string();
-      node.add("diag.app.name", exeName);
-      node.add("diag.app.path", exePath);
-      node.add("diag.app.hash", exeHash);
+      properties["diag"]["app"]["name"] = exeName;
+      properties["diag"]["app"]["path"] = exePath;
+      properties["diag"]["app"]["hash"] = exeHash;
     }
   }
 
-  node.add("diag.proc.cmdline", GetCommandLine());
+  properties["diag"]["proc"]["cmdline"] = GetCommandLine();
 
   {
     std::time_t now = std::time(0);
     auto localTime = std::localtime(&now);
-    auto currentDate = std::put_time(localTime, "%d.%m.%Y");
-    auto currentTime = std::put_time(localTime, "%H:%M:%S");
-    node.add("diag.datetime.date", currentDate);
-    node.add("diag.datetime.time", currentTime);
+    std::stringstream currentDate;
+    currentDate << std::put_time(localTime, "%d.%m.%Y");
+    properties["diag"]["datetime"]["date"] = currentDate.str();
+    std::stringstream currentTime;
+    currentTime << std::put_time(localTime, "%H:%M:%S");
+    properties["diag"]["datetime"]["time"] = currentTime.str();
   }
 
   {
     std::stringstream res;
     res << GetSystemMetrics(SM_CXSCREEN) << "x" << GetSystemMetrics(SM_CYSCREEN);
-    node.add("diag.screen.resolution", res.str());
+    properties["diag"]["screen"]["resolution"] = res.str();
   }
 
   boost::property_tree::ptree tree;
@@ -451,7 +450,7 @@ void gather_diagnostic_info(pt::ptree& node) {
             "VideoModeDescription",
             "VideoProcessor",
         };
-        DescribeClass(con, "Win32_VideoController", props, tree);
+        DescribeClass(con, "Win32_VideoController", props, properties);
       }
       {
         const char* props[] = {
@@ -483,7 +482,7 @@ void gather_diagnostic_info(pt::ptree& node) {
             "StatusInfo",
             "SystemCreationClassName",
         };
-        DescribeClass(con, "Win32_DesktopMonitor", props, tree);
+        DescribeClass(con, "Win32_DesktopMonitor", props, properties);
       }
       {
         const char* props[] = {
@@ -514,14 +513,14 @@ void gather_diagnostic_info(pt::ptree& node) {
             "TargetOperatingSystem",
             "Version",
         };
-        DescribeClass(con, "Win32_BIOS", props, tree);
+        DescribeClass(con, "Win32_BIOS", props, properties);
       }
       {
         const char* props[] = {
             "BootDirectory", "Caption",          "ConfigurationPath", "Description",   "LastDrive",
             "Name",          "ScratchDirectory", "SettingID",         "TempDirectory",
         };
-        DescribeClass(con, "Win32_BootConfiguration", props, tree);
+        DescribeClass(con, "Win32_BootConfiguration", props, properties);
       }
       {
         const char* props[] = {
@@ -578,7 +577,7 @@ void gather_diagnostic_info(pt::ptree& node) {
             "SystemLevelAddress",
             "WritePolicy",
         };
-        DescribeClass(con, "Win32_CacheMemory", props, tree);
+        DescribeClass(con, "Win32_CacheMemory", props, properties);
       }
       {
         const char* props[] = {
@@ -611,7 +610,7 @@ void gather_diagnostic_info(pt::ptree& node) {
             "TypeDetail",
             "Version",
         };
-        DescribeClass(con, "Win32_PhysicalMemory", props, tree);
+        DescribeClass(con, "Win32_PhysicalMemory", props, properties);
       }
       {
         const char* props[] = {
@@ -661,7 +660,7 @@ void gather_diagnostic_info(pt::ptree& node) {
             "Version",
             "VoltageCaps",
         };
-        DescribeClass(con, "Win32_Processor", props, tree);
+        DescribeClass(con, "Win32_Processor", props, properties);
       }
       {
         const char* props[] = {
@@ -722,21 +721,21 @@ void gather_diagnostic_info(pt::ptree& node) {
             "WakeUpType",
             "Workgroup",
         };
-        DescribeClass(con, "Win32_ComputerSystem", props, tree);
+        DescribeClass(con, "Win32_ComputerSystem", props, properties);
       }
       {
         const char* props[] = {
             "Caption", "Description", "Name", "SKUNumber", "Vendor", "Version",
 
         };
-        DescribeClass(con, "Win32_ComputerSystemProduct", props, tree);
+        DescribeClass(con, "Win32_ComputerSystemProduct", props, properties);
       }
       {
         const char* props[] = {
             "Day",   "DayOfWeek", "Hour",   "Milliseconds", "Minute",
             "Month", "Quarter",   "Second", "WeekInMonth",  "Year",
         };
-        DescribeClass(con, "Win32_CurrentTime", props, tree);
+        DescribeClass(con, "Win32_CurrentTime", props, properties);
       }
       {
         const char* props[] = {
@@ -804,7 +803,7 @@ void gather_diagnostic_info(pt::ptree& node) {
             "Version",
             "WindowsDirectory",
         };
-        DescribeClass(con, "Win32_OperatingSystem", props, tree);
+        DescribeClass(con, "Win32_OperatingSystem", props, properties);
       }
       {
         const char* props[] = {
@@ -845,7 +844,7 @@ void gather_diagnostic_info(pt::ptree& node) {
             "Version",
             "Writeable",
         };
-        DescribeClass(con, "Win32_PageFile", props, tree);
+        DescribeClass(con, "Win32_PageFile", props, properties);
       }
       {
         const char* props[] = {
@@ -874,50 +873,48 @@ void gather_diagnostic_info(pt::ptree& node) {
             "StandardSecond",
             "StandardYear",
         };
-        DescribeClass(con, "Win32_TimeZone", props, tree);
+        DescribeClass(con, "Win32_TimeZone", props, properties);
       }
-      node.add_child("diag.os_specific", tree);
     }
   } catch (std::exception& e) {
-    node.add("diag.os_specific", e.what());
+    properties["diag"]["os_specific"] = e.what();
   }
 
-  gather_generic_diags(node);
+  gather_generic_diags(properties);
 
-  node.add("diag.gits.os", "Windows");
+  properties["diag"]["gits"]["os"] = "Windows";
 }
 
 #elif defined GITS_PLATFORM_X11
 
 #include <unistd.h>
 
-void gather_diagnostic_info(pt::ptree& node) {
+void gather_diagnostic_info(nlohmann::ordered_json& properties) {
   auto my_pid = std::to_string(getpid());
-  //node.add("diag.gits.glxinfo", CommandOutput("glxinfo"));
   if (Config::Get().recorder.extras.utilities.extendedDiagnosticInfo) {
-    node.add("diag.gits.uname",
-             CommandOutput("uname -a", Config::Get().common.mode == Config::MODE_RECORDER));
-    node.add("diag.gits.lspci",
-             CommandOutput("lspci -v", Config::Get().common.mode == Config::MODE_RECORDER));
-    node.add("diag.gits.maps", CommandOutput("cat /proc/" + my_pid + "/maps",
-                                             Config::Get().common.mode == Config::MODE_RECORDER));
-    node.add("diag.gits.cpuinfo", CommandOutput("cat /proc/cpuinfo", Config::Get().common.mode ==
-                                                                         Config::MODE_RECORDER));
+    properties["diag"]["gits"]["uname"] =
+        CommandOutput("uname -a", Config::Get().common.mode == Config::MODE_RECORDER);
+    properties["diag"]["gits"]["lspci"] =
+        CommandOutput("lspci -v", Config::Get().common.mode == Config::MODE_RECORDER);
+    properties["diag"]["gits"]["maps"] = CommandOutput(
+        "cat /proc/" + my_pid + "/maps", Config::Get().common.mode == Config::MODE_RECORDER);
+    properties["diag"]["gits"]["cpuinfo"] =
+        CommandOutput("cat /proc/cpuinfo", Config::Get().common.mode == Config::MODE_RECORDER);
   }
 
-  gather_generic_diags(node);
-  node.add("diag.gits.os", "Linux");
+  gather_generic_diags(properties);
+  properties["diag"]["gits"]["os"] = "Linux";
 
   std::string cmdline = CommandOutput("cat /proc/" + my_pid + "/cmdline | sed 's/\\x0/ /g'",
                                       Config::Get().common.mode == Config::MODE_RECORDER);
-  node.add("diag.proc.cmdline", cmdline);
+  properties["diag"]["gits"]["cmdline"] = cmdline;
 }
 
 #else
 
-void gather_diagnostic_info(pt::ptree& node) {
-  gather_generic_diags(node);
-  node.add("diag.gits.os", "<unknown>");
+void gather_diagnostic_info(nlohmann::ordered_json& properties) {
+  gather_generic_diags(properties);
+  properties["diag"]["gits"]["os"] = "<unknown>";
 }
 
 #endif
