@@ -307,6 +307,8 @@ public:
 };
 
 class CKernelArgValue : public CArgument {
+  bool _localMemoryScanned = false;
+
 protected:
   size_t _size = 0U;
   void* _ptr = nullptr;
