@@ -228,6 +228,9 @@ inline void zeKernelCreate_SD(ze_result_t return_value,
   if (return_value == ZE_RESULT_SUCCESS && phKernel != nullptr) {
     auto& kernelState = SD().Map<CKernelState>()[*phKernel];
     kernelState = std::make_unique<CKernelState>(hModule, desc);
+    kernelState->currentKernelInfo->handle = *phKernel;
+    kernelState->currentKernelInfo->hModule = hModule;
+    kernelState->currentKernelInfo->pKernelName = std::string(desc->pKernelName);
   }
 }
 

@@ -673,9 +673,6 @@ void CommandListKernelInit(CStateDynamic& sd,
           static_cast<uint32_t>(CGits::Instance().CurrentKernelCount())) {
     return;
   }
-  kernelState.currentKernelInfo->handle = kernel;
-  kernelState.currentKernelInfo->hModule = kernelState.hModule;
-  kernelState.currentKernelInfo->pKernelName = std::string(kernelState.desc.pKernelName);
   kernelState.currentKernelInfo->kernelNumber = CGits::Instance().CurrentKernelCount();
   LogAppendKernel(kernelState.currentKernelInfo->kernelNumber, kernelState.desc.pKernelName);
   if (cmdListState.isImmediate) {

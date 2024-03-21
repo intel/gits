@@ -232,9 +232,6 @@ inline void zeCommandListAppendLaunchKernel_RECWRAP_PRE(
     } else {
       if (kernelCount == l0IFace.CfgRec_StartKernel() && cmdListState.isImmediate) {
         auto& kernelState = sd.Get<CKernelState>(hKernel, EXCEPTION_MESSAGE);
-        kernelState.currentKernelInfo->handle = hKernel;
-        kernelState.currentKernelInfo->hModule = kernelState.hModule;
-        kernelState.currentKernelInfo->pKernelName = std::string(kernelState.desc.pKernelName);
         if (pLaunchFuncArgs != nullptr) {
           kernelState.currentKernelInfo->launchFuncArgs = *pLaunchFuncArgs;
         }
