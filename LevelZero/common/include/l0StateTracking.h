@@ -27,8 +27,15 @@ void SaveGlobalPointerAllocationToMemory(CStateDynamic& sd,
                                          const void* globalPtr) {
   ze_command_list_handle_t hCommandListImmediate =
       GetCommandListImmediate(sd, drv, allocState.hContext);
+  if (allocState.size == 0U) {
+    const auto err = drv.inject.zeModuleGetGlobalPointer(
+        allocState.hModule, allocState.name.c_str(), &allocState.size, nullptr);
+    if (err != ZE_RESULT_SUCCESS) {
+      throw EOperationFailed(EXCEPTION_MESSAGE);
+    }
+  }
   allocState.globalPtrAllocation.resize(allocState.size);
-  ze_result_t err = drv.inject.zeCommandListAppendMemoryCopy(
+  const auto err = drv.inject.zeCommandListAppendMemoryCopy(
       hCommandListImmediate, allocState.globalPtrAllocation.data(), globalPtr, allocState.size,
       nullptr, 0, nullptr);
   sd.scanningGlobalPointersMode.insert(allocState.hModule);
@@ -654,11 +661,11 @@ inline void zeModuleGetGlobalPointer_SD(ze_result_t return_value,
                                         const char* pGlobalName,
                                         size_t* pSize,
                                         void** pptr) {
-  if (return_value == ZE_RESULT_SUCCESS) {
+  if (return_value == ZE_RESULT_SUCCESS && pptr != nullptr) {
     auto& sd = SD();
     auto& allocState = sd.Map<CAllocState>()[*pptr];
-    allocState =
-        std::make_unique<CAllocState>(hModule, pGlobalName, *pSize, AllocStateType::global_pointer);
+    allocState = std::make_unique<CAllocState>(hModule, pGlobalName, pSize ? *pSize : 0,
+                                               AllocStateType::global_pointer);
     const auto& moduleState = sd.Get<CModuleState>(hModule, EXCEPTION_MESSAGE);
     allocState->hContext = moduleState.hContext;
     allocState->hDevice = moduleState.hDevice;
