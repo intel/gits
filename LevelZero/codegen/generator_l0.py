@@ -4078,7 +4078,7 @@ retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in',release=True),
 )
 
-Function(name='zeContextEvictImage',component='ze_context',enabled=True,ddi_pos=7,
+Function(name='zeContextEvictImage',component='ze_context',enabled=True,ddi_pos=7,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
@@ -4093,7 +4093,7 @@ arg3=ArgDef(name='ptr',type='void*',tag='in'),
 arg4=ArgDef(name='size',type='size_t',tag='in'),
 )
 
-Function(name='zeContextEvictMemory',component='ze_context',enabled=True,ddi_pos=5,version=1,
+Function(name='zeContextEvictMemory',component='ze_context',enabled=True,ddi_pos=5,version=1,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
@@ -4106,7 +4106,7 @@ retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 )
 
-Function(name='zeContextMakeImageResident',component='ze_context',enabled=True,ddi_pos=6,
+Function(name='zeContextMakeImageResident',component='ze_context',enabled=True,ddi_pos=6,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
@@ -4121,7 +4121,7 @@ arg3=ArgDef(name='ptr',type='void*',tag='in',),
 arg4=ArgDef(name='size',type='size_t',tag='in'),
 )
 
-Function(name='zeContextMakeMemoryResident',component='ze_context',enabled=True,ddi_pos=4,version=1,
+Function(name='zeContextMakeMemoryResident',component='ze_context',enabled=True,ddi_pos=4,version=1,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),

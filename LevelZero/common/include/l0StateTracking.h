@@ -1096,5 +1096,56 @@ inline void zeGitsOriginalQueueFamilyInfo_SD(
   }
 }
 
+inline void zeContextMakeImageResident_SD(ze_result_t return_value,
+                                          ze_context_handle_t hContext,
+                                          ze_device_handle_t hDevice,
+                                          ze_image_handle_t hImage) {
+  if (return_value == ZE_RESULT_SUCCESS) {
+    auto& imageState = SD().Get<CImageState>(hImage, EXCEPTION_MESSAGE);
+    imageState.residencyInfo = std::make_unique<CImageState::ResidencyInfo>(hContext, hDevice);
+  }
+}
+
+inline void zeContextMakeMemoryResident_SD(ze_result_t return_value,
+                                           ze_context_handle_t hContext,
+                                           ze_device_handle_t hDevice,
+                                           void* ptr,
+                                           size_t size) {
+  if (return_value == ZE_RESULT_SUCCESS) {
+    auto& sd = SD();
+    const auto allocInfo = GetAllocFromRegion(ptr, sd);
+    auto& allocState = sd.Get<CAllocState>(allocInfo.first, EXCEPTION_MESSAGE);
+    allocState.residencyInfo =
+        std::make_unique<CAllocState::ResidencyInfo>(hContext, hDevice, size, allocInfo.second);
+  }
+}
+
+inline void zeContextEvictImage_SD(ze_result_t return_value,
+                                   [[maybe_unused]] ze_context_handle_t hContext,
+                                   [[maybe_unused]] ze_device_handle_t hDevice,
+                                   ze_image_handle_t hImage) {
+  if (return_value == ZE_RESULT_SUCCESS) {
+    auto& sd = SD();
+    auto& imageState = sd.Get<CImageState>(hImage, EXCEPTION_MESSAGE);
+    imageState.residencyInfo.release();
+  }
+}
+
+inline void zeContextEvictMemory_SD(ze_result_t return_value,
+                                    [[maybe_unused]] ze_context_handle_t hContext,
+                                    [[maybe_unused]] ze_device_handle_t hDevice,
+                                    void* ptr,
+                                    size_t size) {
+  if (return_value == ZE_RESULT_SUCCESS) {
+    auto& sd = SD();
+    const auto allocInfo = GetAllocFromRegion(ptr, sd);
+    auto& allocState = sd.Get<CAllocState>(allocInfo.first, EXCEPTION_MESSAGE);
+    if (allocState.residencyInfo && allocState.residencyInfo->size != size) {
+      Log(WARN) << "Evicted memory size is not covering whole residency.";
+    }
+    allocState.residencyInfo.release();
+  }
+}
+
 } // namespace l0
 } // namespace gits

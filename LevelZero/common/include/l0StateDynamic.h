@@ -109,6 +109,20 @@ struct CAllocState : public CState {
   std::vector<char> originalGlobalPtrAllocation;
   bool savedForStateRestore = false;
 
+  struct ResidencyInfo {
+    ResidencyInfo() = default;
+    ResidencyInfo(ze_context_handle_t hContext,
+                  ze_device_handle_t hDevice,
+                  size_t size,
+                  size_t offset)
+        : hContext(hContext), hDevice(hDevice), size(size), offset(offset) {}
+    ze_context_handle_t hContext = nullptr;
+    ze_device_handle_t hDevice = nullptr;
+    size_t size = 0U;
+    size_t offset = 0U;
+  };
+  std::unique_ptr<ResidencyInfo> residencyInfo;
+
 public:
   CAllocState() = default;
   CAllocState(ze_context_handle_t hContext,
@@ -257,6 +271,14 @@ struct CImageState : public CState {
   ze_image_desc_t desc = {};
   ze_image_handle_t imageView = nullptr;
   bool savedForStateRestore = false;
+
+  struct ResidencyInfo {
+    ResidencyInfo(ze_context_handle_t hContext, ze_device_handle_t hDevice)
+        : hContext(hContext), hDevice(hDevice) {}
+    ze_context_handle_t hContext = nullptr;
+    ze_device_handle_t hDevice = nullptr;
+  };
+  std::unique_ptr<ResidencyInfo> residencyInfo;
 
 public:
   CImageState() = default;

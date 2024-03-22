@@ -252,6 +252,13 @@ void RestorePointers(CScheduler& scheduler, CStateDynamic& sd) {
         break;
       }
       }
+      if (state.second->residencyInfo) {
+        scheduler.Register(new CzeContextMakeMemoryResident(
+            ZE_RESULT_SUCCESS, state.second->residencyInfo->hContext,
+            state.second->residencyInfo->hDevice,
+            GetOffsetPointer(state.first, state.second->residencyInfo->offset),
+            state.second->residencyInfo->size));
+      }
     }
   }
 
@@ -399,6 +406,11 @@ void RestoreImages(CScheduler& scheduler, CStateDynamic& sd) {
         scheduler.Register(new CzeImageCreate(ZE_RESULT_SUCCESS, state.second->hContext,
                                               state.second->hDevice, &state.second->desc,
                                               &stateInstance));
+      }
+      if (state.second->residencyInfo) {
+        scheduler.Register(new CzeContextMakeImageResident(
+            ZE_RESULT_SUCCESS, state.second->residencyInfo->hContext,
+            state.second->residencyInfo->hDevice, stateInstance));
       }
       if (gits::CGits::Instance().apis.IfaceCompute().CfgRec_IsKernelsRangeMode() &&
           !state.second->savedForStateRestore) {
@@ -668,11 +680,23 @@ void CRestoreState::Finish(CScheduler& scheduler) const {
   }
   for (auto& state : sd.Map<CAllocState>()) {
     if (state.second->Restored() && state.second->hModule == nullptr) {
+      if (state.second->residencyInfo) {
+        scheduler.Register(new CzeContextEvictMemory(
+            ZE_RESULT_SUCCESS, state.second->residencyInfo->hContext,
+            state.second->residencyInfo->hDevice,
+            GetOffsetPointer(state.first, state.second->residencyInfo->offset),
+            state.second->residencyInfo->size));
+      }
       scheduler.Register(new CzeMemFree(ZE_RESULT_SUCCESS, state.second->hContext, state.first));
     }
   }
   for (auto& state : sd.Map<CImageState>()) {
     if (state.second->Restored()) {
+      if (state.second->residencyInfo) {
+        scheduler.Register(
+            new CzeContextEvictImage(ZE_RESULT_SUCCESS, state.second->residencyInfo->hContext,
+                                     state.second->residencyInfo->hDevice, state.first));
+      }
       scheduler.Register(new CzeImageDestroy(ZE_RESULT_SUCCESS, state.first));
     }
   }
