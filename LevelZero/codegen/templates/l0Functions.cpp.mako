@@ -66,6 +66,11 @@ void C${name}::Run() {
         %if func.get('stateTrack'):
   ${func.get('stateTrackName')}(${'this, ' if func.get('passToken') else ''}${make_params(func, prefix='*_', with_retval=True)});
         %endif
+        %for arg in func['args']:
+          %if arg.get('release', False):
+  _${arg['name']}.RemoveMapping();
+          %endif
+        %endfor
       %endif
     %endif
 }

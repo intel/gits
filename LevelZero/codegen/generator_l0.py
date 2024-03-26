@@ -4733,11 +4733,18 @@ arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='ptr',type='void*',tag='in',wrapType='CMappedPtr',release=True),
 )
 
-Function(name='zeMemFreeExt',component='ze_mem',enabled=True,api_version='1.3',stateTrack=True,recExecWrap=True,ddi_pos=9,
+Function(name='zeMemFreeExt',component='ze_mem',enabled=True,api_version='1.3',stateTrack=True,recExecWrap=True,ddi_pos=9,skipRun=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='pMemFreeDesc',type='const ze_memory_free_ext_desc_t*',tag='in'),
 arg3=ArgDef(name='ptr',type='void*',tag='in',release=True),
+)
+
+Function(name='zeMemFreeExt',component='ze_mem',enabled=True,api_version='1.3',stateTrack=True,recExecWrap=True,ddi_pos=9,version=1,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
+arg2=ArgDef(name='pMemFreeDesc',type='const ze_memory_free_ext_desc_t*',tag='in'),
+arg3=ArgDef(name='ptr',type='void*',tag='in',wrapType='CMappedPtr',release=True),
 )
 
 Function(name='zeMemGetAddressRange',component='ze_mem',enabled=True,skipRun=True,ddi_pos=5,

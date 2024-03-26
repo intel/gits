@@ -26,6 +26,9 @@ ${'\  ndrv.Initialize();' if name == 'zeInit' else ''}
   %if arg['tag'] == 'out' and (('handle' in arg['type'] or 'CMappedPtr' in arg['wrapType']) and 'ipc' not in arg['type']):
   _${arg['name']}.SaveMapping();
   %endif
+  %if arg.get('release', False):
+  _${arg['name']}.RemoveMapping();
+  %endif
   %endfor
 }
 
