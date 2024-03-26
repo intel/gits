@@ -130,7 +130,7 @@ inline void SaveKernelArguments(const ze_event_handle_t& hSignalEvent,
   }
   auto& sd = SD();
   auto& readyArgVec = sd.Map<CKernelArgumentDump>()[hCommandList];
-  PrepareArguments(kernelInfo.get(), readyArgVec);
+  PrepareArguments(kernelInfo.get(), readyArgVec, sd);
   if (!IsDumpOnlyLayoutEnabled(cfg)) {
     InjectReadsForArguments(readyArgVec, hCommandList, cmdListState.isImmediate ? false : callOnce,
                             needsSync ? cmdListState.hContext : nullptr, hSignalEvent);

@@ -379,14 +379,14 @@ CKernelArgument::CKernelArgument(size_t allocSize, ze_image_handle_t ptr)
 CKernelArgumentDump::CKernelArgumentDump(size_t allocSize,
                                          void* ptr,
                                          uint32_t kernelNumber,
-                                         uint32_t kernelArgIndex)
+                                         uint64_t kernelArgIndex)
     : CKernelArgument(allocSize, ptr), kernelNumber(kernelNumber), kernelArgIndex(kernelArgIndex) {}
 
 CKernelArgumentDump::CKernelArgumentDump(ze_image_desc_t imageDesc,
                                          size_t allocSize,
                                          ze_image_handle_t ptr,
                                          uint32_t kernelNumber,
-                                         uint32_t kernelArgIndex)
+                                         uint64_t kernelArgIndex)
     : CKernelArgument(allocSize, ptr),
       imageDesc(imageDesc),
       kernelNumber(kernelNumber),
@@ -417,7 +417,8 @@ nlohmann::ordered_json LayoutBuilder::GetModuleLinkInfo(
 void LayoutBuilder::UpdateLayout(const CKernelExecutionInfo* kernelInfo,
                                  const uint32_t& queueSubmitNum,
                                  const uint32_t& cmdListNum,
-                                 const uint32_t& argIndex) {
+                                 const uint64_t& argIndex,
+                                 bool isIndirectDump) {
   UpdateExecutionKeyId(queueSubmitNum, cmdListNum, kernelInfo->kernelNumber);
   const auto executionKey = GetExecutionKeyId();
   if (zeKernels.find(executionKey) == zeKernels.end()) {
@@ -436,23 +437,29 @@ void LayoutBuilder::UpdateLayout(const CKernelExecutionInfo* kernelInfo,
     AddOclocInfo(kernelInfo->hModule);
 #endif
   }
-  const auto& arg = kernelInfo->GetArgument(argIndex);
-  if (arg.type == KernelArgType::image) {
-    nlohmann::ordered_json imageArgument;
-    const auto& imgState = SD().Get<CImageState>(
-        reinterpret_cast<ze_image_handle_t>(const_cast<void*>(arg.argValue)), EXCEPTION_MESSAGE);
-    const auto imageDescription = GetImageDescription(imgState.desc);
-    imageArgument[BuildFileName(argIndex, false)] = imageDescription;
-    Add("args", std::to_string(argIndex), imageArgument);
+  if (!isIndirectDump) {
+    const auto& arg = kernelInfo->GetArgument(argIndex);
+    if (arg.type == KernelArgType::image) {
+      nlohmann::ordered_json imageArgument;
+      const auto& imgState = SD().Get<CImageState>(
+          reinterpret_cast<ze_image_handle_t>(const_cast<void*>(arg.argValue)), EXCEPTION_MESSAGE);
+      const auto imageDescription = GetImageDescription(imgState.desc);
+      imageArgument[BuildFileName(argIndex, false)] = imageDescription;
+      Add("args", std::to_string(argIndex), imageArgument);
+    } else {
+      Add("args", std::to_string(argIndex), BuildFileName(argIndex, true));
+    }
   } else {
-    Add("args", std::to_string(argIndex), BuildFileName(argIndex));
+    std::stringstream keyIndex;
+    keyIndex << std::hex << argIndex;
+    Add("indirect_args", keyIndex.str(), BuildFileName(argIndex, true, isIndirectDump));
   }
 }
 
 bool LayoutBuilder::Exists(const uint32_t& queueSubmitNum,
                            const uint32_t& cmdListNum,
                            const uint32_t& kernelNumber,
-                           const uint32_t& kernelArgIndex) const {
+                           const uint64_t& kernelArgIndex) const {
   std::stringstream ss;
   ss << queueSubmitNum << "_" << cmdListNum << "_" << kernelNumber;
   const auto key = ss.str();
@@ -521,12 +528,22 @@ void LayoutBuilder::AddOclocInfo(const ze_module_handle_t& hModule) {
   }
 }
 
-std::string LayoutBuilder::BuildFileName(const uint32_t& argNumber, bool isBuffer) {
+std::string LayoutBuilder::BuildFileName(const uint64_t& argNumber,
+                                         bool isBuffer,
+                                         bool isIndirectDump) {
   static int fileCounter = 1;
   std::stringstream fileName;
   fileName << (isBuffer ? "NDRangeBuffer_" : "NDRangeImage_");
   fileName << queueSubmitNumber << "_" << cmdListNumber << "_";
-  fileName << appendKernelNumber << "_arg_" << argNumber << "_" << fileCounter++;
+  fileName << appendKernelNumber << "_arg_";
+  if (isIndirectDump) {
+    fileName << std::hex << argNumber << std::dec;
+  } else {
+    fileName << argNumber;
+  }
+  if (!isIndirectDump) {
+    fileName << "_" << fileCounter++;
+  }
   latestFileName = fileName.str();
   return latestFileName;
 }

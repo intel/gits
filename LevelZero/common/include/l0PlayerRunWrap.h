@@ -324,7 +324,11 @@ inline void zeMemAllocHost_RUNWRAP(Cze_result_t& _return_value,
                                    Csize_t& _alignment,
                                    CMappedPtr::CSMapArray& _pptr) {
   _return_value.Value() = drv.zeMemAllocHost(*_hContext, *_host_desc, *_size, *_alignment, *_pptr);
-  if (*_return_value == ZE_RESULT_SUCCESS && CheckCfgZeroInitialization(Config::Get())) {
+  const auto& cfg = Config::Get();
+  if (_return_value.Value() == ZE_RESULT_SUCCESS && CaptureKernels(cfg)) {
+    Log(TRACEV) << "^-- Original pointer: " << ToStringHelper(CMappedPtr::GetOriginal((*_pptr)[0]));
+  }
+  if (*_return_value == ZE_RESULT_SUCCESS && CheckCfgZeroInitialization(cfg)) {
     const auto commandList = GetCommandListImmediate(SD(), drv, *_hContext);
     ZeroInitializeUsm(drv, commandList, *_pptr, *_size, UnifiedMemoryType::host);
   }
@@ -340,7 +344,11 @@ inline void zeMemAllocDevice_RUNWRAP(Cze_result_t& _return_value,
                                      CMappedPtr::CSMapArray& _pptr) {
   _return_value.Value() =
       drv.zeMemAllocDevice(*_hContext, *_device_desc, *_size, *_alignment, *_hDevice, *_pptr);
-  if (*_return_value == ZE_RESULT_SUCCESS && CheckCfgZeroInitialization(Config::Get())) {
+  const auto& cfg = Config::Get();
+  if (_return_value.Value() == ZE_RESULT_SUCCESS && CaptureKernels(cfg)) {
+    Log(TRACEV) << "^-- Original pointer: " << ToStringHelper(CMappedPtr::GetOriginal((*_pptr)[0]));
+  }
+  if (*_return_value == ZE_RESULT_SUCCESS && CheckCfgZeroInitialization(cfg)) {
     const auto commandList = GetCommandListImmediate(SD(), drv, *_hContext);
     ZeroInitializeUsm(drv, commandList, *_pptr, *_size, UnifiedMemoryType::device);
   }
@@ -358,7 +366,11 @@ inline void zeMemAllocShared_RUNWRAP(Cze_result_t& _return_value,
                                      CMappedPtr::CSMapArray& _pptr) {
   _return_value.Value() = drv.zeMemAllocShared(*_hContext, *_device_desc, *_host_desc, *_size,
                                                *_alignment, *_hDevice, *_pptr);
-  if (*_return_value == ZE_RESULT_SUCCESS && CheckCfgZeroInitialization(Config::Get())) {
+  const auto& cfg = Config::Get();
+  if (_return_value.Value() == ZE_RESULT_SUCCESS && CaptureKernels(cfg)) {
+    Log(TRACEV) << "^-- Original pointer: " << ToStringHelper(CMappedPtr::GetOriginal((*_pptr)[0]));
+  }
+  if (*_return_value == ZE_RESULT_SUCCESS && CheckCfgZeroInitialization(cfg)) {
     const auto commandList = GetCommandListImmediate(SD(), drv, *_hContext);
     ZeroInitializeUsm(drv, commandList, *_pptr, *_size, UnifiedMemoryType::shared);
   }

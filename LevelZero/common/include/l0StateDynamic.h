@@ -76,17 +76,18 @@ struct CKernelArgumentDump : public CKernelArgument {
   using states_type = std::unordered_map<type, std::vector<CKernelArgumentDump>>;
   ze_image_desc_t imageDesc = {};
   uint32_t kernelNumber = 0U;
-  uint32_t kernelArgIndex = 0U;
+  uint64_t kernelArgIndex = 0U;
+  bool isIndirectDump = false;
 
 public:
   bool injected = false;
   CKernelArgumentDump() = default;
-  CKernelArgumentDump(size_t allocSize, void* ptr, uint32_t kernelNumber, uint32_t kernelArgIndex);
+  CKernelArgumentDump(size_t allocSize, void* ptr, uint32_t kernelNumber, uint64_t kernelArgIndex);
   CKernelArgumentDump(ze_image_desc_t imageDesc,
                       size_t allocSize,
                       ze_image_handle_t ptr,
                       uint32_t kernelNumber,
-                      uint32_t kernelArgIndex);
+                      uint64_t kernelArgIndex);
   void UpdateIndexes(uint32_t kernelNum, uint32_t argIndex);
 };
 
@@ -431,7 +432,7 @@ private:
   uint32_t appendKernelNumber = 0U;
   std::string GetExecutionKeyId() const;
   void AddOclocInfo(const ze_module_handle_t& hModule);
-  std::string BuildFileName(const uint32_t& argNumber, bool isBuffer = true);
+  std::string BuildFileName(const uint64_t& argNumber, bool isBuffer, bool isIndirectDump = false);
   nlohmann::ordered_json GetImageDescription(const ze_image_desc_t& imageDesc) const;
   void UpdateExecutionKeyId(const uint32_t& queueSubmitNum,
                             const uint32_t& cmdListNum,
@@ -442,11 +443,12 @@ public:
   void UpdateLayout(const CKernelExecutionInfo* kernelInfo,
                     const uint32_t& queueSubmitNum,
                     const uint32_t& cmdListNum,
-                    const uint32_t& argIndex);
+                    const uint64_t& argIndex,
+                    bool isIndirectDump = false);
   bool Exists(const uint32_t& queueSubmitNumber,
               const uint32_t& cmdListNumber,
               const uint32_t& appendKernelNumber,
-              const uint32_t& kernelArgIndex) const;
+              const uint64_t& kernelArgIndex) const;
   std::string GetFileName() const;
   void SaveLayoutToJsonFile();
   nlohmann::ordered_json GetModuleLinkInfo(

@@ -40,6 +40,7 @@ size_t CalculateImageSize(ze_image_desc_t desc);
 enum class KernelArgType { pointer = 1, buffer, image };
 void PrepareArguments(const CKernelExecutionInfo* kernelInfo,
                       std::vector<CKernelArgumentDump>& argDumpStates,
+                      CStateDynamic& sd,
                       bool dumpUnique = false);
 void DumpReadyArguments(std::vector<CKernelArgumentDump>& readyArgVector,
                         uint32_t cmdQueueNumber,

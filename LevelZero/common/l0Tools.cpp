@@ -206,6 +206,7 @@ void SaveImage(const std::filesystem::path& dir,
 
 void PrepareArguments(const CKernelExecutionInfo* kernelInfo,
                       std::vector<CKernelArgumentDump>& argDumpStates,
+                      CStateDynamic& sd,
                       bool dumpUnique) {
   for (const auto& arg : kernelInfo->GetArguments()) {
     if (arg.second.type == KernelArgType::buffer) {
@@ -231,9 +232,27 @@ void PrepareArguments(const CKernelExecutionInfo* kernelInfo,
           continue;
         }
       }
-      auto argDump = std::make_shared<CKernelArgumentDump>(arg.second.desc,
-                                                           CalculateImageSize(arg.second.desc), ptr,
-                                                           kernelInfo->kernelNumber, arg.first);
+      auto argDump = std::make_shared<CKernelArgumentDump>(
+          arg.second.desc, CalculateImageSize(arg.second.desc), ptr, kernelInfo->kernelNumber,
+          static_cast<uint64_t>(arg.first));
+      argDumpStates.push_back(*argDump);
+    }
+  }
+  for (const auto& allocState : sd.Map<CAllocState>()) {
+    const auto hModule = sd.Get<CKernelState>(kernelInfo->handle, EXCEPTION_MESSAGE).hModule;
+    const auto kernelContext = sd.Get<CModuleState>(hModule, EXCEPTION_MESSAGE).hContext;
+    const auto isResidencySet = allocState.second->residencyInfo &&
+                                allocState.second->residencyInfo->hContext == kernelContext;
+    const auto isIndirectionSet =
+        (static_cast<unsigned>(allocState.second->memType) & kernelInfo->indirectUsmTypes) != 0U;
+    if (isResidencySet || isIndirectionSet) {
+      void* pointer =
+          Config::IsPlayer() ? CMappedPtr::GetOriginal(allocState.first) : allocState.first;
+
+      auto argDump = std::make_shared<CKernelArgumentDump>(
+          allocState.second->size, allocState.first, kernelInfo->kernelNumber,
+          reinterpret_cast<uintptr_t>(pointer));
+      argDump->isIndirectDump = true;
       argDumpStates.push_back(*argDump);
     }
   }
@@ -256,7 +275,7 @@ void DumpReadyArguments(std::vector<CKernelArgumentDump>& readyArgVector,
     }
 
     sd.layoutBuilder.UpdateLayout(kernelInfo, cmdQueueNumber, cmdListNumber,
-                                  argState.kernelArgIndex);
+                                  argState.kernelArgIndex, argState.isIndirectDump);
     if (IsDumpOnlyLayoutEnabled(cfg)) {
       continue;
     }
@@ -638,7 +657,8 @@ void DumpQueueSubmit(const Config& cfg,
             tmpList = GetCommandListImmediate(sd, drv, queueSubmissionState->hContext);
           }
           auto& readyArgVec = sd.Map<CKernelArgumentDump>()[tmpList];
-          PrepareArguments(kernelInfo.get(), readyArgVec, true);
+          constexpr bool dumpUniqueArguments = true;
+          PrepareArguments(kernelInfo.get(), readyArgVec, sd, dumpUniqueArguments);
           if (!IsDumpOnlyLayoutEnabled(cfg)) {
             InjectReadsForArguments(readyArgVec, tmpList, false, nullptr, nullptr);
           }
