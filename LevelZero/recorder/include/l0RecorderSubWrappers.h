@@ -18,6 +18,7 @@
 #include "exception.h"
 #include "l0Functions.h"
 #include "l0Header.h"
+#include "l0Log.h"
 #include "l0StateDynamic.h"
 #include "l0StateTracking.h"
 #include "l0HelperFunctions.h"
@@ -28,7 +29,9 @@
 #include "recorder.h"
 #include "l0StateRestore.h"
 #include <cstdint>
+#include <string>
 #include <vector>
+#include <future>
 
 namespace gits {
 namespace l0 {
@@ -38,9 +41,13 @@ bool CheckWhetherUpdateUSM(const void* ptr) {
   auto& sd = SD();
   const auto allocInfo = GetAllocFromRegion(const_cast<void*>(ptr), sd);
   if (allocInfo.first != nullptr) {
-    const auto& allocState = sd.Get<CAllocState>(allocInfo.first, EXCEPTION_MESSAGE);
+    auto& allocState = sd.Get<CAllocState>(allocInfo.first, EXCEPTION_MESSAGE);
     update = allocState.sniffedRegionHandle != nullptr &&
              !(**allocState.sniffedRegionHandle).GetTouchedPages().empty();
+    const auto& cfg = Config::Get();
+    if (update && IsBruteForceScanForIndirectPointersEnabled(cfg)) {
+      allocState.modified = true;
+    }
   }
   return update;
 }
@@ -197,6 +204,140 @@ std::vector<ze_command_list_handle_t> GetCommandListsToSubcapture(
   }
   return cmdLists;
 }
+
+bool CheckResidencyInContext(CStateDynamic& sd, const ze_context_handle_t& hContext) {
+  for (const auto& allocPair : sd.Map<CAllocState>()) {
+    if (allocPair.second->residencyInfo && allocPair.second->residencyInfo->hContext == hContext) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool ExistsAsKernelArgument(
+    void* ptr, const std::vector<std::shared_ptr<CKernelExecutionInfo>>& executedKernels) {
+  for (const auto& kernel : executedKernels) {
+    for (const auto& arg : kernel->GetArguments()) {
+      if (arg.second.type == KernelArgType::buffer) {
+        const auto kernelArgValuePtr =
+            GetUsmPtrFromRegion(const_cast<void*>(arg.second.argValue)).first;
+        if (kernelArgValuePtr == ptr) {
+          return true;
+        }
+        const auto kernelArgOriginalValuePtr =
+            GetUsmPtrFromRegion(const_cast<void*>(arg.second.originalValue)).first;
+        if (kernelArgOriginalValuePtr == ptr) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+std::vector<size_t> AsyncBruteForce(const CStateDynamic* sd,
+                                    const void* ptr,
+                                    const CAllocState* allocState,
+                                    const CDriver* driver,
+                                    const ze_command_list_handle_t* immediateSyncCommandListHandle,
+                                    uintptr_t smallestPointerValue,
+                                    uintptr_t highestPointerValue) {
+  std::vector<size_t> offsets;
+  uintptr_t potentialPointer = 0U;
+  size_t i = 0U;
+  std::vector<char> buffer;
+  const char* pointerToData = nullptr;
+  if (allocState->memType == UnifiedMemoryType::device) {
+    buffer.resize(allocState->size);
+    const auto ret = driver->inject.zeCommandListAppendMemoryCopy(
+        *immediateSyncCommandListHandle, buffer.data(), ptr, buffer.size(), nullptr, 0, nullptr);
+    if (ret != ZE_RESULT_SUCCESS) {
+      throw EOperationFailed(EXCEPTION_MESSAGE);
+    }
+    pointerToData = buffer.data();
+  } else {
+    pointerToData = reinterpret_cast<const char*>(ptr);
+  }
+  while (allocState->size > i && allocState->size - i + 1 > sizeof(void*)) {
+    std::memcpy(&potentialPointer, pointerToData + i, sizeof(uintptr_t));
+    if (potentialPointer < smallestPointerValue || potentialPointer > highestPointerValue) {
+      i++;
+      continue;
+    }
+    const auto allocInfo = GetAllocFromRegion(reinterpret_cast<void*>(potentialPointer), *sd);
+    if (allocInfo.first != nullptr) {
+      offsets.push_back(i);
+      Log(TRACEV) << "Scanning pointer: " << ToStringHelper(pointerToData)
+                  << " -> Found pointer on offset " << std::to_string(i)
+                  << " pointer: " << ToStringHelper(allocInfo.first)
+                  << ", memory view: " << ToStringHelper(potentialPointer);
+      i += sizeof(void*) - 1;
+    }
+    i++;
+  }
+  return offsets;
+}
+
+void BruteForceScanForIndirectAccess(
+    CRecorder& recorder,
+    CStateDynamic& sd,
+    CDriver& driver,
+    unsigned int indirectTypes,
+    ze_context_handle_t hContext,
+    const std::vector<std::shared_ptr<CKernelExecutionInfo>>& executedKernels) {
+  if (indirectTypes == 0U && !CheckResidencyInContext(sd, hContext)) {
+    return;
+  }
+  const auto& cfg = Config::Get();
+  uintptr_t smallestPointerValue = UINTPTR_MAX;
+  uintptr_t highestPointerValue = 0;
+  for (const auto& allocState : sd.Map<CAllocState>()) {
+    const auto pointerValueMin = reinterpret_cast<uintptr_t>(allocState.first);
+    const auto pointerValueMax =
+        reinterpret_cast<uintptr_t>(GetOffsetPointer(allocState.first, allocState.second->size));
+    if (pointerValueMin < smallestPointerValue) {
+      smallestPointerValue = pointerValueMin;
+    }
+    if (pointerValueMax > highestPointerValue) {
+      highestPointerValue = pointerValueMax;
+    }
+  }
+  std::map<void*, std::future<std::vector<size_t>>> futures;
+  for (const auto& allocState : sd.Map<CAllocState>()) {
+    if (!IsMemoryTypeIncluded(
+            cfg.recorder.levelZero.utilities.bruteForceScanForIndirectPointers.memoryType,
+            allocState.second->memType)) {
+      continue;
+    }
+    const auto modifiedAllocation =
+        (allocState.second->modified ||
+         (allocState.second->sniffedRegionHandle != nullptr &&
+          !(**allocState.second->sniffedRegionHandle).GetTouchedPages().empty()));
+    if ((static_cast<unsigned>(allocState.second->memType) & indirectTypes && modifiedAllocation) ||
+        allocState.second->residencyInfo ||
+        ExistsAsKernelArgument(allocState.first, executedKernels)) {
+      if (BruteForceScanIterations(cfg)) {
+        if (allocState.second->scannedTimes >= BruteForceScanIterations(cfg)) {
+          continue;
+        }
+        allocState.second->scannedTimes++;
+      }
+      auto immediateCmdList = GetCommandListImmediate(sd, driver, allocState.second->hContext);
+      futures[allocState.first] = std::async(
+          std::launch::async, AsyncBruteForce, &sd, allocState.first, allocState.second.get(),
+          &driver, &immediateCmdList, smallestPointerValue, highestPointerValue);
+    }
+  }
+  for (auto& futureInfo : futures) {
+    std::vector<size_t> offsets = futureInfo.second.get();
+    auto* ptr = futureInfo.first;
+    if (!offsets.empty()) {
+      drv.zeGitsIndirectAllocationOffsets(ptr, offsets.size(), offsets.data());
+      recorder.Schedule(new CzeGitsIndirectAllocationOffsets(ptr, offsets.size(), offsets.data()));
+      zeGitsIndirectAllocationOffsets_SD(ptr, offsets.size(), offsets.data());
+    }
+  }
+}
 } // namespace
 
 inline void zeCommandListAppendLaunchKernel_RECWRAP_PRE(
@@ -245,6 +386,13 @@ inline void zeCommandListAppendLaunchKernel_RECWRAP_PRE(
   if (recorder.Running()) {
     for (const auto ptr : GetPointersToUpdate(hKernel)) {
       recorder.Schedule(new CGitsL0MemoryUpdate(ptr));
+    }
+    if (IsBruteForceScanForIndirectPointersEnabled(Config::Get()) && cmdListState.isImmediate) {
+      const auto& kernelState = sd.Get<CKernelState>(hKernel, EXCEPTION_MESSAGE);
+      const auto& commandListState = sd.Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
+      const auto& indirectTypes = kernelState.currentKernelInfo->indirectUsmTypes;
+      BruteForceScanForIndirectAccess(recorder, sd, drv, indirectTypes, commandListState.hContext,
+                                      commandListState.appendedKernels);
     }
   }
 }
@@ -508,9 +656,25 @@ inline void zeCommandQueueExecuteCommandLists_RECWRAP_PRE(
   if (sd.nomenclatureCounting) {
     gits::CGits::Instance().CommandQueueExecCountUp();
   }
-  sd.Get<CCommandQueueState>(hCommandQueue, EXCEPTION_MESSAGE).cmdQueueNumber =
-      gits::CGits::Instance().CurrentCommandQueueExecCount();
+  auto& commandQueueState = sd.Get<CCommandQueueState>(hCommandQueue, EXCEPTION_MESSAGE);
+  commandQueueState.cmdQueueNumber = gits::CGits::Instance().CurrentCommandQueueExecCount();
   if (recorder.Running()) {
+    if (IsBruteForceScanForIndirectPointersEnabled(Config::Get())) {
+      unsigned int indirectTypes = 0U;
+      std::vector<std::shared_ptr<CKernelExecutionInfo>> executedKernels;
+      for (auto i = 0U; i < numCommandLists; i++) {
+        const auto& commandListState =
+            sd.Get<CCommandListState>(phCommandLists[i], EXCEPTION_MESSAGE);
+        for (const auto& hKernelInfo : commandListState.appendedKernels) {
+          indirectTypes |= hKernelInfo->indirectUsmTypes;
+        }
+        for (auto& kernel : commandListState.appendedKernels) {
+          executedKernels.push_back(kernel);
+        }
+      }
+      BruteForceScanForIndirectAccess(recorder, sd, drv, indirectTypes, commandQueueState.hContext,
+                                      executedKernels);
+    }
     for (const auto& allocState : sd.Map<CAllocState>()) {
       if (CheckWhetherUpdateUSM(allocState.first)) {
         recorder.Schedule(new CGitsL0MemoryUpdate(allocState.first));

@@ -3779,7 +3779,7 @@ Function(name='zeCommandListAppendMemoryCopy',component='ze_command_list',enable
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='dstptr',type='void*',tag='in',wrapType='CUSMPtr',wrapParams='size, {name}'),
-arg3=ArgDef(name='srcptr',type='const void*',tag='in',wrapType='CUSMPtr',wrapParams='size, {name}'),
+arg3=ArgDef(name='srcptr',type='const void*',tag='in',wrapType='CUSMPtr',wrapParams='size, {name}, dstptr'),
 arg4=ArgDef(name='size',type='size_t',tag='in'),
 arg5=ArgDef(name='hSignalEvent',type='ze_event_handle_t',tag='in',optional=True),
 arg6=ArgDef(name='numWaitEvents',type='uint32_t',tag='in',optional=True),

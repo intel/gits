@@ -707,6 +707,10 @@ struct Config {
         vi_bool captureImages;
         vi_bool bufferResetAfterCreate;
         vi_bool nullIndirectPointersInBuffer;
+        struct BruteForceScanForIndirectPointers {
+          vi_uint memoryType;
+          vi_uint iterations;
+        } bruteForceScanForIndirectPointers;
       } utilities;
     } levelZero;
 

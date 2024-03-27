@@ -371,20 +371,31 @@ protected:
   CBinaryResource _resource;
   std::vector<char> _temp_buffer;
 
-private:
+public:
   bool IsMappedPointer() const {
     return _resource.GetResourceHash() == CResourceManager::EmptyHash;
   }
 
-public:
   // PointerProxy allows us to differentiate between srcptr and dstptr
   class PointerProxy {
     CUSMPtr* _ptr;
 
   public:
     PointerProxy(CUSMPtr* ptr) : _ptr(ptr) {}
+    char* GetResourceData(void* originalSrcPtr) {
+      auto& sd = SD();
+      CBinaryResource::PointerProxy data(_ptr->_resource.Data());
+      _ptr->_temp_buffer.assign((const char*)data, (const char*)data + data.Size());
+      const auto allocInfo = GetAllocFromOriginalPtr(originalSrcPtr, sd);
+      if (allocInfo.first != nullptr) {
+        auto& allocState = sd.Get<CAllocState>(allocInfo.first, EXCEPTION_MESSAGE);
+        TranslatePointerOffsets(sd, _ptr->_temp_buffer.data(), allocState.indirectPointersOffsets,
+                                true);
+      }
+      return _ptr->_temp_buffer.data();
+    }
     // srcptr - no need to copy from resource to temporary buffer
-    operator const void*() const {
+    operator const void*() {
       if (_ptr->IsMappedPointer()) {
         auto& sd = SD();
         const auto allocInfo = GetAllocFromOriginalPtr(_ptr->_ptr, sd);
@@ -393,14 +404,12 @@ public:
         }
         return GetOffsetPointer(allocInfo.first, allocInfo.second);
       }
-      return _ptr->_resource.Data();
+      return reinterpret_cast<const void*>(GetResourceData(_ptr->_ptr));
     }
     // dstptr - CBinaryResource is read-only so we need a temporary buffer
     operator void*() {
-      CBinaryResource::PointerProxy data(_ptr->_resource.Data());
       if (!_ptr->IsMappedPointer()) {
-        _ptr->_temp_buffer.assign((const char*)data, (const char*)data + data.Size());
-        return _ptr->_temp_buffer.data();
+        return reinterpret_cast<void*>(GetResourceData(_ptr->_ptr));
       }
       auto& sd = SD();
       const auto allocInfo = GetAllocFromOriginalPtr(_ptr->_ptr, sd);
@@ -439,7 +448,11 @@ public:
     _resource.reset(RESOURCE_DATA_RAW, _ptr, _size);
   }
   CUSMPtr(const void* ptr, ze_image_handle_t image) : CUSMPtr(const_cast<void*>(ptr), image) {}
-
+  CUSMPtr(const size_t len, const void* buffer, void* destPtr) : CUSMPtr(len, buffer) {
+    if (_ptr == nullptr) {
+      _ptr = destPtr;
+    }
+  }
   virtual const char* Name() const {
     return "void*";
   }

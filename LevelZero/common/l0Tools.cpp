@@ -282,14 +282,19 @@ void DumpReadyArguments(std::vector<CKernelArgumentDump>& readyArgVector,
     const auto name = sd.layoutBuilder.GetFileName();
     if (nullIndirectBuffers && argState.argType == KernelArgType::buffer) {
       auto allocInfo = GetAllocFromRegion(argState.h_buf, sd);
-      const auto& indirectList =
+      const auto& indirectOffsets =
           sd.Get<CAllocState>(allocInfo.first, EXCEPTION_MESSAGE).indirectPointersOffsets;
-      for (const auto& pair : indirectList) {
-        if (pair.first >= allocInfo.second && pair.second) {
-          auto it = std::next(argState.buffer.begin(), pair.first - allocInfo.second);
-          auto itEnd =
-              std::next(argState.buffer.begin(), pair.first - allocInfo.second + sizeof(void*));
-          std::fill(it, itEnd, '\0');
+      for (const auto& indirectOffset : indirectOffsets) {
+        if (indirectOffset.first >= allocInfo.second) {
+          auto itStart =
+              std::next(argState.buffer.begin(), indirectOffset.first - allocInfo.second);
+          auto itEnd = std::next(argState.buffer.begin(),
+                                 indirectOffset.first - allocInfo.second + sizeof(void*));
+          uintptr_t extractedPointer = 0U;
+          std::memcpy(&extractedPointer, &(*itStart), sizeof(void*));
+          if (GetAllocFromRegion(reinterpret_cast<void*>(extractedPointer), sd).first != nullptr) {
+            std::fill(itStart, itEnd, '\0');
+          }
         }
       }
     }
@@ -707,5 +712,67 @@ void CommandListKernelInit(CStateDynamic& sd,
   cmdListState.appendedKernels.push_back(std::move(kernelState.currentKernelInfo));
   kernelState.currentKernelInfo = std::move(pointer);
 }
+
+bool IsBruteForceScanForIndirectPointersEnabled(const Config& cfg) {
+  return Config::IsRecorder() &&
+         cfg.recorder.levelZero.utilities.bruteForceScanForIndirectPointers.memoryType != 0U;
+}
+
+uint32_t BruteForceScanIterations(const Config& cfg) {
+  return cfg.recorder.levelZero.utilities.bruteForceScanForIndirectPointers.iterations;
+}
+
+uint32_t TranslatePointerOffsets(const CStateDynamic& sd,
+                                 void* bufferPtr,
+                                 std::map<size_t, bool>& offsets,
+                                 bool isLocalMemory) {
+  uint32_t translations = 0;
+  for (auto& offset : offsets) {
+    void* ptrLocation =
+        reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(bufferPtr) + offset.first);
+    void* ptrToFetch = nullptr;
+    std::memcpy(&ptrToFetch, ptrLocation, sizeof(void*));
+    const auto allocPair = GetAllocFromOriginalPtr(ptrToFetch, sd);
+    if (allocPair.first == nullptr) {
+      if (GetAllocFromRegion(ptrToFetch, sd).first != nullptr) {
+        continue;
+      }
+      Log(WARN) << "Couldn't translate pointer inside pAlloc: " << bufferPtr
+                << " offset: " << offset.first
+                << ". Ptr to translate: " << ToStringHelper(ptrToFetch);
+      continue;
+    }
+    translations++;
+    Log(TRACEV) << "Successfully translated pointer: " << ToStringHelper(ptrToFetch)
+                << " USM Pointer: " << ToStringHelper(allocPair.first);
+    ptrToFetch = GetOffsetPointer(allocPair.first, allocPair.second);
+    std::memcpy(ptrLocation, &ptrToFetch, sizeof(void*));
+    if (!isLocalMemory) {
+      offset.second = true;
+    }
+  }
+  return translations;
+}
+
+bool IsMemoryTypeIncluded(const uint32_t cfgMemoryTypeValue, UnifiedMemoryType type) {
+  if (cfgMemoryTypeValue == static_cast<uint32_t>(0)) {
+    return false;
+  }
+  if (cfgMemoryTypeValue == static_cast<uint32_t>(-1)) {
+    return true;
+  }
+  if (type == UnifiedMemoryType::host) {
+    return (cfgMemoryTypeValue & static_cast<uint32_t>(UnifiedMemoryType::host)) != 0U;
+  }
+  if (type == UnifiedMemoryType::device) {
+    return (cfgMemoryTypeValue & static_cast<uint32_t>(UnifiedMemoryType::device)) != 0U;
+  }
+  if (type == UnifiedMemoryType::shared) {
+    return (cfgMemoryTypeValue & static_cast<uint32_t>(UnifiedMemoryType::shared)) != 0U;
+  }
+
+  return false;
+}
+
 } // namespace l0
 } // namespace gits

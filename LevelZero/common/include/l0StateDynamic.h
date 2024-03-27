@@ -110,6 +110,8 @@ struct CAllocState : public CState {
   std::vector<char> originalGlobalPtrAllocation;
   bool savedForStateRestore = false;
 
+  bool modified = false;
+  uint32_t scannedTimes = 0U;
   struct ResidencyInfo {
     ResidencyInfo() = default;
     ResidencyInfo(ze_context_handle_t hContext,

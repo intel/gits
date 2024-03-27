@@ -356,6 +356,10 @@ LevelZero {
     DumpImages              False
     BufferResetAfterCreate  False
     NullIndirectPointersInBuffer  True
+    BruteForceScanForIndirectPointers {
+      MemoryType 0 ; -1 (All), 1 (Host), 2 (Device), 4 (Shared)
+      Iterations 0
+    }
   }
 }
 %endif
@@ -856,6 +860,19 @@ Extras {
 ;  LevelZero.Utilities.BufferResetAfterCreate                 - Nullifies USM Buffer and Image memory regions immediately after their creation to produce deterministic results when verifying buffers. It might inject writes.
 ;
 ;  LevelZero.Utilities.NullIndirectPointersInBuffer           - Nullifies output buffer's indirection pointers in order to produce deterministic results on verification step.
+;
+;  LevelZero.Utilities.BruteForceScanForIndirectPointers.MemoryType - Setting this to non zero value will cause GITS to scan each specified allocation region for indirect pointers.
+;                                                                     The algorithm will use multiple threads to scan memory regions byte by byte comparing 8-byte data to any region of any USM allocations before any kernel submission.
+;                                                                     Once found GITS extension for indirect pointers will be injected and scheduled into new stream.
+;                                                                     The value of this option is a bitfield that specifies the type of memory to be scanned might be a combination.
+;                                                                     The following values are supported:
+;                                                                      -1 - All memory types
+;                                                                       1 - Host memory
+;                                                                       2 - Device memory
+;                                                                       4 - Shared memory
+;
+;
+;  LevelZero.Utilities.BruteForceScanForIndirectPointers.Iterations - Reduces iterations for brute force algorithm to run the scan only N times for any allocation.
 ;
 %endif
 ##

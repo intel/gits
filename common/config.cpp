@@ -897,6 +897,12 @@ bool gits::Config::Set(const std::filesystem::path& cfgDir) {
   ReadRecorderOption(pt, "LevelZero.Utilities.NullIndirectPointersInBuffer",
                      cfg.recorder.levelZero.utilities.nullIndirectPointersInBuffer,
                      GITS_PLATFORM_BIT_ALL);
+  ReadRecorderOption(pt, "LevelZero.Utilities.BruteForceScanForIndirectPointers.MemoryType",
+                     cfg.recorder.levelZero.utilities.bruteForceScanForIndirectPointers.memoryType,
+                     GITS_PLATFORM_BIT_ALL);
+  ReadRecorderOption(pt, "LevelZero.Utilities.BruteForceScanForIndirectPointers.Iterations",
+                     cfg.recorder.levelZero.utilities.bruteForceScanForIndirectPointers.iterations,
+                     GITS_PLATFORM_BIT_ALL);
   {
     if (cfg.recorder.levelZero.capture.mode.find("Kernel") != std::string::npos) {
       ReadRecorderOption(pt, "LevelZero.Capture.Kernel.Range", kernelInfo, GITS_PLATFORM_BIT_ALL);

@@ -38,9 +38,11 @@ void gits::l0::CGitsL0MemoryUpdate::Write([[maybe_unused]] CCodeOStream& stream)
 
 void gits::l0::CGitsL0MemoryUpdate::Run() {
   if (_resource.Data()) {
+    auto& sd = SD();
+    auto& allocState = sd.Get<CAllocState>(CMappedPtr::GetMapping(_usmPtr), EXCEPTION_MESSAGE);
     char* pointerToData = (char*)CMappedPtr::GetMapping(_usmPtr);
-    std::memcpy(pointerToData, _resource.Data(),
-                SD().Get<CAllocState>(CMappedPtr::GetMapping(_usmPtr), EXCEPTION_MESSAGE).size);
+    std::memcpy(pointerToData, _resource.Data(), allocState.size);
+    TranslatePointerOffsets(sd, pointerToData, allocState.indirectPointersOffsets, true);
   }
 }
 

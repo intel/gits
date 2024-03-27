@@ -34,46 +34,39 @@
 namespace gits {
 namespace l0 {
 namespace {
-void TranslatePointerOffsets(CStateDynamic& sd,
-                             void* bufferPtr,
-                             const std::map<size_t, bool>& offsetMap) {
-  for (const auto& offsetInfo : offsetMap) {
-    void* ptrLocation =
-        reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(bufferPtr) + offsetInfo.first);
-    void* ptrToFetch = nullptr;
-    std::memcpy(&ptrToFetch, ptrLocation, sizeof(void*));
-    const auto allocPair = GetAllocFromOriginalPtr(ptrToFetch, sd);
-    ptrToFetch = GetOffsetPointer(allocPair.first, allocPair.second);
-    if (ptrToFetch == nullptr) {
-      Log(WARN) << "Couldn't translate pointer inside pAlloc: " << bufferPtr
-                << " offset: " << offsetInfo.first;
-    }
-    std::memcpy(ptrLocation, &ptrToFetch, sizeof(void*));
-  }
-}
 void TranslatePointers(CStateDynamic& sd) {
   for (const auto& allocState : sd.Map<CAllocState>()) {
     auto& indirectOffsets = allocState.second->indirectPointersOffsets;
-    if (indirectOffsets.empty() ||
-        indirectOffsets.end() == std::find_if(indirectOffsets.begin(), indirectOffsets.end(),
-                                              [](auto&& i) { return !i.second; })) {
+    if (indirectOffsets.empty()) {
       continue;
     }
+    const auto all_pointers_translated = std::all_of(indirectOffsets.begin(), indirectOffsets.end(),
+                                                     [](const auto& pair) { return pair.second; });
+    if (all_pointers_translated) {
+      continue;
+    }
+
+    Log(TRACEV) << "Translating pointer: " << ToStringHelper(allocState.first)
+                << " size of indirect pointers: " << std::to_string(indirectOffsets.size());
+    const auto size = allocState.second->size;
     if (allocState.second->memType == UnifiedMemoryType::device) {
       ze_command_list_handle_t list = GetCommandListImmediate(sd, drv, allocState.second->hContext);
-      const auto size = allocState.second->size;
-      auto* tmpBuffer = new char[size];
-      drv.inject.zeCommandListAppendMemoryCopy(list, tmpBuffer, allocState.first, size, nullptr, 0,
-                                               nullptr);
-      TranslatePointerOffsets(sd, tmpBuffer, indirectOffsets);
-      drv.inject.zeCommandListAppendMemoryCopy(list, allocState.first, tmpBuffer, size, nullptr, 0,
-                                               nullptr);
-      delete[] tmpBuffer;
+      auto tmpBuffer = std::make_unique<char[]>(size);
+      drv.inject.zeCommandListAppendMemoryCopy(list, tmpBuffer.get(), allocState.first, size,
+                                               nullptr, 0, nullptr);
+      const auto translations = TranslatePointerOffsets(sd, tmpBuffer.get(), indirectOffsets);
+      if (translations > 0) {
+        drv.inject.zeCommandListAppendMemoryCopy(list, allocState.first, tmpBuffer.get(), size,
+                                                 nullptr, 0, nullptr);
+      }
     } else {
-      TranslatePointerOffsets(sd, allocState.first, indirectOffsets);
+      auto tmpBuffer = std::make_unique<char[]>(size);
+      std::memcpy(tmpBuffer.get(), allocState.first, size);
+      const auto translations = TranslatePointerOffsets(sd, tmpBuffer.get(), indirectOffsets);
+      if (translations > 0) {
+        std::memcpy(allocState.first, tmpBuffer.get(), size);
+      }
     }
-    std::for_each(indirectOffsets.begin(), indirectOffsets.end(),
-                  [](auto&& i) { i.second = true; });
   }
 }
 bool UpdateDeviceQueueProperties(

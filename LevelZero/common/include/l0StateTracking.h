@@ -185,6 +185,21 @@ void RegisterEvents(CStateDynamic& sd,
   cmdListState.AddAction(signalEvent, numWaitEvents, phWaitEvents);
 }
 
+bool CheckKernelResidencyPossibilities(const CAllocState& allocState,
+                                       const unsigned int indirectTypes,
+                                       const ze_context_handle_t hContext) {
+  const auto kernelMightModifyAllocation =
+      (allocState.memType == UnifiedMemoryType::device &&
+       indirectTypes & ZE_KERNEL_INDIRECT_ACCESS_FLAG_DEVICE) ||
+      (allocState.memType == UnifiedMemoryType::host &&
+       indirectTypes & ZE_KERNEL_INDIRECT_ACCESS_FLAG_HOST) ||
+      (allocState.memType == UnifiedMemoryType::shared &&
+       indirectTypes & ZE_KERNEL_INDIRECT_ACCESS_FLAG_SHARED);
+  const auto isResident =
+      allocState.residencyInfo && allocState.residencyInfo->hContext == hContext;
+  return kernelMightModifyAllocation && isResident;
+}
+
 } // namespace
 
 inline void zeMemAllocShared_SD(ze_result_t return_value,
@@ -274,15 +289,25 @@ inline void AppendLaunchKernel([[maybe_unused]] ze_result_t return_value,
                                ze_event_handle_t* phWaitEvents) {
   (void)return_value;
   auto& sd = SD();
+  const auto& cfg = Config::Get();
   CommandListKernelInit(sd, hCommandList, hKernel, pLaunchFuncArgs);
   auto& cmdListState = sd.Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
   auto& kernelState = sd.Get<CKernelState>(hKernel, EXCEPTION_MESSAGE);
   if (CheckWhetherDumpKernel(kernelState.currentKernelInfo->kernelNumber,
                              cmdListState.cmdListNumber) &&
-      (cmdListState.isImmediate || !CaptureAfterSubmit(Config::Get()))) {
+      (cmdListState.isImmediate || !CaptureAfterSubmit(cfg))) {
     SaveKernelArguments(hSignalEvent, hCommandList, kernelState, cmdListState);
   }
   RegisterEvents(sd, hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
+  if (IsBruteForceScanForIndirectPointersEnabled(cfg) && cmdListState.isImmediate) {
+    for (auto& allocState : sd.Map<CAllocState>()) {
+      if (CheckKernelResidencyPossibilities(*allocState.second,
+                                            kernelState.currentKernelInfo->indirectUsmTypes,
+                                            cmdListState.hContext)) {
+        allocState.second->modified = true;
+      }
+    }
+  }
 }
 inline void zeCommandListAppendLaunchKernel_SD(ze_result_t return_value,
                                                ze_command_list_handle_t hCommandList,
@@ -393,6 +418,7 @@ inline void zeCommandQueueExecuteCommandLists_SD([[maybe_unused]] ze_result_t re
     cqState.cmdQueueNumber = gits::CGits::Instance().CurrentCommandQueueExecCount();
   }
   bool containsAppendedKernelsToDump = false;
+  unsigned int indirectTypes = 0U;
   for (auto i = 0u; i < numCommandLists; i++) {
     const auto& cmdListState = sd.Get<CCommandListState>(phCommandLists[i], EXCEPTION_MESSAGE);
     for (const auto& kernelInfo : cmdListState.appendedKernels) {
@@ -411,11 +437,19 @@ inline void zeCommandQueueExecuteCommandLists_SD([[maybe_unused]] ze_result_t re
           sd.Release<CKernelArgumentDump>(phCommandLists[i]);
         }
       }
+      indirectTypes |= kernelInfo->indirectUsmTypes;
     }
     if (CaptureKernels(cfg)) {
       cqState.notSyncedSubmissions.push_back(std::make_unique<QueueSubmissionSnapshot>(
           phCommandLists[i], cmdListState.isImmediate, cmdListState.appendedKernels,
           cmdListState.cmdListNumber, cmdListState.hContext, cqState.cmdQueueNumber, nullptr));
+    }
+  }
+  if (IsBruteForceScanForIndirectPointersEnabled(cfg)) {
+    for (auto& allocState : sd.Map<CAllocState>()) {
+      if (CheckKernelResidencyPossibilities(*allocState.second, indirectTypes, cqState.hContext)) {
+        allocState.second->modified = true;
+      }
     }
   }
   if (containsAppendedKernelsToDump && CheckWhetherQueueCanBeSynced(cfg, sd, drv, hCommandQueue)) {
@@ -542,16 +576,21 @@ inline void zeKernelSetIndirectAccess_SD(ze_result_t return_value,
 
 inline void zeContextDestroy_SD(ze_result_t return_value, ze_context_handle_t hContext) {
   if (return_value == ZE_RESULT_SUCCESS) {
-    const auto& list = SD().Get<CContextState>(hContext, EXCEPTION_MESSAGE).gitsImmediateList;
+    auto& sd = SD();
+    const auto& list = sd.Get<CContextState>(hContext, EXCEPTION_MESSAGE).gitsImmediateList;
     if (list != nullptr) {
       drv.inject.zeCommandListDestroy(list);
     }
-    for (const auto& state : SD().Map<CCommandListState>()) {
+    std::vector<ze_command_list_handle_t> commandListsToRelease;
+    for (const auto& state : sd.Map<CCommandListState>()) {
       if (state.second->hContext == hContext) {
-        SD().Release<CCommandListState>(state.first);
+        commandListsToRelease.push_back(state.first);
       }
     }
-    SD().Release<CContextState>(hContext);
+    for (const auto& handle : commandListsToRelease) {
+      sd.Release<CCommandListState>(handle);
+    }
+    sd.Release<CContextState>(hContext);
   }
 }
 
@@ -635,9 +674,11 @@ inline void zeGitsIndirectAllocationOffsets_SD(void* pAlloc,
                                                uint32_t numOffsets,
                                                size_t* pOffsets) {
   auto& allocState = SD().Get<CAllocState>(pAlloc, EXCEPTION_MESSAGE);
-  const auto isBufferTranslated = Config::IsRecorder();
   for (uint32_t i = 0U; i < numOffsets; i++) {
-    allocState.indirectPointersOffsets[pOffsets[i]] = isBufferTranslated;
+    if (allocState.indirectPointersOffsets.find(pOffsets[i]) ==
+        allocState.indirectPointersOffsets.end()) {
+      allocState.indirectPointersOffsets[pOffsets[i]] = false;
+    }
   }
 }
 
@@ -764,7 +805,7 @@ inline void zeDeviceGetCommandQueueGroupProperties_SD(
 
 inline void zeCommandListAppendMemoryCopy_SD(ze_result_t return_value,
                                              ze_command_list_handle_t hCommandList,
-                                             [[maybe_unused]] void* dstptr,
+                                             void* dstptr,
                                              const void* srcptr,
                                              [[maybe_unused]] size_t size,
                                              ze_event_handle_t hSignalEvent,
@@ -777,6 +818,14 @@ inline void zeCommandListAppendMemoryCopy_SD(ze_result_t return_value,
       auto& allocState = sd.Get<CAllocState>(const_cast<void*>(srcptr), EXCEPTION_MESSAGE);
       if (allocState.allocType == AllocStateType::global_pointer) {
         SaveGlobalPointerAllocationToMemory(sd, allocState, srcptr);
+      }
+    }
+    const auto& cfg = Config::Get();
+    if (IsBruteForceScanForIndirectPointersEnabled(cfg)) {
+      const auto allocInfo = GetAllocFromRegion(dstptr, sd);
+      if (allocInfo.first != nullptr) {
+        auto& allocState = sd.Get<CAllocState>(allocInfo.first, EXCEPTION_MESSAGE);
+        allocState.modified = true;
       }
     }
   }

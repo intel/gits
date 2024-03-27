@@ -111,5 +111,12 @@ void CommandListKernelInit(CStateDynamic& sd,
                            const ze_command_list_handle_t& commandList,
                            const ze_kernel_handle_t& kernel,
                            const ze_group_count_t*& pLaunchFuncArgs);
+bool IsBruteForceScanForIndirectPointersEnabled(const Config& cfg);
+uint32_t TranslatePointerOffsets(const CStateDynamic& sd,
+                                 void* bufferPtr,
+                                 std::map<size_t, bool>& offsets,
+                                 bool isLocalMemory = false);
+uint32_t BruteForceScanIterations(const Config& cfg);
+bool IsMemoryTypeIncluded(const uint32_t cfgMemoryTypeValue, UnifiedMemoryType type);
 } // namespace l0
 } // namespace gits
