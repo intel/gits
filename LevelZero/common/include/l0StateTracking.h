@@ -83,66 +83,6 @@ bool CheckWhetherDumpKernel(uint32_t kernelNumber, uint32_t cmdListNumber) {
              : false;
 }
 
-inline void InjectReadsForArguments(std::vector<CKernelArgumentDump>& readyArgVec,
-                                    const ze_command_list_handle_t& cmdList,
-                                    const bool useBarrier,
-                                    ze_context_handle_t hContext,
-                                    ze_event_handle_t hSignalEvent) {
-  const auto eventHandle = CreateGitsEvent(hContext);
-  if (useBarrier && hSignalEvent == nullptr) {
-    drv.inject.zeCommandListAppendBarrier(cmdList, nullptr, 0, nullptr);
-  }
-  for (auto& argDump : readyArgVec) {
-    if (argDump.injected) {
-      continue;
-    }
-    argDump.injected = true;
-    if (argDump.argType == KernelArgType::buffer) {
-      drv.inject.zeCommandListAppendMemoryCopy(
-          cmdList, const_cast<char*>(argDump.buffer.data()), argDump.h_buf, argDump.buffer.size(),
-          eventHandle, hSignalEvent ? 1 : 0, hSignalEvent ? &hSignalEvent : nullptr);
-    } else if (argDump.argType == KernelArgType::image) {
-      drv.inject.zeCommandListAppendImageCopyToMemory(
-          cmdList, const_cast<char*>(argDump.buffer.data()), argDump.h_img, nullptr, eventHandle,
-          hSignalEvent ? 1 : 0, hSignalEvent ? &hSignalEvent : nullptr);
-    }
-    if (eventHandle != nullptr) {
-      drv.inject.zeEventHostSynchronize(eventHandle, UINT64_MAX);
-      drv.inject.zeEventHostReset(eventHandle);
-    }
-  }
-}
-
-inline void SaveKernelArguments(const ze_event_handle_t& hSignalEvent,
-                                const ze_command_list_handle_t& hCommandList,
-                                const CKernelState& kernelState,
-                                const CCommandListState& cmdListState,
-                                bool callOnce = true) {
-  const auto& kernelInfo = kernelState.currentKernelInfo;
-  const auto& cfg = Config::Get();
-  const auto needsSync = cmdListState.isImmediate && callOnce && !cmdListState.isSync;
-  if (needsSync) {
-    if (hSignalEvent) {
-      drv.inject.zeEventHostSynchronize(hSignalEvent, UINT64_MAX);
-    } else {
-      drv.inject.zeCommandListHostSynchronize(hCommandList, UINT64_MAX);
-    }
-  }
-  auto& sd = SD();
-  auto& readyArgVec = sd.Map<CKernelArgumentDump>()[hCommandList];
-  PrepareArguments(kernelInfo.get(), readyArgVec, sd);
-  if (!IsDumpOnlyLayoutEnabled(cfg)) {
-    InjectReadsForArguments(readyArgVec, hCommandList, cmdListState.isImmediate ? false : callOnce,
-                            needsSync ? cmdListState.hContext : nullptr, hSignalEvent);
-  }
-
-  if (cmdListState.isImmediate && CheckWhetherDumpQueueSubmit(cfg, cmdListState.cmdQueueNumber)) {
-    DumpReadyArguments(readyArgVec, cmdListState.cmdQueueNumber, cmdListState.cmdListNumber, cfg,
-                       sd, kernelInfo.get());
-    sd.Release<CKernelArgumentDump>(hCommandList);
-  }
-}
-
 bool CheckWhetherQueueCanBeSynced(const Config& cfg,
                                   CStateDynamic& sd,
                                   CDriver& driver,
@@ -280,67 +220,42 @@ inline void zeCommandListCreateImmediate_SD(ze_result_t return_value,
     clState->cmdQueueNumber = CGits::Instance().CurrentCommandQueueExecCount();
   }
 }
-inline void AppendLaunchKernel([[maybe_unused]] ze_result_t return_value,
-                               const ze_command_list_handle_t& hCommandList,
-                               const ze_kernel_handle_t& hKernel,
-                               const ze_group_count_t* pLaunchFuncArgs,
-                               const ze_event_handle_t& hSignalEvent,
-                               const uint32_t& numWaitEvents,
-                               ze_event_handle_t* phWaitEvents) {
-  (void)return_value;
-  auto& sd = SD();
-  const auto& cfg = Config::Get();
-  CommandListKernelInit(sd, hCommandList, hKernel, pLaunchFuncArgs);
-  auto& cmdListState = sd.Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
-  auto& kernelState = sd.Get<CKernelState>(hKernel, EXCEPTION_MESSAGE);
-  if (CheckWhetherDumpKernel(kernelState.currentKernelInfo->kernelNumber,
-                             cmdListState.cmdListNumber) &&
-      (cmdListState.isImmediate || !CaptureAfterSubmit(cfg))) {
-    SaveKernelArguments(hSignalEvent, hCommandList, kernelState, cmdListState);
-  }
-  RegisterEvents(sd, hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
-  if (IsBruteForceScanForIndirectPointersEnabled(cfg) && cmdListState.isImmediate) {
-    for (auto& allocState : sd.Map<CAllocState>()) {
-      if (CheckKernelResidencyPossibilities(*allocState.second,
-                                            kernelState.currentKernelInfo->indirectUsmTypes,
-                                            cmdListState.hContext)) {
-        allocState.second->modified = true;
-      }
-    }
-  }
-}
-inline void zeCommandListAppendLaunchKernel_SD(ze_result_t return_value,
+
+inline void zeCommandListAppendLaunchKernel_SD([[maybe_unused]] ze_result_t return_value,
                                                ze_command_list_handle_t hCommandList,
                                                ze_kernel_handle_t hKernel,
                                                const ze_group_count_t* pLaunchFuncArgs,
                                                ze_event_handle_t hSignalEvent,
                                                uint32_t numWaitEvents,
                                                ze_event_handle_t* phWaitEvents) {
-  AppendLaunchKernel(return_value, hCommandList, hKernel, pLaunchFuncArgs, hSignalEvent,
-                     numWaitEvents, phWaitEvents);
+  auto& sd = SD();
+  AppendLaunchKernel(hCommandList, hKernel, pLaunchFuncArgs, hSignalEvent);
+  RegisterEvents(sd, hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
 }
 
-inline void zeCommandListAppendLaunchCooperativeKernel_SD(ze_result_t return_value,
+inline void zeCommandListAppendLaunchCooperativeKernel_SD([[maybe_unused]] ze_result_t return_value,
                                                           ze_command_list_handle_t hCommandList,
                                                           ze_kernel_handle_t hKernel,
                                                           const ze_group_count_t* pLaunchFuncArgs,
                                                           ze_event_handle_t hSignalEvent,
                                                           uint32_t numWaitEvents,
                                                           ze_event_handle_t* phWaitEvents) {
-  AppendLaunchKernel(return_value, hCommandList, hKernel, pLaunchFuncArgs, hSignalEvent,
-                     numWaitEvents, phWaitEvents);
+  auto& sd = SD();
+  AppendLaunchKernel(hCommandList, hKernel, pLaunchFuncArgs, hSignalEvent);
+  RegisterEvents(sd, hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
 }
 
 inline void zeCommandListAppendLaunchKernelIndirect_SD(
-    ze_result_t return_value,
+    [[maybe_unused]] ze_result_t return_value,
     ze_command_list_handle_t hCommandList,
     ze_kernel_handle_t hKernel,
     const ze_group_count_t* pLaunchArgumentsBuffer,
     ze_event_handle_t hSignalEvent,
     uint32_t numWaitEvents,
     ze_event_handle_t* phWaitEvents) {
-  AppendLaunchKernel(return_value, hCommandList, hKernel, pLaunchArgumentsBuffer, hSignalEvent,
-                     numWaitEvents, phWaitEvents);
+  auto& sd = SD();
+  AppendLaunchKernel(hCommandList, hKernel, pLaunchArgumentsBuffer, hSignalEvent);
+  RegisterEvents(sd, hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
 }
 
 inline void zeCommandListAppendLaunchMultipleKernelsIndirect_SD(
@@ -358,12 +273,12 @@ inline void zeCommandListAppendLaunchMultipleKernelsIndirect_SD(
   const auto& cmdListState = sd.Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
   for (auto i = 0u; i < numKernels; i++) {
     CommandListKernelInit(sd, hCommandList, phKernels[i], pLaunchArgumentsBuffer);
-    auto& kernelState = sd.Get<CKernelState>((phKernels)[i], EXCEPTION_MESSAGE);
+    const auto& kernelState = sd.Get<CKernelState>((phKernels)[i], EXCEPTION_MESSAGE);
 
     if (CheckWhetherDumpKernel(kernelState.currentKernelInfo->kernelNumber,
                                cmdListState.cmdListNumber) &&
         (cmdListState.isImmediate || !CaptureAfterSubmit(Config::Get()))) {
-      SaveKernelArguments(hSignalEvent, hCommandList, kernelState, cmdListState, callOnce);
+      SaveKernelArguments(hSignalEvent, hCommandList, kernelState, cmdListState, false, callOnce);
       callOnce = false;
     }
   }

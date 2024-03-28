@@ -403,6 +403,7 @@ struct Config {
     vi_bool clCaptureImages;
     vi_bool clRemoveSourceLengths;
     vi_bool l0CaptureImages;
+    vi_bool l0CaptureInputKernels;
     vi_bool l0DumpSpv;
     BitRange captureDraws2DTexs;
     BitRange captureDraws;
@@ -707,6 +708,7 @@ struct Config {
         vi_bool captureImages;
         vi_bool bufferResetAfterCreate;
         vi_bool nullIndirectPointersInBuffer;
+        vi_bool dumpInputKernels;
         struct BruteForceScanForIndirectPointers {
           vi_uint memoryType;
           vi_uint iterations;

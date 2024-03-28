@@ -354,6 +354,7 @@ LevelZero {
     DumpKernels             -/-/-
     DumpAfterSubmit         False
     DumpImages              False
+    DumpInputKernels        False
     BufferResetAfterCreate  False
     NullIndirectPointersInBuffer  True
     BruteForceScanForIndirectPointers {

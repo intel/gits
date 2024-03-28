@@ -903,6 +903,8 @@ bool gits::Config::Set(const std::filesystem::path& cfgDir) {
   ReadRecorderOption(pt, "LevelZero.Utilities.BruteForceScanForIndirectPointers.Iterations",
                      cfg.recorder.levelZero.utilities.bruteForceScanForIndirectPointers.iterations,
                      GITS_PLATFORM_BIT_ALL);
+  ReadRecorderOption(pt, "LevelZero.Utilities.DumpInputKernels",
+                     cfg.recorder.levelZero.utilities.dumpInputKernels, GITS_PLATFORM_BIT_ALL);
   {
     if (cfg.recorder.levelZero.capture.mode.find("Kernel") != std::string::npos) {
       ReadRecorderOption(pt, "LevelZero.Capture.Kernel.Range", kernelInfo, GITS_PLATFORM_BIT_ALL);
@@ -942,6 +944,11 @@ bool gits::Config::Set(const std::filesystem::path& cfgDir) {
                      cfg.recorder.levelZero.utilities.captureAfterSubmit, GITS_PLATFORM_BIT_ALL);
   ReadRecorderOption(pt, "LevelZero.Utilities.DumpImages",
                      cfg.recorder.levelZero.utilities.captureImages, GITS_PLATFORM_BIT_ALL);
+  if (cfg.recorder.levelZero.utilities.captureAfterSubmit &&
+      cfg.recorder.levelZero.utilities.dumpInputKernels) {
+    Log(ERR) << "DumpAfterSubmit and DumpInputKernels are mutually exclusive.";
+    throw EOperationFailed(EXCEPTION_MESSAGE);
+  }
 #endif
   //******************************** EXTRAS ******************************************
   ReadRecorderOption(pt, "Extras.Optimizations.TokenBurstLimit", cfg.common.tokenBurst,

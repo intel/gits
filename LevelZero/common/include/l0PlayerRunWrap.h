@@ -165,6 +165,10 @@ inline void zeCommandListAppendLaunchKernel_RUNWRAP(Cze_result_t& _return_value,
   if (isImmediate) {
     TranslatePointers(sd);
   }
+  const auto& cfg = Config::Get();
+  if (CaptureKernels(cfg) && IsDumpInputMode(cfg)) {
+    AppendLaunchKernel(*_hCommandList, *_hKernel, *_pLaunchFuncArgs, *_hSignalEvent, true);
+  }
   _return_value.Value() =
       drv.zeCommandListAppendLaunchKernel(*_hCommandList, *_hKernel, *_pLaunchFuncArgs,
                                           *_hSignalEvent, *_numWaitEvents, *_phWaitEvents);
@@ -185,6 +189,10 @@ inline void zeCommandListAppendLaunchCooperativeKernel_RUNWRAP(
   KernelCountUp(CGits::Instance());
   if (isImmediate) {
     TranslatePointers(sd);
+  }
+  const auto& cfg = Config::Get();
+  if (CaptureKernels(cfg) && IsDumpInputMode(cfg)) {
+    AppendLaunchKernel(*_hCommandList, *_hKernel, *_pLaunchFuncArgs, *_hSignalEvent, true);
   }
   _return_value.Value() = drv.zeCommandListAppendLaunchCooperativeKernel(
       *_hCommandList, *_hKernel, *_pLaunchFuncArgs, *_hSignalEvent, *_numWaitEvents,
@@ -208,6 +216,10 @@ inline void zeCommandListAppendLaunchKernelIndirect_RUNWRAP(
   if (isImmediate) {
     TranslatePointers(sd);
   }
+  const auto& cfg = Config::Get();
+  if (CaptureKernels(cfg) && IsDumpInputMode(cfg)) {
+    AppendLaunchKernel(*_hCommandList, *_hKernel, *_pLaunchArgumentsBuffer, *_hSignalEvent, true);
+  }
   _return_value.Value() = drv.zeCommandListAppendLaunchKernelIndirect(
       *_hCommandList, *_hKernel, *_pLaunchArgumentsBuffer, *_hSignalEvent, *_numWaitEvents,
       *_phWaitEvents);
@@ -228,9 +240,16 @@ inline void zeCommandListAppendLaunchMultipleKernelsIndirect_RUNWRAP(
     Cze_event_handle_t::CSArray& _phWaitEvents) {
   auto& sd = SD();
   const auto isImmediate = IsCommandListImmediate(*_hCommandList, sd);
-  KernelCountUp(CGits::Instance());
   if (isImmediate) {
     TranslatePointers(sd);
+  }
+  for (auto i = 0U; i < *_numKernels; i++) {
+    KernelCountUp(CGits::Instance());
+    const auto& cfg = Config::Get();
+    if (CaptureKernels(cfg) && IsDumpInputMode(cfg)) {
+      AppendLaunchKernel(*_hCommandList, (*_phKernels)[i], *_pLaunchArgumentsBuffer, *_hSignalEvent,
+                         true);
+    }
   }
   _return_value.Value() = drv.zeCommandListAppendLaunchMultipleKernelsIndirect(
       *_hCommandList, *_numKernels, *_phKernels, *_pCountBuffer, *_pLaunchArgumentsBuffer,

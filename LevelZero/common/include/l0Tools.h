@@ -26,6 +26,7 @@ namespace l0 {
 struct CKernelState;
 struct CKernelExecutionInfo;
 struct CKernelArgumentDump;
+struct CCommandListState;
 class CStateDynamic;
 void SaveBuffer(const std::filesystem::path& dir,
                 const std::string name,
@@ -41,6 +42,7 @@ enum class KernelArgType { pointer = 1, buffer, image };
 void PrepareArguments(const CKernelExecutionInfo* kernelInfo,
                       std::vector<CKernelArgumentDump>& argDumpStates,
                       CStateDynamic& sd,
+                      bool isInputMode,
                       bool dumpUnique = false);
 void DumpReadyArguments(std::vector<CKernelArgumentDump>& readyArgVector,
                         uint32_t cmdQueueNumber,
@@ -118,5 +120,22 @@ uint32_t TranslatePointerOffsets(const CStateDynamic& sd,
                                  bool isLocalMemory = false);
 uint32_t BruteForceScanIterations(const Config& cfg);
 bool IsMemoryTypeIncluded(const uint32_t cfgMemoryTypeValue, UnifiedMemoryType type);
+bool IsDumpInputMode(const Config& cfg);
+void SaveKernelArguments(const ze_event_handle_t& hSignalEvent,
+                         const ze_command_list_handle_t& hCommandList,
+                         const CKernelState& kernelState,
+                         const CCommandListState& cmdListState,
+                         bool isInputMode,
+                         bool callOnce = true);
+void AppendLaunchKernel(const ze_command_list_handle_t& hCommandList,
+                        const ze_kernel_handle_t& hKernel,
+                        const ze_group_count_t* pLaunchFuncArgs,
+                        const ze_event_handle_t& hSignalEvent,
+                        bool isInputMode = false);
+void InjectReadsForArguments(std::vector<CKernelArgumentDump>& readyArgVec,
+                             const ze_command_list_handle_t& cmdList,
+                             const bool useBarrier,
+                             ze_context_handle_t hContext,
+                             ze_event_handle_t hSignalEvent);
 } // namespace l0
 } // namespace gits

@@ -78,6 +78,7 @@ struct CKernelArgumentDump : public CKernelArgument {
   uint32_t kernelNumber = 0U;
   uint64_t kernelArgIndex = 0U;
   bool isIndirectDump = false;
+  bool isInputArg = false;
 
 public:
   bool injected = false;
@@ -434,7 +435,10 @@ private:
   uint32_t appendKernelNumber = 0U;
   std::string GetExecutionKeyId() const;
   void AddOclocInfo(const ze_module_handle_t& hModule);
-  std::string BuildFileName(const uint64_t& argNumber, bool isBuffer, bool isIndirectDump = false);
+  std::string BuildFileName(const uint64_t& argNumber,
+                            bool isBuffer,
+                            bool isIndirectMode,
+                            bool isInputMode);
   nlohmann::ordered_json GetImageDescription(const ze_image_desc_t& imageDesc) const;
   void UpdateExecutionKeyId(const uint32_t& queueSubmitNum,
                             const uint32_t& cmdListNum,
@@ -446,6 +450,7 @@ public:
                     const uint32_t& queueSubmitNum,
                     const uint32_t& cmdListNum,
                     const uint64_t& argIndex,
+                    bool isInputMode,
                     bool isIndirectDump = false);
   bool Exists(const uint32_t& queueSubmitNumber,
               const uint32_t& cmdListNumber,

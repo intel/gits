@@ -492,6 +492,10 @@ bool configure_player(int argc, char** argv) {
   TypedOption<bool> optionL0DumpSpv(options, OPTION_GROUP_PLAYBACK, 0, "l0DumpSpv",
                                     "Option deprecated!");
 
+  TypedOption<bool> optionL0CaptureInputKernels(
+      options, OPTION_GROUP_PLAYBACK, 0, "l0CaptureInputKernels",
+      "Debug option to dump input kernels. Must be used with l0CaptureKernels");
+
   TypedOption<bool> optionL0CaptureAfterSubmit(
       options, OPTION_GROUP_PLAYBACK, 0, "l0CaptureAfterSubmit",
       "used with l0CaptureKernels, modifies the way kernel arguments are dumped."
@@ -1675,10 +1679,15 @@ bool configure_player(int argc, char** argv) {
   set_when_option_present(cfg.player.l0CaptureAfterSubmit, optionL0CaptureAfterSubmit);
   set_when_option_present(cfg.player.l0CaptureImages, optionL0CaptureImages);
   set_when_option_present(cfg.player.l0DumpSpv, optionL0DumpSpv);
+  set_when_option_present(cfg.player.l0CaptureInputKernels, optionL0CaptureInputKernels);
   set_when_option_present(cfg.player.l0InjectBufferResetAfterCreate,
                           optionL0InjectBufferResetAfterCreate);
   set_when_option_present(cfg.player.l0DisableNullIndirectPointersInBuffer,
                           optionL0DisableNullIndirectPointersInBuffer);
+  if (cfg.player.l0CaptureInputKernels && cfg.player.l0CaptureAfterSubmit) {
+    Log(ERR) << "l0CaptureInputKernels and l0CaptureAfterSubmit options are mutually exclusive.";
+    throw EOperationFailed(EXCEPTION_MESSAGE);
+  }
 
   if (optionForceWindowPos.Present()) {
     if (optionFullscreen.Present()) {

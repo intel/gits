@@ -418,6 +418,7 @@ void LayoutBuilder::UpdateLayout(const CKernelExecutionInfo* kernelInfo,
                                  const uint32_t& queueSubmitNum,
                                  const uint32_t& cmdListNum,
                                  const uint64_t& argIndex,
+                                 bool isInputMode,
                                  bool isIndirectDump) {
   UpdateExecutionKeyId(queueSubmitNum, cmdListNum, kernelInfo->kernelNumber);
   const auto executionKey = GetExecutionKeyId();
@@ -444,15 +445,23 @@ void LayoutBuilder::UpdateLayout(const CKernelExecutionInfo* kernelInfo,
       const auto& imgState = SD().Get<CImageState>(
           reinterpret_cast<ze_image_handle_t>(const_cast<void*>(arg.argValue)), EXCEPTION_MESSAGE);
       const auto imageDescription = GetImageDescription(imgState.desc);
-      imageArgument[BuildFileName(argIndex, false)] = imageDescription;
-      Add("args", std::to_string(argIndex), imageArgument);
+      imageArgument[BuildFileName(argIndex, false, isIndirectDump, isInputMode)] = imageDescription;
+      if (!isInputMode) {
+        Add("args", std::to_string(argIndex), imageArgument);
+      }
     } else {
-      Add("args", std::to_string(argIndex), BuildFileName(argIndex, true));
+      const auto fileName = BuildFileName(argIndex, true, isIndirectDump, isInputMode);
+      if (!isInputMode) {
+        Add("args", std::to_string(argIndex), fileName);
+      }
     }
   } else {
     std::stringstream keyIndex;
     keyIndex << std::hex << argIndex;
-    Add("indirect_args", keyIndex.str(), BuildFileName(argIndex, true, isIndirectDump));
+    const auto fileName = BuildFileName(argIndex, true, isIndirectDump, isInputMode);
+    if (!isInputMode) {
+      Add("indirect_args", keyIndex.str(), fileName);
+    }
   }
 }
 
@@ -530,10 +539,14 @@ void LayoutBuilder::AddOclocInfo(const ze_module_handle_t& hModule) {
 
 std::string LayoutBuilder::BuildFileName(const uint64_t& argNumber,
                                          bool isBuffer,
-                                         bool isIndirectDump) {
+                                         bool isIndirectDump,
+                                         bool isInputMode) {
   static int fileCounter = 1;
   std::stringstream fileName;
   fileName << (isBuffer ? "NDRangeBuffer_" : "NDRangeImage_");
+  if (isInputMode) {
+    fileName << "input_";
+  }
   fileName << queueSubmitNumber << "_" << cmdListNumber << "_";
   fileName << appendKernelNumber << "_arg_";
   if (isIndirectDump) {
@@ -542,7 +555,10 @@ std::string LayoutBuilder::BuildFileName(const uint64_t& argNumber,
     fileName << argNumber;
   }
   if (!isIndirectDump) {
-    fileName << "_" << fileCounter++;
+    fileName << "_" << fileCounter;
+    if (!isInputMode) {
+      fileCounter++;
+    }
   }
   latestFileName = fileName.str();
   return latestFileName;

@@ -395,6 +395,10 @@ inline void zeCommandListAppendLaunchKernel_RECWRAP_PRE(
                                       commandListState.appendedKernels);
     }
   }
+  const auto& cfg = Config::Get();
+  if (CaptureKernels(cfg) && IsDumpInputMode(cfg)) {
+    AppendLaunchKernel(hCommandList, hKernel, pLaunchFuncArgs, hSignalEvent, true);
+  }
 }
 
 inline void zeCommandListAppendLaunchKernel_RECWRAP(CRecorder& recorder,
