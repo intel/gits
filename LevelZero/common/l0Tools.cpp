@@ -866,7 +866,7 @@ void AppendLaunchKernel(const ze_command_list_handle_t& hCommandList,
   if (CheckWhetherDumpKernel(kernelState.currentKernelInfo->kernelNumber,
                              cmdListState.cmdListNumber) &&
       (cmdListState.isImmediate || !CaptureAfterSubmit(cfg))) {
-    SaveKernelArguments(hSignalEvent, hCommandList, kernelState, cmdListState, isInputMode, false);
+    SaveKernelArguments(hSignalEvent, hCommandList, kernelState, cmdListState, isInputMode, true);
   }
   if (IsBruteForceScanForIndirectPointersEnabled(cfg) && cmdListState.isImmediate) {
     for (auto& allocState : sd.Map<CAllocState>()) {

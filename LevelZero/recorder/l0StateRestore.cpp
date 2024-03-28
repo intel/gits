@@ -213,6 +213,18 @@ void RestoreContext(CScheduler& scheduler, CStateDynamic& sd) {
   }
 }
 
+void RestorePhysicalMemory(CScheduler& scheduler, CStateDynamic& sd) {
+  for (auto& state : sd.Map<CPhysicalMemState>()) {
+    if (!state.second->Restored()) {
+      auto stateInstance = state.first;
+      scheduler.Register(new CzePhysicalMemCreate(ZE_RESULT_SUCCESS, state.second->hContext,
+                                                  state.second->hDevice, &state.second->desc,
+                                                  &stateInstance));
+      state.second->RestoreFinished();
+    }
+  }
+}
+
 void RestorePointers(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& state : sd.Map<CAllocState>()) {
     if (!state.second->Restored()) {
@@ -233,8 +245,19 @@ void RestorePointers(CScheduler& scheduler, CStateDynamic& sd) {
           }
         } else if (state.second->allocType == AllocStateType::function_pointer) {
           scheduler.Register(
-              new CzeModuleGetFunctionPointer(ZE_RESULT_SUCCESS, state.second->hModule,
-                                              state.second->name.c_str(), &stateInstance));
+              new CzeModuleGetFunctionPointer_V1(ZE_RESULT_SUCCESS, state.second->hModule,
+                                                 state.second->name.c_str(), &stateInstance));
+        } else if (state.second->allocType == AllocStateType::virtual_pointer) {
+          scheduler.Register(new CzeVirtualMemReserve_V1(ZE_RESULT_SUCCESS, state.second->hContext,
+                                                         state.second->pointerHint,
+                                                         state.second->size, &stateInstance));
+          for (const auto& memMap : state.second->memMaps) {
+            scheduler.Register(new CzeVirtualMemMap_V1(
+                ZE_RESULT_SUCCESS, state.second->hContext,
+                GetOffsetPointer(state.first, memMap.first),
+                memMap.second->virtualMemorySizeFromOffset, memMap.second->hPhysicalMemory,
+                memMap.second->physicalMemoryOffset, memMap.second->access));
+          }
         }
         break;
       }
@@ -253,7 +276,7 @@ void RestorePointers(CScheduler& scheduler, CStateDynamic& sd) {
       }
       }
       if (state.second->residencyInfo) {
-        scheduler.Register(new CzeContextMakeMemoryResident(
+        scheduler.Register(new CzeContextMakeMemoryResident_V1(
             ZE_RESULT_SUCCESS, state.second->residencyInfo->hContext,
             state.second->residencyInfo->hDevice,
             GetOffsetPointer(state.first, state.second->residencyInfo->offset),
@@ -351,11 +374,22 @@ void RestorePointers(CScheduler& scheduler, CStateDynamic& sd) {
         if (state.second->allocType != AllocStateType::function_pointer) {
           const auto commandList =
               GetImmediateCommandList(scheduler, state.second->hContext, state.second->hDevice);
-          std::vector<char> buffer(state.second->size);
-          l0::drv.inject.zeCommandListAppendMemoryCopy(commandList, buffer.data(), state.first,
-                                                       buffer.size(), nullptr, 0, nullptr);
-          ScheduleSplitMemoryCopyFromHostPtr(scheduler, buffer.data(), commandList, state.first, 0U,
-                                             buffer.size());
+          if (state.second->allocType == AllocStateType::virtual_pointer) {
+            for (const auto& memMap : state.second->memMaps) {
+              const auto virtualPtrRegion = GetOffsetPointer(state.first, memMap.first);
+              std::vector<char> buffer(memMap.second->virtualMemorySizeFromOffset);
+              l0::drv.inject.zeCommandListAppendMemoryCopy(
+                  commandList, buffer.data(), virtualPtrRegion, buffer.size(), nullptr, 0, nullptr);
+              ScheduleSplitMemoryCopyFromHostPtr(scheduler, buffer.data(), commandList,
+                                                 virtualPtrRegion, 0U, buffer.size());
+            }
+          } else {
+            std::vector<char> buffer(state.second->size);
+            l0::drv.inject.zeCommandListAppendMemoryCopy(commandList, buffer.data(), state.first,
+                                                         buffer.size(), nullptr, 0, nullptr);
+            ScheduleSplitMemoryCopyFromHostPtr(scheduler, buffer.data(), commandList, state.first,
+                                               0U, buffer.size());
+          }
         }
       } else {
         scheduler.Register(new CGitsL0MemoryRestore(stateInstance, state.second->size));
@@ -679,9 +713,27 @@ void CRestoreState::Finish(CScheduler& scheduler) const {
     }
   }
   for (auto& state : sd.Map<CAllocState>()) {
-    if (state.second->Restored() && state.second->hModule == nullptr) {
+    if (state.second->Restored() && state.second->allocType == AllocStateType::virtual_pointer) {
+      for (const auto& memMap : state.second->memMaps) {
+        scheduler.Register(new CzeVirtualMemUnmap_V1(ZE_RESULT_SUCCESS, state.second->hContext,
+                                                     GetOffsetPointer(state.first, memMap.first),
+                                                     memMap.second->virtualMemorySizeFromOffset));
+      }
+      scheduler.Register(new CzeVirtualMemFree_V1(ZE_RESULT_SUCCESS, state.second->hContext,
+                                                  state.first, state.second->size));
+    }
+  }
+  for (auto& state : sd.Map<CPhysicalMemState>()) {
+    if (state.second->Restored()) {
+      scheduler.Register(
+          new CzePhysicalMemDestroy(ZE_RESULT_SUCCESS, state.second->hContext, state.first));
+    }
+  }
+  for (auto& state : sd.Map<CAllocState>()) {
+    if (state.second->Restored() && state.second->hModule == nullptr &&
+        state.second->allocType != AllocStateType::virtual_pointer) {
       if (state.second->residencyInfo) {
-        scheduler.Register(new CzeContextEvictMemory(
+        scheduler.Register(new CzeContextEvictMemory_V1(
             ZE_RESULT_SUCCESS, state.second->residencyInfo->hContext,
             state.second->residencyInfo->hDevice,
             GetOffsetPointer(state.first, state.second->residencyInfo->offset),

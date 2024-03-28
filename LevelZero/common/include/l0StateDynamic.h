@@ -127,6 +127,24 @@ struct CAllocState : public CState {
   };
   std::unique_ptr<ResidencyInfo> residencyInfo;
 
+  const void* pointerHint = nullptr;
+  struct VirtualMemMapInfo {
+    size_t virtualMemorySizeFromOffset = 0U;
+    ze_physical_mem_handle_t hPhysicalMemory = nullptr;
+    size_t physicalMemoryOffset = 0U;
+    ze_memory_access_attribute_t access = ZE_MEMORY_ACCESS_ATTRIBUTE_NONE;
+    VirtualMemMapInfo(size_t virtualMemorySizeFromOffset,
+                      ze_physical_mem_handle_t hPhysicalMemory,
+                      size_t physicalMemoryOffset,
+                      ze_memory_access_attribute_t access)
+        : virtualMemorySizeFromOffset(virtualMemorySizeFromOffset),
+          hPhysicalMemory(hPhysicalMemory),
+          physicalMemoryOffset(physicalMemoryOffset),
+          access(access) {}
+  };
+  // virtualMemoryOffset -> MemMapInfo
+  std::map<size_t, std::shared_ptr<VirtualMemMapInfo>> memMaps;
+
 public:
   CAllocState() = default;
   CAllocState(ze_context_handle_t hContext,
@@ -148,7 +166,21 @@ public:
               const char* ptrName,
               size_t size,
               AllocStateType allocType);
+  CAllocState(ze_context_handle_t hContext, size_t size, const void* pStart);
   ~CAllocState();
+};
+
+struct CPhysicalMemState : public CState {
+  using type = ze_physical_mem_handle_t;
+  using states_type = std::unordered_map<type, std::unique_ptr<CPhysicalMemState>>;
+  ze_context_handle_t hContext = nullptr;
+  ze_device_handle_t hDevice = nullptr;
+  ze_physical_mem_desc_t desc = {};
+  CPhysicalMemState() = default;
+  CPhysicalMemState(ze_context_handle_t hContext,
+                    ze_device_handle_t hDevice,
+                    ze_physical_mem_desc_t desc)
+      : hContext(hContext), hDevice(hDevice), desc(desc) {}
 };
 
 struct ArgInfo {
@@ -486,6 +518,7 @@ private:
   typename CEventState::states_type eventStates_;
   typename CFenceState::states_type fenceStates_;
   typename CKernelArgumentDump::states_type kernelArgumentDumps_;
+  typename CPhysicalMemState::states_type physicalMemStates_;
   static CStateDynamic* instance;
 
 public:
@@ -592,6 +625,10 @@ template <>
 const typename CCommandListState::states_type& CStateDynamic::Map<CCommandListState>() const;
 template <>
 typename CCommandQueueState::states_type& CStateDynamic::Map<CCommandQueueState>();
+template <>
+typename CPhysicalMemState::states_type& CStateDynamic::Map<CPhysicalMemState>();
+template <>
+const typename CPhysicalMemState::states_type& CStateDynamic::Map<CPhysicalMemState>() const;
 template <>
 const typename CCommandQueueState::states_type& CStateDynamic::Map<CCommandQueueState>() const;
 inline CStateDynamic& SD() {

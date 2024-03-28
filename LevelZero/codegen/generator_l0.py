@@ -4919,7 +4919,7 @@ arg3=ArgDef(name='phModules',type='ze_module_handle_t*',tag='in',range='0,numMod
 arg4=ArgDef(name='phLog',type='ze_module_build_log_handle_t*',tag='out'),
 )
 
-Function(name='zePhysicalMemCreate',component='ze_physical_mem',enabled=True,ddi_pos=0,
+Function(name='zePhysicalMemCreate',component='ze_physical_mem',enabled=True,ddi_pos=0,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
@@ -4927,7 +4927,7 @@ arg3=ArgDef(name='desc',type='ze_physical_mem_desc_t*',tag='in'),
 arg4=ArgDef(name='phPhysicalMemory',type='ze_physical_mem_handle_t*',tag='out'),
 )
 
-Function(name='zePhysicalMemDestroy',component='ze_physical_mem',enabled=True,ddi_pos=1,
+Function(name='zePhysicalMemDestroy',component='ze_physical_mem',enabled=True,ddi_pos=1,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='hPhysicalMemory',type='ze_physical_mem_handle_t',tag='in',release=True),
@@ -5001,10 +5001,17 @@ retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hSampler',type='ze_sampler_handle_t',tag='in',release=True),
 )
 
-Function(name='zeVirtualMemFree',component='ze_virtual_mem',enabled=True,ddi_pos=1,
+Function(name='zeVirtualMemFree',component='ze_virtual_mem',enabled=True,ddi_pos=1,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='ptr',type='const void*',tag='in'),
+arg3=ArgDef(name='size',type='size_t',tag='in'),
+)
+
+Function(name='zeVirtualMemFree',component='ze_virtual_mem',enabled=True,ddi_pos=1,stateTrack=True,version=1,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
+arg2=ArgDef(name='ptr',type='const void*',tag='in',wrapType='CUSMPtr'),
 arg3=ArgDef(name='size',type='size_t',tag='in'),
 )
 
@@ -5017,10 +5024,20 @@ arg4=ArgDef(name='access',type='ze_memory_access_attribute_t*',tag='out'),
 arg5=ArgDef(name='outSize',type='size_t*',tag='out'),
 )
 
-Function(name='zeVirtualMemMap',component='ze_virtual_mem',enabled=True,ddi_pos=3,
+Function(name='zeVirtualMemMap',component='ze_virtual_mem',enabled=True,ddi_pos=3,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='ptr',type='const void*',tag='in'),
+arg3=ArgDef(name='size',type='size_t',tag='in'),
+arg4=ArgDef(name='hPhysicalMemory',type='ze_physical_mem_handle_t',tag='in'),
+arg5=ArgDef(name='offset',type='size_t',tag='in'),
+arg6=ArgDef(name='access',type='ze_memory_access_attribute_t',tag='in'),
+)
+
+Function(name='zeVirtualMemMap',component='ze_virtual_mem',enabled=True,ddi_pos=3,stateTrack=True,version=1,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
+arg2=ArgDef(name='ptr',type='const void*',tag='in',wrapType='CUSMPtr'),
 arg3=ArgDef(name='size',type='size_t',tag='in'),
 arg4=ArgDef(name='hPhysicalMemory',type='ze_physical_mem_handle_t',tag='in'),
 arg5=ArgDef(name='offset',type='size_t',tag='in'),
@@ -5035,7 +5052,7 @@ arg3=ArgDef(name='size',type='size_t',tag='in'),
 arg4=ArgDef(name='pagesize',type='size_t*',tag='out'),
 )
 
-Function(name='zeVirtualMemReserve',component='ze_virtual_mem',enabled=True,skipRun=True,ddi_pos=0,
+Function(name='zeVirtualMemReserve',component='ze_virtual_mem',enabled=True,skipRun=True,ddi_pos=0,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='pStart',type='const void*',tag='in',optional=True),
@@ -5043,7 +5060,15 @@ arg3=ArgDef(name='size',type='size_t',tag='in'),
 arg4=ArgDef(name='pptr',type='void**',tag='out'),
 )
 
-Function(name='zeVirtualMemSetAccessAttribute',component='ze_virtual_mem',enabled=True,ddi_pos=5,
+Function(name='zeVirtualMemReserve',component='ze_virtual_mem',enabled=True,ddi_pos=0,stateTrack=True,version=1,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
+arg2=ArgDef(name='pStart',type='const void*',tag='in',optional=True,wrapType='Cuintptr_t'),
+arg3=ArgDef(name='size',type='size_t',tag='in'),
+arg4=ArgDef(name='pptr',type='void**',tag='out',wrapType='CMappedPtr::CSMapArray'),
+)
+
+Function(name='zeVirtualMemSetAccessAttribute',component='ze_virtual_mem',enabled=True,ddi_pos=5,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='ptr',type='const void*',tag='in'),
@@ -5051,10 +5076,25 @@ arg3=ArgDef(name='size',type='size_t',tag='in'),
 arg4=ArgDef(name='access',type='ze_memory_access_attribute_t',tag='in'),
 )
 
-Function(name='zeVirtualMemUnmap',component='ze_virtual_mem',enabled=True,ddi_pos=4,
+Function(name='zeVirtualMemSetAccessAttribute',component='ze_virtual_mem',enabled=True,ddi_pos=5,stateTrack=True,version=1,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
+arg2=ArgDef(name='ptr',type='const void*',tag='in',wrapType='CUSMPtr'),
+arg3=ArgDef(name='size',type='size_t',tag='in'),
+arg4=ArgDef(name='access',type='ze_memory_access_attribute_t',tag='in'),
+)
+
+Function(name='zeVirtualMemUnmap',component='ze_virtual_mem',enabled=True,ddi_pos=4,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='ptr',type='const void*',tag='in'),
+arg3=ArgDef(name='size',type='size_t',tag='in'),
+)
+
+Function(name='zeVirtualMemUnmap',component='ze_virtual_mem',enabled=True,ddi_pos=4,stateTrack=True,version=1,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
+arg2=ArgDef(name='ptr',type='const void*',tag='in',wrapType='CUSMPtr'),
 arg3=ArgDef(name='size',type='size_t',tag='in'),
 )
 

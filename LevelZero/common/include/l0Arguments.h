@@ -422,6 +422,7 @@ public:
 
   CUSMPtr() : _resource(){};
   CUSMPtr(void* mappedPtr) : _ptr(mappedPtr), _resource() {}
+  CUSMPtr(const void* mappedPtr) : _ptr(const_cast<void*>(mappedPtr)), _resource() {}
   CUSMPtr(const size_t len, const void* buffer) : _size(len), _resource() {
     auto& sd = SD();
     const auto allocInfo = GetAllocFromRegion(const_cast<void*>(buffer), sd);
@@ -549,6 +550,41 @@ public:
 private:
   std::string GetFileName(ze_module_format_t format);
   std::string GetProgramBinary(const unsigned char* binary, const size_t length);
+};
+
+class Cuintptr_t : public CArg<uintptr_t, Cuintptr_t> {
+public:
+  typedef CArgumentSizedArray<uintptr_t, Cuintptr_t> CSArray;
+  static constexpr const char* NAME = "uintptr_t";
+  Cuintptr_t() = default;
+  Cuintptr_t(const void* value) {
+    Value() = reinterpret_cast<uintptr_t>(value);
+  }
+  virtual const char* Name() const {
+    return NAME;
+  }
+  operator void*() const {
+    return reinterpret_cast<void*>(Value());
+  }
+  operator const void*() const {
+    return reinterpret_cast<const void*>(Value());
+  }
+  struct PtrConverter {
+    L0Type ptrValue = 0U;
+
+  public:
+    explicit PtrConverter(L0Type ptrValue) : ptrValue(ptrValue) {}
+    operator const void*() const {
+      return reinterpret_cast<void*>(ptrValue);
+    }
+    operator void*() const {
+      return reinterpret_cast<void*>(ptrValue);
+    }
+  };
+
+  PtrConverter operator*() {
+    return PtrConverter(Value());
+  }
 };
 } // namespace l0
 } // namespace gits

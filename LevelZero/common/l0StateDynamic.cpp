@@ -151,6 +151,14 @@ template <>
 typename CCommandQueueState::states_type& CStateDynamic::Map<CCommandQueueState>() {
   return commandQueueStates_;
 }
+template <>
+typename CPhysicalMemState::states_type& CStateDynamic::Map<CPhysicalMemState>() {
+  return physicalMemStates_;
+}
+template <>
+const typename CPhysicalMemState::states_type& CStateDynamic::Map<CPhysicalMemState>() const {
+  return physicalMemStates_;
+}
 CAllocState::CAllocState(ze_context_handle_t hContext,
                          ze_device_mem_alloc_desc_t device_desc,
                          ze_host_mem_alloc_desc_t host_desc,
@@ -201,6 +209,13 @@ CAllocState::CAllocState(ze_context_handle_t hContext,
       size(size),
       alignment(alignment),
       memType(UnifiedMemoryType::host) {}
+
+CAllocState::CAllocState(ze_context_handle_t hContext, size_t size, const void* pStart)
+    : hContext(hContext),
+      size(size),
+      memType(UnifiedMemoryType::device),
+      allocType(AllocStateType::virtual_pointer),
+      pointerHint(pStart) {}
 
 CAllocState::~CAllocState() {
   try {

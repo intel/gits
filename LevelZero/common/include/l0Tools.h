@@ -77,7 +77,7 @@ void* GetOffsetPointer(void* ptr, const uintptr_t& offset);
 std::pair<void*, uintptr_t> GetAllocFromOriginalPtr(void* originalPtr, const CStateDynamic& sd);
 size_t GetSizeFromCopyRegion(const ze_copy_region_t* region);
 bool IsNullIndirectPointersInBufferEnabled(const Config& cfg);
-enum class AllocStateType : unsigned { pointer, global_pointer, function_pointer };
+enum class AllocStateType : unsigned { pointer, global_pointer, function_pointer, virtual_pointer };
 bool IsControlledSubmission(const ze_command_queue_desc_t* desc);
 bool IsControlledSubmission(const ze_command_list_desc_t* desc);
 bool ShouldDumpSpv(bool dumpSpv, const ze_module_desc_t* desc);

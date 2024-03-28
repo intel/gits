@@ -120,11 +120,22 @@ void SaveKernelArgumentsForStateRestore(CStateDynamic& sd,
       if (kernelState.currentKernelInfo->indirectUsmTypes &
           static_cast<unsigned>(allocState.second->memType)) {
         restoredPtrs.insert(allocState.first);
-        stateRestoreBuffersSnapshot.emplace_back(
-            std::make_unique<CKernelArgument>(allocState.second->size, allocState.first));
-        driver.inject.zeCommandListAppendMemoryCopy(
-            hCommandList, stateRestoreBuffersSnapshot.back()->buffer.data(), allocState.first,
-            allocState.second->size, nullptr, numEvents, waitList);
+        if (allocState.second->allocType == AllocStateType::virtual_pointer) {
+          for (const auto& memMap : allocState.second->memMaps) {
+            const auto virtualPtrRegion = GetOffsetPointer(allocState.first, memMap.first);
+            stateRestoreBuffersSnapshot.emplace_back(std::make_unique<CKernelArgument>(
+                memMap.second->virtualMemorySizeFromOffset, virtualPtrRegion));
+            driver.inject.zeCommandListAppendMemoryCopy(
+                hCommandList, stateRestoreBuffersSnapshot.back()->buffer.data(), virtualPtrRegion,
+                stateRestoreBuffersSnapshot.back()->buffer.size(), nullptr, numEvents, waitList);
+          }
+        } else {
+          stateRestoreBuffersSnapshot.emplace_back(
+              std::make_unique<CKernelArgument>(allocState.second->size, allocState.first));
+          driver.inject.zeCommandListAppendMemoryCopy(
+              hCommandList, stateRestoreBuffersSnapshot.back()->buffer.data(), allocState.first,
+              allocState.second->size, nullptr, numEvents, waitList);
+        }
       }
     }
   }
@@ -134,11 +145,22 @@ void SaveKernelArgumentsForStateRestore(CStateDynamic& sd,
       if (restoredPtrs.count(allocInfo.first) == 0) {
         void* ptr = GetOffsetPointer(allocInfo.first, allocInfo.second);
         const auto& allocState = sd.Get<CAllocState>(allocInfo.first, EXCEPTION_MESSAGE);
-        stateRestoreBuffersSnapshot.emplace_back(
-            std::make_unique<CKernelArgument>(allocState.size - allocInfo.second, ptr));
-        driver.inject.zeCommandListAppendMemoryCopy(
-            hCommandList, stateRestoreBuffersSnapshot.back()->buffer.data(), ptr,
-            stateRestoreBuffersSnapshot.back()->buffer.size(), nullptr, numEvents, waitList);
+        if (allocState.allocType == AllocStateType::virtual_pointer) {
+          for (const auto& memMap : allocState.memMaps) {
+            const auto virtualPtrRegion = GetOffsetPointer(allocInfo.first, memMap.first);
+            stateRestoreBuffersSnapshot.emplace_back(std::make_unique<CKernelArgument>(
+                memMap.second->virtualMemorySizeFromOffset, virtualPtrRegion));
+            driver.inject.zeCommandListAppendMemoryCopy(
+                hCommandList, stateRestoreBuffersSnapshot.back()->buffer.data(), virtualPtrRegion,
+                stateRestoreBuffersSnapshot.back()->buffer.size(), nullptr, numEvents, waitList);
+          }
+        } else {
+          stateRestoreBuffersSnapshot.emplace_back(
+              std::make_unique<CKernelArgument>(allocState.size - allocInfo.second, ptr));
+          driver.inject.zeCommandListAppendMemoryCopy(
+              hCommandList, stateRestoreBuffersSnapshot.back()->buffer.data(), ptr,
+              stateRestoreBuffersSnapshot.back()->buffer.size(), nullptr, numEvents, waitList);
+        }
       }
     } else if (arg.second.type == KernelArgType::image) {
       auto h_img = reinterpret_cast<ze_image_handle_t>(const_cast<void*>(arg.second.argValue));

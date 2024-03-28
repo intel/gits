@@ -25,6 +25,7 @@ void RestoreDrivers(CScheduler& scheduler, CStateDynamic& sd);
 void RestoreDevices(CScheduler& scheduler, CStateDynamic& sd);
 void RestoreContext(CScheduler& scheduler, CStateDynamic& sd);
 void RestoreImages(CScheduler& scheduler, CStateDynamic& sd);
+void RestorePhysicalMemory(CScheduler& scheduler, CStateDynamic& sd);
 void RestorePointers(CScheduler& scheduler, CStateDynamic& sd);
 void RestoreModules(CScheduler& scheduler, CStateDynamic& sd);
 void RestoreKernels(CScheduler& scheduler, CStateDynamic& sd);
@@ -49,6 +50,7 @@ public:
     RestoreCommandList(scheduler, sd);
     RestoreImages(scheduler, sd);
     RestoreModules(scheduler, sd);
+    RestorePhysicalMemory(scheduler, sd);
     RestorePointers(scheduler, sd);
     RestoreKernels(scheduler, sd);
     RestoreEventPools(scheduler, sd);

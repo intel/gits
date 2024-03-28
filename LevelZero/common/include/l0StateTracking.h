@@ -1110,6 +1110,103 @@ inline void zeContextEvictMemory_SD(ze_result_t return_value,
     allocState.residencyInfo.release();
   }
 }
+inline void zePhysicalMemCreate_SD(ze_result_t return_value,
+                                   ze_context_handle_t hContext,
+                                   ze_device_handle_t hDevice,
+                                   ze_physical_mem_desc_t* desc,
+                                   ze_physical_mem_handle_t* phPhysicalMemory) {
+  if (return_value == ZE_RESULT_SUCCESS && phPhysicalMemory != nullptr && desc != nullptr) {
+    auto& physicalMemState = SD().Map<CPhysicalMemState>()[*phPhysicalMemory];
+    physicalMemState = std::make_unique<CPhysicalMemState>(hContext, hDevice, *desc);
+  }
+}
+
+inline void zePhysicalMemDestroy_SD(ze_result_t return_value,
+                                    [[maybe_unused]] ze_context_handle_t hContext,
+                                    ze_physical_mem_handle_t hPhysicalMemory) {
+  if (return_value == ZE_RESULT_SUCCESS) {
+    SD().Release<CPhysicalMemState>(hPhysicalMemory);
+  }
+}
+
+inline void zeVirtualMemFree_SD(ze_result_t return_value,
+                                [[maybe_unused]] ze_context_handle_t hContext,
+                                const void* ptr,
+                                [[maybe_unused]] size_t size) {
+  if (return_value == ZE_RESULT_SUCCESS && ptr != nullptr) {
+    SD().Release<CAllocState>(const_cast<void*>(ptr));
+  }
+}
+
+inline void zeVirtualMemMap_SD(ze_result_t return_value,
+                               [[maybe_unused]] ze_context_handle_t hContext,
+                               const void* ptr,
+                               size_t size,
+                               ze_physical_mem_handle_t hPhysicalMemory,
+                               size_t offset,
+                               ze_memory_access_attribute_t access) {
+  if (return_value == ZE_RESULT_SUCCESS && ptr != nullptr && hPhysicalMemory != nullptr) {
+    auto& sd = SD();
+    const auto allocInfo = GetAllocFromRegion(const_cast<void*>(ptr), sd);
+    if (allocInfo.first != nullptr) {
+      auto& allocState = sd.Get<CAllocState>(allocInfo.first, EXCEPTION_MESSAGE);
+      const auto virtualMemOffset = allocInfo.second;
+      const auto virtualMemorySizeFromOffset = size;
+      const auto physicalMemoryOffset = offset;
+      allocState.memMaps[virtualMemOffset] = std::make_shared<CAllocState::VirtualMemMapInfo>(
+          virtualMemorySizeFromOffset, hPhysicalMemory, physicalMemoryOffset, access);
+      const auto& physicalMemState = sd.Get<CPhysicalMemState>(hPhysicalMemory, EXCEPTION_MESSAGE);
+      allocState.hDevice = physicalMemState.hDevice;
+    }
+  }
+}
+
+inline void zeVirtualMemReserve_SD(ze_result_t return_value,
+                                   ze_context_handle_t hContext,
+                                   const void* pStart,
+                                   size_t size,
+                                   void** pptr) {
+  if (return_value == ZE_RESULT_SUCCESS && pptr != nullptr) {
+    auto& allocState = SD().Map<CAllocState>()[*pptr];
+    allocState = std::make_unique<CAllocState>(hContext, size, pStart);
+  }
+}
+
+inline void zeVirtualMemUnmap_SD(ze_result_t return_value,
+                                 [[maybe_unused]] ze_context_handle_t hContext,
+                                 const void* ptr,
+                                 [[maybe_unused]] size_t size) {
+  if (return_value == ZE_RESULT_SUCCESS) {
+    auto& sd = SD();
+    const auto allocInfo = GetAllocFromRegion(const_cast<void*>(ptr), sd);
+    if (allocInfo.first != nullptr) {
+      auto& allocState = SD().Get<CAllocState>(allocInfo.first, EXCEPTION_MESSAGE);
+      allocState.memMaps.erase(allocInfo.second);
+    }
+  }
+}
+
+inline void zeVirtualMemSetAccessAttribute_SD(ze_result_t return_value,
+                                              [[maybe_unused]] ze_context_handle_t hContext,
+                                              const void* ptr,
+                                              size_t size,
+                                              ze_memory_access_attribute_t access) {
+  if (return_value == ZE_RESULT_SUCCESS) {
+    auto& sd = SD();
+    const auto allocInfo = GetAllocFromRegion(const_cast<void*>(ptr), sd);
+    if (allocInfo.first != nullptr) {
+      auto& allocState = SD().Get<CAllocState>(allocInfo.first, EXCEPTION_MESSAGE);
+      if (allocState.size != size) {
+        Log(ERR)
+            << "Setting only part of the virtual memory's memory access attribute is not supported";
+        throw ENotImplemented(EXCEPTION_MESSAGE);
+      }
+      for (auto& memoryMap : allocState.memMaps) {
+        memoryMap.second->access = access;
+      }
+    }
+  }
+}
 
 } // namespace l0
 } // namespace gits
