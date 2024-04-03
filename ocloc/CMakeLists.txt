@@ -8,6 +8,10 @@
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
+if(WITH_LEVELZERO)
+  include_directories(../LevelZero/common/include ${CMAKE_BINARY_DIR}/LevelZero)
+endif()
+
 add_library(ocloc_common
   common/oclocDrivers.cpp
   common/include/oclocDrivers.h

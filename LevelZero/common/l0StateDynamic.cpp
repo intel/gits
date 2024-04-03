@@ -533,6 +533,7 @@ std::string LayoutBuilder::GetExecutionKeyId() const {
   return ss.str();
 }
 
+#ifdef WITH_OCLOC
 void LayoutBuilder::AddOclocInfo(const ze_module_handle_t& hModule) {
   const auto& oclocState = SD().Get<CModuleState>(hModule, EXCEPTION_MESSAGE).oclocState;
   if (oclocState.get() != nullptr && !oclocState->args.empty()) {
@@ -551,6 +552,7 @@ void LayoutBuilder::AddOclocInfo(const ze_module_handle_t& hModule) {
     Add("ocloc", "args", children);
   }
 }
+#endif
 
 std::string LayoutBuilder::BuildFileName(const uint64_t& argNumber,
                                          bool isBuffer,
