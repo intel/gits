@@ -544,8 +544,13 @@ void RestoreCommandListBuffer(CScheduler& scheduler, CStateDynamic& sd) {
                 ZE_RESULT_SUCCESS, stateInstance, kernelInfo->handle, &launchArgs, signalEvent, 0,
                 nullptr));
             if (isImmediate && !state.second->isSync) {
-              scheduler.Register(
-                  new CzeEventHostSynchronize(ZE_RESULT_SUCCESS, signalEvent, UINT64_MAX));
+              if (signalEvent != nullptr) {
+                scheduler.Register(
+                    new CzeEventHostSynchronize(ZE_RESULT_SUCCESS, signalEvent, UINT64_MAX));
+              } else {
+                scheduler.Register(new CzeCommandListHostSynchronize(ZE_RESULT_SUCCESS,
+                                                                     stateInstance, UINT64_MAX));
+              }
             }
           }
         }
