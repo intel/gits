@@ -66,8 +66,12 @@ void gits::Exception::Callback(FCallback callback, void* userData) {
 gits::Exception::Exception() throw() {
   if (_callback && !_inCallback) {
     _inCallback = true;
-    fprintf(stderr, "Err: Exception: %s\n", what());
-    fprintf(stderr, "Err: Running user GITS exception callback\n");
+    try {
+      Log(ERR) << "Exception: " << what();
+      Log(ERR) << "Running user GITS exception callback";
+    } catch (...) {
+      topmost_exception_handler("Exception::Exception() throw()");
+    }
     (*_callback)(_userData);
     _inCallback = false;
   }
@@ -76,8 +80,12 @@ gits::Exception::Exception() throw() {
 gits::Exception::Exception(std::string message) throw() : _msg(std::move(message)) {
   if (_callback && !_inCallback) {
     _inCallback = true;
-    fprintf(stderr, "Err: Exception: %s\n", what());
-    fprintf(stderr, "Err: Running user GITS exception callback\n");
+    try {
+      Log(ERR) << "Exception: " << what();
+      Log(ERR) << "Running user GITS exception callback";
+    } catch (...) {
+      topmost_exception_handler("Exception::Exception(std::string message) throw()");
+    }
     (*_callback)(_userData);
     _inCallback = false;
   }
@@ -135,14 +143,21 @@ void fast_exit(int code) {
 } // namespace
 
 void topmost_exception_handler(const char* funcName) {
+  char msg[1024];
   try {
     throw;
   } catch (gits::Exception& ex) {
-    fprintf(stderr, "Unhandled GITS exception: %s caught in: %s!!!\n", ex.what(), funcName);
+    sprintf(msg, "Unhandled GITS exception: %s caught in: %s!!!", ex.what(), funcName);
   } catch (std::exception& ex) {
-    fprintf(stderr, "Unhandled system exception: %s caught in: %s!!!\n", ex.what(), funcName);
+    sprintf(msg, "Unhandled system exception: %s caught in: %s!!!", ex.what(), funcName);
   } catch (...) {
-    fprintf(stderr, "Unhandled exception caught in: %s\n", funcName);
+    sprintf(msg, "Unhandled exception caught in: %s", funcName);
+  }
+  try {
+    Log(ERR) << "" << msg;
+  } catch (...) {
+    fprintf(stderr, "topmost_exception_handler: Exception during handling exception:\n    %s\n",
+            msg);
   }
   fast_exit(1);
 }
