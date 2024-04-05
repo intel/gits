@@ -204,6 +204,18 @@ void SaveImage(const std::filesystem::path& dir,
   }
 }
 
+std::vector<void*> GetOrderedAllocStateKeys(const CStateDynamic& sd) {
+  std::map<uint32_t, void*> keyMap;
+  for (const auto& state : sd.Map<CAllocState>()) {
+    keyMap[state.second->insertionOrderedId] = state.first;
+  }
+  std::vector<void*> keys;
+  for (const auto& keyInfo : keyMap) {
+    keys.push_back(keyInfo.second);
+  }
+  return keys;
+}
+
 void PrepareArguments(const CKernelExecutionInfo* kernelInfo,
                       std::vector<CKernelArgumentDump>& argDumpStates,
                       CStateDynamic& sd,
@@ -245,20 +257,20 @@ void PrepareArguments(const CKernelExecutionInfo* kernelInfo,
       argDumpStates.push_back(*argDump);
     }
   }
-  for (const auto& allocState : sd.Map<CAllocState>()) {
+  const auto keys = GetOrderedAllocStateKeys(sd);
+  for (const auto& key : keys) {
+    const auto& allocState = sd.Get<CAllocState>(key, EXCEPTION_MESSAGE);
     const auto hModule = sd.Get<CKernelState>(kernelInfo->handle, EXCEPTION_MESSAGE).hModule;
     const auto kernelContext = sd.Get<CModuleState>(hModule, EXCEPTION_MESSAGE).hContext;
-    const auto isResidencySet = allocState.second->residencyInfo &&
-                                allocState.second->residencyInfo->hContext == kernelContext;
+    const auto isResidencySet =
+        allocState.residencyInfo && allocState.residencyInfo->hContext == kernelContext;
     const auto isIndirectionSet =
-        (static_cast<unsigned>(allocState.second->memType) & kernelInfo->indirectUsmTypes) != 0U;
+        (static_cast<unsigned>(allocState.memType) & kernelInfo->indirectUsmTypes) != 0U;
     if (isResidencySet || isIndirectionSet) {
-      void* pointer =
-          Config::IsPlayer() ? CMappedPtr::GetOriginal(allocState.first) : allocState.first;
+      void* pointer = Config::IsPlayer() ? CMappedPtr::GetOriginal(key) : key;
 
       auto argDump = std::make_shared<CKernelArgumentDump>(
-          allocState.second->size, allocState.first, kernelInfo->kernelNumber,
-          reinterpret_cast<uintptr_t>(pointer));
+          allocState.size, key, kernelInfo->kernelNumber, reinterpret_cast<uintptr_t>(pointer));
       argDump->isIndirectDump = true;
       argDump->isInputArg = isInputMode;
       argDumpStates.push_back(*argDump);

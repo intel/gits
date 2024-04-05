@@ -145,6 +145,9 @@ struct CAllocState : public CState {
   // virtualMemoryOffset -> MemMapInfo
   std::map<size_t, std::shared_ptr<VirtualMemMapInfo>> memMaps;
 
+  static uint32_t insertionOrderedCounter;
+  uint32_t insertionOrderedId = 0U;
+
 public:
   CAllocState() = default;
   CAllocState(ze_context_handle_t hContext,

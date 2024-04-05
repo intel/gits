@@ -226,35 +226,32 @@ void RestorePhysicalMemory(CScheduler& scheduler, CStateDynamic& sd) {
 }
 
 void RestorePointers(CScheduler& scheduler, CStateDynamic& sd) {
-  for (auto& state : sd.Map<CAllocState>()) {
-    if (!state.second->Restored()) {
-      auto stateInstance = state.first;
-      switch (state.second->memType) {
+  const auto allocInfoKeys = GetOrderedAllocStateKeys(sd);
+  for (auto& stateKey : allocInfoKeys) {
+    auto& state = sd.Get<CAllocState>(stateKey, EXCEPTION_MESSAGE);
+    if (!state.Restored()) {
+      auto stateInstance = stateKey;
+      switch (state.memType) {
       case UnifiedMemoryType::device: {
-        if (state.second->allocType == AllocStateType::pointer) {
-          scheduler.Register(new CzeMemAllocDevice(
-              ZE_RESULT_SUCCESS, state.second->hContext, &state.second->device_desc,
-              state.second->size, state.second->alignment, state.second->hDevice, &stateInstance));
-        } else if (state.second->allocType == AllocStateType::global_pointer) {
-          scheduler.Register(new CzeModuleGetGlobalPointer(ZE_RESULT_SUCCESS, state.second->hModule,
-                                                           state.second->name.c_str(),
-                                                           &state.second->size, &stateInstance));
-          if (!state.second->globalPtrAllocation.empty()) {
-            scheduler.Register(
-                new CGitsL0MemoryRestore(stateInstance, state.second->globalPtrAllocation));
+        if (state.allocType == AllocStateType::pointer) {
+          scheduler.Register(new CzeMemAllocDevice(ZE_RESULT_SUCCESS, state.hContext,
+                                                   &state.device_desc, state.size, state.alignment,
+                                                   state.hDevice, &stateInstance));
+        } else if (state.allocType == AllocStateType::global_pointer) {
+          scheduler.Register(new CzeModuleGetGlobalPointer(
+              ZE_RESULT_SUCCESS, state.hModule, state.name.c_str(), &state.size, &stateInstance));
+          if (!state.globalPtrAllocation.empty()) {
+            scheduler.Register(new CGitsL0MemoryRestore(stateInstance, state.globalPtrAllocation));
           }
-        } else if (state.second->allocType == AllocStateType::function_pointer) {
-          scheduler.Register(
-              new CzeModuleGetFunctionPointer_V1(ZE_RESULT_SUCCESS, state.second->hModule,
-                                                 state.second->name.c_str(), &stateInstance));
-        } else if (state.second->allocType == AllocStateType::virtual_pointer) {
-          scheduler.Register(new CzeVirtualMemReserve_V1(ZE_RESULT_SUCCESS, state.second->hContext,
-                                                         state.second->pointerHint,
-                                                         state.second->size, &stateInstance));
-          for (const auto& memMap : state.second->memMaps) {
+        } else if (state.allocType == AllocStateType::function_pointer) {
+          scheduler.Register(new CzeModuleGetFunctionPointer_V1(
+              ZE_RESULT_SUCCESS, state.hModule, state.name.c_str(), &stateInstance));
+        } else if (state.allocType == AllocStateType::virtual_pointer) {
+          scheduler.Register(new CzeVirtualMemReserve_V1(
+              ZE_RESULT_SUCCESS, state.hContext, state.pointerHint, state.size, &stateInstance));
+          for (const auto& memMap : state.memMaps) {
             scheduler.Register(new CzeVirtualMemMap_V1(
-                ZE_RESULT_SUCCESS, state.second->hContext,
-                GetOffsetPointer(state.first, memMap.first),
+                ZE_RESULT_SUCCESS, state.hContext, GetOffsetPointer(stateInstance, memMap.first),
                 memMap.second->virtualMemorySizeFromOffset, memMap.second->hPhysicalMemory,
                 memMap.second->physicalMemoryOffset, memMap.second->access));
           }
@@ -262,25 +259,22 @@ void RestorePointers(CScheduler& scheduler, CStateDynamic& sd) {
         break;
       }
       case UnifiedMemoryType::host: {
-        scheduler.Register(new CzeMemAllocHost(ZE_RESULT_SUCCESS, state.second->hContext,
-                                               &state.second->host_desc, state.second->size,
-                                               state.second->alignment, &stateInstance));
+        scheduler.Register(new CzeMemAllocHost(ZE_RESULT_SUCCESS, state.hContext, &state.host_desc,
+                                               state.size, state.alignment, &stateInstance));
         break;
       }
       case UnifiedMemoryType::shared: {
-        scheduler.Register(new CzeMemAllocShared(
-            ZE_RESULT_SUCCESS, state.second->hContext, &state.second->device_desc,
-            &state.second->host_desc, state.second->size, state.second->alignment,
-            state.second->hDevice, &stateInstance));
+        scheduler.Register(new CzeMemAllocShared(ZE_RESULT_SUCCESS, state.hContext,
+                                                 &state.device_desc, &state.host_desc, state.size,
+                                                 state.alignment, state.hDevice, &stateInstance));
         break;
       }
       }
-      if (state.second->residencyInfo) {
+      if (state.residencyInfo) {
         scheduler.Register(new CzeContextMakeMemoryResident_V1(
-            ZE_RESULT_SUCCESS, state.second->residencyInfo->hContext,
-            state.second->residencyInfo->hDevice,
-            GetOffsetPointer(state.first, state.second->residencyInfo->offset),
-            state.second->residencyInfo->size));
+            ZE_RESULT_SUCCESS, state.residencyInfo->hContext, state.residencyInfo->hDevice,
+            GetOffsetPointer(stateInstance, state.residencyInfo->offset),
+            state.residencyInfo->size));
       }
     }
   }
@@ -376,7 +370,7 @@ void RestorePointers(CScheduler& scheduler, CStateDynamic& sd) {
               GetImmediateCommandList(scheduler, state.second->hContext, state.second->hDevice);
           if (state.second->allocType == AllocStateType::virtual_pointer) {
             for (const auto& memMap : state.second->memMaps) {
-              const auto virtualPtrRegion = GetOffsetPointer(state.first, memMap.first);
+              const auto virtualPtrRegion = GetOffsetPointer(stateInstance, memMap.first);
               std::vector<char> buffer(memMap.second->virtualMemorySizeFromOffset);
               l0::drv.inject.zeCommandListAppendMemoryCopy(
                   commandList, buffer.data(), virtualPtrRegion, buffer.size(), nullptr, 0, nullptr);
@@ -385,9 +379,9 @@ void RestorePointers(CScheduler& scheduler, CStateDynamic& sd) {
             }
           } else {
             std::vector<char> buffer(state.second->size);
-            l0::drv.inject.zeCommandListAppendMemoryCopy(commandList, buffer.data(), state.first,
+            l0::drv.inject.zeCommandListAppendMemoryCopy(commandList, buffer.data(), stateInstance,
                                                          buffer.size(), nullptr, 0, nullptr);
-            ScheduleSplitMemoryCopyFromHostPtr(scheduler, buffer.data(), commandList, state.first,
+            ScheduleSplitMemoryCopyFromHostPtr(scheduler, buffer.data(), commandList, stateInstance,
                                                0U, buffer.size());
           }
         }

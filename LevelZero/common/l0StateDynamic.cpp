@@ -173,6 +173,7 @@ CAllocState::CAllocState(ze_context_handle_t hContext,
       hDevice(hDevice),
       memType(UnifiedMemoryType::shared) {
   CGits::Instance().AddLocalMemoryUsage(size);
+  insertionOrderedId = ++CAllocState::insertionOrderedCounter;
 }
 
 CAllocState::CAllocState(ze_context_handle_t hContext,
@@ -186,6 +187,7 @@ CAllocState::CAllocState(ze_context_handle_t hContext,
       alignment(alignment),
       hDevice(hDevice) {
   CGits::Instance().AddLocalMemoryUsage(size);
+  insertionOrderedId = ++CAllocState::insertionOrderedCounter;
 }
 
 CAllocState::CAllocState(ze_module_handle_t hModule,
@@ -198,6 +200,7 @@ CAllocState::CAllocState(ze_module_handle_t hModule,
       memType(UnifiedMemoryType::device),
       allocType(allocType) {
   CGits::Instance().AddLocalMemoryUsage(size);
+  insertionOrderedId = ++CAllocState::insertionOrderedCounter;
 }
 
 CAllocState::CAllocState(ze_context_handle_t hContext,
@@ -208,14 +211,18 @@ CAllocState::CAllocState(ze_context_handle_t hContext,
       host_desc(host_desc),
       size(size),
       alignment(alignment),
-      memType(UnifiedMemoryType::host) {}
+      memType(UnifiedMemoryType::host) {
+  insertionOrderedId = ++CAllocState::insertionOrderedCounter;
+}
 
 CAllocState::CAllocState(ze_context_handle_t hContext, size_t size, const void* pStart)
     : hContext(hContext),
       size(size),
       memType(UnifiedMemoryType::device),
       allocType(AllocStateType::virtual_pointer),
-      pointerHint(pStart) {}
+      pointerHint(pStart) {
+  insertionOrderedId = ++CAllocState::insertionOrderedCounter;
+}
 
 CAllocState::~CAllocState() {
   try {
@@ -226,6 +233,8 @@ CAllocState::~CAllocState() {
     topmost_exception_handler("CAllocState::~CAllocState");
   }
 }
+
+uint32_t CAllocState::insertionOrderedCounter = 0;
 
 CKernelState::CKernelState(ze_module_handle_t hModule, const ze_kernel_desc_t* kernelDesc)
     : hModule(hModule) {
