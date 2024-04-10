@@ -187,7 +187,7 @@ void CRecorderWrapper::oclocInvoke(int return_value,
         newSources[i] = srcHeaders[index].data();
         newSourceLens[i] = src.size();
         srcHeaderNames[i].reserve(fileName.size());
-        std::copy_n(fileName.data(), fileName.size(), srcHeaderNames[i].data());
+        std::copy_n(fileName.data(), fileName.size(), std::back_inserter(srcHeaderNames[i]));
         srcHeaderNames[i].push_back('\0');
         newSourceNames[i] = srcHeaderNames[i].data();
         i++;
