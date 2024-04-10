@@ -23,6 +23,7 @@ public:
   ~CDriver();
   void Initialize();
   bool OpenLibrary(const std::string& path);
+  bool IsInitialized() const;
   dl::SharedObject Library() const {
     return lib_;
   }

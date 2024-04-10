@@ -891,5 +891,22 @@ void AppendLaunchKernel(const ze_command_list_handle_t& hCommandList,
   }
 }
 
+uint32_t GetDeviceIpVersion(CStateDynamic& sd, const CDriver& cDriver) {
+  const auto device = GetGPUDevice(sd, cDriver);
+  uint32_t deviceIp = 0;
+  if (device != nullptr) {
+    ze_device_ip_version_ext_t ipVersion = {};
+    ipVersion.stype = ZE_STRUCTURE_TYPE_DEVICE_IP_VERSION_EXT;
+    ipVersion.pNext = nullptr;
+    ze_device_properties_t deviceProperties = {};
+    deviceProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
+    deviceProperties.pNext = &ipVersion;
+    const auto result = cDriver.inject.zeDeviceGetProperties(device, &deviceProperties);
+    if (result == ZE_RESULT_SUCCESS) {
+      deviceIp = ipVersion.ipVersion;
+    }
+  }
+  return deviceIp;
+}
 } // namespace l0
 } // namespace gits

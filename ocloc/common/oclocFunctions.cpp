@@ -21,13 +21,6 @@
 using namespace gits::ocloc;
 
 namespace gits {
-namespace {
-std::string DeviceIdToString(const uint32_t& id) {
-  std::stringstream out;
-  out << "0x" << std::hex << std::setw(4) << std::setfill('0') << std::noshowbase << id;
-  return out.str();
-}
-} // namespace
 namespace ocloc {
 CoclocInvoke::CoclocInvoke(int return_value,
                            unsigned int argc,
@@ -86,16 +79,18 @@ void CoclocInvoke::Run() {
     }
 #ifdef WITH_LEVELZERO
     if (std::string(argV[i]) == "-device" && ++i <= *_argc) {
-      auto& sd = gits::l0::SD();
-      ze_device_handle_t device = gits::l0::GetGPUDevice(sd, gits::l0::drv);
-      uint32_t deviceId = 0;
-      if (device != nullptr) {
-        deviceId = sd.Get<gits::l0::CDeviceState>(device, EXCEPTION_MESSAGE).properties.deviceId;
+      uint32_t deviceIp = 0;
+      auto& drvl0 = gits::l0::drv;
+      if (!CGits::Instance().apis.HasCompute()) {
+        drvl0.Initialize();
+        if (drvl0.IsInitialized()) {
+          drvl0.inject.zeInit(ZE_INIT_FLAG_GPU_ONLY);
+        }
       }
-      if (!deviceId) {
-        Log(WARN) << "Couldn't get GPU device id.";
+      if (drvl0.IsInitialized()) {
+        deviceIp = gits::l0::GetDeviceIpVersion(gits::l0::SD(), drvl0);
       }
-      arguments.push_back(deviceId == 0 ? argV[i] : DeviceIdToString(deviceId));
+      arguments.push_back(deviceIp != 0 ? std::to_string(deviceIp) : argV[i]);
     }
 #endif
   }
@@ -191,16 +186,18 @@ void CoclocInvoke_V1::Run() {
     }
 #ifdef WITH_LEVELZERO
     if (std::string(argV[i]) == "-device" && ++i <= *_argc) {
-      auto& sd = gits::l0::SD();
-      ze_device_handle_t device = gits::l0::GetGPUDevice(sd, gits::l0::drv);
-      uint32_t deviceId = 0;
-      if (device != nullptr) {
-        deviceId = sd.Get<gits::l0::CDeviceState>(device, EXCEPTION_MESSAGE).properties.deviceId;
+      uint32_t deviceIp = 0;
+      auto& drvl0 = gits::l0::drv;
+      if (!CGits::Instance().apis.HasCompute()) {
+        drvl0.Initialize();
+        if (drvl0.IsInitialized()) {
+          drvl0.inject.zeInit(ZE_INIT_FLAG_GPU_ONLY);
+        }
       }
-      if (!deviceId) {
-        Log(WARN) << "Couldn't get GPU device id.";
+      if (drvl0.IsInitialized()) {
+        deviceIp = gits::l0::GetDeviceIpVersion(gits::l0::SD(), drvl0);
       }
-      arguments.push_back(deviceId == 0 ? argV[i] : DeviceIdToString(deviceId));
+      arguments.push_back(deviceIp != 0 ? std::to_string(deviceIp) : argV[i]);
     }
 #endif
   }

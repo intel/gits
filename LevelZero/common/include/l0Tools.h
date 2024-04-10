@@ -138,5 +138,6 @@ void InjectReadsForArguments(std::vector<CKernelArgumentDump>& readyArgVec,
                              ze_context_handle_t hContext,
                              ze_event_handle_t hSignalEvent);
 std::vector<void*> GetOrderedAllocStateKeys(const CStateDynamic& sd);
+uint32_t GetDeviceIpVersion(CStateDynamic& sd, const CDriver& cDriver);
 } // namespace l0
 } // namespace gits

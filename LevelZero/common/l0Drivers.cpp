@@ -260,5 +260,9 @@ void CDriver::Initialize() {
   OpenLibrary(path);
 #endif
 }
+
+bool CDriver::IsInitialized() const {
+  return initialized_;
+}
 } // namespace l0
 } // namespace gits
