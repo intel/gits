@@ -113,6 +113,11 @@ void CRecorderWrapper::zeCommandListAppendMemoryFill_pre(ze_result_t return_valu
                                             phWaitEvents);
 }
 
+void CRecorderWrapper::zeContextDestroy_pre(ze_result_t return_value,
+                                            ze_context_handle_t hContext) const {
+  zeContextDestroy_RECWRAP_PRE(_recorder, return_value, hContext);
+}
+
 void CRecorderWrapper::UnProtectMemoryPointers(const ze_command_list_handle_t& hCommandList) const {
   const auto isImmediate =
       (hCommandList == nullptr)

@@ -1468,5 +1468,22 @@ inline void zeCommandListCreateCloneExp_RECWRAP(
   }
 }
 
+inline void zeContextDestroy_RECWRAP_PRE(CRecorder& recorder,
+                                         ze_result_t return_value,
+                                         ze_context_handle_t hContext) {
+  if (recorder.Running() && return_value == ZE_RESULT_SUCCESS) {
+    auto& sd = SD();
+    auto& contextState = sd.Get<CContextState>(hContext, EXCEPTION_MESSAGE);
+    auto& hEventPool = contextState.gitsPoolEventHandle;
+    if (hEventPool != nullptr) {
+      drv.inject.zeEventPoolDestroy(hEventPool);
+    }
+    auto& hEvent = contextState.gitsEventHandle;
+    if (hEvent != nullptr) {
+      drv.inject.zeEventDestroy(hEvent);
+    }
+  }
+}
+
 } // namespace l0
 } // namespace gits

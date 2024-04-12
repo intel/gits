@@ -548,5 +548,23 @@ inline void zeDeviceGet_RUNWRAP(Cze_result_t& _return_value,
   zeDeviceGet_SD(*_return_value, *_hDriver, *_pCount, *_phDevices);
 }
 
+inline void zeContextDestroy_RUNWRAP(Cze_result_t& _return_value, Cze_context_handle_t& _hContext) {
+  if (*_hContext != nullptr) {
+    auto& sd = SD();
+    auto& contextState = sd.Get<CContextState>(*_hContext, EXCEPTION_MESSAGE);
+    auto& hEventPool = contextState.gitsPoolEventHandle;
+    if (hEventPool != nullptr) {
+      drv.inject.zeEventPoolDestroy(hEventPool);
+    }
+    auto& hEvent = contextState.gitsEventHandle;
+    if (hEvent != nullptr) {
+      drv.inject.zeEventDestroy(hEvent);
+    }
+  }
+  _return_value.Value() = drv.zeContextDestroy(*_hContext);
+  zeContextDestroy_SD(*_return_value, *_hContext);
+  _hContext.RemoveMapping();
+}
+
 } // namespace l0
 } // namespace gits

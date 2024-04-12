@@ -43,34 +43,6 @@ void SaveGlobalPointerAllocationToMemory(CStateDynamic& sd,
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
 }
-ze_event_pool_handle_t CreateGitsPoolEvent(const ze_context_handle_t hContext) {
-  static std::unordered_map<ze_context_handle_t, ze_event_pool_handle_t> gitsPoolEventMap;
-  if (gitsPoolEventMap.find(hContext) != gitsPoolEventMap.end()) {
-    return gitsPoolEventMap[hContext];
-  }
-  ze_event_pool_desc_t desc = {};
-  desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
-  desc.pNext = nullptr;
-  desc.count = 128;
-  drv.inject.zeEventPoolCreate(hContext, &desc, 0, nullptr, &gitsPoolEventMap[hContext]);
-  return gitsPoolEventMap[hContext];
-}
-ze_event_handle_t CreateGitsEvent(const ze_context_handle_t hContext) {
-  static std::unordered_map<ze_context_handle_t, ze_event_handle_t> gitsEventMap;
-  if (hContext == nullptr) {
-    return nullptr;
-  }
-  if (gitsEventMap.find(hContext) != gitsEventMap.end()) {
-    return gitsEventMap[hContext];
-  }
-  auto eventPool = CreateGitsPoolEvent(hContext);
-  ze_event_desc_t desc = {};
-  desc.index = static_cast<uint32_t>(gitsEventMap.size());
-  desc.pNext = nullptr;
-  desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
-  drv.inject.zeEventCreate(eventPool, &desc, &gitsEventMap[hContext]);
-  return gitsEventMap[hContext];
-}
 
 bool CheckWhetherDumpKernel(uint32_t kernelNumber, uint32_t cmdListNumber) {
   const auto& cfg = Config::Get();

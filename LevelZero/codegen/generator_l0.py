@@ -4073,7 +4073,7 @@ arg4=ArgDef(name='phDevices',type='ze_device_handle_t*',tag='in',range='0, numDe
 arg5=ArgDef(name='phContext',type='ze_context_handle_t*',tag='out'),
 )
 
-Function(name='zeContextDestroy',component='ze_context',enabled=True,stateTrack=True,ddi_pos=1,
+Function(name='zeContextDestroy',component='ze_context',enabled=True,stateTrack=True,ddi_pos=1,runWrap=True,recExecWrap=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in',release=True),
 )

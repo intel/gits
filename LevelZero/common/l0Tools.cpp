@@ -47,6 +47,38 @@ ze_command_queue_group_property_flags_t FilterFlag(
   return static_cast<ze_command_queue_group_property_flags_t>(static_cast<uint32_t>(flags) &
                                                               ~static_cast<uint32_t>(flagToFilter));
 }
+ze_event_pool_handle_t CreateGitsPoolEvent(CStateDynamic& sd, const ze_context_handle_t hContext) {
+  if (hContext == nullptr) {
+    return nullptr;
+  }
+  auto& gitsPoolEventHandle =
+      sd.Get<CContextState>(hContext, EXCEPTION_MESSAGE).gitsPoolEventHandle;
+  if (gitsPoolEventHandle != nullptr) {
+    return gitsPoolEventHandle;
+  }
+  ze_event_pool_desc_t desc = {};
+  desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
+  desc.pNext = nullptr;
+  desc.count = 128;
+  drv.inject.zeEventPoolCreate(hContext, &desc, 0, nullptr, &gitsPoolEventHandle);
+  return gitsPoolEventHandle;
+}
+ze_event_handle_t CreateGitsEvent(CStateDynamic& sd, const ze_context_handle_t hContext) {
+  if (hContext == nullptr) {
+    return nullptr;
+  }
+  auto& gitsEventHandle = sd.Get<CContextState>(hContext, EXCEPTION_MESSAGE).gitsEventHandle;
+  if (gitsEventHandle != nullptr) {
+    return gitsEventHandle;
+  }
+  auto eventPool = CreateGitsPoolEvent(sd, hContext);
+  ze_event_desc_t desc = {};
+  desc.index = 0;
+  desc.pNext = nullptr;
+  desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
+  drv.inject.zeEventCreate(eventPool, &desc, &gitsEventHandle);
+  return gitsEventHandle;
+}
 } // namespace
 size_t CalculateImageSize(ze_image_desc_t desc) {
   return desc.depth * static_cast<size_t>(desc.width) * desc.height *
@@ -673,7 +705,7 @@ void InjectReadsForArguments(std::vector<CKernelArgumentDump>& readyArgVec,
                              const bool useBarrier,
                              ze_context_handle_t hContext,
                              ze_event_handle_t hSignalEvent) {
-  const auto eventHandle = CreateGitsEvent(hContext);
+  const auto eventHandle = CreateGitsEvent(SD(), hContext);
   if (useBarrier && hSignalEvent == nullptr) {
     drv.inject.zeCommandListAppendBarrier(cmdList, nullptr, 0, nullptr);
   }

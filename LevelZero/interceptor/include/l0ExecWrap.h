@@ -283,5 +283,19 @@ inline ze_result_t zesDriverGetExtensionFunctionAddress_RECEXECWRAP(
     [[maybe_unused]] zes_driver_handle_t hDriver, const char* name, void** ppFunctionAddress) {
   return zeDriverGetExtensionFunctionAddress_RECEXECWRAP(nullptr, name, ppFunctionAddress);
 }
+
+inline ze_result_t zeContextDestroy_RECEXECWRAP(ze_context_handle_t hContext) {
+  GITS_ENTRY_L0
+  auto return_value = ZE_RESULT_SUCCESS;
+  GITS_WRAPPER_PRE
+  wrapper.zeContextDestroy_pre(return_value, hContext);
+  driver.zeContextDestroy(hContext);
+  wrapper.zeContextDestroy(return_value, hContext);
+  GITS_WRAPPER_POST
+  else {
+    driver.zeContextDestroy(hContext);
+  }
+  return return_value;
+}
 } // namespace l0
 } // namespace gits
