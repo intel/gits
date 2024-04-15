@@ -23,6 +23,9 @@
 #endif
 #endif
 #include <cassert>
+#ifdef GITS_PLATFORM_WINDOWS
+typedef void* PVOID;
+#endif
 
 // ******************************************************************************************************************
 //
@@ -133,9 +136,13 @@ private:
   RegionsPointersToHandles _regionPointersToHandles;
   std::recursive_mutex _regionsMutex;
   bool _originalSegvSignalFlag = false;
-  bool _unveilWholeRegion = false;
+  bool _computeMode = false;
   static bool _isInstalled;
   static MemorySniffer* _instance;
+#ifdef GITS_PLATFORM_WINDOWS
+  static PVOID _exceptionHandler;
+  static PVOID _continueHandler;
+#endif
 
   MemorySniffer() {}
   PagedMemoryRegionHandle StoreRegionInternal(const PagedMemoryRegion region);
@@ -148,7 +155,7 @@ public:
   bool Protect(PagedMemoryRegionHandle handle);
   bool UnProtect(PagedMemoryRegionHandle handle);
   bool ReadProtect(PagedMemoryRegionHandle handle);
-  bool WriteCallback(void* addr);
+  bool WriteCallback(void* addr, bool writeIntention);
   bool WriteRange(void* addr, size_t size);
   static bool Install();
   static bool UnInstall();
@@ -161,8 +168,8 @@ public:
   bool IsOriginalSegvSignalInitialized() const {
     return _originalSegvSignalFlag;
   }
-  void SetWholeMemoryRegionUnveiling() {
-    _unveilWholeRegion = true;
+  void SetComputeMode() {
+    _computeMode = true;
   }
   static MemorySniffer& Get();
 };

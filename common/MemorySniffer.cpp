@@ -431,7 +431,9 @@ bool MemorySniffer::Protect(PagedMemoryRegionHandle handle) {
     return false;
   }
 
-  bool result = SetPagesProtection(READ_ONLY, (void*)region.BeginPage(), region.SizeOfPages());
+  const auto protectionAccess = _computeMode ? NONE : READ_ONLY;
+  bool result =
+      SetPagesProtection(protectionAccess, (void*)region.BeginPage(), region.SizeOfPages());
   if (result == true) {
     region._protected = true;
   }
@@ -517,7 +519,7 @@ bool MemorySniffer::UnProtect(PagedMemoryRegionHandle handle) {
 // Otherwise it returns false.
 //
 //**************************************************************************************************
-bool MemorySniffer::WriteCallback(void* addr) {
+bool MemorySniffer::WriteCallback(void* addr, bool writeIntention = true) {
   std::unique_lock<std::recursive_mutex> lock(_regionsMutex);
   void* pageAddr = GetPage(addr);
   auto pageRegionHandles = GetPageRegionsInternal(pageAddr);
@@ -526,27 +528,41 @@ bool MemorySniffer::WriteCallback(void* addr) {
   }
 
   auto unveilWholeRegion = false;
-  if (_unveilWholeRegion) {
+  if (_computeMode) {
     const auto& computeIFace = gits::CGits::Instance().apis.IfaceCompute();
     if (computeIFace.VerifyAllocation(addr)) {
-      unveilWholeRegion = _unveilWholeRegion;
+      unveilWholeRegion = true;
     }
   }
-  if (!unveilWholeRegion) {
-    SetPagesProtection(READ_WRITE, addr);
-  }
-  for (auto& handle : pageRegionHandles) {
-    assert(handle);
-    assert(*handle);
-    bool result = false;
-    auto& region = **handle;
-    region.TouchPageInternal(pageAddr);
-    if (unveilWholeRegion) {
-      result =
-          SetPagesProtection(READ_WRITE, const_cast<void*>(region.BeginAddress()), region.Size());
+  if (writeIntention) {
+    if (!unveilWholeRegion) {
+      SetPagesProtection(READ_WRITE, addr);
     }
-    if (result) {
-      region._protected = false;
+    for (auto& handle : pageRegionHandles) {
+      assert(handle);
+      assert(*handle);
+      bool result = false;
+      auto& region = **handle;
+      region.TouchPageInternal(pageAddr);
+      if (unveilWholeRegion) {
+        result =
+            SetPagesProtection(READ_WRITE, const_cast<void*>(region.BeginAddress()), region.Size());
+      }
+      if (result) {
+        region._protected = false;
+      }
+    }
+  } else {
+    if (!unveilWholeRegion) {
+      SetPagesProtection(READ_ONLY, addr);
+    }
+    for (auto& handle : pageRegionHandles) {
+      assert(handle);
+      assert(*handle);
+      auto& region = **handle;
+      if (unveilWholeRegion) {
+        SetPagesProtection(READ_ONLY, const_cast<void*>(region.BeginAddress()), region.Size());
+      }
     }
   }
   return true;
@@ -600,11 +616,13 @@ LONG WINAPI MemorySnifferExceptionFilter(EXCEPTION_POINTERS* ExceptionInfo) {
     if (pExcptRec->ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
       // Need to check if this exception is caused by a write operation
       // 1 - the constant for write operation
-      if (pExcptRec->NumberParameters >= 2 && pExcptRec->ExceptionInformation[0] == 1) {
-        void* address = (void*)pExcptRec->ExceptionInformation[1];
-        if (MemorySniffer::Get().WriteCallback(address)) {
-          return EXCEPTION_CONTINUE_EXECUTION;
-        }
+      void* address = (void*)pExcptRec->ExceptionInformation[1];
+      const auto writeIntention =
+          (pExcptRec->NumberParameters >= 2 && pExcptRec->ExceptionInformation[0] == 1);
+      if (MemorySniffer::Get().WriteCallback(address, writeIntention)) {
+        return EXCEPTION_CONTINUE_EXECUTION;
+      } else {
+        Log(WARN) << "Unhandled exception on address: " << address;
       }
     }
   }
@@ -697,8 +715,12 @@ static void MemorySnifferSignalHandler(int sig, siginfo_t* si, void* unused) {
 //**************************************************************************************************
 bool MemorySniffer::Install() {
 #ifdef GITS_PLATFORM_WINDOWS
-  auto exceptionFilterHandle = AddVectoredExceptionHandler(1, MemorySnifferExceptionFilter);
-  if (exceptionFilterHandle == NULL) {
+  _exceptionHandler = AddVectoredExceptionHandler(0, MemorySnifferExceptionFilter);
+  if (_exceptionHandler == 0) {
+    return false;
+  }
+  _continueHandler = AddVectoredContinueHandler(1, MemorySnifferExceptionFilter);
+  if (_continueHandler == 0) {
     return false;
   }
   return true;
@@ -729,11 +751,9 @@ bool MemorySniffer::Install() {
 
 bool MemorySniffer::UnInstall() {
 #ifdef GITS_PLATFORM_WINDOWS
-  auto exceptionFilterHandle = RemoveVectoredExceptionHandler(MemorySnifferExceptionFilter);
-  if (exceptionFilterHandle == NULL) {
-    return false;
-  }
-  return true;
+  auto retCode = RemoveVectoredExceptionHandler(_exceptionHandler);
+  retCode |= RemoveVectoredContinueHandler(_continueHandler);
+  return retCode != 0;
 #else
   struct sigaction sa = {};
   sa.sa_flags = SA_SIGINFO;
@@ -755,6 +775,11 @@ bool MemorySniffer::UnInstall() {
 }
 
 bool MemorySniffer::_isInstalled = false;
+
+#ifdef GITS_PLATFORM_WINDOWS
+PVOID MemorySniffer::_exceptionHandler = nullptr;
+PVOID MemorySniffer::_continueHandler = nullptr;
+#endif
 
 MemorySniffer* MemorySniffer::_instance;
 

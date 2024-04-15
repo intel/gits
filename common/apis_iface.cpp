@@ -47,24 +47,26 @@ void ApisIface::UseApiComputeIface(std::shared_ptr<ApiCompute> iface) {
 bool ApisIface::ApiCompute::MemorySnifferInstall() const {
   static auto installed = MemorySniffer::Install();
   if (installed) {
-    MemorySniffer::Get().SetWholeMemoryRegionUnveiling();
+    MemorySniffer::Get().SetComputeMode();
   }
   return installed;
 }
 
 void ApisIface::ApiCompute::MemorySnifferProtect(PagedMemoryRegionHandle& handle) const {
-  if (handle != nullptr && *handle != nullptr && !(**handle).Protected() &&
-      !MemorySniffer::Get().Protect(handle)) {
-    Log(WARN) << "Protecting memory region: " << (**handle).BeginAddress() << " - "
-              << (**handle).EndAddress() << " FAILED!.";
+  if (handle != nullptr && *handle != nullptr) {
+    if (!MemorySniffer::Get().Protect(handle)) {
+      Log(WARN) << "Protecting memory region: " << (**handle).BeginAddress() << " - "
+                << (**handle).EndAddress() << " FAILED!.";
+    }
   }
 }
 
 void ApisIface::ApiCompute::MemorySnifferUnProtect(PagedMemoryRegionHandle& handle) const {
-  if (handle != nullptr && *handle != nullptr && (**handle).Protected() &&
-      !MemorySniffer::Get().UnProtect(handle)) {
-    Log(WARN) << "Unprotecting memory region: " << (**handle).BeginAddress() << " - "
-              << (**handle).EndAddress() << " FAILED!.";
+  if (handle != nullptr && *handle != nullptr) {
+    if (!MemorySniffer::Get().UnProtect(handle)) {
+      Log(WARN) << "Unprotecting memory region: " << (**handle).BeginAddress() << " - "
+                << (**handle).EndAddress() << " FAILED!.";
+    }
   }
 }
 
