@@ -213,6 +213,7 @@ struct CKernelExecutionInfo {
   bool isOffsetSet = false;
   ze_module_handle_t hModule = nullptr;
   std::string pKernelName;
+  ze_event_handle_t hSignalEvent = nullptr;
   std::vector<std::unique_ptr<CKernelArgument>> stateRestoreBuffers;
 
 private:
@@ -240,6 +241,7 @@ public:
     isOffsetSet = ptr->isOffsetSet;
     hModule = ptr->hModule;
     pKernelName = ptr->pKernelName;
+    hSignalEvent = ptr->hSignalEvent;
     args = ptr->args;
     pointers = ptr->pointers;
   };

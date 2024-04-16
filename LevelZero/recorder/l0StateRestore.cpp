@@ -473,9 +473,12 @@ void RestoreEvents(CScheduler& scheduler, CStateDynamic& sd) {
       auto stateInstance = state.first;
       scheduler.Register(new CzeEventCreate(ZE_RESULT_SUCCESS, state.second->hEventPool,
                                             &state.second->desc, &stateInstance));
-      const auto eventStatus = drv.inject.zeEventQueryStatus(stateInstance);
-      if (eventStatus == ZE_RESULT_SUCCESS) {
-        scheduler.Register(new CzeEventHostSignal(ZE_RESULT_SUCCESS, stateInstance));
+      const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
+      if (!l0IFace.CfgRec_IsSingleKernelMode()) {
+        const auto eventStatus = drv.inject.zeEventQueryStatus(stateInstance);
+        if (eventStatus == ZE_RESULT_SUCCESS) {
+          scheduler.Register(new CzeEventHostSignal(ZE_RESULT_SUCCESS, stateInstance));
+        }
       }
       availableEvents[stateInstance] = false;
       state.second->RestoreFinished();
@@ -538,7 +541,9 @@ void RestoreCommandListBuffer(CScheduler& scheduler, CStateDynamic& sd) {
         for (const auto& kernelInfo : appendedKernels) {
           if (kernelInfo->kernelNumber == static_cast<uint32_t>(l0IFace.CfgRec_StartKernel())) {
             ScheduleRestoreKernelInfo(scheduler, *kernelInfo);
-            auto signalEvent = GetAvailableSignalEvent(scheduler);
+            auto signalEvent =
+                (kernelInfo->hSignalEvent != nullptr ? kernelInfo->hSignalEvent
+                                                     : GetAvailableSignalEvent(scheduler));
             const auto& launchArgs = kernelInfo->launchFuncArgs;
             scheduler.Register(new CzeCommandListAppendLaunchKernel(
                 ZE_RESULT_SUCCESS, stateInstance, kernelInfo->handle, &launchArgs, signalEvent, 0,
@@ -577,7 +582,9 @@ void RestoreCommandListBuffer(CScheduler& scheduler, CStateDynamic& sd) {
             ScheduleRestoreKernelInfo(scheduler, *kernelInfo);
             lastAppendedKernelInfo[kernelInfo->handle] = kernelInfo;
             if (!isImmediate) {
-              auto signalEvent = GetAvailableSignalEvent(scheduler);
+              auto signalEvent =
+                  (kernelInfo->hSignalEvent != nullptr ? kernelInfo->hSignalEvent
+                                                       : GetAvailableSignalEvent(scheduler));
               const auto& launchArgs = kernelInfo->launchFuncArgs;
               scheduler.Register(new CzeCommandListAppendLaunchKernel(
                   ZE_RESULT_SUCCESS, stateInstance, kernelInfo->handle, &launchArgs, signalEvent, 0,

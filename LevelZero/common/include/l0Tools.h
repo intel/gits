@@ -112,7 +112,8 @@ void DumpQueueSubmit(const Config& cfg,
 void CommandListKernelInit(CStateDynamic& sd,
                            const ze_command_list_handle_t& commandList,
                            const ze_kernel_handle_t& kernel,
-                           const ze_group_count_t*& pLaunchFuncArgs);
+                           const ze_group_count_t*& pLaunchFuncArgs,
+                           const ze_event_handle_t& hSignalEvent);
 bool IsBruteForceScanForIndirectPointersEnabled(const Config& cfg);
 uint32_t TranslatePointerOffsets(const CStateDynamic& sd,
                                  void* bufferPtr,

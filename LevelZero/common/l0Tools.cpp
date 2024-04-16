@@ -778,9 +778,11 @@ void DumpQueueSubmit(const Config& cfg,
 void CommandListKernelInit(CStateDynamic& sd,
                            const ze_command_list_handle_t& commandList,
                            const ze_kernel_handle_t& kernel,
-                           const ze_group_count_t*& pLaunchFuncArgs) {
+                           const ze_group_count_t*& pLaunchFuncArgs,
+                           const ze_event_handle_t& hSignalEvent) {
   auto& kernelState = sd.Get<CKernelState>(kernel, EXCEPTION_MESSAGE);
   auto& cmdListState = sd.Get<CCommandListState>(commandList, EXCEPTION_MESSAGE);
+  kernelState.currentKernelInfo->hSignalEvent = hSignalEvent;
   if (kernelState.currentKernelInfo->kernelNumber ==
       static_cast<uint32_t>(CGits::Instance().CurrentKernelCount())) {
     return;
@@ -904,7 +906,7 @@ void AppendLaunchKernel(const ze_command_list_handle_t& hCommandList,
                         bool isInputMode) {
   auto& sd = SD();
   const auto& cfg = Config::Get();
-  CommandListKernelInit(sd, hCommandList, hKernel, pLaunchFuncArgs);
+  CommandListKernelInit(sd, hCommandList, hKernel, pLaunchFuncArgs, hSignalEvent);
   auto& cmdListState = sd.Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
   auto& kernelState = sd.Get<CKernelState>(hKernel, EXCEPTION_MESSAGE);
   if (CheckWhetherDumpKernel(kernelState.currentKernelInfo->kernelNumber,

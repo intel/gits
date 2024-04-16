@@ -384,7 +384,7 @@ inline void zeCommandListAppendLaunchKernel_RECWRAP_PRE(
         for (auto i = 0U; i < numWaitEvents; i++) {
           drv.inject.zeEventHostSynchronize(phWaitEvents[i], UINT64_MAX);
         }
-        CommandListKernelInit(sd, hCommandList, hKernel, pLaunchFuncArgs);
+        CommandListKernelInit(sd, hCommandList, hKernel, pLaunchFuncArgs, hSignalEvent);
         recorder.Start();
         recorder.Stop();
         recorder.MarkForDeletion();

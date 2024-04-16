@@ -244,7 +244,7 @@ inline void zeCommandListAppendLaunchMultipleKernelsIndirect_SD(
   bool callOnce = true;
   const auto& cmdListState = sd.Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
   for (auto i = 0u; i < numKernels; i++) {
-    CommandListKernelInit(sd, hCommandList, phKernels[i], pLaunchArgumentsBuffer);
+    CommandListKernelInit(sd, hCommandList, phKernels[i], pLaunchArgumentsBuffer, hSignalEvent);
     const auto& kernelState = sd.Get<CKernelState>((phKernels)[i], EXCEPTION_MESSAGE);
 
     if (CheckWhetherDumpKernel(kernelState.currentKernelInfo->kernelNumber,
