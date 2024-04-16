@@ -159,6 +159,12 @@ inline void zeCommandListAppendLaunchKernel_RUNWRAP(Cze_result_t& _return_value,
                                                     Cze_event_handle_t& _hSignalEvent,
                                                     Cuint32_t& _numWaitEvents,
                                                     Cze_event_handle_t::CSArray& _phWaitEvents) {
+  if (*_hSignalEvent != nullptr) {
+    const auto err = drv.inject.zeEventQueryStatus(*_hSignalEvent);
+    if (err == ZE_RESULT_SUCCESS) {
+      drv.inject.zeEventHostReset(*_hSignalEvent);
+    }
+  }
   auto& sd = SD();
   const auto isImmediate = IsCommandListImmediate(*_hCommandList, sd);
   KernelCountUp(CGits::Instance());
