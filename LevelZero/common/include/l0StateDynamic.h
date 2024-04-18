@@ -281,6 +281,7 @@ struct CCommandListState : public CState {
     std::vector<ze_event_handle_t> waitEvents;
   };
   std::vector<Action> mockList;
+  std::set<const void*> ptrsToUpdate;
 
 public:
   CCommandListState() = default;
@@ -534,6 +535,7 @@ public:
   std::unordered_set<ze_module_handle_t> scanningGlobalPointersMode;
   bool nomenclatureCounting = true;
   bool stateRestoreFinished = false;
+  bool isProtectionWrapper = false;
   CStateDynamic(const CStateDynamic& other) = delete;
   CStateDynamic& operator=(const CStateDynamic& other) = delete;
   ~CStateDynamic();

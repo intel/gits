@@ -52,21 +52,23 @@ bool CheckWhetherUpdateUSM(const void* ptr) {
   return update;
 }
 
-std::set<const void*> GetPointersToUpdate(ze_kernel_handle_t hKernel) {
+std::set<const void*> GetPointersToUpdate(CStateDynamic& sd, ze_kernel_handle_t hKernel) {
   std::set<const void*> ptrsToUpdate;
-  const auto& kernelState = SD().Get<CKernelState>(hKernel, EXCEPTION_MESSAGE);
+  const auto& kernelState = sd.Get<CKernelState>(hKernel, EXCEPTION_MESSAGE);
   for (const auto& arg : kernelState.currentKernelInfo->GetArguments()) {
     if (arg.second.type == KernelArgType::buffer && CheckWhetherUpdateUSM(arg.second.argValue)) {
       ptrsToUpdate.insert(arg.second.argValue);
     }
   }
-  if (kernelState.currentKernelInfo->indirectUsmTypes) {
-    for (const auto& ptr : SD().Map<CAllocState>()) {
-      if ((static_cast<unsigned>(ptr.second->memType) &
-           kernelState.currentKernelInfo->indirectUsmTypes) &&
-          CheckWhetherUpdateUSM(ptr.first)) {
-        ptrsToUpdate.insert(ptr.first);
-      }
+  for (const auto& ptr : sd.Map<CAllocState>()) {
+    const auto kernelContext =
+        sd.Get<CModuleState>(kernelState.hModule, EXCEPTION_MESSAGE).hContext;
+    const auto isResidencySet =
+        ptr.second->residencyInfo && ptr.second->residencyInfo->hContext == kernelContext;
+    const auto isIndirectTypeEnabled = static_cast<unsigned>(ptr.second->memType) &
+                                       kernelState.currentKernelInfo->indirectUsmTypes;
+    if ((isResidencySet || isIndirectTypeEnabled) && CheckWhetherUpdateUSM(ptr.first)) {
+      ptrsToUpdate.insert(ptr.first);
     }
   }
   return ptrsToUpdate;
@@ -360,17 +362,32 @@ void BruteForceScanForIndirectAccess(
     }
   }
 }
+
+void SchedulePotentialMemoryUpdate(CStateDynamic& sd,
+                                   CRecorder& recorder,
+                                   const void* usmPtr,
+                                   ze_command_list_handle_t hCommandList) {
+  if (CheckWhetherUpdateUSM(usmPtr)) {
+    const auto allocInfo = GetAllocFromRegion(const_cast<void*>(usmPtr), sd);
+    auto& allocState = sd.Get<CAllocState>(allocInfo.first, EXCEPTION_MESSAGE);
+    auto& commandListState = sd.Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
+    if (commandListState.isImmediate || UnifiedMemoryType::host == allocState.memType) {
+      recorder.Schedule(new CGitsL0MemoryUpdate(usmPtr));
+    } else {
+      commandListState.ptrsToUpdate.insert(usmPtr);
+    }
+  }
+}
 } // namespace
 
-inline void zeCommandListAppendLaunchKernel_RECWRAP_PRE(
-    CRecorder& recorder,
-    [[maybe_unused]] ze_result_t return_value,
-    ze_command_list_handle_t hCommandList,
-    ze_kernel_handle_t hKernel,
-    const ze_group_count_t* pLaunchFuncArgs,
-    [[maybe_unused]] ze_event_handle_t hSignalEvent,
-    uint32_t numWaitEvents,
-    ze_event_handle_t* phWaitEvents) {
+inline void zeCommandListAppendLaunchKernel_RECWRAP_PRE(CRecorder& recorder,
+                                                        [[maybe_unused]] ze_result_t return_value,
+                                                        ze_command_list_handle_t hCommandList,
+                                                        ze_kernel_handle_t hKernel,
+                                                        const ze_group_count_t* pLaunchFuncArgs,
+                                                        ze_event_handle_t hSignalEvent,
+                                                        uint32_t numWaitEvents,
+                                                        ze_event_handle_t* phWaitEvents) {
   auto& sd = SD();
   if (sd.nomenclatureCounting) {
     gits::CGits::Instance().KernelCountUp();
@@ -405,8 +422,8 @@ inline void zeCommandListAppendLaunchKernel_RECWRAP_PRE(
       }
     }
   }
-  if (recorder.Running()) {
-    for (const auto ptr : GetPointersToUpdate(hKernel)) {
+  if (recorder.Running() && cmdListState.isImmediate) {
+    for (const auto ptr : GetPointersToUpdate(sd, hKernel)) {
       recorder.Schedule(new CGitsL0MemoryUpdate(ptr));
     }
     if (IsBruteForceScanForIndirectPointersEnabled(Config::Get()) && cmdListState.isImmediate) {
@@ -458,9 +475,7 @@ inline void zeCommandListAppendMemoryCopy_RECWRAP(CRecorder& recorder,
                                                   uint32_t numWaitEvents,
                                                   ze_event_handle_t* phWaitEvents) {
   if (recorder.Running()) {
-    if (CheckWhetherUpdateUSM(srcptr)) {
-      recorder.Schedule(new CGitsL0MemoryUpdate(srcptr));
-    }
+    SchedulePotentialMemoryUpdate(SD(), recorder, srcptr, hCommandList);
     recorder.Schedule(new CzeCommandListAppendMemoryCopy(return_value, hCommandList, dstptr, srcptr,
                                                          size, hSignalEvent, numWaitEvents,
                                                          phWaitEvents));
@@ -494,9 +509,7 @@ inline void zeCommandListAppendMemoryCopyRegion_RECWRAP(CRecorder& recorder,
                                                         uint32_t numWaitEvents,
                                                         ze_event_handle_t* phWaitEvents) {
   if (recorder.Running()) {
-    if (CheckWhetherUpdateUSM(srcptr)) {
-      recorder.Schedule(new CGitsL0MemoryUpdate(srcptr));
-    }
+    SchedulePotentialMemoryUpdate(SD(), recorder, srcptr, hCommandList);
     recorder.Schedule(new CzeCommandListAppendMemoryCopyRegion(
         return_value, hCommandList, dstptr, dstRegion, dstPitch, dstSlicePitch, srcptr, srcRegion,
         srcPitch, srcSlicePitch, hSignalEvent, numWaitEvents, phWaitEvents));
@@ -583,9 +596,9 @@ inline void zeCommandListAppendLaunchMultipleKernelsIndirect_RECWRAP_PRE(
       }
     }
   }
-  if (recorder.Running()) {
+  if (recorder.Running() && IsCommandListImmediate(hCommandList, sd)) {
     for (auto i = 0u; i < numKernels; i++) {
-      for (const auto ptr : GetPointersToUpdate(phKernels[i])) {
+      for (const auto ptr : GetPointersToUpdate(sd, phKernels[i])) {
         recorder.Schedule(new CGitsL0MemoryUpdate(ptr));
       }
     }
@@ -623,9 +636,7 @@ inline void zeCommandListAppendImageCopyFromMemory_RECWRAP(CRecorder& recorder,
                                                            uint32_t numWaitEvents,
                                                            ze_event_handle_t* phWaitEvents) {
   if (recorder.Running()) {
-    if (CheckWhetherUpdateUSM(srcptr)) {
-      recorder.Schedule(new CGitsL0MemoryUpdate(srcptr));
-    }
+    SchedulePotentialMemoryUpdate(SD(), recorder, srcptr, hCommandList);
     recorder.Schedule(new CzeCommandListAppendImageCopyFromMemory(
         return_value, hCommandList, hDstImage, srcptr, pDstRegion, hSignalEvent, numWaitEvents,
         phWaitEvents));
@@ -637,7 +648,7 @@ inline void zeCommandListAppendImageCopyFromMemory_RECWRAP(CRecorder& recorder,
 inline void zeCommandListAppendMemoryFill_RECWRAP_PRE(
     CRecorder& recorder,
     [[maybe_unused]] ze_result_t return_value,
-    [[maybe_unused]] ze_command_list_handle_t hCommandList,
+    ze_command_list_handle_t hCommandList,
     void* ptr,
     [[maybe_unused]] const void* pattern,
     [[maybe_unused]] size_t pattern_size,
@@ -646,37 +657,16 @@ inline void zeCommandListAppendMemoryFill_RECWRAP_PRE(
     [[maybe_unused]] uint32_t numWaitEvents,
     [[maybe_unused]] ze_event_handle_t* phWaitEvents) {
   if (recorder.Running()) {
-    if (CheckWhetherUpdateUSM(ptr)) {
-      recorder.Schedule(new CGitsL0MemoryUpdate(ptr));
-    }
+    SchedulePotentialMemoryUpdate(SD(), recorder, ptr, hCommandList);
   }
-}
-
-inline void zeCommandListAppendMemoryFill_RECWRAP(CRecorder& recorder,
-                                                  ze_result_t return_value,
-                                                  ze_command_list_handle_t hCommandList,
-                                                  void* ptr,
-                                                  const void* pattern,
-                                                  size_t pattern_size,
-                                                  size_t size,
-                                                  ze_event_handle_t hSignalEvent,
-                                                  uint32_t numWaitEvents,
-                                                  ze_event_handle_t* phWaitEvents) {
-  if (recorder.Running()) {
-    recorder.Schedule(new CzeCommandListAppendMemoryFill_V1(
-        return_value, hCommandList, ptr, pattern, pattern_size, size, hSignalEvent, numWaitEvents,
-        phWaitEvents));
-  }
-  zeCommandListAppendMemoryFill_SD(return_value, hCommandList, ptr, pattern, pattern_size, size,
-                                   hSignalEvent, numWaitEvents, phWaitEvents);
 }
 
 inline void zeCommandQueueExecuteCommandLists_RECWRAP_PRE(
     CRecorder& recorder,
     [[maybe_unused]] ze_result_t return_value,
     ze_command_queue_handle_t hCommandQueue,
-    [[maybe_unused]] uint32_t numCommandLists,
-    [[maybe_unused]] ze_command_list_handle_t* phCommandLists,
+    uint32_t numCommandLists,
+    ze_command_list_handle_t* phCommandLists,
     [[maybe_unused]] ze_fence_handle_t hFence) {
   auto& sd = SD();
   if (sd.nomenclatureCounting) {
@@ -701,9 +691,17 @@ inline void zeCommandQueueExecuteCommandLists_RECWRAP_PRE(
       BruteForceScanForIndirectAccess(recorder, sd, drv, indirectTypes, commandQueueState.hContext,
                                       executedKernels);
     }
-    for (const auto& allocState : sd.Map<CAllocState>()) {
-      if (CheckWhetherUpdateUSM(allocState.first)) {
-        recorder.Schedule(new CGitsL0MemoryUpdate(allocState.first));
+    for (auto i = 0U; i < numCommandLists; i++) {
+      auto& commandListState = sd.Get<CCommandListState>(phCommandLists[i], EXCEPTION_MESSAGE);
+      auto& ptrsToUpdate = commandListState.ptrsToUpdate;
+      for (auto& ptr : ptrsToUpdate) {
+        recorder.Schedule(new CGitsL0MemoryUpdate(ptr));
+      }
+      ptrsToUpdate.clear();
+      for (const auto& kernelInfo : commandListState.appendedKernels) {
+        for (auto ptr : GetPointersToUpdate(sd, kernelInfo->handle)) {
+          recorder.Schedule(new CGitsL0MemoryUpdate(ptr));
+        }
       }
     }
   }
@@ -778,9 +776,7 @@ inline void zeCommandListAppendMemoryCopyFromContext_RECWRAP(CRecorder& recorder
                                                              uint32_t numWaitEvents,
                                                              ze_event_handle_t* phWaitEvents) {
   if (recorder.Running()) {
-    if (CheckWhetherUpdateUSM(srcptr)) {
-      recorder.Schedule(new CGitsL0MemoryUpdate(srcptr));
-    }
+    SchedulePotentialMemoryUpdate(SD(), recorder, srcptr, hCommandList);
     recorder.Schedule(new CzeCommandListAppendMemoryCopyFromContext(
         return_value, hCommandList, dstptr, hContextSrc, srcptr, size, hSignalEvent, numWaitEvents,
         phWaitEvents));
@@ -797,13 +793,13 @@ inline void zeMemAllocHost_RECWRAP(CRecorder& recorder,
                                    size_t size,
                                    size_t alignment,
                                    void** pptr) {
+  const auto& cfg = Config::Get();
   if (recorder.Running()) {
     recorder.Schedule(
         new CzeMemAllocHost(return_value, hContext, host_desc, size, alignment, pptr));
   }
   zeMemAllocHost_SD(return_value, hContext, host_desc, size, alignment, pptr);
-  if (recorder.Running() && return_value == ZE_RESULT_SUCCESS &&
-      CheckCfgZeroInitialization(Config::Get())) {
+  if (recorder.Running() && return_value == ZE_RESULT_SUCCESS && CheckCfgZeroInitialization(cfg)) {
     const auto commandList = GetCommandListImmediateRec(SD(), drv, hContext, &recorder);
     if (commandList != nullptr) {
       ZeroInitializeUsm(drv, commandList, pptr, size, UnifiedMemoryType::host);
@@ -811,7 +807,7 @@ inline void zeMemAllocHost_RECWRAP(CRecorder& recorder,
     }
   }
   const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
-  if (Config::Get().recorder.basic.enabled) {
+  if (cfg.recorder.basic.enabled) {
     auto& sniffedRegionHandle = SD().Get<CAllocState>(*pptr, EXCEPTION_MESSAGE).sniffedRegionHandle;
     l0IFace.EnableMemorySnifferForPointer(*pptr, size, sniffedRegionHandle);
   }

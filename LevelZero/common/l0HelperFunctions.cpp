@@ -7,9 +7,11 @@
 // ===================== end_copyright_notice ==============================
 
 #include "l0HelperFunctions.h"
+#include "MemorySniffer.h"
 #include "l0Header.h"
 #include "l0StateDynamic.h"
 #include "l0Tools.h"
+#include "l0Log.h"
 
 gits::CArgument& gits::l0::CGitsL0MemoryUpdate::Argument(unsigned idx) {
   return get_cargument(__FUNCTION__, idx, _usmPtr, _resource);
@@ -19,14 +21,23 @@ gits::l0::CGitsL0MemoryUpdate::CGitsL0MemoryUpdate(const void* usmPtr) {
   auto& sd = SD();
   const auto allocInfo = GetAllocFromRegion(const_cast<void*>(usmPtr), sd);
   _usmPtr = allocInfo.first;
-  auto& memoryState = sd.Get<CAllocState>(_usmPtr, EXCEPTION_MESSAGE);
-  _resource.reset(RESOURCE_DATA_RAW, (const char*)_usmPtr, memoryState.size);
-  auto& handle = memoryState.sniffedRegionHandle;
+  Log(TRACEV) << "CGitsL0MemoryUpdate(" << ToStringHelper(_usmPtr) << ")";
+  auto& allocState = sd.Get<CAllocState>(_usmPtr, EXCEPTION_MESSAGE);
+  auto& handle = allocState.sniffedRegionHandle;
+  const auto size = allocState.size;
+  if (allocState.memType == UnifiedMemoryType::shared) {
+    // Omit GPU migration
+    std::vector<char> buffer(size);
+    const auto cmdList = GetCommandListImmediate(sd, drv, allocState.hContext);
+    drv.zeCommandListAppendMemoryCopy(cmdList, buffer.data(), _usmPtr, buffer.size(), nullptr, 0,
+                                      nullptr);
+    _resource.reset(RESOURCE_DATA_RAW, buffer.data(), size);
+  } else {
+    _resource.reset(RESOURCE_DATA_RAW, (const char*)_usmPtr, size);
+  }
   (**handle).Reset();
   const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
-  if (!(**handle).Protected()) {
-    // do nothing
-  } else {
+  if (!SD().isProtectionWrapper) {
     l0IFace.MemorySnifferProtect(handle);
   }
 }
@@ -38,10 +49,18 @@ void gits::l0::CGitsL0MemoryUpdate::Write([[maybe_unused]] CCodeOStream& stream)
 
 void gits::l0::CGitsL0MemoryUpdate::Run() {
   if (_resource.Data()) {
+    void* pointerToData = CMappedPtr::GetMapping(_usmPtr);
+    Log(TRACEV) << "CGitsL0MemoryUpdate(" << ToStringHelper(pointerToData) << ")";
+    // CPU Write
+    std::memcpy(pointerToData, _resource.Data(), _resource.Data().Size());
+    // GPU Write
     auto& sd = SD();
-    auto& allocState = sd.Get<CAllocState>(CMappedPtr::GetMapping(_usmPtr), EXCEPTION_MESSAGE);
-    char* pointerToData = (char*)CMappedPtr::GetMapping(_usmPtr);
-    std::memcpy(pointerToData, _resource.Data(), allocState.size);
+    auto& allocState = sd.Get<CAllocState>(pointerToData, EXCEPTION_MESSAGE);
+    if (allocState.memType == UnifiedMemoryType::shared) {
+      auto cmdList = GetCommandListImmediate(sd, drv, allocState.hContext);
+      drv.zeCommandListAppendMemoryCopy(cmdList, pointerToData, _resource.Data(),
+                                        _resource.Data().Size(), nullptr, 0, nullptr);
+    }
     TranslatePointerOffsets(sd, pointerToData, allocState.indirectPointersOffsets, true);
   }
 }
@@ -62,14 +81,14 @@ gits::CArgument& gits::l0::CGitsL0MemoryRestore::Argument(unsigned idx) {
 
 gits::l0::CGitsL0MemoryRestore::CGitsL0MemoryRestore(const void* usmPtr, const size_t& size)
     : _usmPtr(const_cast<void*>(usmPtr)) {
-  _resource.reset(RESOURCE_DATA_RAW, (const char*)usmPtr, size);
+  _resource.reset(RESOURCE_DATA_RAW, usmPtr, size);
 }
 
 gits::l0::CGitsL0MemoryRestore::CGitsL0MemoryRestore(const void* usmPtr,
                                                      const void* resourcePtr,
                                                      const size_t& size)
     : _usmPtr(const_cast<void*>(usmPtr)) {
-  _resource.reset(RESOURCE_DATA_RAW, (const char*)resourcePtr, size);
+  _resource.reset(RESOURCE_DATA_RAW, resourcePtr, size);
 }
 
 gits::l0::CGitsL0MemoryRestore::CGitsL0MemoryRestore(const void* globalPointer,
