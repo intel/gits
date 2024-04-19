@@ -305,7 +305,7 @@ end
 
 function UpdateEvent(event, cqNumber)
   if not event.isCompleted then
-    Log("Updating event of kernel("..event.cqNumber.."_"..event.cmdListNumber.."_"..event.kernelLaunchNumber.."): "..event.kernel.name)
+    Log("Updating event of kernel("..cqNumber.."_"..event.cmdListNumber.."_"..event.kernelLaunchNumber.."): "..event.kernel.name)
     if not event.gatheredData then
       drvl0.zeEventQueryKernelTimestamp(event.handle, event.appendTimestampResult)
     else
@@ -617,6 +617,14 @@ function zeCommandQueueSynchronize(hCommandQueue, timeout)
   local retVal = drvl0.zeCommandQueueSynchronize(hCommandQueue, timeout)
   if retVal == ZE_RESULT_SUCCESS then
     UpdateEventsFromCommandQueue(hCommandQueue)
+  end
+  return retVal
+end
+
+function zeCommandListHostSynchronize(hCommandList, timeout)
+  local retVal = drvl0.zeCommandListHostSynchronize(hCommandList, timeout)
+  if retVal == ZE_RESULT_SUCCESS then
+    UpdateEventsFromCommandList(hCommandList)
   end
   return retVal
 end
