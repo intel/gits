@@ -16,6 +16,8 @@
 
 #include "l0Drivers.h"
 #include "l0Arguments.h"
+#include "l0Log.h"
+#include "l0StateDynamic.h"
 #include "l0Structs.h"
 #include "l0Header.h"
 #include "l0StateTracking.h"
@@ -30,6 +32,7 @@
 #define Ccl_program       COutArgument
 #define Ccl_command_queue COutArgument
 #endif
+#include "tools_lite.h"
 
 namespace gits {
 namespace l0 {
@@ -341,16 +344,17 @@ inline void zeMemAllocHost_RUNWRAP(Cze_result_t& _return_value,
                                    Csize_t& _size,
                                    Csize_t& _alignment,
                                    CMappedPtr::CSMapArray& _pptr) {
-  _return_value.Value() = drv.zeMemAllocHost(*_hContext, *_host_desc, *_size, *_alignment, *_pptr);
+  auto size = *_size;
   const auto& cfg = Config::Get();
+  _return_value.Value() = drv.zeMemAllocHost(*_hContext, *_host_desc, size, *_alignment, *_pptr);
   if (_return_value.Value() == ZE_RESULT_SUCCESS && CaptureKernels(cfg)) {
     Log(TRACEV) << "^-- Original pointer: " << ToStringHelper(CMappedPtr::GetOriginal((*_pptr)[0]));
   }
   if (*_return_value == ZE_RESULT_SUCCESS && CheckCfgZeroInitialization(cfg)) {
     const auto commandList = GetCommandListImmediate(SD(), drv, *_hContext);
-    ZeroInitializeUsm(drv, commandList, *_pptr, *_size, UnifiedMemoryType::host);
+    ZeroInitializeUsm(drv, commandList, *_pptr, size, UnifiedMemoryType::host);
   }
-  zeMemAllocHost_SD(*_return_value, *_hContext, *_host_desc, *_size, *_alignment, *_pptr);
+  zeMemAllocHost_SD(*_return_value, *_hContext, *_host_desc, size, *_alignment, *_pptr);
 }
 
 inline void zeMemAllocDevice_RUNWRAP(Cze_result_t& _return_value,
@@ -360,18 +364,56 @@ inline void zeMemAllocDevice_RUNWRAP(Cze_result_t& _return_value,
                                      Csize_t& _alignment,
                                      Cze_device_handle_t& _hDevice,
                                      CMappedPtr::CSMapArray& _pptr) {
-  _return_value.Value() =
-      drv.zeMemAllocDevice(*_hContext, *_device_desc, *_size, *_alignment, *_hDevice, *_pptr);
   const auto& cfg = Config::Get();
+  void* originalPtr = _pptr.Original()[0];
+  const auto IsAddressTranslationDisabled =
+      IsMemoryTypeAddressTranslationDisabled(cfg, UnifiedMemoryType::device);
+  auto size = *_size;
+  if (IsAddressTranslationDisabled) {
+    void* virtualPtr = nullptr;
+    size = gits::Align<gits::alignment::pageSize2MB>(size);
+    auto retCode = drv.zeVirtualMemReserve(*_hContext, originalPtr, size, &virtualPtr);
+    zeVirtualMemReserve_SD(retCode, *_hContext, originalPtr, size, &virtualPtr);
+    if (retCode != ZE_RESULT_SUCCESS || virtualPtr != originalPtr) {
+      if (retCode == ZE_RESULT_SUCCESS) {
+        drv.zeVirtualMemFree(*_hContext, virtualPtr, size);
+        Log(ERR) << "Could not reserve the same address as pStart";
+      }
+      throw EOperationFailed(EXCEPTION_MESSAGE);
+    }
+    ze_physical_mem_desc_t physical_desc = {};
+    physical_desc.stype = ZE_STRUCTURE_TYPE_PHYSICAL_MEM_DESC;
+    physical_desc.size = size;
+    ze_physical_mem_handle_t hPhysicalMemory = nullptr;
+    retCode = drv.zePhysicalMemCreate(*_hContext, *_hDevice, &physical_desc, &hPhysicalMemory);
+    zePhysicalMemCreate_SD(retCode, *_hContext, *_hDevice, &physical_desc, &hPhysicalMemory);
+    if (retCode != ZE_RESULT_SUCCESS) {
+      Log(ERR) << "Failed to create physical memory";
+      throw EOperationFailed(EXCEPTION_MESSAGE);
+    }
+    retCode = drv.zeVirtualMemMap(*_hContext, originalPtr, size, hPhysicalMemory, 0U,
+                                  ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+    zeVirtualMemMap_SD(retCode, *_hContext, originalPtr, size, hPhysicalMemory, 0U,
+                       ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+    if (retCode != ZE_RESULT_SUCCESS) {
+      Log(ERR) << "Failed to mmap virtual memory to physical memory";
+      throw EOperationFailed(EXCEPTION_MESSAGE);
+    }
+    CMappedPtr::AddMapping(_pptr._array[0], originalPtr);
+  } else {
+    _return_value.Value() =
+        drv.zeMemAllocDevice(*_hContext, *_device_desc, *_size, *_alignment, *_hDevice, *_pptr);
+    zeMemAllocDevice_SD(*_return_value, *_hContext, *_device_desc, size, *_alignment, *_hDevice,
+                        *_pptr);
+  }
   if (_return_value.Value() == ZE_RESULT_SUCCESS && CaptureKernels(cfg)) {
     Log(TRACEV) << "^-- Original pointer: " << ToStringHelper(CMappedPtr::GetOriginal((*_pptr)[0]));
   }
+
   if (*_return_value == ZE_RESULT_SUCCESS && CheckCfgZeroInitialization(cfg)) {
     const auto commandList = GetCommandListImmediate(SD(), drv, *_hContext);
     ZeroInitializeUsm(drv, commandList, *_pptr, *_size, UnifiedMemoryType::device);
   }
-  zeMemAllocDevice_SD(*_return_value, *_hContext, *_device_desc, *_size, *_alignment, *_hDevice,
-                      *_pptr);
 }
 
 inline void zeMemAllocShared_RUNWRAP(Cze_result_t& _return_value,
@@ -382,17 +424,18 @@ inline void zeMemAllocShared_RUNWRAP(Cze_result_t& _return_value,
                                      Csize_t& _alignment,
                                      Cze_device_handle_t& _hDevice,
                                      CMappedPtr::CSMapArray& _pptr) {
-  _return_value.Value() = drv.zeMemAllocShared(*_hContext, *_device_desc, *_host_desc, *_size,
-                                               *_alignment, *_hDevice, *_pptr);
+  auto size = *_size;
   const auto& cfg = Config::Get();
+  _return_value.Value() = drv.zeMemAllocShared(*_hContext, *_device_desc, *_host_desc, size,
+                                               *_alignment, *_hDevice, *_pptr);
   if (_return_value.Value() == ZE_RESULT_SUCCESS && CaptureKernels(cfg)) {
     Log(TRACEV) << "^-- Original pointer: " << ToStringHelper(CMappedPtr::GetOriginal((*_pptr)[0]));
   }
   if (*_return_value == ZE_RESULT_SUCCESS && CheckCfgZeroInitialization(cfg)) {
     const auto commandList = GetCommandListImmediate(SD(), drv, *_hContext);
-    ZeroInitializeUsm(drv, commandList, *_pptr, *_size, UnifiedMemoryType::shared);
+    ZeroInitializeUsm(drv, commandList, *_pptr, size, UnifiedMemoryType::shared);
   }
-  zeMemAllocShared_SD(*_return_value, *_hContext, *_device_desc, *_host_desc, *_size, *_alignment,
+  zeMemAllocShared_SD(*_return_value, *_hContext, *_device_desc, *_host_desc, size, *_alignment,
                       *_hDevice, *_pptr);
 }
 
@@ -570,6 +613,57 @@ inline void zeContextDestroy_RUNWRAP(Cze_result_t& _return_value, Cze_context_ha
   _return_value.Value() = drv.zeContextDestroy(*_hContext);
   zeContextDestroy_SD(*_return_value, *_hContext);
   _hContext.RemoveMapping();
+}
+
+inline void zeMemFree_RUNWRAP(Cze_result_t& _return_value,
+                              Cze_context_handle_t& _hContext,
+                              CMappedPtr& _ptr) {
+  if (*_ptr != nullptr) {
+    auto& allocState = SD().Get<CAllocState>(*_ptr, EXCEPTION_MESSAGE);
+    const auto& cfg = Config::Get();
+    const auto IsAddressTranslationDisabled =
+        IsMemoryTypeAddressTranslationDisabled(cfg, allocState.memType);
+    if (IsAddressTranslationDisabled && allocState.memType == UnifiedMemoryType::device) {
+      for (const auto& memMap : allocState.memMaps) {
+        const auto hPhysicalMemory = memMap.second->hPhysicalMemory;
+        _return_value.Value() =
+            drv.zeVirtualMemUnmap(*_hContext, GetOffsetPointer(*_ptr, memMap.first),
+                                  memMap.second->virtualMemorySizeFromOffset);
+        zeVirtualMemUnmap_SD(*_return_value, *_hContext, GetOffsetPointer(*_ptr, memMap.first),
+                             memMap.second->virtualMemorySizeFromOffset);
+        _return_value.Value() = drv.zePhysicalMemDestroy(*_hContext, hPhysicalMemory);
+        zePhysicalMemDestroy_SD(*_return_value, *_hContext, hPhysicalMemory);
+        _return_value.Value() = drv.zeVirtualMemFree(*_hContext, *_ptr, allocState.size);
+        zeVirtualMemFree_SD(*_return_value, *_hContext, *_ptr, allocState.size);
+      }
+    } else {
+      _return_value.Value() = drv.zeMemFree(*_hContext, *_ptr);
+      zeMemFree_SD(*_return_value, *_hContext, *_ptr);
+    }
+  }
+}
+
+inline void zeVirtualMemReserve_V1_RUNWRAP(Cze_result_t& _return_value,
+                                           Cze_context_handle_t& _hContext,
+                                           Cuintptr_t& _pStart,
+                                           Csize_t& _size,
+                                           CMappedPtr::CSMapArray& _pptr) {
+  _return_value.Value() = drv.zeVirtualMemReserve(*_hContext, *_pStart, *_size, *_pptr);
+  const auto& cfg = Config::Get();
+  if (_return_value.Value() == ZE_RESULT_SUCCESS && !cfg.player.l0OmitOriginalAddressCheck) {
+    const void* originalPtrValue = *_pStart;
+    const void* virtualPtrReturnedByDriver = **_pptr;
+    if (originalPtrValue != nullptr && virtualPtrReturnedByDriver != originalPtrValue) {
+      drv.inject.zeVirtualMemFree(*_hContext, virtualPtrReturnedByDriver, *_size);
+      Log(ERR) << "Could not reserve the same address as pStart";
+      if (reinterpret_cast<uintptr_t>(virtualPtrReturnedByDriver) >
+          reinterpret_cast<uintptr_t>(originalPtrValue)) {
+        Log(ERR) << "Try to record application again with higher VirtualDeviceMemorySize";
+      }
+      throw EOperationFailed(EXCEPTION_MESSAGE);
+    }
+  }
+  zeVirtualMemReserve_SD(*_return_value, *_hContext, *_pStart, *_size, *_pptr);
 }
 
 } // namespace l0

@@ -12,6 +12,7 @@
 #include "gitsPluginL0.h"
 
 #include "platform.h"
+#include "tools_lite.h"
 
 #include <mutex>
 
@@ -208,12 +209,14 @@ inline ze_result_t zeCommandListAppendMemoryFill_RECEXECWRAP(ze_command_list_han
   GITS_ENTRY_L0
   auto return_value = ZE_RESULT_SUCCESS;
   GITS_WRAPPER_PRE
+  wrapper.UnProtectMemoryPointers(hCommandList);
   wrapper.zeCommandListAppendMemoryFill_pre(return_value, hCommandList, ptr, pattern, pattern_size,
                                             size, hSignalEvent, numWaitEvents, phWaitEvents);
   return_value = driver.zeCommandListAppendMemoryFill(
       hCommandList, ptr, pattern, pattern_size, size, hSignalEvent, numWaitEvents, phWaitEvents);
   wrapper.zeCommandListAppendMemoryFill(return_value, hCommandList, ptr, pattern, pattern_size,
                                         size, hSignalEvent, numWaitEvents, phWaitEvents);
+  wrapper.ProtectMemoryPointers(hCommandList);
   GITS_WRAPPER_POST
   else {
     return_value = driver.zeCommandListAppendMemoryFill(
@@ -240,8 +243,10 @@ inline ze_result_t zeMemFree_RECEXECWRAP(ze_context_handle_t hContext, void* ptr
   ze_result_t return_value = ZE_RESULT_SUCCESS;
   GITS_WRAPPER_PRE
   wrapper.DestroySniffedRegion(ptr);
-  return_value = driver.zeMemFree(hContext, ptr);
-  wrapper.zeMemFree(return_value, hContext, ptr);
+  if (!wrapper.DeallocateVirtualMemory(ptr)) {
+    return_value = driver.zeMemFree(hContext, ptr);
+    wrapper.zeMemFree(return_value, hContext, ptr);
+  }
   GITS_WRAPPER_POST
   else {
     return_value = driver.zeMemFree(hContext, ptr);
@@ -255,9 +260,10 @@ inline ze_result_t zeMemFreeExt_RECEXECWRAP(ze_context_handle_t hContext,
   GITS_ENTRY_L0
   ze_result_t return_value = ZE_RESULT_SUCCESS;
   GITS_WRAPPER_PRE
-  wrapper.DestroySniffedRegion(ptr);
-  return_value = driver.zeMemFreeExt(hContext, pMemFreeDesc, ptr);
-  wrapper.zeMemFreeExt(return_value, hContext, pMemFreeDesc, ptr);
+  if (!wrapper.DeallocateVirtualMemory(ptr)) {
+    return_value = driver.zeMemFreeExt(hContext, pMemFreeDesc, ptr);
+    wrapper.zeMemFreeExt(return_value, hContext, pMemFreeDesc, ptr);
+  }
   GITS_WRAPPER_POST
   else {
     return_value = driver.zeMemFreeExt(hContext, pMemFreeDesc, ptr);
@@ -284,16 +290,100 @@ inline ze_result_t zesDriverGetExtensionFunctionAddress_RECEXECWRAP(
   return zeDriverGetExtensionFunctionAddress_RECEXECWRAP(nullptr, name, ppFunctionAddress);
 }
 
+inline ze_result_t zeMemAllocHost_RECEXECWRAP(ze_context_handle_t hContext,
+                                              const ze_host_mem_alloc_desc_t* host_desc,
+                                              size_t size,
+                                              size_t alignment,
+                                              void** pptr) {
+  GITS_ENTRY_L0
+  auto return_value = ZE_RESULT_SUCCESS;
+  GITS_WRAPPER_PRE
+  return_value = driver.zeMemAllocHost(hContext, host_desc, size, alignment, pptr);
+  wrapper.zeMemAllocHost(return_value, hContext, host_desc, size, alignment, pptr);
+  GITS_WRAPPER_POST
+  else {
+    return_value = driver.zeMemAllocHost(hContext, host_desc, size, alignment, pptr);
+  }
+  return return_value;
+}
+
+inline ze_result_t zeMemAllocShared_RECEXECWRAP(ze_context_handle_t hContext,
+                                                const ze_device_mem_alloc_desc_t* device_desc,
+                                                const ze_host_mem_alloc_desc_t* host_desc,
+                                                size_t size,
+                                                size_t alignment,
+                                                ze_device_handle_t hDevice,
+                                                void** pptr) {
+  GITS_ENTRY_L0
+  auto return_value = ZE_RESULT_SUCCESS;
+  GITS_WRAPPER_PRE
+  return_value =
+      driver.zeMemAllocShared(hContext, device_desc, host_desc, size, alignment, hDevice, pptr);
+  wrapper.zeMemAllocShared(return_value, hContext, device_desc, host_desc, size, alignment, hDevice,
+                           pptr);
+  GITS_WRAPPER_POST
+  else {
+    return_value =
+        driver.zeMemAllocShared(hContext, device_desc, host_desc, size, alignment, hDevice, pptr);
+  }
+  return return_value;
+}
+
+inline ze_result_t zeMemAllocDevice_RECEXECWRAP(ze_context_handle_t hContext,
+                                                const ze_device_mem_alloc_desc_t* device_desc,
+                                                size_t size,
+                                                size_t alignment,
+                                                ze_device_handle_t hDevice,
+                                                void** pptr) {
+
+  GITS_ENTRY_L0
+  auto retCode = ZE_RESULT_SUCCESS;
+  GITS_WRAPPER_PRE
+  if (wrapper.IsAddressTranslationModeDisabled(UnifiedMemoryType::device)) {
+    const auto alignedSize = gits::Align<gits::alignment::pageSize2MB>(size);
+    retCode = driver.zeVirtualMemReserve(hContext, nullptr, alignedSize, pptr);
+    if (retCode != ZE_RESULT_SUCCESS && pptr == nullptr && *pptr == nullptr) {
+      throw EOperationFailed(EXCEPTION_MESSAGE);
+    }
+    if (device_desc->pNext != nullptr) {
+      throw ENotImplemented(EXCEPTION_MESSAGE);
+    }
+    wrapper.zeVirtualMemReserve(retCode, hContext, *pptr, alignedSize, pptr);
+    ze_physical_mem_desc_t physicalDesc = {};
+    physicalDesc.stype = ZE_STRUCTURE_TYPE_PHYSICAL_MEM_DESC;
+    physicalDesc.size = alignedSize;
+    ze_physical_mem_handle_t hPhysicalMemory = nullptr;
+    retCode = driver.zePhysicalMemCreate(hContext, hDevice, &physicalDesc, &hPhysicalMemory);
+    wrapper.zePhysicalMemCreate(retCode, hContext, hDevice, &physicalDesc, &hPhysicalMemory);
+    retCode = driver.zeVirtualMemMap(hContext, *pptr, alignedSize, hPhysicalMemory, 0U,
+                                     ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+    wrapper.zeVirtualMemMap(retCode, hContext, *pptr, alignedSize, hPhysicalMemory, 0,
+                            ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+  } else {
+    retCode = driver.zeMemAllocDevice(hContext, device_desc, size, alignment, hDevice, pptr);
+    wrapper.zeMemAllocDevice(retCode, hContext, device_desc, size, alignment, hDevice, pptr);
+  }
+  GITS_WRAPPER_POST
+  else {
+    retCode = driver.zeMemAllocDevice(hContext, device_desc, size, alignment, hDevice, pptr);
+  }
+  return retCode;
+}
+
 inline ze_result_t zeContextDestroy_RECEXECWRAP(ze_context_handle_t hContext) {
   GITS_ENTRY_L0
   auto return_value = ZE_RESULT_SUCCESS;
   GITS_WRAPPER_PRE
   wrapper.zeContextDestroy_pre(return_value, hContext);
-  driver.zeContextDestroy(hContext);
+  if (wrapper.IsAddressTranslationModeDisabled(UnifiedMemoryType::device) &&
+      return_value == ZE_RESULT_SUCCESS) {
+    wrapper.InjectMemoryReservationFree(hContext);
+  }
+  return_value = driver.zeContextDestroy(hContext);
   wrapper.zeContextDestroy(return_value, hContext);
   GITS_WRAPPER_POST
   else {
-    driver.zeContextDestroy(hContext);
+    return_value = driver.zeContextDestroy(hContext);
   }
   return return_value;
 }

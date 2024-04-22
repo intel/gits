@@ -114,6 +114,9 @@ public:
   virtual bool GlobalScopeVariable() const {
     return false;
   }
+  static bool InitializedWithOriginal() {
+    return false;
+  }
   virtual intptr_t ScopeKey() const {
     return reinterpret_cast<intptr_t>(this);
   }
@@ -669,6 +672,8 @@ public:
         // is not mapped
         if (CGLtype::CheckMapping(elem) || _action != ADD_MAPPING) {
           (*_mappedArray)[i] = CGLtype::GetMapping(elem);
+        } else if (CGLtype::InitializedWithOriginal()) {
+          (*_mappedArray)[i] = elem;
         }
       }
       return _mappedArray->data();

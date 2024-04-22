@@ -127,6 +127,8 @@ struct CAllocState : public CState {
   };
   std::unique_ptr<ResidencyInfo> residencyInfo;
 
+  void* virtualMappingAddress = nullptr;
+
   const void* pointerHint = nullptr;
   struct VirtualMemMapInfo {
     size_t virtualMemorySizeFromOffset = 0U;
@@ -418,6 +420,8 @@ struct CContextState : public CState {
   ze_context_desc_t desc = {};
   ze_command_list_handle_t gitsImmediateList = nullptr;
   std::vector<ze_device_handle_t> hDevices;
+  void* virtualMemory = nullptr;
+  size_t virtualMemorySize = 0U;
 
   ze_event_pool_handle_t gitsPoolEventHandle = nullptr;
   ze_event_handle_t gitsEventHandle = nullptr;

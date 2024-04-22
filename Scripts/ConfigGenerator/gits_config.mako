@@ -361,6 +361,11 @@ LevelZero {
       MemoryType 0 ; -1 (All), 1 (Host), 2 (Device), 4 (Shared)
       Iterations 0
     }
+    DisableAddressTranslation {
+      MemoryType 0 ; -1 (ALL) , 1 (HOST), 2 (Device), 4 (Shared)
+      VirtualDeviceMemorySize 1099511627776
+      VirtualHostMemorySize 1099511627776
+    }
   }
 }
 %endif
@@ -874,6 +879,19 @@ Extras {
 ;
 ;
 ;  LevelZero.Utilities.BruteForceScanForIndirectPointers.Iterations - Reduces iterations for brute force algorithm to run the scan only N times for any allocation.
+;
+;  LevelZero.Utilities.DisableAddressTranslation.MemoryType - Setting this to non zero value will cause GITS modify allocations with an intention to work on the same address space during playback.
+;                                                             The value of this option is a bitfield that specifies the type of memory to be affected.
+;                                                             The following values are supported:
+;                                                              -1 - All memory types
+;                                                               1 - Host memory
+;                                                               2 - Device memory
+;                                                               4 - Shared memory
+;
+;
+;  LevelZero.Utilities.DisableAddressTranslation.VirtualDeviceMemorySize - Injects virtual memory reservation of specified size per created context.
+;
+;  LevelZero.Utilities.DisableAddressTranslation.VirtualHostMemorySize - Injects virtual memory reservation of specified size on recorder initialization.
 ;
 %endif
 ##

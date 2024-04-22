@@ -71,6 +71,20 @@ The value of this option is a bitfield that specifies the type of memory to be s
 * `LevelZero.Utilities.BruteForceScanForIndirectPointers.Iterations` - Reduces iterations for brute force algorithm to run the scan only N times for any allocation.
 
 
+* `LevelZero.Utilities.DisableAddressTranslation.MemoryType` - Setting this to non zero value will cause GITS modify allocations with an intention to work on the same address space during playback.
+The value of this option is a bitfield that specifies the type of memory to be affected.
+** The following values are supported:
+*** `-1` - All memory types
+*** `1` - Host memory
+*** `2` - Device memory
+*** `4` - Shared memory
+
+
+* `LevelZero.Utilities.DisableAddressTranslation.VirtualDeviceMemorySize` - Injects virtual memory reservation of specified size per created context.
+
+* `LevelZero.Utilities.DisableAddressTranslation.VirtualHostMemorySize` - Injects virtual memory reservation of specified size on recorder initialization.
+
+
 == Playback Features
 
 * `--l0CaptureKernels <range>` - Generates kernel buffers and memory layout.
@@ -81,6 +95,16 @@ Each read is to allocated memory by GITS, which is freed after synchronization.
 * `--l0CaptureInputKernels` - Similarly to `--l0CaptureKernels`, however, injects are before kernel submission to dump input buffers.
 Works only with `l0CaptureKernels`.
 Option exists only for debug purposes.
+
+* `--l0DisableAddressTranslation` - Tries to use addresses originally used during recording.
+** The following values are supported:
+*** `7` - All memory types
+*** `1` - Host memory
+*** `2` - Device memory
+*** `4` - Shared memory
+
+* `--l0OmitOriginalAddressCheck` - Do not throw when expected address is not equal to originally requested.
+Example `pStart` of `zeVirtualMemReserve`.
 
 * `--l0DumpSpv` - (DEPRECATED) Dumps SPIRV files on zeModuleCreate API call directly from the `pInputModule` of size `inputSize` fields in descriptor to the `l0Programs` folder.
 Requires module format: `ZE_MODULE_FORMAT_IL_SPIRV`.

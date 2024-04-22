@@ -492,6 +492,10 @@ bool configure_player(int argc, char** argv) {
   TypedOption<bool> optionL0DumpSpv(options, OPTION_GROUP_PLAYBACK, 0, "l0DumpSpv",
                                     "Option deprecated!");
 
+  TypedOption<bool> optionL0OmitOriginalAddressCheck(
+      options, OPTION_GROUP_PLAYBACK, 0, "l0OmitOriginalAddressCheck",
+      "Do not throw when expected address is not equal to originally requested");
+
   TypedOption<bool> optionL0CaptureInputKernels(
       options, OPTION_GROUP_PLAYBACK, 0, "l0CaptureInputKernels",
       "Debug option to dump input kernels. Must be used with l0CaptureKernels");
@@ -873,6 +877,13 @@ bool configure_player(int argc, char** argv) {
                                           "Assume they all are 2D RGBA8 images."
                                           "option have to be used with --l0CaptureKernels <range>",
                                           GITS_PLATFORM_BIT_WINDOWS | GITS_PLATFORM_BIT_X11);
+  TypedOption<uint32_t> optionL0DisableAddressTranslation(
+      options, OPTION_GROUP_PLAYBACK, 0, "l0DisableAddressTranslation",
+      "1 - only host addresses"
+      "2 - only device addresses"
+      "4 - only shared addresses"
+      "option value is treated as bitfield and might be used in combination.",
+      GITS_PLATFORM_BIT_WINDOWS | GITS_PLATFORM_BIT_X11);
 
   TypedOption<bool> optionStats(options, OPTION_GROUP_METRICS, 's', "stats",
                                 "GITS will not play specified file but "
@@ -1676,9 +1687,12 @@ bool configure_player(int argc, char** argv) {
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
   }
+  set_when_option_present(cfg.player.l0DisableAddressTranslation,
+                          optionL0DisableAddressTranslation);
   set_when_option_present(cfg.player.l0CaptureAfterSubmit, optionL0CaptureAfterSubmit);
   set_when_option_present(cfg.player.l0CaptureImages, optionL0CaptureImages);
   set_when_option_present(cfg.player.l0DumpSpv, optionL0DumpSpv);
+  set_when_option_present(cfg.player.l0OmitOriginalAddressCheck, optionL0OmitOriginalAddressCheck);
   set_when_option_present(cfg.player.l0CaptureInputKernels, optionL0CaptureInputKernels);
   set_when_option_present(cfg.player.l0InjectBufferResetAfterCreate,
                           optionL0InjectBufferResetAfterCreate);

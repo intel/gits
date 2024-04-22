@@ -1082,6 +1082,37 @@ inline void zeContextEvictMemory_SD(ze_result_t return_value,
     allocState.residencyInfo.release();
   }
 }
+
+inline void zeMemGetAllocProperties_SD([[maybe_unused]] ze_result_t return_value,
+                                       [[maybe_unused]] ze_context_handle_t hContext,
+                                       const void* ptr,
+                                       ze_memory_allocation_properties_t* pMemAllocProperties,
+                                       [[maybe_unused]] ze_device_handle_t* phDevice) {
+  const auto& cfg = Config::Get();
+  if (pMemAllocProperties->type == ZE_MEMORY_TYPE_UNKNOWN &&
+      IsMemoryTypeAddressTranslationDisabled(cfg, UnifiedMemoryType::device)) {
+    auto& sd = SD();
+    auto allocInfo = GetAllocFromRegion(const_cast<void*>(ptr), sd);
+    if (allocInfo.first != nullptr) {
+      auto& allocState = sd.Get<CAllocState>(allocInfo.first, EXCEPTION_MESSAGE);
+      if (allocState.memType == UnifiedMemoryType::device) {
+        pMemAllocProperties->type = ZE_MEMORY_TYPE_DEVICE;
+        if (phDevice != nullptr) {
+          if (allocState.memMaps.size() > 1U) {
+            throw ENotImplemented(EXCEPTION_MESSAGE);
+          }
+          if (*phDevice != allocState.hDevice) {
+            Log(WARN) << "Changing " << ToStringHelper(*phDevice) << " to "
+                      << ToStringHelper(allocState.hDevice);
+            *phDevice = allocState.hDevice;
+          }
+        }
+        Log(WARN) << "Changing ZE_MEMORY_TYPE_UNKNOWN to ZE_MEMORY_TYPE_DEVICE";
+      }
+    }
+  }
+}
+
 inline void zePhysicalMemCreate_SD(ze_result_t return_value,
                                    ze_context_handle_t hContext,
                                    ze_device_handle_t hDevice,

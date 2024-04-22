@@ -9,6 +9,9 @@
 #include "l0RecorderWrapper.h"
 
 #include "gits.h"
+#include "l0Header.h"
+#include "l0StateDynamic.h"
+#include "l0Tools.h"
 #include "log.h"
 #include "recorder.h"
 
@@ -172,6 +175,34 @@ void CRecorderWrapper::DestroySniffedRegion(void* ptr) const {
   }
 }
 
+bool CRecorderWrapper::DeallocateVirtualMemory(void* ptr) const {
+  auto& sd = SD();
+  if (!sd.Exists<CAllocState>(ptr)) {
+    return false;
+  }
+  const auto& allocState = sd.Get<CAllocState>(ptr, EXCEPTION_MESSAGE);
+  const auto isVirtualMemoryReserved =
+      allocState.memType == UnifiedMemoryType::device &&
+      IsMemoryTypeAddressTranslationDisabled(Config::Get(), UnifiedMemoryType::device);
+  if (isVirtualMemoryReserved) {
+    auto errCode = ZE_RESULT_SUCCESS;
+    const auto memMaps = allocState.memMaps;
+    for (const auto& memMap : memMaps) {
+      const auto offsetPtr = GetOffsetPointer(ptr, memMap.first);
+      const auto physicalMemHandle = memMap.second->hPhysicalMemory;
+      errCode = Drivers().zeVirtualMemUnmap(allocState.hContext, offsetPtr,
+                                            memMap.second->virtualMemorySizeFromOffset);
+      CRecorderWrapper::zeVirtualMemUnmap(errCode, allocState.hContext, offsetPtr,
+                                          memMap.second->virtualMemorySizeFromOffset);
+      errCode = Drivers().zePhysicalMemDestroy(allocState.hContext, physicalMemHandle);
+      CRecorderWrapper::zePhysicalMemDestroy(errCode, allocState.hContext, physicalMemHandle);
+    }
+    Drivers().zeVirtualMemFree(allocState.hContext, ptr, allocState.size);
+    CRecorderWrapper::zeVirtualMemFree(errCode, allocState.hContext, ptr, allocState.size);
+  }
+  return isVirtualMemoryReserved;
+}
+
 void CRecorderWrapper::UnProtectMemoryRegion(void* ptr) const {
   if (_recorder.InstancePtr() == nullptr) {
     return;
@@ -220,5 +251,17 @@ void CRecorderWrapper::TrackThread() const {
     previousThreadId = currentThreadId;
   }
 }
+
+bool CRecorderWrapper::IsAddressTranslationModeDisabled(UnifiedMemoryType type) const {
+  return IsMemoryTypeAddressTranslationDisabled(Config::Get(), type);
+}
+
+void CRecorderWrapper::InjectMemoryReservationFree(ze_context_handle_t hContext) const {
+  auto& contextState = SD().Get<CContextState>(hContext, EXCEPTION_MESSAGE);
+  Drivers().inject.zeVirtualMemFree(hContext, contextState.virtualMemory,
+                                    contextState.virtualMemorySize);
+  contextState.virtualMemory = nullptr;
+}
+
 } // namespace l0
 } // namespace gits

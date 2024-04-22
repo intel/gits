@@ -13,6 +13,7 @@
 #include "platform.h"
 
 #include "l0Header.h"
+#include "l0Tools.h"
 
 namespace gits {
 namespace l0 {
@@ -65,10 +66,14 @@ public:
       const ze_command_list_handle_t& hCommandList = nullptr) const = 0;
   virtual void MarkRecorderForDeletion() = 0;
   virtual void DestroySniffedRegion(void* ptr) const = 0;
+  virtual bool DeallocateVirtualMemory(void* ptr) const = 0;
+
   virtual void UnProtectMemoryRegion(void* ptr) const = 0;
   virtual void ProtectMemoryRegion(void* ptr) const = 0;
   virtual bool IsMemorySnifferInstalled() const = 0;
   virtual void TrackThread() const = 0;
+  virtual bool IsAddressTranslationModeDisabled(UnifiedMemoryType type) const = 0;
+  virtual void InjectMemoryReservationFree(ze_context_handle_t hContext) const = 0;
 };
 } // namespace l0
 } // namespace gits

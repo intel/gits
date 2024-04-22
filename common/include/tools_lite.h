@@ -268,4 +268,16 @@ public:
   }
 };
 
+template <size_t SizeAlignment, typename T>
+constexpr T Align(T value) {
+  const auto ret = (static_cast<size_t>(value) + SizeAlignment - 1) & (~(SizeAlignment - 1));
+  return static_cast<T>(ret);
+}
+namespace alignment {
+constexpr size_t pageSize1KB = 1024U;
+constexpr size_t pageSize1MB = pageSize1KB * 1024U;
+constexpr size_t pageSize4KB = pageSize1KB * 4U;
+constexpr size_t pageSize64KB = pageSize1KB * 64U;
+constexpr size_t pageSize2MB = pageSize1MB * 2U;
+} // namespace alignment
 } // namespace gits

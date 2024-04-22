@@ -1481,5 +1481,26 @@ inline void zeContextDestroy_RECWRAP_PRE(CRecorder& recorder,
   }
 }
 
+inline void zeContextCreate_RECWRAP(CRecorder& recorder,
+                                    ze_result_t return_value,
+                                    ze_driver_handle_t hDriver,
+                                    const ze_context_desc_t* desc,
+                                    ze_context_handle_t* phContext) {
+  if (recorder.Running()) {
+    recorder.Schedule(new CzeContextCreate(return_value, hDriver, desc, phContext));
+  }
+  zeContextCreate_SD(return_value, hDriver, desc, phContext);
+  const auto& cfg = Config::Get();
+  const uint64_t deviceMemorySize =
+      cfg.recorder.levelZero.utilities.disableAddressTranslation.virtualDeviceMemorySize;
+  if (return_value == ZE_RESULT_SUCCESS &&
+      IsMemoryTypeAddressTranslationDisabled(cfg, UnifiedMemoryType::device) &&
+      deviceMemorySize != 0U) {
+    auto& contextState = SD().Get<CContextState>(*phContext, EXCEPTION_MESSAGE);
+    const auto alignedSize = gits::Align<gits::alignment::pageSize2MB>(deviceMemorySize);
+    contextState.virtualMemorySize = alignedSize;
+    drv.inject.zeVirtualMemReserve(*phContext, nullptr, alignedSize, &contextState.virtualMemory);
+  }
+}
 } // namespace l0
 } // namespace gits

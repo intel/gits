@@ -862,6 +862,17 @@ bool IsMemoryTypeIncluded(const uint32_t cfgMemoryTypeValue, UnifiedMemoryType t
 
   return false;
 }
+
+bool IsMemoryTypeAddressTranslationDisabled(const Config& cfg, UnifiedMemoryType type) {
+  uint32_t value = 0U;
+  if (Config::IsRecorder()) {
+    value = cfg.recorder.levelZero.utilities.disableAddressTranslation.memoryType;
+  } else {
+    value = cfg.player.l0DisableAddressTranslation;
+  }
+  return IsMemoryTypeIncluded(value, type);
+}
+
 bool IsDumpInputMode(const Config& cfg) {
   return Config::IsPlayer() ? cfg.player.l0CaptureInputKernels
                             : cfg.recorder.levelZero.utilities.dumpInputKernels;

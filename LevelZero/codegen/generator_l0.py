@@ -4051,13 +4051,13 @@ arg1=ArgDef(name='hCommandQueue',type='ze_command_queue_handle_t',tag='in'),
 arg2=ArgDef(name='pOrdinal',type='uint32_t*',tag='out',wrapType='Cuint32_t::CSArray'),
 )
 
-Function(name='zeCommandQueueSynchronize',component='ze_command_queue',enabled=True,ddi_pos=3,unprotectLogic=True,stateTrack=True,
+Function(name='zeCommandQueueSynchronize',component='ze_command_queue',enabled=True,ddi_pos=3,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandQueue',type='ze_command_queue_handle_t',tag='in'),
 arg2=ArgDef(name='timeout',type='uint64_t',tag='in'),
 )
 
-Function(name='zeContextCreate',component='ze_context',enabled=True,stateTrack=True,ddi_pos=0,
+Function(name='zeContextCreate',component='ze_context',enabled=True,stateTrack=True,ddi_pos=0,recWrap=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hDriver',type='ze_driver_handle_t',tag='in'),
 arg2=ArgDef(name='desc',type='const ze_context_desc_t*',tag='in'),
@@ -4691,7 +4691,7 @@ arg1=ArgDef(name='hKernel',type='ze_kernel_handle_t',tag='in'),
 arg2=ArgDef(name='totalGroupCount',type='uint32_t*',tag='out'),
 )
 
-Function(name='zeMemAllocDevice',component='ze_mem',enabled=True,stateTrack=True,recWrap=True,runWrap=True,ddi_pos=1,
+Function(name='zeMemAllocDevice',component='ze_mem',enabled=True,stateTrack=True,recWrap=True,runWrap=True,ddi_pos=1,recExecWrap=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='device_desc',type='const ze_device_mem_alloc_desc_t*',tag='in'),
@@ -4701,7 +4701,7 @@ arg5=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
 arg6=ArgDef(name='pptr',type='void**',tag='out',wrapType='CMappedPtr::CSMapArray'),
 )
 
-Function(name='zeMemAllocHost',component='ze_mem',enabled=True,stateTrack=True,recWrap=True,runWrap=True,ddi_pos=2,
+Function(name='zeMemAllocHost',component='ze_mem',enabled=True,stateTrack=True,recWrap=True,runWrap=True,ddi_pos=2,recExecWrap=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='host_desc',type='const ze_host_mem_alloc_desc_t*',tag='in'),
@@ -4710,7 +4710,7 @@ arg4=ArgDef(name='alignment',type='size_t',tag='in'),
 arg5=ArgDef(name='pptr',type='void**',tag='out',wrapType='CMappedPtr::CSMapArray'),
 )
 
-Function(name='zeMemAllocShared',component='ze_mem',enabled=True,stateTrack=True,recWrap=True,runWrap=True,ddi_pos=0,
+Function(name='zeMemAllocShared',component='ze_mem',enabled=True,stateTrack=True,recWrap=True,runWrap=True,ddi_pos=0,recExecWrap=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='device_desc',type='const ze_device_mem_alloc_desc_t*',tag='in'),
@@ -4727,7 +4727,7 @@ arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='ptr',type='const void*',tag='in',release=True),
 )
 
-Function(name='zeMemFree',component='ze_mem',enabled=True,stateTrack=True,recExecWrap=True,ddi_pos=3,
+Function(name='zeMemFree',component='ze_mem',enabled=True,stateTrack=True,recExecWrap=True,ddi_pos=3,runWrap=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='ptr',type='void*',tag='in',wrapType='CMappedPtr',release=True),
@@ -4755,7 +4755,7 @@ arg3=ArgDef(name='pBase',type='void**',tag='inout',optional=True),
 arg4=ArgDef(name='pSize',type='size_t*',tag='inout',optional=True),
 )
 
-Function(name='zeMemGetAllocProperties',component='ze_mem',enabled=True,skipRun=True,ddi_pos=4,
+Function(name='zeMemGetAllocProperties',component='ze_mem',enabled=True,skipRun=True,ddi_pos=4,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='ptr',type='const void*',tag='in'),
@@ -5060,7 +5060,7 @@ arg3=ArgDef(name='size',type='size_t',tag='in'),
 arg4=ArgDef(name='pptr',type='void**',tag='out'),
 )
 
-Function(name='zeVirtualMemReserve',component='ze_virtual_mem',enabled=True,ddi_pos=0,stateTrack=True,version=1,
+Function(name='zeVirtualMemReserve',component='ze_virtual_mem',enabled=True,ddi_pos=0,stateTrack=True,version=1,runWrap=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hContext',type='ze_context_handle_t',tag='in'),
 arg2=ArgDef(name='pStart',type='const void*',tag='in',optional=True,wrapType='Cuintptr_t'),

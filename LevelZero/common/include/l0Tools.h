@@ -122,6 +122,7 @@ uint32_t TranslatePointerOffsets(const CStateDynamic& sd,
 uint32_t BruteForceScanIterations(const Config& cfg);
 bool IsMemoryTypeIncluded(const uint32_t cfgMemoryTypeValue, UnifiedMemoryType type);
 bool IsDumpInputMode(const Config& cfg);
+bool IsMemoryTypeAddressTranslationDisabled(const Config& cfg, UnifiedMemoryType type);
 void SaveKernelArguments(const ze_event_handle_t& hSignalEvent,
                          const ze_command_list_handle_t& hCommandList,
                          const CKernelState& kernelState,

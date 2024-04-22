@@ -354,6 +354,9 @@ public:
   CMappedPtr(const void* arg) : CArgHandle(const_cast<void*>(arg)) {}
   static void AddMutualMapping([[maybe_unused]] void* key, [[maybe_unused]] void* value){};
   static void RemoveMutualMapping([[maybe_unused]] void* key){};
+  static bool InitializedWithOriginal() {
+    return true;
+  }
 };
 
 /** @class CUSMPtr

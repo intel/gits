@@ -905,6 +905,17 @@ bool gits::Config::Set(const std::filesystem::path& cfgDir) {
                      GITS_PLATFORM_BIT_ALL);
   ReadRecorderOption(pt, "LevelZero.Utilities.DumpInputKernels",
                      cfg.recorder.levelZero.utilities.dumpInputKernels, GITS_PLATFORM_BIT_ALL);
+  ReadRecorderOption(pt, "LevelZero.Utilities.DisableAddressTranslation.MemoryType",
+                     cfg.recorder.levelZero.utilities.disableAddressTranslation.memoryType,
+                     GITS_PLATFORM_BIT_ALL);
+  ReadRecorderOption(
+      pt, "LevelZero.Utilities.DisableAddressTranslation.VirtualDeviceMemorySize",
+      cfg.recorder.levelZero.utilities.disableAddressTranslation.virtualDeviceMemorySize,
+      GITS_PLATFORM_BIT_ALL);
+  ReadRecorderOption(
+      pt, "LevelZero.Utilities.DisableAddressTranslation.VirtualHostMemorySize",
+      cfg.recorder.levelZero.utilities.disableAddressTranslation.virtualHostMemorySize,
+      GITS_PLATFORM_BIT_ALL);
   {
     if (cfg.recorder.levelZero.capture.mode.find("Kernel") != std::string::npos) {
       ReadRecorderOption(pt, "LevelZero.Capture.Kernel.Range", kernelInfo, GITS_PLATFORM_BIT_ALL);

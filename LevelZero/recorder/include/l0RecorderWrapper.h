@@ -9,6 +9,7 @@
 #pragma once
 
 #include "l0RecorderWrapperIface.h"
+#include "l0Tools.h"
 
 namespace gits {
 class CRecorder;
@@ -22,7 +23,7 @@ class CRecorderWrapper : public IRecorderWrapper {
 
 public:
   CRecorderWrapper(CRecorder& recorder);
-  ~CRecorderWrapper() = default;
+  ~CRecorderWrapper() {}
   void StreamFinishedEvent(std::function<void()> e);
   void CloseRecorderIfRequired() override;
   CDriver& Drivers() const override;
@@ -66,10 +67,13 @@ public:
   void ProtectMemoryPointers(const ze_command_list_handle_t& hCommandList = nullptr) const override;
   void MarkRecorderForDeletion() override;
   void DestroySniffedRegion(void* ptr) const override;
+  virtual bool DeallocateVirtualMemory(void* ptr) const override;
   virtual void UnProtectMemoryRegion(void* ptr) const override;
   virtual void ProtectMemoryRegion(void* ptr) const override;
   virtual bool IsMemorySnifferInstalled() const override;
   virtual void TrackThread() const override;
+  virtual bool IsAddressTranslationModeDisabled(UnifiedMemoryType type) const override;
+  virtual void InjectMemoryReservationFree(ze_context_handle_t hContext) const override;
 };
 } // namespace l0
 } // namespace gits

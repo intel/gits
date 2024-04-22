@@ -286,8 +286,9 @@ private:
 };
 
 typedef value_initialized<bool> vi_bool;
-typedef value_initialized<int> vi_int;
-typedef value_initialized<unsigned> vi_uint;
+typedef value_initialized<int32_t> vi_int;
+typedef value_initialized<uint32_t> vi_uint;
+typedef value_initialized<uint64_t> vi_uint64;
 typedef value_initialized<float> vi_float;
 
 struct Config {
@@ -405,6 +406,7 @@ struct Config {
     vi_bool l0CaptureImages;
     vi_bool l0CaptureInputKernels;
     vi_bool l0DumpSpv;
+    vi_bool l0OmitOriginalAddressCheck;
     BitRange captureDraws2DTexs;
     BitRange captureDraws;
     vi_bool captureDrawsPre;
@@ -459,6 +461,7 @@ struct Config {
     vi_bool clInjectBufferResetAfterCreate;
     vi_bool l0InjectBufferResetAfterCreate;
     vi_bool l0DisableNullIndirectPointersInBuffer;
+    vi_uint l0DisableAddressTranslation;
     vi_bool clDisableNullIndirectPointersInBuffer;
     vi_bool noOpenCL;
     vi_bool showWindowsWA;
@@ -713,6 +716,11 @@ struct Config {
           vi_uint memoryType;
           vi_uint iterations;
         } bruteForceScanForIndirectPointers;
+        struct AddressTranslation {
+          vi_uint memoryType;
+          vi_uint64 virtualDeviceMemorySize;
+          vi_uint64 virtualHostMemorySize;
+        } disableAddressTranslation;
       } utilities;
     } levelZero;
 
