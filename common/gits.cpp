@@ -568,19 +568,20 @@ void CGits::WriteImage(const std::string& filename,
 CBinOStream& operator<<(CBinOStream& stream, const CFile& file) {
   // dump all skipped calls to a file
   unsigned skipNum = unsigned(file._skippedCalls.size());
-  write_to_stream(stream, skipNum);
+  stream.WriteToOstream(reinterpret_cast<const char*>(&skipNum), sizeof(skipNum));
 
   for (auto& skipped : file._skippedCalls) {
-    write_to_stream(stream, skipped.first);
-    write_to_stream(stream, skipped.second);
+    stream.WriteToOstream(reinterpret_cast<const char*>(&skipped.first), sizeof(skipped.first));
+    stream.WriteToOstream(reinterpret_cast<const char*>(&skipped.second), sizeof(skipped.second));
   }
 
   //Write properties to the stream file.
   //First size in bytes, than the string
   auto properties = file._properties->dump();
-  write_to_stream<uint32_t>(stream, ensure_unsigned32bit_representible<size_t>(properties.size()));
+  const uint32_t propTreeSize = ensure_unsigned32bit_representible<size_t>(properties.size());
+  stream.WriteToOstream(reinterpret_cast<const char*>(&propTreeSize), sizeof(propTreeSize));
   if (!Config::Get().recorder.extras.utilities.nullIO) {
-    stream.write(properties.c_str(), properties.size());
+    stream.WriteToOstream(properties.c_str(), properties.size());
   }
 
   return stream;
@@ -600,24 +601,24 @@ bool parse_json_recorder_diags(const std::string& properties,
 
 CBinIStream& operator>>(CBinIStream& stream, CFile& file) {
   uint32_t skipNum = 0U;
-  read_from_stream(stream, skipNum);
+  stream.ReadHelper(reinterpret_cast<char*>(&skipNum), sizeof(skipNum));
   if (skipNum <= UINT32_MAX) {
     for (uint32_t i = 0; i < skipNum; i++) {
       uint32_t id = 0U;
-      read_from_stream(stream, id);
+      stream.ReadHelper(reinterpret_cast<char*>(&id), sizeof(id));
 
       uint32_t num = 0U;
-      read_from_stream(stream, num);
+      stream.ReadHelper(reinterpret_cast<char*>(&num), sizeof(num));
 
       file._skippedCalls[id] = num;
     }
   }
 
   uint32_t propsLength = 0;
-  read_from_stream(stream, propsLength);
+  stream.ReadHelper(reinterpret_cast<char*>(&propsLength), sizeof(propsLength));
   if (propsLength <= UINT32_MAX) {
     std::string props(propsLength, '\0');
-    stream.read(&props[0], propsLength);
+    stream.ReadHelper(&props[0], propsLength);
     bool result = false;
     if (props.find("<?xml version") != std::string::npos) {
       file._formerProperties = props;

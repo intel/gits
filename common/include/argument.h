@@ -1788,9 +1788,15 @@ void gits::CArgumentSizedArrayBase<T, T_WRAP>::Write(CBinOStream& stream) const 
   }
 
   if (size != 0) {
-    for (unsigned idx = 0; idx < size; idx++) {
-      CGLtype wrapper_(_array[idx]);
-      stream << wrapper_;
+    static constexpr bool isfloat = std::is_floating_point<T>::value;
+    if constexpr (!isfloat) {
+      for (unsigned idx = 0; idx < size; idx++) {
+        CGLtype wrapper_(_array[idx]);
+        stream << wrapper_;
+      }
+    } else {
+      // floats never need to adjust their type
+      stream.write((const char*)&_array[0], size * sizeof(T));
     }
   }
 }
@@ -1802,8 +1808,8 @@ void gits::CArgumentSizedArrayBase<T, T_WRAP>::Read(CBinIStream& stream) {
   if (size <= UINT32_MAX && ret) {
     if (size != 0U) {
       _array.resize(size);
-      static bool isfloat = std::is_floating_point<T>::value;
-      if (!isfloat) {
+      static constexpr bool isfloat = std::is_floating_point<T>::value;
+      if constexpr (!isfloat) {
         for (auto idx = 0U; idx < size; idx++) {
           CGLtype wrapper_;
           stream >> wrapper_;

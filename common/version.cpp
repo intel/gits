@@ -82,7 +82,7 @@ std::ostream& operator<<(std::ostream& output_stream, const CVersion& version) {
 
 CBinIStream& operator>>(CBinIStream& input_stream, CVersion& version) {
   char magic_r[sizeof(magic) - 1]; //magic contains null terminator
-  input_stream.read(magic_r, sizeof(magic_r));
+  input_stream.ReadHelper(magic_r, sizeof(magic_r));
   if (!std::equal(magic_r, magic_r + sizeof(magic_r), magic)) {
     throw std::runtime_error("unrecognized version format");
   }
@@ -90,7 +90,7 @@ CBinIStream& operator>>(CBinIStream& input_stream, CVersion& version) {
   Alias64w16 v;
   for (size_t i = 0; i < ver_comps; i++) {
     std::vector<char> chunk(format[i] + 1);
-    input_stream.read(&chunk[0], format[i]);
+    input_stream.ReadHelper(&chunk[0], format[i]);
 
     std::stringstream stream(&chunk[0]);
     uint16_t value;
@@ -99,7 +99,7 @@ CBinIStream& operator>>(CBinIStream& input_stream, CVersion& version) {
 
     if (i != ver_comps - 1) {
       char dot;
-      input_stream.read(&dot, 1);
+      input_stream.ReadHelper(&dot, 1);
       if (dot != '.') {
         throw std::runtime_error("unrecognized version format");
       }

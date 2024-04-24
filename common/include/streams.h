@@ -48,16 +48,6 @@ void read_from_stream(std::istream& i, T& value) {
 }
 
 template <class T>
-void write_name_to_stream(std::ostream& o, T value) {
-  write_to_stream(o, value);
-}
-template <class T>
-void write_name_to_stream(std::ostream& o, T* value) {
-  uint64_t v = reinterpret_cast<uintptr_t>(value);
-  write_to_stream(o, v);
-}
-
-template <class T>
 void read_name_from_stream(std::istream& i, T& value) {
   read_from_stream(i, value);
 }
@@ -71,26 +61,63 @@ void read_name_from_stream(std::istream& i, T*& value) {
   value = reinterpret_cast<T*>((uintptr_t)v);
 }
 
-inline void write_size_t_to_stream(std::ostream& o, size_t value) {
-  uint64_t v = (uint64_t)value;
-  write_to_stream(o, v);
-}
 /**
    * @brief Binary file output stream.
    *
    * gits::CBinOStream class is a binary file output stream.
    */
+enum CompressionType : uint8_t { NONE, LZ4, ZSTD };
+enum WriteType : uint8_t { STANDALONE, PACKAGE };
+#define COMPRESSED_PACKAGE_SIZE 2097152
 class CBinOStream : public std::ostream {
   std::streambuf* _buf;
+  std::unique_ptr<StreamCompressor> _compressor;
+  CompressionType _compressionType;
+  std::vector<char> _dataToCompress;
+  std::vector<char> _compressedDataToStore;
+  uint64_t _offset;
+  bool _initializedCompression;
 
 public:
+  bool WriteCompressed(const char* data, uint64_t dataSize);
+  std::ostream& WriteToOstream(const char* data, uint64_t dataSize);
+  void write(const char* s, std::streamsize n);
   CBinOStream(const CBinOStream&) = delete;
   CBinOStream& operator=(const CBinOStream&) = delete;
   CBinOStream(CBinOStream&&) = delete;
   CBinOStream& operator=(CBinOStream&&) = delete;
   CBinOStream(const std::filesystem::path& fileName);
   ~CBinOStream();
+
+private:
+  void HelperWriteCompressed(const char* dataToWrite, uint64_t size, WriteType writeType);
 };
+
+template <typename T>
+void write_to_stream(CBinOStream& o, const T& value) {
+  if (!Config::Get().recorder.extras.utilities.nullIO) {
+    o.write(reinterpret_cast<const char*>(&value), sizeof(value));
+  }
+}
+
+template <class T>
+void write_name_to_stream(CBinOStream& o, T value) {
+  write_to_stream(o, value);
+}
+template <class T>
+void write_name_to_stream(CBinOStream& o, T* value) {
+  uint64_t v = reinterpret_cast<uintptr_t>(value);
+  write_to_stream(o, v);
+}
+
+inline void write_size_t_to_stream(CBinOStream& o, size_t value) {
+  uint64_t v = (uint64_t)value;
+  write_to_stream(o, v);
+}
+
+CBinOStream& operator<<(CBinOStream& o, const char* value);
+CBinOStream& operator<<(CBinOStream& o, const char& value);
+CBinOStream& operator<<(CBinOStream& o, const std::string& value);
 
 /**
    * @brief Binary file input stream.
@@ -100,13 +127,23 @@ public:
 class CBinIStream /*: public std::istream*/ {
   FILE* _file;
   std::filesystem::path _path;
+  std::vector<char> _decompressedData;
+  std::vector<char> _compressedData;
+  uint64_t _offset;
+  uint64_t _size;
+  CompressionType _compressionType;
+  std::unique_ptr<StreamCompressor> _compressor;
+  bool _initializedCompression;
 
 public:
+  bool ReadHelper(char*, size_t);
   bool read(char*, size_t);
   int tellg() const;
   void get_delimited_string(std::string& s, char d);
   bool eof() const;
+  int getc();
 
+  bool ReadCompressed(char* data, uint64_t dataSize);
   CBinIStream(const std::filesystem::path& fileName);
   CBinIStream(const CBinIStream&) = delete;
   CBinIStream& operator=(const CBinIStream&) = delete;

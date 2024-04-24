@@ -56,15 +56,98 @@ void gits::check_uint_conversion_possibility(uint64_t value) {
   }
 }
 
+gits::CBinOStream& gits::operator<<(gits::CBinOStream& o, const char* value) {
+  o.write(value, strlen(value));
+  return o;
+}
+
+gits::CBinOStream& gits::operator<<(gits::CBinOStream& o, const char& value) {
+  o.write(reinterpret_cast<const char*>(&value), sizeof(value));
+  return o;
+}
+
+gits::CBinOStream& gits::operator<<(gits::CBinOStream& o, const std::string& value) {
+  o.write(reinterpret_cast<const char*>(value.c_str()), value.size());
+  return o;
+}
+
+void HelperCopy(const char* dataToCopy,
+                uint64_t dataToCopySize,
+                std::vector<char>& dataToCompress,
+                uint64_t& offset) {
+  memcpy(dataToCompress.data() + offset, dataToCopy, dataToCopySize);
+  offset += dataToCopySize;
+}
+
+void gits::CBinOStream::HelperWriteCompressed(const char* dataToWrite,
+                                              uint64_t size,
+                                              WriteType writeType) {
+  WriteToOstream(reinterpret_cast<char*>(&size), sizeof(size));
+  WriteToOstream(reinterpret_cast<char*>(&writeType), sizeof(writeType));
+  uint64_t outputSize = _compressor->Compress(dataToWrite, size, &_compressedDataToStore);
+  WriteToOstream(reinterpret_cast<char*>(&outputSize), sizeof(outputSize));
+  WriteToOstream(_compressedDataToStore.data(), outputSize);
+}
+
+bool gits::CBinOStream::WriteCompressed(const char* data, uint64_t dataSize) {
+  if (!_initializedCompression) {
+    WriteToOstream(reinterpret_cast<char*>(&_compressionType), sizeof(_compressionType));
+    WriteToOstream(reinterpret_cast<char*>(&_chunkSize), sizeof(_chunkSize));
+    _initializedCompression = true;
+  }
+  if (_compressionType == CompressionType::NONE) {
+    WriteToOstream(data, dataSize);
+  } else {
+    if (dataSize < COMPRESSED_PACKAGE_SIZE) {
+      //small package
+      if (dataSize + _offset < COMPRESSED_PACKAGE_SIZE) {
+        HelperCopy(data, dataSize, _dataToCompress, _offset);
+      } else {
+        HelperWriteCompressed(_dataToCompress.data(), _offset, WriteType::PACKAGE);
+        _offset = 0;
+        HelperCopy(data, dataSize, _dataToCompress, _offset);
+      }
+    } else {
+      //big package
+      if (_offset > 0) {
+        //write old packages if available
+        HelperWriteCompressed(_dataToCompress.data(), _offset, WriteType::PACKAGE);
+        _offset = 0;
+      }
+      HelperWriteCompressed(data, dataSize, WriteType::STANDALONE);
+    }
+  }
+  return true;
+}
+
+std::ostream& gits::CBinOStream::WriteToOstream(const char* data, uint64_t dataSize) {
+  return std::ostream::write(data, dataSize);
+}
+
+void gits::CBinOStream::write(const char* s, std::streamsize n) {
+  WriteCompressed(s, n);
+}
+
 gits::CBinOStream::CBinOStream(const std::filesystem::path& fileName)
-    : std::ostream(nullptr), _buf(nullptr) {
+    : std::ostream(nullptr),
+      _buf(nullptr),
+      _compressor(new LZ4StreamCompressor()),
+      _compressionType(CompressionType::LZ4),
+      _offset(0),
+      _initializedCompression(false) {
   CheckMinimumAvailableDiskSize();
   std::ios::openmode mode = std::ios::binary | std::ios::trunc | std::ios::out;
   _buf = initialize_gits_streambuf(fileName, mode);
   init(_buf);
+  _dataToCompress.resize(COMPRESSED_PACKAGE_SIZE);
+  _compressedDataToStore.resize(COMPRESSED_PACKAGE_SIZE);
 }
 
 gits::CBinOStream::~CBinOStream() {
+  if (_offset > 0) {
+    HelperWriteCompressed(_dataToCompress.data(), _offset, WriteType::PACKAGE);
+    _offset = 0;
+  }
   delete _buf;
 }
 
@@ -77,7 +160,7 @@ gits::CBinOStream::~CBinOStream() {
  * @param fileName Name of a file to create.
  */
 gits::CBinIStream::CBinIStream(const std::filesystem::path& fileName)
-    : _file(nullptr), _path(fileName) {
+    : _file(nullptr), _path(fileName), _offset(0), _size(0), _initializedCompression(false) {
   _file = fopen(fileName.string().c_str(), "rb"
 #ifdef GITS_PLATFORM_WINDOWS
                                            "S"
@@ -87,9 +170,72 @@ gits::CBinIStream::CBinIStream(const std::filesystem::path& fileName)
     Log(ERR) << "Couldn't open file: " << fileName;
     throw std::runtime_error("failed to opeprn file");
   }
+  _decompressedData.resize(COMPRESSED_PACKAGE_SIZE);
+  _compressedData.resize(COMPRESSED_PACKAGE_SIZE);
 }
 
-bool gits::CBinIStream::read(char* buf, size_t size) {
+bool gits::CBinIStream::ReadCompressed(char* data, uint64_t dataSize) {
+  if (!_initializedCompression) {
+    ReadHelper(reinterpret_cast<char*>(&_compressionType), sizeof(_compressionType));
+    ReadHelper(reinterpret_cast<char*>(&_chunkSize), sizeof(_chunkSize));
+    if (_compressionType == CompressionType::LZ4) {
+      _compressor = new LZ4StreamCompressor;
+    } else if (_compressionType == CompressionType::ZSTD) {
+      _compressor = new ZSTDStreamCompressor;
+    }
+    _initializedCompression = true;
+  }
+  if (_compressionType == CompressionType::NONE) {
+    ReadHelper(data, dataSize);
+  } else {
+    if (_offset < _size) {
+      if (_offset + dataSize <= _size) {
+        //we have data loaded, just copy it and return
+        memcpy(data, _decompressedData.data() + _offset, dataSize);
+        _offset += dataSize;
+        return true;
+      } else {
+        //It is possible that sometimes we have different logic for Read and Write functions (e.g. storing elem by elem, loading whole vector). In this case we need to load partly from old chunk and partly from new.
+        uint64_t oldChunkToCopySize = _size - _offset;
+        memcpy(data, _decompressedData.data() + _offset, oldChunkToCopySize);
+        _offset += oldChunkToCopySize;
+        dataSize -= oldChunkToCopySize;
+        data += oldChunkToCopySize;
+      }
+    }
+    if (eof()) {
+      return false;
+    }
+    uint64_t size = 0;
+    ReadHelper(reinterpret_cast<char*>(&size), sizeof(size));
+    WriteType writeType = WriteType::STANDALONE;
+    ReadHelper(reinterpret_cast<char*>(&writeType), sizeof(writeType));
+    uint64_t compressedSize = 0;
+    ReadHelper(reinterpret_cast<char*>(&compressedSize), sizeof(compressedSize));
+    if (eof()) {
+      return false;
+    }
+    if (compressedSize > _compressedData.size()) {
+      _compressedData.resize(compressedSize);
+    }
+    ReadHelper(_compressedData.data(), compressedSize);
+    if (writeType == WriteType::PACKAGE) {
+      _size = size;
+      _offset = 0;
+      _compressor->Decompress(_compressedData, compressedSize, _size, _decompressedData.data());
+
+      memcpy(data, _decompressedData.data() + _offset, dataSize);
+      _offset += dataSize;
+    } else {
+      _compressor->Decompress(_compressedData, compressedSize, size, data);
+      _offset = 0;
+      _size = 0;
+    }
+  }
+  return true;
+}
+
+bool gits::CBinIStream::ReadHelper(char* buf, size_t size) {
 #ifdef GITS_PLATFORM_WINDOWS
   auto ret = _fread_nolock_s(buf, size, 1, size, _file);
 #else
@@ -98,19 +244,37 @@ bool gits::CBinIStream::read(char* buf, size_t size) {
   return ret != 0;
 }
 
+bool gits::CBinIStream::read(char* buf, size_t size) {
+  if (stream_older_than(GITS_TOKEN_COMPRESSION)) {
+    return ReadHelper(buf, size);
+  } else {
+    return ReadCompressed(buf, size);
+  }
+}
+
 int gits::CBinIStream::tellg() const {
   return ftell(_file);
 }
 
+int gits::CBinIStream::getc() {
+  if (stream_older_than(GITS_TOKEN_COMPRESSION)) {
+    return fgetc(_file);
+  } else {
+    int buf = 0;
+    ReadCompressed(reinterpret_cast<char*>(&buf), 1);
+    return buf;
+  }
+}
+
 void gits::CBinIStream::get_delimited_string(std::string& s, char t) {
   s.resize(1024);
-  int delim = fgetc(_file);
+  int delim = getc();
   if (delim != t) {
     throw std::runtime_error("unexpected delimiter of string read");
   }
 
   for (int i = 0; i < 1024; ++i) {
-    char byte = (char)fgetc(_file);
+    char byte = (char)getc();
     if (byte == t) {
       s.resize(i);
       return;
