@@ -396,8 +396,8 @@ Extras {
     BufferStorageFlagsMask  1
     RemoveResourceHash      False
     Compression {
-      Type         None       ; None / LZ4 / ZSTD
-      Level          1        ; 1-10: 1 - fastest, but biggest stream size, 10 - slowest, stream size better optimized
+      Type         LZ4       ; None / LZ4 / ZSTD
+      Level          10        ; 1-10: 1 - fastest, but biggest stream size, 10 - slowest, stream size better optimized
       ChunkSize   2097152     ; grouping small updates in chunks, default chunk size - 2MB
     }
   }
