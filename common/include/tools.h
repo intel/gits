@@ -552,6 +552,9 @@ class ZSTDStreamCompressor : public StreamCompressor {
 public:
   ZSTDStreamCompressor();
   ~ZSTDStreamCompressor();
+  ZSTDStreamCompressor(const ZSTDStreamCompressor& other) = delete;
+  ZSTDStreamCompressor& operator=(const ZSTDStreamCompressor& other) = delete;
+
   virtual uint64_t Compress(const char* uncompressedData,
                             const uint64_t uncompressedDataSize,
                             std::vector<char>* compressedData) override;

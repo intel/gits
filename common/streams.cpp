@@ -170,7 +170,13 @@ gits::CBinOStream::~CBinOStream() {
  * @param fileName Name of a file to create.
  */
 gits::CBinIStream::CBinIStream(const std::filesystem::path& fileName)
-    : _file(nullptr), _path(fileName), _offset(0), _size(0), _initializedCompression(false) {
+    : _file(nullptr),
+      _path(fileName),
+      _offset(0),
+      _size(0),
+      _compressionType(CompressionType::NONE),
+      _initializedCompression(false),
+      _chunkSize(0) {
   _file = fopen(fileName.string().c_str(), "rb"
 #ifdef GITS_PLATFORM_WINDOWS
                                            "S"
@@ -191,12 +197,14 @@ bool gits::CBinIStream::ReadCompressed(char* data, uint64_t dataSize) {
     } else if (_compressionType == CompressionType::ZSTD) {
       _compressor = std::make_unique<ZSTDStreamCompressor>();
     }
-    if (_chunkSize > 0) {
+    uint64_t max_size = std::min(_decompressedData.max_size(), _compressedData.max_size());
+    if (_chunkSize > 0 && _chunkSize <= max_size) {
       _decompressedData.resize(_chunkSize);
       _compressedData.resize(_chunkSize);
     }
     _initializedCompression = true;
   }
+  uint64_t internalOffset = 0;
   if (_compressionType == CompressionType::NONE) {
     ReadHelper(data, dataSize);
   } else {
@@ -208,11 +216,10 @@ bool gits::CBinIStream::ReadCompressed(char* data, uint64_t dataSize) {
         return true;
       } else {
         //It is possible that sometimes we have different logic for Read and Write functions (e.g. storing elem by elem, loading whole vector). In this case we need to load partly from old chunk and partly from new.
-        uint64_t oldChunkToCopySize = _size - _offset;
-        memcpy(data, _decompressedData.data() + _offset, oldChunkToCopySize);
-        _offset += oldChunkToCopySize;
-        dataSize -= oldChunkToCopySize;
-        data += oldChunkToCopySize;
+        internalOffset = _size - _offset;
+        memcpy(data, _decompressedData.data() + _offset, internalOffset);
+        _offset += internalOffset;
+        dataSize -= internalOffset;
       }
     }
     if (eof()) {
@@ -227,6 +234,9 @@ bool gits::CBinIStream::ReadCompressed(char* data, uint64_t dataSize) {
     if (eof()) {
       return false;
     }
+    if (compressedSize > _compressedData.max_size()) {
+      throw std::runtime_error(EXCEPTION_MESSAGE);
+    }
     if (compressedSize > _compressedData.size()) {
       _compressedData.resize(compressedSize);
     }
@@ -236,7 +246,7 @@ bool gits::CBinIStream::ReadCompressed(char* data, uint64_t dataSize) {
       _offset = 0;
       _compressor->Decompress(_compressedData, compressedSize, _size, _decompressedData.data());
 
-      memcpy(data, _decompressedData.data() + _offset, dataSize);
+      memcpy(data + internalOffset, _decompressedData.data() + _offset, dataSize);
       _offset += dataSize;
     } else {
       _compressor->Decompress(_compressedData, compressedSize, size, data);
