@@ -568,8 +568,8 @@ public:
 private:
   ZSTD_CCtx* ZSTDContext;
   const std::map<int, int> perfModes{
-      {1, -8}, {2, -4}, {3, -1}, {4, 3},  {5, 7},
-      {6, 10}, {7, 13}, {8, 16}, {9, 19}, {10, 22}}; // 1 - fastest, 10 - slowest
+      {1, -7}, {2, -5}, {3, -3}, {4, -1}, {5, 1},
+      {6, 3},  {7, 5},  {8, 7},  {9, 9},  {10, 11}}; // 1 - fastest, 10 - slowest
 };
 
 #if defined(GITS_PLATFORM_WINDOWS)
