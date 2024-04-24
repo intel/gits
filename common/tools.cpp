@@ -683,7 +683,8 @@ uint64_t gits::LZ4StreamCompressor::Compress(const char* uncompressedData,
   }
   int returnedCompressedSize = LZ4_compress_fast_extState(
       &ctx, uncompressedData, compressedData->data(), static_cast<int32_t>(uncompressedDataSize),
-      static_cast<int32_t>(lz4MaxCompressedSize), 1);
+      static_cast<int32_t>(lz4MaxCompressedSize),
+      perfModes.at(Config::Get().recorder.extras.optimizations.compression.level));
   if (returnedCompressedSize <= 0) {
     Log(ERR) << "LZ4 Compress failed.";
     throw EOperationFailed(EXCEPTION_MESSAGE);
@@ -729,9 +730,10 @@ uint64_t gits::ZSTDStreamCompressor::Compress(const char* uncompressedData,
   if (zstdMaxCompressedSize > compressedData->size()) {
     compressedData->resize(zstdMaxCompressedSize);
   }
-  uint64_t returnedCompressedSize =
-      ZSTD_compressCCtx(ZSTDContext, compressedData->data(), zstdMaxCompressedSize,
-                        uncompressedData, uncompressedDataSize, -4);
+  uint64_t returnedCompressedSize = ZSTD_compressCCtx(
+      ZSTDContext, compressedData->data(), zstdMaxCompressedSize, uncompressedData,
+      uncompressedDataSize,
+      perfModes.at(Config::Get().recorder.extras.optimizations.compression.level));
   if (ZSTD_isError(returnedCompressedSize)) {
     Log(ERR) << "ZSTD Compress failed with error code:" << returnedCompressedSize;
     throw EOperationFailed(EXCEPTION_MESSAGE);

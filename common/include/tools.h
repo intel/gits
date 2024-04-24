@@ -56,7 +56,8 @@ ENABLE_WARNINGS
 
 namespace gits {
 enum class THashType { MURMUR, XX, INCREMENTAL_NUMBER, CRC32ISH, XXCRC32 };
-}
+enum CompressionType : uint8_t { NONE, LZ4, ZSTD };
+} // namespace gits
 
 #include "config.h"
 
@@ -542,6 +543,9 @@ public:
 
 private:
   LZ4_stream_t ctx;
+  const std::map<int, int> perfModes{
+      {1, 50}, {2, 35}, {3, 15}, {4, 10}, {5, 6},
+      {6, 5},  {7, 4},  {8, 3},  {9, 2},  {10, 1}}; // 1 - fastest, 10 - slowest
 };
 
 class ZSTDStreamCompressor : public StreamCompressor {
@@ -558,6 +562,9 @@ public:
 
 private:
   ZSTD_CCtx* ZSTDContext;
+  const std::map<int, int> perfModes{
+      {1, -8}, {2, -4}, {3, -1}, {4, 3},  {5, 7},
+      {6, 10}, {7, 13}, {8, 16}, {9, 19}, {10, 22}}; // 1 - fastest, 10 - slowest
 };
 #endif
 

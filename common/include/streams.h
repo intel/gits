@@ -66,9 +66,7 @@ void read_name_from_stream(std::istream& i, T*& value) {
    *
    * gits::CBinOStream class is a binary file output stream.
    */
-enum CompressionType : uint8_t { NONE, LZ4, ZSTD };
 enum WriteType : uint8_t { STANDALONE, PACKAGE };
-#define COMPRESSED_PACKAGE_SIZE 2097152
 class CBinOStream : public std::ostream {
   std::streambuf* _buf;
   std::unique_ptr<StreamCompressor> _compressor;
@@ -77,6 +75,7 @@ class CBinOStream : public std::ostream {
   std::vector<char> _compressedDataToStore;
   uint64_t _offset;
   bool _initializedCompression;
+  uint64_t _chunkSize;
 
 public:
   bool WriteCompressed(const char* data, uint64_t dataSize);
@@ -134,6 +133,7 @@ class CBinIStream /*: public std::istream*/ {
   CompressionType _compressionType;
   std::unique_ptr<StreamCompressor> _compressor;
   bool _initializedCompression;
+  uint64_t _chunkSize;
 
 public:
   bool ReadHelper(char*, size_t);

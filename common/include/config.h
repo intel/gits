@@ -182,6 +182,16 @@ struct HashTypeOpt : NamedValuesBase<THashType, HashTypeOpt> {
   }
 };
 
+struct CompressionTypeOpt : NamedValuesBase<CompressionType, CompressionTypeOpt> {
+  static void describe_type() {
+    readable_name() = "Type";
+    default_value() = CompressionType::NONE;
+    values()["None"] = CompressionType::NONE;
+    values()["LZ4"] = CompressionType::LZ4;
+    values()["ZSTD"] = CompressionType::ZSTD;
+  }
+};
+
 struct BuffersStateOpt : NamedValuesBase<TBuffersState, BuffersStateOpt> {
   static void describe_type() {
     readable_name() = "BuffersState";
@@ -737,6 +747,11 @@ struct Config {
         vi_uint bufferMapAccessMask;
         vi_uint bufferStorageFlagsMask;
         vi_bool removeResourceHash;
+        struct Compression {
+          CompressionTypeOpt type;
+          vi_uint level;
+          vi_uint chunkSize;
+        } compression;
       } optimizations;
 
       struct Utilities {

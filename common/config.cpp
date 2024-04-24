@@ -985,6 +985,15 @@ bool gits::Config::Set(const std::filesystem::path& cfgDir) {
                      GITS_PLATFORM_BIT_ALL);
   ReadRecorderOption(pt, "Extras.Optimizations.RemoveResourceHash",
                      cfg.recorder.extras.optimizations.removeResourceHash, GITS_PLATFORM_BIT_ALL);
+  optionValue = "None";
+  ReadRecorderOption(pt, "Extras.Optimizations.Compression.Type", optionValue,
+                     GITS_PLATFORM_BIT_ALL);
+  cfg.recorder.extras.optimizations.compression.type.setFromString(optionValue);
+  ReadRecorderOption(pt, "Extras.Optimizations.Compression.Level",
+                     cfg.recorder.extras.optimizations.compression.level, GITS_PLATFORM_BIT_ALL);
+  ReadRecorderOption(pt, "Extras.Optimizations.Compression.ChunkSize",
+                     cfg.recorder.extras.optimizations.compression.chunkSize,
+                     GITS_PLATFORM_BIT_ALL);
   ReadRecorderOption(pt, "Extras.Utilities.ForceDumpOnError",
                      cfg.recorder.extras.utilities.forceDumpOnError, GITS_PLATFORM_BIT_ALL);
   ReadRecorderOption(pt, "Extras.Utilities.ExtendedDiagnostic",

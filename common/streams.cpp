@@ -98,9 +98,9 @@ bool gits::CBinOStream::WriteCompressed(const char* data, uint64_t dataSize) {
   if (_compressionType == CompressionType::NONE) {
     WriteToOstream(data, dataSize);
   } else {
-    if (dataSize < COMPRESSED_PACKAGE_SIZE) {
+    if (dataSize < _chunkSize) {
       //small package
-      if (dataSize + _offset < COMPRESSED_PACKAGE_SIZE) {
+      if (dataSize + _offset < _chunkSize) {
         HelperCopy(data, dataSize, _dataToCompress, _offset);
       } else {
         HelperWriteCompressed(_dataToCompress.data(), _offset, WriteType::PACKAGE);
@@ -131,16 +131,26 @@ void gits::CBinOStream::write(const char* s, std::streamsize n) {
 gits::CBinOStream::CBinOStream(const std::filesystem::path& fileName)
     : std::ostream(nullptr),
       _buf(nullptr),
-      _compressor(new LZ4StreamCompressor()),
-      _compressionType(CompressionType::LZ4),
+      _compressionType(gits::Config::Get().recorder.extras.optimizations.compression.type),
       _offset(0),
-      _initializedCompression(false) {
+      _initializedCompression(false),
+      _chunkSize(0) {
   CheckMinimumAvailableDiskSize();
   std::ios::openmode mode = std::ios::binary | std::ios::trunc | std::ios::out;
   _buf = initialize_gits_streambuf(fileName, mode);
   init(_buf);
-  _dataToCompress.resize(COMPRESSED_PACKAGE_SIZE);
-  _compressedDataToStore.resize(COMPRESSED_PACKAGE_SIZE);
+  if (_compressionType != CompressionType::NONE) {
+    _chunkSize = gits::Config::Get().recorder.extras.optimizations.compression.chunkSize;
+    _dataToCompress.resize(_chunkSize);
+    _compressedDataToStore.resize(_chunkSize);
+  }
+  if (_compressionType == CompressionType::LZ4) {
+    _compressor = std::make_unique<LZ4StreamCompressor>();
+  } else if (_compressionType == CompressionType::ZSTD) {
+    _compressor = std::make_unique<ZSTDStreamCompressor>();
+  } else {
+    _compressor = nullptr;
+  }
 }
 
 gits::CBinOStream::~CBinOStream() {
@@ -170,8 +180,6 @@ gits::CBinIStream::CBinIStream(const std::filesystem::path& fileName)
     Log(ERR) << "Couldn't open file: " << fileName;
     throw std::runtime_error("failed to opeprn file");
   }
-  _decompressedData.resize(COMPRESSED_PACKAGE_SIZE);
-  _compressedData.resize(COMPRESSED_PACKAGE_SIZE);
 }
 
 bool gits::CBinIStream::ReadCompressed(char* data, uint64_t dataSize) {
@@ -179,9 +187,13 @@ bool gits::CBinIStream::ReadCompressed(char* data, uint64_t dataSize) {
     ReadHelper(reinterpret_cast<char*>(&_compressionType), sizeof(_compressionType));
     ReadHelper(reinterpret_cast<char*>(&_chunkSize), sizeof(_chunkSize));
     if (_compressionType == CompressionType::LZ4) {
-      _compressor = new LZ4StreamCompressor;
+      _compressor = std::make_unique<LZ4StreamCompressor>();
     } else if (_compressionType == CompressionType::ZSTD) {
-      _compressor = new ZSTDStreamCompressor;
+      _compressor = std::make_unique<ZSTDStreamCompressor>();
+    }
+    if (_chunkSize > 0) {
+      _decompressedData.resize(_chunkSize);
+      _compressedData.resize(_chunkSize);
     }
     _initializedCompression = true;
   }
