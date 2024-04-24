@@ -170,18 +170,6 @@ struct GLNativeApiOpt : NamedValuesBase<TForcedGLNativeApi, GLNativeApiOpt> {
   }
 };
 
-struct HashTypeOpt : NamedValuesBase<THashType, HashTypeOpt> {
-  static void describe_type() {
-    readable_name() = "HashType";
-    default_value() = THashType::CRC32ISH;
-    values()["Murmurhash"] = THashType::MURMUR;
-    values()["Xxhash"] = THashType::XX;
-    values()["IncrementalNumber"] = THashType::INCREMENTAL_NUMBER;
-    values()["Crc32ish"] = THashType::CRC32ISH;
-    values()["XxCrc32"] = THashType::XXCRC32;
-  }
-};
-
 struct CompressionTypeOpt : NamedValuesBase<CompressionType, CompressionTypeOpt> {
   static void describe_type() {
     readable_name() = "Type";
@@ -736,17 +724,8 @@ struct Config {
 
     struct Extras {
       struct Optimizations {
-        HashTypeOpt hashType;
-        struct PartialHashInfo {
-          vi_bool enabled;
-          vi_uint cutoff;
-          vi_uint chunks;
-          vi_uint ratio;
-        } partialHash;
-        vi_uint asyncBufferWrites;
         vi_uint bufferMapAccessMask;
         vi_uint bufferStorageFlagsMask;
-        vi_bool removeResourceHash;
         struct Compression {
           CompressionTypeOpt type;
           vi_uint level;

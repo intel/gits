@@ -142,9 +142,6 @@ gits::Config::Config() {
   player.printMemUsageVk = false;
   player.forceMultithreadedPipelineCompilation = false;
 
-  recorder.extras.optimizations.partialHash.cutoff = 8192;
-  recorder.extras.optimizations.partialHash.chunks = 10;
-  recorder.extras.optimizations.partialHash.ratio = 20;
   recorder.extras.utilities.extendedDiagnosticInfo = true;
   recorder.basic.exitSignal = 15;
 
@@ -964,18 +961,6 @@ bool gits::Config::Set(const std::filesystem::path& cfgDir) {
   //******************************** EXTRAS ******************************************
   ReadRecorderOption(pt, "Extras.Optimizations.TokenBurstLimit", cfg.common.tokenBurst,
                      GITS_PLATFORM_BIT_ALL);
-  ReadRecorderOption(pt, "Extras.Optimizations.HashType", optionValue, GITS_PLATFORM_BIT_ALL);
-  cfg.recorder.extras.optimizations.hashType.setFromString(optionValue);
-  ReadRecorderOption(pt, "Extras.Optimizations.HashPartially",
-                     cfg.recorder.extras.optimizations.partialHash.enabled, GITS_PLATFORM_BIT_ALL);
-  ReadRecorderOption(pt, "Extras.Optimizations.PartialHashCutoff",
-                     cfg.recorder.extras.optimizations.partialHash.cutoff, GITS_PLATFORM_BIT_ALL);
-  ReadRecorderOption(pt, "Extras.Optimizations.PartialHashChunks",
-                     cfg.recorder.extras.optimizations.partialHash.chunks, GITS_PLATFORM_BIT_ALL);
-  ReadRecorderOption(pt, "Extras.Optimizations.PartialHashRatio",
-                     cfg.recorder.extras.optimizations.partialHash.ratio, GITS_PLATFORM_BIT_ALL);
-  ReadRecorderOption(pt, "Extras.Optimizations.AsyncBufferWrites",
-                     cfg.recorder.extras.optimizations.asyncBufferWrites, GITS_PLATFORM_BIT_ALL);
   cfg.recorder.extras.optimizations.bufferMapAccessMask = 0xFFFFFFFF;
   ReadRecorderOption(pt, "Extras.Optimizations.BufferMapAccessMask",
                      cfg.recorder.extras.optimizations.bufferMapAccessMask, GITS_PLATFORM_BIT_ALL);
@@ -983,8 +968,6 @@ bool gits::Config::Set(const std::filesystem::path& cfgDir) {
   ReadRecorderOption(pt, "Extras.Optimizations.BufferStorageFlagsMask",
                      cfg.recorder.extras.optimizations.bufferStorageFlagsMask,
                      GITS_PLATFORM_BIT_ALL);
-  ReadRecorderOption(pt, "Extras.Optimizations.RemoveResourceHash",
-                     cfg.recorder.extras.optimizations.removeResourceHash, GITS_PLATFORM_BIT_ALL);
   optionValue = "None";
   ReadRecorderOption(pt, "Extras.Optimizations.Compression.Type", optionValue,
                      GITS_PLATFORM_BIT_ALL);
@@ -1017,7 +1000,6 @@ bool gits::Config::Set(const std::filesystem::path& cfgDir) {
                      cfg.recorder.extras.utilities.highIntegrity, GITS_PLATFORM_BIT_ALL);
   if (cfg.recorder.extras.utilities.highIntegrity) {
     Log(INFO) << "High integrity mode";
-    cfg.recorder.extras.optimizations.asyncBufferWrites = 0;
     cfg.common.tokenBurst = 1;
     cfg.common.tokenBurstNum = 1;
     if (cfg.recorder.extras.utilities.zipTextFiles) {

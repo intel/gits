@@ -380,21 +380,8 @@ LevelZero {
 Extras {
   Optimizations {
     TokenBurstLimit         10000
-    ##
-    %if platform in ["win32", "lnx_32", "lnx_64", "lnx_arm"]:
-    HashType                XxCrc32
-    %else:
-    HashType                Crc32ish
-    %endif
-    ##
-    AsyncBufferWrites       2000000
-    HashPartially           False
-    PartialHashCutoff       8192
-    PartialHashChunks       10
-    PartialHashRatio        20
     BufferMapAccessMask     0xFFFFFFF3
     BufferStorageFlagsMask  1
-    RemoveResourceHash      False
     Compression {
       Type         LZ4       ; None / LZ4 / ZSTD
       Level          10        ; 1-10: 1 - fastest, but biggest stream size, 10 - slowest, stream size better optimized
@@ -908,44 +895,6 @@ Extras {
 ;                                                               GITS will keep a few packs of that many tokens to facilitate hiding
 ;                                                               of IO latency.
 ;
-;  Extras.Optimizations.HashType                              - Controls hashing behavior of binary resources. Takes value of
-;                                                               Crc32ish , Murmurhash , Xxhash , XxCrc32, IncrementalNumber . This
-;                                                               is the hash function that is used to identify all binary resources
-;                                                               that GITS handles. Setting this to IncrementalNumber will
-;                                                               make hash calculations very fast and effectively eliminate risk
-;                                                               of hash collisions at the cost of lack of buffer/texture data deduplication
-;                                                               which may result in excessive stream size. XxCrc32 combines XXHash with Crc32Ish
-;                                                               and it may slightly affect performance, but it is recommended for recording long
-;                                                               streams due to smaller chance of collisions.
-;
-;  Extras.Optimizations.AsyncBufferWrites                     - Maximum number of bytes of binary data that will be queued
-;                                                               to write to hdd in separate thread. Increasing can improve
-;                                                               recording performance at cost of memory usage. Specify 0 to
-;                                                               disable the feature (data will be written to hdd in main recorder
-;                                                               thread).
-;
-;  Extras.Optimizations.HashPartially                         - When resource hashing is enabled (see 'DontHashResources')
-;                                                               the hash is derived from only about ~10% of data to
-;                                                               minimize the cost of hash computation. This introduces
-;                                                               higher risk of collisions but should improve
-;                                                               recording performance.
-;                                                               WARNING: This option _will_ in general cause stream corruptions
-;                                                                        and will require tweeking accompanying parameters
-;                                                                        to obtain useful results. Use with caution.
-;
-;  Extras.Optimizations.PartialHashCutoff                     - Partial hash is computed only for blocks of data larger
-;                                                               then this (in bytes). Smaller blocks are fully hashed.
-;
-;  Extras.Optimizations.PartialHashChunks                     - Number of evenly distributed chunks within hashed block
-;                                                               to be included during hash computation.
-;
-;  Extras.Optimizations.PartialHashRatio                      - Specified the amount of data to be hashed specified as a divisor.
-;                                                                 1 - hash whole block
-;                                                                 2 - hash half of the block
-;                                                                10 - hash only 10% of the block
-;                                                               200 - hash only 0.5% of the block
-;                                                               etc ...
-;
 ;  Extras.Optimizations.BufferMapAccessMask                   - This mask may be used to remove undesired options from buffer mapping
 ;                                                               access bitfield specified by glMapBufferRange for example. By default
 ;                                                               GITS removes GL_MAP_INVALIDATE_BUFFER_BIT and GL_MAP_INVALIDATE_RANGE_BIT
@@ -956,9 +905,6 @@ Extras {
 ;  Extras.Optimizations.BufferStorageFlagsMask                - This mask may be used to add options to storage flags bitfield
 ;                                                               specified by glBufferStorage or glNamedBufferStorageEXT. By default
 ;                                                               GITS adds GL_MAP_READ_BIT.
-;
-;  Extras.Optimizations.RemoveResourceHash                    - Removes resource checksum validation. Injects unique value as a hash for
-;                                                               every data object.
 ;
 ;  Extras.Utilities.ExtendedDiagnostic                        - Enables gathering of system diagnostic info during stream recording.
 ;                                                               Turn off if Gits causes application to crash during startup.
