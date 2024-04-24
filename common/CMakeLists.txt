@@ -97,7 +97,7 @@ add_library(common ${common_SOURCES})
 
 add_definitions(-DGITS_COMMON_PROJ)
 
-target_link_libraries(common OpenGL_common xxhash murmurhash)
+target_link_libraries(common OpenGL_common xxhash murmurhash lz4 libzstd_static)
 
 if(UNIX)
   target_link_libraries(common rt dl lua)

@@ -43,6 +43,8 @@ ENABLE_WARNINGS
 
 #ifndef BUILD_FOR_CCODE
 #include "nlohmann/json.hpp"
+#include <zstd.h>
+#include <lz4.h>
 #endif
 
 #ifndef _DEBUG
@@ -512,6 +514,50 @@ public:
     }
     _tokensList.clear();
   }
+};
+
+class StreamCompressor {
+public:
+  StreamCompressor() {}
+  virtual ~StreamCompressor() {}
+  virtual uint64_t Compress(const char* uncompressedData,
+                            const uint64_t uncompressedDataSize,
+                            std::vector<char>* compressedData) = 0;
+  virtual uint64_t Decompress(const std::vector<char>& compressedData,
+                              const uint64_t compressedDataSize,
+                              const uint64_t expectedUncompressedSize,
+                              char* uncompressedData) = 0;
+};
+
+class LZ4StreamCompressor : public StreamCompressor {
+public:
+  LZ4StreamCompressor() {}
+  virtual uint64_t Compress(const char* uncompressedData,
+                            const uint64_t uncompressedDataSize,
+                            std::vector<char>* compressedData) override;
+  virtual uint64_t Decompress(const std::vector<char>& compressedData,
+                              const uint64_t compressedDataSize,
+                              const uint64_t expectedUncompressedSize,
+                              char* uncompressedData) override;
+
+private:
+  LZ4_stream_t ctx;
+};
+
+class ZSTDStreamCompressor : public StreamCompressor {
+public:
+  ZSTDStreamCompressor();
+  ~ZSTDStreamCompressor();
+  virtual uint64_t Compress(const char* uncompressedData,
+                            const uint64_t uncompressedDataSize,
+                            std::vector<char>* compressedData) override;
+  virtual uint64_t Decompress(const std::vector<char>& compressedData,
+                              const uint64_t compressedDataSize,
+                              const uint64_t expectedUncompressedSize,
+                              char* uncompressedData) override;
+
+private:
+  ZSTD_CCtx* ZSTDContext;
 };
 #endif
 

@@ -667,6 +667,91 @@ void gits::GetMemoryDiffSubRange(const void* oldData,
   offset = minNewPtr - (const uint8_t*)newRangeData;
   length = maxOldPtr - minOldPtr;
 }
+
+uint64_t gits::LZ4StreamCompressor::Compress(const char* uncompressedData,
+                                             const uint64_t uncompressedDataSize,
+                                             std::vector<char>* compressedData) {
+  if (uncompressedDataSize > INT_MAX) {
+    Log(ERR) << "LZ4 Compress failed due to int overflow.";
+    throw EOperationFailed(EXCEPTION_MESSAGE);
+  }
+  uint64_t returnValue = 0;
+  uint64_t lz4MaxCompressedSize =
+      static_cast<uint64_t>(LZ4_compressBound(static_cast<int>(uncompressedDataSize)));
+  if (lz4MaxCompressedSize > compressedData->size()) {
+    compressedData->resize(lz4MaxCompressedSize);
+  }
+  int returnedCompressedSize = LZ4_compress_fast_extState(
+      &ctx, uncompressedData, compressedData->data(), static_cast<int32_t>(uncompressedDataSize),
+      static_cast<int32_t>(lz4MaxCompressedSize), 1);
+  if (returnedCompressedSize <= 0) {
+    Log(ERR) << "LZ4 Compress failed.";
+    throw EOperationFailed(EXCEPTION_MESSAGE);
+  } else {
+    returnValue = returnedCompressedSize;
+  }
+  return returnValue;
+}
+
+uint64_t gits::LZ4StreamCompressor::Decompress(const std::vector<char>& compressedData,
+                                               const uint64_t compressedDataSize,
+                                               const uint64_t expectedUncompressedSize,
+                                               char* uncompressedData) {
+  if (compressedDataSize > INT_MAX || expectedUncompressedSize > INT_MAX) {
+    Log(ERR) << "LZ4 Decompress failed due to int overflow.";
+    throw EOperationFailed(EXCEPTION_MESSAGE);
+  }
+  uint64_t returnValue = 0;
+  int returnedUncompressedSize = LZ4_decompress_safe(
+      compressedData.data(), uncompressedData, static_cast<int32_t>(compressedDataSize),
+      static_cast<int32_t>(expectedUncompressedSize));
+  if (returnedUncompressedSize <= 0) {
+    Log(ERR) << "LZ4 Decompress failed with error code:" << returnedUncompressedSize;
+    throw EOperationFailed(EXCEPTION_MESSAGE);
+  } else {
+    returnValue = returnedUncompressedSize;
+  }
+  return returnValue;
+}
+
+gits::ZSTDStreamCompressor::ZSTDStreamCompressor() {
+  ZSTDContext = ZSTD_createCCtx();
+}
+
+gits::ZSTDStreamCompressor::~ZSTDStreamCompressor() {
+  ZSTD_freeCCtx(ZSTDContext);
+}
+
+uint64_t gits::ZSTDStreamCompressor::Compress(const char* uncompressedData,
+                                              const uint64_t uncompressedDataSize,
+                                              std::vector<char>* compressedData) {
+  uint64_t zstdMaxCompressedSize = ZSTD_compressBound(uncompressedDataSize);
+  if (zstdMaxCompressedSize > compressedData->size()) {
+    compressedData->resize(zstdMaxCompressedSize);
+  }
+  uint64_t returnedCompressedSize =
+      ZSTD_compressCCtx(ZSTDContext, compressedData->data(), zstdMaxCompressedSize,
+                        uncompressedData, uncompressedDataSize, -4);
+  if (ZSTD_isError(returnedCompressedSize)) {
+    Log(ERR) << "ZSTD Compress failed with error code:" << returnedCompressedSize;
+    throw EOperationFailed(EXCEPTION_MESSAGE);
+  }
+  return returnedCompressedSize;
+}
+
+uint64_t gits::ZSTDStreamCompressor::Decompress(const std::vector<char>& compressedData,
+                                                const uint64_t compressedDataSize,
+                                                const uint64_t expectedUncompressedSize,
+                                                char* uncompressedData) {
+  uint64_t returnedUncompressedSize = ZSTD_decompress(uncompressedData, expectedUncompressedSize,
+                                                      compressedData.data(), compressedDataSize);
+  if (ZSTD_isError(returnedUncompressedSize)) {
+    Log(ERR) << "ZSTD Decompress failed with error code:" << returnedUncompressedSize;
+    throw EOperationFailed(EXCEPTION_MESSAGE);
+  }
+  return returnedUncompressedSize;
+}
+
 #endif
 
 #if defined(GITS_PLATFORM_WINDOWS)
