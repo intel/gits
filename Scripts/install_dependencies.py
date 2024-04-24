@@ -362,6 +362,22 @@ class NlohmannJson(Repository):
         self.name = "json"
         self.url = "https://github.com/nlohmann/json.git"
 
+class lz4(Repository):
+    def set_branch(self):
+        self.branch = "v1.9.4"
+
+    def init(self):
+        self.name = "lz4"
+        self.url = "https://github.com/lz4/lz4.git"
+
+class zstd(Repository):
+    def set_branch(self):
+        self.branch = "v1.5.6"
+
+    def init(self):
+        self.name = "zstd"
+        self.url = "https://github.com/facebook/zstd.git"
+
 
 class Repositories:
     def __init__(self, args) -> None:
@@ -396,6 +412,10 @@ class Repositories:
             self.repos.append(RenderDoc())
         if args.with_all or args.with_json:
             self.repos.append(NlohmannJson())
+        if args.with_all or args.with_lz4:
+            self.repos.append(lz4())
+        if args.with_all or args.with_zstd:
+            self.repos.append(zstd())
 
     def __iter__(self):
         for value in self.repos:
@@ -433,6 +453,8 @@ def setup_parser(root_parser):
     root_parser.add_argument("--with-xxhash", action="store_true")
     root_parser.add_argument("--with-stackwalker", action="store_true")
     root_parser.add_argument("--with-clheaders", action="store_true")
+    root_parser.add_argument("--with-lz4", action="store_true")
+    root_parser.add_argument("--with-zstd", action="store_true")
     root_parser.add_argument("--with-renderdoc", action="store_true")
     root_parser.add_argument("--with-json", action="store_true")
 

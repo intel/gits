@@ -116,6 +116,8 @@ include(import_clheaders)
 include(import_murmurhash)
 include(import_renderdoc)
 include(import_json)
+include(import_lz4)
+include(import_zstd)
 
 include_directories(common/include)
 include_directories(OpenGL/common/include)
