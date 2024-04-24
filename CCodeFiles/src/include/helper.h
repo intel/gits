@@ -48,9 +48,8 @@ private:
   const void* _ptr;
 };
 
-inline CResourceManager& GetResourceManager() {
-  static CResourceManager resourceManager(resource_filenames(Config::Get().common.streamDir), 1,
-                                          THashType::XX, false, 8192, 10, 20);
+inline CResourceManager2& GetResourceManager() {
+  static CResourceManager2 resourceManager(resource_filenames(Config::Get().common.streamDir));
   return resourceManager;
 }
 
@@ -268,7 +267,7 @@ void* GetDataPtr(uint64_t recptr);
 void DataUpdate(uint64_t recarea, uint64_t offset, uint64_t hash);
 
 class Resource {
-  mapped_file _data;
+  std::vector<char> _data;
 
 public:
   explicit Resource(uint64_t hash);
@@ -276,16 +275,16 @@ public:
     return _data.size();
   }
   operator const void*() const {
-    return _data.address();
+    return _data.data();
   }
   operator const uint32_t*() const {
-    return (const uint32_t*)_data.address();
+    return (const uint32_t*)_data.data();
   }
   operator const GLubyte*() const {
-    return (const GLubyte*)_data.address();
+    return (const GLubyte*)_data.data();
   }
   operator const char*() const {
-    return _data.address();
+    return _data.data();
   }
 };
 

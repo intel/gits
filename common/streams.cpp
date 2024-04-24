@@ -359,11 +359,15 @@ bool gits::CBinIStream::ReadHelper(char* buf, size_t size) {
 }
 
 bool gits::CBinIStream::read(char* buf, size_t size) {
+#ifndef BUILD_FOR_CCODE
   if (stream_older_than(GITS_TOKEN_COMPRESSION)) {
     return ReadHelper(buf, size);
   } else {
+#endif
     return ReadCompressed(buf, size);
+#ifndef BUILD_FOR_CCODE
   }
+#endif
 }
 
 int gits::CBinIStream::tellg() const {
@@ -371,13 +375,17 @@ int gits::CBinIStream::tellg() const {
 }
 
 int gits::CBinIStream::getc() {
+#ifndef BUILD_FOR_CCODE
   if (stream_older_than(GITS_TOKEN_COMPRESSION)) {
     return fgetc(_file);
   } else {
+#endif
     int buf = 0;
     ReadCompressed(reinterpret_cast<char*>(&buf), 1);
     return buf;
+#ifndef BUILD_FOR_CCODE
   }
+#endif
 }
 
 void gits::CBinIStream::get_delimited_string(std::string& s, char t) {
@@ -424,7 +432,7 @@ gits::CBinIStream::~CBinIStream() {
  *
  * @param fileName Name of a file to create.
  */
-
+#ifndef BUILD_FOR_CCODE
 gits::CCodeOStream::CCodeOStream(const std::string& base_filename)
     : std::ostream(&_fileBuffers[0]), _currBuffer(GITS_MAIN_CPP), _baseName(base_filename) {
   CheckMinimumAvailableDiskSize();
@@ -645,3 +653,4 @@ std::string gits::CCodeOStream::VariableName(intptr_t key) const {
   Log(ERR) << "Key '" << std::hex << key << std::dec << "' not found!!!";
   throw EOperationFailed(EXCEPTION_MESSAGE);
 }
+#endif

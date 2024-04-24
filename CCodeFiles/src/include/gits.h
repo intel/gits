@@ -40,7 +40,7 @@ public:
   int CurrentThreadId() const {
     return 0;
   }
-  CGits& ResourceManager() {
+  CGits& ResourceManager2() {
     return Instance();
   }
   template <class T, class U, class W>

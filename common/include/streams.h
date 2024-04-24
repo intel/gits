@@ -203,6 +203,8 @@ inline void read_size_t_from_stream(CBinIStream& i, size_t& value) {
    *
    * gits::CCodeOStream class is a C code file output stream.
    */
+
+#ifndef BUILD_FOR_CCODE
 class CCodeOStream : public std::ostream {
 public:
   enum TGitsSourceFile {
@@ -289,4 +291,5 @@ public:
     }
   }
 };
+#endif
 } // namespace gits

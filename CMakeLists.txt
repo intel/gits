@@ -192,6 +192,8 @@ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/cmake/import_libpng.cmake DESTINATION 
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/cmake/import_xxhash.cmake DESTINATION CCode/cmake)
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/cmake/import_clheaders.cmake DESTINATION CCode/cmake)
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/cmake/import_murmurhash.cmake DESTINATION CCode/cmake)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/cmake/import_lz4.cmake DESTINATION CCode/cmake)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/cmake/import_zstd.cmake DESTINATION CCode/cmake)
 install(FILES CCodeFiles/CMakeLists.txt DESTINATION CCode)
 if(WIN32)
   install(FILES CCodeFiles/build_ccode.bat DESTINATION CCode)

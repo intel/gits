@@ -667,6 +667,7 @@ void gits::GetMemoryDiffSubRange(const void* oldData,
   offset = minNewPtr - (const uint8_t*)newRangeData;
   length = maxOldPtr - minOldPtr;
 }
+#endif
 
 uint64_t gits::LZ4StreamCompressor::Compress(const char* uncompressedData,
                                              const uint64_t uncompressedDataSize,
@@ -753,8 +754,6 @@ uint64_t gits::ZSTDStreamCompressor::Decompress(const std::vector<char>& compres
   }
   return returnedUncompressedSize;
 }
-
-#endif
 
 #if defined(GITS_PLATFORM_WINDOWS)
 std::string gits::GetRenderDocDllPath() {

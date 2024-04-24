@@ -23,6 +23,7 @@
 #endif
 
 #include <set>
+#include <map>
 #include <deque>
 #include <filesystem>
 #include <climits>
@@ -43,9 +44,9 @@ ENABLE_WARNINGS
 
 #ifndef BUILD_FOR_CCODE
 #include "nlohmann/json.hpp"
+#endif
 #include <zstd.h>
 #include <lz4.h>
-#endif
 
 #ifndef _DEBUG
 #ifndef NDEBUG
@@ -516,6 +517,7 @@ public:
     _tokensList.clear();
   }
 };
+#endif
 
 class StreamCompressor {
 public:
@@ -569,7 +571,6 @@ private:
       {1, -8}, {2, -4}, {3, -1}, {4, 3},  {5, 7},
       {6, 10}, {7, 13}, {8, 16}, {9, 19}, {10, 22}}; // 1 - fastest, 10 - slowest
 };
-#endif
 
 #if defined(GITS_PLATFORM_WINDOWS)
 std::string GetRenderDocDllPath();

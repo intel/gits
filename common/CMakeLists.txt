@@ -117,7 +117,8 @@ set(common_CCode_SOURCES
   exception.cpp
   dynamic_linker.cpp
   keyEvents.cpp
-  getopt.cpp)
+  getopt.cpp
+  streams.cpp)
 if(WIN32)
   list(APPEND common_CCode_SOURCES tools_windows.cpp)
 endif()
@@ -140,7 +141,8 @@ set(common_CCode_HEADERS
   include/pragmas.h
   include/bit_range.h
   include/keyEvents.h
-  include/getopt_.h)
+  include/getopt_.h
+  include/streams.h)
 if(WIN32)
   list(APPEND common_CCode_HEADERS include/tools_windows.h)
 endif()

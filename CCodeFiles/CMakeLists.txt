@@ -39,6 +39,8 @@ include(import_libpng)
 include(import_xxhash)
 include(import_clheaders)
 include(import_murmurhash)
+include(import_lz4)
+include(import_zstd)
 
 if(WITH_LEVELZERO)
   set(L0_CCode_SOURCES
@@ -68,6 +70,7 @@ FILE(GLOB CCodeProject_SOURCES
   ${PROJECT_SOURCE_DIR}/CCodeSource/resource_manager.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/texture_converter.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/timer.cpp
+  ${PROJECT_SOURCE_DIR}/CCodeSource/streams.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/tools_lite.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/tools.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/windowContextState.cpp
@@ -98,9 +101,9 @@ endif()
 add_executable(CCodeProject ${CCodeProject_SOURCES})
 if(MSVC)
   target_link_options(CCodeProject PUBLIC /STACK:100000000 /HEAP:100000000 /ignore:4006)
-  set(LIBS OpenGL32 SetupAPI zlib png xxhash murmurhash)
+  set(LIBS OpenGL32 SetupAPI zlib png xxhash murmurhash lz4 libzstd_static)
 elseif(UNIX)
-  set(LIBS GL X11 xcb X11-xcb wayland-client wayland-egl dl png pthread z xxhash murmurhash)
+  set(LIBS GL X11 xcb X11-xcb wayland-client wayland-egl dl png pthread z xxhash murmurhash lz4 libzstd_static)
   set_target_properties(CCodeProject PROPERTIES LINK_FLAGS -pie)
 endif()
 target_link_libraries(CCodeProject ${LIBS})

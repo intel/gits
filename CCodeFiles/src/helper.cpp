@@ -411,10 +411,10 @@ void DataUpdate(uint64_t recarea, uint64_t offset, uint64_t hash) {
 
   //Apply diff
   char* dataPtr = &memTracker[areaPtrRec][0] + updateOffset;
-  mapped_file storedDataPtr;
-  storedDataPtr = GetResourceManager().get(hash);
+  std::vector<char> storedDataPtr;
+  storedDataPtr = std::move(GetResourceManager().get(hash));
 
-  memcpy(dataPtr, storedDataPtr.address(), storedDataPtr.size());
+  memcpy(dataPtr, storedDataPtr.data(), storedDataPtr.size());
 }
 
 void* GetDataPtr(uint64_t recptr) {
@@ -439,5 +439,5 @@ void* GetDataPtr(uint64_t recptr) {
 }
 
 Resource::Resource(uint64_t hash) {
-  _data = GetResourceManager().get(hash);
+  _data = std::move(GetResourceManager().get(hash));
 }
