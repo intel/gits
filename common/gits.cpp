@@ -117,6 +117,7 @@ CGits::~CGits() {
     _libraryList.clear();
     _resources.reset();
     _resources2.reset();
+    _compressor.reset();
 
     // Only create signature when recording, player can opt in through option.
     if (Config::Get().IsRecorder() && Config::Get().recorder.basic.enabled) {
@@ -540,6 +541,19 @@ void CGits::ResourceManagerInit(const std::filesystem::path& dump_dir) {
     _resources.reset(new CResourceManager(mappings));
   } else {
     _resources2.reset(new CResourceManager2(mappings));
+  }
+}
+
+void CGits::CompressorInit(CompressionType compressionType) {
+  if (_compressor != nullptr) {
+    return;
+  }
+  if (compressionType == CompressionType::LZ4) {
+    _compressor = std::make_unique<LZ4StreamCompressor>();
+  } else if (compressionType == CompressionType::ZSTD) {
+    _compressor = std::make_unique<ZSTDStreamCompressor>();
+  } else {
+    _compressor = nullptr;
   }
 }
 

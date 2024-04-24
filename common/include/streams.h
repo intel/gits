@@ -69,13 +69,13 @@ void read_name_from_stream(std::istream& i, T*& value) {
 enum WriteType : uint8_t { STANDALONE, PACKAGE };
 class CBinOStream : public std::ostream {
   std::streambuf* _buf;
-  std::unique_ptr<StreamCompressor> _compressor;
   CompressionType _compressionType;
   std::vector<char> _dataToCompress;
   std::vector<char> _compressedDataToStore;
   uint64_t _offset;
   bool _initializedCompression;
   uint64_t _chunkSize;
+  std::mutex mutex_;
 
 public:
   bool InitializeCompression();
@@ -137,7 +137,6 @@ class CBinIStream /*: public std::istream*/ {
   uint64_t _size;
   uint64_t _actualOffsetInFile;
   CompressionType _compressionType;
-  std::unique_ptr<StreamCompressor> _compressor;
   bool _initializedCompression;
   uint64_t _chunkSize;
 

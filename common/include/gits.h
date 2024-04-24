@@ -144,6 +144,7 @@ private:
   std::unique_ptr<CResourceManager2> _resources2; // has to be defined before libraries
   CLibraryList _libraryList;                      /**< @brief array of registered libraries */
   std::unique_ptr<CFile> _file;                   /**< @brief GITS file connected data */
+  std::unique_ptr<StreamCompressor> _compressor;
   CRunner _runner;
   FrameTimeSheet _timeSheet;
   int _currentThreadId;
@@ -231,7 +232,10 @@ public:
   void ResourceManagerInit(const std::filesystem::path& dump_dir);
   void ResourceManagerDispose() {
     _resources.reset();
+    _resources2.reset();
   }
+
+  void CompressorInit(CompressionType compressionType);
 
   void CurrentThreadId(int threadId);
   int CurrentThreadId() const {
@@ -379,6 +383,9 @@ public:
   CResourceManager2& ResourceManager2() {
     assert(_resources2);
     return *_resources2;
+  }
+  StreamCompressor& GitsStreamCompressor() {
+    return *_compressor;
   }
   FrameTimeSheet& TimeSheet() {
     return _timeSheet;

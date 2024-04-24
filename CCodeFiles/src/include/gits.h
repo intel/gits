@@ -9,6 +9,7 @@
 #pragma once
 #include "resource_manager.h"
 #include "timer.h"
+#include "tools.h"
 
 DISABLE_WARNINGS
 #include <boost/lexical_cast.hpp>
@@ -26,6 +27,7 @@ private:
   Task<gits::Image> _imageWriter;
   uint32_t _frameNo;
   PlaybackTimer _playback;
+  std::unique_ptr<gits::StreamCompressor> _compressor;
 
 public:
   static CGits& Instance() {
@@ -37,8 +39,12 @@ public:
   bool IsStateRestoration() const {
     return false;
   }
+  void CompressorInit(gits::CompressionType compressionType);
   int CurrentThreadId() const {
     return 0;
+  }
+  gits::StreamCompressor& GitsStreamCompressor() {
+    return *_compressor;
   }
   CGits& ResourceManager2() {
     return Instance();

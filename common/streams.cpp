@@ -84,7 +84,8 @@ void gits::CBinOStream::HelperWriteCompressed(const char* dataToWrite,
                                               WriteType writeType) {
   WriteToOstream(reinterpret_cast<char*>(&size), sizeof(size));
   WriteToOstream(reinterpret_cast<char*>(&writeType), sizeof(writeType));
-  uint64_t outputSize = _compressor->Compress(dataToWrite, size, &_compressedDataToStore);
+  uint64_t outputSize =
+      CGits::Instance().GitsStreamCompressor().Compress(dataToWrite, size, &_compressedDataToStore);
   WriteToOstream(reinterpret_cast<char*>(&outputSize), sizeof(outputSize));
   WriteToOstream(_compressedDataToStore.data(), outputSize);
 }
@@ -99,6 +100,7 @@ bool gits::CBinOStream::InitializeCompression() {
 }
 
 bool gits::CBinOStream::WriteCompressed(const char* data, uint64_t dataSize) {
+  std::unique_lock<std::mutex> lock(mutex_);
   InitializeCompression();
   if (_compressionType == CompressionType::NONE) {
     WriteToOstream(data, dataSize);
@@ -129,6 +131,7 @@ bool gits::CBinOStream::WriteCompressedAndGetOffset(const char* data,
                                                     uint64_t dataSize,
                                                     uint64_t& offsetInFile,
                                                     uint64_t& offsetInChunk) {
+  std::unique_lock<std::mutex> lock(mutex_);
   InitializeCompression();
   if (_compressionType == CompressionType::NONE) {
     offsetInFile = tellp();
@@ -186,13 +189,6 @@ gits::CBinOStream::CBinOStream(const std::filesystem::path& fileName)
     _dataToCompress.resize(_chunkSize);
     _compressedDataToStore.resize(_chunkSize);
   }
-  if (_compressionType == CompressionType::LZ4) {
-    _compressor = std::make_unique<LZ4StreamCompressor>();
-  } else if (_compressionType == CompressionType::ZSTD) {
-    _compressor = std::make_unique<ZSTDStreamCompressor>();
-  } else {
-    _compressor = nullptr;
-  }
 }
 
 gits::CBinOStream::~CBinOStream() {
@@ -235,11 +231,7 @@ bool gits::CBinIStream::InitializeCompression() {
   if (!_initializedCompression) {
     ReadHelper(reinterpret_cast<char*>(&_compressionType), sizeof(_compressionType));
     ReadHelper(reinterpret_cast<char*>(&_chunkSize), sizeof(_chunkSize));
-    if (_compressionType == CompressionType::LZ4) {
-      _compressor = std::make_unique<LZ4StreamCompressor>();
-    } else if (_compressionType == CompressionType::ZSTD) {
-      _compressor = std::make_unique<ZSTDStreamCompressor>();
-    }
+    CGits::Instance().CompressorInit(_compressionType);
     uint64_t max_size = std::min(_decompressedData.max_size(), _compressedData.max_size());
     if (_chunkSize > 0 && _chunkSize <= max_size) {
       _decompressedData.resize(_chunkSize);
@@ -270,7 +262,8 @@ bool gits::CBinIStream::LoadChunk() {
   if (writeType == WriteType::PACKAGE) {
     _size = size;
     _offset = 0;
-    _compressor->Decompress(_compressedData, compressedSize, _size, _decompressedData.data());
+    CGits::Instance().GitsStreamCompressor().Decompress(_compressedData, compressedSize, _size,
+                                                        _decompressedData.data());
     return true;
   } else {
     throw std::runtime_error(EXCEPTION_MESSAGE);
@@ -319,12 +312,14 @@ bool gits::CBinIStream::ReadCompressed(char* data, uint64_t dataSize) {
     if (writeType == WriteType::PACKAGE) {
       _size = size;
       _offset = 0;
-      _compressor->Decompress(_compressedData, compressedSize, _size, _decompressedData.data());
+      CGits::Instance().GitsStreamCompressor().Decompress(_compressedData, compressedSize, _size,
+                                                          _decompressedData.data());
 
       memcpy(data + internalOffset, _decompressedData.data() + _offset, dataSize);
       _offset += dataSize;
     } else {
-      _compressor->Decompress(_compressedData, compressedSize, size, data);
+      CGits::Instance().GitsStreamCompressor().Decompress(_compressedData, compressedSize, size,
+                                                          data);
       _offset = 0;
       _size = 0;
     }

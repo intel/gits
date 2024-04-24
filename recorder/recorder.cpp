@@ -164,6 +164,7 @@ gits::CRecorder::CRecorder()
     action.sa_handler = InterruptHandler;
     sigaction(Config::Get().recorder.basic.exitSignal, &action, nullptr);
 #endif
+    inst.CompressorInit(config.recorder.extras.optimizations.compression.type);
     inst.ResourceManagerInit(config.common.streamDir);
   }
 

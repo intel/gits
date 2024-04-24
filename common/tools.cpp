@@ -672,6 +672,7 @@ void gits::GetMemoryDiffSubRange(const void* oldData,
 uint64_t gits::LZ4StreamCompressor::Compress(const char* uncompressedData,
                                              const uint64_t uncompressedDataSize,
                                              std::vector<char>* compressedData) {
+  std::unique_lock<std::mutex> lock(mutex_);
   if (uncompressedDataSize > INT_MAX) {
     Log(ERR) << "LZ4 Compress failed due to int overflow.";
     throw EOperationFailed(EXCEPTION_MESSAGE);
@@ -699,6 +700,7 @@ uint64_t gits::LZ4StreamCompressor::Decompress(const std::vector<char>& compress
                                                const uint64_t compressedDataSize,
                                                const uint64_t expectedUncompressedSize,
                                                char* uncompressedData) {
+  std::unique_lock<std::mutex> lock(mutex_);
   if (compressedDataSize > INT_MAX || expectedUncompressedSize > INT_MAX) {
     Log(ERR) << "LZ4 Decompress failed due to int overflow.";
     throw EOperationFailed(EXCEPTION_MESSAGE);
@@ -727,6 +729,7 @@ gits::ZSTDStreamCompressor::~ZSTDStreamCompressor() {
 uint64_t gits::ZSTDStreamCompressor::Compress(const char* uncompressedData,
                                               const uint64_t uncompressedDataSize,
                                               std::vector<char>* compressedData) {
+  std::unique_lock<std::mutex> lock(mutex_);
   uint64_t zstdMaxCompressedSize = ZSTD_compressBound(uncompressedDataSize);
   if (zstdMaxCompressedSize > compressedData->size()) {
     compressedData->resize(zstdMaxCompressedSize);
@@ -746,6 +749,7 @@ uint64_t gits::ZSTDStreamCompressor::Decompress(const std::vector<char>& compres
                                                 const uint64_t compressedDataSize,
                                                 const uint64_t expectedUncompressedSize,
                                                 char* uncompressedData) {
+  std::unique_lock<std::mutex> lock(mutex_);
   uint64_t returnedUncompressedSize = ZSTD_decompress(uncompressedData, expectedUncompressedSize,
                                                       compressedData.data(), compressedDataSize);
   if (ZSTD_isError(returnedUncompressedSize)) {

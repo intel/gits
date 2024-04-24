@@ -243,6 +243,7 @@ hash_t CResourceManager2::getHash(uint32_t file_id, const void* data, size_t siz
 }
 
 hash_t CResourceManager2::put(uint32_t file_id, const void* data, size_t size) {
+  std::unique_lock<std::mutex> lock(mutex_);
   if (data == nullptr || size == 0) {
     return EmptyHash;
   }

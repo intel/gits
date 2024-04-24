@@ -545,6 +545,7 @@ public:
 
 private:
   LZ4_stream_t ctx;
+  std::mutex mutex_;
   const std::map<int, int> perfModes{
       {1, 50}, {2, 35}, {3, 15}, {4, 10}, {5, 6},
       {6, 5},  {7, 4},  {8, 3},  {9, 2},  {10, 1}}; // 1 - fastest, 10 - slowest
@@ -567,6 +568,7 @@ public:
 
 private:
   ZSTD_CCtx* ZSTDContext;
+  std::mutex mutex_;
   const std::map<int, int> perfModes{
       {1, -7}, {2, -5}, {3, -3}, {4, -1}, {5, 1},
       {6, 3},  {7, 5},  {8, 7},  {9, 9},  {10, 11}}; // 1 - fastest, 10 - slowest

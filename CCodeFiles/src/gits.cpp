@@ -19,3 +19,16 @@ float CGits::GetFPS() {
   float averageFPS = 1 / (timePerFrame / 1e9);
   return averageFPS;
 }
+
+void CGits::CompressorInit(gits::CompressionType compressionType) {
+  if (_compressor != nullptr) {
+    return;
+  }
+  if (compressionType == gits::CompressionType::LZ4) {
+    _compressor = std::make_unique<gits::LZ4StreamCompressor>();
+  } else if (compressionType == gits::CompressionType::ZSTD) {
+    _compressor = std::make_unique<gits::ZSTDStreamCompressor>();
+  } else {
+    _compressor = nullptr;
+  }
+}
