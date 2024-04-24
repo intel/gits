@@ -124,7 +124,7 @@ gits::Config::Config() {
   common.mode = MODE_UNKNOWN;
   recorder.openGL.capture.all.exitFrame = 100000000;
 
-  common.tokenBurst = 1500000;
+  common.tokenBurst = 10000;
   common.tokenBurstNum = 5;
 
   player.windowCoords = std::make_pair(0, 0);

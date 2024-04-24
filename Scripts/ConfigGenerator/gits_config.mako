@@ -379,7 +379,7 @@ LevelZero {
 
 Extras {
   Optimizations {
-    TokenBurstLimit         1000000
+    TokenBurstLimit         10000
     ##
     %if platform in ["win32", "lnx_32", "lnx_64", "lnx_arm"]:
     HashType                XxCrc32
