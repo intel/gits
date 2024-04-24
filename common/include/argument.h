@@ -240,9 +240,10 @@ private:
 class CBinaryResource : public CArgument {
 public:
   struct PointerProxy {
-    PointerProxy() : _ptr(0) {}
-    explicit PointerProxy(const void* ptr) : _ptr(ptr) {}
-    explicit PointerProxy(const mapped_file& data) : _data(data), _ptr(0) {}
+    PointerProxy() : _ptr(0), _size(0) {}
+    explicit PointerProxy(const void* ptr) : _ptr(ptr), _size(0) {}
+    explicit PointerProxy(const void* ptr, size_t size) : _ptr(ptr), _size(size) {}
+    explicit PointerProxy(const mapped_file& data) : _data(data), _ptr(0), _size(data.size()) {}
     template <class T>
     operator const T*() const {
       return _ptr ? (const T*)_ptr : (const T*)_data.address();
@@ -251,12 +252,13 @@ public:
       return _ptr ? _ptr : _data.address();
     }
     size_t Size() const {
-      return _data.size();
+      return _size;
     }
 
   private:
     mapped_file _data;
     const void* _ptr;
+    size_t _size;
   };
 
   explicit CBinaryResource();
@@ -285,6 +287,7 @@ public:
 protected:
   hash_t _resource_hash;
   mapped_file _data;
+  std::vector<char> _data2;
 };
 
 /**

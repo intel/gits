@@ -949,10 +949,10 @@ void SaveProgramBinary(GLuint program, hash_t hash) {
 }
 
 void RestoreProgramBinary(GLuint program, hash_t hash) {
-  mapped_file data = CLibrary::Get().ProgramBinaryManager().get(hash);
+  std::vector<char> data = std::move(CLibrary::Get().ProgramBinaryManager().get(hash));
 
-  GLenum* format = (GLenum*)data.address();
-  const char* data_ptr = data.address() + sizeof(GLenum);
+  GLenum* format = (GLenum*)data.data();
+  const char* data_ptr = data.data() + sizeof(GLenum);
 
   drv.gl.glProgramBinary(program, *format, data_ptr, (GLsizei)data.size() - sizeof(GLenum));
 }

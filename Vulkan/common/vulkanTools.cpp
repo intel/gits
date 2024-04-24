@@ -3372,8 +3372,8 @@ uint64_t prepareStateTrackingHash(const VkAccelerationStructureBuildControlDataG
       offset,                                // uint32_t                       offset;
       count                                  // uint32_t                       count;
   };
-  return CGits::Instance().ResourceManager().getHash(RESOURCE_DATA_RAW, &hashGenerator,
-                                                     sizeof(hashGenerator));
+  return CGits::Instance().ResourceManager2().getHash(RESOURCE_DATA_RAW, &hashGenerator,
+                                                      sizeof(hashGenerator));
 }
 
 namespace {

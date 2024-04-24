@@ -87,7 +87,7 @@ void gits::OpenGL::ESCompressedTexDataTrack(GLenum target,
       }
       //Save data and hash
       textureRestoreData->pixels[target - GL_TEXTURE_CUBE_MAP_POSITIVE_X].at(level) =
-          CGits::Instance().ResourceManager().put(RESOURCE_TEXTURE, data, imagesize);
+          CGits::Instance().ResourceManager2().put(RESOURCE_TEXTURE, data, imagesize);
     } else {
       auto textureRestoreData = std::static_pointer_cast<CTextureStateData::CTextureNDData>(
           TextureStateObject(target).Data().restore.ptr);
@@ -97,7 +97,7 @@ void gits::OpenGL::ESCompressedTexDataTrack(GLenum target,
       }
       //Save data and hash
       textureRestoreData->pixels.at(level) =
-          CGits::Instance().ResourceManager().put(RESOURCE_TEXTURE, data, imagesize);
+          CGits::Instance().ResourceManager2().put(RESOURCE_TEXTURE, data, imagesize);
     }
   }
 }

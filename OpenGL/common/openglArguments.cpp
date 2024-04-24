@@ -2826,8 +2826,8 @@ void gits::OpenGL::CDataUpdate::DiffAll(uint64_t dataptr, uint64_t updateptr, ui
   }
 
   // Dump entire update data.
-  uint64_t hash = CGits::Instance().ResourceManager().put(RESOURCE_BUFFER, (void*)updateptr,
-                                                          (size_t)updatesize);
+  uint64_t hash = CGits::Instance().ResourceManager2().put(RESOURCE_BUFFER, (void*)updateptr,
+                                                           (size_t)updatesize);
   _updates.push_back(TData(areaPtr, hash, updateOffset));
 
   if (Config::Get().recorder.extras.utilities.highIntegrity) {
@@ -2888,7 +2888,7 @@ void gits::OpenGL::CDataUpdate::DiffOneRange(uint64_t dataptr,
   if (diffBegin != diffEnd) {
     unsigned diffSize = (unsigned)(diffEnd - diffBegin);
     // Dump diff
-    uint64_t hash = CGits::Instance().ResourceManager().put(RESOURCE_BUFFER, diffBegin, diffSize);
+    uint64_t hash = CGits::Instance().ResourceManager2().put(RESOURCE_BUFFER, diffBegin, diffSize);
     uint64_t diffOffset = (uint64_t)diffBegin - (uint64_t)areaPtr;
     _updates.push_back(TData(areaPtr, hash, diffOffset));
 
@@ -2931,7 +2931,8 @@ void gits::OpenGL::CDataUpdate::DiffMultiRange(uint64_t dataptr,
     if (diffBegin != diffEnd) {
       unsigned diffSize = (unsigned)(diffEnd - diffBegin);
       // Dump diff.
-      uint64_t hash = CGits::Instance().ResourceManager().put(RESOURCE_BUFFER, diffBegin, diffSize);
+      uint64_t hash =
+          CGits::Instance().ResourceManager2().put(RESOURCE_BUFFER, diffBegin, diffSize);
       uint64_t diffOffset = (uint64_t)diffBegin - (uint64_t)areaPtr;
       _updates.push_back(TData(areaPtr, hash, diffOffset));
 
@@ -3023,12 +3024,18 @@ void gits::OpenGL::CDataUpdate::Read(CBinIStream& stream) {
     _updates.back().offset = *offset;
 
     // Cache
-    CBinaryResource::PointerProxy ptrProxy = CBinaryResource::PointerProxy(
-        gits::CGits::Instance().ResourceManager().get(_updates.back().hash));
-    const char* updatePtr = (const char*)ptrProxy;
-    const size_t size_ = gits::CGits::Instance().ResourceManager().get(_updates.back().hash).size();
-    _updates.back().playerCache.resize(size_);
-    memcpy(&_updates.back().playerCache[0], updatePtr, size_);
+    if (stream_older_than(GITS_TOKEN_COMPRESSION)) {
+      CBinaryResource::PointerProxy ptrProxy = CBinaryResource::PointerProxy(
+          gits::CGits::Instance().ResourceManager().get(_updates.back().hash));
+      const char* updatePtr = (const char*)ptrProxy;
+      const size_t size_ =
+          gits::CGits::Instance().ResourceManager().get(_updates.back().hash).size();
+      _updates.back().playerCache.resize(size_);
+      memcpy(&_updates.back().playerCache[0], updatePtr, size_);
+    } else {
+      _updates.back().playerCache =
+          std::move(gits::CGits::Instance().ResourceManager2().get(_updates.back().hash));
+    }
   }
 }
 
@@ -3281,7 +3288,7 @@ void gits::OpenGL::CCoherentBufferUpdate::Diff(TCoherentBufferData::UpdateType u
           offset = (int)mapOffset;
           length = (int)mapSize;
           if (mapSize != 0) {
-            uint64_t hash = CGits::Instance().ResourceManager().put(
+            uint64_t hash = CGits::Instance().ResourceManager2().put(
                 RESOURCE_BUFFER, ((GLubyte*)tmpMapMemCpy) + mapOffset, mapSize);
             _updates.push_back(TCoherentBufferData(hash, offset, buffer, length, target));
           }
@@ -3297,8 +3304,8 @@ void gits::OpenGL::CCoherentBufferUpdate::Diff(TCoherentBufferData::UpdateType u
 
           offset = 0;
           if (length != 0) {
-            uint64_t hash = CGits::Instance().ResourceManager().put(RESOURCE_BUFFER,
-                                                                    ((GLubyte*)pointer), length);
+            uint64_t hash = CGits::Instance().ResourceManager2().put(RESOURCE_BUFFER,
+                                                                     ((GLubyte*)pointer), length);
             _updates.push_back(TCoherentBufferData(hash, offset, buffer, length, target));
           }
         }
@@ -3402,13 +3409,18 @@ void gits::OpenGL::CCoherentBufferUpdate::Read(CBinIStream& stream) {
     _updates.back()._target = *target;
 
     // Cache
-    CBinaryResource::PointerProxy ptrProxy = CBinaryResource::PointerProxy(
-        gits::CGits::Instance().ResourceManager().get(_updates.back()._hash));
-    const char* updatePtr = (const char*)ptrProxy;
-    const size_t size_ =
-        gits::CGits::Instance().ResourceManager().get(_updates.back()._hash).size();
-    _updates.back().playerCache.resize(size_);
-    memcpy(&_updates.back().playerCache[0], updatePtr, size_);
+    if (stream_older_than(GITS_TOKEN_COMPRESSION)) {
+      CBinaryResource::PointerProxy ptrProxy = CBinaryResource::PointerProxy(
+          gits::CGits::Instance().ResourceManager().get(_updates.back()._hash));
+      const char* updatePtr = (const char*)ptrProxy;
+      const size_t size_ =
+          gits::CGits::Instance().ResourceManager().get(_updates.back()._hash).size();
+      _updates.back().playerCache.resize(size_);
+      memcpy(&_updates.back().playerCache[0], updatePtr, size_);
+    } else {
+      _updates.back().playerCache =
+          std::move(gits::CGits::Instance().ResourceManager2().get(_updates.back()._hash));
+    }
   }
 }
 

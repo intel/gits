@@ -41,23 +41,6 @@ CLibrary::~CLibrary() {
   }
 }
 
-gits::CResourceManager& gits::Vulkan::CLibrary::ProgramBinaryManager() {
-  if (_progBinManager) {
-    return *_progBinManager;
-  }
-
-  std::unordered_map<uint32_t, std::filesystem::path> the_map;
-  the_map[RESOURCE_INDEX] = "gitsPlayerDataIndex.dat";
-  the_map[RESOURCE_BUFFER] = "gitsPlayerBuffers.dat";
-
-  auto type = Config::Get().recorder.extras.optimizations.hashType;
-  const auto& ph = Config::Get().recorder.extras.optimizations.partialHash;
-  _progBinManager.reset(
-      new CResourceManager(the_map, Config::Get().recorder.extras.optimizations.asyncBufferWrites,
-                           type, ph.enabled, ph.cutoff, ph.chunks, ph.ratio));
-  return *_progBinManager;
-}
-
 /**
     * @brief Creates Vulkan method call wrapper
     *
@@ -1153,8 +1136,8 @@ void CDeviceAddressPatcher::OnQueueSubmitEnd() {
     binaryData.push_back({location, patchedValue});
   }
 
-  CGits::Instance().ResourceManager().put(RESOURCE_DATA_RAW, binaryData.data(),
-                                          binaryData.size() * sizeof(binaryData[0]), _hash);
+  CGits::Instance().ResourceManager2().put(RESOURCE_DATA_RAW, binaryData.data(),
+                                           binaryData.size() * sizeof(binaryData[0]), _hash);
 
   _directAddresses.clear();
   _indirectAddresses.clear();

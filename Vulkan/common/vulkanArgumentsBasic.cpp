@@ -751,8 +751,8 @@ void gits::Vulkan::CVkDeviceOrHostAddressConstKHR::Write(CBinOStream& stream) co
     _dataSize->Write(stream);
     if (**_dataSize) {
       _resource->Write(stream);
-      CGits::Instance().ResourceManager().put(RESOURCE_DATA_RAW, _data.data(), **_dataSize,
-                                              _resource->GetResourceHash());
+      CGits::Instance().ResourceManager2().put(RESOURCE_DATA_RAW, _data.data(), **_dataSize,
+                                               _resource->GetResourceHash());
     }
     break;
   }

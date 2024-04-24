@@ -89,12 +89,17 @@ void gits::CBinOStream::HelperWriteCompressed(const char* dataToWrite,
   WriteToOstream(_compressedDataToStore.data(), outputSize);
 }
 
-bool gits::CBinOStream::WriteCompressed(const char* data, uint64_t dataSize) {
+bool gits::CBinOStream::InitializeCompression() {
   if (!_initializedCompression) {
     WriteToOstream(reinterpret_cast<char*>(&_compressionType), sizeof(_compressionType));
     WriteToOstream(reinterpret_cast<char*>(&_chunkSize), sizeof(_chunkSize));
     _initializedCompression = true;
   }
+  return _initializedCompression;
+}
+
+bool gits::CBinOStream::WriteCompressed(const char* data, uint64_t dataSize) {
+  InitializeCompression();
   if (_compressionType == CompressionType::NONE) {
     WriteToOstream(data, dataSize);
   } else {
@@ -114,6 +119,43 @@ bool gits::CBinOStream::WriteCompressed(const char* data, uint64_t dataSize) {
         HelperWriteCompressed(_dataToCompress.data(), _offset, WriteType::PACKAGE);
         _offset = 0;
       }
+      HelperWriteCompressed(data, dataSize, WriteType::STANDALONE);
+    }
+  }
+  return true;
+}
+
+bool gits::CBinOStream::WriteCompressedAndGetOffset(const char* data,
+                                                    uint64_t dataSize,
+                                                    uint64_t& offsetInFile,
+                                                    uint64_t& offsetInChunk) {
+  InitializeCompression();
+  if (_compressionType == CompressionType::NONE) {
+    offsetInFile = tellp();
+    _offset = 0;
+    WriteToOstream(data, dataSize);
+  } else {
+    if (dataSize < _chunkSize) {
+      //small package
+      if (dataSize + _offset < _chunkSize) {
+        offsetInChunk = _offset;
+        HelperCopy(data, dataSize, _dataToCompress, _offset);
+      } else {
+        HelperWriteCompressed(_dataToCompress.data(), _offset, WriteType::PACKAGE);
+        _offset = 0;
+        offsetInChunk = _offset;
+        HelperCopy(data, dataSize, _dataToCompress, _offset);
+      }
+      offsetInFile = tellp();
+    } else {
+      //big package
+      if (_offset > 0) {
+        //write old packages if available
+        HelperWriteCompressed(_dataToCompress.data(), _offset, WriteType::PACKAGE);
+        _offset = 0;
+      }
+      offsetInChunk = _offset;
+      offsetInFile = tellp();
       HelperWriteCompressed(data, dataSize, WriteType::STANDALONE);
     }
   }
@@ -174,6 +216,7 @@ gits::CBinIStream::CBinIStream(const std::filesystem::path& fileName)
       _path(fileName),
       _offset(0),
       _size(0),
+      _actualOffsetInFile(0),
       _compressionType(CompressionType::NONE),
       _initializedCompression(false),
       _chunkSize(0) {
@@ -188,7 +231,7 @@ gits::CBinIStream::CBinIStream(const std::filesystem::path& fileName)
   }
 }
 
-bool gits::CBinIStream::ReadCompressed(char* data, uint64_t dataSize) {
+bool gits::CBinIStream::InitializeCompression() {
   if (!_initializedCompression) {
     ReadHelper(reinterpret_cast<char*>(&_compressionType), sizeof(_compressionType));
     ReadHelper(reinterpret_cast<char*>(&_chunkSize), sizeof(_chunkSize));
@@ -204,6 +247,38 @@ bool gits::CBinIStream::ReadCompressed(char* data, uint64_t dataSize) {
     }
     _initializedCompression = true;
   }
+  return _initializedCompression;
+}
+
+bool gits::CBinIStream::LoadChunk() {
+  uint64_t size = 0;
+  ReadHelper(reinterpret_cast<char*>(&size), sizeof(size));
+  WriteType writeType = WriteType::STANDALONE;
+  ReadHelper(reinterpret_cast<char*>(&writeType), sizeof(writeType));
+  uint64_t compressedSize = 0;
+  ReadHelper(reinterpret_cast<char*>(&compressedSize), sizeof(compressedSize));
+  if (eof()) {
+    return false;
+  }
+  if (compressedSize > _compressedData.max_size()) {
+    throw std::runtime_error(EXCEPTION_MESSAGE);
+  }
+  if (compressedSize > _compressedData.size()) {
+    _compressedData.resize(compressedSize);
+  }
+  ReadHelper(_compressedData.data(), compressedSize);
+  if (writeType == WriteType::PACKAGE) {
+    _size = size;
+    _offset = 0;
+    _compressor->Decompress(_compressedData, compressedSize, _size, _decompressedData.data());
+    return true;
+  } else {
+    throw std::runtime_error(EXCEPTION_MESSAGE);
+  }
+}
+
+bool gits::CBinIStream::ReadCompressed(char* data, uint64_t dataSize) {
+  InitializeCompression();
   uint64_t internalOffset = 0;
   if (_compressionType == CompressionType::NONE) {
     ReadHelper(data, dataSize);
@@ -255,6 +330,23 @@ bool gits::CBinIStream::ReadCompressed(char* data, uint64_t dataSize) {
     }
   }
   return true;
+}
+
+void* gits::CBinIStream::ReadCompressedWithOffset(char* data,
+                                                  uint64_t dataSize,
+                                                  uint64_t offsetInFile,
+                                                  uint64_t offsetInChunk) {
+  if (offsetInFile != _actualOffsetInFile) {
+    fileseek(_file, offsetInFile, SEEK_SET);
+    _actualOffsetInFile = offsetInFile;
+    _size = 0;
+    if (offsetInChunk != 0) {
+      LoadChunk();
+    }
+  }
+  _offset = offsetInChunk;
+  ReadCompressed(data, dataSize);
+  return nullptr;
 }
 
 bool gits::CBinIStream::ReadHelper(char* buf, size_t size) {
@@ -309,6 +401,14 @@ void gits::CBinIStream::get_delimited_string(std::string& s, char t) {
 
 bool gits::CBinIStream::eof() const {
   return feof(_file);
+}
+
+int gits::CBinIStream::fileseek(FILE* stream, uint64_t offset, int origin) {
+#ifdef GITS_PLATFORM_WINDOWS
+  return _fseeki64(_file, offset, origin);
+#else
+  return fseeko64(_file, offset, origin);
+#endif
 }
 
 gits::CBinIStream::~CBinIStream() {

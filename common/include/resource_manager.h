@@ -66,44 +66,60 @@ typedef uint64_t hash_t;
 
 class CResourceManager {
 public:
-  CResourceManager(const std::unordered_map<uint32_t, std::filesystem::path>& filename_mapping,
-                   uint32_t asyncBufferMaxCost,
-                   THashType hashType,
-                   bool hashPartially,
-                   uint32_t partialHashCutoff,
-                   uint32_t partialHashChunks,
-                   uint32_t partialHashRatio);
+  CResourceManager(const std::unordered_map<uint32_t, std::filesystem::path>& filename_mapping);
   CResourceManager(const CResourceManager& other) = delete;
   CResourceManager& operator=(const CResourceManager& other) = delete;
-  ~CResourceManager();
-
   mapped_file get(hash_t hash) const;
-  hash_t getHash(uint32_t file_id, const void* data, size_t size) const;
-  hash_t put(uint32_t file_id, const void* data, size_t size);
-  hash_t put(uint32_t file_id, const void* data, size_t size, hash_t hash, bool overwrite = false);
 
   TResourceHandle get_resource_handle(hash_t);
 
   static const hash_t EmptyHash = 0;
 
 private:
-  bool dirty_;
   std::filesystem::path index_filename_;
   std::unordered_map<hash_t, TResourceHandle> index_;
   std::unordered_map<uint32_t, std::filesystem::path> filenames_map_;
   std::unordered_map<uint32_t, uint64_t> file_sizes_;
   std::unordered_map<uint32_t, std::shared_ptr<boost::interprocess::file_mapping>> mappings_map_;
 
-  Task<FileData> fileWriter_;
+  hash_t fakeHash_;
+};
 
-  //data needed to entange Resource manager from Config.
-  THashType hashType_;
-  bool hashPartially_;
-  uint32_t partialHashCutoff_;
-  uint32_t partialHashChunks_;
-  uint32_t partialHashRatio_;
-  uint32_t asyncBufferMaxCost_;
+struct TResourceHandle2 {
+  uint64_t offsetToStart;
+  uint64_t offsetInsideChunk;
+  uint32_t file_id;
+  uint64_t size;
+};
+class CBinOStream;
+class CBinIStream;
+class CResourceManager2 {
+public:
+  CResourceManager2(const std::unordered_map<uint32_t, std::filesystem::path>& filename_mapping);
+  CResourceManager2(const CResourceManager2& other) = delete;
+  CResourceManager2& operator=(const CResourceManager2& other) = delete;
+  ~CResourceManager2();
+
+  hash_t getHash(uint32_t file_id, const void* data, size_t size);
+  hash_t put(uint32_t file_id, const void* data, size_t size);
+  hash_t put(uint32_t file_id, const void* data, size_t size, hash_t hash, bool overwrite = false);
+  std::vector<char> get(hash_t hash);
+
+  TResourceHandle2 get_resource_handle(hash_t);
+
+  static const hash_t EmptyHash = 0;
+
+private:
+  bool dirty_;
+  std::filesystem::path index_filename_;
+  std::unordered_map<hash_t, TResourceHandle2> index_;
+  std::unordered_map<uint32_t, std::filesystem::path> filenames_map_;
+  std::unordered_map<uint32_t, uint64_t> file_sizes_;
+  std::unordered_map<uint32_t, std::shared_ptr<boost::interprocess::file_mapping>> mappings_map_;
 
   hash_t fakeHash_;
+  std::map<uint32_t, CBinOStream*> _fileWriter;
+  std::map<uint32_t, CBinIStream*> _fileReader;
+  std::vector<char> _data;
 };
 } // namespace gits

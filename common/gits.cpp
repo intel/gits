@@ -116,6 +116,7 @@ CGits::~CGits() {
     _file.reset();
     _libraryList.clear();
     _resources.reset();
+    _resources2.reset();
 
     // Only create signature when recording, player can opt in through option.
     if (Config::Get().IsRecorder() && Config::Get().recorder.basic.enabled) {
@@ -535,11 +536,11 @@ std::string CFile::ReadProperties() const {
 
 void CGits::ResourceManagerInit(const std::filesystem::path& dump_dir) {
   const auto& mappings = resource_filenames(dump_dir);
-  const auto& ph = Config::Get().recorder.extras.optimizations.partialHash;
-  auto type = Config::Get().recorder.extras.optimizations.hashType;
-  _resources.reset(
-      new CResourceManager(mappings, Config::Get().recorder.extras.optimizations.asyncBufferWrites,
-                           type, ph.enabled, ph.cutoff, ph.chunks, ph.ratio));
+  if (stream_older_than(GITS_TOKEN_COMPRESSION)) {
+    _resources.reset(new CResourceManager(mappings));
+  } else {
+    _resources2.reset(new CResourceManager2(mappings));
+  }
 }
 
 void CGits::CurrentThreadId(int threadId) {

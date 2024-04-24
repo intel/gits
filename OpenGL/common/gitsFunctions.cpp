@@ -798,11 +798,12 @@ void gits::OpenGL::CUpdateMappedTexture::Run() {
 }
 
 void gits::OpenGL::CUpdateMappedTexture::Write(CCodeOStream& stream) const {
-  TResourceHandle rHandle =
-      gits::CGits::Instance().ResourceManager().get_resource_handle(_resource.GetResourceHash());
+  TResourceHandle2 rHandle =
+      gits::CGits::Instance().ResourceManager2().get_resource_handle(_resource.GetResourceHash());
   stream.select(stream.selectCCodeFile());
   stream.Indent() << "CMappedTextures::getInstance().UpdateTexture( " << _texture << ", " << *_level
-                  << ", " << rHandle.offset << ");" << std::endl;
+                  << ", " << rHandle.offsetToStart << ", " << rHandle.offsetInsideChunk << ");"
+                  << std::endl;
 }
 
 /* ***************************** ID_GITS_VIEWPORT_SETTINGS *************************** */

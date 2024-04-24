@@ -159,7 +159,7 @@ gits::CBinaryResource::CBinaryResource(TResourceType type, const void* data, siz
 }
 
 void gits::CBinaryResource::reset(TResourceType type, const void* data, size_t size) {
-  _resource_hash = CGits::Instance().ResourceManager().put(type, data, size);
+  _resource_hash = CGits::Instance().ResourceManager2().put(type, data, size);
 }
 
 const char* gits::CBinaryResource::Name() const {
@@ -177,19 +177,26 @@ void gits::CBinaryResource::Write(CBinOStream& stream) const {
 void gits::CBinaryResource::Read(CBinIStream& stream) {
   CBuffer buffer(_resource_hash);
   stream >> buffer;
-
-  if (Config::Get().player.loadResourcesImmediately) {
-    _data = CGits::Instance().ResourceManager().get(_resource_hash);
-    _data.page_in();
+  if (stream_older_than(GITS_TOKEN_COMPRESSION)) {
+    if (Config::Get().player.loadResourcesImmediately) {
+      _data = CGits::Instance().ResourceManager().get(_resource_hash);
+      _data.page_in();
+    }
+  } else {
+    _data2 = std::move(CGits::Instance().ResourceManager2().get(_resource_hash));
   }
 }
 
 gits::CBinaryResource::PointerProxy gits::CBinaryResource::Data() const {
   if (Config::Get().IsPlayer()) {
-    if (!Config::Get().player.loadResourcesImmediately) {
-      return PointerProxy(CGits::Instance().ResourceManager().get(_resource_hash));
+    if (stream_older_than(GITS_TOKEN_COMPRESSION)) {
+      if (!Config::Get().player.loadResourcesImmediately) {
+        return PointerProxy(CGits::Instance().ResourceManager().get(_resource_hash));
+      }
+      return PointerProxy(_data);
+    } else {
+      return PointerProxy(_data2.data(), _data2.size());
     }
-    return PointerProxy(_data);
   } else {
     Log(ERR) << "CBinaryResource: Getting Data not available in Recorder";
     throw ENotImplemented(EXCEPTION_MESSAGE);

@@ -678,8 +678,8 @@ gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::CGitsVkCmdPatchDeviceAddresses(
   } hashGenerator = {CAccelerationStructureKHRState::globalAccelerationStructureBuildCommandIndex,
                      commandBuffer, ID_GITS_VK_CMD_PATCH_DEVICE_ADDRESSES};
 
-  hash_t hash = CGits::Instance().ResourceManager().getHash(RESOURCE_DATA_RAW, &hashGenerator,
-                                                            sizeof(hashGenerator));
+  hash_t hash = CGits::Instance().ResourceManager2().getHash(RESOURCE_DATA_RAW, &hashGenerator,
+                                                             sizeof(hashGenerator));
 
   _resource = std::make_unique<CDeclaredBinaryResource>(hash);
   patcher.PrepareData(commandBuffer, hash);

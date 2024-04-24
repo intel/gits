@@ -655,8 +655,8 @@ std::vector<CMappedTexturesStateObj::MappedLevel> CMappedTexturesStateObj::SaveT
   std::pair<map_t::iterator, map_t::iterator> textureLevels = mapped_.equal_range(name);
   for (map_t::iterator it = textureLevels.first; it != textureLevels.second; ++it) {
     if (it->second.level == level) {
-      hash = CGits::Instance().ResourceManager().put(RESOURCE_TEXTURE, it->second.pointer,
-                                                     it->second.size);
+      hash = CGits::Instance().ResourceManager2().put(RESOURCE_TEXTURE, it->second.pointer,
+                                                      it->second.size);
       if (hash != it->second.hash) {
         it->second.hash = hash;
         updated.push_back(it->second);
@@ -670,8 +670,8 @@ std::vector<CMappedTexturesStateObj::MappedLevel> CMappedTexturesStateObj::SaveT
 std::vector<CMappedTexturesStateObj::MappedLevel> CMappedTexturesStateObj::SaveAllTexturesToFile() {
   std::vector<MappedLevel> updated;
   for (auto& elem : mapped_) {
-    hash_t hash = CGits::Instance().ResourceManager().put(RESOURCE_TEXTURE, elem.second.pointer,
-                                                          elem.second.size);
+    hash_t hash = CGits::Instance().ResourceManager2().put(RESOURCE_TEXTURE, elem.second.pointer,
+                                                           elem.second.size);
     if (hash != elem.second.hash) {
       elem.second.hash = hash;
       updated.push_back(elem.second);

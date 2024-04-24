@@ -2508,7 +2508,7 @@ void gits::OpenGL::CVariableTextureInfo::CTexture1D::GetTextureLevelsDataGL() {
     }
 
     Texture1DData().pixels.at(i) =
-        CGits::Instance().ResourceManager().put(RESOURCE_TEXTURE, &pixels[0], pixels.size());
+        CGits::Instance().ResourceManager2().put(RESOURCE_TEXTURE, &pixels[0], pixels.size());
   }
 }
 
@@ -2560,7 +2560,7 @@ void gits::OpenGL::CVariableTextureInfo::CTexture2D::GetTextureLevelsDataGL() {
     }
 
     Texture2DData().pixels.at(i) =
-        CGits::Instance().ResourceManager().put(RESOURCE_TEXTURE, &data[0], data.size());
+        CGits::Instance().ResourceManager2().put(RESOURCE_TEXTURE, &data[0], data.size());
   }
 }
 
@@ -2619,7 +2619,7 @@ void gits::OpenGL::CVariableTextureInfo::CTexture2D::GetTextureLevelsDataGLES() 
       data.resize(storeDataSize);
       drv.gl.glReadPixels(0, 0, mipmap.width, mipmap.height, mipmap.format, mipmap.type, &data[0]);
       Texture2DData().pixels.at(level) =
-          CGits::Instance().ResourceManager().put(RESOURCE_TEXTURE, &data[0], data.size());
+          CGits::Instance().ResourceManager2().put(RESOURCE_TEXTURE, &data[0], data.size());
     } else {
       Log(WARN) << "Texture: " << TextureId() << " level: " << level
                 << " content will not be restored.";
@@ -2792,7 +2792,7 @@ void gits::OpenGL::CVariableTextureInfo::CTexture1DArray::GetTextureLevelsDataGL
     }
 
     Texture1DArrayData().pixels.at(i) =
-        CGits::Instance().ResourceManager().put(RESOURCE_TEXTURE, &pixels[0], pixels.size());
+        CGits::Instance().ResourceManager2().put(RESOURCE_TEXTURE, &pixels[0], pixels.size());
   }
 }
 
@@ -2854,7 +2854,7 @@ void gits::OpenGL::CVariableTextureInfo::CTexture2DArray::GetTextureLevelsDataGL
     }
 
     Texture2DArrayData().pixels.at(i) =
-        CGits::Instance().ResourceManager().put(RESOURCE_TEXTURE, &pixels[0], pixels.size());
+        CGits::Instance().ResourceManager2().put(RESOURCE_TEXTURE, &pixels[0], pixels.size());
   }
 }
 
@@ -2900,7 +2900,7 @@ void gits::OpenGL::CVariableTextureInfo::CTexture3D::GetTextureLevelsDataGL() {
     }
 
     Texture3DData().pixels.at(i) =
-        CGits::Instance().ResourceManager().put(RESOURCE_TEXTURE, &pixels[0], pixels.size());
+        CGits::Instance().ResourceManager2().put(RESOURCE_TEXTURE, &pixels[0], pixels.size());
   }
 }
 
@@ -2952,7 +2952,7 @@ void gits::OpenGL::CVariableTextureInfo::CTextureCube::GetTextureLevelsDataGL() 
         }
 
         TextureCubeData().pixels[j].at(i) =
-            CGits::Instance().ResourceManager().put(RESOURCE_TEXTURE, &pixels[0], pixels.size());
+            CGits::Instance().ResourceManager2().put(RESOURCE_TEXTURE, &pixels[0], pixels.size());
       }
     }
   }
@@ -3013,7 +3013,7 @@ void gits::OpenGL::CVariableTextureInfo::CTextureCube::GetTextureLevelsDataGLES(
           drv.gl.glReadPixels(0, 0, mipmap.width, mipmap.height, mipmap.format, mipmap.type,
                               &data[0]);
           hashes.at(i) =
-              CGits::Instance().ResourceManager().put(RESOURCE_TEXTURE, &data[0], data.size());
+              CGits::Instance().ResourceManager2().put(RESOURCE_TEXTURE, &data[0], data.size());
         } else {
           Log(WARN) << "Texture: " << TextureId() << " content will not be restored.";
         }
@@ -5395,9 +5395,10 @@ bool gits::OpenGL::CVariableDefaultFramebuffer::SaveFramebufferData(GLenum inter
   drv.gl.glReadPixels(0, 0, _width, _height, format, type, &data[0]);
   if (attachment == GL_COLOR_ATTACHMENT0) {
     _colorDatahash =
-        CGits::Instance().ResourceManager().put(RESOURCE_TEXTURE, &data[0], dumpDataSize);
+        CGits::Instance().ResourceManager2().put(RESOURCE_TEXTURE, &data[0], dumpDataSize);
   } else {
-    _csDatahash = CGits::Instance().ResourceManager().put(RESOURCE_TEXTURE, &data[0], dumpDataSize);
+    _csDatahash =
+        CGits::Instance().ResourceManager2().put(RESOURCE_TEXTURE, &data[0], dumpDataSize);
   }
 
   drv.gl.glDeleteTextures(1, &texture);
@@ -5567,7 +5568,7 @@ void gits::OpenGL::CVariableRenderbufferEXTInfo::Get() {
       // get RBO content
       std::vector<char> data(dumpDataSize); // GL_RGBA - 4 values
       drv.gl.glReadPixels(0, 0, width, height, dumpPixelFormat, dumpPixelType, &data[0]);
-      datahash = CGits::Instance().ResourceManager().put(RESOURCE_BUFFER, &data[0], dumpDataSize);
+      datahash = CGits::Instance().ResourceManager2().put(RESOURCE_BUFFER, &data[0], dumpDataSize);
 
       if (origPbo != 0) {
         drv.gl.glBindBuffer(GL_PIXEL_PACK_BUFFER, origPbo);
@@ -5789,7 +5790,7 @@ void gits::OpenGL::CVariableRenderbufferInfo::Get() {
       // get RBO content
       std::vector<char> data(dumpDataSize);
       drv.gl.glReadPixels(0, 0, width, height, dumpPixelFormat, dumpPixelType, &data[0]);
-      datahash = CGits::Instance().ResourceManager().put(RESOURCE_BUFFER, &data[0], dumpDataSize);
+      datahash = CGits::Instance().ResourceManager2().put(RESOURCE_BUFFER, &data[0], dumpDataSize);
 
       // delete FBO
       drv.gl.glFramebufferRenderbuffer(GL_FRAMEBUFFER, tmpFboAttachmentType, GL_RENDERBUFFER, 0);

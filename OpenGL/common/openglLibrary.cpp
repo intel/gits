@@ -45,7 +45,7 @@ CLibrary::CLibrary(gits::CLibrary::state_creator_t stc)
 
 CLibrary::~CLibrary() {}
 
-gits::CResourceManager& gits::OpenGL::CLibrary::ProgramBinaryManager() {
+gits::CResourceManager2& gits::OpenGL::CLibrary::ProgramBinaryManager() {
   if (_progBinManager) {
     return *_progBinManager;
   }
@@ -54,11 +54,7 @@ gits::CResourceManager& gits::OpenGL::CLibrary::ProgramBinaryManager() {
   the_map[RESOURCE_INDEX] = "gitsPlayerDataIndex.dat";
   the_map[RESOURCE_BUFFER] = "gitsPlayerBuffers.dat";
 
-  auto type = Config::Get().recorder.extras.optimizations.hashType;
-  const auto& ph = Config::Get().recorder.extras.optimizations.partialHash;
-  _progBinManager.reset(
-      new CResourceManager(the_map, Config::Get().recorder.extras.optimizations.asyncBufferWrites,
-                           type, ph.enabled, ph.cutoff, ph.chunks, ph.ratio));
+  _progBinManager.reset(new CResourceManager2(the_map));
   return *_progBinManager;
 }
 

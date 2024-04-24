@@ -139,10 +139,11 @@ public:
 private:
   static CGits* _instance; /**< @brief singleton class instance */
 
-  const CVersion _version;                      /**< @brief version of GITS project */
-  std::unique_ptr<CResourceManager> _resources; // has to be defined before libraries
-  CLibraryList _libraryList;                    /**< @brief array of registered libraries */
-  std::unique_ptr<CFile> _file;                 /**< @brief GITS file connected data */
+  const CVersion _version;                        /**< @brief version of GITS project */
+  std::unique_ptr<CResourceManager> _resources;   // has to be defined before libraries
+  std::unique_ptr<CResourceManager2> _resources2; // has to be defined before libraries
+  CLibraryList _libraryList;                      /**< @brief array of registered libraries */
+  std::unique_ptr<CFile> _file;                   /**< @brief GITS file connected data */
   CRunner _runner;
   FrameTimeSheet _timeSheet;
   int _currentThreadId;
@@ -374,6 +375,10 @@ public:
   CResourceManager& ResourceManager() {
     assert(_resources);
     return *_resources;
+  }
+  CResourceManager2& ResourceManager2() {
+    assert(_resources2);
+    return *_resources2;
   }
   FrameTimeSheet& TimeSheet() {
     return _timeSheet;

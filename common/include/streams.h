@@ -78,7 +78,12 @@ class CBinOStream : public std::ostream {
   uint64_t _chunkSize;
 
 public:
+  bool InitializeCompression();
   bool WriteCompressed(const char* data, uint64_t dataSize);
+  bool WriteCompressedAndGetOffset(const char* data,
+                                   uint64_t dataSize,
+                                   uint64_t& offsetInFile,
+                                   uint64_t& offsetInChunk);
   std::ostream& WriteToOstream(const char* data, uint64_t dataSize);
   void write(const char* s, std::streamsize n);
   CBinOStream(const CBinOStream&) = delete;
@@ -130,6 +135,7 @@ class CBinIStream /*: public std::istream*/ {
   std::vector<char> _compressedData;
   uint64_t _offset;
   uint64_t _size;
+  uint64_t _actualOffsetInFile;
   CompressionType _compressionType;
   std::unique_ptr<StreamCompressor> _compressor;
   bool _initializedCompression;
@@ -141,9 +147,16 @@ public:
   int tellg() const;
   void get_delimited_string(std::string& s, char d);
   bool eof() const;
+  int fileseek(FILE* stream, uint64_t offset, int origin);
   int getc();
 
+  bool InitializeCompression();
+  bool LoadChunk();
   bool ReadCompressed(char* data, uint64_t dataSize);
+  void* ReadCompressedWithOffset(char* data,
+                                 uint64_t dataSize,
+                                 uint64_t offsetInFile,
+                                 uint64_t offsetInChunk);
   CBinIStream(const std::filesystem::path& fileName);
   CBinIStream(const CBinIStream&) = delete;
   CBinIStream& operator=(const CBinIStream&) = delete;

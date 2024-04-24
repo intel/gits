@@ -24,8 +24,6 @@ namespace gits {
   * @brief Vulkan library specific GITS namespace
   */
 
-class CResourceManager;
-
 namespace Vulkan {
 /**
     * @brief Vulkan library class
@@ -36,7 +34,6 @@ namespace Vulkan {
     * getter class and for creating Vulkan display window for gitsPlayer.
     */
 class CLibrary : public gits::CLibrary {
-  std::unique_ptr<CResourceManager> _progBinManager;
 
 public:
   static CLibrary& Get();
@@ -51,7 +48,6 @@ public:
     return "Vulkan";
   }
 
-  CResourceManager& ProgramBinaryManager();
   class CVulkanCommandBufferTokensBuffer : public CTokensBuffer<Vulkan::CFunction> {
   public:
     std::set<uint64_t> GetMappedPointers();

@@ -67,7 +67,6 @@ const std::unordered_map<uint32_t, std::filesystem::path>& base_resource_filenam
   }
   return the_map;
 }
-
 } // namespace
 
 std::unordered_map<uint32_t, std::filesystem::path> resource_filenames(
@@ -107,23 +106,9 @@ void precache_resources(const std::filesystem::path& dirname) {
 }
 
 CResourceManager::CResourceManager(
-    const std::unordered_map<uint32_t, std::filesystem::path>& filename_mapping,
-    uint32_t asyncBufferMaxCost,
-    THashType hashType,
-    bool hashPartially,
-    uint32_t partialHashCutoff,
-    uint32_t partialHashChunks,
-    uint32_t partialHashRatio)
-    : dirty_(false),
-      index_filename_(gits::get(filename_mapping, RESOURCE_INDEX)),
+    const std::unordered_map<uint32_t, std::filesystem::path>& filename_mapping)
+    : index_filename_(gits::get(filename_mapping, RESOURCE_INDEX)),
       filenames_map_(filename_mapping),
-      fileWriter_(asyncBufferMaxCost),
-      hashType_(hashType),
-      hashPartially_(hashPartially),
-      partialHashCutoff_(partialHashCutoff),
-      partialHashChunks_(partialHashChunks),
-      partialHashRatio_(partialHashRatio),
-      asyncBufferMaxCost_(asyncBufferMaxCost),
       fakeHash_(0) {
   for (const auto& one_mapping : filename_mapping) {
     if (std::filesystem::exists(one_mapping.second)) {
@@ -185,19 +170,6 @@ struct FileWriter {
   FileWriter& operator=(const FileWriter& other) = delete;
 };
 
-CResourceManager::~CResourceManager() {
-  try {
-    //If we have put anything in the manager index needs to be rewritten.
-    if (dirty_ && !Config::Get().recorder.extras.utilities.nullIO) {
-      write_map(index_filename_, index_);
-    }
-
-    fileWriter_.finish();
-  } catch (...) {
-    topmost_exception_handler("CResourceManager::~CResourceManager");
-  }
-}
-
 mapped_file CResourceManager::get(hash_t hash) const {
   if (hash == EmptyHash) {
     return mapped_file();
@@ -212,20 +184,65 @@ mapped_file CResourceManager::get(hash_t hash) const {
   return mapped_file(*mapping, r.offset, r.size);
 }
 
-hash_t CResourceManager::getHash(uint32_t file_id, const void* data, size_t size) const {
-  if (data == nullptr || size == 0) {
-    return EmptyHash;
+TResourceHandle CResourceManager::get_resource_handle(hash_t toFind) {
+  std::unordered_map<hash_t, TResourceHandle>::iterator it;
+  it = index_.find(toFind);
+  if (it == index_.end()) {
+    throw std::runtime_error(
+        "Error during ResourceManager::get_resource_handle - given hash value not found.");
+  }
+  return it->second;
+}
+
+CResourceManager2::CResourceManager2(
+    const std::unordered_map<uint32_t, std::filesystem::path>& filename_mapping)
+    : dirty_(false),
+      index_filename_(gits::get(filename_mapping, RESOURCE_INDEX)),
+      filenames_map_(filename_mapping),
+      fakeHash_(0) {
+  for (const auto& one_mapping : filename_mapping) {
+    if (std::filesystem::exists(one_mapping.second)) {
+      std::shared_ptr<file_mapping> mapping = std::make_shared<file_mapping>(
+          one_mapping.second.string().c_str(), boost::interprocess::read_only);
+      mappings_map_[one_mapping.first] = std::move(mapping);
+    }
   }
 
-  if (Config::Get().IsRecorder()) {
-    return ComputeHash(data, size, hashType_, hashPartially_, partialHashCutoff_,
-                       partialHashChunks_, partialHashRatio_);
-  } else {
-    return ComputeHash(data, size, THashType::CRC32ISH, false, 8192, 10, 20);
+  if (std::filesystem::exists(index_filename_)) {
+    typedef std::unordered_map<uint64_t, TResourceHandle2> map64_t;
+    auto index = read_map<map64_t>(index_filename_);
+    index_.swap(index);
   }
 }
 
-hash_t CResourceManager::put(uint32_t file_id, const void* data, size_t size) {
+CResourceManager2::~CResourceManager2() {
+  try {
+    //If we have put anything in the manager index needs to be rewritten.
+    if (dirty_ && !Config::Get().recorder.extras.utilities.nullIO) {
+      write_map(index_filename_, index_);
+    }
+  } catch (...) {
+    topmost_exception_handler("CResourceManager::~CResourceManager");
+  }
+  for (auto& elem : _fileWriter) {
+    delete elem.second;
+  }
+  for (auto& elem : _fileReader) {
+    delete elem.second;
+  }
+  _fileWriter.clear();
+  _fileReader.clear();
+}
+
+hash_t CResourceManager2::getHash(uint32_t file_id, const void* data, size_t size) {
+  if (data == nullptr || size == 0) {
+    return EmptyHash;
+  } else {
+    return ++fakeHash_;
+  }
+}
+
+hash_t CResourceManager2::put(uint32_t file_id, const void* data, size_t size) {
   if (data == nullptr || size == 0) {
     return EmptyHash;
   }
@@ -234,15 +251,10 @@ hash_t CResourceManager::put(uint32_t file_id, const void* data, size_t size) {
     throw EOperationFailed("Cannot save resource due to size limitation, current size: " +
                            std::to_string(size));
   }
-
-  if (Config::Get().recorder.extras.optimizations.removeResourceHash) {
-    return put(file_id, data, size, ++fakeHash_);
-  }
-
-  return put(file_id, data, size, getHash(file_id, data, size));
+  return put(file_id, data, size, ++fakeHash_);
 }
 
-hash_t CResourceManager::put(
+hash_t CResourceManager2::put(
     uint32_t file_id, const void* data, size_t size, hash_t hash, bool overwrite) {
   if (data == nullptr || size == 0 || hash == EmptyHash) {
     throw std::runtime_error("Error in ResourceManager::put - can't insert empty data / empty hash "
@@ -272,39 +284,21 @@ hash_t CResourceManager::put(
     };
   }
 
-  // Keep track of this file size, initialize to current size on disk.
-  if (file_sizes_[file_id] == 0 && std::filesystem::exists(file_name)) {
-    file_sizes_[file_id] = std::filesystem::file_size(file_name);
+  //std::ofstream file(file_name, std::ios::binary | std::ios::app | std::ios::out);
+  if (_fileWriter[file_id] == nullptr) {
+    _fileWriter[file_id] = new CBinOStream(file_name);
+    _fileWriter[file_id]->InitializeCompression();
   }
+  uint64_t offsetInFile = 0;
+  uint64_t offsetInChunk = 0;
+  _fileWriter[file_id]->WriteCompressedAndGetOffset(static_cast<const char*>(data), size,
+                                                    offsetInFile, offsetInChunk);
 
-  TResourceHandle resource;
+  TResourceHandle2 resource;
   resource.file_id = file_id;
-  resource.offset = file_sizes_[file_id];
-  resource.size = ensure_unsigned32bit_representible<size_t>(size);
-
-  file_sizes_[file_id] += size;
-
-  // Push work to separate thread if configured such way.
-  if (asyncBufferMaxCost_ != 0) {
-    if (!fileWriter_.running()) {
-      fileWriter_.start(FileWriter());
-    }
-
-    FileData prod{};
-    const auto fileNameLength = file_name.string().length();
-    prod.name = new char[fileNameLength + 1];
-    std::strcpy(prod.name, file_name.string().c_str());
-    prod.size = size;
-    prod.ptr = operator new(size);
-    memcpy(prod.ptr, data, size);
-
-    fileWriter_.queue().produce(prod);
-  } else {
-    if (!Config::Get().recorder.extras.utilities.nullIO) {
-      std::ofstream file(file_name, std::ios::binary | std::ios::app | std::ios::out);
-      file.write(static_cast<const char*>(data), size);
-    }
-  }
+  resource.offsetToStart = offsetInFile;
+  resource.offsetInsideChunk = offsetInChunk;
+  resource.size = size;
 
   // Remember where data was put.
   index_[hash] = resource;
@@ -316,12 +310,34 @@ hash_t CResourceManager::put(
   return hash;
 }
 
-TResourceHandle CResourceManager::get_resource_handle(hash_t toFind) {
-  std::unordered_map<hash_t, TResourceHandle>::iterator it;
+std::vector<char> CResourceManager2::get(hash_t hash) {
+  if (hash == EmptyHash) {
+    return std::vector<char>();
+  }
+
+  const TResourceHandle2& r = gits::get(index_, hash);
+  std::shared_ptr<file_mapping> mapping = gits::get(mappings_map_, r.file_id);
+  if (!mapping) {
+    const auto msg = "Resource file mapping is null.";
+    throw std::runtime_error(std::string(EXCEPTION_MESSAGE) + msg);
+  }
+  if (_fileReader[r.file_id] == nullptr) {
+    const auto& file_name = gits::get(filenames_map_, r.file_id);
+    _fileReader[r.file_id] = new CBinIStream(file_name);
+    _fileReader[r.file_id]->InitializeCompression();
+  }
+  _data.resize(r.size);
+  _fileReader[r.file_id]->ReadCompressedWithOffset(_data.data(), r.size, r.offsetToStart,
+                                                   r.offsetInsideChunk);
+  return std::move(_data);
+}
+
+TResourceHandle2 CResourceManager2::get_resource_handle(hash_t toFind) {
+  std::unordered_map<hash_t, TResourceHandle2>::iterator it;
   it = index_.find(toFind);
   if (it == index_.end()) {
     throw std::runtime_error(
-        "Error during ResourceManager::get_resource_handle - given hash value not found.");
+        "Error during ResourceManager2::get_resource_handle - given hash value not found.");
   }
   return it->second;
 }

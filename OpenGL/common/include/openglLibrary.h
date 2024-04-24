@@ -35,7 +35,7 @@ namespace gits {
    * @brief OpenGL library specific GITS namespace
    */
 
-class CResourceManager;
+class CResourceManager2;
 
 namespace OpenGL {
 /**
@@ -48,7 +48,7 @@ namespace OpenGL {
      */
 class CLibrary : public gits::CLibrary {
   uint32_t _linkProgramNo;
-  std::unique_ptr<CResourceManager> _progBinManager;
+  std::unique_ptr<CResourceManager2> _progBinManager;
 
 public:
   static CLibrary& Get();
@@ -61,7 +61,7 @@ public:
     return "OpenGL";
   }
 
-  CResourceManager& ProgramBinaryManager();
+  CResourceManager2& ProgramBinaryManager();
 
   uint32_t GetLinkProgramNumber() const {
     return _linkProgramNo;
