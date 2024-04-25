@@ -7095,13 +7095,13 @@ arg2=ArgDef(name='shadertype', type='GLenum'),
 arg3=ArgDef(name='name', type='const GLchar*', wrapParams='name, \'\\0\', 1')
 )
 
-Function(name='glGetSynciv', enabled=False, type=None,
+Function(name='glGetSynciv', enabled=True, type=Get, runWrap=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='sync', type='GLsync'),
 arg2=ArgDef(name='pname', type='GLenum'),
 arg3=ArgDef(name='bufSize', type='GLsizei'),
-arg4=ArgDef(name='length', type='GLsizei*'),
-arg5=ArgDef(name='values', type='GLint*')
+arg4=ArgDef(name='length', type='GLsizei*', wrapParam='1, length'),
+arg5=ArgDef(name='values', type='GLint*', wrapParams='bufSize/sizeof(GLint), values')
 )
 
 Function(name='glGetSyncivAPPLE', enabled=False, type=None, inheritFrom='glGetSynciv')

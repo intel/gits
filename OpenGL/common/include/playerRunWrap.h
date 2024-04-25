@@ -683,5 +683,30 @@ inline void glClientWaitSync_WRAPRUN(CGLenum& return_value,
     playRetVal = drv.gl.glClientWaitSync(*sync, 0, 10 * MAX_TIMEOUT);
   }
 }
+
+inline void glGetSynciv_WRAPRUN(CGLsync& sync,
+                                CGLenum& pname,
+                                CGLsizei& bufSize,
+                                CGLsizei::CSArray& length,
+                                CGLint::CSArray& values) {
+  GLuint64 MAX_TIMEOUT = 1000000000ull; // 1 second
+  bool sameValues = true;
+  std::vector<GLint> recValues = values.Vector();
+  std::vector<GLint> playValues(recValues.size());
+
+  drv.gl.glGetSynciv(*sync, *pname, *bufSize, *length, playValues.data());
+  for (size_t i = 0; i < recValues.size(); i++) {
+    if (recValues[i] != playValues[i] && playValues[i] == GL_UNSIGNALED) {
+      sameValues = false;
+    }
+  }
+
+  if (!sameValues) {
+    Log(TRACE) << "Calling additional glClientWaitSync, because values returned from "
+                  "glGetSynciv in player differ from those returned in recorder.";
+
+    drv.gl.glClientWaitSync(*sync, 0, MAX_TIMEOUT);
+  }
+}
 } // namespace OpenGL
 } // namespace gits
