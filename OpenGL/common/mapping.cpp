@@ -81,29 +81,28 @@ void CGLUniformLocation::Write(CCodeOStream& stream) const {
 }
 
 GLint CGLUniformLocation::operator*() const {
-  auto& locations_map = getLocationsMap()[program_];
-  auto iter = locations_map.find(location_);
-  if (iter == locations_map.end()) {
+  auto& locationsMap = getLocationsMap()[program_];
+  auto optionalLocationData = locationsMap.find(location_);
+  if (!optionalLocationData) {
     // If location is not mapped we assume shader defined location
     return location_;
   }
 
-  auto actual_base = iter->second;
-  if (actual_base < 0) {
+  auto actualBase = optionalLocationData->currentBase;
+  if (actualBase < 0) {
     return -1;
   }
 
-  auto base = iter->first.lower();
-  return location_ - base + actual_base;
+  auto base = optionalLocationData->originalBase;
+  return location_ - base + actualBase;
 }
 
 void CGLUniformLocation::AddMapping(GLint program,
                                     GLint location,
                                     GLint loc_size,
                                     GLint actual_location) {
-  auto& locations_map = getLocationsMap()[program];
-  locations_map.insert(std::make_pair(
-      icl::interval<GLint>::right_open(location, location + loc_size), actual_location));
+  auto& locationsMap = getLocationsMap()[program];
+  locationsMap.insert(location, location + loc_size, actual_location);
 }
 
 void CGLUniformLocation::RemoveMappings(GLint program) {
@@ -150,29 +149,28 @@ void CGLUniformSubroutineLocation::Write(CCodeOStream& stream) const {
 }
 
 GLint CGLUniformSubroutineLocation::operator*() const {
-  auto& shaders_map = getShadersMap()[program_];
-  auto& locations_map = shaders_map[type_];
-  auto iter = locations_map.find(location_);
-  if (iter == locations_map.end()) {
+  auto& shadersMap = getShadersMap()[program_];
+  auto& locationsMap = shadersMap[type_];
+  auto optionalLocationData = locationsMap.find(location_);
+  if (!optionalLocationData) {
     Log(WARN) << "Uniform subroutine location couldn't be found, returning -1";
     return -1;
   }
 
-  auto actual_base = iter->second;
-  if (actual_base < 0) {
+  auto actualBase = optionalLocationData->currentBase;
+  if (actualBase < 0) {
     return -1;
   }
 
-  auto base = iter->first.lower();
-  return location_ - base + actual_base;
+  auto base = optionalLocationData->originalBase;
+  return location_ - base + actualBase;
 }
 
 void CGLUniformSubroutineLocation::AddMapping(
     GLint program, GLenum type, GLint location, GLint loc_size, GLint actual_location) {
-  auto& shaders_map = getShadersMap()[program];
-  auto& locations_map = shaders_map[type];
-  locations_map.insert(std::make_pair(
-      icl::interval<GLint>::right_open(location, location + loc_size), actual_location));
+  auto& shadersMap = getShadersMap()[program];
+  auto& locationsMap = shadersMap[type];
+  locationsMap.insert(location, location + loc_size, actual_location);
 }
 
 CGLUniformSubroutineLocation::program_locations_map_t& CGLUniformSubroutineLocation::

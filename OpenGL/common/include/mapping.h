@@ -17,20 +17,12 @@
 #pragma once
 #include "openglTypes.h"
 #include "openglLibrary.h"
+#include "openglTools.h"
 #ifdef BUILD_FOR_CCODE
 #include "openglArguments.h" // "openglArguments.h" file for CCode is different than the one used for regular GITS builds
 #endif
 
 #include <unordered_map>
-
-#ifdef check
-#undef check
-#endif
-DISABLE_WARNINGS
-#include <boost/icl/interval_map.hpp>
-ENABLE_WARNINGS
-
-namespace icl = boost::icl;
 
 namespace gits {
 namespace OpenGL {
@@ -427,8 +419,7 @@ public:
   static void RemoveMappings(GLint program);
 
 private:
-  typedef icl::interval_map<GLint, GLint, icl::partial_enricher> locations_interval_map_t;
-  typedef std::unordered_map<GLint, locations_interval_map_t> program_locations_map_t;
+  typedef std::unordered_map<GLint, LocationMap<GLint>> program_locations_map_t;
   static program_locations_map_t& getLocationsMap();
   static GLint& ProgramOverride() {
     static GLint program;
@@ -463,8 +454,7 @@ public:
       GLint program, GLenum type, GLint location, GLint loc_size, GLint actual_location);
 
 private:
-  typedef icl::interval_map<GLint, GLint, icl::partial_enricher> locations_interval_map_t;
-  typedef std::unordered_map<GLint, locations_interval_map_t> shader_locations_map_t;
+  typedef std::unordered_map<GLint, LocationMap<GLint>> shader_locations_map_t;
   typedef std::unordered_map<GLint, shader_locations_map_t> program_locations_map_t;
   static program_locations_map_t& getShadersMap();
 };

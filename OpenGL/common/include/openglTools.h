@@ -18,6 +18,8 @@
 #include <string>
 #include <deque>
 #include <filesystem>
+#include <utility>
+#include <optional>
 
 #include "openglTypes.h"
 #include "tools.h"
@@ -385,5 +387,34 @@ void DestroyAllContexts();
 size_t GetPatchParameterValuesCount(GLenum pname);
 
 GLenum GetTargetOfTextureOrCrash(GLuint name);
+
+template <typename T>
+class LocationMap {
+private:
+  struct LocationData {
+    T originalBase;
+    T currentBase;
+  };
+  std::map<T, LocationData> _map;
+
+public:
+  LocationMap() : _map{} {};
+  void insert(const T& begin, const T& end, const T& currentBase) {
+    LocationData locData{begin, currentBase};
+    for (auto i = begin; i < end; i++) {
+      _map.insert(std::make_pair(i, locData));
+    }
+  }
+
+  std::optional<LocationData> find(const T& key) {
+    auto it = _map.find(key);
+    if (it != _map.end()) {
+      return it->second;
+    } else {
+      return std::nullopt;
+    }
+  }
+};
+
 } // namespace OpenGL
 } // namespace gits
