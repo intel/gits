@@ -1305,12 +1305,10 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
                                                      imageState->imageHandle, &memRequirements);
                   //TODO : call vkGetImageSubresourceLayout when tiling is Linear
 
-                  boost::icl::interval<uint64_t>::type interv(dstOffsetFinal, memRequirements.size +
-                                                                                  dstOffsetFinal);
                   descriptorSetState->descriptorMapMemory[pDescriptorWrites[i].dstBinding].clear();
                   descriptorSetState
                       ->descriptorMapMemory[pDescriptorWrites[i].dstBinding][dstDeviceMemory]
-                      .insert(interv);
+                      .insert(dstOffsetFinal, memRequirements.size + dstOffsetFinal);
                 }
               }
             }
@@ -1352,14 +1350,12 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
                     dstFinalSize = bufferViewState->bufferViewCreateInfoData.Value()->range;
                   }
 
-                  boost::icl::interval<uint64_t>::type interv(dstOffsetFinal,
-                                                              dstFinalSize + dstOffsetFinal);
                   descriptorSetState->descriptorMapMemory[pDescriptorWrites[i].dstBinding].clear();
                   descriptorSetState
                       ->descriptorMapMemory[pDescriptorWrites[i].dstBinding]
                                            [bufferViewState->bufferStateStore->binding
                                                 ->deviceMemoryStateStore->deviceMemoryHandle]
-                      .insert(interv);
+                      .insert(dstOffsetFinal, dstFinalSize + dstOffsetFinal);
                 }
               }
             }
@@ -1402,14 +1398,12 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
                   } else {
                     dstFinalSize = pDescriptorWrites[i].pBufferInfo[j].range;
                   }
-                  boost::icl::interval<uint64_t>::type interv(dstOffsetFinal,
-                                                              dstFinalSize + dstOffsetFinal);
                   descriptorSetState->descriptorMapMemory[pDescriptorWrites[i].dstBinding].clear();
                   descriptorSetState
                       ->descriptorMapMemory[pDescriptorWrites[i].dstBinding]
                                            [bufferState->binding->deviceMemoryStateStore
                                                 ->deviceMemoryHandle]
-                      .insert(interv);
+                      .insert(dstOffsetFinal, dstFinalSize + dstOffsetFinal);
                 }
               }
             }
@@ -1470,8 +1464,9 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
         for (auto& binding : srcDescriptorSetState->descriptorMapMemory) {
           dstDescriptorSetState->descriptorMapMemory[binding.first].clear();
           for (auto& obj : binding.second) {
-            for (auto& obj2 : obj.second) {
-              dstDescriptorSetState->descriptorMapMemory[binding.first][obj.first].insert(obj2);
+            for (auto& obj2 : obj.second.getIntervals()) {
+              dstDescriptorSetState->descriptorMapMemory[binding.first][obj.first].insert(
+                  obj2.first, obj2.second);
             }
           }
         }
@@ -1741,8 +1736,6 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
                                                    imageState->imageHandle, &memRequirements);
                 //TODO : call vkGetImageSubresourceLayout when tiling is Linear
 
-                boost::icl::interval<uint64_t>::type interv(dstOffsetFinal,
-                                                            memRequirements.size + dstOffsetFinal);
                 descriptorSetState
                     ->descriptorMapMemory[descriptorUpdateTemplateCreateInfoData
                                               ->pDescriptorUpdateEntries[i]
@@ -1752,7 +1745,7 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
                     ->descriptorMapMemory[descriptorUpdateTemplateCreateInfoData
                                               ->pDescriptorUpdateEntries[i]
                                               .dstBinding][dstDeviceMemory]
-                    .insert(interv);
+                    .insert(dstOffsetFinal, memRequirements.size + dstOffsetFinal);
               }
             }
           }
@@ -1803,8 +1796,6 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
                   dstFinalSize = bufferViewState->bufferViewCreateInfoData.Value()->range;
                 }
 
-                boost::icl::interval<uint64_t>::type interv(dstOffsetFinal,
-                                                            dstFinalSize + dstOffsetFinal);
                 descriptorSetState
                     ->descriptorMapMemory[descriptorUpdateTemplateCreateInfoData
                                               ->pDescriptorUpdateEntries[i]
@@ -1816,7 +1807,7 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
                                               .dstBinding]
                                          [bufferViewState->bufferStateStore->binding
                                               ->deviceMemoryStateStore->deviceMemoryHandle]
-                    .insert(interv);
+                    .insert(dstOffsetFinal, dstFinalSize + dstOffsetFinal);
               }
             }
           }
@@ -1873,8 +1864,6 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
                   dstFinalSize = descBufferInfo->range;
                 }
 
-                boost::icl::interval<uint64_t>::type interv(dstOffsetFinal,
-                                                            dstFinalSize + dstOffsetFinal);
                 descriptorSetState
                     ->descriptorMapMemory[descriptorUpdateTemplateCreateInfoData
                                               ->pDescriptorUpdateEntries[i]
@@ -1885,7 +1874,7 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
                         [descriptorUpdateTemplateCreateInfoData->pDescriptorUpdateEntries[i]
                              .dstBinding]
                         [bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle]
-                    .insert(interv);
+                    .insert(dstOffsetFinal, dstFinalSize + dstOffsetFinal);
               }
             }
           }
@@ -3442,9 +3431,9 @@ inline void vkCmdBindDescriptorSets_SD(VkCommandBuffer commandBuffer,
           Config::Get().recorder.vulkan.utilities.shadowMemory) {
         for (auto& binding : SD()._descriptorsetstates[pDescriptorSets[i]]->descriptorMapMemory) {
           for (auto& mem : binding.second) {
-            for (auto& obj : mem.second) {
-              SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(mem.first, obj.lower(),
-                                                                    obj.upper() - obj.lower());
+            for (auto& obj : mem.second.getIntervals()) {
+              SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(mem.first, obj.first,
+                                                                    obj.second - obj.first);
             }
           }
         }
@@ -3891,9 +3880,9 @@ inline void vkCmdExecuteCommands_SD(VkCommandBuffer commandBuffer,
       if (Config::Get().recorder.vulkan.utilities.memorySegmentSize ||
           Config::Get().recorder.vulkan.utilities.shadowMemory) {
         for (auto& obj3 : SD().updatedMemoryInCmdBuffer[pCommandBuffers[i]].intervalMapMemory) {
-          for (auto& obj4 : obj3.second) {
-            SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(obj3.first, obj4.lower(),
-                                                                  obj4.upper() - obj4.lower());
+          for (auto& obj4 : obj3.second.getIntervals()) {
+            SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(obj3.first, obj4.first,
+                                                                  obj4.second - obj4.first);
           }
         }
       }

@@ -400,14 +400,12 @@ void CBufferStateObj::TrackBufferData(GLintptr buffoffset, GLsizeiptr size, cons
         uint64_t intervalLast = buffoffset + size;
 
         //Update intervals
-        boost::icl::interval<uint64_t>::type interv(intervalFirst, intervalLast);
-        _data.track.initializedDataMap.insert(interv);
+        _data.track.initializedDataMap.insert(intervalFirst, intervalLast);
       }
 
       //If initialized range covers entire buffer mark it as initialized
-      auto iter = _data.track.initializedDataMap.find(0);
-      if (iter != _data.track.initializedDataMap.end() &&
-          iter->upper() == (_data.restore.buffer.size() - 1)) {
+      auto optionalInterval = _data.track.initializedDataMap.find(0);
+      if (optionalInterval && optionalInterval->second == (_data.restore.buffer.size() - 1)) {
         _data.track.initializedData = true;
       }
     }
@@ -470,9 +468,8 @@ void CBufferStateObj::CalculateMapChange(GLintptr& mapoffset,
     auto& initDataMap = _data.track.initializedDataMap;
     auto rangeLower = mapOffset + mapFlushOffset;
     auto rangeUpper = rangeLower + mapFlushSize;
-    auto initializedRange = initDataMap.find(rangeLower);
-    if (initializedRange != initDataMap.end() &&
-        initializedRange->upper() <= (uint64_t)rangeUpper) {
+    auto optionalInitializedRange = initDataMap.find(rangeLower);
+    if (optionalInitializedRange && optionalInitializedRange->second <= (uint64_t)rangeUpper) {
       initialized = true;
     }
   }

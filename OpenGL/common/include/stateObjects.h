@@ -22,18 +22,13 @@
 #include "openglCommon.h"
 #include "openglTools.h"
 #include "openglEnums.h"
+#include "intervalSet.h"
 
 #include <unordered_map>
 #include <list>
 #include <unordered_set>
 #include <vector>
 
-#ifdef check
-#undef check
-#endif
-DISABLE_WARNINGS
-#include <boost/icl/interval_set.hpp>
-ENABLE_WARNINGS
 //
 //  Following macro and associated template function
 //  are used to workaround issue found in STL that ships with g++4.3.3 -
@@ -816,7 +811,7 @@ struct CBufferStateData {
     GLint size;
     GLenum usage;
     bool initializedData;
-    boost::icl::interval_set<uint64_t> initializedDataMap;
+    IntervalSet<uint64_t> initializedDataMap;
     bool immutable;
     GLbitfield flags;
     bool coherentMapping;

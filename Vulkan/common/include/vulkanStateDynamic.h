@@ -17,10 +17,7 @@
 #include "vkWindowing.h"
 #include "MemorySniffer.h"
 #include "vulkanStructStorageAuto.h"
-
-DISABLE_WARNINGS
-#include <boost/icl/interval_set.hpp>
-ENABLE_WARNINGS
+#include "intervalSet.h"
 
 #include <array>
 #include <unordered_set>
@@ -778,8 +775,7 @@ struct CDescriptorSetState : public UniqueResourceHandle {
   std::unordered_map<uint32_t, std::pair<VulkanResourceType, VkBuffer>> descriptorWriteBuffers;
   std::unordered_map<uint32_t, std::pair<VulkanResourceType, VkImage>> descriptorWriteImages;
   std::unordered_map<uint32_t, CDescriptorSetBindingData> descriptorSetBindings;
-  std::unordered_map<uint32_t,
-                     std::unordered_map<VkDeviceMemory, boost::icl::interval_set<std::uint64_t>>>
+  std::unordered_map<uint32_t, std::unordered_map<VkDeviceMemory, IntervalSet<uint64_t>>>
       descriptorMapMemory;
   std::shared_ptr<CDescriptorPoolState> descriptorPoolStateStore;
   std::shared_ptr<CDescriptorSetLayoutState> descriptorSetLayoutStateStore;
@@ -1549,11 +1545,10 @@ struct CQueueSubmitState {
 // Memory update
 
 struct CMemoryUpdateState {
-  std::unordered_map<VkDeviceMemory, boost::icl::interval_set<std::uint64_t>> intervalMapMemory;
+  std::unordered_map<VkDeviceMemory, IntervalSet<uint64_t>> intervalMapMemory;
 
   void AddToMap(VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size) {
-    boost::icl::interval<std::uint64_t>::type interv(offset, size + offset);
-    intervalMapMemory[memory].insert(interv);
+    intervalMapMemory[memory].insert(offset, size + offset);
   }
 };
 

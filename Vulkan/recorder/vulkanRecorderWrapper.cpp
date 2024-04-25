@@ -169,13 +169,13 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit(VkQueue queue,
           if (memoryStatePair != SD()._devicememorystates.end()) {
             auto& memoryState = memoryStatePair->second;
             if (memoryState->IsMapped()) {
-              for (auto& obj3 : obj2.second) {
-                uint64_t offset = std::max(obj3.lower(), memoryState->mapping->offsetData.Value());
+              for (auto& obj3 : obj2.second.getIntervals()) {
+                uint64_t offset = std::max(obj3.first, memoryState->mapping->offsetData.Value());
                 uint64_t size = 0;
-                uint64_t high_value = obj3.upper();
+                uint64_t high_value = obj3.second;
 
-                if (obj3.upper() > (memoryState->mapping->offsetData.Value() +
-                                    memoryState->mapping->sizeData.Value())) {
+                if (obj3.second > (memoryState->mapping->offsetData.Value() +
+                                   memoryState->mapping->sizeData.Value())) {
                   high_value = memoryState->mapping->offsetData.Value() +
                                memoryState->mapping->sizeData.Value();
                 }
@@ -222,9 +222,9 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit(VkQueue queue,
       auto& memoryState = SD()._devicememorystates[obj2.first];
       void* pointer = (char*)memoryState->mapping->ppDataData.Value();
 
-      for (auto& obj3 : obj2.second) {
-        uint64_t offset = obj3.lower() - memoryState->mapping->offsetData.Value();
-        uint64_t size = obj3.upper() - obj3.lower();
+      for (auto& obj3 : obj2.second.getIntervals()) {
+        uint64_t offset = obj3.first - memoryState->mapping->offsetData.Value();
+        uint64_t size = obj3.second - obj3.first;
 
         if (offset + size <= memoryState->mapping->sizeData.Value()) {
           if (Config::Get().recorder.vulkan.utilities.shadowMemory) {
@@ -286,13 +286,13 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit2(VkQueue queue,
           if (memoryStatePair != SD()._devicememorystates.end()) {
             auto& memoryState = memoryStatePair->second;
             if (memoryState->IsMapped()) {
-              for (auto& obj3 : obj2.second) {
-                uint64_t offset = std::max(obj3.lower(), memoryState->mapping->offsetData.Value());
+              for (auto& obj3 : obj2.second.getIntervals()) {
+                uint64_t offset = std::max(obj3.first, memoryState->mapping->offsetData.Value());
                 uint64_t size = 0;
-                uint64_t high_value = obj3.upper();
+                uint64_t high_value = obj3.second;
 
-                if (obj3.upper() > (memoryState->mapping->offsetData.Value() +
-                                    memoryState->mapping->sizeData.Value())) {
+                if (obj3.second > (memoryState->mapping->offsetData.Value() +
+                                   memoryState->mapping->sizeData.Value())) {
                   high_value = memoryState->mapping->offsetData.Value() +
                                memoryState->mapping->sizeData.Value();
                 }
@@ -339,9 +339,9 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit2(VkQueue queue,
       auto& memoryState = SD()._devicememorystates[obj2.first];
       void* pointer = (char*)memoryState->mapping->ppDataData.Value();
 
-      for (auto& obj3 : obj2.second) {
-        uint64_t offset = obj3.lower() - memoryState->mapping->offsetData.Value();
-        uint64_t size = obj3.upper() - obj3.lower();
+      for (auto& obj3 : obj2.second.getIntervals()) {
+        uint64_t offset = obj3.first - memoryState->mapping->offsetData.Value();
+        uint64_t size = obj3.second - obj3.first;
 
         if (offset + size <= memoryState->mapping->sizeData.Value()) {
           if (Config::Get().recorder.vulkan.utilities.shadowMemory) {

@@ -49,6 +49,7 @@ list(APPEND common_SOURCES
   include/zone_allocator.h
   include/automateCCode.h
   include/ccodeWriteWrap.h
+  include/intervalSet.h
 
   apis_iface.cpp
   argument.cpp
@@ -142,7 +143,8 @@ set(common_CCode_HEADERS
   include/bit_range.h
   include/keyEvents.h
   include/getopt_.h
-  include/streams.h)
+  include/streams.h
+  include/intervalSet.h)
 if(WIN32)
   list(APPEND common_CCode_HEADERS include/tools_windows.h)
 endif()
