@@ -30,6 +30,7 @@ public:
   virtual void CloseRecorderIfRequired() = 0;
   virtual CDrivers& Drivers() const = 0;
   virtual void PreSwap() const = 0;
+  virtual std::recursive_mutex& GetInterceptorMutex() const = 0;
 
   virtual void GLInitialize(CGlDriver::TApiType api) const = 0;
   virtual void EGLInitialize() const = 0;

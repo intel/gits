@@ -43,6 +43,7 @@ public:
   ~CRecorderWrapper() = default;
   void StreamFinishedEvent(std::function<void()> e);
   void CloseRecorderIfRequired() override;
+  std::recursive_mutex& GetInterceptorMutex() const override;
   COclDriver& Drivers() const override;
   void InitializeDriver() const override;
 #include "openclRecorderWrapperAuto.h"

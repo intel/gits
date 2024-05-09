@@ -33,8 +33,6 @@ extern const uint32_t disableDepth;
 void CloseRecorderIfRequired();
 void post_gits_wrapper();
 
-#define GITS_MUTEX std::unique_lock<std::recursive_mutex> lock(globalMutex);
-
 #define GITS_WRAPPER_PRE                                                                           \
   --recursionDepth;                                                                                \
   if (CGitsPlugin::Configuration().recorder.basic.enabled && (recursionDepth == 0)) {              \
@@ -59,12 +57,13 @@ void post_gits_wrapper();
 void entry();
 
 #define GITS_ENTRY                                                                                 \
-  ++recursionDepth;                                                                                \
   entry();                                                                                         \
   using namespace gits::OpenGL;                                                                    \
   IRecorderWrapper& wrapper = CGitsPlugin::RecorderWrapper();                                      \
+  std::unique_lock<std::recursive_mutex> lock(wrapper.GetInterceptorMutex());                      \
+  ++recursionDepth;                                                                                \
   (void)wrapper;
 
-#define GITS_ENTRY_GL GITS_MUTEX GITS_ENTRY
+#define GITS_ENTRY_GL GITS_ENTRY
 
 extern "C" {} //extern "C"

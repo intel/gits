@@ -66,6 +66,10 @@ void CRecorderWrapper::CloseRecorderIfRequired() {
   }
 }
 
+std::recursive_mutex& CRecorderWrapper::GetInterceptorMutex() const {
+  return _recorder.GetMutex();
+}
+
 COclDriver& CRecorderWrapper::Drivers() const {
   return drvOcl;
 }

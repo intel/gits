@@ -27,6 +27,7 @@ public:
   virtual void CloseRecorderIfRequired() = 0;
   virtual COclDriver& Drivers() const = 0;
   virtual void InitializeDriver() const = 0;
+  virtual std::recursive_mutex& GetInterceptorMutex() const = 0;
 #include "openclRecorderWrapperIfaceAuto.h"
   virtual void clEnqueueNDRangeKernel_pre(cl_int return_value,
                                           cl_command_queue command_queue,

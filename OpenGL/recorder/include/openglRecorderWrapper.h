@@ -65,6 +65,7 @@ public:
 
   void EndFramePost() const override;
   void CloseRecorderIfRequired() override;
+  std::recursive_mutex& GetInterceptorMutex() const override;
   CDrivers& Drivers() const override;
   void PreSwap() const;
 

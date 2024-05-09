@@ -548,6 +548,10 @@ void gits::CRecorder::Stop() {
   _runningStarted = false;
 }
 
+std::recursive_mutex& gits::CRecorder::GetMutex() {
+  return _mutex;
+}
+
 /**
  * @brief Saves recorded data to binary
  *

@@ -68,6 +68,7 @@ class CRecorder : private gits::noncopyable {
   InputListener::CInputListener _inputListener;
   uint _exitHotKeyId;
   uint _startHotKeyId;
+  std::recursive_mutex _mutex;
 
   std::vector<std::function<void()>> _disposeEvents;
   StreamingContext _sc;
@@ -100,6 +101,7 @@ public:
   void Start();
   void Stop();
   void Save();
+  std::recursive_mutex& GetMutex();
 
   void RecordingOverride(bool enable) {
     _recordingOverride = enable;

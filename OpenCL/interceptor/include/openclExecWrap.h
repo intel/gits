@@ -17,10 +17,6 @@
 
 #include <map>
 
-namespace {
-std::recursive_mutex globalMutex;
-}
-
 using namespace gits::OpenCL;
 
 #define OCLATTRIB
@@ -49,14 +45,14 @@ void PrePostDisableOpenCL() {
   }
 
 #define GITS_ENTRY                                                                                 \
-  ++recursionDepth;                                                                                \
   CGitsPluginOpenCL::Initialize();                                                                 \
   IRecorderWrapper& wrapper = CGitsPluginOpenCL::RecorderWrapper();                                \
+  std::unique_lock<std::recursive_mutex> lock(wrapper.GetInterceptorMutex());                      \
+  ++recursionDepth;                                                                                \
   COclDriver& drv = wrapper.Drivers();                                                             \
   wrapper.InitializeDriver();
 
-#define GITS_MUTEX     std::unique_lock<std::recursive_mutex> lock(globalMutex);
-#define GITS_ENTRY_OCL GITS_MUTEX GITS_ENTRY
+#define GITS_ENTRY_OCL GITS_ENTRY
 
 namespace gits {
 namespace OpenCL {
