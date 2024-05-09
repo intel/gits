@@ -3094,7 +3094,7 @@ arg1=ArgDef(name='n', type='GLsizei'),
 arg2=ArgDef(name='states', type='const GLuint*')
 )
 
-Function(name='glDeleteSync', enabled=True, type=Delete,
+Function(name='glDeleteSync', enabled=True, type=Delete, runCond='ConditionCurrentContextZero()',
 retV=RetDef(type='void'),
 arg1=ArgDef(name='sync', type='GLsync', wrapType='CGLsync', removeMapping=True)
 )
