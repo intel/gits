@@ -10,6 +10,9 @@
 #include "MemorySniffer.h"
 #include "exception.h"
 #include "openclTools.h"
+#include "openclArgumentsAuto.h"
+#include "openclStateDynamic.h"
+#include "openclArguments.h"
 
 gits::CArgument& gits::OpenCL::CGitsClMemoryUpdate::Argument(unsigned idx) {
   return get_cargument(__FUNCTION__, idx, _ptr, _resource);

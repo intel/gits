@@ -9,9 +9,7 @@
 #pragma once
 
 #include "oclFunction.h"
-#include "openclArgumentsAuto.h"
-#include "openclStateDynamic.h"
-#include "openclArguments.h"
+#include "argument.h"
 
 namespace gits {
 namespace OpenCL {

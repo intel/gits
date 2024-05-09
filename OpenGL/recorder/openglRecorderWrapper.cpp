@@ -754,18 +754,7 @@ bool CRecorderWrapper::Record() const {
 }
 
 void CRecorderWrapper::TrackThread() const {
-  static int generatedThreadId = 0;
-  static int previousThreadId = 0;
-  static thread_local int currentThreadId = -1;
-
-  if (currentThreadId < 0) {
-    currentThreadId = generatedThreadId;
-    generatedThreadId++;
-  }
-  if (currentThreadId != previousThreadId) {
-    _recorder.Schedule(new CTokenMakeCurrentThread(currentThreadId));
-    previousThreadId = currentThreadId;
-  }
+  _recorder.TrackThread(gits::ApisIface::OpenGL);
 }
 
 #if defined GITS_PLATFORM_WINDOWS

@@ -32,6 +32,8 @@
 #include "controlHandler.h"
 #include "recorderBehaviors.h"
 #include "pragmas.h"
+#include "token.h"
+#include "openclHelperFunctions.h"
 
 #if defined(GITS_PLATFORM_LINUX)
 #include <sys/stat.h>
@@ -550,6 +552,26 @@ void gits::CRecorder::Stop() {
 
 std::recursive_mutex& gits::CRecorder::GetMutex() {
   return _mutex;
+}
+
+void gits::CRecorder::TrackThread(gits::ApisIface::TApi api) {
+  static int generatedThreadId = 0;
+  static int previousThreadId = 0;
+  static thread_local int currentThreadId = -1;
+  if (currentThreadId < 0) {
+    currentThreadId = generatedThreadId;
+    generatedThreadId++;
+  }
+  if (currentThreadId != previousThreadId) {
+    if (api == gits::ApisIface::OpenGL) {
+      Scheduler().Register(new CTokenMakeCurrentThread(currentThreadId));
+    } else if (api == gits::ApisIface::OpenCL) {
+      Scheduler().Register(new gits::OpenCL::CGitsClTokenMakeCurrentThread(currentThreadId));
+    } else {
+      throw ENotImplemented("Thread tracking not implemented for this API.");
+    }
+    previousThreadId = currentThreadId;
+  }
 }
 
 /**

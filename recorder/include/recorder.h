@@ -25,6 +25,7 @@
 #include <list>
 #include <vector>
 #include <string>
+#include <apis_iface.h>
 
 namespace gits {
 class CScheduler;
@@ -102,6 +103,7 @@ public:
   void Stop();
   void Save();
   std::recursive_mutex& GetMutex();
+  void TrackThread(gits::ApisIface::TApi api);
 
   void RecordingOverride(bool enable) {
     _recordingOverride = enable;
