@@ -77,10 +77,10 @@ void spillEGL() {
 }
 } // namespace
 
-#define GITS_ENTRY_WGL GITS_ENTRY
-#define GITS_ENTRY_GLX GITS_ENTRY spillGL();
+#define GITS_ENTRY_WGL GITS_MUTEX GITS_ENTRY
+#define GITS_ENTRY_GLX GITS_MUTEX GITS_ENTRY spillGL();
 #define GITS_ENTRY_EGL                                                                             \
-  GITS_ENTRY spillEGL();                                                                           \
+  GITS_MUTEX GITS_ENTRY spillEGL();                                                                \
   wrapper.EGLInitialize();
 
 extern "C" {

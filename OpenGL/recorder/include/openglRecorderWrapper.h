@@ -34,8 +34,7 @@ public:
 } // namespace gits
 #define DRAWCALL_WRAPPER_PRE_POST DrawCallWrapperPrePost drawCallWrapperPrePost(_recorder);
 
-#define GITS_REC_MUTEX     std::unique_lock<std::recursive_mutex> lock(_mutex);
-#define GITS_REC_ENTRY     GITS_REC_MUTEX TrackThread();
+#define GITS_REC_ENTRY     TrackThread();
 #define GITS_REC_ENTRY_EGL GITS_REC_ENTRY
 #define GITS_REC_ENTRY_WGL GITS_REC_ENTRY
 #define GITS_REC_ENTRY_GLX GITS_REC_ENTRY
@@ -49,7 +48,6 @@ namespace OpenGL {
 
 class CRecorderWrapper : public IRecorderWrapper {
   CRecorder& _recorder;
-  mutable std::recursive_mutex _mutex;
 
   //Function used to check if tokens should be recorder. Only gl functions that should run
   // differently are glGetString and glGetStringf.

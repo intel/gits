@@ -109,17 +109,14 @@ namespace OpenGL {
 CRecorderWrapper::CRecorderWrapper(CRecorder& recorder) : _recorder(recorder) {}
 
 void CRecorderWrapper::StreamFinishedEvent(std::function<void()> event) {
-  GITS_REC_MUTEX
   _recorder.RegisterDisposeEvent(std::move(event));
 }
 
 void CRecorderWrapper::EndFramePost() const {
-  GITS_REC_MUTEX
   _recorder.EndFramePost();
 }
 
 void CRecorderWrapper::CloseRecorderIfRequired() {
-  GITS_REC_MUTEX
   if (_recorder.IsMarkedForDeletion()) {
     _recorder.Close();
   }
@@ -129,7 +126,6 @@ CDrivers& CRecorderWrapper::Drivers() const {
 }
 
 void CRecorderWrapper::PreSwap() const {
-  GITS_REC_MUTEX
   if (Record() &&
       Config::Get()
           .recorder.openGL.images.dumpScreenshots[gits::CGits::Instance().CurrentFrame()]) {
