@@ -606,6 +606,18 @@ inline void glTextureImage3DMultisampleNV_SD(GLuint texture,
   }
 }
 
+inline void glTextureStorage1D_SD(
+    GLuint texture, GLsizei levels, GLenum internalformat, GLsizei width, GLboolean recording = 0) {
+  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
+                      !Config::Get().player.captureDraws2DTexs.empty();
+
+  if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
+    TextureStateObject(GL_TEXTURE_1D, texture)
+        .SetTexLevelParams(0, width, 1, 1, internalformat, 0, 0, 0, 1, 0, 0, 0);
+    GenMipMapStateData(texture, GL_TEXTURE_1D, levels);
+  }
+}
+
 inline void glTextureStorage1DEXT_SD(GLuint texture,
                                      GLenum target,
                                      GLsizei levels,

@@ -16115,7 +16115,7 @@ arg2=ArgDef(name='target', type='GLenum'),
 arg3=ArgDef(name='renderbuffer', type='GLuint', wrapType='CGLRenderbufferEXT')
 )
 
-Function(name='glTextureStorage1D', enabled=False, type=Param, stateTrack=True,
+Function(name='glTextureStorage1D', enabled=True, type=Param, stateTrack=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='texture', type='GLuint', wrapType='CGLTexture'),
 arg2=ArgDef(name='levels', type='GLsizei'),
@@ -16286,7 +16286,7 @@ arg7=ArgDef(name='layers', type='GLsizei'),
 arg8=ArgDef(name='flags', type='GLbitfield')
 )
 
-Function(name='glTextureSubImage1D', enabled=False, type=Resource, preSchedule='coherentBufferUpdate_PS(_recorder)',
+Function(name='glTextureSubImage1D', enabled=True, type=Resource, preSchedule='coherentBufferUpdate_PS(_recorder)',
 retV=RetDef(type='void'),
 arg1=ArgDef(name='texture', type='GLuint', wrapType='CGLTexture'),
 arg2=ArgDef(name='level', type='GLint'),
