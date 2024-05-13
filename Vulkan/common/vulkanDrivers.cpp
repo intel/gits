@@ -607,6 +607,11 @@ void CVkDriver::Destroy(VkInstance instance, const VkAllocationCallbacks* pAlloc
 }
 
 void CVkDriver::Destroy(VkDevice device, const VkAllocationCallbacks* pAllocator) {
+  if (device == nullptr) {
+    Log(INFO) << "vkDestroyDevice was called on nullptr handle";
+    return;
+  }
+
   auto dispatchMapKey = GetDispatchKey(device);
 
   drvVk.GetDeviceDispatchTable(device).vkDestroyDevice(device, pAllocator);
