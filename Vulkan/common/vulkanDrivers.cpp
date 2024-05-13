@@ -599,6 +599,11 @@ void CVkDriver::InitializeUnifiedAPI(const VkDeviceCreateInfo* pCreateInfo,
 }
 
 void CVkDriver::Destroy(VkInstance instance, const VkAllocationCallbacks* pAllocator) {
+  if (instance == nullptr) {
+    Log(INFO) << "vkDestroyInstance was called on nullptr handle";
+    return;
+  }
+
   auto dispatchMapKey = GetDispatchKey(instance);
 
   drvVk.GetInstanceDispatchTable(instance).vkDestroyInstance(instance, pAllocator);
