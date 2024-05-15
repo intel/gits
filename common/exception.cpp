@@ -91,8 +91,6 @@ gits::Exception::Exception(std::string message) throw() : _msg(std::move(message
   }
 }
 
-gits::Exception::~Exception() throw() {}
-
 /**
 * @brief Method returns a string describing current exception.
 *

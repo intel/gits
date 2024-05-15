@@ -78,9 +78,6 @@ public:
   static void Callback(FCallback callback, void* userData);
   Exception() throw();
   Exception(std::string message) throw();
-  Exception(const Exception& other) = delete;
-  Exception& operator=(const Exception& other) = delete;
-  ~Exception() throw();
 
   const char* what() const throw();
 };
