@@ -700,7 +700,8 @@ inline void vkQueueSubmit2_RECWRAP(VkResult return_value,
                                    uint32_t submitCount,
                                    const VkSubmitInfo2* pSubmits,
                                    VkFence fence,
-                                   CRecorder& recorder) {
+                                   CRecorder& recorder,
+                                   bool isKHR = false) {
   std::unordered_set<VkDeviceMemory> _memoryToUpdate;
 
   if (updateOnlyUsedMemory()) {
@@ -803,7 +804,11 @@ inline void vkQueueSubmit2_RECWRAP(VkResult return_value,
         }
       }
     }
-    recorder.Schedule(new CvkQueueSubmit2(return_value, queue, submitCount, pSubmits, fence));
+    if (isKHR) {
+      recorder.Schedule(new CvkQueueSubmit2KHR(return_value, queue, submitCount, pSubmits, fence));
+    } else {
+      recorder.Schedule(new CvkQueueSubmit2(return_value, queue, submitCount, pSubmits, fence));
+    }
   } else if (Config::Get().recorder.vulkan.utilities.shadowMemory) {
     for (auto memory : _memoryToUpdate) {
       flushShadowMemory(memory, false);
@@ -849,7 +854,7 @@ inline void vkQueueSubmit2KHR_RECWRAP(VkResult return_value,
                                       const VkSubmitInfo2* pSubmits,
                                       VkFence fence,
                                       CRecorder& recorder) {
-  vkQueueSubmit2_RECWRAP(return_value, queue, submitCount, pSubmits, fence, recorder);
+  vkQueueSubmit2_RECWRAP(return_value, queue, submitCount, pSubmits, fence, recorder, true);
 }
 
 inline void vkBeginCommandBuffer_RECWRAP(VkResult return_value,

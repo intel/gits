@@ -243,7 +243,8 @@ VkResult recExecWrap_vkQueueSubmit(VkQueue queue,
 VkResult recExecWrap_vkQueueSubmit2(VkQueue queue,
                                     uint32_t submitCount,
                                     const VkSubmitInfo2* pSubmits,
-                                    VkFence fence) {
+                                    VkFence fence,
+                                    bool isKHR = false) {
   CVkDriver& drvVk = CGitsPluginVulkan::RecorderWrapper().Drivers();
   VkResult return_value = VK_SUCCESS;
   if (!CGitsPluginVulkan::Configuration().recorder.vulkan.images.dumpSubmits.empty() &&
@@ -258,7 +259,11 @@ VkResult recExecWrap_vkQueueSubmit2(VkQueue queue,
         if (i == (submitCount - 1)) {
           fenceNew = fence;
         }
-        return_value = drvVk.vkQueueSubmit2(queue, 1, &submitInfoOrig, fenceNew);
+        if (isKHR) {
+          return_value = drvVk.vkQueueSubmit2KHR(queue, 1, &submitInfoOrig, fenceNew);
+        } else {
+          return_value = drvVk.vkQueueSubmit2(queue, 1, &submitInfoOrig, fenceNew);
+        }
         if (return_value != VK_SUCCESS) {
           Log(WARN) << "vkQueueSubmit2 failed.";
         }
@@ -295,7 +300,11 @@ VkResult recExecWrap_vkQueueSubmit2(VkQueue queue,
                            0,
                            nullptr};
         }
-        return_value = drvVk.vkQueueSubmit2(queue, 1, &submitInfoNew, fenceNew);
+        if (isKHR) {
+          return_value = drvVk.vkQueueSubmit2KHR(queue, 1, &submitInfoNew, fenceNew);
+        } else {
+          return_value = drvVk.vkQueueSubmit2(queue, 1, &submitInfoNew, fenceNew);
+        }
         if (return_value != VK_SUCCESS) {
           Log(WARN) << "vkQueueSubmit2 failed. Cannot dump submit image.";
         } else {
@@ -305,7 +314,11 @@ VkResult recExecWrap_vkQueueSubmit2(VkQueue queue,
       }
     }
   } else {
-    return_value = drvVk.vkQueueSubmit2(queue, submitCount, pSubmits, fence);
+    if (isKHR) {
+      return_value = drvVk.vkQueueSubmit2KHR(queue, submitCount, pSubmits, fence);
+    } else {
+      return_value = drvVk.vkQueueSubmit2(queue, submitCount, pSubmits, fence);
+    }
   }
 
   CGitsPluginVulkan::RecorderWrapper().resetMemoryAfterQueueSubmit2(queue, submitCount, pSubmits);
@@ -316,7 +329,7 @@ VkResult recExecWrap_vkQueueSubmit2KHR(VkQueue queue,
                                        uint32_t submitCount,
                                        const VkSubmitInfo2* pSubmits,
                                        VkFence fence) {
-  auto return_value = recExecWrap_vkQueueSubmit2(queue, submitCount, pSubmits, fence);
+  auto return_value = recExecWrap_vkQueueSubmit2(queue, submitCount, pSubmits, fence, true);
   return return_value;
 }
 

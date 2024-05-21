@@ -722,7 +722,8 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
                                    CVkQueue& queue,
                                    Cuint32_t& submitCount,
                                    CVkSubmitInfo2Array& pSubmits,
-                                   CVkFence& fence) {
+                                   CVkFence& fence,
+                                   bool isKHR = false) {
   if ((*submitCount > 0) && (!Config::Get().player.captureVulkanSubmits.empty() ||
                              !Config::Get().player.captureVulkanSubmitsResources.empty() ||
                              Config::Get().player.oneVulkanDrawPerCommandBuffer ||
@@ -739,7 +740,11 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
           fenceNew = *fence;
         }
         TODO("Adjust behavior of vkQueueSubmit2 to other functions which use checkReturnValue().")
-        return_value.Assign(drvVk.vkQueueSubmit2(*queue, 1, &submitInfoOrig, fenceNew));
+        if (isKHR) {
+          return_value.Assign(drvVk.vkQueueSubmit2KHR(*queue, 1, &submitInfoOrig, fenceNew));
+        } else {
+          return_value.Assign(drvVk.vkQueueSubmit2(*queue, 1, &submitInfoOrig, fenceNew));
+        }
         if (*return_value != VK_SUCCESS) {
           Log(WARN) << "vkQueueSubmit2 failed.";
           if (Config::Get().player.exitOnVkQueueSubmitFail) {
@@ -793,7 +798,11 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
                            0,
                            nullptr};
         }
-        return_value.Assign(drvVk.vkQueueSubmit2(*queue, 1, &submitInfoNew, fenceNew));
+        if (isKHR) {
+          return_value.Assign(drvVk.vkQueueSubmit2KHR(*queue, 1, &submitInfoNew, fenceNew));
+        } else {
+          return_value.Assign(drvVk.vkQueueSubmit2(*queue, 1, &submitInfoNew, fenceNew));
+        }
         if (*return_value != VK_SUCCESS) {
           Log(WARN) << "vkQueueSubmit2 failed.";
           if (Config::Get().player.exitOnVkQueueSubmitFail) {
@@ -850,7 +859,12 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
       }
     }
     HandleQueueSubmitRenderDocStart();
-    return_value.Assign(drvVk.vkQueueSubmit2(*queue, *submitCount, *pSubmits, *fence));
+    if (isKHR) {
+      return_value.Assign(drvVk.vkQueueSubmit2KHR(*queue, *submitCount, *pSubmits, *fence));
+    } else {
+      return_value.Assign(drvVk.vkQueueSubmit2(*queue, *submitCount, *pSubmits, *fence));
+    }
+
     if (*return_value != VK_SUCCESS) {
       Log(WARN) << "vkQueueSubmit2 failed.";
       if (Config::Get().player.exitOnVkQueueSubmitFail) {
@@ -874,7 +888,7 @@ inline void vkQueueSubmit2KHR_WRAPRUN(CVkResult& return_value,
                                       Cuint32_t& submitCount,
                                       CVkSubmitInfo2Array& pSubmits,
                                       CVkFence& fence) {
-  vkQueueSubmit2_WRAPRUN(return_value, queue, submitCount, pSubmits, fence);
+  vkQueueSubmit2_WRAPRUN(return_value, queue, submitCount, pSubmits, fence, true);
 }
 
 inline void vkMapMemory_WRAPRUN(CVkResult& recorderSideReturnValue,
