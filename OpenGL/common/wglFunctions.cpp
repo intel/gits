@@ -600,6 +600,14 @@ gits::OpenGL::CwglMakeCurrent::CwglMakeCurrent() {}
 gits::OpenGL::CwglMakeCurrent::CwglMakeCurrent(BOOL return_value, HDC hdc, HGLRC hglrc)
     : _return_value(return_value), _hdc(hdc), _hglrc(hglrc), _hwnd(WindowFromDC(hdc)) {
 #if defined GITS_PLATFORM_WINDOWS
+  if (return_value && SD().GetContextStateData(hglrc) == nullptr) {
+    // If the wglMakeCurrent function succeeds but the context data has not yet been tracked,
+    // initiate tracking of the context data at this point.
+    Log(WARN) << "wglMakeCurrent function succeeded, yet context data remains untracked. "
+                 "Initiating tracking now.";
+    SD().AddContext(hglrc, nullptr);
+  }
+
   PtblNtvStreamApi(PtblNativeAPI::Type::WGL);
   if (hdc != 0 && _hwnd.Original() != NULL) {
     UpdateWindowsRec(_hwnd.Original(), _winparams, _hwnd_del_list);
@@ -619,6 +627,14 @@ void gits::OpenGL::CwglMakeCurrent::Run() {
   HDC hdc = nullptr;
   if (_hdc.Original() != 0) {
     hdc = (HDC)UpdateHDC(_hdc, _hwnd);
+  }
+
+  if (!_hglrc.CheckMapping()) {
+    // Ensure the context is created before calling wglMakeCurrent. If not, proceed to create it.
+    Log(WARN) << "The context required for wglMakeCurrent has not been created. Proceeding to "
+                 "create the context.";
+    _hglrc.AddMapping(ptbl_wglCreateContext(hdc));
+    SD().AddContext(*_hglrc, nullptr);
   }
 
   ptbl_wglMakeCurrent(hdc, *_hglrc);

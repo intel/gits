@@ -317,8 +317,6 @@ private:
   typedef std::unordered_map<void*, CContextStateData> CContextMap;
   CContextMap _contextMap;
 
-  CContextStateData* GetContextStateData(void* context);
-
   typedef std::unordered_map<void*, unsigned> CCtxToSharedGroupIdMap;
   CCtxToSharedGroupIdMap _ctxToSharedGroupIdMap;
 
@@ -336,6 +334,7 @@ private:
 
 public:
   ~CStateDynamic();
+  CContextStateData* GetContextStateData(void* context);
 
   // Memory tracking
   typedef std::vector<char> TMemory;
