@@ -383,8 +383,13 @@ Extras {
     BufferMapAccessMask     0xFFFFFFF3
     BufferStorageFlagsMask  1
     Compression {
+    %if is_compute:
+      Type         ZSTD       ; None / LZ4 / ZSTD
+      Level           5       ; 1-10: 1 - fastest, but biggest stream size, 10 - slowest, stream size better optimized
+    %else:
       Type         LZ4       ; None / LZ4 / ZSTD
-      Level          10        ; 1-10: 1 - fastest, but biggest stream size, 10 - slowest, stream size better optimized
+      Level         10       ; 1-10: 1 - fastest, but biggest stream size, 10 - slowest, stream size better optimized
+    %endif
       ChunkSize   2097152     ; grouping small updates in chunks, default chunk size - 2MB
     }
   }
