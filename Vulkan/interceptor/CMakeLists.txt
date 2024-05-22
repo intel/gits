@@ -20,6 +20,7 @@ endif()
 add_definitions(-DBUILD_FOR_VULKAN_INTERCEPTOR)
 
 list(APPEND Vulkan_interceptor_external_cpps
+  ../../common/tools_lite.cpp
   ../../common/exception.cpp
   ../../common/dynamic_linker.cpp
   ../../recorder/gitsLoader.cpp

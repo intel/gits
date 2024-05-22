@@ -28,6 +28,7 @@ if(MSVC)
 endif()
 
 list(APPEND OpenGL_interceptor_external_cpps
+  ../../common/tools_lite.cpp
   ../../common/exception.cpp
   ../../common/timer.cpp
   ../../common/dynamic_linker.cpp

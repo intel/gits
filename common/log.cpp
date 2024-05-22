@@ -29,6 +29,7 @@
 #else
 #include <unistd.h>
 #endif
+#include "tools_lite.h"
 
 // Workaround; interceptors don't have normal config so we
 // store config values in global variables instead.
@@ -63,25 +64,27 @@ gits::CLog::CLog(LogLevel lvl, LogStyle style)
   }
 #endif
   if (_style != NO_PREFIX && _style != RAW) {
+    const auto currentDateTimestamp = getCurrentDateTimestamp();
+    _buffer << currentDateTimestamp << " - ";
     switch (_logLevel) {
     case TRACEV:
     case TRACE:
-      _buffer << "Trace: ";
+      _buffer << "Trace - ";
       break;
     case INFOV:
-      _buffer << "InfoV: ";
+      _buffer << "InfoV - ";
       break;
     case INFO:
-      _buffer << "Info: ";
+      _buffer << "Info - ";
       break;
     case WARN:
-      _buffer << "Warn: ";
+      _buffer << "Warn - ";
       break;
     case ERR:
-      _buffer << "Err: ";
+      _buffer << "Err - ";
       break;
     case OFF: // Messages that should be shown even with logging turned off.
-      _buffer << "Important: ";
+      _buffer << "Important - ";
       break;
     default:
       throw std::invalid_argument((std::string)EXCEPTION_MESSAGE +

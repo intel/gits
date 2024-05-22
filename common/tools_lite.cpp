@@ -115,6 +115,7 @@ std::istream& uniGetLine(std::istream& is, std::string& line) {
       if (sb->sgetc() == '\n') {
         sb->sbumpc();
       }
+      [[fallthrough]];
     case '\n':
     case EOF:
       return is;
@@ -210,6 +211,19 @@ std::string hex::ToString() const {
 std::ostream& operator<<(std::ostream& stream, const hex& h) {
   h.Write(stream);
   return stream;
+}
+
+std::string getCurrentDateTimestamp() {
+  std::stringstream currentDate;
+  const auto time = std::chrono::system_clock::now();
+  const auto tTime = std::chrono::system_clock::to_time_t(time);
+  const auto localTime = std::localtime(&tTime);
+  const auto ms =
+      std::chrono::duration_cast<std::chrono::milliseconds>(time.time_since_epoch()) % 1000;
+  // TODO: When C++20 becomes available, use std::formatter instead.
+  currentDate << std::put_time(localTime, "%Y-%m-%d %H:%M:%S") << "." << std::setfill('0')
+              << std::setw(3) << ms.count();
+  return currentDate.str();
 }
 
 } // namespace gits

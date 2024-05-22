@@ -41,6 +41,7 @@ add_library(ocloc_recorder
 include_directories(recorder)
 
 list(APPEND ocloc_interceptor_files
+  ../common/tools_lite.cpp
   ../common/exception.cpp
   ../common/dynamic_linker.cpp
   ../recorder/gitsLoader.cpp

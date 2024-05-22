@@ -280,4 +280,7 @@ constexpr size_t pageSize4KB = pageSize1KB * 4U;
 constexpr size_t pageSize64KB = pageSize1KB * 64U;
 constexpr size_t pageSize2MB = pageSize1MB * 2U;
 } // namespace alignment
+
+std::string getCurrentDateTimestamp();
+
 } // namespace gits

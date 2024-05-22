@@ -146,6 +146,7 @@ add_library(L0_recorder
 include_directories(recorder/include)
 
 set(L0_interceptor_sources
+  ../common/tools_lite.cpp
   ../common/exception.cpp
   ../common/dynamic_linker.cpp
   ../recorder/gitsLoader.cpp

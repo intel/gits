@@ -99,6 +99,7 @@ if(MSVC)
 endif()
 
 list(APPEND OpenCL_interceptor_external_cpps
+  ../common/tools_lite.cpp
   ../common/exception.cpp
   ../common/dynamic_linker.cpp
   ../recorder/gitsLoader.cpp
