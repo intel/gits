@@ -28,6 +28,7 @@
 Basic {
   RecordingEnabled      True
   LogLevel              "INFO" ;Possible values: TRACEVERBOSE, TRACE, INFO, WARNING, ERROR, OFF
+  LogToConsole          False
 
   BinaryDump            True
   CCodeDump             False

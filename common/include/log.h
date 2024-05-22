@@ -88,6 +88,7 @@ public:
 
   CLog& operator<<(manip t) HIDDEN;
 
+  static void SetLogToConsole(bool logToConsole) HIDDEN;
   static void SetLogLevel(LogLevel lvl) HIDDEN;
 #ifndef BUILD_FOR_CCODE
   static void LogFile(const std::filesystem::path& dir) HIDDEN;

@@ -42,6 +42,7 @@ std::ostream* _log = &std::cout;
 std::ostream* _logPlayerErr = &std::cerr;
 bool _logToFile = false;
 gits::LogLevel _thresholdLogLevel = gits::LogLevel::INFO;
+bool _logToConsole = false;
 #ifndef BUILD_FOR_CCODE
 std::unique_ptr<std::mutex> _mutex;
 #endif
@@ -131,6 +132,10 @@ void gits::CLog::SetLogLevel(LogLevel lvl) {
   _thresholdLogLevel = lvl;
 }
 
+void gits::CLog::SetLogToConsole(bool logToConsole) {
+  _logToConsole = logToConsole;
+}
+
 #ifndef BUILD_FOR_CCODE
 void gits::CLog::LogFile(const std::filesystem::path& dir) {
   if (_file.get() == nullptr) {
@@ -205,6 +210,10 @@ gits::CLog::~CLog() {
       if (_logToFile || _logLevel < LogLevel::WARN) {
         *_log << _buffer.str();
         _log->flush();
+        if (_logToConsole) {
+          std::cout << _buffer.str();
+          std::cout.flush();
+        }
       } else {
         *_logPlayerErr << _buffer.str();
         _logPlayerErr->flush();
