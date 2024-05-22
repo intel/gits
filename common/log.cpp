@@ -30,6 +30,8 @@
 #include <unistd.h>
 #endif
 
+// Workaround; interceptors don't have normal config so we
+// store config values in global variables instead.
 namespace {
 #ifndef BUILD_FOR_CCODE
 std::unique_ptr<std::ofstream> _file;
@@ -38,8 +40,6 @@ gits::CLog::FPrintf* _func = nullptr;
 std::ostream* _log = &std::cout;
 std::ostream* _logPlayerErr = &std::cerr;
 bool _logToFile = false;
-// Workaround; interceptors don't have normal config so we
-// store the level in a global variable instead.
 gits::LogLevel _thresholdLogLevel = gits::LogLevel::INFO;
 #ifndef BUILD_FOR_CCODE
 std::unique_ptr<std::mutex> _mutex;
