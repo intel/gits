@@ -36,8 +36,8 @@ std::unique_ptr<std::ofstream> _file;
 #endif
 gits::CLog::FPrintf* _func = nullptr;
 std::ostream* _log = &std::cout;
-std::ostream* _log_player_err = &std::cerr;
-bool _log_to_file = false;
+std::ostream* _logPlayerErr = &std::cerr;
+bool _logToFile = false;
 // Workaround; interceptors don't have normal config so we
 // store the level in a global variable instead.
 gits::LogLevel _thresholdLogLevel = gits::LogLevel::INFO;
@@ -134,7 +134,7 @@ void gits::CLog::LogFile(const std::filesystem::path& dir) {
     _file.reset(new std::ofstream);
   }
 
-  _log_to_file = true;
+  _logToFile = true;
 
   if (!_file->is_open()) {
     _log = _file.get();
@@ -156,9 +156,9 @@ void gits::CLog::LogFunction(FPrintf* func) {
   if (_file.get() != nullptr) {
     _file->close();
   }
-  _log_to_file = false;
+  _logToFile = false;
   _log = nullptr;
-  _log_player_err = nullptr;
+  _logPlayerErr = nullptr;
 }
 
 void gits::CLog::LogFilePlayer(const std::filesystem::path& dir) {
@@ -166,7 +166,7 @@ void gits::CLog::LogFilePlayer(const std::filesystem::path& dir) {
     _file.reset(new std::ofstream);
   }
 
-  _log_to_file = true;
+  _logToFile = true;
 
   if (!_file->is_open()) {
     _log = _file.get();
@@ -199,12 +199,12 @@ gits::CLog::~CLog() {
       // At first these point to stdout and stderr respectively; we print
       // warnings to the latter. If logging to file is requested, we point _log
       // to that file and print everything there.
-      if (_log_to_file || _logLevel < LogLevel::WARN) {
+      if (_logToFile || _logLevel < LogLevel::WARN) {
         *_log << _buffer.str();
         _log->flush();
       } else {
-        *_log_player_err << _buffer.str();
-        _log_player_err->flush();
+        *_logPlayerErr << _buffer.str();
+        _logPlayerErr->flush();
       }
     }
   } catch (...) {
