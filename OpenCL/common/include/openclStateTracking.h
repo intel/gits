@@ -76,6 +76,58 @@ inline void clCompileProgram_SD(cl_int return_value,
   }
 }
 
+inline void clRetainCommandQueue_SD(cl_int return_value, cl_command_queue command_queue) {
+  if (ErrCodeSuccess(return_value)) {
+    SD().GetCommandQueueState(command_queue, EXCEPTION_MESSAGE).Retain();
+  }
+}
+
+inline void clRetainContext_SD(cl_int return_value, cl_context context) {
+  if (ErrCodeSuccess(return_value)) {
+    SD().GetContextState(context, EXCEPTION_MESSAGE).Retain();
+  }
+}
+
+inline void clRetainDevice_SD(cl_int return_value, cl_device_id device) {
+  if (ErrCodeSuccess(return_value)) {
+    auto& deviceState = SD().GetDeviceIDState(device, EXCEPTION_MESSAGE);
+    if (deviceState.parentDevice == nullptr) {
+      return;
+    }
+    deviceState.Retain();
+  }
+}
+
+inline void clRetainEvent_SD(cl_int return_value, cl_event event) {
+  if (ErrCodeSuccess(return_value)) {
+    SD().GetEventState(event, EXCEPTION_MESSAGE).Retain();
+  }
+}
+
+inline void clRetainKernel_SD(cl_int return_value, cl_kernel kernel) {
+  if (ErrCodeSuccess(return_value)) {
+    SD().GetKernelState(kernel, EXCEPTION_MESSAGE).Retain();
+  }
+}
+
+inline void clRetainMemObject_SD(cl_int return_value, cl_mem memobj) {
+  if (ErrCodeSuccess(return_value)) {
+    SD().GetMemState(memobj, EXCEPTION_MESSAGE).Retain();
+  }
+}
+
+inline void clRetainProgram_SD(cl_int return_value, cl_program program) {
+  if (ErrCodeSuccess(return_value)) {
+    SD().GetProgramState(program, EXCEPTION_MESSAGE).Retain();
+  }
+}
+
+inline void clRetainSampler_SD(cl_int return_value, cl_sampler sampler) {
+  if (ErrCodeSuccess(return_value)) {
+    SD().GetSamplerState(sampler, EXCEPTION_MESSAGE).Retain();
+  }
+}
+
 inline void clCreateBuffer_SD(cl_mem return_value,
                               cl_context context,
                               cl_mem_flags flags,
@@ -233,10 +285,8 @@ inline void clCreateImage_SD(cl_mem return_value,
     if (host_ptr != nullptr) {
       memState->buffer_number = sd._buffers.size() - 1;
     }
-    if (image_desc->mem_object != nullptr &&
-        sd._memStates.find(image_desc->mem_object) != sd._memStates.end()) {
-      memState->memStateCreatedFrom =
-          std::make_shared<CCLMemState>(*sd._memStates[image_desc->mem_object]);
+    if (image_desc->mem_object != nullptr) {
+      clRetainMemObject_SD(CL_SUCCESS, image_desc->mem_object);
     }
   }
 }
@@ -979,12 +1029,17 @@ inline void clReleaseEvent_SD(cl_int return_value, cl_event event) {
 }
 
 inline void clReleaseMemObject_SD(cl_int return_value, cl_mem memobj) {
-  auto& memStates = SD()._memStates;
-  if (memobj != nullptr && memStates.at(memobj)->GetRefCount() == 1U &&
-      memStates.at(memobj)->bufferObj != nullptr) {
-    clReleaseMemObject_SD(return_value, memStates.at(memobj)->bufferObj);
+  if (memobj != nullptr) {
+    const auto& memState = SD().GetMemState(memobj, EXCEPTION_MESSAGE);
+    if (memState.GetRefCount() == 1U && memState.bufferObj != nullptr) {
+      clReleaseMemObject_SD(return_value, memState.bufferObj);
+    }
+    if (memState.GetRefCount() == 1U && memState.image &&
+        memState.image_desc.mem_object != nullptr) {
+      clReleaseMemObject_SD(return_value, memState.image_desc.mem_object);
+    }
   }
-  ReleaseResourceState(memStates, memobj);
+  ReleaseResourceState(SD()._memStates, memobj);
 }
 
 inline void clReleaseProgram_SD(cl_int return_value, cl_program program) {
@@ -1012,58 +1067,6 @@ inline void clReleaseKernel_SD(cl_int return_value, cl_kernel kernel) {
 
 inline void clReleaseSampler_SD(cl_int return_value, cl_sampler sampler) {
   ReleaseResourceState(SD()._samplerStates, sampler);
-}
-
-inline void clRetainCommandQueue_SD(cl_int return_value, cl_command_queue command_queue) {
-  if (ErrCodeSuccess(return_value)) {
-    SD().GetCommandQueueState(command_queue, EXCEPTION_MESSAGE).Retain();
-  }
-}
-
-inline void clRetainContext_SD(cl_int return_value, cl_context context) {
-  if (ErrCodeSuccess(return_value)) {
-    SD().GetContextState(context, EXCEPTION_MESSAGE).Retain();
-  }
-}
-
-inline void clRetainDevice_SD(cl_int return_value, cl_device_id device) {
-  if (ErrCodeSuccess(return_value)) {
-    auto& deviceState = SD().GetDeviceIDState(device, EXCEPTION_MESSAGE);
-    if (deviceState.parentDevice == nullptr) {
-      return;
-    }
-    deviceState.Retain();
-  }
-}
-
-inline void clRetainEvent_SD(cl_int return_value, cl_event event) {
-  if (ErrCodeSuccess(return_value)) {
-    SD().GetEventState(event, EXCEPTION_MESSAGE).Retain();
-  }
-}
-
-inline void clRetainKernel_SD(cl_int return_value, cl_kernel kernel) {
-  if (ErrCodeSuccess(return_value)) {
-    SD().GetKernelState(kernel, EXCEPTION_MESSAGE).Retain();
-  }
-}
-
-inline void clRetainMemObject_SD(cl_int return_value, cl_mem memobj) {
-  if (ErrCodeSuccess(return_value)) {
-    SD().GetMemState(memobj, EXCEPTION_MESSAGE).Retain();
-  }
-}
-
-inline void clRetainProgram_SD(cl_int return_value, cl_program program) {
-  if (ErrCodeSuccess(return_value)) {
-    SD().GetProgramState(program, EXCEPTION_MESSAGE).Retain();
-  }
-}
-
-inline void clRetainSampler_SD(cl_int return_value, cl_sampler sampler) {
-  if (ErrCodeSuccess(return_value)) {
-    SD().GetSamplerState(sampler, EXCEPTION_MESSAGE).Retain();
-  }
 }
 
 inline void clSetKernelArg_SD(cl_int return_value,
@@ -1475,7 +1478,8 @@ inline void clCreateImageWithPropertiesINTEL_SD(cl_mem return_value,
                                                 void* host_ptr,
                                                 cl_int* errcode_ret) {
   if (ErrCodeSuccess(errcode_ret)) {
-    auto& memState = SD()._memStates[return_value];
+    auto& sd = SD();
+    auto& memState = sd._memStates[return_value];
     memState.reset(new CCLMemState(context, properties, CountImageSize(*imageFormat, *imageDesc),
                                    imageFormat, imageDesc, host_ptr));
     memState->image_format = *imageFormat;
@@ -1483,7 +1487,10 @@ inline void clCreateImageWithPropertiesINTEL_SD(cl_mem return_value,
     memState->flags = flags;
     memState->Retain();
     if (host_ptr) {
-      memState->buffer_number = SD()._buffers.size() - 1;
+      memState->buffer_number = sd._buffers.size() - 1;
+    }
+    if (imageDesc->mem_object != nullptr) {
+      clRetainMemObject_SD(CL_SUCCESS, imageDesc->mem_object);
     }
   }
 }

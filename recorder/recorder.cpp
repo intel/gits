@@ -100,7 +100,7 @@ void gits::CRecorder::Dispose() {
 #ifdef GITS_PLATFORM_WINDOWS
   RemoveSignalsHandler();
 #endif
-  if (gits::CGits::Instance().apis.HasCompute()) {
+  if (gits::CGits::Instance().apis.HasCompute() && Config::Get().recorder.basic.enabled) {
     const auto& computeIface = gits::CGits::Instance().apis.IfaceCompute();
     computeIface.MemorySnifferUninstall();
     computeIface.PrintMaxLocalMemoryUsage();

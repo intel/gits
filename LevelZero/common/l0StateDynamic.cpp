@@ -221,6 +221,7 @@ CAllocState::CAllocState(ze_context_handle_t hContext, size_t size, const void* 
       memType(UnifiedMemoryType::device),
       allocType(AllocStateType::virtual_pointer),
       pointerHint(pStart) {
+  CGits::Instance().AddLocalMemoryUsage(size);
   insertionOrderedId = ++CAllocState::insertionOrderedCounter;
 }
 

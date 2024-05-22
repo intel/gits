@@ -51,7 +51,7 @@ bool IsReadOnlyObject(cl_kernel kernel, cl_uint index) {
       isReadOnly = true;
     } else if (arg.type == KernelArgType::mem) {
       const cl_mem memObj = *reinterpret_cast<const cl_mem*>(arg.argValue);
-      const auto memState = SD().GetMemState(memObj, EXCEPTION_MESSAGE);
+      const auto& memState = SD().GetMemState(memObj, EXCEPTION_MESSAGE);
       isReadOnly = IsReadOnlyBuffer(memState.flags, !memState.intel_mem_properties.empty()
                                                         ? memState.intel_mem_properties.data()
                                                         : nullptr);

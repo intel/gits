@@ -147,11 +147,6 @@ void RestoreImage(CScheduler& scheduler,
                   const cl_command_queue& commandQueue) {
   std::vector<char> buffer(state->size);
   void* bufferPtr = nullptr;
-  if (state->image_desc.mem_object != nullptr && state->memStateCreatedFrom &&
-      !state->memStateCreatedFrom->Restored()) {
-    RestoreMemObject(scheduler, state->image_desc.mem_object, state->memStateCreatedFrom,
-                     commandQueue);
-  }
   size_t origin[3] = {0, 0, 0};
   size_t region[3];
   GetRegionForWholeImage(state->image_desc, region);

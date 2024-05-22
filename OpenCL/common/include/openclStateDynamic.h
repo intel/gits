@@ -43,7 +43,7 @@ public:
   void Release() {
     --_refCount;
   }
-  cl_uint GetRefCount() {
+  cl_uint GetRefCount() const {
     return _refCount;
   }
 
@@ -307,7 +307,6 @@ struct CCLMemState : public CCLState {
     static int cnt;
     return cnt;
   }
-  std::shared_ptr<CCLMemState> memStateCreatedFrom;
 
 public:
   CCLMemState();
@@ -338,7 +337,7 @@ public:
               cl_uint pipe_packet_size,
               cl_uint pipe_max_packets,
               const cl_pipe_properties* properties);
-  CCLMemState(const CCLMemState& other) = default;
+  CCLMemState(const CCLMemState& other) = delete;
   CCLMemState& operator=(const CCLMemState& other) = delete;
   ~CCLMemState();
 };
