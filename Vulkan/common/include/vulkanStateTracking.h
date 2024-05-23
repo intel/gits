@@ -4206,6 +4206,9 @@ inline void vkCmdFillBuffer_SD(VkCommandBuffer commandBuffer,
       if (bufferState->binding) {
         VkDeviceSize dstOffsetFinal = bufferState->binding->memoryOffset + dstOffset;
         VkDeviceSize dstSize = size;
+        if (dstSize == VK_WHOLE_SIZE) {
+          dstSize = bufferState->bufferCreateInfoData.Value()->size - dstOffset;
+        }
         VkDeviceMemory dstDeviceMemory =
             bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
         SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
