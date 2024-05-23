@@ -569,19 +569,16 @@ void CVkDriver::InitializeUnifiedAPI(const VkDeviceCreateInfo* pCreateInfo,
           deviceDispatchTable.vkGetBufferDeviceAddressKHR;
       deviceDispatchTable.vkGetBufferOpaqueCaptureAddressUnifiedGITS =
           deviceDispatchTable.vkGetBufferOpaqueCaptureAddressKHR;
-      break;
     }
     // VK_EXT_buffer_device_address
-    if (strcmp(element, VK_EXT_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME) == 0) {
+    else if (strcmp(element, VK_EXT_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME) == 0) {
       deviceDispatchTable.vkGetBufferDeviceAddressUnifiedGITS =
           deviceDispatchTable.vkGetBufferDeviceAddressEXT;
-      break;
     }
     // VK_KHR_synchronization2
-    if (strcmp(element, VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME) == 0) {
+    else if (strcmp(element, VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME) == 0) {
       deviceDispatchTable.vkCmdPipelineBarrier2UnifiedGITS =
           deviceDispatchTable.vkCmdPipelineBarrier2KHR;
-      break;
     }
   }
 
