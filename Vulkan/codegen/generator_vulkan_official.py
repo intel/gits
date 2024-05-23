@@ -1846,20 +1846,20 @@ arg10=ArgDef(name='imageMemoryBarrierCount', type='uint32_t'),
 arg11=ArgDef(name='pImageMemoryBarriers', type='const VkImageMemoryBarrier*', wrapType='CVkImageMemoryBarrierArray', wrapParams='imageMemoryBarrierCount, pImageMemoryBarriers', count='imageMemoryBarrierCount')
 )
 
-Function(name='vkCmdWaitEvents2', enabled=False, type=Param,
+Function(name='vkCmdWaitEvents2', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='eventCount', type='uint32_t'),
-arg3=ArgDef(name='pEvents', type='const VkEvent*'),
-arg4=ArgDef(name='pDependencyInfos', type='const VkDependencyInfo*')
+arg3=ArgDef(name='pEvents', type='const VkEvent*', wrapType='CVkEvent::CSArray', wrapParams='eventCount, pEvents', count='eventCount'),
+arg4=ArgDef(name='pDependencyInfos', type='const VkDependencyInfo*', wrapType='CVkDependencyInfoArray', wrapParams='eventCount, pDependencyInfos', count='eventCount')
 )
 
-Function(name='vkCmdWaitEvents2KHR', enabled=False, type=Param,
+Function(name='vkCmdWaitEvents2KHR', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='eventCount', type='uint32_t'),
-arg3=ArgDef(name='pEvents', type='const VkEvent*'),
-arg4=ArgDef(name='pDependencyInfos', type='const VkDependencyInfo*')
+arg3=ArgDef(name='pEvents', type='const VkEvent*', wrapType='CVkEvent::CSArray', wrapParams='eventCount, pEvents', count='eventCount'),
+arg4=ArgDef(name='pDependencyInfos', type='const VkDependencyInfo*', wrapType='CVkDependencyInfoArray', wrapParams='eventCount, pDependencyInfos', count='eventCount')
 )
 
 Function(name='vkCmdWriteAccelerationStructuresPropertiesKHR', enabled=True, type=Param, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
@@ -9408,7 +9408,7 @@ var3=VarDef(name='image', type='VkImage'),
 var4=VarDef(name='buffer', type='VkBuffer')
 )
 
-Struct(name='VkDependencyInfo_', enabled=True, custom=True,
+Struct(name='VkDependencyInfo_', enabled=True, custom=True, declareArray=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='dependencyFlags', type='VkDependencyFlags'),
