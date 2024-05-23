@@ -13,22 +13,83 @@
 #include <map>
 #include <algorithm>
 
-DISABLE_WARNINGS
-#include <boost/preprocessor/seq/for_each.hpp>
-#include <boost/preprocessor/stringize.hpp>
-ENABLE_WARNINGS
-
 namespace gits {
-#define VAR_TO_STRING(r, data, elem) BOOST_PP_STRINGIZE(elem),
-static const char* texel_type_strings[] = {
-    BOOST_PP_SEQ_FOR_EACH(VAR_TO_STRING, not_used, GITS_TEXEL_TYPE_ENUM) nullptr};
+static const std::map<texel_type, std::string> texel_type_string = {
+    {texel_type::A8, "A8"},
+    {texel_type::R8, "R8"},
+    {texel_type::R8snorm, "R8snorm"},
+    {texel_type::R8ui, "R8ui"},
+    {texel_type::R8i, "R8i"},
+    {texel_type::R16, "R16"},
+    {texel_type::R16snorm, "R16snorm"},
+    {texel_type::R16ui, "R16ui"},
+    {texel_type::R16i, "R16i"},
+    {texel_type::R16f, "R16f"},
+    {texel_type::RG8, "RG8"},
+    {texel_type::RG8snorm, "RG8snorm"},
+    {texel_type::RG8ui, "RG8ui"},
+    {texel_type::RG8i, "RG8i"},
+    {texel_type::B5G6R5, "B5G6R5"},
+    {texel_type::A1BGR5, "A1BGR5"},
+    {texel_type::A1RGB5, "A1RGB5"},
+    {texel_type::ABGR4, "ABGR4"},
+    {texel_type::BGR5A1, "BGR5A1"},
+    {texel_type::R32ui, "R32ui"},
+    {texel_type::R32i, "R32i"},
+    {texel_type::R32f, "R32f"},
+    {texel_type::RG16, "RG16"},
+    {texel_type::RG16snorm, "RG16snorm"},
+    {texel_type::RG16ui, "RG16ui"},
+    {texel_type::RG16i, "RG16i"},
+    {texel_type::RG16f, "RG16f"},
+    {texel_type::BGR8, "BGR8"},
+    {texel_type::BGR8i, "BGR8i"},
+    {texel_type::BGR8ui, "BGR8ui"},
+    {texel_type::BGR8snorm, "BGR8snorm"},
+    {texel_type::RGB8, "RGB8"},
+    {texel_type::RGB8i, "RGB8i"},
+    {texel_type::RGB8ui, "RGB8ui"},
+    {texel_type::RGB8snorm, "RGB8snorm"},
+    {texel_type::RGBA8, "RGBA8"},
+    {texel_type::RGBA8snorm, "RGBA8snorm"},
+    {texel_type::RGBA8ui, "RGBA8ui"},
+    {texel_type::RGBA8i, "RGBA8i"},
+    {texel_type::BGRA8, "BGRA8"},
+    {texel_type::BGRA8i, "BGRA8i"},
+    {texel_type::BGRA8snorm, "BGRA8snorm"},
+    {texel_type::BGRA8ui, "BGRA8ui"},
+    {texel_type::ABGR8, "ABGR8"},
+    {texel_type::ABGR8i, "ABGR8i"},
+    {texel_type::ABGR8snorm, "ABGR8snorm"},
+    {texel_type::ABGR8ui, "ABGR8ui"},
+    {texel_type::RGB10A2, "RGB10A2"},
+    {texel_type::RGB10A2ui, "RGB10A2ui"},
+    {texel_type::BGR10A2, "BGR10A2"},
+    {texel_type::RG11B10f, "RG11B10f"},
+    {texel_type::B10GR11f, "B10GR11f"},
+    {texel_type::RG32ui, "RG32ui"},
+    {texel_type::RG32i, "RG32i"},
+    {texel_type::RG32f, "RG32f"},
+    {texel_type::RGBA16, "RGBA16"},
+    {texel_type::RGBA16snorm, "RGBA16snorm"},
+    {texel_type::RGBA16ui, "RGBA16ui"},
+    {texel_type::RGBA16i, "RGBA16i"},
+    {texel_type::RGBA16f, "RGBA16f"},
+    {texel_type::RGBA32ui, "RGBA32ui"},
+    {texel_type::RGBA32i, "RGBA32i"},
+    {texel_type::RGBA32f, "RGBA32f"},
+    {texel_type::X8D24, "X8D24"},
+    {texel_type::D24, "D24"},
+    {texel_type::D32fS8ui, "D32fS8ui"}};
 
 const char* get_texel_format_string(texel_type val) {
-  return texel_type_strings[(unsigned)val];
+  if (auto it = texel_type_string.find(val); it != texel_type_string.end()) {
+    return it->second.c_str();
+  }
+  throw std::runtime_error("cannot find string value for a given texel type");
 }
 int get_supported_texels_count() {
-  return (int)(sizeof(texel_type_strings) / sizeof(texel_type_strings[0]) -
-               1); //-1 because of additional 0 at the end of the table
+  return static_cast<int>(texel_type_string.size());
 }
 
 namespace texture_converter {
