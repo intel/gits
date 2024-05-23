@@ -75,31 +75,16 @@ void CGitsPlugin::Initialize() {
     return;
   }
 
-  // Sleep on initialization to allow for easier attaching to the process
-  // during debugging.
-  if (getenv("GITS_SLEEP")) {
-    std::this_thread::sleep_for(std::chrono::seconds(10));
-  }
-
   try {
     std::unique_lock<std::mutex> lock(_mutex);
     if (initialized) {
       return;
     }
 
-    const char* envConfigPath = getenv("GITS_CONFIG_DIR");
+    _loader.reset(new CGitsLoader("GITSRecorderOpenGL"));
+    _recorderWrapper = (decltype(_recorderWrapper))_loader->GetRecorderWrapperPtr();
 
-    std::filesystem::path libPath = dl::this_library_path();
-    std::filesystem::path configPath = libPath.parent_path();
-
-    if (envConfigPath) {
-      configPath = std::filesystem::path(envConfigPath);
-    }
-
-    _loader.reset(new CGitsLoader(configPath, "GITSRecorderOpenGL"));
-    _recorderWrapper = (decltype(_recorderWrapper))_loader->RecorderWrapperPtr();
-
-    if (!_loader->Configuration().recorder.basic.enabled) {
+    if (!_loader->GetConfiguration().recorder.basic.enabled) {
       PrePostDisableGL();
     }
 
@@ -127,7 +112,7 @@ void CGitsPlugin::ProcessTerminationDetected() {
 }
 
 const Config& CGitsPlugin::Configuration() {
-  return _loader->Configuration();
+  return _loader->GetConfiguration();
 }
 
 } // namespace OpenGL

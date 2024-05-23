@@ -21,24 +21,22 @@
 namespace gits {
 
 struct Config;
-class CGitsLoader {
-  const Config* _config;
-  dl::SharedObject _sharedLib;
-  void* recorderWrapper;
-
-  CGitsLoader(const CGitsLoader&);            /**< @brief Disallowed */
-  CGitsLoader& operator=(const CGitsLoader&); /**< @brief Disallowed */
-
+class CGitsLoader : public gits::noncopyable {
 public:
-  CGitsLoader(const std::filesystem::path& path, const char* recorderWrapperFactoryName);
+  CGitsLoader(const char* recorderWrapperFactoryName);
   ~CGitsLoader();
 
-  const Config& Configuration() const;
-  void* RecorderWrapperPtr() const {
-    return recorderWrapper;
-  }
+  std::filesystem::path GetGitsPath() const;
+  const Config& GetConfiguration() const;
+  void* GetRecorderWrapperPtr() const;
 
   void ProcessTerminationDetected();
+
+private:
+  const Config* config_;
+  dl::SharedObject recorderLib_;
+  std::filesystem::path gitsPath_;
+  void* recorderWrapper_;
 };
 
 } // namespace gits

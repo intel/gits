@@ -66,29 +66,14 @@ void CGitsPlugin::Initialize() {
     return;
   }
 
-  // Sleep on initialization to allow for easier attaching to the process
-  // during debugging.
-  if (getenv("GITS_SLEEP")) {
-    std::this_thread::sleep_for(std::chrono::seconds(10));
-  }
-
   try {
     std::unique_lock<std::mutex> lock(_mutex);
     if (_initialized) {
       return;
     }
 
-    const char* envConfigPath = getenv("GITS_CONFIG_DIR");
-
-    std::filesystem::path libPath = dl::this_library_path();
-    std::filesystem::path configPath = libPath.parent_path();
-
-    if (envConfigPath) {
-      configPath = std::filesystem::path(envConfigPath);
-    }
-
-    _loader.reset(new CGitsPlugin(configPath, "GITSRecorderL0"));
-    _recorderWrapper = (decltype(_recorderWrapper))_loader->RecorderWrapperPtr();
+    _loader.reset(new CGitsPlugin("GITSRecorderL0"));
+    _recorderWrapper = (decltype(_recorderWrapper))_loader->GetRecorderWrapperPtr();
 
     if (!_loader->Configuration().recorder.basic.enabled) {
       PrePostDisableLevelZero();
@@ -118,7 +103,7 @@ void CGitsPlugin::ProcessTerminationDetected() {
 }
 
 const Config& CGitsPlugin::Configuration() {
-  return static_cast<CGitsLoader*>(_loader.get())->Configuration();
+  return static_cast<CGitsLoader*>(_loader.get())->GetConfiguration();
 }
 
 CGitsPlugin::~CGitsPlugin() {

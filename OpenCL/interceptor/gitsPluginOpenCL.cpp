@@ -82,20 +82,11 @@ void CGitsPluginOpenCL::Initialize() {
       return;
     }
 
-    const char* envConfigPath = getenv("GITS_CONFIG_DIR");
-
-    std::filesystem::path libPath = dl::this_library_path();
-    std::filesystem::path configPath = libPath.parent_path();
-
-    if (envConfigPath) {
-      configPath = std::filesystem::path(envConfigPath);
-    }
-
-    _loader.reset(new CGitsLoader(configPath, "GITSRecorderOpenCL"));
+    _loader.reset(new CGitsLoader("GITSRecorderOpenCL"));
     CGitsPluginOpenCL::_recorderWrapper =
-        (decltype(_recorderWrapper))CGitsPluginOpenCL::_loader->RecorderWrapperPtr();
+        (decltype(_recorderWrapper))CGitsPluginOpenCL::_loader->GetRecorderWrapperPtr();
 
-    if (!CGitsPluginOpenCL::_loader->Configuration().recorder.basic.enabled) {
+    if (!CGitsPluginOpenCL::_loader->GetConfiguration().recorder.basic.enabled) {
       PrePostDisableOpenCL();
     } else {
       CGitsPluginOpenCL::_recorderWrapper->StreamFinishedEvent(PrePostDisableOpenCL);
@@ -122,7 +113,7 @@ void CGitsPluginOpenCL::ProcessTerminationDetected() {
 }
 
 const Config& CGitsPluginOpenCL::Configuration() {
-  return static_cast<CGitsLoader*>(_loader.get())->Configuration();
+  return static_cast<CGitsLoader*>(_loader.get())->GetConfiguration();
 }
 
 CGitsPluginOpenCL::~CGitsPluginOpenCL() {
