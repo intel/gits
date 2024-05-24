@@ -237,7 +237,10 @@ bool gits::Config::Set(const std::filesystem::path& cfgDir) {
   }
   CLog::SetLogLevel(
       cfg.common.thresholdLogLevel); // Log can't use config directly, see log.cpp for info.
-  bool logToConsole = getenv("GITS_LOG_CONSOLE") != nullptr;
+  gits::vi_bool logToConsole;
+  if (getenv("GITS_LOG_CONSOLE") != nullptr) {
+    logToConsole = true;
+  }
   if (!logToConsole) {
     ReadRecorderOption(pt, "Basic.LogToConsole", logToConsole, GITS_PLATFORM_BIT_ALL);
   }
