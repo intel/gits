@@ -342,7 +342,7 @@ inline ze_result_t zeMemAllocDevice_RECEXECWRAP(ze_context_handle_t hContext,
   if (wrapper.IsAddressTranslationModeDisabled(UnifiedMemoryType::device)) {
     const auto alignedSize = gits::Align<gits::alignment::pageSize2MB>(size);
     retCode = driver.zeVirtualMemReserve(hContext, nullptr, alignedSize, pptr);
-    if (retCode != ZE_RESULT_SUCCESS && pptr == nullptr && *pptr == nullptr) {
+    if (retCode != ZE_RESULT_SUCCESS || pptr == nullptr || (pptr != nullptr && *pptr == nullptr)) {
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
     if (device_desc->pNext != nullptr) {
