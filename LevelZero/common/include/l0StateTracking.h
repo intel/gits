@@ -1063,7 +1063,7 @@ inline void zeContextEvictImage_SD(ze_result_t return_value,
   if (return_value == ZE_RESULT_SUCCESS) {
     auto& sd = SD();
     auto& imageState = sd.Get<CImageState>(hImage, EXCEPTION_MESSAGE);
-    imageState.residencyInfo.release();
+    imageState.residencyInfo.reset();
   }
 }
 
@@ -1079,7 +1079,7 @@ inline void zeContextEvictMemory_SD(ze_result_t return_value,
     if (allocState.residencyInfo && allocState.residencyInfo->size != size) {
       Log(WARN) << "Evicted memory size is not covering whole residency.";
     }
-    allocState.residencyInfo.release();
+    allocState.residencyInfo.reset();
   }
 }
 
