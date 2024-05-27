@@ -110,7 +110,6 @@ CGitsPlugin::~CGitsPlugin() {
   _recorderWrapper->MarkRecorderForDeletion();
   _recorderWrapper->CloseRecorderIfRequired();
   _initialized = false;
-  static_cast<CGitsLoader*>(_loader.get())->~CGitsLoader();
 }
 
 static int module_identification_token = 0;
