@@ -192,11 +192,15 @@ gits::CBinOStream::CBinOStream(const std::filesystem::path& fileName)
 }
 
 gits::CBinOStream::~CBinOStream() {
-  if (_offset > 0) {
-    HelperWriteCompressed(_dataToCompress.data(), _offset, WriteType::PACKAGE);
-    _offset = 0;
+  try {
+    if (_offset > 0) {
+      HelperWriteCompressed(_dataToCompress.data(), _offset, WriteType::PACKAGE);
+      _offset = 0;
+    }
+    delete _buf;
+  } catch (...) {
+    topmost_exception_handler("CBinOStream::~CBinOStream");
   }
-  delete _buf;
 }
 
 /**
