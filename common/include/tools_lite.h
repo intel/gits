@@ -23,6 +23,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <cstdint>
 
 #ifndef INIT_NEW_STATIC_OBJ
 // INIT_NEW_STATIC_OBJ creates a static object that won't be destroyed till the end of the application.

@@ -13,6 +13,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <cstdint>
 
 #ifndef VOID_T_DEFINED
 #define VOID_T_DEFINED
