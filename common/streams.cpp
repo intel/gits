@@ -315,7 +315,7 @@ bool gits::CBinIStream::ReadCompressed(char* data, uint64_t dataSize) {
       CGits::Instance().GitsStreamCompressor().Decompress(_compressedData, compressedSize, _size,
                                                           _decompressedData.data());
 
-      memcpy(data + internalOffset, _decompressedData.data() + _offset, dataSize);
+      memcpy((char*)data + internalOffset, _decompressedData.data() + _offset, dataSize);
       _offset += dataSize;
     } else {
       CGits::Instance().GitsStreamCompressor().Decompress(_compressedData, compressedSize, size,
@@ -332,7 +332,10 @@ void* gits::CBinIStream::ReadCompressedWithOffset(char* data,
                                                   uint64_t offsetInFile,
                                                   uint64_t offsetInChunk) {
   if (offsetInFile != _actualOffsetInFile) {
-    fileseek(_file, offsetInFile, SEEK_SET);
+    int seekResult = fileseek(_file, offsetInFile, SEEK_SET);
+    if (seekResult != 0) {
+      throw std::runtime_error("Failed to seek the specified position in the file.");
+    }
     _actualOffsetInFile = offsetInFile;
     _size = 0;
     if (offsetInChunk != 0) {
