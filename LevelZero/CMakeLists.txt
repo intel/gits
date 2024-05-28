@@ -38,6 +38,11 @@ add_custom_command(
     "codegen/templates/l0APITest.lua.mako"
     "codegen/templates/l0Constants.lua.mako"
 )
+
+if(WITH_OCLOC)
+  include_directories(../ocloc/common/include ${CMAKE_BINARY_DIR}/ocloc)
+endif()
+
 add_custom_target(L0_codegen
   DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/L0_codegen.stamp"
   SOURCES
