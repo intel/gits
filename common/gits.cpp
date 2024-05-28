@@ -609,7 +609,7 @@ bool parse_json_recorder_diags(const std::string& properties,
   if (j.is_discarded()) {
     return false;
   }
-  outProperties = j;
+  outProperties = std::move(j);
   return true;
 }
 } // namespace
@@ -636,7 +636,7 @@ CBinIStream& operator>>(CBinIStream& stream, CFile& file) {
     stream.ReadHelper(&props[0], propsLength);
     bool result = false;
     if (props.find("<?xml version") != std::string::npos) {
-      file._formerProperties = props;
+      file._formerProperties = std::move(props);
       result = true;
     } else {
       result = parse_json_recorder_diags(props, *file._properties);

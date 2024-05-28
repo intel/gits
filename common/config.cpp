@@ -41,7 +41,7 @@ std::string read_file(const std::filesystem::path& file_name) {
   return "";
 }
 
-void LoadLevelZeroSubcaptureSettings(gits::Config& cfg, std::string kernelInfo) {
+void LoadLevelZeroSubcaptureSettings(gits::Config& cfg, const std::string& kernelInfo) {
   if (!kernelInfo.empty()) {
     // WA (trigger for _captureState to be CAP_INITIATED for delaying recorder.Start())
     cfg.recorder.openGL.capture.frames.startFrame = static_cast<unsigned>(-1);
