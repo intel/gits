@@ -115,7 +115,6 @@ private:
   std::unordered_map<hash_t, TResourceHandle2> index_;
   std::unordered_map<uint32_t, std::filesystem::path> filenames_map_;
   std::unordered_map<uint32_t, uint64_t> file_sizes_;
-  std::unordered_map<uint32_t, std::shared_ptr<boost::interprocess::file_mapping>> mappings_map_;
   std::mutex mutex_;
 
   hash_t fakeHash_;

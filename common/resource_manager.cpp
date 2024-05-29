@@ -200,14 +200,6 @@ CResourceManager2::CResourceManager2(
       index_filename_(gits::get(filename_mapping, RESOURCE_INDEX)),
       filenames_map_(filename_mapping),
       fakeHash_(0) {
-  for (const auto& one_mapping : filename_mapping) {
-    if (std::filesystem::exists(one_mapping.second)) {
-      std::shared_ptr<file_mapping> mapping = std::make_shared<file_mapping>(
-          one_mapping.second.string().c_str(), boost::interprocess::read_only);
-      mappings_map_[one_mapping.first] = std::move(mapping);
-    }
-  }
-
   if (std::filesystem::exists(index_filename_)) {
     typedef std::unordered_map<uint64_t, TResourceHandle2> map64_t;
     auto index = read_map<map64_t>(index_filename_);
@@ -317,11 +309,6 @@ std::vector<char> CResourceManager2::get(hash_t hash) {
   }
 
   const TResourceHandle2& r = gits::get(index_, hash);
-  std::shared_ptr<file_mapping> mapping = gits::get(mappings_map_, r.file_id);
-  if (!mapping) {
-    const auto msg = "Resource file mapping is null.";
-    throw std::runtime_error(std::string(EXCEPTION_MESSAGE) + msg);
-  }
   if (_fileReader[r.file_id] == nullptr) {
     const auto& file_name = gits::get(filenames_map_, r.file_id);
     _fileReader[r.file_id] = new CBinIStream(file_name);
