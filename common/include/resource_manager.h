@@ -35,7 +35,6 @@ enum TResourceType {
 CLog& operator<<(CLog& log, TResourceType rt);
 std::unordered_map<uint32_t, std::filesystem::path> resource_filenames(
     const std::filesystem::path& prefix);
-void precache_resources(const std::filesystem::path& prefix);
 
 struct TResourceHandle {
   uint64_t offset;

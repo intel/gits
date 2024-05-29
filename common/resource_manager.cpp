@@ -82,29 +82,6 @@ std::unordered_map<uint32_t, std::filesystem::path> resource_filenames(
   return the_map;
 }
 
-void precache_resources(const std::filesystem::path& dirname) {
-  static const int FILE_WARMUP_CYCLES = 2;
-
-  for (auto& res_file : resource_filenames(dirname)) {
-    std::ifstream file(res_file.second, std::ios::binary | std::ios::in);
-
-    for (int file_warmup_cnt = 0; file_warmup_cnt < FILE_WARMUP_CYCLES; file_warmup_cnt++) {
-      if (file.is_open()) {
-        file.clear(); //clear all flags set, if any.
-        file.seekg(0, std::ios::beg);
-        char byte;
-        file.read(&byte, 1);
-        // eof flag status should be checked before calling seekg. New version
-        // of seekg unconditionally clears eof flag.
-        while (!file.eof()) {
-          file.seekg(1024 * 4, std::ios::cur);
-          file.read(&byte, 1);
-        }
-      }
-    }
-  }
-}
-
 CResourceManager::CResourceManager(
     const std::unordered_map<uint32_t, std::filesystem::path>& filename_mapping)
     : index_filename_(gits::get(filename_mapping, RESOURCE_INDEX)),

@@ -193,14 +193,6 @@ int MainBody(int argc, char* argv[]) {
     // create player
     CPlayer player;
 
-    if (cfg.player.precacheResources) {
-      Log(INFO, NO_PREFIX) << "\nPrecaching ...";
-
-      Timer precache;
-      precache_resources(cfg.common.streamDir);
-      Log(INFO, NO_PREFIX) << "Precaching completed in " << precache.Get() / 1e6 << "ms";
-    }
-
     Log(INFO, NO_PREFIX) << "\nLoading...";
 
     // load function calls from a file

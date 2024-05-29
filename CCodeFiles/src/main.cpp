@@ -144,12 +144,6 @@ int main(int argc, char* argv[]) {
         "frames are typically much slower than the rest and they significantly "
         "decrease the average FPS number. Default value: 3");
 
-    TypedOption<bool> optionPrecacheResources(
-        options, OPTION_GROUP_PERFORMANCE, 0, "precacheResources",
-        "Warms up system file cache by reading from gits 'dat' files. "
-        "This is expected to increase total runtime, but decrease time spent playing API "
-        "functions.");
-
     TypedOption<bool> optionDisableLogging(
         options, OPTION_GROUP_PERFORMANCE, 0, "disableLogging",
         "Disable console output, which should slighly increase performance.");
@@ -161,7 +155,7 @@ int main(int argc, char* argv[]) {
     // If we  add some performance options in the future, we should include them in this option.
     TypedOption<bool> optionPerformance(
         options, OPTION_GROUP_PERFORMANCE, 0, "performance",
-        "Enable all the performance options (precacheResources, disableLogging, realtime). "
+        "Enable all the performance options (disableLogging, realtime). "
         "Recommended for performance tests.");
 
     options.Parse();
@@ -229,10 +223,6 @@ int main(int argc, char* argv[]) {
       cfg.ccode.benchmarkStartFrame = 3; //default value
     }
 
-    if (optionPrecacheResources.Present() || optionPerformance.Present()) {
-      cfg.player.precacheResources = true;
-    }
-
     if (optionDisableLogging.Present() || optionPerformance.Present()) {
       cfg.common.thresholdLogLevel = LogLevel::OFF;
       // Log can't use config directly, see log.cpp for info.
@@ -260,12 +250,6 @@ int main(int argc, char* argv[]) {
 #ifdef _PERF_MODE_
     LoadGitsRawFile("gitsData.raw");
 #endif
-    if (Config::Get().player.precacheResources) {
-      Log(INFO, NO_PREFIX) << "\nPrecaching ...";
-      Timer precache;
-      precache_resources(Config::Get().common.streamDir);
-      Log(INFO, NO_PREFIX) << "Precaching completed in " << precache.Get() / 1e6 << " ms";
-    }
 
 #ifdef _TIMING_MASK_AND_FRAME_LOOP_
     blockTimingMask = (argc >= 2) ? atoi(argv[1]) : blockTimingMask;

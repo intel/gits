@@ -419,7 +419,6 @@ struct Config {
     VulkanObjectRange captureVulkanDraws;
     VulkanObjectRange captureVulkanResources;
     vi_bool skipNonDeterministicImages;
-    vi_bool precacheResources;
     vi_bool forceWindowPos;
     std::pair<int, int> windowCoords;
     vi_bool forceWindowSize;

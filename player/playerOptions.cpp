@@ -922,11 +922,6 @@ bool configure_player(int argc, char** argv) {
       "related to max value being exceeded. This option is mutually exclusive with tokenBurstLimit "
       "option.");
 
-  TypedOption<bool> optionPrecacheResources(
-      options, OPTION_GROUP_PERFORMANCE, 0, "precacheResources",
-      "Warms up system file cache by reading from gits 'dat' files. "
-      "This is expected to increase total runtime, but decrease time spent playing GL functions.");
-
   TypedOption<std::string> optionAffectViewport(
       options, OPTION_GROUP_MUTATORS, 0, "affectViewport",
       "Causes certain other options to affect only a viewports specified with 'width,height' "
@@ -1297,7 +1292,6 @@ bool configure_player(int argc, char** argv) {
   }
 
   cfg.player.captureDrawsPre = optionCaptureDrawsPre.Value();
-  cfg.player.precacheResources = optionPrecacheResources.Value();
 
   cfg.player.syncWithRecorder = optionSyncWithRecorder.Value();
   cfg.player.benchmark = optionBenchmark.Value();
