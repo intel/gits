@@ -385,7 +385,6 @@ struct Config {
     vi_bool loadWholeStreamBeforePlayback;
 
     vi_bool minimalConfig;
-    vi_bool loadResourcesImmediately;
     BitRange stopAfterFrames;
     vi_uint tokenLoadLimit;
     BitRange captureFrames;

@@ -904,14 +904,6 @@ bool configure_player(int argc, char** argv) {
                                            "If specified, gitsPlayer will request "
                                            "realtime priority from the system.");
 
-  TypedOption<bool> optionLoadResourcesImmediately(options, OPTION_GROUP_PERFORMANCE, 0,
-                                                   "loadResourcesImmediately",
-                                                   "Loads all binary resources at "
-                                                   "stream load time, instead of later when they "
-                                                   "are actually needed - will stress address "
-                                                   "space and memory availability harder, but "
-                                                   "should provide improved playback performance.");
-
   TypedOption<int> optionTokenBurstLimit(
       options, OPTION_GROUP_PERFORMANCE, 0, "tokenBurstLimit",
       "Specifies number of tokens to be loaded "
@@ -1298,8 +1290,6 @@ bool configure_player(int argc, char** argv) {
     lua::CreateAndRegisterEvents(scriptPath.string().c_str());
     cfg.common.useEvents = true;
   }
-
-  cfg.player.loadResourcesImmediately = optionLoadResourcesImmediately.Value();
 
   if (optionCaptureDepth.Present() || optionCaptureStencil.Present()) {
     throw std::runtime_error("Options 'captureDepth' and 'captureStencil are obsolete due to "
