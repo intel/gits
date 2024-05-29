@@ -252,7 +252,7 @@ int MainBody(int argc, char* argv[]) {
     Log(INFO, NO_PREFIX) << "Initialized in: " << initTime / 1e6 << "ms";
     Log(INFO, NO_PREFIX) << "State restored in: " << restorationTime / 1e6 << "ms";
     Log(INFO, NO_PREFIX) << "Stalled loading: " << loadingTime / 1e6 << "ms";
-    Log(INFO, NO_PREFIX) << "Played back in: " << (playbackTime - loadingTime) / 1e6 << "ms";
+    Log(INFO, NO_PREFIX) << "Played back in: " << playbackTime / 1e6 << "ms";
     Log(INFO, NO_PREFIX) << "Total runtime: " << programTime / 1e6 << "ms";
 
     if (gits::CGits::Instance().apis.HasCompute()) {
