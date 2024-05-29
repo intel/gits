@@ -6429,6 +6429,35 @@ arg1=ArgDef(name='hTracer',type='zet_tracer_exp_handle_t',tag='in'),
 arg2=ArgDef(name='pCoreCbs',type='zet_core_callbacks_t*',tag='in'),
 )
 
+Function(name='zelTracerCreate',component='zel_tracer',enabled=False,ddi_pos=0,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='desc',type='const zel_tracer_desc_t*',tag='in'),
+arg2=ArgDef(name='phTracer',type='zel_tracer_handle_t*',tag='out'),
+)
+
+Function(name='zelTracerDestroy',component='zel_tracer',enabled=False,ddi_pos=1,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hTracer',type='zel_tracer_handle_t',tag='in',release=True),
+)
+
+Function(name='zelTracerSetEnabled',component='zel_tracer',enabled=False,ddi_pos=4,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hTracer',type='zel_tracer_handle_t',tag='in'),
+arg2=ArgDef(name='enable',type='ze_bool_t',tag='in'),
+)
+
+Function(name='zelTracerSetEpilogues',component='zel_tracer',enabled=False,ddi_pos=3,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hTracer',type='zel_tracer_handle_t',tag='in'),
+arg2=ArgDef(name='pCoreCbs',type='zel_core_callbacks_t*',tag='in'),
+)
+
+Function(name='zelTracerSetPrologues',component='zel_tracer',enabled=False,ddi_pos=2,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='hTracer',type='zel_tracer_handle_t',tag='in'),
+arg2=ArgDef(name='pCoreCbs',type='zel_core_callbacks_t*',tag='in'),
+)
+
 Function(name='zeGetCommandListProcAddrTable',component='ze_dditable',enabled=True,skipRun=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='version',type='ze_api_version_t',tag='in'),
@@ -6831,6 +6860,12 @@ arg1=ArgDef(name='version',type='ze_api_version_t',tag='in'),
 arg2=ArgDef(name='pDdiTable',type='zet_tracer_exp_dditable_t*',tag='inout',wrapType='COutArgument'),
 )
 
+Function(name='zelGetTracerApiProcAddrTable',component='ze_dditable',enabled=True,skipRun=True,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='version',type='ze_api_version_t',tag='in'),
+arg2=ArgDef(name='pDdiTable',type='zel_tracer_dditable_t*',tag='inout',wrapType='COutArgument'),
+)
+
 Function(name='zeGitsIndirectAllocationOffsets',component='ze_gits_extension',extension=True,enabled=True,stateTrack=True,recWrap=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='pAlloc',type='void*',tag='in',wrapType='CMappedPtr'),
@@ -6853,33 +6888,4 @@ retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hDevice',type='ze_device_handle_t',tag='in'),
 arg2=ArgDef(name='count',type='uint32_t',tag='in'),
 arg3=ArgDef(name='cqGroupProperties',type='const ze_command_queue_group_properties_t*',tag='in',wrapParams='count, {name}')
-)
-
-Function(name='zelTracerCreate',component='zel_tracer',enabled=False,
-retV=RetDef(type='ze_result_t'),
-arg1=ArgDef(name='desc',type='const zel_tracer_desc_t*',tag='in'),
-arg2=ArgDef(name='phTracer',type='zel_tracer_handle_t*',tag='out'),
-)
-
-Function(name='zelTracerDestroy',component='zel_tracer',enabled=False,
-retV=RetDef(type='ze_result_t'),
-arg1=ArgDef(name='hTracer',type='zel_tracer_handle_t',tag='in',release=True),
-)
-
-Function(name='zelTracerSetEnabled',component='zel_tracer',enabled=False,
-retV=RetDef(type='ze_result_t'),
-arg1=ArgDef(name='hTracer',type='zel_tracer_handle_t',tag='in'),
-arg2=ArgDef(name='enable',type='ze_bool_t',tag='in'),
-)
-
-Function(name='zelTracerSetEpilogues',component='zel_tracer',enabled=False,
-retV=RetDef(type='ze_result_t'),
-arg1=ArgDef(name='hTracer',type='zel_tracer_handle_t',tag='in'),
-arg2=ArgDef(name='pCoreCbs',type='zel_core_callbacks_t*',tag='in'),
-)
-
-Function(name='zelTracerSetPrologues',component='zel_tracer',enabled=False,
-retV=RetDef(type='ze_result_t'),
-arg1=ArgDef(name='hTracer',type='zel_tracer_handle_t',tag='in'),
-arg2=ArgDef(name='pCoreCbs',type='zel_core_callbacks_t*',tag='in'),
 )

@@ -1,5 +1,5 @@
 <%
-COMPONENTS_TO_OMIT = ['ze_gits_extension','ze_deprecated', 'ze_dditable', 'zel_tracer']
+COMPONENTS_TO_OMIT = ['ze_gits_extension','ze_deprecated', 'ze_dditable']
 components = {}
 all_functions = {}
 current_functions = {}
