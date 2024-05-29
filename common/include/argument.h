@@ -286,8 +286,7 @@ public:
 
 protected:
   hash_t _resource_hash;
-  mapped_file _data;
-  std::vector<char> _data2;
+  std::vector<char> _data;
 };
 
 /**

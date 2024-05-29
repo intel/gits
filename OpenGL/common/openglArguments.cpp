@@ -3025,13 +3025,8 @@ void gits::OpenGL::CDataUpdate::Read(CBinIStream& stream) {
 
     // Cache
     if (stream_older_than(GITS_TOKEN_COMPRESSION)) {
-      CBinaryResource::PointerProxy ptrProxy = CBinaryResource::PointerProxy(
-          gits::CGits::Instance().ResourceManager().get(_updates.back().hash));
-      const char* updatePtr = (const char*)ptrProxy;
-      const size_t size_ =
-          gits::CGits::Instance().ResourceManager().get(_updates.back().hash).size();
-      _updates.back().playerCache.resize(size_);
-      memcpy(&_updates.back().playerCache[0], updatePtr, size_);
+      _updates.back().playerCache =
+          std::move(gits::CGits::Instance().ResourceManager().get(_updates.back().hash));
     } else {
       _updates.back().playerCache =
           std::move(gits::CGits::Instance().ResourceManager2().get(_updates.back().hash));
@@ -3410,13 +3405,8 @@ void gits::OpenGL::CCoherentBufferUpdate::Read(CBinIStream& stream) {
 
     // Cache
     if (stream_older_than(GITS_TOKEN_COMPRESSION)) {
-      CBinaryResource::PointerProxy ptrProxy = CBinaryResource::PointerProxy(
-          gits::CGits::Instance().ResourceManager().get(_updates.back()._hash));
-      const char* updatePtr = (const char*)ptrProxy;
-      const size_t size_ =
-          gits::CGits::Instance().ResourceManager().get(_updates.back()._hash).size();
-      _updates.back().playerCache.resize(size_);
-      memcpy(&_updates.back().playerCache[0], updatePtr, size_);
+      _updates.back().playerCache =
+          std::move(gits::CGits::Instance().ResourceManager().get(_updates.back()._hash));
     } else {
       _updates.back().playerCache =
           std::move(gits::CGits::Instance().ResourceManager2().get(_updates.back()._hash));

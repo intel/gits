@@ -152,10 +152,10 @@ public:
   bool InitializeCompression();
   bool LoadChunk();
   bool ReadCompressed(char* data, uint64_t dataSize);
-  void* ReadCompressedWithOffset(char* data,
-                                 uint64_t dataSize,
-                                 uint64_t offsetInFile,
-                                 uint64_t offsetInChunk);
+  void* ReadWithOffset(char* data,
+                       uint64_t dataSize,
+                       uint64_t offsetInFile,
+                       uint64_t offsetInChunk = 0);
   CBinIStream(const std::filesystem::path& fileName);
   CBinIStream(const CBinIStream&) = delete;
   CBinIStream& operator=(const CBinIStream&) = delete;

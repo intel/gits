@@ -63,13 +63,15 @@ inline int get_product_cost(const gits::FileData& d) {
 }
 
 typedef uint64_t hash_t;
+class CBinOStream;
+class CBinIStream;
 
 class CResourceManager {
 public:
   CResourceManager(const std::unordered_map<uint32_t, std::filesystem::path>& filename_mapping);
   CResourceManager(const CResourceManager& other) = delete;
   CResourceManager& operator=(const CResourceManager& other) = delete;
-  mapped_file get(hash_t hash) const;
+  std::vector<char> get(hash_t hash);
 
   TResourceHandle get_resource_handle(hash_t);
 
@@ -80,9 +82,10 @@ private:
   std::unordered_map<hash_t, TResourceHandle> index_;
   std::unordered_map<uint32_t, std::filesystem::path> filenames_map_;
   std::unordered_map<uint32_t, uint64_t> file_sizes_;
-  std::unordered_map<uint32_t, std::shared_ptr<boost::interprocess::file_mapping>> mappings_map_;
 
   hash_t fakeHash_;
+  std::map<uint32_t, CBinIStream*> _fileReader;
+  std::vector<char> _data;
 };
 
 struct TResourceHandle2 {
@@ -91,8 +94,6 @@ struct TResourceHandle2 {
   uint32_t file_id;
   uint64_t size;
 };
-class CBinOStream;
-class CBinIStream;
 class CResourceManager2 {
 public:
   CResourceManager2(const std::unordered_map<uint32_t, std::filesystem::path>& filename_mapping);

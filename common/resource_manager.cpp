@@ -110,13 +110,6 @@ CResourceManager::CResourceManager(
     : index_filename_(gits::get(filename_mapping, RESOURCE_INDEX)),
       filenames_map_(filename_mapping),
       fakeHash_(0) {
-  for (const auto& one_mapping : filename_mapping) {
-    if (std::filesystem::exists(one_mapping.second)) {
-      std::shared_ptr<file_mapping> mapping = std::make_shared<file_mapping>(
-          one_mapping.second.string().c_str(), boost::interprocess::read_only);
-      mappings_map_[one_mapping.first] = std::move(mapping);
-    }
-  }
 
   if (std::filesystem::exists(index_filename_)) {
     typedef std::unordered_map<uint64_t, TResourceHandle> map64_t;
@@ -125,63 +118,19 @@ CResourceManager::CResourceManager(
   }
 }
 
-class OFBinStreamWrap {
-  std::shared_ptr<std::ofstream> _ofstrPtr;
-
-public:
-  OFBinStreamWrap() {}
-  OFBinStreamWrap(const char* name)
-      : _ofstrPtr(new std::ofstream(name, std::ios::binary | std::ios::app | std::ios::out)) {}
-  std::ofstream& Stream() {
-    return *_ofstrPtr;
-  }
-};
-
-struct FileWriter {
-  typedef std::map<std::string, OFBinStreamWrap> FilesMap;
-
-  static void consume_filedata(const FileData& data, FilesMap& files) {
-    if (!Config::Get().recorder.extras.utilities.nullIO) {
-      if (files.find(data.name) == files.end()) {
-        files[data.name] = OFBinStreamWrap(data.name);
-      }
-      files[data.name].Stream().write(static_cast<const char*>(data.ptr), data.size);
-    }
-    operator delete(data.ptr);
-    delete[] data.name;
-  }
-  void operator()(ProducerConsumer<FileData>& sync) {
-    FilesMap files;
-    try {
-      for (;;) {
-        FileData data = {};
-        if (!sync.consume(data)) {
-          break;
-        }
-        consume_filedata(data, files);
-      }
-    } catch (...) {
-      Log(ERR) << "Writer thread failed: Exiting Gits!!!";
-      fast_exit(1);
-    }
-    Log(INFO) << "Resource writer thread finished.";
-  }
-
-  FileWriter& operator=(const FileWriter& other) = delete;
-};
-
-mapped_file CResourceManager::get(hash_t hash) const {
+std::vector<char> CResourceManager::get(hash_t hash) {
   if (hash == EmptyHash) {
-    return mapped_file();
+    return std::vector<char>();
   }
 
   const TResourceHandle& r = gits::get(index_, hash);
-  std::shared_ptr<file_mapping> mapping = gits::get(mappings_map_, r.file_id);
-  if (!mapping) {
-    const auto msg = "Resource file mapping is null.";
-    throw std::runtime_error(std::string(EXCEPTION_MESSAGE) + msg);
+  if (_fileReader[r.file_id] == nullptr) {
+    const auto& file_name = gits::get(filenames_map_, r.file_id);
+    _fileReader[r.file_id] = new CBinIStream(file_name);
   }
-  return mapped_file(*mapping, r.offset, r.size);
+  _data.resize(r.size);
+  _fileReader[r.file_id]->ReadWithOffset(_data.data(), r.size, r.offset);
+  return std::move(_data);
 }
 
 TResourceHandle CResourceManager::get_resource_handle(hash_t toFind) {
@@ -315,8 +264,8 @@ std::vector<char> CResourceManager2::get(hash_t hash) {
     _fileReader[r.file_id]->InitializeCompression();
   }
   _data.resize(r.size);
-  _fileReader[r.file_id]->ReadCompressedWithOffset(_data.data(), r.size, r.offsetToStart,
-                                                   r.offsetInsideChunk);
+  _fileReader[r.file_id]->ReadWithOffset(_data.data(), r.size, r.offsetToStart,
+                                         r.offsetInsideChunk);
   return std::move(_data);
 }
 

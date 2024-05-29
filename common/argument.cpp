@@ -178,25 +178,15 @@ void gits::CBinaryResource::Read(CBinIStream& stream) {
   CBuffer buffer(_resource_hash);
   stream >> buffer;
   if (stream_older_than(GITS_TOKEN_COMPRESSION)) {
-    if (Config::Get().player.loadResourcesImmediately) {
-      _data = CGits::Instance().ResourceManager().get(_resource_hash);
-      _data.page_in();
-    }
+    _data = std::move(CGits::Instance().ResourceManager().get(_resource_hash));
   } else {
-    _data2 = std::move(CGits::Instance().ResourceManager2().get(_resource_hash));
+    _data = std::move(CGits::Instance().ResourceManager2().get(_resource_hash));
   }
 }
 
 gits::CBinaryResource::PointerProxy gits::CBinaryResource::Data() const {
   if (Config::Get().IsPlayer()) {
-    if (stream_older_than(GITS_TOKEN_COMPRESSION)) {
-      if (!Config::Get().player.loadResourcesImmediately) {
-        return PointerProxy(CGits::Instance().ResourceManager().get(_resource_hash));
-      }
-      return PointerProxy(_data);
-    } else {
-      return PointerProxy(_data2.data(), _data2.size());
-    }
+    return PointerProxy(_data.data(), _data.size());
   } else {
     Log(ERR) << "CBinaryResource: Getting Data not available in Recorder";
     throw ENotImplemented(EXCEPTION_MESSAGE);

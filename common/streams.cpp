@@ -331,10 +331,10 @@ bool gits::CBinIStream::ReadCompressed(char* data, uint64_t dataSize) {
   return true;
 }
 
-void* gits::CBinIStream::ReadCompressedWithOffset(char* data,
-                                                  uint64_t dataSize,
-                                                  uint64_t offsetInFile,
-                                                  uint64_t offsetInChunk) {
+void* gits::CBinIStream::ReadWithOffset(char* data,
+                                        uint64_t dataSize,
+                                        uint64_t offsetInFile,
+                                        uint64_t offsetInChunk) {
   if (offsetInFile != _actualOffsetInFile) {
     int seekResult = fileseek(_file, offsetInFile, SEEK_SET);
     if (seekResult != 0) {
@@ -347,7 +347,12 @@ void* gits::CBinIStream::ReadCompressedWithOffset(char* data,
     }
   }
   _offset = offsetInChunk;
-  ReadCompressed(data, dataSize);
+  read(data, dataSize);
+#ifndef BUILD_FOR_CCODE
+  if (stream_older_than(GITS_TOKEN_COMPRESSION)) {
+    _actualOffsetInFile = offsetInFile + dataSize;
+  }
+#endif
   return nullptr;
 }
 
