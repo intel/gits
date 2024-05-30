@@ -60,7 +60,6 @@ FILE(GLOB CCodeProject_SOURCES
   ${PROJECT_SOURCE_DIR}/CCodeSource/gits.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/glEnumStrings.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/log.cpp
-  ${PROJECT_SOURCE_DIR}/CCodeSource/mapped_file.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/message_pump.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/openclDrivers.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/openglDrivers.cpp

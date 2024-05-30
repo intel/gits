@@ -243,20 +243,18 @@ public:
     PointerProxy() : _ptr(0), _size(0) {}
     explicit PointerProxy(const void* ptr) : _ptr(ptr), _size(0) {}
     explicit PointerProxy(const void* ptr, size_t size) : _ptr(ptr), _size(size) {}
-    explicit PointerProxy(const mapped_file& data) : _data(data), _ptr(0), _size(data.size()) {}
     template <class T>
     operator const T*() const {
-      return _ptr ? (const T*)_ptr : (const T*)_data.address();
+      return (const T*)_ptr;
     }
     operator const void*() const {
-      return _ptr ? _ptr : _data.address();
+      return _ptr;
     }
     size_t Size() const {
       return _size;
     }
 
   private:
-    mapped_file _data;
     const void* _ptr;
     size_t _size;
   };

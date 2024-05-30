@@ -30,7 +30,6 @@ list(APPEND common_SOURCES
   include/lua_bindings.h
   include/macros.h
   include/malloc_allocator.h
-  include/mapped_file.h
   include/MemorySniffer.h
   include/message_pump.h
   include/performance.h
@@ -65,7 +64,6 @@ list(APPEND common_SOURCES
   id.cpp
   library.cpp
   log.cpp
-  mapped_file.cpp
   MemorySniffer.cpp
   message_pump.cpp
   performance.cpp
@@ -114,7 +112,6 @@ set(common_CCode_SOURCES
   tools_lite.cpp
   tools.cpp
   resource_manager.cpp
-  mapped_file.cpp
   exception.cpp
   dynamic_linker.cpp
   keyEvents.cpp
@@ -131,7 +128,6 @@ set(common_CCode_HEADERS
   include/tools_lite.h
   include/tools.h
   include/resource_manager.h
-  include/mapped_file.h
   include/exception.h
   include/dynamic_linker.h
   include/key_value.h
