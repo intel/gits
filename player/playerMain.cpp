@@ -58,10 +58,6 @@
 #include <memory>
 #include <filesystem>
 
-DISABLE_WARNINGS
-#include <boost/property_tree/info_parser.hpp>
-ENABLE_WARNINGS
-
 namespace gits {
 // Gits player message loop
 //    - play gits, when state is RUNNING

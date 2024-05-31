@@ -29,11 +29,6 @@
 #include <string>
 #include <iostream>
 
-DISABLE_WARNINGS
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/xml_parser.hpp>
-ENABLE_WARNINGS
-
 namespace gits {
 // Developer builds are of the form: dd.dd.dd.999
 #ifndef VERSION_4

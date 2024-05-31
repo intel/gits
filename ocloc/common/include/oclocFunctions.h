@@ -17,10 +17,6 @@
 #include "oclocLibrary.h"
 #include "pragmas.h"
 
-DISABLE_WARNINGS
-#include <boost/optional.hpp>
-ENABLE_WARNINGS
-
 namespace gits {
 namespace ocloc {
 

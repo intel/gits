@@ -17,12 +17,6 @@
 #include <memory>
 #include <filesystem>
 
-namespace boost {
-namespace interprocess {
-class file_mapping;
-}
-} // namespace boost
-
 namespace gits {
 enum TResourceType {
   RESOURCE_INDEX,

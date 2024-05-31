@@ -382,7 +382,6 @@ void gather_diagnostic_info(nlohmann::ordered_json& properties) {
     properties["diag"]["screen"]["resolution"] = res.str();
   }
 
-  boost::property_tree::ptree tree;
   try {
     if (Config::Get().recorder.extras.utilities.extendedDiagnosticInfo) {
       Log(INFO) << "Gathering extended diagnostic info trough WMI...";

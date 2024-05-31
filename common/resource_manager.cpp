@@ -21,12 +21,6 @@
 #include <algorithm>
 #include <memory>
 
-DISABLE_WARNINGS
-#include <boost/interprocess/file_mapping.hpp>
-ENABLE_WARNINGS
-
-using boost::interprocess::file_mapping;
-
 namespace gits {
 CLog& operator<<(CLog& log, TResourceType rt) {
   switch (rt) {

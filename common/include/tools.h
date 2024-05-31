@@ -32,15 +32,12 @@
 #include <shared_mutex>
 #include <condition_variable>
 #include <vector>
+#include <functional>
 
 #ifdef GITS_PLATFORM_X11
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #endif
-
-DISABLE_WARNINGS
-#include <boost/property_tree/ptree.hpp>
-ENABLE_WARNINGS
 
 #ifndef BUILD_FOR_CCODE
 #include "nlohmann/json.hpp"

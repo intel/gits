@@ -35,10 +35,6 @@
 #include <thread>
 #include <mutex>
 
-DISABLE_WARNINGS
-#include <boost/property_tree/ptree.hpp>
-ENABLE_WARNINGS
-
 void PrePostDisableOcloc();
 
 namespace gits {
