@@ -11,9 +11,7 @@
 #include "platform.h"
 #include "pragmas.h"
 
-DISABLE_WARNINGS
-#include <boost/optional.hpp>
-ENABLE_WARNINGS
+#include <optional>
 #include <functional>
 #include <map>
 #include <vector>
@@ -53,14 +51,13 @@ public:
   };
 
 public:
-  typedef boost::optional<HotKeyHolder&> HotKeyOptional;
   CInputListener() : _threadHandle(), _maxRegisteredHotKeyID(0), _useMessageLoop(false) {}
   CInputListener(const CInputListener& other) = delete;
   CInputListener& operator=(const CInputListener& other) = delete;
   ~CInputListener(void);
   int AddHotKey(const std::vector<uint>& keys);
   void AddHotKeyEvent(uint hotKeyId, HotKeyHolder::HotKeyEvent clickEvent);
-  HotKeyOptional GetHotKey(const uint hotKeyId);
+  std::optional<HotKeyHolder> GetHotKey(const uint hotKeyId);
   void SetAsPressed(uint hotKeyId);
   bool WasPressed(uint hotKeyId);
   void StartHotKeyListener(bool useMessageLoop = true);

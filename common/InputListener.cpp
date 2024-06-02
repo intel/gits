@@ -25,21 +25,21 @@ int CInputListener::AddHotKey(const std::vector<uint>& keys) {
   return _maxRegisteredHotKeyID++;
 }
 void CInputListener::AddHotKeyEvent(uint hotKeyId, HotKeyHolder::HotKeyEvent clickEvent) {
-  HotKeyOptional hotKey = GetHotKey(hotKeyId);
+  auto hotKey = GetHotKey(hotKeyId);
   if (hotKey) {
     hotKey->AddClickedEvent(std::move(clickEvent));
   }
 }
 
-CInputListener::HotKeyOptional CInputListener::GetHotKey(const uint hotKeyId) {
+std::optional<CInputListener::HotKeyHolder> CInputListener::GetHotKey(const uint hotKeyId) {
   auto keyHolderIterator = std::find_if(begin(_hotKeys), end(_hotKeys),
                                         [hotKeyId](const CInputListener::HotKeyHolder& keyHolder) {
                                           return keyHolder.Id() == hotKeyId;
                                         });
   if (keyHolderIterator != end(_hotKeys)) {
-    return HotKeyOptional(*keyHolderIterator);
+    return *keyHolderIterator;
   }
-  return HotKeyOptional();
+  return std::nullopt;
 }
 
 void CInputListener::SetAsPressed(uint hotKeyId) {
@@ -58,7 +58,7 @@ DWORD WINAPI KeyListenerThread(LPVOID lParam) {
       break;
     case WM_HOTKEY:
       uint hotKeyId = (uint)msg.wParam;
-      CInputListener::HotKeyOptional keyHolder = inputListener.GetHotKey(hotKeyId);
+      auto keyHolder = inputListener.GetHotKey(hotKeyId);
       if (keyHolder) {
         inputListener.SetAsPressed(hotKeyId);
         keyHolder->CallClickedEvents();
@@ -82,7 +82,7 @@ bool CInputListener::WasPressed(uint hotKeyId) {
     _pressedHistory[hotKeyId] = false;
     return isDown;
   } else {
-    CInputListener::HotKeyOptional keyHolder = GetHotKey(hotKeyId);
+    auto keyHolder = GetHotKey(hotKeyId);
     if (keyHolder) {
       return gits::AreAllKeysPressed(keyHolder->Keys());
     }
@@ -144,7 +144,7 @@ void CInputListener::HotKeyHolder::RegisterKey() {
 #else // Other platform then WINDOWS.
 
 bool CInputListener::WasPressed(uint hotKeyId) {
-  CInputListener::HotKeyOptional keyHolder = GetHotKey(hotKeyId);
+  auto keyHolder = GetHotKey(hotKeyId);
   if (keyHolder) {
     return gits::AreAllKeysPressed(keyHolder->Keys());
   }
