@@ -17,10 +17,13 @@
 #include <regex>
 #include <chrono>
 #include <filesystem>
+#include <fstream>
 
+#ifndef BUILD_FOR_CCODE
 DISABLE_WARNINGS
 #include <boost/property_tree/info_parser.hpp>
 ENABLE_WARNINGS
+#endif
 
 #ifdef GITS_PLATFORM_WINDOWS
 #include <process.h>

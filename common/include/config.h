@@ -20,6 +20,7 @@
 #include <filesystem>
 #include <optional>
 
+#ifndef BUILD_FOR_CCODE
 DISABLE_WARNINGS
 #ifdef check
 #undef check
@@ -27,6 +28,7 @@ DISABLE_WARNINGS
 #include <boost/property_tree/ptree.hpp>
 #include <boost/optional.hpp>
 ENABLE_WARNINGS
+#endif
 
 namespace gits {
 namespace detail {
@@ -755,8 +757,6 @@ private:
   static Config* config;
 };
 
-void GetConfigPtree(const std::filesystem::path& cfgPath, boost::property_tree::ptree& pt);
-
 bool isTraceDataOptPresent(TraceData option);
 
 template <typename T>
@@ -785,6 +785,9 @@ public:
 };
 template <>
 CEnumParser<LogLevel>::CEnumParser();
+
+#ifndef BUILD_FOR_CCODE
+void GetConfigPtree(const std::filesystem::path& cfgPath, boost::property_tree::ptree& pt);
 
 template <class T>
 void ReadRecorderOption(const boost::property_tree::ptree& pt,
@@ -841,4 +844,6 @@ void ReadRecorderOption<std::vector<std::string>>(const boost::property_tree::pt
                                                   std::vector<std::string>& value,
                                                   unsigned supportedPlatforms,
                                                   bool hide);
+
+#endif
 } // namespace gits
