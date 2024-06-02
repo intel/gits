@@ -23,10 +23,6 @@
 #include "lua_bindings.h"
 #include "ptblLibrary.h"
 
-DISABLE_WARNINGS
-#include <boost/lexical_cast.hpp>
-ENABLE_WARNINGS
-
 #include <string>
 #include <vector>
 #include <fstream>
@@ -188,7 +184,7 @@ int console_columns() {
   }
 #else
   try {
-    int width = boost::lexical_cast<int>(CommandOutput("echo -n $COLUMNS", false));
+    int width = std::stoi(CommandOutput("echo -n $COLUMNS", false));
     return std::max(width, default_width);
   } catch (...) {
   }

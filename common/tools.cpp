@@ -30,9 +30,6 @@
 #include <process.h>
 #else
 #include <sys/mman.h>
-DISABLE_WARNINGS
-#include <boost/lexical_cast.hpp>
-ENABLE_WARNINGS
 #endif
 
 #include <png.h>

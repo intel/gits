@@ -421,10 +421,6 @@ def generate_gits_wrapper(functions):
 #include <sstream>
 #include <algorithm>
 
-DISABLE_WARNINGS
-#include <boost/lexical_cast.hpp>
-ENABLE_WARNINGS
-
 #if defined GITS_PLATFORM_X11
 #define XVisualInfo XVisualInfo_
 #include <GL/glx.h>
@@ -526,10 +522,6 @@ def generate_tokens(functions):
 #include "stateTracking.h"
 #include "playerRunWrap.h"
 #include "playerRunWrapConditions.h"
-
-DISABLE_WARNINGS
-#include <boost/lexical_cast.hpp>
-ENABLE_WARNINGS
 
 #include <cstring>
 #include <iostream>

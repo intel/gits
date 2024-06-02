@@ -32,10 +32,6 @@
 #include <sstream>
 #include <iomanip>
 
-DISABLE_WARNINGS
-#include <boost/lexical_cast.hpp>
-ENABLE_WARNINGS
-
 #if defined GITS_PLATFORM_X11
 #define XVisualInfo XVisualInfo_
 #include <GL/glx.h>

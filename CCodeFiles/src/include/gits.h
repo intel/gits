@@ -11,10 +11,6 @@
 #include "timer.h"
 #include "tools.h"
 
-DISABLE_WARNINGS
-#include <boost/lexical_cast.hpp>
-ENABLE_WARNINGS
-
 struct PlaybackTimer {
   Timer timer;
   uint32_t frameStart;
