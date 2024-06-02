@@ -1309,9 +1309,9 @@ bool configure_player(int argc, char** argv) {
   if (optionLogLevel.Present()) {
     std::string logLevelString = optionLogLevel.StrValue();
     CEnumParser<LogLevel> logLevelParser;
-    boost::optional<LogLevel> lvl = logLevelParser.ParseEnum(logLevelString);
+    std::optional<LogLevel> lvl = logLevelParser.ParseEnum(logLevelString);
     if (lvl) {
-      cfg.common.thresholdLogLevel = lvl.get();
+      cfg.common.thresholdLogLevel = lvl.value();
     } else {
       Log(WARN) << "Incorrect log level: \"" << logLevelString << "\".";
       throw std::runtime_error(EXCEPTION_MESSAGE);
@@ -1330,9 +1330,9 @@ bool configure_player(int argc, char** argv) {
     std::string option;
     CEnumParser<TraceData> traceDataParser;
     while (std::getline(ssTraceDataOpts, option, ',')) {
-      boost::optional<TraceData> opt = traceDataParser.ParseEnum(option);
+      std::optional<TraceData> opt = traceDataParser.ParseEnum(option);
       if (opt) {
-        cfg.common.traceDataOpts.insert(opt.get());
+        cfg.common.traceDataOpts.insert(opt.value());
       } else {
         Log(WARN) << "Incorect traceData option: \"" << option << "\".";
         throw std::runtime_error(EXCEPTION_MESSAGE);

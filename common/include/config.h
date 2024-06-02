@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 #include <filesystem>
+#include <optional>
 
 DISABLE_WARNINGS
 #ifdef check
@@ -771,8 +772,8 @@ class CEnumParser {
 
 public:
   CEnumParser(){};
-  boost::optional<T> ParseEnum(const std::string& variantName) {
-    boost::optional<T> retVal = T();
+  std::optional<T> ParseEnum(const std::string& variantName) {
+    std::optional<T> retVal = T();
 
     auto iter = _map.find(gits::ToLowerCopy(variantName));
     if (iter != _map.end()) {

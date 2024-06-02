@@ -227,9 +227,9 @@ bool gits::Config::Set(const std::filesystem::path& cfgDir) {
   ReadRecorderOption(pt, "Basic.LogLevel", logLevelString, GITS_PLATFORM_BIT_ALL);
   if (!logLevelString.empty()) {
     CEnumParser<LogLevel> logLevelParser;
-    boost::optional<LogLevel> lvl = logLevelParser.ParseEnum(logLevelString);
+    std::optional<LogLevel> lvl = logLevelParser.ParseEnum(logLevelString);
     if (lvl) {
-      cfg.common.thresholdLogLevel = lvl.get();
+      cfg.common.thresholdLogLevel = lvl.value();
     } else {
       Log(ERR) << "Incorrect log level: \"" << logLevelString << "\".";
       throw std::invalid_argument(EXCEPTION_MESSAGE);
