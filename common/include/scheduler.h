@@ -60,7 +60,7 @@ private:
   std::mutex _tokenRegisterMutex;
 
   bool LoadChunk();
-  boost::optional<CToken&> Token();
+  CToken* Token();
 
 public:
   CScheduler(unsigned tokenLimit, unsigned tokenBurstNum = 5);

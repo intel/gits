@@ -337,11 +337,11 @@ void CScheduler::Stream(CBinIStream* stream) {
   _iBinStream = stream;
 }
 
-boost::optional<CToken&> CScheduler::Token() {
+CToken* CScheduler::Token() {
   if (_nextToPlay != _tokenList.end()) {
     CToken* result = *_nextToPlay;
     ++_nextToPlay;
-    return *result;
+    return result;
   }
 
   if (!_streamExhausted) {
@@ -349,7 +349,7 @@ boost::optional<CToken&> CScheduler::Token() {
     return Token();
   }
 
-  return boost::optional<CToken&>();
+  return nullptr;
 }
 bool CScheduler::Run(CAction& action) {
   auto& runner = CGits::Instance().Runner();
