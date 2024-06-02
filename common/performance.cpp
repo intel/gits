@@ -20,7 +20,7 @@
 namespace gits {
 
 void FrameTimeSheet::add_frame_time(const char* row_id, uint64_t time) {
-  boost::optional<size_t> idx = try_get_name_idx(row_id);
+  std::optional<size_t> idx = try_get_name_idx(row_id);
   if (!idx) {
     idx = _rows.size();
     _rows.push_back(row_id);
@@ -29,7 +29,7 @@ void FrameTimeSheet::add_frame_time(const char* row_id, uint64_t time) {
 }
 
 void FrameTimeSheet::add_frame_data(const char* row_id, const char* data) {
-  boost::optional<size_t> idx = try_get_name_idx(row_id);
+  std::optional<size_t> idx = try_get_name_idx(row_id);
   if (!idx) {
     idx = _rows.size();
     _rows.push_back(row_id);
@@ -52,17 +52,17 @@ const std::vector<std::string>& FrameTimeSheet::row_names() const {
 }
 
 size_t FrameTimeSheet::get_name_idx(const char* row_name) const {
-  boost::optional<size_t> idx = try_get_name_idx(row_name);
+  std::optional<size_t> idx = try_get_name_idx(row_name);
   if (!idx) {
     throw std::runtime_error("Unknown row name '" + std::string(row_name) + "'");
   }
   return *idx;
 }
 
-boost::optional<size_t> FrameTimeSheet::try_get_name_idx(const char* row_name) const {
+std::optional<size_t> FrameTimeSheet::try_get_name_idx(const char* row_name) const {
   std::vector<std::string>::const_iterator iter = std::find(_rows.begin(), _rows.end(), row_name);
   if (iter == _rows.end()) {
-    return boost::optional<size_t>();
+    return std::optional<size_t>();
   }
   return iter - _rows.begin();
 }
@@ -97,8 +97,8 @@ void FrameTimeSheet::OutputTimeData(std::ostream& stream, bool addFps) {
   // Has data.
   if (!_times.empty() || !_aux.empty()) {
     // we will make 'stamp' based on first 'cpu' sample
-    boost::optional<size_t> stamp_idx = try_get_name_idx("stamp");
-    boost::optional<size_t> cpu_idx = try_get_name_idx("cpu");
+    std::optional<size_t> stamp_idx = try_get_name_idx("stamp");
+    std::optional<size_t> cpu_idx = try_get_name_idx("cpu");
     uint64_t stamp_base = 0;
 
     if (stamp_idx) {

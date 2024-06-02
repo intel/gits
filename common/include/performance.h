@@ -24,10 +24,7 @@
 #include <map>
 #include <string>
 #include <cstdint>
-
-DISABLE_WARNINGS
-#include <boost/optional.hpp>
-ENABLE_WARNINGS
+#include <optional>
 
 namespace gits {
 class FrameTimeSheet {
@@ -51,7 +48,7 @@ public:
 
 private:
   size_t get_name_idx(const char* row_name) const;
-  boost::optional<size_t> try_get_name_idx(const char* row_name) const;
+  std::optional<size_t> try_get_name_idx(const char* row_name) const;
   std::map<size_t, std::vector<uint64_t>> _times;
   std::map<size_t, std::vector<std::string>> _aux;
   std::vector<std::string> _rows;
