@@ -247,7 +247,7 @@ public:
 
   virtual void Write(CCodeOStream& stream) const {
     stream << "name<" << IdEnumStr() << ">(";
-    if (identity<boost::is_pointer<Type>::value>()) {
+    if (identity<std::is_pointer_v<Type>>()) {
       stream << "0x";
     }
     stream << (typename ptr_to_void<Type>::type)key_ << ")";
