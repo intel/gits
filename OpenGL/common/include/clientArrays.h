@@ -32,12 +32,10 @@ class ClientArraysUpdate : public CArgument {
                          GLuint count,
                          const GLvoid* indices,
                          GLuint basevertex,
-                         boost::container::flat_set<GLuint>& sorted);
+                         std::set<GLuint>& sorted);
   // Dumps indices attribs data memory in continous indices ranges. It uses
   // DumpAttribsUpdate under the hood.
-  void DumpAttribsUpdateOptimized(boost::container::flat_set<GLuint> indices,
-                                  GLuint instances,
-                                  GLuint baseinstance);
+  void DumpAttribsUpdateOptimized(std::set<GLuint> indices, GLuint instances, GLuint baseinstance);
 
 public:
   ClientArraysUpdate() {}

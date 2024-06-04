@@ -80,14 +80,7 @@ gits::OpenGL::ClientArraysUpdate::ClientArraysUpdate(GLenum type,
   }
 
   // Dump indices and get sorted list of indices
-  boost::container::flat_set<GLuint> indicesSorted;
-
-  int sum_count = 0;
-  for (unsigned i = 0; i < primcount; i++) {
-    sum_count += count[i];
-  }
-  indicesSorted.reserve(sum_count);
-
+  std::set<GLuint> indicesSorted;
   for (unsigned i = 0; i < primcount; i++) {
     if (count[i] > 0) {
       DumpIndicesUpdate(buff, type, count[i], indices[i], 0, indicesSorted);
@@ -134,10 +127,7 @@ gits::OpenGL::ClientArraysUpdate::ClientArraysUpdate(GLsizei count,
   }
 
   // Dump indices and get sorted list of indices
-  boost::container::flat_set<GLuint> indicesSorted;
-
-  indicesSorted.reserve(count);
-
+  std::set<GLuint> indicesSorted;
   DumpIndicesUpdate(buff, type, count, indices, basevertex, indicesSorted);
 
   // return if attribs stored in buffers
@@ -149,13 +139,12 @@ gits::OpenGL::ClientArraysUpdate::ClientArraysUpdate(GLsizei count,
   DumpAttribsUpdateOptimized(std::move(indicesSorted), instances, baseinstance);
 }
 
-void gits::OpenGL::ClientArraysUpdate::DumpIndicesUpdate(
-    GLuint buff,
-    GLenum type,
-    GLuint count,
-    const GLvoid* indices,
-    GLuint basevertex,
-    boost::container::flat_set<GLuint>& sorted) {
+void gits::OpenGL::ClientArraysUpdate::DumpIndicesUpdate(GLuint buff,
+                                                         GLenum type,
+                                                         GLuint count,
+                                                         const GLvoid* indices,
+                                                         GLuint basevertex,
+                                                         std::set<GLuint>& sorted) {
   // Get pointer to indices data from client side or mapped buffer
   const GLvoid* indicesPtr;
   std::shared_ptr<MapBuffer> buffMap;
@@ -449,8 +438,9 @@ void gits::OpenGL::ClientArraysUpdate::DumpAttribsUpdate(GLuint frontindex,
 }
 
 // Dump attribs data memory updates optimized
-void gits::OpenGL::ClientArraysUpdate::DumpAttribsUpdateOptimized(
-    boost::container::flat_set<GLuint> indices, GLuint instances, GLuint baseinstance) {
+void gits::OpenGL::ClientArraysUpdate::DumpAttribsUpdateOptimized(std::set<GLuint> indices,
+                                                                  GLuint instances,
+                                                                  GLuint baseinstance) {
   // Get continuous indices ranges and dump attribs data diff for those ranges
   GLuint rangeBegin = 0;
   GLuint rangeEnd = 0;

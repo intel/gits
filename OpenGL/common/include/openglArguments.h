@@ -27,9 +27,6 @@
 #include "mapping.h"
 
 #include <set>
-DISABLE_WARNINGS
-#include <boost/container/flat_set.hpp>
-ENABLE_WARNINGS
 #include <unordered_map>
 #include <vector>
 
