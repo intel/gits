@@ -15,6 +15,8 @@
 
 #ifdef GITS_PLATFORM_WINDOWS
 #include <Windows.h>
+#elif defined GITS_PLATFORM_X11
+#include <unistd.h>
 #endif
 
 #if defined GITS_API_OCL
