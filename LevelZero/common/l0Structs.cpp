@@ -31,19 +31,25 @@ std::vector<uint8_t>* FindOclocInputModule(ocloc::CStateDynamic& sd, const std::
 
 std::vector<uint8_t>* FindOclocInputModule(ocloc::CStateDynamic& sd,
                                            const size_t& size,
-                                           const uint8_t* moduleData) {
+                                           const uint8_t* moduleData,
+                                           const ze_module_format_t format) {
   const auto originalHash = ComputeHash(moduleData, size, THashType::XX);
   for (const auto& oclocState : sd.oclocStates) {
     for (const auto& originalOclocHash : oclocState.second->originalHashes) {
       if (originalOclocHash == originalHash) {
         for (auto i = 0U; i < oclocState.second->outputNames.size(); i++) {
-          if (StringEndsWith(oclocState.second->outputNames[i], ".spv") ||
-              StringEndsWith(oclocState.second->outputNames[i], ".bin")) {
+          if ((format == ZE_MODULE_FORMAT_IL_SPIRV &&
+               StringEndsWith(oclocState.second->outputNames[i], ".spv")) ||
+              (format == ZE_MODULE_FORMAT_NATIVE &&
+               StringEndsWith(oclocState.second->outputNames[i], ".bin"))) {
             Log(TRACEV) << "Ocloc output's original hash matched: " << originalOclocHash
                         << ", file name: " << oclocState.second->outputNames[i];
             return &oclocState.second->outputData[i];
           }
         }
+        Log(WARN) << "Ocloc output's original hash matched: " << originalOclocHash
+                  << " but there is no file that matches given format: " << ToStringHelper(format);
+        return nullptr;
       }
     }
   }
@@ -452,7 +458,8 @@ Cze_module_desc_t_V1::L0Type* Cze_module_desc_t_V1::Ptr() {
   _struct.format = *_format;
   bool oclocHandle = false;
 #ifdef WITH_OCLOC
-  const auto* oclocInputModule = FindOclocInputModule(ocloc::SD(), *_inputSize, *_pInputModule);
+  const auto* oclocInputModule =
+      FindOclocInputModule(ocloc::SD(), *_inputSize, *_pInputModule, *_format);
   if (oclocInputModule != nullptr && !oclocInputModule->empty()) {
     _struct.inputSize = oclocInputModule->size();
     _struct.pInputModule = oclocInputModule->data();
