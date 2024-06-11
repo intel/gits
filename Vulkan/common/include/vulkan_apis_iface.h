@@ -42,27 +42,27 @@ public:
   virtual void Rec_StateRestoreFinished() const;
   virtual bool CfgRec_IsDrawsRangeMode() const {
     return Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode ==
-           Config::MODE_VKDRAW;
+           Config::MODE_VK_DRAW;
   }
   virtual bool CfgRec_IsBlitRangeMode() const {
     return Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode ==
-           Config::MODE_VKBLIT;
+           Config::MODE_VK_BLIT;
   }
   virtual bool CfgRec_IsDispatchRangeMode() const {
     return Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode ==
-           Config::MODE_VKDISPATCH;
+           Config::MODE_VK_DISPATCH;
   }
   virtual bool CfgRec_IsRenderPassMode() const {
     return Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode ==
-           Config::MODE_VKRENDERPASS;
+           Config::MODE_VK_RENDER_PASS;
   }
   virtual bool CfgRec_IsCmdBufferMode() const {
     return Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode ==
-           Config::MODE_VKCOMMANDBUFFER;
+           Config::MODE_VK_COMMAND_BUFFER;
   }
   virtual bool CfgRec_IsQueueSubmitMode() const {
     return Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode ==
-           Config::MODE_VKQUEUESUBMIT;
+           Config::MODE_VK_QUEUE_SUBMIT;
   }
   virtual bool CfgRec_IsObjectToRecord() const;
   virtual bool CfgRec_IsSubcapture() const {

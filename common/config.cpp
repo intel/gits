@@ -619,7 +619,7 @@ bool gits::Config::Set(const std::filesystem::path& cfgDir) {
     cfg.recorder.vulkan.capture.frames.stopFrame = static_cast<unsigned>(-1);
     cfg.recorder.vulkan.capture.all.exitFrame = static_cast<unsigned>(-1);
     cfg.recorder.vulkan.capture.objRange.rangeSpecial.range = BitRange(false);
-    cfg.recorder.vulkan.capture.objRange.rangeSpecial.objMode = MODE_VKNONE;
+    cfg.recorder.vulkan.capture.objRange.rangeSpecial.objMode = MODE_VK_NONE;
 
     ReadRecorderOption(pt, "Vulkan.Capture.All.ExitFrame", exitFrameVulkan,
                        GITS_PLATFORM_BIT_WINDOWS | GITS_PLATFORM_BIT_X11);
@@ -678,17 +678,17 @@ bool gits::Config::Set(const std::filesystem::path& cfgDir) {
         }
 
         if (objectsTable.size() == 0 && foundQueueSubmitMode) {
-          cfg.recorder.vulkan.capture.objRange.rangeSpecial.objMode = MODE_VKQUEUESUBMIT;
+          cfg.recorder.vulkan.capture.objRange.rangeSpecial.objMode = MODE_VK_QUEUE_SUBMIT;
         } else if (objectsTable.size() == 2 && foundCommandBuffersRangeMode) {
-          cfg.recorder.vulkan.capture.objRange.rangeSpecial.objMode = MODE_VKCOMMANDBUFFER;
+          cfg.recorder.vulkan.capture.objRange.rangeSpecial.objMode = MODE_VK_COMMAND_BUFFER;
         } else if (objectsTable.size() == 3 && foundRenderPassRangeMode) {
-          cfg.recorder.vulkan.capture.objRange.rangeSpecial.objMode = MODE_VKRENDERPASS;
+          cfg.recorder.vulkan.capture.objRange.rangeSpecial.objMode = MODE_VK_RENDER_PASS;
         } else if (objectsTable.size() == 4 && foundDrawsRangeMode) {
-          cfg.recorder.vulkan.capture.objRange.rangeSpecial.objMode = MODE_VKDRAW;
+          cfg.recorder.vulkan.capture.objRange.rangeSpecial.objMode = MODE_VK_DRAW;
         } else if (objectsTable.size() == 3 && foundDispatchRangeMode) {
-          cfg.recorder.vulkan.capture.objRange.rangeSpecial.objMode = MODE_VKDISPATCH;
+          cfg.recorder.vulkan.capture.objRange.rangeSpecial.objMode = MODE_VK_DISPATCH;
         } else if (objectsTable.size() == 3 && foundBlitRangeMode) {
-          cfg.recorder.vulkan.capture.objRange.rangeSpecial.objMode = MODE_VKBLIT;
+          cfg.recorder.vulkan.capture.objRange.rangeSpecial.objMode = MODE_VK_BLIT;
         } else {
           Log(ERR) << "Incorrect range for mode: " << cfg.recorder.vulkan.capture.mode;
           throw std::runtime_error(EXCEPTION_MESSAGE);
@@ -1292,10 +1292,10 @@ bool gits::isTraceDataOptPresent(gits::TraceData option) {
 #endif
 
 bool gits::Config::VulkanObjectRange::operator[](uint64_t queueSubmitNumber) const {
-  if (objMode == MODE_VKQUEUESUBMIT) {
+  if (objMode == MODE_VK_QUEUE_SUBMIT) {
     return range[(size_t)queueSubmitNumber];
-  } else if (objMode == MODE_VKCOMMANDBUFFER || objMode == MODE_VKRENDERPASS ||
-             objMode == MODE_VKDRAW || objMode == MODE_VKBLIT || objMode == MODE_VKDISPATCH) {
+  } else if (objMode == MODE_VK_COMMAND_BUFFER || objMode == MODE_VK_RENDER_PASS ||
+             objMode == MODE_VK_DRAW || objMode == MODE_VK_BLIT || objMode == MODE_VK_DISPATCH) {
     return objVector[0] == queueSubmitNumber;
   } else {
     return false;

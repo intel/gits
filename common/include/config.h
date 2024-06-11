@@ -149,7 +149,7 @@ enum class TBufferStateRestoration {
 
 enum class TWindowsKeyHandling { MESSAGE_LOOP, ASYNC_KEY_STATE };
 
-enum class TCaptureGroupType { PER_COMMANDBUFFER, PER_RENDERPASS };
+enum class TCaptureGroupType { PER_COMMAND_BUFFER, PER_RENDER_PASS };
 
 enum class TDeviceType { DEVICE_TYPE_ANY, DEVICE_TYPE_INTEGRATED, DEVICE_TYPE_DISCRETE };
 
@@ -248,9 +248,9 @@ struct WindowsKeyHandlingOpt : NamedValuesBase<TWindowsKeyHandling, WindowsKeyHa
 struct VKCaptureGroupTypeOpt : NamedValuesBase<TCaptureGroupType, VKCaptureGroupTypeOpt> {
   static void describe_type() {
     readable_name() = "VKCaptureGroupType";
-    default_value() = TCaptureGroupType::PER_COMMANDBUFFER;
-    values()["CmdBuffer"] = TCaptureGroupType::PER_COMMANDBUFFER;
-    values()["RenderPass"] = TCaptureGroupType::PER_RENDERPASS;
+    default_value() = TCaptureGroupType::PER_COMMAND_BUFFER;
+    values()["CmdBuffer"] = TCaptureGroupType::PER_COMMAND_BUFFER;
+    values()["RenderPass"] = TCaptureGroupType::PER_RENDER_PASS;
   }
 };
 
@@ -302,13 +302,13 @@ struct Config {
     }
   };
   enum VulkanObjectMode {
-    MODE_VKNONE,
-    MODE_VKQUEUESUBMIT,
-    MODE_VKCOMMANDBUFFER,
-    MODE_VKRENDERPASS,
-    MODE_VKDRAW,
-    MODE_VKDISPATCH,
-    MODE_VKBLIT
+    MODE_VK_NONE,
+    MODE_VK_QUEUE_SUBMIT,
+    MODE_VK_COMMAND_BUFFER,
+    MODE_VK_RENDER_PASS,
+    MODE_VK_DRAW,
+    MODE_VK_DISPATCH,
+    MODE_VK_BLIT
   };
   struct VulkanObjectRange : ObjectRange {
     VulkanObjectMode objMode;

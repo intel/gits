@@ -73,7 +73,7 @@ std::string GetFileNameDrawcallScreenshot(unsigned int frameNumber,
   fileName << "_queueSubmit_" << submitNumber;
   fileName << "_commandbufferBatch_" << cmdBufferBatchNumber;
   fileName << "_commandbuffer_" << cmdBufferNumber;
-  if (dumpingMode == VulkanDumpingMode::VULKAN_PER_RENDERPASS ||
+  if (dumpingMode == VulkanDumpingMode::VULKAN_PER_RENDER_PASS ||
       dumpingMode == VulkanDumpingMode::VULKAN_PER_DRAW) {
     fileName << "_renderpass_" << renderpass;
   }
@@ -129,7 +129,7 @@ std::string GetFileNameResourcesScreenshot(unsigned int frameNumber,
   fileName << "_queueSubmit_" << submitNumber;
   fileName << "_commandbufferBatch_" << cmdBufferBatchNumber;
   fileName << "_commandbuffer_" << cmdBufferNumber;
-  if (dumpingMode == VulkanDumpingMode::VULKAN_PER_RENDERPASS ||
+  if (dumpingMode == VulkanDumpingMode::VULKAN_PER_RENDER_PASS ||
       dumpingMode == VulkanDumpingMode::VULKAN_PER_DRAW) {
     fileName << "_renderpass_" << renderpassNumber;
   } else if (dumpingMode == VulkanDumpingMode::VULKAN_PER_BLIT) {
@@ -526,7 +526,7 @@ bool vulkanCopyImage(VkCommandBuffer commandBuffer,
             if (isResource) {
               commandBufferState->renderPassResourceImages.push_back(attachment);
             } else {
-              if (dumpingMode == VulkanDumpingMode::VULKAN_PER_RENDERPASS) {
+              if (dumpingMode == VulkanDumpingMode::VULKAN_PER_RENDER_PASS) {
                 commandBufferState->renderPassImages.push_back(attachment);
               } else if (dumpingMode == VulkanDumpingMode::VULKAN_PER_DRAW) {
                 commandBufferState->drawImages.push_back(attachment);
@@ -589,7 +589,7 @@ void vulkanScheduleCopyRenderPasses(VkCommandBuffer cmdBuffer,
   if (drawNumber) {
     dumpingMode = VulkanDumpingMode::VULKAN_PER_DRAW;
   } else {
-    dumpingMode = VulkanDumpingMode::VULKAN_PER_RENDERPASS;
+    dumpingMode = VulkanDumpingMode::VULKAN_PER_RENDER_PASS;
   }
   for (uint32_t imageview = 0; imageview < imageViewSize; ++imageview) {
     VkImage imageHandle;
@@ -1291,12 +1291,12 @@ void writeScreenshot(VkQueue queue,
                             ->imageStateStore->imageHandle;
         }
         if (Config::Get().player.captureVulkanSubmitsGroupType ==
-            TCaptureGroupType::PER_COMMANDBUFFER) {
+            TCaptureGroupType::PER_COMMAND_BUFFER) {
           fileName = GetFileNameDrawcallScreenshot(
               CGits::Instance().CurrentFrame(),
               (uint32_t)CGits::Instance().vkCounters.CurrentQueueSubmitCount(),
               commandBufferBatchNumber, cmdBufferNumber, 0, 0, SD().imageCounter[imageHandle],
-              VulkanDumpingMode::VULKAN_PER_COMMANDBUFFER);
+              VulkanDumpingMode::VULKAN_PER_COMMAND_BUFFER);
           if (dumpedImagesFromCmdBuff.find(imageHandle) == dumpedImagesFromCmdBuff.end()) {
             bool dumped =
                 writeScreenshotUtil(std::move(fileName), queue, imageHandle,
@@ -1310,7 +1310,7 @@ void writeScreenshot(VkQueue queue,
               CGits::Instance().CurrentFrame(),
               (uint32_t)CGits::Instance().vkCounters.CurrentQueueSubmitCount(),
               commandBufferBatchNumber, cmdBufferNumber, renderpass, 0, imageview,
-              VulkanDumpingMode::VULKAN_PER_RENDERPASS);
+              VulkanDumpingMode::VULKAN_PER_RENDER_PASS);
           writeScreenshotUtil(std::move(fileName), queue, imageHandle,
                               VULKAN_MODE_RENDER_PASS_ATTACHMENTS, imageStoreOption);
         }
@@ -1354,7 +1354,7 @@ void writeResources(VkQueue queue,
           CGits::Instance().CurrentFrame(),
           (uint32_t)CGits::Instance().vkCounters.CurrentQueueSubmitCount(),
           commandBufferBatchNumber, cmdBufferNumber, 0, 0, SD().bufferCounter[swapBuffer],
-          obj.second, VulkanDumpingMode::VULKAN_PER_COMMANDBUFFER);
+          obj.second, VulkanDumpingMode::VULKAN_PER_COMMAND_BUFFER);
       writeBufferUtil(std::move(fileName), queue, swapBuffer);
     }
     for (auto& obj : commandBufferState->resourceWriteImages) {
@@ -1363,7 +1363,7 @@ void writeResources(VkQueue queue,
           CGits::Instance().CurrentFrame(),
           (uint32_t)CGits::Instance().vkCounters.CurrentQueueSubmitCount(),
           commandBufferBatchNumber, cmdBufferNumber, 0, 0, SD().imageCounter[swapImg], obj.second,
-          VulkanDumpingMode::VULKAN_PER_COMMANDBUFFER);
+          VulkanDumpingMode::VULKAN_PER_COMMAND_BUFFER);
       writeScreenshotUtil(std::move(fileName), queue, swapImg, VULKAN_MODE_RESOURCES);
     }
   }
@@ -2690,7 +2690,7 @@ std::set<uint64_t> getPointersUsedInQueueSubmit(CVkSubmitInfoArrayWrap& submitIn
   auto submitInfo2DataValues = submitInfoData.submitInfo2Data.Value();
   uint32_t submitInfoSize = 0;
   uint32_t objNumber = 0;
-  if (objMode == Config::MODE_VKDRAW) {
+  if (objMode == Config::MODE_VK_DRAW) {
     objNumber = countersTable.back();
   }
 
@@ -2773,9 +2773,9 @@ CVkSubmitInfoArrayWrap getSubmitInfoForPrepare(const std::vector<uint32_t>& coun
     commandBufferBatchNumber = countersTable.at(1);
   }
   if (submitInfoDataArrayValues != nullptr) {
-    if ((Config::MODE_VKCOMMANDBUFFER == objMode || Config::MODE_VKRENDERPASS == objMode ||
-         Config::MODE_VKDRAW == objMode || Config::MODE_VKBLIT == objMode ||
-         Config::MODE_VKDISPATCH == objMode) &&
+    if ((Config::MODE_VK_COMMAND_BUFFER == objMode || Config::MODE_VK_RENDER_PASS == objMode ||
+         Config::MODE_VK_DRAW == objMode || Config::MODE_VK_BLIT == objMode ||
+         Config::MODE_VK_DISPATCH == objMode) &&
         (commandBufferBatchNumber < SD().lastQueueSubmit->submitInfoDataArray.size())) {
       for (uint32_t i = 0; i < commandBufferBatchNumber; i++) {
         submitInfoDataArray.submitInfoData.AddElem(&submitInfoDataArrayValues[i]);
@@ -2783,7 +2783,7 @@ CVkSubmitInfoArrayWrap getSubmitInfoForPrepare(const std::vector<uint32_t>& coun
       VkSubmitInfo submitInfoTemp = submitInfoDataArrayValues[commandBufferBatchNumber];
       std::vector<VkCommandBuffer> commandBufferVector;
 
-      if (Config::MODE_VKCOMMANDBUFFER == objMode) {
+      if (Config::MODE_VK_COMMAND_BUFFER == objMode) {
         for (uint32_t i = 0; (i < submitInfoTemp.commandBufferCount) && !objRange[i]; i++) {
           commandBufferVector.push_back(submitInfoTemp.pCommandBuffers[i]);
         }
@@ -2802,9 +2802,9 @@ CVkSubmitInfoArrayWrap getSubmitInfoForPrepare(const std::vector<uint32_t>& coun
       }
     }
   } else if (submitInfo2DataArrayValues != nullptr) {
-    if ((Config::MODE_VKCOMMANDBUFFER == objMode || Config::MODE_VKRENDERPASS == objMode ||
-         Config::MODE_VKDRAW == objMode || Config::MODE_VKBLIT == objMode ||
-         Config::MODE_VKDISPATCH == objMode) &&
+    if ((Config::MODE_VK_COMMAND_BUFFER == objMode || Config::MODE_VK_RENDER_PASS == objMode ||
+         Config::MODE_VK_DRAW == objMode || Config::MODE_VK_BLIT == objMode ||
+         Config::MODE_VK_DISPATCH == objMode) &&
         (commandBufferBatchNumber < SD().lastQueueSubmit->submitInfo2DataArray.size())) {
       for (uint32_t i = 0; i < commandBufferBatchNumber; i++) {
         submitInfoDataArray.submitInfo2Data.AddElem(&submitInfo2DataArrayValues[i]);
@@ -2812,7 +2812,7 @@ CVkSubmitInfoArrayWrap getSubmitInfoForPrepare(const std::vector<uint32_t>& coun
       VkSubmitInfo2 submitInfo2Temp = submitInfo2DataArrayValues[commandBufferBatchNumber];
       std::vector<VkCommandBufferSubmitInfo> commandBufferSubmitInfoVector;
 
-      if (Config::MODE_VKCOMMANDBUFFER == objMode) {
+      if (Config::MODE_VK_COMMAND_BUFFER == objMode) {
         for (uint32_t i = 0; (i < submitInfo2Temp.commandBufferInfoCount) && !objRange[i]; i++) {
           commandBufferSubmitInfoVector.push_back(submitInfo2Temp.pCommandBufferInfos[i]);
         }
@@ -2863,7 +2863,7 @@ void restoreCommandBufferSettings(const BitRange& objRange,
     drvVk.vkBeginCommandBuffer(
         lastCommandBuffer,
         commandBufferState->beginCommandBuffer->commandBufferBeginInfoData.Value());
-    if (objMode == gits::Config::VulkanObjectMode::MODE_VKDRAW) {
+    if (objMode == gits::Config::VulkanObjectMode::MODE_VK_DRAW) {
       commandBufferState->tokensBuffer.RestoreDraw(renderPassNumber, objRange);
     } else {
       commandBufferState->tokensBuffer.RestoreToSpecifiedObject(objRange, objMode);
@@ -2888,11 +2888,11 @@ CVkSubmitInfoArrayWrap getSubmitInfoForSchedule(const std::vector<uint32_t>& cou
   }
 
   if (submitInfoDataArrayValues != nullptr) {
-    if (Config::MODE_VKQUEUESUBMIT == objMode) {
+    if (Config::MODE_VK_QUEUE_SUBMIT == objMode) {
       for (uint32_t i = 0; i < SD().lastQueueSubmit->submitCount; i++) {
         submitInfoDataArray.submitInfoData.AddElem(&submitInfoDataArrayValues[i]);
       }
-    } else if ((Config::MODE_VKCOMMANDBUFFER == objMode) &&
+    } else if ((Config::MODE_VK_COMMAND_BUFFER == objMode) &&
                (commandBufferBatchNumber < SD().lastQueueSubmit->submitInfoDataArray.size())) {
       VkSubmitInfo submitInfoTemp = submitInfoDataArrayValues[commandBufferBatchNumber];
       std::vector<VkCommandBuffer> commandBufferVector;
@@ -2904,8 +2904,8 @@ CVkSubmitInfoArrayWrap getSubmitInfoForSchedule(const std::vector<uint32_t>& cou
       submitInfoTemp.commandBufferCount = (uint32_t)commandBufferVector.size();
       submitInfoTemp.pCommandBuffers = &commandBufferVector[0];
       submitInfoDataArray.submitInfoData.AddElem(&submitInfoTemp);
-    } else if ((Config::MODE_VKRENDERPASS == objMode || Config::MODE_VKDRAW == objMode ||
-                Config::MODE_VKBLIT == objMode || Config::MODE_VKDISPATCH == objMode) &&
+    } else if ((Config::MODE_VK_RENDER_PASS == objMode || Config::MODE_VK_DRAW == objMode ||
+                Config::MODE_VK_BLIT == objMode || Config::MODE_VK_DISPATCH == objMode) &&
                (commandBufferBatchNumber < SD().lastQueueSubmit->submitInfoDataArray.size())) {
       VkSubmitInfo submitInfoTemp = submitInfoDataArrayValues[commandBufferBatchNumber];
       if (commandBufferNumber < submitInfoTemp.commandBufferCount) {
@@ -2915,11 +2915,11 @@ CVkSubmitInfoArrayWrap getSubmitInfoForSchedule(const std::vector<uint32_t>& cou
       }
     }
   } else if (submitInfo2DataArrayValues != nullptr) {
-    if (Config::MODE_VKQUEUESUBMIT == objMode) {
+    if (Config::MODE_VK_QUEUE_SUBMIT == objMode) {
       for (uint32_t i = 0; i < SD().lastQueueSubmit->submitCount; i++) {
         submitInfoDataArray.submitInfo2Data.AddElem(&submitInfo2DataArrayValues[i]);
       }
-    } else if ((Config::MODE_VKCOMMANDBUFFER == objMode) &&
+    } else if ((Config::MODE_VK_COMMAND_BUFFER == objMode) &&
                (commandBufferBatchNumber < SD().lastQueueSubmit->submitInfo2DataArray.size())) {
       VkSubmitInfo2 submitInfo2Temp = submitInfo2DataArrayValues[commandBufferBatchNumber];
       std::vector<VkCommandBufferSubmitInfo> commandBufferSubmitInfoVector;
@@ -2931,8 +2931,8 @@ CVkSubmitInfoArrayWrap getSubmitInfoForSchedule(const std::vector<uint32_t>& cou
       submitInfo2Temp.commandBufferInfoCount = (uint32_t)commandBufferSubmitInfoVector.size();
       submitInfo2Temp.pCommandBufferInfos = &commandBufferSubmitInfoVector[0];
       submitInfoDataArray.submitInfo2Data.AddElem(&submitInfo2Temp);
-    } else if ((Config::MODE_VKRENDERPASS == objMode || Config::MODE_VKDRAW == objMode ||
-                Config::MODE_VKBLIT == objMode || Config::MODE_VKDISPATCH == objMode) &&
+    } else if ((Config::MODE_VK_RENDER_PASS == objMode || Config::MODE_VK_DRAW == objMode ||
+                Config::MODE_VK_BLIT == objMode || Config::MODE_VK_DISPATCH == objMode) &&
                (commandBufferBatchNumber < SD().lastQueueSubmit->submitInfo2DataArray.size())) {
       VkSubmitInfo2 submitInfo2Temp = submitInfo2DataArrayValues[commandBufferBatchNumber];
       if (commandBufferNumber < submitInfo2Temp.commandBufferInfoCount) {

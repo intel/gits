@@ -81,10 +81,10 @@ std::set<uint64_t> CLibrary::CVulkanCommandBufferTokensBuffer::GetMappedPointers
   uint64_t blitCount = 0;
   uint64_t dispatchCount = 0;
   bool pre_recording = true;
-  bool isRenderPassMode = objMode == Config::MODE_VKRENDERPASS;
-  bool isDrawMode = objMode == Config::MODE_VKDRAW;
-  bool isBlitMode = objMode == Config::MODE_VKBLIT;
-  bool isDispatchMode = objMode == Config::MODE_VKDISPATCH;
+  bool isRenderPassMode = objMode == Config::MODE_VK_RENDER_PASS;
+  bool isDrawMode = objMode == Config::MODE_VK_DRAW;
+  bool isBlitMode = objMode == Config::MODE_VK_BLIT;
+  bool isDispatchMode = objMode == Config::MODE_VK_DISPATCH;
 
   for (auto elem : _tokensList) {
     if (elem->Type() & CFunction::GITS_VULKAN_END_RENDER_PASS_APITYPE) {
@@ -103,7 +103,7 @@ std::set<uint64_t> CLibrary::CVulkanCommandBufferTokensBuffer::GetMappedPointers
         (isBlitMode && objRange[blitCount]) || (isDispatchMode && objRange[dispatchCount])) {
       pre_recording = false;
     }
-    if (objMode == Config::MODE_VKQUEUESUBMIT || objMode == Config::MODE_VKCOMMANDBUFFER ||
+    if (objMode == Config::MODE_VK_QUEUE_SUBMIT || objMode == Config::MODE_VK_COMMAND_BUFFER ||
         (isRenderPassMode && objRange[renderPassCount]) ||
         (isDrawMode && renderPassCount == objNumber && objRange[drawInRenderPass]) ||
         (isBlitMode && objRange[blitCount]) || (isDispatchMode && objRange[dispatchCount]) ||
@@ -207,9 +207,9 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::RestoreSettingsToSpecifiedObjec
     uint64_t objNumber, Config::VulkanObjectMode objMode) {
   uint64_t blitCount = 0;
   uint64_t dispatchCount = 0;
-  bool isRenderPassMode = objMode == Config::MODE_VKRENDERPASS;
-  bool isBlitMode = objMode == Config::MODE_VKBLIT;
-  bool isDispatchMode = objMode == Config::MODE_VKDISPATCH;
+  bool isRenderPassMode = objMode == Config::MODE_VK_RENDER_PASS;
+  bool isBlitMode = objMode == Config::MODE_VK_BLIT;
+  bool isDispatchMode = objMode == Config::MODE_VK_DISPATCH;
 
   uint64_t renderPassCount = 0;
   for (auto elem : _tokensList) {
@@ -422,7 +422,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
         vulkanDumpRenderPassResources(cmdBuffer);
         CreateNewCommandBuffer(elem, cmdBuffer);
         cmdBuffer = CVkCommandBuffer::GetMapping(elem->CommandBuffer());
-        RestoreSettingsToSpecifiedObject(dispatchCount, Config::MODE_VKDISPATCH);
+        RestoreSettingsToSpecifiedObject(dispatchCount, Config::MODE_VK_DISPATCH);
       }
     }
     if (elem->Type() & CFunction::GITS_VULKAN_END_RENDER_PASS_APITYPE) {
@@ -496,7 +496,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
       }
       if (localCounter == Config::Get().player.captureVulkanRenderPassesResources) {
         vulkanScheduleCopyResources(cmdBuffer, queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
-                                    renderPassCount, VulkanDumpingMode::VULKAN_PER_RENDERPASS);
+                                    renderPassCount, VulkanDumpingMode::VULKAN_PER_RENDER_PASS);
       }
       renderPassCount++;
       drawInRenderPass = 0;
@@ -518,7 +518,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
         }
         CreateNewCommandBuffer(elem, cmdBuffer);
         cmdBuffer = CVkCommandBuffer::GetMapping(elem->CommandBuffer());
-        RestoreSettingsToSpecifiedObject(renderPassCount, Config::MODE_VKRENDERPASS);
+        RestoreSettingsToSpecifiedObject(renderPassCount, Config::MODE_VK_RENDER_PASS);
       }
     }
   }
@@ -529,9 +529,9 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::RestoreToSpecifiedObject(
   uint64_t renderPassCount = 0;
   uint64_t blitCount = 0;
   uint64_t dispatchCount = 0;
-  bool isRenderPassMode = objMode == Config::MODE_VKRENDERPASS;
-  bool isBlitMode = objMode == Config::MODE_VKBLIT;
-  bool isDispatchMode = objMode == Config::MODE_VKDISPATCH;
+  bool isRenderPassMode = objMode == Config::MODE_VK_RENDER_PASS;
+  bool isBlitMode = objMode == Config::MODE_VK_BLIT;
+  bool isDispatchMode = objMode == Config::MODE_VK_DISPATCH;
 
   bool pre_recording = true;
 
@@ -562,9 +562,9 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ScheduleObject(
   uint64_t renderPassCount = 0;
   uint64_t blitCount = 0;
   uint64_t dispatchCount = 0;
-  bool isRenderPassMode = objMode == Config::MODE_VKRENDERPASS;
-  bool isBlitMode = objMode == Config::MODE_VKBLIT;
-  bool isDispatchMode = objMode == Config::MODE_VKDISPATCH;
+  bool isRenderPassMode = objMode == Config::MODE_VK_RENDER_PASS;
+  bool isBlitMode = objMode == Config::MODE_VK_BLIT;
+  bool isDispatchMode = objMode == Config::MODE_VK_DISPATCH;
   bool started = false;
 
   for (auto elem : _tokensList) {
