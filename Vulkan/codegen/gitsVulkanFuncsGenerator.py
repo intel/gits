@@ -315,15 +315,15 @@ def make_type(fdata):
   if fdata['functionType'] & FuncType.CREATE_BUFFER:
     type += "GITS_VULKAN_CREATE_BUFFER_APITYPE | "
   if fdata['functionType'] & FuncType.COMMAND_BUFFER_SET:
-    type += "GITS_VULKAN_CMDBUFFER_SET_APITYPE | "
+    type += "GITS_VULKAN_COMMAND_BUFFER_SET_APITYPE | "
   if fdata['functionType'] & FuncType.COMMAND_BUFFER_BIND:
-    type += "GITS_VULKAN_CMDBUFFER_BIND_APITYPE | "
+    type += "GITS_VULKAN_COMMAND_BUFFER_BIND_APITYPE | "
   if fdata['functionType'] & FuncType.COMMAND_BUFFER_PUSH:
-    type += "GITS_VULKAN_CMDBUFFER_PUSH_APITYPE | "
+    type += "GITS_VULKAN_COMMAND_BUFFER_PUSH_APITYPE | "
   if fdata['functionType'] & FuncType.BEGIN_RENDER_PASS:
-    type += "GITS_VULKAN_BEGIN_RENDERPASS_APITYPE | "
+    type += "GITS_VULKAN_BEGIN_RENDER_PASS_APITYPE | "
   if fdata['functionType'] & FuncType.END_RENDER_PASS:
-    type += "GITS_VULKAN_END_RENDERPASS_APITYPE | "
+    type += "GITS_VULKAN_END_RENDER_PASS_APITYPE | "
   if fdata['functionType'] & FuncType.DRAW:
     type += "GITS_VULKAN_DRAW_APITYPE | "
   if fdata['functionType'] & FuncType.BLIT:

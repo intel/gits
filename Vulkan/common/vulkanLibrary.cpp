@@ -87,7 +87,7 @@ std::set<uint64_t> CLibrary::CVulkanCommandBufferTokensBuffer::GetMappedPointers
   bool isDispatchMode = objMode == Config::MODE_VKDISPATCH;
 
   for (auto elem : _tokensList) {
-    if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
+    if (elem->Type() & CFunction::GITS_VULKAN_END_RENDER_PASS_APITYPE) {
       drawInRenderPass = 0;
       renderPassCount++;
     } else if (elem->Type() & CFunction::GITS_VULKAN_DRAW_APITYPE) {
@@ -98,7 +98,7 @@ std::set<uint64_t> CLibrary::CVulkanCommandBufferTokensBuffer::GetMappedPointers
       dispatchCount++;
     }
     if ((isRenderPassMode && objRange[renderPassCount] &&
-         (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDERPASS_APITYPE)) ||
+         (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDER_PASS_APITYPE)) ||
         (isDrawMode && renderPassCount == objNumber && objRange[drawInRenderPass]) ||
         (isBlitMode && objRange[blitCount]) || (isDispatchMode && objRange[dispatchCount])) {
       pre_recording = false;
@@ -108,9 +108,9 @@ std::set<uint64_t> CLibrary::CVulkanCommandBufferTokensBuffer::GetMappedPointers
         (isDrawMode && renderPassCount == objNumber && objRange[drawInRenderPass]) ||
         (isBlitMode && objRange[blitCount]) || (isDispatchMode && objRange[dispatchCount]) ||
         (((isRenderPassMode || isDrawMode || isBlitMode || isDispatchMode) && pre_recording) &&
-         (elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_SET_APITYPE ||
-          elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_BIND_APITYPE ||
-          elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_PUSH_APITYPE))) {
+         (elem->Type() & CFunction::GITS_VULKAN_COMMAND_BUFFER_SET_APITYPE ||
+          elem->Type() & CFunction::GITS_VULKAN_COMMAND_BUFFER_BIND_APITYPE ||
+          elem->Type() & CFunction::GITS_VULKAN_COMMAND_BUFFER_PUSH_APITYPE))) {
       for (auto obj : elem->GetMappedPointers()) {
         returnMap.insert((uint64_t)obj);
       }
@@ -140,7 +140,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::FinishRenderPass(uint64_t rende
       elem->Exec();
     } else if (elem->Type() & CFunction::GITS_VULKAN_DRAW_APITYPE) {
       drawCount++;
-    } else if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
+    } else if (elem->Type() & CFunction::GITS_VULKAN_END_RENDER_PASS_APITYPE) {
       renderPassCount++;
       endRenderID = elem->Id();
     } else if (renderPassCount > renderPassNumber) {
@@ -213,14 +213,14 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::RestoreSettingsToSpecifiedObjec
 
   uint64_t renderPassCount = 0;
   for (auto elem : _tokensList) {
-    if ((elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_SET_APITYPE ||
-         elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_BIND_APITYPE ||
-         elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_PUSH_APITYPE) &&
+    if ((elem->Type() & CFunction::GITS_VULKAN_COMMAND_BUFFER_SET_APITYPE ||
+         elem->Type() & CFunction::GITS_VULKAN_COMMAND_BUFFER_BIND_APITYPE ||
+         elem->Type() & CFunction::GITS_VULKAN_COMMAND_BUFFER_PUSH_APITYPE) &&
         ((isRenderPassMode && renderPassCount < objNumber) ||
          (isBlitMode && blitCount < objNumber) || (isDispatchMode && dispatchCount < objNumber))) {
       // restoring VkCommandBuffer settings
       elem->Exec();
-    } else if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
+    } else if (elem->Type() & CFunction::GITS_VULKAN_END_RENDER_PASS_APITYPE) {
       renderPassCount++;
     } else if (elem->Type() & CFunction::GITS_VULKAN_BLIT_APITYPE) {
       blitCount++;
@@ -238,9 +238,9 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::RestoreSettingsToSpecifiedDraw(
   uint64_t drawCount = 0;
   uint64_t renderPassCount = 0;
   for (auto elem : _tokensList) {
-    if ((elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_SET_APITYPE ||
-         elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_BIND_APITYPE ||
-         elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_PUSH_APITYPE) &&
+    if ((elem->Type() & CFunction::GITS_VULKAN_COMMAND_BUFFER_SET_APITYPE ||
+         elem->Type() & CFunction::GITS_VULKAN_COMMAND_BUFFER_BIND_APITYPE ||
+         elem->Type() & CFunction::GITS_VULKAN_COMMAND_BUFFER_PUSH_APITYPE) &&
         (drawCount < drawNumber)) {
       // restoring VkCommandBuffer settings
       elem->Exec();
@@ -250,9 +250,9 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::RestoreSettingsToSpecifiedDraw(
       elem->Exec();
     } else if (elem->Type() & CFunction::GITS_VULKAN_DRAW_APITYPE) {
       drawCount++;
-    } else if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
+    } else if (elem->Type() & CFunction::GITS_VULKAN_END_RENDER_PASS_APITYPE) {
       renderPassCount++;
-    } else if ((elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDERPASS_APITYPE) &&
+    } else if ((elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDER_PASS_APITYPE) &&
                (renderPassCount == renderPassNumber) &&
                (token->Type() & CFunction::GITS_VULKAN_DRAW_APITYPE)) {
       // Setting loadOp to LOAD, and storeOp to STORE
@@ -317,7 +317,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
   for (auto elem : _tokensList) {
     cmdBuffer = CVkCommandBuffer::GetMapping(elem->CommandBuffer());
     if (Config::Get().player.oneVulkanDrawPerCommandBuffer &&
-        elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDERPASS_APITYPE) {
+        elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDER_PASS_APITYPE) {
       //  For executing each Vulkan draw in separate VkCommandBuffer we need to modify original storeOp (set it to STORE)
       elem->StateTrack();
       VkRenderPassBeginInfo* renderPassBeginInfoPtr = SD()._commandbufferstates[cmdBuffer]
@@ -425,7 +425,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
         RestoreSettingsToSpecifiedObject(dispatchCount, Config::MODE_VKDISPATCH);
       }
     }
-    if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
+    if (elem->Type() & CFunction::GITS_VULKAN_END_RENDER_PASS_APITYPE) {
       if (Config::Get().player.oneVulkanDrawPerCommandBuffer) {
         VkRenderPassBeginInfo* renderPassBeginInfoPtr = SD()._commandbufferstates[cmdBuffer]
                                                             ->beginRenderPassesList.back()
@@ -536,7 +536,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::RestoreToSpecifiedObject(
   bool pre_recording = true;
 
   for (auto elem : _tokensList) {
-    if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
+    if (elem->Type() & CFunction::GITS_VULKAN_END_RENDER_PASS_APITYPE) {
       renderPassCount++;
     } else if (elem->Type() & CFunction::GITS_VULKAN_BLIT_APITYPE) {
       blitCount++;
@@ -544,7 +544,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::RestoreToSpecifiedObject(
       dispatchCount++;
     }
     if ((isRenderPassMode && objRange[renderPassCount] &&
-         (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDERPASS_APITYPE)) ||
+         (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDER_PASS_APITYPE)) ||
         (isBlitMode && objRange[blitCount]) || (isDispatchMode && objRange[dispatchCount])) {
       pre_recording = false;
     }
@@ -574,7 +574,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ScheduleObject(
       dispatchCount++;
     }
     if ((isRenderPassMode && objRange[renderPassCount] &&
-         (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDERPASS_APITYPE)) ||
+         (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDER_PASS_APITYPE)) ||
         (isBlitMode && objRange[blitCount]) || (isDispatchMode && objRange[dispatchCount])) {
       started = true;
     }
@@ -582,9 +582,9 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ScheduleObject(
          (isDispatchMode && objRange[dispatchCount])) &&
         started) {
       schedulerFunc(elem);
-    } else if ((elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_SET_APITYPE ||
-                elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_BIND_APITYPE ||
-                elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_PUSH_APITYPE) &&
+    } else if ((elem->Type() & CFunction::GITS_VULKAN_COMMAND_BUFFER_SET_APITYPE ||
+                elem->Type() & CFunction::GITS_VULKAN_COMMAND_BUFFER_BIND_APITYPE ||
+                elem->Type() & CFunction::GITS_VULKAN_COMMAND_BUFFER_PUSH_APITYPE) &&
                !started) {
       bool toSkip = false;
       for (auto obj : elem->GetMappedPointers()) {
@@ -597,7 +597,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ScheduleObject(
         schedulerFunc(elem);
       }
     }
-    if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
+    if (elem->Type() & CFunction::GITS_VULKAN_END_RENDER_PASS_APITYPE) {
       renderPassCount++;
     }
   }
@@ -618,7 +618,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::RestoreDraw(const uint64_t rend
       pre_draw = false;
     }
     if (renderPassCount == renderPassNumber &&
-        (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDERPASS_APITYPE)) {
+        (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDER_PASS_APITYPE)) {
       //  For executing each Vulkan draw in separate VkCommandBuffer we need to modify original storeOp (set it to STORE)
       elem->StateTrack();
       VkCommandBuffer cmdBuffer = CVkCommandBuffer::GetMapping(elem->CommandBuffer());
@@ -663,12 +663,12 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::RestoreDraw(const uint64_t rend
         callvkCmdBeginRenderingByID(elem->Id(), cmdBuffer, &renderingInfo);
       }
     } else if (pre_draw || (renderPassCount == renderPassNumber &&
-                            (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE ||
+                            (elem->Type() & CFunction::GITS_VULKAN_END_RENDER_PASS_APITYPE ||
                              elem->Type() & CFunction::GITS_VULKAN_NEXT_SUBPASS_APITYPE))) {
       elem->Exec();
       elem->StateTrack();
     }
-    if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
+    if (elem->Type() & CFunction::GITS_VULKAN_END_RENDER_PASS_APITYPE) {
       drawInRenderPass = 0;
       renderPassCount++;
     }
@@ -690,7 +690,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ScheduleDraw(
       started = true;
     }
     if (renderPassCount == renderPassNumber &&
-        (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDERPASS_APITYPE)) {
+        (elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDER_PASS_APITYPE)) {
       VkCommandBuffer cmdBuffer = CVkCommandBuffer::GetMapping(elem->CommandBuffer());
       VkRenderPassBeginInfo* renderPassBeginInfoPtr = SD()._commandbufferstates[cmdBuffer]
                                                           ->beginRenderPassesList.back()
@@ -737,12 +737,12 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ScheduleDraw(
       }
     } else if (renderPassCount == renderPassNumber &&
                ((drawsRange[drawInRenderPass] && started) ||
-                elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE ||
+                elem->Type() & CFunction::GITS_VULKAN_END_RENDER_PASS_APITYPE ||
                 elem->Type() & CFunction::GITS_VULKAN_NEXT_SUBPASS_APITYPE)) {
       schedulerFunc(elem);
-    } else if ((elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_SET_APITYPE ||
-                elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_BIND_APITYPE ||
-                elem->Type() & CFunction::GITS_VULKAN_CMDBUFFER_PUSH_APITYPE) &&
+    } else if ((elem->Type() & CFunction::GITS_VULKAN_COMMAND_BUFFER_SET_APITYPE ||
+                elem->Type() & CFunction::GITS_VULKAN_COMMAND_BUFFER_BIND_APITYPE ||
+                elem->Type() & CFunction::GITS_VULKAN_COMMAND_BUFFER_PUSH_APITYPE) &&
                !started) {
       bool toSkip = false;
       for (auto obj : elem->GetMappedPointers()) {
@@ -755,7 +755,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ScheduleDraw(
         schedulerFunc(elem);
       }
     }
-    if (elem->Type() & CFunction::GITS_VULKAN_END_RENDERPASS_APITYPE) {
+    if (elem->Type() & CFunction::GITS_VULKAN_END_RENDER_PASS_APITYPE) {
       drawInRenderPass = 0;
       renderPassCount++;
     }
