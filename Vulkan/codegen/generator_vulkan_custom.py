@@ -10,31 +10,31 @@
 
 from generator_vulkan_base import *
 
-Function(name='vkPassPhysicalDeviceMemoryPropertiesGITS', enabled=True, type=Param, runWrap=True, customDriver=True, level=InstanceLevel,
+Function(name='vkPassPhysicalDeviceMemoryPropertiesGITS', enabled=True, type=FuncType.PARAM, runWrap=True, customDriver=True, level=FuncLevel.INSTANCE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 arg2=ArgDef(name='pMemoryProperties', type='VkPhysicalDeviceMemoryProperties*')
 )
 
-Function(name='vkGetBufferDeviceAddressUnifiedGITS', enabled=True, type=Param, stateTrack=True, recWrap=True, runWrap=True,
+Function(name='vkGetBufferDeviceAddressUnifiedGITS', enabled=True, type=FuncType.PARAM, stateTrack=True, recWrap=True, runWrap=True,
 retV=RetDef(type='VkDeviceAddress'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pInfo', type='const VkBufferDeviceAddressInfo*')
 )
 
-Function(name='vkGetBufferOpaqueCaptureAddressUnifiedGITS', enabled=False, type=None,
+Function(name='vkGetBufferOpaqueCaptureAddressUnifiedGITS', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='uint64_t'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pInfo', type='const VkBufferDeviceAddressInfo*')
 )
 
-Function(name='vkCmdPipelineBarrier2UnifiedGITS', enabled=True, type=Param, stateTrack=True, recWrap=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer", ccodeWriteWrap=True,
+Function(name='vkCmdPipelineBarrier2UnifiedGITS', enabled=True, type=FuncType.PARAM, stateTrack=True, recWrap=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer", ccodeWriteWrap=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pDependencyInfo', type='const VkDependencyInfo*')
 )
 
-Function(name='vkTagMemoryContentsUpdateGITS', enabled=False, type=Param, recWrap=True, customDriver=True,
+Function(name='vkTagMemoryContentsUpdateGITS', enabled=False, type=FuncType.PARAM, recWrap=True, customDriver=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='memory', type='VkDeviceMemory'),
@@ -42,21 +42,21 @@ arg3=ArgDef(name='regionCount', type='uint32_t'),
 arg4=ArgDef(name='pRegions', type='const VkBufferCopy*', count='regionCount')
 )
 
-Function(name='vkIAmGITS', enabled=False, type=Param, recExecWrap=True, stateTrack=True, level=GlobalLevel, pluginWrap=True,
+Function(name='vkIAmGITS', enabled=False, type=FuncType.PARAM, recExecWrap=True, stateTrack=True, level=FuncLevel.GLOBAL, pluginWrap=True,
 retV=RetDef(type='void')
 )
 
-Function(name='vkGetAccelerationStructureDeviceAddressUnifiedGITS', enabled=True, type=Param, stateTrack=True, recWrap=False, runWrap=True,
+Function(name='vkGetAccelerationStructureDeviceAddressUnifiedGITS', enabled=True, type=FuncType.PARAM, stateTrack=True, recWrap=False, runWrap=True,
 retV=RetDef(type='VkDeviceAddress'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pInfo', type='const VkAccelerationStructureDeviceAddressInfoKHR*')
 )
 
-Function(name='vkPauseRecordingGITS', enabled=False, type=Param, recExecWrap=True, level=GlobalLevel, customDriver=True,
+Function(name='vkPauseRecordingGITS', enabled=False, type=FuncType.PARAM, recExecWrap=True, level=FuncLevel.GLOBAL, customDriver=True,
 retV=RetDef(type='void')
 )
 
-Function(name='vkContinueRecordingGITS', enabled=False, type=Param, recExecWrap=True, level=GlobalLevel, customDriver=True,
+Function(name='vkContinueRecordingGITS', enabled=False, type=FuncType.PARAM, recExecWrap=True, level=FuncLevel.GLOBAL, customDriver=True,
 retV=RetDef(type='void')
 )
 

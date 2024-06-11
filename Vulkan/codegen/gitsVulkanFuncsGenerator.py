@@ -306,31 +306,31 @@ def make_id(name, version):
 
 def make_type(fdata):
   type = ""
-  if fdata['functionType']&Param:
+  if fdata['functionType'] & FuncType.PARAM:
     type += "GITS_VULKAN_PARAM_APITYPE | "
-  if fdata['functionType']&QueueSubmit:
+  if fdata['functionType'] & FuncType.QUEUE_SUBMIT:
     type += "GITS_VULKAN_QUEUE_SUBMIT_APITYPE | "
-  if fdata['functionType']&CreateImage:
+  if fdata['functionType'] & FuncType.CREATE_IMAGE:
     type += "GITS_VULKAN_CREATE_IMAGE_APITYPE | "
-  if fdata['functionType']&CreateBuffer:
+  if fdata['functionType'] & FuncType.CREATE_BUFFER:
     type += "GITS_VULKAN_CREATE_BUFFER_APITYPE | "
-  if fdata['functionType']&CmdBufferSet:
+  if fdata['functionType'] & FuncType.COMMAND_BUFFER_SET:
     type += "GITS_VULKAN_CMDBUFFER_SET_APITYPE | "
-  if fdata['functionType']&CmdBufferBind:
+  if fdata['functionType'] & FuncType.COMMAND_BUFFER_BIND:
     type += "GITS_VULKAN_CMDBUFFER_BIND_APITYPE | "
-  if fdata['functionType']&CmdBufferPush:
+  if fdata['functionType'] & FuncType.COMMAND_BUFFER_PUSH:
     type += "GITS_VULKAN_CMDBUFFER_PUSH_APITYPE | "
-  if fdata['functionType']&BeginRenderPass:
+  if fdata['functionType'] & FuncType.BEGIN_RENDER_PASS:
     type += "GITS_VULKAN_BEGIN_RENDERPASS_APITYPE | "
-  if fdata['functionType']&EndRenderPass:
+  if fdata['functionType'] & FuncType.END_RENDER_PASS:
     type += "GITS_VULKAN_END_RENDERPASS_APITYPE | "
-  if fdata['functionType']&Draw:
+  if fdata['functionType'] & FuncType.DRAW:
     type += "GITS_VULKAN_DRAW_APITYPE | "
-  if fdata['functionType']&Blit:
+  if fdata['functionType'] & FuncType.BLIT:
     type += "GITS_VULKAN_BLIT_APITYPE | "
-  if fdata['functionType']&Dispatch:
+  if fdata['functionType'] & FuncType.DISPATCH:
     type += "GITS_VULKAN_DISPATCH_APITYPE | "
-  if fdata['functionType']&NextSubpass:
+  if fdata['functionType'] & FuncType.NEXT_SUBPASS:
     type += "GITS_VULKAN_NEXT_SUBPASS_APITYPE | "
   type = type.strip(" | ")
   return type
@@ -369,11 +369,11 @@ def generate_vulkan_drivers(functions):
     if function['customDriver'] is True:
       definition += "CUSTOM_"
 
-    if function['level'] == GlobalLevel:
+    if function['level'] == FuncLevel.GLOBAL:
       global_level_functions += definition + "GLOBAL" + content + ")\n"
-    elif function['level'] == InstanceLevel:
+    elif function['level'] == FuncLevel.INSTANCE:
       instance_level_functions += definition + "INSTANCE" + content + ", " + function['args'][0]['name'] + ")\n"
-    elif function['level'] == PrototypeLevel:
+    elif function['level'] == FuncLevel.PROTOTYPE:
       prototype_level_functions += definition + "PROTOTYPE" + content + ")\n"
     else:
       device_level_functions += definition + "DEVICE" + content + ", " + function['args'][0]['name'] + ")\n"
@@ -438,9 +438,8 @@ def generate_vulkan_log(structs, enums):
 
   includes = "#include \"config.h\"\n"     \
   "#include \"vulkanLog.h\"\n"             \
-  "#include \"vulkanTools_lite.h\"\n\n"  
+  "#include \"vulkanTools_lite.h\"\n\n"
   vk_log_auto_cpp.write(includes)
-  
   namespaces = "namespace gits {\n"  \
   "namespace Vulkan {\n\n"
   vk_log_auto_cpp.write(namespaces)
@@ -1078,7 +1077,7 @@ def generate_vulkan_def(functions, def_filename, library_name):
 """ % {'library_name': library_name}
   plugin_def.write(header_def)
   for key in sorted(functions.keys()):
-    if functions[key][0]['level'] == PrototypeLevel:
+    if functions[key][0]['level'] == FuncLevel.PROTOTYPE:
       continue
     plugin_def.write("    " + key + "\n")
 
@@ -1190,7 +1189,7 @@ void CloseRecorderIfRequired() {
 
   for function_name in sorted(functions.keys()):
     function = functions[function_name][0]  # 0 because we only need the base version.
-    if function['level'] == PrototypeLevel:
+    if function['level'] == FuncLevel.PROTOTYPE:
       continue
 
     interceptorExportedFunctions += "  {\"" + function_name + "\", (PFN_vkVoidFunction)" + function_name + "},\n"
@@ -1222,7 +1221,7 @@ void CloseRecorderIfRequired() {
       function_post_call += "\n  EndFramePost();"
 
     gits_plugin_initialization = ""
-    if function['level'] == GlobalLevel:
+    if function['level'] == FuncLevel.GLOBAL:
       gits_plugin_initialization = "CGitsPluginVulkan::Initialize();"
     func_def = f"\nVKATTRIB VISIBLE {return_type} VKAPI_CALL {function_name}({function_arguments}) {{\n"
     func_body = (
@@ -1409,13 +1408,13 @@ namespace gits {
         c = ""
         inherit_type = 'CFunction'
         run_name = 'Run'
-        if func.get('functionType') & QueueSubmit:
+        if func.get('functionType') & FuncType.QUEUE_SUBMIT:
           inherit_type = 'CQueueSubmitFunction'
           run_name = 'RunImpl'
-        elif func.get('functionType') & CreateImage:
+        elif func.get('functionType') & FuncType.CREATE_IMAGE:
           inherit_type = 'CImageFunction'
           run_name = 'RunImpl'
-        if func.get('functionType') & CreateBuffer:
+        if func.get('functionType') & FuncType.CREATE_BUFFER:
           inherit_type = 'CBufferFunction'
           run_name = 'RunImpl'
         return_override = ""
@@ -1663,11 +1662,11 @@ namespace Vulkan {
     if value.get('custom') is not True:
       if (value.get('enabled') is True) or (value.get('recWrap') is True):
         wrapper_pre_post = ""
-        if value.get('functionType') & QueueSubmit:
+        if value.get('functionType') & FuncType.QUEUE_SUBMIT:
           wrapper_pre_post = "QUEUE_SUBMIT_WRAPPER_PRE_POST\n  "
-        elif value.get('functionType') & CreateImage:
+        elif value.get('functionType') & FuncType.CREATE_IMAGE:
           wrapper_pre_post = "CREATE_IMAGE_WRAPPER_PRE_POST\n  "
-        elif value.get('functionType') & CreateBuffer:
+        elif value.get('functionType') & FuncType.CREATE_BUFFER:
           wrapper_pre_post = "CREATE_BUFFER_WRAPPER_PRE_POST\n  "
         pre_token = ""
         if value.get('preToken') is not None and (value.get('recWrap') is not True) and value.get('preToken') is not False:

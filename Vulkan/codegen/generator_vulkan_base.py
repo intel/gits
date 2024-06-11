@@ -8,26 +8,36 @@
 #
 # ===================== end_copyright_notice ==============================
 
-# Methods types
-Param=1
-QueueSubmit=2
-CreateImage=4
-CreateBuffer=8
-CmdBufferSet=16
-CmdBufferBind=32
-CmdBufferPush=64
-BeginRenderPass=128
-EndRenderPass=256
-Draw=512
-Blit=1024
-Dispatch=2048
-NextSubpass=4096
+import enum
+from enum import IntFlag
+
+# TODO: use `@verify(NAMED_FLAGS)` when Python 3.11 becomes available.
+class FuncType(IntFlag):
+    """Flag for API call classification."""
+
+    NONE = 0
+    PARAM = 1
+    QUEUE_SUBMIT = 2
+    CREATE_IMAGE = 4
+    CREATE_BUFFER = 8
+    COMMAND_BUFFER_SET = 16
+    COMMAND_BUFFER_BIND = 32
+    COMMAND_BUFFER_PUSH = 64
+    BEGIN_RENDER_PASS = 128
+    END_RENDER_PASS = 256
+    DRAW = 512
+    BLIT = 1024
+    DISPATCH = 2048
+    NEXT_SUBPASS = 4096
 
 
-# Vulkan API function level
-PrototypeLevel = 0
-GlobalLevel = 1
-InstanceLevel = 2
+class FuncLevel(enum.Enum):  # Direct Enum import would clash with Vulkan Enums.
+    """Vulkan API function level."""
+
+    PROTOTYPE = 0
+    GLOBAL = 1
+    INSTANCE = 2
+
 
 enums_table = []
 functions_table = []
