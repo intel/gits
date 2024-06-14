@@ -159,7 +159,7 @@ void WinTitle(win_ptr_t winptr, const std::string& title) {
 }
 
 void RemoveWinBorder(win_ptr_t winptr) {
-  if (gits::Config::Get().player.showWindowBorder) {
+  if (gits::Config::Get().common.player.showWindowBorder) {
     return;
   }
 

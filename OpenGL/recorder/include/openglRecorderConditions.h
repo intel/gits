@@ -45,8 +45,7 @@ inline bool Recording(gits::CRecorder& recorder) {
 namespace OpenGL {
 inline bool ConditionTextureES(CRecorder& recorder) {
   bool force = !curctx::IsOgl() && !IsGlGetTexAndCompressedTexImagePresentOnGLES();
-  if (Config::Get().recorder.openGL.utilities.texturesState ==
-      TTexturesState::TEXTURES_STATE_RESTORE) {
+  if (Config::Get().opengl.recorder.texturesState == TTexturesState::RESTORE) {
     force = false;
   }
 
@@ -54,9 +53,13 @@ inline bool ConditionTextureES(CRecorder& recorder) {
 }
 
 inline bool ConditionBufferES(CRecorder& recorder) {
+  bool forceBuffersStateCaptureAlwaysWA = false;
+#ifdef GITS_PLATFORM_WINDOWS
+  forceBuffersStateCaptureAlwaysWA = Config::Get().opengl.recorder.forceBuffersStateCaptureAlwaysWA;
+#endif
   bool force = (!curctx::IsOgl() && !IsGlGetTexAndCompressedTexImagePresentOnGLES()) ||
-               Config::Get().recorder.openGL.utilities.forceBuffersStateCaptureAlwaysWA;
-  if (ESBufferState() == TBuffersState::BUFFERS_STATE_RESTORE) {
+               forceBuffersStateCaptureAlwaysWA;
+  if (ESBufferState() == TBuffersState::RESTORE) {
     force = false;
   }
 
@@ -65,8 +68,12 @@ inline bool ConditionBufferES(CRecorder& recorder) {
 
 inline bool ConditionBufferData(
     CRecorder& recorder, GLenum target, GLsizeiptr size, const GLvoid* data, GLenum usage) {
+  bool forceBuffersStateCaptureAlwaysWA = false;
+#ifdef GITS_PLATFORM_WINDOWS
+  forceBuffersStateCaptureAlwaysWA = Config::Get().opengl.recorder.forceBuffersStateCaptureAlwaysWA;
+#endif
   bool force = (!curctx::IsOgl() && !IsGlGetTexAndCompressedTexImagePresentOnGLES()) ||
-               Config::Get().recorder.openGL.utilities.forceBuffersStateCaptureAlwaysWA;
+               forceBuffersStateCaptureAlwaysWA;
   bool skip = false;
   if (size < 0) {
     Log(WARN) << "Skipping glBufferData - size < 0";
@@ -78,7 +85,7 @@ inline bool ConditionBufferData(
     skip = true;
   }
 
-  if (ESBufferState() == TBuffersState::BUFFERS_STATE_RESTORE) {
+  if (ESBufferState() == TBuffersState::RESTORE) {
     force = false;
   }
 
@@ -87,8 +94,12 @@ inline bool ConditionBufferData(
 
 inline bool ConditionBufferStorage(
     CRecorder& recorder, GLenum target, GLsizeiptr size, const GLvoid* data, GLbitfield flags) {
+  bool forceBuffersStateCaptureAlwaysWA = false;
+#ifdef GITS_PLATFORM_WINDOWS
+  forceBuffersStateCaptureAlwaysWA = Config::Get().opengl.recorder.forceBuffersStateCaptureAlwaysWA;
+#endif
   bool force = (!curctx::IsOgl() && !IsGlGetTexAndCompressedTexImagePresentOnGLES()) ||
-               Config::Get().recorder.openGL.utilities.forceBuffersStateCaptureAlwaysWA;
+               forceBuffersStateCaptureAlwaysWA;
   bool skip = false;
   if (size < 0) {
     Log(WARN) << "Skipping glBufferStorage - size < 0";
@@ -99,7 +110,7 @@ inline bool ConditionBufferStorage(
     skip = true;
   }
 
-  if (ESBufferState() == TBuffersState::BUFFERS_STATE_RESTORE) {
+  if (ESBufferState() == TBuffersState::RESTORE) {
     force = false;
   }
 
@@ -110,8 +121,7 @@ inline bool ConditionTexImageES(CRecorder& recorder, GLenum format, GLenum type)
   bool force = !curctx::IsOgl() && !IsGlGetTexImagePresentOnGLES();
   bool skip = false;
 
-  if (Config::Get().recorder.openGL.utilities.texturesState ==
-      TTexturesState::TEXTURES_STATE_RESTORE) {
+  if (Config::Get().opengl.recorder.texturesState == TTexturesState::RESTORE) {
     force = false;
   }
 

@@ -77,6 +77,7 @@ public:
                                            uint32_t minor,
                                            VkPhysicalDevice physicalDevice) const = 0;
   virtual void SetConfig(Config const& cfg) const = 0;
+  virtual bool IsUseExternalMemoryExtensionUsed() const = 0;
 #include "vulkanRecorderWrapperIfaceAuto.h"
 };
 } // namespace Vulkan

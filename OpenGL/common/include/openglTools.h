@@ -387,6 +387,8 @@ void DestroyAllContexts();
 size_t GetPatchParameterValuesCount(GLenum pname);
 
 GLenum GetTargetOfTextureOrCrash(GLuint name);
+bool isTrackTextureBindingWAUsed();
+bool isSchedulefboEXTAsCoreWA();
 
 template <typename T>
 class LocationMap {
@@ -415,6 +417,5 @@ public:
     }
   }
 };
-
 } // namespace OpenGL
 } // namespace gits

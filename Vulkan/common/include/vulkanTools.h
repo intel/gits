@@ -106,19 +106,19 @@ struct CVkSubmitInfoArrayWrap {
 std::set<uint64_t> getPointersUsedInQueueSubmit(CVkSubmitInfoArrayWrap& submitInfoData,
                                                 const std::vector<uint32_t>& countersTable,
                                                 const BitRange& objRange,
-                                                gits::Config::VulkanObjectMode objMode);
+                                                gits::VulkanObjectMode objMode);
 CVkSubmitInfoArrayWrap getSubmitInfoForPrepare(const std::vector<uint32_t>& countersTable,
                                                const BitRange& objRange,
-                                               gits::Config::VulkanObjectMode objMode);
+                                               gits::VulkanObjectMode objMode);
 VkCommandBuffer GetLastCommandBuffer(CVkSubmitInfoArrayWrap& submitInfoData);
 void restoreCommandBufferSettings(const BitRange& objRange,
                                   CVkSubmitInfoArrayWrap& submitInfoData,
-                                  gits::Config::VulkanObjectMode objMode,
+                                  gits::VulkanObjectMode objMode,
                                   uint64_t renderPassNumber = 0);
 
 CVkSubmitInfoArrayWrap getSubmitInfoForSchedule(const std::vector<uint32_t>& countersTable,
                                                 const BitRange& objRange,
-                                                gits::Config::VulkanObjectMode objMode);
+                                                gits::VulkanObjectMode objMode);
 bool checkMemoryMappingFeasibility(VkDevice device,
                                    VkDeviceMemory memory,
                                    bool throwException = true);
@@ -178,7 +178,7 @@ void checkReturnValue(VkResult playerSideReturnValue,
                       CVkResult& recorderSideReturnValue,
                       const char* functionName);
 bool IsObjectToSkip(uint64_t vulkanObject);
-bool operator==(const CGits::CCounter& counter, const Config::VulkanObjectRange& vulkanObjRange);
+bool operator==(const CGits::CCounter& counter, const VulkanObjectRange& vulkanObjRange);
 bool vulkanCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer bufferHandle, std::string fileName);
 bool vulkanCopyImage(VkCommandBuffer commandBuffer,
                      VkImage imageHandle,
@@ -217,7 +217,7 @@ void CreateRenderPasses_helper(VkDevice device,
                                VkRenderPass renderPass,
                                T pCreateInfo,
                                CreationFunction createdWith) {
-  if ((Config::Get().IsPlayer() && Config::Get().player.oneVulkanDrawPerCommandBuffer) ||
+  if ((Config::Get().IsPlayer() && Config::Get().vulkan.player.oneVulkanDrawPerCommandBuffer) ||
       (Config::Get().IsRecorder() &&
        gits::CGits::Instance().apis.Iface3D().CfgRec_IsDrawsRangeMode())) {
     // For executing each Vulkan draw in separate VkCommandBuffer we need some additional VkRenderPasses:

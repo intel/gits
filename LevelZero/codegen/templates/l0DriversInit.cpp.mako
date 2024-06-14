@@ -117,7 +117,7 @@ ${func.get('type')} __zecall special_${func.get('name')}(
   %if func.get('component') != 'ze_gits_extension':
   bool call_orig = true;
 #ifndef BUILD_FOR_CCODE
-  if (gits::Config::Get().common.useEvents && !bypass_luascript) {
+  if (gits::Config::Get().common.shared.useEvents && !bypass_luascript) {
     auto L = CGits::Instance().GetLua().get();
     bool exists = FunctionExists("${func.get('name')}", L);
     if (exists) {
@@ -182,7 +182,7 @@ ${func.get('type')} __zecall default_${func.get('name')}(
     }
   }
   %endif
-  if (ShouldLog(TRACE) || Config::Get().common.useEvents) {
+  if (ShouldLog(TRACE) || Config::Get().common.shared.useEvents) {
     drv.${func.get('name')} = special_${func.get('name')};
     return drv.${func.get('name')}(${make_params(func)});
   }

@@ -186,7 +186,7 @@ void UpdatePointer(PointerDescr& pointer,
 }
 
 uint64_t FileSize(const std::string& fileName) {
-  std::filesystem::path filePath = Config::Get().common.streamDir / fileName;
+  std::filesystem::path filePath = Config::Get().common.player.streamDir / fileName;
   if (!std::filesystem::exists(filePath)) {
     std::cerr << "File: " << filePath << " does not exist!";
   }
@@ -210,7 +210,7 @@ char* LoadFile(const std::string& fileName) {
   }
 
   retval[fileSize] = 0; //null terminate to simplify glShaderSource handling
-  std::string filePath = Config::Get().common.streamDir.string() + fileName;
+  std::string filePath = Config::Get().common.player.streamDir.string() + fileName;
   std::ifstream file(filePath.c_str(), std::ios::binary);
   if (!file.is_open()) {
     delete[] retval;
@@ -224,7 +224,7 @@ char* LoadFile(const std::string& fileName) {
 }
 
 char* LoadFileDense(const std::string& fileName, unsigned offset, unsigned size) {
-  std::string filePath = Config::Get().common.streamDir.string() + fileName;
+  std::string filePath = Config::Get().common.player.streamDir.string() + fileName;
   std::ifstream file(filePath.c_str(), std::ios::binary);
   if (!file.is_open()) {
     std::cerr << "Failed to open file: " << filePath << "\n";
@@ -313,7 +313,7 @@ void Load(const std::string& fileName, size_t bufferSize, char* buffer) {
     exit(EXIT_FAILURE);
   }
 
-  std::string filePath = Config::Get().common.streamDir.string() + fileName;
+  std::string filePath = Config::Get().common.player.streamDir.string() + fileName;
   std::ifstream file(filePath.c_str(), std::ios::binary);
   if (!file.is_open()) {
     std::cerr << "Failed to open file: " << filePath << "\n";
@@ -333,7 +333,7 @@ void Load(const std::string& fileName, unsigned offset, size_t bufferSize, char*
     std::cerr << "Buffer size is bigger than the file size of: " << fileName << "\n";
     exit(EXIT_FAILURE);
   }
-  std::string filePath = Config::Get().common.streamDir.string() + fileName;
+  std::string filePath = Config::Get().common.player.streamDir.string() + fileName;
   std::ifstream file(filePath.c_str(), std::ios::binary);
   if (!file.is_open()) {
     std::cerr << "Failed to open file: " << filePath << "\n";

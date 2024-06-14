@@ -100,7 +100,7 @@ void gits::CRecorder::Dispose() {
 #ifdef GITS_PLATFORM_WINDOWS
   RemoveSignalsHandler();
 #endif
-  if (gits::CGits::Instance().apis.HasCompute() && Config::Get().recorder.basic.enabled) {
+  if (gits::CGits::Instance().apis.HasCompute() && Config::Get().common.recorder.enabled) {
     const auto& computeIface = gits::CGits::Instance().apis.IfaceCompute();
     computeIface.MemorySnifferUninstall();
     computeIface.PrintMaxLocalMemoryUsage();
@@ -158,16 +158,16 @@ gits::CRecorder::CRecorder()
   forceExit = false;
 
   // create file data and register it in GITS
-  if (config.recorder.basic.enabled) {
-    std::filesystem::create_directories(config.common.streamDir);
+  if (config.common.recorder.enabled) {
+    std::filesystem::create_directories(config.common.recorder.dumpPath);
 #if defined(GITS_PLATFORM_X11)
     struct sigaction action;
     memset(&action, 0, sizeof(struct sigaction));
     action.sa_handler = InterruptHandler;
-    sigaction(Config::Get().recorder.basic.exitSignal, &action, nullptr);
+    sigaction(Config::Get().common.recorder.exitSignal, &action, nullptr);
 #endif
-    inst.CompressorInit(config.recorder.extras.optimizations.compression.type);
-    inst.ResourceManagerInit(config.common.streamDir);
+    inst.CompressorInit(config.common.recorder.compression.type);
+    inst.ResourceManagerInit(config.common.recorder.dumpPath);
   }
 
   // register behaviors
@@ -175,7 +175,7 @@ gits::CRecorder::CRecorder()
       inst.apis.Has3D() && !inst.apis.Iface3D().CfgRec_StartKeys().empty();
   Log(INFO) << "Recorder mode: ";
   std::ostringstream message;
-  if (!config.recorder.basic.enabled) {
+  if (!config.common.recorder.enabled) {
     message << " - Off";
   } else {
     if (inst.apis.Has3D()) {
@@ -229,7 +229,7 @@ gits::CRecorder::CRecorder()
   Log(INFO) << message.str();
   Register(std::unique_ptr<CBehavior>(new CBehavior(*this, captureOnKeypress)));
 
-  if (config.recorder.extras.utilities.forceDumpOnError) {
+  if (config.common.recorder.forceDumpOnError) {
 #ifdef _WIN32
     Exception::Callback(
         [](void*) {
@@ -243,7 +243,7 @@ gits::CRecorder::CRecorder()
   }
 
   // init recorder
-  if (config.recorder.basic.enabled) {
+  if (config.common.recorder.enabled) {
     Init();
   }
 }
@@ -283,20 +283,20 @@ gits::CRecorder::~CRecorder() {
 
     if (gits::CGits::Instance().apis.Has3D()) {
       const auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
-      if (api3dIface.CfgRec_IsBenchmark() && config.recorder.basic.enabled) {
-        std::ofstream out_file(config.common.streamDir / "benchmark.csv");
+      if (api3dIface.CfgRec_IsBenchmark() && config.common.recorder.enabled) {
+        std::ofstream out_file(config.common.recorder.dumpPath / "benchmark.csv");
         CGits::Instance().TimeSheet().OutputTimeData(out_file, true);
       }
     }
 
-    if (config.recorder.extras.utilities.forceDumpOnError) {
+    if (config.common.recorder.forceDumpOnError) {
       Exception::Callback(nullptr, nullptr);
     }
-
-    if (config.recorder.extras.utilities.closeAppOnStopRecording) {
+#ifdef GITS_PLATFORM_WINDOWS
+    if (config.common.recorder.closeAppOnStopRecording) {
       CloseApplicationOnStopRecording();
     }
-
+#endif
     Close();
     Save();
 
@@ -357,7 +357,7 @@ void gits::CRecorder::Init() {
   Scheduler().Register(
       new CTokenFrameNumber(CToken::ID_PRE_RECORD_START, CGits::Instance().CurrentFrame()));
 
-  if (Config::Get().common.useEvents) {
+  if (Config::Get().common.shared.useEvents) {
     CGits::Instance().PlaybackEvents().programStart();
   }
 
@@ -384,23 +384,26 @@ void gits::CRecorder::Register(std::unique_ptr<CBehavior> behavior) {
   _sc.behavior.reset(behavior.release());
 
   auto& cmm = Config::Get().common;
-  auto& rec = Config::Get().recorder;
+  auto& rec = cmm.recorder;
 
   if (gits::CGits::Instance().apis.Has3D()) {
     const auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
-    _exitHotKeyId = _inputListener.AddHotKey(rec.basic.exitKeys);
+    _exitHotKeyId = _inputListener.AddHotKey(rec.exitKeys);
     _inputListener.AddHotKeyEvent(_exitHotKeyId, ExitHotKeyPressed);
     _startHotKeyId = _inputListener.AddHotKey(api3dIface.CfgRec_StartKeys());
-    _inputListener.StartHotKeyListener(rec.extras.utilities.windowsKeyHandling ==
-                                       TWindowsKeyHandling::MESSAGE_LOOP);
+    bool useMessageLoop = false;
+#ifdef GITS_PLATFORM_WINDOWS
+    useMessageLoop = rec.windowsKeyHandling == TWindowsKeyHandling::MESSAGE_LOOP;
+#endif
+    _inputListener.StartHotKeyListener(useMessageLoop);
   }
 
-  if (rec.basic.enabled) {
-    _sc.scheduler.reset(new CScheduler(cmm.tokenBurst, cmm.tokenBurstNum));
+  if (rec.enabled) {
+    _sc.scheduler.reset(new CScheduler(cmm.recorder.tokenBurst, cmm.recorder.tokenBurstNum));
   }
 
-  auto filePath = (cmm.streamDir / "stream").string();
-  if (rec.basic.dumpGITS && rec.basic.enabled) {
+  auto filePath = (cmm.recorder.dumpPath / "stream").string();
+  if (Config::Get().dumpBinary()) {
     // create file
     std::string filename = filePath + ".gits2";
 
@@ -416,7 +419,7 @@ void gits::CRecorder::Register(std::unique_ptr<CBehavior> behavior) {
     (*_sc.oBinStream) << CGits::Instance();
   }
 
-  if (rec.basic.dumpCCode && rec.basic.enabled) {
+  if (Config::Get().dumpCCode()) {
     // create file
     _sc.oCodeStream.reset(new CCodeOStream(filePath));
 
@@ -490,7 +493,7 @@ void gits::CRecorder::Start() {
   bool isVulkan = inst.apis.Has3D() && inst.apis.Iface3D().Api() == inst.apis.Vulkan;
   // First frame is a special case.
   // TODO: Make it so that any frame number logic is not necessary in compute-only streams.
-  if (inst.CurrentFrame() == 1 && (!Config::Get().recorder.basic.dumpCCode || !isVulkan)) {
+  if (inst.CurrentFrame() == 1 && (!Config::Get().dumpCCode() || !isVulkan)) {
     Scheduler().Register(new CTokenFrameNumber(CToken::ID_PRE_RECORD_END, inst.CurrentFrame()));
     Scheduler().Register(new CTokenFrameNumber(CToken::ID_FRAME_START, 1));
     //first frame start time stamp
@@ -583,7 +586,7 @@ void gits::CRecorder::TrackThread(gits::ApisIface::TApi api) {
  * @exception ENotFound Specified behavior class was not found.
  */
 void gits::CRecorder::Save() {
-  if (!Config::Get().recorder.basic.enabled) {
+  if (!Config::Get().common.recorder.enabled) {
     return;
   }
 
@@ -775,7 +778,7 @@ bool gits::CRecorder::Schedule(CToken* token, bool force /* = false */) {
 
   const Config& config = Config::Get();
   tokenCount++;
-  if (tokenCount == config.recorder.basic.exitAfterAPICall || forceExit) {
+  if (tokenCount == config.common.recorder.exitAfterAPICall || forceExit) {
     MarkForDeletion();
   }
 
@@ -786,7 +789,7 @@ void gits::CRecorder::Close() {
   CALL_ONCE[&] {
     Stop();
     Save();
-    if (Config::Get().common.useEvents) {
+    if (Config::Get().common.shared.useEvents) {
       CGits::Instance().PlaybackEvents().programExit();
     }
     CRecorder::Dispose();

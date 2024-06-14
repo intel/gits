@@ -229,7 +229,7 @@ void CDriver::Initialize() {
   if (initialized_) {
     return;
   }
-  std::string path = gits::Config::Get().common.libL0.string();
+  std::string path = gits::Config::Get().common.shared.libL0.string();
   Log(INFO) << "Initializing LevelZero API";
 #ifndef BUILD_FOR_CCODE
   gits::CGits::Instance().apis.UseApiComputeIface(std::make_shared<Api>());
@@ -237,7 +237,7 @@ void CDriver::Initialize() {
   if (OpenLibrary(path)) {
     return;
   }
-  path = gits::Config::Get().common.libL0Driver.string();
+  path = gits::Config::Get().common.shared.libL0Driver.string();
 #ifdef GITS_PLATFORM_WINDOWS
   unsigned long driverStorePathLengthInCharacters = 0;
   wchar_t driverStorePath[MAX_PATH] = {0};

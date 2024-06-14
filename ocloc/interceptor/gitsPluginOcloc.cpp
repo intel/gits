@@ -70,7 +70,7 @@ void CGitsPlugin::Initialize() {
     _loader.reset(new CGitsPlugin("GITSRecorderOcloc"));
     _recorderWrapper = (decltype(_recorderWrapper))_loader->GetRecorderWrapperPtr();
 
-    if (!_loader->Configuration().recorder.basic.enabled) {
+    if (!_loader->Configuration().common.recorder.enabled) {
       PrePostDisableOcloc();
     } else {
       CGitsPlugin::_recorderWrapper->StreamFinishedEvent(PrePostDisableOcloc);

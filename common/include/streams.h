@@ -37,7 +37,7 @@ void ensure_unique_ptr(uint64_t value);
 void check_uint_conversion_possibility(uint64_t value);
 template <typename T>
 void write_to_stream(std::ostream& o, const T& value) {
-  if (!Config::Get().recorder.extras.utilities.nullIO) {
+  if (!Config::Get().common.recorder.nullIO) {
     o.write(reinterpret_cast<const char*>(&value), sizeof(value));
   }
 }
@@ -99,7 +99,7 @@ private:
 
 template <typename T>
 void write_to_stream(CBinOStream& o, const T& value) {
-  if (!Config::Get().recorder.extras.utilities.nullIO) {
+  if (!Config::Get().common.recorder.nullIO) {
     o.write(reinterpret_cast<const char*>(&value), sizeof(value));
   }
 }

@@ -152,8 +152,8 @@ private:
   int _kernelCounter;
   uint32_t _cmdListCounter;
   uint32_t _cmdQueueExecCounter;
-  int _drawCounter;
-  int _drawInFrameCounter;
+  uint32_t _drawCounter;
+  uint32_t _drawInFrameCounter;
   std::atomic<bool> _finished;
   zipFile _glProgramsZipFile;
   unzFile _glProgramsUnZipFile;
@@ -244,10 +244,10 @@ public:
   bool MultithreadedApp() const {
     return _multithreadedApp;
   }
-  int CurrentDrawCount() const {
+  uint32_t CurrentDrawCount() const {
     return _drawCounter;
   }
-  int CurrentDrawInFrameCount() const {
+  uint32_t CurrentDrawInFrameCount() const {
     return _drawInFrameCounter;
   }
   bool Finished() {

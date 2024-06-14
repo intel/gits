@@ -307,7 +307,7 @@ gits::OpenGL::CgitsLinkProgramAttribsSetting::CgitsLinkProgramAttribsSetting(
 }
 
 void gits::OpenGL::CgitsLinkProgramAttribsSetting::Run() {
-  if (!Config::Get().player.linkUseProgBinary) {
+  if (!Config::Get().opengl.player.linkUseProgBinary) {
     GLint program = *_program;
 
     // Vertex attributes
@@ -426,7 +426,7 @@ gits::OpenGL::CgitsLinkProgramBuffersSetting::CgitsLinkProgramBuffersSetting(GLu
 
 void gits::OpenGL::CgitsLinkProgramBuffersSetting::Run() {
   // This needs to be called AFTER glLinkProgram() !!!
-  if (!Config::Get().player.linkUseProgBinary) {
+  if (!Config::Get().opengl.player.linkUseProgBinary) {
     // Uniform block bindings
     SetProgramBlockBindings(*_program, GL_UNIFORM_BLOCK, _uniform_blocks_bindings.Map(),
                             drv.gl.glUniformBlockBinding);
@@ -599,7 +599,7 @@ gits::OpenGL::CgitsUnmapBuffer::CgitsUnmapBuffer(GLenum target, GLint buffer)
       // Unmapping after glMapBuffer
       auto access_type = GL_READ_ONLY;
       if ((curctx::IsEs1() || curctx::IsEs2Plus()) &&
-          ESBufferState() != TBuffersState::BUFFERS_STATE_CAPTURE_ALWAYS) {
+          ESBufferState() != TBuffersState::CAPTURE_ALWAYS) {
         // buffer is remapped with write permissions again, as we can read write-only mapping - read it, and save
         access_type = GL_WRITE_ONLY;
       } else {
@@ -648,7 +648,7 @@ gits::OpenGL::CgitsUnmapBuffer::CgitsUnmapBuffer(GLenum target, GLint buffer)
     }
 
     // Optimized size of mapped buffer data dump
-    if (Config::Get().recorder.openGL.utilities.optimizeBufferSize) {
+    if (Config::Get().opengl.recorder.optimizeBufferSize) {
       // Access to mapped memory is multiple times slower than access to cpu
       // memory, so it is better to read it only once. Though temporary copy of
       // mapped memory is created there.

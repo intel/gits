@@ -53,7 +53,7 @@ CGitsLoader::CGitsLoader(const char* recorderWrapperFactoryName)
   // ptree is not read here from config as if there was a typo in config gits
   // would crash with any output. we assume that first "InstallationPath" string
   // in a config file is option name followed by the path to the Recorder.
-  auto cfgPath = configPath / "gits_config.txt";
+  auto cfgPath = configPath / "gits_config.yml";
   std::ifstream cfgFile(cfgPath);
   if (!cfgFile.good()) {
     static const char* msg = "Error: GITS config file not found.\n";
@@ -116,9 +116,9 @@ CGitsLoader::CGitsLoader(const char* recorderWrapperFactoryName)
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   // Because log can't use config directly, see log.cpp for info.
-  CLog::SetLogLevel(config_->common.thresholdLogLevel);
+  CLog::SetLogLevel(config_->common.shared.thresholdLogLevel);
 
-  if (!config_->recorder.basic.enabled) {
+  if (!config_->common.recorder.enabled) {
     Log(INFO) << "Recording disabled in the configuration file";
   }
 

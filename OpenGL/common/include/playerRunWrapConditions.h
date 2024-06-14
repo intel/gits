@@ -43,7 +43,7 @@ inline bool ConditionExtension(std::string ext_name) {
 }
 
 inline bool ConditionQueries() {
-  if (!Config::Get().player.skipQueries) {
+  if (!Config::Get().opengl.player.skipQueries) {
     return true;
   } else {
     return false;

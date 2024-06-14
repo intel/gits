@@ -12,6 +12,8 @@ list(APPEND common_SOURCES
   include/bit_range.h
   include/buffer.h
   include/config.h
+  include/configTypes.h
+  include/configYamlTemplates.h
   include/configUtils.h
   include/diagnostic.h
   include/dynamic_linker.h
@@ -55,6 +57,7 @@ list(APPEND common_SOURCES
   bit_range.cpp
   buffer.cpp
   config.cpp
+  configUtils.cpp
   diagnostic.cpp
   exception.cpp
   function.cpp
@@ -98,6 +101,10 @@ add_definitions(-DGITS_COMMON_PROJ)
 
 target_link_libraries(common OpenGL_common xxhash murmurhash lz4 libzstd_static)
 
+if(WITH_VULKAN)
+  target_link_libraries(common Vulkan_common)
+endif()
+
 if(UNIX)
   target_link_libraries(common rt dl lua)
 endif()
@@ -124,6 +131,7 @@ endif()
 set(common_CCode_HEADERS
   include/timer.h
   include/config.h
+  include/configTypes.h
   include/message_pump.h
   include/tools_lite.h
   include/tools.h

@@ -127,13 +127,12 @@ inline void glBufferData_SD(
 
 inline void glBufferStorage_SD(
     GLenum target, GLsizeiptr size, const GLvoid* data, GLbitfield flags, GLboolean recording = 0) {
-  flags = flags | Config::Get().recorder.extras.optimizations.bufferStorageFlagsMask;
+  flags = flags | Config::Get().opengl.recorder.bufferStorageFlagsMask;
   if (size < 0 || target == 0) {
     return;
   }
   if ((flags & GL_MAP_COHERENT_BIT) ||
-      ((flags & GL_MAP_PERSISTENT_BIT) &&
-       Config::Get().recorder.extras.utilities.coherentMapBehaviorWA)) {
+      ((flags & GL_MAP_PERSISTENT_BIT) && Config::Get().opengl.recorder.coherentMapBehaviorWA)) {
     SD().GetCurrentSharedStateData().coherentBufferMapping = true;
   }
 
@@ -441,13 +440,12 @@ inline void glNamedBufferData_SD(
 
 inline void glNamedBufferStorage_SD(
     GLuint buffer, GLsizeiptr size, const GLvoid* data, GLbitfield flags, GLboolean recording = 0) {
-  flags = flags | Config::Get().recorder.extras.optimizations.bufferStorageFlagsMask;
+  flags = flags | Config::Get().opengl.recorder.bufferStorageFlagsMask;
   if (size < 0) {
     return;
   }
   if ((flags & GL_MAP_COHERENT_BIT) ||
-      ((flags & GL_MAP_PERSISTENT_BIT) &&
-       Config::Get().recorder.extras.utilities.coherentMapBehaviorWA)) {
+      ((flags & GL_MAP_PERSISTENT_BIT) && Config::Get().opengl.recorder.coherentMapBehaviorWA)) {
     SD().GetCurrentSharedStateData().coherentBufferMapping = true;
   }
   // We are saving GL_ARRAY_BUFFER as default, it should be changed with the
@@ -471,7 +469,7 @@ inline void glBindTexture_SD(GLenum target, GLuint texture, GLboolean recording 
     return;
   }
 
-  if (Config::Get().recorder.openGL.utilities.trackTextureBindingWA) {
+  if (isTrackTextureBindingWAUsed()) {
     auto unit =
         SD().GetCurrentContextStateData().GeneralStateObjects().Data().tracked.activeTexture;
     SD().GetCurrentContextStateData().GeneralStateObjects().Data().tracked.boundTextures[unit]
@@ -479,8 +477,8 @@ inline void glBindTexture_SD(GLenum target, GLuint texture, GLboolean recording 
         texture;
   }
 
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     SetTargetForTexture(target, texture);
   }
@@ -490,14 +488,14 @@ inline void glBindMultiTextureEXT_SD(GLenum texunit,
                                      GLenum target,
                                      GLuint texture,
                                      GLboolean recording = 0) {
-  if (Config::Get().recorder.openGL.utilities.trackTextureBindingWA) {
+  if (isTrackTextureBindingWAUsed()) {
     SD().GetCurrentContextStateData().GeneralStateObjects().Data().tracked.boundTextures[texunit]
                                                                                         [target] =
         texture;
   }
 
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     SetTargetForTexture(target, texture);
@@ -506,8 +504,8 @@ inline void glBindMultiTextureEXT_SD(GLenum texunit,
 
 inline void glTexStorage1D_SD(
     GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (!isTargetProxy(target) && (Config::Get().IsRecorder() ||
                                  (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex))) {
@@ -523,8 +521,8 @@ inline void glTexStorage2D_SD(GLenum target,
                               GLsizei width,
                               GLsizei height,
                               GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (!isTargetProxy(target) && (Config::Get().IsRecorder() ||
                                  (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex))) {
@@ -541,8 +539,8 @@ inline void glTexStorage2DMultisample_SD(GLenum target,
                                          GLsizei height,
                                          GLboolean fixedsamplelocations,
                                          GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (!isTargetProxy(target) && (Config::Get().IsRecorder() ||
                                  (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex))) {
@@ -558,8 +556,8 @@ inline void glTexStorage3D_SD(GLenum target,
                               GLsizei height,
                               GLsizei depth,
                               GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (!isTargetProxy(target) && (Config::Get().IsRecorder() ||
                                  (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex))) {
@@ -577,8 +575,8 @@ inline void glTextureImage2DMultisampleNV_SD(GLuint texture,
                                              GLsizei height,
                                              GLboolean fixedSampleLocations,
                                              GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     TextureStateObject(target, texture)
@@ -596,8 +594,8 @@ inline void glTextureImage3DMultisampleNV_SD(GLuint texture,
                                              GLsizei depth,
                                              GLboolean fixedSampleLocations,
                                              GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     TextureStateObject(target, texture)
@@ -608,8 +606,8 @@ inline void glTextureImage3DMultisampleNV_SD(GLuint texture,
 
 inline void glTextureStorage1D_SD(
     GLuint texture, GLsizei levels, GLenum internalformat, GLsizei width, GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     TextureStateObject(GL_TEXTURE_1D, texture)
@@ -624,8 +622,8 @@ inline void glTextureStorage1DEXT_SD(GLuint texture,
                                      GLenum internalformat,
                                      GLsizei width,
                                      GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     TextureStateObject(target, texture)
@@ -640,8 +638,8 @@ inline void glTextureStorage2D_SD(GLuint texture,
                                   GLsizei width,
                                   GLsizei height,
                                   GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     CTextureStateObj* textureState = SD().GetCurrentSharedStateData().Textures().Get(texture);
@@ -662,8 +660,8 @@ inline void glTextureStorage2DEXT_SD(GLuint texture,
                                      GLsizei width,
                                      GLsizei height,
                                      GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     SetTargetForTexture(target, texture);
@@ -680,8 +678,8 @@ inline void glTextureStorage2DMultisample_SD(GLuint texture,
                                              GLsizei height,
                                              GLboolean fixedsamplelocations,
                                              GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     CTextureStateObj* textureState = SD().GetCurrentSharedStateData().Textures().Get(texture);
@@ -703,8 +701,8 @@ inline void glTextureStorage2DMultisampleEXT_SD(GLuint texture,
                                                 GLsizei height,
                                                 GLboolean fixedsamplelocations,
                                                 GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     TextureStateObject(target, texture)
@@ -720,8 +718,8 @@ inline void glTextureStorage3D_SD(GLuint texture,
                                   GLsizei height,
                                   GLsizei depth,
                                   GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     CTextureStateObj* textureState = SD().GetCurrentSharedStateData().Textures().Get(texture);
@@ -743,8 +741,8 @@ inline void glTextureStorage3DMultisample_SD(GLuint texture,
                                              GLsizei depth,
                                              GLboolean fixedsamplelocations,
                                              GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     CTextureStateObj* textureState = SD().GetCurrentSharedStateData().Textures().Get(texture);
@@ -766,8 +764,8 @@ inline void glTextureStorage3DEXT_SD(GLuint texture,
                                      GLsizei height,
                                      GLsizei depth,
                                      GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     TextureStateObject(target, texture)
@@ -784,8 +782,8 @@ inline void glCopyTexImage1D_SD(GLenum target,
                                 GLsizei width,
                                 GLint border,
                                 GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (!isTargetProxy(target) && (Config::Get().IsRecorder() ||
                                  (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex))) {
@@ -803,8 +801,8 @@ inline void glCopyTexImage2D_SD(GLenum target,
                                 GLsizei height,
                                 GLint border,
                                 GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (!isTargetProxy(target) && (Config::Get().IsRecorder() ||
                                  (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex))) {
@@ -820,8 +818,8 @@ inline void glTexImage2DMultisample_SD(GLenum target,
                                        GLsizei height,
                                        GLboolean fixedsamplelocations,
                                        GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (!isTargetProxy(target) && (Config::Get().IsRecorder() ||
                                  (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex))) {
@@ -838,8 +836,8 @@ inline void glTexImage3DMultisample_SD(GLenum target,
                                        GLsizei depth,
                                        GLboolean fixedsamplelocations,
                                        GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (!isTargetProxy(target) && (Config::Get().IsRecorder() ||
                                  (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex))) {
@@ -857,8 +855,8 @@ inline void glTexImage1D_SD(GLenum target,
                             GLenum type,
                             const GLvoid* pixels,
                             GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (!isTargetProxy(target) && (Config::Get().IsRecorder() ||
                                  (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex))) {
@@ -882,8 +880,8 @@ inline void glTexImage2D_SD(GLenum target,
     return;
   }
 
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
   void* currentContext = SD().GetCurrentContext();
 
   if (!isTargetProxy(target) && ((Config::Get().IsRecorder() && currentContext != 0) ||
@@ -904,8 +902,8 @@ inline void glTexImage3D_SD(GLenum target,
                             GLenum type,
                             const GLvoid* pixels,
                             GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (!isTargetProxy(target) && (Config::Get().IsRecorder() ||
                                  (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex))) {
@@ -923,8 +921,8 @@ inline void glCompressedMultiTexImage1DEXT_SD(GLenum texunit,
                                               GLsizei imageSize,
                                               const GLvoid* bits,
                                               GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     TextureStateObject(target, texunit)
@@ -942,8 +940,8 @@ inline void glCompressedMultiTexImage2DEXT_SD(GLenum texunit,
                                               GLsizei imageSize,
                                               const GLvoid* bits,
                                               GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     TextureStateObject(target, texunit)
@@ -963,8 +961,8 @@ inline void glCompressedMultiTexImage3DEXT_SD(GLenum texunit,
                                               GLsizei imageSize,
                                               const GLvoid* bits,
                                               GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     TextureStateObject(target, texunit)
@@ -983,8 +981,8 @@ inline void glMultiTexImage1DEXT_SD(GLenum texunit,
                                     GLenum type,
                                     const GLvoid* pixels,
                                     GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     TextureStateObject(target, texunit)
@@ -1003,8 +1001,8 @@ inline void glMultiTexImage2DEXT_SD(GLenum texunit,
                                     GLenum type,
                                     const GLvoid* pixels,
                                     GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     TextureStateObject(target, texunit)
@@ -1025,8 +1023,8 @@ inline void glMultiTexImage3DEXT_SD(GLenum texunit,
                                     GLenum type,
                                     const GLvoid* pixels,
                                     GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     TextureStateObject(target, texunit)
@@ -1043,8 +1041,8 @@ inline void glCompressedTexImage1D_SD(GLenum target,
                                       GLsizei imageSize,
                                       const GLvoid* data,
                                       GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     TextureStateObject(target).SetTexLevelParams(level, width, 1, 1, internalformat, border, 1,
@@ -1061,8 +1059,8 @@ inline void glCompressedTexImage2D_SD(GLenum target,
                                       GLsizei imageSize,
                                       const GLvoid* data,
                                       GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     TextureStateObject(target).SetTexLevelParams(level, width, height, 1, internalformat, border, 1,
@@ -1072,8 +1070,7 @@ inline void glCompressedTexImage2D_SD(GLenum target,
   // We track data only when not recording to not keep too much garbage in
   // resources
   if (Config::Get().IsRecorder() && !curctx::IsOgl() && recording &&
-      Config::Get().recorder.openGL.utilities.texturesState ==
-          TTexturesState::TEXTURES_STATE_RESTORE) {
+      Config::Get().opengl.recorder.texturesState == TTexturesState::RESTORE) {
     ESCompressedTexDataTrack(target, level, imageSize, data);
   }
 }
@@ -1088,8 +1085,8 @@ inline void glCompressedTexImage3D_SD(GLenum target,
                                       GLsizei imageSize,
                                       const GLvoid* data,
                                       GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     TextureStateObject(target).SetTexLevelParams(level, width, height, depth, internalformat,
@@ -1099,8 +1096,7 @@ inline void glCompressedTexImage3D_SD(GLenum target,
   // We track data only when not recording to not keep too much garbage in
   // resources
   if (Config::Get().IsRecorder() && !curctx::IsOgl() && recording &&
-      Config::Get().recorder.openGL.utilities.texturesState ==
-          TTexturesState::TEXTURES_STATE_RESTORE) {
+      Config::Get().opengl.recorder.texturesState == TTexturesState::RESTORE) {
     ESCompressedTexDataTrack(target, level, imageSize, data);
   }
 }
@@ -1114,8 +1110,8 @@ inline void glCompressedTextureImage1DEXT_SD(GLuint texture,
                                              GLsizei imageSize,
                                              const GLvoid* bits,
                                              GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     SetTargetForTexture(target, texture);
@@ -1134,8 +1130,8 @@ inline void glCompressedTextureImage2DEXT_SD(GLuint texture,
                                              GLsizei imageSize,
                                              const GLvoid* bits,
                                              GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     SetTargetForTexture(target, texture);
@@ -1156,8 +1152,8 @@ inline void glCompressedTextureImage3DEXT_SD(GLuint texture,
                                              GLsizei imageSize,
                                              const GLvoid* bits,
                                              GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     SetTargetForTexture(target, texture);
@@ -1177,8 +1173,8 @@ inline void glTextureImage1DEXT_SD(GLuint texture,
                                    GLenum type,
                                    const GLvoid* pixels,
                                    GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     TextureStateObject(target, texture)
@@ -1197,8 +1193,8 @@ inline void glTextureImage2DEXT_SD(GLuint texture,
                                    GLenum type,
                                    const GLvoid* pixels,
                                    GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     SetTargetForTexture(target, texture);
@@ -1220,8 +1216,8 @@ inline void glTextureImage3DEXT_SD(GLuint texture,
                                    GLenum type,
                                    const GLvoid* pixels,
                                    GLboolean recording = 0) {
-  bool isCaptureTex = !Config::Get().player.capture2DTexs.empty() ||
-                      !Config::Get().player.captureDraws2DTexs.empty();
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
 
   if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
     SetTargetForTexture(target, texture);
@@ -1360,7 +1356,7 @@ inline void glMapBufferRange_SD(GLvoid* return_value,
                                 GLsizeiptr length,
                                 GLbitfield access,
                                 GLboolean recording = 0) {
-  access = access & Config::Get().recorder.extras.optimizations.bufferMapAccessMask;
+  access = access & Config::Get().opengl.recorder.bufferMapAccessMask;
   bool error = false;
   GLint buffer = boundBuff(target);
   if (buffer > 0) {
@@ -1414,7 +1410,7 @@ inline void glMapNamedBufferRange_SD(GLvoid* return_value,
                                      GLsizeiptr length,
                                      GLbitfield access,
                                      GLboolean recording = 0) {
-  access = access & Config::Get().recorder.extras.optimizations.bufferMapAccessMask;
+  access = access & Config::Get().opengl.recorder.bufferMapAccessMask;
   bool error = false;
   if (buffer > 0) {
     CBufferStateObj* bufferState = SD().GetCurrentSharedStateData().Buffers().Get(buffer);
@@ -1454,14 +1450,13 @@ inline void glCompressedTexSubImage1D_SD(GLenum target,
     }
     if (!curctx::IsOgl()) {
       if (width == mipmapData.width) {
-        if (recording && Config::Get().recorder.openGL.utilities.texturesState ==
-                             TTexturesState::TEXTURES_STATE_RESTORE) {
+        if (recording && Config::Get().opengl.recorder.texturesState == TTexturesState::RESTORE) {
           // Track data only when not recording as it is useless and heavy in
           // long streams
           ESCompressedTexDataTrack(target, level, imageSize, data);
         }
-      } else if (recording && Config::Get().recorder.openGL.utilities.texturesState ==
-                                  TTexturesState::TEXTURES_STATE_RESTORE) {
+      } else if (recording &&
+                 Config::Get().opengl.recorder.texturesState == TTexturesState::RESTORE) {
         // No support for restoration of  sub imaged compressed textures in ES
         throw ENotImplemented(EXCEPTION_MESSAGE);
       }
@@ -1491,14 +1486,13 @@ inline void glCompressedTexSubImage2D_SD(GLenum target,
     }
     if (!curctx::IsOgl()) {
       if (width == mipmapData.width && height == mipmapData.height) {
-        if (recording && Config::Get().recorder.openGL.utilities.texturesState ==
-                             TTexturesState::TEXTURES_STATE_RESTORE) {
+        if (recording && Config::Get().opengl.recorder.texturesState == TTexturesState::RESTORE) {
           // Track data only when not recording as it is useless and heavy in
           // long streams
           ESCompressedTexDataTrack(target, level, imageSize, data);
         }
-      } else if (recording && Config::Get().recorder.openGL.utilities.texturesState ==
-                                  TTexturesState::TEXTURES_STATE_RESTORE) {
+      } else if (recording &&
+                 Config::Get().opengl.recorder.texturesState == TTexturesState::RESTORE) {
         // No support for restoration of  sub imaged compressed textures in ES
         throw ENotImplemented(EXCEPTION_MESSAGE);
       }
@@ -1528,14 +1522,13 @@ inline void glCompressedTexSubImage3D_SD(GLenum target,
     }
     if (!curctx::IsOgl()) {
       if (width == mipmapData.width && height == mipmapData.height && depth == mipmapData.depth) {
-        if (recording && Config::Get().recorder.openGL.utilities.texturesState ==
-                             TTexturesState::TEXTURES_STATE_RESTORE) {
+        if (recording && Config::Get().opengl.recorder.texturesState == TTexturesState::RESTORE) {
           // Track data only when not recording as it is useless and heavy in
           // long streams
           ESCompressedTexDataTrack(target, level, imageSize, data);
         }
-      } else if (recording && Config::Get().recorder.openGL.utilities.texturesState ==
-                                  TTexturesState::TEXTURES_STATE_RESTORE) {
+      } else if (recording &&
+                 Config::Get().opengl.recorder.texturesState == TTexturesState::RESTORE) {
         // No support for restoration of  sub imaged compressed textures in ES
         throw ENotImplemented(EXCEPTION_MESSAGE);
       }
@@ -1562,14 +1555,13 @@ inline void glCompressedTextureSubImage1DEXT_SD(GLuint texture,
     }
     if (!curctx::IsOgl()) {
       if (width == mipmapData.width) {
-        if (recording && Config::Get().recorder.openGL.utilities.texturesState ==
-                             TTexturesState::TEXTURES_STATE_RESTORE) {
+        if (recording && Config::Get().opengl.recorder.texturesState == TTexturesState::RESTORE) {
           // Track data only when not recording as it is useless and heavy in
           // long streams
           ESCompressedTexDataTrack(target, level, imageSize, bits);
         }
-      } else if (recording && Config::Get().recorder.openGL.utilities.texturesState ==
-                                  TTexturesState::TEXTURES_STATE_RESTORE) {
+      } else if (recording &&
+                 Config::Get().opengl.recorder.texturesState == TTexturesState::RESTORE) {
         // No support for restoration of  sub imaged compressed textures in ES
         throw ENotImplemented(EXCEPTION_MESSAGE);
       }
@@ -1608,8 +1600,8 @@ inline void glCompressedTextureSubImage2D_SD(GLuint texture,
 
   if (!curctx::IsOgl()) {
     // Track data only when not recording as it is useless and heavy in long streams.
-    const auto& texState = Config::Get().recorder.openGL.utilities.texturesState;
-    if (recording && texState == TTexturesState::TEXTURES_STATE_RESTORE) {
+    const auto& texState = Config::Get().opengl.recorder.texturesState;
+    if (recording && texState == TTexturesState::RESTORE) {
       if (wholeTextureUsed) {
         ESCompressedTexDataTrack(target, level, imageSize, bits);
       } else {
@@ -1646,8 +1638,8 @@ inline void glCompressedTextureSubImage2DEXT_SD(GLuint texture,
 
   if (!curctx::IsOgl()) {
     // Track data only when not recording as it is useless and heavy in long streams.
-    const auto& texState = Config::Get().recorder.openGL.utilities.texturesState;
-    if (recording && texState == TTexturesState::TEXTURES_STATE_RESTORE) {
+    const auto& texState = Config::Get().opengl.recorder.texturesState;
+    if (recording && texState == TTexturesState::RESTORE) {
       if (wholeTextureUsed) {
         ESCompressedTexDataTrack(target, level, imageSize, bits);
       } else {
@@ -1681,14 +1673,13 @@ inline void glCompressedTextureSubImage3DEXT_SD(GLuint texture,
     }
     if (!curctx::IsOgl()) {
       if (width == mipmapData.width && height == mipmapData.height && depth == mipmapData.depth) {
-        if (recording && Config::Get().recorder.openGL.utilities.texturesState ==
-                             TTexturesState::TEXTURES_STATE_RESTORE) {
+        if (recording && Config::Get().opengl.recorder.texturesState == TTexturesState::RESTORE) {
           // Track data only when not recording as it is useless and heavy in
           // long streams
           ESCompressedTexDataTrack(target, level, imageSize, bits);
         }
-      } else if (recording && Config::Get().recorder.openGL.utilities.texturesState ==
-                                  TTexturesState::TEXTURES_STATE_RESTORE) {
+      } else if (recording &&
+                 Config::Get().opengl.recorder.texturesState == TTexturesState::RESTORE) {
         // No support for restoration of  sub imaged compressed textures in ES
         throw ENotImplemented(EXCEPTION_MESSAGE);
       }
@@ -1708,7 +1699,7 @@ inline void glAttachObjectARB_SD(GLhandleARB containerObj,
 }
 
 inline void glAttachShader_SD(GLuint program, GLuint shader, GLboolean recording = 0) {
-  if (Config::Get().IsRecorder() || ShouldLog(TRACEV) || Config::Get().common.useEvents) {
+  if (Config::Get().IsRecorder() || ShouldLog(TRACEV) || Config::Get().common.shared.useEvents) {
     if (shader == 0) {
       return;
     }
@@ -1845,19 +1836,19 @@ inline void glColorPointerEXT_SD(GLint size,
 }
 
 inline void glCompileShader_SD(GLuint shader, GLboolean recording = 0) {
-  if (Config::Get().IsRecorder() || ShouldLog(TRACEV) || Config::Get().common.useEvents) {
+  if (Config::Get().IsRecorder() || ShouldLog(TRACEV) || Config::Get().common.shared.useEvents) {
     SD().GetCurrentSharedStateData().GLSLShaders().Get(shader)->Compile();
   }
 }
 
 inline void glCreateProgram_SD(GLuint retVal, GLboolean recording = 0) {
-  if (Config::Get().IsRecorder() || ShouldLog(TRACEV) || Config::Get().common.useEvents) {
+  if (Config::Get().IsRecorder() || ShouldLog(TRACEV) || Config::Get().common.shared.useEvents) {
     SD().GetCurrentSharedStateData().GLSLPrograms().Add(CGLSLProgramStateObj(retVal));
   }
 }
 
 inline void glCreateShader_SD(GLuint retVal, GLenum type, GLboolean recording = 0) {
-  if (Config::Get().IsRecorder() || ShouldLog(TRACEV) || Config::Get().common.useEvents) {
+  if (Config::Get().IsRecorder() || ShouldLog(TRACEV) || Config::Get().common.shared.useEvents) {
     SD().GetCurrentSharedStateData().GLSLShaders().Add(CGLSLShaderStateObj(retVal, type));
   }
 }
@@ -1900,13 +1891,13 @@ inline void glDeleteObjectARB_SD(GLhandleARB obj, GLboolean recording = 0 /*= fa
 }
 
 inline void glDeleteShader_SD(GLuint shader, GLboolean recording = 0 /*= false*/) {
-  if (Config::Get().IsRecorder() || ShouldLog(TRACEV) || Config::Get().common.useEvents) {
+  if (Config::Get().IsRecorder() || ShouldLog(TRACEV) || Config::Get().common.shared.useEvents) {
     SD().GetCurrentSharedStateData().GLSLShaders().Remove(1, &shader);
   }
 }
 
 inline void glDeleteProgram_SD(GLuint program, GLboolean recording = 0 /*= false*/) {
-  if (Config::Get().IsRecorder() || ShouldLog(TRACEV) || Config::Get().common.useEvents) {
+  if (Config::Get().IsRecorder() || ShouldLog(TRACEV) || Config::Get().common.shared.useEvents) {
     CSharedStateDynamic::CGLSLPrograms& programsState =
         SD().GetCurrentSharedStateData().GLSLPrograms();
 
@@ -2235,7 +2226,7 @@ inline void glVertexArrayAttribLFormat_SD(GLuint vaobj,
 }
 
 inline void glLinkProgram_SD(GLuint program, GLboolean recording = 0 /*= false*/) {
-  if (Config::Get().IsRecorder() || ShouldLog(TRACEV) || Config::Get().common.useEvents) {
+  if (Config::Get().IsRecorder() || ShouldLog(TRACEV) || Config::Get().common.shared.useEvents) {
     SD().GetCurrentSharedStateData().GLSLPrograms().Get(program)->Link();
   }
 }
@@ -2500,7 +2491,7 @@ inline void glShaderSource_SD(GLuint shader,
                               const GLchar* const* string,
                               const GLint* length,
                               GLboolean recording = 0 /*= false*/) {
-  if (Config::Get().IsRecorder() || ShouldLog(TRACEV) || Config::Get().common.useEvents) {
+  if (Config::Get().IsRecorder() || ShouldLog(TRACEV) || Config::Get().common.shared.useEvents) {
     // build source string
     std::stringstream str;
     for (int i = 0; i < count; ++i) {
@@ -2620,7 +2611,7 @@ inline void glCreateShaderProgramv_SD(GLuint return_value,
                                       GLsizei count,
                                       const GLchar* const* strings,
                                       GLboolean recording = 0 /*= false*/) {
-  if (Config::Get().IsRecorder() || ShouldLog(TRACEV) || Config::Get().common.useEvents) {
+  if (Config::Get().IsRecorder() || ShouldLog(TRACEV) || Config::Get().common.shared.useEvents) {
     CGLSLShaderStateObj tmpShader(0, type);
     // This shader data will be attached to shader as linked but deleted though
     // unique name will be generated in state restore. This is why here we can

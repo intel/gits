@@ -74,7 +74,7 @@ void CoclocInvoke::Run() {
 #ifdef GITS_PLATFORM_WINDOWS
       std::replace(argument.begin(), argument.end(), '\'', '"');
 #endif
-      arguments.push_back(argument + " -I" + Config::Get().common.streamDir.string() +
+      arguments.push_back(argument + " -I" + Config::Get().common.player.streamDir.string() +
                           "/gitsFiles");
     }
 #ifdef WITH_LEVELZERO
@@ -181,7 +181,7 @@ void CoclocInvoke_V1::Run() {
 #ifdef GITS_PLATFORM_WINDOWS
       std::replace(argument.begin(), argument.end(), '\'', '"');
 #endif
-      arguments.push_back(argument + " -I" + Config::Get().common.streamDir.string() +
+      arguments.push_back(argument + " -I" + Config::Get().common.player.streamDir.string() +
                           "/gitsFiles");
     }
 #ifdef WITH_LEVELZERO

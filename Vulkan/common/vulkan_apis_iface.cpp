@@ -49,7 +49,7 @@ void VulkanApi::Rec_StateRestoreFinished() const {
 
 bool VulkanApi::CfgRec_IsObjectToRecord() const {
   return Config::Get()
-      .recorder.vulkan.capture.objRange
+      .vulkan.recorder.objRange
       .rangeSpecial[CGits::Instance().vkCounters.CurrentQueueSubmitCount()];
 }
 

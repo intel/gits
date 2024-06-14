@@ -271,7 +271,7 @@ gits::CArgument& gits::OpenGL::CglXMakeCurrent::Argument(unsigned idx) {
 
 void gits::OpenGL::CglXMakeCurrent::Run() {
   if (*_ctx == 0) {
-    ptbl_glXMakeCurrent(*_dpy, None, nullptr);
+    ptbl_glXMakeCurrent(*_dpy, 0, nullptr);
     return;
   }
 
@@ -290,7 +290,7 @@ void gits::OpenGL::CglXMakeCurrent::Run() {
 
   _drawable.AddMapping((uint64_t)glxPlayerMngr->GetWindowHandle());
   // TODO: check why without this line glXMakeCurrent fails (throws BadAlloc)
-  ptbl_glXMakeCurrent(*_dpy, None, None);
+  ptbl_glXMakeCurrent(*_dpy, 0, nullptr);
   ptbl_glXMakeCurrent(*_dpy, (GLXDrawable)*_drawable, *_ctx);
 
   SD().SetCurrentContext((void*)*_ctx);
@@ -1054,7 +1054,7 @@ gits::CArgument& gits::OpenGL::CglXMakeContextCurrent::Argument(unsigned idx) {
 
 void gits::OpenGL::CglXMakeContextCurrent::Run() {
   if (*_ctx == 0) {
-    ptbl_glXMakeContextCurrent(*_dpy, None, None, nullptr);
+    ptbl_glXMakeContextCurrent(*_dpy, 0, 0, nullptr);
     return;
   }
 

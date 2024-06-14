@@ -679,13 +679,14 @@ NOINLINE std::unique_ptr<ScissorStateStash> HandleForceScissor(CDrawFunction* pt
   if (!IsClearOrBlitDrawcall(ptr)) {
     std::vector<int> viewport(4);
     drv.gl.glGetIntegerv(GL_VIEWPORT, &viewport[0]);
-    const auto& player = Config::Get().player;
-    if (!player.affectViewport ||
-        (viewport[2] == player.affectedViewport[0] && viewport[3] == player.affectedViewport[1])) {
+    const auto& player = Config::Get().common.player;
+    const auto& oglplayer = Config::Get().opengl.player;
+    if (!oglplayer.affectViewport || (viewport[2] == oglplayer.affectedViewport[0] &&
+                                      viewport[3] == oglplayer.affectedViewport[1])) {
       scissorStatePtr.reset(new ScissorStateStash());
-      const std::vector<int>& rect = player.scissorCoords;
+      const auto& rect = player.forceScissor;
       drv.gl.glEnable(GL_SCISSOR_TEST);
-      drv.gl.glScissor(rect[0], rect[1], rect[2], rect[3]);
+      drv.gl.glScissor(rect.x, rect.y, rect.width, rect.height);
     }
   }
   return scissorStatePtr;
@@ -693,9 +694,9 @@ NOINLINE std::unique_ptr<ScissorStateStash> HandleForceScissor(CDrawFunction* pt
 
 NOINLINE void HandleCaptureDrawsPre() {
   const auto currentDrawCount = CGits::Instance().CurrentDrawCount();
-  const auto& player = Config::Get().player;
+  const auto& oglplayer = Config::Get().opengl.player;
 
-  if (player.captureDrawsPre && player.captureDraws[currentDrawCount]) {
+  if (oglplayer.captureDrawsPre && oglplayer.captureDraws[currentDrawCount]) {
     capture_drawbuffer(GetPathForImageDumping(),
                        "drawcall-" + std::to_string(currentDrawCount) + "-pre", false);
   }
@@ -703,9 +704,9 @@ NOINLINE void HandleCaptureDrawsPre() {
 
 NOINLINE void HandleCaptureDraws2DTexs() {
   const auto currentDrawCount = CGits::Instance().CurrentDrawCount();
-  const auto& player = Config::Get().player;
+  const auto& oglplayer = Config::Get().opengl.player;
 
-  if (player.captureDraws2DTexs[currentDrawCount]) {
+  if (oglplayer.captureDraws2DTexs[currentDrawCount]) {
     GLint activeTexUnit = 0;
     drv.gl.glGetIntegerv(GL_ACTIVE_TEXTURE, &activeTexUnit);
     GLint maxTexUnits = 0;
@@ -746,9 +747,9 @@ NOINLINE void HandleTrace() {
 
 NOINLINE void HandleCaptureDraws() {
   const auto currentDrawCount = CGits::Instance().CurrentDrawCount();
-  const auto& player = Config::Get().player;
+  const auto& oglplayer = Config::Get().opengl.player;
 
-  if (player.captureDraws[currentDrawCount]) {
+  if (oglplayer.captureDraws[currentDrawCount]) {
     capture_drawbuffer(GetPathForImageDumping(),
                        "drawcall-" + std::to_string(currentDrawCount) + "-post", false);
   }
@@ -759,23 +760,24 @@ void CDrawFunction::DrawFunctionRun() {
 
   const auto isStateRestore = CGits::Instance().IsStateRestoration();
   const auto currentDrawCount = CGits::Instance().CurrentDrawCount();
-  const auto& player = Config::Get().player;
+  const auto& player = Config::Get().common.player;
+  const auto& oglplayer = Config::Get().opengl.player;
 
-  const bool keepDraw = isStateRestore || (player.keepDraws[currentDrawCount] &&
-                                           player.keepFrames[CGits::Instance().CurrentFrame()]);
+  const bool keepDraw = isStateRestore || (oglplayer.keepDraws[currentDrawCount] &&
+                                           oglplayer.keepFrames[CGits::Instance().CurrentFrame()]);
   if (!keepDraw) {
     return;
   }
   std::unique_ptr<ScissorStateStash> scissorStatePtr;
-  if (player.forceScissor) {
+  if (player.forceScissor.enabled) {
     scissorStatePtr = HandleForceScissor(this);
   }
 
-  if (player.captureDrawsPre) {
+  if (oglplayer.captureDrawsPre) {
     HandleCaptureDrawsPre();
   }
 
-  if (!player.captureDraws2DTexs.empty()) {
+  if (!oglplayer.captureDraws2DTexs.empty()) {
     HandleCaptureDraws2DTexs();
   }
   CGits::Instance().traceGLAPIBypass = false;
@@ -785,7 +787,7 @@ void CDrawFunction::DrawFunctionRun() {
   this->RunImpl();
   CGits::Instance().traceGLAPIBypass = true;
 
-  if (!player.captureDraws.empty()) {
+  if (!oglplayer.captureDraws.empty()) {
     HandleCaptureDraws();
   }
 

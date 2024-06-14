@@ -383,7 +383,7 @@ void gather_diagnostic_info(nlohmann::ordered_json& properties) {
   }
 
   try {
-    if (Config::Get().recorder.extras.utilities.extendedDiagnosticInfo) {
+    if (Config::Get().common.recorder.extendedDiagnosticInfo) {
       Log(INFO) << "Gathering extended diagnostic info trough WMI...";
       Log(INFO) << "If it hangs or fails, consider disabling extended "
                    "diagnostics in recorder settings.";
@@ -890,7 +890,7 @@ void gather_diagnostic_info(nlohmann::ordered_json& properties) {
 
 void gather_diagnostic_info(nlohmann::ordered_json& properties) {
   auto my_pid = std::to_string(getpid());
-  if (Config::Get().recorder.extras.utilities.extendedDiagnosticInfo) {
+  if (Config::Get().common.recorder.extendedDiagnosticInfo) {
     properties["diag"]["gits"]["uname"] =
         CommandOutput("uname -a", Config::Get().common.mode == Config::MODE_RECORDER);
     properties["diag"]["gits"]["lspci"] =

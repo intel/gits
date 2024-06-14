@@ -38,7 +38,7 @@ void CvkGetFenceStatus_CCODEWRITEWRAP(CCodeOStream& stream, const CvkGetFenceSta
 // instead of one giant call.
 void CvkUpdateDescriptorSets_CCODEWRITEWRAP(CCodeOStream& stream,
                                             const CvkUpdateDescriptorSets& function) {
-  size_t chunkSize = Config::Get().recorder.vulkan.utilities.maxArraySizeForCCode;
+  size_t chunkSize = Config::Get().vulkan.recorder.maxArraySizeForCCode;
   size_t itDescriptorWrite = 0, itDescriptorCopy = 0;
 
   while (itDescriptorWrite < *function._descriptorWriteCount ||
@@ -85,7 +85,7 @@ void CvkWaitForFences_CCODEWRITEWRAP(CCodeOStream& stream, const CvkWaitForFence
 
 void CvkCreateGraphicsPipelines_CCODEWRITEWRAP(CCodeOStream& stream,
                                                const CvkCreateGraphicsPipelines& function) {
-  size_t chunkSize = Config::Get().recorder.vulkan.utilities.maxArraySizeForCCode;
+  size_t chunkSize = Config::Get().vulkan.recorder.maxArraySizeForCCode;
   auto createInfoCount = *function._createInfoCount;
 
   for (size_t i = 0; i < createInfoCount; i += chunkSize) {
@@ -118,7 +118,7 @@ void CvkCreateGraphicsPipelines_CCODEWRITEWRAP(CCodeOStream& stream,
 
 void CvkCmdPipelineBarrier_CCODEWRITEWRAP(CCodeOStream& stream,
                                           const CvkCmdPipelineBarrier& function) {
-  size_t chunkSize = Config::Get().recorder.vulkan.utilities.maxArraySizeForCCode;
+  size_t chunkSize = Config::Get().vulkan.recorder.maxArraySizeForCCode;
   size_t itMemoryBarriers = 0, itBufferMemoryBarriers = 0, itImageMemoryBarriers = 0;
   size_t memoryBarrierCount = *function._memoryBarrierCount;
   size_t bufferMemoryBarrierCount = *function._bufferMemoryBarrierCount;
@@ -181,7 +181,7 @@ void CVkDependencyInfoCCodeWriter(CCodeOStream& stream,
                                   const std::string& name,
                                   const CVkCommandBuffer& commandBuffer,
                                   const CVkDependencyInfo& dependencyInfo) {
-  size_t chunkSize = Config::Get().recorder.vulkan.utilities.maxArraySizeForCCode;
+  size_t chunkSize = Config::Get().vulkan.recorder.maxArraySizeForCCode;
   size_t itMemoryBarriers = 0, itBufferMemoryBarriers = 0, itImageMemoryBarriers = 0;
   size_t memoryBarrierCount = dependencyInfo.GetMemoryBarrierCount();
   size_t bufferMemoryBarrierCount = dependencyInfo.GetBufferMemoryBarrierCount();

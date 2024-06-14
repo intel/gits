@@ -8,59 +8,38 @@
 
 #pragma once
 
-#include "bit_range.h"
+#include "keyEvents.h"
+
 #include <string>
-DISABLE_WARNINGS
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/info_parser.hpp>
-#include <boost/optional.hpp>
-ENABLE_WARNINGS
+#include <sstream>
 #include <vector>
-#include <set>
-#include <algorithm>
 
 namespace gits {
-
-template <typename T>
-inline void ConfigValueSet(const boost::property_tree::ptree& prop_tree,
-                           const std::string& name,
-                           T& value) {
-  value = prop_tree.get<T>(name);
+template <class T>
+bool parse_pair(const std::string& s, T& pair) {
+  std::stringstream str(s);
+  str >> pair.first;
+  str.ignore();
+  str >> pair.second;
+  return !(!str.eof() || str.fail() || str.bad());
 }
 
-template <>
-inline void ConfigValueSet(const boost::property_tree::ptree& prop_tree,
-                           const std::string& name,
-                           bool& value) {
-  std::string str = prop_tree.get<std::string>(name);
-  if (str == "1" || str == "Yes" || str == "True") {
-    value = true;
-  } else {
-    value = false;
+template <class T>
+bool parse_vector(const std::string& s, std::vector<T>& vector, size_t size) {
+  std::stringstream str(s);
+  std::vector<T> vec;
+  while (!str.eof() && !str.fail() && !str.bad()) {
+    vec.push_back((T)0);
+    str >> vec.back();
+    str.ignore();
   }
+  if (size == vec.size()) {
+    vector = std::move(vec);
+    return true;
+  }
+  return false;
 }
 
-template <>
-inline void ConfigValueSet(const boost::property_tree::ptree& prop_tree,
-                           const std::string& name,
-                           std::vector<std::string>& values) {
-  std::string value = prop_tree.get<std::string>(name);
-  size_t pos;
-  std::string delimeter = ",";
-  char charsToRemove[] = "()\"";
-  size_t len = strlen(charsToRemove);
-  for (size_t i = 0; i < len; i++) {
-    value.erase(std::remove(value.begin(), value.end(), charsToRemove[i]), value.end());
-  }
-
-  if (value.length() == 0) {
-    return;
-  }
-
-  while ((pos = value.find(delimeter)) != std::string::npos) {
-    values.push_back(value.substr(0, pos));
-    value.erase(0, pos + delimeter.length());
-  }
-  values.push_back(value);
-}
+void parse_vector(const std::string& s, std::vector<std::string>& vector);
+std::vector<uint32_t> parseKeys(const std::vector<std::string>& input);
 } // namespace gits

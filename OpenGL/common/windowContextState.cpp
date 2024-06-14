@@ -63,11 +63,11 @@ GlxPlayerMngr::GlxPlayerMngr(Display* glxDpy, GLXContext glxCtx, GLXFBConfig fbc
 void GlxPlayerMngr::UpdateWindow(std::vector<int>& winparams) {
   if (!winparams.empty()) {
 #ifndef BUILD_FOR_CCODE
-    if (!gits::Config::Get().player.forceWindowSize)
+    if (!gits::Config::Get().common.player.forceWindowSize.enabled)
 #endif
       _window->set_size(winparams[2], winparams[3]);
 #ifndef BUILD_FOR_CCODE
-    if (!gits::Config::Get().player.forceWindowPos)
+    if (!gits::Config::Get().common.player.forceWindowPos.enabled)
 #endif
       _window->set_position(winparams[0], winparams[1]);
   }
@@ -103,18 +103,18 @@ void GlxPlayerMngr::SetupWindowWithoutId(std::vector<int>& winparams) {
   int xsize = winparams[2];
   int ysize = winparams[3];
 #ifndef BUILD_FOR_CCODE
-  if (gits::Config::Get().player.forceWindowPos) {
-    xpos = gits::Config::Get().player.windowCoords.first;
-    ypos = gits::Config::Get().player.windowCoords.second;
+  if (gits::Config::Get().common.player.forceWindowPos.enabled) {
+    xpos = gits::Config::Get().common.player.forceWindowPos.x;
+    ypos = gits::Config::Get().common.player.forceWindowPos.y;
   }
 
-  if (gits::Config::Get().player.forceWindowSize) {
-    xsize = gits::Config::Get().player.windowSize.first;
-    ysize = gits::Config::Get().player.windowSize.second;
+  if (gits::Config::Get().common.player.forceWindowSize.enabled) {
+    xsize = gits::Config::Get().common.player.forceWindowSize.width;
+    ysize = gits::Config::Get().common.player.forceWindowSize.height;
   }
 #endif
 
-  int native_attribs[] = {GLX_X_VISUAL_TYPE, GLX_TRUE_COLOR, None};
+  int native_attribs[] = {GLX_X_VISUAL_TYPE, GLX_TRUE_COLOR, 0};
   int formats = 0;
   GLXFBConfig* configs = ptbl_glXChooseFBConfig((Display*)GetNativeDisplay(),
                                                 ptbl_DefaultScreen((Display*)GetNativeDisplay()),
@@ -136,14 +136,14 @@ void GlxPlayerMngr::SetupWindowWithId(std::vector<int>& winparams) {
   int ysize = winparams[3];
 
 #ifndef BUILD_FOR_CCODE
-  if (gits::Config::Get().player.forceWindowPos) {
-    xpos = gits::Config::Get().player.windowCoords.first;
-    ypos = gits::Config::Get().player.windowCoords.second;
+  if (gits::Config::Get().common.player.forceWindowPos.enabled) {
+    xpos = gits::Config::Get().common.player.forceWindowPos.x;
+    ypos = gits::Config::Get().common.player.forceWindowPos.y;
   }
 
-  if (gits::Config::Get().player.forceWindowSize) {
-    xsize = gits::Config::Get().player.windowSize.first;
-    ysize = gits::Config::Get().player.windowSize.second;
+  if (gits::Config::Get().common.player.forceWindowSize.enabled) {
+    xsize = gits::Config::Get().common.player.forceWindowSize.width;
+    ysize = gits::Config::Get().common.player.forceWindowSize.height;
   }
 #endif
 

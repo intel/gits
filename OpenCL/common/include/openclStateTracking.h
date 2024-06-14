@@ -22,7 +22,7 @@ namespace {
 bool checkWhetherInject() {
   auto& cfg = Config::Get();
   auto kernels =
-      cfg.IsPlayer() ? cfg.player.clCaptureKernels : cfg.recorder.openCL.utilities.dumpKernels;
+      cfg.IsPlayer() ? cfg.opencl.player.captureKernels : cfg.opencl.recorder.dumpKernels;
   if (!kernels.empty()) {
     return kernels[CGits::Instance().CurrentKernelCount()];
   }
@@ -710,7 +710,7 @@ inline void clEnqueueNDRangeKernel_SD(cl_int return_value,
     drvOcl.clFinish(command_queue);
     UpdateUsmPtrs(kernel);
   }
-  if (checkWhetherInject() || Config::Get().player.aubSignaturesCL) {
+  if (checkWhetherInject() || Config::Get().opencl.player.aubSignaturesCL) {
     if (num_events_in_wait_list != 0U) {
       for (auto i = 0U; i < num_events_in_wait_list; i++) {
         const auto& e = event_wait_list[i];

@@ -89,7 +89,7 @@ win_ptr_t CreateWin(int width, int height, int x, int y, bool show) {
   DWORD style = WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
   DWORD exStyle = WS_EX_APPWINDOW;
 
-  if (gits::Config::Get().player.windowMode == gits::Config::WindowMode::EXCLUSIVE_FULLSCREEN) {
+  if (gits::Config::Get().common.player.windowMode == gits::WindowMode::EXCLUSIVE_FULLSCREEN) {
     style = WS_POPUP;
     exStyle = WS_EX_APPWINDOW | WS_EX_TOPMOST;
     x = 0;
@@ -107,7 +107,7 @@ win_ptr_t CreateWin(int width, int height, int x, int y, bool show) {
       Log(WARN) << "Cannot adjust screen resolution to match dimensions of " << width << " x "
                 << height << " pixels for a window.";
     }
-  } else if (gits::Config::Get().player.showWindowBorder) {
+  } else if (gits::Config::Get().common.player.showWindowBorder) {
     style = WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_OVERLAPPEDWINDOW;
   }
 
@@ -120,7 +120,7 @@ win_ptr_t CreateWin(int width, int height, int x, int y, bool show) {
                              gits::Win32ErrorToString(GetLastError()));
   }
 
-  if (show && !gits::Config::Get().player.forceInvisibleWindows) {
+  if (show && !gits::Config::Get().common.player.forceInvisibleWindows) {
     ShowWindow(win, SW_SHOW);
   }
 
@@ -140,7 +140,7 @@ void ResizeWin(win_ptr_t winptr, int width, int height) {
                              "  GetLastError() = " +
                              gits::Win32ErrorToString(GetLastError()));
   }
-  if (gits::Config::Get().player.windowMode == gits::Config::WindowMode::EXCLUSIVE_FULLSCREEN) {
+  if (gits::Config::Get().common.player.windowMode == gits::WindowMode::EXCLUSIVE_FULLSCREEN) {
     DEVMODE devMode = {};
     devMode.dmSize = sizeof(devMode);
     devMode.dmPelsWidth = width;
@@ -157,7 +157,7 @@ void ResizeWin(win_ptr_t winptr, int width, int height) {
 }
 
 void MoveWin(win_ptr_t winptr, int x, int y) {
-  if (gits::Config::Get().player.windowMode != gits::Config::WindowMode::EXCLUSIVE_FULLSCREEN) {
+  if (gits::Config::Get().common.player.windowMode != gits::WindowMode::EXCLUSIVE_FULLSCREEN) {
     SetLastError(NO_ERROR);
     if (SetWindowPos((HWND)winptr, 0, x, y, 0, 0, SWP_NOREPOSITION | SWP_NOSIZE | SWP_NOZORDER) ==
         0) {
@@ -170,7 +170,7 @@ void MoveWin(win_ptr_t winptr, int x, int y) {
 }
 
 void WinVisibility(win_ptr_t winptr, bool show) {
-  if (gits::Config::Get().player.forceInvisibleWindows) {
+  if (gits::Config::Get().common.player.forceInvisibleWindows) {
     show = false;
   }
   ShowWindow(winptr, show ? SW_SHOW : SW_HIDE);
@@ -239,7 +239,7 @@ void MessagePump::process_messages() {
 #ifndef BUILD_FOR_CCODE
       gits::CGits::Instance().SetPlayerFinish();
 #endif
-      if (gits::Config::Get().player.windowMode == gits::Config::WindowMode::EXCLUSIVE_FULLSCREEN) {
+      if (gits::Config::Get().common.player.windowMode == gits::WindowMode::EXCLUSIVE_FULLSCREEN) {
         ShowCursor(TRUE);
         ChangeDisplaySettings(NULL, 0);
       }
@@ -261,7 +261,7 @@ void MessagePump::process_messages() {
     XEvent event;
     if (gits::CGits::Instance().apis.Has3D() &&
         gits::CGits::Instance().apis.Iface3D().Api() == gits::ApisIface::OpenGL &&
-        !gits::Config::Get().player.forceWaylandWindow && disp &&
+        !gits::Config::Get().opengl.player.forceWaylandWindow && disp &&
         XCheckIfEvent((Display*)disp, &event, accept_event, nullptr)) {
       //process events, only KeyPress is requested at window creation time
       if (event.type == KeyPress) {

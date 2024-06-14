@@ -34,7 +34,7 @@ CBuffer::CBuffer(const void* buffer, size_t length) {
 }
 
 CBinOStream& operator<<(CBinOStream& stream, const CBuffer& buffer) {
-  if (!Config::Get().recorder.extras.utilities.nullIO) {
+  if (!Config::Get().common.recorder.nullIO) {
     stream.write(buffer._buffer, buffer._length);
   }
   return stream;

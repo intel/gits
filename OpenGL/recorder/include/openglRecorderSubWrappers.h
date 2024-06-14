@@ -152,7 +152,7 @@ inline void glBindFramebuffer_RECWRAP(GLenum target, GLuint framebuffer, CRecord
 }
 
 inline void glBindFramebufferEXT_RECWRAP(GLenum target, GLuint framebuffer, CRecorder& recorder) {
-  if (Config::Get().recorder.openGL.utilities.schedulefboEXTAsCoreWA) {
+  if (isSchedulefboEXTAsCoreWA()) {
     glBindFramebuffer_RECWRAP(target, framebuffer, recorder);
   } else {
     if (Recording(recorder)) {
@@ -184,7 +184,7 @@ inline void glBindFramebufferOES_RECWRAP(GLenum target, GLuint framebuffer, CRec
 }
 
 inline void glBindRenderbufferEXT_RECWRAP(GLenum target, GLuint renderbuffer, CRecorder& recorder) {
-  if (Config::Get().recorder.openGL.utilities.schedulefboEXTAsCoreWA) {
+  if (isSchedulefboEXTAsCoreWA()) {
     if (Recording(recorder)) {
       recorder.Schedule(new CglBindRenderbuffer(target, renderbuffer));
     }
@@ -202,7 +202,7 @@ inline void glBindRenderbufferEXT_RECWRAP(GLenum target, GLuint renderbuffer, CR
 inline void glCheckFramebufferStatusEXT_RECWRAP(GLenum return_value,
                                                 GLenum target,
                                                 CRecorder& recorder) {
-  if (Config::Get().recorder.openGL.utilities.schedulefboEXTAsCoreWA) {
+  if (isSchedulefboEXTAsCoreWA()) {
     if (Recording(recorder)) {
       recorder.Schedule(new CglCheckFramebufferStatus(return_value, target));
     }
@@ -216,7 +216,7 @@ inline void glCheckFramebufferStatusEXT_RECWRAP(GLenum return_value,
 inline void glDeleteFramebuffersEXT_RECWRAP(GLsizei n,
                                             const GLuint* framebuffers,
                                             CRecorder& recorder) {
-  if (Config::Get().recorder.openGL.utilities.schedulefboEXTAsCoreWA) {
+  if (isSchedulefboEXTAsCoreWA()) {
     if (Recording(recorder)) {
       recorder.Schedule(new CglDeleteFramebuffers(n, framebuffers));
     }
@@ -234,7 +234,7 @@ inline void glDeleteFramebuffersEXT_RECWRAP(GLsizei n,
 inline void glDeleteRenderbuffersEXT_RECWRAP(GLsizei n,
                                              const GLuint* renderbuffers,
                                              CRecorder& recorder) {
-  if (Config::Get().recorder.openGL.utilities.schedulefboEXTAsCoreWA) {
+  if (isSchedulefboEXTAsCoreWA()) {
     if (Recording(recorder)) {
       recorder.Schedule(new CglDeleteRenderbuffers(n, renderbuffers));
     }
@@ -254,7 +254,7 @@ inline void glFinish_RECWRAP(CRecorder& recorder) {
     recorder.Schedule(new CglFinish());
   }
 
-  if (Config::Get().recorder.openGL.capture.frames.frameSeparators.glFinishSep) {
+  if (Config::Get().opengl.recorder.frames.frameSeparators.glFinishSep) {
     recorder.FrameEnd();
   }
 }
@@ -264,7 +264,7 @@ inline void glFlush_RECWRAP(CRecorder& recorder) {
     recorder.Schedule(new CglFlush());
   }
 
-  if (Config::Get().recorder.openGL.capture.frames.frameSeparators.glFlushSep) {
+  if (Config::Get().opengl.recorder.frames.frameSeparators.glFlushSep) {
     recorder.FrameEnd();
   }
 }
@@ -274,7 +274,7 @@ inline void glFramebufferRenderbufferEXT_RECWRAP(GLenum target,
                                                  GLenum renderbuffertarget,
                                                  GLuint renderbuffer,
                                                  CRecorder& recorder) {
-  if (Config::Get().recorder.openGL.utilities.schedulefboEXTAsCoreWA) {
+  if (isSchedulefboEXTAsCoreWA()) {
     if (Recording(recorder)) {
       recorder.Schedule(
           new CglFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer));
@@ -299,7 +299,7 @@ inline void glFramebufferTexture1DEXT_RECWRAP(GLenum target,
                                               GLuint texture,
                                               GLint level,
                                               CRecorder& recorder) {
-  if (Config::Get().recorder.openGL.utilities.schedulefboEXTAsCoreWA) {
+  if (isSchedulefboEXTAsCoreWA()) {
     if (Recording(recorder)) {
       recorder.Schedule(new CglFramebufferTexture1D(target, attachment, textarget, texture, level));
     }
@@ -322,7 +322,7 @@ inline void glFramebufferTexture2DEXT_RECWRAP(GLenum target,
                                               GLuint texture,
                                               GLint level,
                                               CRecorder& recorder) {
-  if (Config::Get().recorder.openGL.utilities.schedulefboEXTAsCoreWA) {
+  if (isSchedulefboEXTAsCoreWA()) {
     if (Recording(recorder)) {
       recorder.Schedule(new CglFramebufferTexture2D(target, attachment, textarget, texture, level));
     }
@@ -346,7 +346,7 @@ inline void glFramebufferTexture3DEXT_RECWRAP(GLenum target,
                                               GLint level,
                                               GLint zoffset,
                                               CRecorder& recorder) {
-  if (Config::Get().recorder.openGL.utilities.schedulefboEXTAsCoreWA) {
+  if (isSchedulefboEXTAsCoreWA()) {
     if (Recording(recorder)) {
       recorder.Schedule(
           new CglFramebufferTexture3D(target, attachment, textarget, texture, level, zoffset));
@@ -367,7 +367,7 @@ inline void glFramebufferTexture3DEXT_RECWRAP(GLenum target,
 
 inline void glFramebufferTextureEXT_RECWRAP(
     GLenum target, GLenum attachment, GLuint texture, GLint level, CRecorder& recorder) {
-  if (Config::Get().recorder.openGL.utilities.schedulefboEXTAsCoreWA) {
+  if (isSchedulefboEXTAsCoreWA()) {
     if (Recording(recorder)) {
       recorder.Schedule(new CglFramebufferTexture(target, attachment, texture, level));
     }
@@ -388,7 +388,7 @@ inline void glFramebufferTextureFaceEXT_RECWRAP(GLenum target,
                                                 GLint level,
                                                 GLenum face,
                                                 CRecorder& recorder) {
-  if (Config::Get().recorder.openGL.utilities.schedulefboEXTAsCoreWA) {
+  if (isSchedulefboEXTAsCoreWA()) {
     if (Recording(recorder)) {
       recorder.Schedule(new CglFramebufferTextureFaceARB(target, attachment, texture, level, face));
     }
@@ -409,7 +409,7 @@ inline void glFramebufferTextureLayerEXT_RECWRAP(GLenum target,
                                                  GLint level,
                                                  GLint layer,
                                                  CRecorder& recorder) {
-  if (Config::Get().recorder.openGL.utilities.schedulefboEXTAsCoreWA) {
+  if (isSchedulefboEXTAsCoreWA()) {
     if (Recording(recorder)) {
       recorder.Schedule(new CglFramebufferTextureLayer(target, attachment, texture, level, layer));
     }
@@ -426,7 +426,7 @@ inline void glFramebufferTextureLayerEXT_RECWRAP(GLenum target,
 }
 
 inline void glGenFramebuffersEXT_RECWRAP(GLsizei n, GLuint* framebuffers, CRecorder& recorder) {
-  if (Config::Get().recorder.openGL.utilities.schedulefboEXTAsCoreWA) {
+  if (isSchedulefboEXTAsCoreWA()) {
     if (Recording(recorder)) {
       recorder.Schedule(new CglGenFramebuffers(n, framebuffers));
     }
@@ -440,7 +440,7 @@ inline void glGenFramebuffersEXT_RECWRAP(GLsizei n, GLuint* framebuffers, CRecor
 }
 
 inline void glGenRenderbuffersEXT_RECWRAP(GLsizei n, GLuint* renderbuffers, CRecorder& recorder) {
-  if (Config::Get().recorder.openGL.utilities.schedulefboEXTAsCoreWA) {
+  if (isSchedulefboEXTAsCoreWA()) {
     if (Recording(recorder)) {
       recorder.Schedule(new CglGenRenderbuffers(n, renderbuffers));
     }
@@ -456,7 +456,7 @@ inline void glGenRenderbuffersEXT_RECWRAP(GLsizei n, GLuint* renderbuffers, CRec
 }
 
 inline void glGenerateMipmapEXT_RECWRAP(GLenum target, CRecorder& recorder) {
-  if (Config::Get().recorder.openGL.utilities.schedulefboEXTAsCoreWA) {
+  if (isSchedulefboEXTAsCoreWA()) {
     if (ConditionTextureES(recorder)) {
       recorder.Schedule(new CglGenerateMipmap(target));
     }
@@ -491,7 +491,7 @@ inline void glGetActiveUniformBlockName_RECWRAP(GLuint program,
 inline void glIsFramebufferEXT_RECWRAP(GLboolean return_value,
                                        GLuint framebuffer,
                                        CRecorder& recorder) {
-  if (Config::Get().recorder.openGL.utilities.schedulefboEXTAsCoreWA) {
+  if (isSchedulefboEXTAsCoreWA()) {
     if (Recording(recorder)) {
       recorder.Schedule(new CglIsFramebuffer(return_value, framebuffer));
     }
@@ -505,7 +505,7 @@ inline void glIsFramebufferEXT_RECWRAP(GLboolean return_value,
 inline void glIsRenderbufferEXT_RECWRAP(GLboolean return_value,
                                         GLuint renderbuffer,
                                         CRecorder& recorder) {
-  if (Config::Get().recorder.openGL.utilities.schedulefboEXTAsCoreWA) {
+  if (isSchedulefboEXTAsCoreWA()) {
     if (Recording(recorder)) {
       recorder.Schedule(new CglIsRenderbuffer(return_value, renderbuffer));
     }
@@ -518,7 +518,7 @@ inline void glIsRenderbufferEXT_RECWRAP(GLboolean return_value,
 
 inline void glRenderbufferStorageEXT_RECWRAP(
     GLenum target, GLenum internalformat, GLsizei width, GLsizei height, CRecorder& recorder) {
-  if (Config::Get().recorder.openGL.utilities.schedulefboEXTAsCoreWA) {
+  if (isSchedulefboEXTAsCoreWA()) {
     if (Recording(recorder)) {
       recorder.Schedule(new CglRenderbufferStorage(target, internalformat, width, height));
     }
@@ -535,7 +535,7 @@ inline void glRenderbufferStorageMultisampleEXT_RECWRAP(GLenum target,
                                                         GLsizei width,
                                                         GLsizei height,
                                                         CRecorder& recorder) {
-  if (Config::Get().recorder.openGL.utilities.schedulefboEXTAsCoreWA) {
+  if (isSchedulefboEXTAsCoreWA()) {
     if (Recording(recorder)) {
       recorder.Schedule(
           new CglRenderbufferStorageMultisample(target, samples, internalformat, width, height));

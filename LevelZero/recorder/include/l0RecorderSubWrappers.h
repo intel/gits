@@ -328,9 +328,8 @@ void BruteForceScanForIndirectAccess(
   }
   std::map<void*, std::future<std::vector<size_t>>> futures;
   for (const auto& allocState : sd.Map<CAllocState>()) {
-    if (!IsMemoryTypeIncluded(
-            cfg.recorder.levelZero.utilities.bruteForceScanForIndirectPointers.memoryType,
-            allocState.second->memType)) {
+    if (!IsMemoryTypeIncluded(cfg.levelzero.recorder.bruteForceScanForIndirectPointers.memoryType,
+                              allocState.second->memType)) {
       continue;
     }
     const auto modifiedAllocation =
@@ -807,7 +806,7 @@ inline void zeMemAllocHost_RECWRAP(CRecorder& recorder,
     }
   }
   const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
-  if (cfg.recorder.basic.enabled) {
+  if (Config::Get().common.recorder.enabled) {
     auto& sniffedRegionHandle = SD().Get<CAllocState>(*pptr, EXCEPTION_MESSAGE).sniffedRegionHandle;
     l0IFace.EnableMemorySnifferForPointer(*pptr, size, sniffedRegionHandle);
   }
@@ -864,7 +863,7 @@ inline void zeMemAllocShared_RECWRAP(CRecorder& recorder,
       recorder.Schedule(new CGitsL0MemoryRestore(*pptr, size));
     }
   }
-  if (cfg.recorder.basic.enabled) {
+  if (cfg.common.recorder.enabled) {
     auto& sniffedRegionHandle = SD().Get<CAllocState>(*pptr, EXCEPTION_MESSAGE).sniffedRegionHandle;
     const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
     l0IFace.EnableMemorySnifferForPointer(*pptr, size, sniffedRegionHandle);
@@ -1280,7 +1279,7 @@ inline void zeInit_RECWRAP(CRecorder& recorder, ze_result_t return_value, ze_ini
   if (recorder.Running()) {
     recorder.Schedule(new CzeInit(return_value, flags));
   }
-  if (Config::Get().recorder.basic.enabled) {
+  if (Config::Get().common.recorder.enabled) {
     const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
     if (!l0IFace.MemorySnifferInstall()) {
       Log(WARN) << "Memory Sniffer installation failed";
@@ -1388,7 +1387,7 @@ inline void zesInit_RECWRAP(CRecorder& recorder, ze_result_t return_value, zes_i
   if (recorder.Running()) {
     recorder.Schedule(new CzesInit(return_value, flags));
   }
-  if (Config::Get().recorder.basic.enabled) {
+  if (Config::Get().common.recorder.enabled) {
     const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
     if (!l0IFace.MemorySnifferInstall()) {
       Log(WARN) << "Memory Sniffer installation failed";
@@ -1492,7 +1491,7 @@ inline void zeContextCreate_RECWRAP(CRecorder& recorder,
   zeContextCreate_SD(return_value, hDriver, desc, phContext);
   const auto& cfg = Config::Get();
   const uint64_t deviceMemorySize =
-      cfg.recorder.levelZero.utilities.disableAddressTranslation.virtualDeviceMemorySize;
+      cfg.levelzero.recorder.disableAddressTranslation.virtualDeviceMemorySize;
   if (return_value == ZE_RESULT_SUCCESS &&
       IsMemoryTypeAddressTranslationDisabled(cfg, UnifiedMemoryType::device) &&
       deviceMemorySize != 0U) {

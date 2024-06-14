@@ -25103,6 +25103,3 @@
 #define GLX_PBUFFER_WIDTH                         0x8041
 #define GLX_SAMPLE_BUFFERS_ARB                    0x100000
 #define GLX_SAMPLES_ARB                           0x100001
-#ifndef None
-#define None 0
-#endif

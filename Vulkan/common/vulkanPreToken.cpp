@@ -118,7 +118,7 @@ gits::Vulkan::CGitsVkMemoryUpdate::CGitsVkMemoryUpdate(VkDevice device,
 
     std::uint64_t offset = 0;
 
-    if (Config::Get().recorder.vulkan.utilities.memoryAccessDetection) {
+    if (Config::Get().vulkan.recorder.memoryAccessDetection) {
       std::pair<const void*, size_t> baseRange;
       baseRange.first = (char*)pointer;
       baseRange.second = (size_t)unmapSize;
@@ -143,7 +143,7 @@ gits::Vulkan::CGitsVkMemoryUpdate::CGitsVkMemoryUpdate(VkDevice device,
         return;
       }
     }
-    if (Config::Get().recorder.vulkan.utilities.memorySegmentSize) {
+    if (Config::Get().vulkan.recorder.memorySegmentSize) {
       std::vector<char> mappedMemCopy;
       mappedMemCopy.resize((size_t)unmapSize);
       char* pointerToData = (char*)pointer + offset;
@@ -173,7 +173,7 @@ gits::Vulkan::CGitsVkMemoryUpdate::CGitsVkMemoryUpdate(VkDevice device,
         _resource = std::make_unique<CDeclaredBinaryResource>();
       }
     }
-    if (Config::Get().recorder.vulkan.utilities.shadowMemory) {
+    if (Config::Get().vulkan.recorder.shadowMemory) {
       memoryState->shadowMemory->Flush((size_t) * *_offset, (size_t) * *_length);
     }
   } else {
@@ -247,8 +247,7 @@ gits::Vulkan::CGitsVkMemoryUpdate2::CGitsVkMemoryUpdate2(VkDeviceMemory memory,
 
     _offset.push_back(std::make_shared<Cuint64_t>(offset));
     _length.push_back(std::make_shared<Cuint64_t>(length));
-    if (!Config::Get().recorder.vulkan.utilities.useExternalMemoryExtension &&
-        !Config::Get().recorder.vulkan.utilities.shadowMemory) {
+    if (!isUseExternalMemoryExtensionUsed() && !Config::Get().vulkan.recorder.shadowMemory) {
       // Operations on non-shadow memory are slow, so we operate on a copy.
       mappedMemCopy.resize(length);
       memcpy(mappedMemCopy.data(), pointerToData, length);
@@ -257,7 +256,7 @@ gits::Vulkan::CGitsVkMemoryUpdate2::CGitsVkMemoryUpdate2(VkDeviceMemory memory,
     _resource.push_back(
         std::make_shared<CDeclaredBinaryResource>(RESOURCE_DATA_RAW, pointerToData, length));
 
-    if (Config::Get().recorder.vulkan.utilities.shadowMemory) {
+    if (Config::Get().vulkan.recorder.shadowMemory) {
       size_t offset_flush = offset;
       if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
         offset_flush += memoryState->mapping->offsetData.Value();
@@ -425,7 +424,7 @@ gits::Vulkan::CGitsVkMemoryRestore::CGitsVkMemoryRestore(VkDevice device,
     }
   }
 
-  if (Config::Get().recorder.vulkan.utilities.memoryAccessDetection && memoryState->IsMapped()) {
+  if (Config::Get().vulkan.recorder.memoryAccessDetection && memoryState->IsMapped()) {
     auto& dereferencedRegionHandle = **memoryState->mapping->sniffedRegionHandle;
     dereferencedRegionHandle.Reset();
     if (!MemorySniffer::Get().Protect(memoryState->mapping->sniffedRegionHandle)) {
@@ -442,7 +441,7 @@ gits::Vulkan::CGitsVkMemoryRestore::CGitsVkMemoryRestore(VkDevice device,
   _offset = std::make_unique<Cuint64_t>(offsetNew);
   _length = std::make_unique<Cuint64_t>(lengthNew);
   if (lengthNew > 0) {
-    if (Config::Get().recorder.vulkan.utilities.memorySegmentSize && memoryState->IsMapped()) {
+    if (Config::Get().vulkan.recorder.memorySegmentSize && memoryState->IsMapped()) {
       memcpy(memoryState->mapping->compareData.data(), memoryState->mapping->ppDataData.Value(),
              (size_t)memoryState->mapping->sizeData.Value());
     }
@@ -452,7 +451,7 @@ gits::Vulkan::CGitsVkMemoryRestore::CGitsVkMemoryRestore(VkDevice device,
     _resource = std::make_unique<CDeclaredBinaryResource>();
   }
 
-  if (Config::Get().recorder.vulkan.utilities.shadowMemory && memoryState->IsMapped()) {
+  if (Config::Get().vulkan.recorder.shadowMemory && memoryState->IsMapped()) {
     memoryState->shadowMemory->Flush((size_t) * *_offset, (size_t) * *_length);
   }
 
@@ -1070,7 +1069,7 @@ void gits::Vulkan::CGitsInitializeImage::Run() {
                    "samples greater than one is against specification.";
     };
   }
-  if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
+  if (Config::Get().vulkan.player.execCmdBuffsBeforeQueueSubmit) {
     TokenBuffersUpdate();
   } else {
     Exec();
@@ -1267,7 +1266,7 @@ gits::Vulkan::CGitsVkCmdInsertMemoryBarriers::CGitsVkCmdInsertMemoryBarriers(
       _PImageMemoryBarriers(ImageMemoryBarrierCount, PImageMemoryBarriers) {}
 
 void gits::Vulkan::CGitsVkCmdInsertMemoryBarriers::Run() {
-  if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
+  if (Config::Get().vulkan.player.execCmdBuffsBeforeQueueSubmit) {
     TokenBuffersUpdate();
   } else {
     Exec();
@@ -1298,7 +1297,7 @@ void gits::Vulkan::CGitsVkCmdInsertMemoryBarriers::TokenBuffersUpdate() {
 }
 
 void gits::Vulkan::CGitsVkCmdInsertMemoryBarriers::Write(CCodeOStream& stream) const {
-  size_t chunkSize = Config::Get().recorder.vulkan.utilities.maxArraySizeForCCode;
+  size_t chunkSize = Config::Get().vulkan.recorder.maxArraySizeForCCode;
   size_t itMemoryBarriers = 0, itBufferMemoryBarriers = 0, itImageMemoryBarriers = 0;
 
   while (itMemoryBarriers < *_MemoryBarrierCount ||
@@ -1380,7 +1379,7 @@ gits::Vulkan::CGitsVkCmdInsertMemoryBarriers2::CGitsVkCmdInsertMemoryBarriers2(
     : _commandBuffer(commandBuffer), _dependencyInfo(pDependencyInfo) {}
 
 void gits::Vulkan::CGitsVkCmdInsertMemoryBarriers2::Run() {
-  if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
+  if (Config::Get().vulkan.player.execCmdBuffsBeforeQueueSubmit) {
     TokenBuffersUpdate();
   } else {
     Exec();
@@ -1500,7 +1499,7 @@ void gits::Vulkan::CGitsInitializeMultipleImages::Run() {
   _copyFromBufferMemoryBarrierPost =
       std::make_unique<CVkBufferMemoryBarrierData>(&copyFromBufferMemoryBarrierPost);
 
-  if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
+  if (Config::Get().vulkan.player.execCmdBuffsBeforeQueueSubmit) {
     TokenBuffersUpdate();
   } else {
     Exec();
@@ -1626,7 +1625,7 @@ void gits::Vulkan::CGitsInitializeMultipleImages::Write(CCodeOStream& stream) co
   stream.ScopeEnd();
   stream.Indent() << "}" << std::endl;
 
-  size_t chunkSize = Config::Get().recorder.vulkan.utilities.maxArraySizeForCCode;
+  size_t chunkSize = Config::Get().vulkan.recorder.maxArraySizeForCCode;
   for (size_t i = 0; i < *_imagesCount; i += chunkSize) {
     size_t size = chunkSize;
     if (i + chunkSize > *_imagesCount) {
@@ -1753,7 +1752,7 @@ gits::CArgument& gits::Vulkan::CGitsInitializeBuffer::Argument(unsigned idx) {
 gits::Vulkan::CGitsInitializeBuffer::CGitsInitializeBuffer() {}
 
 void gits::Vulkan::CGitsInitializeBuffer::Run() {
-  if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
+  if (Config::Get().vulkan.player.execCmdBuffsBeforeQueueSubmit) {
     TokenBuffersUpdate();
   } else {
     Exec();
@@ -1960,7 +1959,7 @@ void gits::Vulkan::CGitsInitializeMultipleBuffers::Run() {
   _copyFromBufferMemoryBarrierPost =
       std::make_unique<CVkBufferMemoryBarrierData>(&copyFromBufferMemoryBarrierPost);
 
-  if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
+  if (Config::Get().vulkan.player.execCmdBuffsBeforeQueueSubmit) {
     TokenBuffersUpdate();
   } else {
     Exec();
@@ -2078,7 +2077,7 @@ void gits::Vulkan::CGitsInitializeMultipleBuffers::Write(CCodeOStream& stream) c
   stream.ScopeEnd();
   stream.Indent() << "}" << std::endl;
 
-  size_t chunkSize = Config::Get().recorder.vulkan.utilities.maxArraySizeForCCode;
+  size_t chunkSize = Config::Get().vulkan.recorder.maxArraySizeForCCode;
   for (size_t i = 0; i < *_buffersCount; i += chunkSize) {
     size_t size = chunkSize;
     if (i + chunkSize > *_buffersCount) {
@@ -2182,7 +2181,7 @@ gits::Vulkan::CGitsVkStateRestoreInfo::CGitsVkStateRestoreInfo(const char* phase
       _timerOn(true) {}
 
 void gits::Vulkan::CGitsVkStateRestoreInfo::Run() {
-  if (Config::Get().player.printStateRestoreLogsVk) {
+  if (Config::Get().vulkan.player.printStateRestoreLogsVk) {
     auto& timersVec = CGits::Instance().Timers().stateRestoreTimers;
     std::string resultText = _phaseInfo->ToString();
     if (!_timerOn.Value()) {

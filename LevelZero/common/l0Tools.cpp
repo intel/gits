@@ -360,28 +360,27 @@ void DumpReadyArguments(std::vector<CKernelArgumentDump>& readyArgVector,
 }
 
 const std::filesystem::path& GetDumpPath(const Config& cfg) {
-  static const std::filesystem::path path =
-      cfg.player.outputDir.empty() ? cfg.common.streamDir / "dump" : cfg.player.outputDir;
+  static const std::filesystem::path path = cfg.common.player.outputDir.empty()
+                                                ? cfg.common.player.streamDir / "dump"
+                                                : cfg.common.player.outputDir;
   return path;
 }
 
 bool CaptureKernels(const Config& cfg) {
-  auto captureKernels = cfg.IsPlayer() ? cfg.player.l0CaptureKernels
-                                       : cfg.recorder.levelZero.utilities.captureKernels;
+  auto captureKernels =
+      cfg.IsPlayer() ? cfg.levelzero.player.captureKernels : cfg.levelzero.recorder.captureKernels;
   return !captureKernels.empty();
 }
 
 bool CaptureImages(const Config& cfg) {
-  return cfg.IsPlayer() ? cfg.player.l0CaptureImages
-                        : cfg.recorder.levelZero.utilities.captureImages;
+  return cfg.IsPlayer() ? cfg.levelzero.player.captureImages : cfg.levelzero.recorder.captureImages;
 }
 
 bool CheckCfgZeroInitialization(const Config& cfg) {
-  const auto zeroInit = cfg.IsPlayer() ? cfg.player.l0InjectBufferResetAfterCreate
-                                       : cfg.recorder.levelZero.utilities.bufferResetAfterCreate;
-  const auto dumpBuffers = cfg.IsPlayer()
-                               ? !cfg.player.l0CaptureKernels.empty()
-                               : !cfg.recorder.levelZero.utilities.captureKernels.empty();
+  const auto zeroInit = cfg.IsPlayer() ? cfg.levelzero.player.injectBufferResetAfterCreate
+                                       : cfg.levelzero.recorder.bufferResetAfterCreate;
+  const auto dumpBuffers = cfg.IsPlayer() ? !cfg.levelzero.player.captureKernels.empty()
+                                          : !cfg.levelzero.recorder.captureKernels.empty();
   return zeroInit && dumpBuffers;
 }
 
@@ -573,8 +572,8 @@ size_t GetSizeFromCopyRegion(const ze_copy_region_t* region) {
 }
 
 bool IsNullIndirectPointersInBufferEnabled(const Config& cfg) {
-  return cfg.IsPlayer() ? !cfg.player.l0DisableNullIndirectPointersInBuffer
-                        : cfg.recorder.levelZero.utilities.nullIndirectPointersInBuffer;
+  return cfg.IsPlayer() ? !cfg.levelzero.player.disableNullIndirectPointersInBuffer
+                        : cfg.levelzero.recorder.nullIndirectPointersInBuffer;
 }
 
 bool IsControlledSubmission(const ze_command_queue_desc_t* desc) {
@@ -674,13 +673,13 @@ void* GetMappedGlobalPtrFromOriginalAllocation(const CStateDynamic& sd, void* or
 }
 
 bool CaptureAfterSubmit(const Config& cfg) {
-  return cfg.IsPlayer() ? cfg.player.l0CaptureAfterSubmit
-                        : cfg.recorder.levelZero.utilities.captureAfterSubmit;
+  return cfg.IsPlayer() ? cfg.levelzero.player.captureAfterSubmit
+                        : cfg.levelzero.recorder.captureAfterSubmit;
 }
 
 bool CheckWhetherDumpQueueSubmit(const Config& cfg, const uint32_t& queueSubmitNumber) {
-  const auto& cmdQueueList = cfg.IsPlayer() ? cfg.player.l0CaptureCommandQueues
-                                            : cfg.recorder.levelZero.utilities.captureCommandQueues;
+  const auto& cmdQueueList = cfg.IsPlayer() ? cfg.levelzero.player.captureCommandQueues
+                                            : cfg.levelzero.recorder.captureCommandQueues;
   return !cmdQueueList.empty() ? cmdQueueList[queueSubmitNumber] : false;
 }
 
@@ -697,7 +696,7 @@ void KernelCountUp(CGits& gitsInstance) {
 }
 
 bool IsDumpOnlyLayoutEnabled(const Config& cfg) {
-  return cfg.IsPlayer() && cfg.player.l0DumpLayoutOnly;
+  return cfg.IsPlayer() && cfg.levelzero.player.dumpLayoutOnly;
 }
 
 void InjectReadsForArguments(std::vector<CKernelArgumentDump>& readyArgVec,
@@ -804,11 +803,11 @@ void CommandListKernelInit(CStateDynamic& sd,
 
 bool IsBruteForceScanForIndirectPointersEnabled(const Config& cfg) {
   return Config::IsRecorder() &&
-         cfg.recorder.levelZero.utilities.bruteForceScanForIndirectPointers.memoryType != 0U;
+         cfg.levelzero.recorder.bruteForceScanForIndirectPointers.memoryType != 0U;
 }
 
 uint32_t BruteForceScanIterations(const Config& cfg) {
-  return cfg.recorder.levelZero.utilities.bruteForceScanForIndirectPointers.iterations;
+  return cfg.levelzero.recorder.bruteForceScanForIndirectPointers.iterations;
 }
 
 uint32_t TranslatePointerOffsets(const CStateDynamic& sd,
@@ -866,16 +865,16 @@ bool IsMemoryTypeIncluded(const uint32_t cfgMemoryTypeValue, UnifiedMemoryType t
 bool IsMemoryTypeAddressTranslationDisabled(const Config& cfg, UnifiedMemoryType type) {
   uint32_t value = 0U;
   if (Config::IsRecorder()) {
-    value = cfg.recorder.levelZero.utilities.disableAddressTranslation.memoryType;
+    value = cfg.levelzero.recorder.disableAddressTranslation.memoryType;
   } else {
-    value = cfg.player.l0DisableAddressTranslation;
+    value = cfg.levelzero.player.disableAddressTranslation;
   }
   return IsMemoryTypeIncluded(value, type);
 }
 
 bool IsDumpInputMode(const Config& cfg) {
-  return Config::IsPlayer() ? cfg.player.l0CaptureInputKernels
-                            : cfg.recorder.levelZero.utilities.dumpInputKernels;
+  return Config::IsPlayer() ? cfg.levelzero.player.captureInputKernels
+                            : cfg.levelzero.recorder.dumpInputKernels;
 }
 
 void SaveKernelArguments(const ze_event_handle_t& hSignalEvent,

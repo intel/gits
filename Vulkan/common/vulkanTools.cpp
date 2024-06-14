@@ -29,13 +29,12 @@ namespace gits {
 namespace Vulkan {
 
 std::string GetFileNameFrameScreenshot(unsigned int frameNumber) {
-  auto path = Config::Get().player.outputDir;
+  auto path = Config::Get().common.player.outputDir;
   if (path.empty()) {
-    path = Config::Get().common.streamDir / "gitsScreenshots";
     if (Config::Get().IsRecorder()) {
-      path /= "gitsRecorder";
+      path = Config::Get().common.recorder.dumpPath / "gitsScreenshots/gitsRecorder";
     } else if (Config::Get().IsPlayer()) {
-      path /= "gitsPlayer";
+      path = Config::Get().common.player.streamDir / "gitsScreenshots/gitsPlayer";
     } else {
       Log(ERR) << "Neither in player nor recorder!!!";
       throw EOperationFailed(EXCEPTION_MESSAGE);
@@ -56,13 +55,12 @@ std::string GetFileNameDrawcallScreenshot(unsigned int frameNumber,
                                           unsigned int drawNumber,
                                           uint64_t image,
                                           VulkanDumpingMode dumpingMode) {
-  auto path = Config::Get().player.outputDir;
+  auto path = Config::Get().common.player.outputDir;
   if (path.empty()) {
-    path = Config::Get().common.streamDir / "gitsScreenshots";
     if (Config::Get().IsRecorder()) {
-      path /= "gitsRecorder";
+      path = Config::Get().common.recorder.dumpPath / "gitsScreenshots/gitsRecorder";
     } else if (Config::Get().IsPlayer()) {
-      path /= "gitsPlayer";
+      path = Config::Get().common.player.streamDir / "gitsScreenshots/gitsPlayer";
     } else {
       Log(ERR) << "Neither in player nor recorder!!!";
       throw EOperationFailed(EXCEPTION_MESSAGE);
@@ -96,13 +94,12 @@ std::string GetFileNameResourcesScreenshot(unsigned int frameNumber,
                                            uint64_t objectNumber,
                                            VulkanResourceType resType,
                                            VulkanDumpingMode dumpingMode) {
-  auto path = Config::Get().player.outputDir;
+  auto path = Config::Get().common.player.outputDir;
   if (path.empty()) {
-    path = Config::Get().common.streamDir / "gitsScreenshots";
     if (Config::Get().IsRecorder()) {
-      path /= "gitsRecorder";
+      path = Config::Get().common.recorder.dumpPath / "gitsScreenshots/gitsRecorder";
     } else if (Config::Get().IsPlayer()) {
-      path /= "gitsPlayer";
+      path = Config::Get().common.player.streamDir / "gitsScreenshots/gitsPlayer";
     } else {
       Log(ERR) << "Neither in player nor recorder!!!";
       throw EOperationFailed(EXCEPTION_MESSAGE);
@@ -146,7 +143,7 @@ std::string GetFileNameResourcesScreenshot(unsigned int frameNumber,
   return path.string();
 }
 
-bool operator==(const CGits::CCounter& counter, const Config::VulkanObjectRange& vulkanObjRange) {
+bool operator==(const CGits::CCounter& counter, const VulkanObjectRange& vulkanObjRange) {
   if (vulkanObjRange.empty()) {
     return false;
   }
@@ -313,7 +310,7 @@ bool vulkanCopyImage(VkCommandBuffer commandBuffer,
                      VkAttachmentStoreOp imageStoreOption,
                      VulkanDumpingMode dumpingMode) {
   auto& imageState = SD()._imagestates[imageHandle];
-  if (Config::Get().player.skipNonDeterministicImages &&
+  if (Config::Get().vulkan.player.skipNonDeterministicImages &&
       (SD().nonDeterministicImages.find(imageHandle) != SD().nonDeterministicImages.end())) {
     return false;
   }
@@ -695,7 +692,7 @@ void vulkanDumpImage(std::shared_ptr<RenderGenericAttachment> attachment) {
                              width, height);
       }
       if ((minMaxValues.first < 0.0 || minMaxValues.second > 1.0) &&
-          Config::Get().player.skipNonDeterministicImages &&
+          Config::Get().vulkan.player.skipNonDeterministicImages &&
           !SD().depthRangeUnrestrictedEXTEnabled) {
         // When copying to a depth aspect, and the
         // VK_EXT_depth_range_unrestricted extension is not enabled, the
@@ -783,7 +780,7 @@ bool writeScreenshotUtil(std::string fileName,
       (!imageState->imageCreateInfoData.Value() ||
        imageState->imageCreateInfoData.Value()->samples != VK_SAMPLE_COUNT_1_BIT);
 
-  if (Config::Get().player.skipNonDeterministicImages &&
+  if (Config::Get().vulkan.player.skipNonDeterministicImages &&
       (SD().nonDeterministicImages.find(sourceImage) != SD().nonDeterministicImages.end())) {
     return false;
   }
@@ -1154,7 +1151,7 @@ bool writeScreenshotUtil(std::string fileName,
             }
 #ifndef BUILD_FOR_CCODE
             if ((minMaxValues.first < 0.0 || minMaxValues.second > 1.0) &&
-                Config::Get().player.skipNonDeterministicImages &&
+                Config::Get().vulkan.player.skipNonDeterministicImages &&
                 !SD().depthRangeUnrestrictedEXTEnabled) {
               // When copying to a depth aspect, and the
               // VK_EXT_depth_range_unrestricted extension is not enabled, the
@@ -1290,7 +1287,7 @@ void writeScreenshot(VkQueue queue,
                             ->imageViewStateStoreListKHR[imageview]
                             ->imageStateStore->imageHandle;
         }
-        if (Config::Get().player.captureVulkanSubmitsGroupType ==
+        if (Config::Get().vulkan.player.captureVulkanSubmitsGroupType ==
             TCaptureGroupType::PER_COMMAND_BUFFER) {
           fileName = GetFileNameDrawcallScreenshot(
               CGits::Instance().CurrentFrame(),
@@ -1329,7 +1326,7 @@ void writeScreenshot(VkQueue queue, const VkPresentInfoKHR& presentInfo) {
       nameSuffix << "_swapchain_" << i;
     }
 
-    if (Config::Get().player.captureScreenshot) {
+    if (Config::Get().common.player.captureScreenshot) {
       captureDesktopScreenshot(swapchainState->surfaceKHRStateStore->surfaceKHRHandle,
                                fileName + nameSuffix.str());
     } else {
@@ -2035,8 +2032,7 @@ bool checkForSupportForQueues(VkPhysicalDevice physicalDevice,
     auto originalFlags = queueFamilyPropertiesOriginal[i].queueFlags;
 
 #ifdef GITS_PLATFORM_WINDOWS
-    if (Config::Get().player.renderDoc.frameRecEnabled ||
-        Config::Get().player.renderDoc.queuesubmitRecEnabled) {
+    if (Config::Get().vulkan.player.renderDoc.mode != TVkRenderDocCaptureMode::NONE) {
       currentFlags &= ~VK_QUEUE_PROTECTED_BIT;
       originalFlags &= ~VK_QUEUE_PROTECTED_BIT;
     }
@@ -2139,7 +2135,7 @@ bool areDeviceExtensionsEnabled(VkDevice device,
 }
 
 void printShaderHashes(VkPipeline pipeline) {
-  if ((Config::Get().player.traceVKShaderHashes) && (VK_NULL_HANDLE != pipeline)) {
+  if ((Config::Get().vulkan.player.traceVKShaderHashes) && (VK_NULL_HANDLE != pipeline)) {
     auto& pipelineState = SD()._pipelinestates[pipeline];
 
     VkLog(TRACE) << "Shader hashes:";
@@ -2197,7 +2193,8 @@ void destroyDeviceLevelResources(VkDevice device) {
           drvVk.vkGetPipelineCacheData(devicePipelineCachePair.first,
                                        devicePipelineCachePair.second, &cacheDataSize,
                                        cacheData.data());
-          SaveBinaryFileContents(Config::Get().player.overrideVKPipelineCache.string(), cacheData);
+          SaveBinaryFileContents(Config::Get().vulkan.player.overrideVKPipelineCache.string(),
+                                 cacheData);
         }
       }
     }
@@ -2206,7 +2203,7 @@ void destroyDeviceLevelResources(VkDevice device) {
     DESTROY_VULKAN_OBJECTS(VkSwapchainKHR, _swapchainkhrstates, vkDestroySwapchainKHR)
 
     // Destroy all other resources (only when cleanResourcesOnExit option is used)
-    if (Config::Get().player.cleanResourcesOnExit) {
+    if (Config::Get().common.player.cleanResourcesOnExit) {
       DESTROY_VULKAN_OBJECTS(VkQueryPool, _querypoolstates, vkDestroyQueryPool)
       DESTROY_VULKAN_OBJECTS(VkSemaphore, _semaphorestates, vkDestroySemaphore)
       DESTROY_VULKAN_OBJECTS(VkEvent, _eventstates, vkDestroyEvent)
@@ -2353,7 +2350,7 @@ void destroyDeviceLevelResources(VkDevice device) {
 
 void destroyInstanceLevelResources(VkInstance instance) {
   if (Config::Get().IsPlayer()) {
-    if (Config::Get().player.cleanResourcesOnExit) {
+    if (Config::Get().common.player.cleanResourcesOnExit) {
       // Surfaces
       {
         std::vector<VkSurfaceKHR> objectsToRemove;
@@ -2397,7 +2394,7 @@ void getRangesForMemoryUpdate(VkDeviceMemory memory,
   char* pointer = (char*)mapping->ppDataData.Value();
 
   // External memory option enabled
-  if (Config::Get().recorder.vulkan.utilities.useExternalMemoryExtension) {
+  if (isUseExternalMemoryExtensionUsed()) {
     auto touchedPages = ExternalMemoryRegion::GetTouchedPagesAndReset(
         (char*)memoryState->externalMemory + mapping->offsetData.Value(), unmapSize);
 
@@ -2405,10 +2402,10 @@ void getRangesForMemoryUpdate(VkDeviceMemory memory,
       VkDeviceSize offset = (char*)page.first - (char*)pointer;
       VkDeviceSize size = page.second;
 
-      if (Config::Get().recorder.vulkan.utilities.memorySegmentSize) {
+      if (Config::Get().vulkan.recorder.memorySegmentSize) {
         std::vector<std::pair<const uint8_t*, const uint8_t*>> optimizePagesMap =
             GetChangedMemorySubranges(&mapping->compareData[offset], (char*)pointer + offset, size,
-                                      Config::Get().recorder.vulkan.utilities.memorySegmentSize);
+                                      Config::Get().vulkan.recorder.memorySegmentSize);
 
         for (auto& startEndPtrPair : optimizePagesMap) {
           std::uint64_t optimize_range_size = startEndPtrPair.second - startEndPtrPair.first;
@@ -2434,7 +2431,7 @@ void getRangesForMemoryUpdate(VkDeviceMemory memory,
         });
       }
     }
-  } else if (Config::Get().recorder.vulkan.utilities.memoryAccessDetection) {
+  } else if (Config::Get().vulkan.recorder.memoryAccessDetection) {
     std::pair<const void*, size_t> baseRange = {(char*)pointer, (size_t)unmapSize};
     auto sniffedRegionHandle = mapping->sniffedRegionHandle;
     std::vector<std::pair<std::uint64_t, std::uint64_t>> pagesMap =
@@ -2453,11 +2450,11 @@ void getRangesForMemoryUpdate(VkDeviceMemory memory,
       if (range_size > 0) {
         std::uint64_t offset = (std::uint64_t)((char*)startEndPtrPair.first - (char*)pointer);
 
-        if (Config::Get().recorder.vulkan.utilities.memorySegmentSize) {
+        if (Config::Get().vulkan.recorder.memorySegmentSize) {
           std::vector<std::pair<const uint8_t*, const uint8_t*>> optimizePagesMap =
               GetChangedMemorySubranges(&mapping->compareData[(size_t)offset],
                                         (char*)pointer + offset, range_size,
-                                        Config::Get().recorder.vulkan.utilities.memorySegmentSize);
+                                        Config::Get().vulkan.recorder.memorySegmentSize);
 
           for (auto& startEndPtrPair : optimizePagesMap) {
             std::uint64_t optimize_range_size = startEndPtrPair.second - startEndPtrPair.first;
@@ -2483,10 +2480,10 @@ void getRangesForMemoryUpdate(VkDeviceMemory memory,
         }
       }
     }
-  } else if (Config::Get().recorder.vulkan.utilities.memorySegmentSize) {
+  } else if (Config::Get().vulkan.recorder.memorySegmentSize) {
     std::vector<std::pair<const uint8_t*, const uint8_t*>> optimizePagesMap =
         GetChangedMemorySubranges(&mapping->compareData[0], (char*)pointer, unmapSize,
-                                  Config::Get().recorder.vulkan.utilities.memorySegmentSize);
+                                  Config::Get().vulkan.recorder.memorySegmentSize);
 
     for (auto& startEndPtrPair : optimizePagesMap) {
       std::uint64_t optimize_range_size = startEndPtrPair.second - startEndPtrPair.first;
@@ -2521,7 +2518,7 @@ void flushShadowMemory(VkDeviceMemory memory, bool unmap) {
 
   std::uint64_t offset = memoryState->mapping->offsetData.Value();
 
-  if (Config::Get().recorder.vulkan.utilities.memoryAccessDetection) {
+  if (Config::Get().vulkan.recorder.memoryAccessDetection) {
     std::pair<const void*, size_t> baseRange;
     baseRange.first = (char*)pointer;
     baseRange.second = (size_t)unmapSize;
@@ -2684,13 +2681,13 @@ CVkSubmitInfoArrayWrap::CVkSubmitInfoArrayWrap(uint32_t submitCount, VkSubmitInf
 std::set<uint64_t> getPointersUsedInQueueSubmit(CVkSubmitInfoArrayWrap& submitInfoData,
                                                 const std::vector<uint32_t>& countersTable,
                                                 const BitRange& objRange,
-                                                gits::Config::VulkanObjectMode objMode) {
+                                                gits::VulkanObjectMode objMode) {
   std::set<uint64_t> pointers;
   auto submitInfoDataValues = submitInfoData.submitInfoData.Value();
   auto submitInfo2DataValues = submitInfoData.submitInfo2Data.Value();
   uint32_t submitInfoSize = 0;
   uint32_t objNumber = 0;
-  if (objMode == Config::MODE_VK_DRAW) {
+  if (objMode == VulkanObjectMode::MODE_VK_DRAW) {
     objNumber = countersTable.back();
   }
 
@@ -2760,7 +2757,7 @@ std::set<uint64_t> getPointersUsedInQueueSubmit(CVkSubmitInfoArrayWrap& submitIn
 
 CVkSubmitInfoArrayWrap getSubmitInfoForPrepare(const std::vector<uint32_t>& countersTable,
                                                const BitRange& objRange,
-                                               Config::VulkanObjectMode objMode) {
+                                               VulkanObjectMode objMode) {
   CVkSubmitInfoArrayWrap submitInfoDataArray;
   auto submitInfoDataArrayValues = SD().lastQueueSubmit->submitInfoDataArray.Value();
   auto submitInfo2DataArrayValues = SD().lastQueueSubmit->submitInfo2DataArray.Value();
@@ -2773,9 +2770,10 @@ CVkSubmitInfoArrayWrap getSubmitInfoForPrepare(const std::vector<uint32_t>& coun
     commandBufferBatchNumber = countersTable.at(1);
   }
   if (submitInfoDataArrayValues != nullptr) {
-    if ((Config::MODE_VK_COMMAND_BUFFER == objMode || Config::MODE_VK_RENDER_PASS == objMode ||
-         Config::MODE_VK_DRAW == objMode || Config::MODE_VK_BLIT == objMode ||
-         Config::MODE_VK_DISPATCH == objMode) &&
+    if ((VulkanObjectMode::MODE_VK_COMMAND_BUFFER == objMode ||
+         VulkanObjectMode::MODE_VK_RENDER_PASS == objMode ||
+         VulkanObjectMode::MODE_VK_DRAW == objMode || VulkanObjectMode::MODE_VK_BLIT == objMode ||
+         VulkanObjectMode::MODE_VK_DISPATCH == objMode) &&
         (commandBufferBatchNumber < SD().lastQueueSubmit->submitInfoDataArray.size())) {
       for (uint32_t i = 0; i < commandBufferBatchNumber; i++) {
         submitInfoDataArray.submitInfoData.AddElem(&submitInfoDataArrayValues[i]);
@@ -2783,7 +2781,7 @@ CVkSubmitInfoArrayWrap getSubmitInfoForPrepare(const std::vector<uint32_t>& coun
       VkSubmitInfo submitInfoTemp = submitInfoDataArrayValues[commandBufferBatchNumber];
       std::vector<VkCommandBuffer> commandBufferVector;
 
-      if (Config::MODE_VK_COMMAND_BUFFER == objMode) {
+      if (VulkanObjectMode::MODE_VK_COMMAND_BUFFER == objMode) {
         for (uint32_t i = 0; (i < submitInfoTemp.commandBufferCount) && !objRange[i]; i++) {
           commandBufferVector.push_back(submitInfoTemp.pCommandBuffers[i]);
         }
@@ -2802,9 +2800,10 @@ CVkSubmitInfoArrayWrap getSubmitInfoForPrepare(const std::vector<uint32_t>& coun
       }
     }
   } else if (submitInfo2DataArrayValues != nullptr) {
-    if ((Config::MODE_VK_COMMAND_BUFFER == objMode || Config::MODE_VK_RENDER_PASS == objMode ||
-         Config::MODE_VK_DRAW == objMode || Config::MODE_VK_BLIT == objMode ||
-         Config::MODE_VK_DISPATCH == objMode) &&
+    if ((VulkanObjectMode::MODE_VK_COMMAND_BUFFER == objMode ||
+         VulkanObjectMode::MODE_VK_RENDER_PASS == objMode ||
+         VulkanObjectMode::MODE_VK_DRAW == objMode || VulkanObjectMode::MODE_VK_BLIT == objMode ||
+         VulkanObjectMode::MODE_VK_DISPATCH == objMode) &&
         (commandBufferBatchNumber < SD().lastQueueSubmit->submitInfo2DataArray.size())) {
       for (uint32_t i = 0; i < commandBufferBatchNumber; i++) {
         submitInfoDataArray.submitInfo2Data.AddElem(&submitInfo2DataArrayValues[i]);
@@ -2812,7 +2811,7 @@ CVkSubmitInfoArrayWrap getSubmitInfoForPrepare(const std::vector<uint32_t>& coun
       VkSubmitInfo2 submitInfo2Temp = submitInfo2DataArrayValues[commandBufferBatchNumber];
       std::vector<VkCommandBufferSubmitInfo> commandBufferSubmitInfoVector;
 
-      if (Config::MODE_VK_COMMAND_BUFFER == objMode) {
+      if (VulkanObjectMode::MODE_VK_COMMAND_BUFFER == objMode) {
         for (uint32_t i = 0; (i < submitInfo2Temp.commandBufferInfoCount) && !objRange[i]; i++) {
           commandBufferSubmitInfoVector.push_back(submitInfo2Temp.pCommandBufferInfos[i]);
         }
@@ -2853,7 +2852,7 @@ VkCommandBuffer GetLastCommandBuffer(CVkSubmitInfoArrayWrap& submitInfoData) {
 
 void restoreCommandBufferSettings(const BitRange& objRange,
                                   CVkSubmitInfoArrayWrap& submitInfoData,
-                                  gits::Config::VulkanObjectMode objMode,
+                                  VulkanObjectMode objMode,
                                   uint64_t renderPassNumber) {
   VkCommandBuffer lastCommandBuffer = GetLastCommandBuffer(submitInfoData);
   if (lastCommandBuffer != VK_NULL_HANDLE) {
@@ -2863,7 +2862,7 @@ void restoreCommandBufferSettings(const BitRange& objRange,
     drvVk.vkBeginCommandBuffer(
         lastCommandBuffer,
         commandBufferState->beginCommandBuffer->commandBufferBeginInfoData.Value());
-    if (objMode == gits::Config::VulkanObjectMode::MODE_VK_DRAW) {
+    if (objMode == VulkanObjectMode::MODE_VK_DRAW) {
       commandBufferState->tokensBuffer.RestoreDraw(renderPassNumber, objRange);
     } else {
       commandBufferState->tokensBuffer.RestoreToSpecifiedObject(objRange, objMode);
@@ -2874,7 +2873,7 @@ void restoreCommandBufferSettings(const BitRange& objRange,
 
 CVkSubmitInfoArrayWrap getSubmitInfoForSchedule(const std::vector<uint32_t>& countersTable,
                                                 const BitRange& objRange,
-                                                Config::VulkanObjectMode objMode) {
+                                                VulkanObjectMode objMode) {
   CVkSubmitInfoArrayWrap submitInfoDataArray;
   auto submitInfoDataArrayValues = SD().lastQueueSubmit->submitInfoDataArray.Value();
   auto submitInfo2DataArrayValues = SD().lastQueueSubmit->submitInfo2DataArray.Value();
@@ -2888,11 +2887,11 @@ CVkSubmitInfoArrayWrap getSubmitInfoForSchedule(const std::vector<uint32_t>& cou
   }
 
   if (submitInfoDataArrayValues != nullptr) {
-    if (Config::MODE_VK_QUEUE_SUBMIT == objMode) {
+    if (VulkanObjectMode::MODE_VK_QUEUE_SUBMIT == objMode) {
       for (uint32_t i = 0; i < SD().lastQueueSubmit->submitCount; i++) {
         submitInfoDataArray.submitInfoData.AddElem(&submitInfoDataArrayValues[i]);
       }
-    } else if ((Config::MODE_VK_COMMAND_BUFFER == objMode) &&
+    } else if ((VulkanObjectMode::MODE_VK_COMMAND_BUFFER == objMode) &&
                (commandBufferBatchNumber < SD().lastQueueSubmit->submitInfoDataArray.size())) {
       VkSubmitInfo submitInfoTemp = submitInfoDataArrayValues[commandBufferBatchNumber];
       std::vector<VkCommandBuffer> commandBufferVector;
@@ -2904,8 +2903,10 @@ CVkSubmitInfoArrayWrap getSubmitInfoForSchedule(const std::vector<uint32_t>& cou
       submitInfoTemp.commandBufferCount = (uint32_t)commandBufferVector.size();
       submitInfoTemp.pCommandBuffers = &commandBufferVector[0];
       submitInfoDataArray.submitInfoData.AddElem(&submitInfoTemp);
-    } else if ((Config::MODE_VK_RENDER_PASS == objMode || Config::MODE_VK_DRAW == objMode ||
-                Config::MODE_VK_BLIT == objMode || Config::MODE_VK_DISPATCH == objMode) &&
+    } else if ((VulkanObjectMode::MODE_VK_RENDER_PASS == objMode ||
+                VulkanObjectMode::MODE_VK_DRAW == objMode ||
+                VulkanObjectMode::MODE_VK_BLIT == objMode ||
+                VulkanObjectMode::MODE_VK_DISPATCH == objMode) &&
                (commandBufferBatchNumber < SD().lastQueueSubmit->submitInfoDataArray.size())) {
       VkSubmitInfo submitInfoTemp = submitInfoDataArrayValues[commandBufferBatchNumber];
       if (commandBufferNumber < submitInfoTemp.commandBufferCount) {
@@ -2915,11 +2916,11 @@ CVkSubmitInfoArrayWrap getSubmitInfoForSchedule(const std::vector<uint32_t>& cou
       }
     }
   } else if (submitInfo2DataArrayValues != nullptr) {
-    if (Config::MODE_VK_QUEUE_SUBMIT == objMode) {
+    if (VulkanObjectMode::MODE_VK_QUEUE_SUBMIT == objMode) {
       for (uint32_t i = 0; i < SD().lastQueueSubmit->submitCount; i++) {
         submitInfoDataArray.submitInfo2Data.AddElem(&submitInfo2DataArrayValues[i]);
       }
-    } else if ((Config::MODE_VK_COMMAND_BUFFER == objMode) &&
+    } else if ((VulkanObjectMode::MODE_VK_COMMAND_BUFFER == objMode) &&
                (commandBufferBatchNumber < SD().lastQueueSubmit->submitInfo2DataArray.size())) {
       VkSubmitInfo2 submitInfo2Temp = submitInfo2DataArrayValues[commandBufferBatchNumber];
       std::vector<VkCommandBufferSubmitInfo> commandBufferSubmitInfoVector;
@@ -2931,8 +2932,10 @@ CVkSubmitInfoArrayWrap getSubmitInfoForSchedule(const std::vector<uint32_t>& cou
       submitInfo2Temp.commandBufferInfoCount = (uint32_t)commandBufferSubmitInfoVector.size();
       submitInfo2Temp.pCommandBufferInfos = &commandBufferSubmitInfoVector[0];
       submitInfoDataArray.submitInfo2Data.AddElem(&submitInfo2Temp);
-    } else if ((Config::MODE_VK_RENDER_PASS == objMode || Config::MODE_VK_DRAW == objMode ||
-                Config::MODE_VK_BLIT == objMode || Config::MODE_VK_DISPATCH == objMode) &&
+    } else if ((VulkanObjectMode::MODE_VK_RENDER_PASS == objMode ||
+                VulkanObjectMode::MODE_VK_DRAW == objMode ||
+                VulkanObjectMode::MODE_VK_BLIT == objMode ||
+                VulkanObjectMode::MODE_VK_DISPATCH == objMode) &&
                (commandBufferBatchNumber < SD().lastQueueSubmit->submitInfo2DataArray.size())) {
       VkSubmitInfo2 submitInfo2Temp = submitInfo2DataArrayValues[commandBufferBatchNumber];
       if (commandBufferNumber < submitInfo2Temp.commandBufferInfoCount) {
@@ -2981,7 +2984,7 @@ bool checkMemoryMappingFeasibility(VkDevice device, VkDeviceMemory memory, bool 
       Log(ERR) << "Stream tries to map memory object " << memory
                << " which was allocated from a non-host-visible memory type at index "
                << memoryIndex;
-      if (!Config::Get().player.ignoreVKCrossPlatformIncompatibilitiesWA) {
+      if (!Config::Get().vulkan.player.ignoreVKCrossPlatformIncompatibilitiesWA) {
         throw std::runtime_error("Memory object cannot be mapped on a current platform. Exiting!!");
       }
     }
@@ -2997,7 +3000,7 @@ bool checkMemoryMappingFeasibility(VkDevice device, uint32_t memoryTypeIndex, bo
       Log(ERR) << "Stream tries to map memory object which was allocated from a non-host-visible "
                   "memory type at index "
                << memoryTypeIndex;
-      if (!Config::Get().player.ignoreVKCrossPlatformIncompatibilitiesWA) {
+      if (!Config::Get().vulkan.player.ignoreVKCrossPlatformIncompatibilitiesWA) {
         throw std::runtime_error("Memory object cannot be mapped on a current platform. Exiting!!");
       }
     }
@@ -3507,7 +3510,7 @@ void checkReturnValue(VkResult playerSideReturnValue,
 
 bool IsObjectToSkip(uint64_t vulkanObject) {
   auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
-  if (gits::Config::Get().recorder.vulkan.utilities.minimalStateRestore &&
+  if (gits::Config::Get().vulkan.recorder.minimalStateRestore &&
       (api3dIface.CfgRec_IsSubFrameMode() &&
        SD().objectsUsedInQueueSubmit.find(vulkanObject) == SD().objectsUsedInQueueSubmit.end())) {
     return true;

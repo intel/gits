@@ -220,7 +220,7 @@ bool gits::AreAllKeysPressed(std::vector<unsigned> keys) {
   return false;
 }
 
-unsigned gits::GetKeyVal(const std::string& str) {
+uint32_t gits::GetKeyVal(const std::string& str) {
   static std::map<std::string, unsigned> keyMap;
   if (keyMap.empty()) {
     InitKeyMap(keyMap);

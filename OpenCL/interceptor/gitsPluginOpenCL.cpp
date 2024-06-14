@@ -82,7 +82,7 @@ void CGitsPluginOpenCL::Initialize() {
     CGitsPluginOpenCL::_recorderWrapper =
         (decltype(_recorderWrapper))CGitsPluginOpenCL::_loader->GetRecorderWrapperPtr();
 
-    if (!CGitsPluginOpenCL::_loader->GetConfiguration().recorder.basic.enabled) {
+    if (!CGitsPluginOpenCL::_loader->GetConfiguration().common.recorder.enabled) {
       PrePostDisableOpenCL();
     } else {
       CGitsPluginOpenCL::_recorderWrapper->StreamFinishedEvent(PrePostDisableOpenCL);

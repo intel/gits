@@ -75,8 +75,7 @@ void gits::OpenGL::ESCompressedTexDataTrack(GLenum target,
   using namespace gits::OpenGL;
   //Track compressed textures data on ES if textures restoration option enabled
   //This data is restored in openglState for OpenGL.
-  if (Config::Get().recorder.openGL.utilities.texturesState ==
-      TTexturesState::TEXTURES_STATE_RESTORE) {
+  if (Config::Get().opengl.recorder.texturesState == TTexturesState::RESTORE) {
     if (GL_TEXTURE_CUBE_MAP_POSITIVE_X <= target && GL_TEXTURE_CUBE_MAP_NEGATIVE_Z >= target) {
       auto textureRestoreData = std::static_pointer_cast<CTextureStateData::CTextureCubeData>(
           TextureStateObject(target).Data().restore.ptr);
@@ -147,9 +146,9 @@ void gits::OpenGL::OptionalBufferDataTrack(
   }
   //For OpenGL ES we need to track buffer data by default.
   //In case of optimizeBuffersz option we need to track buffer changes during recording for mapped memory changes detection performance.
-  if ((!curctx::IsOgl() && ESBufferState() != TBuffersState::BUFFERS_STATE_RESTORE &&
+  if ((!curctx::IsOgl() && ESBufferState() != TBuffersState::RESTORE &&
        !IsGlGetTexAndCompressedTexImagePresentOnGLES()) ||
-      (recording && Config::Get().recorder.openGL.utilities.optimizeBufferSize)) {
+      (recording && Config::Get().opengl.recorder.optimizeBufferSize)) {
     auto* bufferStateData = SD().GetCurrentSharedStateData().Buffers().Get(buffer);
     if (bufferStateData != nullptr) {
       bufferStateData->TrackBufferData(offset, size, data);

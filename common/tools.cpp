@@ -142,6 +142,10 @@ uint64_t ComputeHash(const void* data,
   }
 }
 
+uint64_t ComputeHash(const void* data, size_t size, THashType type) {
+  return ComputeHash(data, size, type, false, 0, 0, 0);
+}
+
 std::string CommandOutput(const std::string& command, bool isRecorder) {
 #ifdef GITS_PLATFORM_WINDOWS
   // Windows can't handle popen correctly in non-console applications.
@@ -296,7 +300,7 @@ void SaveJsonFile(const nlohmann::ordered_json& json, const std::filesystem::pat
 #endif
 
 void CheckMinimumAvailableDiskSize() {
-  auto diskSpaceInfo = std::filesystem::space(Config::Get().common.streamDir);
+  auto diskSpaceInfo = std::filesystem::space(Config::Get().common.recorder.dumpPath);
   uintmax_t minDiskSize = 104857600;
   if (diskSpaceInfo.available <= minDiskSize) {
     auto mebiByteSize = diskSpaceInfo.available >> 20;
@@ -467,7 +471,7 @@ void CreateHeaderFiles(const std::vector<std::string>& sourceNamesToScan,
         if (includeMainFiles) {
           const auto headerFileName = headerPath.filename();
           std::filesystem::path path =
-              gits::Config::Get().common.streamDir / "gitsFiles" / headerFileName;
+              gits::Config::Get().common.recorder.dumpPath / "gitsFiles" / headerFileName;
           if (!std::filesystem::exists(path)) {
             std::filesystem::create_directories(path.parent_path());
             std::filesystem::copy_file(headerPath, path);
@@ -683,7 +687,7 @@ uint64_t gits::LZ4StreamCompressor::Compress(const char* uncompressedData,
   int returnedCompressedSize = LZ4_compress_fast_extState(
       &ctx, uncompressedData, compressedData->data(), static_cast<int32_t>(uncompressedDataSize),
       static_cast<int32_t>(lz4MaxCompressedSize),
-      perfModes.at(Config::Get().recorder.extras.optimizations.compression.level));
+      perfModes.at(Config::Get().common.recorder.compression.level));
   if (returnedCompressedSize <= 0) {
     Log(ERR) << "LZ4 Compress failed.";
     throw EOperationFailed(EXCEPTION_MESSAGE);
@@ -733,8 +737,7 @@ uint64_t gits::ZSTDStreamCompressor::Compress(const char* uncompressedData,
   }
   uint64_t returnedCompressedSize = ZSTD_compressCCtx(
       ZSTDContext, compressedData->data(), zstdMaxCompressedSize, uncompressedData,
-      uncompressedDataSize,
-      perfModes.at(Config::Get().recorder.extras.optimizations.compression.level));
+      uncompressedDataSize, perfModes.at(Config::Get().common.recorder.compression.level));
   if (ZSTD_isError(returnedCompressedSize)) {
     Log(ERR) << "ZSTD Compress failed with error code:" << returnedCompressedSize;
     throw EOperationFailed(EXCEPTION_MESSAGE);

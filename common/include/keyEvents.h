@@ -22,5 +22,5 @@ namespace gits {
 void InitKeyMap(std::map<std::string, unsigned>& keyMap);
 bool IsKeyPressed(unsigned key);
 bool AreAllKeysPressed(std::vector<unsigned> keys);
-unsigned GetKeyVal(const std::string& str);
+uint32_t GetKeyVal(const std::string& str);
 } // namespace gits

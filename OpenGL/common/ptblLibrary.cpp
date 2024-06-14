@@ -41,7 +41,7 @@ uint64_t gits::OpenGL::GenFake() {
 //******************** Portable State *********************************
 gits::OpenGL::PortableState::Helper::Helper() {
   currApiEgl = EGL_OPENGL_ES_API;
-  auto forcedApi = Config::Get().player.forceGLProfile;
+  auto forcedApi = Config::Get().opengl.player.forceGLProfile;
   if (forcedApi == TForcedGLProfile::CORE || forcedApi == TForcedGLProfile::COMPAT) {
     currApiEgl = EGL_OPENGL_API;
   }
@@ -114,19 +114,19 @@ void gits::OpenGL::dispatchHelperCreatePBuffer(PtblHandle surf, PtblHandle pf) {
 
 //************** Drivers Initialization interface ****************************
 void gits::OpenGL::ptblInitialize(CGlDriver::TApiType api) {
-  if (!Config::Get().player.forceGLVersion &&
-      Config::Get().player.forceGLProfile == TForcedGLProfile::NO_PROFILE_FORCED) {
+  if (Config::Get().opengl.shared.forceGLVersion.empty() &&
+      Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::NO_PROFILE_FORCED) {
     drv.gl.Initialize(api);
     return;
   }
   Log(INFO) << "Initializing modified GL Version";
 
-  if (Config::Get().player.forceGLProfile == TForcedGLProfile::CORE ||
-      Config::Get().player.forceGLProfile == TForcedGLProfile::COMPAT) {
+  if (Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::CORE ||
+      Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::COMPAT) {
     drv.gl.Initialize(CGlDriver::API_GL);
-  } else if (Config::Get().player.forceGLProfile == TForcedGLProfile::ES) {
-    if (Config::Get().player.forceGLVersion) {
-      if (Config::Get().player.forceGLVersionMajor >= 2) {
+  } else if (Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::ES) {
+    if (!Config::Get().opengl.shared.forceGLVersion.empty()) {
+      if (Config::Get().opengl.shared.forceGLVersionMajor >= 2) {
         drv.gl.Initialize(CGlDriver::API_GLES2);
       } else {
         drv.gl.Initialize(CGlDriver::API_GLES1);

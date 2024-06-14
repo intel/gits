@@ -783,7 +783,8 @@ void LayoutBuilder::SaveLayoutToJsonFile() {
   _layout["cl_kernels"] = _clKernels;
   const auto& cfg = Config::Get();
   std::filesystem::path path =
-      (cfg.player.outputDir.empty() ? cfg.common.streamDir / "dump" : cfg.player.outputDir) /
+      (cfg.common.player.outputDir.empty() ? cfg.common.player.streamDir / "dump"
+                                           : cfg.common.player.outputDir) /
       "layout.json";
   SaveJsonFile(_layout, path);
 }

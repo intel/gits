@@ -99,7 +99,7 @@ inline void vkAcquireNextImage2KHR_WRAPRUN(CVkResult& return_value,
   }
 
   // Offscreen rendering
-  if (Config::Get().player.renderOffscreen) {
+  if (Config::Get().common.player.renderOffscreen) {
     return_value.Assign(AcquireFakeSwapchainImageIndex(
         recorderIndex, indexPtr, *device,
         SD()._devicestates[*device]->queueStateStoreList[0]->queueHandle, acquireInfo->semaphore,
@@ -112,7 +112,8 @@ inline void vkAcquireNextImage2KHR_WRAPRUN(CVkResult& return_value,
     if (recorderIndex != *indexPtr &&
         (recorderReturnValue == VK_SUCCESS || recorderReturnValue == VK_SUBOPTIMAL_KHR)) {
       Log(TRACE) << "vkAcquireNextImage2KHR restore section begin.";
-      uint32_t maxAllowedVkSwapchainRewinds = Config::Get().player.maxAllowedVkSwapchainRewinds;
+      uint32_t maxAllowedVkSwapchainRewinds =
+          Config::Get().vulkan.player.maxAllowedVkSwapchainRewinds;
       uint32_t rewindCount = 0;
       while (recorderIndex != *indexPtr) {
         if (++rewindCount > maxAllowedVkSwapchainRewinds) {
@@ -149,7 +150,7 @@ inline void vkAcquireNextImageKHR_WRAPRUN(CVkResult& return_value,
   VkResult recorderReturnValue = *return_value;
 
   // Offscreen rendering
-  if (Config::Get().player.renderOffscreen) {
+  if (Config::Get().common.player.renderOffscreen) {
     return_value.Assign(AcquireFakeSwapchainImageIndex(
         recorderIndex, indexPtr, *device,
         SD()._devicestates[*device]->queueStateStoreList[0]->queueHandle, *semaphore, *fence));
@@ -162,7 +163,8 @@ inline void vkAcquireNextImageKHR_WRAPRUN(CVkResult& return_value,
     if (recorderIndex != *indexPtr &&
         (recorderReturnValue == VK_SUCCESS || recorderReturnValue == VK_SUBOPTIMAL_KHR)) {
       Log(TRACE) << "vkAcquireNextImageKHR restore section begin.";
-      uint32_t maxAllowedVkSwapchainRewinds = Config::Get().player.maxAllowedVkSwapchainRewinds;
+      uint32_t maxAllowedVkSwapchainRewinds =
+          Config::Get().vulkan.player.maxAllowedVkSwapchainRewinds;
       uint32_t rewindCount = 0;
       while (recorderIndex != *indexPtr) {
         if (++rewindCount > maxAllowedVkSwapchainRewinds) {
@@ -200,7 +202,8 @@ std::vector<VkPhysicalDevice> GetPhysicalDevicesFromGroupProperties(
 
 void HandlePhysicalDeviceMapping(std::vector<VkPhysicalDevice> const& recorderSideDevices,
                                  std::vector<VkPhysicalDevice> const& playerSideDevices) {
-  uint32_t selectedPhysicalDeviceIndex = Config::Get().player.vulkanForcedPhysicalDeviceIndex;
+  uint32_t selectedPhysicalDeviceIndex =
+      Config::Get().vulkan.player.vulkanForcedPhysicalDeviceIndex;
 
   std::vector<VkPhysicalDeviceProperties> playerSideDevicesProperties(playerSideDevices.size());
   for (uint32_t i = 0; i < playerSideDevices.size(); ++i) {
@@ -208,10 +211,10 @@ void HandlePhysicalDeviceMapping(std::vector<VkPhysicalDevice> const& recorderSi
   }
 
   // Select a device with a provided name
-  if (Config::Get().player.vulkanForcedPhysicalDeviceName.size() > 0) {
+  if (Config::Get().vulkan.player.vulkanForcedPhysicalDeviceName.size() > 0) {
     for (uint32_t i = 0; i < playerSideDevices.size(); ++i) {
       auto deviceName = ToLowerCopy(playerSideDevicesProperties[i].deviceName);
-      auto requestedName = ToLowerCopy(Config::Get().player.vulkanForcedPhysicalDeviceName);
+      auto requestedName = ToLowerCopy(Config::Get().vulkan.player.vulkanForcedPhysicalDeviceName);
       if (strstr(deviceName.c_str(), requestedName.c_str()) != nullptr) {
         selectedPhysicalDeviceIndex = i;
         break;
@@ -219,13 +222,12 @@ void HandlePhysicalDeviceMapping(std::vector<VkPhysicalDevice> const& recorderSi
     }
   }
   // Select a device of a provided type
-  if (Config::Get().player.vulkanForcedPhysicalDeviceType != TDeviceType::DEVICE_TYPE_ANY) {
+  if (Config::Get().vulkan.player.vulkanForcedPhysicalDeviceType != TDeviceType::ANY) {
     for (uint32_t i = 0; i < playerSideDevices.size(); ++i) {
-      if (((Config::Get().player.vulkanForcedPhysicalDeviceType ==
-            TDeviceType::DEVICE_TYPE_INTEGRATED) &&
+      if (((Config::Get().vulkan.player.vulkanForcedPhysicalDeviceType ==
+            TDeviceType::INTEGRATED) &&
            (playerSideDevicesProperties[i].deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)) ||
-          ((Config::Get().player.vulkanForcedPhysicalDeviceType ==
-            TDeviceType::DEVICE_TYPE_DISCRETE) &&
+          ((Config::Get().vulkan.player.vulkanForcedPhysicalDeviceType == TDeviceType::DISCRETE) &&
            (playerSideDevicesProperties[i].deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU))) {
         selectedPhysicalDeviceIndex = i;
         break;
@@ -419,9 +421,9 @@ inline void vkCreateInstance_WRAPRUN(CVkResult& recorderSideReturnValue,
                                            createInfo.ppEnabledLayerNames +
                                                createInfo.enabledLayerCount);
 
-  suppressRequestedNames(requestedExtensions, Config::Get().player.suppressVKExtensions,
+  suppressRequestedNames(requestedExtensions, Config::Get().vulkan.shared.suppressExtensions,
                          createInfo.enabledExtensionCount, createInfo.ppEnabledExtensionNames);
-  suppressRequestedNames(requestedLayers, Config::Get().player.suppressVKLayers,
+  suppressRequestedNames(requestedLayers, Config::Get().vulkan.shared.suppressLayers,
                          createInfo.enabledLayerCount, createInfo.ppEnabledLayerNames);
 
   bool allSupported = true;
@@ -435,7 +437,7 @@ inline void vkCreateInstance_WRAPRUN(CVkResult& recorderSideReturnValue,
                                                    createInfo.ppEnabledLayerNames);
   Log(TRACE, NO_PREFIX) << "";
 
-  if (!allSupported && !Config::Get().player.ignoreVKCrossPlatformIncompatibilitiesWA) {
+  if (!allSupported && !Config::Get().vulkan.player.ignoreVKCrossPlatformIncompatibilitiesWA) {
     throw std::runtime_error("Error - stream uses instance extensions and/or layers which are not "
                              "supported on a current platform. Exiting!");
   }
@@ -450,8 +452,8 @@ inline void vkCreateInstance_WRAPRUN(CVkResult& recorderSideReturnValue,
   vkCreateInstance_SD(playerSideReturnValue, createInfoPtrOrig, *pAllocator, *pInstance);
 
 #if defined(GITS_PLATFORM_WINDOWS)
-  if (Config::Get().player.renderDoc.frameRecEnabled &&
-      Config::Get().player.renderDoc.captureRange[CGits::Instance().CurrentFrame()]) {
+  if (Config::Get().vulkan.player.renderDoc.mode == TVkRenderDocCaptureMode::FRAMES &&
+      Config::Get().vulkan.player.renderDoc.captureRange[CGits::Instance().CurrentFrame()]) {
     RenderDocUtil::GetInstance().AddCapturer(**pInstance);
   }
 #endif
@@ -465,15 +467,15 @@ inline void vkQueuePresentKHR_WRAPRUN(CVkResult& recorderSideReturnValue,
   }
   VkPresentInfoKHR presentInfo = *pPresentInfo;
 
-  if (Config::Get().player.captureFrames[CGits::Instance().CurrentFrame()] &&
-      !Config::Get().player.captureScreenshot) {
+  if (Config::Get().common.player.captureFrames[CGits::Instance().CurrentFrame()] &&
+      !Config::Get().common.player.captureScreenshot) {
     writeScreenshot(*queue, presentInfo);
   }
 
   VkResult playerSideReturnValue = VK_SUCCESS;
 
   // Offscreen rendering
-  if (Config::Get().player.renderOffscreen) {
+  if (Config::Get().common.player.renderOffscreen) {
     // Unsignal semaphores (perform fake waiting on all semaphores)
     if ((presentInfo.waitSemaphoreCount > 0) && (presentInfo.pWaitSemaphores)) {
       std::vector<VkPipelineStageFlags> waitStages(presentInfo.waitSemaphoreCount,
@@ -505,8 +507,8 @@ inline void vkQueuePresentKHR_WRAPRUN(CVkResult& recorderSideReturnValue,
   // Normal rendering
   else {
     playerSideReturnValue = drvVk.vkQueuePresentKHR(*queue, &presentInfo);
-    if (Config::Get().player.captureFrames[CGits::Instance().CurrentFrame()] &&
-        Config::Get().player.captureScreenshot) {
+    if (Config::Get().common.player.captureFrames[CGits::Instance().CurrentFrame()] &&
+        Config::Get().common.player.captureScreenshot) {
       sleep_millisec(1000);
       writeScreenshot(*queue, presentInfo);
     }
@@ -518,9 +520,10 @@ inline void vkQueuePresentKHR_WRAPRUN(CVkResult& recorderSideReturnValue,
 namespace {
 inline void HandleQueueSubmitRenderDocStart() {
 #if defined(GITS_PLATFORM_WINDOWS)
-  if (Config::Get().player.renderDoc.queuesubmitRecEnabled &&
+  if (Config::Get().vulkan.player.renderDoc.mode == TVkRenderDocCaptureMode::QUEUE_SUBMIT &&
       Config::Get()
-          .player.renderDoc.captureRange[CGits::Instance().vkCounters.CurrentQueueSubmitCount()]) {
+          .vulkan.player.renderDoc
+          .captureRange[CGits::Instance().vkCounters.CurrentQueueSubmitCount()]) {
     RenderDocUtil::GetInstance().StartRecording();
   }
 #endif
@@ -528,19 +531,20 @@ inline void HandleQueueSubmitRenderDocStart() {
 
 inline void HandleQueueSubmitRenderDocStop() {
 #if defined(GITS_PLATFORM_WINDOWS)
-  if (Config::Get().player.renderDoc.queuesubmitRecEnabled &&
+  if (Config::Get().vulkan.player.renderDoc.mode == TVkRenderDocCaptureMode::QUEUE_SUBMIT &&
       Config::Get()
-          .player.renderDoc.captureRange[CGits::Instance().vkCounters.CurrentQueueSubmitCount()]) {
+          .vulkan.player.renderDoc
+          .captureRange[CGits::Instance().vkCounters.CurrentQueueSubmitCount()]) {
     bool isLast = Config::Get()
-                      .player.renderDoc
+                      .vulkan.player.renderDoc
                       .captureRange[CGits::Instance().vkCounters.CurrentQueueSubmitCount()] &&
                   !Config::Get()
-                       .player.renderDoc
+                       .vulkan.player.renderDoc
                        .captureRange[CGits::Instance().vkCounters.CurrentQueueSubmitCount() + 1];
-    if (!Config::Get().player.renderDoc.continuousCapture || isLast) {
+    if (!Config::Get().vulkan.player.renderDoc.continuousCapture || isLast) {
       RenderDocUtil::GetInstance().StopRecording();
     }
-    if (Config::Get().player.renderDoc.enableUI && isLast) {
+    if (Config::Get().vulkan.player.renderDoc.enableUI && isLast) {
       RenderDocUtil::GetInstance().LaunchRenderDocUI();
     }
   }
@@ -582,10 +586,10 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
                                   Cuint32_t& submitCount,
                                   CVkSubmitInfoArray& pSubmits,
                                   CVkFence& fence) {
-  if ((*submitCount > 0) && (!Config::Get().player.captureVulkanSubmits.empty() ||
-                             !Config::Get().player.captureVulkanSubmitsResources.empty() ||
-                             Config::Get().player.oneVulkanDrawPerCommandBuffer ||
-                             Config::Get().player.oneVulkanRenderPassPerCommandBuffer)) {
+  if ((*submitCount > 0) && (!Config::Get().vulkan.player.captureVulkanSubmits.empty() ||
+                             !Config::Get().vulkan.player.captureVulkanSubmitsResources.empty() ||
+                             Config::Get().vulkan.player.oneVulkanDrawPerCommandBuffer ||
+                             Config::Get().vulkan.player.oneVulkanRenderPassPerCommandBuffer)) {
     auto pSubmitInfoArray = *pSubmits;
     if (pSubmitInfoArray == nullptr) {
       throw std::runtime_error(EXCEPTION_MESSAGE);
@@ -601,7 +605,7 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
         return_value.Assign(drvVk.vkQueueSubmit(*queue, 1, &submitInfoOrig, fenceNew));
         if (*return_value != VK_SUCCESS) {
           Log(WARN) << "vkQueueSubmit failed.";
-          if (Config::Get().player.exitOnVkQueueSubmitFail) {
+          if (Config::Get().vulkan.player.exitOnVkQueueSubmitFail) {
             std::ostringstream error;
             error << "vkQueueSubmit function returned the " << *return_value << " error!\n";
             error << "Exiting!\n";
@@ -613,7 +617,7 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
       for (uint32_t cmdBufIndex = 0; cmdBufIndex < submitInfoOrig.commandBufferCount;
            cmdBufIndex++) {
         VkCommandBuffer cmdbuffer = submitInfoOrig.pCommandBuffers[cmdBufIndex];
-        if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
+        if (Config::Get().vulkan.player.execCmdBuffsBeforeQueueSubmit) {
           auto& commandBuffState = SD()._commandbufferstates[cmdbuffer];
           for (auto secondaryCmdBuffer : commandBuffState->secondaryCommandBuffers) {
             ExecCmdBuffer(secondaryCmdBuffer, true);
@@ -647,7 +651,7 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
         return_value.Assign(drvVk.vkQueueSubmit(*queue, 1, &submitInfoNew, fenceNew));
         if (*return_value != VK_SUCCESS) {
           Log(WARN) << "vkQueueSubmit failed.";
-          if (Config::Get().player.exitOnVkQueueSubmitFail) {
+          if (Config::Get().vulkan.player.exitOnVkQueueSubmitFail) {
             std::ostringstream error;
             error << "vkQueueSubmit function returned the " << *return_value << " error!\n";
             error << "Exiting!\n";
@@ -656,19 +660,19 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
         }
         vkQueueSubmit_SD(*return_value, *queue, 1, &submitInfoNew, fenceNew);
         bool captureVulkanSubmitsCheck =
-            Config::Get().player.captureVulkanSubmits[(size_t)CGits::Instance()
-                                                          .vkCounters.CurrentQueueSubmitCount()];
+            Config::Get().vulkan.player.captureVulkanSubmits
+                [(size_t)CGits::Instance().vkCounters.CurrentQueueSubmitCount()];
         bool captureVulkanSubmitsResourcesCheck =
-            Config::Get().player.captureVulkanSubmitsResources
+            Config::Get().vulkan.player.captureVulkanSubmitsResources
                 [(size_t)CGits::Instance().vkCounters.CurrentQueueSubmitCount()];
 
         bool capturesResourcesCheck =
-            !Config::Get().player.captureVulkanResources.empty() &&
+            !Config::Get().vulkan.player.captureVulkanResources.empty() &&
             (!SD()._commandbufferstates[cmdbuffer]->renderPassResourceImages.empty() ||
              !SD()._commandbufferstates[cmdbuffer]->renderPassResourceBuffers.empty());
 
         if (captureVulkanSubmitsCheck || captureVulkanSubmitsResourcesCheck ||
-            capturesResourcesCheck || Config::Get().player.waitAfterQueueSubmitWA) {
+            capturesResourcesCheck || Config::Get().vulkan.player.waitAfterQueueSubmitWA) {
           drvVk.vkQueueWaitIdle(*queue);
         }
         if (captureVulkanSubmitsCheck) {
@@ -683,7 +687,7 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
       }
     }
   } else {
-    if ((*submitCount > 0) && Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
+    if ((*submitCount > 0) && Config::Get().vulkan.player.execCmdBuffsBeforeQueueSubmit) {
       for (uint32_t i = 0; i < *submitCount; i++) {
         auto pSubmitInfoArray = *pSubmits;
         if (pSubmitInfoArray == nullptr) {
@@ -703,14 +707,14 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
     return_value.Assign(drvVk.vkQueueSubmit(*queue, *submitCount, *pSubmits, *fence));
     if (*return_value != VK_SUCCESS) {
       Log(WARN) << "vkQueueSubmit failed.";
-      if (Config::Get().player.exitOnVkQueueSubmitFail) {
+      if (Config::Get().vulkan.player.exitOnVkQueueSubmitFail) {
         std::ostringstream error;
         error << "vkQueueSubmit function returned the " << *return_value << " error!\n";
         error << "Exiting!\n";
         throw std::runtime_error(error.str());
       }
     }
-    if (Config::Get().player.waitAfterQueueSubmitWA) {
+    if (Config::Get().vulkan.player.waitAfterQueueSubmitWA) {
       drvVk.vkQueueWaitIdle(*queue);
     }
     vkQueueSubmit_SD(*return_value, *queue, *submitCount, *pSubmits, *fence);
@@ -724,10 +728,10 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
                                    CVkSubmitInfo2Array& pSubmits,
                                    CVkFence& fence,
                                    bool isKHR = false) {
-  if ((*submitCount > 0) && (!Config::Get().player.captureVulkanSubmits.empty() ||
-                             !Config::Get().player.captureVulkanSubmitsResources.empty() ||
-                             Config::Get().player.oneVulkanDrawPerCommandBuffer ||
-                             Config::Get().player.oneVulkanRenderPassPerCommandBuffer)) {
+  if ((*submitCount > 0) && (!Config::Get().vulkan.player.captureVulkanSubmits.empty() ||
+                             !Config::Get().vulkan.player.captureVulkanSubmitsResources.empty() ||
+                             Config::Get().vulkan.player.oneVulkanDrawPerCommandBuffer ||
+                             Config::Get().vulkan.player.oneVulkanRenderPassPerCommandBuffer)) {
     auto pSubmitInfo2Array = *pSubmits;
     if (pSubmitInfo2Array == nullptr) {
       throw std::runtime_error(EXCEPTION_MESSAGE);
@@ -747,7 +751,7 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
         }
         if (*return_value != VK_SUCCESS) {
           Log(WARN) << "vkQueueSubmit2 failed.";
-          if (Config::Get().player.exitOnVkQueueSubmitFail) {
+          if (Config::Get().vulkan.player.exitOnVkQueueSubmitFail) {
             std::ostringstream error;
             error << "vkQueueSubmit2 function returned the " << *return_value << " error!\n";
             error << "Exiting!\n";
@@ -760,7 +764,7 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
            cmdBufIndex++) {
         VkCommandBufferSubmitInfo cmdbufferSubmitInfo =
             submitInfoOrig.pCommandBufferInfos[cmdBufIndex];
-        if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
+        if (Config::Get().vulkan.player.execCmdBuffsBeforeQueueSubmit) {
           auto& commandBuffState = SD()._commandbufferstates[cmdbufferSubmitInfo.commandBuffer];
           for (auto secondaryCmdBuffer : commandBuffState->secondaryCommandBuffers) {
             ExecCmdBuffer(secondaryCmdBuffer, true);
@@ -805,7 +809,7 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
         }
         if (*return_value != VK_SUCCESS) {
           Log(WARN) << "vkQueueSubmit2 failed.";
-          if (Config::Get().player.exitOnVkQueueSubmitFail) {
+          if (Config::Get().vulkan.player.exitOnVkQueueSubmitFail) {
             std::ostringstream error;
             error << "vkQueueSubmit2 function returned the " << *return_value << " error!\n";
             error << "Exiting!\n";
@@ -814,20 +818,20 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
         }
         vkQueueSubmit2_SD(*return_value, *queue, 1, &submitInfoNew, fenceNew);
         bool captureVulkanSubmitsCheck =
-            Config::Get().player.captureVulkanSubmits[(size_t)CGits::Instance()
-                                                          .vkCounters.CurrentQueueSubmitCount()];
+            Config::Get().vulkan.player.captureVulkanSubmits
+                [(size_t)CGits::Instance().vkCounters.CurrentQueueSubmitCount()];
         bool captureVulkanSubmitsResourcesCheck =
-            Config::Get().player.captureVulkanSubmitsResources
+            Config::Get().vulkan.player.captureVulkanSubmitsResources
                 [(size_t)CGits::Instance().vkCounters.CurrentQueueSubmitCount()];
 
-        bool capturesResourcesCheck = !Config::Get().player.captureVulkanResources.empty() &&
+        bool capturesResourcesCheck = !Config::Get().vulkan.player.captureVulkanResources.empty() &&
                                       (!SD()._commandbufferstates[cmdbufferSubmitInfo.commandBuffer]
                                             ->renderPassResourceImages.empty() ||
                                        !SD()._commandbufferstates[cmdbufferSubmitInfo.commandBuffer]
                                             ->renderPassResourceBuffers.empty());
 
         if (captureVulkanSubmitsCheck || captureVulkanSubmitsResourcesCheck ||
-            capturesResourcesCheck || Config::Get().player.waitAfterQueueSubmitWA) {
+            capturesResourcesCheck || Config::Get().vulkan.player.waitAfterQueueSubmitWA) {
           drvVk.vkQueueWaitIdle(*queue);
         }
         if (captureVulkanSubmitsCheck) {
@@ -842,7 +846,7 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
       }
     }
   } else {
-    if ((*submitCount > 0) && Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
+    if ((*submitCount > 0) && Config::Get().vulkan.player.execCmdBuffsBeforeQueueSubmit) {
       for (uint32_t i = 0; i < *submitCount; i++) {
         auto pSubmitInfoArray = *pSubmits;
         if (pSubmitInfoArray == nullptr) {
@@ -867,14 +871,14 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
 
     if (*return_value != VK_SUCCESS) {
       Log(WARN) << "vkQueueSubmit2 failed.";
-      if (Config::Get().player.exitOnVkQueueSubmitFail) {
+      if (Config::Get().vulkan.player.exitOnVkQueueSubmitFail) {
         std::ostringstream error;
         error << "vkQueueSubmit2 function returned the " << *return_value << " error!\n";
         error << "Exiting!\n";
         throw std::runtime_error(error.str());
       }
     }
-    if (Config::Get().player.waitAfterQueueSubmitWA) {
+    if (Config::Get().vulkan.player.waitAfterQueueSubmitWA) {
       drvVk.vkQueueWaitIdle(*queue);
     }
     vkQueueSubmit2_SD(*return_value, *queue, *submitCount, *pSubmits, *fence);
@@ -1412,7 +1416,8 @@ void BindBufferMemory_WRAPRUNHelper(VkDevice device,
     incompatibilityError = true;
   }
 
-  if (incompatibilityError && !Config::Get().player.ignoreVKCrossPlatformIncompatibilitiesWA) {
+  if (incompatibilityError &&
+      !Config::Get().vulkan.player.ignoreVKCrossPlatformIncompatibilitiesWA) {
     throw std::runtime_error("Properties of a memory object bound to a buffer are incompatible "
                              "with current platform. Exiting!!");
   }
@@ -1509,7 +1514,8 @@ void BindImageMemory_WRAPRUNHelper(VkDevice device,
     incompatibilityError = true;
   }
 
-  if (incompatibilityError && !Config::Get().player.ignoreVKCrossPlatformIncompatibilitiesWA) {
+  if (incompatibilityError &&
+      !Config::Get().vulkan.player.ignoreVKCrossPlatformIncompatibilitiesWA) {
     throw std::runtime_error("Properties of a memory object bound to an image are incompatible "
                              "with current platform. Exiting!!");
   }
@@ -1588,11 +1594,11 @@ inline void vkCreateDevice_WRAPRUN(CVkResult& recorderSideReturnValue,
                                                createInfo.enabledLayerCount);
 
   suppressPhysicalDeviceFeatures(
-      Config::Get().player.suppressVKDeviceFeatures,
+      Config::Get().vulkan.shared.suppressPhysicalDeviceFeatures,
       const_cast<VkPhysicalDeviceFeatures*>(createInfo.pEnabledFeatures));
-  suppressRequestedNames(requestedExtensions, Config::Get().player.suppressVKExtensions,
+  suppressRequestedNames(requestedExtensions, Config::Get().vulkan.shared.suppressExtensions,
                          createInfo.enabledExtensionCount, createInfo.ppEnabledExtensionNames);
-  suppressRequestedNames(requestedLayers, Config::Get().player.suppressVKLayers,
+  suppressRequestedNames(requestedLayers, Config::Get().vulkan.shared.suppressLayers,
                          createInfo.enabledLayerCount, createInfo.ppEnabledLayerNames);
 
   Log(TRACE, NO_PREFIX) << "";
@@ -1613,7 +1619,7 @@ inline void vkCreateDevice_WRAPRUN(CVkResult& recorderSideReturnValue,
 
   Log(TRACE, NO_PREFIX) << "";
 
-  if (!allSupported && !Config::Get().player.ignoreVKCrossPlatformIncompatibilitiesWA) {
+  if (!allSupported && !Config::Get().vulkan.player.ignoreVKCrossPlatformIncompatibilitiesWA) {
     throw std::runtime_error("Error - stream is incompatible with the current platform. Exiting!");
   }
 
@@ -1628,16 +1634,17 @@ inline void vkCreateDevice_WRAPRUN(CVkResult& recorderSideReturnValue,
   vkCreateDevice_SD(playerSideReturnValue, *physicalDevice, *pCreateInfo, *pAllocator, *pDevice);
 
 #if defined(GITS_PLATFORM_WINDOWS)
-  if (Config::Get().player.renderDoc.frameRecEnabled &&
-      Config::Get().player.renderDoc.captureRange[CGits::Instance().CurrentFrame()]) {
+  if (Config::Get().vulkan.player.renderDoc.mode == TVkRenderDocCaptureMode::FRAMES &&
+      Config::Get().vulkan.player.renderDoc.captureRange[CGits::Instance().CurrentFrame()]) {
     RenderDocUtil::GetInstance().StartRecording();
   }
 #endif
 
-  if (!Config::Get().player.overrideVKPipelineCache.empty()) {
+  if (!Config::Get().vulkan.player.overrideVKPipelineCache.empty()) {
     CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
 
-    auto initialData = GetBinaryFileContents(Config::Get().player.overrideVKPipelineCache.string());
+    auto initialData =
+        GetBinaryFileContents(Config::Get().vulkan.player.overrideVKPipelineCache.string());
 
     VkPipelineCacheCreateInfo cacheCreateInfo = {
         VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO, // VkStructureType sType;
@@ -1667,18 +1674,18 @@ inline void vkCreateSwapchainKHR_WRAPRUN(CVkResult& recorderSideReturnValue,
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
   VkSwapchainCreateInfoKHR createInfo = *pCreateInfo;
-  if (!Config::Get().player.captureFrames.empty() ||
-      !Config::Get().player.captureVulkanSubmits.empty() ||
-      !Config::Get().player.captureVulkanRenderPasses.empty() ||
-      !Config::Get().player.captureVulkanRenderPassesResources.empty() ||
-      !Config::Get().player.captureVulkanDraws.empty() ||
-      !Config::Get().player.captureVulkanResources.empty()) {
+  if (!Config::Get().common.player.captureFrames.empty() ||
+      !Config::Get().vulkan.player.captureVulkanSubmits.empty() ||
+      !Config::Get().vulkan.player.captureVulkanRenderPasses.empty() ||
+      !Config::Get().vulkan.player.captureVulkanRenderPassesResources.empty() ||
+      !Config::Get().vulkan.player.captureVulkanDraws.empty() ||
+      !Config::Get().vulkan.player.captureVulkanResources.empty()) {
     createInfo.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     Log(TRACE) << "Modifying swapchain usage for frames/render targets capturing!!";
   }
-  if (Config::Get().player.forceWindowSize) {
-    createInfo.imageExtent.width = Config::Get().player.windowSize.first;
-    createInfo.imageExtent.height = Config::Get().player.windowSize.second;
+  if (Config::Get().common.player.forceWindowSize.enabled) {
+    createInfo.imageExtent.width = Config::Get().common.player.forceWindowSize.width;
+    createInfo.imageExtent.height = Config::Get().common.player.forceWindowSize.height;
   }
   VkResult playerSideReturnValue =
       drvVk.vkCreateSwapchainKHR(*device, &createInfo, *pAllocator, *pSwapchain);
@@ -1688,7 +1695,7 @@ inline void vkCreateSwapchainKHR_WRAPRUN(CVkResult& recorderSideReturnValue,
 
   VkSwapchainKHR* swapchainPtr = *pSwapchain;
 
-  if (Config::Get().player.renderOffscreen && (swapchainPtr != nullptr)) {
+  if (Config::Get().common.player.renderOffscreen && (swapchainPtr != nullptr)) {
     auto& swapchainState = SD()._swapchainkhrstates[*swapchainPtr];
     for (uint32_t i = 0; i < swapchainState->imageStateStoreList.size(); ++i) {
       uint32_t imageIndex;
@@ -1701,15 +1708,16 @@ inline void vkCreateSwapchainKHR_WRAPRUN(CVkResult& recorderSideReturnValue,
 namespace {
 void ForceScissor_Helper(VkRect2D* originalScissorRect) {
   if (originalScissorRect) {
-    const std::vector<int>& rect = Config::Get().player.scissorCoords;
+    auto& rect = Config::Get().common.player.forceScissor;
 
     auto& offset = originalScissorRect->offset;
     auto& extent = originalScissorRect->extent;
 
-    originalScissorRect->offset.x = std::max(rect[0], offset.x);
-    originalScissorRect->offset.y = std::max(rect[1], offset.y);
-    originalScissorRect->extent.width = std::min(static_cast<uint32_t>(rect[2]), extent.width);
-    originalScissorRect->extent.height = std::min(static_cast<uint32_t>(rect[3]), extent.height);
+    originalScissorRect->offset.x = std::max(static_cast<int32_t>(rect.x), offset.x);
+    originalScissorRect->offset.y = std::max(static_cast<int32_t>(rect.y), offset.y);
+    originalScissorRect->extent.width = std::min(static_cast<uint32_t>(rect.width), extent.width);
+    originalScissorRect->extent.height =
+        std::min(static_cast<uint32_t>(rect.height), extent.height);
   }
 }
 
@@ -1746,7 +1754,7 @@ inline VkResult CreatePipelines_Helper(
   auto return_value = VK_SUCCESS;
 
   VkPipelineCache cacheToUse = pipelineCache;
-  if (!Config::Get().player.overrideVKPipelineCache.empty() &&
+  if (!Config::Get().vulkan.player.overrideVKPipelineCache.empty() &&
       SD().internalResources.pipelineCacheHandles[device] != VK_NULL_HANDLE) {
     cacheToUse = SD().internalResources.pipelineCacheHandles[device];
   }
@@ -1760,7 +1768,7 @@ inline VkResult CreatePipelines_Helper(
     createInfosToUse[i].basePipelineIndex = VK_NULL_HANDLE;
   }
 
-  if (Config::Get().player.forceMultithreadedPipelineCompilation && createInfoCount > 1) {
+  if (Config::Get().vulkan.player.forceMultithreadedPipelineCompilation && createInfoCount > 1) {
     VkPipeline* pipelinesToCreate = pPipelines;
 
     // Calculate number of pipelines per thread
@@ -1810,7 +1818,7 @@ inline void vkCreateGraphicsPipelines_WRAPRUN(CVkResult& recorderSideReturnValue
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 
-  if (Config::Get().player.forceScissor) {
+  if (Config::Get().common.player.forceScissor.enabled) {
     for (uint32_t i = 0; i < *createInfoCount; ++i) {
       ForceScissor_Helper(const_cast<VkRect2D*>(modifiedCreateInfos[i].pViewportState->pScissors));
     }
@@ -1867,12 +1875,12 @@ inline void vkCmdSetScissor_WRAPRUN(CVkCommandBuffer& commandBuffer,
                                     CVkRect2DArray& pScissors) {
   VkRect2D* scissors = *pScissors;
 
-  if (Config::Get().player.forceScissor) {
+  if (Config::Get().common.player.forceScissor.enabled) {
     for (uint32_t i = 0; i < *scissorCount; ++i) {
       ForceScissor_Helper(&scissors[i]);
     }
   }
-  if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
+  if (Config::Get().vulkan.player.execCmdBuffsBeforeQueueSubmit) {
     SD()._commandbufferstates[*commandBuffer]->tokensBuffer.Add(
         new CvkCmdSetScissor(commandBuffer.Original(), firstScissor.Original(),
                              scissorCount.Original(), pScissors.Original()));
@@ -1890,12 +1898,12 @@ inline void vkCreateImage_WRAPRUN(CVkResult& recorderSideReturnValue,
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
   VkImageCreateInfo createInfo = *pCreateInfo;
-  if (!Config::Get().player.captureVulkanSubmits.empty() ||
-      !Config::Get().player.captureVulkanSubmitsResources.empty() ||
-      !Config::Get().player.captureVulkanRenderPasses.empty() ||
-      !Config::Get().player.captureVulkanRenderPassesResources.empty() ||
-      !Config::Get().player.captureVulkanDraws.empty() ||
-      !Config::Get().player.captureVulkanResources.empty()) {
+  if (!Config::Get().vulkan.player.captureVulkanSubmits.empty() ||
+      !Config::Get().vulkan.player.captureVulkanSubmitsResources.empty() ||
+      !Config::Get().vulkan.player.captureVulkanRenderPasses.empty() ||
+      !Config::Get().vulkan.player.captureVulkanRenderPassesResources.empty() ||
+      !Config::Get().vulkan.player.captureVulkanDraws.empty() ||
+      !Config::Get().vulkan.player.captureVulkanResources.empty()) {
     createInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     Log(TRACE) << "Modifying image usage for render targets capturing!!";
   }
@@ -1914,9 +1922,9 @@ inline void vkCreateBuffer_WRAPRUN(CVkResult& recorderSideReturnValue,
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
   VkBufferCreateInfo createInfo = *pCreateInfo;
-  if (!Config::Get().player.captureVulkanSubmitsResources.empty() ||
-      !Config::Get().player.captureVulkanRenderPassesResources.empty() ||
-      !Config::Get().player.captureVulkanResources.empty()) {
+  if (!Config::Get().vulkan.player.captureVulkanSubmitsResources.empty() ||
+      !Config::Get().vulkan.player.captureVulkanRenderPassesResources.empty() ||
+      !Config::Get().vulkan.player.captureVulkanResources.empty()) {
     createInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     Log(TRACE) << "Modifying buffer usage for resource capturing!!";
   }
@@ -1948,8 +1956,7 @@ inline void vkDestroyDevice_WRAPRUN(CVkDevice& device, CNullWrapper& pAllocator)
 
 inline void vkDestroyInstance_WRAPRUN(CVkInstance& instance, CNullWrapper& pAllocator) {
 #ifdef GITS_PLATFORM_WINDOWS
-  if (Config::Get().player.renderDoc.frameRecEnabled ||
-      Config::Get().player.renderDoc.queuesubmitRecEnabled) {
+  if (Config::Get().vulkan.player.renderDoc.mode != TVkRenderDocCaptureMode::NONE) {
     RenderDocUtil::GetInstance().DeleteCapturer(*instance);
   }
 #endif
@@ -1970,7 +1977,7 @@ inline void vkCreateCommandPool_WRAPRUN(CVkResult& recorderSideReturnValue,
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
   VkCommandPoolCreateInfo createInfo = *pCreateInfo;
-  if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
+  if (Config::Get().vulkan.player.execCmdBuffsBeforeQueueSubmit) {
     createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
   }
   VkResult playerSideReturnValue =
@@ -1990,7 +1997,7 @@ inline void vkGetBufferDeviceAddressUnifiedGITS_WRAPRUN(Cuint64_t& _return_value
 inline void vkBeginCommandBuffer_WRAPRUN(CVkResult& return_value,
                                          CVkCommandBuffer& commandBuffer,
                                          CVkCommandBufferBeginInfo& pBeginInfo) {
-  if (!Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
+  if (!Config::Get().vulkan.player.execCmdBuffsBeforeQueueSubmit) {
     return_value.Assign(drvVk.vkBeginCommandBuffer(*commandBuffer, *pBeginInfo));
   }
   // State Tracking is necessary also when using execCmdBuffsBeforeQueueSubmit or captureVulkanRenderPasses because we will call vkBeginCommandBuffer manually later.
@@ -1998,7 +2005,7 @@ inline void vkBeginCommandBuffer_WRAPRUN(CVkResult& return_value,
 }
 
 inline void vkEndCommandBuffer_WRAPRUN(CVkResult& return_value, CVkCommandBuffer& commandBuffer) {
-  if (!Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
+  if (!Config::Get().vulkan.player.execCmdBuffsBeforeQueueSubmit) {
     return_value.Assign(drvVk.vkEndCommandBuffer(*commandBuffer));
   }
   // State Tracking is necessary also when using execCmdBuffsBeforeQueueSubmit or captureVulkanRenderPasses because we will call vkEndCommandBuffer manually later.
@@ -2008,7 +2015,7 @@ inline void vkEndCommandBuffer_WRAPRUN(CVkResult& return_value, CVkCommandBuffer
 inline void vkCmdExecuteCommands_WRAPRUN(CVkCommandBuffer& commandBuffer,
                                          Cuint32_t& commandBufferCount,
                                          CVkCommandBuffer::CSArray& pCommandBuffers) {
-  if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
+  if (Config::Get().vulkan.player.execCmdBuffsBeforeQueueSubmit) {
     SD()._commandbufferstates[*commandBuffer]->tokensBuffer.Add(new CvkCmdExecuteCommands(
         commandBuffer.Original(), commandBufferCount.Original(), pCommandBuffers.Original()));
     if (*commandBufferCount > 0) {
@@ -2065,7 +2072,7 @@ inline void vkDestroyRenderPass_WRAPRUN(CVkDevice& device,
                                         CVkRenderPass& renderPass,
                                         CNullWrapper& pAllocator) {
   drvVk.vkDestroyRenderPass(*device, *renderPass, *pAllocator);
-  if (Config::Get().player.oneVulkanDrawPerCommandBuffer) {
+  if (Config::Get().vulkan.player.oneVulkanDrawPerCommandBuffer) {
     if (SD()._renderpassstates[*renderPass]->loadAndStoreRenderPassHandle != *renderPass) {
       drvVk.vkDestroyRenderPass(*device,
                                 SD()._renderpassstates[*renderPass]->loadAndStoreRenderPassHandle,

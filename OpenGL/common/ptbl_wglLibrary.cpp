@@ -119,8 +119,8 @@ gits::OpenGL::WGLARBPFAttribs gits::OpenGL::PtblToWGLARBAttribs(const PtblPFAttr
       break;
     case ptblPFDepthSize:
       wglattribs.push_back(WGL_DEPTH_BITS_ARB);
-      if (Config::Get().player.forcePortableWglDepthBits) {
-        wglattribs.push_back(Config::Get().player.forcePortableWglDepthBits);
+      if (Config::Get().opengl.player.forcePortableWglDepthBits) {
+        wglattribs.push_back(Config::Get().opengl.player.forcePortableWglDepthBits);
       } else {
         wglattribs.push_back(ptblattr.second);
       }
@@ -204,11 +204,12 @@ gits::OpenGL::PtblPFAttribs gits::OpenGL::WGLARBToPtblAttribs(const int* wglattr
 };
 
 gits::OpenGL::WGLCtxParams gits::OpenGL::GetUpdatedWGLCtxParams(const int* params) {
-  bool forceNone = Config::Get().player.forceGLProfile == TForcedGLProfile::NO_PROFILE_FORCED;
-  bool forceCompat = Config::Get().player.forceGLProfile == TForcedGLProfile::COMPAT;
-  bool forceCore = Config::Get().player.forceGLProfile == TForcedGLProfile::CORE;
-  bool forceES = Config::Get().player.forceGLProfile == TForcedGLProfile::ES;
-  bool forceVer = Config::Get().player.forceGLVersion;
+  bool forceNone =
+      Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::NO_PROFILE_FORCED;
+  bool forceCompat = Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::COMPAT;
+  bool forceCore = Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::CORE;
+  bool forceES = Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::ES;
+  bool forceVer = !Config::Get().opengl.shared.forceGLVersion.empty();
 
   WGLCtxParams newparams;
   WGLCtxParams noparams = {0}; // Used if params pointer is null.
@@ -262,9 +263,9 @@ gits::OpenGL::WGLCtxParams gits::OpenGL::GetUpdatedWGLCtxParams(const int* param
 
   if (forceVer) {
     newparams.push_back(WGL_CONTEXT_MINOR_VERSION_ARB);
-    newparams.push_back(Config::Get().player.forceGLVersionMinor);
+    newparams.push_back(Config::Get().opengl.shared.forceGLVersionMinor);
     newparams.push_back(WGL_CONTEXT_MAJOR_VERSION_ARB);
-    newparams.push_back(Config::Get().player.forceGLVersionMajor);
+    newparams.push_back(Config::Get().opengl.shared.forceGLVersionMajor);
   }
 
   newparams.push_back(0);
@@ -441,8 +442,8 @@ HGLRC gits::OpenGL::ptbl_wglCreateContextAttribsARB(HDC hDC,
   //Update context params if configured
   const int* attribsListMod;
   std::vector<int> attribsListModVec;
-  if (Config::Get().player.forceGLProfile == TForcedGLProfile::NO_PROFILE_FORCED &&
-      Config::Get().player.forceGLVersion == false) {
+  if (Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::NO_PROFILE_FORCED &&
+      Config::Get().opengl.shared.forceGLVersion.empty()) {
     attribsListMod = attribList;
   } else {
     attribsListModVec = GetUpdatedWGLCtxParams(attribList);

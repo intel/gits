@@ -22,11 +22,11 @@ namespace gits {
 namespace OpenCL {
 namespace {
 bool CheckCaptureMemObjectReads(const cl_mem& memObj) {
-  const auto& cfg = Config::Get().player;
-  if (!cfg.clCaptureReads || !cfg.clCaptureKernels.empty()) {
+  const auto& cfgOpenCLPlayer = Config::Get().opencl.player;
+  if (!cfgOpenCLPlayer.captureReads || !cfgOpenCLPlayer.captureKernels.empty()) {
     return false;
   }
-  if (cfg.clOmitReadOnlyObjects) {
+  if (cfgOpenCLPlayer.omitReadOnlyObjects) {
     const auto& memState = SD().GetMemState(memObj, EXCEPTION_MESSAGE);
     const auto readOnlyFlag = (GetPropertyVal(memState.intel_mem_properties.data(), CL_MEM_FLAGS) &
                                CL_MEM_READ_ONLY) != 0U;
@@ -235,7 +235,7 @@ inline void clEnqueueNDRangeKernel_RUNWRAP(CCLResult& _return_value,
                                            Ccl_event::CSArray& _event_wait_list,
                                            Ccl_event::CSMapArray& _event) {
   CGits::Instance().KernelCountUp();
-  auto& cfg = Config::Get().player;
+  auto& cfg = Config::Get().opencl.player;
   if (cfg.aubSignaturesCL) {
     InjectKernelArgOperations(*_kernel, *_command_queue, *_event);
   }
@@ -469,14 +469,14 @@ inline void clCreateBuffer_RUNWRAP(Ccl_mem& _return_value,
   const auto& cfg = Config::Get();
   const auto signature = GenerateSignature();
   size_t size = *_size;
-  if (cfg.player.aubSignaturesCL) {
+  if (cfg.opencl.player.aubSignaturesCL) {
     size += sizeof(mem_signature_t);
   }
   CBinaryResource::PointerProxy ptr = *_host_ptr;
   char* buffer_ptr;
   if ((const void*)ptr != nullptr) {
     SD()._buffers.emplace_back((const char*)ptr, (const char*)ptr + *_size);
-    if (cfg.player.aubSignaturesCL) {
+    if (cfg.opencl.player.aubSignaturesCL) {
       AddSignature(SD()._buffers.back(), signature);
     }
     if (*_size == sizeof(cl_ulong) &&
@@ -655,8 +655,8 @@ inline void clEnqueueReadBuffer_RUNWRAP(CFunction* _token,
                                         Ccl_event::CSArray& _event_wait_list,
                                         Ccl_event::CSMapArray& _event) {
   const auto captureReads = CheckCaptureMemObjectReads(*_buffer);
-  const auto& cfg = Config::Get().player;
-  if (captureReads || cfg.clCaptureKernels.empty()) {
+  const auto& cfg = Config::Get().opencl.player;
+  if (captureReads || cfg.captureKernels.empty()) {
     size_t size = *_cb;
     if (cfg.aubSignaturesCL && *_offset == 0) {
       size += sizeof(mem_signature_t);
@@ -703,9 +703,9 @@ inline void clEnqueueReadBufferRect_RUNWRAP(CFunction* _token,
                                             Ccl_uint& _num_events_in_wait_list,
                                             Ccl_event::CSArray& _event_wait_list,
                                             Ccl_event::CSMapArray& _event) {
-  const auto& cfg = Config::Get().player;
+  const auto& cfg = Config::Get().opencl.player;
   const auto captureReads = CheckCaptureMemObjectReads(*_buffer);
-  if (captureReads || cfg.clCaptureKernels.empty()) {
+  if (captureReads || cfg.captureKernels.empty()) {
     const size_t size = CountBufferRectSize(*_region, *_buffer_row_pitch, *_buffer_slice_pitch);
     auto& cqBuffers = SD()._enqueueBuffers[*_command_queue];
     cqBuffers.emplace_back(size, static_cast<char>(0));
@@ -749,7 +749,7 @@ inline void clEnqueueReadImage_RUNWRAP(CFunction* _token,
                                        Ccl_uint& _num_events_in_wait_list,
                                        Ccl_event::CSArray& _event_wait_list,
                                        Ccl_event::CSMapArray& _event) {
-  const auto& cfg = Config::Get().player;
+  const auto& cfg = Config::Get().opencl.player;
   const auto format = SD().GetMemState(*_image, EXCEPTION_MESSAGE).image_format;
   const auto region = *_region;
   const auto size =
@@ -757,7 +757,7 @@ inline void clEnqueueReadImage_RUNWRAP(CFunction* _token,
   auto& cqBuffers = SD()._enqueueBuffers[*_command_queue];
   cqBuffers.emplace_back(size, static_cast<char>(0));
   cl_bool blockingRead = *_blocking_read;
-  if (cfg.clCaptureReads || cfg.clCaptureImages) {
+  if (cfg.captureReads || cfg.captureImages) {
     blockingRead = CL_BLOCKING;
     _return_value.Value() = drvOcl.clEnqueueReadImage(
         *_command_queue, *_image, blockingRead, *_origin, *_region, *_row_pitch, *_slice_pitch,
@@ -767,12 +767,12 @@ inline void clEnqueueReadImage_RUNWRAP(CFunction* _token,
     if (CheckCaptureMemObjectReads(*_image)) {
       SaveBuffer(fileName, cqBuffers.back());
     }
-    if (cfg.clCaptureImages && cfg.clCaptureKernels.empty()) {
+    if (cfg.captureImages && cfg.captureKernels.empty()) {
       const auto& memState = SD().GetMemState(*_image, EXCEPTION_MESSAGE);
       SaveImage(cqBuffers.back().data(), memState.image_format, memState.image_desc, fileName);
     }
     num++;
-  } else if (cfg.clCaptureKernels.empty()) {
+  } else if (cfg.captureKernels.empty()) {
     _return_value.Value() = drvOcl.clEnqueueReadImage(
         *_command_queue, *_image, blockingRead, *_origin, *_region, *_row_pitch, *_slice_pitch,
         cqBuffers.back().data(), *_num_events_in_wait_list, *_event_wait_list, *_event);
@@ -919,7 +919,7 @@ inline void clCreateBufferWithPropertiesINTEL_RUNWRAP(
     Csize_t& _size,
     CAsyncBinaryData& _host_ptr,
     CCLResult::CSArray& _errcode_ret) {
-  const auto& cfg = Config::Get().player;
+  const auto& cfg = Config::Get().opencl.player;
   const auto signature = GenerateSignature();
   auto size = *_size;
   if (cfg.aubSignaturesCL) {
@@ -963,7 +963,7 @@ inline void clCreateProgramWithSource_RUNWRAP(CFunction* _token,
                                               CProgramSource& _strings,
                                               Csize_t::CSArray& _lengths,
                                               CCLResult::CSArray& _errcode_ret) {
-  auto lengths = Config::Get().player.clRemoveSourceLengths ? nullptr : *_lengths;
+  auto lengths = Config::Get().opencl.player.removeSourceLengths ? nullptr : *_lengths;
   _return_value.Assign(
       drvOcl.clCreateProgramWithSource(*_context, *_count, *_strings, lengths, *_errcode_ret));
   clCreateProgramWithSource_SD(_token, *_return_value, *_context, *_count, *_strings, lengths,
@@ -981,7 +981,7 @@ inline void clEnqueueNDCountKernelINTEL_RUNWRAP(CCLResult& _return_value,
                                                 Ccl_event::CSArray& _eventWaitList,
                                                 Ccl_event::CSMapArray& _event) {
   CGits::Instance().KernelCountUp();
-  auto& cfg = Config::Get().player;
+  auto& cfg = Config::Get().opencl.player;
   if (cfg.aubSignaturesCL) {
     InjectKernelArgOperations(*_kernel, *_command_queue, *_event);
   }

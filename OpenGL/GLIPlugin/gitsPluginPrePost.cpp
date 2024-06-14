@@ -53,7 +53,7 @@ namespace {
 void spillGL() {
 #ifdef GITS_PLATFORM_X11
   CALL_ONCE[] {
-    std::string path = (gits::OpenGL::CGitsPlugin::Configuration().common.libGL).string();
+    std::string path = (gits::OpenGL::CGitsPlugin::Configuration().common.shared.libGL).string();
     void* handleLibGL = dlopen(path.c_str(), RTLD_NOW | RTLD_GLOBAL);
     if (handleLibGL == nullptr) {
       Log(ERR) << "Failed to load GL library: " << path;
@@ -66,7 +66,7 @@ void spillGL() {
 void spillEGL() {
 #ifdef GITS_PLATFORM_X11
   CALL_ONCE[] {
-    std::string path = (gits::OpenGL::CGitsPlugin::Configuration().common.libEGL).string();
+    std::string path = (gits::OpenGL::CGitsPlugin::Configuration().common.shared.libEGL).string();
     void* handleLibEGL = dlopen(path.c_str(), RTLD_NOW | RTLD_GLOBAL);
     if (handleLibEGL == nullptr) {
       Log(ERR) << "Failed to load EGL library: " << path;
@@ -994,7 +994,8 @@ GLAPI void* GLAPIENTRY wglGetDefaultProcAddress(const char* arg0) {
 
 GLAPI int GLAPIENTRY wglGetPixelFormat(HDC arg0) {
   gits::OpenGL::CGitsPlugin::Initialize();
-  if (gits::OpenGL::CGitsPlugin::Configuration().recorder.extras.utilities.mtDriverWA) {
+#ifdef GITS_PLATFORM_WINDOWS
+  if (gits::OpenGL::CGitsPlugin::Configuration().opengl.recorder.mtDriverWA) {
     // wglDescribePixelFormat, like wglGetPixelFormat, is used in threaded
     // drivers off the 'main' thread when wglMakeCurrent is called, which causes
     // deadlock due to GITS api mutex. Because the apis are fairly
@@ -1005,14 +1006,14 @@ GLAPI int GLAPIENTRY wglGetPixelFormat(HDC arg0) {
 
     gits::OpenGL::IRecorderWrapper& wrapper = gits::OpenGL::CGitsPlugin::RecorderWrapper();
     return wrapper.Drivers().wgl.wglGetPixelFormat(arg0);
-  } else {
-    GITS_ENTRY_WGL
-    auto return_value = wrapper.Drivers().wgl.wglGetPixelFormat(arg0);
-    GITS_WRAPPER_PRE
-    wrapper.wglGetPixelFormat(return_value, arg0);
-    GITS_WRAPPER_POST
-    return return_value;
   }
+#endif
+  GITS_ENTRY_WGL
+  auto return_value = wrapper.Drivers().wgl.wglGetPixelFormat(arg0);
+  GITS_WRAPPER_PRE
+  wrapper.wglGetPixelFormat(return_value, arg0);
+  GITS_WRAPPER_POST
+  return return_value;
 }
 
 GLAPI void* GLAPIENTRY wglGetProcAddress(const char* arg0) {
@@ -1141,7 +1142,8 @@ GLAPI int GLAPIENTRY wglDescribePixelFormat(HDC arg0,
                                             UINT arg2,
                                             PIXELFORMATDESCRIPTOR* arg3) {
   gits::OpenGL::CGitsPlugin::Initialize();
-  if (gits::OpenGL::CGitsPlugin::Configuration().recorder.extras.utilities.mtDriverWA) {
+#ifdef GITS_PLATFORM_WINDOWS
+  if (gits::OpenGL::CGitsPlugin::Configuration().opengl.recorder.mtDriverWA) {
     // wglDescribePixelFormat, like wglGetPixelFormat, is used in threaded
     // drivers off the 'main' thread when wglMakeCurrent is called, which causes
     // deadlock due to GITS api mutex. Because the apis are fairly
@@ -1151,15 +1153,14 @@ GLAPI int GLAPIENTRY wglDescribePixelFormat(HDC arg0,
     // function in wrapper.Drivers().wgl.wglFunction.
     gits::OpenGL::IRecorderWrapper& wrapper = gits::OpenGL::CGitsPlugin::RecorderWrapper();
     return wrapper.Drivers().wgl.wglDescribePixelFormat(arg0, arg1, arg2, arg3);
-  } else {
-    GITS_ENTRY_WGL
-    auto return_value = wrapper.Drivers().wgl.wglDescribePixelFormat(arg0, arg1, arg2, arg3);
-    GITS_WRAPPER_PRE
-    GITS_WRAPPER_NOT_SUPPORTED(
-        wrapper.wglDescribePixelFormat(return_value, arg0, arg1, arg2, arg3);)
-    GITS_WRAPPER_POST
-    return return_value;
   }
+#endif
+  GITS_ENTRY_WGL
+  auto return_value = wrapper.Drivers().wgl.wglDescribePixelFormat(arg0, arg1, arg2, arg3);
+  GITS_WRAPPER_PRE
+  GITS_WRAPPER_NOT_SUPPORTED(wrapper.wglDescribePixelFormat(return_value, arg0, arg1, arg2, arg3);)
+  GITS_WRAPPER_POST
+  return return_value;
 }
 
 GLAPI int GLAPIENTRY
@@ -1184,7 +1185,8 @@ wglSetLayerPaletteEntries(HDC arg0, int arg1, int arg2, int arg3, const COLORREF
 
 GLAPI BOOL GLAPIENTRY wglSetPixelFormat(HDC arg0, int arg1, const PIXELFORMATDESCRIPTOR* arg2) {
   gits::OpenGL::CGitsPlugin::Initialize();
-  if (gits::OpenGL::CGitsPlugin::Configuration().recorder.extras.utilities.mtDriverWA) {
+#ifdef GITS_PLATFORM_WINDOWS
+  if (gits::OpenGL::CGitsPlugin::Configuration().opengl.recorder.mtDriverWA) {
     bool deadlock = false;
     Timer deadlock_timer;
     deadlock_timer.Start();
@@ -1205,6 +1207,7 @@ GLAPI BOOL GLAPIENTRY wglSetPixelFormat(HDC arg0, int arg1, const PIXELFORMATDES
       return wrapper.Drivers().wgl.wglSetPixelFormat(arg0, arg1, arg2);
     }
   }
+#endif
   GITS_ENTRY_WGL
   auto return_value = wrapper.Drivers().wgl.wglSetPixelFormat(arg0, arg1, arg2);
   GITS_WRAPPER_PRE

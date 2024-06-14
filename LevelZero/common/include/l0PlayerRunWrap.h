@@ -144,7 +144,7 @@ void ChooseQueueIndex(const ze_device_handle_t& hDevice, const uint32_t& ordinal
 }
 
 inline void HandleDumpSpv(const ze_module_desc_t* desc) {
-  if (ShouldDumpSpv(Config::Get().player.l0DumpSpv, desc)) {
+  if (ShouldDumpSpv(Config::Get().levelzero.player.dumpSpv, desc)) {
     static int programSourceIdx = 0;
     std::stringstream stream;
     stream << "l0Programs/kernel_source_" << std::setfill('0') << std::setw(2) << programSourceIdx++
@@ -650,7 +650,8 @@ inline void zeVirtualMemReserve_V1_RUNWRAP(Cze_result_t& _return_value,
                                            CMappedPtr::CSMapArray& _pptr) {
   _return_value.Value() = drv.zeVirtualMemReserve(*_hContext, *_pStart, *_size, *_pptr);
   const auto& cfg = Config::Get();
-  if (_return_value.Value() == ZE_RESULT_SUCCESS && !cfg.player.l0OmitOriginalAddressCheck) {
+  if (_return_value.Value() == ZE_RESULT_SUCCESS &&
+      !cfg.levelzero.player.omitOriginalAddressCheck) {
     const void* originalPtrValue = *_pStart;
     const void* virtualPtrReturnedByDriver = **_pptr;
     if (originalPtrValue != nullptr && virtualPtrReturnedByDriver != originalPtrValue) {

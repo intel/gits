@@ -32,7 +32,7 @@ void PrePostDisableOpenCL() {
 
 #define GITS_WRAPPER_PRE                                                                           \
   --recursionDepth;                                                                                \
-  if (CGitsPluginOpenCL::Configuration().recorder.basic.enabled && (recursionDepth == 0)) {        \
+  if (CGitsPluginOpenCL::Configuration().common.recorder.enabled && (recursionDepth == 0)) {       \
     try {                                                                                          \
       wrapper.TrackThread();
 

@@ -23,18 +23,17 @@ namespace OpenGL {
 void execWrap_glBufferStorage(GLenum target, GLsizeiptr size, const void* data, GLbitfield flags) {
   GLbitfield flags_interceptor = flags;
   if (((flags & GL_MAP_PERSISTENT_BIT) &&
-       CGitsPlugin::Configuration().recorder.extras.utilities.coherentMapBehaviorWA) ||
+       CGitsPlugin::Configuration().opengl.recorder.coherentMapBehaviorWA) ||
       (flags & GL_MAP_COHERENT_BIT)) {
     flags_interceptor |= GL_MAP_READ_BIT;
   }
   CGitsPlugin::RecorderWrapper().Drivers().gl.glBufferStorage(
       target, size, data,
-      flags_interceptor |
-          CGitsPlugin::Configuration().recorder.extras.optimizations.bufferStorageFlagsMask);
+      flags_interceptor | CGitsPlugin::Configuration().opengl.recorder.bufferStorageFlagsMask);
 }
 
 GLenum execWrap_glClientWaitSync(GLsync sync, GLbitfield flags, GLuint64 timeout) {
-  if (CGitsPlugin::Configuration().recorder.openGL.utilities.forceSyncFlushCommands) {
+  if (CGitsPlugin::Configuration().opengl.recorder.forceSyncFlushCommands) {
     flags |= GL_SYNC_FLUSH_COMMANDS_BIT;
   }
 
@@ -45,14 +44,14 @@ void execWrap_glGetIntegerv(GLenum pname, GLint* params) {
   CGitsPlugin::RecorderWrapper().Drivers().gl.glGetIntegerv(pname, params);
 
   // Replace OpenGL version.
-  const auto& utils = CGitsPlugin::Configuration().recorder.openGL.utilities;
-  if (!utils.forceGLVersion.empty()) {
+  const auto& shared = CGitsPlugin::Configuration().opengl.shared;
+  if (!shared.forceGLVersion.empty()) {
     switch (pname) {
     case GL_MAJOR_VERSION:
-      *params = utils.forceGLVersionMajor;
+      *params = shared.forceGLVersionMajor;
       break;
     case GL_MINOR_VERSION:
-      *params = utils.forceGLVersionMinor;
+      *params = shared.forceGLVersionMinor;
       break;
     }
   }
@@ -62,14 +61,13 @@ const GLubyte* execWrap_glGetString(GLenum name) {
   auto return_value = CGitsPlugin::RecorderWrapper().Drivers().gl.glGetString(name);
 
   // Replace OpenGL version.
-  const std::string& forceGLVersion =
-      CGitsPlugin::Configuration().recorder.openGL.utilities.forceGLVersion;
+  const std::string& forceGLVersion = CGitsPlugin::Configuration().opengl.shared.forceGLVersion;
   if (!forceGLVersion.empty() && name == GL_VERSION && return_value) {
     return_value = (const GLubyte*)forceGLVersion.c_str();
   }
 
   // Remove certain OpenGL extensions.
-  const auto& suprExts = CGitsPlugin::Configuration().recorder.openGL.utilities.suppressExtensions;
+  const auto& suprExts = CGitsPlugin::Configuration().opengl.recorder.suppressExtensions;
   if (!suprExts.empty() && name == GL_EXTENSIONS && return_value) {
     static std::map<const GLubyte*, std::string> resultStrings;
     if (resultStrings.find(return_value) == resultStrings.end()) {
@@ -96,7 +94,7 @@ const GLubyte* execWrap_glGetString(GLenum name) {
 const GLubyte* execWrap_glGetStringi(GLenum name, GLuint index) {
   auto return_value = CGitsPlugin::RecorderWrapper().Drivers().gl.glGetStringi(name, index);
 
-  const auto& suprExts = CGitsPlugin::Configuration().recorder.openGL.utilities.suppressExtensions;
+  const auto& suprExts = CGitsPlugin::Configuration().opengl.recorder.suppressExtensions;
   if (!suprExts.empty() && name == GL_EXTENSIONS && return_value) {
     if (std::find(suprExts.begin(), suprExts.end(), (const char*)return_value) != suprExts.end()) {
       Log(WARN) << "Suppressing extension " << return_value
@@ -122,15 +120,14 @@ void* execWrap_glMapBufferRange(GLenum target,
                                 GLbitfield access) {
   GLbitfield access_interceptor = access;
   if (((access & GL_MAP_PERSISTENT_BIT) &&
-       CGitsPlugin::Configuration().recorder.extras.utilities.coherentMapBehaviorWA) ||
+       CGitsPlugin::Configuration().opengl.recorder.coherentMapBehaviorWA) ||
       (access & GL_MAP_COHERENT_BIT)) {
     access_interceptor |= GL_MAP_READ_BIT;
     access_interceptor &= ~GL_MAP_UNSYNCHRONIZED_BIT;
   }
   return CGitsPlugin::RecorderWrapper().Drivers().gl.glMapBufferRange(
       target, offset, length,
-      access_interceptor &
-          CGitsPlugin::Configuration().recorder.extras.optimizations.bufferMapAccessMask);
+      access_interceptor & CGitsPlugin::Configuration().opengl.recorder.bufferMapAccessMask);
 }
 
 void* execWrap_glMapBufferRangeEXT(GLenum target,
@@ -139,15 +136,14 @@ void* execWrap_glMapBufferRangeEXT(GLenum target,
                                    GLbitfield access) {
   GLbitfield access_interceptor = access;
   if (((access & GL_MAP_PERSISTENT_BIT) &&
-       CGitsPlugin::Configuration().recorder.extras.utilities.coherentMapBehaviorWA) ||
+       CGitsPlugin::Configuration().opengl.recorder.coherentMapBehaviorWA) ||
       (access & GL_MAP_COHERENT_BIT)) {
     access_interceptor |= GL_MAP_READ_BIT;
     access_interceptor &= ~GL_MAP_UNSYNCHRONIZED_BIT;
   }
   return CGitsPlugin::RecorderWrapper().Drivers().gl.glMapBufferRangeEXT(
       target, offset, length,
-      access_interceptor &
-          CGitsPlugin::Configuration().recorder.extras.optimizations.bufferMapAccessMask);
+      access_interceptor & CGitsPlugin::Configuration().opengl.recorder.bufferMapAccessMask);
 }
 
 void* execWrap_glMapNamedBufferRange(GLuint buffer,
@@ -156,15 +152,14 @@ void* execWrap_glMapNamedBufferRange(GLuint buffer,
                                      GLbitfield access) {
   GLbitfield access_interceptor = access;
   if (((access & GL_MAP_PERSISTENT_BIT) &&
-       CGitsPlugin::Configuration().recorder.extras.utilities.coherentMapBehaviorWA) ||
+       CGitsPlugin::Configuration().opengl.recorder.coherentMapBehaviorWA) ||
       (access & GL_MAP_COHERENT_BIT)) {
     access_interceptor |= GL_MAP_READ_BIT;
     access_interceptor &= ~GL_MAP_UNSYNCHRONIZED_BIT;
   }
   return CGitsPlugin::RecorderWrapper().Drivers().gl.glMapNamedBufferRange(
       buffer, offset, length,
-      access_interceptor &
-          CGitsPlugin::Configuration().recorder.extras.optimizations.bufferMapAccessMask);
+      access_interceptor & CGitsPlugin::Configuration().opengl.recorder.bufferMapAccessMask);
 }
 
 void* execWrap_glMapNamedBufferRangeEXT(GLuint buffer,
@@ -173,15 +168,14 @@ void* execWrap_glMapNamedBufferRangeEXT(GLuint buffer,
                                         GLbitfield access) {
   GLbitfield access_interceptor = access;
   if (((access & GL_MAP_PERSISTENT_BIT) &&
-       CGitsPlugin::Configuration().recorder.extras.utilities.coherentMapBehaviorWA) ||
+       CGitsPlugin::Configuration().opengl.recorder.coherentMapBehaviorWA) ||
       (access & GL_MAP_COHERENT_BIT)) {
     access_interceptor |= GL_MAP_READ_BIT;
     access_interceptor &= ~GL_MAP_UNSYNCHRONIZED_BIT;
   }
   return CGitsPlugin::RecorderWrapper().Drivers().gl.glMapNamedBufferRangeEXT(
       buffer, offset, length,
-      access_interceptor &
-          CGitsPlugin::Configuration().recorder.extras.optimizations.bufferMapAccessMask);
+      access_interceptor & CGitsPlugin::Configuration().opengl.recorder.bufferMapAccessMask);
 }
 
 void* execWrap_glMapTexture2DINTEL(
@@ -197,15 +191,14 @@ void execWrap_glNamedBufferStorage(GLuint buffer,
                                    GLbitfield flags) {
   GLbitfield flags_interceptor = flags;
   if (((flags & GL_MAP_PERSISTENT_BIT) &&
-       CGitsPlugin::Configuration().recorder.extras.utilities.coherentMapBehaviorWA) ||
+       CGitsPlugin::Configuration().opengl.recorder.coherentMapBehaviorWA) ||
       (flags & GL_MAP_COHERENT_BIT)) {
     flags_interceptor |= GL_MAP_READ_BIT;
   }
 
   CGitsPlugin::RecorderWrapper().Drivers().gl.glNamedBufferStorage(
       buffer, size, data,
-      flags_interceptor |
-          CGitsPlugin::Configuration().recorder.extras.optimizations.bufferStorageFlagsMask);
+      flags_interceptor | CGitsPlugin::Configuration().opengl.recorder.bufferStorageFlagsMask);
 }
 
 void execWrap_glNamedBufferStorageEXT(GLuint buffer,
@@ -214,15 +207,14 @@ void execWrap_glNamedBufferStorageEXT(GLuint buffer,
                                       GLbitfield flags) {
   GLbitfield flags_interceptor = flags;
   if (((flags & GL_MAP_PERSISTENT_BIT) &&
-       CGitsPlugin::Configuration().recorder.extras.utilities.coherentMapBehaviorWA) ||
+       CGitsPlugin::Configuration().opengl.recorder.coherentMapBehaviorWA) ||
       (flags & GL_MAP_COHERENT_BIT)) {
     flags_interceptor |= GL_MAP_READ_BIT;
   }
 
   CGitsPlugin::RecorderWrapper().Drivers().gl.glNamedBufferStorageEXT(
       buffer, size, data,
-      flags_interceptor |
-          CGitsPlugin::Configuration().recorder.extras.optimizations.bufferStorageFlagsMask);
+      flags_interceptor | CGitsPlugin::Configuration().opengl.recorder.bufferStorageFlagsMask);
 }
 
 void execWrap_glPopGroupMarkerEXT() {
@@ -233,7 +225,7 @@ void execWrap_glProgramBinary(GLuint program,
                               GLenum binaryFormat,
                               const void* binary,
                               GLsizei length) {
-  if (CGitsPlugin::Configuration().recorder.openGL.utilities.suppressProgramBinary) {
+  if (CGitsPlugin::Configuration().opengl.recorder.suppressProgramBinary) {
     length = 1;
   }
   CGitsPlugin::RecorderWrapper().Drivers().gl.glProgramBinary(program, binaryFormat, binary,
@@ -244,7 +236,7 @@ void execWrap_glProgramBinaryOES(GLuint program,
                                  GLenum binaryFormat,
                                  const void* binary,
                                  GLsizei length) {
-  if (CGitsPlugin::Configuration().recorder.openGL.utilities.suppressProgramBinary) {
+  if (CGitsPlugin::Configuration().opengl.recorder.suppressProgramBinary) {
     length = 1;
   }
   CGitsPlugin::RecorderWrapper().Drivers().gl.glProgramBinaryOES(program, binaryFormat, binary,
@@ -261,7 +253,7 @@ void execWrap_glSamplePass(GLenum mode) {
 
 void execWrap_glShaderBinary(
     GLsizei count, const GLuint* shaders, GLenum binaryformat, const void* binary, GLsizei length) {
-  if (CGitsPlugin::Configuration().recorder.openGL.utilities.suppressProgramBinary) {
+  if (CGitsPlugin::Configuration().opengl.recorder.suppressProgramBinary) {
     length = 1;
   }
   CGitsPlugin::RecorderWrapper().Drivers().gl.glShaderBinary(count, shaders, binaryformat, binary,

@@ -69,8 +69,8 @@ gits::OpenGL::EGLPFAttribs gits::OpenGL::PtblToEGLAttribs(const PtblPFAttribs& p
   }
 
   eglattribs.push_back(EGL_RENDERABLE_TYPE);
-  if (Config::Get().player.forceGLProfile == TForcedGLProfile::COMPAT ||
-      Config::Get().player.forceGLProfile == TForcedGLProfile::CORE) {
+  if (Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::COMPAT ||
+      Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::CORE) {
     eglattribs.push_back(EGL_OPENGL_BIT);
   } else {
     eglattribs.push_back(EGL_OPENGL_ES_BIT);
@@ -137,11 +137,12 @@ gits::OpenGL::PtblPFAttribs gits::OpenGL::EGLToPtblAttribs(const EGLint* eglattr
 }
 
 std::vector<int> gits::OpenGL::GetUpdatedEGLCtxParams(const int* params) {
-  bool forceNone = Config::Get().player.forceGLProfile == TForcedGLProfile::NO_PROFILE_FORCED;
-  bool forceCompat = Config::Get().player.forceGLProfile == TForcedGLProfile::COMPAT;
-  bool forceCore = Config::Get().player.forceGLProfile == TForcedGLProfile::CORE;
-  bool forceES = Config::Get().player.forceGLProfile == TForcedGLProfile::ES;
-  bool forceVer = Config::Get().player.forceGLVersion;
+  bool forceNone =
+      Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::NO_PROFILE_FORCED;
+  bool forceCompat = Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::COMPAT;
+  bool forceCore = Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::CORE;
+  bool forceES = Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::ES;
+  bool forceVer = !Config::Get().opengl.shared.forceGLVersion.empty();
   std::vector<int> eglCtxParams;
 
   const int* ptr = params;
@@ -168,8 +169,8 @@ std::vector<int> gits::OpenGL::GetUpdatedEGLCtxParams(const int* params) {
   }
 
   if ((forceES || forceNone) && forceVer) {
-    int majorVer = Config::Get().player.forceGLVersionMajor;
-    int minorVer = Config::Get().player.forceGLVersionMinor;
+    int majorVer = Config::Get().opengl.shared.forceGLVersionMajor;
+    int minorVer = Config::Get().opengl.shared.forceGLVersionMinor;
 
     eglCtxParams.push_back(EGL_CONTEXT_MAJOR_VERSION_KHR);
     eglCtxParams.push_back(majorVer);
@@ -182,10 +183,10 @@ std::vector<int> gits::OpenGL::GetUpdatedEGLCtxParams(const int* params) {
 }
 
 gits::OpenGL::PtblCtxParams gits::OpenGL::EGLToPtblCtxParams(const EGLint* eglparams) {
-  bool forceCompat = Config::Get().player.forceGLProfile == TForcedGLProfile::COMPAT;
-  bool forceCore = Config::Get().player.forceGLProfile == TForcedGLProfile::CORE;
-  bool forceES = Config::Get().player.forceGLProfile == TForcedGLProfile::ES;
-  bool forceVer = Config::Get().player.forceGLVersion;
+  bool forceCompat = Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::COMPAT;
+  bool forceCore = Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::CORE;
+  bool forceES = Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::ES;
+  bool forceVer = !Config::Get().opengl.shared.forceGLVersion.empty();
 
   PtblCtxParams ptblParams;
   const EGLint* eglParamPtr = eglparams;
@@ -221,8 +222,8 @@ gits::OpenGL::PtblCtxParams gits::OpenGL::EGLToPtblCtxParams(const EGLint* eglpa
     ptblParams[Profile] = ES;
   }
   if (forceVer) {
-    ptblParams[VerMajor] = Config::Get().player.forceGLVersionMajor;
-    ptblParams[VerMinor] = Config::Get().player.forceGLVersionMinor;
+    ptblParams[VerMajor] = Config::Get().opengl.shared.forceGLVersionMajor;
+    ptblParams[VerMinor] = Config::Get().opengl.shared.forceGLVersionMinor;
   }
   return ptblParams;
 }
@@ -275,8 +276,8 @@ EGLContext gits::OpenGL::ptbl_eglCreateContext(EGLDisplay dpy,
   //Update context params if configured
   const int* attribsListMod;
   std::vector<int> attribsListModVec;
-  if (Config::Get().player.forceGLProfile == TForcedGLProfile::NO_PROFILE_FORCED &&
-      Config::Get().player.forceGLVersion == false) {
+  if (Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::NO_PROFILE_FORCED &&
+      Config::Get().opengl.shared.forceGLVersion.empty()) {
     attribsListMod = attrib_list;
   } else {
     attribsListModVec = GetUpdatedEGLCtxParams(const_cast<int*>(attrib_list));
@@ -472,7 +473,7 @@ void gits::OpenGL::execSetContextEGL(PtblHandle ctx) {
   static bool eglReady = false;
   if (!eglReady) {
     EGLint glType = EGL_OPENGL_ES_API;
-    auto forcedProfile = Config::Get().player.forceGLProfile;
+    auto forcedProfile = Config::Get().opengl.player.forceGLProfile;
     if (forcedProfile == TForcedGLProfile::COMPAT || forcedProfile == TForcedGLProfile::CORE) {
       glType = EGL_OPENGL_API;
     }

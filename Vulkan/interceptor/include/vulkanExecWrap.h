@@ -21,6 +21,7 @@
 
 #if defined GITS_PLATFORM_X11
 #include <dlfcn.h>
+#include <unistd.h>
 #endif
 
 extern const std::unordered_map<std::string, PFN_vkVoidFunction> interceptorExportedFunctions;
@@ -183,8 +184,8 @@ VkResult recExecWrap_vkQueueSubmit(VkQueue queue,
                                    VkFence fence) {
   CVkDriver& drvVk = CGitsPluginVulkan::RecorderWrapper().Drivers();
   VkResult return_value = VK_SUCCESS;
-  if (!CGitsPluginVulkan::Configuration().recorder.vulkan.images.dumpSubmits.empty() &&
-      CGitsPluginVulkan::Configuration().recorder.basic.enabled &&
+  if (!CGitsPluginVulkan::Configuration().vulkan.recorder.dumpSubmits.empty() &&
+      CGitsPluginVulkan::Configuration().common.recorder.enabled &&
       !CGitsPluginVulkan::_recorderFinished) {
     for (uint32_t i = 0; i < submitCount; i++) {
       VkFence fenceNew = VK_NULL_HANDLE;
@@ -247,8 +248,8 @@ VkResult recExecWrap_vkQueueSubmit2(VkQueue queue,
                                     bool isKHR = false) {
   CVkDriver& drvVk = CGitsPluginVulkan::RecorderWrapper().Drivers();
   VkResult return_value = VK_SUCCESS;
-  if (!CGitsPluginVulkan::Configuration().recorder.vulkan.images.dumpSubmits.empty() &&
-      CGitsPluginVulkan::Configuration().recorder.basic.enabled &&
+  if (!CGitsPluginVulkan::Configuration().vulkan.recorder.dumpSubmits.empty() &&
+      CGitsPluginVulkan::Configuration().common.recorder.enabled &&
       !CGitsPluginVulkan::_recorderFinished) {
     for (uint32_t i = 0; i < submitCount; i++) {
       VkFence fenceNew = VK_NULL_HANDLE;
@@ -343,18 +344,17 @@ VkResult recExecWrap_vkMapMemory(VkDevice device,
                                  void** ppData) {
   CVkDriver& drvVk = CGitsPluginVulkan::RecorderWrapper().Drivers();
   VkResult return_value;
-  if (CGitsPluginVulkan::Configuration().recorder.basic.enabled &&
-      (CGitsPluginVulkan::Configuration().recorder.vulkan.capture.mode.find("All") ==
-       std::string::npos) &&
+  if (CGitsPluginVulkan::Configuration().common.recorder.enabled &&
+      (CGitsPluginVulkan::Configuration().vulkan.recorder.mode != TVulkanRecorderMode::ALL) &&
       ((offset != 0) || (size != 0xFFFFFFFFFFFFFFFF)) && !CGitsPluginVulkan::_recorderFinished &&
-      !CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.useExternalMemoryExtension) {
+      !CGitsPluginVulkan::RecorderWrapper().IsUseExternalMemoryExtensionUsed()) {
     VkDeviceSize wholeSize = 0;
     wholeSize = CGitsPluginVulkan::RecorderWrapper().GetWholeMemorySize(memory);
     void* pointer = 0;
     return_value = drvVk.vkMapMemory(device, memory, 0, wholeSize, flags, &pointer);
 
-    if (CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.shadowMemory &&
-        CGitsPluginVulkan::Configuration().recorder.basic.enabled) {
+    if (CGitsPluginVulkan::Configuration().vulkan.recorder.shadowMemory &&
+        CGitsPluginVulkan::Configuration().common.recorder.enabled) {
       pointer = CGitsPluginVulkan::RecorderWrapper().GetShadowMemory(
           memory, (char*)pointer, (uint64_t)wholeSize, (uint64_t)0);
     }
@@ -362,10 +362,10 @@ VkResult recExecWrap_vkMapMemory(VkDevice device,
   } else {
     return_value = drvVk.vkMapMemory(device, memory, offset, size, flags, ppData);
 
-    if (CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.shadowMemory &&
-        CGitsPluginVulkan::Configuration().recorder.basic.enabled &&
+    if (CGitsPluginVulkan::Configuration().vulkan.recorder.shadowMemory &&
+        CGitsPluginVulkan::Configuration().common.recorder.enabled &&
         !CGitsPluginVulkan::_recorderFinished &&
-        !CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.useExternalMemoryExtension) {
+        !CGitsPluginVulkan::RecorderWrapper().IsUseExternalMemoryExtensionUsed()) {
       *ppData = CGitsPluginVulkan::RecorderWrapper().GetShadowMemory(
           memory, (char*)*ppData, (uint64_t)size, (uint64_t)offset);
     }
@@ -391,12 +391,12 @@ VkResult recExecWrap_vkAllocateMemory(VkDevice device,
   };
 
   bool isMemoryMappable = false;
-  if (CGitsPluginVulkan::Configuration().recorder.basic.enabled) {
+  if (CGitsPluginVulkan::Configuration().common.recorder.enabled) {
     isMemoryMappable = CGitsPluginVulkan::RecorderWrapper().CheckMemoryMappingFeasibility(
         device, allocateInfo.memoryTypeIndex, false);
 
     // Perform only when external memory is ENABLED
-    if (CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.useExternalMemoryExtension &&
+    if (CGitsPluginVulkan::RecorderWrapper().IsUseExternalMemoryExtensionUsed() &&
         isMemoryMappable && !CGitsPluginVulkan::_recorderFinished) {
       hostPointerInfo.pHostPointer =
           CGitsPluginVulkan::RecorderWrapper().CreateExternalMemory(allocateInfo.allocationSize);
@@ -407,12 +407,12 @@ VkResult recExecWrap_vkAllocateMemory(VkDevice device,
   auto return_value = drvVk.vkAllocateMemory(device, &allocateInfo, pAllocator, pMemory);
 
   // Perform only when external memory is DISABLED
-  if (!CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.useExternalMemoryExtension &&
-      isMemoryMappable && CGitsPluginVulkan::Configuration().recorder.basic.enabled &&
+  if (!CGitsPluginVulkan::RecorderWrapper().IsUseExternalMemoryExtensionUsed() &&
+      isMemoryMappable && CGitsPluginVulkan::Configuration().common.recorder.enabled &&
       !CGitsPluginVulkan::_recorderFinished &&
-      (CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.shadowMemory ||
-       CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.memorySegmentSize ||
-       CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.memoryAccessDetection)) {
+      (CGitsPluginVulkan::Configuration().vulkan.recorder.shadowMemory ||
+       CGitsPluginVulkan::Configuration().vulkan.recorder.memorySegmentSize ||
+       CGitsPluginVulkan::Configuration().vulkan.recorder.memoryAccessDetection)) {
     // Clear memory
     void* ptr = nullptr;
     VkResult map_return_value = drvVk.vkMapMemory(device, *pMemory, 0, VK_WHOLE_SIZE, 0, &ptr);
@@ -427,7 +427,7 @@ VkResult recExecWrap_vkAllocateMemory(VkDevice device,
     }
   }
 
-  if (CGitsPluginVulkan::Configuration().recorder.basic.enabled) {
+  if (CGitsPluginVulkan::Configuration().common.recorder.enabled) {
     CGitsPluginVulkan::RecorderWrapper().TrackMemoryState(
         return_value, device, pAllocateInfo, pAllocator, pMemory, hostPointerInfo.pHostPointer);
   }
@@ -438,7 +438,7 @@ void recExecWrap_vkFreeMemory(VkDevice device,
                               VkDeviceMemory memory,
                               const VkAllocationCallbacks* pAllocator) {
   CGitsPluginVulkan::RecorderWrapper().Drivers().vkFreeMemory(device, memory, pAllocator);
-  if (CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.useExternalMemoryExtension &&
+  if (CGitsPluginVulkan::RecorderWrapper().IsUseExternalMemoryExtensionUsed() &&
       (memory != VK_NULL_HANDLE)) {
     CGitsPluginVulkan::RecorderWrapper().FreeExternalMemory(memory);
   }
@@ -472,13 +472,12 @@ VkResult recExecWrap_vkWaitForFences(VkDevice device,
                                      VkBool32 waitAll,
                                      uint64_t timeout) {
   uint64_t timeoutSubtract = std::min(
-      timeout,
-      (uint64_t)CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.shortenFenceWaitTime);
+      timeout, (uint64_t)CGitsPluginVulkan::Configuration().vulkan.recorder.shortenFenceWaitTime);
   VkResult return_value = CGitsPluginVulkan::RecorderWrapper().Drivers().vkWaitForFences(
       device, fenceCount, pFences, waitAll, timeout - timeoutSubtract);
 
   if ((VK_SUCCESS == return_value) &&
-      (CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.delayFenceChecksCount > 0)) {
+      (CGitsPluginVulkan::Configuration().vulkan.recorder.delayFenceChecksCount > 0)) {
     if (!waitAll) {
       return_value = VK_TIMEOUT;
     }
@@ -505,9 +504,9 @@ VkResult recExecWrap_vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo,
                                       const VkAllocationCallbacks* pAllocator,
                                       VkInstance* pInstance) {
   static bool scheduled = false;
-  auto& recorderCfg = CGitsPluginVulkan::Configuration().recorder;
-  bool isRecordingEnabled = recorderCfg.basic.enabled;
-  bool isAllMode = recorderCfg.vulkan.capture.mode.find("All") != std::string::npos;
+  auto& cfg = CGitsPluginVulkan::Configuration();
+  bool isRecordingEnabled = cfg.common.recorder.enabled;
+  bool isAllMode = cfg.vulkan.recorder.mode == TVulkanRecorderMode::ALL;
   if (!scheduled && isRecordingEnabled && isAllMode &&
       !CGitsPluginVulkan::RecorderWrapper().IsCCodeStateRestore()) {
     CGitsPluginVulkan::RecorderWrapper().StartFrame();
@@ -525,7 +524,7 @@ VkResult recExecWrap_vkCreateDevice(VkPhysicalDevice physicalDevice,
   // Enable capture/replay features for buffers and acceleration structures when
   // requested in the recorder config file
   if (CGitsPluginVulkan::Configuration()
-          .recorder.vulkan.utilities.useCaptureReplayFeaturesForBuffersAndAccelerationStructures) {
+          .vulkan.recorder.useCaptureReplayFeaturesForBuffersAndAccelerationStructures) {
     // Core 1.2
     {
       auto vulkan12Features =
@@ -573,7 +572,7 @@ VkResult recExecWrap_vkCreateDevice(VkPhysicalDevice physicalDevice,
   // Enable capture/replay feature for ray tracing pipelines when requested in
   // the recorder config file
   if (CGitsPluginVulkan::Configuration()
-          .recorder.vulkan.utilities.useCaptureReplayFeaturesForRayTracingPipelines) {
+          .vulkan.recorder.useCaptureReplayFeaturesForRayTracingPipelines) {
     VkPhysicalDeviceProperties properties;
     CGitsPluginVulkan::RecorderWrapper().Drivers().vkGetPhysicalDeviceProperties(physicalDevice,
                                                                                  &properties);
@@ -592,7 +591,7 @@ VkResult recExecWrap_vkCreateDevice(VkPhysicalDevice physicalDevice,
       }
     } else {
       auto cfg = CGitsPluginVulkan::Configuration();
-      cfg.recorder.vulkan.utilities.useCaptureReplayFeaturesForRayTracingPipelines = false;
+      cfg.vulkan.recorder.useCaptureReplayFeaturesForRayTracingPipelines = false;
       CGitsPluginVulkan::RecorderWrapper().SetConfig(cfg);
 
       CALL_ONCE[] {
@@ -608,7 +607,7 @@ VkResult recExecWrap_vkCreateDevice(VkPhysicalDevice physicalDevice,
                                              createInfo.ppEnabledExtensionNames +
                                                  createInfo.enabledExtensionCount);
 
-  if (CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.useExternalMemoryExtension) {
+  if (CGitsPluginVulkan::RecorderWrapper().IsUseExternalMemoryExtensionUsed()) {
     const char* externalMemoryExtensionName = VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME;
     const char* externalMemoryHostExtensionName = VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME;
 
@@ -686,9 +685,9 @@ VkResult recExecWrap_vkEnumerateInstanceLayerProperties(uint32_t* pPropertyCount
   CVkDriver& drvVk = CGitsPluginVulkan::RecorderWrapper().Drivers();
   VkResult return_value = drvVk.vkEnumerateInstanceLayerProperties(pPropertyCount, pProperties);
 
-  if (CGitsPluginVulkan::Configuration().recorder.basic.enabled &&
+  if (CGitsPluginVulkan::Configuration().common.recorder.enabled &&
       !CGitsPluginVulkan::_recorderFinished &&
-      !CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.suppressLayers.empty()) {
+      !CGitsPluginVulkan::Configuration().vulkan.shared.suppressLayers.empty()) {
     uint32_t propertyCount = 0;
     std::vector<VkLayerProperties> properties;
 
@@ -699,14 +698,13 @@ VkResult recExecWrap_vkEnumerateInstanceLayerProperties(uint32_t* pPropertyCount
       if (drvVk.vkEnumerateInstanceLayerProperties(&propertyCount, properties.data()) ==
           VK_SUCCESS) {
         properties.erase(
-            std::remove_if(
-                properties.begin(), properties.end(),
-                [](VkLayerProperties& element) {
-                  auto& suppressLayers =
-                      CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.suppressLayers;
-                  return std::find(suppressLayers.begin(), suppressLayers.end(),
-                                   element.layerName) != suppressLayers.end();
-                }),
+            std::remove_if(properties.begin(), properties.end(),
+                           [](VkLayerProperties& element) {
+                             auto& suppressLayers =
+                                 CGitsPluginVulkan::Configuration().vulkan.shared.suppressLayers;
+                             return std::find(suppressLayers.begin(), suppressLayers.end(),
+                                              element.layerName) != suppressLayers.end();
+                           }),
             properties.end());
       }
     }
@@ -739,9 +737,9 @@ VkResult recExecWrap_vkEnumerateInstanceExtensionProperties(const char* pLayerNa
   VkResult return_value =
       drvVk.vkEnumerateInstanceExtensionProperties(pLayerName, pPropertyCount, pProperties);
 
-  if (CGitsPluginVulkan::Configuration().recorder.basic.enabled &&
+  if (CGitsPluginVulkan::Configuration().common.recorder.enabled &&
       !CGitsPluginVulkan::_recorderFinished &&
-      !CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.suppressExtensions.empty()) {
+      !CGitsPluginVulkan::Configuration().vulkan.shared.suppressExtensions.empty()) {
     uint32_t propertyCount = 0;
     std::vector<VkExtensionProperties> properties;
 
@@ -753,14 +751,14 @@ VkResult recExecWrap_vkEnumerateInstanceExtensionProperties(const char* pLayerNa
       if (drvVk.vkEnumerateInstanceExtensionProperties(pLayerName, &propertyCount,
                                                        properties.data()) == VK_SUCCESS) {
         properties.erase(
-            std::remove_if(properties.begin(), properties.end(),
-                           [](VkExtensionProperties& element) {
-                             auto& suppressExtensions =
-                                 CGitsPluginVulkan::Configuration()
-                                     .recorder.vulkan.utilities.suppressExtensions;
-                             return std::find(suppressExtensions.begin(), suppressExtensions.end(),
-                                              element.extensionName) != suppressExtensions.end();
-                           }),
+            std::remove_if(
+                properties.begin(), properties.end(),
+                [](VkExtensionProperties& element) {
+                  auto& suppressExtensions =
+                      CGitsPluginVulkan::Configuration().vulkan.shared.suppressExtensions;
+                  return std::find(suppressExtensions.begin(), suppressExtensions.end(),
+                                   element.extensionName) != suppressExtensions.end();
+                }),
             properties.end());
       }
     }
@@ -797,9 +795,9 @@ VkResult recExecWrap_vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalD
   VkResult return_value =
       drvVk.vkEnumerateDeviceLayerProperties(physicalDevice, pPropertyCount, pProperties);
 
-  if (CGitsPluginVulkan::Configuration().recorder.basic.enabled &&
+  if (CGitsPluginVulkan::Configuration().common.recorder.enabled &&
       !CGitsPluginVulkan::_recorderFinished &&
-      !CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.suppressLayers.empty()) {
+      !CGitsPluginVulkan::Configuration().vulkan.shared.suppressLayers.empty()) {
     uint32_t propertyCount = 0;
     std::vector<VkLayerProperties> properties;
 
@@ -811,14 +809,13 @@ VkResult recExecWrap_vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalD
       if (drvVk.vkEnumerateDeviceLayerProperties(physicalDevice, &propertyCount,
                                                  properties.data()) == VK_SUCCESS) {
         properties.erase(
-            std::remove_if(
-                properties.begin(), properties.end(),
-                [](VkLayerProperties& element) {
-                  auto& suppressLayers =
-                      CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.suppressLayers;
-                  return std::find(suppressLayers.begin(), suppressLayers.end(),
-                                   element.layerName) != suppressLayers.end();
-                }),
+            std::remove_if(properties.begin(), properties.end(),
+                           [](VkLayerProperties& element) {
+                             auto& suppressLayers =
+                                 CGitsPluginVulkan::Configuration().vulkan.shared.suppressLayers;
+                             return std::find(suppressLayers.begin(), suppressLayers.end(),
+                                              element.layerName) != suppressLayers.end();
+                           }),
             properties.end());
       }
     }
@@ -859,9 +856,9 @@ VkResult recExecWrap_vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physi
   VkResult return_value = drvVk.vkEnumerateDeviceExtensionProperties(physicalDevice, pLayerName,
                                                                      pPropertyCount, pProperties);
 
-  if (CGitsPluginVulkan::Configuration().recorder.basic.enabled &&
+  if (CGitsPluginVulkan::Configuration().common.recorder.enabled &&
       !CGitsPluginVulkan::_recorderFinished &&
-      !CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.suppressExtensions.empty()) {
+      !CGitsPluginVulkan::Configuration().vulkan.shared.suppressExtensions.empty()) {
     uint32_t propertyCount = 0;
     std::vector<VkExtensionProperties> properties;
 
@@ -873,14 +870,14 @@ VkResult recExecWrap_vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physi
       if (drvVk.vkEnumerateDeviceExtensionProperties(physicalDevice, pLayerName, &propertyCount,
                                                      properties.data()) == VK_SUCCESS) {
         properties.erase(
-            std::remove_if(properties.begin(), properties.end(),
-                           [](VkExtensionProperties& element) {
-                             auto& suppressExtensions =
-                                 CGitsPluginVulkan::Configuration()
-                                     .recorder.vulkan.utilities.suppressExtensions;
-                             return std::find(suppressExtensions.begin(), suppressExtensions.end(),
-                                              element.extensionName) != suppressExtensions.end();
-                           }),
+            std::remove_if(
+                properties.begin(), properties.end(),
+                [](VkExtensionProperties& element) {
+                  auto& suppressExtensions =
+                      CGitsPluginVulkan::Configuration().vulkan.shared.suppressExtensions;
+                  return std::find(suppressExtensions.begin(), suppressExtensions.end(),
+                                   element.extensionName) != suppressExtensions.end();
+                }),
             properties.end());
       }
     }
@@ -906,7 +903,7 @@ VkResult recExecWrap_vkCreateImage(VkDevice device,
   {
     VkImageCreateInfo* originalCreateInfo = const_cast<VkImageCreateInfo*>(pCreateInfo);
     originalCreateInfo->usage |= static_cast<VkImageUsageFlags>(
-        CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.addImageUsageFlags);
+        CGitsPluginVulkan::Configuration().vulkan.recorder.addImageUsageFlags);
 
     // Handle offscreen applications
     if (CGitsPluginVulkan::RecorderWrapper().IsImagePresentable(pCreateInfo)) {
@@ -917,11 +914,9 @@ VkResult recExecWrap_vkCreateImage(VkDevice device,
   // Local changes - impact only current execution
   VkImageCreateInfo localCreateInfo = *pCreateInfo;
 
-  if (CGitsPluginVulkan::Configuration().recorder.basic.enabled) {
-    if ((CGitsPluginVulkan::Configuration().recorder.vulkan.capture.mode.find("All") ==
-         std::string::npos) &&
-        (CGitsPluginVulkan::Configuration()
-             .recorder.vulkan.utilities.crossPlatformStateRestoration.images)) {
+  if (CGitsPluginVulkan::Configuration().common.recorder.enabled) {
+    if ((CGitsPluginVulkan::Configuration().vulkan.recorder.mode != TVulkanRecorderMode::ALL) &&
+        (CGitsPluginVulkan::Configuration().vulkan.recorder.crossPlatformStateRestoration.images)) {
       localCreateInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     }
   }
@@ -945,24 +940,22 @@ VkResult recExecWrap_vkCreateBuffer(VkDevice device,
 
     if (isBitSet(originalCreateInfo->usage, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) &&
         CGitsPluginVulkan::Configuration()
-            .recorder.vulkan.utilities
-            .useCaptureReplayFeaturesForBuffersAndAccelerationStructures) {
+            .vulkan.recorder.useCaptureReplayFeaturesForBuffersAndAccelerationStructures) {
       originalCreateInfo->flags |= VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
     }
     originalCreateInfo->usage |= static_cast<VkBufferUsageFlags>(
-        CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.addBufferUsageFlags);
+        CGitsPluginVulkan::Configuration().vulkan.recorder.addBufferUsageFlags);
   }
 
   // Local changes - impact only current execution
   {
     VkBufferCreateInfo localCreateInfo = *pCreateInfo;
 
-    if (CGitsPluginVulkan::Configuration().recorder.basic.enabled &&
-        (CGitsPluginVulkan::Configuration().recorder.vulkan.capture.mode.find("All") ==
-         std::string::npos) &&
-        (TBufferStateRestoration::BUFFER_STATE_RESTORATION_NONE !=
+    if (CGitsPluginVulkan::Configuration().common.recorder.enabled &&
+        (CGitsPluginVulkan::Configuration().vulkan.recorder.mode != TVulkanRecorderMode::ALL) &&
+        (TBufferStateRestoration::NONE !=
          CGitsPluginVulkan::Configuration()
-             .recorder.vulkan.utilities.crossPlatformStateRestoration.buffers)) {
+             .vulkan.recorder.crossPlatformStateRestoration.buffers)) {
       localCreateInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     }
     return CGitsPluginVulkan::RecorderWrapper().Drivers().vkCreateBuffer(device, &localCreateInfo,
@@ -979,17 +972,15 @@ VkResult recExecWrap_vkCreateSwapchainKHR(VkDevice device,
     VkSwapchainCreateInfoKHR* originalCreateInfo =
         const_cast<VkSwapchainCreateInfoKHR*>(pCreateInfo);
     originalCreateInfo->imageUsage |= static_cast<VkImageUsageFlags>(
-        CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.addImageUsageFlags);
+        CGitsPluginVulkan::Configuration().vulkan.recorder.addImageUsageFlags);
   }
 
   // Local changes - impact only current execution
   VkSwapchainCreateInfoKHR localCreateInfo = *pCreateInfo;
 
-  if (CGitsPluginVulkan::Configuration().recorder.basic.enabled) {
-    if ((CGitsPluginVulkan::Configuration().recorder.vulkan.capture.mode.find("All") ==
-         std::string::npos) &&
-        CGitsPluginVulkan::Configuration()
-            .recorder.vulkan.utilities.crossPlatformStateRestoration.images) {
+  if (CGitsPluginVulkan::Configuration().common.recorder.enabled) {
+    if ((CGitsPluginVulkan::Configuration().vulkan.recorder.mode != TVulkanRecorderMode::ALL) &&
+        CGitsPluginVulkan::Configuration().vulkan.recorder.crossPlatformStateRestoration.images) {
       localCreateInfo.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     }
   }
@@ -1006,7 +997,7 @@ VkResult recExecWrap_vkCreateRayTracingPipelinesKHR(
     const VkAllocationCallbacks* pAllocator,
     VkPipeline* pPipelines) {
   if (CGitsPluginVulkan::Configuration()
-          .recorder.vulkan.utilities.useCaptureReplayFeaturesForRayTracingPipelines) {
+          .vulkan.recorder.useCaptureReplayFeaturesForRayTracingPipelines) {
     for (uint32_t i = 0; i < createInfoCount; ++i) {
       auto& originalCreateInfo = const_cast<VkRayTracingPipelineCreateInfoKHR&>(pCreateInfos[i]);
       originalCreateInfo.flags |=
@@ -1020,9 +1011,8 @@ VkResult recExecWrap_vkCreateRayTracingPipelinesKHR(
 
 namespace {
 
-VkDeviceSize GetOverriddenMemorySize(
-    VkDeviceSize base,
-    gits::Config::Recorder::Vulkan::MemorySizeRequirementOverride const& modifier) {
+VkDeviceSize GetOverriddenMemorySize(VkDeviceSize base,
+                                     gits::MemorySizeRequirementOverride const& modifier) {
   if ((modifier.percent > 0) || (modifier.fixedAmount > 0)) {
     base = base * (100 + modifier.percent) * 0.01 + modifier.fixedAmount;
 
@@ -1049,25 +1039,24 @@ VkDeviceSize GetOverriddenMemorySize(
 
 void ProcessImageMemoryRequirements(VkMemoryRequirements* pMemoryRequirements) {
   auto& config = CGitsPluginVulkan::Configuration();
-  if (config.recorder.basic.enabled) {
+  if (config.common.recorder.enabled) {
     pMemoryRequirements->size = GetOverriddenMemorySize(
-        pMemoryRequirements->size,
-        config.recorder.vulkan.utilities.increaseImageMemorySizeRequirement);
+        pMemoryRequirements->size, config.vulkan.recorder.increaseImageMemorySizeRequirement);
 
-    if (config.recorder.vulkan.utilities.memoryOffsetAlignmentOverride.images > 0) {
-      if ((config.recorder.vulkan.utilities.memoryOffsetAlignmentOverride.images <
+    if (config.vulkan.recorder.memoryOffsetAlignmentOverride.images > 0) {
+      if ((config.vulkan.recorder.memoryOffsetAlignmentOverride.images <
            pMemoryRequirements->alignment) ||
-          (config.recorder.vulkan.utilities.memoryOffsetAlignmentOverride.images %
+          (config.vulkan.recorder.memoryOffsetAlignmentOverride.images %
                pMemoryRequirements->alignment !=
            0)) {
         Log(WARN)
             << "Override memory offset alignment: "
-            << config.recorder.vulkan.utilities.memoryOffsetAlignmentOverride.images
+            << config.vulkan.recorder.memoryOffsetAlignmentOverride.images
             << " is lower and/or not a multiple of the required image memory offset alignment: "
             << pMemoryRequirements->alignment << ". Override ignored!";
       } else {
         pMemoryRequirements->alignment =
-            config.recorder.vulkan.utilities.memoryOffsetAlignmentOverride.images;
+            config.vulkan.recorder.memoryOffsetAlignmentOverride.images;
       }
     }
   }
@@ -1076,21 +1065,20 @@ void ProcessImageMemoryRequirements(VkMemoryRequirements* pMemoryRequirements) {
 void ProcessBufferMemoryRequirements(VkMemoryRequirements* pMemoryRequirements) {
   auto& config = CGitsPluginVulkan::Configuration();
 
-  if (config.recorder.basic.enabled &&
-      (config.recorder.vulkan.utilities.memoryOffsetAlignmentOverride.buffers > 0)) {
-    if ((config.recorder.vulkan.utilities.memoryOffsetAlignmentOverride.buffers <
+  if (config.common.recorder.enabled &&
+      (config.vulkan.recorder.memoryOffsetAlignmentOverride.buffers > 0)) {
+    if ((config.vulkan.recorder.memoryOffsetAlignmentOverride.buffers <
          pMemoryRequirements->alignment) ||
-        (config.recorder.vulkan.utilities.memoryOffsetAlignmentOverride.buffers %
+        (config.vulkan.recorder.memoryOffsetAlignmentOverride.buffers %
              pMemoryRequirements->alignment !=
          0)) {
       Log(WARN)
           << "Override memory offset alignment: "
-          << config.recorder.vulkan.utilities.memoryOffsetAlignmentOverride.buffers
+          << config.vulkan.recorder.memoryOffsetAlignmentOverride.buffers
           << " is lower and/or not a multiple of the required buffer memory offset alignment: "
           << pMemoryRequirements->alignment << ". Override ignored!";
     } else {
-      pMemoryRequirements->alignment =
-          config.recorder.vulkan.utilities.memoryOffsetAlignmentOverride.buffers;
+      pMemoryRequirements->alignment = config.vulkan.recorder.memoryOffsetAlignmentOverride.buffers;
     }
   }
 }
@@ -1098,50 +1086,50 @@ void ProcessBufferMemoryRequirements(VkMemoryRequirements* pMemoryRequirements) 
 void ProcessPhysicalDeviceProperties(VkPhysicalDeviceProperties* pProperties) {
   auto& config = CGitsPluginVulkan::Configuration();
 
-  if (config.recorder.basic.enabled &&
-      (config.recorder.vulkan.utilities.memoryOffsetAlignmentOverride.descriptors > 0)) {
-    if ((config.recorder.vulkan.utilities.memoryOffsetAlignmentOverride.descriptors <
+  if (config.common.recorder.enabled &&
+      (config.vulkan.recorder.memoryOffsetAlignmentOverride.descriptors > 0)) {
+    if ((config.vulkan.recorder.memoryOffsetAlignmentOverride.descriptors <
          pProperties->limits.minTexelBufferOffsetAlignment) ||
-        (config.recorder.vulkan.utilities.memoryOffsetAlignmentOverride.descriptors %
+        (config.vulkan.recorder.memoryOffsetAlignmentOverride.descriptors %
              pProperties->limits.minTexelBufferOffsetAlignment !=
          0)) {
       Log(WARN) << "Override memory offset alignment: "
-                << config.recorder.vulkan.utilities.memoryOffsetAlignmentOverride.descriptors
+                << config.vulkan.recorder.memoryOffsetAlignmentOverride.descriptors
                 << " is lower and/or not a multiple of the required minTexelBufferOffsetAlignment: "
                 << pProperties->limits.minTexelBufferOffsetAlignment << ". Override ignored!";
     } else {
       pProperties->limits.minTexelBufferOffsetAlignment =
-          config.recorder.vulkan.utilities.memoryOffsetAlignmentOverride.descriptors;
+          config.vulkan.recorder.memoryOffsetAlignmentOverride.descriptors;
     }
 
-    if ((config.recorder.vulkan.utilities.memoryOffsetAlignmentOverride.descriptors <
+    if ((config.vulkan.recorder.memoryOffsetAlignmentOverride.descriptors <
          pProperties->limits.minUniformBufferOffsetAlignment) ||
-        (config.recorder.vulkan.utilities.memoryOffsetAlignmentOverride.descriptors %
+        (config.vulkan.recorder.memoryOffsetAlignmentOverride.descriptors %
              pProperties->limits.minUniformBufferOffsetAlignment !=
          0)) {
       Log(WARN)
           << "Override memory offset alignment: "
-          << config.recorder.vulkan.utilities.memoryOffsetAlignmentOverride.descriptors
+          << config.vulkan.recorder.memoryOffsetAlignmentOverride.descriptors
           << " is lower and/or not a multiple of the required minUniformBufferOffsetAlignment: "
           << pProperties->limits.minUniformBufferOffsetAlignment << ". Override ignored!";
     } else {
       pProperties->limits.minUniformBufferOffsetAlignment =
-          config.recorder.vulkan.utilities.memoryOffsetAlignmentOverride.descriptors;
+          config.vulkan.recorder.memoryOffsetAlignmentOverride.descriptors;
     }
 
-    if ((config.recorder.vulkan.utilities.memoryOffsetAlignmentOverride.descriptors <
+    if ((config.vulkan.recorder.memoryOffsetAlignmentOverride.descriptors <
          pProperties->limits.minStorageBufferOffsetAlignment) ||
-        (config.recorder.vulkan.utilities.memoryOffsetAlignmentOverride.descriptors %
+        (config.vulkan.recorder.memoryOffsetAlignmentOverride.descriptors %
              pProperties->limits.minStorageBufferOffsetAlignment !=
          0)) {
       Log(WARN)
           << "Override memory offset alignment: "
-          << config.recorder.vulkan.utilities.memoryOffsetAlignmentOverride.descriptors
+          << config.vulkan.recorder.memoryOffsetAlignmentOverride.descriptors
           << " is lower and/or not a multiple of the required minStorageBufferOffsetAlignment: "
           << pProperties->limits.minStorageBufferOffsetAlignment << ". Override ignored!";
     } else {
       pProperties->limits.minStorageBufferOffsetAlignment =
-          config.recorder.vulkan.utilities.memoryOffsetAlignmentOverride.descriptors;
+          config.vulkan.recorder.memoryOffsetAlignmentOverride.descriptors;
     }
   }
 }
@@ -1205,18 +1193,17 @@ void recExecWrap_vkGetAccelerationStructureBuildSizesKHR(
       device, buildType, pBuildInfo, pMaxPrimitiveCounts, pSizeInfo);
 
   auto& config = CGitsPluginVulkan::Configuration();
-  if (config.recorder.basic.enabled) {
+  if (config.common.recorder.enabled) {
     pSizeInfo->accelerationStructureSize = GetOverriddenMemorySize(
         pSizeInfo->accelerationStructureSize,
-        config.recorder.vulkan.utilities.increaseAccelerationStructureMemorySizeRequirement
+        config.vulkan.recorder.increaseAccelerationStructureMemorySizeRequirement
             .accelerationStructureSize);
     pSizeInfo->buildScratchSize = GetOverriddenMemorySize(
         pSizeInfo->buildScratchSize,
-        config.recorder.vulkan.utilities.increaseAccelerationStructureMemorySizeRequirement
-            .buildScratchSize);
+        config.vulkan.recorder.increaseAccelerationStructureMemorySizeRequirement.buildScratchSize);
     pSizeInfo->updateScratchSize = GetOverriddenMemorySize(
         pSizeInfo->updateScratchSize,
-        config.recorder.vulkan.utilities.increaseAccelerationStructureMemorySizeRequirement
+        config.vulkan.recorder.increaseAccelerationStructureMemorySizeRequirement
             .updateScratchSize);
   }
 }
@@ -1247,8 +1234,7 @@ void recExecWrap_vkGetPhysicalDeviceFeatures(VkPhysicalDevice physicalDevice,
   CGitsPluginVulkan::RecorderWrapper().Drivers().vkGetPhysicalDeviceFeatures(physicalDevice,
                                                                              pFeatures);
   CGitsPluginVulkan::RecorderWrapper().SuppressPhysicalDeviceFeatures(
-      CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.suppressPhysicalDeviceFeatures,
-      pFeatures);
+      CGitsPluginVulkan::Configuration().vulkan.shared.suppressPhysicalDeviceFeatures, pFeatures);
 }
 
 void recExecWrap_vkGetPhysicalDeviceFeatures2(VkPhysicalDevice physicalDevice,
@@ -1256,7 +1242,7 @@ void recExecWrap_vkGetPhysicalDeviceFeatures2(VkPhysicalDevice physicalDevice,
   CGitsPluginVulkan::RecorderWrapper().Drivers().vkGetPhysicalDeviceFeatures2(physicalDevice,
                                                                               pFeatures);
   CGitsPluginVulkan::RecorderWrapper().SuppressPhysicalDeviceFeatures(
-      CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.suppressPhysicalDeviceFeatures,
+      CGitsPluginVulkan::Configuration().vulkan.shared.suppressPhysicalDeviceFeatures,
       &pFeatures->features);
 }
 
@@ -1265,7 +1251,7 @@ void recExecWrap_vkGetPhysicalDeviceFeatures2KHR(VkPhysicalDevice physicalDevice
   CGitsPluginVulkan::RecorderWrapper().Drivers().vkGetPhysicalDeviceFeatures2KHR(physicalDevice,
                                                                                  pFeatures);
   CGitsPluginVulkan::RecorderWrapper().SuppressPhysicalDeviceFeatures(
-      CGitsPluginVulkan::Configuration().recorder.vulkan.utilities.suppressPhysicalDeviceFeatures,
+      CGitsPluginVulkan::Configuration().vulkan.shared.suppressPhysicalDeviceFeatures,
       &pFeatures->features);
 }
 } // namespace Vulkan

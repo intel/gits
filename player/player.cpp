@@ -41,8 +41,9 @@
 gits::CPlayer::CPlayer() : _state(STATE_RUNNING) {
   CGits::Instance().SetSC(&this->_sc);
   const auto& cfg = Config::Get();
-  _interactive = cfg.player.interactive;
-  _sc.scheduler.reset(new CScheduler(cfg.common.tokenBurst, cfg.common.tokenBurstNum));
+  _interactive = cfg.common.player.interactive;
+  _sc.scheduler.reset(
+      new CScheduler(cfg.common.player.tokenBurst, cfg.common.player.tokenBurstNum));
 }
 
 gits::CPlayer::~CPlayer() {}
@@ -88,26 +89,27 @@ void gits::CPlayer::Play() {
   // or we are on a token that makes us process events and
   // frame number is matching our last frame + 1
   // (so we have played back frame 'exitFrame'.
-  if (finished || CGits::Instance().CurrentFrame() == Config::Get().player.exitFrame + 1 ||
+  if (finished || CGits::Instance().CurrentFrame() == Config::Get().common.player.exitFrame + 1 ||
       CGits::Instance().Finished() == true) {
     _state = STATE_FINISHED;
     CGits::Instance().ProcessEndPlaybackEvents();
   }
 
   // Only pause when
-  if (_interactive || Config::Get().player.stopAfterFrames[CGits::Instance().CurrentFrame()]) {
+  if (_interactive ||
+      Config::Get().common.player.stopAfterFrames[CGits::Instance().CurrentFrame()]) {
     _state = STATE_PAUSED;
   }
 }
 
 void gits::CPlayer::GLResourceCleanup() {
-  if (gits::Config::Get().player.cleanResourcesOnExit) {
+  if (gits::Config::Get().common.player.cleanResourcesOnExit) {
     gits::OpenGL::CleanResources();
   }
 }
 
 void gits::CPlayer::GLContextsCleanup() {
-  if (gits::Config::Get().player.destroyContextsOnExit) {
+  if (gits::Config::Get().opengl.player.destroyContextsOnExit) {
     gits::OpenGL::DestroyAllContexts();
   }
 }

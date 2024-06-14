@@ -53,7 +53,7 @@ void CGitsPluginVulkan::Initialize() {
     _loader.reset(new CGitsLoader("GITSRecorderVulkan"));
     _recorderWrapper = (decltype(_recorderWrapper))_loader->GetRecorderWrapperPtr();
 
-    if (!_loader->GetConfiguration().recorder.basic.enabled) {
+    if (!_loader->GetConfiguration().common.recorder.enabled) {
       PrePostDisableVulkan();
     }
 

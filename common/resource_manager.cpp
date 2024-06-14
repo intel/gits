@@ -130,7 +130,7 @@ CResourceManager2::CResourceManager2(
 CResourceManager2::~CResourceManager2() {
   try {
     //If we have put anything in the manager index needs to be rewritten.
-    if (dirty_ && !Config::Get().recorder.extras.utilities.nullIO) {
+    if (dirty_ && !Config::Get().common.recorder.nullIO) {
       write_map(index_filename_, index_);
     }
   } catch (...) {
@@ -216,7 +216,7 @@ hash_t CResourceManager2::put(
   // Remember where data was put.
   index_[hash] = resource;
 
-  if (Config::Get().recorder.extras.utilities.highIntegrity) {
+  if (Config::Get().common.recorder.highIntegrity) {
     write_map(index_filename_, index_);
   }
 

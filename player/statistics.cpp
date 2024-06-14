@@ -55,7 +55,7 @@ void gits::CStatistics::AddToken(const gits::CToken& token) {
     // update IDs database
     _callsIds.insert(function.Id());
 
-    if (Config::Get().player.statsVerb) {
+    if (Config::Get().common.player.statsVerb) {
       unsigned argc = function.ArgumentCount();
       for (unsigned i = 0; i < argc; ++i) {
         if (const OpenGL::CGLenum* ptr =

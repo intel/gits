@@ -263,7 +263,7 @@ void COclDriver::Initialize() {
   if (_initialized) {
     return;
   }
-  std::filesystem::path path = gits::Config::Get().common.libClPath;
+  std::filesystem::path path = gits::Config::Get().common.shared.libClPath;
   Log(INFO) << "Initializing OpenCL API";
   _lib = dl::open_library(path.string().c_str());
   if (_lib == nullptr) {
@@ -291,8 +291,8 @@ static NOINLINE lua_State* GetLuaState() {
 NOINLINE bool UseTracing(const char* func) {
   const auto& cfg = Config::Get();
   return (gits::ShouldLog(gits::LogLevel::TRACE)) ||
-         (cfg.common.useEvents && LUA_FUNCTION_EXISTS(func)) ||
-         (!cfg.player.traceSelectedFrames.empty());
+         (cfg.common.shared.useEvents && LUA_FUNCTION_EXISTS(func)) ||
+         (!cfg.common.player.traceSelectedFrames.empty());
 }
 
 NOINLINE void LogFunctionBeforeContext(const char* func) {
@@ -309,7 +309,7 @@ NOINLINE void LogFunctionBeforeContext(const char* func) {
     bool call_orig = true;                                                                         \
     if (doTrace)                                                                                   \
       tracer.trace_name();                                                                         \
-    if (Config::Get().common.useEvents && !bypass_luascript) {                                     \
+    if (Config::Get().common.shared.useEvents && !bypass_luascript) {                              \
       auto L = GetLuaState();                                                                      \
       bool exists = !doTrace || lua::FunctionExists(#name, L);                                     \
       if (exists) {                                                                                \

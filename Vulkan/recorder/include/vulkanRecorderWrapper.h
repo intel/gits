@@ -101,6 +101,7 @@ public:
                                    uint32_t minor,
                                    VkPhysicalDevice physicalDevice) const override;
   void SetConfig(Config const& cfg) const override;
+  bool IsUseExternalMemoryExtensionUsed() const override;
 #include "vulkanRecorderWrapperAuto.h"
 };
 } // namespace Vulkan

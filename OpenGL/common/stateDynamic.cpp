@@ -190,7 +190,7 @@ CStateDynamic& CStateDynamic::Get() {
 }
 
 void CStateDynamic::WriteClientSizes() {
-  if (!Config::Get().recorder.basic.enabled) {
+  if (!Config::Get().common.recorder.enabled) {
     return;
   }
 
@@ -199,7 +199,7 @@ void CStateDynamic::WriteClientSizes() {
     mapAreasSizes[area.first] = area.second.size();
   }
 #ifndef BUILD_FOR_CCODE
-  write_map(Config::Get().common.streamDir / "gitsClientSizes.dat", mapAreasSizes);
+  write_map(Config::Get().common.recorder.dumpPath / "gitsClientSizes.dat", mapAreasSizes);
 #endif
 }
 
@@ -748,7 +748,7 @@ void CStateDynamicNative::UnMapEglCtxToDispSurfBySurface(void* surface) {
 //---------------------TEXTURE STATE OBJECT-----------------------------------------------
 CTextureStateObj& TextureStateObject(GLenum target, GLint texture) {
   if (texture == -1) {
-    if (Config::Get().recorder.openGL.utilities.trackTextureBindingWA) {
+    if (isTrackTextureBindingWAUsed()) {
       auto unit =
           SD().GetCurrentContextStateData().GeneralStateObjects().Data().tracked.activeTexture;
       texture = SD().GetCurrentContextStateData()
@@ -779,7 +779,7 @@ CTextureStateObj& TextureStateObject(GLenum target, GLint texture) {
 #ifndef BUILD_FOR_CCODE
 void GenMipMapStateData(GLint texture, GLenum target, GLint levels) {
   GLint bound_texture;
-  if (Config::Get().recorder.openGL.utilities.trackTextureBindingWA) {
+  if (isTrackTextureBindingWAUsed()) {
     auto unit =
         SD().GetCurrentContextStateData().GeneralStateObjects().Data().tracked.activeTexture;
     bound_texture = SD().GetCurrentContextStateData()
@@ -861,7 +861,7 @@ void GenMipMapStateData(GLint texture, GLenum target, GLint levels) {
 
 void GenMipMapStateData(GLenum target, GLint levels) {
   GLint texture;
-  if (Config::Get().recorder.openGL.utilities.trackTextureBindingWA) {
+  if (isTrackTextureBindingWAUsed()) {
     auto unit =
         SD().GetCurrentContextStateData().GeneralStateObjects().Data().tracked.activeTexture;
     texture = SD().GetCurrentContextStateData()

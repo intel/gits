@@ -16,53 +16,53 @@ class VulkanApi : public ApisIface::Api3d {
 public:
   VulkanApi() : Api3d(ApisIface::Vulkan) {}
   virtual bool CfgRec_IsAllMode() const {
-    return Config::Get().recorder.vulkan.capture.mode.find("All") != std::string::npos;
+    return Config::Get().vulkan.recorder.mode == TVulkanRecorderMode::ALL;
   }
   virtual bool CfgRec_IsFramesMode() const {
-    return Config::Get().recorder.vulkan.capture.mode.find("Frames") != std::string::npos;
+    return Config::Get().vulkan.recorder.mode == TVulkanRecorderMode::FRAMES;
   }
   virtual bool CfgRec_IsBenchmark() const {
-    return Config::Get().recorder.vulkan.performance.benchmark;
+    return Config::Get().vulkan.recorder.benchmark;
   }
   virtual unsigned CfgRec_ExitFrame() const {
-    return Config::Get().recorder.vulkan.capture.all.exitFrame;
+    return Config::Get().vulkan.recorder.all.exitFrame;
   }
   virtual int CfgRec_StartFrame() const {
-    return Config::Get().recorder.vulkan.capture.frames.startFrame;
+    return Config::Get().vulkan.recorder.frames.startFrame;
   }
   virtual int CfgRec_StopFrame() const {
-    return Config::Get().recorder.vulkan.capture.frames.stopFrame;
+    return Config::Get().vulkan.recorder.frames.stopFrame;
   }
   virtual const std::vector<unsigned>& CfgRec_StartKeys() const {
-    return Config::Get().recorder.vulkan.capture.frames.startKeys;
+    return Config::Get().vulkan.recorder.frames.startKeys;
   }
   virtual void Play_SwapAfterPrepare() const;
   virtual void Play_StateRestoreBegin() const;
   virtual void Play_StateRestoreEnd() const;
   virtual void Rec_StateRestoreFinished() const;
   virtual bool CfgRec_IsDrawsRangeMode() const {
-    return Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode ==
-           Config::MODE_VK_DRAW;
+    return Config::Get().vulkan.recorder.objRange.rangeSpecial.objMode ==
+           VulkanObjectMode::MODE_VK_DRAW;
   }
   virtual bool CfgRec_IsBlitRangeMode() const {
-    return Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode ==
-           Config::MODE_VK_BLIT;
+    return Config::Get().vulkan.recorder.objRange.rangeSpecial.objMode ==
+           VulkanObjectMode::MODE_VK_BLIT;
   }
   virtual bool CfgRec_IsDispatchRangeMode() const {
-    return Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode ==
-           Config::MODE_VK_DISPATCH;
+    return Config::Get().vulkan.recorder.objRange.rangeSpecial.objMode ==
+           VulkanObjectMode::MODE_VK_DISPATCH;
   }
   virtual bool CfgRec_IsRenderPassMode() const {
-    return Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode ==
-           Config::MODE_VK_RENDER_PASS;
+    return Config::Get().vulkan.recorder.objRange.rangeSpecial.objMode ==
+           VulkanObjectMode::MODE_VK_RENDER_PASS;
   }
   virtual bool CfgRec_IsCmdBufferMode() const {
-    return Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode ==
-           Config::MODE_VK_COMMAND_BUFFER;
+    return Config::Get().vulkan.recorder.objRange.rangeSpecial.objMode ==
+           VulkanObjectMode::MODE_VK_COMMAND_BUFFER;
   }
   virtual bool CfgRec_IsQueueSubmitMode() const {
-    return Config::Get().recorder.vulkan.capture.objRange.rangeSpecial.objMode ==
-           Config::MODE_VK_QUEUE_SUBMIT;
+    return Config::Get().vulkan.recorder.objRange.rangeSpecial.objMode ==
+           VulkanObjectMode::MODE_VK_QUEUE_SUBMIT;
   }
   virtual bool CfgRec_IsObjectToRecord() const;
   virtual bool CfgRec_IsSubcapture() const {

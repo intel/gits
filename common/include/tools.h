@@ -52,11 +52,6 @@
 #endif
 #include <cassert>
 
-namespace gits {
-enum class THashType { MURMUR, XX, INCREMENTAL_NUMBER, CRC32ISH, XXCRC32 };
-enum CompressionType : uint8_t { NONE, LZ4, ZSTD };
-} // namespace gits
-
 #include "config.h"
 
 namespace gits {
@@ -84,9 +79,7 @@ uint64_t ComputeHash(const void* data,
                      uint32_t partialHashCutoff,
                      uint32_t partialHashChunks,
                      uint32_t partialHashRatio);
-inline uint64_t ComputeHash(const void* data, size_t size, THashType type) {
-  return ComputeHash(data, size, type, false, 0, 0, 0);
-}
+uint64_t ComputeHash(const void* data, size_t size, THashType type);
 
 std::string CommandOutput(const std::string& command, bool isRecorder);
 

@@ -334,7 +334,7 @@ gits::OpenCL::CBinariesArray::CBinariesArray(const cl_uint count,
 
 void gits::OpenCL::CBinariesArray::Write(CBinOStream& stream) const {
   uint32_t size = ensure_unsigned32bit_representible<size_t>(_binaries.size());
-  if (!Config::Get().recorder.extras.utilities.nullIO) {
+  if (!Config::Get().common.recorder.nullIO) {
     stream.write((char*)&size, sizeof(size));
   }
 
@@ -454,7 +454,7 @@ void gits::OpenCL::CBinariesArray_V1::Write(CBinOStream& stream) const {
     stream << CBuffer(&_programOriginal, sizeof(_programOriginal));
   } else {
     const auto size = ensure_unsigned32bit_representible<size_t>(_binaries.size());
-    if (!Config::Get().recorder.extras.utilities.nullIO) {
+    if (!Config::Get().common.recorder.nullIO) {
       stream.write((char*)&size, sizeof(size));
     }
     if (size != 0U) {

@@ -53,8 +53,8 @@ public:
     // Bounded number of token burst alive at any one time is needed too.
     // The value is also guessed as it can vary depending on how various
     // stages retire them.
-    zone_allocator_reinitialize(Config::Get().common.tokenBurstNum + 2,
-                                Config::Get().common.tokenBurst * 64);
+    zone_allocator_reinitialize(Config::Get().common.player.tokenBurstNum + 2,
+                                Config::Get().common.player.tokenBurst * 64);
 
     try {
       unsigned totalLoaded = 0;
@@ -63,7 +63,7 @@ public:
       // Token creating function.
       auto tokenCtor = [](CId id) -> CToken* {
         CToken* token = CGits::Instance().TokenCreate(id);
-        if (Config::Get().player.logLoadedTokens) {
+        if (Config::Get().common.player.logLoadedTokens) {
           Log(INFO) << "Loading " << TryToDemangle(typeid(*token).name()).name << "...";
         }
         return token;
@@ -72,14 +72,15 @@ public:
       const auto stream = _sched._iBinStream;
       const auto tokenBurstLimit = _sched._tokenLimit;
       const auto checkpointSize = _sched._checkpointSize;
-      const auto tokenLoadLimit = Config::Get().player.tokenLoadLimit;
+      const auto tokenLoadLimit = Config::Get().common.player.tokenLoadLimit;
 
       for (;;) {
         unsigned loaded = 0;
         bool everything_loaded = false;
         uint64_t maxLoaded = std::min((uint64_t)std::numeric_limits<decltype(loaded)>::max(),
                                       (uint64_t)tokenList.max_size());
-        while ((loaded < tokenBurstLimit || Config::Get().player.loadWholeStreamBeforePlayback) &&
+        while ((loaded < tokenBurstLimit ||
+                Config::Get().common.player.loadWholeStreamBeforePlayback) &&
                !everything_loaded) {
 #ifdef GITS_DEBUG_TOKEN_SIZE
           uint64_t tokBegin = stream->tellg();
@@ -266,7 +267,7 @@ void CScheduler::Register(CToken* token) {
   // single api-mutex among all recorded apis interceptors.
   std::unique_lock<std::mutex> lock(_tokenRegisterMutex);
   _tokenList.push_back(token);
-  if (Config::Get().recorder.extras.utilities.highIntegrity) {
+  if (Config::Get().common.recorder.highIntegrity) {
     WriteChunk(false);
   }
 }
@@ -304,7 +305,7 @@ bool CScheduler::LoadChunk() {
 }
 
 void CScheduler::WriteChunk(bool purgeTokens) {
-  if (Config::Get().recorder.extras.utilities.highIntegrity) {
+  if (Config::Get().common.recorder.highIntegrity) {
     CStreamWriter::consume_tokens(_tokenList, *this, purgeTokens);
   } else {
     if (!_streamWriter.running()) {

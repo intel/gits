@@ -84,7 +84,37 @@ private:
   CPlayer& player_;
 };
 
+namespace {
+std::filesystem::path parseConfigFileOption(int& argc, char** argv) {
+  std::vector<char*> tmpArgs;
+  std::filesystem::path cfgFilePath{};
+  for (int i = 0; i < argc; i++) {
+    if (caseInsensitiveEquals(argv[i], "--configfile")) {
+      cfgFilePath = std::filesystem::absolute(argv[++i]);
+    } else {
+      tmpArgs.push_back(argv[i]);
+    }
+  }
+  argc = static_cast<int>(tmpArgs.size());
+  for (int i = 0; i < argc; i++) {
+    argv[i] = tmpArgs[i];
+  }
+  return cfgFilePath;
+}
+} // namespace
+
 int MainBody(int argc, char* argv[]) {
+  auto cfgPath = parseConfigFileOption(argc, argv);
+  if (cfgPath.empty()) {
+    cfgPath = Config::GetConfigPath(std::filesystem::absolute(argv[0]).parent_path());
+  }
+  if (!cfgPath.empty()) {
+    Config::Set(cfgPath, Config::TMode::MODE_PLAYER);
+  } else {
+    Log(WARN) << "Config file not found. The default values will be used for playback.";
+    Config::SetMode(Config::TMode::MODE_PLAYER);
+  }
+
   try {
     if (configure_player(argc, argv)) {
       return 0;
@@ -100,15 +130,15 @@ int MainBody(int argc, char* argv[]) {
   CGits& inst = CGits::Instance();
   Log(INFO, NO_PREFIX) << inst << "\n";
 
-  if (!cfg.player.outputTracePath.empty()) {
-    CLog::LogFilePlayer(cfg.player.outputTracePath);
+  if (!cfg.common.player.outputTracePath.empty()) {
+    CLog::LogFilePlayer(cfg.common.player.outputTracePath);
   }
 
   int returnValue = EXIT_SUCCESS;
 
   try {
-    if (cfg.player.signStream) {
-      sign_directory(cfg.common.streamDir);
+    if (cfg.common.player.signStream) {
+      sign_directory(cfg.common.player.streamDir);
       Log(INFO) << " (Note that all files in the stream folder and its"
                    " subfolders will be treated as stream files and signed unless they are"
                    " on GITS' internal blacklist. If necessary, you can edit the signature"
@@ -116,23 +146,23 @@ int MainBody(int argc, char* argv[]) {
       return 0;
     }
 
-    if (cfg.player.dontVerifyStream) {
+    if (cfg.common.player.dontVerifyStream) {
       Log(WARN) << "Skipping stream signature verification because --dontVerifyStream was used.";
     } else {
-      verify_directory(cfg.common.streamDir);
-    }
-    if (cfg.player.verifyStream) {
-      Log(WARN) << "Skipping stream playback because --verifyStream was used.";
-      return 0;
+      verify_directory(cfg.common.player.streamDir);
+      if (cfg.common.player.verifyStream) {
+        Log(WARN) << "Skipping stream playback because --verifyStream was used.";
+        return 0;
+      }
     }
 
-    if (cfg.player.waitForEnter) {
+    if (cfg.common.player.waitForEnter) {
       Log(OFF, NO_PREFIX) << "Waiting for ENTER press ...";
       std::cin.get();
     }
 
 #if defined GITS_PLATFORM_WINDOWS
-    if (cfg.player.escalatePriority) {
+    if (cfg.common.player.escalatePriority) {
       if (SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS)) {
         Log(INFO) << "Escalated process priority to realtime priority";
       } else {
@@ -142,10 +172,10 @@ int MainBody(int argc, char* argv[]) {
 
     int previousDesktopWidth = GetSystemMetrics(SM_CXSCREEN);
     int previousDesktopHeight = GetSystemMetrics(SM_CYSCREEN);
-    if (cfg.player.forceDesktopResolution) {
+    if (cfg.common.player.forceDesktopResolution.enabled) {
       DEVMODE devmode;
-      devmode.dmPelsWidth = cfg.player.forcedDesktopResolution[0];
-      devmode.dmPelsHeight = cfg.player.forcedDesktopResolution[1];
+      devmode.dmPelsWidth = cfg.common.player.forceDesktopResolution.width;
+      devmode.dmPelsHeight = cfg.common.player.forceDesktopResolution.height;
       ;
       devmode.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT;
       devmode.dmSize = sizeof(DEVMODE);
@@ -154,9 +184,9 @@ int MainBody(int argc, char* argv[]) {
     }
 
 #ifdef WITH_VULKAN
-    if (cfg.player.renderDoc.frameRecEnabled || cfg.player.renderDoc.queuesubmitRecEnabled) {
-      if (!cfg.player.renderDoc.dllPath.empty()) {
-        Vulkan::RenderDocUtil::dllpath = cfg.player.renderDoc.dllPath.string();
+    if (cfg.vulkan.player.renderDoc.mode != TVkRenderDocCaptureMode::NONE) {
+      if (!cfg.vulkan.player.renderDoc.dllPath.empty()) {
+        Vulkan::RenderDocUtil::dllpath = cfg.vulkan.player.renderDoc.dllPath.string();
       } else {
         Vulkan::RenderDocUtil::dllpath = GetRenderDocDllPath();
       }
@@ -165,13 +195,13 @@ int MainBody(int argc, char* argv[]) {
 #endif
 #endif
 
-    if (cfg.common.useEvents) {
+    if (cfg.common.shared.useEvents) {
       CGits::Instance().ProcessLuaFunctionsRegistrators();
     }
     // initialize GITS
     Log(INFO, NO_PREFIX) << "Initializing...";
 #if WITH_OPENCL
-    if (!cfg.player.noOpenCL) {
+    if (!cfg.opencl.player.noOpenCL) {
       inst.Register(std::shared_ptr<CLibrary>(new OpenCL::CLibrary));
     }
 #endif
@@ -188,27 +218,25 @@ int MainBody(int argc, char* argv[]) {
 
     // create player
     CPlayer player;
-
     Log(INFO, NO_PREFIX) << "\nLoading...";
 
     // load function calls from a file
-    player.Load(cfg.player.streamPath);
+    player.Load(cfg.common.player.streamPath);
 
-    inst.ResourceManagerInit(cfg.common.streamDir);
-
-    if (cfg.player.diags) {
+    inst.ResourceManagerInit(cfg.common.player.streamDir);
+    if (cfg.common.player.diags) {
       std::cout << CGits::Instance().File().ReadProperties();
       return 0;
     }
 
-    if (cfg.player.stats) {
+    if (cfg.common.player.stats) {
       // print statistics
-      player.StatisticsPrint(cfg.player.statsVerb);
+      player.StatisticsPrint(cfg.common.player.statsVerb);
       return 0;
     }
 
     // register tokens executor
-    if (cfg.player.faithfulThreading) {
+    if (cfg.common.player.faithfulThreading) {
       player.Register(std::make_unique<CSequentialExecutor>());
     } else {
       player.Register(std::make_unique<CAction>());
@@ -220,7 +248,7 @@ int MainBody(int argc, char* argv[]) {
     // check if all functions can be run on that system
     Log(INFO, NO_PREFIX) << "Playing...";
 
-    if (Config::Get().common.useEvents) {
+    if (Config::Get().common.shared.useEvents) {
       try {
         CGits::Instance().PlaybackEvents().programStart();
       } catch (std::runtime_error& e) {
@@ -256,9 +284,10 @@ int MainBody(int argc, char* argv[]) {
     }
 
     // Writes performance results to .csv file
-    if (cfg.player.benchmark) {
-      std::filesystem::path outBench =
-          cfg.player.outputDir.empty() ? cfg.player.applicationPath : cfg.player.outputDir;
+    if (cfg.common.player.benchmark) {
+      std::filesystem::path outBench = cfg.common.player.outputDir.empty()
+                                           ? cfg.common.player.applicationPath
+                                           : cfg.common.player.outputDir;
       std::filesystem::create_directories(outBench);
       outBench /= "benchmark.csv";
       std::ofstream timeDataFile(outBench, std::ios::binary | std::ios::out);
@@ -269,7 +298,7 @@ int MainBody(int argc, char* argv[]) {
     CGits::Instance().CloseUnZipFileGLPrograms();
 
 #ifdef GITS_PLATFORM_WINDOWS
-    if (cfg.player.forceDesktopResolution) {
+    if (cfg.common.player.forceDesktopResolution.enabled) {
       DEVMODE devmode;
       devmode.dmPelsWidth = previousDesktopWidth;
       devmode.dmPelsHeight = previousDesktopHeight;
@@ -292,7 +321,7 @@ int MainBody(int argc, char* argv[]) {
     returnValue = EXIT_FAILURE;
   }
 
-  if (Config::Get().common.useEvents) {
+  if (Config::Get().common.shared.useEvents) {
     try {
       CGits::Instance().PlaybackEvents().programExit();
     } catch (std::runtime_error& e) {
@@ -303,7 +332,7 @@ int MainBody(int argc, char* argv[]) {
 
   CGits::Instance().Dispose();
 
-  if (Config::Get().player.waitForEnter) {
+  if (Config::Get().common.player.waitForEnter) {
     Log(OFF, NO_PREFIX) << "Waiting for ENTER press ...";
     std::cin.get();
   }
@@ -325,8 +354,8 @@ void ShowCallstack(PEXCEPTION_POINTERS exceptionPtr) {
 LONG WINAPI ExceptionFilter(PEXCEPTION_POINTERS exceptionPtr) {
   ShowExceptionInfo(exceptionPtr);
   ShowCallstack(exceptionPtr);
-  return Config::Get().player.disableExceptionHandling ? EXCEPTION_CONTINUE_SEARCH
-                                                       : EXCEPTION_EXECUTE_HANDLER;
+  return Config::Get().common.player.disableExceptionHandling ? EXCEPTION_CONTINUE_SEARCH
+                                                              : EXCEPTION_EXECUTE_HANDLER;
 }
 #endif
 } // namespace gits

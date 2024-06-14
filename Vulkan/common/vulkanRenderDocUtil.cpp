@@ -27,19 +27,19 @@ RenderDocUtil::RenderDocCapturer::RenderDocCapturer(VkInstance instance)
 
 void RenderDocUtil::RenderDocCapturer::SetCapturePath() {
   const auto& cfg = Config::Get();
-  const auto& cfgRenderDoc = cfg.player.renderDoc;
+  const auto& cfgRenderDoc = cfg.vulkan.player.renderDoc;
 
   std::string baseName;
   std::string fileName;
 
-  if (cfgRenderDoc.frameRecEnabled) {
+  if (cfgRenderDoc.mode == TVkRenderDocCaptureMode::FRAMES) {
     baseName = "frame_";
     if (cfgRenderDoc.continuousCapture) {
       fileName = baseName + cfgRenderDoc.captureRange.StrValue();
     } else {
       fileName = baseName + std::to_string(CGits::Instance().CurrentFrame());
     }
-  } else if (cfgRenderDoc.queuesubmitRecEnabled) {
+  } else if (cfgRenderDoc.mode == TVkRenderDocCaptureMode::QUEUE_SUBMIT) {
     baseName = "queuesubmit_";
     if (cfgRenderDoc.continuousCapture) {
       fileName = baseName + cfgRenderDoc.captureRange.StrValue();
@@ -49,7 +49,7 @@ void RenderDocUtil::RenderDocCapturer::SetCapturePath() {
   }
 
   std::stringstream capturePath;
-  capturePath << cfg.common.streamDir.string() << "/RenderDoc/" << fileName << "_inst_"
+  capturePath << cfg.common.player.streamDir.string() << "/RenderDoc/" << fileName << "_inst_"
               << capturerID;
   std::string capturePathStr = capturePath.str();
   rdoc->SetCaptureFilePathTemplate(capturePathStr.c_str());

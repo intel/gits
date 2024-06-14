@@ -36,7 +36,7 @@ gits::FPrintHandler STDCALL PrintHandlerGet(const char* dir) {
 
 const gits::Config* STDCALL Configure(const char* cfgDir) {
   try {
-    if (!gits::Config::Set(cfgDir)) {
+    if (!gits::Config::Set(std::filesystem::path(cfgDir) / gits::Config::CONFIG_FILE_NAME)) {
       return nullptr;
     }
     return &gits::Config::Get();

@@ -115,15 +115,15 @@ CGits::~CGits() {
     _compressor.reset();
 
     // Only create signature when recording, player can opt in through option.
-    if (Config::Get().IsRecorder() && Config::Get().recorder.basic.enabled) {
-      sign_directory(Config::Get().common.streamDir);
+    if (Config::Get().IsRecorder() && Config::Get().common.recorder.enabled) {
+      sign_directory(Config::Get().common.recorder.dumpPath);
     }
 
     // Create a buildable CCode project by automatically copying necessary files.
     // TODO: extract it to a separate function.
-    if (Config::Get().recorder.basic.enabled && Config::Get().recorder.basic.dumpCCode) {
-      auto& dumpPath = Config::Get().common.streamDir;
-      auto& installPath = Config::Get().common.installPath;
+    if (Config::Get().IsRecorder() && Config::Get().dumpCCode()) {
+      auto& dumpPath = Config::Get().common.recorder.dumpPath;
+      auto& installPath = Config::Get().common.recorder.installPath;
       std::filesystem::path ccodePath = installPath.parent_path() / "CCode";
       std::filesystem::path ccodeFiles[] = {dumpPath / "stream_externs.cpp",
                                             dumpPath / "stream_externs.h",
@@ -180,7 +180,7 @@ zipFile CGits::OpenZipFileGLPrograms() {
     return _glProgramsZipFile;
   }
 
-  std::filesystem::path path = Config::Get().common.streamDir / "gitsPrograms.zip";
+  std::filesystem::path path = Config::Get().common.recorder.dumpPath / "gitsPrograms.zip";
   auto zipName = path.string();
 
   _glProgramsZipFile = zipOpen(zipName.c_str(), APPEND_STATUS_ADDINZIP);
@@ -250,7 +250,7 @@ void CGits::OpenUnZipFileGLPrograms() {
   }
 
   //Open zip file
-  std::filesystem::path arch_path = Config::Get().common.streamDir / "gitsPrograms.zip";
+  std::filesystem::path arch_path = Config::Get().common.player.streamDir / "gitsPrograms.zip";
   _glProgramsUnZipFile = unzOpen(arch_path.string().c_str());
   if (_glProgramsUnZipFile == nullptr) {
     throw std::runtime_error("failed to open zip archive");
@@ -588,9 +588,10 @@ CBinOStream& operator<<(CBinOStream& stream, const CFile& file) {
   //Write properties to the stream file.
   //First size in bytes, than the string
   auto properties = file._properties->dump();
+
   const uint32_t propTreeSize = ensure_unsigned32bit_representible<size_t>(properties.size());
   stream.WriteToOstream(reinterpret_cast<const char*>(&propTreeSize), sizeof(propTreeSize));
-  if (!Config::Get().recorder.extras.utilities.nullIO) {
+  if (!Config::Get().common.recorder.nullIO) {
     stream.WriteToOstream(properties.c_str(), properties.size());
   }
 

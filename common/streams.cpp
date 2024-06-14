@@ -176,7 +176,7 @@ void gits::CBinOStream::write(const char* s, std::streamsize n) {
 gits::CBinOStream::CBinOStream(const std::filesystem::path& fileName)
     : std::ostream(nullptr),
       _buf(nullptr),
-      _compressionType(gits::Config::Get().recorder.extras.optimizations.compression.type),
+      _compressionType(gits::Config::Get().common.recorder.compression.type),
       _offset(0),
       _initializedCompression(false),
       _chunkSize(0) {
@@ -185,7 +185,7 @@ gits::CBinOStream::CBinOStream(const std::filesystem::path& fileName)
   _buf = initialize_gits_streambuf(fileName, mode);
   init(_buf);
   if (_compressionType != CompressionType::NONE) {
-    _chunkSize = gits::Config::Get().recorder.extras.optimizations.compression.chunkSize;
+    _chunkSize = gits::Config::Get().common.recorder.compression.chunkSize;
     _dataToCompress.resize(_chunkSize);
     _compressedDataToStore.resize(_chunkSize);
   }

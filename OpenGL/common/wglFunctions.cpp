@@ -147,12 +147,12 @@ int SelectPixelFormat(HDC dc, Cint::CSArray& attribs, Cint::CSArray& values) {
     // TODO: Use std::views::zip when available.
     for (; iter_attribs != iter_attribs_end && iter_values != iter_values_end;
          ++iter_attribs, ++iter_values) {
-      if (Config::Get().player.forceNoMSAA &&
+      if (Config::Get().opengl.player.forceNoMSAA &&
           (*iter_attribs == WGL_SAMPLES_ARB || *iter_attribs == WGL_SAMPLE_BUFFERS_ARB)) {
         continue;
       }
-      if (!Config::Get().player.minimalConfig ||
-          (Config::Get().player.minimalConfig &&
+      if (!Config::Get().opengl.player.minimalConfig ||
+          (Config::Get().opengl.player.minimalConfig &&
            (*iter_attribs == WGL_SAMPLES_ARB || *iter_attribs == WGL_SAMPLE_BUFFERS_ARB ||
             *iter_attribs == WGL_ACCELERATION_ARB || *iter_attribs == WGL_DOUBLE_BUFFER_ARB ||
             *iter_attribs == WGL_COLOR_BITS_ARB || *iter_attribs == WGL_RED_BITS_ARB ||
@@ -226,7 +226,7 @@ void UpdateWindowsRec(HWND hwnd, Cint::CSArray& winparams, CHWND::CSArray& hwnd_
     Log(WARN) << "Ignoring update parameters of an unknown window";
     //throw gits::EOperationFailed(EXCEPTION_MESSAGE); - Maya 2012 workaround
   }
-  if (Config::Get().recorder.openGL.utilities.doNotRemoveWin) {
+  if (Config::Get().opengl.recorder.doNotRemoveWin) {
     return;
   }
 
@@ -256,13 +256,13 @@ void UpdateWindows(const CHWND& hwnd,
       return;
     }
     Window_* window = state.MapFindWindowPlayer((win_handle_t)*hwnd);
-    if (!Config::Get().player.forceWindowSize) {
+    if (!Config::Get().common.player.forceWindowSize.enabled) {
       window->set_size(winparams.Vector()[2], winparams.Vector()[3]);
     }
-    if (!Config::Get().player.forceWindowPos) {
+    if (!Config::Get().common.player.forceWindowPos.enabled) {
       window->set_position(winparams.Vector()[0], winparams.Vector()[1]);
     }
-    if (!Config::Get().player.showWindowsWA) {
+    if (!Config::Get().common.player.showWindowsWA) {
       window->set_visibility((bool)winparams.Vector()[4]);
     }
   }
@@ -270,7 +270,7 @@ void UpdateWindows(const CHWND& hwnd,
   //Winapis operating on HWNDs and HDCs are thread affine so apis like CloseWindow can't be called if there is no certainty
   //that window was created in the same thread
   /// @todo Fix workaround to not close windows in multithreaded application
-  if (!CGits::Instance().MultithreadedApp() || !Config::Get().player.faithfulThreading) {
+  if (!CGits::Instance().MultithreadedApp() || !Config::Get().common.player.faithfulThreading) {
     //Delete windows
     if (!hwnd_del_list.Vector().empty()) {
       for (auto hwndIter : hwnd_del_list.Vector()) {
@@ -380,20 +380,20 @@ void gits::OpenGL::CwglSetPixelFormat::Run() {
   //CREATE WINDOW
   int xpos = _winparams.Vector()[0];
   int ypos = _winparams.Vector()[1];
-  if (Config::Get().player.forceWindowPos) {
-    xpos = Config::Get().player.windowCoords.first;
-    ypos = Config::Get().player.windowCoords.second;
+  if (Config::Get().common.player.forceWindowPos.enabled) {
+    xpos = Config::Get().common.player.forceWindowPos.x;
+    ypos = Config::Get().common.player.forceWindowPos.y;
   }
 
   int xsize = _winparams.Vector()[2];
   int ysize = _winparams.Vector()[3];
-  if (Config::Get().player.forceWindowSize) {
-    xsize = Config::Get().player.windowSize.first;
-    ysize = Config::Get().player.windowSize.second;
+  if (Config::Get().common.player.forceWindowSize.enabled) {
+    xsize = Config::Get().common.player.forceWindowSize.width;
+    ysize = Config::Get().common.player.forceWindowSize.height;
   }
 
   bool isWindowVisible = (bool)_winparams.Vector()[4];
-  if (gits::Config::Get().player.showWindowsWA) {
+  if (gits::Config::Get().common.player.showWindowsWA) {
     isWindowVisible = true;
   }
 
@@ -815,7 +815,7 @@ gits::CArgument& gits::OpenGL::CwglSwapBuffers::Argument(unsigned idx) {
 
 void gits::OpenGL::CwglSwapBuffers::Run() {
 #ifdef GITS_PLATFORM_WINDOWS
-  if (Config::Get().player.captureScreenshot) {
+  if (Config::Get().common.player.captureScreenshot) {
     drv.wgl.wglSwapIntervalEXT(1);
   }
 #endif
@@ -846,8 +846,8 @@ void gits::OpenGL::CwglSwapBuffers::Run() {
     ptbl_wglSwapBuffers(nullptr);
   }
 #ifdef GITS_PLATFORM_WINDOWS
-  if (Config::Get().player.captureFrames[CGits::Instance().CurrentFrame()] &&
-      Config::Get().player.captureScreenshot) {
+  if (Config::Get().common.player.captureFrames[CGits::Instance().CurrentFrame()] &&
+      Config::Get().common.player.captureScreenshot) {
     sleep_millisec(1000);
     ScreenshotSave(CGits::Instance().CurrentFrame(), *_hwnd);
   }

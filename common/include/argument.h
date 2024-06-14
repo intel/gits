@@ -1783,7 +1783,7 @@ gits::CArgumentSizedArrayBase<T, T_WRAP>::CArgumentSizedArrayBase(const T* init,
 template <class T, class T_WRAP>
 void gits::CArgumentSizedArrayBase<T, T_WRAP>::Write(CBinOStream& stream) const {
   uint32_t size = ensure_unsigned32bit_representible<size_t>(_array.size());
-  if (!Config::Get().recorder.extras.utilities.nullIO) {
+  if (!Config::Get().common.recorder.nullIO) {
     stream.write((char*)&size, sizeof(size));
   }
 
@@ -1936,7 +1936,7 @@ gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::CArgumentMappedSizedArray(
 template <class T, class T_WRAP, gits::MappedArrayAction T_ACTION>
 void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::Write(CBinOStream& stream) const {
   uint32_t size = ensure_unsigned32bit_representible<size_t>(_array.size());
-  if (!Config::Get().recorder.extras.utilities.nullIO) {
+  if (!Config::Get().common.recorder.nullIO) {
     stream.write((char*)&size, sizeof(size));
   }
 

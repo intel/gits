@@ -82,7 +82,7 @@ void handle_mapping_remove(int kind, MappingContext& ctx) {
 }
 
 #define GENERATE_CAPTURE_FRAME_CODE(option)                                                        \
-  if (!Config::Get().player.option.empty()) {                                                      \
+  if (!Config::Get().opengl.player.option.empty()) {                                               \
     static unsigned frame_num = 1;                                                                 \
     const auto& path = Config::Get().ccode.outputPath;                                             \
     const std::string fileName = getDumpFrameFileName(frame_num);                                  \
@@ -520,7 +520,7 @@ BOOL wglSwapBuffers_wrap(ObjName org_hdc,
                          bool ret_val) {
   UpdateWindows_(org_hwnd, winparams, wp_size, wnd_del, dw_size);
   OnFrameEnd();
-  if (Config::Get().player.captureFrames[CGits::Instance().CurrentFrame()]) {
+  if (Config::Get().common.player.captureFrames[CGits::Instance().CurrentFrame()]) {
     const std::string fileName = getDumpFrameFileName(CGits::Instance().CurrentFrame());
     gits::OpenGL::capture_drawbuffer(Config::Get().ccode.outputPath, fileName, true);
   }
@@ -687,7 +687,7 @@ BOOL wglShareLists_wrap(ObjName lhs, ObjName rhs, bool ret_val) {
 // ************************** EGL API wrappers ****************************************
 void eglSwapBuffers_wrap(ObjName org_dpy, ObjName org_surf) {
   OnFrameEnd();
-  if (Config::Get().player.captureFrames[CGits::Instance().CurrentFrame()]) {
+  if (Config::Get().common.player.captureFrames[CGits::Instance().CurrentFrame()]) {
     const auto& path = Config::Get().ccode.outputPath;
     const std::string fileName = getDumpFrameFileName(CGits::Instance().CurrentFrame());
     gits::OpenGL::capture_drawbuffer(path, fileName, true);

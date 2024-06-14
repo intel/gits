@@ -885,8 +885,7 @@ public:
   void FlagsSet(GLbitfield flags) {
     _data.track.immutable = true;
     if ((flags & GL_MAP_COHERENT_BIT) ||
-        ((flags & GL_MAP_PERSISTENT_BIT) &&
-         Config::Get().recorder.extras.utilities.coherentMapBehaviorWA)) {
+        ((flags & GL_MAP_PERSISTENT_BIT) && Config::Get().opengl.recorder.coherentMapBehaviorWA)) {
       _data.track.flags = flags | GL_MAP_READ_BIT;
     } else {
       _data.track.flags = flags;

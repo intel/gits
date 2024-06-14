@@ -96,7 +96,7 @@ void* CRecorderWrapper::GetShadowMemory(VkDeviceMemory memory,
                                         uint64_t offset) {
   //Returns a reference to shadow buffer data. Data size is being set on first use
   //if shadowBuffers option enabled
-  if (gits::Config::Get().recorder.vulkan.utilities.shadowMemory) {
+  if (gits::Config::Get().vulkan.recorder.shadowMemory) {
     auto& memoryState = SD()._devicememorystates[memory];
 
     if (!memoryState->shadowMemory) {
@@ -109,7 +109,7 @@ void* CRecorderWrapper::GetShadowMemory(VkDeviceMemory memory,
     }
 
     if (!memoryState->shadowMemory->Initialized()) {
-      memoryState->shadowMemory->Init(Config::Get().recorder.vulkan.utilities.memoryAccessDetection,
+      memoryState->shadowMemory->Init(Config::Get().vulkan.recorder.memoryAccessDetection,
                                       (size_t)unmapSize, orig);
       memoryState->shadowMemory->UpdateShadow(0, (size_t)unmapSize);
     } else {
@@ -130,7 +130,7 @@ void CRecorderWrapper::dumpScreenshot(VkQueue queue,
                                       uint32_t commandBufferBatchCounter,
                                       uint32_t commandBufferCounter) {
   if (gits::Config::Get()
-          .recorder.vulkan.images
+          .vulkan.recorder
           .dumpSubmits[(size_t)gits::CGits::Instance().vkCounters.CurrentQueueSubmitCount()]) {
     drvVk.vkQueueWaitIdle(queue);
     writeScreenshot(queue, cmdBuffer, commandBufferBatchCounter, commandBufferCounter);
@@ -156,8 +156,8 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit(VkQueue queue,
                                                    const VkSubmitInfo* pSubmits) {
   bool queueWaitIdleAlreadyUsed = false;
 
-  if (Config::Get().recorder.vulkan.utilities.memorySegmentSize ||
-      Config::Get().recorder.vulkan.utilities.shadowMemory) {
+  if (Config::Get().vulkan.recorder.memorySegmentSize ||
+      Config::Get().vulkan.recorder.shadowMemory) {
     CMemoryUpdateState toUpdate;
     toUpdate.intervalMapMemory.clear();
 
@@ -227,8 +227,8 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit(VkQueue queue,
         uint64_t size = obj3.second - obj3.first;
 
         if (offset + size <= memoryState->mapping->sizeData.Value()) {
-          if (Config::Get().recorder.vulkan.utilities.shadowMemory) {
-            if (Config::Get().recorder.vulkan.utilities.memoryAccessDetection) {
+          if (Config::Get().vulkan.recorder.shadowMemory) {
+            if (Config::Get().vulkan.recorder.memoryAccessDetection) {
               SetPagesProtection(READ_WRITE, (char*)pointer + offset, (size_t)size);
               if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
                 memoryState->shadowMemory->UpdateShadow(
@@ -246,7 +246,7 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit(VkQueue queue,
               }
             }
           }
-          if (Config::Get().recorder.vulkan.utilities.memorySegmentSize) {
+          if (Config::Get().vulkan.recorder.memorySegmentSize) {
             memcpy(&memoryState->mapping->compareData[(size_t)offset], (char*)pointer + offset,
                    (size_t)size);
           }
@@ -272,8 +272,8 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit2(VkQueue queue,
                                                     const VkSubmitInfo2* pSubmits) {
   bool queueWaitIdleAlreadyUsed = false;
 
-  if (Config::Get().recorder.vulkan.utilities.memorySegmentSize ||
-      Config::Get().recorder.vulkan.utilities.shadowMemory) {
+  if (Config::Get().vulkan.recorder.memorySegmentSize ||
+      Config::Get().vulkan.recorder.shadowMemory) {
     CMemoryUpdateState toUpdate;
     toUpdate.intervalMapMemory.clear();
 
@@ -344,8 +344,8 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit2(VkQueue queue,
         uint64_t size = obj3.second - obj3.first;
 
         if (offset + size <= memoryState->mapping->sizeData.Value()) {
-          if (Config::Get().recorder.vulkan.utilities.shadowMemory) {
-            if (Config::Get().recorder.vulkan.utilities.memoryAccessDetection) {
+          if (Config::Get().vulkan.recorder.shadowMemory) {
+            if (Config::Get().vulkan.recorder.memoryAccessDetection) {
               SetPagesProtection(READ_WRITE, (char*)pointer + offset, (size_t)size);
               if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
                 memoryState->shadowMemory->UpdateShadow(
@@ -363,7 +363,7 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit2(VkQueue queue,
               }
             }
           }
-          if (Config::Get().recorder.vulkan.utilities.memorySegmentSize) {
+          if (Config::Get().vulkan.recorder.memorySegmentSize) {
             memcpy(&memoryState->mapping->compareData[(size_t)offset], (char*)pointer + offset,
                    (size_t)size);
           }
@@ -388,10 +388,9 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit2(VkQueue queue,
 VkResult CRecorderWrapper::CheckFenceStatus(VkDevice device, VkFence fence) const {
   VkResult return_value = drvVk.vkGetFenceStatus(device, fence);
   if ((VK_SUCCESS == return_value) &&
-      (gits::Config::Get().recorder.vulkan.utilities.delayFenceChecksCount > 0)) {
+      (gits::Config::Get().vulkan.recorder.delayFenceChecksCount > 0)) {
     auto& fenceState = SD()._fencestates[fence];
-    if (fenceState->delayChecksCount <
-        gits::Config::Get().recorder.vulkan.utilities.delayFenceChecksCount) {
+    if (fenceState->delayChecksCount < gits::Config::Get().vulkan.recorder.delayFenceChecksCount) {
       return_value = VK_NOT_READY;
       fenceState->delayChecksCount++;
     }
@@ -452,20 +451,22 @@ void CRecorderWrapper::DisableConfigOptions() const {
   // By default record substreams from GITS Player using the dedicated/custom
   // method of memory changes tracking (with tags). Use the universal
   // recording/memory tracking only when forced through config option.
-  if (!cfg.recorder.vulkan.utilities.forceUniversalRecording) {
+  if (!cfg.vulkan.recorder.forceUniversalRecording) {
     Log(INFO) << "Recording a (sub)stream from GITS Player. Disabling all memory tracking-related "
                  "options!";
 
-    cfg.recorder.vulkan.utilities.memoryAccessDetection = false;
-    cfg.recorder.vulkan.utilities.memorySegmentSize = 0;
-    cfg.recorder.vulkan.utilities.shadowMemory = false;
-    cfg.recorder.vulkan.utilities.useExternalMemoryExtension = false;
-    cfg.recorder.vulkan.utilities.memoryUpdateState.setFromString("UsingTags");
+    cfg.vulkan.recorder.memoryAccessDetection = false;
+    cfg.vulkan.recorder.memorySegmentSize = 0;
+    cfg.vulkan.recorder.shadowMemory = false;
+    cfg.vulkan.recorder.memoryUpdateState.setFromString("UsingTags");
+#ifdef GITS_PLATFORM_WINDOWS
+    cfg.vulkan.recorder.useExternalMemoryExtension = false;
+#endif
   }
 
 #ifdef GITS_PLATFORM_WINDOWS
   // Disable other options when recording (sub)streams from GITS streams
-  cfg.recorder.vulkan.utilities.usePresentSrcLayoutTransitionAsAFrameBoundary = false;
+  cfg.vulkan.recorder.usePresentSrcLayoutTransitionAsAFrameBoundary = false;
 #endif
 
   gits::Config::Set(cfg);
@@ -473,8 +474,8 @@ void CRecorderWrapper::DisableConfigOptions() const {
 
 void CRecorderWrapper::StartStateRestore() const {
   auto& cfg = gits::Config::Get();
-  if (cfg.recorder.vulkan.capture.mode.find("All") != std::string::npos &&
-      cfg.recorder.basic.dumpCCode && !CGits::Instance().IsCCodeStateRestore()) {
+  if (cfg.vulkan.recorder.mode == TVulkanRecorderMode::ALL && cfg.dumpCCode() &&
+      !CGits::Instance().IsCCodeStateRestore()) {
     CGits::Instance().CCodeStateRestoreStart();
     _recorder.Schedule(
         new CTokenFrameNumber(CToken::ID_PRE_RECORD_END, CGits::Instance().CurrentFrame()));
@@ -485,8 +486,8 @@ void CRecorderWrapper::StartStateRestore() const {
 
 void CRecorderWrapper::EndStateRestore() const {
   auto& cfg = gits::Config::Get();
-  if (cfg.recorder.vulkan.capture.mode.find("All") != std::string::npos &&
-      cfg.recorder.basic.dumpCCode && CGits::Instance().IsCCodeStateRestore()) {
+  if (cfg.vulkan.recorder.mode == TVulkanRecorderMode::ALL && cfg.dumpCCode() &&
+      CGits::Instance().IsCCodeStateRestore()) {
     _recorder.Schedule(
         new CTokenFrameNumber(CToken::ID_INIT_END, CGits::Instance().CurrentFrame()));
     _recorder.Schedule(
@@ -542,6 +543,10 @@ bool CRecorderWrapper::IsVulkanAPIVersionSupported(uint32_t major,
 
 void CRecorderWrapper::SetConfig(Config const& cfg) const {
   Config::Set(cfg);
+}
+
+bool CRecorderWrapper::IsUseExternalMemoryExtensionUsed() const {
+  return isUseExternalMemoryExtensionUsed();
 }
 
 } // namespace Vulkan

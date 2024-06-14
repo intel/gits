@@ -1160,7 +1160,7 @@ void CloseRecorderIfRequired() {
 
 #define GITS_WRAPPER_PRE                                            \\
   --recursionDepth;                                                 \\
-  if (CGitsPluginVulkan::Configuration().recorder.basic.enabled) {  \\
+  if (CGitsPluginVulkan::Configuration().common.recorder.enabled) { \\
     if (recursionDepth == 0) {                                      \\
       try {
 
@@ -1543,7 +1543,7 @@ namespace gits {
         if func.get('tokenCache') is not None:
           token_buff_update = "\n  SD()._commandbufferstates[*_commandBuffer]->tokensBuffer.Add(new C%(name)s(%(argsCallOrig)s));" % {'name': versioned_name, 'argsCallOrig': argsCallOrig}
           if func.get('runWrap') is not True:
-            run_cmd = """if (Config::Get().player.execCmdBuffsBeforeQueueSubmit) {
+            run_cmd = """if (Config::Get().vulkan.player.execCmdBuffsBeforeQueueSubmit) {
     TokenBuffersUpdate();
   } else {
     Exec();
@@ -1681,7 +1681,7 @@ namespace Vulkan {
         if value.get('recCond') and (value.get('recWrap') is not True):
           rec_cond = "if (%(recCond)s) {" % {'recCond': value.get('recCond')}
         elif (value.get('recCond') is not True) and (value.get('tokenCache') is not None) and (value.get('recWrap') is not True):
-          rec_cond = "if (_recorder.Running() && !Config::Get().recorder.vulkan.utilities.scheduleCommandBuffersBeforeQueueSubmit) {"
+          rec_cond = "if (_recorder.Running() && !Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {"
         elif (value.get('recCond') is not True) and (value.get('recWrap') is not True):
           rec_cond = "if (_recorder.Running()) {"
         state_track = ""

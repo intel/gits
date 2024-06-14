@@ -52,7 +52,7 @@ public:
   public:
     std::set<uint64_t> GetMappedPointers();
     std::set<uint64_t> GetMappedPointers(const BitRange& objRange,
-                                         Config::VulkanObjectMode objMode,
+                                         VulkanObjectMode objMode,
                                          const uint64_t objNumber = 0);
     void ExecAndStateTrack();
     void ExecAndDump(uint64_t queueSubmitNumber,
@@ -64,15 +64,15 @@ public:
                           VkCommandBuffer cmdBuffer);
     void FinishCommandBufferAndSubmit(VkCommandBuffer cmdBuffer);
     void CreateNewCommandBuffer(Vulkan::CFunction* token, VkCommandBuffer cmdBuffer);
-    void RestoreSettingsToSpecifiedObject(uint64_t objNumber, Config::VulkanObjectMode objMode);
+    void RestoreSettingsToSpecifiedObject(uint64_t objNumber, VulkanObjectMode objMode);
     void RestoreSettingsToSpecifiedDraw(Vulkan::CFunction* token,
                                         uint64_t renderPassNumber,
                                         uint64_t drawNumber,
                                         VkCommandBuffer cmdBuffer);
-    void RestoreToSpecifiedObject(const BitRange& objRange, Config::VulkanObjectMode objMode);
+    void RestoreToSpecifiedObject(const BitRange& objRange, VulkanObjectMode objMode);
     void ScheduleObject(void (*schedulerFunc)(Vulkan::CFunction*),
                         const BitRange& renderPassRange,
-                        Config::VulkanObjectMode objMode);
+                        VulkanObjectMode objMode);
     void RestoreDraw(const uint64_t renderPassNumber, const BitRange& drawsRange);
     void ScheduleDraw(void (*schedulerFunc)(Vulkan::CFunction*),
                       const uint64_t renderPassNumber,

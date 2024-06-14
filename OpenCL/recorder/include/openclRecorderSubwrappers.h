@@ -79,7 +79,7 @@ inline void clCreateContext_RECWRAP(
   std::vector<cl_context_properties> unsharingPropsVec;
   const cl_context_properties* props = properties;
   const auto& cfg = Config::Get();
-  if (cfg.recorder.basic.enabled && props != nullptr) {
+  if (cfg.common.recorder.enabled && props != nullptr) {
     const auto platform = ExtractPlatform(props);
     const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
     if (platform == nullptr && !oclIFace.MemorySnifferInstall()) {
@@ -114,7 +114,7 @@ inline void clCreateContextFromType_RECWRAP(
   std::vector<cl_context_properties> unsharingPropsVec;
   const cl_context_properties* props = properties;
   const auto& cfg = Config::Get();
-  if (cfg.recorder.basic.enabled && props != nullptr) {
+  if (cfg.common.recorder.enabled && props != nullptr) {
     const auto platform = ExtractPlatform(props);
     const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
     if (platform == nullptr && !oclIFace.MemorySnifferInstall()) {
@@ -2284,7 +2284,7 @@ inline void clGetPlatformIDs_RECWRAP(CRecorder& recorder,
   if (recorder.Running()) {
     recorder.Schedule(new CclGetPlatformIDs(return_value, num_entries, platforms, num_platforms));
   }
-  if (Config::Get().recorder.basic.enabled) {
+  if (Config::Get().common.recorder.enabled) {
     const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
     if (!oclIFace.MemorySnifferInstall()) {
       Log(WARN) << "Memory Sniffer installation failed";
@@ -2304,7 +2304,7 @@ inline void clGetDeviceIDs_RECWRAP(CRecorder& recorder,
     recorder.Schedule(new CclGetDeviceIDs(return_value, platform, device_type, num_entries, devices,
                                           num_devices));
   }
-  if (Config::Get().recorder.basic.enabled) {
+  if (Config::Get().common.recorder.enabled) {
     const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
     if (platform == nullptr && !oclIFace.MemorySnifferInstall()) {
       Log(WARN) << "Memory Sniffer installation failed";

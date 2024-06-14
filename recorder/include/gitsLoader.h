@@ -19,7 +19,7 @@
 #include "dynamic_linker.h"
 
 namespace gits {
-
+std::filesystem::path GetConfigPathForLoader();
 struct Config;
 class CGitsLoader : public gits::noncopyable {
 public:

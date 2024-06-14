@@ -50,18 +50,18 @@ CToken::~CToken() {}
 
 static zone_allocator token_allocator;
 void zone_allocator_next_zone() {
-  if (Config::Get().common.useZoneAllocator) {
+  if (Config::Get().common.player.useZoneAllocator) {
     token_allocator.use_next_zone();
   }
 }
 void zone_allocator_reinitialize(size_t zones, size_t size) {
-  if (Config::Get().common.useZoneAllocator) {
+  if (Config::Get().common.player.useZoneAllocator) {
     token_allocator.reinitialize(zones, size);
   }
 }
 
 void* CToken::operator new(size_t size) {
-  if (Config::Get().common.useZoneAllocator) {
+  if (Config::Get().common.player.useZoneAllocator) {
     return token_allocator.allocate(size);
   } else {
     return ::operator new(size);
@@ -69,7 +69,7 @@ void* CToken::operator new(size_t size) {
 }
 
 void CToken::operator delete(void* pointer) {
-  if (!Config::Get().common.useZoneAllocator) {
+  if (!Config::Get().common.player.useZoneAllocator) {
     ::operator delete(pointer);
   }
 }
@@ -164,13 +164,13 @@ void CTokenFrameNumber::Write(CCodeOStream& stream) const {
 
 static void OnFrameBeginImpl() {
   auto& gits = CGits::Instance();
-  if (Config::Get().player.benchmark) {
+  if (Config::Get().common.player.benchmark) {
     gits.Timers().frame.Restart();
   }
 }
 
 static void OnFrameEndImpl() {
-  if (Config::Get().player.benchmark) {
+  if (Config::Get().common.player.benchmark) {
     CGits::Instance().TimeSheet().add_frame_time("stamp", CGits::Instance().Timers().program.Get());
     CGits::Instance().TimeSheet().add_frame_time("cpu", CGits::Instance().Timers().frame.Get());
   }
@@ -187,14 +187,14 @@ void CTokenFrameNumber::Run() {
     CGits::Instance().StateRestoreStarted();
     Log(INFO) << "Restoring state ...";
 
-    if (cfg.common.useEvents) {
+    if (cfg.common.shared.useEvents) {
       CGits::Instance().PlaybackEvents().stateRestoreBegin();
     }
-    if (cfg.player.traceSelectedFrames.empty() ||
-        cfg.player.traceSelectedFrames[CGits::Instance().CurrentFrame()]) {
-      CLog::SetLogLevel(cfg.common.thresholdLogLevel);
+    if (cfg.common.player.traceSelectedFrames.empty() ||
+        cfg.common.player.traceSelectedFrames[CGits::Instance().CurrentFrame()]) {
+      CLog::SetLogLevel(cfg.common.shared.thresholdLogLevel);
     } else {
-      CLog::SetLogLevel(std::max(cfg.common.thresholdLogLevel, INFOV));
+      CLog::SetLogLevel(std::max(cfg.common.shared.thresholdLogLevel, INFOV));
     }
     break;
 
@@ -205,14 +205,14 @@ void CTokenFrameNumber::Run() {
 
     if (CGits::Instance().apis.Has3D()) {
       CGits::Instance().apis.Iface3D().Play_StateRestoreEnd();
-      if (cfg.player.swapAfterPrepare) {
+      if (cfg.common.player.swapAfterPrepare) {
         CGits::Instance().apis.Iface3D().Play_SwapAfterPrepare();
       }
     }
     if (CGits::Instance().apis.HasCompute()) {
       CGits::Instance().apis.IfaceCompute().Play_StateRestoreEnd();
     }
-    if (cfg.common.useEvents) {
+    if (cfg.common.shared.useEvents) {
       CGits::Instance().PlaybackEvents().stateRestoreEnd();
     }
 
@@ -223,8 +223,8 @@ void CTokenFrameNumber::Run() {
     // If this is stream without state restore, init finishes on begin of first frame.
 
 #if defined(GITS_PLATFORM_WINDOWS) && defined(WITH_VULKAN)
-    if (cfg.player.renderDoc.frameRecEnabled &&
-        cfg.player.renderDoc.captureRange[CGits::Instance().CurrentFrame()]) {
+    if (cfg.vulkan.player.renderDoc.mode == TVkRenderDocCaptureMode::FRAMES &&
+        cfg.vulkan.player.renderDoc.captureRange[CGits::Instance().CurrentFrame()]) {
       Vulkan::RenderDocUtil::GetInstance().StartRecording();
     }
 #endif
@@ -233,21 +233,21 @@ void CTokenFrameNumber::Run() {
     CGits::Instance().Timers().playback.Start();
     OnFrameBeginImpl();
 
-    if (cfg.common.useEvents) {
+    if (cfg.common.shared.useEvents) {
       CGits::Instance().PlaybackEvents().frameBegin(CGits::Instance().CurrentFrame());
     }
-    if (cfg.player.traceSelectedFrames.empty() ||
-        cfg.player.traceSelectedFrames[CGits::Instance().CurrentFrame()]) {
-      CLog::SetLogLevel(cfg.common.thresholdLogLevel);
+    if (cfg.common.player.traceSelectedFrames.empty() ||
+        cfg.common.player.traceSelectedFrames[CGits::Instance().CurrentFrame()]) {
+      CLog::SetLogLevel(cfg.common.shared.thresholdLogLevel);
     } else {
-      CLog::SetLogLevel(std::max(cfg.common.thresholdLogLevel, INFOV));
+      CLog::SetLogLevel(std::max(cfg.common.shared.thresholdLogLevel, INFOV));
     }
     break;
 
   case CToken::ID_FRAME_END:
     OnFrameEndImpl();
 #if defined(GITS_PLATFORM_WINDOWS) || defined(GITS_PLATFORM_X11)
-    if (cfg.player.showWindowBorder) {
+    if (cfg.common.player.showWindowBorder) {
       win_ptr_t window = GetWindowHandle();
 #ifdef GITS_PLATFORM_WINDOWS
       WinTitle(window, "Current frame: " + std::to_string(CGits::Instance().CurrentFrame()));
@@ -259,23 +259,23 @@ void CTokenFrameNumber::Run() {
 #endif
 
 #if defined(GITS_PLATFORM_WINDOWS) && defined(WITH_VULKAN)
-    if (cfg.player.renderDoc.frameRecEnabled &&
-        cfg.player.renderDoc.captureRange[CGits::Instance().CurrentFrame()]) {
-      bool isLast = cfg.player.renderDoc.captureRange[CGits::Instance().CurrentFrame()] &&
-                    !cfg.player.renderDoc
+    if (cfg.vulkan.player.renderDoc.mode == TVkRenderDocCaptureMode::FRAMES &&
+        cfg.vulkan.player.renderDoc.captureRange[CGits::Instance().CurrentFrame()]) {
+      bool isLast = cfg.vulkan.player.renderDoc.captureRange[CGits::Instance().CurrentFrame()] &&
+                    !cfg.vulkan.player.renderDoc
                          .captureRange[static_cast<uint64_t>(CGits::Instance().CurrentFrame()) + 1];
-      if (!cfg.player.renderDoc.continuousCapture || isLast) {
+      if (!cfg.vulkan.player.renderDoc.continuousCapture || isLast) {
         Vulkan::RenderDocUtil::GetInstance().StopRecording();
       }
-      if (cfg.player.renderDoc.enableUI && isLast) {
+      if (cfg.vulkan.player.renderDoc.enableUI && isLast) {
         Vulkan::RenderDocUtil::GetInstance().LaunchRenderDocUI();
       }
     }
 #endif
-    if (cfg.player.endFrameSleep > 0) {
-      sleep_millisec(Config::Get().player.endFrameSleep);
+    if (cfg.common.player.endFrameSleep > 0) {
+      sleep_millisec(Config::Get().common.player.endFrameSleep);
     }
-    if (cfg.common.useEvents) {
+    if (cfg.common.shared.useEvents) {
       CGits::Instance().PlaybackEvents().frameEnd(CGits::Instance().CurrentFrame());
     }
     CGits::Instance().FrameCountUp();
@@ -305,7 +305,7 @@ void CTokenPlayerRecorderSync::Read(CBinIStream& stream) {
 }
 
 void CTokenPlayerRecorderSync::Run() {
-  if (!Config::Get().player.syncWithRecorder) {
+  if (!Config::Get().common.player.syncWithRecorder) {
     return;
   }
 
@@ -323,7 +323,7 @@ CTokenMakeCurrentThread::CTokenMakeCurrentThread(int threadid) : _threadId(threa
     Log(INFO) << "Recorded Application uses multiple threads.";
     Log(WARN) << "Multithreaded applications have to be recorded from beginning. Subcapturing from "
                  "stream is possible without the --faithfulThreading option.";
-    if (Config::Get().recorder.basic.dumpCCode && CGits::Instance().MultithreadedApp()) {
+    if (Config::Get().dumpCCode() && CGits::Instance().MultithreadedApp()) {
       Log(ERR) << "CCodeDump is not possible for multithreaded application. Please record binary "
                   "stream first and then recapture it to CCode";
       throw EOperationFailed(EXCEPTION_MESSAGE);
@@ -347,14 +347,14 @@ void CTokenMakeCurrentThread::Run() {
   };
   CGits::Instance().CurrentThreadId(_threadId);
   if (OpenGL::SD().GetCurrentContextStateData().glBeginState &&
-      !Config::Get().player.faithfulThreading) {
+      !Config::Get().common.player.faithfulThreading) {
     Log(ERR) << "Multithreading bypass failed: Make current thread cannot be emitted between "
                 "glBegin and glEnd";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
 
   // The decision whether to truly switch threads is handled elsewhere by using either CAction or CSequentialExecutor.
-  if (!Config::Get().player.faithfulThreading) {
+  if (!Config::Get().common.player.faithfulThreading) {
     void* ctxFromThread = OpenGL::SD().GetContextFromThread(_threadId);
     OpenGL::SetCurrentContext(ctxFromThread);
     Log(TRACE) << "Make current thread: " << _threadId
@@ -373,7 +373,7 @@ CTokenMakeCurrentThreadNoCtxSwitch::CTokenMakeCurrentThreadNoCtxSwitch(int threa
     Log(INFO) << "Recorded Application uses multiple threads.";
     Log(WARN) << "Multithreaded applications have to be recorded from beginning. Subcapturing from "
                  "stream is possible without the --faithfulThreading option.";
-    if (Config::Get().recorder.basic.dumpCCode && CGits::Instance().MultithreadedApp()) {
+    if (Config::Get().dumpCCode() && CGits::Instance().MultithreadedApp()) {
       Log(ERR) << "CCodeDump is not possible for multithreaded application. Please record binary "
                   "stream first and then recapture it to CCode";
       throw EOperationFailed(EXCEPTION_MESSAGE);
@@ -398,7 +398,7 @@ void CTokenMakeCurrentThreadNoCtxSwitch::Run() {
   CGits::Instance().CurrentThreadId(_threadId);
 
   // The decision whether to truly switch threads is handled elsewhere by using either CAction or CSequentialExecutor.
-  if (!Config::Get().player.faithfulThreading) {
+  if (!Config::Get().common.player.faithfulThreading) {
     Log(TRACE) << "Make current thread (no context switch token): " << _threadId
                << " bypassed because option faithfulThreading is not used.";
   } else {
@@ -422,7 +422,7 @@ void CTokenScreenResolution::Read(CBinIStream& stream) {
 }
 
 void CTokenScreenResolution::Run() {
-  if (!Config::Get().player.forceOrigScreenResolution) {
+  if (!Config::Get().common.player.forceOrigScreenResolution) {
     return;
   }
 #ifdef GITS_PLATFORM_WINDOWS

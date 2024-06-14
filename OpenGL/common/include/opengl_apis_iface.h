@@ -24,46 +24,46 @@ public:
   OpenGLApi() : Api3d(ApisIface::OpenGL) {}
   virtual ~OpenGLApi() {}
   virtual bool CfgRec_IsAllMode() const {
-    return Config::Get().recorder.openGL.capture.mode.find("All") != std::string::npos;
+    return Config::Get().opengl.recorder.mode == TOpenGLRecorderMode::ALL;
   }
   virtual unsigned CfgRec_ExitFrame() const {
-    return Config::Get().recorder.openGL.capture.all.exitFrame;
+    return Config::Get().opengl.recorder.all.exitFrame;
   }
   virtual bool CfgRec_IsFramesMode() const {
-    return Config::Get().recorder.openGL.capture.mode.find("Frames") != std::string::npos;
+    return Config::Get().opengl.recorder.mode == TOpenGLRecorderMode::FRAMES;
   }
   virtual int CfgRec_StartFrame() const {
-    return Config::Get().recorder.openGL.capture.frames.startFrame;
+    return Config::Get().opengl.recorder.frames.startFrame;
   }
   virtual int CfgRec_StopFrame() const {
-    return Config::Get().recorder.openGL.capture.frames.stopFrame;
+    return Config::Get().opengl.recorder.frames.stopFrame;
   }
   virtual const std::vector<unsigned>& CfgRec_StartKeys() const {
-    return Config::Get().recorder.openGL.capture.frames.startKeys;
+    return Config::Get().opengl.recorder.frames.startKeys;
   }
   virtual bool CfgRec_IsSingleDrawMode() const {
-    return Config::Get().recorder.openGL.capture.mode.find("OglSingleDraw") != std::string::npos;
+    return Config::Get().opengl.recorder.mode == TOpenGLRecorderMode::SINGLE_DRAW;
   }
   virtual int CfgRec_SingleDraw() const {
-    return Config::Get().recorder.openGL.capture.oglSingleDraw.number;
+    return Config::Get().opengl.recorder.oglSingleDraw.number;
   }
   virtual bool CfgRec_IsDrawsRangeMode() const {
-    return Config::Get().recorder.openGL.capture.mode.find("OglDrawsRange") != std::string::npos;
+    return Config::Get().opengl.recorder.mode == TOpenGLRecorderMode::DRAWS_RANGE;
   }
   virtual int CfgRec_StartDraw() const {
-    return Config::Get().recorder.openGL.capture.oglDrawsRange.startDraw;
+    return Config::Get().opengl.recorder.oglDrawsRange.startDraw;
   }
   virtual int CfgRec_StopDraw() const {
-    return Config::Get().recorder.openGL.capture.oglDrawsRange.stopDraw;
+    return Config::Get().opengl.recorder.oglDrawsRange.stopDraw;
   }
   virtual int CfgRec_Frame() const {
-    return Config::Get().recorder.openGL.capture.oglDrawsRange.frame;
+    return Config::Get().opengl.recorder.oglDrawsRange.frame;
   }
   virtual bool CfgRec_IsBenchmark() const {
-    return Config::Get().recorder.openGL.performance.benchmark;
+    return Config::Get().opengl.recorder.benchmark;
   }
   virtual unsigned CfgRec_EndFrameSleep() const {
-    return Config::Get().recorder.openGL.utilities.endFrameSleep;
+    return Config::Get().opengl.recorder.endFrameSleep;
   }
   virtual void Play_SwapAfterPrepare() const;
 };

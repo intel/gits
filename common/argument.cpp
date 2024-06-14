@@ -81,11 +81,11 @@ void gits::CArgumentFileText::init(const char* fileName, const char* text, unsig
                              _fileName);
   }
 
-  if (Config::Get().recorder.extras.utilities.nullIO) {
+  if (Config::Get().common.recorder.nullIO) {
     return;
   }
-  std::filesystem::path path = Config::Get().common.streamDir / _fileName;
-  if (Config::Get().recorder.extras.utilities.zipTextFiles) {
+  std::filesystem::path path = Config::Get().common.recorder.dumpPath / _fileName;
+  if (Config::Get().common.recorder.zipTextFiles) {
     auto f = CGits::Instance().OpenZipFileGLPrograms();
     int r = zipOpenNewFileInZip(f, fileName, nullptr, nullptr, 0, nullptr, 0, nullptr, 0, 0);
     if (r != ZIP_OK) {
@@ -123,7 +123,7 @@ void gits::CArgumentFileText::Read(CBinIStream& stream) {
   stream.get_delimited_string(_fileName, '"');
 
   // load text from a file
-  std::filesystem::path path = Config::Get().common.streamDir / _fileName;
+  std::filesystem::path path = Config::Get().common.player.streamDir / _fileName;
   std::ifstream textStream(path, std::ios::binary);
 
   // check if file was opened

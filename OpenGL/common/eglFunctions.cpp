@@ -83,7 +83,7 @@ void log_config_properties(EGLDisplay dpy, EGLConfig config) {
 void show_config_attribs(const std::vector<int>& attribs) {
   using namespace gits;
   using namespace gits::OpenGL;
-  if (Config::Get().player.showOriginalPixelFormat) {
+  if (Config::Get().opengl.player.showOriginalPixelFormat) {
     Log(TRACE) << "Original config attributes:";
     for (size_t i = 0; i < attribs.size(); i += 2) {
       if (attribs[i] == EGL_NONE) {
@@ -424,13 +424,13 @@ std::vector<EGLint> filter_config_attribs(const std::vector<EGLint>& attribs) {
     case EGL_DEPTH_SIZE:
     case EGL_STENCIL_SIZE:
       attr.push_back(attribs[i]);
-      attr.push_back(Config::Get().player.minimalConfig ? 1 : attribs[i + 1]);
+      attr.push_back(Config::Get().opengl.player.minimalConfig ? 1 : attribs[i + 1]);
       break;
     case EGL_SAMPLE_BUFFERS:
     case EGL_SAMPLES:
-      if (!Config::Get().player.forceNoMSAA) {
+      if (!Config::Get().opengl.player.forceNoMSAA) {
         attr.push_back(attribs[i]);
-        attr.push_back(Config::Get().player.minimalConfig ? 1 : attribs[i + 1]);
+        attr.push_back(Config::Get().opengl.player.minimalConfig ? 1 : attribs[i + 1]);
       }
       break;
     case EGL_COLOR_BUFFER_TYPE:
@@ -582,7 +582,7 @@ void gits::OpenGL::CeglCreateWindowSurface::Run() {
   EGLint width, height;
 
   try {
-    float scale = Config::Get().player.scaleFactor;
+    float scale = Config::Get().opengl.player.scaleFactor;
     width = static_cast<EGLint>(scale * find_attrib(EGL_WIDTH, _surface_attribs.Vector()));
     height = static_cast<EGLint>(scale * find_attrib(EGL_HEIGHT, _surface_attribs.Vector()));
   } catch (...) {
@@ -592,9 +592,9 @@ void gits::OpenGL::CeglCreateWindowSurface::Run() {
     height = 600;
   }
 
-  if (Config::Get().player.forceWindowSize) {
-    width = Config::Get().player.windowSize.first;
-    height = Config::Get().player.windowSize.second;
+  if (Config::Get().common.player.forceWindowSize.enabled) {
+    width = Config::Get().common.player.forceWindowSize.width;
+    height = Config::Get().common.player.forceWindowSize.height;
   }
 
   const auto& attr = _config_attribs.Vector();
@@ -603,7 +603,7 @@ void gits::OpenGL::CeglCreateWindowSurface::Run() {
   std::pair<int, int> pos = std::pair<int, int>(0, 0);
 
   EGLSurface surface = nullptr;
-  if (!Config::Get().player.renderOffscreen) {
+  if (!Config::Get().common.player.renderOffscreen) {
 #ifdef GITS_PLATFORM_WINDOWS
     Window_* wnd = new Window_(width, height, pos.first, pos.second, true);
 #elif defined GITS_PLATFORM_X11
@@ -2159,13 +2159,13 @@ gits::CArgument& gits::OpenGL::CeglCreatePlatformWindowSurfaceEXT::Argument(unsi
 }
 
 void gits::OpenGL::CeglCreatePlatformWindowSurfaceEXT::Run() {
-  float scale = Config::Get().player.scaleFactor;
+  float scale = Config::Get().opengl.player.scaleFactor;
   EGLint width = static_cast<EGLint>(scale * find_attrib(EGL_WIDTH, _surface_attribs.Vector()));
   EGLint height = static_cast<EGLint>(scale * find_attrib(EGL_HEIGHT, _surface_attribs.Vector()));
 
-  if (Config::Get().player.forceWindowSize) {
-    width = Config::Get().player.windowSize.first;
-    height = Config::Get().player.windowSize.second;
+  if (Config::Get().common.player.forceWindowSize.enabled) {
+    width = Config::Get().common.player.forceWindowSize.width;
+    height = Config::Get().common.player.forceWindowSize.height;
   }
 
   const auto& attr = _config_attribs.Vector();

@@ -223,7 +223,7 @@ public:
 
   virtual void Write(CBinOStream& stream) const {
     uint32_t size = ensure_unsigned32bit_representible<size_t>(_array.size());
-    if (!Config::Get().recorder.extras.utilities.nullIO) {
+    if (!Config::Get().common.recorder.nullIO) {
       stream.write((char*)&size, sizeof(size));
     }
 
@@ -370,7 +370,7 @@ public:
 
   virtual void Write(CBinOStream& stream) const {
     uint32_t size = ensure_unsigned32bit_representible<size_t>(_array.size());
-    if (!Config::Get().recorder.extras.utilities.nullIO) {
+    if (!Config::Get().common.recorder.nullIO) {
       stream.write((char*)&size, sizeof(size));
     }
 
@@ -1891,7 +1891,7 @@ public:
 
   virtual void Write(CBinOStream& stream) const {
     uint32_t sz = ensure_unsigned32bit_representible<size_t>(_array.size());
-    if (!Config::Get().recorder.extras.utilities.nullIO) {
+    if (!Config::Get().common.recorder.nullIO) {
       stream.write((char*)&sz, sizeof(sz));
     }
 
@@ -1965,7 +1965,7 @@ class CMapAccess : public CArgument {
 public:
   CMapAccess() : _access(0), _mask(0) {}
   CMapAccess(GLenum access) : _access(access) {
-    _mask.Value() = Config::Get().recorder.extras.optimizations.bufferMapAccessMask;
+    _mask.Value() = Config::Get().opengl.recorder.bufferMapAccessMask;
   }
   virtual const char* Name() const {
     return "CMapAccess";
@@ -2005,7 +2005,7 @@ class CBufferStorageFlags : public CArgument {
 public:
   CBufferStorageFlags() : _flags(0), _mask(0) {}
   CBufferStorageFlags(GLenum flags) : _flags(flags) {
-    _mask.Value() = Config::Get().recorder.extras.optimizations.bufferStorageFlagsMask;
+    _mask.Value() = Config::Get().opengl.recorder.bufferStorageFlagsMask;
   }
   virtual const char* Name() const {
     return "CBufferStorageFlags";

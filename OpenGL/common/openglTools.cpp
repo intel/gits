@@ -42,7 +42,7 @@ namespace gits {
 namespace OpenGL {
 void get_capture_viewport(std::vector<GLint>& dims) {
 #if defined GITS_PLATFORM_WINDOWS
-  if (Config::Get().player.captureWholeWindow) {
+  if (Config::Get().opengl.player.captureWholeWindow) {
     HDC hdc = (HDC)drv.wgl.wglGetCurrentDC();
     RECT rect;
     GetClientRect(WindowFromDC(hdc), &rect);
@@ -53,7 +53,7 @@ void get_capture_viewport(std::vector<GLint>& dims) {
     return;
   }
 #elif defined GITS_PLATFORM_X11
-  if (Config::Get().player.captureWholeWindow) {
+  if (Config::Get().opengl.player.captureWholeWindow) {
     Window window;
     int x, y;
     unsigned int w, h, b, d;
@@ -249,7 +249,7 @@ void capture_drawbuffer(
     }
     if (fbo > 0) {
       suffix << "_fbo" << fbo << DrawBufferToSuffixStr(drawBuff) << msaaStr << ".png";
-    } else if (drawBuff != 0 && Config::Get().player.captureFrames.empty()) {
+    } else if (drawBuff != 0 && Config::Get().common.player.captureFrames.empty()) {
       suffix << DrawBufferToSuffixStr(drawBuff) << msaaStr << ".png";
     } else {
       suffix << ".png";
@@ -261,7 +261,8 @@ void capture_drawbuffer(
 #ifndef BUILD_FOR_CCODE
     // The image will be deleted in ImageWriter class after it is consumed
 
-    if (!Config::Get().player.captureFrames.empty() && Config::Get().player.captureFramesHashes) {
+    if (!Config::Get().common.player.captureFrames.empty() &&
+        Config::Get().opengl.player.captureFramesHashes) {
       Log(INFO) << file_name + suffix.str() << " CRC: " << HwCrc32ishHash(&data[0], data.size(), 0);
     } else {
       CGits::Instance().WriteImage(path_color.string(), capture_dims[2], capture_dims[3],
@@ -382,13 +383,12 @@ void captureScreenshot(HWND hWND,
 #endif
 
 std::filesystem::path GetPathForImageDumping() {
-  auto path = Config::Get().player.outputDir;
+  auto path = Config::Get().common.player.outputDir;
   if (path.empty()) {
-    path = Config::Get().common.streamDir / "gitsScreenshots";
     if (Config::Get().IsRecorder()) {
-      path /= "gitsRecorder";
+      path = Config::Get().common.recorder.dumpPath / "gitsScreenshots/gitsRecorder";
     } else if (Config::Get().IsPlayer()) {
-      path /= "gitsPlayer";
+      path = Config::Get().common.player.streamDir / "gitsScreenshots/gitsPlayer";
     } else {
       Log(ERR) << "Neither in player nor recorder!!!";
       throw EOperationFailed(EXCEPTION_MESSAGE);
@@ -399,7 +399,7 @@ std::filesystem::path GetPathForImageDumping() {
 
 void FrameBufferSave(unsigned frameNumber) {
   // this option cannot be used with captureScreenshot option
-  if (Config::Get().player.captureScreenshot) {
+  if (Config::Get().common.player.captureScreenshot) {
     return;
   }
 
@@ -407,7 +407,7 @@ void FrameBufferSave(unsigned frameNumber) {
 
   std::stringstream fileName;
   fileName << "frame" << std::setw(8) << std::setfill('0') << frameNumber;
-  capture_drawbuffer(path, fileName.str(), !Config::Get().player.dontForceBackBufferGL);
+  capture_drawbuffer(path, fileName.str(), !Config::Get().opengl.player.dontForceBackBufferGL);
 }
 
 #ifdef GITS_PLATFORM_WINDOWS
@@ -1165,7 +1165,7 @@ void BufferStateStash::Restore() {
 }
 
 MapBuffer::MapBuffer(GLenum target, GLint buffer) : _target(target), _ptr(nullptr) {
-  if (curctx::IsOgl() || ESBufferState() != TBuffersState::BUFFERS_STATE_CAPTURE_ALWAYS) {
+  if (curctx::IsOgl() || ESBufferState() != TBuffersState::CAPTURE_ALWAYS) {
     auto func_map = drv.gl.glMapBuffer;
     if (drv.gl.HasExtension("GL_OES_mapbuffer")) {
       func_map = drv.gl.glMapBufferOES;
@@ -1195,7 +1195,7 @@ MapBuffer::MapBuffer(GLenum target, GLint buffer) : _target(target), _ptr(nullpt
 
 MapBuffer::~MapBuffer() {
   try {
-    if (curctx::IsOgl() || ESBufferState() != TBuffersState::BUFFERS_STATE_CAPTURE_ALWAYS) {
+    if (curctx::IsOgl() || ESBufferState() != TBuffersState::CAPTURE_ALWAYS) {
       auto func_unmap = drv.gl.glUnmapBuffer;
       if (drv.gl.HasExtension("GL_OES_mapbuffer")) {
         func_unmap = drv.gl.glUnmapBufferOES;
@@ -1630,10 +1630,9 @@ std::map<GLuint, hash_t> CurrentAttribsBuffersHash() {
 TBuffersState ESBufferState() {
   static bool checked = false;
   static bool can_read = false;
-  static TBuffersState buffers_state = TBuffersState::BUFFERS_STATE_CAPTURE_ALWAYS;
+  static TBuffersState buffers_state = TBuffersState::CAPTURE_ALWAYS;
 
-  if (Config::Get().recorder.openGL.utilities.buffersState ==
-      TBuffersState::BUFFERS_STATE_CAPTURE_ALWAYS) {
+  if (Config::Get().opengl.recorder.buffersState == TBuffersState::CAPTURE_ALWAYS) {
     return buffers_state;
   }
 
@@ -1647,7 +1646,7 @@ TBuffersState ESBufferState() {
     Log(ERR) << "Buffers State option not supported";
     throw ENotSupported(EXCEPTION_MESSAGE);
   } else {
-    buffers_state = Config::Get().recorder.openGL.utilities.buffersState;
+    buffers_state = Config::Get().opengl.recorder.buffersState;
   }
   return buffers_state;
 }
@@ -1657,7 +1656,12 @@ bool IsGlGetTexImagePresentOnGLES() {
   static bool presence = false;
 
   if (!presenceChecked) {
-    if (Config::Get().recorder.openGL.utilities.useGlGetTexImageAndRestoreBuffersWhenPossibleES &&
+    bool useGlGetTexImageAndRestoreBuffersWhenPossibleES = false;
+#ifdef GITS_PLATFORM_WINDOWS
+    useGlGetTexImageAndRestoreBuffersWhenPossibleES =
+        Config::Get().opengl.recorder.useGlGetTexImageAndRestoreBuffersWhenPossibleES;
+#endif
+    if (useGlGetTexImageAndRestoreBuffersWhenPossibleES &&
         check_gl_function_availability("glGetTexImage")) {
       GLint oldBinding = 0;
       drv.gl.glGetIntegerv(GL_TEXTURE_BINDING_2D, &oldBinding);
@@ -1693,7 +1697,12 @@ bool IsGlGetCompressedTexImagePresentOnGLES() {
   static bool presence = false;
 
   if (!presenceChecked) {
-    if (Config::Get().recorder.openGL.utilities.useGlGetTexImageAndRestoreBuffersWhenPossibleES &&
+    bool useGlGetTexImageAndRestoreBuffersWhenPossibleES = false;
+#ifdef GITS_PLATFORM_WINDOWS
+    useGlGetTexImageAndRestoreBuffersWhenPossibleES =
+        Config::Get().opengl.recorder.useGlGetTexImageAndRestoreBuffersWhenPossibleES;
+#endif
+    if (useGlGetTexImageAndRestoreBuffersWhenPossibleES &&
         check_gl_function_availability("glGetCompressedTexImage")) {
       GLint oldBinding = 0;
       drv.gl.glGetIntegerv(GL_TEXTURE_BINDING_2D, &oldBinding);
@@ -1996,7 +2005,7 @@ StatePrinter::StatePrinter() {
 void StatePrinter::PrintToLog() {
 #ifndef BUILD_FOR_CCODE
   std::map<GLuint, hash_t> bufferHashses;
-  if (Config::Get().player.traceGLBufferHashes[CGits::Instance().CurrentDrawCount()]) {
+  if (Config::Get().opengl.player.traceGLBufferHashes[CGits::Instance().CurrentDrawCount()]) {
     bufferHashses = CurrentAttribsBuffersHash();
   }
 #endif
@@ -2009,7 +2018,7 @@ void StatePrinter::PrintToLog() {
     }
   }
 #ifndef BUILD_FOR_CCODE
-  if (Config::Get().player.traceGLBufferHashes[CGits::Instance().CurrentDrawCount()]) {
+  if (Config::Get().opengl.player.traceGLBufferHashes[CGits::Instance().CurrentDrawCount()]) {
     Log(TRACE) << "Buffer objects used for rendering";
     for (const auto& elem : bufferHashses) {
       Log(TRACE) << elem.first << " - " << std::hex << elem.second;
@@ -2405,5 +2414,19 @@ GLenum GetTargetOfTextureOrCrash(GLuint texName) {
   }
 }
 #endif
+bool isTrackTextureBindingWAUsed() {
+#ifdef GITS_PLATFORM_WINDOWS
+  return Config::Get().opengl.recorder.trackTextureBindingWA;
+#else
+    return false;
+#endif
+}
+bool isSchedulefboEXTAsCoreWA() {
+#ifdef GITS_PLATFORM_WINDOWS
+  return Config::Get().opengl.recorder.schedulefboEXTAsCoreWA;
+#else
+    return false;
+#endif
+}
 } // namespace OpenGL
 } // namespace gits

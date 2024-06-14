@@ -80,7 +80,7 @@ void CGitsPlugin::Initialize() {
     _loader.reset(new CGitsLoader("GITSRecorderOpenGL"));
     _recorderWrapper = (decltype(_recorderWrapper))_loader->GetRecorderWrapperPtr();
 
-    if (!_loader->GetConfiguration().recorder.basic.enabled) {
+    if (!_loader->GetConfiguration().common.recorder.enabled) {
       PrePostDisableGL();
     }
 

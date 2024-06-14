@@ -22,13 +22,6 @@ def mako_write(template_path, outpath, platform, install_path, is_compute):
     fout.write(rendered)
 
 
-def prepare_install_path(platform, installpath):
-  install_path = installpath
-  if platform == "win32":
-    install_path = install_path.replace("\\", "\\\\")
-  return install_path
-
-
 def setup_parser():
     parser = argparse.ArgumentParser(description="Config generator")
     parser.add_argument('--templatepath', type=Path, help='Mako template path', required=True)
@@ -45,7 +38,7 @@ def main(args=None):
     args = parser.parse_args()
   template_path = Path(args.templatepath).absolute()
   output_path = Path(args.outputpath).absolute()
-  install_path = prepare_install_path(args.platform, str(Path(args.installpath).absolute()))
+  install_path = Path(args.installpath).absolute()
   if not output_path.parent.exists():
     output_path.parent.mkdir(parents=True, exist_ok=True)
   mako_write(str(template_path), str(output_path), args.platform, str(install_path), args.compute)

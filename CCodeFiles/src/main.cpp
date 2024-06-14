@@ -162,15 +162,15 @@ int main(int argc, char* argv[]) {
 
     Config cfg = Config::Get();
     if (optionCaptureFrames.Present()) {
-      cfg.player.captureFrames = optionCaptureFrames.Value();
+      cfg.common.player.captureFrames = optionCaptureFrames.Value();
     }
 
     if (optionDumpDraws.Present()) {
-      cfg.player.captureDraws = BitRange(true);
+      cfg.opengl.player.captureDraws = BitRange(true);
     }
 
     if (optionDumpDrawsPre.Present()) {
-      cfg.player.captureDrawsPre = optionDumpDrawsPre.Value();
+      cfg.opengl.player.captureDrawsPre = optionDumpDrawsPre.Value();
     }
 
     //if(optionDumpDraws.Present())
@@ -189,32 +189,32 @@ int main(int argc, char* argv[]) {
     // CCode for Vulkan uses functions from vulkanTools.cpp (common code) to
     // dump screenshots. Therefore it depends on player.outputDir instead of
     // ccode.outputPath:
-    cfg.player.outputDir = cfg.ccode.outputPath;
+    cfg.common.player.outputDir = cfg.ccode.outputPath;
 
     if (optionStreamDir.Present()) {
-      cfg.common.streamDir = std::filesystem::absolute(optionStreamDir.Value()) / "";
+      cfg.common.player.streamDir = std::filesystem::absolute(optionStreamDir.Value()) / "";
     }
 
     if (optionWaitForEnter.Present()) {
-      cfg.player.waitForEnter = optionWaitForEnter.Value();
+      cfg.common.player.waitForEnter = optionWaitForEnter.Value();
     }
 
-    cfg.player.captureWholeWindow = optionCaptureWholeWindow.Value();
+    cfg.opengl.player.captureWholeWindow = optionCaptureWholeWindow.Value();
 
     if (optionCaptureFinishFrame.Present()) {
-      cfg.player.captureFinishFrame = BitRange(true);
+      cfg.opengl.player.captureFinishFrame = BitRange(true);
     }
 
     if (optionCaptureReadPixels.Present()) {
-      cfg.player.captureReadPixels = BitRange(true);
+      cfg.opengl.player.captureReadPixels = BitRange(true);
     }
 
     if (optionCaptureFlushFrame.Present()) {
-      cfg.player.captureFlushFrame = BitRange(true);
+      cfg.opengl.player.captureFlushFrame = BitRange(true);
     }
 
     if (optionUseVKPhysicalDeviceIndex.Present()) {
-      cfg.player.vulkanForcedPhysicalDeviceIndex = optionUseVKPhysicalDeviceIndex.Value();
+      cfg.vulkan.player.vulkanForcedPhysicalDeviceIndex = optionUseVKPhysicalDeviceIndex.Value();
     }
 
     if (optionBenchmarkStartFrame.Present()) {
@@ -224,13 +224,13 @@ int main(int argc, char* argv[]) {
     }
 
     if (optionDisableLogging.Present() || optionPerformance.Present()) {
-      cfg.common.thresholdLogLevel = LogLevel::OFF;
+      cfg.common.shared.thresholdLogLevel = LogLevel::OFF;
       // Log can't use config directly, see log.cpp for info.
-      CLog::SetLogLevel(cfg.common.thresholdLogLevel);
+      CLog::SetLogLevel(cfg.common.shared.thresholdLogLevel);
     }
 
     if (optionEscalatePriority.Present() || optionPerformance.Present()) {
-      cfg.player.escalatePriority = true;
+      cfg.common.player.escalatePriority = true;
     }
 
     Config::Set(cfg);
@@ -242,7 +242,7 @@ int main(int argc, char* argv[]) {
   }
 
   try {
-    if (Config::Get().player.waitForEnter) {
+    if (Config::Get().common.player.waitForEnter) {
       Log(INFO) << "Waiting for ENTER press ...";
       std::cin.get();
     }
@@ -269,7 +269,7 @@ int main(int argc, char* argv[]) {
 #endif
 
 #if defined GITS_PLATFORM_WINDOWS
-    if (Config::Get().player.escalatePriority) {
+    if (Config::Get().common.player.escalatePriority) {
       if (SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS)) {
         Log(INFO) << "Escalated process priority to realtime priority";
       } else {
@@ -305,7 +305,7 @@ int main(int argc, char* argv[]) {
 
     Log(OFF, NO_PREFIX) << "Finished";
 
-    if (Config::Get().player.waitForEnter) {
+    if (Config::Get().common.player.waitForEnter) {
       Log(WARN) << "Waiting for ENTER press ...";
       std::cin.get();
     }

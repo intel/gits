@@ -532,7 +532,8 @@ void LayoutBuilder::SaveLayoutToJsonFile() {
 
   const auto& cfg = Config::Get();
   const std::filesystem::path path =
-      (cfg.player.outputDir.empty() ? cfg.common.streamDir / "dump" : cfg.player.outputDir) /
+      (cfg.common.player.outputDir.empty() ? cfg.common.player.streamDir / "dump"
+                                           : cfg.common.player.outputDir) /
       "layout.json";
   SaveJsonFile(layout, path);
 }
@@ -553,8 +554,9 @@ void LayoutBuilder::AddOclocInfo(const ze_module_handle_t& hModule) {
       children.push_back(oclocState->args[i]);
       if (Config::Get().IsRecorder() && oclocState->args[i] == "-options") {
         std::string options = oclocState->args[++i];
-        options += " -I \"" + Config::Get().common.streamDir.string() + "\"";
-        options += " -I \"" + (Config::Get().common.streamDir / "gitsFiles").string() + "\"";
+        options += " -I \"" + Config::Get().common.recorder.dumpPath.string() + "\"";
+        options +=
+            " -I \"" + (Config::Get().common.recorder.dumpPath / "gitsFiles").string() + "\"";
         children.push_back(options);
       }
     }

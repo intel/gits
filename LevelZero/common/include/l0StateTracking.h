@@ -46,10 +46,10 @@ void SaveGlobalPointerAllocationToMemory(CStateDynamic& sd,
 
 bool CheckWhetherDumpKernel(uint32_t kernelNumber, uint32_t cmdListNumber) {
   const auto& cfg = Config::Get();
-  const auto& kernelList = cfg.IsPlayer() ? cfg.player.l0CaptureKernels
-                                          : cfg.recorder.levelZero.utilities.captureKernels;
-  auto cmdList = cfg.IsPlayer() ? cfg.player.l0CaptureCommandLists
-                                : cfg.recorder.levelZero.utilities.captureCommandLists;
+  const auto& kernelList =
+      cfg.IsPlayer() ? cfg.levelzero.player.captureKernels : cfg.levelzero.recorder.captureKernels;
+  auto cmdList = cfg.IsPlayer() ? cfg.levelzero.player.captureCommandLists
+                                : cfg.levelzero.recorder.captureCommandLists;
   return !kernelList.empty()
              ? (kernelList[kernelNumber] && (!cmdList.empty() ? cmdList[cmdListNumber] : false))
              : false;

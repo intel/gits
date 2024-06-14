@@ -109,7 +109,7 @@ void CTextureStateObj::SetTexLevelParams(GLint level,
     //OpenGL
     GLint boundName = 0;
 
-    if (Config::Get().recorder.openGL.utilities.trackTextureBindingWA) {
+    if (isTrackTextureBindingWAUsed()) {
       auto unit =
           SD().GetCurrentContextStateData().GeneralStateObjects().Data().tracked.activeTexture;
       boundName = SD().GetCurrentContextStateData()
@@ -268,8 +268,7 @@ void CBufferStateObj::SetBufferMapPlay(GLbitfield access, bool named, GLint leng
 
   if (!_data.track.coherentMapping &&
       ((access & GL_MAP_COHERENT_BIT) ||
-       ((access & GL_MAP_PERSISTENT_BIT) &&
-        Config::Get().recorder.extras.utilities.coherentMapBehaviorWA))) {
+       ((access & GL_MAP_PERSISTENT_BIT) && Config::Get().opengl.recorder.coherentMapBehaviorWA))) {
     _data.track.coherentMapping = true;
   }
 }
@@ -306,8 +305,7 @@ void CBufferStateObj::InitBufferMapPlayEXT(GLbitfield access,
 void CBufferStateObj::SetBufferMapRec(GLbitfield access, bool named, GLint length, GLint offset) {
   GLbitfield access_interceptor = access;
   if ((access & GL_MAP_COHERENT_BIT) ||
-      ((access & GL_MAP_PERSISTENT_BIT) &&
-       Config::Get().recorder.extras.utilities.coherentMapBehaviorWA)) {
+      ((access & GL_MAP_PERSISTENT_BIT) && Config::Get().opengl.recorder.coherentMapBehaviorWA)) {
     access_interceptor |= GL_MAP_READ_BIT;
     access_interceptor &= ~GL_MAP_UNSYNCHRONIZED_BIT;
   }
@@ -321,8 +319,7 @@ void CBufferStateObj::SetBufferMapRec(GLbitfield access, bool named, GLint lengt
 
   if (!_data.track.coherentMapping &&
       ((access & GL_MAP_COHERENT_BIT) ||
-       ((access & GL_MAP_PERSISTENT_BIT) &&
-        Config::Get().recorder.extras.utilities.coherentMapBehaviorWA))) {
+       ((access & GL_MAP_PERSISTENT_BIT) && Config::Get().opengl.recorder.coherentMapBehaviorWA))) {
     _data.track.coherentMapping = true;
   }
 

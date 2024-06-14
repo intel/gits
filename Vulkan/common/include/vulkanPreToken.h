@@ -140,16 +140,16 @@ public:
     int height = *h;
     int xpos = *x;
     int ypos = *y;
-    if (Config::Get().player.showWindowsWA) {
+    if (Config::Get().common.player.showWindowsWA) {
       visible = true;
     }
-    if (Config::Get().player.forceWindowPos) {
-      xpos = Config::Get().player.windowCoords.first;
-      ypos = Config::Get().player.windowCoords.second;
+    if (Config::Get().common.player.forceWindowPos.enabled) {
+      xpos = Config::Get().common.player.forceWindowPos.x;
+      ypos = Config::Get().common.player.forceWindowPos.y;
     }
-    if (Config::Get().player.forceWindowSize) {
-      width = Config::Get().player.windowSize.first;
-      height = Config::Get().player.windowSize.second;
+    if (Config::Get().common.player.forceWindowSize.enabled) {
+      width = Config::Get().common.player.forceWindowSize.width;
+      height = Config::Get().common.player.forceWindowSize.height;
     }
 #if defined(GITS_PLATFORM_WINDOWS)
     Window_* win = new Window_(width, height, xpos, ypos, visible);
@@ -261,16 +261,16 @@ public:
     int height = *h;
     int xpos = *x;
     int ypos = *y;
-    if (Config::Get().player.showWindowsWA) {
+    if (Config::Get().common.player.showWindowsWA) {
       visible = true;
     }
-    if (Config::Get().player.forceWindowPos) {
-      xpos = Config::Get().player.windowCoords.first;
-      ypos = Config::Get().player.windowCoords.second;
+    if (Config::Get().common.player.forceWindowPos.enabled) {
+      xpos = Config::Get().common.player.forceWindowPos.x;
+      ypos = Config::Get().common.player.forceWindowPos.y;
     }
-    if (Config::Get().player.forceWindowSize) {
-      width = Config::Get().player.windowSize.first;
-      height = Config::Get().player.windowSize.second;
+    if (Config::Get().common.player.forceWindowSize.enabled) {
+      width = Config::Get().common.player.forceWindowSize.width;
+      height = Config::Get().common.player.forceWindowSize.height;
     }
 
 #if defined(GITS_PLATFORM_X11)
@@ -406,16 +406,16 @@ public:
     int height = *h;
     int xpos = *x;
     int ypos = *y;
-    if (Config::Get().player.showWindowsWA) {
+    if (Config::Get().common.player.showWindowsWA) {
       visible = true;
     }
-    if (Config::Get().player.forceWindowPos) {
-      xpos = Config::Get().player.windowCoords.first;
-      ypos = Config::Get().player.windowCoords.second;
+    if (Config::Get().common.player.forceWindowPos.enabled) {
+      xpos = Config::Get().common.player.forceWindowPos.x;
+      ypos = Config::Get().common.player.forceWindowPos.y;
     }
-    if (Config::Get().player.forceWindowSize) {
-      width = Config::Get().player.windowSize.first;
-      height = Config::Get().player.windowSize.second;
+    if (Config::Get().common.player.forceWindowSize.enabled) {
+      width = Config::Get().common.player.forceWindowSize.width;
+      height = Config::Get().common.player.forceWindowSize.height;
     }
 #if defined(GITS_PLATFORM_WINDOWS) || defined(GITS_PLATFORM_X11)
     Window_* win = SD()._hwndstates[*hwnd]->window.get();

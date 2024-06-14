@@ -369,7 +369,7 @@ gits::OpenGL::CSharedState::CSharedState() {
     Register(new CVariableRenderbufferInfo);
   }
 
-  if (curctx::IsOgl() || ESBufferState() != TBuffersState::BUFFERS_STATE_CAPTURE_ALWAYS) {
+  if (curctx::IsOgl() || ESBufferState() != TBuffersState::CAPTURE_ALWAYS) {
     Register(new CVariableBufferInfo);
   }
   Register(new CVariableTextureInfo);
@@ -2171,7 +2171,7 @@ void gits::OpenGL::CVariableBufferInfo::Get() {
     }
 
     // Buffer data on ES is not restored if special option is not turned on
-    if (!curctx::IsOgl() && ESBufferState() == TBuffersState::BUFFERS_STATE_CAPTURE_ALWAYS) {
+    if (!curctx::IsOgl() && ESBufferState() == TBuffersState::CAPTURE_ALWAYS) {
       continue;
     }
 
@@ -2211,14 +2211,14 @@ void gits::OpenGL::CVariableBufferInfo::Schedule(CScheduler& scheduler,
       continue;
     }
     // Buffer data on ES is not restored if special option is not turned on
-    if (!curctx::IsOgl() && ESBufferState() == TBuffersState::BUFFERS_STATE_CAPTURE_ALWAYS) {
+    if (!curctx::IsOgl() && ESBufferState() == TBuffersState::CAPTURE_ALWAYS) {
       continue;
     }
 
     // this buffer is new, or some changes in it occurred, we handle
     // both cases simultaneously for the sake of simplicity
     GLuint bufferName = currBuffer.Name();
-    if (ESBufferState() == TBuffersState::BUFFERS_STATE_RESTORE || curctx::IsOgl() ||
+    if (ESBufferState() == TBuffersState::RESTORE || curctx::IsOgl() ||
         IsGlGetTexAndCompressedTexImagePresentOnGLES()) {
       scheduler.Register(new OpenGL::CglGenBuffers(1, &bufferName));
     }
@@ -2231,7 +2231,7 @@ void gits::OpenGL::CVariableBufferInfo::Schedule(CScheduler& scheduler,
     if (buffer.size() == 0) {
       continue;
     }
-    if (ESBufferState() == TBuffersState::BUFFERS_STATE_MIXED && !curctx::IsOgl() &&
+    if (ESBufferState() == TBuffersState::MIXED && !curctx::IsOgl() &&
         !IsGlGetTexAndCompressedTexImagePresentOnGLES()) {
       GCC433WA_0(&currBuffer)->TrackBufferData(0, currBuffer.Size(), &buffer[0]);
       scheduler.Register(
@@ -2548,9 +2548,13 @@ void gits::OpenGL::CVariableTextureInfo::CTexture2D::GetTextureLevelsDataGL() {
       drv.gl.glGetCompressedTexImage(Target(), i, &data[0]);
     } else {
       auto format = currMip.format;
+      bool restoreIndexedTexturesWA = false;
+#ifdef GITS_PLATFORM_WINDOWS
+      restoreIndexedTexturesWA = Config::Get().opengl.recorder.restoreIndexedTexturesWA;
+#endif
 
       if (currMip.internalFormat == GL_RGBA && currMip.format == GL_COLOR_INDEX &&
-          Config::Get().recorder.openGL.utilities.restoreIndexedTexturesWA) {
+          restoreIndexedTexturesWA) {
         format = currMip.internalFormat;
       }
 
@@ -2654,12 +2658,16 @@ void gits::OpenGL::CVariableTextureInfo::CTexture2D::ScheduleSameTargetTextureGL
             currMip.compressedImageSize, Texture2DData().pixels.at(i)));
       }
     } else {
+      bool restoreIndexedTexturesWA = false;
+#ifdef GITS_PLATFORM_WINDOWS
+      restoreIndexedTexturesWA = Config::Get().opengl.recorder.restoreIndexedTexturesWA;
+#endif
       if (GenericData().immutable != GL_FALSE) {
         scheduler.Register(new CglTexSubImage2D(Target(), i, 0, 0, currMip.width, currMip.height,
                                                 currMip.format, currMip.type,
                                                 Texture2DData().pixels.at(i)));
       } else if (currMip.internalFormat == GL_RGBA && currMip.format == GL_COLOR_INDEX &&
-                 Config::Get().recorder.openGL.utilities.restoreIndexedTexturesWA) {
+                 restoreIndexedTexturesWA) {
         scheduler.Register(new CglTexImage2D(Target(), i, currMip.internalFormat, currMip.width,
                                              currMip.height, currMip.border, currMip.internalFormat,
                                              currMip.type, Texture2DData().pixels.at(i)));
@@ -2686,21 +2694,18 @@ void gits::OpenGL::CVariableTextureInfo::CTexture2D::ScheduleSameTargetTextureGL
   for (unsigned i = 0; i < MipmapData().size(); ++i) {
     const TMipmapTextureData& currMip = MipmapData().at(i);
 
-    if (currMip.compressed == GL_TRUE &&
-        Config::Get().recorder.openGL.utilities.texturesState ==
-            TTexturesState::TEXTURES_STATE_RESTORE) { // Compressed texture
+    if (currMip.compressed == GL_TRUE && Config::Get().opengl.recorder.texturesState ==
+                                             TTexturesState::RESTORE) { // Compressed texture
       scheduler.Register(new CglCompressedTexImage2D(
           Target(), i, currMip.internalFormat, currMip.width, currMip.height, currMip.border,
           currMip.compressedImageSize, Texture2DData().pixels.at(i)));
     } // Non compressed readable texture
     else if (texStateData->Data().restore.isESTexReadable) {
-      if (Config::Get().recorder.openGL.utilities.texturesState ==
-          TTexturesState::TEXTURES_STATE_MIXED) {
+      if (Config::Get().opengl.recorder.texturesState == TTexturesState::MIXED) {
         scheduler.Register(new CglTexSubImage2D(Target(), i, 0, 0, currMip.width, currMip.height,
                                                 currMip.format, currMip.type,
                                                 Texture2DData().pixels.at(i)));
-      } else if (Config::Get().recorder.openGL.utilities.texturesState ==
-                 TTexturesState::TEXTURES_STATE_RESTORE) {
+      } else if (Config::Get().opengl.recorder.texturesState == TTexturesState::RESTORE) {
         scheduler.Register(new CglTexImage2D(Target(), i, currMip.internalFormat, currMip.width,
                                              currMip.height, currMip.border, currMip.format,
                                              currMip.type, Texture2DData().pixels.at(i)));
@@ -2709,8 +2714,7 @@ void gits::OpenGL::CVariableTextureInfo::CTexture2D::ScheduleSameTargetTextureGL
     // Non compressed, non readable texture and restore Textures mode
     // in restore Textures mode unreadable textures are initialized with
     // default content. It may cause corruptions.
-    else if (Config::Get().recorder.openGL.utilities.texturesState ==
-             TTexturesState::TEXTURES_STATE_RESTORE) {
+    else if (Config::Get().opengl.recorder.texturesState == TTexturesState::RESTORE) {
       scheduler.Register(new CglTexImage2D(Target(), i, currMip.internalFormat, currMip.width,
                                            currMip.height, currMip.border, currMip.format,
                                            currMip.type, nullptr));
@@ -3083,21 +3087,18 @@ void gits::OpenGL::CVariableTextureInfo::CTextureCube::ScheduleSameTargetTexture
       if (currMip.width != 0) {
         // Compressed texture and restore Textures mode
         if (currMip.compressed == GL_TRUE &&
-            Config::Get().recorder.openGL.utilities.texturesState ==
-                TTexturesState::TEXTURES_STATE_RESTORE) {
+            Config::Get().opengl.recorder.texturesState == TTexturesState::RESTORE) {
           scheduler.Register(new CglCompressedTexImage2D(
               GL_TEXTURE_CUBE_MAP_POSITIVE_X + j, i, currMip.internalFormat, currMip.width,
               currMip.height, currMip.border, currMip.compressedImageSize,
               TextureCubeData().pixels[j].at(i)));
         } // Non compressed readable texture
         else if (texStateData->Data().restore.isESTexReadable) {
-          if (Config::Get().recorder.openGL.utilities.texturesState ==
-              TTexturesState::TEXTURES_STATE_MIXED) {
+          if (Config::Get().opengl.recorder.texturesState == TTexturesState::MIXED) {
             scheduler.Register(new CglTexSubImage2D(
                 GL_TEXTURE_CUBE_MAP_POSITIVE_X + j, i, 0, 0, currMip.width, currMip.height,
                 currMip.format, currMip.type, TextureCubeData().pixels[j].at(i)));
-          } else if (Config::Get().recorder.openGL.utilities.texturesState ==
-                     TTexturesState::TEXTURES_STATE_RESTORE) {
+          } else if (Config::Get().opengl.recorder.texturesState == TTexturesState::RESTORE) {
             scheduler.Register(new CglTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + j, i,
                                                  currMip.internalFormat, currMip.width,
                                                  currMip.height, currMip.border, currMip.format,
@@ -3107,8 +3108,7 @@ void gits::OpenGL::CVariableTextureInfo::CTextureCube::ScheduleSameTargetTexture
         // Non compressed, non readable texture and restore Textures mode
         // in restore Textures mode unreadable textures are initialized with
         // default content. It may cause corruptions.
-        else if (Config::Get().recorder.openGL.utilities.texturesState ==
-                 TTexturesState::TEXTURES_STATE_RESTORE) {
+        else if (Config::Get().opengl.recorder.texturesState == TTexturesState::RESTORE) {
           scheduler.Register(new CglTexImage2D(
               GL_TEXTURE_CUBE_MAP_POSITIVE_X + j, i, currMip.internalFormat, currMip.width,
               currMip.height, currMip.border, currMip.format, currMip.type, nullptr));
@@ -3349,10 +3349,8 @@ void gits::OpenGL::CVariableTextureInfo::CTexture::Get() {
       (IsGlGetTexImagePresentOnGLES() && MipmapData().at(0).compressed == GL_FALSE) ||
       (IsGlGetCompressedTexImagePresentOnGLES() && MipmapData().at(0).compressed == GL_TRUE)) {
     GetTextureLevelsDataGL();
-  } else if (Config::Get().recorder.openGL.utilities.texturesState ==
-                 TTexturesState::TEXTURES_STATE_RESTORE ||
-             (Config::Get().recorder.openGL.utilities.texturesState ==
-                  TTexturesState::TEXTURES_STATE_MIXED &&
+  } else if (Config::Get().opengl.recorder.texturesState == TTexturesState::RESTORE ||
+             (Config::Get().opengl.recorder.texturesState == TTexturesState::MIXED &&
               Target() == GL_TEXTURE_2D)) {
     GetTextureLevelsDataGLES();
   }
@@ -3361,8 +3359,8 @@ void gits::OpenGL::CVariableTextureInfo::CTexture::Get() {
 void gits::OpenGL::CVariableTextureInfo::CTexture::Schedule(
     CScheduler& scheduler, const CTextureData& defaultTexture) const {
   GLuint texture = TextureId();
-  if (texture && (curctx::IsOgl() || Config::Get().recorder.openGL.utilities.texturesState ==
-                                         TTexturesState::TEXTURES_STATE_RESTORE)) {
+  if (texture &&
+      (curctx::IsOgl() || Config::Get().opengl.recorder.texturesState == TTexturesState::RESTORE)) {
     // Textures with id 0 are present by default for each target.
     scheduler.Register(new CglGenTextures(1, &texture));
   }
@@ -3379,10 +3377,8 @@ void gits::OpenGL::CVariableTextureInfo::CTexture::Schedule(
       (IsGlGetTexImagePresentOnGLES() && MipmapData().at(0).compressed == GL_FALSE) ||
       (IsGlGetCompressedTexImagePresentOnGLES() && MipmapData().at(0).compressed == GL_TRUE)) {
     ScheduleSameTargetTextureGL(scheduler);
-  } else if (Config::Get().recorder.openGL.utilities.texturesState ==
-                 TTexturesState::TEXTURES_STATE_RESTORE ||
-             (Config::Get().recorder.openGL.utilities.texturesState ==
-                  TTexturesState::TEXTURES_STATE_MIXED &&
+  } else if (Config::Get().opengl.recorder.texturesState == TTexturesState::RESTORE ||
+             (Config::Get().opengl.recorder.texturesState == TTexturesState::MIXED &&
               Target() == GL_TEXTURE_2D)) {
     ScheduleSameTargetTextureGLES(scheduler);
   }
@@ -5297,7 +5293,7 @@ gits::OpenGL::CVariableDefaultFramebuffer::CVariableDefaultFramebuffer()
       _colorInternalformat(0),
       _colorFormat(0),
       _colorType(0) {
-  if (Config::Get().recorder.openGL.utilities.restoreDefaulFB &&
+  if (Config::Get().opengl.recorder.restoreDefaultFB &&
       (curctx::IsOgl() &&
        (curctx::Version() >= 300 || drv.gl.HasExtension("GL_ARB_framebuffer_object")))) {
     _supported = true;
@@ -6179,7 +6175,7 @@ gits::OpenGL::CVariableFramebufferInfo::CVariableFramebufferInfo() {
   if (curctx::IsEs2Plus() ||
       (curctx::IsOgl() &&
        (curctx::Version() >= 300 || drv.gl.HasExtension("GL_ARB_framebuffer_object") ||
-        Config::Get().recorder.openGL.utilities.forceFBOSupportWA))) {
+        Config::Get().opengl.recorder.forceFBOSupportWA))) {
     _supported = true;
   }
 }

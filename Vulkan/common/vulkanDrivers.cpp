@@ -236,8 +236,9 @@ void_t STDCALL default_vkContinueRecordingGITS() {
 NOINLINE bool UseSpecial(const char* func) {
   const auto& cfg = Config::Get();
   return ShouldLog(TRACE) ||
-         (cfg.common.useEvents && lua::FunctionExists(func, CGits::Instance().GetLua().get())) ||
-         (cfg.player.exitOnError) || (!cfg.player.traceSelectedFrames.empty());
+         (cfg.common.shared.useEvents &&
+          lua::FunctionExists(func, CGits::Instance().GetLua().get())) ||
+         (cfg.common.player.exitOnError) || (!cfg.common.player.traceSelectedFrames.empty());
 }
 
 template <class T>
@@ -268,7 +269,7 @@ void checkReturnValue<PFN_vkVoidFunction>(const char*, PFN_vkVoidFunction) {}
     }                                                                                              \
     return_type gits_ret = (return_type)0;                                                         \
     bool call_shd = true;                                                                          \
-    if (gits_cfg.common.useEvents && !bypass_luascript) {                                          \
+    if (gits_cfg.common.shared.useEvents && !bypass_luascript) {                                   \
       auto L = CGits::Instance().GetLua().get();                                                   \
       bool exists = !doTrace || lua::FunctionExists(#function_name, L);                            \
       if (exists) {                                                                                \
@@ -286,7 +287,7 @@ void checkReturnValue<PFN_vkVoidFunction>(const char*, PFN_vkVoidFunction) {}
       function_name##_trace arguments_call;                                                        \
       trace_return_value(gits_ret);                                                                \
     }                                                                                              \
-    if (gits_cfg.player.exitOnError) {                                                             \
+    if (gits_cfg.common.player.exitOnError) {                                                      \
       checkReturnValue(#function_name, gits_ret);                                                  \
     }                                                                                              \
     return gits_ret;                                                                               \
@@ -388,11 +389,11 @@ void CVkDriver::Initialize() {
 #include "vulkanDriversAuto.inl"
 
     if (Mode == DriverMode::INTERCEPTOR) {
-      _lib = dl::open_library(gits::Config::Get().common.libVK.string().c_str());
+      _lib = dl::open_library(gits::Config::Get().common.shared.libVK.string().c_str());
       if (!_lib) {
         std::string errorMessage =
             std::string("Could not find Vulkan Loader in the specified path: ") +
-            gits::Config::Get().common.libVK.string();
+            gits::Config::Get().common.shared.libVK.string();
         throw std::runtime_error(errorMessage);
       }
 

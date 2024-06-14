@@ -18,7 +18,6 @@
 #include "getopt_.h"
 #include "pragmas.h"
 #include "exception.h"
-#include "openglEnums.h"
 #include "tools.h"
 #include "lua_bindings.h"
 #include "ptblLibrary.h"
@@ -32,41 +31,6 @@
 namespace gits {
 
 namespace {
-
-template <class T>
-bool parse_pair(const std::string& s, T& pair) {
-  std::stringstream str(s);
-  str >> pair.first;
-  str.ignore();
-  str >> pair.second;
-  return !(!str.eof() || str.fail() || str.bad());
-}
-
-template <class T>
-bool parse_vector(const std::string& s, std::vector<T>& vector, int size) {
-  std::stringstream str(s);
-  std::vector<T> vec;
-  while (!str.eof() && !str.fail() && !str.bad()) {
-    vec.push_back((T)0);
-    str >> vec.back();
-    str.ignore();
-  }
-  if ((unsigned)size == vec.size()) {
-    vector = std::move(vec);
-    return true;
-  }
-  return false;
-}
-
-void parse_vector(const std::string& s, std::vector<std::string>& vector) {
-  vector.clear();
-  std::stringstream sstream(s);
-  std::string elem;
-  while (std::getline(sstream, elem, ',')) {
-    vector.push_back(elem);
-  }
-}
-
 bool ends_with(const std::string& str, const std::string& ending) {
   if (str.size() < ending.size()) {
     return false;
@@ -86,60 +50,6 @@ void fixup_args(std::vector<std::string>& input_args,
 
   argc = static_cast<int>(input_args.size());
   argv = &storage[0];
-}
-
-/*
-  Override command line arguments if non are provided. Use gitsPlayer.rsp as
-  a response file, if it doesn't exist carry on as usual.
-  Response file doesn't look into its parameters. Each parameter needs to be
-  provided on separate line in the same way as parsed by the OS.
-  This means that options taking arguments should have the argument on
-  separate line - arguments with embedded spaces should not be enclosed with ".
-*/
-void response_file_args_override(int& argc, char**& argv) {
-  std::filesystem::path rspFile = "gitsPlayer.rsp";
-  std::ifstream file(rspFile);
-  if (argc == 1 && file.is_open()) {
-    Log(INFO)
-        << "No command line parameters passed and 'gitsPlayer.rsp' exists - using response file";
-
-    static std::vector<std::string> lines(1, argv[0]);
-    std::string line;
-    while (std::getline(file, line)) {
-      lines.push_back(line);
-    }
-
-    static std::vector<char*> args;
-    fixup_args(lines, args, argc, argv);
-  }
-}
-
-void environment_args_override(int& argc, char**& argv) {
-  // These are inherited from libcapture. TODO This should be removed
-  // when we no longer depend on old SCATE in production.
-  const char* first_frame = getenv("CAPTURE_FIRST_FRAME");
-  const char* every_frame = getenv("CAPTURE_EVERY_NTH_FRAME");
-  const char* last_frame = getenv("CAPTURE_EXIT_AFTER_FRAME");
-  const char* output_dir = getenv("CAPTURE_FILE_PREFIX");
-
-  if (first_frame && every_frame && last_frame && output_dir) {
-    static std::vector<std::string> lines;
-    for (int i = 0; i < argc; ++i) {
-      lines.push_back(argv[i]);
-    }
-
-    lines.push_back("--captureFrames");
-    lines.push_back(std::string(first_frame) + "-" + last_frame + ":" + every_frame);
-
-    lines.push_back("--exitFrame");
-    lines.push_back(last_frame);
-
-    lines.push_back("--outputDir");
-    lines.push_back(output_dir);
-
-    static std::vector<char*> args;
-    fixup_args(lines, args, argc, argv);
-  }
 }
 
 /*
@@ -198,9 +108,7 @@ void set_when_option_present(T& variable, U& option) {
     variable = option.Value();
   }
 }
-
 } // namespace
-
 template <class T>
 void process_lua_handled_option(const T& opt) {
   if (opt.Present()) {
@@ -212,8 +120,6 @@ void process_lua_handled_option(const T& opt) {
 }
 
 bool configure_player(int argc, char** argv) {
-  environment_args_override(argc, argv);
-  response_file_args_override(argc, argv);
   obsolete_args_override(argc, argv);
 
   // command line options parser
@@ -553,10 +459,6 @@ bool configure_player(int argc, char** argv) {
 
   TypedOption<unsigned> optionExitFrame(options, OPTION_GROUP_PLAYBACK, 0, "exitFrame",
                                         "Stop playback after this frame.");
-
-  TypedOption<unsigned> optionExitCommandBuffer(
-      options, OPTION_GROUP_PLAYBACK, 0, "exitCommandBuffer",
-      "Stop playback when this command buffer enters completed state.");
 
   TypedOption<bool> optionExitOnError(options, OPTION_GROUP_PLAYBACK, 0, "exitOnError",
                                       "Stop playback when API function call returns error value.");
@@ -1200,62 +1102,62 @@ bool configure_player(int argc, char** argv) {
   process_lua_handled_option(optionStripProfileRequest);
 
   Config cfg = Config::Get();
-  cfg.common.mode = Config::MODE_PLAYER;
   if (optionHelp.Value()) {
-    cfg.player.helpGroup = "general";
+    cfg.common.player.helpGroup = "general";
   } else if (optionGroupHelp.Present()) {
-    cfg.player.helpGroup = optionGroupHelp.Value();
+    cfg.common.player.helpGroup = optionGroupHelp.Value();
   }
-  cfg.player.version = optionVersion.Value();
-
-  cfg.player.interactive = optionInteractive.Value();
-  cfg.player.stats = optionStats.Value();
-  cfg.player.statsVerb = optionStatsVerb.Value();
-  cfg.player.disableExceptionHandling = optionNoExceptionHandling.Value();
-  cfg.player.escalatePriority = optionEscalatePriority.Value();
-  cfg.player.swapAfterPrepare = optionSwapAfterPrepare.Value();
-  cfg.player.skipQueries = optionSkipQueries.Value();
-  cfg.player.waitForEnter = optionWaitForEnter.Value();
-  cfg.player.linkGetProgBinary = optionLinkGetProgBinary.Value();
-  cfg.player.linkUseProgBinary = optionLinkUseProgBinary.Value();
-  cfg.player.diags = optionRecorderDiags.Value();
-  cfg.player.showOriginalPixelFormat = optionShowOriginalFormat.Value();
-  cfg.player.forceNoMSAA = optionForceNoMSAA.Value();
-  cfg.player.cleanResourcesOnExit = optionCleanResourcesOnExit.Value();
-  cfg.player.destroyContextsOnExit = optionDestroyContextsOnExit.Value();
-  set_when_option_present(cfg.player.printStateRestoreLogsVk, optionPrintStateRestoreLogsVk);
-  set_when_option_present(cfg.player.printMemUsageVk, optionPrintMemUsageVk);
-  set_when_option_present(cfg.player.execCmdBuffsBeforeQueueSubmit,
+  set_when_option_present(cfg.common.player.version, optionVersion);
+  set_when_option_present(cfg.common.player.interactive, optionInteractive);
+  set_when_option_present(cfg.common.player.stats, optionStats);
+  set_when_option_present(cfg.common.player.statsVerb, optionStatsVerb);
+  set_when_option_present(cfg.common.player.disableExceptionHandling, optionNoExceptionHandling);
+  set_when_option_present(cfg.common.player.escalatePriority, optionEscalatePriority);
+  set_when_option_present(cfg.common.player.swapAfterPrepare, optionSwapAfterPrepare);
+  set_when_option_present(cfg.opengl.player.skipQueries, optionSkipQueries);
+  set_when_option_present(cfg.common.player.waitForEnter, optionWaitForEnter);
+  set_when_option_present(cfg.opengl.player.linkGetProgBinary, optionLinkGetProgBinary);
+  set_when_option_present(cfg.opengl.player.linkUseProgBinary, optionLinkUseProgBinary);
+  set_when_option_present(cfg.common.player.diags, optionRecorderDiags);
+  set_when_option_present(cfg.opengl.player.showOriginalPixelFormat, optionShowOriginalFormat);
+  set_when_option_present(cfg.opengl.player.forceNoMSAA, optionForceNoMSAA);
+  set_when_option_present(cfg.common.player.cleanResourcesOnExit, optionCleanResourcesOnExit);
+  set_when_option_present(cfg.opengl.player.destroyContextsOnExit, optionDestroyContextsOnExit);
+  set_when_option_present(cfg.vulkan.player.printStateRestoreLogsVk, optionPrintStateRestoreLogsVk);
+  set_when_option_present(cfg.vulkan.player.printMemUsageVk, optionPrintMemUsageVk);
+  set_when_option_present(cfg.vulkan.player.execCmdBuffsBeforeQueueSubmit,
                           optionExecCmdBuffsBeforeQueueSubmit);
-  set_when_option_present(cfg.player.forceMultithreadedPipelineCompilation,
+  set_when_option_present(cfg.vulkan.player.forceMultithreadedPipelineCompilation,
                           optionForceMultithreadedPipelineCompilation);
 
   if (optionSuppressVKDeviceFeatures.Present()) {
-    parse_vector(optionSuppressVKDeviceFeatures.Value(), cfg.player.suppressVKDeviceFeatures);
+    parse_vector(optionSuppressVKDeviceFeatures.Value(),
+                 cfg.vulkan.shared.suppressPhysicalDeviceFeatures);
   }
   if (optionSuppressVKExtensions.Present()) {
-    parse_vector(optionSuppressVKExtensions.Value(), cfg.player.suppressVKExtensions);
+    parse_vector(optionSuppressVKExtensions.Value(), cfg.vulkan.shared.suppressExtensions);
   }
   if (optionSuppressVKLayers.Present()) {
-    parse_vector(optionSuppressVKLayers.Value(), cfg.player.suppressVKLayers);
+    parse_vector(optionSuppressVKLayers.Value(), cfg.vulkan.shared.suppressLayers);
   }
-  cfg.player.waitAfterQueueSubmitWA = optionWaitAfterQueueSubmitWA.Value();
+  set_when_option_present(cfg.vulkan.player.waitAfterQueueSubmitWA, optionWaitAfterQueueSubmitWA);
 
   if (optionOverrideVKPipelineCache.Present()) {
     std::filesystem::path pipelineCachePath = optionOverrideVKPipelineCache.Value();
-    cfg.player.overrideVKPipelineCache = std::filesystem::absolute(pipelineCachePath);
+    cfg.vulkan.player.overrideVKPipelineCache = std::filesystem::absolute(pipelineCachePath);
   }
 
-  set_when_option_present(cfg.player.forcePortableWglDepthBits, optionForcePortableWglDepthBits);
+  set_when_option_present(cfg.opengl.player.forcePortableWglDepthBits,
+                          optionForcePortableWglDepthBits);
 
-  cfg.player.noOpenCL = optionNoOpenCL.Value();
-  cfg.player.applicationPath = options.AppPath();
+  set_when_option_present(cfg.opencl.player.noOpenCL, optionNoOpenCL);
+  cfg.common.player.applicationPath = options.AppPath();
 
-  set_when_option_present(cfg.player.traceGLBufferHashes, optionTraceGLBufferHashes);
+  set_when_option_present(cfg.opengl.player.traceGLBufferHashes, optionTraceGLBufferHashes);
 
   if (optionOutputDir.Present()) {
     std::filesystem::path outputPath = optionOutputDir.Value();
-    cfg.player.outputDir = std::filesystem::absolute(outputPath);
+    cfg.common.player.outputDir = std::filesystem::absolute(outputPath);
   }
 
   if (optionOutputTracePath.Present()) {
@@ -1266,11 +1168,11 @@ bool configure_player(int argc, char** argv) {
     if (!outputPath.has_parent_path() && optionOutputDir.Present()) {
       outputPath = optionOutputDir.Value() / outputPath;
     }
-    cfg.player.outputTracePath = std::filesystem::absolute(outputPath);
+    cfg.common.player.outputTracePath = std::filesystem::absolute(outputPath);
   }
 
   if (optionScriptArgsString.Present()) {
-    cfg.common.scriptArgsStr = optionScriptArgsString.StrValue();
+    cfg.common.shared.scriptArgsStr = optionScriptArgsString.StrValue();
   }
   if (optionEventScript.Present()) {
     std::filesystem::path scriptPath = optionEventScript.Value();
@@ -1279,7 +1181,7 @@ bool configure_player(int argc, char** argv) {
     }
 
     lua::CreateAndRegisterEvents(scriptPath.string().c_str());
-    cfg.common.useEvents = true;
+    cfg.common.shared.useEvents = true;
   }
 
   if (optionCaptureDepth.Present() || optionCaptureStencil.Present()) {
@@ -1287,22 +1189,19 @@ bool configure_player(int argc, char** argv) {
                              "intelligent dumping of draws by 'captureDraws' option");
   }
 
-  cfg.player.captureDrawsPre = optionCaptureDrawsPre.Value();
+  set_when_option_present(cfg.opengl.player.captureDrawsPre, optionCaptureDrawsPre);
+  set_when_option_present(cfg.common.player.syncWithRecorder, optionSyncWithRecorder);
+  set_when_option_present(cfg.common.player.benchmark, optionBenchmark);
+  set_when_option_present(cfg.common.player.useZoneAllocator, optionUseZoneAllocator);
+  set_when_option_present(cfg.common.player.nullRun, optionNullRun);
 
-  cfg.player.syncWithRecorder = optionSyncWithRecorder.Value();
-  cfg.player.benchmark = optionBenchmark.Value();
-  cfg.common.useZoneAllocator = optionUseZoneAllocator.Value();
-
-  cfg.player.nullRun = optionNullRun.Value();
-
-  cfg.common.thresholdLogLevel = LogLevel::INFO; // default
   if (optionTrace.Present()) {
-    cfg.common.thresholdLogLevel = LogLevel::TRACE;
+    cfg.common.shared.thresholdLogLevel = LogLevel::TRACE;
     Log(WARN) << "The '--trace' argument is deprecated. "
               << "Please use '--logLevel TRACE' instead.";
   }
   if (optionTraceGLVerbose.Present()) {
-    cfg.common.thresholdLogLevel = LogLevel::TRACEV;
+    cfg.common.shared.thresholdLogLevel = LogLevel::TRACEV;
     Log(WARN) << "The '--traceGLVerbose' argument is deprecated. "
               << "Please use '--logLevel TRACEVERBOSE' instead.";
   }
@@ -1311,17 +1210,17 @@ bool configure_player(int argc, char** argv) {
     CEnumParser<LogLevel> logLevelParser;
     std::optional<LogLevel> lvl = logLevelParser.ParseEnum(logLevelString);
     if (lvl) {
-      cfg.common.thresholdLogLevel = lvl.value();
+      cfg.common.shared.thresholdLogLevel = lvl.value();
     } else {
       Log(WARN) << "Incorrect log level: \"" << logLevelString << "\".";
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
   }
   // Log can't use config directly, see log.cpp for info.
-  CLog::SetLogLevel(cfg.common.thresholdLogLevel);
+  CLog::SetLogLevel(cfg.common.shared.thresholdLogLevel);
 
   bool traceDataPresent = optionTraceData.Present();
-  if (traceDataPresent && cfg.common.thresholdLogLevel != LogLevel::TRACE) {
+  if (traceDataPresent && cfg.common.shared.thresholdLogLevel != LogLevel::TRACE) {
     throw std::runtime_error("Option 'traceData' requires log level to be exactly 'TRACE'.\n");
   }
   if (traceDataPresent) {
@@ -1332,7 +1231,7 @@ bool configure_player(int argc, char** argv) {
     while (std::getline(ssTraceDataOpts, option, ',')) {
       std::optional<TraceData> opt = traceDataParser.ParseEnum(option);
       if (opt) {
-        cfg.common.traceDataOpts.insert(opt.value());
+        cfg.common.shared.traceDataOpts.insert(opt.value());
       } else {
         Log(WARN) << "Incorect traceData option: \"" << option << "\".";
         throw std::runtime_error(EXCEPTION_MESSAGE);
@@ -1340,91 +1239,43 @@ bool configure_player(int argc, char** argv) {
     }
   }
 
-  if (cfg.common.thresholdLogLevel == LogLevel::TRACEV) {
+  if (cfg.common.shared.thresholdLogLevel == LogLevel::TRACEV) {
     for (auto& opt : TraceDataAll) {
-      cfg.common.traceDataOpts.insert(opt);
+      cfg.common.shared.traceDataOpts.insert(opt);
     }
   }
 
-  cfg.player.traceGitsInternal = optionTraceGitsInternal.Value();
-  cfg.common.traceGLError = optionTraceGLError.Value();
+  set_when_option_present(cfg.opengl.player.traceGitsInternal, optionTraceGitsInternal);
+  set_when_option_present(cfg.opengl.shared.traceGLError, optionTraceGLError);
 
   if (optionTraceVKStructs.Present()) {
-    cfg.common.traceDataOpts.insert(TraceData::VK_STRUCTS);
+    cfg.common.shared.traceDataOpts.insert(TraceData::VK_STRUCTS);
     Log(WARN) << "The '--traceVKStructs' argument is deprecated. "
               << "Please use '--traceData vkStructs' instead.";
   }
 
   if (optionCaptureVulkanRenderPasses.Present()) {
-    std::istringstream issVulkanRenderPasses(optionCaptureVulkanRenderPasses.Value());
-    std::vector<std::string> resourceTable;
-
-    std::string strObj;
-    while (std::getline(issVulkanRenderPasses, strObj, '/')) {
-      resourceTable.push_back(strObj);
-    }
-    cfg.player.captureVulkanRenderPasses.range = BitRange(resourceTable.back());
-    resourceTable.pop_back();
-
-    for (auto& obj : resourceTable) {
-      cfg.player.captureVulkanRenderPasses.objVector.push_back(std::stoul(obj, nullptr, 0));
-    }
+    cfg.vulkan.player.captureVulkanRenderPasses.SetFromString(
+        optionCaptureVulkanRenderPasses.StrValue());
   }
 
   if (optionCaptureVulkanRenderPassesResources.Present()) {
-    std::istringstream issVulkanRenderPassesResources(
-        optionCaptureVulkanRenderPassesResources.Value());
-    std::vector<std::string> resourceTable;
-
-    std::string strObj;
-    while (std::getline(issVulkanRenderPassesResources, strObj, '/')) {
-      resourceTable.push_back(strObj);
-    }
-    cfg.player.captureVulkanRenderPassesResources.range = BitRange(resourceTable.back());
-    resourceTable.pop_back();
-
-    for (auto& obj : resourceTable) {
-      cfg.player.captureVulkanRenderPassesResources.objVector.push_back(
-          std::stoul(obj, nullptr, 0));
-    }
+    cfg.vulkan.player.captureVulkanRenderPassesResources.SetFromString(
+        optionCaptureVulkanRenderPassesResources.StrValue());
   }
 
   if (optionCaptureVulkanDraws.Present()) {
-    std::istringstream issVulkanDraws(optionCaptureVulkanDraws.Value());
-    std::vector<std::string> resourceTable;
-
-    std::string strObj;
-    while (std::getline(issVulkanDraws, strObj, '/')) {
-      resourceTable.push_back(strObj);
-    }
-    cfg.player.captureVulkanDraws.range = BitRange(resourceTable.back());
-    resourceTable.pop_back();
-
-    for (auto& obj : resourceTable) {
-      cfg.player.captureVulkanDraws.objVector.push_back(std::stoul(obj, nullptr, 0));
-    }
+    cfg.vulkan.player.captureVulkanDraws.SetFromString(optionCaptureVulkanDraws.StrValue());
   }
 
   if (optionCaptureVulkanResources.Present()) {
-    std::istringstream issVulkanResources(optionCaptureVulkanResources.Value());
-    std::vector<std::string> resourceTable;
-
-    std::string strObj;
-    while (std::getline(issVulkanResources, strObj, '/')) {
-      resourceTable.push_back(strObj);
-    }
-    cfg.player.captureVulkanResources.range = BitRange(resourceTable.back());
-    resourceTable.pop_back();
-
-    for (auto& obj : resourceTable) {
-      cfg.player.captureVulkanResources.objVector.push_back(std::stoul(obj, nullptr, 0));
-    }
+    cfg.vulkan.player.captureVulkanResources.SetFromString(optionCaptureVulkanResources.StrValue());
   }
 
-  set_when_option_present(cfg.player.oneVulkanDrawPerCommandBuffer,
+  set_when_option_present(cfg.vulkan.player.oneVulkanDrawPerCommandBuffer,
                           optionOneVulkanDrawPerCommandBuffer);
 
-  set_when_option_present(cfg.player.oneVulkanRenderPassPerCommandBuffer,
+  set_when_option_present(cfg.vulkan.player.oneVulkanRenderPassPerCommandBuffer,
                           optionOneVulkanRenderPassPerCommandBuffer);
 
   if (optionCaptureVulkanRenderPasses.Present() ||
@@ -1432,19 +1283,19 @@ bool configure_player(int argc, char** argv) {
       optionOneVulkanDrawPerCommandBuffer.Present() ||
       optionOneVulkanRenderPassPerCommandBuffer.Present() || optionCaptureVulkanDraws.Present() ||
       optionCaptureVulkanResources.Present()) {
-    cfg.player.execCmdBuffsBeforeQueueSubmit = true;
+    cfg.vulkan.player.execCmdBuffsBeforeQueueSubmit = true;
   }
 
   if (optionCaptureVulkanDraws.Present() || optionCaptureVulkanResources.Present()) {
-    cfg.player.oneVulkanDrawPerCommandBuffer = true;
+    cfg.vulkan.player.oneVulkanDrawPerCommandBuffer = true;
   }
 
   if (optionCaptureVulkanRenderPasses.Present() ||
       optionCaptureVulkanRenderPassesResources.Present()) {
-    cfg.player.oneVulkanRenderPassPerCommandBuffer = true;
+    cfg.vulkan.player.oneVulkanRenderPassPerCommandBuffer = true;
   }
 
-  cfg.player.traceVKShaderHashes = optionTraceVKShaderHashes.Value();
+  set_when_option_present(cfg.vulkan.player.traceVKShaderHashes, optionTraceVKShaderHashes);
 
   if ((optionUseVKPhysicalDeviceIndex.Present() && optionUseVKPhysicalDeviceName.Present()) ||
       (optionUseVKPhysicalDeviceIndex.Present() && optionUseVKPhysicalDeviceType.Present()) ||
@@ -1453,14 +1304,16 @@ bool configure_player(int argc, char** argv) {
         "Only one of the 'useVKPhysicalDeviceIndex', 'useVKPhysicalDeviceName' and "
         "'useVKPhysicalDevicType' options can be provided.");
   }
-  set_when_option_present(cfg.player.vulkanForcedPhysicalDeviceIndex,
+  set_when_option_present(cfg.vulkan.player.vulkanForcedPhysicalDeviceIndex,
                           optionUseVKPhysicalDeviceIndex);
-  set_when_option_present(cfg.player.vulkanForcedPhysicalDeviceName, optionUseVKPhysicalDeviceName);
-  set_when_option_present(cfg.player.vulkanForcedPhysicalDeviceType, optionUseVKPhysicalDeviceType);
+  set_when_option_present(cfg.vulkan.player.vulkanForcedPhysicalDeviceName,
+                          optionUseVKPhysicalDeviceName);
+  set_when_option_present(cfg.vulkan.player.vulkanForcedPhysicalDeviceType,
+                          optionUseVKPhysicalDeviceType);
 
-  set_when_option_present(cfg.player.forceGLProfile, optionForceGLProfile);
-  set_when_option_present(cfg.player.forceGLNativeAPI, optionForceGLNativeAPI);
-  switch (cfg.player.forceGLNativeAPI) {
+  set_when_option_present(cfg.opengl.player.forceGLProfile, optionForceGLProfile);
+  set_when_option_present(cfg.opengl.player.forceGLNativeAPI, optionForceGLNativeAPI);
+  switch (cfg.opengl.player.forceGLNativeAPI) {
   case TForcedGLNativeApi::NO_NTV_API_FORCED:
     break;
   case TForcedGLNativeApi::WGL:
@@ -1478,72 +1331,66 @@ bool configure_player(int argc, char** argv) {
   }
 
   if (optionForceGLVersionMajor.Present() || optionForceGLVersionMinor.Present()) {
-    cfg.player.forceGLVersion = true;
-    cfg.player.forceGLVersionMajor = optionForceGLVersionMajor.Value();
-    cfg.player.forceGLVersionMinor = optionForceGLVersionMinor.Value();
+    auto verMajor = optionForceGLVersionMajor.Value();
+    auto verMinor = optionForceGLVersionMinor.Value();
+    cfg.opengl.shared.forceGLVersion = std::to_string(verMajor) + "." + std::to_string(verMinor);
+    cfg.opengl.shared.forceGLVersionMajor = verMajor;
+    cfg.opengl.shared.forceGLVersionMinor = verMinor;
   }
 
-  cfg.player.exitFrame = static_cast<unsigned>(-1);
-  set_when_option_present(cfg.player.exitFrame, optionExitFrame);
-
-  cfg.player.exitCommandBuffer = 0;
-  set_when_option_present(cfg.player.exitCommandBuffer, optionExitCommandBuffer);
-
-  cfg.player.exitOnError = false;
-  set_when_option_present(cfg.player.exitOnError, optionExitOnError);
-
-  cfg.player.exitOnVkQueueSubmitFail = false;
-  set_when_option_present(cfg.player.exitOnVkQueueSubmitFail, optionExitOnVkQueueSubmitFail);
+  set_when_option_present(cfg.common.player.exitFrame, optionExitFrame);
+  set_when_option_present(cfg.common.player.exitOnError, optionExitOnError);
+  set_when_option_present(cfg.vulkan.player.exitOnVkQueueSubmitFail, optionExitOnVkQueueSubmitFail);
 
   if (optionCaptureDrawsPre.Present() && !optionCaptureDraws.Present()) {
     throw std::runtime_error(
         "Option 'captureDrawsPre' requires option 'captureDraws' to be specified");
   }
 
-  cfg.player.logFncs = optionLogFncs.Value();
-  cfg.player.faithfulThreading = optionFaithfulThreading.Value();
-  cfg.player.logLoadedTokens = optionLogLoadedTokens.Value();
-  cfg.player.captureWholeWindow = optionCaptureWholeWindow.Value();
-  cfg.player.dontForceBackBufferGL = optionDontForceBackBufferGL.Value();
-  cfg.player.forceOrigScreenResolution = optionForceOrigScreenResolution.Value();
-  if (optionShowWindowBorder.Present()) {
-    cfg.player.showWindowBorder = optionShowWindowBorder.Value();
+  set_when_option_present(cfg.common.player.logFncs, optionLogFncs);
+  set_when_option_present(cfg.common.player.faithfulThreading, optionFaithfulThreading);
+  set_when_option_present(cfg.common.player.logLoadedTokens, optionLogLoadedTokens);
+  set_when_option_present(cfg.opengl.player.captureWholeWindow, optionCaptureWholeWindow);
+  set_when_option_present(cfg.opengl.player.dontForceBackBufferGL, optionDontForceBackBufferGL);
+  set_when_option_present(cfg.common.player.forceOrigScreenResolution,
+                          optionForceOrigScreenResolution);
+  set_when_option_present(cfg.common.player.showWindowBorder, optionShowWindowBorder);
+  if (optionFullscreen.Present()) {
+    cfg.common.player.windowMode = WindowMode::EXCLUSIVE_FULLSCREEN;
   }
-  if (optionFullscreen.Value()) {
-    cfg.player.windowMode = Config::WindowMode::EXCLUSIVE_FULLSCREEN;
-  }
-  cfg.player.showWindowsWA = optionShowWindowsWA.Value();
-  cfg.player.signStream = optionSignStream.Value();
-  cfg.player.verifyStream = optionVerifyStream.Value();
-  cfg.player.dontVerifyStream = optionDontVerifyStream.Value();
-  cfg.player.renderOffscreen = optionRenderOffscreen.Value();
-  cfg.player.ignoreVKCrossPlatformIncompatibilitiesWA =
-      optionIgnoreVKCrossPlatformIncompatibilitiesWA.Value();
+  set_when_option_present(cfg.common.player.showWindowsWA, optionShowWindowsWA);
+  set_when_option_present(cfg.common.player.signStream, optionSignStream);
+  set_when_option_present(cfg.common.player.verifyStream, optionVerifyStream);
+  set_when_option_present(cfg.common.player.dontVerifyStream, optionDontVerifyStream);
+  set_when_option_present(cfg.common.player.renderOffscreen, optionRenderOffscreen);
+  set_when_option_present(cfg.vulkan.player.ignoreVKCrossPlatformIncompatibilitiesWA,
+                          optionIgnoreVKCrossPlatformIncompatibilitiesWA);
   if (optionCheckCrossPlatformCompatibility.Present()) {
     Log(WARN) << "The '--checkCrossPlatformCompatibility' argument is deprecated.";
   }
-  set_when_option_present(cfg.player.scaleFactor, optionScaleFactor);
-  set_when_option_present(cfg.player.tokenLoadLimit, optionTokenLoadLimit);
-  set_when_option_present(cfg.player.maxAllowedVkSwapchainRewinds,
+  set_when_option_present(cfg.opengl.player.scaleFactor, optionScaleFactor);
+  set_when_option_present(cfg.common.player.tokenLoadLimit, optionTokenLoadLimit);
+  set_when_option_present(cfg.vulkan.player.maxAllowedVkSwapchainRewinds,
                           optionMaxAllowedVkSwapchainRewinds);
-  set_when_option_present(cfg.player.endFrameSleep, optionEndFrameSleep);
-  set_when_option_present(cfg.player.stopAfterFrames, optionStopAfterFrames);
-  set_when_option_present(cfg.player.captureFrames, optionCaptureFrames);
-  set_when_option_present(cfg.player.traceSelectedFrames, optionTraceSelectedFrames);
-  set_when_option_present(cfg.player.captureVulkanSubmits, optionCaptureVulkanSubmits);
-  set_when_option_present(cfg.player.captureVulkanSubmitsResources,
+  set_when_option_present(cfg.common.player.endFrameSleep, optionEndFrameSleep);
+  set_when_option_present(cfg.common.player.stopAfterFrames, optionStopAfterFrames);
+  set_when_option_present(cfg.common.player.captureFrames, optionCaptureFrames);
+  set_when_option_present(cfg.common.player.traceSelectedFrames, optionTraceSelectedFrames);
+  set_when_option_present(cfg.vulkan.player.captureVulkanSubmits, optionCaptureVulkanSubmits);
+  set_when_option_present(cfg.vulkan.player.captureVulkanSubmitsResources,
                           optionCaptureVulkanSubmitsResources);
-  set_when_option_present(cfg.player.captureVulkanSubmitsGroupType,
+  set_when_option_present(cfg.vulkan.player.captureVulkanSubmitsGroupType,
                           optionCaptureVulkanSubmitsGroupType);
-  cfg.player.skipNonDeterministicImages = optionSkipNonDeterministicImages.Value();
-  cfg.player.captureFramesHashes = optionCaptureFramesHashes.Value();
-  cfg.player.captureScreenshot = optionCaptureScreenshot.Value();
-  set_when_option_present(cfg.player.captureDraws, optionCaptureDraws);
-  set_when_option_present(cfg.player.capture2DTexs, optionCapture2DTexs);
-  set_when_option_present(cfg.player.clCaptureImages, optionClCaptureImages);
-  set_when_option_present(cfg.player.clRemoveSourceLengths, optionClRemoveSourceLengths);
-  set_when_option_present(cfg.player.captureDraws2DTexs, optionCaptureDraws2DTexs);
-  set_when_option_present(cfg.player.aubSignaturesCL, optionAubSignaturesCL);
+  set_when_option_present(cfg.vulkan.player.skipNonDeterministicImages,
+                          optionSkipNonDeterministicImages);
+  set_when_option_present(cfg.opengl.player.captureFramesHashes, optionCaptureFramesHashes);
+  set_when_option_present(cfg.common.player.captureScreenshot, optionCaptureScreenshot);
+  set_when_option_present(cfg.opengl.player.captureDraws, optionCaptureDraws);
+  set_when_option_present(cfg.opengl.player.capture2DTexs, optionCapture2DTexs);
+  set_when_option_present(cfg.opencl.player.captureImages, optionClCaptureImages);
+  set_when_option_present(cfg.opencl.player.removeSourceLengths, optionClRemoveSourceLengths);
+  set_when_option_present(cfg.opengl.player.captureDraws2DTexs, optionCaptureDraws2DTexs);
+  set_when_option_present(cfg.opencl.player.aubSignaturesCL, optionAubSignaturesCL);
 
 #if defined(GITS_PLATFORM_WINDOWS)
   if (optionRenderDocCaptureFrames.Present()) {
@@ -1551,8 +1398,8 @@ bool configure_player(int argc, char** argv) {
       throw std::runtime_error("Option 'renderDocCaptureFrames' cannot be combined with option "
                                "'renderDocCaptureVKSubmits'");
     }
-    cfg.player.renderDoc.frameRecEnabled = true;
-    cfg.player.renderDoc.captureRange = optionRenderDocCaptureFrames.Value();
+    cfg.vulkan.player.renderDoc.mode.setFromString("Frames");
+    cfg.vulkan.player.renderDoc.captureRange = optionRenderDocCaptureFrames.Value();
   }
 
   if (optionRenderDocCaptureVKSubmits.Present()) {
@@ -1564,13 +1411,13 @@ bool configure_player(int argc, char** argv) {
       throw std::runtime_error("Option 'renderDocCaptureVKSubmits' cannot be combined with option "
                                "'captureVulkanSubmits' or 'captureVulkanSubmitsResources'");
     }
-    cfg.player.renderDoc.queuesubmitRecEnabled = true;
-    cfg.player.renderDoc.captureRange = optionRenderDocCaptureVKSubmits.Value();
+    cfg.vulkan.player.renderDoc.mode.setFromString("QueueSubmit");
+    cfg.vulkan.player.renderDoc.captureRange = optionRenderDocCaptureVKSubmits.Value();
   }
 
   if (optionRenderDocDllPath.Present()) {
     std::filesystem::path renderDocDllPath = optionRenderDocDllPath.Value();
-    cfg.player.renderDoc.dllPath = std::filesystem::absolute(renderDocDllPath);
+    cfg.vulkan.player.renderDoc.dllPath = std::filesystem::absolute(renderDocDllPath);
   }
 
   if (optionRenderDocContinuousCapture.Present()) {
@@ -1579,7 +1426,7 @@ bool configure_player(int argc, char** argv) {
           "Option 'renderDocContinuousCapture' requires option 'renderDocCaptureFrames' or "
           "'renderDocCaptureVKSubmits' to be specified");
     }
-    cfg.player.renderDoc.continuousCapture = optionRenderDocContinuousCapture.Value();
+    cfg.vulkan.player.renderDoc.continuousCapture = optionRenderDocContinuousCapture.Value();
   }
 
   if (optionRenderDocEnableUI.Present()) {
@@ -1588,41 +1435,40 @@ bool configure_player(int argc, char** argv) {
           "Option 'renderDocEnableUI' requires option 'renderDocCaptureFrames' or "
           "'renderDocCaptureVKSubmits' to be specified");
     }
-    cfg.player.renderDoc.enableUI = optionRenderDocEnableUI.Value();
+    cfg.vulkan.player.renderDoc.enableUI = optionRenderDocEnableUI.Value();
   }
 #endif
 
-  set_when_option_present(cfg.common.libEGL, optionLibEGL);
-  set_when_option_present(cfg.common.libGLESv1, optionLibGLESv1);
-  set_when_option_present(cfg.common.libGLESv1, optionLibGLESv2);
-  set_when_option_present(cfg.common.libGL, optionLibGL);
+  set_when_option_present(cfg.common.shared.libEGL, optionLibEGL);
+  set_when_option_present(cfg.common.shared.libGLESv1, optionLibGLESv1);
+  set_when_option_present(cfg.common.shared.libGLESv1, optionLibGLESv2);
+  set_when_option_present(cfg.common.shared.libGL, optionLibGL);
   if (optionLibVK.Present()) {
     std::filesystem::path libVKPath = optionLibVK.Value();
     if (std::filesystem::is_directory(libVKPath)) {
-      libVKPath /= cfg.common.libVK;
+      libVKPath /= cfg.common.shared.libVK;
     }
-    cfg.common.libVK = std::move(libVKPath);
+    cfg.common.shared.libVK = std::move(libVKPath);
   }
 
-  set_when_option_present(cfg.player.captureFinishFrame, optionCaptureFinishFrame);
-  set_when_option_present(cfg.player.captureReadPixels, optionCaptureReadPixels);
-  set_when_option_present(cfg.player.captureFlushFrame, optionCaptureFlushFrame);
-  set_when_option_present(cfg.player.captureBindFboFrame, optionCaptureBindFboFrame);
-  set_when_option_present(cfg.player.keepDraws, optionKeepDraws);
-  set_when_option_present(cfg.player.keepApis, optionKeepApis);
-  set_when_option_present(cfg.player.keepFrames, optionKeepFrames);
-
-  cfg.player.minimalConfig = optionMinimalConfig.Value();
+  set_when_option_present(cfg.opengl.player.captureFinishFrame, optionCaptureFinishFrame);
+  set_when_option_present(cfg.opengl.player.captureReadPixels, optionCaptureReadPixels);
+  set_when_option_present(cfg.opengl.player.captureFlushFrame, optionCaptureFlushFrame);
+  set_when_option_present(cfg.opengl.player.captureBindFboFrame, optionCaptureBindFboFrame);
+  set_when_option_present(cfg.opengl.player.keepDraws, optionKeepDraws);
+  set_when_option_present(cfg.common.player.keepApis, optionKeepApis);
+  set_when_option_present(cfg.opengl.player.keepFrames, optionKeepFrames);
+  set_when_option_present(cfg.opengl.player.minimalConfig, optionMinimalConfig);
 
   if (optionTokenBurstLimit.Present()) {
-    cfg.common.tokenBurst = optionTokenBurstLimit.Value();
-    if (cfg.common.tokenBurst == 0) {
+    cfg.common.player.tokenBurst = optionTokenBurstLimit.Value();
+    if (cfg.common.player.tokenBurst == 0) {
       throw std::runtime_error("tokenBurstLimit must be greater then 0");
     }
   }
   if (optionTokenBurstNum.Present()) {
-    cfg.common.tokenBurstNum = optionTokenBurstNum.Value();
-    if (cfg.common.tokenBurstNum == 0) {
+    cfg.common.player.tokenBurstNum = optionTokenBurstNum.Value();
+    if (cfg.common.player.tokenBurstNum == 0) {
       throw std::runtime_error("tokenBurstNum must be greater then 0");
     }
   }
@@ -1631,54 +1477,43 @@ bool configure_player(int argc, char** argv) {
       throw std::runtime_error("loadWholeStreamBeforePlayback option is mutually exclusive with "
                                "tokenBurstLimit option.");
     }
-    cfg.player.loadWholeStreamBeforePlayback = optionLoadWholeStreamBeforePlayback.Value();
+    cfg.common.player.loadWholeStreamBeforePlayback = optionLoadWholeStreamBeforePlayback.Value();
   }
 
-  set_when_option_present(cfg.player.clCaptureReads, optionClCaptureReads);
-  set_when_option_present(cfg.player.clCaptureKernels, optionClCaptureKernels);
-  set_when_option_present(cfg.player.clOmitReadOnlyObjects, optionClOmitReadOnlyObjects);
-  set_when_option_present(cfg.player.clDumpLayoutOnly, optionClDumpLayoutOnly);
-  set_when_option_present(cfg.player.clInjectBufferResetAfterCreate,
+  set_when_option_present(cfg.opencl.player.captureReads, optionClCaptureReads);
+  set_when_option_present(cfg.opencl.player.captureKernels, optionClCaptureKernels);
+  set_when_option_present(cfg.opencl.player.omitReadOnlyObjects, optionClOmitReadOnlyObjects);
+  set_when_option_present(cfg.opencl.player.dumpLayoutOnly, optionClDumpLayoutOnly);
+  set_when_option_present(cfg.opencl.player.injectBufferResetAfterCreate,
                           optionClInjectBufferResetAfterCreate);
-  set_when_option_present(cfg.player.l0DumpLayoutOnly, optionL0DumpLayoutOnly);
+  set_when_option_present(cfg.levelzero.player.dumpLayoutOnly, optionL0DumpLayoutOnly);
   if (optionL0CaptureKernels.Present()) {
-    const auto captureRange = optionL0CaptureKernels.Value();
-    std::istringstream issL0ObjectsRange(captureRange);
-    std::vector<std::string> objectsTable;
-    std::string strObj;
-    if (captureRange.find_first_of('/') != std::string::npos) {
-      while (std::getline(issL0ObjectsRange, strObj, '/')) {
-        objectsTable.push_back(strObj);
-      }
-    } else {
-      while (std::getline(issL0ObjectsRange, strObj, '\\')) {
-        objectsTable.push_back(strObj);
-      }
-    }
-    if (objectsTable.size() == 3) {
-      cfg.player.l0CaptureKernels = BitRange(objectsTable[2]);
-      cfg.player.l0CaptureCommandLists = BitRange(objectsTable[1]);
-      cfg.player.l0CaptureCommandQueues = BitRange(objectsTable[0]);
-    } else if (objectsTable.size() == 2) {
-      cfg.player.l0CaptureKernels = BitRange(true);
-      cfg.player.l0CaptureCommandLists = BitRange(objectsTable[1]);
-      cfg.player.l0CaptureCommandQueues = BitRange(objectsTable[0]);
+    auto captureKernelsVec = cfg.levelzero.ParseCaptureKernels(optionL0CaptureKernels.Value());
+    if (captureKernelsVec.size() == 3) {
+      cfg.levelzero.player.captureKernels = BitRange(captureKernelsVec[2]);
+      cfg.levelzero.player.captureCommandLists = BitRange(captureKernelsVec[1]);
+      cfg.levelzero.player.captureCommandQueues = BitRange(captureKernelsVec[0]);
+    } else if (captureKernelsVec.size() == 2) {
+      cfg.levelzero.player.captureKernels = BitRange(true);
+      cfg.levelzero.player.captureCommandLists = BitRange(captureKernelsVec[1]);
+      cfg.levelzero.player.captureCommandQueues = BitRange(captureKernelsVec[0]);
     } else {
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
   }
-  set_when_option_present(cfg.player.l0DisableAddressTranslation,
-                          optionL0DisableAddressTranslation);
-  set_when_option_present(cfg.player.l0CaptureAfterSubmit, optionL0CaptureAfterSubmit);
-  set_when_option_present(cfg.player.l0CaptureImages, optionL0CaptureImages);
-  set_when_option_present(cfg.player.l0DumpSpv, optionL0DumpSpv);
-  set_when_option_present(cfg.player.l0OmitOriginalAddressCheck, optionL0OmitOriginalAddressCheck);
-  set_when_option_present(cfg.player.l0CaptureInputKernels, optionL0CaptureInputKernels);
-  set_when_option_present(cfg.player.l0InjectBufferResetAfterCreate,
+  set_when_option_present(cfg.levelzero.player.captureAfterSubmit, optionL0CaptureAfterSubmit);
+  set_when_option_present(cfg.levelzero.player.captureImages, optionL0CaptureImages);
+  set_when_option_present(cfg.levelzero.player.dumpSpv, optionL0DumpSpv);
+  set_when_option_present(cfg.levelzero.player.captureInputKernels, optionL0CaptureInputKernels);
+  set_when_option_present(cfg.levelzero.player.injectBufferResetAfterCreate,
                           optionL0InjectBufferResetAfterCreate);
-  set_when_option_present(cfg.player.l0DisableNullIndirectPointersInBuffer,
+  set_when_option_present(cfg.levelzero.player.disableNullIndirectPointersInBuffer,
                           optionL0DisableNullIndirectPointersInBuffer);
-  if (cfg.player.l0CaptureInputKernels && cfg.player.l0CaptureAfterSubmit) {
+  set_when_option_present(cfg.levelzero.player.disableAddressTranslation,
+                          optionL0DisableAddressTranslation);
+  set_when_option_present(cfg.levelzero.player.omitOriginalAddressCheck,
+                          optionL0OmitOriginalAddressCheck);
+  if (cfg.levelzero.player.captureInputKernels && cfg.levelzero.player.captureAfterSubmit) {
     Log(ERR) << "l0CaptureInputKernels and l0CaptureAfterSubmit options are mutually exclusive.";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
@@ -1689,42 +1524,55 @@ bool configure_player(int argc, char** argv) {
                                "position with --forceWindowPos.");
     }
 
-    cfg.player.forceWindowPos = true;
-    if (!parse_pair(optionForceWindowPos.Value(), cfg.player.windowCoords)) {
+    cfg.common.player.forceWindowPos.enabled = true;
+    std::pair<uint32_t, uint32_t> windowCoords;
+    if (!parse_pair(optionForceWindowPos.Value(), windowCoords)) {
       throw std::runtime_error("Couldn't parse window position parameter.");
     }
+    cfg.common.player.forceWindowPos.x = windowCoords.first;
+    cfg.common.player.forceWindowPos.y = windowCoords.second;
   }
   if (optionForceWindowSize.Present()) {
-    cfg.player.forceWindowSize = true;
-    if (!parse_pair(optionForceWindowSize.Value(), cfg.player.windowSize)) {
+    cfg.common.player.forceWindowSize.enabled = true;
+    std::pair<uint32_t, uint32_t> windowSize;
+    if (!parse_pair(optionForceWindowSize.Value(), windowSize)) {
       throw std::runtime_error("Couldn't parse window size parameter.");
     }
+    cfg.common.player.forceWindowSize.width = windowSize.first;
+    cfg.common.player.forceWindowSize.height = windowSize.second;
   }
   if (optionForceInvisibleWindows.Present()) {
-    cfg.player.forceInvisibleWindows = true;
+    cfg.common.player.forceInvisibleWindows = true;
   }
 
-  set_when_option_present(cfg.common.libClPath, optionLibOCLPath);
+  set_when_option_present(cfg.common.shared.libClPath, optionLibOCLPath);
 
   if (optionForceScissor.Present()) {
-    cfg.player.forceScissor = true;
-    if (!parse_vector(optionForceScissor.Value(), cfg.player.scissorCoords, 4)) {
+    cfg.common.player.forceScissor.enabled = true;
+    std::vector<uint32_t> scissorCoords;
+    if (!parse_vector(optionForceScissor.Value(), scissorCoords, 4)) {
       throw std::runtime_error("Couldn't parse scissor coords");
     }
+    cfg.common.player.forceScissor.x = scissorCoords[0];
+    cfg.common.player.forceScissor.y = scissorCoords[1];
+    cfg.common.player.forceScissor.width = scissorCoords[2];
+    cfg.common.player.forceScissor.height = scissorCoords[3];
   }
   if (optionAffectViewport.Present()) {
-    cfg.player.affectViewport = true;
-    if (!parse_vector(optionAffectViewport.Value(), cfg.player.affectedViewport, 2)) {
+    cfg.opengl.player.affectViewport = true;
+    if (!parse_vector(optionAffectViewport.Value(), cfg.opengl.player.affectedViewport, 2)) {
       throw std::runtime_error("Couldn't parse scissor coords");
     }
   }
 #if defined GITS_PLATFORM_WINDOWS
   if (optionForceDesktopResolution.Present()) {
-    cfg.player.forceDesktopResolution = true;
-    if (!parse_vector(optionForceDesktopResolution.Value(), cfg.player.forcedDesktopResolution,
-                      2)) {
+    cfg.common.player.forceDesktopResolution.enabled = true;
+    std::pair<vi_uint, vi_uint> forcedDesktopResolution;
+    if (!parse_pair(optionForceDesktopResolution.Value(), forcedDesktopResolution)) {
       throw std::runtime_error("Couldn't parse resolution");
     }
+    cfg.common.player.forceDesktopResolution.width = forcedDesktopResolution.first;
+    cfg.common.player.forceDesktopResolution.height = forcedDesktopResolution.second;
   }
 #endif
 
@@ -1762,18 +1610,18 @@ bool configure_player(int argc, char** argv) {
       Log(INFO) << "Using stream file '" << stream_path << "'\n";
     }
 
-    cfg.player.streamPath = stream_path;
-    cfg.common.streamDir = stream_path.parent_path();
+    cfg.common.player.streamPath = stream_path;
+    cfg.common.player.streamDir = stream_path.parent_path();
   }
   Config::Set(cfg);
 
-  if (cfg.player.helpGroup != "") {
+  if (cfg.common.player.helpGroup != "") {
     // show usage screen
     Log(INFO, NO_PREFIX) << "Usage: ";
     Log(INFO, NO_PREFIX) << "  " << options.AppName() << " [options] stream.gits2"
                          << "\n";
 
-    options.Usage(cfg.player.helpGroup, console_columns());
+    options.Usage(cfg.common.player.helpGroup, console_columns());
 
     Log(INFO, NO_PREFIX) << "Keys:";
     Log(INFO, NO_PREFIX) << " - <ESC>    - Exit gitsPlayer";
@@ -1783,7 +1631,7 @@ bool configure_player(int argc, char** argv) {
     return true;
   }
 
-  if (cfg.player.version) {
+  if (cfg.common.player.version) {
     // Print version and quit.
     CGits& inst = CGits::Instance();
     Log(INFO, NO_PREFIX) << inst << "\n";
@@ -1791,7 +1639,7 @@ bool configure_player(int argc, char** argv) {
   }
 
   // check if file to play specified
-  if (options.NotConsumed().empty()) {
+  if (options.NotConsumed().empty() && cfg.common.player.streamPath.empty()) {
     throw std::runtime_error("Error: GITS file not specified");
   } else if (options.NotConsumed().size() > 1) {
     std::stringstream str;

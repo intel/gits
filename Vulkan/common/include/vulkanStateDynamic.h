@@ -428,7 +428,7 @@ struct CDeviceMemoryState : public UniqueResourceHandle {
           flagsData(_flags),
           ppDataData(*_ppData),
           sniffedRegionHandle(0) {
-      if (Config::Get().IsRecorder() && Config::Get().recorder.vulkan.utilities.memorySegmentSize) {
+      if (Config::Get().IsRecorder() && Config::Get().vulkan.recorder.memorySegmentSize) {
         compareData.resize((size_t)*_size);
         memcpy(&compareData[0], (char*)*_ppData, (size_t)*_size);
       }
@@ -1138,7 +1138,7 @@ struct CFenceState : public UniqueResourceHandle {
         fenceCreateInfoData(_pCreateInfo),
         fenceUsed(_pCreateInfo->flags & VK_FENCE_CREATE_SIGNALED_BIT),
         delayChecksCount((_pCreateInfo->flags & VK_FENCE_CREATE_SIGNALED_BIT)
-                             ? Config::Get().recorder.vulkan.utilities.delayFenceChecksCount
+                             ? Config::Get().vulkan.recorder.delayFenceChecksCount
                              : 0),
         deviceStateStore(_deviceState) {}
 

@@ -21,6 +21,10 @@
 
 #include "../../OpenGL/common/include/openglTypes.h"
 
+#ifdef WITH_VULKAN
+#include "vulkanTools.h"
+#endif
+
 namespace gits {
 
 namespace OpenGL {
@@ -47,12 +51,6 @@ void STDCALL GitsGlDebugProc(unsigned source,
   Log(INFO) << "           msg:  " << message;
 }
 } // namespace OpenGL
-
-#ifdef WITH_VULKAN
-namespace Vulkan {
-void waitForAllDevices();
-}
-#endif
 
 namespace lua {
 typedef std::shared_ptr<lua_State> lua_ptr;
@@ -437,7 +435,7 @@ int export_FreeByteArray(lua_State* L) {
 }
 
 int export_ArgsString(lua_State* L) {
-  lua_pushstring(L, (const char*)gits::Config::Get().common.scriptArgsStr.c_str());
+  lua_pushstring(L, (const char*)gits::Config::Get().common.shared.scriptArgsStr.c_str());
   return 1;
 }
 int export_gitsGlDebugProc(lua_State* L) {
@@ -446,7 +444,7 @@ int export_gitsGlDebugProc(lua_State* L) {
 }
 
 int export_OutDir(lua_State* L) {
-  lua_pushstring(L, (const char*)gits::Config::Get().player.outputDir.string().c_str());
+  lua_pushstring(L, (const char*)gits::Config::Get().common.player.outputDir.string().c_str());
   return 1;
 }
 
@@ -465,7 +463,7 @@ int export_SystemLog(lua_State* L) {
 }
 
 int export_GetStreamDir(lua_State* L) {
-  lua_pushstring(L, Config::Get().common.streamDir.string().c_str());
+  lua_pushstring(L, Config::Get().common.player.streamDir.string().c_str());
   return 1;
 }
 

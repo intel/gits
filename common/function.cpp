@@ -44,7 +44,7 @@ void gits::CFunction::Write(CBinOStream& stream) const {
   if (ret) {
     stream << *ret;
   }
-  if (Config::Get().recorder.extras.utilities.highIntegrity) {
+  if (Config::Get().common.recorder.highIntegrity) {
     stream.flush();
   }
 }

@@ -44,7 +44,7 @@ void PrePostDisableOcloc() {
 
 #define GITS_WRAPPER_PRE                                                                           \
   --recursionDepth;                                                                                \
-  if (CGitsPlugin::Configuration().recorder.basic.enabled && (recursionDepth == 0)) {              \
+  if (CGitsPlugin::Configuration().common.recorder.enabled && (recursionDepth == 0)) {             \
     try {
 
 #define GITS_WRAPPER_POST                                                                          \
