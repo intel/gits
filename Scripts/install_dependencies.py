@@ -196,91 +196,6 @@ class Repository:
         return 0
 
 
-class Boost(Repository):
-    def init(self):
-        self.long_paths = True
-        self.version_name = "boost_1_81_0"
-        self.url = "https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0.tar.gz"
-        self.address_model = ""
-        self.modify_build_boost_arguments()
-        self.name = "boost" + f"_x{self.address_model}" if self.address_model else ""
-
-    def modify_build_boost_arguments(self):
-        pass
-
-    def build(self):
-        boost_dir = THIRD_PARTY_PATH / self.version_name
-        self.execute(
-            f"./b2 address-model={self.address_model} install cxxflags=-fPIC runtime-link=static --with-container --prefix=\"{str(THIRD_PARTY_PATH / self.name)}\" -j8 -d0 --hash",
-            cwd=boost_dir,
-        )
-
-    def apply_patches(self):
-        pass
-
-
-class BoostWindows(Boost):
-    def execute(self, cmd, cwd=THIRD_PARTY_PATH, must_pass=False):
-        return super().execute(
-            ["powershell", "-Command", cmd], cwd=cwd, must_pass=must_pass
-        )
-
-    def clone(self):
-        self.execute(
-            "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12"
-        )
-        self.execute(
-            f"wget -Uri {self.url} -OutFile {self.name}.tar.gz -UserAgent [Microsoft.PowerShell.Commands.PSUserAgent]::InternetExplorer"
-        )
-        self.execute(f"tar xf {self.name}.tar.gz")
-        self.execute("./bootstrap.bat", cwd=THIRD_PARTY_PATH / self.version_name)
-
-    def cleanup(self):
-        self.execute(f"rm -R {self.version_name} -Force")
-        self.execute(f"rm {self.name}.tar.gz")
-
-
-class BoostLinux(Boost):
-    def execute(self, cmd, cwd=THIRD_PARTY_PATH):
-        return super().execute(cmd, cwd, True)
-
-    def clone(self):
-        self.execute(f"wget {self.url} -O {self.name}.tar.gz")
-        self.execute(f"tar xf {self.name}.tar.gz")
-        self.execute("./bootstrap.sh", cwd=THIRD_PARTY_PATH / self.version_name)
-
-    def cleanup(self):
-        self.execute(f"rm -rf {self.version_name}")
-        self.execute(f"rm {self.name}.tar.gz")
-
-
-class BoostLinux64(BoostLinux):
-    def modify_build_boost_arguments(self):
-        self.address_model = "64"
-
-
-class BoostLinux32(BoostLinux):
-    def modify_build_boost_arguments(self):
-        self.address_model = "32"
-
-
-class BoostWindows64(BoostWindows):
-    def modify_build_boost_arguments(self):
-        self.address_model = "64"
-
-
-class BoostWindows32(BoostWindows):
-    def modify_build_boost_arguments(self):
-        self.address_model = "32"
-
-
-class BoostLinuxArm(BoostLinux):
-    def modify_build_boost_arguments(self):
-        raise Exception(
-            "Automated building process of Boost on ARM is not currently supported."
-        )
-
-
 class Lua(Repository):
     def set_branch(self):
         self.branch = "v5.4.6"
@@ -393,18 +308,6 @@ class YamlCPP(Repository):
 class Repositories:
     def __init__(self, args) -> None:
         self.repos = []
-        if args.with_all or args.with_boost_64:
-            if os.name == "nt":
-                self.repos.append(BoostWindows64())
-            else:
-                self.repos.append(BoostLinux64())
-        if args.with_boost_32:
-            if os.name == "nt":
-                self.repos.append(BoostWindows32())
-            else:
-                self.repos.append(BoostLinux32())
-        if args.with_boost_arm:
-            self.repos.append(BoostLinuxArm())
         if args.with_all or args.with_lua:
             self.repos.append(Lua())
         if args.with_all or args.with_murmurhash:
@@ -456,9 +359,6 @@ def process_command_line():
 
 def setup_parser(root_parser):
     root_parser.add_argument("--with-all", action="store_true")
-    root_parser.add_argument("--with-boost-32", action="store_true")
-    root_parser.add_argument("--with-boost-64", action="store_true")
-    root_parser.add_argument("--with-boost-arm", action="store_true")
     root_parser.add_argument("--with-lua", action="store_true")
     root_parser.add_argument("--with-murmurhash", action="store_true")
     root_parser.add_argument("--with-zlib", action="store_true")

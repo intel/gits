@@ -173,8 +173,6 @@ At the end of recording, CCode project files are being copied, which can slow do
 
 To build CCode, use CMake. On Windows, you can also use the `build_ccode.bat` script. Run it without arguments to see the available options. On Linux, you can run the `build.linux` script.
 
-To avoid building Boost again and again for each CCode project you generate, which can take a long time, you can use the `-DBOOST_ROOT` CMake option. It accepts a path to Boost code that was already built, for example, `-DBOOST_ROOT="<path to GITS repo>/third_party/boost_x64"`.
-
 
 ## Issues
 
