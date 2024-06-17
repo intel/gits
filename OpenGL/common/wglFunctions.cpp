@@ -600,7 +600,7 @@ gits::OpenGL::CwglMakeCurrent::CwglMakeCurrent() {}
 gits::OpenGL::CwglMakeCurrent::CwglMakeCurrent(BOOL return_value, HDC hdc, HGLRC hglrc)
     : _return_value(return_value), _hdc(hdc), _hglrc(hglrc), _hwnd(WindowFromDC(hdc)) {
 #if defined GITS_PLATFORM_WINDOWS
-  if (return_value && SD().GetContextStateData(hglrc) == nullptr) {
+  if (return_value && (hglrc != nullptr) && (SD().GetContextStateData(hglrc) == nullptr)) {
     // If the wglMakeCurrent function succeeds but the context data has not yet been tracked,
     // initiate tracking of the context data at this point.
     Log(WARN) << "wglMakeCurrent function succeeded, yet context data remains untracked. "

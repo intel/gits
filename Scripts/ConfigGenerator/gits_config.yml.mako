@@ -94,7 +94,7 @@ Common:
     NullIO: false
     RemoveDXSharing: false
     RemoveGLSharing: false
-	Benchmark: true
+    Benchmark: true
 %if platform == "win32":
     CloseAppOnStopRecording: true
     WindowsKeyHandling: 'MessageLoop'
