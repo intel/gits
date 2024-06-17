@@ -131,10 +131,6 @@
 
 - `RestoreIndexedTexturesWA` - Windows only; If enabled, textures, whose format is GL_COLOR_INDEX and internal format is GL_RGBA, are restored with glGetTexImage as being of GL_RGBA format.
 
-### Performance
-
-- `Benchmark` - Causes GITS to produce csv file with system clock times of each frame.
-
 ### Images
 
 - `DumpScreenshots` - Rangespec with frames to be captured during the recording.
@@ -282,10 +278,6 @@
     - WithNonHostVisibleMemoryOnly - restore contents of buffers with non-host-visible memory bound (buffers with device-local-only memory)
     - All - restore contents of all buffers
 
-### Performance
-
-- `Benchmark` - Causes GITS to produce csv file with system clock times of frame.
-
 ### Images
 
 - `DumpScreenshots` - Rangespec with frames to be captured during the recording.
@@ -353,3 +345,7 @@
 - `WindowsKeyHandling` - Select keyboard handling method on Windows:
     - MessageLoop - key presses are detected as events returned by GetMessage WinAPI function
     - AsyncKeyState - key presses are checked with GetAsyncKeyState WinAPI function
+
+### Performance
+
+- `Benchmark` - Causes GITS to produce csv file with system clock times of each frame.

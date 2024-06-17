@@ -94,6 +94,7 @@ Common:
     NullIO: false
     RemoveDXSharing: false
     RemoveGLSharing: false
+	Benchmark: true
 %if platform == "win32":
     CloseAppOnStopRecording: true
     WindowsKeyHandling: 'MessageLoop'
@@ -220,7 +221,6 @@ OpenGL:
     SuppressExtensions: ['GL_ARB_get_program_binary']
     SuppressProgramBinary: true
     EndFrameSleep: 0
-    Benchmark: true
     RestoreDefaultFB: true
     DoNotRemoveWindow: false
     MultiApiProtectBypass: false
@@ -312,7 +312,6 @@ Vulkan:
       Range: '1/0/0/0'  # QueueSubmitNumber / CommandBufferBatchNumber / CommandBufferNumber / BlitRange
     DumpScreenshots: '-'
     DumpSubmits: '-'
-    Benchmark: true
     TraceVKStructs: true
 %if platform == "win32":
     UseExternalMemoryExtension: false

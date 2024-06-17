@@ -108,9 +108,6 @@ public:
     virtual int CfgRec_Frame() const {
       return 0;
     }
-    virtual bool CfgRec_IsBenchmark() const {
-      return false;
-    }
     virtual unsigned CfgRec_EndFrameSleep() const {
       return 0;
     }
@@ -184,9 +181,6 @@ public:
     }
     virtual unsigned int CfgRec_StopCommandQueueSubmit() const {
       return 1;
-    }
-    virtual bool CfgRec_IsBenchmark() const {
-      return false;
     }
     virtual bool CfgRec_IsStopOfSubcapture([[maybe_unused]] const uint32_t cmdListNumber,
                                            [[maybe_unused]] const uint32_t kernelNumber) const {

@@ -431,6 +431,7 @@ struct convert<gits::Config::Common::Recorder> {
       rhs.nullIO = node["NullIO"].as<gits::vi_bool>();
       rhs.removeDXSharing = node["RemoveDXSharing"].as<gits::vi_bool>();
       rhs.removeGLSharing = node["RemoveGLSharing"].as<gits::vi_bool>();
+      rhs.benchmark = node["Benchmark"].as<gits::vi_bool>();
 #ifdef GITS_PLATFORM_WINDOWS
       rhs.closeAppOnStopRecording = node["CloseAppOnStopRecording"].as<gits::vi_bool>();
       rhs.windowsKeyHandling = node["WindowsKeyHandling"].as<gits::WindowsKeyHandlingOpt>();
@@ -531,7 +532,6 @@ struct convert<gits::Config::OpenGL::Recorder> {
       rhs.suppressExtensions = node["SuppressExtensions"].as<std::vector<std::string>>();
       rhs.suppressProgramBinary = node["SuppressProgramBinary"].as<gits::vi_bool>();
       rhs.endFrameSleep = node["EndFrameSleep"].as<gits::vi_uint>();
-      rhs.benchmark = node["Benchmark"].as<gits::vi_bool>();
       rhs.restoreDefaultFB = node["RestoreDefaultFB"].as<gits::vi_bool>();
       rhs.doNotRemoveWin = node["DoNotRemoveWindow"].as<gits::vi_bool>();
       rhs.multiApiProtectBypass = node["MultiApiProtectBypass"].as<gits::vi_bool>();
@@ -657,7 +657,6 @@ struct convert<gits::Config::Vulkan::Recorder> {
 
       rhs.dumpScreenshots = node["DumpScreenshots"].as<BitRange>();
       rhs.dumpSubmits = node["DumpSubmits"].as<BitRange>();
-      rhs.benchmark = node["Benchmark"].as<gits::vi_bool>();
       rhs.traceVkStructs = node["TraceVKStructs"].as<gits::vi_bool>();
       rhs.memorySegmentSize = node["MemorySegmentSize"].as<gits::vi_uint>();
       rhs.shadowMemory = node["ShadowMemory"].as<gits::vi_bool>();

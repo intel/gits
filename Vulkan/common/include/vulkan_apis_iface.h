@@ -21,9 +21,6 @@ public:
   virtual bool CfgRec_IsFramesMode() const {
     return Config::Get().vulkan.recorder.mode == TVulkanRecorderMode::FRAMES;
   }
-  virtual bool CfgRec_IsBenchmark() const {
-    return Config::Get().vulkan.recorder.benchmark;
-  }
   virtual unsigned CfgRec_ExitFrame() const {
     return Config::Get().vulkan.recorder.all.exitFrame;
   }

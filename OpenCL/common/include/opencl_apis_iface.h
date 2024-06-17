@@ -35,9 +35,6 @@ public:
   virtual int CfgRec_StopKernel() const {
     return Config::Get().opencl.recorder.oclKernelsRange.stopKernel;
   }
-  virtual bool CfgRec_IsBenchmark() const {
-    return false;
-  }
   virtual void MemorySnifferUninstall() const {
     if (!IsMemorySnifferInstalled()) {
       return;

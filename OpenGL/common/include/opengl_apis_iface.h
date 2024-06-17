@@ -59,9 +59,6 @@ public:
   virtual int CfgRec_Frame() const {
     return Config::Get().opengl.recorder.oglDrawsRange.frame;
   }
-  virtual bool CfgRec_IsBenchmark() const {
-    return Config::Get().opengl.recorder.benchmark;
-  }
   virtual unsigned CfgRec_EndFrameSleep() const {
     return Config::Get().opengl.recorder.endFrameSleep;
   }

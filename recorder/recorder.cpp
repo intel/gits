@@ -282,8 +282,7 @@ gits::CRecorder::~CRecorder() {
     const Config& config = Config::Get();
 
     if (gits::CGits::Instance().apis.Has3D()) {
-      const auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
-      if (api3dIface.CfgRec_IsBenchmark() && config.common.recorder.enabled) {
+      if (config.common.recorder.benchmark && config.common.recorder.enabled) {
         std::ofstream out_file(config.common.recorder.dumpPath / "benchmark.csv");
         CGits::Instance().TimeSheet().OutputTimeData(out_file, true);
       }
@@ -497,7 +496,7 @@ void gits::CRecorder::Start() {
     Scheduler().Register(new CTokenFrameNumber(CToken::ID_PRE_RECORD_END, inst.CurrentFrame()));
     Scheduler().Register(new CTokenFrameNumber(CToken::ID_FRAME_START, 1));
     //first frame start time stamp
-    if (inst.apis.Has3D() && inst.apis.Iface3D().CfgRec_IsBenchmark()) {
+    if (inst.apis.Has3D() && Config::Get().common.recorder.benchmark) {
       inst.Timers().frame.Start();
     }
   }
@@ -621,7 +620,7 @@ void gits::CRecorder::FrameEnd() {
       Schedule(new CTokenPlayerRecorderSync);
 
       //frame end time stamp
-      if (api3dIface.CfgRec_IsBenchmark()) {
+      if (Config::Get().common.recorder.benchmark) {
         inst.TimeSheet().add_frame_time("stamp", inst.Timers().program.Get());
         inst.TimeSheet().add_frame_time("cpu", inst.Timers().frame.Get());
       }
@@ -646,7 +645,7 @@ void gits::CRecorder::FrameEnd() {
       Schedule(new gits::CTokenFrameNumber(CToken::ID_FRAME_START, inst.CurrentFrame()));
 
       //frame start time stamp
-      if (api3dIface.CfgRec_IsBenchmark()) {
+      if (Config::Get().common.recorder.benchmark) {
         inst.Timers().frame.Restart();
       }
     }

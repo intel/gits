@@ -202,6 +202,7 @@ struct Config {
       vi_bool nullIO;
       vi_bool removeDXSharing;
       vi_bool removeGLSharing;
+      vi_bool benchmark;
 #ifdef GITS_PLATFORM_WINDOWS
       vi_bool closeAppOnStopRecording;
       WindowsKeyHandlingOpt windowsKeyHandling;
@@ -280,7 +281,6 @@ struct Config {
       std::vector<std::string> suppressExtensions;
       vi_bool suppressProgramBinary;
       vi_uint endFrameSleep;
-      vi_bool benchmark;
       vi_bool restoreDefaultFB;
       vi_bool doNotRemoveWin;
       vi_bool multiApiProtectBypass;
@@ -382,7 +382,6 @@ struct Config {
       } objRange;
       BitRange dumpScreenshots;
       BitRange dumpSubmits;
-      vi_bool benchmark;
       vi_bool traceVkStructs;
       vi_uint memorySegmentSize;
       vi_bool shadowMemory;
