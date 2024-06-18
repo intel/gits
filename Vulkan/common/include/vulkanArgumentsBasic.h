@@ -387,16 +387,19 @@ public:
   CVoidPtr(void** ptr) : _ptr((std::uint64_t)ptr), _type(2) {}
   struct PtrConverter {
   private:
-    void** _ptr;
+    void* _ptr;
 
   public:
-    explicit PtrConverter(void** ptr) : _ptr(ptr) {}
-    explicit PtrConverter(void* ptr) : _ptr(&ptr) {}
+    explicit PtrConverter(void** ptr) : _ptr(*ptr) {}
+    explicit PtrConverter(void* ptr) : _ptr(ptr) {}
     operator void*() const {
-      return *_ptr;
+      return _ptr;
     }
     operator void**() const {
-      return _ptr;
+      static void*
+          tempPtr; // Static to ensure the lifetime, but this introduces thread-safety issues.
+      tempPtr = _ptr;
+      return &tempPtr;
     }
   };
 

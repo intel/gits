@@ -949,7 +949,7 @@ void SaveProgramBinary(GLuint program, hash_t hash) {
 }
 
 void RestoreProgramBinary(GLuint program, hash_t hash) {
-  std::vector<char> data = std::move(CLibrary::Get().ProgramBinaryManager().get(hash));
+  std::vector<char> data = CLibrary::Get().ProgramBinaryManager().get(hash);
 
   GLenum* format = (GLenum*)data.data();
   const char* data_ptr = data.data() + sizeof(GLenum);
