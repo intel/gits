@@ -488,6 +488,14 @@ void CreateHeaderFiles(const std::vector<std::string>& sourceNamesToScan,
   }
 }
 
+const std::filesystem::path GetDumpPath(const Config& cfg) {
+  if (Config::IsRecorder()) {
+    return cfg.common.recorder.dumpPath / "dump";
+  }
+  return cfg.common.player.outputDir.empty() ? cfg.common.player.streamDir / "dump"
+                                             : cfg.common.player.outputDir;
+}
+
 } //namespace gits
 
 #ifndef BUILD_FOR_CCODE

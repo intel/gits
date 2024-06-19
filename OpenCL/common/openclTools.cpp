@@ -307,10 +307,8 @@ void SaveImage(char* image,
                const std::string& name) {
   auto& cfg = Config::Get();
   const unsigned rgba8TexelSize = 4;
-  std::filesystem::path dir = cfg.common.player.outputDir.empty()
-                                  ? cfg.common.player.streamDir / "dump"
-                                  : cfg.common.player.outputDir;
-  std::filesystem::create_directories(dir);
+  const auto dumpPath = GetDumpPath(cfg);
+  std::filesystem::create_directories(dumpPath);
 
   const size_t imagesMemorySize = CountImageSize(format, desc);
   const std::array<size_t, 3> sizes = GetSimplifiedImageSizes(desc);
@@ -329,7 +327,7 @@ void SaveImage(char* image,
                            static_cast<int>(width), static_cast<int>(height));
 
       std::string fileName = (depth == 1 ? name : name + "-" + std::to_string(i)) + ".png";
-      std::filesystem::path path = dir / fileName;
+      std::filesystem::path path = dumpPath / fileName;
       CGits::Instance().WriteImage(path.string(), width, height, true, convertedData, false, true);
     }
   } catch (const ENotImplemented& ex) {
@@ -340,10 +338,8 @@ void SaveImage(char* image,
 void SaveBuffer(const std::string& name, const std::vector<char>& data) {
   auto& cfg = Config::Get();
   std::string filename = name + ".dat";
-  std::filesystem::path path =
-      (cfg.common.player.outputDir.empty() ? cfg.common.player.streamDir / "dump"
-                                           : cfg.common.player.outputDir) /
-      filename;
+  const auto dumpPath = GetDumpPath(cfg);
+  std::filesystem::path path = dumpPath / filename;
   std::filesystem::create_directories(path.parent_path());
   std::ofstream binStream(path, std::ofstream::binary);
   binStream.write(data.data(), data.size());
@@ -353,10 +349,8 @@ void SaveBuffer(const std::string& name, const std::vector<char>& data) {
 void SaveBuffer(const std::string& name, const CBinaryResource& data) {
   auto& cfg = Config::Get();
   std::string filename = name + ".dat";
-  std::filesystem::path path =
-      (cfg.common.player.outputDir.empty() ? cfg.common.player.streamDir / "dump"
-                                           : cfg.common.player.outputDir) /
-      filename;
+  const auto dumpPath = GetDumpPath(cfg);
+  std::filesystem::path path = dumpPath / filename;
   std::filesystem::create_directories(path.parent_path());
   std::ofstream binStream(path, std::ofstream::binary);
   binStream.write((const char*)data.Data(), data.Data().Size());
@@ -1310,17 +1304,16 @@ std::string AppendKernelArgInfoOption(const std::string& options) {
 
 std::string AppendStreamPathToIncludePath(const std::string& options, const bool& hasHeaders) {
   const auto& cfg = Config::Get();
-
-  const std::string includeStreamDir = "-I \"" + cfg.common.player.streamDir.string() + "\"";
+  const auto streamPath =
+      Config::IsPlayer() ? cfg.common.player.streamDir : cfg.common.recorder.dumpPath;
+  const std::string includeStreamDir = "-I \"" + streamPath.string() + "\"";
   std::string new_options = AppendBuildOption(options, includeStreamDir);
 
-  const std::string includeClProgramsDir =
-      "-I \"" + (cfg.common.player.streamDir / "clPrograms").string() + "\"";
+  const std::string includeClProgramsDir = "-I \"" + (streamPath / "clPrograms").string() + "\"";
   new_options = AppendBuildOption(new_options, includeClProgramsDir);
 
   if (hasHeaders) {
-    const std::string includeGitsFiles =
-        "-I \"" + (cfg.common.player.streamDir / "gitsFiles").string() + "\"";
+    const std::string includeGitsFiles = "-I \"" + (streamPath / "gitsFiles").string() + "\"";
     new_options = AppendBuildOption(new_options, includeGitsFiles);
   }
   return new_options;

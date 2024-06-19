@@ -463,7 +463,10 @@ int export_SystemLog(lua_State* L) {
 }
 
 int export_GetStreamDir(lua_State* L) {
-  lua_pushstring(L, Config::Get().common.player.streamDir.string().c_str());
+  const auto& cfg = Config::Get();
+  const auto& streamPath = Config::IsPlayer() ? cfg.common.player.streamDir.string()
+                                              : cfg.common.recorder.dumpPath.string();
+  lua_pushstring(L, streamPath.c_str());
   return 1;
 }
 

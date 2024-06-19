@@ -531,10 +531,7 @@ void LayoutBuilder::SaveLayoutToJsonFile() {
   layout["ze_kernels"] = zeKernels;
 
   const auto& cfg = Config::Get();
-  const std::filesystem::path path =
-      (cfg.common.player.outputDir.empty() ? cfg.common.player.streamDir / "dump"
-                                           : cfg.common.player.outputDir) /
-      "layout.json";
+  const auto path = GetDumpPath(cfg) / "layout.json";
   SaveJsonFile(layout, path);
 }
 

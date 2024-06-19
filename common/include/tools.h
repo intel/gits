@@ -55,7 +55,7 @@
 #include "config.h"
 
 namespace gits {
-
+struct Config;
 bool SavePng(const std::string& filename,
              size_t width,
              size_t height,
@@ -143,6 +143,8 @@ std::vector<T> AddPropertyOption(const T* properties, Y property, Z optionBitfie
 
   return propertiesVec;
 }
+
+const std::filesystem::path GetDumpPath(const Config& cfg);
 
 #ifdef GITS_PLATFORM_X11
 pid_t GetPIDFromWindow(Display* display, Window w);

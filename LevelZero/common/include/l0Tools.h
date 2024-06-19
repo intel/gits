@@ -50,7 +50,6 @@ void DumpReadyArguments(std::vector<CKernelArgumentDump>& readyArgVector,
                         const Config& cfg,
                         CStateDynamic& sd,
                         const CKernelExecutionInfo* kernelInfo);
-const std::filesystem::path& GetDumpPath(const Config& cfg);
 bool CaptureKernels(const Config& cfg);
 bool CaptureImages(const Config& cfg);
 enum class UnifiedMemoryType : unsigned { host = 1 << 0, device = 1 << 1, shared = 1 << 2 };

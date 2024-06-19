@@ -359,13 +359,6 @@ void DumpReadyArguments(std::vector<CKernelArgumentDump>& readyArgVector,
   }
 }
 
-const std::filesystem::path& GetDumpPath(const Config& cfg) {
-  static const std::filesystem::path path = cfg.common.player.outputDir.empty()
-                                                ? cfg.common.player.streamDir / "dump"
-                                                : cfg.common.player.outputDir;
-  return path;
-}
-
 bool CaptureKernels(const Config& cfg) {
   auto captureKernels =
       cfg.IsPlayer() ? cfg.levelzero.player.captureKernels : cfg.levelzero.recorder.captureKernels;
