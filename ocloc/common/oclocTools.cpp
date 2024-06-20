@@ -8,6 +8,7 @@
 
 #include "oclocTools.h"
 #include "tools_lite.h"
+#include "arDecoder.h"
 
 namespace gits {
 namespace ocloc {
@@ -127,5 +128,9 @@ void LogOclocInvokeOutput(int ret,
   }
 }
 
+bool IsAr(const uint8_t* binary) {
+  const auto binaryMagic = std::string(reinterpret_cast<const char*>(binary), Ar::arMagic.size());
+  return binaryMagic == Ar::arMagic;
+}
 } // namespace ocloc
 } // namespace gits

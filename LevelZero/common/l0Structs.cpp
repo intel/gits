@@ -41,7 +41,8 @@ std::vector<uint8_t>* FindOclocInputModule(ocloc::CStateDynamic& sd,
           if ((format == ZE_MODULE_FORMAT_IL_SPIRV &&
                StringEndsWith(oclocState.second->outputNames[i], ".spv")) ||
               (format == ZE_MODULE_FORMAT_NATIVE &&
-               StringEndsWith(oclocState.second->outputNames[i], ".bin"))) {
+               (StringEndsWith(oclocState.second->outputNames[i], ".bin") ||
+                StringEndsWith(oclocState.second->outputNames[i], ".ar")))) {
             Log(TRACEV) << "Ocloc output's original hash matched: " << originalOclocHash
                         << ", file name: " << oclocState.second->outputNames[i];
             return &oclocState.second->outputData[i];

@@ -32,7 +32,6 @@ struct COclocState {
   std::vector<std::string> outputNames;
   std::unordered_set<std::string> savedFileNames;
   std::vector<uint64_t> originalHashes;
-  std::vector<uint64_t> hashes;
 
 public:
   COclocState() = default;

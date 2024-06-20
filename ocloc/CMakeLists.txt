@@ -29,6 +29,8 @@ add_library(ocloc_common
   common/oclocStateDynamic.cpp
   common/include/oclocTools.h
   common/oclocTools.cpp
+  common/include/arDecoder.h
+  common/arDecoder.cpp
 )
 include_directories(common/include)
 

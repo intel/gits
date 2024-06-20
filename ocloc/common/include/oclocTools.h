@@ -52,5 +52,7 @@ void LogOclocInvokeOutput(int ret,
                           uint8_t*** dataOutputs,
                           uint64_t** lenOutputs,
                           char*** nameOutputs);
+
+bool IsAr(const uint8_t* binary);
 } // namespace ocloc
 } // namespace gits

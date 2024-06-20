@@ -5,11 +5,14 @@
 // SPDX-License-Identifier: MIT
 //
 // ===================== end_copyright_notice ==============================
+#include <vector>
 
 #include "oclocFunctions.h"
 #include "oclocDrivers.h"
 #include "oclocStateDynamic.h"
 #include "oclocStateTracking.h"
+#include "oclocTools.h"
+#include "arDecoder.h"
 
 #ifdef WITH_LEVELZERO
 #include "l0StateDynamic.h"
@@ -151,6 +154,13 @@ CoclocInvoke_V1::CoclocInvoke_V1(int return_value,
     for (uint32_t i = 0U; i < *numOutputs; ++i) {
       uint64_t hash = ComputeHash((*dataOutputs)[i], (*lenOutputs)[i], THashType::XX);
       hashes.push_back(hash);
+      if (IsAr((*dataOutputs)[i])) {
+        Ar archive((*dataOutputs)[i], (*lenOutputs)[i]);
+        for (const auto& file : archive.files) {
+          hash = ComputeHash(file.fileData.data(), file.fileData.size(), THashType::XX);
+          hashes.push_back(hash);
+        }
+      }
     }
     _originalHashes = Cuint64_t::CSArray(hashes);
   }
