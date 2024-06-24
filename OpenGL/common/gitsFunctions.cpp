@@ -732,6 +732,10 @@ void gits::OpenGL::CgitsUnmapBuffer::Run() {
     if (!SD().GetCurrentSharedStateData().Buffers().Get(playBuff)->Data().restore.mapped) {
       Log(WARN) << "Unmapping unmapped buffer";
     } else {
+      if (pointer == nullptr) {
+        throw EOperationFailed((std::string)EXCEPTION_MESSAGE +
+                               " - Got a nullptr when querying the pointer of a mapped buffer.");
+      }
       GLint size =
           SD().GetCurrentSharedStateData().Buffers().Get(playBuff)->Data().restore.mapLength;
       if (size == -1) {
