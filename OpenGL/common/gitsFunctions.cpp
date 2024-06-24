@@ -704,9 +704,9 @@ void gits::OpenGL::CgitsUnmapBuffer::Run() {
   if (*_resource) {
     //we read some data - therefore buffer was originally mapped with write acces, so here we can just overwrite its data
     GLvoid* pointer;
-    GLint recBuff = *_buffer;
+    GLint recBuff = *_buffer; // Buffer name (-1 if not given).
     GLint playBuff;
-    if (recBuff == -1) {
+    if (recBuff == -1) { // No name was given, unmapping by target.
       playBuff = SD().GetCurrentContextStateData().Bindings().BoundBuffer(*_target);
 
       auto func_get_buffer_pointer = _glGetBufferPointerv_wrap;
@@ -719,15 +719,15 @@ void gits::OpenGL::CgitsUnmapBuffer::Run() {
       }
 
       func_get_buffer_pointer(*_buffer, *_target, GL_BUFFER_MAP_POINTER, &pointer);
-    } else {
+    } else { // Name was given, unmapping by name.
       playBuff = CGLBuffer::GetMapping(*_buffer);
       drv.gl.glGetNamedBufferPointervEXT(playBuff, GL_BUFFER_MAP_POINTER, &pointer);
     }
 
     if (playBuff == 0) {
-      throw EOperationFailed((std::string)EXCEPTION_MESSAGE + " unmapping buffer zero");
+      throw EOperationFailed((std::string)EXCEPTION_MESSAGE + " - unmapping buffer zero");
     } else if (SD().GetCurrentSharedStateData().Buffers().Get(playBuff) == nullptr) {
-      throw EOperationFailed((std::string)EXCEPTION_MESSAGE + " unknown buffer object");
+      throw EOperationFailed((std::string)EXCEPTION_MESSAGE + " - unknown buffer object");
     }
     if (!SD().GetCurrentSharedStateData().Buffers().Get(playBuff)->Data().restore.mapped) {
       Log(WARN) << "Unmapping unmapped buffer";
