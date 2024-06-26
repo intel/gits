@@ -32,7 +32,7 @@ list(APPEND OpenGL_interceptor_external_cpps
   ../../common/exception.cpp
   ../../common/timer.cpp
   ../../common/dynamic_linker.cpp
-  ../../recorder/gitsLoader.cpp
+  ../../common/gitsLoader.cpp
   ../../common/log.cpp
 )
 if(WIN32)

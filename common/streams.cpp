@@ -166,7 +166,13 @@ bool gits::CBinOStream::WriteCompressedAndGetOffset(const char* data,
 }
 
 std::ostream& gits::CBinOStream::WriteToOstream(const char* data, uint64_t dataSize) {
-  return std::ostream::write(data, dataSize);
+  try {
+    return std::ostream::write(data, dataSize);
+  } catch (std::ostream::failure& e) {
+    Log(ERR) << "Failed to write to the stream. Probably not enough space on the disk.";
+    Log(ERR) << "Err code: " << e.code() << " Err msg: " << e.what();
+    throw std::runtime_error("Failed to write to the stream.");
+  }
 }
 
 void gits::CBinOStream::write(const char* s, std::streamsize n) {
@@ -184,6 +190,7 @@ gits::CBinOStream::CBinOStream(const std::filesystem::path& fileName)
   std::ios::openmode mode = std::ios::binary | std::ios::trunc | std::ios::out;
   _buf = initialize_gits_streambuf(fileName, mode);
   init(_buf);
+  exceptions(std::ostream::badbit | std::ostream::failbit);
   if (_compressionType != CompressionType::NONE) {
     _chunkSize = gits::Config::Get().common.recorder.compression.chunkSize;
     _dataToCompress.resize(_chunkSize);

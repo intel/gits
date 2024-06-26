@@ -154,7 +154,7 @@ set(L0_interceptor_sources
   ../common/tools_lite.cpp
   ../common/exception.cpp
   ../common/dynamic_linker.cpp
-  ../recorder/gitsLoader.cpp
+  ../common/gitsLoader.cpp
   interceptor/gitsPluginL0.cpp
   interceptor/include/gitsPluginL0.h
   interceptor/include/l0ExecWrap.h

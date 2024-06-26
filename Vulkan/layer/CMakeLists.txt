@@ -23,7 +23,7 @@ list(APPEND Vulkan_layer_external_cpps
   ../../common/tools_lite.cpp
   ../../common/exception.cpp
   ../../common/dynamic_linker.cpp
-  ../../recorder/gitsLoader.cpp
+  ../../common/gitsLoader.cpp
   ../../common/log.cpp
 )
 if(WIN32)

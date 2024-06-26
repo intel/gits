@@ -105,7 +105,9 @@ void gits::CRecorder::Dispose() {
     computeIface.MemorySnifferUninstall();
     computeIface.PrintMaxLocalMemoryUsage();
   }
-  CGits::Instance().Dispose();
+  if (Config::Get().common.recorder.enabled) {
+    CGits::Instance().Dispose();
+  }
 }
 
 #ifdef GITS_PLATFORM_WINDOWS
@@ -159,7 +161,8 @@ gits::CRecorder::CRecorder()
 
   // create file data and register it in GITS
   if (config.common.recorder.enabled) {
-    std::filesystem::create_directories(config.common.recorder.dumpPath);
+    auto outputpath = config.common.recorder.dumpPath;
+    std::filesystem::create_directories(outputpath);
 #if defined(GITS_PLATFORM_X11)
     struct sigaction action;
     memset(&action, 0, sizeof(struct sigaction));
@@ -175,7 +178,8 @@ gits::CRecorder::CRecorder()
       inst.apis.Has3D() && !inst.apis.Iface3D().CfgRec_StartKeys().empty();
   Log(INFO) << "Recorder mode: ";
   std::ostringstream message;
-  if (!config.common.recorder.enabled) {
+  bool recEnabled = config.common.recorder.enabled;
+  if (!recEnabled) {
     message << " - Off";
   } else {
     if (inst.apis.Has3D()) {
@@ -243,7 +247,7 @@ gits::CRecorder::CRecorder()
   }
 
   // init recorder
-  if (config.common.recorder.enabled) {
+  if (recEnabled) {
     Init();
   }
 }
@@ -281,8 +285,8 @@ gits::CRecorder::~CRecorder() {
   try {
     const Config& config = Config::Get();
 
-    if (gits::CGits::Instance().apis.Has3D()) {
-      if (config.common.recorder.benchmark && config.common.recorder.enabled) {
+    if (gits::CGits::Instance().apis.Has3D() && config.common.recorder.benchmark) {
+      if (config.IsRecorder() && config.common.recorder.enabled) {
         std::ofstream out_file(config.common.recorder.dumpPath / "benchmark.csv");
         CGits::Instance().TimeSheet().OutputTimeData(out_file, true);
       }
@@ -382,8 +386,10 @@ void gits::CRecorder::Register(std::unique_ptr<CBehavior> behavior) {
   }
   _sc.behavior.reset(behavior.release());
 
-  auto& cmm = Config::Get().common;
+  auto& cfg = Config::Get();
+  auto& cmm = cfg.common;
   auto& rec = cmm.recorder;
+  bool recEnabled = rec.enabled;
 
   if (gits::CGits::Instance().apis.Has3D()) {
     const auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
@@ -397,12 +403,13 @@ void gits::CRecorder::Register(std::unique_ptr<CBehavior> behavior) {
     _inputListener.StartHotKeyListener(useMessageLoop);
   }
 
-  if (rec.enabled) {
-    _sc.scheduler.reset(new CScheduler(cmm.recorder.tokenBurst, cmm.recorder.tokenBurstNum));
+  if (recEnabled) {
+    _sc.scheduler.reset(new CScheduler(rec.tokenBurst, rec.tokenBurstNum));
   }
 
-  auto filePath = (cmm.recorder.dumpPath / "stream").string();
-  if (Config::Get().dumpBinary()) {
+  auto outputpath = rec.dumpPath;
+  auto filePath = (outputpath / "stream").string();
+  if (cfg.dumpBinary() && rec.enabled) {
     // create file
     std::string filename = filePath + ".gits2";
 
@@ -464,7 +471,7 @@ void gits::CRecorder::Start() {
   }
   const bool stateNeedsRestoring = shouldRestore3DState || shouldRestoreComputeState;
 
-  if (stateNeedsRestoring) {
+  if (stateNeedsRestoring && !Config::Get().IsPlayer()) {
     Scheduler().Register(new CTokenFrameNumber(CToken::ID_PRE_RECORD_END, inst.CurrentFrame()));
     for (auto it = inst.LibraryBegin(); it != inst.LibraryEnd(); ++it) {
       // schedule current library state only if not init frame number
@@ -585,7 +592,9 @@ void gits::CRecorder::TrackThread(gits::ApisIface::TApi api) {
  * @exception ENotFound Specified behavior class was not found.
  */
 void gits::CRecorder::Save() {
-  if (!Config::Get().common.recorder.enabled) {
+  auto& cfg = Config::Get();
+  bool recEnabled = cfg.common.recorder.enabled;
+  if (!recEnabled) {
     return;
   }
 
@@ -803,128 +812,7 @@ void gits::CRecorder::Continue() {
   _running = _runningStarted;
 }
 
-#ifdef GITS_PLATFORM_WINDOWS
-
-// Following is a hack to allow for graceful termination of GITS recorder.
-// GITS recorder spawns threads to offload IO from application thread.
-// This causes problems for cases where stream is recorded until the end
-// of the application, because ExitProcess in first kills all threads
-// other then current thread and then calls DLL main functions of loaded
-// modules. GITS can't handle such situation correctly because threads are
-// terminated without a chance to leave consistent state - in general
-// cleanup after them will be impossible from DLL main function.
-// To work around, we overwrite ExitProcess function with a to jump
-// to our custom procedure which deals with GITS shutdown when its still
-// possible cleanly.
-char exitProcessHead[12];
-FARPROC exitProcessAddr;
-
-void STDCALL GitsExitProcess(UINT uExitCode) {
-  if (gits::CRecorder::InstancePtr()) {
-    gits::CRecorder::Instance().Close();
-  }
-  Log(INFO) << "Recording done";
-
-  // Restore code of ExitProcess, now that we intercepted it.
-  DWORD oldProtect;
-  VirtualProtect(exitProcessAddr, 32, PAGE_EXECUTE_READWRITE, &oldProtect);
-  std::copy_n(exitProcessHead, sizeof(exitProcessHead), (char*)exitProcessAddr);
-  VirtualProtect(exitProcessAddr, 32, oldProtect, &oldProtect);
-
-  ExitProcess(uExitCode);
-}
-
-char terminateProcessHead[12];
-FARPROC terminateProcessAddr;
-
-namespace {
-
-void RestoreTerminateProcess();
-void InstrumentTerminateProcess();
-
-} // namespace
-
-void STDCALL GitsTerminateProcess(_In_ HANDLE hProcess, _In_ UINT uExitCode) {
-  if (GetProcessId(hProcess) == GetCurrentProcessId()) {
-    if (gits::CRecorder::InstancePtr()) {
-      gits::CRecorder::Instance().Close();
-    }
-    Log(INFO) << "Recording done by TerminateProcess() ";
-  }
-  RestoreTerminateProcess();
-  TerminateProcess(hProcess, uExitCode);
-  InstrumentTerminateProcess();
-}
-
-namespace {
-
-void routeEntryPoint(PROC src, PROC dst) {
-#if defined GITS_ARCH_X86
-  const int ptrOffset = 1;
-  unsigned char routingCode[] = {0xB8, 0, 0, 0, 0, 0xFF, 0xE0};
-#elif defined GITS_ARCH_X64
-  const int ptrOffset = 2;
-  unsigned char routingCode[] = {0x48, 0xB8, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xE0};
-#endif
-  void* addr_value = (void*)dst;
-  unsigned char* addr = (unsigned char*)&addr_value;
-  std::copy(addr, addr + sizeof(void*), &routingCode[ptrOffset]);
-  std::copy(routingCode, routingCode + sizeof(routingCode), (unsigned char*)src);
-}
-
-void InstrumentExitProcess() {
-  HMODULE kern = GetModuleHandle("Kernel32.dll");
-  exitProcessAddr = GetProcAddress(kern, "ExitProcess");
-
-  DWORD oldProtect;
-  VirtualProtect(exitProcessAddr, 32, PAGE_EXECUTE_READWRITE, &oldProtect);
-  // Save what we will overwrite.
-  std::copy_n((char*)exitProcessAddr, sizeof(exitProcessHead), exitProcessHead);
-  // Route to gits cleanup function.
-  routeEntryPoint(exitProcessAddr, (PROC)&GitsExitProcess);
-  VirtualProtect(exitProcessAddr, 32, oldProtect, &oldProtect);
-}
-
-void InstrumentTerminateProcess() {
-  HMODULE kern = GetModuleHandle("Kernel32.dll");
-  terminateProcessAddr = GetProcAddress(kern, "TerminateProcess");
-
-  DWORD oldProtect;
-  VirtualProtect(terminateProcessAddr, 32, PAGE_EXECUTE_READWRITE, &oldProtect);
-  // Save what we will overwrite.
-  std::copy_n((char*)terminateProcessAddr, sizeof(terminateProcessHead), terminateProcessHead);
-  // Route to gits cleanup function.
-  routeEntryPoint(terminateProcessAddr, (PROC)&GitsTerminateProcess);
-  VirtualProtect(terminateProcessAddr, 32, oldProtect, &oldProtect);
-}
-
-void RestoreTerminateProcess() {
-  DWORD oldProtect;
-  VirtualProtect(terminateProcessAddr, 32, PAGE_EXECUTE_READWRITE, &oldProtect);
-  std::copy_n(terminateProcessHead, sizeof(terminateProcessHead), (char*)terminateProcessAddr);
-  VirtualProtect(terminateProcessAddr, 32, oldProtect, &oldProtect);
-}
-
-} // namespace
-
-BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
-  switch (ul_reason_for_call) {
-  case DLL_PROCESS_ATTACH:
-    InstrumentExitProcess();
-    InstrumentTerminateProcess();
-    break;
-  case DLL_THREAD_ATTACH:
-    break;
-  case DLL_THREAD_DETACH:
-    break;
-  case DLL_PROCESS_DETACH:
-    break;
-  }
-  return TRUE;
-}
-
-#else // GITS_PLATFORM_WINDOWS
-
+#if defined(GITS_PLATFORM_LINUX)
 void detach() {
   CALL_ONCE[] {
     if (gits::CRecorder::InstancePtr()) {
@@ -933,5 +821,4 @@ void detach() {
     }
   };
 }
-
-#endif // GITS_PLATFORM_WINDOWS
+#endif

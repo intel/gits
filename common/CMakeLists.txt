@@ -51,6 +51,11 @@ list(APPEND common_SOURCES
   include/automateCCode.h
   include/ccodeWriteWrap.h
   include/intervalSet.h
+  include/controlHandler.h
+  include/gitsLoader.h
+  include/recorderBehaviors.h
+  include/recorder.h
+  include/state.h
 
   apis_iface.cpp
   argument.cpp
@@ -87,7 +92,26 @@ list(APPEND common_SOURCES
   texture_converter.cpp
   automateCCode.cpp
   ccodeWriteWrap.cpp
+  controlHandler.cpp
+  gitsLoader.cpp
+  recorderBehaviors.cpp
+  recorder.cpp
+  state.cpp
 )
+source_group("recorder" FILES
+  include/controlHandler.h
+  include/gitsLoader.h
+  include/recorderBehaviors.h
+  include/recorder.h
+  include/state.cpp
+
+  controlHandler.cpp
+  gitsLoader.cpp
+  recorderBehaviors.cpp
+  recorder.cpp
+  state.cpp
+)
+
 if(WIN32)
   list(APPEND common_SOURCES
     include/tools_windows.h

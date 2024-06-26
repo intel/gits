@@ -6,10 +6,8 @@
 #
 # ===================== end_copyright_notice ==============================
 
-set(control_handler )
 set(recorder_DEF )
 if(MSVC)
-  set(control_handler controlHandler.cpp)
   set(recorder_DEF ${CMAKE_CURRENT_BINARY_DIR}/recorder.def)
   file(WRITE ${recorder_DEF}
     "LIBRARY gitsRecorder.dll\n"
@@ -36,17 +34,9 @@ if(MSVC)
 endif()
 
 list(APPEND recorder_SOURCES
-  include/gitsLoader.h
-  include/recorder.h
-  include/recorderBehaviors.h
   include/recorderIface.h
-  include/state.h
-
-  recorder.cpp
-  recorderBehaviors.cpp
   recorderIface.cpp
-  state.cpp
-  ${control_handler}
+  recorderDLL.cpp
   ${recorder_DEF}
 )
 
@@ -109,7 +99,6 @@ install(TARGETS GitsRecorder
 if(MSVC)
   install(FILES $<TARGET_PDB_FILE:GitsRecorder> DESTINATION Recorder OPTIONAL)
 endif()
-
 if(UNIX)
   install(CODE "execute_process(COMMAND bash -c \"
     cd \${CMAKE_INSTALL_PREFIX}/Recorder/${OpenGL_INSTALL_SUBDIR}/

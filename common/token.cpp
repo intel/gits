@@ -249,12 +249,14 @@ void CTokenFrameNumber::Run() {
 #if defined(GITS_PLATFORM_WINDOWS) || defined(GITS_PLATFORM_X11)
     if (cfg.common.player.showWindowBorder) {
       win_ptr_t window = GetWindowHandle();
+      if (window) {
 #ifdef GITS_PLATFORM_WINDOWS
-      WinTitle(window, "Current frame: " + std::to_string(CGits::Instance().CurrentFrame()));
+        WinTitle(window, "Current frame: " + std::to_string(CGits::Instance().CurrentFrame()));
 #elif defined(GITS_PLATFORM_X11) && defined(WITH_VULKAN)
-      Vulkan::WinTitle(window,
-                       "Current frame: " + std::to_string(CGits::Instance().CurrentFrame()));
+        Vulkan::WinTitle(window,
+                         "Current frame: " + std::to_string(CGits::Instance().CurrentFrame()));
 #endif
+      }
     }
 #endif
 

@@ -376,6 +376,7 @@ template <class T>
 class value_initialized {
 public:
   value_initialized() : x() {}
+  explicit value_initialized(const T& val) : x(val) {}
   operator T&() {
     return x;
   }

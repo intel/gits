@@ -46,7 +46,7 @@ list(APPEND ocloc_interceptor_files
   ../common/tools_lite.cpp
   ../common/exception.cpp
   ../common/dynamic_linker.cpp
-  ../recorder/gitsLoader.cpp
+  ../common/gitsLoader.cpp
   ../common/log.cpp
   interceptor/gitsPluginOcloc.cpp
   interceptor/include/gitsPluginOcloc.h
