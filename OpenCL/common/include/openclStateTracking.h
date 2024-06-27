@@ -1618,6 +1618,19 @@ inline void clGetDeviceIDsFromD3D11KHR_SD(cl_int return_value,
 #endif
 
 #ifdef GITS_PLATFORM_WINDOWS
+inline void clGetDeviceIDsFromD3D11NV_SD(cl_int return_value,
+                                         cl_platform_id platform,
+                                         cl_d3d11_device_source_nv d3d_device_source,
+                                         void* d3d_object,
+                                         cl_d3d11_device_set_nv d3d_device_set,
+                                         cl_uint num_entries,
+                                         cl_device_id* devices,
+                                         cl_uint* num_devices) {
+  clGetDeviceIDs_SD(return_value, platform, CL_DEVICE_TYPE_ALL, num_entries, devices, num_devices);
+}
+#endif
+
+#ifdef GITS_PLATFORM_WINDOWS
 inline void clGetDeviceIDsFromDX9INTEL_SD(cl_int return_value,
                                           cl_platform_id platform,
                                           cl_dx9_device_source_intel dx9_device_source,

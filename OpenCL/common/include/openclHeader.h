@@ -104,6 +104,9 @@ typedef cl_uint cl_dx9_device_set_intel;
 typedef cl_uint cl_dx9_media_adapter_type_khr;
 typedef cl_uint cl_dx9_media_adapter_set_khr;
 
+typedef cl_uint cl_d3d11_device_source_nv;
+typedef cl_uint cl_d3d11_device_set_nv;
+
 typedef cl_uint cl_resource_memory_scope;
 typedef cl_uint cl_resource_barrier_type;
 

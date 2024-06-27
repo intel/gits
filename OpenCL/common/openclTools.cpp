@@ -617,17 +617,32 @@ bool IsGLSharingFunction(const std::string& functionName) {
 }
 
 bool IsDXSharingFunction(const std::string& functionName) {
-  static const std::vector<std::string> sharingFunctions{
-      "clGetDeviceIDsFromD3D10KHR",           "clCreateFromD3D10BufferKHR",
-      "clCreateFromD3D10Texture2DKHR",        "clCreateFromD3D10Texture2DKHR",
-      "clEnqueueAcquireD3D10ObjectsKHR",      "clEnqueueReleaseD3D10ObjectsKHR",
-      "clGetDeviceIDsFromD3D11KHR",           "clCreateFromD3D11BufferKHR",
-      "clCreateFromD3D11Texture2DKHR",        "clCreateFromD3D11Texture2DKHR",
-      "clEnqueueAcquireD3D11ObjectsKHR",      "clEnqueueReleaseD3D11ObjectsKHR",
-      "clGetDeviceIDsFromDX9INTEL",           "clCreateFromDX9MediaSurfaceINTEL",
-      "clEnqueueAcquireDX9ObjectsINTEL",      "clEnqueueReleaseDX9ObjectsINTEL",
-      "clGetDeviceIDsFromDX9MediaAdapterKHR", "clCreateFromDX9MediaSurfaceKHR",
-      "clEnqueueAcquireDX9MediaSurfacesKHR",  "clEnqueueReleaseDX9MediaSurfacesKHR"};
+  static const std::vector<std::string> sharingFunctions{"clGetDeviceIDsFromD3D10KHR",
+                                                         "clCreateFromD3D10BufferKHR",
+                                                         "clCreateFromD3D10Texture2DKHR",
+                                                         "clCreateFromD3D10Texture2DKHR",
+                                                         "clEnqueueAcquireD3D10ObjectsKHR",
+                                                         "clEnqueueReleaseD3D10ObjectsKHR",
+                                                         "clGetDeviceIDsFromD3D11KHR",
+                                                         "clCreateFromD3D11BufferKHR",
+                                                         "clCreateFromD3D11Texture2DKHR",
+                                                         "clCreateFromD3D11Texture3DKHR",
+                                                         "clEnqueueAcquireD3D11ObjectsKHR",
+                                                         "clEnqueueReleaseD3D11ObjectsKHR",
+                                                         "clGetDeviceIDsFromD3D11NV",
+                                                         "clCreateFromD3D11BufferNV",
+                                                         "clCreateFromD3D11Texture2DNV",
+                                                         "clCreateFromD3D11Texture3DNV",
+                                                         "clEnqueueAcquireD3D11ObjectsNV",
+                                                         "clEnqueueReleaseD3D11ObjectsNV",
+                                                         "clGetDeviceIDsFromDX9INTEL",
+                                                         "clCreateFromDX9MediaSurfaceINTEL",
+                                                         "clEnqueueAcquireDX9ObjectsINTEL",
+                                                         "clEnqueueReleaseDX9ObjectsINTEL",
+                                                         "clGetDeviceIDsFromDX9MediaAdapterKHR",
+                                                         "clCreateFromDX9MediaSurfaceKHR",
+                                                         "clEnqueueAcquireDX9MediaSurfacesKHR",
+                                                         "clEnqueueReleaseDX9MediaSurfacesKHR"};
   return std::find(sharingFunctions.begin(), sharingFunctions.end(), functionName) !=
          sharingFunctions.end();
 }

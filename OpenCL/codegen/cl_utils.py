@@ -238,7 +238,7 @@ def _make_id(name, version):
     id_ = re.sub('([a-z])([A-Z])', r'\g<1>_\g<2>', name)
     id_ = re.sub('(D3D[0-9]+)([A-Z])', r'\g<1>_\g<2>', id_)
     id_ = re.sub('(DX[0-9])([A-Z])', r'\g<1>_\g<2>', id_)
-    id_ = re.sub('([^_])(KHR|EXT|INTEL)', r'\g<1>_\g<2>', id_)
+    id_ = re.sub('([^_])(KHR|EXT|INTEL|NV)', r'\g<1>_\g<2>', id_)
 
     id_final = 'ID_' + id_.upper().strip('_')
     if (version > 0):

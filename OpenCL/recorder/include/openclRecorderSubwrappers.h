@@ -559,6 +559,63 @@ inline void clCreateFromD3D11Texture3DKHR_RECWRAP(CRecorder& recorder,
                                    errcode_ret);
 }
 
+inline void clCreateFromD3D11BufferNV_RECWRAP(CRecorder& recorder,
+                                              cl_mem return_value,
+                                              cl_context context,
+                                              cl_mem_flags flags,
+                                              ID3D11Buffer* resource,
+                                              cl_int* errcode_ret) {
+  if (recorder.Running()) {
+    if (IsDXUnsharingEnabled(Config::Get())) {
+      recorder.Schedule(NewTokenPtrCreateCLMem(context, return_value, flags, CL_MEM_OBJECT_BUFFER));
+    } else {
+      recorder.Schedule(
+          new CclCreateFromD3D11BufferNV(return_value, context, flags, resource, errcode_ret));
+    }
+  }
+  clCreateFromD3D11BufferKHR_SD(return_value, context, flags, resource, errcode_ret);
+}
+
+inline void clCreateFromD3D11Texture2DNV_RECWRAP(CRecorder& recorder,
+                                                 cl_mem return_value,
+                                                 cl_context context,
+                                                 cl_mem_flags flags,
+                                                 ID3D11Texture2D* resource,
+                                                 UINT subresource,
+                                                 cl_int* errcode_ret) {
+  if (recorder.Running()) {
+    if (IsDXUnsharingEnabled(Config::Get())) {
+      recorder.Schedule(
+          NewTokenPtrCreateCLMem(context, return_value, flags, CL_MEM_OBJECT_IMAGE2D));
+    } else {
+      recorder.Schedule(new CclCreateFromD3D11Texture2DNV(return_value, context, flags, resource,
+                                                          subresource, errcode_ret));
+    }
+  }
+  clCreateFromD3D11Texture2DKHR_SD(return_value, context, flags, resource, subresource,
+                                   errcode_ret);
+}
+
+inline void clCreateFromD3D11Texture3DNV_RECWRAP(CRecorder& recorder,
+                                                 cl_mem return_value,
+                                                 cl_context context,
+                                                 cl_mem_flags flags,
+                                                 ID3D11Texture3D* resource,
+                                                 UINT subresource,
+                                                 cl_int* errcode_ret) {
+  if (recorder.Running()) {
+    if (IsDXUnsharingEnabled(Config::Get())) {
+      recorder.Schedule(
+          NewTokenPtrCreateCLMem(context, return_value, flags, CL_MEM_OBJECT_IMAGE3D));
+    } else {
+      recorder.Schedule(new CclCreateFromD3D11Texture3DNV(return_value, context, flags, resource,
+                                                          subresource, errcode_ret));
+    }
+  }
+  clCreateFromD3D11Texture3DKHR_SD(return_value, context, flags, resource, subresource,
+                                   errcode_ret);
+}
+
 inline void clCreateFromDX9MediaSurfaceINTEL_RECWRAP(CRecorder& recorder,
                                                      cl_mem return_value,
                                                      cl_context context,
@@ -619,6 +676,26 @@ inline void clEnqueueAcquireD3D11ObjectsKHR_RECWRAP(CRecorder& recorder,
                                      num_events_in_wait_list, event_wait_list, event);
 }
 
+inline void clEnqueueAcquireD3D11ObjectsNV_RECWRAP(CRecorder& recorder,
+                                                   cl_int return_value,
+                                                   cl_command_queue command_queue,
+                                                   cl_uint num_objects,
+                                                   const cl_mem* mem_objects,
+                                                   cl_uint num_events_in_wait_list,
+                                                   const cl_event* event_wait_list,
+                                                   cl_event* event) {
+  if (recorder.Running()) {
+    if (IsDXUnsharingEnabled(Config::Get())) {
+    } else {
+      recorder.Schedule(
+          new CclEnqueueAcquireD3D11ObjectsNV(return_value, command_queue, num_objects, mem_objects,
+                                              num_events_in_wait_list, event_wait_list, event));
+    }
+  }
+  clEnqueueAcquireD3D10ObjectsKHR_SD(return_value, command_queue, num_objects, mem_objects,
+                                     num_events_in_wait_list, event_wait_list, event);
+}
+
 inline void clEnqueueAcquireDX9ObjectsINTEL_RECWRAP(CRecorder& recorder,
                                                     cl_int return_value,
                                                     cl_command_queue command_queue,
@@ -673,6 +750,26 @@ inline void clEnqueueReleaseD3D11ObjectsKHR_RECWRAP(CRecorder& recorder,
       recorder.Schedule(new CclEnqueueReleaseD3D11ObjectsKHR(
           return_value, command_queue, num_objects, mem_objects, num_events_in_wait_list,
           event_wait_list, event));
+    }
+  }
+  clEnqueueReleaseD3D10ObjectsKHR_SD(return_value, command_queue, num_objects, mem_objects,
+                                     num_events_in_wait_list, event_wait_list, event);
+}
+
+inline void clEnqueueReleaseD3D11ObjectsNV_RECWRAP(CRecorder& recorder,
+                                                   cl_int return_value,
+                                                   cl_command_queue command_queue,
+                                                   cl_uint num_objects,
+                                                   const cl_mem* mem_objects,
+                                                   cl_uint num_events_in_wait_list,
+                                                   const cl_event* event_wait_list,
+                                                   cl_event* event) {
+  if (recorder.Running()) {
+    if (IsDXUnsharingEnabled(Config::Get())) {
+    } else {
+      recorder.Schedule(
+          new CclEnqueueReleaseD3D11ObjectsNV(return_value, command_queue, num_objects, mem_objects,
+                                              num_events_in_wait_list, event_wait_list, event));
     }
   }
   clEnqueueReleaseD3D10ObjectsKHR_SD(return_value, command_queue, num_objects, mem_objects,
@@ -744,6 +841,30 @@ inline void clGetDeviceIDsFromD3D11KHR_RECWRAP(CRecorder& recorder,
     }
     clGetDeviceIDsFromD3D11KHR_SD(return_value, platform, d3d_device_source, d3d_object,
                                   d3d_device_set, num_entries, devices, num_devices);
+  }
+}
+
+inline void clGetDeviceIDsFromD3D11NV_RECWRAP(CRecorder& recorder,
+                                              cl_int return_value,
+                                              cl_platform_id platform,
+                                              cl_d3d11_device_source_nv d3d_device_source,
+                                              void* d3d_object,
+                                              cl_d3d11_device_set_nv d3d_device_set,
+                                              cl_uint num_entries,
+                                              cl_device_id* devices,
+                                              cl_uint* num_devices) {
+  if (recorder.Running()) {
+    if (IsDXUnsharingEnabled(Config::Get())) {
+      if (return_value == CL_SUCCESS) {
+        recorder.Schedule(NewTokenPtrGetDevices(platform));
+      }
+    } else {
+      recorder.Schedule(new CclGetDeviceIDsFromD3D11NV(return_value, platform, d3d_device_source,
+                                                       d3d_object, d3d_device_set, num_entries,
+                                                       devices, num_devices));
+    }
+    clGetDeviceIDsFromD3D11NV_SD(return_value, platform, d3d_device_source, d3d_object,
+                                 d3d_device_set, num_entries, devices, num_devices);
   }
 }
 

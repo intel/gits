@@ -55,6 +55,18 @@ case ID_CL_CREATE_FROM_D3D11_TEXTURE3D_KHR:
 return new CclCreateFromD3D11Texture3DKHR;
 #endif
 #ifdef GITS_PLATFORM_WINDOWS
+case ID_CL_CREATE_FROM_D3D11_BUFFER_NV:
+return new CclCreateFromD3D11BufferNV;
+#endif
+#ifdef GITS_PLATFORM_WINDOWS
+case ID_CL_CREATE_FROM_D3D11_TEXTURE2D_NV:
+return new CclCreateFromD3D11Texture2DNV;
+#endif
+#ifdef GITS_PLATFORM_WINDOWS
+case ID_CL_CREATE_FROM_D3D11_TEXTURE3D_NV:
+return new CclCreateFromD3D11Texture3DNV;
+#endif
+#ifdef GITS_PLATFORM_WINDOWS
 case ID_CL_CREATE_FROM_DX9_MEDIA_SURFACE_INTEL:
 return new CclCreateFromDX9MediaSurfaceINTEL;
 #endif
@@ -117,6 +129,10 @@ return new CclEnqueueAcquireD3D10ObjectsKHR;
 #ifdef GITS_PLATFORM_WINDOWS
 case ID_CL_ENQUEUE_ACQUIRE_D3D11_OBJECTS_KHR:
 return new CclEnqueueAcquireD3D11ObjectsKHR;
+#endif
+#ifdef GITS_PLATFORM_WINDOWS
+case ID_CL_ENQUEUE_ACQUIRE_D3D11_OBJECTS_NV:
+return new CclEnqueueAcquireD3D11ObjectsNV;
 #endif
 #ifdef GITS_PLATFORM_WINDOWS
 case ID_CL_ENQUEUE_ACQUIRE_DX9_MEDIA_SURFACES_KHR:
@@ -249,6 +265,10 @@ return new CclGetDeviceIDsFromD3D10KHR;
 #ifdef GITS_PLATFORM_WINDOWS
 case ID_CL_GET_DEVICE_IDS_FROM_D3D11_KHR:
 return new CclGetDeviceIDsFromD3D11KHR;
+#endif
+#ifdef GITS_PLATFORM_WINDOWS
+case ID_CL_GET_DEVICE_IDS_FROM_D3D11_NV:
+return new CclGetDeviceIDsFromD3D11NV;
 #endif
 #ifdef GITS_PLATFORM_WINDOWS
 case ID_CL_GET_DEVICE_IDS_FROM_DX9_INTEL:

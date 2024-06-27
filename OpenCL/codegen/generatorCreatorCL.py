@@ -23,7 +23,7 @@ import pycparser
 lexer = lex.lex()
 
 extensions = [
-    'INTEL', 'KHR', 'APPLE', 'EXT', 'AMD'
+    'INTEL', 'KHR', 'APPLE', 'EXT', 'AMD', 'NV'
     ]
 
 headers = [

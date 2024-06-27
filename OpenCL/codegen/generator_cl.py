@@ -1052,6 +1052,7 @@ arg6=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',remov
 
 #------------------------------------- D3D11 -----------------------------------
 
+#------------- KHR -------------
 Function(name='clGetDeviceIDsFromD3D11KHR',enabled=True,availableFrom='1.2',extension=True,type=Info,platform='Windows',recWrap=True,stateTrack=True,
 retV=RetDef(type='cl_int'),
 arg1=ArgDef(name='platform',type='cl_platform_id'),
@@ -1092,6 +1093,29 @@ arg5=ArgDef(name='errcode_ret',type='cl_int*')
 Function(name='clEnqueueAcquireD3D11ObjectsKHR',enabled=True,availableFrom='1.2',extension=True,inheritFrom='clEnqueueAcquireD3D10ObjectsKHR')
 
 Function(name='clEnqueueReleaseD3D11ObjectsKHR',enabled=True,availableFrom='1.2',extension=True,inheritFrom='clEnqueueReleaseD3D10ObjectsKHR')
+
+#------------- NV --------------
+
+Function(name='clGetDeviceIDsFromD3D11NV',enabled=True,availableFrom='1.0',extension=True,type=Info,platform='Windows',recWrap=True,stateTrack=True,
+retV=RetDef(type='cl_int'),
+arg1=ArgDef(name='platform',type='cl_platform_id'),
+arg2=ArgDef(name='d3d_device_source',type='cl_d3d11_device_source_nv'),
+arg3=ArgDef(name='d3d_object',type='void*',wrapType='CvoidPtr'),
+arg4=ArgDef(name='d3d_device_set',type='cl_d3d11_device_set_nv'),
+arg5=ArgDef(name='num_entries',type='cl_uint'),
+arg6=ArgDef(name='devices',type='cl_device_id*',wrapType='Ccl_device_id::CSMapArray',wrapParams='num_entries,{name}'),
+arg7=ArgDef(name='num_devices',type='cl_uint*')
+)
+
+Function(name='clCreateFromD3D11BufferNV',enabled=True,availableFrom='1.0',extension=True,inheritFrom='clCreateFromD3D11BufferKHR')
+
+Function(name='clCreateFromD3D11Texture2DNV',enabled=True,availableFrom='1.0',extension=True,inheritFrom='clCreateFromD3D11Texture2DKHR')
+
+Function(name='clCreateFromD3D11Texture3DNV',enabled=True,availableFrom='1.0',extension=True,inheritFrom='clCreateFromD3D11Texture3DKHR')
+
+Function(name='clEnqueueAcquireD3D11ObjectsNV',enabled=True,availableFrom='1.0',extension=True,inheritFrom='clEnqueueAcquireD3D10ObjectsKHR')
+
+Function(name='clEnqueueReleaseD3D11ObjectsNV',enabled=True,availableFrom='1.0',extension=True,inheritFrom='clEnqueueReleaseD3D10ObjectsKHR')
 
 #-------------------------------------- DX9 ------------------------------------
 
@@ -2449,6 +2473,16 @@ var2=VarDef(name='CL_D3D11_DXGI_ADAPTER_KHR', value='0x401A')
 Enum(name='cl_d3d11_device_set_khr',
 var1=VarDef(name='CL_PREFERRED_DEVICES_FOR_D3D11_KHR', value='0x401B'),
 var2=VarDef(name='CL_ALL_DEVICES_FOR_D3D11_KHR', value='0x401C')
+)
+
+Enum(name='cl_d3d11_device_source_nv',
+var1=VarDef(name='CL_D3D11_DEVICE_NV', value='0x4019'),
+var2=VarDef(name='CL_D3D11_DXGI_ADAPTER_NV', value='0x401A')
+)
+
+Enum(name='cl_d3d11_device_set_nv',
+var1=VarDef(name='CL_PREFERRED_DEVICES_FOR_D3D11_NV', value='0x401B'),
+var2=VarDef(name='CL_ALL_DEVICES_FOR_D3D11_NV', value='0x401C')
 )
 
 Enum(name='cl_resource_memory_scope',
