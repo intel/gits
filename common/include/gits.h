@@ -143,7 +143,8 @@ private:
   std::unique_ptr<CResourceManager> _resources;   // has to be defined before libraries
   std::unique_ptr<CResourceManager2> _resources2; // has to be defined before libraries
   CLibraryList _libraryList;                      /**< @brief array of registered libraries */
-  std::unique_ptr<CFile> _file;                   /**< @brief GITS file connected data */
+  std::unique_ptr<CFile> _fileRecorder;           /**< @brief GITS file connected data */
+  std::unique_ptr<CFile> _filePlayer;             /**< @brief GITS file connected data */
   std::unique_ptr<StreamCompressor> _compressor;
   CRunner _runner;
   FrameTimeSheet _timeSheet;
@@ -227,7 +228,8 @@ public:
   }
 
   void Register(std::shared_ptr<CLibrary> library);
-  void Register(std::unique_ptr<CFile> file);
+  void RegisterFileRecorder(std::unique_ptr<CFile> file);
+  void RegisterFilePlayer(std::unique_ptr<CFile> file);
 
   void ResourceManagerInit(const std::filesystem::path& dump_dir);
   void ResourceManagerDispose() {
@@ -410,7 +412,8 @@ public:
   CLibrary& Library(CLibrary::TId id);
   CToken* TokenCreate(CId id);
 
-  CFile& File() const;
+  CFile& FileRecorder() const;
+  CFile& FilePlayer() const;
 
   const CVersion& Version() const {
     return _version;

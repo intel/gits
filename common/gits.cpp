@@ -108,7 +108,8 @@ CGits::~CGits() {
   try {
     // Release all resources explicitly, before signature creation.
     _imageWriter.finish();
-    _file.reset();
+    _fileRecorder.reset();
+    _filePlayer.reset();
     _libraryList.clear();
     _resources.reset();
     _resources2.reset();
@@ -343,8 +344,12 @@ void CGits::Register(std::shared_ptr<CLibrary> library) {
 *
 * @param file File class to register
 */
-void CGits::Register(std::unique_ptr<CFile> file) {
-  _file = std::move(file);
+void CGits::RegisterFileRecorder(std::unique_ptr<CFile> file) {
+  _fileRecorder = std::move(file);
+}
+
+void CGits::RegisterFilePlayer(std::unique_ptr<CFile> file) {
+  _filePlayer = std::move(file);
 }
 
 /**
@@ -396,9 +401,18 @@ CToken* CGits::TokenCreate(CId id) {
 *
 * @return Reference to GITS file data
 */
-CFile& CGits::File() const {
-  if (_file) {
-    return *_file;
+CFile& CGits::FileRecorder() const {
+  if (_fileRecorder) {
+    return *_fileRecorder;
+  }
+
+  Log(ERR) << "GITS file data was not set properly!!!";
+  throw ENotFound(EXCEPTION_MESSAGE);
+}
+
+CFile& CGits::FilePlayer() const {
+  if (_filePlayer) {
+    return *_filePlayer;
   }
 
   Log(ERR) << "GITS file data was not set properly!!!";
@@ -457,7 +471,7 @@ std::ostream& operator<<(std::ostream& stream, const CGits& g) {
  */
 CBinOStream& operator<<(CBinOStream& stream, const CGits& g) {
   stream << g._version;
-  stream << g.File();
+  stream << g.FileRecorder();
   return stream;
 }
 
@@ -485,7 +499,7 @@ CBinIStream& operator>>(CBinIStream& stream, CGits& g) {
   // load file data
   std::unique_ptr<CFile> file(new CFile(version));
   stream >> *file;
-  g.Register(std::move(file));
+  g.RegisterFilePlayer(std::move(file));
 
   return stream;
 }
@@ -532,7 +546,7 @@ std::string CFile::ReadProperties() const {
 
 void CGits::ResourceManagerInit(const std::filesystem::path& dump_dir) {
   const auto& mappings = resource_filenames(dump_dir);
-  if (stream_older_than(GITS_TOKEN_COMPRESSION)) {
+  if (Config::IsPlayer() && stream_older_than(GITS_TOKEN_COMPRESSION)) {
     _resources.reset(new CResourceManager(mappings));
   } else {
     _resources2.reset(new CResourceManager2(mappings));
@@ -647,7 +661,7 @@ CBinIStream& operator>>(CBinIStream& stream, CFile& file) {
 }
 
 bool stream_older_than(uint64_t version) {
-  return CGits::Instance().File().Version().version() < version;
+  return Config::Get().IsPlayer() && (CGits::Instance().FilePlayer().Version().version() < version);
 }
 
 TimerSet::TimerSet() : playback(true), restoration(true) {}

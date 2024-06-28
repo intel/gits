@@ -150,7 +150,7 @@ void gits::CPlayer::StatisticsPrint(bool verbose) const {
 }
 
 void gits::CPlayer::NotSupportedFunctionsPrint() const {
-  const CFile::CSkippedCalls& skippedCalls = gits::CGits::Instance().File().SkippedCalls();
+  const CFile::CSkippedCalls& skippedCalls = gits::CGits::Instance().FilePlayer().SkippedCalls();
 
   if (skippedCalls.size()) {
     Log(INFO, RAW) << std::endl;

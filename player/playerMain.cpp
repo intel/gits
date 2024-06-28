@@ -225,7 +225,7 @@ int MainBody(int argc, char* argv[]) {
 
     inst.ResourceManagerInit(cfg.common.player.streamDir);
     if (cfg.common.player.diags) {
-      std::cout << CGits::Instance().File().ReadProperties();
+      std::cout << CGits::Instance().FilePlayer().ReadProperties();
       return 0;
     }
 

@@ -537,7 +537,7 @@ bool gits::Config::Set(const std::filesystem::path& cfgPath, const Config::TMode
     std::stringstream configStrStream;
     configStrStream << configYaml;
     properties["diag"]["gits"]["config"] = configStrStream.str();
-    inst.Register(std::move(file));
+    inst.RegisterFileRecorder(std::move(file));
   }
 
   configured = true;

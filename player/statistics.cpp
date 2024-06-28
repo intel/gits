@@ -106,7 +106,7 @@ void gits::CStatistics::Get(CScheduler& scheduler, CStatsComputer& comp) {
 
   // add skipped calls
   auto& inst = CGits::Instance();
-  auto& skippedCalls = inst.File().SkippedCalls();
+  auto& skippedCalls = inst.FilePlayer().SkippedCalls();
 
   for (auto& skip : skippedCalls) {
     std::unique_ptr<CFunction> function(
