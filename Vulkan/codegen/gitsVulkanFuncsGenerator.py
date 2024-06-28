@@ -255,13 +255,13 @@ types_not_needing_declaration = vulkan_enums + vulkan_uint32 + vulkan_uint64 + v
 vulkan_mapped_types = opaque_dispatchable_handles
 vulkan_mapped_types_nondisp = opaque_nondispatchable_handles
 
-copyright_header = """// ====================== begin_copyright_notice ============================
+copyright_header = """// ===================== begin_copyright_notice ============================
 //
 // Copyright (C) 2023-2024 Intel Corporation
 //
 // SPDX-License-Identifier: MIT
 //
-// ====================== end_copyright_notice ==============================
+// ===================== end_copyright_notice ==============================
 
 """
 # Header for .def files requires a different comment style.
