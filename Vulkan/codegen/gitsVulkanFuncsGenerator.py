@@ -264,6 +264,8 @@ copyright_header = """// ====================== begin_copyright_notice =========
 // ====================== end_copyright_notice ==============================
 
 """
+# Header for .def files requires a different comment style.
+copyright_header_def = copyright_header.replace('//', ';')
 
 structs_names = []
 
@@ -1064,17 +1066,10 @@ typedef _SECURITY_ATTRIBUTES SECURITY_ATTRIBUTES;
 
 def generate_vulkan_def(functions, def_filename, library_name):
   plugin_def = open(def_filename, 'w')
-  header_def = """;====================== begin_copyright_notice ============================
-;
-; Copyright (C) 2023-2024 Intel Corporation
-;
-; SPDX-License-Identifier: MIT
-;
-;====================== end_copyright_notice ==============================
-
-  LIBRARY %(library_name)s
+  header_def = copyright_header_def + f"""
+  LIBRARY {library_name}
   EXPORTS
-""" % {'library_name': library_name}
+""".lstrip('\n')
   plugin_def.write(header_def)
   for key in sorted(functions.keys()):
     if functions[key][0]['level'] == FuncLevel.PROTOTYPE:
