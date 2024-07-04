@@ -1656,11 +1656,10 @@ bool IsGlGetTexImagePresentOnGLES() {
   static bool presence = false;
 
   if (!presenceChecked) {
-    bool useGlGetTexImageAndRestoreBuffersWhenPossibleES = false;
 #ifdef GITS_PLATFORM_WINDOWS
-    useGlGetTexImageAndRestoreBuffersWhenPossibleES =
+    bool useGlGetTexImageAndRestoreBuffersWhenPossibleES =
         Config::Get().opengl.recorder.useGlGetTexImageAndRestoreBuffersWhenPossibleES;
-#endif
+
     if (useGlGetTexImageAndRestoreBuffersWhenPossibleES &&
         check_gl_function_availability("glGetTexImage")) {
       GLint oldBinding = 0;
@@ -1686,6 +1685,7 @@ bool IsGlGetTexImagePresentOnGLES() {
       drv.gl.glBindTexture(GL_TEXTURE_2D, oldBinding);
       drv.gl.glDeleteTextures(1, &texture);
     }
+#endif
     presenceChecked = true;
   }
 
@@ -1697,11 +1697,10 @@ bool IsGlGetCompressedTexImagePresentOnGLES() {
   static bool presence = false;
 
   if (!presenceChecked) {
-    bool useGlGetTexImageAndRestoreBuffersWhenPossibleES = false;
 #ifdef GITS_PLATFORM_WINDOWS
-    useGlGetTexImageAndRestoreBuffersWhenPossibleES =
+    bool useGlGetTexImageAndRestoreBuffersWhenPossibleES =
         Config::Get().opengl.recorder.useGlGetTexImageAndRestoreBuffersWhenPossibleES;
-#endif
+
     if (useGlGetTexImageAndRestoreBuffersWhenPossibleES &&
         check_gl_function_availability("glGetCompressedTexImage")) {
       GLint oldBinding = 0;
@@ -1751,6 +1750,7 @@ bool IsGlGetCompressedTexImagePresentOnGLES() {
       drv.gl.glBindTexture(GL_TEXTURE_2D, oldBinding);
       drv.gl.glDeleteTextures(1, &texture);
     }
+#endif
     presenceChecked = true;
   }
 

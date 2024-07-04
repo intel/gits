@@ -2548,15 +2548,13 @@ void gits::OpenGL::CVariableTextureInfo::CTexture2D::GetTextureLevelsDataGL() {
       drv.gl.glGetCompressedTexImage(Target(), i, &data[0]);
     } else {
       auto format = currMip.format;
-      bool restoreIndexedTexturesWA = false;
 #ifdef GITS_PLATFORM_WINDOWS
-      restoreIndexedTexturesWA = Config::Get().opengl.recorder.restoreIndexedTexturesWA;
-#endif
-
+      bool restoreIndexedTexturesWA = Config::Get().opengl.recorder.restoreIndexedTexturesWA;
       if (currMip.internalFormat == GL_RGBA && currMip.format == GL_COLOR_INDEX &&
           restoreIndexedTexturesWA) {
         format = currMip.internalFormat;
       }
+#endif
 
       int size = TexelSize(format, currMip.type) * currMip.width * currMip.height * currMip.depth;
       data.resize((size > 0) ? size : 1);
@@ -2658,19 +2656,20 @@ void gits::OpenGL::CVariableTextureInfo::CTexture2D::ScheduleSameTargetTextureGL
             currMip.compressedImageSize, Texture2DData().pixels.at(i)));
       }
     } else {
-      bool restoreIndexedTexturesWA = false;
 #ifdef GITS_PLATFORM_WINDOWS
-      restoreIndexedTexturesWA = Config::Get().opengl.recorder.restoreIndexedTexturesWA;
+      bool restoreIndexedTexturesWA = Config::Get().opengl.recorder.restoreIndexedTexturesWA;
 #endif
       if (GenericData().immutable != GL_FALSE) {
         scheduler.Register(new CglTexSubImage2D(Target(), i, 0, 0, currMip.width, currMip.height,
                                                 currMip.format, currMip.type,
                                                 Texture2DData().pixels.at(i)));
+#ifdef GITS_PLATFORM_WINDOWS
       } else if (currMip.internalFormat == GL_RGBA && currMip.format == GL_COLOR_INDEX &&
                  restoreIndexedTexturesWA) {
         scheduler.Register(new CglTexImage2D(Target(), i, currMip.internalFormat, currMip.width,
                                              currMip.height, currMip.border, currMip.internalFormat,
                                              currMip.type, Texture2DData().pixels.at(i)));
+#endif
       } else {
         scheduler.Register(new CglTexImage2D(Target(), i, currMip.internalFormat, currMip.width,
                                              currMip.height, currMip.border, currMip.format,
