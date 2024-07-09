@@ -75,7 +75,7 @@ Ar::Ar(const uint8_t* data, size_t dataLength) {
     if (fileEntry.fileName.empty()) {
       if (ArSpecialCases::longFileNamesFile == std::string(fileEntryHeader->identifier, 2U)) {
         fileEntry.fileName = ArSpecialCases::longFileNamesFile;
-        longFileNamesEntry = fileEntry;
+        longFileNamesEntry = std::move(fileEntry);
       } else {
         Log(ERR) << "Corrupt AR archive - file entry does not have identifier : '" +
                         std::string(fileEntryHeader->identifier,
@@ -100,7 +100,7 @@ Ar::Ar(const uint8_t* data, size_t dataLength) {
       }
       if (fileEntry.fileName.size() < paddingFilenamePrefix.size() ||
           fileEntry.fileName.substr(0, paddingFilenamePrefix.size()) != paddingFilenamePrefix) {
-        files.push_back(fileEntry);
+        files.push_back(std::move(fileEntry));
       }
     }
 
