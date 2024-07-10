@@ -213,29 +213,6 @@ public:
   }
 };
 
-class GLQueryWrapper {
-  struct Data {
-    GLuint queryObj;
-    GLuint drawNr;
-    GLint result;
-    bool ended;
-    bool clearOrBlit;
-    Data(GLuint queryobj, GLuint drawnr)
-        : queryObj(queryobj), drawNr(drawnr), result(-1), ended(false), clearOrBlit(false) {}
-  };
-
-  GLenum _queryType;
-  std::vector<Data> _queries;
-  GLQueryWrapper() {}
-
-public:
-  GLQueryWrapper(GLenum type) : _queryType(type) {}
-  void Begin(GLuint drawnr, bool clearblit);
-  void End();
-  void GetResults();
-  void PrintToLog();
-};
-
 //Helper class for unique glsl names generation (programs shaders names scope)
 class GLSLUnique {
 private:

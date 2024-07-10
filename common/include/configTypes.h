@@ -368,7 +368,6 @@ struct CompressionTypeOpt : NamedValuesBase<CompressionType, CompressionTypeOpt>
     values()["ZSTD"] = CompressionType::ZSTD;
   }
 };
-
 // A lot of values in config are left untouched at 'default' zero-like
 // value. Following will allow to enumerate only defaults that are
 // special.
