@@ -35,7 +35,6 @@ gits::Config::Config() {
   common.player.tokenBurstNum = 5;
   common.recorder.tokenBurst = 10000;
   common.recorder.tokenBurstNum = 5;
-  common.player.tokenLoadLimit = UINT_MAX;
   common.player.exitFrame = 1000000;
   common.recorder.extendedDiagnosticInfo = true;
 #ifdef GITS_PLATFORM_WINDOWS

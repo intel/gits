@@ -45,7 +45,6 @@ public:
     CScheduler::CTokenList tokenList;
 
     try {
-      unsigned totalLoaded = 0;
       unsigned sinceLastChk = 0;
 
       // Token creating function.
@@ -60,7 +59,6 @@ public:
       const auto stream = _sched._iBinStream;
       const auto tokenBurstLimit = _sched._tokenLimit;
       const auto checkpointSize = _sched._checkpointSize;
-      const auto tokenLoadLimit = Config::Get().common.player.tokenLoadLimit;
 
       for (;;) {
         unsigned loaded = 0;
@@ -91,16 +89,11 @@ public:
           tokenList.push_back(token);
 
           loaded++;
-          totalLoaded++;
           sinceLastChk++;
 
           if (sinceLastChk == checkpointSize) {
             Log(INFO, RAW) << "#" << std::flush;
             sinceLastChk = 0;
-          }
-
-          if (tokenLoadLimit == totalLoaded) {
-            everything_loaded = true;
           }
         }
 

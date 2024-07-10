@@ -152,7 +152,6 @@ Common:
     EscalatePriority: false
     SwapAfterPrepare: false
     StopAfterFrames: '-'
-    TokenLoadLimit: 4294967295
     NullRun: false
     WaitForEnter: false
     CleanResourcesOnExit: false

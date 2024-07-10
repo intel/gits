@@ -947,10 +947,6 @@ bool configure_player(int argc, char** argv) {
   TypedOption<bool> optionLogLoadedTokens(options, OPTION_GROUP_INTERNAL, 0, "logLoadedTokens",
                                           "Prints token names after they are loaded.");
 
-  TypedOption<int> optionTokenLoadLimit(options, OPTION_GROUP_INTERNAL, 0, "tokenLoadLimit",
-                                        "Don't load whole stream, instead only load "
-                                        "this many tokens.");
-
   TypedOption<bool> optionAubSignaturesCL(
       options, OPTION_GROUP_INTERNAL, 0, "aubSignaturesCL",
       "Append signatures at the end of each mem object. "
@@ -1327,7 +1323,6 @@ bool configure_player(int argc, char** argv) {
     Log(WARN) << "The '--checkCrossPlatformCompatibility' argument is deprecated.";
   }
   set_when_option_present(cfg.opengl.player.scaleFactor, optionScaleFactor);
-  set_when_option_present(cfg.common.player.tokenLoadLimit, optionTokenLoadLimit);
   set_when_option_present(cfg.vulkan.player.maxAllowedVkSwapchainRewinds,
                           optionMaxAllowedVkSwapchainRewinds);
   set_when_option_present(cfg.common.player.endFrameSleep, optionEndFrameSleep);
