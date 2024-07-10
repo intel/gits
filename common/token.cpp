@@ -28,7 +28,6 @@
 #include "streams.h"
 #include "gits.h"
 #include "config.h"
-#include "zone_allocator.h"
 #include "function.h"
 #include "scheduler.h"
 #include "tools.h"
@@ -48,30 +47,12 @@ namespace gits {
 
 CToken::~CToken() {}
 
-static zone_allocator token_allocator;
-void zone_allocator_next_zone() {
-  if (Config::Get().common.player.useZoneAllocator) {
-    token_allocator.use_next_zone();
-  }
-}
-void zone_allocator_reinitialize(size_t zones, size_t size) {
-  if (Config::Get().common.player.useZoneAllocator) {
-    token_allocator.reinitialize(zones, size);
-  }
-}
-
 void* CToken::operator new(size_t size) {
-  if (Config::Get().common.player.useZoneAllocator) {
-    return token_allocator.allocate(size);
-  } else {
-    return ::operator new(size);
-  }
+  return ::operator new(size);
 }
 
 void CToken::operator delete(void* pointer) {
-  if (!Config::Get().common.player.useZoneAllocator) {
-    ::operator delete(pointer);
-  }
+  ::operator delete(pointer);
 }
 
 void CToken::Serialize(CBinOStream& stream) {

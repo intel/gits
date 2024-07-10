@@ -352,7 +352,6 @@ struct convert<gits::Config::Common::Player> {
       rhs.swapAfterPrepare = node["SwapAfterPrepare"].as<gits::vi_bool>();
       rhs.stopAfterFrames = node["StopAfterFrames"].as<BitRange>();
       rhs.tokenLoadLimit = node["TokenLoadLimit"].as<gits::vi_uint>();
-      rhs.useZoneAllocator = node["UseZoneAllocator"].as<gits::vi_bool>();
       rhs.precacheResources = node["PrecacheResources"].as<gits::vi_bool>();
       rhs.syncWithRecorder = node["SyncWithRecorder"].as<gits::vi_bool>();
       rhs.keepApis = node["KeepApis"].as<BitRange>();

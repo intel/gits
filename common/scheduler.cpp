@@ -34,9 +34,6 @@ std::map<const char*, uint64_t> token_size;
 
 namespace gits {
 
-void zone_allocator_next_zone();
-void zone_allocator_reinitialize(size_t zones, size_t size);
-
 class CStreamLoader {
   CScheduler& _sched;
   unsigned _ignore_mask;
@@ -48,13 +45,6 @@ public:
 
   void operator()(ProducerConsumer<CScheduler::CTokenList>& queue) {
     CScheduler::CTokenList tokenList;
-    // These values are guessed, and should probably be configurable.
-    // The aim is to always have token burst fitting inside one zone.
-    // Bounded number of token burst alive at any one time is needed too.
-    // The value is also guessed as it can vary depending on how various
-    // stages retire them.
-    zone_allocator_reinitialize(Config::Get().common.player.tokenBurstNum + 2,
-                                Config::Get().common.player.tokenBurst * 64);
 
     try {
       unsigned totalLoaded = 0;
@@ -121,7 +111,6 @@ public:
             everything_loaded = true;
           }
         }
-        zone_allocator_next_zone();
 
         // Finish if the queue won't accept more products.
         if (!queue.produce(tokenList)) {

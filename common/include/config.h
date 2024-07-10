@@ -117,7 +117,6 @@ struct Config {
       vi_bool swapAfterPrepare;
       BitRange stopAfterFrames;
       vi_uint tokenLoadLimit;
-      vi_bool useZoneAllocator;
       vi_bool precacheResources;
       vi_bool syncWithRecorder;
       BitRange keepApis;

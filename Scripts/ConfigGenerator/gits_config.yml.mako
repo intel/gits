@@ -153,7 +153,6 @@ Common:
     SwapAfterPrepare: false
     StopAfterFrames: '-'
     TokenLoadLimit: 4294967295
-    UseZoneAllocator: false
     PrecacheResources: false
     SyncWithRecorder: false
     KeepApis: 'all'

@@ -47,7 +47,6 @@ list(APPEND common_SOURCES
   include/tools_lite.h
   include/tools.h
   include/version.h
-  include/zone_allocator.h
   include/automateCCode.h
   include/ccodeWriteWrap.h
   include/intervalSet.h
@@ -85,7 +84,6 @@ list(APPEND common_SOURCES
   tools.cpp
   version.cpp
   dynamic_linker.cpp
-  zone_allocator.cpp
   lua_bindings.cpp
   InputListener.cpp
   keyEvents.cpp

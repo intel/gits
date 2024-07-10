@@ -994,10 +994,6 @@ bool configure_player(int argc, char** argv) {
                                    "crash in case OpenCL is actually used by the stream.",
                                    GITS_PLATFORM_BIT_WINDOWS | GITS_PLATFORM_BIT_X11);
 
-  TypedOption<bool> optionUseZoneAllocator(options, OPTION_GROUP_INTERNAL, 0, "useZoneAlloc",
-                                           "Use zone allocator which stores tokens together "
-                                           "in 4MB blocks of memory.");
-
   TypedOption<bool> optionShowOriginalFormat(
       options, OPTION_GROUP_INTERNAL, 0, "showOriginalFormat",
       "Before createing an EGL window, prints all attributes it "
@@ -1185,7 +1181,6 @@ bool configure_player(int argc, char** argv) {
   set_when_option_present(cfg.opengl.player.captureDrawsPre, optionCaptureDrawsPre);
   set_when_option_present(cfg.common.player.syncWithRecorder, optionSyncWithRecorder);
   set_when_option_present(cfg.common.player.benchmark, optionBenchmark);
-  set_when_option_present(cfg.common.player.useZoneAllocator, optionUseZoneAllocator);
   set_when_option_present(cfg.common.player.nullRun, optionNullRun);
 
   if (optionTrace.Present()) {
