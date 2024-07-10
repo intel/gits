@@ -6173,8 +6173,7 @@ void gits::OpenGL::CVariableFramebufferEXTInfo::Schedule(CScheduler& scheduler,
 gits::OpenGL::CVariableFramebufferInfo::CVariableFramebufferInfo() {
   if (curctx::IsEs2Plus() ||
       (curctx::IsOgl() &&
-       (curctx::Version() >= 300 || drv.gl.HasExtension("GL_ARB_framebuffer_object") ||
-        Config::Get().opengl.recorder.forceFBOSupportWA))) {
+       (curctx::Version() >= 300 || drv.gl.HasExtension("GL_ARB_framebuffer_object")))) {
     _supported = true;
   }
 }

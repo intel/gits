@@ -298,7 +298,6 @@ struct Config {
 
       // Abandoned options
       vi_bool forceSyncFlushCommands;
-      vi_bool forceFBOSupportWA;
     } recorder;
   } opengl;
 
