@@ -297,7 +297,6 @@ struct Config {
       vi_bool ccodeRangesWA;
 
       // Abandoned options
-      vi_int updateMappedTexturesEveryNSwaps;
       vi_bool forceSyncFlushCommands;
       vi_bool forceFBOSupportWA;
     } recorder;

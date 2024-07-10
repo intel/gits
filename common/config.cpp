@@ -47,7 +47,6 @@ gits::Config::Config() {
   opengl.player.keepDraws = BitRange(true);
   opengl.player.keepFrames = BitRange(true);
   opengl.player.scaleFactor = 1.0f;
-  opengl.recorder.updateMappedTexturesEveryNSwaps = 1;
   opengl.recorder.stripIndicesValues = 0xFFFFFFFF;
   opengl.recorder.restoreDefaultFB = true;
   opengl.recorder.suppressProgramBinary = true;
@@ -287,7 +286,6 @@ void gits::Config::SetOpenGL(const YAML::Node& openglYaml) {
                 "then recapture it to CCode.";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
-  cfgOpenGLRecorder.updateMappedTexturesEveryNSwaps = 1;
 }
 
 void gits::Config::SetVulkan(const YAML::Node& vulkanYaml) {
