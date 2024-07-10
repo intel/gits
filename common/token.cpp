@@ -287,17 +287,7 @@ void CTokenPlayerRecorderSync::Read(CBinIStream& stream) {
   read_from_stream(stream, _timeStamp);
 }
 
-void CTokenPlayerRecorderSync::Run() {
-  if (!Config::Get().common.player.syncWithRecorder) {
-    return;
-  }
-
-  static uint64_t base = CGits::Instance().Timers().program.Get() / 1000;
-  for (uint64_t current = CGits::Instance().Timers().program.Get() / 1000;
-       current - base < _timeStamp; current = CGits::Instance().Timers().program.Get() / 1000) {
-    std::this_thread::sleep_for(std::chrono::microseconds(_timeStamp - (current - base)));
-  }
-}
+void CTokenPlayerRecorderSync::Run() {}
 
 /* ******************************** TOKEN MAKE CURRENT THREAD ****************************** */
 

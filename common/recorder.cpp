@@ -626,8 +626,6 @@ void gits::CRecorder::FrameEnd() {
         sleep_millisec(api3dIface.CfgRec_EndFrameSleep());
       }
 
-      Schedule(new CTokenPlayerRecorderSync);
-
       //frame end time stamp
       if (Config::Get().common.recorder.benchmark) {
         inst.TimeSheet().add_frame_time("stamp", inst.Timers().program.Get());

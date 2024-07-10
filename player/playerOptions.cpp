@@ -473,11 +473,6 @@ bool configure_player(int argc, char** argv) {
       "Specified coordinates (e.g. 100x100) will be used as position of "
       "all windows created during stream playback. Window position updates will be inhibited.");
 
-  TypedOption<bool> optionSyncWithRecorder(
-      options, OPTION_GROUP_PLAYBACK, 0, "syncWithRecorder",
-      "Playback will synchronize with recorder timings by sleeping "
-      "on frame boundary until time of recorder in that place is reached.");
-
   TypedOption<BitRange> optionKeepDraws(options, OPTION_GROUP_PLAYBACK, 0, "keepDraws",
                                         "List of drawcall numbers to be executed by "
                                         "gits during playback. Rest of drawcalls won't be executed."
@@ -1179,7 +1174,6 @@ bool configure_player(int argc, char** argv) {
   }
 
   set_when_option_present(cfg.opengl.player.captureDrawsPre, optionCaptureDrawsPre);
-  set_when_option_present(cfg.common.player.syncWithRecorder, optionSyncWithRecorder);
   set_when_option_present(cfg.common.player.benchmark, optionBenchmark);
   set_when_option_present(cfg.common.player.nullRun, optionNullRun);
 
