@@ -487,7 +487,6 @@ struct convert<gits::Config::OpenGL::Player> {
       rhs.forcePortableWglDepthBits = node["ForcePortableWglDepthBits"].as<gits::vi_uint>();
       rhs.affectedViewport = node["AffectedViewport"].as<std::vector<int>>();
       rhs.traceGLBufferHashes = node["TraceGLBufferHashes"].as<BitRange>();
-      rhs.showOriginalPixelFormat = node["ShowOriginalPixelFormat"].as<gits::vi_bool>();
       rhs.forceNoMSAA = node["ForceNoMSAA"].as<gits::vi_bool>();
       rhs.destroyContextsOnExit = node["DestroyContextsOnExit"].as<gits::vi_bool>();
 #ifdef GITS_PLATFORM_LINUX

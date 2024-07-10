@@ -265,7 +265,6 @@ OpenGL:
     ForcePortableWglDepthBits: 0
     AffectedViewport: []
     TraceGLBufferHashes: '-'
-    ShowOriginalPixelFormat: false
     ForceNoMSAA: false
     DestroyContextsOnExit: false
 %if platform != "win32":

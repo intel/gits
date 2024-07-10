@@ -79,21 +79,6 @@ void log_config_properties(EGLDisplay dpy, EGLConfig config) {
   Log(TRACE) << "Received config attributes: id=" << id << " color=" << buffer_size
              << " depth=" << depth_size << " stencil=" << stencil_size << " samples=" << samples;
 }
-
-void show_config_attribs(const std::vector<int>& attribs) {
-  using namespace gits;
-  using namespace gits::OpenGL;
-  if (Config::Get().opengl.player.showOriginalPixelFormat) {
-    Log(TRACE) << "Original config attributes:";
-    for (size_t i = 0; i < attribs.size(); i += 2) {
-      if (attribs[i] == EGL_NONE) {
-        break;
-      }
-      GLLog(TRACE) << "    " << (GLenum)attribs[i] << " - " << attribs[i + 1];
-    }
-  }
-}
-
 } // namespace
 
 gits::OpenGL::CeglGetError::CeglGetError() {}
@@ -548,7 +533,6 @@ EGLint find_attrib(EGLint attrib, const std::vector<EGLint>& attrib_list) {
 } // namespace gits
 
 EGLConfig gits::OpenGL::FindConfigEGL(EGLDisplay dpy, const std::vector<EGLint>& attribs) {
-  show_config_attribs(attribs);
   return choose_config(dpy, attribs);
 }
 

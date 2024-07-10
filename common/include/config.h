@@ -238,7 +238,6 @@ struct Config {
       vi_bool affectViewport;
       std::vector<int> affectedViewport;
       BitRange traceGLBufferHashes;
-      vi_bool showOriginalPixelFormat;
       vi_bool forceNoMSAA;
       vi_bool destroyContextsOnExit;
 #ifdef GITS_PLATFORM_LINUX

@@ -980,11 +980,6 @@ bool configure_player(int argc, char** argv) {
                                    "crash in case OpenCL is actually used by the stream.",
                                    GITS_PLATFORM_BIT_WINDOWS | GITS_PLATFORM_BIT_X11);
 
-  TypedOption<bool> optionShowOriginalFormat(
-      options, OPTION_GROUP_INTERNAL, 0, "showOriginalFormat",
-      "Before createing an EGL window, prints all attributes it "
-      "was created with.");
-
   TypedOption<std::filesystem::path> optionLibEGL(options, OPTION_GROUP_INTERNAL, 0, "libEGLPath",
                                                   "Override for library containing EGL functions",
                                                   GITS_PLATFORM_BIT_WINDOWS |
@@ -1094,7 +1089,6 @@ bool configure_player(int argc, char** argv) {
   set_when_option_present(cfg.opengl.player.linkGetProgBinary, optionLinkGetProgBinary);
   set_when_option_present(cfg.opengl.player.linkUseProgBinary, optionLinkUseProgBinary);
   set_when_option_present(cfg.common.player.diags, optionRecorderDiags);
-  set_when_option_present(cfg.opengl.player.showOriginalPixelFormat, optionShowOriginalFormat);
   set_when_option_present(cfg.opengl.player.forceNoMSAA, optionForceNoMSAA);
   set_when_option_present(cfg.common.player.cleanResourcesOnExit, optionCleanResourcesOnExit);
   set_when_option_present(cfg.opengl.player.destroyContextsOnExit, optionDestroyContextsOnExit);
