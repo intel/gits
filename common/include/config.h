@@ -234,7 +234,6 @@ struct Config {
       vi_bool traceGitsInternal;
       vi_bool linkGetProgBinary;
       vi_bool linkUseProgBinary;
-      vi_uint forcePortableWglDepthBits;
       vi_bool affectViewport;
       std::vector<int> affectedViewport;
       BitRange traceGLBufferHashes;

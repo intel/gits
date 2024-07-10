@@ -896,12 +896,6 @@ bool configure_player(int argc, char** argv) {
       "replayed on another platform. Without it, some unimportant attribute mismatch could cause "
       "the driver to return no usable pixel formats.");
 
-  TypedOption<int> optionForcePortableWglDepthBits(
-      options, OPTION_GROUP_WORKAROUND, 0, "forcePortableWglDepthBits",
-      "Sets WGL_DEPTH_BITS_ARB attribute to given number of bits, when WGL portability layer is "
-      "being used",
-      GITS_PLATFORM_BIT_WINDOWS);
-
   TypedOption<bool> optionShowWindowsWA(options, OPTION_GROUP_WORKAROUND, 0, "showWindowsWA",
                                         "Enables workaround that makes all windows visible "
                                         "all the time by default");
@@ -1115,9 +1109,6 @@ bool configure_player(int argc, char** argv) {
     std::filesystem::path pipelineCachePath = optionOverrideVKPipelineCache.Value();
     cfg.vulkan.player.overrideVKPipelineCache = std::filesystem::absolute(pipelineCachePath);
   }
-
-  set_when_option_present(cfg.opengl.player.forcePortableWglDepthBits,
-                          optionForcePortableWglDepthBits);
 
   set_when_option_present(cfg.opencl.player.noOpenCL, optionNoOpenCL);
   cfg.common.player.applicationPath = options.AppPath();

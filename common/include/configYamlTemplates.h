@@ -484,7 +484,6 @@ struct convert<gits::Config::OpenGL::Player> {
       rhs.traceGitsInternal = node["TraceGitsInternal"].as<gits::vi_bool>();
       rhs.linkGetProgBinary = node["LinkGetProgBinary"].as<gits::vi_bool>();
       rhs.linkUseProgBinary = node["LinkUseProgBinary"].as<gits::vi_bool>();
-      rhs.forcePortableWglDepthBits = node["ForcePortableWglDepthBits"].as<gits::vi_uint>();
       rhs.affectedViewport = node["AffectedViewport"].as<std::vector<int>>();
       rhs.traceGLBufferHashes = node["TraceGLBufferHashes"].as<BitRange>();
       rhs.forceNoMSAA = node["ForceNoMSAA"].as<gits::vi_bool>();

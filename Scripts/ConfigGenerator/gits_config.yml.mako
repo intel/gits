@@ -262,7 +262,6 @@ OpenGL:
     TraceGitsInternal: false
     LinkGetProgBinary: false
     LinkUseProgBinary: false
-    ForcePortableWglDepthBits: 0
     AffectedViewport: []
     TraceGLBufferHashes: '-'
     ForceNoMSAA: false

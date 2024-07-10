@@ -119,11 +119,7 @@ gits::OpenGL::WGLARBPFAttribs gits::OpenGL::PtblToWGLARBAttribs(const PtblPFAttr
       break;
     case ptblPFDepthSize:
       wglattribs.push_back(WGL_DEPTH_BITS_ARB);
-      if (Config::Get().opengl.player.forcePortableWglDepthBits) {
-        wglattribs.push_back(Config::Get().opengl.player.forcePortableWglDepthBits);
-      } else {
-        wglattribs.push_back(ptblattr.second);
-      }
+      wglattribs.push_back(ptblattr.second);
       break;
     case ptblPFStencilSize:
       wglattribs.push_back(WGL_STENCIL_BITS_ARB);
