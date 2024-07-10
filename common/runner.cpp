@@ -41,13 +41,6 @@ static NOINLINE void log_played_token(gits::CToken& token) {
 }
 
 gits::CRunner::TResultType gits::CRunner::operator()(CAction& action, CToken& token) const {
-  static size_t number = 0;
-  number++;
-  if (!Config::Get().common.player.keepApis.empty() &&
-      !Config::Get().common.player.keepApis[number]) {
-    return TResultType();
-  }
-
   if (Config::Get().common.player.logFncs) {
     log_played_token(token);
   }

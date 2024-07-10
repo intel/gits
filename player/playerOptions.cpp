@@ -482,15 +482,6 @@ bool configure_player(int argc, char** argv) {
                                         "  * draw_list = element | draw_list, element\n"
                                         "  * element = Number | Begin-End | Begin-End:Step");
 
-  TypedOption<BitRange> optionKeepApis(options, OPTION_GROUP_PLAYBACK, 0, "keepApis",
-                                       "List of APIs numbers to be executed by "
-                                       "gits during playback. Rest of drawcalls won't be executed."
-                                       "Specified as single string without spaces of "
-                                       "following format: \n"
-                                       "  * pattern = draw_list | draw_list/Repeat-Count"
-                                       "  * draw_list = element | draw_list, element\n"
-                                       "  * element = Number | Begin-End | Begin-End:Step");
-
   TypedOption<BitRange> optionKeepFrames(
       options, OPTION_GROUP_PLAYBACK, 0, "keepFrames",
       "List of frames whose draw calls should be played back. "
@@ -1438,7 +1429,6 @@ bool configure_player(int argc, char** argv) {
   set_when_option_present(cfg.opengl.player.captureFlushFrame, optionCaptureFlushFrame);
   set_when_option_present(cfg.opengl.player.captureBindFboFrame, optionCaptureBindFboFrame);
   set_when_option_present(cfg.opengl.player.keepDraws, optionKeepDraws);
-  set_when_option_present(cfg.common.player.keepApis, optionKeepApis);
   set_when_option_present(cfg.opengl.player.keepFrames, optionKeepFrames);
   set_when_option_present(cfg.opengl.player.minimalConfig, optionMinimalConfig);
 

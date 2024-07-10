@@ -117,7 +117,6 @@ struct Config {
       vi_bool swapAfterPrepare;
       BitRange stopAfterFrames;
       vi_uint tokenLoadLimit;
-      BitRange keepApis;
       vi_bool nullRun;
       vi_bool waitForEnter;
       vi_bool cleanResourcesOnExit;

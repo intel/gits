@@ -153,7 +153,6 @@ Common:
     SwapAfterPrepare: false
     StopAfterFrames: '-'
     TokenLoadLimit: 4294967295
-    KeepApis: 'all'
     NullRun: false
     WaitForEnter: false
     CleanResourcesOnExit: false

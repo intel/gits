@@ -352,7 +352,6 @@ struct convert<gits::Config::Common::Player> {
       rhs.swapAfterPrepare = node["SwapAfterPrepare"].as<gits::vi_bool>();
       rhs.stopAfterFrames = node["StopAfterFrames"].as<BitRange>();
       rhs.tokenLoadLimit = node["TokenLoadLimit"].as<gits::vi_uint>();
-      rhs.keepApis = node["KeepApis"].as<BitRange>();
       rhs.nullRun = node["NullRun"].as<gits::vi_bool>();
       rhs.waitForEnter = node["WaitForEnter"].as<gits::vi_bool>();
       rhs.cleanResourcesOnExit = node["CleanResourcesOnExit"].as<gits::vi_bool>();
