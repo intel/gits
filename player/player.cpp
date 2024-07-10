@@ -138,14 +138,14 @@ void gits::CPlayer::Key(unsigned code) {
   }
 }
 
-void gits::CPlayer::StatisticsPrint(bool verbose) const {
+void gits::CPlayer::StatisticsPrint() const {
   CStatistics stats;
   CStatsComputer comp(stats);
 
   stats.Get(*_sc.scheduler, comp);
 
   Log(INFO, RAW) << std::endl;
-  stats.Print(verbose);
+  stats.Print();
   Log(INFO, RAW) << std::endl;
 }
 

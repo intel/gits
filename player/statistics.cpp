@@ -54,16 +54,6 @@ void gits::CStatistics::AddToken(const gits::CToken& token) {
 
     // update IDs database
     _callsIds.insert(function.Id());
-
-    if (Config::Get().common.player.statsVerb) {
-      unsigned argc = function.ArgumentCount();
-      for (unsigned i = 0; i < argc; ++i) {
-        if (const OpenGL::CGLenum* ptr =
-                dynamic_cast<const OpenGL::CGLenum*>(&function.Argument(i))) {
-          _glenumsUsed.insert(ptr->Value());
-        }
-      }
-    }
   }
 
   if (token.Id() == CToken::ID_INIT_START) {
@@ -129,7 +119,7 @@ void gits::CStatistics::Get(CScheduler& scheduler, CStatsComputer& comp) {
   }
 }
 
-void gits::CStatistics::Print(bool verbose) const {
+void gits::CStatistics::Print() const {
   using namespace std;
 
   cout << "Statistics" << endl;
@@ -174,21 +164,6 @@ void gits::CStatistics::Print(bool verbose) const {
     }
   }
   table.Print(cout);
-
-  if (verbose) {
-    if (!_glenumsUsed.empty()) {
-      std::cout << "\n\nFollowing GLenum values are used in the stream:\n";
-    }
-    std::set<unsigned>::const_iterator iter = _glenumsUsed.begin();
-    std::set<unsigned>::const_iterator end = _glenumsUsed.end();
-    while (iter != end) {
-      for (int i = 0; i < 10 && iter != end; ++i, ++iter) {
-        std::cout << std::hex << std::showbase << std::setfill('0') << std::setw(6) << std::internal
-                  << *iter << std::dec << "  ";
-      }
-      std::cout << '\n';
-    }
-  }
 }
 
 gits::CStatistics::TCall::TCall()

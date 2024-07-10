@@ -74,7 +74,6 @@ struct Config {
       std::filesystem::path applicationPath;
       std::string helpGroup;
       vi_bool stats;
-      vi_bool statsVerb;
       vi_bool version;
       vi_bool diags;
 

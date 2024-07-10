@@ -787,12 +787,6 @@ bool configure_player(int argc, char** argv) {
                                 "GITS will not play specified file but "
                                 "instead will create some statistics about it.");
 
-  TypedOption<bool> optionStatsVerb(
-      options, OPTION_GROUP_METRICS, 0, "statsVerb",
-      "Requires '-s'/'-stats' to be effective. "
-      "Produced statistics will contain more in depth information about the "
-      "stream (like list of unique 'GLenum' variables used by recorded "
-      "functions).");
   TypedOption<bool> optionBenchmark(
       options, OPTION_GROUP_METRICS, 'b', "benchmark",
       "Enables performance measurement in OpenGL streams on frame base."
@@ -1110,7 +1104,6 @@ bool configure_player(int argc, char** argv) {
   set_when_option_present(cfg.common.player.version, optionVersion);
   set_when_option_present(cfg.common.player.interactive, optionInteractive);
   set_when_option_present(cfg.common.player.stats, optionStats);
-  set_when_option_present(cfg.common.player.statsVerb, optionStatsVerb);
   set_when_option_present(cfg.common.player.disableExceptionHandling, optionNoExceptionHandling);
   set_when_option_present(cfg.common.player.escalatePriority, optionEscalatePriority);
   set_when_option_present(cfg.common.player.swapAfterPrepare, optionSwapAfterPrepare);

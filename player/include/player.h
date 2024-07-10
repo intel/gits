@@ -58,7 +58,7 @@ public:
   void Key(unsigned code);
   void GLResourceCleanup();
   void GLContextsCleanup();
-  void StatisticsPrint(bool verbose) const;
+  void StatisticsPrint() const;
   void NotSupportedFunctionsPrint() const;
 };
 } // namespace gits

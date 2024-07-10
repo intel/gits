@@ -186,7 +186,6 @@ class CStatistics {
   unsigned long _initCallsNum;
   unsigned long _appCallsNum;
 
-  std::set<unsigned> _glenumsUsed;
   CLibraryStats _libraryStats;
   CVersionIds _versionIds;
   CCallsIds _callsIds;
@@ -195,6 +194,6 @@ public:
   CStatistics();
   void Get(CScheduler& scheduler, CStatsComputer& comp);
   void AddToken(const gits::CToken& token);
-  void Print(bool verbose) const;
+  void Print() const;
 };
 } // namespace gits

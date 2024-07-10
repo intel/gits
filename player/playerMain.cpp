@@ -231,7 +231,7 @@ int MainBody(int argc, char* argv[]) {
 
     if (cfg.common.player.stats) {
       // print statistics
-      player.StatisticsPrint(cfg.common.player.statsVerb);
+      player.StatisticsPrint();
       return 0;
     }
 
