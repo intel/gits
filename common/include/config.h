@@ -295,9 +295,6 @@ struct Config {
       vi_bool mtDriverWA;
 #endif
       vi_bool ccodeRangesWA;
-
-      // Abandoned options
-      vi_bool forceSyncFlushCommands;
     } recorder;
   } opengl;
 

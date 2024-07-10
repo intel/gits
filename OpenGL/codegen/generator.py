@@ -1246,7 +1246,7 @@ retV=RetDef(type='void'),
 arg1=ArgDef(name='mask', type='GLbitfield')
 )
 
-Function(name='glClientWaitSync', enabled=True, type=Param, runWrap=True, interceptorExecOverride=True,
+Function(name='glClientWaitSync', enabled=True, type=Param, runWrap=True,
 retV=RetDef(type='GLenum'),
 arg1=ArgDef(name='sync', type='GLsync', wrapType='CGLsync'),
 arg2=ArgDef(name='flags', type='GLbitfield'),

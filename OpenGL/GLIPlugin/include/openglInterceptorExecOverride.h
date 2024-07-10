@@ -32,14 +32,6 @@ void execWrap_glBufferStorage(GLenum target, GLsizeiptr size, const void* data, 
       flags_interceptor | CGitsPlugin::Configuration().opengl.recorder.bufferStorageFlagsMask);
 }
 
-GLenum execWrap_glClientWaitSync(GLsync sync, GLbitfield flags, GLuint64 timeout) {
-  if (CGitsPlugin::Configuration().opengl.recorder.forceSyncFlushCommands) {
-    flags |= GL_SYNC_FLUSH_COMMANDS_BIT;
-  }
-
-  return CGitsPlugin::RecorderWrapper().Drivers().gl.glClientWaitSync(sync, flags, timeout);
-}
-
 void execWrap_glGetIntegerv(GLenum pname, GLint* params) {
   CGitsPlugin::RecorderWrapper().Drivers().gl.glGetIntegerv(pname, params);
 
