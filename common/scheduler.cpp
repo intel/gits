@@ -36,12 +36,10 @@ namespace gits {
 
 class CStreamLoader {
   CScheduler& _sched;
-  unsigned _ignore_mask;
   CStreamLoader operator=(const CStreamLoader&) = delete;
 
 public:
-  CStreamLoader(CScheduler& sched, unsigned ignore_mask = 0)
-      : _sched(sched), _ignore_mask(ignore_mask) {}
+  CStreamLoader(CScheduler& sched) : _sched(sched) {}
 
   void operator()(ProducerConsumer<CScheduler::CTokenList>& queue) {
     CScheduler::CTokenList tokenList;
@@ -85,12 +83,6 @@ public:
           uint64_t tokEnd = stream->tellg();
           token_size[typeid(*token).name()] += tokEnd - tokBegin + 2;
 #endif
-          // this token is to be ignored, remove it and carry on with rest
-          auto type = token->Type();
-          if ((type & _ignore_mask) != 0) {
-            delete token;
-            continue;
-          }
           if (loaded >= maxLoaded) {
             Log(ERR) << "Max token loaded limit in one burst exceeded.";
             throw std::runtime_error(EXCEPTION_MESSAGE);
