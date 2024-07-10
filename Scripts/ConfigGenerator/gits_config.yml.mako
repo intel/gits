@@ -151,7 +151,6 @@ Common:
     LogLoadedTokens: false
     EscalatePriority: false
     SwapAfterPrepare: false
-    LoadResourcesImmediately: false
     StopAfterFrames: '-'
     TokenLoadLimit: 4294967295
     UseZoneAllocator: false

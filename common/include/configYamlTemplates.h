@@ -350,7 +350,6 @@ struct convert<gits::Config::Common::Player> {
       rhs.logLoadedTokens = node["LogLoadedTokens"].as<gits::vi_bool>();
       rhs.escalatePriority = node["EscalatePriority"].as<gits::vi_bool>();
       rhs.swapAfterPrepare = node["SwapAfterPrepare"].as<gits::vi_bool>();
-      rhs.loadResourcesImmediately = node["LoadResourcesImmediately"].as<gits::vi_bool>();
       rhs.stopAfterFrames = node["StopAfterFrames"].as<BitRange>();
       rhs.tokenLoadLimit = node["TokenLoadLimit"].as<gits::vi_uint>();
       rhs.useZoneAllocator = node["UseZoneAllocator"].as<gits::vi_bool>();

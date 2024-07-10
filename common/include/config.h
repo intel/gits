@@ -115,7 +115,6 @@ struct Config {
       vi_bool logLoadedTokens;
       vi_bool escalatePriority;
       vi_bool swapAfterPrepare;
-      vi_bool loadResourcesImmediately;
       BitRange stopAfterFrames;
       vi_uint tokenLoadLimit;
       vi_bool useZoneAllocator;
