@@ -350,7 +350,12 @@ void gits::Config::SetVulkan(const YAML::Node& vulkanYaml) {
   if (cfgVkRecorder.traceVkStructs) {
     common.shared.traceDataOpts.insert(TraceData::VK_STRUCTS);
   }
+
 #ifdef GITS_PLATFORM_WINDOWS
+  if (cfgVkRecorder.useExternalMemoryExtension) {
+    cfgVkRecorder.shadowMemory = false;
+    cfgVkRecorder.memoryAccessDetection = false;
+  }
   if (cfgVkRecorder.renderDocCompatibility) {
     auto& rdocSuppressExtensions = cfgVkRecorder.renderDocCompatibilitySuppressedExtensions;
     auto& suppressExtensions = vulkan.shared.suppressExtensions;
