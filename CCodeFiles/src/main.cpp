@@ -94,9 +94,14 @@ int main(int argc, char* argv[]) {
         "  * frame_list = element | frame_list, ',', element\n"
         "  * element = Frame | Begin-End | Begin-End:Step");
 
-    TypedOption<bool> optionDumpDraws(options, OPTION_GROUP_GENERAL, 0, "dumpDraws",
-                                      "Dump current draw buffer content after each drawcall "
-                                      "excluding Begin-End which is not supported.");
+    TypedOption<BitRange> optionDumpDraws(
+        options, OPTION_GROUP_GENERAL, 0, "dumpDraws",
+        "List of draws that will be captured "
+        "during playback. Specified as single string without spaces of "
+        "following format:\n"
+        "  * pattern = frame_list | frame_list/Repeat-Count\n"
+        "  * frame_list = element | frame_list, ',', element\n"
+        "  * element = Frame | Begin-End | Begin-End:Step");
 
     TypedOption<bool> optionDumpDrawsPre(
         options, OPTION_GROUP_GENERAL, 0, "dumpDrawsPre",
@@ -166,7 +171,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (optionDumpDraws.Present()) {
-      cfg.opengl.player.captureDraws = BitRange(true);
+      cfg.opengl.player.captureDraws = optionDumpDraws.Value();
     }
 
     if (optionDumpDrawsPre.Present()) {

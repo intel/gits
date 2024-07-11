@@ -338,16 +338,19 @@ NOINLINE void LogFunctionNotFoundShutdown(const char* func) {
 
 void DumpPreDrawCall() {
   static int PreDrawCallCnt = 0;
-  if (Config::Get().opengl.player.captureDrawsPre) {
+  if (Config::Get().opengl.player.captureDraws[++PreDrawCallCnt] &&
+      Config::Get().opengl.player.captureDrawsPre) {
     capture_drawbuffer(Config::Get().ccode.outputPath,
-                       "drawcall-" + std::to_string(++PreDrawCallCnt) + "-pre", false);
+                       "drawcall-" + std::to_string(PreDrawCallCnt) + "-pre", false);
   }
 }
 
 void DumpPostDrawCall() {
   static int PostDrawCallCnt = 0;
-  capture_drawbuffer(Config::Get().ccode.outputPath,
-                     "drawcall-" + std::to_string(++PostDrawCallCnt) + "-post", false);
+  if (Config::Get().opengl.player.captureDraws[++PostDrawCallCnt]) {
+    capture_drawbuffer(Config::Get().ccode.outputPath,
+                       "drawcall-" + std::to_string(PostDrawCallCnt) + "-post", false);
+  }
 }
 
 #define DEFAULT_DRAW_FUNCTION(b, c, d, e, load_func, drv_name)                                     \
