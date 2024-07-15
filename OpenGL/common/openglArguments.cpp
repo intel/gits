@@ -2506,7 +2506,10 @@ std::string gits::OpenGL::CShaderSource::GetShaderSource(const GLchar* const* st
     } else {
       shaderSource += std::string(string[i], string[i] + length[i]);
     }
-    shaderSource += "\n";
+    // Adding newline after the last part would alter shaders and their hashes.
+    if (i < (count - 1)) {
+      shaderSource += "\n";
+    }
   }
   return shaderSource;
 }
@@ -2516,7 +2519,10 @@ std::string gits::OpenGL::CShaderSource::GetShaderSource(const GLchar* const* st
   std::string shaderSource;
   for (int i = 0; i < count; ++i) {
     shaderSource += std::string(string[i]);
-    shaderSource += "\n";
+    // Adding newline after the last part would alter shaders and their hashes.
+    if (i < (count - 1)) {
+      shaderSource += "\n";
+    }
   }
   return shaderSource;
 }
