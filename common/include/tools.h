@@ -522,6 +522,7 @@ public:
                               const uint64_t compressedDataSize,
                               const uint64_t expectedUncompressedSize,
                               char* uncompressedData) = 0;
+  virtual uint64_t MaxCompressedSize(const uint64_t dataSize) = 0;
 };
 
 class LZ4StreamCompressor : public StreamCompressor {
@@ -534,6 +535,7 @@ public:
                               const uint64_t compressedDataSize,
                               const uint64_t expectedUncompressedSize,
                               char* uncompressedData) override;
+  virtual uint64_t MaxCompressedSize(const uint64_t dataSize) override;
 
 private:
   LZ4_stream_t ctx;
@@ -557,6 +559,7 @@ public:
                               const uint64_t compressedDataSize,
                               const uint64_t expectedUncompressedSize,
                               char* uncompressedData) override;
+  virtual uint64_t MaxCompressedSize(const uint64_t dataSize) override;
 
 private:
   ZSTD_CCtx* ZSTDContext;

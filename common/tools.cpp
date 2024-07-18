@@ -728,6 +728,10 @@ uint64_t gits::LZ4StreamCompressor::Decompress(const std::vector<char>& compress
   return returnValue;
 }
 
+uint64_t gits::LZ4StreamCompressor::MaxCompressedSize(const uint64_t dataSize) {
+  return static_cast<uint64_t>(LZ4_compressBound(static_cast<int>(dataSize)));
+}
+
 gits::ZSTDStreamCompressor::ZSTDStreamCompressor() {
   ZSTDContext = ZSTD_createCCtx();
 }
@@ -766,6 +770,10 @@ uint64_t gits::ZSTDStreamCompressor::Decompress(const std::vector<char>& compres
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   return returnedUncompressedSize;
+}
+
+uint64_t gits::ZSTDStreamCompressor::MaxCompressedSize(const uint64_t dataSize) {
+  return static_cast<uint64_t>(ZSTD_compressBound(dataSize));
 }
 
 #if defined(GITS_PLATFORM_WINDOWS)
