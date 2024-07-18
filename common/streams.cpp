@@ -90,10 +90,45 @@ void gits::CBinOStream::HelperWriteCompressed(const char* dataToWrite,
   WriteToOstream(_compressedDataToStore.data(), outputSize);
 }
 
+void gits::CBinOStream::HelperWriteCompressedLarge(const char* dataToWrite,
+                                                   uint64_t size,
+                                                   WriteType writeType) {
+  // Write the size and writeType to the stream upfront
+  WriteToOstream(reinterpret_cast<char*>(&size), sizeof(size));
+  WriteToOstream(reinterpret_cast<char*>(&writeType), sizeof(writeType));
+
+  // Calculate the number of chunks needed to compress the data in segments of _standaloneMaxSize
+  uint64_t chunksNumber = (size + _standaloneMaxSize - 1) / _standaloneMaxSize;
+  WriteToOstream(reinterpret_cast<char*>(&chunksNumber), sizeof(chunksNumber));
+
+  // Iterate over each chunk, compress, and write it to the stream
+  for (uint64_t i = 0; i < size; i += _standaloneMaxSize) {
+    uint64_t currentChunkSize = std::min(_standaloneMaxSize, size - i);
+    uint64_t compressedSize = CGits::Instance().GitsStreamCompressor().Compress(
+        dataToWrite + i, currentChunkSize, &_compressedDataToStore);
+
+    // Write the current chunk size and its compressed size before the actual compressed data
+    WriteToOstream(reinterpret_cast<char*>(&currentChunkSize), sizeof(currentChunkSize));
+    WriteToOstream(reinterpret_cast<char*>(&compressedSize), sizeof(compressedSize));
+    WriteToOstream(_compressedDataToStore.data(), compressedSize);
+  }
+}
+
 bool gits::CBinOStream::InitializeCompression() {
   if (!_initializedCompression) {
     WriteToOstream(reinterpret_cast<char*>(&_compressionType), sizeof(_compressionType));
     WriteToOstream(reinterpret_cast<char*>(&_chunkSize), sizeof(_chunkSize));
+    if (_compressionType != CompressionType::NONE) {
+      // Allocate buffer for PACKAGE type compression based on configured chunk size
+      _dataToCompress.resize(_chunkSize);
+
+      // Determine the larger of _chunkSize and _standaloneMaxSize to ensure sufficient buffer size for compression
+      uint64_t max_chunk_size = std::max(_chunkSize, _standaloneMaxSize);
+
+      // Resize _compressedDataToStore to accommodate the maximum possible compressed size of the determined chunk
+      _compressedDataToStore.resize(
+          CGits::Instance().GitsStreamCompressor().MaxCompressedSize(max_chunk_size));
+    }
     _initializedCompression = true;
   }
   return _initializedCompression;
@@ -121,7 +156,12 @@ bool gits::CBinOStream::WriteCompressed(const char* data, uint64_t dataSize) {
         HelperWriteCompressed(_dataToCompress.data(), _offset, WriteType::PACKAGE);
         _offset = 0;
       }
-      HelperWriteCompressed(data, dataSize, WriteType::STANDALONE);
+      if (dataSize > _standaloneMaxSize) {
+        // Handle data sizes larger than 256MB due to LZ4's 2GB compression size limit.
+        HelperWriteCompressedLarge(data, dataSize, WriteType::LARGE_STANDALONE);
+      } else {
+        HelperWriteCompressed(data, dataSize, WriteType::STANDALONE);
+      }
     }
   }
   return true;
@@ -159,7 +199,12 @@ bool gits::CBinOStream::WriteCompressedAndGetOffset(const char* data,
       }
       offsetInChunk = _offset;
       offsetInFile = tellp();
-      HelperWriteCompressed(data, dataSize, WriteType::STANDALONE);
+      if (dataSize > _standaloneMaxSize) {
+        // Handle data sizes larger than 256MB due to LZ4's 2GB compression size limit.
+        HelperWriteCompressedLarge(data, dataSize, WriteType::LARGE_STANDALONE);
+      } else {
+        HelperWriteCompressed(data, dataSize, WriteType::STANDALONE);
+      }
     }
   }
   return true;
@@ -185,7 +230,8 @@ gits::CBinOStream::CBinOStream(const std::filesystem::path& fileName)
       _compressionType(gits::Config::Get().common.recorder.compression.type),
       _offset(0),
       _initializedCompression(false),
-      _chunkSize(0) {
+      _chunkSize(0),
+      _standaloneMaxSize(268435456) {
   CheckMinimumAvailableDiskSize();
   std::ios::openmode mode = std::ios::binary | std::ios::trunc | std::ios::out;
   _buf = initialize_gits_streambuf(fileName, mode);
@@ -193,8 +239,6 @@ gits::CBinOStream::CBinOStream(const std::filesystem::path& fileName)
   exceptions(std::ostream::badbit | std::ostream::failbit);
   if (_compressionType != CompressionType::NONE) {
     _chunkSize = gits::Config::Get().common.recorder.compression.chunkSize;
-    _dataToCompress.resize(_chunkSize);
-    _compressedDataToStore.resize(_chunkSize);
   }
 }
 
@@ -226,7 +270,8 @@ gits::CBinIStream::CBinIStream(const std::filesystem::path& fileName)
       _actualOffsetInFile(0),
       _compressionType(CompressionType::NONE),
       _initializedCompression(false),
-      _chunkSize(0) {
+      _chunkSize(0),
+      _standaloneMaxSize(268435456) {
   _file = fopen(fileName.string().c_str(), "rb"
 #ifdef GITS_PLATFORM_WINDOWS
                                            "S"
@@ -244,9 +289,14 @@ bool gits::CBinIStream::InitializeCompression() {
     ReadHelper(reinterpret_cast<char*>(&_chunkSize), sizeof(_chunkSize));
     CGits::Instance().CompressorInit(_compressionType);
     uint64_t max_size = std::min(_decompressedData.max_size(), _compressedData.max_size());
-    if (_chunkSize > 0 && _chunkSize <= max_size) {
+    uint64_t max_chunk_size = std::max(_chunkSize, _standaloneMaxSize);
+    if (max_chunk_size > 0 && max_chunk_size <= max_size) {
+      // Allocate buffer for PACKAGE type compression based on configured chunk size
       _decompressedData.resize(_chunkSize);
-      _compressedData.resize(_chunkSize);
+
+      // Resize _compressedData to accommodate the maximum possible compressed size of the determined chunk
+      _compressedData.resize(
+          CGits::Instance().GitsStreamCompressor().MaxCompressedSize(max_chunk_size));
     }
     _initializedCompression = true;
   }
@@ -308,31 +358,58 @@ bool gits::CBinIStream::ReadCompressed(char* data, uint64_t dataSize) {
     ReadHelper(reinterpret_cast<char*>(&size), sizeof(size));
     WriteType writeType = WriteType::STANDALONE;
     ReadHelper(reinterpret_cast<char*>(&writeType), sizeof(writeType));
-    uint64_t compressedSize = 0;
-    ReadHelper(reinterpret_cast<char*>(&compressedSize), sizeof(compressedSize));
-    if (eof()) {
-      return false;
-    }
-    if (compressedSize > _compressedData.max_size()) {
-      throw std::runtime_error(EXCEPTION_MESSAGE);
-    }
-    if (compressedSize > _compressedData.size()) {
-      _compressedData.resize(compressedSize);
-    }
-    ReadHelper(_compressedData.data(), compressedSize);
-    if (writeType == WriteType::PACKAGE) {
-      _size = size;
-      _offset = 0;
-      CGits::Instance().GitsStreamCompressor().Decompress(_compressedData, compressedSize, _size,
-                                                          _decompressedData.data());
+    if (writeType == WriteType::LARGE_STANDALONE) {
+      uint64_t chunksNumber = 0;
+      ReadHelper(reinterpret_cast<char*>(&chunksNumber), sizeof(chunksNumber));
 
-      memcpy((char*)data + internalOffset, _decompressedData.data() + _offset, dataSize);
-      _offset += dataSize;
-    } else {
-      CGits::Instance().GitsStreamCompressor().Decompress(_compressedData, compressedSize, size,
-                                                          data);
+      for (uint64_t i = 0; i < chunksNumber; ++i) {
+        uint64_t currentChunkSize = 0;
+        uint64_t currentCompressedChunkSize = 0;
+
+        // Read the uncompressed and compressed sizes for the current chunk
+        ReadHelper(reinterpret_cast<char*>(&currentChunkSize), sizeof(currentChunkSize));
+        ReadHelper(reinterpret_cast<char*>(&currentCompressedChunkSize),
+                   sizeof(currentCompressedChunkSize));
+
+        // Read the compressed data for the current chunk
+        ReadHelper(_compressedData.data(), currentCompressedChunkSize);
+
+        // Decompress the current chunk
+        CGits::Instance().GitsStreamCompressor().Decompress(
+            _compressedData, currentCompressedChunkSize, currentChunkSize,
+            data + i * _standaloneMaxSize);
+      }
+
+      // Reset offset and size after processing all chunks
       _offset = 0;
       _size = 0;
+    } else {
+      uint64_t compressedSize = 0;
+      ReadHelper(reinterpret_cast<char*>(&compressedSize), sizeof(compressedSize));
+      if (eof()) {
+        return false;
+      }
+      if (compressedSize > _compressedData.max_size()) {
+        throw std::runtime_error(EXCEPTION_MESSAGE);
+      }
+      if (compressedSize > _compressedData.size()) {
+        _compressedData.resize(compressedSize);
+      }
+      ReadHelper(_compressedData.data(), compressedSize);
+      if (writeType == WriteType::PACKAGE) {
+        _size = size;
+        _offset = 0;
+        CGits::Instance().GitsStreamCompressor().Decompress(_compressedData, compressedSize, _size,
+                                                            _decompressedData.data());
+
+        memcpy((char*)data + internalOffset, _decompressedData.data() + _offset, dataSize);
+        _offset += dataSize;
+      } else {
+        CGits::Instance().GitsStreamCompressor().Decompress(_compressedData, compressedSize, size,
+                                                            data);
+        _offset = 0;
+        _size = 0;
+      }
     }
   }
   return true;

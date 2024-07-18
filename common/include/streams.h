@@ -66,7 +66,7 @@ void read_name_from_stream(std::istream& i, T*& value) {
    *
    * gits::CBinOStream class is a binary file output stream.
    */
-enum WriteType : uint8_t { STANDALONE, PACKAGE };
+enum WriteType : uint8_t { STANDALONE, PACKAGE, LARGE_STANDALONE };
 class CBinOStream : public std::ostream {
   std::streambuf* _buf;
   CompressionType _compressionType;
@@ -75,6 +75,7 @@ class CBinOStream : public std::ostream {
   uint64_t _offset;
   bool _initializedCompression;
   uint64_t _chunkSize;
+  uint64_t _standaloneMaxSize;
   std::mutex mutex_;
 
 public:
@@ -95,6 +96,7 @@ public:
 
 private:
   void HelperWriteCompressed(const char* dataToWrite, uint64_t size, WriteType writeType);
+  void HelperWriteCompressedLarge(const char* dataToWrite, uint64_t size, WriteType writeType);
 };
 
 template <typename T>
@@ -139,6 +141,7 @@ class CBinIStream /*: public std::istream*/ {
   CompressionType _compressionType;
   bool _initializedCompression;
   uint64_t _chunkSize;
+  uint64_t _standaloneMaxSize;
 
 public:
   bool ReadHelper(char*, size_t);
