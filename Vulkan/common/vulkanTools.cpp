@@ -2028,8 +2028,8 @@ bool checkForSupportForQueues(VkPhysicalDevice physicalDevice,
     uint32_t requestedQueueFamilyIndex = requestedQueueCreateInfos[i].queueFamilyIndex;
     uint32_t requestedQueueCountForFamily = requestedQueueCreateInfos[i].queueCount;
 
-    auto currentFlags = availableQueueFamilies[i].queueFlags;
-    auto originalFlags = queueFamilyPropertiesOriginal[i].queueFlags;
+    auto currentFlags = availableQueueFamilies[requestedQueueFamilyIndex].queueFlags;
+    auto originalFlags = queueFamilyPropertiesOriginal[requestedQueueFamilyIndex].queueFlags;
 
 #ifdef GITS_PLATFORM_WINDOWS
     if (Config::Get().vulkan.player.renderDoc.mode != TVkRenderDocCaptureMode::NONE) {
@@ -2057,10 +2057,10 @@ bool checkForSupportForQueues(VkPhysicalDevice physicalDevice,
       return false;
     } else if (!isBitSet(currentFlags, originalFlags)) {
       Log(ERR) << "Queue families are not compatible!";
-      VkLog(ERR) << "Original queue family flags at index " << i << ": "
+      VkLog(ERR) << "Original queue family flags at index " << requestedQueueFamilyIndex << ": "
                  << (VkQueueFlagBits)originalFlags;
-      VkLog(ERR) << "Current platform queue family flags at index " << i << ": "
-                 << (VkQueueFlagBits)currentFlags;
+      VkLog(ERR) << "Current platform queue family flags at index " << requestedQueueFamilyIndex
+                 << ": " << (VkQueueFlagBits)currentFlags;
       return false;
     }
   }

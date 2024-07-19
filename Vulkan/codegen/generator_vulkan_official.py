@@ -7924,6 +7924,8 @@ VarDef(name='VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_NV', 
 VarDef(name='VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_INLINE_UNIFORM_BLOCK', value='1000138002'),
 VarDef(name='VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR', value='1000005000'),
 VarDef(name='VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR', value='1000004000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_IMAGE_COPY_FEATURES_EXT', value='1000270000'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_5_FEATURES_KHR', value='1000470000'),
 # CUSTOM / INTERNAL enum values
 VarDef(name='VK_STRUCTURE_TYPE_WIN32_INSTANCE_CREATE_INFO_INTEL', value='808600005'),
 VarDef(name='VK_STRUCTURE_TYPE_WIN32_DEVICE_CREATE_INFO_INTEL', value='808600006'),
@@ -7949,6 +7951,13 @@ VarDef(name='VK_STRUCTURE_TYPE_WIN32_MEDIA_CALLBACKS_INTEL', value='808600025'),
 VarDef(name='VK_STRUCTURE_TYPE_PIPELINE_STATISTICS_CONTROL_INTEL', value='808600026'),
 VarDef(name='VK_STRUCTURE_TYPE_PRIMARY_COMMAND_BUFFER_INHERITANCE_INFO_INTEL', value='808600027'),
 VarDef(name='VK_STRUCTURE_TYPE_IMAGE_SAMPLE_DEPTH_IN_COPY_OPERATIONS_ONLY_INFO_INTEL', value='808600028'),
+VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CUI_PROPERTIES_INTEL', value='808600029'),
+VarDef(name='VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO_2_INTEL', value='808600030'),
+VarDef(name='VK_STRUCTURE_TYPE_RESOLVE_IMAGE_COMPRESSION_INTEL', value='808600031'),
+VarDef(name='VK_STRUCTURE_TYPE_RESOLVE_IMAGE_COMPRESSION_ON_PRESENT_INTEL', value='808600032'),
+VarDef(name='VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO_3_INTEL', value='808600033'),
+VarDef(name='VK_STRUCTURE_TYPE_SAMPLE_CHROMA_KEY_CREATE_INFO_INTEL', value='808600034'),
+VarDef(name='VK_STRUCTURE_TYPE_SHADER_DXBC_HASH_INTEL', value='808600035'),
 VarDef(name='VK_STRUCTURE_TYPE_MAX_ENUM', value='2147483647'),
 ])
 
@@ -16089,6 +16098,18 @@ var3=VarDef(name='loaderLayerInterfaceVersion', type='uint32_t'),
 var4=VarDef(name='pfnGetInstanceProcAddr', type='PFN_vkGetInstanceProcAddr'),
 var5=VarDef(name='pfnGetDeviceProcAddr', type='PFN_vkGetDeviceProcAddr'),
 var6=VarDef(name='pfnGetPhysicalDeviceProcAddr', type='PFN_GetPhysicalDeviceProcAddr')
+)
+
+Struct(name='VkPhysicalDeviceHostImageCopyFeaturesEXT_', enabled=True,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='hostImageCopy', type='VkBool32'),
+)
+
+Struct(name='VkPhysicalDeviceMaintenance5FeaturesKHR_', enabled=True,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='void*'),
+var3=VarDef(name='maintenance5', type='VkBool32'),
 )
 
 Function(name='vkAllocationFunction', enabled=False, type=FuncType.PARAM, level=FuncLevel.PROTOTYPE,
