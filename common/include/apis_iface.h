@@ -196,6 +196,9 @@ public:
     virtual bool VerifyAllocation([[maybe_unused]] void* address) const {
       return false;
     }
+    virtual bool VerifyAllocationShared([[maybe_unused]] void* address) const {
+      return false;
+    }
     virtual void MemorySnifferProtect(PagedMemoryRegionHandle& handle) const;
     virtual void MemorySnifferUnProtect(PagedMemoryRegionHandle& handle) const;
     virtual void EnableMemorySnifferForPointer(void* ptr,

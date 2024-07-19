@@ -61,6 +61,19 @@ public:
     const auto allocInfo = GetSvmOrUsmFromRegion(address);
     return allocInfo.first != nullptr;
   }
+  virtual bool VerifyAllocationShared(void* address) const {
+    auto allocInfo = GetSvmPtrFromRegion(address);
+    if (allocInfo.first == nullptr) {
+      allocInfo = GetUsmPtrFromRegion(address);
+      if (allocInfo.first == nullptr) {
+        return false;
+      }
+      return SD().GetUSMAllocState(allocInfo.first, EXCEPTION_MESSAGE).type ==
+             UnifiedMemoryType::shared;
+    }
+    return (SD().GetSVMAllocState(allocInfo.first, EXCEPTION_MESSAGE).flags &
+            CL_MEM_SVM_FINE_GRAIN_BUFFER) != 0;
+  }
   virtual ~OpenCLApi() = default; // Fixes the -Wdelete-non-virtual-dtor warning.
 };
 } // namespace OpenCL

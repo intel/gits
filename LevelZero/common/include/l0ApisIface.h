@@ -85,6 +85,17 @@ public:
     const auto isComputeAllocation = allocInfo.first != nullptr;
     return isComputeAllocation;
   }
+  virtual bool VerifyAllocationShared(void* address) const {
+    auto& sd = SD();
+    const auto allocInfo = GetAllocFromRegion(address, sd);
+    const auto isComputeAllocation = allocInfo.first != nullptr;
+    if (isComputeAllocation) {
+      return sd.Get<CAllocState>(allocInfo.first, EXCEPTION_MESSAGE).memType ==
+             UnifiedMemoryType::shared;
+    }
+    return isComputeAllocation;
+  }
+
   virtual ~Api() = default; // Fixes the -Wdelete-non-virtual-dtor warning.
 };
 } // namespace l0

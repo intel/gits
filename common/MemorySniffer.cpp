@@ -698,8 +698,15 @@ void CallOriginalSignalHandler(int sig, siginfo_t* si, void* unused) {
 } // namespace
 
 static void MemorySnifferSignalHandler(int sig, siginfo_t* si, void* unused) {
-  // Original signal handler must be called first
-  CallOriginalSignalHandler(sig, si, unused);
+  if (gits::CGits::Instance().apis.HasCompute()) {
+    const auto& computeIFace = gits::CGits::Instance().apis.IfaceCompute();
+    if (computeIFace.VerifyAllocationShared(si->si_addr)) {
+      // Original signal handler must be called first
+      CallOriginalSignalHandler(sig, si, unused);
+    }
+  } else {
+    CallOriginalSignalHandler(sig, si, unused);
+  }
   if (!MemorySniffer::Get().WriteCallback(si->si_addr)) {
     Log(WARN) << "MemorySnifferSignalHandler caught an unhandled signal: " << sig
               << " errno: " << si->si_errno << " at address: " << si->si_addr;
