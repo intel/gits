@@ -90,7 +90,7 @@ def get_ddi_table_functions(func, ddi_helper_functions, api_version: str):
 def process(functions):
     # add implicit properties
     for name, func in functions.items():
-        if func.get('unprotectLogic', False) and func.get('recExecWrap', False):
+        if (func.get('unprotectLogic', False) or func.get('protectLogic', False)) and func.get('recExecWrap', False):
             raise Exception("'unprotectLogic' and 'recExecWrap' are mutually exclusive")
         functions[name]['version'] = func.get('version', 0)
         functions[name]['recExecWrapName'] = (name if not func['version'] else func.get('name')) + '_RECEXECWRAP'

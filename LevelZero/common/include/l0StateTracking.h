@@ -97,21 +97,6 @@ void RegisterEvents(CStateDynamic& sd,
   cmdListState.AddAction(signalEvent, numWaitEvents, phWaitEvents);
 }
 
-bool CheckKernelResidencyPossibilities(const CAllocState& allocState,
-                                       const unsigned int indirectTypes,
-                                       const ze_context_handle_t hContext) {
-  const auto kernelMightModifyAllocation =
-      (allocState.memType == UnifiedMemoryType::device &&
-       indirectTypes & ZE_KERNEL_INDIRECT_ACCESS_FLAG_DEVICE) ||
-      (allocState.memType == UnifiedMemoryType::host &&
-       indirectTypes & ZE_KERNEL_INDIRECT_ACCESS_FLAG_HOST) ||
-      (allocState.memType == UnifiedMemoryType::shared &&
-       indirectTypes & ZE_KERNEL_INDIRECT_ACCESS_FLAG_SHARED);
-  const auto isResident =
-      allocState.residencyInfo && allocState.residencyInfo->hContext == hContext;
-  return kernelMightModifyAllocation && isResident;
-}
-
 } // namespace
 
 inline void zeMemAllocShared_SD(ze_result_t return_value,
@@ -201,8 +186,8 @@ inline void zeCommandListAppendLaunchKernel_SD([[maybe_unused]] ze_result_t retu
                                                uint32_t numWaitEvents,
                                                ze_event_handle_t* phWaitEvents) {
   auto& sd = SD();
-  AppendLaunchKernel(hCommandList, hKernel, pLaunchFuncArgs, hSignalEvent);
   RegisterEvents(sd, hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
+  AppendLaunchKernel(hCommandList, hKernel, pLaunchFuncArgs, hSignalEvent);
 }
 
 inline void zeCommandListAppendLaunchCooperativeKernel_SD([[maybe_unused]] ze_result_t return_value,
@@ -213,8 +198,8 @@ inline void zeCommandListAppendLaunchCooperativeKernel_SD([[maybe_unused]] ze_re
                                                           uint32_t numWaitEvents,
                                                           ze_event_handle_t* phWaitEvents) {
   auto& sd = SD();
-  AppendLaunchKernel(hCommandList, hKernel, pLaunchFuncArgs, hSignalEvent);
   RegisterEvents(sd, hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
+  AppendLaunchKernel(hCommandList, hKernel, pLaunchFuncArgs, hSignalEvent);
 }
 
 inline void zeCommandListAppendLaunchKernelIndirect_SD(
@@ -226,8 +211,8 @@ inline void zeCommandListAppendLaunchKernelIndirect_SD(
     uint32_t numWaitEvents,
     ze_event_handle_t* phWaitEvents) {
   auto& sd = SD();
-  AppendLaunchKernel(hCommandList, hKernel, pLaunchArgumentsBuffer, hSignalEvent);
   RegisterEvents(sd, hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
+  AppendLaunchKernel(hCommandList, hKernel, pLaunchArgumentsBuffer, hSignalEvent);
 }
 
 inline void zeCommandListAppendLaunchMultipleKernelsIndirect_SD(
@@ -241,6 +226,7 @@ inline void zeCommandListAppendLaunchMultipleKernelsIndirect_SD(
     uint32_t numWaitEvents,
     ze_event_handle_t* phWaitEvents) {
   auto& sd = SD();
+  RegisterEvents(sd, hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
   bool callOnce = true;
   const auto& cmdListState = sd.Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
   for (auto i = 0u; i < numKernels; i++) {
@@ -254,7 +240,6 @@ inline void zeCommandListAppendLaunchMultipleKernelsIndirect_SD(
       callOnce = false;
     }
   }
-  RegisterEvents(sd, hCommandList, hSignalEvent, numWaitEvents, phWaitEvents);
 }
 
 inline void zeKernelSetArgumentValue_SD([[maybe_unused]] ze_result_t return_value,
@@ -340,7 +325,9 @@ inline void zeCommandQueueExecuteCommandLists_SD([[maybe_unused]] ze_result_t re
     }
   }
   if (containsAppendedKernelsToDump && CheckWhetherQueueCanBeSynced(cfg, sd, drv, hCommandQueue)) {
-    drv.inject.zeCommandQueueSynchronize(hCommandQueue, UINT64_MAX);
+    if (!IsDumpOnlyLayoutEnabled(cfg)) {
+      drv.inject.zeCommandQueueSynchronize(hCommandQueue, UINT64_MAX);
+    }
     DumpQueueSubmit(cfg, sd, hCommandQueue);
     cqState.notSyncedSubmissions.clear();
     cqState.queueSubmissionDumpState.clear();

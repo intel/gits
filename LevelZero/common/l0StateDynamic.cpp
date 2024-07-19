@@ -159,6 +159,32 @@ template <>
 const typename CPhysicalMemState::states_type& CStateDynamic::Map<CPhysicalMemState>() const {
   return physicalMemStates_;
 }
+
+void GlobalSubmissionTracker::Add(ze_command_list_handle_t hCommandList,
+                                  std::shared_ptr<CKernelExecutionInfo> currentKernelInfo) {
+  queueSubmissionTracker[submissionId++] =
+      std::make_unique<QueueSubmissionTracker>(hCommandList, currentKernelInfo);
+}
+
+void GlobalSubmissionTracker::SyncCheck() {
+  std::vector<uint32_t> submissionsToRemove;
+  for (auto& queueSubmissionInfo : queueSubmissionTracker) {
+    if (queueSubmissionInfo.second->executionInfo->hSignalEvent == nullptr) {
+      Log(WARN) << "Signal event is nullptr for kernel: "
+                << queueSubmissionInfo.second->executionInfo->handle
+                << ", cannot track kernel completion status";
+      submissionsToRemove.push_back(queueSubmissionInfo.first);
+    } else {
+      if (drv.inject.zeEventQueryStatus(queueSubmissionInfo.second->executionInfo->hSignalEvent) ==
+          ZE_RESULT_SUCCESS) {
+        submissionsToRemove.push_back(queueSubmissionInfo.first);
+      }
+    }
+  }
+  for (const auto& submissionIdKey : submissionsToRemove) {
+    queueSubmissionTracker.erase(submissionIdKey);
+  }
+}
 CAllocState::CAllocState(ze_context_handle_t hContext,
                          ze_device_mem_alloc_desc_t device_desc,
                          ze_host_mem_alloc_desc_t host_desc,

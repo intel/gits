@@ -54,12 +54,14 @@ VISIBLE ${func.get('type')} __zecall ${func.get('name')}(${make_params(func, wit
   return return_value;
   %else:
   GITS_ENTRY_L0
-    %if func.get('unprotectLogic', False):
+    %if func.get('unprotectLogic', False) or func.get('protectLogic', False):
       %if func.get('type') != 'void':
   auto return_value = ZE_RESULT_SUCCESS;
       %endif
   GITS_WRAPPER_PRE
+      %if not func.get('protectLogic', False):
   wrapper.UnProtectMemoryPointers();
+      %endif
   ${'' if func.get('type') == 'void' else 'return_value = '}driver.${func.get('name')}(${make_params(func)});
   wrapper.${func.get('name')}(${make_params(func, with_retval=True)});
   wrapper.ProtectMemoryPointers();

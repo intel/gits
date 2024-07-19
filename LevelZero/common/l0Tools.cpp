@@ -794,6 +794,9 @@ void CommandListKernelInit(CStateDynamic& sd,
       std::make_unique<CKernelExecutionInfo>(kernelState.currentKernelInfo);
   cmdListState.appendedKernels.push_back(std::move(kernelState.currentKernelInfo));
   kernelState.currentKernelInfo = std::move(pointer);
+  if (Config::IsRecorder()) {
+    sd.gst.Add(commandList, cmdListState.appendedKernels.back());
+  }
 }
 
 bool IsBruteForceScanForIndirectPointersEnabled(const Config& cfg) {
@@ -946,6 +949,21 @@ uint32_t GetDeviceIpVersion(CStateDynamic& sd, const CDriver& cDriver) {
     }
   }
   return deviceIp;
+}
+
+bool CheckKernelResidencyPossibilities(const CAllocState& allocState,
+                                       const unsigned int indirectTypes,
+                                       const ze_context_handle_t hContext) {
+  const auto kernelMightModifyAllocation =
+      (allocState.memType == UnifiedMemoryType::device &&
+       indirectTypes & ZE_KERNEL_INDIRECT_ACCESS_FLAG_DEVICE) ||
+      (allocState.memType == UnifiedMemoryType::host &&
+       indirectTypes & ZE_KERNEL_INDIRECT_ACCESS_FLAG_HOST) ||
+      (allocState.memType == UnifiedMemoryType::shared &&
+       indirectTypes & ZE_KERNEL_INDIRECT_ACCESS_FLAG_SHARED);
+  const auto isResident =
+      allocState.residencyInfo && allocState.residencyInfo->hContext == hContext;
+  return kernelMightModifyAllocation || isResident;
 }
 } // namespace l0
 } // namespace gits

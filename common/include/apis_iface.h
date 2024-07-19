@@ -199,6 +199,9 @@ public:
     virtual bool VerifyAllocationShared([[maybe_unused]] void* address) const {
       return false;
     }
+    virtual void UpdateConditionMemoryProtection() const {
+      return;
+    }
     virtual void MemorySnifferProtect(PagedMemoryRegionHandle& handle) const;
     virtual void MemorySnifferUnProtect(PagedMemoryRegionHandle& handle) const;
     virtual void EnableMemorySnifferForPointer(void* ptr,

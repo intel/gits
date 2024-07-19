@@ -74,6 +74,7 @@ public:
   virtual void TrackThread() const override;
   virtual bool IsAddressTranslationModeDisabled(UnifiedMemoryType type) const override;
   virtual void InjectMemoryReservationFree(ze_context_handle_t hContext) const override;
+  virtual void UpdateConditionMemoryProtection() const override;
 };
 } // namespace l0
 } // namespace gits

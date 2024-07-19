@@ -27,6 +27,7 @@ struct CKernelState;
 struct CKernelExecutionInfo;
 struct CKernelArgumentDump;
 struct CCommandListState;
+struct CAllocState;
 class CStateDynamic;
 void SaveBuffer(const std::filesystem::path& dir,
                 const std::string name,
@@ -140,5 +141,8 @@ void InjectReadsForArguments(std::vector<CKernelArgumentDump>& readyArgVec,
                              ze_event_handle_t hSignalEvent);
 std::vector<void*> GetOrderedAllocStateKeys(const CStateDynamic& sd);
 uint32_t GetDeviceIpVersion(CStateDynamic& sd, const CDriver& cDriver);
+bool CheckKernelResidencyPossibilities(const CAllocState& allocState,
+                                       const unsigned int indirectTypes,
+                                       const ze_context_handle_t hContext);
 } // namespace l0
 } // namespace gits
