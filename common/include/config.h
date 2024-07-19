@@ -493,6 +493,7 @@ struct Config {
         vi_uint64 virtualDeviceMemorySize;
         vi_uint64 virtualHostMemorySize;
       } disableAddressTranslation;
+      vi_bool dumpLayoutOnly;
     } recorder;
   } levelzero;
 

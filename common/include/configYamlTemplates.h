@@ -802,6 +802,7 @@ struct convert<gits::Config::LevelZero::Recorder> {
           node["DisableAddressTranslation"]["VirtualDeviceMemorySize"].as<gits::vi_uint64>();
       rhs.disableAddressTranslation.virtualHostMemorySize =
           node["DisableAddressTranslation"]["VirtualHostMemorySize"].as<gits::vi_uint64>();
+      rhs.dumpLayoutOnly = node["DumpLayoutOnly"].as<gits::vi_bool>();
       return true;
     } catch (const YAML::Exception& e) {
       Log(ERR) << "YAML parser exception: " << e.what();

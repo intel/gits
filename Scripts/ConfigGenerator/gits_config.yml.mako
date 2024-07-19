@@ -435,6 +435,7 @@ LevelZero:
       MemoryType: 0  # -1 (All) , 1 (Host), 2 (Device), 4 (Shared)
       VirtualDeviceMemorySize: 1099511627776
       VirtualHostMemorySize: 1099511627776
+    DumpLayoutOnly: false
 
   Player:
     CaptureImages: false

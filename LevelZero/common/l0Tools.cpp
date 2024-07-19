@@ -689,7 +689,8 @@ void KernelCountUp(CGits& gitsInstance) {
 }
 
 bool IsDumpOnlyLayoutEnabled(const Config& cfg) {
-  return cfg.IsPlayer() && cfg.levelzero.player.dumpLayoutOnly;
+  return Config::IsPlayer() ? cfg.levelzero.player.dumpLayoutOnly
+                            : cfg.levelzero.recorder.dumpLayoutOnly;
 }
 
 void InjectReadsForArguments(std::vector<CKernelArgumentDump>& readyArgVec,
