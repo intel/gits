@@ -116,6 +116,19 @@ namespace gits {
       ss << " : { ... }";
       return ss.str();
     }
+    inline std::string ToStringHelperHexMemoryView(const uint8_t* arg, const size_t &size) {
+      std::stringstream result;
+      if (arg == nullptr) {
+        result << "nullptr";
+        return result.str();
+      }
+      std::string dataStr = bytesToHex(arg, size);
+      ReverseByPairs(dataStr);
+      dataStr.erase(0, std::min(dataStr.find_first_not_of('0'), dataStr.size() - 1));
+      dataStr.insert(0, "0x");
+      result << dataStr;
+      return result.str();
+    }
     template <class T>
     inline std::string ToStringHelperArrayRange(const T& arg, const size_t &begin, const size_t &end) {
       std::stringstream result;

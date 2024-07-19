@@ -297,6 +297,13 @@ void CKernelExecutionInfo::SetArgument(uint32_t index, size_t typeSize, const vo
       args[index].desc = SD().Get<CImageState>(h_img, EXCEPTION_MESSAGE).desc;
     }
   }
+  if (args[index].type == KernelArgType::pointer) {
+    args[index].valueString = ToStringHelperHexMemoryView(
+        reinterpret_cast<const uint8_t*>(args[index].originalValue), typeSize);
+  } else {
+    args[index].valueString = ToStringHelper(reinterpret_cast<void*>(*pointers.back()));
+  }
+  Log(TRACE) << "Argument[" << index << "] = " << args[index].valueString;
   args[index].argValue = value;
   args[index].typeSize = typeSize;
 }
@@ -427,6 +434,8 @@ CKernelArgument::CKernelArgument(size_t allocSize, ze_image_handle_t ptr)
   AllocateBuffer(allocSize);
 }
 
+CKernelArgumentDump::CKernelArgumentDump(uint32_t kernelNumber, uint64_t kernelArgIndex)
+    : kernelNumber(kernelNumber), kernelArgIndex(kernelArgIndex) {}
 CKernelArgumentDump::CKernelArgumentDump(size_t allocSize,
                                          void* ptr,
                                          uint32_t kernelNumber,
@@ -500,12 +509,14 @@ void LayoutBuilder::UpdateLayout(const CKernelExecutionInfo* kernelInfo,
       if (!isInputMode) {
         Add("args", std::to_string(argIndex), imageArgument);
       }
-    } else {
+    } else if (arg.type == KernelArgType::buffer) {
       const auto fileName = BuildFileName(argIndex, true, isIndirectDump, isInputMode);
       if (!isInputMode) {
         Add("args", std::to_string(argIndex), fileName);
       }
     }
+    Add("args_info", std::to_string(argIndex), "value", arg.valueString);
+    Add("args_info", std::to_string(argIndex), "typeSize", arg.typeSize);
   } else {
     std::stringstream keyIndex;
     keyIndex << std::hex << argIndex;

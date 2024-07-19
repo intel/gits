@@ -287,6 +287,10 @@ void PrepareArguments(const CKernelExecutionInfo* kernelInfo,
           static_cast<uint64_t>(arg.first));
       argDump->isInputArg = isInputMode;
       argDumpStates.push_back(*argDump);
+    } else {
+      auto argDump = std::make_shared<CKernelArgumentDump>(kernelInfo->kernelNumber,
+                                                           static_cast<uint64_t>(arg.first));
+      argDumpStates.push_back(*argDump);
     }
   }
   const auto keys = GetOrderedAllocStateKeys(sd);
@@ -352,7 +356,9 @@ void DumpReadyArguments(std::vector<CKernelArgumentDump>& readyArgVector,
         }
       }
     }
-    SaveBuffer(path, name, argState.buffer);
+    if (!argState.buffer.empty()) {
+      SaveBuffer(path, name, argState.buffer);
+    }
     if (argState.argType == KernelArgType::image && captureImages) {
       SaveImage(path, argState.buffer.data(), argState.imageDesc, name);
     }
