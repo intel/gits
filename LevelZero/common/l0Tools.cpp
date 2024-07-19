@@ -707,16 +707,17 @@ void InjectReadsForArguments(std::vector<CKernelArgumentDump>& readyArgVec,
       continue;
     }
     argDump.injected = true;
+    ze_result_t reCode = ZE_RESULT_NOT_READY;
     if (argDump.argType == KernelArgType::buffer) {
-      drv.inject.zeCommandListAppendMemoryCopy(
+      reCode = drv.inject.zeCommandListAppendMemoryCopy(
           cmdList, const_cast<char*>(argDump.buffer.data()), argDump.h_buf, argDump.buffer.size(),
           eventHandle, hSignalEvent ? 1 : 0, hSignalEvent ? &hSignalEvent : nullptr);
     } else if (argDump.argType == KernelArgType::image) {
-      drv.inject.zeCommandListAppendImageCopyToMemory(
+      reCode = drv.inject.zeCommandListAppendImageCopyToMemory(
           cmdList, const_cast<char*>(argDump.buffer.data()), argDump.h_img, nullptr, eventHandle,
           hSignalEvent ? 1 : 0, hSignalEvent ? &hSignalEvent : nullptr);
     }
-    if (eventHandle != nullptr) {
+    if (eventHandle != nullptr && reCode == ZE_RESULT_SUCCESS) {
       drv.inject.zeEventHostSynchronize(eventHandle, UINT64_MAX);
       drv.inject.zeEventHostReset(eventHandle);
     }
