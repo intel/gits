@@ -641,6 +641,7 @@ inline void zeMemFree_RUNWRAP(Cze_result_t& _return_value,
       zeMemFree_SD(*_return_value, *_hContext, *_ptr);
     }
   }
+  _ptr.RemoveMapping();
 }
 
 inline void zeVirtualMemReserve_V1_RUNWRAP(Cze_result_t& _return_value,
