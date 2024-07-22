@@ -63,16 +63,17 @@ public:
   }
   virtual bool VerifyAllocationShared(void* address) const {
     auto allocInfo = GetSvmPtrFromRegion(address);
-    if (allocInfo.first == nullptr) {
-      allocInfo = GetUsmPtrFromRegion(address);
-      if (allocInfo.first == nullptr) {
-        return false;
-      }
-      return SD().GetUSMAllocState(allocInfo.first, EXCEPTION_MESSAGE).type ==
+    auto& sd = SD();
+    if (sd.CheckIfSVMAllocExists(allocInfo.first)) {
+      return (sd.GetSVMAllocState(allocInfo.first, EXCEPTION_MESSAGE).flags &
+              CL_MEM_SVM_FINE_GRAIN_BUFFER) != 0;
+    }
+    allocInfo = GetUsmPtrFromRegion(address);
+    if (sd.CheckIfUSMAllocExists(allocInfo.first)) {
+      return sd.GetUSMAllocState(allocInfo.first, EXCEPTION_MESSAGE).type ==
              UnifiedMemoryType::shared;
     }
-    return (SD().GetSVMAllocState(allocInfo.first, EXCEPTION_MESSAGE).flags &
-            CL_MEM_SVM_FINE_GRAIN_BUFFER) != 0;
+    return false;
   }
   virtual ~OpenCLApi() = default; // Fixes the -Wdelete-non-virtual-dtor warning.
 };
