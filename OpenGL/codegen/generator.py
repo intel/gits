@@ -435,11 +435,11 @@ arg6=ArgDef(name='access', type='GLenum'),
 arg7=ArgDef(name='format', type='GLint')
 )
 
-Function(name='glBindImageTextures', enabled=False, type=None,
+Function(name='glBindImageTextures', enabled=True, type=Bind,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='first', type='GLuint'),
 arg2=ArgDef(name='count', type='GLsizei'),
-arg3=ArgDef(name='textures', type='const GLuint*')
+arg3=ArgDef(name='textures', type='const GLuint*', wrapType='CGLTexture::CSArray', wrapParams='count, textures')
 )
 
 Function(name='glBindLightParameterEXT', enabled=True, type=Bind,
