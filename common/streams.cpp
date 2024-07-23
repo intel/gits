@@ -288,15 +288,17 @@ bool gits::CBinIStream::InitializeCompression() {
     ReadHelper(reinterpret_cast<char*>(&_compressionType), sizeof(_compressionType));
     ReadHelper(reinterpret_cast<char*>(&_chunkSize), sizeof(_chunkSize));
     CGits::Instance().CompressorInit(_compressionType);
-    uint64_t max_size = std::min(_decompressedData.max_size(), _compressedData.max_size());
-    uint64_t max_chunk_size = std::max(_chunkSize, _standaloneMaxSize);
-    if (max_chunk_size > 0 && max_chunk_size <= max_size) {
-      // Allocate buffer for PACKAGE type compression based on configured chunk size
-      _decompressedData.resize(_chunkSize);
+    if (_compressionType != CompressionType::NONE) {
+      uint64_t max_size = std::min(_decompressedData.max_size(), _compressedData.max_size());
+      uint64_t max_chunk_size = std::max(_chunkSize, _standaloneMaxSize);
+      if (max_chunk_size > 0 && max_chunk_size <= max_size) {
+        // Allocate buffer for PACKAGE type compression based on configured chunk size
+        _decompressedData.resize(_chunkSize);
 
-      // Resize _compressedData to accommodate the maximum possible compressed size of the determined chunk
-      _compressedData.resize(
-          CGits::Instance().GitsStreamCompressor().MaxCompressedSize(max_chunk_size));
+        // Resize _compressedData to accommodate the maximum possible compressed size of the determined chunk
+        _compressedData.resize(
+            CGits::Instance().GitsStreamCompressor().MaxCompressedSize(max_chunk_size));
+      }
     }
     _initializedCompression = true;
   }
