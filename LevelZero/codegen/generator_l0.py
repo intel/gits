@@ -6458,6 +6458,31 @@ arg1=ArgDef(name='hTracer',type='zel_tracer_handle_t',tag='in'),
 arg2=ArgDef(name='pCoreCbs',type='zel_core_callbacks_t*',tag='in'),
 )
 
+Function(name='zelLoaderGetVersions',component='zel',enabled=False,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='num_elems',type='size_t*',tag='in'),
+arg2=ArgDef(name='versions',type='zel_component_version_t *',tag='inout',wrapType='COutArgument'),
+)
+
+Function(name='zelSetDriverTeardown',component='zel',enabled=False,
+retV=RetDef(type='ze_result_t'),
+)
+
+Function(name='zelEnableTracingLayer',component='zel',enabled=False,
+retV=RetDef(type='ze_result_t'),
+)
+
+Function(name='zelDisableTracingLayer',component='zel',enabled=False,
+retV=RetDef(type='ze_result_t'),
+)
+
+Function(name='zelLoaderTranslateHandle',component='zel',enabled=False,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='handleType',type='zel_handle_type_t',tag='in'),
+arg2=ArgDef(name='handleIn',type='void *',tag='in',wrapType='COutArgument'),
+arg3=ArgDef(name='handleOut',type='void **',tag='inout',wrapType='COutArgument'),
+)
+
 Function(name='zeGetCommandListProcAddrTable',component='ze_dditable',enabled=True,skipRun=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='version',type='ze_api_version_t',tag='in'),

@@ -26,6 +26,7 @@ namespace gits {
     template<typename T> void lua_push_extension_struct([[maybe_unused]] lua_State * L,[[maybe_unused]] const void* pNext) {
       throw ENotImplemented(EXCEPTION_MESSAGE);
     }
+    template<> inline zel_handle_type_t lua_to_ext(lua_State* L, int pos) { return static_cast<zel_handle_type_t>(lua_tointeger(L, pos)); }
 %for name, enum in enums.items():
     template<> inline ${enum.get('name')} lua_to_ext(lua_State* L, int pos) { return static_cast<${enum.get('name')}>(lua_tointeger(L, pos)); }
     template<> inline ${enum.get('name')}* lua_to_ext(lua_State* L, int pos) { return static_cast<${enum.get('name')}*>(lua_touserdata(L, pos)); }

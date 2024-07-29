@@ -1,5 +1,5 @@
 <%
-COMPONENTS_TO_OMIT = ['ze_gits_extension','ze_deprecated', 'ze_dditable']
+COMPONENTS_TO_OMIT = ['ze_gits_extension','ze_deprecated', 'ze_dditable', 'zel']
 components = {}
 all_functions = {}
 current_functions = {}
@@ -83,6 +83,42 @@ enum ${enum.get('name')} {
 };
 %endfor
 
+struct zel_base_properties_t {
+    zel_structure_type_t stype;
+    void* pNext;
+};
+
+#define ZEL_COMPONENT_STRING_SIZE 64 
+
+typedef struct _zel_version {
+   int major;
+   int minor;
+   int patch;
+ } zel_version_t;
+
+typedef struct zel_component_version {
+    char component_name[ZEL_COMPONENT_STRING_SIZE];
+    ze_api_version_t spec_version;
+    zel_version_t component_lib_version;
+} zel_component_version_t;
+
+typedef enum _zel_handle_type_t {
+   ZEL_HANDLE_DRIVER,
+   ZEL_HANDLE_DEVICE,
+   ZEL_HANDLE_CONTEXT,
+   ZEL_HANDLE_COMMAND_QUEUE,
+   ZEL_HANDLE_COMMAND_LIST,
+   ZEL_HANDLE_FENCE,
+   ZEL_HANDLE_EVENT_POOL,
+   ZEL_HANDLE_EVENT,
+   ZEL_HANDLE_IMAGE,
+   ZEL_HANDLE_MODULE,
+   ZEL_HANDLE_MODULE_BUILD_LOG,
+   ZEL_HANDLE_KERNEL,
+   ZEL_HANDLE_SAMPLER,
+   ZEL_HANDLE_PHYSICAL_MEM
+} zel_handle_type_t;
+
 %for name, func in functions.items():
   %if not is_latest_version(functions, func):
 <% continue %>
@@ -129,9 +165,4 @@ struct ze_dispatch_table_t
   %endif
     pfn_${func.get('name')} ${func.get('name')};
 %endfor
-};
-
-struct zel_base_properties_t {
-    zel_structure_type_t stype;
-    void* pNext;
 };
