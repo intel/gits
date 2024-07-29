@@ -62,18 +62,19 @@ public:
 
       for (;;) {
         unsigned loaded = 0;
-        bool everything_loaded = false;
+        unsigned currentLoadedFrame = 0;
+        bool stopLoading = false;
         uint64_t maxLoaded = std::min((uint64_t)std::numeric_limits<decltype(loaded)>::max(),
                                       (uint64_t)tokenList.max_size());
         while ((loaded < tokenBurstLimit ||
                 Config::Get().common.player.loadWholeStreamBeforePlayback) &&
-               !everything_loaded) {
+               !stopLoading) {
 #ifdef GITS_DEBUG_TOKEN_SIZE
           uint64_t tokBegin = stream->tellg();
 #endif
           CToken* token = CToken::Deserialize(*stream, tokenCtor);
           if (token == nullptr) {
-            everything_loaded = true;
+            stopLoading = true;
             break;
           }
 
@@ -95,6 +96,14 @@ public:
             Log(INFO, RAW) << "#" << std::flush;
             sinceLastChk = 0;
           }
+
+          // Stop loading tokens past 'exitFrame'
+          if (token->Id() == CToken::ID_FRAME_END) {
+            currentLoadedFrame++;
+            if (currentLoadedFrame > gits::Config::Get().common.player.exitFrame) {
+              stopLoading = true;
+            }
+          }
         }
 
         // Finish if the queue won't accept more products.
@@ -102,7 +111,7 @@ public:
           break;
         }
 
-        if (everything_loaded) {
+        if (stopLoading) {
           queue.break_pipe();
           break;
         }
