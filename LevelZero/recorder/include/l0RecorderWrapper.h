@@ -28,6 +28,8 @@ public:
   void CloseRecorderIfRequired() override;
   CDriver& Drivers() const override;
   void InitializeDriver() const override;
+  bool IsAlive() const override;
+  std::recursive_mutex& GetInterceptorMutex() const override;
 
 #include "l0WrapperFunctions.h"
   void zeCommandQueueExecuteCommandLists_pre(ze_result_t return_value,

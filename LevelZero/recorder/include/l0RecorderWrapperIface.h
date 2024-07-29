@@ -25,6 +25,8 @@ public:
   virtual void CloseRecorderIfRequired() = 0;
   virtual CDriver& Drivers() const = 0;
   virtual void InitializeDriver() const = 0;
+  virtual bool IsAlive() const = 0;
+  virtual std::recursive_mutex& GetInterceptorMutex() const = 0;
 
 #include "l0WrapperFunctionsIface.h"
   virtual void zeCommandQueueExecuteCommandLists_pre(ze_result_t return_value,

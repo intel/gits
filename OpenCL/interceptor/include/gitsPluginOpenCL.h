@@ -27,10 +27,10 @@ struct Config;
 
 namespace OpenCL {
 class IRecorderWrapper;
-
+class CustomLoaderCleanup;
 class CGitsPluginOpenCL {
   static IRecorderWrapper* _recorderWrapper;
-  static std::unique_ptr<CGitsLoader> _loader;
+  static std::unique_ptr<CGitsLoader, CustomLoaderCleanup> _loader;
   static std::mutex _mutex;
 
   CGitsPluginOpenCL(const CGitsPluginOpenCL&) = delete;
@@ -39,13 +39,19 @@ class CGitsPluginOpenCL {
   CGitsPluginOpenCL& operator=(CGitsPluginOpenCL&&) = delete;
 
 public:
-  ~CGitsPluginOpenCL();
   static void Initialize();
   static IRecorderWrapper& RecorderWrapper() {
     return *_recorderWrapper;
   }
   static void ProcessTerminationDetected();
   static const Config& Configuration();
+};
+
+struct CustomLoaderCleanup {
+  void operator()(CGitsLoader* loader) const {
+    CGitsPluginOpenCL::ProcessTerminationDetected();
+    delete loader;
+  }
 };
 } // namespace OpenCL
 } // namespace gits

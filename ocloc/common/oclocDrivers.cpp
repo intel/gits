@@ -299,7 +299,7 @@ CDriver::CDriver() {
 }
 
 CDriver::~CDriver() {
-  dl::close_library(lib_);
+  initialized_ = false;
 }
 
 void CDriver::Initialize() {
@@ -312,12 +312,9 @@ void CDriver::Initialize() {
   lib_ = nullptr;
   if (lib_ == nullptr) {
     Log(TRACE) << "Using LibOcloc: " << path;
-    lib_ = dl::open_library(path.c_str());
-    if (lib_ == nullptr) {
-      Log(ERR) << dl::last_error();
-    }
+    lib_ = std::make_unique<SharedLibrary>(path.c_str());
 
-    initialized_ = true;
+    initialized_ = lib_->getHandle() != nullptr;
   }
 }
 } // namespace ocloc

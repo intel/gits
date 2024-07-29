@@ -88,6 +88,10 @@ void CRecorderWrapper::MarkRecorderForDeletion() {
   }
 }
 
+std::recursive_mutex& CRecorderWrapper::GetInterceptorMutex() const {
+  return _recorder.GetMutex();
+}
+
 CDriver& CRecorderWrapper::Drivers() const {
   return drv;
 }

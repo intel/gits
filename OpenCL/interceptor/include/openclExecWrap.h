@@ -23,7 +23,7 @@ using namespace gits::OpenCL;
 namespace {
 // Avoid recording API - recursive functions.
 uint32_t recursionDepth = 0;
-const uint32_t disableDepth = 1000;
+constexpr uint32_t disableDepth = 1000;
 } // namespace
 
 void PrePostDisableOpenCL() {

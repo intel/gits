@@ -10,9 +10,11 @@
 
 #include "dynamic_linker.h"
 #include "platform.h"
+#include "tools.h"
 
 #include "l0Header.h"
 
+#include <memory>
 namespace gits {
 namespace l0 {
 class CDriver : public ze_dispatch_table_t {
@@ -25,14 +27,14 @@ public:
   bool OpenLibrary(const std::string& path);
   bool IsInitialized() const;
   dl::SharedObject Library() const {
-    return lib_;
+    return lib_->getHandle();
   }
   ze_dispatch_table_t original = {};
   ze_dispatch_table_t inject = {};
 
 private:
   bool initialized_ = false;
-  dl::SharedObject lib_ = nullptr;
+  std::unique_ptr<SharedLibrary> lib_;
 };
 
 extern CDriver drv;

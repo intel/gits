@@ -41,13 +41,13 @@ public:
   ~COclDriver();
   void Initialize();
   dl::SharedObject Library() const {
-    return _lib;
+    return _lib->getHandle();
   }
   OCL_FUNCTIONS(DECLARE_PTR_)
 
 private:
-  bool _initialized;
-  dl::SharedObject _lib;
+  bool _initialized = false;
+  std::unique_ptr<SharedLibrary> _lib;
 };
 #undef DECLARE_PTR_OCL_FUNCTION
 

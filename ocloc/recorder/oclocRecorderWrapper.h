@@ -28,6 +28,7 @@ public:
   CDriver& Drivers() const override;
   void InitializeDriver() const override;
   void MarkRecorderForDeletion() override;
+  std::recursive_mutex& GetInterceptorMutex() const override;
 
   virtual void oclocInvoke(int return_value,
                            unsigned int argc,

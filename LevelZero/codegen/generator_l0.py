@@ -6464,7 +6464,7 @@ arg1=ArgDef(name='num_elems',type='size_t*',tag='in'),
 arg2=ArgDef(name='versions',type='zel_component_version_t *',tag='inout',wrapType='COutArgument'),
 )
 
-Function(name='zelSetDriverTeardown',component='zel',enabled=False,
+Function(name='zelSetDriverTeardown',component='zel',enabled=False,recExecWrap=True,
 retV=RetDef(type='ze_result_t'),
 )
 

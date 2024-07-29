@@ -228,7 +228,7 @@ void RegisterLuaDriverFunctions() {
 #endif
 } // namespace
 
-CDriver::CDriver() : initialized_(false), lib_(nullptr) {
+CDriver::CDriver() {
 %for name, func in functions.items():
   %if not is_latest_version(functions, func):
 <% continue %>

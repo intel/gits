@@ -21,6 +21,7 @@
 #if defined(GITS_PLATFORM_WINDOWS) || defined(GITS_PLATFORM_X11)
 #include "message_pump.h"
 #endif
+#include "dynamic_linker.h"
 
 #include <set>
 #include <map>
@@ -572,5 +573,23 @@ private:
 #if defined(GITS_PLATFORM_WINDOWS)
 std::string GetRenderDocDllPath();
 #endif
+
+class SharedLibrary {
+  dl::SharedObject handle = nullptr;
+
+public:
+  SharedLibrary(const std::string& name) {
+    handle = dl::open_library(name.c_str());
+    if (handle == nullptr) {
+      Log(ERR) << dl::last_error();
+    }
+  }
+  ~SharedLibrary() {
+    dl::close_library(handle);
+  }
+  dl::SharedObject getHandle() const {
+    return handle;
+  }
+};
 
 } // namespace gits

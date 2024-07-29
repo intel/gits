@@ -17,10 +17,9 @@
 #include <mutex>
 
 namespace {
-std::recursive_mutex globalMutex;
 // Avoid recording API - recursive functions.
 uint32_t recursionDepth = 0;
-const uint32_t disableDepth = 1000;
+constexpr uint32_t disableDepth = 1000;
 } // namespace
 
 using namespace gits::l0;
@@ -44,14 +43,14 @@ void PrePostDisableLevelZero() {
   }
 
 #define GITS_ENTRY                                                                                 \
-  ++recursionDepth;                                                                                \
   CGitsPlugin::Initialize();                                                                       \
   IRecorderWrapper& wrapper = CGitsPlugin::RecorderWrapper();                                      \
+  std::unique_lock<std::recursive_mutex> lock(wrapper.GetInterceptorMutex());                      \
+  ++recursionDepth;                                                                                \
   CDriver& driver = wrapper.Drivers();                                                             \
   wrapper.InitializeDriver();
 
-#define GITS_MUTEX    std::unique_lock<std::recursive_mutex> lock(globalMutex);
-#define GITS_ENTRY_L0 GITS_MUTEX GITS_ENTRY
+#define GITS_ENTRY_L0 GITS_ENTRY
 
 #ifdef GITS_PLATFORM_WINDOWS
 #define VISIBLE __declspec(dllexport)
@@ -386,6 +385,9 @@ inline ze_result_t zeContextDestroy_RECEXECWRAP(ze_context_handle_t hContext) {
     return_value = driver.zeContextDestroy(hContext);
   }
   return return_value;
+}
+inline ze_result_t zelSetDriverTeardown_RECEXECWRAP() {
+  return ZE_RESULT_SUCCESS;
 }
 } // namespace l0
 } // namespace gits

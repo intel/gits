@@ -9,8 +9,10 @@
 #pragma once
 
 #include "dynamic_linker.h"
-
 #include "oclocHeader.h"
+#include "tools.h"
+
+#include <memory>
 
 namespace gits {
 namespace ocloc {
@@ -22,7 +24,7 @@ public:
   ~CDriver();
   void Initialize();
   dl::SharedObject Library() const {
-    return lib_;
+    return lib_->getHandle();
   }
   pfn_oclocInvoke orig_oclocInvoke = nullptr;
   pfn_oclocInvoke oclocInvoke;
@@ -31,7 +33,7 @@ public:
 
 private:
   bool initialized_ = false;
-  dl::SharedObject lib_ = nullptr;
+  std::unique_ptr<SharedLibrary> lib_;
 };
 
 extern CDriver drv;

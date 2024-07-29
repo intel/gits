@@ -18,6 +18,7 @@
 #include "platform.h"
 #include "tools.h"
 
+#include <cstdint>
 #include <string>
 
 namespace gits {
@@ -27,11 +28,10 @@ struct Config;
 
 namespace l0 {
 class IRecorderWrapper;
-
-class CGitsPlugin : public CGitsLoader {
-  using CGitsLoader::CGitsLoader;
+struct CustomLoaderCleanup;
+class CGitsPlugin {
   static IRecorderWrapper* _recorderWrapper;
-  static std::unique_ptr<CGitsPlugin> _loader;
+  static std::unique_ptr<CGitsLoader, CustomLoaderCleanup> _loader;
   static std::mutex _mutex;
   static bool _initialized;
 
@@ -41,7 +41,6 @@ class CGitsPlugin : public CGitsLoader {
   CGitsPlugin& operator=(CGitsPlugin&&) = delete;
 
 public:
-  ~CGitsPlugin();
   static void Initialize();
   static IRecorderWrapper& RecorderWrapper() {
     return *_recorderWrapper;
@@ -50,6 +49,12 @@ public:
   static const Config& Configuration();
   static bool Initialized() {
     return _initialized;
+  }
+};
+struct CustomLoaderCleanup {
+  void operator()(CGitsLoader* loader) const {
+    CGitsPlugin::ProcessTerminationDetected();
+    delete loader;
   }
 };
 } // namespace l0

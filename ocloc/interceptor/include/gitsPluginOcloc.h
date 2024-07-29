@@ -28,12 +28,10 @@ struct Config;
 namespace ocloc {
 class IRecorderWrapper;
 
-class CGitsPlugin : public CGitsLoader {
-  using CGitsLoader::CGitsLoader;
+class CGitsPlugin {
   static IRecorderWrapper* _recorderWrapper;
-  static std::unique_ptr<CGitsPlugin> _loader;
+  static std::unique_ptr<CGitsLoader> _loader;
   static std::mutex _mutex;
-  static bool _initialized;
 
   CGitsPlugin(const CGitsPlugin&) = delete;
   CGitsPlugin(CGitsPlugin&&) = delete;
@@ -41,7 +39,6 @@ class CGitsPlugin : public CGitsLoader {
   CGitsPlugin& operator=(CGitsPlugin&&) = delete;
 
 public:
-  ~CGitsPlugin();
   static void Initialize();
   static IRecorderWrapper& RecorderWrapper() {
     return *_recorderWrapper;

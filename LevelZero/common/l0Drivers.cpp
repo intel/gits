@@ -209,19 +209,13 @@ CDriver drv;
 // constructor in l0DriversInit.cpp
 
 CDriver::~CDriver() {
-  dl::close_library(lib_);
   initialized_ = false;
-  lib_ = nullptr;
 }
 
 bool CDriver::OpenLibrary(const std::string& path) {
   Log(TRACE) << "Using LibL0: " << path;
-  lib_ = dl::open_library(path.c_str());
-  if (lib_ == nullptr) {
-    Log(ERR) << dl::last_error();
-  } else {
-    initialized_ = true;
-  }
+  lib_ = std::make_unique<SharedLibrary>(path.c_str());
+  initialized_ = lib_->getHandle() != nullptr;
   return initialized_;
 }
 
@@ -230,7 +224,6 @@ void CDriver::Initialize() {
     return;
   }
   std::string path = gits::Config::Get().common.shared.libL0.string();
-  Log(INFO) << "Initializing LevelZero API";
 #ifndef BUILD_FOR_CCODE
   gits::CGits::Instance().apis.UseApiComputeIface(std::make_shared<Api>());
 #endif

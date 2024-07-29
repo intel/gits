@@ -61,6 +61,14 @@ CDriver& CRecorderWrapper::Drivers() const {
   return drv;
 }
 
+bool CRecorderWrapper::IsAlive() const {
+  return CGits::InstancePtr() != nullptr;
+}
+
+std::recursive_mutex& CRecorderWrapper::GetInterceptorMutex() const {
+  return _recorder.GetMutex();
+}
+
 void CRecorderWrapper::InitializeDriver() const {
   drv.Initialize();
 }

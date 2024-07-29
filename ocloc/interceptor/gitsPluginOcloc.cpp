@@ -42,9 +42,8 @@ namespace ocloc {
 void* get_proc_address(const char* name);
 
 IRecorderWrapper* CGitsPlugin::_recorderWrapper;
-std::unique_ptr<CGitsPlugin> CGitsPlugin::_loader;
+std::unique_ptr<CGitsLoader> CGitsPlugin::_loader;
 std::mutex CGitsPlugin::_mutex;
-bool CGitsPlugin::_initialized = false;
 
 namespace {
 void fast_exit(int code) {
@@ -57,25 +56,26 @@ void fast_exit(int code) {
 } // namespace
 
 void CGitsPlugin::Initialize() {
-  if (_initialized) {
+  static bool initialized = false;
+  if (initialized) {
     return;
   }
 
   try {
     std::unique_lock<std::mutex> lock(_mutex);
-    if (_initialized) {
+    if (initialized) {
       return;
     }
 
-    _loader.reset(new CGitsPlugin("GITSRecorderOcloc"));
+    _loader = std::make_unique<CGitsLoader>("GITSRecorderOcloc");
     _recorderWrapper = (decltype(_recorderWrapper))_loader->GetRecorderWrapperPtr();
 
-    if (!_loader->Configuration().common.recorder.enabled) {
+    if (!_loader->GetConfiguration().common.recorder.enabled) {
       PrePostDisableOcloc();
     } else {
       CGitsPlugin::_recorderWrapper->StreamFinishedEvent(PrePostDisableOcloc);
     }
-    _initialized = true;
+    initialized = true;
 
   } catch (const Exception& ex) {
     Log(ERR) << "Unhandled GITS exception: " << ex.what();
@@ -92,19 +92,8 @@ void CGitsPlugin::Initialize() {
   }
 }
 
-void CGitsPlugin::ProcessTerminationDetected() {
-  static_cast<CGitsLoader*>(_loader.get())->ProcessTerminationDetected();
-}
-
-CGitsPlugin::~CGitsPlugin() {
-  _recorderWrapper->MarkRecorderForDeletion();
-  _recorderWrapper->CloseRecorderIfRequired();
-  _initialized = false;
-  static_cast<CGitsLoader*>(_loader.get())->~CGitsLoader();
-}
-
 const Config& CGitsPlugin::Configuration() {
-  return static_cast<CGitsLoader*>(_loader.get())->GetConfiguration();
+  return _loader->GetConfiguration();
 }
 
 static int module_identification_token = 0;

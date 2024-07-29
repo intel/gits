@@ -15,10 +15,9 @@
 #include <mutex>
 
 namespace {
-std::recursive_mutex globalMutex;
 // Avoid recording API - recursive functions.
 uint32_t recursionDepth = 0;
-const uint32_t disableDepth = 1000;
+constexpr uint32_t disableDepth = 1000;
 
 std::vector<const char*> ParseArgs(unsigned int argc, const char** argv) {
   bool removeFamilySuffix = true;
@@ -56,12 +55,12 @@ void PrePostDisableOcloc() {
   }
 
 #define GITS_ENTRY                                                                                 \
-  ++recursionDepth;                                                                                \
   IRecorderWrapper& wrapper = CGitsPlugin::RecorderWrapper();                                      \
+  std::unique_lock<std::recursive_mutex> lock(wrapper.GetInterceptorMutex());                      \
+  ++recursionDepth;                                                                                \
   CDriver& drv = wrapper.Drivers();
 
-#define GITS_MUTEX       std::unique_lock<std::recursive_mutex> lock(globalMutex);
-#define GITS_ENTRY_OCLOC GITS_MUTEX GITS_ENTRY
+#define GITS_ENTRY_OCLOC GITS_ENTRY
 
 #ifdef GITS_PLATFORM_WINDOWS
 #define VISIBLE __declspec(dllexport)

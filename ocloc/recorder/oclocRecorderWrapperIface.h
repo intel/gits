@@ -11,6 +11,7 @@
 #include <functional>
 
 #include "platform.h"
+#include <mutex>
 
 #include "oclocHeader.h"
 
@@ -25,6 +26,7 @@ public:
   virtual CDriver& Drivers() const = 0;
   virtual void InitializeDriver() const = 0;
   virtual void MarkRecorderForDeletion() = 0;
+  virtual std::recursive_mutex& GetInterceptorMutex() const = 0;
 
   virtual void oclocInvoke(int return_value,
                            unsigned int argc,

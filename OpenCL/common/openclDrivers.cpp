@@ -264,12 +264,8 @@ void COclDriver::Initialize() {
     return;
   }
   std::filesystem::path path = gits::Config::Get().common.shared.libClPath;
-  Log(INFO) << "Initializing OpenCL API";
-  _lib = dl::open_library(path.string().c_str());
-  if (_lib == nullptr) {
-    Log(ERR) << dl::last_error();
-  }
-  _initialized = true;
+  _lib = std::make_unique<SharedLibrary>(path.string());
+  _initialized = _lib->getHandle() != nullptr;
 #ifndef BUILD_FOR_CCODE
   CGits::Instance().apis.UseApiComputeIface(std::make_shared<OpenCL::OpenCLApi>());
 #endif
@@ -685,7 +681,7 @@ COclDriver::COclDriver() : _initialized(false), _lib(nullptr) {
 }
 
 COclDriver::~COclDriver() {
-  dl::close_library(_lib);
+  _initialized = false;
 }
 
 COclDriver drvOcl;
