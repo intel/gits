@@ -1359,10 +1359,11 @@ struct CCommandBufferState : public UniqueResourceHandle {
   std::vector<std::shared_ptr<RenderGenericAttachment>> renderPassResourceBuffers;
   std::vector<std::shared_ptr<RenderGenericAttachment>> drawImages;
   std::vector<VkCommandBuffer> secondaryCommandBuffers;
-  std::set<std::pair<std::shared_ptr<CDeviceMemoryState>, std::shared_ptr<CBufferState>>>
+  std::list<std::pair<std::shared_ptr<CDeviceMemoryState>, std::shared_ptr<CBufferState>>>
       temporaryBuffers; // To be deleted when cmdbuffer is reset or destroyed
+  std::list<std::shared_ptr<CDescriptorPoolState>> temporaryDescriptors;
   std::unordered_map<uint32_t, CDeviceAddressPatcher> addressPatchers;
-  std::vector<COnQueueSubmitEnd*> queueSubmitEndMessageReceivers;
+  std::vector<COnQueueSubmitEndInterface*> queueSubmitEndMessageReceivers;
 
   CCommandBufferState(VkCommandBuffer const* _pCommandBuffer,
                       VkCommandBufferAllocateInfo const* _pAllocateInfo,
@@ -1475,19 +1476,6 @@ struct CAccelerationStructureKHRState : public UniqueResourceHandle {
   std::shared_ptr<CCopyInfo> copyInfo;
   VkAccelerationStructureBuildSizesInfoKHR buildSizeInfo;
 
-  struct HashGenerator {
-    VkAccelerationStructureKHR accelerationStructure;
-    VkDeviceAddress deviceAddress;
-    uint64_t stride;
-    uint32_t buildCommandIndex;
-    VkBuildAccelerationStructureModeKHR mode;
-    VkAccelerationStructureTypeKHR type;
-    VkStructureType sType;
-    uint32_t offset;
-    uint32_t count;
-  };
-  std::unordered_map<hash_t, void*> stateTrackingHashMap;
-
   static std::unordered_map<VkDeviceAddress, VkAccelerationStructureKHR> deviceAddresses;
   static uint32_t globalAccelerationStructureBuildCommandIndex; // used for generating hashes
 
@@ -1555,33 +1543,31 @@ struct CMemoryUpdateState {
 // Internal resources
 
 struct InternalPipelinesManager {
-  struct InternalPipelines {
+  class InternalPipelines {
+  private:
     VkDevice device;
-    VkPipelineLayout layout;
-    VkPipeline prepareDeviceAddressesForPatching;
+    std::shared_ptr<CDescriptorSetLayoutState> descriptorSetLayoutState;
+    VkPipelineLayout pipelineLayout;
+    VkPipeline prepareDeviceAddressesForPatchingPipeline;
     VkPipeline patchDeviceAddressesPipeline;
+    VkPipeline prepareIndirectCopyFor16BitIndexedVerticesPipeline;
+    VkPipeline prepareIndirectCopyFor32BitIndexedVerticesPipeline;
+    VkPipeline performIndirectCopyPipeline;
 
+  public:
     InternalPipelines(VkDevice _device);
+    ~InternalPipelines();
 
+    std::shared_ptr<CDescriptorSetLayoutState> getDescriptorSetLayoutState();
     VkPipelineLayout getLayout();
     VkPipeline getPrepareDeviceAddressesForPatchingPipeline();
     VkPipeline getPatchDeviceAddressesPipeline();
+    VkPipeline getPrepareIndirectCopyFor16BitIndexedVerticesPipeline();
+    VkPipeline getPrepareIndirectCopyFor32BitIndexedVerticesPipeline();
+    VkPipeline getPerformIndirectCopyPipeline();
   };
 
-  VkPipelineLayout universalComputePipelineLayout;
-  VkPipeline prepareDeviceAddressesForPatching;
-  VkPipeline patchDeviceAddresses;
-  VkPipeline copyAccelerationStructureInstanceData;
-  VkPipeline copyAccelerationStructureTrianglesData;
-
   std::unordered_map<VkDevice, InternalPipelines> pipelinesMap;
-
-  InternalPipelinesManager()
-      : universalComputePipelineLayout(VK_NULL_HANDLE),
-        prepareDeviceAddressesForPatching(VK_NULL_HANDLE),
-        patchDeviceAddresses(VK_NULL_HANDLE),
-        copyAccelerationStructureInstanceData(VK_NULL_HANDLE),
-        copyAccelerationStructureTrianglesData(VK_NULL_HANDLE) {}
 
   InternalPipelines& operator[](VkDevice device) {
     auto it = pipelinesMap.find(device);

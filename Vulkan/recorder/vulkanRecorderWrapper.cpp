@@ -140,6 +140,10 @@ void CRecorderWrapper::dumpScreenshot(VkQueue queue,
 namespace {
 void ProcessOnQueueSubmitEndMessageReceivers(
     std::shared_ptr<CCommandBufferState>& commandBufferState, VkQueue queue, bool& waitVar) {
+  if (!commandBufferState) {
+    return;
+  }
+
   if (!commandBufferState->queueSubmitEndMessageReceivers.empty() && !waitVar) {
     drvVk.vkQueueWaitIdle(queue);
     waitVar = true;
@@ -260,9 +264,10 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit(VkQueue queue,
   // Perform tasks which were waiting for queue submit end (i.e. acceleration structure building data acquisition)
   for (uint32_t i = 0; i < submitCount; i++) {
     for (uint32_t j = 0; j < pSubmits[i].commandBufferCount; j++) {
-      auto& commandBufferState = SD()._commandbufferstates[pSubmits[i].pCommandBuffers[j]];
-
-      ProcessOnQueueSubmitEndMessageReceivers(commandBufferState, queue, queueWaitIdleAlreadyUsed);
+      auto it = SD()._commandbufferstates.find(pSubmits[i].pCommandBuffers[j]);
+      if (it != SD()._commandbufferstates.end()) {
+        ProcessOnQueueSubmitEndMessageReceivers(it->second, queue, queueWaitIdleAlreadyUsed);
+      }
     }
   }
 }
@@ -547,6 +552,10 @@ void CRecorderWrapper::SetConfig(Config const& cfg) const {
 
 bool CRecorderWrapper::IsUseExternalMemoryExtensionUsed() const {
   return isUseExternalMemoryExtensionUsed();
+}
+
+bool CRecorderWrapper::IsSubcaptureBeforeRestorationPhase() const {
+  return isSubcaptureBeforeRestorationPhase();
 }
 
 } // namespace Vulkan

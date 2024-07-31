@@ -131,15 +131,30 @@ uint32_t getMappedMemoryTypeIndex(VkDevice device, uint32_t memoryTypeIndexOrigi
 uint32_t findCompatibleMemoryTypeIndex(VkMemoryPropertyFlags originalMemoryPropertyFlags,
                                        VkPhysicalDeviceMemoryProperties& currentMemoryProperties,
                                        uint32_t requirementsMemoryTypeBits);
-std::shared_ptr<CBufferState> findBufferStateFromDeviceAddress(VkDeviceAddress deviceAddress);
 uint32_t getRayTracingShaderGroupCaptureReplayHandleSize(VkDevice device);
-std::pair<std::shared_ptr<CDeviceMemoryState>, std::shared_ptr<CBufferState>> createTemporaryBuffer(
+
+using TemporaryBufferPairType =
+    std::pair<std::shared_ptr<CDeviceMemoryState>, std::shared_ptr<CBufferState>>;
+
+TemporaryBufferPairType createTemporaryBuffer(
     VkDevice device,
     VkDeviceSize size,
     VkBufferUsageFlags bufferUsage,
     CCommandBufferState* commandBufferState = nullptr,
-    VkMemoryPropertyFlags requiredMemoryPropertyFlags = 0,
-    void* hostPointer = nullptr);
+    VkMemoryPropertyFlags requiredMemoryPropertyFlags = 0);
+VkDescriptorSet getTemporaryDescriptorSet(VkDevice device, CCommandBufferState& commandBufferState);
+void injectCopyCommand(VkCommandBuffer commandBuffer,
+                       VkPipelineStageFlags srcPipelineStageFlags,
+                       VkPipelineStageFlags dstPipelineStageFlags,
+                       VkDeviceSize dataSize,
+                       VkBuffer srcBuffer,
+                       VkDeviceSize srcOffset,
+                       VkAccessFlags srcAccessMaskPre,
+                       VkAccessFlags srcAccessMaskPost,
+                       VkBuffer dstBuffer,
+                       VkDeviceSize dstOffset,
+                       VkAccessFlags dstAccessMaskPre,
+                       VkAccessFlags dstAccessMaskPost);
 void mapMemoryAndCopyData(VkDevice device,
                           VkDeviceMemory destination,
                           VkDeviceSize offset,
@@ -156,27 +171,18 @@ VkDeviceAddress getAccelerationStructureDeviceAddress(
     VkDevice device, VkAccelerationStructureKHR accelerationStructure);
 VkAccelerationStructureBuildControlDataGITS prepareAccelerationStructureControlData(
     VkCommandBuffer commandBuffer);
-VkAccelerationStructureBuildControlDataGITS prepareAccelerationStructureControlData(
-    VkAccelerationStructureBuildControlDataGITS controlData,
-    const VkAccelerationStructureBuildGeometryInfoKHR* buildInfo);
-VkAccelerationStructureBuildControlDataGITS prepareAccelerationStructureControlData(
-    VkAccelerationStructureBuildControlDataGITS controlData, VkStructureType sType);
-uint64_t prepareStateTrackingHash(const VkAccelerationStructureBuildControlDataGITS& controlData,
-                                  VkDeviceAddress deviceAddress,
-                                  uint32_t offset,
-                                  uint64_t stride,
-                                  uint32_t count);
-VkPipelineLayout createInternalPipelineLayout(VkDevice device);
+std::shared_ptr<CDescriptorSetLayoutState> createInternalDescriptorSetLayout(VkDevice device);
+VkPipelineLayout createInternalPipelineLayout(VkDevice device,
+                                              uint32_t descriptorSetLayoutCount,
+                                              VkDescriptorSetLayout* pDescriptorSetLayouts);
 VkPipeline createInternalPipeline(VkDevice device,
                                   VkPipelineLayout layout,
                                   const std::vector<uint32_t>& code);
-bool getStructStorageFromHash(hash_t hash,
-                              VkAccelerationStructureKHR accelerationStructure,
-                              void** ptr);
 bool isVulkanAPIVersionSupported(uint32_t major, uint32_t minor, VkPhysicalDevice physicalDevice);
 void checkReturnValue(VkResult playerSideReturnValue,
                       CVkResult& recorderSideReturnValue,
                       const char* functionName);
+uint32_t GetHash(uint32_t size, const void* data);
 bool IsObjectToSkip(uint64_t vulkanObject);
 bool operator==(const CGits::CCounter& counter, const VulkanObjectRange& vulkanObjRange);
 bool vulkanCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer bufferHandle, std::string fileName);

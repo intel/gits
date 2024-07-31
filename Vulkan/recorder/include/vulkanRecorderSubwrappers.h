@@ -1236,7 +1236,9 @@ void vkCmdBuildAccelerationStructuresKHR_RECWRAP(
       auto it = addressPatchers.find(
           CAccelerationStructureKHRState::globalAccelerationStructureBuildCommandIndex);
       if ((it != addressPatchers.end()) && (it->second.Count() > 0)) {
-        recorder.Schedule(new CGitsVkCmdPatchDeviceAddresses(commandBuffer, it->second));
+        recorder.Schedule(new CGitsVkCmdPatchDeviceAddresses(
+            commandBuffer, it->second,
+            CAccelerationStructureKHRState::globalAccelerationStructureBuildCommandIndex));
       }
     }
 

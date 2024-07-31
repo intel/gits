@@ -2162,31 +2162,36 @@ inline void vkCmdBuildAccelerationStructuresKHR_WRAPRUN(
   auto commandBufferState = SD()._commandbufferstates[*commandBuffer];
   VkDevice device = commandBufferState->commandPoolStateStore->deviceStateStore->deviceHandle;
 
-  // Due to changes in scratch space size requirements on various platforms which can
-  // affect stream cross-platform compatibility and to simplify state tracking code,
-  // scratch space is always prepared adhoc during stream replay.
+  // Prepare scratch space if stream doesn't contain it
   for (uint32_t i = 0; i < *infoCount; ++i) {
-    std::vector<uint32_t> primitivesCount(buildInfos[i].geometryCount);
-
-    for (uint32_t g = 0; g < buildInfos[i].geometryCount; ++g) {
-      primitivesCount[g] = buildRangeInfos[i][g].primitiveCount;
+    if (buildInfos[i].scratchData.deviceAddress != 0) {
+      continue;
     }
-    VkAccelerationStructureBuildSizesInfoKHR buildSizesInfoKHR = {
-        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, // VkStructureType    sType;
-        nullptr,                                                       // const void       * pNext;
-        0, // VkDeviceSize       accelerationStructureSize;
-        0, // VkDeviceSize       updateScratchSize;
-        0  // VkDeviceSize       buildScratchSize;
-    };
-    drvVk.vkGetAccelerationStructureBuildSizesKHR(
-        device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfos[i],
-        primitivesCount.data(), &buildSizesInfoKHR);
 
     VkDeviceSize size = 0;
-    if (buildInfos[i].mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR) {
-      size = buildSizesInfoKHR.buildScratchSize;
-    } else if (buildInfos[i].mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR) {
-      size = buildSizesInfoKHR.updateScratchSize;
+    {
+      std::vector<uint32_t> primitivesCount(buildInfos[i].geometryCount);
+
+      for (uint32_t g = 0; g < buildInfos[i].geometryCount; ++g) {
+        primitivesCount[g] = buildRangeInfos[i][g].primitiveCount;
+      }
+
+      VkAccelerationStructureBuildSizesInfoKHR buildSizesInfoKHR = {
+          VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, // VkStructureType    sType;
+          nullptr, // const void       * pNext;
+          0,       // VkDeviceSize       accelerationStructureSize;
+          0,       // VkDeviceSize       updateScratchSize;
+          0        // VkDeviceSize       buildScratchSize;
+      };
+      drvVk.vkGetAccelerationStructureBuildSizesKHR(
+          device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfos[i],
+          primitivesCount.data(), &buildSizesInfoKHR);
+
+      if (buildInfos[i].mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR) {
+        size = buildSizesInfoKHR.buildScratchSize;
+      } else if (buildInfos[i].mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR) {
+        size = buildSizesInfoKHR.updateScratchSize;
+      }
     }
 
     auto memoryBufferPair = createTemporaryBuffer(device, size,

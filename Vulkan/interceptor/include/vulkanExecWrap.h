@@ -601,12 +601,12 @@ VkResult recExecWrap_vkCreateDevice(VkPhysicalDevice physicalDevice,
     }
   }
 
-  // Add required extensions to be used for external memory (when requested)
   VkDeviceCreateInfo createInfo = *pCreateInfo;
-  std::vector<const char*> enabledExtensions(createInfo.ppEnabledExtensionNames,
+  std::set<std::string> enabledExtensionsSet(createInfo.ppEnabledExtensionNames,
                                              createInfo.ppEnabledExtensionNames +
                                                  createInfo.enabledExtensionCount);
 
+  // Add required extensions to be used for external memory (when requested)
   if (CGitsPluginVulkan::RecorderWrapper().IsUseExternalMemoryExtensionUsed()) {
     const char* externalMemoryExtensionName = VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME;
     const char* externalMemoryHostExtensionName = VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME;
@@ -622,12 +622,12 @@ VkResult recExecWrap_vkCreateDevice(VkPhysicalDevice physicalDevice,
 
     // Version 1.1 and external HOST memory is supported
     if (isVersion11Supported && externalHostMemorySupported) {
-      enabledExtensions.push_back(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
+      enabledExtensionsSet.insert(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
     }
     // External memory and external HOST memory is supported
     else if (externalMemorySupported && externalHostMemorySupported) {
-      enabledExtensions.push_back(VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME);
-      enabledExtensions.push_back(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
+      enabledExtensionsSet.insert(VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME);
+      enabledExtensionsSet.insert(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
     }
     // External memory / host is not supported, yet useExternalMemoryExtension
     // is requested via config
@@ -637,12 +637,96 @@ VkResult recExecWrap_vkCreateDevice(VkPhysicalDevice physicalDevice,
     }
   }
 
-  // Convert a vector to a set to remove possible duplicate entries from the
-  // vector. Then convert it back again.
-  {
-    std::set<const char*> removeDuplicatesSet(enabledExtensions.begin(), enabledExtensions.end());
-    enabledExtensions.assign(removeDuplicatesSet.begin(), removeDuplicatesSet.end());
+  // Enable additional extensions and features which are required to properly capture
+  // acceleration structure build data during substreams recording
+  VkPhysicalDevice8BitStorageFeatures gits8bitStorageFeatures = {};
+  gits8bitStorageFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_8BIT_STORAGE_FEATURES;
+  gits8bitStorageFeatures.storageBuffer8BitAccess = VK_TRUE;
+
+  VkPhysicalDevice16BitStorageFeatures gits16bitStorageFeatures = {};
+  gits16bitStorageFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES;
+  gits16bitStorageFeatures.storageBuffer16BitAccess = VK_TRUE;
+
+  if (CGitsPluginVulkan::RecorderWrapper().IsSubcaptureBeforeRestorationPhase()) {
+
+    // If application uses ray tracing, GITS needs to inject additional extensions and features
+    // in order to capture/gather some RT-related data
+    auto accelerationStructureFeatures =
+        (VkPhysicalDeviceAccelerationStructureFeaturesKHR*)CGitsPluginVulkan::RecorderWrapper()
+            .GetPNextStructure(
+                pCreateInfo->pNext,
+                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR);
+    if ((accelerationStructureFeatures != nullptr) &&
+        (accelerationStructureFeatures->accelerationStructure == VK_TRUE)) {
+      // Vulkan 1.2 and 8-bit storage features
+      {
+        auto appVulkan12Features =
+            (VkPhysicalDeviceVulkan12Features*)CGitsPluginVulkan::RecorderWrapper()
+                .GetPNextStructure(pCreateInfo->pNext,
+                                   VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES);
+
+        if (appVulkan12Features != nullptr) {
+          // VkPhysicalDeviceVulkan12Features is provided by the application
+          appVulkan12Features->storageBuffer8BitAccess = VK_TRUE;
+        } else {
+          // VkPhysicalDeviceVulkan12Features is not available
+          enabledExtensionsSet.insert(VK_KHR_8BIT_STORAGE_EXTENSION_NAME);
+
+          auto app8bitStorageFeatures =
+              (VkPhysicalDevice8BitStorageFeatures*)CGitsPluginVulkan::RecorderWrapper()
+                  .GetPNextStructure(pCreateInfo->pNext,
+                                     VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_8BIT_STORAGE_FEATURES);
+          if (app8bitStorageFeatures != nullptr) {
+            // VkPhysicalDevice8BitStorageFeatures is provided by the application
+            app8bitStorageFeatures->storageBuffer8BitAccess = VK_TRUE;
+          } else {
+            // VkPhysicalDevice8BitStorageFeatures is not available - inject it
+            gits8bitStorageFeatures.pNext = (void*)createInfo.pNext;
+            createInfo.pNext = &gits8bitStorageFeatures;
+          }
+        }
+      }
+
+      // Vulkan 1.1 and 16-bit storage features
+      {
+        auto appVulkan11Features =
+            (VkPhysicalDeviceVulkan11Features*)CGitsPluginVulkan::RecorderWrapper()
+                .GetPNextStructure(pCreateInfo->pNext,
+                                   VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES);
+
+        if (appVulkan11Features != nullptr) {
+          // VkPhysicalDeviceVulkan11Features is provided by the application
+          appVulkan11Features->storageBuffer16BitAccess = VK_TRUE;
+        } else {
+          // Vulkan 1.1 is NOT supported
+          enabledExtensionsSet.insert(VK_KHR_16BIT_STORAGE_EXTENSION_NAME);
+
+          auto app16bitStorageFeatures =
+              (VkPhysicalDevice16BitStorageFeatures*)CGitsPluginVulkan::RecorderWrapper()
+                  .GetPNextStructure(pCreateInfo->pNext,
+                                     VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES);
+
+          if (app16bitStorageFeatures != nullptr) {
+            // VkPhysicalDevice16BitStorageFeatures is provided by the application
+            app16bitStorageFeatures->storageBuffer16BitAccess = VK_TRUE;
+          } else {
+            // VkPhysicalDevice16BitStorageFeatures is not available - inject it
+            gits16bitStorageFeatures.pNext = (void*)createInfo.pNext;
+            createInfo.pNext = &gits16bitStorageFeatures;
+          }
+        }
+      }
+    }
   }
+
+  // std::set was used to remove duplicate entries. Now we need to convert it to a vector
+  // in order to pass data to a CreateInfo structure.
+  std::vector<const char*> enabledExtensions;
+  enabledExtensions.reserve(enabledExtensionsSet.size());
+  for (const auto& extension : enabledExtensionsSet) {
+    enabledExtensions.emplace_back(extension.c_str());
+  }
+
   createInfo.enabledExtensionCount = (uint32_t)enabledExtensions.size();
   createInfo.ppEnabledExtensionNames = enabledExtensions.data();
 

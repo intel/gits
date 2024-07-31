@@ -552,7 +552,10 @@ class CGitsVkMemoryRestore : public CFunction, gits::noncopyable {
 public:
   CGitsVkMemoryRestore();
   CGitsVkMemoryRestore(VkDevice device, VkDeviceMemory mem, std::uint64_t size);
-  CGitsVkMemoryRestore(VkDevice device, VkDeviceMemory mem, std::uint64_t size, void* mappedPtr);
+  CGitsVkMemoryRestore(VkDevice device,
+                       VkDeviceMemory mem,
+                       std::uint64_t size,
+                       const void* mappedPtr);
   virtual void GetDiffFromZero(const std::vector<char>& oldData,
                                std::uint64_t& length,
                                std::uint64_t& offset);
@@ -633,7 +636,9 @@ class CGitsVkCmdPatchDeviceAddresses : public CFunction {
 
 public:
   CGitsVkCmdPatchDeviceAddresses();
-  CGitsVkCmdPatchDeviceAddresses(VkCommandBuffer commandBuffer, CDeviceAddressPatcher& patcher);
+  CGitsVkCmdPatchDeviceAddresses(VkCommandBuffer commandBuffer,
+                                 CDeviceAddressPatcher& patcher,
+                                 uint64_t commandId);
 
   virtual unsigned Id() const {
     return ID_GITS_VK_CMD_PATCH_DEVICE_ADDRESSES;

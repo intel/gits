@@ -975,6 +975,14 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkValidationCacheEXT)
 #define VK_KHR_ACCELERATION_STRUCTURE_SPEC_VERSION   11
 #define VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME "VK_KHR_acceleration_structure"
 
+#define VK_KHR_8bit_storage                1
+#define VK_KHR_8BIT_STORAGE_SPEC_VERSION   1
+#define VK_KHR_8BIT_STORAGE_EXTENSION_NAME "VK_KHR_8bit_storage"
+
+#define VK_KHR_16bit_storage                1
+#define VK_KHR_16BIT_STORAGE_SPEC_VERSION   1
+#define VK_KHR_16BIT_STORAGE_EXTENSION_NAME "VK_KHR_16bit_storage"
+
 #ifdef GITS_PLATFORM_X11
 #define VK_USE_PLATFORM_XLIB_KHR
 #define VK_KHR_xlib_surface                1

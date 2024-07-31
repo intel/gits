@@ -1093,7 +1093,7 @@ public:
         _deviceAddress(0) {}
 
   CBufferDeviceAddressObject(VkDeviceAddress deviceAddress);
-  CBufferDeviceAddressObject(CBufferDeviceAddressObjectData& bufferDeviceAddressObject);
+  CBufferDeviceAddressObject(const CBufferDeviceAddressObjectData& bufferDeviceAddressObject);
 
   VkDeviceAddress Value();
 
@@ -1106,9 +1106,6 @@ public:
     explicit PtrConverter(VkDeviceAddress deviceAddress) : _deviceAddress(deviceAddress) {}
     operator VkDeviceAddress() const {
       return _deviceAddress;
-    }
-    operator VkDeviceOrHostAddressKHR() const {
-      return {_deviceAddress};
     }
   };
 
@@ -1143,6 +1140,7 @@ public:
 };
 
 typedef CVulkanEnum<VkCommandExecutionSideGITS> CVkCommandExecutionSideGITS;
+struct CVkDeviceOrHostAddressConstKHRData;
 
 class CVkDeviceOrHostAddressConstKHR : public CArgument {
   std::unique_ptr<CVkCommandExecutionSideGITS> _commandExecutionSideGITS;
@@ -1166,10 +1164,7 @@ public:
         _DeviceOrHostAddressOriginal(nullptr) {}
 
   CVkDeviceOrHostAddressConstKHR(const VkDeviceOrHostAddressConstKHR deviceorhostaddress,
-                                 uint32_t offset,
-                                 uint64_t stride,
-                                 uint32_t count,
-                                 const VkAccelerationStructureBuildControlDataGITS& controlData);
+                                 const CVkDeviceOrHostAddressConstKHRData& deviceOrHostAddressData);
 
   virtual ~CVkDeviceOrHostAddressConstKHR() {}
 
@@ -1219,21 +1214,73 @@ public:
 
   CDeviceOrHostAddressAccelerationStructureVertexDataGITS(
       VkDeviceOrHostAddressConstKHR vertexData,
-      uint32_t offset,
-      uint64_t stride,
-      uint32_t count,
-      uint32_t firstVertex,
-      uint32_t maxVertex,
-      VkDeviceOrHostAddressConstKHR indexData,
-      VkIndexType indexType,
-      const VkAccelerationStructureBuildControlDataGITS& controlData)
-      : CVkDeviceOrHostAddressConstKHR(vertexData, offset, stride, count, controlData) {
+      const CVkDeviceOrHostAddressConstKHRData& deviceOrHostAddressData)
+      : CVkDeviceOrHostAddressConstKHR(vertexData, deviceOrHostAddressData) {
     // Implementation of this class is exactly the same as CVkDeviceOrHostAddressConstKHR.
     // The difference is in the struct storage counterpart.
   }
 
   virtual const char* Name() const override {
     return "CDeviceOrHostAddressAccelerationStructureVertexDataGITS";
+  }
+};
+
+struct CVkDeviceOrHostAddressKHRData;
+
+class CVkDeviceOrHostAddressKHR : public CArgument {
+  std::unique_ptr<CVkCommandExecutionSideGITS> _commandExecutionSideGITS;
+  std::unique_ptr<CBufferDeviceAddressObject> _bufferDeviceAddress;
+
+  std::unique_ptr<VkDeviceOrHostAddressKHR> _DeviceOrHostAddress;
+  std::unique_ptr<VkDeviceOrHostAddressKHR> _DeviceOrHostAddressOriginal;
+
+public:
+  CVkDeviceOrHostAddressKHR()
+      : _commandExecutionSideGITS(std::make_unique<CVkCommandExecutionSideGITS>()),
+        _bufferDeviceAddress(std::make_unique<CBufferDeviceAddressObject>()),
+        _DeviceOrHostAddress(nullptr),
+        _DeviceOrHostAddressOriginal(nullptr) {}
+
+  CVkDeviceOrHostAddressKHR(const VkDeviceOrHostAddressKHR deviceorhostaddress,
+                            const CVkDeviceOrHostAddressKHRData& deviceOrHostAddressData);
+
+  virtual ~CVkDeviceOrHostAddressKHR() {}
+
+  virtual const char* Name() const override {
+    return "VkDeviceOrHostAddressKHR";
+  }
+
+  VkDeviceOrHostAddressKHR* Value();
+
+  PtrConverter<VkDeviceOrHostAddressKHR> operator*() {
+    return PtrConverter<VkDeviceOrHostAddressKHR>(Value());
+  }
+
+  PtrConverter<VkDeviceOrHostAddressKHR> Original();
+
+  void* GetPtrType() override {
+    return (void*)Value();
+  }
+  virtual std::set<uint64_t> GetMappedPointers() {
+    return _bufferDeviceAddress->GetMappedPointers();
+  }
+
+  virtual void Write(CBinOStream& stream) const override;
+
+  virtual void Read(CBinIStream& stream) override;
+
+  virtual void Write(CCodeOStream& stream) const override {
+    TODO("Implement proper CCode support.")
+    throw ENotImplemented(EXCEPTION_MESSAGE);
+  }
+
+  virtual bool DeclarationNeeded() const override {
+    return true;
+  }
+
+  virtual void Declare(CCodeOStream& stream) const override {
+    TODO("Implement proper CCode support.")
+    throw ENotImplemented(EXCEPTION_MESSAGE);
   }
 };
 

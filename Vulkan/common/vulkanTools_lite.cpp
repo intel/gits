@@ -1306,6 +1306,7 @@ const void* ignoreLoaderSpecificStructureTypes(const void* pNext) {
       case VK_STRUCTURE_TYPE_SAMPLE_CHROMA_KEY_CREATE_INFO_INTEL:
       case VK_STRUCTURE_TYPE_SHADER_DXBC_HASH_INTEL:
       case VK_STRUCTURE_TYPE_QUERY_LOW_LATENCY_SUPPORT_NV:
+      case VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS:
         pNext = ((const VkBaseInStructure*)pNext)->pNext;
         break;
       default:

@@ -321,7 +321,7 @@ Vulkan:
     ForceUniversalRecording: false
     DelayFenceChecksCount: 0
     ShortenFenceWaitTime: 0
-    AddImageUsageFlags: 0x0
+    AddImageUsageFlags: 0x2  # VK_IMAGE_USAGE_TRANSFER_DST_BIT
     AddBufferUsageFlags: 0x1
     ScheduleCommandBuffersBeforeQueueSubmitWA: false
     MinimalStateRestore: true
@@ -340,7 +340,7 @@ Vulkan:
     MemoryRestoration: 'HostVisible'  # None / HostVisible
     RestoreMultisampleImagesWA: false
     MaxArraySizeForCCode: 400
-    UseCaptureReplayFeaturesForBuffersAndAccelerationStructures: false
+    UseCaptureReplayFeaturesForBuffersAndAccelerationStructures: true
     UseCaptureReplayFeaturesForRayTracingPipelines: true
 %if platform == "win32":
     UsePresentSrcLayoutTransitionAsAFrameBoundary: false     # Offscreen applications workaround

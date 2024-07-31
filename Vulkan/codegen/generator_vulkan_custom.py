@@ -109,11 +109,12 @@ var2=VarDef(name='patchedValue', type='VkBufferDeviceAddressGITS')
 
 Struct(name='VkAccelerationStructureBuildControlDataGITS_', enabled=False,
 var1=VarDef(name='buildCommandIndex', type='uint32_t'),
-var2=VarDef(name='mode', type='VkBuildAccelerationStructureModeKHR'),
-var3=VarDef(name='accelerationStructureType', type='VkAccelerationStructureTypeKHR'),
-var4=VarDef(name='device', type='VkDevice'),
-var5=VarDef(name='accelerationStructure', type='VkAccelerationStructureKHR'),
-var6=VarDef(name='commandBuffer', type='VkCommandBuffer'),
-var7=VarDef(name='executionSide', type='VkCommandExecutionSideGITS'),
-var8=VarDef(name='sType', type='VkStructureType')
+var2=VarDef(name='commandBuffer', type='VkCommandBuffer'),
+var3=VarDef(name='executionSide', type='VkCommandExecutionSideGITS')
+)
+
+Struct(name='VkStructStoragePointerGITS_', enabled=False,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=VarDef(name='pStructStorage', type='const void*')
 )

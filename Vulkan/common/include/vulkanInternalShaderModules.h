@@ -22,8 +22,10 @@ namespace gits {
 namespace Vulkan {
 
 std::vector<uint32_t> getPrepareDeviceAddressesForPatchingShaderModuleSource();
-
 std::vector<uint32_t> getPatchDeviceAddressesShaderModuleSource();
+std::vector<uint32_t> getPrepareIndirectCopyFor16BitIndexedVerticesShaderModuleSource();
+std::vector<uint32_t> getPrepareIndirectCopyFor32BitIndexedVerticesShaderModuleSource();
+std::vector<uint32_t> getPerformIndirectCopyShaderModuleSource();
 
 } // namespace Vulkan
 } // namespace gits

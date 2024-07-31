@@ -858,6 +858,7 @@ namespace Vulkan {
                   Csize.append(size[0])
                 else:
                   Csize.append('1')
+
               key_variable = key_name.replace('Vk', '').lower()
               key_decl = '_' + key_name.replace('Vk', '')
               argd = 'const ' + key_name + '* ' + key_variable
@@ -868,6 +869,8 @@ namespace Vulkan {
               argsDecl = ""
               for n, t in zip(Cnames, Ctypes):
                 argsDecl += '      std::unique_ptr<' + t + '> ' + n + ';\n'
+              if elem.get('passStructStorage') is True:
+                argsDecl += '      VkStructStoragePointerGITS _baseIn;\n'
 
               counter = 0
 
@@ -879,6 +882,16 @@ namespace Vulkan {
                 init_to_nullptr = '  } else {\n'
                 init_default = ''
                 function_operator = 'if (' + key_decl + ' == nullptr) {\n'
+
+              if elem.get('passStructStorage') is True:
+                function_operator += """
+    // Pass this structure through pNext
+    _baseIn = {
+        VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS, // VkStructureType sType;
+        **_pNext,                                      // const void* pNext;
+        this                                           // const void* pStructStorage;
+    };\n\n"""
+
               function_operator += '    ' + key_decl + ' = std::make_unique<' + key_name + '>();\n'
               for n, w, t, s, ot in zip(Cnames, Cwraps, Ctypes, Csize, types):
                 if t != 'COutArgument':
@@ -913,9 +926,21 @@ namespace Vulkan {
                     function_operator += '      throw std::runtime_error(EXCEPTION_MESSAGE);\n'
                     function_operator += '    }\n'
                   else:
-                    function_operator += '    ' + key_decl + '->' + n.strip('_') + ' = **' + n + ';\n'
+                    member_value = '    ' + key_decl + '->' + n.strip('_') + ' = **' + n + ';\n'
+                    if elem.get('passStructStorage') is True:
+                      member_value = member_value.replace('**_pNext', '&_baseIn')
+                    function_operator += member_value
 
               mapped_pointers += '}\n  return returnMap;'
+              if elem.get('passStructStorage') is True:
+                init += """
+    // Pass data to vulkan arguments class
+    _baseIn = {
+        VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS, // VkStructureType sType;
+        %(key_variable)s->pNext,                       // const void* pNext;
+        this                                           // const void* pStructStorage;
+    };
+    const_cast<%(unversioned_name)s*>(%(key_variable)s)->pNext = &_baseIn;\n""" % {'unversioned_name': key_name, 'key_variable': key_variable}
               if len(elem['vars']) > 0:
                 init += init_to_nullptr
                 init += '  }'
@@ -1747,8 +1772,6 @@ namespace Vulkan {
 } // namespace gits
 """
   arguments_cpp_include = """#include "vulkanTools.h"
-#include "vulkanTools_lite.h"
-#include "vulkanArgumentsAuto.h"
 
 """
   arguments_cpp.write(arguments_cpp_include)
@@ -2234,6 +2257,8 @@ for s in structs:
     struct['custom'] = s.get('custom')
   if (s.get('constructorWrap')):
     struct['constructorWrap'] = s.get('constructorWrap')
+  if (s.get('passStructStorage')):
+    struct['passStructStorage'] = s.get('passStructStorage')
   if (s.get('declarationNeededWrap')):
     struct['declarationNeededWrap'] = s.get('declarationNeededWrap')
   if (s.get('constructorArgs')):

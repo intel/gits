@@ -463,7 +463,7 @@ gits::Vulkan::CGitsVkMemoryRestore::CGitsVkMemoryRestore(VkDevice device,
 gits::Vulkan::CGitsVkMemoryRestore::CGitsVkMemoryRestore(VkDevice device,
                                                          VkDeviceMemory mem,
                                                          std::uint64_t size,
-                                                         void* mappedPtr)
+                                                         const void* mappedPtr)
     : _device(std::make_unique<CVkDevice>(device)), _mem(std::make_unique<CVkDeviceMemory>(mem)) {
   assert((mappedPtr != nullptr) && "Trying to copy memory contents from nullptr!\n");
 
@@ -490,12 +490,21 @@ void gits::Vulkan::CGitsVkMemoryRestore::Run() {
     auto& memoryState = SD()._devicememorystates[memory];
     if (memoryState && memoryState->IsMapped()) {
       VkBufferCopy updatedRegion = {
-          **_offset, // VkDeviceSize srcOffset;
-          **_offset, // VkDeviceSize dstOffset;
-          **_length  // VkDeviceSize size;
+          **_offset, // VkDeviceSize srcOffset
+          **_offset, // VkDeviceSize dstOffset
+          **_length  // VkDeviceSize size
       };
       std::memcpy((char*)memoryState->mapping->ppDataData.Value() + updatedRegion.dstOffset,
                   **_resource, (size_t)updatedRegion.size);
+
+      VkMappedMemoryRange range = {
+          VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, // VkStructureType   sType
+          nullptr,                               // const void      * pNext
+          memory,                                // VkDeviceMemory    memory
+          memoryState->mapping->offsetData.Value() + updatedRegion.dstOffset, // VkDeviceSize offset
+          updatedRegion.size // VkDeviceSize      size
+      };
+      drvVk.vkFlushMappedMemoryRanges(device, 1, &range);
       drvVk.vkTagMemoryContentsUpdateGITS(device, memory, 1, &updatedRegion);
     } else {
       checkMemoryMappingFeasibility(device, memory);
@@ -504,11 +513,20 @@ void gits::Vulkan::CGitsVkMemoryRestore::Run() {
       drvVk.vkMapMemory(device, memory, **_offset, **_length, 0, &pointer);
 
       VkBufferCopy updatedRegion = {
-          0,        // VkDeviceSize srcOffset;
-          0,        // VkDeviceSize dstOffset;
-          **_length // VkDeviceSize size;
+          0,        // VkDeviceSize srcOffset
+          0,        // VkDeviceSize dstOffset
+          **_length // VkDeviceSize size
       };
       std::memcpy(pointer, **_resource, (size_t)updatedRegion.size);
+
+      VkMappedMemoryRange range = {
+          VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, // VkStructureType  sType
+          nullptr,                               // const void     * pNext
+          memory,                                // VkDeviceMemory   memory
+          **_offset,                             // VkDeviceSize     offset
+          updatedRegion.size                     // VkDeviceSize     size
+      };
+      drvVk.vkFlushMappedMemoryRanges(device, 1, &range);
       drvVk.vkTagMemoryContentsUpdateGITS(device, memory, 1, &updatedRegion);
 
       drvVk.vkUnmapMemory(device, memory);
@@ -663,19 +681,18 @@ gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::CGitsVkCmdPatchDeviceAddresses()
       _resource(std::make_unique<CDeclaredBinaryResource>()) {}
 
 gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::CGitsVkCmdPatchDeviceAddresses(
-    VkCommandBuffer commandBuffer, CDeviceAddressPatcher& patcher)
+    VkCommandBuffer commandBuffer, CDeviceAddressPatcher& patcher, uint64_t commandId)
     : _count(std::make_unique<Cuint32_t>(patcher.Count())),
       _commandBuffer(std::make_unique<CVkCommandBuffer>(commandBuffer)) {
   // Any data uniquely identifying this very acceleration structure build command.
   // It is used only to generate a hash key.
   // This key is used later in a post-vkQueueSubmit() operation to store data.
 
-  struct HashGenerator {
+  struct {
     uint64_t buildCommandID;
     VkCommandBuffer commandBuffer;
     TId tokenID;
-  } hashGenerator = {CAccelerationStructureKHRState::globalAccelerationStructureBuildCommandIndex,
-                     commandBuffer, ID_GITS_VK_CMD_PATCH_DEVICE_ADDRESSES};
+  } hashGenerator = {commandId, commandBuffer, ID_GITS_VK_CMD_PATCH_DEVICE_ADDRESSES};
 
   hash_t hash = CGits::Instance().ResourceManager2().getHash(RESOURCE_DATA_RAW, &hashGenerator,
                                                              sizeof(hashGenerator));

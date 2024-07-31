@@ -15,10 +15,7 @@
 
 #pragma once
 
-#include "istdhash.h"
 #include "vulkanTools.h"
-#include "vulkanTools_lite.h"
-#include "vulkanStateDynamic.h"
 
 namespace gits {
 
@@ -1495,8 +1492,6 @@ inline void vkFreeDescriptorSets_SD(VkResult return_value,
                                     const VkDescriptorSet* pDescriptorSets) {
   if (Config::Get().IsRecorder() || captureRenderPassesResources()) {
     for (unsigned int i = 0; i < descriptorSetCount; i++) {
-      TODO("Check if descriptor set is properly removed (if std::shared_ptr may be used correctly "
-           "with std::set")
       SD()._descriptorpoolstates[descriptorPool]->descriptorSetStateStoreList.erase(
           SD()._descriptorsetstates
               [pDescriptorSets[i]]); // <- check if descriptorSetState is removed correctly
@@ -1937,15 +1932,7 @@ inline void vkCreateShaderModule_SD(VkResult return_value,
                                     const VkAllocationCallbacks* pAllocator,
                                     VkShaderModule* pShaderModule) {
   if ((return_value == VK_SUCCESS) && (*pShaderModule != VK_NULL_HANDLE)) {
-    uint32_t hash;
-    if (!(pCreateInfo->codeSize % sizeof(uint32_t))) {
-      hash = (uint32_t)ISTDHash(reinterpret_cast<const char*>(pCreateInfo->pCode),
-                                static_cast<uint32_t>(pCreateInfo->codeSize));
-    } else {
-      hash = (uint32_t)ISTDHashPadding(reinterpret_cast<const char*>(pCreateInfo->pCode),
-                                       static_cast<uint32_t>(pCreateInfo->codeSize));
-    }
-
+    uint32_t hash = GetHash(pCreateInfo->codeSize, pCreateInfo->pCode);
     SD()._shadermodulestates.emplace(
         *pShaderModule, std::make_shared<CShaderModuleState>(pShaderModule, pCreateInfo, hash,
                                                              SD()._devicestates[device]));
@@ -2405,6 +2392,16 @@ inline void vkResetCommandBuffer_SD(VkResult /* return_value */,
     commandBufferState->temporaryBuffers.clear();
   }
 
+  if (commandBufferState->temporaryDescriptors.size() > 0) {
+    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
+    for (auto& poolState : commandBufferState->temporaryDescriptors) {
+      drvVk.vkDestroyDescriptorPool(poolState->deviceStateStore->deviceHandle,
+                                    poolState->descriptorPoolHandle, nullptr);
+    }
+    commandBufferState->temporaryDescriptors.clear();
+  }
+
   if (Config::Get().IsRecorder()) {
     SD().bindingBuffers[commandBuffer].clear();
     SD().bindingImages[commandBuffer].clear();
@@ -2550,10 +2547,12 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
                     ->commandPoolStateStore->deviceStateStore->deviceHandle;
 
   for (uint32_t acc = 0; acc < infoCount; ++acc) {
-    auto buildInfo = pInfos[acc];
+    // Struct storage data is going to be injected into original structures via pNext
+    // that's why a pointer to original, app-provided structures is needed here.
+    auto* buildInfo = &pInfos[acc];
     auto* pRangeInfos = ppBuildRangeInfos[acc];
     auto& accelerationStructureState =
-        SD()._accelerationstructurekhrstates[buildInfo.dstAccelerationStructure];
+        SD()._accelerationstructurekhrstates[buildInfo->dstAccelerationStructure];
 
     if (isSubcaptureBeforeRestorationPhase()) {
       VkAccelerationStructureBuildSizesInfoKHR buildSizeInfo = {
@@ -2564,31 +2563,33 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
           0  // VkDeviceSize buildScratchSize;
       };
 
-      std::vector<uint32_t> primitivesCount(buildInfo.geometryCount);
+      std::vector<uint32_t> primitivesCount(buildInfo->geometryCount);
 
-      for (uint32_t g = 0; g < buildInfo.geometryCount; ++g) {
+      for (uint32_t g = 0; g < buildInfo->geometryCount; ++g) {
         primitivesCount[g] = pRangeInfos[g].primitiveCount;
       }
 
       drvVk.vkGetAccelerationStructureBuildSizesKHR(
-          device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo,
+          device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, buildInfo,
           primitivesCount.data(), &buildSizeInfo);
       accelerationStructureState->buildSizeInfo = buildSizeInfo;
     }
 
-    buildInfo.scratchData.deviceAddress = 0;
-    if (buildInfo.mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR) {
+    if (buildInfo->mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR) {
+      // Full acceleration structure build
       accelerationStructureState->buildInfo.reset(new CAccelerationStructureKHRState::CBuildInfo(
-          &buildInfo, pRangeInfos, prepareAccelerationStructureControlData(commandBuffer)));
+          buildInfo, pRangeInfos, prepareAccelerationStructureControlData(commandBuffer)));
       accelerationStructureState->updateInfo.reset();
-    } else if (buildInfo.mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR) {
+      accelerationStructureState->copyInfo.reset();
+    } else if (buildInfo->mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR) {
+      // Acceleration structure update (full build info left untouched)
       auto& srcAccelerationStructureState =
-          SD()._accelerationstructurekhrstates[buildInfo.srcAccelerationStructure];
+          SD()._accelerationstructurekhrstates[buildInfo->srcAccelerationStructure];
       accelerationStructureState->updateInfo.reset(new CAccelerationStructureKHRState::CBuildInfo(
-          &buildInfo, pRangeInfos, prepareAccelerationStructureControlData(commandBuffer),
+          buildInfo, pRangeInfos, prepareAccelerationStructureControlData(commandBuffer),
           srcAccelerationStructureState));
+      accelerationStructureState->copyInfo.reset();
     }
-    accelerationStructureState->copyInfo.reset();
   }
 
   if (!(updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
@@ -2630,7 +2631,8 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
           // Index buffer
           addBindingBuffer(trianglesData.indexData.deviceAddress + buildRangeInfo.primitiveOffset);
           // Vertex buffer
-          addBindingBuffer(trianglesData.vertexData.deviceAddress + trianglesData.maxVertex);
+          addBindingBuffer(trianglesData.vertexData.deviceAddress +
+                           std::max(0u, trianglesData.maxVertex - 1) * trianglesData.vertexStride);
         } else {
           // Vertex buffer
           addBindingBuffer(trianglesData.vertexData.deviceAddress + buildRangeInfo.primitiveOffset +
@@ -2679,6 +2681,7 @@ inline void vkCmdCopyAccelerationStructureKHR_SD(VkCommandBuffer commandBuffer,
     dstAccelerationStructureState->updateInfo.reset();
     dstAccelerationStructureState->copyInfo.reset(new CAccelerationStructureKHRState::CCopyInfo(
         pInfo, srcAccelerationStructureState, getCommandExecutionSide(commandBuffer)));
+    dstAccelerationStructureState->buildSizeInfo = srcAccelerationStructureState->buildSizeInfo;
   }
 }
 

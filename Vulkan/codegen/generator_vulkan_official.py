@@ -7927,6 +7927,7 @@ VarDef(name='VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR', value='1000004000'
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_IMAGE_COPY_FEATURES_EXT', value='1000270000'),
 VarDef(name='VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_5_FEATURES_KHR', value='1000470000'),
 # CUSTOM / INTERNAL enum values
+VarDef(name='VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS', value='808600002'),
 VarDef(name='VK_STRUCTURE_TYPE_WIN32_INSTANCE_CREATE_INFO_INTEL', value='808600005'),
 VarDef(name='VK_STRUCTURE_TYPE_WIN32_DEVICE_CREATE_INFO_INTEL', value='808600006'),
 VarDef(name='VK_STRUCTURE_TYPE_WIN32_IMAGE_CREATE_INFO_INTEL', value='808600007'),
@@ -8367,7 +8368,7 @@ var5=VarDef(name='maxY', type='float'),
 var6=VarDef(name='maxZ', type='float')
 )
 
-Struct(name='VkAccelerationStructureBuildGeometryInfoKHR_', enabled=True, declareArray=True, constructorArgs='const VkAccelerationStructureBuildGeometryInfoKHR* accelerationstructurebuildgeometryinfokhr, const VkAccelerationStructureBuildRangeInfoKHR* pBuildRangeInfos, VkAccelerationStructureBuildControlDataGITS controlData',
+Struct(name='VkAccelerationStructureBuildGeometryInfoKHR_', enabled=True, declareArray=True, passStructStorage=True, constructorWrap=True, constructorArgs='const VkAccelerationStructureBuildGeometryInfoKHR* accelerationstructurebuildgeometryinfokhr, const VkAccelerationStructureBuildRangeInfoKHR* pBuildRangeInfos, VkAccelerationStructureBuildControlDataGITS controlData',
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='type', type='VkAccelerationStructureTypeKHR'),
@@ -8376,9 +8377,9 @@ var5=VarDef(name='mode', type='VkBuildAccelerationStructureModeKHR'),
 var6=VarDef(name='srcAccelerationStructure', type='VkAccelerationStructureKHR'),
 var7=VarDef(name='dstAccelerationStructure', type='VkAccelerationStructureKHR'),
 var8=VarDef(name='geometryCount', type='uint32_t'),
-var9=VarDef(name='pGeometries', type='const VkAccelerationStructureGeometryKHR*', wrapType='CVkAccelerationStructureGeometryKHRArray', wrapParams='accelerationstructurebuildgeometryinfokhr->geometryCount, accelerationstructurebuildgeometryinfokhr->pGeometries, pBuildRangeInfos, prepareAccelerationStructureControlData(controlData, accelerationstructurebuildgeometryinfokhr)', count='geometryCount'),
-var10=VarDef(name='ppGeometries', type='const VkAccelerationStructureGeometryKHR* const*', wrapType='CVkAccelerationStructureGeometryKHRArrayOfArrays', wrapParams='accelerationstructurebuildgeometryinfokhr->geometryCount, accelerationstructurebuildgeometryinfokhr->ppGeometries, pBuildRangeInfos, prepareAccelerationStructureControlData(controlData, accelerationstructurebuildgeometryinfokhr)', count='geometryCount'),
-var11=VarDef(name='scratchData', type='VkDeviceOrHostAddressKHR', wrapType='CBufferDeviceAddressObject', wrapParams='/* void */')
+var9=VarDef(name='pGeometries', type='const VkAccelerationStructureGeometryKHR*', wrapType='CVkAccelerationStructureGeometryKHRArray', wrapParams='accelerationstructurebuildgeometryinfokhr->geometryCount, accelerationstructurebuildgeometryinfokhr->pGeometries, pBuildRangeInfos, controlData', count='geometryCount'),
+var10=VarDef(name='ppGeometries', type='const VkAccelerationStructureGeometryKHR* const*', wrapType='CVkAccelerationStructureGeometryKHRArrayOfArrays', wrapParams='accelerationstructurebuildgeometryinfokhr->geometryCount, accelerationstructurebuildgeometryinfokhr->ppGeometries, pBuildRangeInfos, controlData', count='geometryCount'),
+var11=VarDef(name='scratchData', type='VkDeviceOrHostAddressKHR', wrapParams='accelerationstructurebuildgeometryinfokhr->scratchData, controlData')
 )
 
 Struct(name='VkAccelerationStructureBuildRangeInfoKHR_', enabled=True, declareArray=True, declareArrayOfArrays=True,
@@ -8427,10 +8428,10 @@ var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='accelerationStructure', type='VkAccelerationStructureKHR')
 )
 
-Struct(name='VkAccelerationStructureGeometryAabbsDataKHR_', enabled=True, constructorArgs='const VkAccelerationStructureGeometryAabbsDataKHR* accelerationstructuregeometryaabbsdatakhr, const VkAccelerationStructureBuildRangeInfoKHR& buildRangeInfo, const VkAccelerationStructureBuildControlDataGITS& controlData',
+Struct(name='VkAccelerationStructureGeometryAabbsDataKHR_', enabled=True, constructorWrap=True, passStructStorage=True, constructorArgs='const VkAccelerationStructureGeometryAabbsDataKHR* accelerationstructuregeometryaabbsdatakhr, const VkAccelerationStructureBuildRangeInfoKHR& buildRangeInfo, const VkAccelerationStructureBuildControlDataGITS& controlData',
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
-var3=VarDef(name='data', type='VkDeviceOrHostAddressConstKHR', wrapParams='accelerationstructuregeometryaabbsdatakhr->data, buildRangeInfo.primitiveOffset, accelerationstructuregeometryaabbsdatakhr->stride, buildRangeInfo.primitiveCount, prepareAccelerationStructureControlData(controlData, accelerationstructuregeometryaabbsdatakhr->sType)'),
+var3=VarDef(name='data', type='VkDeviceOrHostAddressConstKHR', wrapParams='accelerationstructuregeometryaabbsdatakhr->data, buildRangeInfo.primitiveOffset, accelerationstructuregeometryaabbsdatakhr->stride, buildRangeInfo.primitiveCount, controlData'),
 var4=VarDef(name='stride', type='VkDeviceSize')
 )
 
@@ -8461,16 +8462,16 @@ var2=VarDef(name='aabbs', type='VkAccelerationStructureGeometryAabbsDataKHR'),
 var3=VarDef(name='instances', type='VkAccelerationStructureGeometryInstancesDataKHR'),
 )
 
-Struct(name='VkAccelerationStructureGeometryTrianglesDataKHR_', enabled=True, constructorArgs='const VkAccelerationStructureGeometryTrianglesDataKHR* accelerationstructuregeometrytrianglesdatakhr, const VkAccelerationStructureBuildRangeInfoKHR& buildRangeInfo, const VkAccelerationStructureBuildControlDataGITS& controlData',
+Struct(name='VkAccelerationStructureGeometryTrianglesDataKHR_', enabled=True, constructorWrap=True, passStructStorage=True, constructorArgs='const VkAccelerationStructureGeometryTrianglesDataKHR* accelerationstructuregeometrytrianglesdatakhr, const VkAccelerationStructureBuildRangeInfoKHR& buildRangeInfo, const VkAccelerationStructureBuildControlDataGITS& controlData',
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='vertexFormat', type='VkFormat'),
-var4=VarDef(name='vertexData', type='VkDeviceOrHostAddressConstKHR', wrapType='CDeviceOrHostAddressAccelerationStructureVertexDataGITS', wrapParams='accelerationstructuregeometrytrianglesdatakhr->vertexData, buildRangeInfo.primitiveOffset, accelerationstructuregeometrytrianglesdatakhr->vertexStride, buildRangeInfo.primitiveCount * 3, buildRangeInfo.firstVertex, accelerationstructuregeometrytrianglesdatakhr->maxVertex, accelerationstructuregeometrytrianglesdatakhr->indexData, accelerationstructuregeometrytrianglesdatakhr->indexType, prepareAccelerationStructureControlData(controlData, accelerationstructuregeometrytrianglesdatakhr->sType)'),
+var4=VarDef(name='vertexData', type='VkDeviceOrHostAddressConstKHR', wrapType='CDeviceOrHostAddressAccelerationStructureVertexDataGITS', wrapParams='accelerationstructuregeometrytrianglesdatakhr->vertexData, buildRangeInfo.primitiveOffset, accelerationstructuregeometrytrianglesdatakhr->vertexStride, buildRangeInfo.primitiveCount * 3, buildRangeInfo.firstVertex, accelerationstructuregeometrytrianglesdatakhr->maxVertex, accelerationstructuregeometrytrianglesdatakhr->indexData, accelerationstructuregeometrytrianglesdatakhr->indexType, controlData'),
 var5=VarDef(name='vertexStride', type='VkDeviceSize'),
 var6=VarDef(name='maxVertex', type='uint32_t'),
 var7=VarDef(name='indexType', type='VkIndexType'),
-var8=VarDef(name='indexData', type='VkDeviceOrHostAddressConstKHR', wrapParams='accelerationstructuregeometrytrianglesdatakhr->indexData, buildRangeInfo.primitiveOffset, getIndexElementSize(accelerationstructuregeometrytrianglesdatakhr->indexType), buildRangeInfo.primitiveCount * 3, prepareAccelerationStructureControlData(controlData, accelerationstructuregeometrytrianglesdatakhr->sType)'),
-var9=VarDef(name='transformData', type='VkDeviceOrHostAddressConstKHR', wrapParams='accelerationstructuregeometrytrianglesdatakhr->transformData, buildRangeInfo.transformOffset, sizeof(VkTransformMatrixKHR), 1, prepareAccelerationStructureControlData(controlData, accelerationstructuregeometrytrianglesdatakhr->sType)')
+var8=VarDef(name='indexData', type='VkDeviceOrHostAddressConstKHR', wrapParams='accelerationstructuregeometrytrianglesdatakhr->indexData, buildRangeInfo.primitiveOffset, getIndexElementSize(accelerationstructuregeometrytrianglesdatakhr->indexType), buildRangeInfo.primitiveCount * 3, controlData'),
+var9=VarDef(name='transformData', type='VkDeviceOrHostAddressConstKHR', wrapParams='accelerationstructuregeometrytrianglesdatakhr->transformData, buildRangeInfo.transformOffset, sizeof(VkTransformMatrixKHR), 1, controlData')
 )
 
 Struct(name='VkAccelerationStructureInfoNV_', enabled=False,

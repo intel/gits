@@ -102,6 +102,7 @@ public:
                                    VkPhysicalDevice physicalDevice) const override;
   void SetConfig(Config const& cfg) const override;
   bool IsUseExternalMemoryExtensionUsed() const override;
+  bool IsSubcaptureBeforeRestorationPhase() const override;
 #include "vulkanRecorderWrapperAuto.h"
 };
 } // namespace Vulkan

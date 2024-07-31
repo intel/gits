@@ -7,10 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "vulkanLog.h"
-#include "vulkanTools.h"
-#include "vulkanTools_lite.h"
-#include "vulkanStateDynamic.h"
-#include "vulkanArgumentsAuto.h"
+#include "vulkanStateTracking.h"
 
 template <>
 const char* gits::Vulkan::CVulkanObj<HWND, gits::Vulkan::HWNDTypeTag>::NAME = "HWND";
@@ -617,7 +614,7 @@ gits::Vulkan::CBufferDeviceAddressObject::CBufferDeviceAddressObject(VkDeviceAdd
 }
 
 gits::Vulkan::CBufferDeviceAddressObject::CBufferDeviceAddressObject(
-    gits::Vulkan::CBufferDeviceAddressObjectData& bufferDeviceAddressObject)
+    const gits::Vulkan::CBufferDeviceAddressObjectData& bufferDeviceAddressObject)
     : _deviceAddress(0) {
   _originalDeviceAddress =
       std::make_unique<Cuint64_t>(bufferDeviceAddressObject._originalDeviceAddress);
@@ -647,42 +644,30 @@ std::set<uint64_t> gits::Vulkan::CBufferDeviceAddressObject::GetMappedPointers()
 
 gits::Vulkan::CVkDeviceOrHostAddressConstKHR::CVkDeviceOrHostAddressConstKHR(
     const VkDeviceOrHostAddressConstKHR deviceorhostaddress,
-    uint32_t offset,
-    uint64_t stride,
-    uint32_t count,
-    const VkAccelerationStructureBuildControlDataGITS& controlData) {
-
-  _commandExecutionSideGITS =
-      std::make_unique<CVkCommandExecutionSideGITS>(controlData.executionSide);
-
+    const CVkDeviceOrHostAddressConstKHRData& deviceOrHostAddressData)
+    : _commandExecutionSideGITS(std::make_unique<CVkCommandExecutionSideGITS>(
+          deviceOrHostAddressData._controlData.executionSide)),
+      _bufferDeviceAddress(std::make_unique<CBufferDeviceAddressObject>()),
+      _dataSize(std::make_unique<Csize_t>(0)) {
   if (deviceorhostaddress.deviceAddress == 0) {
-    _bufferDeviceAddress = std::make_unique<CBufferDeviceAddressObject>();
-    _dataSize = std::make_unique<Csize_t>(0);
-    return;
-  }
-
-  auto hash = prepareStateTrackingHash(controlData, deviceorhostaddress.deviceAddress, offset,
-                                       stride, count);
-
-  CVkDeviceOrHostAddressConstKHRData* deviceOrHostAddressData;
-  if (!getStructStorageFromHash(hash, controlData.accelerationStructure,
-                                (void**)(&deviceOrHostAddressData))) {
-    _bufferDeviceAddress = std::make_unique<CBufferDeviceAddressObject>();
-    _dataSize = std::make_unique<Csize_t>(0);
     return;
   }
 
   switch (**_commandExecutionSideGITS) {
   case VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS:
     _bufferDeviceAddress =
-        std::make_unique<CBufferDeviceAddressObject>(deviceOrHostAddressData->_bufferDeviceAddress);
+        std::make_unique<CBufferDeviceAddressObject>(deviceOrHostAddressData._bufferDeviceAddress);
     break;
   case VK_COMMAND_EXECUTION_SIDE_HOST_GITS:
-    _dataSize = std::make_unique<Csize_t>(deviceOrHostAddressData->_dataSize);
-    _data.resize(deviceOrHostAddressData->_dataSize);
-    memcpy(_data.data(), deviceOrHostAddressData->_inputData.data(),
-           deviceOrHostAddressData->_dataSize);
-    _resource = std::make_unique<CDeclaredBinaryResource>(hash);
+    // Host operations are not tested due to lack of applications using them.
+    // Below code will be uncommented as soon as there are any applications
+    // which use host operations.
+
+    //_dataSize = std::make_unique<Csize_t>(deviceOrHostAddressData->_dataSize);
+    //_data.resize(deviceOrHostAddressData->_dataSize);
+    //memcpy(_data.data(), deviceOrHostAddressData->_inputData.data(),
+    //       deviceOrHostAddressData->_dataSize);
+    //_resource = std::make_unique<CDeclaredBinaryResource>(hash);
     break;
   }
 }
@@ -700,16 +685,20 @@ VkDeviceOrHostAddressConstKHR* gits::Vulkan::CVkDeviceOrHostAddressConstKHR::Val
       _DeviceOrHostAddress->deviceAddress = _bufferDeviceAddress->Value();
       break;
     case VK_COMMAND_EXECUTION_SIDE_HOST_GITS:
-      auto dataSize = **_dataSize;
+      // Host operations are not tested due to lack of applications using them.
+      // Below code will be uncommented as soon as there are any applications
+      // which use host operations.
 
-      if (dataSize != 0) {
-        if (_data.size() == 0) {
-          _data.resize(dataSize);
-          memcpy(_data.data(), **_resource, dataSize);
-        }
-      }
-
-      _DeviceOrHostAddress->hostAddress = _data.data();
+      //auto dataSize = **_dataSize;
+      //
+      //if (dataSize != 0) {
+      //  if (_data.size() == 0) {
+      //    _data.resize(dataSize);
+      //    memcpy(_data.data(), **_resource, dataSize);
+      //  }
+      //}
+      //
+      //_DeviceOrHostAddress->hostAddress = _data.data();
       break;
     }
   }
@@ -748,12 +737,16 @@ void gits::Vulkan::CVkDeviceOrHostAddressConstKHR::Write(CBinOStream& stream) co
     break;
   }
   case VK_COMMAND_EXECUTION_SIDE_HOST_GITS:
-    _dataSize->Write(stream);
-    if (**_dataSize) {
-      _resource->Write(stream);
-      CGits::Instance().ResourceManager2().put(RESOURCE_DATA_RAW, _data.data(), **_dataSize,
-                                               _resource->GetResourceHash());
-    }
+    // Host operations are not tested due to lack of applications using them.
+    // Below code will be uncommented as soon as there are any applications
+    // which use host operations.
+
+    //_dataSize->Write(stream);
+    //if (**_dataSize) {
+    //  _resource->Write(stream);
+    //  CGits::Instance().ResourceManager().put(RESOURCE_DATA_RAW, _data.data(), **_dataSize,
+    //                                          _resource->GetResourceHash());
+    //}
     break;
   }
 }
@@ -767,10 +760,107 @@ void gits::Vulkan::CVkDeviceOrHostAddressConstKHR::Read(CBinIStream& stream) {
     break;
   }
   case VK_COMMAND_EXECUTION_SIDE_HOST_GITS:
-    _dataSize->Read(stream);
-    if (**_dataSize) {
-      _resource->Read(stream);
+    // Host operations are not tested due to lack of applications using them.
+    // Below code will be uncommented as soon as there are any applications
+    // which use host operations.
+
+    //_dataSize->Read(stream);
+    //if (**_dataSize) {
+    //  _resource->Read(stream);
+    //}
+    break;
+  }
+}
+
+// CVkDeviceOrHostAddressKHR
+
+gits::Vulkan::CVkDeviceOrHostAddressKHR::CVkDeviceOrHostAddressKHR(
+    const VkDeviceOrHostAddressKHR deviceorhostaddress,
+    const CVkDeviceOrHostAddressKHRData& deviceOrHostAddressData)
+    : _commandExecutionSideGITS(std::make_unique<CVkCommandExecutionSideGITS>(
+          deviceOrHostAddressData._controlData.executionSide)),
+      _bufferDeviceAddress(std::make_unique<CBufferDeviceAddressObject>()) {
+  if (deviceorhostaddress.deviceAddress == 0) {
+    return;
+  }
+
+  switch (**_commandExecutionSideGITS) {
+  case VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS:
+    _bufferDeviceAddress =
+        std::make_unique<CBufferDeviceAddressObject>(deviceOrHostAddressData._bufferDeviceAddress);
+    break;
+  case VK_COMMAND_EXECUTION_SIDE_HOST_GITS:
+    throw std::runtime_error("Ray tracing operations on host are not yet supported!");
+    break;
+  }
+}
+
+VkDeviceOrHostAddressKHR* gits::Vulkan::CVkDeviceOrHostAddressKHR::Value() {
+  if (Config::Get().common.mode != Config::MODE_PLAYER) {
+    throw std::runtime_error(EXCEPTION_MESSAGE);
+  }
+
+  if (!_DeviceOrHostAddress) {
+    _DeviceOrHostAddress = std::make_unique<VkDeviceOrHostAddressKHR>();
+
+    switch (**_commandExecutionSideGITS) {
+    case VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS:
+      _DeviceOrHostAddress->deviceAddress = _bufferDeviceAddress->Value();
+      break;
+    case VK_COMMAND_EXECUTION_SIDE_HOST_GITS:
+      throw std::runtime_error("Ray tracing operations on host are not yet supported!");
+      break;
     }
+  }
+  return _DeviceOrHostAddress.get();
+}
+
+gits::PtrConverter<VkDeviceOrHostAddressKHR> gits::Vulkan::CVkDeviceOrHostAddressKHR::Original() {
+  if (Config::Get().common.mode != Config::MODE_PLAYER) {
+    throw std::runtime_error(EXCEPTION_MESSAGE);
+  }
+
+  if (!_DeviceOrHostAddressOriginal) {
+    _DeviceOrHostAddressOriginal = std::make_unique<VkDeviceOrHostAddressKHR>();
+
+    switch (**_commandExecutionSideGITS) {
+    case VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS: {
+      _DeviceOrHostAddressOriginal->deviceAddress = _bufferDeviceAddress->Original();
+      break;
+    }
+    case VK_COMMAND_EXECUTION_SIDE_HOST_GITS:
+      throw std::runtime_error("Ray tracing operations on host are not yet supported!");
+      break;
+    }
+  }
+
+  return PtrConverter<VkDeviceOrHostAddressKHR>(_DeviceOrHostAddressOriginal.get());
+}
+
+void gits::Vulkan::CVkDeviceOrHostAddressKHR::Write(CBinOStream& stream) const {
+  _commandExecutionSideGITS->Write(stream);
+
+  switch (**_commandExecutionSideGITS) {
+  case VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS: {
+    _bufferDeviceAddress->Write(stream);
+    break;
+  }
+  case VK_COMMAND_EXECUTION_SIDE_HOST_GITS:
+    throw std::runtime_error("Ray tracing operations on host are not yet supported!");
+    break;
+  }
+}
+
+void gits::Vulkan::CVkDeviceOrHostAddressKHR::Read(CBinIStream& stream) {
+  _commandExecutionSideGITS->Read(stream);
+
+  switch (**_commandExecutionSideGITS) {
+  case VK_COMMAND_EXECUTION_SIDE_DEVICE_GITS: {
+    _bufferDeviceAddress->Read(stream);
+    break;
+  }
+  case VK_COMMAND_EXECUTION_SIDE_HOST_GITS:
+    throw std::runtime_error("Ray tracing operations on host are not yet supported!");
     break;
   }
 }
@@ -1024,18 +1114,22 @@ gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHR::
     return;
   }
 
-  auto hash = prepareStateTrackingHash(
-      prepareAccelerationStructureControlData(controlData,
-                                              accelerationstructuregeometryinstancesdatakhr->sType),
-      accelerationstructuregeometryinstancesdatakhr->data.deviceAddress,
-      buildRangeInfo.primitiveOffset, sizeof(VkAccelerationStructureInstanceKHR),
-      buildRangeInfo.primitiveCount);
-
-  CVkAccelerationStructureGeometryInstancesDataKHRData* geometryInstancesData;
-  if (!getStructStorageFromHash(hash, controlData.accelerationStructure,
-                                (void**)(&geometryInstancesData))) {
+  auto* structStoragePointer = (VkStructStoragePointerGITS*)getPNextStructure(
+      accelerationstructuregeometryinstancesdatakhr->pNext,
+      VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS);
+  if (!structStoragePointer || !structStoragePointer->pStructStorage) {
     _isNullPtr = true;
     return;
+  }
+
+  auto* geometryInstancesData =
+      (CVkAccelerationStructureGeometryInstancesDataKHRData*)structStoragePointer->pStructStorage;
+
+  // Revert pNext pointer to the original value (see CVkAccelerationStructureGeometryInstancesDataKHRData() constructor)
+  if (!isSubcaptureBeforeRestorationPhase()) {
+    const_cast<VkAccelerationStructureGeometryInstancesDataKHR*>(
+        accelerationstructuregeometryinstancesdatakhr)
+        ->pNext = structStoragePointer->pNext;
   }
 
   _sType = std::make_unique<CVkStructureType>(accelerationstructuregeometryinstancesdatakhr->sType);

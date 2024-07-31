@@ -137,15 +137,15 @@ public:
                                                                    VkBuffer buffer);
 };
 
-class COnQueueSubmitEnd {
+class COnQueueSubmitEndInterface {
 protected:
-  virtual ~COnQueueSubmitEnd() = 0;
+  virtual ~COnQueueSubmitEndInterface() = 0;
 
 public:
   virtual void OnQueueSubmitEnd() = 0;
 };
 
-class CDeviceAddressPatcher : public COnQueueSubmitEnd {
+class CDeviceAddressPatcher : public COnQueueSubmitEndInterface {
   typedef uint64_t hash_t;
 
   struct InputDataStruct {

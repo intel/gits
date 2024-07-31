@@ -892,7 +892,7 @@ std::set<std::pair<uint64_t, bool>> MemoryAliasingTracker::GetAliasedResourcesFo
   return GetAliasedResourcesForResource(offset, size, {(uint64_t)buffer, false});
 }
 
-COnQueueSubmitEnd::~COnQueueSubmitEnd() {}
+COnQueueSubmitEndInterface::~COnQueueSubmitEndInterface() {}
 
 // Patches value which is found in a memory pointed to by the 'address'.
 void CDeviceAddressPatcher::AddDirectAddress(VkDeviceAddress address) {
@@ -1003,14 +1003,14 @@ void CDeviceAddressPatcher::PrepareData(VkCommandBuffer commandBuffer, hash_t ha
     indirectBaseAddress =
         getBufferDeviceAddress(device, indirectMemoryBufferPair.second->bufferHandle);
 
-    VkMappedMemoryRange range = {
-        VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,              // VkStructureType  sType;
-        nullptr,                                            // const void     * pNext;
-        indirectMemoryBufferPair.first->deviceMemoryHandle, // VkDeviceMemory   memory;
-        0,                                                  // VkDeviceSize     offset;
-        VK_WHOLE_SIZE                                       // VkDeviceSize     size;
-    };
-    drvVk.vkFlushMappedMemoryRanges(device, 1, &range);
+    //VkMappedMemoryRange range = {
+    //    VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,              // VkStructureType  sType;
+    //    nullptr,                                            // const void     * pNext;
+    //    indirectMemoryBufferPair.first->deviceMemoryHandle, // VkDeviceMemory   memory;
+    //    0,                                                  // VkDeviceSize     offset;
+    //    VK_WHOLE_SIZE                                       // VkDeviceSize     size;
+    //};
+    //drvVk.vkFlushMappedMemoryRanges(device, 1, &range);
   }
 
   std::vector<InputDataStruct> inputData;
@@ -1091,14 +1091,11 @@ void CDeviceAddressPatcher::PrepareData(VkCommandBuffer commandBuffer, hash_t ha
 }
 
 void CDeviceAddressPatcher::OnQueueSubmitEnd() {
-  if (_hash == 0) {
+  if (!Count()) {
     return;
   }
 
-  std::vector<OutputDataStruct> outputData;
-  outputData.resize(Count());
-  std::vector<VkBufferDeviceAddressPatchGITS> binaryData;
-  binaryData.reserve(Count());
+  std::vector<OutputDataStruct> outputData(Count());
 
   if (_outputDeviceMemory != VK_NULL_HANDLE) {
     CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
@@ -1110,12 +1107,15 @@ void CDeviceAddressPatcher::OnQueueSubmitEnd() {
         0,                                     // VkDeviceSize      offset;
         VK_WHOLE_SIZE                          // VkDeviceSize      size;
     };
-    drvVk.vkInvalidateMappedMemoryRanges(_device, 1, &range);
+
     void* src;
     drvVk.vkMapMemory(_device, _outputDeviceMemory, 0, VK_WHOLE_SIZE, 0, &src);
+    drvVk.vkInvalidateMappedMemoryRanges(_device, 1, &range);
+
     memcpy(outputData.data(), src, outputData.size() * sizeof(outputData[0]));
   }
 
+  std::vector<VkBufferDeviceAddressPatchGITS> streamData;
   for (auto& element : outputData) {
     // Memory location at which a value must be replaced
     CBufferDeviceAddressObjectData locationData(element.dVA);
@@ -1132,15 +1132,17 @@ void CDeviceAddressPatcher::OnQueueSubmitEnd() {
             reinterpret_cast<void*>(patchedValueData._buffer)),
         patchedValueData._offset};
 
-    binaryData.push_back({location, patchedValue});
+    streamData.push_back({location, patchedValue});
   }
 
-  CGits::Instance().ResourceManager2().put(RESOURCE_DATA_RAW, binaryData.data(),
-                                           binaryData.size() * sizeof(binaryData[0]), _hash);
+  if (_hash != 0) {
+    CGits::Instance().ResourceManager2().put(RESOURCE_DATA_RAW, streamData.data(),
+                                             streamData.size() * sizeof(streamData[0]), _hash);
+    _hash = 0;
+  }
 
   _directAddresses.clear();
   _indirectAddresses.clear();
-  _hash = 0;
 }
 
 uint32_t CDeviceAddressPatcher::Count() const {
