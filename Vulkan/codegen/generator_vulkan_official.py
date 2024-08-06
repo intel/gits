@@ -4139,11 +4139,11 @@ arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pInitializeInfo', type='const VkInitializePerformanceApiInfoINTEL*')
 )
 
-Function(name='vkInvalidateMappedMemoryRanges', enabled=False, type=FuncType.PARAM,
+Function(name='vkInvalidateMappedMemoryRanges', enabled=True, type=FuncType.PARAM,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='memoryRangeCount', type='uint32_t'),
-arg3=ArgDef(name='pMemoryRanges', type='const VkMappedMemoryRange*', count='memoryRangeCount')
+arg3=ArgDef(name='pMemoryRanges', type='const VkMappedMemoryRange*', wrapType='CVkMappedMemoryRangeArray', wrapParams='memoryRangeCount, pMemoryRanges', count='memoryRangeCount')
 )
 
 Function(name='vkMapMemory', enabled=True, type=FuncType.PARAM, runWrap=True, stateTrack=True, recExecWrap=True, ccodeWriteWrap=True,
