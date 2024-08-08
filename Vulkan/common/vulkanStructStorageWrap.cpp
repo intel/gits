@@ -121,7 +121,8 @@ gits::Vulkan::CVkAccelerationStructureBuildGeometryInfoKHRData::
             accelerationstructurebuildgeometryinfokhr,
         const VkAccelerationStructureBuildRangeInfoKHR* pBuildRangeInfos,
         VkAccelerationStructureBuildControlDataGITS controlData)
-    : _AccelerationStructureBuildGeometryInfoKHR(nullptr),
+    : _baseIn(),
+      _AccelerationStructureBuildGeometryInfoKHR(nullptr),
       _isNullPtr(accelerationstructurebuildgeometryinfokhr == nullptr) {
   if (!*_isNullPtr) {
     _sType =
