@@ -364,6 +364,10 @@ bool gits::CBinIStream::ReadCompressed(char* data, uint64_t dataSize) {
       uint64_t chunksNumber = 0;
       ReadHelper(reinterpret_cast<char*>(&chunksNumber), sizeof(chunksNumber));
 
+      if (chunksNumber > size) {
+        throw std::runtime_error(EXCEPTION_MESSAGE);
+      }
+
       for (uint64_t i = 0; i < chunksNumber; ++i) {
         uint64_t currentChunkSize = 0;
         uint64_t currentCompressedChunkSize = 0;
@@ -373,13 +377,17 @@ bool gits::CBinIStream::ReadCompressed(char* data, uint64_t dataSize) {
         ReadHelper(reinterpret_cast<char*>(&currentCompressedChunkSize),
                    sizeof(currentCompressedChunkSize));
 
+        if (currentCompressedChunkSize > _compressedData.size()) {
+          throw std::runtime_error(EXCEPTION_MESSAGE);
+        }
+
         // Read the compressed data for the current chunk
         ReadHelper(_compressedData.data(), currentCompressedChunkSize);
 
         // Decompress the current chunk
         CGits::Instance().GitsStreamCompressor().Decompress(
             _compressedData, currentCompressedChunkSize, currentChunkSize,
-            data + i * _standaloneMaxSize);
+            (char*)data + i * _standaloneMaxSize);
       }
 
       // Reset offset and size after processing all chunks
