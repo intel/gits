@@ -100,6 +100,36 @@ InternalPipelinesManager::InternalPipelines::~InternalPipelines() {
   }
 }
 
+InternalPipelinesManager::InternalPipelines::InternalPipelines(const InternalPipelines& other)
+    : device(other.device),
+      descriptorSetLayoutState(other.descriptorSetLayoutState),
+      pipelineLayout(other.pipelineLayout),
+      prepareDeviceAddressesForPatchingPipeline(other.prepareDeviceAddressesForPatchingPipeline),
+      patchDeviceAddressesPipeline(other.patchDeviceAddressesPipeline),
+      prepareIndirectCopyFor16BitIndexedVerticesPipeline(
+          other.prepareIndirectCopyFor16BitIndexedVerticesPipeline),
+      prepareIndirectCopyFor32BitIndexedVerticesPipeline(
+          other.prepareIndirectCopyFor32BitIndexedVerticesPipeline),
+      performIndirectCopyPipeline(other.performIndirectCopyPipeline) {}
+
+InternalPipelinesManager::InternalPipelines& InternalPipelinesManager::InternalPipelines::operator=(
+    const InternalPipelines& other) {
+  if (this == &other) {
+    return *this;
+  }
+  device = other.device;
+  descriptorSetLayoutState = other.descriptorSetLayoutState;
+  pipelineLayout = other.pipelineLayout;
+  prepareDeviceAddressesForPatchingPipeline = other.prepareDeviceAddressesForPatchingPipeline;
+  patchDeviceAddressesPipeline = other.patchDeviceAddressesPipeline;
+  prepareIndirectCopyFor16BitIndexedVerticesPipeline =
+      other.prepareIndirectCopyFor16BitIndexedVerticesPipeline;
+  prepareIndirectCopyFor32BitIndexedVerticesPipeline =
+      other.prepareIndirectCopyFor32BitIndexedVerticesPipeline;
+  performIndirectCopyPipeline = other.performIndirectCopyPipeline;
+  return *this;
+}
+
 std::shared_ptr<CDescriptorSetLayoutState> InternalPipelinesManager::InternalPipelines::
     getDescriptorSetLayoutState() {
   if (!descriptorSetLayoutState) {

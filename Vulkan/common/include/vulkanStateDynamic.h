@@ -1558,6 +1558,12 @@ struct InternalPipelinesManager {
     InternalPipelines(VkDevice _device);
     ~InternalPipelines();
 
+    // Copy constructor
+    InternalPipelines(const InternalPipelines& other);
+
+    // Copy-assignment operator
+    InternalPipelines& operator=(const InternalPipelines& other);
+
     std::shared_ptr<CDescriptorSetLayoutState> getDescriptorSetLayoutState();
     VkPipelineLayout getLayout();
     VkPipeline getPrepareDeviceAddressesForPatchingPipeline();
