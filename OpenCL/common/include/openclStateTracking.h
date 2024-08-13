@@ -637,6 +637,14 @@ inline void clEnqueueMapBuffer_SD(CFunction* token,
                                   cl_event* event,
                                   cl_int* errcode_ret) {
   RegisterEvents(event, command_queue, errcode_ret);
+  auto& sd = SD();
+  if (return_value != nullptr && sd._memStates.find(buffer) != sd._memStates.end()) {
+    auto& memState = sd.GetMemState(buffer, EXCEPTION_MESSAGE);
+    void* originalPtr = Config::IsPlayer()
+                            ? static_cast<CCLMappedPtr&>(token->Argument(0U)).Original()
+                            : return_value;
+    memState.originalMappedPtrs.push_back(originalPtr);
+  }
 }
 
 inline void clEnqueueMapImage_SD(CFunction* token,
@@ -654,6 +662,14 @@ inline void clEnqueueMapImage_SD(CFunction* token,
                                  cl_event* event,
                                  cl_int* errcode_ret) {
   RegisterEvents(event, command_queue, errcode_ret);
+  auto& sd = SD();
+  if (return_value != nullptr && sd._memStates.find(image) != sd._memStates.end()) {
+    auto& memState = sd.GetMemState(image, EXCEPTION_MESSAGE);
+    void* originalPtr = Config::IsPlayer()
+                            ? static_cast<CCLMappedPtr&>(token->Argument(0U)).Original()
+                            : return_value;
+    memState.originalMappedPtrs.push_back(originalPtr);
+  }
 }
 
 inline void clEnqueueMarker_SD(cl_int return_value,
@@ -1031,12 +1047,34 @@ inline void clReleaseEvent_SD(cl_int return_value, cl_event event) {
 inline void clReleaseMemObject_SD(cl_int return_value, cl_mem memobj) {
   if (memobj != nullptr) {
     const auto& memState = SD().GetMemState(memobj, EXCEPTION_MESSAGE);
-    if (memState.GetRefCount() == 1U && memState.bufferObj != nullptr) {
-      clReleaseMemObject_SD(return_value, memState.bufferObj);
-    }
-    if (memState.GetRefCount() == 1U && memState.image &&
-        memState.image_desc.mem_object != nullptr) {
-      clReleaseMemObject_SD(return_value, memState.image_desc.mem_object);
+    if (memState.GetRefCount() == 1U) {
+      if (memState.bufferObj != nullptr) {
+        clReleaseMemObject_SD(return_value, memState.bufferObj);
+      }
+      if (memState.image && memState.image_desc.mem_object != nullptr) {
+        clReleaseMemObject_SD(return_value, memState.image_desc.mem_object);
+      }
+      // workaround for keeping mapped pointer mapping alive for the same addresses
+      std::map<void*, bool> mappingsToRemove;
+      for (const auto& ptr : memState.originalMappedPtrs) {
+        mappingsToRemove[ptr] = true;
+      }
+      for (const auto& memoryState : SD()._memStates) {
+        if (memoryState.first != memobj) {
+          for (const auto& ptr : memoryState.second->originalMappedPtrs) {
+            for (const auto& mappingPtr : memState.originalMappedPtrs) {
+              if (ptr == mappingPtr) {
+                mappingsToRemove[ptr] = false;
+              }
+            }
+          }
+        }
+      }
+      for (const auto& mapping : mappingsToRemove) {
+        if (mapping.second) {
+          CCLMappedPtr::RemoveMapping(mapping.first);
+        }
+      }
     }
   }
   ReleaseResourceState(SD()._memStates, memobj);

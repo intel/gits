@@ -307,6 +307,7 @@ struct CCLMemState : public CCLState {
     static int cnt;
     return cnt;
   }
+  std::vector<void*> originalMappedPtrs;
 
 public:
   CCLMemState();

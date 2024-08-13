@@ -533,7 +533,7 @@ Function(name='clEnqueueUnmapMemObject',enabled=True,availableFrom='1.0',extensi
 retV=RetDef(type='cl_int'),
 arg1=ArgDef(name='command_queue',type='cl_command_queue'),
 arg2=ArgDef(name='memobj',type='cl_mem'),
-arg3=ArgDef(name='mapped_ptr',type='void*',wrapType='CCLMappedPtr',wrapParams='{name}, false',removeMapping=True),
+arg3=ArgDef(name='mapped_ptr',type='void*',wrapType='CCLMappedPtr',wrapParams='{name}, false'),
 arg4=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
 arg5=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
 arg6=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
