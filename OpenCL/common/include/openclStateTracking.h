@@ -638,7 +638,8 @@ inline void clEnqueueMapBuffer_SD(CFunction* token,
                                   cl_int* errcode_ret) {
   RegisterEvents(event, command_queue, errcode_ret);
   auto& sd = SD();
-  if (return_value != nullptr && sd._memStates.find(buffer) != sd._memStates.end()) {
+  if (token != nullptr && return_value != nullptr &&
+      sd._memStates.find(buffer) != sd._memStates.end()) {
     auto& memState = sd.GetMemState(buffer, EXCEPTION_MESSAGE);
     void* originalPtr = Config::IsPlayer()
                             ? static_cast<CCLMappedPtr&>(token->Argument(0U)).Original()
@@ -663,7 +664,8 @@ inline void clEnqueueMapImage_SD(CFunction* token,
                                  cl_int* errcode_ret) {
   RegisterEvents(event, command_queue, errcode_ret);
   auto& sd = SD();
-  if (return_value != nullptr && sd._memStates.find(image) != sd._memStates.end()) {
+  if (token != nullptr && return_value != nullptr &&
+      sd._memStates.find(image) != sd._memStates.end()) {
     auto& memState = sd.GetMemState(image, EXCEPTION_MESSAGE);
     void* originalPtr = Config::IsPlayer()
                             ? static_cast<CCLMappedPtr&>(token->Argument(0U)).Original()
