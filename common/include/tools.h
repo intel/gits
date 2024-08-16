@@ -587,6 +587,10 @@ public:
   ~SharedLibrary() {
     dl::close_library(handle);
   }
+  SharedLibrary(const SharedLibrary&) = delete;
+  SharedLibrary& operator=(const SharedLibrary&) = delete;
+  SharedLibrary(SharedLibrary&&) = delete;
+  SharedLibrary& operator=(SharedLibrary&&) = delete;
   dl::SharedObject getHandle() const {
     return handle;
   }
