@@ -60,10 +60,10 @@ public:
       const auto tokenBurstLimit = _sched._tokenLimit;
       const auto checkpointSize = _sched._checkpointSize;
 
+      unsigned currentLoadedFrame = 0;
+      bool stopLoading = false;
       for (;;) {
         unsigned loaded = 0;
-        unsigned currentLoadedFrame = 0;
-        bool stopLoading = false;
         uint64_t maxLoaded = std::min((uint64_t)std::numeric_limits<decltype(loaded)>::max(),
                                       (uint64_t)tokenList.max_size());
         while ((loaded < tokenBurstLimit ||
