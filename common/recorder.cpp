@@ -631,6 +631,11 @@ void gits::CRecorder::FrameEnd() {
         inst.TimeSheet().add_frame_time("stamp", inst.Timers().program.Get());
         inst.TimeSheet().add_frame_time("cpu", inst.Timers().frame.Get());
       }
+
+      if (IsMarkedForDeletion()) {
+        Close();
+        return;
+      }
     }
 
     Behavior().OnFrameEnd();
