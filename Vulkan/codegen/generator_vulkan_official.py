@@ -12545,7 +12545,7 @@ var3=VarDef(name='maxMultiviewViewCount', type='uint32_t'),
 var4=VarDef(name='maxMultiviewInstanceIndex', type='uint32_t')
 )
 
-Struct(name='VkPhysicalDeviceMutableDescriptorTypeFeaturesEXT_', enabled=False,
+Struct(name='VkPhysicalDeviceMutableDescriptorTypeFeaturesEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='mutableDescriptorType', type='VkBool32')
@@ -13074,7 +13074,7 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='imageFootprint', type='VkBool32')
 )
 
-Struct(name='VkPhysicalDeviceShaderIntegerDotProductFeatures_', enabled=False,
+Struct(name='VkPhysicalDeviceShaderIntegerDotProductFeatures_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='shaderIntegerDotProduct', type='VkBool32')
