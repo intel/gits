@@ -165,6 +165,8 @@ void gits::Config::SetCommon(const YAML::Node& commonYaml) {
       cfgRecorder.zipTextFiles = false;
       Log(WARN) << "High Integrity mode active - overriding ZipTextFiles to False.";
     }
+    cfgRecorder.compression.type.setFromString("None");
+    Log(WARN) << "High Integrity mode active - disabling compression.";
   }
   if (!cfgRecorder.eventScript.empty()) {
     auto& scriptPath = cfgRecorder.eventScript;
