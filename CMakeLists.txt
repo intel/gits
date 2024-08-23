@@ -10,7 +10,7 @@
 cmake_minimum_required(VERSION 3.13)
 project(gits)
 
-find_package(Python3 COMPONENTS Interpreter)
+find_package(Python3 3.10 REQUIRED COMPONENTS Interpreter)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -29,9 +29,6 @@ endif()
 option(WITH_LEVELZERO "Build LevelZero component" ON)
 if(WITH_LEVELZERO)
   add_definitions(-DWITH_LEVELZERO)
-  if(Python3_VERSION VERSION_LESS "3.6")
-    message(FATAL_ERROR "LevelZero codegen requires Python 3.6+ to work correctly.")
-  endif()
 endif()
 
 execute_process(COMMAND ${Python3_EXECUTABLE} -c "import mako" RESULT_VARIABLE MAKO_IMPORT OUTPUT_QUIET ERROR_QUIET)

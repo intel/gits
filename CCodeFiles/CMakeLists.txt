@@ -8,7 +8,7 @@
 
 cmake_minimum_required(VERSION 3.13)
 project(gits)
-find_package(Python3 COMPONENTS Interpreter)
+find_package(Python3 3.10 REQUIRED COMPONENTS Interpreter)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 set(CMAKE_CXX_STANDARD 17)
