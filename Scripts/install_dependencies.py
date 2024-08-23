@@ -12,6 +12,8 @@ import subprocess
 import sys
 import os
 import re
+from retrying import retry
+import shutil
 from enum import Enum
 from pathlib import Path
 
@@ -67,6 +69,10 @@ class OperatingSystem(Enum):
     LINUX = 2
 
 
+class RetryError(Exception):
+    pass
+
+
 class Repository:
     def __init__(self) -> None:
         self._repository_path = None
@@ -103,7 +109,29 @@ class Repository:
         pass
 
     def cleanup(self):
-        pass
+        if self.repository_path.exists():
+            shutil.rmtree(self.repository_path)
+
+    @retry(stop_max_attempt_number=5, wait_fixed=100000)
+    def execute_with_retry(self, cmd, cwd=None, must_pass=True):
+        logger.info("Running command line: %s", cmd)
+        process = subprocess.run(
+            cmd,
+            cwd=cwd if cwd else self.repository_path,
+            shell=True,
+            stderr=subprocess.PIPE,
+        )
+        if must_pass and process.returncode != 0:
+            logger.error(process.stdout)
+            logger.error(process.stderr)
+        if must_pass:
+            try:
+                process.check_returncode()
+            except subprocess.CalledProcessError as e:
+                self.cleanup()
+                logger.error(e.output)
+                raise RetryError()
+        return process
 
     def execute(self, cmd, cwd=None, must_pass=True):
         logger.info("Running command line: %s", cmd)
@@ -154,7 +182,7 @@ class Repository:
                 clone_cmd.append("-j 8")
             if self.long_paths:
                 clone_cmd.append("-c core.longpaths=true")
-            self.execute(
+            self.execute_with_retry(
                 " ".join(clone_cmd),
                 cwd=self.repository_path.parent,
             )
@@ -189,7 +217,6 @@ class Repository:
             self.apply_patches()
             if install:
                 self.build()
-                self.cleanup()
         except subprocess.CalledProcessError:
             logger.exception("Issue installing repository.")
             return -1
