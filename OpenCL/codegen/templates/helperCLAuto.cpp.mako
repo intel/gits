@@ -6,9 +6,14 @@
 //
 // ===================== end_copyright_notice ==============================
 
+
 #include "helperCL.h"
 
 namespace api {
-#define DEFINE_VARIABLE_OCL_FUNCTION(a, b, c, e, f) a(STDCALL*& b) c = gits::OpenCL::drvOcl.b;
-OCL_FUNCTIONS(DEFINE_VARIABLE_)
+%for name, func in without_field(functions, 'version').items():
+${get_return_type(func)} \
+(STDCALL*& ${name}) \
+(${make_params(func, with_types=True, one_line=True)}) \
+= gits::OpenCL::drvOcl.${name};
+%endfor
 } // namespace api

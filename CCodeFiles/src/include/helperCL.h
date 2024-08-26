@@ -119,6 +119,5 @@ private:
 };
 
 namespace api {
-#define DECLARE_VARIABLE_OCL_FUNCTION(a, b, c, e, f) extern a(STDCALL*& b) c;
-OCL_FUNCTIONS(DECLARE_VARIABLE_)
+#include "helperCLAuto.inl"
 } // namespace api

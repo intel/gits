@@ -61,6 +61,7 @@ FILE(GLOB CCodeProject_SOURCES
   ${PROJECT_SOURCE_DIR}/CCodeSource/log.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/message_pump.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/openclDrivers.cpp
+  ${PROJECT_SOURCE_DIR}/CCodeSource/openclDriversInit.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/openglDrivers.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/openglTools.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/openglCommon.cpp
@@ -86,8 +87,8 @@ FILE(GLOB CCodeProject_SOURCES
   ${PROJECT_SOURCE_DIR}/CCodeSource/vulkanTools_lite.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/main.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/helper.cpp
+  ${PROJECT_SOURCE_DIR}/CCodeSource/helperCLAuto.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/helperGL.cpp
-  ${PROJECT_SOURCE_DIR}/CCodeSource/helperCL.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/helperVk.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/mapping.cpp
   ${L0_CCode_SOURCES}

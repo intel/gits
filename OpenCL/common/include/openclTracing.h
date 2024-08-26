@@ -12,30 +12,8 @@
 
 #include "tools.h"
 
-#include "openclDriversAuto.h"
-
 namespace gits {
 namespace OpenCL {
-#ifndef BUILD_FOR_CCODE
-#define OCL_TYPE(a) extern std::string a##ToString(a);
-OCL_TYPES
-extern std::string CLResultToString(cl_int);
-#undef OCL_TYPE
-#define OCL_TYPE(a)                                                                                \
-  class T##a : public TOclType {                                                                   \
-  private:                                                                                         \
-    a value;                                                                                       \
-                                                                                                   \
-  public:                                                                                          \
-    T##a(a val) : value(val) {}                                                                    \
-    virtual std::string ToString() const {                                                         \
-      return a##ToString(value);                                                                   \
-    }                                                                                              \
-  };
-#else
-#define OCL_TYPE(a) typedef a T##a;
-#endif
-
 class TOclType;
 
 namespace {
@@ -129,18 +107,6 @@ public:
   }
 };
 
-// TCLResult converts cl_int result to string
-class TCLResult : public TOclType {
-private:
-  cl_int value;
-
-public:
-  TCLResult(cl_int val) : value(val) {}
-  virtual std::string ToString() const {
-    return CLResultToString(value);
-  }
-};
-
 // TOclArray represents an array of elements of type Base,
 // with Wrapper providing string representations
 // Wrapper doesn't have to derive from TOclType
@@ -165,8 +131,5 @@ public:
 };
 #endif
 
-// all OCL enums are expanded here to a class derived from TOclBase
-OCL_TYPES
-#undef OCL_TYPE
 } // namespace OpenCL
 } // namespace gits

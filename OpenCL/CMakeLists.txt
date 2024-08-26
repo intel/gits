@@ -14,22 +14,39 @@ set(OpenCL_SCRIPTS_DIR "${CMAKE_SOURCE_DIR}/OpenCL/codegen")
 # as it tries to overwrite currently open files.
 # It also cannot be done with only custom target, because that would always
 # regenerate and rebuild the files, even if source .py files did not change.
+
 add_custom_command(
   OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/OpenCL_codegen.stamp"
-  COMMAND ${Python3_EXECUTABLE} "${OpenCL_SCRIPTS_DIR}/gitsCLFuncsGenerator.py" "${CMAKE_CURRENT_BINARY_DIR}"
+  COMMAND ${Python3_EXECUTABLE} "${OpenCL_SCRIPTS_DIR}/generate.py" "${CMAKE_CURRENT_BINARY_DIR}"
   COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_CURRENT_BINARY_DIR}/OpenCL_codegen.stamp"
   WORKING_DIRECTORY "${OpenCL_SCRIPTS_DIR}"
   DEPENDS
-    "${OpenCL_SCRIPTS_DIR}/cl_constants.py"
-    "${OpenCL_SCRIPTS_DIR}/cl_generator.py"
-    "${OpenCL_SCRIPTS_DIR}/cl_utils.py"
-    "${OpenCL_SCRIPTS_DIR}/gitsCLFuncsGenerator.py"
+    "${OpenCL_SCRIPTS_DIR}/generate.py"
     "${OpenCL_SCRIPTS_DIR}/generator_cl.py"
+    "${OpenCL_SCRIPTS_DIR}/templates/openclDriversAuto.inl.mako"
+    "${OpenCL_SCRIPTS_DIR}/templates/openclDriversInit.cpp.mako"
+    "${OpenCL_SCRIPTS_DIR}/templates/openclArgumentsAuto.h.mako"
+    "${OpenCL_SCRIPTS_DIR}/templates/openclArgumentsAuto.cpp.mako"
+    "${OpenCL_SCRIPTS_DIR}/templates/openclFunctionsAuto.h.mako"
+    "${OpenCL_SCRIPTS_DIR}/templates/openclFunctionsAuto.cpp.mako"
+    "${OpenCL_SCRIPTS_DIR}/templates/openclHeaderAuto.h.mako"
+    "${OpenCL_SCRIPTS_DIR}/templates/openclIDswitch.h.mako"
+    "${OpenCL_SCRIPTS_DIR}/templates/openclPrePostAuto.cpp.mako"
+    "${OpenCL_SCRIPTS_DIR}/templates/openclRecorderWrapperAuto.h.mako"
+    "${OpenCL_SCRIPTS_DIR}/templates/openclRecorderWrapperAuto.cpp.mako"
+    "${OpenCL_SCRIPTS_DIR}/templates/openclRecorderWrapperIfaceAuto.h.mako"
+    "${OpenCL_SCRIPTS_DIR}/templates/openclTracingAuto.h.mako"
+    "${OpenCL_SCRIPTS_DIR}/templates/oclPlugin.def.mako"
+    "${OpenCL_SCRIPTS_DIR}/templates/clconstants.lua.mako"
+    "${OpenCL_SCRIPTS_DIR}/templates/helperCLAuto.inl.mako"
+    "${OpenCL_SCRIPTS_DIR}/templates/helperCLAuto.cpp.mako"
 )
+
 add_custom_target(OpenCL_codegen DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/OpenCL_codegen.stamp")
 set_source_files_properties(
   ${CMAKE_CURRENT_SOURCE_DIR}/common/include/openclIDs.h
-  "openclDriversAuto.h"
+  "openclDriversAuto.inl"
+  "openclDriversInit.cpp"
   "openclArgumentsAuto.h"
   "openclArgumentsAuto.cpp"
   "openclFunctionsAuto.h"
@@ -40,6 +57,7 @@ set_source_files_properties(
   "openclRecorderWrapperAuto.h"
   "openclRecorderWrapperAuto.cpp"
   "openclRecorderWrapperIfaceAuto.h"
+  "openclTracingAuto.h"
   PROPERTIES GENERATED 1
 )
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -49,8 +67,11 @@ add_library(OpenCL_common
   common/include/oglTypes.h
   common/include/openclArguments.h
   ${CMAKE_CURRENT_BINARY_DIR}/openclArgumentsAuto.h
+  common/include/openclArgumentsHelper.h
+  ${CMAKE_CURRENT_BINARY_DIR}/openclDriversAuto.inl
   common/include/openclDrivers.h
-  ${CMAKE_CURRENT_BINARY_DIR}/openclDriversAuto.h
+  ${CMAKE_CURRENT_BINARY_DIR}/openclDriversInit.cpp
+  common/include/openclDriversHelper.h
   ${CMAKE_CURRENT_BINARY_DIR}/openclFunctionsAuto.h
   common/include/openclHeader.h
   ${CMAKE_CURRENT_BINARY_DIR}/openclHeaderAuto.h
@@ -145,14 +166,19 @@ install(TARGETS OpenCL_interceptor
   LIBRARY DESTINATION Recorder/${OpenCL_INSTALL_SUBDIR})
 
 set(OpenCL_CCode_SOURCES
-  common/openclDrivers.cpp)
+  common/openclDrivers.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/helperCLAuto.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/openclDriversInit.cpp)
 
 set(OpenCL_CCode_HEADERS
   common/include/openclTracing.h
   common/include/openclDrivers.h
-  ${CMAKE_CURRENT_BINARY_DIR}/openclDriversAuto.h
+  common/include/openclDriversHelper.h
   common/include/openclHeader.h
-  ${CMAKE_CURRENT_BINARY_DIR}/openclHeaderAuto.h)
+  ${CMAKE_CURRENT_BINARY_DIR}/openclTracingAuto.h
+  ${CMAKE_CURRENT_BINARY_DIR}/openclHeaderAuto.h
+  ${CMAKE_CURRENT_BINARY_DIR}/openclDriversAuto.inl
+  ${CMAKE_CURRENT_BINARY_DIR}/helperCLAuto.inl)
 
 install(FILES ${OpenCL_CCode_SOURCES} DESTINATION CCode/CCodeSource)
 install(FILES ${OpenCL_CCode_HEADERS} DESTINATION CCode/CCodeSource/include)

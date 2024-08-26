@@ -14,7 +14,6 @@
 #include "tools.h"
 #include "dynamic_linker.h"
 
-#include "openclDriversAuto.h"
 #ifndef BUILD_FOR_CCODE
 #include "openclTools.h"
 #endif
@@ -28,11 +27,6 @@ typedef struct void_type_tag {
 namespace gits {
 namespace OpenCL {
 
-#define OCL_FUNCTION(a, b, c, d, e, f) a##OCL_FUNCTION(b, c, d, e, f)
-#define DECLARE_PTR_OCL_FUNCTION(a, b, c, e, f)                                                    \
-  a(STDCALL* b) c = nullptr;                                                                       \
-  a(STDCALL* orig_##b) c = nullptr;
-
 class COclDriver {
 public:
   COclDriver();
@@ -43,13 +37,12 @@ public:
   dl::SharedObject Library() const {
     return _lib->getHandle();
   }
-  OCL_FUNCTIONS(DECLARE_PTR_)
+#include "openclDriversAuto.inl"
 
 private:
   bool _initialized = false;
   std::unique_ptr<SharedLibrary> _lib;
 };
-#undef DECLARE_PTR_OCL_FUNCTION
 
 extern COclDriver drvOcl WEAK;
 } // namespace OpenCL

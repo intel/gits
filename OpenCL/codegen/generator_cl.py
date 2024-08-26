@@ -58,7 +58,7 @@ arg2=ArgDef(name='num_devices',type='cl_uint'),
 arg3=ArgDef(name='device_list',type='const cl_device_id*',wrapParams='num_devices, {name}'),
 arg4=ArgDef(name='options',type='const char*',wrapType='CBuildOptions',wrapParams='{name}, SD().GetProgramState(program, EXCEPTION_MESSAGE).HasHeaders()'),
 arg5=ArgDef(name='pfn_notify',type='CallbackProgram'),
-arg6=ArgDef(name='user_data',type='void*')
+arg6=ArgDef(name='user_data',type='void*',wrapType='CCLUserData')
 )
 
 Function(name='clCreateBuffer',enabled=True,availableFrom='1.0',extension=False,type=Creator,stateTrack=True,recExecWrap=True,runWrap=True,recWrap=True,
@@ -95,7 +95,7 @@ arg1=ArgDef(name='properties',type='const cl_context_properties*',wrapParams='{n
 arg2=ArgDef(name='num_devices',type='cl_uint'),
 arg3=ArgDef(name='devices',type='const cl_device_id*',wrapParams='num_devices, {name}'),
 arg4=ArgDef(name='pfn_notify',type='CallbackContext'),
-arg5=ArgDef(name='user_data',type='void*'),
+arg5=ArgDef(name='user_data',type='void*',wrapType='CCLUserData'),
 arg6=ArgDef(name='errcode_ret',type='cl_int*')
 )
 
@@ -105,7 +105,7 @@ retV=RetDef(type='cl_context'),
 arg1=ArgDef(name='properties',type='const cl_context_properties*',wrapParams='{name}, 0, 2'),
 arg2=ArgDef(name='device_type',type='cl_device_type'),
 arg3=ArgDef(name='pfn_notify',type='CallbackContext'),
-arg4=ArgDef(name='user_data',type='void*'),
+arg4=ArgDef(name='user_data',type='void*',wrapType='CCLUserData'),
 arg5=ArgDef(name='errcode_ret',type='cl_int*')
 )
 
@@ -923,7 +923,7 @@ retV=RetDef(type='cl_int'),
 arg1=ArgDef(name='event',type='cl_event'),
 arg2=ArgDef(name='command_exec_callback_type',type='cl_int'),
 arg3=ArgDef(name='pfn_notify',type='CallbackEvent'),
-arg4=ArgDef(name='user_data',type='void*')
+arg4=ArgDef(name='user_data',type='void*',wrapType='CCLUserData')
 )
 
 Function(name='clSetCommandQueueProperty',enabled=True,availableFrom='1.0.DEPRECATED',extension=False,type=Set,
@@ -961,7 +961,7 @@ Function(name='clSetMemObjectDestructorCallback',enabled=True,availableFrom='1.1
 retV=RetDef(type='cl_int'),
 arg1=ArgDef(name='memobj',type='cl_mem'),
 arg2=ArgDef(name='pfn_notify',type='CallbackMem'),
-arg3=ArgDef(name='user_data',type='void*')
+arg3=ArgDef(name='user_data',type='void*',wrapType='CCLUserData')
 )
 
 Function(name='clSetUserEventStatus',enabled=True,availableFrom='1.1',extension=False,type=Set,
@@ -1182,7 +1182,7 @@ arg5=ArgDef(name='num_input_headers',type='cl_uint'),
 arg6=ArgDef(name='input_headers',type='const cl_program*',wrapParams='num_input_headers, {name}'),
 arg7=ArgDef(name='header_include_names',type='const char**',wrapType='CStringArray',wrapParams='num_input_headers, {name}'),
 arg8=ArgDef(name='pfn_notify',type='CallbackProgram'),
-arg9=ArgDef(name='user_data',type='void*')
+arg9=ArgDef(name='user_data',type='void*',wrapType='CCLUserData')
 )
 
 Function(name='clCreateProgramWithBuiltInKernels',enabled=True,availableFrom='1.2',extension=False,type=Creator,stateTrack=True,
@@ -1289,7 +1289,7 @@ arg4=ArgDef(name='options',type='const char*'),
 arg5=ArgDef(name='num_input_programs',type='cl_uint'),
 arg6=ArgDef(name='input_programs',type='const cl_program*',wrapParams='num_input_programs, {name}'),
 arg7=ArgDef(name='pfn_notify',type='CallbackProgram'),
-arg8=ArgDef(name='user_data',type='void*'),
+arg8=ArgDef(name='user_data',type='void*',wrapType='CCLUserData'),
 arg9=ArgDef(name='errcode_ret',type='cl_int*')
 )
 
@@ -1333,7 +1333,7 @@ arg1=ArgDef(name='command_queue',type='cl_command_queue'),
 arg2=ArgDef(name='num_svm_pointers',type='cl_uint'),
 arg3=ArgDef(name='svm_pointers',type='void**',wrapType='CCLMappedPtr::CSArray',wrapParams='num_svm_pointers, {name}',removeMapping=True),
 arg4=ArgDef(name='pfn_free_func',type='CallbackSVM'),
-arg5=ArgDef(name='user_data',type='void*'),
+arg5=ArgDef(name='user_data',type='void*',wrapType='CCLUserData'),
 arg6=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
 arg7=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
 arg8=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
