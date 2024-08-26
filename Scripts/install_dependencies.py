@@ -243,7 +243,7 @@ class MurmurHash(Repository):
 
 class Zlib(Repository):
     def set_branch(self):
-        self.branch = "v1.3"
+        self.branch = "v1.3.1"
 
     def init(self):
         self.name = "zlib"
