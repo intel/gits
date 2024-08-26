@@ -307,7 +307,7 @@ class NlohmannJson(Repository):
 
 class lz4(Repository):
     def set_branch(self):
-        self.branch = "v1.9.4"
+        self.branch = "v1.10.0"
 
     def init(self):
         self.name = "lz4"
