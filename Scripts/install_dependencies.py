@@ -252,7 +252,7 @@ class Zlib(Repository):
 
 class LibPng(Repository):
     def set_branch(self):
-        self.branch = "v1.6.40"
+        self.branch = "v1.6.43"
 
     def init(self):
         self.name = "libpng"
