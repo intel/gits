@@ -48,6 +48,7 @@ class Argument:
 
     name: str
     type: str
+    count: str | None = None
     wrap_type: str | None = None
     wrap_params: str | None = None
     remove_mapping: bool = False
@@ -60,6 +61,7 @@ class ReturnValue(Argument):
     # Only `type` is being used, hardcode the rest.
     name: str = field(init=False, default='return_value')
     type: str
+    count: str | None = field(init=False, default=None)
     wrap_type: str | None = field(init=False, default=None)
     wrap_params: str | None = field(init=False, default=None)
     remove_mapping: bool = field(init=False, default=False)
@@ -174,6 +176,7 @@ def _rename_keys(dictionary: dict) -> dict:
         ('constructorWrap', 'constructor_wrap'),
         ('declarationNeededWrap', 'declaration_needed_wrap'),
         ('passStructStorage', 'pass_struct_storage'),
+        ('removeMapping', 'remove_mapping'),
     ]
 
     for old, new in replacements:
@@ -219,10 +222,10 @@ def Struct(**kwargs):
     _structs_table.append(VkStruct(**_preprocess_kwargs(kwargs)))
 
 def ArgDef(**kwargs):
-    return kwargs
+    return Argument(**_rename_keys(kwargs))
 
 def RetDef(**kwargs):
-    return kwargs
+    return ReturnValue(**_rename_keys(kwargs))
 
 def VarDef(**kwargs):
     if 'value' in kwargs and 'type' in kwargs:

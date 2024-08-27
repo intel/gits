@@ -2304,12 +2304,12 @@ for f in functions:
     function['inheritName'] = inherit_name
     for g in functions:
       if g.get('name') == inherit_name:
-        if g.get('retV'):
-          function['type'] = g.get('retV').get('type')
-          if g.get('retV').get('wrapType'):
-            function['retVwrapType'] = g.get('retV').get('wrapType')
-          if g.get('retV').get('wrapParams'):
-            function['retVwrapParams'] = g.get('retV').get('wrapParams')
+        if retval := g.get('retV'):
+          function['type'] = retval.type
+          if retval.wrap_type:
+            function['retVwrapType'] = retval.wrap_type
+          if retval.wrap_params:
+            function['retVwrapParams'] = retval.wrap_params
         if g.get('type'):
           function['functionType'] = g.get('type')
         if g.get('custom'):
@@ -2319,20 +2319,18 @@ for f in functions:
         if g.get('tokenCache'):
           function['tokenCache'] = g.get('tokenCache')
         i = 1
-        while g.get('arg'+str(i)):
+        while inherited_arg := g.get('arg'+str(i)):
           arg = {}
-          arg['type'] = g.get('arg'+str(i)).get('type')
-          arg['name'] = g.get('arg'+str(i)).get('name')
-          if g.get('arg'+str(i)).get('wrapType'):
-            arg['wrapType'] = g.get('arg'+str(i)).get('wrapType')
-          if g.get('arg'+str(i)).get('wrapParams'):
-            arg['wrapParams'] = g.get('arg'+str(i)).get('wrapParams')
-          if g.get('arg'+str(i)).get('logCondition'):
-            arg['logCondition'] = g.get('arg'+str(i)).get('logCondition')
-          if g.get('arg'+str(i)).get('count'):
-            arg['count'] = g.get('arg'+str(i)).get('count')
-          if g.get('arg'+str(i)).get('removeMapping'):
-            arg['removeMapping'] = g.get('arg'+str(i)).get('removeMapping')
+          arg['type'] = inherited_arg.type
+          arg['name'] = inherited_arg.name
+          if inherited_arg.wrap_type:
+            arg['wrapType'] = inherited_arg.wrap_type
+          if inherited_arg.wrap_params:
+            arg['wrapParams'] = inherited_arg.wrap_params
+          if inherited_arg.count:
+            arg['count'] = inherited_arg.count
+          if inherited_arg.remove_mapping:
+            arg['removeMapping'] = inherited_arg.remove_mapping
           function['args'].append(arg)
           i += 1
         if g.get('preToken') is not None:
@@ -2376,12 +2374,12 @@ for f in functions:
           function['level'] = g.get('level')
         if g.get('customDriver') is not None:
           function['customDriver'] = True
-  if f.get('retV'):
-    function['type'] = f.get('retV').get('type')
-    if f.get('retV').get('wrapType'):
-      function['retVwrapType'] = f.get('retV').get('wrapType')
-    if f.get('retV').get('wrapParams'):
-      function['retVwrapParams'] = f.get('retV').get('wrapParams')
+  if retval := f.get('retV'):
+    function['type'] = retval.type
+    if retval.wrap_type:
+      function['retVwrapType'] = retval.wrap_type
+    if retval.wrap_params:
+      function['retVwrapParams'] = retval.wrap_params
   if f.get('type'):
     function['functionType'] = f.get('type')
   if f.get('custom'):
@@ -2393,20 +2391,18 @@ for f in functions:
   i = 1
 
   while f.get('arg'+str(i)) or (i <= len(function['args'])):
-    if f.get('arg'+str(i)):
+    if other_arg := f.get('arg'+str(i)):
       arg = {}
-      arg['type'] = f.get('arg'+str(i)).get('type')
-      arg['name'] = f.get('arg'+str(i)).get('name')
-      if f.get('arg'+str(i)).get('wrapType'):
-        arg['wrapType'] = f.get('arg'+str(i)).get('wrapType')
-      if f.get('arg'+str(i)).get('wrapParams'):
-        arg['wrapParams'] = f.get('arg'+str(i)).get('wrapParams')
-      if f.get('arg'+str(i)).get('count'):
-        arg['count'] = f.get('arg'+str(i)).get('count')
-      if f.get('arg'+str(i)).get('logCondition'):
-        arg['logCondition'] = f.get('arg'+str(i)).get('logCondition')
-      if f.get('arg'+str(i)).get('removeMapping'):
-        arg['removeMapping'] = f.get('arg'+str(i)).get('removeMapping')
+      arg['type'] = other_arg.type
+      arg['name'] = other_arg.name
+      if other_arg.wrap_type:
+        arg['wrapType'] = other_arg.wrap_type
+      if other_arg.wrap_params:
+        arg['wrapParams'] = other_arg.wrap_params
+      if other_arg.count:
+        arg['count'] = other_arg.count
+      if other_arg.remove_mapping:
+        arg['removeMapping'] = other_arg.remove_mapping
       if i <= len(function['args']):
         function['args'][i-1] = arg
       else:
