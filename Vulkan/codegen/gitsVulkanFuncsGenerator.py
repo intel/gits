@@ -2269,18 +2269,18 @@ for s in structs:
     struct['version'] = 0
   struct['vars'] = []
   i = 1
-  while s.get('var'+str(i)):
+  while field := s.get('var'+str(i)):
     var = {}
-    var['name'] = s.get('var'+str(i)).get('name')
-    var['type'] = s.get('var'+str(i)).get('type')
-    if(s.get('var'+str(i)).get('wrapType')):
-      var['wrapType'] = s.get('var'+str(i)).get('wrapType')
-    if(s.get('var'+str(i)).get('wrapParams')):
-      var['wrapParams'] = s.get('var'+str(i)).get('wrapParams')
-    if(s.get('var'+str(i)).get('count')):
-      var['count'] = s.get('var'+str(i)).get('count')
-    if(s.get('var'+str(i)).get('logCondition')):
-      var['logCondition'] = s.get('var'+str(i)).get('logCondition')
+    var['name'] = field.name
+    var['type'] = field.type
+    if(field.wrap_type is not None):
+      var['wrapType'] = field.wrap_type
+    if(field.wrap_params is not None):
+      var['wrapParams'] = field.wrap_params
+    if(field.count is not None):
+      var['count'] = field.count
+    if(field.log_condition is not None):
+      var['logCondition'] = field.log_condition
     struct['vars'].append(var)
     i += 1
   if structs_table.get(s.get('name')) is None:

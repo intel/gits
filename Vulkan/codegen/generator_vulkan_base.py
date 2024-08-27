@@ -142,6 +142,7 @@ _enums_dict: dict[str, VkEnum] = {}
 functions_table = []
 structs_table = []
 
+
 def _merge_enums(a: VkEnum, b: VkEnum) -> VkEnum:
     """Take two VkEnums different only in enumerators and create one with merged enumerators."""
     if a.name != b.name:
@@ -153,6 +154,25 @@ def _merge_enums(a: VkEnum, b: VkEnum) -> VkEnum:
     merged_enumerators = a.enumerators[:-1] + b.enumerators + [a.enumerators[-1]]
 
     return VkEnum(name=a.name, size=a.size, enumerators=merged_enumerators)
+
+
+def _replace_key(dictionary: dict, old_key, new_key) -> None:
+    """Replaces the key if present in the dict."""
+    if old_key in dictionary:
+        dictionary[new_key] = dictionary.pop(old_key)
+
+def _rename_keys(dictionary: dict) -> dict:
+    """Rename keys in kwargs to match classes, e.g., 'wrapType' -> 'wrap_type'."""
+    replacements: list[tuple[str, str]] = [
+        ('wrapType', 'wrap_type'),
+        ('wrapParams', 'wrap_params'),
+        ('logCondition', 'log_condition'),
+    ]
+
+    for old, new in replacements:
+        _replace_key(dictionary, old, new)
+
+    return dictionary
 
 
 def Enum(**kwargs):
@@ -181,8 +201,7 @@ def VarDef(**kwargs):
     elif 'value' in kwargs:
         return Enumerator(**kwargs)
     elif 'type' in kwargs:
-        return kwargs  # TODO: Transition to returning Field.
-        # return Field(**kwargs)
+        return Field(**_rename_keys(kwargs))
     else:
         raise ValueError(f"VarDef is missing both value and type arguments: {kwargs}")
 
