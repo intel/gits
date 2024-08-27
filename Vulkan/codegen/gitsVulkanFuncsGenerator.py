@@ -183,8 +183,8 @@ for enum in GetEnums():
   vulkan_enums.append(enum.name)
 
 vulkan_structs = []
-for enum in structs_table:
-  vulkan_structs.append(enum['name'].rstrip('_'))
+for struct in GetStructs():
+  vulkan_structs.append(struct.name.rstrip('_'))
 
 primitive_types = vulkan_enums + vulkan_uint32 + vulkan_uint64 + vulkan_union + vulkan_other_primitives
 
@@ -2244,32 +2244,31 @@ for e in enums:
 
 for s in structs:
   struct = {}
-  struct['enabled'] = s.get('enabled')
-  if s.get('name').strip('_') not in structs_names:
-    structs_names.append(s.get('name').strip('_'))
-  if (s.get('type')):
-    struct['type'] = s.get('type')
-  if (s.get('custom')):
-    struct['custom'] = s.get('custom')
-  if (s.get('constructorWrap')):
-    struct['constructorWrap'] = s.get('constructorWrap')
-  if (s.get('passStructStorage')):
-    struct['passStructStorage'] = s.get('passStructStorage')
-  if (s.get('declarationNeededWrap')):
-    struct['declarationNeededWrap'] = s.get('declarationNeededWrap')
-  if (s.get('constructorArgs')):
-    struct['constructorArgs'] = s.get('constructorArgs')
-  if (s.get('declareArray')):
-    struct['declareArray'] = s.get('declareArray')
-  if (s.get('declareArrayOfArrays')):
-    struct['declareArrayOfArrays'] = s.get('declareArrayOfArrays')
-  if (s.get('version')):
-    struct['version'] = s.get('version')
+  struct['enabled'] = s.enabled
+  if s.name.strip('_') not in structs_names:
+    structs_names.append(s.name.strip('_'))
+  if (s.type):
+    struct['type'] = s.type
+  if (s.custom):
+    struct['custom'] = s.custom
+  if (s.constructor_wrap):
+    struct['constructorWrap'] = s.constructor_wrap
+  if (s.pass_struct_storage):
+    struct['passStructStorage'] = s.pass_struct_storage
+  if (s.declaration_needed_wrap):
+    struct['declarationNeededWrap'] = s.declaration_needed_wrap
+  if (s.constructor_arguments):
+    struct['constructorArgs'] = s.constructor_arguments
+  if (s.declare_array):
+    struct['declareArray'] = s.declare_array
+  if (s.declare_array_of_arrays):
+    struct['declareArrayOfArrays'] = s.declare_array_of_arrays
+  if (s.version):
+    struct['version'] = s.version
   else:
     struct['version'] = 0
   struct['vars'] = []
-  i = 1
-  while field := s.get('var'+str(i)):
+  for field in s.fields:
     var = {}
     var['name'] = field.name
     var['type'] = field.type
@@ -2282,14 +2281,13 @@ for s in structs:
     if(field.log_condition is not None):
       var['logCondition'] = field.log_condition
     struct['vars'].append(var)
-    i += 1
-  if structs_table.get(s.get('name')) is None:
-    structs_table[s.get('name')] = []
-  structs_table[s.get('name')].append(struct)
-  if (structs_enabled_table.get(s.get('name')) is None) and (struct['enabled'] is True):
-    structs_enabled_table[s.get('name')] = []
+  if structs_table.get(s.name) is None:
+    structs_table[s.name] = []
+  structs_table[s.name].append(struct)
+  if (structs_enabled_table.get(s.name) is None) and (struct['enabled'] is True):
+    structs_enabled_table[s.name] = []
   if struct['enabled'] is True:
-    structs_enabled_table[s.get('name')].append(struct)
+    structs_enabled_table[s.name].append(struct)
 
 for f in functions:
   function = {}

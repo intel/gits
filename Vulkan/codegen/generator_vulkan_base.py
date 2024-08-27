@@ -11,6 +11,7 @@
 import enum
 from dataclasses import dataclass, field
 from enum import IntFlag
+from typing import Any
 
 # TODO: use `@verify(NAMED_FLAGS)` when Python 3.11 becomes available.
 class FuncType(IntFlag):
@@ -140,7 +141,7 @@ class VkEnum:  # TODO: Remove the "Vk" prefix here and in VkStruct when Enum is 
 
 _enums_dict: dict[str, VkEnum] = {}
 functions_table = []
-structs_table = []
+_structs_table: list[VkStruct] = []
 
 
 def _merge_enums(a: VkEnum, b: VkEnum) -> VkEnum:
@@ -167,12 +168,40 @@ def _rename_keys(dictionary: dict) -> dict:
         ('wrapType', 'wrap_type'),
         ('wrapParams', 'wrap_params'),
         ('logCondition', 'log_condition'),
+        ('declareArray', 'declare_array'),
+        ('declareArrayOfArrays', 'declare_array_of_arrays'),
+        ('constructorArgs', 'constructor_arguments'),
+        ('constructorWrap', 'constructor_wrap'),
+        ('declarationNeededWrap', 'declaration_needed_wrap'),
+        ('passStructStorage', 'pass_struct_storage'),
     ]
 
     for old, new in replacements:
         _replace_key(dictionary, old, new)
 
     return dictionary
+
+def _gather_list(dictionary: dict[str, Any], *, prefix: str, list_name: str) -> dict:
+    """Collect loose, numbered keys into a list."""
+    if dictionary.get(list_name):
+        raise RuntimeError(
+            f"`{list_name}` list already present, did you call this function twice?")
+
+    elems: list[Argument | Field] = []
+    for i in range(1, 10000):
+        elem = f'{prefix}{i}'
+        if elem in dictionary:
+            elems.append(dictionary.pop(elem))
+        else:
+            break
+    dictionary[list_name] = elems
+
+    return dictionary
+
+def _preprocess_kwargs(dictionary: dict) -> dict:
+    """Change kwargs to be suitable as dataclass constructor arguments."""
+    renamed: dict = _rename_keys(dictionary)
+    return _gather_list(renamed, prefix='var', list_name='fields')
 
 
 def Enum(**kwargs):
@@ -187,7 +216,7 @@ def Function(**kwargs):
     functions_table.append(kwargs)
 
 def Struct(**kwargs):
-    structs_table.append(kwargs)
+    _structs_table.append(VkStruct(**_preprocess_kwargs(kwargs)))
 
 def ArgDef(**kwargs):
     return kwargs
@@ -212,4 +241,4 @@ def GetFunctions():
     return functions_table
 
 def GetStructs():
-    return structs_table
+    return _structs_table
