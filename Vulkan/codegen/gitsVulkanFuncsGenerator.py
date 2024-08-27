@@ -179,11 +179,11 @@ vulkan_other_primitives = [
 ]
 
 vulkan_enums = []
-for enum in GetEnums():
+for enum in get_enums():
   vulkan_enums.append(enum.name)
 
 vulkan_structs = []
-for struct in GetStructs():
+for struct in get_structs():
   vulkan_structs.append(struct.name.rstrip('_'))
 
 primitive_types = vulkan_enums + vulkan_uint32 + vulkan_uint64 + vulkan_union + vulkan_other_primitives
@@ -2211,9 +2211,9 @@ namespace Vulkan {
   arguments_h.write(arguments_h_end)
 
 
-enums = GetEnums()
-functions = GetFunctions()
-structs = GetStructs()
+enums = get_enums()
+functions = get_functions()
+structs = get_structs()
 
 enums_table = {}  # TODO: It's a dict, not a table; rename it.
 structs_table = {}

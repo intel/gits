@@ -254,11 +254,11 @@ def VarDef(**kwargs):
     else:
         raise ValueError(f"VarDef is missing both value and type arguments: {kwargs}")
 
-def GetEnums():
+def get_enums():
     return _enums_dict.values()
 
-def GetFunctions():
+def get_functions():
     return _functions_table
 
-def GetStructs():
+def get_structs():
     return _structs_table
