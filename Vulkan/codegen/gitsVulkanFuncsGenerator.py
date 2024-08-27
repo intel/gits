@@ -179,8 +179,8 @@ vulkan_other_primitives = [
 ]
 
 vulkan_enums = []
-for enum in enums_table:
-  vulkan_enums.append(enum['name'])
+for enum in GetEnums():
+  vulkan_enums.append(enum.name)
 
 vulkan_structs = []
 for enum in structs_table:
@@ -1401,7 +1401,7 @@ namespace gits {
           argInfos += '{ gits::Vulkan::ArgType::'
           if undecorate(typename) in opaque_handles:
             argInfos += 'OPAQUE_HANDLE'
-          elif undecorate(typename) in enums_table:
+          elif undecorate(typename) in vulkan_enums: # TODO: We are looking for a str in list[str], so it works, right?
             argInfos += 'ENUM'
           elif undecorate(typename) in primitive_types:
             argInfos += 'PRIMITIVE_TYPE'
@@ -2222,7 +2222,7 @@ enums = GetEnums()
 functions = GetFunctions()
 structs = GetStructs()
 
-enums_table = {}
+enums_table = {}  # TODO: It's a dict, not a table; rename it.
 structs_table = {}
 structs_enabled_table = {}
 functions_all_table = {}
@@ -2230,21 +2230,17 @@ functions_enabled_table = {}
 
 for e in enums:
   enum = {}
-  enum['vars'] = []
-  enum['size'] = 32
-  if e.get('size') is not None:
-    enum['size'] = int(e.get('size'))
-  i = 1
+  enum['size'] = e.size
 
-  for enumerator in e.get('enumerators'):
+  enum['vars'] = []
+  for enumerator in e.enumerators:
     var = {}
-    var['name'] = enumerator.get('name')
-    var['value'] = enumerator.get('value')
+    var['name'] = enumerator.name
+    var['value'] = enumerator.value
     enum['vars'].append(var)
-    i += 1
-  if enums_table.get(e.get('name')) is None:
-    enums_table[e.get('name')] = []
-  enums_table[e.get('name')].append(enum)
+  if enums_table.get(e.name) is None:
+    enums_table[e.name] = []
+  enums_table[e.name].append(enum)
 
 for s in structs:
   struct = {}

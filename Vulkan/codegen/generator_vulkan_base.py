@@ -138,39 +138,59 @@ class VkEnum:  # TODO: Remove the "Vk" prefix here and in VkStruct when Enum is 
     enumerators: list[Enumerator]
 
 
-enums_table = []
+_enums_dict: dict[str, VkEnum] = {}
 functions_table = []
 structs_table = []
 
+def _merge_enums(a: VkEnum, b: VkEnum) -> VkEnum:
+    """Take two VkEnums different only in enumerators and create one with merged enumerators."""
+    if a.name != b.name:
+        raise ValueError(f"Enum names don't match ('{a.name}', '{b.name}')")
+    if a.size != b.size:
+        raise ValueError(f"Enum sizes don't match ({a.size}, {b.size})")
+
+    # The last value is VK_*_MAX_ENUM, we keep it at the end.
+    merged_enumerators = a.enumerators[:-1] + b.enumerators + [a.enumerators[-1]]
+
+    return VkEnum(name=a.name, size=a.size, enumerators=merged_enumerators)
+
 
 def Enum(**kwargs):
-  found = [i for i,x in enumerate(enums_table) if x['name']==kwargs['name']]
-  if not found:
-    enums_table.append(kwargs)
-  else:
-    it = found[0]
-    enums_table[it]['enumerators'] = enums_table[it]['enumerators'][:-1] + kwargs['enumerators'] + [enums_table[it]['enumerators'][-1]]
+    """Add a VkEnum to the list (or merge enumerators if already present)."""
+    enum = VkEnum(**kwargs)
+    if enum.name not in _enums_dict:
+        _enums_dict[enum.name] = enum
+    else:
+        _enums_dict[enum.name] = _merge_enums(_enums_dict[enum.name], enum)
 
 def Function(**kwargs):
-  functions_table.append(kwargs)
+    functions_table.append(kwargs)
 
 def Struct(**kwargs):
-  structs_table.append(kwargs)
+    structs_table.append(kwargs)
 
 def ArgDef(**kwargs):
-  return kwargs
+    return kwargs
 
 def RetDef(**kwargs):
-  return kwargs
+    return kwargs
 
 def VarDef(**kwargs):
-  return kwargs
+    if 'value' in kwargs and 'type' in kwargs:
+        raise ValueError(f"VarDef has both value and type arguments: {kwargs}")
+    elif 'value' in kwargs:
+        return Enumerator(**kwargs)
+    elif 'type' in kwargs:
+        return kwargs  # TODO: Transition to returning Field.
+        # return Field(**kwargs)
+    else:
+        raise ValueError(f"VarDef is missing both value and type arguments: {kwargs}")
 
 def GetEnums():
-  return enums_table
+    return _enums_dict.values()
 
 def GetFunctions():
-  return functions_table
+    return functions_table
 
 def GetStructs():
-  return structs_table
+    return structs_table
