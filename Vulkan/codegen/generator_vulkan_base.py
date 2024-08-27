@@ -76,8 +76,6 @@ class Token:
     function_type: FuncType
     level: FuncLevel = FuncLevel.DEVICE
     version: int = 0
-    # For compatibility with existing code. TODO: unused, delete it.
-    custom: bool = field(init=False, default=False)
     state_track: bool | str = False
     recorder_wrap: bool | str = False
     exec_post_recorder_wrap: bool = False
