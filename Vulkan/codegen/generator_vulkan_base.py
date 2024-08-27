@@ -76,6 +76,8 @@ class Token:
     function_type: FuncType
     level: FuncLevel = FuncLevel.DEVICE
     version: int = 0
+    # For compatibility with existing code. TODO: unused, delete it.
+    custom: bool = field(init=False, default=False)
     state_track: bool | str = False
     recorder_wrap: bool | str = False
     exec_post_recorder_wrap: bool = False
@@ -83,7 +85,7 @@ class Token:
     run_wrap: bool | str = False
     ccode_wrap: bool = False
     ccode_write_wrap: bool = False
-    ccode_post_action_needed: bool = False
+    ccode_post_action_needed: bool | None = None
     plugin_wrap: bool = False
     custom_driver: bool = False
     end_frame_tag: bool = False
@@ -142,7 +144,7 @@ class VkEnum:  # TODO: Remove the "Vk" prefix here and in VkStruct when Enum is 
 
 
 _enums_dict: dict[str, VkEnum] = {}
-functions_table = []
+_functions_table: list[Token] = []
 _structs_table: list[VkStruct] = []
 
 
@@ -177,6 +179,21 @@ def _rename_keys(dictionary: dict) -> dict:
         ('declarationNeededWrap', 'declaration_needed_wrap'),
         ('passStructStorage', 'pass_struct_storage'),
         ('removeMapping', 'remove_mapping'),
+        ('stateTrack', 'state_track'),
+        ('recWrap', 'recorder_wrap'),
+        ('execPostRecWrap', 'exec_post_recorder_wrap'),
+        ('recExecWrap', 'recorder_exec_wrap'),
+        ('runWrap', 'run_wrap'),
+        ('ccodeWrap', 'ccode_wrap'),
+        ('ccodeWriteWrap', 'ccode_write_wrap'),
+        ('ccodePostActionNeeded', 'ccode_post_action_needed'),
+        ('pluginWrap', 'plugin_wrap'),
+        ('customDriver', 'custom_driver'),
+        ('endFrameTag', 'end_frame_tag'),
+        ('preToken', 'pre_token'),
+        ('postToken', 'post_token'),
+        ('tokenCache', 'token_cache'),
+        ('retV', 'return_value'),
     ]
 
     for old, new in replacements:
@@ -201,10 +218,10 @@ def _gather_list(dictionary: dict[str, Any], *, prefix: str, list_name: str) -> 
 
     return dictionary
 
-def _preprocess_kwargs(dictionary: dict) -> dict:
+def _preprocess_kwargs(dictionary: dict, *, prefix: str, list_name: str) -> dict:
     """Change kwargs to be suitable as dataclass constructor arguments."""
     renamed: dict = _rename_keys(dictionary)
-    return _gather_list(renamed, prefix='var', list_name='fields')
+    return _gather_list(renamed, prefix=prefix, list_name=list_name)
 
 
 def Enum(**kwargs):
@@ -216,10 +233,12 @@ def Enum(**kwargs):
         _enums_dict[enum.name] = _merge_enums(_enums_dict[enum.name], enum)
 
 def Function(**kwargs):
-    functions_table.append(kwargs)
+    # We want to convert `type` only in Tokens, not in other classes.
+    _replace_key(kwargs, 'type', 'function_type')
+    _functions_table.append(Token(**_preprocess_kwargs(kwargs, prefix='arg', list_name='args')))
 
 def Struct(**kwargs):
-    _structs_table.append(VkStruct(**_preprocess_kwargs(kwargs)))
+    _structs_table.append(VkStruct(**_preprocess_kwargs(kwargs, prefix='var', list_name='fields')))
 
 def ArgDef(**kwargs):
     return Argument(**_rename_keys(kwargs))
@@ -241,7 +260,7 @@ def GetEnums():
     return _enums_dict.values()
 
 def GetFunctions():
-    return functions_table
+    return _functions_table
 
 def GetStructs():
     return _structs_table

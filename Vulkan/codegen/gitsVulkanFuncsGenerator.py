@@ -1701,18 +1701,13 @@ namespace Vulkan {
         pre_token = ""
         if value.get('preToken') is not None and (value.get('recWrap') is not True) and value.get('preToken') is not False:
           pre_token = "_recorder.Schedule(new %(name)s);\n    " % {'name': value.get('preToken')}
-        pre_schedule = ""
-        if value.get('preSchedule') is not None and (value.get('recWrap') is not True) and value.get('preSchedule') is not False:
-          pre_schedule = "%(name)s;\n    " % {'name': value.get('preSchedule')}
         post_token = ""
         if value.get('postToken') is not None and (value.get('recWrap') is not True):
           post_token = "\n    _recorder.Schedule(new %(name)s);\n" % {'name': value.get('postToken')}
         rec_cond = ""
-        if value.get('recCond') and (value.get('recWrap') is not True):
-          rec_cond = "if (%(recCond)s) {" % {'recCond': value.get('recCond')}
-        elif (value.get('recCond') is not True) and (value.get('tokenCache') is not None) and (value.get('recWrap') is not True):
+        if (value.get('tokenCache') is not None) and (value.get('recWrap') is not True):
           rec_cond = "if (_recorder.Running() && !Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {"
-        elif (value.get('recCond') is not True) and (value.get('recWrap') is not True):
+        elif value.get('recWrap') is not True:
           rec_cond = "if (_recorder.Running()) {"
         state_track = ""
         rec_cond_end = ""
@@ -1738,8 +1733,8 @@ namespace Vulkan {
         wc = """
 void CRecorderWrapper::%(name)s(%(arg_decl)s) const
 {
-  %(wrapper_pre_post)s%(rec_cond)s%(rec_wrap)s%(new_line)s%(pre_schedule)s%(pre_token)s%(schedule)s%(post_token)s%(rec_cond_end)s%(tokenCache)s%(state_track)s
-}""" % {'name': key, 'arg_decl': arg_decl(value), 'pre_schedule': pre_schedule, 'pre_token': pre_token, 'post_token': post_token, 'rec_cond': rec_cond, 'state_track': state_track, 'rec_wrap': rec_wrap, 'schedule': schedule, 'tokenCache': tokenCache, 'rec_cond_end': rec_cond_end, 'wrapper_pre_post': wrapper_pre_post, 'new_line': new_line}
+  %(wrapper_pre_post)s%(rec_cond)s%(rec_wrap)s%(new_line)s%(pre_token)s%(schedule)s%(post_token)s%(rec_cond_end)s%(tokenCache)s%(state_track)s
+}""" % {'name': key, 'arg_decl': arg_decl(value), 'pre_token': pre_token, 'post_token': post_token, 'rec_cond': rec_cond, 'state_track': state_track, 'rec_wrap': rec_wrap, 'schedule': schedule, 'tokenCache': tokenCache, 'rec_cond_end': rec_cond_end, 'wrapper_pre_post': wrapper_pre_post, 'new_line': new_line}
         wrap_c.write(wc + '\n')
         wrap_h.write('void ' + key + '(' + arg_decl(value) + ') const override;\n')
         wrap_i.write('virtual void ' + key + '(' + arg_decl(value) + ') const = 0;\n')
@@ -2296,102 +2291,29 @@ for f in functions:
   function['level'] = 'DeviceLevel'
   function['customDriver'] = False
   function['functionType'] = None
-  function['enabled'] = f.get('enabled')
+  function['enabled'] = f.enabled
   function['custom'] = False
   function['version'] = 0
-  if f.get('inheritFrom'):
-    inherit_name = f.get('inheritFrom')
-    function['inheritName'] = inherit_name
-    for g in functions:
-      if g.get('name') == inherit_name:
-        if retval := g.get('retV'):
-          function['type'] = retval.type
-          if retval.wrap_type:
-            function['retVwrapType'] = retval.wrap_type
-          if retval.wrap_params:
-            function['retVwrapParams'] = retval.wrap_params
-        if g.get('type'):
-          function['functionType'] = g.get('type')
-        if g.get('custom'):
-          function['custom'] = g.get('custom')
-        if g.get('version'):
-          function['version'] = g.get('version')
-        if g.get('tokenCache'):
-          function['tokenCache'] = g.get('tokenCache')
-        i = 1
-        while inherited_arg := g.get('arg'+str(i)):
-          arg = {}
-          arg['type'] = inherited_arg.type
-          arg['name'] = inherited_arg.name
-          if inherited_arg.wrap_type:
-            arg['wrapType'] = inherited_arg.wrap_type
-          if inherited_arg.wrap_params:
-            arg['wrapParams'] = inherited_arg.wrap_params
-          if inherited_arg.count:
-            arg['count'] = inherited_arg.count
-          if inherited_arg.remove_mapping:
-            arg['removeMapping'] = inherited_arg.remove_mapping
-          function['args'].append(arg)
-          i += 1
-        if g.get('preToken') is not None:
-          function['preToken'] = g.get('preToken')
-          function['preTokenName'] = inherit_name
-        if g.get('postToken') is not None:
-          function['postToken'] = g.get('postToken')
-          function['postTokenName'] = inherit_name
-        if g.get('stateTrack') is not None:
-          function['stateTrack'] = g.get('stateTrack')
-          function['stateTrackName'] = inherit_name
-        if g.get('recCond') is not None:
-          function['recCond'] = g.get('recCond')
-        if g.get('preSchedule') is not None:
-          function['preSchedule'] = g.get('preSchedule')
-        if g.get('recWrap') is not None:
-          function['recWrap'] = g.get('recWrap')
-          function['recWrapName'] = inherit_name
-        if g.get('runWrap') is not None:
-          function['runWrap'] = g.get('runWrap')
-          function['runWrapName'] = inherit_name
-        if g.get('ccodeWrap') is not None:
-          function['ccodeWrap'] = g.get('ccodeWrap')
-          function['ccodeWrapName'] = inherit_name
-        if g.get('ccodeWriteWrap') is not None:
-          function['ccodeWriteWrap'] = g.get('ccodeWriteWrap')
-          function['ccodeWriteWrapName'] = inherit_name
-        if g.get('ccodePostActionNeeded') is not None:
-          function['ccodePostActionNeeded'] = g.get('ccodePostActionNeeded')
-        if g.get('recExecWrap') is not None:
-          function['recExecWrap'] = g.get('recExecWrap')
-          function['recExecWrapName'] = inherit_name
-        if g.get('pluginWrap') is not None:
-          function['pluginWrap'] = g.get('pluginWrap')
-          function['pluginWrapName'] = inherit_name
-        if g.get('execPostRecWrap') is not None:
-          function['execPostRecWrap'] = g.get('execPostRecWrap')
-        if g.get('endFrameTag') is not None:
-          function['endFrameTag'] = g.get('endFrameTag')
-        if g.get('level') is not None:
-          function['level'] = g.get('level')
-        if g.get('customDriver') is not None:
-          function['customDriver'] = True
-  if retval := f.get('retV'):
+  if retval := f.return_value:
     function['type'] = retval.type
     if retval.wrap_type:
       function['retVwrapType'] = retval.wrap_type
     if retval.wrap_params:
       function['retVwrapParams'] = retval.wrap_params
-  if f.get('type'):
-    function['functionType'] = f.get('type')
-  if f.get('custom'):
-    function['custom'] = f.get('custom')
-  if f.get('version'):
-    function['version'] = f.get('version')
-  if f.get('tokenCache'):
-    function['tokenCache'] = f.get('tokenCache')
+  if f.function_type:
+    function['functionType'] = f.function_type
+  if f.custom:
+    function['custom'] = f.custom
+  if f.version:
+    function['version'] = f.version
+  if f.token_cache:
+    function['tokenCache'] = f.token_cache
   i = 1
 
-  while f.get('arg'+str(i)) or (i <= len(function['args'])):
-    if other_arg := f.get('arg'+str(i)):
+  if len(f.args) != len(function['args']) and len(function['args']) != 0:
+    raise RuntimeError(f"Argcount mismatch: input has {len(f.args)}, while temp data dict has {len(function['args'])}.")
+  for other_arg in f.args:
+    if other_arg:
       arg = {}
       arg['type'] = other_arg.type
       arg['name'] = other_arg.name
@@ -2408,56 +2330,52 @@ for f in functions:
       else:
         function['args'].append(arg)
     i += 1
-  if f.get('preToken') is not None:
-    function['preToken'] = f.get('preToken')
-    function['preTokenName'] = f.get('name')
-  if f.get('postToken') is not None:
-    function['postToken'] = f.get('postToken')
-    function['postTokenName'] = f.get('name')
-  if f.get('stateTrack') is not None:
-    function['stateTrack'] = f.get('stateTrack')
-    function['stateTrackName'] = f.get('name')
-  if f.get('recCond') is not None:
-    function['recCond'] = f.get('recCond')
-  if f.get('preSchedule') is not None:
-    function['preSchedule'] = f.get('preSchedule')
-  if f.get('recWrap') is not None:
-    function['recWrap'] = f.get('recWrap')
-    function['recWrapName'] = f.get('name')
-  if f.get('runWrap') is not None:
-    function['runWrap'] = f.get('runWrap')
-    function['runWrapName'] = f.get('name')
-  if f.get('ccodeWrap') is not None:
-    function['ccodeWrap'] = f.get('ccodeWrap')
-    function['ccodeWrapName'] = f.get('name')
-  if f.get('ccodeWriteWrap') is not None:
-    function['ccodeWriteWrap'] = f.get('ccodeWriteWrap')
-    function['ccodeWriteWrapName'] = f.get('name')
-  if f.get('ccodePostActionNeeded') is not None:
-    function['ccodePostActionNeeded'] = f.get('ccodePostActionNeeded')
-  if f.get('recExecWrap') is not None:
-    function['recExecWrap'] = f.get('recExecWrap')
-    function['recExecWrapName'] = f.get('name')
-  if f.get('pluginWrap') is not None:
-    function['pluginWrap'] = f.get('pluginWrap')
-    function['pluginWrapName'] = f.get('name')
-  if f.get('execPostRecWrap') is not None:
-    function['execPostRecWrap'] = f.get('execPostRecWrap')
-  if f.get('endFrameTag') is not None:
-    function['endFrameTag'] = f.get('endFrameTag')
-  if f.get('level') is not None:
-    function['level'] = f.get('level')
-  if f.get('customDriver') is not None:
-    function['customDriver'] = True
-  if functions_all_table.get(f.get('name')) is None:
-    functions_all_table[f.get('name')] = []
-  if (functions_enabled_table.get(f.get('name')) is None) and (function['enabled'] is True):
-    functions_enabled_table[f.get('name')] = []
-  functions_all_table[f.get('name')].append(function)
-  functions_all_table[f.get('name')].sort(key=operator.itemgetter('version'))
+  if f.pre_token is not None:
+    function['preToken'] = f.pre_token
+    function['preTokenName'] = f.name
+  if f.post_token is not None:
+    function['postToken'] = f.post_token
+    function['postTokenName'] = f.name
+  if f.state_track is not None:
+    function['stateTrack'] = f.state_track
+    function['stateTrackName'] = f.name
+  if f.recorder_wrap is not None:
+    function['recWrap'] = f.recorder_wrap
+    function['recWrapName'] = f.name
+  if f.run_wrap is not None:
+    function['runWrap'] = f.run_wrap
+    function['runWrapName'] = f.name
+  if f.ccode_wrap is not None:
+    function['ccodeWrap'] = f.ccode_wrap
+    function['ccodeWrapName'] = f.name
+  if f.ccode_write_wrap is not None:
+    function['ccodeWriteWrap'] = f.ccode_write_wrap
+    function['ccodeWriteWrapName'] = f.name
+  if f.ccode_post_action_needed is not None:
+    function['ccodePostActionNeeded'] = f.ccode_post_action_needed
+  if f.recorder_exec_wrap is not None:
+    function['recExecWrap'] = f.recorder_exec_wrap
+    function['recExecWrapName'] = f.name
+  if f.plugin_wrap is not None:
+    function['pluginWrap'] = f.plugin_wrap
+    function['pluginWrapName'] = f.name
+  if f.exec_post_recorder_wrap is not None:
+    function['execPostRecWrap'] = f.exec_post_recorder_wrap
+  if f.end_frame_tag is not None:
+    function['endFrameTag'] = f.end_frame_tag
+  if f.level is not None:
+    function['level'] = f.level
+  if f.custom_driver is not None:
+    function['customDriver'] = f.custom_driver
+  if functions_all_table.get(f.name) is None:
+    functions_all_table[f.name] = []
+  if (functions_enabled_table.get(f.name) is None) and (function['enabled'] is True):
+    functions_enabled_table[f.name] = []
+  functions_all_table[f.name].append(function)
+  functions_all_table[f.name].sort(key=operator.itemgetter('version'))
   if function['enabled'] is True:
-    functions_enabled_table[f.get('name')].append(function)
-    functions_enabled_table[f.get('name')].sort(key=operator.itemgetter('version'))
+    functions_enabled_table[f.name].append(function)
+    functions_enabled_table[f.name].sort(key=operator.itemgetter('version'))
 
 generate_vulkan_header(enums_table, structs_table, functions_all_table)
 generate_prepost(functions_all_table)
