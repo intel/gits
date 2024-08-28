@@ -228,10 +228,17 @@ set(CONFIG_COMPUTE_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/Config/Compute/${GITS_CON
 set(CONFIG_GENERATOR "${CONFIG_GENERATOR_DIR}/gits_config_generator.py")
 set(CONFIG_TEMPLATE "${CONFIG_GENERATOR_DIR}/gits_config.yml.mako")
 
+if(SKIP_INSTALL_PATH)
+install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" \"${CONFIG_GENERATOR}\" --templatepath \"${CONFIG_TEMPLATE}\" \
+  --outputpath \"${CONFIG_OUTPUT}\" --platform ${PLATFORM} --installpath skip --internal)")
+install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" \"${CONFIG_GENERATOR}\" --templatepath \"${CONFIG_TEMPLATE}\" \
+  --outputpath \"${CONFIG_COMPUTE_OUTPUT}\" --platform ${PLATFORM} --installpath skip --internal --compute)")
+else()
 install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" \"${CONFIG_GENERATOR}\" --templatepath \"${CONFIG_TEMPLATE}\" \
   --outputpath \"${CONFIG_OUTPUT}\" --platform ${PLATFORM} --installpath \"\${CMAKE_INSTALL_PREFIX}\")")
 install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" \"${CONFIG_GENERATOR}\" --templatepath \"${CONFIG_TEMPLATE}\" \
   --outputpath \"${CONFIG_COMPUTE_OUTPUT}\" --platform ${PLATFORM} --installpath \"\${CMAKE_INSTALL_PREFIX}\" --compute)")
+endif(SKIP_INSTALL_PATH)
 
 install(FILES ${CONFIG_OUTPUT} DESTINATION Recorder/${OpenGL_INSTALL_SUBDIR})
 install(FILES ${CONFIG_OUTPUT} DESTINATION Recorder/${OpenGLES_INSTALL_SUBDIR})
