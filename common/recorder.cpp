@@ -510,6 +510,11 @@ void gits::CRecorder::Start() {
 
   // update running flag
   //if (Config::Get().recorder.basic.enabled)
+
+#ifdef GITS_PLATFORM_WINDOWS
+  exitEventHandler.Start();
+#endif // GITS_PLATFORM_WINDOWS
+
   _running = true;
   _runningStarted = true;
 }
@@ -555,6 +560,11 @@ void gits::CRecorder::Stop() {
     }
     Scheduler().Register(new gits::CTokenFrameNumber(CToken::ID_CCODE_FINISH, inst.CurrentFrame()));
   }
+
+#ifdef GITS_PLATFORM_WINDOWS
+  exitEventHandler.Stop();
+#endif // GITS_PLATFORM_WINDOWS
+
   _running = false;
   _runningStarted = false;
 }
