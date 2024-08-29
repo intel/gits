@@ -230,9 +230,9 @@ set(CONFIG_TEMPLATE "${CONFIG_GENERATOR_DIR}/gits_config.yml.mako")
 
 if(SKIP_INSTALL_PATH)
 install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" \"${CONFIG_GENERATOR}\" --templatepath \"${CONFIG_TEMPLATE}\" \
-  --outputpath \"${CONFIG_OUTPUT}\" --platform ${PLATFORM} --installpath skip --internal)")
+  --outputpath \"${CONFIG_OUTPUT}\" --platform ${PLATFORM} --installpath skip)")
 install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" \"${CONFIG_GENERATOR}\" --templatepath \"${CONFIG_TEMPLATE}\" \
-  --outputpath \"${CONFIG_COMPUTE_OUTPUT}\" --platform ${PLATFORM} --installpath skip --internal --compute)")
+  --outputpath \"${CONFIG_COMPUTE_OUTPUT}\" --platform ${PLATFORM} --installpath skip --compute)")
 else()
 install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" \"${CONFIG_GENERATOR}\" --templatepath \"${CONFIG_TEMPLATE}\" \
   --outputpath \"${CONFIG_OUTPUT}\" --platform ${PLATFORM} --installpath \"\${CMAKE_INSTALL_PREFIX}\")")

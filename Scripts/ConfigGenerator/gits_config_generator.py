@@ -38,9 +38,13 @@ def main(args=None):
     args = parser.parse_args()
   template_path = Path(args.templatepath).absolute()
   output_path = Path(args.outputpath).absolute()
-  install_path = Path(args.installpath).absolute()
+  if args.installpath == 'skip':
+    install_path = "${Gits_install_dir}"
+  else:
+    install_path = Path(args.installpath).absolute()
   if not output_path.parent.exists():
     output_path.parent.mkdir(parents=True, exist_ok=True)
+
   mako_write(str(template_path), str(output_path), args.platform, str(install_path), args.compute)
 
 
