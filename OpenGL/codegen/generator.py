@@ -11,7 +11,7 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import IntFlag
-from typing import Any, Self
+from typing import Any
 
 
 
@@ -64,8 +64,6 @@ class Token:
     name: str
     enabled: bool
     function_type: FuncType
-    # TODO: Do we need to keep inherit_from in Token?
-    inherit_from: Self | None = None
     version: int = 0
     custom: bool = False  # TODO: It's unused in OpenGL, should we remove it?
     state_track: bool | str = False
@@ -152,6 +150,11 @@ def handle_inheritance(functions_dict: dict[str, list[dict[str, Any]]]) -> None:
                 # Replace func with child.
                 func.clear()
                 func.update(child)
+
+    # We no longer need inherit_from and we don't store it in Token.
+    for funcs in functions_dict.values():
+        for func in funcs:
+            func.pop('inherit_from', None)
 
 
 def function(**kwargs) -> None:
