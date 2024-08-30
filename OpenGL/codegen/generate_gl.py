@@ -554,7 +554,8 @@ def mako_write(inpath: str, outpath: str, **kwargs) -> int:
         rendered = template.render(**(common_objects | kwargs))
         rendered = re.sub(r'\r\n', r'\n', rendered)
 
-        with open('..' + os.path.sep + outpath, 'w') as fout:
+        destination = os.path.join('..', outpath)
+        with open(destination, 'w') as fout:
             fout.write(rendered)
     except Exception:
         traceback = mako.exceptions.RichTraceback()
