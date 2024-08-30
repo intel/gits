@@ -37,6 +37,21 @@ void write_map(const std::filesystem::path& filename, const T& m) {
 #endif
 }
 
+template <typename KeyType, typename ValueType>
+void append_map(const std::filesystem::path& filename, const KeyType& key, const ValueType& value) {
+#ifndef BUILD_FOR_CCODE
+  std::ofstream file(filename, std::ios::binary | std::ios::app);
+  if (!file.is_open()) {
+    CheckMinimumAvailableDiskSize();
+    throw std::runtime_error("couldn't append to a file: " + filename.string());
+  }
+
+  write_to_stream(file, key);
+  write_to_stream(file, value);
+  file.flush();
+#endif
+}
+
 template <typename T>
 T read_map(const std::filesystem::path& filename) {
   T retval;

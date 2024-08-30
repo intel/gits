@@ -212,7 +212,11 @@ bool gits::CBinOStream::WriteCompressedAndGetOffset(const char* data,
 
 std::ostream& gits::CBinOStream::WriteToOstream(const char* data, uint64_t dataSize) {
   try {
-    return std::ostream::write(data, dataSize);
+    auto& stream = std::ostream::write(data, dataSize);
+    if (gits::Config::Get().common.recorder.highIntegrity) {
+      return std::ostream::flush();
+    }
+    return stream;
   } catch (std::ostream::failure& e) {
     Log(ERR) << "Failed to write to the stream. Probably not enough space on the disk.";
     Log(ERR) << "Err code: " << e.code() << " Err msg: " << e.what();
