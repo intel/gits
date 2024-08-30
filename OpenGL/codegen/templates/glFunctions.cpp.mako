@@ -67,16 +67,16 @@
 
     run_call: str
     if has_retval and not token.run_wrap:
-        run_call = f'_return_value.Assign({run_call_name}({deref_args}));'
+        run_call = f'  _return_value.Assign({run_call_name}({deref_args}));'
     elif has_retval and token.run_wrap:
-        run_call = f'{run_call_name}({retval_and_normal_args});'
+        run_call = f'  {run_call_name}({retval_and_normal_args});'
     elif not has_retval and token.run_wrap:
         if token.pass_token:
-            run_call = f'{run_call_name}(this, {normal_args});'
+            run_call = f'  {run_call_name}(this, {normal_args});'
         else:
-            run_call = f'{run_call_name}({normal_args});'
+            run_call = f'  {run_call_name}({normal_args});'
     else:
-        run_call = f'{run_call_name}({deref_args});'
+        run_call = f'  {run_call_name}({deref_args});'
 
     remove_mapping_args = [arg for arg in args if arg.remove_mapping]
     remove_mappings = args_to_str(remove_mapping_args, '  _{name}.RemoveMapping();\n', '\n')
@@ -86,8 +86,7 @@
         if token.run_wrap:
             print(f"WARNING: run_condition on {name} is overwritten by run_wrap!")
         else:
-            # TODO: Use wrap_in_if(str) for both.
-            run_call = f'if ({token.run_condition})\n    {run_call}'
+            run_call = wrap_in_if(token.run_condition, run_call)
             remove_mappings_run = wrap_in_if(token.run_condition, remove_mappings)
     else:
         remove_mappings_run = remove_mappings
@@ -126,7 +125,7 @@ gits::CArgument &gits::OpenGL::${cname}::Argument(unsigned idx)
 
 void gits::OpenGL::${cname}::${run_method_name}()
 {
-  ${run_call}
+${run_call}
 % if token.state_track and not token.run_wrap:
   ${token.state_track}_SD(${retval_and_deref_args});
 % endif

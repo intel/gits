@@ -287,20 +287,22 @@ def get_indent(s: str) -> str:
     else:
         return match.group()
 
-def wrap_in_scope(code: str, indent: str = '  ') -> str:
-    """Wrap a multiline string in a C++ scope."""
-
-    orig_indent = get_indent(code)
-    indented_code = textwrap.indent(code, indent)
-
-    return f"{orig_indent}{{\n{indented_code}\n{orig_indent}}}"
-
 def wrap_in_if(condition: str, code: str, indent: str = '  ') -> str:
     """Wrap a multiline string in a C++ if statement."""
 
     orig_indent = get_indent(code)
 
-    return f'{orig_indent}if ({condition})\n{wrap_in_scope(code, indent)}'
+    # So we don't double orig_indent when indenting everything at the end.
+    # Dedent doesn't accept amount, but it should dedent exactly by orig_indent.
+    dedented_code = textwrap.dedent(code)
+
+    # Indent by one level.
+    indented_code = textwrap.indent(dedented_code, indent)
+
+    if_statement = f'if ({condition}) {{\n{indented_code}\n}}'
+
+    # Indent everything by original indent amount.
+    return textwrap.indent(if_statement, orig_indent)
 
 def make_member_initializer_list(args: list[Argument]) -> str:
     """Build a C++ member initializer list string from arguments."""
