@@ -1232,8 +1232,8 @@ def copy_file(filename, subdir):
     shutil.copy2(filename, path)
 
 
-copy_file('glIDs.h', '../common/include')
-move_file('glIDswitch.h', '../common/include')
+copy_file('glIDs.h', 'common/include')
+move_file('glIDswitch.h', 'common/include')
 move_file('glDrivers.h', 'common/include')
 move_file('glFunctions.h', 'common/include')
 move_file('glFunctions.cpp', 'common')

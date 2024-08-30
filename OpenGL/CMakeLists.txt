@@ -23,8 +23,8 @@ set_target_properties(OpenGL_codegen PROPERTIES FOLDER OpenGL)
 # GENERATED property is set in CMakeLists.txt in each directory, but this
 # staying here doesn't do any harm
 set_source_files_properties(
-  ${CMAKE_CURRENT_SOURCE_DIR}/../common/include/glIDs.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/../common/include/glIDswitch.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/common/include/glIDs.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/common/include/glIDswitch.h
   ${CMAKE_CURRENT_SOURCE_DIR}/common/include/glDrivers.h
   ${CMAKE_CURRENT_SOURCE_DIR}/common/include/glFunctions.h
   ${CMAKE_CURRENT_SOURCE_DIR}/common/glFunctions.cpp
