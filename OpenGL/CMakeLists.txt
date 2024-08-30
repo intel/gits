@@ -16,6 +16,15 @@ add_custom_command(
   DEPENDS
     "${OpenGL_SCRIPTS_DIR}/generate_gl.py"
     "${OpenGL_SCRIPTS_DIR}/generator.py"
+    "${OpenGL_SCRIPTS_DIR}/templates/gitsPluginPrePostAuto.cpp.mako"
+    "${OpenGL_SCRIPTS_DIR}/templates/gitsPluginPrePostAuto.h.mako"
+    "${OpenGL_SCRIPTS_DIR}/templates/glDrivers.h.mako"
+    "${OpenGL_SCRIPTS_DIR}/templates/glFunctions.cpp.mako"
+    "${OpenGL_SCRIPTS_DIR}/templates/glFunctions.h.mako"
+    "${OpenGL_SCRIPTS_DIR}/templates/glIDswitch.h.mako"
+    "${OpenGL_SCRIPTS_DIR}/templates/GLIPluginXX.def.mako"
+    "${OpenGL_SCRIPTS_DIR}/templates/openglRecorderWrapperAuto.cpp.mako"
+    "${OpenGL_SCRIPTS_DIR}/templates/openglRecorderWrapperXAuto.h.mako"
 )
 add_custom_target(OpenGL_codegen DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/OpenGL_codegen.stamp")
 set_target_properties(OpenGL_codegen PROPERTIES FOLDER OpenGL)
