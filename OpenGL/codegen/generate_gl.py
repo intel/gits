@@ -411,7 +411,6 @@ def expand_special_args(
 
     return expanded_args
 
-# TODO: document strings supported for formatting.
 def args_to_str(
     args: list[Argument],
     format_string: str,
@@ -423,6 +422,14 @@ def args_to_str(
     Each argument will get square brackets and their contents removed, then
     `format_string.format(...)` will be run on it. The results will all get
     concatenated and returned.
+
+    Placeholder strings supported for formatting are:
+        name_with_array: Unedited name straight from generator, e.g. `baseAndCount [2]`.
+        name: Name with the array part removed.
+        type: Type straight from generator.
+        wrap_type: wrap_type from generator (if present) or empty string.
+        wrap_params: wrap_params from generator (if present) or name (described above).
+        ctype: C type made from wrap_type (described above), e.g. `CGLenum`.
 
     Parameters:
         args: Parameters of the OpenGL function.
