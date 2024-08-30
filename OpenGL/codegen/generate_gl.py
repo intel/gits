@@ -11,6 +11,7 @@
 from generator import get_tokens, FuncType, Token, Argument, ReturnValue
 
 import copy
+import os.path
 import re
 import textwrap
 
@@ -526,7 +527,7 @@ def mako_write(inpath: str, outpath: str, **kwargs) -> int:
         rendered = template.render(**(generator_types | kwargs))
         rendered = re.sub(r'\r\n', r'\n', rendered)
 
-        with open(outpath, 'w') as fout:
+        with open('..' + os.path.sep + outpath, 'w') as fout:
             fout.write(rendered)
     except Exception:
         traceback = mako.exceptions.RichTraceback()
@@ -546,31 +547,31 @@ def main() -> None:
     enabled_tokens: dict[str, list[Token]] = get_tokens(include_disabled=False)
 
     mako_write('templates/glIDswitch.h.mako',
-               'temp/glIDswitch.h',
+               'common/include/glIDswitch.h',
                make_cname=make_cname,
                make_id=make_id,
                gl_functions=enabled_tokens)
 
     mako_write('templates/GLIPluginXX.def.mako',
-               'temp/GLIPlugin32.def',
+               'GLIPlugin/GLIPlugin32.def',
                egl_function_names=egl_function_names,
                wgl_function_names=wgl_function_names,
                gl_functions=all_tokens)
 
     # EGL should only be exported on 32-bit.
     mako_write('templates/GLIPluginXX.def.mako',
-               'temp/GLIPlugin64.def',
+               'GLIPlugin/GLIPlugin64.def',
                egl_function_names='',
                wgl_function_names=wgl_function_names,
                gl_functions=all_tokens)
 
     mako_write('templates/gitsPluginPrePostAuto.h.mako',
-               'temp/gitsPluginPrePostAuto.h',
+               'GLIPlugin/include/gitsPluginPrePostAuto.h',
                args_to_str=args_to_str,
                gl_functions=all_tokens)
 
     mako_write('templates/gitsPluginPrePostAuto.cpp.mako',
-               'temp/gitsPluginPrePostAuto.cpp',
+               'GLIPlugin/gitsPluginPrePostAuto.cpp',
                args_to_str=args_to_str,
                arg_call=arg_call,
                driver_call=driver_call,
@@ -578,7 +579,7 @@ def main() -> None:
 
     (draw_functions, nondraw_functions) = split_draw_functions(all_tokens)
     mako_write('templates/glDrivers.h.mako',
-               'temp/glDrivers.h',
+               'common/include/glDrivers.h',
                args_to_str=args_to_str,
                arg_call=arg_call,
                driver_call=driver_call,
@@ -586,7 +587,7 @@ def main() -> None:
                nondraw_functions=nondraw_functions)
 
     mako_write('templates/glFunctions.cpp.mako',
-               'temp/glFunctions.cpp',
+               'common/glFunctions.cpp',
                version_suffix=version_suffix,
                make_cname=make_cname,
                make_id=make_id,
@@ -599,7 +600,7 @@ def main() -> None:
                gl_functions=enabled_tokens)
 
     mako_write('templates/glFunctions.h.mako',
-               'temp/glFunctions.h',
+               'common/include/glFunctions.h',
                make_cname=make_cname,
                make_id=make_id,
                make_func_type_flags=make_func_type_flags,
@@ -610,19 +611,19 @@ def main() -> None:
                gl_functions=enabled_tokens)
 
     mako_write('templates/openglRecorderWrapperXAuto.h.mako',
-               'temp/openglRecorderWrapperAuto.h',
+               'recorder/include/openglRecorderWrapperAuto.h',
                args_to_str=args_to_str,
                is_iface=False,
                gl_functions=all_tokens)
 
     mako_write('templates/openglRecorderWrapperXAuto.h.mako',
-               'temp/openglRecorderWrapperIfaceAuto.h',
+               'recorder/include/openglRecorderWrapperIfaceAuto.h',
                args_to_str=args_to_str,
                is_iface=True,
                gl_functions=all_tokens)
 
     mako_write('templates/openglRecorderWrapperAuto.cpp.mako',
-               'temp/openglRecorderWrapperAuto.cpp',
+               'recorder/openglRecorderWrapperAuto.cpp',
                make_cname=make_cname,
                is_draw_function=is_draw_function,
                args_to_str=args_to_str,

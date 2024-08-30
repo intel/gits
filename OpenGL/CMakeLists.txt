@@ -10,11 +10,11 @@ set(OpenGL_SCRIPTS_DIR "${CMAKE_SOURCE_DIR}/OpenGL/codegen")
 
 add_custom_command(
   OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/OpenGL_codegen.stamp"
-  COMMAND ${Python3_EXECUTABLE} "${OpenGL_SCRIPTS_DIR}/gitsGLFuncsGenerator.py"
+  COMMAND ${Python3_EXECUTABLE} "${OpenGL_SCRIPTS_DIR}/generate_gl.py"
   COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_CURRENT_BINARY_DIR}/OpenGL_codegen.stamp"
   WORKING_DIRECTORY "${OpenGL_SCRIPTS_DIR}"
   DEPENDS
-    "${OpenGL_SCRIPTS_DIR}/gitsGLFuncsGenerator.py"
+    "${OpenGL_SCRIPTS_DIR}/generate_gl.py"
     "${OpenGL_SCRIPTS_DIR}/generator.py"
 )
 add_custom_target(OpenGL_codegen DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/OpenGL_codegen.stamp")
