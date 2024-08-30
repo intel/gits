@@ -62,11 +62,11 @@ third_party/*
 recorder/gits_config.txt
 
 # OpenGL
-OpenGL/common/include/glIDswitch.h
-OpenGL/common/include/glIDs.h
 OpenGL/common/glFunctions.cpp
 OpenGL/common/include/glDrivers.h
 OpenGL/common/include/glFunctions.h
+OpenGL/common/include/glIDs.h
+OpenGL/common/include/glIDswitch.h
 OpenGL/recorder/include/openglRecorderWrapperAuto.h
 OpenGL/recorder/include/openglRecorderWrapperIfaceAuto.h
 OpenGL/recorder/openglRecorderWrapperAuto.cpp

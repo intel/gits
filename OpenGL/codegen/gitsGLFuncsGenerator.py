@@ -1232,11 +1232,11 @@ def copy_file(filename, subdir):
     shutil.copy2(filename, path)
 
 
+move_file('glFunctions.cpp', 'common')
+move_file('glFunctions.h', 'common/include')
+move_file('glDrivers.h', 'common/include')
 copy_file('glIDs.h', 'common/include')
 move_file('glIDswitch.h', 'common/include')
-move_file('glDrivers.h', 'common/include')
-move_file('glFunctions.h', 'common/include')
-move_file('glFunctions.cpp', 'common')
 move_file('openglRecorderWrapperAuto.cpp', 'recorder')
 move_file('openglRecorderWrapperAuto.h', 'recorder/include')
 move_file('openglRecorderWrapperIfaceAuto.h', 'recorder/include')

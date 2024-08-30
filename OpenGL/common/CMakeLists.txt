@@ -7,23 +7,23 @@
 # ===================== end_copyright_notice ==============================
 
 set_source_files_properties(
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/glIDs.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/glIDswitch.h
   ${CMAKE_CURRENT_SOURCE_DIR}/include/glDrivers.h
   ${CMAKE_CURRENT_SOURCE_DIR}/include/glFunctions.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/glIDs.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/glIDswitch.h
   ${CMAKE_CURRENT_SOURCE_DIR}/glFunctions.cpp
   PROPERTIES GENERATED 1
 )
 
 add_library(OpenGL_common
-  include/glIDs.h
-  include/glIDswitch.h
   include/clientArrays.h
   include/eglArguments.h
   include/eglFunctions.h
   include/gitsFunctions.h
   include/glDrivers.h
   include/glFunctions.h
+  include/glIDs.h
+  include/glIDswitch.h
   include/glxArguments.h
   include/glxFunctions.h
   include/mapping.h
@@ -87,10 +87,10 @@ add_library(OpenGL_common
 )
 
 source_group("Generated Files" FILES
-  include/glIDs.h
-  include/glIDswitch.h
   include/glDrivers.h
   include/glFunctions.h
+  include/glIDs.h
+  include/glIDswitch.h
   glFunctions.cpp)
 
 target_link_libraries(OpenGL_common common)
