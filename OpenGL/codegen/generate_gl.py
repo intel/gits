@@ -13,6 +13,7 @@ from generator import get_tokens, FuncType, Token, Argument, ReturnValue
 import copy
 import os.path
 import re
+import shutil
 import textwrap
 
 import mako.template
@@ -547,6 +548,44 @@ def mako_write(inpath: str, outpath: str, **kwargs) -> int:
         return -1
     return 0
 
+def update_gl_ids(
+    source: str,
+    destination_subpath: str,
+    gl_functions: dict[str, list[Token]]
+) -> None:
+    """
+    Append new IDs (if any) to an ID file.
+
+    Parameters:
+        source: Path to the ID file.
+        destination_subpath: Path to copy the file to; relative to `OpenGL/`.
+        gl_functions: Dict of Tokens to generate IDs from.
+    """
+    gl_ids: set[str] = set()
+    with open(source, 'r') as gl_ids_file:
+        for line in gl_ids_file:
+            if line.startswith('ID'):
+                gl_id = line.strip(',\n')
+                gl_ids.add(gl_id)
+
+    new_ids = ''
+    for token_versions in gl_functions.values():
+        for token in token_versions:
+            gl_id = make_id(token.name, token.version)
+            if gl_id not in gl_ids:
+                new_ids += gl_id + ',\n'
+
+    if not new_ids:
+        print(f"File {source} is up to date.")
+    else:
+        print(f"Adding new IDs to {source} ...")
+        with open(source, 'a') as gl_ids_file:
+            gl_ids_file.write(new_ids)
+
+    destination = os.path.join('..', destination_subpath)
+    print(f"Copying {source} to {destination_subpath} ...")
+    shutil.copy2(source, destination)
+
 
 def main() -> None:
     """Generate all the files."""
@@ -554,6 +593,8 @@ def main() -> None:
     # Example: {'glFoo': [glFoo, glFoo_v1], 'glBar': [glBar]}
     all_tokens: dict[str, list[Token]] = get_tokens(include_disabled=True)
     enabled_tokens: dict[str, list[Token]] = get_tokens(include_disabled=False)
+
+    update_gl_ids('glIDs.h', 'common/include', gl_functions=enabled_tokens)
 
     mako_write('templates/glIDswitch.h.mako',
                'common/include/glIDswitch.h',
