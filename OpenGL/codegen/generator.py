@@ -7100,7 +7100,7 @@ retV=RetDef(type='void'),
 arg1=ArgDef(name='sync', type='GLsync'),
 arg2=ArgDef(name='pname', type='GLenum'),
 arg3=ArgDef(name='bufSize', type='GLsizei'),
-arg4=ArgDef(name='length', type='GLsizei*', wrapParam='1, length'),
+arg4=ArgDef(name='length', type='GLsizei*'),
 arg5=ArgDef(name='values', type='GLint*', wrapParams='bufSize/sizeof(GLint), values')
 )
 
