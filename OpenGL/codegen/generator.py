@@ -1579,17 +1579,16 @@ Function(name='glClearNamedBufferSubData', enabled=True, function_type=FuncType.
     ],
 )
 
-# TODO: Shouldn't it just inherit from the non-EXT function instead of defining its own arguments?
-Function(name='glClearNamedBufferSubDataEXT', enabled=False, function_type=FuncType.RESOURCE,
+Function(name='glClearNamedBufferSubDataEXT', enabled=False, function_type=FuncType.RESOURCE, state_track=True,
     return_value=ReturnValue(type='void'),
     args=[
-        Argument(name='buffer', type='GLuint'),
+        Argument(name='buffer', type='GLuint', wrap_type='CGLBuffer'),
         Argument(name='internalformat', type='GLenum'),
-        Argument(name='format', type='GLenum'),
-        Argument(name='type', type='GLenum'),
         Argument(name='offset', type='GLsizeiptr'),
         Argument(name='size', type='GLsizeiptr'),
-        Argument(name='data', type='const void*'),
+        Argument(name='format', type='GLenum'),
+        Argument(name='type', type='GLenum'),
+        Argument(name='data', type='const void*', wrap_type='CBinaryResource', wrap_params='RESOURCE_BUFFER, data, texelSize(format, type)'),
     ],
 )
 
