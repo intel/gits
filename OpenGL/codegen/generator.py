@@ -160,14 +160,6 @@ def function(**kwargs) -> None:
     functions_dict[name].append(kwargs)
 
 
-def ArgDef(**kwargs):
-    return Argument(**kwargs)
-
-
-def RetDef(**kwargs):
-    return ReturnValue(**kwargs)
-
-
 def get_tokens(*, include_disabled: bool) -> dict[str, list[Token]]:
     """Return a dict with either all tokens or enabled ones only."""
     global functions_dict_processed
