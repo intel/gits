@@ -6416,7 +6416,7 @@ Function(name='glGetActiveAttribARB', enabled=True, function_type=FuncType.GET, 
     args=[
         Argument(name='programObj', type='GLhandleARB', wrap_type='CGLProgram'),
         Argument(name='index', type='GLuint'),
-        Argument(name='bufSize', type='GLsizei'),
+        Argument(name='maxLength', type='GLsizei'),
         Argument(name='length', type='GLsizei*', wrap_type='COutArgument'),
         Argument(name='size', type='GLint*', wrap_type='COutArgument'),
         Argument(name='type', type='GLenum*', wrap_type='COutArgument'),
@@ -6476,7 +6476,7 @@ Function(name='glGetActiveUniformARB', enabled=True, function_type=FuncType.GET,
     args=[
         Argument(name='programObj', type='GLhandleARB', wrap_type='CGLProgram'),
         Argument(name='index', type='GLuint'),
-        Argument(name='bufSize', type='GLsizei'),
+        Argument(name='maxLength', type='GLsizei'),
         Argument(name='length', type='GLsizei*', wrap_type='COutArgument'),
         Argument(name='size', type='GLint*', wrap_type='COutArgument'),
         Argument(name='type', type='GLenum*', wrap_type='COutArgument'),
@@ -6689,28 +6689,28 @@ Function(name='glGetClipPlane', enabled=True, function_type=FuncType.GET,
 Function(name='glGetClipPlanef', enabled=True, function_type=FuncType.GET, inherit_from='glGetClipPlane',
     args=[
         Argument(name='plane', type='GLenum'),
-        Argument(name='eqn', type='GLfloat*', wrap_type='COutArgument'),
+        Argument(name='equation', type='GLfloat*', wrap_type='COutArgument'),
     ],
 )
 
 Function(name='glGetClipPlanefOES', enabled=True, function_type=FuncType.GET, inherit_from='glGetClipPlane',
     args=[
         Argument(name='plane', type='GLenum'),
-        Argument(name='eqn', type='GLfloat*', wrap_type='COutArgument'),
+        Argument(name='equation', type='GLfloat*', wrap_type='COutArgument'),
     ],
 )
 
 Function(name='glGetClipPlanex', enabled=True, function_type=FuncType.GET, inherit_from='glGetClipPlane',
     args=[
         Argument(name='plane', type='GLenum'),
-        Argument(name='eqn', type='GLfixed*', wrap_type='COutArgument'),
+        Argument(name='equation', type='GLfixed*', wrap_type='COutArgument'),
     ],
 )
 
 Function(name='glGetClipPlanexOES', enabled=True, function_type=FuncType.GET, inherit_from='glGetClipPlane',
     args=[
         Argument(name='plane', type='GLenum'),
-        Argument(name='eqn', type='GLfixed*', wrap_type='COutArgument'),
+        Argument(name='equation', type='GLfixed*', wrap_type='COutArgument'),
     ],
 )
 
@@ -18156,6 +18156,7 @@ Function(name='glShaderSourceARB', enabled=True, function_type=FuncType.RESOURCE
     args=[
         Argument(name='shaderObj', type='GLhandleARB', wrap_type='CGLProgram'),
         Argument(name='count', type='GLsizei', wrap_params='1'),
+        # TODO: GL_ARB_shader_objects and gl.xml specify it as `const GLcharARB**` (without the second const).
         Argument(name='string', type='const GLcharARB*const*', wrap_type='CShaderSource', wrap_params='shaderObj, count, string, length, _string.SHADER_SOURCE'),
         Argument(name='length', type='const GLint*', wrap_type='CGLintptrZero', wrap_params=' '),
     ],
