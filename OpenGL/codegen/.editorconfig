@@ -1,0 +1,21 @@
+# ===================== begin_copyright_notice ============================
+#
+# Copyright (C) 2023-2024 Intel Corporation
+#
+# SPDX-License-Identifier: MIT
+#
+# ===================== end_copyright_notice ==============================
+
+# This file contains settings for code editors.
+# See https://EditorConfig.org for details.
+
+
+# It's only applicable to a subdirectory.
+root = false
+
+# Python
+[*.py]
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+insert_final_newline = true
