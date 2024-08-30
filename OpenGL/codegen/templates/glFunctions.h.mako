@@ -6,6 +6,8 @@
 //
 // ===================== end_copyright_notice ==============================
 
+${AUTO_GENERATED_HEADER}
+
 
 #pragma once
 

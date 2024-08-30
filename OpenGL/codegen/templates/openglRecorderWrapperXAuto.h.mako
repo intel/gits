@@ -6,6 +6,9 @@
 //
 // ===================== end_copyright_notice ==============================
 
+${AUTO_GENERATED_HEADER}
+
+
 % for name, token_versions in gl_functions.items():
 <%
     # The result should not change depending on which version we use,

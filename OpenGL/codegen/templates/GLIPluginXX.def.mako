@@ -6,6 +6,7 @@
 ;
 ; ===================== end_copyright_notice ==============================
 
+${AUTO_GENERATED_HEADER.replace('//',';')}
 
 
 LIBRARY OpenGL32.dll

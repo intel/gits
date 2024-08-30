@@ -6,6 +6,9 @@
 //
 // ===================== end_copyright_notice ==============================
 
+${AUTO_GENERATED_HEADER}
+
+
 #define DRAW_FUNCTIONS(a) ${'\\'}
 % for token in draw_functions:
 <%
