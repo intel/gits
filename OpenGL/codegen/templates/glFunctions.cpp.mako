@@ -38,7 +38,7 @@
     args: list[Argument] = token.args
     retval_and_args: list[Argument]
     if has_retval:
-        retval_and_args = [retval_as_arg(token.return_value)] + args
+        retval_and_args = [token.return_value] + args
     else:
         retval_and_args = args
 
@@ -61,7 +61,7 @@
 
     run_call_name: str
     if token.run_wrap:
-        run_call_name = f'{token.run_wrap}{version_suffix_from_token(token)}_WRAPRUN'
+        run_call_name = f'{token.run_wrap}{version_suffix(token.version)}_WRAPRUN'
     else:
         run_call_name = f'drv.gl.{name}'
 

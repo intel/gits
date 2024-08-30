@@ -30,8 +30,8 @@ extern "C" {
     # The result should not change depending on which version we use,
     # but we take the latest one just in case.
     token: Token = token_versions[-1]
-    params: str = arg_decl(token, add_retval=False, add_names=True)
+    params = args_to_str(token.args, '{type} {name_with_array}, ', ', ')
 %>\
-  GLAPI ${token.return_value.type} GLAPIENTRY ${name}${params};
+  GLAPI ${token.return_value.type} GLAPIENTRY ${name}(${params});
 % endfor
 }

@@ -236,21 +236,16 @@ wgl_function_names = '''
 '''.strip('\r\n')
 
 
-# TODO: Rename to version_suffix and remove the token variant below?
-def version_suffix_from_int(version: int) -> str:
+def version_suffix(version: int) -> str:
     """Return a version suffix (like '_V1'), empty for version 0."""
     if version <= 0:
         return ''
     else:
         return f'_V{version}'
 
-def version_suffix_from_token(token: Token) -> str:
-    return version_suffix_from_int(token.version)
-
 def make_cname(name: str, version: int) -> str:
     """Return a Cname (like 'CglBegin_V1')."""
-    version_suffix: str = version_suffix_from_int(version)
-    return f'C{name}{version_suffix}'
+    return f'C{name}{version_suffix(version)}'
 
 def make_id(name: str, version: int) -> str:
     """Return an ID (like 'ID_GL_BEGIN_V1')."""
@@ -258,9 +253,7 @@ def make_id(name: str, version: int) -> str:
     id_ = re.sub('([0-9])D', r'_\g<1>D_', id_)
     id_ = id_.rstrip('_').upper()
 
-    version_suffix: str = version_suffix_from_int(version)
-
-    return f'ID_{id_}{version_suffix}'
+    return f'ID_{id_}{version_suffix(version)}'
 
 def make_func_type_flags(func_type: FuncType) -> str:
     """Convert FuncType into GITS' C++ representation string."""
@@ -336,10 +329,9 @@ def is_draw_function(func_type: FuncType) -> bool:
         FuncType.COPY in func_type,
     ])
 
-# TODO: Return (tuples of) dict, list, or dict of lists?
 def split_draw_functions(
     gl_functions: dict[str,list[Token]],
-) -> tuple[dict[str, Token],dict[str, Token]]:
+) -> tuple[list[Token],list[Token]]:
     """
     Separate OpenGL functions into ones that draw and ones that don't.
 
@@ -347,29 +339,23 @@ def split_draw_functions(
         gl_functions: Dict of function versions: {'glFoo': [{glFoo data}, {glFoo_V1 data}], ...}
 
     Returns:
-        A tuple: (draw functions, other functions). Only latest token versions are kept.
+        A tuple: (draw functions, non-draw functions). Only latest token versions are kept.
     """
 
-    draw_funcs: dict[str,Token] = {}
-    other_funcs: dict[str,Token] = {}
+    draw_funcs: list[Token] = []
+    nondraw_funcs: list[Token] = []
 
-    for name, token_versions in gl_functions.items():
+    for token_versions in gl_functions.values():
         # The result should not change depending on which version we use,
         # but we take the latest one just in case.
         token: Token = token_versions[-1]
 
         if is_draw_function(token.function_type):
-            draw_funcs[name] = token
+            draw_funcs.append(token)
         else:
-            other_funcs[name] = token
+            nondraw_funcs.append(token)
 
-    return (draw_funcs, other_funcs)
-
-# TODO: Remove this function?
-def retval_as_arg(retval: ReturnValue) -> Argument:
-    """Returns function's return value metadata in the form of an argument."""
-
-    return retval  # TODO: Is there no need to upcast in Python?
+    return (draw_funcs, nondraw_funcs)
 
 def is_any_arg_special(args: list[Argument]) -> bool:
     """Return true if any of given arguments is special, false otherwise."""
@@ -500,44 +486,6 @@ def arg_call(
 
     return f"({args_str.strip(', ')})"
 
-# TODO: Replace it with expand_special_args/retval_and_args & args_to_str
-def arg_decl(
-    token: Token,
-    add_retval: bool,
-    add_names: bool = False,
-    mode: str = 'default',  # TODO: Use an enum instead.
-) -> str:
-    params: list[Argument] = token.args
-    params_str = ''
-
-    return_type: str = token.return_value.type
-    if add_retval and return_type != 'void':
-        params_str += f'{return_type} return_value, '
-
-    for param in params:
-        if (mode in ('CGLTexResource', 'CGLCompressedTexResource') and
-            param.wrap_type in ('CGLTexResource', 'CGLCompressedTexResource')):
-            params_str += 'hash_t hash, '
-        elif add_names:
-            params_str += f"{param.type} {param.name}, "
-        else:
-            params_str += f"{param.type}, "
-
-    # if mode in ('CGLTexResource', 'CGLCompressedTexResource'):
-    #   for param in params:
-    #     if param.wrap_type in ('CGLTexResource', 'CGLCompressedTexResource'):
-    #         param = 'hash_t hash, '
-    #
-    # if add_names:
-    #   params_str += args_to_str(params, '{type} {name}, ')
-    # else:
-    #   params_str += args_to_str(params, '{type}, ')
-
-    if mode in ('CAttribPtr', 'CIndexPtr'):
-        params_str += 'GLint boundBuffer, '
-
-    return f"({params_str.strip(', ')})"
-
 def driver_call(token: Token) -> str:
     """
     Create a string containing a driver call (for gitsPluginPrePostAuto.cpp).
@@ -618,12 +566,12 @@ def main() -> None:
 
     mako_write('templates/gitsPluginPrePostAuto.h.mako',
                'temp/gitsPluginPrePostAuto.h',
-               arg_decl=arg_decl,
+               args_to_str=args_to_str,
                gl_functions=all_tokens)
 
     mako_write('templates/gitsPluginPrePostAuto.cpp.mako',
                'temp/gitsPluginPrePostAuto.cpp',
-               arg_decl=arg_decl,
+               args_to_str=args_to_str,
                arg_call=arg_call,
                driver_call=driver_call,
                gl_functions=all_tokens)
@@ -631,7 +579,7 @@ def main() -> None:
     (draw_functions, nondraw_functions) = split_draw_functions(all_tokens)
     mako_write('templates/glDrivers.h.mako',
                'temp/glDrivers.h',
-               arg_decl=arg_decl,
+               args_to_str=args_to_str,
                arg_call=arg_call,
                driver_call=driver_call,
                draw_functions=draw_functions,
@@ -639,13 +587,12 @@ def main() -> None:
 
     mako_write('templates/glFunctions.cpp.mako',
                'temp/glFunctions.cpp',
-               version_suffix_from_token=version_suffix_from_token,
+               version_suffix=version_suffix,
                make_cname=make_cname,
                make_id=make_id,
                wrap_in_if=wrap_in_if,
                make_member_initializer_list=make_member_initializer_list,
                is_draw_function=is_draw_function,
-               retval_as_arg=retval_as_arg,
                is_any_arg_special=is_any_arg_special,
                expand_special_args=expand_special_args,
                args_to_str=args_to_str,
@@ -657,7 +604,6 @@ def main() -> None:
                make_id=make_id,
                make_func_type_flags=make_func_type_flags,
                is_draw_function=is_draw_function,
-               retval_as_arg=retval_as_arg,
                is_any_arg_special=is_any_arg_special,
                expand_special_args=expand_special_args,
                args_to_str=args_to_str,
@@ -665,14 +611,12 @@ def main() -> None:
 
     mako_write('templates/openglRecorderWrapperXAuto.h.mako',
                'temp/openglRecorderWrapperAuto.h',
-               retval_as_arg=retval_as_arg,
                args_to_str=args_to_str,
                is_iface=False,
                gl_functions=all_tokens)
 
     mako_write('templates/openglRecorderWrapperXAuto.h.mako',
                'temp/openglRecorderWrapperIfaceAuto.h',
-               retval_as_arg=retval_as_arg,
                args_to_str=args_to_str,
                is_iface=True,
                gl_functions=all_tokens)
@@ -681,7 +625,6 @@ def main() -> None:
                'temp/openglRecorderWrapperAuto.cpp',
                make_cname=make_cname,
                is_draw_function=is_draw_function,
-               retval_as_arg=retval_as_arg,
                args_to_str=args_to_str,
                gl_functions=all_tokens)
 

@@ -26,7 +26,7 @@ extern "C" {
     has_retval: bool = token.return_value.type != 'void'
     delayed_call: bool = token.exec_post_recorder_wrap is True
 
-    params: str = arg_decl(token, add_retval=False, add_names=True)
+    params = args_to_str(token.args, '{type} {name_with_array}, ', ', ')
     wrapper_args: str = arg_call(token, add_retval=has_retval)
 
     # Use a fake retval in the wrapper if the real one is not available yet.
@@ -35,7 +35,7 @@ extern "C" {
 
     # TODO: Prefix & suffix should follow the same indent logic.
 %>\
-GLAPI ${token.return_value.type} GLAPIENTRY ${name}${params}
+GLAPI ${token.return_value.type} GLAPIENTRY ${name}(${params})
 {
 % if token.prefix:
 ${token.prefix}

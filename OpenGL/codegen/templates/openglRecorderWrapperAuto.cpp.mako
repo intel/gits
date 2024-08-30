@@ -67,7 +67,7 @@ namespace OpenGL {
 
     retval_and_args: list[Argument]
     if has_retval:
-        retval_and_args = [retval_as_arg(token.return_value)] + token.args
+        retval_and_args = [token.return_value] + token.args
     else:
         retval_and_args = token.args
 
