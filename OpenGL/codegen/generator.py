@@ -10,7 +10,7 @@
 
 from collections import defaultdict
 from dataclasses import dataclass, field
-from enum import IntFlag
+from enum import Flag, IntFlag
 from typing import Any
 
 
@@ -33,6 +33,55 @@ class FuncType(IntFlag):
     COPY = 2048
     EXEC = 4096
     GET_ESSENTIAL = 8192
+
+# TODO: Remove this WA when Python 3.10 and older are no longer supported.
+def ensure_flag_class_is_iterable(flag_class) -> None:
+    def intflag_iter(self: Flag):
+        """
+        Yield flags set in a value.
+
+        Since Python 3.11, Flag and IntFlag are iterable. For earlier versions,
+        set their __iter__ to this.
+        """
+        for member in self.__class__:
+            nonzero: bool = member.value != 0
+            power_of_two: bool = (member.value & (member.value - 1) == 0)
+            if nonzero and power_of_two and member in self:
+                yield member
+
+
+    # Make flag iterable if it isn't already.
+    if not hasattr(flag_class, '__iter__'):
+        print(f"Adding missing __iter__ to {flag_class}")
+        flag_class.__iter__ = intflag_iter
+        return
+
+    # In Python 3.10 on Windows, there is IntFlag.__iter__ that iterates over
+    # variants in the flag class instead of iterating over bits set in a flag
+    # instance. This is useless to us, so we overwrite existing __iter__.
+    problem_detected: bool = False
+
+    class TestFlag(flag_class):
+        """For checking __iter__ on flag instances."""
+
+        NONE = 0
+        FOO = 1
+        BAR = 2
+        BAZ = 4
+
+    test_instance = TestFlag.FOO | TestFlag.BAZ
+    checklist = [TestFlag.FOO, TestFlag.BAZ]
+    try:
+        for bit in test_instance:
+            checklist.remove(bit)
+    except TypeError:
+        problem_detected = True
+    problem_detected = problem_detected or len(checklist) != 0
+    if problem_detected:
+        print(f"Patching problematic __iter__ in {flag_class}")
+        flag_class.__iter__ = intflag_iter
+
+ensure_flag_class_is_iterable(IntFlag)
 
 
 @dataclass(kw_only=True)
