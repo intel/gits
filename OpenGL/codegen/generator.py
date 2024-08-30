@@ -13877,11 +13877,6 @@ arg1=ArgDef(name='value', type='GLfloat'),
 arg2=ArgDef(name='invert', type='GLboolean')
 )
 
-Function(name='glSamplePass', enabled=False, type=Param, interceptorExecOverride=True,
-retV=RetDef(type='void'),
-arg1=ArgDef(name='mode', type='GLenum')
-)
-
 Function(name='glSampleCoverageARB', enabled=True, type=Param, inheritFrom='glSampleCoverage')
 
 Function(name='glSampleCoverageOES', enabled=False, type=None,
@@ -13927,6 +13922,11 @@ Function(name='glSampleMaski', enabled=True, type=Param,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='maskNumber', type='GLuint'),
 arg2=ArgDef(name='mask', type='GLbitfield')
+)
+
+Function(name='glSamplePass', enabled=False, type=Param, interceptorExecOverride=True,
+retV=RetDef(type='void'),
+arg1=ArgDef(name='mode', type='GLenum')
 )
 
 Function(name='glSamplePatternEXT', enabled=True, type=Param,
