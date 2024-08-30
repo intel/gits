@@ -3646,12 +3646,14 @@ Function(name='glDebugMessageCallbackAMD', enabled=False, function_type=FuncType
 Function(name='glDebugMessageCallbackARB', enabled=False, function_type=FuncType.NONE, inherit_from='glDebugMessageCallback',
     args=[
         Argument(name='callback', type='GLDEBUGPROCARB'),
+        Argument(name='userParam', type='const void*'),
     ],
 )
 
 Function(name='glDebugMessageCallbackKHR', enabled=False, function_type=FuncType.NONE, inherit_from='glDebugMessageCallback',
     args=[
         Argument(name='callback',type='GLDEBUGPROCKHR'),
+        Argument(name='userParam', type='const void*'),
     ],
 )
 
@@ -3951,6 +3953,7 @@ Function(name='glDeleteRenderbuffers', enabled=True, function_type=FuncType.DELE
 
 Function(name='glDeleteRenderbuffersEXT', enabled=True, function_type=FuncType.DELETE, state_track=True, recorder_wrap=True, inherit_from='glDeleteRenderbuffers',
     args=[
+        Argument(name='n', type='GLsizei'),
         Argument(name='renderbuffers', type='const GLuint*', wrap_type='CGLRenderbufferEXT::CSUnmapArray', wrap_params='n, renderbuffers', remove_mapping=True),
     ],
 )
@@ -5864,6 +5867,9 @@ Function(name='glFramebufferRenderbuffer', enabled=True, function_type=FuncType.
 
 Function(name='glFramebufferRenderbufferEXT', enabled=True, function_type=FuncType.PARAM, state_track=True, recorder_wrap=True, inherit_from='glFramebufferRenderbuffer',
     args=[
+        Argument(name='target', type='GLenum'),
+        Argument(name='attachment', type='GLenum'),
+        Argument(name='renderbuffertarget', type='GLenum'),
         Argument(name='renderbuffer', type='GLuint', wrap_type='CGLRenderbufferEXT'),
     ],
 )
@@ -6409,6 +6415,11 @@ Function(name='glGetActiveAttrib', enabled=True, function_type=FuncType.GET,
 Function(name='glGetActiveAttribARB', enabled=True, function_type=FuncType.GET, inherit_from='glGetActiveAttrib',
     args=[
         Argument(name='programObj', type='GLhandleARB', wrap_type='CGLProgram'),
+        Argument(name='index', type='GLuint'),
+        Argument(name='bufSize', type='GLsizei'),
+        Argument(name='length', type='GLsizei*', wrap_type='COutArgument'),
+        Argument(name='size', type='GLint*', wrap_type='COutArgument'),
+        Argument(name='type', type='GLenum*', wrap_type='COutArgument'),
         Argument(name='name', type='GLcharARB*', wrap_type='COutArgument'),
     ],
 )
@@ -6464,6 +6475,11 @@ Function(name='glGetActiveUniform', enabled=True, function_type=FuncType.GET,
 Function(name='glGetActiveUniformARB', enabled=True, function_type=FuncType.GET, inherit_from='glGetActiveUniform',
     args=[
         Argument(name='programObj', type='GLhandleARB', wrap_type='CGLProgram'),
+        Argument(name='index', type='GLuint'),
+        Argument(name='bufSize', type='GLsizei'),
+        Argument(name='length', type='GLsizei*', wrap_type='COutArgument'),
+        Argument(name='size', type='GLint*', wrap_type='COutArgument'),
+        Argument(name='type', type='GLenum*', wrap_type='COutArgument'),
         Argument(name='name', type='GLcharARB*', wrap_type='COutArgument'),
     ],
 )
@@ -6605,6 +6621,8 @@ Function(name='glGetBooleanv', enabled=True, function_type=FuncType.GET,
 
 Function(name='glGetBufferParameteri64v', enabled=True, function_type=FuncType.GET, inherit_from='glGetBufferParameteriv',
     args=[
+        Argument(name='target', type='GLenum'),
+        Argument(name='pname', type='GLenum'),
         Argument(name='params', type='GLint64*', wrap_type='COutArgument'),
     ],
 )
@@ -6622,6 +6640,8 @@ Function(name='glGetBufferParameterivARB', enabled=True, function_type=FuncType.
 
 Function(name='glGetBufferParameterui64vNV', enabled=True, function_type=FuncType.GET, inherit_from='glGetBufferParameteriv',
     args=[
+        Argument(name='target', type='GLenum'),
+        Argument(name='pname', type='GLenum'),
         Argument(name='params', type='GLuint64EXT*', wrap_type='COutArgument'),
     ],
 )
@@ -6651,8 +6671,10 @@ Function(name='glGetBufferSubData', enabled=False, function_type=FuncType.NONE,
 
 Function(name='glGetBufferSubDataARB', enabled=False, function_type=FuncType.NONE, inherit_from='glGetBufferSubData',
     args=[
+        Argument(name='target', type='GLenum'),
         Argument(name='offset', type='GLintptrARB'),
         Argument(name='size', type='GLsizeiptrARB'),
+        Argument(name='data', type='void*'),
     ],
 )
 
@@ -6666,24 +6688,28 @@ Function(name='glGetClipPlane', enabled=True, function_type=FuncType.GET,
 
 Function(name='glGetClipPlanef', enabled=True, function_type=FuncType.GET, inherit_from='glGetClipPlane',
     args=[
+        Argument(name='plane', type='GLenum'),
         Argument(name='eqn', type='GLfloat*', wrap_type='COutArgument'),
     ],
 )
 
 Function(name='glGetClipPlanefOES', enabled=True, function_type=FuncType.GET, inherit_from='glGetClipPlane',
     args=[
+        Argument(name='plane', type='GLenum'),
         Argument(name='eqn', type='GLfloat*', wrap_type='COutArgument'),
     ],
 )
 
 Function(name='glGetClipPlanex', enabled=True, function_type=FuncType.GET, inherit_from='glGetClipPlane',
     args=[
+        Argument(name='plane', type='GLenum'),
         Argument(name='eqn', type='GLfixed*', wrap_type='COutArgument'),
     ],
 )
 
 Function(name='glGetClipPlanexOES', enabled=True, function_type=FuncType.GET, inherit_from='glGetClipPlane',
     args=[
+        Argument(name='plane', type='GLenum'),
         Argument(name='eqn', type='GLfixed*', wrap_type='COutArgument'),
     ],
 )
@@ -7964,6 +7990,8 @@ Function(name='glGetNamedRenderbufferParameteriv', enabled=False, function_type=
 Function(name='glGetNamedRenderbufferParameterivEXT', enabled=False, function_type=FuncType.NONE, inherit_from='glGetNamedRenderbufferParameteriv',
     args=[
         Argument(name='renderbuffer', type='GLuint', wrap_type='CGLRenderbufferEXT'),
+        Argument(name='pname', type='GLenum'),
+        Argument(name='params', type='GLint*'),
     ],
 )
 
@@ -8790,6 +8818,8 @@ Function(name='glGetQueryObjecti64v', enabled=True, function_type=FuncType.GET|F
 
 Function(name='glGetQueryObjecti64vEXT', enabled=True, function_type=FuncType.GET|FuncType.QUERY, inherit_from='glGetQueryObjecti64v',
     args=[
+        Argument(name='id', type='GLuint', wrap_type='CGLQuery'),
+        Argument(name='pname', type='GLenum'),
         Argument(name='params', type='GLint64EXT*', wrap_type='COutArgument'),
     ],
 )
@@ -9603,6 +9633,7 @@ Function(name='glGetUniformfvARB', enabled=True, function_type=FuncType.GET, inh
     args=[
         Argument(name='programObj', type='GLhandleARB', wrap_type='CGLProgram'),
         Argument(name='location', type='GLint', wrap_type='CGLUniformLocation', wrap_params='programObj, location'),
+        Argument(name='params', type='GLfloat*', wrap_type='COutArgument'),
     ],
 )
 
@@ -9637,6 +9668,7 @@ Function(name='glGetUniformivARB', enabled=True, function_type=FuncType.GET, inh
     args=[
         Argument(name='programObj', type='GLhandleARB', wrap_type='CGLProgram'),
         Argument(name='location', type='GLint', wrap_type='CGLUniformLocation', wrap_params='programObj, location'),
+        Argument(name='params', type='GLint*', wrap_type='COutArgument'),
     ],
 )
 
@@ -13640,11 +13672,7 @@ Function(name='glNamedFramebufferParameteri', enabled=True, function_type=FuncTy
     ],
 )
 
-Function(name='glNamedFramebufferParameteriEXT', enabled=True, function_type=FuncType.PARAM, inherit_from='glNamedFramebufferParameteri',
-    args = [
-        Argument(name='framebuffer', type='GLuint', wrap_type='CGLFramebuffer'),
-    ],
-)
+Function(name='glNamedFramebufferParameteriEXT', enabled=True, function_type=FuncType.PARAM, inherit_from='glNamedFramebufferParameteri')
 
 Function(name='glNamedFramebufferReadBuffer', enabled=True, function_type=FuncType.PARAM,
     return_value=ReturnValue(type='void'),
@@ -13664,12 +13692,7 @@ Function(name='glNamedFramebufferRenderbuffer', enabled=True, function_type=Func
     ],
 )
 
-Function(name='glNamedFramebufferRenderbufferEXT', enabled=True, function_type=FuncType.PARAM, inherit_from='glNamedFramebufferRenderbuffer',
-    args = [
-        Argument(name='framebuffer', type='GLuint', wrap_type='CGLFramebuffer'),
-        Argument(name='renderbuffer', type='GLuint', wrap_type='CGLRenderbuffer'),
-    ],
-)
+Function(name='glNamedFramebufferRenderbufferEXT', enabled=True, function_type=FuncType.PARAM, inherit_from='glNamedFramebufferRenderbuffer')
 
 Function(name='glNamedFramebufferSampleLocationsfvARB', enabled=False, function_type=FuncType.NONE,
     return_value=ReturnValue(type='void'),
@@ -13745,11 +13768,7 @@ Function(name='glNamedFramebufferTexture3DEXT', enabled=True, function_type=Func
     ],
 )
 
-Function(name='glNamedFramebufferTextureEXT', enabled=True, function_type=FuncType.PARAM, inherit_from='glNamedFramebufferTexture',
-    args = [
-        Argument(name='framebuffer', type='GLuint', wrap_type='CGLFramebuffer'),
-    ],
-)
+Function(name='glNamedFramebufferTextureEXT', enabled=True, function_type=FuncType.PARAM, inherit_from='glNamedFramebufferTexture')
 
 Function(name='glNamedFramebufferTextureFaceEXT', enabled=False, function_type=FuncType.NONE,
     return_value=ReturnValue(type='void'),
@@ -13773,11 +13792,7 @@ Function(name='glNamedFramebufferTextureLayer', enabled=True, function_type=Func
     ],
 )
 
-Function(name='glNamedFramebufferTextureLayerEXT', enabled=False, function_type=FuncType.NONE, inherit_from='glNamedFramebufferTextureLayer',
-    args = [
-        Argument(name='framebuffer', type='GLuint', wrap_type='CGLFramebuffer'),
-    ],
-)
+Function(name='glNamedFramebufferTextureLayerEXT', enabled=False, function_type=FuncType.NONE, inherit_from='glNamedFramebufferTextureLayer')
 
 Function(name='glNamedProgramLocalParameter4dEXT', enabled=True, function_type=FuncType.PARAM,
     return_value=ReturnValue(type='void'),
@@ -13928,6 +13943,9 @@ Function(name='glNamedRenderbufferStorage', enabled=False, function_type=FuncTyp
 Function(name='glNamedRenderbufferStorageEXT', enabled=False, function_type=FuncType.NONE, inherit_from='glNamedRenderbufferStorage',
     args=[
         Argument(name='renderbuffer', type='GLuint', wrap_type='CGLRenderbufferEXT'),
+        Argument(name='internalformat', type='GLenum'),
+        Argument(name='width', type='GLsizei'),
+        Argument(name='height', type='GLsizei'),
     ],
 )
 
@@ -13957,6 +13975,10 @@ Function(name='glNamedRenderbufferStorageMultisampleCoverageEXT', enabled=False,
 Function(name='glNamedRenderbufferStorageMultisampleEXT', enabled=False, function_type=FuncType.NONE, inherit_from='glNamedRenderbufferStorageMultisample',
     args=[
         Argument(name='renderbuffer', type='GLuint', wrap_type='CGLRenderbufferEXT'),
+        Argument(name='samples', type='GLsizei'),
+        Argument(name='internalformat', type='GLenum'),
+        Argument(name='width', type='GLsizei'),
+        Argument(name='height', type='GLsizei'),
     ],
 )
 
@@ -18125,7 +18147,7 @@ Function(name='glShaderSource', enabled=True, function_type=FuncType.RESOURCE, s
     args=[
         Argument(name='shader', type='GLuint', wrap_type='CGLProgram'),
         Argument(name='count', type='GLsizei', wrap_params='1'),
-        Argument(name='string', type='const GLchar*const*', wrap_type='CShaderSource', wrap_params='shader,count,string,length,_string.SHADER_SOURCE'),
+        Argument(name='string', type='const GLchar*const*', wrap_type='CShaderSource', wrap_params='shader, count, string, length, _string.SHADER_SOURCE'),
         Argument(name='length', type='const GLint*', wrap_type='CGLintptrZero', wrap_params=' '),
     ],
 )
@@ -18133,7 +18155,9 @@ Function(name='glShaderSource', enabled=True, function_type=FuncType.RESOURCE, s
 Function(name='glShaderSourceARB', enabled=True, function_type=FuncType.RESOURCE, inherit_from='glShaderSource', run_wrap=True,
     args=[
         Argument(name='shaderObj', type='GLhandleARB', wrap_type='CGLProgram'),
-        Argument(name='string', type='const GLcharARB*const*', wrap_type='CShaderSource', wrap_params='shaderObj,count,string,length,_string.SHADER_SOURCE'),
+        Argument(name='count', type='GLsizei', wrap_params='1'),
+        Argument(name='string', type='const GLcharARB*const*', wrap_type='CShaderSource', wrap_params='shaderObj, count, string, length, _string.SHADER_SOURCE'),
+        Argument(name='length', type='const GLint*', wrap_type='CGLintptrZero', wrap_params=' '),
     ],
 )
 
