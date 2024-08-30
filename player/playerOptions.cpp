@@ -1567,6 +1567,12 @@ bool configure_player(int argc, char** argv) {
   }
   Config::Set(cfg);
 
+  if (argc > 1 && cfg.common.player.helpGroup == "") {
+    Log(INFO)
+        << "Options defined in the command line; Please note that any options set via the command "
+           "line will take precedence over those specified in the configuration file.";
+  }
+
   if (cfg.common.player.helpGroup != "") {
     // show usage screen
     Log(INFO, NO_PREFIX) << "Usage: ";
