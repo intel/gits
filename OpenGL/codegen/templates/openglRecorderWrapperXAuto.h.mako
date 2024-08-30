@@ -6,36 +6,25 @@
 //
 // ===================== end_copyright_notice ==============================
 
-<%
-    from typing import Any
-
-    name: str  # Keys are OpenGL function names.
-    token_versions_data: list[dict[str,Any]]  # Values are complicated.
-    # Each dict in the list contains data for one version of a token.
-    # Example:
-    # 'glFoo': [{glFoo data}, {glFoo_V1 data}]
-%>\
-% for name, token_versions_data in gl_functions.items():
+% for name, token_versions in gl_functions.items():
 <%
     # The result should not change depending on which version we use,
     # but we take the latest one just in case.
-    token_version_data: dict[str, Any] = token_versions_data[-1]
+    token: Token = token_versions[-1]
 
-    ret_type: str = token_version_data['type']
-    has_retval: bool = ret_type != 'void'
+    has_retval: bool = token.return_value.type != 'void'
 
-    args: list[dict[str,str]] = token_version_data['args']
-    retval_and_args: list[dict[str,str]]
+    retval_and_args: list[Argument]
     if has_retval:
-        retval_and_args = [retval_as_arg(token_version_data)] + args
+        retval_and_args = [retval_as_arg(token.return_value)] + token.args
     else:
-        retval_and_args = args  # TODO: `.copy()` ?
+        retval_and_args = token.args
 
-    params: str = args_to_str(retval_and_args, '{type} {name_with_array}, ', ', ')
+    params = args_to_str(retval_and_args, '{type} {name_with_array}, ', ', ')
 %>\
 % if is_iface:  # Whether to generate *IfaceAuto.h or *Auto.h
 virtual void ${name}(${params}) const = 0;
 % else:
 void ${name}(${params}) const override;
 % endif  # is_iface
-% endfor
+% endfor  # token_versions

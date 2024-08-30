@@ -24,23 +24,14 @@
 #define GLAPIENTRY STDCALL
 
 extern "C" {
-<%
-    from typing import Any
 
-    name: str  # Keys are OpenGL function names.
-    token_versions_data: list[dict[str,Any]]  # Values are complicated.
-    # Each dict in the list contains data for one version of a token.
-    # Example:
-    # 'glFoo': [{glFoo data}, {glFoo_V1 data}]
-%>\
-% for name, token_versions_data in gl_functions.items():
+% for name, token_versions in gl_functions.items():
 <%
     # The result should not change depending on which version we use,
     # but we take the latest one just in case.
-    token_version_data: dict[str, Any] = token_versions_data[-1]
-    ret_type: str = token_version_data['type']
-    params: str = arg_decl(token_version_data, add_retval=False, add_names=True)
+    token: Token = token_versions[-1]
+    params: str = arg_decl(token, add_retval=False, add_names=True)
 %>\
-  GLAPI ${ret_type} GLAPIENTRY ${name}${params};
+  GLAPI ${token.return_value.type} GLAPIENTRY ${name}${params};
 % endfor
 }

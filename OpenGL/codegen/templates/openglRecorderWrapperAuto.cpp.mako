@@ -51,45 +51,25 @@
 namespace gits {
 namespace OpenGL {
 
-<%
-    from typing import Any
-
-    name: str  # Keys are OpenGL function names.
-    token_versions_data: list[dict[str,Any]]  # Values are complicated.
-    # Each dict in the list contains data for one version of a token.
-    # Example:
-    # 'glFoo': [{glFoo data}, {glFoo_V1 data}]
-    token_version_data: dict[str,Any]  # Data for one version.
-%>\
-% for name, token_versions_data in gl_functions.items():
+% for name, token_versions in gl_functions.items():
 <%
     # GITS supports playback of older token versions for compatibility reasons,
     # but it only support recording of the newest version.
-    token_version_data: dict[str, Any] = token_versions_data[-1]
+    token: Token = token_versions[-1]
 
-    track_state: bool = token_version_data.get('stateTrack') or False
-    wrap_rec: bool = token_version_data.get('recWrap') or False
-    is_draw_func: bool = is_draw_function(token_version_data)
-    is_enabled: bool = token_version_data['enabled']
+    cname: str = make_cname(name, token.version)
+    rec_cond: str = token.rec_condition or 'Recording(_recorder)'
+    pre_token: str = token.pre_token or ''
+    pre_schedule: str = token.pre_schedule or ''
 
-    cname: str = make_cname(name, token_version_data['version'])
-    rec_cond: str = token_version_data.get('recCond') or 'Recording(_recorder)'
-    pre_token: str = token_version_data.get('preToken') or ''
-    pre_schedule: str = token_version_data.get('preSchedule') or ''
+    has_retval: bool = token.return_value.type != 'void'
+    is_draw_func: bool = is_draw_function(token.function_type)
 
-    # Handle inheritance, e.g. glTexImage3DEXT calls glTexImage3D_SD without EXT
-    state_track_name: str|None = token_version_data.get('stateTrackName')
-    rec_wrap_name: str|None = token_version_data.get('recWrapName')
-
-    ret_type: str = token_version_data['type']
-    has_retval: bool = ret_type != 'void'
-
-    args: list[dict[str,str]] = token_version_data['args']
-    retval_and_args: list[dict[str,str]]
+    retval_and_args: list[Argument]
     if has_retval:
-        retval_and_args = [retval_as_arg(token_version_data)] + args
+        retval_and_args = [retval_as_arg(token.return_value)] + token.args
     else:
-        retval_and_args = args  # TODO: `.copy()` ?
+        retval_and_args = token.args
 
     params: str = args_to_str(retval_and_args, '{type} {name_with_array}, ', ', ')
     ctor_args: str = args_to_str(retval_and_args, '{name}, ')
@@ -99,7 +79,7 @@ namespace OpenGL {
 %>\
 void CRecorderWrapper::${name}(${params}) const
 {
-% if is_enabled and not wrap_rec:
+% if token.enabled and not token.recorder_wrap:
   GITS_REC_ENTRY_GL
 % if is_draw_func:
   DRAWCALL_WRAPPER_PRE_POST
@@ -115,17 +95,17 @@ void CRecorderWrapper::${name}(${params}) const
 % endif  # pre_schedule
     _recorder.Schedule(new ${cname}(${ctor_args}));
   }
-% if track_state:
-  ${state_track_name}_SD(${state_track_args});
-% endif  # track_state
-% elif is_enabled and wrap_rec:
+% if token.state_track:
+  ${token.state_track}_SD(${state_track_args});
+% endif  # token.state_track
+% elif token.enabled and token.recorder_wrap:
   GITS_REC_ENTRY_GL
-  ${rec_wrap_name}_RECWRAP(${rec_wrap_args});
+  ${token.recorder_wrap}_RECWRAP(${rec_wrap_args});
 % else:
   CALL_ONCE [] { Log(WARN) << "function ${name} not implemented"; };
-% endif  # is_enabled and (not) wrap_rec
+% endif  # token.enabled and (not) token.recorder_wrap
 }
 
-% endfor  # for name, token_versions_data
+% endfor  # for name, token_versions
 } // namespace OpenGL
 } // namespace gits

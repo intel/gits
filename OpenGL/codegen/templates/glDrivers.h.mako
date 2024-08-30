@@ -7,33 +7,27 @@
 // ===================== end_copyright_notice ==============================
 
 #define DRAW_FUNCTIONS(a) ${'\\'}
+% for name, token in draw_functions.items():
 <%
-    from typing import Any
-
-    name: str  # OpenGL function name.
-    token_version_data: dict[str,Any]  # Data for latest version of a token.
-%>\
-% for name, token_version_data in draw_functions.items():
-<%
-    ret_type: str = token_version_data['type']
+    ret_type: str = token.return_value.type
     if ret_type == 'void':
         ret_type = 'void_t'
 
-    params: str = arg_decl(token_version_data, add_retval=False, add_names=True)
-    args: str = arg_call(token_version_data, add_retval=False)
+    params: str = arg_decl(token, add_retval=False, add_names=True)
+    args: str = arg_call(token, add_retval=False)
 %>\
   DRAW_FUNCTION(a, ${ret_type}, ${name}, ${params}, ${args}) ${'\\'}
 % endfor
 
 #define GL_FUNCTIONS(a) ${'\\'}
-% for name, token_version_data in nondraw_functions.items():
+% for name, token in nondraw_functions.items():
 <%
-    ret_type: str = token_version_data['type']
+    ret_type: str = token.return_value.type
     if ret_type == 'void':
         ret_type = 'void_t'
 
-    params: str = arg_decl(token_version_data, add_retval=False, add_names=True)
-    args: str = arg_call(token_version_data, add_retval=False)
+    params: str = arg_decl(token, add_retval=False, add_names=True)
+    args: str = arg_call(token, add_retval=False)
 %>\
   GL_FUNCTION(a, ${ret_type}, ${name}, ${params}, ${args}) ${'\\'}
 % endfor
