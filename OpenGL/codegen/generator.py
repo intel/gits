@@ -233,7 +233,7 @@ Function(name='glBegin', enabled=True, type=Param, runWrap=True, passToken=True,
   // make current fails (at least on Windows). Here we lock, API mutex,
   // which is recursive, and effectively makes glBegin/glEnd block atomic
   // with respect to GL commands in other threads. This will cause big issues
-  // if appliaction fails to match glBegin and glEnd everywhere.
+  // if application fails to match glBegin and glEnd everywhere.
   globalMutex.lock();""",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='mode', type='GLenum')
