@@ -20,6 +20,7 @@ import mako.template
 import mako.exceptions
 
 
+# TODO: Is CGLBitmapResource special too?
 special_types = ['CIndexPtr', 'CAttribPtr', 'CGLTexResource', 'CGLCompressedTexResource']
 
 # TODO: turn these strings into lists (how to handle semicolons?)
@@ -377,6 +378,12 @@ def expand_special_args(
     to CFunction constructors. This function offers two ways of changing/adding
     that data: either replacing existing/adding new Arguments, or (when
     only_add_wrap_params is True) adding wrap_params to existing Arguments.
+
+    CAttribPtr and CIndexPtr force additional constructor for state restore
+    with bound buffer.
+
+    CGLTexResource and CGLCompressedTexResource force additional constructor
+    with resource hash instead of pointer. (TODO: CGLBitmapResource too?)
 
     Parameters:
         args: List of Arguments.
