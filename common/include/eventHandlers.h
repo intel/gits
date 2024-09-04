@@ -11,10 +11,11 @@
 #include <Windows.h>
 #include <thread>
 #include <atomic>
+#include "tools_lite.h"
 
 namespace gits {
 
-class ExitEventHandler {
+class ExitEventHandler : public gits::noncopyable {
 public:
   ExitEventHandler();
   ~ExitEventHandler();
