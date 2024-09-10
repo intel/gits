@@ -76,6 +76,7 @@ public:
 
   nlohmann::ordered_json& GetProperties() const;
   std::string ReadProperties() const;
+  std::string GetApplicationName() const;
 
   friend CBinOStream& operator<<(CBinOStream& stream, const CFile& file);
   friend CBinIStream& operator>>(CBinIStream& stream, CFile& file);

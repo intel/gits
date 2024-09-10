@@ -544,6 +544,25 @@ std::string CFile::ReadProperties() const {
   return _properties->dump(2);
 }
 
+std::string CFile::GetApplicationName() const {
+  std::istringstream keyStream("diag.app.name");
+  std::string segment;
+  nlohmann::json current = *_properties;
+
+  while (std::getline(keyStream, segment, '.')) {
+    auto it = current.find(segment);
+    if (it != current.end()) {
+      current = *it;
+    } else {
+      Log(WARN) << "Application name not found from stream metadata.";
+      return "";
+    }
+  }
+
+  Log(INFO) << "Found application name: " << current;
+  return current;
+}
+
 void CGits::ResourceManagerInit(const std::filesystem::path& dump_dir) {
   const auto& mappings = resource_filenames(dump_dir);
   if (Config::IsPlayer() && stream_older_than(GITS_TOKEN_COMPRESSION)) {
