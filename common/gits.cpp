@@ -559,7 +559,6 @@ std::string CFile::GetApplicationName() const {
     }
   }
 
-  Log(INFO) << "Found application name: " << current;
   return current;
 }
 
