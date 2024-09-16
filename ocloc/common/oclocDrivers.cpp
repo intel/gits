@@ -99,33 +99,35 @@ int __ocloccall special_oclocInvoke(unsigned int argc,
   bool call_orig = true;
   int ret = 0;
 #ifndef BUILD_FOR_CCODE
-  if (gits::Config::Get().common.shared.useEvents && !bypass_luascript) {
-    auto L = CGits::Instance().GetLua().get();
-    bool exists = gits::lua::FunctionExists("oclocInvoke", L);
-    if (exists) {
-      std::unique_lock<std::recursive_mutex> lock(gits::lua::luaMutex);
-      OclocLog(TRACE, NO_PREFIX) << " Lua begin";
-      lua_getglobal(L, "oclocInvoke");
-      gits::lua::lua_push(L, argc);
-      lua_push_ext(L, argv, argc, true);
-      gits::lua::lua_push(L, numSources);
-      lua_push_ext<const uint8_t*>(L, sources, numSources, true);
-      lua_push_ext(L, sourceLens, numSources);
-      lua_push_ext(L, sourcesNames, numSources, true);
-      gits::lua::lua_push(L, numInputHeaders);
-      lua_push_ext<const uint8_t*>(L, dataInputHeaders, numInputHeaders, true);
-      lua_push_ext(L, lenInputHeaders, numInputHeaders);
-      lua_push_ext(L, nameInputHeaders, numInputHeaders, true);
-      lua_pushlightuserdata(L, (void*)numOutputs);
-      lua_pushlightuserdata(L, (void*)dataOutputs);
-      lua_pushlightuserdata(L, (void*)lenOutputs);
-      lua_pushlightuserdata(L, (void*)nameOutputs);
-      if (lua_pcall(L, 14, 1, 0) != 0) {
-        gits::lua::RaiseHookError("oclocInvoke", L);
+  if (gits::Config::Get().common.shared.useEvents) {
+    std::unique_lock<std::recursive_mutex> lock(gits::lua::luaMutex);
+    if (!bypass_luascript) {
+      auto L = CGits::Instance().GetLua().get();
+      bool exists = gits::lua::FunctionExists("oclocInvoke", L);
+      if (exists) {
+        OclocLog(TRACE, NO_PREFIX) << " Lua begin";
+        lua_getglobal(L, "oclocInvoke");
+        gits::lua::lua_push(L, argc);
+        lua_push_ext(L, argv, argc, true);
+        gits::lua::lua_push(L, numSources);
+        lua_push_ext<const uint8_t*>(L, sources, numSources, true);
+        lua_push_ext(L, sourceLens, numSources);
+        lua_push_ext(L, sourcesNames, numSources, true);
+        gits::lua::lua_push(L, numInputHeaders);
+        lua_push_ext<const uint8_t*>(L, dataInputHeaders, numInputHeaders, true);
+        lua_push_ext(L, lenInputHeaders, numInputHeaders);
+        lua_push_ext(L, nameInputHeaders, numInputHeaders, true);
+        lua_pushlightuserdata(L, (void*)numOutputs);
+        lua_pushlightuserdata(L, (void*)dataOutputs);
+        lua_pushlightuserdata(L, (void*)lenOutputs);
+        lua_pushlightuserdata(L, (void*)nameOutputs);
+        if (lua_pcall(L, 14, 1, 0) != 0) {
+          gits::lua::RaiseHookError("oclocInvoke", L);
+        }
+        call_orig = false;
+        lua_pop(L, lua_gettop(L));
+        OclocLog(TRACE, NO_PREFIX) << "Lua End";
       }
-      call_orig = false;
-      lua_pop(L, lua_gettop(L));
-      OclocLog(TRACE, NO_PREFIX) << "Lua End";
     }
   }
 #endif
@@ -172,23 +174,25 @@ int __ocloccall special_oclocFreeOutput(uint32_t* numOutputs,
   int ret = 0;
   bool call_orig = true;
 #ifndef BUILD_FOR_CCODE
-  if (gits::Config::Get().common.shared.useEvents && !bypass_luascript) {
-    auto L = CGits::Instance().GetLua().get();
-    bool exists = gits::lua::FunctionExists("oclocFreeOutput", L);
-    if (exists) {
-      std::unique_lock<std::recursive_mutex> lock(gits::lua::luaMutex);
-      OclocLog(TRACE, NO_PREFIX) << " Lua begin";
-      lua_getglobal(L, "oclocFreeOutput");
-      lua_pushlightuserdata(L, (void*)numOutputs);
-      lua_pushlightuserdata(L, (void*)dataOutputs);
-      lua_pushlightuserdata(L, (void*)lenOutputs);
-      lua_pushlightuserdata(L, (void*)nameOutputs);
-      if (lua_pcall(L, 4, 1, 0) != 0) {
-        gits::lua::RaiseHookError("oclocFreeOutput", L);
+  if (gits::Config::Get().common.shared.useEvents) {
+    std::unique_lock<std::recursive_mutex> lock(gits::lua::luaMutex);
+    if (!bypass_luascript) {
+      auto L = CGits::Instance().GetLua().get();
+      bool exists = gits::lua::FunctionExists("oclocFreeOutput", L);
+      if (exists) {
+        OclocLog(TRACE, NO_PREFIX) << " Lua begin";
+        lua_getglobal(L, "oclocFreeOutput");
+        lua_pushlightuserdata(L, (void*)numOutputs);
+        lua_pushlightuserdata(L, (void*)dataOutputs);
+        lua_pushlightuserdata(L, (void*)lenOutputs);
+        lua_pushlightuserdata(L, (void*)nameOutputs);
+        if (lua_pcall(L, 4, 1, 0) != 0) {
+          gits::lua::RaiseHookError("oclocFreeOutput", L);
+        }
+        call_orig = false;
+        lua_pop(L, lua_gettop(L));
+        OclocLog(TRACE, NO_PREFIX) << "Lua End";
       }
-      call_orig = false;
-      lua_pop(L, lua_gettop(L));
-      OclocLog(TRACE, NO_PREFIX) << "Lua End";
     }
   }
 #endif
@@ -216,7 +220,6 @@ int __ocloccall default_oclocFreeOutput(uint32_t* numOutputs,
 } // namespace
 #ifndef BUILD_FOR_CCODE
 int lua_oclocInvoke(lua_State* L) {
-  std::unique_lock<std::recursive_mutex> lock(gits::lua::luaMutex);
   int top = lua_gettop(L);
   if (top != 14) {
     luaL_error(L, "invalid number of parameters");

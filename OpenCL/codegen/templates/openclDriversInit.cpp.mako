@@ -36,7 +36,6 @@ static bool bypass_luascript;
 %for name, func in without_field(functions, 'version').items():
 #ifndef BUILD_FOR_CCODE
 int lua_${name}(lua_State* L) {
-  std::unique_lock<std::recursive_mutex> lock(luaMutex);
   int top = lua_gettop(L);
   if (top != ${len(func['args'])}) {
     luaL_error(L, "invalid number of parameters");
@@ -60,30 +59,32 @@ ${get_return_type(func)} STDCALL special_${name}(${make_params(func, with_types=
   }
   bool call_orig = true;
 
-  if (Config::Get().common.shared.useEvents && !bypass_luascript) {
-    auto L = GetLuaState();
-    bool exists = lua::FunctionExists("${name}", L);
-    if (exists || !doTrace) {
-      if (doTrace) {
-        tracer.trace_lua(
+  if (Config::Get().common.shared.useEvents) {
+    std::unique_lock<std::recursive_mutex> lock(gits::lua::luaMutex);
+    if (!bypass_luascript) {
+      auto L = GetLuaState();
+      bool exists = lua::FunctionExists("${name}", L);
+      if (exists || !doTrace) {
+        if (doTrace) {
+          tracer.trace_lua(
   %for arg in func['args']:
-          ${format_trace_argument(arg, enums)}${',' if not loop.last else ''}
+            ${format_trace_argument(arg, enums)}${',' if not loop.last else ''}
   %endfor 
-        );
-      }
-      std::unique_lock<std::recursive_mutex> lock(gits::lua::luaMutex);
-      lua_getglobal(L, "${name}");
-      ArgsPusher ap(L);
-      ap.push(${make_params(func, one_line=True)});
-      call_orig = false;
-      if (lua_pcall(L, ${len(func['args'])}, 1, 0) != 0) {
-        RaiseHookError("${name}", L);
-      }
-      int top = lua_gettop(L);
-      gits_ret = lua::lua_to<${get_return_type(func)}>(L, top);
-      lua_pop(L, top);
-      if (doTrace) {
-        tracer.trace_ret_lua(gits_ret);
+          );
+        }
+        lua_getglobal(L, "${name}");
+        ArgsPusher ap(L);
+        ap.push(${make_params(func, one_line=True)});
+        call_orig = false;
+        if (lua_pcall(L, ${len(func['args'])}, 1, 0) != 0) {
+          RaiseHookError("${name}", L);
+        }
+        int top = lua_gettop(L);
+        gits_ret = lua::lua_to<${get_return_type(func)}>(L, top);
+        lua_pop(L, top);
+        if (doTrace) {
+          tracer.trace_ret_lua(gits_ret);
+        }
       }
     }
   }
