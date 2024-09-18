@@ -2095,7 +2095,7 @@ void gits::Vulkan::RestoreSemaphores(CScheduler& scheduler, CStateDynamic& sd) {
   // in any submit)
   for (auto& deviceSemaphoresPair : semaphoresToSignal) {
     VkDevice device = deviceSemaphoresPair.first;
-    auto semaphores = deviceSemaphoresPair.second;
+    auto& semaphores = deviceSemaphoresPair.second;
 
     if (semaphores.size() > 0) {
       // Get temporary command buffer and begin it

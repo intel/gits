@@ -161,7 +161,7 @@ gits::CRecorder::CRecorder()
 
   // create file data and register it in GITS
   if (config.common.recorder.enabled) {
-    auto outputpath = config.common.recorder.dumpPath;
+    auto& outputpath = config.common.recorder.dumpPath;
     std::filesystem::create_directories(outputpath);
 #if defined(GITS_PLATFORM_X11)
     struct sigaction action;
@@ -407,7 +407,7 @@ void gits::CRecorder::Register(std::unique_ptr<CBehavior> behavior) {
     _sc.scheduler.reset(new CScheduler(rec.tokenBurst, rec.tokenBurstNum));
   }
 
-  auto outputpath = rec.dumpPath;
+  auto& outputpath = rec.dumpPath;
   auto filePath = (outputpath / "stream").string();
   if (cfg.dumpBinary() && rec.enabled) {
     // create file

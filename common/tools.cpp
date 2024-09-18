@@ -300,7 +300,8 @@ void SaveJsonFile(const nlohmann::ordered_json& json, const std::filesystem::pat
 #endif
 
 void CheckMinimumAvailableDiskSize() {
-  auto path = Config::Get().common.recorder.dumpPath;
+  auto config = Config::Get();
+  auto& path = config.common.recorder.dumpPath;
   auto diskSpaceInfo = std::filesystem::space(path);
   uintmax_t minDiskSize = 104857600;
   if (diskSpaceInfo.available <= minDiskSize) {
