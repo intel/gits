@@ -65,15 +65,17 @@ void obsolete_args_override(int& argc, char**& argv) {
     return (arg == "-" + ref) || (arg == "--" + ref);
   };
   auto remove_from_lines = [&](const std::string& ref, bool has_arg) -> void {
-    for (size_t i = 0; i < lines.size(); ++i) {
+    size_t i = 0;
+    while (i < lines.size()) {
       if (matches(lines[i], ref)) {
         auto last = lines.begin() + i + 1;
         if (last != lines.end() && has_arg) {
           last++;
         }
         lines.erase(lines.begin() + i, last);
-        i--;
         Log(WARN) << "Option " << ref << " is obsoleted and will have no effect";
+      } else {
+        i++;
       }
     }
   };
