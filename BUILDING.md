@@ -4,6 +4,7 @@
 
 You will need:
 - [Git](https://git-scm.com/)
+- [Git LFS](https://git-lfs.com/)
 - A C++ compiler (MSVC on Windows, GCC on Linux; Clang support is planned)
 - A build system (Make, Visual Studio, Ninja, etc.)
 - [CMake](https://cmake.org/)
@@ -20,6 +21,9 @@ On Linux you will also need:
 - OpenGL development headers (`libgl-dev` on Ubuntu)
 
 ## Building
+
+### Install Git LFS
+- https://docs.github.com/en/repositories/working-with-files/managing-large-files/installing-git-large-file-storage
 
 ### Clone the repo
 

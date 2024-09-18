@@ -1,6 +1,5 @@
 # Commit everything as LF, but on Windows checkout with CRLF.
 * text=auto
-
 # Git tries to detect if a file is a text file, but we can tell it
 # explicitly which files are text and which binaries.
   # Cygwin (?) man files
@@ -34,11 +33,10 @@ LICENSE		text
 NEWS		text
 README		text
 TODO		text
-
 *.ico		binary
-*.jpg		binary
-*.pdf		binary
-*.png		binary
+*.jpg filter=lfs diff=lfs merge=lfs -text
+*.png filter=lfs diff=lfs merge=lfs -text
 *.pyc		binary
-*.so		binary
-
+*.so filter=lfs diff=lfs merge=lfs -text
+*.dll filter=lfs diff=lfs merge=lfs -text
+*.lib filter=lfs diff=lfs merge=lfs -text
