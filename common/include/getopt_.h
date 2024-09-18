@@ -92,6 +92,7 @@ private:
 
 public:
   CGetOpt(int& argc, char**& argv);
+  ~CGetOpt() = default;
   CGetOpt(const CGetOpt& other) = delete;
   CGetOpt& operator=(const CGetOpt& other) = delete;
 

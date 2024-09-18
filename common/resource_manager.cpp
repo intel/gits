@@ -89,6 +89,13 @@ CResourceManager::CResourceManager(
   }
 }
 
+CResourceManager::~CResourceManager() {
+  for (auto& pair : _fileReader) {
+    delete pair.second; // Delete each CBinIStream pointer
+  }
+  _fileReader.clear(); // Clear the map
+}
+
 std::vector<char> CResourceManager::get(hash_t hash) {
   if (hash == EmptyHash) {
     return std::vector<char>();

@@ -59,7 +59,8 @@ public:
                   bool isBGR = false,
                   bool isSRGB = false) {
     if (!_imageWriter.running()) {
-      _imageWriter.start(gits::ImageWriter());
+      auto writer = std::make_shared<gits::ImageWriter>();
+      _imageWriter.start([writer](auto& queue) mutable { (*writer)(queue); });
     }
 
     gits::Image img(filename, width, height, hasAlpha, data, flip, isBGR, isSRGB);

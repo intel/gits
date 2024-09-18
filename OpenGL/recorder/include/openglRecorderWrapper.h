@@ -59,6 +59,7 @@ class CRecorderWrapper : public IRecorderWrapper {
 
 public:
   CRecorderWrapper(const CRecorderWrapper& ref) = delete;
+  ~CRecorderWrapper() = default;
   CRecorderWrapper& operator=(const CRecorderWrapper& ref) = delete;
   void StreamFinishedEvent(std::function<void()> e);
   CRecorderWrapper(CRecorder& recorder);

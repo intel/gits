@@ -63,6 +63,7 @@ public:
   CResourceManager(const std::unordered_map<uint32_t, std::filesystem::path>& filename_mapping);
   CResourceManager(const CResourceManager& other) = delete;
   CResourceManager& operator=(const CResourceManager& other) = delete;
+  ~CResourceManager();
   std::vector<char> get(hash_t hash);
 
   TResourceHandle get_resource_handle(hash_t);

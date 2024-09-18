@@ -220,6 +220,7 @@ public:
       cost_capacity_ = 1;
     }
   }
+  ~ProducerConsumer() = default;
   ProducerConsumer(const ProducerConsumer&) = delete;
   ProducerConsumer& operator=(const ProducerConsumer&) = delete;
   ProducerConsumer(ProducerConsumer&&) = delete;
@@ -303,6 +304,8 @@ public:
 
   template <class T>
   TaskFunction(Queue& q, T func) : function_(func), queue_(q) {}
+  TaskFunction(const TaskFunction& other) : function_(other.function_), queue_(other.queue_) {}
+  ~TaskFunction() = default;
   void operator()() {
     function_(queue_);
   }
@@ -322,9 +325,9 @@ public:
   Task(Task&&) = delete;
   Task& operator=(Task&&) = delete;
   template <class T>
-  void start(T func) {
+  void start(T&& func) {
     assert(thread_.size() == 0);
-    thread_.emplace_back(TaskFunction<WorkUnit>(queue_, func));
+    thread_.emplace_back(TaskFunction<WorkUnit>(queue_, std::forward<T>(func)));
   }
   bool running() const {
     return thread_.size() != 0;
@@ -429,7 +432,23 @@ public:
       fast_exit(1);
     }
   }
+  // Default constructor
+  ImageWriter() = default;
+
+  // User-defined copy constructor
+  ImageWriter(const ImageWriter& other) = delete;
+
+  // User-defined copy assignment operator
   ImageWriter& operator=(const ImageWriter& other) = delete;
+
+  // User-defined move constructor
+  ImageWriter(ImageWriter&& other) = default;
+
+  // User-defined move assignment operator
+  ImageWriter& operator=(ImageWriter&& other) = default;
+
+  // User-defined destructor
+  ~ImageWriter() = default;
 };
 
 #ifndef BUILD_FOR_CCODE

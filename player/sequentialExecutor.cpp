@@ -26,7 +26,16 @@ class CSequentialExecutor::CThreadLoop {
   CSequentialExecutor& _seqExec;
 
 public:
+  // Delete the copy constructor
+  CThreadLoop(const CThreadLoop& other) = delete;
+
+  // Delete the copy assignment operator
   CThreadLoop& operator=(const CThreadLoop& other) = delete;
+
+  // Default destructor
+  ~CThreadLoop() = default;
+
+  // Constructor
   CThreadLoop(CSequentialExecutor& seqexec, int threadId)
       : _threadId(threadId), _seqExec(seqexec) {}
 
@@ -102,7 +111,7 @@ void gits::CSequentialExecutor::Run(CToken& token) {
     // create additional thread if needed
     if (find(begin(_activeThreadsIdList), end(_activeThreadsIdList), threadId) ==
         end(_activeThreadsIdList)) {
-      _executionThreads.emplace_back(CThreadLoop(*this, threadId));
+      _executionThreads.emplace_back([this, threadId]() { CThreadLoop(*this, threadId)(); });
       _activeThreadsIdList.push_back(threadId);
     }
 

@@ -48,6 +48,7 @@ class CRecorderWrapper : public IRecorderWrapper {
 
 public:
   CRecorderWrapper(CRecorder& recorder);
+  ~CRecorderWrapper() = default;
   CRecorderWrapper(const CRecorderWrapper& ref) = delete;
   CRecorderWrapper& operator=(const CRecorderWrapper& ref) = delete;
   void PauseRecording() override;

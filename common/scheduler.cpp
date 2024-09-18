@@ -36,9 +36,16 @@ namespace gits {
 
 class CStreamLoader {
   CScheduler& _sched;
-  CStreamLoader operator=(const CStreamLoader&) = delete;
 
 public:
+  // User-defined copy assignment operator.
+  CStreamLoader& operator=(const CStreamLoader&) = delete;
+
+  // User-defined copy constructor.
+  CStreamLoader(const CStreamLoader& other) : _sched(other._sched) {}
+
+  // User-defined destructor.
+  ~CStreamLoader() = default;
   CStreamLoader(CScheduler& sched) : _sched(sched) {}
 
   void operator()(ProducerConsumer<CScheduler::CTokenList>& queue) {
@@ -133,9 +140,14 @@ public:
 
 class CStreamWriter {
   CScheduler& _sched;
-  CStreamWriter& operator=(const CStreamWriter&) = delete;
 
 public:
+  // User-defined copy assignment operator.
+  CStreamWriter& operator=(const CStreamWriter&) = delete;
+  // User-defined destructor.
+  ~CStreamWriter() = default;
+  // User-defined copy constructor.
+  CStreamWriter(const CStreamWriter& other) : _sched(other._sched) {}
   CStreamWriter(CScheduler& sched) : _sched(sched) {}
 
   static void consume_tokens(CScheduler::CTokenList& tokenList,
