@@ -10,6 +10,7 @@
 #include <sstream>
 #include <algorithm>
 #include <stdexcept>
+#include <limits>
 
 BitRange::BitRange(bool full) : full_(full), empty_(!full), base_(0) {}
 
@@ -67,7 +68,7 @@ void BitRange::recompute_block() const {
 
     int next_value = str.peek();
     if (next_value == '-') {
-      //Read x-y pattern
+      // Read x-y pattern
       str.get();
       size_t last = 0;
       str >> last;
@@ -82,7 +83,7 @@ void BitRange::recompute_block() const {
 
       next_value = str.peek();
       if (next_value == ':') {
-        //Read x-y:z pattern
+        // Read x-y:z pattern
         str.get();
         size_t every_nth_frame = 1;
         str >> every_nth_frame;
@@ -98,22 +99,40 @@ void BitRange::recompute_block() const {
           steps++;
         }
 
+        // Check for potential overflow before performing the multiplication
+        if (every_nth_frame > 0 && steps > (std::numeric_limits<size_t>::max() / every_nth_frame)) {
+          throw std::overflow_error("Multiplication overflow in frame calculation");
+        }
+
         frame += every_nth_frame * steps;
 
-        //Write pattern
+        frame = std::max(frame, min_frame);
+
+        // Write pattern
         for (; frame <= last; frame += every_nth_frame) {
-          bits_[frame - base_] = true;
+          if (frame <= max_frame) {
+            if (frame < base_) {
+              throw std::underflow_error("Frame underflow in bits_ array access");
+            }
+            bits_[frame - base_] = true;
+          }
         }
       } else {
-        //Write pattern
+        // Handle x-y pattern without step
         frame = std::max(frame, min_frame);
         for (; frame <= last; ++frame) {
+          if (frame < base_) {
+            throw std::underflow_error("Frame underflow in bits_ array access");
+          }
           bits_[frame - base_] = true;
         }
       }
     } else {
-      //Write pattern
+      // Handle single frame case
       if (frame >= min_frame && frame <= max_frame) {
+        if (frame < base_) {
+          throw std::underflow_error("Frame underflow in bits_ array access");
+        }
         bits_[frame - base_] = true;
       }
     }
