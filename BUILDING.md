@@ -66,5 +66,3 @@ This will install GITS into the folder indicated by the install prefix we set du
 cmake --install . --config Release --prefix dist
 ```
 Installing in this case means copying files into their destinations and setting paths in config. If you move the install folder somewhere else, you will need to manually adjust paths in config files.
-
-On Windows, it's recommended for the install path to be relatively short (e.g., `C:\Users\username\Code\gits\Release\x64\dist`) to avoid problems with building CCode projects, which are created inside the GITS install folder. Building Boost (which is used by CCode) produces very long paths, which may exceed the default path length limit of Windows, failing the build.
