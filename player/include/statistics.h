@@ -62,12 +62,12 @@ public:
       columnWidths[col] = std::max(columnWidths[col], row[col].length());
     }
     const Row properRow(row.begin(), row.end());
-    rows.push_back(properRow);
+    rows.push_back(std::move(properRow));
   }
 
   void AddOneCellRow(std::string cellContents) {
     const Row properRow{std::move(cellContents)};
-    rows.push_back(properRow);
+    rows.push_back(std::move(properRow));
   }
 
   void Print(std::ostream& out) const {
@@ -79,7 +79,7 @@ public:
 
     printHorizLine(out, summedWidth);
     const Row headersVec(columnHeaders.begin(), columnHeaders.end());
-    printRow(out, headersVec, true);
+    printRow(out, std::move(headersVec), true);
     printHorizLine(out, summedWidth);
     for (const auto& row : rows) {
       if (row.size() == 1) {

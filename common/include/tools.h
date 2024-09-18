@@ -303,7 +303,7 @@ public:
   typedef ProducerConsumer<WorkUnit> Queue;
 
   template <class T>
-  TaskFunction(Queue& q, T func) : function_(func), queue_(q) {}
+  TaskFunction(Queue& q, T func) : function_(std::move(func)), queue_(q) {}
   TaskFunction(const TaskFunction& other) : function_(other.function_), queue_(other.queue_) {}
   ~TaskFunction() = default;
   void operator()() {

@@ -363,7 +363,7 @@ gits::Vulkan::CUpdateDescriptorSetWithTemplateArray::CUpdateDescriptorSetWithTem
       if (obj->GetOffset() + obj->GetSize() > max_length) {
         max_length = obj->GetOffset() + obj->GetSize();
       }
-      _cgenericargsDict.push_back(obj);
+      _cgenericargsDict.push_back(std::move(obj));
     }
   }
   _size = std::make_unique<Cuint64_t>(max_length);
@@ -389,7 +389,7 @@ void gits::Vulkan::CUpdateDescriptorSetWithTemplateArray::Read(CBinIStream& stre
     for (unsigned i = 0; i < dictSize; i++) {
       auto keyArgPtr = std::make_shared<CDescriptorUpdateTemplateObject>();
       keyArgPtr->Read(stream);
-      _cgenericargsDict.push_back(keyArgPtr);
+      _cgenericargsDict.push_back(std::move(keyArgPtr));
     }
   } else {
     throw std::runtime_error(EXCEPTION_MESSAGE);

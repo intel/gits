@@ -115,7 +115,7 @@ gits::OpenGL::CgitsClientIndirectArraysUpdate::CgitsClientIndirectArraysUpdate(G
   for (auto& data : indirectDataVec) {
     auto cArrayUpdatePtr = std::make_shared<ClientArraysUpdate>(
         data.first, data.count, data.instanceCount, data.baseInstance);
-    _arraysUpdateVec.push_back(cArrayUpdatePtr);
+    _arraysUpdateVec.push_back(std::move(cArrayUpdatePtr));
   }
 }
 
@@ -137,7 +137,7 @@ gits::OpenGL::CgitsClientIndirectArraysUpdate::CgitsClientIndirectArraysUpdate(
     auto cArrayUpdatePtr = std::make_shared<ClientArraysUpdate>(
         data.count, type, reinterpret_cast<void*>(data.firstIndex), data.instanceCount,
         data.baseInstance, data.baseVertex);
-    _arraysUpdateVec.push_back(cArrayUpdatePtr);
+    _arraysUpdateVec.push_back(std::move(cArrayUpdatePtr));
   }
 }
 
@@ -167,7 +167,7 @@ gits::OpenGL::CgitsClientIndirectArraysUpdate::CgitsClientIndirectArraysUpdate(G
     auto cArrayUpdatePtr = std::make_shared<ClientArraysUpdate>(
         data.count, type, reinterpret_cast<void*>(data.firstIndex), data.instanceCount,
         data.baseInstance, data.baseVertex);
-    _arraysUpdateVec.push_back(cArrayUpdatePtr);
+    _arraysUpdateVec.push_back(std::move(cArrayUpdatePtr));
   }
 }
 

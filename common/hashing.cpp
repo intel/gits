@@ -54,7 +54,7 @@ std::string file_xxhash(const std::filesystem::path& filename) {
   fclose(file);
 
   const XXH32_hash_t hash = XXH32_digest(ctx);
-  const std::string result = bytesToHex((uint8_t*)&hash, XXHASH_DIGEST_SIZE);
+  std::string result = bytesToHex((uint8_t*)&hash, XXHASH_DIGEST_SIZE);
 
   XXH32_freeState(ctx);
 

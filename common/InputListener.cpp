@@ -21,7 +21,7 @@ namespace InputListener {
 int CInputListener::AddHotKey(const std::vector<uint>& keys) {
   CInputListener::HotKeyHolder hotKey(keys, _maxRegisteredHotKeyID);
   _pressedHistory[_maxRegisteredHotKeyID] = false;
-  _hotKeys.push_back(hotKey);
+  _hotKeys.push_back(std::move(hotKey));
   return _maxRegisteredHotKeyID++;
 }
 void CInputListener::AddHotKeyEvent(uint hotKeyId, HotKeyHolder::HotKeyEvent clickEvent) {

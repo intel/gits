@@ -819,7 +819,7 @@ public:
 
     for (int i = 0; i < size; i++) {
       auto obj = std::make_shared<CVkGenericArgument>(dictionary[i]);
-      _cgenericargsDict.push_back(obj);
+      _cgenericargsDict.push_back(std::move(obj));
     }
   }
 
@@ -855,7 +855,7 @@ public:
       for (unsigned i = 0; i < dictSize; i++) {
         std::shared_ptr<CVkGenericArgument> keyArgPtr(new CVkGenericArgument());
         keyArgPtr->Read(stream);
-        _cgenericargsDict.push_back(keyArgPtr);
+        _cgenericargsDict.push_back(std::move(keyArgPtr));
       }
     } else {
       throw std::runtime_error(EXCEPTION_MESSAGE);

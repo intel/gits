@@ -1173,7 +1173,7 @@ inline void vkCreateRayTracingPipelinesKHR_RECWRAP(
         std::vector<uint8_t> handle(handleSize);
         drvVk.vkGetRayTracingCaptureReplayShaderGroupHandlesKHR(device, pPipelines[p], g, 1,
                                                                 handleSize, handle.data());
-        pipelineCaptureReplayHandles.push_back(handle);
+        pipelineCaptureReplayHandles.push_back(std::move(handle));
 
         currentGroup.pShaderGroupCaptureReplayHandle = pipelineCaptureReplayHandles.back().data();
       }

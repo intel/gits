@@ -601,7 +601,7 @@ void CGits::WriteImage(const std::string& filename,
                        bool isSRGB) {
   if (!_imageWriter.running()) {
     auto writer = std::make_shared<ImageWriter>();
-    _imageWriter.start([writer](auto& queue) mutable { (*writer)(queue); });
+    _imageWriter.start([writer = std::move(writer)](auto& queue) mutable { (*writer)(queue); });
   }
 
   Image img(filename, width, height, hasAlpha, data, flip, isBGR, isSRGB);

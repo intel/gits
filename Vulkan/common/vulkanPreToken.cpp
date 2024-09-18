@@ -317,18 +317,18 @@ void gits::Vulkan::CGitsVkMemoryUpdate2::Read(CBinIStream& stream) {
   for (uint64_t i = 0; i < **_size; i++) {
     auto offsetPtr(std::make_shared<Cuint64_t>());
     offsetPtr->Read(stream);
-    _offset.push_back(offsetPtr);
+    _offset.push_back(std::move(offsetPtr));
   }
   for (uint64_t i = 0; i < **_size; i++) {
     auto lengthPtr(std::make_shared<Cuint64_t>());
     lengthPtr->Read(stream);
-    _length.push_back(lengthPtr);
+    _length.push_back(std::move(lengthPtr));
   }
 
   for (uint64_t i = 0; i < **_size; i++) {
     auto binaryPtr(std::make_shared<CDeclaredBinaryResource>());
     binaryPtr->Read(stream);
-    _resource.push_back(binaryPtr);
+    _resource.push_back(std::move(std::move(binaryPtr)));
   }
 }
 

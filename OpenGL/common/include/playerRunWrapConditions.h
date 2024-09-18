@@ -36,7 +36,7 @@ inline bool ConditionExtension(std::string ext_name) {
   } else {
     if (ext_set.find(ext_name) == ext_set.end()) {
       Log(WARN) << "" + ext_name + " is not available on current platform.";
-      ext_set.insert(ext_name);
+      ext_set.insert(std::move(ext_name));
     }
     return false;
   }

@@ -96,8 +96,7 @@ std::string ToLowerCopy(const std::string& s) {
 const std::string getVarName(const std::string prefix, const void* ptr) {
   std::stringstream ss;
   ss << ptr;
-  const std::string varName = prefix + ss.str();
-  return varName;
+  return prefix + ss.str();
 }
 const std::string getVarName(const void* ptr) {
   return getVarName("var_", ptr);

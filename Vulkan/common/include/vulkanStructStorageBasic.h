@@ -33,7 +33,7 @@ public:
 
     for (size_t i = 0; i < size; i++) {
       auto obj = std::make_shared<TKeyArg>(&dictionary[i]);
-      _cargsDict.push_back(obj);
+      _cargsDict.push_back(std::move(obj));
     }
   }
   void AddElem(const TKey* elem) {
@@ -42,7 +42,7 @@ public:
     }
 
     auto obj = std::make_shared<TKeyArg>(elem);
-    _cargsDict.push_back(obj);
+    _cargsDict.push_back(std::move(obj));
   }
   template <class WRAP_T2>
   CDataArray(size_t size, const TKey* dictionary, const WRAP_T2 arg3) {
@@ -52,7 +52,7 @@ public:
 
     for (size_t i = 0; i < size; i++) {
       auto obj = std::make_shared<TKeyArg>(&dictionary[i], arg3);
-      _cargsDict.push_back(obj);
+      _cargsDict.push_back(std::move(obj));
     }
   }
   template <class WRAP_T2, class WRAP_T3>
@@ -73,7 +73,7 @@ public:
 
     for (size_t i = 0; i < size; i++) {
       auto obj = std::make_shared<TKeyArg>(&dictionary[i]);
-      _cargsDict.push_back(obj);
+      _cargsDict.push_back(std::move(obj));
     }
   }
   std::vector<std::shared_ptr<TKeyArg>>& Vector() {
@@ -514,7 +514,7 @@ public:
 
     for (size_t i = 0; i < size / 4; i++) {
       auto obj = std::make_shared<Cuint32_tData>(&dictionary[i]);
-      _cargsDict.push_back(obj);
+      _cargsDict.push_back(std::move(obj));
     }
   }
   CVulkanShaderData(size_t size, uint32_t* dictionary) {
@@ -524,7 +524,7 @@ public:
 
     for (size_t i = 0; i < size / 4; i++) {
       auto obj = std::make_shared<Cuint32_tData>(&dictionary[i]);
-      _cargsDict.push_back(obj);
+      _cargsDict.push_back(std::move(obj));
     }
   }
   std::vector<std::shared_ptr<Cuint32_tData>>& Vector() {
@@ -779,7 +779,7 @@ public:
 
     for (uint32_t i = 0; i < size; i++) {
       auto obj = std::make_shared<CVkGenericArgumentData>(dictionary[i]);
-      _cgenericargsDict.push_back(obj);
+      _cgenericargsDict.push_back(std::move(obj));
     }
   }
   const void** Value() {

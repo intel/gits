@@ -788,8 +788,8 @@ void MemoryAliasingTracker::SplitRange(uint64_t offset) {
     // Remove existing range
     MemoryRanges.erase(existingRangeIterator);
     // Insert two new ranges
-    MemoryRanges.insert(leftRange);
-    MemoryRanges.insert(rightRange);
+    MemoryRanges.insert(std::move(leftRange));
+    MemoryRanges.insert(std::move(rightRange));
   }
 }
 
@@ -830,7 +830,7 @@ void MemoryAliasingTracker::RemoveResource(uint64_t offset,
       Range newRange = {current->offset, current->size + next->size, current->resources};
       MemoryRanges.erase(current);
       MemoryRanges.erase(next);
-      MemoryRanges.insert(newRange);
+      MemoryRanges.insert(std::move(newRange));
 
       beginIterator = GetRange(offset);
       endIterator = GetRange(offset + size);

@@ -547,7 +547,7 @@ gits::CCodeOStream::CCodeOStream(const std::string& base_filename)
   }
 
   TScopeData scope = {0};
-  _scopeList.push_front(scope);
+  _scopeList.push_front(std::move(scope));
 
   //validate _filesData
   for (unsigned i = 0; i < BUFFER_COUNT; ++i) {
@@ -712,7 +712,7 @@ void gits::CCodeOStream::OnFilesClose() {
 void gits::CCodeOStream::ScopeBegin() {
   _indentLevels[_currBuffer] += INDENT_STEP;
   TScopeData scope = {0};
-  _scopeList.push_front(scope);
+  _scopeList.push_front(std::move(scope));
 }
 
 void gits::CCodeOStream::ScopeEnd() {

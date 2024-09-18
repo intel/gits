@@ -300,7 +300,8 @@ bool vulkanCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer bufferHandle, std:
   attachment->copiedBuffer = localBuffer;
   attachment->fileName = std::move(fileName);
   attachment->devMemory = localMemory;
-  SD()._commandbufferstates[commandBuffer]->renderPassResourceBuffers.push_back(attachment);
+  SD()._commandbufferstates[commandBuffer]->renderPassResourceBuffers.push_back(
+      std::move(attachment));
   return true;
 }
 
@@ -522,12 +523,12 @@ bool vulkanCopyImage(VkCommandBuffer commandBuffer,
             }
             auto& commandBufferState = SD()._commandbufferstates[commandBuffer];
             if (isResource) {
-              commandBufferState->renderPassResourceImages.push_back(attachment);
+              commandBufferState->renderPassResourceImages.push_back(std::move(attachment));
             } else {
               if (dumpingMode == VulkanDumpingMode::VULKAN_PER_RENDER_PASS) {
-                commandBufferState->renderPassImages.push_back(attachment);
+                commandBufferState->renderPassImages.push_back(std::move(attachment));
               } else if (dumpingMode == VulkanDumpingMode::VULKAN_PER_DRAW) {
-                commandBufferState->drawImages.push_back(attachment);
+                commandBufferState->drawImages.push_back(std::move(attachment));
               }
             }
           }
@@ -3280,7 +3281,7 @@ VkDescriptorSet getTemporaryDescriptorSet(VkDevice device,
     auto poolState =
         std::make_shared<CDescriptorPoolState>(&pool, &poolCreateInfo, SD()._devicestates[device]);
 
-    commandBufferState.temporaryDescriptors.push_back(poolState);
+    commandBufferState.temporaryDescriptors.push_back(std::move(poolState));
   }
 
   auto poolState = commandBufferState.temporaryDescriptors.back();
@@ -3302,7 +3303,7 @@ VkDescriptorSet getTemporaryDescriptorSet(VkDevice device,
 
   auto setState =
       std::make_shared<CDescriptorSetState>(&descriptorSet, nullptr, poolState, setLayoutState);
-  poolState->descriptorSetStateStoreList.insert(setState);
+  poolState->descriptorSetStateStoreList.insert(std::move(setState));
 
   return descriptorSet;
 }

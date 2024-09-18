@@ -324,7 +324,7 @@ inline void vkCreateDevice_SD(VkResult return_value,
             std::make_shared<CQueueState>(&queue, queueFamilyIndex, queueIndex,
                                           queueFamilies[queueFamilyIndex].queueFlags, deviceState);
         SD()._queuestates.emplace(queue, queueState);
-        deviceState->queueStateStoreList.push_back(queueState);
+        deviceState->queueStateStoreList.push_back(std::move(queueState));
       }
     }
 
@@ -417,7 +417,7 @@ inline void vkCreateSwapchainKHR_SD(VkResult return_value,
         }
         auto imageState = std::make_shared<CImageState>(&image, swapchainState);
         SD()._imagestates.emplace(image, imageState);
-        swapchainState->imageStateStoreList.push_back(imageState);
+        swapchainState->imageStateStoreList.push_back(std::move(imageState));
       }
     }
 
@@ -2309,7 +2309,7 @@ inline void vkAllocateCommandBuffers_SD(VkResult return_value,
 
       SD()._commandbufferstates.emplace(pCommandBuffers[i], commandBufferState);
       SD()._commandpoolstates[pAllocateInfo->commandPool]->commandBufferStateStoreList.insert(
-          commandBufferState);
+          std::move(commandBufferState));
     }
   }
 }
