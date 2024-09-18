@@ -229,27 +229,29 @@ public:
   // producer is exhausted - no product is generated in such
   // event.
   bool consume(Product& product) {
-    std::unique_lock<std::mutex> lock(mutex_);
+    {
+      std::unique_lock<std::mutex> lock(mutex_);
 
-    // Wait for loader thread to load up a chunk.
-    while (products_.empty()) {
-      if (exhausted_) {
-        return false;
+      // Wait for loader thread to load up a chunk.
+      while (products_.empty()) {
+        if (exhausted_) {
+          return false;
+        }
+        cond_.wait(lock);
       }
-      cond_.wait(lock);
+
+      products_[0].swap(product);
+      products_.pop_front();
+      cost_capacity_ += gits::get_product_cost(product);
+
+      // No need to notify producer thread if it will block
+      // anyways. Only notify him if queue is reasonably empty.
+      if (cost_capacity_ <= 0) {
+        return true;
+      }
     }
 
-    products_[0].swap(product);
-    products_.pop_front();
-    cost_capacity_ += gits::get_product_cost(product);
-
-    // No need to notify producer thread if it will block
-    // anyways. Only notify him if queue is resonably empty.
-    if (cost_capacity_ > 0) {
-      lock.unlock();
-      cond_.notify_one();
-    }
-
+    cond_.notify_one();
     return true;
   }
 
@@ -282,10 +284,11 @@ public:
   }
 
   void break_pipe() {
-    std::unique_lock<std::mutex> lock(mutex_);
-    exhausted_ = true;
+    {
+      std::unique_lock<std::mutex> lock(mutex_);
+      exhausted_ = true;
+    }
 
-    lock.unlock();
     cond_.notify_one();
   }
 
