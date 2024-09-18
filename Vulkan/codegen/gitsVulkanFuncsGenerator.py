@@ -1169,12 +1169,12 @@ void thread_tracker() {
 
 namespace {
   // Avoid recording API - recursive functions.
-  uint32_t recursionDepth = 0;
-  const uint32_t disableDepth = 1000;
+  std::atomic<uint32_t> recursionDepth = 0;
+  const std::atomic<uint32_t> disableDepth = 1000;
 } // namespace
 
 void PrePostDisableVulkan() {
-  recursionDepth = disableDepth;
+  recursionDepth.store(disableDepth);
   CGitsPluginVulkan::_recorderFinished = true;
 }
 

@@ -26,7 +26,7 @@ namespace Vulkan {
 IRecorderWrapper* CGitsPluginVulkan::_recorderWrapper;
 std::unique_ptr<CGitsLoader> CGitsPluginVulkan::_loader;
 std::mutex CGitsPluginVulkan::_mutex;
-bool CGitsPluginVulkan::_recorderFinished = false;
+std::atomic<bool> CGitsPluginVulkan::_recorderFinished{false};
 
 namespace {
 void fast_exit(int code) {
@@ -82,10 +82,12 @@ void CGitsPluginVulkan::Initialize() {
 }
 
 void CGitsPluginVulkan::ProcessTerminationDetected() {
+  std::unique_lock<std::mutex> lock(_mutex);
   _loader->ProcessTerminationDetected();
 }
 
 const Config& CGitsPluginVulkan::Configuration() {
+  std::unique_lock<std::mutex> lock(_mutex);
   return _loader->GetConfiguration();
 }
 } // namespace Vulkan

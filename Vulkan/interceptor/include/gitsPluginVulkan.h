@@ -30,9 +30,10 @@ class CGitsPluginVulkan {
   static std::mutex _mutex;
 
 public:
-  static bool _recorderFinished;
+  static std::atomic<bool> _recorderFinished;
   static void Initialize();
   static IRecorderWrapper& RecorderWrapper() {
+    std::unique_lock<std::mutex> lock(_mutex);
     return *_recorderWrapper;
   }
   static void ProcessTerminationDetected();

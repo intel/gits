@@ -38,6 +38,7 @@ class CGitsPlugin {
 public:
   static void Initialize();
   static IRecorderWrapper& RecorderWrapper() {
+    std::unique_lock<std::mutex> lock(_mutex);
     return *_recorderWrapper;
   }
   static void ProcessTerminationDetected();
