@@ -93,7 +93,9 @@ int CContextStateDynamic::Version() {
   std::string version;
   std::stringstream str(ver);
 
+  bool isES = false;
   if (strstr(ver, "OpenGL ES") != nullptr) {
+    isES = true;
     str >> version; // consume 'OpenGL'
     str >> version; // consume 'ES-XX'
   }
@@ -107,6 +109,17 @@ int CContextStateDynamic::Version() {
   str.clear();
   str.str(version);
   str >> major >> minor;
+
+  // Check for valid OpenGL and OpenGL ES version ranges
+  if ((isES && (major < 1 || major > 3 || minor < 0 || minor > 2)) ||
+      (!isES && (major < 1 || major > 4 || minor < 0 || minor > 6))) {
+    throw std::out_of_range("Invalid OpenGL or OpenGL ES version numbers");
+  }
+
+  // Perform safe arithmetic operations
+  if (major > (INT_MAX / 100) || minor > (INT_MAX / 10)) {
+    throw std::overflow_error("Version number calculation overflow");
+  }
 
   _version = 100 * major + 10 * minor;
   return _version;
