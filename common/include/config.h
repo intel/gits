@@ -372,6 +372,7 @@ struct Config {
       vi_uint memorySegmentSize;
       vi_bool shadowMemory;
       vi_bool memoryAccessDetection;
+      MemoryTrackingModeOpt memoryTrackingMode;
       MemoryUpdateStateOpt memoryUpdateState;
       vi_bool forceUniversalRecording;
       vi_uint delayFenceChecksCount;

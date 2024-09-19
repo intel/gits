@@ -305,17 +305,12 @@ Vulkan:
     DumpScreenshots: '-'
     DumpSubmits: '-'
     TraceVKStructs: true
-%if platform == "win32":
-    UseExternalMemoryExtension: false
-%endif
     MemorySegmentSize: 512
 %if platform == "win32":
-    ShadowMemory: true
-    MemoryAccessDetection: true
+    MemoryTrackingMode: 'External' # External / ShadowMemory / FullMemoryDump
     MemoryUpdateState: 'OnlyUsed'
 %elif platform in ["lnx_32", "lnx_64", "lnx_arm"]:
-    ShadowMemory: false
-    MemoryAccessDetection: false
+    MemoryTrackingMode: 'FullMemoryDump' # ShadowMemory / FullMemoryDump
     MemoryUpdateState: 'AllMapped'
 %endif
     ForceUniversalRecording: false

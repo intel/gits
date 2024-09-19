@@ -353,11 +353,21 @@ void gits::Config::SetVulkan(const YAML::Node& vulkanYaml) {
     common.shared.traceDataOpts.insert(TraceData::VK_STRUCTS);
   }
 
+  switch (cfgVkRecorder.memoryTrackingMode) {
+  case TMemoryTrackingMode::SHADOW_AND_ACCESS_DETECTION:
+    cfgVkRecorder.shadowMemory = true;
+    cfgVkRecorder.memoryAccessDetection = true;
+    break;
 #ifdef GITS_PLATFORM_WINDOWS
-  if (cfgVkRecorder.useExternalMemoryExtension) {
-    cfgVkRecorder.shadowMemory = false;
-    cfgVkRecorder.memoryAccessDetection = false;
+  case TMemoryTrackingMode::EXTERNAL:
+    cfgVkRecorder.useExternalMemoryExtension = true;
+    break;
+#endif
+  case TMemoryTrackingMode::FULL_MEMORY_DUMP:
+    // everything is already set to false by default.
+    break;
   }
+#ifdef GITS_PLATFORM_WINDOWS
   if (cfgVkRecorder.renderDocCompatibility) {
     auto& rdocSuppressExtensions = cfgVkRecorder.renderDocCompatibilitySuppressedExtensions;
     auto& suppressExtensions = vulkan.shared.suppressExtensions;

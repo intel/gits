@@ -284,6 +284,28 @@ struct MemoryUpdateStateOpt : NamedValuesBase<TMemoryUpdateStates, MemoryUpdateS
   }
 };
 
+enum class TMemoryTrackingMode {
+#ifdef GITS_PLATFORM_WINDOWS
+  EXTERNAL,
+#endif
+  SHADOW_AND_ACCESS_DETECTION,
+  FULL_MEMORY_DUMP
+};
+
+struct MemoryTrackingModeOpt : NamedValuesBase<TMemoryTrackingMode, MemoryTrackingModeOpt> {
+  static void describe_type() {
+    readable_name() = "MemoryTrackingMode";
+#ifdef GITS_PLATFORM_WINDOWS
+    default_value() = TMemoryTrackingMode::EXTERNAL;
+    values()["External"] = TMemoryTrackingMode::EXTERNAL;
+#else
+    default_value() = TMemoryTrackingMode::SHADOW_AND_ACCESS_DETECTION;
+#endif
+    values()["ShadowMemory"] = TMemoryTrackingMode::SHADOW_AND_ACCESS_DETECTION;
+    values()["FullMemoryDump"] = TMemoryTrackingMode::FULL_MEMORY_DUMP;
+  }
+};
+
 enum class TMemoryStateRestoration { NONE, HOST_VISIBLE };
 
 struct MemoryStateRestorationOpt

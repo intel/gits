@@ -228,6 +228,13 @@ struct convert<gits::MemoryUpdateStateOpt> {
 };
 
 template <>
+struct convert<gits::MemoryTrackingModeOpt> {
+  static bool decode(const Node& node, gits::MemoryTrackingModeOpt& rhs) {
+    return decodeNamedValuesBaseOption(node, rhs);
+  }
+};
+
+template <>
 struct convert<gits::BufferStateRestorationOpt> {
   static bool decode(const Node& node, gits::BufferStateRestorationOpt& rhs) {
     return decodeNamedValuesBaseOption(node, rhs);
@@ -651,8 +658,7 @@ struct convert<gits::Config::Vulkan::Recorder> {
       rhs.dumpSubmits = node["DumpSubmits"].as<BitRange>();
       rhs.traceVkStructs = node["TraceVKStructs"].as<gits::vi_bool>();
       rhs.memorySegmentSize = node["MemorySegmentSize"].as<gits::vi_uint>();
-      rhs.shadowMemory = node["ShadowMemory"].as<gits::vi_bool>();
-      rhs.memoryAccessDetection = node["MemoryAccessDetection"].as<gits::vi_bool>();
+      rhs.memoryTrackingMode = node["MemoryTrackingMode"].as<gits::MemoryTrackingModeOpt>();
       rhs.memoryUpdateState = node["MemoryUpdateState"].as<gits::MemoryUpdateStateOpt>();
       rhs.forceUniversalRecording = node["ForceUniversalRecording"].as<gits::vi_bool>();
       rhs.delayFenceChecksCount = node["DelayFenceChecksCount"].as<gits::vi_uint>();
@@ -688,7 +694,6 @@ struct convert<gits::Config::Vulkan::Recorder> {
       rhs.useCaptureReplayFeaturesForRayTracingPipelines =
           node["UseCaptureReplayFeaturesForRayTracingPipelines"].as<gits::vi_bool>();
 #ifdef GITS_PLATFORM_WINDOWS
-      rhs.useExternalMemoryExtension = node["UseExternalMemoryExtension"].as<gits::vi_bool>();
       rhs.renderDocCompatibility =
           node["UsePresentSrcLayoutTransitionAsAFrameBoundary"].as<gits::vi_bool>();
       rhs.renderDocCompatibility = node["RenderDocCompatibility"].as<gits::vi_bool>();
