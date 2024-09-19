@@ -222,20 +222,20 @@ bool SetPagesProtection(PageMemoryProtection access, void* ptr, size_t size) {
 //
 //**************************************************************************************************
 
-std::vector<std::pair<void*, uint32_t>> WriteWatchSniffer::GetTouchedPagesAndReset(void* ptr,
-                                                                                   uint32_t size) {
+std::vector<std::pair<void*, size_t>> WriteWatchSniffer::GetTouchedPagesAndReset(void* ptr,
+                                                                                 size_t size) {
 #ifdef GITS_PLATFORM_WINDOWS
   auto pageSize = GetVirtualMemoryPageSize();
   ULONG_PTR pageCount = (size / pageSize) + ((size % pageSize > 0) ? 1 : 0);
   std::vector<void*> touchedPages(pageCount);
   DWORD granularity = 0;
-  if (!GetWriteWatch(WRITE_WATCH_FLAG_RESET, ptr, size, touchedPages.data(), &pageCount,
-                     &granularity) &&
-      (pageCount > 0)) {
+  UINT returnValue = GetWriteWatch(WRITE_WATCH_FLAG_RESET, ptr, size, touchedPages.data(),
+                                   &pageCount, &granularity);
+  if ((returnValue == 0) && (pageCount > 0)) {
 
-    std::vector<std::pair<void*, uint32_t>> touchedMemory;
+    std::vector<std::pair<void*, size_t>> touchedMemory;
     void* basePtr = touchedPages[0];
-    uint32_t length = pageSize;
+    size_t length = pageSize;
 
     for (size_t i = 1; i < pageCount; ++i) {
       if (touchedPages[i] == ((char*)basePtr + length)) {
@@ -266,7 +266,7 @@ std::vector<std::pair<void*, uint32_t>> WriteWatchSniffer::GetTouchedPagesAndRes
   }
 #endif
 
-  return std::vector<std::pair<void*, uint32_t>>();
+  return std::vector<std::pair<void*, size_t>>();
 }
 
 //**************************************************************************************************
@@ -276,7 +276,7 @@ std::vector<std::pair<void*, uint32_t>> WriteWatchSniffer::GetTouchedPagesAndRes
 //
 //**************************************************************************************************
 
-void WriteWatchSniffer::ResetTouchedPages(void* ptr, uint32_t size) {
+void WriteWatchSniffer::ResetTouchedPages(void* ptr, size_t size) {
 #ifdef GITS_PLATFORM_WINDOWS
   ResetWriteWatch(ptr, size);
 #endif

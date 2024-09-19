@@ -112,8 +112,8 @@ typedef PagedMemoryRegionPtr* PagedMemoryRegionHandle;
 // ******************************************************************************************************************
 class WriteWatchSniffer {
 public:
-  static std::vector<std::pair<void*, uint32_t>> GetTouchedPagesAndReset(void* ptr, uint32_t size);
-  static void ResetTouchedPages(void* ptr, uint32_t size);
+  static std::vector<std::pair<void*, size_t>> GetTouchedPagesAndReset(void* ptr, size_t size);
+  static void ResetTouchedPages(void* ptr, size_t size);
 };
 
 // ******************************************************************************************************************

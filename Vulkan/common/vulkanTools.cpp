@@ -2386,7 +2386,7 @@ void getRangesForMemoryUpdate(VkDeviceMemory memory,
 
   // External memory option enabled
   if (isUseExternalMemoryExtensionUsed() || Config::Get().vulkan.recorder.writeWatchDetection) {
-    std::vector<std::pair<void*, uint32_t>> touchedPages;
+    std::vector<std::pair<void*, size_t>> touchedPages;
     if (isUseExternalMemoryExtensionUsed()) {
       touchedPages = WriteWatchSniffer::GetTouchedPagesAndReset(
           (char*)memoryState->externalMemory + mapping->offsetData.Value(), unmapSize);
@@ -2538,7 +2538,7 @@ void flushShadowMemory(VkDeviceMemory memory, bool unmap) {
   }
 
   if (Config::Get().vulkan.recorder.writeWatchDetection) {
-    std::vector<std::pair<void*, uint32_t>> touchedPages =
+    std::vector<std::pair<void*, size_t>> touchedPages =
         WriteWatchSniffer::GetTouchedPagesAndReset(pointer, unmapSize);
 
     for (auto& page : touchedPages) {
