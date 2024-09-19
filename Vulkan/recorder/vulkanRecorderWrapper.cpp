@@ -109,9 +109,13 @@ void* CRecorderWrapper::GetShadowMemory(VkDeviceMemory memory,
     }
 
     if (!memoryState->shadowMemory->Initialized()) {
-      memoryState->shadowMemory->Init(Config::Get().vulkan.recorder.memoryAccessDetection,
-                                      (size_t)unmapSize, orig);
+      memoryState->shadowMemory->Init(true, (size_t)unmapSize, orig,
+                                      gits::Config::Get().vulkan.recorder.writeWatchDetection);
       memoryState->shadowMemory->UpdateShadow(0, (size_t)unmapSize);
+      if (Config::Get().vulkan.recorder.writeWatchDetection) {
+        ExternalMemoryRegion::ResetTouchedPages((char*)memoryState->shadowMemory->GetData(),
+                                                (size_t)unmapSize);
+      }
     } else {
       memoryState->shadowMemory->SetOriginalBuffer(orig);
     }
@@ -248,6 +252,9 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit(VkQueue queue,
               } else {
                 memoryState->shadowMemory->UpdateShadow((size_t)offset, (size_t)size);
               }
+              if (Config::Get().vulkan.recorder.writeWatchDetection) {
+                ExternalMemoryRegion::ResetTouchedPages((char*)pointer + offset, (size_t)size);
+              }
             }
           }
           if (Config::Get().vulkan.recorder.memorySegmentSize) {
@@ -366,6 +373,9 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit2(VkQueue queue,
               } else {
                 memoryState->shadowMemory->UpdateShadow((size_t)offset, (size_t)size);
               }
+              if (Config::Get().vulkan.recorder.writeWatchDetection) {
+                ExternalMemoryRegion::ResetTouchedPages((char*)pointer + offset, (size_t)size);
+              }
             }
           }
           if (Config::Get().vulkan.recorder.memorySegmentSize) {
@@ -463,6 +473,7 @@ void CRecorderWrapper::DisableConfigOptions() const {
     cfg.vulkan.recorder.memoryAccessDetection = false;
     cfg.vulkan.recorder.memorySegmentSize = 0;
     cfg.vulkan.recorder.shadowMemory = false;
+    cfg.vulkan.recorder.writeWatchDetection = false;
     cfg.vulkan.recorder.memoryUpdateState.setFromString("UsingTags");
 #ifdef GITS_PLATFORM_WINDOWS
     cfg.vulkan.recorder.useExternalMemoryExtension = false;

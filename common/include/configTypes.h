@@ -287,6 +287,7 @@ struct MemoryUpdateStateOpt : NamedValuesBase<TMemoryUpdateStates, MemoryUpdateS
 enum class TMemoryTrackingMode {
 #ifdef GITS_PLATFORM_WINDOWS
   EXTERNAL,
+  WRITE_WATCH,
 #endif
   SHADOW_AND_ACCESS_DETECTION,
   FULL_MEMORY_DUMP
@@ -298,6 +299,7 @@ struct MemoryTrackingModeOpt : NamedValuesBase<TMemoryTrackingMode, MemoryTracki
 #ifdef GITS_PLATFORM_WINDOWS
     default_value() = TMemoryTrackingMode::EXTERNAL;
     values()["External"] = TMemoryTrackingMode::EXTERNAL;
+    values()["WriteWatch"] = TMemoryTrackingMode::WRITE_WATCH;
 #else
     default_value() = TMemoryTrackingMode::SHADOW_AND_ACCESS_DETECTION;
 #endif

@@ -307,7 +307,7 @@ Vulkan:
     TraceVKStructs: true
     MemorySegmentSize: 512
 %if platform == "win32":
-    MemoryTrackingMode: 'External' # External / ShadowMemory / FullMemoryDump
+    MemoryTrackingMode: 'External' # External / ShadowMemory / WriteWatch / FullMemoryDump
     MemoryUpdateState: 'OnlyUsed'
 %elif platform in ["lnx_32", "lnx_64", "lnx_arm"]:
     MemoryTrackingMode: 'FullMemoryDump' # ShadowMemory / FullMemoryDump

@@ -660,7 +660,7 @@ inline void vkMapMemory_SD(VkResult return_value,
   }
 
   if (Config::Get().IsRecorder()) {
-    if (isUseExternalMemoryExtensionUsed()) {
+    if (isUseExternalMemoryExtensionUsed() || Config::Get().vulkan.recorder.writeWatchDetection) {
       ExternalMemoryRegion::ResetTouchedPages(*ppData, unmapSize);
     } else if (Config::Get().vulkan.recorder.memoryAccessDetection) {
       MemorySniffer::Install();

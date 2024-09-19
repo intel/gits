@@ -2385,9 +2385,14 @@ void getRangesForMemoryUpdate(VkDeviceMemory memory,
   char* pointer = (char*)mapping->ppDataData.Value();
 
   // External memory option enabled
-  if (isUseExternalMemoryExtensionUsed()) {
-    auto touchedPages = ExternalMemoryRegion::GetTouchedPagesAndReset(
-        (char*)memoryState->externalMemory + mapping->offsetData.Value(), unmapSize);
+  if (isUseExternalMemoryExtensionUsed() || Config::Get().vulkan.recorder.writeWatchDetection) {
+    std::vector<std::pair<void*, uint32_t>> touchedPages;
+    if (isUseExternalMemoryExtensionUsed()) {
+      touchedPages = ExternalMemoryRegion::GetTouchedPagesAndReset(
+          (char*)memoryState->externalMemory + mapping->offsetData.Value(), unmapSize);
+    } else {
+      touchedPages = ExternalMemoryRegion::GetTouchedPagesAndReset(pointer, unmapSize);
+    }
 
     for (auto& page : touchedPages) {
       VkDeviceSize offset = (char*)page.first - (char*)pointer;
@@ -2531,7 +2536,19 @@ void flushShadowMemory(VkDeviceMemory memory, bool unmap) {
       return;
     }
   }
-  memoryState->shadowMemory->Flush((size_t)offset, (size_t)unmapSize);
+
+  if (Config::Get().vulkan.recorder.writeWatchDetection) {
+    std::vector<std::pair<void*, uint32_t>> touchedPages =
+        ExternalMemoryRegion::GetTouchedPagesAndReset(pointer, unmapSize);
+
+    for (auto& page : touchedPages) {
+      VkDeviceSize totalOffset = ((char*)page.first - (char*)pointer) + offset;
+      VkDeviceSize size = page.second;
+      memoryState->shadowMemory->Flush((size_t)totalOffset, (size_t)size);
+    }
+  } else {
+    memoryState->shadowMemory->Flush((size_t)offset, (size_t)unmapSize);
+  }
 }
 
 std::set<uint64_t> getRelatedPointers(std::set<uint64_t>& originalSet) {

@@ -473,7 +473,7 @@ public:
       return 0;
     }
   }
-  void Init(bool pagealigned, size_t size, void* orig = 0);
+  void Init(bool pagealigned, size_t size, void* orig = 0, bool writeWatch = false);
   bool Initialized() const {
     return (_shadow.get() != 0);
   }

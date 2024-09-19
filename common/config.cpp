@@ -362,6 +362,10 @@ void gits::Config::SetVulkan(const YAML::Node& vulkanYaml) {
   case TMemoryTrackingMode::EXTERNAL:
     cfgVkRecorder.useExternalMemoryExtension = true;
     break;
+  case TMemoryTrackingMode::WRITE_WATCH:
+    cfgVkRecorder.writeWatchDetection = true;
+    cfgVkRecorder.shadowMemory = true;
+    break;
 #endif
   case TMemoryTrackingMode::FULL_MEMORY_DUMP:
     // everything is already set to false by default.

@@ -515,7 +515,7 @@ gits::ShadowBuffer::~ShadowBuffer() {
   }
 }
 
-void gits::ShadowBuffer::Init(bool pagealigned, size_t size, void* orig) {
+void gits::ShadowBuffer::Init(bool pagealigned, size_t size, void* orig, bool isWriteWatch) {
   if (Initialized()) {
     return;
   }
@@ -524,7 +524,12 @@ void gits::ShadowBuffer::Init(bool pagealigned, size_t size, void* orig) {
   void* shadow;
   if (_pagealigned) {
 #ifdef GITS_PLATFORM_WINDOWS
-    shadow = VirtualAlloc(NULL, _size, MEM_COMMIT, PAGE_READWRITE);
+    if (isWriteWatch) {
+      shadow =
+          VirtualAlloc(nullptr, _size, MEM_COMMIT | MEM_RESERVE | MEM_WRITE_WATCH, PAGE_READWRITE);
+    } else {
+      shadow = VirtualAlloc(nullptr, _size, MEM_COMMIT, PAGE_READWRITE);
+    }
 #else
     shadow = mmap(nullptr, _size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, 0, 0);
 #endif
