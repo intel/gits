@@ -113,8 +113,8 @@ void* CRecorderWrapper::GetShadowMemory(VkDeviceMemory memory,
                                       gits::Config::Get().vulkan.recorder.writeWatchDetection);
       memoryState->shadowMemory->UpdateShadow(0, (size_t)unmapSize);
       if (Config::Get().vulkan.recorder.writeWatchDetection) {
-        ExternalMemoryRegion::ResetTouchedPages((char*)memoryState->shadowMemory->GetData(),
-                                                (size_t)unmapSize);
+        WriteWatchSniffer::ResetTouchedPages((char*)memoryState->shadowMemory->GetData(),
+                                             (size_t)unmapSize);
       }
     } else {
       memoryState->shadowMemory->SetOriginalBuffer(orig);
@@ -253,7 +253,7 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit(VkQueue queue,
                 memoryState->shadowMemory->UpdateShadow((size_t)offset, (size_t)size);
               }
               if (Config::Get().vulkan.recorder.writeWatchDetection) {
-                ExternalMemoryRegion::ResetTouchedPages((char*)pointer + offset, (size_t)size);
+                WriteWatchSniffer::ResetTouchedPages((char*)pointer + offset, (size_t)size);
               }
             }
           }
@@ -374,7 +374,7 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit2(VkQueue queue,
                 memoryState->shadowMemory->UpdateShadow((size_t)offset, (size_t)size);
               }
               if (Config::Get().vulkan.recorder.writeWatchDetection) {
-                ExternalMemoryRegion::ResetTouchedPages((char*)pointer + offset, (size_t)size);
+                WriteWatchSniffer::ResetTouchedPages((char*)pointer + offset, (size_t)size);
               }
             }
           }

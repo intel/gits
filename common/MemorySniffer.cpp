@@ -217,13 +217,13 @@ bool SetPagesProtection(PageMemoryProtection access, void* ptr, size_t size) {
 
 //**************************************************************************************************
 //
-// ExternalMemoryRegion::GetTouchedPagesAndReset - returns set of memory regions which were
+// WriteWatchSniffer::GetTouchedPagesAndReset - returns set of memory regions which were
 // modified since the last check or reset.
 //
 //**************************************************************************************************
 
-std::vector<std::pair<void*, uint32_t>> ExternalMemoryRegion::GetTouchedPagesAndReset(
-    void* ptr, uint32_t size) {
+std::vector<std::pair<void*, uint32_t>> WriteWatchSniffer::GetTouchedPagesAndReset(void* ptr,
+                                                                                   uint32_t size) {
 #ifdef GITS_PLATFORM_WINDOWS
   auto pageSize = GetVirtualMemoryPageSize();
   ULONG_PTR pageCount = (size / pageSize) + ((size % pageSize > 0) ? 1 : 0);
@@ -271,12 +271,12 @@ std::vector<std::pair<void*, uint32_t>> ExternalMemoryRegion::GetTouchedPagesAnd
 
 //**************************************************************************************************
 //
-// ExternalMemoryRegion::ResetTouchedPages - discards information if the memory region was
+// WriteWatchSniffer::ResetTouchedPages - discards information if the memory region was
 // touched/modified.
 //
 //**************************************************************************************************
 
-void ExternalMemoryRegion::ResetTouchedPages(void* ptr, uint32_t size) {
+void WriteWatchSniffer::ResetTouchedPages(void* ptr, uint32_t size) {
 #ifdef GITS_PLATFORM_WINDOWS
   ResetWriteWatch(ptr, size);
 #endif

@@ -107,11 +107,10 @@ typedef PagedMemoryRegionPtr* PagedMemoryRegionHandle;
 
 // ******************************************************************************************************************
 //
-// ExternalMemoryRegion - this class is used to get touched/modified regions of memory allocated using external
-// memory extension.
+// WriteWatchSniffer - this class is used to get touched/modified regions of memory allocated using WriteWatch
 //
 // ******************************************************************************************************************
-class ExternalMemoryRegion {
+class WriteWatchSniffer {
 public:
   static std::vector<std::pair<void*, uint32_t>> GetTouchedPagesAndReset(void* ptr, uint32_t size);
   static void ResetTouchedPages(void* ptr, uint32_t size);
