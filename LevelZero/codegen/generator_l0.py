@@ -3963,13 +3963,13 @@ arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='pOrdinal',type='uint32_t*',tag='out',wrapType='Cuint32_t::CSArray'),
 )
 
-Function(name='zeCommandListHostSynchronize',component='ze_command_list',enabled=True,api_version='1.6',ddi_pos=28,protectLogic=True,
+Function(name='zeCommandListHostSynchronize',component='ze_command_list',enabled=True,api_version='1.6',ddi_pos=28,protectLogic=True,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='timeout',type='uint64_t',tag='in'),
 )
 
-Function(name='zeCommandListImmediateAppendCommandListsExp',component='ze_command_list_exp',enabled=False,api_version='1.9',ddi_pos=1,recWrap=True,
+Function(name='zeCommandListImmediateAppendCommandListsExp',component='ze_command_list_exp',enabled=True,api_version='1.9',ddi_pos=1,stateTrack=True,recExecWrap=True,recWrap=True,runWrap=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandListImmediate',type='ze_command_list_handle_t',tag='in'),
 arg2=ArgDef(name='numCommandLists',type='uint32_t',tag='in'),
@@ -4363,7 +4363,7 @@ arg1=ArgDef(name='hEvent',type='ze_event_handle_t',tag='in'),
 arg2=ArgDef(name='pWaitScope',type='ze_event_scope_flags_t*',tag='out',wrapType='COutArgument'),
 )
 
-Function(name='zeEventHostReset',component='ze_event',enabled=True,ddi_pos=5,
+Function(name='zeEventHostReset',component='ze_event',enabled=True,ddi_pos=5,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hEvent',type='ze_event_handle_t',tag='in'),
 )
@@ -4373,7 +4373,7 @@ retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hEvent',type='ze_event_handle_t',tag='in'),
 )
 
-Function(name='zeEventHostSynchronize',component='ze_event',enabled=True,ddi_pos=3,protectLogic=True,
+Function(name='zeEventHostSynchronize',component='ze_event',enabled=True,ddi_pos=3,protectLogic=True,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hEvent',type='ze_event_handle_t',tag='in'),
 arg2=ArgDef(name='timeout',type='uint64_t',tag='in'),
@@ -4443,7 +4443,7 @@ arg3=ArgDef(name='pCount',type='uint32_t*',tag='inout'),
 arg4=ArgDef(name='pResults',type='ze_event_query_kernel_timestamps_results_ext_properties_t*',tag='inout',range='0,*pCount',optional=True),
 )
 
-Function(name='zeEventQueryStatus',component='ze_event',enabled=True,ddi_pos=4,unprotectLogic=True,
+Function(name='zeEventQueryStatus',component='ze_event',enabled=True,ddi_pos=4,unprotectLogic=True,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hEvent',type='ze_event_handle_t',tag='in'),
 )

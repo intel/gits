@@ -28,7 +28,9 @@ struct CKernelExecutionInfo;
 struct CKernelArgumentDump;
 struct CCommandListState;
 struct CAllocState;
+class QueueSubmissionSnapshot;
 class CStateDynamic;
+
 void SaveBuffer(const std::filesystem::path& dir,
                 const std::string name,
                 const std::vector<char>& data);
@@ -106,9 +108,6 @@ void CommandListCountUp(CGits& gitsInstance);
 void CommandQueueExecCountUp(CGits& gitsInstance);
 void KernelCountUp(CGits& gitsInstance);
 bool IsDumpOnlyLayoutEnabled(const Config& cfg);
-void DumpQueueSubmit(const Config& cfg,
-                     CStateDynamic& sd,
-                     const ze_command_queue_handle_t& hCommandQueue);
 void CommandListKernelInit(CStateDynamic& sd,
                            const ze_command_list_handle_t& commandList,
                            const ze_kernel_handle_t& kernel,
@@ -144,5 +143,8 @@ uint32_t GetDeviceIpVersion(CStateDynamic& sd, const CDriver& cDriver);
 bool CheckKernelResidencyPossibilities(const CAllocState& allocState,
                                        const unsigned int indirectTypes,
                                        const ze_context_handle_t hContext);
+void DumpQueueSubmissions(const Config& cfg,
+                          CStateDynamic& sd,
+                          const std::vector<std::unique_ptr<QueueSubmissionSnapshot>>& submissions);
 } // namespace l0
 } // namespace gits

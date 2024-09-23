@@ -644,14 +644,14 @@ QueueSubmissionSnapshot::QueueSubmissionSnapshot(
     const std::vector<std::shared_ptr<CKernelExecutionInfo>>& appendedKernels,
     const uint32_t& cmdListNum,
     const ze_context_handle_t& cmdListContext,
-    const uint32_t& submissionNum,
+    const uint32_t& cmdQueueNum,
     std::vector<CKernelArgumentDump>* argumentsVector) {
   if (isImmediate) {
     throw EOperationFailed(
         "Application used illegal operation by submitting immediate command list");
   }
   hCommandList = cmdListHandle;
-  cmdQueueNumber = submissionNum;
+  cmdQueueNumber = cmdQueueNum;
   kernelsExecutionInfo = appendedKernels;
   cmdListNumber = cmdListNum;
   hContext = cmdListContext;

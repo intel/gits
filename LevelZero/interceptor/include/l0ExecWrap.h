@@ -389,5 +389,34 @@ inline ze_result_t zeContextDestroy_RECEXECWRAP(ze_context_handle_t hContext) {
 inline ze_result_t zelSetDriverTeardown_RECEXECWRAP() {
   return ZE_RESULT_SUCCESS;
 }
+inline ze_result_t zeCommandListImmediateAppendCommandListsExp_RECEXECWRAP(
+    ze_command_list_handle_t hCommandListImmediate,
+    uint32_t numCommandLists,
+    ze_command_list_handle_t* phCommandLists,
+    ze_event_handle_t hSignalEvent,
+    uint32_t numWaitEvents,
+    ze_event_handle_t* phWaitEvents) {
+  GITS_ENTRY_L0
+  auto return_value = ZE_RESULT_SUCCESS;
+  GITS_WRAPPER_PRE
+  wrapper.UnProtectMemoryPointers();
+  wrapper.zeCommandListImmediateAppendCommandListsExp_pre(
+      return_value, hCommandListImmediate, numCommandLists, phCommandLists, hSignalEvent,
+      numWaitEvents, phWaitEvents);
+  return_value = driver.zeCommandListImmediateAppendCommandListsExp(
+      hCommandListImmediate, numCommandLists, phCommandLists, hSignalEvent, numWaitEvents,
+      phWaitEvents);
+  wrapper.zeCommandListImmediateAppendCommandListsExp(return_value, hCommandListImmediate,
+                                                      numCommandLists, phCommandLists, hSignalEvent,
+                                                      numWaitEvents, phWaitEvents);
+  wrapper.ProtectMemoryPointers();
+  GITS_WRAPPER_POST
+  else {
+    return_value = driver.zeCommandListImmediateAppendCommandListsExp(
+        hCommandListImmediate, numCommandLists, phCommandLists, hSignalEvent, numWaitEvents,
+        phWaitEvents);
+  }
+  return return_value;
+}
 } // namespace l0
 } // namespace gits

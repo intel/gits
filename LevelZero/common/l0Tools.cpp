@@ -734,41 +734,39 @@ void InjectReadsForArguments(std::vector<CKernelArgumentDump>& readyArgVec,
   }
 }
 
-void DumpQueueSubmit(const Config& cfg,
-                     CStateDynamic& sd,
-                     const ze_command_queue_handle_t& hCommandQueue) {
-  const auto& cqState = sd.Get<CCommandQueueState>(hCommandQueue, EXCEPTION_MESSAGE);
-  ze_command_list_handle_t tmpList = nullptr;
-  for (const auto& queueSubmissionState : cqState.queueSubmissionDumpState) {
-    if (!CheckWhetherDumpQueueSubmit(cfg, queueSubmissionState->cmdQueueNumber)) {
+void DumpQueueSubmissions(
+    const Config& cfg,
+    CStateDynamic& sd,
+    const std::vector<std::unique_ptr<QueueSubmissionSnapshot>>& submissions) {
+  for (const auto& submission : submissions) {
+    if (!CheckWhetherDumpQueueSubmit(cfg, submission->cmdQueueNumber)) {
       continue;
     }
     if (CaptureAfterSubmit(cfg)) {
-      for (const auto& kernelInfo : queueSubmissionState->kernelsExecutionInfo) {
-        if (CheckWhetherDumpKernel(kernelInfo->kernelNumber, queueSubmissionState->cmdListNumber)) {
-          if (!tmpList) {
-            tmpList = GetCommandListImmediate(sd, drv, queueSubmissionState->hContext);
+      ze_command_list_handle_t hImmediateCommandList = nullptr;
+      for (const auto& kernelInfo : submission->kernelsExecutionInfo) {
+        if (CheckWhetherDumpKernel(kernelInfo->kernelNumber, submission->cmdListNumber)) {
+          if (!hImmediateCommandList) {
+            hImmediateCommandList = GetCommandListImmediate(sd, drv, submission->hContext);
           }
-          auto& readyArgVec = sd.Map<CKernelArgumentDump>()[tmpList];
+          auto& readyArgVec = sd.Map<CKernelArgumentDump>()[hImmediateCommandList];
           constexpr bool dumpUniqueArguments = true;
           PrepareArguments(kernelInfo.get(), readyArgVec, sd, false, dumpUniqueArguments);
           if (!IsDumpOnlyLayoutEnabled(cfg)) {
-            InjectReadsForArguments(readyArgVec, tmpList, false, nullptr, nullptr);
+            InjectReadsForArguments(readyArgVec, hImmediateCommandList, false, nullptr, nullptr);
           }
-          DumpReadyArguments(readyArgVec, queueSubmissionState->cmdQueueNumber,
-                             queueSubmissionState->cmdListNumber, cfg, sd, kernelInfo.get());
+          DumpReadyArguments(readyArgVec, submission->cmdQueueNumber, submission->cmdListNumber,
+                             cfg, sd, kernelInfo.get());
         }
       }
-      if (tmpList) {
-        sd.Release<CKernelArgumentDump>(tmpList);
+      if (hImmediateCommandList) {
+        sd.Release<CKernelArgumentDump>(hImmediateCommandList);
       }
     } else {
-      if (queueSubmissionState->readyArgVector != nullptr &&
-          !queueSubmissionState->readyArgVector->empty()) {
-        for (const auto& kernelInfo : queueSubmissionState->kernelsExecutionInfo) {
-          DumpReadyArguments(*queueSubmissionState->readyArgVector,
-                             queueSubmissionState->cmdQueueNumber,
-                             queueSubmissionState->cmdListNumber, cfg, sd, kernelInfo.get());
+      if (submission->readyArgVector != nullptr && !submission->readyArgVector->empty()) {
+        for (const auto& kernelInfo : submission->kernelsExecutionInfo) {
+          DumpReadyArguments(*submission->readyArgVector, submission->cmdQueueNumber,
+                             submission->cmdListNumber, cfg, sd, kernelInfo.get());
         }
       }
     }

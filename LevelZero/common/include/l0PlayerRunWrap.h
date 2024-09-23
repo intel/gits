@@ -668,5 +668,24 @@ inline void zeVirtualMemReserve_V1_RUNWRAP(Cze_result_t& _return_value,
   zeVirtualMemReserve_SD(*_return_value, *_hContext, *_pStart, *_size, *_pptr);
 }
 
+inline void zeCommandListImmediateAppendCommandListsExp_RUNWRAP(
+    Cze_result_t& _return_value,
+    Cze_command_list_handle_t& _hCommandListImmediate,
+    Cuint32_t& _numCommandLists,
+    Cze_command_list_handle_t::CSArray& _phCommandLists,
+    Cze_event_handle_t& _hSignalEvent,
+    Cuint32_t& _numWaitEvents,
+    Cze_event_handle_t::CSArray& _phWaitEvents) {
+  auto& sd = SD();
+  TranslatePointers(sd);
+  _return_value.Value() = drv.zeCommandListImmediateAppendCommandListsExp(
+      *_hCommandListImmediate, *_numCommandLists, *_phCommandLists, *_hSignalEvent, *_numWaitEvents,
+      *_phWaitEvents);
+  gits::CGits::Instance().CommandQueueExecCountUp();
+  zeCommandListImmediateAppendCommandListsExp_SD(*_return_value, *_hCommandListImmediate,
+                                                 *_numCommandLists, *_phCommandLists,
+                                                 *_hSignalEvent, *_numWaitEvents, *_phWaitEvents);
+}
+
 } // namespace l0
 } // namespace gits

@@ -43,7 +43,7 @@ Level Zero GITS subcapture mode is activated by changing the `gits_config.txt` f
 == Nomenclature
 The main nomenclature is `CommandQueueSubmitRange/CommandListRange/AppendKernelsRange`.
 
-`CommandQueueSubmitRange` - Range of command queue executions. Every `zeCommandQueueExecuteCommandLists` API call GITS increments the value.`*`
+`CommandQueueSubmitRange` - Range of command queue executions. Every `zeCommandQueueExecuteCommandLists` and `zeCommandListImmediateAppendCommandListsExp` API calls GITS increments the value.`*`
 
 `CommandListRange`- On every `zeCommandListCreate` or `zeCommandListCreateImmediate` API call GITS increments the value.`*`
 

@@ -83,6 +83,19 @@ void CRecorderWrapper::zeCommandQueueExecuteCommandLists_pre(
                                                 numCommandLists, phCommandLists, hFence);
 }
 
+void CRecorderWrapper::zeCommandListImmediateAppendCommandListsExp_pre(
+    ze_result_t return_value,
+    ze_command_list_handle_t hCommandListImmediate,
+    uint32_t numCommandLists,
+    ze_command_list_handle_t* phCommandLists,
+    ze_event_handle_t hSignalEvent,
+    uint32_t numWaitEvents,
+    ze_event_handle_t* phWaitEvents) const {
+  zeCommandListImmediateAppendCommandListsExp_RECWRAP_PRE(
+      _recorder, return_value, hCommandListImmediate, numCommandLists, phCommandLists, hSignalEvent,
+      numWaitEvents, phWaitEvents);
+}
+
 void CRecorderWrapper::zeCommandListAppendLaunchKernel_pre(ze_result_t return_value,
                                                            ze_command_list_handle_t hCommandList,
                                                            ze_kernel_handle_t hKernel,

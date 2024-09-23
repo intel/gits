@@ -88,6 +88,43 @@ bool CheckWhetherQueueCanBeSynced(const Config& cfg,
   return true;
 }
 
+bool CheckWhetherCommandListImmediateCanBeSynced(
+    const Config& cfg,
+    CStateDynamic& sd,
+    CDriver& driver,
+    const ze_command_list_handle_t& hCommandListImmediate) {
+  std::vector<ze_command_list_handle_t> commandListsToSynchronize;
+  std::vector<ze_command_list_handle_t> submittedCommandList;
+  if (CaptureKernels(cfg)) {
+    const auto& cmdListImmediateState =
+        sd.Get<CCommandListState>(hCommandListImmediate, EXCEPTION_MESSAGE);
+    for (const auto& queueSubmission : cmdListImmediateState.immediateCmdListNotSyncedSubmissions) {
+      commandListsToSynchronize.push_back(queueSubmission->hCommandList);
+    }
+    for (const auto& otherCmdListState : sd.Map<CCommandListState>()) {
+      if (!otherCmdListState.second->isImmediate) {
+        const auto& otherCmdListImmediateState =
+            sd.Get<CCommandListState>(otherCmdListState.first, EXCEPTION_MESSAGE);
+        for (const auto& submission :
+             otherCmdListImmediateState.immediateCmdListNotSyncedSubmissions) {
+          submittedCommandList.push_back(submission->hCommandList);
+        }
+      }
+    }
+    auto mockListExecutor =
+        MockListExecutor(sd, driver, commandListsToSynchronize, submittedCommandList);
+    const auto isCommandListEligibleForSynchronization = mockListExecutor.Run();
+    if (!isCommandListEligibleForSynchronization) {
+      Log(WARN) << "Dumping kernels from immediate command list: "
+                << ToStringHelper(hCommandListImmediate)
+                << " will be delayed to the original application synchronization due to "
+                   "not completable event dependencies";
+    }
+    return isCommandListEligibleForSynchronization;
+  }
+  return true;
+}
+
 void RegisterEvents(CStateDynamic& sd,
                     const ze_command_list_handle_t& hCommandList,
                     const ze_event_handle_t& signalEvent,
@@ -328,7 +365,7 @@ inline void zeCommandQueueExecuteCommandLists_SD([[maybe_unused]] ze_result_t re
     if (!IsDumpOnlyLayoutEnabled(cfg)) {
       drv.inject.zeCommandQueueSynchronize(hCommandQueue, UINT64_MAX);
     }
-    DumpQueueSubmit(cfg, sd, hCommandQueue);
+    DumpQueueSubmissions(cfg, sd, cqState.queueSubmissionDumpState);
     cqState.notSyncedSubmissions.clear();
     cqState.queueSubmissionDumpState.clear();
   }
@@ -752,7 +789,7 @@ inline void zeCommandQueueSynchronize_SD(ze_result_t return_value,
         if (failedSyncAttempt) {
           drv.inject.zeCommandQueueSynchronize(hCommandQueue, UINT64_MAX);
         }
-        DumpQueueSubmit(cfg, sd, hCommandQueue);
+        DumpQueueSubmissions(cfg, sd, cqState.queueSubmissionDumpState);
         break;
       }
     }
@@ -775,7 +812,7 @@ inline void zeFenceHostSynchronize_SD(ze_result_t return_value,
         if (failedSyncAttempt) {
           return_value = drv.inject.zeFenceHostSynchronize(hFence, UINT64_MAX);
         }
-        DumpQueueSubmit(cfg, sd, fenceState.hCommandQueue);
+        DumpQueueSubmissions(cfg, sd, cqState.queueSubmissionDumpState);
         break;
       }
     }
@@ -994,7 +1031,9 @@ inline void zeFenceQueryStatus_SD(ze_result_t return_value, ze_fence_handle_t hF
         auto& cqState = sd.Get<CCommandQueueState>(fenceState.hCommandQueue, EXCEPTION_MESSAGE);
         for (const auto& cmdQueueListsInfo : cqState.queueSubmissionDumpState) {
           if (CheckWhetherDumpQueueSubmit(cfg, cmdQueueListsInfo->cmdQueueNumber)) {
-            DumpQueueSubmit(cfg, sd, fenceState.hCommandQueue);
+            const auto& cmdQueueState =
+                sd.Get<CCommandQueueState>(fenceState.hCommandQueue, EXCEPTION_MESSAGE);
+            DumpQueueSubmissions(cfg, sd, cmdQueueState.queueSubmissionDumpState);
             break;
           }
         }
@@ -1198,5 +1237,162 @@ inline void zeVirtualMemSetAccessAttribute_SD(ze_result_t return_value,
   }
 }
 
+inline void zeCommandListImmediateAppendCommandListsExp_SD(
+    [[maybe_unused]] ze_result_t return_value,
+    ze_command_list_handle_t hCommandListImmediate,
+    uint32_t numCommandLists,
+    ze_command_list_handle_t* phCommandLists,
+    ze_event_handle_t hSignalEvent,
+    uint32_t numWaitEvents,
+    ze_event_handle_t* phWaitEvents) {
+  const auto& cfg = Config::Get();
+  auto& sd = SD();
+  const auto& gitsInstance = CGits::Instance();
+  auto& cmdListImmediateState = sd.Get<CCommandListState>(hCommandListImmediate, EXCEPTION_MESSAGE);
+  const auto& currentExecCount = gitsInstance.CurrentCommandQueueExecCount();
+  bool containsAppendedKernelsToDump = false;
+  unsigned int indirectTypes = 0U;
+
+  RegisterEvents(sd, hCommandListImmediate, hSignalEvent, numWaitEvents, phWaitEvents);
+  if (hSignalEvent != nullptr) {
+    auto& eventState = sd.Get<CEventState>(hSignalEvent, EXCEPTION_MESSAGE);
+    eventState.immediateCmdListExecutingCmdLists = hCommandListImmediate;
+    eventState.canBeSynced = true;
+    eventState.executionIsSynced = cmdListImmediateState.isSync;
+  }
+
+  for (auto i = 0u; i < numCommandLists; i++) {
+    const auto& cmdListState = sd.Get<CCommandListState>(phCommandLists[i], EXCEPTION_MESSAGE);
+    for (const auto& kernelInfo : cmdListState.appendedKernels) {
+      const auto& kernelState = sd.Get<CKernelState>(kernelInfo->handle, EXCEPTION_MESSAGE);
+      LogKernelExecution(kernelInfo->kernelNumber, kernelState.desc.pKernelName, currentExecCount,
+                         cmdListState.cmdListNumber);
+      if (CheckWhetherDumpQueueSubmit(cfg, currentExecCount) &&
+          CheckWhetherDumpKernel(kernelInfo->kernelNumber, cmdListState.cmdListNumber)) {
+        containsAppendedKernelsToDump = true;
+        auto& readyArgVector = sd.Map<CKernelArgumentDump>()[phCommandLists[i]];
+        cmdListImmediateState.immediateCmdListSubmissionsDumpState.push_back(
+            std::make_unique<QueueSubmissionSnapshot>(
+                phCommandLists[i], cmdListState.isImmediate, cmdListState.appendedKernels,
+                cmdListState.cmdListNumber, cmdListState.hContext, currentExecCount,
+                &readyArgVector));
+        if (CaptureAfterSubmit(cfg)) {
+          sd.Release<CKernelArgumentDump>(phCommandLists[i]);
+        }
+      }
+      indirectTypes |= kernelInfo->indirectUsmTypes;
+    }
+    if (CaptureKernels(cfg)) {
+      cmdListImmediateState.immediateCmdListNotSyncedSubmissions.push_back(
+          std::make_unique<QueueSubmissionSnapshot>(
+              phCommandLists[i], cmdListState.isImmediate, cmdListState.appendedKernels,
+              cmdListState.cmdListNumber, cmdListState.hContext, currentExecCount, nullptr));
+    }
+  }
+  if (IsBruteForceScanForIndirectPointersEnabled(cfg)) {
+    for (auto& allocState : sd.Map<CAllocState>()) {
+      if (CheckKernelResidencyPossibilities(*allocState.second, indirectTypes,
+                                            cmdListImmediateState.hContext)) {
+        allocState.second->modified = true;
+      }
+    }
+  }
+
+  if (containsAppendedKernelsToDump &&
+      (cmdListImmediateState.isSync ||
+       CheckWhetherCommandListImmediateCanBeSynced(cfg, sd, drv, hCommandListImmediate))) {
+    if (!IsDumpOnlyLayoutEnabled(cfg) && !cmdListImmediateState.isSync) {
+      drv.inject.zeCommandListHostSynchronize(hCommandListImmediate, UINT64_MAX);
+    }
+    DumpQueueSubmissions(cfg, sd, cmdListImmediateState.immediateCmdListSubmissionsDumpState);
+    cmdListImmediateState.immediateCmdListNotSyncedSubmissions.clear();
+    cmdListImmediateState.immediateCmdListSubmissionsDumpState.clear();
+  }
+}
+
+inline void zeCommandListHostSynchronize_SD(ze_result_t return_value,
+                                            ze_command_list_handle_t hCommandList,
+                                            uint64_t timeout) {
+  auto& sd = SD();
+  const auto& cfg = Config::Get();
+  const auto failedSyncAttempt = return_value != ZE_RESULT_SUCCESS && timeout != UINT64_MAX;
+  auto& cmdListState = sd.Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
+  if (cmdListState.isImmediate && (return_value == ZE_RESULT_SUCCESS || failedSyncAttempt) &&
+      CaptureKernels(cfg)) {
+    for (const auto& cmdListImmediateInfo : cmdListState.immediateCmdListSubmissionsDumpState) {
+      if (CheckWhetherDumpQueueSubmit(cfg, cmdListImmediateInfo->cmdQueueNumber)) {
+        if (failedSyncAttempt) {
+          drv.inject.zeCommandListHostSynchronize(hCommandList, UINT64_MAX);
+        }
+        DumpQueueSubmissions(cfg, sd, cmdListState.immediateCmdListSubmissionsDumpState);
+        break;
+      }
+    }
+    cmdListState.immediateCmdListNotSyncedSubmissions.clear();
+    cmdListState.immediateCmdListSubmissionsDumpState.clear();
+  }
+}
+
+inline void zeEventHostSynchronize_SD(ze_result_t return_value,
+                                      ze_event_handle_t hEvent,
+                                      uint64_t timeout) {
+  auto& sd = SD();
+  auto& eventState = sd.Get<CEventState>(hEvent, EXCEPTION_MESSAGE);
+  if (eventState.immediateCmdListExecutingCmdLists != nullptr) {
+    auto& cmdListState =
+        sd.Get<CCommandListState>(eventState.immediateCmdListExecutingCmdLists, EXCEPTION_MESSAGE);
+    const auto& cfg = Config::Get();
+    const auto failedSyncAttempt = return_value != ZE_RESULT_SUCCESS && timeout != UINT64_MAX;
+    if (cmdListState.isImmediate && (return_value == ZE_RESULT_SUCCESS || failedSyncAttempt) &&
+        CaptureKernels(cfg)) {
+      for (const auto& cmdListImmediateInfo : cmdListState.immediateCmdListSubmissionsDumpState) {
+        if (CheckWhetherDumpQueueSubmit(cfg, cmdListImmediateInfo->cmdQueueNumber)) {
+          if (failedSyncAttempt) {
+            drv.inject.zeEventHostSynchronize(hEvent, UINT64_MAX);
+          }
+          DumpQueueSubmissions(cfg, sd, cmdListState.immediateCmdListSubmissionsDumpState);
+          break;
+        }
+      }
+      cmdListState.immediateCmdListNotSyncedSubmissions.clear();
+      cmdListState.immediateCmdListSubmissionsDumpState.clear();
+    }
+    if (return_value == ZE_RESULT_SUCCESS && eventState.canBeSynced) {
+      eventState.executionIsSynced = true;
+    }
+  }
+}
+
+inline void zeEventQueryStatus_SD(ze_result_t return_value, ze_event_handle_t hEvent) {
+  auto& sd = SD();
+  auto& eventState = sd.Get<CEventState>(hEvent, EXCEPTION_MESSAGE);
+  if (eventState.immediateCmdListExecutingCmdLists != nullptr &&
+      return_value == ZE_RESULT_SUCCESS) {
+    const auto& cfg = Config::Get();
+    if (!eventState.executionIsSynced && eventState.canBeSynced) {
+      if (CaptureKernels(cfg)) {
+        auto& cmdListState = sd.Get<CCommandListState>(eventState.immediateCmdListExecutingCmdLists,
+                                                       EXCEPTION_MESSAGE);
+        for (const auto& cmdListImmediateInfo : cmdListState.immediateCmdListSubmissionsDumpState) {
+          if (CheckWhetherDumpQueueSubmit(cfg, cmdListImmediateInfo->cmdQueueNumber)) {
+            DumpQueueSubmissions(cfg, sd, cmdListState.immediateCmdListSubmissionsDumpState);
+            break;
+          }
+        }
+        cmdListState.immediateCmdListNotSyncedSubmissions.clear();
+        cmdListState.immediateCmdListSubmissionsDumpState.clear();
+      }
+      eventState.executionIsSynced = true;
+    }
+  }
+}
+
+inline void zeEventHostReset_SD(ze_result_t return_value, ze_event_handle_t hEvent) {
+  if (return_value == ZE_RESULT_SUCCESS && hEvent != nullptr) {
+    auto& eventState = SD().Get<CEventState>(hEvent, EXCEPTION_MESSAGE);
+    eventState.canBeSynced = false;
+    eventState.immediateCmdListExecutingCmdLists = nullptr;
+  }
+}
 } // namespace l0
 } // namespace gits
