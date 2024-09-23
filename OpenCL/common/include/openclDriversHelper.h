@@ -31,7 +31,12 @@ using namespace gits::lua;
 
 namespace gits {
 namespace OpenCL {
-#ifdef BUILD_FOR_CCODE
+bool CheckGPUPlatform(const cl_platform_id& platform) {
+  cl_uint num_devices = 0;
+  auto result = drvOcl.clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 0, nullptr, &num_devices);
+  return result == CL_SUCCESS && num_devices > 0;
+}
+
 bool CheckIntelGPUPlatform(const cl_platform_id& platform) {
   constexpr char intelPlatformVendorName[] = "Intel(R) Corporation";
   constexpr size_t intelPlatformVendorNameSize =
@@ -46,13 +51,10 @@ bool CheckIntelGPUPlatform(const cl_platform_id& platform) {
   result = drvOcl.clGetPlatformInfo(platform, CL_PLATFORM_VENDOR, intelPlatformVendorNameSize,
                                     platformName, nullptr);
   if (result == CL_SUCCESS && strcmp(platformName, intelPlatformVendorName) == 0) {
-    cl_uint num_devices = 0;
-    result = drvOcl.clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 0, nullptr, &num_devices);
-    return result == CL_SUCCESS && num_devices > 0;
+    return CheckGPUPlatform(platform);
   }
   return false;
 }
-#endif
 
 cl_platform_id GetPlatform(const char* functionName) {
 #ifndef BUILD_FOR_CCODE
@@ -84,10 +86,13 @@ cl_platform_id GetPlatform(const char* functionName) {
       return state.first;
     }
   }
-  return platformStates.empty() ? nullptr : platformStates.begin()->first;
+  if (!platformStates.empty()) {
+    return platformStates.begin()->first;
+  }
 #else
-  // Temporary workaround for ccode compilation.
   (void)functionName;
+#endif
+  //Workaround for CCode and disabled recording
   cl_uint numberOfPlatforms = 0;
   cl_int result = drvOcl.clGetPlatformIDs(0, nullptr, &numberOfPlatforms);
   if (result != CL_SUCCESS) {
@@ -103,8 +108,12 @@ cl_platform_id GetPlatform(const char* functionName) {
       return platform;
     }
   }
+  for (const auto& platform : platforms) {
+    if (CheckGPUPlatform(platform)) {
+      return platform;
+    }
+  }
   return platforms.empty() ? nullptr : platforms[0];
-#endif
 }
 
 NOINLINE bool load_ocl_function_generic(void*& func, const char* name) {
