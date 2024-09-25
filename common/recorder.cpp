@@ -153,6 +153,13 @@ gits::CRecorder::CRecorder()
   Log(INFO) << " GITS Recorder (" << inst.Version() << ")";
   Log(INFO) << "-----------------------------------------------------";
 
+  inst.GetMessageBus().subscribe({PUBLISHER_PLUGIN, TOPIC_LOG}, [](Topic t, const MessagePtr& m) {
+    auto msg = std::dynamic_pointer_cast<LogMessage>(m);
+    if (msg) {
+      CLog(msg->getLevel(), NORMAL) << msg->getText();
+    }
+  });
+
 #ifdef GITS_PLATFORM_WINDOWS
   // handling signals
   SignalsHandler();

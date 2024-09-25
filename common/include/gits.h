@@ -24,6 +24,8 @@
 #include "tools_lite.h"
 #include "pragmas.h"
 #include "apis_iface.h"
+#include "messageBus.h"
+
 #include <atomic>
 #include <functional>
 #include <memory>
@@ -181,6 +183,8 @@ private:
   uint64_t _maxLocalMemoryUsage;
 
   std::unordered_map<void*, uint64_t> _ptrToOrderedId;
+
+  MessageBus _messageBus;
 
   CGits();
   CGits(uint16_t v0, uint16_t v1, uint16_t v2, uint16_t v3);
@@ -425,6 +429,10 @@ public:
   }
   bool traceGLAPIBypass;
   ApisIface apis;
+
+  MessageBus& GetMessageBus() {
+    return _messageBus;
+  }
 
   friend std::ostream& operator<<(std::ostream& stream, const CGits& g);
   friend CBinOStream& operator<<(CBinOStream& stream, const CGits& g);

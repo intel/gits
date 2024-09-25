@@ -34,6 +34,7 @@ list(APPEND common_SOURCES
   include/malloc_allocator.h
   include/MemorySniffer.h
   include/message_pump.h
+  include/messageBus.h
   include/performance.h
   include/platform.h
   include/pragmas.h
@@ -73,6 +74,7 @@ list(APPEND common_SOURCES
   log.cpp
   MemorySniffer.cpp
   message_pump.cpp
+  messageBus.cpp
   performance.cpp
   resource_manager.cpp
   runner.cpp
