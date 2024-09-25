@@ -28,7 +28,11 @@
 
 namespace gits {
 struct Config {
-  enum TMode { MODE_UNKNOWN, MODE_RECORDER, MODE_PLAYER };
+  enum TMode {
+    MODE_UNKNOWN,
+    MODE_RECORDER,
+    MODE_PLAYER
+  };
 
   static const std::string CONFIG_FILE_NAME;
   static std::filesystem::path GetConfigPath(const std::filesystem::path& appDir);

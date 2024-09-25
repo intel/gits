@@ -27,7 +27,10 @@ public:
     OpenCL,
     LevelZero,
   };
-  enum TApiType { A3D, ACompute };
+  enum TApiType {
+    A3D,
+    ACompute
+  };
 
   class ApiIface {
     TApi _api;

@@ -64,7 +64,10 @@ enum LogLevel {
   OFF = 6,    // Important. Special level that shows messages even when logging is off.
 };
 
-enum class TraceData { VK_STRUCTS, FRAME_NUMBER };
+enum class TraceData {
+  VK_STRUCTS,
+  FRAME_NUMBER
+};
 
 const TraceData TraceDataAll[] = {TraceData::VK_STRUCTS, TraceData::FRAME_NUMBER};
 

@@ -34,7 +34,11 @@ class CFrameRateCounter;
    */
 class CPlayer : private gits::noncopyable {
 public:
-  enum TState { STATE_RUNNING, STATE_PAUSED, STATE_FINISHED };
+  enum TState {
+    STATE_RUNNING,
+    STATE_PAUSED,
+    STATE_FINISHED
+  };
 
 private:
   TState _state;     /**< @brief defines current player state */

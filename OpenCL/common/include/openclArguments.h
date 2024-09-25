@@ -101,7 +101,10 @@ class CProgramSource : public CArgumentFileText {
   size_t text_length = 0;
 
 public:
-  enum ProgramType { PROGRAM_SOURCE, PROGRAM_BINARY };
+  enum ProgramType {
+    PROGRAM_SOURCE,
+    PROGRAM_BINARY
+  };
   CProgramSource() {}
   CProgramSource(cl_uint count, const char** strings, const size_t* lengths);
   CProgramSource(const unsigned char* binary, const size_t length);

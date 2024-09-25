@@ -887,7 +887,12 @@ public:
   CGlDriver(const CGlDriver& other) = delete;
   CGlDriver& operator=(const CGlDriver& other) = delete;
   ~CGlDriver();
-  enum TApiType { API_GL, API_GLES1, API_GLES2, API_NULL };
+  enum TApiType {
+    API_GL,
+    API_GLES1,
+    API_GLES2,
+    API_NULL
+  };
 
   void Initialize(TApiType api) WEAK;
 

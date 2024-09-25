@@ -13,6 +13,7 @@ ReflowComments: false
 AllowShortFunctionsOnASingleLine: Empty
 PenaltyReturnTypeOnItsOwnLine: 999
 InsertNewlineAtEOF: true
+AllowShortEnumsOnASingleLine: false
 ---
 Language: Json
 DisableFormat: true

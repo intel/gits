@@ -299,7 +299,11 @@ struct CCommandListState : public CState {
   uint32_t cmdListNumber = 0U;
   uint32_t cmdQueueNumber = 0U;
   struct Action {
-    enum Type { Normal, Reset, Signal };
+    enum Type {
+      Normal,
+      Reset,
+      Signal
+    };
     Type type = Type::Normal;
     ze_event_handle_t signalEvent = nullptr;
     std::vector<ze_event_handle_t> waitEvents;

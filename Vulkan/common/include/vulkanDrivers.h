@@ -59,7 +59,10 @@ struct CVkDeviceDispatchTable {
 
 class CVkDriver {
 public:
-  enum class DriverMode { INTERCEPTOR, LAYER };
+  enum class DriverMode {
+    INTERCEPTOR,
+    LAYER
+  };
   CVkDriver();
   ~CVkDriver();
   CVkDriver(const CVkDriver& other) = delete;

@@ -55,11 +55,32 @@ COclLog& COclLog::operator<<(const T& t) {
 };
 
 typedef unsigned mem_signature_t;
-enum class UnifiedMemoryType : unsigned { host = 1 << 0, device = 1 << 1, shared = 1 << 2 };
-enum class KernelArgType { pointer = 1, mem, sampler, usm, svm };
-enum class KernelSetType { normal = 1, usm, svm };
-enum class KernelExecInfoType : unsigned { pointers = 1, boolean, uint };
-enum class ProgramBinaryLink : uint8_t { binary = 1, program };
+enum class UnifiedMemoryType : unsigned {
+  host = 1 << 0,
+  device = 1 << 1,
+  shared = 1 << 2
+};
+enum class KernelArgType {
+  pointer = 1,
+  mem,
+  sampler,
+  usm,
+  svm
+};
+enum class KernelSetType {
+  normal = 1,
+  usm,
+  svm
+};
+enum class KernelExecInfoType : unsigned {
+  pointers = 1,
+  boolean,
+  uint
+};
+enum class ProgramBinaryLink : uint8_t {
+  binary = 1,
+  program
+};
 
 size_t PixelSize(const cl_image_format& imageFormat);
 size_t QuerySize(const cl_mem clMem);

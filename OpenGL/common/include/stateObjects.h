@@ -833,7 +833,12 @@ struct CBufferStateData {
     GLintptr mapFlushRangeOffset;
     GLsizeiptr mapFlushRangeLength;
     bool mapped;
-    enum buffer_type { MAP_BUFFER, MAP_BUFFER_OES, MAP_BUFFER_ARB, MAP_BUFFER_EXT };
+    enum buffer_type {
+      MAP_BUFFER,
+      MAP_BUFFER_OES,
+      MAP_BUFFER_ARB,
+      MAP_BUFFER_EXT
+    };
     buffer_type type;
     std::vector<GLubyte> buffer;
     bool named;

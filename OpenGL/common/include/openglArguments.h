@@ -1372,7 +1372,11 @@ class CShaderSource : public CArgumentFileText {
   const char* text_cstr;
 
 public:
-  enum ShaderType { SHADER_SOURCE, SHADER_PROGRAM, PROGRAM_STRING };
+  enum ShaderType {
+    SHADER_SOURCE,
+    SHADER_PROGRAM,
+    PROGRAM_STRING
+  };
   CShaderSource() : text_cstr(nullptr) {}
   CShaderSource(GLuint shaderObj,
                 GLsizei count,
@@ -1595,8 +1599,15 @@ public:
     uint32_t _length;
     uint32_t _target;
     std::vector<char> playerCache;
-    enum UpdateType { TEXTURE_UPDATE, PER_DRAWCALL_UPDATE, PER_FRAME_UPDATE };
-    enum UpdateMode { UPDATE_ALL, UPDATE_BOUND };
+    enum UpdateType {
+      TEXTURE_UPDATE,
+      PER_DRAWCALL_UPDATE,
+      PER_FRAME_UPDATE
+    };
+    enum UpdateMode {
+      UPDATE_ALL,
+      UPDATE_BOUND
+    };
 
     TCoherentBufferData(
         uint64_t hash, uint32_t offset, uint32_t buffer_name, uint32_t length, uint32_t target)

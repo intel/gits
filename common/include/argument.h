@@ -613,7 +613,11 @@ public:
   * If accessed as non const mappings are being updated
   * This parameter is written to the stream
   */
-enum MappedArrayAction { ADD_MAPPING = 0, REMOVE_MAPPING = 1, NO_ACTION = 2 };
+enum MappedArrayAction {
+  ADD_MAPPING = 0,
+  REMOVE_MAPPING = 1,
+  NO_ACTION = 2
+};
 
 template <class T, class T_WRAP, MappedArrayAction T_ACTION>
 class CArgumentMappedSizedArray : public CArgument {

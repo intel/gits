@@ -41,7 +41,11 @@ void SaveImage(const std::filesystem::path& dir,
                const ze_image_desc_t& desc,
                const std::string& name);
 size_t CalculateImageSize(ze_image_desc_t desc);
-enum class KernelArgType { pointer = 1, buffer, image };
+enum class KernelArgType {
+  pointer = 1,
+  buffer,
+  image
+};
 void PrepareArguments(const CKernelExecutionInfo* kernelInfo,
                       std::vector<CKernelArgumentDump>& argDumpStates,
                       CStateDynamic& sd,
@@ -55,7 +59,11 @@ void DumpReadyArguments(std::vector<CKernelArgumentDump>& readyArgVector,
                         const CKernelExecutionInfo* kernelInfo);
 bool CaptureKernels(const Config& cfg);
 bool CaptureImages(const Config& cfg);
-enum class UnifiedMemoryType : unsigned { host = 1 << 0, device = 1 << 1, shared = 1 << 2 };
+enum class UnifiedMemoryType : unsigned {
+  host = 1 << 0,
+  device = 1 << 1,
+  shared = 1 << 2
+};
 bool CheckCfgZeroInitialization(const Config& cfg);
 bool ZeroInitializeUsm(CDriver& driver,
                        const ze_command_list_handle_t& commandList,
@@ -79,7 +87,12 @@ void* GetOffsetPointer(void* ptr, const uintptr_t& offset);
 std::pair<void*, uintptr_t> GetAllocFromOriginalPtr(void* originalPtr, const CStateDynamic& sd);
 size_t GetSizeFromCopyRegion(const ze_copy_region_t* region);
 bool IsNullIndirectPointersInBufferEnabled(const Config& cfg);
-enum class AllocStateType : unsigned { pointer, global_pointer, function_pointer, virtual_pointer };
+enum class AllocStateType : unsigned {
+  pointer,
+  global_pointer,
+  function_pointer,
+  virtual_pointer
+};
 bool IsControlledSubmission(const ze_command_queue_desc_t* desc);
 bool IsControlledSubmission(const ze_command_list_desc_t* desc);
 bool ShouldDumpSpv(bool dumpSpv, const ze_module_desc_t* desc);

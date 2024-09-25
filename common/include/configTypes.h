@@ -147,7 +147,11 @@ private:
   Domain value_;
 };
 
-enum class TRecordingMode { NONE, BINARY, CCODE };
+enum class TRecordingMode {
+  NONE,
+  BINARY,
+  CCODE
+};
 
 struct RecordingModeOpt : NamedValuesBase<TRecordingMode, RecordingModeOpt> {
   static void describe_type() {
@@ -159,7 +163,12 @@ struct RecordingModeOpt : NamedValuesBase<TRecordingMode, RecordingModeOpt> {
   }
 };
 
-enum class TOpenGLRecorderMode { ALL, FRAMES, SINGLE_DRAW, DRAWS_RANGE };
+enum class TOpenGLRecorderMode {
+  ALL,
+  FRAMES,
+  SINGLE_DRAW,
+  DRAWS_RANGE
+};
 
 struct OpenGLRecorderModeOpt : NamedValuesBase<TOpenGLRecorderMode, OpenGLRecorderModeOpt> {
   static void describe_type() {
@@ -198,7 +207,11 @@ struct VulkanRecorderModeOpt : NamedValuesBase<TVulkanRecorderMode, VulkanRecord
   }
 };
 
-enum class TOpenCLRecorderMode { ALL, SINGLE_KERNEL, KERNELS_RANGE };
+enum class TOpenCLRecorderMode {
+  ALL,
+  SINGLE_KERNEL,
+  KERNELS_RANGE
+};
 
 struct OpenCLRecorderModeOpt : NamedValuesBase<TOpenCLRecorderMode, OpenCLRecorderModeOpt> {
   static void describe_type() {
@@ -210,7 +223,10 @@ struct OpenCLRecorderModeOpt : NamedValuesBase<TOpenCLRecorderMode, OpenCLRecord
   }
 };
 
-enum class TLevelZeroRecorderMode { ALL, KERNEL };
+enum class TLevelZeroRecorderMode {
+  ALL,
+  KERNEL
+};
 
 struct LevelZeroRecorderModeOpt
     : NamedValuesBase<TLevelZeroRecorderMode, LevelZeroRecorderModeOpt> {
@@ -222,7 +238,12 @@ struct LevelZeroRecorderModeOpt
   }
 };
 
-enum class TForcedGLProfile { NO_PROFILE_FORCED, COMPAT, CORE, ES };
+enum class TForcedGLProfile {
+  NO_PROFILE_FORCED,
+  COMPAT,
+  CORE,
+  ES
+};
 
 struct GLProfileOpt : NamedValuesBase<TForcedGLProfile, GLProfileOpt> {
   static void describe_type() {
@@ -235,7 +256,12 @@ struct GLProfileOpt : NamedValuesBase<TForcedGLProfile, GLProfileOpt> {
   }
 };
 
-enum class TForcedGLNativeApi { NO_NTV_API_FORCED, EGL, GLX, WGL };
+enum class TForcedGLNativeApi {
+  NO_NTV_API_FORCED,
+  EGL,
+  GLX,
+  WGL
+};
 
 struct GLNativeApiOpt : NamedValuesBase<TForcedGLNativeApi, GLNativeApiOpt> {
   static void describe_type() {
@@ -248,7 +274,11 @@ struct GLNativeApiOpt : NamedValuesBase<TForcedGLNativeApi, GLNativeApiOpt> {
   }
 };
 
-enum class TBuffersState { CAPTURE_ALWAYS, RESTORE, MIXED };
+enum class TBuffersState {
+  CAPTURE_ALWAYS,
+  RESTORE,
+  MIXED
+};
 
 struct BuffersStateOpt : NamedValuesBase<TBuffersState, BuffersStateOpt> {
   static void describe_type() {
@@ -260,7 +290,11 @@ struct BuffersStateOpt : NamedValuesBase<TBuffersState, BuffersStateOpt> {
   }
 };
 
-enum class TTexturesState { CAPTURE_ALWAYS, RESTORE, MIXED };
+enum class TTexturesState {
+  CAPTURE_ALWAYS,
+  RESTORE,
+  MIXED
+};
 
 struct TexturesStateOpt : NamedValuesBase<TTexturesState, TexturesStateOpt> {
   static void describe_type() {
@@ -272,7 +306,11 @@ struct TexturesStateOpt : NamedValuesBase<TTexturesState, TexturesStateOpt> {
   }
 };
 
-enum class TMemoryUpdateStates { ALL_MAPPED, ONLY_USED, USING_TAGS };
+enum class TMemoryUpdateStates {
+  ALL_MAPPED,
+  ONLY_USED,
+  USING_TAGS
+};
 
 struct MemoryUpdateStateOpt : NamedValuesBase<TMemoryUpdateStates, MemoryUpdateStateOpt> {
   static void describe_type() {
@@ -308,7 +346,10 @@ struct MemoryTrackingModeOpt : NamedValuesBase<TMemoryTrackingMode, MemoryTracki
   }
 };
 
-enum class TMemoryStateRestoration { NONE, HOST_VISIBLE };
+enum class TMemoryStateRestoration {
+  NONE,
+  HOST_VISIBLE
+};
 
 struct MemoryStateRestorationOpt
     : NamedValuesBase<TMemoryStateRestoration, MemoryStateRestorationOpt> {
@@ -320,7 +361,11 @@ struct MemoryStateRestorationOpt
   }
 };
 
-enum class TBufferStateRestoration { NONE, WITH_NON_HOST_VISIBLE_MEMORY_ONLY, ALL };
+enum class TBufferStateRestoration {
+  NONE,
+  WITH_NON_HOST_VISIBLE_MEMORY_ONLY,
+  ALL
+};
 
 struct BufferStateRestorationOpt
     : NamedValuesBase<TBufferStateRestoration, BufferStateRestorationOpt> {
@@ -334,7 +379,10 @@ struct BufferStateRestorationOpt
   }
 };
 
-enum class TWindowsKeyHandling { MESSAGE_LOOP, ASYNC_KEY_STATE };
+enum class TWindowsKeyHandling {
+  MESSAGE_LOOP,
+  ASYNC_KEY_STATE
+};
 
 struct WindowsKeyHandlingOpt : NamedValuesBase<TWindowsKeyHandling, WindowsKeyHandlingOpt> {
   static void describe_type() {
@@ -345,7 +393,10 @@ struct WindowsKeyHandlingOpt : NamedValuesBase<TWindowsKeyHandling, WindowsKeyHa
   }
 };
 
-enum class TCaptureGroupType { PER_COMMAND_BUFFER, PER_RENDER_PASS };
+enum class TCaptureGroupType {
+  PER_COMMAND_BUFFER,
+  PER_RENDER_PASS
+};
 
 struct VKCaptureGroupTypeOpt : NamedValuesBase<TCaptureGroupType, VKCaptureGroupTypeOpt> {
   static void describe_type() {
@@ -356,7 +407,11 @@ struct VKCaptureGroupTypeOpt : NamedValuesBase<TCaptureGroupType, VKCaptureGroup
   }
 };
 
-enum class TDeviceType { ANY, INTEGRATED, DISCRETE };
+enum class TDeviceType {
+  ANY,
+  INTEGRATED,
+  DISCRETE
+};
 
 struct DeviceTypeOpt : NamedValuesBase<TDeviceType, DeviceTypeOpt> {
   static void describe_type() {
@@ -368,7 +423,11 @@ struct DeviceTypeOpt : NamedValuesBase<TDeviceType, DeviceTypeOpt> {
   }
 };
 
-enum class TVkRenderDocCaptureMode { NONE, FRAMES, QUEUE_SUBMIT };
+enum class TVkRenderDocCaptureMode {
+  NONE,
+  FRAMES,
+  QUEUE_SUBMIT
+};
 
 struct VkRenderDocCaptureOpt : NamedValuesBase<TVkRenderDocCaptureMode, VkRenderDocCaptureOpt> {
   static void describe_type() {
@@ -380,8 +439,18 @@ struct VkRenderDocCaptureOpt : NamedValuesBase<TVkRenderDocCaptureMode, VkRender
   }
 };
 
-enum class THashType { MURMUR, XX, INCREMENTAL_NUMBER, CRC32ISH, XXCRC32 };
-enum CompressionType : uint8_t { NONE, LZ4, ZSTD };
+enum class THashType {
+  MURMUR,
+  XX,
+  INCREMENTAL_NUMBER,
+  CRC32ISH,
+  XXCRC32
+};
+enum CompressionType : uint8_t {
+  NONE,
+  LZ4,
+  ZSTD
+};
 
 struct CompressionTypeOpt : NamedValuesBase<CompressionType, CompressionTypeOpt> {
   static void describe_type() {

@@ -12,7 +12,12 @@
 
 namespace gits {
 namespace Vulkan {
-enum class DisplayProtocol { NONE, XCB, XLIB, WAYLAND };
+enum class DisplayProtocol {
+  NONE,
+  XCB,
+  XLIB,
+  WAYLAND
+};
 static DisplayProtocol _displayProtocol;
 
 //********************************* Player Window ***********************************

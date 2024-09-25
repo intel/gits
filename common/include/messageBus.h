@@ -18,8 +18,15 @@
 #include <memory>
 
 namespace gits {
-enum PublisherId { PUBLISHER_PLAYER = 0, PUBLISHER_RECORDER, PUBLISHER_PLUGIN };
-enum TopicId { TOPIC_NONE = 0, TOPIC_LOG };
+enum PublisherId {
+  PUBLISHER_PLAYER = 0,
+  PUBLISHER_RECORDER,
+  PUBLISHER_PLUGIN
+};
+enum TopicId {
+  TOPIC_NONE = 0,
+  TOPIC_LOG
+};
 struct Topic {
   PublisherId publisherId{};
   TopicId topicId{};

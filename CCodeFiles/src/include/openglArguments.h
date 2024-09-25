@@ -18,7 +18,11 @@ namespace gits {
 
 struct CArgument {};
 struct CCodeOStream : std::ostream {};
-enum MappedArrayAction { ADD_MAPPING = 0, REMOVE_MAPPING = 1, NO_ACTION = 2 };
+enum MappedArrayAction {
+  ADD_MAPPING = 0,
+  REMOVE_MAPPING = 1,
+  NO_ACTION = 2
+};
 
 namespace OpenGL {
 

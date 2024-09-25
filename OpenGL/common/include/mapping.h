@@ -108,15 +108,21 @@ void* gl_name_cast(int name) {
 
 template <int Native, int Shared, int Legacy, int Nezero>
 struct MappedObjectTraits {
-  enum { native = Native }; // is this native api object or GL object
-  enum { shared = Shared }; // is the object shared in multiple contexts
+  enum {
+    native = Native
+  }; // is this native api object or GL object
+  enum {
+    shared = Shared
+  }; // is the object shared in multiple contexts
   enum {
     legacy = Legacy
-  };                        // does the object support bind w/o gen in some ctxs
-                            // 0 - requires mapping everywhere
-                            // 1 - doesn't require mapping in compat desktop
-                            // 2 - doesn't require mapping in ES context
-  enum { nezero = Nezero }; // does the object name 0 map to itself
+  };  // does the object support bind w/o gen in some ctxs
+      // 0 - requires mapping everywhere
+      // 1 - doesn't require mapping in compat desktop
+      // 2 - doesn't require mapping in ES context
+  enum {
+    nezero = Nezero
+  }; // does the object name 0 map to itself
 };
 
 bool isMappingRequired(MapObjects mapObject, int legacy);

@@ -92,7 +92,12 @@ typedef enum _VulkanResourceType {
 
 // Creation function
 
-enum class CreationFunction { KHR_EXTENSION, CORE_1_0, CORE_1_1, CORE_1_2 };
+enum class CreationFunction {
+  KHR_EXTENSION,
+  CORE_1_0,
+  CORE_1_1,
+  CORE_1_2
+};
 
 // Unique handle
 

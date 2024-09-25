@@ -210,7 +210,10 @@ class CgitsRenderbufferStorage : public CFunction {
   }
 
 public:
-  enum RenderbufferStorageType { RENDER_BUFFER, RENDER_BUFFER_EXT };
+  enum RenderbufferStorageType {
+    RENDER_BUFFER,
+    RENDER_BUFFER_EXT
+  };
   CGLuint _renderbufferStorageType;
   void renderBufferStorageRun();
   void renderBufferStorageEXTRun();

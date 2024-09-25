@@ -38,7 +38,12 @@ unsigned GetVirtualMemoryPageSize();
 void* GetPage(void* addr);
 const void* GetPage(const void* addr);
 
-enum PageMemoryProtection { READ_ONLY, READ_WRITE, WRITE_ONLY, NONE };
+enum PageMemoryProtection {
+  READ_ONLY,
+  READ_WRITE,
+  WRITE_ONLY,
+  NONE
+};
 bool SetPagesProtection(PageMemoryProtection access, void* ptr, size_t size = 1);
 
 class MemorySniffer;

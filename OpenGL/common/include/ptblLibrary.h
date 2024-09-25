@@ -20,7 +20,12 @@ namespace gits {
 namespace OpenGL {
 //*********************** Native API ****************************
 struct PtblNativeAPI {
-  enum Type { UNKNOWN = 0, WGL, GLX, EGL };
+  enum Type {
+    UNKNOWN = 0,
+    WGL,
+    GLX,
+    EGL
+  };
   static Type _api;
   static Type _streamApi;
 
@@ -94,8 +99,16 @@ inline void PtblNtvStreamApi(PtblNativeAPI::Type api) {
 }
 
 //*********************** GL Params ****************************
-enum PtblGLProfile { Compat = 300, Core, ES };
-enum PtblCtxParam { VerMinor = 400, VerMajor, Profile };
+enum PtblGLProfile {
+  Compat = 300,
+  Core,
+  ES
+};
+enum PtblCtxParam {
+  VerMinor = 400,
+  VerMajor,
+  Profile
+};
 typedef std::map<PtblCtxParam, int> PtblCtxParams;
 
 //******************* PF Params ************************************

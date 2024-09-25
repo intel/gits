@@ -131,14 +131,18 @@ struct ArgNum;
 
 template <class T, class... Args>
 struct ArgNum<T(Args...)> {
-  enum { value = sizeof...(Args) };
+  enum {
+    value = sizeof...(Args)
+  };
 };
 
 template <class>
 struct Argnum;
 template <class R, class... T>
 struct Argnum<R(T...)> {
-  enum { value = sizeof...(T) };
+  enum {
+    value = sizeof...(T)
+  };
 };
 
 template <class>

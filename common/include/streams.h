@@ -66,7 +66,11 @@ void read_name_from_stream(std::istream& i, T*& value) {
    *
    * gits::CBinOStream class is a binary file output stream.
    */
-enum WriteType : uint8_t { STANDALONE, PACKAGE, LARGE_STANDALONE };
+enum WriteType : uint8_t {
+  STANDALONE,
+  PACKAGE,
+  LARGE_STANDALONE
+};
 class CBinOStream : public std::ostream {
   std::streambuf* _buf;
   CompressionType _compressionType;
