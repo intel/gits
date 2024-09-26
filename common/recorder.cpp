@@ -618,7 +618,6 @@ void gits::CRecorder::Save() {
   CALL_ONCE[&] {
     Scheduler().WriteAll();
   };
-  CGits::Instance().CloseZipFileGLPrograms();
 }
 
 /**

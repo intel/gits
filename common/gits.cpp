@@ -117,6 +117,7 @@ CGits::~CGits() {
 
     // Only create signature when recording, player can opt in through option.
     if (Config::Get().IsRecorder() && Config::Get().common.recorder.enabled) {
+      CloseZipFileGLPrograms();
       sign_directory(Config::Get().common.recorder.dumpPath);
     }
 
