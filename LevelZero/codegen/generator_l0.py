@@ -4827,12 +4827,12 @@ arg4=ArgDef(name='size',type='size_t',tag='in'),
 arg5=ArgDef(name='attr',type='ze_memory_atomic_attr_exp_flags_t',tag='in'),
 )
 
-Function(name='zeModuleBuildLogDestroy',component='ze_module_build_log',enabled=True,ddi_pos=0,
+Function(name='zeModuleBuildLogDestroy',component='ze_module_build_log',enabled=True,ddi_pos=0,skipRun=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hModuleBuildLog',type='ze_module_build_log_handle_t',tag='in',release=True),
 )
 
-Function(name='zeModuleBuildLogGetString',component='ze_module_build_log',enabled=True,ddi_pos=1,
+Function(name='zeModuleBuildLogGetString',component='ze_module_build_log',enabled=True,ddi_pos=1,skipRun=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hModuleBuildLog',type='ze_module_build_log_handle_t',tag='in'),
 arg2=ArgDef(name='pSize',type='size_t*',tag='inout'),

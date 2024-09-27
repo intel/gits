@@ -293,6 +293,24 @@ inline void zeModuleCreate_RUNWRAP(Cze_result_t& _return_value,
       drv.zeModuleCreate(*_hContext, *_hDevice, *_desc, *_phModule, *_phBuildLog);
   zeModuleCreate_SD(*_return_value, *_hContext, *_hDevice, *_desc, *_phModule, *_phBuildLog);
   HandleDumpSpv(*_desc);
+  const auto buildLogHandle = *_phBuildLog != nullptr ? **_phBuildLog : nullptr;
+  if (_return_value.Value() == ZE_RESULT_ERROR_MODULE_BUILD_FAILURE && buildLogHandle != nullptr) {
+    size_t size = 0U;
+    drv.inject.zeModuleBuildLogGetString(buildLogHandle, &size, nullptr);
+    if (size > 1U) {
+      std::vector<char> buildLog(size, '\0');
+      const auto retVal =
+          drv.inject.zeModuleBuildLogGetString(buildLogHandle, &size, buildLog.data());
+      if (retVal == ZE_RESULT_SUCCESS) {
+        Log(ERR) << buildLog.data();
+      }
+    } else {
+      Log(ERR) << "Build log is empty.";
+    }
+  }
+  if (buildLogHandle != nullptr) {
+    drv.inject.zeModuleBuildLogDestroy(buildLogHandle);
+  }
 }
 
 inline void zeModuleCreate_V1_RUNWRAP(Cze_result_t& _return_value,
@@ -312,6 +330,24 @@ inline void zeModuleCreate_V1_RUNWRAP(Cze_result_t& _return_value,
       auto& moduleState = SD().Get<CModuleState>(*hModule, EXCEPTION_MESSAGE);
       moduleState.moduleFileName = moduleFileName;
     }
+  }
+  const auto buildLogHandle = *_phBuildLog != nullptr ? **_phBuildLog : nullptr;
+  if (_return_value.Value() == ZE_RESULT_ERROR_MODULE_BUILD_FAILURE && buildLogHandle != nullptr) {
+    size_t size = 0U;
+    drv.inject.zeModuleBuildLogGetString(buildLogHandle, &size, nullptr);
+    if (size > 1U) {
+      std::vector<char> buildLog(size, '\0');
+      const auto retVal =
+          drv.inject.zeModuleBuildLogGetString(buildLogHandle, &size, buildLog.data());
+      if (retVal == ZE_RESULT_SUCCESS) {
+        Log(ERR) << buildLog.data();
+      }
+    } else {
+      Log(ERR) << "Build log is empty.";
+    }
+  }
+  if (buildLogHandle != nullptr) {
+    drv.inject.zeModuleBuildLogDestroy(buildLogHandle);
   }
 }
 
