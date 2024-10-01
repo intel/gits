@@ -25,6 +25,7 @@
 #include "log.h"
 
 #if defined GITS_PLATFORM_WINDOWS
+#include "Windows.h"
 const char* RECORDER_LIB_NAME = "gitsRecorder.dll";
 #else
 const char* RECORDER_LIB_NAME = "libGitsRecorder.so";
@@ -82,6 +83,15 @@ CGitsLoader::CGitsLoader(const char* recorderWrapperFactoryName)
 
   // load GITS Recorder DLL
   auto recorderPath = gitsPath_ / RECORDER_LIB_NAME;
+  if (!std::filesystem::exists(recorderPath)) {
+    Log(ERR) << "GITS library not found ('" << recorderPath << "')!!!";
+#ifdef GITS_PLATFORM_WINDOWS
+    MessageBoxA(nullptr, "GITS library not found in installationPath, check configuration.",
+                "Error", MB_OK | MB_ICONERROR);
+#endif
+    throw std::runtime_error("Failed to find required library");
+  }
+
   recorderLib_ = dl::open_library(recorderPath.string().c_str());
   if (recorderLib_ == nullptr) {
     Log(ERR) << "Cannot load GITS library ('" << recorderPath << "')!!!";
