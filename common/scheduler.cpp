@@ -250,10 +250,8 @@ CScheduler::~CScheduler() {
  * @param function Function call wrapper to register.
  */
 void CScheduler::Register(CToken* token) {
-  if (Config::Get().common.mode == Config::MODE_RECORDER) {
-    if (_tokenList.size() > _tokenLimit) {
-      WriteChunk();
-    }
+  if (_tokenList.size() > _tokenLimit) {
+    WriteChunk();
   }
 
   // This mutex is necessary, because each recorded api (GL/CL/rs)
