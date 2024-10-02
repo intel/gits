@@ -87,7 +87,11 @@ namespace gits {
       %if '[' in var['name']:
         std::memcpy(&val.${get_name(var['name'])}[0], (${var['type']}*)lua_to_ext<void*>(L, -1), ${get_array_size(var['name'])});
       %else:
+        %if var['name'] == 'pNext':
+        val.${var['name']} = lua_to_extension_struct<${get_namespace(arg.get('name'))}_structure_type_t>(L, -1);
+        %else:
         val.${var['name']} = lua_to_ext<${var['type']}>(L, -1);
+        %endif
       %endif
         lua_pop(L, 1);
     %endfor
@@ -108,7 +112,11 @@ namespace gits {
       %if '[' in var['name']:
         std::memcpy(&val->${get_name(var['name'])}[0], (${var['type']}*)lua_to_ext<void*>(L, -1), ${get_array_size(var['name'])});
       %else:
+        %if var['name'] == 'pNext':
+        val->${var['name']} = lua_to_extension_struct<${get_namespace(arg.get('name'))}_structure_type_t>(L, -1);
+        %else:
         val->${var['name']} = lua_to_ext<${var['type']}>(L, -1);
+        %endif
       %endif
         lua_pop(L, 1);
     %endfor
