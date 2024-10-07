@@ -1442,7 +1442,7 @@ inline void zeModuleCreate_RECWRAP(CRecorder& recorder,
   if (token != nullptr && return_value == ZE_RESULT_SUCCESS) {
     const auto moduleFileName =
         token->Argument<Cze_module_desc_t_V1::CSArray>(2U).Vector()[0]->GetProgramSourceName();
-    SD().Get<CModuleState>(*phModule, EXCEPTION_MESSAGE).moduleFileName = moduleFileName;
+    SD().Get<CModuleState>(*phModule, EXCEPTION_MESSAGE).moduleFileName = std::move(moduleFileName);
   }
 }
 

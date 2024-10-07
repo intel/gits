@@ -116,7 +116,7 @@ void CoclocInvoke::Run() {
     for (uint32_t i = 0U; i < outputsNum; ++i) {
       const auto moduleData =
           std::vector<uint8_t>(outputsData[i], outputsData[i] + outputsSizes[i]);
-      SD().deprecatedPlayer[std::string(outputsNames[i])] = moduleData;
+      SD().deprecatedPlayer[std::string(outputsNames[i])] = std::move(moduleData);
     }
   }
   drv.oclocFreeOutput(&outputsNum, &outputsData, &outputsSizes, &outputsNames);

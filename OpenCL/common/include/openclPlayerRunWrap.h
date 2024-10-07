@@ -41,7 +41,7 @@ void PrintBuildLog(const cl_program program,
                    const std::vector<cl_device_id> deviceVector) {
   cl_int errCode = CL_SUCCESS;
   size_t tmpNumDevices = numDevices;
-  std::vector<cl_device_id> tmpDeviceVector = deviceVector;
+  std::vector<cl_device_id> tmpDeviceVector = std::move(deviceVector);
   if (tmpNumDevices == 0 || tmpDeviceVector.empty()) {
     errCode |= drvOcl.clGetProgramInfo(program, CL_PROGRAM_NUM_DEVICES, sizeof(size_t),
                                        &tmpNumDevices, nullptr);

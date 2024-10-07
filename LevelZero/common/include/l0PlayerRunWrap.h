@@ -328,7 +328,7 @@ inline void zeModuleCreate_V1_RUNWRAP(Cze_result_t& _return_value,
     ze_module_handle_t* hModule = *_phModule;
     if (hModule != nullptr) {
       auto& moduleState = SD().Get<CModuleState>(*hModule, EXCEPTION_MESSAGE);
-      moduleState.moduleFileName = moduleFileName;
+      moduleState.moduleFileName = std::move(moduleFileName);
     }
   }
   const auto buildLogHandle = *_phBuildLog != nullptr ? **_phBuildLog : nullptr;

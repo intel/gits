@@ -329,7 +329,7 @@ public:
     for (auto i = 0U; i < numWaitEvents; i++) {
       action.waitEvents.push_back(phWaitEvents[i]);
     }
-    mockList.push_back(action);
+    mockList.push_back(std::move(action));
   }
 };
 
