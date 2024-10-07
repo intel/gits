@@ -59,10 +59,6 @@ void fast_exit(int code) {
 } // namespace
 
 void CGitsPlugin::Initialize() {
-  if (_initialized) {
-    return;
-  }
-
   try {
     std::unique_lock<std::mutex> lock(_mutex);
     if (_initialized) {
