@@ -21,7 +21,7 @@ namespace OpenCL {
 namespace {
 bool checkWhetherInject() {
   auto& cfg = Config::Get();
-  auto kernels =
+  const auto& kernels =
       cfg.IsPlayer() ? cfg.opencl.player.captureKernels : cfg.opencl.recorder.dumpKernels;
   if (!kernels.empty()) {
     return kernels[CGits::Instance().CurrentKernelCount()];

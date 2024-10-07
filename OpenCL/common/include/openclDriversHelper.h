@@ -58,7 +58,7 @@ bool CheckIntelGPUPlatform(const cl_platform_id& platform) {
 
 cl_platform_id GetPlatform(const char* functionName) {
 #ifndef BUILD_FOR_CCODE
-  const auto platformStates = SD()._platformIDStates;
+  const auto& platformStates = SD()._platformIDStates;
   cl_platform_id firstGPUPlatform = nullptr;
   cl_platform_id firstNonGPUPlatform = nullptr;
   for (const auto& state : platformStates) {

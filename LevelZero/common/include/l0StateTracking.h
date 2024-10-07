@@ -48,8 +48,8 @@ bool CheckWhetherDumpKernel(uint32_t kernelNumber, uint32_t cmdListNumber) {
   const auto& cfg = Config::Get();
   const auto& kernelList =
       cfg.IsPlayer() ? cfg.levelzero.player.captureKernels : cfg.levelzero.recorder.captureKernels;
-  auto cmdList = cfg.IsPlayer() ? cfg.levelzero.player.captureCommandLists
-                                : cfg.levelzero.recorder.captureCommandLists;
+  const auto& cmdList = cfg.IsPlayer() ? cfg.levelzero.player.captureCommandLists
+                                       : cfg.levelzero.recorder.captureCommandLists;
   return !kernelList.empty()
              ? (kernelList[kernelNumber] && (!cmdList.empty() ? cmdList[cmdListNumber] : false))
              : false;

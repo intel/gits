@@ -438,7 +438,7 @@ std::vector<std::string> gits::OpenCL::CBinariesArray_V1::FileNames() const {
     if (Config::IsPlayer()) {
       program = Ccl_program::GetMapping(_programOriginal);
     }
-    const auto fileName = SD().GetProgramState(program, EXCEPTION_MESSAGE).fileName;
+    const auto& fileName = SD().GetProgramState(program, EXCEPTION_MESSAGE).fileName;
     fileNames.push_back(fileName);
   } else {
     for (const auto& binary : _binaries) {

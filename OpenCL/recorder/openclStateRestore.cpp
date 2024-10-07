@@ -474,7 +474,8 @@ void gits::OpenCL::RestorePrograms(CScheduler& scheduler, CStateDynamic& sd) {
   }
   for (const auto& prog : compileList) {
     auto progExists = deadPrograms.find(prog) == deadPrograms.end();
-    auto stateProg = progExists ? sd.GetProgramState(prog, EXCEPTION_MESSAGE) : deadPrograms[prog];
+    const auto& stateProg =
+        progExists ? sd.GetProgramState(prog, EXCEPTION_MESSAGE) : deadPrograms[prog];
     auto program = progExists ? prog : reinterpret_cast<cl_program>(deadPrograms[prog].ID());
     scheduler.Register(new CclCompileProgram(
         CL_SUCCESS, program, 0, nullptr, stateProg.BuildOptions().c_str(),

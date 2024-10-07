@@ -366,7 +366,7 @@ void DumpReadyArguments(std::vector<CKernelArgumentDump>& readyArgVector,
 }
 
 bool CaptureKernels(const Config& cfg) {
-  auto captureKernels =
+  const auto& captureKernels =
       cfg.IsPlayer() ? cfg.levelzero.player.captureKernels : cfg.levelzero.recorder.captureKernels;
   return !captureKernels.empty();
 }

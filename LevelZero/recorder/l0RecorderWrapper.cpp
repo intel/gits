@@ -208,7 +208,7 @@ bool CRecorderWrapper::DeallocateVirtualMemory(void* ptr) const {
       IsMemoryTypeAddressTranslationDisabled(Config::Get(), UnifiedMemoryType::device);
   if (isVirtualMemoryReserved) {
     auto errCode = ZE_RESULT_SUCCESS;
-    const auto memMaps = allocState.memMaps;
+    const auto& memMaps = allocState.memMaps;
     for (const auto& memMap : memMaps) {
       const auto offsetPtr = GetOffsetPointer(ptr, memMap.first);
       const auto physicalMemHandle = memMap.second->hPhysicalMemory;
