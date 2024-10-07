@@ -111,6 +111,7 @@ void CGitsPluginOpenCL::ProcessTerminationDetected() {
 }
 
 const Config& CGitsPluginOpenCL::Configuration() {
+  std::unique_lock<std::mutex> lock(_mutex);
   return _loader->GetConfiguration();
 }
 
