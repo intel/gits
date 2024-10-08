@@ -83,6 +83,8 @@ CGits::CGits() : CGits(version_num_1, version_num_2, version_num_3, version_num_
  */
 CGits::CGits(uint16_t v0, uint16_t v1, uint16_t v2, uint16_t v3)
     : _version(v0, v1, v2, v3),
+      _api3D(ApisIface::TApi::ApiNotSet),
+      _apiCompute(ApisIface::TApi::ApiNotSet),
       _currentThreadId(0),
       _multithreadedApp(false),
       _kernelCounter(0),
@@ -100,7 +102,8 @@ CGits::CGits(uint16_t v0, uint16_t v1, uint16_t v2, uint16_t v3)
       _sc(nullptr),
       _currentLocalMemoryUsage(0),
       _maxLocalMemoryUsage(0),
-      traceGLAPIBypass(false) {
+      traceGLAPIBypass(false),
+      schedulerVersion(SchedulerVersion::VERSION_1_0) {
   _ptrToOrderedId[nullptr] = 0;
 }
 
@@ -629,6 +632,25 @@ CBinOStream& operator<<(CBinOStream& stream, const CFile& file) {
     stream.WriteToOstream(properties.c_str(), properties.size());
   }
 
+  // Writing 3D API to stream
+  ApisIface::TApi api3D = CGits::Instance().apis.Has3D() ? CGits::Instance().apis.Iface3D().Api()
+                                                         : ApisIface::TApi::ApiNotSet;
+  if (api3D != ApisIface::TApi::ApiNotSet) {
+    CGits::Instance().SetApi3D(api3D);
+  }
+  stream.WriteToOstream(reinterpret_cast<const char*>(&api3D), sizeof(ApisIface::TApi));
+  // Writting Compute API to stream
+  ApisIface::TApi apiCompute = CGits::Instance().apis.HasCompute()
+                                   ? CGits::Instance().apis.IfaceCompute().Api()
+                                   : ApisIface::TApi::ApiNotSet;
+  if (apiCompute != ApisIface::TApi::ApiNotSet) {
+    CGits::Instance().SetApiCompute(apiCompute);
+  }
+  stream.WriteToOstream(reinterpret_cast<const char*>(&apiCompute), sizeof(ApisIface::TApi));
+
+  // Writting scheduler version to stream
+  stream.WriteToOstream(reinterpret_cast<const char*>(&CGits::Instance().schedulerVersion),
+                        sizeof(SchedulerVersion));
   return stream;
 }
 
@@ -675,6 +697,24 @@ CBinIStream& operator>>(CBinIStream& stream, CFile& file) {
       Log(ERR) << "Exception thrown when parsing diagnostic information";
       Log(ERR) << "Disabling Extras.Utilities.ExtendedDiagnostic might help.";
     }
+  }
+
+  if (file.Version().version() >= GITS_API_INFO) {
+    ApisIface::TApi api3D = ApisIface::TApi::ApiNotSet;
+    stream.ReadHelper(reinterpret_cast<char*>(&api3D), sizeof(ApisIface::TApi));
+    if (api3D != ApisIface::TApi::ApiNotSet) {
+      CGits::Instance().SetApi3D(api3D);
+    }
+
+    ApisIface::TApi apiCompute = ApisIface::TApi::ApiNotSet;
+    stream.ReadHelper(reinterpret_cast<char*>(&apiCompute), sizeof(ApisIface::TApi));
+    if (apiCompute != ApisIface::TApi::ApiNotSet) {
+      CGits::Instance().SetApiCompute(apiCompute);
+    }
+
+    SchedulerVersion schedulerVersion;
+    stream.ReadHelper(reinterpret_cast<char*>(&schedulerVersion), sizeof(SchedulerVersion));
+    CGits::Instance().schedulerVersion = schedulerVersion;
   }
 
   return stream;

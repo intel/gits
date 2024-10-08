@@ -22,6 +22,7 @@ namespace gits {
 class ApisIface {
 public:
   enum TApi {
+    ApiNotSet,
     OpenGL,
     Vulkan,
     OpenCL,

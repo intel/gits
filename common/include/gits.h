@@ -127,6 +127,10 @@ struct TimerSet {
   std::vector<std::unique_ptr<Timer>> stateRestoreTimers;
 };
 
+enum class SchedulerVersion {
+  VERSION_1_0, // Initial version
+};
+
 /**
    * @brief Main GITS project class
    *
@@ -150,6 +154,8 @@ private:
   std::unique_ptr<CFile> _fileRecorder;           /**< @brief GITS file connected data */
   std::unique_ptr<CFile> _filePlayer;             /**< @brief GITS file connected data */
   std::unique_ptr<StreamCompressor> _compressor;
+  ApisIface::TApi _api3D;
+  ApisIface::TApi _apiCompute;
   CRunner _runner;
   FrameTimeSheet _timeSheet;
   int _currentThreadId;
@@ -328,6 +334,22 @@ public:
     return _ccodeStateRestore;
   }
 
+  void SetApi3D(ApisIface::TApi newApi) {
+    _api3D = newApi;
+  }
+
+  ApisIface::TApi GetApi3D() const {
+    return _api3D;
+  }
+
+  void SetApiCompute(ApisIface::TApi newApi) {
+    _apiCompute = newApi;
+  }
+
+  ApisIface::TApi GetApiCompute() const {
+    return _apiCompute;
+  }
+
   void AddLocalMemoryUsage(const size_t& size);
   void SubtractLocalMemoryUsage(const size_t& size);
   size_t GetMaxLocalMemoryUsage() const;
@@ -430,6 +452,7 @@ public:
   }
   bool traceGLAPIBypass;
   ApisIface apis;
+  SchedulerVersion schedulerVersion;
 
   MessageBus& GetMessageBus() {
     return _messageBus;
