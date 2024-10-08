@@ -3764,6 +3764,43 @@ inline void vkCmdDispatchIndirect_SD(VkCommandBuffer commandBuffer, VkBuffer buf
   printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
 }
 
+inline void vkCmdTraceRaysIndirectKHR_SD(
+    VkCommandBuffer commandBuffer,
+    const VkStridedDeviceAddressRegionKHR* pRaygenShaderBindingTable,
+    const VkStridedDeviceAddressRegionKHR* pMissShaderBindingTable,
+    const VkStridedDeviceAddressRegionKHR* pHitShaderBindingTable,
+    const VkStridedDeviceAddressRegionKHR* pCallableShaderBindingTable,
+    VkDeviceAddress indirectDeviceAddress) {
+  if (Config::Get().IsRecorder() &&
+      (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
+    auto& bindingBuffers = SD().bindingBuffers[commandBuffer];
+
+    auto addBindingBuffer = [&bindingBuffers](const VkStridedDeviceAddressRegionKHR* SBTtable) {
+      if ((SBTtable != nullptr) && (SBTtable->deviceAddress != 0)) {
+        auto buffer = findBufferFromDeviceAddress(SBTtable->deviceAddress);
+
+        if (buffer) {
+          bindingBuffers.insert(buffer);
+        }
+      }
+    };
+
+    addBindingBuffer(pRaygenShaderBindingTable);
+    addBindingBuffer(pMissShaderBindingTable);
+    addBindingBuffer(pHitShaderBindingTable);
+    addBindingBuffer(pCallableShaderBindingTable);
+    {
+      auto buffer = findBufferFromDeviceAddress(indirectDeviceAddress);
+
+      if (buffer) {
+        bindingBuffers.insert(buffer);
+      }
+    }
+  }
+
+  printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
+}
+
 inline void vkCmdTraceRaysKHR_SD(VkCommandBuffer commandBuffer,
                                  const VkStridedDeviceAddressRegionKHR* pRaygenShaderBindingTable,
                                  const VkStridedDeviceAddressRegionKHR* pMissShaderBindingTable,

@@ -3513,7 +3513,6 @@ void gits::Vulkan::RestoreBufferContents(CScheduler& scheduler, CStateDynamic& s
 void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& deviceResourcesPair : temporaryDeviceResources) {
     VkDevice device = deviceResourcesPair.first;
-    auto& deviceResources = deviceResourcesPair.second;
 
     std::vector<std::pair<VkDeviceSize, VkAccelerationStructureKHR>>
         accelerationStructuresToRestore;
