@@ -269,6 +269,10 @@ void CTokenFrameNumber::Run() {
   }
 }
 
+uint64_t CTokenFrameNumber::Size() const {
+  return sizeof(_id) + sizeof(_frameNumber);
+}
+
 /* ******************************** PLAYER RECORDER SYNC ****************************** */
 
 CTokenPlayerRecorderSync::CTokenPlayerRecorderSync() {

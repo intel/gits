@@ -65,6 +65,9 @@ public:
   virtual void Run() = 0;
   virtual void Exec(){};
   virtual void StateTrack(){};
+  virtual uint64_t Size() const {
+    return 0;
+  }
 
   void Serialize(CBinOStream& stream);
   void Serialize(CCodeOStream& stream);
@@ -99,6 +102,7 @@ public:
   virtual void Read(CBinIStream& stream);
   virtual void Write(CCodeOStream& stream) const;
   virtual void Run();
+  virtual uint64_t Size() const;
 };
 
 class CTokenPlayerRecorderSync : public CToken {
