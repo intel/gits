@@ -3530,7 +3530,10 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
 
       if ((accelerationStructureState.second->buildSizeInfo.accelerationStructureSize == 0) ||
           (!accelerationStructureState.second->buildInfo &&
+           !accelerationStructureState.second->updateInfo &&
            !accelerationStructureState.second->copyInfo)) {
+        Log(INFO) << "Omitting restoration of an acceleration structure "
+                  << accelerationStructureState.first << ".";
         continue;
       }
 
@@ -3541,15 +3544,6 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
 
     std::sort(accelerationStructuresToRestore.begin(), accelerationStructuresToRestore.end(),
               [](const auto& a, const auto& b) { return a.first > b.first; });
-
-    // When image and buffer contents restoration was skipped, create temporary buffers here
-    if ((deviceResources.temporaryBuffers.empty()) &&
-        (accelerationStructuresToRestore.size() > 0) && (deviceResources.maxBufferSize > 0)) {
-      uint32_t count = Config::Get().vulkan.recorder.reusableStateRestoreResourcesCount;
-      for (uint32_t i = 0; i < count; ++i) {
-        CreateTemporaryBuffer(scheduler, device, deviceResources.maxBufferSize);
-      }
-    }
 
     std::function<VkAccelerationStructureKHR(
         CAccelerationStructureKHRState & accelerationStructureState, VkCommandBuffer commandBuffer)>
@@ -3568,8 +3562,12 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
     std::vector<VkDeviceMemory> temporaryMemoryObjects;
 
     auto prepareSourceData = [&](COnQueueSubmitEndDataStorage* structStorageData,
-                                 CBufferDeviceAddressObjectData& bufferDeviceAddressData,
-                                 int64_t additionalOffset) {
+                                 CBufferDeviceAddressObjectData& bufferDeviceAddressData) {
+      if ((!structStorageData->GetDataSize()) || (!bufferDeviceAddressData._buffer) ||
+          (!bufferDeviceAddressData._originalDeviceAddress)) {
+        return bufferDeviceAddressData._originalDeviceAddress;
+      }
+
       auto memoryBufferPair = createTemporaryBuffer(
           device, structStorageData->GetDataSize(),
           VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
@@ -3604,13 +3602,11 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
       temporaryBuffers.push_back(buffer);
       temporaryMemoryObjects.push_back(memory);
 
-      // Update device address data with a newly created buffer
-      bufferDeviceAddressData._offset -= additionalOffset;
-      bufferDeviceAddressData._originalDeviceAddress =
-          deviceAddress + bufferDeviceAddressData._offset;
+      bufferDeviceAddressData._offset = -structStorageData->GetOffset();
+      bufferDeviceAddressData._originalDeviceAddress = deviceAddress;
       bufferDeviceAddressData._buffer = buffer;
 
-      return bufferDeviceAddressData._originalDeviceAddress;
+      return deviceAddress - structStorageData->GetOffset();
     };
 
     scheduleBuild = [&](VkAccelerationStructureKHR dst, VkBuffer accelerationStructureBuffer,
@@ -3649,26 +3645,22 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
             auto* structStoragePointer = (VkStructStoragePointerGITS*)getPNextStructure(
                 pGeometry->geometry.triangles.pNext, VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS);
             if (structStoragePointer && structStoragePointer->pStructStorage) {
-              auto* geometryTrianglesData = (CVkAccelerationStructureGeometryTrianglesDataKHRData*)
-                                                structStoragePointer->pStructStorage;
-
-              if (geometryTrianglesData->_vertexData->_bufferDeviceAddress._buffer) {
-                auto* pVertexData = geometryTrianglesData->_vertexData.get();
-                int64_t additionalOffset = (pVertexData->_indexType == VK_INDEX_TYPE_NONE_KHR)
-                                               ? 0
-                                               : pVertexData->GetOffset();
-                pGeometry->geometry.triangles.vertexData.deviceAddress = prepareSourceData(
-                    pVertexData, pVertexData->_bufferDeviceAddress, additionalOffset);
+              auto* trianglesData = (CVkAccelerationStructureGeometryTrianglesDataKHRData*)
+                                        structStoragePointer->pStructStorage;
+              if (trianglesData->_vertexData) {
+                pGeometry->geometry.triangles.vertexData.deviceAddress =
+                    prepareSourceData(trianglesData->_vertexData.get(),
+                                      trianglesData->_vertexData->_bufferDeviceAddress);
               }
-              if (geometryTrianglesData->_indexData->_bufferDeviceAddress._buffer) {
-                auto* pIndexData = geometryTrianglesData->_indexData.get();
+              if (trianglesData->_indexData) {
                 pGeometry->geometry.triangles.indexData.deviceAddress =
-                    prepareSourceData(pIndexData, pIndexData->_bufferDeviceAddress, 0);
+                    prepareSourceData(trianglesData->_indexData.get(),
+                                      trianglesData->_indexData->_bufferDeviceAddress);
               }
-              if (geometryTrianglesData->_transformData->_bufferDeviceAddress._buffer) {
-                auto* pTransformData = geometryTrianglesData->_transformData.get();
+              if (trianglesData->_transformData) {
                 pGeometry->geometry.triangles.transformData.deviceAddress =
-                    prepareSourceData(pTransformData, pTransformData->_bufferDeviceAddress, 0);
+                    prepareSourceData(trianglesData->_transformData.get(),
+                                      trianglesData->_transformData->_bufferDeviceAddress);
               }
             }
             break;
@@ -3683,14 +3675,11 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
             if (structStoragePointer && structStoragePointer->pStructStorage) {
               auto* geometryInstancesData = (CVkAccelerationStructureGeometryInstancesDataKHRData*)
                                                 structStoragePointer->pStructStorage;
+              pGeometry->geometry.instances.data.deviceAddress = prepareSourceData(
+                  geometryInstancesData, geometryInstancesData->_bufferDeviceAddress);
 
-              if (geometryInstancesData->_bufferDeviceAddress._buffer) {
-                pGeometry->geometry.instances.data.deviceAddress = prepareSourceData(
-                    geometryInstancesData, geometryInstancesData->_bufferDeviceAddress, 0);
-              }
               TODO("FINISH IMPLEMENTATION FOR AS BUILDING WITHOUT CAPTURE/REPLAY FEATURES!!!")
               //geometryInstancesData->individualPatcher
-
               //CGitsVkCmdPatchDeviceAddresses()
             }
             break;

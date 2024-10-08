@@ -3411,7 +3411,7 @@ void injectCopyCommand(VkCommandBuffer commandBuffer,
 void mapMemoryAndCopyData(VkDevice device,
                           VkDeviceMemory destination,
                           VkDeviceSize offset,
-                          void* source,
+                          const void* source,
                           VkDeviceSize dataSize) {
   void* dst;
   if (drvVk.vkMapMemory(device, destination, offset, VK_WHOLE_SIZE, 0, &dst) != VK_SUCCESS) {

@@ -269,6 +269,7 @@ gits::Vulkan::CDeviceOrHostAddressAccelerationStructureVertexDataGITSData::
         const VkAccelerationStructureBuildControlDataGITS& controlData)
     : CVkDeviceOrHostAddressConstKHRData(), _indexType(indexType) {
   _controlData = controlData;
+  _offset = 0;
 
   if ((vertexData.deviceAddress == 0) || (count == 0) || (stride == 0)) {
     return;
@@ -482,7 +483,7 @@ void gits::Vulkan::CDeviceOrHostAddressAccelerationStructureVertexDataGITSData::
     auto* basePtr = (uint32_t*)_data.data();
 
     _dataSize = basePtr[0]; // Data size = stride * ((maxIndex + 1) - minIndex)
-    _offset = basePtr[1] + _bufferDeviceAddress._offset; // Offset    = minIndex * stride
+    _offset = basePtr[1];   // Offset    = minIndex * stride
 
     // Remove additional control information (a header) from the acquired data and leave only the
     // actual vertex data. (This is done for cohesion with other cases/non-index data). This
