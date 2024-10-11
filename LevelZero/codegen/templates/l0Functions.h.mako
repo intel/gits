@@ -17,16 +17,6 @@
 #include "l0Structs.h"
 #include "pragmas.h"
 
-#ifdef WITH_OPENCL
-#include "openclArguments.h"
-using namespace gits::OpenCL;
-#else
-#define Ccl_context COutArgument
-#define Ccl_mem COutArgument
-#define Ccl_program COutArgument
-#define Ccl_command_queue COutArgument
-#endif
-
 namespace gits {
   namespace l0 {
 %for name, func in functions.items():

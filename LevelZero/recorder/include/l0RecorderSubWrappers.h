@@ -25,7 +25,6 @@
 #include "l0Drivers.h"
 #include "l0Structs.h"
 #include "l0Tools.h"
-#include "openclTools.h"
 #include "recorder.h"
 #include "l0StateRestore.h"
 #include <cstdint>
@@ -240,16 +239,17 @@ bool CheckResidencyInContext(CStateDynamic& sd, const ze_context_handle_t& hCont
 
 bool ExistsAsKernelArgument(
     void* ptr, const std::vector<std::shared_ptr<CKernelExecutionInfo>>& executedKernels) {
+  const auto& sd = SD();
   for (const auto& kernel : executedKernels) {
     for (const auto& arg : kernel->GetArguments()) {
       if (arg.second.type == KernelArgType::buffer) {
         const auto kernelArgValuePtr =
-            GetUsmPtrFromRegion(const_cast<void*>(arg.second.argValue)).first;
+            GetAllocFromRegion(const_cast<void*>(arg.second.argValue), sd).first;
         if (kernelArgValuePtr == ptr) {
           return true;
         }
         const auto kernelArgOriginalValuePtr =
-            GetUsmPtrFromRegion(const_cast<void*>(arg.second.originalValue)).first;
+            GetAllocFromRegion(const_cast<void*>(arg.second.originalValue), sd).first;
         if (kernelArgOriginalValuePtr == ptr) {
           return true;
         }

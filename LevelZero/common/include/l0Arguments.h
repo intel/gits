@@ -589,5 +589,49 @@ public:
     return PtrConverter(Value());
   }
 };
+
+class CBinaryData : public CArgument {
+private:
+  mutable CBinaryResource _resource;
+
+protected:
+  size_t _size = 0U;
+  void* _ptr = nullptr;
+  std::vector<char> _buffer;
+
+public:
+  CBinaryData() : _size(0), _ptr(0) {}
+  CBinaryData(const size_t size, const void* buffer);
+  ~CBinaryData() = default;
+  virtual const char* Name() const {
+    return "void*";
+  }
+  virtual size_t Length() const {
+    return _size;
+  }
+
+  void* Value() {
+    return !_buffer.empty() ? _buffer.data() : _ptr;
+  }
+  const void* Value() const {
+    return !_buffer.empty() ? _buffer.data() : _ptr;
+  }
+  void* operator*() {
+    return Value();
+  }
+  const void* operator*() const {
+    return Value();
+  }
+
+  virtual void Write(CBinOStream& stream) const;
+  virtual void Read(CBinIStream& stream);
+  virtual void Write(CCodeOStream& stream) const;
+  virtual bool DeclarationNeeded() const {
+    return Length() > 0;
+  }
+  virtual std::string ToString() const override {
+    return ToStringHelper(_ptr);
+  }
+};
 } // namespace l0
 } // namespace gits

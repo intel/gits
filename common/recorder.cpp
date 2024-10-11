@@ -33,7 +33,10 @@
 #include "recorderBehaviors.h"
 #include "pragmas.h"
 #include "token.h"
+
+#ifdef WITH_OPENCL
 #include "openclHelperFunctions.h"
+#endif
 
 #if defined(GITS_PLATFORM_LINUX)
 #include <sys/stat.h>
@@ -591,9 +594,13 @@ void gits::CRecorder::TrackThread(gits::ApisIface::TApi api) {
   if (currentThreadId != previousThreadId) {
     if (api == gits::ApisIface::OpenGL) {
       Scheduler().Register(new CTokenMakeCurrentThread(currentThreadId));
-    } else if (api == gits::ApisIface::OpenCL) {
+    }
+#ifdef WITH_OPENCL
+    else if (api == gits::ApisIface::OpenCL) {
       Scheduler().Register(new gits::OpenCL::CGitsClTokenMakeCurrentThread(currentThreadId));
-    } else {
+    }
+#endif
+    else {
       throw ENotImplemented("Thread tracking not implemented for this API.");
     }
     previousThreadId = currentThreadId;

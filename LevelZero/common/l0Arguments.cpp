@@ -228,5 +228,35 @@ size_t* CProgramSource::Length() {
   textLength = Text().size();
   return &textLength;
 }
+
+CBinaryData::CBinaryData(const size_t size, const void* buffer)
+    : _size(size), _ptr((void*)buffer), _buffer(0, '\0') {
+  if (_size && _ptr) {
+    _buffer.resize(_size);
+    std::copy_n((const char*)buffer, _size, _buffer.begin());
+  }
+}
+
+void CBinaryData::Write(CBinOStream& stream) const {
+  stream << CBuffer(&_size, sizeof(_size));
+  stream << CBuffer(&_ptr, sizeof(_ptr));
+  if (_size && !_buffer.empty()) {
+    _resource.reset(RESOURCE_DATA_RAW, _buffer.data(), _size);
+    stream << _resource;
+  }
+}
+
+void CBinaryData::Read(CBinIStream& stream) {
+  stream >> CBuffer(&_size, sizeof(_size));
+  stream >> CBuffer(&_ptr, sizeof(_ptr));
+  if (_size && _ptr) {
+    _buffer.resize(_size);
+    stream >> CBuffer(_buffer.data(), _size);
+  }
+}
+
+void CBinaryData::Write([[maybe_unused]] CCodeOStream& stream) const {
+  throw ENotImplemented(EXCEPTION_MESSAGE);
+}
 } // namespace l0
 } // namespace gits

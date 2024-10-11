@@ -24,14 +24,6 @@
 #include "l0ArgumentsAuto.h"
 #include "l0Tools.h"
 
-#ifdef WITH_OPENCL
-#include "openclArguments.h"
-#else
-#define Ccl_context       COutArgument
-#define Ccl_mem           COutArgument
-#define Ccl_program       COutArgument
-#define Ccl_command_queue COutArgument
-#endif
 #include "tools_lite.h"
 
 namespace gits {
