@@ -1002,7 +1002,8 @@ void CRecorderWrapper::wglUseFontBitmapsA(
   detail::getCurrentFontInfo(hdc, str, args);
 
   GITS_REC_ENTRY_WGL
-  _recorder.Schedule(new CwglUseFontBitmapsA(return_value, hdc, first, count, listBase, str, args),
+  _recorder.Schedule(new CwglUseFontBitmapsA(return_value, hdc, first, count, listBase,
+                                             std::move(str), std::move(args)),
                      true);
 }
 
@@ -1013,7 +1014,8 @@ void CRecorderWrapper::wglUseFontBitmapsW(
   detail::getCurrentFontInfo(hdc, str, args);
 
   GITS_REC_ENTRY_WGL
-  _recorder.Schedule(new CwglUseFontBitmapsW(return_value, hdc, first, count, listBase, str, args),
+  _recorder.Schedule(new CwglUseFontBitmapsW(return_value, hdc, first, count, listBase,
+                                             std::move(str), std::move(args)),
                      true);
 }
 
@@ -1032,7 +1034,8 @@ void CRecorderWrapper::wglUseFontOutlinesA(bool return_value,
 
   GITS_REC_ENTRY_WGL
   _recorder.Schedule(new CwglUseFontOutlinesA(return_value, hdc, first, count, listBase, deviation,
-                                              extrusion, format, lpgmf, str, args),
+                                              extrusion, format, lpgmf, std::move(str),
+                                              std::move(args)),
                      true);
 }
 
@@ -1051,7 +1054,8 @@ void CRecorderWrapper::wglUseFontOutlinesW(bool return_value,
 
   GITS_REC_ENTRY_WGL
   _recorder.Schedule(new CwglUseFontOutlinesW(return_value, hdc, first, count, listBase, deviation,
-                                              extrusion, format, lpgmf, str, args),
+                                              extrusion, format, lpgmf, std::move(str),
+                                              std::move(args)),
                      true);
 }
 

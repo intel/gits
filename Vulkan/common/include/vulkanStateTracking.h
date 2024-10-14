@@ -436,7 +436,7 @@ inline void vkCreateFakeSwapchainKHR_SD(VkDevice device,
   for (auto image : swapchainImages) {
     auto imageState = std::make_shared<CImageState>(&image, swapchainState);
     SD()._imagestates.emplace(image, imageState);
-    swapchainState->imageStateStoreList.push_back(imageState);
+    swapchainState->imageStateStoreList.push_back(std::move(imageState));
   }
 
   SD()._swapchainkhrstates.emplace(*pSwapchain, swapchainState);

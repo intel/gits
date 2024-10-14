@@ -502,7 +502,7 @@ void gits::Config::LoadLevelZeroSubcaptureSettings(const std::string& kernelInfo
     }
 
     iter = std::sregex_iterator(objectsTable[2].begin(), objectsTable[2].end(), pattern);
-    size = std::distance(iter, end);
+    size = std::distance(iter, std::move(end));
     auto& startKernel = levelzero.recorder.kernel.startKernel;
     auto& stopKernel = levelzero.recorder.kernel.stopKernel;
     startKernel = (unsigned)std::stoul((*iter++)[0], nullptr);
