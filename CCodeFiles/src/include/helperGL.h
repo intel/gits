@@ -625,7 +625,6 @@ class CMappedTextures {
   map_t mapped_;
 
   CMappedTextures() {}
-  CMappedTextures(const CMappedTextures&){};
 
 public:
   void MapTexture(
