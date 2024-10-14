@@ -31,7 +31,7 @@ public:
     }
 
     void CallClickedEvents() {
-      for (auto clickedEvent : _clickedEvents) {
+      for (auto& clickedEvent : _clickedEvents) {
         clickedEvent();
       }
     }
