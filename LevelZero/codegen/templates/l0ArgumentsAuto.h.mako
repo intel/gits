@@ -94,6 +94,9 @@ namespace gits {
     using CExtensionStructTools = CExtensionStruct<zet_structure_type_t, Czet_structure_type_t, zet_base_properties_t>;
     using CExtensionStructTracer = CExtensionStruct<zel_structure_type_t, Czel_structure_type_t, zel_base_properties_t>;
 %for name, arg in arguments.items():
+  %if not arg.get('enabled', True):
+<% continue %>
+  %endif
 %if not arg.get('custom', False):
 %if arg.get('obj', False):
     class C${name} : public CArgHandle<${arg.get('name')}, C${name}> {

@@ -12,6 +12,9 @@
 namespace gits {
 namespace l0 {
 %for name, arg in arguments.items():
+  %if not arg.get('enabled', True):
+<% continue %>
+  %endif
 const char* C${name}::NAME = "${arg.get('name')}";
   %if not arg.get('custom', False):
     %if not arg.get('obj', False):

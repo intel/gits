@@ -20,6 +20,7 @@ add_custom_command(
   DEPENDS
     "codegen/generate.py"
     "codegen/generator_l0.py"
+    "codegen/generator_callbacks_l0.py"
     "codegen/l0IDs.h"
     "codegen/templates/l0EntryPoints.cpp.mako"
     "codegen/templates/l0WrapperFunctions.cpp.mako"
@@ -48,6 +49,7 @@ add_custom_target(L0_codegen
   SOURCES
     "codegen/generate.py"
     "codegen/generator_l0.py"
+    "codegen/generator_callbacks_l0.py"
     "codegen/l0IDs.h"
     "codegen/templates/l0EntryPoints.cpp.mako"
     "codegen/templates/l0WrapperFunctions.cpp.mako"

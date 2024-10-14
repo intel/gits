@@ -74,7 +74,7 @@ bool load_l0_function_from_original_library(T& func, const char* name) {
   %if not is_latest_version(functions, func):
 <% continue %>
   %endif
-  %if func.get('component') != 'ze_gits_extension':
+  %if func.get('component') != 'ze_gits_extension' and func.get('enabled', True):
 #ifndef BUILD_FOR_CCODE
 int lua_${func.get('name')}(lua_State* L) {
   int top = lua_gettop(L);
@@ -209,11 +209,14 @@ const luaL_Reg exports[] = {
     %if not is_latest_version(functions, func):
 <% continue %>
     %endif
-    %if func.get('component') != 'ze_gits_extension':
+    %if func.get('component') != 'ze_gits_extension' and func.get('enabled', True):
   {"${func.get('name')}", lua_${func.get('name')}},
     %endif
   %endfor
   %for name, arg in arguments.items():
+    %if not is_latest_version(arguments, arg) or not arg.get('enabled', True):
+<% continue %>
+    %endif
     %if 'vars' in arg:
   {"create_${arg.get('name')}", create_${arg.get('name')}},
     %endif

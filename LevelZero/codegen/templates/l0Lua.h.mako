@@ -38,7 +38,7 @@ namespace gits {
   %endif
 %endfor
 %for name, arg in arguments.items():
-  %if not is_latest_version(arguments, arg):
+  %if not is_latest_version(arguments, arg) or not arg.get('enabled', True):
 <% continue %>
   %endif
   %if 'vars' in arg:

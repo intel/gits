@@ -48,7 +48,7 @@ void lua_push_extension_struct<${get_namespace(enum.get('name'))}_structure_type
   %endif
 %endfor
 %for name, arg in arguments.items():
-  %if not is_latest_version(arguments, arg):
+  %if not is_latest_version(arguments, arg) or not arg.get('enabled', True):
 <% continue %>
   %endif
   %if 'vars' in arg:
