@@ -273,7 +273,7 @@ std::string PointerModule(void* pointer) {
     }
   }
 
-  return faultyModule.empty() ? "unknown" : faultyModule;
+  return faultyModule.empty() ? "unknown" : std::move(faultyModule);
 }
 
 void gits::ShowExceptionInfo(_EXCEPTION_POINTERS* exceptionPtr) {
