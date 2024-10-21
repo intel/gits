@@ -1,0 +1,135 @@
+# ===================== begin_copyright_notice ============================
+#
+# Copyright (C) 2023-2024 Intel Corporation
+#
+# SPDX-License-Identifier: MIT
+#
+# ===================== end_copyright_notice ==============================
+
+site_name: GITS Capture Replay Tool  
+site_url: https://ubiquitous-lamp-nvr87n5.pages.github.io/
+repo_url: https://github.com/intel-innersource/drivers.gpu.validation.gits
+copyright: Copyright &copy; 2024 Intel Corporation All Rights Reserved.
+theme:
+  language: en
+  features:
+    - announce.dismiss
+    - content.action.edit
+    - content.action.view
+    - content.code.annotate
+    - content.code.copy
+    - content.tooltips
+    - navigation.expand
+    - navigation.footer
+    - navigation.indexes
+    - navigation.prune
+    - navigation.sections
+    - navigation.tabs
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - search.suggest
+    - toc.follow
+    - footnotes
+  name: material
+  icon:
+    edit: material/pencil 
+    view: material/eye
+    repo: fontawesome/brands/github
+  palette:
+    # Palette toggle 1: automatic mode
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode #->2
+    # Palette toggle 2: light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode #->3
+    # Palette toggle 3: dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference #->1
+extra_css:
+  - assets/stylesheets/extra.css
+plugins:
+  search:
+    # Spaces, dashes, periods and forward-slash (so serving.knative.dev/blibble can be searched as blibble).
+    separator: '[\/\s\-\.]+'
+  awesome-pages:
+    collapse_single_pages: true
+    strict: false
+  
+nav:
+  - About GITS: 'index.md'
+  - Build GITS: 'building.md'
+  - Use GITS: 'usage.md'
+  - Documentation:
+    - Terminology: 'documentation/terminology.md'
+    - Recorder: 'documentation/recorder.md'
+    - Player: 'documentation/player.md'
+    - Streams:
+      - Binary Streams: 'documentation/streams/binary_stream.md'
+      - C-Code Streams: 'documentation/streams/ccode_stream.md'
+    - Configuration: 
+      - General: 'documentation/configuration/general_options.md'
+      - Level Zero: 'documentation/configuration/Level0.md'
+      - OpenCL: 'documentation/configuration/OpenCL.md'
+      - OpenGL: 'documentation/configuration/OpenGL.md'
+      - Vulkan: 'documentation/configuration/vulkan.md'
+    - API:
+      - Level Zero:
+        - Indirect Access Pointers Locations: 'documentation/LevelZero/l0_gits_indirect_access_pointers_locations.md'
+        - Lua Scripting: 'documentation/LevelZero/lua.md'
+        - Metagenerator: 'documentation/LevelZero/metagenerator.md'
+        - Options: 'documentation/LevelZero/options_features.md'
+        - Subcapture: 'documentation/LevelZero/subcaptures.md'
+      - OpenCL:
+          - Generator: 'documentation/OpenCL/Generator.md'
+          - Indirect Access Pointers Locations: 'documentation/OpenCL/cl_gits_indirect_access_pointers_locations.md'
+    - Lua Scripting: 'documentation/lua_scripts.md'        
+  - Userguides:
+    - Usage: 'userguides/userguide.md'
+    - FAQ: 'userguides/FAQ.md'
+    - Recipes: 
+      - General: 'userguides/recipes.md'
+      - Linux: 'userguides/recipes_linux.md'
+      - Windows: 'userguides/recipes_windows.md'
+    - Application-specific Issues: 'userguides/applicationspecific_issues.md'
+    - Debug Solutions: 'userguides/debug_solutions.md'
+  - Community:
+    - Reproducers: 'community/HowToPrepareReproducer.md'
+
+markdown_extensions:
+  - pymdownx.striphtml:
+      strip_comments: true
+  - pymdownx.critic   # {--deleted--}, {++added++}, {~~1~>2 is a pair~~}, {==Highlighting==}, {>>inline comments<<}
+  - pymdownx.caret    # ^^Insert me^^ (underline), A^T^A (superscript)
+  - pymdownx.mark     # ==This was marked== (highlight)
+  - pymdownx.tilde    # ~~This was deleted~~ (strikethrough), H~2~O (subscript)
+  - pymdownx.keys     # ++cmd+ctrl+alt+del++ 
+  - def_list          # - [ ], - [x], 1., ...
+  - footnotes         # here [^1] is the link. later: [^1]: blah blah blah.
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - attr_list
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.superfences:
+        # make exceptions to highlighting of code:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true

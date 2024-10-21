@@ -1,11 +1,15 @@
+---
+icon: octicons/globe-24
+---
 GITS Third Party Programs File
 
 This file contains the list of third party software (“third party programs”) contained in the Intel software and their required notices and/or license terms. This third party software, even if included with the distribution of the Intel software, may be governed by separate license terms, including without limitation, third party license terms, other Intel software license terms, and open source software license terms. These separate license terms govern your use of the third party programs as set forth in the “third-party-programs.txt” or other similarly-named text file.
 
 Third party programs and their corresponding required notices and/or license terms are listed below.
--------------------------------------------------------------
-1.  KhronosGroup/vulkan-headers
-    Copyright 2013-2023 The Khronos Group Inc.
+
+
+##  KhronosGroup/vulkan-headers
+Copyright 2013-2023 The Khronos Group Inc.
 
  Apache License
                            Version 2.0, January 2004
@@ -184,10 +188,11 @@ Third party programs and their corresponding required notices and/or license ter
 
    END OF TERMS AND CONDITIONS
 
--------------------------------------------------------------
-2. Khronos EGL Headers
-   Copyright (c) 2007-2016 The Khronos Group Inc.
-**
+## Khronos EGL Headers
+Copyright (c) 2007-2016 The Khronos Group Inc.
+
+```c++
+/*
 ** Permission is hereby granted, free of charge, to any person obtaining a
 ** copy of this software and/or associated documentation files (the
 ** "Materials"), to deal in the Materials without restriction, including
@@ -207,14 +212,13 @@ Third party programs and their corresponding required notices and/or license ter
 ** TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 ** MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
 */
+```
 
--------------------------------------------------------------
+## Khronos OpenGL WGL Headers
+Copyright (c) 2007-2016 The Khronos Group Inc.
 
-3. Khronos OpenGL WGL Headers
-   Copyright (c) 2007-2016 The Khronos Group Inc.
-
-   lua
-   Copyright © 1994–2021 Lua.org, PUC-Rio.
+## lua
+Copyright © 1994–2021 Lua.org, PUC-Rio.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the 'Software'), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
@@ -222,15 +226,10 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
--------------------------------------------------------------
-4. libpng
+## libpng
+### COPYRIGHT NOTICE, DISCLAIMER, and LICENSE
 
-
-COPYRIGHT NOTICE, DISCLAIMER, and LICENSE
-=========================================
-
-PNG Reference Library License version 2
----------------------------------------
+#### PNG Reference Library License version 2
 
  * Copyright (c) 1995-2019 The PNG Reference Library Authors.
  * Copyright (c) 2018-2019 Cosmin Truta.
@@ -264,8 +263,7 @@ subject to the following restrictions:
     source or altered source distribution.
 
 
-PNG Reference Library License version 1 (for libpng 0.5 through 1.6.35)
------------------------------------------------------------------------
+#### PNG Reference Library License version 1 (for libpng 0.5 through 1.6.35)
 
 libpng versions 1.0.7, July 1, 2000, through 1.6.35, July 15, 2018 are
 Copyright (c) 2000-2002, 2004, 2006-2018 Glenn Randers-Pehrson, are

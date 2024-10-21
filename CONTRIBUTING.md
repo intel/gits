@@ -1,6 +1,6 @@
 # Contributing
 
-Contributing to GITS is subject of our [code of conduct](CODE_OF_CONDUCT.md).
+Contributing to **GITS** is subject of our [code of conduct](CODE_OF_CONDUCT.md).
 
 ## Submitting issues
 
@@ -16,18 +16,17 @@ For now our main bugtracker is an internal one, so don't be surprised if a known
 
 ## Contributing code
 
-We accept pull requests here on GitHub. Before starting work on a PR, please let us know what do you want to work on. This will avoid duplicating efforts and will ensure that your work aligns with our vision and direction.
+We accept pull requests here on GitHub. Before starting work on a PR, please let us know what you want to work on. This will avoid duplicating efforts and will ensure that your work aligns with our vision and direction.
 
-Please write proper commit messages. (A popular howto: [cbea.ms/git-commit](https://cbea.ms/git-commit/).) Please create commits that are logical, discrete, easy to review steps toward your end goal.
+Please write proper commit messages. (A popular howto: [cbea.ms/git-commit](https://cbea.ms/git-commit/){:target="_blank"}.) Please create commits that are _logical_, _discrete_, _easy_ to review steps toward your end goal.
 
 ### License
 
-GITS is licensed under the terms in [LICENSE.md](LICENSE.md). By contributing to the project, you agree to the license and copyright terms therein and release your contribution under these terms.
+**GITS** is licensed under the terms in [LICENSE.md](LICENSE.md). By contributing to the project, you agree to the license and copyright terms therein and release your contribution under these terms.
 
 ### Sign your work
 
-Please use the sign-off line at the end of the patch. Your signature certifies that you wrote the patch or otherwise have the right to pass it on as an open-source patch. The rules are pretty simple: if you can certify
-the below (from [developercertificate.org](http://developercertificate.org/)):
+Please use the sign-off line at the end of the patch. Your signature certifies that you wrote the patch or otherwise have the right to pass it on as an open-source patch. The rules are pretty simple: if you can certify the below (from [developercertificate.org](http://developercertificate.org/){:target="_blank"}):
 
 ```
 Developer Certificate of Origin

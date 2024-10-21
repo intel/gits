@@ -1,3 +1,6 @@
+---
+icon: octicons/paste-24
+---
 # Usage of GITS
 
 ## API and hardware support
@@ -10,7 +13,7 @@ Nevertheless, here is an *approximate* list of what's supported:
 - OpenGL up to 4.3 (Notable exceptions: `GL_ARB_buffer_storage` and `GL_ARB_vertex_attrib_binding` are implemented, but have known issues. Some other features are unimplemented.)
 - Vulkan 1.0, 1.1, 1.2 plus several extensions
 - OpenCL up to 3.0 (Note: CCode is unsupported)
-- Intel oneAPI Level Zero (Note: CCode is unsupported) - Additional L0 documentation is available in `doc/LevelZero/` folder, e.g. [overview of available options](doc/LevelZero/options_features.asciidoc).
+- Intel oneAPI Level Zero (Note: CCode is unsupported) - Additional L0 documentation is available in `docs/documentation/LevelZero/` folder, e.g. [overview of available options](../documentation/LevelZero/options_features.md).
 
 TL;DR your mileage may vary, we don't guarantee that your use case will work.
 
