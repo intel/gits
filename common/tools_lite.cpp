@@ -62,13 +62,6 @@ void ReverseByPairs(std::string& str) {
   }
 }
 
-void MaskAppend(std::string& str, const std::string& maskStr) {
-  if (str.size()) {
-    str += " | ";
-  }
-  str += maskStr;
-}
-
 bool caseInsensitiveEquals(const std::string& a, const std::string& b) {
   if (a.size() != b.size()) {
     return false;
@@ -135,21 +128,6 @@ void sleep_millisec(int duration) {
   std::this_thread::sleep_for(std::chrono::milliseconds(duration));
 }
 
-uint32_t MapPointer(void* ptr) {
-  static uint32_t last_ = 1;
-
-  typedef std::map<void*, uint32_t> map_t;
-  INIT_NEW_STATIC_OBJ(mapPtr, map_t)
-
-  if (mapPtr.empty()) {
-    mapPtr[nullptr] = 0;
-  }
-  if (mapPtr.find(ptr) == mapPtr.end()) {
-    mapPtr[ptr] = last_++;
-  }
-  return mapPtr[ptr];
-}
-
 std::vector<char> GetBinaryFileContents(const std::string& filename) {
   std::ifstream file(filename, std::ios::in | std::ios::binary);
   if (file.fail()) {
@@ -210,19 +188,6 @@ std::string hex::ToString() const {
 std::ostream& operator<<(std::ostream& stream, const hex& h) {
   h.Write(stream);
   return stream;
-}
-
-std::string getCurrentDateTimestamp() {
-  std::stringstream currentDate;
-  const auto time = std::chrono::system_clock::now();
-  const auto tTime = std::chrono::system_clock::to_time_t(time);
-  const auto localTime = std::localtime(&tTime);
-  const auto ms =
-      std::chrono::duration_cast<std::chrono::milliseconds>(time.time_since_epoch()) % 1000;
-  // TODO: When C++20 becomes available, use std::formatter instead.
-  currentDate << std::put_time(localTime, "%Y-%m-%d %H:%M:%S") << "." << std::setfill('0')
-              << std::setw(3) << ms.count();
-  return currentDate.str();
 }
 
 } // namespace gits

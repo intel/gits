@@ -10,6 +10,7 @@
 
 #include "argument.h"
 #include "vulkanHeader.h"
+#include "vectorMapper.h"
 
 namespace gits {
 namespace Vulkan {

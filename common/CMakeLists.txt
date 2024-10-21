@@ -56,6 +56,7 @@ list(APPEND common_SOURCES
   include/recorderBehaviors.h
   include/recorder.h
   include/state.h
+  include/vectorMapper.h
 
   apis_iface.cpp
   argument.cpp
@@ -174,7 +175,8 @@ set(common_CCode_HEADERS
   include/keyEvents.h
   include/getopt_.h
   include/streams.h
-  include/intervalSet.h)
+  include/intervalSet.h
+  include/vectorMapper.h)
 if(WIN32)
   list(APPEND common_CCode_HEADERS include/tools_windows.h)
 endif()

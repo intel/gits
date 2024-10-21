@@ -12,6 +12,7 @@
 #include "vulkanDrivers.h"
 #include "vkWindowing.h"
 #include "tools.h"
+#include "vectorMapper.h"
 
 #include <memory>
 #include <unordered_map>

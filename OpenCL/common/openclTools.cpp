@@ -77,6 +77,13 @@ bool DumpableObject(KernelArgType type) {
 }
 } // namespace
 
+void MaskAppend(std::string& str, const std::string& maskStr) {
+  if (str.size()) {
+    str += " | ";
+  }
+  str += maskStr;
+}
+
 COclLog::COclLog(LogLevel prefix, LogStyle style) : CLog(prefix, style) {}
 
 COclLog& COclLog::operator<<(manip t) {

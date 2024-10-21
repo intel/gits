@@ -1263,7 +1263,7 @@ void gits::OpenGL::CVariableMaterial::Schedule(CScheduler& scheduler,
     if (_data[i].shininess != variable._data[i].shininess) {
       scheduler.Register(new CglMaterialfv(_faces[i], GL_SHININESS, &_data[i].shininess));
     }
-    if (!std::equal(_data[i].indexes, _data[i].indexes + size(_data[i].indexes),
+    if (!std::equal(_data[i].indexes, _data[i].indexes + std::size(_data[i].indexes),
                     variable._data[i].indexes)) {
       scheduler.Register(new CglMaterialfv(_faces[i], GL_COLOR_INDEXES, _data[i].indexes));
     }

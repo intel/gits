@@ -24,6 +24,9 @@ struct CCLMemState;
 class CFunction;
 class CBinaryResource;
 namespace OpenCL {
+
+void MaskAppend(std::string& str, const std::string& maskStr);
+
 class COclLog : public gits::CLog {
 public:
   COclLog(LogLevel prefix, LogStyle style);
