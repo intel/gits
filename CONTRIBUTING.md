@@ -18,7 +18,7 @@ For now our main bugtracker is an internal one, so don't be surprised if a known
 
 We accept pull requests here on GitHub. Before starting work on a PR, please let us know what you want to work on. This will avoid duplicating efforts and will ensure that your work aligns with our vision and direction.
 
-Please write proper commit messages. (A popular howto: [cbea.ms/git-commit](https://cbea.ms/git-commit/){:target="_blank"}.) Please create commits that are _logical_, _discrete_, _easy_ to review steps toward your end goal.
+Please write proper commit messages. (A popular howto: [cbea.ms/git-commit](https://cbea.ms/git-commit/).) Please create commits that are _logical_, _discrete_, _easy_ to review steps toward your end goal.
 
 ### License
 
@@ -26,7 +26,7 @@ Please write proper commit messages. (A popular howto: [cbea.ms/git-commit](http
 
 ### Sign your work
 
-Please use the sign-off line at the end of the patch. Your signature certifies that you wrote the patch or otherwise have the right to pass it on as an open-source patch. The rules are pretty simple: if you can certify the below (from [developercertificate.org](http://developercertificate.org/){:target="_blank"}):
+Please use the sign-off line at the end of the patch. Your signature certifies that you wrote the patch or otherwise have the right to pass it on as an open-source patch. The rules are pretty simple: if you can certify the below (from [developercertificate.org](http://developercertificate.org/)):
 
 ```
 Developer Certificate of Origin
