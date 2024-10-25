@@ -250,8 +250,9 @@ void CBinaryData::Read(CBinIStream& stream) {
   stream >> CBuffer(&_size, sizeof(_size));
   stream >> CBuffer(&_ptr, sizeof(_ptr));
   if (_size && _ptr) {
-    _buffer.resize(_size);
-    stream >> CBuffer(_buffer.data(), _size);
+    stream >> _resource;
+    _buffer.resize(_resource.Data().Size());
+    std::copy_n((const char*)_resource.Data(), _resource.Data().Size(), _buffer.begin());
   }
 }
 
