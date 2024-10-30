@@ -82,6 +82,29 @@ gits::Config::Config() {
 #endif
 }
 
+#ifndef BUILD_FOR_CCODE
+static const YAML::Node updateNode(const YAML::Node& baseNode, const YAML::Node& overrideNode) {
+  if (!overrideNode.IsMap()) {
+    return overrideNode.IsNull() ? baseNode : overrideNode;
+  }
+  if (!baseNode.IsMap()) {
+    return overrideNode;
+  }
+
+  // Create a new map 'newNode' with the same mappings as baseNode and merge with overrideNode
+  YAML::Node newNode(YAML::NodeType::Map);
+  for (const auto& node : baseNode) {
+    const std::string& key = node.first.Scalar();
+    if (overrideNode[key]) {
+      newNode[node.first] = updateNode(node.second, overrideNode[key]);
+    } else {
+      newNode[node.first] = node.second;
+    }
+  }
+  return newNode;
+}
+#endif
+
 std::filesystem::path gits::Config::GetConfigPath(const std::filesystem::path& appDir) {
   auto localConfigPath = appDir / CONFIG_FILE_NAME;
   if (std::filesystem::exists(localConfigPath)) {
@@ -532,7 +555,17 @@ bool gits::Config::Set(const std::filesystem::path& cfgPath, const Config::TMode
     return true;
   }
 
+#ifdef GITS_PLATFORM_WINDOWS
+  auto processName = GetWindowsProcessName(_getpid());
+#elif defined GITS_PLATFORM_LINUX
+  auto processName = GetLinuxProcessName(getpid());
+#endif
   auto configYaml = Config::LoadConfigFile(cfgPath);
+  if (configYaml["Overrides"][processName]) {
+    Log(INFO) << "GITS Config - Using overrides for " << processName;
+    configYaml = updateNode(configYaml, configYaml["Overrides"][processName]);
+  }
+
   auto cfg = Config::Get();
   cfg.common.mode = mode;
   cfg.SetCommon(configYaml["Common"]);
