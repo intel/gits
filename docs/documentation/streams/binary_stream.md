@@ -14,30 +14,16 @@ on feature set of application being recorded.
 Current GITS version will produce binary stream where following
 files/directories are created:
 
--   File `stream.gits2`  
-		Main stream file, containing persisted tokens.
-
--   File `gitsSignature.hash`  
-		Signature file storing hashes of all stream components.
-
--   File `gitsBuffers.dat`  
-		Binary data storage.
-
--   File `gitsTextures.dat`  
-		Binary data storage.
-
--   File `gitsClientSizes.dat`  
-		Auxiliary, lazily persisted data.
-
--   File `gitsDataIndex.dat`  
-		Index storing mappings of hashes to file storage mappings.
-
--   File `gitsPrograms.zip`  
-		Zip file containing shaders used by the application.
-
--   Directory `gitsPrograms`  
-		Directory with shader files. If this directory exists, its content
-		has priority over zipped shaders.
+| type              | name                  | description                                                                                          |
+| ----------------- | --------------------- | ---------------------------------------------------------------------------------------------------- |
+| :material-file:   | `stream.gits2`        | Main stream file, containing persisted tokens.                                                       |
+|                   | `gitsSignature.hash`  | Signature file storing hashes of all stream components.                                              |
+|                   | `gitsBuffers.dat`     | Binary data storage.                                                                                 |
+|                   | `gitsTextures.dat`    | Binary data storage.                                                                                 |
+|                   | `gitsClientSizes.dat` | Auxiliary, lazily persisted data.                                                                    |
+|                   | `gitsDataIndex.dat`   | Index storing mappings of hashes to file storage mappings.                                           |
+|                   | `gitsPrograms.zip`    | Zip file containing shaders used by the application.                                                 |
+| :material-folder: | `gitsPrograms`        | Directory with shader files. If this directory exists, its content has priority over zipped shaders. |
 
 ### Stream integrity
 
@@ -147,7 +133,7 @@ cmd
 and explore the log looking for errors like `Err: *` or
 `Trace: GL Error *`. Below are common issues and solutions:
 
-\- If log contains `Trace: GL Error: GL_INVALID_OPERATION` after shader
+- If log contains `Trace: GL Error: GL_INVALID_OPERATION` after shader
 program loading/compilation API calls (for i.e. glCompileShader or
 glProgramStringARB) it may mean that line endings in shader files are
 not supported. To solve the problem extract shaders from
@@ -155,7 +141,7 @@ gitsPrograms.zip to gitsPrograms folder and use
 `<GITS FOLDER>\UtilityScripts\ShadersConvertEOLtoLF.py` script to change
 line endings to LF.
 
-\- If stream is crashing with error saying that certain function
+- If stream is crashing with error saying that certain function
 couldn't be loaded it means that this particular API is not supported on
 the current configuration. In many cases APIs that are not supported
 does not influence rendering and may be removed or may be replaced by

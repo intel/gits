@@ -1,3 +1,4 @@
 mkdocs-material==9.5.33
 mkdocs-awesome-pages-plugin==2.9.3
 mkdocs-enumerate-headings-plugin==0.6.2
+mdx-truly-sane-lists==1.3

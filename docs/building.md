@@ -9,10 +9,10 @@ hide:
 You will need:
 
 - [Git](https://git-scm.com/)
-- A **C++ compiler** ([MSVC](https://visualstudio.microsoft.com/vs/features/cplusplus/){:target="_blank"} on Windows, [GCC](https://gcc.gnu.org/){:target="_blank"} on Linux; Clang support is planned)
+- A **C++ compiler** ([MSVC](https://visualstudio.microsoft.com/vs/features/cplusplus/) on Windows, [GCC](https://gcc.gnu.org/) on Linux; Clang support is planned)
 - A **build system** (Make, Visual Studio, Ninja, etc.)
-- [CMake](https://cmake.org/){:target="_blank"}
-- [Python 3](https://www.python.org/){:target="_blank"}
+- [CMake](https://cmake.org/)
+- [Python 3](https://www.python.org/)
     - You will also need to install Python modules specified in the requirements.txt file found in the root of the repo
     - Additionally, you may want to use mkdocs-material to work easier with GITS documentation, in which case you would
       also install modules specified in the requirements.txt file found in Scripts/docs directory
@@ -23,10 +23,10 @@ On Linux you will also need:
 
 - **wget**
 - Various development headers:
-    - **libx11** ([`libx11-dev`](https://packages.debian.org/sid/libx11-dev){:target="_blank"} on Ubuntu)
-    - **libx11-xcb** ([`libx11-xcb-dev`](https://packages.debian.org/sid/libx11-xcb-dev){:target="_blank"} on Ubuntu)
-    - **libwayland** ([`libwayland-dev`](https://packages.debian.org/sid/libwayland-dev){:target="_blank"} on Ubuntu)
-    - **OpenGL** ([`libgl-dev`](https://packages.debian.org/sid/libgl-dev){:target="_blank"} on Ubuntu)
+    - **libx11** ([`libx11-dev`](https://packages.debian.org/sid/libx11-dev) on Ubuntu)
+    - **libx11-xcb** ([`libx11-xcb-dev`](https://packages.debian.org/sid/libx11-xcb-dev) on Ubuntu)
+    - **libwayland** ([`libwayland-dev`](https://packages.debian.org/sid/libwayland-dev) on Ubuntu)
+    - **OpenGL** ([`libgl-dev`](https://packages.debian.org/sid/libgl-dev) on Ubuntu)
 
 ## Building
 

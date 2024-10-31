@@ -32,8 +32,6 @@ You can find all three in the output folders of GITS. After completing the [buil
 	cmake --build . --config Release
 	```
 
-
-
 === "Linux 64-bit Rel."
 	```bash
 	mkdir -p Release/x64
@@ -68,14 +66,14 @@ Use player's --help option to see basic usage info, or --hh all to list all avai
 
 Here are some of the most commonly used arguments:
 
-| argument                            | Windows              |
-| ------------------------------ | -------------------- |
-| `--help` | Basic usage info |
-| `--hh all` | List all available options |
-| `--stats` | Show stream statistics |
-| `--captureFrames` | dump rendered frames to disk |
+| argument                        | Windows                                                    |
+| ------------------------------- | ---------------------------------------------------------- |
+| `--help`                        | Basic usage info                                           |
+| `--hh all`                      | List all available options                                 |
+| `--stats`                       | Show stream statistics                                     |
+| `--captureFrames`               | dump rendered frames to disk                               |
 | `--captureFrames 23,420-450:10` | dump rendered frames `#23, #420, #430, #440, #450` to disk |
-| `--captureDraws` | dump rendered draw calls to disk |
+| `--captureDraws`                | dump rendered draw calls to disk                           |
 
 For information on how to adjust parameters of the recording please see the [configuration section](#configuration).
 

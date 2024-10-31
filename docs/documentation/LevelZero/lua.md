@@ -60,7 +60,7 @@ end
 
 **GITS** comes with various lua scripts in the folder `<gits-root-folder>\Scripts\Lua\LevelZero`:
 
-| | |
-|-|-|
-|`l0Constants.lua`| Contains Lua definitions of Level Zero constants supported by **GITS**. |
-|`dumpPerformanceInfo.lua` | Dumps performance data of each kernel execution to the CSV file. |
+|                           |                                                                         |
+| ------------------------- | ----------------------------------------------------------------------- |
+| `l0Constants.lua`         | Contains Lua definitions of Level Zero constants supported by **GITS**. |
+| `dumpPerformanceInfo.lua` | Dumps performance data of each kernel execution to the CSV file.        |

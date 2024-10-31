@@ -42,12 +42,12 @@ Windows API interception mechanism uses Windows loader's feature that causes it 
 
 This means that to correctly record any application, appropriate GITS interceptor DLLs need to be placed in the directory where target EXE file is located and GITS DLLs architecture must match that of target EXE file.
 
-* Determine *recorded process'* architecture (32- vs 64-bit) and install the corresponding GITS version.
-* Determine the APIs used by the target application and open the relevant recorder directory (e.g. `Recorder\FilesToCopyVulkan` if the app uses Vulkan).
-* Copy the contents of aforementioned recorder directory (config file and DLLs) to the target application directory containing the `.exe` file. Ensure you have write access to the app directory, as a log file will be created there.
-* Run the application and perform actions to be recorded.
-* Exit the application.
-* Find the dumped stream in the `dump` subdirectory of your GITS install and a log file in the target application directory. **Read the log file, it will list any errors, saving you time and stress.**
+- Determine *recorded process'* architecture (32- vs 64-bit) and install the corresponding GITS version.
+- Determine the APIs used by the target application and open the relevant recorder directory (e.g. `Recorder\FilesToCopyVulkan` if the app uses Vulkan).
+- Copy the contents of aforementioned recorder directory (config file and DLLs) to the target application directory containing the `.exe` file. Ensure you have write access to the app directory, as a log file will be created there.
+- Run the application and perform actions to be recorded.
+- Exit the application.
+- Find the dumped stream in the `dump` subdirectory of your GITS install and a log file in the target application directory. **Read the log file, it will list any errors, saving you time and stress.**
 
 If you are working with OpenGL ES (GLES) API instead of desktop OpenGL, copy **only** the contents of the `FilesToCopyES` directory. OpenGL32.dll **must not** be present in the app directory in that case.
 
@@ -81,8 +81,9 @@ There are two ways of approaching this issue:
 * Capture more streams, one for direct work group size platform with default 0 setting.
 
 When subcaptures are using CL/GL sharing calls and you don't want them to, you need to re-record them with `Extras.Utilities.RemoveAPISharing` set to "OGL" or "All". You can check that by playing recorded stream with –s option. Look for these functions:
-* `clEnqueueAcquireGLObjects`
-* `clEnqueueReleaseGLObjects`
+
+- `clEnqueueAcquireGLObjects`
+- `clEnqueueReleaseGLObjects`
 
 If they are not present, replacing OpenGL DLLs is not necessary. That way tool’s bugs associated with OpenGL can be avoided.
 
@@ -108,10 +109,10 @@ Sometimes GITS will crash during very long recordings. `Extras.Optimizations.Tok
 
 1. Check `gits_config.txt` for your chosen API and edit it if necessary (for example, library paths might be different on your distro)
 2. Set the environment variable `LD_LIBRARY_PATH`:
-    * for OpenCL workload: `export LD_LIBRARY_PATH=<GITS_DIR_PATH>/Recorder/OpenCL`
-    * for OpenGL workload: `export LD_LIBRARY_PATH=<GITS_DIR_PATH>/Recorder/OpenGL`
-    * for Vulkan workload: `export LD_LIBRARY_PATH=<GITS_DIR_PATH>/Recorder/Vulkan`
-    * for LevelZero workload: `export LD_LIBRARY_PATH=<GITS_DIR_PATH>/Recorder/LevelZero`
+  - for OpenCL workload: `export LD_LIBRARY_PATH=<GITS_DIR_PATH>/Recorder/OpenCL`
+  - for OpenGL workload: `export LD_LIBRARY_PATH=<GITS_DIR_PATH>/Recorder/OpenGL`
+  - for Vulkan workload: `export LD_LIBRARY_PATH=<GITS_DIR_PATH>/Recorder/Vulkan`
+  - for LevelZero workload: `export LD_LIBRARY_PATH=<GITS_DIR_PATH>/Recorder/LevelZero`
 3. Run the application
 4. Remove recording environment variable: `unset LD_LIBRARY_PATH`
 5. Find the dumped stream in the `dump` subdirectory of your GITS install and a log file in the target application directory. **Read the log file, it will list any errors, saving you time and stress.**
@@ -195,24 +196,26 @@ A: Replay the stream with the `--tokenBurstLimit <arg>` gitsPlayer option to lim
 
 ### Streams are not being finished properly
 If player refuses to play a stream, showing the `Signature file not found.` error, this usually means the game/app process was terminated before recorder could finish writing the stream to disk. (The signature file creation is the last stage of dumping a stream.) The premature process termination may be caused either by a crash or by other reason such as the app killing its own processes when quitting takes too long. Relevant information may appear in the recorder log, in the app's own log or in the app's console output. There are multiple solutions that might be helpful:
-  - Detach the recorder before the app quits or the crash happens. There are multiple ways to do so, depending on your operating system. Recorder options for detaching include:
-    - `Basic.ExitKeys`
-    - `Basic.ExitSignal`
-    - `Basic.ExitAfterAPICall`
-    - `*.Capture.All.ExitFrame`
-    - `OpenGL.Capture.All.ExitDeleteContext`
-    - `Extras.Utilities.ForceDumpOnError` which may help, but it may also cause an abort or other serious problems. Please try other detaching options first.
-    - Setting a `*.Capture.Frames.StopFrame`, `OpenGL.Capture.OglDrawsRange.StopDraw`, `*.Number` and similar API-specific recorder options used for recording substreams (capture modes other than `All`).
-  - Disable `Extras.Utilities.CloseAppOnStopRecording` recorder option. In rare cases this option may cause the app to terminate before the stream is fully dumped. This problem is known to affect Pyre, Blender, and SPECviewperf.
-  - Enable the `Extras.Utilities.HighIntegrity` mode. This option forces the recorder to persist the stream to disk after every API call. Unfortunately it has a heavy impact on recorder performance. Sometimes the resulting stream may still lack the signature file, but otherwise be fine. (For example when the app process was terminated during the calculation of signatures.) In this case you can try manually signing the stream as described below.
-  - As a last resort, you can try manually signing the stream using the player's `--signStream` option. This is unlikely to help, so you are advised to exhaust other options first. Expect the resulting stream to cause crashes during playback.
+
+- Detach the recorder before the app quits or the crash happens. There are multiple ways to do so, depending on your operating system. Recorder options for detaching include:
+  - `Basic.ExitKeys`
+  - `Basic.ExitSignal`
+  - `Basic.ExitAfterAPICall`
+  - `*.Capture.All.ExitFrame`
+  - `OpenGL.Capture.All.ExitDeleteContext`
+  - `Extras.Utilities.ForceDumpOnError` which may help, but it may also cause an abort or other serious problems. Please try other detaching options first.
+  - Setting a `*.Capture.Frames.StopFrame`, `OpenGL.Capture.OglDrawsRange.StopDraw`, `*.Number` and similar API-specific recorder options used for recording substreams (capture modes other than `All`).
+- Disable `Extras.Utilities.CloseAppOnStopRecording` recorder option. In rare cases this option may cause the app to terminate before the stream is fully dumped. This problem is known to affect Pyre, Blender, and SPECviewperf.
+- Enable the `Extras.Utilities.HighIntegrity` mode. This option forces the recorder to persist the stream to disk after every API call. Unfortunately it has a heavy impact on recorder performance. Sometimes the resulting stream may still lack the signature file, but otherwise be fine. (For example when the app process was terminated during the calculation of signatures.) In this case you can try manually signing the stream as described below.
+- As a last resort, you can try manually signing the stream using the player's `--signStream` option. This is unlikely to help, so you are advised to exhaust other options first. Expect the resulting stream to cause crashes during playback.
 
 
 ### Recorder hangs
 When the recorded app stops responding, it might not necessarily indicate a problem. Recording a stream decreases the performance of the app, especially the final phase, in which the stream is being finished and signed. While apps should not hang for extended periods during the regular recording phase, they often do hang when recorder is finishing the stream and detaching. In such case it is recommended to wait for it to finish. Depending on the stream size it might take surprisingly long.
 
-However some hangs can be caused by various issues. Known issues include:
+However some hangs can be caused by various issues. 
 
-Windows:
-  - Hang at the start of recording, caused by Windows Management Instrumentation.
-    We use WMI to gather information about the system GITS is being used on. We call it "extended diagnostic". Unfortunately some applications also gather data through WMI. When both GITS and the app use WMI at once, it can result in hangs. When it happens, the last message in recorder log should be about WMI. As the log advises, the workaround is to disable the `Extras.ExtendedDiagnostic` option in the recorder config. Known affected apps include Adobe After Effects and 3DMark API Overhead.
+#### Known issues Windows
+
+- Hang at the start of recording, caused by Windows Management Instrumentation.
+  We use WMI to gather information about the system GITS is being used on. We call it "extended diagnostic". Unfortunately some applications also gather data through WMI. When both GITS and the app use WMI at once, it can result in hangs. When it happens, the last message in recorder log should be about WMI. As the log advises, the workaround is to disable the `Extras.ExtendedDiagnostic` option in the recorder config. Known affected apps include Adobe After Effects and 3DMark API Overhead.

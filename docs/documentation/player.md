@@ -53,13 +53,17 @@ verbatim.
 
 For sample command line player invocation:
 
-		$ gitsPlayer "/mnt/repo/my stream/stream.gits" -exitFrame 10
+```bash
+$ gitsPlayer "/mnt/repo/my stream/stream.gits" -exitFrame 10
+```
 
 Corresponding response file will have following content:
 
-		/mnt/repo/my stream/stream.gits
-		-exitFrame
-		10
+```bash
+/mnt/repo/my stream/stream.gits
+-exitFrame
+10
+```
 
 Options in GITS player are divided into a number of groups. To list the
 help on specific option group use `-hh <groupname>` option. Options are

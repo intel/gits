@@ -46,11 +46,11 @@ void zeGitsIndirectAllocationOffsets(
 
 
 
-|  | |
-|-|-|
-|*pAlloc* | A pointer to an USM memory allocation where data contains indirect pointers addresses. It **must** be the value returned by a call responsible for USM creation.|
-|*numOffsets* | A number of offsets inside pOffsets.|
-|*pOffsets* \[range(0, numOffsets)\] | A pointer to the array of offsets, where each offset specify beginning of the indirect address inside pAlloc. The addresses might be pointers to allocation regions.|
+|                                     |                                                                                                                                                                      |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| *pAlloc*                            | A pointer to an USM memory allocation where data contains indirect pointers addresses. It **must** be the value returned by a call responsible for USM creation.     |
+| *numOffsets*                        | A number of offsets inside pOffsets.                                                                                                                                 |
+| *pOffsets* \[range(0, numOffsets)\] | A pointer to the array of offsets, where each offset specify beginning of the indirect address inside pAlloc. The addresses might be pointers to allocation regions. |
 
 ## Sample pseudocode {#_sample_pseudocode}
 

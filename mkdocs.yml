@@ -82,7 +82,7 @@ nav:
       - C-Code Streams: 'documentation/streams/ccode_stream.md'
     - Configuration: 
       - General: 'documentation/configuration/general_options.md'
-      - Level Zero: 'documentation/configuration/Level0.md'
+      - Level Zero: 'documentation/configuration/LevelZero.md'
       - OpenCL: 'documentation/configuration/OpenCL.md'
       - OpenGL: 'documentation/configuration/OpenGL.md'
       - Vulkan: 'documentation/configuration/vulkan.md'
@@ -108,6 +108,7 @@ nav:
     - Debug Solutions: 'userguides/debug_solutions.md'
   - Community:
     - Reproducers: 'community/HowToPrepareReproducer.md'
+    - Documentation: 'community/Documentation.md'
 
 markdown_extensions:
   - pymdownx.striphtml:
@@ -117,8 +118,11 @@ markdown_extensions:
   - pymdownx.mark     # ==This was marked== (highlight)
   - pymdownx.tilde    # ~~This was deleted~~ (strikethrough), H~2~O (subscript)
   - pymdownx.keys     # ++cmd+ctrl+alt+del++ 
+  - pymdownx.details
   - def_list          # - [ ], - [x], 1., ...
   - footnotes         # here [^1] is the link. later: [^1]: blah blah blah.
+  - mdx_truly_sane_lists
+  - admonition
   - pymdownx.tasklist:
       custom_checkbox: true
   - attr_list
@@ -133,3 +137,4 @@ markdown_extensions:
           format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
+  - strip_comments

@@ -16,34 +16,34 @@ reduction even 100 of times.
 
 Step by step:
 
--   Capture single frame stream reproducing corruption
+- Capture single frame stream reproducing corruption
 
--   Use --captureDraws option to capture per draw screenshots of draw
-    buffer
+- Use --captureDraws option to capture per draw screenshots of draw
+  buffer
 
--   Review captured screenshots - each screenshot has info about the
-    draw number and fbo. Find the draw where corruption was introduced
-    first time. Be aware that sometimes corruption may come from
-    corrupted texture which was rendered previously. It is important to
-    find the first draw where corruption appeared. In some cases
-    cleanFbos option can be useful. It cleans content of all render
-    targets attached to existing frame buffers just before frame
-    playback (after state restoration).
+- Review captured screenshots - each screenshot has info about the
+  draw number and fbo. Find the draw where corruption was introduced
+  first time. Be aware that sometimes corruption may come from
+  corrupted texture which was rendered previously. It is important to
+  find the first draw where corruption appeared. In some cases
+  cleanFbos option can be useful. It cleans content of all render
+  targets attached to existing frame buffers just before frame
+  playback (after state restoration).
 
--   Set gits recorder to capture selected draw and run single frame to
-    make a subcapture.
+- Set gits recorder to capture selected draw and run single frame to
+  make a subcapture.
 
--   Single draw stream does not give any on screen output but running it
-    with captureDraws and captureDrawsPre options will output a
-    screenshots from drawbuffer before and after drawcall so effect
-    should be visible.
+- Single draw stream does not give any on screen output but running it
+  with captureDraws and captureDrawsPre options will output a
+  screenshots from drawbuffer before and after drawcall so effect
+  should be visible.
 
--   To make sure that corruption does not come restored render buffer
-    for example run this single draw on some reference where corruption
-    shouldn't appear.
+- To make sure that corruption does not come restored render buffer
+  for example run this single draw on some reference where corruption
+  shouldn't appear.
 
--   To play more with captured single draw stream ccode from single draw
-    can be captured also.
+- To play more with captured single draw stream ccode from single draw
+  can be captured also.
 
 ### Getting drawcalls affecting specified area and filtering drawcalls
 
@@ -54,24 +54,24 @@ an alternative for single drawcall recording.
 
 Step by step:
 
--   Specify area of the frame image to query drawcalls drawing to it.
-    Describe it using rectangle with position and size on the queried
-    frame.
+- Specify area of the frame image to query drawcalls drawing to it.
+  Describe it using rectangle with position and size on the queried
+  frame.
 
--   Run stream with `--forceScissor x,y,width,height` option.
-    forceScissor option forces scissor with specified values for each
-    drawcall excepting clears and blits. It causes that only draws to
-    this area are being rendered. Be aware that very often games are
-    drawing to inverted fbo and finally are flipping the image during
-    blit. In this case scissor rectangle position can be different then
-    selected by user. If the result is not desired, per drawcall images
-    should be reviewed to better understand how the application is
-    drawing.
+- Run stream with `--forceScissor x,y,width,height` option.
+  forceScissor option forces scissor with specified values for each
+  drawcall excepting clears and blits. It causes that only draws to
+  this area are being rendered. Be aware that very often games are
+  drawing to inverted fbo and finally are flipping the image during
+  blit. In this case scissor rectangle position can be different then
+  selected by user. If the result is not desired, per drawcall images
+  should be reviewed to better understand how the application is
+  drawing.
 
--   To run the stream with only those drawcalls which drew to specified
-    area gitsplayer with `--keepDraws` option has to be used. As a
-    parameter to this option list of drawing drawcalls and clears/blits
-    should be passed
+- To run the stream with only those drawcalls which drew to specified
+  area gitsplayer with `--keepDraws` option has to be used. As a
+  parameter to this option list of drawing drawcalls and clears/blits
+  should be passed
 
 ### Pre-si environment hints
 

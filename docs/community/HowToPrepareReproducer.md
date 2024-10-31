@@ -31,7 +31,7 @@ Captured stream verification:
     * **Open**CL - use `--clCaptureKernels 1-10` to dump buffers and images used by executed kernels from the first to tenth kernel (artifacts are being dumped to `dump` subfolder of the stream folder).
     * **LevelZero** - use `--l0Capture` options to dump buffers and images used by executed kernels, with selected granularity.
     * **Render APIs** - use `--captureFrames` to dump framebuffer per frame.
-	
+
 
 Troubleshooting:
 
@@ -40,5 +40,5 @@ Troubleshooting:
 * Recorded application is crashing (even without attaching GITS) and captured stream is getting corrupted - Modify gits_config.txt file (`<GITS_DIR_PATH>/Recorder/<API>/gits_config.txt`) by setting `HighIntegrity` to `True`. This option makes **GITS** terminating stream on each captured API call and in case of crash it remains consistent. This option heavily affects recording performance.
 * Recorded application crashes on start while being recorded with **GITS**. Check gits_config.txt file, if it contains proper paths to libraries being intercepted. Correct them if needed. Example: `Basic.Paths.LibCL`.
 * No stream is getting captured:
-    * Make sure that recorded application is same architecture (x86 or x64) as recorder.
-    * On Linux try alternative interception method. Use symbols preloading: `LD_PRELOAD=<GITS_DIR_PATH>/Recorder/<API>/<INTERCEPTED_LIB>` instead of `LD_LIBRARY_PATH` based method.
+  * Make sure that recorded application is same architecture (x86 or x64) as recorder.
+  * On Linux try alternative interception method. Use symbols preloading: `LD_PRELOAD=<GITS_DIR_PATH>/Recorder/<API>/<INTERCEPTED_LIB>` instead of `LD_LIBRARY_PATH` based method.

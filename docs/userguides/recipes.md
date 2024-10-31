@@ -19,18 +19,18 @@ Examples:
 
 - Install GITS
 - Modify gits_config.txt:  
-    - In section `OpenGL.Capture` set `Mode` to `OglDrawsRange`
-    - In section `OpenGL.OglDrawsRange` set `StartDraw` and `StopDraw`
-    - Save above changes
+  - In section `OpenGL.Capture` set `Mode` to `OglDrawsRange`
+  - In section `OpenGL.OglDrawsRange` set `StartDraw` and `StopDraw`
+  - Save above changes
 - Prepare recorder and replay single frame stream
 
 ### Single draw subcapture
 
 - Install GITS
 - Modify gits_config.txt:  
-    - In section `OpenGL.Capture` set `Mode` to `OglSingleDraw`
-    - In section `OpenGL.OglSingleDraw` set`Number`
-    - Save above changes
+  - In section `OpenGL.Capture` set `Mode` to `OglSingleDraw`
+  - In section `OpenGL.OglSingleDraw` set`Number`
+  - Save above changes
 - Prepare recorder and replay single frame stream
 
 ### Single kernel subcapture
@@ -39,9 +39,9 @@ Examples:
 
 - Install GITS
 - Modify gits_config.txt:
-    - In section `OpenCL.Capture` set `Mode` to `All`
-    - In section `Extras.Utilities` add `"DX"` to `RemoveAPISharing`
-    - Save above changes
+  - In section `OpenCL.Capture` set `Mode` to `All`
+  - In section `Extras.Utilities` add `"DX"` to `RemoveAPISharing`
+  - Save above changes
 - Prepare recorder and record the stream
 - Replay recorded stream and capture it
 
@@ -49,10 +49,10 @@ Examples:
 
 - Install GITS
 - Modify gits_config.txt:
-    - In section `OpenCL.Capture` set `Mode` to `OclSingleKernel`
-    - In section `OpenCL.Capture.OclSingleKernel` set `Number` to kernel call number you want to capture. You can find it out by recording whole stream with `Basic.CCodeDump` set to `True`, and looking in `stream_frames.cpp`.
-    - In section `Extras.Utilities` set `RemoveAPISharing` to `""`
-    - Save above changes
+  - In section `OpenCL.Capture` set `Mode` to `OclSingleKernel`
+  - In section `OpenCL.Capture.OclSingleKernel` set `Number` to kernel call number you want to capture. You can find it out by recording whole stream with `Basic.CCodeDump` set to `True`, and looking in `stream_frames.cpp`.
+  - In section `Extras.Utilities` set `RemoveAPISharing` to `""`
+  - Save above changes
 - Prepare recorder and record the stream
 
 

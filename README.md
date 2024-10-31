@@ -8,9 +8,11 @@
 
 **GITS** is a collection of command line tools originally aimed at driver developers, but we think it can be useful to other users as well. If you are a game developer who wants to analyze frames using a graphical tool, [GPA](https://www.intel.com/content/www/us/en/developer/tools/graphics-performance-analyzers/overview.html) or a similar tool is what you should look at.
 
+
 ## Distribution
 
-Currently we do _not_ provide prebuilt binaries. To build **GITS** you need a c++ compiler + buildsystem as well as python3. The full process is described [here](docs/building.md).
+Currently we do _not_ provide prebuilt binaries. To build **GITS** you need a c++ compiler + buildsystem as well as python3. 
+The full process is described [in the documentation](docs/building.md). 
 
 ## Usage
 
@@ -27,7 +29,7 @@ More information can be found in the [Usage section](docs/usage.md) of the docum
 
 ## Contributing
 
-For information on how to contribute, see [Contributing](CONTRIBUTING.md). All contributions are subject to our [code of conduct](CODE_OF_CONDUCT.md).
+For information on how to contribute, see [contributing](CONTRIBUTING.md). All contributions are subject to our [code of conduct](CODE_OF_CONDUCT.md).
 
 If you want to report security issues, see [security](SECURITY.md).
 
