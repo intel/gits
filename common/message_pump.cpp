@@ -111,8 +111,13 @@ win_ptr_t CreateWin(int width, int height, int x, int y, bool show) {
     style = WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_OVERLAPPEDWINDOW;
   }
 
-  win = CreateWindowEx(exStyle, class_name, "The title of my window", style, x, y, width, height,
-                       NULL, NULL, hInstance, NULL);
+  RECT rect{x, y, x + width, y + height};
+  AdjustWindowRectEx(&rect, style, FALSE, exStyle);
+  int adjustedWidth = rect.right - rect.left;
+  int adjustedHeight = rect.bottom - rect.top;
+
+  win = CreateWindowEx(exStyle, class_name, "The title of my window", style, x, y, adjustedWidth,
+                       adjustedHeight, NULL, NULL, hInstance, NULL);
 
   if (win == 0) {
     throw std::runtime_error("CreateWindowEx failed.\n"
