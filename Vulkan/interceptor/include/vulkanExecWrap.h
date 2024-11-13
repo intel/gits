@@ -438,7 +438,8 @@ void recExecWrap_vkFreeMemory(VkDevice device,
                               VkDeviceMemory memory,
                               const VkAllocationCallbacks* pAllocator) {
   CGitsPluginVulkan::RecorderWrapper().Drivers().vkFreeMemory(device, memory, pAllocator);
-  if (CGitsPluginVulkan::RecorderWrapper().IsUseExternalMemoryExtensionUsed() &&
+  if (CGitsPluginVulkan::Configuration().common.recorder.enabled &&
+      CGitsPluginVulkan::RecorderWrapper().IsUseExternalMemoryExtensionUsed() &&
       (memory != VK_NULL_HANDLE)) {
     CGitsPluginVulkan::RecorderWrapper().FreeExternalMemory(memory);
   }

@@ -347,6 +347,7 @@ typedef VkFlags VkOpticalFlowSessionCreateFlagsNV;
 typedef VkFlags VkPresentScalingFlagsEXT;
 typedef VkFlags VkPresentGravityFlagsEXT;
 typedef VkFlags VkMicromapCreateFlagsEXT;
+typedef VkFlags VkHostImageCopyFlagsEXT;
 
 #define VK_KHR_surface 1
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkSurfaceKHR)
