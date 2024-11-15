@@ -391,7 +391,7 @@ VkResult recExecWrap_vkAllocateMemory(VkDevice device,
           (VkMemoryAllocateFlagsInfo*)CGitsPluginVulkan::RecorderWrapper().GetPNextStructure(
               originalAllocateInfo->pNext, VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO);
       if ((allocateFlagsInfo != nullptr) &&
-          (isBitSet(allocateFlagsInfo->flags, VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT))) {
+          isBitSet(allocateFlagsInfo->flags, VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT)) {
         allocateFlagsInfo->flags |= VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
       }
     }
@@ -400,9 +400,8 @@ VkResult recExecWrap_vkAllocateMemory(VkDevice device,
   // Local changes - impact only current execution
   {
     auto localAllocateInfo = *pAllocateInfo;
-    VkMemoryAllocateInfo* originalAllocateInfo = const_cast<VkMemoryAllocateInfo*>(pAllocateInfo);
+    // Used only when useExternalMemoryExtension is set to True
     VkImportMemoryHostPointerInfoEXT hostPointerInfo = {
-        // <- Used only when useExternalMemoryExtension is set to True
         VK_STRUCTURE_TYPE_IMPORT_MEMORY_HOST_POINTER_INFO_EXT, // VkStructureType sType;
         localAllocateInfo.pNext,                               // const void* pNext;
         VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT, // VkExternalMemoryHandleTypeFlagBits handleType;

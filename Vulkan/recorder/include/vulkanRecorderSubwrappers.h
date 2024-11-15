@@ -1098,8 +1098,7 @@ inline void vkAllocateMemory_RECWRAP(VkResult return_value,
     auto allocateFlagsInfo = (VkMemoryAllocateFlagsInfo*)getPNextStructure(
         pAllocateInfo->pNext, VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO);
     if ((allocateFlagsInfo != nullptr) &&
-        (isBitSet(allocateFlagsInfo->flags,
-                  VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT))) {
+        isBitSet(allocateFlagsInfo->flags, VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT)) {
       if (drvVk.GetDeviceDispatchTable(device).vkGetDeviceMemoryOpaqueCaptureAddressUnifiedGITS) {
         VkDeviceMemoryOpaqueCaptureAddressInfo addressInfo = {
             VK_STRUCTURE_TYPE_DEVICE_MEMORY_OPAQUE_CAPTURE_ADDRESS_INFO, // VkStructureType sType;
