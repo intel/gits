@@ -79,7 +79,29 @@ public:
 
   nlohmann::ordered_json& GetProperties() const;
   std::string ReadProperties() const;
+  std::optional<nlohmann::ordered_json> FindProperty(const std::string& keyPath) const;
   std::string GetApplicationName() const;
+
+  template <typename T>
+  void SetProperty(const std::string& keyPath, const T& value) {
+    std::istringstream keyStream(keyPath);
+    std::string key;
+    nlohmann::ordered_json* current = _properties.get();
+    std::vector<std::string> keys;
+
+    while (std::getline(keyStream, key, '.')) {
+      keys.push_back(key);
+    }
+
+    for (size_t i = 0; i < keys.size() - 1; i++) {
+      if (!current->contains(keys[i])) {
+        (*current)[keys[i]] = nlohmann::ordered_json::object();
+      }
+      current = &(*current)[keys[i]];
+    }
+
+    (*current)[keys.back()] = value;
+  }
 
   friend CBinOStream& operator<<(CBinOStream& stream, const CFile& file);
   friend CBinIStream& operator>>(CBinIStream& stream, CFile& file);

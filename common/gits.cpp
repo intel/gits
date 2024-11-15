@@ -548,22 +548,33 @@ std::string CFile::ReadProperties() const {
   return _properties->dump(2);
 }
 
-std::string CFile::GetApplicationName() const {
-  std::istringstream keyStream("diag.app.name");
-  std::string segment;
-  nlohmann::json current = *_properties;
+std::optional<nlohmann::ordered_json> CFile::FindProperty(const std::string& keyPath) const {
+  std::istringstream keyStream(keyPath);
+  std::string key;
+  const nlohmann::ordered_json* current = _properties.get();
 
-  while (std::getline(keyStream, segment, '.')) {
-    auto it = current.find(segment);
-    if (it != current.end()) {
-      current = *it;
+  while (std::getline(keyStream, key, '.')) {
+    if (current->contains(key)) {
+      current = &(*current)[key];
     } else {
-      Log(WARN) << "Application name not found from stream metadata.";
-      return "";
+      return std::nullopt;
     }
   }
 
-  return current;
+  return *current;
+}
+
+std::string CFile::GetApplicationName() const {
+  auto appName = FindProperty("diag.original_app.name");
+  if (appName) {
+    return appName->get<std::string>();
+  }
+  appName = FindProperty("diag.app.name");
+  if (appName) {
+    return appName->get<std::string>();
+  }
+  Log(WARN) << "Application name not found from stream metadata.";
+  return "";
 }
 
 void CGits::ResourceManagerInit(const std::filesystem::path& dump_dir) {

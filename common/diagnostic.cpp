@@ -360,6 +360,7 @@ void gather_diagnostic_info(nlohmann::ordered_json& properties) {
       properties["diag"]["app"]["name"] = exeName;
       properties["diag"]["app"]["path"] = exePath;
       properties["diag"]["app"]["hash"] = exeHash;
+      properties["diag"]["original_app"]["name"] = exeName;
     }
   }
 
