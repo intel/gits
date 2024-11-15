@@ -329,7 +329,8 @@ void gits::Vulkan::CDeviceOrHostAddressAccelerationStructureVertexDataGITSData::
     // (indirect) compute shader performs the actual copy operation.
 
     //              DataSize           Offset         Indirect count x/y/z      Vertices
-    SetDataSize(sizeof(uint32_t) + sizeof(uint32_t) + 3 * sizeof(uint32_t) + count * stride);
+    SetDataSize(sizeof(uint32_t) + sizeof(uint32_t) + 3 * sizeof(uint32_t) +
+                std::max(count, maxVertex) * stride);
 
     auto commandBuffer = _controlData.commandBuffer;
     auto commandBufferState = SD()._commandbufferstates[commandBuffer];

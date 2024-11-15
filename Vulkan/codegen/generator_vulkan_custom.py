@@ -28,6 +28,12 @@ arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pInfo', type='const VkBufferDeviceAddressInfo*')
 )
 
+Function(name='vkGetDeviceMemoryOpaqueCaptureAddressUnifiedGITS', enabled=False, type=FuncType.PARAM,
+retV=RetDef(type='uint64_t'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='pInfo', type='const VkDeviceMemoryOpaqueCaptureAddressInfo*')
+)
+
 Function(name='vkCmdPipelineBarrier2UnifiedGITS', enabled=True, type=FuncType.PARAM, stateTrack=True, recWrap=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer", ccodeWriteWrap=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),

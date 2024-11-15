@@ -1085,9 +1085,37 @@ inline void vkAllocateMemory_RECWRAP(VkResult return_value,
                                      const VkAllocationCallbacks* pAllocator,
                                      VkDeviceMemory* pMemory,
                                      CRecorder& recorder) {
+  auto memoryAllocateInfo = *pAllocateInfo;
+
+  VkMemoryOpaqueCaptureAddressAllocateInfo opaqueAddressAllocateInfo = {
+      VK_STRUCTURE_TYPE_MEMORY_OPAQUE_CAPTURE_ADDRESS_ALLOCATE_INFO, // VkStructureType sType;
+      pAllocateInfo->pNext,                                          // const void* pNext;
+      0 // uint64_t opaqueCaptureAddress;
+  };
+
+  // Record opaque/capture device address only when requested
+  if (Config::Get().vulkan.recorder.useCaptureReplayFeaturesForBuffersAndAccelerationStructures) {
+    auto allocateFlagsInfo = (VkMemoryAllocateFlagsInfo*)getPNextStructure(
+        pAllocateInfo->pNext, VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO);
+    if ((allocateFlagsInfo != nullptr) &&
+        (isBitSet(allocateFlagsInfo->flags,
+                  VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT))) {
+      if (drvVk.GetDeviceDispatchTable(device).vkGetDeviceMemoryOpaqueCaptureAddressUnifiedGITS) {
+        VkDeviceMemoryOpaqueCaptureAddressInfo addressInfo = {
+            VK_STRUCTURE_TYPE_DEVICE_MEMORY_OPAQUE_CAPTURE_ADDRESS_INFO, // VkStructureType sType;
+            nullptr,                                                     // const void* pNext;
+            *pMemory                                                     // VkDeviceMemory memory;
+        };
+        opaqueAddressAllocateInfo.opaqueCaptureAddress =
+            drvVk.vkGetDeviceMemoryOpaqueCaptureAddressUnifiedGITS(device, &addressInfo);
+        memoryAllocateInfo.pNext = &opaqueAddressAllocateInfo;
+      }
+    }
+  }
+
   if (recorder.Running()) {
     recorder.Schedule(
-        new CvkAllocateMemory(return_value, device, pAllocateInfo, pAllocator, pMemory));
+        new CvkAllocateMemory(return_value, device, &memoryAllocateInfo, pAllocator, pMemory));
   }
   // vkAllocateMemory_SD() function is called inside recExecWrap_vkAllocateMemory() function
 }

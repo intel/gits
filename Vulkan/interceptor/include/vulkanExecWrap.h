@@ -380,58 +380,79 @@ VkResult recExecWrap_vkAllocateMemory(VkDevice device,
                                       const VkAllocationCallbacks* pAllocator,
                                       VkDeviceMemory* pMemory) {
   CVkDriver& drvVk = CGitsPluginVulkan::RecorderWrapper().Drivers();
-  VkMemoryAllocateInfo allocateInfo = *pAllocateInfo;
 
-  VkImportMemoryHostPointerInfoEXT hostPointerInfo = {
-      // <- Used only when useExternalMemoryExtension is set to True
-      VK_STRUCTURE_TYPE_IMPORT_MEMORY_HOST_POINTER_INFO_EXT, // VkStructureType sType;
-      allocateInfo.pNext,                                    // const void* pNext;
-      VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT, // VkExternalMemoryHandleTypeFlagBits handleType;
-      nullptr                                                 // void* pHostPointer;
-  };
+  // Global changes - propagate to recorded streams
+  {
+    auto* originalAllocateInfo = const_cast<VkMemoryAllocateInfo*>(pAllocateInfo);
 
-  bool isMemoryMappable = false;
-  if (CGitsPluginVulkan::Configuration().common.recorder.enabled) {
-    isMemoryMappable = CGitsPluginVulkan::RecorderWrapper().CheckMemoryMappingFeasibility(
-        device, allocateInfo.memoryTypeIndex, false);
-
-    // Perform only when external memory is ENABLED
-    if (CGitsPluginVulkan::RecorderWrapper().IsUseExternalMemoryExtensionUsed() &&
-        isMemoryMappable && !CGitsPluginVulkan::_recorderFinished) {
-      hostPointerInfo.pHostPointer =
-          CGitsPluginVulkan::RecorderWrapper().CreateExternalMemory(allocateInfo.allocationSize);
-      allocateInfo.pNext = &hostPointerInfo;
+    if (CGitsPluginVulkan::Configuration()
+            .vulkan.recorder.useCaptureReplayFeaturesForBuffersAndAccelerationStructures) {
+      auto allocateFlagsInfo =
+          (VkMemoryAllocateFlagsInfo*)CGitsPluginVulkan::RecorderWrapper().GetPNextStructure(
+              originalAllocateInfo->pNext, VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO);
+      if ((allocateFlagsInfo != nullptr) &&
+          (isBitSet(allocateFlagsInfo->flags, VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT))) {
+        allocateFlagsInfo->flags |= VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
+      }
     }
   }
 
-  auto return_value = drvVk.vkAllocateMemory(device, &allocateInfo, pAllocator, pMemory);
+  // Local changes - impact only current execution
+  {
+    auto localAllocateInfo = *pAllocateInfo;
+    VkMemoryAllocateInfo* originalAllocateInfo = const_cast<VkMemoryAllocateInfo*>(pAllocateInfo);
+    VkImportMemoryHostPointerInfoEXT hostPointerInfo = {
+        // <- Used only when useExternalMemoryExtension is set to True
+        VK_STRUCTURE_TYPE_IMPORT_MEMORY_HOST_POINTER_INFO_EXT, // VkStructureType sType;
+        localAllocateInfo.pNext,                               // const void* pNext;
+        VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT, // VkExternalMemoryHandleTypeFlagBits handleType;
+        nullptr                                                 // void* pHostPointer;
+    };
 
-  // Perform only when external memory is DISABLED
-  if (!CGitsPluginVulkan::RecorderWrapper().IsUseExternalMemoryExtensionUsed() &&
-      isMemoryMappable && CGitsPluginVulkan::Configuration().common.recorder.enabled &&
-      !CGitsPluginVulkan::_recorderFinished &&
-      (CGitsPluginVulkan::Configuration().vulkan.recorder.shadowMemory ||
-       CGitsPluginVulkan::Configuration().vulkan.recorder.memorySegmentSize ||
-       CGitsPluginVulkan::Configuration().vulkan.recorder.memoryAccessDetection)) {
-    // Clear memory
-    void* ptr = nullptr;
-    VkResult map_return_value = drvVk.vkMapMemory(device, *pMemory, 0, VK_WHOLE_SIZE, 0, &ptr);
+    bool isMemoryMappable = false;
+    if (CGitsPluginVulkan::Configuration().common.recorder.enabled) {
+      isMemoryMappable = CGitsPluginVulkan::RecorderWrapper().CheckMemoryMappingFeasibility(
+          device, localAllocateInfo.memoryTypeIndex, false);
 
-    if (map_return_value == VK_SUCCESS) {
-      memset(ptr, 0, (size_t)allocateInfo.allocationSize);
-      drvVk.vkUnmapMemory(device, *pMemory);
-    } else {
-      Log(WARN) << "vkMapMemory() was used to clear previously allocated memory but failed with "
-                   "the code: "
-                << map_return_value << ". It may cause rendering errors!";
+      // Perform only when external memory is ENABLED
+      if (CGitsPluginVulkan::RecorderWrapper().IsUseExternalMemoryExtensionUsed() &&
+          isMemoryMappable && !CGitsPluginVulkan::_recorderFinished) {
+        hostPointerInfo.pHostPointer = CGitsPluginVulkan::RecorderWrapper().CreateExternalMemory(
+            localAllocateInfo.allocationSize);
+        localAllocateInfo.pNext = &hostPointerInfo;
+      }
     }
-  }
 
-  if (CGitsPluginVulkan::Configuration().common.recorder.enabled) {
-    CGitsPluginVulkan::RecorderWrapper().TrackMemoryState(
-        return_value, device, pAllocateInfo, pAllocator, pMemory, hostPointerInfo.pHostPointer);
+    auto return_value = drvVk.vkAllocateMemory(device, &localAllocateInfo, pAllocator, pMemory);
+
+    // Perform only when external memory is DISABLED
+    if (!CGitsPluginVulkan::RecorderWrapper().IsUseExternalMemoryExtensionUsed() &&
+        isMemoryMappable && CGitsPluginVulkan::Configuration().common.recorder.enabled &&
+        !CGitsPluginVulkan::_recorderFinished &&
+        (CGitsPluginVulkan::Configuration().vulkan.recorder.shadowMemory ||
+         CGitsPluginVulkan::Configuration().vulkan.recorder.memorySegmentSize ||
+         CGitsPluginVulkan::Configuration().vulkan.recorder.memoryAccessDetection)) {
+      // Clear memory
+      void* ptr = nullptr;
+      VkResult map_return_value = drvVk.vkMapMemory(device, *pMemory, 0, VK_WHOLE_SIZE, 0, &ptr);
+
+      if (map_return_value == VK_SUCCESS) {
+        memset(ptr, 0, (size_t)localAllocateInfo.allocationSize);
+        drvVk.vkUnmapMemory(device, *pMemory);
+      } else {
+        Log(WARN) << "vkMapMemory() was used to clear previously allocated memory but failed with "
+                     "the code: "
+                  << map_return_value << ". It may cause rendering errors!";
+      }
+    }
+
+    if (CGitsPluginVulkan::Configuration().common.recorder.enabled) {
+      CGitsPluginVulkan::RecorderWrapper().TrackMemoryState(
+          return_value, device, pAllocateInfo, pAllocator, pMemory, hostPointerInfo.pHostPointer);
+    }
+
+    return return_value;
   }
-  return return_value;
 }
 
 void recExecWrap_vkFreeMemory(VkDevice device,

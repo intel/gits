@@ -559,6 +559,8 @@ void CVkDriver::InitializeUnifiedAPI(const VkDeviceCreateInfo* pCreateInfo,
         deviceDispatchTable.vkGetBufferDeviceAddress;
     deviceDispatchTable.vkGetBufferOpaqueCaptureAddressUnifiedGITS =
         deviceDispatchTable.vkGetBufferOpaqueCaptureAddress;
+    deviceDispatchTable.vkGetDeviceMemoryOpaqueCaptureAddressUnifiedGITS =
+        deviceDispatchTable.vkGetDeviceMemoryOpaqueCaptureAddress;
   }
 
   // Enabled extensions
@@ -570,6 +572,8 @@ void CVkDriver::InitializeUnifiedAPI(const VkDeviceCreateInfo* pCreateInfo,
           deviceDispatchTable.vkGetBufferDeviceAddressKHR;
       deviceDispatchTable.vkGetBufferOpaqueCaptureAddressUnifiedGITS =
           deviceDispatchTable.vkGetBufferOpaqueCaptureAddressKHR;
+      deviceDispatchTable.vkGetDeviceMemoryOpaqueCaptureAddressUnifiedGITS =
+          deviceDispatchTable.vkGetDeviceMemoryOpaqueCaptureAddressKHR;
     }
     // VK_EXT_buffer_device_address
     else if (strcmp(element, VK_EXT_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME) == 0) {

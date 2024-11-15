@@ -11085,7 +11085,7 @@ var5=VarDef(name='offset', type='VkDeviceSize'),
 var6=VarDef(name='size', type='VkDeviceSize')
 )
 
-Struct(name='VkMemoryOpaqueCaptureAddressAllocateInfo_', enabled=False,
+Struct(name='VkMemoryOpaqueCaptureAddressAllocateInfo_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='opaqueCaptureAddress', type='uint64_t')
