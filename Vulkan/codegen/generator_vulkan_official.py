@@ -1563,13 +1563,13 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='primitiveRestartEnable', type='VkBool32')
 )
 
-Function(name='vkCmdSetPrimitiveTopology', enabled=False, type=FuncType.PARAM,
+Function(name='vkCmdSetPrimitiveTopology', enabled=True, type=FuncType.COMMAND_BUFFER_SET, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='primitiveTopology', type='VkPrimitiveTopology')
 )
 
-Function(name='vkCmdSetPrimitiveTopologyEXT', enabled=False, type=FuncType.PARAM,
+Function(name='vkCmdSetPrimitiveTopologyEXT', enabled=True, type=FuncType.COMMAND_BUFFER_SET, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='primitiveTopology', type='VkPrimitiveTopology')
@@ -1651,11 +1651,11 @@ arg2=ArgDef(name='scissorCount', type='uint32_t'),
 arg3=ArgDef(name='pScissors', type='const VkRect2D*', wrapType='CVkRect2DArray', wrapParams='scissorCount, pScissors', count='scissorCount')
 )
 
-Function(name='vkCmdSetScissorWithCountEXT', enabled=False, type=FuncType.PARAM,
+Function(name='vkCmdSetScissorWithCountEXT', enabled=True, type=FuncType.COMMAND_BUFFER_SET, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='scissorCount', type='uint32_t'),
-arg3=ArgDef(name='pScissors', type='const VkRect2D*')
+arg3=ArgDef(name='pScissors', type='const VkRect2D*', wrapType='CVkRect2DArray', wrapParams='scissorCount, pScissors', count='scissorCount')
 )
 
 Function(name='vkCmdSetShadingRateImageEnableNV', enabled=False, type=FuncType.PARAM,
@@ -1777,11 +1777,11 @@ arg2=ArgDef(name='viewportCount', type='uint32_t'),
 arg3=ArgDef(name='pViewports', type='const VkViewport*', wrapType='CVkViewportArray', wrapParams='viewportCount, pViewports', count='viewportCount')
 )
 
-Function(name='vkCmdSetViewportWithCountEXT', enabled=False, type=FuncType.PARAM,
+Function(name='vkCmdSetViewportWithCountEXT', enabled=True, type=FuncType.COMMAND_BUFFER_SET, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='viewportCount', type='uint32_t'),
-arg3=ArgDef(name='pViewports', type='const VkViewport*')
+arg3=ArgDef(name='pViewports', type='const VkViewport*', wrapType='CVkViewportArray', wrapParams='viewportCount, pViewports', count='viewportCount')
 )
 
 Function(name='vkCmdTraceRaysIndirect2KHR', enabled=False, type=FuncType.PARAM,
