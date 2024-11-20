@@ -37,6 +37,7 @@ class CGitsPluginOpenCL {
   CGitsPluginOpenCL(CGitsPluginOpenCL&&) = delete;
   CGitsPluginOpenCL& operator=(const CGitsPluginOpenCL&) = delete;
   CGitsPluginOpenCL& operator=(CGitsPluginOpenCL&&) = delete;
+  ~CGitsPluginOpenCL() = delete;
 
 public:
   static void Initialize();

@@ -39,6 +39,7 @@ class CGitsPlugin {
   CGitsPlugin(CGitsPlugin&&) = delete;
   CGitsPlugin& operator=(const CGitsPlugin&) = delete;
   CGitsPlugin& operator=(CGitsPlugin&&) = delete;
+  ~CGitsPlugin() = delete;
 
 public:
   static void Initialize();
