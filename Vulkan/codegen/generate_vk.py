@@ -311,6 +311,41 @@ def make_ctype(type_name: str, wrap_type: str = '', name: str = '') -> str:
     else:
         return f'C{bare_type}'
 
+def make_ctypedata(type_name: str, wrap_type: str = '', name: str = '') -> str:
+    """
+    Return a C*Data type (used in StructStorage).
+
+    Parameters:
+        type_name: Type, as written in generator (like 'const float*').
+        wrap_type: Wrap type (like 'Cfloat::CSArray').
+        name: Name of struct field (like 'pQueuePriorities').
+
+    Returns:
+        A C*Data type (like 'CfloatDataArray').
+    """
+    ctype: str = make_ctype(type_name, wrap_type, name)
+    type, _ = split_arrays_from_name(type_name)
+    bare_type: str = undecorated_type(type)
+
+    # Special cases.
+    if not wrap_type:
+        if '*' in type and bare_type == 'void' and name != 'pNext':
+            return 'CvoidPtrData'
+
+    # Wrapped types conversion.
+    type_replacements: dict[str, str] = {
+        '::CSArray': 'DataArray',
+        '::CSMapArray': 'DataArray',
+        'ArrayOfArrays': 'DataArrayOfArrays',
+        'Array': 'DataArray',
+    }
+    for old, new in type_replacements.items():
+        if old in ctype:
+            return ctype.replace(old, new)
+
+    # Nothing matched, use generic logic.
+    return ctype + 'Data'
+
 def undecorated_type(type_name: str) -> str:
     """Strip the type to its core, e.g., const float* to just float."""
     return type_name.replace('const', '').strip('* ')
@@ -436,7 +471,11 @@ def without_older_versions(input: list[Versioned]) -> list[Versioned]:
 
     return list(newest_token_versions.values())
 
-def dependency_ordered(structs: list[VkStruct]) -> list[VkStruct]:
+def dependency_ordered(
+    structs: list[VkStruct],
+    *,
+    use_undecorated_types: bool = False,
+) -> list[VkStruct]:
     """
     Order structs by putting dependencies first.
 
@@ -447,10 +486,10 @@ def dependency_ordered(structs: list[VkStruct]) -> list[VkStruct]:
 
     Parameters:
         structs: List of structs to be ordered by dependencies.
+        use_undecorated_types: If bare types are to be used for comparison.
 
     Returns:
         A copy of `structs`, reordered to avoid undeclared identifier errors.
-
     """
     structs = without_older_versions(structs)
 
@@ -461,11 +500,19 @@ def dependency_ordered(structs: list[VkStruct]) -> list[VkStruct]:
     while len(declared_structs) < len(structs):
         for struct in structs:
             if struct.name not in declared_structs:
-                to_declare: list[str] = []  # Dependencies.
+                # True when none of the struct's fields are undeclared structs.
+                all_dependencies_met: bool = True
+
                 for field in struct.fields:
-                    if (field.type not in declared_structs) and (field.type in struct_type_names):
-                        to_declare.append(field.type)
-                if len(to_declare) == 0:
+                    bare_type: str = undecorated_type(field.type)
+                    type_: str = bare_type if use_undecorated_types else field.type
+
+                    not_yet_declared: bool = type_ not in declared_structs
+                    is_a_struct: bool = type_ in struct_type_names
+                    if not_yet_declared and is_a_struct:
+                        all_dependencies_met = False
+
+                if all_dependencies_met:
                     result.append(struct)
                     declared_structs.append(struct.name)
 
@@ -775,7 +822,8 @@ def fields_to_str(
         array: Array declaration (or empty string) extracted from name or type.
         bitfield: Bit-field width annotation (or empty string) extracted from name or type.
         arguments: Arguments to each field's constructor.
-        ctype: Name of the class wrapping this argument, e.g. 'CVkDevice'.
+        ctype: Name of the class wrapping this argument, e.g. 'Cfloat'.
+        ctypedata: C*Data type made from C type; e.g. 'CfloatData'.
 
     Parameters:
         fields: Fields of the Vulkan struct.
@@ -798,6 +846,7 @@ def fields_to_str(
 
         wrap_type: str = field.wrap_type or ''
         ctype: str = make_ctype(field.type, wrap_type, name)
+        ctypedata: str = make_ctypedata(field.type, wrap_type, name)
 
         if struct_name:
             vkless_name: str = struct_name.removeprefix('Vk')
@@ -821,6 +870,7 @@ def fields_to_str(
             bitfield=bitfield,
             arguments=arguments,
             ctype=ctype,
+            ctypedata=ctypedata,
         )
 
     return fields_str.rstrip(rstrip_string)
@@ -1176,6 +1226,17 @@ def main() -> None:
         vulkan_mapped_types=vulkan_mapped_types,
         vulkan_mapped_types_nondisp=vulkan_mapped_types_nondisp,
         types_not_needing_declaration=types_not_needing_declaration,
+    )
+
+    enabled_non_custom_structs: list[VkStruct] = [s for s in enabled_structs if not s.custom]
+    mako_write(
+        'templates/vulkanStructStorageAuto.h.mako',
+        'common/include/vulkanStructStorageAuto.h',
+        fields_to_str=fields_to_str,
+        vk_structs=dependency_ordered(enabled_non_custom_structs, use_undecorated_types=True),
+        vk_enums=all_enums,
+        vulkan_mapped_types=vulkan_mapped_types,
+        vulkan_mapped_types_nondisp=vulkan_mapped_types_nondisp,
     )
 
     main()
