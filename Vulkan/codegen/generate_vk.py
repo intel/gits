@@ -456,11 +456,9 @@ def dependency_ordered(structs: list[VkStruct]) -> list[VkStruct]:
 
     return result
 
-def make_struct_field_type_cast(type: str) -> str:
+def make_flagbits_type_cast(type: str) -> str:
     """
-    Return a C++ type cast for given struct type, if appropriate.
-
-    If type is a *Flags uint, cast it to a *FlagBits enum.
+    Return a C++ type cast to a *FlagBits enum if type is a *Flags uint.
     """
     if 'Flags' in type:
         corresponding_enum = type.replace('Flags', 'FlagBits')
@@ -473,7 +471,7 @@ def make_struct_field_log_code(field: Field) -> str:
     """Return C++ code for logging a Field."""
     result = f'" {field.name}: "'
 
-    type_cast = make_struct_field_type_cast(field.type)
+    type_cast = make_flagbits_type_cast(field.type)
 
     if field.name == 'pNext':
         result += ' << (PNextPointerTypeTag)c.pNext << ", " << '
@@ -522,6 +520,64 @@ def make_struct_log_code(fields: list[Field]) -> str:
     fields_str = fields_str.replace('"{" << " ', '"{ ')
 
     return fields_str
+
+def make_argument_log_code(argument: Argument, count_is_a_pointer: bool) -> str:
+    """Return C++ code for logging an Argument."""
+    result = f'", {argument.type} {argument.name}="'
+
+    type_cast = make_flagbits_type_cast(argument.type)
+
+    if argument.count is not None:
+        additional_conditions: str = ''
+        dereference: str = ''
+        if '[' not in argument.type:  # Skip nullptr check for arrays on the stack.
+            additional_conditions = f' && ({argument.name} != nullptr)'
+            if count_is_a_pointer:
+                additional_conditions += f' && ({argument.count} != nullptr)'
+                dereference = '*'
+
+        result += inspect.cleandoc(f'''
+            ;
+                if ((isTraceDataOptPresent(TraceData::VK_STRUCTS)){additional_conditions}) {{
+                  VkLog(TRACE, RAW) << "{{";
+                  for (uint32_t i = 0; i < (uint32_t){dereference}{argument.count}; ++i) {{
+                    VkLog(TRACE, RAW) << " [" << i << "]:" << {type_cast}{argument.name}[i];
+                  }}
+                  VkLog(TRACE, RAW) << " }}";
+                }} else {{
+                  VkLog(TRACE, RAW) << {argument.name};
+                }}
+            ''')
+        result += '\n'
+        result += '    VkLog(TRACE, RAW) << '
+    else:
+        result += f' << {type_cast}{argument.name} << '
+
+    return result
+
+def make_token_log_code(arguments: list[Argument]) -> str:
+    """Return C++ code for logging Arguments of a Token."""
+    # Ignore unnamed arguments of type 'void'.
+    arguments = [arg for arg in arguments if arg.type != 'void']
+    if not arguments:
+        return '"( )"'
+
+    arguments_str = ''
+
+    argument: Argument
+    for argument in arguments:
+        count_is_a_pointer: bool = False
+        if argument.count:
+            for arg2 in arguments:
+                if argument.count in arg2.name and '*' in arg2.type:
+                    count_is_a_pointer = True
+
+        arguments_str += make_argument_log_code(argument, count_is_a_pointer)
+
+    arguments_str = '"( ' + arguments_str.lstrip('", ')
+    arguments_str += '" )"'
+
+    return arguments_str
 
 def split_bitfield_width_from_name(name: str) -> tuple[str, str]:
     """
@@ -1039,6 +1095,14 @@ def main() -> None:
         'templates/vulkanTracerAuto.h.mako',
         'common/include/vulkanTracerAuto.h',
         args_to_str=args_to_str,
+        vk_functions=newest_tokens,
+    )
+
+    mako_write(
+        'templates/vulkanTracerAuto.cpp.mako',
+        'common/vulkanTracerAuto.cpp',
+        args_to_str=args_to_str,
+        make_token_log_code=make_token_log_code,
         vk_functions=newest_tokens,
     )
 
