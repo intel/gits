@@ -3485,13 +3485,6 @@ arg2=ArgDef(name='pPropertyCount', type='uint32_t*'),
 arg3=ArgDef(name='pProperties', type='VkDisplayPropertiesKHR*', count='pPropertyCount')
 )
 
-Function(name='vkGetPhysicalDeviceDisplayPropertiesKHR', enabled=False, type=FuncType.PARAM, level=FuncLevel.INSTANCE,
-retV=RetDef(type='VkResult'),
-arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
-arg2=ArgDef(name='pPropertyCount', type='uint32_t*'),
-arg3=ArgDef(name='pProperties', type='VkDisplayPropertiesKHR*')
-)
-
 Function(name='vkGetPhysicalDeviceExternalBufferProperties', enabled=False, type=FuncType.PARAM, level=FuncLevel.INSTANCE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
