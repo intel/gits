@@ -27,6 +27,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import TypeVar
 import copy
+import inspect
 import platform
 import re
 import shutil
@@ -389,6 +390,73 @@ def dependency_ordered(structs: list[VkStruct]) -> list[VkStruct]:
 
     return result
 
+def make_struct_field_type_cast(type: str) -> str:
+    """
+    Return a C++ type cast for given struct type, if appropriate.
+
+    If type is a *Flags uint, cast it to a *FlagBits enum.
+    """
+    if 'Flags' in type:
+        corresponding_enum = type.replace('Flags', 'FlagBits')
+        if corresponding_enum in vulkan_enums:
+            return f'({corresponding_enum})'
+
+    return ''
+
+def make_struct_field_log_code(field: Field) -> str:
+    """Return C++ code for logging a Field."""
+    result = f'" {field.name}: "'
+
+    type_cast = make_struct_field_type_cast(field.type)
+
+    if field.name == 'pNext':
+        result += ' << (PNextPointerTypeTag)c.pNext << ", " << '
+    elif field.count is not None:
+        additional_conditions = ''
+        if '[' not in field.type:  # Skip nullptr check for arrays on the stack.
+            additional_conditions += f' && (c.{field.name} != nullptr)'
+        if field.log_condition is not None:
+            additional_conditions += f' && ({field.log_condition})'
+
+        count: str = field.count
+        if not count.isdigit():
+            count = f'c.{count}'
+
+        result += inspect.cleandoc(f'''
+            ;
+              if ((isTraceDataOptPresent(TraceData::VK_STRUCTS)){additional_conditions}) {{
+                *this << "{{";
+                for (uint32_t i = 0; i < (uint32_t){count}; ++i) {{
+                  *this << " [" << i << "]:" << {type_cast}c.{field.name}[i];
+                }}
+                *this << " }}";
+              }} else {{
+                *this << (void*)c.{field.name};
+              }}
+            ''')
+        result += '\n'
+        result += '  *this << ", " << '
+    else:
+        result += f' << {type_cast}c.{field.name} << ", " << '
+
+    return result
+
+def make_struct_log_code(fields: list[Field]) -> str:
+    """Return C++ code for logging Fields of a VkStruct."""
+    fields_str = '*this << "{" << '
+
+    field: Field
+    for field in fields:
+        fields_str += make_struct_field_log_code(field)
+
+    fields_str = fields_str.removesuffix(' << ", " << ')
+    fields_str += ' << " }";'
+
+    fields_str = fields_str.replace('", " << " ', '", ')
+    fields_str = fields_str.replace('"{" << " ', '"{ ')
+
+    return fields_str
+
 def split_arrays_from_name(name_with_array: str) -> tuple[str, str]:
     """
     Separate array declarations from variable or type name.
@@ -684,6 +752,17 @@ def main() -> None:
         'templates/vulkanLogAuto.inl.mako',
         'common/include/vulkanLogAuto.inl',
         version_suffix=version_suffix,
+        vk_structs=dependency_ordered(all_structs),
+        vk_enums=all_enums,
+        vulkan_mapped_types_nondisp=vulkan_mapped_types_nondisp,
+        vulkan_mapped_types=vulkan_mapped_types,
+    )
+
+    mako_write(
+        'templates/vulkanLogAuto.cpp.mako',
+        'common/vulkanLogAuto.cpp',
+        version_suffix=version_suffix,
+        make_struct_log_code=make_struct_log_code,
         vk_structs=dependency_ordered(all_structs),
         vk_enums=all_enums,
         vulkan_mapped_types_nondisp=vulkan_mapped_types_nondisp,
