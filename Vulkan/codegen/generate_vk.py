@@ -277,18 +277,33 @@ def make_cname(name: str, version: int) -> str:
     """Return a Cname (like 'CglBegin_V1')."""
     return f'C{name}{version_suffix(version)}'
 
-def make_ctype(type_name: str, wrap_type: str = '') -> str:
-    """Return a Ctype (like 'Cfloat::CSArray')."""
+def make_ctype(type_name: str, wrap_type: str = '', name: str = '') -> str:
+    """
+    Return a Ctype (name of C++ class wrapping a type).
+
+    Parameters:
+        type_name: Type, as written in generator (like 'const float*').
+        wrap_type: Wrap type (like 'Cfloat::CSArray').
+        name: Name of struct field (like 'pQueuePriorities').
+
+    Returns:
+        A Ctype (like 'Cfloat::CSArray').
+    """
     if wrap_type:  # Wrap types override deduced Ctypes.
         return wrap_type
 
-    bare_type: str = undecorated_type(type_name)
+    type, array = split_arrays_from_name(type_name)
+    bare_type: str = undecorated_type(type)
 
     if '*' in type_name:
-        if bare_type in vulkan_structs:
+        if bare_type == 'void' and name == 'pNext':
+            return 'CpNextWrapper'
+        elif bare_type in vulkan_structs:
             return f'C{bare_type}'
         else:
             return f'C{bare_type}::CSArray'
+    elif array:
+        return f'C{type}::CSArray'
     elif bare_type in vulkan_uint32:
         return 'Cuint32_t'
     elif bare_type in vulkan_uint64:
@@ -718,7 +733,7 @@ def args_to_str(
 
         wrap_type: str = arg.wrap_type or ''
         wrap_params: str = arg.wrap_params or name
-        ctype: str = make_ctype(type, wrap_type)
+        ctype: str = make_ctype(arg.type, wrap_type, name)
         num_ptr: int = type.count('*')
         needs_ampersand = str(does_arg_need_ampersand(type, wrap_type)).lower()
 
@@ -781,7 +796,7 @@ def fields_to_str(
 
         wrap_type: str = field.wrap_type or ''
         wrap_params: str = field.wrap_params or name
-        ctype: str = make_ctype(type, wrap_type)
+        ctype: str = make_ctype(field.type, wrap_type, name)
 
         fields_str += format_string.format(
             name=name,
@@ -1115,6 +1130,17 @@ def main() -> None:
     mako_write(
         'templates/vulkanCCodeArgumentsAuto.h.mako',
         '../CCodeFiles/src/include/vulkanCCodeArgumentsAuto.h',
+        vulkan_mapped_types=vulkan_mapped_types,
+        vulkan_mapped_types_nondisp=vulkan_mapped_types_nondisp,
+    )
+
+    mako_write(
+        'templates/vulkanArgumentsAuto.h.mako',
+        'common/include/vulkanArgumentsAuto.h',
+        make_cname=make_cname,
+        fields_to_str=fields_to_str,
+        vk_structs=enabled_structs,
+        vk_enums=all_enums,
         vulkan_mapped_types=vulkan_mapped_types,
         vulkan_mapped_types_nondisp=vulkan_mapped_types_nondisp,
     )
