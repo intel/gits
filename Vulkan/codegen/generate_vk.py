@@ -1119,5 +1119,4 @@ def main() -> None:
         vulkan_mapped_types_nondisp=vulkan_mapped_types_nondisp,
     )
 
-if __name__ == '__main__':
     main()
