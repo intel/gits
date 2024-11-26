@@ -2213,7 +2213,12 @@ namespace Vulkan {
 
 enums = get_enums()
 functions = get_functions()
-structs = get_structs()
+# Adapt to new generator's input style - without trailing '_'.
+structs = []
+for struct in get_structs():
+  underscored_name = struct.name + '_'
+  struct = dataclasses.replace(struct, name=underscored_name)
+  structs.append(struct)
 
 enums_table = {}  # TODO: It's a dict, not a table; rename it.
 structs_table = {}

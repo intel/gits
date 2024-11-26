@@ -354,6 +354,41 @@ def without_older_versions(input: list[Versioned]) -> list[Versioned]:
 
     return list(newest_token_versions.values())
 
+def dependency_ordered(structs: list[VkStruct]) -> list[VkStruct]:
+    """
+    Order structs by putting dependencies first.
+
+    If given struct S contains structs A and B, A and B will be ordered before
+    S to avoid undeclared identifier errors in C++ code.
+
+    To avoid duplicates, only newest struct versions are kept.
+
+    Parameters:
+        structs: List of structs to be ordered by dependencies.
+
+    Returns:
+        A copy of `structs`, reordered to avoid undeclared identifier errors.
+
+    """
+    structs = without_older_versions(structs)
+
+    result: list[VkStruct] = []
+
+    struct_type_names: set[str] = set((s.name for s in structs))
+    declared_structs: list[str] = []
+    while len(declared_structs) < len(structs):
+        for struct in structs:
+            if struct.name not in declared_structs:
+                to_declare: list[str] = []  # Dependencies.
+                for field in struct.fields:
+                    if (field.type not in declared_structs) and (field.type in struct_type_names):
+                        to_declare.append(field.type)
+                if len(to_declare) == 0:
+                    result.append(struct)
+                    declared_structs.append(struct.name)
+
+    return result
+
 def split_arrays_from_name(name_with_array: str) -> tuple[str, str]:
     """
     Separate array declarations from variable or type name.
@@ -591,6 +626,12 @@ def main() -> None:
     enabled_tokens: list[Token] = [f for f in all_tokens if f.enabled]
     newest_tokens: list[Token] = without_older_versions(all_tokens)
 
+    all_structs: list[VkStruct] = get_structs()
+    enabled_structs: list[VkStruct] = [s for s in all_structs if s.enabled]
+
+    all_enums: list[VkEnum] = get_enums()
+    # Enums are always enabled.
+
     update_token_ids('vulkanIDs.h', 'common/include', functions=enabled_tokens)
 
     vulkan_layer_bin_path: str = ''
@@ -637,6 +678,16 @@ def main() -> None:
         make_id=make_id,
         make_cname=make_cname,
         vk_functions=enabled_tokens,
+    )
+
+    mako_write(
+        'templates/vulkanLogAuto.inl.mako',
+        'common/include/vulkanLogAuto.inl',
+        version_suffix=version_suffix,
+        vk_structs=dependency_ordered(all_structs),
+        vk_enums=all_enums,
+        vulkan_mapped_types_nondisp=vulkan_mapped_types_nondisp,
+        vulkan_mapped_types=vulkan_mapped_types,
     )
 
 if __name__ == '__main__':

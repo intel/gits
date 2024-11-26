@@ -11,6 +11,8 @@
 from dataclasses import dataclass, field
 from enum import IntFlag
 from typing import Any
+# TODO: for replace, remove it
+import dataclasses
 import enum
 import operator
 
@@ -239,6 +241,8 @@ def Function(**kwargs):
     _functions_table.append(Token(**_preprocess_kwargs(kwargs, prefix='arg', list_name='args')))
 
 def Struct(**kwargs):
+    # TODO: restore it here instead of after sorting.
+    # kwargs['name'] = kwargs['name'].rstrip('_')
     _structs_table.append(VkStruct(**_preprocess_kwargs(kwargs, prefix='var', list_name='fields')))
 
 def ArgDef(**kwargs):
@@ -268,4 +272,11 @@ def get_functions():
 
 def get_structs():
     _structs_table.sort(key=operator.attrgetter('name', 'version'))
-    return _structs_table
+    # TODO: This is to match old generator sort order.
+    # TODO: Remove it (and strip _ from struct names in data files) after confirming generated files are identical.
+    deunderscored_table: list[VkStruct] = []
+    for struct in _structs_table:
+        struct = dataclasses.replace(struct, name=struct.name.rstrip('_'))
+        deunderscored_table.append(struct)
+    return deunderscored_table
+    # return _structs_table
