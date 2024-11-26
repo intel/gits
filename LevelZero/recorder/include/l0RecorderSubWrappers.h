@@ -34,6 +34,12 @@
 
 namespace gits {
 namespace l0 {
+void zeCommandListCreateImmediate_RECWRAP(CRecorder& recorder,
+                                          ze_result_t return_value,
+                                          ze_context_handle_t hContext,
+                                          ze_device_handle_t hDevice,
+                                          const ze_command_queue_desc_t* altdesc,
+                                          ze_command_list_handle_t* phCommandList);
 namespace {
 bool CheckWhetherUpdateUSM(const void* ptr) {
   bool update = false;
@@ -82,9 +88,7 @@ ze_command_list_handle_t GetCommandListImmediateRec(CStateDynamic& sd,
     const auto device = GetGPUDevice(sd, driver);
     ze_command_queue_desc_t desc = {};
     desc.mode = ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS;
-    recorder->Schedule(
-        new CzeCommandListCreateImmediate(err, context, device, &desc, &commandList));
-    zeCommandListCreateImmediate_SD(err, context, device, &desc, &commandList);
+    zeCommandListCreateImmediate_RECWRAP(*recorder, err, context, device, &desc, &commandList);
   }
   return commandList;
 }
