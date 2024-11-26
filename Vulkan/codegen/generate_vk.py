@@ -308,8 +308,8 @@ def update_gl_ids(
 
 def main() -> None:
     """Generate all the files."""
-    # all_tokens: list[Token] = get_functions()
-    # enabled_tokens: list[Token] = [f for f in all_tokens if f.enabled]
+    all_tokens: list[Token] = get_functions()
+    enabled_tokens: list[Token] = [f for f in all_tokens if f.enabled]
 
     # update_gl_ids('glIDs.h', 'common/include', gl_functions=enabled_tokens)
 
@@ -326,6 +326,20 @@ def main() -> None:
         'templates/VkLayer_vulkan_GITS_recorder.json.mako',
         'layer/VkLayer_vulkan_GITS_recorder.json',
         vulkan_layer_bin_path=vulkan_layer_bin_path,
+    )
+
+    mako_write(
+        'templates/vkX.def.mako',
+        'layer/vkLayer.def',
+        library_name='VkLayer_vulkan_GITS_recorder.dll',
+        vk_functions=all_tokens,
+    )
+
+    mako_write(
+        'templates/vkX.def.mako',
+        'interceptor/vkPlugin.def',
+        library_name='vulkan-1.dll',
+        vk_functions=all_tokens,
     )
 
 if __name__ == '__main__':
