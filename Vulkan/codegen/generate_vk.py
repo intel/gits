@@ -759,6 +759,8 @@ def fields_to_str(
     fields: list[Field],
     format_string: str,
     rstrip_string: str = '',
+    *,
+    struct_name: str | None = None,
 ) -> str:
     """
     Format Vulkan struct fields as string.
@@ -772,7 +774,7 @@ def fields_to_str(
         type: Type with array/bitfield parts removed.
         array: Array declaration (or empty string) extracted from name or type.
         bitfield: Bit-field width annotation (or empty string) extracted from name or type.
-        wrap_params: wrap_params from generator (if present) or name (described above).
+        arguments: Arguments to each field's constructor.
         ctype: Name of the class wrapping this argument, e.g. 'CVkDevice'.
 
     Parameters:
@@ -795,15 +797,29 @@ def fields_to_str(
         name, type, array, bitfield = c
 
         wrap_type: str = field.wrap_type or ''
-        wrap_params: str = field.wrap_params or name
         ctype: str = make_ctype(field.type, wrap_type, name)
+
+        if struct_name:
+            vkless_name: str = struct_name.removeprefix('Vk')
+            array_length: str = array.strip('[]')
+            arguments: str = f'{vkless_name.lower()}->{field.name}'
+            if field.wrap_params:
+                arguments = field.wrap_params
+            elif field.type in vulkan_structs:
+                arguments = f'&{arguments}'
+            elif array_length:
+                arguments = f'{array_length}, {arguments}'
+        elif '{arguments}' in format_string:
+            raise ValueError("Struct name is required when using {arguments}.")
+        else:
+            arguments: str = ''  # It's not going to be used anyway.
 
         fields_str += format_string.format(
             name=name,
             type=type,
             array=array,
             bitfield=bitfield,
-            wrap_params=wrap_params,
+            arguments=arguments,
             ctype=ctype,
         )
 
@@ -1143,6 +1159,23 @@ def main() -> None:
         vk_enums=all_enums,
         vulkan_mapped_types=vulkan_mapped_types,
         vulkan_mapped_types_nondisp=vulkan_mapped_types_nondisp,
+    )
+
+    mako_write(
+        'templates/vulkanArgumentsAuto.cpp.mako',
+        'common/vulkanArgumentsAuto.cpp',
+        make_cname=make_cname,
+        make_ctype=make_ctype,
+        undecorated_type=undecorated_type,
+        split_arrays_from_name=split_arrays_from_name,
+        fields_to_str=fields_to_str,
+        vk_structs=enabled_structs,
+        vk_enums=all_enums,
+        vulkan_structs=vulkan_structs,
+        primitive_types=primitive_types,
+        vulkan_mapped_types=vulkan_mapped_types,
+        vulkan_mapped_types_nondisp=vulkan_mapped_types_nondisp,
+        types_not_needing_declaration=types_not_needing_declaration,
     )
 
     main()
