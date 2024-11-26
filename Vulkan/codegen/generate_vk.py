@@ -1106,5 +1106,11 @@ def main() -> None:
         vk_functions=newest_tokens,
     )
 
+    mako_write(
+        'templates/vulkanLuaEnums.h.mako',
+        'common/include/vulkanLuaEnums.h',
+        vk_enums=all_enums,
+    )
+
 if __name__ == '__main__':
     main()
