@@ -25,6 +25,7 @@ from generator_vulkan import (
 
 from datetime import datetime
 from pathlib import Path
+from typing import TypeVar
 import copy
 import platform
 import re
@@ -33,6 +34,10 @@ import textwrap
 
 import mako.template
 import mako.exceptions
+
+
+
+Versioned = TypeVar('Versioned', Token, VkStruct)  # Enums aren't versioned.
 
 
 AUTO_GENERATED_HEADER = f"""
@@ -124,6 +129,25 @@ def wrap_in_if(condition: str, code: str, indent: str = '  ') -> str:
 
     # Indent everything by original indent amount.
     return textwrap.indent(if_statement, orig_indent)
+
+def without_older_versions(input: list[Versioned]) -> list[Versioned]:
+    """
+    Filter out older versions of Vulkan tokens or structs from a list.
+
+    Parameters:
+        input: List of tokens or structs.
+
+    Returns:
+        A list containing only newest versions of items from input.
+    """
+    newest_token_versions: dict[str, Versioned] = {}
+
+    for item in input:
+        newest_so_far: Versioned | None = newest_token_versions.get(item.name)
+        if newest_so_far is None or newest_so_far.version < item.version:
+            newest_token_versions[item.name] = item
+
+    return list(newest_token_versions.values())
 
 def args_to_str(
     args: list[Argument],
@@ -310,6 +334,7 @@ def main() -> None:
     """Generate all the files."""
     all_tokens: list[Token] = get_functions()
     enabled_tokens: list[Token] = [f for f in all_tokens if f.enabled]
+    newest_tokens: list[Token] = without_older_versions(all_tokens)
 
     # update_gl_ids('glIDs.h', 'common/include', gl_functions=enabled_tokens)
 
@@ -332,14 +357,14 @@ def main() -> None:
         'templates/vkX.def.mako',
         'layer/vkLayer.def',
         library_name='VkLayer_vulkan_GITS_recorder.dll',
-        vk_functions=all_tokens,
+        vk_functions=newest_tokens,
     )
 
     mako_write(
         'templates/vkX.def.mako',
         'interceptor/vkPlugin.def',
         library_name='vulkan-1.dll',
-        vk_functions=all_tokens,
+        vk_functions=newest_tokens,
     )
 
 if __name__ == '__main__':
