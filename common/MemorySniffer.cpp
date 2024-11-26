@@ -128,16 +128,16 @@ bool SetPagesProtection(PageMemoryProtection access, void* ptr, size_t size) {
 #ifdef GITS_PLATFORM_WINDOWS
   unsigned winAccess;
   switch (access) {
-  case READ_ONLY:
+  case PageMemoryProtection::READ_ONLY:
     winAccess = PAGE_READONLY;
     break;
-  case READ_WRITE:
+  case PageMemoryProtection::READ_WRITE:
     winAccess = PAGE_READWRITE;
     break;
-  case WRITE_ONLY:
+  case PageMemoryProtection::WRITE_ONLY:
     winAccess = PAGE_WRITECOPY;
     break;
-  case NONE:
+  case PageMemoryProtection::NONE:
     winAccess = PAGE_NOACCESS;
     break;
   default:
@@ -172,16 +172,16 @@ bool SetPagesProtection(PageMemoryProtection access, void* ptr, size_t size) {
 #else
   unsigned unixAccess;
   switch (access) {
-  case READ_ONLY:
+  case PageMemoryProtection::READ_ONLY:
     unixAccess = PROT_READ;
     break;
-  case READ_WRITE:
+  case PageMemoryProtection::READ_WRITE:
     unixAccess = PROT_READ | PROT_WRITE;
     break;
-  case WRITE_ONLY:
+  case PageMemoryProtection::WRITE_ONLY:
     unixAccess = PROT_WRITE;
     break;
-  case NONE:
+  case PageMemoryProtection::NONE:
     unixAccess = PROT_NONE;
     break;
   default:
@@ -431,7 +431,8 @@ bool MemorySniffer::Protect(PagedMemoryRegionHandle handle) {
     return false;
   }
 
-  const auto protectionAccess = _computeMode ? NONE : READ_ONLY;
+  const auto protectionAccess =
+      _computeMode ? PageMemoryProtection::NONE : PageMemoryProtection::READ_ONLY;
   bool result =
       SetPagesProtection(protectionAccess, (void*)region.BeginPage(), region.SizeOfPages());
   if (result == true) {
@@ -456,7 +457,8 @@ bool MemorySniffer::ReadProtect(PagedMemoryRegionHandle handle) {
     return false;
   }
 
-  bool result = SetPagesProtection(WRITE_ONLY, (void*)region.BeginPage(), region.SizeOfPages());
+  bool result = SetPagesProtection(PageMemoryProtection::WRITE_ONLY, (void*)region.BeginPage(),
+                                   region.SizeOfPages());
   if (result == true) {
     region._protected = true;
   }
@@ -501,7 +503,7 @@ bool MemorySniffer::UnProtect(PagedMemoryRegionHandle handle) {
     }
   }
   if (size > 0) {
-    bool result = SetPagesProtection(READ_WRITE, memPageBeginPtr, size);
+    bool result = SetPagesProtection(PageMemoryProtection::READ_WRITE, memPageBeginPtr, size);
     if (result == true) {
       region._protected = false;
     }
@@ -536,7 +538,7 @@ bool MemorySniffer::WriteCallback(void* addr, bool writeIntention = true) {
   }
   if (writeIntention) {
     if (!unveilWholeRegion) {
-      SetPagesProtection(READ_WRITE, addr);
+      SetPagesProtection(PageMemoryProtection::READ_WRITE, addr);
     }
     for (auto& handle : pageRegionHandles) {
       assert(handle);
@@ -545,8 +547,8 @@ bool MemorySniffer::WriteCallback(void* addr, bool writeIntention = true) {
       auto& region = **handle;
       region.TouchPageInternal(pageAddr);
       if (unveilWholeRegion) {
-        result =
-            SetPagesProtection(READ_WRITE, const_cast<void*>(region.BeginAddress()), region.Size());
+        result = SetPagesProtection(PageMemoryProtection::READ_WRITE,
+                                    const_cast<void*>(region.BeginAddress()), region.Size());
       }
       if (result) {
         region._protected = false;
@@ -554,14 +556,15 @@ bool MemorySniffer::WriteCallback(void* addr, bool writeIntention = true) {
     }
   } else {
     if (!unveilWholeRegion) {
-      SetPagesProtection(READ_ONLY, addr);
+      SetPagesProtection(PageMemoryProtection::READ_ONLY, addr);
     }
     for (auto& handle : pageRegionHandles) {
       assert(handle);
       assert(*handle);
       auto& region = **handle;
       if (unveilWholeRegion) {
-        SetPagesProtection(READ_ONLY, const_cast<void*>(region.BeginAddress()), region.Size());
+        SetPagesProtection(PageMemoryProtection::READ_ONLY,
+                           const_cast<void*>(region.BeginAddress()), region.Size());
       }
     }
   }
@@ -588,7 +591,7 @@ bool MemorySniffer::WriteRange(void* addr, size_t size) {
   bool result = false;
   //Unprotect range
   if (touchedMemRegionsHandles.size() > 0) {
-    SetPagesProtection(READ_WRITE, addr, size);
+    SetPagesProtection(PageMemoryProtection::READ_WRITE, addr, size);
     result = true;
   }
   //Mark overlapping regions as touched

@@ -38,7 +38,7 @@ unsigned GetVirtualMemoryPageSize();
 void* GetPage(void* addr);
 const void* GetPage(const void* addr);
 
-enum PageMemoryProtection {
+enum class PageMemoryProtection {
   READ_ONLY,
   READ_WRITE,
   WRITE_ONLY,

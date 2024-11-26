@@ -237,14 +237,16 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit(VkQueue queue,
         if (offset + size <= memoryState->mapping->sizeData.Value()) {
           if (Config::Get().vulkan.recorder.shadowMemory) {
             if (Config::Get().vulkan.recorder.memoryAccessDetection) {
-              SetPagesProtection(READ_WRITE, (char*)pointer + offset, (size_t)size);
+              SetPagesProtection(PageMemoryProtection::READ_WRITE, (char*)pointer + offset,
+                                 (size_t)size);
               if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
                 memoryState->shadowMemory->UpdateShadow(
                     (size_t)(offset + memoryState->mapping->offsetData.Value()), (size_t)size);
               } else {
                 memoryState->shadowMemory->UpdateShadow((size_t)offset, (size_t)size);
               }
-              SetPagesProtection(READ_ONLY, (char*)pointer + offset, (size_t)size);
+              SetPagesProtection(PageMemoryProtection::READ_ONLY, (char*)pointer + offset,
+                                 (size_t)size);
             } else {
               if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
                 memoryState->shadowMemory->UpdateShadow(
@@ -358,14 +360,16 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit2(VkQueue queue,
         if (offset + size <= memoryState->mapping->sizeData.Value()) {
           if (Config::Get().vulkan.recorder.shadowMemory) {
             if (Config::Get().vulkan.recorder.memoryAccessDetection) {
-              SetPagesProtection(READ_WRITE, (char*)pointer + offset, (size_t)size);
+              SetPagesProtection(PageMemoryProtection::READ_WRITE, (char*)pointer + offset,
+                                 (size_t)size);
               if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
                 memoryState->shadowMemory->UpdateShadow(
                     (size_t)(offset + memoryState->mapping->offsetData.Value()), (size_t)size);
               } else {
                 memoryState->shadowMemory->UpdateShadow((size_t)offset, (size_t)size);
               }
-              SetPagesProtection(READ_ONLY, (char*)pointer + offset, (size_t)size);
+              SetPagesProtection(PageMemoryProtection::READ_ONLY, (char*)pointer + offset,
+                                 (size_t)size);
             } else {
               if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
                 memoryState->shadowMemory->UpdateShadow(
