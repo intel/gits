@@ -450,5 +450,13 @@ def main() -> None:
         functions_by_level=split_functions_by_level(newest_tokens),
     )
 
+    mako_write(
+        'templates/vulkanIDswitch.h.mako',
+        'common/include/vulkanIDswitch.h',
+        make_id=make_id,
+        make_cname=make_cname,
+        vk_functions=enabled_tokens,
+    )
+
 if __name__ == '__main__':
     main()
