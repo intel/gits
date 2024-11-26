@@ -267,21 +267,57 @@ def make_ctype(type_name: str, wrap_type: str = '') -> str:
     if wrap_type:  # Wrap types override deduced Ctypes.
         return wrap_type
 
-    type_name = type_name.replace('const ', '')
-
-    if type_name in vulkan_uint32:
-        return 'Cuint32_t'
-    elif type_name in vulkan_uint64:
-        return 'Cuint64_t'
+    bare_type: str = undecorated_type(type_name)
 
     if '*' in type_name:
-        type_name = type_name.strip(' *')
-        if type_name in vulkan_structs:
-            return f'C{type_name}'
+        if bare_type in vulkan_structs:
+            return f'C{bare_type}'
         else:
-            return f'C{type_name}::CSArray'
+            return f'C{bare_type}::CSArray'
+    elif bare_type in vulkan_uint32:
+        return 'Cuint32_t'
+    elif bare_type in vulkan_uint64:
+        return 'Cuint64_t'
+    else:
+        return f'C{bare_type}'
 
-    return f'C{type_name}'
+def undecorated_type(type_name: str) -> str:
+    """Strip the type to its core, e.g., const float* to just float."""
+    return type_name.replace('const', '').strip('* ')
+
+def does_arg_need_ampersand(type_name: str, wrap_type: str = '') -> bool:
+    """Determine whether an Argument may ever need a '&' prefix in CCode."""
+    raw_type: str = undecorated_type(type_name)
+    num_ptr: int = type_name.count('*')
+
+    if raw_type in vulkan_union and num_ptr == 1:
+        return True
+    elif raw_type in vulkan_structs and not wrap_type.endswith('Array'):
+        return True
+    else:
+        return False
+
+def categorize_argument(type_name: str) -> str:
+    """
+    Categorize the type of an Argument.
+
+    The range of possible categories is defined in C++ code.
+    """
+    raw_type: str = undecorated_type(type_name)
+
+    if raw_type in opaque_handles:
+        return 'OPAQUE_HANDLE'
+    elif raw_type in vulkan_enums:
+        return 'ENUM'
+    elif raw_type in primitive_types:
+        return 'PRIMITIVE_TYPE'
+    elif raw_type in vulkan_structs:
+        return 'STRUCT'
+    elif 'void*' in type_name:
+        return 'OTHER'  # void* or void**
+    else:
+        print(f"Warning: type {type_name} is of unknown category.")
+        return 'OTHER'
 
 def make_func_type_flags(func_type: FuncType) -> str:
     """Convert FuncType into GITS' C++ representation string."""
@@ -513,7 +549,10 @@ def args_to_str(
         type: Type with array part removed.
         array: Array declaration (or empty string) extracted from name or type.
         wrap_params: wrap_params from generator (if present) or name (described above).
-        ctype: Name of the class wrapping this argument, e.g. `CVkDevice`.
+        ctype: Name of the class wrapping this argument, e.g. 'CVkDevice'.
+        category: One of categories defined in C++ code, e.g., 'PRIMITIVE_TYPE'.
+        num_ptr: Pointer count of type, e.g., 2 for 'int**'.
+        needs_ampersand: Whether it may ever need a '&' prefix in CCode.
 
     Parameters:
         args: Parameters of the Vulkan function.
@@ -546,6 +585,13 @@ def args_to_str(
         wrap_type: str = arg.wrap_type or ''
         wrap_params: str = arg.wrap_params or name
         ctype: str = make_ctype(type, wrap_type)
+        num_ptr: int = type.count('*')
+        needs_ampersand = str(does_arg_need_ampersand(type, wrap_type)).lower()
+
+        # Compute only when needed, to avoid bogus 'unknown category' warnings.
+        category: str = ''
+        if '{category}' in format_string:
+            category = categorize_argument(type)
 
         args_str += format_string.format(
             name=name,
@@ -553,6 +599,9 @@ def args_to_str(
             array=array,
             wrap_params=wrap_params,
             ctype=ctype,
+            category=category,
+            num_ptr=num_ptr,
+            needs_ampersand=needs_ampersand,
         )
 
     return args_str.rstrip(rstrip_string)
@@ -818,6 +867,20 @@ def main() -> None:
         make_func_type_flags=make_func_type_flags,
         make_inherit_type=make_inherit_type,
         vk_functions=enabled_tokens,
+    )
+
+    mako_write(
+        'templates/vulkanFunctions.cpp.mako',
+        'common/vulkanFunctions.cpp',
+        args_to_str=args_to_str,
+        make_id=make_id,
+        make_cname=make_cname,
+        make_ctype=make_ctype,
+        undecorated_type=undecorated_type,
+        make_func_type_flags=make_func_type_flags,
+        make_inherit_type=make_inherit_type,
+        vk_functions=enabled_tokens,
+        primitive_types=primitive_types,
     )
 
 if __name__ == '__main__':
