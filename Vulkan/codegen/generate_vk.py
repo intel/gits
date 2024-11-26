@@ -25,6 +25,7 @@ from generator_vulkan import (
 
 from collections import namedtuple
 from datetime import datetime
+from enum import auto, Enum, unique
 from pathlib import Path
 from typing import TypeVar
 import copy
@@ -641,6 +642,61 @@ def make_token_log_code(arguments: list[Argument]) -> str:
 
     return arguments_str
 
+@unique
+class FieldInitType(Enum):
+    """Type of field initialization code to generate."""
+
+    ARGUMENT_VALUE = auto()
+    ARGUMENT_ORIGINAL = auto()
+    STRUCT_STORAGE_VALUE = auto()
+
+def make_value_field_inits(struct: VkStruct, type_: FieldInitType) -> str:
+    """Return C++ field initialization code for Value() or Original() functions."""
+    result: str = ''
+
+    vkless_name: str = struct.name.removeprefix('Vk')
+    if type_ is FieldInitType.ARGUMENT_ORIGINAL:
+        vkless_name += 'Original'
+
+    for field in struct.fields:
+        arrayless_type, array = split_arrays_from_name(field.type)
+        array_length: str = array.strip('[]')
+
+        pointer_type: str
+        dereference: str
+        match type_:
+            case FieldInitType.ARGUMENT_VALUE:
+                pointer_type = f'{arrayless_type}*'
+                pointer_name = f'{field.name}Values'
+                dereference  = f'**_{field.name}'
+            case FieldInitType.ARGUMENT_ORIGINAL:
+                pointer_type = f'{arrayless_type}*'
+                pointer_name = f'{field.name}ValuesOriginal'
+                dereference  = f'_{field.name}->Original()'
+            case FieldInitType.STRUCT_STORAGE_VALUE:
+                pointer_type = 'auto'
+                pointer_name = f'{field.name}Values'
+                dereference  = f'**_{field.name}'
+
+        if array:
+            result += inspect.cleandoc(f'''
+            {pointer_type} {pointer_name} = {dereference};
+            if ({pointer_name} != nullptr) {{
+              for (int i = 0; i < {array_length}; i++)
+                _{vkless_name}->{field.name}[i] = {pointer_name}[i];
+            }} else {{
+              throw std::runtime_error(EXCEPTION_MESSAGE);
+            }}
+            ''') + '\n'
+        elif (type_ is FieldInitType.STRUCT_STORAGE_VALUE and
+                struct.pass_struct_storage and
+                field.name == 'pNext'):
+            result += f'_{vkless_name}->{field.name} = &_baseIn;\n'
+        else:
+            result += f'_{vkless_name}->{field.name} = {dereference};\n'
+
+    return result.strip()
+
 def split_bitfield_width_from_name(name: str) -> tuple[str, str]:
     """
     Separate a bit-field width annotation from variable or type name.
@@ -1217,6 +1273,8 @@ def main() -> None:
         make_cname=make_cname,
         make_ctype=make_ctype,
         undecorated_type=undecorated_type,
+        FieldInitType=FieldInitType,
+        make_value_field_inits=make_value_field_inits,
         split_arrays_from_name=split_arrays_from_name,
         fields_to_str=fields_to_str,
         vk_structs=enabled_structs,
@@ -1243,6 +1301,8 @@ def main() -> None:
         'templates/vulkanStructStorageAuto.cpp.mako',
         'common/vulkanStructStorageAuto.cpp',
         undecorated_type=undecorated_type,
+        FieldInitType=FieldInitType,
+        make_value_field_inits=make_value_field_inits,
         split_arrays_from_name=split_arrays_from_name,
         fields_to_str=fields_to_str,
         vk_structs=dependency_ordered(enabled_non_custom_structs, use_undecorated_types=True),

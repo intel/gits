@@ -29,6 +29,9 @@ ${AUTO_GENERATED_HEADER}
 
     inits_null: str = fields_to_str(struct.fields, '_{name} = nullptr;\n')
     inits_null = textwrap.indent(inits_null, ' ' * 4)
+
+    value_field_inits: str = make_value_field_inits(struct, FieldInitType.STRUCT_STORAGE_VALUE)
+    value_field_inits = textwrap.indent(value_field_inits, ' ' * 4).strip()
 %>\
   % if struct.constructor_wrap:
 // for constructor see vulkanStructStorageWrap.cpp
@@ -57,27 +60,7 @@ ${struct.name}* gits::Vulkan::${cnamedata}::Value() {
 
   % endif
     _${vkless_name} = std::make_unique<${struct.name}>();
-  % for field in struct.fields:
-## This terrible lack of indent prevents the indent from spilling over to the next line.
-<%
-    arrayless_type, array = split_arrays_from_name(field.type)
-    array_length: str = array.strip('[]')
-    values_name: str = f'{field.name}Values'
-%>\
-    % if array:
-    auto ${values_name} = **_${field.name};
-    if (${values_name} != nullptr) {
-      for (int i = 0; i < ${array_length}; i++)
-        _${vkless_name}->${field.name}[i] = ${values_name}[i];
-    } else {
-      throw std::runtime_error(EXCEPTION_MESSAGE);
-    }
-    %elif struct.pass_struct_storage and field.name == 'pNext':
-    _${vkless_name}->${field.name} = &_baseIn;
-    % else:
-    _${vkless_name}->${field.name} = **_${field.name};
-    % endif
-  % endfor
+    ${value_field_inits}
   }
   return _${vkless_name}.get();
 }

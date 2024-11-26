@@ -60,6 +60,11 @@ const char* gits::Vulkan::CVulkanObj<${type_name}, gits::Vulkan::${type_name}Typ
 
     field_inits_null: str = fields_to_str(struct.fields, '_{name} = nullptr;\n')
     field_inits_null = textwrap.indent(field_inits_null, ' ' * 4)
+
+    value_field_inits: str = make_value_field_inits(struct, FieldInitType.ARGUMENT_VALUE)
+    value_field_inits = textwrap.indent(value_field_inits, ' ' * 4).strip()
+    original_field_inits: str = make_value_field_inits(struct, FieldInitType.ARGUMENT_ORIGINAL)
+    original_field_inits = textwrap.indent(original_field_inits, ' ' * 4).strip()
 %>\
 
 gits::Vulkan::${cname}::${cname}(): ${inits}, _${vkless_name}(nullptr), _${vkless_name}Original(nullptr), _isNullPtr(false) {
@@ -84,25 +89,7 @@ ${struct.name}* gits::Vulkan::${cname}::Value() {
     return nullptr;
   if (_${vkless_name} == nullptr) {
     _${vkless_name} = std::make_unique<${struct.name}>();
-  % for field in struct.fields:
-## This terrible lack of indent prevents the indent from spilling over to the next line.
-<%
-    arrayless_type, array = split_arrays_from_name(field.type)
-    array_length: str = array.strip('[]')
-    values_name: str = f'{field.name}Values'
-%>\
-    % if array:
-    ${arrayless_type}* ${values_name} = **_${field.name};
-    if (${values_name} != nullptr) {
-      for (int i = 0; i < ${array_length}; i++)
-        _${vkless_name}->${field.name}[i] = ${values_name}[i];
-    } else {
-      throw std::runtime_error(EXCEPTION_MESSAGE);
-    }
-    % else:
-    _${vkless_name}->${field.name} = **_${field.name};
-    % endif
-  % endfor
+    ${value_field_inits}
   }
   return _${vkless_name}.get();
 }
@@ -112,25 +99,7 @@ gits::PtrConverter<${struct.name}> gits::Vulkan::${cname}::Original() {
     return PtrConverter<${struct.name}>(nullptr);
   if (_${vkless_name}Original == nullptr) {
     _${vkless_name}Original = std::make_unique<${struct.name}>();
-  % for field in struct.fields:
-## This terrible lack of indent prevents the indent from spilling over to the next line.
-<%
-    arrayless_type, array = split_arrays_from_name(field.type)
-    array_length: str = array.strip('[]')
-    original_name: str = f'{field.name}ValuesOriginal'
-%>\
-    % if array:
-    ${arrayless_type}* ${original_name} = _${field.name}->Original();
-    if (${original_name} != nullptr) {
-      for (int i = 0; i < ${array_length}; i++)
-        _${vkless_name}Original->${field.name}[i] = ${original_name}[i];
-    } else {
-      throw std::runtime_error(EXCEPTION_MESSAGE);
-    }
-    % else:
-    _${vkless_name}Original->${field.name} = _${field.name}->Original();
-    % endif
-  % endfor
+    ${original_field_inits}
   }
   return PtrConverter<${struct.name}>(_${vkless_name}Original.get());
 }
