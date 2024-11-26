@@ -8,10 +8,11 @@
 #
 # ===================== end_copyright_notice ==============================
 
-import enum
 from dataclasses import dataclass, field
 from enum import IntFlag
 from typing import Any
+import enum
+import operator
 
 # TODO: use `@verify(NAMED_FLAGS)` when Python 3.11 becomes available.
 class FuncType(IntFlag):
@@ -255,10 +256,14 @@ def VarDef(**kwargs):
         raise ValueError(f"VarDef is missing both value and type arguments: {kwargs}")
 
 def get_enums():
-    return _enums_dict.values()
+    enums = _enums_dict.values()
+    sorted_enums: list[VkEnum] = sorted(enums, key=operator.attrgetter('name'))
+    return sorted_enums
 
 def get_functions():
+    _functions_table.sort(key=operator.attrgetter('name', 'version'))
     return _functions_table
 
 def get_structs():
+    _structs_table.sort(key=operator.attrgetter('name', 'version'))
     return _structs_table
