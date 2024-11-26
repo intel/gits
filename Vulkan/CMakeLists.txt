@@ -10,11 +10,11 @@ set(Vulkan_SCRIPTS_DIR "${CMAKE_SOURCE_DIR}/Vulkan/codegen")
 
 add_custom_command(
   OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/Vulkan_codegen.stamp"
-  COMMAND ${Python3_EXECUTABLE} "${Vulkan_SCRIPTS_DIR}/gitsVulkanFuncsGenerator.py"
+  COMMAND ${Python3_EXECUTABLE} "${Vulkan_SCRIPTS_DIR}/generate_vk.py"
   COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_CURRENT_BINARY_DIR}/Vulkan_codegen.stamp"
   WORKING_DIRECTORY "${Vulkan_SCRIPTS_DIR}"
   DEPENDS
-    "${Vulkan_SCRIPTS_DIR}/gitsVulkanFuncsGenerator.py"
+    "${Vulkan_SCRIPTS_DIR}/generate_vk.py"
     "${Vulkan_SCRIPTS_DIR}/generator_vulkan.py"
 )
 add_custom_target(Vulkan_codegen DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/Vulkan_codegen.stamp")
