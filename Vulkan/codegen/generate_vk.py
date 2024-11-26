@@ -1035,5 +1035,12 @@ def main() -> None:
         vk_enums=all_enums,
     )
 
+    mako_write(
+        'templates/vulkanTracerAuto.h.mako',
+        'common/include/vulkanTracerAuto.h',
+        args_to_str=args_to_str,
+        vk_functions=newest_tokens,
+    )
+
 if __name__ == '__main__':
     main()
