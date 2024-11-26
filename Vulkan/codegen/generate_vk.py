@@ -362,46 +362,45 @@ def mako_write(inpath: str | Path, outpath: str | Path, **kwargs) -> int:
         return -1
     return 0
 
-def update_gl_ids(
-    source: str | Path,
+def update_token_ids(
+    id_file_path: str | Path,
     destination_subpath: str | Path,
-    gl_functions: dict[str, list[Token]]
+    functions: list[Token]
 ) -> None:
     """
-    Append new IDs (if any) to an ID file.
+    Append new token IDs (if any) to an ID file.
 
     Parameters:
-        source: Path to the Mako template file.
-        destination_subpath: Path to copy the file to; relative to `OpenGL/`.
-        gl_functions: Dict of Tokens to generate IDs from.
+        id_file_path: Path to the ID file.
+        destination_subpath: Path to copy the file to; relative to parent directory.
+        functions: List of tokens to generate IDs from.
     """
-    source = Path(source)
+    id_file_path = Path(id_file_path)
     destination_subpath = Path(destination_subpath)
 
-    gl_ids: set[str] = set()
-    with source.open(mode='r') as gl_ids_file:
-        for line in gl_ids_file:
+    existing_ids: set[str] = set()
+    with id_file_path.open(mode='r') as id_file:
+        for line in id_file:
             if line.startswith('ID'):
-                gl_id = line.strip(',\n')
-                gl_ids.add(gl_id)
+                existing_id: str = line.strip(',\n')
+                existing_ids.add(existing_id)
 
     new_ids = ''
-    for token_versions in gl_functions.values():
-        for token in token_versions:
-            gl_id = make_id(token.name, token.version)
-            if gl_id not in gl_ids:
-                new_ids += gl_id + ',\n'
+    for token in functions:
+        token_id: str = make_id(token.name, token.version)
+        if token_id not in existing_ids:
+            new_ids += token_id + ',\n'
 
     if not new_ids:
-        print(f"File {source} is up to date.")
+        print(f"File {id_file_path} is up to date.")
     else:
-        print(f"Adding new IDs to {source} ...")
-        with source.open(mode='a') as gl_ids_file:
-            gl_ids_file.write(new_ids)
+        print(f"Adding new IDs to {id_file_path} ...")
+        with id_file_path.open(mode='a') as id_file:
+            id_file.write(new_ids)
 
     destination = Path('..') / destination_subpath
-    print(f"Copying {source} to {destination_subpath} ...")
-    shutil.copy2(source, destination)
+    print(f"Copying {id_file_path} to {destination_subpath} ...")
+    shutil.copy2(id_file_path, destination)
 
 
 def main() -> None:
@@ -410,7 +409,7 @@ def main() -> None:
     enabled_tokens: list[Token] = [f for f in all_tokens if f.enabled]
     newest_tokens: list[Token] = without_older_versions(all_tokens)
 
-    # update_gl_ids('glIDs.h', 'common/include', gl_functions=enabled_tokens)
+    update_token_ids('vulkanIDs.h', 'common/include', functions=enabled_tokens)
 
     vulkan_layer_bin_path: str = ''
     match platform.system():
