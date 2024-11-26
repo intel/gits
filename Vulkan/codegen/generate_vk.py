@@ -1239,4 +1239,14 @@ def main() -> None:
         vulkan_mapped_types_nondisp=vulkan_mapped_types_nondisp,
     )
 
+    mako_write(
+        'templates/vulkanStructStorageAuto.cpp.mako',
+        'common/vulkanStructStorageAuto.cpp',
+        undecorated_type=undecorated_type,
+        split_arrays_from_name=split_arrays_from_name,
+        fields_to_str=fields_to_str,
+        vk_structs=dependency_ordered(enabled_non_custom_structs, use_undecorated_types=True),
+        primitive_types=primitive_types,
+    )
+
     main()
