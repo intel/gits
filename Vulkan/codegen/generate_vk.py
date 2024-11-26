@@ -883,5 +883,12 @@ def main() -> None:
         primitive_types=primitive_types,
     )
 
+    mako_write(
+        'templates/vulkanPrePostAuto.cpp.mako',
+        'interceptor/vulkanPrePostAuto.cpp',
+        args_to_str=args_to_str,
+        vk_functions=[f for f in newest_tokens if f.level != FuncLevel.PROTOTYPE],
+    )
+
 if __name__ == '__main__':
     main()
