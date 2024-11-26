@@ -9,7 +9,7 @@
 # ===================== end_copyright_notice ==============================
 
 from dataclasses import dataclass, field
-from enum import IntFlag
+from enum import Flag, IntFlag
 from typing import Any
 # TODO: for replace, remove it
 import dataclasses
@@ -36,6 +36,80 @@ class FuncType(IntFlag):
     BLIT = 1024
     DISPATCH = 2048
     NEXT_SUBPASS = 4096
+
+# TODO: Remove this WA when Python 3.10 and older are no longer supported.
+def upgrade_flag_class(flag_class) -> None:
+    def intflag_len(self: Flag):
+        """
+        Return the number of flags set in a value.
+
+        Since Python 3.11, Flag and IntFlag instances have length. For earlier
+        versions, set their __len__ to this.
+        """
+        return self.value.bit_count()
+
+
+    def intflag_iter(self: Flag):
+        """
+        Yield flags set in a value.
+
+        Since Python 3.11, Flag and IntFlag are iterable. For earlier versions,
+        set their __iter__ to this.
+        """
+        for member in self.__class__:
+            nonzero: bool = member.value != 0
+            power_of_two: bool = (member.value & (member.value - 1) == 0)
+            if nonzero and power_of_two and member in self:
+                yield member
+
+    # Add missing methods.
+    has_len: bool = hasattr(flag_class, '__len__')
+    has_iter: bool = hasattr(flag_class, '__iter__')
+
+    if not has_len:
+        print(f"Adding missing __len__ to {flag_class}")
+        flag_class.__len__ = intflag_len
+
+    if not has_iter:
+        print(f"Adding missing __iter__ to {flag_class}")
+        flag_class.__iter__ = intflag_iter
+
+    # If there was no iter nor len, we added them and we're done. If there were
+    # any, we didn't replace them; we will first check if they work correctly
+    # and only replace them if they are broken.
+    if not has_len and not has_iter:
+        return
+
+    # In Python 3.10 on Windows, there is IntFlag.__iter__ that iterates over
+    # variants in the flag class instead of iterating over bits set in a flag
+    # instance. This is useless to us, so we overwrite existing __iter__.
+    problem_detected: bool = False
+
+    class TestFlag(flag_class):
+        """For checking __iter__ on flag instances."""
+
+        NONE = 0
+        FOO = 1
+        BAR = 2
+        BAZ = 4
+
+    test_instance = TestFlag.FOO | TestFlag.BAZ
+    checklist = [TestFlag.FOO, TestFlag.BAZ]
+    try:
+        if len(test_instance) == 2:
+            for bit in test_instance:
+                checklist.remove(bit)
+        else:
+            problem_detected = True
+    except TypeError:
+        problem_detected = True
+    problem_detected = problem_detected or len(checklist) != 0
+    if problem_detected:
+        print(f"Patching problematic __iter__ and __len__ in {flag_class}")
+        flag_class.__iter__ = intflag_iter
+        flag_class.__len__ = intflag_len
+
+upgrade_flag_class(IntFlag)
 
 
 class FuncLevel(enum.Enum):  # Direct Enum import would clash with Enum function.
