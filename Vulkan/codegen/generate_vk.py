@@ -130,6 +130,29 @@ def wrap_in_if(condition: str, code: str, indent: str = '  ') -> str:
     # Indent everything by original indent amount.
     return textwrap.indent(if_statement, orig_indent)
 
+def split_functions_by_level(
+    vk_functions: list[Token],
+) -> dict[FuncLevel, list[Token]]:
+    """
+    Separate Vulkan functions (tokens) by their level.
+
+    Parameters:
+        vk_functions: List of Vulkan functions of various levels.
+
+    Returns:
+        A dict, mapping levels to lists of functions of each level.
+    """
+    functions_by_level: dict[FuncLevel, list[Token]] = {}
+    functions_by_level[FuncLevel.PROTOTYPE] = []
+    functions_by_level[FuncLevel.GLOBAL] = []
+    functions_by_level[FuncLevel.INSTANCE] = []
+    functions_by_level[FuncLevel.DEVICE] = []
+
+    for token in vk_functions:
+        functions_by_level[token.level].append(token)
+
+    return functions_by_level
+
 def without_older_versions(input: list[Versioned]) -> list[Versioned]:
     """
     Filter out older versions of Vulkan tokens or structs from a list.
@@ -149,6 +172,30 @@ def without_older_versions(input: list[Versioned]) -> list[Versioned]:
 
     return list(newest_token_versions.values())
 
+def split_arrays_from_name(name_with_array: str) -> tuple[str, str]:
+    """
+    Separate array declarations from variable or type name.
+
+    Parameters:
+        name_with_array: Name that may contain array declarations.
+
+    Returns:
+        Tuple of (name, array). Examples:
+
+        'baseAndCount [2]' -> ('baseAndCount', '[2]')
+        'matrix[3][4]' -> ('matrix', '[3][4]')
+    """
+    array_regex: str = r'\[[0-9_]+\]'
+    matches = re.findall(array_regex, name_with_array)
+    if matches:
+        name: str = re.sub(array_regex, '', name_with_array)
+        arrays: str = ''.join(matches)
+    else:
+        name: str = name_with_array
+        arrays: str = ''
+
+    return (name.strip(), arrays.strip())
+
 def args_to_str(
     args: list[Argument],
     format_string: str,
@@ -162,21 +209,21 @@ def args_to_str(
     concatenated and returned.
 
     Placeholder strings supported for formatting are:
-        name_with_array: Unedited name straight from generator, e.g. `baseAndCount [2]`.
-        name: Name with the array part removed.
-        type: Type straight from generator.
+        name: Name with array part removed.
+        type: Type with array part removed.
+        array: Array declaration (or empty string) extracted from name or type.
         wrap_params: wrap_params from generator (if present) or name (described above).
         ctype: Name of the class wrapping this argument, e.g. `CVkDevice`.
 
     Parameters:
         args: Parameters of the Vulkan function.
-        format_string: Format of one arg with {} in place of arg name.
+        format_string: Format of one argument, with placeholders like '{name}'.
         rstrip_string: String to rstrip the result with; defaults to ''.
 
     Returns:
         A C++ arguments string. Examples:
 
-            'foo, bar, baz'
+            'int foo, float bar[2], bool baz'
             '*_foo, *_bar, *_baz'
     """
 
@@ -184,19 +231,26 @@ def args_to_str(
 
     arg: Argument
     for arg in args:
-        name_with_array: str = arg.name
-        # Some arguments are arrays; remove square brackets from their names.
-        # For example, `baseAndCount[2]` -> `baseAndCount`.
-        name: str = re.sub(r'\[.+?\]', '', name_with_array).strip()
-        type: str = arg.type
+        # Argument name or type can contain an array declaration, like 'baseAndCount[2]'
+        # in OpenGL or 'VkFragmentShadingRateCombinerOpKHR[2]' in Vulkan.
+        name: str
+        name_array: str
+        type: str
+        type_array: str
+        name, name_array = split_arrays_from_name(arg.name)
+        type, type_array = split_arrays_from_name(arg.type)
+        assert not (name_array and type_array), (
+            "Argument name and type can't both have array declarations.")
+        array: str = name_array or type_array
+
         wrap_type: str = arg.wrap_type or ''
         wrap_params: str = arg.wrap_params or name
         ctype: str = make_ctype(type, wrap_type)
 
         args_str += format_string.format(
-            name_with_array=name_with_array,
             name=name,
             type=type,
+            array=array,
             wrap_params=wrap_params,
             ctype=ctype,
         )
@@ -225,6 +279,26 @@ def arg_call(
         args_str += '_recorder, '
 
     return f"({args_str.strip(', ')})"
+
+def driver_definition(token: Token) -> str:
+    """Return a Token's C++ definition for the driver file."""
+    ret_type: str = token.return_value.type
+    if ret_type == 'void':
+        ret_type = 'void_t'
+
+    custom = 'CUSTOM_' if token.custom_driver else ''
+
+    first_argument_name = ''
+    if token.level in (FuncLevel.INSTANCE, FuncLevel.DEVICE):
+        first_argument_name = f', {token.args[0].name}'
+
+    params: str = args_to_str(token.args, '{type} {name}{array}, ', ', ')
+    args: str = arg_call(token, add_retval=False)
+
+    macro_name = f'VK_{custom}{token.level.name}_LEVEL_FUNCTION'
+    macro_args = f'({ret_type}, {token.name}, ({params}), {args}{first_argument_name})'
+
+    return macro_name + macro_args
 
 def driver_call(token: Token) -> str:
     """
@@ -365,6 +439,15 @@ def main() -> None:
         'interceptor/vkPlugin.def',
         library_name='vulkan-1.dll',
         vk_functions=newest_tokens,
+    )
+
+    mako_write(
+        'templates/vulkanDriversAuto.inl.mako',
+        'common/include/vulkanDriversAuto.inl',
+        args_to_str=args_to_str,
+        arg_call=arg_call,
+        driver_definition=driver_definition,
+        functions_by_level=split_functions_by_level(newest_tokens),
     )
 
 if __name__ == '__main__':
