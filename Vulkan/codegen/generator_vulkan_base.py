@@ -14,6 +14,8 @@ from typing import Any
 import enum
 import operator
 
+
+
 # TODO: use `@verify(NAMED_FLAGS)` when Python 3.11 becomes available.
 class FuncType(IntFlag):
     """Flag for API call classification."""

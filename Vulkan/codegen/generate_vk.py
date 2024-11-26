@@ -47,17 +47,199 @@ AUTO_GENERATED_HEADER = f"""
 //
 """.strip('\n')
 
-egl_function_names = '''
-	eglGetError
-	(...)
-	eglWaitSyncANDROID
-'''.strip('\r\n')
 
-wgl_function_names = '''
-	wglCopyContext
-	(...)
-	wglCopyImageSubDataNV
-'''.strip('\r\n')
+# Vulkan types categorized
+# TODO: these are almost constants, should names be in ALL_CAPS?
+
+vulkan_flags: list[str] = ['VkFlags']
+vulkan_flags64: list[str] = ['VkFlags64']
+for enum in get_enums():
+    if 'FlagBits' in enum.name:
+        flags_name = enum.name.replace('FlagBits', 'Flags')
+        if enum.size == 64:
+            vulkan_flags64.append(flags_name)
+        else:
+            vulkan_flags.append(flags_name)
+
+# Flags that are used in functions or structs, but are not listed in generator.
+# We assume they are 32 bits wide.
+# TODO: Add them to the generator (as *FlagBits enums).
+vk_used_unknown_flags: list[str] = [
+    'VkAccelerationStructureMotionInfoFlagsNV',
+    'VkAccelerationStructureMotionInstanceFlagsNV',
+    'VkBufferViewCreateFlags',
+    'VkCommandPoolTrimFlags',
+    'VkDebugUtilsMessengerCallbackDataFlagsEXT',
+    'VkDebugUtilsMessengerCreateFlagsEXT',
+    'VkDescriptorPoolResetFlags',
+    'VkDescriptorUpdateTemplateCreateFlags',
+    'VkDeviceCreateFlags',
+    'VkDeviceMemoryReportFlagsEXT',
+    'VkDirectDriverLoadingFlagsLUNARG',
+    'VkDisplayModeCreateFlagsKHR',
+    'VkDisplaySurfaceCreateFlagsKHR',
+    'VkHeadlessSurfaceCreateFlagsEXT',
+    'VkIOSSurfaceCreateFlagsMVK',
+    'VkMacOSSurfaceCreateFlagsMVK',
+    'VkMemoryMapFlags',
+    'VkMemoryUnmapFlagsKHR',
+    'VkPipelineCoverageModulationStateCreateFlagsNV',
+    'VkPipelineCoverageReductionStateCreateFlagsNV',
+    'VkPipelineCoverageToColorStateCreateFlagsNV',
+    'VkPipelineDiscardRectangleStateCreateFlagsEXT',
+    'VkPipelineDynamicStateCreateFlags',
+    'VkPipelineInputAssemblyStateCreateFlags',
+    'VkPipelineMultisampleStateCreateFlags',
+    'VkPipelineRasterizationConservativeStateCreateFlagsEXT',
+    'VkPipelineRasterizationDepthClipStateCreateFlagsEXT',
+    'VkPipelineRasterizationStateCreateFlags',
+    'VkPipelineRasterizationStateStreamCreateFlagsEXT',
+    'VkPipelineTessellationStateCreateFlags',
+    'VkPipelineVertexInputStateCreateFlags',
+    'VkPipelineViewportStateCreateFlags',
+    'VkPipelineViewportSwizzleStateCreateFlagsNV',
+    'VkQueryPoolCreateFlags',
+    'VkValidationCacheCreateFlagsEXT',
+    'VkVideoBeginCodingFlagsKHR',
+    'VkVideoDecodeFlagsKHR',
+    'VkVideoEncodeFlagsKHR',
+    'VkVideoEncodeRateControlFlagsKHR',
+    'VkVideoEndCodingFlagsKHR',
+    'VkVideoSessionParametersCreateFlagsKHR',
+    'VkWaylandSurfaceCreateFlagsKHR',
+    'VkWin32SurfaceCreateFlagsKHR',
+    'VkXcbSurfaceCreateFlagsKHR',
+    'VkXlibSurfaceCreateFlagsKHR',
+]
+vulkan_flags += vk_used_unknown_flags
+
+vulkan_uint32: list[str] = vulkan_flags + [
+    'uint32_t',
+    'bool32_t',
+    'VkBool32',
+]
+vulkan_uint64: list[str] = vulkan_flags64 + [
+    'VkDeviceSize',
+    'VkDeviceAddress',
+]
+
+vulkan_union: list[str] = []
+for struct in get_structs():
+  if struct.type == 'union':
+    vulkan_union.append(struct.name.rstrip('_'))
+
+vulkan_other_primitives: list[str] = [
+    "bool",
+    "int32_t",
+    "int64_t",
+    "uint8_t",
+    "uint16_t",
+    "uint32_t",
+    "uint64_t",
+    "size_t",
+    "float",
+    "double",
+    "void*",
+    "void**",
+    "nullptr",
+]
+
+vulkan_enums: list[str] = [enum.name for enum in get_enums()]
+
+# TODO: Remove the rstrip once '_' is removed from struct names in generator data.
+vulkan_structs: list[str] = [struct.name.rstrip('_') for struct in get_structs()]
+
+primitive_types: list[str] = (
+    vulkan_enums
+    + vulkan_uint32
+    + vulkan_uint64
+    + vulkan_union
+    + vulkan_other_primitives
+)
+
+
+opaque_dispatchable_handles: list[str] = [
+    "VkInstance",
+    "VkPhysicalDevice",
+    "VkDevice",
+    "VkQueue",
+    "VkCommandBuffer",
+]
+
+opaque_nondispatchable_handles: list[str] = [
+    'VkSemaphore',
+    'VkFence',
+    'VkDeviceMemory',
+    'VkBuffer',
+    'VkImage',
+    'VkEvent',
+    'VkQueryPool',
+    'VkBufferView',
+    'VkImageView',
+    'VkShaderModule',
+    'VkPipelineCache',
+    'VkPipelineLayout',
+    'VkRenderPass',
+    'VkPipeline',
+    'VkDescriptorSetLayout',
+    'VkSampler',
+    'VkDescriptorPool',
+    'VkDescriptorSet',
+    'VkFramebuffer',
+    'VkCommandPool',
+    'VkSamplerYcbcrConversion',
+    'VkDescriptorUpdateTemplate',
+    'VkSurfaceKHR',
+    'VkSwapchainKHR',
+    'VkDisplayKHR',
+    'VkDisplayModeKHR',
+    'VkDebugReportCallbackEXT',
+    'VkObjectTableNVX',
+    'VkIndirectCommandsLayoutNVX',
+    'VkDebugUtilsMessengerEXT',
+    'VkValidationCacheEXT',
+    'VkPerformanceConfigurationINTEL',
+    'VkVideoSessionKHR',
+    'VkVideoSessionParametersKHR',
+    'VkAccelerationStructureKHR',
+    'VkDeferredOperationKHR',
+]
+
+other_opaque_handles: list[str] = [
+    "HANDLE",
+    "HWND",
+    "HINSTANCE",
+    "HMONITOR",
+]
+
+opaque_handles: list[str] = (
+    opaque_dispatchable_handles
+    + opaque_nondispatchable_handles
+    + other_opaque_handles
+)
+
+vulkan_mapped_types: list[str] = opaque_dispatchable_handles
+vulkan_mapped_types_nondisp: list[str] = opaque_nondispatchable_handles
+
+
+# Data for CCode
+
+types_needing_name_registration: list[str] = [
+    "StringArray",
+    "ByteStringArray",
+]
+
+types_not_needing_declaration: list[str] = (
+    [
+        "NullWrapper",
+        "VoidPtr",
+    ]
+    + vulkan_enums
+    + vulkan_uint32
+    + vulkan_uint64
+    + vulkan_other_primitives
+    + opaque_handles
+)
 
 
 def version_suffix(version: int) -> str:
