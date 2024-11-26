@@ -23,6 +23,7 @@ from generator_vulkan import (
     Enumerator,
 )
 
+from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
 from typing import TypeVar
@@ -242,6 +243,20 @@ types_not_needing_declaration: list[str] = (
     + opaque_handles
 )
 
+
+def decimal_str_to_hex(decimal_text: str) -> str:
+    """
+    Convert text from decimal to hexadecimal.
+
+    To match old generator behavior, negative numbers are in parentheses
+    (except for the minus sign). Example: '-13' -> '-(0xd)'
+    """
+    decimal_value: int = int(decimal_text)
+    absolute_value: int = abs(decimal_value)
+    if decimal_value < 0:
+        return f'-({hex(absolute_value)})'
+    else:
+        return hex(decimal_value)
 
 def version_suffix(version: int) -> str:
     """Return a version suffix (like '_V1'), empty for version 0."""
@@ -508,6 +523,29 @@ def make_struct_log_code(fields: list[Field]) -> str:
 
     return fields_str
 
+def split_bitfield_width_from_name(name: str) -> tuple[str, str]:
+    """
+    Separate a bit-field width annotation from variable or type name.
+
+    Parameters:
+        name: Name that may contain a bit-field width annotation.
+
+    Returns:
+        Tuple of (name, bit-field width). Examples:
+
+        'uint32_t:24' -> ('uint32_t', ':24')
+        'mask : 8' -> ('mask', ' : 8')
+    """
+    bitfield_width: str = ''
+
+    regex: str = r'[ \t]*:[ \t]*[0-9]+'
+    match = re.search(regex, name)
+    if match:
+        name = re.sub(regex, '', name)
+        bitfield_width = match.group(0)
+
+    return (name.strip(), bitfield_width)
+
 def split_arrays_from_name(name_with_array: str) -> tuple[str, str]:
     """
     Separate array declarations from variable or type name.
@@ -531,6 +569,53 @@ def split_arrays_from_name(name_with_array: str) -> tuple[str, str]:
         arrays: str = ''
 
     return (name.strip(), arrays.strip())
+
+NameTypeArrayBitfield = namedtuple(
+    "NameTypeArrayBitfield",
+    [
+        "name",
+        "type",
+        "array",
+        "bitfield",
+    ],
+)
+
+def split_name_type_array_bitfield(raw_name: str, raw_type: str) -> NameTypeArrayBitfield:
+    """
+    Return name and type separately from any possible bitfield width or array declarations.
+
+    Function argument's or struct field's name or type can contain an array
+    declaration, like 'VkFragmentShadingRateCombinerOpKHR[2]' in Vulkan or
+    'baseAndCount[2]' in OpenGL.
+
+    They can also contain a bitfield width annotation, like 'uint32_t:8'.
+
+    Extract an array declaration from name or type and return a named tuple of:
+        name: Name with array/bitfield parts removed.
+        type: Type with array/bitfield parts removed.
+        array: Array declaration (or empty string) extracted from name or type.
+        bitfield: Bit-field width annotation (or empty string) extracted from name or type.
+    """
+    name: str
+    type: str
+
+    name_array: str
+    type_array: str
+    name, name_array = split_arrays_from_name(raw_name)
+    type, type_array = split_arrays_from_name(raw_type)
+    assert not (name_array and type_array), (
+        "Argument name and type can't both have array declarations.")
+    array: str = name_array or type_array
+
+    name_bitfield: str
+    type_bitfield: str
+    name, name_bitfield = split_bitfield_width_from_name(name)
+    type, type_bitfield = split_bitfield_width_from_name(type)
+    assert not (name_bitfield and type_bitfield), (
+        "Argument name and type can't both have bit-field width annotations.")
+    bitfield: str = name_bitfield or type_bitfield
+
+    return NameTypeArrayBitfield(name, type, array, bitfield)
 
 def args_to_str(
     args: list[Argument],
@@ -570,17 +655,10 @@ def args_to_str(
 
     arg: Argument
     for arg in args:
-        # Argument name or type can contain an array declaration, like 'baseAndCount[2]'
-        # in OpenGL or 'VkFragmentShadingRateCombinerOpKHR[2]' in Vulkan.
-        name: str
-        name_array: str
-        type: str
-        type_array: str
-        name, name_array = split_arrays_from_name(arg.name)
-        type, type_array = split_arrays_from_name(arg.type)
-        assert not (name_array and type_array), (
-            "Argument name and type can't both have array declarations.")
-        array: str = name_array or type_array
+        c: NameTypeArrayBitfield = split_name_type_array_bitfield(arg.name, arg.type)
+        name, type, array, bitfield = c
+        if bitfield:
+            raise ValueError("Arguments can't have bitfield width specified.")
 
         wrap_type: str = arg.wrap_type or ''
         wrap_params: str = arg.wrap_params or name
@@ -605,6 +683,60 @@ def args_to_str(
         )
 
     return args_str.rstrip(rstrip_string)
+
+def fields_to_str(
+    fields: list[Field],
+    format_string: str,
+    rstrip_string: str = '',
+) -> str:
+    """
+    Format Vulkan struct fields as string.
+
+    Each field will have values calculated to replace the placeholders, then
+    `format_string.format(...)` will be run on it. Resulting strings will
+    all be concatenated, rstripped using the given value and returned.
+
+    Placeholder strings supported for formatting are:
+        name: Name with array/bitfield parts removed.
+        type: Type with array/bitfield parts removed.
+        array: Array declaration (or empty string) extracted from name or type.
+        bitfield: Bit-field width annotation (or empty string) extracted from name or type.
+        wrap_params: wrap_params from generator (if present) or name (described above).
+        ctype: Name of the class wrapping this argument, e.g. 'CVkDevice'.
+
+    Parameters:
+        fields: Fields of the Vulkan struct.
+        format_string: Format of one field with placeholders like `{name}`.
+        rstrip_string: String to rstrip the result with; defaults to ''.
+
+    Returns:
+        A C++ fields string. Examples:
+
+            'uint32_t foo:24, uint32_t bar:8, float baz[4]'
+            '_foo, _bar, _baz'
+    """
+
+    fields_str = ''
+
+    field: Field
+    for field in fields:
+        c: NameTypeArrayBitfield = split_name_type_array_bitfield(field.name, field.type)
+        name, type, array, bitfield = c
+
+        wrap_type: str = field.wrap_type or ''
+        wrap_params: str = field.wrap_params or name
+        ctype: str = make_ctype(type, wrap_type)
+
+        fields_str += format_string.format(
+            name=name,
+            type=type,
+            array=array,
+            bitfield=bitfield,
+            wrap_params=wrap_params,
+            ctype=ctype,
+        )
+
+    return fields_str.rstrip(rstrip_string)
 
 def arg_call(
     token: Token,
@@ -760,6 +892,7 @@ def main() -> None:
 
     all_structs: list[VkStruct] = get_structs()
     enabled_structs: list[VkStruct] = [s for s in all_structs if s.enabled]
+    newest_structs: list[VkStruct] = without_older_versions(all_structs)
 
     all_enums: list[VkEnum] = get_enums()
     # Enums are always enabled.
@@ -888,6 +1021,18 @@ def main() -> None:
         'interceptor/vulkanPrePostAuto.cpp',
         args_to_str=args_to_str,
         vk_functions=[f for f in newest_tokens if f.level != FuncLevel.PROTOTYPE],
+    )
+
+    mako_write(
+        'templates/vulkanHeader.h.mako',
+        'common/include/vulkanHeader.h',
+        decimal_str_to_hex=decimal_str_to_hex,
+        args_to_str=args_to_str,
+        fields_to_str=fields_to_str,
+        dependency_ordered=dependency_ordered,
+        vk_functions=newest_tokens,
+        vk_structs=newest_structs,
+        vk_enums=all_enums,
     )
 
 if __name__ == '__main__':
