@@ -769,5 +769,21 @@ def main() -> None:
         vulkan_mapped_types=vulkan_mapped_types,
     )
 
+    mako_write(
+        'templates/vulkanRecorderWrapperXAuto.h.mako',
+        'recorder/include/vulkanRecorderWrapperIfaceAuto.h',
+        args_to_str=args_to_str,
+        is_iface=True,
+        vk_functions=newest_tokens,
+    )
+
+    mako_write(
+        'templates/vulkanRecorderWrapperXAuto.h.mako',
+        'recorder/include/vulkanRecorderWrapperAuto.h',
+        args_to_str=args_to_str,
+        is_iface=False,
+        vk_functions=newest_tokens,
+    )
+
 if __name__ == '__main__':
     main()
