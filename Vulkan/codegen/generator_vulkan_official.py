@@ -14043,7 +14043,7 @@ var5=VarDef(name='format', type='VkPipelineExecutableStatisticFormatKHR'),
 var6=VarDef(name='value', type='VkPipelineExecutableStatisticValueKHR')
 )
 
-Struct(name='VkPipelineExecutableStatisticValueKHR_', type='union', enabled='False',
+Struct(name='VkPipelineExecutableStatisticValueKHR_', type='union', enabled=False,
 var1=VarDef(name='b32', type='VkBool32'),
 var2=VarDef(name='i64', type='int64_t'),
 var3=VarDef(name='u64', type='uint64_t'),
