@@ -1112,5 +1112,12 @@ def main() -> None:
         vk_enums=all_enums,
     )
 
+    mako_write(
+        'templates/vulkanCCodeArgumentsAuto.h.mako',
+        '../CCodeFiles/src/include/vulkanCCodeArgumentsAuto.h',
+        vulkan_mapped_types=vulkan_mapped_types,
+        vulkan_mapped_types_nondisp=vulkan_mapped_types_nondisp,
+    )
+
 if __name__ == '__main__':
     main()
