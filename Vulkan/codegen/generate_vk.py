@@ -785,5 +785,13 @@ def main() -> None:
         vk_functions=newest_tokens,
     )
 
+    mako_write(
+        'templates/vulkanRecorderWrapperAuto.cpp.mako',
+        'recorder/vulkanRecorderWrapperAuto.cpp',
+        args_to_str=args_to_str,
+        make_cname=make_cname,
+        vk_functions=newest_tokens,
+    )
+
 if __name__ == '__main__':
     main()
