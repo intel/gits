@@ -287,6 +287,21 @@ def make_func_type_flags(func_type: FuncType) -> str:
     """Convert FuncType into GITS' C++ representation string."""
     return ' | '.join(f'GITS_VULKAN_{flag.name}_APITYPE' for flag in func_type)
 
+def make_inherit_type(func_type: FuncType) -> str:
+    """Return name of the parent class for a function of this type."""
+    if len(func_type) > 1:
+        raise ValueError("Function has multiple types, unclear what to inherit from.")
+
+    match func_type:
+        case FuncType.CREATE_BUFFER:
+            return 'CBufferFunction'
+        case FuncType.CREATE_IMAGE:
+            return 'CImageFunction'
+        case FuncType.QUEUE_SUBMIT:
+            return 'CQueueSubmitFunction'
+        case _:
+            return 'CFunction'
+
 def get_indent(s: str) -> str:
     """Return the base indentation of given code as a string."""
     # In case of multiline strings, first line should be the least indented.
@@ -791,6 +806,18 @@ def main() -> None:
         args_to_str=args_to_str,
         make_cname=make_cname,
         vk_functions=newest_tokens,
+    )
+
+    mako_write(
+        'templates/vulkanFunctions.h.mako',
+        'common/include/vulkanFunctions.h',
+        args_to_str=args_to_str,
+        make_id=make_id,
+        make_cname=make_cname,
+        make_ctype=make_ctype,
+        make_func_type_flags=make_func_type_flags,
+        make_inherit_type=make_inherit_type,
+        vk_functions=enabled_tokens,
     )
 
 if __name__ == '__main__':
