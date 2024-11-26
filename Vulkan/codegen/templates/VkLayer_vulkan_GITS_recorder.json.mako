@@ -1,3 +1,10 @@
+## ===================== begin_copyright_notice ============================
+##
+## Copyright (C) 2023-2024 Intel Corporation
+##
+## SPDX-License-Identifier: MIT
+##
+## ===================== end_copyright_notice ==============================
 {
     "file_format_version" : "1.1.0",
     "layer" : {
