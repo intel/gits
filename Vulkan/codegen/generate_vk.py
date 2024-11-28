@@ -1309,4 +1309,6 @@ def main() -> None:
         primitive_types=primitive_types,
     )
 
+
+if __name__ == '__main__':
     main()
