@@ -157,6 +157,7 @@ typedef struct _cl_resource_barrier_descriptor_intel {
 #define CL_VERSION_2_0 1
 #define CL_VERSION_2_1 1
 #define CL_VERSION_2_2 1
+#define CL_VERSION_3_0 1
 
 /* cl_bool */
 #define CL_BLOCKING     CL_TRUE

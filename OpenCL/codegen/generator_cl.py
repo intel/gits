@@ -1652,6 +1652,13 @@ arg1=ArgDef(name='source_kernel',type='cl_kernel'),
 arg2=ArgDef(name='errcode_ret',type='cl_int*')
 )
 
+Function(name='clSetContextDestructorCallback',enabled=False,availableFrom='3.0',extension=False,type=Set,
+retV=RetDef(type='cl_int'),
+arg1=ArgDef(name='context',type='cl_context'),
+arg2=ArgDef(name='pfn_notify',type='CallbackContext'),
+arg3=ArgDef(name='user_data',type='void*',wrapType='CCLUserData')
+)
+
 # ------------------------------------------ enums ------------------------------------------
 
 Enum(name='CLResult', type='cl_int',

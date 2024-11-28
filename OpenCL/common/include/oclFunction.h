@@ -30,7 +30,8 @@ public:
     VERSION_1_2_DEPRECATED,
     VERSION_2_0,
     VERSION_2_1,
-    VERSION_2_2
+    VERSION_2_2,
+    VERSION_3_0,
   };
   enum TId {
     ID_FUNCTION_BEGIN = CToken::ID_OPENCL,
