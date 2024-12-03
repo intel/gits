@@ -774,6 +774,24 @@ inline void glTextureStorage3DEXT_SD(GLuint texture,
   }
 }
 
+inline void glTextureView_SD(GLuint texture,
+                             GLenum target,
+                             GLuint origtexture,
+                             GLenum internalformat,
+                             GLuint minlevel,
+                             GLuint numlevels,
+                             GLuint minlayer,
+                             GLuint numlayers,
+                             GLboolean recording = 0) {
+  bool isCaptureTex = !Config::Get().opengl.player.capture2DTexs.empty() ||
+                      !Config::Get().opengl.player.captureDraws2DTexs.empty();
+  if (Config::Get().IsRecorder() || (Config::Get().IsPlayer() && curctx::IsEs() && isCaptureTex)) {
+    SetTargetForTexture(target, texture);
+    // TODO: Should we copy over the orig texture state and modify things that changed?
+    //       This should be more accurate, but do we need state other than the target?
+  }
+}
+
 inline void glCopyTexImage1D_SD(GLenum target,
                                 GLint level,
                                 GLenum internalformat,

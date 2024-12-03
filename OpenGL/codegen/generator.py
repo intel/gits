@@ -20706,7 +20706,7 @@ function(name='glTextureSubImage3DEXT', enabled=True, function_type=FuncType.RES
     ],
 )
 
-function(name='glTextureView', enabled=True, function_type=FuncType.PARAM,
+function(name='glTextureView', enabled=True, function_type=FuncType.PARAM, state_track=True,
     return_value=ReturnValue(type='void'),
     args=[
         Argument(name='texture', type='GLuint', wrap_type='CGLTexture'),
