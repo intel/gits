@@ -6040,9 +6040,11 @@ void gits::OpenGL::CVariableFramebufferInfoGITS::createFramebuffer(
                                                     attInfo.cubeFace, attInfo.name, attInfo.level);
         break;
       default:
+        GLLog(ERR) << "Unsupported texture target: " << target;
         throw EOperationFailed(EXCEPTION_MESSAGE);
       }
     } else {
+      GLLog(ERR) << "Unsupported attachment type: " << attInfo.type;
       throw ENotSupported(EXCEPTION_MESSAGE);
     }
   }
