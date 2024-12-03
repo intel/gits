@@ -178,9 +178,9 @@ void gits::CBinaryResource::Read(CBinIStream& stream) {
   CBuffer buffer(_resource_hash);
   stream >> buffer;
   if (stream_older_than(GITS_TOKEN_COMPRESSION)) {
-    _data = std::move(CGits::Instance().ResourceManager().get(_resource_hash));
+    _data = CGits::Instance().ResourceManager().get(_resource_hash);
   } else {
-    _data = std::move(CGits::Instance().ResourceManager2().get(_resource_hash));
+    _data = CGits::Instance().ResourceManager2().get(_resource_hash);
   }
 }
 
