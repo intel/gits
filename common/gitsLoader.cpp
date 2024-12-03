@@ -73,7 +73,7 @@ CGitsLoader::CGitsLoader(const char* recorderWrapperFactoryName)
   auto pos_f = installationPath.find_first_not_of("\"' \t\r\n");
   auto pos_l = installationPath.find_last_not_of("\"' \t\r\n");
 
-  // If either is npos, both are neceserily npos.
+  // If either is npos, both are necessarily npos.
   if (pos_f == pos_l) {
     throw std::runtime_error("invalid InstallationPath");
   }
