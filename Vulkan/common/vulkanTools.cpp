@@ -3026,18 +3026,37 @@ std::unordered_map<uint32_t, uint32_t> matchCorrespondingMemoryTypeIndexes(
       SD()._physicaldevicestates[physicalDevice]->memoryPropertiesCurrent;
 
   std::unordered_map<uint32_t, uint32_t> memoryTypeIndexes;
+  uint32_t currentIndicesAssignedMask = 0;
 
   for (uint32_t i = 0; i < originalPlatformProperties.memoryTypeCount; i++) {
     // firstly look for the 1:1 match of property flags with the same index
     if (originalPlatformProperties.memoryTypes[i].propertyFlags ==
         currentPlatformProperties.memoryTypes[i].propertyFlags) {
-      memoryTypeIndexes.insert({i, i});
+      bool foundMapping = false;
+      if ((currentIndicesAssignedMask & (1 << i)) != 0) {
+        for (uint32_t j = i + 1; j < currentPlatformProperties.memoryTypeCount; j++) {
+          if (originalPlatformProperties.memoryTypes[i].propertyFlags ==
+              currentPlatformProperties.memoryTypes[j].propertyFlags) {
+            if ((currentIndicesAssignedMask & (1 << j)) == 0) {
+              memoryTypeIndexes.insert({i, j});
+              currentIndicesAssignedMask = 1 << j;
+              foundMapping = true;
+              break;
+            }
+          }
+        }
+      }
+      if (!foundMapping) {
+        memoryTypeIndexes.insert({i, i});
+        currentIndicesAssignedMask = 1 << i;
+      }
       continue;
     }
     // then look for a mapping in which the original flags are contained in the current ones with the same index
     if (isBitSet(currentPlatformProperties.memoryTypes[i].propertyFlags,
                  originalPlatformProperties.memoryTypes[i].propertyFlags)) {
       memoryTypeIndexes.insert({i, i});
+      currentIndicesAssignedMask = 1 << i;
       continue;
     }
     bool foundMapping = false;
@@ -3045,8 +3064,25 @@ std::unordered_map<uint32_t, uint32_t> matchCorrespondingMemoryTypeIndexes(
     for (uint32_t j = 0; j < currentPlatformProperties.memoryTypeCount; j++) {
       if (originalPlatformProperties.memoryTypes[i].propertyFlags ==
           currentPlatformProperties.memoryTypes[j].propertyFlags) {
-        memoryTypeIndexes.insert_or_assign(i, j);
-        foundMapping = true;
+        if ((currentIndicesAssignedMask & (1 << i)) != 0) {
+          for (uint32_t k = j + 1; k < currentPlatformProperties.memoryTypeCount; k++) {
+            if (originalPlatformProperties.memoryTypes[i].propertyFlags ==
+                currentPlatformProperties.memoryTypes[k].propertyFlags) {
+              if ((currentIndicesAssignedMask & (1 << k)) == 0) {
+                memoryTypeIndexes.insert({i, k});
+                currentIndicesAssignedMask = 1 << k;
+                foundMapping = true;
+                break;
+              }
+            }
+          }
+        }
+        if (!foundMapping) {
+          memoryTypeIndexes.insert({i, j});
+          currentIndicesAssignedMask = 1 << j;
+          foundMapping = true;
+        }
+        break;
       }
     }
     // then look for a mapping in which the original flags are contained in the current ones
@@ -3054,9 +3090,11 @@ std::unordered_map<uint32_t, uint32_t> matchCorrespondingMemoryTypeIndexes(
       for (uint32_t j = 0; j < currentPlatformProperties.memoryTypeCount; j++) {
         if (isBitSet(currentPlatformProperties.memoryTypes[j].propertyFlags,
                      originalPlatformProperties.memoryTypes[i].propertyFlags)) {
-          memoryTypeIndexes.insert_or_assign(i, j);
+          memoryTypeIndexes.insert({i, j});
+          currentIndicesAssignedMask = 1 << j;
           foundMapping = true;
         }
+        break;
       }
     }
   }
