@@ -484,8 +484,9 @@ inline void zeFenceQueryStatus_RUNWRAP(Cze_result_t& _return_value, Cze_fence_ha
   const auto originalRetValue = _return_value.Original();
   _return_value.Value() = drv.zeFenceQueryStatus(*_hFence);
   if (_return_value.Value() != ZE_RESULT_SUCCESS && originalRetValue == ZE_RESULT_SUCCESS) {
-    drv.inject.zeFenceHostSynchronize(*_hFence, UINT64_MAX);
+    _return_value.Value() = drv.inject.zeFenceHostSynchronize(*_hFence, UINT64_MAX);
   }
+  zeFenceQueryStatus_SD(*_return_value, *_hFence);
 }
 
 inline void zeDeviceGetSubDevices_RUNWRAP(Cze_result_t& _return_value,
@@ -713,6 +714,63 @@ inline void zeCommandListImmediateAppendCommandListsExp_RUNWRAP(
   zeCommandListImmediateAppendCommandListsExp_SD(*_return_value, *_hCommandListImmediate,
                                                  *_numCommandLists, *_phCommandLists,
                                                  *_hSignalEvent, *_numWaitEvents, *_phWaitEvents);
+}
+
+inline void zeCommandQueueSynchronize_RUNWRAP(Cze_result_t& _return_value,
+                                              Cze_command_queue_handle_t& _hCommandQueue,
+                                              Cuint64_t& _timeout) {
+  const auto originalRetValue = _return_value.Original();
+  _return_value.Value() = drv.zeCommandQueueSynchronize(*_hCommandQueue, *_timeout);
+  if (*_return_value != ZE_RESULT_SUCCESS && originalRetValue == ZE_RESULT_SUCCESS &&
+      *_timeout != UINT64_MAX) {
+    _return_value.Value() = drv.inject.zeCommandQueueSynchronize(*_hCommandQueue, UINT64_MAX);
+  }
+  zeCommandQueueSynchronize_SD(*_return_value, *_hCommandQueue, *_timeout);
+}
+
+inline void zeFenceHostSynchronize_RUNWRAP(Cze_result_t& _return_value,
+                                           Cze_fence_handle_t& _hFence,
+                                           Cuint64_t& _timeout) {
+  const auto originalRetValue = _return_value.Original();
+  _return_value.Value() = drv.zeFenceHostSynchronize(*_hFence, *_timeout);
+  if (*_return_value != ZE_RESULT_SUCCESS && originalRetValue == ZE_RESULT_SUCCESS &&
+      *_timeout != UINT64_MAX) {
+    _return_value.Value() = drv.inject.zeFenceHostSynchronize(*_hFence, UINT64_MAX);
+  }
+  zeFenceHostSynchronize_SD(*_return_value, *_hFence, *_timeout);
+}
+
+inline void zeCommandListHostSynchronize_RUNWRAP(Cze_result_t& _return_value,
+                                                 Cze_command_list_handle_t& _hCommandList,
+                                                 Cuint64_t& _timeout) {
+  const auto originalRetValue = _return_value.Original();
+  _return_value.Value() = drv.zeCommandListHostSynchronize(*_hCommandList, *_timeout);
+  if (*_return_value != ZE_RESULT_SUCCESS && originalRetValue == ZE_RESULT_SUCCESS &&
+      *_timeout != UINT64_MAX) {
+    _return_value.Value() = drv.inject.zeCommandListHostSynchronize(*_hCommandList, UINT64_MAX);
+  }
+  zeCommandListHostSynchronize_SD(*_return_value, *_hCommandList, *_timeout);
+}
+
+inline void zeEventHostSynchronize_RUNWRAP(Cze_result_t& _return_value,
+                                           Cze_event_handle_t& _hEvent,
+                                           Cuint64_t& _timeout) {
+  const auto originalRetValue = _return_value.Original();
+  _return_value.Value() = drv.zeEventHostSynchronize(*_hEvent, *_timeout);
+  if (*_return_value != ZE_RESULT_SUCCESS && originalRetValue == ZE_RESULT_SUCCESS &&
+      *_timeout != UINT64_MAX) {
+    _return_value.Value() = drv.inject.zeEventHostSynchronize(*_hEvent, UINT64_MAX);
+  }
+  zeEventHostSynchronize_SD(*_return_value, *_hEvent, *_timeout);
+}
+
+inline void zeEventQueryStatus_RUNWRAP(Cze_result_t& _return_value, Cze_event_handle_t& _hEvent) {
+  const auto originalRetValue = _return_value.Original();
+  _return_value.Value() = drv.zeEventQueryStatus(*_hEvent);
+  if (_return_value.Value() != ZE_RESULT_SUCCESS && originalRetValue == ZE_RESULT_SUCCESS) {
+    _return_value.Value() = drv.inject.zeEventHostSynchronize(*_hEvent, UINT64_MAX);
+  }
+  zeEventQueryStatus_SD(*_return_value, *_hEvent);
 }
 
 } // namespace l0

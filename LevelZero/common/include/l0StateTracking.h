@@ -787,7 +787,7 @@ inline void zeCommandQueueSynchronize_SD(ze_result_t return_value,
     for (const auto& cmdQueueListsInfo : cqState.queueSubmissionDumpState) {
       if (CheckWhetherDumpQueueSubmit(cfg, cmdQueueListsInfo->cmdQueueNumber)) {
         if (failedSyncAttempt) {
-          drv.inject.zeCommandQueueSynchronize(hCommandQueue, UINT64_MAX);
+          return_value = drv.inject.zeCommandQueueSynchronize(hCommandQueue, UINT64_MAX);
         }
         DumpQueueSubmissions(cfg, sd, cqState.queueSubmissionDumpState);
         break;
