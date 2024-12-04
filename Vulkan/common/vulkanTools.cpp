@@ -3028,73 +3028,144 @@ std::unordered_map<uint32_t, uint32_t> matchCorrespondingMemoryTypeIndexes(
   std::unordered_map<uint32_t, uint32_t> memoryTypeIndexes;
   uint32_t currentIndicesAssignedMask = 0;
 
+  // In case where new mem type is added with property flags of already existing mem type:
+  // assume that default non host visible mem type is a one with lowest index
+  // where default host visible mem type is the one with highest index.
+  const uint32_t selectLastPropertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+
+  // Select first forward loop.
   for (uint32_t i = 0; i < originalPlatformProperties.memoryTypeCount; i++) {
-    // firstly look for the 1:1 match of property flags with the same index
-    if (originalPlatformProperties.memoryTypes[i].propertyFlags ==
-        currentPlatformProperties.memoryTypes[i].propertyFlags) {
-      bool foundMapping = false;
-      if ((currentIndicesAssignedMask & (1 << i)) != 0) {
-        for (uint32_t j = i + 1; j < currentPlatformProperties.memoryTypeCount; j++) {
-          if (originalPlatformProperties.memoryTypes[i].propertyFlags ==
-              currentPlatformProperties.memoryTypes[j].propertyFlags) {
-            if ((currentIndicesAssignedMask & (1 << j)) == 0) {
-              memoryTypeIndexes.insert({i, j});
-              currentIndicesAssignedMask = 1 << j;
-              foundMapping = true;
+    if ((originalPlatformProperties.memoryTypes[i].propertyFlags & selectLastPropertyFlags) == 0) {
+      uint32_t selectedIndex = UINT32_MAX;
+      uint32_t firstIndex = UINT32_MAX;
+      // Look for the 1:1 match of property flags.
+      for (uint32_t j = 0; j < currentPlatformProperties.memoryTypeCount; j++) {
+        if (originalPlatformProperties.memoryTypes[i].propertyFlags ==
+            currentPlatformProperties.memoryTypes[j].propertyFlags) {
+          // Remember index to first compatible mem type.
+          if (firstIndex == UINT32_MAX) {
+            firstIndex = j;
+          }
+          // Check if current mem type was already assigned to other original mem type.
+          // If yes, try to find different mem type with same property flags.
+          if ((currentIndicesAssignedMask & (1 << j)) == 0) {
+            selectedIndex = j;
+            break;
+          }
+        }
+      }
+
+      // Then look for a mapping in which the original flags are contained in the current ones.
+      if ((selectedIndex == UINT32_MAX) && (firstIndex == UINT32_MAX)) {
+        for (uint32_t j = 0; j < currentPlatformProperties.memoryTypeCount; j++) {
+          if (isBitSet(currentPlatformProperties.memoryTypes[j].propertyFlags,
+                       originalPlatformProperties.memoryTypes[i].propertyFlags)) {
+            // Found current mem type that contains properties of original mem type, but there can be more current mem types with same property flags.
+            // If current mem type has select first policy then use this mem type for mapping.
+            // If current mem type has select last policy then use last mem type with same property flags.
+            if ((currentPlatformProperties.memoryTypes[j].propertyFlags &
+                 selectLastPropertyFlags) != 0) {
+              // Current property uses select last policy.
+              firstIndex = j;
+              selectedIndex = j;
+              for (uint32_t k = j + 1; k < currentPlatformProperties.memoryTypeCount; k++) {
+                if (currentPlatformProperties.memoryTypes[j].propertyFlags ==
+                    currentPlatformProperties.memoryTypes[k].propertyFlags) {
+                  firstIndex = k;
+                  selectedIndex = k;
+                } else {
+                  break;
+                }
+              }
+              break;
+            } else {
+              // Current property uses select first policy.
+              firstIndex = j;
+              selectedIndex = j;
               break;
             }
           }
         }
       }
-      if (!foundMapping) {
-        memoryTypeIndexes.insert({i, i});
-        currentIndicesAssignedMask = 1 << i;
+
+      // All mem types with given property flags were already assigned to other original mem types.
+      // In such case use first encountered mem type with same property flags.
+      if ((firstIndex != UINT32_MAX) && (selectedIndex == UINT32_MAX)) {
+        selectedIndex = firstIndex;
       }
-      continue;
+
+      if (selectedIndex != UINT32_MAX) {
+        // Mapping was found for this mem type in current mem types.
+        memoryTypeIndexes.insert({i, selectedIndex});
+        currentIndicesAssignedMask = 1 << selectedIndex;
+      }
     }
-    // then look for a mapping in which the original flags are contained in the current ones with the same index
-    if (isBitSet(currentPlatformProperties.memoryTypes[i].propertyFlags,
-                 originalPlatformProperties.memoryTypes[i].propertyFlags)) {
-      memoryTypeIndexes.insert({i, i});
-      currentIndicesAssignedMask = 1 << i;
-      continue;
-    }
-    bool foundMapping = false;
-    // look for the 1:1 match of property flags
-    for (uint32_t j = 0; j < currentPlatformProperties.memoryTypeCount; j++) {
-      if (originalPlatformProperties.memoryTypes[i].propertyFlags ==
-          currentPlatformProperties.memoryTypes[j].propertyFlags) {
-        if ((currentIndicesAssignedMask & (1 << i)) != 0) {
-          for (uint32_t k = j + 1; k < currentPlatformProperties.memoryTypeCount; k++) {
-            if (originalPlatformProperties.memoryTypes[i].propertyFlags ==
-                currentPlatformProperties.memoryTypes[k].propertyFlags) {
-              if ((currentIndicesAssignedMask & (1 << k)) == 0) {
-                memoryTypeIndexes.insert({i, k});
-                currentIndicesAssignedMask = 1 << k;
-                foundMapping = true;
-                break;
+  }
+
+  // Select last backward loop.
+  for (int32_t i = originalPlatformProperties.memoryTypeCount - 1; i >= 0; i--) {
+    if ((originalPlatformProperties.memoryTypes[i].propertyFlags & selectLastPropertyFlags) != 0) {
+      uint32_t selectedIndex = UINT32_MAX;
+      uint32_t firstIndex = UINT32_MAX;
+      // Look for the 1:1 match of property flags.
+      for (int32_t j = currentPlatformProperties.memoryTypeCount - 1; j >= 0; j--) {
+        if (originalPlatformProperties.memoryTypes[i].propertyFlags ==
+            currentPlatformProperties.memoryTypes[j].propertyFlags) {
+          if (firstIndex == UINT32_MAX) {
+            // Remember index to first compatible mem type.
+            firstIndex = static_cast<uint32_t>(j);
+          }
+          if ((currentIndicesAssignedMask & (1 << j)) == 0) {
+            // Check if current mem type was already assigned to other original mem type.
+            // If yes, try to find different mem type with same property flags.
+            selectedIndex = static_cast<uint32_t>(j);
+            break;
+          }
+        }
+      }
+      // Then look for a mapping in which the original flags are contained in the current ones.
+      if ((selectedIndex == UINT32_MAX) && (firstIndex == UINT32_MAX)) {
+        for (uint32_t j = 0; j < currentPlatformProperties.memoryTypeCount; j++) {
+          if (isBitSet(currentPlatformProperties.memoryTypes[j].propertyFlags,
+                       originalPlatformProperties.memoryTypes[i].propertyFlags)) {
+            // Found current mem type that contains properties of original mem type, but there can be more current mem types with same property flags.
+            // If current mem type has select first policy then use this mem type for mapping.
+            // If current mem type has select last policy then use last mem type with same property flags.
+            if ((currentPlatformProperties.memoryTypes[j].propertyFlags &
+                 selectLastPropertyFlags) != 0) {
+              // Current property uses select last policy.
+              firstIndex = j;
+              selectedIndex = j;
+              for (uint32_t k = j + 1; k < currentPlatformProperties.memoryTypeCount; k++) {
+                if (currentPlatformProperties.memoryTypes[j].propertyFlags ==
+                    currentPlatformProperties.memoryTypes[k].propertyFlags) {
+                  firstIndex = k;
+                  selectedIndex = k;
+                } else {
+                  break;
+                }
               }
+              break;
+            } else {
+              // Current property uses select first policy.
+              firstIndex = j;
+              selectedIndex = j;
+              break;
             }
           }
         }
-        if (!foundMapping) {
-          memoryTypeIndexes.insert({i, j});
-          currentIndicesAssignedMask = 1 << j;
-          foundMapping = true;
-        }
-        break;
       }
-    }
-    // then look for a mapping in which the original flags are contained in the current ones
-    if (!foundMapping) {
-      for (uint32_t j = 0; j < currentPlatformProperties.memoryTypeCount; j++) {
-        if (isBitSet(currentPlatformProperties.memoryTypes[j].propertyFlags,
-                     originalPlatformProperties.memoryTypes[i].propertyFlags)) {
-          memoryTypeIndexes.insert({i, j});
-          currentIndicesAssignedMask = 1 << j;
-          foundMapping = true;
-        }
-        break;
+
+      // All mem types with given property flags were already assigned to other original mem types.
+      // In such case use first encountered mem type with same property flags.
+      if ((firstIndex != UINT32_MAX) && (selectedIndex == UINT32_MAX)) {
+        selectedIndex = firstIndex;
+      }
+
+      if (selectedIndex != UINT32_MAX) {
+        // Mapping was found for this mem type in current mem types.
+        memoryTypeIndexes.insert({i, selectedIndex});
+        currentIndicesAssignedMask |= 1 << selectedIndex;
       }
     }
   }
