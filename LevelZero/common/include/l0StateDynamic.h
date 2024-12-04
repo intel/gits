@@ -28,6 +28,8 @@
 
 namespace gits {
 namespace l0 {
+class CUSMPtr;
+
 struct CState {
   CState() = default;
   virtual ~CState() = default;
@@ -548,6 +550,30 @@ struct GlobalSubmissionTracker {
   void SyncCheck();
 };
 
+class DeallocationHandler {
+  struct DeallocationInfo {
+    CUSMPtr* usmPtrResource = nullptr;
+    ze_event_handle_t hSignalEvent = nullptr;
+
+    DeallocationInfo() = default;
+    DeallocationInfo(CUSMPtr* usmPtr, ze_event_handle_t hSignalEvent)
+        : usmPtrResource(usmPtr), hSignalEvent(hSignalEvent) {}
+
+    void Deallocate();
+  };
+
+  std::unordered_map<ze_command_list_handle_t, std::vector<DeallocationInfo>>
+      playbackResourcesInExecution;
+
+public:
+  void AddToResourcesInExecution(const ze_command_list_handle_t& hCommandList,
+                                 CUSMPtr& ptr,
+                                 const ze_event_handle_t& signalEvent);
+  void DeallocateExecutedResources(const ze_command_list_handle_t& hCommandList);
+  void DeallocateResourcesSynchedByEvent(const ze_event_handle_t& hEvent);
+  void RemoveUseOfEvent(const ze_event_handle_t& hEvent);
+};
+
 class CStateDynamic {
 private:
   CStateDynamic() = default;
@@ -570,6 +596,7 @@ private:
 public:
   LayoutBuilder layoutBuilder;
   GlobalSubmissionTracker gst;
+  DeallocationHandler deallocationHandler;
   std::unordered_set<ze_module_handle_t> scanningGlobalPointersMode;
   bool nomenclatureCounting = true;
   bool stateRestoreFinished = false;

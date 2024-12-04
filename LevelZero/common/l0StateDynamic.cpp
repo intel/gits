@@ -16,6 +16,7 @@
 #include "l0StateDynamic.h"
 #include "l0Header.h"
 #include "l0Tools.h"
+#include "l0Arguments.h"
 #include <string>
 
 #ifdef WITH_OCLOC
@@ -656,6 +657,58 @@ QueueSubmissionSnapshot::QueueSubmissionSnapshot(
   cmdListNumber = cmdListNum;
   hContext = cmdListContext;
   readyArgVector = argumentsVector;
+}
+
+void DeallocationHandler::AddToResourcesInExecution(const ze_command_list_handle_t& hCommandList,
+                                                    CUSMPtr& ptr,
+                                                    const ze_event_handle_t& signalEvent) {
+  if (ptr.IsMappedPointer()) {
+    return;
+  }
+  auto& cmdListState = SD().Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
+  if (cmdListState.isImmediate && cmdListState.isSync) {
+    ptr.FreeHostMemory();
+    return;
+  }
+  playbackResourcesInExecution[hCommandList].emplace_back(&ptr, signalEvent);
+}
+
+void DeallocationHandler::DeallocateExecutedResources(
+    const ze_command_list_handle_t& hCommandList) {
+  for (auto& resource : playbackResourcesInExecution[hCommandList]) {
+    resource.Deallocate();
+  }
+  playbackResourcesInExecution[hCommandList].clear();
+}
+
+void DeallocationHandler::DeallocateResourcesSynchedByEvent(const ze_event_handle_t& hEvent) {
+  for (auto& cmdListState : SD().Map<CCommandListState>()) {
+    if (cmdListState.second->isImmediate) {
+      std::vector<DeallocationInfo> notSynchedResources;
+      for (auto& resource : playbackResourcesInExecution[cmdListState.first]) {
+        if (resource.hSignalEvent == hEvent) {
+          resource.Deallocate();
+        } else {
+          notSynchedResources.push_back(resource);
+        }
+      }
+      playbackResourcesInExecution[cmdListState.first] = std::move(notSynchedResources);
+    }
+  }
+}
+
+void DeallocationHandler::RemoveUseOfEvent(const ze_event_handle_t& hEvent) {
+  for (auto& cmdListResources : playbackResourcesInExecution) {
+    for (auto& resource : cmdListResources.second) {
+      if (resource.hSignalEvent == hEvent) {
+        resource.hSignalEvent = nullptr;
+      }
+    }
+  }
+}
+
+void DeallocationHandler::DeallocationInfo::Deallocate() {
+  usmPtrResource->FreeHostMemory();
 }
 } // namespace l0
 } // namespace gits

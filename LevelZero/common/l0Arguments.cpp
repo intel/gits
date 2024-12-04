@@ -192,6 +192,11 @@ void CUSMPtr::Write(CCodeOStream& stream) const {
   stream << "(void*)" << stream.VariableName(ScopeKey());
 }
 
+void CUSMPtr::FreeHostMemory() {
+  _temp_buffer.clear();
+  _resource.Deallocate();
+}
+
 /***************** CProgramSource ******************/
 uint32_t CProgramSource::_programSourceIdx = 0;
 uint32_t CProgramSource::_binarySourceIdx = 0;

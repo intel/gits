@@ -477,6 +477,7 @@ public:
   PointerProxy operator*() {
     return Value();
   }
+  void FreeHostMemory();
 };
 
 template <class T, class WRAP_T>

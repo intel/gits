@@ -716,6 +716,125 @@ inline void zeCommandListImmediateAppendCommandListsExp_RUNWRAP(
                                                  *_hSignalEvent, *_numWaitEvents, *_phWaitEvents);
 }
 
+inline void zeCommandListAppendMemoryCopy_RUNWRAP(Cze_result_t& _return_value,
+                                                  Cze_command_list_handle_t& _hCommandList,
+                                                  CUSMPtr& _dstptr,
+                                                  CUSMPtr& _srcptr,
+                                                  Csize_t& _size,
+                                                  Cze_event_handle_t& _hSignalEvent,
+                                                  Cuint32_t& _numWaitEvents,
+                                                  Cze_event_handle_t::CSArray& _phWaitEvents) {
+  _return_value.Value() = drv.zeCommandListAppendMemoryCopy(
+      *_hCommandList, *_dstptr, *_srcptr, *_size, *_hSignalEvent, *_numWaitEvents, *_phWaitEvents);
+  zeCommandListAppendMemoryCopy_SD(*_return_value, *_hCommandList, *_dstptr, *_srcptr, *_size,
+                                   *_hSignalEvent, *_numWaitEvents, *_phWaitEvents);
+  auto& sd = SD();
+  sd.deallocationHandler.AddToResourcesInExecution(*_hCommandList, _dstptr, *_hSignalEvent);
+  sd.deallocationHandler.AddToResourcesInExecution(*_hCommandList, _srcptr, *_hSignalEvent);
+}
+
+inline void zeCommandListAppendMemoryCopyFromContext_RUNWRAP(
+    Cze_result_t& _return_value,
+    Cze_command_list_handle_t& _hCommandList,
+    CUSMPtr& _dstptr,
+    Cze_context_handle_t& _hContextSrc,
+    CUSMPtr& _srcptr,
+    Csize_t& _size,
+    Cze_event_handle_t& _hSignalEvent,
+    Cuint32_t& _numWaitEvents,
+    Cze_event_handle_t::CSArray& _phWaitEvents) {
+  _return_value.Value() = drv.zeCommandListAppendMemoryCopyFromContext(
+      *_hCommandList, *_dstptr, *_hContextSrc, *_srcptr, *_size, *_hSignalEvent, *_numWaitEvents,
+      *_phWaitEvents);
+  zeCommandListAppendMemoryCopyFromContext_SD(*_return_value, *_hCommandList, *_dstptr,
+                                              *_hContextSrc, *_srcptr, *_size, *_hSignalEvent,
+                                              *_numWaitEvents, *_phWaitEvents);
+  auto& sd = SD();
+  sd.deallocationHandler.AddToResourcesInExecution(*_hCommandList, _dstptr, *_hSignalEvent);
+  sd.deallocationHandler.AddToResourcesInExecution(*_hCommandList, _srcptr, *_hSignalEvent);
+}
+
+inline void zeCommandListAppendMemoryCopyRegion_V1_RUNWRAP(
+    Cze_result_t& _return_value,
+    Cze_command_list_handle_t& _hCommandList,
+    CUSMPtr& _dstptr,
+    Cze_copy_region_t::CSArray& _dstRegion,
+    Cuint32_t& _dstPitch,
+    Cuint32_t& _dstSlicePitch,
+    CUSMPtr& _srcptr,
+    Cze_copy_region_t::CSArray& _srcRegion,
+    Cuint32_t& _srcPitch,
+    Cuint32_t& _srcSlicePitch,
+    Cze_event_handle_t& _hSignalEvent,
+    Cuint32_t& _numWaitEvents,
+    Cze_event_handle_t::CSArray& _phWaitEvents) {
+  _return_value.Value() = drv.zeCommandListAppendMemoryCopyRegion(
+      *_hCommandList, *_dstptr, *_dstRegion, *_dstPitch, *_dstSlicePitch, *_srcptr, *_srcRegion,
+      *_srcPitch, *_srcSlicePitch, *_hSignalEvent, *_numWaitEvents, *_phWaitEvents);
+  zeCommandListAppendMemoryCopyRegion_SD(
+      *_return_value, *_hCommandList, *_dstptr, *_dstRegion, *_dstPitch, *_dstSlicePitch, *_srcptr,
+      *_srcRegion, *_srcPitch, *_srcSlicePitch, *_hSignalEvent, *_numWaitEvents, *_phWaitEvents);
+  auto& sd = SD();
+  sd.deallocationHandler.AddToResourcesInExecution(*_hCommandList, _dstptr, *_hSignalEvent);
+  sd.deallocationHandler.AddToResourcesInExecution(*_hCommandList, _srcptr, *_hSignalEvent);
+}
+
+inline void zeCommandListAppendImageCopyToMemory_RUNWRAP(
+    Cze_result_t& _return_value,
+    Cze_command_list_handle_t& _hCommandList,
+    CUSMPtr& _dstptr,
+    Cze_image_handle_t& _hSrcImage,
+    Cze_image_region_t::CSArray& _pSrcRegion,
+    Cze_event_handle_t& _hSignalEvent,
+    Cuint32_t& _numWaitEvents,
+    Cze_event_handle_t::CSArray& _phWaitEvents) {
+  _return_value.Value() =
+      drv.zeCommandListAppendImageCopyToMemory(*_hCommandList, *_dstptr, *_hSrcImage, *_pSrcRegion,
+                                               *_hSignalEvent, *_numWaitEvents, *_phWaitEvents);
+  zeCommandListAppendImageCopyToMemory_SD(*_return_value, *_hCommandList, *_dstptr, *_hSrcImage,
+                                          *_pSrcRegion, *_hSignalEvent, *_numWaitEvents,
+                                          *_phWaitEvents);
+  auto& sd = SD();
+  sd.deallocationHandler.AddToResourcesInExecution(*_hCommandList, _dstptr, *_hSignalEvent);
+}
+
+inline void zeCommandListAppendMemoryFill_V1_RUNWRAP(Cze_result_t& _return_value,
+                                                     Cze_command_list_handle_t& _hCommandList,
+                                                     CUSMPtr& _ptr,
+                                                     CBinaryData& _pattern,
+                                                     Csize_t& _pattern_size,
+                                                     Csize_t& _size,
+                                                     Cze_event_handle_t& _hSignalEvent,
+                                                     Cuint32_t& _numWaitEvents,
+                                                     Cze_event_handle_t::CSArray& _phWaitEvents) {
+  _return_value.Value() =
+      drv.zeCommandListAppendMemoryFill(*_hCommandList, *_ptr, *_pattern, *_pattern_size, *_size,
+                                        *_hSignalEvent, *_numWaitEvents, *_phWaitEvents);
+  zeCommandListAppendMemoryFill_SD(*_return_value, *_hCommandList, *_ptr, *_pattern, *_pattern_size,
+                                   *_size, *_hSignalEvent, *_numWaitEvents, *_phWaitEvents);
+  auto& sd = SD();
+  sd.deallocationHandler.AddToResourcesInExecution(*_hCommandList, _ptr, *_hSignalEvent);
+}
+
+inline void zeCommandListAppendImageCopyFromMemory_RUNWRAP(
+    Cze_result_t& _return_value,
+    Cze_command_list_handle_t& _hCommandList,
+    Cze_image_handle_t& _hDstImage,
+    CUSMPtr& _srcptr,
+    Cze_image_region_t::CSArray& _pDstRegion,
+    Cze_event_handle_t& _hSignalEvent,
+    Cuint32_t& _numWaitEvents,
+    Cze_event_handle_t::CSArray& _phWaitEvents) {
+  _return_value.Value() = drv.zeCommandListAppendImageCopyFromMemory(
+      *_hCommandList, *_hDstImage, *_srcptr, *_pDstRegion, *_hSignalEvent, *_numWaitEvents,
+      *_phWaitEvents);
+  zeCommandListAppendImageCopyFromMemory_SD(*_return_value, *_hCommandList, *_hDstImage, *_srcptr,
+                                            *_pDstRegion, *_hSignalEvent, *_numWaitEvents,
+                                            *_phWaitEvents);
+  auto& sd = SD();
+  sd.deallocationHandler.AddToResourcesInExecution(*_hCommandList, _srcptr, *_hSignalEvent);
+}
+
 inline void zeCommandQueueSynchronize_RUNWRAP(Cze_result_t& _return_value,
                                               Cze_command_queue_handle_t& _hCommandQueue,
                                               Cuint64_t& _timeout) {
@@ -750,6 +869,10 @@ inline void zeCommandListHostSynchronize_RUNWRAP(Cze_result_t& _return_value,
     _return_value.Value() = drv.inject.zeCommandListHostSynchronize(*_hCommandList, UINT64_MAX);
   }
   zeCommandListHostSynchronize_SD(*_return_value, *_hCommandList, *_timeout);
+  if (*_return_value == ZE_RESULT_SUCCESS) {
+    auto& sd = SD();
+    sd.deallocationHandler.DeallocateExecutedResources(*_hCommandList);
+  }
 }
 
 inline void zeEventHostSynchronize_RUNWRAP(Cze_result_t& _return_value,
@@ -762,6 +885,10 @@ inline void zeEventHostSynchronize_RUNWRAP(Cze_result_t& _return_value,
     _return_value.Value() = drv.inject.zeEventHostSynchronize(*_hEvent, UINT64_MAX);
   }
   zeEventHostSynchronize_SD(*_return_value, *_hEvent, *_timeout);
+  if (_return_value.Value() == ZE_RESULT_SUCCESS) {
+    auto& sd = SD();
+    sd.deallocationHandler.DeallocateResourcesSynchedByEvent(*_hEvent);
+  }
 }
 
 inline void zeEventQueryStatus_RUNWRAP(Cze_result_t& _return_value, Cze_event_handle_t& _hEvent) {
@@ -771,7 +898,35 @@ inline void zeEventQueryStatus_RUNWRAP(Cze_result_t& _return_value, Cze_event_ha
     _return_value.Value() = drv.inject.zeEventHostSynchronize(*_hEvent, UINT64_MAX);
   }
   zeEventQueryStatus_SD(*_return_value, *_hEvent);
+  if (_return_value.Value() == ZE_RESULT_SUCCESS) {
+    auto& sd = SD();
+    sd.deallocationHandler.DeallocateResourcesSynchedByEvent(*_hEvent);
+  }
 }
 
+inline void zeCommandListDestroy_RUNWRAP(Cze_result_t& _return_value,
+                                         Cze_command_list_handle_t& _hCommandList) {
+  _return_value.Value() = drv.zeCommandListDestroy(*_hCommandList);
+  zeCommandListDestroy_SD(*_return_value, *_hCommandList);
+  auto& sd = SD();
+  sd.deallocationHandler.DeallocateExecutedResources(*_hCommandList);
+  _hCommandList.RemoveMapping();
+}
+
+inline void zeCommandListReset_RUNWRAP(Cze_result_t& _return_value,
+                                       Cze_command_list_handle_t& _hCommandList) {
+  _return_value.Value() = drv.zeCommandListReset(*_hCommandList);
+  zeCommandListReset_SD(*_return_value, *_hCommandList);
+  auto& sd = SD();
+  sd.deallocationHandler.DeallocateExecutedResources(*_hCommandList);
+}
+
+inline void zeEventDestroy_RUNWRAP(Cze_result_t& _return_value, Cze_event_handle_t& _hEvent) {
+  _return_value.Value() = drv.zeEventDestroy(*_hEvent);
+  zeEventDestroy_SD(*_return_value, *_hEvent);
+  auto& sd = SD();
+  sd.deallocationHandler.RemoveUseOfEvent(*_hEvent);
+  _hEvent.RemoveMapping();
+}
 } // namespace l0
 } // namespace gits

@@ -281,6 +281,7 @@ public:
   }
 
   hash_t GetResourceHash() const;
+  void Deallocate();
 
 protected:
   hash_t _resource_hash;

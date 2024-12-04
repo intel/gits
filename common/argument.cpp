@@ -205,6 +205,9 @@ gits::hash_t gits::CBinaryResource::GetResourceHash() const {
   return _resource_hash;
 }
 
+void gits::CBinaryResource::Deallocate() {
+  _data.clear();
+}
 /* ******************************** C H A R ****************************** */
 
 const char* gits::Cchar::NAME = "char";
