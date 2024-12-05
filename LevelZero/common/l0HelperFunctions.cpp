@@ -62,6 +62,7 @@ void gits::l0::CGitsL0MemoryUpdate::Run() {
                                         _resource.Data().Size(), nullptr, 0, nullptr);
     }
     TranslatePointerOffsets(sd, pointerToData, allocState.indirectPointersOffsets, true);
+    _resource.Deallocate();
   }
 }
 
@@ -115,6 +116,7 @@ void gits::l0::CGitsL0MemoryRestore::Run() {
       std::memcpy((char*)GetOffsetPointer(allocInfo.first, allocInfo.second), _resource.Data(),
                   _resource.Data().Size());
     }
+    _resource.Deallocate();
   }
 }
 
