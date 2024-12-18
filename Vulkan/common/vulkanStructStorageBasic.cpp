@@ -686,6 +686,7 @@ gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHRData::
   }
 
   SetDataSize(buildRangeInfo.primitiveCount * sizeof(VkAccelerationStructureInstanceKHR));
+  _offset = buildRangeInfo.primitiveOffset;
 
   _sType = accelerationstructuregeometryinstancesdatakhr->sType;
   _pNext =
@@ -748,7 +749,7 @@ gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHRData::
           createTemporaryBuffer(device, _dataSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                                 commandBufferState.get(), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
       auto srcBuffer = _bufferDeviceAddress._buffer;
-      auto srcOffset = _bufferDeviceAddress._offset;
+      auto srcOffset = _bufferDeviceAddress._offset + buildRangeInfo.primitiveOffset;
 
       if (_arrayOfPointers) {
         // Submit a compute shader which copies structures

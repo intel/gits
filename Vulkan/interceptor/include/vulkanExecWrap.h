@@ -579,7 +579,7 @@ VkResult recExecWrap_vkCreateDevice(VkPhysicalDevice physicalDevice,
     // EXT
     {
       auto bufferDeviceAddressFeatures =
-          (VkPhysicalDeviceBufferDeviceAddressFeaturesEXT*)CGitsPluginVulkan::RecorderWrapper()
+          (VkPhysicalDeviceBufferDeviceAddressFeatures*)CGitsPluginVulkan::RecorderWrapper()
               .GetPNextStructure(
                   pCreateInfo->pNext,
                   VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES_EXT);
@@ -1359,5 +1359,60 @@ void recExecWrap_vkGetPhysicalDeviceFeatures2KHR(VkPhysicalDevice physicalDevice
       CGitsPluginVulkan::Configuration().vulkan.shared.suppressPhysicalDeviceFeatures,
       &pFeatures->features);
 }
+
+namespace {
+
+void UpdateUsage(VkImageUsageFlags& usageFlags) {
+  usageFlags |= static_cast<VkImageUsageFlags>(
+      CGitsPluginVulkan::Configuration().vulkan.recorder.addImageUsageFlags);
+
+  if (CGitsPluginVulkan::Configuration().common.recorder.enabled) {
+    if ((CGitsPluginVulkan::Configuration().vulkan.recorder.mode != TVulkanRecorderMode::ALL) &&
+        (CGitsPluginVulkan::Configuration().vulkan.recorder.crossPlatformStateRestoration.images)) {
+      usageFlags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    }
+  }
+}
+
+} // namespace
+
+VkResult recExecWrap_vkGetPhysicalDeviceImageFormatProperties(
+    VkPhysicalDevice physicalDevice,
+    VkFormat format,
+    VkImageType type,
+    VkImageTiling tiling,
+    VkImageUsageFlags usage,
+    VkImageCreateFlags flags,
+    VkImageFormatProperties* pImageFormatProperties) {
+  UpdateUsage(usage);
+
+  return CGitsPluginVulkan::RecorderWrapper().Drivers().vkGetPhysicalDeviceImageFormatProperties(
+      physicalDevice, format, type, tiling, usage, flags, pImageFormatProperties);
+}
+
+VkResult recExecWrap_vkGetPhysicalDeviceImageFormatProperties2(
+    VkPhysicalDevice physicalDevice,
+    const VkPhysicalDeviceImageFormatInfo2* pImageFormatInfo,
+    VkImageFormatProperties2* pImageFormatProperties) {
+  auto formatInfo = *pImageFormatInfo;
+  UpdateUsage(formatInfo.usage);
+
+  return CGitsPluginVulkan::RecorderWrapper().Drivers().vkGetPhysicalDeviceImageFormatProperties2(
+      physicalDevice, &formatInfo, pImageFormatProperties);
+}
+
+VkResult recExecWrap_vkGetPhysicalDeviceImageFormatProperties2KHR(
+    VkPhysicalDevice physicalDevice,
+    const VkPhysicalDeviceImageFormatInfo2* pImageFormatInfo,
+    VkImageFormatProperties2* pImageFormatProperties) {
+  auto formatInfo = *pImageFormatInfo;
+  UpdateUsage(formatInfo.usage);
+
+  return CGitsPluginVulkan::RecorderWrapper()
+      .Drivers()
+      .vkGetPhysicalDeviceImageFormatProperties2KHR(physicalDevice, &formatInfo,
+                                                    pImageFormatProperties);
+}
+
 } // namespace Vulkan
 } // namespace gits

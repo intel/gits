@@ -113,26 +113,39 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkShaderEXT)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkMicromapEXT)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkOpticalFlowSessionNV)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkPrivateDataSlot)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkIndirectCommandsLayoutEXT)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkIndirectExecutionSetEXT)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkCudaFunctionNV)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkCudaModuleNV)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkPipelineBinaryKHR)
 
-#define VK_LOD_CLAMP_NONE                1000.0f
-#define VK_REMAINING_MIP_LEVELS          (~0U)
-#define VK_REMAINING_ARRAY_LAYERS        (~0U)
-#define VK_WHOLE_SIZE                    (~0ULL)
-#define VK_ATTACHMENT_UNUSED             (~0U)
-#define VK_TRUE                          1
-#define VK_FALSE                         0
-#define VK_QUEUE_FAMILY_IGNORED          (~0U)
-#define VK_SUBPASS_EXTERNAL              (~0U)
-#define VK_MAX_PHYSICAL_DEVICE_NAME_SIZE 256
-#define VK_UUID_SIZE                     16
-#define VK_MAX_MEMORY_TYPES              32
-#define VK_MAX_MEMORY_HEAPS              16
-#define VK_MAX_EXTENSION_NAME_SIZE       256
-#define VK_MAX_DESCRIPTION_SIZE          256
-#define VK_MAX_DRIVER_NAME_SIZE          256
-#define VK_MAX_DRIVER_INFO_SIZE          256
-
-#define VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO_INTEL static_cast<VkStructureType>(808600001)
+#define VK_MAX_PHYSICAL_DEVICE_NAME_SIZE          256
+#define VK_UUID_SIZE                              16
+#define VK_LUID_SIZE                              8
+#define VK_MAX_EXTENSION_NAME_SIZE                256
+#define VK_MAX_DESCRIPTION_SIZE                   256
+#define VK_MAX_MEMORY_TYPES                       32
+#define VK_MAX_MEMORY_HEAPS                       16
+#define VK_LOD_CLAMP_NONE                         1000.0f
+#define VK_REMAINING_MIP_LEVELS                   (~0U)
+#define VK_REMAINING_ARRAY_LAYERS                 (~0U)
+#define VK_REMAINING_3D_SLICES_EXT                (~0U)
+#define VK_WHOLE_SIZE                             (~0ULL)
+#define VK_ATTACHMENT_UNUSED                      (~0U)
+#define VK_TRUE                                   1
+#define VK_FALSE                                  0
+#define VK_QUEUE_FAMILY_IGNORED                   (~0U)
+#define VK_QUEUE_FAMILY_EXTERNAL                  (~1U)
+#define VK_QUEUE_FAMILY_FOREIGN_EXT               (~2U)
+#define VK_SUBPASS_EXTERNAL                       (~0U)
+#define VK_MAX_DEVICE_GROUP_SIZE                  32
+#define VK_MAX_DRIVER_NAME_SIZE                   256
+#define VK_MAX_DRIVER_INFO_SIZE                   256
+#define VK_SHADER_UNUSED_KHR                      (~0U)
+#define VK_MAX_GLOBAL_PRIORITY_SIZE_KHR           16
+#define VK_MAX_SHADER_MODULE_IDENTIFIER_SIZE_EXT  32
+#define VK_MAX_PIPELINE_BINARY_KEY_SIZE_KHR       32
+#define VK_MAX_VIDEO_AV1_REFERENCES_PER_FRAME_KHR 7
 
 #define VK_VERSION_1_1 1
 // Vulkan 1.1 version number
@@ -151,10 +164,6 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkPrivateDataSlot)
 
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkSamplerYcbcrConversion)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDescriptorUpdateTemplate)
-
-#define VK_MAX_DEVICE_GROUP_SIZE 32
-#define VK_LUID_SIZE             8
-#define VK_QUEUE_FAMILY_EXTERNAL (~0U - 1)
 
 typedef VkFlags VkInstanceCreateFlags;
 typedef VkFlags VkFormatFeatureFlags;
@@ -348,6 +357,11 @@ typedef VkFlags VkPresentScalingFlagsEXT;
 typedef VkFlags VkPresentGravityFlagsEXT;
 typedef VkFlags VkMicromapCreateFlagsEXT;
 typedef VkFlags VkHostImageCopyFlagsEXT;
+typedef VkFlags64 VkBufferUsageFlags2KHR;
+typedef VkFlags VkFrameBoundaryFlagsEXT;
+typedef VkFlags VkIndirectCommandsLayoutUsageFlagsEXT;
+typedef VkFlags VkIndirectCommandsInputModeFlagsEXT;
+typedef VkFlags64 VkPipelineCreateFlags2KHR;
 
 #define VK_KHR_surface 1
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkSurfaceKHR)
@@ -864,7 +878,6 @@ typedef void* VkRemoteAddressNV;
 #define VK_EXT_queue_family_foreign                1
 #define VK_EXT_QUEUE_FAMILY_FOREIGN_SPEC_VERSION   1
 #define VK_EXT_QUEUE_FAMILY_FOREIGN_EXTENSION_NAME "VK_EXT_queue_family_foreign"
-#define VK_QUEUE_FAMILY_FOREIGN_EXT                (~0U - 2)
 
 #define VK_EXT_debug_utils                1
 #define VK_EXT_DEBUG_UTILS_SPEC_VERSION   1

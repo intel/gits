@@ -743,7 +743,7 @@ struct CDescriptorSetState : public UniqueResourceHandle {
       std::shared_ptr<CBufferViewState> bufferViewStateStore;
 
       std::vector<unsigned char> inlineUniformBlockData;
-      std::shared_ptr<CVkWriteDescriptorSetAccelerationStructureKHRData> accelerationStructureWrite;
+      std::shared_ptr<CAccelerationStructureKHRState> accelerationStructureStateStore;
     };
 
     VkDescriptorType descriptorType;

@@ -2111,65 +2111,15 @@ inline void vkBuildAccelerationStructuresKHR_WRAPRUN(
   auto buildRangeInfos = *ppBuildRangeInfos;
   std::vector<std::vector<char>> scratchSpace(*infoCount);
 
-  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+  {
+    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
 
-  for (uint32_t i = 0; i < *infoCount; ++i) {
-    // Prepare scratch space if stream doesn't contain it
-    if (buildInfos[i].scratchData.hostAddress != nullptr) {
-      continue;
-    }
+    for (uint32_t i = 0; i < *infoCount; ++i) {
+      // Prepare scratch space if stream doesn't contain it
+      if (buildInfos[i].scratchData.hostAddress != nullptr) {
+        continue;
+      }
 
-    std::vector<uint32_t> primitivesCount(buildInfos[i].geometryCount);
-
-    for (uint32_t g = 0; g < buildInfos[i].geometryCount; ++g) {
-      primitivesCount[g] = buildRangeInfos[i][g].primitiveCount;
-    }
-
-    VkAccelerationStructureBuildSizesInfoKHR buildSizesInfoKHR = {
-        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, // VkStructureType    sType;
-        nullptr,                                                       // const void       * pNext;
-        0, // VkDeviceSize       accelerationStructureSize;
-        0, // VkDeviceSize       updateScratchSize;
-        0  // VkDeviceSize       buildScratchSize;
-    };
-    drvVk.vkGetAccelerationStructureBuildSizesKHR(
-        *device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_HOST_KHR, &buildInfos[i],
-        primitivesCount.data(), &buildSizesInfoKHR);
-
-    if (buildInfos[i].mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR) {
-      scratchSpace[i].resize(buildSizesInfoKHR.buildScratchSize);
-    } else if (buildInfos[i].mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR) {
-      scratchSpace[i].resize(buildSizesInfoKHR.updateScratchSize);
-    }
-
-    buildInfos[i].scratchData.hostAddress = scratchSpace[i].data();
-  }
-
-  return_value.Assign(drvVk.vkBuildAccelerationStructuresKHR(
-      *device, *deferredOperation, *infoCount, buildInfos, buildRangeInfos));
-}
-
-inline void vkCmdBuildAccelerationStructuresKHR_WRAPRUN(
-    CVkCommandBuffer& commandBuffer,
-    Cuint32_t& infoCount,
-    CVkAccelerationStructureBuildGeometryInfoKHRArray& pInfos,
-    CVkAccelerationStructureBuildRangeInfoKHRArrayOfArrays& ppBuildRangeInfos) {
-  auto buildInfos = *pInfos;
-  auto buildRangeInfos = *ppBuildRangeInfos;
-
-  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
-
-  auto commandBufferState = SD()._commandbufferstates[*commandBuffer];
-  VkDevice device = commandBufferState->commandPoolStateStore->deviceStateStore->deviceHandle;
-
-  // Prepare scratch space if stream doesn't contain it
-  for (uint32_t i = 0; i < *infoCount; ++i) {
-    if (buildInfos[i].scratchData.deviceAddress != 0) {
-      continue;
-    }
-
-    VkDeviceSize size = 0;
-    {
       std::vector<uint32_t> primitivesCount(buildInfos[i].geometryCount);
 
       for (uint32_t g = 0; g < buildInfos[i].geometryCount; ++g) {
@@ -2184,22 +2134,75 @@ inline void vkCmdBuildAccelerationStructuresKHR_WRAPRUN(
           0        // VkDeviceSize       buildScratchSize;
       };
       drvVk.vkGetAccelerationStructureBuildSizesKHR(
-          device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfos[i],
+          *device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_HOST_KHR, &buildInfos[i],
           primitivesCount.data(), &buildSizesInfoKHR);
 
       if (buildInfos[i].mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR) {
-        size = buildSizesInfoKHR.buildScratchSize;
+        scratchSpace[i].resize(buildSizesInfoKHR.buildScratchSize);
       } else if (buildInfos[i].mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR) {
-        size = buildSizesInfoKHR.updateScratchSize;
+        scratchSpace[i].resize(buildSizesInfoKHR.updateScratchSize);
       }
-    }
 
-    auto memoryBufferPair = createTemporaryBuffer(device, size,
-                                                  VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-                                                      VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-                                                  commandBufferState.get());
-    buildInfos[i].scratchData.deviceAddress =
-        getBufferDeviceAddress(device, memoryBufferPair.second->bufferHandle);
+      buildInfos[i].scratchData.hostAddress = scratchSpace[i].data();
+    }
+  }
+
+  return_value.Assign(drvVk.vkBuildAccelerationStructuresKHR(
+      *device, *deferredOperation, *infoCount, buildInfos, buildRangeInfos));
+}
+
+inline void vkCmdBuildAccelerationStructuresKHR_WRAPRUN(
+    CVkCommandBuffer& commandBuffer,
+    Cuint32_t& infoCount,
+    CVkAccelerationStructureBuildGeometryInfoKHRArray& pInfos,
+    CVkAccelerationStructureBuildRangeInfoKHRArrayOfArrays& ppBuildRangeInfos) {
+  auto buildInfos = *pInfos;
+  auto buildRangeInfos = *ppBuildRangeInfos;
+  {
+    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
+    auto commandBufferState = SD()._commandbufferstates[*commandBuffer];
+    VkDevice device = commandBufferState->commandPoolStateStore->deviceStateStore->deviceHandle;
+
+    // Prepare scratch space if stream doesn't contain it
+    for (uint32_t i = 0; i < *infoCount; ++i) {
+      if (buildInfos[i].scratchData.deviceAddress != 0) {
+        continue;
+      }
+
+      VkDeviceSize size = 0;
+      {
+        std::vector<uint32_t> primitivesCount(buildInfos[i].geometryCount);
+
+        for (uint32_t g = 0; g < buildInfos[i].geometryCount; ++g) {
+          primitivesCount[g] = buildRangeInfos[i][g].primitiveCount;
+        }
+
+        VkAccelerationStructureBuildSizesInfoKHR buildSizesInfoKHR = {
+            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, // VkStructureType    sType;
+            nullptr, // const void       * pNext;
+            0,       // VkDeviceSize       accelerationStructureSize;
+            0,       // VkDeviceSize       updateScratchSize;
+            0        // VkDeviceSize       buildScratchSize;
+        };
+        drvVk.vkGetAccelerationStructureBuildSizesKHR(
+            device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfos[i],
+            primitivesCount.data(), &buildSizesInfoKHR);
+
+        if (buildInfos[i].mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR) {
+          size = buildSizesInfoKHR.buildScratchSize;
+        } else if (buildInfos[i].mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR) {
+          size = buildSizesInfoKHR.updateScratchSize;
+        }
+      }
+
+      auto memoryBufferPair = createTemporaryBuffer(device, size,
+                                                    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+                                                        VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+                                                    commandBufferState.get());
+      buildInfos[i].scratchData.deviceAddress =
+          getBufferDeviceAddress(device, memoryBufferPair.second->bufferHandle);
+    }
   }
 
   drvVk.vkCmdBuildAccelerationStructuresKHR(*commandBuffer, *infoCount, buildInfos,

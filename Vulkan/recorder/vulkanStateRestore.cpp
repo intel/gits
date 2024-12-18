@@ -1167,6 +1167,7 @@ void gits::Vulkan::RestoreDescriptorSetsUpdates(CScheduler& scheduler, CStateDyn
 
     std::vector<VkWriteDescriptorSet> descriptorWrites;
     std::vector<VkWriteDescriptorSetInlineUniformBlock> uniformBlocks;
+    std::list<VkWriteDescriptorSetAccelerationStructureKHR> accelerationStructureWrites;
 
     for (auto& descriptorSetBindingIterator : descriptorSetState.second->descriptorSetBindings) {
       auto& descriptorSetBinding = descriptorSetBindingIterator.second;
@@ -1191,25 +1192,6 @@ void gits::Vulkan::RestoreDescriptorSetsUpdates(CScheduler& scheduler, CStateDyn
             nullptr                                   // const VkBufferView* pTexelBufferView;
         };
         descriptorWrites.push_back(descriptorWrite);
-      } else if (descriptorSetBinding.descriptorType ==
-                 VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR) {
-        if (descriptorSetBinding.descriptorData[0].accelerationStructureWrite) {
-          VkWriteDescriptorSet descriptorWrite = {
-              VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, // VkStructureType                sType;
-              descriptorSetBinding.descriptorData[0]
-                  .accelerationStructureWrite->Value(), // const void                   * pNext;
-              descriptorSetState.first,                 // VkDescriptorSet                dstSet;
-              descriptorSetBindingIterator.first, // uint32_t                       dstBinding;
-              0,                                  // uint32_t                       dstArrayElement;
-              descriptorSetBinding
-                  .descriptorCount, // uint32_t                       descriptorCount;
-              descriptorSetBinding.descriptorType, // VkDescriptorType               descriptorType;
-              nullptr,                             // const VkDescriptorImageInfo  * pImageInfo;
-              nullptr,                             // const VkDescriptorBufferInfo * pBufferInfo;
-              nullptr // const VkBufferView           * pTexelBufferView;
-          };
-          descriptorWrites.push_back(descriptorWrite);
-        }
       } else {
         for (size_t arrayIndex = 0; arrayIndex < descriptorSetBinding.descriptorData.size();
              ++arrayIndex) {
@@ -1379,6 +1361,39 @@ void gits::Vulkan::RestoreDescriptorSetsUpdates(CScheduler& scheduler, CStateDyn
                     << " because used VkBuffer "
                     << descriptorSetBinding.descriptorData[arrayIndex].pBufferInfo->Value()->buffer
                     << " doesn't exist.";
+              }
+            }
+            break;
+          case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
+            if (descriptorSetBinding.descriptorData[arrayIndex].accelerationStructureStateStore) {
+              if ((sd._accelerationstructurekhrstates.find(
+                       descriptorSetBinding.descriptorData[arrayIndex]
+                           .accelerationStructureStateStore->accelerationStructureHandle) !=
+                   sd._accelerationstructurekhrstates.end()) &&
+                  (descriptorSetBinding.descriptorData[arrayIndex]
+                       .accelerationStructureStateStore->GetUniqueStateID() ==
+                   sd._accelerationstructurekhrstates
+                       .find(descriptorSetBinding.descriptorData[arrayIndex]
+                                 .accelerationStructureStateStore->accelerationStructureHandle)
+                       ->second->GetUniqueStateID())) {
+                accelerationStructureWrites.emplace_back(VkWriteDescriptorSetAccelerationStructureKHR{
+                    VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR, // VkStructureType sType;
+                    nullptr, // const void* pNext;
+                    1,       // uint32_t accelerationStructureCount;
+                    &descriptorSetBinding.descriptorData[arrayIndex]
+                         .accelerationStructureStateStore
+                         ->accelerationStructureHandle // const VkAccelerationStructureKHR* pAccelerationStructures;
+                });
+                descriptorWrite.pNext = &accelerationStructureWrites.back();
+                descriptorWrites.push_back(descriptorWrite);
+              } else {
+                Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice "
+                          << descriptorSetState.second->descriptorPoolStateStore->deviceStateStore
+                                 ->deviceHandle
+                          << " because used VkAccelerationStructureKHR "
+                          << descriptorSetBinding.descriptorData[arrayIndex]
+                                 .accelerationStructureStateStore->accelerationStructureHandle
+                          << " doesn't exist.";
               }
             }
             break;
@@ -3664,10 +3679,19 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
             }
             break;
           }
-          case VK_GEOMETRY_TYPE_AABBS_KHR:
-            throw std::runtime_error(
-                "Restoring AABB geometry for acceleration structure building not yet implemented.");
+          case VK_GEOMETRY_TYPE_AABBS_KHR: {
+            auto* structStoragePointer = (VkStructStoragePointerGITS*)getPNextStructure(
+                pGeometry->geometry.aabbs.pNext, VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS);
+            if (structStoragePointer && structStoragePointer->pStructStorage) {
+              auto* aabbsData = (CVkAccelerationStructureGeometryAabbsDataKHRData*)
+                                    structStoragePointer->pStructStorage;
+              if (aabbsData->_data) {
+                pGeometry->geometry.aabbs.data.deviceAddress = prepareSourceData(
+                    aabbsData->_data.get(), aabbsData->_data->_bufferDeviceAddress);
+              }
+            }
             break;
+          }
           case VK_GEOMETRY_TYPE_INSTANCES_KHR: {
             auto* structStoragePointer = (VkStructStoragePointerGITS*)getPNextStructure(
                 pGeometry->geometry.instances.pNext, VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS);

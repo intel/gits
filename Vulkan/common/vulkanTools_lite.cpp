@@ -1158,7 +1158,7 @@ uint32_t getIndexElementSize(VkIndexType indexType) {
   default:
   case VK_INDEX_TYPE_NONE_KHR:
     return 0;
-  case VK_INDEX_TYPE_UINT8_EXT:
+  case VK_INDEX_TYPE_UINT8_KHR:
     return 1;
   case VK_INDEX_TYPE_UINT16:
     return 2;

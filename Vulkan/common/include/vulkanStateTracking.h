@@ -1162,9 +1162,6 @@ inline void vkAllocateDescriptorSets_SD(VkResult return_value,
             descriptorSetBinding.descriptorData.resize(1);
             descriptorSetBinding.descriptorData[0].inlineUniformBlockData.resize(descriptorCount);
             break;
-          case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
-            descriptorSetBinding.descriptorData.resize(1);
-            break;
           default:
             descriptorSetBinding.descriptorData.resize(descriptorCount);
           }
@@ -1202,35 +1199,6 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
             throw std::runtime_error(EXCEPTION_MESSAGE);
           }
         }
-      } else if (descriptorType == VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR) {
-        auto accelerationStructureWrite =
-            static_cast<const VkWriteDescriptorSetAccelerationStructureKHR*>(getPNextStructure(
-                pDescriptorWrites[i].pNext,
-                VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR));
-        if (accelerationStructureWrite == nullptr) {
-          Log(ERR) << "Acceleration structure descriptor write is missing "
-                      "VkWriteDescriptorSetAccelerationStructureKHR structure in the pNext chain!";
-          throw std::runtime_error(EXCEPTION_MESSAGE);
-        }
-
-        if (isSubcaptureBeforeRestorationPhase()) {
-          auto* descriptorSetBinding = &descriptorSetState->descriptorSetBindings[currentBinding];
-          descriptorSetBinding->descriptorData[0].accelerationStructureWrite.reset(
-              new CVkWriteDescriptorSetAccelerationStructureKHRData(accelerationStructureWrite));
-        }
-
-        if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-          for (uint32_t i = 0; i < accelerationStructureWrite->accelerationStructureCount; ++i) {
-            auto accelerationStructure = accelerationStructureWrite->pAccelerationStructures[i];
-
-            if (accelerationStructure != VK_NULL_HANDLE) {
-              auto& accelerationStructureState =
-                  SD()._accelerationstructurekhrstates[accelerationStructure];
-              descriptorSetState->descriptorBuffers[currentBinding] =
-                  accelerationStructureState->bufferStateStore->bufferHandle;
-            }
-          }
-        }
       } else {
         for (unsigned int j = 0; j < pDescriptorWrites[i].descriptorCount; j++) {
           auto* descriptorSetBinding = &descriptorSetState->descriptorSetBindings[currentBinding];
@@ -1254,6 +1222,7 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
             currentDescriptorData->pImageInfo.reset();
             currentDescriptorData->pTexelBufferView.reset();
             currentDescriptorData->samplerStateStore.reset();
+            currentDescriptorData->accelerationStructureStateStore.reset();
           }
 
           switch (descriptorType) {
@@ -1411,6 +1380,26 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
               }
             }
             break;
+          case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR: {
+            auto* accelerationStructureWrite =
+                static_cast<const VkWriteDescriptorSetAccelerationStructureKHR*>(getPNextStructure(
+                    pDescriptorWrites[i].pNext,
+                    VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR));
+            if (accelerationStructureWrite && accelerationStructureWrite->pAccelerationStructures &&
+                (accelerationStructureWrite->pAccelerationStructures[j] != VK_NULL_HANDLE)) {
+              auto& accelerationStructureState =
+                  SD()._accelerationstructurekhrstates[accelerationStructureWrite
+                                                           ->pAccelerationStructures[j]];
+              if (isSubcaptureBeforeRestorationPhase()) {
+                currentDescriptorData->accelerationStructureStateStore = accelerationStructureState;
+              }
+
+              if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
+                descriptorSetState->descriptorBuffers[currentBinding] =
+                    accelerationStructureState->bufferStateStore->bufferHandle;
+              }
+            }
+          }
           default:
             Log(TRACE) << "Not handled VkDescriptorType enumeration: " +
                               std::to_string(descriptorType);
@@ -4155,6 +4144,21 @@ inline void vkCmdBeginQuery_SD(VkCommandBuffer commandBuffer,
                                VkQueryControlFlags flags) {
   if (Config::Get().IsRecorder()) {
     SD()._commandbufferstates[commandBuffer]->usedQueriesAfterSubmit[queryPool].insert(query);
+  }
+}
+
+inline void vkCmdWriteAccelerationStructuresPropertiesKHR_SD(
+    VkCommandBuffer commandBuffer,
+    uint32_t accelerationStructureCount,
+    const VkAccelerationStructureKHR* pAccelerationStructures,
+    VkQueryType queryType,
+    VkQueryPool queryPool,
+    uint32_t firstQuery) {
+  if (Config::Get().IsRecorder()) {
+    auto& usedQueries = SD()._commandbufferstates[commandBuffer]->usedQueriesAfterSubmit[queryPool];
+    for (uint32_t i = firstQuery; i < accelerationStructureCount; ++i) {
+      usedQueries.insert(i);
+    }
   }
 }
 
