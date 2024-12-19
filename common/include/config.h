@@ -413,8 +413,13 @@ struct Config {
       vi_bool usePresentSrcLayoutTransitionAsAFrameBoundary;
       vi_bool renderDocCompatibility;
       std::vector<std::string> renderDocCompatibilitySuppressedExtensions = {
-          "VK_EXT_graphics_pipeline_library", "VK_EXT_extended_dynamic_state3",
-          "VK_EXT_external_memory_host", "VK_KHR_map_memory2"};
+          "VK_EXT_graphics_pipeline_library",
+          "VK_EXT_extended_dynamic_state3",
+          "VK_EXT_external_memory_host",
+          "VK_KHR_map_memory2",
+          "VK_EXT_dynamic_rendering_unused_attachments",
+          "VK_EXT_host_image_copy",
+          "VK_KHR_maintenance5"};
 #endif
     } recorder;
   } vulkan;

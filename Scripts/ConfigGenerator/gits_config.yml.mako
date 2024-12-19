@@ -338,8 +338,8 @@ Vulkan:
     UseCaptureReplayFeaturesForBuffersAndAccelerationStructures: true
     UseCaptureReplayFeaturesForRayTracingPipelines: true
 %if platform == "win32":
-    UsePresentSrcLayoutTransitionAsAFrameBoundary: false     # Offscreen applications workaround
-    RenderDocCompatibility: true      # supress extensions not supported by RenderDoc: VK_EXT_graphics_pipeline_library, VK_EXT_extended_dynamic_state3, VK_EXT_external_memory_host, VK_KHR_map_memory2
+    UsePresentSrcLayoutTransitionAsAFrameBoundary: false  # Offscreen applications workaround
+    RenderDocCompatibility: true  # supress extensions not supported by RenderDoc: VK_EXT_graphics_pipeline_library, VK_EXT_extended_dynamic_state3, VK_EXT_external_memory_host, VK_KHR_map_memory2, VK_EXT_dynamic_rendering_unused_attachments, VK_EXT_host_image_copy, VK_KHR_maintenance5
 %endif
 
   Player:
