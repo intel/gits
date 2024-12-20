@@ -28,7 +28,6 @@ from datetime import datetime
 from enum import auto, Enum, unique
 from pathlib import Path
 from typing import TypeVar
-import copy
 import inspect
 import platform
 import re
