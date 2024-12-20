@@ -126,10 +126,10 @@ vulkan_uint64: list[str] = vulkan_flags64 + [
     'VkDeviceAddress',
 ]
 
-vulkan_union: list[str] = []
+vulkan_unions: list[str] = []
 for struct in get_structs():
   if struct.type == 'union':
-    vulkan_union.append(struct.name.rstrip('_'))
+    vulkan_unions.append(struct.name.rstrip('_'))
 
 vulkan_other_primitives: list[str] = [
     "bool",
@@ -156,7 +156,7 @@ primitive_types: list[str] = (
     vulkan_enums
     + vulkan_uint32
     + vulkan_uint64
-    + vulkan_union
+    + vulkan_unions
     + vulkan_other_primitives
 )
 
@@ -357,7 +357,7 @@ def does_arg_need_ampersand(type_name: str, wrap_type: str = '') -> bool:
     raw_type: str = undecorated_type(type_name)
     num_ptr: int = type_name.count('*')
 
-    if raw_type in vulkan_union and num_ptr == 1:
+    if raw_type in vulkan_unions and num_ptr == 1:
         return True
     elif raw_type in vulkan_structs and not wrap_type.endswith('Array'):
         return True
@@ -664,6 +664,7 @@ def make_value_field_inits(struct: VkStruct, type_: FieldInitType) -> str:
         array_length: str = array.strip('[]')
 
         pointer_type: str
+        pointer_name: str
         dereference: str
         match type_:
             case FieldInitType.ARGUMENT_VALUE:

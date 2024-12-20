@@ -228,7 +228,7 @@ public:
 template <class T>
 class CVulkanEnum : public gits::Cint32_t {
 public:
-  static const char* NAME; // In case you need a static member, normally use Name().
+  static const char* NAME; // In case you need a static member; normally use Name().
 
   using gits::Cint32_t::Write; // Otherwise it's not possible to override only 1 overload of Write.
   typedef CArgumentSizedArray<T, CVulkanEnum> CSArray;
@@ -252,7 +252,7 @@ public:
   }
 };
 
-// Since this is a pointer, we aren't limited to string literals, we can assign any pointer.
+// Since this is a pointer, we aren't limited to string literals; we can assign any pointer.
 template <class T>
 const char* CVulkanEnum<T>::NAME = CVulkanEnumTypeTraits<T>::Name();
 
