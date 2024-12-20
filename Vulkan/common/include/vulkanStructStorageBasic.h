@@ -854,6 +854,9 @@ public:
   }
 };
 typedef CDataArray<VkClearColorValue, CVkClearColorValueData> CVkClearColorValueDataArray;
+
+// ------------------------------------------------------------------------------------------------
+
 class CVkClearValueData : public CBaseDataStruct, gits::noncopyable {
   std::unique_ptr<CVkClearColorValueData> _color;
 
@@ -874,10 +877,9 @@ public:
     return std::set<uint64_t>();
   }
 };
+typedef CDataArray<VkClearValue, CVkClearValueData> CVkClearValueDataArray;
 
 // ------------------------------------------------------------------------------------------------
-
-typedef CDataArray<VkClearValue, CVkClearValueData> CVkClearValueDataArray;
 
 class CBufferDeviceAddressObjectData : public CBaseDataStruct, gits::noncopyable {
 public:
