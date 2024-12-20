@@ -23,7 +23,15 @@ typedef _SECURITY_ATTRIBUTES SECURITY_ATTRIBUTES;
 #include <windows.h>
 #endif  // BUILD_FOR_CCODE
 #endif  // GITS_PLATFORM_WINDOWS
-\
+
+% for flag in vulkan_flags:
+typedef VkFlags ${flag};
+% endfor
+
+% for flag in vulkan_flags64:
+typedef VkFlags64 ${flag};
+% endfor
+
 % for enum in vk_enums:
 <%
     parent_type: str = ': VkFlags64 ' if enum.size == 64 else ''

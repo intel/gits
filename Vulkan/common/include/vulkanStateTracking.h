@@ -1145,7 +1145,7 @@ inline void vkAllocateDescriptorSets_SD(VkResult return_value,
           // Check if the number of descriptors is modified by the VK_EXT_descriptor_indexing extension (VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT flag)
           if (variableDescriptorCount != nullptr) {
             // Flags are specified for each descriptor set / for each binding
-            VkDescriptorBindingFlagsEXT bindingFlags =
+            VkDescriptorBindingFlags bindingFlags =
                 (bindingFlagsCreateInfo != nullptr) ? bindingFlagsCreateInfo->pBindingFlags[j] : 0;
 
             // Variable descriptor count is specified for each descriptor set (only one value for the whole descriptor set, just for the last binding)

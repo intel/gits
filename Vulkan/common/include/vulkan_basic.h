@@ -165,204 +165,6 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkPipelineBinaryKHR)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkSamplerYcbcrConversion)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDescriptorUpdateTemplate)
 
-typedef VkFlags VkInstanceCreateFlags;
-typedef VkFlags VkFormatFeatureFlags;
-typedef VkFlags VkFormatFeatureFlags2;
-typedef VkFlags VkImageUsageFlags;
-typedef VkFlags VkImageCreateFlags;
-typedef VkFlags VkSampleCountFlags;
-typedef VkFlags VkQueueFlags;
-typedef VkFlags VkMemoryPropertyFlags;
-typedef VkFlags VkMemoryHeapFlags;
-typedef VkFlags VkDeviceCreateFlags;
-typedef VkFlags VkDeviceQueueCreateFlags;
-typedef VkFlags VkPipelineStageFlags;
-typedef VkFlags VkMemoryMapFlags;
-typedef VkFlags VkImageAspectFlags;
-typedef VkFlags VkSparseImageFormatFlags;
-typedef VkFlags VkSparseMemoryBindFlags;
-typedef VkFlags VkFenceCreateFlags;
-typedef VkFlags VkSemaphoreCreateFlags;
-typedef VkFlags VkEventCreateFlags;
-typedef VkFlags VkQueryPoolCreateFlags;
-typedef VkFlags VkQueryPipelineStatisticFlags;
-typedef VkFlags VkQueryResultFlags;
-typedef VkFlags VkBufferCreateFlags;
-typedef VkFlags VkBufferUsageFlags;
-typedef VkFlags VkBufferViewCreateFlags;
-typedef VkFlags VkImageViewCreateFlags;
-typedef VkFlags VkShaderModuleCreateFlags;
-typedef VkFlags VkPipelineCacheCreateFlags;
-typedef VkFlags VkPipelineCreateFlags;
-typedef VkFlags VkPipelineShaderStageCreateFlags;
-typedef VkFlags VkPipelineVertexInputStateCreateFlags;
-typedef VkFlags VkPipelineInputAssemblyStateCreateFlags;
-typedef VkFlags VkPipelineTessellationStateCreateFlags;
-typedef VkFlags VkPipelineViewportStateCreateFlags;
-typedef VkFlags VkPipelineRasterizationStateCreateFlags;
-typedef VkFlags VkCullModeFlags;
-typedef VkFlags VkPipelineMultisampleStateCreateFlags;
-typedef VkFlags VkPipelineDepthStencilStateCreateFlags;
-typedef VkFlags VkPipelineColorBlendStateCreateFlags;
-typedef VkFlags VkColorComponentFlags;
-typedef VkFlags VkPipelineDynamicStateCreateFlags;
-typedef VkFlags VkPipelineLayoutCreateFlags;
-typedef VkFlags VkShaderStageFlags;
-typedef VkFlags VkSamplerCreateFlags;
-typedef VkFlags VkDescriptorSetLayoutCreateFlags;
-typedef VkFlags VkDescriptorPoolCreateFlags;
-typedef VkFlags VkDescriptorPoolResetFlags;
-typedef VkFlags VkFramebufferCreateFlags;
-typedef VkFlags VkRenderPassCreateFlags;
-typedef VkFlags VkAttachmentDescriptionFlags;
-typedef VkFlags VkSubpassDescriptionFlags;
-typedef VkFlags VkAccessFlags;
-typedef VkFlags VkDependencyFlags;
-typedef VkFlags VkCommandPoolCreateFlags;
-typedef VkFlags VkCommandPoolResetFlags;
-typedef VkFlags VkCommandBufferUsageFlags;
-typedef VkFlags VkQueryControlFlags;
-typedef VkFlags VkCommandBufferResetFlags;
-typedef VkFlags VkStencilFaceFlags;
-typedef VkFlags VkSubgroupFeatureFlags;
-typedef VkFlags VkPeerMemoryFeatureFlags;
-typedef VkFlags VkMemoryAllocateFlags;
-typedef VkFlags VkCommandPoolTrimFlags;
-typedef VkFlags VkDescriptorUpdateTemplateCreateFlags;
-typedef VkFlags VkExternalMemoryHandleTypeFlags;
-typedef VkFlags VkExternalMemoryFeatureFlags;
-typedef VkFlags VkExternalFenceHandleTypeFlags;
-typedef VkFlags VkExternalFenceFeatureFlags;
-typedef VkFlags VkFenceImportFlags;
-typedef VkFlags VkSemaphoreImportFlags;
-typedef VkFlags VkExternalSemaphoreHandleTypeFlags;
-typedef VkFlags VkExternalSemaphoreFeatureFlags;
-typedef VkFlags VkSurfaceTransformFlagsKHR;
-typedef VkFlags VkCompositeAlphaFlagsKHR;
-typedef VkFlags VkSwapchainCreateFlagsKHR;
-typedef VkFlags VkDeviceGroupPresentModeFlagsKHR;
-typedef VkFlags VkDisplayPlaneAlphaFlagsKHR;
-typedef VkFlags VkDisplayModeCreateFlagsKHR;
-typedef VkFlags VkDisplaySurfaceCreateFlagsKHR;
-typedef VkFlags VkDebugReportFlagsEXT;
-typedef VkFlags VkExternalMemoryHandleTypeFlagsNV;
-typedef VkFlags VkExternalMemoryFeatureFlagsNV;
-typedef VkFlags VkIndirectCommandsLayoutUsageFlagsNVX;
-typedef VkFlags VkObjectEntryUsageFlagsNVX;
-typedef VkFlags VkSurfaceCounterFlagsEXT;
-typedef VkFlags VkPipelineViewportSwizzleStateCreateFlagsNV;
-typedef VkFlags VkPipelineDiscardRectangleStateCreateFlagsEXT;
-typedef VkFlags VkPipelineRasterizationConservativeStateCreateFlagsEXT;
-typedef VkFlags VkDebugUtilsMessengerCallbackDataFlagsEXT;
-typedef VkFlags VkDebugUtilsMessengerCreateFlagsEXT;
-typedef VkFlags VkDebugUtilsMessageSeverityFlagsEXT;
-typedef VkFlags VkDebugUtilsMessageTypeFlagsEXT;
-typedef VkFlags VkPipelineCoverageToColorStateCreateFlagsNV;
-typedef VkFlags VkPipelineCoverageModulationStateCreateFlagsNV;
-typedef VkFlags VkValidationCacheCreateFlagsEXT;
-typedef VkFlags VkDescriptorBindingFlagsEXT;
-typedef VkFlags VkBuildAccelerationStructureFlagsNV;
-typedef VkFlags VkConditionalRenderingFlagsEXT;
-typedef VkFlags VkHeadlessSurfaceCreateFlagsEXT;
-typedef VkFlags VkIOSSurfaceCreateFlagsMVK;
-typedef VkFlags VkMacOSSurfaceCreateFlagsMVK;
-typedef VkFlags VkMetalSurfaceCreateFlagsEXT;
-typedef VkFlags VkPipelineCoverageReductionStateCreateFlagsNV;
-typedef VkFlags VkPipelineCreationFeedbackFlagsEXT;
-typedef VkFlags VkPipelineRasterizationDepthClipStateCreateFlagsEXT;
-typedef VkFlags VkPipelineRasterizationStateStreamCreateFlagsEXT;
-typedef VkFlags VkStreamDescriptorSurfaceCreateFlagsGGP;
-typedef VkFlags VkGeometryFlagsNV;
-typedef VkFlags VkBuildAccelerationStructureFlagsKHR;
-typedef VkFlags VkGeometryFlagsKHR;
-typedef VkFlags VkAcquireProfilingLockFlagsKHR;
-typedef VkFlags VkDeviceDiagnosticsConfigFlagsNV;
-typedef VkFlags VkIndirectStateFlagsNV;
-typedef VkFlags VkPerformanceCounterDescriptionFlagsKHR;
-typedef VkFlags VkIndirectCommandsLayoutUsageFlagsNV;
-typedef VkFlags VkResolveModeFlags;
-typedef VkFlags VkShaderCorePropertiesFlagsAMD;
-typedef VkFlags VkToolPurposeFlagsEXT;
-typedef VkFlags VkPipelineCompilerControlFlagsAMD;
-typedef VkFlags VkPrivateDataSlotCreateFlagsEXT;
-typedef VkFlags VkSemaphoreWaitFlags;
-typedef VkFlags VkGeometryInstanceFlagsKHR;
-typedef VkFlags VkPipelineRasterizationDepthClipStateCreateFlagsEXT;
-typedef VkFlags VkSemaphoreWaitFlags;
-typedef VkFlags VkAccelerationStructureCreateFlagsKHR;
-typedef VkFlags VkDescriptorBindingFlags;
-typedef VkFlags VkDeviceMemoryReportFlagsEXT;
-typedef VkFlags VkSubmitFlagsKHR;
-typedef VkFlags VkVideoSessionCreateFlagsKHR;
-typedef VkFlags VkVideoBeginCodingFlagsKHR;
-typedef VkFlags VkVideoEndCodingFlagsKHR;
-typedef VkFlags VkVideoCodingQualityPresetFlagsKHR;
-typedef VkFlags VkVideoCapabilitiesFlagsKHR;
-typedef VkFlags VkVideoCodingControlFlagsKHR;
-typedef VkFlags VkVideoDecodeH264CreateFlagsEXT;
-typedef VkFlags VkVideoDecodeH265CreateFlagsEXT;
-typedef VkFlags VkVideoEncodeH264CapabilitiesFlagsEXT;
-typedef VkFlags VkVideoEncodeH264InputModeFlagsEXT;
-typedef VkFlags VkVideoEncodeH264OutputModeFlagsEXT;
-typedef VkFlags VkVideoEncodeH264CreateFlagsEXT;
-typedef VkFlags VkVideoEncodeRateControlFlagsKHR;
-typedef VkFlags VkVideoChromaSubsamplingFlagsKHR;
-typedef VkFlags VkVideoComponentBitDepthFlagsKHR;
-typedef VkFlags VkVideoCodecOperationFlagsKHR;
-typedef VkFlags VkVideoDecodeFlagsKHR;
-typedef VkFlags VkVideoEncodeFlagsKHR;
-typedef VkFlags VkImageCompressionFlagsEXT;
-typedef VkFlags VkImageCompressionFixedRateFlagsEXT;
-typedef VkFlags64 VkAccessFlags2;
-typedef VkFlags64 VkAccessFlags2KHR;
-typedef VkFlags64 VkPipelineStageFlags2;
-typedef VkFlags64 VkPipelineStageFlags2KHR;
-typedef VkFlags VkRenderingFlags;
-typedef VkFlags VkSubmitFlags;
-typedef VkFlags VkGraphicsPipelineLibraryFlagsEXT;
-typedef VkFlags VkAccelerationStructureMotionInstanceFlagsNV;
-typedef VkFlags VkPipelineCreationFeedbackFlags;
-typedef VkFlags VkPrivateDataSlotCreateFlags;
-typedef VkFlags VkAccelerationStructureMotionInfoFlagsNV;
-typedef VkFlags VkVideoEncodeH265CapabilityFlagsEXT;
-typedef VkFlags VkVideoEncodeH265InputModeFlagsEXT;
-typedef VkFlags VkVideoEncodeH265OutputModeFlagsEXT;
-typedef VkFlags VkVideoEncodeH265CtbSizeFlagsEXT;
-typedef VkFlags VkVideoEncodeH265TransformBlockSizeFlagsEXT;
-typedef VkFlags VkVideoCapabilitiesFlags;
-typedef VkFlags VkVideoDecodeCapabilityFlagsKHR;
-typedef VkFlags VkVideoEncodeCapabilityFlagsKHR;
-typedef VkFlags VkVideoEncodeRateControlModeFlagsKHR;
-typedef VkFlags VkToolPurposeFlags;
-typedef VkFlags VkVideoEncodeH264CapabilityFlagsEXT;
-typedef VkFlags VkVideoEncodeRateControlModeFlagsKHR;
-typedef VkFlags VkVideoEncodeUsageFlagsKHR;
-typedef VkFlags VkVideoEncodeContentFlagsKHR;
-typedef VkFlags VkVideoSessionParametersCreateFlagsKHR;
-typedef VkFlags VkVideoCapabilityFlagsKHR;
-typedef VkFlags VkVideoDecodeUsageFlagsKHR;
-typedef VkFlags VkBuildMicromapFlagsEXT;
-typedef VkFlags VkVideoEncodeFeedbackFlagsKHR;
-typedef VkFlags VkRefreshObjectFlagsKHR;
-typedef VkFlags VkShaderCreateFlagsEXT;
-typedef VkFlags64 VkMemoryDecompressionMethodFlagsNV;
-typedef VkFlags VkDeviceAddressBindingFlagsEXT;
-typedef VkFlags VkDirectDriverLoadingFlagsLUNARG;
-typedef VkFlags VkMemoryUnmapFlagsKHR;
-typedef VkFlags VkOpticalFlowExecuteFlagsNV;
-typedef VkFlags VkOpticalFlowUsageFlagsNV;
-typedef VkFlags VkOpticalFlowGridSizeFlagsNV;
-typedef VkFlags VkOpticalFlowSessionCreateFlagsNV;
-typedef VkFlags VkPresentScalingFlagsEXT;
-typedef VkFlags VkPresentGravityFlagsEXT;
-typedef VkFlags VkMicromapCreateFlagsEXT;
-typedef VkFlags VkHostImageCopyFlagsEXT;
-typedef VkFlags64 VkBufferUsageFlags2KHR;
-typedef VkFlags VkFrameBoundaryFlagsEXT;
-typedef VkFlags VkIndirectCommandsLayoutUsageFlagsEXT;
-typedef VkFlags VkIndirectCommandsInputModeFlagsEXT;
-typedef VkFlags64 VkPipelineCreateFlags2KHR;
-
 #define VK_KHR_surface 1
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkSurfaceKHR)
 
@@ -884,10 +686,6 @@ typedef void* VkRemoteAddressNV;
 #define VK_EXT_DEBUG_UTILS_EXTENSION_NAME "VK_EXT_debug_utils"
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDebugUtilsMessengerEXT)
 
-typedef VkFlags VkDebugUtilsMessengerCallbackDataFlagsEXT;
-
-typedef VkFlags VkDebugUtilsMessengerCreateFlagsEXT;
-
 #define VK_EXT_sampler_filter_minmax                1
 #define VK_EXT_SAMPLER_FILTER_MINMAX_SPEC_VERSION   1
 #define VK_EXT_SAMPLER_FILTER_MINMAX_EXTENSION_NAME "VK_EXT_sampler_filter_minmax"
@@ -919,8 +717,6 @@ typedef VkFlags VkDebugUtilsMessengerCreateFlagsEXT;
 #define VK_NV_fragment_coverage_to_color                1
 #define VK_NV_FRAGMENT_COVERAGE_TO_COLOR_SPEC_VERSION   1
 #define VK_NV_FRAGMENT_COVERAGE_TO_COLOR_EXTENSION_NAME "VK_NV_fragment_coverage_to_color"
-
-typedef VkFlags VkPipelineCoverageToColorStateCreateFlagsNV;
 
 #define VK_NV_framebuffer_mixed_samples                1
 #define VK_NV_FRAMEBUFFER_MIXED_SAMPLES_SPEC_VERSION   1
@@ -1008,16 +804,12 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkValidationCacheEXT)
 #define VK_EXT_ACQUIRE_XLIB_DISPLAY_EXTENSION_NAME "VK_EXT_acquire_xlib_display"
 #endif
 
-typedef VkFlags VkXlibSurfaceCreateFlagsKHR;
-
 #ifdef GITS_PLATFORM_X11
 #define VK_USE_PLATFORM_XCB_KHR
 #define VK_KHR_xcb_surface                1
 #define VK_KHR_XCB_SURFACE_SPEC_VERSION   6
 #define VK_KHR_XCB_SURFACE_EXTENSION_NAME "VK_KHR_xcb_surface"
 #endif
-
-typedef VkFlags VkXcbSurfaceCreateFlagsKHR;
 
 #ifdef GITS_PLATFORM_WINDOWS
 #define VK_USE_PLATFORM_WIN32_KHR
@@ -1026,8 +818,6 @@ typedef VkFlags VkXcbSurfaceCreateFlagsKHR;
 #define VK_KHR_WIN32_SURFACE_EXTENSION_NAME "VK_KHR_win32_surface"
 #endif
 
-typedef VkFlags VkWin32SurfaceCreateFlagsKHR;
-
 #ifdef GITS_PLATFORM_WAYLAND
 #define VK_USE_PLATFORM_WAYLAND_KHR
 #define VK_KHR_wayland_surface                1
@@ -1035,14 +825,10 @@ typedef VkFlags VkWin32SurfaceCreateFlagsKHR;
 #define VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME "VK_KHR_wayland_surface"
 #endif
 
-typedef VkFlags VkWaylandSurfaceCreateFlagsKHR;
-
 /****************************************************************************\
 DEFINE: VkPerformanceConfigurationINTEL
 *****************************************************************************/
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkPerformanceConfigurationINTEL)
-
-typedef VkFlags VkObjectMemoryUsageQueryFlags;
 
 typedef void(VKAPI_PTR* PFN_vkVoidFunction)(void);
 

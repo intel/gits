@@ -1228,6 +1228,8 @@ def main() -> None:
         args_to_str=args_to_str,
         fields_to_str=fields_to_str,
         dependency_ordered=dependency_ordered,
+        vulkan_flags=vulkan_flags,
+        vulkan_flags64=vulkan_flags64,
         vk_functions=newest_tokens,
         vk_structs=newest_structs,
         vk_enums=all_enums,
