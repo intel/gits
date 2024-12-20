@@ -5567,7 +5567,7 @@ VarDef(name='VK_BUFFER_USAGE_VIDEO_ENCODE_SRC_BIT_KHR', value='65536'),
 VarDef(name='VK_BUFFER_USAGE_FLAG_BITS_MAX_ENUM', value='2147483647'),
 ])
 
-Enum(name='VkBufferUsageFlagBits2KHR', enumerators = [
+Enum(name='VkBufferUsageFlagBits2KHR', size=64, enumerators = [
 VarDef(name='VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT_KHR', value='1'),
 VarDef(name='VK_BUFFER_USAGE_2_TRANSFER_DST_BIT_KHR', value='2'),
 VarDef(name='VK_BUFFER_USAGE_2_UNIFORM_TEXEL_BUFFER_BIT_KHR', value='4'),
