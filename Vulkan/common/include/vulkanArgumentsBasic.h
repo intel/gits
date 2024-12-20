@@ -145,7 +145,7 @@ public:
     }
   }
 
-  const char* Name() const {
+  virtual const char* Name() const override {
     return NAME;
   }
   static const char* TypeNameStr() {
@@ -169,16 +169,16 @@ public:
     return Value();
   }
 
-  virtual void Write(CBinOStream& stream) const {
+  virtual void Write(CBinOStream& stream) const override {
     write_name_to_stream(stream,
                          CGits::Instance().GetOrderedIdFromPtr(reinterpret_cast<void*>(key_)));
   }
 
-  virtual void Read(CBinIStream& stream) {
+  virtual void Read(CBinIStream& stream) override {
     read_name_from_stream(stream, key_);
   }
 
-  virtual void Write(CCodeOStream& stream) const {
+  virtual void Write(CCodeOStream& stream) const override {
     stream << "GetMapping((" << TypeNameStr() << ")" << hex(key_) << ")";
   }
 
@@ -282,16 +282,16 @@ public:
   uint32_t Original() {
     return _uint32;
   }
-  const char* Name() const {
+  virtual const char* Name() const override {
     return "VkBool32";
   }
-  virtual void Write(CBinOStream& stream) const {
+  virtual void Write(CBinOStream& stream) const override {
     write_name_to_stream(stream, _uint32);
   }
-  virtual void Read(CBinIStream& stream) {
+  virtual void Read(CBinIStream& stream) override {
     read_name_from_stream(stream, _uint32);
   }
-  virtual void Write(CCodeOStream& stream) const {
+  virtual void Write(CCodeOStream& stream) const override {
     if (_uint32 == VK_TRUE) {
       stream << "VK_TRUE";
     } else if (_uint32 == VK_FALSE) {
@@ -355,16 +355,16 @@ public:
   void Assign(void* ptr) {
     _ptr = (std::uint64_t)ptr;
   }
-  const char* Name() const {
+  virtual const char* Name() const override {
     return "NullWrapper";
   }
-  virtual void Write(CBinOStream& stream) const {
+  virtual void Write(CBinOStream& stream) const override {
     write_name_to_stream(stream, _ptr);
   }
-  virtual void Read(CBinIStream& stream) {
+  virtual void Read(CBinIStream& stream) override {
     read_name_from_stream(stream, _ptr);
   }
-  virtual void Write(CCodeOStream& stream) const {
+  virtual void Write(CCodeOStream& stream) const override {
     if (_ptr) {
       Log(WARN) << "Pointer is " << _ptr << "while it should be null.";
       stream << hex(_ptr) << " /* nullptr was expected here */";
@@ -421,16 +421,16 @@ public:
   void Assign(void* ptr) {
     _ptr = (std::uint64_t)ptr;
   }
-  const char* Name() const {
+  virtual const char* Name() const override {
     return "VoidPtr";
   }
-  virtual void Write(CBinOStream& stream) const {
+  virtual void Write(CBinOStream& stream) const override {
     write_name_to_stream(stream, _ptr);
   }
-  virtual void Read(CBinIStream& stream) {
+  virtual void Read(CBinIStream& stream) override {
     read_name_from_stream(stream, _ptr);
   }
-  virtual void Write(CCodeOStream& stream) const {
+  virtual void Write(CCodeOStream& stream) const override {
     if (_type == 2) {
       if ((void**)_ptr == nullptr) {
         stream << "nullptr";
@@ -469,7 +469,7 @@ public:
   const uint32_t* Original() {
     return Value();
   }
-  const char* Name() const override {
+  virtual const char* Name() const override {
     return "CVulkanShader";
   }
   virtual void Write(CBinOStream& stream) const override {
@@ -539,7 +539,7 @@ class CVkClearColorValue : public CArgument, gits::noncopyable {
 public:
   CVkClearColorValue();
   CVkClearColorValue(const VkClearColorValue* clearcolorvalue);
-  virtual const char* Name() const {
+  virtual const char* Name() const override {
     return "VkClearColorValue";
   }
   VkClearColorValue* Value();
@@ -548,9 +548,9 @@ public:
     return PtrConverter<VkClearColorValue>(Value());
   }
   PtrConverter<VkClearColorValue> Original();
-  virtual void Write(CBinOStream& stream) const;
-  virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
+  virtual void Write(CBinOStream& stream) const override;
+  virtual void Read(CBinIStream& stream) override;
+  virtual void Write(CCodeOStream& stream) const override;
   virtual bool AmpersandNeeded() const override;
   virtual bool DeclarationNeeded() const override;
   virtual void Declare(CCodeOStream& stream) const override;
@@ -567,7 +567,7 @@ public:
   CVkClearValue();
   CVkClearValue(const VkClearValue* clearvalue);
   static const char* NAME;
-  virtual const char* Name() const {
+  virtual const char* Name() const override {
     return NAME;
   }
   VkClearValue* Value();
@@ -576,9 +576,9 @@ public:
     return PtrConverter<VkClearValue>(Value());
   }
   PtrConverter<VkClearValue> Original();
-  virtual void Write(CBinOStream& stream) const;
-  virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
+  virtual void Write(CBinOStream& stream) const override;
+  virtual void Read(CBinIStream& stream) override;
+  virtual void Write(CCodeOStream& stream) const override;
   virtual void Declare(CCodeOStream& stream) const override;
   virtual bool DeclarationNeeded() const override;
 
@@ -599,7 +599,7 @@ public:
   CVkGenericArgument(const void* vkgenericargument);
   void InitArgument(uint32_t type);
   void CreateArgument(uint32_t type, const void* vkgenericargument);
-  virtual const char* Name() const;
+  virtual const char* Name() const override;
   const void* Value();
   struct PtrConverter {
   private:
@@ -799,8 +799,8 @@ public:
   PtrConverter Original() {
     return PtrConverter(Value());
   }
-  virtual void Write(CBinOStream& stream) const;
-  virtual void Read(CBinIStream& stream);
+  virtual void Write(CBinOStream& stream) const override;
+  virtual void Read(CBinIStream& stream) override;
   virtual void Write(CCodeOStream& stream) const override;
   virtual bool AmpersandNeeded() const override;
   virtual bool DeclarationNeeded() const override;
@@ -841,16 +841,16 @@ public:
   const void** Original() {
     return Value();
   }
-  const char* Name() const {
+  const char* Name() const override {
     return "CVkGenericArgumentArray";
   }
-  virtual void Write(CBinOStream& stream) const {
+  virtual void Write(CBinOStream& stream) const override {
     write_name_to_stream(stream, (unsigned)_cgenericargsDict.size());
     for (auto& arg : _cgenericargsDict) {
       arg->Write(stream);
     }
   }
-  virtual void Read(CBinIStream& stream) {
+  virtual void Read(CBinIStream& stream) override {
     unsigned dictSize;
     read_name_from_stream(stream, dictSize);
     if (dictSize <= _cgenericargsDict.max_size()) {
@@ -863,7 +863,7 @@ public:
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
   }
-  virtual void Write(CCodeOStream& stream) const {
+  virtual void Write(CCodeOStream& stream) const override {
     throw ENotImplemented(EXCEPTION_MESSAGE);
   }
 };
@@ -904,16 +904,16 @@ public:
   PtrConverter Original() {
     return PtrConverter(Value());
   }
-  const char* Name() const {
+  const char* Name() const override {
     return "pNextWrapper";
   }
-  virtual void Write(CBinOStream& stream) const {
+  virtual void Write(CBinOStream& stream) const override {
     write_name_to_stream(stream, _ptr);
     if (_ptr) {
       _data->Write(stream);
     }
   }
-  virtual void Read(CBinIStream& stream) {
+  virtual void Read(CBinIStream& stream) override {
     read_name_from_stream(stream, _ptr);
     if (_ptr) {
       _data = std::make_unique<CVkGenericArgument>();
@@ -964,14 +964,14 @@ public:
   std::uint64_t GetSize() {
     return **_size;
   }
-  virtual void Write(CBinOStream& stream) const {
+  virtual void Write(CBinOStream& stream) const override {
     _descType->Write(stream);
     _offset->Write(stream);
     _size->Write(stream);
     _argument->Write(stream);
   }
-  virtual void Read(CBinIStream& stream);
-  const char* Name() const {
+  virtual void Read(CBinIStream& stream) override;
+  const char* Name() const override {
     return "CDescriptorUpdateTemplateObject";
   }
   virtual void Write(CCodeOStream& stream) const override {
@@ -1005,17 +1005,17 @@ public:
   const void* Original() {
     return Value();
   }
-  const char* Name() const {
+  const char* Name() const override {
     return "CUpdateDescriptorSetWithTemplateArray";
   }
-  virtual void Write(CBinOStream& stream) const {
+  virtual void Write(CBinOStream& stream) const override {
     write_name_to_stream(stream, (unsigned)_cgenericargsDict.size());
     _size->Write(stream);
     for (auto& arg : _cgenericargsDict) {
       arg->Write(stream);
     }
   }
-  virtual void Read(CBinIStream& stream);
+  virtual void Read(CBinIStream& stream) override;
   virtual void Write(CCodeOStream& stream) const override {
     stream << "&" << getVarName("vec_", this) << "[0]";
   }
@@ -1132,11 +1132,11 @@ public:
     _offset->Read(stream);
   }
 
-  const char* Name() const {
+  const char* Name() const override {
     return "CBufferDeviceAddressObject";
   }
 
-  virtual void Write(CCodeOStream& stream) const {
+  virtual void Write(CCodeOStream& stream) const override {
     throw ENotImplemented(EXCEPTION_MESSAGE);
   }
 };
