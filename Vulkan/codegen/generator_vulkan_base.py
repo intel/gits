@@ -200,6 +200,7 @@ class VkStruct:
     constructor_wrap: bool = False
     declaration_needed_wrap: bool = False
     pass_struct_storage: bool = False
+    canonical_union_member: str | None = None
     fields: list[Field]
 
 
@@ -271,6 +272,7 @@ def _rename_keys(dictionary: dict) -> dict:
         ('postToken', 'post_token'),
         ('tokenCache', 'token_cache'),
         ('retV', 'return_value'),
+        ('canonicalUnionMember', 'canonical_union_member'),
     ]
 
     for old, new in replacements:
@@ -317,7 +319,19 @@ def Function(**kwargs):
 def Struct(**kwargs):
     # TODO: restore it here instead of after sorting.
     # kwargs['name'] = kwargs['name'].rstrip('_')
-    _structs_table.append(VkStruct(**_preprocess_kwargs(kwargs, prefix='var', list_name='fields')))
+
+    new_kwargs: dict = _preprocess_kwargs(kwargs, prefix='var', list_name='fields')
+    type_: str | None = new_kwargs.get('type')
+    is_union: bool = bool(type_) and type_ == 'union'
+    enabled: bool = new_kwargs.get('enabled') or False
+    name: str = new_kwargs['name']
+    if is_union and enabled and 'canonical_union_member' not in new_kwargs:
+        raise ValueError(f"Union {name} has no canonical member set.")
+    elif not is_union and 'canonical_union_member' in new_kwargs:
+        raise ValueError(f"Only unions can have a canonical member set. "
+            f"Please unset it for {name} or make it a union.")
+
+    _structs_table.append(VkStruct(**new_kwargs))
 
 def ArgDef(**kwargs):
     return Argument(**_rename_keys(kwargs))

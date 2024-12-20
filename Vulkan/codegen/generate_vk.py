@@ -1088,6 +1088,10 @@ def main() -> None:
     enabled_structs: list[VkStruct] = [s for s in all_structs if s.enabled]
     newest_structs: list[VkStruct] = without_older_versions(all_structs)
 
+    all_unions: list[VkStruct] = [s for s in all_structs if s.type == 'union']
+    enabled_unions: list[VkStruct] = [u for u in all_unions if u.enabled]
+
+
     all_enums: list[VkEnum] = get_enums()
     # Enums are always enabled.
 
@@ -1247,7 +1251,9 @@ def main() -> None:
     mako_write(
         'templates/vulkanLuaEnums.h.mako',
         'common/include/vulkanLuaEnums.h',
+        split_arrays_from_name=split_arrays_from_name,
         vk_enums=all_enums,
+        vk_unions=enabled_unions,
     )
 
     mako_write(

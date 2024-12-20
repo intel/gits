@@ -10335,7 +10335,7 @@ var2=VarDef(name='colorAttachment', type='uint32_t'),
 var3=VarDef(name='clearValue', type='VkClearValue')
 )
 
-Struct(name='VkClearColorValue_', type='union', enabled=True, custom=True,
+Struct(name='VkClearColorValue_', type='union', enabled=True, custom=True, canonicalUnionMember='uint32',
 var1=VarDef(name='float32', type='float[4]', count='4'),
 var2=VarDef(name='int32', type='int32_t[4]', count='4'),
 var3=VarDef(name='uint32', type='uint32_t[4]', count='4')
@@ -10352,7 +10352,7 @@ var2=VarDef(name='baseArrayLayer', type='uint32_t'),
 var3=VarDef(name='layerCount', type='uint32_t')
 )
 
-Struct(name='VkClearValue_', type='union', enabled=True, custom=True, declareArray=True,
+Struct(name='VkClearValue_', type='union', enabled=True, custom=True, declareArray=True, canonicalUnionMember='color',
 var1=VarDef(name='color', type='VkClearColorValue'),
 var2=VarDef(name='depthStencil', type='VkClearDepthStencilValue')
 )
@@ -10913,7 +10913,7 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='buffer', type='VkBuffer')
 )
 
-Struct(name='VkDescriptorDataEXT_', type='union', enabled=False,
+Struct(name='VkDescriptorDataEXT_', type='union', enabled=False, canonicalUnionMember='pSampler',
 var1=VarDef(name='pSampler', type='VkSampler*'),
 var2=VarDef(name='pCombinedImageSampler', type='VkDescriptorImageInfo*'),
 var3=VarDef(name='pSampledImage', type='VkDescriptorImageInfo*'),
@@ -11297,12 +11297,12 @@ var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='privateDataSlotRequestCount', type='uint32_t')
 )
 
-Struct(name='VkDeviceOrHostAddressKHR_', type='union', enabled=False,
+Struct(name='VkDeviceOrHostAddressKHR_', type='union', enabled=False, canonicalUnionMember='deviceAddress',
 var1=VarDef(name='deviceAddress', type='VkDeviceAddress'),
 var2=VarDef(name='hostAddress', type='void *'),
 )
 
-Struct(name='VkDeviceOrHostAddressConstKHR_', type='union', enabled=False,
+Struct(name='VkDeviceOrHostAddressConstKHR_', type='union', enabled=False, canonicalUnionMember='deviceAddress',
 var1=VarDef(name='deviceAddress', type='VkDeviceAddress'),
 var2=VarDef(name='hostAddress', type='const void *'),
 )
@@ -13244,7 +13244,7 @@ var1=VarDef(name='type', type='VkPerformanceValueTypeINTEL'),
 var2=VarDef(name='data', type='VkPerformanceValueDataINTEL')
 )
 
-Struct(name='VkPerformanceValueDataINTEL_', type='union', enabled=False,
+Struct(name='VkPerformanceValueDataINTEL_', type='union', enabled=False, canonicalUnionMember='value64',
 var1=VarDef(name='value32', type='uint32_t'),
 var2=VarDef(name='value64', type='uint64_t'),
 var3=VarDef(name='valueFloat', type='float'),
@@ -16390,7 +16390,7 @@ var5=VarDef(name='format', type='VkPipelineExecutableStatisticFormatKHR'),
 var6=VarDef(name='value', type='VkPipelineExecutableStatisticValueKHR')
 )
 
-Struct(name='VkPipelineExecutableStatisticValueKHR_', type='union', enabled=False,
+Struct(name='VkPipelineExecutableStatisticValueKHR_', type='union', enabled=False, canonicalUnionMember='u64',
 var1=VarDef(name='b32', type='VkBool32'),
 var2=VarDef(name='i64', type='int64_t'),
 var3=VarDef(name='u64', type='uint64_t'),
