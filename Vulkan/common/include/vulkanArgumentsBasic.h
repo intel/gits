@@ -503,7 +503,8 @@ typedef struct HINSTANCE_T* HINSTANCETypeTag;
 typedef CVulkanObj<HINSTANCE, HINSTANCETypeTag> CVkHINSTANCE;
 typedef struct HMONITOR_T* HMONITORTypeTag;
 typedef CVulkanObj<HMONITOR, HMONITORTypeTag> CVkHMONITOR;
-
+typedef struct D3DKMT_HANDLE_T* D3DKMT_HANDLETypeTag;
+typedef CVulkanObj<D3DKMT_HANDLE, D3DKMT_HANDLETypeTag> CD3DKMT_HANDLE;
 typedef void* VkWindow_TypeTag;
 typedef struct xcb_connection_t* xcb_connection_t_TypeTag;
 typedef CVulkanObj<xcb_connection_t*, xcb_connection_t_TypeTag> Cxcb_connection_t;

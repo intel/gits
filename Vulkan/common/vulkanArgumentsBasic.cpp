@@ -19,6 +19,10 @@ template <>
 const char* gits::Vulkan::CVulkanObj<HMONITOR, gits::Vulkan::HMONITORTypeTag>::NAME = "HMONITOR";
 
 template <>
+const char* gits::Vulkan::CVulkanObj<D3DKMT_HANDLE, gits::Vulkan::D3DKMT_HANDLETypeTag>::NAME =
+    "D3DKMT_HANDLE";
+
+template <>
 const char*
     gits::Vulkan::CVulkanObj<xcb_connection_t*, gits::Vulkan::xcb_connection_t_TypeTag>::NAME =
         "xcb_connection_t*";

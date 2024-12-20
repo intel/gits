@@ -492,9 +492,11 @@ typedef CDataArray<std::int32_t, Cint32_tData> Cint32_tDataArray;
 typedef CDataArray<std::int64_t, Cint64_tData> Cint64_tDataArray;
 typedef CDataArray<float, CfloatData> CfloatDataArray;
 typedef CDataArray<size_t, Csize_tData> Csize_tDataArray;
+//TODO: Consider changing "CVk*" to just "C*" for handle data storage classes.
 typedef CSimpleData<HWND> CVkHWNDData;
 typedef CSimpleData<HINSTANCE> CVkHINSTANCEData;
 typedef CSimpleData<HMONITOR> CVkHMONITORData;
+typedef CSimpleData<D3DKMT_HANDLE> CD3DKMT_HANDLEData;
 typedef CSimpleData<xcb_connection_t*> Cxcb_connection_tData;
 typedef CSimpleData<xcb_window_t> Cxcb_window_tData;
 typedef CSimpleData<Display*> CVkDisplayData;

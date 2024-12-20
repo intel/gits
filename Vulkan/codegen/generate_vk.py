@@ -213,6 +213,7 @@ other_opaque_handles: list[str] = [
     "HWND",
     "HINSTANCE",
     "HMONITOR",
+    "D3DKMT_HANDLE",
 ]
 
 opaque_handles: list[str] = (

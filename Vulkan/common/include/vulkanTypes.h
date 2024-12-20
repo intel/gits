@@ -44,6 +44,7 @@ typedef struct HDC__* HDC;
 typedef struct HGLRC__* HGLRC;
 typedef struct HINSTANCE__* HINSTANCE;
 typedef struct HMONITOR__* HMONITOR;
+typedef struct D3DKMT_HANDLE__* D3DKMT_HANDLE;
 typedef HINSTANCE HMODULE;
 #ifdef GITS_PLATFORM_X11
 typedef struct _SECURITY_ATTRIBUTES {
