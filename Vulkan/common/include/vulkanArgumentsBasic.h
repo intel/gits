@@ -373,7 +373,7 @@ public:
     }
   }
   virtual std::set<uint64_t> GetMappedPointers() {
-    return std::set<uint64_t>();
+    return {};
   }
 };
 
@@ -446,7 +446,7 @@ public:
     }
   }
   virtual std::set<uint64_t> GetMappedPointers() {
-    return std::set<uint64_t>();
+    return {};
   }
 };
 
@@ -488,7 +488,7 @@ public:
     _data.Declare(stream);
   }
   virtual std::set<uint64_t> GetMappedPointers() {
-    return std::set<uint64_t>();
+    return {};
   }
 };
 
@@ -583,7 +583,7 @@ public:
   virtual bool DeclarationNeeded() const override;
 
   virtual std::set<uint64_t> GetMappedPointers() {
-    return std::set<uint64_t>();
+    return {};
   }
 };
 
@@ -1034,7 +1034,7 @@ public:
     }
   }
   virtual std::set<uint64_t> GetMappedPointers() {
-    return std::set<uint64_t>();
+    return {};
   }
 };
 
