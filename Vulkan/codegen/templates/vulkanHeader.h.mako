@@ -24,10 +24,12 @@ typedef _SECURITY_ATTRIBUTES SECURITY_ATTRIBUTES;
 #endif  // BUILD_FOR_CCODE
 #endif  // GITS_PLATFORM_WINDOWS
 
+typedef uint32_t VkFlags;
 % for flag in vulkan_flags:
 typedef VkFlags ${flag};
 % endfor
 
+typedef uint64_t VkFlags64;
 % for flag in vulkan_flags64:
 typedef VkFlags64 ${flag};
 % endfor

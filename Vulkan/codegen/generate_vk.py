@@ -53,8 +53,8 @@ AUTO_GENERATED_HEADER = f"""
 # Vulkan types categorized
 # TODO: these are almost constants, should names be in ALL_CAPS?
 
-vulkan_flags: list[str] = ['VkFlags']
-vulkan_flags64: list[str] = ['VkFlags64']
+vulkan_flags: list[str] = []
+vulkan_flags64: list[str] = []
 for enum in get_enums():
     if 'FlagBits' in enum.name:
         flags_name = enum.name.replace('FlagBits', 'Flags')
@@ -62,58 +62,6 @@ for enum in get_enums():
             vulkan_flags64.append(flags_name)
         else:
             vulkan_flags.append(flags_name)
-
-# Flags that are used in functions or structs, but are not listed in generator.
-# We assume they are 32 bits wide.
-# TODO: Add them to the generator (as *FlagBits enums).
-vk_used_unknown_flags: list[str] = [
-    'VkAccelerationStructureMotionInfoFlagsNV',
-    'VkAccelerationStructureMotionInstanceFlagsNV',
-    'VkBufferViewCreateFlags',
-    'VkCommandPoolTrimFlags',
-    'VkDebugUtilsMessengerCallbackDataFlagsEXT',
-    'VkDebugUtilsMessengerCreateFlagsEXT',
-    'VkDescriptorPoolResetFlags',
-    'VkDescriptorUpdateTemplateCreateFlags',
-    'VkDeviceCreateFlags',
-    'VkDeviceMemoryReportFlagsEXT',
-    'VkDirectDriverLoadingFlagsLUNARG',
-    'VkDisplayModeCreateFlagsKHR',
-    'VkDisplaySurfaceCreateFlagsKHR',
-    'VkHeadlessSurfaceCreateFlagsEXT',
-    'VkIOSSurfaceCreateFlagsMVK',
-    'VkMacOSSurfaceCreateFlagsMVK',
-    'VkMemoryMapFlags',
-    'VkMemoryUnmapFlagsKHR',
-    'VkPipelineCoverageModulationStateCreateFlagsNV',
-    'VkPipelineCoverageReductionStateCreateFlagsNV',
-    'VkPipelineCoverageToColorStateCreateFlagsNV',
-    'VkPipelineDiscardRectangleStateCreateFlagsEXT',
-    'VkPipelineDynamicStateCreateFlags',
-    'VkPipelineInputAssemblyStateCreateFlags',
-    'VkPipelineMultisampleStateCreateFlags',
-    'VkPipelineRasterizationConservativeStateCreateFlagsEXT',
-    'VkPipelineRasterizationDepthClipStateCreateFlagsEXT',
-    'VkPipelineRasterizationStateCreateFlags',
-    'VkPipelineRasterizationStateStreamCreateFlagsEXT',
-    'VkPipelineTessellationStateCreateFlags',
-    'VkPipelineVertexInputStateCreateFlags',
-    'VkPipelineViewportStateCreateFlags',
-    'VkPipelineViewportSwizzleStateCreateFlagsNV',
-    'VkQueryPoolCreateFlags',
-    'VkValidationCacheCreateFlagsEXT',
-    'VkVideoBeginCodingFlagsKHR',
-    'VkVideoDecodeFlagsKHR',
-    'VkVideoEncodeFlagsKHR',
-    'VkVideoEncodeRateControlFlagsKHR',
-    'VkVideoEndCodingFlagsKHR',
-    'VkVideoSessionParametersCreateFlagsKHR',
-    'VkWaylandSurfaceCreateFlagsKHR',
-    'VkWin32SurfaceCreateFlagsKHR',
-    'VkXcbSurfaceCreateFlagsKHR',
-    'VkXlibSurfaceCreateFlagsKHR',
-]
-vulkan_flags += vk_used_unknown_flags
 
 vulkan_uint32: list[str] = vulkan_flags + [
     'uint32_t',
@@ -158,7 +106,6 @@ primitive_types: list[str] = (
     + vulkan_unions
     + vulkan_other_primitives
 )
-
 
 opaque_dispatchable_handles: list[str] = [
     "VkInstance",

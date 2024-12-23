@@ -70,12 +70,10 @@ extern "C" {
 #endif
 #endif
 
-typedef uint32_t VkFlags;
 typedef uint32_t VkBool32;
 typedef uint64_t VkDeviceSize;
 typedef uint64_t VkDeviceAddress;
 typedef uint32_t VkSampleMask;
-typedef uint64_t VkFlags64;
 
 VK_DEFINE_HANDLE(VkInstance)
 VK_DEFINE_HANDLE(VkPhysicalDevice)
@@ -118,6 +116,18 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkIndirectExecutionSetEXT)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkCudaFunctionNV)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkCudaModuleNV)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkPipelineBinaryKHR)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkObjectTableNVX)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkIndirectCommandsLayoutNVX)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkSurfaceKHR)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkSwapchainKHR)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDisplayKHR)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDisplayModeKHR)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkSamplerYcbcrConversion)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDescriptorUpdateTemplate)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDebugReportCallbackEXT)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDebugUtilsMessengerEXT)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkValidationCacheEXT)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkPerformanceConfigurationINTEL)
 
 #define VK_MAX_PHYSICAL_DEVICE_NAME_SIZE          256
 #define VK_UUID_SIZE                              16
@@ -162,25 +172,18 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkPipelineBinaryKHR)
 #define VK_API_VERSION_1_3                                                                         \
   VK_MAKE_API_VERSION(0, 1, 3, 0) // Patch version should always be set to 0
 
-VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkSamplerYcbcrConversion)
-VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDescriptorUpdateTemplate)
-
 #define VK_KHR_surface 1
-VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkSurfaceKHR)
 
 #define VK_KHR_SURFACE_SPEC_VERSION      25
 #define VK_KHR_SURFACE_EXTENSION_NAME    "VK_KHR_surface"
 #define VK_COLORSPACE_SRGB_NONLINEAR_KHR VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
 
 #define VK_KHR_swapchain 1
-VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkSwapchainKHR)
 
 #define VK_KHR_SWAPCHAIN_SPEC_VERSION   70
 #define VK_KHR_SWAPCHAIN_EXTENSION_NAME "VK_KHR_swapchain"
 
 #define VK_KHR_display 1
-VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDisplayKHR)
-VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDisplayModeKHR)
 
 #define VK_KHR_DISPLAY_SPEC_VERSION   21
 #define VK_KHR_DISPLAY_EXTENSION_NAME "VK_KHR_display"
@@ -197,60 +200,14 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDisplayModeKHR)
 #define VK_KHR_MULTIVIEW_SPEC_VERSION   1
 #define VK_KHR_MULTIVIEW_EXTENSION_NAME "VK_KHR_multiview"
 
-//typedef VkRenderPassMultiviewCreateInfo VkRenderPassMultiviewCreateInfoKHR;
-//
-//typedef VkPhysicalDeviceMultiviewFeatures VkPhysicalDeviceMultiviewFeaturesKHR;
-//
-//typedef VkPhysicalDeviceMultiviewProperties VkPhysicalDeviceMultiviewPropertiesKHR;
-
 #define VK_KHR_get_physical_device_properties2               1
 #define VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_SPEC_VERSION 1
 #define VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME                                     \
   "VK_KHR_get_physical_device_properties2"
 
-//typedef VkPhysicalDeviceFeatures2 VkPhysicalDeviceFeatures2KHR;
-//
-//typedef VkPhysicalDeviceProperties2 VkPhysicalDeviceProperties2KHR;
-//
-//typedef VkFormatProperties2 VkFormatProperties2KHR;
-//
-//typedef VkImageFormatProperties2 VkImageFormatProperties2KHR;
-//
-//typedef VkPhysicalDeviceImageFormatInfo2 VkPhysicalDeviceImageFormatInfo2KHR;
-//
-//typedef VkQueueFamilyProperties2 VkQueueFamilyProperties2KHR;
-//
-//typedef VkPhysicalDeviceMemoryProperties2 VkPhysicalDeviceMemoryProperties2KHR;
-//
-//typedef VkSparseImageFormatProperties2 VkSparseImageFormatProperties2KHR;
-//
-//typedef VkPhysicalDeviceSparseImageFormatInfo2 VkPhysicalDeviceSparseImageFormatInfo2KHR;
-
 #define VK_KHR_device_group                1
 #define VK_KHR_DEVICE_GROUP_SPEC_VERSION   3
 #define VK_KHR_DEVICE_GROUP_EXTENSION_NAME "VK_KHR_device_group"
-
-//typedef VkPeerMemoryFeatureFlags VkPeerMemoryFeatureFlagsKHR;
-//
-//typedef VkPeerMemoryFeatureFlagBits VkPeerMemoryFeatureFlagBitsKHR;
-//
-//typedef VkMemoryAllocateFlags VkMemoryAllocateFlagsKHR;
-//
-//typedef VkMemoryAllocateFlagBits VkMemoryAllocateFlagBitsKHR;
-//
-//typedef VkMemoryAllocateFlagsInfo VkMemoryAllocateFlagsInfoKHR;
-//
-//typedef VkDeviceGroupRenderPassBeginInfo VkDeviceGroupRenderPassBeginInfoKHR;
-//
-//typedef VkDeviceGroupCommandBufferBeginInfo VkDeviceGroupCommandBufferBeginInfoKHR;
-//
-//typedef VkDeviceGroupSubmitInfo VkDeviceGroupSubmitInfoKHR;
-//
-//typedef VkDeviceGroupBindSparseInfo VkDeviceGroupBindSparseInfoKHR;
-//
-//typedef VkBindBufferMemoryDeviceGroupInfo VkBindBufferMemoryDeviceGroupInfoKHR;
-//
-//typedef VkBindImageMemoryDeviceGroupInfo VkBindImageMemoryDeviceGroupInfoKHR;
 
 #define VK_KHR_shader_draw_parameters                1
 #define VK_KHR_SHADER_DRAW_PARAMETERS_SPEC_VERSION   1
@@ -260,52 +217,20 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDisplayModeKHR)
 #define VK_KHR_MAINTENANCE1_SPEC_VERSION   2
 #define VK_KHR_MAINTENANCE1_EXTENSION_NAME "VK_KHR_maintenance1"
 
-//typedef VkCommandPoolTrimFlags VkCommandPoolTrimFlagsKHR;
-
 #define VK_KHR_device_group_creation                1
 #define VK_KHR_DEVICE_GROUP_CREATION_SPEC_VERSION   1
 #define VK_KHR_DEVICE_GROUP_CREATION_EXTENSION_NAME "VK_KHR_device_group_creation"
 #define VK_MAX_DEVICE_GROUP_SIZE_KHR                VK_MAX_DEVICE_GROUP_SIZE
-
-//typedef VkPhysicalDeviceGroupProperties VkPhysicalDeviceGroupPropertiesKHR;
-//
-//typedef VkDeviceGroupDeviceCreateInfo VkDeviceGroupDeviceCreateInfoKHR;
 
 #define VK_KHR_external_memory_capabilities                1
 #define VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_SPEC_VERSION   1
 #define VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME "VK_KHR_external_memory_capabilities"
 #define VK_LUID_SIZE_KHR                                   VK_LUID_SIZE
 
-//typedef VkExternalMemoryHandleTypeFlags VkExternalMemoryHandleTypeFlagsKHR;
-//
-//typedef VkExternalMemoryHandleTypeFlagBits VkExternalMemoryHandleTypeFlagBitsKHR;
-//
-//typedef VkExternalMemoryFeatureFlags VkExternalMemoryFeatureFlagsKHR;
-//
-//typedef VkExternalMemoryFeatureFlagBits VkExternalMemoryFeatureFlagBitsKHR;
-//
-//typedef VkExternalMemoryProperties VkExternalMemoryPropertiesKHR;
-//
-//typedef VkPhysicalDeviceExternalImageFormatInfo VkPhysicalDeviceExternalImageFormatInfoKHR;
-//
-//typedef VkExternalImageFormatProperties VkExternalImageFormatPropertiesKHR;
-//
-//typedef VkPhysicalDeviceExternalBufferInfo VkPhysicalDeviceExternalBufferInfoKHR;
-//
-//typedef VkExternalBufferProperties VkExternalBufferPropertiesKHR;
-//
-//typedef VkPhysicalDeviceIDProperties VkPhysicalDeviceIDPropertiesKHR;
-
 #define VK_KHR_external_memory                1
 #define VK_KHR_EXTERNAL_MEMORY_SPEC_VERSION   1
 #define VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME "VK_KHR_external_memory"
 #define VK_QUEUE_FAMILY_EXTERNAL_KHR          VK_QUEUE_FAMILY_EXTERNAL
-
-//typedef VkExternalMemoryImageCreateInfo VkExternalMemoryImageCreateInfoKHR;
-//
-//typedef VkExternalMemoryBufferCreateInfo VkExternalMemoryBufferCreateInfoKHR;
-//
-//typedef VkExportMemoryAllocateInfo VkExportMemoryAllocateInfoKHR;
 
 #define VK_KHR_external_memory_fd                1
 #define VK_KHR_EXTERNAL_MEMORY_FD_SPEC_VERSION   1
@@ -316,27 +241,9 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDisplayModeKHR)
 #define VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME                                      \
   "VK_KHR_external_semaphore_capabilities"
 
-//typedef VkExternalSemaphoreHandleTypeFlags VkExternalSemaphoreHandleTypeFlagsKHR;
-//
-//typedef VkExternalSemaphoreHandleTypeFlagBits VkExternalSemaphoreHandleTypeFlagBitsKHR;
-//
-//typedef VkExternalSemaphoreFeatureFlags VkExternalSemaphoreFeatureFlagsKHR;
-//
-//typedef VkExternalSemaphoreFeatureFlagBits VkExternalSemaphoreFeatureFlagBitsKHR;
-//
-//typedef VkPhysicalDeviceExternalSemaphoreInfo VkPhysicalDeviceExternalSemaphoreInfoKHR;
-//
-//typedef VkExternalSemaphoreProperties VkExternalSemaphorePropertiesKHR;
-
 #define VK_KHR_external_semaphore                1
 #define VK_KHR_EXTERNAL_SEMAPHORE_SPEC_VERSION   1
 #define VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME "VK_KHR_external_semaphore"
-
-//typedef VkSemaphoreImportFlags VkSemaphoreImportFlagsKHR;
-//
-//typedef VkSemaphoreImportFlagBits VkSemaphoreImportFlagBitsKHR;
-//
-//typedef VkExportSemaphoreCreateInfo VkExportSemaphoreCreateInfoKHR;
 
 #define VK_KHR_external_semaphore_fd                1
 #define VK_KHR_EXTERNAL_SEMAPHORE_FD_SPEC_VERSION   1
@@ -350,8 +257,6 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDisplayModeKHR)
 #define VK_KHR_16BIT_STORAGE_SPEC_VERSION   1
 #define VK_KHR_16BIT_STORAGE_EXTENSION_NAME "VK_KHR_16bit_storage"
 
-//typedef VkPhysicalDevice16BitStorageFeatures VkPhysicalDevice16BitStorageFeaturesKHR;
-
 #define VK_KHR_incremental_present                1
 #define VK_KHR_INCREMENTAL_PRESENT_SPEC_VERSION   1
 #define VK_KHR_INCREMENTAL_PRESENT_EXTENSION_NAME "VK_KHR_incremental_present"
@@ -359,16 +264,6 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDisplayModeKHR)
 #define VK_KHR_descriptor_update_template                1
 #define VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_SPEC_VERSION   1
 #define VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME "VK_KHR_descriptor_update_template"
-
-//typedef VkDescriptorUpdateTemplate VkDescriptorUpdateTemplateKHR;
-//
-//typedef VkDescriptorUpdateTemplateType VkDescriptorUpdateTemplateTypeKHR;
-//
-//typedef VkDescriptorUpdateTemplateCreateFlags VkDescriptorUpdateTemplateCreateFlagsKHR;
-//
-//typedef VkDescriptorUpdateTemplateEntry VkDescriptorUpdateTemplateEntryKHR;
-//
-//typedef VkDescriptorUpdateTemplateCreateInfo VkDescriptorUpdateTemplateCreateInfoKHR;
 
 #define VK_KHR_shared_presentable_image                1
 #define VK_KHR_SHARED_PRESENTABLE_IMAGE_SPEC_VERSION   1
@@ -378,27 +273,9 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDisplayModeKHR)
 #define VK_KHR_EXTERNAL_FENCE_CAPABILITIES_SPEC_VERSION   1
 #define VK_KHR_EXTERNAL_FENCE_CAPABILITIES_EXTENSION_NAME "VK_KHR_external_fence_capabilities"
 
-//typedef VkExternalFenceHandleTypeFlags VkExternalFenceHandleTypeFlagsKHR;
-//
-//typedef VkExternalFenceHandleTypeFlagBits VkExternalFenceHandleTypeFlagBitsKHR;
-//
-//typedef VkExternalFenceFeatureFlags VkExternalFenceFeatureFlagsKHR;
-//
-//typedef VkExternalFenceFeatureFlagBits VkExternalFenceFeatureFlagBitsKHR;
-//
-//typedef VkPhysicalDeviceExternalFenceInfo VkPhysicalDeviceExternalFenceInfoKHR;
-//
-//typedef VkExternalFenceProperties VkExternalFencePropertiesKHR;
-
 #define VK_KHR_external_fence                1
 #define VK_KHR_EXTERNAL_FENCE_SPEC_VERSION   1
 #define VK_KHR_EXTERNAL_FENCE_EXTENSION_NAME "VK_KHR_external_fence"
-
-//typedef VkFenceImportFlags VkFenceImportFlagsKHR;
-//
-//typedef VkFenceImportFlagBits VkFenceImportFlagBitsKHR;
-//
-//typedef VkExportFenceCreateInfo VkExportFenceCreateInfoKHR;
 
 #define VK_KHR_external_fence_fd                1
 #define VK_KHR_EXTERNAL_FENCE_FD_SPEC_VERSION   1
@@ -408,20 +285,6 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDisplayModeKHR)
 #define VK_KHR_MAINTENANCE2_SPEC_VERSION   1
 #define VK_KHR_MAINTENANCE2_EXTENSION_NAME "VK_KHR_maintenance2"
 
-//typedef VkPointClippingBehavior VkPointClippingBehaviorKHR;
-//
-//typedef VkTessellationDomainOrigin VkTessellationDomainOriginKHR;
-//
-//typedef VkPhysicalDevicePointClippingProperties VkPhysicalDevicePointClippingPropertiesKHR;
-//
-//typedef VkRenderPassInputAttachmentAspectCreateInfo VkRenderPassInputAttachmentAspectCreateInfoKHR;
-//
-//typedef VkInputAttachmentAspectReference VkInputAttachmentAspectReferenceKHR;
-//
-//typedef VkImageViewUsageCreateInfo VkImageViewUsageCreateInfoKHR;
-//
-//typedef VkPipelineTessellationDomainOriginStateCreateInfo VkPipelineTessellationDomainOriginStateCreateInfoKHR;
-
 #define VK_KHR_get_surface_capabilities2                 1
 #define VK_KHR_GET_SURFACE_CAPABILITIES_2_SPEC_VERSION   1
 #define VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME "VK_KHR_get_surface_capabilities2"
@@ -430,15 +293,9 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDisplayModeKHR)
 #define VK_KHR_VARIABLE_POINTERS_SPEC_VERSION   1
 #define VK_KHR_VARIABLE_POINTERS_EXTENSION_NAME "VK_KHR_variable_pointers"
 
-//typedef VkPhysicalDeviceVariablePointerFeatures VkPhysicalDeviceVariablePointerFeaturesKHR;
-
 #define VK_KHR_dedicated_allocation                1
 #define VK_KHR_DEDICATED_ALLOCATION_SPEC_VERSION   3
 #define VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME "VK_KHR_dedicated_allocation"
-
-//typedef VkMemoryDedicatedRequirements VkMemoryDedicatedRequirementsKHR;
-//
-//typedef VkMemoryDedicatedAllocateInfo VkMemoryDedicatedAllocateInfoKHR;
 
 #define VK_KHR_storage_buffer_storage_class                1
 #define VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_SPEC_VERSION   1
@@ -452,16 +309,6 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDisplayModeKHR)
 #define VK_KHR_GET_MEMORY_REQUIREMENTS_2_SPEC_VERSION   1
 #define VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME "VK_KHR_get_memory_requirements2"
 
-//typedef VkBufferMemoryRequirementsInfo2 VkBufferMemoryRequirementsInfo2KHR;
-//
-//typedef VkImageMemoryRequirementsInfo2 VkImageMemoryRequirementsInfo2KHR;
-//
-//typedef VkImageSparseMemoryRequirementsInfo2 VkImageSparseMemoryRequirementsInfo2KHR;
-//
-//typedef VkMemoryRequirements2 VkMemoryRequirements2KHR;
-//
-//typedef VkSparseImageMemoryRequirements2 VkSparseImageMemoryRequirements2KHR;
-
 #define VK_KHR_image_format_list                1
 #define VK_KHR_IMAGE_FORMAT_LIST_SPEC_VERSION   1
 #define VK_KHR_IMAGE_FORMAT_LIST_EXTENSION_NAME "VK_KHR_image_format_list"
@@ -470,41 +317,13 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDisplayModeKHR)
 #define VK_KHR_SAMPLER_YCBCR_CONVERSION_SPEC_VERSION   1
 #define VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME "VK_KHR_sampler_ycbcr_conversion"
 
-//typedef VkSamplerYcbcrConversion VkSamplerYcbcrConversionKHR;
-//
-//typedef VkSamplerYcbcrModelConversion VkSamplerYcbcrModelConversionKHR;
-//
-//typedef VkSamplerYcbcrRange VkSamplerYcbcrRangeKHR;
-//
-//typedef VkChromaLocation VkChromaLocationKHR;
-//
-//typedef VkSamplerYcbcrConversionCreateInfo VkSamplerYcbcrConversionCreateInfoKHR;
-//
-//typedef VkSamplerYcbcrConversionInfo VkSamplerYcbcrConversionInfoKHR;
-//
-//typedef VkBindImagePlaneMemoryInfo VkBindImagePlaneMemoryInfoKHR;
-//
-//typedef VkImagePlaneMemoryRequirementsInfo VkImagePlaneMemoryRequirementsInfoKHR;
-//
-//typedef VkPhysicalDeviceSamplerYcbcrConversionFeatures VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR;
-//
-//typedef VkSamplerYcbcrConversionImageFormatProperties VkSamplerYcbcrConversionImageFormatPropertiesKHR;
-
 #define VK_KHR_bind_memory2                 1
 #define VK_KHR_BIND_MEMORY_2_SPEC_VERSION   1
 #define VK_KHR_BIND_MEMORY_2_EXTENSION_NAME "VK_KHR_bind_memory2"
 
-//typedef VkBindBufferMemoryInfo VkBindBufferMemoryInfoKHR;
-//
-//typedef VkBindImageMemoryInfo VkBindImageMemoryInfoKHR;
-
 #define VK_KHR_maintenance3                1
 #define VK_KHR_MAINTENANCE3_SPEC_VERSION   1
 #define VK_KHR_MAINTENANCE3_EXTENSION_NAME "VK_KHR_maintenance3"
-
-//typedef VkPhysicalDeviceMaintenance3Properties VkPhysicalDeviceMaintenance3PropertiesKHR;
-//
-//typedef VkDescriptorSetLayoutSupport VkDescriptorSetLayoutSupportKHR;
 
 #define VK_EXT_debug_report                1
 #define VK_EXT_DEBUG_REPORT_SPEC_VERSION   9
@@ -514,7 +333,6 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDisplayModeKHR)
   VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT
 #define VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT                                               \
   VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_CALLBACK_EXT_EXT
-VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDebugReportCallbackEXT)
 
 #define VK_NV_glsl_shader                1
 #define VK_NV_GLSL_SHADER_SPEC_VERSION   1
@@ -608,8 +426,6 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDebugReportCallbackEXT)
 #define VK_NVX_device_generated_commands                1
 #define VK_NVX_DEVICE_GENERATED_COMMANDS_SPEC_VERSION   3
 #define VK_NVX_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME "VK_NVX_device_generated_commands"
-VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkObjectTableNVX)
-VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkIndirectCommandsLayoutNVX)
 
 #define VK_NV_clip_space_w_scaling                1
 #define VK_NV_CLIP_SPACE_W_SCALING_SPEC_VERSION   1
@@ -684,7 +500,6 @@ typedef void* VkRemoteAddressNV;
 #define VK_EXT_debug_utils                1
 #define VK_EXT_DEBUG_UTILS_SPEC_VERSION   1
 #define VK_EXT_DEBUG_UTILS_EXTENSION_NAME "VK_EXT_debug_utils"
-VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDebugUtilsMessengerEXT)
 
 #define VK_EXT_sampler_filter_minmax                1
 #define VK_EXT_SAMPLER_FILTER_MINMAX_SPEC_VERSION   1
@@ -735,7 +550,6 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDebugUtilsMessengerEXT)
 #define VK_EXT_VALIDATION_CACHE_EXTENSION_NAME "VK_EXT_validation_cache"
 #define VK_DEBUG_REPORT_OBJECT_TYPE_VALIDATION_CACHE_EXT                                           \
   VK_DEBUG_REPORT_OBJECT_TYPE_VALIDATION_CACHE_EXT_EXT
-VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkValidationCacheEXT)
 
 #define VK_EXT_descriptor_indexing                1
 #define VK_EXT_DESCRIPTOR_INDEXING_SPEC_VERSION   2
@@ -824,11 +638,6 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkValidationCacheEXT)
 #define VK_KHR_WAYLAND_SURFACE_SPEC_VERSION   6
 #define VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME "VK_KHR_wayland_surface"
 #endif
-
-/****************************************************************************\
-DEFINE: VkPerformanceConfigurationINTEL
-*****************************************************************************/
-VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkPerformanceConfigurationINTEL)
 
 typedef void(VKAPI_PTR* PFN_vkVoidFunction)(void);
 

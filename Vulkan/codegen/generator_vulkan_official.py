@@ -9567,6 +9567,200 @@ VarDef(name='LAYER_NEGOTIATE_UNINTIALIZED', value='0'),
 VarDef(name='LAYER_NEGOTIATE_INTERFACE_STRUCT', value='1'),
 ])
 
+# Placeholder enums:
+
+Enum(name='VkAccelerationStructureMotionInfoFlagBitsNV', enumerators = [
+VarDef(name='VK_ACCELERATION_STRUCTURE_MOTION_INFO_FLAG_BITS_MAX_ENUM_NV', value='2147483647'),
+])
+
+Enum(name='VkAccelerationStructureMotionInstanceFlagBitsNV', enumerators = [
+VarDef(name='VK_ACCELERATION_STRUCTURE_MOTION_INSTANCE_FLAG_BITS_MAX_ENUM_NV', value='2147483647'),
+])
+
+Enum(name='VkAndroidSurfaceCreateFlagBitsKHR', enumerators = [
+VarDef(name='VK_ANDROID_SURFACE_CREATE_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
+])
+
+Enum(name='VkBufferViewCreateFlagBits', enumerators = [
+VarDef(name='VK_BUFFER_VIEW_CREATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
+])
+
+Enum(name='VkCommandPoolTrimFlagBits', enumerators = [
+VarDef(name='VK_COMMAND_POOL_TRIM_FLAG_BITS_MAX_ENUM', value='2147483647'),
+])
+
+Enum(name='VkDebugUtilsMessengerCallbackDataFlagBitsEXT', enumerators = [
+VarDef(name='VK_DEBUG_UTILS_MESSENGER_CALLBACK_DATA_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
+])
+
+Enum(name='VkDebugUtilsMessengerCreateFlagBitsEXT', enumerators = [
+VarDef(name='VK_DEBUG_UTILS_MESSENGER_CREATE_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
+])
+
+Enum(name='VkDescriptorPoolResetFlagBits', enumerators = [
+VarDef(name='VK_DESCRIPTOR_POOL_RESET_FLAG_BITS_MAX_ENUM', value='2147483647'),
+])
+
+Enum(name='VkDescriptorUpdateTemplateCreateFlagBits', enumerators = [
+VarDef(name='VK_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
+])
+
+Enum(name='VkDeviceCreateFlagBits', enumerators = [
+VarDef(name='VK_DEVICE_CREATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
+])
+
+Enum(name='VkDeviceMemoryReportFlagBitsEXT', enumerators = [
+VarDef(name='VK_DEVICE_MEMORY_REPORT_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
+])
+
+Enum(name='VkDirectDriverLoadingFlagBitsLUNARG', enumerators = [
+VarDef(name='VK_DIRECT_DRIVER_LOADING_FLAG_BITS_MAX_ENUM_LUNARG', value='2147483647'),
+])
+
+Enum(name='VkDirectFBSurfaceCreateFlagBitsEXT', enumerators = [
+VarDef(name='VK_DIRECT_FBSURFACE_CREATE_EXT_FLAG_BITS_MAX_ENUM_FB', value='2147483647'),
+])
+
+Enum(name='VkDisplayModeCreateFlagBitsKHR', enumerators = [
+VarDef(name='VK_DISPLAY_MODE_CREATE_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
+])
+
+Enum(name='VkDisplaySurfaceCreateFlagBitsKHR', enumerators = [
+VarDef(name='VK_DISPLAY_SURFACE_CREATE_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
+])
+
+Enum(name='VkHeadlessSurfaceCreateFlagBitsEXT', enumerators = [
+VarDef(name='VK_HEADLESS_SURFACE_CREATE_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
+])
+
+Enum(name='VkIOSSurfaceCreateFlagBitsMVK', enumerators = [
+VarDef(name='VK_IOSSURFACE_CREATE_FLAG_BITS_MAX_ENUM_MVK', value='2147483647'),
+])
+
+Enum(name='VkImagePipeSurfaceCreateFlagBitsFUCHSIA', enumerators = [
+VarDef(name='VK_IMAGE_PIPE_SURFACE_CREATE_FLAG_BITS_MAX_ENUM_FUCHSIA', value='2147483647'),
+])
+
+Enum(name='VkMacOSSurfaceCreateFlagBitsMVK', enumerators = [
+VarDef(name='VK_MAC_OSSURFACE_CREATE_FLAG_BITS_MAX_ENUM_MVK', value='2147483647'),
+])
+
+Enum(name='VkMetalSurfaceCreateFlagBitsEXT', enumerators = [
+VarDef(name='VK_METAL_SURFACE_CREATE_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
+])
+
+Enum(name='VkPipelineCoverageModulationStateCreateFlagBitsNV', enumerators = [
+VarDef(name='VK_PIPELINE_COVERAGE_MODULATION_STATE_CREATE_FLAG_BITS_MAX_ENUM_NV', value='2147483647'),
+])
+
+Enum(name='VkPipelineCoverageReductionStateCreateFlagBitsNV', enumerators = [
+VarDef(name='VK_PIPELINE_COVERAGE_REDUCTION_STATE_CREATE_FLAG_BITS_MAX_ENUM_NV', value='2147483647'),
+])
+
+Enum(name='VkPipelineCoverageToColorStateCreateFlagBitsNV', enumerators = [
+VarDef(name='VK_PIPELINE_COVERAGE_TO_COLOR_STATE_CREATE_FLAG_BITS_MAX_ENUM_NV', value='2147483647'),
+])
+
+Enum(name='VkPipelineDiscardRectangleStateCreateFlagBitsEXT', enumerators = [
+VarDef(name='VK_PIPELINE_DISCARD_RECTANGLE_STATE_CREATE_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
+])
+
+Enum(name='VkPipelineDynamicStateCreateFlagBits', enumerators = [
+VarDef(name='VK_PIPELINE_DYNAMIC_STATE_CREATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
+])
+
+Enum(name='VkPipelineInputAssemblyStateCreateFlagBits', enumerators = [
+VarDef(name='VK_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
+])
+
+Enum(name='VkPipelineMultisampleStateCreateFlagBits', enumerators = [
+VarDef(name='VK_PIPELINE_MULTISAMPLE_STATE_CREATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
+])
+
+Enum(name='VkPipelineRasterizationConservativeStateCreateFlagBitsEXT', enumerators = [
+VarDef(name='VK_PIPELINE_RASTERIZATION_CONSERVATIVE_STATE_CREATE_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
+])
+
+Enum(name='VkPipelineRasterizationDepthClipStateCreateFlagBitsEXT', enumerators = [
+VarDef(name='VK_PIPELINE_RASTERIZATION_DEPTH_CLIP_STATE_CREATE_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
+])
+
+Enum(name='VkPipelineRasterizationStateCreateFlagBits', enumerators = [
+VarDef(name='VK_PIPELINE_RASTERIZATION_STATE_CREATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
+])
+
+Enum(name='VkPipelineRasterizationStateStreamCreateFlagBitsEXT', enumerators = [
+VarDef(name='VK_PIPELINE_RASTERIZATION_STATE_STREAM_CREATE_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
+])
+
+Enum(name='VkPipelineTessellationStateCreateFlagBits', enumerators = [
+VarDef(name='VK_PIPELINE_TESSELLATION_STATE_CREATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
+])
+
+Enum(name='VkPipelineVertexInputStateCreateFlagBits', enumerators = [
+VarDef(name='VK_PIPELINE_VERTEX_INPUT_STATE_CREATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
+])
+
+Enum(name='VkPipelineViewportStateCreateFlagBits', enumerators = [
+VarDef(name='VK_PIPELINE_VIEWPORT_STATE_CREATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
+])
+
+Enum(name='VkPipelineViewportSwizzleStateCreateFlagBitsNV', enumerators = [
+VarDef(name='VK_PIPELINE_VIEWPORT_SWIZZLE_STATE_CREATE_FLAG_BITS_MAX_ENUM_NV', value='2147483647'),
+])
+
+Enum(name='VkQueryPoolCreateFlagBits', enumerators = [
+VarDef(name='VK_QUERY_POOL_CREATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
+])
+
+Enum(name='VkScreenSurfaceCreateFlagBitsQNX', enumerators = [
+VarDef(name='VK_SCREEN_SURFACE_CREATE_FLAG_BITS_MAX_ENUM_QNX', value='2147483647'),
+])
+
+Enum(name='VkStreamDescriptorSurfaceCreateFlagBitsGGP', enumerators = [
+VarDef(name='VK_STREAM_DESCRIPTOR_SURFACE_CREATE_FLAG_BITS_MAX_ENUM_GGP', value='2147483647'),
+])
+
+Enum(name='VkValidationCacheCreateFlagBitsEXT', enumerators = [
+VarDef(name='VK_VALIDATION_CACHE_CREATE_FLAG_BITS_MAX_ENUM_EXT', value='2147483647'),
+])
+
+Enum(name='VkViSurfaceCreateFlagBitsNN', enumerators = [
+VarDef(name='VK_VI_SURFACE_CREATE_FLAG_BITS_MAX_ENUM_NN', value='2147483647'),
+])
+
+Enum(name='VkVideoBeginCodingFlagBitsKHR', enumerators = [
+VarDef(name='VK_VIDEO_BEGIN_CODING_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
+])
+
+Enum(name='VkVideoDecodeFlagBitsKHR', enumerators = [
+VarDef(name='VK_VIDEO_DECODE_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
+])
+
+Enum(name='VkVideoEncodeRateControlFlagBitsKHR', enumerators = [
+VarDef(name='VK_VIDEO_ENCODE_RATE_CONTROL_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
+])
+
+Enum(name='VkVideoEndCodingFlagBitsKHR', enumerators = [
+VarDef(name='VK_VIDEO_END_CODING_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
+])
+
+Enum(name='VkVideoSessionParametersCreateFlagBitsKHR', enumerators = [
+VarDef(name='VK_VIDEO_SESSION_PARAMETERS_CREATE_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
+])
+
+Enum(name='VkWin32SurfaceCreateFlagBitsKHR', enumerators = [
+VarDef(name='VK_WIN_32_SURFACE_CREATE_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
+])
+
+Enum(name='VkXcbSurfaceCreateFlagBitsKHR', enumerators = [
+VarDef(name='VK_XCB_SURFACE_CREATE_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
+])
+
+Enum(name='VkXlibSurfaceCreateFlagBitsKHR', enumerators = [
+VarDef(name='VK_XLIB_SURFACE_CREATE_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
+])
+
 ###############################################
 
 Struct(name='VkAabbPositionsKHR_', enabled=False,
