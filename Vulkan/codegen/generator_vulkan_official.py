@@ -97,7 +97,7 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CN
 arg4=ArgDef(name='pMemory', type='VkDeviceMemory*', wrapType='CVkDeviceMemory::CSMapArray', wrapParams = '1, pMemory')
 )
 
-Function(name='vkAntiLagUpdateAMD', enabled=False, type=None,
+Function(name='vkAntiLagUpdateAMD', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pData', type='const VkAntiLagDataAMD*')
@@ -271,7 +271,7 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pBeginInfo', type='const VkVideoBeginCodingInfoKHR*')
 )
 
-Function(name='vkCmdBindDescriptorBufferEmbeddedSamplers2EXT', enabled=False, type=None,
+Function(name='vkCmdBindDescriptorBufferEmbeddedSamplers2EXT', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pBindDescriptorBufferEmbeddedSamplersInfo', type='const VkBindDescriptorBufferEmbeddedSamplersInfoEXT*')
@@ -304,7 +304,7 @@ arg7=ArgDef(name='dynamicOffsetCount', type='uint32_t'),
 arg8=ArgDef(name='pDynamicOffsets', type='const uint32_t*', wrapParams='dynamicOffsetCount, pDynamicOffsets', count='dynamicOffsetCount')
 )
 
-Function(name='vkCmdBindDescriptorSets2KHR', enabled=False, type=None,
+Function(name='vkCmdBindDescriptorSets2KHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pBindDescriptorSetsInfo', type='const VkBindDescriptorSetsInfoKHR*')
@@ -327,7 +327,7 @@ arg4=ArgDef(name='size', type='VkDeviceSize'),
 arg5=ArgDef(name='indexType', type='VkIndexType')
 )
 
-Function(name='vkCmdBindInvocationMaskHUAWEI', enabled=False, type=None,
+Function(name='vkCmdBindInvocationMaskHUAWEI', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='imageView', type='VkImageView'),
@@ -665,7 +665,7 @@ arg7=ArgDef(name='stride', type='VkDeviceSize'),
 arg8=ArgDef(name='flags', type='VkQueryResultFlags')
 )
 
-Function(name='vkCmdCudaLaunchKernelNV', enabled=False, type=None,
+Function(name='vkCmdCudaLaunchKernelNV', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pLaunchInfo', type='const VkCudaLaunchInfoNV*')
@@ -755,7 +755,7 @@ arg4=ArgDef(name='firstVertex', type='uint32_t'),
 arg5=ArgDef(name='firstInstance', type='uint32_t')
 )
 
-Function(name='vkCmdDrawClusterHUAWEI', enabled=False, type=None,
+Function(name='vkCmdDrawClusterHUAWEI', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='groupCountX', type='uint32_t'),
@@ -763,7 +763,7 @@ arg3=ArgDef(name='groupCountY', type='uint32_t'),
 arg4=ArgDef(name='groupCountZ', type='uint32_t')
 )
 
-Function(name='vkCmdDrawClusterIndirectHUAWEI', enabled=False, type=None,
+Function(name='vkCmdDrawClusterIndirectHUAWEI', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='buffer', type='VkBuffer'),
@@ -1031,7 +1031,7 @@ arg2=ArgDef(name='commandBufferCount', type='uint32_t'),
 arg3=ArgDef(name='pCommandBuffers', type='const VkCommandBuffer*', wrapParams='commandBufferCount, pCommandBuffers', count='commandBufferCount')
 )
 
-Function(name='vkCmdExecuteGeneratedCommandsEXT', enabled=False, type=None,
+Function(name='vkCmdExecuteGeneratedCommandsEXT', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='isPreprocessed', type='VkBool32'),
@@ -1113,14 +1113,14 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pDependencyInfo', type='const VkDependencyInfo*')
 )
 
-Function(name='vkCmdPreprocessGeneratedCommandsEXT', enabled=False, type=None,
+Function(name='vkCmdPreprocessGeneratedCommandsEXT', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pGeneratedCommandsInfo', type='const VkGeneratedCommandsInfoEXT*'),
 arg3=ArgDef(name='stateCommandBuffer', type='VkCommandBuffer')
 )
 
-Function(name='vkCmdPreprocessGeneratedCommandsNV', enabled=False, type=None,
+Function(name='vkCmdPreprocessGeneratedCommandsNV', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pGeneratedCommandsInfo', type='const VkGeneratedCommandsInfoNV*')
@@ -1136,13 +1136,13 @@ arg5=ArgDef(name='size', type='uint32_t'),
 arg6=ArgDef(name='pValues', type='const void*', wrapType='Cuint8_t::CSArray', wrapParams='(size_t)(size), (const uint8_t *)pValues')
 )
 
-Function(name='vkCmdPushConstants2KHR', enabled=False, type=None,
+Function(name='vkCmdPushConstants2KHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pPushConstantsInfo', type='const VkPushConstantsInfoKHR*')
 )
 
-Function(name='vkCmdPushDescriptorSet2KHR', enabled=False, type=None,
+Function(name='vkCmdPushDescriptorSet2KHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pPushDescriptorSetInfo', type='const VkPushDescriptorSetInfoKHR*')
@@ -1158,7 +1158,7 @@ arg5=ArgDef(name='descriptorWriteCount', type='uint32_t'),
 arg6=ArgDef(name='pDescriptorWrites', type='const VkWriteDescriptorSet*', wrapType='CVkWriteDescriptorSetArray', wrapParams='descriptorWriteCount, pDescriptorWrites', count='descriptorWriteCount')
 )
 
-Function(name='vkCmdPushDescriptorSetWithTemplate2KHR', enabled=False, type=None,
+Function(name='vkCmdPushDescriptorSetWithTemplate2KHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pPushDescriptorSetWithTemplateInfo', type='const VkPushDescriptorSetWithTemplateInfoKHR*')
@@ -1231,19 +1231,19 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pResolveImageInfo', type='const VkResolveImageInfo2*')
 )
 
-Function(name='vkCmdSetAlphaToCoverageEnableEXT', enabled=False, type=None,
+Function(name='vkCmdSetAlphaToCoverageEnableEXT', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='alphaToCoverageEnable', type='VkBool32')
 )
 
-Function(name='vkCmdSetAlphaToOneEnableEXT', enabled=False, type=None,
+Function(name='vkCmdSetAlphaToOneEnableEXT', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='alphaToOneEnable', type='VkBool32')
 )
 
-Function(name='vkCmdSetAttachmentFeedbackLoopEnableEXT', enabled=False, type=None,
+Function(name='vkCmdSetAttachmentFeedbackLoopEnableEXT', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='aspectMask', type='VkImageAspectFlags')
@@ -1371,7 +1371,7 @@ arg3=ArgDef(name='depthBiasClamp', type='float'),
 arg4=ArgDef(name='depthBiasSlopeFactor', type='float')
 )
 
-Function(name='vkCmdSetDepthBias2EXT', enabled=False, type=None,
+Function(name='vkCmdSetDepthBias2EXT', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pDepthBiasInfo', type='const VkDepthBiasInfoEXT*')
@@ -1414,7 +1414,7 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='depthClampEnable', type='VkBool32')
 )
 
-Function(name='vkCmdSetDepthClampRangeEXT', enabled=False, type=None,
+Function(name='vkCmdSetDepthClampRangeEXT', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='depthClampMode', type='VkDepthClampModeEXT'),
@@ -1469,7 +1469,7 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='depthWriteEnable', type='VkBool32')
 )
 
-Function(name='vkCmdSetDescriptorBufferOffsets2EXT', enabled=False, type=None,
+Function(name='vkCmdSetDescriptorBufferOffsets2EXT', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pSetDescriptorBufferOffsetsInfo', type='const VkSetDescriptorBufferOffsetsInfoEXT*')
@@ -1606,7 +1606,7 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='stippledLineEnable', type='VkBool32')
 )
 
-Function(name='vkCmdSetLineStippleKHR', enabled=False, type=None,
+Function(name='vkCmdSetLineStippleKHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='lineStippleFactor', type='uint32_t'),
@@ -1721,13 +1721,13 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pipelineStackSize', type='uint32_t')
 )
 
-Function(name='vkCmdSetRenderingAttachmentLocationsKHR', enabled=False, type=None,
+Function(name='vkCmdSetRenderingAttachmentLocationsKHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pLocationInfo', type='const VkRenderingAttachmentLocationInfoKHR*')
 )
 
-Function(name='vkCmdSetRenderingInputAttachmentIndicesKHR', enabled=False, type=None,
+Function(name='vkCmdSetRenderingInputAttachmentIndicesKHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pInputAttachmentIndexInfo', type='const VkRenderingInputAttachmentIndexInfoKHR*')
@@ -1906,7 +1906,7 @@ arg2=ArgDef(name='viewportCount', type='uint32_t'),
 arg3=ArgDef(name='pViewports', type='const VkViewport*', wrapType='CVkViewportArray', wrapParams='viewportCount, pViewports', count='viewportCount')
 )
 
-Function(name='vkCmdSubpassShadingHUAWEI', enabled=False, type=None,
+Function(name='vkCmdSubpassShadingHUAWEI', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer')
 )
@@ -1967,7 +1967,7 @@ arg4=ArgDef(name='dataSize', type='VkDeviceSize'),
 arg5=ArgDef(name='pData', type='const void*', wrapType='Cuint8_t::CSArray', wrapParams='(size_t)(dataSize), (const uint8_t *)pData')
 )
 
-Function(name='vkCmdUpdatePipelineIndirectBufferNV', enabled=False, type=None,
+Function(name='vkCmdUpdatePipelineIndirectBufferNV', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pipelineBindPoint', type='VkPipelineBindPoint'),
@@ -2160,7 +2160,7 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*'),
 arg4=ArgDef(name='pAccelerationStructure', type='VkAccelerationStructureNV*')
 )
 
-#Function(name='vkCreateAndroidSurfaceKHR', enabled=False, type=None,
+#Function(name='vkCreateAndroidSurfaceKHR', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='instance', type='VkInstance'),
 #arg2=ArgDef(name='pCreateInfo', type='const VkAndroidSurfaceCreateInfoKHR*'),
@@ -2176,7 +2176,7 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CN
 arg4=ArgDef(name='pBuffer', type='VkBuffer*', wrapType='CVkBuffer::CSMapArray', wrapParams='1, pBuffer')
 )
 
-#Function(name='vkCreateBufferCollectionFUCHSIA', enabled=False, type=None,
+#Function(name='vkCreateBufferCollectionFUCHSIA', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='device', type='VkDevice'),
 #arg2=ArgDef(name='pCreateInfo', type='const VkBufferCollectionCreateInfoFUCHSIA*'),
@@ -2210,7 +2210,7 @@ arg5=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CN
 arg6=ArgDef(name='pPipelines', type='VkPipeline*', wrapType='CVkPipeline::CSMapArray', wrapParams='createInfoCount, pPipelines', count='createInfoCount')
 )
 
-Function(name='vkCreateCudaFunctionNV', enabled=False, type=None,
+Function(name='vkCreateCudaFunctionNV', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pCreateInfo', type='const VkCudaFunctionCreateInfoNV*'),
@@ -2218,7 +2218,7 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*'),
 arg4=ArgDef(name='pFunction', type='VkCudaFunctionNV*')
 )
 
-Function(name='vkCreateCudaModuleNV', enabled=False, type=None,
+Function(name='vkCreateCudaModuleNV', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pCreateInfo', type='const VkCudaModuleCreateInfoNV*'),
@@ -2372,7 +2372,7 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CN
 arg4=ArgDef(name='pImage', type='VkImage*', wrapType='CVkImage::CSMapArray', wrapParams='1, pImage')
 )
 
-#Function(name='vkCreateImagePipeSurfaceFUCHSIA', enabled=False, type=None,
+#Function(name='vkCreateImagePipeSurfaceFUCHSIA', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='instance', type='VkInstance'),
 #arg2=ArgDef(name='pCreateInfo', type='const VkImagePipeSurfaceCreateInfoFUCHSIA*'),
@@ -2388,7 +2388,7 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CN
 arg4=ArgDef(name='pView', type='VkImageView*', wrapType='CVkImageView::CSMapArray', wrapParams='1, pView')
 )
 
-Function(name='vkCreateIndirectCommandsLayoutEXT', enabled=False, type=None,
+Function(name='vkCreateIndirectCommandsLayoutEXT', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pCreateInfo', type='const VkIndirectCommandsLayoutCreateInfoEXT*'),
@@ -2404,7 +2404,7 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*'),
 arg4=ArgDef(name='pIndirectCommandsLayout', type='VkIndirectCommandsLayoutNV*')
 )
 
-Function(name='vkCreateIndirectExecutionSetEXT', enabled=False, type=None,
+Function(name='vkCreateIndirectExecutionSetEXT', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pCreateInfo', type='const VkIndirectExecutionSetCreateInfoEXT*'),
@@ -2427,7 +2427,7 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*'),
 arg4=ArgDef(name='pSurface', type='VkSurfaceKHR*')
 )
 
-#Function(name='vkCreateMetalSurfaceEXT', enabled=False, type=None,
+#Function(name='vkCreateMetalSurfaceEXT', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='instance', type='VkInstance'),
 #arg2=ArgDef(name='pCreateInfo', type='const VkMetalSurfaceCreateInfoEXT*'),
@@ -2451,7 +2451,7 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*'),
 arg4=ArgDef(name='pSession', type='VkOpticalFlowSessionNV*')
 )
 
-Function(name='vkCreatePipelineBinariesKHR', enabled=False, type=None,
+Function(name='vkCreatePipelineBinariesKHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pCreateInfo', type='const VkPipelineBinaryCreateInfoKHR*'),
@@ -2576,7 +2576,7 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*'),
 arg4=ArgDef(name='pYcbcrConversion', type='VkSamplerYcbcrConversion*')
 )
 
-#Function(name='vkCreateScreenSurfaceQNX', enabled=False, type=None,
+#Function(name='vkCreateScreenSurfaceQNX', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='instance', type='VkInstance'),
 #arg2=ArgDef(name='pCreateInfo', type='const VkScreenSurfaceCreateInfoQNX*'),
@@ -2592,7 +2592,7 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CN
 arg4=ArgDef(name='pSemaphore', type='VkSemaphore*', wrapType='CVkSemaphore::CSMapArray', wrapParams='1, pSemaphore')
 )
 
-#Function(name='vkCreateSemaphoreSciSyncPoolNV', enabled=False, type=None,
+#Function(name='vkCreateSemaphoreSciSyncPoolNV', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='device', type='VkDevice'),
 #arg2=ArgDef(name='pCreateInfo', type='const VkSemaphoreSciSyncPoolCreateInfoNV*'),
@@ -2626,7 +2626,7 @@ arg4=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CN
 arg5=ArgDef(name='pSwapchains', type='VkSwapchainKHR*', count='swapchainCount')
 )
 
-#Function(name='vkCreateStreamDescriptorSurfaceGGP', enabled=False, type=None,
+#Function(name='vkCreateStreamDescriptorSurfaceGGP', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='instance', type='VkInstance'),
 #arg2=ArgDef(name='pCreateInfo', type='const VkStreamDescriptorSurfaceCreateInfoGGP*'),
@@ -2650,7 +2650,7 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CN
 arg4=ArgDef(name='pValidationCache', type='VkValidationCacheEXT*', wrapType='CVkValidationCacheEXT::CSMapArray', wrapParams='1, pValidationCache')
 )
 
-#Function(name='vkCreateViSurfaceNN', enabled=False, type=None,
+#Function(name='vkCreateViSurfaceNN', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='instance', type='VkInstance'),
 #arg2=ArgDef(name='pCreateInfo', type='const VkViSurfaceCreateInfoNN*'),
@@ -2757,7 +2757,7 @@ arg2=ArgDef(name='buffer', type='VkBuffer', removeMapping=True),
 arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper')
 )
 
-#Function(name='vkDestroyBufferCollectionFUCHSIA', enabled=False, type=None,
+#Function(name='vkDestroyBufferCollectionFUCHSIA', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='void'),
 #arg1=ArgDef(name='device', type='VkDevice'),
 #arg2=ArgDef(name='collection', type='VkBufferCollectionFUCHSIA'),
@@ -2778,14 +2778,14 @@ arg2=ArgDef(name='commandPool', type='VkCommandPool', removeMapping=True),
 arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper')
 )
 
-Function(name='vkDestroyCudaFunctionNV', enabled=False, type=None,
+Function(name='vkDestroyCudaFunctionNV', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='function', type='VkCudaFunctionNV'),
 arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*')
 )
 
-Function(name='vkDestroyCudaModuleNV', enabled=False, type=None,
+Function(name='vkDestroyCudaModuleNV', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='module', type='VkCudaModuleNV'),
@@ -2889,14 +2889,14 @@ arg2=ArgDef(name='indirectCommandsLayout', type='VkIndirectCommandsLayoutNV'),
 arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*')
 )
 
-Function(name='vkDestroyIndirectCommandsLayoutNV', enabled=False, type=None,
+Function(name='vkDestroyIndirectCommandsLayoutNV', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='indirectCommandsLayout', type='VkIndirectCommandsLayoutNV'),
 arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*')
 )
 
-Function(name='vkDestroyIndirectExecutionSetEXT', enabled=False, type=None,
+Function(name='vkDestroyIndirectExecutionSetEXT', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='indirectExecutionSet', type='VkIndirectExecutionSetEXT'),
@@ -2930,7 +2930,7 @@ arg2=ArgDef(name='pipeline', type='VkPipeline', removeMapping=True),
 arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper')
 )
 
-Function(name='vkDestroyPipelineBinaryKHR', enabled=False, type=None,
+Function(name='vkDestroyPipelineBinaryKHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pipelineBinary', type='VkPipelineBinaryKHR'),
@@ -3007,7 +3007,7 @@ arg2=ArgDef(name='semaphore', type='VkSemaphore', removeMapping=True),
 arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper')
 )
 
-#Function(name='vkDestroySemaphoreSciSyncPoolNV', enabled=False, type=None,
+#Function(name='vkDestroySemaphoreSciSyncPoolNV', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='void'),
 #arg1=ArgDef(name='device', type='VkDevice'),
 #arg2=ArgDef(name='semaphorePool', type='VkSemaphoreSciSyncPoolNV'),
@@ -3143,7 +3143,7 @@ arg2=ArgDef(name='pPhysicalDeviceCount', type='uint32_t*', wrapParams='1, pPhysi
 arg3=ArgDef(name='pPhysicalDevices', type='VkPhysicalDevice*', wrapType='CVkPhysicalDevice::CSMapArray', wrapParams='*pPhysicalDeviceCount, pPhysicalDevices', count='pPhysicalDeviceCount')
 )
 
-#Function(name='vkExportMetalObjectsEXT', enabled=False, type=None,
+#Function(name='vkExportMetalObjectsEXT', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='void'),
 #arg1=ArgDef(name='device', type='VkDevice'),
 #arg2=ArgDef(name='pMetalObjectsInfo', type='VkExportMetalObjectsInfoEXT*')
@@ -3216,14 +3216,14 @@ arg2=ArgDef(name='pInfo', type='const VkAccelerationStructureCaptureDescriptorDa
 arg3=ArgDef(name='pData', type='void*')
 )
 
-#Function(name='vkGetAndroidHardwareBufferPropertiesANDROID', enabled=False, type=None,
+#Function(name='vkGetAndroidHardwareBufferPropertiesANDROID', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='device', type='VkDevice'),
 #arg2=ArgDef(name='buffer', type='const struct AHardwareBuffer*'),
 #arg3=ArgDef(name='pProperties', type='VkAndroidHardwareBufferPropertiesANDROID*')
 #)
 
-#Function(name='vkGetBufferCollectionPropertiesFUCHSIA', enabled=False, type=None,
+#Function(name='vkGetBufferCollectionPropertiesFUCHSIA', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='device', type='VkDevice'),
 #arg2=ArgDef(name='collection', type='VkBufferCollectionFUCHSIA'),
@@ -3297,7 +3297,7 @@ arg4=ArgDef(name='pTimestamps', type='uint64_t*'),
 arg5=ArgDef(name='pMaxDeviation', type='uint64_t*')
 )
 
-Function(name='vkGetCalibratedTimestampsKHR', enabled=False, type=None,
+Function(name='vkGetCalibratedTimestampsKHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='timestampCount', type='uint32_t'),
@@ -3314,7 +3314,7 @@ arg3=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg4=ArgDef(name='pConsumption', type='VkCommandPoolMemoryConsumption*')
 )
 
-Function(name='vkGetCudaModuleCacheNV', enabled=False, type=None,
+Function(name='vkGetCudaModuleCacheNV', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='module', type='VkCudaModuleNV'),
@@ -3342,7 +3342,7 @@ arg3=ArgDef(name='dataSize', type='size_t'),
 arg4=ArgDef(name='pDescriptor', type='void*')
 )
 
-Function(name='vkGetDescriptorSetHostMappingVALVE', enabled=False, type=None,
+Function(name='vkGetDescriptorSetHostMappingVALVE', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='descriptorSet', type='VkDescriptorSet'),
@@ -3357,7 +3357,7 @@ arg3=ArgDef(name='binding', type='uint32_t'),
 arg4=ArgDef(name='pOffset', type='VkDeviceSize*')
 )
 
-Function(name='vkGetDescriptorSetLayoutHostMappingInfoVALVE', enabled=False, type=None,
+Function(name='vkGetDescriptorSetLayoutHostMappingInfoVALVE', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pBindingReference', type='const VkDescriptorSetBindingReferenceVALVE*'),
@@ -3481,7 +3481,7 @@ arg3=ArgDef(name='pSparseMemoryRequirementCount', type='uint32_t*'),
 arg4=ArgDef(name='pSparseMemoryRequirements', type='VkSparseImageMemoryRequirements2*')
 )
 
-Function(name='vkGetDeviceImageSubresourceLayoutKHR', enabled=False, type=None,
+Function(name='vkGetDeviceImageSubresourceLayoutKHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pInfo', type='const VkDeviceImageSubresourceInfoKHR*'),
@@ -3535,7 +3535,7 @@ arg2=ArgDef(name='pQueueInfo', type='const VkDeviceQueueInfo2*'),
 arg3=ArgDef(name='pQueue', type='VkQueue*', wrapType='CVkQueue::CSMapArray', wrapParams='1, pQueue')
 )
 
-Function(name='vkGetDeviceSubpassShadingMaxWorkgroupSizeHUAWEI', enabled=False, type=None,
+Function(name='vkGetDeviceSubpassShadingMaxWorkgroupSizeHUAWEI', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='renderpass', type='VkRenderPass'),
@@ -3589,14 +3589,14 @@ arg3=ArgDef(name='connectorId', type='uint32_t'),
 arg4=ArgDef(name='display', type='VkDisplayKHR*')
 )
 
-#Function(name='vkGetDynamicRenderingTilePropertiesQCOM', enabled=False, type=None,
+#Function(name='vkGetDynamicRenderingTilePropertiesQCOM', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='device', type='VkDevice'),
 #arg2=ArgDef(name='pRenderingInfo', type='const VkRenderingInfo*'),
 #arg3=ArgDef(name='pProperties', type='VkTilePropertiesQCOM*')
 #)
 
-Function(name='vkGetEncodedVideoSessionParametersKHR', enabled=False, type=None,
+Function(name='vkGetEncodedVideoSessionParametersKHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pVideoSessionParametersInfo', type='const VkVideoEncodeSessionParametersGetInfoKHR*'),
@@ -3627,14 +3627,14 @@ arg2=ArgDef(name='pGetFdInfo', type='const VkFenceGetFdInfoKHR*'),
 arg3=ArgDef(name='pFd', type='int*')
 )
 
-#Function(name='vkGetFenceSciSyncFenceNV', enabled=False, type=None,
+#Function(name='vkGetFenceSciSyncFenceNV', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='device', type='VkDevice'),
 #arg2=ArgDef(name='pGetSciSyncHandleInfo', type='const VkFenceGetSciSyncInfoNV*'),
 #arg3=ArgDef(name='pHandle', type='void*')
 #)
 
-#Function(name='vkGetFenceSciSyncObjNV', enabled=False, type=None,
+#Function(name='vkGetFenceSciSyncObjNV', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='device', type='VkDevice'),
 #arg2=ArgDef(name='pGetSciSyncHandleInfo', type='const VkFenceGetSciSyncInfoNV*'),
@@ -3654,7 +3654,7 @@ arg2=ArgDef(name='pGetWin32HandleInfo', type='const VkFenceGetWin32HandleInfoKHR
 arg3=ArgDef(name='pHandle', type='HANDLE*')
 )
 
-#Function(name='vkGetFramebufferTilePropertiesQCOM', enabled=False, type=None,
+#Function(name='vkGetFramebufferTilePropertiesQCOM', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='device', type='VkDevice'),
 #arg2=ArgDef(name='framebuffer', type='VkFramebuffer'),
@@ -3662,7 +3662,7 @@ arg3=ArgDef(name='pHandle', type='HANDLE*')
 #arg4=ArgDef(name='pProperties', type='VkTilePropertiesQCOM*')
 #)
 
-Function(name='vkGetGeneratedCommandsMemoryRequirementsEXT', enabled=False, type=None,
+Function(name='vkGetGeneratedCommandsMemoryRequirementsEXT', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pInfo', type='const VkGeneratedCommandsMemoryRequirementsInfoEXT*'),
@@ -3751,7 +3751,7 @@ arg3=ArgDef(name='pSubresource', type='const VkImageSubresource2KHR*'),
 arg4=ArgDef(name='pLayout', type='VkSubresourceLayout2KHR*')
 )
 
-Function(name='vkGetImageSubresourceLayout2KHR', enabled=False, type=None,
+Function(name='vkGetImageSubresourceLayout2KHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='image', type='VkImage'),
@@ -3772,14 +3772,14 @@ arg1=ArgDef(name='instance', type='VkInstance'),
 arg2=ArgDef(name='pName', type='const char*')
 )
 
-Function(name='vkGetLatencyTimingsNV', enabled=False, type=None,
+Function(name='vkGetLatencyTimingsNV', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='swapchain', type='VkSwapchainKHR'),
 arg3=ArgDef(name='pLatencyMarkerInfo', type='VkGetLatencyMarkerInfoNV*')
 )
 
-#Function(name='vkGetMemoryAndroidHardwareBufferANDROID', enabled=False, type=None,
+#Function(name='vkGetMemoryAndroidHardwareBufferANDROID', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='device', type='VkDevice'),
 #arg2=ArgDef(name='pInfo', type='const VkMemoryGetAndroidHardwareBufferInfoANDROID*'),
@@ -3816,7 +3816,7 @@ arg2=ArgDef(name='pMemoryGetRemoteAddressInfo', type='const VkMemoryGetRemoteAdd
 arg3=ArgDef(name='pAddress', type='VkRemoteAddressNV*')
 )
 
-#Function(name='vkGetMemorySciBufNV', enabled=False, type=None,
+#Function(name='vkGetMemorySciBufNV', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='device', type='VkDevice'),
 #arg2=ArgDef(name='pGetSciBufInfo', type='const VkMemoryGetSciBufInfoNV*'),
@@ -3846,14 +3846,14 @@ arg3=ArgDef(name='handle', type='HANDLE'),
 arg4=ArgDef(name='pMemoryWin32HandleProperties', type='VkMemoryWin32HandlePropertiesKHR*')
 )
 
-#Function(name='vkGetMemoryZirconHandleFUCHSIA', enabled=False, type=None,
+#Function(name='vkGetMemoryZirconHandleFUCHSIA', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='device', type='VkDevice'),
 #arg2=ArgDef(name='pGetZirconHandleInfo', type='const VkMemoryGetZirconHandleInfoFUCHSIA*'),
 #arg3=ArgDef(name='pZirconHandle', type='zx_handle_t*')
 #)
 
-#Function(name='vkGetMemoryZirconHandlePropertiesFUCHSIA', enabled=False, type=None,
+#Function(name='vkGetMemoryZirconHandlePropertiesFUCHSIA', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='device', type='VkDevice'),
 #arg2=ArgDef(name='handleType', type='VkExternalMemoryHandleTypeFlagBits'),
@@ -3891,21 +3891,21 @@ arg2=ArgDef(name='pTimeDomainCount', type='uint32_t*'),
 arg3=ArgDef(name='pTimeDomains', type='VkTimeDomainKHR*')
 )
 
-Function(name='vkGetPhysicalDeviceCalibrateableTimeDomainsKHR', enabled=False, type=None,
+Function(name='vkGetPhysicalDeviceCalibrateableTimeDomainsKHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 arg2=ArgDef(name='pTimeDomainCount', type='uint32_t*'),
 arg3=ArgDef(name='pTimeDomains', type='VkTimeDomainKHR*')
 )
 
-Function(name='vkGetPhysicalDeviceCooperativeMatrixFlexibleDimensionsPropertiesNV', enabled=False, type=None,
+Function(name='vkGetPhysicalDeviceCooperativeMatrixFlexibleDimensionsPropertiesNV', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 arg2=ArgDef(name='pPropertyCount', type='uint32_t*'),
 arg3=ArgDef(name='pProperties', type='VkCooperativeMatrixFlexibleDimensionsPropertiesNV*')
 )
 
-Function(name='vkGetPhysicalDeviceCooperativeMatrixPropertiesKHR', enabled=False, type=None,
+Function(name='vkGetPhysicalDeviceCooperativeMatrixPropertiesKHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 arg2=ArgDef(name='pPropertyCount', type='uint32_t*'),
@@ -3987,7 +3987,7 @@ arg7=ArgDef(name='externalHandleType', type='VkExternalMemoryHandleTypeFlagsNV')
 arg8=ArgDef(name='pExternalImageFormatProperties', type='VkExternalImageFormatPropertiesNV*')
 )
 
-#Function(name='vkGetPhysicalDeviceExternalMemorySciBufPropertiesNV', enabled=False, type=None,
+#Function(name='vkGetPhysicalDeviceExternalMemorySciBufPropertiesNV', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 #arg2=ArgDef(name='handleType', type='VkExternalMemoryHandleTypeFlagBits'),
@@ -4180,20 +4180,20 @@ arg2=ArgDef(name='pRefreshableObjectTypeCount', type='uint32_t*'),
 arg3=ArgDef(name='pRefreshableObjectTypes', type='VkObjectType*')
 )
 
-#Function(name='vkGetPhysicalDeviceSciBufAttributesNV', enabled=False, type=None,
+#Function(name='vkGetPhysicalDeviceSciBufAttributesNV', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 #arg2=ArgDef(name='pAttributes', type='NvSciBufAttrList')
 #)
 
-#Function(name='vkGetPhysicalDeviceSciSyncAttributesNV', enabled=False, type=None,
+#Function(name='vkGetPhysicalDeviceSciSyncAttributesNV', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 #arg2=ArgDef(name='pSciSyncAttributesInfo', type='const VkSciSyncAttributesInfoNV*'),
 #arg3=ArgDef(name='pAttributes', type='NvSciSyncAttrList')
 #)
 
-#Function(name='vkGetPhysicalDeviceScreenPresentationSupportQNX', enabled=False, type=None,
+#Function(name='vkGetPhysicalDeviceScreenPresentationSupportQNX', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkBool32'),
 #arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 #arg2=ArgDef(name='queueFamilyIndex', type='uint32_t'),
@@ -4317,7 +4317,7 @@ arg2=ArgDef(name='pVideoProfile', type='const VkVideoProfileInfoKHR*'),
 arg3=ArgDef(name='pCapabilities', type='VkVideoCapabilitiesKHR*')
 )
 
-Function(name='vkGetPhysicalDeviceVideoEncodeQualityLevelPropertiesKHR', enabled=False, type=None,
+Function(name='vkGetPhysicalDeviceVideoEncodeQualityLevelPropertiesKHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 arg2=ArgDef(name='pQualityLevelInfo', type='const VkPhysicalDeviceVideoEncodeQualityLevelInfoKHR*'),
@@ -4361,7 +4361,7 @@ arg3=ArgDef(name='dpy', type='Display*'),
 arg4=ArgDef(name='visualID', type='VisualID')
 )
 
-Function(name='vkGetPipelineBinaryDataKHR', enabled=False, type=None,
+Function(name='vkGetPipelineBinaryDataKHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pInfo', type='const VkPipelineBinaryDataInfoKHR*'),
@@ -4402,20 +4402,20 @@ arg3=ArgDef(name='pStatisticCount', type='uint32_t*'),
 arg4=ArgDef(name='pStatistics', type='VkPipelineExecutableStatisticKHR*')
 )
 
-Function(name='vkGetPipelineIndirectDeviceAddressNV', enabled=False, type=None,
+Function(name='vkGetPipelineIndirectDeviceAddressNV', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='VkDeviceAddress'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pInfo', type='const VkPipelineIndirectDeviceAddressInfoNV*')
 )
 
-Function(name='vkGetPipelineIndirectMemoryRequirementsNV', enabled=False, type=None,
+Function(name='vkGetPipelineIndirectMemoryRequirementsNV', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pCreateInfo', type='const VkComputePipelineCreateInfo*'),
 arg3=ArgDef(name='pMemoryRequirements', type='VkMemoryRequirements2*')
 )
 
-Function(name='vkGetPipelineKeyKHR', enabled=False, type=None,
+Function(name='vkGetPipelineKeyKHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pPipelineCreateInfo', type='const VkPipelineCreateInfoKHR*'),
@@ -4473,7 +4473,7 @@ arg2=ArgDef(name='pCheckpointDataCount', type='uint32_t*'),
 arg3=ArgDef(name='pCheckpointData', type='VkCheckpointDataNV*')
 )
 
-#Function(name='vkGetRandROutputDisplayEXT', enabled=False, type=None,
+#Function(name='vkGetRandROutputDisplayEXT', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 #arg2=ArgDef(name='dpy', type='Display*'),
@@ -4533,7 +4533,7 @@ arg2=ArgDef(name='renderPass', type='VkRenderPass'),
 arg3=ArgDef(name='pGranularity', type='VkExtent2D*')
 )
 
-Function(name='vkGetRenderingAreaGranularityKHR', enabled=False, type=None,
+Function(name='vkGetRenderingAreaGranularityKHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pRenderingAreaInfo', type='const VkRenderingAreaInfoKHR*'),
@@ -4547,7 +4547,7 @@ arg2=ArgDef(name='pInfo', type='const VkSamplerCaptureDescriptorDataInfoEXT*'),
 arg3=ArgDef(name='pData', type='void*')
 )
 
-#Function(name='vkGetScreenBufferPropertiesQNX', enabled=False, type=None,
+#Function(name='vkGetScreenBufferPropertiesQNX', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='device', type='VkDevice'),
 #arg2=ArgDef(name='buffer', type='const struct _screen_buffer*'),
@@ -4575,7 +4575,7 @@ arg2=ArgDef(name='pGetFdInfo', type='const VkSemaphoreGetFdInfoKHR*'),
 arg3=ArgDef(name='pFd', type='int*')
 )
 
-#Function(name='vkGetSemaphoreSciSyncObjNV', enabled=False, type=None,
+#Function(name='vkGetSemaphoreSciSyncObjNV', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='device', type='VkDevice'),
 #arg2=ArgDef(name='pGetSciSyncInfo', type='const VkSemaphoreGetSciSyncInfoNV*'),
@@ -4589,7 +4589,7 @@ arg2=ArgDef(name='pGetWin32HandleInfo', type='const VkSemaphoreGetWin32HandleInf
 arg3=ArgDef(name='pHandle', type='HANDLE*')
 )
 
-#Function(name='vkGetSemaphoreZirconHandleFUCHSIA', enabled=False, type=None,
+#Function(name='vkGetSemaphoreZirconHandleFUCHSIA', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='device', type='VkDevice'),
 #arg2=ArgDef(name='pGetZirconHandleInfo', type='const VkSemaphoreGetZirconHandleInfoFUCHSIA*'),
@@ -4697,13 +4697,13 @@ arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pImportFenceFdInfo', type='const VkImportFenceFdInfoKHR*')
 )
 
-#Function(name='vkImportFenceSciSyncFenceNV', enabled=False, type=None,
+#Function(name='vkImportFenceSciSyncFenceNV', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='device', type='VkDevice'),
 #arg2=ArgDef(name='pImportFenceSciSyncInfo', type='const VkImportFenceSciSyncInfoNV*')
 #)
 
-#Function(name='vkImportFenceSciSyncObjNV', enabled=False, type=None,
+#Function(name='vkImportFenceSciSyncObjNV', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='device', type='VkDevice'),
 #arg2=ArgDef(name='pImportFenceSciSyncInfo', type='const VkImportFenceSciSyncInfoNV*')
@@ -4721,7 +4721,7 @@ arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pImportSemaphoreFdInfo', type='const VkImportSemaphoreFdInfoKHR*')
 )
 
-#Function(name='vkImportSemaphoreSciSyncObjNV', enabled=False, type=None,
+#Function(name='vkImportSemaphoreSciSyncObjNV', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='device', type='VkDevice'),
 #arg2=ArgDef(name='pImportSemaphoreSciSyncInfo', type='const VkImportSemaphoreSciSyncInfoNV*')
@@ -4733,7 +4733,7 @@ arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pImportSemaphoreWin32HandleInfo', type='const VkImportSemaphoreWin32HandleInfoKHR*')
 )
 
-#Function(name='vkImportSemaphoreZirconHandleFUCHSIA', enabled=False, type=None,
+#Function(name='vkImportSemaphoreZirconHandleFUCHSIA', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='device', type='VkDevice'),
 #arg2=ArgDef(name='pImportSemaphoreZirconHandleInfo', type='const VkImportSemaphoreZirconHandleInfoFUCHSIA*')
@@ -4752,7 +4752,7 @@ arg2=ArgDef(name='memoryRangeCount', type='uint32_t'),
 arg3=ArgDef(name='pMemoryRanges', type='const VkMappedMemoryRange*', wrapType='CVkMappedMemoryRangeArray', wrapParams='memoryRangeCount, pMemoryRanges', count='memoryRangeCount')
 )
 
-Function(name='vkLatencySleepNV', enabled=False, type=None,
+Function(name='vkLatencySleepNV', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='swapchain', type='VkSwapchainKHR'),
@@ -4822,7 +4822,7 @@ arg1=ArgDef(name='queue', type='VkQueue'),
 arg2=ArgDef(name='pLabelInfo', type='const VkDebugUtilsLabelEXT*')
 )
 
-Function(name='vkQueueNotifyOutOfBandNV', enabled=False, type=None,
+Function(name='vkQueueNotifyOutOfBandNV', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='queue', type='VkQueue'),
 arg2=ArgDef(name='pQueueTypeInfo', type='const VkOutOfBandQueueTypeInfoNV*')
@@ -4895,7 +4895,7 @@ arg4=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*'),
 arg5=ArgDef(name='pFence', type='VkFence*')
 )
 
-Function(name='vkReleaseCapturedPipelineDataKHR', enabled=False, type=None,
+Function(name='vkReleaseCapturedPipelineDataKHR', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pInfo', type='const VkReleaseCapturedPipelineDataInfoKHR*'),
@@ -4980,14 +4980,14 @@ arg3=ArgDef(name='firstQuery', type='uint32_t'),
 arg4=ArgDef(name='queryCount', type='uint32_t')
 )
 
-#Function(name='vkSetBufferCollectionBufferConstraintsFUCHSIA', enabled=False, type=None,
+#Function(name='vkSetBufferCollectionBufferConstraintsFUCHSIA', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='device', type='VkDevice'),
 #arg2=ArgDef(name='collection', type='VkBufferCollectionFUCHSIA'),
 #arg3=ArgDef(name='pBufferConstraintsInfo', type='const VkBufferConstraintsInfoFUCHSIA*')
 #)
 
-#Function(name='vkSetBufferCollectionImageConstraintsFUCHSIA', enabled=False, type=None,
+#Function(name='vkSetBufferCollectionImageConstraintsFUCHSIA', enabled=False, type=FuncType.NONE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='device', type='VkDevice'),
 #arg2=ArgDef(name='collection', type='VkBufferCollectionFUCHSIA'),
@@ -5027,14 +5027,14 @@ arg3=ArgDef(name='pSwapchains', type='const VkSwapchainKHR*', count='swapchainCo
 arg4=ArgDef(name='pMetadata', type='const VkHdrMetadataEXT*', count='swapchainCount')
 )
 
-Function(name='vkSetLatencyMarkerNV', enabled=False, type=None,
+Function(name='vkSetLatencyMarkerNV', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='swapchain', type='VkSwapchainKHR'),
 arg3=ArgDef(name='pLatencyMarkerInfo', type='const VkSetLatencyMarkerInfoNV*')
 )
 
-Function(name='vkSetLatencySleepModeNV', enabled=False, type=None,
+Function(name='vkSetLatencySleepModeNV', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='swapchain', type='VkSwapchainKHR'),
@@ -5086,7 +5086,7 @@ arg3=ArgDef(name='messageTypes', type='VkDebugUtilsMessageTypeFlagsEXT'),
 arg4=ArgDef(name='pCallbackData', type='const VkDebugUtilsMessengerCallbackDataEXT*')
 )
 
-Function(name='vkTransitionImageLayoutEXT', enabled=False, type=None,
+Function(name='vkTransitionImageLayoutEXT', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='transitionCount', type='uint32_t'),
@@ -5149,7 +5149,7 @@ arg4=ArgDef(name='descriptorCopyCount', type='uint32_t'),
 arg5=ArgDef(name='pDescriptorCopies', type='const VkCopyDescriptorSet*', wrapType='CVkCopyDescriptorSetArray', wrapParams='descriptorCopyCount, pDescriptorCopies', count='descriptorCopyCount')
 )
 
-Function(name='vkUpdateIndirectExecutionSetPipelineEXT', enabled=False, type=None,
+Function(name='vkUpdateIndirectExecutionSetPipelineEXT', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='indirectExecutionSet', type='VkIndirectExecutionSetEXT'),
@@ -5157,7 +5157,7 @@ arg3=ArgDef(name='executionSetWriteCount', type='uint32_t'),
 arg4=ArgDef(name='pExecutionSetWrites', type='const VkWriteIndirectExecutionSetPipelineEXT*')
 )
 
-Function(name='vkUpdateIndirectExecutionSetShaderEXT', enabled=False, type=None,
+Function(name='vkUpdateIndirectExecutionSetShaderEXT', enabled=False, type=FuncType.NONE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='indirectExecutionSet', type='VkIndirectExecutionSetEXT'),
@@ -5381,7 +5381,7 @@ VarDef(name='VK_ACCESS_2_VIDEO_DECODE_READ_BIT_KHR', value='34359738368'),
 VarDef(name='VK_ACCESS_2_VIDEO_DECODE_WRITE_BIT_KHR', value='68719476736'),
 VarDef(name='VK_ACCESS_2_VIDEO_ENCODE_READ_BIT_KHR', value='137438953472'),
 VarDef(name='VK_ACCESS_2_VIDEO_ENCODE_WRITE_BIT_KHR', value='274877906944'),
-VarDef(name='VK_ACCESS_2_FLAG_BITS_MAX_ENUM', value='2147483647'),
+VarDef(name='VK_ACCESS_2_FLAG_BITS_MAX_ENUM', value='9223372036854775807'),
 ])
 
 Enum(name='VkAcquireProfilingLockFlagBitsKHR', enumerators = [
@@ -5597,7 +5597,7 @@ VarDef(name='VK_BUFFER_USAGE_2_VIDEO_DECODE_DST_BIT_KHR', value='16384'),
 VarDef(name='VK_BUFFER_USAGE_2_VIDEO_DECODE_SRC_BIT_KHR', value='8192'),
 VarDef(name='VK_BUFFER_USAGE_2_VIDEO_ENCODE_DST_BIT_KHR', value='32768'),
 VarDef(name='VK_BUFFER_USAGE_2_VIDEO_ENCODE_SRC_BIT_KHR', value='65536'),
-VarDef(name='VK_BUFFER_USAGE_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
+VarDef(name='VK_BUFFER_USAGE_2_FLAG_BITS_MAX_ENUM_KHR', value='9223372036854775807'),
 ])
 
 Enum(name='VkBuildAccelerationStructureFlagBitsKHR', enumerators = [
@@ -6674,7 +6674,7 @@ VarDef(name='VK_FORMAT_FEATURE_2_VIDEO_ENCODE_DPB_BIT_KHR', value='268435456'),
 VarDef(name='VK_FORMAT_FEATURE_2_VIDEO_ENCODE_INPUT_BIT_KHR', value='134217728'),
 VarDef(name='VK_FORMAT_FEATURE_2_WEIGHT_IMAGE_BIT_QCOM', value='17179869184'),
 VarDef(name='VK_FORMAT_FEATURE_2_WEIGHT_SAMPLED_IMAGE_BIT_QCOM', value='34359738368'),
-VarDef(name='VK_FORMAT_FEATURE_2_FLAG_BITS_MAX_ENUM', value='2147483647'),
+VarDef(name='VK_FORMAT_FEATURE_2_FLAG_BITS_MAX_ENUM', value='9223372036854775807'),
 ])
 
 Enum(name='VkFragmentShadingRateCombinerOpKHR', enumerators = [
@@ -7104,9 +7104,9 @@ VarDef(name='VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT', value='4'),
 VarDef(name='VK_MEMORY_ALLOCATE_FLAG_BITS_MAX_ENUM', value='2147483647'),
 ])
 
-Enum(name='VkMemoryDecompressionMethodFlagBitsNV', enumerators = [
+Enum(name='VkMemoryDecompressionMethodFlagBitsNV', size=64, enumerators = [
 VarDef(name='VK_MEMORY_DECOMPRESSION_METHOD_GDEFLATE_1_0_BIT_NV', value='1'),
-VarDef(name='VK_MEMORY_DECOMPRESSION_METHOD_FLAG_BITS_MAX_ENUM_NV', value='2147483647'),
+VarDef(name='VK_MEMORY_DECOMPRESSION_METHOD_FLAG_BITS_MAX_ENUM_NV', value='9223372036854775807'),
 ])
 
 Enum(name='VkMemoryHeapFlagBits', enumerators = [
@@ -7371,9 +7371,9 @@ VarDef(name='VK_PHYSICAL_DEVICE_LAYERED_API_OPENGLES_KHR', value='4'),
 VarDef(name='VK_PHYSICAL_DEVICE_LAYERED_API_MAX_ENUM_KHR', value='2147483647'),
 ])
 
-Enum(name='VkPhysicalDeviceSchedulingControlsFlagBitsARM', enumerators = [
+Enum(name='VkPhysicalDeviceSchedulingControlsFlagBitsARM', size=64, enumerators = [
 VarDef(name='VK_PHYSICAL_DEVICE_SCHEDULING_CONTROLS_SHADER_CORE_COUNT_ARM', value='1'),
-VarDef(name='VK_PHYSICAL_DEVICE_SCHEDULING_CONTROLS_FLAG_BITS_MAX_ENUM_ARM', value='2147483647'),
+VarDef(name='VK_PHYSICAL_DEVICE_SCHEDULING_CONTROLS_FLAG_BITS_MAX_ENUM_ARM', value='9223372036854775807'),
 ])
 
 Enum(name='VkPhysicalDeviceType', enumerators = [
@@ -7496,7 +7496,7 @@ VarDef(name='VK_PIPELINE_CREATE_2_RESERVED_37_BIT_ARM', value='137438953472'),
 VarDef(name='VK_PIPELINE_CREATE_2_RETAIN_LINK_TIME_OPTIMIZATION_INFO_BIT_EXT', value='8388608'),
 VarDef(name='VK_PIPELINE_CREATE_2_VIEW_INDEX_FROM_DEVICE_INDEX_BIT_KHR', value='8'),
 VarDef(name='VK_PIPELINE_CREATE_RESERVED_36_BIT_KHR', value='68719476736'),
-VarDef(name='VK_PIPELINE_CREATE_FLAG_BITS_MAX_ENUM_KHR', value='2147483647'),
+VarDef(name='VK_PIPELINE_CREATE_2_FLAG_BITS_MAX_ENUM_KHR', value='9223372036854775807'),
 ])
 
 Enum(name='VkPipelineCreationFeedbackFlagBits', enumerators = [
@@ -7632,7 +7632,7 @@ VarDef(name='VK_PIPELINE_STAGE_2_TASK_SHADER_BIT_EXT', value='524288'),
 VarDef(name='VK_PIPELINE_STAGE_2_TRANSFORM_FEEDBACK_BIT_EXT', value='16777216'),
 VarDef(name='VK_PIPELINE_STAGE_2_VIDEO_DECODE_BIT_KHR', value='67108864'),
 VarDef(name='VK_PIPELINE_STAGE_2_VIDEO_ENCODE_BIT_KHR', value='134217728'),
-VarDef(name='VK_PIPELINE_STAGE_2_FLAG_BITS_MAX_ENUM', value='2147483647'),
+VarDef(name='VK_PIPELINE_STAGE_2_FLAG_BITS_MAX_ENUM', value='9223372036854775807'),
 ])
 
 Enum(name='VkPointClippingBehavior', enumerators = [
@@ -8064,7 +8064,7 @@ VarDef(name='VK_SHADER_STAGE_RAYGEN_BIT_KHR', value='256'),
 VarDef(name='VK_SHADER_STAGE_RESERVED_15_BIT_NV', value='32768'),
 VarDef(name='VK_SHADER_STAGE_SUBPASS_SHADING_BIT_HUAWEI', value='16384'),
 VarDef(name='VK_SHADER_STAGE_TASK_BIT_EXT', value='64'),
-# VarDef(name='VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM', value='2147483647'), # removed on purpose
+# VarDef(name='VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM', value='2147483647'), # removed on purpose - the same value is already used by VK_SHADER_STAGE_ALL
 ])
 
 Enum(name='VkShadingRatePaletteEntryNV', enumerators = [

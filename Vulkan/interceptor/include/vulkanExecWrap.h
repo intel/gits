@@ -1363,12 +1363,14 @@ void recExecWrap_vkGetPhysicalDeviceFeatures2KHR(VkPhysicalDevice physicalDevice
 namespace {
 
 void UpdateUsage(VkImageUsageFlags& usageFlags) {
-  usageFlags |= static_cast<VkImageUsageFlags>(
-      CGitsPluginVulkan::Configuration().vulkan.recorder.addImageUsageFlags);
+  auto& commonRecCfg = CGitsPluginVulkan::Configuration().common.recorder;
+  auto& vulkanRecCfg = CGitsPluginVulkan::Configuration().vulkan.recorder;
 
-  if (CGitsPluginVulkan::Configuration().common.recorder.enabled) {
-    if ((CGitsPluginVulkan::Configuration().vulkan.recorder.mode != TVulkanRecorderMode::ALL) &&
-        (CGitsPluginVulkan::Configuration().vulkan.recorder.crossPlatformStateRestoration.images)) {
+  usageFlags |= static_cast<VkImageUsageFlags>(vulkanRecCfg.addImageUsageFlags);
+
+  if (commonRecCfg.enabled) {
+    if ((vulkanRecCfg.mode != TVulkanRecorderMode::ALL) &&
+        vulkanRecCfg.crossPlatformStateRestoration.images) {
       usageFlags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     }
   }
