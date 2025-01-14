@@ -824,7 +824,7 @@ void gits::CRecorder::Close() {
     if (Config::Get().common.shared.useEvents) {
       CGits::Instance().PlaybackEvents().programExit();
     }
-    CGits::Instance().GetMessageBus().publish({PUBLISHER_RECORDER, TOPIC_DESTROY},
+    CGits::Instance().GetMessageBus().publish({PUBLISHER_RECORDER, TOPIC_END},
                                               std::make_shared<EndOfRecordingMessage>());
     CRecorder::Dispose();
   };

@@ -26,7 +26,7 @@ enum PublisherId {
 enum TopicId {
   TOPIC_NONE = 0,
   TOPIC_LOG,
-  TOPIC_DESTROY
+  TOPIC_END
 };
 struct Topic {
   PublisherId publisherId{};
