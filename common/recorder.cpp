@@ -279,11 +279,9 @@ void CloseApplicationOnStopRecording() {
 }
 
 #else
-
 void CloseApplicationOnStopRecording() {
   TODO("Implementation required for platforms other than Windows!")
 }
-
 #endif
 
 /**
@@ -826,6 +824,8 @@ void gits::CRecorder::Close() {
     if (Config::Get().common.shared.useEvents) {
       CGits::Instance().PlaybackEvents().programExit();
     }
+    CGits::Instance().GetMessageBus().publish({PUBLISHER_RECORDER, TOPIC_DESTROY},
+                                              std::make_shared<EndOfRecordingMessage>());
     CRecorder::Dispose();
   };
 }

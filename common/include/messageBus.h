@@ -25,7 +25,8 @@ enum PublisherId {
 };
 enum TopicId {
   TOPIC_NONE = 0,
-  TOPIC_LOG
+  TOPIC_LOG,
+  TOPIC_DESTROY
 };
 struct Topic {
   PublisherId publisherId{};
@@ -101,6 +102,11 @@ private:
     (stream << ... << args); // Fold expression (C++17)
     return stream.str();
   }
+};
+
+class EndOfRecordingMessage : public Message {
+public:
+  EndOfRecordingMessage() {}
 };
 
 } // namespace gits
