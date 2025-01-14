@@ -1400,6 +1400,7 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
                     accelerationStructureState->bufferStateStore->bufferHandle;
               }
             }
+            break;
           }
           default:
             Log(TRACE) << "Not handled VkDescriptorType enumeration: " +
