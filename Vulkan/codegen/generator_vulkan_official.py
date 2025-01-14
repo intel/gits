@@ -10,7 +10,7 @@
 
 from generator_vulkan_base import *
 
-Function(name='vkAcquireDrmDisplayEXT', enabled=False, type=FuncType.PARAM,
+Function(name='vkAcquireDrmDisplayEXT', enabled=False, type=FuncType.PARAM, level=FuncLevel.INSTANCE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 arg2=ArgDef(name='drmFd', type='int32_t'),
@@ -62,13 +62,13 @@ arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pInfo', type='const VkAcquireProfilingLockInfoKHR*')
 )
 
-Function(name='vkAcquireWinrtDisplayNV', enabled=False, type=FuncType.PARAM,
+Function(name='vkAcquireWinrtDisplayNV', enabled=False, type=FuncType.PARAM, level=FuncLevel.INSTANCE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 arg2=ArgDef(name='display', type='VkDisplayKHR')
 )
 
-Function(name='vkAcquireXlibDisplayEXT', enabled=False, type=FuncType.PARAM,
+Function(name='vkAcquireXlibDisplayEXT', enabled=False, type=FuncType.PARAM, level=FuncLevel.INSTANCE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 arg2=ArgDef(name='dpy', type='Display*'),
@@ -3581,7 +3581,7 @@ arg3=ArgDef(name='pDisplayCount', type='uint32_t*'),
 arg4=ArgDef(name='pDisplays', type='VkDisplayKHR*', count='pDisplayCount')
 )
 
-Function(name='vkGetDrmDisplayEXT', enabled=False, type=FuncType.PARAM,
+Function(name='vkGetDrmDisplayEXT', enabled=False, type=FuncType.PARAM, level=FuncLevel.INSTANCE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 arg2=ArgDef(name='drmFd', type='int32_t'),
@@ -3891,21 +3891,21 @@ arg2=ArgDef(name='pTimeDomainCount', type='uint32_t*'),
 arg3=ArgDef(name='pTimeDomains', type='VkTimeDomainKHR*')
 )
 
-Function(name='vkGetPhysicalDeviceCalibrateableTimeDomainsKHR', enabled=False, type=FuncType.NONE,
+Function(name='vkGetPhysicalDeviceCalibrateableTimeDomainsKHR', enabled=False, type=FuncType.NONE, level=FuncLevel.INSTANCE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 arg2=ArgDef(name='pTimeDomainCount', type='uint32_t*'),
 arg3=ArgDef(name='pTimeDomains', type='VkTimeDomainKHR*')
 )
 
-Function(name='vkGetPhysicalDeviceCooperativeMatrixFlexibleDimensionsPropertiesNV', enabled=False, type=FuncType.NONE,
+Function(name='vkGetPhysicalDeviceCooperativeMatrixFlexibleDimensionsPropertiesNV', enabled=False, type=FuncType.NONE, level=FuncLevel.INSTANCE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 arg2=ArgDef(name='pPropertyCount', type='uint32_t*'),
 arg3=ArgDef(name='pProperties', type='VkCooperativeMatrixFlexibleDimensionsPropertiesNV*')
 )
 
-Function(name='vkGetPhysicalDeviceCooperativeMatrixPropertiesKHR', enabled=False, type=FuncType.NONE,
+Function(name='vkGetPhysicalDeviceCooperativeMatrixPropertiesKHR', enabled=False, type=FuncType.NONE, level=FuncLevel.INSTANCE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 arg2=ArgDef(name='pPropertyCount', type='uint32_t*'),
@@ -3987,7 +3987,7 @@ arg7=ArgDef(name='externalHandleType', type='VkExternalMemoryHandleTypeFlagsNV')
 arg8=ArgDef(name='pExternalImageFormatProperties', type='VkExternalImageFormatPropertiesNV*')
 )
 
-#Function(name='vkGetPhysicalDeviceExternalMemorySciBufPropertiesNV', enabled=False, type=FuncType.NONE,
+#Function(name='vkGetPhysicalDeviceExternalMemorySciBufPropertiesNV', enabled=False, type=FuncType.NONE, level=FuncLevel.INSTANCE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 #arg2=ArgDef(name='handleType', type='VkExternalMemoryHandleTypeFlagBits'),
@@ -4105,7 +4105,7 @@ arg2=ArgDef(name='samples', type='VkSampleCountFlagBits'),
 arg3=ArgDef(name='pMultisampleProperties', type='VkMultisamplePropertiesEXT*')
 )
 
-Function(name='vkGetPhysicalDeviceOpticalFlowImageFormatsNV', enabled=False, type=FuncType.PARAM,
+Function(name='vkGetPhysicalDeviceOpticalFlowImageFormatsNV', enabled=False, type=FuncType.PARAM, level=FuncLevel.INSTANCE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 arg2=ArgDef(name='pOpticalFlowImageFormatInfo', type='const VkOpticalFlowImageFormatInfoNV*'),
@@ -4173,27 +4173,27 @@ arg2=ArgDef(name='pQueueFamilyPropertyCount', type='uint32_t*', wrapParams='1, p
 arg3=ArgDef(name='pQueueFamilyProperties', type='VkQueueFamilyProperties2*', wrapType='CVkQueueFamilyProperties2Array', wrapParams='*pQueueFamilyPropertyCount, pQueueFamilyProperties', count='*pQueueFamilyPropertyCount')
 )
 
-Function(name='vkGetPhysicalDeviceRefreshableObjectTypesKHR', enabled=False, type=FuncType.PARAM,
+Function(name='vkGetPhysicalDeviceRefreshableObjectTypesKHR', enabled=False, type=FuncType.PARAM, level=FuncLevel.INSTANCE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 arg2=ArgDef(name='pRefreshableObjectTypeCount', type='uint32_t*'),
 arg3=ArgDef(name='pRefreshableObjectTypes', type='VkObjectType*')
 )
 
-#Function(name='vkGetPhysicalDeviceSciBufAttributesNV', enabled=False, type=FuncType.NONE,
+#Function(name='vkGetPhysicalDeviceSciBufAttributesNV', enabled=False, type=FuncType.NONE, level=FuncLevel.INSTANCE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 #arg2=ArgDef(name='pAttributes', type='NvSciBufAttrList')
 #)
 
-#Function(name='vkGetPhysicalDeviceSciSyncAttributesNV', enabled=False, type=FuncType.NONE,
+#Function(name='vkGetPhysicalDeviceSciSyncAttributesNV', enabled=False, type=FuncType.NONE, level=FuncLevel.INSTANCE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 #arg2=ArgDef(name='pSciSyncAttributesInfo', type='const VkSciSyncAttributesInfoNV*'),
 #arg3=ArgDef(name='pAttributes', type='NvSciSyncAttrList')
 #)
 
-#Function(name='vkGetPhysicalDeviceScreenPresentationSupportQNX', enabled=False, type=FuncType.NONE,
+#Function(name='vkGetPhysicalDeviceScreenPresentationSupportQNX', enabled=False, type=FuncType.NONE, level=FuncLevel.INSTANCE,
 #retV=RetDef(type='VkBool32'),
 #arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 #arg2=ArgDef(name='queueFamilyIndex', type='uint32_t'),
@@ -4310,21 +4310,21 @@ arg2=ArgDef(name='pToolCount', type='uint32_t*'),
 arg3=ArgDef(name='pToolProperties', type='VkPhysicalDeviceToolProperties*')
 )
 
-Function(name='vkGetPhysicalDeviceVideoCapabilitiesKHR', enabled=False, type=FuncType.PARAM,
+Function(name='vkGetPhysicalDeviceVideoCapabilitiesKHR', enabled=False, type=FuncType.PARAM, level=FuncLevel.INSTANCE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 arg2=ArgDef(name='pVideoProfile', type='const VkVideoProfileInfoKHR*'),
 arg3=ArgDef(name='pCapabilities', type='VkVideoCapabilitiesKHR*')
 )
 
-Function(name='vkGetPhysicalDeviceVideoEncodeQualityLevelPropertiesKHR', enabled=False, type=FuncType.NONE,
+Function(name='vkGetPhysicalDeviceVideoEncodeQualityLevelPropertiesKHR', enabled=False, type=FuncType.NONE, level=FuncLevel.INSTANCE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 arg2=ArgDef(name='pQualityLevelInfo', type='const VkPhysicalDeviceVideoEncodeQualityLevelInfoKHR*'),
 arg3=ArgDef(name='pQualityLevelProperties', type='VkVideoEncodeQualityLevelPropertiesKHR*')
 )
 
-Function(name='vkGetPhysicalDeviceVideoFormatPropertiesKHR', enabled=False, type=FuncType.PARAM,
+Function(name='vkGetPhysicalDeviceVideoFormatPropertiesKHR', enabled=False, type=FuncType.PARAM, level=FuncLevel.INSTANCE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 arg2=ArgDef(name='pVideoFormatInfo', type='const VkPhysicalDeviceVideoFormatInfoKHR*'),
@@ -4473,7 +4473,7 @@ arg2=ArgDef(name='pCheckpointDataCount', type='uint32_t*'),
 arg3=ArgDef(name='pCheckpointData', type='VkCheckpointDataNV*')
 )
 
-#Function(name='vkGetRandROutputDisplayEXT', enabled=False, type=FuncType.NONE,
+#Function(name='vkGetRandROutputDisplayEXT', enabled=False, type=FuncType.NONE, level=FuncLevel.INSTANCE,
 #retV=RetDef(type='VkResult'),
 #arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 #arg2=ArgDef(name='dpy', type='Display*'),
@@ -4684,7 +4684,7 @@ arg3=ArgDef(name='pMemoryRequirementsCount', type='uint32_t*'),
 arg4=ArgDef(name='pMemoryRequirements', type='VkVideoSessionMemoryRequirementsKHR*')
 )
 
-Function(name='vkGetWinrtDisplayNV', enabled=False, type=FuncType.PARAM,
+Function(name='vkGetWinrtDisplayNV', enabled=False, type=FuncType.PARAM, level=FuncLevel.INSTANCE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 arg2=ArgDef(name='deviceRelativeId', type='uint32_t'),

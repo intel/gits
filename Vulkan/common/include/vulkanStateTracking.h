@@ -295,29 +295,30 @@ inline void vkCreateDevice_SD(VkResult return_value,
   if ((return_value == VK_SUCCESS) && (*pDevice != VK_NULL_HANDLE)) {
     CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
 
-    auto deviceState = std::make_shared<CDeviceState>(pDevice, pCreateInfo,
-                                                      SD()._physicaldevicestates[physicalDevice]);
-
-    const auto& queueFamilies =
-        SD()._physicaldevicestates[physicalDevice]->queueFamilyPropertiesCurrent;
+    auto physicalDeviceState = SD()._physicaldevicestates[physicalDevice];
+    auto deviceState = std::make_shared<CDeviceState>(pDevice, pCreateInfo, physicalDeviceState);
+    const auto& queueFamilies = physicalDeviceState->queueFamilyPropertiesCurrent;
+    auto device = *pDevice;
 
     for (uint32_t qci = 0; qci < pCreateInfo->queueCreateInfoCount; ++qci) {
+      auto flags = pCreateInfo->pQueueCreateInfos[qci].flags;
+
       for (uint32_t qc = 0; qc < pCreateInfo->pQueueCreateInfos[qci].queueCount; ++qc) {
         VkQueue queue = VK_NULL_HANDLE;
         uint32_t queueFamilyIndex = pCreateInfo->pQueueCreateInfos[qci].queueFamilyIndex;
         uint32_t queueIndex = qc;
 
-        if (0 != pCreateInfo->pQueueCreateInfos[qci].flags) {
+        if (drvVk.GetDeviceDispatchTable(device).vkGetDeviceQueue2) {
           VkDeviceQueueInfo2 deviceQueueInfo2 = {
-              VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2,     // VkStructureType sType;
-              nullptr,                                   // const void* pNext;
-              pCreateInfo->pQueueCreateInfos[qci].flags, // VkDeviceQueueCreateFlags flags;
-              queueFamilyIndex,                          // uint32_t queueFamilyIndex;
-              queueIndex                                 // uint32_t queueIndex;
+              VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2, // VkStructureType sType;
+              nullptr,                               // const void* pNext;
+              flags,                                 // VkDeviceQueueCreateFlags flags;
+              queueFamilyIndex,                      // uint32_t queueFamilyIndex;
+              queueIndex                             // uint32_t queueIndex;
           };
-          drvVk.vkGetDeviceQueue2(*pDevice, &deviceQueueInfo2, &queue);
+          drvVk.vkGetDeviceQueue2(device, &deviceQueueInfo2, &queue);
         } else {
-          drvVk.vkGetDeviceQueue(*pDevice, queueFamilyIndex, queueIndex, &queue);
+          drvVk.vkGetDeviceQueue(device, queueFamilyIndex, queueIndex, &queue);
         }
 
         auto queueState =
@@ -328,7 +329,7 @@ inline void vkCreateDevice_SD(VkResult return_value,
       }
     }
 
-    SD()._devicestates.emplace(*pDevice, deviceState);
+    SD()._devicestates.emplace(device, deviceState);
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; ++i) {
       deviceState->enabledExtensions.emplace_back(pCreateInfo->ppEnabledExtensionNames[i]);
     }

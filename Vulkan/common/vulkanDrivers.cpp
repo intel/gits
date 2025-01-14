@@ -546,14 +546,14 @@ void CVkDriver::InitializeUnifiedAPI(const VkDeviceCreateInfo* pCreateInfo,
   //
   // This way GITS can call only a single, "unified" function but underneath
   // the pointer is initialized according to API version and available ext.
-  // Core 1.3 version
 
+  // Core 1.3+ version
   if (instanceDispatchTable.minorVersion >= 3) {
     deviceDispatchTable.vkCmdPipelineBarrier2UnifiedGITS =
         deviceDispatchTable.vkCmdPipelineBarrier2;
   }
 
-  // Core 1.2 version
+  // Core 1.2+ version
   if (instanceDispatchTable.minorVersion >= 2) {
     deviceDispatchTable.vkGetBufferDeviceAddressUnifiedGITS =
         deviceDispatchTable.vkGetBufferDeviceAddress;
@@ -561,6 +561,12 @@ void CVkDriver::InitializeUnifiedAPI(const VkDeviceCreateInfo* pCreateInfo,
         deviceDispatchTable.vkGetBufferOpaqueCaptureAddress;
     deviceDispatchTable.vkGetDeviceMemoryOpaqueCaptureAddressUnifiedGITS =
         deviceDispatchTable.vkGetDeviceMemoryOpaqueCaptureAddress;
+  }
+
+  // Core 1.0 version
+  if ((instanceDispatchTable.majorVersion == 1) && (instanceDispatchTable.minorVersion == 0)) {
+    deviceDispatchTable.vkGetDeviceQueue2 = nullptr;
+    drvVk.vkGetDeviceQueue2 = nullptr;
   }
 
   // Enabled extensions
