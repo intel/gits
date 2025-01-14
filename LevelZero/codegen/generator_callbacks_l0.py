@@ -223,6 +223,26 @@ var1=VarDef(name='phCommandList',type='ze_command_list_handle_t*',tag='inout'),
 var2=VarDef(name='phEvent',type='ze_event_handle_t*',tag='inout'),
 )
 
+Argument(name='ze_command_list_append_signal_external_semaphore_ext_params_t',enabled=False,
+var1=VarDef(name='phCommandList',type='ze_command_list_handle_t*',tag='inout'),
+var2=VarDef(name='pnumSemaphores',type='uint32_t*',tag='inout'),
+var3=VarDef(name='pphSemaphores',type='ze_external_semaphore_ext_handle_t**',tag='inout'),
+var4=VarDef(name='psignalParams',type='ze_external_semaphore_signal_params_ext_t**',tag='inout'),
+var5=VarDef(name='phSignalEvent',type='ze_event_handle_t*',tag='inout'),
+var6=VarDef(name='pnumWaitEvents',type='uint32_t*',tag='inout'),
+var7=VarDef(name='pphWaitEvents',type='ze_event_handle_t**',tag='inout'),
+)
+
+Argument(name='ze_command_list_append_wait_external_semaphore_ext_params_t',enabled=False,
+var1=VarDef(name='phCommandList',type='ze_command_list_handle_t*',tag='inout'),
+var2=VarDef(name='pnumSemaphores',type='uint32_t*',tag='inout'),
+var3=VarDef(name='pphSemaphores',type='ze_external_semaphore_ext_handle_t**',tag='inout'),
+var4=VarDef(name='pwaitParams',type='ze_external_semaphore_wait_params_ext_t**',tag='inout'),
+var5=VarDef(name='phSignalEvent',type='ze_event_handle_t*',tag='inout'),
+var6=VarDef(name='pnumWaitEvents',type='uint32_t*',tag='inout'),
+var7=VarDef(name='pphWaitEvents',type='ze_event_handle_t**',tag='inout'),
+)
+
 Argument(name='ze_command_list_append_wait_on_events_params_t',enabled=False,
 var1=VarDef(name='phCommandList',type='ze_command_list_handle_t*',tag='inout'),
 var2=VarDef(name='pnumEvents',type='uint32_t*',tag='inout'),
@@ -524,9 +544,19 @@ var2=VarDef(name='ppCount',type='uint32_t**',tag='inout'),
 var3=VarDef(name='pphSubdevices',type='ze_device_handle_t**',tag='inout'),
 )
 
+Argument(name='ze_device_import_external_semaphore_ext_params_t',enabled=False,
+var1=VarDef(name='phDevice',type='ze_device_handle_t*',tag='inout'),
+var2=VarDef(name='pdesc',type='const ze_external_semaphore_ext_desc_t**',tag='inout'),
+var3=VarDef(name='pphSemaphore',type='ze_external_semaphore_ext_handle_t**',tag='inout'),
+)
+
 Argument(name='ze_device_pci_get_properties_ext_params_t',enabled=False,
 var1=VarDef(name='phDevice',type='ze_device_handle_t*',tag='inout'),
 var2=VarDef(name='ppPciProperties',type='ze_pci_ext_properties_t**',tag='inout'),
+)
+
+Argument(name='ze_device_release_external_semaphore_ext_params_t',enabled=False,
+var1=VarDef(name='phSemaphore',type='ze_external_semaphore_ext_handle_t*',tag='inout'),
 )
 
 Argument(name='ze_device_reserve_cache_ext_params_t',enabled=False,
@@ -818,6 +848,12 @@ var3=VarDef(name='pphKernel',type='ze_kernel_handle_t**',tag='inout'),
 
 Argument(name='ze_kernel_destroy_params_t',enabled=False,
 var1=VarDef(name='phKernel',type='ze_kernel_handle_t*',tag='inout'),
+)
+
+Argument(name='ze_kernel_get_binary_exp_params_t',enabled=False,
+var1=VarDef(name='phKernel',type='ze_kernel_handle_t*',tag='inout'),
+var2=VarDef(name='ppSize',type='size_t**',tag='inout'),
+var3=VarDef(name='ppKernelBinary',type='uint8_t**',tag='inout'),
 )
 
 Argument(name='ze_kernel_get_indirect_access_params_t',enabled=False,
@@ -1339,6 +1375,20 @@ arg3=ArgDef(name='pTracerUserData',type='void*'),
 arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
 )
 
+Callback(name='ze_pfnCommandListAppendSignalExternalSemaphoreExtCb_t',component='ze_command_list_callbacks_t',
+arg1=ArgDef(name='params',type='ze_command_list_append_signal_external_semaphore_ext_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
+Callback(name='ze_pfnCommandListAppendWaitExternalSemaphoreExtCb_t',component='ze_command_list_callbacks_t',
+arg1=ArgDef(name='params',type='ze_command_list_append_wait_external_semaphore_ext_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
 Callback(name='ze_pfnCommandListAppendWaitOnEventsCb_t',component='ze_command_list_callbacks_t',
 arg1=ArgDef(name='params',type='ze_command_list_append_wait_on_events_params_t*'),
 arg2=ArgDef(name='result',type='ze_result_t'),
@@ -1710,8 +1760,22 @@ arg3=ArgDef(name='pTracerUserData',type='void*'),
 arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
 )
 
+Callback(name='ze_pfnDeviceImportExternalSemaphoreExtCb_t',component='ze_device_callbacks_t',
+arg1=ArgDef(name='params',type='ze_device_import_external_semaphore_ext_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
 Callback(name='ze_pfnDevicePciGetPropertiesExtCb_t',component='ze_device_callbacks_t',
 arg1=ArgDef(name='params',type='ze_device_pci_get_properties_ext_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
+Callback(name='ze_pfnDeviceReleaseExternalSemaphoreExtCb_t',component='ze_device_callbacks_t',
+arg1=ArgDef(name='params',type='ze_device_release_external_semaphore_ext_params_t*'),
 arg2=ArgDef(name='result',type='ze_result_t'),
 arg3=ArgDef(name='pTracerUserData',type='void*'),
 arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
@@ -2090,6 +2154,13 @@ arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
 
 Callback(name='ze_pfnKernelDestroyCb_t',component='ze_kernel_callbacks_t',
 arg1=ArgDef(name='params',type='ze_kernel_destroy_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
+Callback(name='ze_pfnKernelGetBinaryExpCb_t',component='ze_kernel_exp_callbacks_t',
+arg1=ArgDef(name='params',type='ze_kernel_get_binary_exp_params_t*'),
 arg2=ArgDef(name='result',type='ze_result_t'),
 arg3=ArgDef(name='pTracerUserData',type='void*'),
 arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
