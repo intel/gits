@@ -23,7 +23,7 @@ std::vector<const char*> ParseArgs(unsigned int argc, const char** argv) {
   bool removeFamilySuffix = true;
   std::vector<const char*> arguments(argc);
   for (auto i = 0U; i < argc; i++) {
-    if (std::string(argv[i]) == "-output_no_suffix") {
+    if (std::string(argv[i]) == "-output_no_suffix" || std::string(argv[i]) == "query") {
       removeFamilySuffix = false;
     }
     arguments[i] = argv[i];
