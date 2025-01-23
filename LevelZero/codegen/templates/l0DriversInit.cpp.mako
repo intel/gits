@@ -134,7 +134,7 @@ ${func.get('type')} __zecall special_${func.get('name')}(
         const auto top = lua_gettop(L);
         ret = lua_to_ext<ze_result_t>(L, top);  
         lua_pop(L, top);
-        L0Log(TRACE, NO_PREFIX) << "Lua End";
+        L0Log(TRACE, NO_PREFIX) << "${name}" << " Lua End = " << ret;
       }
     }
   }
