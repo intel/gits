@@ -25,7 +25,8 @@ static std::string PrintElementsBase(size_t size,
                                      const Base* array,
                                      std::function<std::string(const Base)> func) {
   if (array != nullptr) {
-    std::string elements("{ ");
+    std::string elements(gits::hex(array).ToString());
+    elements += " { ";
     // limit amount of elements to 8
     size_t count = std::min((size_t)8, size);
     for (size_t i = 0; i < count; ++i) {

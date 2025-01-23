@@ -406,16 +406,19 @@ int export_CallbackData(lua_State* L) {
   return 1;
 }
 
-struct Tracer {
+class Tracer {
+  static const LogLevel level = LogLevel::TRACE;
+
+public:
   template <class T>
-  NOINLINE void trace_ret(T r) {
+  NOINLINE static void TraceRet(T r) {
     if (ShouldLog(level)) {
       COclLog(level, NO_PREFIX) << " = " << r;
     }
   }
 
   template <class T>
-  NOINLINE void trace_ret(T* r) {
+  NOINLINE static void TraceRet(T* r) {
     if (r == nullptr) {
       if (ShouldLog(level)) {
         COclLog(level, NO_PREFIX) << " = nullptr";
@@ -431,101 +434,17 @@ struct Tracer {
     }
   }
 
-  NOINLINE void trace_ret(cl_int r) {
+  NOINLINE static void TraceRet(cl_int r) {
     if (ShouldLog(level)) {
       COclLog(level, NO_PREFIX) << " = " << CLResultToString(r);
     }
   }
 
-  NOINLINE void trace_ret(void_t r) {
+  NOINLINE static void TraceRet(void_t r) {
     if (ShouldLog(level)) {
       COclLog(level, NO_PREFIX) << "";
     }
   }
-
-  template <class T>
-  NOINLINE void trace_ret_lua(T r) {
-    trace_name();
-    if (ShouldLog(level)) {
-      COclLog(level, RAW) << " Lua end";
-    }
-    trace_ret(r);
-  }
-
-  void print_args(COclLog& s) {}
-
-  NOINLINE void print_args(COclLog& s, const char* t) {
-    if (t == nullptr) {
-      s << "nullptr";
-    } else {
-      s << "\"" << t << "\"";
-    }
-  }
-
-  template <class T>
-  NOINLINE void print_args(COclLog& s, T* t) {
-    if (t == nullptr) {
-      s << "nullptr";
-    } else {
-#ifdef GITS_PLATFORM_LINUX
-      s << t;
-#else
-      s << "0x" << t;
-#endif
-    }
-  }
-
-  template <class T>
-  NOINLINE typename std::enable_if<!std::is_base_of<TOclType, T>::value>::type print_args(
-      COclLog& s, T t) {
-    s << t;
-  }
-
-  template <class T>
-  NOINLINE typename std::enable_if<std::is_base_of<TOclType, T>::value>::type print_args(COclLog& s,
-                                                                                         T t) {
-    s << t.ToString();
-  }
-
-  template <class Head, class... Rest>
-  NOINLINE void print_args(COclLog& s, Head h, Rest... r) {
-    print_args(s, std::move(h));
-    s << ", ";
-    print_args(s, std::move(r)...);
-  }
-
-  Tracer(const char* nameStr) : name(nameStr) {}
-
-  template <class... Args>
-  NOINLINE void trace(Args... args) {
-    if (ShouldLog(level)) {
-      auto log = COclLog(level, RAW);
-      log << "(";
-      print_args(log, std::move(args)...);
-      log << ")";
-    }
-  }
-
-  template <class... Args>
-  NOINLINE void trace_lua(Args... args) {
-    if (ShouldLog(level)) {
-      auto log = COclLog(level, NO_PREFIX);
-      log << "(";
-      print_args(log, std::move(args)...);
-      log << ") Lua begin";
-    }
-  }
-
-  NOINLINE void trace_name() {
-    if (ShouldLog(level)) {
-      auto log = COclLog(level, NO_NEWLINE);
-      log << name;
-    }
-  }
-
-private:
-  const char* name;
-  const LogLevel level = LogLevel::INFO;
 };
 #else
 #define LUA_FUNCTION_EXISTS(function) false

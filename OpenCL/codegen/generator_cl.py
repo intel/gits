@@ -53,87 +53,87 @@ def GetFunctions():
 
 Function(name='clBuildProgram',enabled=True,availableFrom='1.0',extension=False,type=Build,stateTrack=True,runWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='program',type='cl_program'),
-arg2=ArgDef(name='num_devices',type='cl_uint'),
-arg3=ArgDef(name='device_list',type='const cl_device_id*',wrapParams='num_devices, {name}'),
-arg4=ArgDef(name='options',type='const char*',wrapType='CBuildOptions',wrapParams='{name}, SD().GetProgramState(program, EXCEPTION_MESSAGE).HasHeaders()'),
-arg5=ArgDef(name='pfn_notify',type='CallbackProgram'),
-arg6=ArgDef(name='user_data',type='void*',wrapType='CCLUserData')
+arg1=ArgDef(name='program',tag='in',type='cl_program'),
+arg2=ArgDef(name='num_devices',tag='in',type='cl_uint'),
+arg3=ArgDef(name='device_list',tag='in',type='const cl_device_id*',wrapParams='num_devices, {name}'),
+arg4=ArgDef(name='options',tag='in',type='const char*',wrapType='CBuildOptions',wrapParams='{name}, SD().GetProgramState(program, EXCEPTION_MESSAGE).HasHeaders()'),
+arg5=ArgDef(name='pfn_notify',tag='in',type='CallbackProgram'),
+arg6=ArgDef(name='user_data',tag='out',type='void*',wrapType='CCLUserData')
 )
 
 Function(name='clCreateBuffer',enabled=True,availableFrom='1.0',extension=False,type=Creator,stateTrack=True,recExecWrap=True,runWrap=True,recWrap=True,
 retV=RetDef(type='cl_mem'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='flags',type='cl_mem_flags'),
-arg3=ArgDef(name='size',type='size_t'),
-arg4=ArgDef(name='host_ptr',type='void*',wrapType='CAsyncBinaryData',wrapParams='{name} ? size : 0, {name}'),
-arg5=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='flags',tag='in',type='cl_mem_flags'),
+arg3=ArgDef(name='size',tag='in',type='size_t'),
+arg4=ArgDef(name='host_ptr',tag='in',type='void*',wrapType='CAsyncBinaryData',wrapParams='{name} ? size : 0, {name}'),
+arg5=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clCreateBufferWithPropertiesINTEL',enabled=True,availableFrom='1.0',extension=True,type=Creator,stateTrack=True,passToken=True,runWrap=True,recWrap=True,
 retV=RetDef(type='cl_mem'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='properties',type='cl_mem_properties_intel*',wrapParams='{name}, 0, 2'),
-arg3=ArgDef(name='flags',type='cl_mem_flags'),
-arg4=ArgDef(name='size',type='size_t'),
-arg5=ArgDef(name='host_ptr',type='void*',wrapType='CAsyncBinaryData',wrapParams='{name} ? size : 0, {name}'),
-arg6=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='properties',tag='in',type='cl_mem_properties_intel*',wrapParams='{name}, 0, 2'),
+arg3=ArgDef(name='flags',tag='in',type='cl_mem_flags'),
+arg4=ArgDef(name='size',tag='in',type='size_t'),
+arg5=ArgDef(name='host_ptr',tag='in',type='void*',wrapType='CAsyncBinaryData',wrapParams='{name} ? size : 0, {name}'),
+arg6=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clCreateCommandQueue',enabled=True,availableFrom='1.0',extension=False,type=Creator,stateTrack=True,
 retV=RetDef(type='cl_command_queue'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='device',type='cl_device_id'),
-arg3=ArgDef(name='properties',type='cl_command_queue_properties'),
-arg4=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='device',tag='in',type='cl_device_id'),
+arg3=ArgDef(name='properties',tag='in',type='cl_command_queue_properties'),
+arg4=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 # XXX: arg2.wrapParams: should the last parameter be changed to 2?
 Function(name='clCreateContext',enabled=True,availableFrom='1.0',extension=False,type=Creator,runWrap=True,stateTrack=True,recWrap=True,
 retV=RetDef(type='cl_context'),
-arg1=ArgDef(name='properties',type='const cl_context_properties*',wrapParams='{name}, 0, 2'),
-arg2=ArgDef(name='num_devices',type='cl_uint'),
-arg3=ArgDef(name='devices',type='const cl_device_id*',wrapParams='num_devices, {name}'),
-arg4=ArgDef(name='pfn_notify',type='CallbackContext'),
-arg5=ArgDef(name='user_data',type='void*',wrapType='CCLUserData'),
-arg6=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='properties',tag='in',type='const cl_context_properties*',wrapParams='{name}, 0, 2'),
+arg2=ArgDef(name='num_devices',tag='in',type='cl_uint'),
+arg3=ArgDef(name='devices',tag='in',type='const cl_device_id*',wrapParams='num_devices, {name}'),
+arg4=ArgDef(name='pfn_notify',tag='in',type='CallbackContext'),
+arg5=ArgDef(name='user_data',tag='in',type='void*',wrapType='CCLUserData'),
+arg6=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 # XXX: arg2.wrapParams: should the last parameter be changed to 2?
 Function(name='clCreateContextFromType',enabled=True,availableFrom='1.0',extension=False,type=Creator,runWrap=True,stateTrack=True,recWrap=True,
 retV=RetDef(type='cl_context'),
-arg1=ArgDef(name='properties',type='const cl_context_properties*',wrapParams='{name}, 0, 2'),
-arg2=ArgDef(name='device_type',type='cl_device_type'),
-arg3=ArgDef(name='pfn_notify',type='CallbackContext'),
-arg4=ArgDef(name='user_data',type='void*',wrapType='CCLUserData'),
-arg5=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='properties',tag='in',type='const cl_context_properties*',wrapParams='{name}, 0, 2'),
+arg2=ArgDef(name='device_type',tag='in',type='cl_device_type'),
+arg3=ArgDef(name='pfn_notify',tag='in',type='CallbackContext'),
+arg4=ArgDef(name='user_data',tag='in',type='void*',wrapType='CCLUserData'),
+arg5=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clCreateEventFromGLsyncKHR',enabled=True,availableFrom='1.1',extension=True,type=Creator,
 retV=RetDef(type='cl_event'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='sync',type='cl_GLsync'),
-arg3=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='sync',tag='in',type='cl_GLsync'),
+arg3=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clCreateFromGLBuffer',enabled=True,availableFrom='1.0',extension=True,type=Creator,stateTrack=True,recWrap=True,
 retV=RetDef(type='cl_mem'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='flags',type='cl_mem_flags'),
-arg3=ArgDef(name='bufobj',type='cl_GLuint'),
-arg4=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='flags',tag='in',type='cl_mem_flags'),
+arg3=ArgDef(name='bufobj',tag='in',type='cl_GLuint'),
+arg4=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clCreateFromGLRenderbuffer',enabled=True,availableFrom='1.0',extension=True,inheritFrom='clCreateFromGLBuffer')
 
 Function(name='clCreateFromGLTexture',enabled=True,availableFrom='1.2',extension=False,type=Creator,stateTrack=True,recWrap=True,
 retV=RetDef(type='cl_mem'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='flags',type='cl_mem_flags'),
-arg3=ArgDef(name='target',type='cl_GLenum'),
-arg4=ArgDef(name='miplevel',type='cl_GLint'),
-arg5=ArgDef(name='texture',type='cl_GLuint'),
-arg6=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='flags',tag='in',type='cl_mem_flags'),
+arg3=ArgDef(name='target',tag='in',type='cl_GLenum'),
+arg4=ArgDef(name='miplevel',tag='in',type='cl_GLint'),
+arg5=ArgDef(name='texture',tag='in',type='cl_GLuint'),
+arg6=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clCreateFromGLTexture2D',enabled=True,availableFrom='1.1.DEPRECATED',extension=True,inheritFrom='clCreateFromGLTexture')
@@ -142,837 +142,837 @@ Function(name='clCreateFromGLTexture3D',enabled=True,availableFrom='1.1.DEPRECAT
 
 Function(name='clCreateImage',enabled=True,availableFrom='1.2',extension=False,type=Creator,stateTrack=True,recExecWrap=True,runWrap=True,recWrap=True,
 retV=RetDef(type='cl_mem'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='flags',type='cl_mem_flags'),
-arg3=ArgDef(name='image_format',type='const cl_image_format*'),
-arg4=ArgDef(name='image_desc',type='const cl_image_desc*'),
-arg5=ArgDef(name='host_ptr',type='void*',wrapType='CAsyncBinaryData',wrapParams='*image_format, *image_desc, {name}'),
-arg6=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='flags',tag='in',type='cl_mem_flags'),
+arg3=ArgDef(name='image_format',tag='in',type='const cl_image_format*'),
+arg4=ArgDef(name='image_desc',tag='in',type='const cl_image_desc*'),
+arg5=ArgDef(name='host_ptr',tag='in',type='void*',wrapType='CAsyncBinaryData',wrapParams='*image_format, *image_desc, {name}'),
+arg6=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clCreateImageWithPropertiesINTEL',enabled=True,availableFrom='1.2',extension=True,type=Creator,stateTrack=True,runWrap=True,recWrap=True,
 retV=RetDef(type='cl_mem'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='properties',type='cl_mem_properties_intel*',wrapParams='{name}, 0, 2'),
-arg3=ArgDef(name='flags',type='cl_mem_flags'),
-arg4=ArgDef(name='image_format',type='const cl_image_format*'),
-arg5=ArgDef(name='image_desc',type='const cl_image_desc*'),
-arg6=ArgDef(name='host_ptr',type='void*',wrapType='CAsyncBinaryData',wrapParams='*image_format, *image_desc, {name}'),
-arg7=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='properties',tag='in',type='cl_mem_properties_intel*',wrapParams='{name}, 0, 2'),
+arg3=ArgDef(name='flags',tag='in',type='cl_mem_flags'),
+arg4=ArgDef(name='image_format',tag='in',type='const cl_image_format*'),
+arg5=ArgDef(name='image_desc',tag='in',type='const cl_image_desc*'),
+arg6=ArgDef(name='host_ptr',tag='in',type='void*',wrapType='CAsyncBinaryData',wrapParams='*image_format, *image_desc, {name}'),
+arg7=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clCreateImage2D',enabled=True,availableFrom='1.1.DEPRECATED',extension=False,type=Creator,stateTrack=True,recExecWrap=True,runWrap=True,recWrap=True,
 retV=RetDef(type='cl_mem'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='flags',type='cl_mem_flags'),
-arg3=ArgDef(name='image_format',type='const cl_image_format*'),
-arg4=ArgDef(name='image_width',type='size_t'),
-arg5=ArgDef(name='image_height',type='size_t'),
-arg6=ArgDef(name='image_row_pitch',type='size_t'),
-arg7=ArgDef(name='host_ptr',type='void*',wrapType='CAsyncBinaryData',wrapParams='*image_format, image_width, image_height, image_row_pitch, {name}'),
-arg8=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='flags',tag='in',type='cl_mem_flags'),
+arg3=ArgDef(name='image_format',tag='in',type='const cl_image_format*'),
+arg4=ArgDef(name='image_width',tag='in',type='size_t'),
+arg5=ArgDef(name='image_height',tag='in',type='size_t'),
+arg6=ArgDef(name='image_row_pitch',tag='in',type='size_t'),
+arg7=ArgDef(name='host_ptr',tag='in',type='void*',wrapType='CAsyncBinaryData',wrapParams='*image_format, image_width, image_height, image_row_pitch, {name}'),
+arg8=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clCreateImage3D',enabled=True,availableFrom='1.1.DEPRECATED',extension=False,type=Creator,stateTrack=True,recExecWrap=True,runWrap=True,recWrap=True,
 retV=RetDef(type='cl_mem'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='flags',type='cl_mem_flags'),
-arg3=ArgDef(name='image_format',type='const cl_image_format*'),
-arg4=ArgDef(name='image_width',type='size_t'),
-arg5=ArgDef(name='image_height',type='size_t'),
-arg6=ArgDef(name='image_depth',type='size_t'),
-arg7=ArgDef(name='image_row_pitch',type='size_t'),
-arg8=ArgDef(name='image_slice_pitch',type='size_t'),
-arg9=ArgDef(name='host_ptr',type='void*',wrapType='CAsyncBinaryData',wrapParams='*image_format, image_width, image_height, image_depth, image_row_pitch, image_slice_pitch, {name}'),
-arg10=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='flags',tag='in',type='cl_mem_flags'),
+arg3=ArgDef(name='image_format',tag='in',type='const cl_image_format*'),
+arg4=ArgDef(name='image_width',tag='in',type='size_t'),
+arg5=ArgDef(name='image_height',tag='in',type='size_t'),
+arg6=ArgDef(name='image_depth',tag='in',type='size_t'),
+arg7=ArgDef(name='image_row_pitch',tag='in',type='size_t'),
+arg8=ArgDef(name='image_slice_pitch',tag='in',type='size_t'),
+arg9=ArgDef(name='host_ptr',tag='in',type='void*',wrapType='CAsyncBinaryData',wrapParams='*image_format, image_width, image_height, image_depth, image_row_pitch, image_slice_pitch, {name}'),
+arg10=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clCreateKernel',enabled=True,availableFrom='1.0',extension=False,type=Creator,stateTrack=True,
 retV=RetDef(type='cl_kernel'),
-arg1=ArgDef(name='program',type='cl_program'),
-arg2=ArgDef(name='kernel_name',type='const char*'),
-arg3=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='program',tag='in',type='cl_program'),
+arg2=ArgDef(name='kernel_name',tag='in',type='const char*'),
+arg3=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clCreateKernelsInProgram',enabled=True,availableFrom='1.0',extension=False,type=Creator,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='program',type='cl_program'),
-arg2=ArgDef(name='num_kernels',type='cl_uint'),
-arg3=ArgDef(name='kernels',type='cl_kernel*',wrapType='Ccl_kernel::CSMapArray',wrapParams='num_kernels, {name}'),
-arg4=ArgDef(name='num_kernels_ret',type='cl_uint*')
+arg1=ArgDef(name='program',tag='in',type='cl_program'),
+arg2=ArgDef(name='num_kernels',tag='in',type='cl_uint'),
+arg3=ArgDef(name='kernels',tag='out',type='cl_kernel*',wrapType='Ccl_kernel::CSMapArray',wrapParams='num_kernels, {name}'),
+arg4=ArgDef(name='num_kernels_ret',tag='out',type='cl_uint*')
 )
 
 Function(name='clCreateProgramWithBinary',enabled=True,availableFrom='1.0',extension=False,type=Creator,stateTrack=True,passNullToken=True,
 retV=RetDef(type='cl_program'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='num_devices',type='cl_uint'),
-arg3=ArgDef(name='device_list',type='const cl_device_id*',wrapParams='num_devices, {name}'),
-arg4=ArgDef(name='lengths',type='const size_t*',wrapParams='num_devices, {name}'),
-arg5=ArgDef(name='binaries',type='const unsigned char**',wrapType='CBinariesArray',wrapParams='num_devices, {name}, lengths'),
-arg6=ArgDef(name='binary_status',type='cl_int*',wrapType='CCLResult::CSArray',wrapParams='num_devices, {name}'),
-arg7=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='num_devices',tag='in',type='cl_uint'),
+arg3=ArgDef(name='device_list',tag='in',type='const cl_device_id*',wrapParams='num_devices, {name}'),
+arg4=ArgDef(name='lengths',tag='in',type='const size_t*',wrapParams='num_devices, {name}'),
+arg5=ArgDef(name='binaries',tag='in',type='const unsigned char**',wrapType='CBinariesArray',wrapParams='num_devices, {name}, lengths'),
+arg6=ArgDef(name='binary_status',tag='out',type='cl_int*',wrapType='CCLResult::CSArray',wrapParams='num_devices, {name}'),
+arg7=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clCreateProgramWithBinary',enabled=True,availableFrom='1.0',extension=False,type=Creator,version=1,stateTrack=True,runWrap=True,recWrap=True,passToken=True,
 retV=RetDef(type='cl_program'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='num_devices',type='cl_uint'),
-arg3=ArgDef(name='device_list',type='const cl_device_id*',wrapParams='num_devices, {name}'),
-arg4=ArgDef(name='lengths',type='const size_t*',wrapParams='num_devices, {name}'),
-arg5=ArgDef(name='binaries',type='const unsigned char**',wrapType='CBinariesArray_V1',wrapParams='num_devices, {name}, lengths'),
-arg6=ArgDef(name='binary_status',type='cl_int*',wrapType='CCLResult::CSArray',wrapParams='num_devices, {name}'),
-arg7=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='num_devices',tag='in',type='cl_uint'),
+arg3=ArgDef(name='device_list',tag='in',type='const cl_device_id*',wrapParams='num_devices, {name}'),
+arg4=ArgDef(name='lengths',tag='in',type='const size_t*',wrapParams='num_devices, {name}'),
+arg5=ArgDef(name='binaries',tag='in',type='const unsigned char**',wrapType='CBinariesArray_V1',wrapParams='num_devices, {name}, lengths'),
+arg6=ArgDef(name='binary_status',tag='out',type='cl_int*',wrapType='CCLResult::CSArray',wrapParams='num_devices, {name}'),
+arg7=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clCreateProgramWithSource',enabled=True,availableFrom='1.0',extension=False,type=Creator,passToken=True,stateTrack=True,runWrap=True,
 retV=RetDef(type='cl_program'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='count',type='cl_uint',wrapParams='1'),
-arg3=ArgDef(name='strings',type='const char**',wrapType='CProgramSource', wrapParams='count, {name}, lengths'),
-arg4=ArgDef(name='lengths',type='const size_t*',wrapParams='1, _strings.Length()'),
-arg5=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='count',tag='in',type='cl_uint',wrapParams='1'),
+arg3=ArgDef(name='strings',tag='in',type='const char**',wrapType='CProgramSource', wrapParams='count, {name}, lengths'),
+arg4=ArgDef(name='lengths',tag='in',type='const size_t*',wrapParams='1, _strings.Length()'),
+arg5=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clCreateSampler',enabled=True,availableFrom='1.0',extension=False,type=Creator,stateTrack=True,
 retV=RetDef(type='cl_sampler'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='normalized_coords',type='cl_bool'),
-arg3=ArgDef(name='addressing_mode',type='cl_addressing_mode'),
-arg4=ArgDef(name='filter_mode',type='cl_filter_mode'),
-arg5=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='normalized_coords',tag='in',type='cl_bool'),
+arg3=ArgDef(name='addressing_mode',tag='in',type='cl_addressing_mode'),
+arg4=ArgDef(name='filter_mode',tag='in',type='cl_filter_mode'),
+arg5=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clCreateSubBuffer',enabled=True,availableFrom='1.1',extension=False,type=Creator,stateTrack=True,
 retV=RetDef(type='cl_mem'),
-arg1=ArgDef(name='buffer',type='cl_mem'),
-arg2=ArgDef(name='flags',type='cl_mem_flags'),
-arg3=ArgDef(name='buffer_create_type',type='cl_buffer_create_type'),
-arg4=ArgDef(name='buffer_create_info',type='const void*',wrapType='Ccl_buffer_region::CSArray',wrapParams='{name} ? 1 : 0, static_cast<const cl_buffer_region*>({name})'),
-arg5=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='buffer',tag='in',type='cl_mem'),
+arg2=ArgDef(name='flags',tag='in',type='cl_mem_flags'),
+arg3=ArgDef(name='buffer_create_type',tag='in',type='cl_buffer_create_type'),
+arg4=ArgDef(name='buffer_create_info',tag='in',type='const void*',wrapType='Ccl_buffer_region::CSArray',wrapParams='{name} ? 1 : 0, static_cast<const cl_buffer_region*>({name})'),
+arg5=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clCreateSubDevices',enabled=True,availableFrom='1.2',extension=False,type=Creator,stateTrack=True,runWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='in_device',type='cl_device_id'),
-arg2=ArgDef(name='properties',type='const cl_device_partition_property*',wrapParams='{name}, 0, 2'),
-arg3=ArgDef(name='num_entries',type='cl_uint'),
-arg4=ArgDef(name='out_devices',type='cl_device_id*',wrapType='Ccl_device_id::CSMapArray',wrapParams='num_entries, {name}'),
-arg5=ArgDef(name='num_devices',type='cl_uint*')
+arg1=ArgDef(name='in_device',tag='in',type='cl_device_id'),
+arg2=ArgDef(name='properties',tag='in',type='const cl_device_partition_property*',wrapParams='{name}, 0, 2'),
+arg3=ArgDef(name='num_entries',tag='in',type='cl_uint'),
+arg4=ArgDef(name='out_devices',tag='out',type='cl_device_id*',wrapType='Ccl_device_id::CSMapArray',wrapParams='num_entries, {name}'),
+arg5=ArgDef(name='num_devices',tag='out',type='cl_uint*')
 )
 
 Function(name='clCreateSubDevicesEXT',enabled=True,availableFrom='1.1.DEPRECATED',extension=True,type=Creator,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='in_device',type='cl_device_id'),
-arg2=ArgDef(name='properties',type='const cl_device_partition_property_ext*',wrapParams='{name}, 0, 2'),
-arg3=ArgDef(name='num_entries',type='cl_uint'),
-arg4=ArgDef(name='out_devices',type='cl_device_id*',wrapType='Ccl_device_id::CSMapArray',wrapParams='num_entries, {name}'),
-arg5=ArgDef(name='num_devices',type='cl_uint*')
+arg1=ArgDef(name='in_device',tag='in',type='cl_device_id'),
+arg2=ArgDef(name='properties',tag='in',type='const cl_device_partition_property_ext*',wrapParams='{name}, 0, 2'),
+arg3=ArgDef(name='num_entries',tag='in',type='cl_uint'),
+arg4=ArgDef(name='out_devices',tag='out',type='cl_device_id*',wrapType='Ccl_device_id::CSMapArray',wrapParams='num_entries, {name}'),
+arg5=ArgDef(name='num_devices',tag='out',type='cl_uint*')
 )
 
 Function(name='clCreateUserEvent',enabled=True,availableFrom='1.1',extension=False,stateTrack=True,type=Creator,
 retV=RetDef(type='cl_event'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clEnqueueAcquireGLObjects',enabled=True,availableFrom='1.0',extension=True,type=Enqueue,stateTrack=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='num_objects',type='cl_uint'),
-arg3=ArgDef(name='mem_objects',type='const cl_mem*',wrapParams='num_objects, {name}'),
-arg4=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg5=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg6=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='num_objects',tag='in',type='cl_uint'),
+arg3=ArgDef(name='mem_objects',tag='in',type='const cl_mem*',wrapParams='num_objects, {name}'),
+arg4=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg5=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg6=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueBarrier',enabled=True,availableFrom='1.1.DEPRECATED',extension=False,type=Enqueue,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue')
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue')
 )
 
 Function(name='clEnqueueCopyBuffer',enabled=True,availableFrom='1.0',extension=False,type=Enqueue,stateTrack=True,passToken=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='src_buffer',type='cl_mem'),
-arg3=ArgDef(name='dst_buffer',type='cl_mem'),
-arg4=ArgDef(name='src_offset',type='size_t'),
-arg5=ArgDef(name='dst_offset',type='size_t'),
-arg6=ArgDef(name='cb',type='size_t'),
-arg7=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg8=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg9=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='src_buffer',tag='in',type='cl_mem'),
+arg3=ArgDef(name='dst_buffer',tag='in',type='cl_mem'),
+arg4=ArgDef(name='src_offset',tag='in',type='size_t'),
+arg5=ArgDef(name='dst_offset',tag='in',type='size_t'),
+arg6=ArgDef(name='cb',tag='in',type='size_t'),
+arg7=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg8=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg9=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueCopyBufferRect',enabled=True,availableFrom='1.1',extension=False,type=Enqueue,stateTrack=True,passToken=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='src_buffer',type='cl_mem'),
-arg3=ArgDef(name='dst_buffer',type='cl_mem'),
-arg4=ArgDef(name='src_origin',type='const size_t*',wrapParams='3, {name}'),
-arg5=ArgDef(name='dst_origin',type='const size_t*',wrapParams='3, {name}'),
-arg6=ArgDef(name='region',type='const size_t*',wrapParams='3, {name}'),
-arg7=ArgDef(name='src_row_pitch',type='size_t'),
-arg8=ArgDef(name='src_slice_pitch',type='size_t'),
-arg9=ArgDef(name='dst_row_pitch',type='size_t'),
-arg10=ArgDef(name='dst_slice_pitch',type='size_t'),
-arg11=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg12=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg13=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='src_buffer',tag='in',type='cl_mem'),
+arg3=ArgDef(name='dst_buffer',tag='in',type='cl_mem'),
+arg4=ArgDef(name='src_origin',tag='in',type='const size_t*',wrapParams='3, {name}'),
+arg5=ArgDef(name='dst_origin',tag='in',type='const size_t*',wrapParams='3, {name}'),
+arg6=ArgDef(name='region',tag='in',type='const size_t*',wrapParams='3, {name}'),
+arg7=ArgDef(name='src_row_pitch',tag='in',type='size_t'),
+arg8=ArgDef(name='src_slice_pitch',tag='in',type='size_t'),
+arg9=ArgDef(name='dst_row_pitch',tag='in',type='size_t'),
+arg10=ArgDef(name='dst_slice_pitch',tag='in',type='size_t'),
+arg11=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg12=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg13=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueCopyBufferToImage',enabled=True,availableFrom='1.0',extension=False,type=Enqueue,stateTrack=True,passToken=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='src_buffer',type='cl_mem'),
-arg3=ArgDef(name='dst_image',type='cl_mem'),
-arg4=ArgDef(name='src_offset',type='size_t'),
-arg5=ArgDef(name='dst_origin',type='const size_t*',wrapParams='3, {name}'),
-arg6=ArgDef(name='region',type='const size_t*',wrapParams='3, {name}'),
-arg7=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg8=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg9=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='src_buffer',tag='in',type='cl_mem'),
+arg3=ArgDef(name='dst_image',tag='in',type='cl_mem'),
+arg4=ArgDef(name='src_offset',tag='in',type='size_t'),
+arg5=ArgDef(name='dst_origin',tag='in',type='const size_t*',wrapParams='3, {name}'),
+arg6=ArgDef(name='region',tag='in',type='const size_t*',wrapParams='3, {name}'),
+arg7=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg8=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg9=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueCopyImage',enabled=True,availableFrom='1.0',extension=False,type=Enqueue,stateTrack=True,passToken=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='src_image',type='cl_mem'),
-arg3=ArgDef(name='dst_image',type='cl_mem'),
-arg4=ArgDef(name='src_origin',type='const size_t*',wrapParams='3, {name}'),
-arg5=ArgDef(name='dst_origin',type='const size_t*',wrapParams='3, {name}'),
-arg6=ArgDef(name='region',type='const size_t*',wrapParams='3, {name}'),
-arg7=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg8=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg9=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='src_image',tag='in',type='cl_mem'),
+arg3=ArgDef(name='dst_image',tag='in',type='cl_mem'),
+arg4=ArgDef(name='src_origin',tag='in',type='const size_t*',wrapParams='3, {name}'),
+arg5=ArgDef(name='dst_origin',tag='in',type='const size_t*',wrapParams='3, {name}'),
+arg6=ArgDef(name='region',tag='in',type='const size_t*',wrapParams='3, {name}'),
+arg7=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg8=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg9=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueCopyImageToBuffer',enabled=True,availableFrom='1.0',extension=False,type=Enqueue,stateTrack=True,passToken=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='src_image',type='cl_mem'),
-arg3=ArgDef(name='dst_buffer',type='cl_mem'),
-arg4=ArgDef(name='src_origin',type='const size_t*',wrapParams='3, {name}'),
-arg5=ArgDef(name='region',type='const size_t*',wrapParams='3, {name}'),
-arg6=ArgDef(name='dst_offset',type='size_t'),
-arg7=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg8=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg9=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='src_image',tag='in',type='cl_mem'),
+arg3=ArgDef(name='dst_buffer',tag='in',type='cl_mem'),
+arg4=ArgDef(name='src_origin',tag='in',type='const size_t*',wrapParams='3, {name}'),
+arg5=ArgDef(name='region',tag='in',type='const size_t*',wrapParams='3, {name}'),
+arg6=ArgDef(name='dst_offset',tag='in',type='size_t'),
+arg7=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg8=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg9=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueMapBuffer',enabled=True,availableFrom='1.0',extension=False,type=Enqueue,stateTrack=True,passToken=True,recWrap=True,
 retV=RetDef(type='void*'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='buffer',type='cl_mem'),
-arg3=ArgDef(name='blocking_map',type='cl_bool'),
-arg4=ArgDef(name='map_flags',type='cl_map_flags'),
-arg5=ArgDef(name='offset',type='size_t'),
-arg6=ArgDef(name='cb',type='size_t'),
-arg7=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg8=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg9=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True),
-arg10=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='buffer',tag='in',type='cl_mem'),
+arg3=ArgDef(name='blocking_map',tag='in',type='cl_bool'),
+arg4=ArgDef(name='map_flags',tag='in',type='cl_map_flags'),
+arg5=ArgDef(name='offset',tag='in',type='size_t'),
+arg6=ArgDef(name='cb',tag='in',type='size_t'),
+arg7=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg8=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg9=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True),
+arg10=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clEnqueueMapImage',enabled=True,availableFrom='1.0',extension=False,type=Enqueue,stateTrack=True,passToken=True,recWrap=True,
 retV=RetDef(type='void*'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='image',type='cl_mem'),
-arg3=ArgDef(name='blocking_map',type='cl_bool'),
-arg4=ArgDef(name='map_flags',type='cl_map_flags'),
-arg5=ArgDef(name='origin',type='const size_t*',wrapParams='3, {name}'),
-arg6=ArgDef(name='region',type='const size_t*',wrapParams='3, {name}'),
-arg7=ArgDef(name='image_row_pitch',type='size_t*'),
-arg8=ArgDef(name='image_slice_pitch',type='size_t*'),
-arg9=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg10=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg11=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True),
-arg12=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='image',tag='in',type='cl_mem'),
+arg3=ArgDef(name='blocking_map',tag='in',type='cl_bool'),
+arg4=ArgDef(name='map_flags',tag='in',type='cl_map_flags'),
+arg5=ArgDef(name='origin',tag='in',type='const size_t*',wrapParams='3, {name}'),
+arg6=ArgDef(name='region',tag='in',type='const size_t*',wrapParams='3, {name}'),
+arg7=ArgDef(name='image_row_pitch',tag='out',type='size_t*'),
+arg8=ArgDef(name='image_slice_pitch',tag='out',type='size_t*'),
+arg9=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg10=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg11=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True),
+arg12=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clEnqueueMarker',enabled=True,availableFrom='1.1.DEPRECATED',extension=False,type=Enqueue,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueNDRangeKernel',enabled=True,availableFrom='1.0',extension=False,type=NDRange,stateTrack=True,recExecWrap=True,runWrap=True,recWrap=True,
          ccodeWrap='static size_t counter = 1;\n  stream.select(CCodeOStream::GITS_FRAMES_CPP);\n  stream.Indent() << "// kernel call #" << counter << std::endl;\n  counter++;\n  gits::CFunction::Write(stream);',
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='kernel',type='cl_kernel'),
-arg3=ArgDef(name='work_dim',type='cl_uint'),
-arg4=ArgDef(name='global_work_offset',type='const size_t*',wrapParams='work_dim, {name}'),
-arg5=ArgDef(name='global_work_size',type='const size_t*',wrapParams='work_dim, {name}'),
-arg6=ArgDef(name='local_work_size',type='const size_t*',wrapParams='work_dim, {name}'),
-arg7=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg8=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg9=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='kernel',tag='in',type='cl_kernel'),
+arg3=ArgDef(name='work_dim',tag='in',type='cl_uint'),
+arg4=ArgDef(name='global_work_offset',tag='in',type='const size_t*',wrapParams='work_dim, {name}'),
+arg5=ArgDef(name='global_work_size',tag='in',type='const size_t*',wrapParams='work_dim, {name}'),
+arg6=ArgDef(name='local_work_size',tag='in',type='const size_t*',wrapParams='work_dim, {name}'),
+arg7=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg8=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg9=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueNDCountKernelINTEL',enabled=True,availableFrom='1.2',extension=True,type=NDRange,stateTrack=True,recExecWrap=True,runWrap=True,recWrap=True,
          ccodeWrap='static size_t counter = 1;\n  stream.select(CCodeOStream::GITS_FRAMES_CPP);\n  stream.Indent() << "// kernel call #" << counter << std::endl;\n  counter++;\n  gits::CFunction::Write(stream);',
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='kernel',type='cl_kernel'),
-arg3=ArgDef(name='workDim',type='cl_uint'),
-arg4=ArgDef(name='globalWorkOffset',type='const size_t*',wrapParams='workDim, {name}'),
-arg5=ArgDef(name='workGroupCount',type='const size_t*',wrapParams='workDim, {name}'),
-arg6=ArgDef(name='localWorkSize',type='const size_t*',wrapParams='workDim, {name}'),
-arg7=ArgDef(name='numEventsInWaitList',type='cl_uint'),
-arg8=ArgDef(name='eventWaitList',type='const cl_event*',wrapParams='numEventsInWaitList, {name}'),
-arg9=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='kernel',tag='in',type='cl_kernel'),
+arg3=ArgDef(name='workDim',tag='in',type='cl_uint'),
+arg4=ArgDef(name='globalWorkOffset',tag='in',type='const size_t*',wrapParams='workDim, {name}'),
+arg5=ArgDef(name='workGroupCount',tag='in',type='const size_t*',wrapParams='workDim, {name}'),
+arg6=ArgDef(name='localWorkSize',tag='in',type='const size_t*',wrapParams='workDim, {name}'),
+arg7=ArgDef(name='numEventsInWaitList',tag='in',type='cl_uint'),
+arg8=ArgDef(name='eventWaitList',tag='in',type='const cl_event*',wrapParams='numEventsInWaitList, {name}'),
+arg9=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clGetKernelMaxConcurrentWorkGroupCountINTEL',enabled=True,availableFrom='1.2',extension=True,type=Info,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='kernel',type='cl_kernel'),
-arg3=ArgDef(name='workDim',type='cl_uint'),
-arg4=ArgDef(name='globalWorkOffset',type='const size_t*',wrapParams='workDim, {name}'),
-arg5=ArgDef(name='localWorkSize',type='const size_t*',wrapParams='workDim, {name}'),
-arg6=ArgDef(name='suggestedWorkGroupCount',type='size_t *',wrapParams='workDim, {name}')
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='kernel',tag='in',type='cl_kernel'),
+arg3=ArgDef(name='workDim',tag='in',type='cl_uint'),
+arg4=ArgDef(name='globalWorkOffset',tag='in',type='const size_t*',wrapParams='workDim, {name}'),
+arg5=ArgDef(name='localWorkSize',tag='in',type='const size_t*',wrapParams='workDim, {name}'),
+arg6=ArgDef(name='suggestedWorkGroupCount',tag='out',type='size_t *',wrapParams='workDim, {name}')
 )
 
 Function(name='clGetDeviceGlobalVariablePointerINTEL',enabled=True,availableFrom='2.0',extension=True,type=Info,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='device',type='cl_device_id'),
-arg2=ArgDef(name='program',type='cl_program'),
-arg3=ArgDef(name='global_variable_name',type='const char*'),
-arg4=ArgDef(name='global_variable_size_ret',type='size_t*'),
-arg5=ArgDef(name='global_variable_pointer_ret',type='void**',wrapType='CCLMappedPtr::CSMapArray',wrapParams='1, {name}')
+arg1=ArgDef(name='device',tag='in',type='cl_device_id'),
+arg2=ArgDef(name='program',tag='in',type='cl_program'),
+arg3=ArgDef(name='global_variable_name',tag='in',type='const char*'),
+arg4=ArgDef(name='global_variable_size_ret',tag='out',type='size_t*'),
+arg5=ArgDef(name='global_variable_pointer_ret',tag='out',type='void**',wrapType='CCLMappedPtr::CSMapArray',wrapParams='1, {name}')
 )
 
 Function(name='clGetDeviceFunctionPointerINTEL',enabled=True,availableFrom='1.2',extension=True,type=Info,runWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='device',type='cl_device_id'),
-arg2=ArgDef(name='program',type='cl_program'),
-arg3=ArgDef(name='function_name',type='const char*'),
-arg4=ArgDef(name='function_pointer_ret',type='cl_ulong*',wrapType='CCLMappedPtr',wrapParams='{name}')
+arg1=ArgDef(name='device',tag='in',type='cl_device_id'),
+arg2=ArgDef(name='program',tag='in',type='cl_program'),
+arg3=ArgDef(name='function_name',tag='in',type='const char*'),
+arg4=ArgDef(name='function_pointer_ret',tag='out',type='cl_ulong*',wrapType='CCLMappedPtr',wrapParams='{name}')
 )
 
 Function(name='clEnqueueNativeKernel',enabled=False,availableFrom='1.0',extension=False,type=Enqueue,stateTrack=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='user_func',type='CallbackFunc'),
-arg3=ArgDef(name='args',type='void*'),
-arg4=ArgDef(name='cb_args',type='size_t'),
-arg5=ArgDef(name='num_mem_objects',type='cl_uint'),
-arg6=ArgDef(name='mem_list',type='const cl_mem*'),
-arg7=ArgDef(name='args_mem_loc',type='const void**'),
-arg8=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg9=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg10=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='user_func',tag='in',type='CallbackFunc'),
+arg3=ArgDef(name='args',tag='in',type='void*'),
+arg4=ArgDef(name='cb_args',tag='in',type='size_t'),
+arg5=ArgDef(name='num_mem_objects',tag='in',type='cl_uint'),
+arg6=ArgDef(name='mem_list',tag='in',type='const cl_mem*'),
+arg7=ArgDef(name='args_mem_loc',tag='in',type='const void**'),
+arg8=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg9=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg10=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueReadBuffer',enabled=True,availableFrom='1.0',extension=False,type=Enqueue,stateTrack=True,passToken=True,runWrap=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='buffer',type='cl_mem'),
-arg3=ArgDef(name='blocking_read',type='cl_bool'),
-arg4=ArgDef(name='offset',type='size_t'),
-arg5=ArgDef(name='cb',type='size_t'),
-arg6=ArgDef(name='ptr',type='void*',wrapType='CAsyncBinaryData',wrapParams='cb, {name}, true'),
-arg7=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg8=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg9=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='buffer',tag='in',type='cl_mem'),
+arg3=ArgDef(name='blocking_read',tag='in',type='cl_bool'),
+arg4=ArgDef(name='offset',tag='in',type='size_t'),
+arg5=ArgDef(name='cb',tag='in',type='size_t'),
+arg6=ArgDef(name='ptr',tag='out',type='void*',wrapType='CAsyncBinaryData',wrapParams='cb, {name}, true'),
+arg7=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg8=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg9=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueReadBufferRect',enabled=True,availableFrom='1.1',extension=False,type=Enqueue,stateTrack=True,passToken=True,runWrap=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='buffer',type='cl_mem'),
-arg3=ArgDef(name='blocking_read',type='cl_bool'),
-arg4=ArgDef(name='buffer_offset',type='const size_t*',wrapParams='3, {name}'),
-arg5=ArgDef(name='host_offset',type='const size_t*',wrapParams='3, {name}'),
-arg6=ArgDef(name='region',type='const size_t*',wrapParams='3, {name}'),
-arg7=ArgDef(name='buffer_row_pitch',type='size_t'),
-arg8=ArgDef(name='buffer_slice_pitch',type='size_t'),
-arg9=ArgDef(name='host_row_pitch',type='size_t'),
-arg10=ArgDef(name='host_slice_pitch',type='size_t'),
-arg11=ArgDef(name='ptr',type='void*',wrapType='CAsyncBinaryData',wrapParams='CountBufferRectSize(region, host_row_pitch, host_slice_pitch), {name}, true'),
-arg12=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg13=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg14=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='buffer',tag='in',type='cl_mem'),
+arg3=ArgDef(name='blocking_read',tag='in',type='cl_bool'),
+arg4=ArgDef(name='buffer_offset',tag='in',type='const size_t*',wrapParams='3, {name}'),
+arg5=ArgDef(name='host_offset',tag='in',type='const size_t*',wrapParams='3, {name}'),
+arg6=ArgDef(name='region',tag='in',type='const size_t*',wrapParams='3, {name}'),
+arg7=ArgDef(name='buffer_row_pitch',tag='in',type='size_t'),
+arg8=ArgDef(name='buffer_slice_pitch',tag='in',type='size_t'),
+arg9=ArgDef(name='host_row_pitch',tag='in',type='size_t'),
+arg10=ArgDef(name='host_slice_pitch',tag='in',type='size_t'),
+arg11=ArgDef(name='ptr',tag='out',type='void*',wrapType='CAsyncBinaryData',wrapParams='CountBufferRectSize(region, host_row_pitch, host_slice_pitch), {name}, true'),
+arg12=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg13=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg14=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueReadImage',enabled=True,availableFrom='1.0',extension=False,type=Enqueue,stateTrack=True,passToken=True,runWrap=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='image',type='cl_mem'),
-arg3=ArgDef(name='blocking_read',type='cl_bool'),
-arg4=ArgDef(name='origin',type='const size_t*',wrapParams='3, {name}'),
-arg5=ArgDef(name='region',type='const size_t*',wrapParams='3, {name}'),
-arg6=ArgDef(name='row_pitch',type='size_t'),
-arg7=ArgDef(name='slice_pitch',type='size_t'),
-arg8=ArgDef(name='ptr',type='void*',wrapType='CAsyncBinaryData',wrapParams='{name} ? CountImageSize(SD().GetMemState(image, EXCEPTION_MESSAGE).image_format, region, row_pitch, slice_pitch) : 0, {name}, true'),
-arg9=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg10=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg11=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='image',tag='in',type='cl_mem'),
+arg3=ArgDef(name='blocking_read',tag='in',type='cl_bool'),
+arg4=ArgDef(name='origin',tag='in',type='const size_t*',wrapParams='3, {name}'),
+arg5=ArgDef(name='region',tag='in',type='const size_t*',wrapParams='3, {name}'),
+arg6=ArgDef(name='row_pitch',tag='in',type='size_t'),
+arg7=ArgDef(name='slice_pitch',tag='in',type='size_t'),
+arg8=ArgDef(name='ptr',tag='out',type='void*',wrapType='CAsyncBinaryData',wrapParams='{name} ? CountImageSize(SD().GetMemState(image, EXCEPTION_MESSAGE).image_format, region, row_pitch, slice_pitch) : 0, {name}, true'),
+arg9=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg10=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg11=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueReleaseGLObjects',enabled=True,availableFrom='1.0',extension=True,type=Enqueue,stateTrack=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='num_objects',type='cl_uint'),
-arg3=ArgDef(name='mem_objects',type='const cl_mem*',wrapParams='num_objects, {name}'),
-arg4=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg5=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg6=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='num_objects',tag='in',type='cl_uint'),
+arg3=ArgDef(name='mem_objects',tag='in',type='const cl_mem*',wrapParams='num_objects, {name}'),
+arg4=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg5=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg6=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueTask',enabled=True,availableFrom='1.0',extension=False,type=Enqueue,stateTrack=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='kernel',type='cl_kernel'),
-arg3=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg4=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg5=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='kernel',tag='in',type='cl_kernel'),
+arg3=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg4=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg5=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueUnmapMemObject',enabled=True,availableFrom='1.0',extension=False,type=Enqueue,stateTrack=True,passToken=True,recExecWrap=True,runWrap=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='memobj',type='cl_mem'),
-arg3=ArgDef(name='mapped_ptr',type='void*',wrapType='CCLMappedPtr',wrapParams='{name}, false'),
-arg4=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg5=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg6=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='memobj',tag='in',type='cl_mem'),
+arg3=ArgDef(name='mapped_ptr',tag='in',type='void*',wrapType='CCLMappedPtr',wrapParams='{name}, false'),
+arg4=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg5=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg6=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueWaitForEvents',enabled=True,availableFrom='1.1.DEPRECATED',extension=False,type=Enqueue,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='num_events',type='cl_uint'),
-arg3=ArgDef(name='event_list',type='const cl_event*',wrapParams='num_events, {name}')
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='num_events',tag='in',type='cl_uint'),
+arg3=ArgDef(name='event_list',tag='in',type='const cl_event*',wrapParams='num_events, {name}')
 )
 
 Function(name='clEnqueueWriteBuffer',enabled=True,availableFrom='1.0',extension=False,type=Enqueue,stateTrack=True,passToken=True,runWrap=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='buffer',type='cl_mem'),
-arg3=ArgDef(name='blocking_write',type='cl_bool'),
-arg4=ArgDef(name='offset',type='size_t'),
-arg5=ArgDef(name='cb',type='size_t'),
-arg6=ArgDef(name='ptr',type='const void*',wrapType='CAsyncBinaryData',wrapParams='cb, {name}'),
-arg7=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg8=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg9=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='buffer',tag='in',type='cl_mem'),
+arg3=ArgDef(name='blocking_write',tag='in',type='cl_bool'),
+arg4=ArgDef(name='offset',tag='in',type='size_t'),
+arg5=ArgDef(name='cb',tag='in',type='size_t'),
+arg6=ArgDef(name='ptr',tag='in',type='const void*',wrapType='CAsyncBinaryData',wrapParams='cb, {name}'),
+arg7=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg8=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg9=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueWriteBufferRect',enabled=True,availableFrom='1.1',extension=False,type=Enqueue,stateTrack=True,passToken=True,runWrap=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='buffer',type='cl_mem'),
-arg3=ArgDef(name='blocking_write',type='cl_bool'),
-arg4=ArgDef(name='buffer_offset',type='const size_t*',wrapParams='3, {name}'),
-arg5=ArgDef(name='host_offset',type='const size_t*',wrapParams='3, {name}'),
-arg6=ArgDef(name='region',type='const size_t*',wrapParams='3, {name}'),
-arg7=ArgDef(name='buffer_row_pitch',type='size_t'),
-arg8=ArgDef(name='buffer_slice_pitch',type='size_t'),
-arg9=ArgDef(name='host_row_pitch',type='size_t'),
-arg10=ArgDef(name='host_slice_pitch',type='size_t'),
-arg11=ArgDef(name='ptr',type='const void*',wrapType='CAsyncBinaryData',wrapParams='CountBufferRectSize(region, host_row_pitch, host_slice_pitch), {name}'),
-arg12=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg13=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg14=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='buffer',tag='in',type='cl_mem'),
+arg3=ArgDef(name='blocking_write',tag='in',type='cl_bool'),
+arg4=ArgDef(name='buffer_offset',tag='in',type='const size_t*',wrapParams='3, {name}'),
+arg5=ArgDef(name='host_offset',tag='in',type='const size_t*',wrapParams='3, {name}'),
+arg6=ArgDef(name='region',tag='in',type='const size_t*',wrapParams='3, {name}'),
+arg7=ArgDef(name='buffer_row_pitch',tag='in',type='size_t'),
+arg8=ArgDef(name='buffer_slice_pitch',tag='in',type='size_t'),
+arg9=ArgDef(name='host_row_pitch',tag='in',type='size_t'),
+arg10=ArgDef(name='host_slice_pitch',tag='in',type='size_t'),
+arg11=ArgDef(name='ptr',tag='in',type='const void*',wrapType='CAsyncBinaryData',wrapParams='CountBufferRectSize(region, host_row_pitch, host_slice_pitch), {name}'),
+arg12=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg13=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg14=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueWriteImage',enabled=True,availableFrom='1.0',extension=False,type=Enqueue,stateTrack=True,passToken=True,runWrap=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='image',type='cl_mem'),
-arg3=ArgDef(name='blocking_write',type='cl_bool'),
-arg4=ArgDef(name='origin',type='const size_t*',wrapParams='3, {name}'),
-arg5=ArgDef(name='region',type='const size_t*',wrapParams='3, {name}'),
-arg6=ArgDef(name='input_row_pitch',type='size_t'),
-arg7=ArgDef(name='input_slice_pitch',type='size_t'),
-arg8=ArgDef(name='ptr',type='const void*',wrapType='CAsyncBinaryData',wrapParams='{name} ? CountImageSize(SD().GetMemState(image, EXCEPTION_MESSAGE).image_format, region, input_row_pitch, input_slice_pitch) : 0, {name}'),
-arg9=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg10=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg11=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='image',tag='in',type='cl_mem'),
+arg3=ArgDef(name='blocking_write',tag='in',type='cl_bool'),
+arg4=ArgDef(name='origin',tag='in',type='const size_t*',wrapParams='3, {name}'),
+arg5=ArgDef(name='region',tag='in',type='const size_t*',wrapParams='3, {name}'),
+arg6=ArgDef(name='input_row_pitch',tag='in',type='size_t'),
+arg7=ArgDef(name='input_slice_pitch',tag='in',type='size_t'),
+arg8=ArgDef(name='ptr',tag='in',type='const void*',wrapType='CAsyncBinaryData',wrapParams='{name} ? CountImageSize(SD().GetMemState(image, EXCEPTION_MESSAGE).image_format, region, input_row_pitch, input_slice_pitch) : 0, {name}'),
+arg9=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg10=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg11=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clFinish',enabled=True,availableFrom='1.0',extension=False,type=Enqueue,runWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue')
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue')
 )
 
 Function(name='clFlush',enabled=True,availableFrom='1.0',extension=False,type=Enqueue,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue')
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue')
 )
 
 Function(name='clGetCommandQueueInfo',enabled=True,availableFrom='1.0',extension=False,type=Info,runWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='param_name',type='cl_command_queue_info'),
-arg3=ArgDef(name='param_value_size',type='size_t'),
-arg4=ArgDef(name='param_value',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
-arg5=ArgDef(name='param_value_size_ret',type='size_t*')
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='param_name',tag='in',type='cl_command_queue_info'),
+arg3=ArgDef(name='param_value_size',tag='in',type='size_t'),
+arg4=ArgDef(name='param_value',tag='out',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
+arg5=ArgDef(name='param_value_size_ret',tag='out',type='size_t*')
 )
 
 Function(name='clGetContextInfo',enabled=True,availableFrom='1.0',extension=False,type=Info,runWrap=True,stateTrack=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='param_name',type='cl_context_info'),
-arg3=ArgDef(name='param_value_size',type='size_t'),
-arg4=ArgDef(name='param_value',type='void*',wrapType='CGetContextInfoOutArgument',wrapParams='param_value_size, {name}, param_name'),
-arg5=ArgDef(name='param_value_size_ret',type='size_t*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='param_name',tag='in',type='cl_context_info'),
+arg3=ArgDef(name='param_value_size',tag='in',type='size_t'),
+arg4=ArgDef(name='param_value',tag='out',type='void*',wrapType='CGetContextInfoOutArgument',wrapParams='param_value_size, {name}, param_name'),
+arg5=ArgDef(name='param_value_size_ret',tag='out',type='size_t*')
 )
 
 Function(name='clGetDeviceIDs',enabled=True,availableFrom='1.0',extension=False,type=Info,stateTrack=True,runWrap=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='platform',type='cl_platform_id'),
-arg2=ArgDef(name='device_type',type='cl_device_type'),
-arg3=ArgDef(name='num_entries',type='cl_uint'),
-arg4=ArgDef(name='devices',type='cl_device_id*',wrapType='Ccl_device_id::CSMapArray',wrapParams='num_entries, {name}'),
-arg5=ArgDef(name='num_devices',type='cl_uint*')
+arg1=ArgDef(name='platform',tag='in',type='cl_platform_id'),
+arg2=ArgDef(name='device_type',tag='in',type='cl_device_type'),
+arg3=ArgDef(name='num_entries',tag='in',type='cl_uint'),
+arg4=ArgDef(name='devices',tag='out',type='cl_device_id*',wrapType='Ccl_device_id::CSMapArray',wrapParams='num_entries, {name}'),
+arg5=ArgDef(name='num_devices',tag='out',type='cl_uint*')
 )
 
 #Function(name='clGetDeviceImageInfoQCOM',enabled=True,availableFrom='1.0',extension=False,type=None,
 #retV=RetDef(type='cl_int'),
-#arg1=ArgDef(name='device',type='cl_device_id'),
-#arg2=ArgDef(name='image_width',type='size_t'),
-#arg3=ArgDef(name='image_height',type='size_t'),
-#arg4=ArgDef(name='image_format',type='const cl_image_format*'),
-#arg5=ArgDef(name='param_name',type='cl_image_pitch_info_qcom'),
-#arg6=ArgDef(name='param_value_size',type='size_t'),
-#arg7=ArgDef(name='param_value',type='void*'),
-#arg8=ArgDef(name='param_value_size_ret',type='size_t*')
+#arg1=ArgDef(name='device',tag='in',type='cl_device_id'),
+#arg2=ArgDef(name='image_width',tag='in',type='size_t'),
+#arg3=ArgDef(name='image_height',tag='in',type='size_t'),
+#arg4=ArgDef(name='image_format',tag='in',type='const cl_image_format*'),
+#arg5=ArgDef(name='param_name',tag='in',type='cl_image_pitch_info_qcom'),
+#arg6=ArgDef(name='param_value_size',tag='in',type='size_t'),
+#arg7=ArgDef(name='param_value',tag='out',type='void*'),
+#arg8=ArgDef(name='param_value_size_ret',tag='out',type='size_t*')
 #)
 
 Function(name='clGetDeviceInfo',enabled=True,availableFrom='1.0',extension=False,type=Info,runWrap=True,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='device',type='cl_device_id'),
-arg2=ArgDef(name='param_name',type='cl_device_info'),
-arg3=ArgDef(name='param_value_size',type='size_t'),
-arg4=ArgDef(name='param_value',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
-arg5=ArgDef(name='param_value_size_ret',type='size_t*')
+arg1=ArgDef(name='device',tag='in',type='cl_device_id'),
+arg2=ArgDef(name='param_name',tag='in',type='cl_device_info'),
+arg3=ArgDef(name='param_value_size',tag='in',type='size_t'),
+arg4=ArgDef(name='param_value',tag='out',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
+arg5=ArgDef(name='param_value_size_ret',tag='out',type='size_t*')
 )
 
 Function(name='clGetEventInfo',enabled=True,availableFrom='1.0',extension=False,type=Info,runWrap=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='event',type='cl_event'),
-arg2=ArgDef(name='param_name',type='cl_event_info'),
-arg3=ArgDef(name='param_value_size',type='size_t'),
-arg4=ArgDef(name='param_value',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
-arg5=ArgDef(name='param_value_size_ret',type='size_t*')
+arg1=ArgDef(name='event',tag='in',type='cl_event'),
+arg2=ArgDef(name='param_name',tag='in',type='cl_event_info'),
+arg3=ArgDef(name='param_value_size',tag='in',type='size_t'),
+arg4=ArgDef(name='param_value',tag='out',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
+arg5=ArgDef(name='param_value_size_ret',tag='out',type='size_t*')
 )
 
 Function(name='clGetEventProfilingInfo',enabled=True,availableFrom='1.0',extension=False,type=Info,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='event',type='cl_event'),
-arg2=ArgDef(name='param_name',type='cl_profiling_info'),
-arg3=ArgDef(name='param_value_size',type='size_t'),
-arg4=ArgDef(name='param_value',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
-arg5=ArgDef(name='param_value_size_ret',type='size_t*')
+arg1=ArgDef(name='event',tag='in',type='cl_event'),
+arg2=ArgDef(name='param_name',tag='in',type='cl_profiling_info'),
+arg3=ArgDef(name='param_value_size',tag='in',type='size_t'),
+arg4=ArgDef(name='param_value',tag='out',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
+arg5=ArgDef(name='param_value_size_ret',tag='out',type='size_t*')
 )
 
 Function(name='clGetExtensionFunctionAddress',enabled=True,availableFrom='1.1.DEPRECATED',extension=False,type=None,recWrap=True,recExecWrap=True,
 retV=RetDef(type='void*',wrapType='CvoidPtr'),
-arg1=ArgDef(name='function_name',type='const char*')
+arg1=ArgDef(name='function_name',tag='in',type='const char*')
 )
 
 Function(name='clGetGLContextInfoKHR',enabled=True,availableFrom='1.0',extension=True,type=Info,runWrap=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='properties',type='const cl_context_properties*',wrapParams='{name}, 0, 2'),
-arg2=ArgDef(name='param_name',type='cl_gl_context_info'),
-arg3=ArgDef(name='param_value_size',type='size_t'),
-arg4=ArgDef(name='param_value',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
-arg5=ArgDef(name='param_value_size_ret',type='size_t*')
+arg1=ArgDef(name='properties',tag='in',type='const cl_context_properties*',wrapParams='{name}, 0, 2'),
+arg2=ArgDef(name='param_name',tag='in',type='cl_gl_context_info'),
+arg3=ArgDef(name='param_value_size',tag='in',type='size_t'),
+arg4=ArgDef(name='param_value',tag='out',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
+arg5=ArgDef(name='param_value_size_ret',tag='out',type='size_t*')
 )
 
 Function(name='clGetGLObjectInfo',enabled=True,availableFrom='1.0',extension=True,type=Info,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='memobj',type='cl_mem'),
-arg2=ArgDef(name='gl_object_type',type='cl_gl_object_type*'),
-arg3=ArgDef(name='gl_object_name',type='cl_GLuint*')
+arg1=ArgDef(name='memobj',tag='in',type='cl_mem'),
+arg2=ArgDef(name='gl_object_type',tag='out',type='cl_gl_object_type*'),
+arg3=ArgDef(name='gl_object_name',tag='out',type='cl_GLuint*')
 )
 
 Function(name='clGetGLTextureInfo',enabled=True,availableFrom='1.0',extension=True,type=Info,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='memobj',type='cl_mem'),
-arg2=ArgDef(name='param_name',type='cl_gl_texture_info'),
-arg3=ArgDef(name='param_value_size',type='size_t'),
-arg4=ArgDef(name='param_value',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
-arg5=ArgDef(name='param_value_size_ret',type='size_t*')
+arg1=ArgDef(name='memobj',tag='in',type='cl_mem'),
+arg2=ArgDef(name='param_name',tag='in',type='cl_gl_texture_info'),
+arg3=ArgDef(name='param_value_size',tag='in',type='size_t'),
+arg4=ArgDef(name='param_value',tag='out',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
+arg5=ArgDef(name='param_value_size_ret',tag='out',type='size_t*')
 )
 
 Function(name='clGetImageInfo',enabled=True,availableFrom='1.0',extension=False,type=Info,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='image',type='cl_mem'),
-arg2=ArgDef(name='param_name',type='cl_image_info'),
-arg3=ArgDef(name='param_value_size',type='size_t'),
-arg4=ArgDef(name='param_value',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
-arg5=ArgDef(name='param_value_size_ret',type='size_t*')
+arg1=ArgDef(name='image',tag='in',type='cl_mem'),
+arg2=ArgDef(name='param_name',tag='in',type='cl_image_info'),
+arg3=ArgDef(name='param_value_size',tag='in',type='size_t'),
+arg4=ArgDef(name='param_value',tag='out',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
+arg5=ArgDef(name='param_value_size_ret',tag='out',type='size_t*')
 )
 
 Function(name='clGetKernelInfo',enabled=True,availableFrom='1.0',extension=False,type=Info,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='kernel',type='cl_kernel'),
-arg2=ArgDef(name='param_name',type='cl_kernel_info'),
-arg3=ArgDef(name='param_value_size',type='size_t'),
-arg4=ArgDef(name='param_value',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
-arg5=ArgDef(name='param_value_size_ret',type='size_t*')
+arg1=ArgDef(name='kernel',tag='in',type='cl_kernel'),
+arg2=ArgDef(name='param_name',tag='in',type='cl_kernel_info'),
+arg3=ArgDef(name='param_value_size',tag='in',type='size_t'),
+arg4=ArgDef(name='param_value',tag='out',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
+arg5=ArgDef(name='param_value_size_ret',tag='out',type='size_t*')
 )
 
 Function(name='clGetKernelSubGroupInfo',enabled=True,availableFrom='2.1',extension=False,type=Info,runWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='in_kernel',type='cl_kernel'),
-arg2=ArgDef(name='in_device',type='cl_device_id'),
-arg3=ArgDef(name='param_name',type='cl_kernel_sub_group_info'),
-arg4=ArgDef(name='input_value_size',type='size_t'),
-arg5=ArgDef(name='input_value',type='const void*',wrapType='CBinaryData',wrapParams='input_value_size, {name}'),
-arg6=ArgDef(name='param_value_size',type='size_t'),
-arg7=ArgDef(name='param_value',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
-arg8=ArgDef(name='param_value_size_ret',type='size_t*')
+arg1=ArgDef(name='in_kernel',tag='in',type='cl_kernel'),
+arg2=ArgDef(name='in_device',tag='in',type='cl_device_id'),
+arg3=ArgDef(name='param_name',tag='in',type='cl_kernel_sub_group_info'),
+arg4=ArgDef(name='input_value_size',tag='in',type='size_t'),
+arg5=ArgDef(name='input_value',tag='in',type='const void*',wrapType='CBinaryData',wrapParams='input_value_size, {name}'),
+arg6=ArgDef(name='param_value_size',tag='in',type='size_t'),
+arg7=ArgDef(name='param_value',tag='out',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
+arg8=ArgDef(name='param_value_size_ret',tag='out',type='size_t*')
 )
 
 Function(name='clGetKernelSubGroupInfoKHR',enabled=True,availableFrom='2.0',extension=True,inheritFrom='clGetKernelSubGroupInfo')
 
 Function(name='clGetKernelWorkGroupInfo',enabled=True,availableFrom='1.0',extension=False,type=Info,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='kernel',type='cl_kernel'),
-arg2=ArgDef(name='device',type='cl_device_id'),
-arg3=ArgDef(name='param_name',type='cl_kernel_work_group_info'),
-arg4=ArgDef(name='param_value_size',type='size_t'),
-arg5=ArgDef(name='param_value',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
-arg6=ArgDef(name='param_value_size_ret',type='size_t*')
+arg1=ArgDef(name='kernel',tag='in',type='cl_kernel'),
+arg2=ArgDef(name='device',tag='in',type='cl_device_id'),
+arg3=ArgDef(name='param_name',tag='in',type='cl_kernel_work_group_info'),
+arg4=ArgDef(name='param_value_size',tag='in',type='size_t'),
+arg5=ArgDef(name='param_value',tag='out',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
+arg6=ArgDef(name='param_value_size_ret',tag='out',type='size_t*')
 )
 
 Function(name='clGetMemObjectInfo',enabled=True,availableFrom='1.0',extension=False,type=Info,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='memobj',type='cl_mem'),
-arg2=ArgDef(name='param_name',type='cl_mem_info'),
-arg3=ArgDef(name='param_value_size',type='size_t'),
-arg4=ArgDef(name='param_value',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
-arg5=ArgDef(name='param_value_size_ret',type='size_t*')
+arg1=ArgDef(name='memobj',tag='in',type='cl_mem'),
+arg2=ArgDef(name='param_name',tag='in',type='cl_mem_info'),
+arg3=ArgDef(name='param_value_size',tag='in',type='size_t'),
+arg4=ArgDef(name='param_value',tag='out',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
+arg5=ArgDef(name='param_value_size_ret',tag='out',type='size_t*')
 )
 
 Function(name='clGetPlatformIDs',enabled=True,availableFrom='1.0',extension=False,type=Info,runWrap=True,stateTrack=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='num_entries',type='cl_uint'),
-arg2=ArgDef(name='platforms',type='cl_platform_id*',wrapType='Ccl_platform_id::CSMapArray',wrapParams='num_entries, {name}'),
-arg3=ArgDef(name='num_platforms',type='cl_uint*')
+arg1=ArgDef(name='num_entries',tag='in',type='cl_uint'),
+arg2=ArgDef(name='platforms',tag='out',type='cl_platform_id*',wrapType='Ccl_platform_id::CSMapArray',wrapParams='num_entries, {name}'),
+arg3=ArgDef(name='num_platforms',tag='out',type='cl_uint*')
 )
 
 Function(name='clGetPlatformInfo',enabled=True,availableFrom='1.0',extension=False,type=Info,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='platform',type='cl_platform_id'),
-arg2=ArgDef(name='param_name',type='cl_platform_info'),
-arg3=ArgDef(name='param_value_size',type='size_t'),
-arg4=ArgDef(name='param_value',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
-arg5=ArgDef(name='param_value_size_ret',type='size_t*')
+arg1=ArgDef(name='platform',tag='in',type='cl_platform_id'),
+arg2=ArgDef(name='param_name',tag='in',type='cl_platform_info'),
+arg3=ArgDef(name='param_value_size',tag='in',type='size_t'),
+arg4=ArgDef(name='param_value',tag='out',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
+arg5=ArgDef(name='param_value_size_ret',tag='out',type='size_t*')
 )
 
 Function(name='clGetProgramBuildInfo',enabled=True,availableFrom='1.0',extension=False,type=Info,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='program',type='cl_program'),
-arg2=ArgDef(name='device',type='cl_device_id'),
-arg3=ArgDef(name='param_name',type='cl_program_build_info'),
-arg4=ArgDef(name='param_value_size',type='size_t'),
-arg5=ArgDef(name='param_value',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
-arg6=ArgDef(name='param_value_size_ret',type='size_t*')
+arg1=ArgDef(name='program',tag='in',type='cl_program'),
+arg2=ArgDef(name='device',tag='in',type='cl_device_id'),
+arg3=ArgDef(name='param_name',tag='in',type='cl_program_build_info'),
+arg4=ArgDef(name='param_value_size',tag='in',type='size_t'),
+arg5=ArgDef(name='param_value',tag='out',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
+arg6=ArgDef(name='param_value_size_ret',tag='out',type='size_t*')
 )
 
 Function(name='clGetProgramInfo',enabled=True,availableFrom='1.0',extension=False,type=Info,runWrap=True,stateTrack=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='program',type='cl_program'),
-arg2=ArgDef(name='param_name',type='cl_program_info'),
-arg3=ArgDef(name='param_value_size',type='size_t'),
-arg4=ArgDef(name='param_value',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
-arg5=ArgDef(name='param_value_size_ret',type='size_t*')
+arg1=ArgDef(name='program',tag='in',type='cl_program'),
+arg2=ArgDef(name='param_name',tag='in',type='cl_program_info'),
+arg3=ArgDef(name='param_value_size',tag='in',type='size_t'),
+arg4=ArgDef(name='param_value',tag='out',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
+arg5=ArgDef(name='param_value_size_ret',tag='out',type='size_t*')
 )
 
 Function(name='clGetSamplerInfo',enabled=True,availableFrom='1.0',extension=False,type=Info,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='sampler',type='cl_sampler'),
-arg2=ArgDef(name='param_name',type='cl_sampler_info'),
-arg3=ArgDef(name='param_value_size',type='size_t'),
-arg4=ArgDef(name='param_value',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
-arg5=ArgDef(name='param_value_size_ret',type='size_t*')
+arg1=ArgDef(name='sampler',tag='in',type='cl_sampler'),
+arg2=ArgDef(name='param_name',tag='in',type='cl_sampler_info'),
+arg3=ArgDef(name='param_value_size',tag='in',type='size_t'),
+arg4=ArgDef(name='param_value',tag='out',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
+arg5=ArgDef(name='param_value_size_ret',tag='out',type='size_t*')
 )
 
 Function(name='clGetSupportedImageFormats',enabled=True,availableFrom='1.0',extension=False,type=Info,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='flags',type='cl_mem_flags'),
-arg3=ArgDef(name='image_type',type='cl_mem_object_type'),
-arg4=ArgDef(name='num_entries',type='cl_uint'),
-arg5=ArgDef(name='image_formats',type='cl_image_format*',wrapParams='num_entries, {name}'),
-arg6=ArgDef(name='num_image_formats',type='cl_uint*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='flags',tag='in',type='cl_mem_flags'),
+arg3=ArgDef(name='image_type',tag='in',type='cl_mem_object_type'),
+arg4=ArgDef(name='num_entries',tag='in',type='cl_uint'),
+arg5=ArgDef(name='image_formats',tag='out',type='cl_image_format*',wrapParams='num_entries, {name}'),
+arg6=ArgDef(name='num_image_formats',tag='out',type='cl_uint*')
 )
 
 #Function(name='clIcdGetPlatformIDsKHR',enabled=True,availableFrom='1.0',extension=True,type=None,
 #retV=RetDef(type='cl_int'),
-#arg1=ArgDef(name='num_entries',type='cl_uint'),
-#arg2=ArgDef(name='platforms',type='cl_platform_id*'),
-#arg3=ArgDef(name='num_platforms',type='cl_uint*')
+#arg1=ArgDef(name='num_entries',tag='in',type='cl_uint'),
+#arg2=ArgDef(name='platforms',tag='out',type='cl_platform_id*'),
+#arg3=ArgDef(name='num_platforms',tag='out',type='cl_uint*')
 #)
 #
 #Function(name='clLogMessagesToStderrAPPLE',enabled=True,availableFrom='1.0',extension=True,type=None,
 #retV=RetDef(type='void'),
-#arg1=ArgDef(name='errstr',type='const char*'),
-#arg2=ArgDef(name='private_info',type='const void*'),
-#arg3=ArgDef(name='cb',type='size_t'),
-#arg4=ArgDef(name='user_data',type='void*')
+#arg1=ArgDef(name='errstr',tag='in',type='const char*'),
+#arg2=ArgDef(name='private_info',tag='in',type='const void*'),
+#arg3=ArgDef(name='cb',tag='in',type='size_t'),
+#arg4=ArgDef(name='user_data',tag='out',type='void*')
 #)
 #
 #Function(name='clLogMessagesToStdoutAPPLE',enabled=True,availableFrom='1.0',extension=True,type=None,
 #retV=RetDef(type='void'),
-#arg1=ArgDef(name='errstr',type='const char*'),
-#arg2=ArgDef(name='private_info',type='const void*'),
-#arg3=ArgDef(name='cb',type='size_t'),
-#arg4=ArgDef(name='user_data',type='void*')
+#arg1=ArgDef(name='errstr',tag='in',type='const char*'),
+#arg2=ArgDef(name='private_info',tag='in',type='const void*'),
+#arg3=ArgDef(name='cb',tag='in',type='size_t'),
+#arg4=ArgDef(name='user_data',tag='out',type='void*')
 #)
 #
 #Function(name='clLogMessagesToSystemLogAPPLE',enabled=True,availableFrom='1.0',extension=True,type=None,
 #retV=RetDef(type='void'),
-#arg1=ArgDef(name='errstr',type='const char*'),
-#arg2=ArgDef(name='private_info',type='const void*'),
-#arg3=ArgDef(name='cb',type='size_t'),
-#arg4=ArgDef(name='user_data',type='void*')
+#arg1=ArgDef(name='errstr',tag='in',type='const char*'),
+#arg2=ArgDef(name='private_info',tag='in',type='const void*'),
+#arg3=ArgDef(name='cb',tag='in',type='size_t'),
+#arg4=ArgDef(name='user_data',tag='out',type='void*')
 #)
 
 Function(name='clReleaseCommandQueue',enabled=True,availableFrom='1.0',extension=False,type=Release,stateTrack=True,runWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue',removeMapping=True)
 )
 
 Function(name='clReleaseContext',enabled=True,availableFrom='1.0',extension=False,type=Release,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='context',type='cl_context',removeMapping=True)
+arg1=ArgDef(name='context',tag='in',type='cl_context',removeMapping=True)
 )
 
 Function(name='clReleaseDevice',enabled=True,availableFrom='1.2',extension=False,type=Release,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='device',type='cl_device_id')
+arg1=ArgDef(name='device',tag='in',type='cl_device_id')
 )
 
 Function(name='clReleaseDeviceEXT',enabled=True,availableFrom='1.1.DEPRECATED',extension=True,inheritFrom='clReleaseDevice')
 
 Function(name='clReleaseEvent',enabled=True,availableFrom='1.0',extension=False,type=Release,stateTrack=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='event',type='cl_event',removeMapping=True)
+arg1=ArgDef(name='event',tag='in',type='cl_event',removeMapping=True)
 )
 
 Function(name='clReleaseKernel',enabled=True,availableFrom='1.0',extension=False,type=Release,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='kernel',type='cl_kernel',removeMapping=True)
+arg1=ArgDef(name='kernel',tag='in',type='cl_kernel',removeMapping=True)
 )
 
 Function(name='clReleaseMemObject',enabled=True,availableFrom='1.0',extension=False,type=Release,stateTrack=True,runWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='memobj',type='cl_mem',removeMapping=True)
+arg1=ArgDef(name='memobj',tag='in',type='cl_mem',removeMapping=True)
 )
 
 Function(name='clReleaseProgram',enabled=True,availableFrom='1.0',extension=False,type=Release,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='program',type='cl_program',removeMapping=True)
+arg1=ArgDef(name='program',tag='in',type='cl_program',removeMapping=True)
 )
 
 Function(name='clReleaseSampler',enabled=True,availableFrom='1.0',extension=False,type=Release,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='sampler',type='cl_sampler',removeMapping=True)
+arg1=ArgDef(name='sampler',tag='in',type='cl_sampler',removeMapping=True)
 )
 
 Function(name='clRetainCommandQueue',enabled=True,availableFrom='1.0',extension=False,type=Retain,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue')
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue')
 )
 
 Function(name='clRetainContext',enabled=True,availableFrom='1.0',extension=False,type=Retain,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='context',type='cl_context')
+arg1=ArgDef(name='context',tag='in',type='cl_context')
 )
 
 Function(name='clRetainDevice',enabled=True,availableFrom='1.2',extension=False,type=Retain,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='device',type='cl_device_id')
+arg1=ArgDef(name='device',tag='in',type='cl_device_id')
 )
 
 Function(name='clRetainDeviceEXT',enabled=True,availableFrom='1.1.DEPRECATED',extension=True,inheritFrom='clRetainDevice')
 
 Function(name='clRetainEvent',enabled=True,availableFrom='1.0',extension=False,type=Retain,stateTrack=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='event',type='cl_event')
+arg1=ArgDef(name='event',tag='in',type='cl_event')
 )
 
 Function(name='clRetainKernel',enabled=True,availableFrom='1.0',extension=False,type=Retain,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='kernel',type='cl_kernel')
+arg1=ArgDef(name='kernel',tag='in',type='cl_kernel')
 )
 
 Function(name='clRetainMemObject',enabled=True,availableFrom='1.0',extension=False,type=Retain,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='memobj',type='cl_mem')
+arg1=ArgDef(name='memobj',tag='in',type='cl_mem')
 )
 
 Function(name='clRetainProgram',enabled=True,availableFrom='1.0',extension=False,type=Retain,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='program',type='cl_program')
+arg1=ArgDef(name='program',tag='in',type='cl_program')
 )
 
 Function(name='clRetainSampler',enabled=True,availableFrom='1.0',extension=False,type=Retain,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='sampler',type='cl_sampler')
+arg1=ArgDef(name='sampler',tag='in',type='cl_sampler')
 )
 
 Function(name='clSetEventCallback',enabled=True,availableFrom='1.1',extension=False,type=Set,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='event',type='cl_event'),
-arg2=ArgDef(name='command_exec_callback_type',type='cl_int'),
-arg3=ArgDef(name='pfn_notify',type='CallbackEvent'),
-arg4=ArgDef(name='user_data',type='void*',wrapType='CCLUserData')
+arg1=ArgDef(name='event',tag='in',type='cl_event'),
+arg2=ArgDef(name='command_exec_callback_type',tag='in',type='cl_int'),
+arg3=ArgDef(name='pfn_notify',tag='in',type='CallbackEvent'),
+arg4=ArgDef(name='user_data',tag='in',type='void*',wrapType='CCLUserData')
 )
 
 Function(name='clSetCommandQueueProperty',enabled=True,availableFrom='1.0.DEPRECATED',extension=False,type=Set,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='properties',type='cl_command_queue_properties'),
-arg3=ArgDef(name='enable',type='cl_bool'),
-arg4=ArgDef(name='old_properties',type='cl_command_queue_properties*')
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='properties',tag='in',type='cl_command_queue_properties'),
+arg3=ArgDef(name='enable',tag='in',type='cl_bool'),
+arg4=ArgDef(name='old_properties',tag='in',type='cl_command_queue_properties*')
 )
 
 Function(name='clSetKernelArg',enabled=True,availableFrom='1.0',extension=False,type=Set,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='kernel',type='cl_kernel'),
-arg2=ArgDef(name='arg_index',type='cl_uint'),
-arg3=ArgDef(name='arg_size',type='size_t'),
-arg4=ArgDef(name='arg_value',type='const void*',wrapType='CKernelArgValue',wrapParams='{name} ? arg_size : 0, {name}')
+arg1=ArgDef(name='kernel',tag='in',type='cl_kernel'),
+arg2=ArgDef(name='arg_index',tag='in',type='cl_uint'),
+arg3=ArgDef(name='arg_size',tag='in',type='size_t'),
+arg4=ArgDef(name='arg_value',tag='in',type='const void*',wrapType='CKernelArgValue',wrapParams='{name} ? arg_size : 0, {name}')
 )
 
 Function(name='clSetKernelArg',enabled=True,availableFrom='1.0',extension=False,type=Set,stateTrack=True,version=1,runWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='kernel',type='cl_kernel'),
-arg2=ArgDef(name='arg_index',type='cl_uint'),
-arg3=ArgDef(name='arg_size',type='size_t'),
-arg4=ArgDef(name='arg_value',type='const void*',wrapType='CKernelArgValue_V1',wrapParams='{name} ? arg_size : 0, {name}')
+arg1=ArgDef(name='kernel',tag='in',type='cl_kernel'),
+arg2=ArgDef(name='arg_index',tag='in',type='cl_uint'),
+arg3=ArgDef(name='arg_size',tag='in',type='size_t'),
+arg4=ArgDef(name='arg_value',tag='in',type='const void*',wrapType='CKernelArgValue_V1',wrapParams='{name} ? arg_size : 0, {name}')
 )
 
 #Function(name='clSetMemObjectDestructorAPPLE',enabled=True,availableFrom='1.0',extension=True,type=Set,
 #retV=RetDef(type='cl_int'),
-#arg1=ArgDef(name='memobj',type='cl_mem'),
-#arg2=ArgDef(name='pfn_notify',type='CallbackMem'),
-#arg3=ArgDef(name='user_data',type='void*')
+#arg1=ArgDef(name='memobj',tag='in',type='cl_mem'),
+#arg2=ArgDef(name='pfn_notify',tag='in',type='CallbackMem'),
+#arg3=ArgDef(name='user_data',tag='in',type='void*')
 #)
 #
 Function(name='clSetMemObjectDestructorCallback',enabled=True,availableFrom='1.1',extension=False,type=Set,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='memobj',type='cl_mem'),
-arg2=ArgDef(name='pfn_notify',type='CallbackMem'),
-arg3=ArgDef(name='user_data',type='void*',wrapType='CCLUserData')
+arg1=ArgDef(name='memobj',tag='in',type='cl_mem'),
+arg2=ArgDef(name='pfn_notify',tag='in',type='CallbackMem'),
+arg3=ArgDef(name='user_data',tag='in',type='void*',wrapType='CCLUserData')
 )
 
 Function(name='clSetUserEventStatus',enabled=True,availableFrom='1.1',extension=False,type=Set,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='event',type='cl_event'),
-arg2=ArgDef(name='execution_status',type='cl_int')
+arg1=ArgDef(name='event',tag='in',type='cl_event'),
+arg2=ArgDef(name='execution_status',tag='in',type='cl_int')
 )
 
 #Function(name='clTerminateContextKHR',enabled=True,availableFrom='1.0',extension=True,type=None,
 #retV=RetDef(type='cl_int'),
-#arg1=ArgDef(name='context',type='cl_context')
+#arg1=ArgDef(name='context',tag='in',type='cl_context')
 #)
 
 Function(name='clUnloadCompiler',enabled=True,availableFrom='1.1.DEPRECATED',extension=False,type=None,
@@ -981,73 +981,73 @@ retV=RetDef(type='cl_int')
 
 Function(name='clWaitForEvents',enabled=True,availableFrom='1.0',extension=False,type=Enqueue,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='num_events',type='cl_uint'),
-arg2=ArgDef(name='event_list',type='const cl_event*',wrapParams='num_events, {name}')
+arg1=ArgDef(name='num_events',tag='in',type='cl_uint'),
+arg2=ArgDef(name='event_list',tag='in',type='const cl_event*',wrapParams='num_events, {name}')
 )
 
 Function(name='nanf',enabled=True,availableFrom='1.0',extension=False,type=None,
 retV=RetDef(type='float'),
-arg1=ArgDef(name='arg0',type='const char*')
+arg1=ArgDef(name='arg0',tag='in',type='const char*')
 )
 
 #------------------------------------- D3D10 -----------------------------------
 
 Function(name='clGetDeviceIDsFromD3D10KHR',enabled=True,availableFrom='1.0',extension=True,type=Info,platform='Windows',recWrap=True,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='platform',type='cl_platform_id'),
-arg2=ArgDef(name='d3d_device_source',type='cl_d3d10_device_source_khr'),
-arg3=ArgDef(name='d3d_object',type='void*',wrapType='CvoidPtr'),
-arg4=ArgDef(name='d3d_device_set',type='cl_d3d10_device_set_khr'),
-arg5=ArgDef(name='num_entries',type='cl_uint'),
-arg6=ArgDef(name='devices',type='cl_device_id*',wrapType='Ccl_device_id::CSMapArray',wrapParams='num_entries,{name}'),
-arg7=ArgDef(name='num_devices',type='cl_uint*')
+arg1=ArgDef(name='platform',tag='in',type='cl_platform_id'),
+arg2=ArgDef(name='d3d_device_source',tag='in',type='cl_d3d10_device_source_khr'),
+arg3=ArgDef(name='d3d_object',tag='in',type='void*',wrapType='CvoidPtr'),
+arg4=ArgDef(name='d3d_device_set',tag='in',type='cl_d3d10_device_set_khr'),
+arg5=ArgDef(name='num_entries',tag='in',type='cl_uint'),
+arg6=ArgDef(name='devices',tag='out',type='cl_device_id*',wrapType='Ccl_device_id::CSMapArray',wrapParams='num_entries,{name}'),
+arg7=ArgDef(name='num_devices',tag='out',type='cl_uint*')
 )
 
 Function(name='clCreateFromD3D10BufferKHR',enabled=True,availableFrom='1.0',extension=True,type=Creator,platform='Windows',recWrap=True,stateTrack=True,
 retV=RetDef(type='cl_mem'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='flags',type='cl_mem_flags'),
-arg3=ArgDef(name='resource',type='ID3D10Buffer*',wrapType='CvoidPtr'),
-arg4=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='flags',tag='in',type='cl_mem_flags'),
+arg3=ArgDef(name='resource',tag='in',type='ID3D10Buffer*',wrapType='CvoidPtr'),
+arg4=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clCreateFromD3D10Texture2DKHR',enabled=True,availableFrom='1.0',extension=True,type=Creator,platform='Windows',recWrap=True,stateTrack=True,
 retV=RetDef(type='cl_mem'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='flags',type='cl_mem_flags'),
-arg3=ArgDef(name='resource',type='ID3D10Texture2D*',wrapType='CvoidPtr'),
-arg4=ArgDef(name='subresource',type='UINT'),
-arg5=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='flags',tag='in',type='cl_mem_flags'),
+arg3=ArgDef(name='resource',tag='in',type='ID3D10Texture2D*',wrapType='CvoidPtr'),
+arg4=ArgDef(name='subresource',tag='in',type='UINT'),
+arg5=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clCreateFromD3D10Texture3DKHR',enabled=True,availableFrom='1.0',extension=True,type=Creator,platform='Windows',recWrap=True,stateTrack=True,
 retV=RetDef(type='cl_mem'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='flags',type='cl_mem_flags'),
-arg3=ArgDef(name='resource',type='ID3D10Texture3D*',wrapType='CvoidPtr'),
-arg4=ArgDef(name='subresource',type='UINT'),
-arg5=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='flags',tag='in',type='cl_mem_flags'),
+arg3=ArgDef(name='resource',tag='in',type='ID3D10Texture3D*',wrapType='CvoidPtr'),
+arg4=ArgDef(name='subresource',tag='in',type='UINT'),
+arg5=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clEnqueueAcquireD3D10ObjectsKHR',enabled=True,availableFrom='1.0',extension=True,type=Enqueue,platform='Windows',stateTrack=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='num_objects',type='cl_uint'),
-arg3=ArgDef(name='mem_objects',type='const cl_mem*',wrapParams='num_objects,{name}'),
-arg4=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg5=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list,{name}'),
-arg6=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='num_objects',tag='in',type='cl_uint'),
+arg3=ArgDef(name='mem_objects',tag='in',type='const cl_mem*',wrapParams='num_objects,{name}'),
+arg4=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg5=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list,{name}'),
+arg6=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 # no multiple inheritance
 Function(name='clEnqueueReleaseD3D10ObjectsKHR',enabled=True,availableFrom='1.0',extension=True,type=Enqueue,platform='Windows',stateTrack=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='num_objects',type='cl_uint'),
-arg3=ArgDef(name='mem_objects',type='const cl_mem*',wrapParams='num_objects,{name}'),
-arg4=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg5=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list,{name}'),
-arg6=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='num_objects',tag='in',type='cl_uint'),
+arg3=ArgDef(name='mem_objects',tag='in',type='const cl_mem*',wrapParams='num_objects,{name}'),
+arg4=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg5=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list,{name}'),
+arg6=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 #------------------------------------- D3D11 -----------------------------------
@@ -1055,39 +1055,39 @@ arg6=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',remov
 #------------- KHR -------------
 Function(name='clGetDeviceIDsFromD3D11KHR',enabled=True,availableFrom='1.2',extension=True,type=Info,platform='Windows',recWrap=True,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='platform',type='cl_platform_id'),
-arg2=ArgDef(name='d3d_device_source',type='cl_d3d11_device_source_khr'),
-arg3=ArgDef(name='d3d_object',type='void*',wrapType='CvoidPtr'),
-arg4=ArgDef(name='d3d_device_set',type='cl_d3d11_device_set_khr'),
-arg5=ArgDef(name='num_entries',type='cl_uint'),
-arg6=ArgDef(name='devices',type='cl_device_id*',wrapType='Ccl_device_id::CSMapArray',wrapParams='num_entries,{name}'),
-arg7=ArgDef(name='num_devices',type='cl_uint*')
+arg1=ArgDef(name='platform',tag='in',type='cl_platform_id'),
+arg2=ArgDef(name='d3d_device_source',tag='in',type='cl_d3d11_device_source_khr'),
+arg3=ArgDef(name='d3d_object',tag='in',type='void*',wrapType='CvoidPtr'),
+arg4=ArgDef(name='d3d_device_set',tag='in',type='cl_d3d11_device_set_khr'),
+arg5=ArgDef(name='num_entries',tag='in',type='cl_uint'),
+arg6=ArgDef(name='devices',tag='out',type='cl_device_id*',wrapType='Ccl_device_id::CSMapArray',wrapParams='num_entries,{name}'),
+arg7=ArgDef(name='num_devices',tag='out',type='cl_uint*')
 )
 
 Function(name='clCreateFromD3D11BufferKHR',enabled=True,availableFrom='1.2',extension=True,type=Creator,platform='Windows',recWrap=True,stateTrack=True,
 retV=RetDef(type='cl_mem'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='flags',type='cl_mem_flags'),
-arg3=ArgDef(name='resource',type='ID3D11Buffer*',wrapType='CvoidPtr'),
-arg4=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='flags',tag='in',type='cl_mem_flags'),
+arg3=ArgDef(name='resource',tag='in',type='ID3D11Buffer*',wrapType='CvoidPtr'),
+arg4=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clCreateFromD3D11Texture2DKHR',enabled=True,availableFrom='1.2',extension=True,type=Creator,platform='Windows',recWrap=True,stateTrack=True,
 retV=RetDef(type='cl_mem'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='flags',type='cl_mem_flags'),
-arg3=ArgDef(name='resource',type='ID3D11Texture2D*',wrapType='CvoidPtr'),
-arg4=ArgDef(name='subresource',type='UINT'),
-arg5=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='flags',tag='in',type='cl_mem_flags'),
+arg3=ArgDef(name='resource',tag='in',type='ID3D11Texture2D*',wrapType='CvoidPtr'),
+arg4=ArgDef(name='subresource',tag='in',type='UINT'),
+arg5=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clCreateFromD3D11Texture3DKHR',enabled=True,availableFrom='1.2',extension=True,type=Creator,platform='Windows',recWrap=True,stateTrack=True,
 retV=RetDef(type='cl_mem'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='flags',type='cl_mem_flags'),
-arg3=ArgDef(name='resource',type='ID3D11Texture3D*',wrapType='CvoidPtr'),
-arg4=ArgDef(name='subresource',type='UINT'),
-arg5=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='flags',tag='in',type='cl_mem_flags'),
+arg3=ArgDef(name='resource',tag='in',type='ID3D11Texture3D*',wrapType='CvoidPtr'),
+arg4=ArgDef(name='subresource',tag='in',type='UINT'),
+arg5=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clEnqueueAcquireD3D11ObjectsKHR',enabled=True,availableFrom='1.2',extension=True,inheritFrom='clEnqueueAcquireD3D10ObjectsKHR')
@@ -1098,13 +1098,13 @@ Function(name='clEnqueueReleaseD3D11ObjectsKHR',enabled=True,availableFrom='1.2'
 
 Function(name='clGetDeviceIDsFromD3D11NV',enabled=True,availableFrom='1.0',extension=True,type=Info,platform='Windows',recWrap=True,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='platform',type='cl_platform_id'),
-arg2=ArgDef(name='d3d_device_source',type='cl_d3d11_device_source_nv'),
-arg3=ArgDef(name='d3d_object',type='void*',wrapType='CvoidPtr'),
-arg4=ArgDef(name='d3d_device_set',type='cl_d3d11_device_set_nv'),
-arg5=ArgDef(name='num_entries',type='cl_uint'),
-arg6=ArgDef(name='devices',type='cl_device_id*',wrapType='Ccl_device_id::CSMapArray',wrapParams='num_entries,{name}'),
-arg7=ArgDef(name='num_devices',type='cl_uint*')
+arg1=ArgDef(name='platform',tag='in',type='cl_platform_id'),
+arg2=ArgDef(name='d3d_device_source',tag='in',type='cl_d3d11_device_source_nv'),
+arg3=ArgDef(name='d3d_object',tag='in',type='void*',wrapType='CvoidPtr'),
+arg4=ArgDef(name='d3d_device_set',tag='in',type='cl_d3d11_device_set_nv'),
+arg5=ArgDef(name='num_entries',tag='in',type='cl_uint'),
+arg6=ArgDef(name='devices',tag='out',type='cl_device_id*',wrapType='Ccl_device_id::CSMapArray',wrapParams='num_entries,{name}'),
+arg7=ArgDef(name='num_devices',tag='out',type='cl_uint*')
 )
 
 Function(name='clCreateFromD3D11BufferNV',enabled=True,availableFrom='1.0',extension=True,inheritFrom='clCreateFromD3D11BufferKHR')
@@ -1121,23 +1121,23 @@ Function(name='clEnqueueReleaseD3D11ObjectsNV',enabled=True,availableFrom='1.0',
 
 Function(name='clGetDeviceIDsFromDX9INTEL',enabled=True,availableFrom='1.0',extension=True,type=Info,platform='Windows',recWrap=True,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='platform',type='cl_platform_id'),
-arg2=ArgDef(name='dx9_device_source',type='cl_dx9_device_source_intel'),
-arg3=ArgDef(name='dx9_object',type='void*',wrapType='CvoidPtr'),
-arg4=ArgDef(name='dx9_device_set',type='cl_dx9_device_set_intel'),
-arg5=ArgDef(name='num_entries',type='cl_uint'),
-arg6=ArgDef(name='devices',type='cl_device_id*',wrapType='Ccl_device_id::CSMapArray',wrapParams='num_entries,{name}'),
-arg7=ArgDef(name='num_devices',type='cl_uint*')
+arg1=ArgDef(name='platform',tag='in',type='cl_platform_id'),
+arg2=ArgDef(name='dx9_device_source',tag='in',type='cl_dx9_device_source_intel'),
+arg3=ArgDef(name='dx9_object',tag='in',type='void*',wrapType='CvoidPtr'),
+arg4=ArgDef(name='dx9_device_set',tag='in',type='cl_dx9_device_set_intel'),
+arg5=ArgDef(name='num_entries',tag='in',type='cl_uint'),
+arg6=ArgDef(name='devices',tag='out',type='cl_device_id*',wrapType='Ccl_device_id::CSMapArray',wrapParams='num_entries,{name}'),
+arg7=ArgDef(name='num_devices',tag='out',type='cl_uint*')
 )
 
 Function(name='clCreateFromDX9MediaSurfaceINTEL',enabled=True,availableFrom='1.0',extension=True,type=Creator,platform='Windows',stateTrack=True,recWrap=True,
 retV=RetDef(type='cl_mem'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='flags',type='cl_mem_flags'),
-arg3=ArgDef(name='resource',type='IDirect3DSurface9*',wrapType='CvoidPtr'),
-arg4=ArgDef(name='shared_handle',type='void*',wrapType='CvoidPtr'),
-arg5=ArgDef(name='plane',type='UINT'),
-arg6=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='flags',tag='in',type='cl_mem_flags'),
+arg3=ArgDef(name='resource',tag='in',type='IDirect3DSurface9*',wrapType='CvoidPtr'),
+arg4=ArgDef(name='shared_handle',tag='in',type='void*',wrapType='CvoidPtr'),
+arg5=ArgDef(name='plane',tag='in',type='UINT'),
+arg6=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clEnqueueAcquireDX9ObjectsINTEL',enabled=True,availableFrom='1.0',extension=True,inheritFrom='clEnqueueAcquireD3D10ObjectsKHR')
@@ -1146,24 +1146,24 @@ Function(name='clEnqueueReleaseDX9ObjectsINTEL',enabled=True,availableFrom='1.0'
 
 Function(name='clGetDeviceIDsFromDX9MediaAdapterKHR',enabled=True,availableFrom='1.0',extension=True,type=Info,platform='Windows',recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='platform',type='cl_platform_id'),
-arg2=ArgDef(name='num_media_adapters',type='cl_uint'),
-arg3=ArgDef(name='media_adapters_type',type='cl_dx9_media_adapter_type_khr*'),
-arg4=ArgDef(name='media_adapters',type='void*',wrapType='CvoidPtr'),
-arg5=ArgDef(name='media_adapter_set',type='cl_dx9_media_adapter_set_khr'),
-arg6=ArgDef(name='num_entries',type='cl_uint'),
-arg7=ArgDef(name='devices',type='cl_device_id*',wrapType='Ccl_device_id::CSMapArray',wrapParams='num_entries,{name}'),
-arg8=ArgDef(name='num_devices',type='cl_int*')
+arg1=ArgDef(name='platform',tag='in',type='cl_platform_id'),
+arg2=ArgDef(name='num_media_adapters',tag='in',type='cl_uint'),
+arg3=ArgDef(name='media_adapters_type',tag='in',type='cl_dx9_media_adapter_type_khr*'),
+arg4=ArgDef(name='media_adapters',tag='in',type='void*',wrapType='CvoidPtr'),
+arg5=ArgDef(name='media_adapter_set',tag='in',type='cl_dx9_media_adapter_set_khr'),
+arg6=ArgDef(name='num_entries',tag='in',type='cl_uint'),
+arg7=ArgDef(name='devices',tag='out',type='cl_device_id*',wrapType='Ccl_device_id::CSMapArray',wrapParams='num_entries,{name}'),
+arg8=ArgDef(name='num_devices',tag='out',type='cl_int*')
 )
 
 Function(name='clCreateFromDX9MediaSurfaceKHR',enabled=True,availableFrom='1.0',extension=True,type=Creator,platform='Windows',stateTrack=True,recWrap=True,
 retV=RetDef(type='cl_mem'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='flags',type='cl_mem_flags'),
-arg3=ArgDef(name='adapter_type',type='cl_dx9_media_adapter_type_khr'),
-arg4=ArgDef(name='surface_info',type='void*',wrapType='CvoidPtr'),
-arg5=ArgDef(name='plane',type='cl_uint'),
-arg6=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='flags',tag='in',type='cl_mem_flags'),
+arg3=ArgDef(name='adapter_type',tag='in',type='cl_dx9_media_adapter_type_khr'),
+arg4=ArgDef(name='surface_info',tag='in',type='void*',wrapType='CvoidPtr'),
+arg5=ArgDef(name='plane',tag='in',type='cl_uint'),
+arg6=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clEnqueueAcquireDX9MediaSurfacesKHR',enabled=True,availableFrom='1.0',extension=True,inheritFrom='clEnqueueAcquireD3D10ObjectsKHR')
@@ -1174,128 +1174,128 @@ Function(name='clEnqueueReleaseDX9MediaSurfacesKHR',enabled=True,availableFrom='
 
 Function(name='clCompileProgram',enabled=True,availableFrom='1.2',extension=False,type=None,stateTrack=True,runWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='program',type='cl_program'),
-arg2=ArgDef(name='num_devices',type='cl_uint'),
-arg3=ArgDef(name='device_list',type='const cl_device_id*',wrapParams='num_devices, {name}'),
-arg4=ArgDef(name='options',type='const char*'),
-arg5=ArgDef(name='num_input_headers',type='cl_uint'),
-arg6=ArgDef(name='input_headers',type='const cl_program*',wrapParams='num_input_headers, {name}'),
-arg7=ArgDef(name='header_include_names',type='const char**',wrapType='CStringArray',wrapParams='num_input_headers, {name}'),
-arg8=ArgDef(name='pfn_notify',type='CallbackProgram'),
-arg9=ArgDef(name='user_data',type='void*',wrapType='CCLUserData')
+arg1=ArgDef(name='program',tag='in',type='cl_program'),
+arg2=ArgDef(name='num_devices',tag='in',type='cl_uint'),
+arg3=ArgDef(name='device_list',tag='in',type='const cl_device_id*',wrapParams='num_devices, {name}'),
+arg4=ArgDef(name='options',tag='in',type='const char*'),
+arg5=ArgDef(name='num_input_headers',tag='in',type='cl_uint'),
+arg6=ArgDef(name='input_headers',tag='in',type='const cl_program*',wrapParams='num_input_headers, {name}'),
+arg7=ArgDef(name='header_include_names',tag='in',type='const char**',wrapType='CStringArray',wrapParams='num_input_headers, {name}'),
+arg8=ArgDef(name='pfn_notify',tag='in',type='CallbackProgram'),
+arg9=ArgDef(name='user_data',tag='out',type='void*',wrapType='CCLUserData')
 )
 
 Function(name='clCreateProgramWithBuiltInKernels',enabled=True,availableFrom='1.2',extension=False,type=Creator,stateTrack=True,
 retV=RetDef(type='cl_program'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='num_devices',type='cl_uint'),
-arg3=ArgDef(name='device_list',type='const cl_device_id*',wrapParams='num_devices, {name}'),
-arg4=ArgDef(name='kernel_names',type='const char*'),
-arg5=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='num_devices',tag='in',type='cl_uint'),
+arg3=ArgDef(name='device_list',tag='in',type='const cl_device_id*',wrapParams='num_devices, {name}'),
+arg4=ArgDef(name='kernel_names',tag='in',type='const char*'),
+arg5=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clEnqueueBarrierWithWaitList',enabled=True,availableFrom='1.2',extension=False,type=Enqueue,stateTrack=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg3=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg4=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg3=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg4=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 # pattern probably is not too big so we can save it using CBinaryData
 # this saves us some work in state tracking
 Function(name='clEnqueueFillBuffer',enabled=True,availableFrom='1.2',extension=False,type=Enqueue,stateTrack=True,passToken=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='buffer',type='cl_mem'),
-arg3=ArgDef(name='pattern',type='const void*',wrapType='CBinaryData',wrapParams='pattern_size, {name}'),
-arg4=ArgDef(name='pattern_size',type='size_t'),
-arg5=ArgDef(name='offset',type='size_t'),
-arg6=ArgDef(name='cb',type='size_t'),
-arg7=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg8=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg9=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='buffer',tag='in',type='cl_mem'),
+arg3=ArgDef(name='pattern',tag='in',type='const void*',wrapType='CBinaryData',wrapParams='pattern_size, {name}'),
+arg4=ArgDef(name='pattern_size',tag='in',type='size_t'),
+arg5=ArgDef(name='offset',tag='in',type='size_t'),
+arg6=ArgDef(name='cb',tag='in',type='size_t'),
+arg7=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg8=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg9=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueFillImage',enabled=True,availableFrom='1.2',extension=False,type=Enqueue,stateTrack=True,passToken=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='image',type='cl_mem'),
-arg3=ArgDef(name='fill_color',type='const void*',wrapType='Ccl_float::CSArray',wrapParams='4, static_cast<const cl_float*>({name})'),
-arg4=ArgDef(name='origin',type='const size_t*',wrapParams='3, {name}'),
-arg5=ArgDef(name='region',type='const size_t*',wrapParams='3, {name}'),
-arg6=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg7=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg8=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='image',tag='in',type='cl_mem'),
+arg3=ArgDef(name='fill_color',tag='in',type='const void*',wrapType='Ccl_float::CSArray',wrapParams='4, static_cast<const cl_float*>({name})'),
+arg4=ArgDef(name='origin',tag='in',type='const size_t*',wrapParams='3, {name}'),
+arg5=ArgDef(name='region',tag='in',type='const size_t*',wrapParams='3, {name}'),
+arg6=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg7=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg8=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueMarkerWithWaitList',enabled=True,availableFrom='1.2',extension=False,type=Enqueue,stateTrack=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg3=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg4=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg3=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg4=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueMigrateMemObjects',enabled=True,availableFrom='1.2',extension=False,type=Enqueue,stateTrack=True,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='num_mem_objects',type='cl_uint'),
-arg3=ArgDef(name='mem_objects',type='const cl_mem*',wrapParams='num_mem_objects, {name}'),
-arg4=ArgDef(name='flags',type='cl_mem_migration_flags'),
-arg5=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg6=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg7=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='num_mem_objects',tag='in',type='cl_uint'),
+arg3=ArgDef(name='mem_objects',tag='in',type='const cl_mem*',wrapParams='num_mem_objects, {name}'),
+arg4=ArgDef(name='flags',tag='in',type='cl_mem_migration_flags'),
+arg5=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg6=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg7=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clGetExtensionFunctionAddressForPlatform',enabled=True,availableFrom='1.2',extension=False,type=None,recWrap=True,recExecWrap=True,stateTrack=True,
 retV=RetDef(type='void*',wrapType='CvoidPtr'),
-arg1=ArgDef(name='platform',type='cl_platform_id'),
-arg2=ArgDef(name='function_name',type='const char*')
+arg1=ArgDef(name='platform',tag='in',type='cl_platform_id'),
+arg2=ArgDef(name='function_name',tag='in',type='const char*')
 )
 
 Function(name='clAddCommentINTEL',enabled=True,availableFrom='2.0',extension=True,type=None,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='device',type='cl_device_id'),
-arg2=ArgDef(name='comment',type='const char*')
+arg1=ArgDef(name='device',tag='in',type='cl_device_id'),
+arg2=ArgDef(name='comment',tag='in',type='const char*')
 )
 
 Function(name='clEnqueueResourcesBarrierINTEL',enabled=True,availableFrom='1.2',extension=True,type=Enqueue,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='resource_count',type='cl_uint'),
-arg3=ArgDef(name='barrier_descriptors',type='const cl_resource_barrier_descriptor_intel*'),
-arg4=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg5=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg6=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='resource_count',tag='in',type='cl_uint'),
+arg3=ArgDef(name='barrier_descriptors',tag='in',type='const cl_resource_barrier_descriptor_intel*'),
+arg4=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg5=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg6=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clGetKernelArgInfo',enabled=True,availableFrom='1.2',extension=False,type=Info,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='kernel',type='cl_kernel'),
-arg2=ArgDef(name='arg_indx',type='cl_uint'),
-arg3=ArgDef(name='param_name',type='cl_kernel_arg_info'),
-arg4=ArgDef(name='param_value_size',type='size_t'),
-arg5=ArgDef(name='param_value',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
-arg6=ArgDef(name='param_value_size_ret',type='size_t*')
+arg1=ArgDef(name='kernel',tag='in',type='cl_kernel'),
+arg2=ArgDef(name='arg_indx',tag='in',type='cl_uint'),
+arg3=ArgDef(name='param_name',tag='in',type='cl_kernel_arg_info'),
+arg4=ArgDef(name='param_value_size',tag='in',type='size_t'),
+arg5=ArgDef(name='param_value',tag='out',type='void*',wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
+arg6=ArgDef(name='param_value_size_ret',tag='out',type='size_t*')
 )
 
 Function(name='clLinkProgram',enabled=True,availableFrom='1.2',extension=False,type=None,stateTrack=True,
 retV=RetDef(type='cl_program'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='num_devices',type='cl_uint'),
-arg3=ArgDef(name='device_list',type='const cl_device_id*',wrapParams='num_devices, {name}'),
-arg4=ArgDef(name='options',type='const char*'),
-arg5=ArgDef(name='num_input_programs',type='cl_uint'),
-arg6=ArgDef(name='input_programs',type='const cl_program*',wrapParams='num_input_programs, {name}'),
-arg7=ArgDef(name='pfn_notify',type='CallbackProgram'),
-arg8=ArgDef(name='user_data',type='void*',wrapType='CCLUserData'),
-arg9=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='num_devices',tag='in',type='cl_uint'),
+arg3=ArgDef(name='device_list',tag='in',type='const cl_device_id*',wrapParams='num_devices, {name}'),
+arg4=ArgDef(name='options',tag='in',type='const char*'),
+arg5=ArgDef(name='num_input_programs',tag='in',type='cl_uint'),
+arg6=ArgDef(name='input_programs',tag='in',type='const cl_program*',wrapParams='num_input_programs, {name}'),
+arg7=ArgDef(name='pfn_notify',tag='in',type='CallbackProgram'),
+arg8=ArgDef(name='user_data',tag='in',type='void*',wrapType='CCLUserData'),
+arg9=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clUnloadPlatformCompiler',enabled=True,availableFrom='1.2',extension=False,type=None,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='platform',type='cl_platform_id')
+arg1=ArgDef(name='platform',tag='in',type='cl_platform_id')
 )
 
 Function(name='clCreateCommandQueueWithPropertiesINTEL',enabled=True,availableFrom='1.2',extension=True,inheritFrom='clCreateCommandQueueWithProperties')
@@ -1304,359 +1304,359 @@ Function(name='clCreateCommandQueueWithPropertiesINTEL',enabled=True,availableFr
 
 Function(name='clCreateCommandQueueWithProperties',enabled=True,availableFrom='2.0',extension=False,stateTrack=True,type=Creator,
 retV=RetDef(type='cl_command_queue'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='device',type='cl_device_id'),
-arg3=ArgDef(name='properties',type='const cl_queue_properties*',wrapParams='{name}, 0, 2'),
-arg4=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='device',tag='in',type='cl_device_id'),
+arg3=ArgDef(name='properties',tag='in',type='const cl_queue_properties*',wrapParams='{name}, 0, 2'),
+arg4=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clCreatePipe',enabled=True,availableFrom='2.0',extension=False,stateTrack=True,type=Creator,
 retV=RetDef(type='cl_mem'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='flags',type='cl_mem_flags'),
-arg3=ArgDef(name='pipe_packet_size',type='cl_uint'),
-arg4=ArgDef(name='pipe_max_packets',type='cl_uint'),
-arg5=ArgDef(name='properties',type='const cl_pipe_properties*',wrapParams='{name}, 0, 2'),
-arg6=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='flags',tag='in',type='cl_mem_flags'),
+arg3=ArgDef(name='pipe_packet_size',tag='in',type='cl_uint'),
+arg4=ArgDef(name='pipe_max_packets',tag='in',type='cl_uint'),
+arg5=ArgDef(name='properties',tag='in',type='const cl_pipe_properties*',wrapParams='{name}, 0, 2'),
+arg6=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clCreateSamplerWithProperties',enabled=True,availableFrom='2.0',extension=False,stateTrack=True,type=Creator,
 retV=RetDef(type='cl_sampler'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='sampler_properties',type='const cl_sampler_properties*',wrapParams='{name}, 0, 2'),
-arg3=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='sampler_properties',tag='in',type='const cl_sampler_properties*',wrapParams='{name}, 0, 2'),
+arg3=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clEnqueueSVMFree',enabled=True,availableFrom='2.0',extension=False,stateTrack=True,type=Enqueue,recWrap=True,recExecWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='num_svm_pointers',type='cl_uint'),
-arg3=ArgDef(name='svm_pointers',type='void**',wrapType='CCLMappedPtr::CSArray',wrapParams='num_svm_pointers, {name}',removeMapping=True),
-arg4=ArgDef(name='pfn_free_func',type='CallbackSVM'),
-arg5=ArgDef(name='user_data',type='void*',wrapType='CCLUserData'),
-arg6=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg7=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg8=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='num_svm_pointers',tag='in',type='cl_uint'),
+arg3=ArgDef(name='svm_pointers',tag='in',type='void**',wrapType='CCLMappedPtr::CSArray',wrapParams='num_svm_pointers, {name}',removeMapping=True),
+arg4=ArgDef(name='pfn_free_func',tag='in',type='CallbackSVM'),
+arg5=ArgDef(name='user_data',tag='in',type='void*',wrapType='CCLUserData'),
+arg6=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg7=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg8=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueSVMMap',enabled=True,availableFrom='2.0',extension=False,stateTrack=True,type=Enqueue,recWrap=True,runWrap=True,recExecWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='blocking_map',type='cl_bool'),
-arg3=ArgDef(name='flags',type='cl_map_flags'),
-arg4=ArgDef(name='svm_ptr',type='void*',wrapType='CCLMappedPtr'),
-arg5=ArgDef(name='size',type='size_t'),
-arg6=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg7=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg8=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='blocking_map',tag='in',type='cl_bool'),
+arg3=ArgDef(name='flags',tag='in',type='cl_map_flags'),
+arg4=ArgDef(name='svm_ptr',tag='in',type='void*',wrapType='CCLMappedPtr'),
+arg5=ArgDef(name='size',tag='in',type='size_t'),
+arg6=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg7=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg8=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueSVMMemFill',enabled=True,availableFrom='2.0',extension=False,stateTrack=True,type=Enqueue,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='svm_ptr',type='void*',wrapType='CSVMPtr',wrapParams='{name}, size, SD().CheckIfSVMAllocExists({name})'),
-arg3=ArgDef(name='pattern',type='const void*',wrapType='CBinaryData',wrapParams='pattern_size, {name}'),
-arg4=ArgDef(name='pattern_size',type='size_t'),
-arg5=ArgDef(name='size',type='size_t'),
-arg6=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg7=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg8=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='svm_ptr',tag='in',type='void*',wrapType='CSVMPtr',wrapParams='{name}, size, SD().CheckIfSVMAllocExists({name})'),
+arg3=ArgDef(name='pattern',tag='in',type='const void*',wrapType='CBinaryData',wrapParams='pattern_size, {name}'),
+arg4=ArgDef(name='pattern_size',tag='in',type='size_t'),
+arg5=ArgDef(name='size',tag='in',type='size_t'),
+arg6=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg7=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg8=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueSVMMemFill',enabled=True,availableFrom='2.0',extension=False,stateTrack=True,type=Enqueue,recWrap=True,version=1,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='svm_ptr',type='void*',wrapType='CSVMPtr_V1',wrapParams='{name}, size'),
-arg3=ArgDef(name='pattern',type='const void*',wrapType='CBinaryData',wrapParams='pattern_size, {name}'),
-arg4=ArgDef(name='pattern_size',type='size_t'),
-arg5=ArgDef(name='size',type='size_t'),
-arg6=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg7=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg8=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='svm_ptr',tag='in',type='void*',wrapType='CSVMPtr_V1',wrapParams='{name}, size'),
+arg3=ArgDef(name='pattern',tag='in',type='const void*',wrapType='CBinaryData',wrapParams='pattern_size, {name}'),
+arg4=ArgDef(name='pattern_size',tag='in',type='size_t'),
+arg5=ArgDef(name='size',tag='in',type='size_t'),
+arg6=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg7=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg8=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueMemsetINTEL',enabled=True,availableFrom='2.0',extension=True,stateTrack=True,type=Enqueue,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='dst_ptr',type='void*',wrapType='CUSMPtr',wrapParams='{name}, size'),
-arg3=ArgDef(name='value',type='cl_int'),
-arg4=ArgDef(name='size',type='size_t'),
-arg5=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg6=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg7=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='dst_ptr',tag='in',type='void*',wrapType='CUSMPtr',wrapParams='{name}, size'),
+arg3=ArgDef(name='value',tag='in',type='cl_int'),
+arg4=ArgDef(name='size',tag='in',type='size_t'),
+arg5=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg6=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg7=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueSVMMemcpy',enabled=True,availableFrom='2.0',extension=False,stateTrack=True,type=Enqueue,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='blocking_copy',type='cl_bool'),
-arg3=ArgDef(name='dst_ptr',type='void*',wrapType='CSVMPtr',wrapParams='{name}, size, SD().CheckIfSVMAllocExists({name})'),
-arg4=ArgDef(name='src_ptr',type='const void*',wrapType='CSVMPtr',wrapParams='const_cast<void*>({name}), size, SD().CheckIfSVMAllocExists(const_cast<void*>({name}))'),
-arg5=ArgDef(name='size',type='size_t'),
-arg6=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg7=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg8=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='blocking_copy',tag='in',type='cl_bool'),
+arg3=ArgDef(name='dst_ptr',tag='in',type='void*',wrapType='CSVMPtr',wrapParams='{name}, size, SD().CheckIfSVMAllocExists({name})'),
+arg4=ArgDef(name='src_ptr',tag='in',type='const void*',wrapType='CSVMPtr',wrapParams='const_cast<void*>({name}), size, SD().CheckIfSVMAllocExists(const_cast<void*>({name}))'),
+arg5=ArgDef(name='size',tag='in',type='size_t'),
+arg6=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg7=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg8=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueSVMMemcpy',enabled=True,availableFrom='2.0',extension=False,stateTrack=True,type=Enqueue,recWrap=True,version=1,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='blocking_copy',type='cl_bool'),
-arg3=ArgDef(name='dst_ptr',type='void*',wrapType='CSVMPtr_V1',wrapParams='{name}, size'),
-arg4=ArgDef(name='src_ptr',type='const void*',wrapType='CSVMPtr_V1',wrapParams='const_cast<void*>({name}), size'),
-arg5=ArgDef(name='size',type='size_t'),
-arg6=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg7=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg8=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='blocking_copy',tag='in',type='cl_bool'),
+arg3=ArgDef(name='dst_ptr',tag='in',type='void*',wrapType='CSVMPtr_V1',wrapParams='{name}, size'),
+arg4=ArgDef(name='src_ptr',tag='in',type='const void*',wrapType='CSVMPtr_V1',wrapParams='const_cast<void*>({name}), size'),
+arg5=ArgDef(name='size',tag='in',type='size_t'),
+arg6=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg7=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg8=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueSVMUnmap',enabled=True,availableFrom='2.0',extension=False,stateTrack=True,type=Enqueue,recWrap=True,recExecWrap=True,runWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='svm_ptr',type='void*',wrapType='CCLMappedPtr'),
-arg3=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg4=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg5=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='svm_ptr',tag='in',type='void*',wrapType='CCLMappedPtr'),
+arg3=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg4=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg5=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueSVMMigrateMem',enabled=True,availableFrom='2.1',extension=False,stateTrack=True,type=Enqueue,runWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='num_svm_pointers',type='cl_uint'),
-arg3=ArgDef(name='svm_pointers',type='const void**',wrapType='CCLMappedPtr::CSArray',wrapParams='num_svm_pointers, const_cast<void**>({name})',removeMapping=True),
-arg4=ArgDef(name='sizes',type='const size_t*'),
-arg5=ArgDef(name='flags',type='cl_mem_migration_flags'),
-arg6=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg7=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg8=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='num_svm_pointers',tag='in',type='cl_uint'),
+arg3=ArgDef(name='svm_pointers',tag='in',type='const void**',wrapType='CCLMappedPtr::CSArray',wrapParams='num_svm_pointers, const_cast<void**>({name})',removeMapping=True),
+arg4=ArgDef(name='sizes',tag='in',type='const size_t*'),
+arg5=ArgDef(name='flags',tag='in',type='cl_mem_migration_flags'),
+arg6=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg7=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg8=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueVerifyMemoryINTEL',enabled=True,availableFrom='2.0',extension=True,type=Enqueue,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='allocationPtr',type='const void*',wrapType='CAsyncBinaryData',wrapParams='sizeOfComparison, {name}'),
-arg3=ArgDef(name='expectedData',type='const void*',wrapType='CAsyncBinaryData',wrapParams='sizeOfComparison, {name}'),
-arg4=ArgDef(name='sizeOfComparison',type='size_t',),
-arg5=ArgDef(name='comparisonMode',type='cl_uint')
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='allocationPtr',tag='in',type='const void*',wrapType='CAsyncBinaryData',wrapParams='sizeOfComparison, {name}'),
+arg3=ArgDef(name='expectedData',tag='in',type='const void*',wrapType='CAsyncBinaryData',wrapParams='sizeOfComparison, {name}'),
+arg4=ArgDef(name='sizeOfComparison',tag='in',type='size_t',),
+arg5=ArgDef(name='comparisonMode',tag='in',type='cl_uint')
 )
 
 Function(name='clGetPipeInfo',enabled=True,availableFrom='2.0',extension=False,type=Info,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='pipe',type='cl_mem'),
-arg2=ArgDef(name='param_name',type='cl_pipe_info'),
-arg3=ArgDef(name='param_value_size',type='size_t'),
-arg4=ArgDef(name='param_value',type='void*',wrapType='Ccl_uint::CSArray',wrapParams='param_value_size ? 1 : 0, static_cast<unsigned int*>({name})'),
-arg5=ArgDef(name='param_value_size_ret',type='size_t*')
+arg1=ArgDef(name='pipe',tag='in',type='cl_mem'),
+arg2=ArgDef(name='param_name',tag='in',type='cl_pipe_info'),
+arg3=ArgDef(name='param_value_size',tag='in',type='size_t'),
+arg4=ArgDef(name='param_value',tag='out',type='void*',wrapType='Ccl_uint::CSArray',wrapParams='param_value_size ? 1 : 0, static_cast<unsigned int*>({name})'),
+arg5=ArgDef(name='param_value_size_ret',tag='out',type='size_t*')
 )
 
 Function(name='clSVMAlloc',enabled=True,availableFrom='2.0',extension=False,stateTrack=True,type=Creator,runWrap=True,recWrap=True,
 retV=RetDef(type='void*',wrapType='CCLMappedPtr'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='flags',type='cl_svm_mem_flags'),
-arg3=ArgDef(name='size',type='size_t'),
-arg4=ArgDef(name='alignment',type='cl_uint')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='flags',tag='in',type='cl_svm_mem_flags'),
+arg3=ArgDef(name='size',tag='in',type='size_t'),
+arg4=ArgDef(name='alignment',tag='in',type='cl_uint')
 )
 
 Function(name='clSVMFree',enabled=True,availableFrom='2.0',extension=False,stateTrack=True,type=Release,recExecWrap=True,
 retV=RetDef(type='void'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='svm_pointer',type='void*',wrapType='CCLMappedPtr',removeMapping=True)
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='svm_pointer',tag='out',type='void*',wrapType='CCLMappedPtr',removeMapping=True)
 )
 
 Function(name='clSetKernelArgSVMPointer',enabled=True,availableFrom='2.0',extension=False,type=Set,stateTrack=True,runWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='kernel',type='cl_kernel'),
-arg2=ArgDef(name='arg_index',type='cl_uint'),
-arg3=ArgDef(name='arg_value',type='const void*',wrapType="CCLMappedPtr",wrapParams='const_cast<void*>({name})')
+arg1=ArgDef(name='kernel',tag='in',type='cl_kernel'),
+arg2=ArgDef(name='arg_index',tag='in',type='cl_uint'),
+arg3=ArgDef(name='arg_value',tag='in',type='const void*',wrapType="CCLMappedPtr",wrapParams='const_cast<void*>({name})')
 )
 
 Function(name='clSetKernelExecInfo',enabled=True,availableFrom='2.0',extension=False,type=Info,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='kernel',type='cl_kernel'),
-arg2=ArgDef(name='param_name',type='cl_kernel_exec_info'),
-arg3=ArgDef(name='param_value_size',type='size_t'),
-arg4=ArgDef(name='param_value',type='const void*',wrapType='CCLKernelExecInfo',wrapParams='param_name, param_value, param_value_size')
+arg1=ArgDef(name='kernel',tag='in',type='cl_kernel'),
+arg2=ArgDef(name='param_name',tag='in',type='cl_kernel_exec_info'),
+arg3=ArgDef(name='param_value_size',tag='in',type='size_t'),
+arg4=ArgDef(name='param_value',tag='in',type='const void*',wrapType='CCLKernelExecInfo',wrapParams='param_name, param_value, param_value_size')
 )
 
 Function(name='clSetKernelExecInfo',enabled=True,availableFrom='2.0',extension=False,type=Info,stateTrack=True,version=1,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='kernel',type='cl_kernel'),
-arg2=ArgDef(name='param_name',type='cl_kernel_exec_info'),
-arg3=ArgDef(name='param_value_size',type='size_t'),
-arg4=ArgDef(name='param_value',type='const void*',wrapType='CCLKernelExecInfo_V1',wrapParams='param_name, param_value, param_value_size')
+arg1=ArgDef(name='kernel',tag='in',type='cl_kernel'),
+arg2=ArgDef(name='param_name',tag='in',type='cl_kernel_exec_info'),
+arg3=ArgDef(name='param_value_size',tag='in',type='size_t'),
+arg4=ArgDef(name='param_value',tag='in',type='const void*',wrapType='CCLKernelExecInfo_V1',wrapParams='param_name, param_value, param_value_size')
 )
 
 Function(name='clHostMemAllocINTEL',enabled=True,availableFrom='2.0',extension=True,stateTrack=True,type=Creator,runWrap=True,recWrap=True,
 retV=RetDef(type='void*',wrapType='CCLMappedPtr'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='properties',type='cl_mem_properties_intel*', wrapParams='{name}, 0, 2'),
-arg3=ArgDef(name='size',type='size_t'),
-arg4=ArgDef(name='alignment',type='cl_uint'),
-arg5=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='properties',tag='in',type='cl_mem_properties_intel*', wrapParams='{name}, 0, 2'),
+arg3=ArgDef(name='size',tag='in',type='size_t'),
+arg4=ArgDef(name='alignment',tag='in',type='cl_uint'),
+arg5=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clDeviceMemAllocINTEL',enabled=True,availableFrom='2.0',extension=True,stateTrack=True,type=Creator,runWrap=True,recWrap=True,
 retV=RetDef(type='void*',wrapType='CCLMappedPtr'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='device',type='cl_device_id'),
-arg3=ArgDef(name='properties',type='cl_mem_properties_intel*', wrapParams='{name}, 0, 2'),
-arg4=ArgDef(name='size',type='size_t'),
-arg5=ArgDef(name='alignment',type='cl_uint'),
-arg6=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='device',tag='in',type='cl_device_id'),
+arg3=ArgDef(name='properties',tag='in',type='cl_mem_properties_intel*', wrapParams='{name}, 0, 2'),
+arg4=ArgDef(name='size',tag='in',type='size_t'),
+arg5=ArgDef(name='alignment',tag='in',type='cl_uint'),
+arg6=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clSharedMemAllocINTEL',enabled=True,availableFrom='2.0',extension=True,stateTrack=True,type=Creator,runWrap=True,recWrap=True,
 retV=RetDef(type='void*',wrapType='CCLMappedPtr'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='device',type='cl_device_id'),
-arg3=ArgDef(name='properties',type='cl_mem_properties_intel*', wrapParams='{name}, 0, 2'),
-arg4=ArgDef(name='size',type='size_t'),
-arg5=ArgDef(name='alignment',type='cl_uint'),
-arg6=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='device',tag='in',type='cl_device_id'),
+arg3=ArgDef(name='properties',tag='in',type='cl_mem_properties_intel*', wrapParams='{name}, 0, 2'),
+arg4=ArgDef(name='size',tag='in',type='size_t'),
+arg5=ArgDef(name='alignment',tag='in',type='cl_uint'),
+arg6=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clMemFreeINTEL',enabled=True,availableFrom='2.0',extension=True,type=Release,stateTrack=True,recExecWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='ptr',type='void*',wrapType='CCLMappedPtr',removeMapping=True)
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='ptr',tag='in',type='void*',wrapType='CCLMappedPtr',removeMapping=True)
 )
 
 Function(name='clMemBlockingFreeINTEL',enabled=True,availableFrom='2.0',extension=True,type=Release,stateTrack=True,recExecWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='ptr',type='void*',wrapType='CCLMappedPtr',removeMapping=True)
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='ptr',tag='in',type='void*',wrapType='CCLMappedPtr',removeMapping=True)
 )
 
 Function(name='clGetMemAllocInfoINTEL',enabled=True,availableFrom='2.0',extension=True,type=Info,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='ptr',type='const void*',wrapType="CUSMPtr"),
-arg3=ArgDef(name='param_name',type='cl_mem_info_intel', wrapType='Ccl_mem_info_intel'),
-arg4=ArgDef(name='param_value_size',type='size_t'),
-arg5=ArgDef(name='param_value',type='void*', wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
-arg6=ArgDef(name='param_value_size_ret',type='size_t*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='ptr',tag='in',type='const void*',wrapType="CUSMPtr"),
+arg3=ArgDef(name='param_name',tag='in',type='cl_mem_info_intel', wrapType='Ccl_mem_info_intel'),
+arg4=ArgDef(name='param_value_size',tag='in',type='size_t'),
+arg5=ArgDef(name='param_value',tag='out',type='void*', wrapType='CBinaryData',wrapParams='param_value_size, {name}'),
+arg6=ArgDef(name='param_value_size_ret',tag='out',type='size_t*')
 )
 
 Function(name='clSetKernelArgMemPointerINTEL',enabled=True,availableFrom='2.0',extension=True,type=Set,stateTrack=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='kernel',type='cl_kernel'),
-arg2=ArgDef(name='arg_index',type='cl_uint'),
-arg3=ArgDef(name='arg_value',type='const void*',wrapType="CUSMPtr")
+arg1=ArgDef(name='kernel',tag='in',type='cl_kernel'),
+arg2=ArgDef(name='arg_index',tag='in',type='cl_uint'),
+arg3=ArgDef(name='arg_value',tag='in',type='const void*',wrapType="CUSMPtr")
 )
 
 
 Function(name='clEnqueueMemFillINTEL',enabled=True,availableFrom='2.0',extension=True,stateTrack=True,type=Enqueue,recWrap=True,recExecWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='dst_ptr',type='void*',wrapType='CUSMPtr',wrapParams='{name}, size'),
-arg3=ArgDef(name='pattern',type='const void*',wrapType='CBinaryData',wrapParams='pattern_size, {name}'),
-arg4=ArgDef(name='pattern_size',type='size_t'),
-arg5=ArgDef(name='size',type='size_t'),
-arg6=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg7=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg8=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='dst_ptr',tag='in',type='void*',wrapType='CUSMPtr',wrapParams='{name}, size'),
+arg3=ArgDef(name='pattern',tag='in',type='const void*',wrapType='CBinaryData',wrapParams='pattern_size, {name}'),
+arg4=ArgDef(name='pattern_size',tag='in',type='size_t'),
+arg5=ArgDef(name='size',tag='in',type='size_t'),
+arg6=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg7=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg8=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueMemcpyINTEL',enabled=True,availableFrom='2.0',extension=True,stateTrack=True,type=Enqueue,recWrap=True,recExecWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='blocking',type='cl_bool'),
-arg3=ArgDef(name='dst_ptr',type='void*',wrapType='CUSMPtr',wrapParams='{name}, size'),
-arg4=ArgDef(name='src_ptr',type='const void*',wrapType='CUSMPtr',wrapParams='const_cast<void*>({name}), size'),
-arg5=ArgDef(name='size',type='size_t'),
-arg6=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg7=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg8=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='blocking',tag='in',type='cl_bool'),
+arg3=ArgDef(name='dst_ptr',tag='in',type='void*',wrapType='CUSMPtr',wrapParams='{name}, size'),
+arg4=ArgDef(name='src_ptr',tag='in',type='const void*',wrapType='CUSMPtr',wrapParams='const_cast<void*>({name}), size'),
+arg5=ArgDef(name='size',tag='in',type='size_t'),
+arg6=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg7=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg8=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueMigrateMemINTEL',enabled=True,availableFrom='2.0',extension=True,stateTrack=True,type=Enqueue,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='ptr',type='const void*',wrapType='CUSMPtr',wrapParams='const_cast<void*>({name}), size'),
-arg3=ArgDef(name='size',type='size_t'),
-arg4=ArgDef(name='flags',type='cl_mem_migration_flags_intel'),
-arg5=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg6=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg7=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='ptr',tag='in',type='const void*',wrapType='CUSMPtr',wrapParams='const_cast<void*>({name}), size'),
+arg3=ArgDef(name='size',tag='in',type='size_t'),
+arg4=ArgDef(name='flags',tag='in',type='cl_mem_migration_flags_intel'),
+arg5=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg6=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg7=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clEnqueueMemAdviseINTEL',enabled=True,availableFrom='2.0',extension=True,stateTrack=True,type=Enqueue,recWrap=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='ptr',type='const void*',wrapType='CUSMPtr',wrapParams='const_cast<void*>({name}), size'),
-arg3=ArgDef(name='size',type='size_t'),
-arg4=ArgDef(name='advice',type='cl_mem_advice_intel'),
-arg5=ArgDef(name='num_events_in_wait_list',type='cl_uint'),
-arg6=ArgDef(name='event_wait_list',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
-arg7=ArgDef(name='event',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='ptr',tag='in',type='const void*',wrapType='CUSMPtr',wrapParams='const_cast<void*>({name}), size'),
+arg3=ArgDef(name='size',tag='in',type='size_t'),
+arg4=ArgDef(name='advice',tag='in',type='cl_mem_advice_intel'),
+arg5=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg6=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg7=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
 Function(name='clGetKernelSuggestedLocalWorkSizeINTEL',enabled=True,availableFrom='1.0',extension=True,type=Info,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='command_queue',type='cl_command_queue'),
-arg2=ArgDef(name='kernel',type='cl_kernel'),
-arg3=ArgDef(name='work_dim',type='cl_uint'),
-arg4=ArgDef(name='global_work_offset',type='const size_t*',wrapParams='work_dim, {name}'),
-arg5=ArgDef(name='global_work_size',type='const size_t*',wrapParams='work_dim, {name}'),
-arg6=ArgDef(name='suggested_local_work_size',type='size_t*',wrapParams='work_dim, {name}')
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='kernel',tag='in',type='cl_kernel'),
+arg3=ArgDef(name='work_dim',tag='in',type='cl_uint'),
+arg4=ArgDef(name='global_work_offset',tag='in',type='const size_t*',wrapParams='work_dim, {name}'),
+arg5=ArgDef(name='global_work_size',tag='in',type='const size_t*',wrapParams='work_dim, {name}'),
+arg6=ArgDef(name='suggested_local_work_size',tag='out',type='size_t*',wrapParams='work_dim, {name}')
 )
 
 Function(name='clGitsIndirectAllocationOffsets',enabled=True,availableFrom='1.0',extension=True,type=Info,recExecWrap=True,stateTrack=True,runWrap=True,recWrap=True,
 retV=RetDef(type='void'),
-arg1=ArgDef(name='pAlloc',type='void*',wrapType='CCLMappedPtr'),
-arg2=ArgDef(name='numOffsets',type='uint32_t'),
-arg3=ArgDef(name='pOffsets',type='size_t*',wrapParams='numOffsets, {name}')
+arg1=ArgDef(name='pAlloc',tag='in',type='void*',wrapType='CCLMappedPtr'),
+arg2=ArgDef(name='numOffsets',tag='in',type='uint32_t'),
+arg3=ArgDef(name='pOffsets',tag='out',type='size_t*',wrapParams='numOffsets, {name}')
 )
 
 Function(name='clSetProgramSpecializationConstant',enabled=True,availableFrom='2.2',extension=True,type=Set,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='program',type='cl_program'),
-arg2=ArgDef(name='spec_id',type='cl_uint'),
-arg3=ArgDef(name='spec_size',type='size_t'),
-arg4=ArgDef(name='spec_value',type='const void*',wrapType='CBinaryData',wrapParams='spec_size, {name}')
+arg1=ArgDef(name='program',tag='in',type='cl_program'),
+arg2=ArgDef(name='spec_id',tag='in',type='cl_uint'),
+arg3=ArgDef(name='spec_size',tag='in',type='size_t'),
+arg4=ArgDef(name='spec_value',tag='in',type='const void*',wrapType='CBinaryData',wrapParams='spec_size, {name}')
 )
 # ------------------------------------------ OCL2.1 ------------------------------------------
 
 Function(name='clCreateProgramWithIL',enabled=True,availableFrom='2.1',extension=False,type=Creator,passToken=True,stateTrack=True,
 retV=RetDef(type='cl_program'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='il',type='const void*',wrapType='CProgramSource', wrapParams='{name}, length'),
-arg3=ArgDef(name='length',type='size_t'),
-arg4=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='il',tag='in',type='const void*',wrapType='CProgramSource', wrapParams='{name}, length'),
+arg3=ArgDef(name='length',tag='in',type='size_t'),
+arg4=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clCreateProgramWithILKHR',enabled=True,availableFrom='2.0',extension=True,type=Creator,passToken=True,stateTrack=True,
 retV=RetDef(type='cl_program'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='il',type='const void*',wrapType='CProgramSource', wrapParams='{name}, length'),
-arg3=ArgDef(name='length',type='size_t'),
-arg4=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='il',tag='in',type='const void*',wrapType='CProgramSource', wrapParams='{name}, length'),
+arg3=ArgDef(name='length',tag='in',type='size_t'),
+arg4=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clGetDeviceAndHostTimer',enabled=True,availableFrom='2.1',extension=False,type=Creator,passToken=True,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='device',type='cl_device_id'),
-arg2=ArgDef(name='device_timestamp',type='cl_ulong*'),
-arg3=ArgDef(name='host_timestamp',type='cl_ulong*')
+arg1=ArgDef(name='device',tag='in',type='cl_device_id'),
+arg2=ArgDef(name='device_timestamp',tag='out',type='cl_ulong*'),
+arg3=ArgDef(name='host_timestamp',tag='out',type='cl_ulong*')
 )
 
 Function(name='clGetHostTimer',enabled=True,availableFrom='2.1',extension=False,type=Info,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='device',type='cl_device_id'),
-arg2=ArgDef(name='host_timestamp',type='cl_ulong*')
+arg1=ArgDef(name='device',tag='in',type='cl_device_id'),
+arg2=ArgDef(name='host_timestamp',tag='out',type='cl_ulong*')
 )
 
 Function(name='clCloneKernel',enabled=True,availableFrom='2.1',extension=False,type=Creator,stateTrack=True,
 retV=RetDef(type='cl_kernel'),
-arg1=ArgDef(name='source_kernel',type='cl_kernel'),
-arg2=ArgDef(name='errcode_ret',type='cl_int*')
+arg1=ArgDef(name='source_kernel',tag='in',type='cl_kernel'),
+arg2=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 )
 
 Function(name='clSetContextDestructorCallback',enabled=False,availableFrom='3.0',extension=False,type=Set,
 retV=RetDef(type='cl_int'),
-arg1=ArgDef(name='context',type='cl_context'),
-arg2=ArgDef(name='pfn_notify',type='CallbackContext'),
-arg3=ArgDef(name='user_data',type='void*',wrapType='CCLUserData')
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='pfn_notify',tag='in',type='CallbackContext'),
+arg3=ArgDef(name='user_data',tag='in',type='void*',wrapType='CCLUserData')
 )
 
 # ------------------------------------------ enums ------------------------------------------

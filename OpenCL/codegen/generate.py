@@ -281,10 +281,10 @@ def format_trace_argument(arg: dict, enums: dict) -> str:
             in ["CAsyncBinaryData", "CSVMPtr", "CUSMPtr", "CUSMAreaPtr", "CCLMappedPtr", "CSVMPtr_V1"]
         ):
             array = f'TOclArray<{_extract_type(argument["type"])}, {_get_tracing_wrapper_type(argument)}>'
-            return f"{array}({_get_tracing_params(argument)})"
+            return f"{array}({_get_tracing_params(argument)}).ToString()"
         else:
             if argument["type"] in enums.keys():
-                return f'T{argument["type"]}({argument["name"]})'
+                return f'T{argument["type"]}({argument["name"]}).ToString()'
         return argument["name"]
 
     return _argument(arg)
@@ -311,7 +311,7 @@ def _mako_write(inpath: str, outpath: str, **args: dict) -> int:
             fout.write(rendered)
     except:
         traceback = mako.exceptions.RichTraceback()
-        for (filename, lineno, function, line) in traceback.traceback:
+        for filename, lineno, function, line in traceback.traceback:
             print(f"{filename}({lineno}) : error in {function}")
             print(line, "\n")
         print(f"{str(traceback.error.__class__.__name__)}: {traceback.error}")

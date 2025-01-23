@@ -53,24 +53,22 @@ ${get_return_type(func)} STDCALL special_${name}(${make_params(func, with_types=
   ${get_return_type(func)} gits_ret = static_cast<${get_return_type(func)}>(0);
 #ifndef BUILD_FOR_CCODE
   bool doTrace = ShouldLog(TRACE);
-  auto tracer = Tracer("${name}");
   if (doTrace) {
-    tracer.trace_name();
+    OclLog(TRACE, NO_NEWLINE) << "${name}(";
+  %for arg in func['args']:
+    OclLog(TRACE, RAW) << ${format_trace_argument(arg, enums)}${' << ", "' if not loop.last else ""};
+  %endfor
+    OclLog(TRACE, ${'RAW' if func['type'] != 'void' else 'NO_PREFIX'}) << ")";
   }
   bool call_orig = true;
-
   if (Config::Get().common.shared.useEvents) {
     std::unique_lock<std::recursive_mutex> lock(gits::lua::luaMutex);
     if (!bypass_luascript) {
       auto L = GetLuaState();
       bool exists = lua::FunctionExists("${name}", L);
       if (exists || !doTrace) {
-        if (doTrace) {
-          tracer.trace_lua(
-  %for arg in func['args']:
-            ${format_trace_argument(arg, enums)}${',' if not loop.last else ''}
-  %endfor 
-          );
+        if(doTrace) {
+          OclLog(TRACE, NO_PREFIX) << " Lua Begin";
         }
         lua_getglobal(L, "${name}");
         ArgsPusher ap(L);
@@ -83,23 +81,22 @@ ${get_return_type(func)} STDCALL special_${name}(${make_params(func, with_types=
         gits_ret = lua::lua_to<${get_return_type(func)}>(L, top);
         lua_pop(L, top);
         if (doTrace) {
-          tracer.trace_ret_lua(gits_ret);
+          OclLog(TRACE, RAW) << "${name}" << " Lua End";
+          Tracer::TraceRet(gits_ret);
         }
       }
     }
   }
 
   if (call_orig) {
-    if (doTrace) {
-      tracer.trace(
-  %for arg in func['args']:
-        ${format_trace_argument(arg, enums)}${',' if not loop.last else ''}
-  %endfor 
-      );
-    }
     gits_ret = drvOcl.orig_${name}(${make_params(func, one_line=True)});
     if (doTrace) {
-      tracer.trace_ret(gits_ret);
+      Tracer::TraceRet(gits_ret);
+      %for arg in func['args']:
+        %if 'out' in arg['tag']:
+      OclLog(TRACEV, NO_PREFIX) << ">>>> ${arg['tag']} ${arg['name']}: " << ${format_trace_argument(arg, enums)};
+        %endif
+      %endfor
     }
   }
 #endif
