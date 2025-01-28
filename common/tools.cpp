@@ -85,10 +85,8 @@ void gits_assert(bool condition,
                  const char* file,
                  uint32_t line) {
   if (!condition) {
-    Log(ERR) << "Assertion failed: (" << condition << "). " << message;
-    Log(ERR) << "Function: " << function;
-    Log(ERR) << "File: " << file;
-    Log(ERR) << "Line: " << line;
+    Log(ERR) << "Assertion failed: " << condition_string << " " << message
+             << "\n  Function: " << function << "\n  File: " << file << "\n  Line: " << line;
     fast_exit(EXIT_FAILURE);
   }
 }
