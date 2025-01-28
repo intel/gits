@@ -71,10 +71,13 @@ void gits_assert(bool condition,
 #define GITS_ASSERT1(condition)                                                                    \
   gits_assert(condition, #condition, "", __FUNCTION__, __FILE__, __LINE__);
 #define GET_OVERLOAD(PLACEHOLDER1, PLACEHOLDER2, NAME, ...) NAME
+// Workaround for a MSVC bug, see https://stackoverflow.com/a/5134656/
+#define EXPAND(x) x
+//
 // Notice how the increasing number of arguments coming from __VA_ARGS__ pushes
 // GITS_ASSERT<number> arguments right. It ensures the correct GITS_ASSERT<number>
 // argument will be passed as NAME to the GET_OVERLOAD macro.
-#define GITS_ASSERT(...) GET_OVERLOAD(__VA_ARGS__, GITS_ASSERT2, GITS_ASSERT1)(__VA_ARGS__)
+#define GITS_ASSERT(...) EXPAND(GET_OVERLOAD(__VA_ARGS__, GITS_ASSERT2, GITS_ASSERT1)(__VA_ARGS__))
 
 bool SavePng(const std::string& filename,
              size_t width,
