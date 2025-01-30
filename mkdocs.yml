@@ -97,15 +97,9 @@ nav:
           - Generator: 'documentation/OpenCL/Generator.md'
           - Indirect Access Pointers Locations: 'documentation/OpenCL/cl_gits_indirect_access_pointers_locations.md'
     - Lua Scripting: 'documentation/lua_scripts.md'        
-  - Userguides:
-    - Usage: 'userguides/userguide.md'
-    - FAQ: 'userguides/FAQ.md'
-    - Recipes: 
-      - General: 'userguides/recipes.md'
-      - Linux: 'userguides/recipes_linux.md'
-      - Windows: 'userguides/recipes_windows.md'
-    - Application-specific Issues: 'userguides/applicationspecific_issues.md'
-    - Debug Solutions: 'userguides/debug_solutions.md'
+  - Guides:
+    - Usage: 'guides/userguide.md'
+    - FAQ: 'guides/FAQ.md'
   - Community:
     - Reproducers: 'community/HowToPrepareReproducer.md'
     - Documentation: 'community/Documentation.md'
