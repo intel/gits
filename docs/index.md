@@ -57,4 +57,4 @@ To **record an application**, you will have to inject our dynamic library (calle
 
 To **replay a stream**, pass it as an argument to the **gitsPlayer**-executable. 
 
-We provide a general introduction to [using GITS](usage.md) as well as more detailed information, that can be found in the [documentation](documentation/terminology.md) and/or the [userguides](userguides/userguide.md) section. 
+We provide a general introduction to [using GITS](usage.md) as well as more detailed information, that can be found in the [documentation](documentation/terminology.md) and/or the [userguides](guides/userguide.md) section.
