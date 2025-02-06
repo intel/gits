@@ -873,6 +873,10 @@ void gits::OpenCL::CBinaryData::Declare(CCodeOStream& stream) const {
   }
 }
 
+void gits::OpenCL::CBinaryData::Deallocate() {
+  std::vector<char>().swap(_buffer);
+}
+
 /******************** CKERNELARGVALUE ********************/
 
 gits::OpenCL::CKernelArgValue::CKernelArgValue(const size_t len, const void* buffer)

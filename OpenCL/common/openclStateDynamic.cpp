@@ -797,5 +797,62 @@ std::string LayoutBuilder::BuildFileName(const int argNumber, const bool isBuffe
   return _latestFileName;
 }
 
+void DeallocationHandler::AddToResourcesInExecution(const cl_command_queue& command_queue,
+                                                    CUSMPtr& ptr,
+                                                    cl_bool blocking) {
+  if (ptr.IsMappedPointer()) {
+    return;
+  }
+  if (blocking == CL_TRUE) {
+    ptr.FreeHostMemory();
+    return;
+  }
+  playbackResourcesInExecution[command_queue].emplace_back(&ptr);
+}
+
+void DeallocationHandler::AddToResourcesInExecution(const cl_command_queue& command_queue,
+                                                    CAsyncBinaryData& data,
+                                                    cl_bool blocking) {
+  if (data.IsMappedPointer()) {
+    return;
+  }
+  if (blocking == CL_TRUE) {
+    data.FreeHostMemory();
+    return;
+  }
+  playbackResourcesInExecution[command_queue].emplace_back(&data);
+}
+
+void DeallocationHandler::AddToResourcesInExecution(const cl_command_queue& command_queue,
+                                                    CSVMPtr_V1& ptr,
+                                                    cl_bool blocking) {
+  if (ptr.IsMappedPointer()) {
+    return;
+  }
+  if (blocking == CL_TRUE) {
+    ptr.FreeHostMemory();
+    return;
+  }
+  playbackResourcesInExecution[command_queue].emplace_back(&ptr);
+}
+
+void DeallocationHandler::DeallocateExecutedResources(const cl_command_queue& command_queue) {
+  for (auto& ptr : playbackResourcesInExecution[command_queue]) {
+    ptr.Deallocate();
+  }
+  playbackResourcesInExecution[command_queue].clear();
+}
+
+void DeallocationHandler::DeallocationInfo::Deallocate() {
+  if (usmPtrResource != nullptr) {
+    usmPtrResource->FreeHostMemory();
+  }
+  if (dataResource != nullptr) {
+    dataResource->FreeHostMemory();
+  }
+  if (svmPtrResource != nullptr) {
+    svmPtrResource->FreeHostMemory();
+  }
+}
 } // namespace OpenCL
 } // namespace gits

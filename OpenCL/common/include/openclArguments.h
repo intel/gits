@@ -405,6 +405,7 @@ public:
   virtual std::string ToString() const override {
     return ToStringHelper(_ptr);
   }
+  virtual void Deallocate();
 };
 
 class CKernelArgValue : public CBinaryData {
@@ -491,6 +492,12 @@ public:
   virtual std::string ToString() const override {
     return ToStringHelper(_appPtr);
   }
+  void FreeHostMemory() {
+    _resource.Deallocate();
+  }
+  bool IsMappedPointer() const {
+    return _resource.GetResourceHash() == CResourceManager::EmptyHash;
+  }
 };
 
 class CSVMPtr : CCLArg<void*, CSVMPtr> {
@@ -543,6 +550,12 @@ public:
   virtual void Read(CBinIStream& stream);
   virtual std::string ToString() const override {
     return _createdByCLSVMAlloc ? ToStringHelper(*_mappedPtr) : _hostPtr.ToString();
+  }
+  void FreeHostMemory() {
+    _hostPtr.Deallocate();
+  }
+  bool IsMappedPointer() {
+    return _createdByCLSVMAlloc;
   }
 };
 
@@ -602,6 +615,12 @@ public:
   virtual void Read(CBinIStream& stream);
   virtual std::string ToString() const override {
     return _createdByCLUSMAlloc ? ToStringHelper(*_mappedPtr) : _hostPtr.ToString();
+  }
+  virtual bool IsMappedPointer() {
+    return _createdByCLUSMAlloc;
+  }
+  virtual void FreeHostMemory() {
+    _hostPtr.Deallocate();
   }
 };
 

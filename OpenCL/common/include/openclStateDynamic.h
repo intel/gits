@@ -17,6 +17,7 @@
 #include "openclHeader.h"
 
 #include "openclTools.h"
+#include "openclArguments.h"
 #include "texture_converter.h"
 #include "MemorySniffer.h"
 
@@ -31,6 +32,10 @@
 namespace gits {
 class CArgument;
 class CFunction;
+class CUSMPtr;
+class CSVMPtr_V1;
+class CAsyncBinaryData;
+
 namespace OpenCL {
 struct CCLState {
 public:
@@ -435,6 +440,35 @@ public:
   }
 };
 
+class DeallocationHandler {
+  struct DeallocationInfo {
+    CUSMPtr* usmPtrResource = nullptr;
+    CAsyncBinaryData* dataResource = nullptr;
+    CSVMPtr_V1* svmPtrResource = nullptr;
+
+    DeallocationInfo() = default;
+    DeallocationInfo(CUSMPtr* usmPtr) : usmPtrResource(usmPtr) {}
+    DeallocationInfo(CSVMPtr_V1* svmPtr) : svmPtrResource(svmPtr) {}
+    DeallocationInfo(CAsyncBinaryData* data) : dataResource(data) {}
+
+    void Deallocate();
+  };
+
+  std::unordered_map<cl_command_queue, std::vector<DeallocationInfo>> playbackResourcesInExecution;
+
+public:
+  void AddToResourcesInExecution(const cl_command_queue& command_queue,
+                                 CUSMPtr& ptr,
+                                 cl_bool blocking = CL_FALSE);
+  void AddToResourcesInExecution(const cl_command_queue& command_queue,
+                                 CAsyncBinaryData& ptr,
+                                 cl_bool blocking = CL_FALSE);
+  void AddToResourcesInExecution(const cl_command_queue& command_queue,
+                                 CSVMPtr_V1& ptr,
+                                 cl_bool blocking = CL_FALSE);
+  void DeallocateExecutedResources(const cl_command_queue& hCommandList);
+};
+
 /************************************************************************/
 /* CStateDynamic holds all contexts state data                          */
 /************************************************************************/
@@ -484,6 +518,7 @@ public:
   std::map<cl_command_queue, std::vector<std::vector<char>>> _enqueueBuffers;
   std::unordered_map<void*, size_t> _enqueueSvmMapSize;
   LayoutBuilder layoutBuilder;
+  DeallocationHandler deallocationHandler;
   std::unordered_map<cl_platform_id, std::set<cl_device_id>> originalPlaybackPlatforms;
 
   CCLPlatformIDState& GetPlatformIDState(const cl_platform_id platformID,

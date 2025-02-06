@@ -656,12 +656,13 @@ inline void clEnqueueReadBuffer_RUNWRAP(CFunction* _token,
                                         Ccl_event::CSMapArray& _event) {
   const auto captureReads = CheckCaptureMemObjectReads(*_buffer);
   const auto& cfg = Config::Get().opencl.player;
+  auto& sd = SD();
   if (captureReads || cfg.captureKernels.empty()) {
     size_t size = *_cb;
     if (cfg.aubSignaturesCL && *_offset == 0) {
       size += sizeof(mem_signature_t);
     }
-    auto& cqBuffers = SD()._enqueueBuffers[*_command_queue];
+    auto& cqBuffers = sd._enqueueBuffers[*_command_queue];
     cqBuffers.emplace_back(size, static_cast<char>(0));
     const auto blockingRead = captureReads ? CL_BLOCKING : *_blocking_read;
     _return_value.Value() = drvOcl.clEnqueueReadBuffer(
@@ -678,13 +679,14 @@ inline void clEnqueueReadBuffer_RUNWRAP(CFunction* _token,
       DeleteBuffer(cqBuffers.back());
     }
   } else if (_event.Size() > 0) {
-    const auto context = SD().GetCommandQueueState(*_command_queue, EXCEPTION_MESSAGE).context;
+    const auto context = sd.GetCommandQueueState(*_command_queue, EXCEPTION_MESSAGE).context;
     const auto event = GetGitsUserEvent(context);
     const auto& originalEvent = _event.Original();
     if (originalEvent != nullptr) {
       Ccl_event::AddMapping(originalEvent[0], event);
     }
   }
+  sd.deallocationHandler.AddToResourcesInExecution(*_command_queue, _ptr, *_blocking_read);
 }
 
 inline void clEnqueueReadBufferRect_RUNWRAP(CFunction* _token,
@@ -704,10 +706,11 @@ inline void clEnqueueReadBufferRect_RUNWRAP(CFunction* _token,
                                             Ccl_event::CSArray& _event_wait_list,
                                             Ccl_event::CSMapArray& _event) {
   const auto& cfg = Config::Get().opencl.player;
+  auto& sd = SD();
   const auto captureReads = CheckCaptureMemObjectReads(*_buffer);
   if (captureReads || cfg.captureKernels.empty()) {
     const size_t size = CountBufferRectSize(*_region, *_buffer_row_pitch, *_buffer_slice_pitch);
-    auto& cqBuffers = SD()._enqueueBuffers[*_command_queue];
+    auto& cqBuffers = sd._enqueueBuffers[*_command_queue];
     cqBuffers.emplace_back(size, static_cast<char>(0));
     const auto blockingRead = captureReads ? CL_BLOCKING : *_blocking_read;
     _return_value.Value() = drvOcl.clEnqueueReadBufferRect(
@@ -727,13 +730,14 @@ inline void clEnqueueReadBufferRect_RUNWRAP(CFunction* _token,
       DeleteBuffer(cqBuffers.back());
     }
   } else if (_event.Size() > 0) {
-    const auto context = SD().GetCommandQueueState(*_command_queue, EXCEPTION_MESSAGE).context;
+    const auto context = sd.GetCommandQueueState(*_command_queue, EXCEPTION_MESSAGE).context;
     const auto event = GetGitsUserEvent(context);
     const auto& originalEvent = _event.Original();
     if (originalEvent != nullptr) {
       Ccl_event::AddMapping(originalEvent[0], event);
     }
   }
+  sd.deallocationHandler.AddToResourcesInExecution(*_command_queue, _ptr, *_blocking_read);
 }
 
 inline void clEnqueueReadImage_RUNWRAP(CFunction* _token,
@@ -750,11 +754,12 @@ inline void clEnqueueReadImage_RUNWRAP(CFunction* _token,
                                        Ccl_event::CSArray& _event_wait_list,
                                        Ccl_event::CSMapArray& _event) {
   const auto& cfg = Config::Get().opencl.player;
-  const auto format = SD().GetMemState(*_image, EXCEPTION_MESSAGE).image_format;
+  auto& sd = SD();
+  const auto format = sd.GetMemState(*_image, EXCEPTION_MESSAGE).image_format;
   const auto region = *_region;
   const auto size =
       (region == nullptr ? 0 : CountImageSize(format, region, *_row_pitch, *_slice_pitch));
-  auto& cqBuffers = SD()._enqueueBuffers[*_command_queue];
+  auto& cqBuffers = sd._enqueueBuffers[*_command_queue];
   cqBuffers.emplace_back(size, static_cast<char>(0));
   cl_bool blockingRead = *_blocking_read;
   if (cfg.captureReads || cfg.captureImages) {
@@ -768,7 +773,7 @@ inline void clEnqueueReadImage_RUNWRAP(CFunction* _token,
       SaveBuffer(fileName, cqBuffers.back());
     }
     if (cfg.captureImages && cfg.captureKernels.empty()) {
-      const auto& memState = SD().GetMemState(*_image, EXCEPTION_MESSAGE);
+      const auto& memState = sd.GetMemState(*_image, EXCEPTION_MESSAGE);
       SaveImage(cqBuffers.back().data(), memState.image_format, memState.image_desc, fileName);
     }
     num++;
@@ -777,7 +782,7 @@ inline void clEnqueueReadImage_RUNWRAP(CFunction* _token,
         *_command_queue, *_image, blockingRead, *_origin, *_region, *_row_pitch, *_slice_pitch,
         cqBuffers.back().data(), *_num_events_in_wait_list, *_event_wait_list, *_event);
   } else if (_event.Size() > 0) {
-    const auto context = SD().GetCommandQueueState(*_command_queue, EXCEPTION_MESSAGE).context;
+    const auto context = sd.GetCommandQueueState(*_command_queue, EXCEPTION_MESSAGE).context;
     const auto event = GetGitsUserEvent(context);
     Ccl_event::AddMapping(_event.Original()[0], event);
     return;
@@ -788,6 +793,7 @@ inline void clEnqueueReadImage_RUNWRAP(CFunction* _token,
   if (blockingRead == CL_TRUE) {
     DeleteBuffer(cqBuffers.back());
   }
+  sd.deallocationHandler.AddToResourcesInExecution(*_command_queue, _ptr, *_blocking_read);
 }
 
 inline void clEnqueueWriteBuffer_RUNWRAP(CFunction* _token,
@@ -802,7 +808,8 @@ inline void clEnqueueWriteBuffer_RUNWRAP(CFunction* _token,
                                          Ccl_event::CSArray& _event_wait_list,
                                          Ccl_event::CSMapArray& _event) {
   CBinaryResource::PointerProxy ptr = *_ptr;
-  auto& cqBuffers = SD()._enqueueBuffers[*_command_queue];
+  auto& sd = SD();
+  auto& cqBuffers = sd._enqueueBuffers[*_command_queue];
   cqBuffers.emplace_back((const char*)ptr, (const char*)ptr + *_cb);
   _return_value.Value() = drvOcl.clEnqueueWriteBuffer(
       *_command_queue, *_buffer, *_blocking_write, *_offset, *_cb, cqBuffers.back().data(),
@@ -810,9 +817,11 @@ inline void clEnqueueWriteBuffer_RUNWRAP(CFunction* _token,
   clEnqueueWriteBuffer_SD(_token, *_return_value, *_command_queue, *_buffer, *_blocking_write,
                           *_offset, *_cb, cqBuffers.back().data(), *_num_events_in_wait_list,
                           *_event_wait_list, *_event);
+
   if (*_blocking_write == CL_TRUE) {
     DeleteBuffer(cqBuffers.back());
   }
+  sd.deallocationHandler.AddToResourcesInExecution(*_command_queue, _ptr, *_blocking_write);
 }
 
 inline void clEnqueueWriteBufferRect_RUNWRAP(CFunction* _token,
@@ -833,6 +842,7 @@ inline void clEnqueueWriteBufferRect_RUNWRAP(CFunction* _token,
                                              Ccl_event::CSMapArray& _event) {
   CBinaryResource::PointerProxy ptr = *_ptr;
   size_t size = CountBufferRectSize(*_region, *_buffer_row_pitch, *_buffer_slice_pitch);
+  auto& sd = SD();
   auto& cqBuffers = SD()._enqueueBuffers[*_command_queue];
   cqBuffers.emplace_back((const char*)ptr, (const char*)ptr + size);
   _return_value.Value() = drvOcl.clEnqueueWriteBufferRect(
@@ -844,9 +854,11 @@ inline void clEnqueueWriteBufferRect_RUNWRAP(CFunction* _token,
                               *_buffer_slice_pitch, *_host_row_pitch, *_host_slice_pitch,
                               cqBuffers.back().data(), *_num_events_in_wait_list, *_event_wait_list,
                               *_event);
+
   if (*_blocking_write == CL_TRUE) {
     DeleteBuffer(cqBuffers.back());
   }
+  sd.deallocationHandler.AddToResourcesInExecution(*_command_queue, _ptr, *_blocking_write);
 }
 
 inline void clEnqueueWriteImage_RUNWRAP(CFunction* _token,
@@ -863,12 +875,13 @@ inline void clEnqueueWriteImage_RUNWRAP(CFunction* _token,
                                         Ccl_event::CSArray& _event_wait_list,
                                         Ccl_event::CSMapArray& _event) {
   CBinaryResource::PointerProxy ptr = *_ptr;
-  cl_image_format format = SD().GetMemState(*_image, EXCEPTION_MESSAGE).image_format;
+  auto& sd = SD();
+  cl_image_format format = sd.GetMemState(*_image, EXCEPTION_MESSAGE).image_format;
   const auto region = *_region;
   size_t size =
       (region == nullptr ? 0
                          : CountImageSize(format, region, *_input_row_pitch, *_input_slice_pitch));
-  auto& cqBuffers = SD()._enqueueBuffers[*_command_queue];
+  auto& cqBuffers = sd._enqueueBuffers[*_command_queue];
   cqBuffers.emplace_back((const char*)ptr, (const char*)ptr + size);
   _return_value.Value() =
       drvOcl.clEnqueueWriteImage(*_command_queue, *_image, *_blocking_write, *_origin, *_region,
@@ -878,9 +891,11 @@ inline void clEnqueueWriteImage_RUNWRAP(CFunction* _token,
                          *_origin, *_region, *_input_row_pitch, *_input_slice_pitch,
                          cqBuffers.back().data(), *_num_events_in_wait_list, *_event_wait_list,
                          *_event);
+
   if (*_blocking_write == CL_TRUE) {
     DeleteBuffer(cqBuffers.back());
   }
+  sd.deallocationHandler.AddToResourcesInExecution(*_command_queue, _ptr, *_blocking_write);
 }
 
 inline void clReleaseMemObject_RUNWRAP(CCLResult& _return_value, Ccl_mem& _memobj) {
@@ -896,8 +911,10 @@ inline void clReleaseMemObject_RUNWRAP(CCLResult& _return_value, Ccl_mem& _memob
 }
 
 inline void clFinish_RUNWRAP(CCLResult& _return_value, Ccl_command_queue& _command_queue) {
+  auto& sd = SD();
   _return_value.Value() = drvOcl.clFinish(*_command_queue);
-  auto& cqBuffers = SD()._enqueueBuffers[*_command_queue];
+  sd.deallocationHandler.DeallocateExecutedResources(*_command_queue);
+  auto& cqBuffers = sd._enqueueBuffers[*_command_queue];
   cqBuffers.clear();
 }
 
@@ -906,7 +923,9 @@ inline void clReleaseCommandQueue_RUNWRAP(CCLResult& _return_value,
   _return_value.Value() = drvOcl.clReleaseCommandQueue(*_command_queue);
   clReleaseCommandQueue_SD(*_return_value, *_command_queue);
   if (!GetRefCount(*_command_queue)) {
-    SD()._enqueueBuffers.erase(*_command_queue);
+    auto& sd = SD();
+    sd._enqueueBuffers.erase(*_command_queue);
+    sd.deallocationHandler.DeallocateExecutedResources(*_command_queue);
   }
 }
 
@@ -1358,6 +1377,45 @@ inline void clSetKernelArg_V1_RUNWRAP(CCLResult& _return_value,
   }
   _return_value.Value() = drvOcl.clSetKernelArg(*_kernel, *_arg_index, size, *_arg_value);
   clSetKernelArg_SD(*_return_value, *_kernel, *_arg_index, size, *_arg_value);
+}
+
+inline void clEnqueueMemcpyINTEL_RUNWRAP(CCLResult& _return_value,
+                                         Ccl_command_queue& _command_queue,
+                                         Ccl_bool& _blocking,
+                                         CUSMPtr& _dst_ptr,
+                                         CUSMPtr& _src_ptr,
+                                         Csize_t& _size,
+                                         Ccl_uint& _num_events_in_wait_list,
+                                         Ccl_event::CSArray& _event_wait_list,
+                                         Ccl_event::CSMapArray& _event) {
+  auto& sd = SD();
+  _return_value.Value() =
+      drvOcl.clEnqueueMemcpyINTEL(*_command_queue, *_blocking, *_dst_ptr, *_src_ptr, *_size,
+                                  *_num_events_in_wait_list, *_event_wait_list, *_event);
+
+  clEnqueueMemcpyINTEL_SD(*_return_value, *_command_queue, *_blocking, *_dst_ptr, *_src_ptr, *_size,
+                          *_num_events_in_wait_list, *_event_wait_list, *_event);
+  sd.deallocationHandler.AddToResourcesInExecution(*_command_queue, _dst_ptr, *_blocking);
+  sd.deallocationHandler.AddToResourcesInExecution(*_command_queue, _src_ptr, *_blocking);
+}
+
+inline void clEnqueueSVMMemcpy_V1_RUNWRAP(CCLResult& _return_value,
+                                          Ccl_command_queue& _command_queue,
+                                          Ccl_bool& _blocking_copy,
+                                          CSVMPtr_V1& _dst_ptr,
+                                          CSVMPtr_V1& _src_ptr,
+                                          Csize_t& _size,
+                                          Ccl_uint& _num_events_in_wait_list,
+                                          Ccl_event::CSArray& _event_wait_list,
+                                          Ccl_event::CSMapArray& _event) {
+  auto& sd = SD();
+  _return_value.Value() =
+      drvOcl.clEnqueueSVMMemcpy(*_command_queue, *_blocking_copy, *_dst_ptr, *_src_ptr, *_size,
+                                *_num_events_in_wait_list, *_event_wait_list, *_event);
+  clEnqueueSVMMemcpy_SD(*_return_value, *_command_queue, *_blocking_copy, *_dst_ptr, *_src_ptr,
+                        *_size, *_num_events_in_wait_list, *_event_wait_list, *_event);
+  sd.deallocationHandler.AddToResourcesInExecution(*_command_queue, _dst_ptr, *_blocking_copy);
+  sd.deallocationHandler.AddToResourcesInExecution(*_command_queue, _src_ptr, *_blocking_copy);
 }
 
 } // namespace OpenCL

@@ -1398,7 +1398,7 @@ arg7=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='n
 arg8=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
-Function(name='clEnqueueSVMMemcpy',enabled=True,availableFrom='2.0',extension=False,stateTrack=True,type=Enqueue,recWrap=True,version=1,
+Function(name='clEnqueueSVMMemcpy',enabled=True,availableFrom='2.0',extension=False,stateTrack=True,type=Enqueue,recWrap=True,runWrap=True,version=1,
 retV=RetDef(type='cl_int'),
 arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
 arg2=ArgDef(name='blocking_copy',tag='in',type='cl_bool'),
@@ -1557,7 +1557,7 @@ arg7=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='n
 arg8=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
 )
 
-Function(name='clEnqueueMemcpyINTEL',enabled=True,availableFrom='2.0',extension=True,stateTrack=True,type=Enqueue,recWrap=True,recExecWrap=True,
+Function(name='clEnqueueMemcpyINTEL',enabled=True,availableFrom='2.0',extension=True,stateTrack=True,type=Enqueue,recWrap=True,recExecWrap=True,runWrap=True,
 retV=RetDef(type='cl_int'),
 arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
 arg2=ArgDef(name='blocking',tag='in',type='cl_bool'),

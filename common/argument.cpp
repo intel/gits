@@ -206,7 +206,7 @@ gits::hash_t gits::CBinaryResource::GetResourceHash() const {
 }
 
 void gits::CBinaryResource::Deallocate() {
-  _data.clear();
+  std::vector<char>().swap(_data);
 }
 /* ******************************** C H A R ****************************** */
 
