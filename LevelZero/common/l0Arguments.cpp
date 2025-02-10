@@ -193,7 +193,7 @@ void CUSMPtr::Write(CCodeOStream& stream) const {
 }
 
 void CUSMPtr::FreeHostMemory() {
-  _temp_buffer.clear();
+  DeallocateVector(_temp_buffer);
   _resource.Deallocate();
 }
 

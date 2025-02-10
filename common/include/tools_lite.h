@@ -104,6 +104,11 @@ const typename T::value_type::second_type& get(const T& m, typename T::value_typ
   return iter->second;
 }
 
+template <typename T>
+void DeallocateVector(std::vector<T>& buffer) {
+  std::vector<T>().swap(buffer);
+}
+
 class noncopyable {
   // Disallow copying. (Note: it can still be moved!)
   noncopyable(const noncopyable&) = delete;

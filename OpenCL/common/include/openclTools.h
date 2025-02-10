@@ -207,7 +207,6 @@ std::vector<char> InjectObjOperations(cl_command_queue cmdQ,
                                       KernelArgType type,
                                       KernelSetType setType);
 
-void DeleteBuffer(std::vector<char>& buffer);
 void AddSignature(std::vector<char>& buffer, mem_signature_t signature);
 mem_signature_t GenerateSignature();
 bool ResourceExists(cl_context resource);

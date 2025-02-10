@@ -492,7 +492,7 @@ inline void clCreateBuffer_RUNWRAP(Ccl_mem& _return_value,
   _return_value.Assign(drvOcl.clCreateBuffer(*_context, *_flags, size, buffer_ptr, *_errcode_ret));
   clCreateBuffer_SD(*_return_value, *_context, *_flags, *_size, buffer_ptr, *_errcode_ret);
   if (buffer_ptr && !FlagUseHostPtr(*_flags)) {
-    DeleteBuffer(SD()._buffers.back());
+    DeallocateVector(SD()._buffers.back());
   }
   const auto isUsingHostPtr = *_flags & (CL_MEM_COPY_HOST_PTR | CL_MEM_USE_HOST_PTR);
   if (ErrCodeSuccess(*_errcode_ret) && !isUsingHostPtr &&
@@ -532,7 +532,7 @@ inline void clCreateImage_RUNWRAP(Ccl_mem& _return_value,
   clCreateImage_SD(*_return_value, *_context, *_flags, *_image_format, &image_desc, buffer_ptr,
                    *_errcode_ret);
   if (buffer_ptr != nullptr && !FlagUseHostPtr(*_flags)) {
-    DeleteBuffer(SD()._buffers.back());
+    DeallocateVector(SD()._buffers.back());
   }
   const auto isUsingHostPtr = (*_flags & (CL_MEM_COPY_HOST_PTR | CL_MEM_USE_HOST_PTR));
   if (ErrCodeSuccess(*_errcode_ret) && !isUsingHostPtr &&
@@ -570,7 +570,7 @@ inline void clCreateImage2D_RUNWRAP(Ccl_mem& _return_value,
   clCreateImage2D_SD(*_return_value, *_context, *_flags, *_image_format, *_image_width,
                      *_image_height, *_image_row_pitch, buffer_ptr, *_errcode_ret);
   if (buffer_ptr != nullptr && !FlagUseHostPtr(*_flags)) {
-    DeleteBuffer(SD()._buffers.back());
+    DeallocateVector(SD()._buffers.back());
   }
   const auto isUsingHostPtr = (*_flags & (CL_MEM_COPY_HOST_PTR | CL_MEM_USE_HOST_PTR));
   if (ErrCodeSuccess(*_errcode_ret) && !isUsingHostPtr &&
@@ -610,7 +610,7 @@ inline void clCreateImage3D_RUNWRAP(Ccl_mem& _return_value,
                      *_image_height, *_image_depth, *_image_row_pitch, *_image_slice_pitch,
                      buffer_ptr, *_errcode_ret);
   if (buffer_ptr != nullptr && !FlagUseHostPtr(*_flags)) {
-    DeleteBuffer(SD()._buffers.back());
+    DeallocateVector(SD()._buffers.back());
   }
   const auto isUsingHostPtr = (*_flags & (CL_MEM_COPY_HOST_PTR | CL_MEM_USE_HOST_PTR));
   if (ErrCodeSuccess(*_errcode_ret) && !isUsingHostPtr &&
@@ -676,7 +676,7 @@ inline void clEnqueueReadBuffer_RUNWRAP(CFunction* _token,
                            *_offset, *_cb, cqBuffers.back().data(), *_num_events_in_wait_list,
                            *_event_wait_list, *_event);
     if (blockingRead == CL_TRUE) {
-      DeleteBuffer(cqBuffers.back());
+      DeallocateVector(cqBuffers.back());
     }
   } else if (_event.Size() > 0) {
     const auto context = sd.GetCommandQueueState(*_command_queue, EXCEPTION_MESSAGE).context;
@@ -727,7 +727,7 @@ inline void clEnqueueReadBufferRect_RUNWRAP(CFunction* _token,
                                cqBuffers.back().data(), *_num_events_in_wait_list,
                                *_event_wait_list, *_event);
     if (blockingRead == CL_TRUE) {
-      DeleteBuffer(cqBuffers.back());
+      DeallocateVector(cqBuffers.back());
     }
   } else if (_event.Size() > 0) {
     const auto context = sd.GetCommandQueueState(*_command_queue, EXCEPTION_MESSAGE).context;
@@ -791,7 +791,7 @@ inline void clEnqueueReadImage_RUNWRAP(CFunction* _token,
                         *_region, *_row_pitch, *_slice_pitch, cqBuffers.back().data(),
                         *_num_events_in_wait_list, *_event_wait_list, *_event);
   if (blockingRead == CL_TRUE) {
-    DeleteBuffer(cqBuffers.back());
+    DeallocateVector(cqBuffers.back());
   }
   sd.deallocationHandler.AddToResourcesInExecution(*_command_queue, _ptr, *_blocking_read);
 }
@@ -819,7 +819,7 @@ inline void clEnqueueWriteBuffer_RUNWRAP(CFunction* _token,
                           *_event_wait_list, *_event);
 
   if (*_blocking_write == CL_TRUE) {
-    DeleteBuffer(cqBuffers.back());
+    DeallocateVector(cqBuffers.back());
   }
   sd.deallocationHandler.AddToResourcesInExecution(*_command_queue, _ptr, *_blocking_write);
 }
@@ -856,7 +856,7 @@ inline void clEnqueueWriteBufferRect_RUNWRAP(CFunction* _token,
                               *_event);
 
   if (*_blocking_write == CL_TRUE) {
-    DeleteBuffer(cqBuffers.back());
+    DeallocateVector(cqBuffers.back());
   }
   sd.deallocationHandler.AddToResourcesInExecution(*_command_queue, _ptr, *_blocking_write);
 }
@@ -893,7 +893,7 @@ inline void clEnqueueWriteImage_RUNWRAP(CFunction* _token,
                          *_event);
 
   if (*_blocking_write == CL_TRUE) {
-    DeleteBuffer(cqBuffers.back());
+    DeallocateVector(cqBuffers.back());
   }
   sd.deallocationHandler.AddToResourcesInExecution(*_command_queue, _ptr, *_blocking_write);
 }
@@ -904,7 +904,7 @@ inline void clReleaseMemObject_RUNWRAP(CCLResult& _return_value, Ccl_mem& _memob
     auto& memState = SD().GetMemState(*_memobj, EXCEPTION_MESSAGE);
     if ((memState.buffer || memState.image) && FlagUseHostPtr(memState.flags) &&
         GetRefCount(*_memobj) == 0) {
-      DeleteBuffer(SD()._buffers[memState.buffer_number]);
+      DeallocateVector(SD()._buffers[memState.buffer_number]);
     }
   }
   clReleaseMemObject_SD(*_return_value, *_memobj);
@@ -962,7 +962,7 @@ inline void clCreateBufferWithPropertiesINTEL_RUNWRAP(
   clCreateBufferWithPropertiesINTEL_SD(*_return_value, *_context, mappedProps.data(), *_flags,
                                        *_size, buffer_ptr, *_errcode_ret);
   if (buffer_ptr && (!FlagUseHostPtr(*_flags) || !FlagUseHostPtr(propFlags))) {
-    DeleteBuffer(SD()._buffers.back());
+    DeallocateVector(SD()._buffers.back());
   }
   const auto isUsingHostPtr =
       (*_properties != nullptr && (propFlags & (CL_MEM_COPY_HOST_PTR | CL_MEM_USE_HOST_PTR))) ||
@@ -1045,7 +1045,7 @@ inline void clCreateImageWithPropertiesINTEL_RUNWRAP(Ccl_mem& _return_value,
                                       *_image_format, &image_desc, buffer_ptr, *_errcode_ret);
   if (buffer_ptr && (!FlagUseHostPtr(*_flags) ||
                      !FlagUseHostPtr(GetPropertyVal(mappedProps.data(), CL_MEM_FLAGS)))) {
-    DeleteBuffer(SD()._buffers.back());
+    DeallocateVector(SD()._buffers.back());
   }
   const auto isUsingHostPtr =
       (*_properties != nullptr && (GetPropertyVal(mappedProps.data(), CL_MEM_FLAGS) &

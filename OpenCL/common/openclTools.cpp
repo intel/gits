@@ -963,11 +963,6 @@ std::vector<char> InjectObjOperations(cl_command_queue cmdQ,
   return buffer;
 }
 
-void DeleteBuffer(std::vector<char>& buffer) {
-  std::vector<char> temp(0, 0);
-  buffer.swap(temp);
-}
-
 void AddSignature(std::vector<char>& buffer, mem_signature_t signature) {
   constexpr size_t size = sizeof(mem_signature_t);
   std::array<char, size> signatureArray;
