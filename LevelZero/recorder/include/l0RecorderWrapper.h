@@ -52,6 +52,21 @@ public:
                                            ze_event_handle_t hSignalEvent,
                                            uint32_t numWaitEvents,
                                            ze_event_handle_t* phWaitEvents) const override;
+  void zeCommandListAppendLaunchCooperativeKernel_pre(
+      ze_result_t return_value,
+      ze_command_list_handle_t hCommandList,
+      ze_kernel_handle_t hKernel,
+      const ze_group_count_t* pLaunchFuncArgs,
+      ze_event_handle_t hSignalEvent,
+      uint32_t numWaitEvents,
+      ze_event_handle_t* phWaitEvents) const override;
+  void zeCommandListAppendLaunchKernelIndirect_pre(ze_result_t return_value,
+                                                   ze_command_list_handle_t hCommandList,
+                                                   ze_kernel_handle_t hKernel,
+                                                   const ze_group_count_t* pLaunchArgumentsBuffer,
+                                                   ze_event_handle_t hSignalEvent,
+                                                   uint32_t numWaitEvents,
+                                                   ze_event_handle_t* phWaitEvents) const override;
   void zeCommandListAppendLaunchMultipleKernelsIndirect_pre(
       ze_result_t return_value,
       ze_command_list_handle_t hCommandList,

@@ -121,8 +121,9 @@ inline ze_result_t zeCommandListAppendLaunchCooperativeKernel_RECEXECWRAP(
   auto return_value = ZE_RESULT_SUCCESS;
   GITS_WRAPPER_PRE
   wrapper.UnProtectMemoryPointers(hCommandList);
-  wrapper.zeCommandListAppendLaunchKernel_pre(return_value, hCommandList, hKernel, pLaunchFuncArgs,
-                                              hSignalEvent, numWaitEvents, phWaitEvents);
+  wrapper.zeCommandListAppendLaunchCooperativeKernel_pre(return_value, hCommandList, hKernel,
+                                                         pLaunchFuncArgs, hSignalEvent,
+                                                         numWaitEvents, phWaitEvents);
   return_value = driver.zeCommandListAppendLaunchCooperativeKernel(
       hCommandList, hKernel, pLaunchFuncArgs, hSignalEvent, numWaitEvents, phWaitEvents);
   wrapper.zeCommandListAppendLaunchCooperativeKernel(return_value, hCommandList, hKernel,
@@ -148,9 +149,9 @@ inline ze_result_t zeCommandListAppendLaunchKernelIndirect_RECEXECWRAP(
   auto return_value = ZE_RESULT_SUCCESS;
   GITS_WRAPPER_PRE
   wrapper.UnProtectMemoryPointers(hCommandList);
-  wrapper.zeCommandListAppendLaunchKernel_pre(return_value, hCommandList, hKernel,
-                                              pLaunchArgumentsBuffer, hSignalEvent, numWaitEvents,
-                                              phWaitEvents);
+  wrapper.zeCommandListAppendLaunchKernelIndirect_pre(return_value, hCommandList, hKernel,
+                                                      pLaunchArgumentsBuffer, hSignalEvent,
+                                                      numWaitEvents, phWaitEvents);
   return_value = driver.zeCommandListAppendLaunchKernelIndirect(
       hCommandList, hKernel, pLaunchArgumentsBuffer, hSignalEvent, numWaitEvents, phWaitEvents);
   wrapper.zeCommandListAppendLaunchKernelIndirect(return_value, hCommandList, hKernel,

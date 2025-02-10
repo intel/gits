@@ -108,6 +108,44 @@ void CRecorderWrapper::zeCommandListAppendLaunchKernel_pre(ze_result_t return_va
                                               phWaitEvents);
 }
 
+void CRecorderWrapper::zeCommandListAppendLaunchCooperativeKernel_pre(
+    ze_result_t return_value,
+    ze_command_list_handle_t hCommandList,
+    ze_kernel_handle_t hKernel,
+    const ze_group_count_t* pLaunchFuncArgs,
+    ze_event_handle_t hSignalEvent,
+    uint32_t numWaitEvents,
+    ze_event_handle_t* phWaitEvents) const {
+  zeCommandListAppendLaunchKernel_RECWRAP_PRE(_recorder, return_value, hCommandList, hKernel,
+                                              pLaunchFuncArgs, hSignalEvent, numWaitEvents,
+                                              phWaitEvents);
+  const auto kernelCount = gits::CGits::Instance().CurrentKernelCount();
+  const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
+  if (l0IFace.CfgRec_IsSubcapture() && kernelCount == l0IFace.CfgRec_StartKernel()) {
+    throw ENotImplemented(
+        "Subcapturing from zeCommandListAppendLaunchCooperativeKernel is not supported");
+  }
+}
+
+void CRecorderWrapper::zeCommandListAppendLaunchKernelIndirect_pre(
+    ze_result_t return_value,
+    ze_command_list_handle_t hCommandList,
+    ze_kernel_handle_t hKernel,
+    const ze_group_count_t* pLaunchArgumentsBuffer,
+    ze_event_handle_t hSignalEvent,
+    uint32_t numWaitEvents,
+    ze_event_handle_t* phWaitEvents) const {
+  zeCommandListAppendLaunchKernel_RECWRAP_PRE(_recorder, return_value, hCommandList, hKernel,
+                                              pLaunchArgumentsBuffer, hSignalEvent, numWaitEvents,
+                                              phWaitEvents);
+  const auto kernelCount = gits::CGits::Instance().CurrentKernelCount();
+  const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
+  if (l0IFace.CfgRec_IsSubcapture() && kernelCount == l0IFace.CfgRec_StartKernel()) {
+    throw ENotImplemented(
+        "Subcapturing from zeCommandListAppendLaunchKernelIndirect is not supported");
+  }
+}
+
 void CRecorderWrapper::zeCommandListAppendLaunchMultipleKernelsIndirect_pre(
     ze_result_t return_value,
     ze_command_list_handle_t hCommandList,
