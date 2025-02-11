@@ -28,7 +28,7 @@ private:
 
   HANDLE _hEventExit;
   std::thread _eventThread;
-  std::atomic<bool> _stopWaiting;
+  std::atomic<bool> _waitForExitEvent;
 };
 
 } // namespace gits

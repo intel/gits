@@ -10,49 +10,47 @@
 #include "log.h"
 #include "recorder.h"
 
-gits::ExitEventHandler::ExitEventHandler() : _stopWaiting(false) {
+namespace gits {
+
+ExitEventHandler::ExitEventHandler() : _waitForExitEvent(true) {
   _hEventExit = CreateEvent(NULL, TRUE, FALSE, "GitsExitEvent");
   if (_hEventExit == NULL) {
-    Log(ERR) << "Failed to create exit event";
+    Log(ERR) << "ExitEventHandler: Failed to create event 'GitsExitEvent'";
   }
 }
 
-gits::ExitEventHandler::~ExitEventHandler() {
+ExitEventHandler::~ExitEventHandler() {
   if (_hEventExit) {
     ResetEvent(_hEventExit);
     CloseHandle(_hEventExit);
   }
 }
 
-void gits::ExitEventHandler::Start() {
+void ExitEventHandler::Start() {
   _eventThread = std::thread(&ExitEventHandler::WaitForExitEvent, this);
 }
 
-void gits::ExitEventHandler::Stop() {
-  if (!_stopWaiting) {
-    _stopWaiting = true;
-    SetEvent(_hEventExit);
-  }
-
+void ExitEventHandler::Stop() {
+  _waitForExitEvent = false;
   if (_eventThread.joinable()) {
     _eventThread.join();
   }
 }
 
-void gits::ExitEventHandler::WaitForExitEvent() {
+void ExitEventHandler::WaitForExitEvent() {
   if (_hEventExit == NULL) {
     return;
   }
 
-  DWORD waitExitResult = WaitForSingleObject(_hEventExit, INFINITE);
-
-  if (waitExitResult == WAIT_OBJECT_0) {
-    if (!_stopWaiting) {
-      Log(INFO) << "Received 'GitsExitEvent'. Exiting...";
+  while (_waitForExitEvent) {
+    // Poll for GitsExitEvent every 4ms
+    DWORD waitExitResult = WaitForSingleObject(_hEventExit, 4);
+    if (waitExitResult == WAIT_OBJECT_0) {
+      Log(INFO) << "ExitEventHandler: Received 'GitsExitEvent'. Exiting...";
       gits::CRecorder::Instance().MarkForDeletion();
-      _stopWaiting = true;
+      _waitForExitEvent = false;
     }
-  } else {
-    Log(ERR) << "Failed to wait for 'GitsExitEvent'. Exiting...";
   }
 }
+
+} // namespace gits
