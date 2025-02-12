@@ -85,11 +85,13 @@ void gits::CPlayer::Play() {
   }
 
   const bool finished = _sc.scheduler->Run(*_sc.action);
+
+  const auto& cfgPlayer = Config::Get().common.player;
   // Finish when scheduler doesn't have anything more for us,
   // or we are on a token that makes us process events and
   // frame number is matching our last frame + 1
   // (so we have played back frame 'exitFrame'.
-  if (finished || CGits::Instance().CurrentFrame() == Config::Get().common.player.exitFrame + 1 ||
+  if (finished || CGits::Instance().CurrentFrame() == cfgPlayer.exitFrame + 1 ||
       CGits::Instance().Finished() == true) {
     _state = STATE_FINISHED;
     CGits::Instance().ProcessEndPlaybackEvents();
@@ -97,7 +99,7 @@ void gits::CPlayer::Play() {
 
   // Only pause when
   if (_interactive ||
-      Config::Get().common.player.stopAfterFrames[CGits::Instance().CurrentFrame()]) {
+      cfgPlayer.stopAfterFrames[static_cast<size_t>(CGits::Instance().CurrentFrame()) - 1]) {
     _state = STATE_PAUSED;
   }
 }
