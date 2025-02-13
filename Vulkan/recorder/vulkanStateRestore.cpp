@@ -2486,14 +2486,9 @@ std::vector<std::pair<uint64_t, std::pair<uint64_t, bool>>> GetSortedAliasedReso
   return sortedByTimestamp;
 }
 
-bool isResourceOmittedFromRestoration(uint64_t resource,
-                                      bool isImage,
-                                      gits::Vulkan::CStateDynamic& sd) {
-  // Skip resources due to minimal state restore
-  if (gits::Vulkan::IsObjectToSkip(resource)) {
-    return true;
-  }
-
+bool isResourceOmittedFromContentsRestoration(uint64_t resource,
+                                              bool isImage,
+                                              gits::Vulkan::CStateDynamic& sd) {
   if (isImage) {
     VkImage image = (VkImage)resource;
     auto& imageState = sd._imagestates[image];
@@ -2701,17 +2696,25 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
 
   for (auto& imageAndStatePair : sd._imagestates) {
     VkImage image = imageAndStatePair.first;
+
+    // Skip resources due to a minimal state restore
+    if (gits::Vulkan::IsObjectToSkip((uint64_t)image)) {
+      Log(INFO) << "Omitting restoration of an image " << image
+                << " due to a minimal state restore.";
+      continue;
+    }
+
     auto& imageState = imageAndStatePair.second;
     auto device = imageState->deviceStateStore->deviceHandle;
-    auto physicalDevice =
-        imageState->deviceStateStore->physicalDeviceStateStore->physicalDeviceHandle;
 
     if (temporaryDeviceResources.find(device) == temporaryDeviceResources.end()) {
-      Log(INFO) << "Omitting restoration of image " << image
+      Log(INFO) << "Omitting restoration of an image " << image
                 << " because it was created for an ignored device.";
       continue;
     }
 
+    auto physicalDevice =
+        imageState->deviceStateStore->physicalDeviceStateStore->physicalDeviceHandle;
     auto addBarrier = [physicalDevice, device](std::vector<VkImageMemoryBarrier>& oldVector,
                                                std::vector<VkImageMemoryBarrier2>& newVector,
                                                VkImageMemoryBarrier2 barrier) {
@@ -2759,9 +2762,7 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
       format = imageState->imageCreateInfoData.Value()->format;
     }
 
-    if (isResourceOmittedFromRestoration((uint64_t)image, true, sd)) {
-      Log(INFO) << "Omitting restoration of image " << image << ".";
-
+    if (isResourceOmittedFromContentsRestoration((uint64_t)image, true, sd)) {
       // Don't restore image contents, perform only a layout transition
 
       for (uint32_t l = 0; l < arrayLayers; ++l) {
@@ -3368,15 +3369,23 @@ void gits::Vulkan::RestoreBufferContents(CScheduler& scheduler, CStateDynamic& s
   }
 
   for (auto& bufferAndStatePair : sd._bufferstates) {
-    if (isResourceOmittedFromRestoration((uint64_t)bufferAndStatePair.first, false, sd)) {
+    auto dstBuffer = bufferAndStatePair.first;
+
+    // Skip resources due to a minimal state restore
+    if (gits::Vulkan::IsObjectToSkip((uint64_t)dstBuffer)) {
+      Log(INFO) << "Omitting restoration of a buffer " << dstBuffer
+                << " due to a minimal state restore.";
+      continue;
+    }
+
+    if (isResourceOmittedFromContentsRestoration((uint64_t)dstBuffer, false, sd)) {
       continue;
     }
 
     auto device = bufferAndStatePair.second->deviceStateStore->deviceHandle;
-    auto dstBuffer = bufferAndStatePair.first;
 
     if (temporaryDeviceResources.find(device) == temporaryDeviceResources.end()) {
-      Log(INFO) << "Omitting restoration of buffer " << dstBuffer
+      Log(INFO) << "Omitting restoration of a buffer " << dstBuffer
                 << " because it was created for an ignored device.";
       continue;
     }
