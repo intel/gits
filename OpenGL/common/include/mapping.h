@@ -23,6 +23,7 @@
 #endif
 
 #include <unordered_map>
+#include <optional>
 
 namespace gits {
 namespace OpenGL {
@@ -127,6 +128,11 @@ struct MappedObjectTraits {
 
 bool isMappingRequired(MapObjects mapObject, int legacy);
 
+// Workaround (+ warning) for mixing of the GL_ARB_framebuffer_object extension
+// and the older GL_EXT_framebuffer_object extension.
+template <MapObjects MapObjectId, typename Type>
+std::optional<Type> handleFBOExtMixing(Type key);
+
 // Structure for mapping id of mapped argument to its type.
 template <int>
 struct IdMappedArgMap {};
@@ -191,6 +197,11 @@ public:
     auto& the_map = get_map();
     auto iter = the_map.find(key);
     if (iter == the_map.end()) {
+      std::optional<Type> foundElsewhere = handleFBOExtMixing<MapObjectId, Type>(key);
+      if (foundElsewhere) {
+        return foundElsewhere.value();
+      }
+
       Log(WARN) << "Couldn't map object name " << key << " of typeid " << MapObjectId;
       return (Type)gl_name_cast<typename ptr_to_void<Type>::type>(1000000);
     }
@@ -384,6 +395,37 @@ DEFINE_MAPPED_ARGUMENT(GLX_CONTEXT_MAP, GLXContext, NativeObjectTraits, CGLXCont
 DEFINE_MAPPED_ARGUMENT(GLX_DRAWABLE_MAP, uint64_t, NativeObjectTraits, CGLXDrawable)
 
 #undef DEFINE_MAPPED_ARGUMENT
+
+// This helper function is defined rather late in the file because it needs
+// various types that are defined or typedef'd earlier and forward declarations
+// of typedefs don't exist in C++.
+template <MapObjects MapObjectId, typename Type>
+std::optional<Type> handleFBOExtMixing(Type key) {
+  // It's unused when this template is instantiated without either of the ifs.
+  [[maybe_unused]] const char* message =
+      "App is mixing calls from the GL_ARB_framebuffer_object extension and the older "
+      "GL_EXT_framebuffer_object extension. GITS will try to handle this but issues might "
+      "still occur. Consider recording the stream with `ScheduleFboEXTAsCoreWA = true` to "
+      "record non-EXT framebuffer API calls whenever app calls the EXT ones.";
+
+  if constexpr (MapObjectId == OGL_FRAME_BUFFER_MAP) {
+    if (CGLFramebufferEXT::CheckMapping(key)) {
+      CALL_ONCE[message] {
+        Log(WARN) << message;
+      };
+      return CGLFramebufferEXT::GetMapping(key);
+    }
+  } else if constexpr (MapObjectId == OGL_RENDER_BUFFER_MAP) {
+    if (CGLRenderbufferEXT::CheckMapping(key)) {
+      CALL_ONCE[message] {
+        Log(WARN) << message;
+      };
+      return CGLRenderbufferEXT::GetMapping(key);
+    }
+  }
+
+  return {};
+}
 
 struct current_program_tag_t {};
 extern current_program_tag_t current_program_tag;
