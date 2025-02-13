@@ -1159,6 +1159,176 @@ void gits::Vulkan::RestoreAllocatedDescriptorSet(CScheduler& scheduler, CStateDy
   }
 }
 
+namespace {
+
+bool RestoreSamplerDescriptorHelper(
+    gits::Vulkan::CStateDynamic& sd,
+    gits::Vulkan::CDescriptorSetState::CDescriptorSetBindingData::CDescriptorData& descriptorData,
+    VkWriteDescriptorSet& descriptorWrite,
+    VkDevice device) {
+  if (descriptorData.pImageInfo) {
+    auto sampler = descriptorData.pImageInfo->Value()->sampler;
+    auto samplerStateIT = sd._samplerstates.find(sampler);
+
+    if ((samplerStateIT != sd._samplerstates.end()) &&
+        (descriptorData.samplerStateStore->GetUniqueStateID() ==
+         samplerStateIT->second->GetUniqueStateID())) {
+      descriptorWrite.pImageInfo = descriptorData.pImageInfo->Value();
+      return true;
+    } else {
+      Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
+                << " because used VkSampler " << sampler << " doesn't exist.";
+    }
+  }
+  return false;
+}
+
+bool RestoreCombinedImageSamplerDescriptorHelper(
+    gits::Vulkan::CStateDynamic& sd,
+    gits::Vulkan::CDescriptorSetState::CDescriptorSetBindingData::CDescriptorData& descriptorData,
+    VkWriteDescriptorSet& descriptorWrite,
+    VkDevice device) {
+  if (descriptorData.pImageInfo) {
+    auto sampler = descriptorData.pImageInfo->Value()->sampler;
+    auto samplerStateIT = sd._samplerstates.find(sampler);
+    auto imageView = descriptorData.pImageInfo->Value()->imageView;
+    auto imageViewStateIT = sd._imageviewstates.find(imageView);
+    auto image = imageViewStateIT->second->imageStateStore->imageHandle;
+    auto imageStateIT = sd._imagestates.find(image);
+
+    if ((samplerStateIT != sd._samplerstates.end()) &&
+        (descriptorData.samplerStateStore->GetUniqueStateID() ==
+         samplerStateIT->second->GetUniqueStateID()) &&
+        (imageViewStateIT != sd._imageviewstates.end()) &&
+        (descriptorData.imageViewStateStore->GetUniqueStateID() ==
+         imageViewStateIT->second->GetUniqueStateID()) &&
+        (imageStateIT != sd._imagestates.end()) &&
+        (imageStateIT->second->GetUniqueStateID() ==
+         imageViewStateIT->second->imageStateStore->GetUniqueStateID())) {
+      descriptorWrite.pImageInfo = descriptorData.pImageInfo->Value();
+      return true;
+    } else {
+      Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
+                << " because used VkSampler " << sampler << " and/or VkImageView " << imageView
+                << " don't exist.";
+    }
+  }
+  return false;
+}
+
+bool RestoreImageDescriptorHelper(
+    gits::Vulkan::CStateDynamic& sd,
+    gits::Vulkan::CDescriptorSetState::CDescriptorSetBindingData::CDescriptorData& descriptorData,
+    VkWriteDescriptorSet& descriptorWrite,
+    VkDevice device) {
+  if (descriptorData.pImageInfo) {
+    auto imageView = descriptorData.pImageInfo->Value()->imageView;
+    auto imageViewStateIT = sd._imageviewstates.find(imageView);
+    auto image = imageViewStateIT->second->imageStateStore->imageHandle;
+    auto imageStateIT = sd._imagestates.find(image);
+
+    if ((imageViewStateIT != sd._imageviewstates.end()) &&
+        (descriptorData.imageViewStateStore->GetUniqueStateID() ==
+         imageViewStateIT->second->GetUniqueStateID()) &&
+        (imageStateIT != sd._imagestates.end()) &&
+        (imageStateIT->second->GetUniqueStateID() ==
+         imageViewStateIT->second->imageStateStore->GetUniqueStateID())) {
+      descriptorWrite.pImageInfo = descriptorData.pImageInfo->Value();
+      return true;
+    } else {
+      Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
+                << " because used VkImageView " << imageView << " doesn't exist.";
+    }
+  }
+  return false;
+}
+
+bool RestoreTexelBufferDescriptorHelper(
+    gits::Vulkan::CStateDynamic& sd,
+    gits::Vulkan::CDescriptorSetState::CDescriptorSetBindingData::CDescriptorData& descriptorData,
+    VkWriteDescriptorSet& descriptorWrite,
+    VkDevice device) {
+  if (descriptorData.pTexelBufferView) {
+    auto texelBufferView = *descriptorData.pTexelBufferView->Value();
+    auto bufferViewStateIt = sd._bufferviewstates.find(texelBufferView);
+    auto buffer = bufferViewStateIt->second->bufferStateStore->bufferHandle;
+    auto bufferStateIT = sd._bufferstates.find(buffer);
+
+    if ((bufferViewStateIt != sd._bufferviewstates.end()) &&
+        (descriptorData.bufferViewStateStore->GetUniqueStateID() ==
+         bufferViewStateIt->second->GetUniqueStateID()) &&
+        (bufferStateIT != sd._bufferstates.end()) &&
+        (bufferStateIT->second->GetUniqueStateID() ==
+         bufferViewStateIt->second->bufferStateStore->GetUniqueStateID())) {
+      descriptorWrite.pTexelBufferView = descriptorData.pTexelBufferView->Value();
+      return true;
+    } else {
+      Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
+                << " because used VkBufferView " << texelBufferView << " doesn't exist.";
+    }
+  }
+  return false;
+}
+
+bool RestoreBufferDescriptorHelper(
+    gits::Vulkan::CStateDynamic& sd,
+    gits::Vulkan::CDescriptorSetState::CDescriptorSetBindingData::CDescriptorData& descriptorData,
+    VkWriteDescriptorSet& descriptorWrite,
+    VkDevice device) {
+  if (descriptorData.pBufferInfo) {
+    auto buffer = descriptorData.pBufferInfo->Value()->buffer;
+    auto bufferStateIt = sd._bufferstates.find(buffer);
+
+    if ((bufferStateIt != sd._bufferstates.end()) &&
+        (descriptorData.bufferStateStore->GetUniqueStateID() ==
+         bufferStateIt->second->GetUniqueStateID())) {
+      descriptorWrite.pBufferInfo = descriptorData.pBufferInfo->Value();
+      return true;
+    } else {
+      Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
+                << " because used VkBuffer " << buffer << " doesn't exist.";
+    }
+  }
+  return false;
+}
+
+bool RestoreAccelerationStructureDescriptorHelper(
+    gits::Vulkan::CStateDynamic& sd,
+    gits::Vulkan::CDescriptorSetState::CDescriptorSetBindingData::CDescriptorData& descriptorData,
+    VkWriteDescriptorSet& descriptorWrite,
+    std::list<VkWriteDescriptorSetAccelerationStructureKHR>& accelerationStructureWrites,
+    VkDevice device) {
+  if (descriptorData.accelerationStructureStateStore) {
+    auto accStruct = descriptorData.accelerationStructureStateStore->accelerationStructureHandle;
+    auto accStructStateIT = sd._accelerationstructurekhrstates.find(accStruct);
+    auto buffer = descriptorData.accelerationStructureStateStore->bufferStateStore->bufferHandle;
+    auto bufferStateIT = sd._bufferstates.find(buffer);
+
+    if ((accStructStateIT != sd._accelerationstructurekhrstates.end()) &&
+        (descriptorData.accelerationStructureStateStore->GetUniqueStateID() ==
+         accStructStateIT->second->GetUniqueStateID()) &&
+        (bufferStateIT != sd._bufferstates.end()) &&
+        (descriptorData.accelerationStructureStateStore->bufferStateStore->GetUniqueStateID() ==
+         bufferStateIT->second->GetUniqueStateID())) {
+      accelerationStructureWrites.emplace_back(VkWriteDescriptorSetAccelerationStructureKHR{
+          VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR, // VkStructureType sType;
+          nullptr,                                                           // const void* pNext;
+          1, // uint32_t accelerationStructureCount;
+          &descriptorData.accelerationStructureStateStore
+               ->accelerationStructureHandle // const VkAccelerationStructureKHR* pAccelerationStructures;
+      });
+      descriptorWrite.pNext = &accelerationStructureWrites.back();
+      return true;
+    } else {
+      Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
+                << " because used VkAccelerationStructureKHR " << accStruct << " doesn't exist.";
+    }
+  }
+  return false;
+}
+
+} // namespace
+
 void gits::Vulkan::RestoreDescriptorSetsUpdates(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& descriptorSetState : sd._descriptorsetstates) {
     if (IsObjectToSkip((uint64_t)descriptorSetState.first)) {
@@ -1171,6 +1341,9 @@ void gits::Vulkan::RestoreDescriptorSetsUpdates(CScheduler& scheduler, CStateDyn
 
     for (auto& descriptorSetBindingIterator : descriptorSetState.second->descriptorSetBindings) {
       auto& descriptorSetBinding = descriptorSetBindingIterator.second;
+      auto device =
+          descriptorSetState.second->descriptorPoolStateStore->deviceStateStore->deviceHandle;
+
       if (descriptorSetBinding.descriptorType == VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK) {
         VkWriteDescriptorSetInlineUniformBlock uniformBlock = {
             VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_INLINE_UNIFORM_BLOCK, //VkStructureType sType
@@ -1207,200 +1380,48 @@ void gits::Vulkan::RestoreDescriptorSetsUpdates(CScheduler& scheduler, CStateDyn
               nullptr,                                // const VkDescriptorBufferInfo* pBufferInfo;
               nullptr                                 // const VkBufferView* pTexelBufferView;
           };
+          bool writeDescriptor = false;
 
           switch (descriptorSetBinding.descriptorType) {
           case VK_DESCRIPTOR_TYPE_SAMPLER:
-            if ((descriptorSetBinding.descriptorData[arrayIndex].pImageInfo)) {
-              if ((VK_NULL_HANDLE !=
-                   descriptorSetBinding.descriptorData[arrayIndex].pImageInfo->Value()->sampler) &&
-                  (sd._samplerstates.find(descriptorSetBinding.descriptorData[arrayIndex]
-                                              .pImageInfo->Value()
-                                              ->sampler) != sd._samplerstates.end()) &&
-                  (descriptorSetBinding.descriptorData[arrayIndex]
-                       .samplerStateStore->GetUniqueStateID() ==
-                   sd._samplerstates[descriptorSetBinding.descriptorData[arrayIndex]
-                                         .pImageInfo->Value()
-                                         ->sampler]
-                       ->GetUniqueStateID())) {
-                descriptorWrite.pImageInfo =
-                    descriptorSetBinding.descriptorData[arrayIndex].pImageInfo->Value();
-                descriptorWrites.push_back(descriptorWrite);
-              } else {
-                Log(INFO)
-                    << "Omitting restore of vkUpdateDescriptorSets for VkDevice "
-                    << descriptorSetState.second->descriptorPoolStateStore->deviceStateStore
-                           ->deviceHandle
-                    << " because used VkSampler "
-                    << descriptorSetBinding.descriptorData[arrayIndex].pImageInfo->Value()->sampler
-                    << " doesn't exist.";
-              }
-            }
+            writeDescriptor = RestoreSamplerDescriptorHelper(
+                sd, descriptorSetBinding.descriptorData[arrayIndex], descriptorWrite, device);
             break;
           case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-            if ((descriptorSetBinding.descriptorData[arrayIndex].pImageInfo)) {
-              if ((VK_NULL_HANDLE !=
-                   descriptorSetBinding.descriptorData[arrayIndex].pImageInfo->Value()->sampler) &&
-                  (sd._samplerstates.find(descriptorSetBinding.descriptorData[arrayIndex]
-                                              .pImageInfo->Value()
-                                              ->sampler) != sd._samplerstates.end()) &&
-                  (descriptorSetBinding.descriptorData[arrayIndex]
-                       .samplerStateStore->GetUniqueStateID() ==
-                   sd._samplerstates[descriptorSetBinding.descriptorData[arrayIndex]
-                                         .pImageInfo->Value()
-                                         ->sampler]
-                       ->GetUniqueStateID()) &&
-                  (VK_NULL_HANDLE != descriptorSetBinding.descriptorData[arrayIndex]
-                                         .pImageInfo->Value()
-                                         ->imageView) &&
-                  (sd._imageviewstates.find(descriptorSetBinding.descriptorData[arrayIndex]
-                                                .pImageInfo->Value()
-                                                ->imageView) != sd._imageviewstates.end()) &&
-                  (descriptorSetBinding.descriptorData[arrayIndex]
-                       .imageViewStateStore->GetUniqueStateID() ==
-                   sd._imageviewstates[descriptorSetBinding.descriptorData[arrayIndex]
-                                           .pImageInfo->Value()
-                                           ->imageView]
-                       ->GetUniqueStateID())) {
-                descriptorWrite.pImageInfo =
-                    descriptorSetBinding.descriptorData[arrayIndex].pImageInfo->Value();
-                descriptorWrites.push_back(descriptorWrite);
-              } else {
-                Log(INFO)
-                    << "Omitting restore of vkUpdateDescriptorSets for VkDevice "
-                    << descriptorSetState.second->descriptorPoolStateStore->deviceStateStore
-                           ->deviceHandle
-                    << " because used VkSampler "
-                    << descriptorSetBinding.descriptorData[arrayIndex].pImageInfo->Value()->sampler
-                    << " and/or VkImageView "
-                    << descriptorSetBinding.descriptorData[arrayIndex]
-                           .pImageInfo->Value()
-                           ->imageView
-                    << " don't exist.";
-              }
-            }
+            writeDescriptor = RestoreCombinedImageSamplerDescriptorHelper(
+                sd, descriptorSetBinding.descriptorData[arrayIndex], descriptorWrite, device);
             break;
           case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
           case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
           case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-            if ((descriptorSetBinding.descriptorData[arrayIndex].pImageInfo)) {
-              auto& imageView =
-                  descriptorSetBinding.descriptorData[arrayIndex].pImageInfo->Value()->imageView;
-              if ((VK_NULL_HANDLE != imageView) &&
-                  (sd._imageviewstates.find(imageView) != sd._imageviewstates.end()) &&
-                  (descriptorSetBinding.descriptorData[arrayIndex]
-                       .imageViewStateStore->GetUniqueStateID() ==
-                   sd._imageviewstates[imageView]->GetUniqueStateID()) &&
-                  (sd._imagestates.find(
-                       sd._imageviewstates[imageView]->imageStateStore->imageHandle) !=
-                   sd._imagestates.end()) &&
-                  (sd._imagestates[sd._imageviewstates[imageView]->imageStateStore->imageHandle]
-                       ->GetUniqueStateID() ==
-                   sd._imageviewstates[imageView]->imageStateStore->GetUniqueStateID())) {
-                descriptorWrite.pImageInfo =
-                    descriptorSetBinding.descriptorData[arrayIndex].pImageInfo->Value();
-                descriptorWrites.push_back(descriptorWrite);
-              } else {
-                Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice "
-                          << descriptorSetState.second->descriptorPoolStateStore->deviceStateStore
-                                 ->deviceHandle
-                          << " because used VkImageView " << imageView << " doesn't exist.";
-              }
-            }
+            writeDescriptor = RestoreImageDescriptorHelper(
+                sd, descriptorSetBinding.descriptorData[arrayIndex], descriptorWrite, device);
             break;
           case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
           case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-            if (descriptorSetBinding.descriptorData[arrayIndex].pTexelBufferView) {
-              if ((VK_NULL_HANDLE !=
-                   *descriptorSetBinding.descriptorData[arrayIndex].pTexelBufferView->Value()) &&
-                  (sd._bufferviewstates.find(*descriptorSetBinding.descriptorData[arrayIndex]
-                                                  .pTexelBufferView->Value()) !=
-                   sd._bufferviewstates.end()) &&
-                  (descriptorSetBinding.descriptorData[arrayIndex]
-                       .bufferViewStateStore->GetUniqueStateID() ==
-                   sd._bufferviewstates[*descriptorSetBinding.descriptorData[arrayIndex]
-                                             .pTexelBufferView->Value()]
-                       ->GetUniqueStateID())) {
-                descriptorWrite.pTexelBufferView =
-                    descriptorSetBinding.descriptorData[arrayIndex].pTexelBufferView->Value();
-                descriptorWrites.push_back(descriptorWrite);
-              } else {
-                Log(INFO)
-                    << "Omitting restore of vkUpdateDescriptorSets for VkDevice "
-                    << descriptorSetState.second->descriptorPoolStateStore->deviceStateStore
-                           ->deviceHandle
-                    << " because used VkBufferView "
-                    << *descriptorSetBinding.descriptorData[arrayIndex].pTexelBufferView->Value()
-                    << " doesn't exist.";
-              }
-            }
+            writeDescriptor = RestoreTexelBufferDescriptorHelper(
+                sd, descriptorSetBinding.descriptorData[arrayIndex], descriptorWrite, device);
             break;
           case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
           case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
           case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
           case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-            if (descriptorSetBinding.descriptorData[arrayIndex].pBufferInfo) {
-              if ((VK_NULL_HANDLE !=
-                   descriptorSetBinding.descriptorData[arrayIndex].pBufferInfo->Value()->buffer) &&
-                  (sd._bufferstates.find(descriptorSetBinding.descriptorData[arrayIndex]
-                                             .pBufferInfo->Value()
-                                             ->buffer) != sd._bufferstates.end()) &&
-                  (descriptorSetBinding.descriptorData[arrayIndex]
-                       .bufferStateStore->GetUniqueStateID() ==
-                   sd._bufferstates[descriptorSetBinding.descriptorData[arrayIndex]
-                                        .pBufferInfo->Value()
-                                        ->buffer]
-                       ->GetUniqueStateID())) {
-                descriptorWrite.pBufferInfo =
-                    descriptorSetBinding.descriptorData[arrayIndex].pBufferInfo->Value();
-                descriptorWrites.push_back(descriptorWrite);
-              } else {
-                Log(INFO)
-                    << "Omitting restore of vkUpdateDescriptorSets for VkDevice "
-                    << descriptorSetState.second->descriptorPoolStateStore->deviceStateStore
-                           ->deviceHandle
-                    << " because used VkBuffer "
-                    << descriptorSetBinding.descriptorData[arrayIndex].pBufferInfo->Value()->buffer
-                    << " doesn't exist.";
-              }
-            }
+            writeDescriptor = RestoreBufferDescriptorHelper(
+                sd, descriptorSetBinding.descriptorData[arrayIndex], descriptorWrite, device);
             break;
           case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
-            if (descriptorSetBinding.descriptorData[arrayIndex].accelerationStructureStateStore) {
-              if ((sd._accelerationstructurekhrstates.find(
-                       descriptorSetBinding.descriptorData[arrayIndex]
-                           .accelerationStructureStateStore->accelerationStructureHandle) !=
-                   sd._accelerationstructurekhrstates.end()) &&
-                  (descriptorSetBinding.descriptorData[arrayIndex]
-                       .accelerationStructureStateStore->GetUniqueStateID() ==
-                   sd._accelerationstructurekhrstates
-                       .find(descriptorSetBinding.descriptorData[arrayIndex]
-                                 .accelerationStructureStateStore->accelerationStructureHandle)
-                       ->second->GetUniqueStateID())) {
-                accelerationStructureWrites.emplace_back(VkWriteDescriptorSetAccelerationStructureKHR{
-                    VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR, // VkStructureType sType;
-                    nullptr, // const void* pNext;
-                    1,       // uint32_t accelerationStructureCount;
-                    &descriptorSetBinding.descriptorData[arrayIndex]
-                         .accelerationStructureStateStore
-                         ->accelerationStructureHandle // const VkAccelerationStructureKHR* pAccelerationStructures;
-                });
-                descriptorWrite.pNext = &accelerationStructureWrites.back();
-                descriptorWrites.push_back(descriptorWrite);
-              } else {
-                Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice "
-                          << descriptorSetState.second->descriptorPoolStateStore->deviceStateStore
-                                 ->deviceHandle
-                          << " because used VkAccelerationStructureKHR "
-                          << descriptorSetBinding.descriptorData[arrayIndex]
-                                 .accelerationStructureStateStore->accelerationStructureHandle
-                          << " doesn't exist.";
-              }
-            }
+            writeDescriptor = RestoreAccelerationStructureDescriptorHelper(
+                sd, descriptorSetBinding.descriptorData[arrayIndex], descriptorWrite,
+                accelerationStructureWrites, device);
             break;
           default:
-            Log(TRACE) << "Not handled VkDescriptorType enumeration: " +
-                              std::to_string(descriptorSetBinding.descriptorType);
+            Log(TRACE) << "Not handled VkDescriptorType enumeration: "
+                       << descriptorSetBinding.descriptorType;
             break;
+          }
+
+          if (writeDescriptor) {
+            descriptorWrites.push_back(descriptorWrite);
           }
         }
       }

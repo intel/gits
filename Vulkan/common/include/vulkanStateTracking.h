@@ -1399,8 +1399,7 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
                     accelerationStructureState->bufferStateStore;
               }
             }
-            break;
-          }
+          } break;
           default:
             Log(TRACE) << "Not handled VkDescriptorType enumeration: " +
                               std::to_string(descriptorType);
