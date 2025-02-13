@@ -1465,7 +1465,7 @@ struct CAccelerationStructureKHRState : public UniqueResourceHandle {
     VkCommandExecutionSideGITS executionSide;
 
     CCopyInfo(const VkCopyAccelerationStructureInfoKHR* _pCopyInfo,
-              std::shared_ptr<CAccelerationStructureKHRState>& _srcAccelerationStructureState,
+              const std::shared_ptr<CAccelerationStructureKHRState>& _srcAccelerationStructureState,
               VkCommandExecutionSideGITS _executionSide)
         : srcAccelerationStructureStateStore(_srcAccelerationStructureState),
           copyAccelerationStructureInfoData(_pCopyInfo),

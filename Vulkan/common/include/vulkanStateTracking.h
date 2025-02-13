@@ -135,12 +135,12 @@ inline void vkDestroyInstance_SD(VkInstance instance, const VkAllocationCallback
   {
     std::vector<VkPhysicalDevice> physicalDevicesToRemove;
 
-    for (auto& physicalDeviceState : SD()._physicaldevicestates) {
+    for (const auto& physicalDeviceState : SD()._physicaldevicestates) {
       if (physicalDeviceState.second->instanceStateStore->instanceHandle == instance) {
         physicalDevicesToRemove.push_back(physicalDeviceState.first);
       }
     }
-    for (auto& physicalDevice : physicalDevicesToRemove) {
+    for (const auto& physicalDevice : physicalDevicesToRemove) {
       SD()._physicaldevicestates.erase(physicalDevice);
     }
   }
@@ -168,7 +168,7 @@ void getSupportedExtensions(std::shared_ptr<CPhysicalDeviceState>& physicalDevic
   }
 
   physicalDeviceState->supportedExtensions.reserve(supportedExtensionsCount);
-  for (auto& extension : supportedExtensions) {
+  for (const auto& extension : supportedExtensions) {
     physicalDeviceState->supportedExtensions.emplace_back(extension.extensionName);
   }
 }
@@ -266,7 +266,7 @@ inline void vkDestroySurfaceKHR_SD(VkInstance instance,
                                    VkSurfaceKHR surface,
                                    const VkAllocationCallbacks* pAllocator) {
   if (surface) {
-    auto& surfaceState = SD()._surfacekhrstates[surface];
+    const auto& surfaceState = SD()._surfacekhrstates[surface];
 #ifdef GITS_PLATFORM_WINDOWS
     SD()._hwndstates.erase(surfaceState->surfaceCreateInfoWin32Data.Value()->hwnd);
 #endif
@@ -353,7 +353,7 @@ inline void vkQueueBindSparse_SD(VkResult returnValue,
 
   if (Config::Get().IsRecorder()) {
     for (uint32_t bic = 0; bic < bindInfoCount; ++bic) {
-      auto& bindInfo = pBindInfo[bic];
+      const auto& bindInfo = pBindInfo[bic];
 
       for (uint32_t b = 0; b < bindInfo.bufferBindCount; ++b) {
         auto& bufferState = SD()._bufferstates[bindInfo.pBufferBinds[b].buffer];
@@ -499,7 +499,7 @@ inline void vkQueuePresentKHR_SD(VkResult return_value,
 inline void vkDestroySwapchainKHR_SD(VkDevice device,
                                      VkSwapchainKHR swapchain,
                                      const VkAllocationCallbacks* pAllocator) {
-  for (auto& imageState : SD()._swapchainkhrstates[swapchain]->imageStateStoreList) {
+  for (const auto& imageState : SD()._swapchainkhrstates[swapchain]->imageStateStoreList) {
     SD()._imagestates.erase(imageState->imageHandle);
   }
   SD()._swapchainkhrstates.erase(swapchain);
@@ -527,7 +527,7 @@ inline void vkResetDescriptorPool_SD(VkResult return_value,
     auto& descriptorSetStateList =
         SD()._descriptorpoolstates[descriptorPool]->descriptorSetStateStoreList;
 
-    for (auto& descriptorSetState : descriptorSetStateList) {
+    for (const auto& descriptorSetState : descriptorSetStateList) {
       SD()._descriptorsetstates.erase(descriptorSetState->descriptorSetHandle); // Stardust
     }
     descriptorSetStateList.clear();
@@ -538,7 +538,7 @@ inline void vkDestroyDescriptorPool_SD(VkDevice device,
                                        VkDescriptorPool descriptorPool,
                                        const VkAllocationCallbacks* pAllocator) {
   if (descriptorPool != VK_NULL_HANDLE) {
-    for (auto& descriptorSetState :
+    for (const auto& descriptorSetState :
          SD()._descriptorpoolstates[descriptorPool]->descriptorSetStateStoreList) {
       SD()._descriptorsetstates.erase(descriptorSetState->descriptorSetHandle); // Stardust
     }
@@ -569,7 +569,7 @@ inline void vkResetCommandPool_SD(VkResult return_value,
                                   VkDevice device,
                                   VkCommandPool commandPool,
                                   VkCommandPoolResetFlags flags) {
-  for (auto& commandBufferState :
+  for (const auto& commandBufferState :
        SD()._commandpoolstates[commandPool]->commandBufferStateStoreList) {
     vkResetCommandBuffer_SD(return_value, commandBufferState->commandBufferHandle, flags);
   }
@@ -585,8 +585,8 @@ inline void vkDestroyCommandPool_SD(VkDevice device,
     // we need to call vkResetCommandPool_SD(), which calls vkResetCommandBuffer_SD()
     vkResetCommandPool_SD(VK_SUCCESS, device, commandPool, 0);
 
-    auto& commandPoolState = SD()._commandpoolstates[commandPool];
-    for (auto& commandBufferState : commandPoolState->commandBufferStateStoreList) {
+    const auto& commandPoolState = SD()._commandpoolstates[commandPool];
+    for (const auto& commandBufferState : commandPoolState->commandBufferStateStoreList) {
       SD()._commandbufferstates.erase(commandBufferState->commandBufferHandle);
 
       if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
@@ -779,7 +779,7 @@ inline void vkDestroyImage_SD(VkDevice device,
                               VkImage image,
                               const VkAllocationCallbacks* pAllocator) {
   if (Config::Get().IsRecorder() && isSubcaptureBeforeRestorationPhase()) {
-    auto iterator = SD()._imagestates.find(image);
+    const auto iterator = SD()._imagestates.find(image);
     if ((iterator != SD()._imagestates.end()) && (iterator->second->binding != nullptr)) {
       iterator->second->binding->deviceMemoryStateStore->aliasingTracker.RemoveImage(
           iterator->second->binding->memoryOffset, iterator->second->binding->memorySizeRequirement,
@@ -908,13 +908,13 @@ inline void vkDestroyBuffer_SD(VkDevice device,
     return;
   }
   if (Config::Get().IsRecorder()) {
-    auto iterator = SD()._bufferstates.find(buffer);
+    const auto iterator = SD()._bufferstates.find(buffer);
     if (iterator == SD()._bufferstates.end()) {
       Log(WARN) << "Unknown buffer destroyed: " << buffer;
       return;
     }
 
-    auto& bufferState = iterator->second;
+    const auto& bufferState = iterator->second;
 
     if (isSubcaptureBeforeRestorationPhase()) {
       if (bufferState->binding != nullptr) {
@@ -1030,7 +1030,7 @@ inline void vkGetBufferDeviceAddressUnifiedGITS_SD(VkDeviceAddress return_value,
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 
-  auto& bufferState = SD()._bufferstates[pInfo->buffer];
+  const auto& bufferState = SD()._bufferstates[pInfo->buffer];
   bufferState->deviceAddress =
       return_value; // <- We need this data to properly replay streams (see CBufferDeviceAddressObject class)
 
@@ -1138,7 +1138,7 @@ inline void vkAllocateDescriptorSets_SD(VkResult return_value,
         }
 
         for (uint32_t j = 0; j < layoutCreateInfo->bindingCount; j++) {
-          auto& layoutBindingData = layoutCreateInfo->pBindings[j];
+          const auto& layoutBindingData = layoutCreateInfo->pBindings[j];
           auto& descriptorSetBinding =
               descriptorSetState->descriptorSetBindings[layoutBindingData.binding];
           uint32_t descriptorCount = layoutBindingData.descriptorCount;
@@ -1243,9 +1243,9 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
           case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
             if ((pDescriptorWrites[i].pImageInfo != nullptr) &&
                 (pDescriptorWrites[i].pImageInfo[j].imageView != VK_NULL_HANDLE)) {
-              auto& imageViewState =
+              const auto& imageViewState =
                   SD()._imageviewstates[pDescriptorWrites[i].pImageInfo[j].imageView];
-              auto& imageState = imageViewState->imageStateStore;
+              const auto& imageState = imageViewState->imageStateStore;
 
               if (isSubcaptureBeforeRestorationPhase() && (currentDescriptorData != nullptr)) {
                 currentDescriptorData->pImageInfo.reset(new CVkDescriptorImageInfoData(
@@ -1289,7 +1289,7 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
           case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
             if ((pDescriptorWrites[i].pTexelBufferView != nullptr) &&
                 (pDescriptorWrites[i].pTexelBufferView[j]) != VK_NULL_HANDLE) {
-              auto& bufferViewState =
+              const auto& bufferViewState =
                   SD()._bufferviewstates[pDescriptorWrites[i].pTexelBufferView[j]];
 
               if (isSubcaptureBeforeRestorationPhase() && (currentDescriptorData != nullptr)) {
@@ -1338,7 +1338,8 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
           case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
             if ((pDescriptorWrites[i].pBufferInfo != nullptr) &&
                 (pDescriptorWrites[i].pBufferInfo[j].buffer != VK_NULL_HANDLE)) {
-              auto& bufferState = SD()._bufferstates[pDescriptorWrites[i].pBufferInfo[j].buffer];
+              const auto& bufferState =
+                  SD()._bufferstates[pDescriptorWrites[i].pBufferInfo[j].buffer];
 
               if (isSubcaptureBeforeRestorationPhase() && (currentDescriptorData != nullptr)) {
                 currentDescriptorData->pBufferInfo.reset(
@@ -1387,7 +1388,7 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
                     VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR));
             if (accelerationStructureWrite && accelerationStructureWrite->pAccelerationStructures &&
                 (accelerationStructureWrite->pAccelerationStructures[j] != VK_NULL_HANDLE)) {
-              auto& accelerationStructureState =
+              const auto& accelerationStructureState =
                   SD()._accelerationstructurekhrstates[accelerationStructureWrite
                                                            ->pAccelerationStructures[j]];
               if (isSubcaptureBeforeRestorationPhase()) {
@@ -1411,8 +1412,8 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
     }
 
     for (unsigned int i = 0; i < descriptorCopyCount; i++) {
-      auto& srcDescriptorSetState = SD()._descriptorsetstates[pDescriptorCopies[i].srcSet];
-      auto& dstDescriptorSetState = SD()._descriptorsetstates[pDescriptorCopies[i].dstSet];
+      const auto& srcDescriptorSetState = SD()._descriptorsetstates[pDescriptorCopies[i].srcSet];
+      const auto& dstDescriptorSetState = SD()._descriptorsetstates[pDescriptorCopies[i].dstSet];
 
       if (isSubcaptureBeforeRestorationPhase()) {
         uint32_t srcArrayOffset = pDescriptorCopies[i].srcArrayElement;
@@ -1443,20 +1444,20 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
       }
 
       if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-        for (auto& obj : srcDescriptorSetState->descriptorBuffers) {
+        for (const auto& obj : srcDescriptorSetState->descriptorBuffers) {
           dstDescriptorSetState->descriptorBuffers[obj.first] = obj.second;
         }
 
-        for (auto& obj : srcDescriptorSetState->descriptorImages) {
+        for (const auto& obj : srcDescriptorSetState->descriptorImages) {
           dstDescriptorSetState->descriptorImages[obj.first] = obj.second;
         }
       }
       if (Config::Get().vulkan.recorder.memorySegmentSize ||
           Config::Get().vulkan.recorder.shadowMemory) {
-        for (auto& binding : srcDescriptorSetState->descriptorMapMemory) {
+        for (const auto& binding : srcDescriptorSetState->descriptorMapMemory) {
           dstDescriptorSetState->descriptorMapMemory[binding.first].clear();
-          for (auto& obj : binding.second) {
-            for (auto& obj2 : obj.second.getIntervals()) {
+          for (const auto& obj : binding.second) {
+            for (const auto& obj2 : obj.second.getIntervals()) {
               dstDescriptorSetState->descriptorMapMemory[binding.first][obj.first].insert(
                   obj2.first, obj2.second);
             }
@@ -1464,10 +1465,10 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
         }
       }
 
-      for (auto& obj : srcDescriptorSetState->descriptorWriteBuffers) {
+      for (const auto& obj : srcDescriptorSetState->descriptorWriteBuffers) {
         dstDescriptorSetState->descriptorWriteBuffers[obj.first] = obj.second;
       }
-      for (auto& obj : srcDescriptorSetState->descriptorWriteImages) {
+      for (const auto& obj : srcDescriptorSetState->descriptorWriteImages) {
         dstDescriptorSetState->descriptorWriteImages[obj.first] = obj.second;
       }
     }
@@ -1506,7 +1507,7 @@ inline void vkCreatePipelineLayout_SD(VkResult return_value,
           continue;
         }
 
-        const auto& it = SD()._descriptorsetlayoutstates.find(pCreateInfo->pSetLayouts[i]);
+        const auto it = SD()._descriptorsetlayoutstates.find(pCreateInfo->pSetLayouts[i]);
         if (it != SD()._descriptorsetlayoutstates.end()) {
           state->descriptorSetLayoutStates.push_back(it->second);
         } else {
@@ -1608,10 +1609,10 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
     VkDescriptorUpdateTemplate descriptorUpdateTemplate,
     const void* pData) {
   if (Config::Get().IsRecorder() || captureRenderPassesResources()) {
-    auto& descriptorSetState = SD()._descriptorsetstates[descriptorSet];
-    auto& descriptorUpdateTemplateState =
+    const auto& descriptorSetState = SD()._descriptorsetstates[descriptorSet];
+    const auto& descriptorUpdateTemplateState =
         SD()._descriptorupdatetemplatestates[descriptorUpdateTemplate];
-    auto descriptorUpdateTemplateCreateInfoData =
+    const auto* descriptorUpdateTemplateCreateInfoData =
         descriptorUpdateTemplateState->descriptorUpdateTemplateCreateInfoData.Value();
 
     for (unsigned int i = 0; i < descriptorUpdateTemplateCreateInfoData->descriptorUpdateEntryCount;
@@ -1689,7 +1690,7 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
                                                .stride *
                                            j);
           if (descriptorImageInfo->imageView != VK_NULL_HANDLE) {
-            auto& imageViewState = SD()._imageviewstates[descriptorImageInfo->imageView];
+            const auto& imageViewState = SD()._imageviewstates[descriptorImageInfo->imageView];
 
             if (isSubcaptureBeforeRestorationPhase() && (currentDescriptorData != nullptr)) {
               currentDescriptorData->pImageInfo.reset(
@@ -1702,7 +1703,7 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
               }
             }
 
-            auto& imageState = imageViewState->imageStateStore;
+            const auto& imageState = imageViewState->imageStateStore;
 
             if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
               descriptorSetState->descriptorImages
@@ -1751,7 +1752,7 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
                                   j);
 
           if (*bufferView != VK_NULL_HANDLE) {
-            auto& bufferViewState = SD()._bufferviewstates[*bufferView];
+            const auto& bufferViewState = SD()._bufferviewstates[*bufferView];
 
             if (isSubcaptureBeforeRestorationPhase() && (currentDescriptorData != nullptr)) {
               currentDescriptorData->pTexelBufferView.reset(
@@ -1817,7 +1818,7 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
                                             j);
 
           if (descBufferInfo->buffer != VK_NULL_HANDLE) {
-            auto& bufferState = SD()._bufferstates[descBufferInfo->buffer];
+            const auto& bufferState = SD()._bufferstates[descBufferInfo->buffer];
 
             if (isSubcaptureBeforeRestorationPhase() && (currentDescriptorData != nullptr)) {
               currentDescriptorData->pBufferInfo.reset(
@@ -2010,10 +2011,10 @@ inline void vkCreateGraphicsPipelines_SD(VkResult return_value,
           &pPipelines[i], createInfo, SD()._devicestates[device], pipelineLayoutObj, renderPassObj);
 
       for (unsigned int j = 0; j < createInfo->stageCount; j++) {
-        auto& stageInfo = createInfo->pStages[j];
+        const auto& stageInfo = createInfo->pStages[j];
 
         if (stageInfo.module != VK_NULL_HANDLE) {
-          auto& shaderModuleState = SD()._shadermodulestates[stageInfo.module];
+          const auto& shaderModuleState = SD()._shadermodulestates[stageInfo.module];
           pipelineState->shaderModuleStateStoreList.push_back(shaderModuleState);
           pipelineState->stageShaderHashMapping[stageInfo.stage] = shaderModuleState->shaderHash;
         } else {
@@ -2046,9 +2047,9 @@ inline void vkCreateComputePipelines_SD(VkResult return_value,
                                            SD()._pipelinelayoutstates[createInfo->layout]);
 
       {
-        auto& stageInfo = createInfo->stage;
+        const auto& stageInfo = createInfo->stage;
         if (stageInfo.module != VK_NULL_HANDLE) {
-          auto& shaderModuleState = SD()._shadermodulestates[stageInfo.module];
+          const auto& shaderModuleState = SD()._shadermodulestates[stageInfo.module];
           pipelineState->shaderModuleStateStoreList.push_back(shaderModuleState);
           pipelineState->stageShaderHashMapping[stageInfo.stage] = shaderModuleState->shaderHash;
         } else {
@@ -2082,8 +2083,8 @@ inline void vkCreateRayTracingPipelinesKHR_SD(VkResult return_value,
                                            SD()._pipelinelayoutstates[createInfo->layout]);
 
       for (unsigned int j = 0; j < createInfo->stageCount; j++) {
-        auto& stageInfo = createInfo->pStages[j];
-        auto& shaderModuleState = SD()._shadermodulestates[stageInfo.module];
+        const auto& stageInfo = createInfo->pStages[j];
+        const auto& shaderModuleState = SD()._shadermodulestates[stageInfo.module];
         pipelineState->shaderModuleStateStoreList.push_back(shaderModuleState);
         pipelineState->stageShaderHashMapping[stageInfo.stage] = shaderModuleState->shaderHash;
       }
@@ -2369,7 +2370,7 @@ inline void vkResetCommandBuffer_SD(VkResult /* return_value */,
   if (commandBufferState->temporaryBuffers.size() > 0) {
     CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
 
-    for (auto& temporaryBuffer : commandBufferState->temporaryBuffers) {
+    for (const auto& temporaryBuffer : commandBufferState->temporaryBuffers) {
       auto memoryState = temporaryBuffer.first;
       auto bufferState = temporaryBuffer.second;
 
@@ -2384,7 +2385,7 @@ inline void vkResetCommandBuffer_SD(VkResult /* return_value */,
   if (commandBufferState->temporaryDescriptors.size() > 0) {
     CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
 
-    for (auto& poolState : commandBufferState->temporaryDescriptors) {
+    for (const auto& poolState : commandBufferState->temporaryDescriptors) {
       drvVk.vkDestroyDescriptorPool(poolState->deviceStateStore->deviceHandle,
                                     poolState->descriptorPoolHandle, nullptr);
     }
@@ -2419,10 +2420,10 @@ inline void vkBeginCommandBuffer_SD(VkResult /* return_value */,
   if (Config::Get().IsRecorder()) {
     if (nullptr != pBeginInfo->pInheritanceInfo) {
       if (VK_NULL_HANDLE != pBeginInfo->pInheritanceInfo->framebuffer) {
-        for (auto& imageViewState :
+        for (const auto& imageViewState :
              SD()._framebufferstates[pBeginInfo->pInheritanceInfo->framebuffer]
                  ->imageViewStateStoreList) {
-          auto& imageState = imageViewState->imageStateStore;
+          const auto& imageState = imageViewState->imageStateStore;
 
           if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
             SD().bindingImages[cmdBuffer].insert(imageState);
@@ -2572,7 +2573,7 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
       accelerationStructureState->copyInfo.reset();
     } else if (buildInfo->mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR) {
       // Acceleration structure update (full build info left untouched)
-      auto& srcAccelerationStructureState =
+      const auto& srcAccelerationStructureState =
           SD()._accelerationstructurekhrstates[buildInfo->srcAccelerationStructure];
       accelerationStructureState->updateInfo.reset(new CAccelerationStructureKHRState::CBuildInfo(
           buildInfo, pRangeInfos, prepareAccelerationStructureControlData(commandBuffer),
@@ -2592,7 +2593,8 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
     auto buildRangeInfos = ppBuildRangeInfos[acc];
 
     {
-      auto it = SD()._accelerationstructurekhrstates.find(buildInfo->dstAccelerationStructure);
+      const auto it =
+          SD()._accelerationstructurekhrstates.find(buildInfo->dstAccelerationStructure);
       if (it != SD()._accelerationstructurekhrstates.end()) {
         bindingBuffers.insert(it->second->bufferStateStore);
       }
@@ -2604,7 +2606,7 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
 
     auto addBindingBuffer = [&bindingBuffers](VkDeviceAddress deviceAddress) {
       auto buffer = findBufferFromDeviceAddress(deviceAddress);
-      auto it = SD()._bufferstates.find(buffer);
+      const auto it = SD()._bufferstates.find(buffer);
       if (it != SD()._bufferstates.end()) {
         bindingBuffers.insert(it->second);
       }
@@ -2614,11 +2616,11 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
       const VkAccelerationStructureGeometryKHR* pGeometry = (buildInfo->pGeometries != nullptr)
                                                                 ? (&buildInfo->pGeometries[geom])
                                                                 : (buildInfo->ppGeometries[geom]);
-      auto& buildRangeInfo = buildRangeInfos[geom];
+      const auto& buildRangeInfo = buildRangeInfos[geom];
 
       switch (pGeometry->geometryType) {
       case VK_GEOMETRY_TYPE_TRIANGLES_KHR: {
-        auto& trianglesData = pGeometry->geometry.triangles;
+        const auto& trianglesData = pGeometry->geometry.triangles;
 
         if (trianglesData.indexType != VK_INDEX_TYPE_NONE_KHR) {
           // Index buffer
@@ -2667,7 +2669,7 @@ inline void vkCopyAccelerationStructureKHR_SD(VkResult return_value,
 inline void vkCmdCopyAccelerationStructureKHR_SD(VkCommandBuffer commandBuffer,
                                                  const VkCopyAccelerationStructureInfoKHR* pInfo) {
   if (Config::Get().IsRecorder() && CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
-    auto& srcAccelerationStructureState = SD()._accelerationstructurekhrstates[pInfo->src];
+    const auto& srcAccelerationStructureState = SD()._accelerationstructurekhrstates[pInfo->src];
     auto& dstAccelerationStructureState = SD()._accelerationstructurekhrstates[pInfo->dst];
 
     dstAccelerationStructureState->buildInfo.reset();
@@ -2701,7 +2703,7 @@ inline void vkQueueSubmit_setImageLayout(std::shared_ptr<CCommandBufferState>& c
        Config::Get().vulkan.recorder.crossPlatformStateRestoration.images) ||
       captureRenderPasses() || captureRenderPassesResources()) {
 
-    for (auto& imageLayoutAfterSubmit : commandBufferState->imageLayoutAfterSubmit) {
+    for (const auto& imageLayoutAfterSubmit : commandBufferState->imageLayoutAfterSubmit) {
       auto& imageState = SD()._imagestates[imageLayoutAfterSubmit.first];
 
       for (uint32_t l = 0; l < imageLayoutAfterSubmit.second.size(); ++l) {
@@ -2725,19 +2727,19 @@ inline void vkQueueSubmit_setImageLayout(std::shared_ptr<CCommandBufferState>& c
 inline void vkQueueSubmit_setQueryPoolState(
     std::shared_ptr<CCommandBufferState>& commandBufferState) {
   if (isSubcaptureBeforeRestorationPhase()) {
-    for (auto& resetQueryAfterSubmit : commandBufferState->resetQueriesAfterSubmit) {
+    for (const auto& resetQueryAfterSubmit : commandBufferState->resetQueriesAfterSubmit) {
       auto& queryPoolState = SD()._querypoolstates[resetQueryAfterSubmit.first];
 
-      for (auto& queryIndex : resetQueryAfterSubmit.second) {
+      for (auto queryIndex : resetQueryAfterSubmit.second) {
         queryPoolState->resetQueries[queryIndex] = true;
         queryPoolState->usedQueries[queryIndex] = false;
       }
     }
 
-    for (auto& usedQueryAfterSubmit : commandBufferState->usedQueriesAfterSubmit) {
+    for (const auto& usedQueryAfterSubmit : commandBufferState->usedQueriesAfterSubmit) {
       auto& queryPoolState = SD()._querypoolstates[usedQueryAfterSubmit.first];
 
-      for (auto& queryIndex : usedQueryAfterSubmit.second) {
+      for (auto queryIndex : usedQueryAfterSubmit.second) {
         queryPoolState->usedQueries[queryIndex] = true;
       }
     }
@@ -2747,7 +2749,7 @@ inline void vkQueueSubmit_setQueryPoolState(
 inline void vkQueueSubmit_setTimestamps(std::shared_ptr<CCommandBufferState>& commandBufferState) {
   if (isSubcaptureBeforeRestorationPhase()) {
     for (uint32_t i = 0; i < commandBufferState->touchedResources.size(); ++i) {
-      auto& touchedResource = commandBufferState->touchedResources[i];
+      const auto& touchedResource = commandBufferState->touchedResources[i];
       if (touchedResource.second) {
         SD()._imagestates[(VkImage)touchedResource.first]->timestamp =
             SD().internalResources.timestamp + i;
@@ -2764,7 +2766,7 @@ inline void vkQueueSubmit_setTimestamps(std::shared_ptr<CCommandBufferState>& co
 inline void vkQueueSubmit_updateNonDeterministicImages(
     std::shared_ptr<CCommandBufferState>& commandBufferState) {
   if (Config::Get().vulkan.player.skipNonDeterministicImages) {
-    for (auto& obj : commandBufferState->clearedImages) {
+    for (auto obj : commandBufferState->clearedImages) {
       SD().nonDeterministicImages.erase(obj);
     }
   }
@@ -2790,7 +2792,7 @@ inline void vkQueueSubmit_SD(VkResult return_value,
             secondaryCommandBufferState.second->submitted = true;
           }
           if (!stateRestore) {
-            for (auto& eventState : commandBufferState->eventStatesAfterSubmit) {
+            for (const auto& eventState : commandBufferState->eventStatesAfterSubmit) {
               SD()._eventstates[eventState.first]->eventUsed = eventState.second;
             }
           }
@@ -2835,9 +2837,9 @@ inline void vkQueueSubmit_SD(VkResult return_value,
   if (pSubmits != NULL && !stateRestore) {
     for (uint32_t s = 0; s < submitCount; ++s) {
       for (uint32_t c = 0; c < pSubmits[s].commandBufferCount; ++c) {
-        auto& cmdBufferState = SD()._commandbufferstates[pSubmits[s].pCommandBuffers[c]];
+        const auto& cmdBufferState = SD()._commandbufferstates[pSubmits[s].pCommandBuffers[c]];
 
-        for (auto& eventState : cmdBufferState->eventStatesAfterSubmit) {
+        for (const auto& eventState : cmdBufferState->eventStatesAfterSubmit) {
           SD()._eventstates[eventState.first]->eventUsed = eventState.second;
         }
       }
@@ -2869,7 +2871,7 @@ inline void vkQueueSubmit2_SD(VkResult return_value,
             secondaryCommandBufferState.second->submitted = true;
           }
           if (!stateRestore) {
-            for (auto& eventState : commandBufferState->eventStatesAfterSubmit) {
+            for (const auto& eventState : commandBufferState->eventStatesAfterSubmit) {
               SD()._eventstates[eventState.first]->eventUsed = eventState.second;
             }
           }
@@ -2896,7 +2898,7 @@ inline void vkQueueSubmit2_SD(VkResult return_value,
           }
 
           for (uint32_t i = 0; i < pSubmits[s].signalSemaphoreInfoCount; i++) {
-            auto& signalInfo = pSubmits[s].pSignalSemaphoreInfos[i];
+            const auto& signalInfo = pSubmits[s].pSignalSemaphoreInfos[i];
             auto& semaphoreState = SD()._semaphorestates[signalInfo.semaphore];
 
             semaphoreState->semaphoreUsed = true;
@@ -2912,10 +2914,10 @@ inline void vkQueueSubmit2_SD(VkResult return_value,
   if (pSubmits != NULL && !stateRestore) {
     for (uint32_t s = 0; s < submitCount; ++s) {
       for (uint32_t c = 0; c < pSubmits[s].commandBufferInfoCount; ++c) {
-        auto& cmdBufferState =
+        const auto& cmdBufferState =
             SD()._commandbufferstates[pSubmits[s].pCommandBufferInfos[c].commandBuffer];
 
-        for (auto& eventState : cmdBufferState->eventStatesAfterSubmit) {
+        for (const auto& eventState : cmdBufferState->eventStatesAfterSubmit) {
           SD()._eventstates[eventState.first]->eventUsed = eventState.second;
         }
       }
@@ -2939,10 +2941,10 @@ inline void vkQueueSubmit2KHR_SD(VkResult return_value,
 //RenderPass helper functions
 namespace {
 inline void vkEndRenderPass_setImageLayout(
-    std::shared_ptr<CCommandBufferState>& commandBufferState) {
+    const std::shared_ptr<CCommandBufferState>& commandBufferState) {
   if (!Config::Get().vulkan.player.captureVulkanRenderPasses.empty() ||
       !Config::Get().vulkan.player.captureVulkanDraws.empty()) {
-    for (auto& imageLayoutAfterSubmit : commandBufferState->imageLayoutAfterSubmit) {
+    for (const auto& imageLayoutAfterSubmit : commandBufferState->imageLayoutAfterSubmit) {
       auto& imageState = SD()._imagestates[imageLayoutAfterSubmit.first];
 
       for (uint32_t l = 0; l < imageLayoutAfterSubmit.second.size(); ++l) {
@@ -2961,7 +2963,7 @@ inline void vkEndRenderPass_updateNonDeterministicImages(
     std::shared_ptr<CCommandBufferState>& commandBufferState) {
   if (Config::Get().vulkan.player.skipNonDeterministicImages &&
       commandBufferState->beginRenderPassesList.size()) {
-    auto& framebufferState =
+    const auto& framebufferState =
         commandBufferState->beginRenderPassesList.back()->framebufferStateStore;
     uint32_t imageViewSize;
     if (framebufferState && !(framebufferState->framebufferCreateInfoData.Value()->flags &
@@ -2991,7 +2993,7 @@ inline void vkEndRenderPass_updateNonDeterministicImages(
     }
     if (!Config::Get().vulkan.player.captureVulkanRenderPasses.empty() ||
         !Config::Get().vulkan.player.captureVulkanDraws.empty()) {
-      for (auto& obj : commandBufferState->clearedImages) {
+      for (const auto& obj : commandBufferState->clearedImages) {
         SD().nonDeterministicImages.erase(obj);
       }
     }
@@ -3024,7 +3026,7 @@ inline void vkCmdBeginRenderPass_SD(VkCommandBuffer cmdBuffer,
             SD()._imageviewstates[rpAttBeginInfo->pAttachments[i]]);
         VkAttachmentLoadOp loadOp;
         VkAttachmentStoreOp storeOp;
-        auto& state = SD()._renderpassstates[pRenderPassBegin->renderPass];
+        const auto& state = SD()._renderpassstates[pRenderPassBegin->renderPass];
         if (getFormatAspectFlags(SD()._imageviewstates[rpAttBeginInfo->pAttachments[i]]
                                      ->imageStateStore->imageFormat) &
             VK_IMAGE_ASPECT_STENCIL_BIT) {
@@ -3057,7 +3059,7 @@ inline void vkCmdBeginRenderPass_SD(VkCommandBuffer cmdBuffer,
         VkAttachmentLoadOp loadOp;
         VkAttachmentStoreOp storeOp;
 
-        auto& state = SD()._renderpassstates[pRenderPassBegin->renderPass];
+        const auto& state = SD()._renderpassstates[pRenderPassBegin->renderPass];
         if (getFormatAspectFlags(imageViewStateStore->imageStateStore->imageFormat) &
             VK_IMAGE_ASPECT_STENCIL_BIT) {
           if (state->renderPassCreateInfoData.Value()) {
@@ -3086,9 +3088,9 @@ inline void vkCmdBeginRenderPass_SD(VkCommandBuffer cmdBuffer,
               ->framebufferCreateInfoData.Value()
               ->flags &
           VK_FRAMEBUFFER_CREATE_IMAGELESS_BIT)) {
-      for (auto& imageViewState :
+      for (const auto& imageViewState :
            SD()._framebufferstates[pRenderPassBegin->framebuffer]->imageViewStateStoreList) {
-        auto& imageState = imageViewState->imageStateStore;
+        const auto& imageState = imageViewState->imageStateStore;
 
         if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
           SD().bindingImages[cmdBuffer].insert(imageState);
@@ -3109,7 +3111,8 @@ inline void vkCmdBeginRenderPass_SD(VkCommandBuffer cmdBuffer,
       }
     } else {
       for (uint32_t i = 0; i < beginRenderPassState->imageViewStateStoreListKHR.size(); i++) {
-        auto& imageState = beginRenderPassState->imageViewStateStoreListKHR[i]->imageStateStore;
+        const auto& imageState =
+            beginRenderPassState->imageViewStateStoreListKHR[i]->imageStateStore;
 
         if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
           SD().bindingImages[cmdBuffer].insert(imageState);
@@ -3159,9 +3162,9 @@ inline void vkCmdEndRenderPass_SD(VkCommandBuffer commandBuffer) {
     auto& commandBufferState = SD()._commandbufferstates[commandBuffer];
 
     if (commandBufferState->beginRenderPassesList.size()) {
-      auto& renderPassState =
+      const auto& renderPassState =
           commandBufferState->beginRenderPassesList.back()->renderPassStateStore;
-      auto& framebufferState =
+      const auto& framebufferState =
           commandBufferState->beginRenderPassesList.back()->framebufferStateStore;
 
       for (uint32_t i = 0; i < renderPassState->finalImageLayoutList.size(); ++i) {
@@ -3190,7 +3193,7 @@ inline void vkCmdEndRenderPass_SD(VkCommandBuffer commandBuffer) {
           imageViewSubresourceRange.layerCount =
               imageState->arrayLayers - imageViewSubresourceRange.baseArrayLayer;
         }
-        auto& imageLayoutData = imageState->currentLayout;
+        const auto& imageLayoutData = imageState->currentLayout;
         if (!imageLayoutData.size()) {
           continue;
         }
@@ -3275,7 +3278,7 @@ inline void vkCmdBeginRendering_SD(VkCommandBuffer commandBuffer,
 
   if (Config::Get().IsRecorder()) {
     for (uint32_t i = 0; i < beginRenderPassState->imageViewStateStoreListKHR.size(); i++) {
-      auto& imageState = beginRenderPassState->imageViewStateStoreListKHR[i]->imageStateStore;
+      const auto& imageState = beginRenderPassState->imageViewStateStoreListKHR[i]->imageStateStore;
 
       if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
         SD().bindingImages[commandBuffer].insert(imageState);
@@ -3321,7 +3324,7 @@ void BindVertexBuffers_SDHelper(VkCommandBuffer cmdBuffer,
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
     auto& bindingBuffers = SD().bindingBuffers[cmdBuffer];
     for (uint32_t i = 0; i < bindingCount; ++i) {
-      auto it = SD()._bufferstates.find(pBuffers[i]);
+      const auto it = SD()._bufferstates.find(pBuffers[i]);
       if (it != SD()._bufferstates.end()) {
         bindingBuffers.insert(it->second);
       }
@@ -3365,7 +3368,7 @@ inline void vkCmdBindIndexBuffer_SD(VkCommandBuffer commandBuffer,
                                     VkIndexType indexType) {
   if (Config::Get().IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    auto it = SD()._bufferstates.find(buffer);
+    const auto it = SD()._bufferstates.find(buffer);
     if (it != SD()._bufferstates.end()) {
       SD().bindingBuffers[commandBuffer].insert(it->second);
     }
@@ -3381,7 +3384,7 @@ inline void vkCmdBindTransformFeedbackBuffersEXT_SD(VkCommandBuffer commandBuffe
   if (Config::Get().IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
     for (uint32_t i = 0; i < bindingCount; ++i) {
-      auto it = SD()._bufferstates.find(pBuffers[i]);
+      const auto it = SD()._bufferstates.find(pBuffers[i]);
       if (it != SD()._bufferstates.end()) {
         SD().bindingBuffers[commandBuffer].insert(it->second);
       }
@@ -3418,32 +3421,34 @@ inline void vkCmdBindDescriptorSets_SD(VkCommandBuffer commandBuffer,
       }
 
       if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-        auto& descriptorSetState = SD()._descriptorsetstates[pDescriptorSets[i]];
+        const auto& descriptorSetState = SD()._descriptorsetstates[pDescriptorSets[i]];
 
         commandBufferState->descriptorSetStateStoreList.emplace(pDescriptorSets[i],
                                                                 descriptorSetState);
 
-        for (auto& obj : descriptorSetState->descriptorBuffers) {
+        for (const auto& obj : descriptorSetState->descriptorBuffers) {
           SD().bindingBuffers[commandBuffer].insert(obj.second);
         }
 
-        for (auto& obj : descriptorSetState->descriptorImages) {
+        for (const auto& obj : descriptorSetState->descriptorImages) {
           SD().bindingImages[commandBuffer].insert(obj.second);
         }
       }
-      for (auto& obj : SD()._descriptorsetstates[pDescriptorSets[i]]->descriptorWriteBuffers) {
+      for (const auto& obj :
+           SD()._descriptorsetstates[pDescriptorSets[i]]->descriptorWriteBuffers) {
         commandBufferState->touchedResources.emplace_back((uint64_t)obj.second.second, false);
         commandBufferState->resourceWriteBuffers[obj.second.second] = obj.second.first;
       }
-      for (auto& obj : SD()._descriptorsetstates[pDescriptorSets[i]]->descriptorWriteImages) {
+      for (const auto& obj : SD()._descriptorsetstates[pDescriptorSets[i]]->descriptorWriteImages) {
         commandBufferState->touchedResources.emplace_back((uint64_t)obj.second.second, true);
         commandBufferState->resourceWriteImages[obj.second.second] = obj.second.first;
       }
       if (Config::Get().vulkan.recorder.memorySegmentSize ||
           Config::Get().vulkan.recorder.shadowMemory) {
-        for (auto& binding : SD()._descriptorsetstates[pDescriptorSets[i]]->descriptorMapMemory) {
-          for (auto& mem : binding.second) {
-            for (auto& obj : mem.second.getIntervals()) {
+        for (const auto& binding :
+             SD()._descriptorsetstates[pDescriptorSets[i]]->descriptorMapMemory) {
+          for (const auto& mem : binding.second) {
+            for (const auto& obj : mem.second.getIntervals()) {
               SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(mem.first, obj.first,
                                                                     obj.second - obj.first);
             }
@@ -3481,9 +3486,9 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer commandBuffer,
           continue;
         }
 
-        auto it = SD()._imageviewstates.find(pDescriptorWrites[i].pImageInfo[j].imageView);
+        const auto it = SD()._imageviewstates.find(pDescriptorWrites[i].pImageInfo[j].imageView);
         if (it != SD()._imageviewstates.end()) {
-          auto& imageState = it->second->imageStateStore;
+          const auto& imageState = it->second->imageStateStore;
 
           if (VK_DESCRIPTOR_TYPE_STORAGE_IMAGE == descriptorType) {
             SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back(
@@ -3517,12 +3522,12 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer commandBuffer,
           continue;
         }
 
-        auto it = SD()._bufferviewstates.find(pDescriptorWrites[i].pTexelBufferView[j]);
+        const auto it = SD()._bufferviewstates.find(pDescriptorWrites[i].pTexelBufferView[j]);
         if (it != SD()._bufferviewstates.end()) {
-          auto& bufferState = it->second->bufferStateStore;
+          const auto& bufferState = it->second->bufferStateStore;
 
           if (VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER == descriptorType) {
-            auto& cmdBufferIT = SD()._commandbufferstates.find(commandBuffer);
+            const auto cmdBufferIT = SD()._commandbufferstates.find(commandBuffer);
             if (cmdBufferIT != SD()._commandbufferstates.end()) {
               cmdBufferIT->second->touchedResources.emplace_back(
                   (uint64_t)bufferState->bufferHandle, false);
@@ -3538,7 +3543,7 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer commandBuffer,
                  Config::Get().vulkan.recorder.shadowMemory) &&
                 (VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER == descriptorType) &&
                 (bufferState->binding)) {
-              auto& bufferViewState = it->second;
+              const auto& bufferViewState = it->second;
               VkDeviceSize dstOffsetFinal =
                   bufferState->binding->memoryOffset +
                   bufferViewState->bufferViewCreateInfoData.Value()->offset;
@@ -3563,9 +3568,9 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer commandBuffer,
           continue;
         }
 
-        auto it = SD()._bufferstates.find(pDescriptorWrites[i].pBufferInfo[j].buffer);
+        const auto it = SD()._bufferstates.find(pDescriptorWrites[i].pBufferInfo[j].buffer);
         if (it != SD()._bufferstates.end()) {
-          auto& bufferState = it->second;
+          const auto& bufferState = it->second;
 
           if ((VK_DESCRIPTOR_TYPE_STORAGE_BUFFER == descriptorType) ||
               (VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC == descriptorType)) {
@@ -3589,7 +3594,7 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer commandBuffer,
                     (pDescriptorWrites[i].pBufferInfo[j].range == 0xFFFFFFFFFFFFFFFF)
                         ? (bufferState->bufferCreateInfoData.Value()->size -
                            pDescriptorWrites[i].pBufferInfo[j].offset)
-                        : (dstFinalSize = pDescriptorWrites[i].pBufferInfo[j].range);
+                        : (pDescriptorWrites[i].pBufferInfo[j].range);
 
                 SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(
                     bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle,
@@ -3623,7 +3628,7 @@ inline void vkCmdDrawIndexedIndirect_SD(VkCommandBuffer commandBuffer,
                                         uint32_t stride) {
   if (Config::Get().IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    auto it = SD()._bufferstates.find(buffer);
+    const auto it = SD()._bufferstates.find(buffer);
     if (it != SD()._bufferstates.end()) {
       SD().bindingBuffers[commandBuffer].insert(it->second);
     }
@@ -3638,7 +3643,7 @@ inline void vkCmdDrawIndirect_SD(VkCommandBuffer commandBuffer,
                                  uint32_t stride) {
   if (Config::Get().IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    auto it = SD()._bufferstates.find(buffer);
+    const auto it = SD()._bufferstates.find(buffer);
     if (it != SD()._bufferstates.end()) {
       SD().bindingBuffers[commandBuffer].insert(it->second);
     }
@@ -3657,13 +3662,13 @@ inline void vkCmdDrawIndirectCountKHR_SD(VkCommandBuffer commandBuffer,
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
     auto& bindingBuffers = SD().bindingBuffers[commandBuffer];
     {
-      auto it = SD()._bufferstates.find(buffer);
+      const auto it = SD()._bufferstates.find(buffer);
       if (it != SD()._bufferstates.end()) {
         bindingBuffers.insert(it->second);
       }
     }
     {
-      auto it = SD()._bufferstates.find(countBuffer);
+      const auto it = SD()._bufferstates.find(countBuffer);
       if (it != SD()._bufferstates.end()) {
         bindingBuffers.insert(it->second);
       }
@@ -3683,13 +3688,13 @@ inline void vkCmdDrawIndexedIndirectCount_SD(VkCommandBuffer commandBuffer,
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
     auto& bindingBuffers = SD().bindingBuffers[commandBuffer];
     {
-      auto it = SD()._bufferstates.find(buffer);
+      const auto it = SD()._bufferstates.find(buffer);
       if (it != SD()._bufferstates.end()) {
         bindingBuffers.insert(it->second);
       }
     }
     {
-      auto it = SD()._bufferstates.find(countBuffer);
+      const auto it = SD()._bufferstates.find(countBuffer);
       if (it != SD()._bufferstates.end()) {
         bindingBuffers.insert(it->second);
       }
@@ -3709,13 +3714,13 @@ inline void vkCmdDrawIndexedIndirectCountKHR_SD(VkCommandBuffer commandBuffer,
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
     auto& bindingBuffers = SD().bindingBuffers[commandBuffer];
     {
-      auto it = SD()._bufferstates.find(buffer);
+      const auto it = SD()._bufferstates.find(buffer);
       if (it != SD()._bufferstates.end()) {
         bindingBuffers.insert(it->second);
       }
     }
     {
-      auto it = SD()._bufferstates.find(countBuffer);
+      const auto it = SD()._bufferstates.find(countBuffer);
       if (it != SD()._bufferstates.end()) {
         bindingBuffers.insert(it->second);
       }
@@ -3743,7 +3748,7 @@ inline void vkCmdDrawMeshTasksIndirectEXT_SD(VkCommandBuffer commandBuffer,
                                              uint32_t drawCount,
                                              uint32_t stride) {
   if (isRecorder() && (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    auto it = SD()._bufferstates.find(buffer);
+    const auto it = SD()._bufferstates.find(buffer);
     if (it != SD()._bufferstates.end()) {
       SD().bindingBuffers[commandBuffer].insert(it->second);
     }
@@ -3769,13 +3774,13 @@ inline void vkCmdDrawMeshTasksIndirectCountEXT_SD(VkCommandBuffer commandBuffer,
   if (isRecorder() && (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
     auto& bindingBuffers = SD().bindingBuffers[commandBuffer];
     {
-      auto it = SD()._bufferstates.find(buffer);
+      const auto it = SD()._bufferstates.find(buffer);
       if (it != SD()._bufferstates.end()) {
         bindingBuffers.insert(it->second);
       }
     }
     {
-      auto it = SD()._bufferstates.find(countBuffer);
+      const auto it = SD()._bufferstates.find(countBuffer);
       if (it != SD()._bufferstates.end()) {
         bindingBuffers.insert(it->second);
       }
@@ -3802,7 +3807,7 @@ inline void vkCmdDispatch_SD(VkCommandBuffer commandBuffer, uint32_t, uint32_t, 
 inline void vkCmdDispatchIndirect_SD(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize) {
   if (Config::Get().IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    auto it = SD()._bufferstates.find(buffer);
+    const auto it = SD()._bufferstates.find(buffer);
     if (it != SD()._bufferstates.end()) {
       SD().bindingBuffers[commandBuffer].insert(it->second);
     }
@@ -3824,7 +3829,7 @@ inline void vkCmdTraceRaysIndirectKHR_SD(
     auto addBindingBuffer = [&bindingBuffers](const VkStridedDeviceAddressRegionKHR* SBTtable) {
       if ((SBTtable != nullptr) && (SBTtable->deviceAddress != 0)) {
         auto buffer = findBufferFromDeviceAddress(SBTtable->deviceAddress);
-        auto it = SD()._bufferstates.find(buffer);
+        const auto it = SD()._bufferstates.find(buffer);
         if (it != SD()._bufferstates.end()) {
           bindingBuffers.insert(it->second);
         }
@@ -3837,7 +3842,7 @@ inline void vkCmdTraceRaysIndirectKHR_SD(
     addBindingBuffer(pCallableShaderBindingTable);
     {
       auto buffer = findBufferFromDeviceAddress(indirectDeviceAddress);
-      auto it = SD()._bufferstates.find(buffer);
+      const auto it = SD()._bufferstates.find(buffer);
       if (it != SD()._bufferstates.end()) {
         bindingBuffers.insert(it->second);
       }
@@ -3862,7 +3867,7 @@ inline void vkCmdTraceRaysKHR_SD(VkCommandBuffer commandBuffer,
     auto addBindingBuffer = [&bindingBuffers](const VkStridedDeviceAddressRegionKHR* SBTtable) {
       if ((SBTtable != nullptr) && (SBTtable->deviceAddress != 0)) {
         auto buffer = findBufferFromDeviceAddress(SBTtable->deviceAddress);
-        auto it = SD()._bufferstates.find(buffer);
+        const auto it = SD()._bufferstates.find(buffer);
         if (it != SD()._bufferstates.end()) {
           bindingBuffers.insert(it->second);
         }
@@ -3887,13 +3892,13 @@ inline void vkCmdExecuteCommands_SD(VkCommandBuffer commandBuffer,
        Config::Get().vulkan.player.execCmdBuffsBeforeQueueSubmit)) {
     for (unsigned int i = 0; i < commandBufferCount; i++) {
       auto& primaryCommandBufferState = SD()._commandbufferstates[commandBuffer];
-      auto& secondaryCommandBufferState = SD()._commandbufferstates[pCommandBuffers[i]];
+      const auto& secondaryCommandBufferState = SD()._commandbufferstates[pCommandBuffers[i]];
 
       if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-        auto& srcBindingImages = SD().bindingImages[pCommandBuffers[i]];
+        const auto& srcBindingImages = SD().bindingImages[pCommandBuffers[i]];
         SD().bindingImages[commandBuffer].insert(srcBindingImages.begin(), srcBindingImages.end());
 
-        auto& srcBindingBuffers = SD().bindingBuffers[pCommandBuffers[i]];
+        const auto& srcBindingBuffers = SD().bindingBuffers[pCommandBuffers[i]];
         SD().bindingBuffers[commandBuffer].insert(srcBindingBuffers.begin(),
                                                   srcBindingBuffers.end());
       }
@@ -3908,26 +3913,26 @@ inline void vkCmdExecuteCommands_SD(VkCommandBuffer commandBuffer,
           secondaryCommandBufferState->touchedResources.end());
 
       // Track query pool state
-      for (auto& queryPoolState : secondaryCommandBufferState->resetQueriesAfterSubmit) {
+      for (const auto& queryPoolState : secondaryCommandBufferState->resetQueriesAfterSubmit) {
         primaryCommandBufferState->resetQueriesAfterSubmit[queryPoolState.first].insert(
             queryPoolState.second.begin(), queryPoolState.second.end());
       }
 
-      for (auto& queryPoolState : secondaryCommandBufferState->usedQueriesAfterSubmit) {
+      for (const auto& queryPoolState : secondaryCommandBufferState->usedQueriesAfterSubmit) {
         primaryCommandBufferState->usedQueriesAfterSubmit[queryPoolState.first].insert(
             queryPoolState.second.begin(), queryPoolState.second.end());
       }
 
       // Track event state
-      for (auto& eventState : secondaryCommandBufferState->eventStatesAfterSubmit) {
+      for (const auto& eventState : secondaryCommandBufferState->eventStatesAfterSubmit) {
         primaryCommandBufferState->eventStatesAfterSubmit[eventState.first] = eventState.second;
       }
 
       // Track image layout state
-      for (auto& imageLayoutAfterSubmitSecondaryCommandBuffer :
+      for (const auto& imageLayoutAfterSubmitSecondaryCommandBuffer :
            secondaryCommandBufferState->imageLayoutAfterSubmit) {
         VkImage image = imageLayoutAfterSubmitSecondaryCommandBuffer.first;
-        auto& imageLayout = SD()._imagestates[image]->currentLayout;
+        const auto& imageLayout = SD()._imagestates[image]->currentLayout;
         if (!imageLayout.size()) {
           continue;
         }
@@ -3961,17 +3966,18 @@ inline void vkCmdExecuteCommands_SD(VkCommandBuffer commandBuffer,
         }
       }
       if (captureRenderPassesResources()) {
-        for (auto& obj : secondaryCommandBufferState->resourceWriteBuffers) {
+        for (const auto& obj : secondaryCommandBufferState->resourceWriteBuffers) {
           primaryCommandBufferState->resourceWriteBuffers[obj.first] = obj.second;
         }
-        for (auto& obj : secondaryCommandBufferState->resourceWriteImages) {
+        for (const auto& obj : secondaryCommandBufferState->resourceWriteImages) {
           primaryCommandBufferState->resourceWriteImages[obj.first] = obj.second;
         }
       }
       if (Config::Get().vulkan.recorder.memorySegmentSize ||
           Config::Get().vulkan.recorder.shadowMemory) {
-        for (auto& obj3 : SD().updatedMemoryInCmdBuffer[pCommandBuffers[i]].intervalMapMemory) {
-          for (auto& obj4 : obj3.second.getIntervals()) {
+        for (const auto& obj3 :
+             SD().updatedMemoryInCmdBuffer[pCommandBuffers[i]].intervalMapMemory) {
+          for (const auto& obj4 : obj3.second.getIntervals()) {
             SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(obj3.first, obj4.first,
                                                                   obj4.second - obj4.first);
           }
@@ -3996,7 +4002,7 @@ inline void vkCmdPipelineBarrier_SD(VkCommandBuffer commandBuffer,
     if (pBufferMemoryBarriers) {
       auto& bindingBuffers = SD().bindingBuffers[commandBuffer];
       for (unsigned int i = 0; i < bufferMemoryBarrierCount; i++) {
-        auto it = SD()._bufferstates.find(pBufferMemoryBarriers[i].buffer);
+        const auto it = SD()._bufferstates.find(pBufferMemoryBarriers[i].buffer);
         if (it != SD()._bufferstates.end()) {
           bindingBuffers.insert(it->second);
         }
@@ -4009,12 +4015,12 @@ inline void vkCmdPipelineBarrier_SD(VkCommandBuffer commandBuffer,
 
     auto& bindingImages = SD().bindingImages[commandBuffer];
     for (unsigned int i = 0; i < imageMemoryBarrierCount; i++) {
-      auto it = SD()._imagestates.find(pImageMemoryBarriers[i].image);
+      const auto it = SD()._imagestates.find(pImageMemoryBarriers[i].image);
       if (it == SD()._imagestates.end()) {
         continue;
       }
 
-      auto& imageState = it->second;
+      const auto& imageState = it->second;
 
       bindingImages.insert(imageState);
       if (!CGits::Instance().IsStateRestoration() &&
@@ -4024,7 +4030,7 @@ inline void vkCmdPipelineBarrier_SD(VkCommandBuffer commandBuffer,
 
       if (captureRenderPasses() || captureRenderPassesResources() ||
           (isSubcaptureBeforeRestorationPhase() && crossPlatformStateRestoration())) {
-        auto& imageLayout = imageState->currentLayout;
+        const auto& imageLayout = imageState->currentLayout;
         if (!imageLayout.size()) {
           continue;
         }
@@ -4039,7 +4045,7 @@ inline void vkCmdPipelineBarrier_SD(VkCommandBuffer commandBuffer,
           }
         }
 
-        auto& subresourceRange = pImageMemoryBarriers[i].subresourceRange;
+        const auto& subresourceRange = pImageMemoryBarriers[i].subresourceRange;
         if (VK_IMAGE_TYPE_3D == imageState->imageType) {
           for (uint32_t m = subresourceRange.baseMipLevel;
                (m < subresourceRange.baseMipLevel + subresourceRange.levelCount) &&
@@ -4080,7 +4086,7 @@ inline void vkCmdPipelineBarrier2UnifiedGITS_SD(VkCommandBuffer commandBuffer,
     if (pDependencyInfo->pBufferMemoryBarriers) {
       auto& bindingBuffers = SD().bindingBuffers[commandBuffer];
       for (unsigned int i = 0; i < pDependencyInfo->bufferMemoryBarrierCount; i++) {
-        auto it = SD()._bufferstates.find(pDependencyInfo->pBufferMemoryBarriers[i].buffer);
+        const auto it = SD()._bufferstates.find(pDependencyInfo->pBufferMemoryBarriers[i].buffer);
         if (it != SD()._bufferstates.end()) {
           bindingBuffers.insert(it->second);
         }
@@ -4093,12 +4099,12 @@ inline void vkCmdPipelineBarrier2UnifiedGITS_SD(VkCommandBuffer commandBuffer,
 
     auto& bindingImages = SD().bindingImages[commandBuffer];
     for (unsigned int i = 0; i < pDependencyInfo->imageMemoryBarrierCount; i++) {
-      auto it = SD()._imagestates.find(pDependencyInfo->pImageMemoryBarriers[i].image);
+      const auto it = SD()._imagestates.find(pDependencyInfo->pImageMemoryBarriers[i].image);
       if (it == SD()._imagestates.end()) {
         continue;
       }
 
-      auto& imageState = it->second;
+      const auto& imageState = it->second;
       bindingImages.insert(imageState);
 
       if (!CGits::Instance().IsStateRestoration() &&
@@ -4108,7 +4114,7 @@ inline void vkCmdPipelineBarrier2UnifiedGITS_SD(VkCommandBuffer commandBuffer,
 
       if (captureRenderPasses() || captureRenderPassesResources() ||
           (isSubcaptureBeforeRestorationPhase() && crossPlatformStateRestoration())) {
-        auto& imageLayout = imageState->currentLayout;
+        const auto& imageLayout = imageState->currentLayout;
         if (!imageLayout.size()) {
           continue;
         }
@@ -4124,7 +4130,7 @@ inline void vkCmdPipelineBarrier2UnifiedGITS_SD(VkCommandBuffer commandBuffer,
           }
         }
 
-        auto& subresourceRange = pDependencyInfo->pImageMemoryBarriers[i].subresourceRange;
+        const auto& subresourceRange = pDependencyInfo->pImageMemoryBarriers[i].subresourceRange;
         if (VK_IMAGE_TYPE_3D == imageState->imageType) {
           for (uint32_t m = subresourceRange.baseMipLevel;
                (m < subresourceRange.baseMipLevel + subresourceRange.levelCount) &&
@@ -4262,12 +4268,12 @@ inline void vkCmdCopyQueryPoolResults_SD(VkCommandBuffer commandBuffer,
                                          VkDeviceSize stride,
                                          VkQueryResultFlags flags) {
   if (Config::Get().IsRecorder()) {
-    auto it = SD()._bufferstates.find(dstBuffer);
+    const auto it = SD()._bufferstates.find(dstBuffer);
     if (it == SD()._bufferstates.end()) {
       return;
     }
 
-    auto& bufferState = it->second;
+    const auto& bufferState = it->second;
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
       SD().bindingBuffers[commandBuffer].insert(bufferState);
@@ -4301,12 +4307,12 @@ inline void vkCmdUpdateBuffer_SD(VkCommandBuffer commandBuffer,
         VULKAN_BLIT_DESTINATION_BUFFER;
   }
   if (Config::Get().IsRecorder()) {
-    auto it = SD()._bufferstates.find(dstBuffer);
+    const auto it = SD()._bufferstates.find(dstBuffer);
     if (it == SD()._bufferstates.end()) {
       return;
     }
 
-    auto& bufferState = it->second;
+    const auto& bufferState = it->second;
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
       SD().bindingBuffers[commandBuffer].insert(bufferState);
@@ -4339,12 +4345,12 @@ inline void vkCmdFillBuffer_SD(VkCommandBuffer commandBuffer,
         VULKAN_BLIT_DESTINATION_BUFFER;
   }
   if (Config::Get().IsRecorder()) {
-    auto it = SD()._bufferstates.find(dstBuffer);
+    const auto it = SD()._bufferstates.find(dstBuffer);
     if (it == SD()._bufferstates.end()) {
       return;
     }
 
-    auto& bufferState = it->second;
+    const auto& bufferState = it->second;
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
       SD().bindingBuffers[commandBuffer].insert(bufferState);
@@ -4380,12 +4386,12 @@ inline void vkCmdCopyBuffer_SD(VkCommandBuffer commandBuffer,
         VULKAN_BLIT_DESTINATION_BUFFER;
   }
   if (Config::Get().IsRecorder()) {
-    auto dstIt = SD()._bufferstates.find(dstBuffer);
+    const auto dstIt = SD()._bufferstates.find(dstBuffer);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
       // Src buffer
       {
-        auto srcIt = SD()._bufferstates.find(srcBuffer);
+        const auto srcIt = SD()._bufferstates.find(srcBuffer);
         if (srcIt != SD()._bufferstates.end()) {
           SD().bindingBuffers[commandBuffer].insert(srcIt->second);
         }
@@ -4405,7 +4411,7 @@ inline void vkCmdCopyBuffer_SD(VkCommandBuffer commandBuffer,
 
     if (Config::Get().vulkan.recorder.memorySegmentSize ||
         Config::Get().vulkan.recorder.shadowMemory) {
-      auto& bufferBinding = dstIt->second->binding;
+      const auto& bufferBinding = dstIt->second->binding;
       if (bufferBinding) {
         for (uint32_t i = 0; i < regionCount; i++) {
           VkDeviceSize dstOffsetFinal = bufferBinding->memoryOffset + pRegions[i].dstOffset;
@@ -4429,12 +4435,12 @@ inline void vkCmdCopyBuffer2_SD(VkCommandBuffer commandBuffer,
   }
 
   if (Config::Get().IsRecorder() && pCopyBufferInfo) {
-    auto& dstIt = SD()._bufferstates.find(pCopyBufferInfo->dstBuffer);
+    const auto dstIt = SD()._bufferstates.find(pCopyBufferInfo->dstBuffer);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
       // Src buffer
       {
-        auto srcIt = SD()._bufferstates.find(pCopyBufferInfo->srcBuffer);
+        const auto srcIt = SD()._bufferstates.find(pCopyBufferInfo->srcBuffer);
         if (srcIt != SD()._bufferstates.end()) {
           SD().bindingBuffers[commandBuffer].insert(srcIt->second);
         }
@@ -4454,7 +4460,7 @@ inline void vkCmdCopyBuffer2_SD(VkCommandBuffer commandBuffer,
 
     if (Config::Get().vulkan.recorder.memorySegmentSize ||
         Config::Get().vulkan.recorder.shadowMemory) {
-      auto& bufferBinding = dstIt->second->binding;
+      const auto& bufferBinding = dstIt->second->binding;
 
       if (bufferBinding) {
         for (uint32_t i = 0; i < pCopyBufferInfo->regionCount; i++) {
@@ -4582,12 +4588,12 @@ inline void vkCmdCopyBufferToImage_SD(VkCommandBuffer commandBuffer,
   }
 
   if (Config::Get().IsRecorder()) {
-    auto& dstIt = SD()._imagestates.find(dstImage);
+    const auto dstIt = SD()._imagestates.find(dstImage);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
       // Src buffer
       {
-        auto srcIt = SD()._bufferstates.find(srcBuffer);
+        const auto srcIt = SD()._bufferstates.find(srcBuffer);
         if (srcIt != SD()._bufferstates.end()) {
           SD().bindingBuffers[commandBuffer].insert(srcIt->second);
         }
@@ -4625,12 +4631,12 @@ inline void vkCmdCopyBufferToImage2_SD(VkCommandBuffer commandBuffer,
   }
 
   if (Config::Get().IsRecorder() && pCopyBufferToImageInfo) {
-    auto& dstIt = SD()._imagestates.find(pCopyBufferToImageInfo->dstImage);
+    const auto dstIt = SD()._imagestates.find(pCopyBufferToImageInfo->dstImage);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
       // Src buffer
       {
-        auto srcIt = SD()._bufferstates.find(pCopyBufferToImageInfo->srcBuffer);
+        const auto srcIt = SD()._bufferstates.find(pCopyBufferToImageInfo->srcBuffer);
         if (srcIt != SD()._bufferstates.end()) {
           SD().bindingBuffers[commandBuffer].insert(srcIt->second);
         }
@@ -4673,12 +4679,12 @@ inline void vkCmdCopyImage_SD(VkCommandBuffer commandBuffer,
   }
 
   if (Config::Get().IsRecorder()) {
-    auto dstIt = SD()._imagestates.find(dstImage);
+    const auto dstIt = SD()._imagestates.find(dstImage);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
       // Src image
       {
-        auto srcIt = SD()._imagestates.find(srcImage);
+        const auto srcIt = SD()._imagestates.find(srcImage);
         if (srcIt != SD()._imagestates.end()) {
           SD().bindingImages[commandBuffer].insert(srcIt->second);
         }
@@ -4717,12 +4723,12 @@ inline void vkCmdCopyImage2_SD(VkCommandBuffer commandBuffer,
         VULKAN_BLIT_DESTINATION_IMAGE;
   }
   if (Config::Get().IsRecorder()) {
-    auto dstIt = SD()._imagestates.find(pCopyImageInfo->dstImage);
+    const auto dstIt = SD()._imagestates.find(pCopyImageInfo->dstImage);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
       // Src image
       {
-        auto srcIt = SD()._imagestates.find(pCopyImageInfo->srcImage);
+        const auto srcIt = SD()._imagestates.find(pCopyImageInfo->srcImage);
         if (srcIt != SD()._imagestates.end()) {
           SD().bindingImages[commandBuffer].insert(srcIt->second);
         }
@@ -4767,8 +4773,8 @@ inline void vkCmdCopyImageToBuffer_SD(VkCommandBuffer commandBuffer,
         VULKAN_BLIT_DESTINATION_BUFFER;
   }
   if (Config::Get().IsRecorder()) {
-    auto srcIt = SD()._imagestates.find(srcImage);
-    auto dstIt = SD()._bufferstates.find(dstBuffer);
+    const auto srcIt = SD()._imagestates.find(srcImage);
+    const auto dstIt = SD()._bufferstates.find(dstBuffer);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
       // Src image
@@ -4790,10 +4796,10 @@ inline void vkCmdCopyImageToBuffer_SD(VkCommandBuffer commandBuffer,
 
     if (Config::Get().vulkan.recorder.memorySegmentSize ||
         Config::Get().vulkan.recorder.shadowMemory) {
-      auto& bufferBinding = dstIt->second->binding;
+      const auto& bufferBinding = dstIt->second->binding;
 
       if (bufferBinding) {
-        auto& bufferState = dstIt->second;
+        const auto& bufferState = dstIt->second;
         auto device = bufferState->deviceStateStore->deviceHandle;
         VkDeviceMemory deviceMemory = bufferBinding->deviceMemoryStateStore->deviceMemoryHandle;
 
@@ -4835,8 +4841,8 @@ inline void vkCmdCopyImageToBuffer2_SD(VkCommandBuffer commandBuffer,
         ->resourceWriteBuffers[pCopyImageToBufferInfo->dstBuffer] = VULKAN_BLIT_DESTINATION_BUFFER;
   }
   if (Config::Get().IsRecorder() && pCopyImageToBufferInfo) {
-    auto srcIt = SD()._imagestates.find(pCopyImageToBufferInfo->srcImage);
-    auto dstIt = SD()._bufferstates.find(pCopyImageToBufferInfo->dstBuffer);
+    const auto srcIt = SD()._imagestates.find(pCopyImageToBufferInfo->srcImage);
+    const auto dstIt = SD()._bufferstates.find(pCopyImageToBufferInfo->dstBuffer);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
       // Src image
@@ -4858,10 +4864,10 @@ inline void vkCmdCopyImageToBuffer2_SD(VkCommandBuffer commandBuffer,
 
     if (Config::Get().vulkan.recorder.memorySegmentSize ||
         Config::Get().vulkan.recorder.shadowMemory) {
-      auto& bufferBinding = dstIt->second->binding;
+      const auto& bufferBinding = dstIt->second->binding;
 
       if (bufferBinding) {
-        auto& bufferState = dstIt->second;
+        const auto& bufferState = dstIt->second;
         VkDeviceMemory dstDeviceMemory = bufferBinding->deviceMemoryStateStore->deviceMemoryHandle;
 
         if ((srcIt != SD()._imagestates.end()) && srcIt->second->imageCreateInfoData.Value() &&
@@ -4915,12 +4921,12 @@ inline void vkCmdBlitImage_SD(VkCommandBuffer commandBuffer,
         VULKAN_BLIT_DESTINATION_IMAGE;
   }
   if (Config::Get().IsRecorder()) {
-    auto dstIt = SD()._imagestates.find(dstImage);
+    const auto dstIt = SD()._imagestates.find(dstImage);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
       // Src image
       {
-        auto srcIt = SD()._imagestates.find(srcImage);
+        const auto srcIt = SD()._imagestates.find(srcImage);
         if (srcIt != SD()._imagestates.end()) {
           SD().bindingImages[commandBuffer].insert(srcIt->second);
         }
@@ -4959,12 +4965,12 @@ inline void vkCmdBlitImage2_SD(VkCommandBuffer commandBuffer,
         VULKAN_BLIT_DESTINATION_IMAGE;
   }
   if (Config::Get().IsRecorder()) {
-    auto dstIt = SD()._imagestates.find(pBlitInfoImage->dstImage);
+    const auto dstIt = SD()._imagestates.find(pBlitInfoImage->dstImage);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
       // Src image
       {
-        auto srcIt = SD()._imagestates.find(pBlitInfoImage->srcImage);
+        const auto srcIt = SD()._imagestates.find(pBlitInfoImage->srcImage);
         if (srcIt != SD()._imagestates.end()) {
           SD().bindingImages[commandBuffer].insert(srcIt->second);
         }
@@ -5006,12 +5012,12 @@ inline void vkCmdResolveImage_SD(VkCommandBuffer commandBuffer,
     SD()._commandbufferstates[commandBuffer]->resourceWriteImages[dstImage] = VULKAN_RESOLVE_IMAGE;
   }
   if (Config::Get().IsRecorder()) {
-    auto dstIt = SD()._imagestates.find(dstImage);
+    const auto dstIt = SD()._imagestates.find(dstImage);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
       // Src image
       {
-        auto srcIt = SD()._imagestates.find(srcImage);
+        const auto srcIt = SD()._imagestates.find(srcImage);
         if (srcIt != SD()._imagestates.end()) {
           SD().bindingImages[commandBuffer].insert(srcIt->second);
         }
@@ -5051,12 +5057,12 @@ inline void vkCmdResolveImage2_SD(VkCommandBuffer commandBuffer,
   }
 
   if (Config::Get().IsRecorder()) {
-    auto dstIt = SD()._imagestates.find(pResolveImageInfo->dstImage);
+    const auto dstIt = SD()._imagestates.find(pResolveImageInfo->dstImage);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
       // Src image
       {
-        auto srcIt = SD()._imagestates.find(pResolveImageInfo->srcImage);
+        const auto srcIt = SD()._imagestates.find(pResolveImageInfo->srcImage);
         if (srcIt != SD()._imagestates.end()) {
           SD().bindingImages[commandBuffer].insert(srcIt->second);
         }
@@ -5095,7 +5101,7 @@ inline void vkCmdClearColorImage_SD(VkCommandBuffer commandBuffer,
                                     uint32_t rangeCount,
                                     const VkImageSubresourceRange* pRanges) {
   if (Config::Get().IsRecorder()) {
-    auto dstIt = SD()._imagestates.find(image);
+    const auto dstIt = SD()._imagestates.find(image);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
       if (dstIt != SD()._imagestates.end()) {
@@ -5111,7 +5117,7 @@ inline void vkCmdClearColorImage_SD(VkCommandBuffer commandBuffer,
       return;
     }
 
-    auto& imageState = dstIt->second;
+    const auto& imageState = dstIt->second;
 
     if (imageState->binding) {
       VkMemoryRequirements memRequirements = {};
@@ -5140,7 +5146,7 @@ inline void vkCmdClearDepthStencilImage_SD(VkCommandBuffer commandBuffer,
                                            uint32_t rangeCount,
                                            const VkImageSubresourceRange* pRanges) {
   if (Config::Get().IsRecorder()) {
-    auto dstIt = SD()._imagestates.find(image);
+    const auto dstIt = SD()._imagestates.find(image);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
       if (dstIt != SD()._imagestates.end()) {
@@ -5156,7 +5162,7 @@ inline void vkCmdClearDepthStencilImage_SD(VkCommandBuffer commandBuffer,
       return;
     }
 
-    auto& imageState = dstIt->second;
+    const auto& imageState = dstIt->second;
 
     if (imageState->binding) {
       VkMemoryRequirements memRequirements = {};
@@ -5183,10 +5189,10 @@ inline void vkCmdClearAttachments_SD(VkCommandBuffer commandBuffer,
                                      uint32_t rectCount,
                                      const VkClearRect* pRects) {
   if (captureRenderPasses()) {
-    auto& commandBufferState = SD()._commandbufferstates[commandBuffer];
+    const auto& commandBufferState = SD()._commandbufferstates[commandBuffer];
     for (uint32_t i = 0; i < attachmentCount; ++i) {
       if (commandBufferState->beginRenderPassesList.size()) {
-        auto& framebufferState =
+        const auto& framebufferState =
             commandBufferState->beginRenderPassesList.back()->framebufferStateStore;
         uint32_t imageViewSize;
         if (framebufferState && !(framebufferState->framebufferCreateInfoData.Value()->flags &
