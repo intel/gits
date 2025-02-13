@@ -2517,8 +2517,8 @@ bool isResourceOmittedFromRestoration(uint64_t resource,
               imageState->binding->memoryOffset, imageState->binding->memorySizeRequirement, image),
           sd);
 
-      for (auto& resource : sortedAliasedResources) {
-        if (resource.first > imageState->timestamp) {
+      for (auto& resourcePair : sortedAliasedResources) {
+        if (resourcePair.first > imageState->timestamp) {
           return true;
         }
       }
@@ -2569,8 +2569,8 @@ bool isResourceOmittedFromRestoration(uint64_t resource,
                                             bufferState->binding->memorySizeRequirement, buffer),
           sd);
 
-      for (auto& resource : sortedAliasedResources) {
-        if (resource.first > bufferState->timestamp) {
+      for (auto& resourcePair : sortedAliasedResources) {
+        if (resourcePair.first > bufferState->timestamp) {
           return true;
         }
       }
@@ -2583,8 +2583,11 @@ bool isResourceOmittedFromRestoration(uint64_t resource,
 
 inline bool useSynchronization2(VkPhysicalDevice physicalDevice, VkDevice device) {
   static const char* synchronization2ExtensionName = VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME;
-  return gits::Vulkan::isVulkanAPIVersionSupported(1, 3, physicalDevice) ||
-         gits::Vulkan::areDeviceExtensionsEnabled(device, 1, &synchronization2ExtensionName);
+  static bool useSynchronization2 =
+      (gits::Vulkan::isVulkanAPIVersionSupported(1, 3, physicalDevice) ||
+       gits::Vulkan::areDeviceExtensionsEnabled(device, 1, &synchronization2ExtensionName)) &&
+      gits::Vulkan::isSynchronization2FeatureEnabled(device);
+  return useSynchronization2;
 }
 
 } // namespace
@@ -2679,6 +2682,15 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
 
     auto& deviceResources = temporaryDeviceResources[device];
     auto& parameters = imagesAndBarriersMap[device];
+
+    bool concurrentSharing =
+        (imageState->swapchainKHRStateStore)
+            ? (imageState->swapchainKHRStateStore->swapchainCreateInfoKHRData.Value()
+                   ->imageSharingMode == VK_SHARING_MODE_CONCURRENT)
+            : (imageState->imageCreateInfoData.Value()->sharingMode == VK_SHARING_MODE_CONCURRENT);
+    uint32_t restoreQueueFamily =
+        concurrentSharing ? VK_QUEUE_FAMILY_IGNORED : deviceResources.queueFamilyIndex;
+
     uint32_t arrayLayers;
     uint32_t mipLevels;
     VkFormat format;
@@ -2694,8 +2706,8 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
       format = imageState->imageCreateInfoData.Value()->format;
     }
 
-    if (isResourceOmittedFromRestoration((uint64_t)imageAndStatePair.first, true, sd)) {
-      Log(INFO) << "Omitting restoration of image " << imageAndStatePair.first << ".";
+    if (isResourceOmittedFromRestoration((uint64_t)image, true, sd)) {
+      Log(INFO) << "Omitting restoration of image " << image << ".";
 
       // Don't restore image contents, perform only a layout transition
 
@@ -2708,22 +2720,25 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
               (currentSlice.Layout == VK_IMAGE_LAYOUT_PREINITIALIZED)) {
             continue;
           }
-          addBarrier(
-              parameters.imageMemoryBarriersFromTransferDst,
-              parameters.imageMemoryBarriersFromTransferDst2,
-              {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2, // VkStructureType       sType;
-               nullptr,                                  // const void*           pNext;
-               VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,     // VkPipelineStageFlags2 srcStageMask;
-               0,                                        // VkAccessFlags2        srcAccessMask;
-               VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,       // VkPipelineStageFlags2 dstStageMask;
-               currentSlice.Access,                      // VkAccessFlags2        dstAccessMask;
-               VK_IMAGE_LAYOUT_UNDEFINED,                // VkImageLayout         oldLayout;
-               currentSlice.Layout,                      // VkImageLayout         newLayout;
-               deviceResources.queueFamilyIndex, // uint32_t                srcQueueFamilyIndex;
-               currentSlice.QueueFamilyIndex,    // uint32_t                dstQueueFamilyIndex;
-               image,                            // VkImage                 image;
-               {                                 // VkImageSubresourceRange subresourceRange;
-                getFormatAspectFlags(format), m, 1, l, 1}});
+
+          uint32_t imageQueueFamily =
+              concurrentSharing ? VK_QUEUE_FAMILY_IGNORED : currentSlice.QueueFamilyIndex;
+
+          addBarrier(parameters.imageMemoryBarriersFromTransferDst,
+                     parameters.imageMemoryBarriersFromTransferDst2,
+                     {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2, // VkStructureType   sType;
+                      nullptr,                                  // const void*       pNext;
+                      VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, // VkPipelineStageFlags2 srcStageMask;
+                      0,                                    // VkAccessFlags2        srcAccessMask;
+                      VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,   // VkPipelineStageFlags2 dstStageMask;
+                      currentSlice.Access,                  // VkAccessFlags2        dstAccessMask;
+                      VK_IMAGE_LAYOUT_UNDEFINED,            // VkImageLayout         oldLayout;
+                      currentSlice.Layout,                  // VkImageLayout         newLayout;
+                      imageQueueFamily, // uint32_t                srcQueueFamilyIndex;
+                      imageQueueFamily, // uint32_t                dstQueueFamilyIndex;
+                      image,            // VkImage                 image;
+                      {                 // VkImageSubresourceRange subresourceRange;
+                       getFormatAspectFlags(format), m, 1, l, 1}});
         }
       }
 
@@ -2772,77 +2787,76 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
 
         // Image barriers for all existing images
 
+        uint32_t imageQueueFamily =
+            concurrentSharing ? VK_QUEUE_FAMILY_IGNORED : currentSlice.QueueFamilyIndex;
+
         // Recorder-side pre-transfer layout transition
-        addBarrier(
-            parameters.imageMemoryBarriersToTransferSrc,
-            parameters.imageMemoryBarriersToTransferSrc2,
-            {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2, // VkStructureType       sType;
-             nullptr,                                  // const void*           pNext;
-             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,       // VkPipelineStageFlags2 srcStageMask;
-             currentSlice.Access,                      // VkAccessFlags2        srcAccessMask;
-             VK_PIPELINE_STAGE_TRANSFER_BIT,           // VkPipelineStageFlags2 dstStageMask;
-             VK_ACCESS_TRANSFER_READ_BIT,              // VkAccessFlags2        dstAccessMask;
-             currentSlice.Layout,                      // VkImageLayout         oldLayout;
-             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,     // VkImageLayout         newLayout;
-             currentSlice.QueueFamilyIndex,    // uint32_t                srcQueueFamilyIndex;
-             deviceResources.queueFamilyIndex, // uint32_t                dstQueueFamilyIndex;
-             image,                            // VkImage                 image;
-             {                                 // VkImageSubresourceRange subresourceRange;
-              getFormatAspectFlags(format), m, 1, l, 1}});
+        addBarrier(parameters.imageMemoryBarriersToTransferSrc,
+                   parameters.imageMemoryBarriersToTransferSrc2,
+                   {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2, // VkStructureType    sType;
+                    nullptr,                                  // const void*        pNext;
+                    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,   // VkPipelineStageFlags2  srcStageMask;
+                    currentSlice.Access,                  // VkAccessFlags2         srcAccessMask;
+                    VK_PIPELINE_STAGE_TRANSFER_BIT,       // VkPipelineStageFlags2  dstStageMask;
+                    VK_ACCESS_TRANSFER_READ_BIT,          // VkAccessFlags2         dstAccessMask;
+                    currentSlice.Layout,                  // VkImageLayout          oldLayout;
+                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, // VkImageLayout          newLayout;
+                    imageQueueFamily,   // uint32_t                srcQueueFamilyIndex;
+                    restoreQueueFamily, // uint32_t                dstQueueFamilyIndex;
+                    image,              // VkImage                 image;
+                    {                   // VkImageSubresourceRange subresourceRange;
+                     getFormatAspectFlags(format), m, 1, l, 1}});
 
         // Player-side pre-transfer layout transition
-        addBarrier(
-            parameters.imageMemoryBarriersToTransferDst,
-            parameters.imageMemoryBarriersToTransferDst2,
-            {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2, // VkStructureType       sType;
-             nullptr,                                  // const void*           pNext;
-             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,       // VkPipelineStageFlags2 srcStageMask;
-             0,                                        // VkAccessFlags2        srcAccessMask;
-             VK_PIPELINE_STAGE_TRANSFER_BIT,           // VkPipelineStageFlags2 dstStageMask;
-             VK_ACCESS_TRANSFER_WRITE_BIT,             // VkAccessFlags2        dstAccessMask;
-             VK_IMAGE_LAYOUT_UNDEFINED,                // VkImageLayout         oldLayout;
-             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,     // VkImageLayout         newLayout;
-             VK_QUEUE_FAMILY_IGNORED,          // uint32_t                srcQueueFamilyIndex;
-             deviceResources.queueFamilyIndex, // uint32_t                dstQueueFamilyIndex;
-             image,                            // VkImage                 image;
-             {                                 // VkImageSubresourceRange subresourceRange;
-              getFormatAspectFlags(format), m, 1, l, 1}});
+        addBarrier(parameters.imageMemoryBarriersToTransferDst,
+                   parameters.imageMemoryBarriersToTransferDst2,
+                   {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2, // VkStructureType    sType;
+                    nullptr,                                  // const void*        pNext;
+                    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,   // VkPipelineStageFlags2  srcStageMask;
+                    0,                                    // VkAccessFlags2         srcAccessMask;
+                    VK_PIPELINE_STAGE_TRANSFER_BIT,       // VkPipelineStageFlags2  dstStageMask;
+                    VK_ACCESS_TRANSFER_WRITE_BIT,         // VkAccessFlags2         dstAccessMask;
+                    VK_IMAGE_LAYOUT_UNDEFINED,            // VkImageLayout          oldLayout;
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, // VkImageLayout          newLayout;
+                    restoreQueueFamily, // uint32_t                srcQueueFamilyIndex;
+                    restoreQueueFamily, // uint32_t                dstQueueFamilyIndex;
+                    image,              // VkImage                 image;
+                    {                   // VkImageSubresourceRange subresourceRange;
+                     getFormatAspectFlags(format), m, 1, l, 1}});
 
         // Recorder-side post-transfer layout transitions
-        addBarrier(
-            parameters.imageMemoryBarriersFromTransferSrc,
-            parameters.imageMemoryBarriersFromTransferSrc2,
-            {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2, // VkStructureType       sType;
-             nullptr,                                  // const void*           pNext;
-             VK_PIPELINE_STAGE_TRANSFER_BIT,           // VkPipelineStageFlags2 srcStageMask;
-             VK_ACCESS_TRANSFER_READ_BIT,              // VkAccessFlags2        srcAccessMask;
-             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,       // VkPipelineStageFlags2 dstStageMask;
-             currentSlice.Access,                      // VkAccessFlags2        dstAccessMask;
-             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,     // VkImageLayout         oldLayout;
-             currentSlice.Layout,                      // VkImageLayout         newLayout;
-             deviceResources.queueFamilyIndex, // uint32_t                srcQueueFamilyIndex;
-             currentSlice.QueueFamilyIndex,    // uint32_t                dstQueueFamilyIndex;
-             image,                            // VkImage                 image;
-             {                                 // VkImageSubresourceRange subresourceRange;
-              getFormatAspectFlags(format), m, 1, l, 1}});
+        addBarrier(parameters.imageMemoryBarriersFromTransferSrc,
+                   parameters.imageMemoryBarriersFromTransferSrc2,
+                   {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2, // VkStructureType    sType;
+                    nullptr,                                  // const void*        pNext;
+                    VK_PIPELINE_STAGE_TRANSFER_BIT,       // VkPipelineStageFlags2  srcStageMask;
+                    VK_ACCESS_TRANSFER_READ_BIT,          // VkAccessFlags2         srcAccessMask;
+                    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,   // VkPipelineStageFlags2  dstStageMask;
+                    currentSlice.Access,                  // VkAccessFlags2         dstAccessMask;
+                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, // VkImageLayout          oldLayout;
+                    currentSlice.Layout,                  // VkImageLayout          newLayout;
+                    restoreQueueFamily, // uint32_t                srcQueueFamilyIndex;
+                    imageQueueFamily,   // uint32_t                dstQueueFamilyIndex;
+                    image,              // VkImage                 image;
+                    {                   // VkImageSubresourceRange subresourceRange;
+                     getFormatAspectFlags(format), m, 1, l, 1}});
 
         // Player-side post-transfer layout transition
-        addBarrier(
-            parameters.imageMemoryBarriersFromTransferDst,
-            parameters.imageMemoryBarriersFromTransferDst2,
-            {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2, // VkStructureType       sType;
-             nullptr,                                  // const void*           pNext;
-             VK_PIPELINE_STAGE_TRANSFER_BIT,           // VkPipelineStageFlags2 srcStageMask;
-             VK_ACCESS_TRANSFER_WRITE_BIT,             // VkAccessFlags2        srcAccessMask;
-             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,       // VkPipelineStageFlags2 dstStageMask;
-             currentSlice.Access,                      // VkAccessFlags2        dstAccessMask;
-             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,     // VkImageLayout         oldLayout;
-             currentSlice.Layout,                      // VkImageLayout         newLayout;
-             deviceResources.queueFamilyIndex, // uint32_t                srcQueueFamilyIndex;
-             currentSlice.QueueFamilyIndex,    // uint32_t                dstQueueFamilyIndex;
-             image,                            // VkImage                 image;
-             {                                 // VkImageSubresourceRange subresourceRange;
-              getFormatAspectFlags(format), m, 1, l, 1}});
+        addBarrier(parameters.imageMemoryBarriersFromTransferDst,
+                   parameters.imageMemoryBarriersFromTransferDst2,
+                   {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2, // VkStructureType    sType;
+                    nullptr,                                  // const void*        pNext;
+                    VK_PIPELINE_STAGE_TRANSFER_BIT,       // VkPipelineStageFlags2  srcStageMask;
+                    VK_ACCESS_TRANSFER_WRITE_BIT,         // VkAccessFlags2         srcAccessMask;
+                    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,   // VkPipelineStageFlags2  dstStageMask;
+                    currentSlice.Access,                  // VkAccessFlags2         dstAccessMask;
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, // VkImageLayout          oldLayout;
+                    currentSlice.Layout,                  // VkImageLayout          newLayout;
+                    restoreQueueFamily, // uint32_t                srcQueueFamilyIndex;
+                    imageQueueFamily,   // uint32_t                dstQueueFamilyIndex;
+                    image,              // VkImage                 image;
+                    {                   // VkImageSubresourceRange subresourceRange;
+                     getFormatAspectFlags(format), m, 1, l, 1}});
       }
     }
 

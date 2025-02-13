@@ -264,13 +264,15 @@ struct CDeviceState : public UniqueResourceHandle {
   std::shared_ptr<CPhysicalDeviceState> physicalDeviceStateStore;
   std::vector<std::shared_ptr<CQueueState>> queueStateStoreList;
   std::vector<std::string> enabledExtensions;
+  bool synchronization2;
 
   CDeviceState(VkDevice const* _pDevice,
                VkDeviceCreateInfo const* _pCreateInfo,
                std::shared_ptr<CPhysicalDeviceState>& _physicalDeviceState)
       : deviceHandle(*_pDevice),
         deviceCreateInfoData(_pCreateInfo),
-        physicalDeviceStateStore(_physicalDeviceState) {}
+        physicalDeviceStateStore(_physicalDeviceState),
+        synchronization2(false) {}
 
   std::set<uint64_t> GetMappedPointers() {
     std::set<uint64_t> pointers;

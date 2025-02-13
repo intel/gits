@@ -352,6 +352,16 @@ inline void vkCreateDevice_SD(VkResult return_value,
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; ++i) {
       deviceState->enabledExtensions.emplace_back(pCreateInfo->ppEnabledExtensionNames[i]);
     }
+
+    // Synchronization2 feature check
+    {
+      const auto* sync2Features =
+          (const VkPhysicalDeviceSynchronization2Features*)getPNextStructure(
+              pCreateInfo->pNext, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES);
+      if (sync2Features && (sync2Features->synchronization2 == VK_TRUE)) {
+        deviceState->synchronization2 = true;
+      }
+    }
   }
 }
 

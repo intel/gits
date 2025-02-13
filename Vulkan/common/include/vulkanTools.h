@@ -87,6 +87,7 @@ bool areDeviceExtensionsSupported(VkPhysicalDevice physicalDevice,
 bool areDeviceExtensionsEnabled(VkDevice device,
                                 uint32_t requestedExtensionsCount,
                                 char const* const* requestedExtensions);
+bool isSynchronization2FeatureEnabled(VkDevice device);
 void printShaderHashes(VkPipeline pipeline);
 void waitForAllDevices();
 void destroyDeviceLevelResources(VkDevice device = VK_NULL_HANDLE);

@@ -269,7 +269,9 @@ gits::Vulkan::CGitsVkMemoryUpdate2::CGitsVkMemoryUpdate2(VkDeviceMemory memory,
 void gits::Vulkan::CGitsVkMemoryUpdate2::Run() {
   if (**_size > 0) {
     std::vector<VkBufferCopy> updatedRegions;
+    std::vector<VkMappedMemoryRange> regionsToFlush;
     updatedRegions.reserve(**_size);
+    regionsToFlush.reserve(**_size);
 
     VkDeviceMemory memory = **_mem;
     auto& memoryState = SD()._devicememorystates[memory];
@@ -283,6 +285,13 @@ void gits::Vulkan::CGitsVkMemoryUpdate2::Run() {
             **_offset[i], // VkDeviceSize dstOffset;
             **_length[i]  // VkDeviceSize size;
         });
+        regionsToFlush.push_back({
+            VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, // VkStructureType sType;
+            nullptr,                               // const void* pNext;
+            memory,                                // VkDeviceMemory memory;
+            **_offset[i],                          // VkDeviceSize offset;
+            **_length[i]                           // VkDeviceSize size;
+        });
 
         void* pointer = memoryState->mapping->ppDataData.Value();
         std::memcpy((char*)pointer + updatedRegions[i].dstOffset, resourcePtr,
@@ -291,6 +300,7 @@ void gits::Vulkan::CGitsVkMemoryUpdate2::Run() {
     }
 
     if (updatedRegions.size() > 0) {
+      drvVk.vkFlushMappedMemoryRanges(device, regionsToFlush.size(), regionsToFlush.data());
       drvVk.vkTagMemoryContentsUpdateGITS(device, memory, updatedRegions.size(),
                                           updatedRegions.data());
     }

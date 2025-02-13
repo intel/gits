@@ -2136,6 +2136,10 @@ bool areDeviceExtensionsEnabled(VkDevice device,
   return true;
 }
 
+bool isSynchronization2FeatureEnabled(VkDevice device) {
+  return SD()._devicestates[device]->synchronization2;
+}
+
 void printShaderHashes(VkPipeline pipeline) {
   if ((Config::Get().vulkan.player.traceVKShaderHashes) && (VK_NULL_HANDLE != pipeline)) {
     auto& pipelineState = SD()._pipelinestates[pipeline];
