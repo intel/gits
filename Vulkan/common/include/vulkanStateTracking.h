@@ -2583,7 +2583,6 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
       accelerationStructureState->updateInfo.reset(new CAccelerationStructureKHRState::CBuildInfo(
           buildInfo, pRangeInfos, prepareAccelerationStructureControlData(cmdBuf),
           srcAccelerationStructureState));
-      accelerationStructureState->copyInfo.reset();
     }
   }
 

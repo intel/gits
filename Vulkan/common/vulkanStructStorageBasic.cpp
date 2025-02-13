@@ -180,7 +180,10 @@ gits::Vulkan::CVkDeviceOrHostAddressConstKHRData::CVkDeviceOrHostAddressConstKHR
     uint64_t stride,
     uint32_t count,
     const VkAccelerationStructureBuildControlDataGITS& controlData)
-    : _controlData(controlData), _bufferDeviceAddress(), _DeviceOrHostAddressConst(nullptr) {
+    : COnQueueSubmitEndDataStorage(),
+      _controlData(controlData),
+      _bufferDeviceAddress(),
+      _DeviceOrHostAddressConst(nullptr) {
   if ((deviceorhostaddress.deviceAddress == 0) || (count == 0) || (stride == 0)) {
     return;
   }

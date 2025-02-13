@@ -2203,15 +2203,24 @@ void gits::Vulkan::RestoreQueryPool(CScheduler& scheduler, CStateDynamic& sd) {
           if (!queryPoolState->resetQueries[i]) {
             Log(ERR) << "Query " << i << " from pool " << queryPool << " used but wasn't reset!";
           }
-          if (VK_QUERY_TYPE_TIMESTAMP ==
-              queryPoolState->queryPoolCreateInfoData.Value()->queryType) {
+          switch (queryPoolState->queryPoolCreateInfoData.Value()->queryType) {
+          case VK_QUERY_TYPE_TIMESTAMP:
             scheduler.Register(new CvkCmdWriteTimestamp(submitableResources.commandBuffer,
                                                         VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                                         queryPool, i));
-          } else {
+            break;
+          case VK_QUERY_TYPE_ACCELERATION_STRUCTURE_COMPACTED_SIZE_KHR:
+          case VK_QUERY_TYPE_ACCELERATION_STRUCTURE_SERIALIZATION_SIZE_KHR:
+          case VK_QUERY_TYPE_ACCELERATION_STRUCTURE_SIZE_KHR:
+          case VK_QUERY_TYPE_ACCELERATION_STRUCTURE_SERIALIZATION_BOTTOM_LEVEL_POINTERS_KHR:
+          case VK_QUERY_TYPE_ACCELERATION_STRUCTURE_COMPACTED_SIZE_NV:
+            // Not allowed
+            break;
+          default:
             scheduler.Register(
                 new CvkCmdBeginQuery(submitableResources.commandBuffer, queryPool, i, 0));
             scheduler.Register(new CvkCmdEndQuery(submitableResources.commandBuffer, queryPool, i));
+            break;
           }
         }
       }
@@ -3851,18 +3860,21 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
           VkAccelerationStructureKHR accelerationStructure =
               (VkAccelerationStructureKHR)accelerationStructureState.GetUniqueStateID();
 
+          auto createInfo = *accelerationStructureState.accelerationStructureCreateInfoData.Value();
+
           auto tmpMemoryBufferPair = createTemporaryBuffer(
-              device, accelerationStructureState.buildSizeInfo.accelerationStructureSize,
+              device,
+              std::max(accelerationStructureState.buildSizeInfo.accelerationStructureSize,
+                       createInfo.size),
               accelerationStructureState.bufferStateStore->bufferCreateInfoData.Value()->usage);
           auto& memoryState = *tmpMemoryBufferPair.first;
           auto& bufferState = *tmpMemoryBufferPair.second;
           auto memory = (VkDeviceMemory)memoryState.GetUniqueStateID();
           auto buffer = (VkBuffer)bufferState.GetUniqueStateID();
 
-          auto createInfo = *accelerationStructureState.accelerationStructureCreateInfoData.Value();
           createInfo.offset = 0;
           createInfo.deviceAddress = 0;
-          createInfo.buffer = (VkBuffer)bufferState.GetUniqueStateID();
+          createInfo.buffer = buffer;
 
           scheduler.Register(new CvkCreateBuffer(
               VK_SUCCESS, device, bufferState.bufferCreateInfoData.Value(), nullptr, &buffer));
@@ -3876,17 +3888,17 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
           temporaryBuffers.push_back(buffer);
           temporaryMemoryObjects.push_back(memory);
 
+          // Schedule copy commands
+          scheduleCopy(accelerationStructure, buffer, accelerationStructureState.copyInfo.get(),
+                       commandBuffer);
+
           // Schedule build commands
           scheduleBuild(accelerationStructure, buffer, accelerationStructureState.buildInfo.get(),
                         commandBuffer);
 
-          // Schedule build with update commands
+          // Schedule update commands
           scheduleBuild(accelerationStructure, buffer, accelerationStructureState.updateInfo.get(),
                         commandBuffer);
-
-          // Schedule copy
-          scheduleCopy(accelerationStructure, buffer, accelerationStructureState.copyInfo.get(),
-                       commandBuffer);
 
           return accelerationStructure;
         };
@@ -3904,20 +3916,20 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
         auto submittableResources = GetSubmitableResources(scheduler, device);
         VkCommandBuffer commandBuffer = submittableResources.commandBuffer;
 
+        // Schedule copy commands
+        scheduleCopy(accelerationStructurePair.second,
+                     accelerationStructureState->bufferStateStore->bufferHandle,
+                     accelerationStructureState->copyInfo.get(), commandBuffer);
+
         // Schedule build commands
         scheduleBuild(accelerationStructurePair.second,
                       accelerationStructureState->bufferStateStore->bufferHandle,
                       accelerationStructureState->buildInfo.get(), commandBuffer);
 
-        // Schedule build with update commands
+        // Schedule update commands
         scheduleBuild(accelerationStructurePair.second,
                       accelerationStructureState->bufferStateStore->bufferHandle,
                       accelerationStructureState->updateInfo.get(), commandBuffer);
-
-        // Schedule copy commands
-        scheduleCopy(accelerationStructurePair.second,
-                     accelerationStructureState->bufferStateStore->bufferHandle,
-                     accelerationStructureState->copyInfo.get(), commandBuffer);
 
         drvVk.vkQueueSubmit(submittableResources.queue, 0, nullptr, submittableResources.fence);
         SubmitWork(scheduler, submittableResources);

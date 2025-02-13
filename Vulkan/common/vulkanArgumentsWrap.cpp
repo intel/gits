@@ -23,10 +23,6 @@ gits::Vulkan::CVkAccelerationStructureGeometryAabbsDataKHR::
       _AccelerationStructureGeometryAabbsDataKHROriginal(nullptr),
       _isNullPtr(accelerationstructuregeometryaabbsdatakhr == nullptr) {
   if (!*_isNullPtr) {
-    if (buildRangeInfo.primitiveCount == 0) {
-      return;
-    }
-
     auto* structStoragePointer = (VkStructStoragePointerGITS*)getPNextStructure(
         accelerationstructuregeometryaabbsdatakhr->pNext,
         VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS);
@@ -68,10 +64,6 @@ gits::Vulkan::CVkAccelerationStructureGeometryTrianglesDataKHR::
       _AccelerationStructureGeometryTrianglesDataKHROriginal(nullptr),
       _isNullPtr(accelerationstructuregeometrytrianglesdatakhr == nullptr) {
   if (!*_isNullPtr) {
-    if (buildRangeInfo.primitiveCount == 0) {
-      return;
-    }
-
     auto* structStoragePointer = (VkStructStoragePointerGITS*)getPNextStructure(
         accelerationstructuregeometrytrianglesdatakhr->pNext,
         VK_STRUCTURE_TYPE_STRUCT_STORAGE_POINTER_GITS);

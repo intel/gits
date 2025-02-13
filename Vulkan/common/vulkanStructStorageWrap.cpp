@@ -18,10 +18,6 @@ gits::Vulkan::CVkAccelerationStructureGeometryAabbsDataKHRData::
       _AccelerationStructureGeometryAabbsDataKHR(nullptr),
       _isNullPtr(accelerationstructuregeometryaabbsdatakhr == nullptr) {
   if (!*_isNullPtr) {
-    if (buildRangeInfo.primitiveCount == 0) {
-      return;
-    }
-
     _sType =
         std::make_unique<CVkStructureTypeData>(accelerationstructuregeometryaabbsdatakhr->sType);
     _pNext = std::make_unique<CpNextWrapperData>(accelerationstructuregeometryaabbsdatakhr->pNext);
@@ -60,10 +56,6 @@ gits::Vulkan::CVkAccelerationStructureGeometryTrianglesDataKHRData::
       _AccelerationStructureGeometryTrianglesDataKHR(nullptr),
       _isNullPtr(accelerationstructuregeometrytrianglesdatakhr == nullptr) {
   if (!*_isNullPtr) {
-    if (buildRangeInfo.primitiveCount == 0) {
-      return;
-    }
-
     _sType = std::make_unique<CVkStructureTypeData>(
         accelerationstructuregeometrytrianglesdatakhr->sType);
     _pNext =
