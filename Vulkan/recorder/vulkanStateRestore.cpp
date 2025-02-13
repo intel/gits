@@ -2255,10 +2255,12 @@ void gits::Vulkan::RestoreCommandBuffers(CScheduler& scheduler, CStateDynamic& s
       return;
     }
 
-    for (auto obj : sd.bindingBuffers[commandBuffer]) {
-      if (sd._bufferstates.find(obj) == sd._bufferstates.end()) {
+    for (auto bufferState : sd.bindingBuffers[commandBuffer]) {
+      if ((sd._bufferstates.find(bufferState->bufferHandle) == sd._bufferstates.end()) ||
+          (sd._bufferstates.find(bufferState->bufferHandle)->second->GetUniqueStateID() !=
+           bufferState->GetUniqueStateID())) {
         Log(WARN) << "Omitting restore of VKCommandBuffer " << commandBuffer
-                  << " because used VKBuffer " << obj << " doesn't exist.";
+                  << " because used VKBuffer " << bufferState->bufferHandle << " doesn't exist.";
         return;
       }
     }
@@ -2266,9 +2268,11 @@ void gits::Vulkan::RestoreCommandBuffers(CScheduler& scheduler, CStateDynamic& s
     // Disable this check when recording streams from "The Surge 2" game
     TODO("Find a way to manage workarounds specific for a given title")
     for (auto obj : sd.bindingImages[commandBuffer]) {
-      if (sd._imagestates.find(obj) == sd._imagestates.end()) {
+      if ((sd._imagestates.find(obj->imageHandle) == sd._imagestates.end()) ||
+          (sd._imagestates.find(obj->imageHandle)->second->GetUniqueStateID() !=
+           obj->GetUniqueStateID())) {
         Log(WARN) << "Omitting restore of VKCommandBuffer " << commandBuffer
-                  << " because used VKImage " << obj << " doesn't exist.";
+                  << " because used VKImage " << obj->imageHandle << " doesn't exist.";
         return;
       }
     }
@@ -2599,11 +2603,6 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
   //////////////////////////////////////////////////////////////////
 
   for (auto& imageAndStatePair : sd._imagestates) {
-    if (isResourceOmittedFromRestoration((uint64_t)imageAndStatePair.first, true, sd)) {
-      Log(INFO) << "Omitting restoration of image " << imageAndStatePair.first << ".";
-      continue;
-    }
-
     VkImage image = imageAndStatePair.first;
     auto& imageState = imageAndStatePair.second;
     auto device = imageState->deviceStateStore->deviceHandle;
@@ -2652,6 +2651,40 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
       arrayLayers = imageState->imageCreateInfoData.Value()->arrayLayers;
       mipLevels = imageState->imageCreateInfoData.Value()->mipLevels;
       format = imageState->imageCreateInfoData.Value()->format;
+    }
+
+    if (isResourceOmittedFromRestoration((uint64_t)imageAndStatePair.first, true, sd)) {
+      Log(INFO) << "Omitting restoration of image " << imageAndStatePair.first << ".";
+
+      // Don't restore image contents, perform only a layout transition
+
+      for (uint32_t l = 0; l < arrayLayers; ++l) {
+        for (uint32_t m = 0; m < mipLevels; ++m) {
+          // Don't perform layout transition for images in undefined or preinitialized state
+          if ((imageState->currentLayout[l][m].Layout == VK_IMAGE_LAYOUT_UNDEFINED) ||
+              (imageState->currentLayout[l][m].Layout == VK_IMAGE_LAYOUT_PREINITIALIZED)) {
+            continue;
+          }
+          addBarrier(
+              parameters.imageMemoryBarriersFromTransferDst,
+              parameters.imageMemoryBarriersFromTransferDst2,
+              {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2, // VkStructureType       sType;
+               nullptr,                                  // const void*           pNext;
+               VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,     // VkPipelineStageFlags2 srcStageMask;
+               0,                                        // VkAccessFlags2        srcAccessMask;
+               VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,       // VkPipelineStageFlags2 dstStageMask;
+               imageState->currentLayout[l][m].Access,   // VkAccessFlags2        dstAccessMask;
+               VK_IMAGE_LAYOUT_UNDEFINED,                // VkImageLayout         oldLayout;
+               imageState->currentLayout[l][m].Layout,   // VkImageLayout         newLayout;
+               deviceResources.queueFamilyIndex, // uint32_t                 srcQueueFamilyIndex;
+               imageState->currentLayout[l][m].QueueFamilyIndex, // uint32_t dstQueueFamilyIndex;
+               image,                                            // VkImage  image;
+               {// VkImageSubresourceRange subresourceRange;
+                getFormatAspectFlags(format), m, 1, l, 1}});
+        }
+      }
+
+      continue;
     }
 
     // Copied data

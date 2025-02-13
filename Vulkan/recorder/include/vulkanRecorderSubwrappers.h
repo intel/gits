@@ -561,40 +561,38 @@ inline void vkQueueSubmit_RECWRAP(VkResult return_value,
 
     for (uint32_t i = 0; i < submitCount; i++) {
       for (uint32_t j = 0; j < pSubmits[i].commandBufferCount; j++) {
-        // Process memory bound to buffers
-        for (auto buffer : SD().bindingBuffers[pSubmits[i].pCommandBuffers[j]]) {
-          if ((SD()._bufferstates.find(buffer) != SD()._bufferstates.end()) &&
-              (updatedBuffers.find(buffer) == updatedBuffers.end())) {
-            auto& bufferState = SD()._bufferstates[buffer];
+        auto commandBuffer = pSubmits[i].pCommandBuffers[j];
 
-            if ((bufferState->binding) &&
+        // Process memory bound to buffers
+        for (auto& bufferState : SD().bindingBuffers[commandBuffer]) {
+          if (updatedBuffers.find(bufferState->bufferHandle) == updatedBuffers.end()) {
+            auto& bufferBinding = bufferState->binding;
+
+            if (bufferBinding &&
                 (SD()._devicememorystates.find(
-                     bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle) !=
+                     bufferBinding->deviceMemoryStateStore->deviceMemoryHandle) !=
                  SD()._devicememorystates.end()) &&
-                (bufferState->binding->deviceMemoryStateStore->IsMapped())) {
-              _memoryToUpdate.insert(
-                  bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle);
+                bufferBinding->deviceMemoryStateStore->IsMapped()) {
+              _memoryToUpdate.insert(bufferBinding->deviceMemoryStateStore->deviceMemoryHandle);
             }
+            updatedBuffers.insert(bufferState->bufferHandle);
           }
-          updatedBuffers.insert(buffer);
         }
 
         // Process memory bound to images
-        for (auto image : SD().bindingImages[pSubmits[i].pCommandBuffers[j]]) {
-          if ((SD()._imagestates.find(image) != SD()._imagestates.end()) &&
-              (updatedImages.find(image) == updatedImages.end())) {
-            auto& imageState = SD()._imagestates[image];
+        for (auto& imageState : SD().bindingImages[commandBuffer]) {
+          if (updatedImages.find(imageState->imageHandle) == updatedImages.end()) {
+            auto& imageBinding = imageState->binding;
 
-            if ((imageState->binding) &&
+            if (imageBinding &&
                 (SD()._devicememorystates.find(
-                     imageState->binding->deviceMemoryStateStore->deviceMemoryHandle) !=
+                     imageBinding->deviceMemoryStateStore->deviceMemoryHandle) !=
                  SD()._devicememorystates.end()) &&
-                (imageState->binding->deviceMemoryStateStore->IsMapped())) {
-              _memoryToUpdate.insert(
-                  imageState->binding->deviceMemoryStateStore->deviceMemoryHandle);
+                imageBinding->deviceMemoryStateStore->IsMapped()) {
+              _memoryToUpdate.insert(imageBinding->deviceMemoryStateStore->deviceMemoryHandle);
             }
+            updatedImages.insert(imageState->imageHandle);
           }
-          updatedImages.insert(image);
         }
       }
     }
@@ -707,40 +705,38 @@ inline void vkQueueSubmit2_RECWRAP(VkResult return_value,
 
     for (uint32_t i = 0; i < submitCount; i++) {
       for (uint32_t j = 0; j < pSubmits[i].commandBufferInfoCount; j++) {
-        // Process memory bound to buffers
-        for (auto buffer : SD().bindingBuffers[pSubmits[i].pCommandBufferInfos[j].commandBuffer]) {
-          if ((SD()._bufferstates.find(buffer) != SD()._bufferstates.end()) &&
-              (updatedBuffers.find(buffer) == updatedBuffers.end())) {
-            auto& bufferState = SD()._bufferstates[buffer];
+        auto commandBuffer = pSubmits[i].pCommandBufferInfos[j].commandBuffer;
 
-            if ((bufferState->binding) &&
+        // Process memory bound to buffers
+        for (auto& bufferState : SD().bindingBuffers[commandBuffer]) {
+          if (updatedBuffers.find(bufferState->bufferHandle) == updatedBuffers.end()) {
+            auto& bufferBinding = bufferState->binding;
+
+            if (bufferBinding &&
                 (SD()._devicememorystates.find(
-                     bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle) !=
+                     bufferBinding->deviceMemoryStateStore->deviceMemoryHandle) !=
                  SD()._devicememorystates.end()) &&
-                (bufferState->binding->deviceMemoryStateStore->IsMapped())) {
-              _memoryToUpdate.insert(
-                  bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle);
+                bufferBinding->deviceMemoryStateStore->IsMapped()) {
+              _memoryToUpdate.insert(bufferBinding->deviceMemoryStateStore->deviceMemoryHandle);
             }
+            updatedBuffers.insert(bufferState->bufferHandle);
           }
-          updatedBuffers.insert(buffer);
         }
 
         // Process memory bound to images
-        for (auto image : SD().bindingImages[pSubmits[i].pCommandBufferInfos[j].commandBuffer]) {
-          if ((SD()._imagestates.find(image) != SD()._imagestates.end()) &&
-              (updatedImages.find(image) == updatedImages.end())) {
-            auto& imageState = SD()._imagestates[image];
+        for (auto& imageState : SD().bindingImages[commandBuffer]) {
+          if (updatedImages.find(imageState->imageHandle) == updatedImages.end()) {
+            auto& imageBinding = imageState->binding;
 
-            if ((imageState->binding) &&
+            if (imageBinding &&
                 (SD()._devicememorystates.find(
-                     imageState->binding->deviceMemoryStateStore->deviceMemoryHandle) !=
+                     imageBinding->deviceMemoryStateStore->deviceMemoryHandle) !=
                  SD()._devicememorystates.end()) &&
-                (imageState->binding->deviceMemoryStateStore->IsMapped())) {
-              _memoryToUpdate.insert(
-                  imageState->binding->deviceMemoryStateStore->deviceMemoryHandle);
+                imageBinding->deviceMemoryStateStore->IsMapped()) {
+              _memoryToUpdate.insert(imageBinding->deviceMemoryStateStore->deviceMemoryHandle);
             }
+            updatedImages.insert(imageState->imageHandle);
           }
-          updatedImages.insert(image);
         }
       }
     }

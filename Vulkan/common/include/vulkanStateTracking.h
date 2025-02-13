@@ -1259,8 +1259,7 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
               }
 
               if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-                descriptorSetState->descriptorImages[pDescriptorWrites[i].dstBinding] =
-                    imageState->imageHandle;
+                descriptorSetState->descriptorImages[pDescriptorWrites[i].dstBinding] = imageState;
               }
 
               if (descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
@@ -1301,7 +1300,7 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
 
               if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
                 descriptorSetState->descriptorBuffers[pDescriptorWrites[i].dstBinding] =
-                    bufferViewState->bufferStateStore->bufferHandle;
+                    bufferViewState->bufferStateStore;
               }
               if (descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
                 descriptorSetState->descriptorWriteBuffers[pDescriptorWrites[i].dstBinding] = {
@@ -1349,7 +1348,7 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
 
               if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
                 descriptorSetState->descriptorBuffers[pDescriptorWrites[i].dstBinding] =
-                    pDescriptorWrites[i].pBufferInfo[j].buffer;
+                    bufferState;
               }
               if ((descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) ||
                   (descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
@@ -1397,7 +1396,7 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
 
               if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
                 descriptorSetState->descriptorBuffers[currentBinding] =
-                    accelerationStructureState->bufferStateStore->bufferHandle;
+                    accelerationStructureState->bufferStateStore;
               }
             }
             break;
@@ -1709,7 +1708,7 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
             if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
               descriptorSetState->descriptorImages
                   [descriptorUpdateTemplateCreateInfoData->pDescriptorUpdateEntries[i].dstBinding] =
-                  imageState->imageHandle;
+                  imageState;
             }
             if (descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
               descriptorSetState->descriptorWriteImages[descriptorUpdateTemplateCreateInfoData
@@ -1764,7 +1763,7 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
             if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
               descriptorSetState->descriptorBuffers
                   [descriptorUpdateTemplateCreateInfoData->pDescriptorUpdateEntries[i].dstBinding] =
-                  bufferViewState->bufferStateStore->bufferHandle;
+                  bufferViewState->bufferStateStore;
             }
             if (descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
               descriptorSetState->descriptorWriteBuffers[descriptorUpdateTemplateCreateInfoData
@@ -1830,7 +1829,7 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
             if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
               descriptorSetState->descriptorBuffers
                   [descriptorUpdateTemplateCreateInfoData->pDescriptorUpdateEntries[i].dstBinding] =
-                  descBufferInfo->buffer;
+                  bufferState;
             }
 
             if ((descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) ||
@@ -2427,11 +2426,11 @@ inline void vkBeginCommandBuffer_SD(VkResult /* return_value */,
           auto& imageState = imageViewState->imageStateStore;
 
           if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-            SD().bindingImages[cmdBuffer].insert(imageState->imageHandle);
+            SD().bindingImages[cmdBuffer].insert(imageState);
           }
           if ((Config::Get().vulkan.recorder.memorySegmentSize ||
                Config::Get().vulkan.recorder.shadowMemory) &&
-              (imageState->binding)) {
+              imageState->binding) {
             VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset;
             VkDeviceMemory dstDeviceMemory =
                 imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
@@ -2593,9 +2592,12 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
     auto buildInfo = &pInfos[acc];
     auto buildRangeInfos = ppBuildRangeInfos[acc];
 
-    auto& accelerationStructureState =
-        SD()._accelerationstructurekhrstates[buildInfo->dstAccelerationStructure];
-    bindingBuffers.insert(accelerationStructureState->bufferStateStore->bufferHandle);
+    {
+      auto it = SD()._accelerationstructurekhrstates.find(buildInfo->dstAccelerationStructure);
+      if (it != SD()._accelerationstructurekhrstates.end()) {
+        bindingBuffers.insert(it->second->bufferStateStore);
+      }
+    }
 
     if (buildInfo->geometryCount == 0) {
       continue;
@@ -2603,8 +2605,9 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
 
     auto addBindingBuffer = [&bindingBuffers](VkDeviceAddress deviceAddress) {
       auto buffer = findBufferFromDeviceAddress(deviceAddress);
-      if (buffer) {
-        bindingBuffers.insert(buffer);
+      auto it = SD()._bufferstates.find(buffer);
+      if (it != SD()._bufferstates.end()) {
+        bindingBuffers.insert(it->second);
       }
     };
 
@@ -3089,7 +3092,7 @@ inline void vkCmdBeginRenderPass_SD(VkCommandBuffer cmdBuffer,
         auto& imageState = imageViewState->imageStateStore;
 
         if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-          SD().bindingImages[cmdBuffer].insert(imageState->imageHandle);
+          SD().bindingImages[cmdBuffer].insert(imageState);
         }
         if ((Config::Get().vulkan.recorder.memorySegmentSize ||
              (Config::Get().vulkan.recorder.shadowMemory)) &&
@@ -3110,7 +3113,7 @@ inline void vkCmdBeginRenderPass_SD(VkCommandBuffer cmdBuffer,
         auto& imageState = beginRenderPassState->imageViewStateStoreListKHR[i]->imageStateStore;
 
         if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-          SD().bindingImages[cmdBuffer].insert(imageState->imageHandle);
+          SD().bindingImages[cmdBuffer].insert(imageState);
         }
         if ((Config::Get().vulkan.recorder.memorySegmentSize ||
              (Config::Get().vulkan.recorder.shadowMemory)) &&
@@ -3276,7 +3279,7 @@ inline void vkCmdBeginRendering_SD(VkCommandBuffer commandBuffer,
       auto& imageState = beginRenderPassState->imageViewStateStoreListKHR[i]->imageStateStore;
 
       if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-        SD().bindingImages[commandBuffer].insert(imageState->imageHandle);
+        SD().bindingImages[commandBuffer].insert(imageState);
       }
       if ((Config::Get().vulkan.recorder.memorySegmentSize ||
            (Config::Get().vulkan.recorder.shadowMemory)) &&
@@ -3319,8 +3322,9 @@ void BindVertexBuffers_SDHelper(VkCommandBuffer cmdBuffer,
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
     auto& bindingBuffers = SD().bindingBuffers[cmdBuffer];
     for (uint32_t i = 0; i < bindingCount; ++i) {
-      if (pBuffers[i] != VK_NULL_HANDLE) {
-        bindingBuffers.insert(pBuffers[i]);
+      auto it = SD()._bufferstates.find(pBuffers[i]);
+      if (it != SD()._bufferstates.end()) {
+        bindingBuffers.insert(it->second);
       }
     }
   }
@@ -3356,13 +3360,16 @@ inline void vkCmdBindVertexBuffers2EXT_SD(VkCommandBuffer cmdBuffer,
   BindVertexBuffers_SDHelper(cmdBuffer, bindingCount, pBuffers);
 }
 
-inline void vkCmdBindIndexBuffer_SD(VkCommandBuffer cmdBuffer,
+inline void vkCmdBindIndexBuffer_SD(VkCommandBuffer commandBuffer,
                                     VkBuffer buffer,
                                     VkDeviceSize offset,
                                     VkIndexType indexType) {
   if (Config::Get().IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    SD().bindingBuffers[cmdBuffer].insert(buffer);
+    auto it = SD()._bufferstates.find(buffer);
+    if (it != SD()._bufferstates.end()) {
+      SD().bindingBuffers[commandBuffer].insert(it->second);
+    }
   }
 }
 
@@ -3374,7 +3381,12 @@ inline void vkCmdBindTransformFeedbackBuffersEXT_SD(VkCommandBuffer commandBuffe
                                                     const VkDeviceSize* pSizes) {
   if (Config::Get().IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    SD().bindingBuffers[commandBuffer].insert(pBuffers, pBuffers + bindingCount);
+    for (uint32_t i = 0; i < bindingCount; ++i) {
+      auto it = SD()._bufferstates.find(pBuffers[i]);
+      if (it != SD()._bufferstates.end()) {
+        SD().bindingBuffers[commandBuffer].insert(it->second);
+      }
+    }
   }
 }
 
@@ -3396,12 +3408,15 @@ inline void vkCmdBindDescriptorSets_SD(VkCommandBuffer commandBuffer,
                                        uint32_t dynamicOffsetCount,
                                        const uint32_t* pDynamicOffsets) {
   if (Config::Get().IsRecorder() || captureRenderPassesResources()) {
+    if (!pDescriptorSets) {
+      return;
+    }
+
+    auto& commandBufferState = SD()._commandbufferstates[commandBuffer];
     for (unsigned int i = 0; i < descriptorSetCount; i++) {
       if (pDescriptorSets[i] == VK_NULL_HANDLE) {
         continue;
       }
-
-      auto& commandBufferState = SD()._commandbufferstates[commandBuffer];
 
       if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
         auto& descriptorSetState = SD()._descriptorsetstates[pDescriptorSets[i]];
@@ -3458,14 +3473,18 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer commandBuffer,
       const auto descriptorType = pDescriptorWrites[i].descriptorType;
       switch (descriptorType) {
       case VK_DESCRIPTOR_TYPE_SAMPLER:
+        break;
       case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
       case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
       case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-      case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-        if ((nullptr != pDescriptorWrites[i].pImageInfo) &&
-            (VK_NULL_HANDLE != pDescriptorWrites[i].pImageInfo[j].imageView)) {
-          auto& imageState =
-              SD()._imageviewstates[pDescriptorWrites[i].pImageInfo[j].imageView]->imageStateStore;
+      case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT: {
+        if (!pDescriptorWrites[i].pImageInfo) {
+          continue;
+        }
+
+        auto it = SD()._imageviewstates.find(pDescriptorWrites[i].pImageInfo[j].imageView);
+        if (it != SD()._imageviewstates.end()) {
+          auto& imageState = it->second->imageStateStore;
 
           if (VK_DESCRIPTOR_TYPE_STORAGE_IMAGE == descriptorType) {
             SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back(
@@ -3475,7 +3494,7 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer commandBuffer,
           }
 
           if (updateOnlyUsedMemory()) {
-            SD().bindingImages[commandBuffer].insert(imageState->imageHandle);
+            SD().bindingImages[commandBuffer].insert(imageState);
 
             if ((Config::Get().vulkan.recorder.memorySegmentSize ||
                  Config::Get().vulkan.recorder.shadowMemory) &&
@@ -3492,39 +3511,43 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer commandBuffer,
             }
           }
         }
-        break;
+      } break;
       case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
-      case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-        if (nullptr != pDescriptorWrites[i].pTexelBufferView) {
-          auto& bufferState =
-              SD()._bufferviewstates[pDescriptorWrites[i].pTexelBufferView[j]]->bufferStateStore;
+      case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER: {
+        if (!pDescriptorWrites[i].pTexelBufferView) {
+          continue;
+        }
+
+        auto it = SD()._bufferviewstates.find(pDescriptorWrites[i].pTexelBufferView[j]);
+        if (it != SD()._bufferviewstates.end()) {
+          auto& bufferState = it->second->bufferStateStore;
 
           if (VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER == descriptorType) {
-            SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back(
-                (uint64_t)bufferState->bufferHandle, false);
-            SD()._commandbufferstates[commandBuffer]
-                ->resourceWriteBuffers[bufferState->bufferHandle] = VULKAN_STORAGE_TEXEL_BUFFER;
+            auto& cmdBufferIT = SD()._commandbufferstates.find(commandBuffer);
+            if (cmdBufferIT != SD()._commandbufferstates.end()) {
+              cmdBufferIT->second->touchedResources.emplace_back(
+                  (uint64_t)bufferState->bufferHandle, false);
+              cmdBufferIT->second->resourceWriteBuffers[bufferState->bufferHandle] =
+                  VULKAN_STORAGE_TEXEL_BUFFER;
+            }
           }
 
           if (updateOnlyUsedMemory()) {
-            SD().bindingBuffers[commandBuffer].insert(bufferState->bufferHandle);
+            SD().bindingBuffers[commandBuffer].insert(bufferState);
 
             if ((Config::Get().vulkan.recorder.memorySegmentSize ||
                  Config::Get().vulkan.recorder.shadowMemory) &&
                 (VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER == descriptorType) &&
                 (bufferState->binding)) {
-              auto& bufferViewState =
-                  SD()._bufferviewstates[pDescriptorWrites[i].pTexelBufferView[j]];
+              auto& bufferViewState = it->second;
               VkDeviceSize dstOffsetFinal =
                   bufferState->binding->memoryOffset +
                   bufferViewState->bufferViewCreateInfoData.Value()->offset;
-              VkDeviceSize dstFinalSize;
-              if (bufferViewState->bufferViewCreateInfoData.Value()->range == 0xFFFFFFFFFFFFFFFF) {
-                dstFinalSize = bufferState->bufferCreateInfoData.Value()->size -
-                               bufferViewState->bufferViewCreateInfoData.Value()->offset;
-              } else {
-                dstFinalSize = bufferViewState->bufferViewCreateInfoData.Value()->range;
-              }
+              VkDeviceSize dstFinalSize =
+                  (bufferViewState->bufferViewCreateInfoData.Value()->range == 0xFFFFFFFFFFFFFFFF)
+                      ? (bufferState->bufferCreateInfoData.Value()->size -
+                         bufferViewState->bufferViewCreateInfoData.Value()->offset)
+                      : (bufferViewState->bufferViewCreateInfoData.Value()->range);
 
               SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(
                   bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle, dstOffsetFinal,
@@ -3532,41 +3555,42 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer commandBuffer,
             }
           }
         }
-        break;
+      } break;
       case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
       case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
       case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-        if ((nullptr != pDescriptorWrites[i].pBufferInfo) &&
-            (VK_NULL_HANDLE != pDescriptorWrites[i].pBufferInfo[j].buffer)) {
-          auto buffer = pDescriptorWrites[i].pBufferInfo[j].buffer;
+      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC: {
+        if (!pDescriptorWrites[i].pBufferInfo) {
+          continue;
+        }
+
+        auto it = SD()._bufferstates.find(pDescriptorWrites[i].pBufferInfo[j].buffer);
+        if (it != SD()._bufferstates.end()) {
+          auto& bufferState = it->second;
 
           if ((VK_DESCRIPTOR_TYPE_STORAGE_BUFFER == descriptorType) ||
               (VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC == descriptorType)) {
             SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back(
-                (uint64_t)buffer, false);
-            SD()._commandbufferstates[commandBuffer]->resourceWriteBuffers[buffer] =
-                VULKAN_STORAGE_BUFFER_DYNAMIC;
+                (uint64_t)bufferState->bufferHandle, false);
+            SD()._commandbufferstates[commandBuffer]
+                ->resourceWriteBuffers[bufferState->bufferHandle] = VULKAN_STORAGE_BUFFER_DYNAMIC;
           }
 
           if (updateOnlyUsedMemory()) {
-            SD().bindingBuffers[commandBuffer].insert(buffer);
+            SD().bindingBuffers[commandBuffer].insert(bufferState);
 
             if ((Config::Get().vulkan.recorder.memorySegmentSize ||
                  Config::Get().vulkan.recorder.shadowMemory) &&
                 ((VK_DESCRIPTOR_TYPE_STORAGE_BUFFER == descriptorType) ||
                  (VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC == descriptorType))) {
-              auto& bufferState = SD()._bufferstates[pDescriptorWrites[i].pBufferInfo[j].buffer];
               if (bufferState->binding) {
                 VkDeviceSize dstOffsetFinal =
                     bufferState->binding->memoryOffset + pDescriptorWrites[i].pBufferInfo[j].offset;
-                VkDeviceSize dstFinalSize;
-                if (pDescriptorWrites[i].pBufferInfo[j].range == 0xFFFFFFFFFFFFFFFF) {
-                  dstFinalSize = bufferState->bufferCreateInfoData.Value()->size -
-                                 pDescriptorWrites[i].pBufferInfo[j].offset;
-                } else {
-                  dstFinalSize = pDescriptorWrites[i].pBufferInfo[j].range;
-                }
+                VkDeviceSize dstFinalSize =
+                    (pDescriptorWrites[i].pBufferInfo[j].range == 0xFFFFFFFFFFFFFFFF)
+                        ? (bufferState->bufferCreateInfoData.Value()->size -
+                           pDescriptorWrites[i].pBufferInfo[j].offset)
+                        : (dstFinalSize = pDescriptorWrites[i].pBufferInfo[j].range);
 
                 SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(
                     bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle,
@@ -3575,7 +3599,7 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer commandBuffer,
             }
           }
         }
-        break;
+      } break;
       default:
         Log(TRACE) << "Not handled VkDescriptorType enumeration: " + std::to_string(descriptorType);
         break;
@@ -3600,8 +3624,9 @@ inline void vkCmdDrawIndexedIndirect_SD(VkCommandBuffer commandBuffer,
                                         uint32_t stride) {
   if (Config::Get().IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    if (VK_NULL_HANDLE != buffer) {
-      SD().bindingBuffers[commandBuffer].insert(buffer);
+    auto it = SD()._bufferstates.find(buffer);
+    if (it != SD()._bufferstates.end()) {
+      SD().bindingBuffers[commandBuffer].insert(it->second);
     }
   }
   printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
@@ -3614,8 +3639,9 @@ inline void vkCmdDrawIndirect_SD(VkCommandBuffer commandBuffer,
                                  uint32_t stride) {
   if (Config::Get().IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    if (VK_NULL_HANDLE != buffer) {
-      SD().bindingBuffers[commandBuffer].insert(buffer);
+    auto it = SD()._bufferstates.find(buffer);
+    if (it != SD()._bufferstates.end()) {
+      SD().bindingBuffers[commandBuffer].insert(it->second);
     }
   }
   printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
@@ -3630,11 +3656,18 @@ inline void vkCmdDrawIndirectCountKHR_SD(VkCommandBuffer commandBuffer,
                                          uint32_t stride) {
   if (Config::Get().IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    if (VK_NULL_HANDLE != buffer) {
-      SD().bindingBuffers[commandBuffer].insert(buffer);
+    auto& bindingBuffers = SD().bindingBuffers[commandBuffer];
+    {
+      auto it = SD()._bufferstates.find(buffer);
+      if (it != SD()._bufferstates.end()) {
+        bindingBuffers.insert(it->second);
+      }
     }
-    if (VK_NULL_HANDLE != countBuffer) {
-      SD().bindingBuffers[commandBuffer].insert(countBuffer);
+    {
+      auto it = SD()._bufferstates.find(countBuffer);
+      if (it != SD()._bufferstates.end()) {
+        bindingBuffers.insert(it->second);
+      }
     }
   }
   printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
@@ -3649,11 +3682,18 @@ inline void vkCmdDrawIndexedIndirectCount_SD(VkCommandBuffer commandBuffer,
                                              uint32_t stride) {
   if (Config::Get().IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    if (VK_NULL_HANDLE != buffer) {
-      SD().bindingBuffers[commandBuffer].insert(buffer);
+    auto& bindingBuffers = SD().bindingBuffers[commandBuffer];
+    {
+      auto it = SD()._bufferstates.find(buffer);
+      if (it != SD()._bufferstates.end()) {
+        bindingBuffers.insert(it->second);
+      }
     }
-    if (VK_NULL_HANDLE != countBuffer) {
-      SD().bindingBuffers[commandBuffer].insert(countBuffer);
+    {
+      auto it = SD()._bufferstates.find(countBuffer);
+      if (it != SD()._bufferstates.end()) {
+        bindingBuffers.insert(it->second);
+      }
     }
   }
   printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
@@ -3668,11 +3708,18 @@ inline void vkCmdDrawIndexedIndirectCountKHR_SD(VkCommandBuffer commandBuffer,
                                                 uint32_t stride) {
   if (Config::Get().IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    if (VK_NULL_HANDLE != buffer) {
-      SD().bindingBuffers[commandBuffer].insert(buffer);
+    auto& bindingBuffers = SD().bindingBuffers[commandBuffer];
+    {
+      auto it = SD()._bufferstates.find(buffer);
+      if (it != SD()._bufferstates.end()) {
+        bindingBuffers.insert(it->second);
+      }
     }
-    if (VK_NULL_HANDLE != countBuffer) {
-      SD().bindingBuffers[commandBuffer].insert(countBuffer);
+    {
+      auto it = SD()._bufferstates.find(countBuffer);
+      if (it != SD()._bufferstates.end()) {
+        bindingBuffers.insert(it->second);
+      }
     }
   }
   printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
@@ -3697,8 +3744,9 @@ inline void vkCmdDrawMeshTasksIndirectEXT_SD(VkCommandBuffer commandBuffer,
                                              uint32_t drawCount,
                                              uint32_t stride) {
   if (isRecorder() && (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    if (VK_NULL_HANDLE != buffer) {
-      SD().bindingBuffers[commandBuffer].insert(buffer);
+    auto it = SD()._bufferstates.find(buffer);
+    if (it != SD()._bufferstates.end()) {
+      SD().bindingBuffers[commandBuffer].insert(it->second);
     }
   }
   printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
@@ -3720,11 +3768,18 @@ inline void vkCmdDrawMeshTasksIndirectCountEXT_SD(VkCommandBuffer commandBuffer,
                                                   uint32_t maxDrawCount,
                                                   uint32_t stride) {
   if (isRecorder() && (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    if (VK_NULL_HANDLE != buffer) {
-      SD().bindingBuffers[commandBuffer].insert(buffer);
+    auto& bindingBuffers = SD().bindingBuffers[commandBuffer];
+    {
+      auto it = SD()._bufferstates.find(buffer);
+      if (it != SD()._bufferstates.end()) {
+        bindingBuffers.insert(it->second);
+      }
     }
-    if (VK_NULL_HANDLE != countBuffer) {
-      SD().bindingBuffers[commandBuffer].insert(countBuffer);
+    {
+      auto it = SD()._bufferstates.find(countBuffer);
+      if (it != SD()._bufferstates.end()) {
+        bindingBuffers.insert(it->second);
+      }
     }
   }
   printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
@@ -3748,8 +3803,9 @@ inline void vkCmdDispatch_SD(VkCommandBuffer commandBuffer, uint32_t, uint32_t, 
 inline void vkCmdDispatchIndirect_SD(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize) {
   if (Config::Get().IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    if (VK_NULL_HANDLE != buffer) {
-      SD().bindingBuffers[commandBuffer].insert(buffer);
+    auto it = SD()._bufferstates.find(buffer);
+    if (it != SD()._bufferstates.end()) {
+      SD().bindingBuffers[commandBuffer].insert(it->second);
     }
   }
   printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
@@ -3769,9 +3825,9 @@ inline void vkCmdTraceRaysIndirectKHR_SD(
     auto addBindingBuffer = [&bindingBuffers](const VkStridedDeviceAddressRegionKHR* SBTtable) {
       if ((SBTtable != nullptr) && (SBTtable->deviceAddress != 0)) {
         auto buffer = findBufferFromDeviceAddress(SBTtable->deviceAddress);
-
-        if (buffer) {
-          bindingBuffers.insert(buffer);
+        auto it = SD()._bufferstates.find(buffer);
+        if (it != SD()._bufferstates.end()) {
+          bindingBuffers.insert(it->second);
         }
       }
     };
@@ -3782,9 +3838,9 @@ inline void vkCmdTraceRaysIndirectKHR_SD(
     addBindingBuffer(pCallableShaderBindingTable);
     {
       auto buffer = findBufferFromDeviceAddress(indirectDeviceAddress);
-
-      if (buffer) {
-        bindingBuffers.insert(buffer);
+      auto it = SD()._bufferstates.find(buffer);
+      if (it != SD()._bufferstates.end()) {
+        bindingBuffers.insert(it->second);
       }
     }
   }
@@ -3807,9 +3863,9 @@ inline void vkCmdTraceRaysKHR_SD(VkCommandBuffer commandBuffer,
     auto addBindingBuffer = [&bindingBuffers](const VkStridedDeviceAddressRegionKHR* SBTtable) {
       if ((SBTtable != nullptr) && (SBTtable->deviceAddress != 0)) {
         auto buffer = findBufferFromDeviceAddress(SBTtable->deviceAddress);
-
-        if (buffer) {
-          bindingBuffers.insert(buffer);
+        auto it = SD()._bufferstates.find(buffer);
+        if (it != SD()._bufferstates.end()) {
+          bindingBuffers.insert(it->second);
         }
       }
     };
@@ -3938,14 +3994,30 @@ inline void vkCmdPipelineBarrier_SD(VkCommandBuffer commandBuffer,
                                     const VkImageMemoryBarrier* pImageMemoryBarriers) {
   if (captureRenderPasses() || captureRenderPassesResources() ||
       (isRecorder() && ((updateOnlyUsedMemory()) || isSubcaptureBeforeRestorationPhase()))) {
-
-    for (unsigned int i = 0; i < bufferMemoryBarrierCount; i++) {
-      SD().bindingBuffers[commandBuffer].insert(pBufferMemoryBarriers[i].buffer);
+    if (pBufferMemoryBarriers) {
+      auto& bindingBuffers = SD().bindingBuffers[commandBuffer];
+      for (unsigned int i = 0; i < bufferMemoryBarrierCount; i++) {
+        auto it = SD()._bufferstates.find(pBufferMemoryBarriers[i].buffer);
+        if (it != SD()._bufferstates.end()) {
+          bindingBuffers.insert(it->second);
+        }
+      }
     }
 
-    for (unsigned int i = 0; i < imageMemoryBarrierCount; i++) {
-      SD().bindingImages[commandBuffer].insert(pImageMemoryBarriers[i].image);
+    if (!pImageMemoryBarriers) {
+      return;
+    }
 
+    auto& bindingImages = SD().bindingImages[commandBuffer];
+    for (unsigned int i = 0; i < imageMemoryBarrierCount; i++) {
+      auto it = SD()._imagestates.find(pImageMemoryBarriers[i].image);
+      if (it == SD()._imagestates.end()) {
+        continue;
+      }
+
+      auto& imageState = it->second;
+
+      bindingImages.insert(imageState);
       if (!CGits::Instance().IsStateRestoration() &&
           pImageMemoryBarriers[i].oldLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
         SD().nonDeterministicImages.insert(pImageMemoryBarriers[i].image);
@@ -3953,7 +4025,6 @@ inline void vkCmdPipelineBarrier_SD(VkCommandBuffer commandBuffer,
 
       if (captureRenderPasses() || captureRenderPassesResources() ||
           (isSubcaptureBeforeRestorationPhase() && crossPlatformStateRestoration())) {
-        auto& imageState = SD()._imagestates[pImageMemoryBarriers[i].image];
         auto& imageLayout = imageState->currentLayout;
         if (!imageLayout.size()) {
           continue;
@@ -4001,15 +4072,35 @@ inline void vkCmdPipelineBarrier_SD(VkCommandBuffer commandBuffer,
 
 inline void vkCmdPipelineBarrier2UnifiedGITS_SD(VkCommandBuffer commandBuffer,
                                                 const VkDependencyInfo* pDependencyInfo) {
+  if (!pDependencyInfo) {
+    return;
+  }
+
   if (captureRenderPasses() || captureRenderPassesResources() ||
       (isRecorder() && (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()))) {
-
-    for (unsigned int i = 0; i < pDependencyInfo->bufferMemoryBarrierCount; i++) {
-      SD().bindingBuffers[commandBuffer].insert(pDependencyInfo->pBufferMemoryBarriers[i].buffer);
+    if (pDependencyInfo->pBufferMemoryBarriers) {
+      auto& bindingBuffers = SD().bindingBuffers[commandBuffer];
+      for (unsigned int i = 0; i < pDependencyInfo->bufferMemoryBarrierCount; i++) {
+        auto it = SD()._bufferstates.find(pDependencyInfo->pBufferMemoryBarriers[i].buffer);
+        if (it != SD()._bufferstates.end()) {
+          bindingBuffers.insert(it->second);
+        }
+      }
     }
 
+    if (!pDependencyInfo->pImageMemoryBarriers) {
+      return;
+    }
+
+    auto& bindingImages = SD().bindingImages[commandBuffer];
     for (unsigned int i = 0; i < pDependencyInfo->imageMemoryBarrierCount; i++) {
-      SD().bindingImages[commandBuffer].insert(pDependencyInfo->pImageMemoryBarriers[i].image);
+      auto it = SD()._imagestates.find(pDependencyInfo->pImageMemoryBarriers[i].image);
+      if (it == SD()._imagestates.end()) {
+        continue;
+      }
+
+      auto& imageState = it->second;
+      bindingImages.insert(imageState);
 
       if (!CGits::Instance().IsStateRestoration() &&
           pDependencyInfo->pImageMemoryBarriers[i].oldLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
@@ -4018,7 +4109,6 @@ inline void vkCmdPipelineBarrier2UnifiedGITS_SD(VkCommandBuffer commandBuffer,
 
       if (captureRenderPasses() || captureRenderPassesResources() ||
           (isSubcaptureBeforeRestorationPhase() && crossPlatformStateRestoration())) {
-        auto& imageState = SD()._imagestates[pDependencyInfo->pImageMemoryBarriers[i].image];
         auto& imageLayout = imageState->currentLayout;
         if (!imageLayout.size()) {
           continue;
@@ -4173,8 +4263,15 @@ inline void vkCmdCopyQueryPoolResults_SD(VkCommandBuffer commandBuffer,
                                          VkDeviceSize stride,
                                          VkQueryResultFlags flags) {
   if (Config::Get().IsRecorder()) {
+    auto it = SD()._bufferstates.find(dstBuffer);
+    if (it == SD()._bufferstates.end()) {
+      return;
+    }
+
+    auto& bufferState = it->second;
+
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      SD().bindingBuffers[commandBuffer].insert(dstBuffer);
+      SD().bindingBuffers[commandBuffer].insert(bufferState);
     }
 
     SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back((uint64_t)dstBuffer,
@@ -4182,7 +4279,6 @@ inline void vkCmdCopyQueryPoolResults_SD(VkCommandBuffer commandBuffer,
 
     if (Config::Get().vulkan.recorder.memorySegmentSize ||
         Config::Get().vulkan.recorder.shadowMemory) {
-      auto& bufferState = SD()._bufferstates[dstBuffer];
 
       if (bufferState->binding) {
         VkDeviceSize dstOffsetFinal = bufferState->binding->memoryOffset + dstOffset;
@@ -4206,10 +4302,15 @@ inline void vkCmdUpdateBuffer_SD(VkCommandBuffer commandBuffer,
         VULKAN_BLIT_DESTINATION_BUFFER;
   }
   if (Config::Get().IsRecorder()) {
+    auto it = SD()._bufferstates.find(dstBuffer);
+    if (it == SD()._bufferstates.end()) {
+      return;
+    }
+
+    auto& bufferState = it->second;
+
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      if (VK_NULL_HANDLE != dstBuffer) {
-        SD().bindingBuffers[commandBuffer].insert(dstBuffer);
-      }
+      SD().bindingBuffers[commandBuffer].insert(bufferState);
     }
 
     SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back((uint64_t)dstBuffer,
@@ -4217,8 +4318,6 @@ inline void vkCmdUpdateBuffer_SD(VkCommandBuffer commandBuffer,
 
     if (Config::Get().vulkan.recorder.memorySegmentSize ||
         Config::Get().vulkan.recorder.shadowMemory) {
-      auto& bufferState = SD()._bufferstates[dstBuffer];
-
       if (bufferState->binding) {
         VkDeviceSize dstOffsetFinal = bufferState->binding->memoryOffset + dstOffset;
         VkDeviceSize dstSize = dataSize;
@@ -4241,10 +4340,15 @@ inline void vkCmdFillBuffer_SD(VkCommandBuffer commandBuffer,
         VULKAN_BLIT_DESTINATION_BUFFER;
   }
   if (Config::Get().IsRecorder()) {
+    auto it = SD()._bufferstates.find(dstBuffer);
+    if (it == SD()._bufferstates.end()) {
+      return;
+    }
+
+    auto& bufferState = it->second;
+
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      if (VK_NULL_HANDLE != dstBuffer) {
-        SD().bindingBuffers[commandBuffer].insert(dstBuffer);
-      }
+      SD().bindingBuffers[commandBuffer].insert(bufferState);
     }
 
     SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back((uint64_t)dstBuffer,
@@ -4252,8 +4356,6 @@ inline void vkCmdFillBuffer_SD(VkCommandBuffer commandBuffer,
 
     if (Config::Get().vulkan.recorder.memorySegmentSize ||
         Config::Get().vulkan.recorder.shadowMemory) {
-      auto& bufferState = SD()._bufferstates[dstBuffer];
-
       if (bufferState->binding) {
         VkDeviceSize dstOffsetFinal = bufferState->binding->memoryOffset + dstOffset;
         VkDeviceSize dstSize = size;
@@ -4279,13 +4381,24 @@ inline void vkCmdCopyBuffer_SD(VkCommandBuffer commandBuffer,
         VULKAN_BLIT_DESTINATION_BUFFER;
   }
   if (Config::Get().IsRecorder()) {
+    auto dstIt = SD()._bufferstates.find(dstBuffer);
+
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      if (srcBuffer != NULL) {
-        SD().bindingBuffers[commandBuffer].insert(srcBuffer);
+      // Src buffer
+      {
+        auto srcIt = SD()._bufferstates.find(srcBuffer);
+        if (srcIt != SD()._bufferstates.end()) {
+          SD().bindingBuffers[commandBuffer].insert(srcIt->second);
+        }
       }
-      if (dstBuffer != NULL) {
-        SD().bindingBuffers[commandBuffer].insert(dstBuffer);
+      // Dst buffer
+      if (dstIt != SD()._bufferstates.end()) {
+        SD().bindingBuffers[commandBuffer].insert(dstIt->second);
       }
+    }
+
+    if (dstIt == SD()._bufferstates.end()) {
+      return;
     }
 
     SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back((uint64_t)dstBuffer,
@@ -4293,13 +4406,13 @@ inline void vkCmdCopyBuffer_SD(VkCommandBuffer commandBuffer,
 
     if (Config::Get().vulkan.recorder.memorySegmentSize ||
         Config::Get().vulkan.recorder.shadowMemory) {
-      auto& bufferState = SD()._bufferstates[dstBuffer];
-      if (bufferState->binding) {
+      auto& bufferBinding = dstIt->second->binding;
+      if (bufferBinding) {
         for (uint32_t i = 0; i < regionCount; i++) {
-          VkDeviceSize dstOffsetFinal = bufferState->binding->memoryOffset + pRegions[i].dstOffset;
+          VkDeviceSize dstOffsetFinal = bufferBinding->memoryOffset + pRegions[i].dstOffset;
           VkDeviceSize dstSize = pRegions[i].size;
           VkDeviceMemory dstDeviceMemory =
-              bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
+              bufferBinding->deviceMemoryStateStore->deviceMemoryHandle;
           SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
                                                                 dstSize);
         }
@@ -4315,14 +4428,26 @@ inline void vkCmdCopyBuffer2_SD(VkCommandBuffer commandBuffer,
     SD()._commandbufferstates[commandBuffer]->resourceWriteBuffers[pCopyBufferInfo->dstBuffer] =
         VULKAN_BLIT_DESTINATION_BUFFER;
   }
-  if (Config::Get().IsRecorder()) {
+
+  if (Config::Get().IsRecorder() && pCopyBufferInfo) {
+    auto& dstIt = SD()._bufferstates.find(pCopyBufferInfo->dstBuffer);
+
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      if (pCopyBufferInfo->srcBuffer != NULL) {
-        SD().bindingBuffers[commandBuffer].insert(pCopyBufferInfo->srcBuffer);
+      // Src buffer
+      {
+        auto srcIt = SD()._bufferstates.find(pCopyBufferInfo->srcBuffer);
+        if (srcIt != SD()._bufferstates.end()) {
+          SD().bindingBuffers[commandBuffer].insert(srcIt->second);
+        }
       }
-      if (pCopyBufferInfo->dstBuffer != NULL) {
-        SD().bindingBuffers[commandBuffer].insert(pCopyBufferInfo->dstBuffer);
+      // Dst buffer
+      if (dstIt != SD()._bufferstates.end()) {
+        SD().bindingBuffers[commandBuffer].insert(dstIt->second);
       }
+    }
+
+    if (dstIt == SD()._bufferstates.end()) {
+      return;
     }
 
     SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back(
@@ -4330,14 +4455,15 @@ inline void vkCmdCopyBuffer2_SD(VkCommandBuffer commandBuffer,
 
     if (Config::Get().vulkan.recorder.memorySegmentSize ||
         Config::Get().vulkan.recorder.shadowMemory) {
-      auto& bufferState = SD()._bufferstates[pCopyBufferInfo->dstBuffer];
-      if (bufferState->binding) {
+      auto& bufferBinding = dstIt->second->binding;
+
+      if (bufferBinding) {
         for (uint32_t i = 0; i < pCopyBufferInfo->regionCount; i++) {
           VkDeviceSize dstOffsetFinal =
-              bufferState->binding->memoryOffset + pCopyBufferInfo->pRegions[i].dstOffset;
+              bufferBinding->memoryOffset + pCopyBufferInfo->pRegions[i].dstOffset;
           VkDeviceSize dstSize = pCopyBufferInfo->pRegions[i].size;
           VkDeviceMemory dstDeviceMemory =
-              bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
+              bufferBinding->deviceMemoryStateStore->deviceMemoryHandle;
           SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
                                                                 dstSize);
         }
@@ -4345,6 +4471,105 @@ inline void vkCmdCopyBuffer2_SD(VkCommandBuffer commandBuffer,
     }
   }
 }
+
+namespace {
+
+VkImageSubresource getImageSubresource(const VkBufferImageCopy& region) {
+  return VkImageSubresource{
+      region.imageSubresource.aspectMask,    // VkImageAspectFlags aspectMask;
+      region.imageSubresource.mipLevel,      // uint32_t mipLevel;
+      region.imageSubresource.baseArrayLayer // uint32_t arrayLayer;
+  };
+}
+
+VkImageSubresource getImageSubresource(const VkBufferImageCopy2& region) {
+  return VkImageSubresource{
+      region.imageSubresource.aspectMask,    // VkImageAspectFlags aspectMask;
+      region.imageSubresource.mipLevel,      // uint32_t mipLevel;
+      region.imageSubresource.baseArrayLayer // uint32_t arrayLayer;
+  };
+}
+
+VkImageSubresource getImageSubresource(const VkImageCopy& region) {
+  return VkImageSubresource{
+      region.dstSubresource.aspectMask,    // VkImageAspectFlags aspectMask;
+      region.dstSubresource.mipLevel,      // uint32_t mipLevel;
+      region.dstSubresource.baseArrayLayer // uint32_t arrayLayer;
+  };
+}
+
+VkImageSubresource getImageSubresource(const VkImageCopy2& region) {
+  return VkImageSubresource{
+      region.dstSubresource.aspectMask,    // VkImageAspectFlags aspectMask;
+      region.dstSubresource.mipLevel,      // uint32_t mipLevel;
+      region.dstSubresource.baseArrayLayer // uint32_t arrayLayer;
+  };
+}
+
+VkImageSubresource getImageSubresource(const VkImageBlit& region) {
+  return VkImageSubresource{
+      region.dstSubresource.aspectMask,    // VkImageAspectFlags aspectMask;
+      region.dstSubresource.mipLevel,      // uint32_t mipLevel;
+      region.dstSubresource.baseArrayLayer // uint32_t arrayLayer;
+  };
+}
+
+VkImageSubresource getImageSubresource(const VkImageBlit2& region) {
+  return VkImageSubresource{
+      region.dstSubresource.aspectMask,    // VkImageAspectFlags aspectMask;
+      region.dstSubresource.mipLevel,      // uint32_t mipLevel;
+      region.dstSubresource.baseArrayLayer // uint32_t arrayLayer;
+  };
+}
+
+VkImageSubresource getImageSubresource(const VkImageResolve& region) {
+  return VkImageSubresource{
+      region.dstSubresource.aspectMask,    // VkImageAspectFlags aspectMask;
+      region.dstSubresource.mipLevel,      // uint32_t mipLevel;
+      region.dstSubresource.baseArrayLayer // uint32_t arrayLayer;
+  };
+}
+
+VkImageSubresource getImageSubresource(const VkImageResolve2& region) {
+  return VkImageSubresource{
+      region.dstSubresource.aspectMask,    // VkImageAspectFlags aspectMask;
+      region.dstSubresource.mipLevel,      // uint32_t mipLevel;
+      region.dstSubresource.baseArrayLayer // uint32_t arrayLayer;
+  };
+}
+
+template <typename REGION_TYPE>
+void ProcessDestinationImage(std::shared_ptr<CImageState>& imageState,
+                             uint32_t regionCount,
+                             const REGION_TYPE* pRegions,
+                             CMemoryUpdateState& updatedMemoryInCmdBuffer) {
+  auto device = imageState->deviceStateStore->deviceHandle;
+  VkDeviceMemory deviceMemory = imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
+
+  if (imageState->imageCreateInfoData.Value() &&
+      (imageState->imageCreateInfoData.Value()->tiling == VK_IMAGE_TILING_LINEAR)) {
+    for (uint32_t i = 0; i < regionCount; i++) {
+      VkImageSubresource imageSubresource = getImageSubresource(pRegions[i]);
+
+      VkSubresourceLayout subLayout;
+      drvVk.vkGetImageSubresourceLayout(device, imageState->imageHandle, &imageSubresource,
+                                        &subLayout);
+
+      VkDeviceSize dstOffset = imageState->binding->memoryOffset + subLayout.offset;
+      VkDeviceSize dstSize = subLayout.size;
+      updatedMemoryInCmdBuffer.AddToMap(deviceMemory, dstOffset, dstSize);
+    }
+  } else {
+    VkMemoryRequirements memRequirements = {};
+    drvVk.vkGetImageMemoryRequirements(device, imageState->imageHandle, &memRequirements);
+
+    VkDeviceSize dstOffset = imageState->binding->memoryOffset;
+    VkDeviceSize dstSize = memRequirements.size;
+
+    updatedMemoryInCmdBuffer.AddToMap(deviceMemory, dstOffset, dstSize);
+  }
+}
+} // namespace
 
 inline void vkCmdCopyBufferToImage_SD(VkCommandBuffer commandBuffer,
                                       VkBuffer srcBuffer,
@@ -4356,57 +4581,39 @@ inline void vkCmdCopyBufferToImage_SD(VkCommandBuffer commandBuffer,
     SD()._commandbufferstates[commandBuffer]->resourceWriteImages[dstImage] =
         VULKAN_BLIT_DESTINATION_IMAGE;
   }
+
   if (Config::Get().IsRecorder()) {
+    auto& dstIt = SD()._imagestates.find(dstImage);
+
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      if (srcBuffer != NULL) {
-        SD().bindingBuffers[commandBuffer].insert(srcBuffer);
+      // Src buffer
+      {
+        auto srcIt = SD()._bufferstates.find(srcBuffer);
+        if (srcIt != SD()._bufferstates.end()) {
+          SD().bindingBuffers[commandBuffer].insert(srcIt->second);
+        }
       }
-      if (dstImage != NULL) {
-        SD().bindingImages[commandBuffer].insert(dstImage);
+      // Dst image
+      if (dstIt != SD()._imagestates.end()) {
+        SD().bindingImages[commandBuffer].insert(dstIt->second);
       }
+    }
+
+    if (dstIt == SD()._imagestates.end()) {
+      return;
     }
 
     SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back((uint64_t)dstImage,
                                                                             true);
 
-    if (Config::Get().vulkan.recorder.memorySegmentSize ||
-        Config::Get().vulkan.recorder.shadowMemory) {
-      auto& imageState = SD()._imagestates[dstImage];
-
-      if (imageState->binding) {
-        if (imageState->imageCreateInfoData.Value() &&
-            (imageState->imageCreateInfoData.Value()->tiling == VK_IMAGE_TILING_LINEAR)) {
-          for (uint32_t i = 0; i < regionCount; i++) {
-            VkImageSubresource imageSubresource;
-
-            imageSubresource.aspectMask = pRegions[i].imageSubresource.aspectMask;
-            imageSubresource.mipLevel = pRegions[i].imageSubresource.mipLevel;
-            imageSubresource.arrayLayer = pRegions[i].imageSubresource.baseArrayLayer;
-
-            VkSubresourceLayout subLayout;
-            drvVk.vkGetImageSubresourceLayout(imageState->deviceStateStore->deviceHandle, dstImage,
-                                              &imageSubresource, &subLayout);
-            VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset + subLayout.offset;
-            VkDeviceSize dstSize = subLayout.size;
-            VkDeviceMemory dstDeviceMemory =
-                imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-            SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                                  dstSize);
-          }
-        } else {
-          VkMemoryRequirements memRequirements = {};
-          drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle, dstImage,
-                                             &memRequirements);
-
-          VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset;
-          VkDeviceSize dstSize = memRequirements.size;
-          VkDeviceMemory dstDeviceMemory =
-              imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-          SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                                dstSize);
-        }
-      }
+    if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
+         !Config::Get().vulkan.recorder.shadowMemory) ||
+        !dstIt->second->binding) {
+      return;
     }
+
+    ProcessDestinationImage(dstIt->second, regionCount, pRegions,
+                            SD().updatedMemoryInCmdBuffer[commandBuffer]);
   }
 }
 
@@ -4417,61 +4624,40 @@ inline void vkCmdCopyBufferToImage2_SD(VkCommandBuffer commandBuffer,
     SD()._commandbufferstates[commandBuffer]
         ->resourceWriteImages[pCopyBufferToImageInfo->dstImage] = VULKAN_BLIT_DESTINATION_IMAGE;
   }
-  if (Config::Get().IsRecorder()) {
+
+  if (Config::Get().IsRecorder() && pCopyBufferToImageInfo) {
+    auto& dstIt = SD()._imagestates.find(pCopyBufferToImageInfo->dstImage);
+
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      if (pCopyBufferToImageInfo->srcBuffer != NULL) {
-        SD().bindingBuffers[commandBuffer].insert(pCopyBufferToImageInfo->srcBuffer);
+      // Src buffer
+      {
+        auto srcIt = SD()._bufferstates.find(pCopyBufferToImageInfo->srcBuffer);
+        if (srcIt != SD()._bufferstates.end()) {
+          SD().bindingBuffers[commandBuffer].insert(srcIt->second);
+        }
       }
-      if (pCopyBufferToImageInfo->dstImage != NULL) {
-        SD().bindingImages[commandBuffer].insert(pCopyBufferToImageInfo->dstImage);
+      // Dst image
+      if (dstIt != SD()._imagestates.end()) {
+        SD().bindingImages[commandBuffer].insert(dstIt->second);
       }
+    }
+
+    if (dstIt == SD()._imagestates.end()) {
+      return;
     }
 
     SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back(
         (uint64_t)pCopyBufferToImageInfo->dstImage, true);
 
-    if (Config::Get().vulkan.recorder.memorySegmentSize ||
-        Config::Get().vulkan.recorder.shadowMemory) {
-      auto& imageState = SD()._imagestates[pCopyBufferToImageInfo->dstImage];
-
-      if (imageState->binding) {
-        if (imageState->imageCreateInfoData.Value() &&
-            (imageState->imageCreateInfoData.Value()->tiling == VK_IMAGE_TILING_LINEAR)) {
-          for (uint32_t i = 0; i < pCopyBufferToImageInfo->regionCount; i++) {
-            VkImageSubresource imageSubresource;
-
-            imageSubresource.aspectMask =
-                pCopyBufferToImageInfo->pRegions[i].imageSubresource.aspectMask;
-            imageSubresource.mipLevel =
-                pCopyBufferToImageInfo->pRegions[i].imageSubresource.mipLevel;
-            imageSubresource.arrayLayer =
-                pCopyBufferToImageInfo->pRegions[i].imageSubresource.baseArrayLayer;
-
-            VkSubresourceLayout subLayout;
-            drvVk.vkGetImageSubresourceLayout(imageState->deviceStateStore->deviceHandle,
-                                              pCopyBufferToImageInfo->dstImage, &imageSubresource,
-                                              &subLayout);
-            VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset + subLayout.offset;
-            VkDeviceSize dstSize = subLayout.size;
-            VkDeviceMemory dstDeviceMemory =
-                imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-            SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                                  dstSize);
-          }
-        } else {
-          VkMemoryRequirements memRequirements = {};
-          drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle,
-                                             pCopyBufferToImageInfo->dstImage, &memRequirements);
-
-          VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset;
-          VkDeviceSize dstSize = memRequirements.size;
-          VkDeviceMemory dstDeviceMemory =
-              imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-          SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                                dstSize);
-        }
-      }
+    if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
+         !Config::Get().vulkan.recorder.shadowMemory) ||
+        !dstIt->second->binding) {
+      return;
     }
+
+    ProcessDestinationImage(dstIt->second, pCopyBufferToImageInfo->regionCount,
+                            pCopyBufferToImageInfo->pRegions,
+                            SD().updatedMemoryInCmdBuffer[commandBuffer]);
   }
 }
 
@@ -4486,56 +4672,41 @@ inline void vkCmdCopyImage_SD(VkCommandBuffer commandBuffer,
     SD()._commandbufferstates[commandBuffer]->resourceWriteImages[dstImage] =
         VULKAN_BLIT_DESTINATION_IMAGE;
   }
+
   if (Config::Get().IsRecorder()) {
+    auto dstIt = SD()._imagestates.find(dstImage);
+
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      if (srcImage != NULL) {
-        SD().bindingImages[commandBuffer].insert(srcImage);
+      // Src image
+      {
+        auto srcIt = SD()._imagestates.find(srcImage);
+        if (srcIt != SD()._imagestates.end()) {
+          SD().bindingImages[commandBuffer].insert(srcIt->second);
+        }
       }
-      if (dstImage != NULL) {
-        SD().bindingImages[commandBuffer].insert(dstImage);
+      // Dst image
+      {
+        if (dstIt != SD()._imagestates.end()) {
+          SD().bindingImages[commandBuffer].insert(dstIt->second);
+        }
       }
+    }
+
+    if (dstIt == SD()._imagestates.end()) {
+      return;
     }
 
     SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back((uint64_t)dstImage,
                                                                             true);
 
-    if (Config::Get().vulkan.recorder.memorySegmentSize ||
-        Config::Get().vulkan.recorder.shadowMemory) {
-      auto& imageState = SD()._imagestates[dstImage];
-      if (imageState->binding) {
-        if (imageState->imageCreateInfoData.Value() &&
-            (imageState->imageCreateInfoData.Value()->tiling == VK_IMAGE_TILING_LINEAR)) {
-          for (uint32_t i = 0; i < regionCount; i++) {
-            VkImageSubresource imageSubresource;
-
-            imageSubresource.aspectMask = pRegions[i].dstSubresource.aspectMask;
-            imageSubresource.mipLevel = pRegions[i].dstSubresource.mipLevel;
-            imageSubresource.arrayLayer = pRegions[i].dstSubresource.baseArrayLayer;
-
-            VkSubresourceLayout subLayout;
-            drvVk.vkGetImageSubresourceLayout(imageState->deviceStateStore->deviceHandle, dstImage,
-                                              &imageSubresource, &subLayout);
-            VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset + subLayout.offset;
-            VkDeviceSize dstSize = subLayout.size;
-            VkDeviceMemory dstDeviceMemory =
-                imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-            SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                                  dstSize);
-          }
-        } else {
-          VkMemoryRequirements memRequirements = {};
-          drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle, dstImage,
-                                             &memRequirements);
-
-          VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset;
-          VkDeviceSize dstSize = memRequirements.size;
-          VkDeviceMemory dstDeviceMemory =
-              imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-          SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                                dstSize);
-        }
-      }
+    if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
+         !Config::Get().vulkan.recorder.shadowMemory) ||
+        !dstIt->second->binding) {
+      return;
     }
+
+    ProcessDestinationImage(dstIt->second, regionCount, pRegions,
+                            SD().updatedMemoryInCmdBuffer[commandBuffer]);
   }
 }
 
@@ -4547,56 +4718,37 @@ inline void vkCmdCopyImage2_SD(VkCommandBuffer commandBuffer,
         VULKAN_BLIT_DESTINATION_IMAGE;
   }
   if (Config::Get().IsRecorder()) {
+    auto dstIt = SD()._imagestates.find(pCopyImageInfo->dstImage);
+
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      if (pCopyImageInfo->srcImage != NULL) {
-        SD().bindingImages[commandBuffer].insert(pCopyImageInfo->srcImage);
+      // Src image
+      {
+        auto srcIt = SD()._imagestates.find(pCopyImageInfo->srcImage);
+        if (srcIt != SD()._imagestates.end()) {
+          SD().bindingImages[commandBuffer].insert(srcIt->second);
+        }
       }
-      if (pCopyImageInfo->dstImage != NULL) {
-        SD().bindingImages[commandBuffer].insert(pCopyImageInfo->dstImage);
+      // Dst image
+      if (dstIt != SD()._imagestates.end()) {
+        SD().bindingImages[commandBuffer].insert(dstIt->second);
       }
+    }
+
+    if (dstIt == SD()._imagestates.end()) {
+      return;
     }
 
     SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back(
         (uint64_t)pCopyImageInfo->dstImage, true);
 
-    if (Config::Get().vulkan.recorder.memorySegmentSize ||
-        Config::Get().vulkan.recorder.shadowMemory) {
-      auto& imageState = SD()._imagestates[pCopyImageInfo->dstImage];
-      if (imageState->binding) {
-        if (imageState->imageCreateInfoData.Value() &&
-            (imageState->imageCreateInfoData.Value()->tiling == VK_IMAGE_TILING_LINEAR)) {
-          for (uint32_t i = 0; i < pCopyImageInfo->regionCount; i++) {
-            VkImageSubresource imageSubresource;
-
-            imageSubresource.aspectMask = pCopyImageInfo->pRegions[i].dstSubresource.aspectMask;
-            imageSubresource.mipLevel = pCopyImageInfo->pRegions[i].dstSubresource.mipLevel;
-            imageSubresource.arrayLayer = pCopyImageInfo->pRegions[i].dstSubresource.baseArrayLayer;
-
-            VkSubresourceLayout subLayout;
-            drvVk.vkGetImageSubresourceLayout(imageState->deviceStateStore->deviceHandle,
-                                              pCopyImageInfo->dstImage, &imageSubresource,
-                                              &subLayout);
-            VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset + subLayout.offset;
-            VkDeviceSize dstSize = subLayout.size;
-            VkDeviceMemory dstDeviceMemory =
-                imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-            SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                                  dstSize);
-          }
-        } else {
-          VkMemoryRequirements memRequirements = {};
-          drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle,
-                                             pCopyImageInfo->dstImage, &memRequirements);
-
-          VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset;
-          VkDeviceSize dstSize = memRequirements.size;
-          VkDeviceMemory dstDeviceMemory =
-              imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-          SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                                dstSize);
-        }
-      }
+    if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
+         !Config::Get().vulkan.recorder.shadowMemory) ||
+        !dstIt->second->binding) {
+      return;
     }
+
+    ProcessDestinationImage(dstIt->second, pCopyImageInfo->regionCount, pCopyImageInfo->pRegions,
+                            SD().updatedMemoryInCmdBuffer[commandBuffer]);
   }
 }
 
@@ -4616,13 +4768,22 @@ inline void vkCmdCopyImageToBuffer_SD(VkCommandBuffer commandBuffer,
         VULKAN_BLIT_DESTINATION_BUFFER;
   }
   if (Config::Get().IsRecorder()) {
+    auto srcIt = SD()._imagestates.find(srcImage);
+    auto dstIt = SD()._bufferstates.find(dstBuffer);
+
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      if (srcImage != NULL) {
-        SD().bindingImages[commandBuffer].insert(srcImage);
+      // Src image
+      if (srcIt != SD()._imagestates.end()) {
+        SD().bindingImages[commandBuffer].insert(srcIt->second);
       }
-      if (dstBuffer != NULL) {
-        SD().bindingBuffers[commandBuffer].insert(dstBuffer);
+      // Dst buffer
+      if (dstIt != SD()._bufferstates.end()) {
+        SD().bindingBuffers[commandBuffer].insert(dstIt->second);
       }
+    }
+
+    if (dstIt == SD()._bufferstates.end()) {
+      return;
     }
 
     SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back((uint64_t)dstBuffer,
@@ -4630,35 +4791,36 @@ inline void vkCmdCopyImageToBuffer_SD(VkCommandBuffer commandBuffer,
 
     if (Config::Get().vulkan.recorder.memorySegmentSize ||
         Config::Get().vulkan.recorder.shadowMemory) {
-      auto& bufferState = SD()._bufferstates[dstBuffer];
-      auto& imageState = SD()._imagestates[srcImage];
-      if (bufferState->binding) {
-        if (imageState->imageCreateInfoData.Value() &&
-            (imageState->imageCreateInfoData.Value()->tiling == VK_IMAGE_TILING_LINEAR)) {
-          for (uint32_t i = 0; i < regionCount; i++) {
-            VkImageSubresource imageSubresource;
+      auto& bufferBinding = dstIt->second->binding;
 
-            imageSubresource.aspectMask = pRegions[i].imageSubresource.aspectMask;
-            imageSubresource.mipLevel = pRegions[i].imageSubresource.mipLevel;
-            imageSubresource.arrayLayer = pRegions[i].imageSubresource.baseArrayLayer;
+      if (bufferBinding) {
+        auto& bufferState = dstIt->second;
+        auto device = bufferState->deviceStateStore->deviceHandle;
+        VkDeviceMemory deviceMemory = bufferBinding->deviceMemoryStateStore->deviceMemoryHandle;
+
+        if ((srcIt != SD()._imagestates.end()) && srcIt->second->imageCreateInfoData.Value() &&
+            (srcIt->second->imageCreateInfoData.Value()->tiling == VK_IMAGE_TILING_LINEAR)) {
+          for (uint32_t i = 0; i < regionCount; i++) {
+            VkImageSubresource imageSubresource = {
+                pRegions[i].imageSubresource.aspectMask,    // VkImageAspectFlags aspectMask;
+                pRegions[i].imageSubresource.mipLevel,      // uint32_t mipLevel;
+                pRegions[i].imageSubresource.baseArrayLayer // uint32_t arrayLayer;
+            };
 
             VkSubresourceLayout subLayout;
-            drvVk.vkGetImageSubresourceLayout(bufferState->deviceStateStore->deviceHandle, srcImage,
-                                              &imageSubresource, &subLayout);
-            VkDeviceSize dstOffsetFinal =
-                bufferState->binding->memoryOffset + pRegions[i].bufferOffset;
+            drvVk.vkGetImageSubresourceLayout(device, srcImage, &imageSubresource, &subLayout);
+
+            VkDeviceSize dstOffsetFinal = bufferBinding->memoryOffset + pRegions[i].bufferOffset;
             VkDeviceSize dstSize = subLayout.size;
-            VkDeviceMemory dstDeviceMemory =
-                bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-            SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
+
+            SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(deviceMemory, dstOffsetFinal,
                                                                   dstSize);
           }
         } else {
-          VkDeviceSize dstOffsetFinal = bufferState->binding->memoryOffset;
+          VkDeviceSize dstOffsetFinal = bufferBinding->memoryOffset;
           VkDeviceSize dstSize = bufferState->bufferCreateInfoData.Value()->size;
-          VkDeviceMemory dstDeviceMemory =
-              bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-          SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
+
+          SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(deviceMemory, dstOffsetFinal,
                                                                 dstSize);
         }
       }
@@ -4673,14 +4835,23 @@ inline void vkCmdCopyImageToBuffer2_SD(VkCommandBuffer commandBuffer,
     SD()._commandbufferstates[commandBuffer]
         ->resourceWriteBuffers[pCopyImageToBufferInfo->dstBuffer] = VULKAN_BLIT_DESTINATION_BUFFER;
   }
-  if (Config::Get().IsRecorder()) {
+  if (Config::Get().IsRecorder() && pCopyImageToBufferInfo) {
+    auto srcIt = SD()._imagestates.find(pCopyImageToBufferInfo->srcImage);
+    auto dstIt = SD()._bufferstates.find(pCopyImageToBufferInfo->dstBuffer);
+
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      if (pCopyImageToBufferInfo->srcImage != NULL) {
-        SD().bindingImages[commandBuffer].insert(pCopyImageToBufferInfo->srcImage);
+      // Src image
+      if (srcIt != SD()._imagestates.end()) {
+        SD().bindingImages[commandBuffer].insert(srcIt->second);
       }
-      if (pCopyImageToBufferInfo->dstBuffer != NULL) {
-        SD().bindingBuffers[commandBuffer].insert(pCopyImageToBufferInfo->dstBuffer);
+      // Dst buffer
+      if (dstIt != SD()._bufferstates.end()) {
+        SD().bindingBuffers[commandBuffer].insert(dstIt->second);
       }
+    }
+
+    if (dstIt == SD()._bufferstates.end()) {
+      return;
     }
 
     SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back(
@@ -4688,38 +4859,37 @@ inline void vkCmdCopyImageToBuffer2_SD(VkCommandBuffer commandBuffer,
 
     if (Config::Get().vulkan.recorder.memorySegmentSize ||
         Config::Get().vulkan.recorder.shadowMemory) {
-      auto& bufferState = SD()._bufferstates[pCopyImageToBufferInfo->dstBuffer];
-      auto& imageState = SD()._imagestates[pCopyImageToBufferInfo->srcImage];
-      if (bufferState->binding) {
-        if (imageState->imageCreateInfoData.Value() &&
-            (imageState->imageCreateInfoData.Value()->tiling == VK_IMAGE_TILING_LINEAR)) {
-          for (uint32_t i = 0; i < pCopyImageToBufferInfo->regionCount; i++) {
-            VkImageSubresource imageSubresource;
+      auto& bufferBinding = dstIt->second->binding;
 
-            imageSubresource.aspectMask =
-                pCopyImageToBufferInfo->pRegions[i].imageSubresource.aspectMask;
-            imageSubresource.mipLevel =
-                pCopyImageToBufferInfo->pRegions[i].imageSubresource.mipLevel;
-            imageSubresource.arrayLayer =
-                pCopyImageToBufferInfo->pRegions[i].imageSubresource.baseArrayLayer;
+      if (bufferBinding) {
+        auto& bufferState = dstIt->second;
+        VkDeviceMemory dstDeviceMemory = bufferBinding->deviceMemoryStateStore->deviceMemoryHandle;
+
+        if ((srcIt != SD()._imagestates.end()) && srcIt->second->imageCreateInfoData.Value() &&
+            (srcIt->second->imageCreateInfoData.Value()->tiling == VK_IMAGE_TILING_LINEAR)) {
+          for (uint32_t i = 0; i < pCopyImageToBufferInfo->regionCount; i++) {
+            VkImageSubresource imageSubresource = {
+                pCopyImageToBufferInfo->pRegions[i]
+                    .imageSubresource.aspectMask, // VkImageAspectFlags aspectMask;
+                pCopyImageToBufferInfo->pRegions[i].imageSubresource.mipLevel, // uint32_t mipLevel;
+                pCopyImageToBufferInfo->pRegions[i]
+                    .imageSubresource.baseArrayLayer // uint32_t arrayLayer;
+            };
 
             VkSubresourceLayout subLayout;
             drvVk.vkGetImageSubresourceLayout(bufferState->deviceStateStore->deviceHandle,
                                               pCopyImageToBufferInfo->srcImage, &imageSubresource,
                                               &subLayout);
-            VkDeviceSize dstOffsetFinal = bufferState->binding->memoryOffset +
-                                          pCopyImageToBufferInfo->pRegions[i].bufferOffset;
+
+            VkDeviceSize dstOffsetFinal =
+                bufferBinding->memoryOffset + pCopyImageToBufferInfo->pRegions[i].bufferOffset;
             VkDeviceSize dstSize = subLayout.size;
-            VkDeviceMemory dstDeviceMemory =
-                bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
             SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
                                                                   dstSize);
           }
         } else {
-          VkDeviceSize dstOffsetFinal = bufferState->binding->memoryOffset;
+          VkDeviceSize dstOffsetFinal = bufferBinding->memoryOffset;
           VkDeviceSize dstSize = bufferState->bufferCreateInfoData.Value()->size;
-          VkDeviceMemory dstDeviceMemory =
-              bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
           SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
                                                                 dstSize);
         }
@@ -4746,54 +4916,39 @@ inline void vkCmdBlitImage_SD(VkCommandBuffer commandBuffer,
         VULKAN_BLIT_DESTINATION_IMAGE;
   }
   if (Config::Get().IsRecorder()) {
+    auto dstIt = SD()._imagestates.find(dstImage);
+
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      if (VK_NULL_HANDLE != srcImage) {
-        SD().bindingImages[commandBuffer].insert(srcImage);
+      // Src image
+      {
+        auto srcIt = SD()._imagestates.find(srcImage);
+        if (srcIt != SD()._imagestates.end()) {
+          SD().bindingImages[commandBuffer].insert(srcIt->second);
+        }
       }
-      if (VK_NULL_HANDLE != dstImage) {
-        SD().bindingImages[commandBuffer].insert(dstImage);
+      // Dst image
+      {
+        if (dstIt != SD()._imagestates.end()) {
+          SD().bindingImages[commandBuffer].insert(dstIt->second);
+        }
       }
+    }
+
+    if (dstIt == SD()._imagestates.end()) {
+      return;
     }
 
     SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back((uint64_t)dstImage,
                                                                             true);
 
-    if (Config::Get().vulkan.recorder.memorySegmentSize ||
-        Config::Get().vulkan.recorder.shadowMemory) {
-      auto& imageState = SD()._imagestates[dstImage];
-      if (imageState->binding) {
-        if (imageState->imageCreateInfoData.Value()->tiling == VK_IMAGE_TILING_LINEAR) {
-          for (uint32_t i = 0; i < regionCount; i++) {
-            VkImageSubresource imageSubresource;
-
-            imageSubresource.aspectMask = pRegions[i].dstSubresource.aspectMask;
-            imageSubresource.mipLevel = pRegions[i].dstSubresource.mipLevel;
-            imageSubresource.arrayLayer = pRegions[i].dstSubresource.baseArrayLayer;
-
-            VkSubresourceLayout subLayout;
-            drvVk.vkGetImageSubresourceLayout(imageState->deviceStateStore->deviceHandle, dstImage,
-                                              &imageSubresource, &subLayout);
-            VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset + subLayout.offset;
-            VkDeviceSize dstSize = subLayout.size;
-            VkDeviceMemory dstDeviceMemory =
-                imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-            SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                                  dstSize);
-          }
-        } else {
-          VkMemoryRequirements memRequirements = {};
-          drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle, dstImage,
-                                             &memRequirements);
-
-          VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset;
-          VkDeviceSize dstSize = memRequirements.size;
-          VkDeviceMemory dstDeviceMemory =
-              imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-          SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                                dstSize);
-        }
-      }
+    if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
+         !Config::Get().vulkan.recorder.shadowMemory) ||
+        !dstIt->second->binding) {
+      return;
     }
+
+    ProcessDestinationImage(dstIt->second, regionCount, pRegions,
+                            SD().updatedMemoryInCmdBuffer[commandBuffer]);
   }
 }
 
@@ -4805,55 +4960,39 @@ inline void vkCmdBlitImage2_SD(VkCommandBuffer commandBuffer,
         VULKAN_BLIT_DESTINATION_IMAGE;
   }
   if (Config::Get().IsRecorder()) {
+    auto dstIt = SD()._imagestates.find(pBlitInfoImage->dstImage);
+
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      if (VK_NULL_HANDLE != pBlitInfoImage->srcImage) {
-        SD().bindingImages[commandBuffer].insert(pBlitInfoImage->srcImage);
+      // Src image
+      {
+        auto srcIt = SD()._imagestates.find(pBlitInfoImage->srcImage);
+        if (srcIt != SD()._imagestates.end()) {
+          SD().bindingImages[commandBuffer].insert(srcIt->second);
+        }
       }
-      if (VK_NULL_HANDLE != pBlitInfoImage->dstImage) {
-        SD().bindingImages[commandBuffer].insert(pBlitInfoImage->dstImage);
+      // Dst image
+      {
+        if (dstIt != SD()._imagestates.end()) {
+          SD().bindingImages[commandBuffer].insert(dstIt->second);
+        }
       }
+    }
+
+    if (dstIt == SD()._imagestates.end()) {
+      return;
     }
 
     SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back(
         (uint64_t)pBlitInfoImage->dstImage, true);
 
-    if (Config::Get().vulkan.recorder.memorySegmentSize ||
-        Config::Get().vulkan.recorder.shadowMemory) {
-      auto& imageState = SD()._imagestates[pBlitInfoImage->dstImage];
-      if (imageState->binding) {
-        if (imageState->imageCreateInfoData.Value()->tiling == VK_IMAGE_TILING_LINEAR) {
-          for (uint32_t i = 0; i < pBlitInfoImage->regionCount; i++) {
-            VkImageSubresource imageSubresource;
-
-            imageSubresource.aspectMask = pBlitInfoImage->pRegions[i].dstSubresource.aspectMask;
-            imageSubresource.mipLevel = pBlitInfoImage->pRegions[i].dstSubresource.mipLevel;
-            imageSubresource.arrayLayer = pBlitInfoImage->pRegions[i].dstSubresource.baseArrayLayer;
-
-            VkSubresourceLayout subLayout;
-            drvVk.vkGetImageSubresourceLayout(imageState->deviceStateStore->deviceHandle,
-                                              pBlitInfoImage->dstImage, &imageSubresource,
-                                              &subLayout);
-            VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset + subLayout.offset;
-            VkDeviceSize dstSize = subLayout.size;
-            VkDeviceMemory dstDeviceMemory =
-                imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-            SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                                  dstSize);
-          }
-        } else {
-          VkMemoryRequirements memRequirements = {};
-          drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle,
-                                             pBlitInfoImage->dstImage, &memRequirements);
-
-          VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset;
-          VkDeviceSize dstSize = memRequirements.size;
-          VkDeviceMemory dstDeviceMemory =
-              imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-          SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                                dstSize);
-        }
-      }
+    if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
+         !Config::Get().vulkan.recorder.shadowMemory) ||
+        !dstIt->second->binding) {
+      return;
     }
+
+    ProcessDestinationImage(dstIt->second, pBlitInfoImage->regionCount, pBlitInfoImage->pRegions,
+                            SD().updatedMemoryInCmdBuffer[commandBuffer]);
   }
 }
 
@@ -4868,55 +5007,39 @@ inline void vkCmdResolveImage_SD(VkCommandBuffer commandBuffer,
     SD()._commandbufferstates[commandBuffer]->resourceWriteImages[dstImage] = VULKAN_RESOLVE_IMAGE;
   }
   if (Config::Get().IsRecorder()) {
+    auto dstIt = SD()._imagestates.find(dstImage);
+
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      if (VK_NULL_HANDLE != srcImage) {
-        SD().bindingImages[commandBuffer].insert(srcImage);
+      // Src image
+      {
+        auto srcIt = SD()._imagestates.find(srcImage);
+        if (srcIt != SD()._imagestates.end()) {
+          SD().bindingImages[commandBuffer].insert(srcIt->second);
+        }
       }
-      if (VK_NULL_HANDLE != dstImage) {
-        SD().bindingImages[commandBuffer].insert(dstImage);
+      // Dst image
+      {
+        if (dstIt != SD()._imagestates.end()) {
+          SD().bindingImages[commandBuffer].insert(dstIt->second);
+        }
       }
+    }
+
+    if (dstIt == SD()._imagestates.end()) {
+      return;
     }
 
     SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back((uint64_t)dstImage,
                                                                             true);
 
-    if (Config::Get().vulkan.recorder.memorySegmentSize ||
-        Config::Get().vulkan.recorder.shadowMemory) {
-      auto& imageState = SD()._imagestates[dstImage];
-
-      if (imageState->binding) {
-        if (imageState->imageCreateInfoData.Value()->tiling == VK_IMAGE_TILING_LINEAR) {
-          for (uint32_t i = 0; i < regionCount; i++) {
-            VkImageSubresource imageSubresource;
-
-            imageSubresource.aspectMask = pRegions[i].dstSubresource.aspectMask;
-            imageSubresource.mipLevel = pRegions[i].dstSubresource.mipLevel;
-            imageSubresource.arrayLayer = pRegions[i].dstSubresource.baseArrayLayer;
-
-            VkSubresourceLayout subLayout;
-            drvVk.vkGetImageSubresourceLayout(imageState->deviceStateStore->deviceHandle, dstImage,
-                                              &imageSubresource, &subLayout);
-            VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset + subLayout.offset;
-            VkDeviceSize dstSize = subLayout.size;
-            VkDeviceMemory dstDeviceMemory =
-                imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-            SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                                  dstSize);
-          }
-        } else {
-          VkMemoryRequirements memRequirements = {};
-          drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle, dstImage,
-                                             &memRequirements);
-
-          VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset;
-          VkDeviceSize dstSize = memRequirements.size;
-          VkDeviceMemory dstDeviceMemory =
-              imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-          SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                                dstSize);
-        }
-      }
+    if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
+         !Config::Get().vulkan.recorder.shadowMemory) ||
+        !dstIt->second->binding) {
+      return;
     }
+
+    ProcessDestinationImage(dstIt->second, regionCount, pRegions,
+                            SD().updatedMemoryInCmdBuffer[commandBuffer]);
   }
 }
 
@@ -4927,58 +5050,42 @@ inline void vkCmdResolveImage2_SD(VkCommandBuffer commandBuffer,
     SD()._commandbufferstates[commandBuffer]->resourceWriteImages[pResolveImageInfo->dstImage] =
         VULKAN_RESOLVE_IMAGE;
   }
+
   if (Config::Get().IsRecorder()) {
+    auto dstIt = SD()._imagestates.find(pResolveImageInfo->dstImage);
+
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      if (VK_NULL_HANDLE != pResolveImageInfo->srcImage) {
-        SD().bindingImages[commandBuffer].insert(pResolveImageInfo->srcImage);
+      // Src image
+      {
+        auto srcIt = SD()._imagestates.find(pResolveImageInfo->srcImage);
+        if (srcIt != SD()._imagestates.end()) {
+          SD().bindingImages[commandBuffer].insert(srcIt->second);
+        }
       }
-      if (VK_NULL_HANDLE != pResolveImageInfo->dstImage) {
-        SD().bindingImages[commandBuffer].insert(pResolveImageInfo->dstImage);
+      // Dst image
+      {
+        if (dstIt != SD()._imagestates.end()) {
+          SD().bindingImages[commandBuffer].insert(dstIt->second);
+        }
       }
+    }
+
+    if (dstIt == SD()._imagestates.end()) {
+      return;
     }
 
     SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back(
         (uint64_t)pResolveImageInfo->dstImage, true);
 
-    if (Config::Get().vulkan.recorder.memorySegmentSize ||
-        Config::Get().vulkan.recorder.shadowMemory) {
-      auto& imageState = SD()._imagestates[pResolveImageInfo->dstImage];
-
-      if (imageState->binding) {
-        if (imageState->imageCreateInfoData.Value()->tiling == VK_IMAGE_TILING_LINEAR) {
-          for (uint32_t i = 0; i < pResolveImageInfo->regionCount; i++) {
-            VkImageSubresource imageSubresource;
-
-            imageSubresource.aspectMask = pResolveImageInfo->pRegions[i].dstSubresource.aspectMask;
-            imageSubresource.mipLevel = pResolveImageInfo->pRegions[i].dstSubresource.mipLevel;
-            imageSubresource.arrayLayer =
-                pResolveImageInfo->pRegions[i].dstSubresource.baseArrayLayer;
-
-            VkSubresourceLayout subLayout;
-            drvVk.vkGetImageSubresourceLayout(imageState->deviceStateStore->deviceHandle,
-                                              pResolveImageInfo->dstImage, &imageSubresource,
-                                              &subLayout);
-            VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset + subLayout.offset;
-            VkDeviceSize dstSize = subLayout.size;
-            VkDeviceMemory dstDeviceMemory =
-                imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-            SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                                  dstSize);
-          }
-        } else {
-          VkMemoryRequirements memRequirements = {};
-          drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle,
-                                             pResolveImageInfo->dstImage, &memRequirements);
-
-          VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset;
-          VkDeviceSize dstSize = memRequirements.size;
-          VkDeviceMemory dstDeviceMemory =
-              imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-          SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                                dstSize);
-        }
-      }
+    if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
+         !Config::Get().vulkan.recorder.shadowMemory) ||
+        !dstIt->second->binding) {
+      return;
     }
+
+    ProcessDestinationImage(dstIt->second, pResolveImageInfo->regionCount,
+                            pResolveImageInfo->pRegions,
+                            SD().updatedMemoryInCmdBuffer[commandBuffer]);
   }
 }
 
@@ -4989,30 +5096,39 @@ inline void vkCmdClearColorImage_SD(VkCommandBuffer commandBuffer,
                                     uint32_t rangeCount,
                                     const VkImageSubresourceRange* pRanges) {
   if (Config::Get().IsRecorder()) {
+    auto dstIt = SD()._imagestates.find(image);
+
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      SD().bindingImages[commandBuffer].insert(image);
+      if (dstIt != SD()._imagestates.end()) {
+        SD().bindingImages[commandBuffer].insert(dstIt->second);
+      }
     }
 
     SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back((uint64_t)image, true);
 
-    if (Config::Get().vulkan.recorder.memorySegmentSize ||
-        Config::Get().vulkan.recorder.shadowMemory) {
-      auto& imageState = SD()._imagestates[image];
-      if (imageState->binding) {
-        VkMemoryRequirements memRequirements = {};
-        drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle, image,
-                                           &memRequirements);
-        //TODO : call vkGetImageSubresourceLayout when tiling is Linear
+    if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
+         !Config::Get().vulkan.recorder.shadowMemory) ||
+        !dstIt->second->binding) {
+      return;
+    }
 
-        VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset;
-        VkDeviceSize dstSize = memRequirements.size;
-        VkDeviceMemory dstDeviceMemory =
-            imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-        SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                              dstSize);
-      }
+    auto& imageState = dstIt->second;
+
+    if (imageState->binding) {
+      VkMemoryRequirements memRequirements = {};
+      drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle, image,
+                                         &memRequirements);
+
+      //TODO : call vkGetImageSubresourceLayout when tiling is Linear
+
+      VkDeviceSize dstOffset = imageState->binding->memoryOffset;
+      VkDeviceSize dstSize = memRequirements.size;
+      VkDeviceMemory deviceMemory = imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
+
+      SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(deviceMemory, dstOffset, dstSize);
     }
   }
+
   if (captureRenderPasses()) {
     SD()._commandbufferstates[commandBuffer]->clearedImages.insert(image);
   }
@@ -5025,30 +5141,38 @@ inline void vkCmdClearDepthStencilImage_SD(VkCommandBuffer commandBuffer,
                                            uint32_t rangeCount,
                                            const VkImageSubresourceRange* pRanges) {
   if (Config::Get().IsRecorder()) {
+    auto dstIt = SD()._imagestates.find(image);
+
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      SD().bindingImages[commandBuffer].insert(image);
+      if (dstIt != SD()._imagestates.end()) {
+        SD().bindingImages[commandBuffer].insert(dstIt->second);
+      }
     }
 
     SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back((uint64_t)image, true);
 
-    if (Config::Get().vulkan.recorder.memorySegmentSize ||
-        Config::Get().vulkan.recorder.shadowMemory) {
-      auto& imageState = SD()._imagestates[image];
-      if (imageState->binding) {
-        VkMemoryRequirements memRequirements = {};
-        drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle, image,
-                                           &memRequirements);
-        //TODO : call vkGetImageSubresourceLayout when tiling is Linear
+    if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
+         !Config::Get().vulkan.recorder.shadowMemory) ||
+        !dstIt->second->binding) {
+      return;
+    }
 
-        VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset;
-        VkDeviceSize dstSize = memRequirements.size;
-        VkDeviceMemory dstDeviceMemory =
-            imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-        SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                              dstSize);
-      }
+    auto& imageState = dstIt->second;
+
+    if (imageState->binding) {
+      VkMemoryRequirements memRequirements = {};
+      drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle, image,
+                                         &memRequirements);
+
+      //TODO : call vkGetImageSubresourceLayout when tiling is Linear
+
+      VkDeviceSize dstOffset = imageState->binding->memoryOffset;
+      VkDeviceSize dstSize = memRequirements.size;
+      VkDeviceMemory deviceMemory = imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
+      SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(deviceMemory, dstOffset, dstSize);
     }
   }
+
   if (captureRenderPasses()) {
     SD()._commandbufferstates[commandBuffer]->clearedImages.insert(image);
   }

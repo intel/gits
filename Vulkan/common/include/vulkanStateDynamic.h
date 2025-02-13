@@ -775,8 +775,8 @@ struct CDescriptorSetState : public UniqueResourceHandle {
 
   VkDescriptorSet descriptorSetHandle;
   CpNextWrapperData extensionsDataChain;
-  std::unordered_map<uint32_t, VkBuffer> descriptorBuffers;
-  std::unordered_map<uint32_t, VkImage> descriptorImages;
+  std::unordered_map<uint32_t, std::shared_ptr<CBufferState>> descriptorBuffers;
+  std::unordered_map<uint32_t, std::shared_ptr<CImageState>> descriptorImages;
   std::unordered_map<uint32_t, std::pair<VulkanResourceType, VkBuffer>> descriptorWriteBuffers;
   std::unordered_map<uint32_t, std::pair<VulkanResourceType, VkImage>> descriptorWriteImages;
   std::unordered_map<uint32_t, CDescriptorSetBindingData> descriptorSetBindings;
@@ -1750,8 +1750,10 @@ public:
   TDeferredOperationKHRStates _deferredoperationkhrstates;
   TAccelerationStructureKHRStates _accelerationstructurekhrstates;
 
-  std::unordered_map<VkCommandBuffer, std::unordered_set<VkBuffer>> bindingBuffers;
-  std::unordered_map<VkCommandBuffer, std::unordered_set<VkImage>> bindingImages;
+  std::unordered_map<VkCommandBuffer, std::unordered_set<std::shared_ptr<CBufferState>>>
+      bindingBuffers;
+  std::unordered_map<VkCommandBuffer, std::unordered_set<std::shared_ptr<CImageState>>>
+      bindingImages;
   std::unordered_map<VkCommandBuffer, CMemoryUpdateState> updatedMemoryInCmdBuffer;
   std::shared_ptr<CQueueSubmitState> lastQueueSubmit;
   std::set<uint64_t> objectsUsedInQueueSubmit;
