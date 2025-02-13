@@ -96,15 +96,14 @@ VkCommandBuffer allocateCommandBuffer(VkDevice device,
       1                                               // uint32_t commandBufferCount;
   };
 
-  VkCommandBuffer commandBuffer;
-  if (drvVk.vkAllocateCommandBuffers(device, &allocateInfo, &commandBuffer) != VK_SUCCESS) {
+  VkCommandBuffer cmdBuf;
+  if (drvVk.vkAllocateCommandBuffers(device, &allocateInfo, &cmdBuf) != VK_SUCCESS) {
     throw std::runtime_error("Could not allocate a command buffer.");
   }
-  vkAllocateCommandBuffers_SD(VK_SUCCESS, device, &allocateInfo, &commandBuffer);
+  vkAllocateCommandBuffers_SD(VK_SUCCESS, device, &allocateInfo, &cmdBuf);
 
-  recorder.Schedule(
-      new CvkAllocateCommandBuffers(VK_SUCCESS, device, &allocateInfo, &commandBuffer));
-  return commandBuffer;
+  recorder.Schedule(new CvkAllocateCommandBuffers(VK_SUCCESS, device, &allocateInfo, &cmdBuf));
+  return cmdBuf;
 }
 
 void handleSwapchainCreationForOffscreenApplications(VkDevice device,
@@ -261,10 +260,10 @@ void scheduleCopyToSwapchainAndPresent(VkDevice device, VkQueue queue, CRecorder
 
   // Copy data to a virtual swapchain
   {
-    VkCommandBuffer commandBuffer = presentationData.commandBuffer;
-    VkImage srcImage = offscreenApp.imageToPresent;
-    auto& srcImageState = SD()._imagestates[srcImage];
-    VkImage dstImage = presentationData.swapchainImage;
+    const auto cmdBuf = presentationData.commandBuffer;
+    const auto srcImage = offscreenApp.imageToPresent;
+    const auto& srcImageState = SD()._imagestates[srcImage];
+    const auto dstImage = presentationData.swapchainImage;
 
     // Begin a command buffer for performing copy
     {
@@ -274,8 +273,9 @@ void scheduleCopyToSwapchainAndPresent(VkDevice device, VkQueue queue, CRecorder
           VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, // VkCommandBufferUsageFlags flags;
           nullptr // const VkCommandBufferInheritanceInfo* pInheritanceInfo;
       };
-      recorder.Schedule(new CvkBeginCommandBuffer(VK_SUCCESS, commandBuffer, &beginInfo));
+      recorder.Schedule(new CvkBeginCommandBuffer(VK_SUCCESS, cmdBuf, &beginInfo));
     }
+
     // Initial memory barriers before copy
     {
       std::vector<VkImageMemoryBarrier> preTransferImageMemoryBarriers = {
@@ -314,10 +314,11 @@ void scheduleCopyToSwapchainAndPresent(VkDevice device, VkQueue queue, CRecorder
                1                          // uint32_t layerCount;
            }}};
       recorder.Schedule(new CvkCmdPipelineBarrier(
-          commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+          cmdBuf, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
           VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr,
           (uint32_t)preTransferImageMemoryBarriers.size(), preTransferImageMemoryBarriers.data()));
     }
+
     // Data copy
     {
       if (srcImageState->imageCreateInfoData.Value()->samples == VK_SAMPLE_COUNT_1_BIT) {
@@ -339,7 +340,7 @@ void scheduleCopyToSwapchainAndPresent(VkDevice device, VkQueue queue, CRecorder
                                  {0, 0, 0}, // VkOffset3D dstOffset;
                                  {static_cast<uint32_t>(srcImageState->width),
                                   static_cast<uint32_t>(srcImageState->height), 1}};
-        recorder.Schedule(new CvkCmdCopyImage(commandBuffer, srcImage,
+        recorder.Schedule(new CvkCmdCopyImage(cmdBuf, srcImage,
                                               VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstImage,
                                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageCopy));
       } else {
@@ -363,11 +364,12 @@ void scheduleCopyToSwapchainAndPresent(VkDevice device, VkQueue queue, CRecorder
             {static_cast<uint32_t>(srcImageState->width),
              static_cast<uint32_t>(srcImageState->height), 1} //VkExtent3D extent;
         };
-        recorder.Schedule(new CvkCmdResolveImage(commandBuffer, srcImage,
+        recorder.Schedule(new CvkCmdResolveImage(cmdBuf, srcImage,
                                                  VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstImage,
                                                  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region));
       }
     }
+
     // Post-copy, pre-present memory barriers
     {
       std::vector<VkImageMemoryBarrier> postTransferImageMemoryBarriers = {
@@ -406,13 +408,15 @@ void scheduleCopyToSwapchainAndPresent(VkDevice device, VkQueue queue, CRecorder
                1                          // uint32_t layerCount;
            }}};
       recorder.Schedule(new CvkCmdPipelineBarrier(
-          commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+          cmdBuf, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
           VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr,
           (uint32_t)postTransferImageMemoryBarriers.size(),
           postTransferImageMemoryBarriers.data()));
     }
+
     // End the command buffer
-    { recorder.Schedule(new CvkEndCommandBuffer(VK_SUCCESS, commandBuffer)); }
+    recorder.Schedule(new CvkEndCommandBuffer(VK_SUCCESS, cmdBuf));
+
     // Submit
     {
       VkPipelineStageFlags waitStages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
@@ -421,16 +425,17 @@ void scheduleCopyToSwapchainAndPresent(VkDevice device, VkQueue queue, CRecorder
           nullptr,                                  // const void* pNext;
           1,                                        // uint32_t waitSemaphoreCount;
           &presentationData.imageAcquiredSemaphore, // const VkSemaphore* pWaitSemaphores;
-          &waitStages,    // const VkPipelineStageFlags* pWaitDstStageMask;
-          1,              // uint32_t commandBufferCount;
-          &commandBuffer, // const VkCommandBuffer* pCommandBuffers;
-          1,              // uint32_t signalSemaphoreCount;
+          &waitStages, // const VkPipelineStageFlags* pWaitDstStageMask;
+          1,           // uint32_t commandBufferCount;
+          &cmdBuf,     // const VkCommandBuffer* pCommandBuffers;
+          1,           // uint32_t signalSemaphoreCount;
           &presentationData.readyToPresentSemaphore // const VkSemaphore* pSignalSemaphores;
       };
       recorder.Schedule(
           new CvkQueueSubmit(VK_SUCCESS, queue, 1, &submitInfo, presentationData.fence));
     }
   }
+
   // Present an image on screen
   {
     VkPresentInfoKHR presentInfo = {
@@ -447,6 +452,7 @@ void scheduleCopyToSwapchainAndPresent(VkDevice device, VkQueue queue, CRecorder
     vkQueuePresentKHR_RECWRAP(VK_SUCCESS, queue, &presentInfo, recorder);
     recorder.EndFramePost();
   }
+
   // Acquire next image
   {
     vs.nextImage = (vs.nextImage + 1) % vs.imageCount;
@@ -561,10 +567,10 @@ inline void vkQueueSubmit_RECWRAP(VkResult return_value,
 
     for (uint32_t i = 0; i < submitCount; i++) {
       for (uint32_t j = 0; j < pSubmits[i].commandBufferCount; j++) {
-        auto commandBuffer = pSubmits[i].pCommandBuffers[j];
+        const auto cmdBuf = pSubmits[i].pCommandBuffers[j];
 
         // Process memory bound to buffers
-        for (auto& bufferState : SD().bindingBuffers[commandBuffer]) {
+        for (auto& bufferState : SD().bindingBuffers[cmdBuf]) {
           if (updatedBuffers.find(bufferState->bufferHandle) == updatedBuffers.end()) {
             auto& bufferBinding = bufferState->binding;
 
@@ -580,7 +586,7 @@ inline void vkQueueSubmit_RECWRAP(VkResult return_value,
         }
 
         // Process memory bound to images
-        for (auto& imageState : SD().bindingImages[commandBuffer]) {
+        for (auto& imageState : SD().bindingImages[cmdBuf]) {
           if (updatedImages.find(imageState->imageHandle) == updatedImages.end()) {
             auto& imageBinding = imageState->binding;
 
@@ -622,17 +628,17 @@ inline void vkQueueSubmit_RECWRAP(VkResult return_value,
     if (Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
       for (uint32_t i = 0; i < submitCount; i++) {
         for (uint32_t j = 0; j < pSubmits[i].commandBufferCount; j++) {
-          auto& commandBuffState = SD()._commandbufferstates[pSubmits[i].pCommandBuffers[j]];
+          const auto cmdBuf = pSubmits[i].pCommandBuffers[j];
+          auto& commandBuffState = SD()._commandbufferstates[cmdBuf];
 
           if ((!commandBuffState->restored) && commandBuffState->beginCommandBuffer) {
             recorder.Schedule(new CvkBeginCommandBuffer(
-                VK_SUCCESS, pSubmits[i].pCommandBuffers[j],
+                VK_SUCCESS, cmdBuf,
                 commandBuffState->beginCommandBuffer->commandBufferBeginInfoData.Value()));
             commandBuffState->tokensBuffer.Flush(ScheduleTokens);
 
             if (commandBuffState->ended) {
-              recorder.Schedule(
-                  new CvkEndCommandBuffer(VK_SUCCESS, pSubmits[i].pCommandBuffers[j]));
+              recorder.Schedule(new CvkEndCommandBuffer(VK_SUCCESS, cmdBuf));
             }
             commandBuffState->restored = true;
           }
@@ -705,10 +711,10 @@ inline void vkQueueSubmit2_RECWRAP(VkResult return_value,
 
     for (uint32_t i = 0; i < submitCount; i++) {
       for (uint32_t j = 0; j < pSubmits[i].commandBufferInfoCount; j++) {
-        auto commandBuffer = pSubmits[i].pCommandBufferInfos[j].commandBuffer;
+        const auto cmdBuf = pSubmits[i].pCommandBufferInfos[j].commandBuffer;
 
         // Process memory bound to buffers
-        for (auto& bufferState : SD().bindingBuffers[commandBuffer]) {
+        for (auto& bufferState : SD().bindingBuffers[cmdBuf]) {
           if (updatedBuffers.find(bufferState->bufferHandle) == updatedBuffers.end()) {
             auto& bufferBinding = bufferState->binding;
 
@@ -724,7 +730,7 @@ inline void vkQueueSubmit2_RECWRAP(VkResult return_value,
         }
 
         // Process memory bound to images
-        for (auto& imageState : SD().bindingImages[commandBuffer]) {
+        for (auto& imageState : SD().bindingImages[cmdBuf]) {
           if (updatedImages.find(imageState->imageHandle) == updatedImages.end()) {
             auto& imageBinding = imageState->binding;
 
@@ -766,20 +772,19 @@ inline void vkQueueSubmit2_RECWRAP(VkResult return_value,
     if (Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
       for (uint32_t i = 0; i < submitCount; i++) {
         for (uint32_t j = 0; j < pSubmits[i].commandBufferInfoCount; j++) {
-          auto& commandBuffState =
-              SD()._commandbufferstates[pSubmits[i].pCommandBufferInfos[j].commandBuffer];
+          const auto cmdBuf = pSubmits[i].pCommandBufferInfos[j].commandBuffer;
+          auto& cmdBufState = SD()._commandbufferstates[cmdBuf];
 
-          if ((!commandBuffState->restored) && commandBuffState->beginCommandBuffer) {
+          if ((!cmdBufState->restored) && cmdBufState->beginCommandBuffer) {
             recorder.Schedule(new CvkBeginCommandBuffer(
-                VK_SUCCESS, pSubmits[i].pCommandBufferInfos[j].commandBuffer,
-                commandBuffState->beginCommandBuffer->commandBufferBeginInfoData.Value()));
-            commandBuffState->tokensBuffer.Flush(ScheduleTokens);
+                VK_SUCCESS, cmdBuf,
+                cmdBufState->beginCommandBuffer->commandBufferBeginInfoData.Value()));
+            cmdBufState->tokensBuffer.Flush(ScheduleTokens);
 
-            if (commandBuffState->ended) {
-              recorder.Schedule(new CvkEndCommandBuffer(
-                  VK_SUCCESS, pSubmits[i].pCommandBufferInfos[j].commandBuffer));
+            if (cmdBufState->ended) {
+              recorder.Schedule(new CvkEndCommandBuffer(VK_SUCCESS, cmdBuf));
             }
-            commandBuffState->restored = true;
+            cmdBufState->restored = true;
           }
         }
       }
@@ -850,24 +855,24 @@ inline void vkQueueSubmit2KHR_RECWRAP(VkResult return_value,
 }
 
 inline void vkBeginCommandBuffer_RECWRAP(VkResult return_value,
-                                         VkCommandBuffer commandBuffer,
+                                         VkCommandBuffer cmdBuf,
                                          const VkCommandBufferBeginInfo* pBeginInfo,
                                          CRecorder& recorder) {
   if (recorder.Running() &&
       !Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
-    recorder.Schedule(new CvkBeginCommandBuffer(return_value, commandBuffer, pBeginInfo));
+    recorder.Schedule(new CvkBeginCommandBuffer(return_value, cmdBuf, pBeginInfo));
   }
-  vkBeginCommandBuffer_SD(return_value, commandBuffer, pBeginInfo);
+  vkBeginCommandBuffer_SD(return_value, cmdBuf, pBeginInfo);
 }
 
 inline void vkEndCommandBuffer_RECWRAP(VkResult return_value,
-                                       VkCommandBuffer commandBuffer,
+                                       VkCommandBuffer cmdBuf,
                                        CRecorder& recorder) {
   if (recorder.Running() &&
       !Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
-    recorder.Schedule(new CvkEndCommandBuffer(return_value, commandBuffer));
+    recorder.Schedule(new CvkEndCommandBuffer(return_value, cmdBuf));
   }
-  vkEndCommandBuffer_SD(return_value, commandBuffer);
+  vkEndCommandBuffer_SD(return_value, cmdBuf);
 }
 
 inline void vkDestroyDescriptorPool_RECWRAP(VkDevice device,
@@ -1215,7 +1220,7 @@ inline void vkCreateRayTracingPipelinesKHR_RECWRAP(
 }
 
 void vkCmdBuildAccelerationStructuresKHR_RECWRAP(
-    VkCommandBuffer commandBuffer,
+    VkCommandBuffer cmdBuf,
     uint32_t infoCount,
     const VkAccelerationStructureBuildGeometryInfoKHR* pInfos,
     const VkAccelerationStructureBuildRangeInfoKHR* const* ppBuildRangeInfos,
@@ -1250,23 +1255,23 @@ void vkCmdBuildAccelerationStructuresKHR_RECWRAP(
   // pointed to by a device address and then look through it. The buffer contains device addresses, so
   // acceleration structures associated with them need to be find and their handles need to be acquired.
 
-  vkCmdBuildAccelerationStructuresKHR_SD(commandBuffer, infoCount, pInfos, ppBuildRangeInfos);
+  vkCmdBuildAccelerationStructuresKHR_SD(cmdBuf, infoCount, pInfos, ppBuildRangeInfos);
 
   if (recorder.Running()) {
     // Schedule a token which updates/patches a list of device addresses
     if (!useCaptureReplayFeaturesForBuffersAndAccelerationStructures()) {
-      auto& addressPatchers = SD()._commandbufferstates[commandBuffer]->addressPatchers;
+      auto& addressPatchers = SD()._commandbufferstates[cmdBuf]->addressPatchers;
       auto it = addressPatchers.find(
           CAccelerationStructureKHRState::globalAccelerationStructureBuildCommandIndex);
       if ((it != addressPatchers.end()) && (it->second.Count() > 0)) {
         recorder.Schedule(new CGitsVkCmdPatchDeviceAddresses(
-            commandBuffer, it->second,
+            cmdBuf, it->second,
             CAccelerationStructureKHRState::globalAccelerationStructureBuildCommandIndex));
       }
     }
 
-    recorder.Schedule(new CvkCmdBuildAccelerationStructuresKHR(commandBuffer, infoCount, pInfos,
-                                                               ppBuildRangeInfos));
+    recorder.Schedule(
+        new CvkCmdBuildAccelerationStructuresKHR(cmdBuf, infoCount, pInfos, ppBuildRangeInfos));
   }
 }
 
@@ -1274,13 +1279,13 @@ void vkCmdBuildAccelerationStructuresKHR_RECWRAP(
 namespace {
 
 // Offscreen applications support
-inline void barriers2HelperForOffscreenApplications(VkCommandBuffer commandBuffer,
+inline void barriers2HelperForOffscreenApplications(VkCommandBuffer cmdBuf,
                                                     const VkDependencyInfo* pDependencyInfo,
                                                     CRecorder& recorder) {
 
   if (usePresentSrcLayoutTransitionAsAFrameBoundary()) {
-    auto device = SD()._commandbufferstates[commandBuffer]
-                      ->commandPoolStateStore->deviceStateStore->deviceHandle;
+    auto device =
+        SD()._commandbufferstates[cmdBuf]->commandPoolStateStore->deviceStateStore->deviceHandle;
 
     for (unsigned int i = 0; i < pDependencyInfo->imageMemoryBarrierCount; i++) {
       if (pDependencyInfo->pImageMemoryBarriers[i].newLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
@@ -1291,7 +1296,7 @@ inline void barriers2HelperForOffscreenApplications(VkCommandBuffer commandBuffe
         }
         {
           auto& offscreenApp = SD().internalResources.offscreenApps[device];
-          offscreenApp.commandBufferWithTransitionToPresentSRC = commandBuffer;
+          offscreenApp.commandBufferWithTransitionToPresentSRC = cmdBuf;
           offscreenApp.imageToPresent = pDependencyInfo->pImageMemoryBarriers[i].image;
         }
         break;
@@ -1303,7 +1308,7 @@ inline void barriers2HelperForOffscreenApplications(VkCommandBuffer commandBuffe
 } // namespace
 #endif
 
-inline void vkCmdPipelineBarrier_RECWRAP(VkCommandBuffer commandBuffer,
+inline void vkCmdPipelineBarrier_RECWRAP(VkCommandBuffer cmdBuf,
                                          VkPipelineStageFlags srcStageMask,
                                          VkPipelineStageFlags dstStageMask,
                                          VkDependencyFlags dependencyFlags,
@@ -1316,22 +1321,22 @@ inline void vkCmdPipelineBarrier_RECWRAP(VkCommandBuffer commandBuffer,
                                          CRecorder& recorder) {
   if (recorder.Running() &&
       !Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
-    recorder.Schedule(new CvkCmdPipelineBarrier(
-        commandBuffer, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount,
-        pMemoryBarriers, bufferMemoryBarrierCount, pBufferMemoryBarriers, imageMemoryBarrierCount,
-        pImageMemoryBarriers));
+    recorder.Schedule(new CvkCmdPipelineBarrier(cmdBuf, srcStageMask, dstStageMask, dependencyFlags,
+                                                memoryBarrierCount, pMemoryBarriers,
+                                                bufferMemoryBarrierCount, pBufferMemoryBarriers,
+                                                imageMemoryBarrierCount, pImageMemoryBarriers));
   } else {
-    SD()._commandbufferstates[commandBuffer]->tokensBuffer.Add(new CvkCmdPipelineBarrier(
-        commandBuffer, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount,
-        pMemoryBarriers, bufferMemoryBarrierCount, pBufferMemoryBarriers, imageMemoryBarrierCount,
+    SD()._commandbufferstates[cmdBuf]->tokensBuffer.Add(new CvkCmdPipelineBarrier(
+        cmdBuf, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount, pMemoryBarriers,
+        bufferMemoryBarrierCount, pBufferMemoryBarriers, imageMemoryBarrierCount,
         pImageMemoryBarriers));
   }
 #ifdef GITS_PLATFORM_WINDOWS
   // Offscreen applications support
   if (!Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit &&
       usePresentSrcLayoutTransitionAsAFrameBoundary()) {
-    auto device = SD()._commandbufferstates[commandBuffer]
-                      ->commandPoolStateStore->deviceStateStore->deviceHandle;
+    auto device =
+        SD()._commandbufferstates[cmdBuf]->commandPoolStateStore->deviceStateStore->deviceHandle;
 
     for (unsigned int i = 0; i < imageMemoryBarrierCount; i++) {
       if (pImageMemoryBarriers[i].newLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
@@ -1342,7 +1347,7 @@ inline void vkCmdPipelineBarrier_RECWRAP(VkCommandBuffer commandBuffer,
         }
         {
           auto& offscreenApp = SD().internalResources.offscreenApps[device];
-          offscreenApp.commandBufferWithTransitionToPresentSRC = commandBuffer;
+          offscreenApp.commandBufferWithTransitionToPresentSRC = cmdBuf;
           offscreenApp.imageToPresent = pImageMemoryBarriers[i].image;
         }
         break;
@@ -1350,101 +1355,101 @@ inline void vkCmdPipelineBarrier_RECWRAP(VkCommandBuffer commandBuffer,
     }
   }
 #endif
-  vkCmdPipelineBarrier_SD(commandBuffer, srcStageMask, dstStageMask, dependencyFlags,
-                          memoryBarrierCount, pMemoryBarriers, bufferMemoryBarrierCount,
-                          pBufferMemoryBarriers, imageMemoryBarrierCount, pImageMemoryBarriers);
+  vkCmdPipelineBarrier_SD(cmdBuf, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount,
+                          pMemoryBarriers, bufferMemoryBarrierCount, pBufferMemoryBarriers,
+                          imageMemoryBarrierCount, pImageMemoryBarriers);
 }
 
-inline void vkCmdPipelineBarrier2UnifiedGITS_RECWRAP(VkCommandBuffer commandBuffer,
+inline void vkCmdPipelineBarrier2UnifiedGITS_RECWRAP(VkCommandBuffer cmdBuf,
                                                      const VkDependencyInfo* pDependencyInfo,
                                                      CRecorder& recorder) {
   if (recorder.Running() &&
       !Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
-    recorder.Schedule(new CvkCmdPipelineBarrier2UnifiedGITS(commandBuffer, pDependencyInfo));
+    recorder.Schedule(new CvkCmdPipelineBarrier2UnifiedGITS(cmdBuf, pDependencyInfo));
   } else {
-    SD()._commandbufferstates[commandBuffer]->tokensBuffer.Add(
-        new CvkCmdPipelineBarrier2UnifiedGITS(commandBuffer, pDependencyInfo));
+    SD()._commandbufferstates[cmdBuf]->tokensBuffer.Add(
+        new CvkCmdPipelineBarrier2UnifiedGITS(cmdBuf, pDependencyInfo));
   }
 #ifdef GITS_PLATFORM_WINDOWS
   if (!Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
-    barriers2HelperForOffscreenApplications(commandBuffer, pDependencyInfo, recorder);
+    barriers2HelperForOffscreenApplications(cmdBuf, pDependencyInfo, recorder);
   }
 #endif
-  vkCmdPipelineBarrier2UnifiedGITS_SD(commandBuffer, pDependencyInfo);
+  vkCmdPipelineBarrier2UnifiedGITS_SD(cmdBuf, pDependencyInfo);
 }
 
-inline void vkCmdPipelineBarrier2_RECWRAP(VkCommandBuffer commandBuffer,
+inline void vkCmdPipelineBarrier2_RECWRAP(VkCommandBuffer cmdBuf,
                                           const VkDependencyInfo* pDependencyInfo,
                                           CRecorder& recorder) {
   if (recorder.Running() &&
       !Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
-    recorder.Schedule(new CvkCmdPipelineBarrier2(commandBuffer, pDependencyInfo));
+    recorder.Schedule(new CvkCmdPipelineBarrier2(cmdBuf, pDependencyInfo));
   } else {
-    SD()._commandbufferstates[commandBuffer]->tokensBuffer.Add(
-        new CvkCmdPipelineBarrier2(commandBuffer, pDependencyInfo));
+    SD()._commandbufferstates[cmdBuf]->tokensBuffer.Add(
+        new CvkCmdPipelineBarrier2(cmdBuf, pDependencyInfo));
   }
 #ifdef GITS_PLATFORM_WINDOWS
   if (!Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
-    barriers2HelperForOffscreenApplications(commandBuffer, pDependencyInfo, recorder);
+    barriers2HelperForOffscreenApplications(cmdBuf, pDependencyInfo, recorder);
   }
 #endif
-  vkCmdPipelineBarrier2_SD(commandBuffer, pDependencyInfo);
+  vkCmdPipelineBarrier2_SD(cmdBuf, pDependencyInfo);
 }
 
-inline void vkCmdPipelineBarrier2KHR_RECWRAP(VkCommandBuffer commandBuffer,
+inline void vkCmdPipelineBarrier2KHR_RECWRAP(VkCommandBuffer cmdBuf,
                                              const VkDependencyInfo* pDependencyInfo,
                                              CRecorder& recorder) {
   if (recorder.Running() &&
       !Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
-    recorder.Schedule(new CvkCmdPipelineBarrier2KHR(commandBuffer, pDependencyInfo));
+    recorder.Schedule(new CvkCmdPipelineBarrier2KHR(cmdBuf, pDependencyInfo));
   } else {
-    SD()._commandbufferstates[commandBuffer]->tokensBuffer.Add(
-        new CvkCmdPipelineBarrier2KHR(commandBuffer, pDependencyInfo));
+    SD()._commandbufferstates[cmdBuf]->tokensBuffer.Add(
+        new CvkCmdPipelineBarrier2KHR(cmdBuf, pDependencyInfo));
   }
 #ifdef GITS_PLATFORM_WINDOWS
   if (!Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
-    barriers2HelperForOffscreenApplications(commandBuffer, pDependencyInfo, recorder);
+    barriers2HelperForOffscreenApplications(cmdBuf, pDependencyInfo, recorder);
   }
 #endif
-  vkCmdPipelineBarrier2KHR_SD(commandBuffer, pDependencyInfo);
+  vkCmdPipelineBarrier2KHR_SD(cmdBuf, pDependencyInfo);
 }
 
-inline void vkCmdSetEvent2_RECWRAP(VkCommandBuffer commandBuffer,
+inline void vkCmdSetEvent2_RECWRAP(VkCommandBuffer cmdBuf,
                                    VkEvent event,
                                    const VkDependencyInfo* pDependencyInfo,
                                    CRecorder& recorder) {
   if (recorder.Running() &&
       !Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
-    recorder.Schedule(new CvkCmdSetEvent2(commandBuffer, event, pDependencyInfo));
+    recorder.Schedule(new CvkCmdSetEvent2(cmdBuf, event, pDependencyInfo));
   } else {
-    SD()._commandbufferstates[commandBuffer]->tokensBuffer.Add(
-        new CvkCmdSetEvent2(commandBuffer, event, pDependencyInfo));
+    SD()._commandbufferstates[cmdBuf]->tokensBuffer.Add(
+        new CvkCmdSetEvent2(cmdBuf, event, pDependencyInfo));
   }
 #ifdef GITS_PLATFORM_WINDOWS
   if (!Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
-    barriers2HelperForOffscreenApplications(commandBuffer, pDependencyInfo, recorder);
+    barriers2HelperForOffscreenApplications(cmdBuf, pDependencyInfo, recorder);
   }
 #endif
-  vkCmdSetEvent2_SD(commandBuffer, event, pDependencyInfo);
+  vkCmdSetEvent2_SD(cmdBuf, event, pDependencyInfo);
 }
 
-inline void vkCmdSetEvent2KHR_RECWRAP(VkCommandBuffer commandBuffer,
+inline void vkCmdSetEvent2KHR_RECWRAP(VkCommandBuffer cmdBuf,
                                       VkEvent event,
                                       const VkDependencyInfo* pDependencyInfo,
                                       CRecorder& recorder) {
   if (recorder.Running() &&
       !Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
-    recorder.Schedule(new CvkCmdSetEvent2KHR(commandBuffer, event, pDependencyInfo));
+    recorder.Schedule(new CvkCmdSetEvent2KHR(cmdBuf, event, pDependencyInfo));
   } else {
-    SD()._commandbufferstates[commandBuffer]->tokensBuffer.Add(
-        new CvkCmdSetEvent2KHR(commandBuffer, event, pDependencyInfo));
+    SD()._commandbufferstates[cmdBuf]->tokensBuffer.Add(
+        new CvkCmdSetEvent2KHR(cmdBuf, event, pDependencyInfo));
   }
 #ifdef GITS_PLATFORM_WINDOWS
   if (!Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
-    barriers2HelperForOffscreenApplications(commandBuffer, pDependencyInfo, recorder);
+    barriers2HelperForOffscreenApplications(cmdBuf, pDependencyInfo, recorder);
   }
 #endif
-  vkCmdSetEvent2KHR_SD(commandBuffer, event, pDependencyInfo);
+  vkCmdSetEvent2KHR_SD(cmdBuf, event, pDependencyInfo);
 }
 
 inline void vkCreateRenderPass_RECWRAP(VkResult return_value,

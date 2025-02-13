@@ -813,10 +813,9 @@ void gits::Vulkan::RestoreImageView(CScheduler& scheduler, CStateDynamic& sd) {
     }
 
     auto imageViewCreateInfo = *imageViewState.second->imageViewCreateInfoData.Value();
-    auto imageStateIterator =
-        sd._imagestates.find(imageViewState.second->imageStateStore->imageHandle);
-    if ((imageStateIterator == sd._imagestates.end()) ||
-        (imageStateIterator->second->GetUniqueStateID() !=
+    auto imageStateIt = sd._imagestates.find(imageViewState.second->imageStateStore->imageHandle);
+    if ((imageStateIt == sd._imagestates.end()) ||
+        (imageStateIt->second->GetUniqueStateID() !=
          imageViewState.second->imageStateStore->GetUniqueStateID())) {
       VkImage image = (VkImage)imageViewState.second->imageStateStore->GetUniqueStateID();
       imageViewCreateInfo.image = image;
@@ -952,10 +951,10 @@ void gits::Vulkan::RestoreBufferView(CScheduler& scheduler, CStateDynamic& sd) {
       continue;
     }
 
-    auto bufferStateIterator =
+    auto bufferStateIt =
         sd._bufferstates.find(bufferViewState.second->bufferStateStore->bufferHandle);
-    if ((bufferStateIterator != sd._bufferstates.end()) &&
-        (bufferStateIterator->second->GetUniqueStateID() ==
+    if ((bufferStateIt != sd._bufferstates.end()) &&
+        (bufferStateIt->second->GetUniqueStateID() ==
          bufferViewState.second->bufferStateStore->GetUniqueStateID())) {
       auto bufferView = bufferViewState.first;
       auto device = bufferViewState.second->deviceStateStore->deviceHandle;
@@ -1162,17 +1161,18 @@ void gits::Vulkan::RestoreAllocatedDescriptorSet(CScheduler& scheduler, CStateDy
 namespace {
 
 bool RestoreSamplerDescriptorHelper(
-    gits::Vulkan::CStateDynamic& sd,
-    gits::Vulkan::CDescriptorSetState::CDescriptorSetBindingData::CDescriptorData& descriptorData,
+    const gits::Vulkan::CStateDynamic& sd,
+    const gits::Vulkan::CDescriptorSetState::CDescriptorSetBindingData::CDescriptorData&
+        descriptorData,
     VkWriteDescriptorSet& descriptorWrite,
-    VkDevice device) {
+    const VkDevice device) {
   if (descriptorData.pImageInfo) {
-    auto sampler = descriptorData.pImageInfo->Value()->sampler;
-    auto samplerStateIT = sd._samplerstates.find(sampler);
+    const auto sampler = descriptorData.pImageInfo->Value()->sampler;
+    const auto samplerStateIt = sd._samplerstates.find(sampler);
 
-    if ((samplerStateIT != sd._samplerstates.end()) &&
+    if ((samplerStateIt != sd._samplerstates.end()) &&
         (descriptorData.samplerStateStore->GetUniqueStateID() ==
-         samplerStateIT->second->GetUniqueStateID())) {
+         samplerStateIt->second->GetUniqueStateID())) {
       descriptorWrite.pImageInfo = descriptorData.pImageInfo->Value();
       return true;
     } else {
@@ -1184,27 +1184,28 @@ bool RestoreSamplerDescriptorHelper(
 }
 
 bool RestoreCombinedImageSamplerDescriptorHelper(
-    gits::Vulkan::CStateDynamic& sd,
-    gits::Vulkan::CDescriptorSetState::CDescriptorSetBindingData::CDescriptorData& descriptorData,
+    const gits::Vulkan::CStateDynamic& sd,
+    const gits::Vulkan::CDescriptorSetState::CDescriptorSetBindingData::CDescriptorData&
+        descriptorData,
     VkWriteDescriptorSet& descriptorWrite,
-    VkDevice device) {
+    const VkDevice device) {
   if (descriptorData.pImageInfo) {
-    auto sampler = descriptorData.pImageInfo->Value()->sampler;
-    auto samplerStateIT = sd._samplerstates.find(sampler);
-    auto imageView = descriptorData.pImageInfo->Value()->imageView;
-    auto imageViewStateIT = sd._imageviewstates.find(imageView);
-    auto image = imageViewStateIT->second->imageStateStore->imageHandle;
-    auto imageStateIT = sd._imagestates.find(image);
+    const auto sampler = descriptorData.pImageInfo->Value()->sampler;
+    const auto samplerStateIt = sd._samplerstates.find(sampler);
+    const auto imageView = descriptorData.pImageInfo->Value()->imageView;
+    const auto imageViewStateIt = sd._imageviewstates.find(imageView);
+    const auto image = imageViewStateIt->second->imageStateStore->imageHandle;
+    const auto imageStateIt = sd._imagestates.find(image);
 
-    if ((samplerStateIT != sd._samplerstates.end()) &&
+    if ((samplerStateIt != sd._samplerstates.end()) &&
         (descriptorData.samplerStateStore->GetUniqueStateID() ==
-         samplerStateIT->second->GetUniqueStateID()) &&
-        (imageViewStateIT != sd._imageviewstates.end()) &&
+         samplerStateIt->second->GetUniqueStateID()) &&
+        (imageViewStateIt != sd._imageviewstates.end()) &&
         (descriptorData.imageViewStateStore->GetUniqueStateID() ==
-         imageViewStateIT->second->GetUniqueStateID()) &&
-        (imageStateIT != sd._imagestates.end()) &&
-        (imageStateIT->second->GetUniqueStateID() ==
-         imageViewStateIT->second->imageStateStore->GetUniqueStateID())) {
+         imageViewStateIt->second->GetUniqueStateID()) &&
+        (imageStateIt != sd._imagestates.end()) &&
+        (imageStateIt->second->GetUniqueStateID() ==
+         imageViewStateIt->second->imageStateStore->GetUniqueStateID())) {
       descriptorWrite.pImageInfo = descriptorData.pImageInfo->Value();
       return true;
     } else {
@@ -1217,22 +1218,23 @@ bool RestoreCombinedImageSamplerDescriptorHelper(
 }
 
 bool RestoreImageDescriptorHelper(
-    gits::Vulkan::CStateDynamic& sd,
-    gits::Vulkan::CDescriptorSetState::CDescriptorSetBindingData::CDescriptorData& descriptorData,
+    const gits::Vulkan::CStateDynamic& sd,
+    const gits::Vulkan::CDescriptorSetState::CDescriptorSetBindingData::CDescriptorData&
+        descriptorData,
     VkWriteDescriptorSet& descriptorWrite,
-    VkDevice device) {
+    const VkDevice device) {
   if (descriptorData.pImageInfo) {
-    auto imageView = descriptorData.pImageInfo->Value()->imageView;
-    auto imageViewStateIT = sd._imageviewstates.find(imageView);
-    auto image = imageViewStateIT->second->imageStateStore->imageHandle;
-    auto imageStateIT = sd._imagestates.find(image);
+    const auto imageView = descriptorData.pImageInfo->Value()->imageView;
+    const auto imageViewStateIt = sd._imageviewstates.find(imageView);
+    const auto image = imageViewStateIt->second->imageStateStore->imageHandle;
+    const auto imageStateIt = sd._imagestates.find(image);
 
-    if ((imageViewStateIT != sd._imageviewstates.end()) &&
+    if ((imageViewStateIt != sd._imageviewstates.end()) &&
         (descriptorData.imageViewStateStore->GetUniqueStateID() ==
-         imageViewStateIT->second->GetUniqueStateID()) &&
-        (imageStateIT != sd._imagestates.end()) &&
-        (imageStateIT->second->GetUniqueStateID() ==
-         imageViewStateIT->second->imageStateStore->GetUniqueStateID())) {
+         imageViewStateIt->second->GetUniqueStateID()) &&
+        (imageStateIt != sd._imagestates.end()) &&
+        (imageStateIt->second->GetUniqueStateID() ==
+         imageViewStateIt->second->imageStateStore->GetUniqueStateID())) {
       descriptorWrite.pImageInfo = descriptorData.pImageInfo->Value();
       return true;
     } else {
@@ -1244,21 +1246,22 @@ bool RestoreImageDescriptorHelper(
 }
 
 bool RestoreTexelBufferDescriptorHelper(
-    gits::Vulkan::CStateDynamic& sd,
-    gits::Vulkan::CDescriptorSetState::CDescriptorSetBindingData::CDescriptorData& descriptorData,
+    const gits::Vulkan::CStateDynamic& sd,
+    const gits::Vulkan::CDescriptorSetState::CDescriptorSetBindingData::CDescriptorData&
+        descriptorData,
     VkWriteDescriptorSet& descriptorWrite,
-    VkDevice device) {
+    const VkDevice device) {
   if (descriptorData.pTexelBufferView) {
-    auto texelBufferView = *descriptorData.pTexelBufferView->Value();
-    auto bufferViewStateIt = sd._bufferviewstates.find(texelBufferView);
-    auto buffer = bufferViewStateIt->second->bufferStateStore->bufferHandle;
-    auto bufferStateIT = sd._bufferstates.find(buffer);
+    const auto texelBufferView = *descriptorData.pTexelBufferView->Value();
+    const auto bufferViewStateIt = sd._bufferviewstates.find(texelBufferView);
+    const auto buffer = bufferViewStateIt->second->bufferStateStore->bufferHandle;
+    const auto bufferStateIt = sd._bufferstates.find(buffer);
 
     if ((bufferViewStateIt != sd._bufferviewstates.end()) &&
         (descriptorData.bufferViewStateStore->GetUniqueStateID() ==
          bufferViewStateIt->second->GetUniqueStateID()) &&
-        (bufferStateIT != sd._bufferstates.end()) &&
-        (bufferStateIT->second->GetUniqueStateID() ==
+        (bufferStateIt != sd._bufferstates.end()) &&
+        (bufferStateIt->second->GetUniqueStateID() ==
          bufferViewStateIt->second->bufferStateStore->GetUniqueStateID())) {
       descriptorWrite.pTexelBufferView = descriptorData.pTexelBufferView->Value();
       return true;
@@ -1271,13 +1274,14 @@ bool RestoreTexelBufferDescriptorHelper(
 }
 
 bool RestoreBufferDescriptorHelper(
-    gits::Vulkan::CStateDynamic& sd,
-    gits::Vulkan::CDescriptorSetState::CDescriptorSetBindingData::CDescriptorData& descriptorData,
+    const gits::Vulkan::CStateDynamic& sd,
+    const gits::Vulkan::CDescriptorSetState::CDescriptorSetBindingData::CDescriptorData&
+        descriptorData,
     VkWriteDescriptorSet& descriptorWrite,
-    VkDevice device) {
+    const VkDevice device) {
   if (descriptorData.pBufferInfo) {
-    auto buffer = descriptorData.pBufferInfo->Value()->buffer;
-    auto bufferStateIt = sd._bufferstates.find(buffer);
+    const auto buffer = descriptorData.pBufferInfo->Value()->buffer;
+    const auto bufferStateIt = sd._bufferstates.find(buffer);
 
     if ((bufferStateIt != sd._bufferstates.end()) &&
         (descriptorData.bufferStateStore->GetUniqueStateID() ==
@@ -1293,23 +1297,26 @@ bool RestoreBufferDescriptorHelper(
 }
 
 bool RestoreAccelerationStructureDescriptorHelper(
-    gits::Vulkan::CStateDynamic& sd,
-    gits::Vulkan::CDescriptorSetState::CDescriptorSetBindingData::CDescriptorData& descriptorData,
+    const gits::Vulkan::CStateDynamic& sd,
+    const gits::Vulkan::CDescriptorSetState::CDescriptorSetBindingData::CDescriptorData&
+        descriptorData,
     VkWriteDescriptorSet& descriptorWrite,
     std::list<VkWriteDescriptorSetAccelerationStructureKHR>& accelerationStructureWrites,
-    VkDevice device) {
+    const VkDevice device) {
   if (descriptorData.accelerationStructureStateStore) {
-    auto accStruct = descriptorData.accelerationStructureStateStore->accelerationStructureHandle;
-    auto accStructStateIT = sd._accelerationstructurekhrstates.find(accStruct);
-    auto buffer = descriptorData.accelerationStructureStateStore->bufferStateStore->bufferHandle;
-    auto bufferStateIT = sd._bufferstates.find(buffer);
+    const auto accStruct =
+        descriptorData.accelerationStructureStateStore->accelerationStructureHandle;
+    const auto accStructStateIt = sd._accelerationstructurekhrstates.find(accStruct);
+    const auto buffer =
+        descriptorData.accelerationStructureStateStore->bufferStateStore->bufferHandle;
+    const auto bufferStateIt = sd._bufferstates.find(buffer);
 
-    if ((accStructStateIT != sd._accelerationstructurekhrstates.end()) &&
+    if ((accStructStateIt != sd._accelerationstructurekhrstates.end()) &&
         (descriptorData.accelerationStructureStateStore->GetUniqueStateID() ==
-         accStructStateIT->second->GetUniqueStateID()) &&
-        (bufferStateIT != sd._bufferstates.end()) &&
+         accStructStateIt->second->GetUniqueStateID()) &&
+        (bufferStateIt != sd._bufferstates.end()) &&
         (descriptorData.accelerationStructureStateStore->bufferStateStore->GetUniqueStateID() ==
-         bufferStateIT->second->GetUniqueStateID())) {
+         bufferStateIt->second->GetUniqueStateID())) {
       accelerationStructureWrites.emplace_back(VkWriteDescriptorSetAccelerationStructureKHR{
           VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR, // VkStructureType sType;
           nullptr,                                                           // const void* pNext;
@@ -1339,8 +1346,8 @@ void gits::Vulkan::RestoreDescriptorSetsUpdates(CScheduler& scheduler, CStateDyn
     std::vector<VkWriteDescriptorSetInlineUniformBlock> uniformBlocks;
     std::list<VkWriteDescriptorSetAccelerationStructureKHR> accelerationStructureWrites;
 
-    for (auto& descriptorSetBindingIterator : descriptorSetState.second->descriptorSetBindings) {
-      auto& descriptorSetBinding = descriptorSetBindingIterator.second;
+    for (auto& descriptorSetBindingIt : descriptorSetState.second->descriptorSetBindings) {
+      auto& descriptorSetBinding = descriptorSetBindingIt.second;
       auto device =
           descriptorSetState.second->descriptorPoolStateStore->deviceStateStore->deviceHandle;
 
@@ -1356,7 +1363,7 @@ void gits::Vulkan::RestoreDescriptorSetsUpdates(CScheduler& scheduler, CStateDyn
             VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,   // VkStructureType sType;
             &uniformBlocks[uniformBlocks.size() - 1], // const void* pNext;
             descriptorSetState.first,                 // VkDescriptorSet dstSet;
-            descriptorSetBindingIterator.first,       // uint32_t dstBinding;
+            descriptorSetBindingIt.first,             // uint32_t dstBinding;
             0,                                        // uint32_t dstArrayElement;
             descriptorSetBinding.descriptorCount,     // uint32_t descriptorCount;
             descriptorSetBinding.descriptorType,      // VkDescriptorType descriptorType;
@@ -1368,11 +1375,13 @@ void gits::Vulkan::RestoreDescriptorSetsUpdates(CScheduler& scheduler, CStateDyn
       } else {
         for (size_t arrayIndex = 0; arrayIndex < descriptorSetBinding.descriptorData.size();
              ++arrayIndex) {
+          const auto& currentBindingData = descriptorSetBinding.descriptorData[arrayIndex];
+
           VkWriteDescriptorSet descriptorWrite = {
               VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, // VkStructureType sType;
               nullptr,                                // const void* pNext;
               descriptorSetState.first,               // VkDescriptorSet dstSet;
-              descriptorSetBindingIterator.first,     // uint32_t dstBinding;
+              descriptorSetBindingIt.first,           // uint32_t dstBinding;
               (uint32_t)arrayIndex,                   // uint32_t dstArrayElement;
               1,                                      // uint32_t descriptorCount;
               descriptorSetBinding.descriptorType,    // VkDescriptorType descriptorType;
@@ -1384,35 +1393,34 @@ void gits::Vulkan::RestoreDescriptorSetsUpdates(CScheduler& scheduler, CStateDyn
 
           switch (descriptorSetBinding.descriptorType) {
           case VK_DESCRIPTOR_TYPE_SAMPLER:
-            writeDescriptor = RestoreSamplerDescriptorHelper(
-                sd, descriptorSetBinding.descriptorData[arrayIndex], descriptorWrite, device);
+            writeDescriptor =
+                RestoreSamplerDescriptorHelper(sd, currentBindingData, descriptorWrite, device);
             break;
           case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-            writeDescriptor = RestoreCombinedImageSamplerDescriptorHelper(
-                sd, descriptorSetBinding.descriptorData[arrayIndex], descriptorWrite, device);
+            writeDescriptor = RestoreCombinedImageSamplerDescriptorHelper(sd, currentBindingData,
+                                                                          descriptorWrite, device);
             break;
           case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
           case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
           case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-            writeDescriptor = RestoreImageDescriptorHelper(
-                sd, descriptorSetBinding.descriptorData[arrayIndex], descriptorWrite, device);
+            writeDescriptor =
+                RestoreImageDescriptorHelper(sd, currentBindingData, descriptorWrite, device);
             break;
           case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
           case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-            writeDescriptor = RestoreTexelBufferDescriptorHelper(
-                sd, descriptorSetBinding.descriptorData[arrayIndex], descriptorWrite, device);
+            writeDescriptor =
+                RestoreTexelBufferDescriptorHelper(sd, currentBindingData, descriptorWrite, device);
             break;
           case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
           case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
           case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
           case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-            writeDescriptor = RestoreBufferDescriptorHelper(
-                sd, descriptorSetBinding.descriptorData[arrayIndex], descriptorWrite, device);
+            writeDescriptor =
+                RestoreBufferDescriptorHelper(sd, currentBindingData, descriptorWrite, device);
             break;
           case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
             writeDescriptor = RestoreAccelerationStructureDescriptorHelper(
-                sd, descriptorSetBinding.descriptorData[arrayIndex], descriptorWrite,
-                accelerationStructureWrites, device);
+                sd, currentBindingData, descriptorWrite, accelerationStructureWrites, device);
             break;
           default:
             Log(TRACE) << "Not handled VkDescriptorType enumeration: "
@@ -2277,9 +2285,9 @@ void gits::Vulkan::RestoreCommandBuffers(CScheduler& scheduler, CStateDynamic& s
     }
 
     for (auto bufferState : sd.bindingBuffers[commandBuffer]) {
-      if ((sd._bufferstates.find(bufferState->bufferHandle) == sd._bufferstates.end()) ||
-          (sd._bufferstates.find(bufferState->bufferHandle)->second->GetUniqueStateID() !=
-           bufferState->GetUniqueStateID())) {
+      auto it = sd._bufferstates.find(bufferState->bufferHandle);
+      if ((it == sd._bufferstates.end()) ||
+          (it->second->GetUniqueStateID() != bufferState->GetUniqueStateID())) {
         Log(WARN) << "Omitting restore of VKCommandBuffer " << commandBuffer
                   << " because used VKBuffer " << bufferState->bufferHandle << " doesn't exist.";
         return;
@@ -2289,9 +2297,9 @@ void gits::Vulkan::RestoreCommandBuffers(CScheduler& scheduler, CStateDynamic& s
     // Disable this check when recording streams from "The Surge 2" game
     TODO("Find a way to manage workarounds specific for a given title")
     for (auto obj : sd.bindingImages[commandBuffer]) {
-      if ((sd._imagestates.find(obj->imageHandle) == sd._imagestates.end()) ||
-          (sd._imagestates.find(obj->imageHandle)->second->GetUniqueStateID() !=
-           obj->GetUniqueStateID())) {
+      auto it = sd._imagestates.find(obj->imageHandle);
+      if ((it == sd._imagestates.end()) ||
+          (it->second->GetUniqueStateID() != obj->GetUniqueStateID())) {
         Log(WARN) << "Omitting restore of VKCommandBuffer " << commandBuffer
                   << " because used VKImage " << obj->imageHandle << " doesn't exist.";
         return;
@@ -2299,10 +2307,9 @@ void gits::Vulkan::RestoreCommandBuffers(CScheduler& scheduler, CStateDynamic& s
     }
 
     for (auto& descriptorSetState : commandBufferState->descriptorSetStateStoreList) {
-      if ((sd._descriptorsetstates.find(descriptorSetState.first) ==
-           sd._descriptorsetstates.end()) ||
-          (sd._descriptorsetstates[descriptorSetState.first]->GetUniqueStateID() !=
-           descriptorSetState.second->GetUniqueStateID())) {
+      auto it = sd._descriptorsetstates.find(descriptorSetState.first);
+      if ((it == sd._descriptorsetstates.end()) ||
+          (it->second->GetUniqueStateID() != descriptorSetState.second->GetUniqueStateID())) {
         Log(WARN) << "Omitting restore of VKCommandBuffer " << commandBuffer
                   << " because used VkDescriptorSet " << descriptorSetState.first
                   << " doesn't exist.";
@@ -2311,9 +2318,9 @@ void gits::Vulkan::RestoreCommandBuffers(CScheduler& scheduler, CStateDynamic& s
     }
 
     for (auto& pipelineState : commandBufferState->pipelineStateStoreList) {
-      if ((sd._pipelinestates.find(pipelineState.first) == sd._pipelinestates.end()) ||
-          (sd._pipelinestates[pipelineState.first]->GetUniqueStateID() !=
-           pipelineState.second->GetUniqueStateID())) {
+      auto it = sd._pipelinestates.find(pipelineState.first);
+      if ((it == sd._pipelinestates.end()) ||
+          (it->second->GetUniqueStateID() != pipelineState.second->GetUniqueStateID())) {
         Log(WARN) << "Omitting restore of VKCommandBuffer " << commandBuffer
                   << " because used VkPipeline " << pipelineState.first << " doesn't exist.";
         return;
@@ -2322,8 +2329,10 @@ void gits::Vulkan::RestoreCommandBuffers(CScheduler& scheduler, CStateDynamic& s
 
     for (auto& secondaryCommandBufferState :
          commandBufferState->secondaryCommandBuffersStateStoreList) {
-      if (sd._commandbufferstates.find(secondaryCommandBufferState.first) ==
-          sd._commandbufferstates.end()) {
+      auto it = sd._commandbufferstates.find(secondaryCommandBufferState.first);
+      if ((it == sd._commandbufferstates.end()) ||
+          (it->second->GetUniqueStateID() !=
+           secondaryCommandBufferState.second->GetUniqueStateID())) {
         Log(WARN) << "Omitting restore of VKCommandBuffer " << commandBuffer
                   << " because used secondary VkCommandBuffer " << secondaryCommandBufferState.first
                   << " doesn't exist.";
@@ -2476,8 +2485,10 @@ bool isResourceOmittedFromRestoration(uint64_t resource,
       // If at least one layer/mipmap of an image is in any other layout, than restore such image
       for (uint32_t l = 0; l < arrayLayers; ++l) {
         for (uint32_t m = 0; m < mipLevels; ++m) {
-          if ((imageState->currentLayout[l][m].Layout != VK_IMAGE_LAYOUT_UNDEFINED) &&
-              (imageState->currentLayout[l][m].Layout != VK_IMAGE_LAYOUT_PREINITIALIZED)) {
+          const auto& currentSlice = imageState->currentLayout[l][m];
+
+          if ((currentSlice.Layout != VK_IMAGE_LAYOUT_UNDEFINED) &&
+              (currentSlice.Layout != VK_IMAGE_LAYOUT_PREINITIALIZED)) {
             allLayersMipmnapsUndefined = false;
             break;
           }
@@ -2681,9 +2692,11 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
 
       for (uint32_t l = 0; l < arrayLayers; ++l) {
         for (uint32_t m = 0; m < mipLevels; ++m) {
+          const auto& currentSlice = imageState->currentLayout[l][m];
+
           // Don't perform layout transition for images in undefined or preinitialized state
-          if ((imageState->currentLayout[l][m].Layout == VK_IMAGE_LAYOUT_UNDEFINED) ||
-              (imageState->currentLayout[l][m].Layout == VK_IMAGE_LAYOUT_PREINITIALIZED)) {
+          if ((currentSlice.Layout == VK_IMAGE_LAYOUT_UNDEFINED) ||
+              (currentSlice.Layout == VK_IMAGE_LAYOUT_PREINITIALIZED)) {
             continue;
           }
           addBarrier(
@@ -2694,13 +2707,13 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
                VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,     // VkPipelineStageFlags2 srcStageMask;
                0,                                        // VkAccessFlags2        srcAccessMask;
                VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,       // VkPipelineStageFlags2 dstStageMask;
-               imageState->currentLayout[l][m].Access,   // VkAccessFlags2        dstAccessMask;
+               currentSlice.Access,                      // VkAccessFlags2        dstAccessMask;
                VK_IMAGE_LAYOUT_UNDEFINED,                // VkImageLayout         oldLayout;
-               imageState->currentLayout[l][m].Layout,   // VkImageLayout         newLayout;
-               deviceResources.queueFamilyIndex, // uint32_t                 srcQueueFamilyIndex;
-               imageState->currentLayout[l][m].QueueFamilyIndex, // uint32_t dstQueueFamilyIndex;
-               image,                                            // VkImage  image;
-               {// VkImageSubresourceRange subresourceRange;
+               currentSlice.Layout,                      // VkImageLayout         newLayout;
+               deviceResources.queueFamilyIndex, // uint32_t                srcQueueFamilyIndex;
+               currentSlice.QueueFamilyIndex,    // uint32_t                dstQueueFamilyIndex;
+               image,                            // VkImage                 image;
+               {                                 // VkImageSubresourceRange subresourceRange;
                 getFormatAspectFlags(format), m, 1, l, 1}});
         }
       }
@@ -2713,9 +2726,11 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
 
     for (uint32_t l = 0; l < arrayLayers; ++l) {
       for (uint32_t m = 0; m < mipLevels; ++m) {
+        const auto& currentSlice = imageState->currentLayout[l][m];
+
         // Ignore all the images in undefined or preinitialized state as their contents cannot be restored using the below method
-        if ((imageState->currentLayout[l][m].Layout == VK_IMAGE_LAYOUT_UNDEFINED) ||
-            (imageState->currentLayout[l][m].Layout == VK_IMAGE_LAYOUT_PREINITIALIZED)) {
+        if ((currentSlice.Layout == VK_IMAGE_LAYOUT_UNDEFINED) ||
+            (currentSlice.Layout == VK_IMAGE_LAYOUT_PREINITIALIZED)) {
           continue;
         }
 
@@ -2752,16 +2767,15 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
         addBarrier(
             parameters.imageMemoryBarriersToTransferSrc,
             parameters.imageMemoryBarriersToTransferSrc2,
-            {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2, // VkStructureType         sType;
-             nullptr,                                  // const void*             pNext;
-             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,       // VkPipelineStageFlags2   srcStageMask;
-             imageState->currentLayout[l][m].Access,   // VkAccessFlags2          srcAccessMask;
-             VK_PIPELINE_STAGE_TRANSFER_BIT,           // VkPipelineStageFlags2   dstStageMask;
-             VK_ACCESS_TRANSFER_READ_BIT,              // VkAccessFlags2          dstAccessMask;
-             imageState->currentLayout[l][m].Layout,   // VkImageLayout           oldLayout;
-             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,     // VkImageLayout           newLayout;
-             imageState->currentLayout[l][m]
-                 .QueueFamilyIndex,            // uint32_t                srcQueueFamilyIndex;
+            {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2, // VkStructureType       sType;
+             nullptr,                                  // const void*           pNext;
+             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,       // VkPipelineStageFlags2 srcStageMask;
+             currentSlice.Access,                      // VkAccessFlags2        srcAccessMask;
+             VK_PIPELINE_STAGE_TRANSFER_BIT,           // VkPipelineStageFlags2 dstStageMask;
+             VK_ACCESS_TRANSFER_READ_BIT,              // VkAccessFlags2        dstAccessMask;
+             currentSlice.Layout,                      // VkImageLayout         oldLayout;
+             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,     // VkImageLayout         newLayout;
+             currentSlice.QueueFamilyIndex,    // uint32_t                srcQueueFamilyIndex;
              deviceResources.queueFamilyIndex, // uint32_t                dstQueueFamilyIndex;
              image,                            // VkImage                 image;
              {                                 // VkImageSubresourceRange subresourceRange;
@@ -2771,14 +2785,14 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
         addBarrier(
             parameters.imageMemoryBarriersToTransferDst,
             parameters.imageMemoryBarriersToTransferDst2,
-            {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2, // VkStructureType         sType;
-             nullptr,                                  // const void*             pNext;
-             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,       // VkPipelineStageFlags2   srcStageMask;
-             0,                                        // VkAccessFlags2          srcAccessMask;
-             VK_PIPELINE_STAGE_TRANSFER_BIT,           // VkPipelineStageFlags2   dstStageMask;
-             VK_ACCESS_TRANSFER_WRITE_BIT,             // VkAccessFlags2          dstAccessMask;
-             VK_IMAGE_LAYOUT_UNDEFINED,                // VkImageLayout           oldLayout;
-             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,     // VkImageLayout           newLayout;
+            {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2, // VkStructureType       sType;
+             nullptr,                                  // const void*           pNext;
+             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,       // VkPipelineStageFlags2 srcStageMask;
+             0,                                        // VkAccessFlags2        srcAccessMask;
+             VK_PIPELINE_STAGE_TRANSFER_BIT,           // VkPipelineStageFlags2 dstStageMask;
+             VK_ACCESS_TRANSFER_WRITE_BIT,             // VkAccessFlags2        dstAccessMask;
+             VK_IMAGE_LAYOUT_UNDEFINED,                // VkImageLayout         oldLayout;
+             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,     // VkImageLayout         newLayout;
              VK_QUEUE_FAMILY_IGNORED,          // uint32_t                srcQueueFamilyIndex;
              deviceResources.queueFamilyIndex, // uint32_t                dstQueueFamilyIndex;
              image,                            // VkImage                 image;
@@ -2789,38 +2803,36 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
         addBarrier(
             parameters.imageMemoryBarriersFromTransferSrc,
             parameters.imageMemoryBarriersFromTransferSrc2,
-            {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2, // VkStructureType         sType;
-             nullptr,                                  // const void*             pNext;
-             VK_PIPELINE_STAGE_TRANSFER_BIT,           // VkPipelineStageFlags2   srcStageMask;
-             VK_ACCESS_TRANSFER_READ_BIT,              // VkAccessFlags2          srcAccessMask;
-             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,       // VkPipelineStageFlags2   dstStageMask;
-             imageState->currentLayout[l][m].Access,   // VkAccessFlags2          dstAccessMask;
-             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,     // VkImageLayout           oldLayout;
-             imageState->currentLayout[l][m].Layout,   // VkImageLayout           newLayout;
+            {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2, // VkStructureType       sType;
+             nullptr,                                  // const void*           pNext;
+             VK_PIPELINE_STAGE_TRANSFER_BIT,           // VkPipelineStageFlags2 srcStageMask;
+             VK_ACCESS_TRANSFER_READ_BIT,              // VkAccessFlags2        srcAccessMask;
+             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,       // VkPipelineStageFlags2 dstStageMask;
+             currentSlice.Access,                      // VkAccessFlags2        dstAccessMask;
+             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,     // VkImageLayout         oldLayout;
+             currentSlice.Layout,                      // VkImageLayout         newLayout;
              deviceResources.queueFamilyIndex, // uint32_t                srcQueueFamilyIndex;
-             imageState->currentLayout[l][m]
-                 .QueueFamilyIndex, // uint32_t                dstQueueFamilyIndex;
-             image,                 // VkImage                 image;
-             {                      // VkImageSubresourceRange subresourceRange;
+             currentSlice.QueueFamilyIndex,    // uint32_t                dstQueueFamilyIndex;
+             image,                            // VkImage                 image;
+             {                                 // VkImageSubresourceRange subresourceRange;
               getFormatAspectFlags(format), m, 1, l, 1}});
 
         // Player-side post-transfer layout transition
         addBarrier(
             parameters.imageMemoryBarriersFromTransferDst,
             parameters.imageMemoryBarriersFromTransferDst2,
-            {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2, // VkStructureType         sType;
-             nullptr,                                  // const void*             pNext;
-             VK_PIPELINE_STAGE_TRANSFER_BIT,           // VkPipelineStageFlags2   srcStageMask;
-             VK_ACCESS_TRANSFER_WRITE_BIT,             // VkAccessFlags2          srcAccessMask;
-             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,       // VkPipelineStageFlags2   dstStageMask;
-             imageState->currentLayout[l][m].Access,   // VkAccessFlags2          dstAccessMask;
-             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,     // VkImageLayout           oldLayout;
-             imageState->currentLayout[l][m].Layout,   // VkImageLayout           newLayout;
+            {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2, // VkStructureType       sType;
+             nullptr,                                  // const void*           pNext;
+             VK_PIPELINE_STAGE_TRANSFER_BIT,           // VkPipelineStageFlags2 srcStageMask;
+             VK_ACCESS_TRANSFER_WRITE_BIT,             // VkAccessFlags2        srcAccessMask;
+             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,       // VkPipelineStageFlags2 dstStageMask;
+             currentSlice.Access,                      // VkAccessFlags2        dstAccessMask;
+             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,     // VkImageLayout         oldLayout;
+             currentSlice.Layout,                      // VkImageLayout         newLayout;
              deviceResources.queueFamilyIndex, // uint32_t                srcQueueFamilyIndex;
-             imageState->currentLayout[l][m]
-                 .QueueFamilyIndex, // uint32_t                dstQueueFamilyIndex;
-             image,                 // VkImage                 image;
-             {                      // VkImageSubresourceRange subresourceRange;
+             currentSlice.QueueFamilyIndex,    // uint32_t                dstQueueFamilyIndex;
+             image,                            // VkImage                 image;
+             {                                 // VkImageSubresourceRange subresourceRange;
               getFormatAspectFlags(format), m, 1, l, 1}});
       }
     }
@@ -2981,10 +2993,11 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
 
       for (uint32_t l = 0; l < arrayLayers; ++l) {
         for (uint32_t m = 0; m < mipLevels; ++m) {
+          const auto& currentSlice = imageState->currentLayout[l][m];
 
           // Ignore all the images in undefined or preinitialized state
-          if ((imageState->currentLayout[l][m].Layout == VK_IMAGE_LAYOUT_UNDEFINED) ||
-              (imageState->currentLayout[l][m].Layout == VK_IMAGE_LAYOUT_PREINITIALIZED)) {
+          if ((currentSlice.Layout == VK_IMAGE_LAYOUT_UNDEFINED) ||
+              (currentSlice.Layout == VK_IMAGE_LAYOUT_PREINITIALIZED)) {
             continue;
           }
 
@@ -3038,12 +3051,12 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
           }
 
           initializeImagesMap[image].second.emplace_back(VkInitializeImageGITS{
-              colorOrDepthOffset,                    // VkDeviceSize bufferOffset;
-              stencilOffset,                         // VkDeviceSize stencilBufferOffset;
-              imageExtent,                           // VkExtent3D imageExtent;
-              m,                                     // uint32_t imageMipLevel;
-              l,                                     // uint32_t imageArrayLayer;
-              imageState->currentLayout[l][m].Layout // VkImageLayout imageLayout;
+              colorOrDepthOffset, // VkDeviceSize bufferOffset;
+              stencilOffset,      // VkDeviceSize stencilBufferOffset;
+              imageExtent,        // VkExtent3D imageExtent;
+              m,                  // uint32_t imageMipLevel;
+              l,                  // uint32_t imageArrayLayer;
+              currentSlice.Layout // VkImageLayout imageLayout;
           });
         }
       }

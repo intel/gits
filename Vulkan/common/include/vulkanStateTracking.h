@@ -85,6 +85,25 @@ inline bool isUseExternalMemoryExtensionUsed() {
   return false;
 #endif
 }
+
+template <class STATE_CONTAINER, class KEY, class DST_CONTAINER>
+inline void insertStateIfFound(STATE_CONTAINER& state, KEY key, DST_CONTAINER& dst) {
+  const auto it = state.find(key);
+  if (it != state.end()) {
+    dst.insert(it->second);
+  }
+}
+
+template <>
+inline void insertStateIfFound(gits::Vulkan::CStateDynamic::TAccelerationStructureKHRStates& state,
+                               VkAccelerationStructureKHR key,
+                               std::unordered_set<std::shared_ptr<CBufferState>>& dst) {
+  const auto it = state.find(key);
+  if (it != state.end()) {
+    dst.insert(it->second->bufferStateStore);
+  }
+}
+
 } // namespace
 
 inline void vkIAmGITS_SD() {
@@ -561,7 +580,7 @@ inline void vkCreateCommandPool_SD(VkResult return_value,
 }
 
 inline void vkResetCommandBuffer_SD(VkResult /* return_value */,
-                                    VkCommandBuffer commandBuffer,
+                                    VkCommandBuffer cmdBuf,
                                     VkCommandBufferResetFlags /* flags */,
                                     bool stateRestore = false);
 
@@ -779,11 +798,10 @@ inline void vkDestroyImage_SD(VkDevice device,
                               VkImage image,
                               const VkAllocationCallbacks* pAllocator) {
   if (Config::Get().IsRecorder() && isSubcaptureBeforeRestorationPhase()) {
-    const auto iterator = SD()._imagestates.find(image);
-    if ((iterator != SD()._imagestates.end()) && (iterator->second->binding != nullptr)) {
-      iterator->second->binding->deviceMemoryStateStore->aliasingTracker.RemoveImage(
-          iterator->second->binding->memoryOffset, iterator->second->binding->memorySizeRequirement,
-          image);
+    const auto it = SD()._imagestates.find(image);
+    if ((it != SD()._imagestates.end()) && (it->second->binding != nullptr)) {
+      it->second->binding->deviceMemoryStateStore->aliasingTracker.RemoveImage(
+          it->second->binding->memoryOffset, it->second->binding->memorySizeRequirement, image);
     }
   }
   SD().nonDeterministicImages.erase(image);
@@ -908,13 +926,13 @@ inline void vkDestroyBuffer_SD(VkDevice device,
     return;
   }
   if (Config::Get().IsRecorder()) {
-    const auto iterator = SD()._bufferstates.find(buffer);
-    if (iterator == SD()._bufferstates.end()) {
+    const auto it = SD()._bufferstates.find(buffer);
+    if (it == SD()._bufferstates.end()) {
       Log(WARN) << "Unknown buffer destroyed: " << buffer;
       return;
     }
 
-    const auto& bufferState = iterator->second;
+    const auto& bufferState = it->second;
 
     if (isSubcaptureBeforeRestorationPhase()) {
       if (bufferState->binding != nullptr) {
@@ -1259,28 +1277,29 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
               }
 
               if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-                descriptorSetState->descriptorImages[pDescriptorWrites[i].dstBinding] = imageState;
+                descriptorSetState->descriptorImages[currentBinding] = imageState;
               }
 
               if (descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
-                descriptorSetState->descriptorWriteImages[pDescriptorWrites[i].dstBinding] = {
+                descriptorSetState->descriptorWriteImages[currentBinding] = {
                     VULKAN_STORAGE_IMAGE, imageState->imageHandle};
 
                 if ((Config::Get().vulkan.recorder.memorySegmentSize ||
                      Config::Get().vulkan.recorder.shadowMemory) &&
                     (imageState->binding)) {
-                  VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset;
-                  VkDeviceMemory dstDeviceMemory =
-                      imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
                   VkMemoryRequirements memRequirements = {};
                   drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle,
                                                      imageState->imageHandle, &memRequirements);
+
                   //TODO : call vkGetImageSubresourceLayout when tiling is Linear
 
-                  descriptorSetState->descriptorMapMemory[pDescriptorWrites[i].dstBinding].clear();
-                  descriptorSetState
-                      ->descriptorMapMemory[pDescriptorWrites[i].dstBinding][dstDeviceMemory]
-                      .insert(dstOffsetFinal, memRequirements.size + dstOffsetFinal);
+                  const auto memory =
+                      imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
+                  const auto offset = imageState->binding->memoryOffset;
+
+                  descriptorSetState->descriptorMapMemory[currentBinding].clear();
+                  descriptorSetState->descriptorMapMemory[currentBinding][memory].insert(
+                      offset, memRequirements.size + offset);
                 }
               }
             }
@@ -1293,41 +1312,35 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
                   SD()._bufferviewstates[pDescriptorWrites[i].pTexelBufferView[j]];
 
               if (isSubcaptureBeforeRestorationPhase() && (currentDescriptorData != nullptr)) {
-                currentDescriptorData->pTexelBufferView.reset(
-                    new CVkBufferViewDataArray(1, &pDescriptorWrites[i].pTexelBufferView[j]));
+                currentDescriptorData->pTexelBufferView = std::make_shared<CVkBufferViewDataArray>(
+                    1, &pDescriptorWrites[i].pTexelBufferView[j]);
                 currentDescriptorData->bufferViewStateStore = bufferViewState;
               }
 
+              const auto& bufferState = bufferViewState->bufferStateStore;
+
               if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-                descriptorSetState->descriptorBuffers[pDescriptorWrites[i].dstBinding] =
-                    bufferViewState->bufferStateStore;
+                descriptorSetState->descriptorBuffers[currentBinding] = bufferState;
               }
               if (descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
-                descriptorSetState->descriptorWriteBuffers[pDescriptorWrites[i].dstBinding] = {
-                    VULKAN_STORAGE_TEXEL_BUFFER, bufferViewState->bufferStateStore->bufferHandle};
+                descriptorSetState->descriptorWriteBuffers[currentBinding] = {
+                    VULKAN_STORAGE_TEXEL_BUFFER, bufferState->bufferHandle};
 
                 if ((Config::Get().vulkan.recorder.memorySegmentSize ||
                      Config::Get().vulkan.recorder.shadowMemory) &&
-                    (bufferViewState->bufferStateStore->binding)) {
-                  VkDeviceSize dstOffsetFinal =
-                      bufferViewState->bufferStateStore->binding->memoryOffset +
-                      bufferViewState->bufferViewCreateInfoData.Value()->offset;
-                  VkDeviceSize dstFinalSize;
-                  if (bufferViewState->bufferViewCreateInfoData.Value()->range ==
-                      0xFFFFFFFFFFFFFFFF) {
-                    dstFinalSize =
-                        bufferViewState->bufferStateStore->bufferCreateInfoData.Value()->size -
-                        bufferViewState->bufferViewCreateInfoData.Value()->offset;
-                  } else {
-                    dstFinalSize = bufferViewState->bufferViewCreateInfoData.Value()->range;
-                  }
+                    (bufferState->binding)) {
+                  const auto* pViewCreateInfo = bufferViewState->bufferViewCreateInfoData.Value();
+                  const auto memory =
+                      bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
+                  const auto offset = bufferState->binding->memoryOffset + pViewCreateInfo->offset;
+                  const auto size = (pViewCreateInfo->range == 0xFFFFFFFFFFFFFFFF)
+                                        ? (bufferState->bufferCreateInfoData.Value()->size -
+                                           pViewCreateInfo->offset)
+                                        : (pViewCreateInfo->range);
 
-                  descriptorSetState->descriptorMapMemory[pDescriptorWrites[i].dstBinding].clear();
-                  descriptorSetState
-                      ->descriptorMapMemory[pDescriptorWrites[i].dstBinding]
-                                           [bufferViewState->bufferStateStore->binding
-                                                ->deviceMemoryStateStore->deviceMemoryHandle]
-                      .insert(dstOffsetFinal, dstFinalSize + dstOffsetFinal);
+                  descriptorSetState->descriptorMapMemory[currentBinding].clear();
+                  descriptorSetState->descriptorMapMemory[currentBinding][memory].insert(
+                      offset, size + offset);
                 }
               }
             }
@@ -1338,45 +1351,40 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
           case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
             if ((pDescriptorWrites[i].pBufferInfo != nullptr) &&
                 (pDescriptorWrites[i].pBufferInfo[j].buffer != VK_NULL_HANDLE)) {
-              const auto& bufferState =
-                  SD()._bufferstates[pDescriptorWrites[i].pBufferInfo[j].buffer];
+              const auto& bufferInfo = pDescriptorWrites[i].pBufferInfo[j];
+              const auto& bufferState = SD()._bufferstates[bufferInfo.buffer];
 
               if (isSubcaptureBeforeRestorationPhase() && (currentDescriptorData != nullptr)) {
-                currentDescriptorData->pBufferInfo.reset(
-                    new CVkDescriptorBufferInfoData(&pDescriptorWrites[i].pBufferInfo[j]));
+                currentDescriptorData->pBufferInfo =
+                    std::make_shared<CVkDescriptorBufferInfoData>(&bufferInfo);
                 currentDescriptorData->bufferStateStore = bufferState;
               }
 
               if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-                descriptorSetState->descriptorBuffers[pDescriptorWrites[i].dstBinding] =
-                    bufferState;
+                descriptorSetState->descriptorBuffers[currentBinding] = bufferState;
               }
               if ((descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) ||
                   (descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
                 VulkanResourceType resType = descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
                                                  ? VULKAN_STORAGE_BUFFER
                                                  : VULKAN_STORAGE_BUFFER_DYNAMIC;
-                descriptorSetState->descriptorWriteBuffers[pDescriptorWrites[i].dstBinding] = {
-                    resType, pDescriptorWrites[i].pBufferInfo[j].buffer};
+                descriptorSetState->descriptorWriteBuffers[currentBinding] = {resType,
+                                                                              bufferInfo.buffer};
 
                 if ((Config::Get().vulkan.recorder.memorySegmentSize ||
                      Config::Get().vulkan.recorder.shadowMemory) &&
                     bufferState->binding) {
-                  VkDeviceSize dstOffsetFinal = bufferState->binding->memoryOffset +
-                                                pDescriptorWrites[i].pBufferInfo[j].offset;
-                  VkDeviceSize dstFinalSize;
-                  if (pDescriptorWrites[i].pBufferInfo[j].range == 0xFFFFFFFFFFFFFFFF) {
-                    dstFinalSize = bufferState->bufferCreateInfoData.Value()->size -
-                                   pDescriptorWrites[i].pBufferInfo[j].offset;
-                  } else {
-                    dstFinalSize = pDescriptorWrites[i].pBufferInfo[j].range;
-                  }
-                  descriptorSetState->descriptorMapMemory[pDescriptorWrites[i].dstBinding].clear();
-                  descriptorSetState
-                      ->descriptorMapMemory[pDescriptorWrites[i].dstBinding]
-                                           [bufferState->binding->deviceMemoryStateStore
-                                                ->deviceMemoryHandle]
-                      .insert(dstOffsetFinal, dstFinalSize + dstOffsetFinal);
+                  const auto memory =
+                      bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
+                  const auto offset = bufferState->binding->memoryOffset + bufferInfo.offset;
+                  const auto size =
+                      (bufferInfo.range == 0xFFFFFFFFFFFFFFFF)
+                          ? (bufferState->bufferCreateInfoData.Value()->size - bufferInfo.offset)
+                          : (bufferInfo.range);
+
+                  descriptorSetState->descriptorMapMemory[currentBinding].clear();
+                  descriptorSetState->descriptorMapMemory[currentBinding][memory].insert(
+                      offset, size + offset);
                 }
               }
             }
@@ -1719,13 +1727,14 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
               if ((Config::Get().vulkan.recorder.memorySegmentSize ||
                    Config::Get().vulkan.recorder.shadowMemory) &&
                   (imageState->binding)) {
-                VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset;
-                VkDeviceMemory dstDeviceMemory =
-                    imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
                 VkMemoryRequirements memRequirements = {};
                 drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle,
                                                    imageState->imageHandle, &memRequirements);
+
                 //TODO : call vkGetImageSubresourceLayout when tiling is Linear
+
+                const auto memory = imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
+                const auto offset = imageState->binding->memoryOffset;
 
                 descriptorSetState
                     ->descriptorMapMemory[descriptorUpdateTemplateCreateInfoData
@@ -1735,8 +1744,8 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
                 descriptorSetState
                     ->descriptorMapMemory[descriptorUpdateTemplateCreateInfoData
                                               ->pDescriptorUpdateEntries[i]
-                                              .dstBinding][dstDeviceMemory]
-                    .insert(dstOffsetFinal, memRequirements.size + dstOffsetFinal);
+                                              .dstBinding][memory]
+                    .insert(offset, memRequirements.size + offset);
               }
             }
           }
@@ -1755,37 +1764,35 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
             const auto& bufferViewState = SD()._bufferviewstates[*bufferView];
 
             if (isSubcaptureBeforeRestorationPhase() && (currentDescriptorData != nullptr)) {
-              currentDescriptorData->pTexelBufferView.reset(
-                  new CVkBufferViewDataArray(1, bufferView));
+              currentDescriptorData->pTexelBufferView =
+                  std::make_shared<CVkBufferViewDataArray>(1, bufferView);
               currentDescriptorData->bufferViewStateStore = bufferViewState;
             }
+
+            const auto& bufferState = bufferViewState->bufferStateStore;
 
             if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
               descriptorSetState->descriptorBuffers
                   [descriptorUpdateTemplateCreateInfoData->pDescriptorUpdateEntries[i].dstBinding] =
-                  bufferViewState->bufferStateStore;
+                  bufferState;
             }
             if (descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
               descriptorSetState->descriptorWriteBuffers[descriptorUpdateTemplateCreateInfoData
                                                              ->pDescriptorUpdateEntries[i]
                                                              .dstBinding] = {
-                  VULKAN_STORAGE_TEXEL_BUFFER, bufferViewState->bufferStateStore->bufferHandle};
+                  VULKAN_STORAGE_TEXEL_BUFFER, bufferState->bufferHandle};
 
               if ((Config::Get().vulkan.recorder.memorySegmentSize ||
                    Config::Get().vulkan.recorder.shadowMemory) &&
-                  (bufferViewState->bufferStateStore->binding)) {
-                VkDeviceSize dstOffsetFinal =
-                    bufferViewState->bufferStateStore->binding->memoryOffset +
-                    bufferViewState->bufferViewCreateInfoData.Value()->offset;
-                VkDeviceSize dstFinalSize;
-                if (bufferViewState->bufferViewCreateInfoData.Value()->range ==
-                    0xFFFFFFFFFFFFFFFF) {
-                  dstFinalSize =
-                      bufferViewState->bufferStateStore->bufferCreateInfoData.Value()->size -
-                      bufferViewState->bufferViewCreateInfoData.Value()->offset;
-                } else {
-                  dstFinalSize = bufferViewState->bufferViewCreateInfoData.Value()->range;
-                }
+                  (bufferState->binding)) {
+                const auto* pViewCreateInfo = bufferViewState->bufferViewCreateInfoData.Value();
+                const auto memory =
+                    bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
+                const auto offset = bufferState->binding->memoryOffset + pViewCreateInfo->offset;
+                const auto size = (pViewCreateInfo->range == 0xFFFFFFFFFFFFFFFF)
+                                      ? (bufferState->bufferCreateInfoData.Value()->size -
+                                         pViewCreateInfo->offset)
+                                      : (pViewCreateInfo->range);
 
                 descriptorSetState
                     ->descriptorMapMemory[descriptorUpdateTemplateCreateInfoData
@@ -1795,10 +1802,8 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
                 descriptorSetState
                     ->descriptorMapMemory[descriptorUpdateTemplateCreateInfoData
                                               ->pDescriptorUpdateEntries[i]
-                                              .dstBinding]
-                                         [bufferViewState->bufferStateStore->binding
-                                              ->deviceMemoryStateStore->deviceMemoryHandle]
-                    .insert(dstOffsetFinal, dstFinalSize + dstOffsetFinal);
+                                              .dstBinding][memory]
+                    .insert(offset, size + offset);
               }
             }
           }
@@ -1821,8 +1826,8 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
             const auto& bufferState = SD()._bufferstates[descBufferInfo->buffer];
 
             if (isSubcaptureBeforeRestorationPhase() && (currentDescriptorData != nullptr)) {
-              currentDescriptorData->pBufferInfo.reset(
-                  new CVkDescriptorBufferInfoData(descBufferInfo));
+              currentDescriptorData->pBufferInfo =
+                  std::make_shared<CVkDescriptorBufferInfoData>(descBufferInfo);
               currentDescriptorData->bufferStateStore = bufferState;
             }
 
@@ -1834,7 +1839,7 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
 
             if ((descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) ||
                 (descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
-              VulkanResourceType resType = descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
+              VulkanResourceType resType = (descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
                                                ? VULKAN_STORAGE_BUFFER
                                                : VULKAN_STORAGE_BUFFER_DYNAMIC;
               descriptorSetState->descriptorWriteBuffers[descriptorUpdateTemplateCreateInfoData
@@ -1845,15 +1850,13 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
               if ((Config::Get().vulkan.recorder.memorySegmentSize ||
                    Config::Get().vulkan.recorder.shadowMemory) &&
                   bufferState->binding) {
-                VkDeviceSize dstOffsetFinal =
-                    bufferState->binding->memoryOffset + descBufferInfo->offset;
-                VkDeviceSize dstFinalSize;
-                if (descBufferInfo->range == 0xFFFFFFFFFFFFFFFF) {
-                  dstFinalSize =
-                      bufferState->bufferCreateInfoData.Value()->size - descBufferInfo->offset;
-                } else {
-                  dstFinalSize = descBufferInfo->range;
-                }
+                const auto memory =
+                    bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
+                const auto offset = bufferState->binding->memoryOffset + descBufferInfo->offset;
+                const auto size =
+                    (descBufferInfo->range == 0xFFFFFFFFFFFFFFFF)
+                        ? (bufferState->bufferCreateInfoData.Value()->size - descBufferInfo->offset)
+                        : (descBufferInfo->range);
 
                 descriptorSetState
                     ->descriptorMapMemory[descriptorUpdateTemplateCreateInfoData
@@ -1861,11 +1864,10 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
                                               .dstBinding]
                     .clear();
                 descriptorSetState
-                    ->descriptorMapMemory
-                        [descriptorUpdateTemplateCreateInfoData->pDescriptorUpdateEntries[i]
-                             .dstBinding]
-                        [bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle]
-                    .insert(dstOffsetFinal, dstFinalSize + dstOffsetFinal);
+                    ->descriptorMapMemory[descriptorUpdateTemplateCreateInfoData
+                                              ->pDescriptorUpdateEntries[i]
+                                              .dstBinding][memory]
+                    .insert(offset, size + offset);
               }
             }
           }
@@ -2332,10 +2334,10 @@ inline void vkFreeCommandBuffers_SD(VkDevice device,
 }
 
 inline void vkResetCommandBuffer_SD(VkResult /* return_value */,
-                                    VkCommandBuffer commandBuffer,
+                                    VkCommandBuffer cmdBuf,
                                     VkCommandBufferResetFlags /* flags */,
                                     bool stateRestore) {
-  auto& commandBufferState = SD()._commandbufferstates[commandBuffer];
+  auto& commandBufferState = SD()._commandbufferstates[cmdBuf];
 
   if (!stateRestore) {
     // In stateRestore, these are used for RenderPass mode preparation, so we can't reset them.
@@ -2393,26 +2395,26 @@ inline void vkResetCommandBuffer_SD(VkResult /* return_value */,
   }
 
   if (Config::Get().IsRecorder()) {
-    SD().bindingBuffers[commandBuffer].clear();
-    SD().bindingImages[commandBuffer].clear();
+    SD().bindingBuffers[cmdBuf].clear();
+    SD().bindingImages[cmdBuf].clear();
 
     if (Config::Get().vulkan.recorder.memorySegmentSize ||
         Config::Get().vulkan.recorder.shadowMemory) {
-      SD().updatedMemoryInCmdBuffer.erase(commandBuffer);
+      SD().updatedMemoryInCmdBuffer.erase(cmdBuf);
     }
   }
 }
 
 inline void vkBeginCommandBuffer_SD(VkResult /* return_value */,
-                                    VkCommandBuffer cmdBuffer,
+                                    VkCommandBuffer cmdBuf,
                                     const VkCommandBufferBeginInfo* pBeginInfo) {
-  vkResetCommandBuffer_SD(VK_SUCCESS, cmdBuffer, 0);
+  vkResetCommandBuffer_SD(VK_SUCCESS, cmdBuf, 0);
 
   if (pBeginInfo == nullptr) {
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 
-  auto& commandBufferState = SD()._commandbufferstates[cmdBuffer];
+  auto& commandBufferState = SD()._commandbufferstates[cmdBuf];
 
   commandBufferState->beginCommandBuffer.reset(
       new CCommandBufferState::CBeginCommandBuffer(pBeginInfo));
@@ -2426,29 +2428,32 @@ inline void vkBeginCommandBuffer_SD(VkResult /* return_value */,
           const auto& imageState = imageViewState->imageStateStore;
 
           if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-            SD().bindingImages[cmdBuffer].insert(imageState);
+            SD().bindingImages[cmdBuf].insert(imageState);
           }
-          if ((Config::Get().vulkan.recorder.memorySegmentSize ||
-               Config::Get().vulkan.recorder.shadowMemory) &&
-              imageState->binding) {
-            VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset;
-            VkDeviceMemory dstDeviceMemory =
-                imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-            VkMemoryRequirements memRequirements = {};
-            drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle,
-                                               imageState->imageHandle, &memRequirements);
-            //TODO : call vkGetImageSubresourceLayout when tiling is Linear
-            SD().updatedMemoryInCmdBuffer[cmdBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                              memRequirements.size);
+
+          if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
+               !Config::Get().vulkan.recorder.shadowMemory) ||
+              !imageState->binding) {
+            return;
           }
+
+          VkMemoryRequirements memRequirements = {};
+          drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle,
+                                             imageState->imageHandle, &memRequirements);
+
+          //TODO : call vkGetImageSubresourceLayout when tiling is Linear
+
+          const auto memory = imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
+          const auto offset = imageState->binding->memoryOffset;
+          SD().updatedMemoryInCmdBuffer[cmdBuf].AddToMap(memory, offset, memRequirements.size);
         }
       }
     }
   }
 }
 
-inline void vkEndCommandBuffer_SD(VkResult return_value, VkCommandBuffer commandBuffer) {
-  SD()._commandbufferstates[commandBuffer]->ended = true;
+inline void vkEndCommandBuffer_SD(VkResult return_value, VkCommandBuffer cmdBuf) {
+  SD()._commandbufferstates[cmdBuf]->ended = true;
 }
 
 // Deferred operation
@@ -2524,7 +2529,7 @@ inline void vkBuildAccelerationStructuresKHR_SD(
 }
 
 inline void vkCmdBuildAccelerationStructuresKHR_SD(
-    VkCommandBuffer commandBuffer,
+    VkCommandBuffer cmdBuf,
     uint32_t infoCount,
     const VkAccelerationStructureBuildGeometryInfoKHR* pInfos,
     const VkAccelerationStructureBuildRangeInfoKHR* const* ppBuildRangeInfos) {
@@ -2533,8 +2538,8 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
   if (!Config::Get().IsRecorder()) {
     return;
   }
-  auto device = SD()._commandbufferstates[commandBuffer]
-                    ->commandPoolStateStore->deviceStateStore->deviceHandle;
+  auto device =
+      SD()._commandbufferstates[cmdBuf]->commandPoolStateStore->deviceStateStore->deviceHandle;
 
   for (uint32_t acc = 0; acc < infoCount; ++acc) {
     // Struct storage data is going to be injected into original structures via pNext
@@ -2568,7 +2573,7 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
     if (buildInfo->mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR) {
       // Full acceleration structure build
       accelerationStructureState->buildInfo.reset(new CAccelerationStructureKHRState::CBuildInfo(
-          buildInfo, pRangeInfos, prepareAccelerationStructureControlData(commandBuffer)));
+          buildInfo, pRangeInfos, prepareAccelerationStructureControlData(cmdBuf)));
       accelerationStructureState->updateInfo.reset();
       accelerationStructureState->copyInfo.reset();
     } else if (buildInfo->mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR) {
@@ -2576,7 +2581,7 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
       const auto& srcAccelerationStructureState =
           SD()._accelerationstructurekhrstates[buildInfo->srcAccelerationStructure];
       accelerationStructureState->updateInfo.reset(new CAccelerationStructureKHRState::CBuildInfo(
-          buildInfo, pRangeInfos, prepareAccelerationStructureControlData(commandBuffer),
+          buildInfo, pRangeInfos, prepareAccelerationStructureControlData(cmdBuf),
           srcAccelerationStructureState));
       accelerationStructureState->copyInfo.reset();
     }
@@ -2586,19 +2591,14 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
     return;
   }
 
-  auto& bindingBuffers = SD().bindingBuffers[commandBuffer];
+  auto& bindingBuffers = SD().bindingBuffers[cmdBuf];
 
   for (uint32_t acc = 0; acc < infoCount; ++acc) {
     auto buildInfo = &pInfos[acc];
     auto buildRangeInfos = ppBuildRangeInfos[acc];
 
-    {
-      const auto it =
-          SD()._accelerationstructurekhrstates.find(buildInfo->dstAccelerationStructure);
-      if (it != SD()._accelerationstructurekhrstates.end()) {
-        bindingBuffers.insert(it->second->bufferStateStore);
-      }
-    }
+    insertStateIfFound(SD()._accelerationstructurekhrstates, buildInfo->dstAccelerationStructure,
+                       bindingBuffers);
 
     if (buildInfo->geometryCount == 0) {
       continue;
@@ -2606,10 +2606,7 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
 
     auto addBindingBuffer = [&bindingBuffers](VkDeviceAddress deviceAddress) {
       auto buffer = findBufferFromDeviceAddress(deviceAddress);
-      const auto it = SD()._bufferstates.find(buffer);
-      if (it != SD()._bufferstates.end()) {
-        bindingBuffers.insert(it->second);
-      }
+      insertStateIfFound(SD()._bufferstates, buffer, bindingBuffers);
     };
 
     for (uint32_t geom = 0; geom < buildInfo->geometryCount; ++geom) {
@@ -2666,7 +2663,7 @@ inline void vkCopyAccelerationStructureKHR_SD(VkResult return_value,
   throw std::runtime_error("Ray tracing operations on host are not yet supported!");
 }
 
-inline void vkCmdCopyAccelerationStructureKHR_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdCopyAccelerationStructureKHR_SD(VkCommandBuffer cmdBuf,
                                                  const VkCopyAccelerationStructureInfoKHR* pInfo) {
   if (Config::Get().IsRecorder() && CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
     const auto& srcAccelerationStructureState = SD()._accelerationstructurekhrstates[pInfo->src];
@@ -2675,7 +2672,7 @@ inline void vkCmdCopyAccelerationStructureKHR_SD(VkCommandBuffer commandBuffer,
     dstAccelerationStructureState->buildInfo.reset();
     dstAccelerationStructureState->updateInfo.reset();
     dstAccelerationStructureState->copyInfo.reset(new CAccelerationStructureKHRState::CCopyInfo(
-        pInfo, srcAccelerationStructureState, getCommandExecutionSide(commandBuffer)));
+        pInfo, srcAccelerationStructureState, getCommandExecutionSide(cmdBuf)));
     dstAccelerationStructureState->buildSizeInfo = srcAccelerationStructureState->buildSizeInfo;
   }
 }
@@ -3003,7 +3000,7 @@ inline void vkEndRenderPass_updateNonDeterministicImages(
 
 // Command buffer recording commands
 
-inline void vkCmdBeginRenderPass_SD(VkCommandBuffer cmdBuffer,
+inline void vkCmdBeginRenderPass_SD(VkCommandBuffer cmdBuf,
                                     const VkRenderPassBeginInfo* pRenderPassBegin,
                                     VkSubpassContents contents) {
   if (pRenderPassBegin == nullptr) {
@@ -3013,7 +3010,7 @@ inline void vkCmdBeginRenderPass_SD(VkCommandBuffer cmdBuffer,
   auto beginRenderPassState = std::make_shared<CCommandBufferState::CBeginRenderPass>(
       pRenderPassBegin, &contents, SD()._renderpassstates[pRenderPassBegin->renderPass],
       SD()._framebufferstates[pRenderPassBegin->framebuffer]);
-  SD()._commandbufferstates[cmdBuffer]->beginRenderPassesList.push_back(beginRenderPassState);
+  SD()._commandbufferstates[cmdBuf]->beginRenderPassesList.push_back(beginRenderPassState);
   if (Config::Get().IsRecorder() || captureRenderPasses() || captureRenderPassesResources()) {
     if (SD()._framebufferstates[pRenderPassBegin->framebuffer]
             ->framebufferCreateInfoData.Value()
@@ -3093,21 +3090,24 @@ inline void vkCmdBeginRenderPass_SD(VkCommandBuffer cmdBuffer,
         const auto& imageState = imageViewState->imageStateStore;
 
         if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-          SD().bindingImages[cmdBuffer].insert(imageState);
+          SD().bindingImages[cmdBuf].insert(imageState);
         }
-        if ((Config::Get().vulkan.recorder.memorySegmentSize ||
-             (Config::Get().vulkan.recorder.shadowMemory)) &&
-            (imageState->binding)) {
-          VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset;
-          VkDeviceMemory dstDeviceMemory =
-              imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-          VkMemoryRequirements memRequirements = {};
-          drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle,
-                                             imageState->imageHandle, &memRequirements);
-          //TODO : call vkGetImageSubresourceLayout when tiling is Linear
-          SD().updatedMemoryInCmdBuffer[cmdBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                            memRequirements.size);
+
+        if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
+             !Config::Get().vulkan.recorder.shadowMemory) ||
+            !imageState->binding) {
+          continue;
         }
+
+        VkMemoryRequirements memRequirements = {};
+        drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle,
+                                           imageState->imageHandle, &memRequirements);
+
+        //TODO : call vkGetImageSubresourceLayout when tiling is Linear
+
+        const auto memory = imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
+        const auto offset = imageState->binding->memoryOffset;
+        SD().updatedMemoryInCmdBuffer[cmdBuf].AddToMap(memory, offset, memRequirements.size);
       }
     } else {
       for (uint32_t i = 0; i < beginRenderPassState->imageViewStateStoreListKHR.size(); i++) {
@@ -3115,51 +3115,54 @@ inline void vkCmdBeginRenderPass_SD(VkCommandBuffer cmdBuffer,
             beginRenderPassState->imageViewStateStoreListKHR[i]->imageStateStore;
 
         if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-          SD().bindingImages[cmdBuffer].insert(imageState);
+          SD().bindingImages[cmdBuf].insert(imageState);
         }
-        if ((Config::Get().vulkan.recorder.memorySegmentSize ||
-             (Config::Get().vulkan.recorder.shadowMemory)) &&
-            (imageState->binding)) {
-          VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset;
-          VkDeviceMemory dstDeviceMemory =
-              imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-          VkMemoryRequirements memRequirements = {};
-          drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle,
-                                             imageState->imageHandle, &memRequirements);
-          //TODO : call vkGetImageSubresourceLayout when tiling is Linear
-          SD().updatedMemoryInCmdBuffer[cmdBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                            memRequirements.size);
+
+        if ((Config::Get().vulkan.recorder.memorySegmentSize &&
+             !Config::Get().vulkan.recorder.shadowMemory) ||
+            !imageState->binding) {
+          continue;
         }
+
+        VkMemoryRequirements memRequirements = {};
+        drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle,
+                                           imageState->imageHandle, &memRequirements);
+
+        //TODO : call vkGetImageSubresourceLayout when tiling is Linear
+
+        const auto memory = imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
+        const auto offset = imageState->binding->memoryOffset;
+        SD().updatedMemoryInCmdBuffer[cmdBuf].AddToMap(memory, offset, memRequirements.size);
       }
     }
   }
 }
 
-inline void vkCmdBeginRenderPass2_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdBeginRenderPass2_SD(VkCommandBuffer cmdBuf,
                                      const VkRenderPassBeginInfo* pRenderPassBegin,
                                      const VkSubpassBeginInfo* pSubpassBeginInfo) {
   if (pSubpassBeginInfo == nullptr) {
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 
-  vkCmdBeginRenderPass_SD(commandBuffer, pRenderPassBegin, pSubpassBeginInfo->contents);
+  vkCmdBeginRenderPass_SD(cmdBuf, pRenderPassBegin, pSubpassBeginInfo->contents);
 }
 
-inline void vkCmdBeginRenderPass2KHR_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdBeginRenderPass2KHR_SD(VkCommandBuffer cmdBuf,
                                         const VkRenderPassBeginInfo* pRenderPassBegin,
                                         const VkSubpassBeginInfo* pSubpassBeginInfo) {
   if (pSubpassBeginInfo == nullptr) {
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 
-  vkCmdBeginRenderPass_SD(commandBuffer, pRenderPassBegin, pSubpassBeginInfo->contents);
+  vkCmdBeginRenderPass_SD(cmdBuf, pRenderPassBegin, pSubpassBeginInfo->contents);
 }
 
-inline void vkCmdEndRenderPass_SD(VkCommandBuffer commandBuffer) {
+inline void vkCmdEndRenderPass_SD(VkCommandBuffer cmdBuf) {
   if (((Config::Get().common.recorder.enabled) && (isSubcaptureBeforeRestorationPhase()) &&
        (Config::Get().vulkan.recorder.crossPlatformStateRestoration.images)) ||
       (captureRenderPasses() || captureRenderPassesResources())) {
-    auto& commandBufferState = SD()._commandbufferstates[commandBuffer];
+    auto& commandBufferState = SD()._commandbufferstates[cmdBuf];
 
     if (commandBufferState->beginRenderPassesList.size()) {
       const auto& renderPassState =
@@ -3232,21 +3235,20 @@ inline void vkCmdEndRenderPass_SD(VkCommandBuffer commandBuffer) {
   }
 }
 
-inline void vkCmdEndRenderPass2_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdEndRenderPass2_SD(VkCommandBuffer cmdBuf,
                                    const VkSubpassEndInfo* pSubpassEndInfo) {
-  vkCmdEndRenderPass_SD(commandBuffer);
+  vkCmdEndRenderPass_SD(cmdBuf);
 }
 
-inline void vkCmdEndRenderPass2KHR_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdEndRenderPass2KHR_SD(VkCommandBuffer cmdBuf,
                                       const VkSubpassEndInfo* pSubpassEndInfo) {
-  vkCmdEndRenderPass_SD(commandBuffer);
+  vkCmdEndRenderPass_SD(cmdBuf);
 }
 
-inline void vkCmdBeginRendering_SD(VkCommandBuffer commandBuffer,
-                                   const VkRenderingInfo* pRenderingInfo) {
+inline void vkCmdBeginRendering_SD(VkCommandBuffer cmdBuf, const VkRenderingInfo* pRenderingInfo) {
   auto beginRenderPassState =
       std::make_shared<CCommandBufferState::CBeginRenderPass>(pRenderingInfo);
-  SD()._commandbufferstates[commandBuffer]->beginRenderPassesList.push_back(beginRenderPassState);
+  SD()._commandbufferstates[cmdBuf]->beginRenderPassesList.push_back(beginRenderPassState);
 
   if (Config::Get().IsRecorder() || captureRenderPasses() || captureRenderPassesResources()) {
 
@@ -3281,101 +3283,99 @@ inline void vkCmdBeginRendering_SD(VkCommandBuffer commandBuffer,
       const auto& imageState = beginRenderPassState->imageViewStateStoreListKHR[i]->imageStateStore;
 
       if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-        SD().bindingImages[commandBuffer].insert(imageState);
+        SD().bindingImages[cmdBuf].insert(imageState);
       }
-      if ((Config::Get().vulkan.recorder.memorySegmentSize ||
-           (Config::Get().vulkan.recorder.shadowMemory)) &&
-          (imageState->binding)) {
-        VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset;
-        VkDeviceMemory dstDeviceMemory =
-            imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-        VkMemoryRequirements memRequirements = {};
-        drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle,
-                                           imageState->imageHandle, &memRequirements);
-        //TODO : call vkGetImageSubresourceLayout when tiling is Linear
-        SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                              memRequirements.size);
+
+      if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
+           !Config::Get().vulkan.recorder.shadowMemory) ||
+          !imageState->binding) {
+        continue;
       }
+
+      VkMemoryRequirements memRequirements = {};
+      drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle,
+                                         imageState->imageHandle, &memRequirements);
+
+      //TODO : call vkGetImageSubresourceLayout when tiling is Linear
+
+      const auto memory = imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
+      const auto offset = imageState->binding->memoryOffset;
+      SD().updatedMemoryInCmdBuffer[cmdBuf].AddToMap(memory, offset, memRequirements.size);
     }
   }
 }
 
-inline void vkCmdBeginRenderingKHR_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdBeginRenderingKHR_SD(VkCommandBuffer cmdBuf,
                                       const VkRenderingInfo* pRenderingInfo) {
-  vkCmdBeginRendering_SD(commandBuffer, pRenderingInfo);
+  vkCmdBeginRendering_SD(cmdBuf, pRenderingInfo);
 }
 
-inline void vkCmdEndRendering_SD(VkCommandBuffer commandBuffer) {
-  auto& commandBufferState = SD()._commandbufferstates[commandBuffer];
+inline void vkCmdEndRendering_SD(VkCommandBuffer cmdBuf) {
+  auto& commandBufferState = SD()._commandbufferstates[cmdBuf];
   vkEndRenderPass_setImageLayout(commandBufferState);
   vkEndRenderPass_updateNonDeterministicImages(commandBufferState);
 }
 
-inline void vkCmdEndRenderingKHR_SD(VkCommandBuffer commandBuffer) {
-  vkCmdEndRendering_SD(commandBuffer);
+inline void vkCmdEndRenderingKHR_SD(VkCommandBuffer cmdBuf) {
+  vkCmdEndRendering_SD(cmdBuf);
 }
 
 namespace {
 
-void BindVertexBuffers_SDHelper(VkCommandBuffer cmdBuffer,
+void BindVertexBuffers_SDHelper(VkCommandBuffer cmdBuf,
                                 uint32_t bindingCount,
                                 const VkBuffer* pBuffers) {
   if (Config::Get().IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    auto& bindingBuffers = SD().bindingBuffers[cmdBuffer];
+    auto& bindingBuffers = SD().bindingBuffers[cmdBuf];
+
     for (uint32_t i = 0; i < bindingCount; ++i) {
-      const auto it = SD()._bufferstates.find(pBuffers[i]);
-      if (it != SD()._bufferstates.end()) {
-        bindingBuffers.insert(it->second);
-      }
+      insertStateIfFound(SD()._bufferstates, pBuffers[i], bindingBuffers);
     }
   }
 }
 
 } // namespace
 
-inline void vkCmdBindVertexBuffers_SD(VkCommandBuffer cmdBuffer,
+inline void vkCmdBindVertexBuffers_SD(VkCommandBuffer cmdBuf,
                                       uint32_t startBinding,
                                       uint32_t bindingCount,
                                       const VkBuffer* pBuffers,
                                       const VkDeviceSize* pOffsets) {
-  BindVertexBuffers_SDHelper(cmdBuffer, bindingCount, pBuffers);
+  BindVertexBuffers_SDHelper(cmdBuf, bindingCount, pBuffers);
 }
 
-inline void vkCmdBindVertexBuffers2_SD(VkCommandBuffer cmdBuffer,
+inline void vkCmdBindVertexBuffers2_SD(VkCommandBuffer cmdBuf,
                                        uint32_t firstBinding,
                                        uint32_t bindingCount,
                                        const VkBuffer* pBuffers,
                                        const VkDeviceSize* pOffsets,
                                        const VkDeviceSize* pSizes,
                                        const VkDeviceSize* pStrides) {
-  BindVertexBuffers_SDHelper(cmdBuffer, bindingCount, pBuffers);
+  BindVertexBuffers_SDHelper(cmdBuf, bindingCount, pBuffers);
 }
 
-inline void vkCmdBindVertexBuffers2EXT_SD(VkCommandBuffer cmdBuffer,
+inline void vkCmdBindVertexBuffers2EXT_SD(VkCommandBuffer cmdBuf,
                                           uint32_t firstBinding,
                                           uint32_t bindingCount,
                                           const VkBuffer* pBuffers,
                                           const VkDeviceSize* pOffsets,
                                           const VkDeviceSize* pSizes,
                                           const VkDeviceSize* pStrides) {
-  BindVertexBuffers_SDHelper(cmdBuffer, bindingCount, pBuffers);
+  BindVertexBuffers_SDHelper(cmdBuf, bindingCount, pBuffers);
 }
 
-inline void vkCmdBindIndexBuffer_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdBindIndexBuffer_SD(VkCommandBuffer cmdBuf,
                                     VkBuffer buffer,
                                     VkDeviceSize offset,
                                     VkIndexType indexType) {
   if (Config::Get().IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    const auto it = SD()._bufferstates.find(buffer);
-    if (it != SD()._bufferstates.end()) {
-      SD().bindingBuffers[commandBuffer].insert(it->second);
-    }
+    insertStateIfFound(SD()._bufferstates, buffer, SD().bindingBuffers[cmdBuf]);
   }
 }
 
-inline void vkCmdBindTransformFeedbackBuffersEXT_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdBindTransformFeedbackBuffersEXT_SD(VkCommandBuffer cmdBuf,
                                                     uint32_t firstBinding,
                                                     uint32_t bindingCount,
                                                     const VkBuffer* pBuffers,
@@ -3384,24 +3384,21 @@ inline void vkCmdBindTransformFeedbackBuffersEXT_SD(VkCommandBuffer commandBuffe
   if (Config::Get().IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
     for (uint32_t i = 0; i < bindingCount; ++i) {
-      const auto it = SD()._bufferstates.find(pBuffers[i]);
-      if (it != SD()._bufferstates.end()) {
-        SD().bindingBuffers[commandBuffer].insert(it->second);
-      }
+      insertStateIfFound(SD()._bufferstates, pBuffers[i], SD().bindingBuffers[cmdBuf]);
     }
   }
 }
 
-inline void vkCmdBindPipeline_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdBindPipeline_SD(VkCommandBuffer cmdBuf,
                                  VkPipelineBindPoint pipelineBindPoint,
                                  VkPipeline pipeline) {
-  auto& commandBufferState = SD()._commandbufferstates[commandBuffer];
+  auto& commandBufferState = SD()._commandbufferstates[cmdBuf];
   commandBufferState->pipelineStateStoreList.emplace(pipeline, SD()._pipelinestates[pipeline]);
   commandBufferState->currentPipeline = pipeline;
   commandBufferState->currentPipelineBindPoint = pipelineBindPoint;
 }
 
-inline void vkCmdBindDescriptorSets_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdBindDescriptorSets_SD(VkCommandBuffer cmdBuf,
                                        VkPipelineBindPoint pipelineBindPoint,
                                        VkPipelineLayout layout,
                                        uint32_t firstSet,
@@ -3414,7 +3411,7 @@ inline void vkCmdBindDescriptorSets_SD(VkCommandBuffer commandBuffer,
       return;
     }
 
-    auto& commandBufferState = SD()._commandbufferstates[commandBuffer];
+    auto& commandBufferState = SD()._commandbufferstates[cmdBuf];
     for (unsigned int i = 0; i < descriptorSetCount; i++) {
       if (pDescriptorSets[i] == VK_NULL_HANDLE) {
         continue;
@@ -3427,11 +3424,11 @@ inline void vkCmdBindDescriptorSets_SD(VkCommandBuffer commandBuffer,
                                                                 descriptorSetState);
 
         for (const auto& obj : descriptorSetState->descriptorBuffers) {
-          SD().bindingBuffers[commandBuffer].insert(obj.second);
+          SD().bindingBuffers[cmdBuf].insert(obj.second);
         }
 
         for (const auto& obj : descriptorSetState->descriptorImages) {
-          SD().bindingImages[commandBuffer].insert(obj.second);
+          SD().bindingImages[cmdBuf].insert(obj.second);
         }
       }
       for (const auto& obj :
@@ -3449,8 +3446,8 @@ inline void vkCmdBindDescriptorSets_SD(VkCommandBuffer commandBuffer,
              SD()._descriptorsetstates[pDescriptorSets[i]]->descriptorMapMemory) {
           for (const auto& mem : binding.second) {
             for (const auto& obj : mem.second.getIntervals()) {
-              SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(mem.first, obj.first,
-                                                                    obj.second - obj.first);
+              SD().updatedMemoryInCmdBuffer[cmdBuf].AddToMap(mem.first, obj.first,
+                                                             obj.second - obj.first);
             }
           }
         }
@@ -3459,7 +3456,7 @@ inline void vkCmdBindDescriptorSets_SD(VkCommandBuffer commandBuffer,
   }
 }
 
-inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer cmdBuf,
                                          VkPipelineBindPoint pipelineBindPoint,
                                          VkPipelineLayout layout,
                                          uint32_t set,
@@ -3491,27 +3488,27 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer commandBuffer,
           const auto& imageState = it->second->imageStateStore;
 
           if (VK_DESCRIPTOR_TYPE_STORAGE_IMAGE == descriptorType) {
-            SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back(
+            SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back(
                 (uint64_t)imageState->imageHandle, true);
-            SD()._commandbufferstates[commandBuffer]->resourceWriteImages[imageState->imageHandle] =
+            SD()._commandbufferstates[cmdBuf]->resourceWriteImages[imageState->imageHandle] =
                 VULKAN_STORAGE_IMAGE;
           }
 
           if (updateOnlyUsedMemory()) {
-            SD().bindingImages[commandBuffer].insert(imageState);
+            SD().bindingImages[cmdBuf].insert(imageState);
 
             if ((Config::Get().vulkan.recorder.memorySegmentSize ||
                  Config::Get().vulkan.recorder.shadowMemory) &&
                 (VK_DESCRIPTOR_TYPE_STORAGE_IMAGE == descriptorType) && (imageState->binding)) {
-              VkDeviceSize dstOffsetFinal = imageState->binding->memoryOffset;
-              VkDeviceMemory dstDeviceMemory =
-                  imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
               VkMemoryRequirements memRequirements = {};
               drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle,
                                                  imageState->imageHandle, &memRequirements);
+
               //TODO : call vkGetImageSubresourceLayout when tiling is Linear
-              SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                                    memRequirements.size);
+
+              const auto memory = imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
+              const auto offset = imageState->binding->memoryOffset;
+              SD().updatedMemoryInCmdBuffer[cmdBuf].AddToMap(memory, offset, memRequirements.size);
             }
           }
         }
@@ -3527,35 +3524,30 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer commandBuffer,
           const auto& bufferState = it->second->bufferStateStore;
 
           if (VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER == descriptorType) {
-            const auto cmdBufferIT = SD()._commandbufferstates.find(commandBuffer);
-            if (cmdBufferIT != SD()._commandbufferstates.end()) {
-              cmdBufferIT->second->touchedResources.emplace_back(
-                  (uint64_t)bufferState->bufferHandle, false);
-              cmdBufferIT->second->resourceWriteBuffers[bufferState->bufferHandle] =
+            const auto cmdBufIt = SD()._commandbufferstates.find(cmdBuf);
+            if (cmdBufIt != SD()._commandbufferstates.end()) {
+              cmdBufIt->second->touchedResources.emplace_back((uint64_t)bufferState->bufferHandle,
+                                                              false);
+              cmdBufIt->second->resourceWriteBuffers[bufferState->bufferHandle] =
                   VULKAN_STORAGE_TEXEL_BUFFER;
             }
           }
 
           if (updateOnlyUsedMemory()) {
-            SD().bindingBuffers[commandBuffer].insert(bufferState);
+            SD().bindingBuffers[cmdBuf].insert(bufferState);
 
             if ((Config::Get().vulkan.recorder.memorySegmentSize ||
                  Config::Get().vulkan.recorder.shadowMemory) &&
                 (VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER == descriptorType) &&
                 (bufferState->binding)) {
-              const auto& bufferViewState = it->second;
-              VkDeviceSize dstOffsetFinal =
-                  bufferState->binding->memoryOffset +
-                  bufferViewState->bufferViewCreateInfoData.Value()->offset;
-              VkDeviceSize dstFinalSize =
-                  (bufferViewState->bufferViewCreateInfoData.Value()->range == 0xFFFFFFFFFFFFFFFF)
-                      ? (bufferState->bufferCreateInfoData.Value()->size -
-                         bufferViewState->bufferViewCreateInfoData.Value()->offset)
-                      : (bufferViewState->bufferViewCreateInfoData.Value()->range);
-
-              SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(
-                  bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle, dstOffsetFinal,
-                  dstFinalSize);
+              const auto* pViewCreateInfo = it->second->bufferViewCreateInfoData.Value();
+              const auto memory = bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
+              const auto offset = bufferState->binding->memoryOffset + pViewCreateInfo->offset;
+              const auto size =
+                  (pViewCreateInfo->range == 0xFFFFFFFFFFFFFFFF)
+                      ? (bufferState->bufferCreateInfoData.Value()->size - pViewCreateInfo->offset)
+                      : (pViewCreateInfo->range);
+              SD().updatedMemoryInCmdBuffer[cmdBuf].AddToMap(memory, offset, size);
             }
           }
         }
@@ -3568,37 +3560,36 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer commandBuffer,
           continue;
         }
 
-        const auto it = SD()._bufferstates.find(pDescriptorWrites[i].pBufferInfo[j].buffer);
+        const auto& bufferInfo = pDescriptorWrites[i].pBufferInfo[j];
+
+        const auto it = SD()._bufferstates.find(bufferInfo.buffer);
         if (it != SD()._bufferstates.end()) {
           const auto& bufferState = it->second;
 
           if ((VK_DESCRIPTOR_TYPE_STORAGE_BUFFER == descriptorType) ||
               (VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC == descriptorType)) {
-            SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back(
+            SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back(
                 (uint64_t)bufferState->bufferHandle, false);
-            SD()._commandbufferstates[commandBuffer]
-                ->resourceWriteBuffers[bufferState->bufferHandle] = VULKAN_STORAGE_BUFFER_DYNAMIC;
+            SD()._commandbufferstates[cmdBuf]->resourceWriteBuffers[bufferState->bufferHandle] =
+                VULKAN_STORAGE_BUFFER_DYNAMIC;
           }
 
           if (updateOnlyUsedMemory()) {
-            SD().bindingBuffers[commandBuffer].insert(bufferState);
+            SD().bindingBuffers[cmdBuf].insert(bufferState);
 
             if ((Config::Get().vulkan.recorder.memorySegmentSize ||
                  Config::Get().vulkan.recorder.shadowMemory) &&
                 ((VK_DESCRIPTOR_TYPE_STORAGE_BUFFER == descriptorType) ||
                  (VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC == descriptorType))) {
               if (bufferState->binding) {
-                VkDeviceSize dstOffsetFinal =
-                    bufferState->binding->memoryOffset + pDescriptorWrites[i].pBufferInfo[j].offset;
-                VkDeviceSize dstFinalSize =
-                    (pDescriptorWrites[i].pBufferInfo[j].range == 0xFFFFFFFFFFFFFFFF)
-                        ? (bufferState->bufferCreateInfoData.Value()->size -
-                           pDescriptorWrites[i].pBufferInfo[j].offset)
-                        : (pDescriptorWrites[i].pBufferInfo[j].range);
-
-                SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(
-                    bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle,
-                    dstOffsetFinal, dstFinalSize);
+                const auto memory =
+                    bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
+                const auto offset = bufferState->binding->memoryOffset + bufferInfo.offset;
+                const auto size =
+                    (bufferInfo.range == 0xFFFFFFFFFFFFFFFF)
+                        ? (bufferState->bufferCreateInfoData.Value()->size - bufferInfo.offset)
+                        : (bufferInfo.range);
+                SD().updatedMemoryInCmdBuffer[cmdBuf].AddToMap(memory, offset, size);
               }
             }
           }
@@ -3612,46 +3603,40 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer commandBuffer,
   }
 }
 
-inline void vkCmdDraw_SD(VkCommandBuffer commandBuffer, uint32_t, uint32_t, uint32_t, uint32_t) {
-  printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
+inline void vkCmdDraw_SD(VkCommandBuffer cmdBuf, uint32_t, uint32_t, uint32_t, uint32_t) {
+  printShaderHashes(SD()._commandbufferstates[cmdBuf]->currentPipeline);
 }
 
 inline void vkCmdDrawIndexed_SD(
-    VkCommandBuffer commandBuffer, uint32_t, uint32_t, uint32_t, int32_t, uint32_t) {
-  printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
+    VkCommandBuffer cmdBuf, uint32_t, uint32_t, uint32_t, int32_t, uint32_t) {
+  printShaderHashes(SD()._commandbufferstates[cmdBuf]->currentPipeline);
 }
 
-inline void vkCmdDrawIndexedIndirect_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdDrawIndexedIndirect_SD(VkCommandBuffer cmdBuf,
                                         VkBuffer buffer,
                                         VkDeviceSize offset,
                                         uint32_t drawCount,
                                         uint32_t stride) {
   if (Config::Get().IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    const auto it = SD()._bufferstates.find(buffer);
-    if (it != SD()._bufferstates.end()) {
-      SD().bindingBuffers[commandBuffer].insert(it->second);
-    }
+    insertStateIfFound(SD()._bufferstates, buffer, SD().bindingBuffers[cmdBuf]);
   }
-  printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
+  printShaderHashes(SD()._commandbufferstates[cmdBuf]->currentPipeline);
 }
 
-inline void vkCmdDrawIndirect_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdDrawIndirect_SD(VkCommandBuffer cmdBuf,
                                  VkBuffer buffer,
                                  VkDeviceSize offset,
                                  uint32_t drawCount,
                                  uint32_t stride) {
   if (Config::Get().IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    const auto it = SD()._bufferstates.find(buffer);
-    if (it != SD()._bufferstates.end()) {
-      SD().bindingBuffers[commandBuffer].insert(it->second);
-    }
+    insertStateIfFound(SD()._bufferstates, buffer, SD().bindingBuffers[cmdBuf]);
   }
-  printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
+  printShaderHashes(SD()._commandbufferstates[cmdBuf]->currentPipeline);
 }
 
-inline void vkCmdDrawIndirectCountKHR_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdDrawIndirectCountKHR_SD(VkCommandBuffer cmdBuf,
                                          VkBuffer buffer,
                                          VkDeviceSize offset,
                                          VkBuffer countBuffer,
@@ -3660,24 +3645,15 @@ inline void vkCmdDrawIndirectCountKHR_SD(VkCommandBuffer commandBuffer,
                                          uint32_t stride) {
   if (Config::Get().IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    auto& bindingBuffers = SD().bindingBuffers[commandBuffer];
-    {
-      const auto it = SD()._bufferstates.find(buffer);
-      if (it != SD()._bufferstates.end()) {
-        bindingBuffers.insert(it->second);
-      }
-    }
-    {
-      const auto it = SD()._bufferstates.find(countBuffer);
-      if (it != SD()._bufferstates.end()) {
-        bindingBuffers.insert(it->second);
-      }
-    }
+    auto& bindingBuffers = SD().bindingBuffers[cmdBuf];
+
+    insertStateIfFound(SD()._bufferstates, buffer, bindingBuffers);
+    insertStateIfFound(SD()._bufferstates, countBuffer, bindingBuffers);
   }
-  printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
+  printShaderHashes(SD()._commandbufferstates[cmdBuf]->currentPipeline);
 }
 
-inline void vkCmdDrawIndexedIndirectCount_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdDrawIndexedIndirectCount_SD(VkCommandBuffer cmdBuf,
                                              VkBuffer buffer,
                                              VkDeviceSize offset,
                                              VkBuffer countBuffer,
@@ -3686,24 +3662,15 @@ inline void vkCmdDrawIndexedIndirectCount_SD(VkCommandBuffer commandBuffer,
                                              uint32_t stride) {
   if (Config::Get().IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    auto& bindingBuffers = SD().bindingBuffers[commandBuffer];
-    {
-      const auto it = SD()._bufferstates.find(buffer);
-      if (it != SD()._bufferstates.end()) {
-        bindingBuffers.insert(it->second);
-      }
-    }
-    {
-      const auto it = SD()._bufferstates.find(countBuffer);
-      if (it != SD()._bufferstates.end()) {
-        bindingBuffers.insert(it->second);
-      }
-    }
+    auto& bindingBuffers = SD().bindingBuffers[cmdBuf];
+
+    insertStateIfFound(SD()._bufferstates, buffer, bindingBuffers);
+    insertStateIfFound(SD()._bufferstates, countBuffer, bindingBuffers);
   }
-  printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
+  printShaderHashes(SD()._commandbufferstates[cmdBuf]->currentPipeline);
 }
 
-inline void vkCmdDrawIndexedIndirectCountKHR_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdDrawIndexedIndirectCountKHR_SD(VkCommandBuffer cmdBuf,
                                                 VkBuffer buffer,
                                                 VkDeviceSize offset,
                                                 VkBuffer countBuffer,
@@ -3712,59 +3679,47 @@ inline void vkCmdDrawIndexedIndirectCountKHR_SD(VkCommandBuffer commandBuffer,
                                                 uint32_t stride) {
   if (Config::Get().IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    auto& bindingBuffers = SD().bindingBuffers[commandBuffer];
-    {
-      const auto it = SD()._bufferstates.find(buffer);
-      if (it != SD()._bufferstates.end()) {
-        bindingBuffers.insert(it->second);
-      }
-    }
-    {
-      const auto it = SD()._bufferstates.find(countBuffer);
-      if (it != SD()._bufferstates.end()) {
-        bindingBuffers.insert(it->second);
-      }
-    }
+    auto& bindingBuffers = SD().bindingBuffers[cmdBuf];
+
+    insertStateIfFound(SD()._bufferstates, buffer, bindingBuffers);
+    insertStateIfFound(SD()._bufferstates, countBuffer, bindingBuffers);
   }
-  printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
+  printShaderHashes(SD()._commandbufferstates[cmdBuf]->currentPipeline);
 }
 
-inline void vkCmdDrawMeshTasksEXT_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdDrawMeshTasksEXT_SD(VkCommandBuffer cmdBuf,
                                      uint32_t groupCountX,
                                      uint32_t groupCountY,
                                      uint32_t groupCountZ) {
-  printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
+  printShaderHashes(SD()._commandbufferstates[cmdBuf]->currentPipeline);
 }
 
-inline void vkCmdDrawMeshTasksNV_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdDrawMeshTasksNV_SD(VkCommandBuffer cmdBuf,
                                     uint32_t taskCount,
                                     uint32_t firstTask) {
-  printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
+  printShaderHashes(SD()._commandbufferstates[cmdBuf]->currentPipeline);
 }
 
-inline void vkCmdDrawMeshTasksIndirectEXT_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdDrawMeshTasksIndirectEXT_SD(VkCommandBuffer cmdBuf,
                                              VkBuffer buffer,
                                              VkDeviceSize offset,
                                              uint32_t drawCount,
                                              uint32_t stride) {
   if (isRecorder() && (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    const auto it = SD()._bufferstates.find(buffer);
-    if (it != SD()._bufferstates.end()) {
-      SD().bindingBuffers[commandBuffer].insert(it->second);
-    }
+    insertStateIfFound(SD()._bufferstates, buffer, SD().bindingBuffers[cmdBuf]);
   }
-  printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
+  printShaderHashes(SD()._commandbufferstates[cmdBuf]->currentPipeline);
 }
 
-inline void vkCmdDrawMeshTasksIndirectNV_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdDrawMeshTasksIndirectNV_SD(VkCommandBuffer cmdBuf,
                                             VkBuffer buffer,
                                             VkDeviceSize offset,
                                             uint32_t drawCount,
                                             uint32_t stride) {
-  vkCmdDrawMeshTasksIndirectEXT_SD(commandBuffer, buffer, offset, drawCount, stride);
+  vkCmdDrawMeshTasksIndirectEXT_SD(cmdBuf, buffer, offset, drawCount, stride);
 }
 
-inline void vkCmdDrawMeshTasksIndirectCountEXT_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdDrawMeshTasksIndirectCountEXT_SD(VkCommandBuffer cmdBuf,
                                                   VkBuffer buffer,
                                                   VkDeviceSize offset,
                                                   VkBuffer countBuffer,
@@ -3772,51 +3727,39 @@ inline void vkCmdDrawMeshTasksIndirectCountEXT_SD(VkCommandBuffer commandBuffer,
                                                   uint32_t maxDrawCount,
                                                   uint32_t stride) {
   if (isRecorder() && (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    auto& bindingBuffers = SD().bindingBuffers[commandBuffer];
-    {
-      const auto it = SD()._bufferstates.find(buffer);
-      if (it != SD()._bufferstates.end()) {
-        bindingBuffers.insert(it->second);
-      }
-    }
-    {
-      const auto it = SD()._bufferstates.find(countBuffer);
-      if (it != SD()._bufferstates.end()) {
-        bindingBuffers.insert(it->second);
-      }
-    }
+    auto& bindingBuffers = SD().bindingBuffers[cmdBuf];
+
+    insertStateIfFound(SD()._bufferstates, buffer, bindingBuffers);
+    insertStateIfFound(SD()._bufferstates, countBuffer, bindingBuffers);
   }
-  printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
+  printShaderHashes(SD()._commandbufferstates[cmdBuf]->currentPipeline);
 }
 
-inline void vkCmdDrawMeshTasksIndirectCountNV_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdDrawMeshTasksIndirectCountNV_SD(VkCommandBuffer cmdBuf,
                                                  VkBuffer buffer,
                                                  VkDeviceSize offset,
                                                  VkBuffer countBuffer,
                                                  VkDeviceSize countBufferOffset,
                                                  uint32_t maxDrawCount,
                                                  uint32_t stride) {
-  vkCmdDrawMeshTasksIndirectCountEXT_SD(commandBuffer, buffer, offset, countBuffer,
-                                        countBufferOffset, maxDrawCount, stride);
+  vkCmdDrawMeshTasksIndirectCountEXT_SD(cmdBuf, buffer, offset, countBuffer, countBufferOffset,
+                                        maxDrawCount, stride);
 }
 
-inline void vkCmdDispatch_SD(VkCommandBuffer commandBuffer, uint32_t, uint32_t, uint32_t) {
-  printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
+inline void vkCmdDispatch_SD(VkCommandBuffer cmdBuf, uint32_t, uint32_t, uint32_t) {
+  printShaderHashes(SD()._commandbufferstates[cmdBuf]->currentPipeline);
 }
 
-inline void vkCmdDispatchIndirect_SD(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize) {
+inline void vkCmdDispatchIndirect_SD(VkCommandBuffer cmdBuf, VkBuffer buffer, VkDeviceSize) {
   if (Config::Get().IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    const auto it = SD()._bufferstates.find(buffer);
-    if (it != SD()._bufferstates.end()) {
-      SD().bindingBuffers[commandBuffer].insert(it->second);
-    }
+    insertStateIfFound(SD()._bufferstates, buffer, SD().bindingBuffers[cmdBuf]);
   }
-  printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
+  printShaderHashes(SD()._commandbufferstates[cmdBuf]->currentPipeline);
 }
 
 inline void vkCmdTraceRaysIndirectKHR_SD(
-    VkCommandBuffer commandBuffer,
+    VkCommandBuffer cmdBuf,
     const VkStridedDeviceAddressRegionKHR* pRaygenShaderBindingTable,
     const VkStridedDeviceAddressRegionKHR* pMissShaderBindingTable,
     const VkStridedDeviceAddressRegionKHR* pHitShaderBindingTable,
@@ -3824,15 +3767,12 @@ inline void vkCmdTraceRaysIndirectKHR_SD(
     VkDeviceAddress indirectDeviceAddress) {
   if (Config::Get().IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    auto& bindingBuffers = SD().bindingBuffers[commandBuffer];
+    auto& bindingBuffers = SD().bindingBuffers[cmdBuf];
 
     auto addBindingBuffer = [&bindingBuffers](const VkStridedDeviceAddressRegionKHR* SBTtable) {
       if ((SBTtable != nullptr) && (SBTtable->deviceAddress != 0)) {
         auto buffer = findBufferFromDeviceAddress(SBTtable->deviceAddress);
-        const auto it = SD()._bufferstates.find(buffer);
-        if (it != SD()._bufferstates.end()) {
-          bindingBuffers.insert(it->second);
-        }
+        insertStateIfFound(SD()._bufferstates, buffer, bindingBuffers);
       }
     };
 
@@ -3842,17 +3782,14 @@ inline void vkCmdTraceRaysIndirectKHR_SD(
     addBindingBuffer(pCallableShaderBindingTable);
     {
       auto buffer = findBufferFromDeviceAddress(indirectDeviceAddress);
-      const auto it = SD()._bufferstates.find(buffer);
-      if (it != SD()._bufferstates.end()) {
-        bindingBuffers.insert(it->second);
-      }
+      insertStateIfFound(SD()._bufferstates, buffer, bindingBuffers);
     }
   }
 
-  printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
+  printShaderHashes(SD()._commandbufferstates[cmdBuf]->currentPipeline);
 }
 
-inline void vkCmdTraceRaysKHR_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdTraceRaysKHR_SD(VkCommandBuffer cmdBuf,
                                  const VkStridedDeviceAddressRegionKHR* pRaygenShaderBindingTable,
                                  const VkStridedDeviceAddressRegionKHR* pMissShaderBindingTable,
                                  const VkStridedDeviceAddressRegionKHR* pHitShaderBindingTable,
@@ -3862,15 +3799,12 @@ inline void vkCmdTraceRaysKHR_SD(VkCommandBuffer commandBuffer,
                                  uint32_t /* depth */) {
   if (Config::Get().IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
-    auto& bindingBuffers = SD().bindingBuffers[commandBuffer];
+    auto& bindingBuffers = SD().bindingBuffers[cmdBuf];
 
     auto addBindingBuffer = [&bindingBuffers](const VkStridedDeviceAddressRegionKHR* SBTtable) {
       if ((SBTtable != nullptr) && (SBTtable->deviceAddress != 0)) {
         auto buffer = findBufferFromDeviceAddress(SBTtable->deviceAddress);
-        const auto it = SD()._bufferstates.find(buffer);
-        if (it != SD()._bufferstates.end()) {
-          bindingBuffers.insert(it->second);
-        }
+        insertStateIfFound(SD()._bufferstates, buffer, bindingBuffers);
       }
     };
 
@@ -3880,10 +3814,10 @@ inline void vkCmdTraceRaysKHR_SD(VkCommandBuffer commandBuffer,
     addBindingBuffer(pCallableShaderBindingTable);
   }
 
-  printShaderHashes(SD()._commandbufferstates[commandBuffer]->currentPipeline);
+  printShaderHashes(SD()._commandbufferstates[cmdBuf]->currentPipeline);
 }
 
-inline void vkCmdExecuteCommands_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdExecuteCommands_SD(VkCommandBuffer cmdBuf,
                                     uint32_t commandBufferCount,
                                     const VkCommandBuffer* pCommandBuffers) {
   if (Config::Get().IsRecorder() ||
@@ -3891,16 +3825,15 @@ inline void vkCmdExecuteCommands_SD(VkCommandBuffer commandBuffer,
        !Config::Get().vulkan.player.captureVulkanRenderPasses.empty() ||
        Config::Get().vulkan.player.execCmdBuffsBeforeQueueSubmit)) {
     for (unsigned int i = 0; i < commandBufferCount; i++) {
-      auto& primaryCommandBufferState = SD()._commandbufferstates[commandBuffer];
+      auto& primaryCommandBufferState = SD()._commandbufferstates[cmdBuf];
       const auto& secondaryCommandBufferState = SD()._commandbufferstates[pCommandBuffers[i]];
 
       if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
         const auto& srcBindingImages = SD().bindingImages[pCommandBuffers[i]];
-        SD().bindingImages[commandBuffer].insert(srcBindingImages.begin(), srcBindingImages.end());
+        SD().bindingImages[cmdBuf].insert(srcBindingImages.begin(), srcBindingImages.end());
 
         const auto& srcBindingBuffers = SD().bindingBuffers[pCommandBuffers[i]];
-        SD().bindingBuffers[commandBuffer].insert(srcBindingBuffers.begin(),
-                                                  srcBindingBuffers.end());
+        SD().bindingBuffers[cmdBuf].insert(srcBindingBuffers.begin(), srcBindingBuffers.end());
       }
 
       primaryCommandBufferState->secondaryCommandBuffersStateStoreList[pCommandBuffers[i]] =
@@ -3978,8 +3911,8 @@ inline void vkCmdExecuteCommands_SD(VkCommandBuffer commandBuffer,
         for (const auto& obj3 :
              SD().updatedMemoryInCmdBuffer[pCommandBuffers[i]].intervalMapMemory) {
           for (const auto& obj4 : obj3.second.getIntervals()) {
-            SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(obj3.first, obj4.first,
-                                                                  obj4.second - obj4.first);
+            SD().updatedMemoryInCmdBuffer[cmdBuf].AddToMap(obj3.first, obj4.first,
+                                                           obj4.second - obj4.first);
           }
         }
       }
@@ -3987,7 +3920,7 @@ inline void vkCmdExecuteCommands_SD(VkCommandBuffer commandBuffer,
   }
 }
 
-inline void vkCmdPipelineBarrier_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdPipelineBarrier_SD(VkCommandBuffer cmdBuf,
                                     VkPipelineStageFlags srcStageMask,
                                     VkPipelineStageFlags dstStageMask,
                                     VkDependencyFlags dependencyFlags,
@@ -4000,12 +3933,9 @@ inline void vkCmdPipelineBarrier_SD(VkCommandBuffer commandBuffer,
   if (captureRenderPasses() || captureRenderPassesResources() ||
       (isRecorder() && ((updateOnlyUsedMemory()) || isSubcaptureBeforeRestorationPhase()))) {
     if (pBufferMemoryBarriers) {
-      auto& bindingBuffers = SD().bindingBuffers[commandBuffer];
+      auto& bindingBuffers = SD().bindingBuffers[cmdBuf];
       for (unsigned int i = 0; i < bufferMemoryBarrierCount; i++) {
-        const auto it = SD()._bufferstates.find(pBufferMemoryBarriers[i].buffer);
-        if (it != SD()._bufferstates.end()) {
-          bindingBuffers.insert(it->second);
-        }
+        insertStateIfFound(SD()._bufferstates, pBufferMemoryBarriers[i].buffer, bindingBuffers);
       }
     }
 
@@ -4013,7 +3943,7 @@ inline void vkCmdPipelineBarrier_SD(VkCommandBuffer commandBuffer,
       return;
     }
 
-    auto& bindingImages = SD().bindingImages[commandBuffer];
+    auto& bindingImages = SD().bindingImages[cmdBuf];
     for (unsigned int i = 0; i < imageMemoryBarrierCount; i++) {
       const auto it = SD()._imagestates.find(pImageMemoryBarriers[i].image);
       if (it == SD()._imagestates.end()) {
@@ -4035,7 +3965,7 @@ inline void vkCmdPipelineBarrier_SD(VkCommandBuffer commandBuffer,
           continue;
         }
 
-        auto& imageLayoutAfterSubmit = SD()._commandbufferstates[commandBuffer]
+        auto& imageLayoutAfterSubmit = SD()._commandbufferstates[cmdBuf]
                                            ->imageLayoutAfterSubmit[pImageMemoryBarriers[i].image];
         if (!imageLayoutAfterSubmit.size()) {
           imageLayoutAfterSubmit.resize(imageLayout.size());
@@ -4075,7 +4005,7 @@ inline void vkCmdPipelineBarrier_SD(VkCommandBuffer commandBuffer,
   }
 }
 
-inline void vkCmdPipelineBarrier2UnifiedGITS_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdPipelineBarrier2UnifiedGITS_SD(VkCommandBuffer cmdBuf,
                                                 const VkDependencyInfo* pDependencyInfo) {
   if (!pDependencyInfo) {
     return;
@@ -4084,12 +4014,10 @@ inline void vkCmdPipelineBarrier2UnifiedGITS_SD(VkCommandBuffer commandBuffer,
   if (captureRenderPasses() || captureRenderPassesResources() ||
       (isRecorder() && (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()))) {
     if (pDependencyInfo->pBufferMemoryBarriers) {
-      auto& bindingBuffers = SD().bindingBuffers[commandBuffer];
+      auto& bindingBuffers = SD().bindingBuffers[cmdBuf];
       for (unsigned int i = 0; i < pDependencyInfo->bufferMemoryBarrierCount; i++) {
-        const auto it = SD()._bufferstates.find(pDependencyInfo->pBufferMemoryBarriers[i].buffer);
-        if (it != SD()._bufferstates.end()) {
-          bindingBuffers.insert(it->second);
-        }
+        insertStateIfFound(SD()._bufferstates, pDependencyInfo->pBufferMemoryBarriers[i].buffer,
+                           bindingBuffers);
       }
     }
 
@@ -4097,7 +4025,7 @@ inline void vkCmdPipelineBarrier2UnifiedGITS_SD(VkCommandBuffer commandBuffer,
       return;
     }
 
-    auto& bindingImages = SD().bindingImages[commandBuffer];
+    auto& bindingImages = SD().bindingImages[cmdBuf];
     for (unsigned int i = 0; i < pDependencyInfo->imageMemoryBarrierCount; i++) {
       const auto it = SD()._imagestates.find(pDependencyInfo->pImageMemoryBarriers[i].image);
       if (it == SD()._imagestates.end()) {
@@ -4120,7 +4048,7 @@ inline void vkCmdPipelineBarrier2UnifiedGITS_SD(VkCommandBuffer commandBuffer,
         }
 
         auto& imageLayoutAfterSubmit =
-            SD()._commandbufferstates[commandBuffer]
+            SD()._commandbufferstates[cmdBuf]
                 ->imageLayoutAfterSubmit[pDependencyInfo->pImageMemoryBarriers[i].image];
         if (!imageLayoutAfterSubmit.size()) {
           imageLayoutAfterSubmit.resize(imageLayout.size());
@@ -4162,63 +4090,63 @@ inline void vkCmdPipelineBarrier2UnifiedGITS_SD(VkCommandBuffer commandBuffer,
   }
 }
 
-inline void vkCmdPipelineBarrier2_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdPipelineBarrier2_SD(VkCommandBuffer cmdBuf,
                                      const VkDependencyInfo* pDependencyInfo) {
-  vkCmdPipelineBarrier2UnifiedGITS_SD(commandBuffer, pDependencyInfo);
+  vkCmdPipelineBarrier2UnifiedGITS_SD(cmdBuf, pDependencyInfo);
 }
 
-inline void vkCmdPipelineBarrier2KHR_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdPipelineBarrier2KHR_SD(VkCommandBuffer cmdBuf,
                                         const VkDependencyInfo* pDependencyInfo) {
-  vkCmdPipelineBarrier2UnifiedGITS_SD(commandBuffer, pDependencyInfo);
+  vkCmdPipelineBarrier2UnifiedGITS_SD(cmdBuf, pDependencyInfo);
 }
 
-inline void vkCmdSetEvent_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdSetEvent_SD(VkCommandBuffer cmdBuf,
                              VkEvent event,
                              VkPipelineStageFlags stageMask) {
-  SD()._commandbufferstates[commandBuffer]->eventStatesAfterSubmit[event] = true;
+  SD()._commandbufferstates[cmdBuf]->eventStatesAfterSubmit[event] = true;
 }
 
-inline void vkCmdResetEvent_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdResetEvent_SD(VkCommandBuffer cmdBuf,
                                VkEvent event,
                                VkPipelineStageFlags stageMask) {
-  SD()._commandbufferstates[commandBuffer]->eventStatesAfterSubmit[event] = false;
+  SD()._commandbufferstates[cmdBuf]->eventStatesAfterSubmit[event] = false;
 }
 
-inline void vkCmdSetEvent2_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdSetEvent2_SD(VkCommandBuffer cmdBuf,
                               VkEvent event,
                               const VkDependencyInfo* pDependencyInfo) {
   if (pDependencyInfo == nullptr) {
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 
-  SD()._commandbufferstates[commandBuffer]->eventStatesAfterSubmit[event] = true;
+  SD()._commandbufferstates[cmdBuf]->eventStatesAfterSubmit[event] = true;
 
   // Not counting eventStatesAfterSubmit, a state tracking for the vkCmdPipelineBarrier2...()
   // functions is exactly the same as for the vkCmdSetEvent2() function. That's why, to
   // avoid code redundancy, a common vkCmdPipelineBarrier2UnifiedGITS_SD() is called.
-  vkCmdPipelineBarrier2UnifiedGITS_SD(commandBuffer, pDependencyInfo);
+  vkCmdPipelineBarrier2UnifiedGITS_SD(cmdBuf, pDependencyInfo);
 }
 
-inline void vkCmdSetEvent2KHR_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdSetEvent2KHR_SD(VkCommandBuffer cmdBuf,
                                  VkEvent event,
                                  const VkDependencyInfo* pDependencyInfo) {
-  SD()._commandbufferstates[commandBuffer]->eventStatesAfterSubmit[event] = true;
+  SD()._commandbufferstates[cmdBuf]->eventStatesAfterSubmit[event] = true;
 
   // Not counting eventStatesAfterSubmit, a state tracking for the vkCmdPipelineBarrier2...()
   // functions is exactly the same as for the vkCmdSetEvent2KHR() function. That's why, to
   // avoid code redundancy, a common vkCmdPipelineBarrier2UnifiedGITS_SD() is called.
-  vkCmdPipelineBarrier2UnifiedGITS_SD(commandBuffer, pDependencyInfo);
+  vkCmdPipelineBarrier2UnifiedGITS_SD(cmdBuf, pDependencyInfo);
 }
 
-inline void vkCmdResetQueryPool_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdResetQueryPool_SD(VkCommandBuffer cmdBuf,
                                    VkQueryPool queryPool,
                                    uint32_t firstQuery,
                                    uint32_t queryCount) {
   if (Config::Get().IsRecorder()) {
     auto& resetQueryAfterSubmit =
-        SD()._commandbufferstates[commandBuffer]->resetQueriesAfterSubmit[queryPool];
+        SD()._commandbufferstates[cmdBuf]->resetQueriesAfterSubmit[queryPool];
     auto& usedQueryAfterSubmit =
-        SD()._commandbufferstates[commandBuffer]->usedQueriesAfterSubmit[queryPool];
+        SD()._commandbufferstates[cmdBuf]->usedQueriesAfterSubmit[queryPool];
     for (uint32_t i = firstQuery; i < queryCount; ++i) {
       resetQueryAfterSubmit.insert(i);
       usedQueryAfterSubmit.erase(i);
@@ -4226,40 +4154,40 @@ inline void vkCmdResetQueryPool_SD(VkCommandBuffer commandBuffer,
   }
 }
 
-inline void vkCmdWriteTimestamp_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdWriteTimestamp_SD(VkCommandBuffer cmdBuf,
                                    VkPipelineStageFlagBits pipelineStage,
                                    VkQueryPool queryPool,
                                    uint32_t query) {
   if (Config::Get().IsRecorder()) {
-    SD()._commandbufferstates[commandBuffer]->usedQueriesAfterSubmit[queryPool].insert(query);
+    SD()._commandbufferstates[cmdBuf]->usedQueriesAfterSubmit[queryPool].insert(query);
   }
 }
 
-inline void vkCmdBeginQuery_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdBeginQuery_SD(VkCommandBuffer cmdBuf,
                                VkQueryPool queryPool,
                                uint32_t query,
                                VkQueryControlFlags flags) {
   if (Config::Get().IsRecorder()) {
-    SD()._commandbufferstates[commandBuffer]->usedQueriesAfterSubmit[queryPool].insert(query);
+    SD()._commandbufferstates[cmdBuf]->usedQueriesAfterSubmit[queryPool].insert(query);
   }
 }
 
 inline void vkCmdWriteAccelerationStructuresPropertiesKHR_SD(
-    VkCommandBuffer commandBuffer,
+    VkCommandBuffer cmdBuf,
     uint32_t accelerationStructureCount,
     const VkAccelerationStructureKHR* pAccelerationStructures,
     VkQueryType queryType,
     VkQueryPool queryPool,
     uint32_t firstQuery) {
   if (Config::Get().IsRecorder()) {
-    auto& usedQueries = SD()._commandbufferstates[commandBuffer]->usedQueriesAfterSubmit[queryPool];
+    auto& usedQueries = SD()._commandbufferstates[cmdBuf]->usedQueriesAfterSubmit[queryPool];
     for (uint32_t i = firstQuery; i < accelerationStructureCount; ++i) {
       usedQueries.insert(i);
     }
   }
 }
 
-inline void vkCmdCopyQueryPoolResults_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdCopyQueryPoolResults_SD(VkCommandBuffer cmdBuf,
                                          VkQueryPool queryPool,
                                          uint32_t firstQuery,
                                          uint32_t queryCount,
@@ -4276,34 +4204,31 @@ inline void vkCmdCopyQueryPoolResults_SD(VkCommandBuffer commandBuffer,
     const auto& bufferState = it->second;
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      SD().bindingBuffers[commandBuffer].insert(bufferState);
+      SD().bindingBuffers[cmdBuf].insert(bufferState);
     }
 
-    SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back((uint64_t)dstBuffer,
-                                                                            false);
+    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstBuffer, false);
 
     if (Config::Get().vulkan.recorder.memorySegmentSize ||
         Config::Get().vulkan.recorder.shadowMemory) {
 
       if (bufferState->binding) {
-        VkDeviceSize dstOffsetFinal = bufferState->binding->memoryOffset + dstOffset;
-        VkDeviceSize dstSize = bufferState->bufferCreateInfoData.Value()->size - dstOffset;
-        VkDeviceMemory dstDeviceMemory =
-            bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-        SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                              dstSize);
+        const auto memory = bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
+        const auto offset = bufferState->binding->memoryOffset + dstOffset;
+        const auto size = bufferState->bufferCreateInfoData.Value()->size - dstOffset;
+        SD().updatedMemoryInCmdBuffer[cmdBuf].AddToMap(memory, offset, size);
       }
     }
   }
 }
 
-inline void vkCmdUpdateBuffer_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdUpdateBuffer_SD(VkCommandBuffer cmdBuf,
                                  VkBuffer dstBuffer,
                                  VkDeviceSize dstOffset,
                                  VkDeviceSize dataSize,
                                  const void* pData) {
   if (Config::Get().IsPlayer() && captureRenderPassesResources() && (dstBuffer != NULL)) {
-    SD()._commandbufferstates[commandBuffer]->resourceWriteBuffers[dstBuffer] =
+    SD()._commandbufferstates[cmdBuf]->resourceWriteBuffers[dstBuffer] =
         VULKAN_BLIT_DESTINATION_BUFFER;
   }
   if (Config::Get().IsRecorder()) {
@@ -4315,33 +4240,30 @@ inline void vkCmdUpdateBuffer_SD(VkCommandBuffer commandBuffer,
     const auto& bufferState = it->second;
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      SD().bindingBuffers[commandBuffer].insert(bufferState);
+      SD().bindingBuffers[cmdBuf].insert(bufferState);
     }
 
-    SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back((uint64_t)dstBuffer,
-                                                                            false);
+    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstBuffer, false);
 
     if (Config::Get().vulkan.recorder.memorySegmentSize ||
         Config::Get().vulkan.recorder.shadowMemory) {
       if (bufferState->binding) {
-        VkDeviceSize dstOffsetFinal = bufferState->binding->memoryOffset + dstOffset;
-        VkDeviceSize dstSize = dataSize;
-        VkDeviceMemory dstDeviceMemory =
-            bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-        SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                              dstSize);
+        const auto memory = bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
+        const auto offset = bufferState->binding->memoryOffset + dstOffset;
+        const auto size = dataSize;
+        SD().updatedMemoryInCmdBuffer[cmdBuf].AddToMap(memory, offset, size);
       }
     }
   }
 }
 
-inline void vkCmdFillBuffer_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdFillBuffer_SD(VkCommandBuffer cmdBuf,
                                VkBuffer dstBuffer,
                                VkDeviceSize dstOffset,
-                               VkDeviceSize size,
+                               VkDeviceSize dstSize,
                                uint32_t data) {
   if (Config::Get().IsPlayer() && captureRenderPassesResources() && (dstBuffer != NULL)) {
-    SD()._commandbufferstates[commandBuffer]->resourceWriteBuffers[dstBuffer] =
+    SD()._commandbufferstates[cmdBuf]->resourceWriteBuffers[dstBuffer] =
         VULKAN_BLIT_DESTINATION_BUFFER;
   }
   if (Config::Get().IsRecorder()) {
@@ -4353,52 +4275,46 @@ inline void vkCmdFillBuffer_SD(VkCommandBuffer commandBuffer,
     const auto& bufferState = it->second;
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      SD().bindingBuffers[commandBuffer].insert(bufferState);
+      SD().bindingBuffers[cmdBuf].insert(bufferState);
     }
 
-    SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back((uint64_t)dstBuffer,
-                                                                            false);
+    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstBuffer, false);
 
     if (Config::Get().vulkan.recorder.memorySegmentSize ||
         Config::Get().vulkan.recorder.shadowMemory) {
       if (bufferState->binding) {
-        VkDeviceSize dstOffsetFinal = bufferState->binding->memoryOffset + dstOffset;
-        VkDeviceSize dstSize = size;
-        if (dstSize == VK_WHOLE_SIZE) {
-          dstSize = bufferState->bufferCreateInfoData.Value()->size - dstOffset;
-        }
-        VkDeviceMemory dstDeviceMemory =
-            bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-        SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                              dstSize);
+        const auto memory = bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
+        const auto offset = bufferState->binding->memoryOffset + dstOffset;
+        const auto size = (dstSize == VK_WHOLE_SIZE)
+                              ? (bufferState->bufferCreateInfoData.Value()->size - dstOffset)
+                              : dstSize;
+        SD().updatedMemoryInCmdBuffer[cmdBuf].AddToMap(memory, offset, size);
       }
     }
   }
 }
 
-inline void vkCmdCopyBuffer_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdCopyBuffer_SD(VkCommandBuffer cmdBuf,
                                VkBuffer srcBuffer,
                                VkBuffer dstBuffer,
                                uint32_t regionCount,
                                const VkBufferCopy* pRegions) {
   if (Config::Get().IsPlayer() && captureRenderPassesResources() && (dstBuffer != NULL)) {
-    SD()._commandbufferstates[commandBuffer]->resourceWriteBuffers[dstBuffer] =
+    SD()._commandbufferstates[cmdBuf]->resourceWriteBuffers[dstBuffer] =
         VULKAN_BLIT_DESTINATION_BUFFER;
   }
   if (Config::Get().IsRecorder()) {
     const auto dstIt = SD()._bufferstates.find(dstBuffer);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
+      auto& bindingBuffers = SD().bindingBuffers[cmdBuf];
+
       // Src buffer
-      {
-        const auto srcIt = SD()._bufferstates.find(srcBuffer);
-        if (srcIt != SD()._bufferstates.end()) {
-          SD().bindingBuffers[commandBuffer].insert(srcIt->second);
-        }
-      }
+      insertStateIfFound(SD()._bufferstates, srcBuffer, bindingBuffers);
+
       // Dst buffer
       if (dstIt != SD()._bufferstates.end()) {
-        SD().bindingBuffers[commandBuffer].insert(dstIt->second);
+        bindingBuffers.insert(dstIt->second);
       }
     }
 
@@ -4406,31 +4322,27 @@ inline void vkCmdCopyBuffer_SD(VkCommandBuffer commandBuffer,
       return;
     }
 
-    SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back((uint64_t)dstBuffer,
-                                                                            false);
+    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstBuffer, false);
 
     if (Config::Get().vulkan.recorder.memorySegmentSize ||
         Config::Get().vulkan.recorder.shadowMemory) {
       const auto& bufferBinding = dstIt->second->binding;
       if (bufferBinding) {
         for (uint32_t i = 0; i < regionCount; i++) {
-          VkDeviceSize dstOffsetFinal = bufferBinding->memoryOffset + pRegions[i].dstOffset;
-          VkDeviceSize dstSize = pRegions[i].size;
-          VkDeviceMemory dstDeviceMemory =
-              bufferBinding->deviceMemoryStateStore->deviceMemoryHandle;
-          SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                                dstSize);
+          const auto memory = bufferBinding->deviceMemoryStateStore->deviceMemoryHandle;
+          const auto offset = bufferBinding->memoryOffset + pRegions[i].dstOffset;
+          const auto size = pRegions[i].size;
+          SD().updatedMemoryInCmdBuffer[cmdBuf].AddToMap(memory, offset, size);
         }
       }
     }
   }
 }
 
-inline void vkCmdCopyBuffer2_SD(VkCommandBuffer commandBuffer,
-                                const VkCopyBufferInfo2* pCopyBufferInfo) {
+inline void vkCmdCopyBuffer2_SD(VkCommandBuffer cmdBuf, const VkCopyBufferInfo2* pCopyBufferInfo) {
   if (Config::Get().IsPlayer() && captureRenderPassesResources() &&
       (pCopyBufferInfo->dstBuffer != NULL)) {
-    SD()._commandbufferstates[commandBuffer]->resourceWriteBuffers[pCopyBufferInfo->dstBuffer] =
+    SD()._commandbufferstates[cmdBuf]->resourceWriteBuffers[pCopyBufferInfo->dstBuffer] =
         VULKAN_BLIT_DESTINATION_BUFFER;
   }
 
@@ -4438,16 +4350,14 @@ inline void vkCmdCopyBuffer2_SD(VkCommandBuffer commandBuffer,
     const auto dstIt = SD()._bufferstates.find(pCopyBufferInfo->dstBuffer);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
+      auto& bindingBuffers = SD().bindingBuffers[cmdBuf];
+
       // Src buffer
-      {
-        const auto srcIt = SD()._bufferstates.find(pCopyBufferInfo->srcBuffer);
-        if (srcIt != SD()._bufferstates.end()) {
-          SD().bindingBuffers[commandBuffer].insert(srcIt->second);
-        }
-      }
+      insertStateIfFound(SD()._bufferstates, pCopyBufferInfo->srcBuffer, bindingBuffers);
+
       // Dst buffer
       if (dstIt != SD()._bufferstates.end()) {
-        SD().bindingBuffers[commandBuffer].insert(dstIt->second);
+        bindingBuffers.insert(dstIt->second);
       }
     }
 
@@ -4455,7 +4365,7 @@ inline void vkCmdCopyBuffer2_SD(VkCommandBuffer commandBuffer,
       return;
     }
 
-    SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back(
+    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back(
         (uint64_t)pCopyBufferInfo->dstBuffer, false);
 
     if (Config::Get().vulkan.recorder.memorySegmentSize ||
@@ -4464,13 +4374,10 @@ inline void vkCmdCopyBuffer2_SD(VkCommandBuffer commandBuffer,
 
       if (bufferBinding) {
         for (uint32_t i = 0; i < pCopyBufferInfo->regionCount; i++) {
-          VkDeviceSize dstOffsetFinal =
-              bufferBinding->memoryOffset + pCopyBufferInfo->pRegions[i].dstOffset;
-          VkDeviceSize dstSize = pCopyBufferInfo->pRegions[i].size;
-          VkDeviceMemory dstDeviceMemory =
-              bufferBinding->deviceMemoryStateStore->deviceMemoryHandle;
-          SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                                dstSize);
+          const auto memory = bufferBinding->deviceMemoryStateStore->deviceMemoryHandle;
+          const auto offset = bufferBinding->memoryOffset + pCopyBufferInfo->pRegions[i].dstOffset;
+          const auto size = pCopyBufferInfo->pRegions[i].size;
+          SD().updatedMemoryInCmdBuffer[cmdBuf].AddToMap(memory, offset, size);
         }
       }
     }
@@ -4549,41 +4456,40 @@ void ProcessDestinationImage(std::shared_ptr<CImageState>& imageState,
                              const REGION_TYPE* pRegions,
                              CMemoryUpdateState& updatedMemoryInCmdBuffer) {
   auto device = imageState->deviceStateStore->deviceHandle;
-  VkDeviceMemory deviceMemory = imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
+  VkDeviceMemory memory = imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
 
   if (imageState->imageCreateInfoData.Value() &&
       (imageState->imageCreateInfoData.Value()->tiling == VK_IMAGE_TILING_LINEAR)) {
     for (uint32_t i = 0; i < regionCount; i++) {
-      VkImageSubresource imageSubresource = getImageSubresource(pRegions[i]);
+      const auto imageSubresource = getImageSubresource(pRegions[i]);
 
       VkSubresourceLayout subLayout;
       drvVk.vkGetImageSubresourceLayout(device, imageState->imageHandle, &imageSubresource,
                                         &subLayout);
 
-      VkDeviceSize dstOffset = imageState->binding->memoryOffset + subLayout.offset;
-      VkDeviceSize dstSize = subLayout.size;
-      updatedMemoryInCmdBuffer.AddToMap(deviceMemory, dstOffset, dstSize);
+      const auto offset = imageState->binding->memoryOffset + subLayout.offset;
+      const auto size = subLayout.size;
+      updatedMemoryInCmdBuffer.AddToMap(memory, offset, size);
     }
   } else {
     VkMemoryRequirements memRequirements = {};
     drvVk.vkGetImageMemoryRequirements(device, imageState->imageHandle, &memRequirements);
 
-    VkDeviceSize dstOffset = imageState->binding->memoryOffset;
-    VkDeviceSize dstSize = memRequirements.size;
-
-    updatedMemoryInCmdBuffer.AddToMap(deviceMemory, dstOffset, dstSize);
+    const auto offset = imageState->binding->memoryOffset;
+    const auto size = memRequirements.size;
+    updatedMemoryInCmdBuffer.AddToMap(memory, offset, size);
   }
 }
 } // namespace
 
-inline void vkCmdCopyBufferToImage_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdCopyBufferToImage_SD(VkCommandBuffer cmdBuf,
                                       VkBuffer srcBuffer,
                                       VkImage dstImage,
                                       VkImageLayout dstImageLayout,
                                       uint32_t regionCount,
                                       const VkBufferImageCopy* pRegions) {
   if (Config::Get().IsPlayer() && captureRenderPassesResources() && (dstImage != NULL)) {
-    SD()._commandbufferstates[commandBuffer]->resourceWriteImages[dstImage] =
+    SD()._commandbufferstates[cmdBuf]->resourceWriteImages[dstImage] =
         VULKAN_BLIT_DESTINATION_IMAGE;
   }
 
@@ -4592,15 +4498,11 @@ inline void vkCmdCopyBufferToImage_SD(VkCommandBuffer commandBuffer,
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
       // Src buffer
-      {
-        const auto srcIt = SD()._bufferstates.find(srcBuffer);
-        if (srcIt != SD()._bufferstates.end()) {
-          SD().bindingBuffers[commandBuffer].insert(srcIt->second);
-        }
-      }
+      insertStateIfFound(SD()._bufferstates, srcBuffer, SD().bindingBuffers[cmdBuf]);
+
       // Dst image
       if (dstIt != SD()._imagestates.end()) {
-        SD().bindingImages[commandBuffer].insert(dstIt->second);
+        SD().bindingImages[cmdBuf].insert(dstIt->second);
       }
     }
 
@@ -4608,8 +4510,7 @@ inline void vkCmdCopyBufferToImage_SD(VkCommandBuffer commandBuffer,
       return;
     }
 
-    SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back((uint64_t)dstImage,
-                                                                            true);
+    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstImage, true);
 
     if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
          !Config::Get().vulkan.recorder.shadowMemory) ||
@@ -4618,16 +4519,16 @@ inline void vkCmdCopyBufferToImage_SD(VkCommandBuffer commandBuffer,
     }
 
     ProcessDestinationImage(dstIt->second, regionCount, pRegions,
-                            SD().updatedMemoryInCmdBuffer[commandBuffer]);
+                            SD().updatedMemoryInCmdBuffer[cmdBuf]);
   }
 }
 
-inline void vkCmdCopyBufferToImage2_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdCopyBufferToImage2_SD(VkCommandBuffer cmdBuf,
                                        const VkCopyBufferToImageInfo2* pCopyBufferToImageInfo) {
   if (Config::Get().IsPlayer() && captureRenderPassesResources() &&
       (pCopyBufferToImageInfo->dstImage != NULL)) {
-    SD()._commandbufferstates[commandBuffer]
-        ->resourceWriteImages[pCopyBufferToImageInfo->dstImage] = VULKAN_BLIT_DESTINATION_IMAGE;
+    SD()._commandbufferstates[cmdBuf]->resourceWriteImages[pCopyBufferToImageInfo->dstImage] =
+        VULKAN_BLIT_DESTINATION_IMAGE;
   }
 
   if (Config::Get().IsRecorder() && pCopyBufferToImageInfo) {
@@ -4635,15 +4536,12 @@ inline void vkCmdCopyBufferToImage2_SD(VkCommandBuffer commandBuffer,
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
       // Src buffer
-      {
-        const auto srcIt = SD()._bufferstates.find(pCopyBufferToImageInfo->srcBuffer);
-        if (srcIt != SD()._bufferstates.end()) {
-          SD().bindingBuffers[commandBuffer].insert(srcIt->second);
-        }
-      }
+      insertStateIfFound(SD()._bufferstates, pCopyBufferToImageInfo->srcBuffer,
+                         SD().bindingBuffers[cmdBuf]);
+
       // Dst image
       if (dstIt != SD()._imagestates.end()) {
-        SD().bindingImages[commandBuffer].insert(dstIt->second);
+        SD().bindingImages[cmdBuf].insert(dstIt->second);
       }
     }
 
@@ -4651,7 +4549,7 @@ inline void vkCmdCopyBufferToImage2_SD(VkCommandBuffer commandBuffer,
       return;
     }
 
-    SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back(
+    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back(
         (uint64_t)pCopyBufferToImageInfo->dstImage, true);
 
     if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
@@ -4662,11 +4560,11 @@ inline void vkCmdCopyBufferToImage2_SD(VkCommandBuffer commandBuffer,
 
     ProcessDestinationImage(dstIt->second, pCopyBufferToImageInfo->regionCount,
                             pCopyBufferToImageInfo->pRegions,
-                            SD().updatedMemoryInCmdBuffer[commandBuffer]);
+                            SD().updatedMemoryInCmdBuffer[cmdBuf]);
   }
 }
 
-inline void vkCmdCopyImage_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdCopyImage_SD(VkCommandBuffer cmdBuf,
                               VkImage srcImage,
                               VkImageLayout srcImageLayout,
                               VkImage dstImage,
@@ -4674,7 +4572,7 @@ inline void vkCmdCopyImage_SD(VkCommandBuffer commandBuffer,
                               uint32_t regionCount,
                               const VkImageCopy* pRegions) {
   if (Config::Get().IsPlayer() && captureRenderPassesResources() && (dstImage != NULL)) {
-    SD()._commandbufferstates[commandBuffer]->resourceWriteImages[dstImage] =
+    SD()._commandbufferstates[cmdBuf]->resourceWriteImages[dstImage] =
         VULKAN_BLIT_DESTINATION_IMAGE;
   }
 
@@ -4682,17 +4580,15 @@ inline void vkCmdCopyImage_SD(VkCommandBuffer commandBuffer,
     const auto dstIt = SD()._imagestates.find(dstImage);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
+      auto& bindingImages = SD().bindingImages[cmdBuf];
+
       // Src image
-      {
-        const auto srcIt = SD()._imagestates.find(srcImage);
-        if (srcIt != SD()._imagestates.end()) {
-          SD().bindingImages[commandBuffer].insert(srcIt->second);
-        }
-      }
+      insertStateIfFound(SD()._imagestates, srcImage, bindingImages);
+
       // Dst image
       {
         if (dstIt != SD()._imagestates.end()) {
-          SD().bindingImages[commandBuffer].insert(dstIt->second);
+          bindingImages.insert(dstIt->second);
         }
       }
     }
@@ -4701,8 +4597,7 @@ inline void vkCmdCopyImage_SD(VkCommandBuffer commandBuffer,
       return;
     }
 
-    SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back((uint64_t)dstImage,
-                                                                            true);
+    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstImage, true);
 
     if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
          !Config::Get().vulkan.recorder.shadowMemory) ||
@@ -4711,31 +4606,28 @@ inline void vkCmdCopyImage_SD(VkCommandBuffer commandBuffer,
     }
 
     ProcessDestinationImage(dstIt->second, regionCount, pRegions,
-                            SD().updatedMemoryInCmdBuffer[commandBuffer]);
+                            SD().updatedMemoryInCmdBuffer[cmdBuf]);
   }
 }
 
-inline void vkCmdCopyImage2_SD(VkCommandBuffer commandBuffer,
-                               const VkCopyImageInfo2* pCopyImageInfo) {
+inline void vkCmdCopyImage2_SD(VkCommandBuffer cmdBuf, const VkCopyImageInfo2* pCopyImageInfo) {
   if (Config::Get().IsPlayer() && captureRenderPassesResources() &&
       (pCopyImageInfo->dstImage != NULL)) {
-    SD()._commandbufferstates[commandBuffer]->resourceWriteImages[pCopyImageInfo->dstImage] =
+    SD()._commandbufferstates[cmdBuf]->resourceWriteImages[pCopyImageInfo->dstImage] =
         VULKAN_BLIT_DESTINATION_IMAGE;
   }
   if (Config::Get().IsRecorder()) {
     const auto dstIt = SD()._imagestates.find(pCopyImageInfo->dstImage);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
+      auto& bindingImages = SD().bindingImages[cmdBuf];
+
       // Src image
-      {
-        const auto srcIt = SD()._imagestates.find(pCopyImageInfo->srcImage);
-        if (srcIt != SD()._imagestates.end()) {
-          SD().bindingImages[commandBuffer].insert(srcIt->second);
-        }
-      }
+      insertStateIfFound(SD()._imagestates, pCopyImageInfo->srcImage, bindingImages);
+
       // Dst image
       if (dstIt != SD()._imagestates.end()) {
-        SD().bindingImages[commandBuffer].insert(dstIt->second);
+        bindingImages.insert(dstIt->second);
       }
     }
 
@@ -4743,7 +4635,7 @@ inline void vkCmdCopyImage2_SD(VkCommandBuffer commandBuffer,
       return;
     }
 
-    SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back(
+    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back(
         (uint64_t)pCopyImageInfo->dstImage, true);
 
     if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
@@ -4753,23 +4645,24 @@ inline void vkCmdCopyImage2_SD(VkCommandBuffer commandBuffer,
     }
 
     ProcessDestinationImage(dstIt->second, pCopyImageInfo->regionCount, pCopyImageInfo->pRegions,
-                            SD().updatedMemoryInCmdBuffer[commandBuffer]);
+                            SD().updatedMemoryInCmdBuffer[cmdBuf]);
   }
 }
 
-inline void vkCmdCopyImage2KHR_SD(VkCommandBuffer commandBuffer,
-                                  const VkCopyImageInfo2* pCopyImageInfo) {
-  vkCmdCopyImage2_SD(commandBuffer, pCopyImageInfo);
+inline void vkCmdCopyImage2KHR_SD(VkCommandBuffer cmdBuf, const VkCopyImageInfo2* pCopyImageInfo) {
+  vkCmdCopyImage2_SD(cmdBuf, pCopyImageInfo);
 }
 
-inline void vkCmdCopyImageToBuffer_SD(VkCommandBuffer commandBuffer,
-                                      VkImage srcImage,
-                                      VkImageLayout srcImageLayout,
-                                      VkBuffer dstBuffer,
-                                      uint32_t regionCount,
-                                      const VkBufferImageCopy* pRegions) {
-  if (Config::Get().IsPlayer() && captureRenderPassesResources() && (dstBuffer != NULL)) {
-    SD()._commandbufferstates[commandBuffer]->resourceWriteBuffers[dstBuffer] =
+namespace {
+
+template <typename REGION_TYPE>
+void CopyImageToBufferHelper(VkCommandBuffer cmdBuf,
+                             VkImage srcImage,
+                             VkBuffer dstBuffer,
+                             uint32_t regionCount,
+                             const REGION_TYPE* pRegions) {
+  if (Config::Get().IsPlayer() && captureRenderPassesResources() && (dstBuffer != VK_NULL_HANDLE)) {
+    SD()._commandbufferstates[cmdBuf]->resourceWriteBuffers[dstBuffer] =
         VULKAN_BLIT_DESTINATION_BUFFER;
   }
   if (Config::Get().IsRecorder()) {
@@ -4779,11 +4672,11 @@ inline void vkCmdCopyImageToBuffer_SD(VkCommandBuffer commandBuffer,
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
       // Src image
       if (srcIt != SD()._imagestates.end()) {
-        SD().bindingImages[commandBuffer].insert(srcIt->second);
+        SD().bindingImages[cmdBuf].insert(srcIt->second);
       }
       // Dst buffer
       if (dstIt != SD()._bufferstates.end()) {
-        SD().bindingBuffers[commandBuffer].insert(dstIt->second);
+        SD().bindingBuffers[cmdBuf].insert(dstIt->second);
       }
     }
 
@@ -4791,8 +4684,7 @@ inline void vkCmdCopyImageToBuffer_SD(VkCommandBuffer commandBuffer,
       return;
     }
 
-    SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back((uint64_t)dstBuffer,
-                                                                            false);
+    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstBuffer, false);
 
     if (Config::Get().vulkan.recorder.memorySegmentSize ||
         Config::Get().vulkan.recorder.shadowMemory) {
@@ -4800,115 +4692,112 @@ inline void vkCmdCopyImageToBuffer_SD(VkCommandBuffer commandBuffer,
 
       if (bufferBinding) {
         const auto& bufferState = dstIt->second;
-        auto device = bufferState->deviceStateStore->deviceHandle;
-        VkDeviceMemory deviceMemory = bufferBinding->deviceMemoryStateStore->deviceMemoryHandle;
+        const auto memory = bufferBinding->deviceMemoryStateStore->deviceMemoryHandle;
 
         if ((srcIt != SD()._imagestates.end()) && srcIt->second->imageCreateInfoData.Value() &&
             (srcIt->second->imageCreateInfoData.Value()->tiling == VK_IMAGE_TILING_LINEAR)) {
           for (uint32_t i = 0; i < regionCount; i++) {
-            VkImageSubresource imageSubresource = {
-                pRegions[i].imageSubresource.aspectMask,    // VkImageAspectFlags aspectMask;
-                pRegions[i].imageSubresource.mipLevel,      // uint32_t mipLevel;
-                pRegions[i].imageSubresource.baseArrayLayer // uint32_t arrayLayer;
-            };
+            const auto imageSubresource = getImageSubresource(pRegions[i]);
 
             VkSubresourceLayout subLayout;
-            drvVk.vkGetImageSubresourceLayout(device, srcImage, &imageSubresource, &subLayout);
+            drvVk.vkGetImageSubresourceLayout(bufferState->deviceStateStore->deviceHandle, srcImage,
+                                              &imageSubresource, &subLayout);
 
-            VkDeviceSize dstOffsetFinal = bufferBinding->memoryOffset + pRegions[i].bufferOffset;
-            VkDeviceSize dstSize = subLayout.size;
-
-            SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(deviceMemory, dstOffsetFinal,
-                                                                  dstSize);
+            const auto offset = bufferBinding->memoryOffset + pRegions[i].bufferOffset;
+            const auto size = subLayout.size;
+            SD().updatedMemoryInCmdBuffer[cmdBuf].AddToMap(memory, offset, size);
           }
         } else {
-          VkDeviceSize dstOffsetFinal = bufferBinding->memoryOffset;
-          VkDeviceSize dstSize = bufferState->bufferCreateInfoData.Value()->size;
-
-          SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(deviceMemory, dstOffsetFinal,
-                                                                dstSize);
+          const auto offset = bufferBinding->memoryOffset;
+          const auto size = bufferState->bufferCreateInfoData.Value()->size;
+          SD().updatedMemoryInCmdBuffer[cmdBuf].AddToMap(memory, offset, size);
         }
       }
     }
   }
 }
 
-inline void vkCmdCopyImageToBuffer2_SD(VkCommandBuffer commandBuffer,
+} // namespace
+
+inline void vkCmdCopyImageToBuffer_SD(VkCommandBuffer cmdBuf,
+                                      VkImage srcImage,
+                                      VkImageLayout srcImageLayout,
+                                      VkBuffer dstBuffer,
+                                      uint32_t regionCount,
+                                      const VkBufferImageCopy* pRegions) {
+  CopyImageToBufferHelper(cmdBuf, srcImage, dstBuffer, regionCount, pRegions);
+}
+
+inline void vkCmdCopyImageToBuffer2_SD(VkCommandBuffer cmdBuf,
                                        const VkCopyImageToBufferInfo2* pCopyImageToBufferInfo) {
-  if (Config::Get().IsPlayer() && captureRenderPassesResources() &&
-      (pCopyImageToBufferInfo->dstBuffer != VK_NULL_HANDLE)) {
-    SD()._commandbufferstates[commandBuffer]
-        ->resourceWriteBuffers[pCopyImageToBufferInfo->dstBuffer] = VULKAN_BLIT_DESTINATION_BUFFER;
+  if (!pCopyImageToBufferInfo) {
+    return;
   }
-  if (Config::Get().IsRecorder() && pCopyImageToBufferInfo) {
-    const auto srcIt = SD()._imagestates.find(pCopyImageToBufferInfo->srcImage);
-    const auto dstIt = SD()._bufferstates.find(pCopyImageToBufferInfo->dstBuffer);
+
+  CopyImageToBufferHelper(cmdBuf, pCopyImageToBufferInfo->srcImage,
+                          pCopyImageToBufferInfo->dstBuffer, pCopyImageToBufferInfo->regionCount,
+                          pCopyImageToBufferInfo->pRegions);
+}
+
+inline void vkCmdCopyImageToBuffer2KHR_SD(VkCommandBuffer cmdBuf,
+                                          const VkCopyImageToBufferInfo2* pCopyImageToBufferInfo) {
+  if (!pCopyImageToBufferInfo) {
+    return;
+  }
+
+  CopyImageToBufferHelper(cmdBuf, pCopyImageToBufferInfo->srcImage,
+                          pCopyImageToBufferInfo->dstBuffer, pCopyImageToBufferInfo->regionCount,
+                          pCopyImageToBufferInfo->pRegions);
+}
+
+namespace {
+
+template <typename REGION_TYPE>
+void BlitOrResolveImageHelper(VkCommandBuffer cmdBuf,
+                              VkImage srcImage,
+                              VkImage dstImage,
+                              uint32_t regionCount,
+                              const REGION_TYPE* pRegions) {
+  if (Config::Get().IsPlayer() && captureRenderPassesResources() && (dstImage != VK_NULL_HANDLE)) {
+    SD()._commandbufferstates[cmdBuf]->resourceWriteImages[dstImage] =
+        VULKAN_BLIT_DESTINATION_IMAGE;
+  }
+
+  if (Config::Get().IsRecorder()) {
+    const auto dstIt = SD()._imagestates.find(dstImage);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
+      auto& bindingImages = SD().bindingImages[cmdBuf];
+
       // Src image
-      if (srcIt != SD()._imagestates.end()) {
-        SD().bindingImages[commandBuffer].insert(srcIt->second);
-      }
-      // Dst buffer
-      if (dstIt != SD()._bufferstates.end()) {
-        SD().bindingBuffers[commandBuffer].insert(dstIt->second);
+      insertStateIfFound(SD()._imagestates, srcImage, bindingImages);
+
+      // Dst image
+      if (dstIt != SD()._imagestates.end()) {
+        bindingImages.insert(dstIt->second);
       }
     }
 
-    if (dstIt == SD()._bufferstates.end()) {
+    if (dstIt == SD()._imagestates.end()) {
       return;
     }
 
-    SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back(
-        (uint64_t)pCopyImageToBufferInfo->dstBuffer, false);
+    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstImage, true);
 
-    if (Config::Get().vulkan.recorder.memorySegmentSize ||
-        Config::Get().vulkan.recorder.shadowMemory) {
-      const auto& bufferBinding = dstIt->second->binding;
-
-      if (bufferBinding) {
-        const auto& bufferState = dstIt->second;
-        VkDeviceMemory dstDeviceMemory = bufferBinding->deviceMemoryStateStore->deviceMemoryHandle;
-
-        if ((srcIt != SD()._imagestates.end()) && srcIt->second->imageCreateInfoData.Value() &&
-            (srcIt->second->imageCreateInfoData.Value()->tiling == VK_IMAGE_TILING_LINEAR)) {
-          for (uint32_t i = 0; i < pCopyImageToBufferInfo->regionCount; i++) {
-            VkImageSubresource imageSubresource = {
-                pCopyImageToBufferInfo->pRegions[i]
-                    .imageSubresource.aspectMask, // VkImageAspectFlags aspectMask;
-                pCopyImageToBufferInfo->pRegions[i].imageSubresource.mipLevel, // uint32_t mipLevel;
-                pCopyImageToBufferInfo->pRegions[i]
-                    .imageSubresource.baseArrayLayer // uint32_t arrayLayer;
-            };
-
-            VkSubresourceLayout subLayout;
-            drvVk.vkGetImageSubresourceLayout(bufferState->deviceStateStore->deviceHandle,
-                                              pCopyImageToBufferInfo->srcImage, &imageSubresource,
-                                              &subLayout);
-
-            VkDeviceSize dstOffsetFinal =
-                bufferBinding->memoryOffset + pCopyImageToBufferInfo->pRegions[i].bufferOffset;
-            VkDeviceSize dstSize = subLayout.size;
-            SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                                  dstSize);
-          }
-        } else {
-          VkDeviceSize dstOffsetFinal = bufferBinding->memoryOffset;
-          VkDeviceSize dstSize = bufferState->bufferCreateInfoData.Value()->size;
-          SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(dstDeviceMemory, dstOffsetFinal,
-                                                                dstSize);
-        }
-      }
+    if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
+         !Config::Get().vulkan.recorder.shadowMemory) ||
+        !dstIt->second->binding) {
+      return;
     }
+
+    ProcessDestinationImage(dstIt->second, regionCount, pRegions,
+                            SD().updatedMemoryInCmdBuffer[cmdBuf]);
   }
 }
 
-inline void vkCmdCopyImageToBuffer2KHR_SD(VkCommandBuffer commandBuffer,
-                                          const VkCopyImageToBufferInfo2* pCopyImageToBufferInfo) {
-  vkCmdCopyImageToBuffer2_SD(commandBuffer, pCopyImageToBufferInfo);
-}
+} // namespace
 
-inline void vkCmdBlitImage_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdBlitImage_SD(VkCommandBuffer cmdBuf,
                               VkImage srcImage,
                               VkImageLayout srcImageLayout,
                               VkImage dstImage,
@@ -4916,185 +4805,39 @@ inline void vkCmdBlitImage_SD(VkCommandBuffer commandBuffer,
                               uint32_t regionCount,
                               const VkImageBlit* pRegions,
                               VkFilter filter) {
-  if (Config::Get().IsPlayer() && captureRenderPassesResources() && (dstImage != VK_NULL_HANDLE)) {
-    SD()._commandbufferstates[commandBuffer]->resourceWriteImages[dstImage] =
-        VULKAN_BLIT_DESTINATION_IMAGE;
-  }
-  if (Config::Get().IsRecorder()) {
-    const auto dstIt = SD()._imagestates.find(dstImage);
-
-    if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      // Src image
-      {
-        const auto srcIt = SD()._imagestates.find(srcImage);
-        if (srcIt != SD()._imagestates.end()) {
-          SD().bindingImages[commandBuffer].insert(srcIt->second);
-        }
-      }
-      // Dst image
-      {
-        if (dstIt != SD()._imagestates.end()) {
-          SD().bindingImages[commandBuffer].insert(dstIt->second);
-        }
-      }
-    }
-
-    if (dstIt == SD()._imagestates.end()) {
-      return;
-    }
-
-    SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back((uint64_t)dstImage,
-                                                                            true);
-
-    if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
-         !Config::Get().vulkan.recorder.shadowMemory) ||
-        !dstIt->second->binding) {
-      return;
-    }
-
-    ProcessDestinationImage(dstIt->second, regionCount, pRegions,
-                            SD().updatedMemoryInCmdBuffer[commandBuffer]);
-  }
+  BlitOrResolveImageHelper(cmdBuf, srcImage, dstImage, regionCount, pRegions);
 }
 
-inline void vkCmdBlitImage2_SD(VkCommandBuffer commandBuffer,
-                               const VkBlitImageInfo2* pBlitInfoImage) {
-  if (Config::Get().IsPlayer() && captureRenderPassesResources() &&
-      (pBlitInfoImage->dstImage != VK_NULL_HANDLE)) {
-    SD()._commandbufferstates[commandBuffer]->resourceWriteImages[pBlitInfoImage->dstImage] =
-        VULKAN_BLIT_DESTINATION_IMAGE;
+inline void vkCmdBlitImage2_SD(VkCommandBuffer cmdBuf, const VkBlitImageInfo2* pBlitInfoImage) {
+  if (!pBlitInfoImage) {
+    return;
   }
-  if (Config::Get().IsRecorder()) {
-    const auto dstIt = SD()._imagestates.find(pBlitInfoImage->dstImage);
 
-    if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      // Src image
-      {
-        const auto srcIt = SD()._imagestates.find(pBlitInfoImage->srcImage);
-        if (srcIt != SD()._imagestates.end()) {
-          SD().bindingImages[commandBuffer].insert(srcIt->second);
-        }
-      }
-      // Dst image
-      {
-        if (dstIt != SD()._imagestates.end()) {
-          SD().bindingImages[commandBuffer].insert(dstIt->second);
-        }
-      }
-    }
-
-    if (dstIt == SD()._imagestates.end()) {
-      return;
-    }
-
-    SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back(
-        (uint64_t)pBlitInfoImage->dstImage, true);
-
-    if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
-         !Config::Get().vulkan.recorder.shadowMemory) ||
-        !dstIt->second->binding) {
-      return;
-    }
-
-    ProcessDestinationImage(dstIt->second, pBlitInfoImage->regionCount, pBlitInfoImage->pRegions,
-                            SD().updatedMemoryInCmdBuffer[commandBuffer]);
-  }
+  BlitOrResolveImageHelper(cmdBuf, pBlitInfoImage->srcImage, pBlitInfoImage->dstImage,
+                           pBlitInfoImage->regionCount, pBlitInfoImage->pRegions);
 }
 
-inline void vkCmdResolveImage_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdResolveImage_SD(VkCommandBuffer cmdBuf,
                                  VkImage srcImage,
                                  VkImageLayout srcImageLayout,
                                  VkImage dstImage,
                                  VkImageLayout dstImageLayout,
                                  uint32_t regionCount,
                                  const VkImageResolve* pRegions) {
-  if (Config::Get().IsPlayer() && captureRenderPassesResources() && (dstImage != VK_NULL_HANDLE)) {
-    SD()._commandbufferstates[commandBuffer]->resourceWriteImages[dstImage] = VULKAN_RESOLVE_IMAGE;
-  }
-  if (Config::Get().IsRecorder()) {
-    const auto dstIt = SD()._imagestates.find(dstImage);
-
-    if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      // Src image
-      {
-        const auto srcIt = SD()._imagestates.find(srcImage);
-        if (srcIt != SD()._imagestates.end()) {
-          SD().bindingImages[commandBuffer].insert(srcIt->second);
-        }
-      }
-      // Dst image
-      {
-        if (dstIt != SD()._imagestates.end()) {
-          SD().bindingImages[commandBuffer].insert(dstIt->second);
-        }
-      }
-    }
-
-    if (dstIt == SD()._imagestates.end()) {
-      return;
-    }
-
-    SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back((uint64_t)dstImage,
-                                                                            true);
-
-    if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
-         !Config::Get().vulkan.recorder.shadowMemory) ||
-        !dstIt->second->binding) {
-      return;
-    }
-
-    ProcessDestinationImage(dstIt->second, regionCount, pRegions,
-                            SD().updatedMemoryInCmdBuffer[commandBuffer]);
-  }
+  BlitOrResolveImageHelper(cmdBuf, srcImage, dstImage, regionCount, pRegions);
 }
 
-inline void vkCmdResolveImage2_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdResolveImage2_SD(VkCommandBuffer cmdBuf,
                                   const VkResolveImageInfo2* pResolveImageInfo) {
-  if (Config::Get().IsPlayer() && captureRenderPassesResources() &&
-      (pResolveImageInfo->dstImage != VK_NULL_HANDLE)) {
-    SD()._commandbufferstates[commandBuffer]->resourceWriteImages[pResolveImageInfo->dstImage] =
-        VULKAN_RESOLVE_IMAGE;
+  if (!pResolveImageInfo) {
+    return;
   }
 
-  if (Config::Get().IsRecorder()) {
-    const auto dstIt = SD()._imagestates.find(pResolveImageInfo->dstImage);
-
-    if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      // Src image
-      {
-        const auto srcIt = SD()._imagestates.find(pResolveImageInfo->srcImage);
-        if (srcIt != SD()._imagestates.end()) {
-          SD().bindingImages[commandBuffer].insert(srcIt->second);
-        }
-      }
-      // Dst image
-      {
-        if (dstIt != SD()._imagestates.end()) {
-          SD().bindingImages[commandBuffer].insert(dstIt->second);
-        }
-      }
-    }
-
-    if (dstIt == SD()._imagestates.end()) {
-      return;
-    }
-
-    SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back(
-        (uint64_t)pResolveImageInfo->dstImage, true);
-
-    if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
-         !Config::Get().vulkan.recorder.shadowMemory) ||
-        !dstIt->second->binding) {
-      return;
-    }
-
-    ProcessDestinationImage(dstIt->second, pResolveImageInfo->regionCount,
-                            pResolveImageInfo->pRegions,
-                            SD().updatedMemoryInCmdBuffer[commandBuffer]);
-  }
+  BlitOrResolveImageHelper(cmdBuf, pResolveImageInfo->srcImage, pResolveImageInfo->dstImage,
+                           pResolveImageInfo->regionCount, pResolveImageInfo->pRegions);
 }
 
-inline void vkCmdClearColorImage_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdClearColorImage_SD(VkCommandBuffer cmdBuf,
                                     VkImage image,
                                     VkImageLayout imageLayout,
                                     const VkClearColorValue* pColor,
@@ -5105,11 +4848,11 @@ inline void vkCmdClearColorImage_SD(VkCommandBuffer commandBuffer,
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
       if (dstIt != SD()._imagestates.end()) {
-        SD().bindingImages[commandBuffer].insert(dstIt->second);
+        SD().bindingImages[cmdBuf].insert(dstIt->second);
       }
     }
 
-    SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back((uint64_t)image, true);
+    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)image, true);
 
     if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
          !Config::Get().vulkan.recorder.shadowMemory) ||
@@ -5119,27 +4862,24 @@ inline void vkCmdClearColorImage_SD(VkCommandBuffer commandBuffer,
 
     const auto& imageState = dstIt->second;
 
-    if (imageState->binding) {
-      VkMemoryRequirements memRequirements = {};
-      drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle, image,
-                                         &memRequirements);
+    VkMemoryRequirements memRequirements = {};
+    drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle, image,
+                                       &memRequirements);
 
-      //TODO : call vkGetImageSubresourceLayout when tiling is Linear
+    //TODO : call vkGetImageSubresourceLayout when tiling is Linear
 
-      VkDeviceSize dstOffset = imageState->binding->memoryOffset;
-      VkDeviceSize dstSize = memRequirements.size;
-      VkDeviceMemory deviceMemory = imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-
-      SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(deviceMemory, dstOffset, dstSize);
-    }
+    const auto memory = imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
+    const auto offset = imageState->binding->memoryOffset;
+    const auto size = memRequirements.size;
+    SD().updatedMemoryInCmdBuffer[cmdBuf].AddToMap(memory, offset, size);
   }
 
   if (captureRenderPasses()) {
-    SD()._commandbufferstates[commandBuffer]->clearedImages.insert(image);
+    SD()._commandbufferstates[cmdBuf]->clearedImages.insert(image);
   }
 }
 
-inline void vkCmdClearDepthStencilImage_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdClearDepthStencilImage_SD(VkCommandBuffer cmdBuf,
                                            VkImage image,
                                            VkImageLayout imageLayout,
                                            const VkClearDepthStencilValue* pDepthStencil,
@@ -5150,11 +4890,11 @@ inline void vkCmdClearDepthStencilImage_SD(VkCommandBuffer commandBuffer,
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
       if (dstIt != SD()._imagestates.end()) {
-        SD().bindingImages[commandBuffer].insert(dstIt->second);
+        SD().bindingImages[cmdBuf].insert(dstIt->second);
       }
     }
 
-    SD()._commandbufferstates[commandBuffer]->touchedResources.emplace_back((uint64_t)image, true);
+    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)image, true);
 
     if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
          !Config::Get().vulkan.recorder.shadowMemory) ||
@@ -5171,25 +4911,25 @@ inline void vkCmdClearDepthStencilImage_SD(VkCommandBuffer commandBuffer,
 
       //TODO : call vkGetImageSubresourceLayout when tiling is Linear
 
-      VkDeviceSize dstOffset = imageState->binding->memoryOffset;
-      VkDeviceSize dstSize = memRequirements.size;
-      VkDeviceMemory deviceMemory = imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-      SD().updatedMemoryInCmdBuffer[commandBuffer].AddToMap(deviceMemory, dstOffset, dstSize);
+      const auto memory = imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
+      const auto offset = imageState->binding->memoryOffset;
+      const auto size = memRequirements.size;
+      SD().updatedMemoryInCmdBuffer[cmdBuf].AddToMap(memory, offset, size);
     }
   }
 
   if (captureRenderPasses()) {
-    SD()._commandbufferstates[commandBuffer]->clearedImages.insert(image);
+    SD()._commandbufferstates[cmdBuf]->clearedImages.insert(image);
   }
 }
 
-inline void vkCmdClearAttachments_SD(VkCommandBuffer commandBuffer,
+inline void vkCmdClearAttachments_SD(VkCommandBuffer cmdBuf,
                                      uint32_t attachmentCount,
                                      const VkClearAttachment* pAttachments,
                                      uint32_t rectCount,
                                      const VkClearRect* pRects) {
   if (captureRenderPasses()) {
-    const auto& commandBufferState = SD()._commandbufferstates[commandBuffer];
+    const auto& commandBufferState = SD()._commandbufferstates[cmdBuf];
     for (uint32_t i = 0; i < attachmentCount; ++i) {
       if (commandBufferState->beginRenderPassesList.size()) {
         const auto& framebufferState =
@@ -5224,11 +4964,11 @@ inline void vkCmdClearAttachments_SD(VkCommandBuffer commandBuffer,
           if (pAttachments[i].aspectMask == aspect) {
             if (aspect == VK_IMAGE_ASPECT_COLOR_BIT) {
               if (pAttachments[i].colorAttachment == colorAttIndex) {
-                SD()._commandbufferstates[commandBuffer]->clearedImages.insert(imageHandle);
+                SD()._commandbufferstates[cmdBuf]->clearedImages.insert(imageHandle);
               }
               colorAttIndex++;
             } else {
-              SD()._commandbufferstates[commandBuffer]->clearedImages.insert(imageHandle);
+              SD()._commandbufferstates[cmdBuf]->clearedImages.insert(imageHandle);
             }
           }
         }
