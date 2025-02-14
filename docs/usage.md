@@ -18,15 +18,15 @@ You can find all the binaries in the output folders of GITS. After completing th
 
 The **Recorder** is split into multiple folders depending on the API you wish to record:
 
-
-| API                          | Windows             | Unix          |
-| ---------------------------- | ------------------- | ------------- |
-| :simple-intel: LevelZero     | `FilesToCopyL0`     | `LevelZero`   |
-| :simple-opengl: OpenGL       | `FilesToCopyOGL`    | `OpenGL`      |
-| :simple-opengl: OpenGL ES    | `FilesToCopyES`     | `OpenGL`      |
-| :simple-opengl: OpenCL       | `FilesToCopyOCL`    | `OpenCL`      |
-| :simple-vulkan: Vulkan       | `FilesToCopyVulkan` | `Vulkan`      |
-| :simple-vulkan: Vulkan Layer | `VulkanLayer`       | `VulkanLayer` |
+| API                            | Windows              | Unix          |
+| ------------------------------ | -------------------- | ------------- |
+| :material-microsoft: DirectX12 | `FilesToCopyDirectX` | ---           |
+| :simple-intel: LevelZero       | `FilesToCopyL0`      | `LevelZero`   |
+| :simple-opengl: OpenGL         | `FilesToCopyOGL`     | `OpenGL`      |
+| :simple-opengl: OpenGL ES      | `FilesToCopyES`      | `OpenGL`      |
+| :simple-opengl: OpenCL         | `FilesToCopyOCL`     | `OpenCL`      |
+| :simple-vulkan: Vulkan         | `FilesToCopyVulkan`  | `Vulkan`      |
+| :simple-vulkan: Vulkan Layer   | `VulkanLayer`        | `VulkanLayer` |
 
 ## Record
 

@@ -52,7 +52,7 @@ pip install -r Scripts/docs/requirements.txt
 
 Below you can find examples how to build **GITS** for the most common cases. For other configurations (e.g. 32-bit binaries, unusual Python locations, different build systems like Ninja...) please check the relevant documentation on how you need to adjust the commands.
 
-
+Since **DirectX12** support is still in development you need to **explicitly enable it** using the following define: `-DWITH_DIRECTX=ON`.
 
 === "Windows 64-bit Rel."
 	```batch
@@ -62,7 +62,13 @@ Below you can find examples how to build **GITS** for the most common cases. For
 	cmake --build . --config Release
 	```
 
-
+=== "Windows 64-bit Rel. with DirectX12"
+	```batch
+	mkdir build
+	cd build
+	cmake -A x64 ..\ -DWITH_DIRECTX=ON
+	cmake --build . --config Release
+	```
 
 === "Linux 64-bit Rel."
 	```bash
