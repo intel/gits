@@ -125,6 +125,9 @@ Common:
     LibL0: 'libze_loader.so.1'
 %endif
     StreamPath: ''
+%if platform == "win32":
+    SubcapturePath: '${install_path}\dump\%f%_%r%'
+%endif
     TokenBurstLimit: 10000
     TokenBurstNum: 5
     ExitFrame: 1000000
@@ -180,6 +183,99 @@ Common:
       Height: 0
 %endif
 
+%if platform == "win32":
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#                                                         #
+#                     DirectX SETTINGS                    #
+#                                                         #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+DirectX:
+  Capture:
+    Record: true  # Record the API commands
+    ShadowMemory: false
+    CaptureIntelExtensions: true  # If false Intel Extensions capture is done at D3D12 level
+    CaptureXess: true  # If false XeSS capture is done on Intel Extensions level
+    CaptureDirectML: true  # If false DirectML capture is done on D3D12 level
+    CaptureDirectStorage: false  # If false DirectStorage capture is done on D3D12 level
+    DebugLayer: false  # Enable the DirectX Debug Layer
+    Plugins: []
+    TokenBurstChunkSize: 5242880  # default size: 5 MB
+
+  Playback:
+    Execute: true  # Execute the API commands (driver / null driver)
+    DebugLayer: false  # Enable the DirectX Debug Layer
+    WaitOnEventCompletion: false  # CPU waits for GPU on SetEventOnCompletion and SetEventOnMultipleFenceCompletion
+    UseCopyQueueOnRestore: false  # Use a D3D12_COMMAND_LIST_TYPE_COPY to restore resource states
+    UavBarrierAfterCopyRaytracingASWorkaround: false  # Adds UAV barrier for all resources after CopyRaytracingAccelerationStructure
+    MultithreadedShaderCompilation: true  # Usa a thread pool for D3D12 methods which cause hardware shader compilation
+    Plugins: []
+    TokenBurstChunkSize: 5242880 # default size: 5 MB
+    AdapterOverride:
+      # Select the adapter used on D3D12CreateDevice
+      # Set the Vendor and Index for that vendor (or global index if Vendor is empty)
+      # For example: Index: 1, Vendor: "Intel" will select the second Intel adapter enumerated 
+      Enabled: false
+      Index: 0
+      Vendor: ''  # Empty / AMD / NVIDIA / Intel
+
+  Features:
+    Trace:
+      Enabled: false
+      FlushMethod: 'ipc'  # off / ipc (flush into shared memory and save to file from a different process) / file (flush directly into a file)
+      Print:
+        PostCalls: true
+        PreCalls: false
+        DebugLayerWarnings: false
+        GPUExecution: false
+
+    Subcapture:
+      Enabled: false
+      SerializeAccelerationStructures: false # if true BLASes are recreated with serialize/deserialize mode of CopyRaytracingAccelerationStructure
+      RestoreTLASes: false # if false TLASes are not recreated
+      Frames: ''  # Frame range. For example '3-6'
+
+    Screenshots:
+      Enabled: false
+      Frames: ''  # Frame range (supports multiple ranges and strides). For example '3-6:2,9'
+      Format: 'png'  # png / jpg
+
+    ResourcesDump:
+      Enabled: false
+      ResourceKeys: ''  # Comma separated list of resource keys
+      CommandKeys: ''  # Comma separated list of command lists call keys
+      TextureRescaleRange: ''  # Texture rescaling factor range between 0.0-1.0, if empty no rescaling. For example '0-0.5'
+      Format: 'png'  # png / jpg
+
+    RenderTargetsDump:
+      Enabled: false
+      Frames: ''  # Frame range. For example '3-6'
+      Draws: ''  # Draw range (supports multiple ranges and strides). For example '1-100:5'
+      Format: 'png'  # png / jpg
+
+    RaytracingDump:
+      BindingTablesPre: false  # Dumps binding table buffers before patching for given DispatchRays calls
+      BindingTablesPost: false  # Dumps binding table buffers after patching for given DispatchRays calls
+      InstancesPre: false  # Dumps instances buffers before patching for given BuildRaytracingAccelerationStructure TLAS calls
+      InstancesPost: false  # Dumps instances buffers after patching for given BuildRaytracingAccelerationStructure TLAS calls
+      BLASes: false  # Dumps bottom level acceleration structures for given BuildRaytracingAccelerationStructure BLAS calls
+      CommandKeys: ''  # Comma separated list of DispatchRays or BuildRaytracingAccelerationStructure call keys, empty list means all such calls
+
+    ExecuteIndirectDump:
+      ArgumentBufferPre: false  # Dumps arguments buffers for specified ExecuteIndirect calls before patching
+      ArgumentBufferPost: false  # Dumps arguments buffers for specified ExecuteIndirect calls after patching
+      CommandKeys: ''  # Comma separated list of ExecuteIndirect call keys
+
+    SkipCalls:
+      Enabled: false
+      CommandKeys: ''  # Comma separated list of call keys to skip
+
+    Portability:
+      Enabled: false
+      StorePlacedResourceDataOnCapture : true  # Enable storing placed resources data while capturing
+      StorePlacedResourceDataOnPlayback : false  # Request storing placed resources data while playing back
+
+%endif
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #                                                         #

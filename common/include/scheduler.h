@@ -47,6 +47,10 @@ private:
   Task<CTokenList> _tokenShredder;
 
   CTokenList _tokenList; /**< @brief list of registered function calls */
+#ifdef GITS_PLATFORM_WINDOWS
+  uint64_t _chunkSize;
+  uint64_t _currentChunkSize;
+#endif
 
   CTokenList::iterator _nextToPlay;
   unsigned _tokenLimit;
@@ -63,7 +67,13 @@ private:
   CToken* Token();
 
 public:
+#if defined GITS_PLATFORM_WINDOWS
+  CScheduler(unsigned tokenLimit,
+             unsigned tokenBurstNum = 5,
+             uint64_t tokenBurstChunkSize = 5242880);
+#else
   CScheduler(unsigned tokenLimit, unsigned tokenBurstNum = 5);
+#endif
   CScheduler(const CScheduler&) = delete;
   CScheduler& operator=(const CScheduler&) = delete;
   CScheduler(CScheduler&&) = delete;

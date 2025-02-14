@@ -27,6 +27,7 @@ public:
     Vulkan,
     OpenCL,
     LevelZero,
+    DirectX,
   };
   enum TApiType {
     A3D,
@@ -42,6 +43,7 @@ public:
       switch (api) {
       case OpenGL:
       case Vulkan:
+      case DirectX:
         _type = A3D;
         break;
       case OpenCL:

@@ -55,6 +55,7 @@ public:
     ID_VULKAN = 10 * 0x10000,
     ID_LEVELZERO = 11 * 0x10000,
     ID_OCLOC = 12 * 0x10000,
+    ID_DirectX = 13 * 0x10000,
   };
   virtual ~CToken() = 0;
 

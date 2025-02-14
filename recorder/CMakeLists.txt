@@ -31,6 +31,10 @@ if(MSVC)
     file(APPEND ${recorder_DEF}
       "  GITSRecorderOcloc\n")
   endif()
+  if(WITH_DIRECTX)
+    file(APPEND ${recorder_DEF}
+      "  GITSRecorderD3D12\n")
+  endif()
 endif()
 
 list(APPEND recorder_SOURCES
@@ -74,6 +78,19 @@ endif()
 if(WITH_OCLOC)
   set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} ocloc_recorder)
   set(recorderCommonLibs ${recorderCommonLibs} ocloc_common)
+endif()
+if(WITH_DIRECTX)
+  set(recorderIfaceLibs 
+  ${recorderIfaceLibs}
+  ${libPrefix}
+  d3d12.lib
+  dxgi.lib
+  DirectX_recorder
+  detours
+  directxtex
+  ${DML_DIR}/bin/x64-win/DirectML.lib
+  ${DSTORAGE_DIR}/native/lib/x64/dstorage.lib
+  )
 endif()
 
 if(UNIX)

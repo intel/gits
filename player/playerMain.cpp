@@ -36,6 +36,9 @@
 #if defined WITH_OCLOC
 #include "oclocLibrary.h"
 #endif
+#if defined WITH_DIRECTX
+#include "directXLibrary.h"
+#endif
 
 #include "player.h"
 #include "exception.h"
@@ -50,6 +53,9 @@
 #include "playerOptions.h"
 #include "hashing.h"
 #include "message_pump.h"
+#if defined GITS_PLATFORM_WINDOWS
+#include "recorder.h"
+#endif
 
 #include <sstream>
 #include <iostream>
@@ -124,6 +130,9 @@ int MainBody(int argc, char* argv[]) {
     Log(ERR) << "Please run player with the \"--help\" argument to see usage info.";
     return 1;
   }
+#ifdef GITS_PLATFORM_WINDOWS
+  Config::PrepareSubcapturePath();
+#endif
   const Config& cfg = Config::Get();
 
   // Print version.
@@ -222,6 +231,9 @@ int MainBody(int argc, char* argv[]) {
 #ifdef WITH_OCLOC
     inst.Register(std::shared_ptr<CLibrary>(new ocloc::CLibrary));
 #endif
+#if defined WITH_DIRECTX
+    inst.Register(std::shared_ptr<CLibrary>(new DirectX::DirectXLibrary));
+#endif
 
     // create player
     CPlayer player;
@@ -229,6 +241,12 @@ int MainBody(int argc, char* argv[]) {
 
     // load function calls from a file
     player.Load(cfg.common.player.streamPath);
+#if defined WITH_DIRECTX
+    if (cfg.directx.features.subcapture.enabled) {
+      CGits::Instance().FileRecorder().SetProperty(
+          "diag.original_app.name", CGits::Instance().FilePlayer().GetApplicationName());
+    }
+#endif
 
     inst.ResourceManagerInit(cfg.common.player.streamDir);
     if (cfg.common.player.diags) {
@@ -337,6 +355,12 @@ int MainBody(int argc, char* argv[]) {
     }
   }
 
+#if defined GITS_PLATFORM_WINDOWS
+  if (Config::Get().directx.features.subcapture.enabled &&
+      CRecorder::Instance().IsMarkedForDeletion()) {
+    CRecorder::Instance().Close();
+  }
+#endif
   CGits::Instance().Dispose();
 
   if (Config::Get().common.player.waitForEnter) {
@@ -370,6 +394,9 @@ LONG WINAPI ExceptionFilter(PEXCEPTION_POINTERS exceptionPtr) {
 int main2(int argc, char* argv[]) {
   using namespace gits;
 #ifdef GITS_PLATFORM_WINDOWS
+#if _DEBUG
+  MessageBox(0, "Waiting for debugger...", "Waiting for debugger...", 0);
+#endif
   // Prevent OS from scaling our windows.
   SetProcessDPIAware();
 #ifdef _NDEBUG

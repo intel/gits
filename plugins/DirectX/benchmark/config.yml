@@ -1,0 +1,15 @@
+## ===================== begin_copyright_notice ============================
+##
+## Copyright (C) 2023-2025 Intel Corporation
+##
+## SPDX-License-Identifier: MIT
+##
+## ===================== end_copyright_notice ==============================
+
+Info:
+  Name: 'Benchmark'
+  Description: 'Creates a .csv file with the present-to-present frame times (CPU) for the stream.'
+
+Config:
+  Enabled: false
+  Output: 'benchmarkCPUPerFrame.csv'

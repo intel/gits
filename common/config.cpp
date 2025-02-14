@@ -227,6 +227,92 @@ void gits::Config::SetCommon(const YAML::Node& commonYaml) {
   }
 }
 
+#ifdef GITS_PLATFORM_WINDOWS
+void gits::Config::SetDirectX(const YAML::Node& DirectXYaml) {
+  // Capture
+  auto& cfgDirectXCapture = directx.capture;
+  cfgDirectXCapture = DirectXYaml["Capture"].as<Config::DirectX::Capture>();
+
+  // Playback
+  auto& cfgDirectXPlayer = directx.player;
+  cfgDirectXPlayer = DirectXYaml["Playback"].as<Config::DirectX::Player>();
+
+  // Trace
+  auto& cfgDirectXTrace = directx.features.trace;
+  cfgDirectXTrace = DirectXYaml["Features"]["Trace"].as<Config::DirectX::Features::Trace>();
+
+  // Subcapture
+  auto& cfgDirectXSubcapture = directx.features.subcapture;
+  cfgDirectXSubcapture =
+      DirectXYaml["Features"]["Subcapture"].as<Config::DirectX::Features::Subcapture>();
+
+  // Screenshots
+  auto& cfgDirectXScreenshots = directx.features.screenshots;
+  cfgDirectXScreenshots =
+      DirectXYaml["Features"]["Screenshots"].as<Config::DirectX::Features::Screenshots>();
+
+  // ResourcesDump
+  auto& cfgDirectXResourcesDump = directx.features.resourcesDump;
+  cfgDirectXResourcesDump =
+      DirectXYaml["Features"]["ResourcesDump"].as<Config::DirectX::Features::ResourcesDump>();
+
+  // RenderTargetsDump
+  auto& cfgDirectXRenderTargetsDump = directx.features.renderTargetsDump;
+  cfgDirectXRenderTargetsDump = DirectXYaml["Features"]["RenderTargetsDump"]
+                                    .as<Config::DirectX::Features::RenderTargetsDump>();
+  // RaytracingDump
+  auto& cfgDirectXRaytracingDump = directx.features.raytracingDump;
+  cfgDirectXRaytracingDump =
+      DirectXYaml["Features"]["RaytracingDump"].as<Config::DirectX::Features::RaytracingDump>();
+
+  // ExecuteIndirectDump
+  auto& cfgDirectXExecuteIndirectDump = directx.features.executeIndirectDump;
+  cfgDirectXExecuteIndirectDump = DirectXYaml["Features"]["ExecuteIndirectDump"]
+                                      .as<Config::DirectX::Features::ExecuteIndirectDump>();
+
+  // SkipCalls
+  auto& cfgDirectXSkipCalls = directx.features.skipCalls;
+  cfgDirectXSkipCalls =
+      DirectXYaml["Features"]["SkipCalls"].as<Config::DirectX::Features::SkipCalls>();
+
+  // Portability
+  auto& cfgDirectXPortability = directx.features.portability;
+  cfgDirectXPortability =
+      DirectXYaml["Features"]["Portability"].as<Config::DirectX::Features::Portability>();
+}
+
+void gits::Config::PrepareSubcapturePath() {
+  auto cfg = Config::Get();
+  std::string preparedPath = cfg.common.player.subcapturePath.string();
+
+  //handle special names in subcapture path:
+  //  %f% - original filename
+  //  %r% - frames range
+  const std::string filenamePlaceholder = "%f%";
+  std::string::size_type filenamePos = preparedPath.find(filenamePlaceholder);
+  if (filenamePos != std::string::npos) {
+    std::stringstream str;
+    str << cfg.common.player.streamDir.filename().string();
+    std::string left = preparedPath.substr(0, filenamePos);
+    std::string right = preparedPath.substr(filenamePos + filenamePlaceholder.size());
+    preparedPath = left + str.str() + right;
+  }
+
+  const std::string rangePlaceholder = "%r%";
+  std::string::size_type rangePos = preparedPath.find(rangePlaceholder);
+  if (rangePos != std::string::npos) {
+    std::stringstream str;
+    str << "frames-" << cfg.directx.features.subcapture.frames;
+    std::string left = preparedPath.substr(0, rangePos);
+    std::string right = preparedPath.substr(rangePos + rangePlaceholder.size());
+    preparedPath = left + str.str() + right;
+  }
+
+  cfg.common.player.subcapturePath = preparedPath;
+  Config::Set(cfg);
+}
+#endif
+
 void gits::Config::SetOpenGL(const YAML::Node& openglYaml) {
   // Shared
   auto& cfgOpenGLShared = opengl.shared;
@@ -569,6 +655,9 @@ bool gits::Config::Set(const std::filesystem::path& cfgPath, const Config::TMode
   auto cfg = Config::Get();
   cfg.common.mode = mode;
   cfg.SetCommon(configYaml["Common"]);
+#if defined(WITH_DIRECTX) && defined(GITS_PLATFORM_WINDOWS)
+  cfg.SetDirectX(configYaml["DirectX"]);
+#endif
   cfg.SetOpenGL(configYaml["OpenGL"]);
   cfg.SetVulkan(configYaml["Vulkan"]);
   cfg.SetOpenCL(configYaml["OpenCL"]);
@@ -577,7 +666,13 @@ bool gits::Config::Set(const std::filesystem::path& cfgPath, const Config::TMode
 #endif
   Config::Set(cfg);
 
+#if defined(WITH_DIRECTX) && defined(GITS_PLATFORM_WINDOWS)
+  if ((Config::Get().common.mode == MODE_RECORDER) ||
+      ((Config::Get().common.mode == MODE_PLAYER) &&
+       Config::Get().directx.features.subcapture.enabled)) {
+#else
   if (Config::Get().common.mode == MODE_RECORDER) {
+#endif
     // create file data and register it in GITS
     CGits& inst = CGits::Instance();
     std::unique_ptr<CFile> file(new CFile(inst.Version()));

@@ -57,6 +57,7 @@ ipch/
 build/
 third_party/*
 !third_party/patch
+!third_party/IntelExtensions
 
 # GITS config
 recorder/gits_config.txt
@@ -99,3 +100,7 @@ Vulkan/recorder/include/vulkanRecorderWrapperAuto.h
 Vulkan/recorder/include/vulkanRecorderWrapperIfaceAuto.h
 Vulkan/recorder/vulkanRecorderWrapperAuto.cpp
 CCodeFiles/src/include/vulkanCCodeArgumentsAuto.h
+
+#DirectX
+DirectX/**/*Auto.cpp
+DirectX/**/*Auto.h

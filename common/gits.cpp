@@ -122,6 +122,10 @@ CGits::~CGits() {
     if (Config::Get().IsRecorder() && Config::Get().common.recorder.enabled) {
       CloseZipFileGLPrograms();
       sign_directory(Config::Get().common.recorder.dumpPath);
+#ifdef GITS_PLATFORM_WINDOWS
+    } else if (Config::Get().IsPlayer() && Config::Get().directx.features.subcapture.enabled) {
+      sign_directory(Config::Get().common.player.subcapturePath);
+#endif
     }
 
     // Create a buildable CCode project by automatically copying necessary files.

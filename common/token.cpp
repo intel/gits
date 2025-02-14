@@ -261,7 +261,13 @@ void CTokenFrameNumber::Run() {
     if (cfg.common.shared.useEvents) {
       CGits::Instance().PlaybackEvents().frameEnd(CGits::Instance().CurrentFrame());
     }
+#ifdef GITS_PLATFORM_WINDOWS
+    if (!cfg.directx.features.subcapture.enabled) {
+      CGits::Instance().FrameCountUp();
+    }
+#else
     CGits::Instance().FrameCountUp();
+#endif
     break;
 
   default: //WA - Warning on linux for not handling default case.

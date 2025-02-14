@@ -12,6 +12,9 @@ import subprocess
 import sys
 import os
 import re
+import requests
+import zipfile
+import tempfile
 from retrying import retry
 import shutil
 from enum import Enum
@@ -223,6 +226,100 @@ class Repository:
         return 0
 
 
+@retry(stop_max_attempt_number=5, wait_fixed=100000)
+def download_and_extract_nuget_package(package_url, output_directory: Path, folder_to_extract=None):
+    # Ensure the output directory exists
+    output_directory.mkdir(parents=True, exist_ok=True)
+
+    # Retrieve proxy settings from Git
+    try:
+        http_proxy = subprocess.run(
+            "git config --global --get http.proxy",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+            shell=True
+        ).stdout.decode().strip()
+    except subprocess.CalledProcessError:
+        http_proxy = None
+
+    try:
+        https_proxy = subprocess.run(
+            "git config --global --get https.proxy",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+            shell=True
+        ).stdout.decode().strip()
+    except subprocess.CalledProcessError:
+        https_proxy = None
+
+    # Set up the requests session with proxy settings
+    session = requests.Session()
+    proxies = {}
+    if http_proxy:
+        proxies["http"] = http_proxy
+        proxies["https"] = http_proxy
+        logger.info(f"Using HTTP proxy: {http_proxy}")
+    if https_proxy:
+        proxies["https"] = https_proxy
+        logger.info(f"Using HTTPS proxy: {https_proxy}")
+    if proxies:
+        session.proxies = proxies
+
+    # Download the package
+    response = session.get(package_url)
+    package_path = output_directory / "package.nupkg"
+
+    # Save the package to the output directory
+    with open(package_path, "wb") as file:
+        file.write(response.content)
+
+    # Extract the package
+    with zipfile.ZipFile(package_path, 'r') as zip_ref:
+        if folder_to_extract:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                for member in zip_ref.namelist():
+                    # Extract files from the main directory (e.g., licenses, README, etc.)
+                    if '/' not in member.strip('/'):
+                        zip_ref.extract(member, output_directory)
+                    # Extract files and directories from the specified subdirectory
+                    elif member.startswith(folder_to_extract):
+                        zip_ref.extract(member, temp_dir)
+                # Move the contents from the temporary directory to the output directory
+                temp_dir_path = Path(temp_dir)
+                for item in (temp_dir_path / folder_to_extract).iterdir():
+                     shutil.move(temp_dir_path / folder_to_extract / item, output_directory)
+        else:
+            zip_ref.extractall(output_directory)
+
+    # Delete the downloaded package file
+    os.remove(package_path)
+
+
+class Nuget(Repository):
+    def install(self):
+        try:
+            if self.check_skip_os():
+                logger.debug("Skipping %s installation due to os limitation", self.name)
+                return 0
+            install = True
+            if self.repository_path.exists() and any(self.repository_path.iterdir()):
+                logger.info(f"Package is already downloaded and extracted: {self.name}")
+                install = False
+            if install:
+                logger.info(f"Starting download and extraction of package: {self.name}")
+                download_and_extract_nuget_package(self.package_url + self.version, self.repository_path, self.folder_to_extract)
+                logger.info(f"Download and extraction completed for package: {self.name}")
+                # Check if the directory is empty after extraction
+                if not any(self.repository_path.iterdir()):
+                    raise Exception(f"Extraction failed, {self.repository_path} is empty.")
+        except Exception as e:
+            logger.exception("Issue installing nuget package.")
+            return -1
+        return 0
+
+
 class Lua(Repository):
     def set_branch(self):
         self.branch = "v5.4.6"
@@ -287,6 +384,84 @@ class ClHeaders(Repository):
         self.url = "https://github.com/KhronosGroup/OpenCL-Headers.git"
 
 
+class Detours(Repository):
+    def set_branch(self):
+        self.branch = "main"
+
+    def set_commit(self):
+        self.commit_id = "4b8c659f549b0ab21cf649377c7a84eb708f5e68"
+
+    def init(self):
+        self.name = "Detours"
+        self.url = "https://github.com/microsoft/Detours.git"
+        self.os = OperatingSystem.WINDOWS
+
+
+class DirectXTex(Repository):
+    def set_branch(self):
+        self.branch = "sep2024"
+
+    def init(self):
+        self.name = "DirectXTex"
+        self.url = "https://github.com/microsoft/DirectXTex.git"
+        self.os = OperatingSystem.WINDOWS
+
+
+class XeSS(Repository):
+    def set_branch(self):
+        self.branch = "v1.3.1"
+
+    def init(self):
+        self.name = "xess"
+        self.url = "https://github.com/intel/xess.git"
+        self.os = OperatingSystem.WINDOWS
+
+
+class AgilitySDK(Nuget):
+    def init(self):
+        self.name = "AgilitySDK"
+        self.package_url = "https://www.nuget.org/api/v2/package/Microsoft.Direct3D.D3D12/"
+        self.folder_to_extract = "build/native/"
+        self.version = "1.614.1"
+        self.os = OperatingSystem.WINDOWS
+
+
+class DXC(Nuget):
+    def init(self):
+        self.name = "dxc"
+        self.package_url = "https://www.nuget.org/api/v2/package/Microsoft.Direct3D.DXC/"
+        self.folder_to_extract = "build/native/"
+        self.version = "1.8.2407.12"
+        self.os = OperatingSystem.WINDOWS
+
+
+class DirectML(Nuget):
+    def init(self):
+        self.name = "DirectML"
+        self.package_url = "https://www.nuget.org/api/v2/package/Microsoft.AI.DirectML/"
+        self.folder_to_extract = None
+        self.version = "1.15.2"
+        self.os = OperatingSystem.WINDOWS
+
+
+class DirectStorage(Nuget):
+    def init(self):
+        self.name = "DirectStorage"
+        self.package_url = "https://www.nuget.org/api/v2/package/Microsoft.Direct3D.DirectStorage/"
+        self.folder_to_extract = None
+        self.version = "1.2.3"
+        self.os = OperatingSystem.WINDOWS
+
+
+class fastio(Repository):
+    def set_commit(self):
+        self.commit_id = "788cb9810f0ca881d15fe594b0dd1144901d14d8"
+
+    def init(self):
+        self.name = "fast_io"
+        self.url = "https://github.com/cppfastio/fast_io.git"
+
+
 class RenderDoc(Repository):
     def set_branch(self):
         self.branch = "v1.21"
@@ -349,6 +524,22 @@ class Repositories:
             self.repos.append(StackWalker())
         if args.with_all or args.with_clheaders:
             self.repos.append(ClHeaders())
+        if args.with_all or args.with_detours:
+            self.repos.append(Detours())
+        if args.with_all or args.with_directxtex:
+            self.repos.append(DirectXTex())
+        if args.with_all or args.with_xess:
+            self.repos.append(XeSS())
+        if args.with_all or args.with_agility_sdk:
+            self.repos.append(AgilitySDK())
+        if args.with_all or args.with_dxc:
+            self.repos.append(DXC())
+        if args.with_all or args.with_directml:
+            self.repos.append(DirectML())
+        if args.with_all or args.with_directstorage:
+            self.repos.append(DirectStorage())
+        if args.with_all or args.with_fastio:
+            self.repos.append(fastio())
         if args.with_all or args.with_renderdoc:
             self.repos.append(RenderDoc())
         if args.with_all or args.with_json:
@@ -395,6 +586,14 @@ def setup_parser(root_parser):
     root_parser.add_argument("--with-clheaders", action="store_true")
     root_parser.add_argument("--with-lz4", action="store_true")
     root_parser.add_argument("--with-zstd", action="store_true")
+    root_parser.add_argument("--with-detours", action="store_true")
+    root_parser.add_argument("--with-directxtex", action="store_true")
+    root_parser.add_argument("--with-xess", action="store_true")
+    root_parser.add_argument("--with-agility-sdk", action="store_true")
+    root_parser.add_argument("--with-dxc", action="store_true")
+    root_parser.add_argument("--with-directml", action="store_true")
+    root_parser.add_argument("--with-directstorage", action="store_true")
+    root_parser.add_argument("--with-fastio", action="store_true")
     root_parser.add_argument("--with-renderdoc", action="store_true")
     root_parser.add_argument("--with-json", action="store_true")
     root_parser.add_argument("--with-yamlcpp", action="store_true")

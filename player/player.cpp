@@ -43,7 +43,12 @@ gits::CPlayer::CPlayer() : _state(STATE_RUNNING) {
   const auto& cfg = Config::Get();
   _interactive = cfg.common.player.interactive;
   _sc.scheduler.reset(
+#if defined GITS_PLATFORM_WINDOWS
+      new CScheduler(cfg.common.player.tokenBurst, cfg.common.player.tokenBurstNum,
+                     cfg.directx.player.tokenBurstChunkSize));
+#else
       new CScheduler(cfg.common.player.tokenBurst, cfg.common.player.tokenBurstNum));
+#endif
 }
 
 gits::CPlayer::~CPlayer() {}

@@ -43,6 +43,9 @@ struct Config {
   static void Set(const Config& cfg);
   static void SetMode(const Config::TMode& mode);
   static bool Set(const std::filesystem::path& cfgPath, const Config::TMode& mode = MODE_RECORDER);
+#ifdef GITS_PLATFORM_WINDOWS
+  static void PrepareSubcapturePath();
+#endif
 
   static bool IsRecorder();
   static bool IsPlayer();
@@ -92,6 +95,9 @@ struct Config {
 
       std::filesystem::path streamPath;
       std::filesystem::path streamDir;
+#ifdef GITS_PLATFORM_WINDOWS
+      std::filesystem::path subcapturePath;
+#endif
       vi_uint tokenBurst;
       vi_uint tokenBurstNum;
       vi_uint exitFrame;
@@ -206,6 +212,106 @@ struct Config {
 #endif
     } recorder;
   } common;
+
+#ifdef GITS_PLATFORM_WINDOWS
+  struct DirectX {
+    struct Capture {
+      vi_bool record{true};
+      vi_bool shadowMemory{false};
+      vi_bool captureIntelExtensions{true};
+      vi_bool captureDirectML{true};
+      vi_bool captureDirectStorage{true};
+      vi_bool captureXess{true};
+      vi_bool debugLayer{false};
+      std::vector<std::string> plugins;
+      vi_uint64 tokenBurstChunkSize{5242880};
+    } capture;
+
+    struct Player {
+      vi_bool execute{true};
+      vi_bool debugLayer{false};
+      vi_bool waitOnEventCompletion{false};
+      vi_bool useCopyQueueOnRestore{false};
+      vi_bool uavBarrierAfterCopyRaytracingASWorkaround{false};
+      vi_bool multithreadedShaderCompilation{true};
+      std::vector<std::string> plugins;
+      vi_uint64 tokenBurstChunkSize{5242880};
+      struct AdapterOverride {
+        vi_bool enabled{false};
+        vi_uint index{0};
+        std::string vendor;
+      } adapterOverride;
+    } player;
+
+    struct Features {
+      struct Trace {
+        vi_bool enabled{false};
+        std::string flushMethod{"ipc"};
+        struct Print {
+          vi_bool postCalls{true};
+          vi_bool preCalls{false};
+          vi_bool debugLayerWarnings{false};
+          vi_bool gpuExecution{false};
+        } print;
+      } trace;
+
+      struct Subcapture {
+        vi_bool enabled{false};
+        vi_bool serializeAccelerationStructures{false};
+        vi_bool restoreTLASes{false};
+        std::string frames;
+      } subcapture;
+
+      struct Screenshots {
+        vi_bool enabled{false};
+        std::string frames;
+        std::string format{"png"};
+      } screenshots;
+
+      struct ResourcesDump {
+        vi_bool enabled{false};
+        std::string resourceKeys;
+        std::string commandKeys;
+        std::string textureRescaleRange;
+        std::string format{"png"};
+      } resourcesDump;
+
+      struct RenderTargetsDump {
+        vi_bool enabled{false};
+        std::string frames;
+        std::string draws;
+        std::string format{"png"};
+      } renderTargetsDump;
+
+      struct RaytracingDump {
+        vi_bool bindingTablesPre{false};
+        vi_bool bindingTablesPost{false};
+        vi_bool instancesPre{false};
+        vi_bool instancesPost{false};
+        vi_bool blases{false};
+        std::string commandKeys;
+      } raytracingDump;
+
+      struct ExecuteIndirectDump {
+        vi_bool argumentBufferPre{false};
+        vi_bool argumentBufferPost{false};
+        std::string commandKeys;
+      } executeIndirectDump;
+
+      struct SkipCalls {
+        vi_bool enabled{false};
+        std::string commandKeys;
+      } skipCalls;
+
+      struct Portability {
+        vi_bool enabled{false};
+        vi_bool storePlacedResourceDataOnCapture{false};
+        vi_bool storePlacedResourceDataOnPlayback{false};
+      } portability;
+
+    } features;
+  } directx;
+#endif
 
   struct OpenGL {
     struct Shared {
@@ -516,6 +622,9 @@ private:
   static YAML::Node LoadConfigFile(const std::filesystem::path& cfgDir);
   // Set funcs
   void SetCommon(const YAML::Node& commonYaml);
+#ifdef GITS_PLATFORM_WINDOWS
+  void SetDirectX(const YAML::Node& directxYaml);
+#endif
   void SetOpenGL(const YAML::Node& openglYaml);
   void SetVulkan(const YAML::Node& vulkanYaml);
   void SetOpenCL(const YAML::Node& openclYaml);

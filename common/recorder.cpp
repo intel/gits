@@ -170,8 +170,20 @@ gits::CRecorder::CRecorder()
   forceExit = false;
 
   // create file data and register it in GITS
+#if defined GITS_PLATFORM_WINDOWS
+  if (config.common.recorder.enabled ||
+      (config.IsPlayer() && config.directx.features.subcapture.enabled)) {
+#else
   if (config.common.recorder.enabled) {
+#endif
+#if defined WITH_DIRECTX
+    auto outputpath = config.common.recorder.dumpPath;
+    if (config.IsPlayer() && config.directx.features.subcapture.enabled) {
+      outputpath = config.common.player.subcapturePath;
+    }
+#else
     auto& outputpath = config.common.recorder.dumpPath;
+#endif
     std::filesystem::create_directories(outputpath);
 #if defined(GITS_PLATFORM_X11)
     struct sigaction action;
@@ -188,7 +200,12 @@ gits::CRecorder::CRecorder()
       inst.apis.Has3D() && !inst.apis.Iface3D().CfgRec_StartKeys().empty();
   Log(INFO) << "Recorder mode: ";
   std::ostringstream message;
+#if defined GITS_PLATFORM_WINDOWS
+  bool recEnabled = config.common.recorder.enabled ||
+                    (config.IsPlayer() && config.directx.features.subcapture.enabled);
+#else
   bool recEnabled = config.common.recorder.enabled;
+#endif
   if (!recEnabled) {
     message << " - Off";
   } else {
@@ -297,6 +314,11 @@ gits::CRecorder::~CRecorder() {
       if (config.IsRecorder() && config.common.recorder.enabled) {
         std::ofstream out_file(config.common.recorder.dumpPath / "benchmark.csv");
         CGits::Instance().TimeSheet().OutputTimeData(out_file, true);
+#if defined GITS_PLATFORM_WINDOWS
+      } else if (config.IsPlayer() && config.directx.features.subcapture.enabled) {
+        std::ofstream out_file(config.common.player.subcapturePath / "benchmark.csv");
+        CGits::Instance().TimeSheet().OutputTimeData(out_file, true);
+#endif
       }
     }
 
@@ -397,7 +419,12 @@ void gits::CRecorder::Register(std::unique_ptr<CBehavior> behavior) {
   auto& cfg = Config::Get();
   auto& cmm = cfg.common;
   auto& rec = cmm.recorder;
+#if defined GITS_PLATFORM_WINDOWS
+  auto& directx = cfg.directx;
+  bool recEnabled = rec.enabled || (cfg.IsPlayer() && directx.features.subcapture.enabled);
+#else
   bool recEnabled = rec.enabled;
+#endif
 
   if (gits::CGits::Instance().apis.Has3D()) {
     const auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
@@ -412,12 +439,29 @@ void gits::CRecorder::Register(std::unique_ptr<CBehavior> behavior) {
   }
 
   if (recEnabled) {
+#if defined GITS_PLATFORM_WINDOWS
+    _sc.scheduler.reset(
+        new CScheduler(rec.tokenBurst, rec.tokenBurstNum, directx.capture.tokenBurstChunkSize));
+#else
     _sc.scheduler.reset(new CScheduler(rec.tokenBurst, rec.tokenBurstNum));
+#endif
   }
 
+#if defined GITS_PLATFORM_WINDOWS
+  auto outputpath = rec.dumpPath;
+  if (cfg.IsPlayer() && directx.features.subcapture.enabled) {
+    outputpath = cmm.player.subcapturePath;
+  }
+#else
   auto& outputpath = rec.dumpPath;
+#endif
   auto filePath = (outputpath / "stream").string();
+#if defined GITS_PLATFORM_WINDOWS
+  if ((cfg.dumpBinary() && rec.enabled) ||
+      (cfg.IsPlayer() && directx.features.subcapture.enabled)) {
+#else
   if (cfg.dumpBinary() && rec.enabled) {
+#endif
     // create file
     std::string filename = filePath + ".gits2";
 
@@ -615,7 +659,12 @@ void gits::CRecorder::TrackThread(gits::ApisIface::TApi api) {
  */
 void gits::CRecorder::Save() {
   auto& cfg = Config::Get();
+#if defined GITS_PLATFORM_WINDOWS
+  bool recEnabled =
+      cfg.common.recorder.enabled || (cfg.IsPlayer() && cfg.directx.features.subcapture.enabled);
+#else
   bool recEnabled = cfg.common.recorder.enabled;
+#endif
   if (!recEnabled) {
     return;
   }

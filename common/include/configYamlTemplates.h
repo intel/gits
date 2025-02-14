@@ -331,6 +331,9 @@ struct convert<gits::Config::Common::Player> {
       rhs.libL0 = node["LibL0"].as<std::filesystem::path>();
 
       rhs.streamPath = node["StreamPath"].as<std::filesystem::path>();
+#ifdef GITS_PLATFORM_WINDOWS
+      rhs.subcapturePath = node["SubcapturePath"].as<std::filesystem::path>();
+#endif
       rhs.tokenBurst = node["TokenBurstLimit"].as<gits::vi_uint>();
       rhs.tokenBurstNum = node["TokenBurstNum"].as<gits::vi_uint>();
       rhs.exitFrame = node["ExitFrame"].as<gits::vi_uint>();
@@ -815,4 +818,251 @@ struct convert<gits::Config::LevelZero::Recorder> {
     }
   }
 };
+
+#ifdef GITS_PLATFORM_WINDOWS
+template <>
+struct convert<gits::Config::DirectX::Capture> {
+  static bool decode(const Node& node, gits::Config::DirectX::Capture& rhs) {
+    if (!node.IsMap()) {
+      return false;
+    }
+    try {
+      rhs.record = node["Record"].as<gits::vi_bool>();
+      rhs.shadowMemory = node["ShadowMemory"].as<gits::vi_bool>();
+      rhs.captureIntelExtensions = node["CaptureIntelExtensions"].as<gits::vi_bool>();
+      rhs.captureXess = node["CaptureXess"].as<gits::vi_bool>();
+      rhs.captureDirectML = node["CaptureDirectML"].as<gits::vi_bool>();
+      rhs.captureDirectStorage = node["CaptureDirectStorage"].as<gits::vi_bool>();
+      rhs.debugLayer = node["DebugLayer"].as<gits::vi_bool>();
+      rhs.plugins = node["Plugins"].as<std::vector<std::string>>();
+      rhs.tokenBurstChunkSize = node["TokenBurstChunkSize"].as<gits::vi_uint64>();
+      return true;
+    } catch (const YAML::Exception& e) {
+      Log(ERR) << "YAML parser exception: " << e.what();
+      return false;
+    }
+  }
+};
+
+template <>
+struct convert<gits::Config::DirectX::Player::AdapterOverride> {
+  static bool decode(const Node& node, gits::Config::DirectX::Player::AdapterOverride& rhs) {
+    if (!node.IsMap()) {
+      return false;
+    }
+    try {
+      rhs.enabled = node["Enabled"].as<gits::vi_bool>();
+      rhs.index = node["Index"].as<gits::vi_uint>();
+      rhs.vendor = node["Vendor"].as<std::string>();
+      return true;
+    } catch (const YAML::Exception& e) {
+      Log(ERR) << "YAML parser exception: " << e.what();
+      return false;
+    }
+  }
+};
+
+template <>
+struct convert<gits::Config::DirectX::Player> {
+  static bool decode(const Node& node, gits::Config::DirectX::Player& rhs) {
+    if (!node.IsMap()) {
+      return false;
+    }
+    try {
+      rhs.execute = node["Execute"].as<gits::vi_bool>();
+      rhs.debugLayer = node["DebugLayer"].as<gits::vi_bool>();
+      rhs.waitOnEventCompletion = node["WaitOnEventCompletion"].as<gits::vi_bool>();
+      rhs.useCopyQueueOnRestore = node["UseCopyQueueOnRestore"].as<gits::vi_bool>();
+      rhs.uavBarrierAfterCopyRaytracingASWorkaround =
+          node["UavBarrierAfterCopyRaytracingASWorkaround"].as<gits::vi_bool>();
+      rhs.multithreadedShaderCompilation =
+          node["MultithreadedShaderCompilation"].as<gits::vi_bool>();
+      rhs.plugins = node["Plugins"].as<std::vector<std::string>>();
+      rhs.tokenBurstChunkSize = node["TokenBurstChunkSize"].as<gits::vi_uint64>();
+      rhs.adapterOverride =
+          node["AdapterOverride"].as<gits::Config::DirectX::Player::AdapterOverride>();
+      return true;
+    } catch (const YAML::Exception& e) {
+      Log(ERR) << "YAML parser exception: " << e.what();
+      return false;
+    }
+  }
+};
+
+template <>
+struct convert<gits::Config::DirectX::Features::Trace> {
+  static bool decode(const Node& node, gits::Config::DirectX::Features::Trace& rhs) {
+    if (!node.IsMap()) {
+      return false;
+    }
+    try {
+      rhs.enabled = node["Enabled"].as<gits::vi_bool>();
+      rhs.flushMethod = node["FlushMethod"].as<std::string>();
+      rhs.print.postCalls = node["Print"]["PostCalls"].as<gits::vi_bool>();
+      rhs.print.preCalls = node["Print"]["PreCalls"].as<gits::vi_bool>();
+      rhs.print.debugLayerWarnings = node["Print"]["DebugLayerWarnings"].as<gits::vi_bool>();
+      rhs.print.gpuExecution = node["Print"]["GPUExecution"].as<gits::vi_bool>();
+      return true;
+    } catch (const YAML::Exception& e) {
+      Log(ERR) << "YAML parser exception: " << e.what();
+      return false;
+    }
+  }
+};
+
+template <>
+struct convert<gits::Config::DirectX::Features::Subcapture> {
+  static bool decode(const Node& node, gits::Config::DirectX::Features::Subcapture& rhs) {
+    if (!node.IsMap()) {
+      return false;
+    }
+    try {
+      rhs.enabled = node["Enabled"].as<gits::vi_bool>();
+      rhs.serializeAccelerationStructures =
+          node["SerializeAccelerationStructures"].as<gits::vi_bool>();
+      rhs.restoreTLASes = node["RestoreTLASes"].as<gits::vi_bool>();
+      rhs.frames = node["Frames"].as<std::string>();
+      return true;
+    } catch (const YAML::Exception& e) {
+      Log(ERR) << "YAML parser exception: " << e.what();
+      return false;
+    }
+  }
+};
+
+template <>
+struct convert<gits::Config::DirectX::Features::Screenshots> {
+  static bool decode(const Node& node, gits::Config::DirectX::Features::Screenshots& rhs) {
+    if (!node.IsMap()) {
+      return false;
+    }
+    try {
+      rhs.enabled = node["Enabled"].as<gits::vi_bool>();
+      rhs.frames = node["Frames"].as<std::string>();
+      rhs.format = node["Format"].as<std::string>();
+      return true;
+    } catch (const YAML::Exception& e) {
+      Log(ERR) << "YAML parser exception: " << e.what();
+      return false;
+    }
+  }
+};
+
+template <>
+struct convert<gits::Config::DirectX::Features::ResourcesDump> {
+  static bool decode(const Node& node, gits::Config::DirectX::Features::ResourcesDump& rhs) {
+    if (!node.IsMap()) {
+      return false;
+    }
+    try {
+      rhs.enabled = node["Enabled"].as<gits::vi_bool>();
+      rhs.resourceKeys = node["ResourceKeys"].as<std::string>();
+      rhs.commandKeys = node["CommandKeys"].as<std::string>();
+      rhs.textureRescaleRange = node["TextureRescaleRange"].as<std::string>();
+      rhs.format = node["Format"].as<std::string>();
+      return true;
+    } catch (const YAML::Exception& e) {
+      Log(ERR) << "YAML parser exception: " << e.what();
+      return false;
+    }
+  }
+};
+
+template <>
+struct convert<gits::Config::DirectX::Features::RenderTargetsDump> {
+  static bool decode(const Node& node, gits::Config::DirectX::Features::RenderTargetsDump& rhs) {
+    if (!node.IsMap()) {
+      return false;
+    }
+    try {
+      rhs.enabled = node["Enabled"].as<gits::vi_bool>();
+      rhs.frames = node["Frames"].as<std::string>();
+      rhs.draws = node["Draws"].as<std::string>();
+      rhs.format = node["Format"].as<std::string>();
+      return true;
+    } catch (const YAML::Exception& e) {
+      Log(ERR) << "YAML parser exception: " << e.what();
+      return false;
+    }
+  }
+};
+
+template <>
+struct convert<gits::Config::DirectX::Features::RaytracingDump> {
+  static bool decode(const Node& node, gits::Config::DirectX::Features::RaytracingDump& rhs) {
+    if (!node.IsMap()) {
+      return false;
+    }
+    try {
+      rhs.bindingTablesPre = node["BindingTablesPre"].as<gits::vi_bool>();
+      rhs.bindingTablesPost = node["BindingTablesPost"].as<gits::vi_bool>();
+      rhs.instancesPre = node["InstancesPre"].as<gits::vi_bool>();
+      rhs.instancesPost = node["InstancesPost"].as<gits::vi_bool>();
+      rhs.blases = node["BLASes"].as<gits::vi_bool>();
+      rhs.commandKeys = node["CommandKeys"].as<std::string>();
+      return true;
+    } catch (const YAML::Exception& e) {
+      Log(ERR) << "YAML parser exception: " << e.what();
+      return false;
+    }
+  }
+};
+
+template <>
+struct convert<gits::Config::DirectX::Features::ExecuteIndirectDump> {
+  static bool decode(const Node& node, gits::Config::DirectX::Features::ExecuteIndirectDump& rhs) {
+    if (!node.IsMap()) {
+      return false;
+    }
+    try {
+      rhs.argumentBufferPre = node["ArgumentBufferPre"].as<gits::vi_bool>();
+      rhs.argumentBufferPost = node["ArgumentBufferPost"].as<gits::vi_bool>();
+      rhs.commandKeys = node["CommandKeys"].as<std::string>();
+      return true;
+    } catch (const YAML::Exception& e) {
+      Log(ERR) << "YAML parser exception: " << e.what();
+      return false;
+    }
+  }
+};
+
+template <>
+struct convert<gits::Config::DirectX::Features::SkipCalls> {
+  static bool decode(const Node& node, gits::Config::DirectX::Features::SkipCalls& rhs) {
+    if (!node.IsMap()) {
+      return false;
+    }
+    try {
+      rhs.enabled = node["Enabled"].as<gits::vi_bool>();
+      rhs.commandKeys = node["CommandKeys"].as<std::string>();
+      return true;
+    } catch (const YAML::Exception& e) {
+      Log(ERR) << "YAML parser exception: " << e.what();
+      return false;
+    }
+  }
+};
+
+template <>
+struct convert<gits::Config::DirectX::Features::Portability> {
+  static bool decode(const Node& node, gits::Config::DirectX::Features::Portability& rhs) {
+    if (!node.IsMap()) {
+      return false;
+    }
+    try {
+      rhs.enabled = node["Enabled"].as<gits::vi_bool>();
+      rhs.storePlacedResourceDataOnCapture =
+          node["StorePlacedResourceDataOnCapture"].as<gits::vi_bool>();
+      rhs.storePlacedResourceDataOnPlayback =
+          node["StorePlacedResourceDataOnPlayback"].as<gits::vi_bool>();
+      return true;
+    } catch (const YAML::Exception& e) {
+      Log(ERR) << "YAML parser exception: " << e.what();
+      return false;
+    }
+  }
+};
+
+#endif
+
 } // namespace YAML

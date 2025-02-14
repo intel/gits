@@ -50,6 +50,10 @@ public:
 
   void operator()(ProducerConsumer<CScheduler::CTokenList>& queue) {
     CScheduler::CTokenList tokenList;
+#if defined GITS_PLATFORM_WINDOWS
+    static bool isDirectX =
+        (CGits::Instance().GetApi3D() == ApisIface::TApi::DirectX); // Static variable for the check
+#endif
 
     try {
       unsigned sinceLastChk = 0;
@@ -66,6 +70,9 @@ public:
       const auto stream = _sched._iBinStream;
       const auto tokenBurstLimit = _sched._tokenLimit;
       const auto checkpointSize = _sched._checkpointSize;
+#if defined GITS_PLATFORM_WINDOWS
+      const uint64_t chunkSize = _sched._chunkSize;
+#endif
 
       unsigned currentLoadedFrame = 0;
       bool stopLoading = false;
@@ -73,7 +80,13 @@ public:
         unsigned loaded = 0;
         uint64_t maxLoaded = std::min((uint64_t)std::numeric_limits<decltype(loaded)>::max(),
                                       (uint64_t)tokenList.max_size());
+#if defined GITS_PLATFORM_WINDOWS
+        uint64_t currentChunkSize = 0;
+        while (((isDirectX && currentChunkSize < chunkSize) ||
+                (!isDirectX && loaded < tokenBurstLimit) ||
+#else
         while ((loaded < tokenBurstLimit ||
+#endif
                 Config::Get().common.player.loadWholeStreamBeforePlayback) &&
                !stopLoading) {
 #ifdef GITS_DEBUG_TOKEN_SIZE
@@ -84,6 +97,9 @@ public:
             stopLoading = true;
             break;
           }
+#if defined GITS_PLATFORM_WINDOWS
+          currentChunkSize += token->Size();
+#endif
 
 #ifdef GITS_DEBUG_TOKEN_SIZE
           uint64_t tokEnd = stream->tellg();
@@ -196,10 +212,18 @@ public:
 };
 
 //CScheduler class definition
+#if defined GITS_PLATFORM_WINDOWS
+CScheduler::CScheduler(unsigned tokenLimit, unsigned tokenBurstNum, uint64_t tokenBurstChunkSize)
+#else
 CScheduler::CScheduler(unsigned tokenLimit, unsigned tokenBurstNum)
+#endif
     : _streamLoader(tokenBurstNum),
       _streamWriter(tokenBurstNum),
       _tokenShredder(tokenBurstNum),
+#ifdef GITS_PLATFORM_WINDOWS
+      _chunkSize(tokenBurstChunkSize),
+      _currentChunkSize(0),
+#endif
       _nextToPlay(_tokenList.begin()),
       _tokenLimit(tokenLimit),
       _checkpointSize(10000),
@@ -250,7 +274,15 @@ CScheduler::~CScheduler() {
  * @param function Function call wrapper to register.
  */
 void CScheduler::Register(CToken* token) {
+#if defined GITS_PLATFORM_WINDOWS
+  static bool isDirectX =
+      (CGits::Instance().GetApi3D() == ApisIface::TApi::DirectX); // Static variable for the check
+  if ((isDirectX && _currentChunkSize > _chunkSize) ||
+      (!isDirectX && _tokenList.size() > _tokenLimit)) {
+    _currentChunkSize = 0;
+#else
   if (_tokenList.size() > _tokenLimit) {
+#endif
     WriteChunk();
   }
 
@@ -260,8 +292,14 @@ void CScheduler::Register(CToken* token) {
   // single api-mutex among all recorded apis interceptors.
   std::unique_lock<std::mutex> lock(_tokenRegisterMutex);
   _tokenList.push_back(token);
+#if defined GITS_PLATFORM_WINDOWS
+  _currentChunkSize += token->Size();
+#endif
   if (Config::Get().common.recorder.highIntegrity) {
     WriteChunk(false);
+#if defined GITS_PLATFORM_WINDOWS
+    _currentChunkSize = 0;
+#endif
   }
 }
 
@@ -311,6 +349,9 @@ void CScheduler::WriteChunk(bool purgeTokens) {
 
 void CScheduler::WriteAll() {
   WriteChunk();
+#if defined GITS_PLATFORM_WINDOWS
+  _currentChunkSize = 0;
+#endif
 }
 
 void CScheduler::Stream(CBinIStream* stream) {

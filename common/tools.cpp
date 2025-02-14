@@ -314,7 +314,14 @@ void SaveJsonFile(const nlohmann::ordered_json& json, const std::filesystem::pat
 
 void CheckMinimumAvailableDiskSize() {
   auto config = Config::Get();
+#if defined GITS_PLATFORM_WINDOWS
+  auto path = config.common.recorder.dumpPath;
+  if (config.IsPlayer() && config.directx.features.subcapture.enabled) {
+    path = config.common.player.subcapturePath;
+  }
+#else
   auto& path = config.common.recorder.dumpPath;
+#endif
   auto diskSpaceInfo = std::filesystem::space(path);
   uintmax_t minDiskSize = 104857600;
   if (diskSpaceInfo.available <= minDiskSize) {
