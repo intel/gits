@@ -46,7 +46,10 @@ def get_object_versions(arguments, name):
     return object_list
 
 def get_namespace(name):
-    return name.split("_")[0]
+    namespace = name.split("_")[0]
+    if namespace == "zex":
+        return "ze"
+    return namespace
 
 def get_api_version_from_string(api_version: str):
     return api_version.replace('ZE_API_VERSION_', '').replace('_', '.')
