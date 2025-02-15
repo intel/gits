@@ -421,6 +421,18 @@ public:
       }
       return GetOffsetPointer(allocInfo.first, allocInfo.second);
     }
+    operator uint64_t*() {
+      if (!_ptr->IsMappedPointer()) {
+        return reinterpret_cast<uint64_t*>(GetResourceData(_ptr->_ptr));
+      }
+      auto& sd = SD();
+      const auto allocInfo = GetAllocFromOriginalPtr(_ptr->_ptr, sd);
+      if (allocInfo.first == nullptr && !sd.scanningGlobalPointersMode.empty()) {
+        return reinterpret_cast<uint64_t*>(
+            GetMappedGlobalPtrFromOriginalAllocation(sd, _ptr->_ptr));
+      }
+      return reinterpret_cast<uint64_t*>(GetOffsetPointer(allocInfo.first, allocInfo.second));
+    }
   };
 
   CUSMPtr() : _resource(){};
@@ -442,6 +454,15 @@ public:
         }
       }
       _resource.reset(RESOURCE_BUFFER, buffer, _size);
+    } else {
+      _ptr = GetOffsetPointer(allocInfo.first, allocInfo.second);
+    }
+  }
+  CUSMPtr(uint64_t* pointerValue) : _size(sizeof(uint64_t)), _resource() {
+    auto& sd = SD();
+    const auto allocInfo = GetAllocFromRegion(static_cast<void*>(pointerValue), sd);
+    if (_size != 0U && pointerValue != nullptr && allocInfo.first == nullptr) {
+      _resource.reset(RESOURCE_BUFFER, &pointerValue, _size);
     } else {
       _ptr = GetOffsetPointer(allocInfo.first, allocInfo.second);
     }
