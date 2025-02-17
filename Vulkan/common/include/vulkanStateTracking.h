@@ -4857,24 +4857,29 @@ inline void vkCmdClearColorImage_SD(VkCommandBuffer cmdBuf,
                                     const VkClearColorValue* pColor,
                                     uint32_t rangeCount,
                                     const VkImageSubresourceRange* pRanges) {
+  const auto dstIt = SD()._imagestates.find(image);
+  if (dstIt == SD()._imagestates.end()) {
+    return;
+  }
+
+  if (captureRenderPasses()) {
+    SD()._commandbufferstates[cmdBuf]->clearedImages.insert(image);
+  }
+
   if (Config::Get().IsRecorder()) {
-    const auto dstIt = SD()._imagestates.find(image);
+    const auto& imageState = dstIt->second;
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      if (dstIt != SD()._imagestates.end()) {
-        SD().bindingImages[cmdBuf].insert(dstIt->second);
-      }
+      SD().bindingImages[cmdBuf].insert(imageState);
     }
 
     SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)image, true);
 
     if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
          !Config::Get().vulkan.recorder.shadowMemory) ||
-        !dstIt->second->binding) {
+        !imageState->binding) {
       return;
     }
-
-    const auto& imageState = dstIt->second;
 
     VkMemoryRequirements memRequirements = {};
     drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle, image,
@@ -4887,10 +4892,6 @@ inline void vkCmdClearColorImage_SD(VkCommandBuffer cmdBuf,
     const auto size = memRequirements.size;
     SD().updatedMemoryInCmdBuffer[cmdBuf].AddToMap(memory, offset, size);
   }
-
-  if (captureRenderPasses()) {
-    SD()._commandbufferstates[cmdBuf]->clearedImages.insert(image);
-  }
 }
 
 inline void vkCmdClearDepthStencilImage_SD(VkCommandBuffer cmdBuf,
@@ -4899,41 +4900,40 @@ inline void vkCmdClearDepthStencilImage_SD(VkCommandBuffer cmdBuf,
                                            const VkClearDepthStencilValue* pDepthStencil,
                                            uint32_t rangeCount,
                                            const VkImageSubresourceRange* pRanges) {
+  const auto dstIt = SD()._imagestates.find(image);
+  if (dstIt == SD()._imagestates.end()) {
+    return;
+  }
+
+  if (captureRenderPasses()) {
+    SD()._commandbufferstates[cmdBuf]->clearedImages.insert(image);
+  }
+
   if (Config::Get().IsRecorder()) {
-    const auto dstIt = SD()._imagestates.find(image);
+    const auto& imageState = dstIt->second;
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
-      if (dstIt != SD()._imagestates.end()) {
-        SD().bindingImages[cmdBuf].insert(dstIt->second);
-      }
+      SD().bindingImages[cmdBuf].insert(imageState);
     }
 
     SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)image, true);
 
     if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
          !Config::Get().vulkan.recorder.shadowMemory) ||
-        !dstIt->second->binding) {
+        !imageState->binding) {
       return;
     }
 
-    const auto& imageState = dstIt->second;
+    VkMemoryRequirements memRequirements = {};
+    drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle, image,
+                                       &memRequirements);
 
-    if (imageState->binding) {
-      VkMemoryRequirements memRequirements = {};
-      drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle, image,
-                                         &memRequirements);
+    //TODO : call vkGetImageSubresourceLayout when tiling is Linear
 
-      //TODO : call vkGetImageSubresourceLayout when tiling is Linear
-
-      const auto memory = imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-      const auto offset = imageState->binding->memoryOffset;
-      const auto size = memRequirements.size;
-      SD().updatedMemoryInCmdBuffer[cmdBuf].AddToMap(memory, offset, size);
-    }
-  }
-
-  if (captureRenderPasses()) {
-    SD()._commandbufferstates[cmdBuf]->clearedImages.insert(image);
+    const auto memory = imageState->binding->deviceMemoryStateStore->deviceMemoryHandle;
+    const auto offset = imageState->binding->memoryOffset;
+    const auto size = memRequirements.size;
+    SD().updatedMemoryInCmdBuffer[cmdBuf].AddToMap(memory, offset, size);
   }
 }
 
