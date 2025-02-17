@@ -2830,11 +2830,11 @@ inline void vkQueueSubmit_SD(VkResult return_value,
           auto timelineSemaphoreSubmitInfo = (VkTimelineSemaphoreSubmitInfo*)getPNextStructure(
               pSubmits[s].pNext, VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO);
           if (timelineSemaphoreSubmitInfo) {
-            for (uint32_t t = 0; t < timelineSemaphoreSubmitInfo->signalSemaphoreValueCount; ++t) {
+            for (uint32_t t = 0; t < pSubmits[s].signalSemaphoreCount; ++t) {
               auto semaphore = pSubmits[s].pSignalSemaphores[t];
 
               auto it = SD()._semaphorestates.find(semaphore);
-              if (it != SD()._semaphorestates.end()) {
+              if ((it != SD()._semaphorestates.end()) && (it->second->isTimeline)) {
                 it->second->timelineSemaphoreValue =
                     timelineSemaphoreSubmitInfo->pSignalSemaphoreValues[t];
               }
