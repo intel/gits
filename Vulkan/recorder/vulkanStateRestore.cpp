@@ -2739,12 +2739,16 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
     auto& deviceResources = temporaryDeviceResources[device];
     auto& parameters = imagesAndBarriersMap[device];
 
-    bool concurrentSharing =
-        (imageState->swapchainKHRStateStore)
-            ? (imageState->swapchainKHRStateStore->swapchainCreateInfoKHRData.Value()
-                   ->imageSharingMode == VK_SHARING_MODE_CONCURRENT)
-            : (imageState->imageCreateInfoData.Value()->sharingMode == VK_SHARING_MODE_CONCURRENT);
-    uint32_t restoreQueueFamily =
+    const bool concurrentSharing = [&imageState]() {
+      if (imageState->swapchainKHRStateStore) {
+        return imageState->swapchainKHRStateStore->swapchainCreateInfoKHRData.Value()
+                   ->imageSharingMode == VK_SHARING_MODE_CONCURRENT;
+      } else {
+        return imageState->imageCreateInfoData.Value()->sharingMode == VK_SHARING_MODE_CONCURRENT;
+      }
+    }();
+
+    const uint32_t restoreQueueFamily =
         concurrentSharing ? VK_QUEUE_FAMILY_IGNORED : deviceResources.queueFamilyIndex;
 
     uint32_t arrayLayers;
@@ -2775,7 +2779,7 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
             continue;
           }
 
-          uint32_t imageQueueFamily =
+          const uint32_t imageQueueFamily =
               concurrentSharing ? VK_QUEUE_FAMILY_IGNORED : currentSlice.QueueFamilyIndex;
 
           addBarrier(parameters.imageMemoryBarriersFromTransferDst,
@@ -2841,7 +2845,7 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
 
         // Image barriers for all existing images
 
-        uint32_t imageQueueFamily =
+        const uint32_t imageQueueFamily =
             concurrentSharing ? VK_QUEUE_FAMILY_IGNORED : currentSlice.QueueFamilyIndex;
 
         // Recorder-side pre-transfer layout transition
