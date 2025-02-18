@@ -27,6 +27,11 @@ GitsRecorder::GitsRecorder() {
   recorder_ = &gits::CRecorder::Instance();
 }
 
+void GitsRecorder::frameEnd(unsigned tokenKey) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  frameEndKeys_.insert(tokenKey);
+}
+
 void GitsRecorder::skip(unsigned tokenKey) {
   std::lock_guard<std::mutex> lock(mutex_);
   if (tokenKey == nextKey_) {
@@ -45,6 +50,7 @@ void GitsRecorder::skip(unsigned tokenKey) {
 void GitsRecorder::orderedSchedule(OrderedToken token) {
   if (token.key == nextKey_) {
     recorder_->Schedule(token.token);
+    checkFrameEnd(token.key);
     updateNextKey();
     checkPendingTokens();
   } else if (token.key > nextKey_ && getRangeIt(token.key) == skippedKeyRanges_.end()) {
@@ -76,8 +82,17 @@ void GitsRecorder::checkPendingTokens() {
       break;
     }
     recorder_->Schedule(tokens_.top().token);
+    checkFrameEnd(tokens_.top().key);
     tokens_.pop();
     updateNextKey();
+  }
+}
+
+void GitsRecorder::checkFrameEnd(unsigned key) {
+  auto keyIt = frameEndKeys_.find(key);
+  if (keyIt != frameEndKeys_.end()) {
+    recorder_->FrameEnd();
+    frameEndKeys_.erase(keyIt);
   }
 }
 

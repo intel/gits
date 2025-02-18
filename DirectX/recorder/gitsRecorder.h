@@ -14,6 +14,7 @@
 #include <mutex>
 #include <queue>
 #include <map>
+#include <set>
 
 namespace gits {
 namespace DirectX {
@@ -22,9 +23,7 @@ class GitsRecorder {
 public:
   GitsRecorder();
   void record(unsigned tokenKey, CToken* token);
-  void frameEnd() {
-    recorder_->FrameEnd();
-  }
+  void frameEnd(unsigned tokenKey);
   void skip(unsigned tokenKey);
 
 private:
@@ -45,11 +44,13 @@ private:
   void orderedSchedule(OrderedToken token);
   void updateNextKey();
   void checkPendingTokens();
+  void checkFrameEnd(unsigned key);
   std::map<unsigned, KeyRange>::iterator getRangeIt(unsigned tokenKey);
 
   gits::CRecorder* recorder_{nullptr};
   std::mutex mutex_;
   unsigned nextKey_{1};
+  std::set<unsigned> frameEndKeys_;
   std::map<unsigned, KeyRange> skippedKeyRanges_;
   std::priority_queue<OrderedToken, std::vector<OrderedToken>, std::greater<OrderedToken>> tokens_;
 };

@@ -17,20 +17,20 @@ namespace gits {
 namespace DirectX {
 
 void EncoderLayer::post(IDXGISwapChainPresentCommand& c) {
+  if (!(c.Flags_.value & DXGI_PRESENT_TEST)) {
+    recorder_.frameEnd(c.key);
+  }
   if (!c.skip) {
     recorder_.record(c.key, new IDXGISwapChainPresentWriter(c));
-  }
-  if (!(c.Flags_.value & DXGI_PRESENT_TEST)) {
-    recorder_.frameEnd();
   }
 }
 
 void EncoderLayer::post(IDXGISwapChain1Present1Command& c) {
+  if (!(c.PresentFlags_.value & DXGI_PRESENT_TEST)) {
+    recorder_.frameEnd(c.key);
+  }
   if (!c.skip) {
     recorder_.record(c.key, new IDXGISwapChain1Present1Writer(c));
-  }
-  if (!(c.PresentFlags_.value & DXGI_PRESENT_TEST)) {
-    recorder_.frameEnd();
   }
 }
 
