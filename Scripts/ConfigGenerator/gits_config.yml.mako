@@ -219,6 +219,13 @@ DirectX:
       Enabled: false
       Index: 0
       Vendor: ''  # Empty / AMD / NVIDIA / Intel
+    ApplicationInfoOverride:
+      # Override arguments for INTC_D3D12_SetApplicationInfo
+      Enabled: false
+      ApplicationName: ""
+      ApplicationVersion: "0.0.0"
+      EngineName: ""
+      EngineVersion: "0.0.0"
 
   Features:
     Trace:

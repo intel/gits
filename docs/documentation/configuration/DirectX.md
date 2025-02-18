@@ -47,6 +47,18 @@ icon: material/microsoft
       Index of the adapter to use
   - **`Vendor`**
       Vendor of the adapter (Empty / AMD / NVIDIA / Intel).
+- **`ApplicationInfoOverride`**
+  Override arguments for INTC_D3D12_SetApplicationInfo. By default only the ApplicationName will be set and it will use the Process Name from capture.
+  - **`Enabled`**
+  Whether application info override is enabled or not
+  - **`ApplicationName`**
+  Application name
+  - **`ApplicationVersion`**
+  Application version: "major.minor.patch", Example: "1.2.3"
+  - **`EngineName`**
+  Engine name
+  - **`EngineVersion`**
+  Engine version: "major.minor.patch", Example: "1.2.3"
 
 ## DirectX.Features
 

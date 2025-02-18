@@ -20,7 +20,7 @@ public:
   ~IntelExtensionsService();
 
   void loadIntelExtensions(const uint32_t& vendorID, const uint32_t& deviceID);
-  void setApplicationName(const std::string& appName);
+  void setApplicationInfo();
 
 private:
   bool intelExtensionLoaded_{};

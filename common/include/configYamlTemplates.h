@@ -863,6 +863,27 @@ struct convert<gits::Config::DirectX::Player::AdapterOverride> {
 };
 
 template <>
+struct convert<gits::Config::DirectX::Player::ApplicationInfoOverride> {
+  static bool decode(const Node& node,
+                     gits::Config::DirectX::Player::ApplicationInfoOverride& rhs) {
+    if (!node.IsMap()) {
+      return false;
+    }
+    try {
+      rhs.enabled = node["Enabled"].as<gits::vi_bool>();
+      rhs.applicationName = node["ApplicationName"].as<std::string>();
+      rhs.applicationVersion = node["ApplicationVersion"].as<std::string>();
+      rhs.engineName = node["EngineName"].as<std::string>();
+      rhs.engineVersion = node["EngineVersion"].as<std::string>();
+      return true;
+    } catch (const YAML::Exception& e) {
+      Log(ERR) << "YAML parser exception: " << e.what();
+      return false;
+    }
+  }
+};
+
+template <>
 struct convert<gits::Config::DirectX::Player> {
   static bool decode(const Node& node, gits::Config::DirectX::Player& rhs) {
     if (!node.IsMap()) {
@@ -882,6 +903,9 @@ struct convert<gits::Config::DirectX::Player> {
       rhs.tokenBurstChunkSize = node["TokenBurstChunkSize"].as<gits::vi_uint64>();
       rhs.adapterOverride =
           node["AdapterOverride"].as<gits::Config::DirectX::Player::AdapterOverride>();
+      rhs.applicationInfoOverride =
+          node["ApplicationInfoOverride"]
+              .as<gits::Config::DirectX::Player::ApplicationInfoOverride>();
       return true;
     } catch (const YAML::Exception& e) {
       Log(ERR) << "YAML parser exception: " << e.what();

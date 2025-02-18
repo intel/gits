@@ -242,6 +242,13 @@ struct Config {
         vi_uint index{0};
         std::string vendor;
       } adapterOverride;
+      struct ApplicationInfoOverride {
+        vi_bool enabled{false};
+        std::string applicationName;
+        std::string applicationVersion;
+        std::string engineName;
+        std::string engineVersion;
+      } applicationInfoOverride;
     } player;
 
     struct Features {

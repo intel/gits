@@ -36,20 +36,55 @@ void IntelExtensionsService::loadIntelExtensions(const uint32_t& vendorID,
   intelExtensionLoaded_ = true;
 }
 
-void IntelExtensionsService::setApplicationName(const std::string& appName) {
+void IntelExtensionsService::setApplicationInfo() {
 
   if (!intelExtensionLoaded_ || applicationNameSet_) {
     return;
   }
 
-  std::wstring nameW(appName.begin(), appName.end());
+  const auto parseVersion = [](std::string version) -> INTCAppInfoVersion {
+    std::stringstream ss(version);
+    std::string temp;
+    std::vector<uint32_t> parts;
+    while (std::getline(ss, temp, '.')) {
+      parts.push_back(std::stoi(temp));
+    }
+    GITS_ASSERT(parts.size() == 3);
+    return {parts[0], parts[1], parts[2]};
+  };
+
+  std::string appName;
+  std::string appVersion = "0.0.0";
+  std::string engineName;
+  std::string engineVersion = "0.0.0";
+
   INTCExtensionAppInfo1 appInfo{};
-  appInfo.pApplicationName = nameW.c_str();
+
+  const auto& appInfoConfigOverride = Config::Get().directx.player.applicationInfoOverride;
+  if (appInfoConfigOverride.enabled) {
+    appName = appInfoConfigOverride.applicationName;
+
+    appVersion = appInfoConfigOverride.applicationVersion;
+    appInfo.ApplicationVersion = parseVersion(appVersion);
+
+    engineName = appInfoConfigOverride.engineName;
+    const std::wstring engineNameW(engineName.begin(), engineName.end());
+    appInfo.pEngineName = engineNameW.c_str();
+
+    engineVersion = appInfoConfigOverride.engineVersion;
+    appInfo.EngineVersion = parseVersion(engineVersion);
+  } else {
+    appName = CGits::Instance().FilePlayer().GetApplicationName();
+  }
+  const std::wstring appNameW(appName.begin(), appName.end());
+  appInfo.pApplicationName = appNameW.c_str();
+
   HRESULT hr = INTC_D3D12_SetApplicationInfo(&appInfo);
   if (hr != S_OK) {
     Log(ERR) << "INTC_D3D12_SetApplicationInfo failed - application name is not set.";
   } else {
-    Log(INFO) << "INTC_D3D12_SetApplicationInfo - application name set to " << appName;
+    Log(INFO) << "INTC_D3D12_SetApplicationInfo - application: \"" << appName << "\" ("
+              << appVersion << "), engine: \"" << engineName << "\" (" << engineVersion << ")";
     applicationNameSet_ = true;
   }
 }

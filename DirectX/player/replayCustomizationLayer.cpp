@@ -63,9 +63,7 @@ void ReplayCustomizationLayer::pre(D3D12CreateDeviceCommand& c) {
   Log(INFO) << "D3D12CreateDevice - Using adapter: " << description;
 
   manager_.getIntelExtensionsService().loadIntelExtensions(desc.VendorId, desc.DeviceId);
-
-  std::string appName = CGits::Instance().FilePlayer().GetApplicationName();
-  manager_.getIntelExtensionsService().setApplicationName(appName);
+  manager_.getIntelExtensionsService().setApplicationInfo();
 }
 
 void ReplayCustomizationLayer::pre(IDXGISwapChainSetFullscreenStateCommand& c) {
