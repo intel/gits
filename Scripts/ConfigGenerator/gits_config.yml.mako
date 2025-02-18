@@ -208,6 +208,7 @@ DirectX:
     WaitOnEventCompletion: false  # CPU waits for GPU on SetEventOnCompletion and SetEventOnMultipleFenceCompletion
     UseCopyQueueOnRestore: false  # Use a D3D12_COMMAND_LIST_TYPE_COPY to restore resource states
     UavBarrierAfterCopyRaytracingASWorkaround: false  # Adds UAV barrier for all resources after CopyRaytracingAccelerationStructure
+    SkipResolveQueryData: true # Don't replay ID3D12GraphicsCommandList::ResolveQueryData commands
     MultithreadedShaderCompilation: true  # Usa a thread pool for D3D12 methods which cause hardware shader compilation
     Plugins: []
     TokenBurstChunkSize: 5242880 # default size: 5 MB

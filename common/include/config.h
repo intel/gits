@@ -233,6 +233,7 @@ struct Config {
       vi_bool waitOnEventCompletion{false};
       vi_bool useCopyQueueOnRestore{false};
       vi_bool uavBarrierAfterCopyRaytracingASWorkaround{false};
+      vi_bool skipResolveQueryData{true};
       vi_bool multithreadedShaderCompilation{true};
       std::vector<std::string> plugins;
       vi_uint64 tokenBurstChunkSize{5242880};

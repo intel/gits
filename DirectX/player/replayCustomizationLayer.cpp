@@ -776,7 +776,17 @@ void ReplayCustomizationLayer::pre(ID3D12Device12GetResourceAllocationInfo3Comma
 }
 
 void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListResolveQueryDataCommand& c) {
-  c.skip = true;
+  if (Config::Get().directx.player.skipResolveQueryData) {
+    c.skip = true;
+    if (c.Type_.value == D3D12_QUERY_TYPE_OCCLUSION ||
+        c.Type_.value == D3D12_QUERY_TYPE_BINARY_OCCLUSION) {
+      static bool logged = false;
+      if (!logged) {
+        Log(WARN) << "Skipping ResolveQueryData for occlusion queries may result in corruptions";
+        logged = true;
+      }
+    }
+  }
 }
 
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateCommandQueueCommand& c) {

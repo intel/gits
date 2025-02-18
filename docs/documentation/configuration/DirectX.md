@@ -31,6 +31,8 @@ icon: material/microsoft
     CPU waits for GPU on SetEventOnCompletion and SetEventOnMultipleFenceCompletion
 - **`UseCopyQueueOnRestore`**
     Use a D3D12_COMMAND_LIST_TYPE_COPY to restore resource states
+- **`SkipResolveQueryData`**
+    Don't replay ID3D12GraphicsCommandList::ResolveQueryData commands
 - **`MultithreadedShaderCompilation`**
     Use a thread pool for D3D12 methods which cause hardware shader compilation
 - **`Plugins`**

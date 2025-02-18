@@ -875,6 +875,7 @@ struct convert<gits::Config::DirectX::Player> {
       rhs.useCopyQueueOnRestore = node["UseCopyQueueOnRestore"].as<gits::vi_bool>();
       rhs.uavBarrierAfterCopyRaytracingASWorkaround =
           node["UavBarrierAfterCopyRaytracingASWorkaround"].as<gits::vi_bool>();
+      rhs.skipResolveQueryData = node["SkipResolveQueryData"].as<gits::vi_bool>();
       rhs.multithreadedShaderCompilation =
           node["MultithreadedShaderCompilation"].as<gits::vi_bool>();
       rhs.plugins = node["Plugins"].as<std::vector<std::string>>();
