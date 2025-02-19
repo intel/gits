@@ -51,13 +51,18 @@ void PluginService::loadPlugins() {
   std::vector<char> moduleFilename(MAX_PATH + 1, 0);
   GetModuleFileNameA(nullptr, moduleFilename.data(), moduleFilename.size());
 
-  // Try to load plugins from Plugins/DirectX/ directory
+  // Try to load plugins from the Plugins/DirectX/ directory next to the binary
   auto exePath = std::filesystem::absolute(moduleFilename.data());
-  auto pluginsPath = std::filesystem::absolute(exePath / "../Plugins/DirectX/");
+  auto pluginsPath = std::filesystem::absolute(exePath.parent_path() / "Plugins" / "DirectX");
   if (!isValidPluginsPath(pluginsPath)) {
-    // Try to load the plugins from the install path
+    // Try to load plugins from the install path
+    pluginsPath = std::filesystem::absolute(cfg.common.recorder.installPath.parent_path() /
+                                            "Plugins" / "DirectX");
+  }
+  if (!isValidPluginsPath(pluginsPath)) {
+    // Try to load plugins from the Plugins/DirectX/ directory from the binary's parent directory
     pluginsPath =
-        std::filesystem::absolute(cfg.common.recorder.installPath / "../Plugins/DirectX/");
+        std::filesystem::absolute(exePath.parent_path().parent_path() / "Plugins" / "DirectX");
   }
 
   if (isValidPluginsPath(pluginsPath)) {

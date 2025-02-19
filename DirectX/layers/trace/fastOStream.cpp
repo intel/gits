@@ -76,9 +76,29 @@ void FastOStringStream::initializeIpcFlush() {
     return;
   }
 
-  const auto executablePath =
+  auto executablePath =
       std::filesystem::path(gits::Config::Get().common.recorder.installPath).parent_path() /
       "UtilityTools" / "DirectX_trace_ipc.exe";
+  if (!std::filesystem::exists(executablePath)) {
+    std::vector<char> moduleFilename(MAX_PATH + 1, 0);
+    GetModuleFileNameA(nullptr, moduleFilename.data(), moduleFilename.size());
+
+    // Try to load the trace executable from the directory next to the player
+    auto playerPath = std::filesystem::absolute(moduleFilename.data());
+    executablePath = std::filesystem::absolute(playerPath.parent_path() / "UtilityTools" /
+                                               "DirectX_trace_ipc.exe");
+    if (!std::filesystem::exists(executablePath)) {
+      // Try to load the trace executable from the player's parent directory
+      executablePath = std::filesystem::absolute(playerPath.parent_path().parent_path() /
+                                                 "UtilityTools" / "DirectX_trace_ipc.exe");
+    }
+  }
+
+  if (!std::filesystem::exists(executablePath)) {
+    Log(ERR) << "Could not locate the DirectX_trace_ipc.exe";
+    return;
+  }
+
   const std::string eventName =
       eventBaseName + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
   const std::string sharedMemoryName =
