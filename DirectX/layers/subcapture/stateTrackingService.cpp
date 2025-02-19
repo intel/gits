@@ -25,10 +25,9 @@ StateTrackingService::~StateTrackingService() {
 }
 
 void StateTrackingService::restoreState() {
-  auto frameNumber = CGits::Instance().CurrentFrame();
+  unsigned frameNumber = CGits::Instance().CurrentFrame();
   recorder_.record(new CTokenFrameNumber(CToken::ID_INIT_START, frameNumber));
 
-  // Restore states
   for (auto& it : statesByKey_) {
     restoreState(it.second);
   }
@@ -43,10 +42,11 @@ void StateTrackingService::restoreState() {
   commandListService_.restoreCommandLists();
   restoreReferenceCount();
 
-  // Rewind swapChain
   swapChainService_.restoreBackBufferSequence();
-
   recorder_.record(new CTokenFrameNumber(CToken::ID_INIT_END, frameNumber));
+  // one Present after ID_INIT_END to enable PIX first frame capture in gits interactive mode
+  swapChainService_.recordSwapChainPresent();
+
   copyAuxiliaryFiles();
 }
 
@@ -1236,27 +1236,23 @@ void StateTrackingService::SwapChainService::setSwapChain(unsigned key,
 
 void StateTrackingService::SwapChainService::restoreBackBufferSequence() {
 
-  int backBufferShift = backBufferShift_;
+  // taking into account one Present that will be always recorded later
+  int backBufferShift = backBufferShift_ - 1;
+  if (backBufferShift < 0) {
+    backBufferShift += backBuffersCount_;
+  }
+  for (int i = 0; i < backBufferShift; ++i) {
+    recordSwapChainPresent();
+  }
+}
 
+void StateTrackingService::SwapChainService::recordSwapChainPresent() {
   IDXGISwapChainPresentCommand presentCommand;
   presentCommand.key = stateService_.getUniqueCommandKey();
   presentCommand.object_.key = swapChainKey_;
   presentCommand.SyncInterval_.value = 0;
   presentCommand.Flags_.value = 0;
   stateService_.recorder_.record(new IDXGISwapChainPresentWriter(presentCommand));
-  --backBufferShift;
-  if (backBufferShift < 0) {
-    backBufferShift += backBuffersCount_;
-  }
-
-  for (int i = 0; i < backBufferShift; ++i) {
-    IDXGISwapChainPresentCommand presentCommand;
-    presentCommand.key = stateService_.getUniqueCommandKey();
-    presentCommand.object_.key = swapChainKey_;
-    presentCommand.SyncInterval_.value = 0;
-    presentCommand.Flags_.value = 0;
-    stateService_.recorder_.record(new IDXGISwapChainPresentWriter(presentCommand));
-  }
 }
 
 } // namespace DirectX

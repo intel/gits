@@ -167,6 +167,7 @@ private:
     SwapChainService(StateTrackingService& stateService) : stateService_(stateService) {}
     void setSwapChain(unsigned key, IDXGISwapChain* swapChain, unsigned backBuffersCount);
     void restoreBackBufferSequence();
+    void recordSwapChainPresent();
 
   private:
     StateTrackingService& stateService_;
