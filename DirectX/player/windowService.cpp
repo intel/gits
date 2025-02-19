@@ -37,7 +37,8 @@ HWND WindowService::createWindow(HWND captureHwnd, int width, int height) {
 
 HWND WindowService::getCurrentHwnd(HWND captureHwnd) {
   if (captureHwnd != captureWindow_) {
-    Log(WARN) << "getCurrentHwnd: captureHwnd != captureWindow_" << std::endl;
+    Log(WARN) << "Cannot find window for hWnd from capture: " << std::hex << captureHwnd
+              << std::dec;
   }
   return currentWindow_;
 }
