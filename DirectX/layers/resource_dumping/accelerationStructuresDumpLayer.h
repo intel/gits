@@ -12,6 +12,7 @@
 #include "accelerationStructuresDump.h"
 
 #include <unordered_set>
+#include <unordered_map>
 
 namespace gits {
 namespace DirectX {
@@ -26,6 +27,7 @@ public:
   void pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) override;
   void post(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) override;
   void post(ID3D12CommandQueueExecuteCommandListsCommand& c) override;
+  void post(ID3D12GraphicsCommandListResetCommand& c) override;
   void post(ID3D12CommandQueueWaitCommand& c) override;
   void post(ID3D12CommandQueueSignalCommand& c) override;
   void post(ID3D12FenceSignalCommand& c) override;
@@ -38,6 +40,20 @@ private:
   std::wstring dumpPath_;
   AccelerationStructuresDump accelerationStructuresDump_;
   std::unordered_set<unsigned> callKeys_;
+  bool dumpCurrentBuild_{};
+
+  class CommandListModuloStep {
+  public:
+    void parse(const std::string& range);
+    bool checkNextCommandListCall(unsigned commandListKey);
+    void resetCommandList(unsigned commandListKey);
+
+  private:
+    std::unordered_map<unsigned, unsigned> commandListCalls_;
+    unsigned start_{};
+    unsigned step_{};
+  };
+  CommandListModuloStep commandListModuloStep_;
 };
 
 } // namespace DirectX

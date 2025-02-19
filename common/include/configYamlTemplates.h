@@ -1025,6 +1025,7 @@ struct convert<gits::Config::DirectX::Features::RaytracingDump> {
       rhs.instancesPost = node["InstancesPost"].as<gits::vi_bool>();
       rhs.blases = node["BLASes"].as<gits::vi_bool>();
       rhs.commandKeys = node["CommandKeys"].as<std::string>();
+      rhs.commandListModuloStep = node["CommandListModuloStep"].as<std::string>();
       return true;
     } catch (const YAML::Exception& e) {
       Log(ERR) << "YAML parser exception: " << e.what();

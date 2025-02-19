@@ -26,6 +26,7 @@ AccelerationStructuresDumpLayer::AccelerationStructuresDumpLayer()
   if (!raytracingDump.commandKeys.empty()) {
     extractKeys(raytracingDump.commandKeys, callKeys_);
   }
+  commandListModuloStep_.parse(raytracingDump.commandListModuloStep);
 }
 
 void AccelerationStructuresDumpLayer::pre(ID3D12DeviceCreateCommandQueueCommand& c) {
@@ -54,12 +55,15 @@ void AccelerationStructuresDumpLayer::pre(ID3D12DeviceCreateCommandAllocatorComm
 
 void AccelerationStructuresDumpLayer::pre(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
-  if (!callKeys_.empty() && callKeys_.find(c.key) == callKeys_.end()) {
+  if (!callKeys_.empty() && callKeys_.find(c.key) == callKeys_.end() ||
+      !commandListModuloStep_.checkNextCommandListCall(c.object_.key)) {
     return;
   }
   if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
     return;
   }
+  dumpCurrentBuild_ = true;
+
   c.pDesc_.value->Inputs.Flags &=
       ~(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD |
         D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE);
@@ -88,13 +92,11 @@ void AccelerationStructuresDumpLayer::pre(
 void AccelerationStructuresDumpLayer::post(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
 
-  if (!callKeys_.empty() && callKeys_.find(c.key) == callKeys_.end()) {
+  if (!dumpCurrentBuild_) {
     return;
   }
+  dumpCurrentBuild_ = false;
 
-  if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-    return;
-  }
   if (c.pDesc_.value->Inputs.Flags &
       D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE) {
     return;
@@ -107,6 +109,10 @@ void AccelerationStructuresDumpLayer::post(
 void AccelerationStructuresDumpLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
   accelerationStructuresDump_.executeCommandLists(
       c.key, c.object_.key, c.object_.value, c.ppCommandLists_.value, c.NumCommandLists_.value);
+}
+
+void AccelerationStructuresDumpLayer::post(ID3D12GraphicsCommandListResetCommand& c) {
+  commandListModuloStep_.resetCommandList(c.object_.key);
 }
 
 void AccelerationStructuresDumpLayer::post(ID3D12CommandQueueWaitCommand& c) {
@@ -137,6 +143,34 @@ void AccelerationStructuresDumpLayer::extractKeys(const std::string& keyString,
     std::string key(begin, p);
     keySet.insert(std::stoi(key));
   } while (*p++);
+}
+
+void AccelerationStructuresDumpLayer::CommandListModuloStep::parse(const std::string& range) {
+  if (range.empty()) {
+    return;
+  }
+  start_ = std::stoi(range);
+  size_t pos = range.find(':');
+  GITS_ASSERT(pos != std::string::npos);
+  step_ = std::stoi(range.substr(pos + 1));
+}
+
+bool AccelerationStructuresDumpLayer::CommandListModuloStep::checkNextCommandListCall(
+    unsigned commandListKey) {
+  if (!step_) {
+    return true;
+  }
+  unsigned& index = commandListCalls_[commandListKey];
+  ++index;
+  if (index % step_ == start_) {
+    return true;
+  }
+  return false;
+}
+
+void AccelerationStructuresDumpLayer::CommandListModuloStep::resetCommandList(
+    unsigned commandListKey) {
+  commandListCalls_.erase(commandListKey);
 }
 
 } // namespace DirectX

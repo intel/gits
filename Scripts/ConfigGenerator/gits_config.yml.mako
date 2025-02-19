@@ -268,6 +268,7 @@ DirectX:
       InstancesPost: false  # Dumps instances buffers after patching for given BuildRaytracingAccelerationStructure TLAS calls
       BLASes: false  # Dumps bottom level acceleration structures for given BuildRaytracingAccelerationStructure BLAS calls
       CommandKeys: ''  # Comma separated list of DispatchRays or BuildRaytracingAccelerationStructure call keys, empty list means all such calls
+      CommandListModuloStep: ''  # start:modulo_step - specifies congruence modulo within command list, if CommandKeys are non empty only they are regarded, e.g. 2:2 dumps all even
 
     ExecuteIndirectDump:
       ArgumentBufferPre: false  # Dumps arguments buffers for specified ExecuteIndirect calls before patching

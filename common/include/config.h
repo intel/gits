@@ -298,6 +298,7 @@ struct Config {
         vi_bool instancesPost{false};
         vi_bool blases{false};
         std::string commandKeys;
+        std::string commandListModuloStep;
       } raytracingDump;
 
       struct ExecuteIndirectDump {
