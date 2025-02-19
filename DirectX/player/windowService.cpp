@@ -36,7 +36,9 @@ HWND WindowService::createWindow(HWND captureHwnd, int width, int height) {
 }
 
 HWND WindowService::getCurrentHwnd(HWND captureHwnd) {
-  GITS_ASSERT(captureHwnd == captureWindow_);
+  if (captureHwnd != captureWindow_) {
+    Log(WARN) << "getCurrentHwnd: captureHwnd != captureWindow_" << std::endl;
+  }
   return currentWindow_;
 }
 
