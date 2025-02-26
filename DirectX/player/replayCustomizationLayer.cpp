@@ -921,6 +921,14 @@ void ReplayCustomizationLayer::pre(ID3D12DeviceOpenSharedHandleCommand& c) {
   c.skip = true;
 }
 
+void ReplayCustomizationLayer::pre(ID3DBlobGetBufferPointerCommand& c) {
+  c.skip = true;
+}
+
+void ReplayCustomizationLayer::pre(ID3DBlobGetBufferSizeCommand& c) {
+  c.skip = true;
+}
+
 void ReplayCustomizationLayer::fillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg) {
   if (arg.value) {
     arg.value = manager_.getGpuAddressService().getGpuAddress(arg.interfaceKey, arg.offset);

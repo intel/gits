@@ -153,6 +153,8 @@ public:
                command) override;
   void pre(D3D12CreateRootSignatureDeserializerCommand& command) override;
   void pre(ID3D12DeviceOpenSharedHandleCommand& command) override;
+  void pre(ID3DBlobGetBufferPointerCommand& command) override;
+  void pre(ID3DBlobGetBufferSizeCommand& command) override;
 
 private:
   void fillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg);
