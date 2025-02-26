@@ -178,19 +178,19 @@ FastOStream& operator<<(FastOStream& stream, D3D12_RESOURCE_BARRIERs_Argument& a
   }
   stream << "D3D12_RESOURCE_BARRIER[";
   for (unsigned i = 0; i < arg.size; ++i) {
-    stream << "{" << arg.value->Type << ", " << arg.value->Flags << ", ";
-    switch (arg.value->Type) {
+    stream << "{" << arg.value[i].Type << ", " << arg.value[i].Flags << ", ";
+    switch (arg.value[i].Type) {
     case D3D12_RESOURCE_BARRIER_TYPE_TRANSITION:
       stream << "D3D12_RESOURCE_TRANSITION_BARRIER{";
       printObjectKey(stream, arg.resourceKeys[i]);
       stream << ", ";
-      if (arg.value->Transition.Subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES) {
+      if (arg.value[i].Transition.Subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES) {
         stream << "D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES";
       } else {
-        stream << arg.value->Transition.Subresource;
+        stream << arg.value[i].Transition.Subresource;
       }
-      stream << ", " << arg.value->Transition.StateBefore << ", "
-             << arg.value->Transition.StateAfter;
+      stream << ", " << arg.value[i].Transition.StateBefore << ", "
+             << arg.value[i].Transition.StateAfter;
       break;
     case D3D12_RESOURCE_BARRIER_TYPE_ALIASING:
       stream << "D3D12_RESOURCE_ALIASING_BARRIER{";
