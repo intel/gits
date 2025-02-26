@@ -12,10 +12,6 @@ set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(ROOT_SRC
   ${SRC_DIR}/resourceDumpingFactory.h
   ${SRC_DIR}/resourceDumpingFactory.cpp
-  ${SRC_DIR}/resourceDump.h
-  ${SRC_DIR}/resourceDump.cpp
-  ${SRC_DIR}/gpuExecutionTracker.h
-  ${SRC_DIR}/gpuExecutionTracker.cpp
 )
 source_group("" FILES ${ROOT_SRC})
 
@@ -70,6 +66,7 @@ target_sources(DirectX_resource_dumping PRIVATE
 
 target_include_directories(DirectX_resource_dumping PRIVATE
   ${DIRECTX_DIR}/common/layer_interface
+  ${DIRECTX_DIR}/common/utils
   ${D3D12_HEADERS_DIR}
   ${DSTORAGE_HEADERS_DIR}
   ${XESS_HEADERS_DIR}

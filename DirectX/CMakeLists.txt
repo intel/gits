@@ -73,6 +73,7 @@ add_dependencies(DirectX_subcapture
     DirectX_layer_interface
     DirectX_dstorage_resources
     DirectX_coders
+	DirectX_utils
 )
 
 add_dependencies(DirectX_coders
@@ -85,6 +86,7 @@ add_dependencies(DirectX_dstorage_resources
 
 add_dependencies(DirectX_resource_dumping
     DirectX_layer_interface
+	DirectX_utils
 )
 
 add_dependencies(DirectX_skip_calls
@@ -97,6 +99,7 @@ add_dependencies(DirectX_portability
 
 target_link_libraries(DirectX_subcapture PRIVATE
     DirectX_dstorage_resources
+	DirectX_utils
 )
 
 target_link_libraries(DirectX_recorder PRIVATE

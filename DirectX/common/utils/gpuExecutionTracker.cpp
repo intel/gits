@@ -82,6 +82,14 @@ void GpuExecutionTracker::fenceSignal(unsigned key, unsigned fenceKey, UINT64 fe
   }
 }
 
+bool GpuExecutionTracker::isCommandQueueWaiting(unsigned commandQueueKey) {
+  auto it = queueEvents_.find(commandQueueKey);
+  if (it == queueEvents_.end() || it->second.empty()) {
+    return false;
+  }
+  return true;
+}
+
 void GpuExecutionTracker::execute(unsigned key, unsigned commandQueueKey, Executable* executable) {
   executable->key = key;
   auto it = queueEvents_.find(commandQueueKey);

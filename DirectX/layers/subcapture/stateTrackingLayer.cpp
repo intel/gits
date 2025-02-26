@@ -75,6 +75,7 @@ void StateTrackingLayer::post(IDXGISwapChainPresentCommand& c) {
   unsigned currentFrame = CGits::Instance().CurrentFrame();
   if (currentFrame == startFrame_ - 1) {
     Log(INFOV) << "Start subcapture frame " << currentFrame + 1 << " call " << c.key;
+    gpuExecutionFlusher_.flushCommandQueues();
     stateService_.restoreState();
   }
 }
@@ -86,6 +87,7 @@ void StateTrackingLayer::post(IDXGISwapChain1Present1Command& c) {
   unsigned currentFrame = CGits::Instance().CurrentFrame();
   if (currentFrame == startFrame_ - 1) {
     Log(INFOV) << "Start subcapture frame " << currentFrame + 1 << " call " << c.key;
+    gpuExecutionFlusher_.flushCommandQueues();
     stateService_.restoreState();
   }
 }
@@ -108,6 +110,8 @@ void StateTrackingLayer::pre(IUnknownReleaseCommand& c) {
         stateService_.releaseObject(resourceKey, 0);
       }
     }
+
+    gpuExecutionFlusher_.destroyCommandQueue(c.object_.key);
   }
 }
 
@@ -274,6 +278,9 @@ void StateTrackingLayer::post(ID3D12DeviceCreateCommandQueueCommand& c) {
   stateService_.storeState(state);
   accelerationStructuresSerializeService_.setDevice(c.object_.value, c.object_.key);
   accelerationStructuresBuildService_.setDeviceKey(c.object_.key);
+
+  gpuExecutionFlusher_.createCommandQueue(
+      c.ppCommandQueue_.key, *reinterpret_cast<ID3D12CommandQueue**>(c.ppCommandQueue_.value));
 }
 
 void StateTrackingLayer::post(ID3D12Device9CreateCommandQueue1Command& c) {
@@ -289,6 +296,9 @@ void StateTrackingLayer::post(ID3D12Device9CreateCommandQueue1Command& c) {
   state->iid = c.riid_.value;
   state->commandQueue = static_cast<ID3D12CommandQueue*>(*c.ppCommandQueue_.value);
   stateService_.storeState(state);
+
+  gpuExecutionFlusher_.createCommandQueue(
+      c.ppCommandQueue_.key, *reinterpret_cast<ID3D12CommandQueue**>(c.ppCommandQueue_.value));
 }
 
 void StateTrackingLayer::post(IDXGIFactoryCreateSwapChainCommand& c) {
@@ -1077,6 +1087,15 @@ void StateTrackingLayer::post(ID3D12CommandQueueSignalCommand& c) {
     return;
   }
   fenceTrackingService_.setFenceValue(c.pFence_.key, c.Value_.value);
+
+  gpuExecutionFlusher_.commandQueueSignal(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
+}
+
+void StateTrackingLayer::post(ID3D12CommandQueueWaitCommand& c) {
+  if (c.result_.value != S_OK) {
+    return;
+  }
+  gpuExecutionFlusher_.commandQueueWait(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
 }
 
 void StateTrackingLayer::post(ID3D12FenceSignalCommand& c) {
@@ -1084,6 +1103,8 @@ void StateTrackingLayer::post(ID3D12FenceSignalCommand& c) {
     return;
   }
   fenceTrackingService_.setFenceValue(c.object_.key, c.Value_.value);
+
+  gpuExecutionFlusher_.fenceSignal(c.key, c.object_.key, c.Value_.value);
 }
 
 void StateTrackingLayer::post(ID3D12Device3EnqueueMakeResidentCommand& c) {

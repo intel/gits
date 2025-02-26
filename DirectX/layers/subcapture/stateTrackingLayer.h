@@ -21,6 +21,7 @@
 #include "xessStateService.h"
 #include "accelerationStructuresBuildService.h"
 #include "accelerationStructuresSerializeService.h"
+#include "gpuExecutionFlusher.h"
 
 #include <map>
 #include <array>
@@ -97,6 +98,7 @@ public:
   void post(ID3D12DeviceCreateShaderResourceViewCommand& c) override;
   void post(ID3D12DeviceCreateFenceCommand& c) override;
   void post(ID3D12CommandQueueSignalCommand& c) override;
+  void post(ID3D12CommandQueueWaitCommand& c) override;
   void post(ID3D12FenceSignalCommand& c) override;
   void post(ID3D12Device3EnqueueMakeResidentCommand& c) override;
   void post(ID3D12DeviceCreateSamplerCommand& c) override;
@@ -234,6 +236,7 @@ private:
   XessStateService xessStateService_;
   AccelerationStructuresSerializeService accelerationStructuresSerializeService_;
   AccelerationStructuresBuildService accelerationStructuresBuildService_;
+  GpuExecutionFlusher gpuExecutionFlusher_;
   unsigned startFrame_;
   std::vector<D3D12_GPU_VIRTUAL_ADDRESS> lastCallCaptureGpuAddresses_;
   std::unordered_map<unsigned, std::unordered_set<unsigned>> resourceHeaps_;

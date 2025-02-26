@@ -73,6 +73,7 @@ public:
                           unsigned fenceKey,
                           UINT64 fenceValue);
   void fenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue);
+  bool isCommandQueueWaiting(unsigned commandQueueKey);
   void execute(unsigned key, unsigned commandQueueKey, Executable* executable);
   std::vector<Executable*>& getReadyExecutables() {
     return readyExecutables_;

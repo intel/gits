@@ -52,6 +52,8 @@ set(STATE_TRACKING_SRC
   ${SRC_DIR}/accelerationStructuresSerializeService.cpp
   ${SRC_DIR}/accelerationStructuresBufferContentRestore.h
   ${SRC_DIR}/accelerationStructuresBufferContentRestore.cpp
+  ${SRC_DIR}/gpuExecutionFlusher.h
+  ${SRC_DIR}/gpuExecutionFlusher.cpp
 )
 source_group("state_tracking" FILES ${STATE_TRACKING_SRC})
 
@@ -78,7 +80,7 @@ target_sources(DirectX_subcapture PRIVATE
 target_include_directories(DirectX_subcapture PRIVATE
   ${DIRECTX_DIR}/common/layer_interface
   ${DIRECTX_DIR}/common/coders
-  ${DIRECTX_DIR}/layers/resource_dumping
+  ${DIRECTX_DIR}/common/utils
   ${DIRECTX_DIR}/layers/dstorage_resources
   ${D3D12_HEADERS_DIR}
   ${DML_HEADERS_DIR}
