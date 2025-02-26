@@ -928,5 +928,21 @@ inline void zeEventDestroy_RUNWRAP(Cze_result_t& _return_value, Cze_event_handle
   sd.deallocationHandler.RemoveUseOfEvent(*_hEvent);
   _hEvent.RemoveMapping();
 }
+
+inline void zeCommandListAppendWriteGlobalTimestamp_V1_RUNWRAP(
+    Cze_result_t& _return_value,
+    Cze_command_list_handle_t& _hCommandList,
+    CUSMPtr& _dstptr,
+    Cze_event_handle_t& _hSignalEvent,
+    Cuint32_t& _numWaitEvents,
+    Cze_event_handle_t::CSArray& _phWaitEvents) {
+  _return_value.Value() = drv.zeCommandListAppendWriteGlobalTimestamp(
+      *_hCommandList, *_dstptr, *_hSignalEvent, *_numWaitEvents, *_phWaitEvents);
+  zeCommandListAppendWriteGlobalTimestamp_SD(*_return_value, *_hCommandList, *_dstptr,
+                                             *_hSignalEvent, *_numWaitEvents, *_phWaitEvents);
+  auto& sd = SD();
+  sd.deallocationHandler.AddToResourcesInExecution(*_hCommandList, _dstptr, *_hSignalEvent);
+}
+
 } // namespace l0
 } // namespace gits
