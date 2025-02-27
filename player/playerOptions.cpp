@@ -1315,9 +1315,6 @@ bool configure_player(int argc, char** argv) {
     cfg.common.player.windowMode = WindowMode::EXCLUSIVE_FULLSCREEN;
   }
   set_when_option_present(cfg.common.player.showWindowsWA, optionShowWindowsWA);
-  set_when_option_present(cfg.common.player.signStream, optionSignStream);
-  set_when_option_present(cfg.common.player.verifyStream, optionVerifyStream);
-  set_when_option_present(cfg.common.player.dontVerifyStream, optionDontVerifyStream);
   set_when_option_present(cfg.common.player.renderOffscreen, optionRenderOffscreen);
   set_when_option_present(cfg.vulkan.player.ignoreVKCrossPlatformIncompatibilitiesWA,
                           optionIgnoreVKCrossPlatformIncompatibilitiesWA);

@@ -108,7 +108,6 @@ struct Config {
       std::string scriptArgsStr;
       vi_bool benchmark;
       vi_bool showWindowBorder;
-      vi_bool dontVerifyStream;
       BitRange captureFrames;
       std::filesystem::path outputDir;
       BitRange traceSelectedFrames;
@@ -117,8 +116,6 @@ struct Config {
       vi_bool logFncs;
       vi_bool faithfulThreading;
       vi_bool loadWholeStreamBeforePlayback;
-      vi_bool signStream;
-      vi_bool verifyStream;
       vi_bool showWindowsWA;
       vi_bool disableExceptionHandling;
       vi_bool captureScreenshot;

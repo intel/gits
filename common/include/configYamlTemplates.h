@@ -343,7 +343,6 @@ struct convert<gits::Config::Common::Player> {
       rhs.scriptArgsStr = node["ScriptArgs"].as<std::string>();
       rhs.benchmark = node["Benchmark"].as<gits::vi_bool>();
       rhs.showWindowBorder = node["ShowWindowBorder"].as<gits::vi_bool>();
-      rhs.dontVerifyStream = node["DontVerifyStream"].as<gits::vi_bool>();
       rhs.captureFrames = node["CaptureFrames"].as<BitRange>();
       rhs.outputDir = node["OutputDir"].as<std::filesystem::path>();
       rhs.traceSelectedFrames = node["TraceSelectedFrames"].as<BitRange>();
@@ -352,8 +351,6 @@ struct convert<gits::Config::Common::Player> {
       rhs.logFncs = node["LogFncs"].as<gits::vi_bool>();
       rhs.faithfulThreading = node["FaithfulThreading"].as<gits::vi_bool>();
       rhs.loadWholeStreamBeforePlayback = node["LoadWholeStreamBeforePlayback"].as<gits::vi_bool>();
-      rhs.signStream = node["SignStream"].as<gits::vi_bool>();
-      rhs.verifyStream = node["VerifyStream"].as<gits::vi_bool>();
       rhs.showWindowsWA = node["ShowWindowsWA"].as<gits::vi_bool>();
       rhs.disableExceptionHandling = node["DisableExceptionHandling"].as<gits::vi_bool>();
       rhs.captureScreenshot = node["CaptureScreenshot"].as<gits::vi_bool>();

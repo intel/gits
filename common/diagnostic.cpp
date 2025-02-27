@@ -12,7 +12,6 @@
 #include "tools.h"
 #include "pragmas.h"
 #include "config.h"
-#include "hashing.h"
 
 #include <string>
 #include <sstream>
@@ -355,11 +354,9 @@ void gather_diagnostic_info(nlohmann::ordered_json& properties) {
     GetModuleFileName(NULL, exePathArr, sizeof(exePathArr));
     std::filesystem::path exePath(exePathArr);
     if (std::filesystem::exists(exePath)) {
-      std::string exeHash = file_xxhash(exePath);
       std::string exeName = exePath.filename().string();
       properties["diag"]["app"]["name"] = exeName;
       properties["diag"]["app"]["path"] = exePath;
-      properties["diag"]["app"]["hash"] = exeHash;
       properties["diag"]["original_app"]["name"] = exeName;
     }
   }

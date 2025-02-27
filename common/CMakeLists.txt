@@ -21,7 +21,6 @@ list(APPEND common_SOURCES
   include/function.h
   include/getopt_.h
   include/gits.h
-  include/hashing.h
   include/id.h
   include/InputListener.h
   include/istdhash.h
@@ -69,7 +68,6 @@ list(APPEND common_SOURCES
   function.cpp
   gits.cpp
   getopt.cpp
-  hashing.cpp
   id.cpp
   library.cpp
   log.cpp

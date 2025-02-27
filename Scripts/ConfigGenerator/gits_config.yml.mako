@@ -137,7 +137,6 @@ Common:
     ScriptArgs: ''
     Benchmark: false
     ShowWindowBorder: false
-    DontVerifyStream: false
     CaptureFrames: '-'
     OutputDir: ''  # path
     TraceSelectedFrames: '-'
@@ -146,8 +145,6 @@ Common:
     LogFncs: false
     FaithfulThreading: false
     LoadWholeStreamBeforePlayback: false
-    SignStream: false
-    VerifyStream: false
     ShowWindowsWA: false
     DisableExceptionHandling: false
     CaptureScreenshot: false

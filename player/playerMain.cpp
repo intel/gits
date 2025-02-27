@@ -51,7 +51,6 @@
 #include "sequentialExecutor.h"
 #include "pragmas.h"
 #include "playerOptions.h"
-#include "hashing.h"
 #include "message_pump.h"
 #if defined GITS_PLATFORM_WINDOWS
 #include "recorder.h"
@@ -153,25 +152,6 @@ int MainBody(int argc, char* argv[]) {
   int returnValue = EXIT_SUCCESS;
 
   try {
-    if (cfg.common.player.signStream) {
-      sign_directory(cfg.common.player.streamDir);
-      Log(INFO) << " (Note that all files in the stream folder and its"
-                   " subfolders will be treated as stream files and signed unless they are"
-                   " on GITS' internal blacklist. If necessary, you can edit the signature"
-                   " file by hand to remove stray non-stream files from it.)";
-      return 0;
-    }
-
-    if (cfg.common.player.dontVerifyStream) {
-      Log(WARN) << "Skipping stream signature verification because --dontVerifyStream was used.";
-    } else {
-      verify_directory(cfg.common.player.streamDir);
-      if (cfg.common.player.verifyStream) {
-        Log(WARN) << "Skipping stream playback because --verifyStream was used.";
-        return 0;
-      }
-    }
-
     if (cfg.common.player.waitForEnter) {
       Log(OFF, NO_PREFIX) << "Waiting for ENTER press ...";
       std::cin.get();

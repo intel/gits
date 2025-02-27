@@ -15,7 +15,6 @@
 
 #include "gits.h"
 #include "streams.h"
-#include "hashing.h"
 #include "exception.h"
 #include "log.h"
 #include "pragmas.h"
@@ -121,11 +120,6 @@ CGits::~CGits() {
     // Only create signature when recording, player can opt in through option.
     if (Config::Get().IsRecorder() && Config::Get().common.recorder.enabled) {
       CloseZipFileGLPrograms();
-      sign_directory(Config::Get().common.recorder.dumpPath);
-#ifdef GITS_PLATFORM_WINDOWS
-    } else if (Config::Get().IsPlayer() && Config::Get().directx.features.subcapture.enabled) {
-      sign_directory(Config::Get().common.player.subcapturePath);
-#endif
     }
 
     // Create a buildable CCode project by automatically copying necessary files.
