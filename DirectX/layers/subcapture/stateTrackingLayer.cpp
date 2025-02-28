@@ -116,7 +116,7 @@ void StateTrackingLayer::pre(IUnknownReleaseCommand& c) {
 }
 
 void StateTrackingLayer::post(IUnknownAddRefCommand& c) {
-  stateService_.addRefObject(c.object_.key, c.result_.value);
+  stateService_.setReferenceCount(c.object_.key, c.result_.value);
 }
 
 void StateTrackingLayer::post(IUnknownQueryInterfaceCommand& c) {
@@ -124,10 +124,10 @@ void StateTrackingLayer::post(IUnknownQueryInterfaceCommand& c) {
     return;
   }
 
-  if (c.object_.key == c.ppvObject_.key && c.object_.value) {
+  if (c.object_.value) {
     c.object_.value->AddRef();
-    auto refCount = c.object_.value->Release();
-    stateService_.addRefObject(c.object_.key, refCount);
+    ULONG refCount = c.object_.value->Release();
+    stateService_.setReferenceCount(c.object_.key, refCount);
   }
 
   IID riid = c.riid_.value;

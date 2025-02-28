@@ -305,13 +305,12 @@ void StateTrackingService::releaseObject(unsigned key, ULONG result) {
   }
 }
 
-void StateTrackingService::addRefObject(unsigned key, ULONG result) {
-  auto itState = statesByKey_.find(key);
+void StateTrackingService::setReferenceCount(unsigned objectKey, ULONG referenceCount) {
+  auto itState = statesByKey_.find(objectKey);
   if (itState == statesByKey_.end()) {
     return;
   }
-
-  itState->second->refCount = result;
+  itState->second->refCount = referenceCount;
 }
 
 ObjectState* StateTrackingService::getState(unsigned key) {

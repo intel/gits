@@ -58,7 +58,7 @@ public:
   void storeState(ObjectState* state);
   void storeINTCFeature(INTC_D3D12_FEATURE feature);
   void releaseObject(unsigned key, ULONG result);
-  void addRefObject(unsigned key, ULONG result);
+  void setReferenceCount(unsigned objectKey, ULONG referenceCount);
   ObjectState* getState(unsigned key);
 
 private:
