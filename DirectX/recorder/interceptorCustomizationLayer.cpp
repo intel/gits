@@ -39,14 +39,10 @@ void InterceptorCustomizationLayer::acquireSwapChainBuffers(IDXGISwapChain* swap
 
 void InterceptorCustomizationLayer::releaseSwapChainBuffers(unsigned swapChainKey) {
   std::vector<IUnknownWrapper*>& swapChainBuffers = swapChainBuffers_[swapChainKey];
-
   CaptureManager& manager = CaptureManager::get();
   for (IUnknownWrapper* bufferWrapper : swapChainBuffers) {
     ID3D12Resource* buffer = bufferWrapper->getWrappedObject<ID3D12Resource>();
     buffer->Release();
-
-    // Resizing the swapchain requires all the buffers to have been previously released (we should not track them anymore)
-    // https://learn.microsoft.com/en-us/windows/win32/api/dxgi/nf-dxgi-idxgiswapchain-resizebuffers
     manager.removeWrapper(bufferWrapper);
   }
   swapChainBuffers.clear();
@@ -57,10 +53,7 @@ void InterceptorCustomizationLayer::post(IUnknownReleaseCommand& c) {
     std::lock_guard<std::mutex> lock(mutex_);
     auto it = swapChainBuffers_.find(c.object_.key);
     if (it != swapChainBuffers_.end()) {
-      c.object_.value->AddRef();
       releaseSwapChainBuffers(c.object_.key);
-      c.object_.value->Release();
-      swapChainBuffers_.erase(it);
     }
   }
 }
@@ -98,6 +91,8 @@ void InterceptorCustomizationLayer::post(
 
 void InterceptorCustomizationLayer::pre(IDXGISwapChainResizeBuffersCommand& c) {
   std::lock_guard<std::mutex> lock(mutex_);
+  // Resizing the swapchain requires all the buffers to have been previously released (we should not track them anymore)
+  // https://learn.microsoft.com/en-us/windows/win32/api/dxgi/nf-dxgi-idxgiswapchain-resizebuffers
   releaseSwapChainBuffers(c.object_.key);
 }
 
@@ -109,6 +104,8 @@ void InterceptorCustomizationLayer::post(IDXGISwapChainResizeBuffersCommand& c) 
 
 void InterceptorCustomizationLayer::pre(IDXGISwapChain3ResizeBuffers1Command& c) {
   std::lock_guard<std::mutex> lock(mutex_);
+  // Resizing the swapchain requires all the buffers to have been previously released (we should not track them anymore)
+  // https://learn.microsoft.com/en-us/windows/win32/api/dxgi/nf-dxgi-idxgiswapchain-resizebuffers
   releaseSwapChainBuffers(c.object_.key);
 }
 
