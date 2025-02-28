@@ -43,10 +43,11 @@ void InterceptorCustomizationLayer::releaseSwapChainBuffers(unsigned swapChainKe
   CaptureManager& manager = CaptureManager::get();
   for (IUnknownWrapper* bufferWrapper : swapChainBuffers) {
     ID3D12Resource* buffer = bufferWrapper->getWrappedObject<ID3D12Resource>();
-    ULONG ref = buffer->Release();
-    if (!ref) {
-      manager.removeWrapper(bufferWrapper);
-    }
+    buffer->Release();
+
+    // Resizing the swapchain requires all the buffers to have been previously released (we should not track them anymore)
+    // https://learn.microsoft.com/en-us/windows/win32/api/dxgi/nf-dxgi-idxgiswapchain-resizebuffers
+    manager.removeWrapper(bufferWrapper);
   }
   swapChainBuffers.clear();
 }

@@ -364,6 +364,14 @@ void StateTrackingLayer::post(IDXGISwapChainResizeBuffersCommand& c) {
       state->desc.BufferCount = c.BufferCount_.value;
     }
   }
+
+  // Resizing the swapchain requires all the buffers to have been previously released (we should not track them anymore)
+  // https://learn.microsoft.com/en-us/windows/win32/api/dxgi/nf-dxgi-idxgiswapchain-resizebuffers
+  for (unsigned bufferKey : swapchainBuffers_[c.object_.key]) {
+    resourceStateTrackingService_.destroyResource(bufferKey);
+    stateService_.releaseObject(bufferKey, 0);
+  }
+  swapchainBuffers_[c.object_.key].clear();
 }
 
 void StateTrackingLayer::post(ID3D12ObjectSetNameCommand& c) {
@@ -459,6 +467,9 @@ void StateTrackingLayer::post(IDXGISwapChainGetBufferCommand& c) {
 
   resourceStateTrackingService_.addResource(0, static_cast<ID3D12Resource*>(*c.ppSurface_.value),
                                             state->key, D3D12_RESOURCE_STATE_COMMON, false);
+
+  // Keep track of the buffer key
+  swapchainBuffers_[state->swapChainKey].push_back(state->key);
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateRenderTargetViewCommand& c) {
