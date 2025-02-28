@@ -37,14 +37,15 @@ HRESULT STDMETHODCALLTYPE IUnknownWrapper::QueryInterface(REFIID riid, void** pp
   auto& manager = CaptureManager::get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
-    IUnknownQueryInterfaceCommand command(manager.createCommandKey(), GetCurrentThreadId(),
-                                          reinterpret_cast<IUnknown*>(this), riid, ppvObject);
+    IUnknownQueryInterfaceCommand command(GetCurrentThreadId(), reinterpret_cast<IUnknown*>(this),
+                                          riid, ppvObject);
     updateInterface(command.object_, this);
 
     for (Layer* layer : manager.getPreLayers()) {
       layer->pre(command);
     }
 
+    command.key = manager.createCommandKey();
     result = object_->QueryInterface(command.riid_.value, command.ppvObject_.value);
 
     object_->AddRef();
@@ -96,14 +97,14 @@ ULONG STDMETHODCALLTYPE IUnknownWrapper::AddRef() {
   auto& manager = CaptureManager::get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
-    IUnknownAddRefCommand command(manager.createCommandKey(), GetCurrentThreadId(),
-                                  reinterpret_cast<IUnknown*>(this));
+    IUnknownAddRefCommand command(GetCurrentThreadId(), reinterpret_cast<IUnknown*>(this));
     updateInterface(command.object_, this);
 
     for (Layer* layer : manager.getPreLayers()) {
       layer->pre(command);
     }
 
+    command.key = manager.createCommandKey();
     result = object_->AddRef();
     command.result_.value = result;
 
@@ -124,14 +125,14 @@ ULONG STDMETHODCALLTYPE IUnknownWrapper::Release() {
   auto& manager = CaptureManager::get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
-    IUnknownReleaseCommand command(manager.createCommandKey(), GetCurrentThreadId(),
-                                   reinterpret_cast<IUnknown*>(this));
+    IUnknownReleaseCommand command(GetCurrentThreadId(), reinterpret_cast<IUnknown*>(this));
     updateInterface(command.object_, this);
 
     for (Layer* layer : manager.getPreLayers()) {
       layer->pre(command);
     }
 
+    command.key = manager.createCommandKey();
     object_->AddRef();
     result = object_->Release();
 

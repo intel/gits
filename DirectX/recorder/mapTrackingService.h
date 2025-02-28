@@ -29,8 +29,8 @@ public:
                    ID3D12Resource* resource,
                    unsigned subresourceIndex,
                    void** mappedData);
-  void unmapResource(Command& command, unsigned resourceKey, unsigned subresourceIndex);
-  void executeCommandLists(Command& command);
+  void unmapResource(unsigned resourceKey, unsigned subresourceIndex);
+  void executeCommandLists();
   void destroyResource(unsigned resourceKey);
 
 private:
@@ -57,13 +57,9 @@ private:
 
 private:
   bool isUploadHeap(D3D12_HEAP_TYPE heapType, D3D12_CPU_PAGE_PROPERTY cpuPageProperty);
-  void captureModifiedData(Command& triggeringCommand, MappedInfo* info);
-  void captureData(Command& triggeringCommand,
-                   unsigned resourceKey,
-                   void* mappedAddress,
-                   unsigned offset,
-                   void* data,
-                   unsigned dataSize);
+  void captureModifiedData(MappedInfo* info);
+  void captureData(
+      unsigned resourceKey, void* mappedAddress, unsigned offset, void* data, unsigned dataSize);
   size_t getSubresourceSize(ID3D12Resource* resource, unsigned subresource);
 };
 

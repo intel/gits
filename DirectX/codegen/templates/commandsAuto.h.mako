@@ -45,14 +45,14 @@ initializer_list = generate_initializer_list(function)
 %>\
 class ${function.name}Command : public Command {
 public:
-  ${function.name}Command(unsigned key, unsigned threadId${',' if params else ')'}
+  ${function.name}Command(unsigned threadId${',' if params else ')'}
           %if params:
           %for param in params[:-1]:
           ${param},
           %endfor
           ${params[-1]})
           %endif
-      : Command{CommandId::ID_${function.name.upper()}, key, threadId}${',' if initializer_list else ''}
+      : Command{CommandId::ID_${function.name.upper()}, threadId}${',' if initializer_list else ''}
           %if initializer_list:
           %for param in initializer_list[:-1]:
           ${param},
@@ -85,7 +85,7 @@ initializer_list = generate_initializer_list(function)
 %>\
 class ${interface.name}${function.name}Command : public Command {
 public:
-  ${interface.name}${function.name}Command(unsigned key, unsigned threadId,
+  ${interface.name}${function.name}Command(unsigned threadId,
           ${interface.name}* object${',' if params else ')'}
           %if params:
           %for param in params[:-1]:
@@ -93,7 +93,7 @@ public:
           %endfor
           ${params[-1]})
           %endif
-      : Command{CommandId::ID_${interface.name.upper()}_${function.name.upper()}, key, threadId},
+      : Command{CommandId::ID_${interface.name.upper()}_${function.name.upper()}, threadId},
           object_{object}${',' if initializer_list else ''}
           %if initializer_list:
           %for param in initializer_list[:-1]:

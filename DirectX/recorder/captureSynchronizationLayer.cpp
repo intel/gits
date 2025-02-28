@@ -14,7 +14,6 @@ namespace DirectX {
 
 void CaptureSynchronizationLayer::pre(ID3D12FenceSignalCommand& command) {
   manager_.getFenceService().getGlobalMutex().lock();
-  manager_.updateCommandKey(command);
 }
 
 void CaptureSynchronizationLayer::post(ID3D12FenceSignalCommand& command) {
@@ -23,7 +22,6 @@ void CaptureSynchronizationLayer::post(ID3D12FenceSignalCommand& command) {
 
 void CaptureSynchronizationLayer::pre(ID3D12CommandQueueSignalCommand& command) {
   manager_.getFenceService().getGlobalMutex().lock();
-  manager_.updateCommandKey(command);
 }
 
 void CaptureSynchronizationLayer::post(ID3D12CommandQueueSignalCommand& command) {
@@ -32,7 +30,6 @@ void CaptureSynchronizationLayer::post(ID3D12CommandQueueSignalCommand& command)
 
 void CaptureSynchronizationLayer::pre(ID3D12CommandQueueWaitCommand& command) {
   manager_.getFenceService().getGlobalMutex().lock();
-  manager_.updateCommandKey(command);
 }
 
 void CaptureSynchronizationLayer::post(ID3D12CommandQueueWaitCommand& command) {
@@ -41,7 +38,6 @@ void CaptureSynchronizationLayer::post(ID3D12CommandQueueWaitCommand& command) {
 
 void CaptureSynchronizationLayer::pre(ID3D12FenceGetCompletedValueCommand& command) {
   manager_.getFenceService().getGlobalMutex().lock();
-  manager_.updateCommandKey(command);
 }
 
 void CaptureSynchronizationLayer::post(ID3D12FenceGetCompletedValueCommand& command) {

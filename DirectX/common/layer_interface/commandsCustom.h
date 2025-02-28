@@ -29,9 +29,8 @@ namespace DirectX {
 
 class IUnknownQueryInterfaceCommand : public Command {
 public:
-  IUnknownQueryInterfaceCommand(
-      unsigned key, unsigned threadId, IUnknown* object, REFIID riid, void** ppvObject)
-      : Command{CommandId::ID_IUNKNOWN_QUERYINTERFACE, key, threadId},
+  IUnknownQueryInterfaceCommand(unsigned threadId, IUnknown* object, REFIID riid, void** ppvObject)
+      : Command{CommandId::ID_IUNKNOWN_QUERYINTERFACE, threadId},
         riid_{riid},
         ppvObject_{ppvObject} {}
   IUnknownQueryInterfaceCommand() : Command(CommandId::ID_IUNKNOWN_QUERYINTERFACE) {}
@@ -45,8 +44,8 @@ public:
 
 class IUnknownAddRefCommand : public Command {
 public:
-  IUnknownAddRefCommand(unsigned key, unsigned threadId, IUnknown* object)
-      : Command{CommandId::ID_IUNKNOWN_ADDREF, key, threadId} {}
+  IUnknownAddRefCommand(unsigned threadId, IUnknown* object)
+      : Command{CommandId::ID_IUNKNOWN_ADDREF, threadId} {}
   IUnknownAddRefCommand() : Command(CommandId::ID_IUNKNOWN_ADDREF) {}
 
 public:
@@ -56,8 +55,8 @@ public:
 
 class IUnknownReleaseCommand : public Command {
 public:
-  IUnknownReleaseCommand(unsigned key, unsigned threadId, IUnknown* object)
-      : Command{CommandId::ID_IUNKNOWN_RELEASE, key, threadId} {}
+  IUnknownReleaseCommand(unsigned threadId, IUnknown* object)
+      : Command{CommandId::ID_IUNKNOWN_RELEASE, threadId} {}
   IUnknownReleaseCommand() : Command(CommandId::ID_IUNKNOWN_RELEASE) {}
 
 public:
@@ -68,14 +67,13 @@ public:
 class ID3D12GraphicsCommandListOMSetRenderTargetsCommand : public Command {
 public:
   ID3D12GraphicsCommandListOMSetRenderTargetsCommand(
-      unsigned key,
       unsigned threadId,
       IUnknown* object,
       UINT NumRenderTargetDescriptors,
       const D3D12_CPU_DESCRIPTOR_HANDLE* pRenderTargetDescriptors,
       BOOL RTsSingleHandleToDescriptorRange,
       const D3D12_CPU_DESCRIPTOR_HANDLE* pDepthStencilDescriptor)
-      : Command{CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_OMSETRENDERTARGETS, key, threadId},
+      : Command{CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_OMSETRENDERTARGETS, threadId},
         NumRenderTargetDescriptors_{NumRenderTargetDescriptors},
         pRenderTargetDescriptors_{pRenderTargetDescriptors, NumRenderTargetDescriptors},
         RTsSingleHandleToDescriptorRange_{RTsSingleHandleToDescriptorRange},
@@ -96,7 +94,6 @@ public:
 class ID3D12DeviceGetResourceTilingCommand : public Command {
 public:
   ID3D12DeviceGetResourceTilingCommand(
-      unsigned key,
       unsigned threadId,
       ID3D12Device* object,
       ID3D12Resource* pTiledResource,
@@ -106,7 +103,7 @@ public:
       UINT* pNumSubresourceTilings,
       UINT FirstSubresourceTilingToGet,
       D3D12_SUBRESOURCE_TILING* pSubresourceTilingsForNonPackedMips)
-      : Command{CommandId::ID_ID3D12DEVICE_GETRESOURCETILING, key, threadId},
+      : Command{CommandId::ID_ID3D12DEVICE_GETRESOURCETILING, threadId},
         object_{object},
         pTiledResource_{pTiledResource},
         pNumTilesForEntireResource_{pNumTilesForEntireResource},
@@ -135,11 +132,10 @@ public:
 
 class ID3D12StateObjectPropertiesGetShaderIdentifierCommand : public Command {
 public:
-  ID3D12StateObjectPropertiesGetShaderIdentifierCommand(unsigned key,
-                                                        unsigned threadId,
+  ID3D12StateObjectPropertiesGetShaderIdentifierCommand(unsigned threadId,
                                                         ID3D12StateObjectProperties* object,
                                                         LPCWSTR pExportName)
-      : Command{CommandId::ID_ID3D12STATEOBJECTPROPERTIES_GETSHADERIDENTIFIER, key, threadId},
+      : Command{CommandId::ID_ID3D12STATEOBJECTPROPERTIES_GETSHADERIDENTIFIER, threadId},
         object_{object},
         pExportName_{pExportName} {}
   ID3D12StateObjectPropertiesGetShaderIdentifierCommand()
@@ -153,12 +149,11 @@ public:
 
 class INTC_D3D12_GetSupportedVersionsCommand : public Command {
 public:
-  INTC_D3D12_GetSupportedVersionsCommand(unsigned key,
-                                         unsigned threadId,
+  INTC_D3D12_GetSupportedVersionsCommand(unsigned threadId,
                                          const ID3D12Device* pDevice,
                                          INTCExtensionVersion* pSupportedExtVersions,
                                          uint32_t* pSupportedExtVersionsCount)
-      : Command{CommandId::INTC_D3D12_GETSUPPORTEDVERSIONS, key, threadId},
+      : Command{CommandId::INTC_D3D12_GETSUPPORTEDVERSIONS, threadId},
         pDevice_{const_cast<ID3D12Device*>(pDevice)},
         pSupportedExtVersionsCount_{pSupportedExtVersionsCount},
         pSupportedExtVersions_{} {
@@ -177,13 +172,12 @@ public:
 
 class INTC_D3D12_CreateDeviceExtensionContextCommand : public Command {
 public:
-  INTC_D3D12_CreateDeviceExtensionContextCommand(unsigned key,
-                                                 unsigned threadId,
+  INTC_D3D12_CreateDeviceExtensionContextCommand(unsigned threadId,
                                                  const ID3D12Device* pDevice,
                                                  INTCExtensionContext** ppExtensionContext,
                                                  INTCExtensionInfo* pExtensionInfo,
                                                  INTCExtensionAppInfo* pExtensionAppInfo)
-      : Command{CommandId::INTC_D3D12_CREATEDEVICEEXTENSIONCONTEXT, key, threadId},
+      : Command{CommandId::INTC_D3D12_CREATEDEVICEEXTENSIONCONTEXT, threadId},
         pDevice_{const_cast<ID3D12Device*>(pDevice)},
         ppExtensionContext_{ppExtensionContext},
         pExtensionInfo_{pExtensionInfo},
@@ -201,13 +195,12 @@ public:
 
 class INTC_D3D12_CreateDeviceExtensionContext1Command : public Command {
 public:
-  INTC_D3D12_CreateDeviceExtensionContext1Command(unsigned key,
-                                                  unsigned threadId,
+  INTC_D3D12_CreateDeviceExtensionContext1Command(unsigned threadId,
                                                   const ID3D12Device* pDevice,
                                                   INTCExtensionContext** ppExtensionContext,
                                                   INTCExtensionInfo* pExtensionInfo,
                                                   INTCExtensionAppInfo1* pExtensionAppInfo)
-      : Command{CommandId::INTC_D3D12_CREATEDEVICEEXTENSIONCONTEXT1, key, threadId},
+      : Command{CommandId::INTC_D3D12_CREATEDEVICEEXTENSIONCONTEXT1, threadId},
         pDevice_{const_cast<ID3D12Device*>(pDevice)},
         ppExtensionContext_{ppExtensionContext},
         pExtensionInfo_{pExtensionInfo},
@@ -225,10 +218,9 @@ public:
 
 class INTC_DestroyDeviceExtensionContextCommand : public Command {
 public:
-  INTC_DestroyDeviceExtensionContextCommand(unsigned key,
-                                            unsigned threadId,
+  INTC_DestroyDeviceExtensionContextCommand(unsigned threadId,
                                             INTCExtensionContext** ppExtensionContext)
-      : Command{CommandId::INTC_DESTROYDEVICEEXTENSIONCONTEXT, key, threadId},
+      : Command{CommandId::INTC_DESTROYDEVICEEXTENSIONCONTEXT, threadId},
         ppExtensionContext_{ppExtensionContext} {}
   INTC_DestroyDeviceExtensionContextCommand()
       : Command(CommandId::INTC_DESTROYDEVICEEXTENSIONCONTEXT) {}
@@ -240,13 +232,12 @@ public:
 
 class INTC_D3D12_CheckFeatureSupportCommand : public Command {
 public:
-  INTC_D3D12_CheckFeatureSupportCommand(unsigned key,
-                                        unsigned threadId,
+  INTC_D3D12_CheckFeatureSupportCommand(unsigned threadId,
                                         INTCExtensionContext* pExtensionContext,
                                         INTC_D3D12_FEATURES Feature,
                                         void* pFeatureSupportData,
                                         UINT FeatureSupportDataSize)
-      : Command{CommandId::INTC_D3D12_CHECKFEATURESUPPORT, key, threadId},
+      : Command{CommandId::INTC_D3D12_CHECKFEATURESUPPORT, threadId},
         pExtensionContext_{pExtensionContext},
         Feature_{Feature},
         pFeatureSupportData_{pFeatureSupportData, FeatureSupportDataSize},
@@ -263,11 +254,10 @@ public:
 
 class INTC_D3D12_SetFeatureSupportCommand : public Command {
 public:
-  INTC_D3D12_SetFeatureSupportCommand(unsigned key,
-                                      unsigned threadId,
+  INTC_D3D12_SetFeatureSupportCommand(unsigned threadId,
                                       INTCExtensionContext* pExtensionContext,
                                       INTC_D3D12_FEATURE* pFeature)
-      : Command{CommandId::INTC_D3D12_SETFEATURESUPPORT, key, threadId},
+      : Command{CommandId::INTC_D3D12_SETFEATURESUPPORT, threadId},
         pExtensionContext_{pExtensionContext},
         pFeature_{pFeature} {}
   INTC_D3D12_SetFeatureSupportCommand() : Command(CommandId::INTC_D3D12_SETFEATURESUPPORT) {}
@@ -280,13 +270,12 @@ public:
 
 class INTC_D3D12_GetResourceAllocationInfoCommand : public Command {
 public:
-  INTC_D3D12_GetResourceAllocationInfoCommand(unsigned key,
-                                              unsigned threadId,
+  INTC_D3D12_GetResourceAllocationInfoCommand(unsigned threadId,
                                               INTCExtensionContext* pExtensionContext,
                                               UINT visibleMask,
                                               UINT numResourceDescs,
                                               const INTC_D3D12_RESOURCE_DESC_0001* pResourceDescs)
-      : Command{CommandId::INTC_D3D12_GETRESOURCEALLOCATIONINFO, key, threadId},
+      : Command{CommandId::INTC_D3D12_GETRESOURCEALLOCATIONINFO, threadId},
         pExtensionContext_{pExtensionContext},
         visibleMask_{visibleMask},
         numResourceDescs_{numResourceDescs},
@@ -304,13 +293,12 @@ public:
 
 class INTC_D3D12_CreateComputePipelineStateCommand : public Command {
 public:
-  INTC_D3D12_CreateComputePipelineStateCommand(unsigned key,
-                                               unsigned threadId,
+  INTC_D3D12_CreateComputePipelineStateCommand(unsigned threadId,
                                                INTCExtensionContext* pExtensionContext,
                                                const INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC* pDesc,
                                                REFIID riid,
                                                void** ppPipelineState)
-      : Command{CommandId::INTC_D3D12_CREATECOMPUTEPIPELINESTATE, key, threadId},
+      : Command{CommandId::INTC_D3D12_CREATECOMPUTEPIPELINESTATE, threadId},
         pExtensionContext_{pExtensionContext},
         pDesc_{pDesc},
         riid_{riid},
@@ -328,8 +316,7 @@ public:
 
 class INTC_D3D12_CreatePlacedResourceCommand : public Command {
 public:
-  INTC_D3D12_CreatePlacedResourceCommand(unsigned key,
-                                         unsigned threadId,
+  INTC_D3D12_CreatePlacedResourceCommand(unsigned threadId,
                                          INTCExtensionContext* pExtensionContext,
                                          ID3D12Heap* pHeap,
                                          UINT64 HeapOffset,
@@ -338,7 +325,7 @@ public:
                                          const D3D12_CLEAR_VALUE* pOptimizedClearValue,
                                          REFIID riid,
                                          void** ppvResource)
-      : Command{CommandId::INTC_D3D12_CREATEPLACEDRESOURCE, key, threadId},
+      : Command{CommandId::INTC_D3D12_CREATEPLACEDRESOURCE, threadId},
         pExtensionContext_{pExtensionContext},
         pHeap_{pHeap},
         HeapOffset_{HeapOffset},
@@ -363,8 +350,7 @@ public:
 
 class INTC_D3D12_CreateCommittedResourceCommand : public Command {
 public:
-  INTC_D3D12_CreateCommittedResourceCommand(unsigned key,
-                                            unsigned threadId,
+  INTC_D3D12_CreateCommittedResourceCommand(unsigned threadId,
                                             INTCExtensionContext* pExtensionContext,
                                             const D3D12_HEAP_PROPERTIES* pHeapProperties,
                                             D3D12_HEAP_FLAGS HeapFlags,
@@ -373,7 +359,7 @@ public:
                                             const D3D12_CLEAR_VALUE* pOptimizedClearValue,
                                             REFIID riidResource,
                                             void** ppvResource)
-      : Command{CommandId::INTC_D3D12_CREATECOMMITTEDRESOURCE, key, threadId},
+      : Command{CommandId::INTC_D3D12_CREATECOMMITTEDRESOURCE, threadId},
         pExtensionContext_{pExtensionContext},
         pHeapProperties_{pHeapProperties},
         HeapFlags_{HeapFlags},
@@ -399,8 +385,8 @@ public:
 
 class CreateWindowMetaCommand : public Command {
 public:
-  CreateWindowMetaCommand(unsigned key, unsigned threadId)
-      : Command{CommandId::ID_META_CREATE_WINDOW, key, threadId} {}
+  CreateWindowMetaCommand(unsigned threadId)
+      : Command{CommandId::ID_META_CREATE_WINDOW, threadId} {}
   CreateWindowMetaCommand() : Command(CommandId::ID_META_CREATE_WINDOW) {}
 
 public:
@@ -411,8 +397,7 @@ public:
 
 class MappedDataMetaCommand : public Command {
 public:
-  MappedDataMetaCommand(unsigned key, unsigned threadId)
-      : Command{CommandId::ID_MAPPED_DATA, key, threadId} {}
+  MappedDataMetaCommand(unsigned threadId) : Command{CommandId::ID_MAPPED_DATA, threadId} {}
   MappedDataMetaCommand() : Command(CommandId::ID_MAPPED_DATA) {}
 
 public:
@@ -424,8 +409,8 @@ public:
 
 class CreateHeapAllocationMetaCommand : public Command {
 public:
-  CreateHeapAllocationMetaCommand(unsigned key, unsigned threadId)
-      : Command{CommandId::ID_CREATE_HEAP_ALLOCATION, key, threadId} {}
+  CreateHeapAllocationMetaCommand(unsigned threadId)
+      : Command{CommandId::ID_CREATE_HEAP_ALLOCATION, threadId} {}
   CreateHeapAllocationMetaCommand() : Command(CommandId::ID_CREATE_HEAP_ALLOCATION) {}
 
 public:
@@ -436,8 +421,8 @@ public:
 
 class WaitForFenceSignaledCommand : public Command {
 public:
-  WaitForFenceSignaledCommand(unsigned key, unsigned threadId)
-      : Command{CommandId::ID_WAIT_FOR_FENCE_SIGNALED, key, threadId} {}
+  WaitForFenceSignaledCommand(unsigned threadId)
+      : Command{CommandId::ID_WAIT_FOR_FENCE_SIGNALED, threadId} {}
   WaitForFenceSignaledCommand() : Command(CommandId::ID_WAIT_FOR_FENCE_SIGNALED) {}
 
 public:
@@ -450,15 +435,14 @@ public:
 
 class IDMLDeviceCheckFeatureSupportCommand : public Command {
 public:
-  IDMLDeviceCheckFeatureSupportCommand(unsigned key,
-                                       unsigned threadId,
+  IDMLDeviceCheckFeatureSupportCommand(unsigned threadId,
                                        IDMLDevice* object,
                                        DML_FEATURE feature,
                                        UINT featureQueryDataSize,
                                        const void* featureQueryData,
                                        UINT featureSupportDataSize,
                                        void* featureSupportData)
-      : Command{CommandId::ID_IDMLDEVICE_CHECKFEATURESUPPORT, key, threadId},
+      : Command{CommandId::ID_IDMLDEVICE_CHECKFEATURESUPPORT, threadId},
         object_{object},
         feature_{feature},
         featureQueryDataSize_{featureQueryDataSize},

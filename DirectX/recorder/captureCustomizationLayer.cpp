@@ -39,13 +39,11 @@ void CaptureCustomizationLayer::pre(IDXGIFactoryCreateSwapChainCommand& c) {
   BOOL ret = GetClientRect(c.pDesc_.value->OutputWindow, &rect);
   GITS_ASSERT(ret);
 
-  CreateWindowMetaCommand createWindowCommand(manager_.createCommandKey(), c.threadId);
-  manager_.updateCommandKey(c);
-
+  CreateWindowMetaCommand createWindowCommand(c.threadId);
+  createWindowCommand.key = manager_.createCommandKey();
   createWindowCommand.hWnd_.value = c.pDesc_.value->OutputWindow;
   createWindowCommand.width_.value = rect.right - rect.left;
   createWindowCommand.height_.value = rect.bottom - rect.top;
-
   createWindowCommand.width_.value = std::max(
       static_cast<unsigned>(createWindowCommand.width_.value), c.pDesc_.value->BufferDesc.Width);
   createWindowCommand.height_.value = std::max(
@@ -59,13 +57,11 @@ void CaptureCustomizationLayer::pre(IDXGIFactory2CreateSwapChainForHwndCommand& 
   BOOL ret = GetClientRect(c.hWnd_.value, &rect);
   GITS_ASSERT(ret);
 
-  CreateWindowMetaCommand createWindowCommand(manager_.createCommandKey(), c.threadId);
-  manager_.updateCommandKey(c);
-
+  CreateWindowMetaCommand createWindowCommand(c.threadId);
+  createWindowCommand.key = manager_.createCommandKey();
   createWindowCommand.hWnd_ = c.hWnd_;
   createWindowCommand.width_.value = rect.right - rect.left;
   createWindowCommand.height_.value = rect.bottom - rect.top;
-
   createWindowCommand.width_.value =
       std::max(static_cast<unsigned>(createWindowCommand.width_.value), c.pDesc_.value->Width);
   createWindowCommand.height_.value =
@@ -223,15 +219,15 @@ void CaptureCustomizationLayer::post(ID3D12Device3OpenExistingHeapFromAddressCom
 
     D3D12_HEAP_DESC desc = heap->GetDesc();
 
-    CreateHeapAllocationMetaCommand command(manager_.createCommandKey(), c.threadId);
-    manager_.updateCommandKey(c);
-
+    CreateHeapAllocationMetaCommand command(c.threadId);
+    command.key = manager_.createCommandKey();
     command.heap_.key = c.ppvHeap_.key;
     command.address_.value = const_cast<void*>(c.pAddress_.value);
     command.data_.value = const_cast<void*>(c.pAddress_.value);
     command.data_.size = desc.SizeInBytes;
-
     recorder_.record(command.key, new CreateHeapAllocationMetaWriter(command));
+
+    manager_.updateCommandKey(c);
   }
 }
 
@@ -242,15 +238,15 @@ void CaptureCustomizationLayer::post(ID3D12Device13OpenExistingHeapFromAddress1C
 
     D3D12_HEAP_DESC desc = heap->GetDesc();
 
-    CreateHeapAllocationMetaCommand command(manager_.createCommandKey(), c.threadId);
-    manager_.updateCommandKey(c);
-
+    CreateHeapAllocationMetaCommand command(c.threadId);
+    command.key = manager_.createCommandKey();
     command.heap_.key = c.ppvHeap_.key;
     command.address_.value = const_cast<void*>(c.pAddress_.value);
     command.data_.value = const_cast<void*>(c.pAddress_.value);
     command.data_.size = desc.SizeInBytes;
-
     recorder_.record(command.key, new CreateHeapAllocationMetaWriter(command));
+
+    manager_.updateCommandKey(c);
   }
 }
 
@@ -263,11 +259,11 @@ void CaptureCustomizationLayer::post(ID3D12ResourceMapCommand& c) {
 }
 
 void CaptureCustomizationLayer::pre(ID3D12ResourceUnmapCommand& c) {
-  manager_.getMapTrackingService().unmapResource(c, c.object_.key, c.Subresource_.value);
+  manager_.getMapTrackingService().unmapResource(c.object_.key, c.Subresource_.value);
 }
 
 void CaptureCustomizationLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
-  manager_.getMapTrackingService().executeCommandLists(c);
+  manager_.getMapTrackingService().executeCommandLists();
 }
 
 void CaptureCustomizationLayer::pre(ID3D12DeviceCreateRenderTargetViewCommand& c) {
@@ -584,8 +580,6 @@ void CaptureCustomizationLayer::post(ID3D12DeviceOpenSharedHandleCommand& c) {
 
     ID3D12DeviceCreateCommittedResourceCommand createResource;
     createResource.key = manager_.createCommandKey();
-    manager_.updateCommandKey(c);
-
     createResource.threadId = c.threadId;
     createResource.object_.key = c.object_.key;
     createResource.pHeapProperties_.value = &heapProperties;
@@ -598,14 +592,14 @@ void CaptureCustomizationLayer::post(ID3D12DeviceOpenSharedHandleCommand& c) {
     recorder_.record(createResource.key,
                      new ID3D12DeviceCreateCommittedResourceWriter(createResource));
 
+    manager_.updateCommandKey(c);
+
   } else if (c.riid_.value == IID_ID3D12Fence || c.riid_.value == IID_ID3D12Fence1) {
     ID3D12Fence* fence = static_cast<ID3D12Fence*>(*c.ppvObj_.value);
     UINT64 fenceValue = fence->GetCompletedValue();
 
     ID3D12DeviceCreateFenceCommand createFence;
     createFence.key = manager_.createCommandKey();
-    manager_.updateCommandKey(c);
-
     createFence.threadId = c.threadId;
     createFence.object_.key = c.object_.key;
     createFence.InitialValue_.value = fenceValue;
@@ -614,6 +608,7 @@ void CaptureCustomizationLayer::post(ID3D12DeviceOpenSharedHandleCommand& c) {
     createFence.ppFence_.key = c.ppvObj_.key;
     recorder_.record(createFence.key, new ID3D12DeviceCreateFenceWriter(createFence));
 
+    manager_.updateCommandKey(c);
   } else {
     Log(ERR)
         << "ID3D12Device::OpenSharedHandle handled only for ID3D12Resource/1/2 and ID3D12Fence/1.";

@@ -18,8 +18,7 @@ namespace DirectX {
 
 class Command {
 public:
-  Command(CommandId id, unsigned key_, unsigned threadId_)
-      : id_(id), key(key_), threadId(threadId_) {}
+  Command(CommandId id, unsigned threadId_) : id_(id), threadId(threadId_) {}
   Command(CommandId id) : id_{id} {}
 
   CommandId getId() const {

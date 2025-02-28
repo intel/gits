@@ -46,7 +46,6 @@ ${generate_return(function)} ${function.name}Wrapper(${'' if params else ') {'}
   auto& manager = CaptureManager::get();
   if (auto atTopOfStack = AtTopOfStackGlobal()) { 
     ${function.name}Command command(
-        manager.createCommandKey(),
         GetCurrentThreadId()${',' if args_simple else ');'}
         %if args_simple:
         %for arg in args_simple[:-1]:
@@ -78,6 +77,7 @@ ${generate_return(function)} ${function.name}Wrapper(${'' if params else ') {'}
       layer->pre(command);
     }
 
+    command.key = manager.createCommandKey();
     if (!command.skip) {
       ${'result = ' if not function.ret.is_void else ''}manager.${dispatch_table}.${function.name}(${'' if args else ');'}
           %if args:
@@ -146,7 +146,6 @@ ${generate_return(function)} ${interface.name}Wrapper::${function.name}(${'' if 
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
     ${interface.name}${function.name}Command command(
-        manager.createCommandKey(),
         GetCurrentThreadId(),
         reinterpret_cast<${interface.name}*>(this)${',' if params else ');'}
         %if args_simple:
@@ -175,6 +174,7 @@ ${generate_return(function)} ${interface.name}Wrapper::${function.name}(${'' if 
       layer->pre(command);
     }
 
+    command.key = manager.createCommandKey();
     if (!command.skip) {
       ${'result = ' if not function.ret.is_void else ''}command.object_.value->${function.name}(${'' if args else ');'}
           %if args:

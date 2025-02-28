@@ -93,9 +93,7 @@ void MapTrackingService::mapResource(unsigned resourceKey,
   mutex_.unlock();
 }
 
-void MapTrackingService::unmapResource(Command& c,
-                                       unsigned resourceKey,
-                                       unsigned subresourceIndex) {
+void MapTrackingService::unmapResource(unsigned resourceKey, unsigned subresourceIndex) {
 
   std::lock_guard<std::mutex> lock(mutex_);
 
@@ -106,19 +104,19 @@ void MapTrackingService::unmapResource(Command& c,
 
       MappedInfo* info = it->second.get();
       if (--info->mapCount == 0) {
-        captureModifiedData(c, info);
+        captureModifiedData(info);
       }
     }
   }
 }
 
-void MapTrackingService::executeCommandLists(Command& c) {
+void MapTrackingService::executeCommandLists() {
 
   std::lock_guard<std::mutex> lock(mutex_);
 
   for (auto& itResource : mappedData_) {
     for (auto& it : itResource.second) {
-      captureModifiedData(c, it.second.get());
+      captureModifiedData(it.second.get());
     }
   }
 }
@@ -142,7 +140,7 @@ bool MapTrackingService::isUploadHeap(D3D12_HEAP_TYPE heapType,
              cpuPageProperty != D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
 }
 
-void MapTrackingService::captureModifiedData(Command& triggeringCommand, MappedInfo* info) {
+void MapTrackingService::captureModifiedData(MappedInfo* info) {
 
   UINT64 pageCount = info->watchedPages.size();
   unsigned long pageSize;
@@ -184,20 +182,15 @@ void MapTrackingService::captureModifiedData(Command& triggeringCommand, MappedI
     if (shadowMemory_) {
       memcpy(info->mappedAddress + offset, watchedAddress + offset, dataSize);
     }
-    captureData(triggeringCommand, info->resourceKey, watchedAddress, offset, data, dataSize);
+    captureData(info->resourceKey, watchedAddress, offset, data, dataSize);
   }
 }
 
-void MapTrackingService::captureData(Command& triggeringCommand,
-                                     unsigned resourceKey,
-                                     void* mappedAddress,
-                                     unsigned offset,
-                                     void* data,
-                                     unsigned dataSize) {
+void MapTrackingService::captureData(
+    unsigned resourceKey, void* mappedAddress, unsigned offset, void* data, unsigned dataSize) {
 
-  MappedDataMetaCommand command(CaptureManager::get().createCommandKey(), GetCurrentThreadId());
-  CaptureManager::get().updateCommandKey(triggeringCommand);
-
+  MappedDataMetaCommand command(GetCurrentThreadId());
+  command.key = CaptureManager::get().createCommandKey();
   command.resource_.key = resourceKey;
   command.mappedAddress_.value = mappedAddress;
   command.offset_.value = offset;
