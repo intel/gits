@@ -398,6 +398,7 @@ void ResourceDump::dumpTexture(DumpInfo& dumpInfo, void* data) {
     image.slicePitch = dumpInfo.size / depth;
     image.pixels = reinterpret_cast<uint8_t*>(data) + slice * image.slicePitch;
 
+    static bool initialized = false;
     const ::DirectX::Image* imageConverted{};
     ::DirectX::ScratchImage scratchImage;
     if (::DirectX::IsCompressed(image.format)) {
@@ -414,8 +415,16 @@ void ResourceDump::dumpTexture(DumpInfo& dumpInfo, void* data) {
       if (textureRescaleRange_.has_value()) {
         hr = rescaleTexture(image, scratchImage);
       } else {
-        hr = ::DirectX::Convert(image, destFormat, ::DirectX::TEX_FILTER_DEFAULT,
-                                ::DirectX::TEX_THRESHOLD_DEFAULT, scratchImage);
+        auto convert = [&]() {
+          hr = ::DirectX::Convert(image, destFormat, ::DirectX::TEX_FILTER_DEFAULT,
+                                  ::DirectX::TEX_THRESHOLD_DEFAULT, scratchImage);
+        };
+        convert();
+        if (!initialized && hr != S_OK) {
+          CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+          convert();
+          initialized = true;
+        }
       }
       if (hr != S_OK) {
         Log(ERR) << "Dumping " + dumpNameA + " format " << formatToString(dumpInfo.desc.Format)
@@ -437,7 +446,6 @@ void ResourceDump::dumpTexture(DumpInfo& dumpInfo, void* data) {
           dumpJpg_ ? nullptr : &GUID_WICPixelFormat48bppRGB);
     };
     saveToWICFile();
-    static bool initialized = false;
     if (!initialized && hr != S_OK) {
       CoInitializeEx(nullptr, COINIT_MULTITHREADED);
       saveToWICFile();
