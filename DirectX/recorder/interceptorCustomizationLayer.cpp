@@ -53,7 +53,9 @@ void InterceptorCustomizationLayer::post(IUnknownReleaseCommand& c) {
     std::lock_guard<std::mutex> lock(mutex_);
     auto it = swapChainBuffers_.find(c.object_.key);
     if (it != swapChainBuffers_.end()) {
+      c.object_.value->AddRef();
       releaseSwapChainBuffers(c.object_.key);
+      c.object_.value->Release();
     }
   }
 }
