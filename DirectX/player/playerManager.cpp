@@ -124,8 +124,8 @@ PlayerManager::PlayerManager() {
   enablePreLayer(recordingLayer);
   enablePreLayer(logDxErrorLayer);
   enablePreLayer(multithreadedObjectCreationLayer);
-  enablePreLayer(directStorageResourcesLayer);
   enablePreLayer(directStorageLayer);
+  enablePreLayer(directStorageResourcesLayer);
   enablePreLayer(accelerationStructuresDumpLayer);
 
   // Enable Post layers
@@ -137,8 +137,8 @@ PlayerManager::PlayerManager() {
   };
   enablePostLayer(portabilityLayer);
   enablePostLayer(logDxErrorLayer);
-  enablePostLayer(directStorageResourcesLayer);
   enablePostLayer(directStorageLayer);
+  enablePostLayer(directStorageResourcesLayer);
   enablePostLayer(replayCustomizationLayer);
   enablePostLayer(gpuPatchLayer);
   enablePostLayer(traceLayer);
