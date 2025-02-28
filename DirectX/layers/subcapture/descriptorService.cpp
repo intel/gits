@@ -101,7 +101,14 @@ void DescriptorService::copyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand
     return;
   }
   auto& srcHeapIt = statesByHeapIndex_.find(c.SrcDescriptorRangeStart_.interfaceKey);
-  GITS_ASSERT(srcHeapIt != statesByHeapIndex_.end());
+  if (srcHeapIt == statesByHeapIndex_.end()) {
+    static bool logged = false;
+    if (!logged) {
+      Log(ERR) << "DescriptorService::copyDescriptors - descriptor states for heap not found";
+      logged = true;
+    }
+    return;
+  }
   auto& srcIt = srcHeapIt->second.find(c.SrcDescriptorRangeStart_.index);
   auto& destHeap = statesByHeapIndex_[c.DestDescriptorRangeStart_.interfaceKey];
   for (unsigned i = 0; i < c.NumDescriptors_.value; ++i, ++srcIt) {
