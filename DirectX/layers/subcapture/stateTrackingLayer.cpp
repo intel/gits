@@ -124,6 +124,12 @@ void StateTrackingLayer::post(IUnknownQueryInterfaceCommand& c) {
     return;
   }
 
+  if (c.object_.key == c.ppvObject_.key && c.object_.value) {
+    c.object_.value->AddRef();
+    auto refCount = c.object_.value->Release();
+    stateService_.addRefObject(c.object_.key, refCount);
+  }
+
   IID riid = c.riid_.value;
   if (riid == IID_ID3D12StateObjectProperties) {
     D3D12StateObjectPropertiesState* state = new D3D12StateObjectPropertiesState();
