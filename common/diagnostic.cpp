@@ -347,6 +347,18 @@ void DescribeClass(WMIConnection& con,
 
 } // namespace
 
+std::string wstringToUtf8string(const std::wstring& wstr) {
+  if (wstr.empty()) {
+    return std::string();
+  }
+  int sizeNeeded =
+      WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), nullptr, 0, nullptr, nullptr);
+  std::string outStr(sizeNeeded, 0);
+  WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &outStr[0], sizeNeeded, nullptr,
+                      nullptr);
+  return outStr;
+}
+
 void gather_diagnostic_info(nlohmann::ordered_json& properties) {
 
   {
@@ -361,7 +373,9 @@ void gather_diagnostic_info(nlohmann::ordered_json& properties) {
     }
   }
 
-  properties["diag"]["proc"]["cmdline"] = GetCommandLine();
+  std::wstring cmdlineW = GetCommandLineW();
+  std::string cmdlineUtf8 = wstringToUtf8string(cmdlineW);
+  properties["diag"]["proc"]["cmdline"] = cmdlineUtf8;
 
   {
     std::time_t now = std::time(0);
