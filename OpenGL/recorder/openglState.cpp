@@ -4144,7 +4144,7 @@ void gits::OpenGL::CVariableGLSLInfo::Schedule(CScheduler& scheduler,
   bool programUsed = stateDynamic.GLSLPrograms().List().size() > 0 && (currentProgram != pipeline);
 
   // Schedule programs
-  for (auto& program : stateDynamic.GLSLPrograms().List()) {
+  for (const auto& program : stateDynamic.GLSLPrograms().List()) {
     CreateProgram(scheduler, program.Data());
   }
 
@@ -4165,69 +4165,66 @@ void gits::OpenGL::CVariableGLSLInfo::Schedule(CScheduler& scheduler,
       CGLUniformLocation::RecorderProgramOverride guard(program.Name());
       // setup necessary uniforms - register glGetUniformLocation,
       for (const auto& floatUniElem : program.Data().restore.floatUniforms) {
+        const char* name = floatUniElem.first.c_str();
+        const auto& uniformInfo = floatUniElem.second;
         // get current location of a uniform
-        const GLint location =
-            drv.gl.glGetUniformLocation(program.Name(), floatUniElem.first.c_str());
+        const GLint location = drv.gl.glGetUniformLocation(program.Name(), name);
         // schedule location translation
-        scheduler.Register(
-            new CglGetUniformLocation(location, program.Name(), floatUniElem.first.c_str()));
-        for (int arrayIndex = 0; arrayIndex < floatUniElem.second.arraySize; ++arrayIndex) {
-          const std::vector<GLfloat>& data = floatUniElem.second.data[arrayIndex];
-          switch (floatUniElem.second.type) {
+        scheduler.Register(new CglGetUniformLocation(location, program.Name(), name));
+        for (int arrayIndex = 0; arrayIndex < uniformInfo.arraySize; ++arrayIndex) {
+          const std::vector<GLfloat>& data = uniformInfo.data[arrayIndex];
+          const GLsizei dataSize = static_cast<GLsizei>(data.size());
+          const GLfloat* dataPtr = data.data();
+          const GLint newLocation = location + arrayIndex;
+          switch (uniformInfo.type) {
           case GL_FLOAT:
-            scheduler.Register(
-                new CglUniform1fv(location + arrayIndex, int(data.size()), &data[0]));
+            scheduler.Register(new CglUniform1fv(newLocation, dataSize, dataPtr));
             break;
           case GL_FLOAT_VEC2:
-            scheduler.Register(
-                new CglUniform2fv(location + arrayIndex, int(data.size()) / 2, &data[0]));
+            scheduler.Register(new CglUniform2fv(newLocation, dataSize / 2, dataPtr));
             break;
           case GL_FLOAT_VEC3:
-            scheduler.Register(
-                new CglUniform3fv(location + arrayIndex, int(data.size()) / 3, &data[0]));
+            scheduler.Register(new CglUniform3fv(newLocation, dataSize / 3, dataPtr));
             break;
           case GL_FLOAT_VEC4:
-            scheduler.Register(
-                new CglUniform4fv(location + arrayIndex, int(data.size()) / 4, &data[0]));
+            scheduler.Register(new CglUniform4fv(newLocation, dataSize / 4, dataPtr));
             break;
           case GL_FLOAT_MAT2:
-            scheduler.Register(new CglUniformMatrix2fv(location + arrayIndex, int(data.size()) / 4,
-                                                       false, &data[0]));
+            scheduler.Register(new CglUniformMatrix2fv(newLocation, dataSize / 4, false, dataPtr));
             break;
           case GL_FLOAT_MAT3:
-            scheduler.Register(new CglUniformMatrix3fv(location + arrayIndex, int(data.size()) / 9,
-                                                       false, &data[0]));
+            scheduler.Register(new CglUniformMatrix3fv(newLocation, dataSize / 9, false, dataPtr));
             break;
           case GL_FLOAT_MAT4:
-            scheduler.Register(new CglUniformMatrix4fv(location + arrayIndex, int(data.size()) / 16,
-                                                       false, &data[0]));
+            scheduler.Register(new CglUniformMatrix4fv(newLocation, dataSize / 16, false, dataPtr));
             break;
           case GL_FLOAT_MAT2x3:
-            scheduler.Register(new CglUniformMatrix2x3fv(location + arrayIndex,
-                                                         int(data.size()) / 6, false, &data[0]));
+            scheduler.Register(
+                new CglUniformMatrix2x3fv(newLocation, dataSize / 6, false, dataPtr));
             break;
           case GL_FLOAT_MAT2x4:
-            scheduler.Register(new CglUniformMatrix2x4fv(location + arrayIndex,
-                                                         int(data.size()) / 8, false, &data[0]));
+            scheduler.Register(
+                new CglUniformMatrix2x4fv(newLocation, dataSize / 8, false, dataPtr));
             break;
           case GL_FLOAT_MAT3x2:
-            scheduler.Register(new CglUniformMatrix3x2fv(location + arrayIndex,
-                                                         int(data.size()) / 6, false, &data[0]));
+            scheduler.Register(
+                new CglUniformMatrix3x2fv(newLocation, dataSize / 6, false, dataPtr));
             break;
           case GL_FLOAT_MAT3x4:
-            scheduler.Register(new CglUniformMatrix3x4fv(location + arrayIndex,
-                                                         int(data.size()) / 12, false, &data[0]));
+            scheduler.Register(
+                new CglUniformMatrix3x4fv(newLocation, dataSize / 12, false, dataPtr));
             break;
           case GL_FLOAT_MAT4x2:
-            scheduler.Register(new CglUniformMatrix4x2fv(location + arrayIndex,
-                                                         int(data.size()) / 8, false, &data[0]));
+            scheduler.Register(
+                new CglUniformMatrix4x2fv(newLocation, dataSize / 8, false, dataPtr));
             break;
           case GL_FLOAT_MAT4x3:
-            scheduler.Register(new CglUniformMatrix4x3fv(location + arrayIndex,
-                                                         int(data.size()) / 12, false, &data[0]));
+            scheduler.Register(
+                new CglUniformMatrix4x3fv(newLocation, dataSize / 12, false, dataPtr));
             break;
           default:
-            // other types
+            Log(ERR) << "Unknown float uniform type: " << GetGLEnumString(uniformInfo.type) << " ("
+                     << gits::hex(uniformInfo.type) << ")";
             throw ENotImplemented(EXCEPTION_MESSAGE);
           }
         }
@@ -4235,134 +4232,66 @@ void gits::OpenGL::CVariableGLSLInfo::Schedule(CScheduler& scheduler,
 
       // setup necessary uniforms - register glGetUniformLocation,
       for (const auto& intUniElem : program.Data().restore.intUniforms) {
+        const char* name = intUniElem.first.c_str();
+        const auto& uniformInfo = intUniElem.second;
         // get current location of a uniform
-        const GLint location =
-            drv.gl.glGetUniformLocation(program.Name(), intUniElem.first.c_str());
+        const GLint location = drv.gl.glGetUniformLocation(program.Name(), name);
         // schedule location translation
-        scheduler.Register(
-            new CglGetUniformLocation(location, program.Name(), intUniElem.first.c_str()));
-        for (int arrayIndex = 0; arrayIndex < intUniElem.second.arraySize; ++arrayIndex) {
-          const std::vector<GLint>& data = intUniElem.second.data[arrayIndex];
-          switch (intUniElem.second.type) {
-          case GL_SAMPLER_1D:
-          case GL_SAMPLER_1D_ARRAY:
-          case GL_SAMPLER_2D:
-          case GL_SAMPLER_2D_ARRAY:
-          case GL_SAMPLER_3D:
-          case GL_SAMPLER_CUBE:
-          case GL_SAMPLER_CUBE_SHADOW:
-          case GL_SAMPLER_CUBE_MAP_ARRAY:
-          case GL_SAMPLER_1D_SHADOW:
-          case GL_SAMPLER_1D_ARRAY_SHADOW:
-          case GL_SAMPLER_2D_SHADOW:
-          case GL_SAMPLER_2D_ARRAY_SHADOW:
-          case GL_SAMPLER_2D_RECT_ARB:
-          case GL_SAMPLER_2D_RECT_SHADOW_ARB:
-          case GL_SAMPLER_EXTERNAL_OES:
-          case GL_INT_SAMPLER_1D:
-          case GL_INT_SAMPLER_2D:
-          case GL_INT_SAMPLER_3D:
-          case GL_INT_SAMPLER_CUBE:
-          case GL_INT_SAMPLER_1D_ARRAY:
-          case GL_INT_SAMPLER_2D_ARRAY:
-          case GL_UNSIGNED_INT_SAMPLER_1D:
-          case GL_UNSIGNED_INT_SAMPLER_2D:
-          case GL_UNSIGNED_INT_SAMPLER_3D:
-          case GL_UNSIGNED_INT_SAMPLER_CUBE:
-          case GL_UNSIGNED_INT_SAMPLER_1D_ARRAY:
-          case GL_UNSIGNED_INT_SAMPLER_2D_ARRAY:
-          case GL_SAMPLER_2D_MULTISAMPLE:
-          case GL_BOOL:
-          case GL_INT:
-          case GL_SAMPLER_BUFFER:
-          case GL_INT_SAMPLER_BUFFER:
-          case GL_UNSIGNED_INT_SAMPLER_BUFFER:
-          case GL_UNSIGNED_INT_ATOMIC_COUNTER:
-          case GL_UNSIGNED_INT_SAMPLER_2D_RECT:
-          case GL_IMAGE_1D_EXT:
-          case GL_IMAGE_2D_EXT:
-          case GL_IMAGE_3D_EXT:
-          case GL_IMAGE_2D_RECT_EXT:
-          case GL_IMAGE_CUBE_EXT:
-          case GL_IMAGE_BUFFER_EXT:
-          case GL_IMAGE_1D_ARRAY_EXT:
-          case GL_IMAGE_2D_ARRAY_EXT:
-          case GL_IMAGE_CUBE_MAP_ARRAY_EXT:
-          case GL_IMAGE_2D_MULTISAMPLE_EXT:
-          case GL_IMAGE_2D_MULTISAMPLE_ARRAY_EXT:
-          case GL_INT_IMAGE_1D_EXT:
-          case GL_INT_IMAGE_2D_EXT:
-          case GL_INT_IMAGE_3D_EXT:
-          case GL_INT_IMAGE_2D_RECT_EXT:
-          case GL_INT_IMAGE_CUBE_EXT:
-          case GL_INT_IMAGE_BUFFER_EXT:
-          case GL_INT_IMAGE_1D_ARRAY_EXT:
-          case GL_INT_IMAGE_2D_ARRAY_EXT:
-          case GL_INT_IMAGE_CUBE_MAP_ARRAY_EXT:
-          case GL_INT_IMAGE_2D_MULTISAMPLE_EXT:
-          case GL_INT_IMAGE_2D_MULTISAMPLE_ARRAY_EXT:
-          case GL_UNSIGNED_INT_IMAGE_1D_EXT:
-          case GL_UNSIGNED_INT_IMAGE_2D_EXT:
-          case GL_UNSIGNED_INT_IMAGE_3D_EXT:
-          case GL_UNSIGNED_INT_IMAGE_2D_RECT_EXT:
-          case GL_UNSIGNED_INT_IMAGE_CUBE_EXT:
-          case GL_UNSIGNED_INT_IMAGE_BUFFER_EXT:
-          case GL_UNSIGNED_INT_IMAGE_1D_ARRAY_EXT:
-          case GL_UNSIGNED_INT_IMAGE_2D_ARRAY_EXT:
-          case GL_UNSIGNED_INT_IMAGE_CUBE_MAP_ARRAY_EXT:
-          case GL_UNSIGNED_INT_IMAGE_2D_MULTISAMPLE_EXT:
-          case GL_UNSIGNED_INT_IMAGE_2D_MULTISAMPLE_ARRAY_EXT:
-            scheduler.Register(
-                new CglUniform1iv(location + arrayIndex, int(data.size()), &data[0]));
+        scheduler.Register(new CglGetUniformLocation(location, program.Name(), name));
+        for (int arrayIndex = 0; arrayIndex < uniformInfo.arraySize; ++arrayIndex) {
+          const std::vector<GLint>& data = uniformInfo.data[arrayIndex];
+          const unsigned int dimensionality = UniformDimensions(uniformInfo.type).second;
+          const GLsizei count = static_cast<GLsizei>(data.size() / dimensionality);
+          const GLint* dataPtr = data.data();
+          const GLint newLocation = location + arrayIndex;
+          switch (dimensionality) {
+          case 1:
+            scheduler.Register(new CglUniform1iv(newLocation, count, dataPtr));
             break;
-          case GL_BOOL_VEC2:
-          case GL_INT_VEC2:
-            scheduler.Register(
-                new CglUniform2iv(location + arrayIndex, int(data.size()) / 2, &data[0]));
+          case 2:
+            scheduler.Register(new CglUniform2iv(newLocation, count, dataPtr));
             break;
-          case GL_BOOL_VEC3:
-          case GL_INT_VEC3:
-            scheduler.Register(
-                new CglUniform3iv(location + arrayIndex, int(data.size()) / 3, &data[0]));
+          case 3:
+            scheduler.Register(new CglUniform3iv(newLocation, count, dataPtr));
             break;
-          case GL_BOOL_VEC4:
-          case GL_INT_VEC4:
-            scheduler.Register(
-                new CglUniform4iv(location + arrayIndex, int(data.size() / 4), &data[0]));
+          case 4:
+            scheduler.Register(new CglUniform4iv(newLocation, count, dataPtr));
             break;
           default:
+            Log(ERR) << "Expected dimensionality between 1 and 4, got " << dimensionality << ".";
             throw ENotImplemented(EXCEPTION_MESSAGE);
           }
         }
       }
 
       for (const auto& uintUniElem : program.Data().restore.uintUniforms) {
+        const char* name = uintUniElem.first.c_str();
+        const auto& uniformInfo = uintUniElem.second;
         // get current location of a uniform
-        const GLuint location =
-            drv.gl.glGetUniformLocation(program.Name(), uintUniElem.first.c_str());
+        const GLuint location = drv.gl.glGetUniformLocation(program.Name(), name);
         // schedule location translation
-        scheduler.Register(
-            new CglGetUniformLocation(location, program.Name(), uintUniElem.first.c_str()));
-        for (int arrayIndex = 0; arrayIndex < uintUniElem.second.arraySize; ++arrayIndex) {
-          const std::vector<GLuint>& data = uintUniElem.second.data[arrayIndex];
-          switch (uintUniElem.second.type) {
-          case GL_UNSIGNED_INT:
-            scheduler.Register(
-                new CglUniform1uiv(location + arrayIndex, int(data.size()), &data[0]));
+        scheduler.Register(new CglGetUniformLocation(location, program.Name(), name));
+        for (int arrayIndex = 0; arrayIndex < uniformInfo.arraySize; ++arrayIndex) {
+          const std::vector<GLuint>& data = uniformInfo.data[arrayIndex];
+          const unsigned int dimensionality = UniformDimensions(uniformInfo.type).second;
+          const GLsizei count = static_cast<GLsizei>(data.size() / dimensionality);
+          const GLuint* dataPtr = data.data();
+          const GLint newLocation = location + arrayIndex;
+          switch (dimensionality) {
+          case 1:
+            scheduler.Register(new CglUniform1uiv(newLocation, count, dataPtr));
             break;
-          case GL_UNSIGNED_INT_VEC2:
-            scheduler.Register(
-                new CglUniform2uiv(location + arrayIndex, int(data.size()) / 2, &data[0]));
+          case 2:
+            scheduler.Register(new CglUniform2uiv(newLocation, count, dataPtr));
             break;
-          case GL_UNSIGNED_INT_VEC3:
-            scheduler.Register(
-                new CglUniform3uiv(location + arrayIndex, int(data.size()) / 3, &data[0]));
+          case 3:
+            scheduler.Register(new CglUniform3uiv(newLocation, count, dataPtr));
             break;
-          case GL_UNSIGNED_INT_VEC4:
-            scheduler.Register(
-                new CglUniform4uiv(location + arrayIndex, int(data.size() / 4), &data[0]));
+          case 4:
+            scheduler.Register(new CglUniform4uiv(newLocation, count, dataPtr));
             break;
           default:
+            Log(ERR) << "Expected dimensionality between 1 and 4, got " << dimensionality << ".";
             throw ENotImplemented(EXCEPTION_MESSAGE);
           }
         }
@@ -4376,30 +4305,30 @@ void gits::OpenGL::CVariableGLSLInfo::Schedule(CScheduler& scheduler,
       // setup necessary uniform subroutines - register
       // glGetSubroutineUniformLocation,
       for (const auto& uniformSubElem : program.Data().restore.uniformSubroutine) {
-        std::vector<std::string>::const_iterator subIter =
-            uniformSubElem.second.uniformSubroutineNames.begin();
+        const GLenum shaderType = uniformSubElem.first;
+        const auto& subroutineData = uniformSubElem.second;
+        auto subIter = subroutineData.uniformSubroutineNames.cbegin();
         std::vector<GLuint> vecSubroutineIdx;
-        vecSubroutineIdx.resize(uniformSubElem.second.uniformSubroutineNames.size());
-        for (; subIter != uniformSubElem.second.uniformSubroutineNames.end(); ++subIter) {
-          GLint locUniformSub = drv.gl.glGetSubroutineUniformLocation(
-              program.Name(), uniformSubElem.first, subIter->c_str());
+        vecSubroutineIdx.resize(subroutineData.uniformSubroutineNames.size());
+        for (; subIter != subroutineData.uniformSubroutineNames.cend(); ++subIter) {
+          const GLint locUniformSub =
+              drv.gl.glGetSubroutineUniformLocation(program.Name(), shaderType, subIter->c_str());
           GLuint idxSubroutine = 0;
-          drv.gl.glGetUniformSubroutineuiv(uniformSubElem.first, locUniformSub, &idxSubroutine);
+          drv.gl.glGetUniformSubroutineuiv(shaderType, locUniformSub, &idxSubroutine);
           vecSubroutineIdx[locUniformSub] = idxSubroutine;
         }
-        subIter = uniformSubElem.second.subroutineNames.begin();
-        for (; subIter != uniformSubElem.second.subroutineNames.end(); ++subIter) {
-          GLuint index =
-              drv.gl.glGetSubroutineIndex(program.Name(), uniformSubElem.first, subIter->c_str());
+        subIter = subroutineData.subroutineNames.cbegin();
+        for (; subIter != subroutineData.subroutineNames.cend(); ++subIter) {
+          const GLuint index =
+              drv.gl.glGetSubroutineIndex(program.Name(), shaderType, subIter->c_str());
           // schedule index translation
-          scheduler.Register(new CglGetSubroutineIndex(index, program.Name(), uniformSubElem.first,
-                                                       subIter->c_str()));
+          scheduler.Register(
+              new CglGetSubroutineIndex(index, program.Name(), shaderType, subIter->c_str()));
         }
         if (!vecSubroutineIdx.empty()) {
           // schedule index translation
           scheduler.Register(new CglUniformSubroutinesuiv(
-              uniformSubElem.first, static_cast<GLsizei>(vecSubroutineIdx.size()),
-              &(vecSubroutineIdx[0])));
+              shaderType, static_cast<GLsizei>(vecSubroutineIdx.size()), vecSubroutineIdx.data()));
         }
       }
     }
@@ -4444,17 +4373,17 @@ void gits::OpenGL::CVariableGLSLInfo::Schedule(CScheduler& scheduler,
         std::vector<GLuint> uniformIndices;
         std::vector<const GLchar*> uniformNames;
 
-        uniformIndices.resize(program.Data().restore.uniformNames.size());
-        uniformNames.resize(program.Data().restore.uniformNames.size());
-        if (uniformNames.size() > 0 && uniformIndices.size() > 0) {
-          for (unsigned int i = 0; i < uniformIndices.size(); i++) {
+        const size_t count = program.Data().restore.uniformNames.size();
+        uniformIndices.resize(count);
+        uniformNames.resize(count);
+        if (count > 0) {
+          for (size_t i = 0; i < uniformIndices.size(); i++) {
             uniformNames[i] = program.Data().restore.uniformNames[i].c_str();
           }
-          drv.gl.glGetUniformIndices(program.Name(), (GLsizei)uniformIndices.size(),
-                                     &uniformNames[0], &uniformIndices[0]);
-          scheduler.Register(new CglGetUniformIndices(program.Name(),
-                                                      (GLsizei)uniformIndices.size(),
-                                                      &uniformNames[0], &uniformIndices[0]));
+          drv.gl.glGetUniformIndices(program.Name(), (GLsizei)count, uniformNames.data(),
+                                     uniformIndices.data());
+          scheduler.Register(new CglGetUniformIndices(program.Name(), (GLsizei)count,
+                                                      uniformNames.data(), uniformIndices.data()));
         }
       }
     }
@@ -4472,12 +4401,12 @@ void gits::OpenGL::CVariableGLSLInfo::Schedule(CScheduler& scheduler,
         GLsizei actualLength = 0;
 
         drv.gl.glGetProgramResourceName(program.Name(), GL_SHADER_STORAGE_BLOCK, i,
-                                        (GLsizei)name.size(), &actualLength, &name[0]);
+                                        (GLsizei)name.size(), &actualLength, name.data());
         name.resize(actualLength);
         if (name.size() != 0) {
-          GLuint return_value = drv.gl.glGetProgramResourceIndex(
+          const GLuint return_value = drv.gl.glGetProgramResourceIndex(
               program.Name(), GL_SHADER_STORAGE_BLOCK, name.c_str());
-          GLenum buffBindingEnum = GL_BUFFER_BINDING;
+          const GLenum buffBindingEnum = GL_BUFFER_BINDING;
           GLint blockBindingOutput = 0;
           actualLength = 0;
           drv.gl.glGetProgramResourceiv(program.Name(), GL_SHADER_STORAGE_BLOCK, i, 1,
