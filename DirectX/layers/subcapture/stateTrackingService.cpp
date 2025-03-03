@@ -361,7 +361,7 @@ void StateTrackingService::restoreReferenceCount() {
 
 D3D12_RESOURCE_STATES StateTrackingService::getResourceInitialState(
     ResourceState& state, D3D12_RESOURCE_DIMENSION dimension) {
-  if (state.isMappable) {
+  if (state.isMappable || state.isBarrierRestricted) {
     return resourceStateTrackingService_.getResourceState(state.key);
   }
   if (dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {

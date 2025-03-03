@@ -98,6 +98,9 @@ private:
   void initRestoreUnmappableResources();
   void cleanupRestoreUnmappableResources();
   UINT64 getAlignedSize(UINT64 size);
+  bool isBarrierRestricted(unsigned resourceKey);
+  ID3D12Resource* createAuxiliaryPlacedResource(unsigned primaryResourceKey);
+  unsigned createSubcaptureAuxiliaryPlacedResource(unsigned primaryResourceKey);
 
 private:
   StateTrackingService& stateService_;

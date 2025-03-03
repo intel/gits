@@ -192,6 +192,9 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
     std::vector<D3D12_RESOURCE_BARRIER> barriers;
     for (unsigned resourceIndex = 0; resourceIndex < resourcesCount; ++resourceIndex) {
       ResourceState& state = unmappableResourceStates[resourceIndex + resourceStartIndex];
+      if (isBarrierRestricted(state.key)) {
+        continue;
+      }
       ResourceStateTrackingService::ResourceStates& resourceStates =
           stateService_.resourceStateTrackingService_.getResourceStates(state.key);
       if (resourceStates.allEqual) {
@@ -225,16 +228,22 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
     }
   }
 
+  std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> auxiliaryPlacedResources;
   unsigned offsetReadback = 0;
   for (unsigned resourceIndex = 0; resourceIndex < resourcesCount; ++resourceIndex) {
     ResourceState& state = unmappableResourceStates[resourceIndex + resourceStartIndex];
-    D3D12_RESOURCE_DESC desc = state.resource->GetDesc();
+    ID3D12Resource* resource = state.resource;
+    if (isBarrierRestricted(state.key)) {
+      auxiliaryPlacedResources.emplace_back(createAuxiliaryPlacedResource(state.key));
+      resource = auxiliaryPlacedResources.back().Get();
+    }
 
+    D3D12_RESOURCE_DESC desc = resource->GetDesc();
     for (unsigned subresourceIndex = 0; subresourceIndex < resourceSizes[resourceIndex].size();
          ++subresourceIndex) {
       unsigned subresourceSize = resourceSizes[resourceIndex][subresourceIndex].first;
       if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
-        commandList_->CopyBufferRegion(readbackResource.Get(), offsetReadback, state.resource, 0,
+        commandList_->CopyBufferRegion(readbackResource.Get(), offsetReadback, resource, 0,
                                        subresourceSize);
       } else {
         D3D12_TEXTURE_COPY_LOCATION dest{};
@@ -245,7 +254,7 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
         dest.PlacedFootprint.Offset = offsetReadback;
         D3D12_TEXTURE_COPY_LOCATION src{};
         src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-        src.pResource = state.resource;
+        src.pResource = resource;
         src.SubresourceIndex = subresourceIndex;
         commandList_->CopyTextureRegion(&dest, 0, 0, 0, &src, nullptr);
       }
@@ -257,6 +266,9 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
     std::vector<D3D12_RESOURCE_BARRIER> barriers;
     for (unsigned resourceIndex = 0; resourceIndex < resourcesCount; ++resourceIndex) {
       ResourceState& state = unmappableResourceStates[resourceIndex + resourceStartIndex];
+      if (isBarrierRestricted(state.key)) {
+        continue;
+      }
       ResourceStateTrackingService::ResourceStates& resourceStates =
           stateService_.resourceStateTrackingService_.getResourceStates(state.key);
       if (resourceStates.allEqual) {
@@ -302,6 +314,10 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
   GITS_ASSERT(hr == S_OK);
   hr = commandList_->Reset(commandAllocator_, nullptr);
   GITS_ASSERT(hr == S_OK);
+
+  // release auxiliary placed resources
+
+  auxiliaryPlacedResources.clear();
 
   // decrese residency count or evict
 
@@ -393,9 +409,16 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
   // restore resources contents from upload resource in subcaptured stream
 
   unsigned offsetUpload = 0;
+  std::vector<unsigned> auxiliaryPlacedResourceKeys;
   for (unsigned resourceIndex = 0; resourceIndex < resourcesCount; ++resourceIndex) {
     ResourceState& state = unmappableResourceStates[resourceIndex + resourceStartIndex];
     D3D12_RESOURCE_DESC desc = state.resource->GetDesc();
+    unsigned resourceKey = state.key;
+    if (isBarrierRestricted(state.key)) {
+      resourceKey = createSubcaptureAuxiliaryPlacedResource(state.key);
+      auxiliaryPlacedResourceKeys.push_back(resourceKey);
+    }
+
     for (unsigned subresourceIndex = 0; subresourceIndex < resourceSizes[resourceIndex].size();
          ++subresourceIndex) {
       unsigned subresourceSize = resourceSizes[resourceIndex][subresourceIndex].first;
@@ -404,7 +427,7 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
         ID3D12GraphicsCommandListCopyBufferRegionCommand copyBufferRegion;
         copyBufferRegion.key = stateService_.getUniqueCommandKey();
         copyBufferRegion.object_.key = commandListKey_;
-        copyBufferRegion.pDstBuffer_.key = state.key;
+        copyBufferRegion.pDstBuffer_.key = resourceKey;
         copyBufferRegion.DstOffset_.value = 0;
         copyBufferRegion.pSrcBuffer_.key = uploadResourceKey;
         copyBufferRegion.SrcOffset_.value = offsetUpload;
@@ -427,7 +450,7 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
         copyTextureRegion.key = stateService_.getUniqueCommandKey();
         copyTextureRegion.object_.key = commandListKey_;
         copyTextureRegion.pDst_.value = &dest;
-        copyTextureRegion.pDst_.resourceKey = state.key;
+        copyTextureRegion.pDst_.resourceKey = resourceKey;
         copyTextureRegion.pSrc_.value = &src;
         copyTextureRegion.pSrc_.resourceKey = uploadResourceKey;
         stateService_.recorder_.record(
@@ -477,6 +500,13 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
   commandListReset.pAllocator_.key = commandAllocatorKey_;
   commandListReset.pInitialState_.key = 0;
   stateService_.recorder_.record(new ID3D12GraphicsCommandListResetWriter(commandListReset));
+
+  for (const auto key : auxiliaryPlacedResourceKeys) {
+    IUnknownReleaseCommand releaseCommand;
+    releaseCommand.key = stateService_.getUniqueCommandKey();
+    releaseCommand.object_.key = key;
+    stateService_.recorder_.record(new IUnknownReleaseWriter(releaseCommand));
+  }
 
   IUnknownReleaseCommand releaseCommand;
   releaseCommand.key = stateService_.getUniqueCommandKey();
@@ -627,6 +657,142 @@ UINT64 ResourceContentRestore::getAlignedSize(UINT64 size) {
              ? size
              : ((size / D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT) + 1) *
                    D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT;
+}
+
+bool ResourceContentRestore::isBarrierRestricted(unsigned resourceKey) {
+  const ObjectState* resourceObjectState = stateService_.getState(resourceKey);
+  GITS_ASSERT(resourceObjectState);
+  return static_cast<const gits::DirectX::ResourceState*>(resourceObjectState)->isBarrierRestricted;
+}
+
+ID3D12Resource* ResourceContentRestore::createAuxiliaryPlacedResource(unsigned primaryResourceKey) {
+  const ObjectState* resourceObjectState = stateService_.getState(primaryResourceKey);
+  ID3D12Resource* auxiliaryResource{};
+  if (resourceObjectState->id == ObjectState::D3D12_PLACEDRESOURCE) {
+    const auto* state = static_cast<const D3D12PlacedResourceState*>(resourceObjectState);
+    auto* heap = static_cast<ID3D12Heap*>(stateService_.getState(state->heapKey)->object);
+
+    HRESULT hr = device_->CreatePlacedResource(
+        heap, state->heapOffset, &state->desc, D3D12_RESOURCE_STATE_COPY_SOURCE,
+        state->isClearValue ? &state->clearValue : nullptr, IID_PPV_ARGS(&auxiliaryResource));
+    GITS_ASSERT(hr == S_OK);
+  } else if (resourceObjectState->id == ObjectState::D3D12_PLACEDRESOURCE1) {
+    const auto* state = static_cast<const D3D12PlacedResource1State*>(resourceObjectState);
+    auto* heap = static_cast<ID3D12Heap*>(stateService_.getState(state->heapKey)->object);
+
+    Microsoft::WRL::ComPtr<ID3D12Device8> device;
+    HRESULT hr = device_->QueryInterface(IID_PPV_ARGS(&device));
+    GITS_ASSERT(hr == S_OK);
+
+    hr = device->CreatePlacedResource1(
+        heap, state->heapOffset, &state->desc, D3D12_RESOURCE_STATE_COPY_SOURCE,
+        state->isClearValue ? &state->clearValue : nullptr, IID_PPV_ARGS(&auxiliaryResource));
+    GITS_ASSERT(hr == S_OK);
+  } else if (resourceObjectState->id == ObjectState::D3D12_PLACEDRESOURCE2) {
+    const auto* state = static_cast<const D3D12PlacedResource2State*>(resourceObjectState);
+    auto* heap = static_cast<ID3D12Heap*>(stateService_.getState(state->heapKey)->object);
+
+    Microsoft::WRL::ComPtr<ID3D12Device10> device;
+    HRESULT hr = device_->QueryInterface(IID_PPV_ARGS(&device));
+    GITS_ASSERT(hr == S_OK);
+
+    hr = device->CreatePlacedResource2(
+        heap, state->heapOffset, &state->desc, D3D12_BARRIER_LAYOUT_COPY_SOURCE,
+        state->isClearValue ? &state->clearValue : nullptr, state->castableFormats.size(),
+        state->castableFormats.data(), IID_PPV_ARGS(&auxiliaryResource));
+    GITS_ASSERT(hr == S_OK);
+  } else if (resourceObjectState->id == ObjectState::D3D12_INTC_PLACEDRESOURCE) {
+    const auto* state = static_cast<const D3D12INTCPlacedResourceState*>(resourceObjectState);
+    auto* heap = static_cast<ID3D12Heap*>(stateService_.getState(state->heapKey)->object);
+
+    Microsoft::WRL::ComPtr<ID3D12Device8> device;
+    HRESULT hr = device_->QueryInterface(IID_PPV_ARGS(&device));
+    GITS_ASSERT(hr == S_OK);
+
+    hr = INTC_D3D12_CreatePlacedResource(state->extensionContext, heap, state->heapOffset,
+                                         &state->descIntc, D3D12_RESOURCE_STATE_COPY_SOURCE,
+                                         state->isClearValue ? &state->clearValue : nullptr,
+                                         IID_PPV_ARGS(&auxiliaryResource));
+    GITS_ASSERT(hr == S_OK);
+  } else {
+    GITS_ASSERT(false && "Unhandled ObjectState");
+  }
+
+  return auxiliaryResource;
+}
+
+unsigned ResourceContentRestore::createSubcaptureAuxiliaryPlacedResource(
+    unsigned primaryResourceKey) {
+  ObjectState* resourceObjectState = stateService_.getState(primaryResourceKey);
+  unsigned auxiliaryResourceKey{};
+  if (resourceObjectState->id == ObjectState::D3D12_PLACEDRESOURCE) {
+    auto* state = static_cast<D3D12PlacedResourceState*>(resourceObjectState);
+
+    ID3D12DeviceCreatePlacedResourceCommand c;
+    c.key = stateService_.getUniqueCommandKey();
+    c.object_.key = state->deviceKey;
+    c.pHeap_.key = state->heapKey;
+    c.HeapOffset_.value = state->heapOffset;
+    c.pDesc_.value = &state->desc;
+    c.InitialState_.value = D3D12_RESOURCE_STATE_COPY_DEST;
+    c.pOptimizedClearValue_.value = state->isClearValue ? &state->clearValue : nullptr;
+    c.riid_.value = state->iid;
+    c.ppvResource_.key = stateService_.getUniqueObjectKey();
+    stateService_.recorder_.record(new ID3D12DeviceCreatePlacedResourceWriter(c));
+    auxiliaryResourceKey = c.ppvResource_.key;
+  } else if (resourceObjectState->id == ObjectState::D3D12_PLACEDRESOURCE1) {
+    auto* state = static_cast<D3D12PlacedResource1State*>(resourceObjectState);
+
+    ID3D12Device8CreatePlacedResource1Command c;
+    c.key = stateService_.getUniqueCommandKey();
+    c.object_.key = state->deviceKey;
+    c.pHeap_.key = state->heapKey;
+    c.HeapOffset_.value = state->heapOffset;
+    c.pDesc_.value = &state->desc;
+    c.InitialState_.value = D3D12_RESOURCE_STATE_COPY_DEST;
+    c.pOptimizedClearValue_.value = state->isClearValue ? &state->clearValue : nullptr;
+    c.riid_.value = state->iid;
+    c.ppvResource_.key = stateService_.getUniqueObjectKey();
+    stateService_.recorder_.record(new ID3D12Device8CreatePlacedResource1Writer(c));
+    auxiliaryResourceKey = c.ppvResource_.key;
+  } else if (resourceObjectState->id == ObjectState::D3D12_PLACEDRESOURCE2) {
+    auto* state = static_cast<D3D12PlacedResource2State*>(resourceObjectState);
+
+    ID3D12Device10CreatePlacedResource2Command c;
+    c.key = stateService_.getUniqueCommandKey();
+    c.object_.key = state->deviceKey;
+    c.pHeap_.key = state->heapKey;
+    c.HeapOffset_.value = state->heapOffset;
+    c.pDesc_.value = &state->desc;
+    c.InitialLayout_.value = D3D12_BARRIER_LAYOUT_COPY_DEST;
+    c.pOptimizedClearValue_.value = state->isClearValue ? &state->clearValue : nullptr;
+    c.NumCastableFormats_.value = state->castableFormats.size();
+    c.pCastableFormats_.value = state->castableFormats.data();
+    c.riid_.value = state->iid;
+    c.ppvResource_.key = stateService_.getUniqueObjectKey();
+    stateService_.recorder_.record(new ID3D12Device10CreatePlacedResource2Writer(c));
+    auxiliaryResourceKey = c.ppvResource_.key;
+  } else if (resourceObjectState->id == ObjectState::D3D12_INTC_PLACEDRESOURCE) {
+    auto* state = static_cast<D3D12INTCPlacedResourceState*>(resourceObjectState);
+
+    INTC_D3D12_CreatePlacedResourceCommand c;
+    c.key = stateService_.getUniqueCommandKey();
+    c.pExtensionContext_.key = state->extensionContextKey;
+    c.pHeap_.key = state->heapKey;
+    c.HeapOffset_.value = state->heapOffset;
+    c.pDesc_.value = &state->descIntc;
+    c.pDesc_.value->pD3D12Desc = &state->desc;
+    c.InitialState_.value = D3D12_RESOURCE_STATE_COPY_DEST;
+    c.pOptimizedClearValue_.value = state->isClearValue ? &state->clearValue : nullptr;
+    c.riid_.value = state->iid;
+    c.ppvResource_.key = stateService_.getUniqueObjectKey();
+    stateService_.recorder_.record(new INTC_D3D12_CreatePlacedResourceWriter(c));
+    auxiliaryResourceKey = c.ppvResource_.key;
+  } else {
+    GITS_ASSERT(false && "Unhandled ObjectState");
+  }
+
+  return auxiliaryResourceKey;
 }
 
 } // namespace DirectX

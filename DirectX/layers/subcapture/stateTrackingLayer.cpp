@@ -68,6 +68,14 @@ bool StateTrackingLayer::isResourceHeapMappable(unsigned heapKey) {
   return false;
 }
 
+bool StateTrackingLayer::isResourceBarrierRestricted(D3D12_RESOURCE_FLAGS flags) {
+  // ResourceBarrier on placed resource can corrupt underlying heap data if resource does not currently own that data
+  // https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device-createplacedresource
+  constexpr D3D12_RESOURCE_FLAGS resourceTypesRestrictedFromBarrier =
+      D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL | D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+  return (flags & resourceTypesRestrictedFromBarrier) != 0;
+}
+
 void StateTrackingLayer::post(IDXGISwapChainPresentCommand& c) {
   if (c.Flags_.value & DXGI_PRESENT_TEST || c.key & Command::stateRestoreKeyMask) {
     return;
@@ -908,13 +916,14 @@ void StateTrackingLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
   state->iid = c.riid_.value;
   state->isMappable = isResourceHeapMappable(state->heapKey);
   state->isGenericRead = state->initialResourceState == D3D12_RESOURCE_STATE_GENERIC_READ;
+  state->isBarrierRestricted = isResourceBarrierRestricted(c.pDesc_.value->Flags);
   stateService_.storeState(state);
   resourceHeaps_[c.pHeap_.key].insert(c.ppvResource_.key);
 
   if (state->initialResourceState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
     resourceStateTrackingService_.addResource(
         state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
-        state->initialResourceState, !state->isMappable);
+        state->initialResourceState, !(state->isMappable || state->isBarrierRestricted));
   }
 }
 
@@ -940,13 +949,14 @@ void StateTrackingLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
   state->iid = c.riid_.value;
   state->isMappable = isResourceHeapMappable(state->heapKey);
   state->isGenericRead = state->initialResourceState == D3D12_RESOURCE_STATE_GENERIC_READ;
+  state->isBarrierRestricted = isResourceBarrierRestricted(c.pDesc_.value->Flags);
   stateService_.storeState(state);
   resourceHeaps_[c.pHeap_.key].insert(c.ppvResource_.key);
 
   if (state->initialResourceState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
     resourceStateTrackingService_.addResource(
         state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
-        state->initialResourceState, !state->isMappable);
+        state->initialResourceState, !(state->isMappable || state->isBarrierRestricted));
   }
 }
 
@@ -975,12 +985,13 @@ void StateTrackingLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
   state->iid = c.riid_.value;
   state->isMappable = isResourceHeapMappable(state->heapKey);
   state->isGenericRead = state->initialLayout == D3D12_BARRIER_LAYOUT_GENERIC_READ;
+  state->isBarrierRestricted = isResourceBarrierRestricted(c.pDesc_.value->Flags);
   stateService_.storeState(state);
   resourceHeaps_[c.pHeap_.key].insert(c.ppvResource_.key);
 
-  resourceStateTrackingService_.addResource(state->deviceKey,
-                                            static_cast<ID3D12Resource*>(*c.ppvResource_.value),
-                                            state->key, state->initialLayout, !state->isMappable);
+  resourceStateTrackingService_.addResource(
+      state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
+      state->initialLayout, !(state->isMappable || state->isBarrierRestricted));
 }
 
 void StateTrackingLayer::pre(ID3D12DeviceCreateReservedResourceCommand& c) {
@@ -1283,6 +1294,7 @@ void StateTrackingLayer::post(INTC_D3D12_CreatePlacedResourceCommand& c) {
   state->object = static_cast<IUnknown*>(*c.ppvResource_.value);
   state->deviceKey = deviceByINTCExtensionContext_[c.pExtensionContext_.key];
   state->extensionContextKey = c.pExtensionContext_.key;
+  state->extensionContext = c.pExtensionContext_.value;
   state->heapKey = c.pHeap_.key;
   state->heapOffset = c.HeapOffset_.value;
   state->descIntc = *c.pDesc_.value;
@@ -1297,7 +1309,7 @@ void StateTrackingLayer::post(INTC_D3D12_CreatePlacedResourceCommand& c) {
 
   resourceStateTrackingService_.addResource(
       state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
-      state->initialResourceState, !state->isMappable);
+      state->initialResourceState, !(state->isMappable || state->isBarrierRestricted));
 }
 
 void StateTrackingLayer::pre(INTC_D3D12_CreateComputePipelineStateCommand& c) {

@@ -221,6 +221,7 @@ private:
              heapProperties.CPUPageProperty == D3D12_CPU_PAGE_PROPERTY_NOT_AVAILABLE);
   }
   bool isResourceHeapMappable(unsigned heapKey);
+  bool isResourceBarrierRestricted(D3D12_RESOURCE_FLAGS flags);
 
 private:
   std::map<unsigned, unsigned> deviceByINTCExtensionContext_;

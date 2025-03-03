@@ -93,6 +93,7 @@ struct ResourceState : public ObjectState {
   D3D12_GPU_VIRTUAL_ADDRESS gpuVirtualAddress{};
   bool isMappable{};
   bool isGenericRead{};
+  bool isBarrierRestricted{};
 };
 
 struct DXGIFactoryState : public ObjectState {
@@ -471,6 +472,7 @@ struct D3D12INTCPlacedResourceState : public ResourceState {
   D3D12INTCPlacedResourceState() : ResourceState(D3D12_INTC_PLACEDRESOURCE) {}
   unsigned deviceKey{};
   unsigned extensionContextKey{};
+  INTCExtensionContext* extensionContext{};
   unsigned heapKey{};
   UINT64 heapOffset{};
   INTC_D3D12_RESOURCE_DESC_0001 descIntc{};
