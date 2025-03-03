@@ -349,19 +349,23 @@ void StateTrackingLayer::post(IDXGISwapChainResizeBuffersCommand& c) {
     DXGISwapChainForHwndState* state = static_cast<DXGISwapChainForHwndState*>(objectState);
     state->desc.Width = c.Width_.value;
     state->desc.Height = c.Height_.value;
-    state->desc.Format = c.NewFormat_.value;
     state->desc.Flags = c.SwapChainFlags_.value;
     if (c.BufferCount_.value) {
       state->desc.BufferCount = c.BufferCount_.value;
+    }
+    if (c.NewFormat_.value != DXGI_FORMAT_UNKNOWN) {
+      state->desc.Format = c.NewFormat_.value;
     }
   } else if (objectState->id == ObjectState::DXGI_SWAPCHAIN) {
     DXGISwapChainState* state = static_cast<DXGISwapChainState*>(objectState);
     state->desc.BufferDesc.Width = c.Width_.value;
     state->desc.BufferDesc.Height = c.Height_.value;
-    state->desc.BufferDesc.Format = c.NewFormat_.value;
     state->desc.Flags = c.SwapChainFlags_.value;
     if (c.BufferCount_.value) {
       state->desc.BufferCount = c.BufferCount_.value;
+    }
+    if (c.NewFormat_.value != DXGI_FORMAT_UNKNOWN) {
+      state->desc.BufferDesc.Format = c.NewFormat_.value;
     }
   }
 
