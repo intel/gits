@@ -4657,10 +4657,18 @@ std::pair<GLenum, GLuint> gits::OpenGL::CVariableGLSLInfo::UniformDimensions(GLe
   INIT_NEW_STATIC_OBJ(typeMap, map_t)
 
   if (typeMap.empty()) {
+    // Basic types and vectors
+
     typeMap[GL_FLOAT] = std::make_pair(GL_FLOAT, 1);
     typeMap[GL_FLOAT_VEC2] = std::make_pair(GL_FLOAT, 2);
     typeMap[GL_FLOAT_VEC3] = std::make_pair(GL_FLOAT, 3);
     typeMap[GL_FLOAT_VEC4] = std::make_pair(GL_FLOAT, 4);
+
+    typeMap[GL_DOUBLE] = std::make_pair(GL_DOUBLE, 1);
+    typeMap[GL_DOUBLE_VEC2] = std::make_pair(GL_DOUBLE, 2);
+    typeMap[GL_DOUBLE_VEC3] = std::make_pair(GL_DOUBLE, 3);
+    typeMap[GL_DOUBLE_VEC4] = std::make_pair(GL_DOUBLE, 4);
+
     typeMap[GL_INT] = std::make_pair(GL_INT, 1);
     typeMap[GL_INT_VEC2] = std::make_pair(GL_INT, 2);
     typeMap[GL_INT_VEC3] = std::make_pair(GL_INT, 3);
@@ -4675,6 +4683,9 @@ std::pair<GLenum, GLuint> gits::OpenGL::CVariableGLSLInfo::UniformDimensions(GLe
     typeMap[GL_BOOL_VEC2] = std::make_pair(GL_INT, 2);
     typeMap[GL_BOOL_VEC3] = std::make_pair(GL_INT, 3);
     typeMap[GL_BOOL_VEC4] = std::make_pair(GL_INT, 4);
+
+    // Matrices
+
     typeMap[GL_FLOAT_MAT2] = std::make_pair(GL_FLOAT, 4);
     typeMap[GL_FLOAT_MAT3] = std::make_pair(GL_FLOAT, 9);
     typeMap[GL_FLOAT_MAT4] = std::make_pair(GL_FLOAT, 16);
@@ -4684,6 +4695,18 @@ std::pair<GLenum, GLuint> gits::OpenGL::CVariableGLSLInfo::UniformDimensions(GLe
     typeMap[GL_FLOAT_MAT3x4] = std::make_pair(GL_FLOAT, 12);
     typeMap[GL_FLOAT_MAT4x2] = std::make_pair(GL_FLOAT, 8);
     typeMap[GL_FLOAT_MAT4x3] = std::make_pair(GL_FLOAT, 12);
+
+    typeMap[GL_DOUBLE_MAT2] = std::make_pair(GL_DOUBLE, 4);
+    typeMap[GL_DOUBLE_MAT3] = std::make_pair(GL_DOUBLE, 9);
+    typeMap[GL_DOUBLE_MAT4] = std::make_pair(GL_DOUBLE, 16);
+    typeMap[GL_DOUBLE_MAT2x3] = std::make_pair(GL_DOUBLE, 6);
+    typeMap[GL_DOUBLE_MAT2x4] = std::make_pair(GL_DOUBLE, 8);
+    typeMap[GL_DOUBLE_MAT3x2] = std::make_pair(GL_DOUBLE, 6);
+    typeMap[GL_DOUBLE_MAT3x4] = std::make_pair(GL_DOUBLE, 12);
+    typeMap[GL_DOUBLE_MAT4x2] = std::make_pair(GL_DOUBLE, 8);
+    typeMap[GL_DOUBLE_MAT4x3] = std::make_pair(GL_DOUBLE, 12);
+
+    // Samplers
 
     typeMap[GL_SAMPLER_1D] = std::make_pair(GL_INT, 1);
     typeMap[GL_SAMPLER_1D_ARRAY] = std::make_pair(GL_INT, 1);
@@ -4699,26 +4722,36 @@ std::pair<GLenum, GLuint> gits::OpenGL::CVariableGLSLInfo::UniformDimensions(GLe
     typeMap[GL_SAMPLER_2D_ARRAY_SHADOW] = std::make_pair(GL_INT, 1);
     typeMap[GL_SAMPLER_2D_RECT_ARB] = std::make_pair(GL_INT, 1);
     typeMap[GL_SAMPLER_2D_RECT_SHADOW_ARB] = std::make_pair(GL_INT, 1);
+    typeMap[GL_SAMPLER_2D_MULTISAMPLE] = std::make_pair(GL_INT, 1);
+    typeMap[GL_SAMPLER_2D_MULTISAMPLE_ARRAY] = std::make_pair(GL_INT, 1);
     typeMap[GL_SAMPLER_EXTERNAL_OES] = std::make_pair(GL_INT, 1);
+    typeMap[GL_SAMPLER_BUFFER] = std::make_pair(GL_INT, 1);
     typeMap[GL_INT_SAMPLER_1D] = std::make_pair(GL_INT, 1);
     typeMap[GL_INT_SAMPLER_2D] = std::make_pair(GL_INT, 1);
     typeMap[GL_INT_SAMPLER_3D] = std::make_pair(GL_INT, 1);
     typeMap[GL_INT_SAMPLER_CUBE] = std::make_pair(GL_INT, 1);
     typeMap[GL_INT_SAMPLER_1D_ARRAY] = std::make_pair(GL_INT, 1);
     typeMap[GL_INT_SAMPLER_2D_ARRAY] = std::make_pair(GL_INT, 1);
+    typeMap[GL_INT_SAMPLER_2D_MULTISAMPLE] = std::make_pair(GL_INT, 1);
+    typeMap[GL_INT_SAMPLER_2D_MULTISAMPLE_ARRAY] = std::make_pair(GL_INT, 1);
+    typeMap[GL_INT_SAMPLER_2D_RECT] = std::make_pair(GL_INT, 1);
+    typeMap[GL_INT_SAMPLER_BUFFER] = std::make_pair(GL_INT, 1);
     typeMap[GL_UNSIGNED_INT_SAMPLER_1D] = std::make_pair(GL_INT, 1);
     typeMap[GL_UNSIGNED_INT_SAMPLER_2D] = std::make_pair(GL_INT, 1);
     typeMap[GL_UNSIGNED_INT_SAMPLER_3D] = std::make_pair(GL_INT, 1);
     typeMap[GL_UNSIGNED_INT_SAMPLER_CUBE] = std::make_pair(GL_INT, 1);
     typeMap[GL_UNSIGNED_INT_SAMPLER_1D_ARRAY] = std::make_pair(GL_INT, 1);
     typeMap[GL_UNSIGNED_INT_SAMPLER_2D_ARRAY] = std::make_pair(GL_INT, 1);
-    typeMap[GL_SAMPLER_2D_MULTISAMPLE] = std::make_pair(GL_INT, 1);
-    typeMap[GL_SAMPLER_BUFFER] = std::make_pair(GL_INT, 1);
+    typeMap[GL_UNSIGNED_INT_SAMPLER_2D_MULTISAMPLE] = std::make_pair(GL_INT, 1);
+    typeMap[GL_UNSIGNED_INT_SAMPLER_2D_MULTISAMPLE_ARRAY] = std::make_pair(GL_INT, 1);
     typeMap[GL_UNSIGNED_INT_SAMPLER_2D_RECT] = std::make_pair(GL_INT, 1);
-    typeMap[GL_INT_SAMPLER_BUFFER] = std::make_pair(GL_INT, 1);
     typeMap[GL_UNSIGNED_INT_SAMPLER_BUFFER] = std::make_pair(GL_INT, 1);
 
+    // Atomic counters
+
     typeMap[GL_UNSIGNED_INT_ATOMIC_COUNTER] = std::make_pair(GL_INT, 1);
+
+    // Images
 
     typeMap[GL_IMAGE_1D_EXT] = std::make_pair(GL_INT, 1);
     typeMap[GL_IMAGE_2D_EXT] = std::make_pair(GL_INT, 1);
@@ -4756,7 +4789,14 @@ std::pair<GLenum, GLuint> gits::OpenGL::CVariableGLSLInfo::UniformDimensions(GLe
     typeMap[GL_UNSIGNED_INT_IMAGE_2D_MULTISAMPLE_EXT] = std::make_pair(GL_INT, 1);
     typeMap[GL_UNSIGNED_INT_IMAGE_2D_MULTISAMPLE_ARRAY_EXT] = std::make_pair(GL_INT, 1);
   }
-  return typeMap[type];
+
+  const auto it = typeMap.find(type);
+  if (it != typeMap.end()) {
+    return it->second;
+  } else {
+    Log(ERR) << "Unknown uniform type: " << GetGLEnumString(type) << " (" << gits::hex(type) << ")";
+    throw ENotImplemented(EXCEPTION_MESSAGE);
+  }
 }
 
 /**************************************** G L S L   P I P E L I N E  I N F O ************************************************/
