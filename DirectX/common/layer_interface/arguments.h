@@ -518,7 +518,7 @@ struct DML_OPERATOR_DESC_Argument {
 
 struct DML_CheckFeatureSupport_BufferArgument : public BufferArgument {
   DML_CheckFeatureSupport_BufferArgument(const void* value_, size_t size_, DML_FEATURE feat)
-      : BufferArgument(value_, size), feature{feat} {}
+      : BufferArgument(value_, size_), feature{feat} {}
 
   DML_CheckFeatureSupport_BufferArgument() : BufferArgument() {}
 
