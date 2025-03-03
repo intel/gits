@@ -1068,8 +1068,21 @@ void StateTrackingService::restoreD3D12INTCDeviceExtensionContext(
   c.key = getUniqueCommandKey();
   c.pDevice_.key = state->deviceKey;
   c.ppExtensionContext_.key = state->key;
-  c.pExtensionInfo_.value = &state->extensionInfo;
-  c.pExtensionAppInfo_.value = state->isExtensionAppInfo ? &state->extensionAppInfo : nullptr;
+
+  PointerArgument<INTCExtensionInfo> extensionInfoArg;
+  unsigned offset{};
+  decode(state->extensionInfoEncoded.get(), offset, extensionInfoArg);
+  c.pExtensionInfo_ = extensionInfoArg;
+
+  if (state->isExtensionAppInfo) {
+    PointerArgument<INTCExtensionAppInfo> extensionAppInfoArg;
+    unsigned offset{};
+    decode(state->extensionAppInfoEncoded.get(), offset, extensionAppInfoArg);
+    c.pExtensionAppInfo_ = extensionAppInfoArg;
+  } else {
+    c.pExtensionAppInfo_.value = nullptr;
+  }
+
   recorder_.record(new INTC_D3D12_CreateDeviceExtensionContextWriter(c));
   if (intcFeature_.EmulatedTyped64bitAtomics) {
     INTC_D3D12_SetFeatureSupportCommand c;
@@ -1086,8 +1099,21 @@ void StateTrackingService::restoreD3D12INTCDeviceExtensionContext1(
   c.key = getUniqueCommandKey();
   c.pDevice_.key = state->deviceKey;
   c.ppExtensionContext_.key = state->key;
-  c.pExtensionInfo_.value = &state->extensionInfo;
-  c.pExtensionAppInfo_.value = state->isExtensionAppInfo ? &state->extensionAppInfo : nullptr;
+
+  PointerArgument<INTCExtensionInfo> extensionInfoArg;
+  unsigned offset{};
+  decode(state->extensionInfoEncoded.get(), offset, extensionInfoArg);
+  c.pExtensionInfo_ = extensionInfoArg;
+
+  if (state->isExtensionAppInfo) {
+    PointerArgument<INTCExtensionAppInfo1> extensionAppInfoArg;
+    unsigned offset{};
+    decode(state->extensionAppInfoEncoded.get(), offset, extensionAppInfoArg);
+    c.pExtensionAppInfo_ = extensionAppInfoArg;
+  } else {
+    c.pExtensionAppInfo_.value = nullptr;
+  }
+
   recorder_.record(new INTC_D3D12_CreateDeviceExtensionContext1Writer(c));
 
   if (intcFeature_.EmulatedTyped64bitAtomics) {

@@ -1128,12 +1128,14 @@ void decode(char* src, unsigned& offset, PointerArgument<INTCExtensionAppInfo>& 
     unsigned* len = reinterpret_cast<unsigned*>(src + offset);
     offset += sizeof(unsigned);
     arg.value->pApplicationName = reinterpret_cast<const wchar_t*>(src + offset);
+    arg.pApplicationName = arg.value->pApplicationName;
     offset += *len;
   }
   if (arg.value->pEngineName) {
     unsigned* len = reinterpret_cast<unsigned*>(src + offset);
     offset += sizeof(unsigned);
     arg.value->pEngineName = reinterpret_cast<const wchar_t*>(src + offset);
+    arg.pEngineName = arg.value->pEngineName;
     offset += *len;
   }
 }
@@ -1150,12 +1152,14 @@ void decode(char* src, unsigned& offset, PointerArgument<INTCExtensionAppInfo1>&
     unsigned* len = reinterpret_cast<unsigned*>(src + offset);
     offset += sizeof(unsigned);
     arg.value->pApplicationName = reinterpret_cast<const wchar_t*>(src + offset);
+    arg.pApplicationName = arg.value->pApplicationName;
     offset += *len;
   }
   if (arg.value->pEngineName) {
     unsigned* len = reinterpret_cast<unsigned*>(src + offset);
     offset += sizeof(unsigned);
     arg.value->pEngineName = reinterpret_cast<const wchar_t*>(src + offset);
+    arg.pEngineName = arg.value->pEngineName;
     offset += *len;
   }
 }

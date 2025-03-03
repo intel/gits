@@ -1760,10 +1760,10 @@ unsigned getSize(const PointerArgument<INTCExtensionAppInfo>& arg) {
   unsigned size = sizeof(void*) + sizeof(INTCExtensionAppInfo);
 
   if (arg.value->pApplicationName) {
-    size += sizeof(unsigned) + wcslen(arg.value->pApplicationName) * 2 + 2;
+    size += sizeof(unsigned) + wcslen(arg.pApplicationName) * 2 + 2;
   }
   if (arg.value->pEngineName) {
-    size += sizeof(unsigned) + wcslen(arg.value->pEngineName) * 2 + 2;
+    size += sizeof(unsigned) + wcslen(arg.pEngineName) * 2 + 2;
   }
 
   return size;
@@ -1778,17 +1778,17 @@ void encode(char* dest, unsigned& offset, const PointerArgument<INTCExtensionApp
   offset += sizeof(INTCExtensionAppInfo);
 
   if (arg.value->pApplicationName) {
-    unsigned len = wcslen(arg.value->pApplicationName) * 2 + 2;
+    unsigned len = wcslen(arg.pApplicationName) * 2 + 2;
     memcpy(dest + offset, &len, sizeof(len));
     offset += sizeof(unsigned);
-    memcpy(dest + offset, arg.value->pApplicationName, len);
+    memcpy(dest + offset, arg.pApplicationName, len);
     offset += len;
   }
   if (arg.value->pEngineName) {
-    unsigned len = wcslen(arg.value->pEngineName) * 2 + 2;
+    unsigned len = wcslen(arg.pEngineName) * 2 + 2;
     memcpy(dest + offset, &len, sizeof(len));
     offset += sizeof(unsigned);
-    memcpy(dest + offset, arg.value->pEngineName, len);
+    memcpy(dest + offset, arg.pEngineName, len);
     offset += len;
   }
 }

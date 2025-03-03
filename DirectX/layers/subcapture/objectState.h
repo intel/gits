@@ -440,17 +440,17 @@ struct D3D12QueryHeapState : public ObjectState {
 struct D3D12INTCDeviceExtensionContextState : public ObjectState {
   D3D12INTCDeviceExtensionContextState() : ObjectState(D3D12_INTC_DEVICEEXTENSIONCONTEXT) {}
   unsigned deviceKey{};
-  INTCExtensionInfo extensionInfo{};
+  std::unique_ptr<char[]> extensionInfoEncoded;
   bool isExtensionAppInfo{};
-  INTCExtensionAppInfo extensionAppInfo{};
+  std::unique_ptr<char[]> extensionAppInfoEncoded;
 };
 
 struct D3D12INTCDeviceExtensionContext1State : public ObjectState {
   D3D12INTCDeviceExtensionContext1State() : ObjectState(D3D12_INTC_DEVICEEXTENSIONCONTEXT1) {}
   unsigned deviceKey{};
-  INTCExtensionInfo extensionInfo{};
+  std::unique_ptr<char[]> extensionInfoEncoded;
   bool isExtensionAppInfo{};
-  INTCExtensionAppInfo1 extensionAppInfo{};
+  std::unique_ptr<char[]> extensionAppInfoEncoded;
 };
 
 struct D3D12INTCCommittedResourceState : public ResourceState {

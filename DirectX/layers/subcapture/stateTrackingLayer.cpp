@@ -1202,9 +1202,15 @@ void StateTrackingLayer::post(INTC_D3D12_CreateDeviceExtensionContextCommand& c)
   D3D12INTCDeviceExtensionContextState* state = new D3D12INTCDeviceExtensionContextState();
   state->deviceKey = c.pDevice_.key;
   state->key = c.ppExtensionContext_.key;
-  state->extensionInfo = *c.pExtensionInfo_.value;
+
+  state->extensionInfoEncoded.reset(new char[getSize(c.pExtensionInfo_)]);
+  unsigned offset{};
+  encode(state->extensionInfoEncoded.get(), offset, c.pExtensionInfo_);
+
   if (state->isExtensionAppInfo = c.pExtensionAppInfo_.value ? true : false) {
-    state->extensionAppInfo = *c.pExtensionAppInfo_.value;
+    state->extensionAppInfoEncoded.reset(new char[getSize(c.pExtensionAppInfo_)]);
+    unsigned offset{};
+    encode(state->extensionAppInfoEncoded.get(), offset, c.pExtensionAppInfo_);
   }
   ObjectState* parentState = stateService_.getState(state->deviceKey);
   parentState->childKey = state->key;
@@ -1216,9 +1222,15 @@ void StateTrackingLayer::post(INTC_D3D12_CreateDeviceExtensionContext1Command& c
   D3D12INTCDeviceExtensionContext1State* state = new D3D12INTCDeviceExtensionContext1State();
   state->deviceKey = c.pDevice_.key;
   state->key = c.ppExtensionContext_.key;
-  state->extensionInfo = *c.pExtensionInfo_.value;
+
+  state->extensionInfoEncoded.reset(new char[getSize(c.pExtensionInfo_)]);
+  unsigned offset{};
+  encode(state->extensionInfoEncoded.get(), offset, c.pExtensionInfo_);
+
   if (state->isExtensionAppInfo = c.pExtensionAppInfo_.value ? true : false) {
-    state->extensionAppInfo = *c.pExtensionAppInfo_.value;
+    state->extensionAppInfoEncoded.reset(new char[getSize(c.pExtensionAppInfo_)]);
+    unsigned offset{};
+    encode(state->extensionAppInfoEncoded.get(), offset, c.pExtensionAppInfo_);
   }
   ObjectState* parentState = stateService_.getState(state->deviceKey);
   parentState->childKey = state->key;
