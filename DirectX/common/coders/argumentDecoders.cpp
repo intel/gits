@@ -91,7 +91,14 @@ void decode(char* src, unsigned& offset, ShaderIdentifierArgument& arg) {
   arg.data.resize(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
   memcpy(arg.data.data(), src + offset, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
   offset += D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
-  arg.value = arg.data.data();
+  bool null = true;
+  for (uint8_t d : arg.data) {
+    if (d) {
+      null = false;
+      break;
+    }
+  }
+  arg.value = null ? nullptr : arg.data.data();
 }
 
 void decode(char* src, unsigned& offset, D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument& arg) {

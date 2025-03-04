@@ -121,7 +121,11 @@ unsigned getSize(const ShaderIdentifierArgument& arg) {
 }
 
 void encode(char* dest, unsigned& offset, const ShaderIdentifierArgument& arg) {
-  memcpy(dest + offset, arg.value, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+  if (arg.value) {
+    memcpy(dest + offset, arg.value, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+  } else {
+    memset(dest + offset, 0, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+  }
   offset += D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
 }
 
