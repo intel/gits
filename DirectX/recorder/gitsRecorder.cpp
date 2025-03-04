@@ -17,7 +17,10 @@ namespace DirectX {
 
 void GitsRecorder::record(unsigned tokenKey, CToken* token) {
   std::lock_guard<std::mutex> lock(mutex_);
-  if (!recorder_ || recorder_->IsMarkedForDeletion()) {
+  if (!recorder_) {
+    return;
+  } else if (recorder_->IsMarkedForDeletion()) {
+    recorder_->Close();
     return;
   }
   orderedSchedule({tokenKey, token});
