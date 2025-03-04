@@ -39,8 +39,12 @@ FastOStream& operator<<(FastOStream& stream, OutputBufferArgument& arg) {
 
 FastOStream& operator<<(FastOStream& stream, ShaderIdentifierArgument& arg) {
   stream << "ShaderIdentifier{";
-  for (unsigned i = 0; i < D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES; ++i) {
-    printHexFull(stream, *(static_cast<uint8_t*>(arg.value) + i));
+  if (arg.value) {
+    for (unsigned i = 0; i < D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES; ++i) {
+      printHexFull(stream, *(static_cast<uint8_t*>(arg.value) + i));
+    }
+  } else {
+    stream << "nullptr";
   }
   stream << "}";
   return stream;
