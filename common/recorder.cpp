@@ -163,6 +163,14 @@ gits::CRecorder::CRecorder()
     }
   });
 
+  inst.GetMessageBus().subscribe({PUBLISHER_PLUGIN, TOPIC_CLOSE_RECORDER},
+                                 [](Topic t, const MessagePtr& m) {
+                                   auto msg = std::dynamic_pointer_cast<CloseRecorderMessage>(m);
+                                   if (msg) {
+                                     CRecorder::Instance().MarkForDeletion();
+                                   }
+                                 });
+
 #ifdef GITS_PLATFORM_WINDOWS
   // handling signals
   SignalsHandler();
@@ -563,10 +571,6 @@ void gits::CRecorder::Start() {
   // update running flag
   //if (Config::Get().recorder.basic.enabled)
 
-#ifdef GITS_PLATFORM_WINDOWS
-  exitEventHandler.Start();
-#endif // GITS_PLATFORM_WINDOWS
-
   _running = true;
   _runningStarted = true;
 }
@@ -612,10 +616,6 @@ void gits::CRecorder::Stop() {
     }
     Scheduler().Register(new gits::CTokenFrameNumber(CToken::ID_CCODE_FINISH, inst.CurrentFrame()));
   }
-
-#ifdef GITS_PLATFORM_WINDOWS
-  exitEventHandler.Stop();
-#endif // GITS_PLATFORM_WINDOWS
 
   _running = false;
   _runningStarted = false;

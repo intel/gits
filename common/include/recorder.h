@@ -27,10 +27,6 @@
 #include <string>
 #include <apis_iface.h>
 
-#ifdef GITS_PLATFORM_WINDOWS
-#include "eventHandlers.h"
-#endif
-
 namespace gits {
 class CScheduler;
 class CToken;
@@ -74,10 +70,6 @@ class CRecorder : private gits::noncopyable {
   uint _exitHotKeyId;
   uint _startHotKeyId;
   std::recursive_mutex _mutex;
-
-#ifdef GITS_PLATFORM_WINDOWS
-  ExitEventHandler exitEventHandler;
-#endif
 
   std::vector<std::function<void()>> _disposeEvents;
   StreamingContext _sc;

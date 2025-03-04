@@ -114,9 +114,7 @@ source_group("recorder" FILES
 if(WIN32)
   list(APPEND common_SOURCES
     include/tools_windows.h
-    include/eventHandlers.h
     tools_windows.cpp
-    eventHandlers.cpp
   )
 endif()
 

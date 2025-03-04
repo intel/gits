@@ -26,7 +26,9 @@ enum PublisherId {
 enum TopicId {
   TOPIC_NONE = 0,
   TOPIC_LOG,
-  TOPIC_END
+  TOPIC_END,
+  TOPIC_STREAM_SAVED,
+  TOPIC_CLOSE_RECORDER
 };
 struct Topic {
   PublisherId publisherId{};
@@ -107,6 +109,23 @@ private:
 class EndOfRecordingMessage : public Message {
 public:
   EndOfRecordingMessage() {}
+};
+
+class StreamSavedMessage : public Message {
+public:
+  StreamSavedMessage(const std::string& path) : path_(path) {}
+
+  const std::string& getPath() const {
+    return path_;
+  }
+
+private:
+  std::string path_;
+};
+
+class CloseRecorderMessage : public Message {
+public:
+  CloseRecorderMessage() {}
 };
 
 } // namespace gits

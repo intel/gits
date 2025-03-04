@@ -121,6 +121,15 @@ CGits::~CGits() {
     if (Config::Get().IsRecorder() && Config::Get().common.recorder.enabled) {
       CloseZipFileGLPrograms();
     }
+    if ((Config::Get().IsRecorder() && Config::Get().common.recorder.enabled)
+#ifdef GITS_PLATFORM_WINDOWS
+        || (Config::Get().IsPlayer() && Config::Get().directx.features.subcapture.enabled)
+#endif
+    ) {
+      CGits::Instance().GetMessageBus().publish(
+          {PUBLISHER_RECORDER, TOPIC_STREAM_SAVED},
+          std::make_shared<StreamSavedMessage>(Config::Get().common.recorder.dumpPath.string()));
+    }
 
     // Create a buildable CCode project by automatically copying necessary files.
     // TODO: extract it to a separate function.
