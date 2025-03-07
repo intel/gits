@@ -358,25 +358,19 @@ void DebugInfo::logDredBreadcrumbs(const D3D12_AUTO_BREADCRUMB_NODE* headNode) {
     unsigned nExecuted = node->pLastBreadcrumbValue ? *node->pLastBreadcrumbValue : 0;
     bool hasFinished = (nExecuted > 0) && (nExecuted == node->BreadcrumbCount);
 
-    auto formatInterfaceName = [](const std::string& name) {
-      unsigned numeric = std::stoul(std::string{name.begin() + 1, name.end()});
-      return ConfigKeySet::keyToString(numeric);
-    };
-
-    std::string cmdListName("O");
+    std::string cmdListName;
     if (node->pCommandListDebugNameA) {
-      cmdListName += formatInterfaceName(std::string(node->pCommandListDebugNameA));
+      cmdListName = std::string(node->pCommandListDebugNameA);
     } else if (node->pCommandListDebugNameW) {
       std::wstring cmdListNameW = std::wstring(node->pCommandListDebugNameW);
-      cmdListName += formatInterfaceName(std::string(cmdListNameW.begin(), cmdListNameW.end()));
+      cmdListName = std::string(cmdListNameW.begin(), cmdListNameW.end());
     }
-
-    std::string cmdQueueName("O");
+    std::string cmdQueueName;
     if (node->pCommandQueueDebugNameA) {
-      cmdQueueName += formatInterfaceName(std::string(node->pCommandQueueDebugNameA));
+      cmdQueueName = std::string(node->pCommandQueueDebugNameA);
     } else if (node->pCommandQueueDebugNameW) {
       std::wstring cmdQueueNameW = std::wstring(node->pCommandQueueDebugNameW);
-      cmdQueueName += formatInterfaceName(std::string(cmdQueueNameW.begin(), cmdQueueNameW.end()));
+      cmdQueueName = std::string(cmdQueueNameW.begin(), cmdQueueNameW.end());
     }
 
     dredFile_ << "  Breadcrumb Node:\n";
