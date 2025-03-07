@@ -423,6 +423,10 @@ void CaptureCustomizationLayer::post(ID3D12Device4CreateCommandList1Command& c) 
 }
 
 void CaptureCustomizationLayer::post(ID3D12GraphicsCommandListSetGraphicsRootSignatureCommand& c) {
+  // pRootSignature is optional, so it can be nullptr
+  if (!c.pRootSignature_.value) {
+    return;
+  }
 
   std::lock_guard<std::mutex> lock(*c.object_.objectInfo->getMutex());
   CommandListObjectInfo* info = c.object_.objectInfo->getObjectInfo<CommandListObjectInfo>(this);
@@ -431,6 +435,10 @@ void CaptureCustomizationLayer::post(ID3D12GraphicsCommandListSetGraphicsRootSig
 }
 
 void CaptureCustomizationLayer::post(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) {
+  // pRootSignature is optional, so it can be nullptr
+  if (!c.pRootSignature_.value) {
+    return;
+  }
 
   std::lock_guard<std::mutex> lock(*c.object_.objectInfo->getMutex());
   CommandListObjectInfo* info = c.object_.objectInfo->getObjectInfo<CommandListObjectInfo>(this);
