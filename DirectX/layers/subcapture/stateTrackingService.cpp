@@ -35,8 +35,8 @@ void StateTrackingService::restoreState() {
   descriptorService_.restoreState();
   accelerationStructuresSerializeService_.restoreAccelerationStructures();
   accelerationStructuresBuildService_.restoreAccelerationStructures();
-  resourceContentRestore_.restoreContent();
   reservedResourcesService_.restoreContent();
+  resourceContentRestore_.restoreContent();
   resourceStateTrackingService_.restoreResourceStates();
   mapStateService_.restoreMapState();
   commandListService_.restoreCommandLists();
