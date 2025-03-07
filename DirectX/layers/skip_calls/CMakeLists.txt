@@ -34,6 +34,7 @@ target_sources(DirectX_skip_calls PRIVATE
 
 target_include_directories(DirectX_skip_calls PRIVATE
   ${DIRECTX_DIR}/common/layer_interface
+  ${DIRECTX_DIR}/common/utils
   ${D3D12_HEADERS_DIR}
   ${DML_HEADERS_DIR}
   ${DSTORAGE_HEADERS_DIR}

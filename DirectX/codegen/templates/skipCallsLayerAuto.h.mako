@@ -11,16 +11,16 @@ ${header}
 
 #include "layerAuto.h"
 #include "config.h"
-#include <unordered_set>
+#include "commandKeyService.h"
 
 namespace gits {
 namespace DirectX {
 
 class SkipCallsLayer : public Layer {
 public:
-  SkipCallsLayer() : Layer("SkipCalls")  {
-    extractKeys(Config::Get().directx.features.skipCalls.commandKeys, callsToSkip_);
-  }
+  SkipCallsLayer() : Layer("SkipCalls"),
+      commandKeysService_(Config::Get().directx.features.skipCalls.commandKeys)
+  {}
 
   virtual void pre(CreateWindowMetaCommand& command) override;
   virtual void pre(MappedDataMetaCommand& command) override;
@@ -39,7 +39,7 @@ public:
   virtual void pre(INTC_D3D12_CreateComputePipelineStateCommand& command) override;
   virtual void pre(INTC_D3D12_CreatePlacedResourceCommand& command) override;
   virtual void pre(INTC_D3D12_CreateCommittedResourceCommand& command) override;
-
+  
   %for function in functions:
   virtual void pre(${function.name}Command& command) override;
   %endfor
@@ -50,10 +50,7 @@ public:
   %endfor
 
 private:
-  std::unordered_set<unsigned> callsToSkip_;
-
-  bool isToSkip(unsigned key);
-  void extractKeys(const std::string& keyString, std::unordered_set<unsigned>& keySet);
+  CommandKeyService commandKeysService_;
 };
 
 } // namespace DirectX

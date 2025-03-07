@@ -16,6 +16,8 @@ set(UTILS_FILES
   ${SRC_DIR}/resourceDump.cpp
   ${SRC_DIR}/gpuExecutionTracker.h
   ${SRC_DIR}/gpuExecutionTracker.cpp
+  ${SRC_DIR}/commandKeyService.cpp
+  ${SRC_DIR}/commandKeyService.h
 )
 source_group("" FILES ${UTILS_FILES})
 
@@ -26,9 +28,11 @@ target_sources(DirectX_utils PRIVATE
 target_include_directories(DirectX_utils PRIVATE
   ${D3D12_HEADERS_DIR}
   ${DML_HEADERS_DIR}
+  ${XESS_HEADERS_DIR}
   ${DSTORAGE_HEADERS_DIR}
   ${PLUGINS_DIR}
   ${CMAKE_SOURCE_DIR}/third_party/DirectXTex/DirectXTex
+  ../layer_interface
 )
 
 set_target_properties(DirectX_utils PROPERTIES LINKER_LANGUAGE CXX)

@@ -12,6 +12,7 @@
 #include "config.h"
 #include "printEnumsAuto.h"
 #include "gits.h"
+#include "commandKeyService.h"
 
 #include <sstream>
 #include <memory>
@@ -357,19 +358,26 @@ void DebugInfo::logDredBreadcrumbs(const D3D12_AUTO_BREADCRUMB_NODE* headNode) {
     unsigned nExecuted = node->pLastBreadcrumbValue ? *node->pLastBreadcrumbValue : 0;
     bool hasFinished = (nExecuted > 0) && (nExecuted == node->BreadcrumbCount);
 
-    std::string cmdListName;
+    auto formatInterfaceName = [](std::string&& name) -> std::string {
+      static CommandKeyService commandKeyService("");
+      unsigned numeric = std::stoul(std::string{name.begin() + 1, name.end()});
+      return commandKeyService.keyToString(numeric);
+    };
+
+    std::string cmdListName("O");
     if (node->pCommandListDebugNameA) {
-      cmdListName = std::string(node->pCommandListDebugNameA);
+      cmdListName += formatInterfaceName(std::string(node->pCommandListDebugNameA));
     } else if (node->pCommandListDebugNameW) {
       std::wstring cmdListNameW = std::wstring(node->pCommandListDebugNameW);
-      cmdListName = std::string(cmdListNameW.begin(), cmdListNameW.end());
+      cmdListName += formatInterfaceName(std::string(cmdListNameW.begin(), cmdListNameW.end()));
     }
-    std::string cmdQueueName;
+
+    std::string cmdQueueName("O");
     if (node->pCommandQueueDebugNameA) {
-      cmdQueueName = std::string(node->pCommandQueueDebugNameA);
+      cmdQueueName += formatInterfaceName(std::string(node->pCommandQueueDebugNameA));
     } else if (node->pCommandQueueDebugNameW) {
       std::wstring cmdQueueNameW = std::wstring(node->pCommandQueueDebugNameW);
-      cmdQueueName = std::string(cmdQueueNameW.begin(), cmdQueueNameW.end());
+      cmdQueueName += formatInterfaceName(std::string(cmdQueueNameW.begin(), cmdQueueNameW.end()));
     }
 
     dredFile_ << "  Breadcrumb Node:\n";
