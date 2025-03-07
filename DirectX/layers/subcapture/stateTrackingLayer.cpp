@@ -1122,6 +1122,7 @@ void StateTrackingLayer::post(ID3D12CommandQueueSignalCommand& c) {
   }
   fenceTrackingService_.setFenceValue(c.pFence_.key, c.Value_.value);
 
+  accelerationStructuresBuildService_.commandQueueSignal(c);
   gpuExecutionFlusher_.commandQueueSignal(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
 }
 
@@ -1129,6 +1130,8 @@ void StateTrackingLayer::post(ID3D12CommandQueueWaitCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
+
+  accelerationStructuresBuildService_.commandQueueWait(c);
   gpuExecutionFlusher_.commandQueueWait(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
 }
 
@@ -1138,6 +1141,7 @@ void StateTrackingLayer::post(ID3D12FenceSignalCommand& c) {
   }
   fenceTrackingService_.setFenceValue(c.object_.key, c.Value_.value);
 
+  accelerationStructuresBuildService_.fenceSignal(c);
   gpuExecutionFlusher_.fenceSignal(c.key, c.object_.key, c.Value_.value);
 }
 

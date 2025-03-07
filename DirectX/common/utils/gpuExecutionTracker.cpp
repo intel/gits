@@ -12,40 +12,43 @@
 namespace gits {
 namespace DirectX {
 
-void GpuExecutionTracker::commandQueueWait(unsigned key,
+void GpuExecutionTracker::commandQueueWait(unsigned callKey,
                                            unsigned commandQueueKey,
                                            unsigned fenceKey,
                                            UINT64 fenceValue) {
   auto it = signaledFences_.find(Fence{fenceKey, fenceValue});
   if (it != signaledFences_.end()) {
+    // fence can be non incremental
     signaledFences_.erase(it);
     return;
   }
 
   WaitEvent* waitEvent = new WaitEvent();
-  waitEvent->key = key;
+  waitEvent->callKey = callKey;
+  waitEvent->commandQueueKey = commandQueueKey;
   waitEvent->fence.key = fenceKey;
   waitEvent->fence.value = fenceValue;
   queueEvents_[commandQueueKey].push_back(waitEvent);
 }
 
-void GpuExecutionTracker::commandQueueSignal(unsigned key,
+void GpuExecutionTracker::commandQueueSignal(unsigned callKey,
                                              unsigned commandQueueKey,
                                              unsigned fenceKey,
                                              UINT64 fenceValue) {
   auto it = queueEvents_.find(commandQueueKey);
   if (it == queueEvents_.end() || it->second.empty()) {
-    fenceSignal(key, fenceKey, fenceValue);
+    fenceSignal(callKey, fenceKey, fenceValue);
   } else {
     SignalEvent* signalEvent = new SignalEvent();
-    signalEvent->key = key;
+    signalEvent->callKey = callKey;
+    signalEvent->commandQueueKey = commandQueueKey;
     signalEvent->fence.key = fenceKey;
     signalEvent->fence.value = fenceValue;
     it->second.push_back(signalEvent);
   }
 }
 
-void GpuExecutionTracker::fenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue) {
+void GpuExecutionTracker::fenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue) {
   Fence fence{fenceKey, fenceValue};
 
   bool waitFound = false;
@@ -77,7 +80,7 @@ void GpuExecutionTracker::fenceSignal(unsigned key, unsigned fenceKey, UINT64 fe
   }
 
   for (SignalEvent* signal : signaled) {
-    fenceSignal(signal->key, signal->fence.key, signal->fence.value);
+    fenceSignal(signal->callKey, signal->fence.key, signal->fence.value);
     delete signal;
   }
 }
@@ -90,8 +93,11 @@ bool GpuExecutionTracker::isCommandQueueWaiting(unsigned commandQueueKey) {
   return true;
 }
 
-void GpuExecutionTracker::execute(unsigned key, unsigned commandQueueKey, Executable* executable) {
-  executable->key = key;
+void GpuExecutionTracker::execute(unsigned callKey,
+                                  unsigned commandQueueKey,
+                                  Executable* executable) {
+  executable->callKey = callKey;
+  executable->commandQueueKey = commandQueueKey;
   auto it = queueEvents_.find(commandQueueKey);
   if (it == queueEvents_.end() || it->second.empty()) {
     readyExecutables_.push_back(executable);

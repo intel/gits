@@ -28,7 +28,8 @@ private:
     };
     QueueEvent(Type t) : type(t) {}
     virtual ~QueueEvent() {}
-    unsigned key{};
+    unsigned callKey{};
+    unsigned commandQueueKey{};
     Type type{};
   };
 
@@ -64,17 +65,17 @@ public:
   };
 
 public:
-  void commandQueueWait(unsigned key,
+  void commandQueueWait(unsigned callKey,
                         unsigned commandQueueKey,
                         unsigned fenceKey,
                         UINT64 fenceValue);
-  void commandQueueSignal(unsigned key,
+  void commandQueueSignal(unsigned callKey,
                           unsigned commandQueueKey,
                           unsigned fenceKey,
                           UINT64 fenceValue);
-  void fenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue);
+  void fenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue);
   bool isCommandQueueWaiting(unsigned commandQueueKey);
-  void execute(unsigned key, unsigned commandQueueKey, Executable* executable);
+  void execute(unsigned callKey, unsigned commandQueueKey, Executable* executable);
   std::vector<Executable*>& getReadyExecutables() {
     return readyExecutables_;
   }

@@ -538,5 +538,17 @@ void AccelerationStructuresBuildService::executeCommandLists(
                                             c.ppCommandLists_.value, c.NumCommandLists_.value);
 }
 
+void AccelerationStructuresBuildService::commandQueueWait(ID3D12CommandQueueWaitCommand& c) {
+  bufferContentRestore_.commandQueueWait(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
+}
+
+void AccelerationStructuresBuildService::commandQueueSignal(ID3D12CommandQueueSignalCommand& c) {
+  bufferContentRestore_.commandQueueSignal(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
+}
+
+void AccelerationStructuresBuildService::fenceSignal(ID3D12FenceSignalCommand& c) {
+  bufferContentRestore_.fenceSignal(c.key, c.object_.key, c.Value_.value);
+}
+
 } // namespace DirectX
 } // namespace gits
