@@ -6,13 +6,13 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "commandKeyService.h"
+#include "configKeySet.h"
 #include "command.h"
 
 namespace gits {
 namespace DirectX {
 
-CommandKeyService::CommandKeyService(const std::string& keys) {
+ConfigKeySet::ConfigKeySet(const std::string& keys) {
   if (!keys.empty()) {
     const char* p = keys.data();
     do {
@@ -33,7 +33,7 @@ CommandKeyService::CommandKeyService(const std::string& keys) {
   }
 }
 
-std::string CommandKeyService::keyToString(unsigned key) {
+std::string ConfigKeySet::keyToString(unsigned key) {
   std::string commandKey;
   if (key & Command::stateRestoreKeyMask) {
     commandKey = "S" + std::to_string(key & ~Command::stateRestoreKeyMask);
@@ -41,6 +41,11 @@ std::string CommandKeyService::keyToString(unsigned key) {
     commandKey = std::to_string(key);
   }
   return commandKey;
+}
+
+std::wstring ConfigKeySet::keyToWString(unsigned key) {
+  std::string commandKey = keyToString(key);
+  return std::wstring(commandKey.begin(), commandKey.end());
 }
 
 } // namespace DirectX

@@ -11,7 +11,7 @@ ${header}
 
 #include "layerAuto.h"
 #include "config.h"
-#include "commandKeyService.h"
+#include "configKeySet.h"
 
 namespace gits {
 namespace DirectX {
@@ -19,7 +19,7 @@ namespace DirectX {
 class SkipCallsLayer : public Layer {
 public:
   SkipCallsLayer() : Layer("SkipCalls"),
-      commandKeysService_(Config::Get().directx.features.skipCalls.commandKeys)
+      configKeySet_(Config::Get().directx.features.skipCalls.commandKeys)
   {}
 
   virtual void pre(CreateWindowMetaCommand& command) override;
@@ -50,7 +50,7 @@ public:
   %endfor
 
 private:
-  CommandKeyService commandKeysService_;
+  ConfigKeySet configKeySet_;
 };
 
 } // namespace DirectX

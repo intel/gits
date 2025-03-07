@@ -16,9 +16,9 @@ namespace DirectX {
 
 ResourceDumpService::ResourceDumpService()
     : resourceDump_(Config::Get().directx.features.resourcesDump.format == "jpg" ? true : false,
-                    Config::Get().directx.features.resourcesDump.textureRescaleRange) {
-  extractKeys(Config::Get().directx.features.resourcesDump.resourceKeys, resourceKeys_);
-  extractKeys(Config::Get().directx.features.resourcesDump.commandKeys, callKeys_);
+                    Config::Get().directx.features.resourcesDump.textureRescaleRange),
+      resourceKeys_(Config::Get().directx.features.resourcesDump.resourceKeys),
+      callKeys_(Config::Get().directx.features.resourcesDump.commandKeys) {
 
   auto& dumpPath = Config::Get().common.player.outputDir.empty()
                        ? Config::Get().common.player.streamDir / "resources"
@@ -32,7 +32,7 @@ ResourceDumpService::ResourceDumpService()
 void ResourceDumpService::createResource(unsigned resourceKey,
                                          ID3D12Resource* resource,
                                          D3D12_RESOURCE_STATES initialState) {
-  if (resourceKeys_.find(resourceKey) == resourceKeys_.end()) {
+  if (!resourceKeys_.contains(resourceKey)) {
     return;
   }
   resourceStateTracker_.addResource(resourceKey, initialState);
@@ -40,7 +40,7 @@ void ResourceDumpService::createResource(unsigned resourceKey,
 }
 
 void ResourceDumpService::destroyResource(unsigned resourceKey) {
-  if (resourceKeys_.find(resourceKey) == resourceKeys_.end()) {
+  if (!resourceKeys_.contains(resourceKey)) {
     return;
   }
   resourceStateTracker_.destroyResource(resourceKey);
@@ -49,7 +49,7 @@ void ResourceDumpService::destroyResource(unsigned resourceKey) {
 
 void ResourceDumpService::commandListCall(unsigned callKey,
                                           ID3D12GraphicsCommandList* commandList) {
-  if (callKeys_.find(callKey) == callKeys_.end()) {
+  if (!callKeys_.contains(callKey)) {
     return;
   }
   for (unsigned resourceKey : resourceKeys_) {
@@ -60,8 +60,8 @@ void ResourceDumpService::commandListCall(unsigned callKey,
       D3D12_RESOURCE_DESC desc = resource->GetDesc();
 
       if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
-        std::wstring dumpName =
-            dumpPath_ + L"/command_" + convertKey(callKey) + L"_buffer_O" + convertKey(resourceKey);
+        std::wstring dumpName = dumpPath_ + L"/command_" + ConfigKeySet::keyToWString(callKey) +
+                                L"_buffer_O" + ConfigKeySet::keyToWString(resourceKey);
         D3D12_RESOURCE_STATES resourceState =
             resourceStateTracker_.getResourceState(commandList, resourceKey, 0);
         resourceDump_.dumpResource(commandList, resource, 0, resourceState, dumpName);
@@ -78,8 +78,8 @@ void ResourceDumpService::commandListCall(unsigned callKey,
             for (unsigned planeSlice = 0; planeSlice < planeCount; ++planeSlice) {
 
               std::wstring dumpName = dumpPath_;
-              dumpName += L"/command_" + convertKey(callKey);
-              dumpName += L"_texture_O" + convertKey(resourceKey);
+              dumpName += L"/command_" + ConfigKeySet::keyToWString(callKey);
+              dumpName += L"_texture_O" + ConfigKeySet::keyToWString(resourceKey);
               if (planeCount > 1) {
                 dumpName += L"_plane_" + std::to_wstring(planeSlice);
               }
@@ -136,36 +136,6 @@ void ResourceDumpService::commandQueueSignal(unsigned key,
 
 void ResourceDumpService::fenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue) {
   resourceDump_.fenceSignal(key, fenceKey, fenceValue);
-}
-
-void ResourceDumpService::extractKeys(const std::string& keyString,
-                                      std::unordered_set<unsigned>& keySet) {
-  const char* p = keyString.data();
-  do {
-    const char* begin = p;
-    while (*p != ',' && *p) {
-      ++p;
-    }
-    std::string key(begin, p);
-    if (key[0] == 'S') {
-      key = key.substr(1);
-      unsigned k = std::stoi(key);
-      k |= Command::stateRestoreKeyMask;
-      keySet.insert(k);
-    } else {
-      keySet.insert(std::stoi(key));
-    }
-  } while (*p++);
-}
-
-std::wstring ResourceDumpService::convertKey(unsigned key) {
-  std::wstring s;
-  if (key & Command::stateRestoreKeyMask) {
-    s = L"S";
-  }
-  key = key & ~Command::stateRestoreKeyMask;
-  s += std::to_wstring(key);
-  return s;
 }
 
 } // namespace DirectX

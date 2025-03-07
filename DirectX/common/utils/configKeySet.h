@@ -14,13 +14,23 @@
 namespace gits {
 namespace DirectX {
 
-class CommandKeyService {
+class ConfigKeySet {
 public:
-  CommandKeyService(const std::string& keys);
+  ConfigKeySet(const std::string& keys);
+  bool empty() {
+    return commandKeys_.empty();
+  }
   bool contains(unsigned key) {
     return commandKeys_.find(key) != commandKeys_.end();
   }
+  auto begin() {
+    return commandKeys_.begin();
+  }
+  auto end() {
+    return commandKeys_.end();
+  }
   static std::string keyToString(unsigned key);
+  static std::wstring keyToWString(unsigned key);
 
 private:
   std::unordered_set<unsigned> commandKeys_;

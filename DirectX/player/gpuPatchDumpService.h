@@ -13,6 +13,7 @@
 #include "shaderIdentifierService.h"
 #include "gpuPatchDescriptorHandleService.h"
 #include "executeIndirectDump.h"
+#include "configKeySet.h"
 
 #include <unordered_set>
 
@@ -83,19 +84,16 @@ public:
 private:
   RaytracingResourceDump resourceDump_;
   std::wstring dumpPath_;
-  std::unordered_set<unsigned> raytracingKeys_;
+  ConfigKeySet raytracingKeys_;
   bool dumpInstancesPre_{};
   bool dumpInstancesPost_{};
   bool dumpBindingTablesPre_{};
   bool dumpBindingTablesPost_{};
 
-  std::unordered_set<unsigned> executeIndirectKeys_;
+  ConfigKeySet executeIndirectKeys_;
   ExecuteIndirectDump executeIndirectDump_;
   bool dumpArgumentBufferPre_{};
   bool dumpArgumentBufferPost_{};
-
-private:
-  void extractKeys(const std::string& keyString, std::unordered_set<unsigned>& keySet);
 };
 
 } // namespace DirectX

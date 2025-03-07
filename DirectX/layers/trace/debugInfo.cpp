@@ -12,7 +12,7 @@
 #include "config.h"
 #include "printEnumsAuto.h"
 #include "gits.h"
-#include "commandKeyService.h"
+#include "configKeySet.h"
 
 #include <sstream>
 #include <memory>
@@ -358,10 +358,9 @@ void DebugInfo::logDredBreadcrumbs(const D3D12_AUTO_BREADCRUMB_NODE* headNode) {
     unsigned nExecuted = node->pLastBreadcrumbValue ? *node->pLastBreadcrumbValue : 0;
     bool hasFinished = (nExecuted > 0) && (nExecuted == node->BreadcrumbCount);
 
-    auto formatInterfaceName = [](std::string&& name) -> std::string {
-      static CommandKeyService commandKeyService("");
+    auto formatInterfaceName = [](const std::string& name) {
       unsigned numeric = std::stoul(std::string{name.begin() + 1, name.end()});
-      return commandKeyService.keyToString(numeric);
+      return ConfigKeySet::keyToString(numeric);
     };
 
     std::string cmdListName("O");

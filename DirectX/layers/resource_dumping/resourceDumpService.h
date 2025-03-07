@@ -11,6 +11,7 @@
 #include "commandsAuto.h"
 #include "resourceStateTracker.h"
 #include "resourceDump.h"
+#include "configKeySet.h"
 #include "directx.h"
 
 #include <unordered_set>
@@ -44,12 +45,8 @@ public:
   void fenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue);
 
 private:
-  void extractKeys(const std::string& keyString, std::unordered_set<unsigned>& keySet);
-  std::wstring convertKey(unsigned key);
-
-private:
-  std::unordered_set<unsigned> resourceKeys_;
-  std::unordered_set<unsigned> callKeys_;
+  ConfigKeySet resourceKeys_;
+  ConfigKeySet callKeys_;
   std::wstring dumpPath_;
   std::map<unsigned, ID3D12Resource*> resources_;
   ResourceStateTracker resourceStateTracker_;

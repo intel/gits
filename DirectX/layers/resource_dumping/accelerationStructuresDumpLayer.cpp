@@ -13,7 +13,8 @@ namespace gits {
 namespace DirectX {
 
 AccelerationStructuresDumpLayer::AccelerationStructuresDumpLayer()
-    : Layer("AccelerationStructuresDump") {
+    : Layer("AccelerationStructuresDump"),
+      callKeys_(Config::Get().directx.features.raytracingDump.commandKeys) {
   auto& dumpPath = Config::Get().common.player.outputDir.empty()
                        ? Config::Get().common.player.streamDir / "acceleration_structures"
                        : Config::Get().common.player.outputDir;
@@ -22,11 +23,7 @@ AccelerationStructuresDumpLayer::AccelerationStructuresDumpLayer()
   }
   dumpPath_ = dumpPath;
 
-  auto& raytracingDump = Config::Get().directx.features.raytracingDump;
-  if (!raytracingDump.commandKeys.empty()) {
-    extractKeys(raytracingDump.commandKeys, callKeys_);
-  }
-  commandListModuloStep_.parse(raytracingDump.commandListModuloStep);
+  commandListModuloStep_.parse(Config::Get().directx.features.raytracingDump.commandListModuloStep);
 }
 
 void AccelerationStructuresDumpLayer::pre(ID3D12DeviceCreateCommandQueueCommand& c) {
@@ -55,7 +52,7 @@ void AccelerationStructuresDumpLayer::pre(ID3D12DeviceCreateCommandAllocatorComm
 
 void AccelerationStructuresDumpLayer::pre(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
-  if (!callKeys_.empty() && callKeys_.find(c.key) == callKeys_.end() ||
+  if (!callKeys_.empty() && !callKeys_.contains(c.key) ||
       !commandListModuloStep_.checkNextCommandListCall(c.object_.key)) {
     return;
   }
@@ -130,19 +127,6 @@ void AccelerationStructuresDumpLayer::post(ID3D12FenceSignalCommand& c) {
 
 void AccelerationStructuresDumpLayer::post(ID3D12DeviceCreateFenceCommand& c) {
   accelerationStructuresDump_.fenceSignal(c.key, c.ppFence_.key, c.InitialValue_.value);
-}
-
-void AccelerationStructuresDumpLayer::extractKeys(const std::string& keyString,
-                                                  std::unordered_set<unsigned>& keySet) {
-  const char* p = keyString.data();
-  do {
-    const char* begin = p;
-    while (*p != ',' && *p) {
-      ++p;
-    }
-    std::string key(begin, p);
-    keySet.insert(std::stoi(key));
-  } while (*p++);
 }
 
 void AccelerationStructuresDumpLayer::CommandListModuloStep::parse(const std::string& range) {

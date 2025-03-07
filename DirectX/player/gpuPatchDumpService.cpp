@@ -19,7 +19,9 @@ GpuPatchDumpService::GpuPatchDumpService(GpuPatchAddressService& addressService,
                                          ShaderIdentifierService& shaderIdentifierService,
                                          GpuPatchDescriptorHandleService& descriptorHandleService)
     : resourceDump_(addressService, shaderIdentifierService, descriptorHandleService),
-      executeIndirectDump_(addressService) {
+      executeIndirectDump_(addressService),
+      raytracingKeys_(Config::Get().directx.features.raytracingDump.commandKeys),
+      executeIndirectKeys_(Config::Get().directx.features.executeIndirectDump.commandKeys) {
 
   auto& configRaytracing = Config::Get().directx.features.raytracingDump;
   dumpInstancesPre_ = configRaytracing.instancesPre;
@@ -43,14 +45,6 @@ GpuPatchDumpService::GpuPatchDumpService(GpuPatchAddressService& addressService,
     descriptorHandleService.enableDumpLookup();
   }
 
-  if (!configRaytracing.commandKeys.empty()) {
-    extractKeys(configRaytracing.commandKeys, raytracingKeys_);
-  }
-
-  if (!configExecuteIndirect.commandKeys.empty()) {
-    extractKeys(configExecuteIndirect.commandKeys, executeIndirectKeys_);
-  }
-
   std::filesystem::path dumpPath = Config::Get().common.player.outputDir.empty()
                                        ? Config::Get().common.player.streamDir / "resources"
                                        : Config::Get().common.player.outputDir;
@@ -70,7 +64,7 @@ void GpuPatchDumpService::dumpInstances(ID3D12GraphicsCommandList* commandList,
   if (!(dumpInstancesPre_ && prePatch || dumpInstancesPost_ && !prePatch)) {
     return;
   }
-  if (!raytracingKeys_.empty() && raytracingKeys_.find(callKey) == raytracingKeys_.end()) {
+  if (!raytracingKeys_.empty() && !raytracingKeys_.contains(callKey)) {
     return;
   }
 
@@ -94,7 +88,7 @@ void GpuPatchDumpService::dumpInstancesArrayOfPointers(ID3D12GraphicsCommandList
   if (!(dumpInstancesPre_ && prePatch || dumpInstancesPost_ && !prePatch)) {
     return;
   }
-  if (!raytracingKeys_.empty() && raytracingKeys_.find(callKey) == raytracingKeys_.end()) {
+  if (!raytracingKeys_.empty() && !raytracingKeys_.contains(callKey)) {
     return;
   }
 
@@ -118,7 +112,7 @@ void GpuPatchDumpService::dumpBindingTable(ID3D12GraphicsCommandList* commandLis
   if (!(dumpBindingTablesPre_ && prePatch || dumpBindingTablesPost_ && !prePatch)) {
     return;
   }
-  if (!raytracingKeys_.empty() && raytracingKeys_.find(callKey) == raytracingKeys_.end()) {
+  if (!raytracingKeys_.empty() && !raytracingKeys_.contains(callKey)) {
     return;
   }
 
@@ -161,8 +155,7 @@ void GpuPatchDumpService::dumpExecuteIndirectArgumentBuffer(
   if (!(dumpArgumentBufferPre_ && prePatch || dumpArgumentBufferPost_ && !prePatch)) {
     return;
   }
-  if (!executeIndirectKeys_.empty() &&
-      executeIndirectKeys_.find(callKey) == executeIndirectKeys_.end()) {
+  if (!executeIndirectKeys_.empty() && !executeIndirectKeys_.contains(callKey)) {
     return;
   }
 
@@ -222,19 +215,6 @@ void GpuPatchDumpService::fenceSignal(unsigned key, unsigned fenceKey, UINT64 fe
   if (dumpArgumentBufferPre_ || dumpArgumentBufferPost_) {
     executeIndirectDump_.fenceSignal(key, fenceKey, fenceValue);
   }
-}
-
-void GpuPatchDumpService::extractKeys(const std::string& keyString,
-                                      std::unordered_set<unsigned>& keySet) {
-  const char* p = keyString.data();
-  do {
-    const char* begin = p;
-    while (*p != ',' && *p) {
-      ++p;
-    }
-    std::string key(begin, p);
-    keySet.insert(std::stoi(key));
-  } while (*p++);
 }
 
 } // namespace DirectX

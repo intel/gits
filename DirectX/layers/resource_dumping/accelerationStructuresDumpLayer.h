@@ -10,6 +10,7 @@
 
 #include "layerAuto.h"
 #include "accelerationStructuresDump.h"
+#include "configKeySet.h"
 
 #include <unordered_set>
 #include <unordered_map>
@@ -34,12 +35,9 @@ public:
   void post(ID3D12DeviceCreateFenceCommand& c) override;
 
 private:
-  void extractKeys(const std::string& keyString, std::unordered_set<unsigned>& keySet);
-
-private:
   std::wstring dumpPath_;
   AccelerationStructuresDump accelerationStructuresDump_;
-  std::unordered_set<unsigned> callKeys_;
+  ConfigKeySet callKeys_;
   bool dumpCurrentBuild_{};
 
   class CommandListModuloStep {

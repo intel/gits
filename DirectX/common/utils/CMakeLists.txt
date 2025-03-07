@@ -16,8 +16,8 @@ set(UTILS_FILES
   ${SRC_DIR}/resourceDump.cpp
   ${SRC_DIR}/gpuExecutionTracker.h
   ${SRC_DIR}/gpuExecutionTracker.cpp
-  ${SRC_DIR}/commandKeyService.cpp
-  ${SRC_DIR}/commandKeyService.h
+  ${SRC_DIR}/configKeySet.h
+  ${SRC_DIR}/configKeySet.cpp
 )
 source_group("" FILES ${UTILS_FILES})
 
