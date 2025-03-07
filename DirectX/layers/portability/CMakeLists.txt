@@ -9,23 +9,15 @@
 add_library(DirectX_portability STATIC)
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
-set(UTILS_SRC
-  ${SRC_DIR}/asyncTaskScheduler.h
-  ${SRC_DIR}/heapPlacementOrganizer.cpp
-  ${SRC_DIR}/heapPlacementOrganizer.h
-)
-source_group("utils" FILES ${UTILS_SRC})
-
-set(PORTABILITY_LAYER_SRC
+set(ALL_SRC
   ${SRC_DIR}/portabilityLayer.h
   ${SRC_DIR}/portabilityLayer.cpp
+  ${SRC_DIR}/resourcePlacementCapture.h
+  ${SRC_DIR}/resourcePlacementCapture.cpp
+  ${SRC_DIR}/resourcePlacementPlayback.h
+  ${SRC_DIR}/resourcePlacementPlayback.cpp
 )
-source_group("" FILES ${PORTABILITY_LAYER_SRC})
-
-set(ALL_SRC
-  ${UTILS_SRC}
-  ${PORTABILITY_LAYER_SRC}
-)
+source_group("" FILES ${ALL_SRC})
 
 set_auto_generated_property(FILE_LIST ${ALL_SRC})
 

@@ -9,7 +9,8 @@
 #pragma once
 
 #include "layerAuto.h"
-#include "heapPlacementOrganizer.h"
+#include "resourcePlacementCapture.h"
+#include "resourcePlacementPlayback.h"
 
 namespace gits {
 namespace DirectX {
@@ -21,24 +22,16 @@ public:
   ~PortabilityLayer();
 
 public:
-  void post(D3D12CreateDeviceCommand& command) override;
-
   void pre(ID3D12DeviceCreateHeapCommand& c) override;
   void post(ID3D12DeviceCreateHeapCommand& c) override;
-
   void pre(ID3D12Device4CreateHeap1Command& c) override;
   void post(ID3D12Device4CreateHeap1Command& c) override;
-
   void pre(ID3D12DeviceCreatePlacedResourceCommand& c) override;
   void post(ID3D12DeviceCreatePlacedResourceCommand& c) override;
-
   void pre(ID3D12Device8CreatePlacedResource1Command& c) override;
   void post(ID3D12Device8CreatePlacedResource1Command& c) override;
-
   void pre(ID3D12Device10CreatePlacedResource2Command& c) override;
   void post(ID3D12Device10CreatePlacedResource2Command& c) override;
-
-  void pre(ID3D12CommandQueueUpdateTileMappingsCommand& c) override;
 
 private:
   void checkHeapCreationFlags(unsigned heapKey,
@@ -47,8 +40,9 @@ private:
                               HRESULT result);
 
 private:
-  HeapPlacementOrganizer heapPlacementOrganizer_;
-  bool isPlayer_;
+  ResourcePlacementCapture resourcePlacementCapture_;
+  ResourcePlacementPlayback resourcePlacementPlayback_;
+  bool storeResourcePlacementData_{};
 };
 
 } // namespace DirectX
