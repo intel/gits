@@ -730,6 +730,8 @@ void StateTrackingLayer::post(ID3D12Device7AddToStateObjectCommand& c) {
   encode(state->descEncoded.get(), offset, c.pAddition_);
 
   stateService_.storeState(state);
+
+  stateService_.keepState(c.pStateObjectToGrowFrom_.key);
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateCommandListCommand& c) {
