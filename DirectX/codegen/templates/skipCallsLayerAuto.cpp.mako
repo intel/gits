@@ -7,128 +7,128 @@
 // ===================== end_copyright_notice ==============================
 ${header}
 
-#include "SkipCallsLayerAuto.h"
+#include "skipCallsLayerAuto.h"
 
 namespace gits {
 namespace DirectX {
 
 void SkipCallsLayer::pre(CreateWindowMetaCommand& command) {
-  if (const auto skipKey = commandKeysService_.atCommand(command.key)) {
+  if (commandKeysService_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(skipKey) <<   " CreateWindowMeta" <<  std::endl;
+    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(command.key) << " CreateWindowMeta";
   }
 }
 
 void SkipCallsLayer::pre(MappedDataMetaCommand& command) {
-  if (const auto skipKey = commandKeysService_.atCommand(command.key)) {
+  if (commandKeysService_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(skipKey) <<   " MappedDataMeta" <<  std::endl;
+    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(command.key) << " MappedDataMeta";
   }
 }
 
 void SkipCallsLayer::pre(CreateHeapAllocationMetaCommand& command) {
-  if (const auto skipKey = commandKeysService_.atCommand(command.key)) {
+  if (commandKeysService_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(skipKey) <<   " CreateHeapAllocationMeta" <<  std::endl;
+    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(command.key) << " CreateHeapAllocationMeta";
   }
 }
 
 void SkipCallsLayer::pre(WaitForFenceSignaledCommand& command) {
-  if (const auto skipKey = commandKeysService_.atCommand(command.key)) {
+  if (commandKeysService_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(skipKey) <<   " WaitForFenceSignaled" <<  std::endl;
+    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(command.key) << " WaitForFenceSignaled";
   }
 }
 
 void SkipCallsLayer::pre(IUnknownQueryInterfaceCommand& command) {
-  if (const auto skipKey = commandKeysService_.atCommand(command.key)) {
+  if (commandKeysService_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(skipKey) <<   " IUnknownQueryInterface" <<  std::endl;
+    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(command.key) << " IUnknown::QueryInterface";
   }
 }
 
 void SkipCallsLayer::pre(IUnknownAddRefCommand& command) {
-  if (const auto skipKey = commandKeysService_.atCommand(command.key)) {
+  if (commandKeysService_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(skipKey) <<   " IUnknownAddRef" <<  std::endl;
+    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(command.key) << " IUnknown::AddRef";
   }
 }
 
 void SkipCallsLayer::pre(IUnknownReleaseCommand& command) {
-  if (const auto skipKey = commandKeysService_.atCommand(command.key)) {
+  if (commandKeysService_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(skipKey) <<   " IUnknownRelease" <<  std::endl;
+    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(command.key) << " IUnknown::Release";
   }
 }
 
 void SkipCallsLayer::pre(INTC_D3D12_CreateDeviceExtensionContextCommand& command) {
-  if (const auto skipKey = commandKeysService_.atCommand(command.key)) {
+  if (commandKeysService_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(skipKey) <<   " INTC_D3D12_CreateDeviceExtensionContext" <<  std::endl;
+    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(command.key) << " INTC_D3D12_CreateDeviceExtensionContext";
   }
 }
 
 void SkipCallsLayer::pre(INTC_D3D12_CreateDeviceExtensionContext1Command& command) {
-  if (const auto skipKey = commandKeysService_.atCommand(command.key)) {
+  if (commandKeysService_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(skipKey) <<   " INTC_D3D12_CreateDeviceExtensionContext1" <<  std::endl;
+    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(command.key) << " INTC_D3D12_CreateDeviceExtensionContext1";
   }
 }
 
 void SkipCallsLayer::pre(INTC_DestroyDeviceExtensionContextCommand& command) {
-  if (const auto skipKey = commandKeysService_.atCommand(command.key)) {
+  if (commandKeysService_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(skipKey) <<   " INTC_DestroyDeviceExtensionContext" <<  std::endl;
+    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(command.key) << " INTC_DestroyDeviceExtensionContext";
   }
 }
 
 void SkipCallsLayer::pre(INTC_D3D12_CheckFeatureSupportCommand& command) {
-  if (const auto skipKey = commandKeysService_.atCommand(command.key)) {
+  if (commandKeysService_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(skipKey) <<   " INTC_D3D12_CheckFeatureSupport" <<  std::endl;
+    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(command.key) << " INTC_D3D12_CheckFeatureSupport";
   }
 }
 
 void SkipCallsLayer::pre(INTC_D3D12_SetFeatureSupportCommand& command) {
-  if (const auto skipKey = commandKeysService_.atCommand(command.key)) {
+  if (commandKeysService_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(skipKey) <<   " INTC_D3D12_SetFeatureSupport" <<  std::endl;
+    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(command.key) << " INTC_D3D12_SetFeatureSupport";
   }
 }
 
 void SkipCallsLayer::pre(INTC_D3D12_GetResourceAllocationInfoCommand& command) {
-  if (const auto skipKey = commandKeysService_.atCommand(command.key)) {
+  if (commandKeysService_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(skipKey) <<   " INTC_D3D12_GetResourceAllocationInfo" <<  std::endl;
+    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(command.key) << " INTC_D3D12_GetResourceAllocationInfo";
   }
 }
 
 void SkipCallsLayer::pre(INTC_D3D12_CreateComputePipelineStateCommand& command) {
-  if (const auto skipKey = commandKeysService_.atCommand(command.key)) {
+  if (commandKeysService_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(skipKey) <<   " INTC_D3D12_CreateComputePipelineState" <<  std::endl;
+    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(command.key) << " INTC_D3D12_CreateComputePipelineState";
   }
 }
 
 void SkipCallsLayer::pre(INTC_D3D12_CreatePlacedResourceCommand& command) {
-  if (const auto skipKey = commandKeysService_.atCommand(command.key)) {
+  if (commandKeysService_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(skipKey) <<   " INTC_D3D12_CreatePlacedResource" <<  std::endl;
+    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(command.key) << " INTC_D3D12_CreatePlacedResource";
   }
 }
 
 void SkipCallsLayer::pre(INTC_D3D12_CreateCommittedResourceCommand& command) {
-  if (const auto skipKey = commandKeysService_.atCommand(command.key)) {
+  if (commandKeysService_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(skipKey) <<   " INTC_D3D12_CreateCommittedResource" <<  std::endl;
+    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(command.key) << " INTC_D3D12_CreateCommittedResource";
   }
 }
 
 %for function in functions:
 void SkipCallsLayer::pre(${function.name}Command& command) {
-  if (const auto skipKey = commandKeysService_.atCommand(command.key)) {
+  if (commandKeysService_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(skipKey) <<   " ${function.name}" <<  std::endl;
+    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(command.key) << " ${function.name}";
   }
 }
 
@@ -136,9 +136,9 @@ void SkipCallsLayer::pre(${function.name}Command& command) {
 %for interface in interfaces:
 %for function in interface.functions:
 void SkipCallsLayer::pre(${interface.name}${function.name}Command& command) {
-  if (const auto skipKey = commandKeysService_.atCommand(command.key)) {
+  if (commandKeysService_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(skipKey) <<   " ${interface.name}::${function.name}" <<  std::endl;
+    Log(INFO) << "[SKIPPED] call " << commandKeysService_.keyToString(command.key) << " ${interface.name}::${function.name}";
   }
 }
 

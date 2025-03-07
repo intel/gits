@@ -16,12 +16,11 @@ namespace DirectX {
 
 class CommandKeyService {
 public:
-  CommandKeyService(const std::string& atCommandKey);
-  unsigned atCommand(unsigned commandKey);
-  std::string keyToString(unsigned key) const;
-
-private:
-  void extractKeys(const std::string& keyString, std::unordered_set<unsigned>& keySet);
+  CommandKeyService(const std::string& keys);
+  bool contains(unsigned key) {
+    return commandKeys_.find(key) != commandKeys_.end();
+  }
+  static std::string keyToString(unsigned key);
 
 private:
   std::unordered_set<unsigned> commandKeys_;
