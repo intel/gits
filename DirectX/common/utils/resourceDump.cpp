@@ -440,7 +440,7 @@ void ResourceDump::dumpTexture(DumpInfo& dumpInfo, void* data) {
     HRESULT hr{};
     auto saveToWICFile = [&]() {
       hr = SaveToWICFile(
-          image, ::DirectX::WIC_FLAGS_FORCE_SRGB,
+          *imageConverted, ::DirectX::WIC_FLAGS_FORCE_SRGB,
           GetWICCodec(dumpJpg_ ? ::DirectX::WIC_CODEC_JPEG : ::DirectX::WIC_CODEC_PNG),
           (dumpNameW + (dumpJpg_ ? L".jpg" : L".png")).c_str(),
           dumpJpg_ ? nullptr : &GUID_WICPixelFormat48bppRGB);
