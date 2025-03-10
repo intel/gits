@@ -159,5 +159,30 @@ bool CheckKernelResidencyPossibilities(const CAllocState& allocState,
 void DumpQueueSubmissions(const Config& cfg,
                           CStateDynamic& sd,
                           const std::vector<std::unique_ptr<QueueSubmissionSnapshot>>& submissions);
+
+template <typename T>
+struct TypeProperties;
+template <>
+struct TypeProperties<ze_structure_type_t> {
+  using type = ze_base_properties_t;
+};
+template <>
+struct TypeProperties<zel_structure_type_t> {
+  using type = zel_base_properties_t;
+};
+template <>
+struct TypeProperties<zes_structure_type_t> {
+  using type = zes_base_properties_t;
+};
+template <>
+struct TypeProperties<zet_structure_type_t> {
+  using type = zet_base_properties_t;
+};
+
+template <typename StructureType>
+bool IsPNextOfType(const void* pNext, const StructureType& stype) {
+  using BaseProperties = typename TypeProperties<StructureType>::type;
+  return pNext != nullptr && reinterpret_cast<const BaseProperties*>(pNext)->stype == stype;
+}
 } // namespace l0
 } // namespace gits

@@ -88,6 +88,9 @@ namespace gits {
       virtual std::set<uint64_t> GetMappedPointers() {
         return std::set<uint64_t>();
       }
+      virtual CArgument* GetCPtrType() {
+        return _pNext;
+      }
     };
     using CExtensionStructCore = CExtensionStruct<ze_structure_type_t, Cze_structure_type_t, ze_base_properties_t>;
     using CExtensionStructSysman = CExtensionStruct<zes_structure_type_t, Czes_structure_type_t, zes_base_properties_t>;
