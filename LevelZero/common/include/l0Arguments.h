@@ -536,27 +536,29 @@ struct CExtensionStructBase : public CArgument {
   virtual ~CExtensionStructBase() = default;
 };
 
-struct SourceFileInfo {
+class SourceFileInfo {
+  static uint32_t _programSourceIdx;
+  static uint32_t _binarySourceIdx;
+  static std::string CreateFileName(ze_module_format_t format);
+
+public:
   std::vector<uint8_t> data;
   std::string filename;
 
   SourceFileInfo() = default;
+  SourceFileInfo(const size_t _size, const uint8_t* _data, ze_module_format_t format);
   SourceFileInfo(const size_t _size, const uint8_t* _data, std::string _filename);
 };
 
 class CProgramSource : public CArgumentFileText {
   const char* emptyFileName = "GITSL0EmptyFile";
 
-  static uint32_t _programSourceIdx;
-  static uint32_t _binarySourceIdx;
   const char* textCstr = nullptr;
   size_t textLength = 0U;
 
   SourceFileInfo sourceFile;
 
 public:
-  static std::string GetFileName(ze_module_format_t format);
-
   typedef CProgramSourceArray CSArray;
   static constexpr const char* NAME = "const char*";
 

@@ -197,15 +197,10 @@ void CUSMPtr::FreeHostMemory() {
   _resource.Deallocate();
 }
 
-SourceFileInfo::SourceFileInfo(const size_t _size, const uint8_t* _data, std::string _filename)
-    : data(const_cast<uint8_t*>(_data), const_cast<uint8_t*>(_data) + _size),
-      filename(std::move(_filename)) {}
+uint32_t SourceFileInfo::_programSourceIdx = 0;
+uint32_t SourceFileInfo::_binarySourceIdx = 0;
 
-/***************** CProgramSource ******************/
-uint32_t CProgramSource::_programSourceIdx = 0;
-uint32_t CProgramSource::_binarySourceIdx = 0;
-
-std::string CProgramSource::GetFileName(ze_module_format_t format) {
+std::string SourceFileInfo::CreateFileName(ze_module_format_t format) {
   std::stringstream stream;
   stream << "l0Programs/kernel_";
   if (format == ZE_MODULE_FORMAT_IL_SPIRV) {
@@ -220,13 +215,16 @@ std::string CProgramSource::GetFileName(ze_module_format_t format) {
   return stream.str();
 }
 
-std::string CProgramSource::GetProgramBinary(const unsigned char* binary, const size_t length) {
-  std::string shaderSource(binary, binary + length);
-  return shaderSource;
-}
+SourceFileInfo::SourceFileInfo(const size_t _size, const uint8_t* _data, ze_module_format_t format)
+    : SourceFileInfo(_size, _data, CreateFileName(format)) {}
 
+SourceFileInfo::SourceFileInfo(const size_t _size, const uint8_t* _data, std::string _filename)
+    : data(const_cast<uint8_t*>(_data), const_cast<uint8_t*>(_data) + _size),
+      filename(std::move(_filename)) {}
+
+/***************** CProgramSource ******************/
 CProgramSource::CProgramSource(const uint8_t* text, size_t size, ze_module_format_t format)
-    : sourceFile(*Length(), reinterpret_cast<const uint8_t*>(Text().c_str()), GetFileName(format)) {
+    : sourceFile(*Length(), reinterpret_cast<const uint8_t*>(Text().c_str()), format) {
   if (size > 0) {
     _fileName = sourceFile.filename;
     _text = std::string(reinterpret_cast<const char*>(text), size);
@@ -293,7 +291,7 @@ std::vector<SourceFileInfo> CProgramSourceArray::ConvertToArray(const size_t cou
                                                                 const ze_module_format_t format) {
   std::vector<SourceFileInfo> ret;
   for (size_t i = 0; i < count; i++) {
-    ret.push_back(SourceFileInfo(sizes[i], data[i], CProgramSource::GetFileName(format)));
+    ret.push_back(SourceFileInfo(sizes[i], data[i], format));
   }
   return ret;
 }
