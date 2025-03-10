@@ -197,6 +197,10 @@ void CUSMPtr::FreeHostMemory() {
   _resource.Deallocate();
 }
 
+SourceFileInfo::SourceFileInfo(const size_t _size, const uint8_t* _data, std::string _filename)
+    : data(const_cast<uint8_t*>(_data), const_cast<uint8_t*>(_data) + _size),
+      filename(std::move(_filename)) {}
+
 /***************** CProgramSource ******************/
 uint32_t CProgramSource::_programSourceIdx = 0;
 uint32_t CProgramSource::_binarySourceIdx = 0;
@@ -221,11 +225,21 @@ std::string CProgramSource::GetProgramBinary(const unsigned char* binary, const 
   return shaderSource;
 }
 
-CProgramSource::CProgramSource(const uint8_t* text, size_t size, ze_module_format_t format) {
+CProgramSource::CProgramSource(const uint8_t* text, size_t size, ze_module_format_t format)
+    : sourceFile(*Length(), reinterpret_cast<const uint8_t*>(Text().c_str()), GetFileName(format)) {
   if (size > 0) {
-    _fileName = GetFileName(format);
+    _fileName = sourceFile.filename;
     _text = std::string(reinterpret_cast<const char*>(text), size);
     init(_fileName.c_str(), _text.c_str(), size);
+  }
+}
+
+CProgramSource::CProgramSource(SourceFileInfo sourceFile) : sourceFile(sourceFile) {
+  if (sourceFile.data.size() > 0) {
+    _fileName = sourceFile.filename;
+    _text =
+        std::string(reinterpret_cast<const char*>(sourceFile.data.data()), sourceFile.data.size());
+    init(_fileName.c_str(), _text.c_str(), sourceFile.data.size());
   }
 }
 
@@ -249,11 +263,47 @@ void CProgramSource::Write(CBinOStream& stream) const {
     stream << '"' << emptyFileName << '"';
   }
 }
+
 void CProgramSource::Read(CBinIStream& stream) {
   stream.get_delimited_string(_fileName, '"');
   if (_fileName != emptyFileName) {
     LoadTextFromFile();
+    sourceFile =
+        SourceFileInfo(*Length(), reinterpret_cast<const uint8_t*>(Text().c_str()), _fileName);
   }
+}
+
+void CProgramSource::Write([[maybe_unused]] CCodeOStream& stream) const {
+  throw ENotImplemented(EXCEPTION_MESSAGE);
+}
+
+SourceFileInfo CProgramSource::Original() {
+  return sourceFile;
+}
+
+CProgramSourceArray::CProgramSourceArray(const size_t count,
+                                         const uint8_t** data,
+                                         const size_t* sizes,
+                                         const ze_module_format_t format)
+    : CArgumentSizedArray(ConvertToArray(count, data, sizes, format)) {}
+
+std::vector<SourceFileInfo> CProgramSourceArray::ConvertToArray(const size_t count,
+                                                                const uint8_t** data,
+                                                                const size_t* sizes,
+                                                                const ze_module_format_t format) {
+  std::vector<SourceFileInfo> ret;
+  for (size_t i = 0; i < count; i++) {
+    ret.push_back(SourceFileInfo(sizes[i], data[i], CProgramSource::GetFileName(format)));
+  }
+  return ret;
+}
+
+const uint8_t** CProgramSourceArray::Value() {
+  dataVector.clear();
+  for (const auto& sourceInfo : Vector()) {
+    dataVector.push_back(const_cast<uint8_t*>(sourceInfo.data.data()));
+  }
+  return const_cast<const uint8_t**>(dataVector.data());
 }
 
 CBinaryData::CBinaryData(const size_t size, const void* buffer)

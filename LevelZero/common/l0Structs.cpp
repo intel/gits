@@ -228,6 +228,46 @@ std::set<uint64_t> Cze_module_constants_t_V1::GetMappedPointers() {
   return std::set<uint64_t>();
 }
 
+const char* Cze_module_constants_ptr::NAME = "const ze_module_constants_t*";
+
+Cze_module_constants_ptr::Cze_module_constants_ptr(const L0Type& value)
+    : _pConstants(value != nullptr ? 1U : 0U, value) {}
+
+Cze_module_constants_ptr::Cze_module_constants_ptr(const L0Type* value)
+    : Cze_module_constants_ptr(*value) {}
+
+const char* Cze_module_constants_ptr::Name() const {
+  return Cze_module_constants_ptr::NAME;
+}
+
+void Cze_module_constants_ptr::Write(CBinOStream& stream) const {
+  _pConstants.Write(stream);
+}
+
+void Cze_module_constants_ptr::Read(CBinIStream& stream) {
+  _pConstants.Read(stream);
+}
+
+void Cze_module_constants_ptr::Write([[maybe_unused]] CCodeOStream& stream) const {
+  throw ENotImplemented(EXCEPTION_MESSAGE);
+}
+
+Cze_module_constants_ptr::L0Type Cze_module_constants_ptr::operator*() {
+  const auto* ptr = Ptr();
+  if (ptr == nullptr) {
+    throw EOperationFailed(EXCEPTION_MESSAGE);
+  }
+  return *ptr;
+}
+
+Cze_module_constants_ptr::L0Type* Cze_module_constants_ptr::Ptr() {
+  return &_pointer;
+}
+
+std::set<uint64_t> Cze_module_constants_ptr::GetMappedPointers() {
+  return std::set<uint64_t>();
+}
+
 Cze_module_desc_t::Cze_module_desc_t(const L0Type& value)
     : _stype(value.stype),
       _pNext(value.pNext),
@@ -491,5 +531,114 @@ std::string Cze_module_desc_t_V1::GetProgramSourceName() const {
   return _pInputModule.FileName();
 }
 
+Cze_module_program_exp_desc_t::Cze_module_program_exp_desc_t(const L0Type& value)
+    : _stype(value.stype),
+      _pNext(value.pNext),
+      _count(value.count),
+      _inputSizes(value.count, value.inputSizes),
+      _pInputModules(value.count, value.pInputModules, value.inputSizes),
+      _pBuildFlags(value.pBuildFlags != nullptr ? value.count : 0U, value.pBuildFlags),
+      _pConstants(value.pConstants != nullptr ? value.count : 0U, value.pConstants) {}
+
+Cze_module_program_exp_desc_t::Cze_module_program_exp_desc_t(const L0Type* value)
+    : _stype(value->stype),
+      _pNext(value->pNext),
+      _count(value->count),
+      _inputSizes(value->count, value->inputSizes),
+      _pInputModules(value->count, value->pInputModules, value->inputSizes),
+      _pBuildFlags(value->pBuildFlags != nullptr ? value->count : 0U, value->pBuildFlags),
+      _pConstants(value->pConstants != nullptr ? value->count : 0U, value->pConstants) {}
+
+const char* Cze_module_program_exp_desc_t::Name() const {
+  return Cze_module_program_exp_desc_t::NAME;
+}
+
+void Cze_module_program_exp_desc_t::Write(CBinOStream& stream) const {
+  _stype.Write(stream);
+  _pNext.Write(stream);
+  _count.Write(stream);
+  _inputSizes.Write(stream);
+  _pInputModules.Write(stream);
+  _pBuildFlags.Write(stream);
+  _pConstants.Write(stream);
+}
+
+void Cze_module_program_exp_desc_t::Read(CBinIStream& stream) {
+  _stype.Read(stream);
+  _pNext.Read(stream);
+  _count.Read(stream);
+  _inputSizes.Read(stream);
+  _pInputModules.Read(stream);
+  _pBuildFlags.Read(stream);
+  _pConstants.Read(stream);
+}
+
+void Cze_module_program_exp_desc_t::Declare([[maybe_unused]] CCodeOStream& stream) const {
+  throw ENotImplemented(EXCEPTION_MESSAGE);
+}
+
+void Cze_module_program_exp_desc_t::Write([[maybe_unused]] CCodeOStream& stream) const {
+  throw EOperationFailed(EXCEPTION_MESSAGE);
+}
+
+Cze_module_program_exp_desc_t::L0Type Cze_module_program_exp_desc_t::operator*() {
+  const auto* ptr = Ptr();
+  if (ptr == nullptr) {
+    throw EOperationFailed(EXCEPTION_MESSAGE);
+  }
+  return *ptr;
+}
+
+Cze_module_program_exp_desc_t::L0Type* Cze_module_program_exp_desc_t::Ptr() {
+  _struct.stype = *_stype;
+  _struct.pNext = *_pNext;
+  _struct.count = *_count;
+
+  bool oclocHandle = false;
+  newInputSizes.clear();
+  newInputModules.clear();
+  for (size_t i = 0; i < *_count; i++) {
+    const auto& program = _pInputModules.Vector()[i];
+#ifdef WITH_OCLOC
+    const auto* oclocInputModule = FindOclocInputModule(
+        ocloc::SD(), program.data.size(), program.data.data(), ZE_MODULE_FORMAT_IL_SPIRV);
+    if (oclocInputModule != nullptr && !oclocInputModule->empty()) {
+      newInputSizes.push_back(oclocInputModule->size());
+      newInputModules.push_back(const_cast<uint8_t*>(oclocInputModule->data()));
+      oclocHandle = true;
+    } else {
+      newInputSizes.push_back((*_inputSizes)[i]);
+      newInputModules.push_back(
+          const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(program.data.data())));
+    }
+#else
+    newInputSizes.push_back((*_inputSizes)[i]);
+    newInputModules.push_back(const_cast<uint8_t*>(program.data.data()));
+#endif
+  }
+  if (!oclocHandle) {
+    _struct.inputSizes = *_inputSizes;
+    _struct.pInputModules = *_pInputModules;
+  } else {
+    _struct.inputSizes = newInputSizes.data();
+    _struct.pInputModules = const_cast<const uint8_t**>(newInputModules.data());
+  }
+
+  _struct.pBuildFlags = *_pBuildFlags;
+  _struct.pConstants = *_pConstants;
+  return &_struct;
+}
+
+bool Cze_module_program_exp_desc_t::DeclarationNeeded() const {
+  return true;
+}
+
+std::set<uint64_t> Cze_module_program_exp_desc_t::GetMappedPointers() {
+  return std::set<uint64_t>();
+}
+
+void* Cze_module_program_exp_desc_t::GetPtrType() {
+  return (void*)Ptr();
+}
 } // namespace l0
 } // namespace gits

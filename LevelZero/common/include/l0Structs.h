@@ -72,6 +72,29 @@ public:
   virtual std::set<uint64_t> GetMappedPointers();
 };
 
+class Cze_module_constants_ptr : public CArgument {
+private:
+  typedef const ze_module_constants_t* L0Type;
+  L0Type _pointer = nullptr;
+
+  Cze_module_constants_t_V1::CSArray _pConstants;
+
+public:
+  typedef CL0StructArray<L0Type, Cze_module_constants_ptr> CSArray;
+  static const char* NAME;
+  Cze_module_constants_ptr() = default;
+  Cze_module_constants_ptr(const L0Type& value);
+  Cze_module_constants_ptr(const L0Type* value);
+  virtual const char* Name() const;
+  virtual void Write(CBinOStream& stream) const;
+  virtual void Read(CBinIStream& stream);
+
+  virtual void Write(CCodeOStream& stream) const;
+  L0Type operator*();
+  L0Type* Ptr();
+  virtual std::set<uint64_t> GetMappedPointers();
+};
+
 class Cze_module_desc_t : public CArgument {
 private:
   typedef ze_module_desc_t L0Type;
@@ -132,5 +155,37 @@ public:
   virtual std::string GetProgramSourceName() const;
 };
 
+class Cze_module_program_exp_desc_t : public CArgument {
+private:
+  typedef ze_module_program_exp_desc_t L0Type;
+  L0Type _struct = {};
+  Cze_structure_type_t _stype;
+  CExtensionStructCore _pNext;
+  Cuint32_t _count;
+  Csize_t::CSArray _inputSizes;
+  CProgramSource::CSArray _pInputModules;
+  CStringArray _pBuildFlags;
+  Cze_module_constants_ptr::CSArray _pConstants;
+
+  std::vector<size_t> newInputSizes;
+  std::vector<uint8_t*> newInputModules;
+
+public:
+  typedef CL0StructArray<L0Type, Cze_module_program_exp_desc_t> CSArray;
+  static const char* NAME;
+  Cze_module_program_exp_desc_t() = default;
+  Cze_module_program_exp_desc_t(const L0Type& value);
+  Cze_module_program_exp_desc_t(const L0Type* value);
+  virtual const char* Name() const;
+  virtual void Write(CBinOStream& stream) const;
+  virtual void Read(CBinIStream& stream);
+  virtual void Declare(CCodeOStream& stream) const;
+  virtual void Write(CCodeOStream& stream) const;
+  L0Type operator*();
+  L0Type* Ptr();
+  virtual bool DeclarationNeeded() const;
+  virtual std::set<uint64_t> GetMappedPointers();
+  void* GetPtrType() override;
+};
 } // namespace l0
 } // namespace gits

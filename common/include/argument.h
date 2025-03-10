@@ -1256,7 +1256,7 @@ public:
     return true;
   }
 
-  void Declare(CCodeOStream& stream) const {
+  void Declare([[maybe_unused]] CCodeOStream& stream) const {
     TODO("Finish declaration for CCode - important for ray tracing")
   }
 

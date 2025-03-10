@@ -18,6 +18,7 @@
 
 namespace gits {
 namespace l0 {
+class CProgramSourceArray;
 
 template <typename T, typename T_WRAP>
 class CArg : public CArgument {
@@ -535,6 +536,14 @@ struct CExtensionStructBase : public CArgument {
   virtual ~CExtensionStructBase() = default;
 };
 
+struct SourceFileInfo {
+  std::vector<uint8_t> data;
+  std::string filename;
+
+  SourceFileInfo() = default;
+  SourceFileInfo(const size_t _size, const uint8_t* _data, std::string _filename);
+};
+
 class CProgramSource : public CArgumentFileText {
   const char* emptyFileName = "GITSL0EmptyFile";
 
@@ -543,14 +552,25 @@ class CProgramSource : public CArgumentFileText {
   const char* textCstr = nullptr;
   size_t textLength = 0U;
 
+  SourceFileInfo sourceFile;
+
 public:
-  CProgramSource() {}
+  static std::string GetFileName(ze_module_format_t format);
+
+  typedef CProgramSourceArray CSArray;
+  static constexpr const char* NAME = "const char*";
+
+  CProgramSource() = default;
   CProgramSource(const uint8_t* text, size_t size, ze_module_format_t format);
+  CProgramSource(SourceFileInfo sourceFile);
 
   size_t* Length();
   const char** Value();
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
+  virtual void Write(CCodeOStream& stream) const;
+
+  SourceFileInfo Original();
 
   struct PtrConverter {
   private:
@@ -586,8 +606,27 @@ public:
   }
 
 private:
-  std::string GetFileName(ze_module_format_t format);
-  std::string GetProgramBinary(const unsigned char* binary, const size_t length);
+  static std::string GetProgramBinary(const unsigned char* binary, const size_t length);
+};
+
+class CProgramSourceArray : public CArgumentSizedArray<SourceFileInfo, CProgramSource> {
+  std::vector<uint8_t*> dataVector;
+
+  std::vector<SourceFileInfo> ConvertToArray(const size_t count,
+                                             const uint8_t** data,
+                                             const size_t* sizes,
+                                             const ze_module_format_t format);
+
+public:
+  CProgramSourceArray() = default;
+  CProgramSourceArray(const size_t count,
+                      const uint8_t** data,
+                      const size_t* sizes,
+                      const ze_module_format_t format = ZE_MODULE_FORMAT_IL_SPIRV);
+  const uint8_t** Value();
+  const uint8_t** operator*() {
+    return Value();
+  }
 };
 
 class Cuintptr_t : public CArg<uintptr_t, Cuintptr_t> {
