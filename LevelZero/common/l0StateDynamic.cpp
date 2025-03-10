@@ -621,7 +621,7 @@ void CKernelArgumentDump::UpdateIndexes(uint32_t kernelNum, uint32_t argIndex) {
 }
 
 LayoutBuilder::LayoutBuilder() : layout(), latestFileName("") {
-  layout["version"] = "1.0";
+  layout["version"] = "1.1";
 }
 
 nlohmann::ordered_json LayoutBuilder::GetModuleLinkInfo(
@@ -630,8 +630,19 @@ nlohmann::ordered_json LayoutBuilder::GetModuleLinkInfo(
   for (const auto& module : moduleLinks) {
     nlohmann::ordered_json moduleInfo;
     const auto& moduleState = sd.Get<CModuleState>(module, EXCEPTION_MESSAGE);
-    moduleInfo["module_file"] = moduleState.moduleFileName;
-    moduleInfo["build_options"] = moduleState.desc.pBuildFlags;
+    if (moduleState.programs.size() == 1) {
+      moduleInfo["module_file"] = moduleState.programs[0].moduleFileName;
+      moduleInfo["build_options"] = moduleState.programs[0].buildOptions;
+    } else {
+      nlohmann::ordered_json programsInfo;
+      for (auto& program : moduleState.programs) {
+        nlohmann::ordered_json programInfo;
+        programInfo["module_file"] = program.moduleFileName;
+        programInfo["build_options"] = program.buildOptions;
+        programsInfo.push_back(moduleInfo);
+      }
+      moduleInfo["programs"] = programsInfo;
+    }
     modulesInfo.push_back(moduleInfo);
   }
   return modulesInfo;
@@ -649,17 +660,45 @@ void LayoutBuilder::UpdateLayout(const CKernelExecutionInfo* kernelInfo,
     Add("kernel_name", kernelInfo->pKernelName);
     auto& sd = SD();
     const auto& moduleState = sd.Get<CModuleState>(kernelInfo->hModule, EXCEPTION_MESSAGE);
-    if (moduleState.desc.pBuildFlags != nullptr) {
-      Add("build_options", moduleState.desc.pBuildFlags);
+    if (moduleState.programs.size() == 1) {
+      if (moduleState.desc.pBuildFlags != nullptr) {
+        Add("build_options", moduleState.programs[0].buildOptions);
+      }
+      Add("module_file", moduleState.programs[0].moduleFileName);
+#ifdef WITH_OCLOC
+      AddOclocInfo(moduleState.programs[0].oclocState);
+#endif
+    } else {
+      nlohmann::ordered_json modulesInfo = nlohmann::ordered_json::array();
+      for (const auto& program : moduleState.programs) {
+        nlohmann::ordered_json moduleInfo;
+        moduleInfo["module_file"] = program.moduleFileName;
+        moduleInfo["build_options"] = program.buildOptions;
+#ifdef WITH_OCLOC
+        if (program.oclocState.get() != nullptr && !program.oclocState->args.empty()) {
+          nlohmann::ordered_json children = nlohmann::ordered_json::array();
+          const auto size = program.oclocState->args.size();
+          for (auto i = 0U; i < size; i++) {
+            children.push_back(program.oclocState->args[i]);
+            if (Config::Get().IsRecorder() && program.oclocState->args[i] == "-options") {
+              std::string options = program.oclocState->args[++i];
+              options += " -I \"" + Config::Get().common.recorder.dumpPath.string() + "\"";
+              options +=
+                  " -I \"" + (Config::Get().common.recorder.dumpPath / "gitsFiles").string() + "\"";
+              children.push_back(options);
+            }
+          }
+          moduleInfo["ocloc"]["sources"] = program.oclocState->savedFileNames;
+          moduleInfo["ocloc"]["args"] = children;
+        }
+#endif
+        modulesInfo.push_back(moduleInfo);
+      }
+      Add("programs", modulesInfo);
     }
-    Add("module_file", moduleState.moduleFileName);
     if (moduleState.IsModuleLinkUsed()) {
       Add("module_link", GetModuleLinkInfo(sd, moduleState.moduleLinks));
     }
-
-#ifdef WITH_OCLOC
-    AddOclocInfo(kernelInfo->hModule);
-#endif
   }
   if (!isIndirectDump) {
     const auto& arg = kernelInfo->GetArgument(argIndex);
@@ -742,8 +781,7 @@ std::string LayoutBuilder::GetExecutionKeyId() const {
 }
 
 #ifdef WITH_OCLOC
-void LayoutBuilder::AddOclocInfo(const ze_module_handle_t& hModule) {
-  const auto& oclocState = SD().Get<CModuleState>(hModule, EXCEPTION_MESSAGE).oclocState;
+void LayoutBuilder::AddOclocInfo(const std::shared_ptr<ocloc::COclocState>& oclocState) {
   if (oclocState.get() != nullptr && !oclocState->args.empty()) {
     nlohmann::ordered_json children = nlohmann::ordered_json::array();
     const auto size = oclocState->args.size();

@@ -516,7 +516,9 @@ private:
   uint32_t cmdListNumber = 0U;
   uint32_t appendKernelNumber = 0U;
   std::string GetExecutionKeyId() const;
-  void AddOclocInfo(const ze_module_handle_t& hModule);
+#ifdef WITH_OCLOC
+  void AddOclocInfo(const std::shared_ptr<ocloc::COclocState>& oclocState);
+#endif
   std::string BuildFileName(const uint64_t& argNumber,
                             bool isBuffer,
                             bool isIndirectMode,
