@@ -221,10 +221,18 @@ std::string CProgramSource::GetProgramBinary(const unsigned char* binary, const 
   return shaderSource;
 }
 
-CProgramSource::CProgramSource(const uint8_t* text, size_t size, ze_module_format_t format)
-    : CArgumentFileText(GetFileName(format), GetProgramBinary(text, size)) {}
+CProgramSource::CProgramSource(const uint8_t* text, size_t size, ze_module_format_t format) {
+  if (size > 0) {
+    _fileName = GetFileName(format);
+    _text = std::string(reinterpret_cast<const char*>(text), size);
+    init(_fileName.c_str(), _text.c_str(), size);
+  }
+}
 
 const char** CProgramSource::Value() {
+  if (*Length() == 0) {
+    return nullptr;
+  }
   textCstr = Text().c_str();
   return &textCstr;
 }
@@ -232,6 +240,20 @@ const char** CProgramSource::Value() {
 size_t* CProgramSource::Length() {
   textLength = Text().size();
   return &textLength;
+}
+
+void CProgramSource::Write(CBinOStream& stream) const {
+  if (Text().size() > 0) {
+    CArgumentFileText::Write(stream);
+  } else {
+    stream << '"' << emptyFileName << '"';
+  }
+}
+void CProgramSource::Read(CBinIStream& stream) {
+  stream.get_delimited_string(_fileName, '"');
+  if (_fileName != emptyFileName) {
+    LoadTextFromFile();
+  }
 }
 
 CBinaryData::CBinaryData(const size_t size, const void* buffer)

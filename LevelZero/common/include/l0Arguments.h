@@ -536,6 +536,8 @@ struct CExtensionStructBase : public CArgument {
 };
 
 class CProgramSource : public CArgumentFileText {
+  const char* emptyFileName = "GITSL0EmptyFile";
+
   static uint32_t _programSourceIdx;
   static uint32_t _binarySourceIdx;
   const char* textCstr = nullptr;
@@ -547,6 +549,8 @@ public:
 
   size_t* Length();
   const char** Value();
+  virtual void Write(CBinOStream& stream) const;
+  virtual void Read(CBinIStream& stream);
 
   struct PtrConverter {
   private:
@@ -555,15 +559,24 @@ public:
   public:
     explicit PtrConverter(const char** ptr) : _ptr(ptr) {}
     operator const char*() const {
+      if (_ptr == nullptr) {
+        return nullptr;
+      }
       return *_ptr;
     }
     operator const unsigned char*() const {
+      if (_ptr == nullptr) {
+        return nullptr;
+      }
       return reinterpret_cast<const unsigned char*>(*_ptr);
     }
     operator const char**() const {
       return _ptr;
     }
     operator const void*() const {
+      if (_ptr == nullptr) {
+        return nullptr;
+      }
       return *_ptr;
     }
   };

@@ -121,7 +121,10 @@ void gits::CArgumentFileText::Write(CBinOStream& stream) const {
 void gits::CArgumentFileText::Read(CBinIStream& stream) {
   // load filename
   stream.get_delimited_string(_fileName, '"');
+  LoadTextFromFile();
+}
 
+void gits::CArgumentFileText::LoadTextFromFile() {
   // load text from a file
   std::filesystem::path path = Config::Get().common.player.streamDir / _fileName;
   std::ifstream textStream(path, std::ios::binary);

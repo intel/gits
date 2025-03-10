@@ -205,8 +205,12 @@ public:
 };
 
 class CArgumentFileText : public CArgument {
+protected:
   std::string _fileName;
   std::string _text;
+
+  void init(const char* fileName, const char* text, unsigned length);
+  void LoadTextFromFile();
 
 public:
   CArgumentFileText() {}
@@ -232,9 +236,6 @@ public:
   const std::string& operator*() const {
     return _text;
   }
-
-private:
-  void init(const char* fileName, const char* text, unsigned length);
 };
 
 class CBinaryResource : public CArgument {
