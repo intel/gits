@@ -517,7 +517,7 @@ private:
   uint32_t appendKernelNumber = 0U;
   std::string GetExecutionKeyId() const;
 #ifdef WITH_OCLOC
-  void AddOclocInfo(const std::shared_ptr<ocloc::COclocState>& oclocState);
+  nlohmann::ordered_json GetOclocInfo(const std::shared_ptr<ocloc::COclocState>& oclocState);
 #endif
   std::string BuildFileName(const uint64_t& argNumber,
                             bool isBuffer,

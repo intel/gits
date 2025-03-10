@@ -666,7 +666,10 @@ void LayoutBuilder::UpdateLayout(const CKernelExecutionInfo* kernelInfo,
       }
       Add("module_file", moduleState.programs[0].moduleFileName);
 #ifdef WITH_OCLOC
-      AddOclocInfo(moduleState.programs[0].oclocState);
+      auto oclocInfo = GetOclocInfo(moduleState.programs[0].oclocState);
+      if (oclocInfo.size() != 0) {
+        Add("ocloc", oclocInfo);
+      }
 #endif
     } else {
       nlohmann::ordered_json modulesInfo = nlohmann::ordered_json::array();
@@ -675,21 +678,9 @@ void LayoutBuilder::UpdateLayout(const CKernelExecutionInfo* kernelInfo,
         moduleInfo["module_file"] = program.moduleFileName;
         moduleInfo["build_options"] = program.buildOptions;
 #ifdef WITH_OCLOC
-        if (program.oclocState.get() != nullptr && !program.oclocState->args.empty()) {
-          nlohmann::ordered_json children = nlohmann::ordered_json::array();
-          const auto size = program.oclocState->args.size();
-          for (auto i = 0U; i < size; i++) {
-            children.push_back(program.oclocState->args[i]);
-            if (Config::Get().IsRecorder() && program.oclocState->args[i] == "-options") {
-              std::string options = program.oclocState->args[++i];
-              options += " -I \"" + Config::Get().common.recorder.dumpPath.string() + "\"";
-              options +=
-                  " -I \"" + (Config::Get().common.recorder.dumpPath / "gitsFiles").string() + "\"";
-              children.push_back(options);
-            }
-          }
-          moduleInfo["ocloc"]["sources"] = program.oclocState->savedFileNames;
-          moduleInfo["ocloc"]["args"] = children;
+        auto oclocInfo = GetOclocInfo(program.oclocState);
+        if (oclocInfo.size() != 0) {
+          moduleInfo["ocloc"] = oclocInfo;
         }
 #endif
         modulesInfo.push_back(moduleInfo);
@@ -781,7 +772,9 @@ std::string LayoutBuilder::GetExecutionKeyId() const {
 }
 
 #ifdef WITH_OCLOC
-void LayoutBuilder::AddOclocInfo(const std::shared_ptr<ocloc::COclocState>& oclocState) {
+nlohmann::ordered_json LayoutBuilder::GetOclocInfo(
+    const std::shared_ptr<ocloc::COclocState>& oclocState) {
+  nlohmann::ordered_json oclocInfo;
   if (oclocState.get() != nullptr && !oclocState->args.empty()) {
     nlohmann::ordered_json children = nlohmann::ordered_json::array();
     const auto size = oclocState->args.size();
@@ -795,9 +788,10 @@ void LayoutBuilder::AddOclocInfo(const std::shared_ptr<ocloc::COclocState>& oclo
         children.push_back(options);
       }
     }
-    Add("ocloc", "sources", oclocState->savedFileNames);
-    Add("ocloc", "args", children);
+    oclocInfo["sources"] = oclocState->savedFileNames;
+    oclocInfo["args"] = children;
   }
+  return oclocInfo;
 }
 #endif
 
