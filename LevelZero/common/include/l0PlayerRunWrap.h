@@ -283,7 +283,8 @@ inline void zeModuleCreate_RUNWRAP(Cze_result_t& _return_value,
                                    Cze_module_build_log_handle_t::CSMapArray& _phBuildLog) {
   _return_value.Value() =
       drv.zeModuleCreate(*_hContext, *_hDevice, *_desc, *_phModule, *_phBuildLog);
-  zeModuleCreate_SD(*_return_value, *_hContext, *_hDevice, *_desc, *_phModule, *_phBuildLog);
+  zeModuleCreate_SD(nullptr, *_return_value, *_hContext, *_hDevice, *_desc, *_phModule,
+                    *_phBuildLog);
   HandleDumpSpv(*_desc);
   const auto buildLogHandle = *_phBuildLog != nullptr ? **_phBuildLog : nullptr;
   if (_return_value.Value() == ZE_RESULT_ERROR_MODULE_BUILD_FAILURE && buildLogHandle != nullptr) {
@@ -305,7 +306,8 @@ inline void zeModuleCreate_RUNWRAP(Cze_result_t& _return_value,
   }
 }
 
-inline void zeModuleCreate_V1_RUNWRAP(Cze_result_t& _return_value,
+inline void zeModuleCreate_V1_RUNWRAP(CFunction* token,
+                                      Cze_result_t& _return_value,
                                       Cze_context_handle_t& _hContext,
                                       Cze_device_handle_t& _hDevice,
                                       Cze_module_desc_t_V1::CSArray& _desc,
@@ -313,16 +315,7 @@ inline void zeModuleCreate_V1_RUNWRAP(Cze_result_t& _return_value,
                                       Cze_module_build_log_handle_t::CSMapArray& _phBuildLog) {
   _return_value.Value() =
       drv.zeModuleCreate(*_hContext, *_hDevice, *_desc, *_phModule, *_phBuildLog);
-  zeModuleCreate_SD(*_return_value, *_hContext, *_hDevice, *_desc, *_phModule, *_phBuildLog);
-  if (_return_value.Value() == ZE_RESULT_SUCCESS && *_phModule != nullptr && *_desc != nullptr &&
-      !_desc.Vector().empty()) {
-    const auto moduleFileName = _desc.Vector().front()->GetProgramSourceName();
-    ze_module_handle_t* hModule = *_phModule;
-    if (hModule != nullptr) {
-      auto& moduleState = SD().Get<CModuleState>(*hModule, EXCEPTION_MESSAGE);
-      moduleState.moduleFileName = std::move(moduleFileName);
-    }
-  }
+  zeModuleCreate_SD(token, *_return_value, *_hContext, *_hDevice, *_desc, *_phModule, *_phBuildLog);
   const auto buildLogHandle = *_phBuildLog != nullptr ? **_phBuildLog : nullptr;
   if (_return_value.Value() == ZE_RESULT_ERROR_MODULE_BUILD_FAILURE && buildLogHandle != nullptr) {
     size_t size = 0U;

@@ -1442,12 +1442,7 @@ inline void zeModuleCreate_RECWRAP(CRecorder& recorder,
     token = new CzeModuleCreate_V1(return_value, hContext, hDevice, desc, phModule, phBuildLog);
     recorder.Schedule(token);
   }
-  zeModuleCreate_SD(return_value, hContext, hDevice, desc, phModule, phBuildLog);
-  if (token != nullptr && return_value == ZE_RESULT_SUCCESS) {
-    const auto moduleFileName =
-        token->Argument<Cze_module_desc_t_V1::CSArray>(2U).Vector()[0]->GetProgramSourceName();
-    SD().Get<CModuleState>(*phModule, EXCEPTION_MESSAGE).moduleFileName = std::move(moduleFileName);
-  }
+  zeModuleCreate_SD(token, return_value, hContext, hDevice, desc, phModule, phBuildLog);
 }
 
 inline void zeCommandListImmediateAppendCommandListsExp_RECWRAP_PRE(

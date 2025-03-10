@@ -15,6 +15,7 @@
 #include "l0StateDynamic.h"
 #include "l0Tools.h"
 #include "l0Drivers.h"
+#include "l0Functions.h"
 #include "mockListExecutor.h"
 #include <unordered_map>
 #include <utility>
@@ -402,7 +403,8 @@ inline void zeDeviceGet_SD(ze_result_t return_value,
   }
 }
 
-inline void zeModuleCreate_SD(ze_result_t return_value,
+inline void zeModuleCreate_SD(CFunction* token,
+                              ze_result_t return_value,
                               ze_context_handle_t hContext,
                               ze_device_handle_t hDevice,
                               const ze_module_desc_t* desc,
@@ -410,8 +412,14 @@ inline void zeModuleCreate_SD(ze_result_t return_value,
                               ze_module_build_log_handle_t* phBuildLog) {
   if (return_value == ZE_RESULT_SUCCESS && phModule != nullptr && desc != nullptr) {
     auto& moduleState = SD().Map<CModuleState>()[*phModule];
+    std::vector<std::string> filenames;
+    if (token != nullptr) {
+      filenames =
+          token->Argument<Cze_module_desc_t_V1::CSArray>(2U).Vector()[0]->GetProgramSourcesNames();
+    }
     moduleState = std::make_unique<CModuleState>(hContext, hDevice, desc,
-                                                 phBuildLog != nullptr ? *phBuildLog : nullptr);
+                                                 phBuildLog != nullptr ? *phBuildLog : nullptr,
+                                                 std::move(filenames));
   }
 }
 

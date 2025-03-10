@@ -12,6 +12,7 @@
 #include "l0StateDynamic.h"
 #include "l0Tools.h"
 #include "l0Log.h"
+#include "l0StateTracking.h"
 
 gits::CArgument& gits::l0::CGitsL0MemoryUpdate::Argument(unsigned idx) {
   return get_cargument(__FUNCTION__, idx, _usmPtr, _resource);

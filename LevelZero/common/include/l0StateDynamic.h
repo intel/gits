@@ -400,18 +400,39 @@ public:
   explicit CDeviceState(ze_device_handle_t hDevice);
 };
 
+struct ProgramInfo {
+  std::string moduleFileName;
+  std::string buildOptions;
+#ifdef WITH_OCLOC
+  std::shared_ptr<ocloc::COclocState> oclocState = nullptr;
+#endif
+
+public:
+#ifdef WITH_OCLOC
+  ProgramInfo(const char* buildOptions,
+              const std::string filename,
+              std::shared_ptr<ocloc::COclocState>& oclocState);
+#endif
+  ProgramInfo(const char* buildOptions, const std::string filename);
+};
+
 struct CModuleState : public CState {
   using type = ze_module_handle_t;
   using states_type = std::unordered_map<type, std::unique_ptr<CModuleState>>;
   ze_context_handle_t hContext = nullptr;
   ze_device_handle_t hDevice = nullptr;
   ze_module_desc_t desc = {};
-#ifdef WITH_OCLOC
-  std::shared_ptr<ocloc::COclocState> oclocState = nullptr;
-#endif
-  std::string moduleFileName;
   std::unordered_set<ze_module_handle_t> moduleLinks;
   ze_module_build_log_handle_t hBuildLog = nullptr;
+
+  std::vector<ProgramInfo> programs;
+
+private:
+  ze_module_constants_t* CreateNewModuleConstants(const ze_module_constants_t* originalConstants);
+  void DeleteModuleConstants(const ze_module_constants_t* originalConstants);
+
+  void SetModuleDesc(const ze_module_desc_t* descriptor);
+  void FillProgramInfo(std::vector<std::string> filenames);
 
 public:
   CModuleState() = default;
@@ -419,7 +440,9 @@ public:
   CModuleState(ze_context_handle_t hContext,
                ze_device_handle_t hDevice,
                const ze_module_desc_t* desc,
-               ze_module_build_log_handle_t hBuildLog);
+               ze_module_build_log_handle_t hBuildLog,
+               std::vector<std::string> filenames);
+
   void AddModuleLinks(const uint32_t& numModules, const ze_module_handle_t* phModules);
   bool IsModuleLinkUsed() const;
 };

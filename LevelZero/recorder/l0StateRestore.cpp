@@ -408,9 +408,11 @@ void RestoreModules(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& state : sd.Map<CModuleState>()) {
     if (!state.second->Restored()) {
 #ifdef WITH_OCLOC
-      auto& oclocState = state.second->oclocState;
-      if (oclocState && !oclocState->args.empty()) {
-        ScheduleOclocInvoke(scheduler, *oclocState);
+      for (auto& program : state.second->programs) {
+        auto& oclocState = program.oclocState;
+        if (oclocState && !oclocState->args.empty()) {
+          ScheduleOclocInvoke(scheduler, *oclocState);
+        }
       }
 #endif
       auto stateInstance = state.first;

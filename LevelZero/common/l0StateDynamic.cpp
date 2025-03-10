@@ -358,35 +358,197 @@ CDeviceState::CDeviceState(ze_driver_handle_t hDriver) : hDriver(hDriver) {}
 
 CDeviceState::CDeviceState(ze_device_handle_t hDevice) : hDevice(hDevice) {}
 
+#ifdef WITH_OCLOC
+ProgramInfo::ProgramInfo(const char* buildOptions,
+                         const std::string filename,
+                         std::shared_ptr<ocloc::COclocState>& oclocState)
+    : moduleFileName(std::move(filename)), oclocState(oclocState) {
+  if (buildOptions != nullptr) {
+    this->buildOptions = std::string(buildOptions);
+  }
+}
+#endif
+ProgramInfo::ProgramInfo(const char* buildOptions, const std::string filename)
+    : moduleFileName(std::move(filename)) {
+  if (buildOptions != nullptr) {
+    this->buildOptions = std::string(buildOptions);
+  }
+}
+
+ze_module_constants_t* CModuleState::CreateNewModuleConstants(
+    const ze_module_constants_t* originalConstants) {
+  auto* pConstantIds = new uint32_t[originalConstants->numConstants]();
+  std::memcpy(pConstantIds, originalConstants->pConstantIds,
+              originalConstants->numConstants * sizeof(uint32_t));
+  auto** pConstantValues = new uint64_t*[originalConstants->numConstants]();
+  for (size_t i = 0U; i < originalConstants->numConstants; i++) {
+    pConstantValues[i] = new uint64_t();
+    std::memcpy(pConstantValues[i], originalConstants->pConstantValues[i], sizeof(uint64_t));
+  }
+  auto* pConstants = new ze_module_constants_t();
+  pConstants->numConstants = originalConstants->numConstants;
+  pConstants->pConstantIds = pConstantIds;
+  pConstants->pConstantValues = const_cast<const void**>(reinterpret_cast<void**>(pConstantValues));
+  return pConstants;
+}
+
+void CModuleState::SetModuleDesc(const ze_module_desc_t* originalDescriptor) {
+  desc.stype = originalDescriptor->stype;
+  desc.pNext = originalDescriptor->pNext;
+  desc.format = originalDescriptor->format;
+  if (IsPNextOfType(originalDescriptor->pNext, ZE_STRUCTURE_TYPE_MODULE_PROGRAM_EXP_DESC)) {
+    const auto originalModuleProgramDesc =
+        *reinterpret_cast<const ze_module_program_exp_desc_t*>(originalDescriptor->pNext);
+    auto newModuleProgramDesc = new ze_module_program_exp_desc_t(originalModuleProgramDesc);
+
+    newModuleProgramDesc->inputSizes = new size_t[originalModuleProgramDesc.count]();
+    memcpy((void*)newModuleProgramDesc->inputSizes, originalModuleProgramDesc.inputSizes,
+           originalModuleProgramDesc.count * sizeof(originalModuleProgramDesc.inputSizes[0]));
+    newModuleProgramDesc->pInputModules = new const uint8_t*[originalModuleProgramDesc.count]();
+    if (originalModuleProgramDesc.pBuildFlags != nullptr) {
+      newModuleProgramDesc->pBuildFlags = new const char*[originalModuleProgramDesc.count]();
+    }
+    if (originalModuleProgramDesc.pConstants != nullptr) {
+      newModuleProgramDesc->pConstants =
+          new const ze_module_constants_t*[originalModuleProgramDesc.count];
+    }
+
+    for (size_t i = 0; i < originalModuleProgramDesc.count; i++) {
+      newModuleProgramDesc->pInputModules[i] =
+          new uint8_t[originalModuleProgramDesc.inputSizes[i]]();
+      memcpy((void*)newModuleProgramDesc->pInputModules[i],
+             originalModuleProgramDesc.pInputModules[i], originalModuleProgramDesc.inputSizes[i]);
+      if (originalModuleProgramDesc.pBuildFlags != nullptr &&
+          originalModuleProgramDesc.pBuildFlags[i] != nullptr) {
+        const auto buildFlagsLength = strlen(originalModuleProgramDesc.pBuildFlags[i]);
+        newModuleProgramDesc->pBuildFlags[i] = new char[buildFlagsLength]();
+        memcpy((void*)newModuleProgramDesc->pBuildFlags[i],
+               originalModuleProgramDesc.pBuildFlags[i], buildFlagsLength);
+      }
+      if (originalModuleProgramDesc.pConstants != nullptr &&
+          originalModuleProgramDesc.pConstants[i] != nullptr &&
+          originalModuleProgramDesc.pConstants[i]->numConstants != 0) {
+        newModuleProgramDesc->pConstants[i] =
+            CreateNewModuleConstants(originalModuleProgramDesc.pConstants[i]);
+      } else if (originalModuleProgramDesc.pConstants != nullptr) {
+        newModuleProgramDesc->pConstants[i] = nullptr;
+      }
+    }
+    desc.pNext = newModuleProgramDesc;
+  }
+
+  desc.inputSize = originalDescriptor->inputSize;
+  if (originalDescriptor->pInputModule != nullptr) {
+    desc.pInputModule = new uint8_t[originalDescriptor->inputSize + 1];
+    std::memcpy((void*)desc.pInputModule, originalDescriptor->pInputModule,
+                originalDescriptor->inputSize);
+  }
+  if (originalDescriptor->pBuildFlags != nullptr) {
+    const auto buildFlagsSize = std::strlen(originalDescriptor->pBuildFlags) + 1;
+    desc.pBuildFlags = new char[buildFlagsSize];
+    std::memcpy((void*)desc.pBuildFlags, originalDescriptor->pBuildFlags, buildFlagsSize);
+  }
+  if (originalDescriptor->pConstants != nullptr &&
+      originalDescriptor->pConstants->numConstants == 0) {
+    desc.pConstants = nullptr;
+  } else if (originalDescriptor->pConstants != nullptr) {
+    desc.pConstants = CreateNewModuleConstants(originalDescriptor->pConstants);
+  }
+}
+
+void CModuleState::FillProgramInfo(std::vector<std::string> filenames) {
+  if (IsPNextOfType(desc.pNext, ZE_STRUCTURE_TYPE_MODULE_PROGRAM_EXP_DESC)) {
+    const auto moduleProgramDesc =
+        *reinterpret_cast<const ze_module_program_exp_desc_t*>(desc.pNext);
+    for (size_t i = 0; i < moduleProgramDesc.count; i++) {
+      std::string filename = filenames.size() == moduleProgramDesc.count ? filenames[i] : "";
+#ifdef WITH_OCLOC
+      std::shared_ptr<ocloc::COclocState> oclocState;
+      const uint64_t hash = ComputeHash(moduleProgramDesc.pInputModules[i],
+                                        moduleProgramDesc.inputSizes[i], THashType::XX);
+      if (!ocloc::SD().oclocStates.empty() &&
+          ocloc::SD().oclocStates.find(hash) != ocloc::SD().oclocStates.end()) {
+        oclocState = ocloc::SD().oclocStates.at(hash);
+        programs.emplace_back(
+            moduleProgramDesc.pBuildFlags != nullptr ? moduleProgramDesc.pBuildFlags[i] : nullptr,
+            filename, oclocState);
+      } else {
+        programs.emplace_back(
+            moduleProgramDesc.pBuildFlags != nullptr ? moduleProgramDesc.pBuildFlags[i] : nullptr,
+            filename);
+      }
+#else
+      programs.emplace_back(
+          moduleProgramDesc.pBuildFlags != nullptr ? moduleProgramDesc.pBuildFlags[i] : nullptr,
+          filename);
+#endif
+    }
+  } else {
+    std::string filename = !filenames.empty() ? filenames[0] : "";
+#ifdef WITH_OCLOC
+    std::shared_ptr<ocloc::COclocState> oclocState;
+    const uint64_t hash = ComputeHash(desc.pInputModule, desc.inputSize, THashType::XX);
+    if (!ocloc::SD().oclocStates.empty() &&
+        ocloc::SD().oclocStates.find(hash) != ocloc::SD().oclocStates.end()) {
+      oclocState = ocloc::SD().oclocStates.at(hash);
+    }
+    programs.emplace_back(desc.pBuildFlags, filename, oclocState);
+#else
+    programs.emplace_back(desc.pBuildFlags, filename);
+#endif
+  }
+}
+
 CModuleState::CModuleState(ze_context_handle_t hContext,
                            ze_device_handle_t hDevice,
                            const ze_module_desc_t* descriptor,
-                           ze_module_build_log_handle_t hBuildLog)
-    : hContext(hContext), hDevice(hDevice), desc(*descriptor), hBuildLog(hBuildLog) {
-  desc.pInputModule = new uint8_t[desc.inputSize + 1];
-  std::memcpy((void*)desc.pInputModule, descriptor->pInputModule, desc.inputSize);
-  if (descriptor->pBuildFlags != nullptr) {
-    const auto buildFlagsSize = std::strlen(descriptor->pBuildFlags) + 1;
-    desc.pBuildFlags = new char[buildFlagsSize];
-    std::memcpy((void*)desc.pBuildFlags, descriptor->pBuildFlags, buildFlagsSize);
+                           ze_module_build_log_handle_t hBuildLog,
+                           std::vector<std::string> filenames)
+    : hContext(hContext), hDevice(hDevice), hBuildLog(hBuildLog) {
+  SetModuleDesc(descriptor);
+  FillProgramInfo(filenames);
+}
+
+void CModuleState::DeleteModuleConstants(const ze_module_constants_t* pConstants) {
+  if (pConstants != nullptr && pConstants->numConstants != 0) {
+    delete[] pConstants->pConstantIds;
+    for (size_t i = 0U; i < pConstants->numConstants; i++) {
+      delete reinterpret_cast<const uint64_t*>(pConstants->pConstantValues[i]);
+    }
+    delete[] pConstants->pConstantValues;
+    delete pConstants;
   }
-  if (descriptor->pConstants != nullptr && descriptor->pConstants->numConstants == 0) {
-    desc.pConstants = nullptr;
-  }
-#ifdef WITH_OCLOC
-  const uint64_t hash = ComputeHash(desc.pInputModule, desc.inputSize, THashType::XX);
-  if (!ocloc::SD().oclocStates.empty() &&
-      ocloc::SD().oclocStates.find(hash) != ocloc::SD().oclocStates.end()) {
-    oclocState = ocloc::SD().oclocStates.at(hash);
-  }
-#endif
 }
 
 CModuleState::~CModuleState() {
-  delete[] desc.pInputModule;
+  if (IsPNextOfType(desc.pNext, ZE_STRUCTURE_TYPE_MODULE_PROGRAM_EXP_DESC)) {
+    const auto& moduleProgramDesc =
+        *reinterpret_cast<const ze_module_program_exp_desc_t*>(desc.pNext);
+    for (size_t i = 0; i < moduleProgramDesc.count; i++) {
+      delete[] moduleProgramDesc.pInputModules[i];
+      if (moduleProgramDesc.pBuildFlags != nullptr && moduleProgramDesc.pBuildFlags[i] != nullptr) {
+        delete[] moduleProgramDesc.pBuildFlags[i];
+      }
+      if (moduleProgramDesc.pConstants != nullptr) {
+        DeleteModuleConstants(moduleProgramDesc.pConstants[i]);
+      }
+    }
+    delete[] moduleProgramDesc.inputSizes;
+    delete[] moduleProgramDesc.pInputModules;
+    if (moduleProgramDesc.pBuildFlags != nullptr) {
+      delete[] moduleProgramDesc.pBuildFlags;
+    }
+    if (moduleProgramDesc.pConstants != nullptr) {
+      delete[] moduleProgramDesc.pConstants;
+    }
+  }
+  if (desc.pInputModule != nullptr) {
+    delete[] desc.pInputModule;
+  }
   if (desc.pBuildFlags != nullptr) {
     delete[] desc.pBuildFlags;
   }
+  DeleteModuleConstants(desc.pConstants);
 }
 
 void CModuleState::AddModuleLinks(const uint32_t& numModules, const ze_module_handle_t* phModules) {

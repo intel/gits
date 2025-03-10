@@ -152,7 +152,7 @@ public:
   L0Type* Ptr();
   virtual bool DeclarationNeeded() const;
   virtual std::set<uint64_t> GetMappedPointers();
-  virtual std::string GetProgramSourceName() const;
+  virtual std::vector<std::string> GetProgramSourcesNames();
 };
 
 class Cze_module_program_exp_desc_t : public CArgument {
@@ -185,6 +185,7 @@ public:
   L0Type* Ptr();
   virtual bool DeclarationNeeded() const;
   virtual std::set<uint64_t> GetMappedPointers();
+  virtual std::vector<std::string> GetProgramSourcesNames();
   void* GetPtrType() override;
 };
 } // namespace l0

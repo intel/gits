@@ -527,8 +527,15 @@ std::set<uint64_t> Cze_module_desc_t_V1::GetMappedPointers() {
   return std::set<uint64_t>();
 }
 
-std::string Cze_module_desc_t_V1::GetProgramSourceName() const {
-  return _pInputModule.FileName();
+std::vector<std::string> Cze_module_desc_t_V1::GetProgramSourcesNames() {
+  if (IsPNextOfType(*_pNext, ZE_STRUCTURE_TYPE_MODULE_PROGRAM_EXP_DESC)) {
+    auto moduleProgram = reinterpret_cast<Cze_module_program_exp_desc_t*>(_pNext.GetCPtrType());
+    return moduleProgram->GetProgramSourcesNames();
+  } else {
+    std::vector<std::string> fileNames;
+    fileNames.push_back(_pInputModule.FileName());
+    return fileNames;
+  }
 }
 
 Cze_module_program_exp_desc_t::Cze_module_program_exp_desc_t(const L0Type& value)
@@ -635,6 +642,14 @@ bool Cze_module_program_exp_desc_t::DeclarationNeeded() const {
 
 std::set<uint64_t> Cze_module_program_exp_desc_t::GetMappedPointers() {
   return std::set<uint64_t>();
+}
+
+std::vector<std::string> Cze_module_program_exp_desc_t::GetProgramSourcesNames() {
+  std::vector<std::string> fileNames;
+  for (auto& file : _pInputModules.Vector()) {
+    fileNames.push_back(file.filename);
+  }
+  return fileNames;
 }
 
 void* Cze_module_program_exp_desc_t::GetPtrType() {
