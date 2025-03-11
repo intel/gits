@@ -33,20 +33,5 @@ ConfigKeySet::ConfigKeySet(const std::string& keys) {
   }
 }
 
-std::string ConfigKeySet::keyToString(unsigned key) {
-  std::string commandKey;
-  if (key & Command::stateRestoreKeyMask) {
-    commandKey = "S" + std::to_string(key & ~Command::stateRestoreKeyMask);
-  } else {
-    commandKey = std::to_string(key);
-  }
-  return commandKey;
-}
-
-std::wstring ConfigKeySet::keyToWString(unsigned key) {
-  std::string commandKey = keyToString(key);
-  return std::wstring(commandKey.begin(), commandKey.end());
-}
-
 } // namespace DirectX
 } // namespace gits

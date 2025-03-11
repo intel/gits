@@ -8,6 +8,7 @@
 ${header}
 
 #include "skipCallsLayerAuto.h"
+#include "toStr.h"
 
 namespace gits {
 namespace DirectX {
@@ -15,112 +16,112 @@ namespace DirectX {
 void SkipCallsLayer::pre(CreateWindowMetaCommand& command) {
   if (configKeySet_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << ConfigKeySet::keyToString(command.key) << " CreateWindowMeta";
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " CreateWindowMeta";
   }
 }
 
 void SkipCallsLayer::pre(MappedDataMetaCommand& command) {
   if (configKeySet_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << ConfigKeySet::keyToString(command.key) << " MappedDataMeta";
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " MappedDataMeta";
   }
 }
 
 void SkipCallsLayer::pre(CreateHeapAllocationMetaCommand& command) {
   if (configKeySet_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << ConfigKeySet::keyToString(command.key) << " CreateHeapAllocationMeta";
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " CreateHeapAllocationMeta";
   }
 }
 
 void SkipCallsLayer::pre(WaitForFenceSignaledCommand& command) {
   if (configKeySet_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << ConfigKeySet::keyToString(command.key) << " WaitForFenceSignaled";
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " WaitForFenceSignaled";
   }
 }
 
 void SkipCallsLayer::pre(IUnknownQueryInterfaceCommand& command) {
   if (configKeySet_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << ConfigKeySet::keyToString(command.key) << " IUnknown::QueryInterface";
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " IUnknown::QueryInterface";
   }
 }
 
 void SkipCallsLayer::pre(IUnknownAddRefCommand& command) {
   if (configKeySet_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << ConfigKeySet::keyToString(command.key) << " IUnknown::AddRef";
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " IUnknown::AddRef";
   }
 }
 
 void SkipCallsLayer::pre(IUnknownReleaseCommand& command) {
   if (configKeySet_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << ConfigKeySet::keyToString(command.key) << " IUnknown::Release";
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " IUnknown::Release";
   }
 }
 
 void SkipCallsLayer::pre(INTC_D3D12_CreateDeviceExtensionContextCommand& command) {
   if (configKeySet_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << ConfigKeySet::keyToString(command.key) << " INTC_D3D12_CreateDeviceExtensionContext";
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " INTC_D3D12_CreateDeviceExtensionContext";
   }
 }
 
 void SkipCallsLayer::pre(INTC_D3D12_CreateDeviceExtensionContext1Command& command) {
   if (configKeySet_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << ConfigKeySet::keyToString(command.key) << " INTC_D3D12_CreateDeviceExtensionContext1";
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " INTC_D3D12_CreateDeviceExtensionContext1";
   }
 }
 
 void SkipCallsLayer::pre(INTC_DestroyDeviceExtensionContextCommand& command) {
   if (configKeySet_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << ConfigKeySet::keyToString(command.key) << " INTC_DestroyDeviceExtensionContext";
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " INTC_DestroyDeviceExtensionContext";
   }
 }
 
 void SkipCallsLayer::pre(INTC_D3D12_CheckFeatureSupportCommand& command) {
   if (configKeySet_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << ConfigKeySet::keyToString(command.key) << " INTC_D3D12_CheckFeatureSupport";
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " INTC_D3D12_CheckFeatureSupport";
   }
 }
 
 void SkipCallsLayer::pre(INTC_D3D12_SetFeatureSupportCommand& command) {
   if (configKeySet_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << ConfigKeySet::keyToString(command.key) << " INTC_D3D12_SetFeatureSupport";
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " INTC_D3D12_SetFeatureSupport";
   }
 }
 
 void SkipCallsLayer::pre(INTC_D3D12_GetResourceAllocationInfoCommand& command) {
   if (configKeySet_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << ConfigKeySet::keyToString(command.key) << " INTC_D3D12_GetResourceAllocationInfo";
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " INTC_D3D12_GetResourceAllocationInfo";
   }
 }
 
 void SkipCallsLayer::pre(INTC_D3D12_CreateComputePipelineStateCommand& command) {
   if (configKeySet_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << ConfigKeySet::keyToString(command.key) << " INTC_D3D12_CreateComputePipelineState";
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " INTC_D3D12_CreateComputePipelineState";
   }
 }
 
 void SkipCallsLayer::pre(INTC_D3D12_CreatePlacedResourceCommand& command) {
   if (configKeySet_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << ConfigKeySet::keyToString(command.key) << " INTC_D3D12_CreatePlacedResource";
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " INTC_D3D12_CreatePlacedResource";
   }
 }
 
 void SkipCallsLayer::pre(INTC_D3D12_CreateCommittedResourceCommand& command) {
   if (configKeySet_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << ConfigKeySet::keyToString(command.key) << " INTC_D3D12_CreateCommittedResource";
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " INTC_D3D12_CreateCommittedResource";
   }
 }
 
@@ -128,7 +129,7 @@ void SkipCallsLayer::pre(INTC_D3D12_CreateCommittedResourceCommand& command) {
 void SkipCallsLayer::pre(${function.name}Command& command) {
   if (configKeySet_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << ConfigKeySet::keyToString(command.key) << " ${function.name}";
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " ${function.name}";
   }
 }
 
@@ -138,7 +139,7 @@ void SkipCallsLayer::pre(${function.name}Command& command) {
 void SkipCallsLayer::pre(${interface.name}${function.name}Command& command) {
   if (configKeySet_.contains(command.key)) {
     command.skip = true;
-    Log(INFO) << "[SKIPPED] call " << ConfigKeySet::keyToString(command.key) << " ${interface.name}::${function.name}";
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " ${interface.name}::${function.name}";
   }
 }
 

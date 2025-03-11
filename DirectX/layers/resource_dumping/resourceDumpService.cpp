@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "resourceDumpService.h"
+#include "toStr.h"
 #include "gits.h"
 
 #include <d3dx12.h>
@@ -60,8 +61,8 @@ void ResourceDumpService::commandListCall(unsigned callKey,
       D3D12_RESOURCE_DESC desc = resource->GetDesc();
 
       if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
-        std::wstring dumpName = dumpPath_ + L"/command_" + ConfigKeySet::keyToWString(callKey) +
-                                L"_buffer_O" + ConfigKeySet::keyToWString(resourceKey);
+        std::wstring dumpName = dumpPath_ + L"/command_" + callKeyToWStr(callKey) + L"_buffer_O" +
+                                callKeyToWStr(resourceKey);
         D3D12_RESOURCE_STATES resourceState =
             resourceStateTracker_.getResourceState(commandList, resourceKey, 0);
         resourceDump_.dumpResource(commandList, resource, 0, resourceState, dumpName);
@@ -78,8 +79,8 @@ void ResourceDumpService::commandListCall(unsigned callKey,
             for (unsigned planeSlice = 0; planeSlice < planeCount; ++planeSlice) {
 
               std::wstring dumpName = dumpPath_;
-              dumpName += L"/command_" + ConfigKeySet::keyToWString(callKey);
-              dumpName += L"_texture_O" + ConfigKeySet::keyToWString(resourceKey);
+              dumpName += L"/command_" + callKeyToWStr(callKey);
+              dumpName += L"_texture_O" + callKeyToWStr(resourceKey);
               if (planeCount > 1) {
                 dumpName += L"_plane_" + std::to_wstring(planeSlice);
               }

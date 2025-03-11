@@ -10,7 +10,6 @@ ${header}
 #include "printStructuresAuto.h"
 #include "printEnumsAuto.h"
 #include "printCustom.h"
-#include "printGuidsAuto.h"
 
 namespace gits {
 namespace DirectX {

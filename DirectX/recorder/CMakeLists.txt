@@ -104,7 +104,8 @@ target_include_directories(DirectX_recorder PRIVATE
   ${DIRECTX_DIR}/layers/trace
   ${DIRECTX_DIR}/layers/resource_dumping
   ${DIRECTX_DIR}/layers/portability
-  ${DIRECTX_DIR}
+  ${DIRECTX_DIR}/layers/api_debug
+  ${DIRECTX_DIR}/layers/dstorage_resources
   ${CMAKE_SOURCE_DIR}/third_party/DirectXTex/DirectXTex
   ${PLUGINS_DIR}
   ${SRC_DIR}

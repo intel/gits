@@ -12,17 +12,13 @@ ${header}
 #include "layerAuto.h"
 #include "debugInfo.h"
 
-#include <fstream>
-#include <mutex>
-
 namespace gits {
 namespace DirectX {
 
 class DebugInfoLayer : public Layer {
 
 public:
-  DebugInfoLayer(FastOStream& traceFile, std::mutex& mutex, bool debugInfoWarning)
-      : Layer("DebugInfo"), debugInfo_(traceFile, mutex, debugInfoWarning) {}
+  DebugInfoLayer() : Layer("DebugInfo") {}
 
   void pre(CreateDXGIFactoryCommand& command) override;
   void post(CreateDXGIFactoryCommand& command) override;

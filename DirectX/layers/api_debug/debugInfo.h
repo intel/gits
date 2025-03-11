@@ -9,9 +9,8 @@
 #pragma once
 
 #include "layerAuto.h"
-#include "fastOStream.h"
 
-#include <mutex>
+#include <fstream>
 
 namespace gits {
 namespace DirectX {
@@ -19,7 +18,7 @@ namespace DirectX {
 class DebugInfo {
 
 public:
-  DebugInfo(FastOStream& traceFile, std::mutex& mutex, bool debugInfoWarning);
+  DebugInfo();
 
   void createDXGIFactory(CreateDXGIFactoryCommand& command);
   void createDXGIFactory1(CreateDXGIFactory1Command& command);
@@ -38,20 +37,14 @@ private:
                                              D3D12_MESSAGE_ID id,
                                              LPCSTR description,
                                              void* context);
-  void printMessage(unsigned commandKey,
-                    D3D12_MESSAGE_SEVERITY severity,
-                    const std::string& message);
+  void traceMessage(D3D12_MESSAGE_SEVERITY severity, const char* message);
   void initDredLog();
   void logDredBreadcrumbs(const D3D12_AUTO_BREADCRUMB_NODE* headNode);
   void logDredPageFaults(const D3D12_DRED_PAGE_FAULT_OUTPUT& pageFaultOutput);
 
 private:
-  FastOStream& traceFile_;
-  std::mutex& mutex_;
-  FastOFileStream dredFile_;
-  bool debugInfoWarning_;
   bool d3d12CallbackRegistered_{};
-  bool print_{};
+  std::ofstream dredFile_{};
 };
 
 } // namespace DirectX

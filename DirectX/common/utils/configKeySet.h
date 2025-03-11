@@ -29,8 +29,6 @@ public:
   auto end() {
     return commandKeys_.end();
   }
-  static std::string keyToString(unsigned key);
-  static std::wstring keyToWString(unsigned key);
 
 private:
   std::unordered_set<unsigned> commandKeys_;

@@ -8,12 +8,9 @@
 
 #include "traceFactory.h"
 #include "traceLayerAuto.h"
-#include "debugInfoLayerAuto.h"
-#include "debugHelperLayer.h"
 #include "config.h"
 #include "gits.h"
 #include "showExecutionLayer.h"
-#include "logDxErrorLayerAuto.h"
 
 #include <fstream>
 #include <string>
@@ -97,30 +94,17 @@ TraceFactory::TraceFactory() {
     }
   }
 
-  if (configDirectX.capture.debugLayer && Config::Get().IsRecorder() ||
-      configDirectX.player.execute && configDirectX.player.debugLayer && Config::Get().IsPlayer()) {
-    if (configDirectX.features.trace.enabled && !traceStream_->isOpen()) {
-      debugLayerStream_ =
-          std::make_unique<FastOStringStream>(filepath.string() + "_debuglayer.txt", flushMethod);
-    } else if (!configDirectX.features.trace.enabled) {
-      debugLayerStream_ = std::make_unique<FastOStringStream>();
-    }
-    auto& traceFile = traceStream_ && traceStream_->isOpen() ? *traceStream_ : *debugLayerStream_;
-    debugInfoLayer_ = std::make_unique<DebugInfoLayer>(
-        traceFile, traceMutex_, configDirectX.features.trace.print.debugLayerWarnings);
-  }
-  if (configDirectX.player.execute) {
-    debugHelperLayer_ = std::make_unique<DebugHelperLayer>();
-  }
-  logDxErrorLayer_ = std::make_unique<LogDxErrorLayer>();
-
   // Log messages with LogLevel::TRACE to trace files
-  auto traceMsg = [stream = traceStream_.get(),
-                   streamPre = traceStreamPre_.get()](const MessagePtr& m) {
+  auto traceMsg = [this](const MessagePtr& m) {
     auto msg = std::dynamic_pointer_cast<LogMessage>(m);
     if (!msg || msg->getLevel() != LogLevel::TRACE) {
       return;
     }
+
+    std::lock_guard<std::mutex> lock(traceMutex_);
+
+    auto* stream = traceStream_.get();
+    auto* streamPre = traceStreamPre_.get();
     if (stream && stream->isOpen()) {
       *stream << msg->getText() << '\n';
     }

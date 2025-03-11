@@ -9,9 +9,9 @@ ${header}
 
 #pragma once
 
-#include "printGuidsAuto.h"
 #include "directx.h"
 
+#include <sstream>
 #include <unordered_map>
 #include <string>
 #include <iomanip>
@@ -40,23 +40,25 @@ const std::unordered_map<IID, std::string, IIDHash> g_guidToStringMap {
   %endfor
 };
 
-FastOStream& operator<<(FastOStream& stream, REFIID riid) {
+std::string toStr(REFIID riid) {
+  std::stringstream ss;
   auto it = g_guidToStringMap.find(riid);
   if (it != g_guidToStringMap.end()) {
-    stream << it->second;
+    ss << it->second;
   } else {
-    printHexFull(stream, riid.Data1) << "-";
-    printHexFull(stream, riid.Data2) << "-";
-    printHexFull(stream, riid.Data3) << "-";
+    ss << std::setfill('0') << std::hex << std::uppercase;
+    ss << std::setw(8) << riid.Data1 << "-";
+    ss << std::setw(4) << riid.Data2 << "-";
+    ss << std::setw(4) << riid.Data3 << "-";
     for (int i = 0; i < 2; ++i) {
-      printHexFull(stream, static_cast<uint8_t>(riid.Data4[i]));
+      ss << std::setw(2) << unsigned(riid.Data4[i]);
     }
-    stream << "-";
+    ss << "-";
     for (int i = 2; i < 8; ++i) {
-      printHexFull(stream, static_cast<uint8_t>(riid.Data4[i]));
+      ss << std::setw(2) << unsigned(riid.Data4[i]);
     }
   }
-  return stream;
+  return ss.str();
 }
 
 } // namespace DirectX

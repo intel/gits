@@ -20,7 +20,7 @@ CommandPrinter::CommandPrinter(FastOStream& stream,
                                unsigned objectId)
     : stream_(stream), state_(state), command_(command), lock_(state.mutex) {
 
-  printCallKey(stream_, command.key);
+  stream_ << callKeyToStr(command.key);
   stream_ << " T" << command.threadId;
   if (objectId) {
     stream_ << " ";

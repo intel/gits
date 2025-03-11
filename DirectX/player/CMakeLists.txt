@@ -122,6 +122,7 @@ target_include_directories(DirectX_player PRIVATE
   ${DIRECTX_DIR}/common/utils
   ${DIRECTX_DIR}/layers/trace
   ${DIRECTX_DIR}/layers/subcapture
+  ${DIRECTX_DIR}/layers/api_debug
   ${DIRECTX_DIR}/layers/resource_dumping
   ${DIRECTX_DIR}/layers/skip_calls
   ${DIRECTX_DIR}/layers/portability

@@ -34,29 +34,16 @@ public:
   std::unique_ptr<Layer> getTraceLayer() {
     return std::move(traceLayer_);
   }
-  std::unique_ptr<Layer> getDebugInfoLayer() {
-    return std::move(debugInfoLayer_);
-  }
-  std::unique_ptr<Layer> getDebugHelperLayer() {
-    return std::move(debugHelperLayer_);
-  }
   std::unique_ptr<Layer> getShowExecutionLayer() {
     return std::move(showExecutionLayer_);
-  }
-  std::unique_ptr<Layer> getLogDxErrorLayer() {
-    return std::move(logDxErrorLayer_);
   }
 
 private:
   std::unique_ptr<FastOStream> traceStream_;
   std::unique_ptr<FastOStream> traceStreamPre_;
   std::unique_ptr<FastOStringStream> showExecutionStream_;
-  std::unique_ptr<FastOStringStream> debugLayerStream_;
   std::unique_ptr<Layer> traceLayer_;
-  std::unique_ptr<Layer> debugInfoLayer_;
-  std::unique_ptr<Layer> debugHelperLayer_;
   std::unique_ptr<Layer> showExecutionLayer_;
-  std::unique_ptr<Layer> logDxErrorLayer_;
   std::mutex traceMutex_;
 };
 

@@ -21,18 +21,36 @@ set(UTILS_FILES
 )
 source_group("" FILES ${UTILS_FILES})
 
-target_sources(DirectX_utils PRIVATE
+set(TO_STR_FILES
+  ${SRC_DIR}/to_string/toStr.h
+  ${SRC_DIR}/to_string/toStr.cpp
+  ${SRC_DIR}/to_string/enumToStrAuto.h
+  ${SRC_DIR}/to_string/enumToStrAuto.cpp
+  ${SRC_DIR}/to_string/guidToStrAuto.h
+  ${SRC_DIR}/to_string/guidToStrAuto.cpp
+)
+source_group("to_string" FILES ${TO_STR_FILES})
+
+set(ALL_SRC
   ${UTILS_FILES}
+  ${TO_STR_FILES}
+)
+
+set_auto_generated_property(FILE_LIST ${ALL_SRC})
+
+target_sources(DirectX_utils PRIVATE
+  ${ALL_SRC}
 )
 
 target_include_directories(DirectX_utils PRIVATE
+  ${DIRECTX_DIR}/common/layer_interface
   ${D3D12_HEADERS_DIR}
   ${DML_HEADERS_DIR}
   ${XESS_HEADERS_DIR}
   ${DSTORAGE_HEADERS_DIR}
+  ${XESS_HEADERS_DIR}
   ${PLUGINS_DIR}
   ${CMAKE_SOURCE_DIR}/third_party/DirectXTex/DirectXTex
-  ../layer_interface
 )
 
 set_target_properties(DirectX_utils PROPERTIES LINKER_LANGUAGE CXX)

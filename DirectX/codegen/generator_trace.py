@@ -88,16 +88,10 @@ def generate_trace_files(context, out_path):
     files_to_generate = [
         'traceLayerAuto.h',
         'traceLayerAuto.cpp',
-        'printGuidsAuto.h',
-        'printGuidsAuto.cpp',
         'printStructuresAuto.h',
         'printStructuresAuto.cpp',
         'printEnumsAuto.h',
-        'printEnumsAuto.cpp',
-        'debugInfoLayerAuto.h',
-        'debugInfoLayerAuto.cpp',
-        'logDxErrorLayerAuto.h',
-        'logDxErrorLayerAuto.cpp'
+        'printEnumsAuto.cpp'
     ]
 
     for file_name in files_to_generate:

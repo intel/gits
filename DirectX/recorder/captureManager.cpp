@@ -17,7 +17,9 @@
 #include "captureSynchronizationLayer.h"
 #include "gpuPatchLayer.h"
 #include "portabilityLayer.h"
-#include "layers/dstorage_resources/directStorageResourcesLayer.h"
+#include "debugInfoLayerAuto.h"
+#include "logDxErrorLayerAuto.h"
+#include "directStorageResourcesLayer.h"
 
 #include "gits.h"
 #include "directXApi.h"
@@ -117,17 +119,20 @@ void CaptureManager::createLayers() {
   // Create layers used by Recorder
   std::unique_ptr<Layer> interceptorCustomizationLayer =
       std::make_unique<InterceptorCustomizationLayer>();
+  std::unique_ptr<Layer> logDxErrorLayer = std::make_unique<LogDxErrorLayer>();
   std::unique_ptr<Layer> traceLayer = traceFactory_.getTraceLayer();
-  std::unique_ptr<Layer> debugInfoLayer = traceFactory_.getDebugInfoLayer();
-  std::unique_ptr<Layer> debugHelperLayer = traceFactory_.getDebugHelperLayer();
-  std::unique_ptr<Layer> logDxErrorLayer = traceFactory_.getLogDxErrorLayer();
   std::unique_ptr<Layer> screenshotsLayer = resourceDumpingFactory_.getScreenshotsLayer();
+  std::unique_ptr<Layer> debugInfoLayer;
   std::unique_ptr<Layer> directStorageResourcesLayer;
   std::unique_ptr<Layer> captureCustomizationLayer;
   std::unique_ptr<Layer> captureSynchronizationLayer;
   std::unique_ptr<Layer> encoderLayer;
   std::unique_ptr<Layer> gpuPatchLayer;
   std::unique_ptr<Layer> portabilityLayer;
+
+  if (cfg.directx.capture.debugLayer) {
+    debugInfoLayer = std::make_unique<DebugInfoLayer>();
+  }
 
   if (cfg.directx.capture.record) {
     captureCustomizationLayer = std::make_unique<CaptureCustomizationLayer>(*this, *recorder_);
@@ -174,7 +179,6 @@ void CaptureManager::createLayers() {
   enablePostLayer(gpuPatchLayer);
   enablePostLayer(captureSynchronizationLayer);
   enablePostLayer(traceLayer);
-  enablePostLayer(debugHelperLayer);
   enablePostLayer(screenshotsLayer);
   enablePostLayer(directStorageResourcesLayer);
 
@@ -191,7 +195,6 @@ void CaptureManager::createLayers() {
   retainLayer(std::move(gpuPatchLayer));
   retainLayer(std::move(traceLayer));
   retainLayer(std::move(debugInfoLayer));
-  retainLayer(std::move(debugHelperLayer));
   retainLayer(std::move(logDxErrorLayer));
   retainLayer(std::move(screenshotsLayer));
   retainLayer(std::move(directStorageResourcesLayer));

@@ -8,10 +8,11 @@
 
 #pragma once
 
-#include "arguments.h"
 #include "directx.h"
+#include "arguments.h"
 #include "printEnumsAuto.h"
 #include "printStructuresAuto.h"
+#include "toStr.h"
 #include "fastOStream.h"
 
 #include <iostream>
@@ -20,11 +21,8 @@ namespace gits {
 namespace DirectX {
 
 FastOStream& printObjectKey(FastOStream& stream, unsigned key);
-FastOStream& printCallKey(FastOStream& stream, unsigned key);
 FastOStream& printString(FastOStream& stream, const wchar_t* s);
 FastOStream& printString(FastOStream& stream, const char* s);
-
-std::ostream& printCallKey(std::ostream& stream, unsigned key);
 
 template <typename T>
 FastOStream& printArray(FastOStream& stream, unsigned dimension, T* data) {
@@ -60,6 +58,7 @@ FastOStream& printStatic2DArray(FastOStream& stream, const T (&array)[ROWS][COLS
   return stream << "}";
 }
 
+FastOStream& operator<<(FastOStream& stream, REFIID riid);
 FastOStream& operator<<(FastOStream& stream, const UINT* value);
 FastOStream& operator<<(FastOStream& stream, const BOOL* value);
 FastOStream& operator<<(FastOStream& stream, const UINT8& value);

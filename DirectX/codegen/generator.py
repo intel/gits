@@ -22,6 +22,8 @@ from generator_recorder import generate_recorder_files
 from generator_coders import generate_coders_files
 from generator_layer import generate_layer_files
 from generator_trace import generate_trace_files
+from generator_api_debug import generate_api_debug_files
+from generator_to_string import generate_to_string_files
 from generator_player import generate_player_files
 from generator_subcapture import generate_subcapture_files
 from generator_resource_dumping import generate_resource_dumping_files
@@ -113,6 +115,8 @@ def main():
     generate_xess_dispatch_table(context, [os.path.join(outpath, 'player'), os.path.join(outpath, 'recorder')])
     generate_layer_files(context, os.path.join(outpath, 'common/layer_interface'))
     generate_trace_files(context, os.path.join(outpath, 'layers/trace'))
+    generate_api_debug_files(context, os.path.join(outpath, 'layers/api_debug'))
+    generate_to_string_files(context, os.path.join(outpath, 'common/utils/to_string'))
     generate_subcapture_files(context, os.path.join(outpath, 'layers/subcapture'))
     generate_resource_dumping_files(context, os.path.join(outpath, 'layers/resource_dumping'))
     generate_skip_calls_files(context, os.path.join(outpath, 'layers/skip_calls'))

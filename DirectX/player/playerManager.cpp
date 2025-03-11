@@ -18,6 +18,9 @@
 #include "portabilityLayer.h"
 #include "accelerationStructuresDumpLayer.h"
 #include "dstorage/directStorageLayer.h"
+#include "debugInfoLayerAuto.h"
+#include "debugHelperLayer.h"
+#include "logDxErrorLayerAuto.h"
 
 #include <wrl/client.h>
 
@@ -75,9 +78,9 @@ PlayerManager::PlayerManager() {
   std::unique_ptr<Layer> directStorageLayer;
   std::unique_ptr<Layer> traceLayer = traceFactory_.getTraceLayer();
   std::unique_ptr<Layer> showExecutionLayer = traceFactory_.getShowExecutionLayer();
-  std::unique_ptr<Layer> debugInfoLayer = traceFactory_.getDebugInfoLayer();
-  std::unique_ptr<Layer> debugHelperLayer = traceFactory_.getDebugHelperLayer();
-  std::unique_ptr<Layer> logDxErrorLayer = traceFactory_.getLogDxErrorLayer();
+  std::unique_ptr<Layer> debugInfoLayer;
+  std::unique_ptr<Layer> debugHelperLayer;
+  std::unique_ptr<Layer> logDxErrorLayer = std::make_unique<LogDxErrorLayer>();
   std::unique_ptr<Layer> stateTrackingLayer = subcaptureFactory_.getStateTrackingLayer();
   std::unique_ptr<Layer> recordingLayer = subcaptureFactory_.getRecordingLayer();
   std::unique_ptr<Layer> analyzerLayer = subcaptureFactory_.getAnalyzerLayer();
@@ -95,6 +98,10 @@ PlayerManager::PlayerManager() {
     replayCustomizationLayer = std::make_unique<ReplayCustomizationLayer>(*this);
     gpuPatchLayer = std::make_unique<GpuPatchLayer>(*this);
     directStorageLayer = std::make_unique<DirectStorageLayer>();
+    debugHelperLayer = std::make_unique<DebugHelperLayer>();
+    if (cfg.directx.player.debugLayer) {
+      debugInfoLayer = std::make_unique<DebugInfoLayer>();
+    }
     if (multithreadedShaderCompilation_) {
       multithreadedObjectCreationLayer = std::make_unique<MultithreadedObjectCreationLayer>(*this);
       multithreadedObjectAwaitLayer = std::make_unique<MultithreadedObjectAwaitLayer>(*this);

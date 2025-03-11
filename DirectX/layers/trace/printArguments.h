@@ -12,7 +12,6 @@
 #include "printCustom.h"
 #include "printEnumsAuto.h"
 #include "printStructuresAuto.h"
-#include "printGuidsAuto.h"
 #include "directx.h"
 
 #include <iostream>

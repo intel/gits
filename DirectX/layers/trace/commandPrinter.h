@@ -9,11 +9,9 @@
 #pragma once
 
 #include "command.h"
-#include "printArguments.h"
-
-#include "printGuidsAuto.h"
-#include "printStructuresAuto.h"
 #include "printCustom.h"
+#include "printArguments.h"
+#include "printStructuresAuto.h"
 
 #include <string>
 #include <mutex>

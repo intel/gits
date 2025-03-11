@@ -40,6 +40,7 @@ add_subdirectory(common/layer_interface)
 add_subdirectory(common/coders)
 add_subdirectory(common/utils)
 add_subdirectory(layers/trace)
+add_subdirectory(layers/api_debug)
 add_subdirectory(layers/subcapture)
 add_subdirectory(layers/resource_dumping)
 add_subdirectory(layers/skip_calls)
@@ -57,6 +58,10 @@ add_dependencies(DirectX_recorder
 )
 
 add_dependencies(DirectX_trace
+    DirectX_layer_interface
+)
+
+add_dependencies(DirectX_api_debug
     DirectX_layer_interface
 )
 
@@ -103,6 +108,7 @@ target_link_libraries(DirectX_subcapture PRIVATE
 )
 
 target_link_libraries(DirectX_recorder PRIVATE
+    DirectX_api_debug
     DirectX_trace
     DirectX_dstorage_resources
     DirectX_coders
@@ -113,6 +119,7 @@ target_link_libraries(DirectX_recorder PRIVATE
 )
 
 target_link_libraries(DirectX_player PRIVATE
+    DirectX_api_debug
     DirectX_trace
     DirectX_resource_dumping
     DirectX_subcapture

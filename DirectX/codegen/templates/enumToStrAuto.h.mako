@@ -9,15 +9,15 @@ ${header}
 
 #pragma once
 
-#include <guiddef.h>
-#include <initguid.h>
+#include "directx.h"
 #include <string>
-#include "fastOStream.h"
 
 namespace gits {
 namespace DirectX {
 
-FastOStream& operator<<(FastOStream& stream, REFIID riid);
+%for enum in enums:
+std::string toStr(${enum.name} value);
+%endfor
 
 } // namespace DirectX
 } // namespace gits

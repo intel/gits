@@ -8,6 +8,7 @@
 
 #include "printCustom.h"
 #include "command.h"
+#include "guidToStrAuto.h"
 
 namespace gits {
 namespace DirectX {
@@ -24,20 +25,6 @@ FastOStream& printObjectKey(FastOStream& stream, unsigned key) {
     stream << (key & ~Command::stateRestoreKeyMask);
   }
   return stream;
-}
-
-FastOStream& printCallKey(FastOStream& stream, unsigned key) {
-  if (key & Command::stateRestoreKeyMask) {
-    stream << "S";
-  }
-  return stream << (key & ~Command::stateRestoreKeyMask);
-}
-
-std::ostream& printCallKey(std::ostream& stream, unsigned key) {
-  if (key & Command::stateRestoreKeyMask) {
-    stream << "S";
-  }
-  return stream << (key & ~Command::stateRestoreKeyMask);
 }
 
 FastOStream& printString(FastOStream& stream, const wchar_t* s) {
@@ -58,6 +45,10 @@ FastOStream& printString(FastOStream& stream, const char* s) {
     stream << "nullptr";
   }
   return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, REFIID riid) {
+  return stream << toStr(riid);
 }
 
 FastOStream& operator<<(FastOStream& stream, const UINT* value) {

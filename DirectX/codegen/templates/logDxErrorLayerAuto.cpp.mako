@@ -8,7 +8,7 @@
 ${header}
 
 #include "logDxErrorLayerAuto.h"
-#include "printCustom.h"
+#include "toStr.h"
 #include "log.h"
 
 namespace gits {
@@ -16,9 +16,7 @@ namespace DirectX {
 
 void LogDxErrorLayer::post(ID3D12FenceGetCompletedValueCommand& command) {
   if (command.result_.value == UINT64_MAX) {
-    std::stringstream s;
-    printCallKey(s, command.key);
-    Log(ERR) << s.str() << " ID3D12Fence::GetCompletedValue failed - device removed";
+    Log(ERR) << callKeyToStr(command.key) << " ID3D12Fence::GetCompletedValue failed - device removed";
   }
 }
 
@@ -28,9 +26,7 @@ void LogDxErrorLayer::pre(IUnknownQueryInterfaceCommand& command) {
 
 void LogDxErrorLayer::post(IUnknownQueryInterfaceCommand& command) {
   if (isFailure(command.result_.value)) {
-    std::stringstream s;
-    printCallKey(s, command.key);
-    Log(ERR) << s.str() << " IUnknown::QueryInterface failed " << printResult(command.result_.value);
+    Log(ERR) << callKeyToStr(command.key) << " IUnknown::QueryInterface failed " << printResult(command.result_.value);
   }
 }
 
@@ -42,9 +38,7 @@ void LogDxErrorLayer::pre(${function.name}Command& command) {
 
 void LogDxErrorLayer::post(${function.name}Command& command) {
   if (isFailure(command.result_.value)) {
-    std::stringstream s;
-    printCallKey(s, command.key);
-    Log(ERR) << s.str() << " ${function.name} failed " << printResult(command.result_.value);
+    Log(ERR) << callKeyToStr(command.key) << " ${function.name} failed " << printResult(command.result_.value);
   }
 }
 
@@ -55,9 +49,7 @@ void LogDxErrorLayer::pre(${function.name}Command& command) {
 
 void LogDxErrorLayer::post(${function.name}Command& command) {
   if (isFailureXess(command.result_.value)) {
-    std::stringstream s;
-    printCallKey(s, command.key);
-    Log(ERR) << s.str() << " ${function.name} failed " << printResultXess(command.result_.value);
+    Log(ERR) << callKeyToStr(command.key) << " ${function.name} failed " << printResultXess(command.result_.value);
   }
 }
 
@@ -72,9 +64,7 @@ void LogDxErrorLayer::pre(${interface.name}${function.name}Command& command) {
 
 void LogDxErrorLayer::post(${interface.name}${function.name}Command& command) {
   if (isFailure(command.result_.value)) {
-    std::stringstream s;
-    printCallKey(s, command.key);
-    Log(ERR) << s.str() << " ${interface.name}::${function.name} failed " << printResult(command.result_.value);
+    Log(ERR) << callKeyToStr(command.key) << " ${interface.name}::${function.name} failed " << printResult(command.result_.value);
   }
 }
 
@@ -87,9 +77,7 @@ void LogDxErrorLayer::pre(INTC_D3D12_GetSupportedVersionsCommand& command) {
 
 void LogDxErrorLayer::post(INTC_D3D12_GetSupportedVersionsCommand& command) {
   if (isFailure(command.result_.value)) {
-    std::stringstream s;
-    printCallKey(s, command.key);
-    Log(ERR) << s.str() << " INTC_D3D12_GetSupportedVersions failed " << printResult(command.result_.value);
+    Log(ERR) << callKeyToStr(command.key) << " INTC_D3D12_GetSupportedVersions failed " << printResult(command.result_.value);
   }
 }
 
@@ -99,9 +87,7 @@ void LogDxErrorLayer::pre(INTC_D3D12_CreateDeviceExtensionContextCommand& comman
 
 void LogDxErrorLayer::post(INTC_D3D12_CreateDeviceExtensionContextCommand& command) {
   if (isFailure(command.result_.value)) {
-    std::stringstream s;
-    printCallKey(s, command.key);
-    Log(ERR) << s.str() << " INTC_D3D12_CreateDeviceExtensionContext failed " << printResult(command.result_.value);
+    Log(ERR) << callKeyToStr(command.key) << " INTC_D3D12_CreateDeviceExtensionContext failed " << printResult(command.result_.value);
   }
 }
 
@@ -111,9 +97,7 @@ void LogDxErrorLayer::pre(INTC_D3D12_CreateDeviceExtensionContext1Command& comma
 
 void LogDxErrorLayer::post(INTC_D3D12_CreateDeviceExtensionContext1Command& command) {
   if (isFailure(command.result_.value)) {
-    std::stringstream s;
-    printCallKey(s, command.key);
-    Log(ERR) << s.str() << " INTC_D3D12_CreateDeviceExtensionContext1 failed " << printResult(command.result_.value);
+    Log(ERR) << callKeyToStr(command.key) << " INTC_D3D12_CreateDeviceExtensionContext1 failed " << printResult(command.result_.value);
   }
 }
 
@@ -123,9 +107,7 @@ void LogDxErrorLayer::pre(INTC_DestroyDeviceExtensionContextCommand& command) {
 
 void LogDxErrorLayer::post(INTC_DestroyDeviceExtensionContextCommand& command) {
   if (isFailure(command.result_.value)) {
-    std::stringstream s;
-    printCallKey(s, command.key);
-    Log(ERR) << s.str() << " INTC_DestroyDeviceExtensionContextCommand failed " << printResult(command.result_.value);
+    Log(ERR) << callKeyToStr(command.key) << " INTC_DestroyDeviceExtensionContextCommand failed " << printResult(command.result_.value);
   }
 }
 
@@ -135,9 +117,7 @@ void LogDxErrorLayer::pre(INTC_D3D12_CheckFeatureSupportCommand& command) {
 
 void LogDxErrorLayer::post(INTC_D3D12_CheckFeatureSupportCommand& command) {
   if (isFailure(command.result_.value)) {
-    std::stringstream s;
-    printCallKey(s, command.key);
-    Log(ERR) << s.str() << " INTC_D3D12_CheckFeatureSupport failed " << printResult(command.result_.value);
+    Log(ERR) << callKeyToStr(command.key) << " INTC_D3D12_CheckFeatureSupport failed " << printResult(command.result_.value);
   }
 }
 
@@ -147,9 +127,7 @@ void LogDxErrorLayer::pre(INTC_D3D12_SetFeatureSupportCommand& command) {
 
 void LogDxErrorLayer::post(INTC_D3D12_SetFeatureSupportCommand& command) {
   if (isFailure(command.result_.value)) {
-    std::stringstream s;
-    printCallKey(s, command.key);
-    Log(ERR) << s.str() << " INTC_D3D12_SetFeatureSupport failed " << printResult(command.result_.value);
+    Log(ERR) << callKeyToStr(command.key) << " INTC_D3D12_SetFeatureSupport failed " << printResult(command.result_.value);
   }
 }
 
@@ -159,9 +137,7 @@ void LogDxErrorLayer::pre(INTC_D3D12_CreateComputePipelineStateCommand& command)
 
 void LogDxErrorLayer::post(INTC_D3D12_CreateComputePipelineStateCommand& command) {
   if (isFailure(command.result_.value)) {
-    std::stringstream s;
-    printCallKey(s, command.key);
-    Log(ERR) << s.str() << " INTC_D3D12_CreateComputePipelineState failed " << printResult(command.result_.value);
+    Log(ERR) << callKeyToStr(command.key) << " INTC_D3D12_CreateComputePipelineState failed " << printResult(command.result_.value);
   }
 }
 
@@ -171,9 +147,7 @@ void LogDxErrorLayer::pre(INTC_D3D12_CreatePlacedResourceCommand& command) {
 
 void LogDxErrorLayer::post(INTC_D3D12_CreatePlacedResourceCommand& command) {
   if (isFailure(command.result_.value)) {
-    std::stringstream s;
-    printCallKey(s, command.key);
-    Log(ERR) << s.str() << " INTC_D3D12_CreatePlacedResource failed " << printResult(command.result_.value);
+    Log(ERR) << callKeyToStr(command.key)<< " INTC_D3D12_CreatePlacedResource failed " << printResult(command.result_.value);
   }
 }
 
@@ -183,9 +157,7 @@ void LogDxErrorLayer::pre(INTC_D3D12_CreateCommittedResourceCommand& command) {
 
 void LogDxErrorLayer::post(INTC_D3D12_CreateCommittedResourceCommand& command) {
   if (isFailure(command.result_.value)) {
-    std::stringstream s;
-    printCallKey(s, command.key);
-    Log(ERR) << s.str() << " INTC_D3D12_CreateCommittedResource failed " << printResult(command.result_.value);
+    Log(ERR) << callKeyToStr(command.key) << " INTC_D3D12_CreateCommittedResource failed " << printResult(command.result_.value);
   }
 }
 

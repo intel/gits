@@ -8,11 +8,10 @@
 
 #include "debugInfo.h"
 #include "log.h"
-#include "printCustom.h"
 #include "config.h"
-#include "printEnumsAuto.h"
+#include "enumToStrAuto.h"
+#include "toStr.h"
 #include "gits.h"
-#include "configKeySet.h"
 
 #include <sstream>
 #include <memory>
@@ -21,12 +20,7 @@
 namespace gits {
 namespace DirectX {
 
-DebugInfo::DebugInfo(FastOStream& traceFile, std::mutex& mutex, bool debugInfoWarning)
-    : traceFile_(traceFile), mutex_(mutex), debugInfoWarning_(debugInfoWarning) {
-  if (traceFile_.isOpen()) {
-    print_ = true;
-  }
-}
+DebugInfo::DebugInfo() {}
 
 void DebugInfo::createDXGIFactory(CreateDXGIFactoryCommand& command) {
 
@@ -82,9 +76,7 @@ void DebugInfo::createD3D12DevicePost(D3D12CreateDeviceCommand& command) {
   if (command.result_.value != S_OK) {
     return;
   }
-  if (!print_) {
-    return;
-  }
+
   Microsoft::WRL::ComPtr<ID3D12InfoQueue1> infoQueue;
   HRESULT hr = static_cast<ID3D12Device*>(*command.ppDevice_.value)
                    ->QueryInterface(IID_PPV_ARGS(&infoQueue));
@@ -111,11 +103,6 @@ void DebugInfo::createDMLDevice1Pre(DMLCreateDevice1Command& command) {
 }
 
 void DebugInfo::checkDXGIDebugInfo(Command& command, IUnknown* object) {
-
-  if (!print_) {
-    return;
-  }
-
   Microsoft::WRL::ComPtr<IDXGIInfoQueue> infoQueue;
   HRESULT hr = object->QueryInterface(IID_PPV_ARGS(&infoQueue));
   if (hr != S_OK) {
@@ -142,15 +129,13 @@ void DebugInfo::checkDXGIDebugInfo(Command& command, IUnknown* object) {
         reinterpret_cast<DXGI_INFO_QUEUE_MESSAGE*>(messageBytes.get());
     hr = infoQueue->GetMessage(DXGI_DEBUG_ALL, 0, message, &size);
     if (hr == S_OK) {
-      printMessage(command.key, static_cast<D3D12_MESSAGE_SEVERITY>(message->Severity),
-                   message->pDescription);
+      traceMessage(static_cast<D3D12_MESSAGE_SEVERITY>(message->Severity), message->pDescription);
     }
   }
 }
 
 void DebugInfo::checkD3D12DebugInfo(Command& command, IUnknown* object) {
-
-  if (d3d12CallbackRegistered_ || !print_) {
+  if (d3d12CallbackRegistered_) {
     return;
   }
 
@@ -181,7 +166,7 @@ void DebugInfo::checkD3D12DebugInfo(Command& command, IUnknown* object) {
         D3D12_MESSAGE* message = reinterpret_cast<D3D12_MESSAGE*>(messageBytes.get());
         hr = infoQueue->GetMessage(i, message, &size);
         if (hr == S_OK) {
-          printMessage(command.key, message->Severity, message->pDescription);
+          traceMessage(message->Severity, message->pDescription);
         }
       }
     }
@@ -195,72 +180,45 @@ void __stdcall DebugInfo::debugMessageCallback(D3D12_MESSAGE_CATEGORY category,
                                                LPCSTR description,
                                                void* context) {
   DebugInfo* debugInfo = static_cast<DebugInfo*>(context);
-  if (!debugInfo->debugInfoWarning_ && severity == D3D12_MESSAGE_SEVERITY_WARNING) {
-    return;
-  }
-
-  std::stringstream str;
-
-  switch (severity) {
-  case D3D12_MESSAGE_SEVERITY_CORRUPTION:
-    str << "[CORRUPTION] ";
-    break;
-  case D3D12_MESSAGE_SEVERITY_ERROR:
-    str << "[ERROR] ";
-    break;
-  case D3D12_MESSAGE_SEVERITY_WARNING:
-    str << "[WARNING] ";
-    break;
-  case D3D12_MESSAGE_SEVERITY_INFO:
-    str << "[INFO] ";
-    break;
-  case D3D12_MESSAGE_SEVERITY_MESSAGE:
-    str << "[MESSAGE] ";
-    break;
-  }
-
-  str << description << "\n";
-
-  debugInfo->traceFile_ << str.str();
-  debugInfo->traceFile_.flush();
+  debugInfo->traceMessage(severity, description);
 }
 
-void DebugInfo::printMessage(unsigned commandKey,
-                             D3D12_MESSAGE_SEVERITY severity,
-                             const std::string& message) {
+void DebugInfo::traceMessage(D3D12_MESSAGE_SEVERITY severity, const char* message) {
+  auto& cfg = Config::Get();
 
-  if (!debugInfoWarning_ && severity == D3D12_MESSAGE_SEVERITY_WARNING) {
+  // Check if the message should be added to the trace file
+  if (!cfg.directx.features.trace.enabled) {
+    return;
+  }
+  if (!cfg.directx.features.trace.print.debugLayerWarnings &&
+      severity >= D3D12_MESSAGE_SEVERITY_WARNING) {
     return;
   }
 
-  std::lock_guard<std::mutex> lock(mutex_);
-
-  std::stringstream str;
-
-  str << commandKey << " ";
-
+  std::string severityStr;
   switch (severity) {
   case D3D12_MESSAGE_SEVERITY_CORRUPTION:
-    str << "[CORRUPTION] ";
+    severityStr = "[CORRUPTION] ";
     break;
   case D3D12_MESSAGE_SEVERITY_ERROR:
-    str << "[ERROR] ";
+    severityStr = "[ERROR] ";
     break;
   case D3D12_MESSAGE_SEVERITY_WARNING:
-    str << "[WARNING] ";
+    severityStr = "[WARNING] ";
     break;
   case D3D12_MESSAGE_SEVERITY_INFO:
-    str << "[INFO] ";
+    severityStr = "[INFO] ";
     break;
   case D3D12_MESSAGE_SEVERITY_MESSAGE:
-    str << "[MESSAGE] ";
+    severityStr = "[MESSAGE] ";
     break;
   }
 
-  str << message << "\n";
-
-  traceFile_ << str.str();
-  traceFile_.flush();
+  // The message to be logged in the trace files if DirectX.Features.Trace is enabled
+  static auto publisherId = Config::IsPlayer() ? PUBLISHER_PLAYER : PUBLISHER_RECORDER;
+  CGits::Instance().GetMessageBus().publish(
+      {publisherId, TOPIC_LOG},
+      std::make_shared<LogMessage>(LogLevel::TRACE, severityStr, message));
 }
 
 void DebugInfo::checkD3D12DeviceRemoval(Command& command, IUnknown* object) {
@@ -323,11 +281,11 @@ void DebugInfo::checkD3D12DeviceRemoval(Command& command, IUnknown* object) {
   if (hr == S_OK) {
     logDredPageFaults(pageFaultOutput);
   }
+  dredFile_.flush();
 }
 
 void DebugInfo::initDredLog() {
-
-  if (dredFile_.isOpen()) {
+  if (dredFile_.is_open()) {
     return;
   }
 
@@ -358,7 +316,7 @@ void DebugInfo::logDredBreadcrumbs(const D3D12_AUTO_BREADCRUMB_NODE* headNode) {
     unsigned nExecuted = node->pLastBreadcrumbValue ? *node->pLastBreadcrumbValue : 0;
     bool hasFinished = (nExecuted > 0) && (nExecuted == node->BreadcrumbCount);
 
-    std::string cmdListName;
+    std::string cmdListName("O");
     if (node->pCommandListDebugNameA) {
       cmdListName = std::string(node->pCommandListDebugNameA);
     } else if (node->pCommandListDebugNameW) {
@@ -400,7 +358,6 @@ void DebugInfo::logDredBreadcrumbs(const D3D12_AUTO_BREADCRUMB_NODE* headNode) {
 }
 
 void DebugInfo::logDredPageFaults(const D3D12_DRED_PAGE_FAULT_OUTPUT& pageFaultOutput) {
-
   auto printAllocationNodes = [&](const D3D12_DRED_ALLOCATION_NODE* headNode) {
     if (!headNode) {
       return;
@@ -423,12 +380,11 @@ void DebugInfo::logDredPageFaults(const D3D12_DRED_PAGE_FAULT_OUTPUT& pageFaultO
 
   dredFile_ << "DRED Page Fault Report:\n";
   dredFile_ << "  GPU Virtual Address: ";
-  printHex(dredFile_, pageFaultOutput.PageFaultVA) << "\n";
+  dredFile_ << std::hex << pageFaultOutput.PageFaultVA << std::dec << "\n";
   dredFile_ << "  Recent Freed Allocations:\n";
   printAllocationNodes(pageFaultOutput.pHeadRecentFreedAllocationNode);
   dredFile_ << "  Existing Allocations:\n";
   printAllocationNodes(pageFaultOutput.pHeadExistingAllocationNode);
-  dredFile_.flush();
 }
 
 } // namespace DirectX
