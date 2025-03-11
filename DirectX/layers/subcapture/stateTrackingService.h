@@ -20,6 +20,7 @@
 #include "xessStateService.h"
 #include "accelerationStructuresBuildService.h"
 #include "accelerationStructuresSerializeService.h"
+#include "residencyService.h"
 
 #include <vector>
 #include <unordered_map>
@@ -39,7 +40,8 @@ public:
       CommandListService& commandListService,
       XessStateService& xessStateService,
       AccelerationStructuresSerializeService& accelerationStructuresSerializeService,
-      AccelerationStructuresBuildService& accelerationStructuresBuildService)
+      AccelerationStructuresBuildService& accelerationStructuresBuildService,
+      ResidencyService& residencyService)
       : recorder_(recorder),
         resourceContentRestore_(*this),
         swapChainService_(*this),
@@ -51,7 +53,8 @@ public:
         commandListService_(commandListService),
         xessStateService_(xessStateService),
         accelerationStructuresSerializeService_(accelerationStructuresSerializeService),
-        accelerationStructuresBuildService_(accelerationStructuresBuildService) {}
+        accelerationStructuresBuildService_(accelerationStructuresBuildService),
+        residencyService_(residencyService) {}
   ~StateTrackingService();
   void restoreState();
   void keepState(unsigned objectKey);
@@ -143,6 +146,7 @@ private:
   friend class AccelerationStructuresBuildService;
   friend class AccelerationStructuresSerializeService;
   friend class AccelerationStructuresBufferContentRestore;
+  friend class ResidencyService;
   SubcaptureRecorder& recorder_;
   ResourceContentRestore resourceContentRestore_;
   std::map<unsigned, ObjectState*> statesByKey_;
@@ -158,6 +162,7 @@ private:
   XessStateService& xessStateService_;
   AccelerationStructuresSerializeService& accelerationStructuresSerializeService_;
   AccelerationStructuresBuildService& accelerationStructuresBuildService_;
+  ResidencyService& residencyService_;
   unsigned deviceKey_{};
   INTC_D3D12_FEATURE intcFeature_{};
 

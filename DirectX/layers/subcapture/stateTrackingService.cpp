@@ -31,6 +31,7 @@ void StateTrackingService::restoreState() {
   for (auto& it : statesByKey_) {
     restoreState(it.second);
   }
+  residencyService_.restoreResidency();
   xessStateService_.restoreState();
   descriptorService_.restoreState();
   accelerationStructuresSerializeService_.restoreAccelerationStructures();

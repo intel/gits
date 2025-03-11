@@ -27,7 +27,8 @@ StateTrackingLayer::StateTrackingLayer(SubcaptureRecorder& recorder)
                     commandListService_,
                     xessStateService_,
                     accelerationStructuresSerializeService_,
-                    accelerationStructuresBuildService_),
+                    accelerationStructuresBuildService_,
+                    residencyService_),
       recorder_(recorder),
       mapStateService_(stateService_),
       resourceStateTrackingService_(stateService_),
@@ -36,7 +37,8 @@ StateTrackingLayer::StateTrackingLayer(SubcaptureRecorder& recorder)
       commandListService_(stateService_),
       xessStateService_(stateService_, recorder),
       accelerationStructuresSerializeService_(stateService_, recorder_),
-      accelerationStructuresBuildService_(stateService_, recorder_, reservedResourcesService_) {
+      accelerationStructuresBuildService_(stateService_, recorder_, reservedResourcesService_),
+      residencyService_(stateService_) {
 
   const std::string& frames = Config::Get().directx.features.subcapture.frames;
   size_t pos = frames.find("-");
@@ -111,6 +113,7 @@ void StateTrackingLayer::pre(IUnknownReleaseCommand& c) {
     commandListService_.removeCommandList(c.object_.key);
     xessStateService_.destroyDevice(c.object_.key);
     accelerationStructuresSerializeService_.destroyResource(c.object_.key);
+    residencyService_.destroyObject(c.object_.key);
 
     auto it = resourceHeaps_.find(c.object_.key);
     if (it != resourceHeaps_.end()) {
@@ -419,6 +422,10 @@ void StateTrackingLayer::post(ID3D12DeviceCreateHeapCommand& c) {
   state->desc = *c.pDesc_.value;
   state->iid = c.riid_.value;
   stateService_.storeState(state);
+
+  if (state->desc.Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+    residencyService_.createNotResident(state->key, state->deviceKey);
+  }
 }
 
 void StateTrackingLayer::post(ID3D12Device4CreateHeap1Command& c) {
@@ -433,6 +440,10 @@ void StateTrackingLayer::post(ID3D12Device4CreateHeap1Command& c) {
   state->protectedSessionKey = c.pProtectedSession_.key;
   state->iid = c.riid_.value;
   stateService_.storeState(state);
+
+  if (state->desc.Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+    residencyService_.createNotResident(state->key, state->deviceKey);
+  }
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateQueryHeapCommand& c) {
@@ -798,6 +809,10 @@ void StateTrackingLayer::post(ID3D12DeviceCreateCommittedResourceCommand& c) {
         state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
         state->initialResourceState, !state->isMappable);
   }
+
+  if (state->heapFlags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+    residencyService_.createNotResident(state->key, state->deviceKey);
+  }
 }
 
 void StateTrackingLayer::pre(ID3D12Device4CreateCommittedResource1Command& c) {
@@ -828,6 +843,10 @@ void StateTrackingLayer::post(ID3D12Device4CreateCommittedResource1Command& c) {
     resourceStateTrackingService_.addResource(
         state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
         state->initialResourceState, !state->isMappable);
+  }
+
+  if (state->heapFlags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+    residencyService_.createNotResident(state->key, state->deviceKey);
   }
 }
 
@@ -860,6 +879,10 @@ void StateTrackingLayer::post(ID3D12Device8CreateCommittedResource2Command& c) {
     resourceStateTrackingService_.addResource(
         state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
         state->initialResourceState, !state->isMappable);
+  }
+
+  if (state->heapFlags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+    residencyService_.createNotResident(state->key, state->deviceKey);
   }
 }
 
@@ -894,6 +917,10 @@ void StateTrackingLayer::post(ID3D12Device10CreateCommittedResource3Command& c) 
   resourceStateTrackingService_.addResource(state->deviceKey,
                                             static_cast<ID3D12Resource*>(*c.ppvResource_.value),
                                             state->key, state->initialLayout, !state->isMappable);
+
+  if (state->heapFlags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+    residencyService_.createNotResident(state->key, state->deviceKey);
+  }
 }
 
 void StateTrackingLayer::pre(ID3D12DeviceCreatePlacedResourceCommand& c) {
@@ -1150,6 +1177,21 @@ void StateTrackingLayer::post(ID3D12Device3EnqueueMakeResidentCommand& c) {
     return;
   }
   fenceTrackingService_.setFenceValue(c.pFenceToSignal_.key, c.FenceValueToSignal_.value);
+  residencyService_.makeResident(c.ppObjects_.keys, c.object_.key);
+}
+
+void StateTrackingLayer::post(ID3D12DeviceMakeResidentCommand& c) {
+  if (c.result_.value != S_OK) {
+    return;
+  }
+  residencyService_.makeResident(c.ppObjects_.keys, c.object_.key);
+}
+
+void StateTrackingLayer::post(ID3D12DeviceEvictCommand& c) {
+  if (c.result_.value != S_OK) {
+    return;
+  }
+  residencyService_.evict(c.ppObjects_.keys, c.object_.key);
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateSamplerCommand& c) {
@@ -1289,6 +1331,10 @@ void StateTrackingLayer::post(INTC_D3D12_CreateCommittedResourceCommand& c) {
   resourceStateTrackingService_.addResource(
       state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
       state->initialResourceState, !state->isMappable);
+
+  if (state->heapFlags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+    residencyService_.createNotResident(state->key, state->deviceKey);
+  }
 }
 
 void StateTrackingLayer::post(INTC_D3D12_CreatePlacedResourceCommand& c) {

@@ -22,6 +22,7 @@
 #include "accelerationStructuresBuildService.h"
 #include "accelerationStructuresSerializeService.h"
 #include "gpuExecutionFlusher.h"
+#include "residencyService.h"
 
 #include <map>
 #include <array>
@@ -101,6 +102,8 @@ public:
   void post(ID3D12CommandQueueWaitCommand& c) override;
   void post(ID3D12FenceSignalCommand& c) override;
   void post(ID3D12Device3EnqueueMakeResidentCommand& c) override;
+  void post(ID3D12DeviceMakeResidentCommand& c) override;
+  void post(ID3D12DeviceEvictCommand& c) override;
   void post(ID3D12DeviceCreateSamplerCommand& c) override;
   void post(ID3D12DeviceCreateUnorderedAccessViewCommand& c) override;
   void post(ID3D12DeviceCreateConstantBufferViewCommand& c) override;
@@ -237,6 +240,7 @@ private:
   XessStateService xessStateService_;
   AccelerationStructuresSerializeService accelerationStructuresSerializeService_;
   AccelerationStructuresBuildService accelerationStructuresBuildService_;
+  ResidencyService residencyService_;
   GpuExecutionFlusher gpuExecutionFlusher_;
   unsigned startFrame_;
   std::vector<D3D12_GPU_VIRTUAL_ADDRESS> lastCallCaptureGpuAddresses_;

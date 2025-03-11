@@ -54,6 +54,8 @@ set(STATE_TRACKING_SRC
   ${SRC_DIR}/accelerationStructuresBufferContentRestore.cpp
   ${SRC_DIR}/gpuExecutionFlusher.h
   ${SRC_DIR}/gpuExecutionFlusher.cpp
+  ${SRC_DIR}/residencyService.h
+  ${SRC_DIR}/residencyService.cpp
 )
 source_group("state_tracking" FILES ${STATE_TRACKING_SRC})
 
