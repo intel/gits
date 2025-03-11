@@ -29,8 +29,12 @@ PortabilityLayer::PortabilityLayer() : Layer("Portability") {
 }
 
 PortabilityLayer::~PortabilityLayer() {
-  if (Config::IsPlayer() && storeResourcePlacementData_) {
-    resourcePlacementCapture_.storeResourcePlacement();
+  try {
+    if (Config::IsPlayer() && storeResourcePlacementData_) {
+      resourcePlacementCapture_.storeResourcePlacement();
+    }
+  } catch (...) {
+    topmost_exception_handler("PortabilityLayer::~PortabilityLayer");
   }
 }
 
