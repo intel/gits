@@ -1171,21 +1171,23 @@ void encode(char* dest, unsigned& offset, const D3D12_PIPELINE_STATE_STREAM_DESC
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_STREAM_OUTPUT: {
       D3D12_STREAM_OUTPUT_DESC* subobject =
           &*static_cast<CD3DX12_PIPELINE_STATE_STREAM_STREAM_OUTPUT*>(subobjectData);
+      if (subobject->pSODeclaration) {
+        memcpy(dest + offset, subobject->pSODeclaration,
+               subobject->NumEntries * sizeof(D3D12_SO_DECLARATION_ENTRY));
+        offset += subobject->NumEntries * sizeof(D3D12_SO_DECLARATION_ENTRY);
 
-      memcpy(dest + offset, subobject->pSODeclaration,
-             subobject->NumEntries * sizeof(D3D12_SO_DECLARATION_ENTRY));
-      offset += subobject->NumEntries * sizeof(D3D12_SO_DECLARATION_ENTRY);
-
-      for (unsigned i = 0; i < subobject->NumEntries; ++i) {
-        unsigned len = strlen(subobject->pSODeclaration[i].SemanticName) + 1;
-        memcpy(dest + offset, &len, sizeof(len));
-        offset += sizeof(len);
-        memcpy(dest + offset, subobject->pSODeclaration[i].SemanticName, len);
-        offset += len;
+        for (unsigned i = 0; i < subobject->NumEntries; ++i) {
+          unsigned len = strlen(subobject->pSODeclaration[i].SemanticName) + 1;
+          memcpy(dest + offset, &len, sizeof(len));
+          offset += sizeof(len);
+          memcpy(dest + offset, subobject->pSODeclaration[i].SemanticName, len);
+          offset += len;
+        }
       }
-      memcpy(dest + offset, subobject->pBufferStrides, subobject->NumStrides * sizeof(UINT));
-      offset += subobject->NumStrides * sizeof(UINT);
-
+      if (subobject->pBufferStrides) {
+        memcpy(dest + offset, subobject->pBufferStrides, subobject->NumStrides * sizeof(UINT));
+        offset += subobject->NumStrides * sizeof(UINT);
+      }
       stateOffset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_STREAM_OUTPUT);
     } break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_BLEND:
@@ -1218,17 +1220,18 @@ void encode(char* dest, unsigned& offset, const D3D12_PIPELINE_STATE_STREAM_DESC
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_INPUT_LAYOUT: {
       D3D12_INPUT_LAYOUT_DESC* subobject =
           &*static_cast<CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT*>(subobjectData);
+      if (subobject->pInputElementDescs) {
+        memcpy(dest + offset, subobject->pInputElementDescs,
+               subobject->NumElements * sizeof(D3D12_INPUT_ELEMENT_DESC));
+        offset += subobject->NumElements * sizeof(D3D12_INPUT_ELEMENT_DESC);
 
-      memcpy(dest + offset, subobject->pInputElementDescs,
-             subobject->NumElements * sizeof(D3D12_INPUT_ELEMENT_DESC));
-      offset += subobject->NumElements * sizeof(D3D12_INPUT_ELEMENT_DESC);
-
-      for (unsigned i = 0; i < subobject->NumElements; ++i) {
-        unsigned len = strlen(subobject->pInputElementDescs[i].SemanticName) + 1;
-        memcpy(dest + offset, &len, sizeof(len));
-        offset += sizeof(len);
-        memcpy(dest + offset, subobject->pInputElementDescs[i].SemanticName, len);
-        offset += len;
+        for (unsigned i = 0; i < subobject->NumElements; ++i) {
+          unsigned len = strlen(subobject->pInputElementDescs[i].SemanticName) + 1;
+          memcpy(dest + offset, &len, sizeof(len));
+          offset += sizeof(len);
+          memcpy(dest + offset, subobject->pInputElementDescs[i].SemanticName, len);
+          offset += len;
+        }
       }
       stateOffset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT);
     } break;
@@ -1262,10 +1265,11 @@ void encode(char* dest, unsigned& offset, const D3D12_PIPELINE_STATE_STREAM_DESC
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_VIEW_INSTANCING: {
       D3D12_VIEW_INSTANCING_DESC* subobject =
           &*static_cast<CD3DX12_PIPELINE_STATE_STREAM_VIEW_INSTANCING*>(subobjectData);
-      memcpy(dest + offset, subobject->pViewInstanceLocations,
-             subobject->ViewInstanceCount * sizeof(D3D12_VIEW_INSTANCE_LOCATION));
-      offset += subobject->ViewInstanceCount * sizeof(D3D12_VIEW_INSTANCE_LOCATION);
-
+      if (subobject->pViewInstanceLocations) {
+        memcpy(dest + offset, subobject->pViewInstanceLocations,
+               subobject->ViewInstanceCount * sizeof(D3D12_VIEW_INSTANCE_LOCATION));
+        offset += subobject->ViewInstanceCount * sizeof(D3D12_VIEW_INSTANCE_LOCATION);
+      }
       stateOffset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_VIEW_INSTANCING);
     } break;
     default:

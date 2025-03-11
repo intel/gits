@@ -719,20 +719,22 @@ void decode(char* src, unsigned& offset, D3D12_PIPELINE_STATE_STREAM_DESC_Argume
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_STREAM_OUTPUT: {
       D3D12_STREAM_OUTPUT_DESC* subobject =
           &*static_cast<CD3DX12_PIPELINE_STATE_STREAM_STREAM_OUTPUT*>(subobjectData);
+      if (subobject->pSODeclaration) {
+        subobject->pSODeclaration = reinterpret_cast<D3D12_SO_DECLARATION_ENTRY*>(src + offset);
+        offset += subobject->NumEntries * sizeof(D3D12_SO_DECLARATION_ENTRY);
 
-      subobject->pSODeclaration = reinterpret_cast<D3D12_SO_DECLARATION_ENTRY*>(src + offset);
-      offset += subobject->NumEntries * sizeof(D3D12_SO_DECLARATION_ENTRY);
-
-      for (unsigned i = 0; i < subobject->NumEntries; ++i) {
-        unsigned* len = reinterpret_cast<unsigned*>(src + offset);
-        offset += sizeof(unsigned);
-        const_cast<D3D12_SO_DECLARATION_ENTRY*>(subobject->pSODeclaration)[i].SemanticName =
-            reinterpret_cast<LPCSTR>(src + offset);
-        offset += *len;
+        for (unsigned i = 0; i < subobject->NumEntries; ++i) {
+          unsigned* len = reinterpret_cast<unsigned*>(src + offset);
+          offset += sizeof(unsigned);
+          const_cast<D3D12_SO_DECLARATION_ENTRY*>(subobject->pSODeclaration)[i].SemanticName =
+              reinterpret_cast<LPCSTR>(src + offset);
+          offset += *len;
+        }
       }
-      subobject->pBufferStrides = reinterpret_cast<UINT*>(src + offset);
-      offset += subobject->NumStrides * sizeof(UINT);
-
+      if (subobject->pBufferStrides) {
+        subobject->pBufferStrides = reinterpret_cast<UINT*>(src + offset);
+        offset += subobject->NumStrides * sizeof(UINT);
+      }
       stateOffset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_STREAM_OUTPUT);
     } break;
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_BLEND:
@@ -765,16 +767,17 @@ void decode(char* src, unsigned& offset, D3D12_PIPELINE_STATE_STREAM_DESC_Argume
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_INPUT_LAYOUT: {
       D3D12_INPUT_LAYOUT_DESC* subobject =
           &*static_cast<CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT*>(subobjectData);
+      if (subobject->pInputElementDescs) {
+        subobject->pInputElementDescs = reinterpret_cast<D3D12_INPUT_ELEMENT_DESC*>(src + offset);
+        offset += subobject->NumElements * sizeof(D3D12_INPUT_ELEMENT_DESC);
 
-      subobject->pInputElementDescs = reinterpret_cast<D3D12_INPUT_ELEMENT_DESC*>(src + offset);
-      offset += subobject->NumElements * sizeof(D3D12_INPUT_ELEMENT_DESC);
-
-      for (unsigned i = 0; i < subobject->NumElements; ++i) {
-        unsigned* len = reinterpret_cast<unsigned*>(src + offset);
-        offset += sizeof(unsigned);
-        const_cast<D3D12_INPUT_ELEMENT_DESC*>(subobject->pInputElementDescs)[i].SemanticName =
-            reinterpret_cast<LPCSTR>(src + offset);
-        offset += *len;
+        for (unsigned i = 0; i < subobject->NumElements; ++i) {
+          unsigned* len = reinterpret_cast<unsigned*>(src + offset);
+          offset += sizeof(unsigned);
+          const_cast<D3D12_INPUT_ELEMENT_DESC*>(subobject->pInputElementDescs)[i].SemanticName =
+              reinterpret_cast<LPCSTR>(src + offset);
+          offset += *len;
+        }
       }
       stateOffset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT);
     } break;
@@ -797,7 +800,8 @@ void decode(char* src, unsigned& offset, D3D12_PIPELINE_STATE_STREAM_DESC_Argume
       D3D12_CACHED_PIPELINE_STATE* subobject =
           &*static_cast<CD3DX12_PIPELINE_STATE_STREAM_CACHED_PSO*>(subobjectData);
       if (subobject->pCachedBlob) {
-        subobject->pCachedBlob = src + offset;
+        // Cached PSO blobs are not compatible accross different HW or SW
+        subobject->pCachedBlob = nullptr;
         offset += subobject->CachedBlobSizeInBytes;
       }
       stateOffset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_CACHED_PSO);
@@ -808,10 +812,11 @@ void decode(char* src, unsigned& offset, D3D12_PIPELINE_STATE_STREAM_DESC_Argume
     case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_VIEW_INSTANCING: {
       D3D12_VIEW_INSTANCING_DESC* subobject =
           &*static_cast<CD3DX12_PIPELINE_STATE_STREAM_VIEW_INSTANCING*>(subobjectData);
-      subobject->pViewInstanceLocations =
-          reinterpret_cast<D3D12_VIEW_INSTANCE_LOCATION*>(src + offset);
-      offset += subobject->ViewInstanceCount * sizeof(D3D12_VIEW_INSTANCE_LOCATION);
-
+      if (subobject->pViewInstanceLocations) {
+        subobject->pViewInstanceLocations =
+            reinterpret_cast<D3D12_VIEW_INSTANCE_LOCATION*>(src + offset);
+        offset += subobject->ViewInstanceCount * sizeof(D3D12_VIEW_INSTANCE_LOCATION);
+      }
       stateOffset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_VIEW_INSTANCING);
     } break;
     default:
