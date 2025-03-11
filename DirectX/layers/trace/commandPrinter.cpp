@@ -19,7 +19,9 @@ CommandPrinter::CommandPrinter(FastOStream& stream,
                                const char* name,
                                unsigned objectId)
     : stream_(stream), state_(state), command_(command), lock_(state.mutex) {
-
+  if (command.skip) {
+    stream_ << "[SKIPPED] ";
+  }
   stream_ << callKeyToStr(command.key);
   stream_ << " T" << command.threadId;
   if (objectId) {
