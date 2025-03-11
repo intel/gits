@@ -60,7 +60,7 @@ desc_types = dml_enum_get_type(enums, structure.name)
 %endif
 %endfor
   default:
-    stream << "Unknown";
+    stream << "unknown";
     break;
   }
   stream << "}";

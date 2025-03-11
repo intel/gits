@@ -27,13 +27,13 @@ static std::string enumToStr(const std::unordered_map<int, std::string>& enumMap
       first = false;
     }
   }
-  return result.empty() ? "Unknown" : result;
+  return result.empty() ? "unknown" : result;
 }
 
 %for enum in enums:
 
 std::string toStr(${enum.name} value) {
-  std::string result = "Unknown";
+  std::string result = "unknown";
   switch (value) {
 %for value in enum.values:
   case ${value}:

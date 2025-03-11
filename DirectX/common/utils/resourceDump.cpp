@@ -956,7 +956,7 @@ std::string ResourceDump::formatToString(DXGI_FORMAT value) {
     return "FORCE_UINT";
     break;
   default:
-    return "UNKNOWN";
+    return "unknown";
   }
 }
 

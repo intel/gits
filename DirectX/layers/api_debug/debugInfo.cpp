@@ -334,7 +334,8 @@ void DebugInfo::logDredBreadcrumbs(const D3D12_AUTO_BREADCRUMB_NODE* headNode) {
     dredFile_ << "  Breadcrumb Node:\n";
     dredFile_ << "    Finished: " << (hasFinished ? "Yes" : "No") << "\n";
     if (!hasFinished && (nExecuted > 0)) {
-      dredFile_ << "    Last Executed Operation: " << node->pCommandHistory[nExecuted - 1] << "\n";
+      dredFile_ << "    Last Executed Operation: " << toStr(node->pCommandHistory[nExecuted - 1])
+                << "\n";
     }
     dredFile_ << "    Command Queue: " << cmdQueueName << "\n";
     dredFile_ << "    Command List: " << cmdListName << "\n";
@@ -347,7 +348,7 @@ void DebugInfo::logDredBreadcrumbs(const D3D12_AUTO_BREADCRUMB_NODE* headNode) {
     }
     for (unsigned i = 0; i < node->BreadcrumbCount; ++i) {
       if (node->pCommandHistory[i] != 0) {
-        dredFile_ << "      " << i << ": " << node->pCommandHistory[i]
+        dredFile_ << "      " << i << ": " << toStr(node->pCommandHistory[i])
                   << (i == lastExecuted ? " LAST EXECUTED" : "") << "\n";
       }
     }
