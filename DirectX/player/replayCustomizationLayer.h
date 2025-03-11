@@ -106,8 +106,10 @@ public:
   void post(IDXGIAdapter1GetDesc1Command& command) override;
   void pre(IDXGIAdapter2GetDesc2Command& command) override;
   void post(IDXGIAdapter2GetDesc2Command& command) override;
+  void pre(IDXGIAdapter3QueryVideoMemoryInfoCommand& command) override;
   void pre(
       IDXGIAdapter3RegisterHardwareContentProtectionTeardownStatusEventCommand& command) override;
+  void pre(IDXGIAdapter3SetVideoMemoryReservationCommand& command) override;
   void pre(IDXGIAdapter3UnregisterHardwareContentProtectionTeardownStatusCommand& command) override;
   void pre(IDXGIAdapter3UnregisterVideoMemoryBudgetChangeNotificationCommand& command) override;
   void pre(IDXGIAdapter4GetDesc3Command& command) override;

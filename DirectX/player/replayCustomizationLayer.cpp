@@ -606,9 +606,21 @@ void ReplayCustomizationLayer::post(IDXGIAdapter4GetDesc3Command& c) {
   manager_.getAdapterService().setCurrentAdapterLuid(c.object_.key, c.pDesc_.value->AdapterLuid);
 }
 
+void ReplayCustomizationLayer::pre(IDXGIAdapter3QueryVideoMemoryInfoCommand& c) {
+  if (!c.object_.value) {
+    c.skip = true;
+  }
+}
+
 void ReplayCustomizationLayer::pre(
     IDXGIAdapter3RegisterHardwareContentProtectionTeardownStatusEventCommand& c) {
   c.skip = true;
+}
+
+void ReplayCustomizationLayer::pre(IDXGIAdapter3SetVideoMemoryReservationCommand& c) {
+  if (!c.object_.value) {
+    c.skip = true;
+  }
 }
 
 void ReplayCustomizationLayer::pre(
