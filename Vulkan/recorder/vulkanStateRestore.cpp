@@ -2346,7 +2346,7 @@ void gits::Vulkan::RestoreCommandBuffers(CScheduler& scheduler, CStateDynamic& s
       return;
     }
 
-    for (auto bufferState : sd.bindingBuffers[commandBuffer]) {
+    for (auto& bufferState : sd.bindingBuffers[commandBuffer]) {
       auto it = sd._bufferstates.find(bufferState->bufferHandle);
       if ((it == sd._bufferstates.end()) ||
           (it->second->GetUniqueStateID() != bufferState->GetUniqueStateID())) {
@@ -2358,7 +2358,7 @@ void gits::Vulkan::RestoreCommandBuffers(CScheduler& scheduler, CStateDynamic& s
 
     // Disable this check when recording streams from "The Surge 2" game
     TODO("Find a way to manage workarounds specific for a given title")
-    for (auto obj : sd.bindingImages[commandBuffer]) {
+    for (auto& obj : sd.bindingImages[commandBuffer]) {
       auto it = sd._imagestates.find(obj->imageHandle);
       if ((it == sd._imagestates.end()) ||
           (it->second->GetUniqueStateID() != obj->GetUniqueStateID())) {

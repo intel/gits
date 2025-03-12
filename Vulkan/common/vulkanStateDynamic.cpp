@@ -84,7 +84,8 @@ InternalPipelinesManager::InternalPipelines::InternalPipelines(VkDevice _device)
       patchDeviceAddressesPipeline(VK_NULL_HANDLE),
       prepareIndirectCopyFor16BitIndexedVerticesPipeline(VK_NULL_HANDLE),
       prepareIndirectCopyFor32BitIndexedVerticesPipeline(VK_NULL_HANDLE),
-      performIndirectCopyPipeline(VK_NULL_HANDLE) {}
+      performIndirectCopyPipeline(VK_NULL_HANDLE),
+      patchShaderGroupHandlesInSBT(VK_NULL_HANDLE) {}
 
 InternalPipelinesManager::InternalPipelines::~InternalPipelines() {
   drvVk.vkDestroyPipeline(device, prepareDeviceAddressesForPatchingPipeline, nullptr);
@@ -92,6 +93,7 @@ InternalPipelinesManager::InternalPipelines::~InternalPipelines() {
   drvVk.vkDestroyPipeline(device, prepareIndirectCopyFor16BitIndexedVerticesPipeline, nullptr);
   drvVk.vkDestroyPipeline(device, prepareIndirectCopyFor32BitIndexedVerticesPipeline, nullptr);
   drvVk.vkDestroyPipeline(device, performIndirectCopyPipeline, nullptr);
+  drvVk.vkDestroyPipeline(device, patchShaderGroupHandlesInSBT, nullptr);
 
   drvVk.vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
   if (descriptorSetLayoutState) {
@@ -110,7 +112,8 @@ InternalPipelinesManager::InternalPipelines::InternalPipelines(const InternalPip
           other.prepareIndirectCopyFor16BitIndexedVerticesPipeline),
       prepareIndirectCopyFor32BitIndexedVerticesPipeline(
           other.prepareIndirectCopyFor32BitIndexedVerticesPipeline),
-      performIndirectCopyPipeline(other.performIndirectCopyPipeline) {}
+      performIndirectCopyPipeline(other.performIndirectCopyPipeline),
+      patchShaderGroupHandlesInSBT(other.patchShaderGroupHandlesInSBT) {}
 
 InternalPipelinesManager::InternalPipelines& InternalPipelinesManager::InternalPipelines::operator=(
     const InternalPipelines& other) {
@@ -127,6 +130,7 @@ InternalPipelinesManager::InternalPipelines& InternalPipelinesManager::InternalP
   prepareIndirectCopyFor32BitIndexedVerticesPipeline =
       other.prepareIndirectCopyFor32BitIndexedVerticesPipeline;
   performIndirectCopyPipeline = other.performIndirectCopyPipeline;
+  patchShaderGroupHandlesInSBT = other.patchShaderGroupHandlesInSBT;
   return *this;
 }
 
@@ -192,6 +196,34 @@ VkPipeline InternalPipelinesManager::InternalPipelines::getPerformIndirectCopyPi
   }
 
   return performIndirectCopyPipeline;
+}
+
+VkPipeline InternalPipelinesManager::InternalPipelines::getPatchShaderGroupHandlesInSBT() {
+  if (patchShaderGroupHandlesInSBT == VK_NULL_HANDLE) {
+    patchShaderGroupHandlesInSBT = createInternalPipeline(
+        device, pipelineLayout, getPatchShaderGroupHandlesInSBTShaderModuleSource());
+  }
+
+  return patchShaderGroupHandlesInSBT;
+}
+
+CPipelineState::CShaderGroupHandlesManagement::~CShaderGroupHandlesManagement() {
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
+  if (memoryBufferPair.second) {
+    auto device = memoryBufferPair.second->deviceStateStore->deviceHandle;
+    if (SD()._devicestates.find(device) != SD()._devicestates.end()) {
+      auto buffer = memoryBufferPair.second->bufferHandle;
+      drvVk.vkDestroyBuffer(device, buffer, nullptr);
+    }
+  }
+  if (memoryBufferPair.first) {
+    auto device = memoryBufferPair.first->deviceStateStore->deviceHandle;
+    if (SD()._devicestates.find(device) != SD()._devicestates.end()) {
+      auto memory = memoryBufferPair.first->deviceMemoryHandle;
+      drvVk.vkFreeMemory(device, memory, nullptr);
+    }
+  }
 }
 
 } // namespace Vulkan

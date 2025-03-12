@@ -222,6 +222,12 @@ bool configure_player(int argc, char** argv) {
       "Executing commandBuffers operation just before QueueSubmit, instead of doing that in the "
       "same way as app/benchmark/game.");
 
+  TypedOption<bool> optionPatchShaderGroupHandlesInSBT(
+      options, OPTION_GROUP_GENERAL, 0, "patchShaderGroupHandlesInSBT",
+      "Vulkan specific option. Injects compute shaders which update shader group handles in Shader "
+      "Binding Tables during playback, which in some situations may potentially improve "
+      "cross-platform compatiblity of ray-tracing-enabled streams.");
+
   TypedOption<std::string> optionCaptureVulkanRenderPasses(
       options, OPTION_GROUP_IMAGE, 0, "captureVulkanRenderPasses",
       "List of Vulkan render passes, whose attachments will be captured during playback. The "
@@ -1088,6 +1094,8 @@ bool configure_player(int argc, char** argv) {
   set_when_option_present(cfg.vulkan.player.printMemUsageVk, optionPrintMemUsageVk);
   set_when_option_present(cfg.vulkan.player.execCmdBuffsBeforeQueueSubmit,
                           optionExecCmdBuffsBeforeQueueSubmit);
+  set_when_option_present(cfg.vulkan.player.patchShaderGroupHandlesInSBT,
+                          optionPatchShaderGroupHandlesInSBT);
   set_when_option_present(cfg.vulkan.player.forceMultithreadedPipelineCompilation,
                           optionForceMultithreadedPipelineCompilation);
 

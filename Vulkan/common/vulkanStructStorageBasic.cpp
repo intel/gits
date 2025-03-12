@@ -676,7 +676,7 @@ gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHRData::
         const VkAccelerationStructureBuildRangeInfoKHR& buildRangeInfo,
         const VkAccelerationStructureBuildControlDataGITS& controlData)
     : _sType(VK_STRUCTURE_TYPE_MAX_ENUM),
-      _pNext(),
+      _pNext(std::make_unique<CpNextWrapperData>(nullptr)),
       _arrayOfPointers(false),
       _bufferDeviceAddress(),
       _AccelerationStructureGeometryInstancesDataKHR(),

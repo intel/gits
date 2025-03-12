@@ -2082,26 +2082,94 @@ inline void vkCreateRayTracingPipelinesKHR_SD(VkResult return_value,
                                               const VkRayTracingPipelineCreateInfoKHR* pCreateInfos,
                                               const VkAllocationCallbacks* pAllocator,
                                               VkPipeline* pPipelines) {
+  if (!pCreateInfos) {
+    return;
+  }
+
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
   if (VK_SUCCESS == return_value) {
     for (uint32_t i = 0; i < createInfoCount; i++) {
       if (pPipelines[i] == VK_NULL_HANDLE) {
         continue;
       }
 
-      VkRayTracingPipelineCreateInfoKHR const* createInfo = &pCreateInfos[i];
-
+      const auto* pCreateInfo = &pCreateInfos[i];
       auto pipelineState =
-          std::make_shared<CPipelineState>(&pPipelines[i], createInfo, SD()._devicestates[device],
-                                           SD()._pipelinelayoutstates[createInfo->layout]);
+          std::make_shared<CPipelineState>(&pPipelines[i], pCreateInfo, SD()._devicestates[device],
+                                           SD()._pipelinelayoutstates[pCreateInfo->layout]);
+      pipelineState->isLibrary = isBitSet(pCreateInfo->flags, VK_PIPELINE_CREATE_LIBRARY_BIT_KHR);
 
-      for (unsigned int j = 0; j < createInfo->stageCount; j++) {
-        const auto& stageInfo = createInfo->pStages[j];
+      for (unsigned int j = 0; j < pCreateInfo->stageCount; j++) {
+        const auto& stageInfo = pCreateInfo->pStages[j];
         const auto& shaderModuleState = SD()._shadermodulestates[stageInfo.module];
         pipelineState->shaderModuleStateStoreList.push_back(shaderModuleState);
         pipelineState->stageShaderHashMapping[stageInfo.stage] = shaderModuleState->shaderHash;
       }
 
       SD()._pipelinestates.emplace(pPipelines[i], pipelineState);
+
+      auto& shaderGroup = pipelineState->shaderGroupHandles;
+
+      // Shader group handles
+      {
+        shaderGroup.dataSize = pCreateInfo->groupCount * CDeviceState::shaderGroupHandleSize;
+        shaderGroup.currentHandles.resize(shaderGroup.dataSize);
+        shaderGroup.count = pCreateInfo->groupCount;
+        drvVk.vkGetRayTracingShaderGroupHandlesKHR(device, pPipelines[i], 0,
+                                                   pCreateInfo->groupCount, shaderGroup.dataSize,
+                                                   shaderGroup.currentHandles.data());
+
+        auto* pOriginalHandles = (VkOriginalShaderGroupHandlesGITS*)getPNextStructure(
+            pCreateInfo->pNext, VK_STRUCTURE_TYPE_ORIGINAL_SHADER_GROUP_HANDLES_GITS);
+        if (pOriginalHandles) {
+          shaderGroup.originalHandles.resize(pOriginalHandles->dataSize);
+          memcpy(shaderGroup.originalHandles.data(), pOriginalHandles->pData,
+                 pOriginalHandles->dataSize);
+          shaderGroup.SBTPatchingRequired =
+              (memcmp(shaderGroup.originalHandles.data(), shaderGroup.currentHandles.data(),
+                      pOriginalHandles->dataSize) != 0);
+        } else {
+          shaderGroup.originalHandles = shaderGroup.currentHandles;
+          shaderGroup.SBTPatchingRequired = false;
+        }
+      }
+
+      // Create a per RT-pipeline buffer to store shader group handles which are used later during
+      // SBT patching. The buffer contains both original (recorder-side) and current (player-side)
+      // handles, that's why its size is twice as large.
+
+      if (Config::Get().vulkan.player.patchShaderGroupHandlesInSBT) {
+        shaderGroup.memoryBufferPair = createTemporaryBuffer(
+            device, 2 * shaderGroup.dataSize, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, nullptr,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        auto memory = shaderGroup.memoryBufferPair.first->deviceMemoryHandle;
+        auto buffer = shaderGroup.memoryBufferPair.second->bufferHandle;
+        drvVk.vkMapMemory(device, memory, 0, VK_WHOLE_SIZE, 0,
+                          (void**)&shaderGroup.mappedMemoryPtr);
+        shaderGroup.deviceAddress = getBufferDeviceAddress(device, buffer);
+
+        if (shaderGroup.SBTPatchingRequired) {
+          // Buffer used to patch shader group handles contains original handles first
+          // and after them the current handles
+
+          // Copy original shader group handles passed from a recorder
+          memcpy(shaderGroup.mappedMemoryPtr, shaderGroup.originalHandles.data(),
+                 shaderGroup.dataSize);
+          // Copy current shader group handles acquired from a driver
+          memcpy(shaderGroup.mappedMemoryPtr + shaderGroup.dataSize,
+                 shaderGroup.currentHandles.data(), shaderGroup.dataSize);
+
+          VkMappedMemoryRange range = {
+              VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,                  // VkStructureType sType;
+              nullptr,                                                // const void* pNext;
+              shaderGroup.memoryBufferPair.first->deviceMemoryHandle, // VkDeviceMemory memory;
+              0,                                                      // VkDeviceSize offset;
+              shaderGroup.dataSize * 2                                // VkDeviceSize size;
+          };
+          drvVk.vkFlushMappedMemoryRanges(device, 1, &range);
+        }
+      }
     }
   }
 }
@@ -2613,9 +2681,11 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
       continue;
     }
 
-    auto addBindingBuffer = [&bindingBuffers](VkDeviceAddress deviceAddress) {
-      auto buffer = findBufferFromDeviceAddress(deviceAddress);
-      insertStateIfFound(SD()._bufferstates, buffer, bindingBuffers);
+    auto addBindingBuffer = [&bindingBuffers](VkDeviceAddress deviceAddress, uint64_t offset) {
+      if (deviceAddress != 0) {
+        auto buffer = findBufferFromDeviceAddress(deviceAddress + offset);
+        insertStateIfFound(SD()._bufferstates, buffer, bindingBuffers);
+      }
     };
 
     for (uint32_t geom = 0; geom < buildInfo->geometryCount; ++geom) {
@@ -2630,30 +2700,30 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
 
         if (trianglesData.indexType != VK_INDEX_TYPE_NONE_KHR) {
           // Index buffer
-          addBindingBuffer(trianglesData.indexData.deviceAddress + buildRangeInfo.primitiveOffset);
+          addBindingBuffer(trianglesData.indexData.deviceAddress, buildRangeInfo.primitiveOffset);
           // Vertex buffer
-          addBindingBuffer(trianglesData.vertexData.deviceAddress +
+          addBindingBuffer(trianglesData.vertexData.deviceAddress,
                            std::max(0u, trianglesData.maxVertex - 1) * trianglesData.vertexStride);
         } else {
           // Vertex buffer
-          addBindingBuffer(trianglesData.vertexData.deviceAddress + buildRangeInfo.primitiveOffset +
-                           (trianglesData.vertexStride * buildRangeInfo.firstVertex));
+          addBindingBuffer(trianglesData.vertexData.deviceAddress,
+                           buildRangeInfo.primitiveOffset +
+                               trianglesData.vertexStride * buildRangeInfo.firstVertex);
         }
 
         // Transform buffer
-        addBindingBuffer(trianglesData.transformData.deviceAddress +
-                         buildRangeInfo.transformOffset);
+        addBindingBuffer(trianglesData.transformData.deviceAddress, buildRangeInfo.transformOffset);
       } break;
 
       case VK_GEOMETRY_TYPE_AABBS_KHR: {
         // AABBs data buffer
-        addBindingBuffer(pGeometry->geometry.aabbs.data.deviceAddress +
+        addBindingBuffer(pGeometry->geometry.aabbs.data.deviceAddress,
                          buildRangeInfo.primitiveOffset);
       } break;
 
       case VK_GEOMETRY_TYPE_INSTANCES_KHR: {
         // Instance data buffer
-        addBindingBuffer(pGeometry->geometry.instances.data.deviceAddress +
+        addBindingBuffer(pGeometry->geometry.instances.data.deviceAddress,
                          buildRangeInfo.primitiveOffset);
       } break;
 
@@ -4990,5 +5060,25 @@ inline void vkCmdClearAttachments_SD(VkCommandBuffer cmdBuf,
     }
   }
 }
+
+inline void vkCmdPushConstants_SD(VkCommandBuffer cmdBuf,
+                                  VkPipelineLayout layout,
+                                  VkShaderStageFlags stageFlags,
+                                  uint32_t offset,
+                                  uint32_t size,
+                                  const void* pValues) {
+  auto& commandBufferState = SD()._commandbufferstates[cmdBuf];
+
+  commandBufferState->pushContantsData = {
+      layout,     // VkPipelineLayout layout;
+      stageFlags, // VkShaderStageFlags stageFlags;
+      offset,     // uint32_t offset;
+      {}          // std::vector<uint8_t> data;
+  };
+
+  commandBufferState->pushContantsData.data.resize(size);
+  memcpy(commandBufferState->pushContantsData.data.data(), pValues, size);
+}
+
 } // namespace Vulkan
 } // namespace gits

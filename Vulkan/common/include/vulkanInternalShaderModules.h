@@ -26,6 +26,7 @@ std::vector<uint32_t> getPatchDeviceAddressesShaderModuleSource();
 std::vector<uint32_t> getPrepareIndirectCopyFor16BitIndexedVerticesShaderModuleSource();
 std::vector<uint32_t> getPrepareIndirectCopyFor32BitIndexedVerticesShaderModuleSource();
 std::vector<uint32_t> getPerformIndirectCopyShaderModuleSource();
+std::vector<uint32_t> getPatchShaderGroupHandlesInSBTShaderModuleSource();
 
 } // namespace Vulkan
 } // namespace gits

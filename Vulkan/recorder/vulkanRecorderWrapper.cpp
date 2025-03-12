@@ -490,6 +490,7 @@ void CRecorderWrapper::DisableConfigOptions() const {
 #endif
 
   gits::Config::Set(cfg);
+  vkIAmGITS_SD();
 }
 
 void CRecorderWrapper::StartStateRestore() const {

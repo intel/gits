@@ -124,3 +124,10 @@ var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='pStructStorage', type='const void*')
 )
+
+Struct(name='VkOriginalShaderGroupHandlesGITS_', enabled=True,
+var1=VarDef(name='sType', type='VkStructureType'),
+var2=VarDef(name='pNext', type='const void*'),
+var3=ArgDef(name='dataSize', type='uint32_t'),
+var4=ArgDef(name='pData', type='const void*', wrapType='Cuint8_t::CSArray', wrapParams='(size_t)(originalshadergrouphandlesgits->dataSize), (const uint8_t *)originalshadergrouphandlesgits->pData')
+)

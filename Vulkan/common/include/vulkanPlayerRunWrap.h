@@ -457,6 +457,18 @@ inline void vkCreateInstance_WRAPRUN(CVkResult& recorderSideReturnValue,
     RenderDocUtil::GetInstance().AddCapturer(**pInstance);
   }
 #endif
+
+  // Workaround to check if a recorder is attached to the player
+  if (drvVk.GetGlobalDispatchTable().vkPauseRecordingGITS) {
+    // Currently, shader group handle patching in SBT cannot be used during
+    // substream recording. Inform user about this problem.
+
+    if (Config::Get().vulkan.player.patchShaderGroupHandlesInSBT) {
+      throw std::runtime_error("Error: \"patchShaderGroupHandlesInSBT\" option cannot be used "
+                               "during (sub)stream recording. "
+                               "In order to record a stream, disable the option.");
+    }
+  }
 }
 
 inline void vkQueuePresentKHR_WRAPRUN(CVkResult& recorderSideReturnValue,
@@ -1585,6 +1597,9 @@ inline void vkCreateDevice_WRAPRUN(CVkResult& recorderSideReturnValue,
   if (*pCreateInfo == nullptr) {
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
+
+  auto& vkConfig = Config::Get().vulkan;
+
   VkDeviceCreateInfo createInfo = *pCreateInfo;
   std::vector<const char*> requestedExtensions(createInfo.ppEnabledExtensionNames,
                                                createInfo.ppEnabledExtensionNames +
@@ -1594,12 +1609,23 @@ inline void vkCreateDevice_WRAPRUN(CVkResult& recorderSideReturnValue,
                                                createInfo.enabledLayerCount);
 
   suppressPhysicalDeviceFeatures(
-      Config::Get().vulkan.shared.suppressPhysicalDeviceFeatures,
+      vkConfig.shared.suppressPhysicalDeviceFeatures,
       const_cast<VkPhysicalDeviceFeatures*>(createInfo.pEnabledFeatures));
-  suppressRequestedNames(requestedExtensions, Config::Get().vulkan.shared.suppressExtensions,
+  suppressRequestedNames(requestedExtensions, vkConfig.shared.suppressExtensions,
                          createInfo.enabledExtensionCount, createInfo.ppEnabledExtensionNames);
-  suppressRequestedNames(requestedLayers, Config::Get().vulkan.shared.suppressLayers,
+  suppressRequestedNames(requestedLayers, vkConfig.shared.suppressLayers,
                          createInfo.enabledLayerCount, createInfo.ppEnabledLayerNames);
+
+  // Disable capture/replay features for RT pipelines if shader group handles patching is enabled
+  if (vkConfig.player.patchShaderGroupHandlesInSBT) {
+    auto* rayTracingPipelineFeatures =
+        (VkPhysicalDeviceRayTracingPipelineFeaturesKHR*)getPNextStructure(
+            createInfo.pNext, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR);
+
+    if (rayTracingPipelineFeatures != nullptr) {
+      rayTracingPipelineFeatures->rayTracingPipelineShaderGroupHandleCaptureReplay = VK_FALSE;
+    }
+  }
 
   Log(TRACE, NO_PREFIX) << "";
   Log(TRACE) << " ------------------ ";
@@ -1619,7 +1645,7 @@ inline void vkCreateDevice_WRAPRUN(CVkResult& recorderSideReturnValue,
 
   Log(TRACE, NO_PREFIX) << "";
 
-  if (!allSupported && !Config::Get().vulkan.player.ignoreVKCrossPlatformIncompatibilitiesWA) {
+  if (!allSupported && !vkConfig.player.ignoreVKCrossPlatformIncompatibilitiesWA) {
     throw std::runtime_error("Error - stream is incompatible with the current platform. Exiting!");
   }
 
@@ -1634,17 +1660,16 @@ inline void vkCreateDevice_WRAPRUN(CVkResult& recorderSideReturnValue,
   vkCreateDevice_SD(playerSideReturnValue, *physicalDevice, *pCreateInfo, *pAllocator, *pDevice);
 
 #if defined(GITS_PLATFORM_WINDOWS)
-  if (Config::Get().vulkan.player.renderDoc.mode == TVkRenderDocCaptureMode::FRAMES &&
-      Config::Get().vulkan.player.renderDoc.captureRange[CGits::Instance().CurrentFrame()]) {
+  if (vkConfig.player.renderDoc.mode == TVkRenderDocCaptureMode::FRAMES &&
+      vkConfig.player.renderDoc.captureRange[CGits::Instance().CurrentFrame()]) {
     RenderDocUtil::GetInstance().StartRecording();
   }
 #endif
 
-  if (!Config::Get().vulkan.player.overrideVKPipelineCache.empty()) {
+  if (!vkConfig.player.overrideVKPipelineCache.empty()) {
     CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
 
-    auto initialData =
-        GetBinaryFileContents(Config::Get().vulkan.player.overrideVKPipelineCache.string());
+    auto initialData = GetBinaryFileContents(vkConfig.player.overrideVKPipelineCache.string());
 
     VkPipelineCacheCreateInfo cacheCreateInfo = {
         VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO, // VkStructureType sType;
@@ -1732,7 +1757,20 @@ CreateRayTracingPipelinesArgumentWrapper(VkDevice device,
                                          const VkRayTracingPipelineCreateInfoKHR* pCreateInfos,
                                          const VkAllocationCallbacks* pAllocator,
                                          VkPipeline* pPipelines) {
-  return drvVk.vkCreateRayTracingPipelinesKHR(device, VK_NULL_HANDLE /* *deferredOperation */,
+  // Disable capture/replay features for RT pipelines if shader group handles patching is enabled
+  if (Config::Get().vulkan.player.patchShaderGroupHandlesInSBT) {
+    for (uint32_t ci = 0; ci < createInfoCount; ci++) {
+      auto* pCreateInfo = const_cast<VkRayTracingPipelineCreateInfoKHR*>(&pCreateInfos[ci]);
+      pCreateInfo->flags &=
+          ~VK_PIPELINE_CREATE_RAY_TRACING_SHADER_GROUP_HANDLE_CAPTURE_REPLAY_BIT_KHR;
+
+      for (uint32_t g = 0; g < pCreateInfo->groupCount; ++g) {
+        auto* pGroup = const_cast<VkRayTracingShaderGroupCreateInfoKHR*>(&pCreateInfo->pGroups[g]);
+        pGroup->pShaderGroupCaptureReplayHandle = nullptr;
+      }
+    }
+  }
+  return drvVk.vkCreateRayTracingPipelinesKHR(device, VK_NULL_HANDLE /* deferredOperation */,
                                               pipelineCache, createInfoCount, pCreateInfos,
                                               pAllocator, pPipelines);
 }
@@ -2263,6 +2301,199 @@ inline void vkGetPhysicalDeviceQueueFamilyProperties2KHR_WRAPRUN(
 
   drvVk.vkGetPhysicalDeviceQueueFamilyProperties2KHR(*_physicalDevice, *_pQueueFamilyPropertyCount,
                                                      *_pQueueFamilyProperties);
+}
+
+inline void vkCmdTraceRaysKHR_WRAPRUN(
+    CVkCommandBuffer& _commandBuffer,
+    CVkStridedDeviceAddressRegionKHR& _pRaygenShaderBindingTable,
+    CVkStridedDeviceAddressRegionKHR& _pMissShaderBindingTable,
+    CVkStridedDeviceAddressRegionKHR& _pHitShaderBindingTable,
+    CVkStridedDeviceAddressRegionKHR& _pCallableShaderBindingTable,
+    Cuint32_t& _width,
+    Cuint32_t& _height,
+    Cuint32_t& _depth) {
+  struct PushConstantsData {
+    VkDeviceAddress OriginalHandles;
+    VkDeviceAddress NewHandles;
+    VkDeviceAddress AddressesToPatch;
+  };
+
+  const auto cmdBuf = *_commandBuffer;
+  VkPipeline currentPipeline = VK_NULL_HANDLE;
+  VkPipelineBindPoint currentBindPoint = VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR;
+  CCommandBufferState::CPushContantsData* currentPushContants = nullptr;
+
+  const VkStridedDeviceAddressRegionKHR* pRaygenSBT = *_pRaygenShaderBindingTable;
+  const VkStridedDeviceAddressRegionKHR* pMissSBT = *_pMissShaderBindingTable;
+  const VkStridedDeviceAddressRegionKHR* pHitSBT = *_pHitShaderBindingTable;
+  const VkStridedDeviceAddressRegionKHR* pCallableSBT = *_pCallableShaderBindingTable;
+
+  VkPipelineLayout patchingLayout = VK_NULL_HANDLE;
+  VkPipeline patchingPipeline = VK_NULL_HANDLE;
+
+  VkDeviceAddress originalHandlesAddress = 0;
+  VkDeviceAddress newHandlesAddress = 0;
+  VkDeviceAddress addressesToPatchAddress = 0;
+
+  uint32_t addressesCount = 0;
+  uint32_t groupHandlesCount = 0;
+
+  // Patch shader group handles in a SBT before tracing rays
+  bool SBTPatchingRequired = false;
+
+  if (Config::Get().vulkan.player.patchShaderGroupHandlesInSBT) {
+    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
+    const auto& cmdBufState = SD()._commandbufferstates[cmdBuf];
+    const auto& currentPipelineState = SD()._pipelinestates[cmdBufState->currentPipeline];
+
+    SBTPatchingRequired = currentPipelineState->shaderGroupHandles.SBTPatchingRequired;
+
+    // Skip if handles are identical in between recorder and player
+    if (SBTPatchingRequired) {
+      const auto device = cmdBufState->commandPoolStateStore->deviceStateStore->deviceHandle;
+
+      currentPipeline = cmdBufState->currentPipeline;
+      currentBindPoint = cmdBufState->currentPipelineBindPoint;
+
+      originalHandlesAddress = currentPipelineState->shaderGroupHandles.deviceAddress;
+      newHandlesAddress =
+          originalHandlesAddress + currentPipelineState->shaderGroupHandles.dataSize;
+
+      patchingLayout = SD().internalResources.internalPipelines[device].getLayout();
+      patchingPipeline =
+          SD().internalResources.internalPipelines[device].getPatchShaderGroupHandlesInSBT();
+
+      std::set<VkDeviceAddress> setOfAddressesToPatch;
+      auto addAddresses = [&setOfAddressesToPatch](const VkStridedDeviceAddressRegionKHR* pSBT) {
+        if (!pSBT || !pSBT->deviceAddress || !pSBT->size || !pSBT->stride) {
+          return;
+        }
+        for (auto address = pSBT->deviceAddress; address < pSBT->deviceAddress + pSBT->size;
+             address += pSBT->stride) {
+          setOfAddressesToPatch.insert(address);
+        }
+      };
+      addAddresses(pRaygenSBT);
+      addAddresses(pMissSBT);
+      addAddresses(pHitSBT);
+      addAddresses(pCallableSBT);
+
+      std::vector<VkDeviceAddress> addressesToPatch(setOfAddressesToPatch.begin(),
+                                                    setOfAddressesToPatch.end());
+      addressesCount = addressesToPatch.size();
+      groupHandlesCount = currentPipelineState->shaderGroupHandles.count;
+
+      auto dataSize = addressesCount * sizeof(VkDeviceAddress);
+      auto memoryBufferPair =
+          createTemporaryBuffer(device, dataSize, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+                                cmdBufState.get(), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+      const auto dataBuffer = memoryBufferPair.second->bufferHandle;
+      const auto dataMemory = memoryBufferPair.first->deviceMemoryHandle;
+      addressesToPatchAddress = getBufferDeviceAddress(device, dataBuffer);
+
+      void* dst;
+      if (drvVk.vkMapMemory(device, dataMemory, 0, VK_WHOLE_SIZE, 0, &dst) != VK_SUCCESS) {
+        throw std::runtime_error("Could not map and copy data.");
+      }
+
+      memcpy(dst, addressesToPatch.data(), dataSize);
+
+      VkMemoryBarrier barrierPre = {
+          VK_STRUCTURE_TYPE_MEMORY_BARRIER,                      // VkStructureType sType;
+          nullptr,                                               // const void* pNext;
+          VK_ACCESS_MEMORY_WRITE_BIT,                            // VkAccessFlags srcAccessMask;
+          VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT // VkAccessFlags dstAccessMask;
+      };
+      drvVk.vkCmdPipelineBarrier(cmdBuf, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &barrierPre, 0,
+                                 nullptr, 0, nullptr);
+
+      // Inject compute - patch shader group handles in SBT with current values
+      drvVk.vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_COMPUTE, patchingPipeline);
+      PushConstantsData pushConstants = {
+          originalHandlesAddress, // VkDeviceAddress OriginalHandles;
+          newHandlesAddress,      // VkDeviceAddress NewHandles;
+          addressesToPatchAddress // VkDeviceAddress SBT;
+      };
+
+      drvVk.vkCmdPushConstants(cmdBuf, patchingLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0,
+                               sizeof(PushConstantsData), &pushConstants);
+      drvVk.vkCmdDispatch(cmdBuf, /* All SBT entries count */ addressesCount,
+                          /* map entries count */ groupHandlesCount, 1);
+
+      VkMemoryBarrier barrierPost = {
+          VK_STRUCTURE_TYPE_MEMORY_BARRIER,                       // VkStructureType sType;
+          nullptr,                                                // const void* pNext;
+          VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, // VkAccessFlags srcAccessMask;
+          VK_ACCESS_SHADER_READ_BIT                               // VkAccessFlags dstAccessMask;
+      };
+      drvVk.vkCmdPipelineBarrier(cmdBuf, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                                 VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR, 0, 1, &barrierPost,
+                                 0, nullptr, 0, nullptr);
+      if (currentPipeline != VK_NULL_HANDLE) {
+        drvVk.vkCmdBindPipeline(cmdBuf, currentBindPoint, currentPipeline);
+        if (cmdBufState->pushContantsData.data.size()) {
+          currentPushContants = &cmdBufState->pushContantsData;
+          drvVk.vkCmdPushConstants(cmdBuf, currentPushContants->layout,
+                                   currentPushContants->stageFlags, currentPushContants->offset,
+                                   currentPushContants->data.size(),
+                                   currentPushContants->data.data());
+        }
+      }
+    }
+  }
+
+  drvVk.vkCmdTraceRaysKHR(cmdBuf, pRaygenSBT, pMissSBT, pHitSBT, pCallableSBT, *_width, *_height,
+                          *_depth);
+  vkCmdTraceRaysKHR_SD(cmdBuf, pRaygenSBT, pMissSBT, pHitSBT, pCallableSBT, *_width, *_height,
+                       *_depth);
+
+  if (SBTPatchingRequired) {
+    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
+    VkMemoryBarrier barrierPre = {
+        VK_STRUCTURE_TYPE_MEMORY_BARRIER,                      // VkStructureType sType;
+        nullptr,                                               // const void* pNext;
+        VK_ACCESS_SHADER_READ_BIT,                             // VkAccessFlags srcAccessMask;
+        VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT // VkAccessFlags dstAccessMask;
+    };
+    drvVk.vkCmdPipelineBarrier(cmdBuf, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
+                               VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &barrierPre, 0, nullptr,
+                               0, nullptr);
+
+    // Inject compute - revert patching
+    drvVk.vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_COMPUTE, patchingPipeline);
+    PushConstantsData pushConstants = {
+        newHandlesAddress,      // VkDeviceAddress OriginalHandles;
+        originalHandlesAddress, // VkDeviceAddress NewHandles;
+        addressesToPatchAddress // VkDeviceAddress SBT;
+    };
+
+    drvVk.vkCmdPushConstants(cmdBuf, patchingLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0,
+                             sizeof(PushConstantsData), &pushConstants);
+    drvVk.vkCmdDispatch(cmdBuf, /* All SBT entries count */ addressesCount,
+                        /* map entries count */ groupHandlesCount, 1);
+
+    VkMemoryBarrier barrierPost = {
+        VK_STRUCTURE_TYPE_MEMORY_BARRIER,                       // VkStructureType sType;
+        nullptr,                                                // const void* pNext;
+        VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, // VkAccessFlags srcAccessMask;
+        VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT  // VkAccessFlags dstAccessMask;
+    };
+    drvVk.vkCmdPipelineBarrier(cmdBuf, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                               VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 1, &barrierPost, 0, nullptr,
+                               0, nullptr);
+    if (currentPipeline != VK_NULL_HANDLE) {
+      drvVk.vkCmdBindPipeline(cmdBuf, currentBindPoint, currentPipeline);
+      if (currentPushContants) {
+        drvVk.vkCmdPushConstants(cmdBuf, currentPushContants->layout,
+                                 currentPushContants->stageFlags, currentPushContants->offset,
+                                 currentPushContants->data.size(),
+                                 currentPushContants->data.data());
+      }
+    }
+  }
 }
 
 } // namespace Vulkan

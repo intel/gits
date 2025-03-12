@@ -1126,7 +1126,7 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pGeneratedCommandsInfo', type='const VkGeneratedCommandsInfoNV*')
 )
 
-Function(name='vkCmdPushConstants', enabled=True, type=FuncType.COMMAND_BUFFER_PUSH, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdPushConstants', enabled=True, stateTrack=True, type=FuncType.COMMAND_BUFFER_PUSH, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='layout', type='VkPipelineLayout'),
@@ -1927,7 +1927,7 @@ arg5=ArgDef(name='pCallableShaderBindingTable', type='const VkStridedDeviceAddre
 arg6=ArgDef(name='indirectDeviceAddress', type='VkDeviceAddress')
 )
 
-Function(name='vkCmdTraceRaysKHR', enabled=True, type=FuncType.DISPATCH, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdTraceRaysKHR', enabled=True, type=FuncType.DISPATCH, stateTrack=True, runWrap=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pRaygenShaderBindingTable', type='const VkStridedDeviceAddressRegionKHR*'),
@@ -9131,6 +9131,8 @@ VarDef(name='VK_STRUCTURE_TYPE_RESOLVE_IMAGE_COMPRESSION_ON_PRESENT_INTEL', valu
 VarDef(name='VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO_3_INTEL', value='808600033'),
 VarDef(name='VK_STRUCTURE_TYPE_SAMPLE_CHROMA_KEY_CREATE_INFO_INTEL', value='808600034'),
 VarDef(name='VK_STRUCTURE_TYPE_SHADER_DXBC_HASH_INTEL', value='808600035'),
+#8086_20_XYZ is a custom structure type numbering used specifically for GITS
+VarDef(name='VK_STRUCTURE_TYPE_ORIGINAL_SHADER_GROUP_HANDLES_GITS', value='808620001'),
 VarDef(name='VK_STRUCTURE_TYPE_MAX_ENUM', value='2147483647'),
 ])
 

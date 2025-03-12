@@ -1180,9 +1180,13 @@ inline void vkCreateRayTracingPipelinesKHR_RECWRAP(
     const VkAllocationCallbacks* pAllocator,
     VkPipeline* pPipelines,
     CRecorder& recorder) {
+  vkCreateRayTracingPipelinesKHR_SD(return_value, device, deferredOperation, pipelineCache,
+                                    createInfoCount, pCreateInfos, pAllocator, pPipelines);
+
   std::vector<std::vector<uint8_t>> pipelineCaptureReplayHandles;
   std::vector<VkRayTracingPipelineCreateInfoKHR> allCreateInfos;
   std::vector<std::vector<VkRayTracingShaderGroupCreateInfoKHR>> allShaderGroups;
+  std::list<VkOriginalShaderGroupHandlesGITS> shaderGroupHandlesPNexts;
 
   for (uint32_t p = 0; p < createInfoCount; ++p) {
     allCreateInfos.emplace_back(pCreateInfos[p]);
@@ -1208,6 +1212,26 @@ inline void vkCreateRayTracingPipelinesKHR_RECWRAP(
     }
 
     currentCreateInfo.pGroups = groupsForCurrentCreateInfo.data();
+
+    auto* pNext = (VkOriginalShaderGroupHandlesGITS*)getPNextStructure(
+        currentCreateInfo.pNext, VK_STRUCTURE_TYPE_ORIGINAL_SHADER_GROUP_HANDLES_GITS);
+    if (!pNext) {
+      auto pipeline = pPipelines[p];
+      if (pipeline == VK_NULL_HANDLE) {
+        continue;
+      }
+
+      auto& shaderGroup = SD()._pipelinestates[pipeline]->shaderGroupHandles;
+
+      shaderGroupHandlesPNexts.emplace_back(VkOriginalShaderGroupHandlesGITS{
+          VK_STRUCTURE_TYPE_ORIGINAL_SHADER_GROUP_HANDLES_GITS, // VkStructureType sType;
+          currentCreateInfo.pNext,                              // const void* pNext;
+          shaderGroup.dataSize,                                 // uint32_t dataSize;
+          shaderGroup.originalHandles.data()                    // const void* pData;
+      });
+
+      currentCreateInfo.pNext = &shaderGroupHandlesPNexts.back();
+    }
   }
 
   if (recorder.Running()) {
@@ -1215,8 +1239,6 @@ inline void vkCreateRayTracingPipelinesKHR_RECWRAP(
         return_value, device, VK_NULL_HANDLE /* deferredOperation */, pipelineCache,
         createInfoCount, allCreateInfos.data(), pAllocator, pPipelines));
   }
-  vkCreateRayTracingPipelinesKHR_SD(return_value, device, deferredOperation, pipelineCache,
-                                    createInfoCount, allCreateInfos.data(), pAllocator, pPipelines);
 }
 
 void vkCmdBuildAccelerationStructuresKHR_RECWRAP(

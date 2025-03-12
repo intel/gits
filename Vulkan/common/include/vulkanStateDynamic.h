@@ -266,6 +266,8 @@ struct CDeviceState : public UniqueResourceHandle {
   std::vector<std::string> enabledExtensions;
   bool synchronization2;
 
+  static const uint32_t shaderGroupHandleSize = 32;
+
   CDeviceState(VkDevice const* _pDevice,
                VkDeviceCreateInfo const* _pCreateInfo,
                std::shared_ptr<CPhysicalDeviceState>& _physicalDeviceState)
@@ -1021,6 +1023,21 @@ struct CPipelineState : public UniqueResourceHandle {
   std::shared_ptr<CPipelineLayoutState> pipelineLayoutStateStore;
   std::shared_ptr<CRenderPassState> renderPassStateStore;
   std::vector<std::shared_ptr<CShaderModuleState>> shaderModuleStateStoreList;
+  bool isLibrary;
+  struct CShaderGroupHandlesManagement {
+    uint32_t count;
+    uint32_t dataSize;
+    std::vector<uint8_t> originalHandles;
+    std::vector<uint8_t> currentHandles;
+    std::pair<std::shared_ptr<CDeviceMemoryState>, std::shared_ptr<CBufferState>> memoryBufferPair;
+    uint8_t* mappedMemoryPtr;
+    VkDeviceAddress deviceAddress;
+    bool SBTPatchingRequired;
+
+    CShaderGroupHandlesManagement()
+        : count(0), mappedMemoryPtr(nullptr), deviceAddress(0), SBTPatchingRequired(true) {}
+    ~CShaderGroupHandlesManagement();
+  } shaderGroupHandles;
 
   CPipelineState(VkPipeline const* _pPipeline,
                  VkGraphicsPipelineCreateInfo const* _pCreateInfo,
@@ -1033,7 +1050,9 @@ struct CPipelineState : public UniqueResourceHandle {
         rayTracingPipelineCreateInfoData(nullptr, VK_NULL_HANDLE),
         deviceStateStore(_deviceState),
         pipelineLayoutStateStore(_pipelineLayoutState),
-        renderPassStateStore(_renderPassState) {}
+        renderPassStateStore(_renderPassState),
+        isLibrary(false),
+        shaderGroupHandles() {}
 
   CPipelineState(VkPipeline const* _pPipeline,
                  VkComputePipelineCreateInfo const* _pCreateInfo,
@@ -1044,7 +1063,9 @@ struct CPipelineState : public UniqueResourceHandle {
         computePipelineCreateInfoData(_pCreateInfo),
         rayTracingPipelineCreateInfoData(nullptr, VK_NULL_HANDLE),
         deviceStateStore(_deviceState),
-        pipelineLayoutStateStore(_pipelineLayoutState) {}
+        pipelineLayoutStateStore(_pipelineLayoutState),
+        isLibrary(false),
+        shaderGroupHandles() {}
 
   CPipelineState(VkPipeline const* _pPipeline,
                  VkRayTracingPipelineCreateInfoKHR const* _pCreateInfo,
@@ -1055,7 +1076,9 @@ struct CPipelineState : public UniqueResourceHandle {
         computePipelineCreateInfoData(nullptr),
         rayTracingPipelineCreateInfoData(_pCreateInfo, _deviceState->deviceHandle),
         deviceStateStore(_deviceState),
-        pipelineLayoutStateStore(_pipelineLayoutState) {}
+        pipelineLayoutStateStore(_pipelineLayoutState),
+        isLibrary(false),
+        shaderGroupHandles() {}
 
   std::set<uint64_t> GetMappedPointers() {
     std::set<uint64_t> pointers;
@@ -1343,6 +1366,12 @@ struct CCommandBufferState : public UniqueResourceHandle {
   bool restored;
   VkPipeline currentPipeline;
   VkPipelineBindPoint currentPipelineBindPoint;
+  struct CPushContantsData {
+    VkPipelineLayout layout;
+    VkShaderStageFlags stageFlags;
+    uint32_t offset;
+    std::vector<uint8_t> data;
+  } pushContantsData;
   CLibrary::CVulkanCommandBufferTokensBuffer tokensBuffer;
   std::unordered_map<VkEvent, bool> eventStatesAfterSubmit;
   std::unordered_map<VkQueryPool, std::unordered_set<uint32_t>>
@@ -1560,6 +1589,7 @@ struct InternalPipelinesManager {
     VkPipeline prepareIndirectCopyFor16BitIndexedVerticesPipeline;
     VkPipeline prepareIndirectCopyFor32BitIndexedVerticesPipeline;
     VkPipeline performIndirectCopyPipeline;
+    VkPipeline patchShaderGroupHandlesInSBT;
 
   public:
     InternalPipelines(VkDevice _device);
@@ -1578,6 +1608,7 @@ struct InternalPipelinesManager {
     VkPipeline getPrepareIndirectCopyFor16BitIndexedVerticesPipeline();
     VkPipeline getPrepareIndirectCopyFor32BitIndexedVerticesPipeline();
     VkPipeline getPerformIndirectCopyPipeline();
+    VkPipeline getPatchShaderGroupHandlesInSBT();
   };
 
   std::unordered_map<VkDevice, InternalPipelines> pipelinesMap;
