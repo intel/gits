@@ -56,21 +56,16 @@ void GpuPatchLayer::post(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
 }
 
 void GpuPatchLayer::pre(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) {
-  if (c.result_.value) {
-    ShaderIdentifierService::ShaderIdentifier shaderIdentifier;
-    memcpy(shaderIdentifier.data(), c.result_.value, shaderIdentifier.size());
-    shaderIdentifierService_.addCaptureShaderIdentifier(c.key, shaderIdentifier,
-                                                        c.pExportName_.value);
-  }
+  ShaderIdentifierService::ShaderIdentifier shaderIdentifier;
+  memcpy(shaderIdentifier.data(), c.result_.value, shaderIdentifier.size());
+  shaderIdentifierService_.addCaptureShaderIdentifier(c.key, shaderIdentifier,
+                                                      c.pExportName_.value);
 }
 
 void GpuPatchLayer::post(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) {
-  if (c.result_.value) {
-    ShaderIdentifierService::ShaderIdentifier shaderIdentifier;
-    memcpy(shaderIdentifier.data(), c.result_.value, shaderIdentifier.size());
-    shaderIdentifierService_.addPlayerShaderIdentifier(c.key, shaderIdentifier,
-                                                       c.pExportName_.value);
-  }
+  ShaderIdentifierService::ShaderIdentifier shaderIdentifier;
+  memcpy(shaderIdentifier.data(), c.result_.value, shaderIdentifier.size());
+  shaderIdentifierService_.addPlayerShaderIdentifier(c.key, shaderIdentifier, c.pExportName_.value);
 }
 
 void GpuPatchLayer::pre(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) {
