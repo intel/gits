@@ -53,14 +53,16 @@ Event = {                                   -- Event object info
   kernelLaunchNumber = 0,                   -- Id of command list append kernel launch
   isCompleted = false,                      -- Flag responsible for filtering fully initialized events
   appendTimestampResult = {},               -- L0 object structure ze_kernel_timestamp_result_t
-  gatheredData = false                      -- Determines whether application uses AppendEventResets
+  gatheredData = false,                     -- Determines whether application uses AppendEventResets
+  isDestroyed = false                       -- Tracking destroyed events to work with the same addresses
 }
 
 CommandList = {                             -- Command list object info
   handle = 0,                               -- Command list handle
   number = 0,                               -- Id of command list creation
   events = {},                              -- List of references to kernel events
-  isCompleted = false                       -- Determines whether list has registered its every event
+  isCompleted = false,                      -- Determines whether list has registered its every event
+  isDestroyed = false                       -- Tracking destroyed command lists to work with the same addresses
 }
 
 CommandQueue = {                            -- Command queue submit object info
@@ -68,7 +70,8 @@ CommandQueue = {                            -- Command queue submit object info
   number = 0,                               -- Id of command queue submit
   hFence = nil,                             -- Fence handle of command queue submit
   cmdLists = {},                            -- Command lists listed for submit
-  isCompleted = false                       -- Determines whether queue submit has registered its every event
+  isCompleted = false,                      -- Determines whether queue submit has registered its every event
+  isDestroyed = false                       -- Tracking destroyed command queues to work with the same addresses
 }
 
 Kernel = {                                  -- Kernel object info
@@ -76,7 +79,8 @@ Kernel = {                                  -- Kernel object info
   name = '',                                -- Kernel name
   group_size_x = 0,                         -- group size for X dimension to use for this kernel
   group_size_y = 0,                         -- group size for Y dimension to use for this kernel
-  group_size_z = 0                          -- group size for Z dimension to use for this kernel
+  group_size_z = 0,                         -- group size for Z dimension to use for this kernel
+  isDestroyed = false                       -- Tracking destroyed kernels to work with the same addresses
 }
 
 CSV_HEADER = {'launch_no', 'kernel', 'start_ns', 'complete_ns', 'duration_ns', 'gws'}
@@ -134,6 +138,7 @@ end
 
 function CommandList:addKernelEvent(event)
   table.insert(self.events, event)
+  self.isCompleted = false
 end
 
 function CommandQueue:new(handle, number, hFence)
@@ -149,6 +154,7 @@ end
 
 function CommandQueue:addCommandList(handle)
   table.insert(self.cmdLists, handle)
+  self.isCompleted = false
 end
 
 function Kernel:new(handle, name)
@@ -176,7 +182,7 @@ end
 
 function GetObject(table, handle)
   for _, v in ipairs(table) do
-    if v.handle == handle then
+    if not v.isDestroyed and v.handle == handle then
       return v
     end
   end
@@ -234,9 +240,13 @@ end
 
 function RegisterKernelEvent(hKernel, hEvent, hCommandList)
     APPEND_LAUNCH_KERNEL_NUMBER = APPEND_LAUNCH_KERNEL_NUMBER + 1
-    local e = Event:new(hKernel, hEvent, hCommandList, APPEND_LAUNCH_KERNEL_NUMBER)
-    table.insert(EVENT_LIST, e)
     local cmdList = GetObject(COMMAND_LIST, hCommandList)
+    local e = Event:new(hKernel, hEvent, hCommandList, APPEND_LAUNCH_KERNEL_NUMBER)
+    if cmdList.isImmediate then
+      local cq = GetObject(COMMAND_QUEUE_LIST, hCommandList)
+      e.cqNumber = cq.number
+    end
+    table.insert(EVENT_LIST, e)
     cmdList:addKernelEvent(e)
     return e
 end
@@ -259,10 +269,12 @@ function RegisterCmdQueue(hCommandQueue, number, hFence, phCommandLists, numComm
   local queueContainsKernel = false
   for _, v in ipairs(cq.cmdLists) do
     local cmdList = GetObject(COMMAND_LIST, v)
-    if #cmdList.events > 0 then
+    if not cmdList.isDestroyed and #cmdList.events > 0 then
       queueContainsKernel = true
       for _, event in ipairs(cmdList.events) do
-        event.cqNumber = number
+        if not event.isDestroyed then
+          event.cqNumber = number
+        end
       end
     end
   end
@@ -331,7 +343,7 @@ end
 
 function UpdateEventsFromCommandList(cmdListHandle)
   for _, v in ipairs(COMMAND_LIST) do
-    if not v.isCompleted and v.handle == cmdListHandle then
+    if not v.isDestroyed and not v.isCompleted and v.handle == cmdListHandle then
       for _, kernelEvent in ipairs(v.events) do
         UpdateEvents(cmdListHandle, kernelEvent.kernel.handle)
       end
@@ -342,7 +354,7 @@ end
 
 function UpdateEventsFromFence(hFence)
   for _, cqState in ipairs(COMMAND_QUEUE_LIST) do
-    if cqState.hFence == hFence and not cqState.isCompleted then
+    if not cqState.isDestroyed and cqState.hFence == hFence and not cqState.isCompleted then
       for _, cmdListHandle in ipairs(cqState.cmdLists) do
         UpdateEventsFromCommandList(cmdListHandle)
       end
@@ -353,7 +365,7 @@ end
 
 function UpdateEventsFromCommandQueue(hCommandQueue)
   for _, cqState in ipairs(COMMAND_QUEUE_LIST) do
-    if not cqState.isCompleted and cqState.handle == hCommandQueue then
+    if not cqState.isDestroyed and not cqState.isCompleted and cqState.handle == hCommandQueue then
       for _, cmdListState in ipairs(cqState.cmdLists) do
         UpdateEventsFromCommandList(cmdListState)
       end
@@ -698,6 +710,37 @@ function zeEventDestroy(hEvent)
       end
       UpdateEvent(event, event.cqNumber)
     end
+    if event.handle == hEvent then
+      event.isDestroyed = true
+    end
   end
   return drvl0.zeEventDestroy(hEvent)
+end
+
+function zeCommandListDestroy(hCommandList)
+  local cmdList = GetObject(COMMAND_LIST, hCommandList)
+  if cmdList ~= nil then
+    cmdList.isDestroyed = true
+    if cmdList.isImmediate then
+      local cmdQueue = GetObject(COMMAND_QUEUE_LIST, hCommandList)
+      cmdQueue.isDestroyed = true
+    end
+  end
+  return drvl0.zeCommandListDestroy(hCommandList)
+end
+
+function zeCommandQueueDestroy(hCommandQueue)
+  local cq = GetObject(COMMAND_QUEUE_LIST, hCommandQueue)
+  if cq ~= nil then
+    cq.isDestroyed = true
+  end
+  return drvl0.zeCommandQueueDestroy(hCommandQueue)
+end
+
+function zeKernelDestroy(hKernel)
+  local kernel = GetObject(KERNEL_LIST, hKernel)
+  if kernel ~= nil then
+    kernel.isDestroyed = true
+  end
+  return drvl0.zeKernelDestroy(hKernel)
 end
