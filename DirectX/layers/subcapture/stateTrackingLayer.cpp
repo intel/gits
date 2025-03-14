@@ -2171,8 +2171,8 @@ void StateTrackingLayer::post(IDStorageFactoryCreateQueueCommand& c) {
   state->iid = c.riid_.value;
   state->desc = *c.desc_.value;
   state->deviceKey = c.desc_.deviceKey;
-  if (c.desc_.name) {
-    state->name = c.desc_.name;
+  if (c.desc_.value->Name) {
+    state->name = c.desc_.value->Name;
   }
   stateService_.storeState(state);
 

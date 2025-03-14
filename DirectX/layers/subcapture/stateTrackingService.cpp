@@ -1220,8 +1220,9 @@ void StateTrackingService::restoreDStorageQueueState(DStorageQueueState* state) 
   c.key = getUniqueCommandKey();
   c.object_.key = state->parentKey;
   c.desc_.value = &state->desc;
-  c.desc_.deviceKey = state->deviceKey;
   c.desc_.name = state->name.c_str();
+  c.desc_.value->Name = c.desc_.name;
+  c.desc_.deviceKey = state->deviceKey;
   c.riid_.value = state->iid;
   c.ppv_.key = state->key;
   recorder_.record(new IDStorageFactoryCreateQueueWriter(c));
