@@ -155,6 +155,8 @@ void gits::Config::SetCommon(const YAML::Node& commonYaml) {
   }
   if (cfgPlayer.fullscreen) {
     cfgPlayer.windowMode = WindowMode::EXCLUSIVE_FULLSCREEN;
+  } else {
+    cfgPlayer.windowMode = WindowMode::NORMAL;
   }
   if (!cfgPlayer.eventScript.empty()) {
     auto& scriptPath = cfgPlayer.eventScript;
