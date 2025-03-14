@@ -13,12 +13,19 @@ namespace gits {
 namespace DirectX {
 
 RtasCacheLayer::RtasCacheLayer(CGits& gits, const RtasCacheConfig& cfg)
-    : Layer("RtasCache"), gits_(gits), cfg_(cfg) {
-  std::filesystem::path cachePath = "rtas_cache";
-  if (!cachePath.empty() && !std::filesystem::exists(cachePath) && cfg_.record) {
-    std::filesystem::create_directory(cachePath);
+    : Layer("RtasCache"),
+      gits_(gits),
+      cfg_(cfg),
+      accelerationStructuresSerializer_(gits, cfg_.record),
+      accelerationStructuresDeserializer_(gits) {}
+
+RtasCacheLayer::~RtasCacheLayer() {
+  if (replay()) {
+    log(gits_, "RtasCache: deserialized ", blasCount_, " BLASes");
   }
-  cachePath_ = cachePath;
+  if (record()) {
+    log(gits_, "RtasCache: serialized ", blasCount_, " BLASes");
+  }
 }
 
 void RtasCacheLayer::pre(D3D12CreateDeviceCommand& c) {
@@ -28,6 +35,12 @@ void RtasCacheLayer::pre(D3D12CreateDeviceCommand& c) {
 }
 
 void RtasCacheLayer::pre(IDXGISwapChainPresentCommand& c) {
+  if (replay()) {
+    log(gits_, "RtasCache: deserialized ", blasCount_, " BLASes");
+  }
+  if (record()) {
+    log(gits_, "RtasCache: serialized ", blasCount_, " BLASes");
+  }
   stateRestore_ = false;
 }
 
@@ -37,10 +50,10 @@ void RtasCacheLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationSt
       return;
     }
 
-    std::wstring filePath = cachePath_ + L"/blas_" + std::to_wstring(c.key) + L".dat";
-    accelerationStructuresDeserializer_.deserializeAccelerationStructure(c.object_.value,
-                                                                         *c.pDesc_.value, filePath);
+    accelerationStructuresDeserializer_.deserializeAccelerationStructure(c.key, c.object_.value,
+                                                                         *c.pDesc_.value);
     c.skip = true;
+    ++blasCount_;
   }
 }
 
@@ -51,9 +64,9 @@ void RtasCacheLayer::post(
       return;
     }
 
-    std::wstring filePath = cachePath_ + L"/blas_" + std::to_wstring(c.key) + L".dat";
-    accelerationStructuresSerializer_.serializeAccelerationStructure(c.object_.value,
-                                                                     *c.pDesc_.value, filePath);
+    accelerationStructuresSerializer_.serializeAccelerationStructure(c.key, c.object_.value,
+                                                                     *c.pDesc_.value);
+    ++blasCount_;
   }
 }
 

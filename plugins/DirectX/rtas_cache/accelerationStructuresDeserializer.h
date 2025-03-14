@@ -14,16 +14,19 @@
 #include <unordered_map>
 #include <vector>
 #include <queue>
+#include <fstream>
 
 namespace gits {
+class CGits;
 namespace DirectX {
 
 class AccelerationStructuresDeserializer {
 public:
+  AccelerationStructuresDeserializer(CGits& gits);
   ~AccelerationStructuresDeserializer();
-  void deserializeAccelerationStructure(ID3D12GraphicsCommandList4* commandList,
-                                        D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc,
-                                        const std::wstring& filePath);
+  void deserializeAccelerationStructure(unsigned buildKey,
+                                        ID3D12GraphicsCommandList4* commandList,
+                                        D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc);
   void executeCommandLists(unsigned key,
                            unsigned commandQueueKey,
                            ID3D12CommandQueue* commandQueue,
@@ -34,6 +37,7 @@ private:
   void cleanup();
 
 private:
+  CGits& gits_;
   std::unordered_map<ID3D12CommandList*, std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>>>
       buffersByCommandList_;
 
@@ -47,6 +51,8 @@ private:
     std::queue<ExecuteInfo> executes;
   };
   std::unordered_map<ID3D12CommandQueue*, CommandQueueInfo> commandQueues_;
+
+  std::ifstream cacheFile_;
 };
 
 } // namespace DirectX

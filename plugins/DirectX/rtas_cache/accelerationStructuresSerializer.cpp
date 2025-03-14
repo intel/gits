@@ -8,6 +8,7 @@
 
 #include "accelerationStructuresSerializer.h"
 #include "gits.h"
+#include "pluginUtils.h"
 
 #include <fstream>
 #include <iomanip>
@@ -15,14 +16,63 @@
 namespace gits {
 namespace DirectX {
 
+AccelerationStructuresSerializer::AccelerationStructuresSerializer(CGits& gits, bool enabled)
+    : ResourceDump(), gits_(gits), enabled_(enabled) {
+  if (enabled_) {
+    cachePath_ = L"rtas_cache";
+    if (!cachePath_.empty() && !std::filesystem::exists(cachePath_)) {
+      std::filesystem::create_directory(cachePath_);
+    }
+  }
+}
+
 AccelerationStructuresSerializer::~AccelerationStructuresSerializer() {
+  if (!enabled_) {
+    return;
+  }
   waitUntilDumped();
+
+  logE(gits_, "RtasCache: writing rtas_cache.dat");
+
+  std::map<unsigned, unsigned> blases;
+  for (std::filesystem::directory_entry file : std::filesystem::directory_iterator(cachePath_)) {
+    std::string name = file.path().filename().string();
+    unsigned size = file.file_size();
+    unsigned buildKey = std::stoi(name);
+    blases[buildKey] = size;
+  }
+
+  std::ofstream cache("rtas_cache.dat", std::ios_base::binary);
+  for (auto& it : blases) {
+    unsigned buildKey = it.first;
+    std::string name = std::to_string(buildKey);
+    unsigned size = it.second;
+    std::ifstream file("rtas_cache/" + name, std::ios_base::binary);
+    std::vector<char> data(size);
+    file.read(data.data(), size);
+    if (file.fail()) {
+      logE(gits_, "RtasCache: error reading BLAS ", buildKey);
+      break;
+    }
+    file.close();
+    cache.write(reinterpret_cast<char*>(&buildKey), sizeof(buildKey));
+    cache.write(reinterpret_cast<char*>(&size), sizeof(size));
+    cache.write(data.data(), size);
+    if (cache.bad()) {
+      logE(gits_, "RtasCache: error writing BLAS ", buildKey);
+      break;
+    }
+  }
+
+  cache.flush();
+
+  std::filesystem::remove_all(cachePath_);
 }
 
 void AccelerationStructuresSerializer::serializeAccelerationStructure(
+    unsigned buildKey,
     ID3D12GraphicsCommandList4* commandList,
-    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc,
-    const std::wstring& filePath) {
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc) {
 
   Microsoft::WRL::ComPtr<ID3D12Device5> device;
   HRESULT hr = commandList->GetDevice(IID_PPV_ARGS(&device));
@@ -34,7 +84,7 @@ void AccelerationStructuresSerializer::serializeAccelerationStructure(
   UINT64 size = prebuildInfo.ResultDataMaxSizeInBytes * 2;
 
   AccelerationStructuresDumpInfo* dumpInfo = new AccelerationStructuresDumpInfo();
-  dumpInfo->dumpName = filePath;
+  dumpInfo->dumpName = cachePath_ + L"/" + std::to_wstring(buildKey);
   dumpInfo->size = size;
   dumpInfo->postbuildInfo.size =
       sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_SERIALIZATION_DESC);

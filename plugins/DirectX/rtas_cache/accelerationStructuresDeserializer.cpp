@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "accelerationStructuresDeserializer.h"
+#include "pluginUtils.h"
 
 #include <filesystem>
 #include <cassert>
@@ -15,18 +16,28 @@
 namespace gits {
 namespace DirectX {
 
+AccelerationStructuresDeserializer::AccelerationStructuresDeserializer(CGits& gits) : gits_(gits) {
+  cacheFile_.open("rtas_cache.dat", std::ios_base::binary);
+}
+
 AccelerationStructuresDeserializer::~AccelerationStructuresDeserializer() {
   cleanup();
 }
 
 void AccelerationStructuresDeserializer::deserializeAccelerationStructure(
+    unsigned buildKey,
     ID3D12GraphicsCommandList4* commandList,
-    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc,
-    const std::wstring& filePath) {
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc) {
 
   cleanup();
 
-  unsigned size = std::filesystem::file_size(filePath);
+  unsigned key{};
+  cacheFile_.read(reinterpret_cast<char*>(&key), sizeof(key));
+  if (key != buildKey) {
+    logE(gits_, "RtasCache: expected BLAS ", buildKey, " deserialized ", key);
+  }
+  unsigned size{};
+  cacheFile_.read(reinterpret_cast<char*>(&size), sizeof(size));
 
   Microsoft::WRL::ComPtr<ID3D12Device> device;
   HRESULT hr = commandList->GetDevice(IID_PPV_ARGS(&device));
@@ -59,8 +70,10 @@ void AccelerationStructuresDeserializer::deserializeAccelerationStructure(
     void* data{};
     hr = serializedBuffer->Map(0, nullptr, &data);
 
-    std::ifstream stream(filePath, std::ios_base::binary);
-    stream.read(static_cast<char*>(data), size);
+    cacheFile_.read(static_cast<char*>(data), size);
+    if (!cacheFile_) {
+      logE(gits_, "RtasCache: error reading BLAS ", buildKey);
+    }
 
     serializedBuffer->Unmap(0, nullptr);
 

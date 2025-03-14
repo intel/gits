@@ -13,15 +13,16 @@
 #include <wrl/client.h>
 
 namespace gits {
+class CGits;
 namespace DirectX {
 
 class AccelerationStructuresSerializer : public ResourceDump {
 public:
-  AccelerationStructuresSerializer() : ResourceDump() {}
+  AccelerationStructuresSerializer(CGits& gits, bool enabled);
   ~AccelerationStructuresSerializer();
-  void serializeAccelerationStructure(ID3D12GraphicsCommandList4* commandList,
-                                      D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc,
-                                      const std::wstring& filePath);
+  void serializeAccelerationStructure(unsigned buildKey,
+                                      ID3D12GraphicsCommandList4* commandList,
+                                      D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc);
 
 protected:
   struct AccelerationStructuresDumpInfo : public DumpInfo {
@@ -30,6 +31,11 @@ protected:
     DumpInfo postbuildInfo;
   };
   void dumpStagedResource(DumpInfo& dumpInfo) override;
+
+private:
+  CGits& gits_;
+  bool enabled_{};
+  std::wstring cachePath_;
 };
 
 } // namespace DirectX

@@ -13,9 +13,7 @@
 #include "accelerationStructuresDeserializer.h"
 
 namespace gits {
-
 class CGits;
-
 namespace DirectX {
 
 struct RtasCacheConfig {
@@ -26,6 +24,7 @@ struct RtasCacheConfig {
 class RtasCacheLayer : public Layer {
 public:
   RtasCacheLayer(CGits& gits, const RtasCacheConfig& cfg);
+  ~RtasCacheLayer();
 
   void pre(D3D12CreateDeviceCommand& c) override;
   void pre(IDXGISwapChainPresentCommand& c) override;
@@ -50,8 +49,8 @@ private:
   RtasCacheConfig cfg_;
   AccelerationStructuresSerializer accelerationStructuresSerializer_;
   AccelerationStructuresDeserializer accelerationStructuresDeserializer_;
-  std::wstring cachePath_;
   bool stateRestore_{};
+  unsigned blasCount_{};
 };
 
 } // namespace DirectX
