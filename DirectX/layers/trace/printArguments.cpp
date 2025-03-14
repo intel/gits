@@ -933,7 +933,7 @@ FastOStream& operator<<(FastOStream& stream,
   printObjectKey(stream, arg.destAccelerationStructureKey);
   stream << ", " << arg.destAccelerationStructureOffset << "}, {";
 
-  stream << arg.value->Inputs.Type << ", " << static_cast<unsigned>(arg.value->Inputs.Flags) << ", "
+  stream << arg.value->Inputs.Type << ", " << arg.value->Inputs.Flags << ", "
          << arg.value->Inputs.NumDescs << ", " << arg.value->Inputs.DescsLayout << ", ";
   if (!arg.inputKeys.empty() &&
       arg.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
@@ -952,7 +952,7 @@ FastOStream& operator<<(FastOStream& stream,
       if (i > 0) {
         stream << ", ";
       }
-      stream << "{" << desc.Type << ", " << static_cast<unsigned>(desc.Flags) << ", {";
+      stream << "{" << desc.Type << ", " << desc.Flags << ", {";
 
       if (!arg.inputKeys.empty() && desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
         stream << "{";
