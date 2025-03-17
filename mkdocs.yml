@@ -7,8 +7,7 @@
 # ===================== end_copyright_notice ==============================
 
 site_name: GITS Capture Replay Tool  
-site_url: https://ubiquitous-lamp-nvr87n5.pages.github.io/
-repo_url: https://github.com/intel-innersource/drivers.gpu.validation.gits
+repo_url: https://github.com/intel/gits
 copyright: Copyright &copy; 2024 Intel Corporation All Rights Reserved.
 theme:
   language: en
