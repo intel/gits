@@ -86,6 +86,11 @@ nav:
       - OpenGL: 'documentation/configuration/OpenGL.md'
       - Vulkan: 'documentation/configuration/vulkan.md'
     - API:
+      - DirectX: 
+        - 'documentation/DirectX/Overview.md'
+        - 'documentation/DirectX/Plugins.md'
+        - 'documentation/DirectX/DirectStorage.md'
+        - 'documentation/DirectX/Portability.md'
       - Level Zero:
         - Indirect Access Pointers Locations: 'documentation/LevelZero/l0_gits_indirect_access_pointers_locations.md'
         - Lua Scripting: 'documentation/LevelZero/lua.md'

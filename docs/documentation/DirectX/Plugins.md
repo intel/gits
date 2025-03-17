@@ -65,4 +65,8 @@ Example starting point for a DirectX GITS plugin. Annotates presents and GPU exe
 
 Creates a .csv file with the present-to-present frame times (CPU) for the stream.
 
+### RtasCache
+
+Caches BLASes through serialization/deserialization by CopyRaytracingAccelerationStructure. This plugin is useful to avoid costly BuildRaytracingAccelerationStructure calls.
+
 
