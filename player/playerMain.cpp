@@ -140,7 +140,7 @@ int MainBody(int argc, char* argv[]) {
 
   inst.GetMessageBus().subscribe({PUBLISHER_PLUGIN, TOPIC_LOG}, [](Topic t, const MessagePtr& m) {
     auto msg = std::dynamic_pointer_cast<LogMessage>(m);
-    if (msg) {
+    if (msg && ShouldLog(msg->getLevel())) {
       CLog(msg->getLevel(), NORMAL) << msg->getText();
     }
   });
