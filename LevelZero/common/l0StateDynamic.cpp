@@ -506,7 +506,7 @@ CModuleState::CModuleState(ze_context_handle_t hContext,
                            std::vector<std::string> filenames)
     : hContext(hContext), hDevice(hDevice), hBuildLog(hBuildLog) {
   SetModuleDesc(descriptor);
-  FillProgramInfo(filenames);
+  FillProgramInfo(std::move(filenames));
 }
 
 void CModuleState::DeleteModuleConstants(const ze_module_constants_t* pConstants) {
@@ -641,7 +641,7 @@ nlohmann::ordered_json LayoutBuilder::GetModuleLinkInfo(
         programInfo["build_options"] = program.buildOptions;
         programsInfo.push_back(moduleInfo);
       }
-      moduleInfo["programs"] = programsInfo;
+      moduleInfo["programs"] = std::move(programsInfo);
     }
     modulesInfo.push_back(moduleInfo);
   }
@@ -680,7 +680,7 @@ void LayoutBuilder::UpdateLayout(const CKernelExecutionInfo* kernelInfo,
 #ifdef WITH_OCLOC
         auto oclocInfo = GetOclocInfo(program.oclocState);
         if (oclocInfo.size() != 0) {
-          moduleInfo["ocloc"] = oclocInfo;
+          moduleInfo["ocloc"] = std::move(oclocInfo);
         }
 #endif
         modulesInfo.push_back(moduleInfo);
@@ -789,7 +789,7 @@ nlohmann::ordered_json LayoutBuilder::GetOclocInfo(
       }
     }
     oclocInfo["sources"] = oclocState->savedFileNames;
-    oclocInfo["args"] = children;
+    oclocInfo["args"] = std::move(children);
   }
   return oclocInfo;
 }
