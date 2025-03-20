@@ -620,7 +620,7 @@ struct convert<gits::Config::Vulkan::Player> {
       rhs.forceMultithreadedPipelineCompilation =
           node["ForceMultithreadedPipelineCompilation"].as<gits::vi_bool>();
       rhs.execCmdBuffsBeforeQueueSubmit = node["ExecCmdBuffsBeforeQueueSubmit"].as<gits::vi_bool>();
-      rhs.patchShaderGroupHandles = node["patchShaderGroupHandles"].as<gits::vi_bool>();
+      rhs.patchShaderGroupHandles = node["PatchShaderGroupHandles"].as<gits::vi_bool>();
 #ifdef GITS_PLATFORM_WINDOWS
       rhs.renderDoc.mode = node["RenderDoc"]["Mode"].as<gits::VkRenderDocCaptureOpt>();
       rhs.renderDoc.captureRange = node["RenderDoc"]["Range"].as<BitRange>();
