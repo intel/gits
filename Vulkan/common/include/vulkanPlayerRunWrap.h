@@ -462,7 +462,7 @@ inline void vkCreateInstance_WRAPRUN(CVkResult& recorderSideReturnValue,
     // Currently, shader group handle patching in SBT cannot be used during
     // substream recording. Inform user about this problem.
     auto cfg = Config::Get();
-    cfg.vulkan.player.forceDisableShaderGroupHandlesPatching = true;
+    cfg.vulkan.player.patchShaderGroupHandles = false;
     Config::Set(cfg);
     Log(WARN) << "Shader group handles patching cannot be used during substream recording. GITS "
                  "will disable it for this replay.";
@@ -1614,8 +1614,8 @@ inline void vkCreateDevice_WRAPRUN(CVkResult& recorderSideReturnValue,
   suppressRequestedNames(requestedLayers, vkConfig.shared.suppressLayers,
                          createInfo.enabledLayerCount, createInfo.ppEnabledLayerNames);
 
-  // Use capture/replay features (if available) when shader group handles patching is disabled
-  if (!vkConfig.player.forceDisableShaderGroupHandlesPatching) {
+  // Don't use capture/replay features (if available) together with shader group handles patching
+  if (vkConfig.player.patchShaderGroupHandles) {
     auto* rayTracingPipelineFeatures =
         (VkPhysicalDeviceRayTracingPipelineFeaturesKHR*)getPNextStructure(
             createInfo.pNext, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR);
@@ -1755,8 +1755,8 @@ CreateRayTracingPipelinesArgumentWrapper(VkDevice device,
                                          const VkRayTracingPipelineCreateInfoKHR* pCreateInfos,
                                          const VkAllocationCallbacks* pAllocator,
                                          VkPipeline* pPipelines) {
-  // Use capture/replay features (if available) when shader group handles patching is disabled
-  if (!Config::Get().vulkan.player.forceDisableShaderGroupHandlesPatching) {
+  // Don't use capture/replay features (if available) together with shader group handles patching
+  if (Config::Get().vulkan.player.patchShaderGroupHandles) {
     for (uint32_t ci = 0; ci < createInfoCount; ci++) {
       auto* pCreateInfo = const_cast<VkRayTracingPipelineCreateInfoKHR*>(&pCreateInfos[ci]);
       pCreateInfo->flags &=

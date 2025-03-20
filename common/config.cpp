@@ -56,6 +56,7 @@ gits::Config::Config() {
   vulkan.recorder.reusableStateRestoreBufferSize = 80;
   vulkan.recorder.maxArraySizeForCCode = 400;
   vulkan.player.maxAllowedVkSwapchainRewinds = 100;
+  vulkan.player.patchShaderGroupHandles = true;
 
 #if defined GITS_PLATFORM_WINDOWS
   common.shared.libGL = "OpenGL32.dll";

@@ -222,11 +222,11 @@ bool configure_player(int argc, char** argv) {
       "Executing commandBuffers operation just before QueueSubmit, instead of doing that in the "
       "same way as app/benchmark/game.");
 
-  TypedOption<bool> optionForceDisableShaderGroupHandlesPatching(
-      options, OPTION_GROUP_GENERAL, 0, "forceDisableShaderGroupHandlesPatching",
+  TypedOption<bool> optionDisableShaderGroupHandlesPatching(
+      options, OPTION_GROUP_GENERAL, 0, "disableShaderGroupHandlesPatching",
       "Vulkan specific option. Forces shader group handles patching in Shader Binding Tables to be "
       "disabled during playback. The patching mechanism injects a compute shader before ray "
-      "tracing commands and updates shader group handles, potentially improving a cross-platform "
+      "tracing commands which updates shader group handles, potentially improving cross-platform "
       "compatiblity of streams. When patching is disabled, a stream replay uses capture/replay "
       "features, if they were enabled during recording (depending on a config option), or just "
       "replays the stream as is.");
@@ -1097,8 +1097,6 @@ bool configure_player(int argc, char** argv) {
   set_when_option_present(cfg.vulkan.player.printMemUsageVk, optionPrintMemUsageVk);
   set_when_option_present(cfg.vulkan.player.execCmdBuffsBeforeQueueSubmit,
                           optionExecCmdBuffsBeforeQueueSubmit);
-  set_when_option_present(cfg.vulkan.player.forceDisableShaderGroupHandlesPatching,
-                          optionForceDisableShaderGroupHandlesPatching);
   set_when_option_present(cfg.vulkan.player.forceMultithreadedPipelineCompilation,
                           optionForceMultithreadedPipelineCompilation);
 
@@ -1111,6 +1109,9 @@ bool configure_player(int argc, char** argv) {
   }
   if (optionSuppressVKLayers.Present()) {
     parse_vector(optionSuppressVKLayers.Value(), cfg.vulkan.shared.suppressLayers);
+  }
+  if (optionDisableShaderGroupHandlesPatching.Present()) {
+    cfg.vulkan.player.patchShaderGroupHandles = false;
   }
   set_when_option_present(cfg.vulkan.player.waitAfterQueueSubmitWA, optionWaitAfterQueueSubmitWA);
 

@@ -2136,7 +2136,7 @@ inline void vkCreateRayTracingPipelinesKHR_SD(VkResult return_value,
           shaderGroup.SBTPatchingRequired =
               (memcmp(shaderGroup.originalHandles.data(), shaderGroup.currentHandles.data(),
                       pOriginalHandles->dataSize) != 0) &&
-              !Config::Get().vulkan.player.forceDisableShaderGroupHandlesPatching;
+              Config::Get().vulkan.player.patchShaderGroupHandles;
         } else {
           shaderGroup.originalHandles = shaderGroup.currentHandles;
           shaderGroup.SBTPatchingRequired = false;

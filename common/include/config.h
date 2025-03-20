@@ -445,7 +445,7 @@ struct Config {
       vi_bool printMemUsageVk;
       vi_bool forceMultithreadedPipelineCompilation;
       vi_bool execCmdBuffsBeforeQueueSubmit;
-      vi_bool forceDisableShaderGroupHandlesPatching;
+      vi_bool patchShaderGroupHandles;
 #ifdef GITS_PLATFORM_WINDOWS
       struct RenderDoc {
         VkRenderDocCaptureOpt mode;
