@@ -12,6 +12,17 @@
 # as it tries to overwrite currently open files.
 # It also cannot be done with only custom target, because that would always
 # regenerate and rebuild the files, even if source .py files did not change.
+
+if(WIN32)
+  set(ZE_LOADER_VERSION_MAJOR 1)
+  set(ZE_LOADER_VERSION_MINOR 18)
+  set(ZE_LOADER_VERSION_PATCH 3)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/ZeLoaderVersion.rc.in
+    ${CMAKE_CURRENT_BINARY_DIR}/ZeLoaderVersion.rc
+    @ONLY)
+endif()
+
 add_custom_command(
   OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/L0_codegen.stamp"
   COMMAND ${Python3_EXECUTABLE} "generate.py" "${CMAKE_CURRENT_BINARY_DIR}"
@@ -174,9 +185,17 @@ if (NOT MSVC)
   )
 endif()
 
-add_library(L0_interceptor SHARED
-  ${L0_interceptor_sources}
-)
+if(WIN32)
+  add_library(L0_interceptor SHARED
+    ${L0_interceptor_sources}
+    ${CMAKE_CURRENT_BINARY_DIR}/ZeLoaderVersion.rc
+  )
+else()
+  add_library(L0_interceptor SHARED
+    ${L0_interceptor_sources}
+  )
+endif()
+
 include_directories(interceptor/include)
 
 set_target_properties(L0_interceptor PROPERTIES OUTPUT_NAME ze_loader)
