@@ -468,7 +468,7 @@ Vulkan:
     PrintMemUsageVk: false
     ForceMultithreadedPipelineCompilation: false
     ExecCmdBuffsBeforeQueueSubmit: false
-    PatchShaderGroupHandlesInSBT: false
+    ForceDisableShaderGroupHandlesPatching: false
     RenderDoc:
       Mode: 'None'  # None / Frames / QueueSubmit
       Range: '-'

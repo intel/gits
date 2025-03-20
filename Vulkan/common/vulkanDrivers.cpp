@@ -192,6 +192,12 @@ void_t STDCALL default_vkContinueRecordingGITS() {
   return nullptr;
 }
 
+void_t STDCALL default_vkIAmRecorderGITS() {
+  // No call on purpose (function is exported from a GITS recorder and is used
+  // only to indicate whether the recorder is attached to a player)
+  return nullptr;
+}
+
 #define DEFAULT_FUNCTION(return_type, function_name, function_arguments, arguments_call, level,    \
                          first_argument_name, drv_initialization)                                  \
   return_type STDCALL default_##function_name function_arguments {                                 \

@@ -111,7 +111,6 @@ extern "C" {
     else:
         wrapper_call_args = normal_retval_and_args
 %>\
-
 VKATTRIB VISIBLE ${token.return_value.type} VKAPI_CALL ${token.name}(${params}) {
   % if token.level == FuncLevel.GLOBAL:
   CGitsPluginVulkan::Initialize();

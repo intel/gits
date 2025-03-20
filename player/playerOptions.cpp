@@ -222,11 +222,14 @@ bool configure_player(int argc, char** argv) {
       "Executing commandBuffers operation just before QueueSubmit, instead of doing that in the "
       "same way as app/benchmark/game.");
 
-  TypedOption<bool> optionPatchShaderGroupHandlesInSBT(
-      options, OPTION_GROUP_GENERAL, 0, "patchShaderGroupHandlesInSBT",
-      "Vulkan specific option. Injects compute shaders which update shader group handles in Shader "
-      "Binding Tables during playback, which in some situations may potentially improve "
-      "cross-platform compatiblity of ray-tracing-enabled streams.");
+  TypedOption<bool> optionForceDisableShaderGroupHandlesPatching(
+      options, OPTION_GROUP_GENERAL, 0, "forceDisableShaderGroupHandlesPatching",
+      "Vulkan specific option. Forces shader group handles patching in Shader Binding Tables to be "
+      "disabled during playback. The patching mechanism injects a compute shader before ray "
+      "tracing commands and updates shader group handles, potentially improving a cross-platform "
+      "compatiblity of streams. When patching is disabled, a stream replay uses capture/replay "
+      "features, if they were enabled during recording (depending on a config option), or just "
+      "replays the stream as is.");
 
   TypedOption<std::string> optionCaptureVulkanRenderPasses(
       options, OPTION_GROUP_IMAGE, 0, "captureVulkanRenderPasses",
@@ -1094,8 +1097,8 @@ bool configure_player(int argc, char** argv) {
   set_when_option_present(cfg.vulkan.player.printMemUsageVk, optionPrintMemUsageVk);
   set_when_option_present(cfg.vulkan.player.execCmdBuffsBeforeQueueSubmit,
                           optionExecCmdBuffsBeforeQueueSubmit);
-  set_when_option_present(cfg.vulkan.player.patchShaderGroupHandlesInSBT,
-                          optionPatchShaderGroupHandlesInSBT);
+  set_when_option_present(cfg.vulkan.player.forceDisableShaderGroupHandlesPatching,
+                          optionForceDisableShaderGroupHandlesPatching);
   set_when_option_present(cfg.vulkan.player.forceMultithreadedPipelineCompilation,
                           optionForceMultithreadedPipelineCompilation);
 

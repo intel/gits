@@ -86,6 +86,13 @@ inline bool isUseExternalMemoryExtensionUsed() {
 #endif
 }
 
+inline bool isGitsRecorderAttached() {
+  if (drvVk.GetGlobalDispatchTable().vkIAmRecorderGITS) {
+    return true;
+  }
+  return false;
+}
+
 template <class STATE_CONTAINER, class KEY, class DST_CONTAINER>
 inline void insertStateIfFound(STATE_CONTAINER& state, KEY key, DST_CONTAINER& dst) {
   const auto it = state.find(key);
@@ -2128,7 +2135,8 @@ inline void vkCreateRayTracingPipelinesKHR_SD(VkResult return_value,
                  pOriginalHandles->dataSize);
           shaderGroup.SBTPatchingRequired =
               (memcmp(shaderGroup.originalHandles.data(), shaderGroup.currentHandles.data(),
-                      pOriginalHandles->dataSize) != 0);
+                      pOriginalHandles->dataSize) != 0) &&
+              !Config::Get().vulkan.player.forceDisableShaderGroupHandlesPatching;
         } else {
           shaderGroup.originalHandles = shaderGroup.currentHandles;
           shaderGroup.SBTPatchingRequired = false;
@@ -2139,7 +2147,7 @@ inline void vkCreateRayTracingPipelinesKHR_SD(VkResult return_value,
       // SBT patching. The buffer contains both original (recorder-side) and current (player-side)
       // handles, that's why its size is twice as large.
 
-      if (Config::Get().vulkan.player.patchShaderGroupHandlesInSBT) {
+      if (shaderGroup.SBTPatchingRequired) {
         shaderGroup.memoryBufferPair = createTemporaryBuffer(
             device, 2 * shaderGroup.dataSize, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, nullptr,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
@@ -2149,26 +2157,24 @@ inline void vkCreateRayTracingPipelinesKHR_SD(VkResult return_value,
                           (void**)&shaderGroup.mappedMemoryPtr);
         shaderGroup.deviceAddress = getBufferDeviceAddress(device, buffer);
 
-        if (shaderGroup.SBTPatchingRequired) {
-          // Buffer used to patch shader group handles contains original handles first
-          // and after them the current handles
+        // Buffer used to patch shader group handles contains original handles first
+        // and after them the current handles
 
-          // Copy original shader group handles passed from a recorder
-          memcpy(shaderGroup.mappedMemoryPtr, shaderGroup.originalHandles.data(),
-                 shaderGroup.dataSize);
-          // Copy current shader group handles acquired from a driver
-          memcpy(shaderGroup.mappedMemoryPtr + shaderGroup.dataSize,
-                 shaderGroup.currentHandles.data(), shaderGroup.dataSize);
+        // Copy original shader group handles passed from a recorder
+        memcpy(shaderGroup.mappedMemoryPtr, shaderGroup.originalHandles.data(),
+               shaderGroup.dataSize);
+        // Copy current shader group handles acquired from a driver
+        memcpy(shaderGroup.mappedMemoryPtr + shaderGroup.dataSize,
+               shaderGroup.currentHandles.data(), shaderGroup.dataSize);
 
-          VkMappedMemoryRange range = {
-              VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,                  // VkStructureType sType;
-              nullptr,                                                // const void* pNext;
-              shaderGroup.memoryBufferPair.first->deviceMemoryHandle, // VkDeviceMemory memory;
-              0,                                                      // VkDeviceSize offset;
-              shaderGroup.dataSize * 2                                // VkDeviceSize size;
-          };
-          drvVk.vkFlushMappedMemoryRanges(device, 1, &range);
-        }
+        VkMappedMemoryRange range = {
+            VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,                  // VkStructureType sType;
+            nullptr,                                                // const void* pNext;
+            shaderGroup.memoryBufferPair.first->deviceMemoryHandle, // VkDeviceMemory memory;
+            0,                                                      // VkDeviceSize offset;
+            shaderGroup.dataSize * 2                                // VkDeviceSize size;
+        };
+        drvVk.vkFlushMappedMemoryRanges(device, 1, &range);
       }
     }
   }

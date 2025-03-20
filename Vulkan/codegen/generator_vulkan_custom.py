@@ -66,6 +66,10 @@ Function(name='vkContinueRecordingGITS', enabled=False, type=FuncType.PARAM, rec
 retV=RetDef(type='void')
 )
 
+Function(name='vkIAmRecorderGITS', enabled=False, type=FuncType.PARAM, level=FuncLevel.GLOBAL, customDriver=True, disableInPlugin=True,
+retV=RetDef(type='void')
+)
+
 ###############################################
 
 Enum(name='VkFormat', enumerators = [

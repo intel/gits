@@ -164,6 +164,7 @@ class Token:
     ccode_write_wrap: bool = False
     ccode_post_action_needed: bool | None = None
     plugin_wrap: bool = False
+    disable_in_plugin: bool = False
     custom_driver: bool = False
     end_frame_tag: bool = False
     pre_token: str | None = None
@@ -266,6 +267,7 @@ def _rename_keys(dictionary: dict) -> dict:
         ('ccodeWriteWrap', 'ccode_write_wrap'),
         ('ccodePostActionNeeded', 'ccode_post_action_needed'),
         ('pluginWrap', 'plugin_wrap'),
+        ('disableInPlugin', 'disable_in_plugin'),
         ('customDriver', 'custom_driver'),
         ('endFrameTag', 'end_frame_tag'),
         ('preToken', 'pre_token'),
