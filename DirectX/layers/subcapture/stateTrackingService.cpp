@@ -273,8 +273,13 @@ void StateTrackingService::releaseObject(unsigned key, ULONG result) {
 
   itState->second->refCount = result;
 
-  if (result == 0 && !itState->second->keepDestroyed) {
-    itState->second->destroyed = true;
+  if (result != 0) {
+    return;
+  }
+
+  itState->second->destroyed = true;
+
+  if (!itState->second->keepDestroyed) {
     if (itState->second->id == ObjectState::D3D12_PIPELINELIBRARY) {
       return;
     }
