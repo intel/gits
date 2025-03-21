@@ -1432,6 +1432,7 @@ void StateTrackingLayer::pre(ID3D12StateObjectPropertiesGetShaderIdentifierComma
   D3D12StateObjectPropertiesState* state =
       static_cast<D3D12StateObjectPropertiesState*>(stateService_.getState(c.object_.key));
   GITS_ASSERT(state);
+  stateService_.keepState(state->key);
   auto it = state->shaderIdentifiers.find(c.pExportName_.value);
   if (it == state->shaderIdentifiers.end()) {
     auto& shaderIdentifier = state->shaderIdentifiers[c.pExportName_.value];

@@ -279,33 +279,39 @@ void StateTrackingService::releaseObject(unsigned key, ULONG result) {
 
   itState->second->destroyed = true;
 
-  if (!itState->second->keepDestroyed) {
-    if (itState->second->id == ObjectState::D3D12_PIPELINELIBRARY) {
-      return;
-    }
+  if (itState->second->id == ObjectState::D3D12_PIPELINELIBRARY) {
+    return;
+  }
 
-    unsigned parentKey = itState->second->parentKey;
-    if (parentKey) {
-      auto itParentState = statesByKey_.find(parentKey);
-      if (itParentState != statesByKey_.end()) {
-        itParentState->second->object->AddRef();
-        ULONG refCount = itParentState->second->object->Release();
-        if (refCount == 1) {
+  unsigned parentKey = itState->second->parentKey;
+  if (parentKey) {
+    auto itParentState = statesByKey_.find(parentKey);
+    if (itParentState != statesByKey_.end()) {
+      itParentState->second->object->AddRef();
+      ULONG refCount = itParentState->second->object->Release();
+      if (refCount == 1) {
+        itParentState->second->destroyed = true;
+        if (!itParentState->second->keepDestroyed) {
           delete itParentState->second;
           statesByKey_.erase(itParentState);
         }
       }
     }
+  }
 
-    unsigned childKey = itState->second->childKey;
-    if (childKey) {
-      auto itChildState = statesByKey_.find(childKey);
-      if (itChildState != statesByKey_.end()) {
+  unsigned childKey = itState->second->childKey;
+  if (childKey) {
+    auto itChildState = statesByKey_.find(childKey);
+    if (itChildState != statesByKey_.end()) {
+      itChildState->second->destroyed = true;
+      if (!itChildState->second->keepDestroyed) {
         delete itChildState->second;
         statesByKey_.erase(itChildState);
       }
     }
+  }
 
+  if (!itState->second->keepDestroyed) {
     delete itState->second;
     statesByKey_.erase(itState);
   }
@@ -771,6 +777,13 @@ void StateTrackingService::restoreD3D12AddToStateObjectState(D3D12AddToStateObje
 
 void StateTrackingService::restoreD3D12StateObjectPropertiesState(
     D3D12StateObjectPropertiesState* state) {
+  {
+    const ObjectState* stateObjecState = getState(state->stateObjectKey);
+    if (stateObjecState == nullptr || stateObjecState->destroyed) {
+      return;
+    }
+  }
+
   IUnknownQueryInterfaceCommand c;
   c.key = getUniqueCommandKey();
   c.object_.key = state->stateObjectKey;
