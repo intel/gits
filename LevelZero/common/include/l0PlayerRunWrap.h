@@ -281,13 +281,16 @@ inline void zeModuleCreate_RUNWRAP(Cze_result_t& _return_value,
                                    Cze_module_desc_t::CSArray& _desc,
                                    Cze_module_handle_t::CSMapArray& _phModule,
                                    Cze_module_build_log_handle_t::CSMapArray& _phBuildLog) {
+  ze_module_build_log_handle_t buildLogHandle = nullptr;
+  if (*_phBuildLog != nullptr && **_phBuildLog != nullptr) {
+    buildLogHandle = **_phBuildLog;
+  }
   _return_value.Value() =
-      drv.zeModuleCreate(*_hContext, *_hDevice, *_desc, *_phModule, *_phBuildLog);
+      drv.zeModuleCreate(*_hContext, *_hDevice, *_desc, *_phModule, &buildLogHandle);
   zeModuleCreate_SD(nullptr, *_return_value, *_hContext, *_hDevice, *_desc, *_phModule,
-                    *_phBuildLog);
+                    &buildLogHandle);
   HandleDumpSpv(*_desc);
-  const auto buildLogHandle = *_phBuildLog != nullptr ? **_phBuildLog : nullptr;
-  if (_return_value.Value() == ZE_RESULT_ERROR_MODULE_BUILD_FAILURE && buildLogHandle != nullptr) {
+  if (_return_value.Value() == ZE_RESULT_ERROR_MODULE_BUILD_FAILURE) {
     size_t size = 0U;
     drv.inject.zeModuleBuildLogGetString(buildLogHandle, &size, nullptr);
     if (size > 1U) {
@@ -313,10 +316,14 @@ inline void zeModuleCreate_V1_RUNWRAP(CFunction* token,
                                       Cze_module_desc_t_V1::CSArray& _desc,
                                       Cze_module_handle_t::CSMapArray& _phModule,
                                       Cze_module_build_log_handle_t::CSMapArray& _phBuildLog) {
+  ze_module_build_log_handle_t buildLogHandle = nullptr;
+  if (*_phBuildLog != nullptr && **_phBuildLog != nullptr) {
+    buildLogHandle = **_phBuildLog;
+  }
   _return_value.Value() =
-      drv.zeModuleCreate(*_hContext, *_hDevice, *_desc, *_phModule, *_phBuildLog);
-  zeModuleCreate_SD(token, *_return_value, *_hContext, *_hDevice, *_desc, *_phModule, *_phBuildLog);
-  const auto buildLogHandle = *_phBuildLog != nullptr ? **_phBuildLog : nullptr;
+      drv.zeModuleCreate(*_hContext, *_hDevice, *_desc, *_phModule, &buildLogHandle);
+  zeModuleCreate_SD(token, *_return_value, *_hContext, *_hDevice, *_desc, *_phModule,
+                    &buildLogHandle);
   if (_return_value.Value() == ZE_RESULT_ERROR_MODULE_BUILD_FAILURE && buildLogHandle != nullptr) {
     size_t size = 0U;
     drv.inject.zeModuleBuildLogGetString(buildLogHandle, &size, nullptr);
