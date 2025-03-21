@@ -297,7 +297,6 @@ struct D3D12AddToStateObjectState : public ObjectState {
 
 struct D3D12StateObjectPropertiesState : public ObjectState {
   D3D12StateObjectPropertiesState() : ObjectState(D3D12_STATEOBJECTPROPERTIESSTATE) {}
-  unsigned stateObjectKey{};
   std::map<std::wstring, std::array<uint8_t, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES>>
       shaderIdentifiers;
 };

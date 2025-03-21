@@ -354,7 +354,6 @@ void StateTrackingService::restoreReferenceCount() {
         state->id == ObjectState::D3D12_LOADGRAPHICSPIPELINESTATE ||
         state->id == ObjectState::D3D12_LOADCOMPUTEPIPELINESTATE ||
         state->id == ObjectState::D3D12_LOADPIPELINESTATE ||
-        state->id == ObjectState::D3D12_ADDTOSTATEOBJECTSTATE ||
         state->id == ObjectState::D3D12_ROOTSIGNATURE) {
       refCount = state->refCount;
     } else {
@@ -778,7 +777,7 @@ void StateTrackingService::restoreD3D12AddToStateObjectState(D3D12AddToStateObje
 void StateTrackingService::restoreD3D12StateObjectPropertiesState(
     D3D12StateObjectPropertiesState* state) {
   {
-    const ObjectState* stateObjecState = getState(state->stateObjectKey);
+    const ObjectState* stateObjecState = getState(state->parentKey);
     if (stateObjecState == nullptr || stateObjecState->destroyed) {
       return;
     }
@@ -786,7 +785,7 @@ void StateTrackingService::restoreD3D12StateObjectPropertiesState(
 
   IUnknownQueryInterfaceCommand c;
   c.key = getUniqueCommandKey();
-  c.object_.key = state->stateObjectKey;
+  c.object_.key = state->parentKey;
   c.ppvObject_.key = state->key;
   c.riid_.value = IID_ID3D12StateObjectProperties;
   recorder_.record(new IUnknownQueryInterfaceWriter(c));

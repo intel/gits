@@ -144,10 +144,10 @@ void StateTrackingLayer::post(IUnknownQueryInterfaceCommand& c) {
   IID riid = c.riid_.value;
   if (riid == IID_ID3D12StateObjectProperties) {
     D3D12StateObjectPropertiesState* state = new D3D12StateObjectPropertiesState();
-    state->stateObjectKey = c.object_.key;
+    state->parentKey = c.object_.key;
     state->key = c.ppvObject_.key;
 
-    ObjectState* parentState = stateService_.getState(state->stateObjectKey);
+    ObjectState* parentState = stateService_.getState(state->parentKey);
     parentState->childKey = state->key;
 
     stateService_.storeState(state);
