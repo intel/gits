@@ -29,6 +29,8 @@ public:
   void post(ID3D12CommandQueueWaitCommand& c) override;
   void post(ID3D12CommandQueueSignalCommand& c) override;
   void post(ID3D12FenceSignalCommand& c) override;
+  void post(ID3D12DeviceCreateFenceCommand& c) override;
+  void post(ID3D12Device3EnqueueMakeResidentCommand& c) override;
   void post(IDXGISwapChainPresentCommand& c) override;
   void post(IDXGISwapChain1Present1Command& c) override;
   void post(IUnknownReleaseCommand& c) override;

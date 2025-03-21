@@ -39,7 +39,7 @@ public:
   void executeCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& command);
   void commandQueueWait(ID3D12CommandQueueWaitCommand& command);
   void commandQueueSignal(ID3D12CommandQueueSignalCommand& command);
-  void fenceSignal(ID3D12FenceSignalCommand& command);
+  void fenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue);
 
 private:
   StateTrackingService& stateService_;

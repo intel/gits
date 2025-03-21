@@ -106,5 +106,12 @@ void RtasCacheLayer::post(ID3D12DeviceCreateFenceCommand& c) {
   }
 }
 
+void RtasCacheLayer::post(ID3D12Device3EnqueueMakeResidentCommand& c) {
+  if (record()) {
+    accelerationStructuresSerializer_.fenceSignal(c.key, c.pFenceToSignal_.key,
+                                                  c.FenceValueToSignal_.value);
+  }
+}
+
 } // namespace DirectX
 } // namespace gits

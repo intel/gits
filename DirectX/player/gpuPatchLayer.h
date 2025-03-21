@@ -61,6 +61,7 @@ public:
   void post(ID3D12CommandQueueSignalCommand& c) override;
   void post(ID3D12FenceSignalCommand& c) override;
   void post(ID3D12DeviceCreateFenceCommand& c) override;
+  void post(ID3D12Device3EnqueueMakeResidentCommand& c) override;
   void post(ID3D12DeviceCreateCommandSignatureCommand& c) override;
   void pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) override;
   void post(ID3D12DeviceCreatePlacedResourceCommand& c) override;

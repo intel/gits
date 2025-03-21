@@ -390,6 +390,10 @@ void RenderTargetsDumpLayer::post(ID3D12DeviceCreateFenceCommand& c) {
   resourceDump_.fenceSignal(c.key, c.ppFence_.key, c.InitialValue_.value);
 }
 
+void RenderTargetsDumpLayer::post(ID3D12Device3EnqueueMakeResidentCommand& c) {
+  resourceDump_.fenceSignal(c.key, c.pFenceToSignal_.key, c.FenceValueToSignal_.value);
+}
+
 void RenderTargetsDumpLayer::post(IDXGISwapChainPresentCommand& c) {
   if (!(c.Flags_.value & DXGI_PRESENT_TEST)) {
     drawCount_ = 0;

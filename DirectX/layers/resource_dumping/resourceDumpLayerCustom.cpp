@@ -39,6 +39,10 @@ void ResourceDumpLayer::post(ID3D12DeviceCreateFenceCommand& c) {
   resourceDumpService_.fenceSignal(c.key, c.ppFence_.key, c.InitialValue_.value);
 }
 
+void ResourceDumpLayer::post(ID3D12Device3EnqueueMakeResidentCommand& c) {
+  resourceDumpService_.fenceSignal(c.key, c.pFenceToSignal_.key, c.FenceValueToSignal_.value);
+}
+
 void ResourceDumpLayer::post(IDXGISwapChainGetBufferCommand& c) {
   if (c.result_.value == S_OK) {
     resourceDumpService_.createResource(c.ppSurface_.key,

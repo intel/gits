@@ -990,6 +990,10 @@ void GpuPatchLayer::post(ID3D12DeviceCreateFenceCommand& c) {
   dumpService_.fenceSignal(c.key, c.ppFence_.key, c.InitialValue_.value);
 }
 
+void GpuPatchLayer::post(ID3D12Device3EnqueueMakeResidentCommand& c) {
+  dumpService_.fenceSignal(c.key, c.pFenceToSignal_.key, c.FenceValueToSignal_.value);
+}
+
 void GpuPatchLayer::post(ID3D12DeviceCreateCommandSignatureCommand& c) {
   D3D12_COMMAND_SIGNATURE_DESC& desc = commandSignatures_[c.ppvCommandSignature_.key] =
       *c.pDesc_.value;

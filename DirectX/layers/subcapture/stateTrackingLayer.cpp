@@ -1141,6 +1141,8 @@ void StateTrackingLayer::post(ID3D12DeviceCreateFenceCommand& c) {
   stateService_.storeState(state);
 
   fenceTrackingService_.setFenceValue(c.ppFence_.key, c.InitialValue_.value);
+  accelerationStructuresBuildService_.fenceSignal(c.key, c.ppFence_.key, c.InitialValue_.value);
+  gpuExecutionFlusher_.fenceSignal(c.key, c.ppFence_.key, c.InitialValue_.value);
 }
 
 void StateTrackingLayer::post(ID3D12CommandQueueSignalCommand& c) {
@@ -1167,8 +1169,7 @@ void StateTrackingLayer::post(ID3D12FenceSignalCommand& c) {
     return;
   }
   fenceTrackingService_.setFenceValue(c.object_.key, c.Value_.value);
-
-  accelerationStructuresBuildService_.fenceSignal(c);
+  accelerationStructuresBuildService_.fenceSignal(c.key, c.object_.key, c.Value_.value);
   gpuExecutionFlusher_.fenceSignal(c.key, c.object_.key, c.Value_.value);
 }
 
@@ -1177,6 +1178,10 @@ void StateTrackingLayer::post(ID3D12Device3EnqueueMakeResidentCommand& c) {
     return;
   }
   fenceTrackingService_.setFenceValue(c.pFenceToSignal_.key, c.FenceValueToSignal_.value);
+  accelerationStructuresBuildService_.fenceSignal(c.key, c.pFenceToSignal_.key,
+                                                  c.FenceValueToSignal_.value);
+  gpuExecutionFlusher_.fenceSignal(c.key, c.pFenceToSignal_.key, c.FenceValueToSignal_.value);
+
   residencyService_.makeResident(c.ppObjects_.keys, c.object_.key);
 }
 
