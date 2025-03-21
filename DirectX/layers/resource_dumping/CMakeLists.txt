@@ -50,12 +50,21 @@ set(ACCELERATION_STRUCTURES_DUMP_SRC
 )
 source_group("acceleration_structures_dump" FILES ${ACCELERATION_STRUCTURES_DUMP_SRC})
 
+set(ROOT_SIGNATURE_DUMP_SRC
+  ${SRC_DIR}/rootSignatureDump.h
+  ${SRC_DIR}/rootSignatureDump.cpp
+  ${SRC_DIR}/rootSignatureDumpLayer.h
+  ${SRC_DIR}/rootSignatureDumpLayer.cpp
+)
+source_group("root_signature_dump" FILES ${ROOT_SIGNATURE_DUMP_SRC})
+
 set(ALL_SRC
   ${ROOT_SRC}
   ${SCREENSHOTS_SRC}
   ${RESOURCE_DUMP_SRC}
   ${RENDER_TARGETS_DUMP_SRC}
   ${ACCELERATION_STRUCTURES_DUMP_SRC}
+  ${ROOT_SIGNATURE_DUMP_SRC}
 )
 
 set_auto_generated_property(FILE_LIST  ${ALL_SRC})

@@ -1051,6 +1051,23 @@ struct convert<gits::Config::DirectX::Features::ExecuteIndirectDump> {
 };
 
 template <>
+struct convert<gits::Config::DirectX::Features::RootSignatureDump> {
+  static bool decode(const Node& node, gits::Config::DirectX::Features::RootSignatureDump& rhs) {
+    if (!node.IsMap()) {
+      return false;
+    }
+    try {
+      rhs.enabled = node["Enabled"].as<gits::vi_bool>();
+      rhs.commandKeys = node["CommandKeys"].as<std::string>();
+      return true;
+    } catch (const YAML::Exception& e) {
+      Log(ERR) << "YAML parser exception: " << e.what();
+      return false;
+    }
+  }
+};
+
+template <>
 struct convert<gits::Config::DirectX::Features::SkipCalls> {
   static bool decode(const Node& node, gits::Config::DirectX::Features::SkipCalls& rhs) {
     if (!node.IsMap()) {

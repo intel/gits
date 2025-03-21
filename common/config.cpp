@@ -273,6 +273,11 @@ void gits::Config::SetDirectX(const YAML::Node& DirectXYaml) {
   cfgDirectXExecuteIndirectDump = DirectXYaml["Features"]["ExecuteIndirectDump"]
                                       .as<Config::DirectX::Features::ExecuteIndirectDump>();
 
+  // RootSignatureDump
+  auto& cfgDirectXRootSignatureDump = directx.features.rootSignatureDump;
+  cfgDirectXRootSignatureDump = DirectXYaml["Features"]["RootSignatureDump"]
+                                    .as<Config::DirectX::Features::RootSignatureDump>();
+
   // SkipCalls
   auto& cfgDirectXSkipCalls = directx.features.skipCalls;
   cfgDirectXSkipCalls =

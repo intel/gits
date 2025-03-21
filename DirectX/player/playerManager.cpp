@@ -92,6 +92,8 @@ PlayerManager::PlayerManager() {
       resourceDumpingFactory_.getRenderTargetsDumpLayer();
   std::unique_ptr<Layer> accelerationStructuresDumpLayer =
       resourceDumpingFactory_.getAccelerationStructuresDumpLayer();
+  std::unique_ptr<Layer> rootSignatureDumpLayer =
+      resourceDumpingFactory_.getRootSignatureDumpLayer();
   std::unique_ptr<Layer> skipCallsLayer = skipCallsFactory_.getSkipCallsLayer();
 
   if (executeCommands_) {
@@ -158,6 +160,7 @@ PlayerManager::PlayerManager() {
   enablePostLayer(resourceDumpLayer);
   enablePostLayer(renderTargetsDumpLayer);
   enablePostLayer(accelerationStructuresDumpLayer);
+  enablePostLayer(rootSignatureDumpLayer);
   enablePostLayer(recordingLayer);
 
   // Let layersOwner_ take the ownership of layers
@@ -184,6 +187,7 @@ PlayerManager::PlayerManager() {
   retainLayer(std::move(resourceDumpLayer));
   retainLayer(std::move(renderTargetsDumpLayer));
   retainLayer(std::move(accelerationStructuresDumpLayer));
+  retainLayer(std::move(rootSignatureDumpLayer));
   retainLayer(std::move(directStorageLayer));
   retainLayer(std::move(directStorageResourcesLayer));
 

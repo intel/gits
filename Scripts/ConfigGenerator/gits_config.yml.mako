@@ -272,6 +272,10 @@ DirectX:
       ArgumentBufferPost: false  # Dumps arguments buffers for specified ExecuteIndirect calls after patching
       CommandKeys: ''  # Comma separated list of ExecuteIndirect call keys
 
+    RootSignatureDump:
+      Enabled: false
+      CommandKeys: ''  # Comma separated list of CreateRootSignature call keys, empty list means all such calls
+
     SkipCalls:
       Enabled: false
       CommandKeys: ''  # Comma separated list of call keys to skip

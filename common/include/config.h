@@ -304,6 +304,11 @@ struct Config {
         std::string commandKeys;
       } executeIndirectDump;
 
+      struct RootSignatureDump {
+        vi_bool enabled{false};
+        std::string commandKeys;
+      } rootSignatureDump;
+
       struct SkipCalls {
         vi_bool enabled{false};
         std::string commandKeys;

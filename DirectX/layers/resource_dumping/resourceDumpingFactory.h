@@ -33,12 +33,16 @@ public:
   std::unique_ptr<Layer> getAccelerationStructuresDumpLayer() {
     return std::move(accelerationStructuresDumpLayer_);
   }
+  std::unique_ptr<Layer> getRootSignatureDumpLayer() {
+    return std::move(rootSignatureDumpLayer_);
+  }
 
 private:
   std::unique_ptr<Layer> screenshotsLayer_;
   std::unique_ptr<Layer> resourceDumpLayer_;
   std::unique_ptr<Layer> renderTargetsDumpLayer_;
   std::unique_ptr<Layer> accelerationStructuresDumpLayer_;
+  std::unique_ptr<Layer> rootSignatureDumpLayer_;
 };
 
 } // namespace DirectX
