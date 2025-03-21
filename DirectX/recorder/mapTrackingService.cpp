@@ -134,7 +134,7 @@ void MapTrackingService::destroyResource(unsigned resourceKey) {
 
 bool MapTrackingService::isUploadHeap(D3D12_HEAP_TYPE heapType,
                                       D3D12_CPU_PAGE_PROPERTY cpuPageProperty) {
-  return heapType == D3D12_HEAP_TYPE_UPLOAD ||
+  return heapType == D3D12_HEAP_TYPE_UPLOAD || heapType == D3D12_HEAP_TYPE_GPU_UPLOAD ||
          heapType == D3D12_HEAP_TYPE_CUSTOM &&
              cpuPageProperty != D3D12_CPU_PAGE_PROPERTY_NOT_AVAILABLE &&
              cpuPageProperty != D3D12_CPU_PAGE_PROPERTY_UNKNOWN;

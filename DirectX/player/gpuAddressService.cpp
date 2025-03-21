@@ -85,7 +85,8 @@ D3D12_GPU_VIRTUAL_ADDRESS GpuAddressService::getHeapGPUVirtualAddress(ID3D12Heap
   GITS_ASSERT(res == S_OK);
 
   D3D12_RESOURCE_STATES initialState = D3D12_RESOURCE_STATE_COMMON;
-  if (heapDesc.Properties.Type == D3D12_HEAP_TYPE_UPLOAD) {
+  if (heapDesc.Properties.Type == D3D12_HEAP_TYPE_UPLOAD ||
+      heapDesc.Properties.Type == D3D12_HEAP_TYPE_GPU_UPLOAD) {
     initialState = D3D12_RESOURCE_STATE_GENERIC_READ;
   } else if (heapDesc.Properties.Type == D3D12_HEAP_TYPE_READBACK) {
     initialState = D3D12_RESOURCE_STATE_COPY_DEST;
