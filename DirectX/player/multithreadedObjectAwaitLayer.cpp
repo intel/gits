@@ -70,15 +70,25 @@ MultithreadedObjectAwaitLayer::MultithreadedObjectAwaitLayer(PlayerManager& mana
     : Layer("MultithreadedObjectAwaitLayer"), manager_(manager) {}
 
 void MultithreadedObjectAwaitLayer::pre(IUnknownAddRefCommand& c) {
-  completeArgument(c.object_);
+  // If the object has not been created yet, defer the reference count update
+  if (!manager_.findObject(c.object_.key)) {
+    auto& service = manager_.getMultithreadedObjectCreationService();
+    bool scheduled = service.scheduleUpdateRefCount(c.object_.key, 1);
+    if (scheduled) {
+      c.skip = true;
+    } else {
+      completeArgument(c.object_);
+    }
+  }
 }
 
 void MultithreadedObjectAwaitLayer::pre(IUnknownReleaseCommand& c) {
-  completeArgument(c.object_);
-
   auto& service = manager_.getMultithreadedObjectCreationService();
 
   if (c.result_.value == 0) {
+    completeArgument(c.object_);
+
+    // If the object is being released we need to create all objects that depend on it
     auto objectsToComplete = service.collectConsumers(c.object_.key);
     for (const auto objectKey : objectsToComplete) {
       auto creationOutput = service.complete(objectKey);
@@ -89,6 +99,18 @@ void MultithreadedObjectAwaitLayer::pre(IUnknownReleaseCommand& c) {
       auto [it, inserted] = preCollectedOutputs_.insert({objectKey, creationOutput.value()});
       GITS_ASSERT(inserted);
     }
+
+    return;
+  }
+
+  // If the object has not been created yet, defer the reference count update
+  if (!manager_.findObject(c.object_.key)) {
+    bool scheduled = service.scheduleUpdateRefCount(c.object_.key, -1);
+    if (scheduled) {
+      c.skip = true;
+    } else {
+      completeArgument(c.object_);
+    }
   }
 }
 
@@ -97,19 +119,23 @@ void MultithreadedObjectAwaitLayer::pre(IUnknownQueryInterfaceCommand& c) {
 }
 
 void MultithreadedObjectAwaitLayer::pre(ID3D12ObjectGetPrivateDataCommand& c) {
-  completeArgument(c.object_);
+  // This command is not necessary (skipping it prevents any potential stalling)
+  c.skip = true;
 }
 
 void MultithreadedObjectAwaitLayer::pre(ID3D12ObjectSetNameCommand& c) {
-  completeArgument(c.object_);
+  // This command is not necessary (skipping it prevents any potential stalling)
+  c.skip = true;
 }
 
 void MultithreadedObjectAwaitLayer::pre(ID3D12ObjectSetPrivateDataCommand& c) {
-  completeArgument(c.object_);
+  // This command is not necessary (skipping it prevents any potential stalling)
+  c.skip = true;
 }
 
 void MultithreadedObjectAwaitLayer::pre(ID3D12ObjectSetPrivateDataInterfaceCommand& c) {
-  completeArgument(c.object_);
+  // This command is not necessary (skipping it prevents any potential stalling)
+  c.skip = true;
 }
 
 void MultithreadedObjectAwaitLayer::pre(ID3D12DeviceChildGetDeviceCommand& c) {
@@ -117,7 +143,8 @@ void MultithreadedObjectAwaitLayer::pre(ID3D12DeviceChildGetDeviceCommand& c) {
 }
 
 void MultithreadedObjectAwaitLayer::pre(ID3D12PipelineStateGetCachedBlobCommand& c) {
-  completeArgument(c.object_);
+  // This command is not necessary (skipping it prevents any potential stalling)
+  c.skip = true;
 }
 
 void MultithreadedObjectAwaitLayer::pre(ID3D12DeviceCreateCommandListCommand& c) {

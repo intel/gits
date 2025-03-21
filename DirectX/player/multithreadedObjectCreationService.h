@@ -29,7 +29,6 @@ public:
   };
   using CreationFunction = std::function<ObjectCreationOutput()>;
 
-public:
   ~MultithreadedObjectCreationService();
 
   void shutdown();
@@ -37,6 +36,7 @@ public:
   void addDependency(unsigned providerKey, unsigned consumerKey);
   std::vector<unsigned> collectConsumers(unsigned providerKey);
   std::optional<ObjectCreationOutput> complete(unsigned objectKey);
+  bool scheduleUpdateRefCount(unsigned objectKey, int count);
 
 private:
   struct ObjectCreationTask {
@@ -46,15 +46,15 @@ private:
     std::future<CreationFunction::result_type> startedTask_;
   };
 
-private:
+  ObjectCreationOutput createObject(ObjectCreationTask* task);
   void initialize();
   void workerThread();
 
-private:
   bool initialized_ = false;
   std::unordered_map<unsigned, std::vector<unsigned>> dependencies_;
   std::vector<std::thread> workers_;
   std::unordered_map<unsigned, std::unique_ptr<ObjectCreationTask>> tasks_;
+  std::unordered_map<unsigned, int> refCounts_;
   std::deque<ObjectCreationTask*> tasksQueue_;
   std::mutex mutex_;
   std::condition_variable cv_;

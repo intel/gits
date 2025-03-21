@@ -10,47 +10,26 @@
 #include "log.h"
 #include "gits.h"
 
+#include <processthreadsapi.h> // Used for SetThreadDescription
+
 namespace gits {
 namespace DirectX {
-
-namespace {
-
-const DWORD MS_VC_EXCEPTION = 0x406D1388;
-#pragma pack(push, 8)
-typedef struct tagTHREADNAME_INFO {
-  DWORD dwType;     // Must be 0x1000.
-  LPCSTR szName;    // Pointer to name (in user addr space).
-  DWORD dwThreadID; // Thread ID (-1=caller thread).
-  DWORD dwFlags;    // Reserved for future use, must be zero.
-} THREADNAME_INFO;
-#pragma pack(pop)
-void SetThreadName(DWORD dwThreadID, const char* threadName) {
-  THREADNAME_INFO info;
-  info.dwType = 0x1000;
-  info.szName = threadName;
-  info.dwThreadID = dwThreadID;
-  info.dwFlags = 0;
-#pragma warning(push)
-#pragma warning(disable : 6320 6322)
-  __try {
-    RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR), (ULONG_PTR*)&info);
-  } __except (EXCEPTION_EXECUTE_HANDLER) {
-  }
-#pragma warning(pop)
-}
-
-} // namespace
 
 void MultithreadedObjectCreationService::initialize() {
   if (initialized_) {
     return;
   }
 
+  // Create worker threads
   unsigned threadCount = std::thread::hardware_concurrency();
   for (decltype(threadCount) i = 0; i < threadCount; ++i) {
     workers_.emplace_back(&MultithreadedObjectCreationService::workerThread, this);
-    DWORD threadId = GetThreadId(static_cast<HANDLE>(workers_.back().native_handle()));
-    SetThreadName(threadId, ("object-creation-worker-" + std::to_string(i)).c_str());
+
+    // Set thread description (for ease of debugging)
+    auto description = L"object-creation-worker-" + std::to_wstring(i);
+    auto handle = workers_.back().native_handle();
+    auto hr = SetThreadDescription(handle, description.c_str());
+    GITS_ASSERT(SUCCEEDED(hr), "MultithreadedObjectCreationService - SetThreadDescription failed!");
   }
 
   initialized_ = true;
@@ -111,6 +90,7 @@ std::vector<unsigned> MultithreadedObjectCreationService::collectConsumers(unsig
   return consumers;
 }
 
+// Ensure the object has been created (either returns the collected result from a worker thread or creates the object)
 std::optional<MultithreadedObjectCreationService::ObjectCreationOutput>
 MultithreadedObjectCreationService::complete(unsigned objectKey) {
   std::unique_lock<std::mutex> lock(mutex_);
@@ -130,8 +110,26 @@ MultithreadedObjectCreationService::complete(unsigned objectKey) {
     tasksQueue_.erase(std::remove(tasksQueue_.begin(), tasksQueue_.end(), task.get()),
                       tasksQueue_.end());
     lock.unlock();
-    return task->creationFunction_();
+    return createObject(task.get());
   }
+}
+
+bool MultithreadedObjectCreationService::scheduleUpdateRefCount(unsigned objectKey, int count) {
+  std::lock_guard<std::mutex> guard(mutex_);
+
+  auto it = tasks_.find(objectKey);
+  if (it == tasks_.end()) {
+    return false;
+  }
+
+  // Task is not pending
+  if (it->second.get()->startedTask_.valid()) {
+    return false;
+  }
+
+  // Update the reference count for pending objects
+  refCounts_[objectKey] += count;
+  return true;
 }
 
 void MultithreadedObjectCreationService::workerThread() {
@@ -152,8 +150,39 @@ void MultithreadedObjectCreationService::workerThread() {
       task->startedTask_ = promise.get_future();
     }
 
-    promise.set_value(task->creationFunction_());
+    promise.set_value(createObject(task));
   }
+}
+
+MultithreadedObjectCreationService::ObjectCreationOutput MultithreadedObjectCreationService::
+    createObject(ObjectCreationTask* task) {
+  // Create object
+  ObjectCreationOutput r = task->creationFunction_();
+  if (r.result != S_OK) {
+    return r;
+  }
+
+  // Get the reference count and remove it from the map
+  int refCount = 0;
+  {
+    std::lock_guard<std::mutex> guard(mutex_);
+    refCount = refCounts_[task->objectKey_];
+    refCounts_.erase(task->objectKey_);
+  }
+
+  // Set the reference count on newly created object
+  if (refCount != 0) {
+    IUnknown* object = static_cast<IUnknown*>(r.object);
+    if (refCount < 0) {
+      GITS_ASSERT(refCount == -1);
+      object->Release();
+    }
+    for (int i = 0; i < refCount; ++i) {
+      object->AddRef();
+    }
+  }
+
+  return r;
 }
 
 MultithreadedObjectCreationService::ObjectCreationTask::ObjectCreationTask(
