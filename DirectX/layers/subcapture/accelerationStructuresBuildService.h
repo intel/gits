@@ -58,6 +58,8 @@ private:
     std::unique_ptr<char[]> descEncoded;
     unsigned destKey{};
     unsigned destOffset{};
+    unsigned sourceKey{};
+    unsigned sourceOffset{};
     bool update{};
     std::unordered_map<unsigned, ResourceState*> buffers;
     std::vector<unsigned> uploadBuffers;

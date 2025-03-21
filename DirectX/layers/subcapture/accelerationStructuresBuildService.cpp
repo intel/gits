@@ -67,6 +67,8 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
   state->buildState = true;
   state->destKey = c.pDesc_.destAccelerationStructureKey;
   state->destOffset = c.pDesc_.destAccelerationStructureOffset;
+  state->sourceKey = c.pDesc_.sourceAccelerationStructureKey;
+  state->sourceOffset = c.pDesc_.sourceAccelerationStructureOffset;
   state->update = c.pDesc_.value->Inputs.Flags &
                   D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE;
 
@@ -277,6 +279,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
   std::map<std::pair<unsigned, unsigned>, std::unordered_set<unsigned>>
       restoreBuildsByDestKeyOffset;
   std::map<std::pair<unsigned, unsigned>, std::unordered_set<unsigned>> copiedBuildsByKeyOffset;
+  std::map<std::pair<unsigned, unsigned>, std::unordered_set<unsigned>> updatedBuildsByKeyOffset;
   for (auto& itState : states_) {
     if (itState->buildState) {
       BuildRaytracingAccelerationStructureState* state =
@@ -286,6 +289,16 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
             restoreBuildsByDestKeyOffset.find(std::pair(state->destKey, state->destOffset));
         if (itRestoreBuilds != restoreBuildsByDestKeyOffset.end()) {
           restoreBuildsByDestKeyOffset.erase(itRestoreBuilds);
+        }
+      } else if (state->sourceKey) {
+        auto itSourceRestoreBuilds =
+            restoreBuildsByDestKeyOffset.find(std::pair(state->sourceKey, state->sourceOffset));
+        if (itSourceRestoreBuilds != restoreBuildsByDestKeyOffset.end()) {
+          auto& updatedBuilds =
+              updatedBuildsByKeyOffset[std::pair(state->sourceKey, state->sourceOffset)];
+          for (unsigned buildKey : itSourceRestoreBuilds->second) {
+            updatedBuilds.insert(buildKey);
+          }
         }
       }
       restoreBuildsByDestKeyOffset[std::pair(state->destKey, state->destOffset)].insert(
@@ -320,6 +333,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
       BuildRaytracingAccelerationStructureState* state =
           static_cast<BuildRaytracingAccelerationStructureState*>(itState.get());
 
+      // remove previous builds to the same destination
       auto itRestoreBuilds =
           restoreBuildsByDestKeyOffset.find(std::pair(state->destKey, state->destOffset));
       if (itRestoreBuilds == restoreBuildsByDestKeyOffset.end() ||
@@ -328,7 +342,12 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
             copiedBuildsByKeyOffset.find(std::pair(state->destKey, state->destOffset));
         if (itCopiedBuilds == copiedBuildsByKeyOffset.end() ||
             itCopiedBuilds->second.find(state->commandKey) == itCopiedBuilds->second.end()) {
-          continue;
+          auto itUpdatedBuilds =
+              updatedBuildsByKeyOffset.find(std::pair(state->destKey, state->destOffset));
+          if (itUpdatedBuilds == updatedBuildsByKeyOffset.end() ||
+              itUpdatedBuilds->second.find(state->commandKey) == itUpdatedBuilds->second.end()) {
+            continue;
+          }
         }
       }
 
