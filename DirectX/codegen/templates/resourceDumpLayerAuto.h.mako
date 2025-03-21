@@ -26,6 +26,7 @@ public:
   void post(ID3D12CommandQueueSignalCommand& c) override;
   void post(ID3D12FenceSignalCommand& c) override;
   void post(ID3D12DeviceCreateFenceCommand& c) override;
+  void post(ID3D12Device3EnqueueMakeResidentCommand& c) override;
   void post(IDXGISwapChainGetBufferCommand& c) override;
   %for interface in interfaces:
   %for function in interface.functions:
