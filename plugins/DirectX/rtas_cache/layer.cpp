@@ -20,11 +20,15 @@ RtasCacheLayer::RtasCacheLayer(CGits& gits, const RtasCacheConfig& cfg)
       accelerationStructuresDeserializer_(gits) {}
 
 RtasCacheLayer::~RtasCacheLayer() {
-  if (replay()) {
-    log(gits_, "RtasCache: deserialized ", blasCount_, " BLASes");
-  }
-  if (record()) {
-    log(gits_, "RtasCache: serialized ", blasCount_, " BLASes");
+  try {
+    if (replay()) {
+      log(gits_, "RtasCache: deserialized ", blasCount_, " BLASes");
+    }
+    if (record()) {
+      log(gits_, "RtasCache: serialized ", blasCount_, " BLASes");
+    }
+  } catch (...) {
+    std::cerr << "Unhandled exception caught in RtasCacheLayer::~RtasCacheLayer";
   }
 }
 

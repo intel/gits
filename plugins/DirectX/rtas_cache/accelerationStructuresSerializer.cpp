@@ -30,43 +30,48 @@ AccelerationStructuresSerializer::~AccelerationStructuresSerializer() {
   if (!enabled_) {
     return;
   }
-  waitUntilDumped();
+  try {
+    waitUntilDumped();
 
-  logE(gits_, "RtasCache: writing rtas_cache.dat");
+    logE(gits_, "RtasCache: writing rtas_cache.dat");
 
-  std::map<unsigned, unsigned> blases;
-  for (std::filesystem::directory_entry file : std::filesystem::directory_iterator(cachePath_)) {
-    std::string name = file.path().filename().string();
-    unsigned size = file.file_size();
-    unsigned buildKey = std::stoi(name);
-    blases[buildKey] = size;
-  }
-
-  std::ofstream cache("rtas_cache.dat", std::ios_base::binary);
-  for (auto& it : blases) {
-    unsigned buildKey = it.first;
-    std::string name = std::to_string(buildKey);
-    unsigned size = it.second;
-    std::ifstream file("rtas_cache/" + name, std::ios_base::binary);
-    std::vector<char> data(size);
-    file.read(data.data(), size);
-    if (file.fail()) {
-      logE(gits_, "RtasCache: error reading BLAS ", buildKey);
-      break;
+    std::map<unsigned, unsigned> blases;
+    for (std::filesystem::directory_entry file : std::filesystem::directory_iterator(cachePath_)) {
+      std::string name = file.path().filename().string();
+      unsigned size = file.file_size();
+      unsigned buildKey = std::stoi(name);
+      blases[buildKey] = size;
     }
-    file.close();
-    cache.write(reinterpret_cast<char*>(&buildKey), sizeof(buildKey));
-    cache.write(reinterpret_cast<char*>(&size), sizeof(size));
-    cache.write(data.data(), size);
-    if (cache.bad()) {
-      logE(gits_, "RtasCache: error writing BLAS ", buildKey);
-      break;
+
+    std::ofstream cache("rtas_cache.dat", std::ios_base::binary);
+    for (auto& it : blases) {
+      unsigned buildKey = it.first;
+      std::string name = std::to_string(buildKey);
+      unsigned size = it.second;
+      std::ifstream file("rtas_cache/" + name, std::ios_base::binary);
+      std::vector<char> data(size);
+      file.read(data.data(), size);
+      if (file.fail()) {
+        logE(gits_, "RtasCache: error reading BLAS ", buildKey);
+        break;
+      }
+      file.close();
+      cache.write(reinterpret_cast<char*>(&buildKey), sizeof(buildKey));
+      cache.write(reinterpret_cast<char*>(&size), sizeof(size));
+      cache.write(data.data(), size);
+      if (cache.bad()) {
+        logE(gits_, "RtasCache: error writing BLAS ", buildKey);
+        break;
+      }
     }
+
+    cache.flush();
+
+    std::filesystem::remove_all(cachePath_);
+  } catch (...) {
+    std::cerr << "Unhandled exception caught in "
+                 "AccelerationStructuresSerializer::~AccelerationStructuresSerializer";
   }
-
-  cache.flush();
-
-  std::filesystem::remove_all(cachePath_);
 }
 
 void AccelerationStructuresSerializer::serializeAccelerationStructure(
