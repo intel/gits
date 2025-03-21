@@ -178,11 +178,11 @@ void RaytracingResourceDump::dumpBindingTableBuffer(RaytracingDumpInfo& dumpInfo
       if (heapInfo) {
         unsigned index{};
         if (dumpInfo.fromCapture) {
-          index = (*address - resourceInfo->captureStart) / stride;
+          index = (*address - heapInfo->captureStart) / stride;
         } else {
-          index = (*address - resourceInfo->playerStart) / stride;
+          index = (*address - heapInfo->playerStart) / stride;
         }
-        stream << " descriptor heap O" << resourceInfo->key << " index " << index;
+        stream << " descriptor heap O" << heapInfo->key << " index " << index;
       }
 
       stream << "\n";
