@@ -20,7 +20,9 @@ namespace DirectX {
 
 <%def name="run_body(function, interfaceName)">
   auto& manager = PlayerManager::get();
+  %if is_xess_function(function):
   auto& xessDispatchTable = manager.getXessService().getXessDispatchTable();
+  %endif
   %if interfaceName:
 
   updateInterface(manager, command.object_);
