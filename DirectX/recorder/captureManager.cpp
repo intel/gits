@@ -142,9 +142,7 @@ void CaptureManager::createLayers() {
     if (cfg.directx.capture.captureDirectStorage) {
       directStorageResourcesLayer = std::make_unique<DirectStorageResourcesLayer>();
     }
-    if (cfg.directx.features.portability.enabled) {
-      portabilityLayer = std::make_unique<PortabilityLayer>();
-    }
+    portabilityLayer = portabilityFactory_.getPortabilityLayer();
   }
 
   // Enable Pre layers

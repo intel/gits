@@ -198,6 +198,11 @@ DirectX:
     DebugLayer: false  # Enable the DirectX Debug Layer
     Plugins: []
     TokenBurstChunkSize: 5242880  # default size: 5 MB
+    Portability:
+      ResourcePlacementStorage: true # Enable storing placed resources data 
+      Raytracing:
+        AccelerationStructurePadding: 2.0 # Acceleration structures padding factor in GetRaytracingAccelerationStructurePrebuildInfo, 1.0 means no padding
+        AccelerationStructureScratchPadding: 2.0 # Acceleration structures scratch space padding factor in GetRaytracingAccelerationStructurePrebuildInfo, 1.0 means no padding
 
   Playback:
     Execute: true  # Execute the API commands (driver / null driver)
@@ -223,6 +228,9 @@ DirectX:
       ApplicationVersion: "0.0.0"
       EngineName: ""
       EngineVersion: "0.0.0"
+    Portability:
+      ResourcePlacement: 'none' # 'use' (resource placement using stored data) / 'store' (store placed resources data) / 'none'
+      PortabilityChecks: false # Checks and logs portability issues
 
   Features:
     Trace:
@@ -279,11 +287,6 @@ DirectX:
     SkipCalls:
       Enabled: false
       CommandKeys: ''  # Comma separated list of call keys to skip
-
-    Portability:
-      Enabled: false
-      StorePlacedResourceDataOnCapture : true  # Enable storing placed resources data while capturing
-      StorePlacedResourceDataOnPlayback : false  # Request storing placed resources data while playing back
 
 %endif
 

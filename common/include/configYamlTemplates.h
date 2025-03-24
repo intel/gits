@@ -819,6 +819,43 @@ struct convert<gits::Config::LevelZero::Recorder> {
 
 #ifdef GITS_PLATFORM_WINDOWS
 template <>
+struct convert<gits::Config::DirectX::Capture::Portability::Raytracing> {
+  static bool decode(const Node& node,
+                     gits::Config::DirectX::Capture::Portability::Raytracing& rhs) {
+    if (!node.IsMap()) {
+      return false;
+    }
+    try {
+      rhs.accelerationStructurePadding = node["AccelerationStructurePadding"].as<float>();
+      rhs.accelerationStructureScratchPadding =
+          node["AccelerationStructureScratchPadding"].as<float>();
+      return true;
+    } catch (const YAML::Exception& e) {
+      Log(ERR) << "YAML parser exception: " << e.what();
+      return false;
+    }
+  }
+};
+
+template <>
+struct convert<gits::Config::DirectX::Capture::Portability> {
+  static bool decode(const Node& node, gits::Config::DirectX::Capture::Portability& rhs) {
+    if (!node.IsMap()) {
+      return false;
+    }
+    try {
+      rhs.resourcePlacementStorage = node["ResourcePlacementStorage"].as<gits::vi_bool>();
+      rhs.raytracing =
+          node["Raytracing"].as<gits::Config::DirectX::Capture::Portability::Raytracing>();
+      return true;
+    } catch (const YAML::Exception& e) {
+      Log(ERR) << "YAML parser exception: " << e.what();
+      return false;
+    }
+  }
+};
+
+template <>
 struct convert<gits::Config::DirectX::Capture> {
   static bool decode(const Node& node, gits::Config::DirectX::Capture& rhs) {
     if (!node.IsMap()) {
@@ -834,6 +871,7 @@ struct convert<gits::Config::DirectX::Capture> {
       rhs.debugLayer = node["DebugLayer"].as<gits::vi_bool>();
       rhs.plugins = node["Plugins"].as<std::vector<std::string>>();
       rhs.tokenBurstChunkSize = node["TokenBurstChunkSize"].as<gits::vi_uint64>();
+      rhs.portability = node["Portability"].as<gits::Config::DirectX::Capture::Portability>();
       return true;
     } catch (const YAML::Exception& e) {
       Log(ERR) << "YAML parser exception: " << e.what();
@@ -882,6 +920,23 @@ struct convert<gits::Config::DirectX::Player::ApplicationInfoOverride> {
 };
 
 template <>
+struct convert<gits::Config::DirectX::Player::Portability> {
+  static bool decode(const Node& node, gits::Config::DirectX::Player::Portability& rhs) {
+    if (!node.IsMap()) {
+      return false;
+    }
+    try {
+      rhs.resourcePlacement = node["ResourcePlacement"].as<std::string>();
+      rhs.portabilityChecks = node["PortabilityChecks"].as<gits::vi_bool>();
+      return true;
+    } catch (const YAML::Exception& e) {
+      Log(ERR) << "YAML parser exception: " << e.what();
+      return false;
+    }
+  }
+};
+
+template <>
 struct convert<gits::Config::DirectX::Player> {
   static bool decode(const Node& node, gits::Config::DirectX::Player& rhs) {
     if (!node.IsMap()) {
@@ -904,6 +959,7 @@ struct convert<gits::Config::DirectX::Player> {
       rhs.applicationInfoOverride =
           node["ApplicationInfoOverride"]
               .as<gits::Config::DirectX::Player::ApplicationInfoOverride>();
+      rhs.portability = node["Portability"].as<gits::Config::DirectX::Player::Portability>();
       return true;
     } catch (const YAML::Exception& e) {
       Log(ERR) << "YAML parser exception: " << e.what();
@@ -1076,26 +1132,6 @@ struct convert<gits::Config::DirectX::Features::SkipCalls> {
     try {
       rhs.enabled = node["Enabled"].as<gits::vi_bool>();
       rhs.commandKeys = node["CommandKeys"].as<std::string>();
-      return true;
-    } catch (const YAML::Exception& e) {
-      Log(ERR) << "YAML parser exception: " << e.what();
-      return false;
-    }
-  }
-};
-
-template <>
-struct convert<gits::Config::DirectX::Features::Portability> {
-  static bool decode(const Node& node, gits::Config::DirectX::Features::Portability& rhs) {
-    if (!node.IsMap()) {
-      return false;
-    }
-    try {
-      rhs.enabled = node["Enabled"].as<gits::vi_bool>();
-      rhs.storePlacedResourceDataOnCapture =
-          node["StorePlacedResourceDataOnCapture"].as<gits::vi_bool>();
-      rhs.storePlacedResourceDataOnPlayback =
-          node["StorePlacedResourceDataOnPlayback"].as<gits::vi_bool>();
       return true;
     } catch (const YAML::Exception& e) {
       Log(ERR) << "YAML parser exception: " << e.what();

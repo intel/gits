@@ -13,11 +13,27 @@ namespace gits {
 namespace DirectX {
 
 PortabilityLayer::PortabilityLayer() : Layer("Portability") {
-  if (Config::IsRecorder() &&
-          Config::Get().directx.features.portability.storePlacedResourceDataOnCapture ||
-      Config::IsPlayer() &&
-          Config::Get().directx.features.portability.storePlacedResourceDataOnPlayback) {
+  if (Config::IsRecorder() && Config::Get().directx.capture.portability.resourcePlacementStorage ||
+      Config::IsPlayer() && Config::Get().directx.player.portability.resourcePlacement == "store") {
     storeResourcePlacementData_ = true;
+  }
+  if (Config::IsPlayer() && Config::Get().directx.player.portability.resourcePlacement == "use") {
+    useResourcePlacementData_ = true;
+  }
+  if (Config::IsPlayer() && Config::Get().directx.player.portability.portabilityChecks) {
+    portabilityChecks_ = true;
+  }
+  if (Config::IsRecorder()) {
+    accelerationStructurePadding_ =
+        Config::Get().directx.capture.portability.raytracing.accelerationStructurePadding;
+    if (accelerationStructurePadding_ < 1.0) {
+      accelerationStructurePadding_ = 1.0;
+    }
+    accelerationStructureScratchPadding_ =
+        Config::Get().directx.capture.portability.raytracing.accelerationStructureScratchPadding;
+    if (accelerationStructureScratchPadding_ < 1.0) {
+      accelerationStructureScratchPadding_ = 1.0;
+    }
   }
 
   if (Config::IsRecorder() && storeResourcePlacementData_) {
@@ -39,29 +55,33 @@ PortabilityLayer::~PortabilityLayer() {
 }
 
 void PortabilityLayer::pre(ID3D12DeviceCreateHeapCommand& c) {
-  if (Config::IsPlayer()) {
+  if (useResourcePlacementData_) {
     resourcePlacementPlayback_.createHeap(c.object_.value, c.ppvHeap_.key,
                                           c.pDesc_.value->SizeInBytes);
   }
 }
 
 void PortabilityLayer::post(ID3D12DeviceCreateHeapCommand& c) {
-  checkHeapCreationFlags(c.ppvHeap_.key, c.object_.value, c.pDesc_.value, c.result_.value);
+  if (portabilityChecks_ && c.result_.value != S_OK) {
+    checkHeapCreationFlags(c.ppvHeap_.key, c.object_.value, c.pDesc_.value);
+  }
 }
 
 void PortabilityLayer::pre(ID3D12Device4CreateHeap1Command& c) {
-  if (Config::IsPlayer()) {
+  if (useResourcePlacementData_) {
     resourcePlacementPlayback_.createHeap(c.object_.value, c.ppvHeap_.key,
                                           c.pDesc_.value->SizeInBytes);
   }
 }
 
 void PortabilityLayer::post(ID3D12Device4CreateHeap1Command& c) {
-  checkHeapCreationFlags(c.ppvHeap_.key, c.object_.value, c.pDesc_.value, c.result_.value);
+  if (portabilityChecks_ && c.result_.value != S_OK) {
+    checkHeapCreationFlags(c.ppvHeap_.key, c.object_.value, c.pDesc_.value);
+  }
 }
 
 void PortabilityLayer::pre(ID3D12DeviceCreatePlacedResourceCommand& c) {
-  if (Config::IsPlayer()) {
+  if (useResourcePlacementData_) {
     resourcePlacementPlayback_.createPlacedResource(c.ppvResource_.key, c.HeapOffset_.value);
   }
 }
@@ -77,7 +97,7 @@ void PortabilityLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
 }
 
 void PortabilityLayer::pre(ID3D12Device8CreatePlacedResource1Command& c) {
-  if (Config::IsPlayer()) {
+  if (useResourcePlacementData_) {
     resourcePlacementPlayback_.createPlacedResource(c.ppvResource_.key, c.HeapOffset_.value);
   }
 }
@@ -95,7 +115,7 @@ void PortabilityLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
 }
 
 void PortabilityLayer::pre(ID3D12Device10CreatePlacedResource2Command& c) {
-  if (Config::IsPlayer()) {
+  if (useResourcePlacementData_) {
     resourcePlacementPlayback_.createPlacedResource(c.ppvResource_.key, c.HeapOffset_.value);
   }
 }
@@ -112,14 +132,40 @@ void PortabilityLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
   }
 }
 
+void PortabilityLayer::post(ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& c) {
+  c.pInfo_.value->ResultDataMaxSizeInBytes *= accelerationStructurePadding_;
+  c.pInfo_.value->ScratchDataSizeInBytes *= accelerationStructureScratchPadding_;
+  c.pInfo_.value->UpdateScratchDataSizeInBytes *= accelerationStructureScratchPadding_;
+}
+
+void PortabilityLayer::post(
+    ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c) {
+  if (portabilityChecks_) {
+    static bool logged = false;
+    if (!logged) {
+      Log(WARN) << "Portability - padding in capture post build info in "
+                   "EmitRaytracingAccelerationStructurePostbuildInfo not "
+                   "supported";
+      logged = true;
+    }
+  }
+}
+
+void PortabilityLayer::post(
+    ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
+  if (portabilityChecks_ && c.pPostbuildInfoDescs_.value) {
+    static bool logged = false;
+    if (!logged) {
+      Log(WARN) << "Portability - padding in capture post build info in "
+                   "BuildRaytracingAccelerationStructure not supported";
+      logged = true;
+    }
+  }
+}
+
 void PortabilityLayer::checkHeapCreationFlags(unsigned heapKey,
                                               ID3D12Device* device,
-                                              D3D12_HEAP_DESC* desc,
-                                              HRESULT result) {
-  if (Config::IsRecorder() || result == S_OK) {
-    return;
-  }
-
+                                              D3D12_HEAP_DESC* desc) {
   D3D12_FEATURE_DATA_D3D12_OPTIONS featureOptions{};
   HRESULT hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &featureOptions,
                                            sizeof(featureOptions));

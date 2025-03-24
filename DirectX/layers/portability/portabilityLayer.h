@@ -32,17 +32,22 @@ public:
   void post(ID3D12Device8CreatePlacedResource1Command& c) override;
   void pre(ID3D12Device10CreatePlacedResource2Command& c) override;
   void post(ID3D12Device10CreatePlacedResource2Command& c) override;
+  void post(ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& c) override;
+  void post(ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c)
+      override;
+  void post(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) override;
 
 private:
-  void checkHeapCreationFlags(unsigned heapKey,
-                              ID3D12Device* device,
-                              D3D12_HEAP_DESC* desc,
-                              HRESULT result);
+  void checkHeapCreationFlags(unsigned heapKey, ID3D12Device* device, D3D12_HEAP_DESC* desc);
 
 private:
   ResourcePlacementCapture resourcePlacementCapture_;
   ResourcePlacementPlayback resourcePlacementPlayback_;
   bool storeResourcePlacementData_{};
+  bool useResourcePlacementData_{};
+  bool portabilityChecks_{};
+  float accelerationStructurePadding_{};
+  float accelerationStructureScratchPadding_{};
 };
 
 } // namespace DirectX

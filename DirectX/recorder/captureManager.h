@@ -23,6 +23,7 @@
 #include "contextMapService.h"
 #include "directx.h"
 #include "resourceDumpingFactory.h"
+#include "portabilityFactory.h"
 
 #include <vector>
 #include <memory>
@@ -156,6 +157,7 @@ private:
   // Factory classes encapsulate layer creation logic.
   TraceFactory traceFactory_;
   ResourceDumpingFactory resourceDumpingFactory_;
+  PortabilityFactory portabilityFactory_;
 
   std::atomic<unsigned> globalStackDepth_{0};
   static thread_local unsigned localStackDepth_;

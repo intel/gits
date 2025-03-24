@@ -24,6 +24,7 @@
 #include "analyzerLayerAuto.h"
 #include "resourceDumpingFactory.h"
 #include "skipCallsFactory.h"
+#include "portabilityFactory.h"
 #include "multithreadedObjectCreationService.h"
 #include "pipelineLibraryService.h"
 #include "contextMapService.h"
@@ -144,6 +145,7 @@ private:
   SubcaptureFactory subcaptureFactory_;
   ResourceDumpingFactory resourceDumpingFactory_;
   SkipCallsFactory skipCallsFactory_;
+  PortabilityFactory portabilityFactory_;
 
   bool executeCommands_{true};
   bool multithreadedShaderCompilation_{true};

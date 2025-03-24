@@ -282,11 +282,6 @@ void gits::Config::SetDirectX(const YAML::Node& DirectXYaml) {
   auto& cfgDirectXSkipCalls = directx.features.skipCalls;
   cfgDirectXSkipCalls =
       DirectXYaml["Features"]["SkipCalls"].as<Config::DirectX::Features::SkipCalls>();
-
-  // Portability
-  auto& cfgDirectXPortability = directx.features.portability;
-  cfgDirectXPortability =
-      DirectXYaml["Features"]["Portability"].as<Config::DirectX::Features::Portability>();
 }
 
 void gits::Config::PrepareSubcapturePath() {

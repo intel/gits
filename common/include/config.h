@@ -222,6 +222,13 @@ struct Config {
       vi_bool debugLayer{false};
       std::vector<std::string> plugins;
       vi_uint64 tokenBurstChunkSize{5242880};
+      struct Portability {
+        vi_bool resourcePlacementStorage{false};
+        struct Raytracing {
+          vi_float accelerationStructurePadding{1.0};
+          vi_float accelerationStructureScratchPadding{1.0};
+        } raytracing;
+      } portability;
     } capture;
 
     struct Player {
@@ -246,6 +253,10 @@ struct Config {
         std::string engineName;
         std::string engineVersion;
       } applicationInfoOverride;
+      struct Portability {
+        std::string resourcePlacement{"none"};
+        vi_bool portabilityChecks{false};
+      } portability;
     } player;
 
     struct Features {
@@ -313,12 +324,6 @@ struct Config {
         vi_bool enabled{false};
         std::string commandKeys;
       } skipCalls;
-
-      struct Portability {
-        vi_bool enabled{false};
-        vi_bool storePlacedResourceDataOnCapture{false};
-        vi_bool storePlacedResourceDataOnPlayback{false};
-      } portability;
 
     } features;
   } directx;
