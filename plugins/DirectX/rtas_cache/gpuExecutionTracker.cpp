@@ -17,10 +17,8 @@ void GpuExecutionTracker::commandQueueWait(unsigned callKey,
                                            unsigned commandQueueKey,
                                            unsigned fenceKey,
                                            UINT64 fenceValue) {
-  auto it = signaledFences_.find(Fence{fenceKey, fenceValue});
-  if (it != signaledFences_.end()) {
-    // fence can be non incremental
-    signaledFences_.erase(it);
+  auto it = signaledFences_.find(fenceKey);
+  if (it != signaledFences_.end() && it->second >= fenceValue) {
     return;
   }
 
@@ -50,15 +48,14 @@ void GpuExecutionTracker::commandQueueSignal(unsigned callKey,
 }
 
 void GpuExecutionTracker::fenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue) {
-  Fence fence{fenceKey, fenceValue};
+  signaledFences_[fenceKey] = fenceValue;
 
-  bool waitFound = false;
   std::vector<SignalEvent*> signaled;
   for (auto& it : queueEvents_) {
     if (!it.second.empty()) {
       assert(it.second.front()->type == QueueEvent::Wait);
-      if (static_cast<WaitEvent*>(it.second.front())->fence == fence) {
-        waitFound = true;
+      auto* waitEvent = static_cast<WaitEvent*>(it.second.front());
+      if (fenceKey == waitEvent->fence.key && fenceValue >= waitEvent->fence.value) {
         delete it.second.front();
         it.second.pop_front();
         while (!it.second.empty()) {
@@ -74,10 +71,6 @@ void GpuExecutionTracker::fenceSignal(unsigned callKey, unsigned fenceKey, UINT6
         }
       }
     }
-  }
-
-  if (!waitFound) {
-    signaledFences_.insert(fence);
   }
 
   for (SignalEvent* signal : signaled) {

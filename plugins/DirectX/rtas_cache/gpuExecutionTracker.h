@@ -10,7 +10,6 @@
 
 #include <vector>
 #include <unordered_map>
-#include <unordered_set>
 #include <deque>
 #include <functional>
 #include <basetsd.h>
@@ -36,16 +35,6 @@ private:
   struct Fence {
     unsigned key{};
     UINT64 value{};
-    struct Hash {
-      size_t operator()(const Fence& fence) const {
-        size_t h1 = std::hash<unsigned>()(fence.key);
-        size_t h2 = std::hash<UINT64>()(fence.value);
-        return h1 ^ h2 << 1;
-      }
-    };
-    bool operator==(const Fence& fence) const {
-      return fence.key == key && fence.value == value;
-    }
   };
 
   struct WaitEvent : public QueueEvent {
@@ -82,7 +71,7 @@ public:
 
 private:
   std::unordered_map<unsigned, std::deque<QueueEvent*>> queueEvents_;
-  std::unordered_set<Fence, Fence::Hash> signaledFences_;
+  std::unordered_map<unsigned, UINT64> signaledFences_;
   std::vector<Executable*> readyExecutables_;
 };
 
