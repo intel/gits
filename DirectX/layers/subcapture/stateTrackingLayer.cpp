@@ -384,6 +384,7 @@ void StateTrackingLayer::post(IDXGISwapChainResizeBuffersCommand& c) {
   // https://learn.microsoft.com/en-us/windows/win32/api/dxgi/nf-dxgi-idxgiswapchain-resizebuffers
   for (unsigned bufferKey : swapchainBuffers_[c.object_.key]) {
     resourceStateTrackingService_.destroyResource(bufferKey);
+    descriptorService_.removeState(bufferKey);
     stateService_.releaseObject(bufferKey, 0);
   }
   swapchainBuffers_[c.object_.key].clear();
