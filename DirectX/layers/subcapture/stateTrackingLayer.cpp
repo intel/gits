@@ -143,6 +143,8 @@ void StateTrackingLayer::checkIfBackBufferRelease(unsigned key, unsigned referen
     if (bufferKey == key) {
       continue;
     }
+    resourceStateTrackingService_.destroyResource(bufferKey);
+    descriptorService_.removeState(bufferKey);
     stateService_.releaseObject(bufferKey, 0);
   }
   swapchainBuffers_.erase(bufState->swapChainKey);
