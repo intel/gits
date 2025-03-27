@@ -103,6 +103,7 @@ void StateTrackingLayer::post(IDXGISwapChain1Present1Command& c) {
 }
 
 void StateTrackingLayer::pre(IUnknownReleaseCommand& c) {
+  checkIfBackBufferRelease(c.object_.key, c.result_.value);
   stateService_.releaseObject(c.object_.key, c.result_.value);
   if (c.result_.value == 0) {
     mapStateService_.destroyResource(c.object_.key);
@@ -124,6 +125,27 @@ void StateTrackingLayer::pre(IUnknownReleaseCommand& c) {
 
     gpuExecutionFlusher_.destroyCommandQueue(c.object_.key);
   }
+}
+
+void StateTrackingLayer::checkIfBackBufferRelease(unsigned key, unsigned referenceCount) {
+
+  if (referenceCount > 0) {
+    return;
+  }
+
+  auto* state = stateService_.getState(key);
+  if (!state || state->id != ObjectState::DXGI_SWAPCHAINBUFFER) {
+    return;
+  }
+
+  auto* bufState = static_cast<DXGISwapChainBufferState*>(state);
+  for (unsigned bufferKey : swapchainBuffers_[bufState->swapChainKey]) {
+    if (bufferKey == key) {
+      continue;
+    }
+    stateService_.releaseObject(bufferKey, 0);
+  }
+  swapchainBuffers_.erase(bufState->swapChainKey);
 }
 
 void StateTrackingLayer::post(IUnknownAddRefCommand& c) {
@@ -483,6 +505,7 @@ void StateTrackingLayer::post(IDXGISwapChainGetBufferCommand& c) {
   }
   DXGISwapChainBufferState* state = new DXGISwapChainBufferState();
   state->swapChainKey = c.object_.key;
+  state->parentKey = state->swapChainKey;
   state->key = c.ppSurface_.key;
   state->object = static_cast<IUnknown*>(*c.ppSurface_.value);
   state->buffer = c.Buffer_.value;
