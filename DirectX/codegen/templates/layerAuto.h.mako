@@ -73,6 +73,12 @@ public:
   virtual void pre(INTC_D3D12_CheckFeatureSupportCommand& command) {}
   virtual void post(INTC_D3D12_CheckFeatureSupportCommand& command) {}
 
+  virtual void pre(INTC_D3D12_CreateCommandQueueCommand& command) {}
+  virtual void post(INTC_D3D12_CreateCommandQueueCommand& command) {}
+
+  virtual void pre(INTC_D3D12_CreateReservedResourceCommand& command) {}
+  virtual void post(INTC_D3D12_CreateReservedResourceCommand& command) {}
+
   virtual void pre(INTC_D3D12_SetFeatureSupportCommand& command) {}
   virtual void post(INTC_D3D12_SetFeatureSupportCommand& command) {}
 

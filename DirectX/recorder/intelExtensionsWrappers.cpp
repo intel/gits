@@ -190,12 +190,37 @@ HRESULT INTC_D3D12_CreateCommandQueueWrapper(
     const INTC_D3D12_COMMAND_QUEUE_DESC* pDesc,
     REFIID riid,
     void** ppCommandQueue) {
-  static bool logged = false;
-  if (!logged) {
-    Log(ERR) << "INTC_D3D12_CreateCommandQueue not handled.";
-    logged = true;
+  HRESULT result{};
+
+  auto& manager = CaptureManager::get();
+  if (auto atTopOfStack = AtTopOfStackLocal()) {
+
+    INTC_D3D12_CreateCommandQueueCommand command(GetCurrentThreadId(), pExtensionContext, pDesc,
+                                                 riid, ppCommandQueue);
+
+    command.pExtensionContext_.key = manager.getIntelExtensionsContextMap().getKey(
+        reinterpret_cast<std::uintptr_t>(command.pExtensionContext_.value));
+
+    for (Layer* layer : manager.getPreLayers()) {
+      layer->pre(command);
+    }
+
+    command.key = manager.createCommandKey();
+    if (!command.skip) {
+      result = pfnCreateCommandQueue(command.pExtensionContext_.value, command.pDesc_.value,
+                                     command.riid_.value, command.ppCommandQueue_.value);
+    }
+
+    UpdateOutputInterface<InterfaceOutputArgument<void>, void> update_ppvResource(
+        command.ppCommandQueue_, result, riid, ppCommandQueue);
+    command.result_.value = result;
+
+    for (Layer* layer : manager.getPostLayers()) {
+      layer->post(command);
+    }
+  } else {
+    result = pfnCreateCommandQueue(pExtensionContext, pDesc, riid, ppCommandQueue);
   }
-  HRESULT result = pfnCreateCommandQueue(pExtensionContext, pDesc, riid, ppCommandQueue);
   return result;
 }
 
@@ -251,13 +276,40 @@ HRESULT INTC_D3D12_CreateReservedResourceWrapper(
     const D3D12_CLEAR_VALUE* pOptimizedClearValue,
     REFIID riid,
     void** ppvResource) {
-  static bool logged = false;
-  if (!logged) {
-    Log(ERR) << "INTC_D3D12_CreateReservedResource not handled.";
-    logged = true;
+  HRESULT result{};
+
+  auto& manager = CaptureManager::get();
+  if (auto atTopOfStack = AtTopOfStackLocal()) {
+
+    INTC_D3D12_CreateReservedResourceCommand command(GetCurrentThreadId(), pExtensionContext, pDesc,
+                                                     InitialState, pOptimizedClearValue, riid,
+                                                     ppvResource);
+
+    command.pExtensionContext_.key = manager.getIntelExtensionsContextMap().getKey(
+        reinterpret_cast<std::uintptr_t>(command.pExtensionContext_.value));
+
+    for (Layer* layer : manager.getPreLayers()) {
+      layer->pre(command);
+    }
+
+    command.key = manager.createCommandKey();
+    if (!command.skip) {
+      result = pfnCreateReservedResource(
+          command.pExtensionContext_.value, command.pDesc_.value, command.InitialState_.value,
+          command.pOptimizedClearValue_.value, command.riid_.value, command.ppvResource_.value);
+    }
+
+    UpdateOutputInterface<InterfaceOutputArgument<void>, void> update_ppvResource(
+        command.ppvResource_, result, riid, ppvResource);
+    command.result_.value = result;
+
+    for (Layer* layer : manager.getPostLayers()) {
+      layer->post(command);
+    }
+  } else {
+    result = pfnCreateReservedResource(pExtensionContext, pDesc, InitialState, pOptimizedClearValue,
+                                       riid, ppvResource);
   }
-  HRESULT result = pfnCreateReservedResource(pExtensionContext, pDesc, InitialState,
-                                             pOptimizedClearValue, riid, ppvResource);
   return result;
 }
 

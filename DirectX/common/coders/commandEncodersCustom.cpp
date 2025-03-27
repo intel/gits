@@ -190,6 +190,43 @@ void encode(const INTC_D3D12_CheckFeatureSupportCommand& command, char* dest) {
   encode(dest, offset, command.result_);
 }
 
+unsigned getSize(const INTC_D3D12_CreateCommandQueueCommand& command) {
+  return getSize(command.key) + getSize(command.threadId) + getSize(command.pExtensionContext_) +
+         getSize(command.pDesc_) + getSize(command.riid_) + getSize(command.ppCommandQueue_) +
+         getSize(command.result_);
+}
+
+void encode(const INTC_D3D12_CreateCommandQueueCommand& command, char* dest) {
+  unsigned offset = 0;
+  encode(dest, offset, command.key);
+  encode(dest, offset, command.threadId);
+  encode(dest, offset, command.pExtensionContext_);
+  encode(dest, offset, command.pDesc_);
+  encode(dest, offset, command.riid_);
+  encode(dest, offset, command.ppCommandQueue_);
+  encode(dest, offset, command.result_);
+}
+
+unsigned getSize(const INTC_D3D12_CreateReservedResourceCommand& command) {
+  return getSize(command.key) + getSize(command.threadId) + getSize(command.pExtensionContext_) +
+         getSize(command.pDesc_) + getSize(command.InitialState_) +
+         getSize(command.pOptimizedClearValue_) + getSize(command.riid_) +
+         getSize(command.ppvResource_) + getSize(command.result_);
+}
+
+void encode(const INTC_D3D12_CreateReservedResourceCommand& command, char* dest) {
+  unsigned offset = 0;
+  encode(dest, offset, command.key);
+  encode(dest, offset, command.threadId);
+  encode(dest, offset, command.pExtensionContext_);
+  encode(dest, offset, command.pDesc_);
+  encode(dest, offset, command.InitialState_);
+  encode(dest, offset, command.pOptimizedClearValue_);
+  encode(dest, offset, command.riid_);
+  encode(dest, offset, command.ppvResource_);
+  encode(dest, offset, command.result_);
+}
+
 unsigned getSize(const INTC_D3D12_SetFeatureSupportCommand& command) {
   return getSize(command.key) + getSize(command.threadId) + getSize(command.pExtensionContext_) +
          getSize(command.pFeature_) + getSize(command.result_);

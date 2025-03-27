@@ -56,6 +56,10 @@ public:
   virtual void post(INTC_D3D12_CreatePlacedResourceCommand& command);
   virtual void pre(INTC_D3D12_CreateCommittedResourceCommand& command);
   virtual void post(INTC_D3D12_CreateCommittedResourceCommand& command);
+  virtual void pre(INTC_D3D12_CreateCommandQueueCommand& command);
+  virtual void post(INTC_D3D12_CreateCommandQueueCommand& command);
+  virtual void pre(INTC_D3D12_CreateReservedResourceCommand& command);
+  virtual void post(INTC_D3D12_CreateReservedResourceCommand& command);
 
 private:
   bool isFailure(HRESULT result) {

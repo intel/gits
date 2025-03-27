@@ -24,6 +24,8 @@ void decode(char* src, INTC_D3D12_CreateDeviceExtensionContextCommand& command);
 void decode(char* src, INTC_D3D12_CreateDeviceExtensionContext1Command& command);
 void decode(char* src, INTC_DestroyDeviceExtensionContextCommand& command);
 void decode(char* src, INTC_D3D12_CheckFeatureSupportCommand& command);
+void decode(char* src, INTC_D3D12_CreateCommandQueueCommand& command);
+void decode(char* src, INTC_D3D12_CreateReservedResourceCommand& command);
 void decode(char* src, INTC_D3D12_SetFeatureSupportCommand& command);
 void decode(char* src, INTC_D3D12_GetResourceAllocationInfoCommand& command);
 void decode(char* src, INTC_D3D12_CreateComputePipelineStateCommand& command);

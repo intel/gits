@@ -162,6 +162,30 @@ public:
   }
 };
 
+class INTC_D3D12_CreateCommandQueueWriter : public CommandWriter {
+public:
+  INTC_D3D12_CreateCommandQueueWriter(INTC_D3D12_CreateCommandQueueCommand& command) {
+    dataSize_ = getSize(command);
+    data_.reset(new char[dataSize_]);
+    encode(command, data_.get());
+  }
+  unsigned Id() const override {
+    return static_cast<unsigned>(CommandId::INTC_D3D12_CREATECOMMANDQUEUE);
+  }
+};
+
+class INTC_D3D12_CreateReservedResourceWriter : public CommandWriter {
+public:
+  INTC_D3D12_CreateReservedResourceWriter(INTC_D3D12_CreateReservedResourceCommand& command) {
+    dataSize_ = getSize(command);
+    data_.reset(new char[dataSize_]);
+    encode(command, data_.get());
+  }
+  unsigned Id() const override {
+    return static_cast<unsigned>(CommandId::INTC_D3D12_CREATERESERVEDRESOURCE);
+  }
+};
+
 class INTC_D3D12_SetFeatureSupportWriter : public CommandWriter {
 public:
   INTC_D3D12_SetFeatureSupportWriter(INTC_D3D12_SetFeatureSupportCommand& command) {

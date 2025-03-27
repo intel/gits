@@ -48,6 +48,14 @@ void EncoderLayer::post(INTC_D3D12_CheckFeatureSupportCommand& command) {
   recorder_.record(command.key, new INTC_D3D12_CheckFeatureSupportWriter(command));
 }
 
+void EncoderLayer::post(INTC_D3D12_CreateCommandQueueCommand& command) {
+  recorder_.record(command.key, new INTC_D3D12_CreateCommandQueueWriter(command));
+}
+
+void EncoderLayer::post(INTC_D3D12_CreateReservedResourceCommand& command) {
+  recorder_.record(command.key, new INTC_D3D12_CreateReservedResourceWriter(command));
+}
+
 void EncoderLayer::post(INTC_D3D12_SetFeatureSupportCommand& command) {
   recorder_.record(command.key, new INTC_D3D12_SetFeatureSupportWriter(command));
 }

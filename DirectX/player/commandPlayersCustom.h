@@ -255,6 +255,44 @@ private:
   INTC_D3D12_CheckFeatureSupportCommand command;
 };
 
+class INTC_D3D12_CreateCommandQueuePlayer : public CommandPlayer {
+public:
+  unsigned Id() const override {
+    return static_cast<unsigned>(CommandId::INTC_D3D12_CREATECOMMANDQUEUE);
+  }
+  const char* Name() const override {
+    return "INTC_D3D12_CreateCommandQueue";
+  }
+  void Run() override;
+
+protected:
+  void decodeCommand() override {
+    decode(data_.data(), command);
+  }
+
+private:
+  INTC_D3D12_CreateCommandQueueCommand command;
+};
+
+class INTC_D3D12_CreateReservedResourcePlayer : public CommandPlayer {
+public:
+  unsigned Id() const override {
+    return static_cast<unsigned>(CommandId::INTC_D3D12_CREATERESERVEDRESOURCE);
+  }
+  const char* Name() const override {
+    return "INTC_D3D12_CreateReservedResource";
+  }
+  void Run() override;
+
+protected:
+  void decodeCommand() override {
+    decode(data_.data(), command);
+  }
+
+private:
+  INTC_D3D12_CreateReservedResourceCommand command;
+};
+
 class INTC_D3D12_SetFeatureSupportPlayer : public CommandPlayer {
 public:
   unsigned Id() const override {

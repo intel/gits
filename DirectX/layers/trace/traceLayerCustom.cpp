@@ -455,6 +455,57 @@ void TraceLayer::post(INTC_D3D12_CreateComputePipelineStateCommand& command) {
   }
 }
 
+void TraceLayer::pre(INTC_D3D12_CreateCommandQueueCommand& command) {
+  if (printPre_) {
+    CommandPrinter p(streamPre_, statePre_, command, "INTC_D3D12_CreateCommandQueue");
+    p.addArgument(command.pExtensionContext_);
+    p.addArgument(command.pDesc_);
+    p.addArgument(command.riid_);
+    p.addArgument(command.ppCommandQueue_);
+    p.addResult(command.result_);
+    p.print(flush_);
+  }
+}
+
+void TraceLayer::post(INTC_D3D12_CreateCommandQueueCommand& command) {
+  if (printPost_) {
+    CommandPrinter p(streamPost_, statePost_, command, "INTC_D3D12_CreateCommandQueue");
+    p.addArgument(command.pExtensionContext_);
+    p.addArgument(command.pDesc_);
+    p.addArgument(command.riid_);
+    p.addArgument(command.ppCommandQueue_);
+    p.addResult(command.result_);
+    p.print(flush_);
+  }
+}
+void TraceLayer::pre(INTC_D3D12_CreateReservedResourceCommand& command) {
+  if (printPre_) {
+    CommandPrinter p(streamPre_, statePre_, command, "INTC_D3D12_CreateReservedResource");
+    p.addArgument(command.pExtensionContext_);
+    p.addArgument(command.pDesc_);
+    p.addArgument(command.InitialState_);
+    p.addArgument(command.pOptimizedClearValue_);
+    p.addArgument(command.riid_);
+    p.addArgument(command.ppvResource_);
+    p.addResult(command.result_);
+    p.print(flush_);
+  }
+}
+
+void TraceLayer::post(INTC_D3D12_CreateReservedResourceCommand& command) {
+  if (printPost_) {
+    CommandPrinter p(streamPost_, statePost_, command, "INTC_D3D12_CreateReservedResource");
+    p.addArgument(command.pExtensionContext_);
+    p.addArgument(command.pDesc_);
+    p.addArgument(command.InitialState_);
+    p.addArgument(command.pOptimizedClearValue_);
+    p.addArgument(command.riid_);
+    p.addArgument(command.ppvResource_);
+    p.addResult(command.result_);
+    p.print(flush_);
+  }
+}
+
 #pragma endregion
 
 } // namespace DirectX

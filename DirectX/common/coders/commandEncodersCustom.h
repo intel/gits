@@ -47,6 +47,12 @@ void encode(const INTC_DestroyDeviceExtensionContextCommand& command, char* dest
 unsigned getSize(const INTC_D3D12_CheckFeatureSupportCommand& command);
 void encode(const INTC_D3D12_CheckFeatureSupportCommand& command, char* dest);
 
+unsigned getSize(const INTC_D3D12_CreateCommandQueueCommand& command);
+void encode(const INTC_D3D12_CreateCommandQueueCommand& command, char* dest);
+
+unsigned getSize(const INTC_D3D12_CreateReservedResourceCommand& command);
+void encode(const INTC_D3D12_CreateReservedResourceCommand& command, char* dest);
+
 unsigned getSize(const INTC_D3D12_SetFeatureSupportCommand& command);
 void encode(const INTC_D3D12_SetFeatureSupportCommand& command, char* dest);
 

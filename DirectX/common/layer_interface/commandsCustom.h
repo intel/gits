@@ -23,6 +23,8 @@ struct INTCExtensionAppInfo;
 struct INTCExtensionAppInfo1;
 struct INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC;
 struct INTC_D3D12_RESOURCE_DESC_0001;
+struct INTC_D3D12_RESOURCE_DESC;
+struct INTC_D3D12_COMMAND_QUEUE_DESC_0001;
 
 namespace gits {
 namespace DirectX {
@@ -249,6 +251,57 @@ public:
   Argument<INTC_D3D12_FEATURES> Feature_{};
   BufferArgument pFeatureSupportData_{};
   Argument<UINT> FeatureSupportDataSize_{};
+  Argument<HRESULT> result_{};
+};
+
+class INTC_D3D12_CreateCommandQueueCommand : public Command {
+public:
+  INTC_D3D12_CreateCommandQueueCommand(unsigned threadId,
+                                       INTCExtensionContext* pExtensionContext,
+                                       const INTC_D3D12_COMMAND_QUEUE_DESC_0001* pDesc,
+                                       REFIID riid,
+                                       void** ppCommandQueue)
+      : Command{CommandId::INTC_D3D12_CREATECOMMANDQUEUE, threadId},
+        pExtensionContext_{pExtensionContext},
+        pDesc_{pDesc},
+        riid_{riid},
+        ppCommandQueue_{ppCommandQueue} {}
+  INTC_D3D12_CreateCommandQueueCommand() : Command(CommandId::INTC_D3D12_CREATECOMMANDQUEUE) {}
+
+public:
+  INTCExtensionContextArgument pExtensionContext_;
+  PointerArgument<INTC_D3D12_COMMAND_QUEUE_DESC_0001> pDesc_{};
+  Argument<IID> riid_{};
+  InterfaceOutputArgument<void> ppCommandQueue_{};
+  Argument<HRESULT> result_{};
+};
+
+class INTC_D3D12_CreateReservedResourceCommand : public Command {
+public:
+  INTC_D3D12_CreateReservedResourceCommand(unsigned threadId,
+                                           INTCExtensionContext* pExtensionContext,
+                                           const INTC_D3D12_RESOURCE_DESC* pDesc,
+                                           D3D12_RESOURCE_STATES InitialState,
+                                           const D3D12_CLEAR_VALUE* pOptimizedClearValue,
+                                           REFIID riid,
+                                           void** ppvResource)
+      : Command{CommandId::INTC_D3D12_CREATERESERVEDRESOURCE, threadId},
+        pExtensionContext_{pExtensionContext},
+        pDesc_{pDesc},
+        InitialState_{InitialState},
+        pOptimizedClearValue_{pOptimizedClearValue},
+        riid_{riid},
+        ppvResource_{ppvResource} {}
+  INTC_D3D12_CreateReservedResourceCommand()
+      : Command(CommandId::INTC_D3D12_CREATERESERVEDRESOURCE) {}
+
+public:
+  INTCExtensionContextArgument pExtensionContext_;
+  PointerArgument<INTC_D3D12_RESOURCE_DESC> pDesc_{};
+  Argument<D3D12_RESOURCE_STATES> InitialState_{};
+  PointerArgument<D3D12_CLEAR_VALUE> pOptimizedClearValue_{};
+  Argument<IID> riid_{};
+  InterfaceOutputArgument<void> ppvResource_{};
   Argument<HRESULT> result_{};
 };
 

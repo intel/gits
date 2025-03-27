@@ -27,11 +27,13 @@ public:
   void post(INTC_D3D12_CreateDeviceExtensionContext1Command& command) override;
   void post(INTC_DestroyDeviceExtensionContextCommand& command) override;
   void post(INTC_D3D12_CheckFeatureSupportCommand& command) override;
+  void post(INTC_D3D12_CreateCommandQueueCommand& command) override;
   void post(INTC_D3D12_SetFeatureSupportCommand& command) override;
   void post(INTC_D3D12_GetResourceAllocationInfoCommand& command) override;
   void post(INTC_D3D12_CreateComputePipelineStateCommand& command) override;
   void post(INTC_D3D12_CreatePlacedResourceCommand& command) override;
   void post(INTC_D3D12_CreateCommittedResourceCommand& command) override;
+  void post(INTC_D3D12_CreateReservedResourceCommand& command) override;
 
   %for function in functions:
   void post(${function.name}Command& command) override;
