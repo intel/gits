@@ -101,9 +101,6 @@ public:
 
   void pre(INTC_D3D12_CreateCommittedResourceCommand& command) override;
   void post(INTC_D3D12_CreateCommittedResourceCommand& command) override;
-  
-  void pre(INTC_D3D12_AddShaderBinariesPathCommand& command) override;
-  void post(INTC_D3D12_AddShaderBinariesPathCommand& command) override;
 
   void pre(INTC_D3D12_CreateCommandQueueCommand& command) override;
   void post(INTC_D3D12_CreateCommandQueueCommand& command) override;
