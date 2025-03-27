@@ -109,11 +109,11 @@ void DescriptorService::copyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand
     }
     return;
   }
-  auto& srcIt = srcHeapIt->second.find(c.SrcDescriptorRangeStart_.index);
   auto& destHeap = statesByHeapIndex_[c.DestDescriptorRangeStart_.interfaceKey];
-  for (unsigned i = 0; i < c.NumDescriptors_.value; ++i, ++srcIt) {
+  for (unsigned i = 0; i < c.NumDescriptors_.value; ++i) {
+    auto& srcIt = srcHeapIt->second.find(c.SrcDescriptorRangeStart_.index + i);
     if (srcIt == srcHeapIt->second.end()) {
-      break;
+      continue;
     }
     unsigned destHeapIndex = c.DestDescriptorRangeStart_.index + i;
     destHeap[destHeapIndex].reset(copyDescriptor(
@@ -135,10 +135,11 @@ void DescriptorService::copyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c) {
     auto& srcHeapIt =
         statesByHeapIndex_.find(c.pSrcDescriptorRangeStarts_.interfaceKeys[srcRangeIndex]);
     GITS_ASSERT(srcHeapIt != statesByHeapIndex_.end());
-    auto& srcIt = srcHeapIt->second.find(c.pSrcDescriptorRangeStarts_.indexes[srcRangeIndex]);
-    for (unsigned srcIndex = 0; srcIndex < srcRangeSize; ++srcIndex, ++destIndex, ++srcIt) {
+    for (unsigned srcIndex = 0; srcIndex < srcRangeSize; ++srcIndex, ++destIndex) {
+      auto& srcIt =
+          srcHeapIt->second.find(c.pSrcDescriptorRangeStarts_.indexes[srcRangeIndex] + srcIndex);
       if (srcIt == srcHeapIt->second.end()) {
-        break;
+        continue;
       }
       if (destIndex == destRangeSize) {
         destIndex = 0;
