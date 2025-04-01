@@ -103,7 +103,7 @@ void StateTrackingLayer::post(IDXGISwapChain1Present1Command& c) {
 }
 
 void StateTrackingLayer::pre(IUnknownReleaseCommand& c) {
-  checkIfBackBufferRelease(c.object_.key, c.result_.value);
+  releaseSwapChainBuffers(c.object_.key, c.result_.value);
   stateService_.releaseObject(c.object_.key, c.result_.value);
   if (c.result_.value == 0) {
     mapStateService_.destroyResource(c.object_.key);
@@ -127,8 +127,7 @@ void StateTrackingLayer::pre(IUnknownReleaseCommand& c) {
   }
 }
 
-void StateTrackingLayer::checkIfBackBufferRelease(unsigned key, unsigned referenceCount) {
-
+void StateTrackingLayer::releaseSwapChainBuffers(unsigned key, unsigned referenceCount) {
   if (referenceCount > 0) {
     return;
   }
@@ -138,6 +137,8 @@ void StateTrackingLayer::checkIfBackBufferRelease(unsigned key, unsigned referen
     return;
   }
 
+  // SwapChain buffers share the same reference count
+  // Remove all buffers from the same SwapChain if one of them has 0 references
   auto* bufState = static_cast<DXGISwapChainBufferState*>(state);
   for (unsigned bufferKey : swapchainBuffers_[bufState->swapChainKey]) {
     if (bufferKey == key) {
@@ -403,15 +404,6 @@ void StateTrackingLayer::post(IDXGISwapChainResizeBuffersCommand& c) {
       state->desc.BufferDesc.Format = c.NewFormat_.value;
     }
   }
-
-  // Resizing the swapchain requires all the buffers to have been previously released (we should not track them anymore)
-  // https://learn.microsoft.com/en-us/windows/win32/api/dxgi/nf-dxgi-idxgiswapchain-resizebuffers
-  for (unsigned bufferKey : swapchainBuffers_[c.object_.key]) {
-    resourceStateTrackingService_.destroyResource(bufferKey);
-    descriptorService_.removeState(bufferKey);
-    stateService_.releaseObject(bufferKey, 0);
-  }
-  swapchainBuffers_[c.object_.key].clear();
 }
 
 void StateTrackingLayer::post(ID3D12ObjectSetNameCommand& c) {

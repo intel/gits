@@ -225,7 +225,7 @@ private:
   }
   bool isResourceHeapMappable(unsigned heapKey);
   bool isResourceBarrierRestricted(D3D12_RESOURCE_FLAGS flags);
-  void checkIfBackBufferRelease(unsigned key, unsigned referenceCount);
+  void releaseSwapChainBuffers(unsigned key, unsigned referenceCount);
 
 private:
   std::map<unsigned, unsigned> deviceByINTCExtensionContext_;
