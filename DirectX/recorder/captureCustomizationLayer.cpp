@@ -21,6 +21,14 @@
 namespace gits {
 namespace DirectX {
 
+// Heaps (and resources) may require their D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS to be updated (for writewatch)
+// s_orgHeapInfo will be used to store the original value during pre() and restore it during post()
+struct HeapInfo {
+  D3D12_HEAP_PROPERTIES properties;
+  D3D12_HEAP_FLAGS flags;
+};
+static thread_local HeapInfo s_orgHeapInfo;
+
 CaptureCustomizationLayer::CaptureCustomizationLayer(CaptureManager& manager,
                                                      GitsRecorder& recorder)
     : Layer("CaptureCustomization"), manager_(manager), recorder_(recorder) {}
@@ -80,8 +88,8 @@ void CaptureCustomizationLayer::post(ID3D12DeviceCreateDescriptorHeapCommand& c)
 }
 
 void CaptureCustomizationLayer::pre(ID3D12DeviceCreateCommittedResourceCommand& c) {
-  c.pHeapProperties_.originalValue = *c.pHeapProperties_.value;
-  c.HeapFlags_.originalValue = c.HeapFlags_.value;
+  s_orgHeapInfo = {*c.pHeapProperties_.value, c.HeapFlags_.value};
+  // Modify D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS to enable writewatch
   manager_.getMapTrackingService().enableWriteWatch(*c.pHeapProperties_.value, c.HeapFlags_.value);
 }
 
@@ -89,14 +97,15 @@ void CaptureCustomizationLayer::post(ID3D12DeviceCreateCommittedResourceCommand&
   if (c.result_.value == S_OK) {
     ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.ppvResource_.value);
     manager_.getGpuAddressService().createResource(c.ppvResource_.key, resource);
-    *c.pHeapProperties_.value = c.pHeapProperties_.originalValue;
-    c.HeapFlags_.value = c.HeapFlags_.originalValue;
   }
+  // Restore D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS
+  *c.pHeapProperties_.value = s_orgHeapInfo.properties;
+  c.HeapFlags_.value = s_orgHeapInfo.flags;
 }
 
 void CaptureCustomizationLayer::pre(ID3D12Device4CreateCommittedResource1Command& c) {
-  c.pHeapProperties_.originalValue = *c.pHeapProperties_.value;
-  c.HeapFlags_.originalValue = c.HeapFlags_.value;
+  s_orgHeapInfo = {*c.pHeapProperties_.value, c.HeapFlags_.value};
+  // Modify D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS to enable writewatch
   manager_.getMapTrackingService().enableWriteWatch(*c.pHeapProperties_.value, c.HeapFlags_.value);
 }
 
@@ -104,14 +113,15 @@ void CaptureCustomizationLayer::post(ID3D12Device4CreateCommittedResource1Comman
   if (c.result_.value == S_OK) {
     ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.ppvResource_.value);
     manager_.getGpuAddressService().createResource(c.ppvResource_.key, resource);
-    *c.pHeapProperties_.value = c.pHeapProperties_.originalValue;
-    c.HeapFlags_.value = c.HeapFlags_.originalValue;
   }
+  // Restore D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS
+  *c.pHeapProperties_.value = s_orgHeapInfo.properties;
+  c.HeapFlags_.value = s_orgHeapInfo.flags;
 }
 
 void CaptureCustomizationLayer::pre(ID3D12Device8CreateCommittedResource2Command& c) {
-  c.pHeapProperties_.originalValue = *c.pHeapProperties_.value;
-  c.HeapFlags_.originalValue = c.HeapFlags_.value;
+  s_orgHeapInfo = {*c.pHeapProperties_.value, c.HeapFlags_.value};
+  // Modify D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS to enable writewatch
   manager_.getMapTrackingService().enableWriteWatch(*c.pHeapProperties_.value, c.HeapFlags_.value);
 }
 
@@ -119,14 +129,15 @@ void CaptureCustomizationLayer::post(ID3D12Device8CreateCommittedResource2Comman
   if (c.result_.value == S_OK) {
     ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.ppvResource_.value);
     manager_.getGpuAddressService().createResource(c.ppvResource_.key, resource);
-    *c.pHeapProperties_.value = c.pHeapProperties_.originalValue;
-    c.HeapFlags_.value = c.HeapFlags_.originalValue;
   }
+  // Restore D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS
+  *c.pHeapProperties_.value = s_orgHeapInfo.properties;
+  c.HeapFlags_.value = s_orgHeapInfo.flags;
 }
 
 void CaptureCustomizationLayer::pre(ID3D12Device10CreateCommittedResource3Command& c) {
-  c.pHeapProperties_.originalValue = *c.pHeapProperties_.value;
-  c.HeapFlags_.originalValue = c.HeapFlags_.value;
+  s_orgHeapInfo = {*c.pHeapProperties_.value, c.HeapFlags_.value};
+  // Modify D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS to enable writewatch
   manager_.getMapTrackingService().enableWriteWatch(*c.pHeapProperties_.value, c.HeapFlags_.value);
 }
 
@@ -134,9 +145,10 @@ void CaptureCustomizationLayer::post(ID3D12Device10CreateCommittedResource3Comma
   if (c.result_.value == S_OK) {
     ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.ppvResource_.value);
     manager_.getGpuAddressService().createResource(c.ppvResource_.key, resource);
-    *c.pHeapProperties_.value = c.pHeapProperties_.originalValue;
-    c.HeapFlags_.value = c.HeapFlags_.originalValue;
   }
+  // Restore D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS
+  *c.pHeapProperties_.value = s_orgHeapInfo.properties;
+  c.HeapFlags_.value = s_orgHeapInfo.flags;
 }
 
 void CaptureCustomizationLayer::post(ID3D12DeviceCreateReservedResourceCommand& c) {
@@ -185,7 +197,8 @@ void CaptureCustomizationLayer::post(ID3D12Device10CreatePlacedResource2Command&
 }
 
 void CaptureCustomizationLayer::pre(ID3D12DeviceCreateHeapCommand& c) {
-  c.pDesc_.originalValue = *c.pDesc_.value;
+  s_orgHeapInfo = {c.pDesc_.value->Properties, c.pDesc_.value->Flags};
+  // Modify D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS to enable writewatch
   manager_.getMapTrackingService().enableWriteWatch(c.pDesc_.value->Properties,
                                                     c.pDesc_.value->Flags);
 }
@@ -194,12 +207,15 @@ void CaptureCustomizationLayer::post(ID3D12DeviceCreateHeapCommand& c) {
   if (c.result_.value == S_OK) {
     ID3D12Heap* heap = static_cast<ID3D12Heap*>(*c.ppvHeap_.value);
     manager_.getGpuAddressService().createHeap(c.ppvHeap_.key, heap);
-    *c.pDesc_.value = c.pDesc_.originalValue;
   }
+  // Restore D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS
+  c.pDesc_.value->Properties = s_orgHeapInfo.properties;
+  c.pDesc_.value->Flags = s_orgHeapInfo.flags;
 }
 
 void CaptureCustomizationLayer::pre(ID3D12Device4CreateHeap1Command& c) {
-  c.pDesc_.originalValue = *c.pDesc_.value;
+  s_orgHeapInfo = {c.pDesc_.value->Properties, c.pDesc_.value->Flags};
+  // Modify D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS to enable writewatch
   manager_.getMapTrackingService().enableWriteWatch(c.pDesc_.value->Properties,
                                                     c.pDesc_.value->Flags);
 }
@@ -208,22 +224,27 @@ void CaptureCustomizationLayer::post(ID3D12Device4CreateHeap1Command& c) {
   if (c.result_.value == S_OK) {
     ID3D12Heap* heap = static_cast<ID3D12Heap*>(*c.ppvHeap_.value);
     manager_.getGpuAddressService().createHeap(c.ppvHeap_.key, heap);
-    *c.pDesc_.value = c.pDesc_.originalValue;
   }
+  // Restore D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS
+  c.pDesc_.value->Properties = s_orgHeapInfo.properties;
+  c.pDesc_.value->Flags = s_orgHeapInfo.flags;
 }
 
 void CaptureCustomizationLayer::pre(INTC_D3D12_CreateHeapCommand& c) {
-  // Does not store original value
-  manager_.getMapTrackingService().enableWriteWatch(c.pDesc_.value->pD3D12Desc->Properties,
-                                                    c.pDesc_.value->pD3D12Desc->Flags);
+  auto* desc = c.pDesc_.value->pD3D12Desc;
+  s_orgHeapInfo = {desc->Properties, desc->Flags};
+  // Modify D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS to enable writewatch
+  manager_.getMapTrackingService().enableWriteWatch(desc->Properties, desc->Flags);
 }
 
 void CaptureCustomizationLayer::post(INTC_D3D12_CreateHeapCommand& c) {
-  // Does not restore original value
   if (c.result_.value == S_OK) {
     ID3D12Heap* heap = static_cast<ID3D12Heap*>(*c.ppvHeap_.value);
     manager_.getGpuAddressService().createHeap(c.ppvHeap_.key, heap);
   }
+  // Restore D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS
+  c.pDesc_.value->pD3D12Desc->Properties = s_orgHeapInfo.properties;
+  c.pDesc_.value->pD3D12Desc->Flags = s_orgHeapInfo.flags;
 }
 
 void CaptureCustomizationLayer::post(ID3D12Device3OpenExistingHeapFromAddressCommand& c) {

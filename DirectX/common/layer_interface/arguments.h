@@ -16,7 +16,6 @@
 #include <vector>
 
 struct INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC;
-struct INTC_D3D12_HEAP_DESC;
 struct INTCExtensionContext;
 struct INTCExtensionAppInfo;
 struct INTCExtensionAppInfo1;
@@ -323,32 +322,6 @@ struct D3D12_STATE_OBJECT_DESC_Argument {
   D3D12_STATE_OBJECT_DESC* value{};
   std::map<unsigned, unsigned> interfaceKeysBySubobject;
   std::map<unsigned, ObjectInfos*> objectInfosBySubobject;
-};
-
-template <>
-struct PointerArgument<D3D12_HEAP_PROPERTIES> {
-  PointerArgument(const D3D12_HEAP_PROPERTIES* value_)
-      : value(const_cast<D3D12_HEAP_PROPERTIES*>(value_)), originalValue(*value) {}
-  PointerArgument() {}
-  D3D12_HEAP_PROPERTIES* value{};
-  D3D12_HEAP_PROPERTIES originalValue{};
-};
-
-template <>
-struct PointerArgument<D3D12_HEAP_DESC> {
-  PointerArgument(const D3D12_HEAP_DESC* value_)
-      : value(const_cast<D3D12_HEAP_DESC*>(value_)), originalValue(*value) {}
-  PointerArgument() {}
-  D3D12_HEAP_DESC* value{};
-  D3D12_HEAP_DESC originalValue{};
-};
-
-template <>
-struct Argument<D3D12_HEAP_FLAGS> {
-  Argument(D3D12_HEAP_FLAGS value_) : value(value_), originalValue(value_) {}
-  Argument() {}
-  D3D12_HEAP_FLAGS value{};
-  D3D12_HEAP_FLAGS originalValue{};
 };
 
 template <>
