@@ -17,8 +17,11 @@ GpuPatchLayer::GpuPatchLayer(GpuAddressService& gpuAddressService)
     : Layer("GpuPatch"), gpuAddressService_(gpuAddressService) {}
 
 void GpuPatchLayer::post(ID3D12DeviceCreateCommandSignatureCommand& c) {
-  D3D12_COMMAND_SIGNATURE_DESC& desc = commandSignatures_[c.ppvCommandSignature_.key] =
-      *c.pDesc_.value;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    commandSignatures_[c.ppvCommandSignature_.key] = *c.pDesc_.value;
+  }
+  D3D12_COMMAND_SIGNATURE_DESC& desc = commandSignatures_[c.ppvCommandSignature_.key];
   desc.pArgumentDescs = new D3D12_INDIRECT_ARGUMENT_DESC[desc.NumArgumentDescs];
   std::copy(c.pDesc_.value->pArgumentDescs,
             c.pDesc_.value->pArgumentDescs + c.pDesc_.value->NumArgumentDescs,
@@ -26,20 +29,25 @@ void GpuPatchLayer::post(ID3D12DeviceCreateCommandSignatureCommand& c) {
 }
 
 void GpuPatchLayer::post(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
-  auto it = commandSignatures_.find(c.pCommandSignature_.key);
-  GITS_ASSERT(it != commandSignatures_.end());
-  D3D12_COMMAND_SIGNATURE_DESC& commandSignature = it->second;
+  D3D12_COMMAND_SIGNATURE_DESC* commandSignature = nullptr;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto it = commandSignatures_.find(c.pCommandSignature_.key);
+    GITS_ASSERT(it != commandSignatures_.end());
+    commandSignature = &it->second;
+  }
+  GITS_ASSERT(commandSignature);
 
   bool raytracing = false;
-  for (unsigned i = 0; i < commandSignature.NumArgumentDescs; ++i) {
-    D3D12_INDIRECT_ARGUMENT_TYPE type = commandSignature.pArgumentDescs[i].Type;
+  for (unsigned i = 0; i < commandSignature->NumArgumentDescs; ++i) {
+    D3D12_INDIRECT_ARGUMENT_TYPE type = commandSignature->pArgumentDescs[i].Type;
     if (type == D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_RAYS) {
       raytracing = true;
     }
   }
 
   if (raytracing) {
-    gpuPatchDump_.dumpArgumentBuffer(c.object_.value, it->second, c.MaxCommandCount_.value,
+    gpuPatchDump_.dumpArgumentBuffer(c.object_.value, *commandSignature, c.MaxCommandCount_.value,
                                      c.pArgumentBuffer_.value, c.ArgumentBufferOffset_.value,
                                      D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT, c.pCountBuffer_.value,
                                      c.CountBufferOffset_.value,
