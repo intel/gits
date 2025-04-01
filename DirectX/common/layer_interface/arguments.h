@@ -16,6 +16,7 @@
 #include <vector>
 
 struct INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC;
+struct INTC_D3D12_HEAP_DESC;
 struct INTCExtensionContext;
 struct INTCExtensionAppInfo;
 struct INTCExtensionAppInfo1;

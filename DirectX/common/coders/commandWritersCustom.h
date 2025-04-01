@@ -247,5 +247,17 @@ public:
   }
 };
 
+class INTC_D3D12_CreateHeapWriter : public CommandWriter {
+public:
+  INTC_D3D12_CreateHeapWriter(INTC_D3D12_CreateHeapCommand& command) {
+    dataSize_ = getSize(command);
+    data_.reset(new char[dataSize_]);
+    encode(command, data_.get());
+  }
+  unsigned Id() const override {
+    return static_cast<unsigned>(CommandId::INTC_D3D12_CREATEHEAP);
+  }
+};
+
 } // namespace DirectX
 } // namespace gits

@@ -348,6 +348,11 @@ void ReplayCustomizationLayer::post(ID3D12Device4CreateHeap1Command& c) {
   manager_.getGpuAddressService().createHeap(c.ppvHeap_.key, heap);
 }
 
+void ReplayCustomizationLayer::post(INTC_D3D12_CreateHeapCommand& c) {
+  ID3D12Heap* heap = static_cast<ID3D12Heap*>(*c.ppvHeap_.value);
+  manager_.getGpuAddressService().createHeap(c.ppvHeap_.key, heap);
+}
+
 void ReplayCustomizationLayer::pre(ID3D12Device3OpenExistingHeapFromAddressCommand& c) {
   c.pAddress_.value =
       manager_.getHeapAllocationService().getHeapAllocation(const_cast<void*>(c.pAddress_.value));

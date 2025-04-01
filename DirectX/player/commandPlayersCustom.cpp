@@ -384,6 +384,29 @@ void INTC_D3D12_CreateCommittedResourcePlayer::Run() {
     layer->post(command);
   }
 }
+
+void INTC_D3D12_CreateHeapPlayer::Run() {
+  auto& manager = PlayerManager::get();
+
+  for (Layer* layer : manager.getPreLayers()) {
+    layer->pre(command);
+  }
+
+  if (manager.executeCommands() && command.result_.value == S_OK && !command.skip) {
+    auto* context = reinterpret_cast<INTCExtensionContext*>(
+        manager.getIntelExtensionsContextMap().getContext(command.pExtensionContext_.key));
+    command.result_.value = INTC_D3D12_CreateHeap(context, command.pDesc_.value,
+                                                  command.riid_.value, command.ppvHeap_.value);
+
+    if (command.result_.value == S_OK) {
+      updateOutputInterface(manager, command.ppvHeap_);
+    }
+  }
+
+  for (Layer* layer : manager.getPostLayers()) {
+    layer->post(command);
+  }
+}
 #pragma endregion
 
 } // namespace DirectX

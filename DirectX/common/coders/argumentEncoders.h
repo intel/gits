@@ -320,6 +320,9 @@ void encode(char* dest,
             unsigned& offset,
             const PointerArgument<INTC_D3D12_RESOURCE_DESC_0001>& arg);
 
+unsigned getSize(const PointerArgument<INTC_D3D12_HEAP_DESC>& arg);
+void encode(char* dest, unsigned& offset, const PointerArgument<INTC_D3D12_HEAP_DESC>& arg);
+
 unsigned getSize(const xess_d3d12_init_params_t_Argument& arg);
 void encode(char* dest, unsigned& offset, const xess_d3d12_init_params_t_Argument& arg);
 

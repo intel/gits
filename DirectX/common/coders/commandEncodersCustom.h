@@ -68,5 +68,8 @@ void encode(const INTC_D3D12_CreatePlacedResourceCommand& command, char* dest);
 unsigned getSize(const INTC_D3D12_CreateCommittedResourceCommand& command);
 void encode(const INTC_D3D12_CreateCommittedResourceCommand& command, char* dest);
 
+unsigned getSize(const INTC_D3D12_CreateHeapCommand& command);
+void encode(const INTC_D3D12_CreateHeapCommand& command, char* dest);
+
 } // namespace DirectX
 } // namespace gits

@@ -1208,6 +1208,18 @@ void decode(char* src,
   offset += sizeof(arg.rootSignatureKey);
 }
 
+void decode(char* src, unsigned& offset, PointerArgument<INTC_D3D12_HEAP_DESC>& arg) {
+  if (decodeNullPtr(src, offset, arg)) {
+    return;
+  }
+
+  arg.value = reinterpret_cast<INTC_D3D12_HEAP_DESC*>(src + offset);
+  offset += sizeof(INTC_D3D12_HEAP_DESC);
+
+  arg.value->pD3D12Desc = reinterpret_cast<D3D12_HEAP_DESC*>(src + offset);
+  offset += sizeof(D3D12_HEAP_DESC);
+}
+
 void decode(char* src, unsigned& offset, PointerArgument<INTC_D3D12_RESOURCE_DESC_0001>& arg) {
   if (decodeNullPtr(src, offset, arg)) {
     return;

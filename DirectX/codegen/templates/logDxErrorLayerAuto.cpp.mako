@@ -181,6 +181,16 @@ void LogDxErrorLayer::post(INTC_D3D12_CreateReservedResourceCommand& command) {
   }
 }
 
+void LogDxErrorLayer::pre(INTC_D3D12_CreateHeapCommand& command) {
+  preResult_ = command.result_.value;
+}
+
+void LogDxErrorLayer::post(INTC_D3D12_CreateHeapCommand& command) {
+  if (isFailure(command.result_.value)) {
+    Log(ERR) << callKeyToStr(command.key) << " INTC_D3D12_CreateHeapCommand failed " << printResult(command.result_.value);
+  }
+}
+
 std::string LogDxErrorLayer::printResult(HRESULT result) {
   switch (result) {
   case E_INVALIDARG:

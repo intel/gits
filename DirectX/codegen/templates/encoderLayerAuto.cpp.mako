@@ -76,6 +76,10 @@ void EncoderLayer::post(INTC_D3D12_CreateCommittedResourceCommand& command) {
   recorder_.record(command.key, new INTC_D3D12_CreateCommittedResourceWriter(command));
 }
 
+void EncoderLayer::post(INTC_D3D12_CreateHeapCommand& command) {
+  recorder_.record(command.key, new INTC_D3D12_CreateHeapWriter(command));
+}
+
 <%
 custom = [
     'IDXGISwapChainPresent',

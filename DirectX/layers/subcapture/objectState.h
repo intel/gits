@@ -67,6 +67,7 @@ struct ObjectState {
     D3D12_INTC_COMMITTEDRESOURCE,
     D3D12_INTC_PLACEDRESOURCE,
     D3D12_INTC_COMPUTEPIPELINESTATE,
+    D3D12_INTC_HEAP,
     DSTORAGE_FACTORY,
     DSTORAGE_FILE,
     DSTORAGE_QUEUE,
@@ -486,6 +487,15 @@ struct D3D12INTCComputePipelineState : public ObjectState {
   D3D12INTCComputePipelineState() : ObjectState(D3D12_INTC_COMPUTEPIPELINESTATE) {}
   unsigned extensionContextKey{};
   std::unique_ptr<char[]> descEncoded;
+  IID iid{};
+};
+
+struct D3D12INTCHeapState : public ObjectState {
+  D3D12INTCHeapState() : ObjectState(D3D12_INTC_HEAP) {}
+  unsigned extensionContextKey{};
+  unsigned deviceKey{};
+  INTC_D3D12_HEAP_DESC desc{};
+  D3D12_HEAP_DESC d3dDesc{};
   IID iid{};
 };
 

@@ -94,6 +94,9 @@ public:
   virtual void pre(INTC_D3D12_CreateCommittedResourceCommand& command) {}
   virtual void post(INTC_D3D12_CreateCommittedResourceCommand& command) {}
   
+  virtual void pre(INTC_D3D12_CreateHeapCommand& command) {}
+  virtual void post(INTC_D3D12_CreateHeapCommand& command) {}
+
 private:
   std::string name_;
 };

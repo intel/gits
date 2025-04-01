@@ -506,6 +506,30 @@ void TraceLayer::post(INTC_D3D12_CreateReservedResourceCommand& command) {
   }
 }
 
+void TraceLayer::pre(INTC_D3D12_CreateHeapCommand& command) {
+  if (printPre_) {
+    CommandPrinter p(streamPre_, statePre_, command, "INTC_D3D12_CreateHeap");
+    p.addArgument(command.pExtensionContext_);
+    p.addArgument(command.pDesc_);
+    p.addArgument(command.riid_);
+    p.addArgument(command.ppvHeap_);
+    p.addResult(command.result_);
+    p.print(flush_);
+  }
+}
+
+void TraceLayer::post(INTC_D3D12_CreateHeapCommand& command) {
+  if (printPost_) {
+    CommandPrinter p(streamPost_, statePost_, command, "INTC_D3D12_CreateHeap");
+    p.addArgument(command.pExtensionContext_);
+    p.addArgument(command.pDesc_);
+    p.addArgument(command.riid_);
+    p.addArgument(command.ppvHeap_);
+    p.addResult(command.result_);
+    p.print(flush_);
+  }
+}
+
 #pragma endregion
 
 } // namespace DirectX

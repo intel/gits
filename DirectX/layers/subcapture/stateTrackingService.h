@@ -129,6 +129,7 @@ private:
   void restoreD3D12INTCCommittedResource(D3D12INTCCommittedResourceState* state);
   void restoreD3D12INTCPlacedResource(D3D12INTCPlacedResourceState* state);
   void restoreD3D12INTCComputePipelineState(D3D12INTCComputePipelineState* state);
+  void restoreD3D12INTCHeapState(D3D12INTCHeapState* state);
   void restoreDStorageFactoryState(DStorageFactoryState* state);
   void restoreDStorageFileState(DStorageFileState* state);
   void restoreDStorageQueueState(DStorageQueueState* state);

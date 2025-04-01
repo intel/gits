@@ -56,6 +56,7 @@ public:
   void post(ID3D12DeviceCreateDescriptorHeapCommand& c) override;
   void post(ID3D12DeviceCreateHeapCommand& c) override;
   void post(ID3D12Device4CreateHeap1Command& c) override;
+  void post(INTC_D3D12_CreateHeapCommand& c) override;
   void post(ID3D12DeviceCreateQueryHeapCommand& c) override;
   void post(CreateHeapAllocationMetaCommand& c) override;
   void post(ID3D12Device3OpenExistingHeapFromAddressCommand& c) override;

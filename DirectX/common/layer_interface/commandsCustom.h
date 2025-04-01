@@ -25,6 +25,7 @@ struct INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC;
 struct INTC_D3D12_RESOURCE_DESC_0001;
 struct INTC_D3D12_RESOURCE_DESC;
 struct INTC_D3D12_COMMAND_QUEUE_DESC_0001;
+struct INTC_D3D12_HEAP_DESC;
 
 namespace gits {
 namespace DirectX {
@@ -433,6 +434,28 @@ public:
   PointerArgument<D3D12_CLEAR_VALUE> pOptimizedClearValue_{};
   Argument<IID> riidResource_{};
   InterfaceOutputArgument<void> ppvResource_{};
+  Argument<HRESULT> result_{};
+};
+
+class INTC_D3D12_CreateHeapCommand : public Command {
+public:
+  INTC_D3D12_CreateHeapCommand(unsigned threadId,
+                               INTCExtensionContext* pExtensionContext,
+                               const INTC_D3D12_HEAP_DESC* pDesc,
+                               REFIID riid,
+                               void** ppvHeap)
+      : Command{CommandId::INTC_D3D12_CREATEHEAP, threadId},
+        pExtensionContext_{pExtensionContext},
+        pDesc_{pDesc},
+        riid_{riid},
+        ppvHeap_{ppvHeap} {}
+  INTC_D3D12_CreateHeapCommand() : Command(CommandId::INTC_D3D12_CREATEHEAP) {}
+
+public:
+  INTCExtensionContextArgument pExtensionContext_;
+  PointerArgument<INTC_D3D12_HEAP_DESC> pDesc_{};
+  Argument<IID> riid_{};
+  InterfaceOutputArgument<void> ppvHeap_{};
   Argument<HRESULT> result_{};
 };
 

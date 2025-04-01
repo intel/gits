@@ -212,6 +212,20 @@ void CaptureCustomizationLayer::post(ID3D12Device4CreateHeap1Command& c) {
   }
 }
 
+void CaptureCustomizationLayer::pre(INTC_D3D12_CreateHeapCommand& c) {
+  // Does not store original value
+  manager_.getMapTrackingService().enableWriteWatch(c.pDesc_.value->pD3D12Desc->Properties,
+                                                    c.pDesc_.value->pD3D12Desc->Flags);
+}
+
+void CaptureCustomizationLayer::post(INTC_D3D12_CreateHeapCommand& c) {
+  // Does not restore original value
+  if (c.result_.value == S_OK) {
+    ID3D12Heap* heap = static_cast<ID3D12Heap*>(*c.ppvHeap_.value);
+    manager_.getGpuAddressService().createHeap(c.ppvHeap_.key, heap);
+  }
+}
+
 void CaptureCustomizationLayer::post(ID3D12Device3OpenExistingHeapFromAddressCommand& c) {
   if (c.result_.value == S_OK) {
     ID3D12Heap* heap = static_cast<ID3D12Heap*>(*c.ppvHeap_.value);

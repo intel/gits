@@ -94,6 +94,8 @@ public:
   void pre(INTC_D3D12_CreateDeviceExtensionContextCommand& command) override;
   void pre(INTC_D3D12_CreateDeviceExtensionContext1Command& command) override;
   void pre(INTC_D3D12_CreateComputePipelineStateCommand& command) override;
+  void pre(INTC_D3D12_CreateHeapCommand& command) override;
+  void post(INTC_D3D12_CreateHeapCommand& command) override;
   void pre(IDMLDeviceCreateBindingTableCommand& command) override;
   void pre(IDMLBindingTableResetCommand& command) override;
 

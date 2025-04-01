@@ -176,6 +176,7 @@ void decode(char* src, unsigned& offset, PointerArgument<INTCExtensionAppInfo1>&
 void decode(char* src,
             unsigned& offset,
             PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg);
+void decode(char* src, unsigned& offset, PointerArgument<INTC_D3D12_HEAP_DESC>& arg);
 void decode(char* src, unsigned& offset, D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument& arg);
 void decode(char* src, unsigned& offset, D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument& arg);
 void decode(char* src, unsigned& offset, D3D12_SHADER_RESOURCE_VIEW_DESC_Argument& arg);

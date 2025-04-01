@@ -388,6 +388,25 @@ private:
   INTC_D3D12_CreateCommittedResourceCommand command;
 };
 
+class INTC_D3D12_CreateHeapPlayer : public CommandPlayer {
+public:
+  unsigned Id() const override {
+    return static_cast<unsigned>(CommandId::INTC_D3D12_CREATEHEAP);
+  }
+  const char* Name() const override {
+    return "INTC_D3D12_CreateHeap";
+  }
+  void Run() override;
+
+protected:
+  void decodeCommand() override {
+    decode(data_.data(), command);
+  }
+
+private:
+  INTC_D3D12_CreateHeapCommand command;
+};
+
 #pragma endregion
 
 } // namespace DirectX

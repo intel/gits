@@ -319,5 +319,22 @@ void encode(const INTC_D3D12_CreateCommittedResourceCommand& command, char* dest
   encode(dest, offset, command.result_);
 }
 
+unsigned getSize(const INTC_D3D12_CreateHeapCommand& command) {
+  return getSize(command.key) + getSize(command.threadId) + getSize(command.pExtensionContext_) +
+         getSize(command.pDesc_) + getSize(command.riid_) + getSize(command.ppvHeap_) +
+         getSize(command.result_);
+}
+
+void encode(const INTC_D3D12_CreateHeapCommand& command, char* dest) {
+  unsigned offset = 0;
+  encode(dest, offset, command.key);
+  encode(dest, offset, command.threadId);
+  encode(dest, offset, command.pExtensionContext_);
+  encode(dest, offset, command.pDesc_);
+  encode(dest, offset, command.riid_);
+  encode(dest, offset, command.ppvHeap_);
+  encode(dest, offset, command.result_);
+}
+
 } // namespace DirectX
 } // namespace gits

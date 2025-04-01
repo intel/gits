@@ -60,6 +60,8 @@ public:
   virtual void post(INTC_D3D12_CreateCommandQueueCommand& command);
   virtual void pre(INTC_D3D12_CreateReservedResourceCommand& command);
   virtual void post(INTC_D3D12_CreateReservedResourceCommand& command);
+  virtual void pre(INTC_D3D12_CreateHeapCommand& command);
+  virtual void post(INTC_D3D12_CreateHeapCommand& command);
 
 private:
   bool isFailure(HRESULT result) {

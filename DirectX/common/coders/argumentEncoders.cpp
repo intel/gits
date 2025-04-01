@@ -1916,6 +1916,25 @@ void encode(char* dest,
   offset += sizeof(D3D12_RESOURCE_DESC);
 }
 
+unsigned getSize(const PointerArgument<INTC_D3D12_HEAP_DESC>& arg) {
+  if (!arg.value) {
+    return sizeof(void*);
+  }
+  return sizeof(void*) + sizeof(INTC_D3D12_HEAP_DESC) + sizeof(D3D12_HEAP_DESC);
+}
+
+void encode(char* dest, unsigned& offset, const PointerArgument<INTC_D3D12_HEAP_DESC>& arg) {
+  if (encodeNullPtr(dest, offset, arg)) {
+    return;
+  }
+
+  memcpy(dest + offset, arg.value, sizeof(INTC_D3D12_HEAP_DESC));
+  offset += sizeof(INTC_D3D12_HEAP_DESC);
+
+  memcpy(dest + offset, arg.value->pD3D12Desc, sizeof(D3D12_HEAP_DESC));
+  offset += sizeof(D3D12_HEAP_DESC);
+}
+
 unsigned getSize(const xess_d3d12_init_params_t_Argument& arg) {
   return sizeof(xess_d3d12_init_params_t) + sizeof(arg.key) + sizeof(arg.tempBufferHeapKey) +
          sizeof(arg.tempTextureHeapKey) + sizeof(arg.pipelineLibraryKey);

@@ -31,6 +31,7 @@ void decode(char* src, INTC_D3D12_GetResourceAllocationInfoCommand& command);
 void decode(char* src, INTC_D3D12_CreateComputePipelineStateCommand& command);
 void decode(char* src, INTC_D3D12_CreatePlacedResourceCommand& command);
 void decode(char* src, INTC_D3D12_CreateCommittedResourceCommand& command);
+void decode(char* src, INTC_D3D12_CreateHeapCommand& command);
 
 } // namespace DirectX
 } // namespace gits

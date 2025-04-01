@@ -34,6 +34,7 @@ public:
   void post(INTC_D3D12_CreatePlacedResourceCommand& command) override;
   void post(INTC_D3D12_CreateCommittedResourceCommand& command) override;
   void post(INTC_D3D12_CreateReservedResourceCommand& command) override;
+  void post(INTC_D3D12_CreateHeapCommand& command) override;
 
   %for function in functions:
   void post(${function.name}Command& command) override;

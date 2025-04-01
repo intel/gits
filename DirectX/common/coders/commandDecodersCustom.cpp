@@ -215,5 +215,16 @@ void decode(char* src, INTC_D3D12_CreateCommittedResourceCommand& command) {
   decode(src, offset, command.result_);
 }
 
+void decode(char* src, INTC_D3D12_CreateHeapCommand& command) {
+  unsigned offset = 0;
+  decode(src, offset, command.key);
+  decode(src, offset, command.threadId);
+  decode(src, offset, command.pExtensionContext_);
+  decode(src, offset, command.pDesc_);
+  decode(src, offset, command.riid_);
+  decode(src, offset, command.ppvHeap_);
+  decode(src, offset, command.result_);
+}
+
 } // namespace DirectX
 } // namespace gits

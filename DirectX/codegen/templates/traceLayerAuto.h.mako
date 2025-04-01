@@ -107,6 +107,9 @@ public:
 
   void pre(INTC_D3D12_CreateReservedResourceCommand& command) override;
   void post(INTC_D3D12_CreateReservedResourceCommand& command) override;
+
+  void pre(INTC_D3D12_CreateHeapCommand& command) override;
+  void post(INTC_D3D12_CreateHeapCommand& command) override;
 };
 
 } // namespace DirectX

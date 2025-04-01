@@ -64,6 +64,9 @@ bool StateTrackingLayer::isResourceHeapMappable(unsigned heapKey) {
     return isResourceHeapMappable(heapState->desc.Properties);
   } else if (state->id == ObjectState::D3D12_HEAPFROMADDRESS) {
     return true;
+  } else if (state->id == ObjectState::D3D12_INTC_HEAP) {
+    D3D12INTCHeapState* heapState = static_cast<D3D12INTCHeapState*>(state);
+    return isResourceHeapMappable(heapState->d3dDesc.Properties);
   } else {
     GITS_ASSERT(0 && "Unexpected state type");
   }
@@ -459,6 +462,26 @@ void StateTrackingLayer::post(ID3D12Device4CreateHeap1Command& c) {
   stateService_.storeState(state);
 
   if (state->desc.Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+    residencyService_.createNotResident(state->key, state->deviceKey);
+  }
+}
+
+void StateTrackingLayer::post(INTC_D3D12_CreateHeapCommand& c) {
+  if (c.result_.value != S_OK) {
+    return;
+  }
+  D3D12INTCHeapState* state = new D3D12INTCHeapState();
+  state->extensionContextKey = c.pExtensionContext_.key;
+  state->deviceKey = deviceByINTCExtensionContext_[c.pExtensionContext_.key];
+  state->key = c.ppvHeap_.key;
+  state->object = static_cast<IUnknown*>(*c.ppvHeap_.value);
+  state->d3dDesc = *c.pDesc_.value->pD3D12Desc;
+  state->desc = *c.pDesc_.value;
+  state->desc.pD3D12Desc = &state->d3dDesc;
+  state->iid = c.riid_.value;
+  stateService_.storeState(state);
+
+  if (state->d3dDesc.Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
     residencyService_.createNotResident(state->key, state->deviceKey);
   }
 }

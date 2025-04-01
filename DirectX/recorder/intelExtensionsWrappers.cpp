@@ -388,12 +388,37 @@ HRESULT INTC_D3D12_CreateHeapWrapper(PFNINTCDX12EXT_CREATEHEAP pfnCreateHeap,
                                      const INTC_D3D12_HEAP_DESC* pDesc,
                                      REFIID riid,
                                      void** ppvHeap) {
-  static bool logged = false;
-  if (!logged) {
-    Log(ERR) << "INTC_D3D12_CreateHeap not handled.";
-    logged = true;
+  HRESULT result{};
+
+  auto& manager = CaptureManager::get();
+  if (auto atTopOfStack = AtTopOfStackLocal()) {
+
+    INTC_D3D12_CreateHeapCommand command(GetCurrentThreadId(), pExtensionContext, pDesc, riid,
+                                         ppvHeap);
+
+    command.pExtensionContext_.key = manager.getIntelExtensionsContextMap().getKey(
+        reinterpret_cast<std::uintptr_t>(command.pExtensionContext_.value));
+
+    for (Layer* layer : manager.getPreLayers()) {
+      layer->pre(command);
+    }
+
+    command.key = manager.createCommandKey();
+    if (!command.skip) {
+      result = pfnCreateHeap(command.pExtensionContext_.value, command.pDesc_.value,
+                             command.riid_.value, command.ppvHeap_.value);
+    }
+
+    UpdateOutputInterface<InterfaceOutputArgument<void>, void> update_ppvHeap(
+        command.ppvHeap_, result, riid, ppvHeap);
+    command.result_.value = result;
+
+    for (Layer* layer : manager.getPostLayers()) {
+      layer->post(command);
+    }
+  } else {
+    result = pfnCreateHeap(pExtensionContext, pDesc, riid, ppvHeap);
   }
-  HRESULT result = pfnCreateHeap(pExtensionContext, pDesc, riid, ppvHeap);
   return result;
 }
 

@@ -222,6 +222,9 @@ void StateTrackingService::restoreState(ObjectState* state) {
   case ObjectState::D3D12_INTC_COMPUTEPIPELINESTATE:
     restoreD3D12INTCComputePipelineState(static_cast<D3D12INTCComputePipelineState*>(state));
     break;
+  case ObjectState::D3D12_INTC_HEAP:
+    restoreD3D12INTCHeapState(static_cast<D3D12INTCHeapState*>(state));
+    break;
   case ObjectState::DSTORAGE_FACTORY:
     restoreDStorageFactoryState(static_cast<DStorageFactoryState*>(state));
     break;
@@ -1212,6 +1215,18 @@ void StateTrackingService::restoreD3D12INTCComputePipelineState(
   c.riid_.value = state->iid;
   c.ppPipelineState_.key = state->key;
   recorder_.record(new INTC_D3D12_CreateComputePipelineStateWriter(c));
+}
+
+void StateTrackingService::restoreD3D12INTCHeapState(D3D12INTCHeapState* state) {
+  INTC_D3D12_CreateHeapCommand c;
+  c.key = getUniqueCommandKey();
+  c.pExtensionContext_.key = state->extensionContextKey;
+  c.pDesc_.value = &state->desc;
+  c.riid_.value = state->iid;
+  c.ppvHeap_.key = state->key;
+  recorder_.record(new INTC_D3D12_CreateHeapWriter(c));
+
+  restoreResidencyPriority(state->deviceKey, state->key, state->residencyPriority);
 }
 
 void StateTrackingService::restoreDStorageFactoryState(DStorageFactoryState* state) {
