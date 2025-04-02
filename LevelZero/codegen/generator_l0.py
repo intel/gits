@@ -4875,7 +4875,7 @@ retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='flags',type='ze_init_flags_t',tag='in'),
 )
 
-Function(name='zeInitDrivers',component='ze_global',enabled=True,api_version='1.10',ddi_pos=1,
+Function(name='zeInitDrivers',component='ze_global',enabled=True,api_version='1.10',ddi_pos=1,recWrap=True,stateTrack=True,runWrap=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='pCount',type='uint32_t*',tag='inout'),
 arg2=ArgDef(name='phDrivers',type='ze_driver_handle_t*',tag='inout',range='0,*pCount',optional=True),

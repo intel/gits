@@ -944,5 +944,26 @@ inline void zeCommandListAppendWriteGlobalTimestamp_V1_RUNWRAP(
   sd.deallocationHandler.AddToResourcesInExecution(*_hCommandList, _dstptr, *_hSignalEvent);
 }
 
+inline void zeInitDrivers_RUNWRAP(Cze_result_t& _return_value,
+                                  Cuint32_t::CSArray& _pCount,
+                                  Cze_driver_handle_t::CSMapArray& _phDrivers,
+                                  Cze_init_driver_type_desc_t::CSArray& _desc) {
+  drv.Initialize();
+  const auto originalCount = **_pCount;
+  _return_value.Value() = drv.zeInitDrivers(*_pCount, *_phDrivers, *_desc);
+  const auto currentCount = **_pCount;
+  if (_return_value.Value() == ZE_RESULT_SUCCESS && _phDrivers.Size() > 0U &&
+      originalCount > currentCount) {
+    Log(WARN) << "Original application was recorded using more drivers.";
+    const auto firstDriver = (*_phDrivers)[0];
+    for (auto i = currentCount; i < originalCount; i++) {
+      const auto originalDrivers = _phDrivers.Original();
+      Cze_driver_handle_t::AddMapping(originalDrivers[i], firstDriver);
+    }
+  }
+  _return_value.Value() = drv.zeInitDrivers(*_pCount, *_phDrivers, *_desc);
+  zeInitDrivers_SD(*_return_value, *_pCount, *_phDrivers, *_desc);
+}
+
 } // namespace l0
 } // namespace gits

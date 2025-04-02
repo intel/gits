@@ -1576,5 +1576,22 @@ inline void zeContextCreate_RECWRAP(CRecorder& recorder,
     drv.inject.zeVirtualMemReserve(*phContext, nullptr, alignedSize, &contextState.virtualMemory);
   }
 }
+
+inline void zeInitDrivers_RECWRAP(CRecorder& recorder,
+                                  ze_result_t return_value,
+                                  uint32_t* pCount,
+                                  ze_driver_handle_t* phDrivers,
+                                  ze_init_driver_type_desc_t* desc) {
+  if (recorder.Running()) {
+    recorder.Schedule(new CzeInitDrivers(return_value, pCount, phDrivers, desc));
+  }
+  if (Config::Get().common.recorder.enabled) {
+    const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
+    if (!l0IFace.MemorySnifferInstall()) {
+      Log(WARN) << "Memory Sniffer installation failed";
+    }
+  }
+}
+
 } // namespace l0
 } // namespace gits

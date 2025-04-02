@@ -1402,5 +1402,17 @@ inline void zeEventHostReset_SD(ze_result_t return_value, ze_event_handle_t hEve
     eventState.immediateCmdListExecutingCmdLists = nullptr;
   }
 }
+inline void zeInitDrivers_SD(ze_result_t return_value,
+                             uint32_t* pCount,
+                             ze_driver_handle_t* phDrivers,
+                             [[maybe_unused]] ze_init_driver_type_desc_t* desc) {
+  if (return_value == ZE_RESULT_SUCCESS && phDrivers != nullptr && pCount != nullptr) {
+    for (auto i = 0u; i < *pCount; i++) {
+      auto& driverState = SD().Map<CDriverState>()[phDrivers[i]];
+      driverState = std::make_unique<CDriverState>();
+    }
+  }
+}
+
 } // namespace l0
 } // namespace gits
