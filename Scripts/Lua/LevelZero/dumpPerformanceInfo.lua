@@ -451,7 +451,12 @@ function CompareGitsNomenclature(a, b)
 end
 
 function gitsProgramExit()
-    local csvFile = io.open('benchmark.csv', 'w')
+    local path = 'benchmark.csv'
+    out_dir = gits.getOutDir()
+    if out_dir ~= gits.nullUdt() and out_dir ~= '' then
+      path = out_dir .. ossep .. path
+    end
+    local csvFile = io.open(path, 'w')
     if csvFile == nil then
       error('Failed to open results file for writing.')
       return
