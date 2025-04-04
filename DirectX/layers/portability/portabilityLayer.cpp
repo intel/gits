@@ -59,6 +59,9 @@ void PortabilityLayer::pre(ID3D12DeviceCreateHeapCommand& c) {
     resourcePlacementPlayback_.createHeap(c.object_.value, c.ppvHeap_.key,
                                           c.pDesc_.value->SizeInBytes);
   }
+  if (portabilityChecks_) {
+    configureHeapMemoryPool(c.object_.value, c.pDesc_.value);
+  }
 }
 
 void PortabilityLayer::post(ID3D12DeviceCreateHeapCommand& c) {
@@ -160,6 +163,23 @@ void PortabilityLayer::post(
                    "BuildRaytracingAccelerationStructure not supported";
       logged = true;
     }
+  }
+}
+
+void PortabilityLayer::configureHeapMemoryPool(ID3D12Device* device, D3D12_HEAP_DESC* heapDesc) {
+  D3D12_FEATURE_DATA_ARCHITECTURE1 architectureInfo{0};
+  HRESULT result = device->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE1, &architectureInfo,
+                                               sizeof(D3D12_FEATURE_DATA_ARCHITECTURE1));
+  if (result != S_OK || !architectureInfo.UMA) {
+    return;
+  }
+
+  D3D12_MEMORY_POOL preferredPool = (heapDesc->Properties.Type == D3D12_HEAP_TYPE_CUSTOM)
+                                        ? D3D12_MEMORY_POOL_L0
+                                        : D3D12_MEMORY_POOL_UNKNOWN;
+
+  if (heapDesc->Properties.MemoryPoolPreference != preferredPool) {
+    heapDesc->Properties.MemoryPoolPreference = preferredPool;
   }
 }
 

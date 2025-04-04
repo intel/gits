@@ -38,6 +38,7 @@ public:
   void post(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) override;
 
 private:
+  void configureHeapMemoryPool(ID3D12Device* device, D3D12_HEAP_DESC* heapDesc);
   void checkHeapCreationFlags(unsigned heapKey, ID3D12Device* device, D3D12_HEAP_DESC* desc);
 
 private:
