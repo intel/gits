@@ -9,6 +9,7 @@
 #pragma once
 
 #include <windows.h>
+#include <unordered_map>
 
 namespace gits {
 namespace DirectX {
@@ -19,8 +20,7 @@ public:
   HWND getCurrentHwnd(HWND captureHwnd);
 
 private:
-  HWND currentWindow_{NULL};
-  HWND captureWindow_{NULL};
+  std::unordered_map<HWND, HWND> windowMap_;
 };
 
 } // namespace DirectX

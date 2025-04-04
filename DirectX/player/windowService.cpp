@@ -15,8 +15,6 @@ namespace gits {
 namespace DirectX {
 
 HWND WindowService::createWindow(HWND captureHwnd, int width, int height) {
-
-  captureWindow_ = captureHwnd;
   int wndWidth = gits::Config::Get().common.player.forceWindowSize.enabled
                      ? gits::Config::Get().common.player.forceWindowSize.width
                      : width;
@@ -30,17 +28,26 @@ HWND WindowService::createWindow(HWND captureHwnd, int width, int height) {
                     ? gits::Config::Get().common.player.forceWindowPos.y
                     : 10;
 
-  currentWindow_ = CreateWin(wndWidth, wndHeight, wndPosX, wndPosY, true);
-  WinTitle(currentWindow_, "DX12-GITS");
-  return currentWindow_;
+  auto it = windowMap_.find(captureHwnd);
+  if (it != windowMap_.end()) {
+    ResizeWin(it->second, wndWidth, wndHeight);
+    return it->second;
+  }
+
+  HWND newWindow = CreateWin(wndWidth, wndHeight, wndPosX, wndPosY, true);
+  WinTitle(newWindow, "DX12-GITS");
+  windowMap_[captureHwnd] = newWindow;
+  return newWindow;
 }
 
 HWND WindowService::getCurrentHwnd(HWND captureHwnd) {
-  if (captureHwnd != captureWindow_) {
+  auto it = windowMap_.find(captureHwnd);
+  if (it == windowMap_.end()) {
     Log(WARN) << "Cannot find window for hWnd from capture: " << std::hex << captureHwnd
               << std::dec;
+    return 0;
   }
-  return currentWindow_;
+  return it->second;
 }
 
 } // namespace DirectX
