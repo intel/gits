@@ -110,6 +110,10 @@ typedef cl_uint cl_d3d11_device_set_nv;
 typedef cl_uint cl_resource_memory_scope;
 typedef cl_uint cl_resource_barrier_type;
 
+typedef cl_uint cl_va_api_device_source_intel;
+typedef cl_uint cl_va_api_device_set_intel;
+typedef unsigned int VASurfaceID;
+
 typedef struct __GLsync* cl_GLsync;
 
 typedef struct _cl_image_format {

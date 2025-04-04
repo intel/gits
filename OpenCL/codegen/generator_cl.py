@@ -990,6 +990,49 @@ retV=RetDef(type='float'),
 arg1=ArgDef(name='arg0',tag='in',type='const char*')
 )
 
+
+#------------------------- cl_intel_va_api_media_sharing -------------------------
+
+Function(name='clGetDeviceIDsFromVA_APIMediaAdapterINTEL',enabled=False,availableFrom='1.2',extension=True,type=Info,
+retV=RetDef(type='cl_int'),
+arg1=ArgDef(name='platform',tag='in',type='cl_platform_id'),
+arg2=ArgDef(name='media_adapter_type',tag='in',type='cl_va_api_device_source_intel'),
+arg3=ArgDef(name='media_adapter',tag='in',type='void*',wrapType='CvoidPtr'),
+arg4=ArgDef(name='media_adapter_set',tag='in',type='cl_va_api_device_set_intel'),
+arg5=ArgDef(name='num_entries',tag='in',type='cl_uint'),
+arg6=ArgDef(name='devices',tag='out',type='cl_device_id*',wrapType='Ccl_device_id::CSMapArray',wrapParams='num_entries, {name}'),
+arg7=ArgDef(name='num_devices',tag='out',type='cl_uint*')
+)
+
+Function(name='clCreateFromVA_APIMediaSurfaceINTEL',enabled=False,availableFrom='1.2',extension=True,type=Creator,
+retV=RetDef(type='cl_mem'),
+arg1=ArgDef(name='context',tag='in',type='cl_context'),
+arg2=ArgDef(name='flags',tag='in',type='cl_mem_flags'),
+arg3=ArgDef(name='surface',tag='in',type='VASurfaceID*',wrapType='CvoidPtr'),
+arg4=ArgDef(name='plane',tag='in',type='cl_uint'),
+arg5=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
+)
+
+Function(name='clEnqueueAcquireVA_APIMediaSurfacesINTEL',enabled=False,availableFrom='1.2',extension=True,type=Enqueue,
+retV=RetDef(type='cl_int'),
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='num_objects',tag='in',type='cl_uint'),
+arg3=ArgDef(name='mem_objects',tag='in',type='const cl_mem*',wrapParams='num_objects, {name}'),
+arg4=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg5=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg6=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+)
+
+Function(name='clEnqueueReleaseVA_APIMediaSurfacesINTEL',enabled=False,availableFrom='1.2',extension=True,type=Enqueue,
+retV=RetDef(type='cl_int'),
+arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
+arg2=ArgDef(name='num_objects',tag='in',type='cl_uint'),
+arg3=ArgDef(name='mem_objects',tag='in',type='const cl_mem*',wrapParams='num_objects, {name}'),
+arg4=ArgDef(name='num_events_in_wait_list',tag='in',type='cl_uint'),
+arg5=ArgDef(name='event_wait_list',tag='in',type='const cl_event*',wrapParams='num_events_in_wait_list, {name}'),
+arg6=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapArray',removeMapping=True)
+)
+
 #------------------------------------- D3D10 -----------------------------------
 
 Function(name='clGetDeviceIDsFromD3D10KHR',enabled=True,availableFrom='1.0',extension=True,type=Info,platform='Windows',recWrap=True,stateTrack=True,
@@ -1735,7 +1778,11 @@ var70=VarDef(name='CL_D3D11_RESOURCE_NOT_ACQUIRED_KHR', value='-1009'),
 var71=VarDef(name='CL_INVALID_DX9_MEDIA_ADAPTER_KHR', value='-1010'),
 var72=VarDef(name='CL_INVALID_DX9_MEDIA_SURFACE_KHR', value='-1011'),
 var73=VarDef(name='CL_DX9_MEDIA_SURFACE_ALREADY_ACQUIRED_KHR', value='-1012'),
-var74=VarDef(name='CL_DX9_MEDIA_SURFACE_NOT_ACQUIRED_KHR', value='-1013')
+var74=VarDef(name='CL_DX9_MEDIA_SURFACE_NOT_ACQUIRED_KHR', value='-1013'),
+var75=VarDef(name='CL_INVALID_VA_API_MEDIA_ADAPTER_INTEL', value='-1098'),
+var76=VarDef(name='CL_INVALID_VA_API_MEDIA_SURFACE_INTEL', value='-1099'),
+var77=VarDef(name='CL_VA_API_MEDIA_SURFACE_ALREADY_ACQUIRED_INTEL', value='-1100'),
+var78=VarDef(name='CL_VA_API_MEDIA_SURFACE_NOT_ACQUIRED_INTEL', value='-1101'),
 )
 
 Enum(name='cl_bool',
@@ -1944,7 +1991,8 @@ var10=VarDef(name='CL_CONTEXT_DXVA_DEVICE_INTEL', value='0x4073'),
 var11=VarDef(name='CL_CONTEXT_D3D10_DEVICE_KHR', value='0x4014'),
 var12=VarDef(name='CL_CONTEXT_D3D10_PREFER_SHARED_RESOURCES_KHR', value='0x402C'),
 var13=VarDef(name='CL_CONTEXT_D3D11_DEVICE_KHR', value='0x401D'),
-var14=VarDef(name='CL_CONTEXT_D3D11_PREFER_SHARED_RESOURCES_KHR', value='0x402D')
+var14=VarDef(name='CL_CONTEXT_D3D11_PREFER_SHARED_RESOURCES_KHR', value='0x402D'),
+var15=VarDef(name='CL_CONTEXT_VA_API_DISPLAY_INTEL', value='0x4097'),
 )
 
 Enum(name='cl_gl_context_info',
@@ -2171,7 +2219,8 @@ var12=VarDef(name='CL_MEM_DX9_MEDIA_SURFACE_INFO_KHR', value='0x2029'),
 var13=VarDef(name='CL_MEM_DX9_RESOURCE_INTEL', value='0x4027'),
 var14=VarDef(name='CL_MEM_DX9_SHARED_HANDLE_INTEL', value='0x4074'),
 var15=VarDef(name='CL_MEM_D3D10_RESOURCE_KHR', value='0x4015'),
-var16=VarDef(name='CL_MEM_D3D11_RESOURCE_KHR', value='0x401E')
+var16=VarDef(name='CL_MEM_D3D11_RESOURCE_KHR', value='0x401E'),
+var17=VarDef(name='CL_MEM_VA_API_MEDIA_SURFACE_INTEL', value='0x4098'),
 )
 
 Enum(name='cl_image_info',
@@ -2189,7 +2238,8 @@ var11=VarDef(name='CL_IMAGE_NUM_SAMPLES', value='0x111A'),
 var12=VarDef(name='CL_IMAGE_DX9_MEDIA_PLANE_KHR', value='0x202A'),
 var13=VarDef(name='CL_IMAGE_DX9_PLANE_INTEL', value='0x4075'),
 var14=VarDef(name='CL_IMAGE_D3D10_SUBRESOURCE_KHR', value='0x4016'),
-var15=VarDef(name='CL_IMAGE_D3D11_SUBRESOURCE_KHR', value='0x401F')
+var15=VarDef(name='CL_IMAGE_D3D11_SUBRESOURCE_KHR', value='0x401F'),
+var16=VarDef(name='CL_IMAGE_VA_API_PLANE_INTEL', value='0x4099')
 )
 
 Enum(name='cl_pipe_info',
@@ -2401,7 +2451,9 @@ var39=VarDef(name='CL_COMMAND_GL_FENCE_SYNC_OBJECT_KHR', value='0x200D'),
 var40=VarDef(name='CL_COMMAND_MEMSET_INTEL', value='0x4204'),
 var41=VarDef(name='CL_COMMAND_MEMCPY_INTEL', value='0x4205'),
 var42=VarDef(name='CL_COMMAND_MIGRATEMEM_INTEL', value='0x4206'),
-var43=VarDef(name='CL_COMMAND_MEMADVISE_INTEL', value='0x4207')
+var43=VarDef(name='CL_COMMAND_MEMADVISE_INTEL', value='0x4207'),
+var44=VarDef(name='CL_COMMAND_ACQUIRE_VA_API_MEDIA_SURFACES_INTEL', value='0x409A'),
+var45=VarDef(name='CL_COMMAND_RELEASE_VA_API_MEDIA_SURFACES_INTEL', value='0x409B'),
 )
 
 Enum(name='CLExecutionStatus', type='cl_int',
@@ -2490,6 +2542,15 @@ var2=VarDef(name='CL_D3D11_DXGI_ADAPTER_NV', value='0x401A')
 Enum(name='cl_d3d11_device_set_nv',
 var1=VarDef(name='CL_PREFERRED_DEVICES_FOR_D3D11_NV', value='0x401B'),
 var2=VarDef(name='CL_ALL_DEVICES_FOR_D3D11_NV', value='0x401C')
+)
+
+Enum(name='cl_va_api_device_source_intel',
+var1=VarDef(name='CL_VA_API_DISPLAY_INTEL',value='0x4094'),
+)
+
+Enum(name='cl_va_api_device_set_intel',
+var1=VarDef(name='CL_PREFERRED_DEVICES_FOR_VA_API_INTEL',value='0x4095'),
+var2=VarDef(name='CL_ALL_DEVICES_FOR_VA_API_INTEL',value='0x4096'),
 )
 
 Enum(name='cl_resource_memory_scope',
