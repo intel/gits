@@ -10,6 +10,7 @@
 
 #include "layerAuto.h"
 #include "commandPrinter.h"
+#include "gpuExecutionTracker.h"
 
 #include <iostream>
 #include <map>
@@ -52,6 +53,7 @@ public:
   void post(ID3D12GraphicsCommandList6DispatchMeshCommand& command) override;
   void post(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& command) override;
   void post(ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& command) override;
+  void post(ID3D12DeviceCreateFenceCommand& command) override;
   void post(ID3D12FenceSignalCommand& command) override;
   void post(ID3D12CommandQueueSignalCommand& command) override;
   void post(ID3D12Device3EnqueueMakeResidentCommand& command) override;
@@ -67,9 +69,23 @@ private:
     std::string str;
     bool isDraw;
   };
+
+  struct CommandQueueEvent : public GpuExecutionTracker::Executable {
+    std::string str;
+  };
+  void fenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue);
+  void stageCommandQueueEvent(unsigned commandKey,
+                              unsigned commandQueueKey,
+                              const std::string& str);
+  void dumpReadyCommandQueueEvents();
+  std::string replaceSubstring(const std::string& str,
+                               const std::string& from,
+                               const std::string& to);
+
   std::map<unsigned, std::vector<Command>> commandListCommands_;
   std::map<unsigned, D3D12_COMMAND_LIST_TYPE> commandQueueTypes_;
   unsigned executeCount{};
+  GpuExecutionTracker gpuExecutionTracker_;
 };
 
 } // namespace DirectX

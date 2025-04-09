@@ -47,14 +47,19 @@ void ShowExecutionLayer::post(IDXGISwapChain1Present1Command& command) {
 }
 
 void ShowExecutionLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& command) {
-
+  outBuff_.flush();
   outBuff_ << "  ";
+
+  const bool isWaiting = gpuExecutionTracker_.isCommandQueueWaiting(command.object_.key);
+  if (isWaiting) {
+    outBuff_ << "[DEFERRED] ";
+  }
   CommandPrinter p(outBuff_, printerState_, command, "ID3D12CommandQueue::ExecuteCommandLists",
                    command.object_.key);
   ++executeCount;
   p.addArgument(command.NumCommandLists_);
   p.addArgument(command.ppCommandLists_);
-  p.print(true);
+  p.print(false);
 
   std::string type;
   if (commandQueueTypes_.find(command.object_.key) != commandQueueTypes_.end()) {
@@ -75,7 +80,6 @@ void ShowExecutionLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& comm
     auto it = commandListCommands_.find(command.ppCommandLists_.keys[i]);
     if (it != commandListCommands_.end()) {
       outBuff_ << "    " << type << " CommandList O" << command.ppCommandLists_.keys[i] << ":\n";
-      outBuff_.flush();
 
       unsigned drawCount{};
       unsigned frameCount = printerState_.stateRestorePhase ? 0 : CGits::Instance().CurrentFrame();
@@ -85,9 +89,16 @@ void ShowExecutionLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& comm
           outBuff_ << " execution #" << frameCount << "." << executeCount << "." << i + 1 << "."
                    << ++drawCount << "\n";
         }
-        outBuff_.flush();
       }
     }
+  }
+
+  const auto str = outBuff_.extractString();
+  outBuff_ << str;
+  outBuff_.flush();
+  if (isWaiting) {
+    stageCommandQueueEvent(command.key, command.object_.key,
+                           replaceSubstring("  " + str, "[DEFERRED] ", ""));
   }
 }
 
@@ -380,22 +391,63 @@ void ShowExecutionLayer::post(
   commandListCommands_[command.object_.key].emplace_back(outBuff_.extractString());
 }
 
+void ShowExecutionLayer::post(ID3D12DeviceCreateFenceCommand& command) {
+  outBuff_ << "  ";
+  CommandPrinter p(outBuff_, printerState_, command, "ID3D12Device::CreateFence",
+                   command.object_.key);
+  p.addArgument(command.InitialValue_);
+  p.addArgument(command.Flags_);
+  p.addArgument(command.riid_);
+  p.addArgument(command.ppFence_);
+  p.addResult(command.result_);
+  p.print(true);
+
+  fenceSignal(command.key, command.ppFence_.key, command.InitialValue_.value);
+}
+
 void ShowExecutionLayer::post(ID3D12FenceSignalCommand& command) {
   outBuff_ << "  ";
   CommandPrinter p(outBuff_, printerState_, command, "ID3D12Fence::Signal", command.object_.key);
   p.addArgument(command.Value_);
   p.addResult(command.result_);
   p.print(true);
+
+  fenceSignal(command.key, command.object_.key, command.Value_.value);
 }
 
 void ShowExecutionLayer::post(ID3D12CommandQueueSignalCommand& command) {
+  outBuff_.flush();
   outBuff_ << "  ";
+
+  const bool isWaiting = gpuExecutionTracker_.isCommandQueueWaiting(command.object_.key);
+  if (isWaiting) {
+    outBuff_ << "[DEFERRED] ";
+  }
   CommandPrinter p(outBuff_, printerState_, command, "ID3D12CommandQueue::Signal",
                    command.object_.key);
   p.addArgument(command.pFence_);
   p.addArgument(command.Value_);
   p.addResult(command.result_);
-  p.print(true);
+  p.print(false);
+
+  const auto str = outBuff_.extractString();
+  outBuff_ << str;
+  outBuff_.flush();
+
+  gpuExecutionTracker_.commandQueueSignal(command.key, command.object_.key, command.pFence_.key,
+                                          command.Value_.value);
+
+  if (isWaiting) {
+    stageCommandQueueEvent(command.key, command.object_.key,
+                           replaceSubstring("  " + str, "[DEFERRED] ", ""));
+  } else {
+    auto count = gpuExecutionTracker_.getReadyExecutables().size();
+    if (count > 0) {
+      outBuff_ << "  CommandQueueSignal unlocking " << count << " events:\n";
+      outBuff_.flush();
+    }
+    dumpReadyCommandQueueEvents();
+  }
 }
 
 void ShowExecutionLayer::post(ID3D12Device3EnqueueMakeResidentCommand& command) {
@@ -409,16 +461,82 @@ void ShowExecutionLayer::post(ID3D12Device3EnqueueMakeResidentCommand& command) 
   p.addArgument(command.FenceValueToSignal_);
   p.addResult(command.result_);
   p.print(true);
+
+  fenceSignal(command.key, command.pFenceToSignal_.key, command.FenceValueToSignal_.value);
 }
 
 void ShowExecutionLayer::post(ID3D12CommandQueueWaitCommand& command) {
+  outBuff_.flush();
   outBuff_ << "  ";
+
+  gpuExecutionTracker_.commandQueueWait(command.key, command.object_.key, command.pFence_.key,
+                                        command.Value_.value);
+  const bool isWaiting = gpuExecutionTracker_.isCommandQueueWaiting(command.object_.key);
+  if (isWaiting) {
+    outBuff_ << "[DEFERRED] ";
+  }
   CommandPrinter p(outBuff_, printerState_, command, "ID3D12CommandQueue::Wait",
                    command.object_.key);
   p.addArgument(command.pFence_);
   p.addArgument(command.Value_);
   p.addResult(command.result_);
-  p.print(true);
+  p.print(false);
+
+  const auto str = outBuff_.extractString();
+  outBuff_ << str;
+  outBuff_.flush();
+  if (isWaiting) {
+    stageCommandQueueEvent(command.key, command.object_.key,
+                           replaceSubstring("  " + str, "[DEFERRED] ", ""));
+  }
+}
+
+void ShowExecutionLayer::fenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue) {
+  gpuExecutionTracker_.fenceSignal(callKey, fenceKey, fenceValue);
+  auto count = gpuExecutionTracker_.getReadyExecutables().size();
+  if (count > 0) {
+    outBuff_ << "  Signal unlocking: " << count << " events:\n";
+    outBuff_.flush();
+  }
+  dumpReadyCommandQueueEvents();
+}
+
+void ShowExecutionLayer::stageCommandQueueEvent(unsigned commandKey,
+                                                unsigned commandQueueKey,
+                                                const std::string& str) {
+  auto* event = new CommandQueueEvent{};
+  event->str = str;
+  gpuExecutionTracker_.execute(commandKey, commandQueueKey, event);
+}
+
+void ShowExecutionLayer::dumpReadyCommandQueueEvents() {
+  std::vector<GpuExecutionTracker::Executable*>& executables =
+      gpuExecutionTracker_.getReadyExecutables();
+  for (GpuExecutionTracker::Executable* executable : executables) {
+    CommandQueueEvent* event = static_cast<CommandQueueEvent*>(executable);
+    outBuff_ << event->str;
+    outBuff_.flush();
+    delete event;
+  }
+  executables.clear();
+}
+
+std::string ShowExecutionLayer::replaceSubstring(const std::string& str,
+                                                 const std::string& from,
+                                                 const std::string& to) {
+  if (from.empty()) {
+    return str;
+  }
+
+  std::string result = str;
+  size_t startPos = 0;
+
+  while ((startPos = result.find(from, startPos)) != std::string::npos) {
+    result.replace(startPos, from.length(), to);
+    startPos += to.length();
+  }
+
+  return result;
 }
 
 } // namespace DirectX

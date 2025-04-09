@@ -59,6 +59,7 @@ add_dependencies(DirectX_recorder
 
 add_dependencies(DirectX_trace
     DirectX_layer_interface
+    DirectX_utils
 )
 
 add_dependencies(DirectX_api_debug
