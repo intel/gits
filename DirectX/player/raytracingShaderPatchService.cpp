@@ -104,8 +104,8 @@ cbuffer MappingCount : register(b0)
 };
 
 [numthreads(1, 1, 1)]
-void main(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID, 
-            uint3 gtId : SV_GroupThreadID, uint gi : SV_GroupIndex)
+void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID, 
+                uint3 gtId : SV_GroupThreadID, uint gi : SV_GroupIndex)
 {
   uint instancesIndex = dtId.x;
   uint64_t captureAddress = instances[instancesIndex].blas;
@@ -129,6 +129,7 @@ void main(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
 })";
 
   initializePipelineState(cs, device, instancesRootSignature_, &instancesPipelineState_);
+  instancesPipelineState_->SetName(L"GitsPatchInstances_CS");
 }
 
 void RaytracingShaderPatchService::patchInstancesOffset(
@@ -211,8 +212,8 @@ cbuffer MappingCount : register(b0)
 };
 
 [numthreads(1, 1, 1)]
-void main(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID, 
-            uint3 gtId : SV_GroupThreadID, uint gi : SV_GroupIndex)
+void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID, 
+                uint3 gtId : SV_GroupThreadID, uint gi : SV_GroupIndex)
 {
   uint instancesIndex = instancesOffsets[dtId.x];
   uint64_t captureAddress = instances[instancesIndex].blas;
@@ -237,6 +238,7 @@ void main(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
 
   initializePipelineState(cs, device, instancesOffsetRootSignature_,
                           &instancesOffsetPipelineState_);
+  instancesPipelineState_->SetName(L"GitsPatchInstancesOffset_CS");
 }
 
 void RaytracingShaderPatchService::patchBindingTable(
@@ -346,8 +348,8 @@ cbuffer ConstantBuffer : register(b1)
 };
 
 [numthreads(1, 1, 1)]
-void main(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID, 
-            uint3 gtId : SV_GroupThreadID, uint gi : SV_GroupIndex)
+void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID, 
+                uint3 gtId : SV_GroupThreadID, uint gi : SV_GroupIndex)
 {
   uint bindingTableOffset = dtId.x * recordSize;
   uint64_t4 captureIdentifier;
@@ -437,6 +439,7 @@ void main(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
 })";
 
   initializePipelineState(cs, device, bindingTableRootSignature_, &bindingTablePipelineState_);
+  instancesPipelineState_->SetName(L"GitsPatchBindingTable_CS");
 }
 
 void RaytracingShaderPatchService::initializePipelineState(const std::string& shaderCode,
@@ -455,7 +458,7 @@ void RaytracingShaderPatchService::initializePipelineState(const std::string& sh
 
   std::vector<const WCHAR*> arguments;
   arguments.push_back(L"-E");
-  arguments.push_back(L"main");
+  arguments.push_back(L"gits_patch");
   arguments.push_back(L"-T");
   arguments.push_back(L"cs_6_0");
   if (Config::Get().directx.player.debugLayer) {

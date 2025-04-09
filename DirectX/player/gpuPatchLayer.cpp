@@ -87,6 +87,12 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
     initialize(commandList);
   }
 
+  auto& msgBus = CGits::Instance().GetMessageBus();
+  msgBus.publish(
+      {PUBLISHER_PLAYER, TOPIC_GITS_WORKLOAD_BEGIN},
+      std::make_shared<GitsWorkloadMessage>(
+          commandList, "GITS_BuildRaytracingAccelerationStructure-Patch", c.object_.key));
+
   unsigned mappingBufferIndex = getMappingBufferIndex(c.object_.key);
   commandList->CopyResource(gpuAddressBuffers_[mappingBufferIndex],
                             gpuAddressStagingBuffers_[mappingBufferIndex]);
@@ -370,6 +376,11 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
   }
 
   commandListService_.restoreState(c.object_.key, c.object_.value);
+
+  msgBus.publish(
+      {PUBLISHER_PLAYER, TOPIC_GITS_WORKLOAD_END},
+      std::make_shared<GitsWorkloadMessage>(
+          commandList, "GITS_BuildRaytracingAccelerationStructure-Patch", c.object_.key));
 }
 
 void GpuPatchLayer::post(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
@@ -388,6 +399,11 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
     initialize(commandList);
   }
 
+  auto& msgBus = CGits::Instance().GetMessageBus();
+  msgBus.publish(
+      {PUBLISHER_PLAYER, TOPIC_GITS_WORKLOAD_BEGIN},
+      std::make_shared<GitsWorkloadMessage>(commandList, "GITS_DispatchRays-Patch", c.object_.key));
+
   unsigned patchBufferIndex = getPatchBufferIndex(c.object_.key);
 
   unsigned mappingBufferIndex = getMappingBufferIndex(c.object_.key);
@@ -405,6 +421,10 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
   patchDispatchRays(c.object_.value, *c.pDesc_.value, patchBufferIndex, mappingBufferIndex, c.key);
 
   commandListService_.restoreState(c.object_.key, c.object_.value);
+
+  msgBus.publish(
+      {PUBLISHER_PLAYER, TOPIC_GITS_WORKLOAD_END},
+      std::make_shared<GitsWorkloadMessage>(commandList, "GITS_DispatchRays-Patch", c.object_.key));
 }
 
 void GpuPatchLayer::patchDispatchRays(ID3D12GraphicsCommandList* commandList,
@@ -1033,6 +1053,11 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
     initialize(commandList);
   }
 
+  auto& msgBus = CGits::Instance().GetMessageBus();
+  msgBus.publish({PUBLISHER_PLAYER, TOPIC_GITS_WORKLOAD_BEGIN},
+                 std::make_shared<GitsWorkloadMessage>(commandList, "GITS_ExecuteIndirect-Patch",
+                                                       c.object_.key));
+
   unsigned patchBufferIndex = getPatchBufferIndex(c.object_.key);
 
   unsigned mappingBufferIndex = getMappingBufferIndex(c.object_.key);
@@ -1197,6 +1222,10 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
   commandList->ResourceBarrier(2, barriers);
 
   commandListService_.restoreState(c.object_.key, c.object_.value);
+
+  msgBus.publish({PUBLISHER_PLAYER, TOPIC_GITS_WORKLOAD_BEGIN},
+                 std::make_shared<GitsWorkloadMessage>(commandList, "GITS_ExecuteIndirect-Patch",
+                                                       c.object_.key));
 }
 
 void GpuPatchLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {

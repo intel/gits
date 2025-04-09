@@ -28,7 +28,9 @@ enum TopicId {
   TOPIC_LOG,
   TOPIC_END,
   TOPIC_STREAM_SAVED,
-  TOPIC_CLOSE_RECORDER
+  TOPIC_CLOSE_RECORDER,
+  TOPIC_GITS_WORKLOAD_BEGIN,
+  TOPIC_GITS_WORKLOAD_END
 };
 struct Topic {
   PublisherId publisherId{};
@@ -126,6 +128,29 @@ private:
 class CloseRecorderMessage : public Message {
 public:
   CloseRecorderMessage() {}
+};
+
+class GitsWorkloadMessage : public Message {
+public:
+  GitsWorkloadMessage(void* context, const std::string& label, unsigned value)
+      : context_(context), label_(label), value_(value) {}
+
+  void* getContext() const {
+    return context_;
+  }
+
+  const std::string& getLabel() const {
+    return label_;
+  }
+
+  unsigned getValue() const {
+    return value_;
+  }
+
+private:
+  void* context_;
+  std::string label_;
+  unsigned value_;
 };
 
 } // namespace gits

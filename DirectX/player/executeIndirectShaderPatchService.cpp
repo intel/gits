@@ -172,8 +172,8 @@ cbuffer RaytracingPatchCount : register(b5)
 
 
 [numthreads(1, 1, 1)]
-void main(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID, 
-            uint3 gtId : SV_GroupThreadID, uint gi : SV_GroupIndex)
+void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID, 
+                uint3 gtId : SV_GroupThreadID, uint gi : SV_GroupIndex)
 {
   for (uint i = 0; i < patchOffsetsCount; ++i) {
     uint commandOffset = patchOffsets[i];
@@ -241,7 +241,7 @@ void main(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
 
     std::vector<const WCHAR*> arguments;
     arguments.push_back(L"-E");
-    arguments.push_back(L"main");
+    arguments.push_back(L"gits_patch");
     arguments.push_back(L"-T");
     arguments.push_back(L"cs_6_0");
     if (Config::Get().directx.player.debugLayer) {
