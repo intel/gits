@@ -209,6 +209,28 @@ void TraceLayer::post(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartComm
   }
 }
 
+void TraceLayer::pre(ID3D12GraphicsCommandListBeginEventCommand& command) {
+  if (printPre_) {
+    CommandPrinter p(streamPre_, statePre_, command, "ID3D12GraphicsCommandList::BeginEvent",
+                     command.object_.key);
+    p.addArgument(command.Metadata_);
+    LPCWSTR_Argument arg(static_cast<wchar_t*>(command.pData_.value) + 20);
+    p.addArgument(arg);
+    p.print(flush_);
+  }
+}
+
+void TraceLayer::post(ID3D12GraphicsCommandListBeginEventCommand& command) {
+  if (printPost_) {
+    CommandPrinter p(streamPost_, statePost_, command, "ID3D12GraphicsCommandList::BeginEvent",
+                     command.object_.key);
+    p.addArgument(command.Metadata_);
+    LPCWSTR_Argument arg(static_cast<wchar_t*>(command.pData_.value) + 20);
+    p.addArgument(arg);
+    p.print(flush_);
+  }
+}
+
 #pragma region INTCExtension
 
 void TraceLayer::pre(INTC_D3D12_GetSupportedVersionsCommand& command) {

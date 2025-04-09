@@ -16,7 +16,8 @@ namespace DirectX {
 custom = [
     'ID3D12ResourceGetGPUVirtualAddress',
     'ID3D12DescriptorHeapGetCPUDescriptorHandleForHeapStart',
-    'ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStart'
+    'ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStart',
+    'ID3D12GraphicsCommandListBeginEvent'
 ]
 %>\
 %for function in functions:
