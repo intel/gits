@@ -584,13 +584,20 @@ void CaptureCustomizationLayer::pre(ID3D12GraphicsCommandList2WriteBufferImmedia
 }
 
 void CaptureCustomizationLayer::post(ID3D12FenceGetCompletedValueCommand& c) {
+  static constexpr unsigned maxCommandKeyDifference = 10;
+
+  static thread_local unsigned prevCommandKey = 0;
   static thread_local unsigned prevFenceKey = 0;
   static thread_local unsigned prevValue = 0;
+  unsigned commandKey = c.key;
   unsigned fenceKey = c.object_.key;
   unsigned value = c.result_.value;
-  if (fenceKey == prevFenceKey && value == prevValue) {
-    recorder_.skip(c.key);
+  if (commandKey <= prevCommandKey + maxCommandKeyDifference) {
+    if (fenceKey == prevFenceKey && value == prevValue) {
+      recorder_.skip(c.key);
+    }
   }
+  prevCommandKey = commandKey;
   prevFenceKey = fenceKey;
   prevValue = value;
 }
