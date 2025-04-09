@@ -239,6 +239,7 @@ public:
     for (auto& f : _endPlaybackEvents) {
       f();
     }
+    _endPlaybackEvents.clear();
   }
 
   void RegisterLuaFunctionsRegistrator(std::function<void()> f) {
