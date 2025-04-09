@@ -136,7 +136,7 @@ void CaptureManager::createLayers() {
     debugInfoLayer = std::make_unique<DebugInfoLayer>();
   }
 
-  if (cfg.directx.capture.globalSynchronization) {
+  if (cfg.directx.capture.forceGlobalSynchronization) {
     globalSynchronizationLayer = std::make_unique<GlobalSynchronizationLayer>();
   }
 

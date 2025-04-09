@@ -869,7 +869,7 @@ struct convert<gits::Config::DirectX::Capture> {
       rhs.captureDirectML = node["CaptureDirectML"].as<gits::vi_bool>();
       rhs.captureDirectStorage = node["CaptureDirectStorage"].as<gits::vi_bool>();
       rhs.debugLayer = node["DebugLayer"].as<gits::vi_bool>();
-      rhs.globalSynchronization = node["GlobalSynchronization"].as<gits::vi_bool>();
+      rhs.forceGlobalSynchronization = node["ForceGlobalSynchronization"].as<gits::vi_bool>();
       rhs.plugins = node["Plugins"].as<std::vector<std::string>>();
       rhs.tokenBurstChunkSize = node["TokenBurstChunkSize"].as<gits::vi_uint64>();
       rhs.portability = node["Portability"].as<gits::Config::DirectX::Capture::Portability>();

@@ -196,7 +196,7 @@ DirectX:
     CaptureDirectML: true  # If false DirectML capture is done on D3D12 level
     CaptureDirectStorage: false  # If false DirectStorage capture is done on D3D12 level
     DebugLayer: false  # Enable the DirectX Debug Layer
-    GlobalSynchronization: false # Lock mutex on first pre layer and unlock on last post layer
+    ForceGlobalSynchronization: false # Force global synchronization of command execution and all layers
     Plugins: []
     TokenBurstChunkSize: 5242880  # default size: 5 MB
     Portability:
