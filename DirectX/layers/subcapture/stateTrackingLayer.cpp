@@ -466,26 +466,6 @@ void StateTrackingLayer::post(ID3D12Device4CreateHeap1Command& c) {
   }
 }
 
-void StateTrackingLayer::post(INTC_D3D12_CreateHeapCommand& c) {
-  if (c.result_.value != S_OK) {
-    return;
-  }
-  D3D12INTCHeapState* state = new D3D12INTCHeapState();
-  state->extensionContextKey = c.pExtensionContext_.key;
-  state->deviceKey = deviceByINTCExtensionContext_[c.pExtensionContext_.key];
-  state->key = c.ppvHeap_.key;
-  state->object = static_cast<IUnknown*>(*c.ppvHeap_.value);
-  state->d3dDesc = *c.pDesc_.value->pD3D12Desc;
-  state->desc = *c.pDesc_.value;
-  state->desc.pD3D12Desc = &state->d3dDesc;
-  state->iid = c.riid_.value;
-  stateService_.storeState(state);
-
-  if (state->d3dDesc.Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
-    residencyService_.createNotResident(state->key, state->deviceKey);
-  }
-}
-
 void StateTrackingLayer::post(ID3D12DeviceCreateQueryHeapCommand& c) {
   if (c.result_.value != S_OK) {
     return;
@@ -1408,6 +1388,69 @@ void StateTrackingLayer::post(INTC_D3D12_CreatePlacedResourceCommand& c) {
   resourceStateTrackingService_.addResource(
       state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
       state->initialResourceState, !(state->isMappable || state->isBarrierRestricted));
+}
+
+void StateTrackingLayer::post(INTC_D3D12_CreateReservedResourceCommand& c) {
+  if (c.result_.value != S_OK) {
+    return;
+  }
+  D3D12INTCReservedResourceState* state = new D3D12INTCReservedResourceState();
+  state->key = c.ppvResource_.key;
+  state->object = static_cast<IUnknown*>(*c.ppvResource_.value);
+  state->deviceKey = deviceByINTCExtensionContext_[c.pExtensionContext_.key];
+  state->extensionContextKey = c.pExtensionContext_.key;
+  state->extensionContext = c.pExtensionContext_.value;
+  state->descIntc = *c.pDesc_.value;
+  state->desc = *c.pDesc_.value->pD3D12Desc;
+  state->initialResourceState = c.InitialState_.value;
+  if (state->isClearValue = c.pOptimizedClearValue_.value ? true : false) {
+    state->clearValue = *c.pOptimizedClearValue_.value;
+  }
+  state->iid = c.riid_.value;
+  stateService_.storeState(state);
+
+  resourceStateTrackingService_.addResource(
+      state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
+      state->initialResourceState, !(state->isMappable));
+}
+
+void StateTrackingLayer::post(INTC_D3D12_CreateCommandQueueCommand& c) {
+  if (c.result_.value != S_OK) {
+    return;
+  }
+  D3D12INTCCommandQueueState* state = new D3D12INTCCommandQueueState();
+  state->extensionContextKey = c.pExtensionContext_.key;
+  state->deviceKey = deviceByINTCExtensionContext_[c.pExtensionContext_.key];
+  state->key = c.ppCommandQueue_.key;
+  state->object = static_cast<IUnknown*>(*c.ppCommandQueue_.value);
+  state->d3dDesc = *c.pDesc_.value->pD3D12Desc;
+  state->desc = *c.pDesc_.value;
+  state->desc.pD3D12Desc = &state->d3dDesc;
+  state->iid = c.riid_.value;
+  stateService_.storeState(state);
+
+  gpuExecutionFlusher_.createCommandQueue(
+      c.ppCommandQueue_.key, *reinterpret_cast<ID3D12CommandQueue**>(c.ppCommandQueue_.value));
+}
+
+void StateTrackingLayer::post(INTC_D3D12_CreateHeapCommand& c) {
+  if (c.result_.value != S_OK) {
+    return;
+  }
+  D3D12INTCHeapState* state = new D3D12INTCHeapState();
+  state->extensionContextKey = c.pExtensionContext_.key;
+  state->deviceKey = deviceByINTCExtensionContext_[c.pExtensionContext_.key];
+  state->key = c.ppvHeap_.key;
+  state->object = static_cast<IUnknown*>(*c.ppvHeap_.value);
+  state->d3dDesc = *c.pDesc_.value->pD3D12Desc;
+  state->desc = *c.pDesc_.value;
+  state->desc.pD3D12Desc = &state->d3dDesc;
+  state->iid = c.riid_.value;
+  stateService_.storeState(state);
+
+  if (state->d3dDesc.Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+    residencyService_.createNotResident(state->key, state->deviceKey);
+  }
 }
 
 void StateTrackingLayer::pre(INTC_D3D12_CreateComputePipelineStateCommand& c) {

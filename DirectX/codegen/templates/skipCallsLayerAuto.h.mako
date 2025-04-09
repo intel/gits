@@ -39,6 +39,9 @@ public:
   virtual void pre(INTC_D3D12_CreateComputePipelineStateCommand& command) override;
   virtual void pre(INTC_D3D12_CreatePlacedResourceCommand& command) override;
   virtual void pre(INTC_D3D12_CreateCommittedResourceCommand& command) override;
+  virtual void pre(INTC_D3D12_CreateReservedResourceCommand& command) override;
+  virtual void pre(INTC_D3D12_CreateCommandQueueCommand& command) override;
+  virtual void pre(INTC_D3D12_CreateHeapCommand& command) override;
   
   %for function in functions:
   virtual void pre(${function.name}Command& command) override;

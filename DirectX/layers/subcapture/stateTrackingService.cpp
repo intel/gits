@@ -219,6 +219,12 @@ void StateTrackingService::restoreState(ObjectState* state) {
   case ObjectState::D3D12_INTC_PLACEDRESOURCE:
     restoreD3D12INTCPlacedResource(static_cast<D3D12INTCPlacedResourceState*>(state));
     break;
+  case ObjectState::D3D12_INTC_RESERVEDRESOURCE:
+    restoreD3D12INTCReservedResource(static_cast<D3D12INTCReservedResourceState*>(state));
+    break;
+  case ObjectState::D3D12_INTC_COMMANDQUEUE:
+    restoreD3D12INTCCommandQueue(static_cast<D3D12INTCCommandQueueState*>(state));
+    break;
   case ObjectState::D3D12_INTC_COMPUTEPIPELINESTATE:
     restoreD3D12INTCComputePipelineState(static_cast<D3D12INTCComputePipelineState*>(state));
     break;
@@ -1172,6 +1178,7 @@ void StateTrackingService::restoreD3D12INTCCommittedResource(
   resourceContentRestore_.addCommittedResourceState(state);
 
   restoreResidencyPriority(state->deviceKey, state->key, state->residencyPriority);
+  restoreGpuVirtualAddress(state);
 }
 
 void StateTrackingService::restoreD3D12INTCPlacedResource(D3D12INTCPlacedResourceState* state) {
@@ -1197,6 +1204,37 @@ void StateTrackingService::restoreD3D12INTCPlacedResource(D3D12INTCPlacedResourc
   recorder_.record(new INTC_D3D12_CreatePlacedResourceWriter(c));
 
   resourceContentRestore_.addPlacedResourceState(state);
+
+  restoreGpuVirtualAddress(state);
+}
+
+void StateTrackingService::restoreD3D12INTCReservedResource(D3D12INTCReservedResourceState* state) {
+  D3D12_RESOURCE_STATES initialState = state->initialResourceState;
+  if (initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
+    initialState = getResourceInitialState(*state, state->desc.Dimension);
+  }
+
+  INTC_D3D12_CreateReservedResourceCommand c;
+  c.key = getUniqueCommandKey();
+  c.pDesc_.value = &state->descIntc;
+  c.pDesc_.value->pD3D12Desc = &state->desc;
+  c.InitialState_.value = initialState;
+  c.pOptimizedClearValue_.value = state->isClearValue ? &state->clearValue : nullptr;
+  c.riid_.value = state->iid;
+  c.ppvResource_.key = state->key;
+  recorder_.record(new INTC_D3D12_CreateReservedResourceWriter(c));
+
+  restoreGpuVirtualAddress(state);
+}
+
+void StateTrackingService::restoreD3D12INTCCommandQueue(D3D12INTCCommandQueueState* state) {
+  INTC_D3D12_CreateCommandQueueCommand c;
+  c.key = getUniqueCommandKey();
+  c.pExtensionContext_.key = state->extensionContextKey;
+  c.pDesc_.value = &state->desc;
+  c.riid_.value = state->iid;
+  c.ppCommandQueue_.key = state->key;
+  recorder_.record(new INTC_D3D12_CreateCommandQueueWriter(c));
 }
 
 void StateTrackingService::restoreD3D12INTCComputePipelineState(

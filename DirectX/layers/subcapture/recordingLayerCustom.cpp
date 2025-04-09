@@ -126,6 +126,24 @@ void RecordingLayer::post(INTC_D3D12_CreateCommittedResourceCommand& command) {
   }
 }
 
+void RecordingLayer::post(INTC_D3D12_CreateReservedResourceCommand& command) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new INTC_D3D12_CreateReservedResourceWriter(command));
+  }
+}
+
+void RecordingLayer::post(INTC_D3D12_CreateCommandQueueCommand& command) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new INTC_D3D12_CreateCommandQueueWriter(command));
+  }
+}
+
+void RecordingLayer::post(INTC_D3D12_CreateHeapCommand& command) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new INTC_D3D12_CreateHeapWriter(command));
+  }
+}
+
 void RecordingLayer::post(IDXGIAdapter3QueryVideoMemoryInfoCommand& command) {}
 
 } // namespace DirectX

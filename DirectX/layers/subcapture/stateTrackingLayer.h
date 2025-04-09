@@ -56,7 +56,6 @@ public:
   void post(ID3D12DeviceCreateDescriptorHeapCommand& c) override;
   void post(ID3D12DeviceCreateHeapCommand& c) override;
   void post(ID3D12Device4CreateHeap1Command& c) override;
-  void post(INTC_D3D12_CreateHeapCommand& c) override;
   void post(ID3D12DeviceCreateQueryHeapCommand& c) override;
   void post(CreateHeapAllocationMetaCommand& c) override;
   void post(ID3D12Device3OpenExistingHeapFromAddressCommand& c) override;
@@ -119,6 +118,9 @@ public:
   void post(INTC_D3D12_SetFeatureSupportCommand& c) override;
   void post(INTC_D3D12_CreateCommittedResourceCommand& c) override;
   void post(INTC_D3D12_CreatePlacedResourceCommand& c) override;
+  void post(INTC_D3D12_CreateReservedResourceCommand& c) override;
+  void post(INTC_D3D12_CreateCommandQueueCommand& c) override;
+  void post(INTC_D3D12_CreateHeapCommand& c) override;
   void pre(INTC_D3D12_CreateComputePipelineStateCommand& c) override;
   void post(INTC_D3D12_CreateComputePipelineStateCommand& c) override;
   void post(ID3D12Device1SetResidencyPriorityCommand& c) override;

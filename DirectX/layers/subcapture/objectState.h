@@ -66,6 +66,8 @@ struct ObjectState {
     D3D12_INTC_DEVICEEXTENSIONCONTEXT1,
     D3D12_INTC_COMMITTEDRESOURCE,
     D3D12_INTC_PLACEDRESOURCE,
+    D3D12_INTC_RESERVEDRESOURCE,
+    D3D12_INTC_COMMANDQUEUE,
     D3D12_INTC_COMPUTEPIPELINESTATE,
     D3D12_INTC_HEAP,
     DSTORAGE_FACTORY,
@@ -480,6 +482,28 @@ struct D3D12INTCPlacedResourceState : public ResourceState {
   D3D12_RESOURCE_STATES initialResourceState{};
   bool isClearValue{};
   D3D12_CLEAR_VALUE clearValue{};
+  IID iid{};
+};
+
+struct D3D12INTCReservedResourceState : public ResourceState {
+  D3D12INTCReservedResourceState() : ResourceState(D3D12_INTC_RESERVEDRESOURCE) {}
+  unsigned deviceKey{};
+  unsigned extensionContextKey{};
+  INTCExtensionContext* extensionContext{};
+  INTC_D3D12_RESOURCE_DESC descIntc{};
+  D3D12_RESOURCE_DESC desc{};
+  D3D12_RESOURCE_STATES initialResourceState{};
+  bool isClearValue{};
+  D3D12_CLEAR_VALUE clearValue{};
+  IID iid{};
+};
+
+struct D3D12INTCCommandQueueState : public ObjectState {
+  D3D12INTCCommandQueueState() : ObjectState(D3D12_INTC_COMMANDQUEUE) {}
+  unsigned extensionContextKey{};
+  unsigned deviceKey{};
+  INTC_D3D12_COMMAND_QUEUE_DESC_0001 desc{};
+  D3D12_COMMAND_QUEUE_DESC d3dDesc{};
   IID iid{};
 };
 

@@ -128,6 +128,8 @@ private:
   void restoreD3D12INTCDeviceExtensionContext1(D3D12INTCDeviceExtensionContext1State* state);
   void restoreD3D12INTCCommittedResource(D3D12INTCCommittedResourceState* state);
   void restoreD3D12INTCPlacedResource(D3D12INTCPlacedResourceState* state);
+  void restoreD3D12INTCReservedResource(D3D12INTCReservedResourceState* state);
+  void restoreD3D12INTCCommandQueue(D3D12INTCCommandQueueState* state);
   void restoreD3D12INTCComputePipelineState(D3D12INTCComputePipelineState* state);
   void restoreD3D12INTCHeapState(D3D12INTCHeapState* state);
   void restoreDStorageFactoryState(DStorageFactoryState* state);
