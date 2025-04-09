@@ -174,8 +174,8 @@ void ExecuteIndirectDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
         stream << ", " << args.CallableShaderTable.SizeInBytes << ", "
                << args.CallableShaderTable.StrideInBytes << "\n";
         stream << "    Width " << args.Width << "\n";
-        stream << "    Height " << args.Width << "\n";
-        stream << "    Depth " << args.Width << "\n";
+        stream << "    Height " << args.Height << "\n";
+        stream << "    Depth " << args.Depth << "\n";
         offset += sizeof(D3D12_DISPATCH_RAYS_DESC);
         break;
       }
