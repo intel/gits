@@ -18,6 +18,7 @@
 #include "gpuPatchLayer.h"
 #include "portabilityLayer.h"
 #include "debugInfoLayerAuto.h"
+#include "globalSynchronizationLayerAuto.h"
 #include "logDxErrorLayerAuto.h"
 #include "directStorageResourcesLayer.h"
 
@@ -123,6 +124,7 @@ void CaptureManager::createLayers() {
   std::unique_ptr<Layer> traceLayer = traceFactory_.getTraceLayer();
   std::unique_ptr<Layer> screenshotsLayer = resourceDumpingFactory_.getScreenshotsLayer();
   std::unique_ptr<Layer> debugInfoLayer;
+  std::unique_ptr<Layer> globalSynchronizationLayer;
   std::unique_ptr<Layer> directStorageResourcesLayer;
   std::unique_ptr<Layer> captureCustomizationLayer;
   std::unique_ptr<Layer> captureSynchronizationLayer;
@@ -132,6 +134,10 @@ void CaptureManager::createLayers() {
 
   if (cfg.directx.capture.debugLayer) {
     debugInfoLayer = std::make_unique<DebugInfoLayer>();
+  }
+
+  if (cfg.directx.capture.globalSynchronization) {
+    globalSynchronizationLayer = std::make_unique<GlobalSynchronizationLayer>();
   }
 
   if (cfg.directx.capture.record) {
@@ -152,6 +158,7 @@ void CaptureManager::createLayers() {
       preLayers_.push_back(layer.get());
     }
   };
+  enablePreLayer(globalSynchronizationLayer); // keep as first
   enablePreLayer(traceLayer);
   enablePreLayer(interceptorCustomizationLayer);
   enablePreLayer(captureCustomizationLayer);
@@ -180,6 +187,20 @@ void CaptureManager::createLayers() {
   enablePostLayer(screenshotsLayer);
   enablePostLayer(directStorageResourcesLayer);
 
+  pluginService_.loadPlugins();
+  for (const auto& plugin : pluginService_.getPlugins()) {
+    auto* layer = static_cast<Layer*>(plugin.impl->getImpl());
+    // The enable[Pre|Post]Layer lambdas take unique_ptr<Layer>& instead of
+    // Layer* to avoid littering their each use with a .get() call. This means
+    // we can't use them here, so let's add those layers manually.
+    if (layer) {
+      preLayers_.push_back(layer);
+      postLayers_.push_back(layer);
+    }
+  }
+
+  enablePostLayer(globalSynchronizationLayer); // keep as last
+
   // Retain ownership of layers
   auto retainLayer = [this](std::unique_ptr<Layer>&& layer) {
     if (layer) {
@@ -197,18 +218,7 @@ void CaptureManager::createLayers() {
   retainLayer(std::move(screenshotsLayer));
   retainLayer(std::move(directStorageResourcesLayer));
   retainLayer(std::move(portabilityLayer));
-
-  pluginService_.loadPlugins();
-  for (const auto& plugin : pluginService_.getPlugins()) {
-    auto* layer = static_cast<Layer*>(plugin.impl->getImpl());
-    // The enable[Pre|Post]Layer lambdas take unique_ptr<Layer>& instead of
-    // Layer* to avoid littering their each use with a .get() call. This means
-    // we can't use them here, so let's add those layers manually.
-    if (layer) {
-      preLayers_.push_back(layer);
-      postLayers_.push_back(layer);
-    }
-  }
+  retainLayer(std::move(globalSynchronizationLayer));
 }
 
 void CaptureManager::interceptDirectMLFunctions() {

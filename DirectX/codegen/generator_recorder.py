@@ -58,7 +58,9 @@ def generate_recorder_files(context, out_path):
         'wrapperCreatorsAuto.h',
         'wrapperCreatorsAuto.cpp',
         'encoderLayerAuto.h',
-        'encoderLayerAuto.cpp'
+        'encoderLayerAuto.cpp',
+        'globalSynchronizationLayerAuto.h',
+        'globalSynchronizationLayerAuto.cpp'
     ]
     for file_name in files_to_generate:
         generate_file(context | additional_context, file_name, out_path)

@@ -220,6 +220,7 @@ struct Config {
       vi_bool captureDirectStorage{true};
       vi_bool captureXess{true};
       vi_bool debugLayer{false};
+      vi_bool globalSynchronization{false};
       std::vector<std::string> plugins;
       vi_uint64 tokenBurstChunkSize{5242880};
       struct Portability {
