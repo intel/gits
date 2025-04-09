@@ -238,7 +238,7 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
 
   initializePipelineState(cs, device, instancesOffsetRootSignature_,
                           &instancesOffsetPipelineState_);
-  instancesPipelineState_->SetName(L"GitsPatchInstancesOffset_CS");
+  instancesOffsetPipelineState_->SetName(L"GitsPatchInstancesOffset_CS");
 }
 
 void RaytracingShaderPatchService::patchBindingTable(
@@ -439,7 +439,7 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
 })";
 
   initializePipelineState(cs, device, bindingTableRootSignature_, &bindingTablePipelineState_);
-  instancesPipelineState_->SetName(L"GitsPatchBindingTable_CS");
+  bindingTablePipelineState_->SetName(L"GitsPatchBindingTable_CS");
 }
 
 void RaytracingShaderPatchService::initializePipelineState(const std::string& shaderCode,
