@@ -1205,10 +1205,10 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
   }
 
   {
-    D3D12_RESOURCE_BARRIER barriers[1]{};
-    barriers[0].Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-    barriers[0].UAV.pResource = nullptr;
-    commandList->ResourceBarrier(1, barriers);
+    D3D12_RESOURCE_BARRIER barrier{};
+    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+    barrier.UAV.pResource = nullptr;
+    commandList->ResourceBarrier(1, &barrier);
   }
 
   dumpService_.dumpExecuteIndirectArgumentBuffer(
@@ -1230,16 +1230,18 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
       c.ArgumentBufferOffset_.value, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, c.pCountBuffer_.value,
       c.CountBufferOffset_.value, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT, c.key, false);
 
-  D3D12_RESOURCE_BARRIER barriers[2]{};
-  barriers[0].Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-  barriers[0].UAV.pResource = nullptr;
+  {
+    D3D12_RESOURCE_BARRIER barriers[2]{};
+    barriers[0].Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+    barriers[0].UAV.pResource = nullptr;
 
-  barriers[1].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-  barriers[1].Transition.pResource = patchBuffers_[patchBufferIndex];
-  barriers[1].Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-  barriers[1].Transition.StateAfter = D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
+    barriers[1].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barriers[1].Transition.pResource = patchBuffers_[patchBufferIndex];
+    barriers[1].Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    barriers[1].Transition.StateAfter = D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
 
-  commandList->ResourceBarrier(2, barriers);
+    commandList->ResourceBarrier(2, barriers);
+  }
 
   commandListService_.restoreState(c.object_.key, c.object_.value);
 

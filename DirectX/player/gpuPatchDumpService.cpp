@@ -148,7 +148,7 @@ void GpuPatchDumpService::dumpExecuteIndirectArgumentBuffer(
     D3D12_RESOURCE_STATES argumentBufferState,
     ID3D12Resource* countBuffer,
     unsigned countBufferOffset,
-    D3D12_RESOURCE_STATES /*countBufferState*/,
+    D3D12_RESOURCE_STATES countBufferState,
     unsigned callKey,
     bool prePatch) {
 
@@ -163,10 +163,10 @@ void GpuPatchDumpService::dumpExecuteIndirectArgumentBuffer(
   dumpName << dumpPath_ << L"/call_" << callKey << L"_execute_indirect_"
            << (prePatch ? L"pre_patch" : L"post_patch") << L".txt";
 
-  executeIndirectDump_.dumpArgumentBuffer(
-      commandList, commandSignature, maxCommandCount, argumentBuffer, argumentBufferOffset,
-      argumentBufferState, countBuffer, countBufferOffset, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT,
-      dumpName.str(), prePatch);
+  executeIndirectDump_.dumpArgumentBuffer(commandList, commandSignature, maxCommandCount,
+                                          argumentBuffer, argumentBufferOffset, argumentBufferState,
+                                          countBuffer, countBufferOffset, countBufferState,
+                                          dumpName.str(), prePatch);
 }
 
 void GpuPatchDumpService::executeCommandLists(unsigned key,
