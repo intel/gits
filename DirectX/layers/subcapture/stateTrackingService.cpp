@@ -787,7 +787,7 @@ void StateTrackingService::restoreD3D12StateObjectPropertiesState(
     D3D12StateObjectPropertiesState* state) {
   {
     const ObjectState* stateObjecState = getState(state->parentKey);
-    if (stateObjecState == nullptr || stateObjecState->destroyed) {
+    if (stateObjecState == nullptr || !stateObjecState->restored) {
       return;
     }
   }
