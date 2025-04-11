@@ -1236,7 +1236,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
 
   commandListService_.restoreState(c.object_.key, c.object_.value);
 
-  msgBus.publish({PUBLISHER_PLAYER, TOPIC_GITS_WORKLOAD_BEGIN},
+  msgBus.publish({PUBLISHER_PLAYER, TOPIC_GITS_WORKLOAD_END},
                  std::make_shared<GitsWorkloadMessage>(commandList, "GITS_ExecuteIndirect-Patch",
                                                        c.object_.key));
 }
