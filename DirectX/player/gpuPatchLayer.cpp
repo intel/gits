@@ -122,9 +122,13 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
       barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
       commandList->ResourceBarrier(1, &barrier);
 
-      bool genericRead =
-          genericReadResources_.find(instanceDescsKey) != genericReadResources_.end();
-      if (!genericRead) {
+      // workaround for improper mapping gpu address to buffer in capture
+      D3D12_RESOURCE_DESC desc = infoInstanceDescs.resource->GetDesc();
+      bool denyShaderResource = desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+      bool setSourceBarrier =
+          genericReadResources_.find(instanceDescsKey) == genericReadResources_.end() &&
+          !denyShaderResource;
+      if (setSourceBarrier) {
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         barrier.Transition.pResource = infoInstanceDescs.resource;
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
@@ -141,7 +145,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
       barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
       commandList->ResourceBarrier(1, &barrier);
 
-      if (!genericRead) {
+      if (setSourceBarrier) {
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         barrier.Transition.pResource = infoInstanceDescs.resource;
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
@@ -316,9 +320,13 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
         commandList->ResourceBarrier(1, &barrier);
 
-        bool genericRead =
-            genericReadResources_.find(instanceInfo.resourceKey) != genericReadResources_.end();
-        if (!genericRead) {
+        // workaround for improper mapping gpu address to buffer in capture
+        D3D12_RESOURCE_DESC desc = instanceInfo.resource->GetDesc();
+        bool denyShaderResource = desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+        bool setSourceBarrier =
+            genericReadResources_.find(instanceInfo.resourceKey) == genericReadResources_.end() &&
+            !denyShaderResource;
+        if (setSourceBarrier) {
           barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
           barrier.Transition.pResource = instanceInfo.resource;
           barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
@@ -335,7 +343,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
         commandList->ResourceBarrier(1, &barrier);
 
-        if (!genericRead) {
+        if (setSourceBarrier) {
           barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
           barrier.Transition.pResource = instanceInfo.resource;
           barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
@@ -464,8 +472,13 @@ void GpuPatchLayer::patchDispatchRays(ID3D12GraphicsCommandList* commandList,
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
         commandList->ResourceBarrier(1, &barrier);
 
-        bool genericRead = genericReadResources_.find(info->key) != genericReadResources_.end();
-        if (!genericRead) {
+        // workaround for improper mapping gpu address to buffer in capture
+        D3D12_RESOURCE_DESC desc = info->resource->GetDesc();
+        bool denyShaderResource = desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+        bool setSourceBarrier =
+            genericReadResources_.find(info->key) == genericReadResources_.end() &&
+            !denyShaderResource;
+        if (setSourceBarrier) {
           barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
           barrier.Transition.pResource = info->resource;
           barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
@@ -482,7 +495,7 @@ void GpuPatchLayer::patchDispatchRays(ID3D12GraphicsCommandList* commandList,
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
         commandList->ResourceBarrier(1, &barrier);
 
-        if (!genericRead) {
+        if (setSourceBarrier) {
           barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
           barrier.Transition.pResource = info->resource;
           barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
