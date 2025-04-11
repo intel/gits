@@ -1204,10 +1204,17 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
     }
   }
 
+  {
+    D3D12_RESOURCE_BARRIER barriers[1]{};
+    barriers[0].Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+    barriers[0].UAV.pResource = nullptr;
+    commandList->ResourceBarrier(1, barriers);
+  }
+
   dumpService_.dumpExecuteIndirectArgumentBuffer(
       c.object_.value, it->second, c.MaxCommandCount_.value, c.pArgumentBuffer_.value,
       c.ArgumentBufferOffset_.value, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, c.pCountBuffer_.value,
-      c.CountBufferOffset_.value, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, c.key, true);
+      c.CountBufferOffset_.value, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT, c.key, true);
 
   executeIndirectShaderPatchService_.patchArgumentBuffer(
       commandList, patchBuffers_[patchBufferIndex]->GetGPUVirtualAddress(),

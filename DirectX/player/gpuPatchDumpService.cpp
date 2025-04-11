@@ -148,7 +148,7 @@ void GpuPatchDumpService::dumpExecuteIndirectArgumentBuffer(
     D3D12_RESOURCE_STATES argumentBufferState,
     ID3D12Resource* countBuffer,
     unsigned countBufferOffset,
-    D3D12_RESOURCE_STATES countBufferState,
+    D3D12_RESOURCE_STATES /*countBufferState*/,
     unsigned callKey,
     bool prePatch) {
 
