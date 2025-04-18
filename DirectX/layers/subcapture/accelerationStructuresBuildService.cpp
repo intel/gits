@@ -81,19 +81,20 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
   unsigned offset{};
   encode(state->descEncoded.get(), offset, c.pDesc_);
 
-  auto storeBuffer = [&](unsigned inputIndex, D3D12_GPU_VIRTUAL_ADDRESS address, unsigned size) {
+  auto storeBuffer = [&](unsigned inputIndex, unsigned size) {
     unsigned inputKey = c.pDesc_.inputKeys[inputIndex];
+    unsigned inputOffset = c.pDesc_.inputOffsets[inputIndex];
     stateService_.keepState(inputKey);
     ResourceState* bufferState = static_cast<ResourceState*>(stateService_.getState(inputKey));
-    unsigned offset = address - bufferState->gpuVirtualAddress;
     unsigned uploadResourceKey = stateService_.getUniqueObjectKey();
     state->uploadBuffers.push_back(uploadResourceKey);
     D3D12_RESOURCE_STATES resourceState = bufferState->isGenericRead
                                               ? D3D12_RESOURCE_STATE_GENERIC_READ
                                               : D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-    bufferContentRestore_.storeBuffer(
-        c.object_.value, commandListKey_, static_cast<ID3D12Resource*>(bufferState->object),
-        inputKey, offset, size, resourceState, c.key, bufferState->isMappable, uploadResourceKey);
+    bufferContentRestore_.storeBuffer(c.object_.value, commandListKey_,
+                                      static_cast<ID3D12Resource*>(bufferState->object), inputKey,
+                                      inputOffset, size, resourceState, c.key,
+                                      bufferState->isMappable, uploadResourceKey);
     state->buffers[inputKey] = bufferState;
     ReservedResourcesService::TiledResource* tiledResource =
         reservedResourcesService_.getTiledResource(inputKey);
@@ -116,7 +117,7 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
   if (inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL && inputs.NumDescs) {
     if (inputs.NumDescs) {
       unsigned size = inputs.NumDescs * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
-      storeBuffer(inputIndex, inputs.InstanceDescs, size);
+      storeBuffer(inputIndex, size);
     }
   } else {
     for (unsigned i = 0; i < inputs.NumDescs; ++i) {
@@ -127,13 +128,13 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
       if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
         if (desc.Triangles.Transform3x4) {
           unsigned size = sizeof(float) * 3 * 4;
-          storeBuffer(inputIndex, desc.Triangles.Transform3x4, size);
+          storeBuffer(inputIndex, size);
         }
         ++inputIndex;
         if (desc.Triangles.IndexBuffer && desc.Triangles.IndexCount) {
           unsigned size = desc.Triangles.IndexCount *
                           (desc.Triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
-          storeBuffer(inputIndex, desc.Triangles.IndexBuffer, size);
+          storeBuffer(inputIndex, size);
         }
         ++inputIndex;
         if (desc.Triangles.VertexBuffer.StartAddress && desc.Triangles.VertexCount) {
@@ -144,13 +145,13 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
             }
           }
           unsigned size = desc.Triangles.VertexCount * stride;
-          storeBuffer(inputIndex, desc.Triangles.VertexBuffer.StartAddress, size);
+          storeBuffer(inputIndex, size);
         }
         ++inputIndex;
       } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
         if (desc.AABBs.AABBs.StartAddress && desc.AABBs.AABBCount) {
           unsigned size = desc.AABBs.AABBCount * desc.AABBs.AABBs.StrideInBytes;
-          storeBuffer(inputIndex, desc.AABBs.AABBs.StartAddress, size);
+          storeBuffer(inputIndex, size);
         }
         ++inputIndex;
       }
