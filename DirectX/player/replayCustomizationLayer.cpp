@@ -242,37 +242,14 @@ void ReplayCustomizationLayer::pre(ID3D12Device1SetEventOnMultipleFenceCompletio
   }
 }
 
-void ReplayCustomizationLayer::post(ID3D12DeviceCreateFenceCommand& c) {
-  FenceObjectInfo* info = new FenceObjectInfo();
-  info->lastSignaledValue = c.InitialValue_.value;
-  c.ppFence_.objectInfo->addObjectInfo(this, info);
-}
-
-void ReplayCustomizationLayer::post(ID3D12FenceSignalCommand& c) {
-
-  FenceObjectInfo* info = static_cast<FenceObjectInfo*>(c.object_.objectInfo->getObjectInfo(this));
-  info->lastSignaledValue = c.Value_.value;
-  info->signaled = true;
-}
-
-void ReplayCustomizationLayer::post(ID3D12CommandQueueSignalCommand& c) {
-
-  FenceObjectInfo* info = static_cast<FenceObjectInfo*>(c.pFence_.objectInfo->getObjectInfo(this));
-  info->lastSignaledValue = c.Value_.value;
-  info->signaled = true;
-}
-
 void ReplayCustomizationLayer::pre(ID3D12FenceGetCompletedValueCommand& c) {
-
-  FenceObjectInfo* info = static_cast<FenceObjectInfo*>(c.object_.objectInfo->getObjectInfo(this));
-  waitForFence(c.key, info, c.object_.value, c.result_.value);
+  waitForFence(c.key, c.object_.value, c.result_.value);
 }
 
 void ReplayCustomizationLayer::pre(WaitForFenceSignaledCommand& c) {
   // fence could be removed before wait is signaled
   if (c.fence_.value) {
-    FenceObjectInfo* info = static_cast<FenceObjectInfo*>(c.fence_.objectInfo->getObjectInfo(this));
-    waitForFence(c.key, info, c.fence_.value, c.value_.value);
+    waitForFence(c.key, c.fence_.value, c.value_.value);
   }
 }
 
@@ -961,7 +938,6 @@ void ReplayCustomizationLayer::fillCpuDescriptorHandleArgument(
 }
 
 void ReplayCustomizationLayer::waitForFence(unsigned commandKey,
-                                            FenceObjectInfo* fenceInfo,
                                             ID3D12Fence* fence,
                                             unsigned fenceValue) {
   UINT64 value = fence->GetCompletedValue();

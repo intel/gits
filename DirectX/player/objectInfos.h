@@ -23,11 +23,5 @@ public:
   void* replayHeapAllocationAddress{nullptr};
 };
 
-class FenceObjectInfo : public ObjectInfo {
-public:
-  UINT64 lastSignaledValue{};
-  bool signaled{false};
-};
-
 } // namespace DirectX
 } // namespace gits

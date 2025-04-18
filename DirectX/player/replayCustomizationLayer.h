@@ -51,9 +51,6 @@ public:
   void pre(ID3D12DeviceCopyDescriptorsSimpleCommand& command) override;
   void pre(ID3D12FenceSetEventOnCompletionCommand& command) override;
   void pre(ID3D12Device1SetEventOnMultipleFenceCompletionCommand& command) override;
-  void post(ID3D12DeviceCreateFenceCommand& command) override;
-  void post(ID3D12FenceSignalCommand& command) override;
-  void post(ID3D12CommandQueueSignalCommand& command) override;
   void pre(ID3D12FenceGetCompletedValueCommand& command) override;
   void pre(WaitForFenceSignaledCommand& command) override;
   void post(ID3D12DeviceCreateCommittedResourceCommand& command) override;
@@ -163,10 +160,7 @@ private:
   void fillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg);
   void fillGpuDescriptorHandleArgument(DescriptorHandleArgument<D3D12_GPU_DESCRIPTOR_HANDLE>& arg);
   void fillCpuDescriptorHandleArgument(DescriptorHandleArgument<D3D12_CPU_DESCRIPTOR_HANDLE>& arg);
-  void waitForFence(unsigned commandKey,
-                    FenceObjectInfo* fenceInfo,
-                    ID3D12Fence* fence,
-                    unsigned fenceValue);
+  void waitForFence(unsigned commandKey, ID3D12Fence* fence, unsigned fenceValue);
   void removeCachedPSO(D3D12_PIPELINE_STATE_STREAM_DESC& desc);
   void overrideAdapter(D3D12CreateDeviceCommand& command);
 
