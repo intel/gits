@@ -251,9 +251,6 @@ void ReplayCustomizationLayer::post(ID3D12DeviceCreateFenceCommand& c) {
 void ReplayCustomizationLayer::post(ID3D12FenceSignalCommand& c) {
 
   FenceObjectInfo* info = static_cast<FenceObjectInfo*>(c.object_.objectInfo->getObjectInfo(this));
-  if (c.Value_.value < info->lastSignaledValue) {
-    info->incremental = false;
-  }
   info->lastSignaledValue = c.Value_.value;
   info->signaled = true;
 }
@@ -261,9 +258,6 @@ void ReplayCustomizationLayer::post(ID3D12FenceSignalCommand& c) {
 void ReplayCustomizationLayer::post(ID3D12CommandQueueSignalCommand& c) {
 
   FenceObjectInfo* info = static_cast<FenceObjectInfo*>(c.pFence_.objectInfo->getObjectInfo(this));
-  if (c.Value_.value < info->lastSignaledValue) {
-    info->incremental = false;
-  }
   info->lastSignaledValue = c.Value_.value;
   info->signaled = true;
 }
@@ -970,23 +964,8 @@ void ReplayCustomizationLayer::waitForFence(unsigned commandKey,
                                             FenceObjectInfo* fenceInfo,
                                             ID3D12Fence* fence,
                                             unsigned fenceValue) {
-  UINT64 value{};
-  static HANDLE event{};
-  if (fenceInfo->incremental) {
-    while ((value = fence->GetCompletedValue()) < fenceValue) {
-    }
-  } else {
-    if ((value = fence->GetCompletedValue()) != fenceValue) {
-      if (!event) {
-        event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-      }
-      fence->SetEventOnCompletion(fenceValue, event);
-      DWORD ret = WaitForSingleObject(event, 10000);
-      if (ret == WAIT_TIMEOUT) {
-        Log(WARN) << "GetCompletedValue - timeout while waiting for fence. Command " << commandKey;
-      }
-    }
-  }
+  HRESULT hr = fence->SetEventOnCompletion(fenceValue, NULL);
+  GITS_ASSERT(hr == S_OK);
 }
 
 void ReplayCustomizationLayer::removeCachedPSO(D3D12_PIPELINE_STATE_STREAM_DESC& desc) {

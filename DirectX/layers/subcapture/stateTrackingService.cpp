@@ -1061,32 +1061,14 @@ void StateTrackingService::restoreGpuVirtualAddress(ResourceState* state) {
 }
 
 void StateTrackingService::restoreD3D12Fence(D3D12FenceState* state) {
-
-  std::array<UINT64, 3>& fenceValues = fenceTrackingService_.getFenceValue(state->key);
-  bool incremental = fenceTrackingService_.incremental(fenceValues);
-
   ID3D12DeviceCreateFenceCommand c;
   c.key = getUniqueCommandKey();
   c.object_.key = state->deviceKey;
-  c.InitialValue_.value = incremental ? fenceValues[0] : fenceValues[2];
+  c.InitialValue_.value = fenceTrackingService_.getFenceValue(state->key);
   c.Flags_.value = state->flags;
   c.riid_.value = state->iid;
   c.ppFence_.key = state->key;
   recorder_.record(new ID3D12DeviceCreateFenceWriter(c));
-
-  if (!incremental) {
-    ID3D12FenceSignalCommand c1;
-    c1.key = getUniqueCommandKey();
-    c1.object_.key = state->key;
-    c1.Value_.value = fenceValues[1];
-    recorder_.record(new ID3D12FenceSignalWriter(c1));
-
-    ID3D12FenceSignalCommand c0;
-    c0.key = getUniqueCommandKey();
-    c0.object_.key = state->key;
-    c0.Value_.value = fenceValues[0];
-    recorder_.record(new ID3D12FenceSignalWriter(c0));
-  }
 }
 
 void StateTrackingService::restoreD3D12INTCDeviceExtensionContext(

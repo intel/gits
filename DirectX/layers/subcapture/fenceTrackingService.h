@@ -17,20 +17,14 @@ namespace DirectX {
 class FenceTrackingService {
 public:
   void setFenceValue(unsigned fenceKey, UINT64 fenceValue) {
-    std::array<UINT64, 3>& values = fenceValues_[fenceKey];
-    values[2] = values[1];
-    values[1] = values[0];
-    values[0] = fenceValue;
+    fenceValues_[fenceKey] = fenceValue;
   }
-  std::array<UINT64, 3> getFenceValue(unsigned fenceKey) {
+  UINT64 getFenceValue(unsigned fenceKey) {
     return fenceValues_[fenceKey];
-  }
-  bool incremental(std::array<UINT64, 3>& values) {
-    return values[2] <= values[1] && values[1] <= values[0];
   }
 
 private:
-  std::unordered_map<unsigned, std::array<UINT64, 3>> fenceValues_;
+  std::unordered_map<unsigned, UINT64> fenceValues_;
 };
 
 } // namespace DirectX

@@ -26,7 +26,6 @@ public:
 class FenceObjectInfo : public ObjectInfo {
 public:
   UINT64 lastSignaledValue{};
-  bool incremental{true};
   bool signaled{false};
 };
 
