@@ -30,7 +30,7 @@ public:
 
 private:
   std::unordered_map<unsigned, unsigned> swapChainByBufferKey_;
-  std::unordered_map<unsigned, std::vector<IUnknown*>> buffersBySwapChainKey_;
+  std::unordered_map<unsigned, std::unordered_set<IUnknown*>> buffersBySwapChainKey_;
   std::mutex mutex_;
 };
 

@@ -22,7 +22,7 @@ void InterceptorCustomizationLayer::post(IDXGISwapChainGetBufferCommand& c) {
   if (c.result_.value == S_OK) {
     std::lock_guard<std::mutex> lock(mutex_);
     swapChainByBufferKey_[c.ppSurface_.key] = c.object_.key;
-    buffersBySwapChainKey_[c.object_.key].push_back(static_cast<IUnknown*>(*c.ppSurface_.value));
+    buffersBySwapChainKey_[c.object_.key].insert(static_cast<IUnknown*>(*c.ppSurface_.value));
   }
 }
 
