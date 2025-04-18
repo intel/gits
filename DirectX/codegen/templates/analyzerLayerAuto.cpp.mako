@@ -16,13 +16,7 @@ namespace DirectX {
 %for function in interface.functions:
 %if interface.name.startswith('ID3D12GraphicsCommandList') and not function.name.startswith('Reset') and not function.name.startswith('SetName'):
 void AnalyzerLayer::post(${interface.name}${function.name}Command& c) {
-  if (inRange_) {
-    unsigned commandListKey = c.object_.key;
-    auto it = commandListsReset_.find(commandListKey);
-    if (it == commandListsReset_.end()) {
-      commandListsForRestore_.insert(commandListKey);
-    }
-  }
+  analyzerService_.commandListCommand(c.object_.key);
 }
 
 %endif

@@ -18,7 +18,7 @@ namespace gits {
 namespace DirectX {
 
 class GpuExecutionTracker {
-private:
+public:
   struct QueueEvent {
     enum Type {
       Wait,
@@ -47,7 +47,6 @@ private:
     Fence fence{};
   };
 
-public:
   struct Executable : public QueueEvent {
     Executable() : QueueEvent(Execute) {}
     virtual ~Executable() {}
@@ -67,6 +66,9 @@ public:
   void execute(unsigned callKey, unsigned commandQueueKey, Executable* executable);
   std::vector<Executable*>& getReadyExecutables() {
     return readyExecutables_;
+  }
+  std::unordered_map<unsigned, std::deque<QueueEvent*>>& getQueueEvents() {
+    return queueEvents_;
   }
 
 private:

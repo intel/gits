@@ -41,6 +41,7 @@ void StateTrackingService::restoreState() {
   resourceStateTrackingService_.restoreResourceStates();
   mapStateService_.restoreMapState();
   commandListService_.restoreCommandLists();
+  commandQueueService_.restoreCommandQueues();
   restoreReferenceCount();
 
   swapChainService_.restoreBackBufferSequence();

@@ -18,11 +18,13 @@
 #include "reservedResourcesService.h"
 #include "descriptorService.h"
 #include "commandListService.h"
+#include "commandQueueService.h"
 #include "xessStateService.h"
 #include "accelerationStructuresBuildService.h"
 #include "accelerationStructuresSerializeService.h"
 #include "gpuExecutionFlusher.h"
 #include "residencyService.h"
+#include "analyzerResults.h"
 
 #include <map>
 #include <array>
@@ -234,6 +236,7 @@ private:
   std::map<unsigned, unsigned> deviceByINTCExtensionContext_;
   StateTrackingService stateService_;
   SubcaptureRecorder& recorder_;
+  AnalyzerResults analyzerResults_;
   FenceTrackingService fenceTrackingService_;
   MapStateService mapStateService_;
   ResourceStateTrackingService resourceStateTrackingService_;
@@ -241,6 +244,7 @@ private:
   ReservedResourcesService reservedResourcesService_;
   DescriptorService descriptorService_;
   CommandListService commandListService_;
+  CommandQueueService commandQueueService_;
   XessStateService xessStateService_;
   AccelerationStructuresSerializeService accelerationStructuresSerializeService_;
   AccelerationStructuresBuildService accelerationStructuresBuildService_;

@@ -17,10 +17,12 @@
 #include "reservedResourcesService.h"
 #include "descriptorService.h"
 #include "commandListService.h"
+#include "commandQueueService.h"
 #include "xessStateService.h"
 #include "accelerationStructuresBuildService.h"
 #include "accelerationStructuresSerializeService.h"
 #include "residencyService.h"
+#include "analyzerResults.h"
 
 #include <vector>
 #include <unordered_map>
@@ -38,19 +40,23 @@ public:
       ReservedResourcesService& reservedResourcesService,
       DescriptorService& descriptorService,
       CommandListService& commandListService,
+      CommandQueueService& commandQueueService,
       XessStateService& xessStateService,
       AccelerationStructuresSerializeService& accelerationStructuresSerializeService,
       AccelerationStructuresBuildService& accelerationStructuresBuildService,
-      ResidencyService& residencyService)
+      ResidencyService& residencyService,
+      AnalyzerResults& analyzerResults)
       : recorder_(recorder),
         resourceContentRestore_(*this),
         swapChainService_(*this),
+        analyzerResults_(analyzerResults),
         fenceTrackingService_(fenceTrackingService),
         mapStateService_(mapStateService),
         resourceStateTrackingService_(resourceStateTrackingService),
         reservedResourcesService_(reservedResourcesService),
         descriptorService_(descriptorService),
         commandListService_(commandListService),
+        commandQueueService_(commandQueueService),
         xessStateService_(xessStateService),
         accelerationStructuresSerializeService_(accelerationStructuresSerializeService),
         accelerationStructuresBuildService_(accelerationStructuresBuildService),
@@ -145,6 +151,7 @@ private:
   friend class ReservedResourcesService;
   friend class DescriptorService;
   friend class CommandListService;
+  friend class CommandQueueService;
   friend class XessStateService;
   friend class AccelerationStructuresBuildService;
   friend class AccelerationStructuresSerializeService;
@@ -156,12 +163,14 @@ private:
   unsigned restoreCommandKey_{Command::stateRestoreKeyMask};
   unsigned restoreObjectKey_{Command::stateRestoreKeyMask};
   unsigned restoreFakePointer_{};
+  AnalyzerResults& analyzerResults_;
   FenceTrackingService& fenceTrackingService_;
   MapStateService& mapStateService_;
   ResourceStateTrackingService& resourceStateTrackingService_;
   ReservedResourcesService& reservedResourcesService_;
   DescriptorService& descriptorService_;
   CommandListService& commandListService_;
+  CommandQueueService& commandQueueService_;
   XessStateService& xessStateService_;
   AccelerationStructuresSerializeService& accelerationStructuresSerializeService_;
   AccelerationStructuresBuildService& accelerationStructuresBuildService_;

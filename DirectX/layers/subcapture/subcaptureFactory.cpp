@@ -11,6 +11,7 @@
 #include "recordingLayerAuto.h"
 #include "directXApi.h"
 #include "directStorageResourcesLayer.h"
+#include "analyzerResults.h"
 
 namespace gits {
 namespace DirectX {
@@ -34,8 +35,7 @@ SubcaptureFactory::SubcaptureFactory() {
     exit(EXIT_FAILURE);
   }
 
-  std::ifstream analysisFile(AnalyzerLayer::getAnalysisFileName());
-  if (analysisFile) {
+  if (AnalyzerResults::isAnalysis()) {
     recorder_ = std::make_unique<SubcaptureRecorder>();
     stateTrackingLayer_ = std::make_unique<StateTrackingLayer>(*recorder_);
     recordingLayer_ = std::make_unique<RecordingLayer>(*recorder_);

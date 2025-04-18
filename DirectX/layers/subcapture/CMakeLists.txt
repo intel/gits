@@ -44,6 +44,8 @@ set(STATE_TRACKING_SRC
   ${SRC_DIR}/descriptorService.cpp
   ${SRC_DIR}/commandListService.h
   ${SRC_DIR}/commandListService.cpp
+  ${SRC_DIR}/commandQueueService.h
+  ${SRC_DIR}/commandQueueService.cpp
   ${SRC_DIR}/xessStateService.h
   ${SRC_DIR}/xessStateService.cpp
   ${SRC_DIR}/accelerationStructuresBuildService.h
@@ -63,6 +65,10 @@ set(ANALYSIS_SRC
   ${SRC_DIR}/analyzerLayerAuto.h
   ${SRC_DIR}/analyzerLayerAuto.cpp
   ${SRC_DIR}/analyzerLayerCustom.cpp
+  ${SRC_DIR}/analyzerService.h
+  ${SRC_DIR}/analyzerService.cpp
+  ${SRC_DIR}/analyzerResults.h
+  ${SRC_DIR}/analyzerResults.cpp
 )
 source_group("analysis" FILES ${ANALYSIS_SRC})
 

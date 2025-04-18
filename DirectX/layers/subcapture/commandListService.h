@@ -30,18 +30,52 @@ struct CommandListCommand {
 struct CommandListOMSetRenderTargets : public CommandListCommand {
   CommandListOMSetRenderTargets(unsigned key)
       : CommandListCommand(CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_OMSETRENDERTARGETS, key) {}
+  unsigned commandListKey{};
   std::vector<std::unique_ptr<D3D12RenderTargetViewState>> renderTargetViews;
   std::unique_ptr<D3D12DepthStencilViewState> depthStencilView;
-  unsigned commandListKey{};
   bool rtsSingleHandleToDescriptorRange{};
 };
 
 struct CommandListClearRenderTargetView : public CommandListCommand {
   CommandListClearRenderTargetView(unsigned key)
       : CommandListCommand(CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARRENDERTARGETVIEW, key) {}
-  std::unique_ptr<D3D12RenderTargetViewState> renderTargetView;
   unsigned commandListKey{};
-  FLOAT colorRGBA[4];
+  std::unique_ptr<D3D12RenderTargetViewState> renderTargetView;
+  FLOAT colorRGBA[4]{};
+  std::vector<D3D12_RECT> rects{};
+};
+
+struct CommandListClearDepthStencilView : public CommandListCommand {
+  CommandListClearDepthStencilView(unsigned key)
+      : CommandListCommand(CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARDEPTHSTENCILVIEW, key) {}
+  unsigned commandListKey{};
+  std::unique_ptr<D3D12DepthStencilViewState> depthStencilView;
+  FLOAT depth;
+  UINT8 stencil;
+  std::vector<D3D12_RECT> rects{};
+};
+
+struct CommandListClearUnorderedAccessViewUint : public CommandListCommand {
+  CommandListClearUnorderedAccessViewUint(unsigned key)
+      : CommandListCommand(CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARUNORDEREDACCESSVIEWUINT,
+                           key) {}
+  unsigned commandListKey{};
+  std::unique_ptr<D3D12UnorderedAccessViewState> viewGPUHandleInCurrentHeap;
+  std::unique_ptr<D3D12UnorderedAccessViewState> viewCPUHandle;
+  unsigned resourceKey{};
+  UINT values[4]{};
+  std::vector<D3D12_RECT> rects{};
+};
+
+struct CommandListClearUnorderedAccessViewFloat : public CommandListCommand {
+  CommandListClearUnorderedAccessViewFloat(unsigned key)
+      : CommandListCommand(CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARUNORDEREDACCESSVIEWFLOAT,
+                           key) {}
+  unsigned commandListKey{};
+  std::unique_ptr<D3D12UnorderedAccessViewState> viewGPUHandleInCurrentHeap;
+  std::unique_ptr<D3D12UnorderedAccessViewState> viewCPUHandle;
+  unsigned resourceKey{};
+  FLOAT values[4]{};
   std::vector<D3D12_RECT> rects{};
 };
 
@@ -61,6 +95,7 @@ struct CommandListState : public ObjectState, gits::noncopyable {
   D3D12_COMMAND_LIST_TYPE type{};
   IID iid{};
   std::vector<CommandListCommand*> commands;
+  std::vector<unsigned> descriptorHeapKeys{};
 };
 
 struct D3D12CommandListState : public CommandListState {
@@ -86,23 +121,34 @@ public:
 private:
   void restoreCommandState(CommandListOMSetRenderTargets* command);
   void restoreCommandState(CommandListClearRenderTargetView* command);
+  void restoreCommandState(CommandListClearDepthStencilView* command);
+  template <typename CommandListClearUnorderedAccessView>
+  void restoreCommandState(CommandListClearUnorderedAccessView* command);
   void initAuxiliaryRtvHeap(unsigned deviceKey);
   void initAuxiliaryDsvHeap(unsigned deviceKey);
+  void initAuxiliaryUavGpuHeap(unsigned deviceKey);
+  void initAuxiliaryUavCpuHeap(unsigned deviceKey);
   void createAuxiliaryRtv(D3D12RenderTargetViewState* view);
   void createAuxiliaryDsv(D3D12DepthStencilViewState* view);
+  void createAuxiliaryUavGpu(D3D12UnorderedAccessViewState* view);
+  void createAuxiliaryUavCpu(D3D12UnorderedAccessViewState* view);
   bool equalRtv(D3D12RenderTargetViewState* view, DescriptorState* descriptor);
   bool equalDsv(D3D12DepthStencilViewState* view, DescriptorState* descriptor);
+  bool equalUav(D3D12UnorderedAccessViewState* view, DescriptorState* descriptor);
 
 private:
   StateTrackingService& stateService_;
   bool restoreCommandLists_{false};
   std::unordered_map<unsigned, CommandListState*> commandListsByKey_;
-  std::unordered_set<unsigned> commandListsWithoutReset_;
 
   unsigned auxiliaryRtvDescriptorHeapKey_{};
   unsigned auxiliaryRtvDescriptorHeapIndex_{};
   unsigned auxiliaryDsvDescriptorHeapKey_{};
   unsigned auxiliaryDsvDescriptorHeapIndex_{};
+  unsigned auxiliaryUavGpuDescriptorHeapKey_{};
+  unsigned auxiliaryUavGpuDescriptorHeapIndex_{};
+  unsigned auxiliaryUavCpuDescriptorHeapKey_{};
+  unsigned auxiliaryUavCpuDescriptorHeapIndex_{};
   const unsigned auxiliaryHeapSize_{64};
 };
 

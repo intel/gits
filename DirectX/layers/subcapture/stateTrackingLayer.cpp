@@ -25,16 +25,19 @@ StateTrackingLayer::StateTrackingLayer(SubcaptureRecorder& recorder)
                     reservedResourcesService_,
                     descriptorService_,
                     commandListService_,
+                    commandQueueService_,
                     xessStateService_,
                     accelerationStructuresSerializeService_,
                     accelerationStructuresBuildService_,
-                    residencyService_),
+                    residencyService_,
+                    analyzerResults_),
       recorder_(recorder),
       mapStateService_(stateService_),
       resourceStateTrackingService_(stateService_),
       reservedResourcesService_(stateService_),
       descriptorService_(stateService_),
       commandListService_(stateService_),
+      commandQueueService_(stateService_),
       xessStateService_(stateService_, recorder),
       accelerationStructuresSerializeService_(stateService_, recorder_),
       accelerationStructuresBuildService_(stateService_, recorder_, reservedResourcesService_),
@@ -1170,7 +1173,11 @@ void StateTrackingLayer::post(ID3D12CommandQueueSignalCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  fenceTrackingService_.setFenceValue(c.pFence_.key, c.Value_.value);
+  if (analyzerResults_.restoreCommandQueueCommand(c.key)) {
+    commandQueueService_.addCommandQueueSignal(c);
+  } else {
+    fenceTrackingService_.setFenceValue(c.pFence_.key, c.Value_.value);
+  }
 
   accelerationStructuresBuildService_.commandQueueSignal(c);
   gpuExecutionFlusher_.commandQueueSignal(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
@@ -1179,6 +1186,9 @@ void StateTrackingLayer::post(ID3D12CommandQueueSignalCommand& c) {
 void StateTrackingLayer::post(ID3D12CommandQueueWaitCommand& c) {
   if (c.result_.value != S_OK) {
     return;
+  }
+  if (analyzerResults_.restoreCommandQueueCommand(c.key)) {
+    commandQueueService_.addCommandQueueWait(c);
   }
 
   accelerationStructuresBuildService_.commandQueueWait(c);
@@ -1264,7 +1274,11 @@ void StateTrackingLayer::post(ID3D12ResourceMapCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12CommandQueueUpdateTileMappingsCommand& c) {
-  reservedResourcesService_.addUpdateTileMappings(c);
+  if (analyzerResults_.restoreCommandQueueCommand(c.key)) {
+    commandQueueService_.addUpdateTileMappings(c);
+  } else {
+    reservedResourcesService_.addUpdateTileMappings(c);
+  }
 }
 
 void StateTrackingLayer::post(ID3D12CommandQueueCopyTileMappingsCommand& c) {
@@ -1495,9 +1509,13 @@ void StateTrackingLayer::post(ID3D12Device1SetResidencyPriorityCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
-  resourceStateTrackingService_.executeCommandLists(c.ppCommandLists_.keys);
-  accelerationStructuresSerializeService_.executeCommandLists(c);
-  accelerationStructuresBuildService_.executeCommandLists(c);
+  if (analyzerResults_.restoreCommandQueueCommand(c.key)) {
+    commandQueueService_.addExecuteCommandLists(c);
+  } else {
+    resourceStateTrackingService_.executeCommandLists(c.ppCommandLists_.keys);
+    accelerationStructuresSerializeService_.executeCommandLists(c);
+    accelerationStructuresBuildService_.executeCommandLists(c);
+  }
 }
 
 void StateTrackingLayer::pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
@@ -1756,6 +1774,7 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListSetDescriptorHeapsCommand
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListSetDescriptorHeapsWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
+  state->descriptorHeapKeys = c.ppDescriptorHeaps_.keys;
   state->commands.push_back(command);
 }
 
@@ -1917,7 +1936,24 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListOMSetRenderTargetsCommand
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListClearDepthStencilViewCommand& c) {
-  CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
+  CommandListClearDepthStencilView* command = new CommandListClearDepthStencilView(c.key);
+  if (c.DepthStencilView_.interfaceKey) {
+    DescriptorState* descriptorState = descriptorService_.getDescriptorState(
+        c.DepthStencilView_.interfaceKey, c.DepthStencilView_.index);
+    GITS_ASSERT(descriptorState->id == DescriptorState::D3D12_DEPTHSTENCILVIEW);
+    command->depthStencilView.reset(
+        new D3D12DepthStencilViewState(*static_cast<D3D12DepthStencilViewState*>(descriptorState)));
+  }
+  command->commandListKey = c.object_.key;
+  command->depth = c.Depth_.value;
+  command->stencil = c.Stencil_.value;
+  if (c.NumRects_.value) {
+    command->rects.resize(c.NumRects_.value);
+    for (unsigned i = 0; i < c.NumRects_.value; ++i) {
+      command->rects[i] = c.pRects_.value[i];
+    }
+  }
+
   command->commandWriter.reset(new ID3D12GraphicsCommandListClearDepthStencilViewWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
   state->commands.push_back(command);
@@ -1949,14 +1985,68 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListClearRenderTargetViewComm
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& c) {
-  CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
+  CommandListClearUnorderedAccessViewUint* command =
+      new CommandListClearUnorderedAccessViewUint(c.key);
+  if (c.ViewGPUHandleInCurrentHeap_.interfaceKey) {
+    DescriptorState* descriptorState = descriptorService_.getDescriptorState(
+        c.ViewGPUHandleInCurrentHeap_.interfaceKey, c.ViewGPUHandleInCurrentHeap_.index);
+    GITS_ASSERT(descriptorState->id == DescriptorState::D3D12_UNORDEREDACCESSVIEW);
+    command->viewGPUHandleInCurrentHeap.reset(new D3D12UnorderedAccessViewState(
+        *static_cast<D3D12UnorderedAccessViewState*>(descriptorState)));
+  }
+  if (c.ViewCPUHandle_.interfaceKey) {
+    DescriptorState* descriptorState = descriptorService_.getDescriptorState(
+        c.ViewCPUHandle_.interfaceKey, c.ViewCPUHandle_.index);
+    GITS_ASSERT(descriptorState->id == DescriptorState::D3D12_UNORDEREDACCESSVIEW);
+    command->viewCPUHandle.reset(new D3D12UnorderedAccessViewState(
+        *static_cast<D3D12UnorderedAccessViewState*>(descriptorState)));
+  }
+  command->commandListKey = c.object_.key;
+  command->resourceKey = c.pResource_.key;
+  for (unsigned i = 0; i < 4; ++i) {
+    command->values[i] = c.Values_.value[i];
+  }
+  if (c.NumRects_.value) {
+    command->rects.resize(c.NumRects_.value);
+    for (unsigned i = 0; i < c.NumRects_.value; ++i) {
+      command->rects[i] = c.pRects_.value[i];
+    }
+  }
+
   command->commandWriter.reset(new ID3D12GraphicsCommandListClearUnorderedAccessViewUintWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
   state->commands.push_back(command);
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c) {
-  CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
+  CommandListClearUnorderedAccessViewFloat* command =
+      new CommandListClearUnorderedAccessViewFloat(c.key);
+  if (c.ViewGPUHandleInCurrentHeap_.interfaceKey) {
+    DescriptorState* descriptorState = descriptorService_.getDescriptorState(
+        c.ViewGPUHandleInCurrentHeap_.interfaceKey, c.ViewGPUHandleInCurrentHeap_.index);
+    GITS_ASSERT(descriptorState->id == DescriptorState::D3D12_UNORDEREDACCESSVIEW);
+    command->viewGPUHandleInCurrentHeap.reset(new D3D12UnorderedAccessViewState(
+        *static_cast<D3D12UnorderedAccessViewState*>(descriptorState)));
+  }
+  if (c.ViewCPUHandle_.interfaceKey) {
+    DescriptorState* descriptorState = descriptorService_.getDescriptorState(
+        c.ViewCPUHandle_.interfaceKey, c.ViewCPUHandle_.index);
+    GITS_ASSERT(descriptorState->id == DescriptorState::D3D12_UNORDEREDACCESSVIEW);
+    command->viewCPUHandle.reset(new D3D12UnorderedAccessViewState(
+        *static_cast<D3D12UnorderedAccessViewState*>(descriptorState)));
+  }
+  command->commandListKey = c.object_.key;
+  command->resourceKey = c.pResource_.key;
+  for (unsigned i = 0; i < 4; ++i) {
+    command->values[i] = c.Values_.value[i];
+  }
+  if (c.NumRects_.value) {
+    command->rects.resize(c.NumRects_.value);
+    for (unsigned i = 0; i < c.NumRects_.value; ++i) {
+      command->rects[i] = c.pRects_.value[i];
+    }
+  }
+
   command->commandWriter.reset(new ID3D12GraphicsCommandListClearUnorderedAccessViewFloatWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
   state->commands.push_back(command);
