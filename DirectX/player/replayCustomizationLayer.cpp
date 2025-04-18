@@ -964,8 +964,22 @@ void ReplayCustomizationLayer::waitForFence(unsigned commandKey,
                                             FenceObjectInfo* fenceInfo,
                                             ID3D12Fence* fence,
                                             unsigned fenceValue) {
-  HRESULT hr = fence->SetEventOnCompletion(fenceValue, NULL);
+  UINT64 value = fence->GetCompletedValue();
+  if (value >= fenceValue) {
+    return;
+  }
+  if (!waitForFenceEvent_) {
+    waitForFenceEvent_ = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    GITS_ASSERT(waitForFenceEvent_);
+  }
+  HRESULT hr = fence->SetEventOnCompletion(fenceValue, waitForFenceEvent_);
   GITS_ASSERT(hr == S_OK);
+  DWORD ret = WaitForSingleObject(waitForFenceEvent_, 5000);
+  if (ret == WAIT_TIMEOUT) {
+    value = fence->GetCompletedValue();
+    Log(ERR) << "GetCompletedValue - timeout while waiting for fence value " << fenceValue
+             << ". Current value " << value << ". Command " << commandKey;
+  }
 }
 
 void ReplayCustomizationLayer::removeCachedPSO(D3D12_PIPELINE_STATE_STREAM_DESC& desc) {

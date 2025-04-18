@@ -174,6 +174,7 @@ private:
   PlayerManager& manager_;
   Microsoft::WRL::ComPtr<IDXGIAdapter1> adapterOverride_;
   PipelineLibraryService& pipelineLibraryService_;
+  HANDLE waitForFenceEvent_{};
 };
 
 } // namespace DirectX
