@@ -191,7 +191,6 @@ class Repository:
             )
             if self.commit_id:
                 self.execute(f"git reset --hard {self.commit_id}")
-        self.scan_repositories()
 
     def scan_repositories(self) -> None:
         modules_paths = self.repository_path.rglob(".git")
@@ -217,6 +216,7 @@ class Repository:
                 install = False
             if install:
                 self.clone()
+            self.scan_repositories()
             self.apply_patches()
             if install:
                 self.build()
