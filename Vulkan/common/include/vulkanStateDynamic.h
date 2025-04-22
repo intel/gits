@@ -1035,7 +1035,11 @@ struct CPipelineState : public UniqueResourceHandle {
     bool SBTPatchingRequired;
 
     CShaderGroupHandlesManagement()
-        : count(0), mappedMemoryPtr(nullptr), deviceAddress(0), SBTPatchingRequired(true) {}
+        : count(0),
+          dataSize(0),
+          mappedMemoryPtr(nullptr),
+          deviceAddress(0),
+          SBTPatchingRequired(true) {}
     ~CShaderGroupHandlesManagement();
   } shaderGroupHandles;
 
