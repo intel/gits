@@ -52,6 +52,7 @@ void InterceptorCustomizationLayer::pre(IUnknownReleaseCommand& c) {
       continue;
     }
     auto* bufferWrapper = CaptureManager::get().findWrapper(bufferObject);
+    GITS_ASSERT(bufferWrapper != nullptr, "Can't remove a nonexistent buffer wrapper.");
     swapChainByBufferKey_.erase(bufferWrapper->getKey());
     CaptureManager::get().removeWrapper(bufferWrapper);
   }
