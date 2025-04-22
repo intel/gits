@@ -208,21 +208,25 @@ VkPipeline InternalPipelinesManager::InternalPipelines::getPatchShaderGroupHandl
 }
 
 CPipelineState::CShaderGroupHandlesManagement::~CShaderGroupHandlesManagement() {
-  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+  try {
+    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
 
-  if (memoryBufferPair.second) {
-    auto device = memoryBufferPair.second->deviceStateStore->deviceHandle;
-    if (SD()._devicestates.find(device) != SD()._devicestates.end()) {
-      auto buffer = memoryBufferPair.second->bufferHandle;
-      drvVk.vkDestroyBuffer(device, buffer, nullptr);
+    if (memoryBufferPair.second) {
+      auto device = memoryBufferPair.second->deviceStateStore->deviceHandle;
+      if (SD()._devicestates.find(device) != SD()._devicestates.end()) {
+        auto buffer = memoryBufferPair.second->bufferHandle;
+        drvVk.vkDestroyBuffer(device, buffer, nullptr);
+      }
     }
-  }
-  if (memoryBufferPair.first) {
-    auto device = memoryBufferPair.first->deviceStateStore->deviceHandle;
-    if (SD()._devicestates.find(device) != SD()._devicestates.end()) {
-      auto memory = memoryBufferPair.first->deviceMemoryHandle;
-      drvVk.vkFreeMemory(device, memory, nullptr);
+    if (memoryBufferPair.first) {
+      auto device = memoryBufferPair.first->deviceStateStore->deviceHandle;
+      if (SD()._devicestates.find(device) != SD()._devicestates.end()) {
+        auto memory = memoryBufferPair.first->deviceMemoryHandle;
+        drvVk.vkFreeMemory(device, memory, nullptr);
+      }
     }
+  } catch (...) {
+    topmost_exception_handler("CShaderGroupHandlesManagement::~CShaderGroupHandlesManagement()");
   }
 }
 
