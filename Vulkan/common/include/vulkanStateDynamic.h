@@ -1024,7 +1024,7 @@ struct CPipelineState : public UniqueResourceHandle {
   std::shared_ptr<CRenderPassState> renderPassStateStore;
   std::vector<std::shared_ptr<CShaderModuleState>> shaderModuleStateStoreList;
   bool isLibrary;
-  struct CShaderGroupHandlesManagement {
+  struct CShaderGroupHandlesManagement : gits::noncopyable {
     uint32_t count;
     uint32_t dataSize;
     std::vector<uint8_t> originalHandles;
