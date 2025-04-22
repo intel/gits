@@ -10,10 +10,6 @@
 
 namespace gits {
 
-MessageBus::~MessageBus() {
-  subscribers_.clear();
-}
-
 unsigned MessageBus::subscribe(Topic topic, SubscriberCb callback) {
   unsigned id = currentSubscriptionId_++;
   subscribers_[topic].emplace_back(id, callback);

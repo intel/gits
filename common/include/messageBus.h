@@ -61,9 +61,6 @@ using Subscription = std::pair<unsigned, SubscriberCb>;
 
 class MessageBus : gits::noncopyable {
 public:
-  MessageBus() = default;
-  ~MessageBus();
-
   unsigned subscribe(Topic topic, SubscriberCb callback);
   void unsubscribe(unsigned id);
   void publish(Topic topic, const MessagePtr& message);
