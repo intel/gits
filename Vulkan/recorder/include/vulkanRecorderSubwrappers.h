@@ -1230,6 +1230,10 @@ inline void vkCreateRayTracingPipelinesKHR_RECWRAP(
           shaderGroup.originalHandles.data()                    // const void* pData;
       });
 
+      // This pNext will dangle when the function ends, but then allCreateInfos will also be
+      // destroyed. Passing it to CvkCreateRayTracingPipelinesKHR constructor is also not a problem,
+      // as it will make copies of all the structures. So after Schedule(...) returns, the pNext no
+      // longer needs to be valid.
       currentCreateInfo.pNext = &shaderGroupHandlesPNexts.back();
     }
   }
