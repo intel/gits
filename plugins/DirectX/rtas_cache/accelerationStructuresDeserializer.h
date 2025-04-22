@@ -24,6 +24,11 @@ class AccelerationStructuresDeserializer {
 public:
   AccelerationStructuresDeserializer(CGits& gits);
   ~AccelerationStructuresDeserializer();
+
+  // Disallow copying (gits::noncopyable is not available here).
+  AccelerationStructuresDeserializer(const AccelerationStructuresDeserializer&) = delete;
+  AccelerationStructuresDeserializer& operator=(const AccelerationStructuresDeserializer&) = delete;
+
   void deserializeAccelerationStructure(unsigned buildKey,
                                         ID3D12GraphicsCommandList4* commandList,
                                         D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc);
