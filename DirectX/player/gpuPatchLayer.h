@@ -102,7 +102,7 @@ private:
 
   static const unsigned instancesAoPStagingBufferPoolSize_{8};
   std::array<ID3D12Resource*, patchBufferPoolSize_> instancesAoPStagingBuffers_{};
-  const unsigned instancesAoPStagingBufferSize_{0x40000};
+  const unsigned instancesAoPStagingBufferSize_{0x80000};
 
   std::array<ID3D12Resource*, instancesAoPStagingBufferPoolSize_>
       instancesAoPPatchOffsetsBuffers_{};
