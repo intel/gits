@@ -100,13 +100,35 @@ public:
   void pre(IDMLBindingTableResetCommand& command) override;
 
 private:
+  // Heaps (and resources) may require their D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS to be updated (for writewatch)
+  struct HeapInfo {
+    // Pointer to the original data
+    D3D12_HEAP_PROPERTIES* propertiesPtr{nullptr};
+    // Temporary values used during execution (potentially updated for writewatch)
+    D3D12_HEAP_PROPERTIES properties{D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+                                     D3D12_MEMORY_POOL_UNKNOWN, 0, 0};
+    D3D12_HEAP_FLAGS flags{D3D12_HEAP_FLAG_NONE};
+
+    HeapInfo() = default;
+    HeapInfo(D3D12_HEAP_PROPERTIES* p, D3D12_HEAP_FLAGS f) {
+      this->propertiesPtr = p;
+      this->properties = *p;
+      this->flags = f;
+    }
+    HeapInfo(D3D12_HEAP_PROPERTIES& p, D3D12_HEAP_FLAGS f) {
+      this->propertiesPtr = &p;
+      this->properties = p;
+      this->flags = f;
+    }
+  };
+
   void fillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg);
   void fillGpuDescriptorHandleArgument(DescriptorHandleArgument<D3D12_GPU_DESCRIPTOR_HANDLE>& arg,
                                        D3D12_DESCRIPTOR_HEAP_TYPE heapType);
   void fillCpuDescriptorHandleArgument(DescriptorHandleArgument<D3D12_CPU_DESCRIPTOR_HANDLE>& arg,
                                        D3D12_DESCRIPTOR_HEAP_TYPE heapType);
 
-private:
+  static thread_local HeapInfo s_heapInfo_;
   CaptureManager& manager_;
   GitsRecorder& recorder_;
 };
