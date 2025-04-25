@@ -31,7 +31,6 @@ void StateTrackingService::restoreState() {
   for (auto& it : statesByKey_) {
     restoreState(it.second);
   }
-  residencyService_.restoreResidency();
   xessStateService_.restoreState();
   descriptorService_.restoreState();
   accelerationStructuresSerializeService_.restoreAccelerationStructures();
@@ -40,6 +39,7 @@ void StateTrackingService::restoreState() {
   resourceContentRestore_.restoreContent();
   resourceStateTrackingService_.restoreResourceStates();
   mapStateService_.restoreMapState();
+  residencyService_.restoreResidency();
   commandListService_.restoreCommandLists();
   commandQueueService_.restoreCommandQueues();
   restoreReferenceCount();
