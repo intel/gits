@@ -544,6 +544,12 @@ var2=VarDef(name='ppCount',type='uint32_t**',tag='inout'),
 var3=VarDef(name='pphSubdevices',type='ze_device_handle_t**',tag='inout'),
 )
 
+Argument(name='ze_device_get_vector_width_properties_ext_params_t',enabled=False,
+var1=VarDef(name='phDevice',type='ze_device_handle_t*',tag='inout'),
+var2=VarDef(name='ppCount',type='uint32_t**',tag='inout'),
+var3=VarDef(name='ppVectorWidthProperties',type='ze_device_vector_width_properties_ext_t**',tag='inout'),
+)
+
 Argument(name='ze_device_import_external_semaphore_ext_params_t',enabled=False,
 var1=VarDef(name='phDevice',type='ze_device_handle_t*',tag='inout'),
 var2=VarDef(name='pdesc',type='const ze_external_semaphore_ext_desc_t**',tag='inout'),
@@ -613,6 +619,12 @@ Argument(name='ze_driver_rtas_format_compatibility_check_exp_params_t',enabled=F
 var1=VarDef(name='phDriver',type='ze_driver_handle_t*',tag='inout'),
 var2=VarDef(name='prtasFormatA',type='ze_rtas_format_exp_t*',tag='inout'),
 var3=VarDef(name='prtasFormatB',type='ze_rtas_format_exp_t*',tag='inout'),
+)
+
+Argument(name='ze_driver_rtas_format_compatibility_check_ext_params_t',enabled=False,
+var1=VarDef(name='phDriver',type='ze_driver_handle_t*',tag='inout'),
+var2=VarDef(name='prtasFormatA',type='ze_rtas_format_ext_t*',tag='inout'),
+var3=VarDef(name='prtasFormatB',type='ze_rtas_format_ext_t*',tag='inout'),
 )
 
 Argument(name='ze_event_create_params_t',enabled=False,
@@ -1132,14 +1144,47 @@ var9=VarDef(name='ppBounds',type='ze_rtas_aabb_exp_t**',tag='inout'),
 var10=VarDef(name='ppRtasBufferSizeBytes',type='size_t**',tag='inout'),
 )
 
+Argument(name='ze_rtas_builder_build_ext_params_t',enabled=False,
+var1=VarDef(name='phBuilder',type='ze_rtas_builder_ext_handle_t*',tag='inout'),
+var2=VarDef(name='ppBuildOpDescriptor',type='const ze_rtas_builder_build_op_ext_desc_t**',tag='inout'),
+var3=VarDef(name='ppScratchBuffer',type='void**',tag='inout'),
+var4=VarDef(name='pscratchBufferSizeBytes',type='size_t*',tag='inout'),
+var5=VarDef(name='ppRtasBuffer',type='void**',tag='inout'),
+var6=VarDef(name='prtasBufferSizeBytes',type='size_t*',tag='inout'),
+var7=VarDef(name='phParallelOperation',type='ze_rtas_parallel_operation_ext_handle_t*',tag='inout'),
+var8=VarDef(name='ppBuildUserPtr',type='void**',tag='inout'),
+var9=VarDef(name='ppBounds',type='ze_rtas_aabb_ext_t**',tag='inout'),
+var10=VarDef(name='ppRtasBufferSizeBytes',type='size_t**',tag='inout'),
+)
+
+Argument(name='ze_rtas_builder_command_list_append_copy_ext_params_t',enabled=False,
+var1=VarDef(name='phCommandList',type='ze_command_list_handle_t*',tag='inout'),
+var2=VarDef(name='pdstptr',type='void**',tag='inout'),
+var3=VarDef(name='psrcptr',type='const void**',tag='inout'),
+var4=VarDef(name='psize',type='size_t*',tag='inout'),
+var5=VarDef(name='phSignalEvent',type='ze_event_handle_t*',tag='inout'),
+var6=VarDef(name='pnumWaitEvents',type='uint32_t*',tag='inout'),
+var7=VarDef(name='pphWaitEvents',type='ze_event_handle_t**',tag='inout'),
+)
+
 Argument(name='ze_rtas_builder_create_exp_params_t',enabled=False,
 var1=VarDef(name='phDriver',type='ze_driver_handle_t*',tag='inout'),
 var2=VarDef(name='ppDescriptor',type='const ze_rtas_builder_exp_desc_t**',tag='inout'),
 var3=VarDef(name='pphBuilder',type='ze_rtas_builder_exp_handle_t**',tag='inout'),
 )
 
+Argument(name='ze_rtas_builder_create_ext_params_t',enabled=False,
+var1=VarDef(name='phDriver',type='ze_driver_handle_t*',tag='inout'),
+var2=VarDef(name='ppDescriptor',type='const ze_rtas_builder_ext_desc_t**',tag='inout'),
+var3=VarDef(name='pphBuilder',type='ze_rtas_builder_ext_handle_t**',tag='inout'),
+)
+
 Argument(name='ze_rtas_builder_destroy_exp_params_t',enabled=False,
 var1=VarDef(name='phBuilder',type='ze_rtas_builder_exp_handle_t*',tag='inout'),
+)
+
+Argument(name='ze_rtas_builder_destroy_ext_params_t',enabled=False,
+var1=VarDef(name='phBuilder',type='ze_rtas_builder_ext_handle_t*',tag='inout'),
 )
 
 Argument(name='ze_rtas_builder_get_build_properties_exp_params_t',enabled=False,
@@ -1148,13 +1193,28 @@ var2=VarDef(name='ppBuildOpDescriptor',type='const ze_rtas_builder_build_op_exp_
 var3=VarDef(name='ppProperties',type='ze_rtas_builder_exp_properties_t**',tag='inout'),
 )
 
+Argument(name='ze_rtas_builder_get_build_properties_ext_params_t',enabled=False,
+var1=VarDef(name='phBuilder',type='ze_rtas_builder_ext_handle_t*',tag='inout'),
+var2=VarDef(name='ppBuildOpDescriptor',type='const ze_rtas_builder_build_op_ext_desc_t**',tag='inout'),
+var3=VarDef(name='ppProperties',type='ze_rtas_builder_ext_properties_t**',tag='inout'),
+)
+
 Argument(name='ze_rtas_parallel_operation_create_exp_params_t',enabled=False,
 var1=VarDef(name='phDriver',type='ze_driver_handle_t*',tag='inout'),
 var2=VarDef(name='pphParallelOperation',type='ze_rtas_parallel_operation_exp_handle_t**',tag='inout'),
 )
 
+Argument(name='ze_rtas_parallel_operation_create_ext_params_t',enabled=False,
+var1=VarDef(name='phDriver',type='ze_driver_handle_t*',tag='inout'),
+var2=VarDef(name='pphParallelOperation',type='ze_rtas_parallel_operation_ext_handle_t**',tag='inout'),
+)
+
 Argument(name='ze_rtas_parallel_operation_destroy_exp_params_t',enabled=False,
 var1=VarDef(name='phParallelOperation',type='ze_rtas_parallel_operation_exp_handle_t*',tag='inout'),
+)
+
+Argument(name='ze_rtas_parallel_operation_destroy_ext_params_t',enabled=False,
+var1=VarDef(name='phParallelOperation',type='ze_rtas_parallel_operation_ext_handle_t*',tag='inout'),
 )
 
 Argument(name='ze_rtas_parallel_operation_get_properties_exp_params_t',enabled=False,
@@ -1162,8 +1222,17 @@ var1=VarDef(name='phParallelOperation',type='ze_rtas_parallel_operation_exp_hand
 var2=VarDef(name='ppProperties',type='ze_rtas_parallel_operation_exp_properties_t**',tag='inout'),
 )
 
+Argument(name='ze_rtas_parallel_operation_get_properties_ext_params_t',enabled=False,
+var1=VarDef(name='phParallelOperation',type='ze_rtas_parallel_operation_ext_handle_t*',tag='inout'),
+var2=VarDef(name='ppProperties',type='ze_rtas_parallel_operation_ext_properties_t**',tag='inout'),
+)
+
 Argument(name='ze_rtas_parallel_operation_join_exp_params_t',enabled=False,
 var1=VarDef(name='phParallelOperation',type='ze_rtas_parallel_operation_exp_handle_t*',tag='inout'),
+)
+
+Argument(name='ze_rtas_parallel_operation_join_ext_params_t',enabled=False,
+var1=VarDef(name='phParallelOperation',type='ze_rtas_parallel_operation_ext_handle_t*',tag='inout'),
 )
 
 Argument(name='ze_sampler_create_params_t',enabled=False,
@@ -1760,6 +1829,13 @@ arg3=ArgDef(name='pTracerUserData',type='void*'),
 arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
 )
 
+Callback(name='ze_pfnDeviceGetVectorWidthPropertiesExtCb_t',component='ze_device_callbacks_t',
+arg1=ArgDef(name='params',type='ze_device_get_vector_width_properties_ext_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
 Callback(name='ze_pfnDeviceImportExternalSemaphoreExtCb_t',component='ze_device_callbacks_t',
 arg1=ArgDef(name='params',type='ze_device_import_external_semaphore_ext_params_t*'),
 arg2=ArgDef(name='result',type='ze_result_t'),
@@ -1846,6 +1922,13 @@ arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
 
 Callback(name='ze_pfnDriverRTASFormatCompatibilityCheckExpCb_t',component='ze_driver_exp_callbacks_t',
 arg1=ArgDef(name='params',type='ze_driver_rtas_format_compatibility_check_exp_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
+Callback(name='ze_pfnDriverRTASFormatCompatibilityCheckExtCb_t',component='ze_driver_callbacks_t',
+arg1=ArgDef(name='params',type='ze_driver_rtas_format_compatibility_check_ext_params_t*'),
 arg2=ArgDef(name='result',type='ze_result_t'),
 arg3=ArgDef(name='pTracerUserData',type='void*'),
 arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
@@ -2460,8 +2543,29 @@ arg3=ArgDef(name='pTracerUserData',type='void*'),
 arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
 )
 
+Callback(name='ze_pfnRTASBuilderBuildExtCb_t',component='ze_rtas_builder_callbacks_t',
+arg1=ArgDef(name='params',type='ze_rtas_builder_build_ext_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
+Callback(name='ze_pfnRTASBuilderCommandListAppendCopyExtCb_t',component='ze_rtas_builder_callbacks_t',
+arg1=ArgDef(name='params',type='ze_rtas_builder_command_list_append_copy_ext_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
 Callback(name='ze_pfnRTASBuilderCreateExpCb_t',component='ze_rtas_builder_exp_callbacks_t',
 arg1=ArgDef(name='params',type='ze_rtas_builder_create_exp_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
+Callback(name='ze_pfnRTASBuilderCreateExtCb_t',component='ze_rtas_builder_callbacks_t',
+arg1=ArgDef(name='params',type='ze_rtas_builder_create_ext_params_t*'),
 arg2=ArgDef(name='result',type='ze_result_t'),
 arg3=ArgDef(name='pTracerUserData',type='void*'),
 arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
@@ -2474,8 +2578,22 @@ arg3=ArgDef(name='pTracerUserData',type='void*'),
 arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
 )
 
+Callback(name='ze_pfnRTASBuilderDestroyExtCb_t',component='ze_rtas_builder_callbacks_t',
+arg1=ArgDef(name='params',type='ze_rtas_builder_destroy_ext_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
 Callback(name='ze_pfnRTASBuilderGetBuildPropertiesExpCb_t',component='ze_rtas_builder_exp_callbacks_t',
 arg1=ArgDef(name='params',type='ze_rtas_builder_get_build_properties_exp_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
+Callback(name='ze_pfnRTASBuilderGetBuildPropertiesExtCb_t',component='ze_rtas_builder_callbacks_t',
+arg1=ArgDef(name='params',type='ze_rtas_builder_get_build_properties_ext_params_t*'),
 arg2=ArgDef(name='result',type='ze_result_t'),
 arg3=ArgDef(name='pTracerUserData',type='void*'),
 arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
@@ -2488,8 +2606,22 @@ arg3=ArgDef(name='pTracerUserData',type='void*'),
 arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
 )
 
+Callback(name='ze_pfnRTASParallelOperationCreateExtCb_t',component='ze_rtas_parallel_operation_callbacks_t',
+arg1=ArgDef(name='params',type='ze_rtas_parallel_operation_create_ext_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
 Callback(name='ze_pfnRTASParallelOperationDestroyExpCb_t',component='ze_rtas_parallel_operation_exp_callbacks_t',
 arg1=ArgDef(name='params',type='ze_rtas_parallel_operation_destroy_exp_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
+Callback(name='ze_pfnRTASParallelOperationDestroyExtCb_t',component='ze_rtas_parallel_operation_callbacks_t',
+arg1=ArgDef(name='params',type='ze_rtas_parallel_operation_destroy_ext_params_t*'),
 arg2=ArgDef(name='result',type='ze_result_t'),
 arg3=ArgDef(name='pTracerUserData',type='void*'),
 arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
@@ -2502,8 +2634,22 @@ arg3=ArgDef(name='pTracerUserData',type='void*'),
 arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
 )
 
+Callback(name='ze_pfnRTASParallelOperationGetPropertiesExtCb_t',component='ze_rtas_parallel_operation_callbacks_t',
+arg1=ArgDef(name='params',type='ze_rtas_parallel_operation_get_properties_ext_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
 Callback(name='ze_pfnRTASParallelOperationJoinExpCb_t',component='ze_rtas_parallel_operation_exp_callbacks_t',
 arg1=ArgDef(name='params',type='ze_rtas_parallel_operation_join_exp_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
+Callback(name='ze_pfnRTASParallelOperationJoinExtCb_t',component='ze_rtas_parallel_operation_callbacks_t',
+arg1=ArgDef(name='params',type='ze_rtas_parallel_operation_join_ext_params_t*'),
 arg2=ArgDef(name='result',type='ze_result_t'),
 arg3=ArgDef(name='pTracerUserData',type='void*'),
 arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),

@@ -258,6 +258,10 @@ def extract_type(type):
         .replace("ze_rtas_builder_packed_geometry_exp_flags_t", "uint8_t")
         .replace("ze_rtas_builder_packed_geometry_type_exp_t", "uint8_t")
         .replace("ze_rtas_builder_packed_instance_exp_flags_t", "uint8_t")
+        .replace("ze_rtas_builder_packed_geometry_ext_flags_t", "uint8_t")
+        .replace("ze_rtas_builder_packed_geometry_type_ext_t", "uint8_t")
+        .replace("ze_rtas_builder_packed_instance_ext_flags_t", "uint8_t")
+        .replace("ze_rtas_builder_packed_input_data_format_ext_t", "uint8_t")
     )
 
 

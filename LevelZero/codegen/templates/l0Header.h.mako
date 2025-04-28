@@ -83,6 +83,10 @@ typedef uint8_t ze_rtas_builder_packed_input_data_format_exp_t;
 typedef uint8_t ze_rtas_builder_packed_geometry_exp_flags_t;
 typedef uint8_t ze_rtas_builder_packed_geometry_type_exp_t;
 typedef uint8_t ze_rtas_builder_packed_instance_exp_flags_t;
+typedef uint8_t ze_rtas_builder_packed_geometry_type_ext_t;
+typedef uint8_t ze_rtas_builder_packed_input_data_format_ext_t;
+typedef uint8_t ze_rtas_builder_packed_instance_ext_flags_t;
+typedef uint8_t ze_rtas_builder_packed_geometry_ext_flags_t;
 
 %for name, enum in enums.items():
 enum ${enum.get('name')} {
@@ -97,7 +101,7 @@ struct zel_base_properties_t {
     void* pNext;
 };
 
-#define ZEL_COMPONENT_STRING_SIZE 64 
+#define ZEL_COMPONENT_STRING_SIZE 64
 
 typedef struct _zel_version {
    int major;
