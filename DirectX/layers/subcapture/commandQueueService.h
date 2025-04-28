@@ -17,7 +17,7 @@ namespace DirectX {
 
 class StateTrackingService;
 
-class CommandQueueService {
+class CommandQueueService : gits::noncopyable {
 public:
   CommandQueueService(StateTrackingService& stateService);
   ~CommandQueueService();
