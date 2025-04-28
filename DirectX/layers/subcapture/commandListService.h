@@ -50,8 +50,8 @@ struct CommandListClearDepthStencilView : public CommandListCommand {
       : CommandListCommand(CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARDEPTHSTENCILVIEW, key) {}
   unsigned commandListKey{};
   std::unique_ptr<D3D12DepthStencilViewState> depthStencilView;
-  FLOAT depth;
-  UINT8 stencil;
+  FLOAT depth{};
+  UINT8 stencil{};
   std::vector<D3D12_RECT> rects{};
 };
 
