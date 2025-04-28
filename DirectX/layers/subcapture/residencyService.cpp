@@ -58,7 +58,7 @@ void gits::DirectX::ResidencyService::restoreResidency() {
       c.object_.key = residencyInfo.deviceKey;
       c.NumObjects_.value = objectKeyRepeat.size();
       c.ppObjects_.size = objectKeyRepeat.size();
-      c.ppObjects_.keys = objectKeyRepeat;
+      c.ppObjects_.keys = std::move(objectKeyRepeat);
       ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
       c.ppObjects_.value = &fakePtr;
       stateService_.recorder_.record(new ID3D12DeviceMakeResidentWriter(c));
