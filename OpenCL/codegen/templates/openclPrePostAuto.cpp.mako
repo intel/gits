@@ -16,7 +16,7 @@ extern "C" {
   %if 'platform' in func:
 #ifdef GITS_PLATFORM_${func.get('platform').upper()}
   %endif
-CL_API_ENTRY VISIBLE ${func.get('type')} CL_API_CALL ${name}(${make_params(func, with_types=True)})\
+CL_API_ENTRY ${'' if func.get('extension') else 'VISIBLE '}${func.get('type')} CL_API_CALL ${name}(${make_params(func, with_types=True)})\
  CL_API_SUFFIX__VERSION_${func.get('availableFrom')}
 {
   %if func.get('recExecWrap'):
