@@ -1992,7 +1992,6 @@ var11=VarDef(name='CL_CONTEXT_D3D10_DEVICE_KHR', value='0x4014'),
 var12=VarDef(name='CL_CONTEXT_D3D10_PREFER_SHARED_RESOURCES_KHR', value='0x402C'),
 var13=VarDef(name='CL_CONTEXT_D3D11_DEVICE_KHR', value='0x401D'),
 var14=VarDef(name='CL_CONTEXT_D3D11_PREFER_SHARED_RESOURCES_KHR', value='0x402D'),
-var15=VarDef(name='CL_CONTEXT_VA_API_DISPLAY_INTEL', value='0x4097'),
 )
 
 Enum(name='cl_gl_context_info',
@@ -2013,6 +2012,7 @@ var8=VarDef(name='CL_CONTEXT_FLAGS_INTEL', value='0x10003'),
 var9=VarDef(name='CL_CONTEXT_ALLOW_ONLY_MASKED_QUEUE_INTEL', value='0x10004'),
 var10=VarDef(name='CL_CONTEXT_ALLOW_ONLY_SINGLE_TILE_QUEUES_INTEL', value='0x10005'),
 var11=VarDef(name='CL_CONTEXT_ALLOW_ALL_KIND_OF_QUEUES_INTEL', value='0x10006'),
+var12=VarDef(name='CL_CONTEXT_VA_API_DISPLAY_INTEL', value='0x4097'),
 )
 
 Enum(name='cl_mem_properties_intel',
