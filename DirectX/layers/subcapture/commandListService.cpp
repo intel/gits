@@ -227,11 +227,15 @@ void CommandListService::restoreCommandState(CommandListClearUnorderedAccessView
       ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand c;
       c.key = stateService_.getUniqueCommandKey();
       c.object_.key = command->commandListKey;
-      c.ViewGPUHandleInCurrentHeap_.interfaceKey = viewGPUHandleInCurrentHeap->destDescriptorKey;
-      c.ViewGPUHandleInCurrentHeap_.index = viewGPUHandleInCurrentHeap->destDescriptorIndex;
-      c.ViewCPUHandle_.value = viewCPUHandle->destDescriptor;
-      c.ViewCPUHandle_.interfaceKey = viewCPUHandle->destDescriptorKey;
-      c.ViewCPUHandle_.index = viewCPUHandle->destDescriptorIndex;
+      if (viewGPUHandleInCurrentHeap) {
+        c.ViewGPUHandleInCurrentHeap_.interfaceKey = viewGPUHandleInCurrentHeap->destDescriptorKey;
+        c.ViewGPUHandleInCurrentHeap_.index = viewGPUHandleInCurrentHeap->destDescriptorIndex;
+      }
+      if (viewCPUHandle) {
+        c.ViewCPUHandle_.value = viewCPUHandle->destDescriptor;
+        c.ViewCPUHandle_.interfaceKey = viewCPUHandle->destDescriptorKey;
+        c.ViewCPUHandle_.index = viewCPUHandle->destDescriptorIndex;
+      }
       c.pResource_.key = command->resourceKey;
       for (unsigned i = 0; i < 4; ++i) {
         c.Values_.value[i] = command->values[i];
