@@ -202,8 +202,8 @@ DirectX:
     Portability:
       ResourcePlacementStorage: true # Enable storing placed resources data 
       Raytracing:
-        AccelerationStructurePadding: 2.0 # Acceleration structures padding factor in GetRaytracingAccelerationStructurePrebuildInfo, 1.0 means no padding
-        AccelerationStructureScratchPadding: 2.0 # Acceleration structures scratch space padding factor in GetRaytracingAccelerationStructurePrebuildInfo, 1.0 means no padding
+        AccelerationStructurePadding: 1.0 # Acceleration structures padding factor in GetRaytracingAccelerationStructurePrebuildInfo, 1.0 means no padding
+        AccelerationStructureScratchPadding: 1.0 # Acceleration structures scratch space padding factor in GetRaytracingAccelerationStructurePrebuildInfo, 1.0 means no padding
 
   Playback:
     Execute: true  # Execute the API commands (driver / null driver)
