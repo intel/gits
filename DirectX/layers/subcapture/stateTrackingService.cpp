@@ -309,14 +309,15 @@ void StateTrackingService::releaseObject(unsigned key, ULONG result) {
     }
   }
 
-  unsigned childKey = itState->second->childKey;
-  if (childKey) {
-    auto itChildState = statesByKey_.find(childKey);
-    if (itChildState != statesByKey_.end()) {
-      itChildState->second->destroyed = true;
-      if (!itChildState->second->keepDestroyed) {
-        delete itChildState->second;
-        statesByKey_.erase(itChildState);
+  for (auto childKey : itState->second->childrenKeys) {
+    if (childKey) {
+      auto itChildState = statesByKey_.find(childKey);
+      if (itChildState != statesByKey_.end()) {
+        itChildState->second->destroyed = true;
+        if (!itChildState->second->keepDestroyed) {
+          delete itChildState->second;
+          statesByKey_.erase(itChildState);
+        }
       }
     }
   }

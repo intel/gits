@@ -14,6 +14,7 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <map>
 
 namespace gits {
@@ -81,7 +82,7 @@ struct ObjectState {
   StateId id;
   unsigned key{};
   unsigned parentKey{};
-  unsigned childKey{};
+  std::unordered_set<unsigned> childrenKeys{};
   IUnknown* object{};
   std::wstring name;
   D3D12_RESIDENCY_PRIORITY residencyPriority{};

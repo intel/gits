@@ -224,6 +224,7 @@ public:
   void post(IDStorageFactoryCreateStatusArrayCommand& c) override;
 
 private:
+  void setAsChildInParent(unsigned parentKey, unsigned childKey);
   bool isResourceHeapMappable(D3D12_HEAP_PROPERTIES& heapProperties) {
     return !(heapProperties.Type == D3D12_HEAP_TYPE_DEFAULT ||
              heapProperties.CPUPageProperty == D3D12_CPU_PAGE_PROPERTY_NOT_AVAILABLE);

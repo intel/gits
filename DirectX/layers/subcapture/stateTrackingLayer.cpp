@@ -57,6 +57,14 @@ StateTrackingLayer::StateTrackingLayer(SubcaptureRecorder& recorder)
   }
 }
 
+void StateTrackingLayer::setAsChildInParent(unsigned parentKey, unsigned childKey) {
+  ObjectState* parentState = stateService_.getState(parentKey);
+  if (!parentState) {
+    return;
+  }
+  parentState->childrenKeys.insert(childKey);
+}
+
 bool StateTrackingLayer::isResourceHeapMappable(unsigned heapKey) {
   ObjectState* state = stateService_.getState(heapKey);
   if (state->id == ObjectState::D3D12_HEAP) {
@@ -178,9 +186,7 @@ void StateTrackingLayer::post(IUnknownQueryInterfaceCommand& c) {
     state->parentKey = c.object_.key;
     state->key = c.ppvObject_.key;
 
-    ObjectState* parentState = stateService_.getState(state->parentKey);
-    parentState->childKey = state->key;
-
+    setAsChildInParent(state->parentKey, state->key);
     stateService_.storeState(state);
   } else if ((riid == __uuidof(IDStorageCustomDecompressionQueue)) ||
              (riid == __uuidof(IDStorageCustomDecompressionQueue1))) {
@@ -189,9 +195,7 @@ void StateTrackingLayer::post(IUnknownQueryInterfaceCommand& c) {
     state->key = c.ppvObject_.key;
     state->iid = riid;
 
-    ObjectState* parentState = stateService_.getState(state->parentKey);
-    parentState->childKey = state->key;
-
+    setAsChildInParent(state->parentKey, state->key);
     stateService_.storeState(state);
   }
 }
@@ -244,6 +248,8 @@ void StateTrackingLayer::post(IDXGIFactoryEnumAdaptersCommand& c) {
   state->gpuPreference = DXGI_GPU_PREFERENCE_UNSPECIFIED;
   state->iid = IID_IDXGIAdapter;
   stateService_.storeState(state);
+
+  setAsChildInParent(state->parentKey, state->key);
 }
 
 void StateTrackingLayer::post(IDXGIFactory1EnumAdapters1Command& c) {
@@ -258,6 +264,8 @@ void StateTrackingLayer::post(IDXGIFactory1EnumAdapters1Command& c) {
   state->gpuPreference = DXGI_GPU_PREFERENCE_UNSPECIFIED;
   state->iid = IID_IDXGIAdapter;
   stateService_.storeState(state);
+
+  setAsChildInParent(state->parentKey, state->key);
 }
 
 void StateTrackingLayer::post(IDXGIFactory6EnumAdapterByGpuPreferenceCommand& c) {
@@ -272,6 +280,8 @@ void StateTrackingLayer::post(IDXGIFactory6EnumAdapterByGpuPreferenceCommand& c)
   state->gpuPreference = c.GpuPreference_.value;
   state->iid = c.riid_.value;
   stateService_.storeState(state);
+
+  setAsChildInParent(state->parentKey, state->key);
 }
 
 void StateTrackingLayer::post(IDXGIFactory4EnumAdapterByLuidCommand& c) {
@@ -285,6 +295,8 @@ void StateTrackingLayer::post(IDXGIFactory4EnumAdapterByLuidCommand& c) {
   state->adapterLuid = c.AdapterLuid_.value;
   state->iid = c.riid_.value;
   stateService_.storeState(state);
+
+  setAsChildInParent(state->parentKey, state->key);
 }
 
 void StateTrackingLayer::post(IDXGIObjectGetParentCommand& c) {
@@ -1311,8 +1323,7 @@ void StateTrackingLayer::post(INTC_D3D12_CreateDeviceExtensionContextCommand& c)
     unsigned offset{};
     encode(state->extensionAppInfoEncoded.get(), offset, c.pExtensionAppInfo_);
   }
-  ObjectState* parentState = stateService_.getState(state->deviceKey);
-  parentState->childKey = state->key;
+  setAsChildInParent(state->deviceKey, state->key);
   stateService_.storeState(state);
   deviceByINTCExtensionContext_[state->key] = state->deviceKey;
 }
@@ -1331,8 +1342,7 @@ void StateTrackingLayer::post(INTC_D3D12_CreateDeviceExtensionContext1Command& c
     unsigned offset{};
     encode(state->extensionAppInfoEncoded.get(), offset, c.pExtensionAppInfo_);
   }
-  ObjectState* parentState = stateService_.getState(state->deviceKey);
-  parentState->childKey = state->key;
+  setAsChildInParent(state->deviceKey, state->key);
   stateService_.storeState(state);
 
   deviceByINTCExtensionContext_[state->key] = state->deviceKey;
@@ -2336,8 +2346,7 @@ void StateTrackingLayer::post(IDStorageFactoryOpenFileCommand& c) {
   state->path = c.path_.value;
   stateService_.storeState(state);
 
-  ObjectState* parentState = stateService_.getState(state->parentKey);
-  parentState->childKey = state->key;
+  setAsChildInParent(state->parentKey, state->key);
 }
 
 void StateTrackingLayer::post(IDStorageFactoryCreateQueueCommand& c) {
@@ -2355,9 +2364,7 @@ void StateTrackingLayer::post(IDStorageFactoryCreateQueueCommand& c) {
     state->name = c.desc_.value->Name;
   }
   stateService_.storeState(state);
-
-  ObjectState* parentState = stateService_.getState(state->parentKey);
-  parentState->childKey = state->key;
+  setAsChildInParent(state->parentKey, state->key);
 }
 
 void StateTrackingLayer::post(IDStorageFactoryCreateStatusArrayCommand& c) {
@@ -2374,9 +2381,7 @@ void StateTrackingLayer::post(IDStorageFactoryCreateStatusArrayCommand& c) {
   }
   state->capacity = c.capacity_.value;
   stateService_.storeState(state);
-
-  ObjectState* parentState = stateService_.getState(state->parentKey);
-  parentState->childKey = state->key;
+  setAsChildInParent(state->parentKey, state->key);
 }
 
 } // namespace DirectX
