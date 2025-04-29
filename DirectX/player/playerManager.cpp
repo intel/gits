@@ -142,6 +142,7 @@ PlayerManager::PlayerManager() {
       postLayers_.push_back(layer.get());
     }
   };
+  enablePostLayer(debugInfoLayer);
   enablePostLayer(portabilityLayer);
   enablePostLayer(logDxErrorLayer);
   enablePostLayer(directStorageLayer);
@@ -151,7 +152,6 @@ PlayerManager::PlayerManager() {
   enablePostLayer(traceLayer);
   enablePostLayer(showExecutionLayer);
   enablePostLayer(debugHelperLayer);
-  enablePostLayer(debugInfoLayer);
   enablePostLayer(stateTrackingLayer);
   enablePostLayer(analyzerLayer);
   enablePostLayer(screenshotsLayer);
