@@ -16,9 +16,9 @@ ${header}
 namespace gits {
 namespace DirectX {
 
-class SkipCallsLayer : public Layer {
+class SkipCallsOnConfigLayer : public Layer {
 public:
-  SkipCallsLayer() : Layer("SkipCalls"),
+  SkipCallsOnConfigLayer() : Layer("SkipCallsOnConfig"),
       configKeySet_(Config::Get().directx.features.skipCalls.commandKeys)
   {}
 

@@ -16,8 +16,11 @@ set(ROOT_SRC
 source_group("" FILES ${ROOT_SRC})
 
 set(SKIP_CALLS_SRC
-  ${SRC_DIR}/skipCallsLayerAuto.h
-  ${SRC_DIR}/skipCallsLayerAuto.cpp
+  ${SRC_DIR}/skipCallsOnConfigLayerAuto.h
+  ${SRC_DIR}/skipCallsOnConfigLayerAuto.cpp
+  ${SRC_DIR}/skipCallsOnResultLayerAuto.h
+  ${SRC_DIR}/skipCallsOnResultLayerAuto.cpp
+  ${SRC_DIR}/skipCallsOnResultLayerCustom.cpp
 )
 source_group("skip_calls" FILES ${SKIP_CALLS_SRC})
 

@@ -19,10 +19,12 @@ namespace DirectX {
 class SkipCallsFactory {
 public:
   SkipCallsFactory();
-  std::unique_ptr<Layer> getSkipCallsLayer();
+  std::unique_ptr<Layer> getSkipCallsOnConfigLayer();
+  std::unique_ptr<Layer> getSkipCallsOnResultLayer();
 
 private:
-  std::unique_ptr<Layer> skipCallsLayer_;
+  std::unique_ptr<Layer> skipCallsOnConfigLayer_;
+  std::unique_ptr<Layer> skipCallsOnResultLayer_;
 };
 
 } // namespace DirectX

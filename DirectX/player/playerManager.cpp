@@ -94,7 +94,8 @@ PlayerManager::PlayerManager() {
       resourceDumpingFactory_.getAccelerationStructuresDumpLayer();
   std::unique_ptr<Layer> rootSignatureDumpLayer =
       resourceDumpingFactory_.getRootSignatureDumpLayer();
-  std::unique_ptr<Layer> skipCallsLayer = skipCallsFactory_.getSkipCallsLayer();
+  std::unique_ptr<Layer> skipCallsOnConfigLayer = skipCallsFactory_.getSkipCallsOnConfigLayer();
+  std::unique_ptr<Layer> skipCallsOnResultLayer = skipCallsFactory_.getSkipCallsOnResultLayer();
 
   if (executeCommands_) {
     replayCustomizationLayer = std::make_unique<ReplayCustomizationLayer>(*this);
@@ -118,7 +119,8 @@ PlayerManager::PlayerManager() {
       preLayers_.push_back(layer.get());
     }
   };
-  enablePreLayer(skipCallsLayer);
+  enablePreLayer(skipCallsOnConfigLayer);
+  enablePreLayer(skipCallsOnResultLayer);
   enablePreLayer(portabilityLayer);
   enablePreLayer(multithreadedObjectAwaitLayer);
   enablePreLayer(debugHelperLayer);
@@ -167,7 +169,8 @@ PlayerManager::PlayerManager() {
       layersOwner_.push_back(std::move(layer));
     }
   };
-  retainLayer(std::move(skipCallsLayer));
+  retainLayer(std::move(skipCallsOnConfigLayer));
+  retainLayer(std::move(skipCallsOnResultLayer));
   retainLayer(std::move(replayCustomizationLayer));
   retainLayer(std::move(portabilityLayer));
   retainLayer(std::move(multithreadedObjectCreationLayer));

@@ -8,19 +8,25 @@
 
 #include "skipCallsFactory.h"
 #include "config.h"
-#include "skipCallsLayerAuto.h"
+#include "skipCallsOnConfigLayerAuto.h"
+#include "skipCallsOnResultLayerAuto.h"
 
 namespace gits {
 namespace DirectX {
 
 SkipCallsFactory::SkipCallsFactory() {
   if (Config::Get().directx.features.skipCalls.enabled) {
-    skipCallsLayer_ = std::make_unique<SkipCallsLayer>();
+    skipCallsOnConfigLayer_ = std::make_unique<SkipCallsOnConfigLayer>();
   }
+  skipCallsOnResultLayer_ = std::make_unique<SkipCallsOnResultLayer>();
 }
 
-std::unique_ptr<Layer> SkipCallsFactory::getSkipCallsLayer() {
-  return std::move(skipCallsLayer_);
+std::unique_ptr<Layer> SkipCallsFactory::getSkipCallsOnConfigLayer() {
+  return std::move(skipCallsOnConfigLayer_);
+}
+
+std::unique_ptr<Layer> SkipCallsFactory::getSkipCallsOnResultLayer() {
+  return std::move(skipCallsOnResultLayer_);
 }
 
 } // namespace DirectX

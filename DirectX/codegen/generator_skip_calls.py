@@ -12,8 +12,10 @@ from generator_helpers import *
 
 def generate_skip_calls_files(context, out_path):
     files_to_generate = [
-        'skipCallsLayerAuto.h',
-        'skipCallsLayerAuto.cpp',
+        'skipCallsOnConfigLayerAuto.h',
+        'skipCallsOnConfigLayerAuto.cpp',
+        'skipCallsOnResultLayerAuto.h',
+        'skipCallsOnResultLayerAuto.cpp',
     ]
     
     for file_name in files_to_generate:

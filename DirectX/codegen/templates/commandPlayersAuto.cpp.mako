@@ -54,7 +54,7 @@ namespace DirectX {
     %endif
   }
   %else:
-  if (manager.executeCommands()${' && command.result_.value == S_OK' if function.ret.type == 'HRESULT' else ''}) {
+  if (manager.executeCommands()) {
     if (!command.skip) {
       ${'command.result_.value = ' if not function.ret.is_void else ''}${'command.object_.value->' if interfaceName else ''}${function.name}(${command_runner_call_parameters(function, '            ')}
     }
