@@ -569,6 +569,9 @@ void CVkDriver::InitializeUnifiedAPI(const VkDeviceCreateInfo* pCreateInfo,
         deviceDispatchTable.vkGetBufferOpaqueCaptureAddress;
     deviceDispatchTable.vkGetDeviceMemoryOpaqueCaptureAddressUnifiedGITS =
         deviceDispatchTable.vkGetDeviceMemoryOpaqueCaptureAddress;
+    deviceDispatchTable.vkWaitSemaphoresUnifiedGITS = deviceDispatchTable.vkWaitSemaphores;
+    deviceDispatchTable.vkGetSemaphoreCounterValueUnifiedGITS =
+        deviceDispatchTable.vkGetSemaphoreCounterValue;
   }
 
   // Core 1.0 version
@@ -598,6 +601,12 @@ void CVkDriver::InitializeUnifiedAPI(const VkDeviceCreateInfo* pCreateInfo,
     else if (strcmp(element, VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME) == 0) {
       deviceDispatchTable.vkCmdPipelineBarrier2UnifiedGITS =
           deviceDispatchTable.vkCmdPipelineBarrier2KHR;
+    }
+    // VK_KHR_timeline_semaphore
+    else if (strcmp(element, VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME) == 0) {
+      deviceDispatchTable.vkWaitSemaphoresUnifiedGITS = deviceDispatchTable.vkWaitSemaphoresKHR;
+      deviceDispatchTable.vkGetSemaphoreCounterValueUnifiedGITS =
+          deviceDispatchTable.vkGetSemaphoreCounterValueKHR;
     }
   }
 

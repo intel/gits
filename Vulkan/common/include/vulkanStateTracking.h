@@ -2351,11 +2351,6 @@ inline void vkCreateSemaphore_SD(VkResult return_value,
     SD()._semaphorestates.emplace(*pSemaphore, semaphoreState);
     auto semaphoreTypeCreateInfo = (VkSemaphoreTypeCreateInfo*)getPNextStructure(
         pCreateInfo->pNext, VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO);
-    if (semaphoreTypeCreateInfo &&
-        semaphoreTypeCreateInfo->semaphoreType == VK_SEMAPHORE_TYPE_TIMELINE) {
-      semaphoreState->isTimeline = true;
-      semaphoreState->timelineSemaphoreValue = semaphoreTypeCreateInfo->initialValue;
-    }
   }
 }
 
@@ -2946,20 +2941,6 @@ inline void vkQueueSubmit_SD(VkResult return_value,
           for (uint32_t i = 0; i < pSubmits[s].signalSemaphoreCount; i++) {
             SD()._semaphorestates[pSubmits[s].pSignalSemaphores[i]]->semaphoreUsed = true;
           }
-
-          auto timelineSemaphoreSubmitInfo = (VkTimelineSemaphoreSubmitInfo*)getPNextStructure(
-              pSubmits[s].pNext, VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO);
-          if (timelineSemaphoreSubmitInfo) {
-            for (uint32_t t = 0; t < pSubmits[s].signalSemaphoreCount; ++t) {
-              auto semaphore = pSubmits[s].pSignalSemaphores[t];
-
-              auto it = SD()._semaphorestates.find(semaphore);
-              if ((it != SD()._semaphorestates.end()) && (it->second->isTimeline)) {
-                it->second->timelineSemaphoreValue =
-                    timelineSemaphoreSubmitInfo->pSignalSemaphoreValues[t];
-              }
-            }
-          }
         }
       }
     }
@@ -3026,16 +3007,6 @@ inline void vkQueueSubmit2_SD(VkResult return_value,
           for (uint32_t i = 0; i < pSubmits[s].waitSemaphoreInfoCount; i++) {
             SD()._semaphorestates[pSubmits[s].pWaitSemaphoreInfos[i].semaphore]->semaphoreUsed =
                 false;
-          }
-
-          for (uint32_t i = 0; i < pSubmits[s].signalSemaphoreInfoCount; i++) {
-            const auto& signalInfo = pSubmits[s].pSignalSemaphoreInfos[i];
-            auto& semaphoreState = SD()._semaphorestates[signalInfo.semaphore];
-
-            semaphoreState->semaphoreUsed = true;
-            if (semaphoreState->isTimeline) {
-              semaphoreState->timelineSemaphoreValue = signalInfo.value;
-            }
           }
         }
       }
@@ -3141,7 +3112,6 @@ inline void vkLatencySleepNV_SD(VkResult return_value,
   if (pSleepInfo && (VK_NULL_HANDLE != pSleepInfo->signalSemaphore)) {
     auto& semaphoreState = SD()._semaphorestates[pSleepInfo->signalSemaphore];
     semaphoreState->semaphoreUsed = true;
-    semaphoreState->timelineSemaphoreValue = pSleepInfo->value;
   }
 }
 

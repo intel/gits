@@ -2173,13 +2173,17 @@ void gits::Vulkan::RestoreSemaphores(CScheduler& scheduler, CStateDynamic& sd) {
 
     VkSemaphore semaphore = semaphoreState.first;
     auto pCreateInfo = semaphoreState.second->semaphoreCreateInfoData.Value();
+    bool isBinarySemaphore = true;
     auto semaphoreTypeCreateInfo = (VkSemaphoreTypeCreateInfo*)getPNextStructure(
         pCreateInfo->pNext, VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO);
-    if (semaphoreTypeCreateInfo) {
-      semaphoreTypeCreateInfo->initialValue = semaphoreState.second->timelineSemaphoreValue;
+    if (semaphoreTypeCreateInfo &&
+        (semaphoreTypeCreateInfo->semaphoreType == VK_SEMAPHORE_TYPE_TIMELINE)) {
+      isBinarySemaphore = false;
+      drvVk.vkGetSemaphoreCounterValueUnifiedGITS(device, semaphore,
+                                                  &semaphoreTypeCreateInfo->initialValue);
     }
 
-    if (semaphoreState.second->semaphoreUsed && !semaphoreState.second->isTimeline) {
+    if (semaphoreState.second->semaphoreUsed && isBinarySemaphore) {
       semaphoresToSignal[device].push_back(semaphore);
     }
     scheduler.Register(

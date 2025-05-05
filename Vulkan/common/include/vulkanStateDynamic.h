@@ -1240,8 +1240,6 @@ struct CSemaphoreState : public UniqueResourceHandle {
   VkSemaphore semaphoreHandle;
   CVkSemaphoreCreateInfoData semaphoreCreateInfoData;
   bool semaphoreUsed;
-  bool isTimeline;
-  uint64_t timelineSemaphoreValue;
   std::shared_ptr<CDeviceState> deviceStateStore;
 
   CSemaphoreState(VkSemaphore const* _pSemaphore,
@@ -1250,8 +1248,6 @@ struct CSemaphoreState : public UniqueResourceHandle {
       : semaphoreHandle(*_pSemaphore),
         semaphoreCreateInfoData(_pCreateInfo),
         semaphoreUsed(false),
-        isTimeline(false),
-        timelineSemaphoreValue(0),
         deviceStateStore(_deviceState) {}
 
   std::set<uint64_t> GetMappedPointers() {

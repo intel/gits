@@ -949,10 +949,10 @@ inline void vkGetEventStatus_WRAPRUN(CVkResult& return_value, CVkDevice& device,
   }
 }
 
-inline void vkGetSemaphoreCounterValue_WRAPRUN(CVkResult& return_value,
-                                               CVkDevice& device,
-                                               CVkSemaphore& semaphore,
-                                               Cuint64_t::CSArray& pValue) {
+inline void vkGetSemaphoreCounterValueUnifiedGITS_WRAPRUN(CVkResult& return_value,
+                                                          CVkDevice& device,
+                                                          CVkSemaphore& semaphore,
+                                                          Cuint64_t::CSArray& pValue) {
   VkResult recRetVal = *return_value;
   auto valuePtr = *pValue;
   if (valuePtr == nullptr) {
@@ -961,7 +961,8 @@ inline void vkGetSemaphoreCounterValue_WRAPRUN(CVkResult& return_value,
   uint64_t recValue = *valuePtr;
   uint64_t currentValue = 0;
   VkSemaphore semaphoreHandle = *semaphore;
-  return_value.Assign(drvVk.vkGetSemaphoreCounterValue(*device, *semaphore, &currentValue));
+  return_value.Assign(
+      drvVk.vkGetSemaphoreCounterValueUnifiedGITS(*device, *semaphore, &currentValue));
   if ((*return_value == VK_SUCCESS) && (recRetVal == VK_SUCCESS) && (currentValue < recValue)) {
     VkSemaphoreWaitInfo waitInfo = {
         VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO, // VkStructureType sType;
@@ -971,34 +972,22 @@ inline void vkGetSemaphoreCounterValue_WRAPRUN(CVkResult& return_value,
         &semaphoreHandle,                      // const VkSemaphore * pSemaphores;
         &recValue                              // const uint64_t* pValues;
     };
-    drvVk.vkWaitSemaphores(*device, &waitInfo, 0xFFFFFFFFFFFFFFFF);
+    drvVk.vkWaitSemaphoresUnifiedGITS(*device, &waitInfo, 0xFFFFFFFFFFFFFFFF);
   }
+}
+
+inline void vkGetSemaphoreCounterValue_WRAPRUN(CVkResult& return_value,
+                                               CVkDevice& device,
+                                               CVkSemaphore& semaphore,
+                                               Cuint64_t::CSArray& pValue) {
+  vkGetSemaphoreCounterValueUnifiedGITS_WRAPRUN(return_value, device, semaphore, pValue);
 }
 
 inline void vkGetSemaphoreCounterValueKHR_WRAPRUN(CVkResult& return_value,
                                                   CVkDevice& device,
                                                   CVkSemaphore& semaphore,
                                                   Cuint64_t::CSArray& pValue) {
-  VkResult recRetVal = *return_value;
-  auto valuePtr = *pValue;
-  if (valuePtr == nullptr) {
-    throw std::runtime_error(EXCEPTION_MESSAGE);
-  }
-  uint64_t recValue = *valuePtr;
-  uint64_t currentValue = 0;
-  VkSemaphore semaphoreHandle = *semaphore;
-  return_value.Assign(drvVk.vkGetSemaphoreCounterValueKHR(*device, *semaphore, &currentValue));
-  if ((*return_value == VK_SUCCESS) && (recRetVal == VK_SUCCESS) && (currentValue < recValue)) {
-    VkSemaphoreWaitInfo waitInfo = {
-        VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO, // VkStructureType sType;
-        nullptr,                               // const void * pNext;
-        0,                                     // VkSemaphoreWaitFlags flags;
-        1,                                     // uint32_t semaphoreCount;
-        &semaphoreHandle,                      // const VkSemaphore * pSemaphores;
-        &recValue                              // const uint64_t* pValues;
-    };
-    drvVk.vkWaitSemaphoresKHR(*device, &waitInfo, 0xFFFFFFFFFFFFFFFF);
-  }
+  vkGetSemaphoreCounterValueUnifiedGITS_WRAPRUN(return_value, device, semaphore, pValue);
 }
 
 inline void vkAllocateMemory_WRAPRUN(CVkResult& recorderSideReturnValue,
@@ -1370,32 +1359,32 @@ inline void vkWaitForFences_WRAPRUN(CVkResult& return_value,
   }
 }
 
+inline void vkWaitSemaphoresUnifiedGITS_WRAPRUN(CVkResult& return_value,
+                                                CVkDevice& device,
+                                                CVkSemaphoreWaitInfo& pWaitInfo,
+                                                Cuint64_t& timeout) {
+  VkResult recRetVal = *return_value;
+
+  return_value.Assign(drvVk.vkWaitSemaphoresUnifiedGITS(*device, *pWaitInfo, *timeout));
+
+  if ((*return_value != VK_SUCCESS) && (*return_value != recRetVal)) {
+    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+    return_value.Assign(drvVk.vkWaitSemaphoresUnifiedGITS(*device, *pWaitInfo, 0xFFFFFFFFFFFFFFFF));
+  }
+}
+
 inline void vkWaitSemaphores_WRAPRUN(CVkResult& return_value,
                                      CVkDevice& device,
                                      CVkSemaphoreWaitInfo& pWaitInfo,
                                      Cuint64_t& timeout) {
-  VkResult recRetVal = *return_value;
-
-  return_value.Assign(drvVk.vkWaitSemaphores(*device, *pWaitInfo, *timeout));
-
-  if ((*return_value != VK_SUCCESS) && (*return_value != recRetVal)) {
-    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
-    return_value.Assign(drvVk.vkWaitSemaphores(*device, *pWaitInfo, 0xFFFFFFFFFFFFFFFF));
-  }
+  vkWaitSemaphoresUnifiedGITS_WRAPRUN(return_value, device, pWaitInfo, timeout);
 }
 
 inline void vkWaitSemaphoresKHR_WRAPRUN(CVkResult& return_value,
                                         CVkDevice& device,
                                         CVkSemaphoreWaitInfo& pWaitInfo,
                                         Cuint64_t& timeout) {
-  VkResult recRetVal = *return_value;
-
-  return_value.Assign(drvVk.vkWaitSemaphoresKHR(*device, *pWaitInfo, *timeout));
-
-  if ((*return_value != VK_SUCCESS) && (*return_value != recRetVal)) {
-    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
-    return_value.Assign(drvVk.vkWaitSemaphoresKHR(*device, *pWaitInfo, 0xFFFFFFFFFFFFFFFF));
-  }
+  vkWaitSemaphoresUnifiedGITS_WRAPRUN(return_value, device, pWaitInfo, timeout);
 }
 
 namespace {

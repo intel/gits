@@ -70,6 +70,20 @@ Function(name='vkIAmRecorderGITS', enabled=False, type=FuncType.PARAM, level=Fun
 retV=RetDef(type='void')
 )
 
+Function(name='vkWaitSemaphoresUnifiedGITS', enabled=False, type=FuncType.PARAM,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='pWaitInfo', type='const VkSemaphoreWaitInfo*'),
+arg3=ArgDef(name='timeout', type='uint64_t')
+)
+
+Function(name='vkGetSemaphoreCounterValueUnifiedGITS', enabled=False, type=FuncType.PARAM,
+retV=RetDef(type='VkResult'),
+arg1=ArgDef(name='device', type='VkDevice'),
+arg2=ArgDef(name='semaphore', type='VkSemaphore'),
+arg3=ArgDef(name='pValue', type='uint64_t*', wrapParams='1, pValue')
+)
+
 ###############################################
 
 Enum(name='VkFormat', enumerators = [

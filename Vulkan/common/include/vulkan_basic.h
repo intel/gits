@@ -607,6 +607,8 @@ typedef void* VkRemoteAddressNV;
 #define VK_KHR_16BIT_STORAGE_SPEC_VERSION   1
 #define VK_KHR_16BIT_STORAGE_EXTENSION_NAME "VK_KHR_16bit_storage"
 
+#define VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME "VK_KHR_timeline_semaphore"
+
 #ifdef GITS_PLATFORM_X11
 #define VK_USE_PLATFORM_XLIB_KHR
 #define VK_KHR_xlib_surface                1
