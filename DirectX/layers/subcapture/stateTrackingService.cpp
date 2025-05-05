@@ -1299,6 +1299,7 @@ void StateTrackingService::restoreDStorageStatusArrayState(DStorageStatusArraySt
   c.object_.key = state->parentKey;
   c.capacity_.value = state->capacity;
   c.name_.value = const_cast<char*>(state->name.c_str());
+  c.riid_.value = state->iid;
   c.ppv_.key = state->key;
   recorder_.record(new IDStorageFactoryCreateStatusArrayWriter(c));
 }
