@@ -14352,7 +14352,7 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='maxFragmentShadingRateInvocationCount', type='VkSampleCountFlagBits')
 )
 
-Struct(name='VkPhysicalDeviceFragmentShadingRateFeaturesKHR_', enabled=False,
+Struct(name='VkPhysicalDeviceFragmentShadingRateFeaturesKHR_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='pipelineFragmentShadingRate', type='VkBool32'),
