@@ -30,6 +30,7 @@ void ReplayCustomizationLayer::post(IUnknownReleaseCommand& c) {
     manager_.getMapTrackingService().destroyResource(c.object_.key);
     manager_.getGpuAddressService().destroyInterface(c.object_.key);
     manager_.removeObject(c.object_.key);
+    manager_.getHeapAllocationService().destroyHeapAllocation(c.object_.key);
   }
   pipelineLibraryService_.releasePipelineState(c.object_.key, c.result_.value);
 }
@@ -332,10 +333,6 @@ void ReplayCustomizationLayer::pre(ID3D12Device3OpenExistingHeapFromAddressComma
 void ReplayCustomizationLayer::post(ID3D12Device3OpenExistingHeapFromAddressCommand& c) {
   ID3D12Heap* heap = static_cast<ID3D12Heap*>(*c.ppvHeap_.value);
   manager_.getGpuAddressService().createHeap(c.ppvHeap_.key, heap);
-
-  HeapObjectInfo* info = new HeapObjectInfo();
-  info->replayHeapAllocationAddress = const_cast<void*>(c.pAddress_.value);
-  c.ppvHeap_.objectInfo->addObjectInfo(this, info);
 }
 
 void ReplayCustomizationLayer::pre(ID3D12Device13OpenExistingHeapFromAddress1Command& c) {
@@ -346,10 +343,6 @@ void ReplayCustomizationLayer::pre(ID3D12Device13OpenExistingHeapFromAddress1Com
 void ReplayCustomizationLayer::post(ID3D12Device13OpenExistingHeapFromAddress1Command& c) {
   ID3D12Heap* heap = static_cast<ID3D12Heap*>(*c.ppvHeap_.value);
   manager_.getGpuAddressService().createHeap(c.ppvHeap_.key, heap);
-
-  HeapObjectInfo* info = new HeapObjectInfo();
-  info->replayHeapAllocationAddress = const_cast<void*>(c.pAddress_.value);
-  c.ppvHeap_.objectInfo->addObjectInfo(this, info);
 }
 
 void ReplayCustomizationLayer::pre(

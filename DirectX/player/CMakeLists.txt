@@ -24,8 +24,6 @@ set(PLAYER_SRC
   ${SRC_DIR}/multithreadedObjectAwaitLayer.cpp
   ${SRC_DIR}/interfaceArgumentUpdaters.h
   ${SRC_DIR}/interfaceArgumentUpdaters.cpp
-  ${SRC_DIR}/objectInfos.h
-  ${SRC_DIR}/objectInfos.cpp
   ${SRC_DIR}/intelExtensions.h
 )
 source_group("player" FILES ${PLAYER_SRC})

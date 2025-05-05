@@ -17,7 +17,6 @@ set(LAYER_INTERFACE_SRC
   ${SRC_DIR}/layerAuto.h
   ${SRC_DIR}/command.h
   ${SRC_DIR}/arguments.h
-  ${SRC_DIR}/objectInfo.h
   ${SRC_DIR}/directXApi.h
 )
 source_group("" FILES ${LAYER_INTERFACE_SRC})

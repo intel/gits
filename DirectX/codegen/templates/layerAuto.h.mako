@@ -12,6 +12,8 @@ ${header}
 #include "commandsAuto.h"
 #include "commandsCustom.h"
 
+#include <string>
+
 namespace gits {
 namespace DirectX {
 

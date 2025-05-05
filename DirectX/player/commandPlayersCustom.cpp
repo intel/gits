@@ -135,9 +135,8 @@ void CreateHeapAllocationMetaPlayer::Run() {
   }
 
   if (manager.executeCommands() && !command.skip) {
-
     manager.getHeapAllocationService().createHeapAllocation(
-        command.address_.value, command.data_.value, command.data_.size);
+        command.heap_.key, command.address_.value, command.data_.value, command.data_.size);
   }
 
   for (Layer* layer : manager.getPostLayers()) {

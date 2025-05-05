@@ -8,7 +8,6 @@
 
 #pragma once
 
-#include "objectInfos.h"
 #include "gitsRecorder.h"
 #include "command.h"
 

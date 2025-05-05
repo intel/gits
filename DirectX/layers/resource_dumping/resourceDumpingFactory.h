@@ -10,6 +10,8 @@
 
 #include "layerAuto.h"
 
+#include <memory>
+
 namespace gits {
 namespace DirectX {
 

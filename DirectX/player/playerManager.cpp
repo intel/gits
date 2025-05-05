@@ -211,20 +211,20 @@ PlayerManager::PlayerManager() {
   }
 }
 
-void PlayerManager::addObject(unsigned objectKey, ObjectInfoPlayer* objectInfo) {
-  objects_[objectKey].reset(objectInfo);
+void PlayerManager::addObject(unsigned objectKey, IUnknown* object) {
+  objects_[objectKey] = object;
 }
 
 void PlayerManager::removeObject(unsigned objectKey) {
   objects_.erase(objectKey);
 }
 
-ObjectInfoPlayer* PlayerManager::findObject(unsigned objectKey) {
+IUnknown* PlayerManager::findObject(unsigned objectKey) {
   auto it = objects_.find(objectKey);
   if (it == objects_.end()) {
     return nullptr;
   }
-  return it->second.get();
+  return it->second;
 }
 
 void PlayerManager::loadAgilitySdk() {

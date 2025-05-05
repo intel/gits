@@ -13,7 +13,6 @@
 #include "commandWritersAuto.h"
 #include "iunknownWrapper.h"
 #include "wrapperUtils.h"
-#include "objectInfos.h"
 #include "gits.h"
 
 #include <windows.h>
@@ -337,21 +336,17 @@ void CaptureCustomizationLayer::pre(ID3D12Device11CreateSampler2Command& c) {
 
 void CaptureCustomizationLayer::pre(
     ID3D12GraphicsCommandListSetGraphicsRootDescriptorTableCommand& c) {
-
-  std::lock_guard<std::mutex> lock(*c.object_.objectInfo->getMutex());
-  CommandListObjectInfo* info = c.object_.objectInfo->getObjectInfo<CommandListObjectInfo>(this);
   D3D12_DESCRIPTOR_HEAP_TYPE heapType =
-      info->graphicsRootSignatureInfo->getDescriptorTableHeapType(c.RootParameterIndex_.value);
+      manager_.getRootSignatureService().getGraphicsRootSignatureDescriptorHeapType(
+          c.object_.key, c.RootParameterIndex_.value);
   fillGpuDescriptorHandleArgument(c.BaseDescriptor_, heapType);
 }
 
 void CaptureCustomizationLayer::pre(
     ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c) {
-
-  std::lock_guard<std::mutex> lock(*c.object_.objectInfo->getMutex());
-  CommandListObjectInfo* info = c.object_.objectInfo->getObjectInfo<CommandListObjectInfo>(this);
   D3D12_DESCRIPTOR_HEAP_TYPE heapType =
-      info->computeRootSignatureInfo->getDescriptorTableHeapType(c.RootParameterIndex_.value);
+      manager_.getRootSignatureService().getComputeRootSignatureDescriptorHeapType(
+          c.object_.key, c.RootParameterIndex_.value);
   fillGpuDescriptorHandleArgument(c.BaseDescriptor_, heapType);
 }
 
@@ -441,18 +436,9 @@ void CaptureCustomizationLayer::post(ID3DBlobGetBufferPointerCommand& c) {
 
 void CaptureCustomizationLayer::post(ID3D12DeviceCreateRootSignatureCommand& c) {
   if (c.result_.value == S_OK) {
-    manager_.getRootSignatureService().createRootSignature(c.pBlobWithRootSignature_.value,
-                                                           c.blobLengthInBytes_.value,
-                                                           c.ppvRootSignature_.objectInfo, this);
+    manager_.getRootSignatureService().createRootSignature(
+        c.pBlobWithRootSignature_.value, c.blobLengthInBytes_.value, c.ppvRootSignature_.key);
   }
-}
-
-void CaptureCustomizationLayer::post(ID3D12DeviceCreateCommandListCommand& c) {
-  c.ppCommandList_.objectInfo->addObjectInfo(this, new CommandListObjectInfo());
-}
-
-void CaptureCustomizationLayer::post(ID3D12Device4CreateCommandList1Command& c) {
-  c.ppCommandList_.objectInfo->addObjectInfo(this, new CommandListObjectInfo());
 }
 
 void CaptureCustomizationLayer::post(ID3D12GraphicsCommandListSetGraphicsRootSignatureCommand& c) {
@@ -460,11 +446,7 @@ void CaptureCustomizationLayer::post(ID3D12GraphicsCommandListSetGraphicsRootSig
   if (!c.pRootSignature_.value) {
     return;
   }
-
-  std::lock_guard<std::mutex> lock(*c.object_.objectInfo->getMutex());
-  CommandListObjectInfo* info = c.object_.objectInfo->getObjectInfo<CommandListObjectInfo>(this);
-  info->graphicsRootSignatureInfo =
-      c.pRootSignature_.objectInfo->getObjectInfo<RootSignatureObjectInfo>(this);
+  manager_.getRootSignatureService().setGraphicsRootSignature(c.object_.key, c.pRootSignature_.key);
 }
 
 void CaptureCustomizationLayer::post(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) {
@@ -472,19 +454,11 @@ void CaptureCustomizationLayer::post(ID3D12GraphicsCommandListSetComputeRootSign
   if (!c.pRootSignature_.value) {
     return;
   }
-
-  std::lock_guard<std::mutex> lock(*c.object_.objectInfo->getMutex());
-  CommandListObjectInfo* info = c.object_.objectInfo->getObjectInfo<CommandListObjectInfo>(this);
-  info->computeRootSignatureInfo =
-      c.pRootSignature_.objectInfo->getObjectInfo<RootSignatureObjectInfo>(this);
+  manager_.getRootSignatureService().setComputeRootSignature(c.object_.key, c.pRootSignature_.key);
 }
 
 void CaptureCustomizationLayer::post(ID3D12GraphicsCommandListResetCommand& c) {
-
-  std::lock_guard<std::mutex> lock(*c.object_.objectInfo->getMutex());
-  CommandListObjectInfo* info = c.object_.objectInfo->getObjectInfo<CommandListObjectInfo>(this);
-  info->graphicsRootSignatureInfo = nullptr;
-  info->computeRootSignatureInfo = nullptr;
+  manager_.getRootSignatureService().resetRootSignatures(c.object_.key);
 }
 
 void CaptureCustomizationLayer::pre(

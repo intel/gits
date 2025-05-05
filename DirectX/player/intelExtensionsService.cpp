@@ -31,7 +31,7 @@ void IntelExtensionsService::loadIntelExtensions(const uint32_t& vendorID,
 
   HRESULT result = INTC_LoadExtensionsLibrary(false, vendorID, deviceID);
   if (FAILED(result)) {
-    Log(ERR) << "INTC_LoadExtensionsLibrary failed.";
+    Log(WARN) << "INTC_LoadExtensionsLibrary failed.";
     return;
   }
   intelExtensionLoaded_ = true;

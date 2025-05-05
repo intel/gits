@@ -14,36 +14,6 @@
 namespace gits {
 namespace DirectX {
 
-unsigned getBindingCount(const DML_BINDING_DESC* bindings, unsigned count) {
-  unsigned bindingCount = 0;
-  for (unsigned i = 0; i < count; ++i) {
-    if (bindings[i].Type == DML_BINDING_TYPE_BUFFER) {
-      ++bindingCount;
-    } else if (bindings[i].Type == DML_BINDING_TYPE_BUFFER_ARRAY) {
-      auto* bindingArray =
-          static_cast<DML_BUFFER_ARRAY_BINDING*>(const_cast<void*>(bindings[i].Desc));
-      bindingCount += bindingArray->BindingCount;
-    }
-  }
-  return bindingCount;
-}
-
-unsigned updateBinding(const void* srcBinding, DML_BUFFER_BINDING* dstBinding) {
-  auto* binding = static_cast<DML_BUFFER_BINDING*>(const_cast<void*>(srcBinding));
-  GITS_ASSERT(binding);
-  if (!binding->Buffer) {
-    return 0;
-  }
-
-  // Copy DML_BUFFER_BINDING into the temporary data and replace its pointer
-  memcpy(dstBinding, srcBinding, sizeof(DML_BUFFER_BINDING));
-  binding = dstBinding;
-
-  IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(binding->Buffer);
-  binding->Buffer = wrapper->getWrappedObject<ID3D12Resource>();
-  return wrapper->getKey();
-}
-
 UpdateInterface<D3D12_TEXTURE_COPY_LOCATION_Argument, D3D12_TEXTURE_COPY_LOCATION>::UpdateInterface(
     D3D12_TEXTURE_COPY_LOCATION_Argument& arg, const D3D12_TEXTURE_COPY_LOCATION* value) {
 
@@ -53,7 +23,6 @@ UpdateInterface<D3D12_TEXTURE_COPY_LOCATION_Argument, D3D12_TEXTURE_COPY_LOCATIO
   if (value->pResource) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pResource);
     arg.resourceKey = wrapper->getKey();
-    arg.resourceInfo = wrapper->getObjectInfos();
     arg.value->pResource = wrapper->getWrappedObject<ID3D12Resource>();
   }
 }
@@ -68,7 +37,6 @@ UpdateInterface<D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument, D3D12_GRAPHICS_PIPE
   if (value->pRootSignature) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pRootSignature);
     arg.rootSignatureKey = wrapper->getKey();
-    arg.rootSignatureInfo = wrapper->getObjectInfos();
     arg.value->pRootSignature = wrapper->getWrappedObject<ID3D12RootSignature>();
   }
 }
@@ -83,7 +51,6 @@ UpdateInterface<D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument, D3D12_COMPUTE_PIPELI
   if (value->pRootSignature) {
     IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(value->pRootSignature);
     arg.rootSignatureKey = wrapper->getKey();
-    arg.rootSignatureInfo = wrapper->getObjectInfos();
     arg.value->pRootSignature = wrapper->getWrappedObject<ID3D12RootSignature>();
   }
 }
@@ -109,14 +76,12 @@ UpdateInterface<D3D12_RESOURCE_BARRIERs_Argument, D3D12_RESOURCE_BARRIER>::Updat
         IUnknownWrapper* wrapper =
             reinterpret_cast<IUnknownWrapper*>(barrier.Aliasing.pResourceBefore);
         arg.resourceKeys[i] = wrapper->getKey();
-        arg.resourceInfos[i] = wrapper->getObjectInfos();
         barrier.Aliasing.pResourceBefore = wrapper->getWrappedObject<ID3D12Resource>();
       }
       if (barrier.Aliasing.pResourceAfter) {
         IUnknownWrapper* wrapper =
             reinterpret_cast<IUnknownWrapper*>(barrier.Aliasing.pResourceAfter);
         arg.resourceAfterKeys[i] = wrapper->getKey();
-        arg.resourceAfterInfos[i] = wrapper->getObjectInfos();
         barrier.Aliasing.pResourceAfter = wrapper->getWrappedObject<ID3D12Resource>();
       }
       break;
@@ -125,7 +90,6 @@ UpdateInterface<D3D12_RESOURCE_BARRIERs_Argument, D3D12_RESOURCE_BARRIER>::Updat
       if (barrier.Transition.pResource) {
         IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(barrier.Transition.pResource);
         arg.resourceKeys[i] = wrapper->getKey();
-        arg.resourceInfos[i] = wrapper->getObjectInfos();
         barrier.Transition.pResource = wrapper->getWrappedObject<ID3D12Resource>();
       }
       break;
@@ -134,7 +98,6 @@ UpdateInterface<D3D12_RESOURCE_BARRIERs_Argument, D3D12_RESOURCE_BARRIER>::Updat
       if (barrier.UAV.pResource) {
         IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(barrier.UAV.pResource);
         arg.resourceKeys[i] = wrapper->getKey();
-        arg.resourceInfos[i] = wrapper->getObjectInfos();
         barrier.UAV.pResource = wrapper->getWrappedObject<ID3D12Resource>();
       }
       break;
@@ -167,7 +130,6 @@ UpdateInterface<D3D12_PIPELINE_STATE_STREAM_DESC_Argument, D3D12_PIPELINE_STATE_
       ID3D12RootSignature* rootSignature = *rootSignatureSubobject;
       IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(rootSignature);
       arg.rootSignatureKey = wrapper->getKey();
-      arg.rootSignatureInfo = wrapper->getObjectInfos();
       *rootSignatureSubobject = wrapper->getWrappedObject<ID3D12RootSignature>();
 
       offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE);
@@ -285,7 +247,6 @@ UpdateInterface<D3D12_STATE_OBJECT_DESC_Argument, D3D12_STATE_OBJECT_DESC>::Upda
       IUnknownWrapper* wrapper =
           reinterpret_cast<IUnknownWrapper*>(globalSignatureUnwrapped_.pGlobalRootSignature);
       arg.interfaceKeysBySubobject[index] = wrapper->getKey();
-      arg.objectInfosBySubobject[index] = wrapper->getObjectInfos();
       globalSignatureUnwrapped_.pGlobalRootSignature =
           wrapper->getWrappedObject<ID3D12RootSignature>();
 
@@ -302,7 +263,6 @@ UpdateInterface<D3D12_STATE_OBJECT_DESC_Argument, D3D12_STATE_OBJECT_DESC>::Upda
       IUnknownWrapper* wrapper =
           reinterpret_cast<IUnknownWrapper*>(localRootSignature->pLocalRootSignature);
       arg.interfaceKeysBySubobject[index] = wrapper->getKey();
-      arg.objectInfosBySubobject[index] = wrapper->getObjectInfos();
       localRootSignature->pLocalRootSignature = wrapper->getWrappedObject<ID3D12RootSignature>();
 
       subobjectsUnwrapped_.push_back(D3D12_STATE_SUBOBJECT{subobject->Type, localRootSignature});
@@ -316,7 +276,6 @@ UpdateInterface<D3D12_STATE_OBJECT_DESC_Argument, D3D12_STATE_OBJECT_DESC>::Upda
       D3D12_EXISTING_COLLECTION_DESC* desc = &existingCollectionDescs.back();
       IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(desc->pExistingCollection);
       arg.interfaceKeysBySubobject[index] = wrapper->getKey();
-      arg.objectInfosBySubobject[index] = wrapper->getObjectInfos();
       desc->pExistingCollection = wrapper->getWrappedObject<ID3D12StateObject>();
 
       subobjectsUnwrapped_.push_back(D3D12_STATE_SUBOBJECT{subobject->Type, desc});
@@ -439,9 +398,38 @@ UpdateInterface<PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>,
     IUnknownWrapper* wrapper =
         reinterpret_cast<IUnknownWrapper*>(value->pD3D12Desc->pRootSignature);
     arg.rootSignatureKey = wrapper->getKey();
-    arg.rootSignatureInfo = wrapper->getObjectInfos();
     arg.value->pD3D12Desc->pRootSignature = wrapper->getWrappedObject<ID3D12RootSignature>();
   }
+}
+
+static unsigned getDmlBindingCount(const DML_BINDING_DESC* bindings, unsigned count) {
+  unsigned bindingCount = 0;
+  for (unsigned i = 0; i < count; ++i) {
+    if (bindings[i].Type == DML_BINDING_TYPE_BUFFER) {
+      ++bindingCount;
+    } else if (bindings[i].Type == DML_BINDING_TYPE_BUFFER_ARRAY) {
+      auto* bindingArray =
+          static_cast<DML_BUFFER_ARRAY_BINDING*>(const_cast<void*>(bindings[i].Desc));
+      bindingCount += bindingArray->BindingCount;
+    }
+  }
+  return bindingCount;
+}
+
+static unsigned updateDmlBinding(const void* srcBinding, DML_BUFFER_BINDING* dstBinding) {
+  auto* binding = static_cast<DML_BUFFER_BINDING*>(const_cast<void*>(srcBinding));
+  GITS_ASSERT(binding);
+  if (!binding->Buffer) {
+    return 0;
+  }
+
+  // Copy DML_BUFFER_BINDING into the temporary data and replace its pointer
+  memcpy(dstBinding, srcBinding, sizeof(DML_BUFFER_BINDING));
+  binding = dstBinding;
+
+  IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(binding->Buffer);
+  binding->Buffer = wrapper->getWrappedObject<ID3D12Resource>();
+  return wrapper->getKey();
 }
 
 UpdateInterface<DML_BINDING_TABLE_DESC_Argument, DML_BINDING_TABLE_DESC>::UpdateInterface(
@@ -466,7 +454,7 @@ UpdateInterface<DML_BINDING_DESC_Argument, DML_BINDING_DESC>::UpdateInterface(
   arg.value = &unwrapStructure_;
   *arg.value = *value;
 
-  arg.resourceKeysSize = getBindingCount(arg.value, 1);
+  arg.resourceKeysSize = getDmlBindingCount(arg.value, 1);
   arg.resourceKeys.resize(arg.resourceKeysSize);
   bindings_.resize(arg.resourceKeysSize);
 
@@ -475,13 +463,13 @@ UpdateInterface<DML_BINDING_DESC_Argument, DML_BINDING_DESC>::UpdateInterface(
   }
 
   if (arg.value->Type == DML_BINDING_TYPE_BUFFER) {
-    arg.resourceKeys[0] = updateBinding(arg.value->Desc, &bindings_[0]);
+    arg.resourceKeys[0] = updateDmlBinding(arg.value->Desc, &bindings_[0]);
     arg.value->Desc = bindings_.data();
   } else if (arg.value->Type == DML_BINDING_TYPE_BUFFER_ARRAY) {
     auto* bindingArray = static_cast<DML_BUFFER_ARRAY_BINDING*>(const_cast<void*>(arg.value->Desc));
     GITS_ASSERT(bindingArray);
     for (unsigned i = 0; i < bindingArray->BindingCount; ++i) {
-      arg.resourceKeys[i] = updateBinding(&bindingArray->Bindings[i], &bindings_[i]);
+      arg.resourceKeys[i] = updateDmlBinding(&bindingArray->Bindings[i], &bindings_[i]);
     }
     bindingArray_ = *bindingArray;
     bindingArray_.Bindings = bindings_.data();
@@ -501,7 +489,7 @@ UpdateInterface<DML_BINDING_DESCs_Argument, DML_BINDING_DESC>::UpdateInterface(
   unwrapStructure_ = unwrapStructures_.data();
   arg.value = unwrapStructure_;
 
-  auto bindingCount = getBindingCount(value, arg.size);
+  auto bindingCount = getDmlBindingCount(value, arg.size);
   bindings_.resize(bindingCount);
   arg.resourceKeysSize = bindingCount;
   arg.resourceKeys.resize(bindingCount);
@@ -516,7 +504,7 @@ UpdateInterface<DML_BINDING_DESCs_Argument, DML_BINDING_DESC>::UpdateInterface(
     auto* bindingSrc = &arg.value[i];
     auto* bindingDst = &bindings_[bindingIdx];
     if (bindingSrc->Type == DML_BINDING_TYPE_BUFFER) {
-      arg.resourceKeys[bindingIdx] = updateBinding(bindingSrc->Desc, bindingDst);
+      arg.resourceKeys[bindingIdx] = updateDmlBinding(bindingSrc->Desc, bindingDst);
       bindingSrc->Desc = bindingDst;
       ++bindingIdx;
     } else if (bindingSrc->Type == DML_BINDING_TYPE_BUFFER_ARRAY) {
@@ -526,7 +514,7 @@ UpdateInterface<DML_BINDING_DESCs_Argument, DML_BINDING_DESC>::UpdateInterface(
       bindingArrays_[i] = *bindingArray;
       bindingArray = &bindingArrays_[i];
       for (unsigned j = 0; j < bindingArray->BindingCount; ++j) {
-        arg.resourceKeys[bindingIdx] = updateBinding(&bindingArray->Bindings[j], &bindingDst[j]);
+        arg.resourceKeys[bindingIdx] = updateDmlBinding(&bindingArray->Bindings[j], &bindingDst[j]);
         ++bindingIdx;
       }
       bindingArray->Bindings = bindingDst;

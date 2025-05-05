@@ -10,7 +10,6 @@
 
 #include "layerAuto.h"
 #include "gitsRecorder.h"
-#include "objectInfos.h"
 
 namespace gits {
 namespace DirectX {
@@ -67,8 +66,6 @@ public:
   void post(D3D12SerializeVersionedRootSignatureCommand& command) override;
   void post(ID3DBlobGetBufferPointerCommand& command) override;
   void post(ID3D12DeviceCreateRootSignatureCommand& command) override;
-  void post(ID3D12DeviceCreateCommandListCommand& command) override;
-  void post(ID3D12Device4CreateCommandList1Command& command) override;
   void post(ID3D12GraphicsCommandListSetGraphicsRootSignatureCommand& command) override;
   void post(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& command) override;
   void post(ID3D12GraphicsCommandListResetCommand& command) override;

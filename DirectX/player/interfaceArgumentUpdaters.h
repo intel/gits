@@ -14,15 +14,12 @@ namespace DirectX {
 template <typename T>
 void updateInterface(PlayerManager& manager, InterfaceArrayArgument<T>& arg) {
 
-  arg.objectInfos.resize(arg.size);
   for (int i = 0; i < arg.keys.size(); ++i) {
     if (!arg.keys[i]) {
       arg.value[i] = nullptr;
       continue;
     }
-    ObjectInfoPlayer* info = manager.findObject(arg.keys[i]);
-    arg.value[i] = info ? static_cast<T*>(info->object) : nullptr;
-    arg.objectInfos[i] = info;
+    arg.value[i] = static_cast<T*>(manager.findObject(arg.keys[i]));
   }
 }
 
@@ -31,9 +28,7 @@ void updateInterface(PlayerManager& manager, InterfaceArgument<T>& arg) {
   if (!arg.key) {
     return;
   }
-  ObjectInfoPlayer* info = manager.findObject(arg.key);
-  arg.value = info ? static_cast<T*>(info->object) : nullptr;
-  arg.objectInfo = info;
+  arg.value = static_cast<T*>(manager.findObject(arg.key));
 }
 
 template <typename T>
@@ -41,11 +36,7 @@ void updateOutputInterface(PlayerManager& manager, InterfaceOutputArgument<T>& a
   if (!arg.value || !*arg.value) {
     return;
   }
-
-  ObjectInfoPlayer* info = new ObjectInfoPlayer();
-  info->object = static_cast<IUnknown*>(*arg.value);
-  arg.objectInfo = info;
-  manager.addObject(arg.key, info);
+  manager.addObject(arg.key, static_cast<IUnknown*>(*arg.value));
 }
 
 void updateInterface(PlayerManager& manager, D3D12_TEXTURE_COPY_LOCATION_Argument& arg);

@@ -9,19 +9,21 @@
 #pragma once
 
 #include <map>
+#include <unordered_map>
 
 namespace gits {
 namespace DirectX {
 
 class HeapAllocationService {
 public:
-  void createHeapAllocation(void* captureAddress, void* data, size_t size);
+  void createHeapAllocation(unsigned heapKey, void* captureAddress, void* data, size_t size);
   void* getHeapAllocation(void* captureAddress);
-  void destroyHeapAllocation(void* captureAddress);
+  void destroyHeapAllocation(unsigned heapKey);
 
 private:
   std::map<void*, void*> heapAllocationsByCaptureAddress_;
   std::map<void*, void*> heapAllocationsByReplayAddress_;
+  std::unordered_map<unsigned, void*> heapAllocationsCaptureAddressByHeapKey_;
 };
 
 } // namespace DirectX

@@ -45,7 +45,6 @@ set(CAPTURE_SRC
   ${SRC_DIR}/gitsRecorder.cpp
   ${SRC_DIR}/captureCustomizationLayer.h
   ${SRC_DIR}/captureCustomizationLayer.cpp
-  ${SRC_DIR}/objectInfos.h
   ${SRC_DIR}/captureSynchronizationLayer.h
   ${SRC_DIR}/captureSynchronizationLayer.cpp
   ${SRC_DIR}/encoderLayerAuto.h

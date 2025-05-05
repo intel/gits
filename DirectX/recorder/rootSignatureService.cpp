@@ -20,9 +20,9 @@ void RootSignatureService::serializeRootSignature(D3D12_ROOT_SIGNATURE_DESC* des
 
   std::lock_guard<std::mutex> lock(mutex_);
 
-  RootSignatureObjectInfo* info = new RootSignatureObjectInfo{};
+  RootSignatureInfo* info = new RootSignatureInfo{};
   parseRootSignatureDesc(*desc, info);
-  rootSignatureInfosByBlobKey_[blobKey] = info;
+  rootSignatureByBlobKey_[blobKey] = info;
 }
 
 void RootSignatureService::serializeVersionedRootSignature(
@@ -30,7 +30,7 @@ void RootSignatureService::serializeVersionedRootSignature(
 
   std::lock_guard<std::mutex> lock(mutex_);
 
-  RootSignatureObjectInfo* info = new RootSignatureObjectInfo{};
+  RootSignatureInfo* info = new RootSignatureInfo{};
 
   switch (desc->Version) {
   case D3D_ROOT_SIGNATURE_VERSION_1_0:
@@ -44,12 +44,12 @@ void RootSignatureService::serializeVersionedRootSignature(
     break;
   }
 
-  rootSignatureInfosByBlobKey_[blobKey] = info;
+  rootSignatureByBlobKey_[blobKey] = info;
 }
 
 template <typename ROOT_SIGNATURE_DESC>
 void RootSignatureService::parseRootSignatureDesc(ROOT_SIGNATURE_DESC& desc,
-                                                  RootSignatureObjectInfo* rootSignatureInfo) {
+                                                  RootSignatureInfo* rootSignatureInfo) {
 
   for (unsigned paramIndex = 0; paramIndex < desc.NumParameters; ++paramIndex) {
     if (desc.pParameters[paramIndex].ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE) {
@@ -73,30 +73,29 @@ void RootSignatureService::setBlobBufferPointer(unsigned blobKey, void* blobPoin
 
   std::lock_guard<std::mutex> lock(mutex_);
 
-  auto it = rootSignatureInfosByBlobKey_.find(blobKey);
-  if (it != rootSignatureInfosByBlobKey_.end()) {
-    rootSignatureInfosByBlobPointer_[blobPointer] = it->second;
-    rootSignatureInfosByBlobKey_.erase(blobKey);
+  auto it = rootSignatureByBlobKey_.find(blobKey);
+  if (it != rootSignatureByBlobKey_.end()) {
+    rootSignatureByBlobPointer_[blobPointer] = it->second;
+    rootSignatureByBlobKey_.erase(blobKey);
   }
 }
 
 void RootSignatureService::createRootSignature(void* blobPointer,
                                                unsigned blobLength,
-                                               ObjectInfos* rootSignatureInfos,
-                                               Layer* layer) {
+                                               unsigned rootSignatureKey) {
 
   std::lock_guard<std::mutex> lock(mutex_);
 
-  RootSignatureObjectInfo* info{};
+  RootSignatureInfo* info{};
 
-  auto it = rootSignatureInfosByBlobPointer_.find(blobPointer);
-  if (it != rootSignatureInfosByBlobPointer_.end()) {
+  auto it = rootSignatureByBlobPointer_.find(blobPointer);
+  if (it != rootSignatureByBlobPointer_.end()) {
 
     info = it->second;
-    rootSignatureInfosByBlobPointer_.erase(blobPointer);
+    rootSignatureByBlobPointer_.erase(blobPointer);
   } else {
 
-    info = new RootSignatureObjectInfo{};
+    info = new RootSignatureInfo{};
 
     Microsoft::WRL::ComPtr<ID3D12RootSignatureDeserializer> rootSignatureDeserializer;
     HRESULT res = D3D12CreateRootSignatureDeserializer(blobPointer, blobLength,
@@ -107,7 +106,51 @@ void RootSignatureService::createRootSignature(void* blobPointer,
     parseRootSignatureDesc(*desc, info);
   }
 
-  rootSignatureInfos->addObjectInfo(layer, info);
+  rootSignatureByRootSignatureKey_[rootSignatureKey] = info;
+}
+
+void RootSignatureService::setGraphicsRootSignature(unsigned commandListKey,
+                                                    unsigned rootSignatureKey) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  auto it = rootSignatureByRootSignatureKey_.find(rootSignatureKey);
+  GITS_ASSERT(it != rootSignatureByRootSignatureKey_.end());
+  graphicsRootSignatureByCommandListKey_[commandListKey] = it->second;
+}
+
+void RootSignatureService::setComputeRootSignature(unsigned commandListKey,
+                                                   unsigned rootSignatureKey) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  auto it = rootSignatureByRootSignatureKey_.find(rootSignatureKey);
+  GITS_ASSERT(it != rootSignatureByRootSignatureKey_.end());
+  computeRootSignatureByCommandListKey_[commandListKey] = it->second;
+}
+
+void RootSignatureService::resetRootSignatures(unsigned commandListKey) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  graphicsRootSignatureByCommandListKey_.erase(commandListKey);
+  computeRootSignatureByCommandListKey_.erase(commandListKey);
+}
+
+D3D12_DESCRIPTOR_HEAP_TYPE RootSignatureService::getGraphicsRootSignatureDescriptorHeapType(
+    unsigned commandListKey, unsigned parameterIndex) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  D3D12_DESCRIPTOR_HEAP_TYPE type{};
+  auto it = graphicsRootSignatureByCommandListKey_.find(commandListKey);
+  if (it != graphicsRootSignatureByCommandListKey_.end()) {
+    type = it->second->getDescriptorTableHeapType(parameterIndex);
+  }
+  return type;
+}
+
+D3D12_DESCRIPTOR_HEAP_TYPE RootSignatureService::getComputeRootSignatureDescriptorHeapType(
+    unsigned commandListKey, unsigned parameterIndex) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  D3D12_DESCRIPTOR_HEAP_TYPE type{};
+  auto it = computeRootSignatureByCommandListKey_.find(commandListKey);
+  if (it != computeRootSignatureByCommandListKey_.end()) {
+    type = it->second->getDescriptorTableHeapType(parameterIndex);
+  }
+  return type;
 }
 
 } // namespace DirectX

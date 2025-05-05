@@ -15,7 +15,6 @@
 #include "gpuAddressService.h"
 #include "heapAllocationService.h"
 #include "pluginService.h"
-#include "objectInfo.h"
 #include "traceFactory.h"
 #include "adapterService.h"
 #include "intelExtensionsService.h"
@@ -35,27 +34,6 @@
 
 namespace gits {
 namespace DirectX {
-
-class ObjectInfoPlayer : public ObjectInfos {
-public:
-  IUnknown* object{};
-
-public:
-  void addObjectInfo(Layer* layer, ObjectInfo* objectInfo) override {
-    infos_[layer].reset(objectInfo);
-  }
-
-  virtual ObjectInfo* getObjectInfo(Layer* layer) override {
-    auto it = infos_.find(layer);
-    if (it == infos_.end()) {
-      return nullptr;
-    }
-    return it->second.get();
-  }
-
-private:
-  std::map<Layer*, std::unique_ptr<ObjectInfo>> infos_;
-};
 
 class PlayerManager : public gits::noncopyable {
 public:
@@ -113,9 +91,9 @@ public:
     return pipelineLibraryService_;
   }
 
-  void addObject(unsigned objectKey, ObjectInfoPlayer* objectInfo);
+  void addObject(unsigned objectKey, IUnknown* object);
   void removeObject(unsigned objectKey);
-  ObjectInfoPlayer* findObject(unsigned objectKey);
+  IUnknown* findObject(unsigned objectKey);
 
   ContextMapService& getIntelExtensionsContextMap() {
     return intelExtensionsContextMap_;
@@ -168,7 +146,7 @@ private:
   HMODULE dStorageDll_{};
   HMODULE dStorageCoreDll_{};
 
-  std::unordered_map<unsigned, std::unique_ptr<ObjectInfoPlayer>> objects_;
+  std::unordered_map<unsigned, IUnknown*> objects_;
   ContextMapService intelExtensionsContextMap_;
   ContextMapService xessContextMap_;
 };

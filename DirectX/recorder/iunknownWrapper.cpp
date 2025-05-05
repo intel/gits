@@ -55,14 +55,12 @@ HRESULT STDMETHODCALLTYPE IUnknownWrapper::QueryInterface(REFIID riid, void** pp
       if (isIID(riid)) {
         *ppvObject = this;
         command.ppvObject_.key = key_;
-        command.ppvObject_.objectInfo = &objectInfos_;
       } else {
         bool found = false;
         for (auto& wrapper : secondaryWrappers_) {
           if (wrapper->isIID(riid)) {
             *ppvObject = wrapper.get();
             command.ppvObject_.key = wrapper->key_;
-            command.ppvObject_.objectInfo = &objectInfos_;
             found = true;
             break;
           }
@@ -71,7 +69,6 @@ HRESULT STDMETHODCALLTYPE IUnknownWrapper::QueryInterface(REFIID riid, void** pp
           if (wrapObjectNoStore(riid, ppvObject)) {
             IUnknownWrapper* wrapper = *reinterpret_cast<IUnknownWrapper**>(ppvObject);
             command.ppvObject_.key = wrapper->key_;
-            command.ppvObject_.objectInfo = &objectInfos_;
             secondaryWrappers_.emplace_back(wrapper);
           }
         }

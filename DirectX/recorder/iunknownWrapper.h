@@ -8,8 +8,6 @@
 
 #pragma once
 
-#include "objectInfo.h"
-
 #include <comip.h>
 #include <unknwn.h>
 #include <unordered_set>
@@ -28,32 +26,6 @@ struct IIDHash {
 
 const IID IID_IUnknownWrapper = {
     0XACC5279F, 0XF194, 0X4659, {0XAE, 0X9B, 0X40, 0XD0, 0X57, 0XBE, 0XD1, 0XA6}};
-
-class ObjectInfosCapture : public ObjectInfos {
-public:
-  void addObjectInfo(Layer* layer, ObjectInfo* objectInfo) override {
-
-    std::lock_guard<std::mutex> lock(mutex_);
-    infos_[layer].reset(objectInfo);
-  }
-
-  std::mutex* getMutex() override {
-    return &mutex_;
-  }
-
-  ObjectInfo* getObjectInfo(Layer* layer) override {
-
-    auto it = infos_.find(layer);
-    if (it == infos_.end()) {
-      return nullptr;
-    }
-    return it->second.get();
-  }
-
-private:
-  std::map<Layer*, std::unique_ptr<ObjectInfo>> infos_;
-  std::mutex mutex_;
-};
 
 class IUnknownWrapper {
 public:
@@ -83,10 +55,6 @@ public:
     return key_;
   }
 
-  ObjectInfos* getObjectInfos() {
-    return &objectInfos_;
-  }
-
 protected:
   void insertIID(REFIID riid) {
     iids_.insert(riid);
@@ -103,7 +71,6 @@ private:
   unsigned key_;
   std::unordered_set<IID, IIDHash> iids_;
   std::vector<std::unique_ptr<IUnknownWrapper>> secondaryWrappers_;
-  ObjectInfosCapture objectInfos_;
 };
 
 } // namespace DirectX

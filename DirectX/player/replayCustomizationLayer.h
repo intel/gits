@@ -9,7 +9,6 @@
 #pragma once
 
 #include "layerAuto.h"
-#include "objectInfos.h"
 #include "pipelineLibraryService.h"
 
 #include <wrl/client.h>

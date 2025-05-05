@@ -9,7 +9,6 @@
 #include "interceptorCustomizationLayer.h"
 #include "wrapperUtils.h"
 #include "captureManager.h"
-#include "objectInfos.h"
 #include "intelExtensionsWrappers.h"
 #include "gits.h"
 

@@ -20,7 +20,6 @@ template <typename T>
 void updateInterface(InterfaceArgument<T>& arg, IUnknownWrapper* wrapper) {
 
   arg.key = wrapper->getKey();
-  arg.objectInfo = wrapper->getObjectInfos();
   arg.value = wrapper->getWrappedObject<T>();
 }
 
@@ -36,7 +35,6 @@ void updateInterface(InterfaceArgument<T>& arg, T* object) {
     return;
   }
   arg.key = wrapper->getKey();
-  arg.objectInfo = wrapper->getObjectInfos();
   arg.value = wrapper->getWrappedObject<T>();
 }
 
@@ -69,7 +67,6 @@ public:
           objects[i]->QueryInterface(IID_IUnknownWrapper, reinterpret_cast<void**>(&wrapper));
       GITS_ASSERT(hr == S_OK);
       arg.keys[i] = wrapper->getKey();
-      arg.objectInfos[i] = wrapper->getObjectInfos();
       unwrappedObjects_[i] = wrapper->getWrappedObject<T>();
     }
   }
@@ -93,7 +90,6 @@ public:
       wrapper_ = reinterpret_cast<IUnknownWrapper*>(wrappedObject);
 
       arg.key = wrapper_->getKey();
-      arg.objectInfo = wrapper_->getObjectInfos();
     }
   }
   ~UpdateOutputInterface() {

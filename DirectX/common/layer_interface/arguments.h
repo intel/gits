@@ -8,12 +8,12 @@
 
 #pragma once
 
-#include "objectInfo.h"
 #include "xess.h"
 #include "xess_d3d12.h"
 #include "directx.h"
 
 #include <vector>
+#include <map>
 
 struct INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC;
 struct INTCExtensionContext;
@@ -87,20 +87,17 @@ template <typename T>
 struct InterfaceArgument {
   T* value{};
   unsigned key{};
-  ObjectInfos* objectInfo{};
 };
 
 template <typename T>
 struct InterfaceArrayArgument {
   InterfaceArrayArgument(T** value_, size_t size_) : value(value_), size(size_) {
     keys.resize(size);
-    objectInfos.resize(size);
   }
   InterfaceArrayArgument() {}
   T** value{};
   size_t size{};
   std::vector<unsigned> keys{};
-  std::vector<ObjectInfos*> objectInfos{};
   std::vector<T*> data;
 };
 
@@ -108,7 +105,6 @@ template <typename T>
 struct InterfaceOutputArgument {
   T** value{};
   unsigned key{};
-  ObjectInfos* objectInfo{};
   T* data{};
 };
 
@@ -142,7 +138,6 @@ template <typename T>
 struct DescriptorHandleArgument {
   T value{};
   unsigned interfaceKey{};
-  ObjectInfos* interfaceInfo{};
   unsigned index{};
 };
 
@@ -151,14 +146,12 @@ struct DescriptorHandleArrayArgument {
   DescriptorHandleArrayArgument(const T* value_, size_t size_)
       : value(const_cast<T*>(value_)), size(size_) {
     interfaceKeys.resize(size);
-    interfaceInfos.resize(size);
     indexes.resize(size);
   }
   DescriptorHandleArrayArgument() {}
   T* value{};
   size_t size{};
   std::vector<unsigned> interfaceKeys{};
-  std::vector<ObjectInfos*> interfaceInfos{};
   std::vector<unsigned> indexes{};
   std::vector<T> data;
 };
@@ -166,7 +159,6 @@ struct DescriptorHandleArrayArgument {
 struct D3D12_GPU_VIRTUAL_ADDRESS_Argument {
   D3D12_GPU_VIRTUAL_ADDRESS value{};
   unsigned interfaceKey{};
-  ObjectInfos* interfaceInfo{};
   unsigned offset{};
 };
 
@@ -196,7 +188,6 @@ struct D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument {
   D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument() {}
   D3D12_GRAPHICS_PIPELINE_STATE_DESC* value{};
   unsigned rootSignatureKey{};
-  ObjectInfos* rootSignatureInfo{};
 };
 
 struct D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument {
@@ -205,7 +196,6 @@ struct D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument {
   D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument() {}
   D3D12_COMPUTE_PIPELINE_STATE_DESC* value{};
   unsigned rootSignatureKey{};
-  ObjectInfos* rootSignatureInfo{};
 };
 
 struct D3D12_TEXTURE_COPY_LOCATION_Argument {
@@ -214,24 +204,19 @@ struct D3D12_TEXTURE_COPY_LOCATION_Argument {
   D3D12_TEXTURE_COPY_LOCATION_Argument() {}
   D3D12_TEXTURE_COPY_LOCATION* value{};
   unsigned resourceKey{};
-  ObjectInfos* resourceInfo{};
 };
 
 struct D3D12_RESOURCE_BARRIERs_Argument {
   D3D12_RESOURCE_BARRIERs_Argument(const D3D12_RESOURCE_BARRIER* value_, unsigned size_)
       : value(const_cast<D3D12_RESOURCE_BARRIER*>(value_)), size(size_) {
     resourceKeys.resize(size_);
-    resourceInfos.resize(size_);
     resourceAfterKeys.resize(size_);
-    resourceAfterInfos.resize(size_);
   }
   D3D12_RESOURCE_BARRIERs_Argument() {}
   D3D12_RESOURCE_BARRIER* value{};
   size_t size{};
   std::vector<unsigned> resourceKeys{};
-  std::vector<ObjectInfos*> resourceInfos{};
   std::vector<unsigned> resourceAfterKeys{};
-  std::vector<ObjectInfos*> resourceAfterInfos{};
 };
 
 struct D3D12_INDEX_BUFFER_VIEW_Argument {
@@ -240,7 +225,6 @@ struct D3D12_INDEX_BUFFER_VIEW_Argument {
   D3D12_INDEX_BUFFER_VIEW_Argument() {}
   D3D12_INDEX_BUFFER_VIEW* value{};
   unsigned bufferLocationKey{};
-  ObjectInfos* bufferLocationInfo{};
   unsigned bufferLocationOffset{};
 };
 
@@ -257,14 +241,12 @@ struct D3D12_VERTEX_BUFFER_VIEWs_Argument {
   D3D12_VERTEX_BUFFER_VIEWs_Argument(const D3D12_VERTEX_BUFFER_VIEW* value_, unsigned size_)
       : value(const_cast<D3D12_VERTEX_BUFFER_VIEW*>(value_)), size(size_) {
     bufferLocationKeys.resize(size_);
-    bufferLocationInfos.resize(size_);
     bufferLocationOffsets.resize(size_);
   }
   D3D12_VERTEX_BUFFER_VIEWs_Argument() {}
   D3D12_VERTEX_BUFFER_VIEW* value{};
   size_t size{};
   std::vector<unsigned> bufferLocationKeys{};
-  std::vector<ObjectInfos*> bufferLocationInfos{};
   std::vector<unsigned> bufferLocationOffsets{};
 };
 
@@ -273,20 +255,16 @@ struct D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument {
                                             unsigned size_)
       : value(const_cast<D3D12_STREAM_OUTPUT_BUFFER_VIEW*>(value_)), size(size_) {
     bufferLocationKeys.resize(size_);
-    bufferLocationInfos.resize(size_);
     bufferLocationOffsets.resize(size_);
     bufferFilledSizeLocationKeys.resize(size_);
-    bufferFilledSizeLocationInfos.resize(size_);
     bufferFilledSizeLocationOffsets.resize(size_);
   }
   D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument() {}
   D3D12_STREAM_OUTPUT_BUFFER_VIEW* value{};
   size_t size{};
   std::vector<unsigned> bufferLocationKeys{};
-  std::vector<ObjectInfos*> bufferLocationInfos{};
   std::vector<unsigned> bufferLocationOffsets{};
   std::vector<unsigned> bufferFilledSizeLocationKeys{};
-  std::vector<ObjectInfos*> bufferFilledSizeLocationInfos{};
   std::vector<unsigned> bufferFilledSizeLocationOffsets{};
 };
 
@@ -295,14 +273,12 @@ struct D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument {
                                                  unsigned size_)
       : value(const_cast<D3D12_WRITEBUFFERIMMEDIATE_PARAMETER*>(value_)), size(size_) {
     destKeys.resize(size_);
-    destInfos.resize(size_);
     destOffsets.resize(size_);
   }
   D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument() {}
   D3D12_WRITEBUFFERIMMEDIATE_PARAMETER* value{};
   size_t size{};
   std::vector<unsigned> destKeys{};
-  std::vector<ObjectInfos*> destInfos{};
   std::vector<unsigned> destOffsets{};
 };
 
@@ -312,7 +288,6 @@ struct D3D12_PIPELINE_STATE_STREAM_DESC_Argument {
   D3D12_PIPELINE_STATE_STREAM_DESC_Argument() {}
   D3D12_PIPELINE_STATE_STREAM_DESC* value{};
   unsigned rootSignatureKey{};
-  ObjectInfos* rootSignatureInfo{};
 };
 
 struct D3D12_STATE_OBJECT_DESC_Argument {
@@ -321,7 +296,6 @@ struct D3D12_STATE_OBJECT_DESC_Argument {
   D3D12_STATE_OBJECT_DESC_Argument() {}
   D3D12_STATE_OBJECT_DESC* value{};
   std::map<unsigned, unsigned> interfaceKeysBySubobject;
-  std::map<unsigned, ObjectInfos*> objectInfosBySubobject;
 };
 
 template <>
@@ -379,7 +353,6 @@ struct PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC> {
   const void* compileOptions{};
   const void* internalOptions{};
   unsigned rootSignatureKey{};
-  ObjectInfos* rootSignatureInfo{};
 };
 
 template <>

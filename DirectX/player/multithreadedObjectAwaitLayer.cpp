@@ -38,9 +38,7 @@ bool MultithreadedObjectAwaitLayer::completeObject(unsigned key) {
     return false;
   }
 
-  ObjectInfoPlayer* info = new ObjectInfoPlayer();
-  info->object = static_cast<IUnknown*>(creationOutput.value().object);
-  manager_.addObject(key, info);
+  manager_.addObject(key, static_cast<IUnknown*>(creationOutput.value().object));
   return true;
 }
 
