@@ -1093,21 +1093,23 @@ inline void vkAllocateMemory_WRAPRUN(CVkResult& recorderSideReturnValue,
   recorderSideReturnValue.Assign(playerSideReturnValue);
   vkAllocateMemory_SD(playerSideReturnValue, device, allocateInfoPtr, *pAllocator, *pMemory);
 
-  VkDeviceMemory* memoryPtr = *pMemory;
-  if (memoryPtr == nullptr) {
+  if (*pMemory == nullptr) {
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 
-  if (checkMemoryMappingFeasibility(device, allocateInfoPtr->memoryTypeIndex, false)) {
+  VkDeviceMemory memory = **pMemory;
+
+  if ((playerSideReturnValue == VK_SUCCESS) && (memory != VK_NULL_HANDLE) &&
+      checkMemoryMappingFeasibility(device, allocateInfoPtr->memoryTypeIndex, false)) {
     CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
 
     //clearMemory
     void* ptr = nullptr;
 
-    VkResult map_return_value = drvVk.vkMapMemory(device, *memoryPtr, 0, VK_WHOLE_SIZE, 0, &ptr);
+    VkResult map_return_value = drvVk.vkMapMemory(device, memory, 0, VK_WHOLE_SIZE, 0, &ptr);
     if (map_return_value == VK_SUCCESS) {
       memset(ptr, 0, (size_t)allocateInfoPtr->allocationSize);
-      drvVk.vkUnmapMemory(device, *memoryPtr);
+      drvVk.vkUnmapMemory(device, memory);
     } else {
       Log(WARN) << "vkMapMemory() was used to clear allocated memory but failed with the code: "
                 << map_return_value << ". It can cause rendering errors!";

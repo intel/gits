@@ -3132,6 +3132,19 @@ inline void vkEndRenderPass_updateNonDeterministicImages(
 }
 } // namespace
 
+// NV
+
+inline void vkLatencySleepNV_SD(VkResult return_value,
+                                VkDevice device,
+                                VkSwapchainKHR swapchain,
+                                const VkLatencySleepInfoNV* pSleepInfo) {
+  if (pSleepInfo && (VK_NULL_HANDLE != pSleepInfo->signalSemaphore)) {
+    auto& semaphoreState = SD()._semaphorestates[pSleepInfo->signalSemaphore];
+    semaphoreState->semaphoreUsed = true;
+    semaphoreState->timelineSemaphoreValue = pSleepInfo->value;
+  }
+}
+
 // Command buffer recording commands
 
 inline void vkCmdBeginRenderPass_SD(VkCommandBuffer cmdBuf,

@@ -1371,7 +1371,7 @@ arg3=ArgDef(name='depthBiasClamp', type='float'),
 arg4=ArgDef(name='depthBiasSlopeFactor', type='float')
 )
 
-Function(name='vkCmdSetDepthBias2EXT', enabled=False, type=FuncType.NONE,
+Function(name='vkCmdSetDepthBias2EXT', enabled=True, type=FuncType.COMMAND_BUFFER_SET, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pDepthBiasInfo', type='const VkDepthBiasInfoEXT*')
@@ -4752,7 +4752,7 @@ arg2=ArgDef(name='memoryRangeCount', type='uint32_t'),
 arg3=ArgDef(name='pMemoryRanges', type='const VkMappedMemoryRange*', wrapType='CVkMappedMemoryRangeArray', wrapParams='memoryRangeCount, pMemoryRanges', count='memoryRangeCount')
 )
 
-Function(name='vkLatencySleepNV', enabled=False, type=FuncType.NONE,
+Function(name='vkLatencySleepNV', enabled=True, type=FuncType.PARAM, stateTrack=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='swapchain', type='VkSwapchainKHR'),
@@ -5034,7 +5034,7 @@ arg2=ArgDef(name='swapchain', type='VkSwapchainKHR'),
 arg3=ArgDef(name='pLatencyMarkerInfo', type='const VkSetLatencyMarkerInfoNV*')
 )
 
-Function(name='vkSetLatencySleepModeNV', enabled=False, type=FuncType.NONE,
+Function(name='vkSetLatencySleepModeNV', enabled=True, type=FuncType.PARAM,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='swapchain', type='VkSwapchainKHR'),
@@ -5186,7 +5186,7 @@ arg4=ArgDef(name='waitAll', type='VkBool32'),
 arg5=ArgDef(name='timeout', type='uint64_t')
 )
 
-Function(name='vkWaitForPresentKHR', enabled=False, type=FuncType.PARAM,
+Function(name='vkWaitForPresentKHR', enabled=True, type=FuncType.PARAM,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='swapchain', type='VkSwapchainKHR'),
@@ -11068,7 +11068,7 @@ var8=VarDef(name='imageMemoryBarrierCount', type='uint32_t'),
 var9=VarDef(name='pImageMemoryBarriers', type='const VkImageMemoryBarrier2*', wrapType='CVkImageMemoryBarrier2Array', wrapParams='dependencyinfo->imageMemoryBarrierCount, dependencyinfo->pImageMemoryBarriers', count='imageMemoryBarrierCount')
 )
 
-Struct(name='VkDepthBiasInfoEXT_', enabled=False,
+Struct(name='VkDepthBiasInfoEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='depthBiasConstantFactor', type='float'),
@@ -11076,7 +11076,7 @@ var4=VarDef(name='depthBiasClamp', type='float'),
 var5=VarDef(name='depthBiasSlopeFactor', type='float')
 )
 
-Struct(name='VkDepthBiasRepresentationInfoEXT_', enabled=False,
+Struct(name='VkDepthBiasRepresentationInfoEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='depthBiasRepresentation', type='VkDepthBiasRepresentationEXT'),
@@ -12915,14 +12915,14 @@ var7=VarDef(name='enabledExtensionCount', type='uint32_t'),
 var8=VarDef(name='ppEnabledExtensionNames', type='const char*const*', wrapType='CStringArray', wrapParams='instancecreateinfo->enabledExtensionCount, (const char**)instancecreateinfo->ppEnabledExtensionNames', count='enabledExtensionCount')
 )
 
-Struct(name='VkLatencySleepInfoNV_', enabled=False,
+Struct(name='VkLatencySleepInfoNV_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='signalSemaphore', type='VkSemaphore'),
 var4=VarDef(name='value', type='uint64_t')
 )
 
-Struct(name='VkLatencySleepModeInfoNV_', enabled=False,
+Struct(name='VkLatencySleepModeInfoNV_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='lowLatencyMode', type='VkBool32'),
@@ -13743,7 +13743,7 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='dedicatedAllocationImageAliasing', type='VkBool32')
 )
 
-Struct(name='VkPhysicalDeviceDepthBiasControlFeaturesEXT_', enabled=False,
+Struct(name='VkPhysicalDeviceDepthBiasControlFeaturesEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='depthBiasControl', type='VkBool32'),
@@ -15221,7 +15221,7 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='presentBarrier', type='VkBool32')
 )
 
-Struct(name='VkPhysicalDevicePresentIdFeaturesKHR_', enabled=False,
+Struct(name='VkPhysicalDevicePresentIdFeaturesKHR_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='presentId', type='VkBool32')
@@ -15233,7 +15233,7 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='presentModeFifoLatestReady', type='VkBool32')
 )
 
-Struct(name='VkPhysicalDevicePresentWaitFeaturesKHR_', enabled=False,
+Struct(name='VkPhysicalDevicePresentWaitFeaturesKHR_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='presentWait', type='VkBool32')
@@ -16885,11 +16885,11 @@ var4=VarDef(name='viewportCount', type='uint32_t'),
 var5=VarDef(name='pViewportWScalings', type='const VkViewportWScalingNV*')
 )
 
-Struct(name='VkPresentIdKHR_', enabled=False,
+Struct(name='VkPresentIdKHR_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='swapchainCount', type='uint32_t'),
-var4=VarDef(name='pPresentIds', type='const uint64_t*')
+var4=VarDef(name='pPresentIds', type='const uint64_t*', wrapType='Cuint64_t::CSArray', wrapParams='presentidkhr->swapchainCount, presentidkhr->pPresentIds', count='swapchainCount')
 )
 
 Struct(name='VkPresentInfoKHR_', enabled=True,
