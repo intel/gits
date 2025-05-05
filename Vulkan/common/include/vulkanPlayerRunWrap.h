@@ -2321,13 +2321,6 @@ void PatchSBTHelper(const CCommandBufferState& cmdBufState,
                     VkDeviceAddress newHandlesMap,
                     uint32_t handlesMapEntriesCount) {
   if (isSBTPatchingRequired) {
-    struct PushConstantsData {
-      VkDeviceAddress OldHandlesMap;
-      VkDeviceAddress NewHandlesMap;
-      VkDeviceAddress SBTBaseAddress;
-      uint32_t Stride;
-    };
-
     // Patch shader group handles in a SBT before tracing rays
     CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
 
@@ -2352,16 +2345,26 @@ void PatchSBTHelper(const CCommandBufferState& cmdBufState,
 
       auto dispatchComputeShader = [&](const VkStridedDeviceAddressRegionKHR* pSBT) {
         if (pSBT && pSBT->deviceAddress && pSBT->size && pSBT->stride) {
-          PushConstantsData pushConstants = {
-              oldHandlesMap,         // VkDeviceAddress OldHandlesMap;
-              newHandlesMap,         // VkDeviceAddress NewHandlesMap;
-              pSBT->deviceAddress,   // VkDeviceAddress SBTBaseAddress;
-              (uint32_t)pSBT->stride // uint32_t Stride;
+          struct PushConstantsData {
+            VkDeviceAddress OldHandlesMap;
+            VkDeviceAddress NewHandlesMap;
+            VkDeviceAddress SBTBaseAddress;
+            uint32_t Stride;
+            uint32_t Size;
+          } pushConstants = {
+              oldHandlesMap,          // VkDeviceAddress OldHandlesMap;
+              newHandlesMap,          // VkDeviceAddress NewHandlesMap;
+              pSBT->deviceAddress,    // VkDeviceAddress SBTBaseAddress;
+              (uint32_t)pSBT->stride, // uint32_t Stride;
+              (uint32_t)pSBT->size    // uint32_t Size;
           };
+          // 32 is a performance optimization - 32 local invocations of a compute shader are dispatched
+          uint32_t divisor = pSBT->stride * 32;
+          uint32_t invocationsCount = (pSBT->size / divisor) + ((pSBT->size % divisor > 0) ? 1 : 0);
+
           drvVk.vkCmdPushConstants(cmdBuf, gitsPipelines.getLayout(), VK_SHADER_STAGE_COMPUTE_BIT,
                                    0, sizeof(PushConstantsData), &pushConstants);
-          drvVk.vkCmdDispatch(cmdBuf, /* SBT entries count */ pSBT->size / pSBT->stride,
-                              /* map entries count */ handlesMapEntriesCount, 1);
+          drvVk.vkCmdDispatch(cmdBuf, invocationsCount, handlesMapEntriesCount, 1);
         }
       };
 
