@@ -240,28 +240,28 @@ std::vector<std::pair<char*, size_t>> WriteWatchSniffer::GetTouchedPagesAndReset
 
   if ((returnValue == 0) && (pageCount > 0)) {
     std::vector<std::pair<char*, size_t>> touchedMemory{{touchedPages[0], pageSize}};
-    auto& currentElement = touchedMemory.front();
+    auto* currentElement = &touchedMemory.front();
 
     // Adjust the base ptr of the first entry
-    if (currentElement.first < ptr) {
-      auto diff = ptr - currentElement.first;
-      currentElement.first = ptr;
-      currentElement.second -= diff;
+    if (currentElement->first < ptr) {
+      auto diff = ptr - currentElement->first;
+      currentElement->first = ptr;
+      currentElement->second -= diff;
     }
 
     for (size_t i = 1; i < pageCount; ++i) {
-      if (touchedPages[i] == (currentElement.first + currentElement.second)) {
-        currentElement.second += pageSize;
+      if (touchedPages[i] == (currentElement->first + currentElement->second)) {
+        currentElement->second += pageSize;
       } else {
         touchedMemory.emplace_back(touchedPages[i], pageSize);
-        currentElement = touchedMemory.back();
+        currentElement = &touchedMemory.back();
       }
     }
 
     // Trim the length of the last entry
-    if ((currentElement.first + currentElement.second) > (ptr + size)) {
-      auto diff = (currentElement.first + currentElement.second) - (ptr + size);
-      currentElement.second -= diff;
+    if ((currentElement->first + currentElement->second) > (ptr + size)) {
+      auto diff = (currentElement->first + currentElement->second) - (ptr + size);
+      currentElement->second -= diff;
     }
     return touchedMemory;
   }

@@ -1917,7 +1917,7 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='indirectDeviceAddress', type='VkDeviceAddress')
 )
 
-Function(name='vkCmdTraceRaysIndirectKHR', enabled=True, type=FuncType.DISPATCH, stateTrack=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
+Function(name='vkCmdTraceRaysIndirectKHR', enabled=True, type=FuncType.DISPATCH, stateTrack=True, runWrap=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pRaygenShaderBindingTable', type='const VkStridedDeviceAddressRegionKHR*'),

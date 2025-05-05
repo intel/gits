@@ -88,14 +88,31 @@ InternalPipelinesManager::InternalPipelines::InternalPipelines(VkDevice _device)
       patchShaderGroupHandlesInSBT(VK_NULL_HANDLE) {}
 
 InternalPipelinesManager::InternalPipelines::~InternalPipelines() {
-  drvVk.vkDestroyPipeline(device, prepareDeviceAddressesForPatchingPipeline, nullptr);
-  drvVk.vkDestroyPipeline(device, patchDeviceAddressesPipeline, nullptr);
-  drvVk.vkDestroyPipeline(device, prepareIndirectCopyFor16BitIndexedVerticesPipeline, nullptr);
-  drvVk.vkDestroyPipeline(device, prepareIndirectCopyFor32BitIndexedVerticesPipeline, nullptr);
-  drvVk.vkDestroyPipeline(device, performIndirectCopyPipeline, nullptr);
-  drvVk.vkDestroyPipeline(device, patchShaderGroupHandlesInSBT, nullptr);
+  if (SD()._devicestates.find(device) == SD()._devicestates.end()) {
+    return;
+  }
 
-  drvVk.vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+  if (prepareDeviceAddressesForPatchingPipeline) {
+    drvVk.vkDestroyPipeline(device, prepareDeviceAddressesForPatchingPipeline, nullptr);
+  }
+  if (patchDeviceAddressesPipeline) {
+    drvVk.vkDestroyPipeline(device, patchDeviceAddressesPipeline, nullptr);
+  }
+  if (prepareIndirectCopyFor16BitIndexedVerticesPipeline) {
+    drvVk.vkDestroyPipeline(device, prepareIndirectCopyFor16BitIndexedVerticesPipeline, nullptr);
+  }
+  if (prepareIndirectCopyFor32BitIndexedVerticesPipeline) {
+    drvVk.vkDestroyPipeline(device, prepareIndirectCopyFor32BitIndexedVerticesPipeline, nullptr);
+  }
+  if (performIndirectCopyPipeline) {
+    drvVk.vkDestroyPipeline(device, performIndirectCopyPipeline, nullptr);
+  }
+  if (patchShaderGroupHandlesInSBT) {
+    drvVk.vkDestroyPipeline(device, patchShaderGroupHandlesInSBT, nullptr);
+  }
+  if (pipelineLayout) {
+    drvVk.vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+  }
   if (descriptorSetLayoutState) {
     drvVk.vkDestroyDescriptorSetLayout(device, descriptorSetLayoutState->descriptorSetLayoutHandle,
                                        nullptr);
@@ -154,7 +171,7 @@ VkPipeline InternalPipelinesManager::InternalPipelines::
     getPrepareDeviceAddressesForPatchingPipeline() {
   if (prepareDeviceAddressesForPatchingPipeline == VK_NULL_HANDLE) {
     prepareDeviceAddressesForPatchingPipeline = createInternalPipeline(
-        device, pipelineLayout, getPrepareDeviceAddressesForPatchingShaderModuleSource());
+        device, getLayout(), getPrepareDeviceAddressesForPatchingShaderModuleSource());
   }
 
   return prepareDeviceAddressesForPatchingPipeline;
@@ -163,7 +180,7 @@ VkPipeline InternalPipelinesManager::InternalPipelines::
 VkPipeline InternalPipelinesManager::InternalPipelines::getPatchDeviceAddressesPipeline() {
   if (patchDeviceAddressesPipeline == VK_NULL_HANDLE) {
     patchDeviceAddressesPipeline =
-        createInternalPipeline(device, pipelineLayout, getPatchDeviceAddressesShaderModuleSource());
+        createInternalPipeline(device, getLayout(), getPatchDeviceAddressesShaderModuleSource());
   }
 
   return patchDeviceAddressesPipeline;
@@ -173,7 +190,7 @@ VkPipeline InternalPipelinesManager::InternalPipelines::
     getPrepareIndirectCopyFor16BitIndexedVerticesPipeline() {
   if (prepareIndirectCopyFor16BitIndexedVerticesPipeline == VK_NULL_HANDLE) {
     prepareIndirectCopyFor16BitIndexedVerticesPipeline = createInternalPipeline(
-        device, pipelineLayout, getPrepareIndirectCopyFor16BitIndexedVerticesShaderModuleSource());
+        device, getLayout(), getPrepareIndirectCopyFor16BitIndexedVerticesShaderModuleSource());
   }
 
   return prepareIndirectCopyFor16BitIndexedVerticesPipeline;
@@ -183,7 +200,7 @@ VkPipeline InternalPipelinesManager::InternalPipelines::
     getPrepareIndirectCopyFor32BitIndexedVerticesPipeline() {
   if (prepareIndirectCopyFor32BitIndexedVerticesPipeline == VK_NULL_HANDLE) {
     prepareIndirectCopyFor32BitIndexedVerticesPipeline = createInternalPipeline(
-        device, pipelineLayout, getPrepareIndirectCopyFor32BitIndexedVerticesShaderModuleSource());
+        device, getLayout(), getPrepareIndirectCopyFor32BitIndexedVerticesShaderModuleSource());
   }
 
   return prepareIndirectCopyFor32BitIndexedVerticesPipeline;
@@ -192,7 +209,7 @@ VkPipeline InternalPipelinesManager::InternalPipelines::
 VkPipeline InternalPipelinesManager::InternalPipelines::getPerformIndirectCopyPipeline() {
   if (performIndirectCopyPipeline == VK_NULL_HANDLE) {
     performIndirectCopyPipeline =
-        createInternalPipeline(device, pipelineLayout, getPerformIndirectCopyShaderModuleSource());
+        createInternalPipeline(device, getLayout(), getPerformIndirectCopyShaderModuleSource());
   }
 
   return performIndirectCopyPipeline;
@@ -201,7 +218,7 @@ VkPipeline InternalPipelinesManager::InternalPipelines::getPerformIndirectCopyPi
 VkPipeline InternalPipelinesManager::InternalPipelines::getPatchShaderGroupHandlesInSBT() {
   if (patchShaderGroupHandlesInSBT == VK_NULL_HANDLE) {
     patchShaderGroupHandlesInSBT = createInternalPipeline(
-        device, pipelineLayout, getPatchShaderGroupHandlesInSBTShaderModuleSource());
+        device, getLayout(), getPatchShaderGroupHandlesInSBTShaderModuleSource());
   }
 
   return patchShaderGroupHandlesInSBT;

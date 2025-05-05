@@ -1023,18 +1023,16 @@ struct CPipelineState : public UniqueResourceHandle {
     uint32_t count;
     uint32_t dataSize;
     std::vector<uint8_t> originalHandles;
-    std::vector<uint8_t> currentHandles;
     std::pair<std::shared_ptr<CDeviceMemoryState>, std::shared_ptr<CBufferState>> memoryBufferPair;
-    uint8_t* mappedMemoryPtr;
     VkDeviceAddress deviceAddress;
-    bool SBTPatchingRequired;
+    bool patchingRequired;
 
     CShaderGroupHandlesManagement()
         : count(0),
           dataSize(0),
           mappedMemoryPtr(nullptr),
           deviceAddress(0),
-          SBTPatchingRequired(true) {}
+          patchingRequired(true) {}
     ~CShaderGroupHandlesManagement();
   } shaderGroupHandles;
 

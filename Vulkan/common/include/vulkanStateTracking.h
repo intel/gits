@@ -2094,9 +2094,9 @@ inline void vkCreateRayTracingPipelinesKHR_SD(VkResult return_value,
     return;
   }
 
-  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
-
   if (VK_SUCCESS == return_value) {
+    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
     for (uint32_t i = 0; i < createInfoCount; i++) {
       if (pPipelines[i] == VK_NULL_HANDLE) {
         continue;
@@ -2117,65 +2117,71 @@ inline void vkCreateRayTracingPipelinesKHR_SD(VkResult return_value,
 
       SD()._pipelinestates.emplace(pPipelines[i], pipelineState);
 
-      auto& shaderGroup = pipelineState->shaderGroupHandles;
-
       // Shader group handles
-      {
-        shaderGroup.dataSize = pCreateInfo->groupCount * CDeviceState::shaderGroupHandleSize;
-        shaderGroup.currentHandles.resize(shaderGroup.dataSize);
-        shaderGroup.count = pCreateInfo->groupCount;
-        drvVk.vkGetRayTracingShaderGroupHandlesKHR(device, pPipelines[i], 0,
-                                                   pCreateInfo->groupCount, shaderGroup.dataSize,
-                                                   shaderGroup.currentHandles.data());
+      auto& shaderGroup = pipelineState->shaderGroupHandles;
+      shaderGroup.count = pCreateInfo->groupCount;
+      shaderGroup.dataSize = pCreateInfo->groupCount * CDeviceState::shaderGroupHandleSize;
 
-        auto* pOriginalHandles = (VkOriginalShaderGroupHandlesGITS*)getPNextStructure(
-            pCreateInfo->pNext, VK_STRUCTURE_TYPE_ORIGINAL_SHADER_GROUP_HANDLES_GITS);
+      // Handles assigned on a current platform
+      std::vector<uint8_t> currentHandles;
+      {
+        currentHandles.resize(shaderGroup.dataSize);
+        drvVk.vkGetRayTracingShaderGroupHandlesKHR(device, pPipelines[i], 0, shaderGroup.count,
+                                                   shaderGroup.dataSize, currentHandles.data());
+      }
+
+      // Handles assigned during stream recording (passed from a recorder)
+      auto* pOriginalHandles = (VkOriginalShaderGroupHandlesGITS*)getPNextStructure(
+          pCreateInfo->pNext, VK_STRUCTURE_TYPE_ORIGINAL_SHADER_GROUP_HANDLES_GITS);
+      std::vector<uint8_t>& originalHandles = shaderGroup.originalHandles;
+      {
+        originalHandles.resize(shaderGroup.dataSize);
         if (pOriginalHandles) {
-          shaderGroup.originalHandles.resize(pOriginalHandles->dataSize);
-          memcpy(shaderGroup.originalHandles.data(), pOriginalHandles->pData,
-                 pOriginalHandles->dataSize);
-          shaderGroup.SBTPatchingRequired =
-              (memcmp(shaderGroup.originalHandles.data(), shaderGroup.currentHandles.data(),
-                      pOriginalHandles->dataSize) != 0) &&
-              Configurator::Get().vulkan.player.patchShaderGroupHandles;
+          memcpy(originalHandles.data(), pOriginalHandles->pData, shaderGroup.dataSize);
         } else {
-          shaderGroup.originalHandles = shaderGroup.currentHandles;
-          shaderGroup.SBTPatchingRequired = false;
+          originalHandles = currentHandles;
         }
       }
+
+      // Prepare data for patching and perform patching ONLY when:
+      // - there are original handles AND
+      // - patching option is enabled AND
+      // - original and current handles are different
+      shaderGroup.patchingRequired =
+          pOriginalHandles && Config::Get().vulkan.player.patchShaderGroupHandles &&
+          (memcmp(originalHandles.data(), currentHandles.data(), shaderGroup.dataSize) != 0);
 
       // Create a per RT-pipeline buffer to store shader group handles which are used later during
       // SBT patching. The buffer contains both original (recorder-side) and current (player-side)
       // handles, that's why its size is twice as large.
-
-      if (shaderGroup.SBTPatchingRequired) {
+      if (shaderGroup.patchingRequired) {
         shaderGroup.memoryBufferPair = createTemporaryBuffer(
             device, 2 * shaderGroup.dataSize, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, nullptr,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+
         auto memory = shaderGroup.memoryBufferPair.first->deviceMemoryHandle;
         auto buffer = shaderGroup.memoryBufferPair.second->bufferHandle;
-        drvVk.vkMapMemory(device, memory, 0, VK_WHOLE_SIZE, 0,
-                          (void**)&shaderGroup.mappedMemoryPtr);
         shaderGroup.deviceAddress = getBufferDeviceAddress(device, buffer);
 
-        // Buffer used to patch shader group handles contains original handles first
-        // and after them the current handles
+        char* mappedMemoryPtr;
+        drvVk.vkMapMemory(device, memory, 0, VK_WHOLE_SIZE, 0, (void**)&mappedMemoryPtr);
+
+        // Buffer used to patch shader group handles contains original and current handles
 
         // Copy original shader group handles passed from a recorder
-        memcpy(shaderGroup.mappedMemoryPtr, shaderGroup.originalHandles.data(),
-               shaderGroup.dataSize);
+        memcpy(mappedMemoryPtr, originalHandles.data(), shaderGroup.dataSize);
         // Copy current shader group handles acquired from a driver
-        memcpy(shaderGroup.mappedMemoryPtr + shaderGroup.dataSize,
-               shaderGroup.currentHandles.data(), shaderGroup.dataSize);
+        memcpy(mappedMemoryPtr + shaderGroup.dataSize, currentHandles.data(), shaderGroup.dataSize);
 
         VkMappedMemoryRange range = {
-            VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,                  // VkStructureType sType;
-            nullptr,                                                // const void* pNext;
-            shaderGroup.memoryBufferPair.first->deviceMemoryHandle, // VkDeviceMemory memory;
-            0,                                                      // VkDeviceSize offset;
-            shaderGroup.dataSize * 2                                // VkDeviceSize size;
+            VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, // VkStructureType sType;
+            nullptr,                               // const void* pNext;
+            memory,                                // VkDeviceMemory memory;
+            0,                                     // VkDeviceSize offset;
+            shaderGroup.dataSize * 2               // VkDeviceSize size;
         };
         drvVk.vkFlushMappedMemoryRanges(device, 1, &range);
+        drvVk.vkUnmapMemory(device, memory);
       }
     }
   }
