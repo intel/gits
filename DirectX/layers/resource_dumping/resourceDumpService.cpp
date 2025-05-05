@@ -9,6 +9,7 @@
 #include "resourceDumpService.h"
 #include "toStr.h"
 #include "gits.h"
+#include "configurationLib.h"
 
 #include <d3dx12.h>
 
@@ -16,14 +17,15 @@ namespace gits {
 namespace DirectX {
 
 ResourceDumpService::ResourceDumpService()
-    : resourceDump_(Config::Get().directx.features.resourcesDump.format == "jpg" ? true : false,
-                    Config::Get().directx.features.resourcesDump.textureRescaleRange),
-      resourceKeys_(Config::Get().directx.features.resourcesDump.resourceKeys),
-      callKeys_(Config::Get().directx.features.resourcesDump.commandKeys) {
+    : resourceDump_(Configurator::Get().directx.features.resourcesDump.format == "jpg" ? true
+                                                                                       : false,
+                    Configurator::Get().directx.features.resourcesDump.textureRescaleRange),
+      resourceKeys_(Configurator::Get().directx.features.resourcesDump.resourceKeys),
+      callKeys_(Configurator::Get().directx.features.resourcesDump.commandKeys) {
 
-  auto& dumpPath = Config::Get().common.player.outputDir.empty()
-                       ? Config::Get().common.player.streamDir / "resources"
-                       : Config::Get().common.player.outputDir;
+  auto& dumpPath = Configurator::Get().common.player.outputDir.empty()
+                       ? Configurator::Get().common.player.streamDir / "resources"
+                       : Configurator::Get().common.player.outputDir;
   if (!dumpPath.empty() && !std::filesystem::exists(dumpPath)) {
     std::filesystem::create_directory(dumpPath);
   }

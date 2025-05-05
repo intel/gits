@@ -15,6 +15,7 @@
 #include "commandWritersCustom.h"
 #include "reservedResourcesService.h"
 #include "gits.h"
+#include "configurationLib.h"
 
 namespace gits {
 namespace DirectX {
@@ -22,7 +23,7 @@ namespace DirectX {
 AccelerationStructuresSerializeService::AccelerationStructuresSerializeService(
     StateTrackingService& stateService, SubcaptureRecorder& recorder)
     : stateService_(stateService), recorder_(recorder) {
-  serializeMode_ = Config::Get().directx.features.subcapture.serializeAccelerationStructures;
+  serializeMode_ = Configurator::Get().directx.features.subcapture.serializeAccelerationStructures;
 }
 
 void AccelerationStructuresSerializeService::buildAccelerationStructure(

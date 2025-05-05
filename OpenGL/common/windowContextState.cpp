@@ -63,11 +63,11 @@ GlxPlayerMngr::GlxPlayerMngr(Display* glxDpy, GLXContext glxCtx, GLXFBConfig fbc
 void GlxPlayerMngr::UpdateWindow(std::vector<int>& winparams) {
   if (!winparams.empty()) {
 #ifndef BUILD_FOR_CCODE
-    if (!gits::Config::Get().common.player.forceWindowSize.enabled)
+    if (!Configurator::Get().common.player.forceWindowSize.enabled)
 #endif
       _window->set_size(winparams[2], winparams[3]);
 #ifndef BUILD_FOR_CCODE
-    if (!gits::Config::Get().common.player.forceWindowPos.enabled)
+    if (!Configurator::Get().common.player.forceWindowPos.enabled)
 #endif
       _window->set_position(winparams[0], winparams[1]);
   }
@@ -103,14 +103,14 @@ void GlxPlayerMngr::SetupWindowWithoutId(std::vector<int>& winparams) {
   int xsize = winparams[2];
   int ysize = winparams[3];
 #ifndef BUILD_FOR_CCODE
-  if (gits::Config::Get().common.player.forceWindowPos.enabled) {
-    xpos = gits::Config::Get().common.player.forceWindowPos.x;
-    ypos = gits::Config::Get().common.player.forceWindowPos.y;
+  if (Configurator::Get().common.player.forceWindowPos.enabled) {
+    xpos = Configurator::Get().common.player.forceWindowPos.x;
+    ypos = Configurator::Get().common.player.forceWindowPos.y;
   }
 
-  if (gits::Config::Get().common.player.forceWindowSize.enabled) {
-    xsize = gits::Config::Get().common.player.forceWindowSize.width;
-    ysize = gits::Config::Get().common.player.forceWindowSize.height;
+  if (Configurator::Get().common.player.forceWindowSize.enabled) {
+    xsize = Configurator::Get().common.player.forceWindowSize.width;
+    ysize = Configurator::Get().common.player.forceWindowSize.height;
   }
 #endif
 
@@ -136,14 +136,14 @@ void GlxPlayerMngr::SetupWindowWithId(std::vector<int>& winparams) {
   int ysize = winparams[3];
 
 #ifndef BUILD_FOR_CCODE
-  if (gits::Config::Get().common.player.forceWindowPos.enabled) {
-    xpos = gits::Config::Get().common.player.forceWindowPos.x;
-    ypos = gits::Config::Get().common.player.forceWindowPos.y;
+  if (Configurator::Get().common.player.forceWindowPos.enabled) {
+    xpos = Configurator::Get().common.player.forceWindowPos.x;
+    ypos = Configurator::Get().common.player.forceWindowPos.y;
   }
 
-  if (gits::Config::Get().common.player.forceWindowSize.enabled) {
-    xsize = gits::Config::Get().common.player.forceWindowSize.width;
-    ysize = gits::Config::Get().common.player.forceWindowSize.height;
+  if (Configurator::Get().common.player.forceWindowSize.enabled) {
+    xsize = Configurator::Get().common.player.forceWindowSize.width;
+    ysize = Configurator::Get().common.player.forceWindowSize.height;
   }
 #endif
 

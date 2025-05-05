@@ -68,6 +68,7 @@ add_dependencies(DirectX_api_debug
 
 add_dependencies(DirectX_layer_interface
     DirectX_codegen
+    configuration
 )
 
 add_dependencies(DirectX_player
@@ -103,9 +104,13 @@ add_dependencies(DirectX_portability
     DirectX_layer_interface
 )
 
+target_include_directories(DirectX_subcapture PRIVATE ${ARGS_SOURCE_DIR})
+target_include_directories(DirectX_recorder PRIVATE ${ARGS_SOURCE_DIR})
+target_include_directories(DirectX_player PRIVATE ${ARGS_SOURCE_DIR})
+
 target_link_libraries(DirectX_subcapture PRIVATE
     DirectX_dstorage_resources
-	DirectX_utils
+    DirectX_utils
 )
 
 target_link_libraries(DirectX_recorder PRIVATE
@@ -117,6 +122,7 @@ target_link_libraries(DirectX_recorder PRIVATE
     DirectX_utils
     DirectX_resource_dumping
     DirectX_portability
+    configuration
 )
 
 target_link_libraries(DirectX_player PRIVATE
@@ -128,8 +134,10 @@ target_link_libraries(DirectX_player PRIVATE
     DirectX_utils
     DirectX_skip_calls
     DirectX_portability
+    configuration
 )
 
 target_link_libraries(DirectX_subcapture PRIVATE
     DirectX_coders
+    configuration
 )

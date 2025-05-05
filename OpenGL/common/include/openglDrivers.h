@@ -54,7 +54,7 @@ struct Tracer {
 
   template <class... Args>
   NOINLINE void trace(Args... args) {
-    auto log = OpenGL::CGLLog(TRACE, NO_NEWLINE);
+    auto log = OpenGL::CGLLog(LogLevel::TRACE, NO_NEWLINE);
     log << name << "(";
     print_args(log, args...);
     log << ")";

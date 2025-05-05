@@ -161,7 +161,7 @@ void GpuPatchDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
             *reinterpret_cast<D3D12_DISPATCH_RAYS_DESC*>(static_cast<uint8_t*>(data) + offset);
 
         if (!executeIndirectStream_.is_open()) {
-          std::filesystem::path dumpPath = Config::Get().common.recorder.dumpPath;
+          std::filesystem::path dumpPath = Configurator::Get().common.recorder.dumpPath;
           executeIndirectStream_.open(dumpPath / "executeIndirectRaytracing.txt");
         }
         executeIndirectStream_ << dumpInfo.callKey << " ";
@@ -194,7 +194,7 @@ void GpuPatchDump::dumpArgumentBuffer(ExecuteIndirectDumpInfo& dumpInfo,
 void GpuPatchDump::dumpInstancesBuffer(InstancesArrayOfPointersDumpInfo& dumpInfo, void* data) {
   std::lock_guard<std::mutex> lock(instancesMutex_);
   if (!instancesStream_.is_open()) {
-    std::filesystem::path dumpPath = Config::Get().common.recorder.dumpPath;
+    std::filesystem::path dumpPath = Configurator::Get().common.recorder.dumpPath;
     instancesStream_.open(dumpPath / "raytracingArraysOfPointers.dat", std::ios::binary);
   }
   instancesStream_.write(reinterpret_cast<char*>(&dumpInfo.callKey), sizeof(unsigned));

@@ -22,6 +22,8 @@
 #include <array>
 #include <unordered_set>
 
+#include "configurationLib.h"
+
 namespace gits {
 
 /**
@@ -437,7 +439,7 @@ struct CDeviceMemoryState : public UniqueResourceHandle {
           flagsData(_flags),
           ppDataData(*_ppData),
           sniffedRegionHandle(0) {
-      if (Config::Get().IsRecorder() && Config::Get().vulkan.recorder.memorySegmentSize) {
+      if (Configurator::IsRecorder() && Configurator::Get().vulkan.recorder.memorySegmentSize) {
         compareData.resize((size_t)*_size);
         memcpy(&compareData[0], (char*)*_ppData, (size_t)*_size);
       }
@@ -1172,7 +1174,7 @@ struct CFenceState : public UniqueResourceHandle {
         fenceCreateInfoData(_pCreateInfo),
         fenceUsed(_pCreateInfo->flags & VK_FENCE_CREATE_SIGNALED_BIT),
         delayChecksCount((_pCreateInfo->flags & VK_FENCE_CREATE_SIGNALED_BIT)
-                             ? Config::Get().vulkan.recorder.delayFenceChecksCount
+                             ? Configurator::Get().vulkan.recorder.delayFenceChecksCount
                              : 0),
         deviceStateStore(_deviceState) {}
 

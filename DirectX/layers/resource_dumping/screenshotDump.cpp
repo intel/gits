@@ -8,6 +8,7 @@
 
 #include "screenshotDump.h"
 #include "gits.h"
+#include "configurationLib.h"
 
 #include <DirectXTex.h>
 #include <wincodec.h>
@@ -17,7 +18,7 @@ namespace gits {
 namespace DirectX {
 
 ScreenshotDump::ScreenshotDump(ID3D12CommandQueue* commandQueue) {
-  std::string format = Config::Get().directx.features.screenshots.format;
+  std::string format = Configurator::Get().directx.features.screenshots.format;
   if (format == "jpg") {
     dumpJpg = true;
   }

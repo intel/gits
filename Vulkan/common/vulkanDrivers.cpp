@@ -28,6 +28,8 @@ namespace lua {
 
 #endif
 
+#include "configurationLib.h"
+
 namespace gits {
 namespace Vulkan {
 using std::uint64_t;
@@ -240,8 +242,8 @@ void_t STDCALL default_vkIAmRecorderGITS() {
 #ifndef BUILD_FOR_CCODE
 
 NOINLINE bool UseSpecial(const char* func) {
-  const auto& cfg = Config::Get();
-  return ShouldLog(TRACE) ||
+  const auto& cfg = Configurator::Get();
+  return ShouldLog(LogLevel::TRACE) ||
          (cfg.common.shared.useEvents &&
           lua::FunctionExists(func, CGits::Instance().GetLua().get())) ||
          (cfg.common.player.exitOnError) || (!cfg.common.player.traceSelectedFrames.empty());
@@ -266,10 +268,10 @@ void checkReturnValue<PFN_vkVoidFunction>(const char*, PFN_vkVoidFunction) {}
 #define SPECIAL_FUNCTION(return_type, function_name, function_arguments, arguments_call,           \
                          first_argument_name)                                                      \
   return_type STDCALL special_##function_name function_arguments {                                 \
-    const Config& gits_cfg = Config::Get();                                                        \
-    bool doTrace = ShouldLog(TRACE);                                                               \
+    const Configuration& gits_cfg = Configurator::Get();                                           \
+    bool doTrace = ShouldLog(LogLevel::TRACE);                                                     \
     if (doTrace) {                                                                                 \
-      if (isTraceDataOptPresent(TraceData::FRAME_NUMBER))                                          \
+      if (Configurator::IsTraceDataOptPresent(TraceData::FRAME_NUMBER))                            \
         Log(TRACE, RAW) << "Frame: " << CGits::Instance().CurrentFrame() << " ";                   \
       Log(TRACE, NO_NEWLINE) << #function_name;                                                    \
     }                                                                                              \
@@ -302,13 +304,13 @@ void checkReturnValue<PFN_vkVoidFunction>(const char*, PFN_vkVoidFunction) {}
 #else
 
 NOINLINE bool UseSpecial(const char*) {
-  return ShouldLog(TRACE);
+  return ShouldLog(LogLevel::TRACE);
 }
 
 #define SPECIAL_FUNCTION(return_type, function_name, function_arguments, arguments_call,           \
                          first_argument_name)                                                      \
   return_type STDCALL special_##function_name function_arguments {                                 \
-    bool doTrace = ShouldLog(TRACE);                                                               \
+    bool doTrace = ShouldLog(LogLevel::TRACE);                                                     \
     if (doTrace) {                                                                                 \
       Log(TRACE, NO_NEWLINE) << #function_name;                                                    \
     }                                                                                              \
@@ -374,7 +376,7 @@ CVkDriver::~CVkDriver() {
 
 void CVkDriver::Initialize() {
   CALL_ONCE[&] {
-    Config::Get();
+    Configurator::Get();
     Log(INFO) << "Initializing Vulkan API";
 
 #define VK_GLOBAL_LEVEL_FUNCTION(return_type, function_name, function_arguments, arguments_call)   \
@@ -395,11 +397,11 @@ void CVkDriver::Initialize() {
 #include "vulkanDriversAuto.inl"
 
     if (Mode == DriverMode::INTERCEPTOR) {
-      _lib = dl::open_library(gits::Config::Get().common.shared.libVK.string().c_str());
+      _lib = dl::open_library(Configurator::Get().common.shared.libVK.string().c_str());
       if (!_lib) {
         std::string errorMessage =
             std::string("Could not find Vulkan Loader in the specified path: ") +
-            gits::Config::Get().common.shared.libVK.string();
+            Configurator::Get().common.shared.libVK.string();
         throw std::runtime_error(errorMessage);
       }
 

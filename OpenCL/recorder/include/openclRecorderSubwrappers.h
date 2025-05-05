@@ -78,7 +78,7 @@ inline void clCreateContext_RECWRAP(
     cl_int* errcode_ret) {
   std::vector<cl_context_properties> unsharingPropsVec;
   const cl_context_properties* props = properties;
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   if (cfg.common.recorder.enabled && props != nullptr) {
     const auto platform = ExtractPlatform(props);
     const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
@@ -113,7 +113,7 @@ inline void clCreateContextFromType_RECWRAP(
     cl_int* errcode_ret) {
   std::vector<cl_context_properties> unsharingPropsVec;
   const cl_context_properties* props = properties;
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   if (cfg.common.recorder.enabled && props != nullptr) {
     const auto platform = ExtractPlatform(props);
     const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
@@ -145,7 +145,7 @@ inline void clCreateFromGLBuffer_RECWRAP(CRecorder& recorder,
                                          cl_GLuint bufobj,
                                          cl_int* errcode_ret) {
   if (recorder.Running()) {
-    if (IsGLUnsharingEnabled(Config::Get())) {
+    if (IsGLUnsharingEnabled(Configurator::Get())) {
       recorder.Schedule(NewTokenPtrCreateCLMem(context, return_value, flags, CL_MEM_OBJECT_BUFFER));
     } else {
       recorder.Schedule(
@@ -162,7 +162,7 @@ inline void clCreateFromGLRenderbuffer_RECWRAP(CRecorder& recorder,
                                                cl_GLuint bufobj,
                                                cl_int* errcode_ret) {
   if (recorder.Running()) {
-    if (IsGLUnsharingEnabled(Config::Get())) {
+    if (IsGLUnsharingEnabled(Configurator::Get())) {
       recorder.Schedule(
           NewTokenPtrCreateCLMem(context, return_value, flags, CL_MEM_OBJECT_IMAGE2D));
     } else {
@@ -182,7 +182,7 @@ inline void clCreateFromGLTexture_RECWRAP(CRecorder& recorder,
                                           cl_GLuint texture,
                                           cl_int* errcode_ret) {
   if (recorder.Running()) {
-    if (IsGLUnsharingEnabled(Config::Get())) {
+    if (IsGLUnsharingEnabled(Configurator::Get())) {
       auto type = TextureGLEnumToCLMemType(target);
       recorder.Schedule(NewTokenPtrCreateCLMem(context, return_value, flags, type));
     } else {
@@ -202,7 +202,7 @@ inline void clCreateFromGLTexture2D_RECWRAP(CRecorder& recorder,
                                             cl_GLuint texture,
                                             cl_int* errcode_ret) {
   if (recorder.Running()) {
-    if (IsGLUnsharingEnabled(Config::Get())) {
+    if (IsGLUnsharingEnabled(Configurator::Get())) {
       recorder.Schedule(
           NewTokenPtrCreateCLMem(context, return_value, flags, CL_MEM_OBJECT_IMAGE2D));
     } else {
@@ -222,7 +222,7 @@ inline void clCreateFromGLTexture3D_RECWRAP(CRecorder& recorder,
                                             cl_GLuint texture,
                                             cl_int* errcode_ret) {
   if (recorder.Running()) {
-    if (IsGLUnsharingEnabled(Config::Get())) {
+    if (IsGLUnsharingEnabled(Configurator::Get())) {
       recorder.Schedule(
           NewTokenPtrCreateCLMem(context, return_value, flags, CL_MEM_OBJECT_IMAGE3D));
     } else {
@@ -242,7 +242,7 @@ inline void clEnqueueAcquireGLObjects_RECWRAP(CRecorder& recorder,
                                               const cl_event* event_wait_list,
                                               cl_event* event) {
   if (recorder.Running()) {
-    if (IsGLUnsharingEnabled(Config::Get())) {
+    if (IsGLUnsharingEnabled(Configurator::Get())) {
       //TODO: Inject verification calls?
     } else {
       recorder.Schedule(new CclEnqueueAcquireGLObjects(return_value, command_queue, num_objects,
@@ -263,7 +263,7 @@ inline void clEnqueueReleaseGLObjects_RECWRAP(CRecorder& recorder,
                                               const cl_event* event_wait_list,
                                               cl_event* event) {
   if (recorder.Running()) {
-    if (IsGLUnsharingEnabled(Config::Get())) {
+    if (IsGLUnsharingEnabled(Configurator::Get())) {
       //TODO: Inject verification calls?
     } else {
       recorder.Schedule(new CclEnqueueReleaseGLObjects(return_value, command_queue, num_objects,
@@ -279,7 +279,7 @@ inline void clGetExtensionFunctionAddress_RECWRAP(CRecorder& recorder,
                                                   void* return_value,
                                                   const char* function_name) {
   if (recorder.Running()) {
-    const auto& cfg = Config::Get();
+    const auto& cfg = Configurator::Get();
     if ((IsGLUnsharingEnabled(cfg) && IsGLSharingFunction(function_name)) ||
         (IsDXUnsharingEnabled(cfg) && IsDXSharingFunction(function_name))) {
       return;
@@ -293,7 +293,7 @@ inline void clGetExtensionFunctionAddressForPlatform_RECWRAP(CRecorder& recorder
                                                              cl_platform_id platform,
                                                              const char* function_name) {
   if (recorder.Running()) {
-    const auto& cfg = Config::Get();
+    const auto& cfg = Configurator::Get();
     if ((IsGLUnsharingEnabled(cfg) && IsGLSharingFunction(function_name)) ||
         (IsDXUnsharingEnabled(cfg) && IsDXSharingFunction(function_name))) {
       return;
@@ -310,7 +310,7 @@ inline void clGetGLObjectInfo_RECWRAP(CRecorder& recorder,
                                       cl_gl_object_type* gl_object_type,
                                       cl_GLuint* gl_object_name) {
   if (recorder.Running()) {
-    if (IsGLUnsharingEnabled(Config::Get())) {
+    if (IsGLUnsharingEnabled(Configurator::Get())) {
       return;
     }
     recorder.Schedule(new CclGetGLObjectInfo(return_value, memobj, gl_object_type, gl_object_name));
@@ -325,7 +325,7 @@ inline void clGetGLTextureInfo_RECWRAP(CRecorder& recorder,
                                        void* param_value,
                                        size_t* param_value_size_ret) {
   if (recorder.Running()) {
-    if (IsGLUnsharingEnabled(Config::Get())) {
+    if (IsGLUnsharingEnabled(Configurator::Get())) {
       return;
     }
     recorder.Schedule(new CclGetGLTextureInfo(return_value, memobj, param_name, param_value_size,
@@ -336,7 +336,7 @@ inline void clGetGLTextureInfo_RECWRAP(CRecorder& recorder,
 inline void clReleaseEvent_RECWRAP(CRecorder& recorder, cl_int return_value, cl_event event) {
   if (recorder.Running()) {
     const auto& eventState = SD()._eventStates[event];
-    const auto& cfg = Config::Get();
+    const auto& cfg = Configurator::Get();
     if ((IsGLUnsharingEnabled(cfg) && eventState->isGLSharingEvent) ||
         (IsDXUnsharingEnabled(cfg) && eventState->isDXSharingEvent)) {
       return;
@@ -352,7 +352,7 @@ inline void clWaitForEvents_RECWRAP(CRecorder& recorder,
                                     cl_uint num_events,
                                     const cl_event* event_list) {
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(FilterSharingEvents(num_events, event_list));
       recorder.Schedule(new CclWaitForEvents(
           return_value, static_cast<cl_uint>(filteredEvents.size()), filteredEvents.data()));
@@ -370,7 +370,7 @@ inline void clGetGLContextInfoKHR_RECWRAP(CRecorder& recorder,
                                           void* param_value,
                                           size_t* param_value_size_ret) {
   if (recorder.Running()) {
-    if (IsGLUnsharingEnabled(Config::Get())) {
+    if (IsGLUnsharingEnabled(Configurator::Get())) {
       //Unsharing enabled - need to replace GL device query by standard device query for the same platform.
       if (return_value == CL_SUCCESS && (param_name == CL_DEVICES_FOR_GL_CONTEXT_KHR ||
                                          param_name == CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR)) {
@@ -422,7 +422,7 @@ inline void clEnqueueNDRangeKernel_RECWRAP(CRecorder& recorder,
                                            global_work_offset, global_work_size, local_work_size, 0,
                                            nullptr, nullptr);
     } else {
-      if (IsUnsharingEnabled(Config::Get())) {
+      if (IsUnsharingEnabled(Configurator::Get())) {
         std::vector<cl_event> filteredEvents(
             FilterSharingEvents(num_events_in_wait_list, event_wait_list));
         cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -452,7 +452,7 @@ inline void clCreateFromD3D10BufferKHR_RECWRAP(CRecorder& recorder,
                                                ID3D10Buffer* resource,
                                                cl_int* errcode_ret) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
       recorder.Schedule(NewTokenPtrCreateCLMem(context, return_value, flags, CL_MEM_OBJECT_BUFFER));
     } else {
       recorder.Schedule(
@@ -470,7 +470,7 @@ inline void clCreateFromD3D10Texture2DKHR_RECWRAP(CRecorder& recorder,
                                                   UINT subresource,
                                                   cl_int* errcode_ret) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
       recorder.Schedule(
           NewTokenPtrCreateCLMem(context, return_value, flags, CL_MEM_OBJECT_IMAGE2D));
     } else {
@@ -490,7 +490,7 @@ inline void clCreateFromD3D10Texture3DKHR_RECWRAP(CRecorder& recorder,
                                                   UINT subresource,
                                                   cl_int* errcode_ret) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
       recorder.Schedule(
           NewTokenPtrCreateCLMem(context, return_value, flags, CL_MEM_OBJECT_IMAGE3D));
     } else {
@@ -509,7 +509,7 @@ inline void clCreateFromD3D11BufferKHR_RECWRAP(CRecorder& recorder,
                                                ID3D11Buffer* resource,
                                                cl_int* errcode_ret) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
       recorder.Schedule(NewTokenPtrCreateCLMem(context, return_value, flags, CL_MEM_OBJECT_BUFFER));
     } else {
       recorder.Schedule(
@@ -527,7 +527,7 @@ inline void clCreateFromD3D11Texture2DKHR_RECWRAP(CRecorder& recorder,
                                                   UINT subresource,
                                                   cl_int* errcode_ret) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
       recorder.Schedule(
           NewTokenPtrCreateCLMem(context, return_value, flags, CL_MEM_OBJECT_IMAGE2D));
     } else {
@@ -547,7 +547,7 @@ inline void clCreateFromD3D11Texture3DKHR_RECWRAP(CRecorder& recorder,
                                                   UINT subresource,
                                                   cl_int* errcode_ret) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
       recorder.Schedule(
           NewTokenPtrCreateCLMem(context, return_value, flags, CL_MEM_OBJECT_IMAGE3D));
     } else {
@@ -566,7 +566,7 @@ inline void clCreateFromD3D11BufferNV_RECWRAP(CRecorder& recorder,
                                               ID3D11Buffer* resource,
                                               cl_int* errcode_ret) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
       recorder.Schedule(NewTokenPtrCreateCLMem(context, return_value, flags, CL_MEM_OBJECT_BUFFER));
     } else {
       recorder.Schedule(
@@ -584,7 +584,7 @@ inline void clCreateFromD3D11Texture2DNV_RECWRAP(CRecorder& recorder,
                                                  UINT subresource,
                                                  cl_int* errcode_ret) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
       recorder.Schedule(
           NewTokenPtrCreateCLMem(context, return_value, flags, CL_MEM_OBJECT_IMAGE2D));
     } else {
@@ -604,7 +604,7 @@ inline void clCreateFromD3D11Texture3DNV_RECWRAP(CRecorder& recorder,
                                                  UINT subresource,
                                                  cl_int* errcode_ret) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
       recorder.Schedule(
           NewTokenPtrCreateCLMem(context, return_value, flags, CL_MEM_OBJECT_IMAGE3D));
     } else {
@@ -625,7 +625,7 @@ inline void clCreateFromDX9MediaSurfaceINTEL_RECWRAP(CRecorder& recorder,
                                                      UINT plane,
                                                      cl_int* errcode_ret) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
       recorder.Schedule(NewTokenPtrCreateCLMem(context, return_value, flags, CL_MEM_OBJECT_BUFFER));
     } else {
       recorder.Schedule(new CclCreateFromDX9MediaSurfaceINTEL(
@@ -645,7 +645,7 @@ inline void clEnqueueAcquireD3D10ObjectsKHR_RECWRAP(CRecorder& recorder,
                                                     const cl_event* event_wait_list,
                                                     cl_event* event) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
     } else {
       recorder.Schedule(new CclEnqueueAcquireD3D10ObjectsKHR(
           return_value, command_queue, num_objects, mem_objects, num_events_in_wait_list,
@@ -665,7 +665,7 @@ inline void clEnqueueAcquireD3D11ObjectsKHR_RECWRAP(CRecorder& recorder,
                                                     const cl_event* event_wait_list,
                                                     cl_event* event) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
     } else {
       recorder.Schedule(new CclEnqueueAcquireD3D11ObjectsKHR(
           return_value, command_queue, num_objects, mem_objects, num_events_in_wait_list,
@@ -685,7 +685,7 @@ inline void clEnqueueAcquireD3D11ObjectsNV_RECWRAP(CRecorder& recorder,
                                                    const cl_event* event_wait_list,
                                                    cl_event* event) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
     } else {
       recorder.Schedule(
           new CclEnqueueAcquireD3D11ObjectsNV(return_value, command_queue, num_objects, mem_objects,
@@ -705,7 +705,7 @@ inline void clEnqueueAcquireDX9ObjectsINTEL_RECWRAP(CRecorder& recorder,
                                                     const cl_event* event_wait_list,
                                                     cl_event* event) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
     } else {
       recorder.Schedule(new CclEnqueueAcquireDX9ObjectsINTEL(
           return_value, command_queue, num_objects, mem_objects, num_events_in_wait_list,
@@ -725,7 +725,7 @@ inline void clEnqueueReleaseD3D10ObjectsKHR_RECWRAP(CRecorder& recorder,
                                                     const cl_event* event_wait_list,
                                                     cl_event* event) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
     } else {
       recorder.Schedule(new CclEnqueueReleaseD3D10ObjectsKHR(
           return_value, command_queue, num_objects, mem_objects, num_events_in_wait_list,
@@ -745,7 +745,7 @@ inline void clEnqueueReleaseD3D11ObjectsKHR_RECWRAP(CRecorder& recorder,
                                                     const cl_event* event_wait_list,
                                                     cl_event* event) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
     } else {
       recorder.Schedule(new CclEnqueueReleaseD3D11ObjectsKHR(
           return_value, command_queue, num_objects, mem_objects, num_events_in_wait_list,
@@ -765,7 +765,7 @@ inline void clEnqueueReleaseD3D11ObjectsNV_RECWRAP(CRecorder& recorder,
                                                    const cl_event* event_wait_list,
                                                    cl_event* event) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
     } else {
       recorder.Schedule(
           new CclEnqueueReleaseD3D11ObjectsNV(return_value, command_queue, num_objects, mem_objects,
@@ -785,7 +785,7 @@ inline void clEnqueueReleaseDX9ObjectsINTEL_RECWRAP(CRecorder& recorder,
                                                     const cl_event* event_wait_list,
                                                     cl_event* event) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
     } else {
       recorder.Schedule(new CclEnqueueReleaseDX9ObjectsINTEL(
           return_value, command_queue, num_objects, mem_objects, num_events_in_wait_list,
@@ -806,7 +806,7 @@ inline void clGetDeviceIDsFromD3D10KHR_RECWRAP(CRecorder& recorder,
                                                cl_device_id* devices,
                                                cl_uint* num_devices) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
       if (return_value == CL_SUCCESS) {
         recorder.Schedule(NewTokenPtrGetDevices(platform));
       }
@@ -830,7 +830,7 @@ inline void clGetDeviceIDsFromD3D11KHR_RECWRAP(CRecorder& recorder,
                                                cl_device_id* devices,
                                                cl_uint* num_devices) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
       if (return_value == CL_SUCCESS) {
         recorder.Schedule(NewTokenPtrGetDevices(platform));
       }
@@ -854,7 +854,7 @@ inline void clGetDeviceIDsFromD3D11NV_RECWRAP(CRecorder& recorder,
                                               cl_device_id* devices,
                                               cl_uint* num_devices) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
       if (return_value == CL_SUCCESS) {
         recorder.Schedule(NewTokenPtrGetDevices(platform));
       }
@@ -878,7 +878,7 @@ inline void clGetDeviceIDsFromDX9INTEL_RECWRAP(CRecorder& recorder,
                                                cl_device_id* devices,
                                                cl_uint* num_devices) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
       if (return_value == CL_SUCCESS) {
         recorder.Schedule(NewTokenPtrGetDevices(platform));
       }
@@ -901,7 +901,7 @@ inline void clGetContextInfo_RECWRAP(CRecorder& recorder,
                                      void* param_value,
                                      size_t* param_value_size_ret) {
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get()) && IsSharingQuery(param_name)) {
+    if (IsUnsharingEnabled(Configurator::Get()) && IsSharingQuery(param_name)) {
       return;
     } else {
       recorder.Schedule(new CclGetContextInfo(return_value, context, param_name, param_value_size,
@@ -922,7 +922,7 @@ inline void clCreateFromDX9MediaSurfaceKHR_RECWRAP(CRecorder& recorder,
                                                    cl_uint plane,
                                                    cl_int* errcode_ret) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
       recorder.Schedule(
           NewTokenPtrCreateCLMem(context, return_value, flags, CL_MEM_OBJECT_IMAGE2D));
     } else {
@@ -946,7 +946,7 @@ inline void clGetDeviceIDsFromDX9MediaAdapterKHR_RECWRAP(
     cl_device_id* devices,
     cl_int* num_devices) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
     } else {
       recorder.Schedule(new CclGetDeviceIDsFromDX9MediaAdapterKHR(
           return_value, platform, num_media_adapters, media_adapters_type, media_adapters,
@@ -965,7 +965,7 @@ inline void clGetEventInfo_RECWRAP(CRecorder& recorder,
                                    size_t* param_value_size_ret) {
   if (recorder.Running()) {
     const auto& eventState = SD()._eventStates[event];
-    const auto& cfg = Config::Get();
+    const auto& cfg = Configurator::Get();
     if ((IsGLUnsharingEnabled(cfg) &&
          (IsGLSharingQuery(param_name) || eventState->isGLSharingEvent)) ||
         (IsDXUnsharingEnabled(cfg) &&
@@ -986,7 +986,7 @@ inline void clGetImageInfo_RECWRAP(CRecorder& recorder,
                                    void* param_value,
                                    size_t* param_value_size_ret) {
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get()) && IsSharingQuery(param_name)) {
+    if (IsUnsharingEnabled(Configurator::Get()) && IsSharingQuery(param_name)) {
       return;
     } else {
       recorder.Schedule(new CclGetImageInfo(return_value, image, param_name, param_value_size,
@@ -1003,7 +1003,7 @@ inline void clGetMemObjectInfo_RECWRAP(CRecorder& recorder,
                                        void* param_value,
                                        size_t* param_value_size_ret) {
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get()) && IsSharingQuery(param_name)) {
+    if (IsUnsharingEnabled(Configurator::Get()) && IsSharingQuery(param_name)) {
       return;
     } else {
       recorder.Schedule(new CclGetMemObjectInfo(return_value, memobj, param_name, param_value_size,
@@ -1015,7 +1015,7 @@ inline void clGetMemObjectInfo_RECWRAP(CRecorder& recorder,
 inline void clRetainEvent_RECWRAP(CRecorder& recorder, cl_int return_value, cl_event event) {
   if (recorder.Running()) {
     const auto& eventState = SD()._eventStates[event];
-    const auto& cfg = Config::Get();
+    const auto& cfg = Configurator::Get();
     if ((IsGLUnsharingEnabled(cfg) && eventState->isGLSharingEvent) ||
         (IsDXUnsharingEnabled(cfg) && eventState->isDXSharingEvent)) {
       return;
@@ -1034,7 +1034,7 @@ inline void clEnqueueBarrierWithWaitList_RECWRAP(CRecorder& recorder,
                                                  cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1063,7 +1063,7 @@ inline void clEnqueueCopyBuffer_RECWRAP(CRecorder& recorder,
                                         cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1098,7 +1098,7 @@ inline void clEnqueueCopyBufferRect_RECWRAP(CRecorder& recorder,
                                             cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1133,7 +1133,7 @@ inline void clEnqueueCopyBufferToImage_RECWRAP(CRecorder& recorder,
                                                cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1165,7 +1165,7 @@ inline void clEnqueueCopyImage_RECWRAP(CRecorder& recorder,
                                        cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1196,7 +1196,7 @@ inline void clEnqueueCopyImageToBuffer_RECWRAP(CRecorder& recorder,
                                                cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1228,7 +1228,7 @@ inline void clEnqueueFillBuffer_RECWRAP(CRecorder& recorder,
                                         cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1258,7 +1258,7 @@ inline void clEnqueueFillImage_RECWRAP(CRecorder& recorder,
                                        cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1289,7 +1289,7 @@ inline void clEnqueueMapBuffer_RECWRAP(CRecorder& recorder,
                                        cl_int* errcode_ret) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1326,7 +1326,7 @@ inline void clEnqueueMapImage_RECWRAP(CRecorder& recorder,
                                       cl_int* errcode_ret) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1359,7 +1359,7 @@ inline void clEnqueueMarkerWithWaitList_RECWRAP(CRecorder& recorder,
                                                 cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1386,7 +1386,7 @@ inline void clEnqueueMigrateMemObjects_RECWRAP(CRecorder& recorder,
                                                cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1417,7 +1417,7 @@ inline void clEnqueueReadBuffer_RECWRAP(CRecorder& recorder,
                                         cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1452,7 +1452,7 @@ inline void clEnqueueReadBufferRect_RECWRAP(CRecorder& recorder,
                                             cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1489,7 +1489,7 @@ inline void clEnqueueReadImage_RECWRAP(CRecorder& recorder,
                                        cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1521,7 +1521,7 @@ inline void clEnqueueSVMFree_RECWRAP(
     cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1551,7 +1551,7 @@ inline void clEnqueueSVMMap_RECWRAP(CRecorder& recorder,
                                     cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1597,7 +1597,7 @@ inline void clEnqueueSVMUnmap_RECWRAP(CRecorder& recorder,
                                       cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1622,7 +1622,7 @@ inline void clEnqueueTask_RECWRAP(CRecorder& recorder,
                                   cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1648,7 +1648,7 @@ inline void clEnqueueUnmapMemObject_RECWRAP(CRecorder& recorder,
                                             cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1678,7 +1678,7 @@ inline void clEnqueueWaitForEvents_RECWRAP(CRecorder& recorder,
                                            const cl_event* event_list) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(FilterSharingEvents(num_events, event_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
       _token = new CclEnqueueWaitForEvents(return_value, command_queue, num_filtered_events,
@@ -1703,7 +1703,7 @@ inline void clEnqueueWriteBuffer_RECWRAP(CRecorder& recorder,
                                          cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1739,7 +1739,7 @@ inline void clEnqueueWriteBufferRect_RECWRAP(CRecorder& recorder,
                                              cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1776,7 +1776,7 @@ inline void clEnqueueWriteImage_RECWRAP(CRecorder& recorder,
                                         cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1818,7 +1818,7 @@ inline void clEnqueueAcquireDX9MediaSurfacesKHR_RECWRAP(CRecorder& recorder,
                                                         const cl_event* event_wait_list,
                                                         cl_event* event) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
     } else {
       recorder.Schedule(new CclEnqueueAcquireDX9MediaSurfacesKHR(
           return_value, command_queue, num_objects, mem_objects, num_events_in_wait_list,
@@ -1840,7 +1840,7 @@ inline void clEnqueueReleaseDX9MediaSurfacesKHR_RECWRAP(CRecorder& recorder,
                                                         const cl_event* event_wait_list,
                                                         cl_event* event) {
   if (recorder.Running()) {
-    if (IsDXUnsharingEnabled(Config::Get())) {
+    if (IsDXUnsharingEnabled(Configurator::Get())) {
     } else {
       recorder.Schedule(new CclEnqueueReleaseDX9MediaSurfacesKHR(
           return_value, command_queue, num_objects, mem_objects, num_events_in_wait_list,
@@ -1868,7 +1868,7 @@ inline void clEnqueueMemcpyINTEL_RECWRAP(CRecorder& recorder,
       _token = new CGitsClMemoryUpdate(const_cast<void*>(src_ptr));
       recorder.Schedule(_token);
     }
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1896,7 +1896,7 @@ inline void clEnqueueMemAdviseINTEL_RECWRAP(CRecorder& recorder,
                                             cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1924,7 +1924,7 @@ inline void clEnqueueMigrateMemINTEL_RECWRAP(CRecorder& recorder,
                                              cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1960,7 +1960,7 @@ inline void clEnqueueNDCountKernelINTEL_RECWRAP(CRecorder& recorder,
                                                 globalWorkOffset, workGroupCount, localWorkSize, 0,
                                                 nullptr, nullptr);
     } else {
-      if (IsUnsharingEnabled(Config::Get())) {
+      if (IsUnsharingEnabled(Configurator::Get())) {
         std::vector<cl_event> filteredEvents(
             FilterSharingEvents(numEventsInWaitList, eventWaitList));
         cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -1993,7 +1993,7 @@ inline void clEnqueueMemFillINTEL_RECWRAP(CRecorder& recorder,
                                           cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -2023,7 +2023,7 @@ inline void clEnqueueSVMMemcpy_V1_RECWRAP(CRecorder& recorder,
                                           cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -2053,7 +2053,7 @@ inline void clEnqueueSVMMemFill_V1_RECWRAP(CRecorder& recorder,
                                            cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -2085,7 +2085,7 @@ inline void clDeviceMemAllocINTEL_RECWRAP(CRecorder& recorder,
   }
   clDeviceMemAllocINTEL_SD(return_value, context, device, properties, size, alignment, errcode_ret);
   if (recorder.Running() && ErrCodeSuccess(errcode_ret) &&
-      CheckCfgZeroInitialization(Config::Get(), IsReadOnlyBuffer(0, properties))) {
+      CheckCfgZeroInitialization(Configurator::Get(), IsReadOnlyBuffer(0, properties))) {
     const auto commandQueue = GetCommandQueueRec(context, &recorder);
     if (commandQueue != nullptr) {
       if (ZeroInitializeUsm(commandQueue, return_value, size, UnifiedMemoryType::device)) {
@@ -2111,7 +2111,7 @@ inline void clHostMemAllocINTEL_RECWRAP(CRecorder& recorder,
   }
   clHostMemAllocINTEL_SD(return_value, context, properties, size, alignment, errcode_ret);
   if (recorder.Running() && ErrCodeSuccess(errcode_ret) &&
-      CheckCfgZeroInitialization(Config::Get(), IsReadOnlyBuffer(0, properties))) {
+      CheckCfgZeroInitialization(Configurator::Get(), IsReadOnlyBuffer(0, properties))) {
     const auto commandQueue = GetCommandQueueRec(context, &recorder);
     if (commandQueue != nullptr) {
       if (ZeroInitializeUsm(commandQueue, return_value, size, UnifiedMemoryType::host)) {
@@ -2138,7 +2138,7 @@ inline void clSVMAlloc_RECWRAP(CRecorder& recorder,
   }
   clSVMAlloc_SD(return_value, context, flags, size, alignment);
   if (recorder.Running() && return_value != nullptr &&
-      CheckCfgZeroInitialization(Config::Get(), IsReadOnlyBuffer(flags))) {
+      CheckCfgZeroInitialization(Configurator::Get(), IsReadOnlyBuffer(flags))) {
     const auto commandQueue = GetCommandQueueRec(context, &recorder);
     if (commandQueue != nullptr) {
       const auto fineGrain = (flags & CL_MEM_SVM_FINE_GRAIN_BUFFER) != 0U;
@@ -2176,7 +2176,7 @@ inline void clSharedMemAllocINTEL_RECWRAP(CRecorder& recorder,
   }
   clSharedMemAllocINTEL_SD(return_value, context, device, properties, size, alignment, errcode_ret);
   if (recorder.Running() && ErrCodeSuccess(errcode_ret) &&
-      CheckCfgZeroInitialization(Config::Get(), IsReadOnlyBuffer(0, properties))) {
+      CheckCfgZeroInitialization(Configurator::Get(), IsReadOnlyBuffer(0, properties))) {
     const auto commandQueue = GetCommandQueueRec(context, &recorder);
     if (commandQueue != nullptr) {
       ZeroInitializeUsm(commandQueue, return_value, size, UnifiedMemoryType::shared);
@@ -2205,7 +2205,7 @@ inline void clCreateBuffer_RECWRAP(CRecorder& recorder,
   clCreateBuffer_SD(return_value, context, flags, size, host_ptr, errcode_ret);
   const auto isUsingHostPtr = flags & (CL_MEM_COPY_HOST_PTR | CL_MEM_USE_HOST_PTR);
   if (recorder.Running() && ErrCodeSuccess(errcode_ret) && !isUsingHostPtr &&
-      CheckCfgZeroInitialization(Config::Get(), IsReadOnlyBuffer(flags, nullptr))) {
+      CheckCfgZeroInitialization(Configurator::Get(), IsReadOnlyBuffer(flags, nullptr))) {
     const auto commandQueue = GetCommandQueueRec(context, &recorder);
     if (commandQueue != nullptr && ZeroInitializeBuffer(commandQueue, return_value, size)) {
       const auto zeroBuffer = std::vector<char>(size, 0);
@@ -2237,7 +2237,7 @@ inline void clCreateBufferWithPropertiesINTEL_RECWRAP(CRecorder& recorder,
   }
   isUsingHostPtr = isUsingHostPtr || (flags & (CL_MEM_COPY_HOST_PTR | CL_MEM_USE_HOST_PTR));
   if (recorder.Running() && ErrCodeSuccess(errcode_ret) && !isUsingHostPtr &&
-      CheckCfgZeroInitialization(Config::Get(), IsReadOnlyBuffer(flags, properties))) {
+      CheckCfgZeroInitialization(Configurator::Get(), IsReadOnlyBuffer(flags, properties))) {
     const auto commandQueue = GetCommandQueueRec(context, &recorder);
     if (commandQueue != nullptr && ZeroInitializeBuffer(commandQueue, return_value, size)) {
       const auto zeroBuffer = std::vector<char>(size, 0);
@@ -2263,7 +2263,7 @@ inline void clCreateImage_RECWRAP(CRecorder& recorder,
   clCreateImage_SD(return_value, context, flags, image_format, image_desc, host_ptr, errcode_ret);
   const auto isUsingHostPtr = (flags & (CL_MEM_COPY_HOST_PTR | CL_MEM_USE_HOST_PTR));
   if (recorder.Running() && ErrCodeSuccess(errcode_ret) && !isUsingHostPtr &&
-      CheckCfgZeroInitialization(Config::Get(), IsReadOnlyBuffer(flags, nullptr))) {
+      CheckCfgZeroInitialization(Configurator::Get(), IsReadOnlyBuffer(flags, nullptr))) {
     const auto commandQueue = GetCommandQueueRec(context, &recorder);
     if (commandQueue != nullptr) {
       const auto size = CountImageSize(*image_format, *image_desc);
@@ -2301,7 +2301,7 @@ inline void clCreateImage2D_RECWRAP(CRecorder& recorder,
                      image_row_pitch, host_ptr, errcode_ret);
   const auto isUsingHostPtr = (flags & (CL_MEM_COPY_HOST_PTR | CL_MEM_USE_HOST_PTR));
   if (recorder.Running() && ErrCodeSuccess(errcode_ret) && !isUsingHostPtr &&
-      CheckCfgZeroInitialization(Config::Get(), IsReadOnlyBuffer(flags, nullptr))) {
+      CheckCfgZeroInitialization(Configurator::Get(), IsReadOnlyBuffer(flags, nullptr))) {
     const auto commandQueue = GetCommandQueueRec(context, &recorder);
     if (commandQueue != nullptr) {
       const auto size = CountImageSize(*image_format, image_width, image_height, image_row_pitch);
@@ -2339,7 +2339,7 @@ inline void clCreateImage3D_RECWRAP(CRecorder& recorder,
                      image_depth, image_row_pitch, image_slice_pitch, host_ptr, errcode_ret);
   const auto isUsingHostPtr = (flags & (CL_MEM_COPY_HOST_PTR | CL_MEM_USE_HOST_PTR));
   if (recorder.Running() && ErrCodeSuccess(errcode_ret) && !isUsingHostPtr &&
-      CheckCfgZeroInitialization(Config::Get(), IsReadOnlyBuffer(flags, nullptr))) {
+      CheckCfgZeroInitialization(Configurator::Get(), IsReadOnlyBuffer(flags, nullptr))) {
     const auto commandQueue = GetCommandQueueRec(context, &recorder);
     if (commandQueue != nullptr) {
       const auto size = CountImageSize(*image_format, image_width, image_height, image_depth,
@@ -2377,7 +2377,7 @@ inline void clCreateImageWithPropertiesINTEL_RECWRAP(CRecorder& recorder,
        (GetPropertyVal(properties, CL_MEM_FLAGS) & (CL_MEM_COPY_HOST_PTR | CL_MEM_USE_HOST_PTR))) ||
       (flags & (CL_MEM_COPY_HOST_PTR | CL_MEM_USE_HOST_PTR));
   if (recorder.Running() && ErrCodeSuccess(errcode_ret) && !isUsingHostPtr &&
-      CheckCfgZeroInitialization(Config::Get(), IsReadOnlyBuffer(flags, properties))) {
+      CheckCfgZeroInitialization(Configurator::Get(), IsReadOnlyBuffer(flags, properties))) {
     const auto commandQueue = GetCommandQueueRec(context, &recorder);
     if (commandQueue != nullptr) {
       const auto size = CountImageSize(*image_format, *image_desc);
@@ -2405,7 +2405,7 @@ inline void clGetPlatformIDs_RECWRAP(CRecorder& recorder,
   if (recorder.Running()) {
     recorder.Schedule(new CclGetPlatformIDs(return_value, num_entries, platforms, num_platforms));
   }
-  if (Config::Get().common.recorder.enabled) {
+  if (Configurator::Get().common.recorder.enabled) {
     const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
     if (!oclIFace.MemorySnifferInstall()) {
       Log(WARN) << "Memory Sniffer installation failed";
@@ -2425,7 +2425,7 @@ inline void clGetDeviceIDs_RECWRAP(CRecorder& recorder,
     recorder.Schedule(new CclGetDeviceIDs(return_value, platform, device_type, num_entries, devices,
                                           num_devices));
   }
-  if (Config::Get().common.recorder.enabled) {
+  if (Configurator::Get().common.recorder.enabled) {
     const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
     if (platform == nullptr && !oclIFace.MemorySnifferInstall()) {
       Log(WARN) << "Memory Sniffer installation failed";
@@ -2445,7 +2445,7 @@ inline void clEnqueueMemsetINTEL_RECWRAP(CRecorder& recorder,
                                          cl_event* event) {
   CFunction* _token = nullptr;
   if (recorder.Running()) {
-    if (IsUnsharingEnabled(Config::Get())) {
+    if (IsUnsharingEnabled(Configurator::Get())) {
       std::vector<cl_event> filteredEvents(
           FilterSharingEvents(num_events_in_wait_list, event_wait_list));
       cl_uint num_filtered_events = static_cast<cl_uint>(filteredEvents.size());
@@ -2536,7 +2536,7 @@ inline void clSetEventCallback_RECWRAP(CRecorder& recorder,
   if (recorder.Running()) {
     bool scheduleEventStatus = false;
     const auto sharingEvent =
-        IsUnsharingEnabled(Config::Get()) && IsSharingEventFilteringNeeded(event);
+        IsUnsharingEnabled(Configurator::Get()) && IsSharingEventFilteringNeeded(event);
     if (sharingEvent) {
       cl_int errCode = CL_SUCCESS;
       auto& eventState = SD().GetEventState(event, EXCEPTION_MESSAGE);

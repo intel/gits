@@ -106,7 +106,9 @@ nav:
     - FAQ: 'guides/FAQ.md'
   - Community:
     - Reproducers: 'community/HowToPrepareReproducer.md'
-    - Documentation: 'community/Documentation.md'
+    - Development:
+      - Documentation: 'community/development/Documentation.md'
+      - Configuration & Arguments: 'community/development/Configuration.md'
 
 markdown_extensions:
   - pymdownx.striphtml:

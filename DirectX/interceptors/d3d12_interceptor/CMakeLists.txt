@@ -10,12 +10,12 @@ add_library(d3d12_interceptor SHARED)
 target_link_libraries(d3d12_interceptor common detours)
 
 set(COMMON_SRC
-  ${CMAKE_SOURCE_DIR}/common/tools_lite.cpp
-  ${CMAKE_SOURCE_DIR}/common/exception.cpp
-  ${CMAKE_SOURCE_DIR}/common/timer.cpp
-  ${CMAKE_SOURCE_DIR}/common/dynamic_linker.cpp
-  ${CMAKE_SOURCE_DIR}/common/gitsLoader.cpp
-  ${CMAKE_SOURCE_DIR}/common/log.cpp
+  ${CMAKE_SOURCE_DIR}/common/legacy/tools_lite.cpp
+  ${CMAKE_SOURCE_DIR}/common/legacy/exception.cpp
+  ${CMAKE_SOURCE_DIR}/common/legacy/timer.cpp
+  ${CMAKE_SOURCE_DIR}/common/legacy/dynamic_linker.cpp
+  ${CMAKE_SOURCE_DIR}/common/legacy/gitsLoader.cpp
+  ${CMAKE_SOURCE_DIR}/common/legacy/log.cpp
 )
 source_group("common" FILES ${COMMON_SRC})
 

@@ -91,7 +91,7 @@ void gits::Vulkan::${cname}::${run_function_name}()
 % if token.run_wrap:
   ${token.name}_WRAPRUN(${normal_retval_and_args});
 % elif token.token_cache:
-  if (Config::Get().vulkan.player.execCmdBuffsBeforeQueueSubmit) {
+  if (Configurator::Get().vulkan.player.execCmdBuffsBeforeQueueSubmit) {
     TokenBuffersUpdate();
   } else {
     Exec();

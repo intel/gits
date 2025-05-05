@@ -8,10 +8,11 @@
 
 #include "fastOStream.h"
 #include "log.h"
-#include "config.h"
+#include "configurationLib.h"
 #include "ipc/common.h"
 #include <filesystem>
 #include <Windows.h>
+#include <thread>
 
 namespace gits {
 namespace DirectX {
@@ -77,7 +78,7 @@ void FastOStringStream::initializeIpcFlush() {
   }
 
   auto executablePath =
-      std::filesystem::path(gits::Config::Get().common.recorder.installPath).parent_path() /
+      std::filesystem::path(Configurator::Get().common.recorder.installPath).parent_path() /
       "UtilityTools" / "DirectX_trace_ipc.exe";
   if (!std::filesystem::exists(executablePath)) {
     std::vector<char> moduleFilename(MAX_PATH + 1, 0);

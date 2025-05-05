@@ -154,7 +154,7 @@ gits::OpenCL::CGitsClTokenMakeCurrentThread::CGitsClTokenMakeCurrentThread(const
     Log(WARN) << "Multithreaded applications have to be "
                  "recorded from beginning. Subcapturing from stream is "
                  "possible without the --faithfulThreading option.";
-    if (Config::Get().dumpCCode() && CGits::Instance().MultithreadedApp()) {
+    if (Configurator::DumpCCode() && CGits::Instance().MultithreadedApp()) {
       Log(ERR) << "CCodeDump is not possible for multithreaded application. Please "
                   "record binary stream first and then recapture it to CCode";
       throw EOperationFailed(EXCEPTION_MESSAGE);

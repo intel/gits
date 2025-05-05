@@ -8,35 +8,41 @@
 
 #include "portabilityLayer.h"
 #include "gits.h"
+#include "configurationLib.h"
 
 namespace gits {
 namespace DirectX {
 
 PortabilityLayer::PortabilityLayer() : Layer("Portability") {
-  if (Config::IsRecorder() && Config::Get().directx.capture.portability.resourcePlacementStorage ||
-      Config::IsPlayer() && Config::Get().directx.player.portability.resourcePlacement == "store") {
+  if (Configurator::IsRecorder() &&
+          Configurator::Get().directx.capture.portability.resourcePlacementStorage ||
+      Configurator::IsPlayer() &&
+          Configurator::Get().directx.player.portability.resourcePlacement == "store") {
     storeResourcePlacementData_ = true;
   }
-  if (Config::IsPlayer() && Config::Get().directx.player.portability.resourcePlacement == "use") {
+  if (Configurator::IsPlayer() &&
+      Configurator::Get().directx.player.portability.resourcePlacement == "use") {
     useResourcePlacementData_ = true;
   }
-  if (Config::IsPlayer() && Config::Get().directx.player.portability.portabilityChecks) {
+  if (Configurator::IsPlayer() &&
+      Configurator::Get().directx.player.portability.portabilityChecks) {
     portabilityChecks_ = true;
   }
-  if (Config::IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     accelerationStructurePadding_ =
-        Config::Get().directx.capture.portability.raytracing.accelerationStructurePadding;
+        Configurator::Get().directx.capture.portability.raytracing.accelerationStructurePadding;
     if (accelerationStructurePadding_ < 1.0) {
       accelerationStructurePadding_ = 1.0;
     }
     accelerationStructureScratchPadding_ =
-        Config::Get().directx.capture.portability.raytracing.accelerationStructureScratchPadding;
+        Configurator::Get()
+            .directx.capture.portability.raytracing.accelerationStructureScratchPadding;
     if (accelerationStructureScratchPadding_ < 1.0) {
       accelerationStructureScratchPadding_ = 1.0;
     }
   }
 
-  if (Config::IsRecorder() && storeResourcePlacementData_) {
+  if (Configurator::IsRecorder() && storeResourcePlacementData_) {
     gits::CGits::Instance().GetMessageBus().subscribe(
         {PUBLISHER_RECORDER, TOPIC_END}, [this](Topic t, const MessagePtr& m) {
           resourcePlacementCapture_.storeResourcePlacement();
@@ -46,7 +52,7 @@ PortabilityLayer::PortabilityLayer() : Layer("Portability") {
 
 PortabilityLayer::~PortabilityLayer() {
   try {
-    if (Config::IsPlayer() && storeResourcePlacementData_) {
+    if (Configurator::IsPlayer() && storeResourcePlacementData_) {
       resourcePlacementCapture_.storeResourcePlacement();
     }
   } catch (...) {

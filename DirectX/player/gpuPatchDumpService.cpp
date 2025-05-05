@@ -9,6 +9,7 @@
 #include "gpuPatchDumpService.h"
 #include "gits.h"
 #include "command.h"
+#include "configurationLib.h"
 
 #include <sstream>
 
@@ -20,16 +21,16 @@ GpuPatchDumpService::GpuPatchDumpService(GpuPatchAddressService& addressService,
                                          GpuPatchDescriptorHandleService& descriptorHandleService)
     : resourceDump_(addressService, shaderIdentifierService, descriptorHandleService),
       executeIndirectDump_(addressService),
-      raytracingKeys_(Config::Get().directx.features.raytracingDump.commandKeys),
-      executeIndirectKeys_(Config::Get().directx.features.executeIndirectDump.commandKeys) {
+      raytracingKeys_(Configurator::Get().directx.features.raytracingDump.commandKeys),
+      executeIndirectKeys_(Configurator::Get().directx.features.executeIndirectDump.commandKeys) {
 
-  auto& configRaytracing = Config::Get().directx.features.raytracingDump;
+  auto& configRaytracing = Configurator::Get().directx.features.raytracingDump;
   dumpInstancesPre_ = configRaytracing.instancesPre;
   dumpInstancesPost_ = configRaytracing.instancesPost;
   dumpBindingTablesPre_ = configRaytracing.bindingTablesPre;
   dumpBindingTablesPost_ = configRaytracing.bindingTablesPost;
 
-  auto& configExecuteIndirect = Config::Get().directx.features.executeIndirectDump;
+  auto& configExecuteIndirect = Configurator::Get().directx.features.executeIndirectDump;
   dumpArgumentBufferPre_ = configExecuteIndirect.argumentBufferPre;
   dumpArgumentBufferPost_ = configExecuteIndirect.argumentBufferPost;
 
@@ -45,9 +46,9 @@ GpuPatchDumpService::GpuPatchDumpService(GpuPatchAddressService& addressService,
     descriptorHandleService.enableDumpLookup();
   }
 
-  std::filesystem::path dumpPath = Config::Get().common.player.outputDir.empty()
-                                       ? Config::Get().common.player.streamDir / "resources"
-                                       : Config::Get().common.player.outputDir;
+  std::filesystem::path dumpPath = Configurator::Get().common.player.outputDir.empty()
+                                       ? Configurator::Get().common.player.streamDir / "resources"
+                                       : Configurator::Get().common.player.outputDir;
   if (!dumpPath.empty() && !std::filesystem::exists(dumpPath)) {
     std::filesystem::create_directory(dumpPath);
   }

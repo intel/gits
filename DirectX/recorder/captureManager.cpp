@@ -40,10 +40,10 @@ CaptureManager& CaptureManager::get() {
   if (!instance_) {
     instance_ = new CaptureManager();
     instance_->interceptKernelFunctions();
-    if (Config::Get().directx.capture.captureDirectStorage) {
+    if (Configurator::Get().directx.capture.captureDirectStorage) {
       instance_->interceptDirectStorageFunctions();
     }
-    if (Config::Get().directx.capture.captureDirectML) {
+    if (Configurator::Get().directx.capture.captureDirectML) {
       instance_->interceptDirectMLFunctions();
     }
   }
@@ -115,7 +115,7 @@ CaptureManager::CaptureManager() {
 }
 
 void CaptureManager::createLayers() {
-  auto& cfg = Config::Get();
+  auto& cfg = Configurator::Get();
 
   // Create layers used by Recorder
   std::unique_ptr<Layer> interceptorCustomizationLayer =
@@ -371,7 +371,7 @@ void CaptureManager::interceptKernelFunctions() {
 
 void CaptureManager::interceptXessFunctions() {
 
-  if (xessDll_ || loadingXessDll_ || !Config::Get().directx.capture.captureXess) {
+  if (xessDll_ || loadingXessDll_ || !Configurator::Get().directx.capture.captureXess) {
     return;
   }
 
@@ -521,7 +521,7 @@ void CaptureManager::interceptXessFunctions() {
 }
 
 void CaptureManager::loadIntelExtension(const uint32_t& vendorID, const uint32_t& deviceID) {
-  if (intelExtensionLoaded_ || !Config::Get().directx.capture.captureIntelExtensions) {
+  if (intelExtensionLoaded_ || !Configurator::Get().directx.capture.captureIntelExtensions) {
     return;
   }
 

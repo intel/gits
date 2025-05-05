@@ -334,7 +334,7 @@ gits::OpenCL::CBinariesArray::CBinariesArray(const cl_uint count,
 
 void gits::OpenCL::CBinariesArray::Write(CBinOStream& stream) const {
   uint32_t size = ensure_unsigned32bit_representible<size_t>(_binaries.size());
-  if (!Config::Get().common.recorder.nullIO) {
+  if (!Configurator::Get().common.recorder.nullIO) {
     stream.write((char*)&size, sizeof(size));
   }
 
@@ -435,7 +435,7 @@ std::vector<std::string> gits::OpenCL::CBinariesArray_V1::FileNames() const {
   std::vector<std::string> fileNames;
   if (_linkMode == ProgramBinaryLink::program) {
     auto program = _programOriginal;
-    if (Config::IsPlayer()) {
+    if (Configurator::IsPlayer()) {
       program = Ccl_program::GetMapping(_programOriginal);
     }
     const auto& fileName = SD().GetProgramState(program, EXCEPTION_MESSAGE).fileName;
@@ -454,7 +454,7 @@ void gits::OpenCL::CBinariesArray_V1::Write(CBinOStream& stream) const {
     stream << CBuffer(&_programOriginal, sizeof(_programOriginal));
   } else {
     const auto size = ensure_unsigned32bit_representible<size_t>(_binaries.size());
-    if (!Config::Get().common.recorder.nullIO) {
+    if (!Configurator::Get().common.recorder.nullIO) {
       stream.write((char*)&size, sizeof(size));
     }
     if (size != 0U) {
@@ -1074,7 +1074,7 @@ gits::OpenCL::CAsyncBinaryData::CAsyncBinaryData(const cl_image_format imageForm
 }
 
 gits::CBinaryResource::PointerProxy gits::OpenCL::CAsyncBinaryData::Value() {
-  if (Config::IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     return gits::CBinaryResource::PointerProxy(_appPtr);
   } else {
     return _resource.Data();

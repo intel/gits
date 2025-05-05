@@ -33,19 +33,19 @@ inline void glViewport_WRAPRUN(CGLint& x, CGLint& y, CGLsizei& width, CGLsizei& 
   // practice resize this objects if we resize the main rendering surface but
   // since there is no easy way to do that we opt for this.
   bool overrideviewportsz =
-      Config::Get().common.player.forceWindowSize.enabled
-          ? (Config::Get().opengl.player.affectViewport
-                 ? Config::Get().opengl.player.affectedViewport[0] == *width &&
-                       Config::Get().opengl.player.affectedViewport[1] == *height
+      Configurator::Get().common.player.forceWindowSize.enabled
+          ? (Configurator::Get().opengl.player.affectViewport
+                 ? Configurator::Get().opengl.player.affectedViewport[0] == *width &&
+                       Configurator::Get().opengl.player.affectedViewport[1] == *height
                  : true)
           : false;
   if (!overrideviewportsz) {
-    float scale = Config::Get().opengl.player.scaleFactor;
+    float scale = Configurator::Get().opengl.player.scaleFactor;
     drv.gl.glViewport(static_cast<GLint>(*x * scale), static_cast<GLint>(*y * scale),
                       static_cast<GLint>(*width * scale), static_cast<GLint>(*height * scale));
   } else {
-    drv.gl.glViewport(0, 0, Config::Get().common.player.forceWindowSize.width,
-                      Config::Get().common.player.forceWindowSize.height);
+    drv.gl.glViewport(0, 0, Configurator::Get().common.player.forceWindowSize.width,
+                      Configurator::Get().common.player.forceWindowSize.height);
   }
 }
 
@@ -54,20 +54,20 @@ inline void glProgramStringARB_WRAPRUN(CGLenum& target,
                                        CGLsizei& len,
                                        CShaderSource& string) {
   drv.gl.glProgramStringARB(*target, *format, (GLsizei)string.Text().size(), *string);
-  if (ShouldLog(TRACE)) {
+  if (ShouldLog(LogLevel::TRACE)) {
     std::string file_name = string.GetShaderFileName();
     Log(TRACE, NO_NEWLINE) << "code: " << file_name << "  ";
   }
 }
 
 inline void glScissor_WRAPRUN(CGLint& x, CGLint& y, CGLsizei& width, CGLsizei& height) {
-  if (!Config::Get().common.player.forceWindowSize.enabled) {
-    float scale = Config::Get().opengl.player.scaleFactor;
+  if (!Configurator::Get().common.player.forceWindowSize.enabled) {
+    float scale = Configurator::Get().opengl.player.scaleFactor;
     drv.gl.glScissor(static_cast<GLint>(*x * scale), static_cast<GLint>(*y * scale),
                      static_cast<GLint>(*width * scale), static_cast<GLint>(*height * scale));
   } else {
-    drv.gl.glScissor(0, 0, Config::Get().common.player.forceWindowSize.width,
-                     Config::Get().common.player.forceWindowSize.height);
+    drv.gl.glScissor(0, 0, Configurator::Get().common.player.forceWindowSize.width,
+                     Configurator::Get().common.player.forceWindowSize.height);
   }
 }
 
@@ -108,9 +108,9 @@ inline void glRenderbufferStorageMultisampleEXT_WRAPRUN(CGLenum& target,
                                                         CGLenum& internalformat,
                                                         CGLsizei& width,
                                                         CGLsizei& height) {
-  drv.gl.glRenderbufferStorageMultisampleEXT(*target,
-                                             Config::Get().opengl.player.forceNoMSAA ? 1 : *samples,
-                                             *internalformat, *width, *height);
+  drv.gl.glRenderbufferStorageMultisampleEXT(
+      *target, Configurator::Get().opengl.player.forceNoMSAA ? 1 : *samples, *internalformat,
+      *width, *height);
 }
 
 inline void glRenderbufferStorageMultisample_WRAPRUN(CGLenum& target,
@@ -118,11 +118,11 @@ inline void glRenderbufferStorageMultisample_WRAPRUN(CGLenum& target,
                                                      CGLenum& internalformat,
                                                      CGLsizei& width,
                                                      CGLsizei& height) {
-  drv.gl.glRenderbufferStorageMultisample(*target,
-                                          Config::Get().opengl.player.forceNoMSAA ? 1 : *samples,
-                                          *internalformat, *width, *height);
+  drv.gl.glRenderbufferStorageMultisample(
+      *target, Configurator::Get().opengl.player.forceNoMSAA ? 1 : *samples, *internalformat,
+      *width, *height);
   glRenderbufferStorageMultisample_SD(*target,
-                                      Config::Get().opengl.player.forceNoMSAA ? 1 : *samples,
+                                      Configurator::Get().opengl.player.forceNoMSAA ? 1 : *samples,
                                       *internalformat, *width, *height);
 }
 
@@ -132,19 +132,19 @@ inline void glRenderbufferStorageMultisampleANGLE_WRAPRUN(CGLenum& target,
                                                           CGLsizei& width,
                                                           CGLsizei& height) {
   drv.gl.glRenderbufferStorageMultisampleANGLE(
-      *target, Config::Get().opengl.player.forceNoMSAA ? 1 : *samples, *internalformat, *width,
-      *height);
+      *target, Configurator::Get().opengl.player.forceNoMSAA ? 1 : *samples, *internalformat,
+      *width, *height);
   glRenderbufferStorageMultisample_SD(*target,
-                                      Config::Get().opengl.player.forceNoMSAA ? 1 : *samples,
+                                      Configurator::Get().opengl.player.forceNoMSAA ? 1 : *samples,
                                       *internalformat, *width, *height);
 }
 
 inline void glRenderbufferStorageMultisampleIMG_WRAPRUN(
     CGLenum& arg0, CGLsizei& arg1, CGLenum& arg2, CGLsizei& arg3, CGLsizei& arg4) {
   drv.gl.glRenderbufferStorageMultisampleIMG(
-      *arg0, Config::Get().opengl.player.forceNoMSAA ? 1 : *arg1, *arg2, *arg3, *arg4);
-  glRenderbufferStorageMultisample_SD(*arg0, Config::Get().opengl.player.forceNoMSAA ? 1 : *arg1,
-                                      *arg2, *arg3, *arg4);
+      *arg0, Configurator::Get().opengl.player.forceNoMSAA ? 1 : *arg1, *arg2, *arg3, *arg4);
+  glRenderbufferStorageMultisample_SD(
+      *arg0, Configurator::Get().opengl.player.forceNoMSAA ? 1 : *arg1, *arg2, *arg3, *arg4);
 }
 
 inline void glUniformSubroutinesuiv_WRAPRUN(CGLenum& shadertype,
@@ -181,8 +181,8 @@ inline void glRenderbufferStorageMultisampleCoverageNV_WRAPRUN(CGLenum& target,
                                                                CGLsizei& width,
                                                                CGLsizei& height) {
   drv.gl.glRenderbufferStorageMultisampleCoverageNV(
-      *target, Config::Get().opengl.player.forceNoMSAA ? 0 : *coverageSamples,
-      Config::Get().opengl.player.forceNoMSAA ? 0 : *colorSamples, *internalformat, *width,
+      *target, Configurator::Get().opengl.player.forceNoMSAA ? 0 : *coverageSamples,
+      Configurator::Get().opengl.player.forceNoMSAA ? 0 : *colorSamples, *internalformat, *width,
       *height);
 }
 
@@ -190,7 +190,7 @@ inline void glLinkProgram_WRAPRUN(CGLProgram& program) {
   OpenGL::CLibrary::Get().IncrementLinkProgramNumber();
   uint32_t linkNo = OpenGL::CLibrary::Get().GetLinkProgramNumber();
 
-  if (Config::Get().opengl.player.linkUseProgBinary) {
+  if (Configurator::Get().opengl.player.linkUseProgBinary) {
     RestoreProgramBinary(*program, linkNo);
   } else {
     /*
@@ -215,7 +215,7 @@ inline void glLinkProgram_WRAPRUN(CGLProgram& program) {
 
     drv.gl.glLinkProgram(*program);
 
-    if (Config::Get().opengl.player.linkGetProgBinary) {
+    if (Configurator::Get().opengl.player.linkGetProgBinary) {
       SaveProgramBinary(*program, linkNo);
     }
   }
@@ -227,7 +227,7 @@ inline void glLinkProgramARB_WRAPRUN(CGLProgram& program) {
   OpenGL::CLibrary::Get().IncrementLinkProgramNumber();
   uint32_t linkNo = OpenGL::CLibrary::Get().GetLinkProgramNumber();
 
-  if (Config::Get().opengl.player.linkUseProgBinary) {
+  if (Configurator::Get().opengl.player.linkUseProgBinary) {
     RestoreProgramBinary(*program, linkNo);
   } else {
     /*
@@ -252,7 +252,7 @@ inline void glLinkProgramARB_WRAPRUN(CGLProgram& program) {
 
     drv.gl.glLinkProgramARB(*program);
 
-    if (Config::Get().opengl.player.linkGetProgBinary) {
+    if (Configurator::Get().opengl.player.linkGetProgBinary) {
       SaveProgramBinary(*program, linkNo);
     }
   }
@@ -314,7 +314,7 @@ inline void glReadPixels_WRAPRUN(CGLint& x,
   }
 
   static unsigned read_pixels_num = 1;
-  if (Config::Get().opengl.player.captureReadPixels[read_pixels_num]) {
+  if (Configurator::Get().opengl.player.captureReadPixels[read_pixels_num]) {
     FrameBufferSave(read_pixels_num);
   }
 
@@ -402,7 +402,7 @@ inline void glFinish_WRAPRUN() {
   drv.gl.glFinish();
 
   static unsigned finish_num = 1;
-  if (Config::Get().opengl.player.captureFinishFrame[finish_num]) {
+  if (Configurator::Get().opengl.player.captureFinishFrame[finish_num]) {
     FrameBufferSave(finish_num);
   }
   finish_num++;
@@ -412,7 +412,7 @@ inline void glFlush_WRAPRUN() {
   drv.gl.glFlush();
 
   static unsigned flush_num = 1;
-  if (Config::Get().opengl.player.captureFlushFrame[flush_num]) {
+  if (Configurator::Get().opengl.player.captureFlushFrame[flush_num]) {
     FrameBufferSave(flush_num);
   }
   flush_num++;
@@ -420,7 +420,7 @@ inline void glFlush_WRAPRUN() {
 
 inline void glBindFramebuffer_WRAPRUN(CGLenum& target, CGLFramebuffer& framebuffer) {
   static unsigned bindfbo_num = 1;
-  if (Config::Get().opengl.player.captureBindFboFrame[bindfbo_num]) {
+  if (Configurator::Get().opengl.player.captureBindFboFrame[bindfbo_num]) {
     FrameBufferSave(bindfbo_num);
   }
 
@@ -576,7 +576,7 @@ inline void glTexImage2D_WRAPRUN(CGLenum& target,
                   *pixels);
 
   static long texNum = 1;
-  if (Config::Get().opengl.player.capture2DTexs[texNum]) {
+  if (Configurator::Get().opengl.player.capture2DTexs[texNum]) {
     GLint boundTex = BoundTexture(*target);
     capture_bound_texture2D(*target, GetPathForImageDumping(),
                             "tex2D_" + std::to_string(boundTex) + "_" + std::to_string(texNum));
@@ -590,9 +590,10 @@ inline void glTexImage2DMultisample_WRAPRUN(CGLenum& target,
                                             CGLsizei& width,
                                             CGLsizei& height,
                                             CGLboolean& fixedsamplelocations) {
-  drv.gl.glTexImage2DMultisample(*target, Config::Get().opengl.player.forceNoMSAA ? 1 : *samples,
+  drv.gl.glTexImage2DMultisample(*target,
+                                 Configurator::Get().opengl.player.forceNoMSAA ? 1 : *samples,
                                  *internalformat, *width, *height, *fixedsamplelocations);
-  glTexImage2DMultisample_SD(*target, Config::Get().opengl.player.forceNoMSAA ? 1 : *samples,
+  glTexImage2DMultisample_SD(*target, Configurator::Get().opengl.player.forceNoMSAA ? 1 : *samples,
                              *internalformat, *width, *height, *fixedsamplelocations);
 }
 
@@ -602,10 +603,10 @@ inline void glShaderSource_WRAPRUN(CGLProgram& shader,
                                    CGLintptrZero& length) {
   drv.gl.glShaderSource(*shader, *count, *string, *length);
   glShaderSource_SD(*shader, *count, *string, *length);
-  if (ShouldLog(TRACE)) {
+  if (ShouldLog(LogLevel::TRACE)) {
     std::string file_name = string.GetShaderFileName();
     Log(TRACE, NO_NEWLINE) << "code: " << file_name << "  ";
-    if (*shader != 0 && ShouldLog(TRACEV)) {
+    if (*shader != 0 && ShouldLog(LogLevel::TRACEV)) {
       SD().GetCurrentSharedStateData().GLSLShaders().Get(*shader)->SetShaderName(file_name);
     }
   }
@@ -616,10 +617,10 @@ inline void glShaderSourceARB_WRAPRUN(CGLProgram& shaderObj,
                                       CGLintptrZero& length) {
   drv.gl.glShaderSourceARB(*shaderObj, *count, *string, *length);
   glShaderSource_SD(*shaderObj, *count, *string, *length);
-  if (ShouldLog(TRACE)) {
+  if (ShouldLog(LogLevel::TRACE)) {
     std::string file_name = string.GetShaderFileName();
     Log(TRACE, NO_NEWLINE) << "code: " << file_name << "  ";
-    if (*shaderObj != 0 && ShouldLog(TRACEV)) {
+    if (*shaderObj != 0 && ShouldLog(LogLevel::TRACEV)) {
       SD().GetCurrentSharedStateData().GLSLShaders().Get(*shaderObj)->SetShaderName(file_name);
     }
   }
@@ -631,7 +632,7 @@ inline void glCreateShaderProgramv_WRAPRUN(CGLProgram& return_value,
                                            CShaderSource& strings) {
   return_value.Assign(drv.gl.glCreateShaderProgramv(*type, 1, *strings));
   glCreateShaderProgramv_SD(*return_value, *type, 1, *strings);
-  if (ShouldLog(TRACE)) {
+  if (ShouldLog(LogLevel::TRACE)) {
     std::string file_name = strings.GetShaderFileName();
     Log(TRACE, NO_NEWLINE) << "code: " << file_name << "  ";
   }
@@ -642,7 +643,7 @@ inline void glCreateShaderProgramvEXT_WRAPRUN(CGLProgram& return_value,
                                               CShaderSource& strings) {
   return_value.Assign(drv.gl.glCreateShaderProgramvEXT(*type, 1, *strings));
   glCreateShaderProgramv_SD(*return_value, *type, 1, *strings);
-  if (ShouldLog(TRACE)) {
+  if (ShouldLog(LogLevel::TRACE)) {
     std::string file_name = strings.GetShaderFileName();
     Log(TRACE, NO_NEWLINE) << "code: " << file_name << "  ";
   }

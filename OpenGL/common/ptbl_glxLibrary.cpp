@@ -194,11 +194,11 @@ gits::OpenGL::PtblPFAttribs gits::OpenGL::XVisualToPtblAttribs(const int* glxatt
 
 gits::OpenGL::GLXCtxParams gits::OpenGL::GetUpdatedGLXCtxParams(const int* ptblparams) {
   bool forceNone =
-      Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::NO_PROFILE_FORCED;
-  bool forceCompat = Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::COMPAT;
-  bool forceCore = Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::CORE;
-  bool forceES = Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::ES;
-  bool forceVer = !Config::Get().opengl.shared.forceGLVersion.empty();
+      Configurator::Get().opengl.player.forceGLProfile == TForcedGLProfile::NO_PROFILE_FORCED;
+  bool forceCompat = Configurator::Get().opengl.player.forceGLProfile == TForcedGLProfile::COMPAT;
+  bool forceCore = Configurator::Get().opengl.player.forceGLProfile == TForcedGLProfile::CORE;
+  bool forceES = Configurator::Get().opengl.player.forceGLProfile == TForcedGLProfile::ES;
+  bool forceVer = !Configurator::Get().opengl.shared.forceGLVersion.empty();
 
   GLXCtxParams newparams;
 
@@ -245,9 +245,9 @@ gits::OpenGL::GLXCtxParams gits::OpenGL::GetUpdatedGLXCtxParams(const int* ptblp
 
   if (forceVer) {
     newparams.push_back(GLX_CONTEXT_MINOR_VERSION_ARB);
-    newparams.push_back(Config::Get().opengl.shared.forceGLVersionMinor);
+    newparams.push_back(Configurator::Get().opengl.shared.forceGLVersionMinor);
     newparams.push_back(GLX_CONTEXT_MAJOR_VERSION_ARB);
-    newparams.push_back(Config::Get().opengl.shared.forceGLVersionMajor);
+    newparams.push_back(Configurator::Get().opengl.shared.forceGLVersionMajor);
   }
 
   newparams.push_back(0);
@@ -425,8 +425,8 @@ GLXContext gits::OpenGL::ptbl_glXCreateContextAttribsARB(Display* dpy,
   // Update cokntext params if configured
   const int* attribsListMod;
   std::vector<int> attribsListModVec;
-  if (Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::NO_PROFILE_FORCED &&
-      Config::Get().opengl.shared.forceGLVersion.empty()) {
+  if (Configurator::Get().opengl.player.forceGLProfile == TForcedGLProfile::NO_PROFILE_FORCED &&
+      Configurator::Get().opengl.shared.forceGLVersion.empty()) {
     attribsListMod = attrib_list;
   } else {
     attribsListModVec = GetUpdatedGLXCtxParams(attrib_list);

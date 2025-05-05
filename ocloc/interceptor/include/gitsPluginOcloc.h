@@ -17,13 +17,13 @@
 #include "gitsLoader.h"
 #include "platform.h"
 #include "tools.h"
+#include "config.h"
 
 #include <string>
 
 namespace gits {
 
 class CRecorder;
-struct Config;
 
 namespace ocloc {
 class IRecorderWrapper;

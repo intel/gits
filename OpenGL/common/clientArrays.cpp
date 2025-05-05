@@ -156,7 +156,7 @@ void gits::OpenGL::ClientArraysUpdate::DumpIndicesUpdate(GLuint buff,
   }
 
   // Support for GL_PRIMITIVE_RESTART and STRIP INDEX options
-  GLuint stripIndex = Config::Get().opengl.recorder.stripIndicesValues;
+  GLuint stripIndex = Configurator::Get().opengl.recorder.stripIndicesValues;
   GLuint restartIndex = 4294967295u;
   if (drv.gl.glIsEnabled(GL_PRIMITIVE_RESTART)) {
     restartIndex = SD().GetCurrentContextStateData().restartIndexValue;

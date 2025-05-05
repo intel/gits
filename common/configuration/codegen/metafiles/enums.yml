@@ -1,0 +1,203 @@
+# ===================== begin_copyright_notice ============================
+#
+# Copyright (C) 2023-2025 Intel Corporation
+#
+# SPDX-License-Identifier: MIT
+#
+# ===================== end_copyright_notice ==============================
+
+Enums:
+  - Name: TraceData
+    Description: Trace data type
+    Values:
+      - Value: VK_STRUCTS
+      - Value: FRAME_NUMBER
+  - Name: GITSMode
+    Description: Mode of operation
+    Values:
+      - Value: MODE_UNKNOWN
+        Description: Play capture file
+      - Value: MODE_RECORDER
+        Description: Record capture file
+      - Value: MODE_PLAYER
+        Description: Play capture file
+  - Name: LogLevel
+    Description: Defines the verbosity level of logging output.
+    Values:
+      - Value: TRACEV
+        Labels: [TRACEVERBOSE, TRACEV]
+        Description: Detailed trace logging, destined for debugging purposes.
+        LongDescription: >
+          This level provides the most granular logging, capturing every detail of the application's operation. It is ideal for developers who need to diagnose complex issues or understand the intricate workings of the code. TRACEV logs include verbose output that can significantly aid in debugging by providing insights into variable states, function calls, and execution paths.
+      - Value: TRACE
+        Labels: [TRACE]
+        Description: Basic trace information for tracking execution flow.
+        LongDescription: >
+          `TRACE` level logging captures essential information about the application's execution flow, including entry and exit points of functions and key decision-making processes. It is useful for understanding how the application navigates through its logic without the verbosity of TRACEV, making it suitable for performance monitoring and basic debugging.
+      - Value: INFOV
+        Labels: [INFOVERBOSE, INFOV]
+        Description: Log detailed informational messages.
+        LongDescription: >
+          `INFOV` provides comprehensive logging of informational messages, including verbose details that offer a deeper understanding of the application's state and operations. This level is beneficial for monitoring application health and performance, as it includes additional context that can help identify trends or anomalies in behavior.
+      - Value: INFO
+        Labels: [INFO]
+        Description: Log general informational messages.
+        LongDescription: >
+          `INFO` level logging captures standard operational messages that inform about the application's normal functioning. It is designed to provide a clear overview of the application's activities without overwhelming detail, making it suitable for routine monitoring and reporting.
+      - Value: WARN
+        Labels: [WARNING, WARN]
+        Description: Log warnings and errors.
+        LongDescription: >
+          `WARN` level logging highlights potential issues that do not necessarily disrupt the application's operation but may require attention. It includes warnings about deprecated features, unexpected states, and recoverable errors, helping to preemptively address problems before they escalate.
+      - Value: ERR
+        Labels: [ERROR, ERR]
+        Description: Only log errors.
+        LongDescription: >
+          `ERR` level logging is focused on capturing error conditions that affect the application's functionality. It records critical issues that need immediate resolution, such as failed operations, exceptions, and system errors, providing essential information for troubleshooting and recovery.
+      - Value: "OFF"
+        Labels: ["OFF"]
+        Description: No logging.
+        LongDescription: >
+          The `OFF` level disables all logging, ensuring that no log messages are generated or recorded. This setting is useful for scenarios where performance is critical, and logging overhead must be minimized, or when logging is managed externally and not required within the application.
+  - Name: RecordingMode
+    Values:
+      - Value: NONE
+      - Value: BINARY
+      - Value: CCODE
+        Labels: [CCode]
+  - Name: OpenGLRecorderMode
+    Values:
+      - Value: ALL
+      - Value: FRAMES
+      - Value: SINGLE_DRAW
+        Labels: [OglSingleDraw]
+      - Value: DRAWS_RANGE
+        Labels: [OglDrawsRange]
+  - Name: VulkanRecorderMode
+    Values:
+      - Value: ALL
+      - Value: FRAMES
+      - Value: QUEUE_SUBMIT
+      - Value: COMMAND_BUFFERS_RANGE
+      - Value: RENDER_PASS_RANGE
+      - Value: DRAWS_RANGE
+      - Value: DISPATCH_RANGE
+      - Value: BLIT_RANGE
+  - Name: OpenCLRecorderMode
+    Values:
+      - Value: ALL
+      - Value: SINGLE_KERNEL
+        Labels: [OclSingleKernel]
+      - Value: KERNELS_RANGE
+        Labels: [OclKernelsRange]
+  - Name: LevelZeroRecorderMode
+    Values:
+      - Value: ALL
+      - Value: KERNEL
+  - Name: GLProfile
+    Values:
+      - Value: NO_PROFILE_FORCED
+        ConfigValue: NONE
+        Labels: [NONE]
+      - Value: COMPAT
+        Labels: [COMPAT]
+      - Value: CORE
+        Labels: [CORE]
+      - Value: ES
+        Labels: [ES]
+  - Name: GLNativeApi
+    Values:
+      - Value: NO_NTV_API_FORCED
+        ConfigValue: NONE
+        Labels: [NONE]
+      - Value: EGL
+        Labels: [EGL]
+      - Value: GLX
+        Labels: [GLX]
+      - Value: WGL
+        Labels: [WGL]
+  - Name: BuffersState
+    Values:
+      - Value: CAPTURE_ALWAYS
+      - Value: RESTORE
+      - Value: MIXED
+  - Name: TexturesState
+    Values:
+      - Value: CAPTURE_ALWAYS
+      - Value: RESTORE
+      - Value: MIXED
+  - Name: MemoryUpdateState
+    Values:
+      - Value: ALL_MAPPED
+      - Value: ONLY_USED
+      - Value: USING_TAGS
+  - Name: MemoryTrackingMode
+    Values:
+#ifdef GITS_PLATFORM_WINDOWS
+      - Value: EXTERNAL
+      - Value: WRITE_WATCH
+#endif
+      - Value: SHADOW_AND_ACCESS_DETECTION
+        Labels: [ShadowMemory]
+      - Value: FULL_MEMORY_DUMP
+        Labels: [FullMemoryDump]
+  - Name: MemoryStateRestoration
+    Values:
+      - Value: NONE
+      - Value: HOST_VISIBLE
+  - Name: BufferStateRestoration
+    Values:
+      - Value: NONE
+      - Value: WITH_NON_HOST_VISIBLE_MEMORY_ONLY
+      - Value: ALL
+  - Name: WindowsKeyHandling
+    Values:
+      - Value: MESSAGE_LOOP
+      - Value: ASYNC_KEY_STATE
+  - Name: CaptureGroupType
+    Values:
+      - Value: PER_COMMAND_BUFFER
+        Labels: [CmdBuffer]
+      - Value: PER_RENDER_PASS
+        Labels: [RenderPass]
+  - Name: DeviceType
+    Values:
+      - Value: ANY
+        Labels: [any]
+      - Value: INTEGRATED
+        Labels: [integrated]
+      - Value: DISCRETE
+        Labels: [discrete]
+  - Name: VkRenderDocCaptureMode
+    Values:
+      - Value: NONE
+      - Value: FRAMES
+      - Value: QUEUE_SUBMIT
+  - Name: HashType
+    Values:
+      - Value: MURMUR
+      - Value: XX
+      - Value: INCREMENTAL_NUMBER
+      - Value: CRC32ISH
+      - Value: XXCRC32
+  - Name: CompressionType
+    Type: uint8_t
+    Values:
+      - Value: NONE
+      - Value: LZ4
+        Labels: [LZ4]
+      - Value: ZSTD
+        Labels: [ZSTD]
+  - Name: VulkanObjectMode
+    Values:
+      - Value: MODE_VK_NONE
+      - Value: MODE_VK_QUEUE_SUBMIT
+      - Value: MODE_VK_COMMAND_BUFFER
+      - Value: MODE_VK_RENDER_PASS
+      - Value: MODE_VK_DRAW
+      - Value: MODE_VK_DISPATCH
+      - Value: MODE_VK_BLIT
+  - Name: WindowMode
+    Values:
+      - Value: NORMAL
+      - Value: EXCLUSIVE_FULLSCREEN

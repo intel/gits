@@ -114,7 +114,7 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
   while (first <= last) {
     int mid = first + (last - first) / 2;
     GpuAddressMapping mapping = mappings[mid];
-    if (captureAddress >= mapping.captureStart && captureAddress < 
+    if (captureAddress >= mapping.captureStart && captureAddress <
         mapping.captureStart + mapping.size) {
       uint64_t offset = captureAddress - mapping.captureStart;
       uint64_t playbackAddress = mapping.playerStart + offset;
@@ -222,7 +222,7 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
   while (first <= last) {
     int mid = first + (last - first) / 2;
     GpuAddressMapping mapping = mappings[mid];
-    if (captureAddress >= mapping.captureStart && captureAddress < 
+    if (captureAddress >= mapping.captureStart && captureAddress <
         mapping.captureStart + mapping.size) {
       uint64_t offset = captureAddress - mapping.captureStart;
       uint64_t playbackAddress = mapping.playerStart + offset;
@@ -363,11 +363,11 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
         && shaderIdentifierMappings[i].captureIdentifier.z == captureIdentifier.z
         && shaderIdentifierMappings[i].captureIdentifier.w == captureIdentifier.w) {
       bindingTable[bindingTableOffset] = shaderIdentifierMappings[i].playerIdentifier.x;
-      bindingTable[bindingTableOffset + 1] = 
+      bindingTable[bindingTableOffset + 1] =
           shaderIdentifierMappings[i].playerIdentifier.y;
-      bindingTable[bindingTableOffset + 2] = 
+      bindingTable[bindingTableOffset + 2] =
           shaderIdentifierMappings[i].playerIdentifier.z;
-      bindingTable[bindingTableOffset + 3] = 
+      bindingTable[bindingTableOffset + 3] =
           shaderIdentifierMappings[i].playerIdentifier.w;
       break;
     }
@@ -381,7 +381,7 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
       while (first <= last) {
         int mid = first + (last - first) / 2;
         Mapping mapping = viewDescriptorMappings[mid];
-        if (captureAddress >= mapping.captureStart && captureAddress < 
+        if (captureAddress >= mapping.captureStart && captureAddress <
             mapping.captureStart + mapping.size) {
           uint64_t offset = captureAddress - mapping.captureStart;
           uint64_t playbackAddress = mapping.playerStart + offset;
@@ -401,7 +401,7 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
       while (first <= last) {
         int mid = first + (last - first) / 2;
         Mapping mapping = samplerDescriptorMappings[mid];
-        if (captureAddress >= mapping.captureStart && captureAddress < 
+        if (captureAddress >= mapping.captureStart && captureAddress <
             mapping.captureStart + mapping.size) {
           uint64_t offset = captureAddress - mapping.captureStart;
           uint64_t playbackAddress = mapping.playerStart + offset;
@@ -421,7 +421,7 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
       while (first <= last) {
         int mid = first + (last - first) / 2;
         Mapping mapping = gpuAddressMappings[mid];
-        if (captureAddress >= mapping.captureStart && captureAddress < 
+        if (captureAddress >= mapping.captureStart && captureAddress <
             mapping.captureStart + mapping.size) {
           uint64_t offset = captureAddress - mapping.captureStart;
           uint64_t playbackAddress = mapping.playerStart + offset;
@@ -461,7 +461,7 @@ void RaytracingShaderPatchService::initializePipelineState(const std::string& sh
   arguments.push_back(L"gits_patch");
   arguments.push_back(L"-T");
   arguments.push_back(L"cs_6_0");
-  if (Config::Get().directx.player.debugLayer) {
+  if (Configurator::Get().directx.player.debugLayer) {
     arguments.push_back(L"-Zi");
     arguments.push_back(L"-Qembed_debug");
   }

@@ -611,9 +611,8 @@ VkResult recExecWrap_vkCreateDevice(VkPhysicalDevice physicalDevice,
         rayTracingPipelineFeatures->rayTracingPipelineShaderGroupHandleCaptureReplay = VK_TRUE;
       }
     } else {
-      auto cfg = CGitsPluginVulkan::Configuration();
+      auto& cfg = CGitsPluginVulkan::Configuration();
       cfg.vulkan.recorder.useCaptureReplayFeaturesForRayTracingPipelines = false;
-      CGitsPluginVulkan::RecorderWrapper().SetConfig(cfg);
 
       CALL_ONCE[] {
         Log(WARN) << "Capture/replay feature for recording ray tracing pipeline handles is by "
@@ -1117,7 +1116,7 @@ VkResult recExecWrap_vkCreateRayTracingPipelinesKHR(
 namespace {
 
 VkDeviceSize GetOverriddenMemorySize(VkDeviceSize base,
-                                     gits::MemorySizeRequirementOverride const& modifier) {
+                                     MemorySizeRequirementOverride const& modifier) {
   if ((modifier.percent > 0) || (modifier.fixedAmount > 0)) {
     base = base * (100 + modifier.percent) * 0.01 + modifier.fixedAmount;
 

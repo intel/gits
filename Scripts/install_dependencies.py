@@ -507,6 +507,15 @@ class YamlCPP(Repository):
         self.url = "https://github.com/jbeder/yaml-cpp.git"
 
 
+class ArgsHXX(Repository):
+    def set_commit(self):
+        self.commit_id = "114200a9ad5fe06c8dea76e15d92325695cf3e34"
+
+    def init(self):
+        self.name = "argshxx"
+        self.url = "https://github.com/Taywee/args.git"
+
+
 class Repositories:
     def __init__(self, args) -> None:
         self.repos = []
@@ -550,6 +559,8 @@ class Repositories:
             self.repos.append(zstd())
         if args.with_all or args.with_yamlcpp:
             self.repos.append(YamlCPP())
+        if args.with_all or args.with_argshxx:
+            self.repos.append(ArgsHXX())
 
     def __iter__(self):
         for value in self.repos:
@@ -597,6 +608,7 @@ def setup_parser(root_parser):
     root_parser.add_argument("--with-renderdoc", action="store_true")
     root_parser.add_argument("--with-json", action="store_true")
     root_parser.add_argument("--with-yamlcpp", action="store_true")
+    root_parser.add_argument("--with-argshxx", action="store_true")
 
 
 def install_dependencies(args):

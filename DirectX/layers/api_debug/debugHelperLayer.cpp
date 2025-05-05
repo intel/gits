@@ -8,6 +8,7 @@
 
 #include "debugHelperLayer.h"
 #include "config.h"
+#include "configurationLib.h"
 
 #include <sstream>
 
@@ -32,7 +33,7 @@ void DebugHelperLayer::setDXGIObjectName(void* obj, unsigned key) {
 DebugHelperLayer::DebugHelperLayer()
     : Layer("DebugHelper"),
       multithreadedShaderCompilation_(
-          gits::Config::Get().directx.player.multithreadedShaderCompilation) {}
+          Configurator::Get().directx.player.multithreadedShaderCompilation) {}
 
 void DebugHelperLayer::pre(ID3D12ObjectSetNameCommand& c) {
   c.skip = true;

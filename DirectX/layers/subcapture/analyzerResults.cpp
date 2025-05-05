@@ -41,7 +41,7 @@ bool AnalyzerResults::isAnalysis() {
 }
 
 std::string AnalyzerResults::getAnalysisFileName() {
-  const Config& config = Config::Get();
+  const Config& config = Configurator::Get();
   std::stringstream fileName;
   fileName << config.common.player.streamDir.filename().string() << "_frames-"
            << config.directx.features.subcapture.frames;

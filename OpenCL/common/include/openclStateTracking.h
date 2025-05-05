@@ -20,9 +20,9 @@ namespace gits {
 namespace OpenCL {
 namespace {
 bool checkWhetherInject() {
-  auto& cfg = Config::Get();
+  auto& cfg = Configurator::Get();
   const auto& kernels =
-      cfg.IsPlayer() ? cfg.opencl.player.captureKernels : cfg.opencl.recorder.dumpKernels;
+      Configurator::IsPlayer() ? cfg.opencl.player.captureKernels : cfg.opencl.recorder.dumpKernels;
   if (!kernels.empty()) {
     return kernels[CGits::Instance().CurrentKernelCount()];
   }
@@ -641,7 +641,7 @@ inline void clEnqueueMapBuffer_SD(CFunction* token,
   if (token != nullptr && return_value != nullptr &&
       sd._memStates.find(buffer) != sd._memStates.end()) {
     auto& memState = sd.GetMemState(buffer, EXCEPTION_MESSAGE);
-    void* originalPtr = Config::IsPlayer()
+    void* originalPtr = Configurator::IsPlayer()
                             ? static_cast<CCLMappedPtr&>(token->Argument(0U)).Original()
                             : return_value;
     memState.originalMappedPtrs.push_back(originalPtr);
@@ -667,7 +667,7 @@ inline void clEnqueueMapImage_SD(CFunction* token,
   if (token != nullptr && return_value != nullptr &&
       sd._memStates.find(image) != sd._memStates.end()) {
     auto& memState = sd.GetMemState(image, EXCEPTION_MESSAGE);
-    void* originalPtr = Config::IsPlayer()
+    void* originalPtr = Configurator::IsPlayer()
                             ? static_cast<CCLMappedPtr&>(token->Argument(0U)).Original()
                             : return_value;
     memState.originalMappedPtrs.push_back(originalPtr);
@@ -723,12 +723,12 @@ inline void clEnqueueNDRangeKernel_SD(cl_int return_value,
   Log(TRACE) << "--- kernel call #" << CGits::Instance().CurrentKernelCount() << ", kernel name \""
              << SD()._kernelStates[kernel]->name << "\" ---";
   RegisterEvents(event, command_queue, return_value);
-  if (Config::Get().IsRecorder() && HasUsmPtrsToUpdate(kernel)) {
+  if (Configurator::IsRecorder() && HasUsmPtrsToUpdate(kernel)) {
     // have to wait for kernel execution before protecting memory
     drvOcl.clFinish(command_queue);
     UpdateUsmPtrs(kernel);
   }
-  if (checkWhetherInject() || Config::Get().opencl.player.aubSignaturesCL) {
+  if (checkWhetherInject() || Configurator::Get().opencl.player.aubSignaturesCL) {
     if (num_events_in_wait_list != 0U) {
       for (auto i = 0U; i < num_events_in_wait_list; i++) {
         const auto& e = event_wait_list[i];
@@ -964,7 +964,7 @@ inline void clGetPlatformIDs_SD(cl_int return_value,
                                 cl_uint* num_platforms) {
   if (ErrCodeSuccess(return_value) && num_entries > 0 && platforms != nullptr) {
     auto& sd = SD();
-    if (Config::IsPlayer()) {
+    if (Configurator::IsPlayer()) {
       sd.originalPlaybackPlatforms.clear();
     }
     sd._platformIDStates.clear();
@@ -1375,7 +1375,7 @@ inline void clEnqueueMemcpyINTEL_SD(cl_int return_value,
                                     const cl_event* event_wait_list,
                                     cl_event* event) {
   RegisterEvents(event, command_queue, return_value);
-  if (Config::Get().IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     drvOcl.clFinish(command_queue);
   }
 }
@@ -1587,7 +1587,7 @@ inline void clCreateSubDevices_SD(cl_int return_value,
   }
   if (out_devices && ErrCodeSuccess(return_value)) {
     const auto subcaptureMode =
-        (Config::Get().IsRecorder() && !CGits::Instance().apis.IfaceCompute().CfgRec_IsAllMode());
+        (Configurator::IsRecorder() && !CGits::Instance().apis.IfaceCompute().CfgRec_IsAllMode());
     for (auto i = 0u; i < numDevices; i++) {
       auto& deviceState = SD()._deviceIDStates[out_devices[i]];
       deviceState.reset(new CCLDeviceIDState(in_device, properties));
@@ -1607,7 +1607,7 @@ inline void clCreateSubDevices_SD(cl_int return_value,
 inline void clGitsIndirectAllocationOffsets_SD(void* pAlloc,
                                                uint32_t numOffsets,
                                                size_t* pOffsets) {
-  const auto isBufferTranslated = Config::IsRecorder();
+  const auto isBufferTranslated = Configurator::IsRecorder();
   if (SD().CheckIfUSMAllocExists(pAlloc)) {
     auto& allocState = SD().GetUSMAllocState(pAlloc, EXCEPTION_MESSAGE);
     for (uint32_t i = 0U; i < numOffsets; i++) {

@@ -46,11 +46,11 @@ void SaveGlobalPointerAllocationToMemory(CStateDynamic& sd,
 }
 
 bool CheckWhetherDumpKernel(uint32_t kernelNumber, uint32_t cmdListNumber) {
-  const auto& cfg = Config::Get();
-  const auto& kernelList =
-      cfg.IsPlayer() ? cfg.levelzero.player.captureKernels : cfg.levelzero.recorder.captureKernels;
-  const auto& cmdList = cfg.IsPlayer() ? cfg.levelzero.player.captureCommandLists
-                                       : cfg.levelzero.recorder.captureCommandLists;
+  const auto& cfg = Configurator::Get();
+  const auto& kernelList = Configurator::IsPlayer() ? cfg.levelzero.player.captureKernels
+                                                    : cfg.levelzero.recorder.captureKernels;
+  const auto& cmdList = Configurator::IsPlayer() ? cfg.levelzero.player.captureCommandLists
+                                                 : cfg.levelzero.recorder.captureCommandLists;
   return !kernelList.empty()
              ? (kernelList[kernelNumber] && (!cmdList.empty() ? cmdList[cmdListNumber] : false))
              : false;
@@ -273,7 +273,7 @@ inline void zeCommandListAppendLaunchMultipleKernelsIndirect_SD(
 
     if (CheckWhetherDumpKernel(kernelState.currentKernelInfo->kernelNumber,
                                cmdListState.cmdListNumber) &&
-        (cmdListState.isImmediate || !CaptureAfterSubmit(Config::Get()))) {
+        (cmdListState.isImmediate || !CaptureAfterSubmit(Configurator::Get()))) {
       SaveKernelArguments(hSignalEvent, hCommandList, kernelState, cmdListState, false, callOnce);
       callOnce = false;
     }
@@ -316,7 +316,7 @@ inline void zeCommandQueueExecuteCommandLists_SD([[maybe_unused]] ze_result_t re
                                                  uint32_t numCommandLists,
                                                  ze_command_list_handle_t* phCommandLists,
                                                  ze_fence_handle_t hFence) {
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   auto& sd = SD();
   if (hFence != nullptr) {
     auto& fenceState = sd.Get<CFenceState>(hFence, EXCEPTION_MESSAGE);
@@ -324,7 +324,7 @@ inline void zeCommandQueueExecuteCommandLists_SD([[maybe_unused]] ze_result_t re
     fenceState.executionIsSynced = false;
   }
   auto& cqState = sd.Get<CCommandQueueState>(hCommandQueue, EXCEPTION_MESSAGE);
-  if (cfg.IsPlayer()) {
+  if (Configurator::IsPlayer()) {
     cqState.cmdQueueNumber = gits::CGits::Instance().CurrentCommandQueueExecCount();
   }
   bool containsAppendedKernelsToDump = false;
@@ -739,7 +739,7 @@ inline void zeCommandListAppendMemoryCopy_SD(ze_result_t return_value,
         SaveGlobalPointerAllocationToMemory(sd, allocState, srcptr);
       }
     }
-    const auto& cfg = Config::Get();
+    const auto& cfg = Configurator::Get();
     if (IsBruteForceScanForIndirectPointersEnabled(cfg)) {
       const auto allocInfo = GetAllocFromRegion(dstptr, sd);
       if (allocInfo.first != nullptr) {
@@ -788,7 +788,7 @@ inline void zeCommandQueueSynchronize_SD(ze_result_t return_value,
                                          ze_command_queue_handle_t hCommandQueue,
                                          uint64_t timeout) {
   const auto failedSyncAttempt = return_value != ZE_RESULT_SUCCESS && timeout != UINT64_MAX;
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   if ((return_value == ZE_RESULT_SUCCESS || failedSyncAttempt) && CaptureKernels(cfg)) {
     auto& sd = SD();
     auto& cqState = sd.Get<CCommandQueueState>(hCommandQueue, EXCEPTION_MESSAGE);
@@ -810,7 +810,7 @@ inline void zeFenceHostSynchronize_SD(ze_result_t return_value,
                                       ze_fence_handle_t hFence,
                                       uint64_t timeout) {
   const auto failedSyncAttempt = return_value != ZE_RESULT_SUCCESS && timeout != UINT64_MAX;
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   auto& sd = SD();
   auto& fenceState = sd.Get<CFenceState>(hFence, EXCEPTION_MESSAGE);
   if ((return_value == ZE_RESULT_SUCCESS || failedSyncAttempt) && CaptureKernels(cfg)) {
@@ -1033,7 +1033,7 @@ inline void zeFenceQueryStatus_SD(ze_result_t return_value, ze_fence_handle_t hF
   if (return_value == ZE_RESULT_SUCCESS) {
     auto& sd = SD();
     auto& fenceState = sd.Get<CFenceState>(hFence, EXCEPTION_MESSAGE);
-    const auto& cfg = Config::Get();
+    const auto& cfg = Configurator::Get();
     if (!fenceState.executionIsSynced && fenceState.canBeSynced) {
       if (CaptureKernels(cfg)) {
         auto& cqState = sd.Get<CCommandQueueState>(fenceState.hCommandQueue, EXCEPTION_MESSAGE);
@@ -1122,7 +1122,7 @@ inline void zeMemGetAllocProperties_SD([[maybe_unused]] ze_result_t return_value
                                        const void* ptr,
                                        ze_memory_allocation_properties_t* pMemAllocProperties,
                                        [[maybe_unused]] ze_device_handle_t* phDevice) {
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   if (pMemAllocProperties->type == ZE_MEMORY_TYPE_UNKNOWN &&
       IsMemoryTypeAddressTranslationDisabled(cfg, UnifiedMemoryType::device)) {
     auto& sd = SD();
@@ -1253,7 +1253,7 @@ inline void zeCommandListImmediateAppendCommandListsExp_SD(
     ze_event_handle_t hSignalEvent,
     uint32_t numWaitEvents,
     ze_event_handle_t* phWaitEvents) {
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   auto& sd = SD();
   const auto& gitsInstance = CGits::Instance();
   auto& cmdListImmediateState = sd.Get<CCommandListState>(hCommandListImmediate, EXCEPTION_MESSAGE);
@@ -1322,7 +1322,7 @@ inline void zeCommandListHostSynchronize_SD(ze_result_t return_value,
                                             ze_command_list_handle_t hCommandList,
                                             uint64_t timeout) {
   auto& sd = SD();
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   const auto failedSyncAttempt = return_value != ZE_RESULT_SUCCESS && timeout != UINT64_MAX;
   auto& cmdListState = sd.Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
   if (cmdListState.isImmediate && (return_value == ZE_RESULT_SUCCESS || failedSyncAttempt) &&
@@ -1349,7 +1349,7 @@ inline void zeEventHostSynchronize_SD(ze_result_t return_value,
   if (eventState.immediateCmdListExecutingCmdLists != nullptr) {
     auto& cmdListState =
         sd.Get<CCommandListState>(eventState.immediateCmdListExecutingCmdLists, EXCEPTION_MESSAGE);
-    const auto& cfg = Config::Get();
+    const auto& cfg = Configurator::Get();
     const auto failedSyncAttempt = return_value != ZE_RESULT_SUCCESS && timeout != UINT64_MAX;
     if (cmdListState.isImmediate && (return_value == ZE_RESULT_SUCCESS || failedSyncAttempt) &&
         CaptureKernels(cfg)) {
@@ -1376,7 +1376,7 @@ inline void zeEventQueryStatus_SD(ze_result_t return_value, ze_event_handle_t hE
   auto& eventState = sd.Get<CEventState>(hEvent, EXCEPTION_MESSAGE);
   if (eventState.immediateCmdListExecutingCmdLists != nullptr &&
       return_value == ZE_RESULT_SUCCESS) {
-    const auto& cfg = Config::Get();
+    const auto& cfg = Configurator::Get();
     if (!eventState.executionIsSynced && eventState.canBeSynced) {
       if (CaptureKernels(cfg)) {
         auto& cmdListState = sd.Get<CCommandListState>(eventState.immediateCmdListExecutingCmdLists,

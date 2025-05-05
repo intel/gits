@@ -67,7 +67,7 @@ void ReplayCustomizationLayer::pre(D3D12CreateDeviceCommand& c) {
 }
 
 void ReplayCustomizationLayer::pre(IDXGISwapChainSetFullscreenStateCommand& c) {
-  if (c.Fullscreen_.value && gits::Config::Get().common.player.showWindowBorder) {
+  if (c.Fullscreen_.value && Configurator::Get().common.player.showWindowBorder) {
     c.Fullscreen_.value = false;
     Log(INFO) << "SetFullscreenState: Force windowed mode due to 'showWindowBorder'";
   }
@@ -76,7 +76,7 @@ void ReplayCustomizationLayer::pre(IDXGISwapChainSetFullscreenStateCommand& c) {
 void ReplayCustomizationLayer::pre(IDXGIFactoryCreateSwapChainCommand& c) {
   c.pDesc_.value->OutputWindow =
       manager_.getWindowService().getCurrentHwnd(c.pDesc_.value->OutputWindow);
-  if (gits::Config::Get().common.player.showWindowBorder) {
+  if (Configurator::Get().common.player.showWindowBorder) {
     c.pDesc_.value->Windowed = true;
     Log(INFO) << "CreateSwapChain: Force windowed mode due to 'showWindowBorder'";
   }
@@ -84,7 +84,7 @@ void ReplayCustomizationLayer::pre(IDXGIFactoryCreateSwapChainCommand& c) {
 
 void ReplayCustomizationLayer::pre(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
   c.hWnd_.value = manager_.getWindowService().getCurrentHwnd(c.hWnd_.value);
-  if (c.pFullscreenDesc_.value && gits::Config::Get().common.player.showWindowBorder) {
+  if (c.pFullscreenDesc_.value && Configurator::Get().common.player.showWindowBorder) {
     c.pFullscreenDesc_.value->Windowed = true;
     Log(INFO) << "CreateSwapChainForHwnd: Force windowed mode due to 'showWindowBorder'";
   }
@@ -219,7 +219,7 @@ void ReplayCustomizationLayer::pre(ID3D12DeviceCopyDescriptorsSimpleCommand& c) 
 }
 
 void ReplayCustomizationLayer::pre(ID3D12FenceSetEventOnCompletionCommand& c) {
-  if (gits::Config::Get().directx.player.waitOnEventCompletion) {
+  if (Configurator::Get().directx.player.waitOnEventCompletion) {
     c.hEvent_.value = NULL;
   }
   if (c.hEvent_.value) {
@@ -228,7 +228,7 @@ void ReplayCustomizationLayer::pre(ID3D12FenceSetEventOnCompletionCommand& c) {
 }
 
 void ReplayCustomizationLayer::pre(ID3D12Device1SetEventOnMultipleFenceCompletionCommand& c) {
-  if (gits::Config::Get().directx.player.waitOnEventCompletion) {
+  if (Configurator::Get().directx.player.waitOnEventCompletion) {
     c.hEvent_.value = NULL;
   }
   if (c.hEvent_.value) {
@@ -762,7 +762,7 @@ void ReplayCustomizationLayer::pre(ID3D12Device12GetResourceAllocationInfo3Comma
 }
 
 void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListResolveQueryDataCommand& c) {
-  if (Config::Get().directx.player.skipResolveQueryData) {
+  if (Configurator::Get().directx.player.skipResolveQueryData) {
     c.skip = true;
     if (c.Type_.value == D3D12_QUERY_TYPE_OCCLUSION ||
         c.Type_.value == D3D12_QUERY_TYPE_BINARY_OCCLUSION) {
@@ -778,7 +778,7 @@ void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListResolveQueryDataComm
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateCommandQueueCommand& c) {
   if (c.ppCommandQueue_.key & Command::stateRestoreKeyMask &&
       c.pDesc_.value->Type == D3D12_COMMAND_LIST_TYPE_COPY &&
-      !Config::Get().directx.player.useCopyQueueOnRestore) {
+      !Configurator::Get().directx.player.useCopyQueueOnRestore) {
     c.pDesc_.value->Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
   }
 }
@@ -786,7 +786,7 @@ void ReplayCustomizationLayer::pre(ID3D12DeviceCreateCommandQueueCommand& c) {
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateCommandAllocatorCommand& c) {
   if (c.ppCommandAllocator_.key & Command::stateRestoreKeyMask &&
       c.type_.value == D3D12_COMMAND_LIST_TYPE_COPY &&
-      !Config::Get().directx.player.useCopyQueueOnRestore) {
+      !Configurator::Get().directx.player.useCopyQueueOnRestore) {
     c.type_.value = D3D12_COMMAND_LIST_TYPE_DIRECT;
   }
 }
@@ -794,7 +794,7 @@ void ReplayCustomizationLayer::pre(ID3D12DeviceCreateCommandAllocatorCommand& c)
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateCommandListCommand& c) {
   if (c.ppCommandList_.key & Command::stateRestoreKeyMask &&
       c.type_.value == D3D12_COMMAND_LIST_TYPE_COPY &&
-      !Config::Get().directx.player.useCopyQueueOnRestore) {
+      !Configurator::Get().directx.player.useCopyQueueOnRestore) {
     c.type_.value = D3D12_COMMAND_LIST_TYPE_DIRECT;
   }
 }
@@ -1064,7 +1064,7 @@ void ReplayCustomizationLayer::removeCachedPSO(D3D12_PIPELINE_STATE_STREAM_DESC&
 }
 
 void ReplayCustomizationLayer::overrideAdapter(D3D12CreateDeviceCommand& command) {
-  const auto& adapterOverride = Config::Get().directx.player.adapterOverride;
+  const auto& adapterOverride = Configurator::Get().directx.player.adapterOverride;
   if (!adapterOverride.enabled) {
     return;
   }

@@ -679,8 +679,8 @@ NOINLINE std::unique_ptr<ScissorStateStash> HandleForceScissor(CDrawFunction* pt
   if (!IsClearOrBlitDrawcall(ptr)) {
     std::vector<int> viewport(4);
     drv.gl.glGetIntegerv(GL_VIEWPORT, &viewport[0]);
-    const auto& player = Config::Get().common.player;
-    const auto& oglplayer = Config::Get().opengl.player;
+    const auto& player = Configurator::Get().common.player;
+    const auto& oglplayer = Configurator::Get().opengl.player;
     if (!oglplayer.affectViewport || (viewport[2] == oglplayer.affectedViewport[0] &&
                                       viewport[3] == oglplayer.affectedViewport[1])) {
       scissorStatePtr.reset(new ScissorStateStash());
@@ -694,7 +694,7 @@ NOINLINE std::unique_ptr<ScissorStateStash> HandleForceScissor(CDrawFunction* pt
 
 NOINLINE void HandleCaptureDrawsPre() {
   const auto currentDrawCount = CGits::Instance().CurrentDrawCount();
-  const auto& oglplayer = Config::Get().opengl.player;
+  const auto& oglplayer = Configurator::Get().opengl.player;
 
   if (oglplayer.captureDrawsPre && oglplayer.captureDraws[currentDrawCount]) {
     capture_drawbuffer(GetPathForImageDumping(),
@@ -704,7 +704,7 @@ NOINLINE void HandleCaptureDrawsPre() {
 
 NOINLINE void HandleCaptureDraws2DTexs() {
   const auto currentDrawCount = CGits::Instance().CurrentDrawCount();
-  const auto& oglplayer = Config::Get().opengl.player;
+  const auto& oglplayer = Configurator::Get().opengl.player;
 
   if (oglplayer.captureDraws2DTexs[currentDrawCount]) {
     GLint activeTexUnit = 0;
@@ -736,7 +736,7 @@ NOINLINE void HandleCaptureDraws2DTexs() {
 NOINLINE void HandleTrace() {
   const auto currentDrawCount = CGits::Instance().CurrentDrawCount();
 
-  if (ShouldLog(TRACEV)) {
+  if (ShouldLog(LogLevel::TRACEV)) {
     StatePrinter statePrinter;
     statePrinter.PrintToLog();
   }
@@ -747,7 +747,7 @@ NOINLINE void HandleTrace() {
 
 NOINLINE void HandleCaptureDraws() {
   const auto currentDrawCount = CGits::Instance().CurrentDrawCount();
-  const auto& oglplayer = Config::Get().opengl.player;
+  const auto& oglplayer = Configurator::Get().opengl.player;
 
   if (oglplayer.captureDraws[currentDrawCount]) {
     capture_drawbuffer(GetPathForImageDumping(),
@@ -760,8 +760,8 @@ void CDrawFunction::DrawFunctionRun() {
 
   const auto isStateRestore = CGits::Instance().IsStateRestoration();
   const auto currentDrawCount = CGits::Instance().CurrentDrawCount();
-  const auto& player = Config::Get().common.player;
-  const auto& oglplayer = Config::Get().opengl.player;
+  const auto& player = Configurator::Get().common.player;
+  const auto& oglplayer = Configurator::Get().opengl.player;
 
   const bool keepDraw = isStateRestore || (oglplayer.keepDraws[currentDrawCount] &&
                                            oglplayer.keepFrames[CGits::Instance().CurrentFrame()]);

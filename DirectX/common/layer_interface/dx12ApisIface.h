@@ -16,15 +16,15 @@ class DirectXApi : public ApisIface::Api3d {
 public:
   DirectXApi() : Api3d(ApisIface::DirectX) {}
   virtual bool CfgRec_IsAllMode() const {
-    return !Config::Get().directx.features.subcapture.enabled;
+    return !Configurator::Get().directx.features.subcapture.enabled;
   }
   virtual bool CfgRec_IsFramesMode() const {
-    return Config::Get().directx.features.subcapture.enabled;
+    return Configurator::Get().directx.features.subcapture.enabled;
   };
   virtual int CfgRec_StartFrame() const {
-    auto& cfgDirectX = Config::Get().directx;
+    auto& cfgDirectX = Configurator::Get().directx;
     if (cfgDirectX.features.subcapture.enabled) {
-      const std::string& frames = Config::Get().directx.features.subcapture.frames;
+      const std::string& frames = Configurator::Get().directx.features.subcapture.frames;
       size_t pos = frames.find("-");
       if (pos != std::string::npos) {
         return std::stoi(frames.substr(0, pos));
@@ -36,9 +36,9 @@ public:
     }
   }
   virtual int CfgRec_StopFrame() const {
-    auto& cfgDirectX = Config::Get().directx;
+    auto& cfgDirectX = Configurator::Get().directx;
     if (cfgDirectX.features.subcapture.enabled) {
-      const std::string& frames = Config::Get().directx.features.subcapture.frames;
+      const std::string& frames = Configurator::Get().directx.features.subcapture.frames;
       size_t pos = frames.find("-");
       if (pos != std::string::npos) {
         return std::stoi(frames.substr(pos + 1));

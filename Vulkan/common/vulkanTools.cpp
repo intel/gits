@@ -27,15 +27,34 @@
 #endif
 
 namespace gits {
+#ifndef BUILD_FOR_CCODE
+bool operator==(const CGits::CCounter& counter, const VulkanObjectRange& vulkanObjRange) {
+  if (vulkanObjRange.empty()) {
+    return false;
+  }
+  if (vulkanObjRange.objVector.size() > counter.countersTable.size()) {
+    return false;
+  }
+  for (size_t i = 0; i < vulkanObjRange.objVector.size(); i++) {
+    if (counter.countersTable[i] != vulkanObjRange.objVector[i]) {
+      return false;
+    }
+  }
+  if (vulkanObjRange.range[(size_t)counter.countersTable[vulkanObjRange.objVector.size()]]) {
+    return true;
+  }
+  return false;
+}
+#endif
 namespace Vulkan {
 
 std::string GetFileNameFrameScreenshot(unsigned int frameNumber) {
-  auto path = Config::Get().common.player.outputDir;
+  auto path = Configurator::Get().common.player.outputDir;
   if (path.empty()) {
-    if (Config::Get().IsRecorder()) {
-      path = Config::Get().common.recorder.dumpPath / "gitsScreenshots/gitsRecorder";
-    } else if (Config::Get().IsPlayer()) {
-      path = Config::Get().common.player.streamDir / "gitsScreenshots/gitsPlayer";
+    if (Configurator::IsRecorder()) {
+      path = Configurator::Get().common.recorder.dumpPath / "gitsScreenshots/gitsRecorder";
+    } else if (Configurator::IsPlayer()) {
+      path = Configurator::Get().common.player.streamDir / "gitsScreenshots/gitsPlayer";
     } else {
       Log(ERR) << "Neither in player nor recorder!!!";
       throw EOperationFailed(EXCEPTION_MESSAGE);
@@ -56,12 +75,12 @@ std::string GetFileNameDrawcallScreenshot(unsigned int frameNumber,
                                           unsigned int drawNumber,
                                           uint64_t image,
                                           VulkanDumpingMode dumpingMode) {
-  auto path = Config::Get().common.player.outputDir;
+  auto path = Configurator::Get().common.player.outputDir;
   if (path.empty()) {
-    if (Config::Get().IsRecorder()) {
-      path = Config::Get().common.recorder.dumpPath / "gitsScreenshots/gitsRecorder";
-    } else if (Config::Get().IsPlayer()) {
-      path = Config::Get().common.player.streamDir / "gitsScreenshots/gitsPlayer";
+    if (Configurator::IsRecorder()) {
+      path = Configurator::Get().common.recorder.dumpPath / "gitsScreenshots/gitsRecorder";
+    } else if (Configurator::IsPlayer()) {
+      path = Configurator::Get().common.player.streamDir / "gitsScreenshots/gitsPlayer";
     } else {
       Log(ERR) << "Neither in player nor recorder!!!";
       throw EOperationFailed(EXCEPTION_MESSAGE);
@@ -95,12 +114,12 @@ std::string GetFileNameResourcesScreenshot(unsigned int frameNumber,
                                            uint64_t objectNumber,
                                            VulkanResourceType resType,
                                            VulkanDumpingMode dumpingMode) {
-  auto path = Config::Get().common.player.outputDir;
+  auto path = Configurator::Get().common.player.outputDir;
   if (path.empty()) {
-    if (Config::Get().IsRecorder()) {
-      path = Config::Get().common.recorder.dumpPath / "gitsScreenshots/gitsRecorder";
-    } else if (Config::Get().IsPlayer()) {
-      path = Config::Get().common.player.streamDir / "gitsScreenshots/gitsPlayer";
+    if (Configurator::IsRecorder()) {
+      path = Configurator::Get().common.recorder.dumpPath / "gitsScreenshots/gitsRecorder";
+    } else if (Configurator::IsPlayer()) {
+      path = Configurator::Get().common.player.streamDir / "gitsScreenshots/gitsPlayer";
     } else {
       Log(ERR) << "Neither in player nor recorder!!!";
       throw EOperationFailed(EXCEPTION_MESSAGE);
@@ -142,24 +161,6 @@ std::string GetFileNameResourcesScreenshot(unsigned int frameNumber,
   std::filesystem::create_directories(path);
   path /= fileName.str();
   return path.string();
-}
-
-bool operator==(const CGits::CCounter& counter, const VulkanObjectRange& vulkanObjRange) {
-  if (vulkanObjRange.empty()) {
-    return false;
-  }
-  if (vulkanObjRange.objVector.size() > counter.countersTable.size()) {
-    return false;
-  }
-  for (size_t i = 0; i < vulkanObjRange.objVector.size(); i++) {
-    if (counter.countersTable[i] != vulkanObjRange.objVector[i]) {
-      return false;
-    }
-  }
-  if (vulkanObjRange.range[(size_t)counter.countersTable[vulkanObjRange.objVector.size()]]) {
-    return true;
-  }
-  return false;
 }
 
 bool vulkanCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer bufferHandle, std::string fileName) {
@@ -312,7 +313,7 @@ bool vulkanCopyImage(VkCommandBuffer commandBuffer,
                      VkAttachmentStoreOp imageStoreOption,
                      VulkanDumpingMode dumpingMode) {
   auto& imageState = SD()._imagestates[imageHandle];
-  if (Config::Get().vulkan.player.skipNonDeterministicImages &&
+  if (Configurator::Get().vulkan.player.skipNonDeterministicImages &&
       (SD().nonDeterministicImages.find(imageHandle) != SD().nonDeterministicImages.end())) {
     return false;
   }
@@ -694,7 +695,7 @@ void vulkanDumpImage(std::shared_ptr<RenderGenericAttachment> attachment) {
                              width, height);
       }
       if ((minMaxValues.first < 0.0 || minMaxValues.second > 1.0) &&
-          Config::Get().vulkan.player.skipNonDeterministicImages &&
+          Configurator::Get().vulkan.player.skipNonDeterministicImages &&
           !SD().depthRangeUnrestrictedEXTEnabled) {
         // When copying to a depth aspect, and the
         // VK_EXT_depth_range_unrestricted extension is not enabled, the
@@ -782,7 +783,7 @@ bool writeScreenshotUtil(std::string fileName,
       (!imageState->imageCreateInfoData.Value() ||
        imageState->imageCreateInfoData.Value()->samples != VK_SAMPLE_COUNT_1_BIT);
 
-  if (Config::Get().vulkan.player.skipNonDeterministicImages &&
+  if (Configurator::Get().vulkan.player.skipNonDeterministicImages &&
       (SD().nonDeterministicImages.find(sourceImage) != SD().nonDeterministicImages.end())) {
     return false;
   }
@@ -1119,7 +1120,7 @@ bool writeScreenshotUtil(std::string fileName,
 
         // Normalize ???
         /*
-        if ((VK_IMAGE_ASPECT_COLOR_BIT & target[l][m][a].aspect) 
+        if ((VK_IMAGE_ASPECT_COLOR_BIT & target[l][m][a].aspect)
             && isFormatFloat(imageState.imageFormat)) {
           try {
             normalize_texture_data(getTexelToConvertFromImageFormat(imageState.imageFormat), screenshotData, width, height);
@@ -1153,7 +1154,7 @@ bool writeScreenshotUtil(std::string fileName,
             }
 #ifndef BUILD_FOR_CCODE
             if ((minMaxValues.first < 0.0 || minMaxValues.second > 1.0) &&
-                Config::Get().vulkan.player.skipNonDeterministicImages &&
+                Configurator::Get().vulkan.player.skipNonDeterministicImages &&
                 !SD().depthRangeUnrestrictedEXTEnabled) {
               // When copying to a depth aspect, and the
               // VK_EXT_depth_range_unrestricted extension is not enabled, the
@@ -1289,7 +1290,7 @@ void writeScreenshot(VkQueue queue,
                             ->imageViewStateStoreListKHR[imageview]
                             ->imageStateStore->imageHandle;
         }
-        if (Config::Get().vulkan.player.captureVulkanSubmitsGroupType ==
+        if (Configurator::Get().vulkan.player.captureVulkanSubmitsGroupType ==
             TCaptureGroupType::PER_COMMAND_BUFFER) {
           fileName = GetFileNameDrawcallScreenshot(
               CGits::Instance().CurrentFrame(),
@@ -1328,7 +1329,7 @@ void writeScreenshot(VkQueue queue, const VkPresentInfoKHR& presentInfo) {
       nameSuffix << "_swapchain_" << i;
     }
 
-    if (Config::Get().common.player.captureScreenshot) {
+    if (Configurator::Get().common.player.captureScreenshot) {
       captureDesktopScreenshot(swapchainState->surfaceKHRStateStore->surfaceKHRHandle,
                                fileName + nameSuffix.str());
     } else {
@@ -2034,7 +2035,7 @@ bool checkForSupportForQueues(VkPhysicalDevice physicalDevice,
     auto originalFlags = queueFamilyPropertiesOriginal[requestedQueueFamilyIndex].queueFlags;
 
 #ifdef GITS_PLATFORM_WINDOWS
-    if (Config::Get().vulkan.player.renderDoc.mode != TVkRenderDocCaptureMode::NONE) {
+    if (Configurator::Get().vulkan.player.renderDoc.mode != TVkRenderDocCaptureMode::NONE) {
       currentFlags &= ~VK_QUEUE_PROTECTED_BIT;
       originalFlags &= ~VK_QUEUE_PROTECTED_BIT;
     }
@@ -2141,7 +2142,7 @@ bool isSynchronization2FeatureEnabled(VkDevice device) {
 }
 
 void printShaderHashes(VkPipeline pipeline) {
-  if ((Config::Get().vulkan.player.traceVKShaderHashes) && (VK_NULL_HANDLE != pipeline)) {
+  if ((Configurator::Get().vulkan.player.traceVKShaderHashes) && (VK_NULL_HANDLE != pipeline)) {
     auto& pipelineState = SD()._pipelinestates[pipeline];
 
     VkLog(TRACE) << "Shader hashes:";
@@ -2186,7 +2187,7 @@ void destroyDeviceLevelResources(VkDevice device) {
     }                                                                                              \
   }
 
-  if (Config::Get().IsPlayer()) {
+  if (Configurator::IsPlayer()) {
     // If needed, get and store pipeline cache data
     for (auto& devicePipelineCachePair : SD().internalResources.pipelineCacheHandles) {
       if (((device == VK_NULL_HANDLE) || (device == devicePipelineCachePair.first)) &&
@@ -2199,7 +2200,7 @@ void destroyDeviceLevelResources(VkDevice device) {
           drvVk.vkGetPipelineCacheData(devicePipelineCachePair.first,
                                        devicePipelineCachePair.second, &cacheDataSize,
                                        cacheData.data());
-          SaveBinaryFileContents(Config::Get().vulkan.player.overrideVKPipelineCache.string(),
+          SaveBinaryFileContents(Configurator::Get().vulkan.player.overrideVKPipelineCache.string(),
                                  cacheData);
         }
       }
@@ -2209,7 +2210,7 @@ void destroyDeviceLevelResources(VkDevice device) {
     DESTROY_VULKAN_OBJECTS(VkSwapchainKHR, _swapchainkhrstates, vkDestroySwapchainKHR)
 
     // Destroy all other resources (only when cleanResourcesOnExit option is used)
-    if (Config::Get().common.player.cleanResourcesOnExit) {
+    if (Configurator::Get().common.player.cleanResourcesOnExit) {
       DESTROY_VULKAN_OBJECTS(VkQueryPool, _querypoolstates, vkDestroyQueryPool)
       DESTROY_VULKAN_OBJECTS(VkSemaphore, _semaphorestates, vkDestroySemaphore)
       DESTROY_VULKAN_OBJECTS(VkEvent, _eventstates, vkDestroyEvent)
@@ -2326,7 +2327,7 @@ void destroyDeviceLevelResources(VkDevice device) {
           }
         }
       }
-    } // if (Config::Get().player.cleanResourcesOnExit)
+    } // if (Configurator::Get().player.cleanResourcesOnExit)
 
     // Devices
     {
@@ -2344,8 +2345,8 @@ void destroyDeviceLevelResources(VkDevice device) {
 }
 
 void destroyInstanceLevelResources(VkInstance instance) {
-  if (Config::Get().IsPlayer()) {
-    if (Config::Get().common.player.cleanResourcesOnExit) {
+  if (Configurator::IsPlayer()) {
+    if (Configurator::Get().common.player.cleanResourcesOnExit) {
       // Surfaces
       {
         std::vector<VkSurfaceKHR> objectsToRemove;
@@ -2389,7 +2390,8 @@ void getRangesForMemoryUpdate(VkDeviceMemory memory,
   char* pointer = (char*)mapping->ppDataData.Value();
 
   // External memory option enabled
-  if (isUseExternalMemoryExtensionUsed() || Config::Get().vulkan.recorder.writeWatchDetection) {
+  if (isUseExternalMemoryExtensionUsed() ||
+      Configurator::Get().vulkan.recorder.writeWatchDetection) {
     std::vector<std::pair<void*, size_t>> touchedPages;
     if (isUseExternalMemoryExtensionUsed()) {
       touchedPages = WriteWatchSniffer::GetTouchedPagesAndReset(
@@ -2402,10 +2404,10 @@ void getRangesForMemoryUpdate(VkDeviceMemory memory,
       VkDeviceSize offset = (char*)page.first - (char*)pointer;
       VkDeviceSize size = page.second;
 
-      if (Config::Get().vulkan.recorder.memorySegmentSize) {
+      if (Configurator::Get().vulkan.recorder.memorySegmentSize) {
         std::vector<std::pair<const uint8_t*, const uint8_t*>> optimizePagesMap =
             GetChangedMemorySubranges(&mapping->compareData[offset], (char*)pointer + offset, size,
-                                      Config::Get().vulkan.recorder.memorySegmentSize);
+                                      Configurator::Get().vulkan.recorder.memorySegmentSize);
 
         for (auto& startEndPtrPair : optimizePagesMap) {
           std::uint64_t optimize_range_size = startEndPtrPair.second - startEndPtrPair.first;
@@ -2431,7 +2433,7 @@ void getRangesForMemoryUpdate(VkDeviceMemory memory,
         });
       }
     }
-  } else if (Config::Get().vulkan.recorder.memoryAccessDetection) {
+  } else if (Configurator::Get().vulkan.recorder.memoryAccessDetection) {
     std::pair<const void*, size_t> baseRange = {(char*)pointer, (size_t)unmapSize};
     auto sniffedRegionHandle = mapping->sniffedRegionHandle;
     std::vector<std::pair<std::uint64_t, std::uint64_t>> pagesMap =
@@ -2450,11 +2452,11 @@ void getRangesForMemoryUpdate(VkDeviceMemory memory,
       if (range_size > 0) {
         std::uint64_t offset = (std::uint64_t)((char*)startEndPtrPair.first - (char*)pointer);
 
-        if (Config::Get().vulkan.recorder.memorySegmentSize) {
+        if (Configurator::Get().vulkan.recorder.memorySegmentSize) {
           std::vector<std::pair<const uint8_t*, const uint8_t*>> optimizePagesMap =
               GetChangedMemorySubranges(&mapping->compareData[(size_t)offset],
                                         (char*)pointer + offset, range_size,
-                                        Config::Get().vulkan.recorder.memorySegmentSize);
+                                        Configurator::Get().vulkan.recorder.memorySegmentSize);
 
           for (auto& startEndPtrPair : optimizePagesMap) {
             std::uint64_t optimize_range_size = startEndPtrPair.second - startEndPtrPair.first;
@@ -2480,10 +2482,10 @@ void getRangesForMemoryUpdate(VkDeviceMemory memory,
         }
       }
     }
-  } else if (Config::Get().vulkan.recorder.memorySegmentSize) {
+  } else if (Configurator::Get().vulkan.recorder.memorySegmentSize) {
     std::vector<std::pair<const uint8_t*, const uint8_t*>> optimizePagesMap =
         GetChangedMemorySubranges(&mapping->compareData[0], (char*)pointer, unmapSize,
-                                  Config::Get().vulkan.recorder.memorySegmentSize);
+                                  Configurator::Get().vulkan.recorder.memorySegmentSize);
 
     for (auto& startEndPtrPair : optimizePagesMap) {
       std::uint64_t optimize_range_size = startEndPtrPair.second - startEndPtrPair.first;
@@ -2518,7 +2520,7 @@ void flushShadowMemory(VkDeviceMemory memory, bool unmap) {
 
   std::uint64_t offset = memoryState->mapping->offsetData.Value();
 
-  if (Config::Get().vulkan.recorder.memoryAccessDetection) {
+  if (Configurator::Get().vulkan.recorder.memoryAccessDetection) {
     std::pair<const void*, size_t> baseRange;
     baseRange.first = (char*)pointer;
     baseRange.second = (size_t)unmapSize;
@@ -2541,7 +2543,7 @@ void flushShadowMemory(VkDeviceMemory memory, bool unmap) {
     }
   }
 
-  if (Config::Get().vulkan.recorder.writeWatchDetection) {
+  if (Configurator::Get().vulkan.recorder.writeWatchDetection) {
     std::vector<std::pair<void*, size_t>> touchedPages =
         WriteWatchSniffer::GetTouchedPagesAndReset(pointer, unmapSize);
 
@@ -2996,7 +2998,7 @@ bool checkMemoryMappingFeasibility(VkDevice device, VkDeviceMemory memory, bool 
       Log(ERR) << "Stream tries to map memory object " << memory
                << " which was allocated from a non-host-visible memory type at index "
                << memoryIndex;
-      if (!Config::Get().vulkan.player.ignoreVKCrossPlatformIncompatibilitiesWA) {
+      if (!Configurator::Get().vulkan.player.ignoreVKCrossPlatformIncompatibilitiesWA) {
         throw std::runtime_error("Memory object cannot be mapped on a current platform. Exiting!!");
       }
     }
@@ -3012,7 +3014,7 @@ bool checkMemoryMappingFeasibility(VkDevice device, uint32_t memoryTypeIndex, bo
       Log(ERR) << "Stream tries to map memory object which was allocated from a non-host-visible "
                   "memory type at index "
                << memoryTypeIndex;
-      if (!Config::Get().vulkan.player.ignoreVKCrossPlatformIncompatibilitiesWA) {
+      if (!Configurator::Get().vulkan.player.ignoreVKCrossPlatformIncompatibilitiesWA) {
         throw std::runtime_error("Memory object cannot be mapped on a current platform. Exiting!!");
       }
     }
@@ -3740,7 +3742,7 @@ uint32_t GetHash(uint32_t size, const void* data) {
 
 bool IsObjectToSkip(uint64_t vulkanObject) {
   auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
-  if (gits::Config::Get().vulkan.recorder.minimalStateRestore &&
+  if (Configurator::Get().vulkan.recorder.minimalStateRestore &&
       (api3dIface.CfgRec_IsSubFrameMode() &&
        SD().objectsUsedInQueueSubmit.find(vulkanObject) == SD().objectsUsedInQueueSubmit.end())) {
     return true;

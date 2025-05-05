@@ -12,7 +12,7 @@
 #endif
 
 #include "windowing.h"
-#include "config.h"
+#include "configurationLib.h"
 #include "gits.h"
 #include "pragmas.h"
 #include "message_pump.h"
@@ -277,7 +277,7 @@ native_disp_t GetNativeDisplayWaylandEgl() {
 }
 
 win_ptr_t CreateWin(GLint width, GLint height, GLint x, GLint y, bool show) {
-  if (gits::Config::Get().opengl.player.forceWaylandWindow) {
+  if (gits::Configurator::Get().opengl.player.forceWaylandWindow) {
     return CreateWinWaylandEgl(width, height, x, y, show);
   } else {
     return CreateWinX11(width, height, x, y, show);
@@ -286,14 +286,14 @@ win_ptr_t CreateWin(GLint width, GLint height, GLint x, GLint y, bool show) {
 
 win_ptr_t CreateWin(
     GLXFBConfig pf, XVisualInfo* vi, GLint width, GLint height, GLint x, GLint y, bool show) {
-  if (gits::Config::Get().opengl.player.forceWaylandWindow) {
+  if (gits::Configurator::Get().opengl.player.forceWaylandWindow) {
     return CreateWinWaylandEgl(pf, vi, width, height, x, y, show);
   } else {
     return CreateWinX11(pf, vi, width, height, x, y, show);
   }
 }
 win_ptr_t CreateWin(EGLConfig pf, GLint width, GLint height, GLint x, GLint y, bool show) {
-  if (gits::Config::Get().opengl.player.forceWaylandWindow) {
+  if (gits::Configurator::Get().opengl.player.forceWaylandWindow) {
     return CreateWinWaylandEgl(pf, width, height, x, y, show);
   } else {
     return CreateWinX11(pf, width, height, x, y, show);
@@ -301,7 +301,7 @@ win_ptr_t CreateWin(EGLConfig pf, GLint width, GLint height, GLint x, GLint y, b
 }
 
 void RemoveWin(win_ptr_t winptr) {
-  if (gits::Config::Get().opengl.player.forceWaylandWindow) {
+  if (gits::Configurator::Get().opengl.player.forceWaylandWindow) {
     return RemoveWinWaylandEgl(winptr);
   } else {
     return RemoveWinX11(winptr);
@@ -309,7 +309,7 @@ void RemoveWin(win_ptr_t winptr) {
 }
 
 void ResizeWin(win_ptr_t winptr, int width, int height) {
-  if (gits::Config::Get().opengl.player.forceWaylandWindow) {
+  if (gits::Configurator::Get().opengl.player.forceWaylandWindow) {
     return ResizeWinWaylandEgl(winptr, width, height);
   } else {
     return ResizeWinX11(winptr, width, height);
@@ -317,7 +317,7 @@ void ResizeWin(win_ptr_t winptr, int width, int height) {
 }
 
 void MoveWin(win_ptr_t winptr, int x, int y) {
-  if (gits::Config::Get().opengl.player.forceWaylandWindow) {
+  if (gits::Configurator::Get().opengl.player.forceWaylandWindow) {
     return MoveWinWaylandEgl(winptr, x, y);
   } else {
     return MoveWinX11(winptr, x, y);
@@ -325,7 +325,7 @@ void MoveWin(win_ptr_t winptr, int x, int y) {
 }
 
 void WinVisibility(win_ptr_t winptr, bool show) {
-  if (gits::Config::Get().opengl.player.forceWaylandWindow) {
+  if (gits::Configurator::Get().opengl.player.forceWaylandWindow) {
     return WinVisibilityWaylandEgl(winptr, show);
   } else {
     return WinVisibilityX11(winptr, show);
@@ -333,7 +333,7 @@ void WinVisibility(win_ptr_t winptr, bool show) {
 }
 
 void WinTitle(win_ptr_t winptr, const std::string& title) {
-  if (gits::Config::Get().opengl.player.forceWaylandWindow) {
+  if (gits::Configurator::Get().opengl.player.forceWaylandWindow) {
     WinTitleWaylandEgl(winptr, title);
   } else {
     WinTitleX11(winptr, title);
@@ -345,7 +345,7 @@ win_handle_t GetWinHandle(win_ptr_t winptr) {
 }
 
 native_disp_t GetNativeDisplay() {
-  if (gits::Config::Get().opengl.player.forceWaylandWindow) {
+  if (gits::Configurator::Get().opengl.player.forceWaylandWindow) {
     return GetNativeDisplayWaylandEgl();
   } else {
     return GetNativeDisplayX11();

@@ -32,7 +32,7 @@ void COclDriver::Initialize() {
   if (_initialized) {
     return;
   }
-  std::filesystem::path path = gits::Config::Get().common.shared.libClPath;
+  std::filesystem::path path = Configurator::Get().common.shared.libClPath;
   _lib = std::make_unique<SharedLibrary>(path.string());
   _initialized = _lib->getHandle() != nullptr;
 #ifndef BUILD_FOR_CCODE

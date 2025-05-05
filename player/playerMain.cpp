@@ -13,6 +13,8 @@
  *
  */
 
+#include "argumentParser.h"
+
 #include "platform.h"
 #if defined GITS_PLATFORM_WINDOWS
 #include "StackWalker.h"
@@ -55,6 +57,9 @@
 #if defined GITS_PLATFORM_WINDOWS
 #include "recorder.h"
 #endif
+#include "configurationLib.h"
+#include "diagnostic.h"
+#include "playerUtils.h"
 
 #include <sstream>
 #include <iostream>
@@ -106,33 +111,70 @@ std::filesystem::path parseConfigFileOption(int& argc, char** argv) {
   }
   return cfgFilePath;
 }
+
+std::set<std::string> argsFilterTags = {};
+
+bool argsFilterTagsFunc(const args::Base& item) {
+  if (argsFilterTags.size() <= 0) {
+    return true;
+  }
+  for (const auto& entry : item.GetTags()) {
+    if (argsFilterTags.find(entry) != argsFilterTags.end()) {
+      return true;
+    }
+  }
+  return false;
+}
 } // namespace
 
 int MainBody(int argc, char* argv[]) {
-  auto cfgPath = parseConfigFileOption(argc, argv);
-  if (cfgPath.empty()) {
-    cfgPath = Config::GetConfigPath(std::filesystem::absolute(argv[0]).parent_path());
+  std::filesystem::path playerPath = "";
+  auto argsVector = std::vector<std::string>(argv, argv + argc);
+  if (argsVector.size() >= 1) {
+    playerPath = argsVector[0];
+    argsVector.erase(argsVector.begin());
   }
-  if (!cfgPath.empty()) {
-    Config::Set(cfgPath, Config::TMode::MODE_PLAYER);
-  } else {
-    Log(WARN) << "Config file not found. The default values will be used for playback.";
-    Config::SetMode(Config::TMode::MODE_PLAYER);
-  }
+  auto args = ArgumentParser(argsVector);
 
-  try {
-    if (configure_player(argc, argv)) {
-      return 0;
-    }
-  } catch (const std::runtime_error& e) {
-    Log(ERR) << "Error during command line parsing:\n" << e.what();
+  args::HideGroupSection = true;
+  args::HiddenOptionSuffixMarker = '!';
+
+  args.Parser.helpParams.helpindent = 30;
+  args.Parser.helpParams.eachgroupindent = 0;
+  args.Parser.helpParams.programName = "gitsPlayer";
+  args.Parser.helpParams.addNewlineBeforeDescription = true;
+  args.Parser.helpParams.showCommandFullHelp = true;
+
+  switch (args.ParsingResult) {
+  case ParsingSyntaxError:
+    Log(ERR) << "Error during command line parsing:\n" << args.Output.str();
     Log(ERR) << "Please run player with the \"--help\" argument to see usage info.";
     return 1;
+  case ParsingSemanticError:
+    Log(ERR) << "Error during command line parsing:\n" << args.Output.str();
+    return 1;
+  case ShowHelp:
+    break;
   }
-#ifdef GITS_PLATFORM_WINDOWS
-  Config::PrepareSubcapturePath();
-#endif
-  const Config& cfg = Config::Get();
+
+  if ((args.ParsingResult == ShowHelp) || (args.HelpMenu)) {
+    if (args.HelpMenu) {
+      argsFilterTags.insert(args.HelpMenu.Get());
+      args::GlobalFilterOption = argsFilterTagsFunc;
+    }
+    Log(INFO)
+        << std::endl
+        << std::endl
+        << args.Parser.Help() << std::endl
+        << "All options of a configfile can be set via commandline by using the keypath and value."
+        << std::endl;
+    return 0;
+  }
+
+  if (!ConfigurePlayer(playerPath, args)) {
+    Log(ERR) << "Encountered error while configuring player";
+    return 1;
+  }
 
   // Print version.
   CGits& inst = CGits::Instance();
@@ -144,6 +186,8 @@ int MainBody(int argc, char* argv[]) {
       CLog(msg->getLevel(), NORMAL) << msg->getText();
     }
   });
+
+  const auto& cfg = Configurator::Get();
 
   if (!cfg.common.player.outputTracePath.empty()) {
     CLog::LogFilePlayer(cfg.common.player.outputTracePath);
@@ -253,7 +297,7 @@ int MainBody(int argc, char* argv[]) {
     // check if all functions can be run on that system
     Log(INFO, NO_PREFIX) << "Playing...";
 
-    if (Config::Get().common.shared.useEvents) {
+    if (Configurator::Get().common.shared.useEvents) {
       try {
         CGits::Instance().PlaybackEvents().programStart();
       } catch (std::runtime_error& e) {
@@ -326,7 +370,7 @@ int MainBody(int argc, char* argv[]) {
     returnValue = EXIT_FAILURE;
   }
 
-  if (Config::Get().common.shared.useEvents) {
+  if (Configurator::Get().common.shared.useEvents) {
     try {
       CGits::Instance().PlaybackEvents().programExit();
     } catch (std::runtime_error& e) {
@@ -336,14 +380,14 @@ int MainBody(int argc, char* argv[]) {
   }
 
 #if defined GITS_PLATFORM_WINDOWS
-  if (Config::Get().directx.features.subcapture.enabled &&
+  if (Configurator::Get().directx.features.subcapture.enabled &&
       CRecorder::Instance().IsMarkedForDeletion()) {
     CRecorder::Instance().Close();
   }
 #endif
   CGits::Instance().Dispose();
 
-  if (Config::Get().common.player.waitForEnter) {
+  if (Configurator::Get().common.player.waitForEnter) {
     Log(OFF, NO_PREFIX) << "Waiting for ENTER press ...";
     std::cin.get();
   }
@@ -365,8 +409,8 @@ void ShowCallstack(PEXCEPTION_POINTERS exceptionPtr) {
 LONG WINAPI ExceptionFilter(PEXCEPTION_POINTERS exceptionPtr) {
   ShowExceptionInfo(exceptionPtr);
   ShowCallstack(exceptionPtr);
-  return Config::Get().common.player.disableExceptionHandling ? EXCEPTION_CONTINUE_SEARCH
-                                                              : EXCEPTION_EXECUTE_HANDLER;
+  return Configurator::Get().common.player.disableExceptionHandling ? EXCEPTION_CONTINUE_SEARCH
+                                                                    : EXCEPTION_EXECUTE_HANDLER;
 }
 #endif
 } // namespace gits

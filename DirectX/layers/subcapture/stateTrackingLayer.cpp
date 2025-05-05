@@ -10,6 +10,7 @@
 #include "argumentEncoders.h"
 #include "descriptorService.h"
 #include "commandWritersAuto.h"
+#include "configurationLib.h"
 
 #include <wrl/client.h>
 
@@ -43,7 +44,7 @@ StateTrackingLayer::StateTrackingLayer(SubcaptureRecorder& recorder)
       accelerationStructuresBuildService_(stateService_, recorder_, reservedResourcesService_),
       residencyService_(stateService_) {
 
-  const std::string& frames = Config::Get().directx.features.subcapture.frames;
+  const std::string& frames = Configurator::Get().directx.features.subcapture.frames;
   size_t pos = frames.find("-");
   try {
     if (pos != std::string::npos) {
@@ -53,7 +54,7 @@ StateTrackingLayer::StateTrackingLayer(SubcaptureRecorder& recorder)
     }
   } catch (...) {
     throw Exception("Invalid subcapture range: '" +
-                    Config::Get().directx.features.subcapture.frames + "'");
+                    Configurator::Get().directx.features.subcapture.frames + "'");
   }
 }
 

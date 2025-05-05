@@ -8,6 +8,7 @@
 
 #include "subcaptureRecorder.h"
 #include "directXApi.h"
+#include "configurationLib.h"
 
 #include <filesystem>
 
@@ -16,7 +17,7 @@ namespace DirectX {
 
 SubcaptureRecorder::SubcaptureRecorder() {
 
-  const Config& config = Config::Get();
+  const Config& config = Configurator::Get();
   if (!config.directx.features.subcapture.enabled) {
     return;
   }

@@ -70,7 +70,7 @@ namespace gits {
 
 DrawCallWrapperPrePost::DrawCallWrapperPrePost(gits::CRecorder& rec) : _recorder(rec) {
   gits::CGits::Instance().DrawCountUp();
-  const auto& frameRangeCfg = gits::Config::Get().opengl.recorder;
+  const auto& frameRangeCfg = Configurator::Get().opengl.recorder;
   if (frameRangeCfg.oglSingleDraw.number == gits::CGits::Instance().CurrentDrawCount()) {
     gits::OpenGL::SD().EraseNonCurrentData();
   }
@@ -80,17 +80,18 @@ DrawCallWrapperPrePost::DrawCallWrapperPrePost(gits::CRecorder& rec) : _recorder
     _recorder.Schedule(new gits::OpenGL::CgitsCoherentBufferMapping(
         gits::OpenGL::CCoherentBufferUpdate::TCoherentBufferData::PER_DRAWCALL_UPDATE,
         gits::OpenGL::CCoherentBufferUpdate::TCoherentBufferData::UPDATE_BOUND,
-        Config::Get().opengl.recorder.coherentMapUpdatePerFrame));
+        Configurator::Get().opengl.recorder.coherentMapUpdatePerFrame));
   }
 }
 DrawCallWrapperPrePost::~DrawCallWrapperPrePost() {
   using namespace gits;
   using namespace OpenGL;
   try {
-    if (Config::Get().opengl.recorder.dumpDrawsFromFrames[gits::CGits::Instance().CurrentFrame()]) {
+    if (Configurator::Get()
+            .opengl.recorder.dumpDrawsFromFrames[gits::CGits::Instance().CurrentFrame()]) {
       //Dump screenshots after drawcalls
-      std::filesystem::path path =
-          Config::Get().common.recorder.dumpPath / "gitsScreenshots" / "gitsRecorder" / "draws";
+      std::filesystem::path path = Configurator::Get().common.recorder.dumpPath /
+                                   "gitsScreenshots" / "gitsRecorder" / "draws";
       capture_drawbuffer(
           path, "drawcall-" + std::to_string(CGits::Instance().CurrentDrawCount()) + "-pre", true);
     }
@@ -130,7 +131,7 @@ CDrivers& CRecorderWrapper::Drivers() const {
 
 void CRecorderWrapper::PreSwap() const {
   if (Record() &&
-      Config::Get().opengl.recorder.dumpScreenshots[gits::CGits::Instance().CurrentFrame()]) {
+      Configurator::Get().opengl.recorder.dumpScreenshots[gits::CGits::Instance().CurrentFrame()]) {
     FrameBufferSave(gits::CGits::Instance().CurrentFrame());
   }
 }
@@ -340,7 +341,7 @@ void CRecorderWrapper::eglDestroyContext(EGLBoolean return_value,
   _recorder.Schedule(new CeglDestroyContext(return_value, dpy, ctx), true);
 
   static uint32_t deleted_context = 0;
-  if (++deleted_context == Config::Get().opengl.recorder.all.exitDeleteContext) {
+  if (++deleted_context == Configurator::Get().opengl.recorder.all.exitDeleteContext) {
     _recorder.Close();
   }
 }
@@ -876,7 +877,7 @@ void CRecorderWrapper::wglDeleteContext(bool retVal, HGLRC hglrc) const {
   _recorder.Schedule(new CwglDeleteContext(retVal, hglrc), true);
 
   static int deleted_context = 0;
-  if (++deleted_context == Config::Get().opengl.recorder.all.exitDeleteContext) {
+  if (++deleted_context == Configurator::Get().opengl.recorder.all.exitDeleteContext) {
     _recorder.Close();
   }
 }
@@ -1927,7 +1928,7 @@ void CRecorderWrapper::glXDestroyContext(Display* dpy, GLXContext ctx) const {
   _recorder.Schedule(new CglXDestroyContext(dpy, ctx), true);
 
   static uint32_t deleted_context = 0;
-  if (++deleted_context == Config::Get().opengl.recorder.all.exitDeleteContext) {
+  if (++deleted_context == Configurator::Get().opengl.recorder.all.exitDeleteContext) {
     _recorder.Close();
   }
 }

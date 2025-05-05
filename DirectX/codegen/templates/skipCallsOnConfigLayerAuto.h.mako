@@ -19,7 +19,7 @@ namespace DirectX {
 class SkipCallsOnConfigLayer : public Layer {
 public:
   SkipCallsOnConfigLayer() : Layer("SkipCallsOnConfig"),
-      configKeySet_(Config::Get().directx.features.skipCalls.commandKeys)
+      configKeySet_(Configurator::Get().directx.features.skipCalls.commandKeys)
   {}
 
   virtual void pre(CreateWindowMetaCommand& command) override;

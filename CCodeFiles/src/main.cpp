@@ -78,6 +78,34 @@ void LoadGitsRawFile(const std::string& fileName) {
 #endif
 
 int main(int argc, char* argv[]) {
+  auto& cfg = Configurator::GetMutable();
+
+  cfg.common.mode = GITSMode::MODE_PLAYER;
+
+#if defined GITS_PLATFORM_WINDOWS
+  cfg.common.shared.libGL = "OpenGL32.dll";
+  cfg.common.shared.libEGL = "libEGL.dll";
+  cfg.common.shared.libGLESv1 = "libGLESv1_CM.dll";
+  cfg.common.shared.libGLESv2 = "libGLESv2.dll";
+  cfg.common.shared.libClPath = "OpenCL.dll";
+  cfg.common.shared.libVK = "vulkan-1.dll";
+  cfg.common.shared.libOcloc = "ocloc64.dll";
+  cfg.common.shared.libL0Driver = "ze_intel_gpu64.dll";
+  cfg.common.shared.libL0 = "ze_loader.dll";
+#elif defined GITS_PLATFORM_X11
+  cfg.common.shared.libGL = "libGL.so.1";
+  cfg.common.shared.libEGL = "libEGL.so.1";
+  cfg.common.shared.libGLESv1 = "libGLESv1_CM.so.1";
+  cfg.common.shared.libGLESv2 = "libGLESv2.so.2";
+  cfg.common.shared.libClPath = "libOpenCL.so.1";
+  cfg.common.shared.libVK = "libvulkan.so.1";
+  cfg.common.shared.libOcloc = "libocloc.so";
+  cfg.common.shared.libL0Driver = "libze_intel_gpu.so.1";
+  cfg.common.shared.libL0 = "libze_loader.so.1";
+#else
+#error Invalid platform.
+#endif
+
   try {
     // command line options parser
     CGetOpt options(argc, argv);
@@ -165,7 +193,6 @@ int main(int argc, char* argv[]) {
 
     options.Parse();
 
-    Config cfg = Config::Get();
     if (optionCaptureFrames.Present()) {
       cfg.common.player.captureFrames = optionCaptureFrames.Value();
     }
@@ -237,8 +264,6 @@ int main(int argc, char* argv[]) {
     if (optionEscalatePriority.Present() || optionPerformance.Present()) {
       cfg.common.player.escalatePriority = true;
     }
-
-    Config::Set(cfg);
   } catch (const std::runtime_error& e) {
     std::cout << "Error during command line parsing:\n" << e.what() << "\n";
     return 1;
@@ -247,7 +272,7 @@ int main(int argc, char* argv[]) {
   }
 
   try {
-    if (Config::Get().common.player.waitForEnter) {
+    if (Configurator::Get().common.player.waitForEnter) {
       Log(INFO) << "Waiting for ENTER press ...";
       std::cin.get();
     }
@@ -274,7 +299,7 @@ int main(int argc, char* argv[]) {
 #endif
 
 #if defined GITS_PLATFORM_WINDOWS
-    if (Config::Get().common.player.escalatePriority) {
+    if (Configurator::Get().common.player.escalatePriority) {
       if (SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS)) {
         Log(INFO) << "Escalated process priority to realtime priority";
       } else {
@@ -297,7 +322,7 @@ int main(int argc, char* argv[]) {
   try {
     uint32_t currentFrame = CGits::Instance().CurrentFrame();
     Log(OFF, NO_PREFIX) << "Rendered frames : " << currentFrame;
-    if (currentFrame > Config::Get().ccode.benchmarkStartFrame) {
+    if (currentFrame > Configurator::Get().ccode.benchmarkStartFrame) {
       int64_t timeElapsed = CGits::Instance().GetLastFrameTime();
       float averageFPS = CGits::Instance().GetFPS();
       Log(OFF, NO_PREFIX) << "Rendering Time: " << timeElapsed / 1e9
@@ -310,7 +335,7 @@ int main(int argc, char* argv[]) {
 
     Log(OFF, NO_PREFIX) << "Finished";
 
-    if (Config::Get().common.player.waitForEnter) {
+    if (Configurator::Get().common.player.waitForEnter) {
       Log(WARN) << "Waiting for ENTER press ...";
       std::cin.get();
     }

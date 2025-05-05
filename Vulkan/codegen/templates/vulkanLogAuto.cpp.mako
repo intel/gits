@@ -23,7 +23,7 @@ CVkLog & CVkLog::operator<<(const ${struct.name}& c) {
 
 CVkLog & CVkLog::operator<<(const ${struct.name}* c) {
   if (c != nullptr) {
-    if (isTraceDataOptPresent(TraceData::VK_STRUCTS))
+    if (Configurator::IsTraceDataOptPresent(TraceData::VK_STRUCTS))
       *this << *c;
     else
       _buffer << "{ " << (void*)c << " }";
@@ -105,7 +105,7 @@ CVkLog & CVkLog::operator<<(const ${type_name}& c) {
 
 CVkLog & CVkLog::operator<<(const ${type_name}* c) {
   if (c != nullptr) {
-    if (isTraceDataOptPresent(TraceData::VK_STRUCTS))
+    if (Configurator::IsTraceDataOptPresent(TraceData::VK_STRUCTS))
       *this << *c;
     else
       _buffer << "{ " << (void*)c << " }";
@@ -125,7 +125,7 @@ CVkLog & CVkLog::operator<<(const ${type_name}& c) {
 
 CVkLog & CVkLog::operator<<(const ${type_name}* c) {
   if (c != nullptr) {
-    if (isTraceDataOptPresent(TraceData::VK_STRUCTS))
+    if (Configurator::IsTraceDataOptPresent(TraceData::VK_STRUCTS))
       *this << *c;
     else
       _buffer << "{ " << (void*)c << " }";

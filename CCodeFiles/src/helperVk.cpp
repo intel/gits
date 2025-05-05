@@ -63,7 +63,7 @@ std::vector<VkPhysicalDevice> GetPhysicalDevicesFromGroupProperties(
 VkPhysicalDevice GetPhysicalDeviceForReplay(
     std::vector<VkPhysicalDevice> const& playerSideDevices) {
   uint32_t selectedPhysicalDeviceIndex =
-      gits::Config::Get().vulkan.player.vulkanForcedPhysicalDeviceIndex;
+      Configurator::Get().vulkan.player.vulkanForcedPhysicalDeviceIndex;
   if (selectedPhysicalDeviceIndex >= playerSideDevices.size()) {
     Log(WARN) << "Selected physical device index is greater than the number of enumerated physical "
                  "devices. Defaulting to 0.";
@@ -332,7 +332,7 @@ void vkDestroySwapchainKHR_CCODEWRAP(VkDevice device,
 VkResult vkQueuePresentKHR_CCODEWRAP(VkQueue queue, const VkPresentInfoKHR* pPresentInfo) {
   OnFrameEnd();
 
-  if (gits::Config::Get().common.player.captureFrames[CGits::Instance().CurrentFrame()]) {
+  if (Configurator::Get().common.player.captureFrames[CGits::Instance().CurrentFrame()]) {
     gits::Vulkan::writeCCodeScreenshot(
         queue, *pPresentInfo, [&](VkSwapchainKHR swapchain, unsigned int imageIndex) -> VkImage {
           return globalState.swapchainStates.at(swapchain).swapchainImages[imageIndex];

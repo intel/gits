@@ -203,7 +203,7 @@ CStateDynamic& CStateDynamic::Get() {
 }
 
 void CStateDynamic::WriteClientSizes() {
-  if (!Config::Get().common.recorder.enabled) {
+  if (!Configurator::Get().common.recorder.enabled) {
     return;
   }
 
@@ -212,7 +212,7 @@ void CStateDynamic::WriteClientSizes() {
     mapAreasSizes[area.first] = area.second.size();
   }
 #ifndef BUILD_FOR_CCODE
-  write_map(Config::Get().common.recorder.dumpPath / "gitsClientSizes.dat", mapAreasSizes);
+  write_map(Configurator::Get().common.recorder.dumpPath / "gitsClientSizes.dat", mapAreasSizes);
 #endif
 }
 

@@ -12,6 +12,7 @@
 #include "commandWritersCustom.h"
 #include "argumentDecoders.h"
 #include "gits.h"
+#include "configurationLib.h"
 
 #include <wrl/client.h>
 
@@ -53,8 +54,8 @@ void StateTrackingService::restoreState() {
 }
 
 void StateTrackingService::copyAuxiliaryFiles() {
-  std::filesystem::path streamDir = Config::Get().common.player.streamDir;
-  std::filesystem::path subcapturePath = Config::Get().common.player.subcapturePath;
+  std::filesystem::path streamDir = Configurator::Get().common.player.streamDir;
+  std::filesystem::path subcapturePath = Configurator::Get().common.player.subcapturePath;
   if (std::filesystem::exists(streamDir / "raytracingArraysOfPointers.dat")) {
     std::filesystem::copy(streamDir / "raytracingArraysOfPointers.dat", subcapturePath,
                           std::filesystem::copy_options::overwrite_existing);

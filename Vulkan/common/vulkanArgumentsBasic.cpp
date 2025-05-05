@@ -677,7 +677,7 @@ gits::Vulkan::CVkDeviceOrHostAddressConstKHR::CVkDeviceOrHostAddressConstKHR(
 }
 
 VkDeviceOrHostAddressConstKHR* gits::Vulkan::CVkDeviceOrHostAddressConstKHR::Value() {
-  if (Config::Get().common.mode != Config::MODE_PLAYER) {
+  if (Configurator::Get().common.mode != GITSMode::MODE_PLAYER) {
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 
@@ -711,7 +711,7 @@ VkDeviceOrHostAddressConstKHR* gits::Vulkan::CVkDeviceOrHostAddressConstKHR::Val
 
 gits::PtrConverter<VkDeviceOrHostAddressConstKHR> gits::Vulkan::CVkDeviceOrHostAddressConstKHR::
     Original() {
-  if (Config::Get().common.mode != Config::MODE_PLAYER) {
+  if (Configurator::Get().common.mode != GITSMode::MODE_PLAYER) {
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 
@@ -800,7 +800,7 @@ gits::Vulkan::CVkDeviceOrHostAddressKHR::CVkDeviceOrHostAddressKHR(
 }
 
 VkDeviceOrHostAddressKHR* gits::Vulkan::CVkDeviceOrHostAddressKHR::Value() {
-  if (Config::Get().common.mode != Config::MODE_PLAYER) {
+  if (Configurator::Get().common.mode != GITSMode::MODE_PLAYER) {
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 
@@ -820,7 +820,7 @@ VkDeviceOrHostAddressKHR* gits::Vulkan::CVkDeviceOrHostAddressKHR::Value() {
 }
 
 gits::PtrConverter<VkDeviceOrHostAddressKHR> gits::Vulkan::CVkDeviceOrHostAddressKHR::Original() {
-  if (Config::Get().common.mode != Config::MODE_PLAYER) {
+  if (Configurator::Get().common.mode != GITSMode::MODE_PLAYER) {
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 
@@ -1156,7 +1156,7 @@ gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHR::
 
 VkAccelerationStructureGeometryInstancesDataKHR* gits::Vulkan::
     CVkAccelerationStructureGeometryInstancesDataKHR::Value() {
-  if (Config::Get().common.mode != Config::MODE_PLAYER) {
+  if (Configurator::Get().common.mode != GITSMode::MODE_PLAYER) {
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 
@@ -1186,7 +1186,7 @@ VkAccelerationStructureGeometryInstancesDataKHR* gits::Vulkan::
 
 gits::PtrConverter<VkAccelerationStructureGeometryInstancesDataKHR> gits::Vulkan::
     CVkAccelerationStructureGeometryInstancesDataKHR::Original() {
-  if (Config::Get().common.mode != Config::MODE_PLAYER) {
+  if (Configurator::Get().common.mode != GITSMode::MODE_PLAYER) {
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 
@@ -1321,7 +1321,7 @@ gits::Vulkan::CVkAccelerationStructureGeometryDataKHR::CVkAccelerationStructureG
 
 VkAccelerationStructureGeometryDataKHR* gits::Vulkan::CVkAccelerationStructureGeometryDataKHR::
     Value() {
-  if (Config::Get().common.mode != Config::MODE_PLAYER) {
+  if (Configurator::Get().common.mode != GITSMode::MODE_PLAYER) {
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
   if (*_isNullPtr) {
@@ -1350,7 +1350,7 @@ VkAccelerationStructureGeometryDataKHR* gits::Vulkan::CVkAccelerationStructureGe
 
 gits::PtrConverter<VkAccelerationStructureGeometryDataKHR> gits::Vulkan::
     CVkAccelerationStructureGeometryDataKHR::Original() {
-  if (Config::Get().common.mode != Config::MODE_PLAYER) {
+  if (Configurator::Get().common.mode != GITSMode::MODE_PLAYER) {
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
   if (*_isNullPtr) {

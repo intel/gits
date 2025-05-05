@@ -15,6 +15,7 @@
 #include "commandWritersCustom.h"
 #include "reservedResourcesService.h"
 #include "gits.h"
+#include "configurationLib.h"
 
 namespace gits {
 namespace DirectX {
@@ -28,8 +29,8 @@ AccelerationStructuresBuildService::AccelerationStructuresBuildService(
       reservedResourcesService_(reservedResourcesService),
       bufferContentRestore_(stateService) {
   commandListKey_ = stateService_.getUniqueObjectKey();
-  serializeMode_ = Config::Get().directx.features.subcapture.serializeAccelerationStructures;
-  restoreTLASes_ = Config::Get().directx.features.subcapture.restoreTLASes;
+  serializeMode_ = Configurator::Get().directx.features.subcapture.serializeAccelerationStructures;
+  restoreTLASes_ = Configurator::Get().directx.features.subcapture.restoreTLASes;
 }
 
 void AccelerationStructuresBuildService::buildAccelerationStructure(

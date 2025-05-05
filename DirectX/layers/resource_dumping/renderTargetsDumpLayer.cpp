@@ -8,6 +8,7 @@
 
 #include "renderTargetsDumpLayer.h"
 #include "gits.h"
+#include "configurationLib.h"
 
 #include <d3dx12.h>
 #include <wrl/client.h>
@@ -17,14 +18,14 @@ namespace DirectX {
 
 RenderTargetsDumpLayer::RenderTargetsDumpLayer()
     : Layer("RenderTargetsDump"),
-      resourceDump_(Config::Get().directx.features.renderTargetsDump.format == "jpg" ? true
-                                                                                     : false),
-      frameRange_(Config::Get().directx.features.renderTargetsDump.frames),
-      drawRange_(Config::Get().directx.features.renderTargetsDump.draws) {
+      resourceDump_(Configurator::Get().directx.features.renderTargetsDump.format == "jpg" ? true
+                                                                                           : false),
+      frameRange_(Configurator::Get().directx.features.renderTargetsDump.frames),
+      drawRange_(Configurator::Get().directx.features.renderTargetsDump.draws) {
 
-  auto& dumpPath = Config::Get().common.player.outputDir.empty()
-                       ? Config::Get().common.player.streamDir / "render_targets"
-                       : Config::Get().common.player.outputDir;
+  auto& dumpPath = Configurator::Get().common.player.outputDir.empty()
+                       ? Configurator::Get().common.player.streamDir / "render_targets"
+                       : Configurator::Get().common.player.outputDir;
   if (!dumpPath.empty() && !std::filesystem::exists(dumpPath)) {
     std::filesystem::create_directory(dumpPath);
   }

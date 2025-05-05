@@ -8,9 +8,9 @@
 
 /**
 * @file   sequentialExecutor.cpp
-* 
+*
 * @brief  GITS tokens sequential executor.
-* 
+*
 */
 
 #include "sequentialExecutor.h"
@@ -50,7 +50,7 @@ public:
         }
 
         if (_seqExec._token != nullptr) {
-          if (!Config::Get().common.player.nullRun) {
+          if (!Configurator::Get().common.player.nullRun) {
             _seqExec._token->Run();
           }
         }
@@ -104,7 +104,7 @@ void gits::CSequentialExecutor::Run(CToken& token) {
 
   // main thread execution
   if (threadId == 0) {
-    if (!Config::Get().common.player.nullRun) {
+    if (!Configurator::Get().common.player.nullRun) {
       token.Run();
     }
   } else {

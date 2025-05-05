@@ -39,8 +39,10 @@ endif()
 
 list(APPEND recorder_SOURCES
   include/recorderIface.h
+  include/recorderUtils.h
   recorderIface.cpp
   recorderDLL.cpp
+  recorderUtils.cpp
   ${recorder_DEF}
 )
 
@@ -49,7 +51,7 @@ add_library(GitsRecorder SHARED ${recorder_SOURCES})
 add_definitions(-DGITS_RECORDER_EXPORTS)
 
 set(recorderIfaceLibs )
-set(recorderCommonLibs )
+set(recorderCommonLibs configuration)
 set(frameworks )
 
 set(libPrefix )

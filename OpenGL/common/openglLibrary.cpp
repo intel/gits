@@ -85,7 +85,7 @@ std::function<void()> CLibrary::CreateRestorePoint() {
 void PreSwap() {
   using gits::Config;
 
-  if (Config::Get().common.player.captureFrames[CGits::Instance().CurrentFrame()]) {
+  if (Configurator::Get().common.player.captureFrames[CGits::Instance().CurrentFrame()]) {
     FrameBufferSave(CGits::Instance().CurrentFrame());
   }
 

@@ -20,7 +20,7 @@ MapTrackingService::MapTrackingService(GitsRecorder& recorder) : recorder_(recor
   SYSTEM_INFO sSysInfo;
   GetSystemInfo(&sSysInfo);
   pageSize_ = sSysInfo.dwPageSize;
-  shadowMemory_ = Config::Get().directx.capture.shadowMemory;
+  shadowMemory_ = Configurator::Get().directx.capture.shadowMemory;
 }
 
 void MapTrackingService::enableWriteWatch(D3D12_HEAP_PROPERTIES& properties,

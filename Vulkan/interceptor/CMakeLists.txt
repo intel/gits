@@ -20,14 +20,14 @@ endif()
 add_definitions(-DBUILD_FOR_VULKAN_INTERCEPTOR)
 
 list(APPEND Vulkan_interceptor_external_cpps
-  ../../common/tools_lite.cpp
-  ../../common/exception.cpp
-  ../../common/dynamic_linker.cpp
-  ../../common/gitsLoader.cpp
-  ../../common/log.cpp
+  ../../common/legacy/tools_lite.cpp
+  ../../common/legacy/exception.cpp
+  ../../common/legacy/dynamic_linker.cpp
+  ../../common/legacy/gitsLoader.cpp
+  ../../common/legacy/log.cpp
 )
 if(WIN32)
-  list(APPEND Vulkan_interceptor_external_cpps ../../common/tools_windows.cpp)
+  list(APPEND Vulkan_interceptor_external_cpps ../../common/legacy/tools_windows.cpp)
 endif()
 
 add_library(Vulkan_interceptor SHARED

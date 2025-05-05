@@ -10,16 +10,17 @@
 #include "rootSignatureDump.h"
 #include "gits.h"
 #include "toStr.h"
+#include "configurationLib.h"
 
 namespace gits {
 namespace DirectX {
 
 RootSignatureDumpLayer::RootSignatureDumpLayer()
     : Layer("RootSignatureDump"),
-      configKeySet_(Config::Get().directx.features.rootSignatureDump.commandKeys) {
-  auto& dumpPath = Config::Get().common.player.outputDir.empty()
-                       ? Config::Get().common.player.streamDir / "rootSignatures"
-                       : Config::Get().common.player.outputDir;
+      configKeySet_(Configurator::Get().directx.features.rootSignatureDump.commandKeys) {
+  auto& dumpPath = Configurator::Get().common.player.outputDir.empty()
+                       ? Configurator::Get().common.player.streamDir / "rootSignatures"
+                       : Configurator::Get().common.player.outputDir;
   if (!dumpPath.empty() && !std::filesystem::exists(dumpPath)) {
     std::filesystem::create_directories(dumpPath);
   }

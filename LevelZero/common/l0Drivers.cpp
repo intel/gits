@@ -223,14 +223,14 @@ void CDriver::Initialize() {
   if (initialized_) {
     return;
   }
-  std::string path = gits::Config::Get().common.shared.libL0.string();
+  std::string path = Configurator::Get().common.shared.libL0.string();
 #ifndef BUILD_FOR_CCODE
   gits::CGits::Instance().apis.UseApiComputeIface(std::make_shared<Api>());
 #endif
   if (OpenLibrary(path)) {
     return;
   }
-  path = gits::Config::Get().common.shared.libL0Driver.string();
+  path = Configurator::Get().common.shared.libL0Driver.string();
 #ifdef GITS_PLATFORM_WINDOWS
   unsigned long driverStorePathLengthInCharacters = 0;
   wchar_t driverStorePath[MAX_PATH] = {0};

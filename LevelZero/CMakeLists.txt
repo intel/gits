@@ -164,18 +164,18 @@ add_library(L0_recorder
 include_directories(recorder/include)
 
 set(L0_interceptor_sources
-  ../common/tools_lite.cpp
-  ../common/exception.cpp
-  ../common/dynamic_linker.cpp
-  ../common/gitsLoader.cpp
+  ../common/legacy/tools_lite.cpp
+  ../common/legacy/exception.cpp
+  ../common/legacy/dynamic_linker.cpp
+  ../common/legacy/gitsLoader.cpp
   interceptor/gitsPluginL0.cpp
   interceptor/include/gitsPluginL0.h
   interceptor/include/l0ExecWrap.h
   ${CMAKE_CURRENT_BINARY_DIR}/l0EntryPoints.cpp
-  ../common/log.cpp
+  ../common/legacy/log.cpp
 )
 if(WIN32)
-  list(APPEND L0_interceptor_sources ../common/tools_windows.cpp)
+  list(APPEND L0_interceptor_sources ../common/legacy/tools_windows.cpp)
 endif()
 
 if (NOT MSVC)

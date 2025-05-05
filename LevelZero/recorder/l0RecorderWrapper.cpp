@@ -243,7 +243,7 @@ bool CRecorderWrapper::DeallocateVirtualMemory(void* ptr) const {
   const auto& allocState = sd.Get<CAllocState>(ptr, EXCEPTION_MESSAGE);
   const auto isVirtualMemoryReserved =
       allocState.memType == UnifiedMemoryType::device &&
-      IsMemoryTypeAddressTranslationDisabled(Config::Get(), UnifiedMemoryType::device);
+      IsMemoryTypeAddressTranslationDisabled(Configurator::Get(), UnifiedMemoryType::device);
   if (isVirtualMemoryReserved) {
     auto errCode = ZE_RESULT_SUCCESS;
     const auto& memMaps = allocState.memMaps;
@@ -313,7 +313,7 @@ void CRecorderWrapper::TrackThread() const {
 }
 
 bool CRecorderWrapper::IsAddressTranslationModeDisabled(UnifiedMemoryType type) const {
-  return IsMemoryTypeAddressTranslationDisabled(Config::Get(), type);
+  return IsMemoryTypeAddressTranslationDisabled(Configurator::Get(), type);
 }
 
 void CRecorderWrapper::InjectMemoryReservationFree(ze_context_handle_t hContext) const {

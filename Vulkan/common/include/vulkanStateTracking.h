@@ -24,7 +24,7 @@ namespace Vulkan {
 namespace {
 
 inline bool isRecorder() {
-  static bool isRecorder = Config::Get().IsRecorder();
+  static bool isRecorder = Configurator::IsRecorder();
   return isRecorder;
 }
 
@@ -38,49 +38,50 @@ inline bool isSubcaptureBeforeRestorationPhase() {
 
 inline bool updateOnlyUsedMemory() {
   static bool updateOnlyUsedMemory =
-      TMemoryUpdateStates::ONLY_USED == Config::Get().vulkan.recorder.memoryUpdateState;
+      TMemoryUpdateStates::ONLY_USED == Configurator::Get().vulkan.recorder.memoryUpdateState;
   return updateOnlyUsedMemory;
 }
 
 inline bool captureRenderPasses() {
   static bool captureRenderPasses =
-      !Config::Get().vulkan.player.captureVulkanSubmits.empty() ||
-      !Config::Get().vulkan.player.captureVulkanRenderPasses.empty() ||
-      !Config::Get().vulkan.player.captureVulkanDraws.empty() ||
-      !Config::Get().vulkan.recorder.dumpSubmits.empty();
+      !Configurator::Get().vulkan.player.captureVulkanSubmits.empty() ||
+      !Configurator::Get().vulkan.player.captureVulkanRenderPasses.empty() ||
+      !Configurator::Get().vulkan.player.captureVulkanDraws.empty() ||
+      !Configurator::Get().vulkan.recorder.dumpSubmits.empty();
   return captureRenderPasses;
 }
 
 inline bool captureRenderPassesResources() {
   static bool captureRenderPassesResources =
-      !Config::Get().vulkan.player.captureVulkanSubmitsResources.empty() ||
-      !Config::Get().vulkan.player.captureVulkanRenderPassesResources.empty() ||
-      !Config::Get().vulkan.player.captureVulkanResources.empty();
+      !Configurator::Get().vulkan.player.captureVulkanSubmitsResources.empty() ||
+      !Configurator::Get().vulkan.player.captureVulkanRenderPassesResources.empty() ||
+      !Configurator::Get().vulkan.player.captureVulkanResources.empty();
   return captureRenderPassesResources;
 }
 
 inline bool crossPlatformStateRestoration() {
   static bool crossPlatformStateRestoration =
-      Config::Get().vulkan.recorder.crossPlatformStateRestoration.images;
+      Configurator::Get().vulkan.recorder.crossPlatformStateRestoration.images;
   return crossPlatformStateRestoration;
 }
 #ifdef GITS_PLATFORM_WINDOWS
 inline bool usePresentSrcLayoutTransitionAsAFrameBoundary() {
   static bool usePresentSrcLayoutTransitionAsAFrameBoundary =
-      Config::Get().vulkan.recorder.usePresentSrcLayoutTransitionAsAFrameBoundary;
+      Configurator::Get().vulkan.recorder.usePresentSrcLayoutTransitionAsAFrameBoundary;
   return usePresentSrcLayoutTransitionAsAFrameBoundary;
 }
 #endif
 
 inline bool useCaptureReplayFeaturesForBuffersAndAccelerationStructures() {
   static bool useCaptureReplayFeaturesForBuffersAndAccelerationStructures =
-      Config::Get().vulkan.recorder.useCaptureReplayFeaturesForBuffersAndAccelerationStructures;
+      Configurator::Get()
+          .vulkan.recorder.useCaptureReplayFeaturesForBuffersAndAccelerationStructures;
   return useCaptureReplayFeaturesForBuffersAndAccelerationStructures;
 }
 
 inline bool isUseExternalMemoryExtensionUsed() {
 #ifdef GITS_PLATFORM_WINDOWS
-  return Config::Get().vulkan.recorder.useExternalMemoryExtension;
+  return Configurator::Get().vulkan.recorder.useExternalMemoryExtension;
 #else
   return false;
 #endif
@@ -128,9 +129,7 @@ inline void vkCreateInstance_SD(VkResult return_value,
       getPNextStructure(pCreateInfo->pNext, VK_STRUCTURE_TYPE_WIN32_INSTANCE_CREATE_INFO_INTEL);
   if (offscreenApp != nullptr) {
     // Automatically enable path for offscreen applications
-    auto cfg = Config::Get();
-    cfg.vulkan.recorder.usePresentSrcLayoutTransitionAsAFrameBoundary = true;
-    Config::Set(cfg);
+    Configurator::GetMutable().vulkan.recorder.usePresentSrcLayoutTransitionAsAFrameBoundary = true;
   }
 #endif
 
@@ -144,7 +143,7 @@ inline void vkCreateInstance_SD(VkResult return_value,
     }
     SD()._instancestates.emplace(*pInstance, instanceState);
 
-    if (Config::Get().vulkan.player.skipNonDeterministicImages) {
+    if (Configurator::Get().vulkan.player.skipNonDeterministicImages) {
       for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
         auto element = pCreateInfo->ppEnabledExtensionNames[i];
         if (strcmp(element, VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME) == 0) {
@@ -387,7 +386,7 @@ inline void vkQueueBindSparse_SD(VkResult returnValue,
     SD()._fencestates[fence]->fenceUsed = true;
   }
 
-  if (Config::Get().IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     for (uint32_t bic = 0; bic < bindInfoCount; ++bic) {
       const auto& bindInfo = pBindInfo[bic];
 
@@ -559,7 +558,7 @@ inline void vkResetDescriptorPool_SD(VkResult return_value,
                                      VkDevice device,
                                      VkDescriptorPool descriptorPool,
                                      VkDescriptorPoolResetFlags flags) {
-  if (Config::Get().IsRecorder() || captureRenderPassesResources()) {
+  if (Configurator::IsRecorder() || captureRenderPassesResources()) {
     auto& descriptorSetStateList =
         SD()._descriptorpoolstates[descriptorPool]->descriptorSetStateStoreList;
 
@@ -630,8 +629,8 @@ inline void vkDestroyCommandPool_SD(VkDevice device,
         SD().bindingImages.erase(commandBufferState->commandBufferHandle);
       }
 
-      if (Config::Get().vulkan.recorder.memorySegmentSize ||
-          Config::Get().vulkan.recorder.shadowMemory) {
+      if (Configurator::Get().vulkan.recorder.memorySegmentSize ||
+          Configurator::Get().vulkan.recorder.shadowMemory) {
         SD().updatedMemoryInCmdBuffer.erase(commandBufferState->commandBufferHandle);
       }
     }
@@ -647,7 +646,7 @@ inline void vkCreateSampler_SD(VkResult return_value,
                                const VkSamplerCreateInfo* pCreateInfo,
                                const VkAllocationCallbacks* pAllocator,
                                VkSampler* pSampler) {
-  if (((Config::Get().IsPlayer()) && (Config::Get().common.player.cleanResourcesOnExit)) ||
+  if (((Configurator::IsPlayer()) && (Configurator::Get().common.player.cleanResourcesOnExit)) ||
       (isSubcaptureBeforeRestorationPhase())) {
     if ((return_value == VK_SUCCESS) && (*pSampler != VK_NULL_HANDLE)) {
       SD()._samplerstates.emplace(
@@ -660,7 +659,7 @@ inline void vkCreateSampler_SD(VkResult return_value,
 inline void vkDestroySampler_SD(VkDevice device,
                                 VkSampler sampler,
                                 const VkAllocationCallbacks* pAllocator) {
-  if (((Config::Get().IsPlayer()) && (Config::Get().common.player.cleanResourcesOnExit)) ||
+  if (((Configurator::IsPlayer()) && (Configurator::Get().common.player.cleanResourcesOnExit)) ||
       (isSubcaptureBeforeRestorationPhase())) {
     SD()._samplerstates.erase(sampler);
   }
@@ -688,7 +687,7 @@ inline void vkMapMemory_SD(VkResult return_value,
 
   memoryState->mapping.reset(new CDeviceMemoryState::CMapping(&offset, &unmapSize, &flags, ppData));
 
-  if (Config::Get().vulkan.player.printMemUsageVk) {
+  if (Configurator::Get().vulkan.player.printMemUsageVk) {
     SD().currentlyMappedMemory += unmapSize;
     Log(INFO) << "Currently Allocated Memory TOTAL: " << SD().currentlyAllocatedMemoryAll / 1000000
               << " MB; GPU_ONLY: " << SD().currentlyAllocatedMemoryGPU / 1000000
@@ -696,10 +695,11 @@ inline void vkMapMemory_SD(VkResult return_value,
               << " MB; Currently mapped memory: " << SD().currentlyMappedMemory / 1000000 << " MB";
   }
 
-  if (Config::Get().IsRecorder()) {
-    if (isUseExternalMemoryExtensionUsed() || Config::Get().vulkan.recorder.writeWatchDetection) {
+  if (Configurator::IsRecorder()) {
+    if (isUseExternalMemoryExtensionUsed() ||
+        Configurator::Get().vulkan.recorder.writeWatchDetection) {
       WriteWatchSniffer::ResetTouchedPages(*ppData, unmapSize);
-    } else if (Config::Get().vulkan.recorder.memoryAccessDetection) {
+    } else if (Configurator::Get().vulkan.recorder.memoryAccessDetection) {
       MemorySniffer::Install();
 
       auto& sniffedRegionHandle = memoryState->mapping->sniffedRegionHandle;
@@ -712,7 +712,7 @@ inline void vkMapMemory_SD(VkResult return_value,
       if (!MemorySniffer::Get().Protect(sniffedRegionHandle)) {
         Log(ERR) << "Protecting memory region: " << (**sniffedRegionHandle).BeginAddress() << " - "
                  << (**sniffedRegionHandle).EndAddress() << " FAILED!.";
-        if (!Config::Get().vulkan.recorder.shadowMemory) {
+        if (!Configurator::Get().vulkan.recorder.shadowMemory) {
           Log(ERR) << "Please try to record with enabled ShadowMemory option.";
         }
       }
@@ -724,18 +724,18 @@ inline void vkUnmapMemory_SD(VkDevice device, VkDeviceMemory memory) {
   auto& memoryState = SD()._devicememorystates[memory];
 
   if (memoryState->IsMapped()) {
-    if (Config::Get().IsRecorder() && Config::Get().vulkan.recorder.memoryAccessDetection) {
+    if (Configurator::IsRecorder() && Configurator::Get().vulkan.recorder.memoryAccessDetection) {
       MemorySniffer::Get().RemoveRegion(memoryState->mapping->sniffedRegionHandle);
     }
 
-    if (Config::Get().vulkan.player.printMemUsageVk) {
+    if (Configurator::Get().vulkan.player.printMemUsageVk) {
       SD().currentlyMappedMemory -= memoryState->mapping->sizeData.Value();
     }
 
     memoryState->mapping.reset();
   }
 
-  if (Config::Get().IsRecorder() && Config::Get().vulkan.recorder.shadowMemory) {
+  if (Configurator::IsRecorder() && Configurator::Get().vulkan.recorder.shadowMemory) {
     memoryState->shadowMemory.reset();
   }
 }
@@ -750,7 +750,7 @@ inline void vkAllocateMemory_SD(VkResult return_value,
     SD()._devicememorystates.emplace(
         *pMemory, std::make_shared<CDeviceMemoryState>(pMemory, pAllocInfo,
                                                        SD()._devicestates[device], externalMemory));
-    if (Config::Get().vulkan.player.printMemUsageVk) {
+    if (Configurator::Get().vulkan.player.printMemUsageVk) {
       SD().currentlyAllocatedMemoryAll += pAllocInfo->allocationSize;
       if (checkMemoryMappingFeasibility(device, pAllocInfo->memoryTypeIndex, false)) {
         SD().currentlyAllocatedMemoryCPU_GPU += pAllocInfo->allocationSize;
@@ -775,7 +775,7 @@ inline void vkFreeMemory_SD(VkDevice device,
   }
   vkUnmapMemory_SD(device, memory);
 
-  if (Config::Get().vulkan.player.printMemUsageVk) {
+  if (Configurator::Get().vulkan.player.printMemUsageVk) {
     SD().currentlyAllocatedMemoryAll -=
         SD()._devicememorystates[memory]->memoryAllocateInfoData.Value()->allocationSize;
     if (checkMemoryMappingFeasibility(
@@ -814,7 +814,7 @@ inline void vkCreateImage_SD(VkResult return_value,
 inline void vkDestroyImage_SD(VkDevice device,
                               VkImage image,
                               const VkAllocationCallbacks* pAllocator) {
-  if (Config::Get().IsRecorder() && isSubcaptureBeforeRestorationPhase()) {
+  if (Configurator::IsRecorder() && isSubcaptureBeforeRestorationPhase()) {
     const auto it = SD()._imagestates.find(image);
     if ((it != SD()._imagestates.end()) && (it->second->binding != nullptr)) {
       it->second->binding->deviceMemoryStateStore->aliasingTracker.RemoveImage(
@@ -860,7 +860,7 @@ void BindImageMemory_SDHelper(VkImage image, VkDeviceMemory memory, VkDeviceSize
   imageState->binding.reset(new CMemoryBinding(memOffset, imageState->memoryRequirements.size,
                                                SD()._devicememorystates[memory]));
 
-  if (Config::Get().IsRecorder() && isSubcaptureBeforeRestorationPhase()) {
+  if (Configurator::IsRecorder() && isSubcaptureBeforeRestorationPhase()) {
     imageState->binding->deviceMemoryStateStore->aliasingTracker.AddImage(
         memOffset, imageState->memoryRequirements.size, image);
   }
@@ -929,7 +929,7 @@ inline void vkCreateBuffer_SD(VkResult return_value,
     // BUFFER DEVICE ADDRESS GROUP COMMENT TOKEN
     // Please, (un)comment all the areas with the above token together, at the same time
     //
-    // if (Config::Get().IsRecorder() &&
+    // if (Configurator::IsRecorder() &&
     //    ((pCreateInfo->usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) == VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)) {
     //   CBufferState::shaderDeviceAddressBuffers[*pBuffer] = newBufferState;
     // }
@@ -942,7 +942,7 @@ inline void vkDestroyBuffer_SD(VkDevice device,
   if (buffer == VK_NULL_HANDLE) {
     return;
   }
-  if (Config::Get().IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     const auto it = SD()._bufferstates.find(buffer);
     if (it == SD()._bufferstates.end()) {
       Log(WARN) << "Unknown buffer destroyed: " << buffer;
@@ -1026,7 +1026,7 @@ void BindBufferMemory_SDHelper(VkBuffer buffer, VkDeviceMemory memory, VkDeviceS
         getBufferDeviceAddress(bufferState->deviceStateStore->deviceHandle, buffer);
   }
 
-  if (Config::Get().IsRecorder() && isSubcaptureBeforeRestorationPhase()) {
+  if (Configurator::IsRecorder() && isSubcaptureBeforeRestorationPhase()) {
     bufferState->binding->deviceMemoryStateStore->aliasingTracker.AddBuffer(
         memOffset, bufferState->memoryRequirements.size, buffer);
   }
@@ -1069,7 +1069,7 @@ inline void vkGetBufferDeviceAddressUnifiedGITS_SD(VkDeviceAddress return_value,
   bufferState->deviceAddress =
       return_value; // <- We need this data to properly replay streams (see CBufferDeviceAddressObject class)
 
-  if (Config::Get().IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     CBufferState::deviceAddresses.insert(
         {return_value, return_value + bufferState->bufferCreateInfoData.Value()->size,
          pInfo->buffer});
@@ -1122,7 +1122,7 @@ inline void vkAllocateDescriptorSets_SD(VkResult return_value,
                                         VkDevice device,
                                         const VkDescriptorSetAllocateInfo* pAllocateInfo,
                                         VkDescriptorSet* pDescriptorSets) {
-  if ((Config::Get().IsRecorder() || captureRenderPassesResources()) &&
+  if ((Configurator::IsRecorder() || captureRenderPassesResources()) &&
       (return_value == VK_SUCCESS)) {
 
     const VkDescriptorSetVariableDescriptorCountAllocateInfo* variableDescriptorCount =
@@ -1212,7 +1212,7 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
                                       const VkWriteDescriptorSet* pDescriptorWrites,
                                       uint32_t descriptorCopyCount,
                                       const VkCopyDescriptorSet* pDescriptorCopies) {
-  if (Config::Get().IsRecorder() || captureRenderPassesResources()) {
+  if (Configurator::IsRecorder() || captureRenderPassesResources()) {
     for (unsigned int i = 0; i < descriptorWriteCount; i++) {
       auto& descriptorSetState = SD()._descriptorsetstates[pDescriptorWrites[i].dstSet];
 
@@ -1301,8 +1301,8 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
                 descriptorSetState->descriptorWriteImages[currentBinding] = {
                     VULKAN_STORAGE_IMAGE, imageState->imageHandle};
 
-                if ((Config::Get().vulkan.recorder.memorySegmentSize ||
-                     Config::Get().vulkan.recorder.shadowMemory) &&
+                if ((Configurator::Get().vulkan.recorder.memorySegmentSize ||
+                     Configurator::Get().vulkan.recorder.shadowMemory) &&
                     (imageState->binding)) {
                   VkMemoryRequirements memRequirements = {};
                   drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle,
@@ -1343,8 +1343,8 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
                 descriptorSetState->descriptorWriteBuffers[currentBinding] = {
                     VULKAN_STORAGE_TEXEL_BUFFER, bufferState->bufferHandle};
 
-                if ((Config::Get().vulkan.recorder.memorySegmentSize ||
-                     Config::Get().vulkan.recorder.shadowMemory) &&
+                if ((Configurator::Get().vulkan.recorder.memorySegmentSize ||
+                     Configurator::Get().vulkan.recorder.shadowMemory) &&
                     (bufferState->binding)) {
                   const auto* pViewCreateInfo = bufferViewState->bufferViewCreateInfoData.Value();
                   const auto memory =
@@ -1388,8 +1388,8 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
                 descriptorSetState->descriptorWriteBuffers[currentBinding] = {resType,
                                                                               bufferInfo.buffer};
 
-                if ((Config::Get().vulkan.recorder.memorySegmentSize ||
-                     Config::Get().vulkan.recorder.shadowMemory) &&
+                if ((Configurator::Get().vulkan.recorder.memorySegmentSize ||
+                     Configurator::Get().vulkan.recorder.shadowMemory) &&
                     bufferState->binding) {
                   const auto memory =
                       bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
@@ -1477,8 +1477,8 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
           dstDescriptorSetState->descriptorImages[obj.first] = obj.second;
         }
       }
-      if (Config::Get().vulkan.recorder.memorySegmentSize ||
-          Config::Get().vulkan.recorder.shadowMemory) {
+      if (Configurator::Get().vulkan.recorder.memorySegmentSize ||
+          Configurator::Get().vulkan.recorder.shadowMemory) {
         for (const auto& binding : srcDescriptorSetState->descriptorMapMemory) {
           dstDescriptorSetState->descriptorMapMemory[binding.first].clear();
           for (const auto& obj : binding.second) {
@@ -1505,7 +1505,7 @@ inline void vkFreeDescriptorSets_SD(VkResult return_value,
                                     VkDescriptorPool descriptorPool,
                                     uint32_t descriptorSetCount,
                                     const VkDescriptorSet* pDescriptorSets) {
-  if (Config::Get().IsRecorder() || captureRenderPassesResources()) {
+  if (Configurator::IsRecorder() || captureRenderPassesResources()) {
     for (unsigned int i = 0; i < descriptorSetCount; i++) {
       SD()._descriptorpoolstates[descriptorPool]->descriptorSetStateStoreList.erase(
           SD()._descriptorsetstates
@@ -1525,7 +1525,7 @@ inline void vkCreatePipelineLayout_SD(VkResult return_value,
   if ((return_value == VK_SUCCESS) && (*pPipelineLayout != VK_NULL_HANDLE)) {
     auto state = std::make_shared<CPipelineLayoutState>(pPipelineLayout, pCreateInfo,
                                                         SD()._devicestates[device]);
-    if (Config::Get().IsRecorder()) {
+    if (Configurator::IsRecorder()) {
       for (uint32_t i = 0; i < pCreateInfo->setLayoutCount; i++) {
         if (pCreateInfo->pSetLayouts[i] == VK_NULL_HANDLE) {
           state->descriptorSetLayoutStates.push_back(0);
@@ -1581,9 +1581,9 @@ inline void vkCreateDescriptorUpdateTemplate_SD(
     const VkDescriptorUpdateTemplateCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
     VkDescriptorUpdateTemplate* pDescriptorUpdateTemplate) {
-  if (((Config::Get().IsPlayer()) &&
-       (Config::Get().common.player.cleanResourcesOnExit || captureRenderPassesResources())) ||
-      (Config::Get().IsRecorder())) {
+  if (((Configurator::IsPlayer()) && (Configurator::Get().common.player.cleanResourcesOnExit ||
+                                      captureRenderPassesResources())) ||
+      (Configurator::IsRecorder())) {
     if ((return_value == VK_SUCCESS) && (*pDescriptorUpdateTemplate != VK_NULL_HANDLE)) {
       CreateDescriptorUpdateTemplate_SDHelper(
           device, pCreateInfo, pAllocator, pDescriptorUpdateTemplate, CreationFunction::CORE_1_1);
@@ -1597,9 +1597,9 @@ inline void vkCreateDescriptorUpdateTemplateKHR_SD(
     const VkDescriptorUpdateTemplateCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
     VkDescriptorUpdateTemplate* pDescriptorUpdateTemplate) {
-  if (((Config::Get().IsPlayer()) &&
-       (Config::Get().common.player.cleanResourcesOnExit || captureRenderPassesResources())) ||
-      (Config::Get().IsRecorder())) {
+  if (((Configurator::IsPlayer()) && (Configurator::Get().common.player.cleanResourcesOnExit ||
+                                      captureRenderPassesResources())) ||
+      (Configurator::IsRecorder())) {
     if ((return_value == VK_SUCCESS) && (*pDescriptorUpdateTemplate != VK_NULL_HANDLE)) {
       CreateDescriptorUpdateTemplate_SDHelper(device, pCreateInfo, pAllocator,
                                               pDescriptorUpdateTemplate,
@@ -1612,8 +1612,8 @@ inline void vkDestroyDescriptorUpdateTemplate_SD(
     VkDevice device,
     VkDescriptorUpdateTemplate descriptorUpdateTemplate,
     const VkAllocationCallbacks* pAllocator) {
-  if (((Config::Get().IsPlayer()) && (Config::Get().common.player.cleanResourcesOnExit)) ||
-      (Config::Get().IsRecorder())) {
+  if (((Configurator::IsPlayer()) && (Configurator::Get().common.player.cleanResourcesOnExit)) ||
+      (Configurator::IsRecorder())) {
     SD()._descriptorupdatetemplatestates.erase(descriptorUpdateTemplate);
   }
 }
@@ -1622,8 +1622,8 @@ inline void vkDestroyDescriptorUpdateTemplateKHR_SD(
     VkDevice device,
     VkDescriptorUpdateTemplate descriptorUpdateTemplate,
     const VkAllocationCallbacks* pAllocator) {
-  if (((Config::Get().IsPlayer()) && (Config::Get().common.player.cleanResourcesOnExit)) ||
-      (Config::Get().IsRecorder())) {
+  if (((Configurator::IsPlayer()) && (Configurator::Get().common.player.cleanResourcesOnExit)) ||
+      (Configurator::IsRecorder())) {
     vkDestroyDescriptorUpdateTemplate_SD(device, descriptorUpdateTemplate, pAllocator);
   }
 }
@@ -1633,7 +1633,7 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
     VkDescriptorSet descriptorSet,
     VkDescriptorUpdateTemplate descriptorUpdateTemplate,
     const void* pData) {
-  if (Config::Get().IsRecorder() || captureRenderPassesResources()) {
+  if (Configurator::IsRecorder() || captureRenderPassesResources()) {
     const auto& descriptorSetState = SD()._descriptorsetstates[descriptorSet];
     const auto& descriptorUpdateTemplateState =
         SD()._descriptorupdatetemplatestates[descriptorUpdateTemplate];
@@ -1741,8 +1741,8 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
                                                             .dstBinding] = {
                   VULKAN_STORAGE_IMAGE, imageState->imageHandle};
 
-              if ((Config::Get().vulkan.recorder.memorySegmentSize ||
-                   Config::Get().vulkan.recorder.shadowMemory) &&
+              if ((Configurator::Get().vulkan.recorder.memorySegmentSize ||
+                   Configurator::Get().vulkan.recorder.shadowMemory) &&
                   (imageState->binding)) {
                 VkMemoryRequirements memRequirements = {};
                 drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle,
@@ -1799,8 +1799,8 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
                                                              .dstBinding] = {
                   VULKAN_STORAGE_TEXEL_BUFFER, bufferState->bufferHandle};
 
-              if ((Config::Get().vulkan.recorder.memorySegmentSize ||
-                   Config::Get().vulkan.recorder.shadowMemory) &&
+              if ((Configurator::Get().vulkan.recorder.memorySegmentSize ||
+                   Configurator::Get().vulkan.recorder.shadowMemory) &&
                   (bufferState->binding)) {
                 const auto* pViewCreateInfo = bufferViewState->bufferViewCreateInfoData.Value();
                 const auto memory =
@@ -1864,8 +1864,8 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
                                                              .dstBinding] = {
                   resType, descBufferInfo->buffer};
 
-              if ((Config::Get().vulkan.recorder.memorySegmentSize ||
-                   Config::Get().vulkan.recorder.shadowMemory) &&
+              if ((Configurator::Get().vulkan.recorder.memorySegmentSize ||
+                   Configurator::Get().vulkan.recorder.shadowMemory) &&
                   bufferState->binding) {
                 const auto memory =
                     bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
@@ -1914,7 +1914,7 @@ inline void vkCreatePipelineCache_SD(VkResult return_value,
                                      const VkPipelineCacheCreateInfo* pCreateInfo,
                                      const VkAllocationCallbacks* pAllocator,
                                      VkPipelineCache* pPipelineCache) {
-  if (((Config::Get().IsPlayer()) && (Config::Get().common.player.cleanResourcesOnExit)) ||
+  if (((Configurator::IsPlayer()) && (Configurator::Get().common.player.cleanResourcesOnExit)) ||
       (isSubcaptureBeforeRestorationPhase())) {
     if ((return_value == VK_SUCCESS) && (*pPipelineCache != VK_NULL_HANDLE)) {
       SD()._pipelinecachestates.emplace(
@@ -1927,7 +1927,7 @@ inline void vkCreatePipelineCache_SD(VkResult return_value,
 inline void vkDestroyPipelineCache_SD(VkDevice device,
                                       VkPipelineCache pipelineCache,
                                       const VkAllocationCallbacks* pAllocator) {
-  if (((Config::Get().IsPlayer()) && (Config::Get().common.player.cleanResourcesOnExit)) ||
+  if (((Configurator::IsPlayer()) && (Configurator::Get().common.player.cleanResourcesOnExit)) ||
       (isSubcaptureBeforeRestorationPhase())) {
     SD()._pipelinecachestates.erase(pipelineCache);
   }
@@ -2136,7 +2136,7 @@ inline void vkCreateRayTracingPipelinesKHR_SD(VkResult return_value,
           shaderGroup.SBTPatchingRequired =
               (memcmp(shaderGroup.originalHandles.data(), shaderGroup.currentHandles.data(),
                       pOriginalHandles->dataSize) != 0) &&
-              Config::Get().vulkan.player.patchShaderGroupHandles;
+              Configurator::Get().vulkan.player.patchShaderGroupHandles;
         } else {
           shaderGroup.originalHandles = shaderGroup.currentHandles;
           shaderGroup.SBTPatchingRequired = false;
@@ -2239,23 +2239,25 @@ inline void vkResetFences_SD(VkResult return_value,
 }
 
 inline void vkDeviceWaitIdle_SD(VkResult return_value, VkDevice device) {
-  if (Config::Get().vulkan.recorder.delayFenceChecksCount > 0) {
+  if (Configurator::Get().vulkan.recorder.delayFenceChecksCount > 0) {
     for (auto& fenceState : SD()._fencestates) {
       if ((fenceState.second->deviceStateStore->deviceHandle == device) &&
           fenceState.second->fenceUsed) {
-        fenceState.second->delayChecksCount = Config::Get().vulkan.recorder.delayFenceChecksCount;
+        fenceState.second->delayChecksCount =
+            Configurator::Get().vulkan.recorder.delayFenceChecksCount;
       }
     }
   }
 }
 
 inline void vkQueueWaitIdle_SD(VkResult return_value, VkQueue queue) {
-  if (Config::Get().vulkan.recorder.delayFenceChecksCount > 0) {
+  if (Configurator::Get().vulkan.recorder.delayFenceChecksCount > 0) {
     for (auto& fenceState : SD()._fencestates) {
       if ((fenceState.second->deviceStateStore->deviceHandle ==
            SD()._queuestates[queue]->deviceStateStore->deviceHandle) &&
           fenceState.second->fenceUsed) {
-        fenceState.second->delayChecksCount = Config::Get().vulkan.recorder.delayFenceChecksCount;
+        fenceState.second->delayChecksCount =
+            Configurator::Get().vulkan.recorder.delayFenceChecksCount;
       }
     }
   }
@@ -2328,7 +2330,7 @@ inline void vkCreateQueryPool_SD(VkResult return_value,
                                  const VkQueryPoolCreateInfo* pCreateInfo,
                                  const VkAllocationCallbacks* pAllocator,
                                  VkQueryPool* pQueryPool) {
-  if (((Config::Get().IsPlayer()) && (Config::Get().common.player.cleanResourcesOnExit)) ||
+  if (((Configurator::IsPlayer()) && (Configurator::Get().common.player.cleanResourcesOnExit)) ||
       (isSubcaptureBeforeRestorationPhase())) {
     if ((return_value == VK_SUCCESS) && (*pQueryPool != VK_NULL_HANDLE)) {
       SD()._querypoolstates.emplace(
@@ -2341,7 +2343,7 @@ inline void vkCreateQueryPool_SD(VkResult return_value,
 inline void vkDestroyQueryPool_SD(VkDevice device,
                                   VkQueryPool queryPool,
                                   const VkAllocationCallbacks* pAllocator) {
-  if (((Config::Get().IsPlayer()) && (Config::Get().common.player.cleanResourcesOnExit)) ||
+  if (((Configurator::IsPlayer()) && (Configurator::Get().common.player.cleanResourcesOnExit)) ||
       (isSubcaptureBeforeRestorationPhase())) {
     SD()._querypoolstates.erase(queryPool);
   }
@@ -2351,7 +2353,7 @@ inline void vkResetQueryPool_SD(VkDevice device,
                                 VkQueryPool queryPool,
                                 uint32_t firstQuery,
                                 uint32_t queryCount) {
-  if (((Config::Get().IsPlayer()) && (Config::Get().common.player.cleanResourcesOnExit)) ||
+  if (((Configurator::IsPlayer()) && (Configurator::Get().common.player.cleanResourcesOnExit)) ||
       (isSubcaptureBeforeRestorationPhase())) {
     auto& state = SD()._querypoolstates[queryPool];
     for (auto i = firstQuery; i < firstQuery + queryCount; i++) {
@@ -2405,12 +2407,12 @@ inline void vkFreeCommandBuffers_SD(VkDevice device,
         SD()._commandbufferstates[pCommandBuffers[i]]);
     SD()._commandbufferstates.erase(pCommandBuffers[i]);
 
-    if (Config::Get().IsRecorder()) {
+    if (Configurator::IsRecorder()) {
       SD().bindingBuffers.erase(pCommandBuffers[i]);
       SD().bindingImages.erase(pCommandBuffers[i]);
 
-      if (Config::Get().vulkan.recorder.memorySegmentSize ||
-          Config::Get().vulkan.recorder.shadowMemory) {
+      if (Configurator::Get().vulkan.recorder.memorySegmentSize ||
+          Configurator::Get().vulkan.recorder.shadowMemory) {
         SD().updatedMemoryInCmdBuffer.erase(pCommandBuffers[i]);
       }
     }
@@ -2478,12 +2480,12 @@ inline void vkResetCommandBuffer_SD(VkResult /* return_value */,
     commandBufferState->temporaryDescriptors.clear();
   }
 
-  if (Config::Get().IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     SD().bindingBuffers[cmdBuf].clear();
     SD().bindingImages[cmdBuf].clear();
 
-    if (Config::Get().vulkan.recorder.memorySegmentSize ||
-        Config::Get().vulkan.recorder.shadowMemory) {
+    if (Configurator::Get().vulkan.recorder.memorySegmentSize ||
+        Configurator::Get().vulkan.recorder.shadowMemory) {
       SD().updatedMemoryInCmdBuffer.erase(cmdBuf);
     }
   }
@@ -2503,7 +2505,7 @@ inline void vkBeginCommandBuffer_SD(VkResult /* return_value */,
   commandBufferState->beginCommandBuffer.reset(
       new CCommandBufferState::CBeginCommandBuffer(pBeginInfo));
 
-  if (Config::Get().IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     if (nullptr != pBeginInfo->pInheritanceInfo) {
       if (VK_NULL_HANDLE != pBeginInfo->pInheritanceInfo->framebuffer) {
         for (const auto& imageViewState :
@@ -2515,8 +2517,8 @@ inline void vkBeginCommandBuffer_SD(VkResult /* return_value */,
             SD().bindingImages[cmdBuf].insert(imageState);
           }
 
-          if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
-               !Config::Get().vulkan.recorder.shadowMemory) ||
+          if ((!Configurator::Get().vulkan.recorder.memorySegmentSize &&
+               !Configurator::Get().vulkan.recorder.shadowMemory) ||
               !imageState->binding) {
             return;
           }
@@ -2579,7 +2581,7 @@ inline void vkCreateAccelerationStructureKHR_SD(
         *pAccelerationStructure;
 
     // Required to properly track device addresses of buffers used for AS space
-    if (Config::Get().IsRecorder()) {
+    if (Configurator::IsRecorder()) {
       VkBuffer buffer = accelerationStructureState->bufferStateStore->bufferHandle;
       VkDeviceAddress address = getBufferDeviceAddress(device, buffer);
       VkBufferDeviceAddressInfo info = {
@@ -2619,7 +2621,7 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
     const VkAccelerationStructureBuildRangeInfoKHR* const* ppBuildRangeInfos) {
   CAccelerationStructureKHRState::globalAccelerationStructureBuildCommandIndex++;
 
-  if (!Config::Get().IsRecorder()) {
+  if (!Configurator::IsRecorder()) {
     return;
   }
   auto device =
@@ -2750,7 +2752,7 @@ inline void vkCopyAccelerationStructureKHR_SD(VkResult return_value,
 
 inline void vkCmdCopyAccelerationStructureKHR_SD(VkCommandBuffer cmdBuf,
                                                  const VkCopyAccelerationStructureInfoKHR* pInfo) {
-  if (Config::Get().IsRecorder() && CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
+  if (Configurator::IsRecorder() && CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
     const auto& srcAccelerationStructureState = SD()._accelerationstructurekhrstates[pInfo->src];
     auto& dstAccelerationStructureState = SD()._accelerationstructurekhrstates[pInfo->dst];
 
@@ -2771,7 +2773,7 @@ inline void vkGetAccelerationStructureDeviceAddressUnifiedGITS_SD(
 
   accelerationStructureState->deviceAddress = return_value;
 
-  if (Config::Get().IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     CAccelerationStructureKHRState::deviceAddresses[return_value] = pInfo->accelerationStructure;
   }
 }
@@ -2782,7 +2784,7 @@ namespace {
 inline void vkQueueSubmit_setImageLayout(std::shared_ptr<CCommandBufferState>& commandBufferState,
                                          uint32_t queueFamilyIndex) {
   if ((isSubcaptureBeforeRestorationPhase() &&
-       Config::Get().vulkan.recorder.crossPlatformStateRestoration.images) ||
+       Configurator::Get().vulkan.recorder.crossPlatformStateRestoration.images) ||
       captureRenderPasses() || captureRenderPassesResources()) {
 
     for (const auto& imageLayoutAfterSubmit : commandBufferState->imageLayoutAfterSubmit) {
@@ -2847,7 +2849,7 @@ inline void vkQueueSubmit_setTimestamps(std::shared_ptr<CCommandBufferState>& co
 
 inline void vkQueueSubmit_updateNonDeterministicImages(
     std::shared_ptr<CCommandBufferState>& commandBufferState) {
-  if (Config::Get().vulkan.player.skipNonDeterministicImages) {
+  if (Configurator::Get().vulkan.player.skipNonDeterministicImages) {
     for (auto obj : commandBufferState->clearedImages) {
       SD().nonDeterministicImages.erase(obj);
     }
@@ -2861,7 +2863,7 @@ inline void vkQueueSubmit_SD(VkResult return_value,
                              const VkSubmitInfo* pSubmits,
                              VkFence fence,
                              bool stateRestore = false) {
-  if (Config::Get().IsRecorder() || captureRenderPasses() || captureRenderPassesResources()) {
+  if (Configurator::IsRecorder() || captureRenderPasses() || captureRenderPassesResources()) {
     if (pSubmits != NULL) {
       for (uint32_t s = 0; s < submitCount; ++s) {
         for (uint32_t c = 0; c < pSubmits[s].commandBufferCount; ++c) {
@@ -2944,7 +2946,7 @@ inline void vkQueueSubmit2_SD(VkResult return_value,
                               const VkSubmitInfo2* pSubmits,
                               VkFence fence,
                               bool stateRestore = false) {
-  if (Config::Get().IsRecorder() || captureRenderPasses() || captureRenderPassesResources()) {
+  if (Configurator::IsRecorder() || captureRenderPasses() || captureRenderPassesResources()) {
     if (pSubmits != NULL) {
       for (uint32_t s = 0; s < submitCount; ++s) {
         for (uint32_t c = 0; c < pSubmits[s].commandBufferInfoCount; ++c) {
@@ -3029,8 +3031,8 @@ inline void vkQueueSubmit2KHR_SD(VkResult return_value,
 namespace {
 inline void vkEndRenderPass_setImageLayout(
     const std::shared_ptr<CCommandBufferState>& commandBufferState) {
-  if (!Config::Get().vulkan.player.captureVulkanRenderPasses.empty() ||
-      !Config::Get().vulkan.player.captureVulkanDraws.empty()) {
+  if (!Configurator::Get().vulkan.player.captureVulkanRenderPasses.empty() ||
+      !Configurator::Get().vulkan.player.captureVulkanDraws.empty()) {
     for (const auto& imageLayoutAfterSubmit : commandBufferState->imageLayoutAfterSubmit) {
       auto& imageState = SD()._imagestates[imageLayoutAfterSubmit.first];
 
@@ -3048,7 +3050,7 @@ inline void vkEndRenderPass_setImageLayout(
 
 inline void vkEndRenderPass_updateNonDeterministicImages(
     std::shared_ptr<CCommandBufferState>& commandBufferState) {
-  if (Config::Get().vulkan.player.skipNonDeterministicImages &&
+  if (Configurator::Get().vulkan.player.skipNonDeterministicImages &&
       commandBufferState->beginRenderPassesList.size()) {
     const auto& framebufferState =
         commandBufferState->beginRenderPassesList.back()->framebufferStateStore;
@@ -3078,8 +3080,8 @@ inline void vkEndRenderPass_updateNonDeterministicImages(
         commandBufferState->clearedImages.insert(imageHandle);
       }
     }
-    if (!Config::Get().vulkan.player.captureVulkanRenderPasses.empty() ||
-        !Config::Get().vulkan.player.captureVulkanDraws.empty()) {
+    if (!Configurator::Get().vulkan.player.captureVulkanRenderPasses.empty() ||
+        !Configurator::Get().vulkan.player.captureVulkanDraws.empty()) {
       for (const auto& obj : commandBufferState->clearedImages) {
         SD().nonDeterministicImages.erase(obj);
       }
@@ -3101,7 +3103,7 @@ inline void vkCmdBeginRenderPass_SD(VkCommandBuffer cmdBuf,
       pRenderPassBegin, &contents, SD()._renderpassstates[pRenderPassBegin->renderPass],
       SD()._framebufferstates[pRenderPassBegin->framebuffer]);
   SD()._commandbufferstates[cmdBuf]->beginRenderPassesList.push_back(beginRenderPassState);
-  if (Config::Get().IsRecorder() || captureRenderPasses() || captureRenderPassesResources()) {
+  if (Configurator::IsRecorder() || captureRenderPasses() || captureRenderPassesResources()) {
     if (SD()._framebufferstates[pRenderPassBegin->framebuffer]
             ->framebufferCreateInfoData.Value()
             ->flags &
@@ -3170,7 +3172,7 @@ inline void vkCmdBeginRenderPass_SD(VkCommandBuffer cmdBuf,
       }
     }
   }
-  if (Config::Get().IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     if (!(SD()._framebufferstates[pRenderPassBegin->framebuffer]
               ->framebufferCreateInfoData.Value()
               ->flags &
@@ -3183,8 +3185,8 @@ inline void vkCmdBeginRenderPass_SD(VkCommandBuffer cmdBuf,
           SD().bindingImages[cmdBuf].insert(imageState);
         }
 
-        if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
-             !Config::Get().vulkan.recorder.shadowMemory) ||
+        if ((!Configurator::Get().vulkan.recorder.memorySegmentSize &&
+             !Configurator::Get().vulkan.recorder.shadowMemory) ||
             !imageState->binding) {
           continue;
         }
@@ -3208,8 +3210,8 @@ inline void vkCmdBeginRenderPass_SD(VkCommandBuffer cmdBuf,
           SD().bindingImages[cmdBuf].insert(imageState);
         }
 
-        if ((Config::Get().vulkan.recorder.memorySegmentSize &&
-             !Config::Get().vulkan.recorder.shadowMemory) ||
+        if ((Configurator::Get().vulkan.recorder.memorySegmentSize &&
+             !Configurator::Get().vulkan.recorder.shadowMemory) ||
             !imageState->binding) {
           continue;
         }
@@ -3249,8 +3251,8 @@ inline void vkCmdBeginRenderPass2KHR_SD(VkCommandBuffer cmdBuf,
 }
 
 inline void vkCmdEndRenderPass_SD(VkCommandBuffer cmdBuf) {
-  if (((Config::Get().common.recorder.enabled) && (isSubcaptureBeforeRestorationPhase()) &&
-       (Config::Get().vulkan.recorder.crossPlatformStateRestoration.images)) ||
+  if (((Configurator::Get().common.recorder.enabled) && (isSubcaptureBeforeRestorationPhase()) &&
+       (Configurator::Get().vulkan.recorder.crossPlatformStateRestoration.images)) ||
       (captureRenderPasses() || captureRenderPassesResources())) {
     auto& commandBufferState = SD()._commandbufferstates[cmdBuf];
 
@@ -3340,7 +3342,7 @@ inline void vkCmdBeginRendering_SD(VkCommandBuffer cmdBuf, const VkRenderingInfo
       std::make_shared<CCommandBufferState::CBeginRenderPass>(pRenderingInfo);
   SD()._commandbufferstates[cmdBuf]->beginRenderPassesList.push_back(beginRenderPassState);
 
-  if (Config::Get().IsRecorder() || captureRenderPasses() || captureRenderPassesResources()) {
+  if (Configurator::IsRecorder() || captureRenderPasses() || captureRenderPassesResources()) {
 
     for (uint32_t i = 0; i < pRenderingInfo->colorAttachmentCount; i++) {
       if (pRenderingInfo->pColorAttachments[i].imageView != VK_NULL_HANDLE) {
@@ -3368,7 +3370,7 @@ inline void vkCmdBeginRendering_SD(VkCommandBuffer cmdBuf, const VkRenderingInfo
     }
   }
 
-  if (Config::Get().IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     for (uint32_t i = 0; i < beginRenderPassState->imageViewStateStoreListKHR.size(); i++) {
       const auto& imageState = beginRenderPassState->imageViewStateStoreListKHR[i]->imageStateStore;
 
@@ -3376,8 +3378,8 @@ inline void vkCmdBeginRendering_SD(VkCommandBuffer cmdBuf, const VkRenderingInfo
         SD().bindingImages[cmdBuf].insert(imageState);
       }
 
-      if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
-           !Config::Get().vulkan.recorder.shadowMemory) ||
+      if ((!Configurator::Get().vulkan.recorder.memorySegmentSize &&
+           !Configurator::Get().vulkan.recorder.shadowMemory) ||
           !imageState->binding) {
         continue;
       }
@@ -3415,7 +3417,7 @@ namespace {
 void BindVertexBuffers_SDHelper(VkCommandBuffer cmdBuf,
                                 uint32_t bindingCount,
                                 const VkBuffer* pBuffers) {
-  if (Config::Get().IsRecorder() &&
+  if (Configurator::IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
     auto& bindingBuffers = SD().bindingBuffers[cmdBuf];
 
@@ -3459,7 +3461,7 @@ inline void vkCmdBindIndexBuffer_SD(VkCommandBuffer cmdBuf,
                                     VkBuffer buffer,
                                     VkDeviceSize offset,
                                     VkIndexType indexType) {
-  if (Config::Get().IsRecorder() &&
+  if (Configurator::IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
     insertStateIfFound(SD()._bufferstates, buffer, SD().bindingBuffers[cmdBuf]);
   }
@@ -3471,7 +3473,7 @@ inline void vkCmdBindTransformFeedbackBuffersEXT_SD(VkCommandBuffer cmdBuf,
                                                     const VkBuffer* pBuffers,
                                                     const VkDeviceSize* pOffsets,
                                                     const VkDeviceSize* pSizes) {
-  if (Config::Get().IsRecorder() &&
+  if (Configurator::IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
     for (uint32_t i = 0; i < bindingCount; ++i) {
       insertStateIfFound(SD()._bufferstates, pBuffers[i], SD().bindingBuffers[cmdBuf]);
@@ -3496,7 +3498,7 @@ inline void vkCmdBindDescriptorSets_SD(VkCommandBuffer cmdBuf,
                                        const VkDescriptorSet* pDescriptorSets,
                                        uint32_t dynamicOffsetCount,
                                        const uint32_t* pDynamicOffsets) {
-  if (Config::Get().IsRecorder() || captureRenderPassesResources()) {
+  if (Configurator::IsRecorder() || captureRenderPassesResources()) {
     if (!pDescriptorSets) {
       return;
     }
@@ -3530,8 +3532,8 @@ inline void vkCmdBindDescriptorSets_SD(VkCommandBuffer cmdBuf,
         commandBufferState->touchedResources.emplace_back((uint64_t)obj.second.second, true);
         commandBufferState->resourceWriteImages[obj.second.second] = obj.second.first;
       }
-      if (Config::Get().vulkan.recorder.memorySegmentSize ||
-          Config::Get().vulkan.recorder.shadowMemory) {
+      if (Configurator::Get().vulkan.recorder.memorySegmentSize ||
+          Configurator::Get().vulkan.recorder.shadowMemory) {
         for (const auto& binding :
              SD()._descriptorsetstates[pDescriptorSets[i]]->descriptorMapMemory) {
           for (const auto& mem : binding.second) {
@@ -3552,7 +3554,7 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer cmdBuf,
                                          uint32_t set,
                                          uint32_t descriptorWriteCount,
                                          const VkWriteDescriptorSet* pDescriptorWrites) {
-  if (!Config::Get().IsRecorder()) {
+  if (!Configurator::IsRecorder()) {
     return;
   }
   if (!isSubcaptureBeforeRestorationPhase()) {
@@ -3587,8 +3589,8 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer cmdBuf,
           if (updateOnlyUsedMemory()) {
             SD().bindingImages[cmdBuf].insert(imageState);
 
-            if ((Config::Get().vulkan.recorder.memorySegmentSize ||
-                 Config::Get().vulkan.recorder.shadowMemory) &&
+            if ((Configurator::Get().vulkan.recorder.memorySegmentSize ||
+                 Configurator::Get().vulkan.recorder.shadowMemory) &&
                 (VK_DESCRIPTOR_TYPE_STORAGE_IMAGE == descriptorType) && (imageState->binding)) {
               VkMemoryRequirements memRequirements = {};
               drvVk.vkGetImageMemoryRequirements(imageState->deviceStateStore->deviceHandle,
@@ -3626,8 +3628,8 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer cmdBuf,
           if (updateOnlyUsedMemory()) {
             SD().bindingBuffers[cmdBuf].insert(bufferState);
 
-            if ((Config::Get().vulkan.recorder.memorySegmentSize ||
-                 Config::Get().vulkan.recorder.shadowMemory) &&
+            if ((Configurator::Get().vulkan.recorder.memorySegmentSize ||
+                 Configurator::Get().vulkan.recorder.shadowMemory) &&
                 (VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER == descriptorType) &&
                 (bufferState->binding)) {
               const auto* pViewCreateInfo = it->second->bufferViewCreateInfoData.Value();
@@ -3667,8 +3669,8 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer cmdBuf,
           if (updateOnlyUsedMemory()) {
             SD().bindingBuffers[cmdBuf].insert(bufferState);
 
-            if ((Config::Get().vulkan.recorder.memorySegmentSize ||
-                 Config::Get().vulkan.recorder.shadowMemory) &&
+            if ((Configurator::Get().vulkan.recorder.memorySegmentSize ||
+                 Configurator::Get().vulkan.recorder.shadowMemory) &&
                 ((VK_DESCRIPTOR_TYPE_STORAGE_BUFFER == descriptorType) ||
                  (VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC == descriptorType))) {
               if (bufferState->binding) {
@@ -3707,7 +3709,7 @@ inline void vkCmdDrawIndexedIndirect_SD(VkCommandBuffer cmdBuf,
                                         VkDeviceSize offset,
                                         uint32_t drawCount,
                                         uint32_t stride) {
-  if (Config::Get().IsRecorder() &&
+  if (Configurator::IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
     insertStateIfFound(SD()._bufferstates, buffer, SD().bindingBuffers[cmdBuf]);
   }
@@ -3719,7 +3721,7 @@ inline void vkCmdDrawIndirect_SD(VkCommandBuffer cmdBuf,
                                  VkDeviceSize offset,
                                  uint32_t drawCount,
                                  uint32_t stride) {
-  if (Config::Get().IsRecorder() &&
+  if (Configurator::IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
     insertStateIfFound(SD()._bufferstates, buffer, SD().bindingBuffers[cmdBuf]);
   }
@@ -3733,7 +3735,7 @@ inline void vkCmdDrawIndirectCountKHR_SD(VkCommandBuffer cmdBuf,
                                          VkDeviceSize countBufferOffset,
                                          uint32_t maxDrawCount,
                                          uint32_t stride) {
-  if (Config::Get().IsRecorder() &&
+  if (Configurator::IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
     auto& bindingBuffers = SD().bindingBuffers[cmdBuf];
 
@@ -3750,7 +3752,7 @@ inline void vkCmdDrawIndexedIndirectCount_SD(VkCommandBuffer cmdBuf,
                                              VkDeviceSize countBufferOffset,
                                              uint32_t maxDrawCount,
                                              uint32_t stride) {
-  if (Config::Get().IsRecorder() &&
+  if (Configurator::IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
     auto& bindingBuffers = SD().bindingBuffers[cmdBuf];
 
@@ -3767,7 +3769,7 @@ inline void vkCmdDrawIndexedIndirectCountKHR_SD(VkCommandBuffer cmdBuf,
                                                 VkDeviceSize countBufferOffset,
                                                 uint32_t maxDrawCount,
                                                 uint32_t stride) {
-  if (Config::Get().IsRecorder() &&
+  if (Configurator::IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
     auto& bindingBuffers = SD().bindingBuffers[cmdBuf];
 
@@ -3841,7 +3843,7 @@ inline void vkCmdDispatch_SD(VkCommandBuffer cmdBuf, uint32_t, uint32_t, uint32_
 }
 
 inline void vkCmdDispatchIndirect_SD(VkCommandBuffer cmdBuf, VkBuffer buffer, VkDeviceSize) {
-  if (Config::Get().IsRecorder() &&
+  if (Configurator::IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
     insertStateIfFound(SD()._bufferstates, buffer, SD().bindingBuffers[cmdBuf]);
   }
@@ -3855,7 +3857,7 @@ inline void vkCmdTraceRaysIndirectKHR_SD(
     const VkStridedDeviceAddressRegionKHR* pHitShaderBindingTable,
     const VkStridedDeviceAddressRegionKHR* pCallableShaderBindingTable,
     VkDeviceAddress indirectDeviceAddress) {
-  if (Config::Get().IsRecorder() &&
+  if (Configurator::IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
     auto& bindingBuffers = SD().bindingBuffers[cmdBuf];
 
@@ -3887,7 +3889,7 @@ inline void vkCmdTraceRaysKHR_SD(VkCommandBuffer cmdBuf,
                                  uint32_t /* width */,
                                  uint32_t /* height */,
                                  uint32_t /* depth */) {
-  if (Config::Get().IsRecorder() &&
+  if (Configurator::IsRecorder() &&
       (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase())) {
     auto& bindingBuffers = SD().bindingBuffers[cmdBuf];
 
@@ -3910,10 +3912,10 @@ inline void vkCmdTraceRaysKHR_SD(VkCommandBuffer cmdBuf,
 inline void vkCmdExecuteCommands_SD(VkCommandBuffer cmdBuf,
                                     uint32_t commandBufferCount,
                                     const VkCommandBuffer* pCommandBuffers) {
-  if (Config::Get().IsRecorder() ||
+  if (Configurator::IsRecorder() ||
       (captureRenderPassesResources() ||
-       !Config::Get().vulkan.player.captureVulkanRenderPasses.empty() ||
-       Config::Get().vulkan.player.execCmdBuffsBeforeQueueSubmit)) {
+       !Configurator::Get().vulkan.player.captureVulkanRenderPasses.empty() ||
+       Configurator::Get().vulkan.player.execCmdBuffsBeforeQueueSubmit)) {
     for (unsigned int i = 0; i < commandBufferCount; i++) {
       auto& primaryCommandBufferState = SD()._commandbufferstates[cmdBuf];
       const auto& secondaryCommandBufferState = SD()._commandbufferstates[pCommandBuffers[i]];
@@ -3996,8 +3998,8 @@ inline void vkCmdExecuteCommands_SD(VkCommandBuffer cmdBuf,
           primaryCommandBufferState->resourceWriteImages[obj.first] = obj.second;
         }
       }
-      if (Config::Get().vulkan.recorder.memorySegmentSize ||
-          Config::Get().vulkan.recorder.shadowMemory) {
+      if (Configurator::Get().vulkan.recorder.memorySegmentSize ||
+          Configurator::Get().vulkan.recorder.shadowMemory) {
         for (const auto& obj3 :
              SD().updatedMemoryInCmdBuffer[pCommandBuffers[i]].intervalMapMemory) {
           for (const auto& obj4 : obj3.second.getIntervals()) {
@@ -4232,7 +4234,7 @@ inline void vkCmdResetQueryPool_SD(VkCommandBuffer cmdBuf,
                                    VkQueryPool queryPool,
                                    uint32_t firstQuery,
                                    uint32_t queryCount) {
-  if (Config::Get().IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     auto& resetQueryAfterSubmit =
         SD()._commandbufferstates[cmdBuf]->resetQueriesAfterSubmit[queryPool];
     auto& usedQueryAfterSubmit =
@@ -4248,7 +4250,7 @@ inline void vkCmdWriteTimestamp_SD(VkCommandBuffer cmdBuf,
                                    VkPipelineStageFlagBits pipelineStage,
                                    VkQueryPool queryPool,
                                    uint32_t query) {
-  if (Config::Get().IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     SD()._commandbufferstates[cmdBuf]->usedQueriesAfterSubmit[queryPool].insert(query);
   }
 }
@@ -4257,7 +4259,7 @@ inline void vkCmdBeginQuery_SD(VkCommandBuffer cmdBuf,
                                VkQueryPool queryPool,
                                uint32_t query,
                                VkQueryControlFlags flags) {
-  if (Config::Get().IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     SD()._commandbufferstates[cmdBuf]->usedQueriesAfterSubmit[queryPool].insert(query);
   }
 }
@@ -4269,7 +4271,7 @@ inline void vkCmdWriteAccelerationStructuresPropertiesKHR_SD(
     VkQueryType queryType,
     VkQueryPool queryPool,
     uint32_t firstQuery) {
-  if (Config::Get().IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     auto& usedQueries = SD()._commandbufferstates[cmdBuf]->usedQueriesAfterSubmit[queryPool];
     for (uint32_t i = firstQuery; i < accelerationStructureCount; ++i) {
       usedQueries.insert(i);
@@ -4285,7 +4287,7 @@ inline void vkCmdCopyQueryPoolResults_SD(VkCommandBuffer cmdBuf,
                                          VkDeviceSize dstOffset,
                                          VkDeviceSize stride,
                                          VkQueryResultFlags flags) {
-  if (Config::Get().IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     const auto it = SD()._bufferstates.find(dstBuffer);
     if (it == SD()._bufferstates.end()) {
       return;
@@ -4299,8 +4301,8 @@ inline void vkCmdCopyQueryPoolResults_SD(VkCommandBuffer cmdBuf,
 
     SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstBuffer, false);
 
-    if (Config::Get().vulkan.recorder.memorySegmentSize ||
-        Config::Get().vulkan.recorder.shadowMemory) {
+    if (Configurator::Get().vulkan.recorder.memorySegmentSize ||
+        Configurator::Get().vulkan.recorder.shadowMemory) {
 
       if (bufferState->binding) {
         const auto memory = bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
@@ -4317,11 +4319,11 @@ inline void vkCmdUpdateBuffer_SD(VkCommandBuffer cmdBuf,
                                  VkDeviceSize dstOffset,
                                  VkDeviceSize dataSize,
                                  const void* pData) {
-  if (Config::Get().IsPlayer() && captureRenderPassesResources() && (dstBuffer != NULL)) {
+  if (Configurator::IsPlayer() && captureRenderPassesResources() && (dstBuffer != NULL)) {
     SD()._commandbufferstates[cmdBuf]->resourceWriteBuffers[dstBuffer] =
         VULKAN_BLIT_DESTINATION_BUFFER;
   }
-  if (Config::Get().IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     const auto it = SD()._bufferstates.find(dstBuffer);
     if (it == SD()._bufferstates.end()) {
       return;
@@ -4335,8 +4337,8 @@ inline void vkCmdUpdateBuffer_SD(VkCommandBuffer cmdBuf,
 
     SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstBuffer, false);
 
-    if (Config::Get().vulkan.recorder.memorySegmentSize ||
-        Config::Get().vulkan.recorder.shadowMemory) {
+    if (Configurator::Get().vulkan.recorder.memorySegmentSize ||
+        Configurator::Get().vulkan.recorder.shadowMemory) {
       if (bufferState->binding) {
         const auto memory = bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
         const auto offset = bufferState->binding->memoryOffset + dstOffset;
@@ -4352,11 +4354,11 @@ inline void vkCmdFillBuffer_SD(VkCommandBuffer cmdBuf,
                                VkDeviceSize dstOffset,
                                VkDeviceSize dstSize,
                                uint32_t data) {
-  if (Config::Get().IsPlayer() && captureRenderPassesResources() && (dstBuffer != NULL)) {
+  if (Configurator::IsPlayer() && captureRenderPassesResources() && (dstBuffer != NULL)) {
     SD()._commandbufferstates[cmdBuf]->resourceWriteBuffers[dstBuffer] =
         VULKAN_BLIT_DESTINATION_BUFFER;
   }
-  if (Config::Get().IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     const auto it = SD()._bufferstates.find(dstBuffer);
     if (it == SD()._bufferstates.end()) {
       return;
@@ -4370,8 +4372,8 @@ inline void vkCmdFillBuffer_SD(VkCommandBuffer cmdBuf,
 
     SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstBuffer, false);
 
-    if (Config::Get().vulkan.recorder.memorySegmentSize ||
-        Config::Get().vulkan.recorder.shadowMemory) {
+    if (Configurator::Get().vulkan.recorder.memorySegmentSize ||
+        Configurator::Get().vulkan.recorder.shadowMemory) {
       if (bufferState->binding) {
         const auto memory = bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
         const auto offset = bufferState->binding->memoryOffset + dstOffset;
@@ -4389,11 +4391,11 @@ inline void vkCmdCopyBuffer_SD(VkCommandBuffer cmdBuf,
                                VkBuffer dstBuffer,
                                uint32_t regionCount,
                                const VkBufferCopy* pRegions) {
-  if (Config::Get().IsPlayer() && captureRenderPassesResources() && (dstBuffer != NULL)) {
+  if (Configurator::IsPlayer() && captureRenderPassesResources() && (dstBuffer != NULL)) {
     SD()._commandbufferstates[cmdBuf]->resourceWriteBuffers[dstBuffer] =
         VULKAN_BLIT_DESTINATION_BUFFER;
   }
-  if (Config::Get().IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     const auto dstIt = SD()._bufferstates.find(dstBuffer);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
@@ -4414,8 +4416,8 @@ inline void vkCmdCopyBuffer_SD(VkCommandBuffer cmdBuf,
 
     SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstBuffer, false);
 
-    if (Config::Get().vulkan.recorder.memorySegmentSize ||
-        Config::Get().vulkan.recorder.shadowMemory) {
+    if (Configurator::Get().vulkan.recorder.memorySegmentSize ||
+        Configurator::Get().vulkan.recorder.shadowMemory) {
       const auto& bufferBinding = dstIt->second->binding;
       if (bufferBinding) {
         for (uint32_t i = 0; i < regionCount; i++) {
@@ -4430,13 +4432,13 @@ inline void vkCmdCopyBuffer_SD(VkCommandBuffer cmdBuf,
 }
 
 inline void vkCmdCopyBuffer2_SD(VkCommandBuffer cmdBuf, const VkCopyBufferInfo2* pCopyBufferInfo) {
-  if (Config::Get().IsPlayer() && captureRenderPassesResources() &&
+  if (Configurator::IsPlayer() && captureRenderPassesResources() &&
       (pCopyBufferInfo->dstBuffer != NULL)) {
     SD()._commandbufferstates[cmdBuf]->resourceWriteBuffers[pCopyBufferInfo->dstBuffer] =
         VULKAN_BLIT_DESTINATION_BUFFER;
   }
 
-  if (Config::Get().IsRecorder() && pCopyBufferInfo) {
+  if (Configurator::IsRecorder() && pCopyBufferInfo) {
     const auto dstIt = SD()._bufferstates.find(pCopyBufferInfo->dstBuffer);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
@@ -4458,8 +4460,8 @@ inline void vkCmdCopyBuffer2_SD(VkCommandBuffer cmdBuf, const VkCopyBufferInfo2*
     SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back(
         (uint64_t)pCopyBufferInfo->dstBuffer, false);
 
-    if (Config::Get().vulkan.recorder.memorySegmentSize ||
-        Config::Get().vulkan.recorder.shadowMemory) {
+    if (Configurator::Get().vulkan.recorder.memorySegmentSize ||
+        Configurator::Get().vulkan.recorder.shadowMemory) {
       const auto& bufferBinding = dstIt->second->binding;
 
       if (bufferBinding) {
@@ -4578,12 +4580,12 @@ inline void vkCmdCopyBufferToImage_SD(VkCommandBuffer cmdBuf,
                                       VkImageLayout dstImageLayout,
                                       uint32_t regionCount,
                                       const VkBufferImageCopy* pRegions) {
-  if (Config::Get().IsPlayer() && captureRenderPassesResources() && (dstImage != NULL)) {
+  if (Configurator::IsPlayer() && captureRenderPassesResources() && (dstImage != NULL)) {
     SD()._commandbufferstates[cmdBuf]->resourceWriteImages[dstImage] =
         VULKAN_BLIT_DESTINATION_IMAGE;
   }
 
-  if (Config::Get().IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     const auto dstIt = SD()._imagestates.find(dstImage);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
@@ -4602,8 +4604,8 @@ inline void vkCmdCopyBufferToImage_SD(VkCommandBuffer cmdBuf,
 
     SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstImage, true);
 
-    if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
-         !Config::Get().vulkan.recorder.shadowMemory) ||
+    if ((!Configurator::Get().vulkan.recorder.memorySegmentSize &&
+         !Configurator::Get().vulkan.recorder.shadowMemory) ||
         !dstIt->second->binding) {
       return;
     }
@@ -4615,13 +4617,13 @@ inline void vkCmdCopyBufferToImage_SD(VkCommandBuffer cmdBuf,
 
 inline void vkCmdCopyBufferToImage2_SD(VkCommandBuffer cmdBuf,
                                        const VkCopyBufferToImageInfo2* pCopyBufferToImageInfo) {
-  if (Config::Get().IsPlayer() && captureRenderPassesResources() &&
+  if (Configurator::IsPlayer() && captureRenderPassesResources() &&
       (pCopyBufferToImageInfo->dstImage != NULL)) {
     SD()._commandbufferstates[cmdBuf]->resourceWriteImages[pCopyBufferToImageInfo->dstImage] =
         VULKAN_BLIT_DESTINATION_IMAGE;
   }
 
-  if (Config::Get().IsRecorder() && pCopyBufferToImageInfo) {
+  if (Configurator::IsRecorder() && pCopyBufferToImageInfo) {
     const auto dstIt = SD()._imagestates.find(pCopyBufferToImageInfo->dstImage);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
@@ -4642,8 +4644,8 @@ inline void vkCmdCopyBufferToImage2_SD(VkCommandBuffer cmdBuf,
     SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back(
         (uint64_t)pCopyBufferToImageInfo->dstImage, true);
 
-    if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
-         !Config::Get().vulkan.recorder.shadowMemory) ||
+    if ((!Configurator::Get().vulkan.recorder.memorySegmentSize &&
+         !Configurator::Get().vulkan.recorder.shadowMemory) ||
         !dstIt->second->binding) {
       return;
     }
@@ -4661,12 +4663,12 @@ inline void vkCmdCopyImage_SD(VkCommandBuffer cmdBuf,
                               VkImageLayout dstImageLayout,
                               uint32_t regionCount,
                               const VkImageCopy* pRegions) {
-  if (Config::Get().IsPlayer() && captureRenderPassesResources() && (dstImage != NULL)) {
+  if (Configurator::IsPlayer() && captureRenderPassesResources() && (dstImage != NULL)) {
     SD()._commandbufferstates[cmdBuf]->resourceWriteImages[dstImage] =
         VULKAN_BLIT_DESTINATION_IMAGE;
   }
 
-  if (Config::Get().IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     const auto dstIt = SD()._imagestates.find(dstImage);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
@@ -4689,8 +4691,8 @@ inline void vkCmdCopyImage_SD(VkCommandBuffer cmdBuf,
 
     SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstImage, true);
 
-    if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
-         !Config::Get().vulkan.recorder.shadowMemory) ||
+    if ((!Configurator::Get().vulkan.recorder.memorySegmentSize &&
+         !Configurator::Get().vulkan.recorder.shadowMemory) ||
         !dstIt->second->binding) {
       return;
     }
@@ -4701,12 +4703,12 @@ inline void vkCmdCopyImage_SD(VkCommandBuffer cmdBuf,
 }
 
 inline void vkCmdCopyImage2_SD(VkCommandBuffer cmdBuf, const VkCopyImageInfo2* pCopyImageInfo) {
-  if (Config::Get().IsPlayer() && captureRenderPassesResources() &&
+  if (Configurator::IsPlayer() && captureRenderPassesResources() &&
       (pCopyImageInfo->dstImage != NULL)) {
     SD()._commandbufferstates[cmdBuf]->resourceWriteImages[pCopyImageInfo->dstImage] =
         VULKAN_BLIT_DESTINATION_IMAGE;
   }
-  if (Config::Get().IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     const auto dstIt = SD()._imagestates.find(pCopyImageInfo->dstImage);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
@@ -4728,8 +4730,8 @@ inline void vkCmdCopyImage2_SD(VkCommandBuffer cmdBuf, const VkCopyImageInfo2* p
     SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back(
         (uint64_t)pCopyImageInfo->dstImage, true);
 
-    if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
-         !Config::Get().vulkan.recorder.shadowMemory) ||
+    if ((!Configurator::Get().vulkan.recorder.memorySegmentSize &&
+         !Configurator::Get().vulkan.recorder.shadowMemory) ||
         !dstIt->second->binding) {
       return;
     }
@@ -4751,11 +4753,11 @@ void CopyImageToBufferHelper(VkCommandBuffer cmdBuf,
                              VkBuffer dstBuffer,
                              uint32_t regionCount,
                              const REGION_TYPE* pRegions) {
-  if (Config::Get().IsPlayer() && captureRenderPassesResources() && (dstBuffer != VK_NULL_HANDLE)) {
+  if (Configurator::IsPlayer() && captureRenderPassesResources() && (dstBuffer != VK_NULL_HANDLE)) {
     SD()._commandbufferstates[cmdBuf]->resourceWriteBuffers[dstBuffer] =
         VULKAN_BLIT_DESTINATION_BUFFER;
   }
-  if (Config::Get().IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     const auto srcIt = SD()._imagestates.find(srcImage);
     const auto dstIt = SD()._bufferstates.find(dstBuffer);
 
@@ -4776,8 +4778,8 @@ void CopyImageToBufferHelper(VkCommandBuffer cmdBuf,
 
     SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstBuffer, false);
 
-    if (Config::Get().vulkan.recorder.memorySegmentSize ||
-        Config::Get().vulkan.recorder.shadowMemory) {
+    if (Configurator::Get().vulkan.recorder.memorySegmentSize ||
+        Configurator::Get().vulkan.recorder.shadowMemory) {
       const auto& bufferBinding = dstIt->second->binding;
 
       if (bufferBinding) {
@@ -4848,12 +4850,12 @@ void BlitOrResolveImageHelper(VkCommandBuffer cmdBuf,
                               VkImage dstImage,
                               uint32_t regionCount,
                               const REGION_TYPE* pRegions) {
-  if (Config::Get().IsPlayer() && captureRenderPassesResources() && (dstImage != VK_NULL_HANDLE)) {
+  if (Configurator::IsPlayer() && captureRenderPassesResources() && (dstImage != VK_NULL_HANDLE)) {
     SD()._commandbufferstates[cmdBuf]->resourceWriteImages[dstImage] =
         VULKAN_BLIT_DESTINATION_IMAGE;
   }
 
-  if (Config::Get().IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     const auto dstIt = SD()._imagestates.find(dstImage);
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
@@ -4874,8 +4876,8 @@ void BlitOrResolveImageHelper(VkCommandBuffer cmdBuf,
 
     SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstImage, true);
 
-    if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
-         !Config::Get().vulkan.recorder.shadowMemory) ||
+    if ((!Configurator::Get().vulkan.recorder.memorySegmentSize &&
+         !Configurator::Get().vulkan.recorder.shadowMemory) ||
         !dstIt->second->binding) {
       return;
     }
@@ -4942,7 +4944,7 @@ inline void vkCmdClearColorImage_SD(VkCommandBuffer cmdBuf,
     SD()._commandbufferstates[cmdBuf]->clearedImages.insert(image);
   }
 
-  if (Config::Get().IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     const auto& imageState = dstIt->second;
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
@@ -4951,8 +4953,8 @@ inline void vkCmdClearColorImage_SD(VkCommandBuffer cmdBuf,
 
     SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)image, true);
 
-    if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
-         !Config::Get().vulkan.recorder.shadowMemory) ||
+    if ((!Configurator::Get().vulkan.recorder.memorySegmentSize &&
+         !Configurator::Get().vulkan.recorder.shadowMemory) ||
         !imageState->binding) {
       return;
     }
@@ -4985,7 +4987,7 @@ inline void vkCmdClearDepthStencilImage_SD(VkCommandBuffer cmdBuf,
     SD()._commandbufferstates[cmdBuf]->clearedImages.insert(image);
   }
 
-  if (Config::Get().IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     const auto& imageState = dstIt->second;
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
@@ -4994,8 +4996,8 @@ inline void vkCmdClearDepthStencilImage_SD(VkCommandBuffer cmdBuf,
 
     SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)image, true);
 
-    if ((!Config::Get().vulkan.recorder.memorySegmentSize &&
-         !Config::Get().vulkan.recorder.shadowMemory) ||
+    if ((!Configurator::Get().vulkan.recorder.memorySegmentSize &&
+         !Configurator::Get().vulkan.recorder.shadowMemory) ||
         !imageState->binding) {
       return;
     }

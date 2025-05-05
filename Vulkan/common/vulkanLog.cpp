@@ -175,7 +175,7 @@ CVkLog& CVkLog::operator<<(PNextPointerTypeTag pNext) {
   pNext = (PNextPointerTypeTag)ignoreLoaderSpecificStructureTypes(pNext);
 
   if (pNext != nullptr) {
-    if (isTraceDataOptPresent(TraceData::VK_STRUCTS)) {
+    if (Configurator::IsTraceDataOptPresent(TraceData::VK_STRUCTS)) {
 
       switch (*(VkStructureType*)pNext) {
 

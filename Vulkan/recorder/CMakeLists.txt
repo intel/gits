@@ -28,4 +28,5 @@ add_library(Vulkan_recorder
 
 source_group("Generated Files" REGULAR_EXPRESSION ".*Auto.*")
 
+target_link_libraries(Vulkan_recorder configuration)
 set_target_properties(Vulkan_recorder PROPERTIES FOLDER Vulkan)

@@ -45,7 +45,7 @@ inline bool Recording(gits::CRecorder& recorder) {
 namespace OpenGL {
 inline bool ConditionTextureES(CRecorder& recorder) {
   bool force = !curctx::IsOgl() && !IsGlGetTexAndCompressedTexImagePresentOnGLES();
-  if (Config::Get().opengl.recorder.texturesState == TTexturesState::RESTORE) {
+  if (Configurator::Get().opengl.recorder.texturesState == TTexturesState::RESTORE) {
     force = false;
   }
 
@@ -55,7 +55,8 @@ inline bool ConditionTextureES(CRecorder& recorder) {
 inline bool ConditionBufferES(CRecorder& recorder) {
   bool forceBuffersStateCaptureAlwaysWA = false;
 #ifdef GITS_PLATFORM_WINDOWS
-  forceBuffersStateCaptureAlwaysWA = Config::Get().opengl.recorder.forceBuffersStateCaptureAlwaysWA;
+  forceBuffersStateCaptureAlwaysWA =
+      Configurator::Get().opengl.recorder.forceBuffersStateCaptureAlwaysWA;
 #endif
   bool force = (!curctx::IsOgl() && !IsGlGetTexAndCompressedTexImagePresentOnGLES()) ||
                forceBuffersStateCaptureAlwaysWA;
@@ -70,7 +71,8 @@ inline bool ConditionBufferData(
     CRecorder& recorder, GLenum target, GLsizeiptr size, const GLvoid* data, GLenum usage) {
   bool forceBuffersStateCaptureAlwaysWA = false;
 #ifdef GITS_PLATFORM_WINDOWS
-  forceBuffersStateCaptureAlwaysWA = Config::Get().opengl.recorder.forceBuffersStateCaptureAlwaysWA;
+  forceBuffersStateCaptureAlwaysWA =
+      Configurator::Get().opengl.recorder.forceBuffersStateCaptureAlwaysWA;
 #endif
   bool force = (!curctx::IsOgl() && !IsGlGetTexAndCompressedTexImagePresentOnGLES()) ||
                forceBuffersStateCaptureAlwaysWA;
@@ -96,7 +98,8 @@ inline bool ConditionBufferStorage(
     CRecorder& recorder, GLenum target, GLsizeiptr size, const GLvoid* data, GLbitfield flags) {
   bool forceBuffersStateCaptureAlwaysWA = false;
 #ifdef GITS_PLATFORM_WINDOWS
-  forceBuffersStateCaptureAlwaysWA = Config::Get().opengl.recorder.forceBuffersStateCaptureAlwaysWA;
+  forceBuffersStateCaptureAlwaysWA =
+      Configurator::Get().opengl.recorder.forceBuffersStateCaptureAlwaysWA;
 #endif
   bool force = (!curctx::IsOgl() && !IsGlGetTexAndCompressedTexImagePresentOnGLES()) ||
                forceBuffersStateCaptureAlwaysWA;
@@ -121,7 +124,7 @@ inline bool ConditionTexImageES(CRecorder& recorder, GLenum format, GLenum type)
   bool force = !curctx::IsOgl() && !IsGlGetTexImagePresentOnGLES();
   bool skip = false;
 
-  if (Config::Get().opengl.recorder.texturesState == TTexturesState::RESTORE) {
+  if (Configurator::Get().opengl.recorder.texturesState == TTexturesState::RESTORE) {
     force = false;
   }
 

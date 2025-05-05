@@ -1,0 +1,74 @@
+// ===================== begin_copyright_notice ============================
+//
+// Copyright (C) 2023-2025 Intel Corporation
+//
+// SPDX-License-Identifier: MIT
+//
+// ===================== end_copyright_notice ==============================
+
+#pragma once
+
+#include <optional>
+
+#include "configurationAuto.h"
+#include "platform.h"
+
+namespace gits {
+
+class Configurator {
+public:
+  static bool IsRecorder() {
+    return Get().common.mode == GITSMode::MODE_RECORDER;
+  }
+
+  static bool IsPlayer() {
+    return Get().common.mode == GITSMode::MODE_PLAYER;
+  }
+
+  static bool DumpBinary() {
+    return Get().common.recorder.recordingMode == RecordingMode::BINARY;
+  }
+
+  static bool DumpCCode() {
+    return Get().common.recorder.recordingMode == RecordingMode::CCODE;
+  }
+
+  static bool IsTraceDataOptPresent(TraceData option) {
+    return Configurator::Get().common.shared.traceDataOpts.find(option) !=
+           Configurator::Get().common.shared.traceDataOpts.end();
+  }
+
+#ifdef GITS_PLATFORM_WINDOWS
+  static void PrepareSubcapturePath();
+#endif
+
+  static std::string ConfigFileName() {
+    return "gits_config.yml";
+  }
+
+public: // Singleton
+  Configurator(const Configurator&) = delete;
+  Configurator& operator=(const Configurator&) = delete;
+  static Configurator& Instance();
+  static const Configuration& Get();
+  static Configuration& GetMutable();
+
+#ifndef BUILD_FOR_CCODE
+  static bool LoadInto(const std::filesystem::path filepath, Configuration* config);
+  bool Load(const std::filesystem::path& filepath);
+
+  static bool Save(const std::filesystem::path filepath, const Configuration& config);
+
+  bool ApplyOverrides(const std::filesystem::path filepath, std::string processName);
+  void DeriveData();
+#endif
+
+public: // Configuration
+  void UpdateFromEnvironment();
+
+private:
+  Configurator();
+
+  Configuration configuration;
+};
+} // namespace gits

@@ -93,6 +93,6 @@ source_group("Generated Files" FILES
   vulkanFunctions.cpp
   REGULAR_EXPRESSION ".*Auto.*")
 
-target_link_libraries(Vulkan_common common)
+target_link_libraries(Vulkan_common common configuration)
 
 set_target_properties(Vulkan_common PROPERTIES FOLDER Vulkan)

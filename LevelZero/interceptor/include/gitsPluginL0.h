@@ -17,6 +17,8 @@
 #include "gitsLoader.h"
 #include "platform.h"
 #include "tools.h"
+#include "configurationLib.h"
+#include "config.h"
 
 #include <cstdint>
 #include <string>
@@ -24,7 +26,6 @@
 namespace gits {
 
 class CRecorder;
-struct Config;
 
 namespace l0 {
 class IRecorderWrapper;

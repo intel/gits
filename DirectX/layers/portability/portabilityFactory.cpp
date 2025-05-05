@@ -9,16 +9,17 @@
 #include "portabilityFactory.h"
 #include "portabilityLayer.h"
 #include "gits.h"
+#include "configurationLib.h"
 
 namespace gits {
 namespace DirectX {
 
 PortabilityFactory::PortabilityFactory() {
-  if (Config::IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     portabilityLayer_ = std::make_unique<PortabilityLayer>();
-  } else if (Config::IsPlayer()) {
-    if (Config::Get().directx.player.portability.resourcePlacement != "none" ||
-        Config::Get().directx.player.portability.portabilityChecks) {
+  } else if (Configurator::IsPlayer()) {
+    if (Configurator::Get().directx.player.portability.resourcePlacement != "none" ||
+        Configurator::Get().directx.player.portability.portabilityChecks) {
       portabilityLayer_ = std::make_unique<PortabilityLayer>();
     }
   }

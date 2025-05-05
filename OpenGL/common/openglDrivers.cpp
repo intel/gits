@@ -147,7 +147,7 @@ NOINLINE bool load_glx_function(T& func, const char* name) {
 #endif
 
 NOINLINE void GLErrorLog() {
-  if (!Config::Get().opengl.shared.traceGLError) {
+  if (!Configurator::Get().opengl.shared.traceGLError) {
     return;
   }
 
@@ -234,8 +234,8 @@ static NOINLINE lua_State* GetLuaState() {
 #define LOGGING_FUNCTION(b, c, d, e, err_fun, drv_name)                                            \
   b STDCALL logging_##c d {                                                                        \
     err_fun();                                                                                     \
-    const Config& gits_cfg = Config::Get();                                                        \
-    const bool doTrace = ShouldLog(TRACE);                                                         \
+    const Config& gits_cfg = Configurator::Get();                                                  \
+    const bool doTrace = ShouldLog(LogLevel::TRACE);                                               \
     if (doTrace &&                                                                                 \
         (!CGits::Instance().traceGLAPIBypass || gits_cfg.opengl.player.traceGitsInternal)) {       \
       Tracer(#c).trace e;                                                                          \
@@ -278,7 +278,7 @@ static NOINLINE lua_State* GetLuaState() {
 
 // If the proxy library loads itself instead of the original one, the function logs the message and exits.
 void CheckForRecursion(dl::SharedObject library) {
-  if (gits::Config::IsRecorder() && gits::Config::Get().opengl.recorder.detectRecursion &&
+  if (Configurator::IsRecorder() && Configurator::Get().opengl.recorder.detectRecursion &&
       (dl::load_symbol(library, "GITSIdentificationToken") !=
        nullptr)) { // This token is exposed only by proxy i.e. gits library
     Log(ERR) << "Recursion detected while loading the library.";
@@ -289,8 +289,8 @@ void CheckForRecursion(dl::SharedObject library) {
 }
 
 NOINLINE bool UseTracing(const char* func) {
-  const auto& cfg = Config::Get();
-  return ShouldLog(TRACE) || (cfg.common.shared.useEvents && LUA_FUNCTION_EXISTS(func)) ||
+  const auto& cfg = Configurator::Get();
+  return ShouldLog(LogLevel::TRACE) || (cfg.common.shared.useEvents && LUA_FUNCTION_EXISTS(func)) ||
          (!cfg.common.player.traceSelectedFrames.empty());
 }
 
@@ -312,7 +312,7 @@ NOINLINE void LogFunctionNotFoundShutdown(const char* func) {
     if (!load_func(drv_name.c, #c)) {                                                              \
       Log(ERR) << "Application called the function " << #c << ", but it "                          \
                << "couldn't be loaded. The driver call will be skipped.";                          \
-      if (Config::Get().opengl.recorder.retryFunctionLoads) {                                      \
+      if (Configurator::Get().opengl.recorder.retryFunctionLoads) {                                \
         Log(ERR) << "Function load will be reattempted the next time "                             \
                     "application calls this function.";                                            \
         drv_name.c = default_##c;                                                                  \
@@ -338,17 +338,17 @@ NOINLINE void LogFunctionNotFoundShutdown(const char* func) {
 
 void DumpPreDrawCall() {
   static int PreDrawCallCnt = 0;
-  if (Config::Get().opengl.player.captureDraws[++PreDrawCallCnt] &&
-      Config::Get().opengl.player.captureDrawsPre) {
-    capture_drawbuffer(Config::Get().ccode.outputPath,
+  if (Configurator::Get().opengl.player.captureDraws[++PreDrawCallCnt] &&
+      Configurator::Get().opengl.player.captureDrawsPre) {
+    capture_drawbuffer(Configurator::Get().ccode.outputPath,
                        "drawcall-" + std::to_string(PreDrawCallCnt) + "-pre", false);
   }
 }
 
 void DumpPostDrawCall() {
   static int PostDrawCallCnt = 0;
-  if (Config::Get().opengl.player.captureDraws[++PostDrawCallCnt]) {
-    capture_drawbuffer(Config::Get().ccode.outputPath,
+  if (Configurator::Get().opengl.player.captureDraws[++PostDrawCallCnt]) {
+    capture_drawbuffer(Configurator::Get().ccode.outputPath,
                        "drawcall-" + std::to_string(PostDrawCallCnt) + "-post", false);
   }
 }
@@ -357,7 +357,7 @@ void DumpPostDrawCall() {
   b STDCALL draw_##c d {                                                                           \
     static b(STDCALL* drawFunc) d;                                                                 \
     bool isFunLoaded = false;                                                                      \
-    if (!Config::Get().opengl.player.captureDraws.empty()) {                                       \
+    if (!Configurator::Get().opengl.player.captureDraws.empty()) {                                 \
       isFunLoaded = load_func(drawFunc, #c);                                                       \
     } else {                                                                                       \
       isFunLoaded = load_func(drv_name.c, #c);                                                     \
@@ -371,9 +371,9 @@ void DumpPostDrawCall() {
         drv.trigger_terminate_event();                                                             \
         exit(1);                                                                                   \
       } else {                                                                                     \
-        if (ShouldLog(TRACE) || Config::Get().common.shared.useEvents)                             \
+        if (ShouldLog(LogLevel::TRACE) || Configurator::Get().common.shared.useEvents)             \
           return logging_##c e;                                                                    \
-        if (!Config::Get().opengl.player.captureDraws.empty()) {                                   \
+        if (!Configurator::Get().opengl.player.captureDraws.empty()) {                             \
           DumpPreDrawCall();                                                                       \
           drawFunc e;                                                                              \
           DumpPostDrawCall();                                                                      \
@@ -502,7 +502,7 @@ dl::SharedObject CEglDriver::Library() {
 
   //EGL is loaded into global namespace so its easier on
   //frame capturing tools to perform their job
-  std::filesystem::path path = gits::Config::Get().common.shared.libEGL;
+  std::filesystem::path path = Configurator::Get().common.shared.libEGL;
   _lib_egl = dl::open_library(path.string().c_str());
 
   if (_lib_egl == nullptr) {
@@ -530,7 +530,7 @@ dl::SharedObject CGlxDriver::Library() {
     return _lib;
   }
   _initialized = true;
-  const auto& libGL = gits::Config::Get().common.shared.libGL;
+  const auto& libGL = Configurator::Get().common.shared.libGL;
   printf("library path: %s\n", libGL.string().c_str());
 
   _lib = dl::open_library(libGL.string().c_str());
@@ -580,8 +580,7 @@ CWglDriver::CWglDriver() : _initialized(false), _lib(nullptr) {
 #define INITIALIZE_WGL_EXT_FUNCTION(b, c, d, e)                                                    \
   c = default_##c;                                                                                 \
   shd_##c = nullptr;
-  WGL_FUNCTIONS(INITIALIZE_)
-  WGL_EXT_FUNCTIONS(INITIALIZE_)
+  WGL_FUNCTIONS(INITIALIZE_) WGL_EXT_FUNCTIONS(INITIALIZE_)
 #undef INITIALIZE_WGL_EXT_FUNCTION
 #undef INITIALIZE_WGL_FUNCTION
 }
@@ -596,7 +595,7 @@ dl::SharedObject CWglDriver::Library() {
   }
   _initialized = true;
 
-  const auto& libGL = gits::Config::Get().common.shared.libGL;
+  const auto& libGL = Configurator::Get().common.shared.libGL;
 
   _lib = dl::open_library(libGL.string().c_str());
 
@@ -624,8 +623,8 @@ CGlDriver::CGlDriver() : _api(API_NULL), _initialized(false), _lib(nullptr) {
 }
 
 void CGlDriver::Initialize(TApiType api) {
-  if (Config::Get().common.mode == Config::MODE_RECORDER &&
-      !gits::Config::Get().opengl.recorder.multiApiProtectBypass && _initialized && api != _api) {
+  if (Configurator::Get().common.mode == GITSMode::MODE_RECORDER &&
+      !Configurator::Get().opengl.recorder.multiApiProtectBypass && _initialized && api != _api) {
     Log(ERR) << "Multiple OGL API types applications not supported";
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
@@ -637,15 +636,15 @@ void CGlDriver::Initialize(TApiType api) {
   std::filesystem::path path;
   switch (api) {
   case API_GL:
-    path = gits::Config::Get().common.shared.libGL;
+    path = Configurator::Get().common.shared.libGL;
     Log(INFO) << "Initializing OpenGL API";
     break;
   case API_GLES1:
-    path = gits::Config::Get().common.shared.libGLESv1;
+    path = Configurator::Get().common.shared.libGLESv1;
     Log(INFO) << "Initializing OpenGLES 1.1 API";
     break;
   case API_GLES2:
-    path = gits::Config::Get().common.shared.libGLESv2;
+    path = Configurator::Get().common.shared.libGLESv2;
     Log(INFO) << "Initializing OpenGLES 2.0 API";
     break;
   default:

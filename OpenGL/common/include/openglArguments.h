@@ -223,7 +223,7 @@ public:
 
   virtual void Write(CBinOStream& stream) const {
     uint32_t size = ensure_unsigned32bit_representible<size_t>(_array.size());
-    if (!Config::Get().common.recorder.nullIO) {
+    if (!Configurator::Get().common.recorder.nullIO) {
       stream.write((char*)&size, sizeof(size));
     }
 
@@ -370,7 +370,7 @@ public:
 
   virtual void Write(CBinOStream& stream) const {
     uint32_t size = ensure_unsigned32bit_representible<size_t>(_array.size());
-    if (!Config::Get().common.recorder.nullIO) {
+    if (!Configurator::Get().common.recorder.nullIO) {
       stream.write((char*)&size, sizeof(size));
     }
 
@@ -1902,7 +1902,7 @@ public:
 
   virtual void Write(CBinOStream& stream) const {
     uint32_t sz = ensure_unsigned32bit_representible<size_t>(_array.size());
-    if (!Config::Get().common.recorder.nullIO) {
+    if (!Configurator::Get().common.recorder.nullIO) {
       stream.write((char*)&sz, sizeof(sz));
     }
 
@@ -1976,7 +1976,7 @@ class CMapAccess : public CArgument {
 public:
   CMapAccess() : _access(0), _mask(0) {}
   CMapAccess(GLenum access) : _access(access) {
-    _mask.Value() = Config::Get().opengl.recorder.bufferMapAccessMask;
+    _mask.Value() = Configurator::Get().opengl.recorder.bufferMapAccessMask;
   }
   virtual const char* Name() const {
     return "CMapAccess";
@@ -2016,7 +2016,7 @@ class CBufferStorageFlags : public CArgument {
 public:
   CBufferStorageFlags() : _flags(0), _mask(0) {}
   CBufferStorageFlags(GLenum flags) : _flags(flags) {
-    _mask.Value() = Config::Get().opengl.recorder.bufferStorageFlagsMask;
+    _mask.Value() = Configurator::Get().opengl.recorder.bufferStorageFlagsMask;
   }
   virtual const char* Name() const {
     return "CBufferStorageFlags";
@@ -2259,7 +2259,7 @@ public:
     return true;
   }
   virtual void Declare(CCodeOStream& stream) const override {
-    assert(Config::IsRecorder() && "Use _count only in recorder.");
+    assert(Configurator::IsRecorder() && "Use _count only in recorder.");
     stream.Indent() << "std::vector<GLint> params(" << _count << ");\n";
     stream.Indent() << "std::vector<CRecUniformLocation> locations = {\n";
     stream.ScopeBegin();

@@ -52,7 +52,7 @@ int lua_${name}(lua_State* L) {
 ${get_return_type(func)} STDCALL special_${name}(${make_params(func, with_types=True)}) {
   ${get_return_type(func)} gits_ret = static_cast<${get_return_type(func)}>(0);
 #ifndef BUILD_FOR_CCODE
-  bool doTrace = ShouldLog(TRACE);
+  bool doTrace = ShouldLog(LogLevel::TRACE);
   if (doTrace) {
     OclLog(TRACE, NO_NEWLINE) << "${name}(";
   %for arg in func['args']:
@@ -61,7 +61,7 @@ ${get_return_type(func)} STDCALL special_${name}(${make_params(func, with_types=
     OclLog(TRACE, ${'RAW' if func['type'] != 'void' else 'NO_PREFIX'}) << ")";
   }
   bool call_orig = true;
-  if (Config::Get().common.shared.useEvents) {
+  if (Configurator::Get().common.shared.useEvents) {
     std::unique_lock<std::recursive_mutex> lock(gits::lua::luaMutex);
     if (!bypass_luascript) {
       auto L = GetLuaState();
@@ -109,9 +109,9 @@ ${get_return_type(func)} STDCALL default_${name}(${make_params(func, with_types=
     return static_cast<${get_return_type(func)}>(0);
   }
   drvOcl.orig_${name} = drvOcl.${name};
-  if ((gits::ShouldLog(gits::LogLevel::TRACE)) ||
-      (Config::Get().common.shared.useEvents && LUA_FUNCTION_EXISTS("${name}")) ||
-      (!Config::Get().common.player.traceSelectedFrames.empty())) {
+  if ((gits::ShouldLog(LogLevel::TRACE)) ||
+      (Configurator::Get().common.shared.useEvents && LUA_FUNCTION_EXISTS("${name}")) ||
+      (!Configurator::Get().common.player.traceSelectedFrames.empty())) {
     drvOcl.${name} = special_${name};
   }
   return drvOcl.${name}(${make_params(func,one_line=True)});

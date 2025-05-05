@@ -104,3 +104,7 @@ CCodeFiles/src/include/vulkanCCodeArgumentsAuto.h
 #DirectX
 DirectX/**/*Auto.cpp
 DirectX/**/*Auto.h
+
+# Configuration
+common/configuration/**/*Auto.cpp
+common/configuration/**/*Auto.h

@@ -23,7 +23,7 @@ namespace Vulkan {
     additional_recorder_conditions = ''
     if token.token_cache:
         additional_recorder_conditions = (
-            ' && !Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit')
+            ' && !Configurator::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit')
 
     wrapper_pre_post_macro: str = ''
     if token.function_type in (

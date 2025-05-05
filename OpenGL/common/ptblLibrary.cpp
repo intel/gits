@@ -41,7 +41,7 @@ uint64_t gits::OpenGL::GenFake() {
 //******************** Portable State *********************************
 gits::OpenGL::PortableState::Helper::Helper() {
   currApiEgl = EGL_OPENGL_ES_API;
-  auto forcedApi = Config::Get().opengl.player.forceGLProfile;
+  auto forcedApi = Configurator::Get().opengl.player.forceGLProfile;
   if (forcedApi == TForcedGLProfile::CORE || forcedApi == TForcedGLProfile::COMPAT) {
     currApiEgl = EGL_OPENGL_API;
   }
@@ -114,19 +114,19 @@ void gits::OpenGL::dispatchHelperCreatePBuffer(PtblHandle surf, PtblHandle pf) {
 
 //************** Drivers Initialization interface ****************************
 void gits::OpenGL::ptblInitialize(CGlDriver::TApiType api) {
-  if (Config::Get().opengl.shared.forceGLVersion.empty() &&
-      Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::NO_PROFILE_FORCED) {
+  if (Configurator::Get().opengl.shared.forceGLVersion.empty() &&
+      Configurator::Get().opengl.player.forceGLProfile == TForcedGLProfile::NO_PROFILE_FORCED) {
     drv.gl.Initialize(api);
     return;
   }
   Log(INFO) << "Initializing modified GL Version";
 
-  if (Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::CORE ||
-      Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::COMPAT) {
+  if (Configurator::Get().opengl.player.forceGLProfile == TForcedGLProfile::CORE ||
+      Configurator::Get().opengl.player.forceGLProfile == TForcedGLProfile::COMPAT) {
     drv.gl.Initialize(CGlDriver::API_GL);
-  } else if (Config::Get().opengl.player.forceGLProfile == TForcedGLProfile::ES) {
-    if (!Config::Get().opengl.shared.forceGLVersion.empty()) {
-      if (Config::Get().opengl.shared.forceGLVersionMajor >= 2) {
+  } else if (Configurator::Get().opengl.player.forceGLProfile == TForcedGLProfile::ES) {
+    if (!Configurator::Get().opengl.shared.forceGLVersion.empty()) {
+      if (Configurator::Get().opengl.shared.forceGLVersionMajor >= 2) {
         drv.gl.Initialize(CGlDriver::API_GLES2);
       } else {
         drv.gl.Initialize(CGlDriver::API_GLES1);

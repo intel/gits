@@ -40,11 +40,11 @@ public:
 };
 // See common/include/log.h for explanations of these macros.
 #define OclLog1(lvl)                                                                               \
-  if (gits::ShouldLog(gits::LogLevel::lvl))                                                        \
-  gits::OpenCL::COclLog(gits::LogLevel::lvl, gits::LogStyle::NORMAL)
+  if (gits::ShouldLog(LogLevel::lvl))                                                              \
+  gits::OpenCL::COclLog(LogLevel::lvl, gits::LogStyle::NORMAL)
 #define OclLog2(lvl, style)                                                                        \
-  if (gits::ShouldLog(gits::LogLevel::lvl))                                                        \
-  gits::OpenCL::COclLog(gits::LogLevel::lvl, gits::LogStyle::style)
+  if (gits::ShouldLog(LogLevel::lvl))                                                              \
+  gits::OpenCL::COclLog(LogLevel::lvl, gits::LogStyle::style)
 // Workaround for a MSVC bug, see https://stackoverflow.com/a/5134656/
 #define EXPAND(x) x
 // Magic to call different variants based on the number of arguments.

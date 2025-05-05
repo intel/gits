@@ -303,7 +303,7 @@ void PrepareArguments(const CKernelExecutionInfo* kernelInfo,
     const auto isIndirectionSet =
         (static_cast<unsigned>(allocState.memType) & kernelInfo->indirectUsmTypes) != 0U;
     if (isResidencySet || isIndirectionSet) {
-      void* pointer = Config::IsPlayer() ? CMappedPtr::GetOriginal(key) : key;
+      void* pointer = Configurator::IsPlayer() ? CMappedPtr::GetOriginal(key) : key;
 
       auto argDump = std::make_shared<CKernelArgumentDump>(
           allocState.size, key, kernelInfo->kernelNumber, reinterpret_cast<uintptr_t>(pointer));
@@ -366,20 +366,22 @@ void DumpReadyArguments(std::vector<CKernelArgumentDump>& readyArgVector,
 }
 
 bool CaptureKernels(const Config& cfg) {
-  const auto& captureKernels =
-      cfg.IsPlayer() ? cfg.levelzero.player.captureKernels : cfg.levelzero.recorder.captureKernels;
+  const auto& captureKernels = Configurator::IsPlayer() ? cfg.levelzero.player.captureKernels
+                                                        : cfg.levelzero.recorder.captureKernels;
   return !captureKernels.empty();
 }
 
 bool CaptureImages(const Config& cfg) {
-  return cfg.IsPlayer() ? cfg.levelzero.player.captureImages : cfg.levelzero.recorder.captureImages;
+  return Configurator::IsPlayer() ? cfg.levelzero.player.captureImages
+                                  : cfg.levelzero.recorder.captureImages;
 }
 
 bool CheckCfgZeroInitialization(const Config& cfg) {
-  const auto zeroInit = cfg.IsPlayer() ? cfg.levelzero.player.injectBufferResetAfterCreate
-                                       : cfg.levelzero.recorder.bufferResetAfterCreate;
-  const auto dumpBuffers = cfg.IsPlayer() ? !cfg.levelzero.player.captureKernels.empty()
-                                          : !cfg.levelzero.recorder.captureKernels.empty();
+  const auto zeroInit = Configurator::IsPlayer() ? cfg.levelzero.player.injectBufferResetAfterCreate
+                                                 : cfg.levelzero.recorder.bufferResetAfterCreate;
+  const auto dumpBuffers = Configurator::IsPlayer()
+                               ? !cfg.levelzero.player.captureKernels.empty()
+                               : !cfg.levelzero.recorder.captureKernels.empty();
   return zeroInit && dumpBuffers;
 }
 
@@ -571,8 +573,8 @@ size_t GetSizeFromCopyRegion(const ze_copy_region_t* region) {
 }
 
 bool IsNullIndirectPointersInBufferEnabled(const Config& cfg) {
-  return cfg.IsPlayer() ? !cfg.levelzero.player.disableNullIndirectPointersInBuffer
-                        : cfg.levelzero.recorder.nullIndirectPointersInBuffer;
+  return Configurator::IsPlayer() ? !cfg.levelzero.player.disableNullIndirectPointersInBuffer
+                                  : cfg.levelzero.recorder.nullIndirectPointersInBuffer;
 }
 
 bool IsControlledSubmission(const ze_command_queue_desc_t* desc) {
@@ -672,13 +674,13 @@ void* GetMappedGlobalPtrFromOriginalAllocation(const CStateDynamic& sd, void* or
 }
 
 bool CaptureAfterSubmit(const Config& cfg) {
-  return cfg.IsPlayer() ? cfg.levelzero.player.captureAfterSubmit
-                        : cfg.levelzero.recorder.captureAfterSubmit;
+  return Configurator::IsPlayer() ? cfg.levelzero.player.captureAfterSubmit
+                                  : cfg.levelzero.recorder.captureAfterSubmit;
 }
 
 bool CheckWhetherDumpQueueSubmit(const Config& cfg, const uint32_t& queueSubmitNumber) {
-  const auto& cmdQueueList = cfg.IsPlayer() ? cfg.levelzero.player.captureCommandQueues
-                                            : cfg.levelzero.recorder.captureCommandQueues;
+  const auto& cmdQueueList = Configurator::IsPlayer() ? cfg.levelzero.player.captureCommandQueues
+                                                      : cfg.levelzero.recorder.captureCommandQueues;
   return !cmdQueueList.empty() ? cmdQueueList[queueSubmitNumber] : false;
 }
 
@@ -695,8 +697,8 @@ void KernelCountUp(CGits& gitsInstance) {
 }
 
 bool IsDumpOnlyLayoutEnabled(const Config& cfg) {
-  return Config::IsPlayer() ? cfg.levelzero.player.dumpLayoutOnly
-                            : cfg.levelzero.recorder.dumpLayoutOnly;
+  return Configurator::IsPlayer() ? cfg.levelzero.player.dumpLayoutOnly
+                                  : cfg.levelzero.recorder.dumpLayoutOnly;
 }
 
 void InjectReadsForArguments(std::vector<CKernelArgumentDump>& readyArgVec,
@@ -798,13 +800,13 @@ void CommandListKernelInit(CStateDynamic& sd,
       std::make_unique<CKernelExecutionInfo>(kernelState.currentKernelInfo);
   cmdListState.appendedKernels.push_back(std::move(kernelState.currentKernelInfo));
   kernelState.currentKernelInfo = std::move(pointer);
-  if (Config::IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     sd.gst.Add(commandList, cmdListState.appendedKernels.back());
   }
 }
 
 bool IsBruteForceScanForIndirectPointersEnabled(const Config& cfg) {
-  return Config::IsRecorder() &&
+  return Configurator::IsRecorder() &&
          cfg.levelzero.recorder.bruteForceScanForIndirectPointers.memoryType != 0U;
 }
 
@@ -866,7 +868,7 @@ bool IsMemoryTypeIncluded(const uint32_t cfgMemoryTypeValue, UnifiedMemoryType t
 
 bool IsMemoryTypeAddressTranslationDisabled(const Config& cfg, UnifiedMemoryType type) {
   uint32_t value = 0U;
-  if (Config::IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     value = cfg.levelzero.recorder.disableAddressTranslation.memoryType;
   } else {
     value = cfg.levelzero.player.disableAddressTranslation;
@@ -875,8 +877,8 @@ bool IsMemoryTypeAddressTranslationDisabled(const Config& cfg, UnifiedMemoryType
 }
 
 bool IsDumpInputMode(const Config& cfg) {
-  return Config::IsPlayer() ? cfg.levelzero.player.captureInputKernels
-                            : cfg.levelzero.recorder.dumpInputKernels;
+  return Configurator::IsPlayer() ? cfg.levelzero.player.captureInputKernels
+                                  : cfg.levelzero.recorder.dumpInputKernels;
 }
 
 void SaveKernelArguments(const ze_event_handle_t& hSignalEvent,
@@ -886,7 +888,7 @@ void SaveKernelArguments(const ze_event_handle_t& hSignalEvent,
                          bool isInputMode,
                          bool callOnce) {
   const auto& kernelInfo = kernelState.currentKernelInfo;
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   const auto needsSync = cmdListState.isImmediate && callOnce && !cmdListState.isSync;
   if (needsSync) {
     if (hSignalEvent) {
@@ -917,7 +919,7 @@ void AppendLaunchKernel(const ze_command_list_handle_t& hCommandList,
                         const ze_event_handle_t& hSignalEvent,
                         bool isInputMode) {
   auto& sd = SD();
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   CommandListKernelInit(sd, hCommandList, hKernel, pLaunchFuncArgs, hSignalEvent);
   auto& cmdListState = sd.Get<CCommandListState>(hCommandList, EXCEPTION_MESSAGE);
   auto& kernelState = sd.Get<CKernelState>(hKernel, EXCEPTION_MESSAGE);

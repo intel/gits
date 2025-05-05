@@ -2568,8 +2568,8 @@ uint64_t GetCArraySizeFromId(uint64_t id) {
   typedef std::map<uint64_t, uint64_t> map_t;
   INIT_NEW_STATIC_OBJ(idsMap, map_t);
   CALL_ONCE[&] {
-    idsMap =
-        gits::read_map<map_t>(gits::Config::Get().common.player.streamDir / "gitsClientSizes.dat");
+    idsMap = gits::read_map<map_t>(gits::Configurator::Get().common.player.streamDir /
+                                   "gitsClientSizes.dat");
   };
   if (idsMap.find(id) == idsMap.end()) {
     return 0;
@@ -2629,7 +2629,7 @@ void gits::OpenGL::CDataPtr::Write(CCodeOStream& stream) const {
 }
 
 void* gits::OpenGL::CDataPtr::Value() {
-  if (!gits::Config::Get().IsPlayer()) {
+  if (!Configurator::IsPlayer()) {
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 
@@ -2764,7 +2764,7 @@ void gits::OpenGL::CDataPtrArray::Declare(CCodeOStream& stream) const {
 }
 
 const void** gits::OpenGL::CDataPtrArray::Value() {
-  if (!gits::Config::Get().IsPlayer()) {
+  if (!Configurator::IsPlayer()) {
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 
@@ -2808,11 +2808,11 @@ const void** gits::OpenGL::CDataPtrArray::Value() {
 
 // Select diff method.
 void gits::OpenGL::CDataUpdate::Diff(uint64_t dataptr, uint64_t updateptr, uint64_t updatesize) {
-  if (Config::Get().opengl.recorder.carrayMemCmpType == 0) {
+  if (Configurator::Get().opengl.recorder.carrayMemCmpType == 0) {
     DiffAll(dataptr, updateptr, updatesize);
-  } else if (Config::Get().opengl.recorder.carrayMemCmpType == 1) {
+  } else if (Configurator::Get().opengl.recorder.carrayMemCmpType == 1) {
     DiffOneRange(dataptr, updateptr, updatesize);
-  } else if (Config::Get().opengl.recorder.carrayMemCmpType == 2) {
+  } else if (Configurator::Get().opengl.recorder.carrayMemCmpType == 2) {
     DiffMultiRange(dataptr, updateptr, updatesize);
   } else {
     throw ENotImplemented(EXCEPTION_MESSAGE);
@@ -2837,7 +2837,7 @@ void gits::OpenGL::CDataUpdate::DiffAll(uint64_t dataptr, uint64_t updateptr, ui
                                                            (size_t)updatesize);
   _updates.push_back(TData(areaPtr, hash, updateOffset));
 
-  if (Config::Get().common.recorder.highIntegrity) {
+  if (Configurator::Get().common.recorder.highIntegrity) {
     SD().WriteClientSizes();
   }
 }
@@ -2903,7 +2903,7 @@ void gits::OpenGL::CDataUpdate::DiffOneRange(uint64_t dataptr,
     memcpy(storeDiffBegin, diffBegin, diffSize);
   }
 
-  if (Config::Get().common.recorder.highIntegrity) {
+  if (Configurator::Get().common.recorder.highIntegrity) {
     SD().WriteClientSizes();
   }
 }
@@ -2984,7 +2984,7 @@ void gits::OpenGL::CDataUpdate::DiffMultiRange(uint64_t dataptr,
     }
   }
 
-  if (Config::Get().common.recorder.highIntegrity) {
+  if (Configurator::Get().common.recorder.highIntegrity) {
     SD().WriteClientSizes();
   }
 }
@@ -3259,7 +3259,7 @@ void gits::OpenGL::CCoherentBufferUpdate::Diff(TCoherentBufferData::UpdateType u
         }
 
         // Optimized size of mapped buffer data dump
-        if (Config::Get().opengl.recorder.optimizeBufferSize) {
+        if (Configurator::Get().opengl.recorder.optimizeBufferSize) {
           // Access to mapped memory is multiple times slower than access to cpu
           // memory so it is better to read it only once. Though temporary copy
           // of mapped memory is created there.

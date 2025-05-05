@@ -18,22 +18,22 @@ class OpenCLApi : public ApisIface::ApiCompute {
 public:
   OpenCLApi() : ApiCompute(ApisIface::OpenCL) {}
   virtual bool CfgRec_IsAllMode() const {
-    return Config::Get().opencl.recorder.mode == TOpenCLRecorderMode::ALL;
+    return Configurator::Get().opencl.recorder.mode == TOpenCLRecorderMode::ALL;
   }
   virtual bool CfgRec_IsSingleKernelMode() const {
-    return Config::Get().opencl.recorder.mode == TOpenCLRecorderMode::SINGLE_KERNEL;
+    return Configurator::Get().opencl.recorder.mode == TOpenCLRecorderMode::SINGLE_KERNEL;
   }
   virtual int CfgRec_SingleKernel() const {
-    return Config::Get().opencl.recorder.oclSingleKernel.number;
+    return Configurator::Get().opencl.recorder.oclSingleKernel.number;
   }
   virtual bool CfgRec_IsKernelsRangeMode() const {
-    return Config::Get().opencl.recorder.mode == TOpenCLRecorderMode::KERNELS_RANGE;
+    return Configurator::Get().opencl.recorder.mode == TOpenCLRecorderMode::KERNELS_RANGE;
   }
   virtual int CfgRec_StartKernel() const {
-    return Config::Get().opencl.recorder.oclKernelsRange.startKernel;
+    return Configurator::Get().opencl.recorder.oclKernelsRange.startKernel;
   }
   virtual int CfgRec_StopKernel() const {
-    return Config::Get().opencl.recorder.oclKernelsRange.stopKernel;
+    return Configurator::Get().opencl.recorder.oclKernelsRange.stopKernel;
   }
   virtual void MemorySnifferUninstall() const {
     if (!IsMemorySnifferInstalled()) {

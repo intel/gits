@@ -17,7 +17,7 @@ namespace gits {
 namespace DirectX {
 
 AnalyzerService::AnalyzerService() {
-  const std::string& frames = Config::Get().directx.features.subcapture.frames;
+  const std::string& frames = Configurator::Get().directx.features.subcapture.frames;
   size_t pos = frames.find("-");
   try {
     if (pos != std::string::npos) {
@@ -29,7 +29,7 @@ AnalyzerService::AnalyzerService() {
     }
   } catch (...) {
     throw Exception("Invalid subcapture range: '" +
-                    Config::Get().directx.features.subcapture.frames + "'");
+                    Configurator::Get().directx.features.subcapture.frames + "'");
   }
 }
 

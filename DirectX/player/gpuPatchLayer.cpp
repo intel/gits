@@ -392,7 +392,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
 }
 
 void GpuPatchLayer::post(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
-  if (Config::Get().directx.player.uavBarrierAfterCopyRaytracingASWorkaround) {
+  if (Configurator::Get().directx.player.uavBarrierAfterCopyRaytracingASWorkaround) {
     ID3D12GraphicsCommandList* commandList = c.object_.value;
     D3D12_RESOURCE_BARRIER barrier{};
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
@@ -1473,7 +1473,7 @@ unsigned GpuPatchLayer::getInstancesAoPStagingBufferIndex(unsigned commandListKe
 }
 
 void GpuPatchLayer::loadExecuteIndirectDispatchRays() {
-  std::filesystem::path dumpPath = Config::Get().common.player.streamDir;
+  std::filesystem::path dumpPath = Configurator::Get().common.player.streamDir;
   std::ifstream stream(dumpPath / "executeIndirectRaytracing.txt");
   while (true) {
     unsigned callKey{};
@@ -1504,7 +1504,7 @@ void GpuPatchLayer::loadExecuteIndirectDispatchRays() {
 }
 
 void GpuPatchLayer::loadInstancesArraysOfPointers() {
-  std::filesystem::path dumpPath = Config::Get().common.player.streamDir;
+  std::filesystem::path dumpPath = Configurator::Get().common.player.streamDir;
   std::ifstream stream(dumpPath / "raytracingArraysOfPointers.dat", std::ios::binary);
   while (true) {
     unsigned callKey{};

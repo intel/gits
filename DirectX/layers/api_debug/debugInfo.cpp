@@ -9,6 +9,7 @@
 #include "debugInfo.h"
 #include "log.h"
 #include "config.h"
+#include "configurationLib.h"
 #include "enumToStrAuto.h"
 #include "toStr.h"
 #include "gits.h"
@@ -184,7 +185,7 @@ void __stdcall DebugInfo::debugMessageCallback(D3D12_MESSAGE_CATEGORY category,
 }
 
 void DebugInfo::traceMessage(D3D12_MESSAGE_SEVERITY severity, const char* message) {
-  auto& cfg = Config::Get();
+  auto& cfg = Configurator::Get();
 
   // Check if the message should be added to the trace file
   if (!cfg.directx.features.trace.enabled) {
@@ -215,7 +216,7 @@ void DebugInfo::traceMessage(D3D12_MESSAGE_SEVERITY severity, const char* messag
   }
 
   // The message to be logged in the trace files if DirectX.Features.Trace is enabled
-  static auto publisherId = Config::IsPlayer() ? PUBLISHER_PLAYER : PUBLISHER_RECORDER;
+  static auto publisherId = Configurator::IsPlayer() ? PUBLISHER_PLAYER : PUBLISHER_RECORDER;
   CGits::Instance().GetMessageBus().publish(
       {publisherId, TOPIC_LOG},
       std::make_shared<LogMessage>(LogLevel::TRACE, severityStr, message));
@@ -289,9 +290,9 @@ void DebugInfo::initDredLog() {
     return;
   }
 
-  std::filesystem::path outputTracePath = Config::Get().common.player.outputTracePath;
+  std::filesystem::path outputTracePath = Configurator::Get().common.player.outputTracePath;
   outputTracePath.remove_filename();
-  std::string streamDir = Config::Get().common.player.streamDir.filename().string();
+  std::string streamDir = Configurator::Get().common.player.streamDir.filename().string();
   std::string filenameBase = outputTracePath.string() + streamDir + "_dred";
   std::string fileNum;
   std::string fileExt = ".txt";

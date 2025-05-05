@@ -206,7 +206,7 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
         while (first <= last) {
           int mid = first + (last - first) / 2;
           GpuAddressMapping mapping = mappings[mid];
-          if (captureAddress >= mapping.captureStart && captureAddress < 
+          if (captureAddress >= mapping.captureStart && captureAddress <
               mapping.captureStart + mapping.size) {
             uint64_t offset = captureAddress - mapping.captureStart;
             uint64_t playbackAddress = mapping.playerStart + offset;
@@ -244,7 +244,7 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
     arguments.push_back(L"gits_patch");
     arguments.push_back(L"-T");
     arguments.push_back(L"cs_6_0");
-    if (Config::Get().directx.player.debugLayer) {
+    if (Configurator::Get().directx.player.debugLayer) {
       arguments.push_back(L"-Zi");
       arguments.push_back(L"-Qembed_debug");
     }

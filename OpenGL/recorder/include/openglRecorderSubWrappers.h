@@ -254,7 +254,7 @@ inline void glFinish_RECWRAP(CRecorder& recorder) {
     recorder.Schedule(new CglFinish());
   }
 
-  if (Config::Get().opengl.recorder.frames.frameSeparators.glFinishSep) {
+  if (Configurator::Get().opengl.recorder.frames.frameSeparators.glFinishSep) {
     recorder.FrameEnd();
   }
 }
@@ -264,7 +264,7 @@ inline void glFlush_RECWRAP(CRecorder& recorder) {
     recorder.Schedule(new CglFlush());
   }
 
-  if (Config::Get().opengl.recorder.frames.frameSeparators.glFlushSep) {
+  if (Configurator::Get().opengl.recorder.frames.frameSeparators.glFlushSep) {
     recorder.FrameEnd();
   }
 }

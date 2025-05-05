@@ -587,7 +587,7 @@ CKernelArgument::CKernelArgument(size_t allocSize, void* ptr)
 }
 
 void CKernelArgument::AllocateBuffer(const size_t& allocSize) {
-  if (!IsDumpOnlyLayoutEnabled(Config::Get())) {
+  if (!IsDumpOnlyLayoutEnabled(Configurator::Get())) {
     buffer = std::vector<char>(allocSize, '\0');
   }
 }
@@ -760,7 +760,7 @@ void LayoutBuilder::SaveLayoutToJsonFile() {
   }
   layout["ze_kernels"] = zeKernels;
 
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   const auto path = GetDumpPath(cfg) / "layout.json";
   SaveJsonFile(layout, path);
 }
@@ -780,11 +780,11 @@ nlohmann::ordered_json LayoutBuilder::GetOclocInfo(
     const auto size = oclocState->args.size();
     for (auto i = 0U; i < size; i++) {
       children.push_back(oclocState->args[i]);
-      if (Config::Get().IsRecorder() && oclocState->args[i] == "-options") {
+      if (Configurator::IsRecorder() && oclocState->args[i] == "-options") {
         std::string options = oclocState->args[++i];
-        options += " -I \"" + Config::Get().common.recorder.dumpPath.string() + "\"";
+        options += " -I \"" + Configurator::Get().common.recorder.dumpPath.string() + "\"";
         options +=
-            " -I \"" + (Config::Get().common.recorder.dumpPath / "gitsFiles").string() + "\"";
+            " -I \"" + (Configurator::Get().common.recorder.dumpPath / "gitsFiles").string() + "\"";
         children.push_back(options);
       }
     }

@@ -23,10 +23,10 @@ namespace OpenGL {
 inline void coherentBufferUpdate_PS(CRecorder& recorder) {
   if (SD().GetCurrentSharedStateData().coherentBufferMapping == true &&
       SD().GetCurrentContext() != nullptr) {
-    recorder.Schedule(
-        new CgitsCoherentBufferMapping(CCoherentBufferUpdate::TCoherentBufferData::TEXTURE_UPDATE,
-                                       CCoherentBufferUpdate::TCoherentBufferData::UPDATE_BOUND,
-                                       Config::Get().opengl.recorder.coherentMapUpdatePerFrame));
+    recorder.Schedule(new CgitsCoherentBufferMapping(
+        CCoherentBufferUpdate::TCoherentBufferData::TEXTURE_UPDATE,
+        CCoherentBufferUpdate::TCoherentBufferData::UPDATE_BOUND,
+        Configurator::Get().opengl.recorder.coherentMapUpdatePerFrame));
   }
 }
 

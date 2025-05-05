@@ -12,17 +12,18 @@
 #include "directXApi.h"
 #include "directStorageResourcesLayer.h"
 #include "analyzerResults.h"
+#include "configurationLib.h"
 
 namespace gits {
 namespace DirectX {
 
 SubcaptureFactory::SubcaptureFactory() {
 
-  if (!Config::Get().directx.features.subcapture.enabled) {
+  if (!Configurator::Get().directx.features.subcapture.enabled) {
     return;
   }
 
-  const std::string& frames = Config::Get().directx.features.subcapture.frames;
+  const std::string& frames = Configurator::Get().directx.features.subcapture.frames;
   try {
     int startFrame = std::stoi(frames);
     if (startFrame == 1) {
@@ -30,8 +31,8 @@ SubcaptureFactory::SubcaptureFactory() {
       exit(EXIT_FAILURE);
     }
   } catch (...) {
-    Log(ERR) << "Invalid subcapture range: '" + Config::Get().directx.features.subcapture.frames +
-                    "'";
+    Log(ERR) << "Invalid subcapture range: '" +
+                    Configurator::Get().directx.features.subcapture.frames + "'";
     exit(EXIT_FAILURE);
   }
 
@@ -41,7 +42,7 @@ SubcaptureFactory::SubcaptureFactory() {
     recordingLayer_ = std::make_unique<RecordingLayer>(*recorder_);
     directStorageResourcesLayer_ = std::make_unique<DirectStorageResourcesLayer>();
   } else {
-    const_cast<gits::Config&>(Config::Get()).directx.features.subcapture.enabled = false;
+    const_cast<gits::Config&>(Configurator::Get()).directx.features.subcapture.enabled = false;
     analyzerLayer_ = std::make_unique<AnalyzerLayer>();
     Log(INFO) << "SUBCAPTURE ANALYSIS. RUN AGAIN FOR SUBCAPTURE RECORDING.";
   }

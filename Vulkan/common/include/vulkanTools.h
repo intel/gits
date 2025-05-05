@@ -17,7 +17,9 @@
 #endif
 
 namespace gits {
-
+#ifndef BUILD_FOR_CCODE
+bool operator==(const CGits::CCounter& counter, const VulkanObjectRange& vulkanObjRange);
+#endif
 namespace Vulkan {
 
 struct CBufferState;
@@ -185,7 +187,6 @@ void checkReturnValue(VkResult playerSideReturnValue,
                       const char* functionName);
 uint32_t GetHash(uint32_t size, const void* data);
 bool IsObjectToSkip(uint64_t vulkanObject);
-bool operator==(const CGits::CCounter& counter, const VulkanObjectRange& vulkanObjRange);
 bool vulkanCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer bufferHandle, std::string fileName);
 bool vulkanCopyImage(VkCommandBuffer commandBuffer,
                      VkImage imageHandle,
@@ -224,8 +225,9 @@ void CreateRenderPasses_helper(VkDevice device,
                                VkRenderPass renderPass,
                                T pCreateInfo,
                                CreationFunction createdWith) {
-  if ((Config::Get().IsPlayer() && Config::Get().vulkan.player.oneVulkanDrawPerCommandBuffer) ||
-      (Config::Get().IsRecorder() &&
+  if ((Configurator::IsPlayer() &&
+       Configurator::Get().vulkan.player.oneVulkanDrawPerCommandBuffer) ||
+      (Configurator::IsRecorder() &&
        gits::CGits::Instance().apis.Iface3D().CfgRec_IsDrawsRangeMode())) {
     // For executing each Vulkan draw in separate VkCommandBuffer we need some additional VkRenderPasses:
     // - storeNoLoadRenderPassHandle - for modyfying original VkRenderPass - changing storeOp to STORE, loadOp is original
@@ -302,7 +304,7 @@ void CreateRenderPasses_helper(VkDevice device,
       _vkCreateRenderPass_Helper(device, &renderPassCreateInfo, nullptr,
                                  SD()._renderpassstates[renderPass]->restoreRenderPassHandle,
                                  createdWith);
-      if (Config::Get().IsRecorder()) {
+      if (Configurator::IsRecorder()) {
         auto restoreRenderPassState = std::make_shared<CRenderPassState>(
             &SD()._renderpassstates[renderPass]->restoreRenderPassHandle, &renderPassCreateInfo,
             createdWith, SD()._devicestates[device]);

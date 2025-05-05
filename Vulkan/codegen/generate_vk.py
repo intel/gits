@@ -498,7 +498,7 @@ def make_struct_field_log_code(field: Field) -> str:
 
         result += inspect.cleandoc(f'''
             ;
-              if ((isTraceDataOptPresent(TraceData::VK_STRUCTS)){additional_conditions}) {{
+              if ((Configurator::IsTraceDataOptPresent(TraceData::VK_STRUCTS)){additional_conditions}) {{
                 *this << "{{";
                 for (uint32_t i = 0; i < (uint32_t){count}; ++i) {{
                   *this << " [" << i << "]:" << {type_cast}c.{field.name}[i];
@@ -548,7 +548,7 @@ def make_argument_log_code(argument: Argument, count_is_a_pointer: bool) -> str:
 
         result += inspect.cleandoc(f'''
             ;
-                if ((isTraceDataOptPresent(TraceData::VK_STRUCTS)){additional_conditions}) {{
+                if ((Configurator::IsTraceDataOptPresent(TraceData::VK_STRUCTS)){additional_conditions}) {{
                   VkLog(TRACE, RAW) << "{{";
                   for (uint32_t i = 0; i < (uint32_t){dereference}{argument.count}; ++i) {{
                     VkLog(TRACE, RAW) << " [" << i << "]:" << {type_cast}{argument.name}[i];

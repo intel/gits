@@ -8,22 +8,24 @@
 
 #include "accelerationStructuresDumpLayer.h"
 #include "gits.h"
+#include "configurationLib.h"
 
 namespace gits {
 namespace DirectX {
 
 AccelerationStructuresDumpLayer::AccelerationStructuresDumpLayer()
     : Layer("AccelerationStructuresDump"),
-      callKeys_(Config::Get().directx.features.raytracingDump.commandKeys) {
-  auto& dumpPath = Config::Get().common.player.outputDir.empty()
-                       ? Config::Get().common.player.streamDir / "acceleration_structures"
-                       : Config::Get().common.player.outputDir;
+      callKeys_(Configurator::Get().directx.features.raytracingDump.commandKeys) {
+  auto& dumpPath = Configurator::Get().common.player.outputDir.empty()
+                       ? Configurator::Get().common.player.streamDir / "acceleration_structures"
+                       : Configurator::Get().common.player.outputDir;
   if (!dumpPath.empty() && !std::filesystem::exists(dumpPath)) {
     std::filesystem::create_directory(dumpPath);
   }
   dumpPath_ = dumpPath;
 
-  commandListModuloStep_.parse(Config::Get().directx.features.raytracingDump.commandListModuloStep);
+  commandListModuloStep_.parse(
+      Configurator::Get().directx.features.raytracingDump.commandListModuloStep);
 }
 
 void AccelerationStructuresDumpLayer::pre(ID3D12DeviceCreateCommandQueueCommand& c) {

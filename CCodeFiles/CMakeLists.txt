@@ -24,6 +24,7 @@ elseif(UNIX)
 endif()
 
 add_definitions(-DBUILD_FOR_CCODE)
+set(BUILD_FOR_CCODE 1)
 
 if(EMPTY_BUILD)
   add_definitions(-D_EMPTY_BUILD)
@@ -98,6 +99,11 @@ if(WIN32)
 endif()
 
 add_executable(CCodeProject ${CCodeProject_SOURCES})
+
+add_subdirectory(configuration)
+target_include_directories(CCodeProject PUBLIC configuration/src/include)
+target_link_libraries(CCodeProject configuration)
+
 if(MSVC)
   target_link_options(CCodeProject PUBLIC /STACK:100000000 /HEAP:100000000 /ignore:4006)
   set(LIBS OpenGL32 SetupAPI zlib png xxhash murmurhash lz4 libzstd_static)

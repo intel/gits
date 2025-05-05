@@ -8,6 +8,7 @@
 
 #include "intelExtensionsService.h"
 #include "gits.h"
+#include "configurationLib.h"
 
 #include <map>
 #include <setupapi.h>
@@ -60,7 +61,7 @@ void IntelExtensionsService::setApplicationInfo() {
 
   INTCExtensionAppInfo1 appInfo{};
 
-  const auto& appInfoConfigOverride = Config::Get().directx.player.applicationInfoOverride;
+  const auto& appInfoConfigOverride = Configurator::Get().directx.player.applicationInfoOverride;
   if (appInfoConfigOverride.enabled) {
     appName = appInfoConfigOverride.applicationName;
 

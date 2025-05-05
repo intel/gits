@@ -42,8 +42,9 @@ void PluginService::loadPlugins() {
     return lowerCaseStr;
   };
 
-  auto& cfg = Config::Get();
-  auto pluginNames = Config::IsPlayer() ? cfg.directx.player.plugins : cfg.directx.capture.plugins;
+  auto& cfg = Configurator::Get();
+  auto pluginNames =
+      Configurator::IsPlayer() ? cfg.directx.player.plugins : cfg.directx.capture.plugins;
   if (pluginNames.empty()) {
     return;
   }

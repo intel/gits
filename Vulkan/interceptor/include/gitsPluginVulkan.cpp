@@ -86,7 +86,7 @@ void CGitsPluginVulkan::ProcessTerminationDetected() {
   _loader->ProcessTerminationDetected();
 }
 
-const Config& CGitsPluginVulkan::Configuration() {
+Config& CGitsPluginVulkan::Configuration() {
   std::unique_lock<std::mutex> lock(_mutex);
   return _loader->GetConfiguration();
 }

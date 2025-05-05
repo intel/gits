@@ -8,11 +8,4 @@
 
 #pragma once
 
-namespace gits {
-// Returns true if GITS can finish after the function execution.
-// This happens when only help was requested from GITS.
-bool configure_player(int arg, char** argv);
-
-template <>
-CEnumParser<TraceData>::CEnumParser();
-} // namespace gits
+namespace gits {} // namespace gits

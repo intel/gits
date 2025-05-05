@@ -1,0 +1,211 @@
+From 1600bec8959270f712bca5f634b5e20a74e1cfa9 Mon Sep 17 00:00:00 2001
+From: Sebastian Schaefer <sebastian.schafer@intel.com>
+Date: Mon, 28 Apr 2025 11:46:24 +0200
+Subject: [PATCH] tags to filter, hide options and no tests
+
+---
+ CMakeLists.txt | 35 -------------------------
+ args.hxx       | 70 ++++++++++++++++++++++++++++++++++++++++++++------
+ 2 files changed, 62 insertions(+), 43 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 73a2062..09c40a6 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -56,41 +56,6 @@ if(ARGS_MAIN_PROJECT)
+     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/args-config-version.cmake" DESTINATION lib/cmake/args)
+ endif()
+ 
+-if (ARGS_BUILD_EXAMPLE)
+-    add_executable(gitlike examples/gitlike.cxx)
+-    target_link_libraries(gitlike args)
+-    set_property(TARGET gitlike PROPERTY CXX_STANDARD 11)
+-
+-    add_executable(completion examples/completion.cxx)
+-    target_link_libraries(completion args)
+-    set_property(TARGET completion PROPERTY CXX_STANDARD 11)
+-endif()
+-
+-if (ARGS_BUILD_UNITTESTS)
+-    add_executable(argstest test.cxx)
+-    target_link_libraries(argstest args)
+-    set_property(TARGET argstest PROPERTY CXX_STANDARD 11)
+-
+-    if (MSVC)
+-        target_compile_options(argstest PRIVATE /W4 /WX /bigobj)
+-    else ()
+-        target_compile_options(argstest PRIVATE -Wall -Wextra -Werror -pedantic -Wshadow -Wunused-parameter)
+-    endif ()
+-
+-    add_executable(argstest-multiple-inclusion test/multiple_inclusion_1.cxx test/multiple_inclusion_2.cxx)
+-
+-    target_link_libraries(argstest-multiple-inclusion args)
+-    set_property(TARGET argstest-multiple-inclusion PROPERTY CXX_STANDARD 11)
+-
+-    add_executable(argstest-windows-h test/windows_h.cxx)
+-    target_link_libraries(argstest-windows-h args)
+-    set_property(TARGET argstest-windows-h PROPERTY CXX_STANDARD 11)
+-
+-    enable_testing()
+-    add_test(NAME "test" COMMAND argstest)
+-    add_test(NAME "test-multiple-inclusion" COMMAND argstest-multiple-inclusion)
+-endif()
+-
+ add_library(taywee::args ALIAS args)
+ export(
+     TARGETS args
+diff --git a/args.hxx b/args.hxx
+index c0ec54a..5a87bd7 100644
+--- a/args.hxx
++++ b/args.hxx
+@@ -60,6 +60,7 @@
+ #ifdef ARGS_TESTNAMESPACE
+ namespace argstest
+ {
++    class Base;
+ #else
+ 
+ /** \namespace args
+@@ -67,7 +68,23 @@ namespace argstest
+  */
+ namespace args
+ {
++    class Base;
+ #endif
++    typedef bool (*FilterFunction)(const args::Base&);
++
++    static bool FilterAllowAll(const args::Base&) {
++        return true;
++    }
++
++    static bool FilterAllowNone(const args::Base&) {
++        return true;
++    }
++
++    static FilterFunction GlobalFilterOption = nullptr;
++
++    static bool HideGroupSection = false;
++    static char HiddenOptionSuffixMarker = '!';
++
+     /** Getter to grab the value from the argument type.
+      *
+      * If the Get() function of the type returns a reference, so does this, and
+@@ -480,7 +497,13 @@ namespace args
+              */
+             bool Match(const std::string &flag) const
+             {
+-                return longFlags.find(flag) != longFlags.end();
++                if (longFlags.find(flag) != longFlags.end()) {
++                    return true;
++                }
++                if (HiddenOptionSuffixMarker && (longFlags.find(flag + HiddenOptionSuffixMarker) != longFlags.end())) {
++                    return true;
++                }
++                return false;
+             }
+ 
+             /** (INTERNAL) Check if there is a match of a flag
+@@ -795,6 +818,7 @@ namespace args
+     {
+         private:
+             Options options = {};
++            std::vector<std::string> tags;
+ 
+         protected:
+             bool matched = false;
+@@ -871,6 +895,14 @@ namespace args
+                 return false;
+             }
+ 
++            std::vector<std::string> GetTags() const {
++                return tags;
++            }
++
++            void SetTags(std::vector<std::string> tags_) {
++                this->tags = std::vector<std::string>(tags_);
++            }
++
+             virtual bool HasPositional() const
+             {
+                 return false;
+@@ -999,6 +1031,9 @@ namespace args
+ 
+             virtual std::vector<std::tuple<std::string, std::string, unsigned>> GetDescription(const HelpParams &params, const unsigned indentLevel) const override
+             {
++                if ((args::GlobalFilterOption != nullptr) && (!(*args::GlobalFilterOption)(*this))) {
++                    return {};
++                }
+                 std::tuple<std::string, std::string, unsigned> description;
+                 std::get<0>(description) = GetNameString(params);
+                 std::get<1>(description) = help;
+@@ -1089,13 +1124,23 @@ namespace args
+                 std::string flags;
+                 const auto flagStrings = matcher.GetFlagStrings();
+                 const bool useValueNameOnce = flagStrings.size() == 1 ? false : params.useValueNameOnce;
++
++                size_t idx = 0;
+                 for (auto it = flagStrings.begin(); it != flagStrings.end(); ++it)
+                 {
+                     auto &flag = *it;
+-                    if (it != flagStrings.begin())
++                    const std::string flagStr = flag.str();
++
++                    if (HiddenOptionSuffixMarker != '\0' && !flagStr.empty() &&
++                        flagStr.back() == HiddenOptionSuffixMarker) {
++                        continue;
++                    }
++
++                    if (idx != 0)
+                     {
+                         flags += ", ";
+                     }
++                    idx += 1;
+ 
+                     flags += flag.isShort ? params.shortPrefix : params.longPrefix;
+                     flags += flag.str();
+@@ -1531,7 +1576,7 @@ namespace args
+ 
+                 // Push that group description on the back if not empty
+                 unsigned addindent = 0;
+-                if (!help.empty())
++                if (!help.empty() && !HideGroupSection)
+                 {
+                     descriptions.emplace_back(help, "", indent);
+                     addindent = 1;
+@@ -1545,12 +1590,18 @@ namespace args
+                     }
+ 
+                     auto groupDescriptions = child->GetDescription(params, indent + addindent);
+-                    descriptions.insert(
+-                        std::end(descriptions),
+-                        std::make_move_iterator(std::begin(groupDescriptions)),
+-                        std::make_move_iterator(std::end(groupDescriptions)));
++                    if (groupDescriptions.size() > 0) {
++                        descriptions.insert(
++                            std::end(descriptions),
++                            std::make_move_iterator(std::begin(groupDescriptions)),
++                            std::make_move_iterator(std::end(groupDescriptions)));
++                    }
+                 }
+-                return descriptions;
++
++                if (descriptions.size() > addindent) {
++                    return descriptions;
++                }
++                return {};
+             }
+ 
+             /** Get the names of positional parameters
+@@ -3007,6 +3058,9 @@ namespace args
+                     const auto info = Wrap(std::get<1>(desc), helpParams.width - (helpParams.helpindent + groupindent));
+ 
+                     std::string::size_type flagssize = 0;
++                    if (flags.size() == 0 && info.size() == 0) {
++                      continue;
++                    }
+                     for (auto flagsit = std::begin(flags); flagsit != std::end(flags); ++flagsit)
+                     {
+                         if (flagsit != std::begin(flags))
+-- 
+2.46.1.windows.1
+

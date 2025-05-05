@@ -9,6 +9,7 @@
 #include "traceFactory.h"
 #include "traceLayerAuto.h"
 #include "config.h"
+#include "configurationLib.h"
 #include "gits.h"
 #include "showExecutionLayer.h"
 
@@ -22,7 +23,7 @@ namespace gits {
 namespace DirectX {
 
 TraceFactory::TraceFactory() {
-  std::filesystem::path outputTracePath = Config::Get().common.player.outputTracePath;
+  std::filesystem::path outputTracePath = Configurator::Get().common.player.outputTracePath;
   outputTracePath.remove_filename();
 
   if (!outputTracePath.empty() && !std::filesystem::exists(outputTracePath)) {
@@ -34,8 +35,8 @@ TraceFactory::TraceFactory() {
   }
 
   std::filesystem::path filepath;
-  if (Config::IsPlayer()) {
-    const std::string streamDir = Config::Get().common.player.streamDir.filename().string();
+  if (Configurator::IsPlayer()) {
+    const std::string streamDir = Configurator::Get().common.player.streamDir.filename().string();
     filepath = outputTracePath / streamDir;
   } else {
     std::filesystem::path appName = CGits::Instance().FileRecorder().GetApplicationName();
@@ -59,7 +60,7 @@ TraceFactory::TraceFactory() {
   const std::string finalOutputPathPre = filepathBasePre.string() + fileNum + fileExt;
   const std::string finalOutputPathExecution = filepathBaseExecution.string() + fileNum + fileExt;
 
-  const auto& configDirectX = Config::Get().directx;
+  const auto& configDirectX = Configurator::Get().directx;
   const auto flushMethod = configDirectX.features.trace.flushMethod == "file"
                                ? FastOStringStream::FlushMethod::File
                                : FastOStringStream::FlushMethod::Ipc;

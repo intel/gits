@@ -317,7 +317,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
   uint64_t dispatchCount = 0;
   for (auto elem : _tokensList) {
     cmdBuffer = CVkCommandBuffer::GetMapping(elem->CommandBuffer());
-    if (Config::Get().vulkan.player.oneVulkanDrawPerCommandBuffer &&
+    if (Configurator::Get().vulkan.player.oneVulkanDrawPerCommandBuffer &&
         elem->Type() & CFunction::GITS_VULKAN_BEGIN_RENDER_PASS_APITYPE) {
       //  For executing each Vulkan draw in separate VkCommandBuffer we need to modify original storeOp (set it to STORE)
       elem->StateTrack();
@@ -366,18 +366,18 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
       elem->StateTrack();
     }
 
-    if (Config::Get().vulkan.player.oneVulkanDrawPerCommandBuffer &&
+    if (Configurator::Get().vulkan.player.oneVulkanDrawPerCommandBuffer &&
         (elem->Type() & CFunction::GITS_VULKAN_DRAW_APITYPE)) {
       ++drawInRenderPass;
       ++drawCount;
       FinishRenderPass(renderPassCount, drawCount, cmdBuffer);
       CGits::CCounter localCounter = {queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
                                       renderPassCount, drawInRenderPass};
-      if (localCounter == Config::Get().vulkan.player.captureVulkanDraws) {
+      if (localCounter == Configurator::Get().vulkan.player.captureVulkanDraws) {
         vulkanScheduleCopyRenderPasses(cmdBuffer, queueSubmitNumber, cmdBuffBatchNumber,
                                        cmdBuffNumber, renderPassCount, drawInRenderPass);
       }
-      if (localCounter == Config::Get().vulkan.player.captureVulkanResources) {
+      if (localCounter == Configurator::Get().vulkan.player.captureVulkanResources) {
         vulkanScheduleCopyResources(cmdBuffer, queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
                                     renderPassCount, VulkanDumpingMode::VULKAN_PER_DRAW,
                                     drawInRenderPass);
@@ -387,7 +387,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
         vulkanDumpRenderPasses(cmdBuffer);
       }
       bool capturesResourcesCheck =
-          !Config::Get().vulkan.player.captureVulkanResources.empty() &&
+          !Configurator::Get().vulkan.player.captureVulkanResources.empty() &&
           (!SD()._commandbufferstates[cmdBuffer]->renderPassResourceImages.empty() ||
            !SD()._commandbufferstates[cmdBuffer]->renderPassResourceBuffers.empty());
       if (capturesResourcesCheck) {
@@ -400,7 +400,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
       blitCount++;
       CGits::CCounter localCounter = {queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
                                       blitCount};
-      if (localCounter == Config::Get().vulkan.player.captureVulkanResources) {
+      if (localCounter == Configurator::Get().vulkan.player.captureVulkanResources) {
         vulkanScheduleCopyResources(cmdBuffer, queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
                                     blitCount, VulkanDumpingMode::VULKAN_PER_BLIT);
       }
@@ -409,13 +409,13 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
       dispatchCount++;
       CGits::CCounter localCounter = {queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
                                       dispatchCount};
-      if (localCounter == Config::Get().vulkan.player.captureVulkanResources) {
+      if (localCounter == Configurator::Get().vulkan.player.captureVulkanResources) {
         vulkanScheduleCopyResources(cmdBuffer, queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
                                     dispatchCount, VulkanDumpingMode::VULKAN_PER_DISPATCH);
       }
 
       bool capturesResourcesCheck =
-          !Config::Get().vulkan.player.captureVulkanResources.empty() &&
+          !Configurator::Get().vulkan.player.captureVulkanResources.empty() &&
           (!SD()._commandbufferstates[cmdBuffer]->renderPassResourceImages.empty() ||
            !SD()._commandbufferstates[cmdBuffer]->renderPassResourceBuffers.empty());
       if (capturesResourcesCheck) {
@@ -427,7 +427,7 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
       }
     }
     if (elem->Type() & CFunction::GITS_VULKAN_END_RENDER_PASS_APITYPE) {
-      if (Config::Get().vulkan.player.oneVulkanDrawPerCommandBuffer) {
+      if (Configurator::Get().vulkan.player.oneVulkanDrawPerCommandBuffer) {
         VkRenderPassBeginInfo* renderPassBeginInfoPtr = SD()._commandbufferstates[cmdBuffer]
                                                             ->beginRenderPassesList.back()
                                                             ->renderPassBeginInfoData.Value();
@@ -491,24 +491,24 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ExecAndDump(uint64_t queueSubmi
       }
       CGits::CCounter localCounter = {queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
                                       renderPassCount};
-      if (localCounter == Config::Get().vulkan.player.captureVulkanRenderPasses) {
+      if (localCounter == Configurator::Get().vulkan.player.captureVulkanRenderPasses) {
         vulkanScheduleCopyRenderPasses(cmdBuffer, queueSubmitNumber, cmdBuffBatchNumber,
                                        cmdBuffNumber, renderPassCount);
       }
-      if (localCounter == Config::Get().vulkan.player.captureVulkanRenderPassesResources) {
+      if (localCounter == Configurator::Get().vulkan.player.captureVulkanRenderPassesResources) {
         vulkanScheduleCopyResources(cmdBuffer, queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
                                     renderPassCount, VulkanDumpingMode::VULKAN_PER_RENDER_PASS);
       }
       renderPassCount++;
       drawInRenderPass = 0;
-      if (Config::Get().vulkan.player.oneVulkanRenderPassPerCommandBuffer) {
+      if (Configurator::Get().vulkan.player.oneVulkanRenderPassPerCommandBuffer) {
         FinishCommandBufferAndSubmit(cmdBuffer);
         bool captureVulkanRenderPassesCheck =
-            !Config::Get().vulkan.player.captureVulkanRenderPasses.empty() &&
+            !Configurator::Get().vulkan.player.captureVulkanRenderPasses.empty() &&
             !SD()._commandbufferstates[cmdBuffer]->renderPassImages.empty();
 
         bool captureVulkanRenderPassesResourcesCheck =
-            !Config::Get().vulkan.player.captureVulkanRenderPassesResources.empty() &&
+            !Configurator::Get().vulkan.player.captureVulkanRenderPassesResources.empty() &&
             (!SD()._commandbufferstates[cmdBuffer]->renderPassResourceImages.empty() ||
              !SD()._commandbufferstates[cmdBuffer]->renderPassResourceBuffers.empty());
         if (captureVulkanRenderPassesCheck) {

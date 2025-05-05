@@ -19,6 +19,8 @@
 #include "gitsPluginPrePostAuto.h"
 #include "pragmas.h"
 
+#include "configurationLib.h"
+
 #include <mutex>
 
 #ifdef GITS_PLATFORM_X11

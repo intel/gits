@@ -22,7 +22,7 @@ namespace gits {
 namespace OpenCL {
 namespace {
 bool CheckCaptureMemObjectReads(const cl_mem& memObj) {
-  const auto& cfgOpenCLPlayer = Config::Get().opencl.player;
+  const auto& cfgOpenCLPlayer = Configurator::Get().opencl.player;
   if (!cfgOpenCLPlayer.captureReads || !cfgOpenCLPlayer.captureKernels.empty()) {
     return false;
   }
@@ -235,7 +235,7 @@ inline void clEnqueueNDRangeKernel_RUNWRAP(CCLResult& _return_value,
                                            Ccl_event::CSArray& _event_wait_list,
                                            Ccl_event::CSMapArray& _event) {
   CGits::Instance().KernelCountUp();
-  auto& cfg = Config::Get().opencl.player;
+  auto& cfg = Configurator::Get().opencl.player;
   if (cfg.aubSignaturesCL) {
     InjectKernelArgOperations(*_kernel, *_command_queue, *_event);
   }
@@ -466,7 +466,7 @@ inline void clCreateBuffer_RUNWRAP(Ccl_mem& _return_value,
                                    Csize_t& _size,
                                    CAsyncBinaryData& _host_ptr,
                                    CCLResult::CSArray& _errcode_ret) {
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   const auto signature = GenerateSignature();
   size_t size = *_size;
   if (cfg.opencl.player.aubSignaturesCL) {
@@ -536,7 +536,7 @@ inline void clCreateImage_RUNWRAP(Ccl_mem& _return_value,
   }
   const auto isUsingHostPtr = (*_flags & (CL_MEM_COPY_HOST_PTR | CL_MEM_USE_HOST_PTR));
   if (ErrCodeSuccess(*_errcode_ret) && !isUsingHostPtr &&
-      CheckCfgZeroInitialization(Config::Get(), IsReadOnlyBuffer(*_flags, nullptr))) {
+      CheckCfgZeroInitialization(Configurator::Get(), IsReadOnlyBuffer(*_flags, nullptr))) {
     const auto device = GetGpuDevice();
     const auto commandQueue = GetCommandQueue(*_context, device);
     ZeroInitializeImage(commandQueue, *_return_value, size, image_desc.image_width,
@@ -574,7 +574,7 @@ inline void clCreateImage2D_RUNWRAP(Ccl_mem& _return_value,
   }
   const auto isUsingHostPtr = (*_flags & (CL_MEM_COPY_HOST_PTR | CL_MEM_USE_HOST_PTR));
   if (ErrCodeSuccess(*_errcode_ret) && !isUsingHostPtr &&
-      CheckCfgZeroInitialization(Config::Get(), IsReadOnlyBuffer(*_flags, nullptr))) {
+      CheckCfgZeroInitialization(Configurator::Get(), IsReadOnlyBuffer(*_flags, nullptr))) {
     const auto device = GetGpuDevice();
     const auto commandQueue = GetCommandQueue(*_context, device);
     ZeroInitializeImage(commandQueue, *_return_value, size, *_image_width, *_image_height, 1,
@@ -614,7 +614,7 @@ inline void clCreateImage3D_RUNWRAP(Ccl_mem& _return_value,
   }
   const auto isUsingHostPtr = (*_flags & (CL_MEM_COPY_HOST_PTR | CL_MEM_USE_HOST_PTR));
   if (ErrCodeSuccess(*_errcode_ret) && !isUsingHostPtr &&
-      CheckCfgZeroInitialization(Config::Get(), IsReadOnlyBuffer(*_flags, nullptr))) {
+      CheckCfgZeroInitialization(Configurator::Get(), IsReadOnlyBuffer(*_flags, nullptr))) {
     const auto device = GetGpuDevice();
     const auto commandQueue = GetCommandQueue(*_context, device);
     ZeroInitializeImage(commandQueue, *_return_value, size, *_image_width, *_image_height,
@@ -655,7 +655,7 @@ inline void clEnqueueReadBuffer_RUNWRAP(CFunction* _token,
                                         Ccl_event::CSArray& _event_wait_list,
                                         Ccl_event::CSMapArray& _event) {
   const auto captureReads = CheckCaptureMemObjectReads(*_buffer);
-  const auto& cfg = Config::Get().opencl.player;
+  const auto& cfg = Configurator::Get().opencl.player;
   auto& sd = SD();
   if (captureReads || cfg.captureKernels.empty()) {
     size_t size = *_cb;
@@ -705,7 +705,7 @@ inline void clEnqueueReadBufferRect_RUNWRAP(CFunction* _token,
                                             Ccl_uint& _num_events_in_wait_list,
                                             Ccl_event::CSArray& _event_wait_list,
                                             Ccl_event::CSMapArray& _event) {
-  const auto& cfg = Config::Get().opencl.player;
+  const auto& cfg = Configurator::Get().opencl.player;
   auto& sd = SD();
   const auto captureReads = CheckCaptureMemObjectReads(*_buffer);
   if (captureReads || cfg.captureKernels.empty()) {
@@ -753,7 +753,7 @@ inline void clEnqueueReadImage_RUNWRAP(CFunction* _token,
                                        Ccl_uint& _num_events_in_wait_list,
                                        Ccl_event::CSArray& _event_wait_list,
                                        Ccl_event::CSMapArray& _event) {
-  const auto& cfg = Config::Get().opencl.player;
+  const auto& cfg = Configurator::Get().opencl.player;
   auto& sd = SD();
   const auto format = sd.GetMemState(*_image, EXCEPTION_MESSAGE).image_format;
   const auto region = *_region;
@@ -938,7 +938,7 @@ inline void clCreateBufferWithPropertiesINTEL_RUNWRAP(
     Csize_t& _size,
     CAsyncBinaryData& _host_ptr,
     CCLResult::CSArray& _errcode_ret) {
-  const auto& cfg = Config::Get().opencl.player;
+  const auto& cfg = Configurator::Get().opencl.player;
   const auto signature = GenerateSignature();
   auto size = *_size;
   if (cfg.aubSignaturesCL) {
@@ -968,7 +968,7 @@ inline void clCreateBufferWithPropertiesINTEL_RUNWRAP(
       (*_properties != nullptr && (propFlags & (CL_MEM_COPY_HOST_PTR | CL_MEM_USE_HOST_PTR))) ||
       (*_flags & (CL_MEM_COPY_HOST_PTR | CL_MEM_USE_HOST_PTR));
   if (ErrCodeSuccess(*_errcode_ret) && !isUsingHostPtr &&
-      CheckCfgZeroInitialization(Config::Get(), IsReadOnlyBuffer(*_flags, *_properties))) {
+      CheckCfgZeroInitialization(Configurator::Get(), IsReadOnlyBuffer(*_flags, *_properties))) {
     const auto device = GetGpuDevice();
     const auto commandQueue = GetCommandQueue(*_context, device);
     ZeroInitializeBuffer(commandQueue, *_return_value, size);
@@ -982,7 +982,7 @@ inline void clCreateProgramWithSource_RUNWRAP(CFunction* _token,
                                               CProgramSource& _strings,
                                               Csize_t::CSArray& _lengths,
                                               CCLResult::CSArray& _errcode_ret) {
-  auto lengths = Config::Get().opencl.player.removeSourceLengths ? nullptr : *_lengths;
+  auto lengths = Configurator::Get().opencl.player.removeSourceLengths ? nullptr : *_lengths;
   _return_value.Assign(
       drvOcl.clCreateProgramWithSource(*_context, *_count, *_strings, lengths, *_errcode_ret));
   clCreateProgramWithSource_SD(_token, *_return_value, *_context, *_count, *_strings, lengths,
@@ -1000,7 +1000,7 @@ inline void clEnqueueNDCountKernelINTEL_RUNWRAP(CCLResult& _return_value,
                                                 Ccl_event::CSArray& _eventWaitList,
                                                 Ccl_event::CSMapArray& _event) {
   CGits::Instance().KernelCountUp();
-  auto& cfg = Config::Get().opencl.player;
+  auto& cfg = Configurator::Get().opencl.player;
   if (cfg.aubSignaturesCL) {
     InjectKernelArgOperations(*_kernel, *_command_queue, *_event);
   }
@@ -1052,7 +1052,8 @@ inline void clCreateImageWithPropertiesINTEL_RUNWRAP(Ccl_mem& _return_value,
                                    (CL_MEM_COPY_HOST_PTR | CL_MEM_USE_HOST_PTR))) ||
       (*_flags & (CL_MEM_COPY_HOST_PTR | CL_MEM_USE_HOST_PTR));
   if (ErrCodeSuccess(*_errcode_ret) && !isUsingHostPtr &&
-      CheckCfgZeroInitialization(Config::Get(), IsReadOnlyBuffer(*_flags, mappedProps.data()))) {
+      CheckCfgZeroInitialization(Configurator::Get(),
+                                 IsReadOnlyBuffer(*_flags, mappedProps.data()))) {
     const auto device = GetGpuDevice();
     const auto commandQueue = GetCommandQueue(*_context, device);
     ZeroInitializeImage(commandQueue, *_return_value, size, image_desc.image_width,
@@ -1083,7 +1084,7 @@ inline void clDeviceMemAllocINTEL_RUNWRAP(CCLMappedPtr& _return_value,
   _return_value.Assign(drvOcl.clDeviceMemAllocINTEL(*_context, *_device, modProps.data(), *_size,
                                                     *_alignment, *_errcode_ret));
   if (ErrCodeSuccess(*_errcode_ret) &&
-      CheckCfgZeroInitialization(Config::Get(), IsReadOnlyBuffer(0, modProps.data()))) {
+      CheckCfgZeroInitialization(Configurator::Get(), IsReadOnlyBuffer(0, modProps.data()))) {
     const auto device = GetGpuDevice();
     const auto commandQueue = GetCommandQueue(*_context, device);
     ZeroInitializeUsm(commandQueue, *_return_value, *_size, UnifiedMemoryType::device);
@@ -1102,7 +1103,7 @@ inline void clHostMemAllocINTEL_RUNWRAP(CCLMappedPtr& _return_value,
   _return_value.Assign(
       drvOcl.clHostMemAllocINTEL(*_context, modProps.data(), *_size, *_alignment, *_errcode_ret));
   if (ErrCodeSuccess(*_errcode_ret) &&
-      CheckCfgZeroInitialization(Config::Get(), IsReadOnlyBuffer(0, modProps.data()))) {
+      CheckCfgZeroInitialization(Configurator::Get(), IsReadOnlyBuffer(0, modProps.data()))) {
     ZeroInitializeUsm(nullptr, *_return_value, *_size, UnifiedMemoryType::host);
   }
   clHostMemAllocINTEL_SD(*_return_value, *_context, modProps.data(), *_size, *_alignment,
@@ -1120,7 +1121,7 @@ inline void clSharedMemAllocINTEL_RUNWRAP(CCLMappedPtr& _return_value,
   _return_value.Assign(drvOcl.clSharedMemAllocINTEL(*_context, *_device, modProps.data(), *_size,
                                                     *_alignment, *_errcode_ret));
   if (ErrCodeSuccess(*_errcode_ret) &&
-      CheckCfgZeroInitialization(Config::Get(), IsReadOnlyBuffer(0, modProps.data()))) {
+      CheckCfgZeroInitialization(Configurator::Get(), IsReadOnlyBuffer(0, modProps.data()))) {
     ZeroInitializeUsm(nullptr, *_return_value, *_size, UnifiedMemoryType::shared);
   }
   clSharedMemAllocINTEL_SD(*_return_value, *_context, *_device, modProps.data(), *_size,
@@ -1275,7 +1276,7 @@ inline void clSVMAlloc_RUNWRAP(CCLMappedPtr& _return_value,
                                Ccl_uint& _alignment) {
   _return_value.Assign(drvOcl.clSVMAlloc(*_context, *_flags, *_size, *_alignment));
   if (*_return_value != nullptr &&
-      CheckCfgZeroInitialization(Config::Get(), IsReadOnlyBuffer(*_flags))) {
+      CheckCfgZeroInitialization(Configurator::Get(), IsReadOnlyBuffer(*_flags))) {
     const auto device = GetGpuDevice();
     const auto commandQueue = GetCommandQueue(*_context, device);
     ZeroInitializeSvm(commandQueue, *_return_value, *_size, *_flags & CL_MEM_SVM_FINE_GRAIN_BUFFER);

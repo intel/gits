@@ -15,11 +15,11 @@
 #pragma once
 
 #include "gitsLoader.h"
+#include "config.h"
 
 namespace gits {
 
 class CRecorder;
-struct Config;
 
 namespace Vulkan {
 class IRecorderWrapper;
@@ -37,7 +37,7 @@ public:
     return *_recorderWrapper;
   }
   static void ProcessTerminationDetected();
-  static const Config& Configuration();
+  static Config& Configuration();
 };
 } // namespace Vulkan
 } // namespace gits

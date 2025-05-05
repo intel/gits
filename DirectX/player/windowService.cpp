@@ -15,17 +15,18 @@ namespace gits {
 namespace DirectX {
 
 HWND WindowService::createWindow(HWND captureHwnd, int width, int height) {
-  int wndWidth = gits::Config::Get().common.player.forceWindowSize.enabled
-                     ? gits::Config::Get().common.player.forceWindowSize.width
+
+  int wndWidth = Configurator::Get().common.player.forceWindowSize.enabled
+                     ? Configurator::Get().common.player.forceWindowSize.width
                      : width;
-  int wndHeight = gits::Config::Get().common.player.forceWindowSize.enabled
-                      ? gits::Config::Get().common.player.forceWindowSize.height
+  int wndHeight = Configurator::Get().common.player.forceWindowSize.enabled
+                      ? Configurator::Get().common.player.forceWindowSize.height
                       : height;
-  int wndPosX = gits::Config::Get().common.player.forceWindowPos.enabled
-                    ? gits::Config::Get().common.player.forceWindowPos.x
+  int wndPosX = Configurator::Get().common.player.forceWindowPos.enabled
+                    ? Configurator::Get().common.player.forceWindowPos.x
                     : 10;
-  int wndPosY = gits::Config::Get().common.player.forceWindowPos.enabled
-                    ? gits::Config::Get().common.player.forceWindowPos.y
+  int wndPosY = Configurator::Get().common.player.forceWindowPos.enabled
+                    ? Configurator::Get().common.player.forceWindowPos.y
                     : 10;
 
   auto it = windowMap_.find(captureHwnd);

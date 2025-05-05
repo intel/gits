@@ -99,7 +99,7 @@ int __ocloccall special_oclocInvoke(unsigned int argc,
   bool call_orig = true;
   int ret = 0;
 #ifndef BUILD_FOR_CCODE
-  if (gits::Config::Get().common.shared.useEvents) {
+  if (Configurator::Get().common.shared.useEvents) {
     std::unique_lock<std::recursive_mutex> lock(gits::lua::luaMutex);
     if (!bypass_luascript) {
       auto L = CGits::Instance().GetLua().get();
@@ -159,7 +159,7 @@ int __ocloccall default_oclocInvoke(unsigned int argc,
     return -1;
   }
   drv.orig_oclocInvoke = drv.oclocInvoke;
-  if (ShouldLog(TRACE) || Config::Get().common.shared.useEvents) {
+  if (ShouldLog(LogLevel::TRACE) || Configurator::Get().common.shared.useEvents) {
     drv.oclocInvoke = special_oclocInvoke;
   }
   return drv.oclocInvoke(argc, argv, numSources, sources, sourceLens, sourcesNames, numInputHeaders,
@@ -174,7 +174,7 @@ int __ocloccall special_oclocFreeOutput(uint32_t* numOutputs,
   int ret = 0;
   bool call_orig = true;
 #ifndef BUILD_FOR_CCODE
-  if (gits::Config::Get().common.shared.useEvents) {
+  if (Configurator::Get().common.shared.useEvents) {
     std::unique_lock<std::recursive_mutex> lock(gits::lua::luaMutex);
     if (!bypass_luascript) {
       auto L = CGits::Instance().GetLua().get();
@@ -212,7 +212,7 @@ int __ocloccall default_oclocFreeOutput(uint32_t* numOutputs,
     return -1;
   }
   drv.orig_oclocFreeOutput = drv.oclocFreeOutput;
-  if (ShouldLog(TRACE) || Config::Get().common.shared.useEvents) {
+  if (ShouldLog(LogLevel::TRACE) || Configurator::Get().common.shared.useEvents) {
     drv.oclocFreeOutput = special_oclocFreeOutput;
   }
   return drv.oclocFreeOutput(numOutputs, dataOutputs, lenOutputs, nameOutputs);
@@ -309,7 +309,7 @@ void CDriver::Initialize() {
   if (initialized_) {
     return;
   }
-  const std::string path = gits::Config::Get().common.shared.libOcloc.string();
+  const std::string path = Configurator::Get().common.shared.libOcloc.string();
   Log(INFO) << "Initializing Ocloc API";
 
   lib_ = nullptr;

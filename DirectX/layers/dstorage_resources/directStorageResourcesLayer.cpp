@@ -8,6 +8,7 @@
 
 #include "directStorageResourcesLayer.h"
 #include "config.h"
+#include "configurationLib.h"
 #include "gits.h"
 
 #include <fstream>
@@ -17,9 +18,9 @@ namespace gits {
 namespace DirectX {
 
 DirectStorageResourcesLayer::DirectStorageResourcesLayer() : Layer("DirectStorageResources") {
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   const auto& outFileDir =
-      Config::IsPlayer() ? cfg.common.player.subcapturePath : cfg.common.recorder.dumpPath;
+      Configurator::IsPlayer() ? cfg.common.player.subcapturePath : cfg.common.recorder.dumpPath;
   outFilePath_ = outFileDir / "DirectStorageResources.bin";
   outFile_.open(outFilePath_, std::ios::binary);
 }

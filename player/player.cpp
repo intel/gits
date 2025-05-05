@@ -23,6 +23,7 @@
 #include "exception.h"
 #include "log.h"
 #include "config.h"
+#include "configurationLib.h"
 #include "buffer.h"
 
 #include <iostream>
@@ -39,9 +40,11 @@
  * @param dumpScreenshots Defines if player should dump screenshot for every replayed frame
  */
 gits::CPlayer::CPlayer() : _state(STATE_RUNNING) {
+  const auto& config = Configurator::Get();
   CGits::Instance().SetSC(&this->_sc);
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   _interactive = cfg.common.player.interactive;
+
   _sc.scheduler.reset(
 #if defined GITS_PLATFORM_WINDOWS
       new CScheduler(cfg.common.player.tokenBurst, cfg.common.player.tokenBurstNum,
@@ -91,7 +94,7 @@ void gits::CPlayer::Play() {
 
   const bool finished = _sc.scheduler->Run(*_sc.action);
 
-  const auto& cfgPlayer = Config::Get().common.player;
+  const auto& cfgPlayer = Configurator::Get().common.player;
   // Finish when scheduler doesn't have anything more for us,
   // or we are on a token that makes us process events and
   // frame number is matching our last frame + 1
@@ -110,13 +113,13 @@ void gits::CPlayer::Play() {
 }
 
 void gits::CPlayer::GLResourceCleanup() {
-  if (gits::Config::Get().common.player.cleanResourcesOnExit) {
+  if (Configurator::Get().common.player.cleanResourcesOnExit) {
     gits::OpenGL::CleanResources();
   }
 }
 
 void gits::CPlayer::GLContextsCleanup() {
-  if (gits::Config::Get().opengl.player.destroyContextsOnExit) {
+  if (Configurator::Get().opengl.player.destroyContextsOnExit) {
     gits::OpenGL::DestroyAllContexts();
   }
 }

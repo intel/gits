@@ -48,7 +48,7 @@ namespace gits {
       virtual ArgInfo ArgumentInfo(unsigned idx) const override;
       virtual unsigned ArgumentCount() const override { return ${len(token.args)}; }
     % if has_retval:
-      virtual const CArgument* Return() const { return (stream_older_than(GITS_VULKAN_RETURN_VALUE_FIX) && Config::IsPlayer()) ? CFunction::Return() : &_return_value; }
+      virtual const CArgument* Return() const { return (stream_older_than(GITS_VULKAN_RETURN_VALUE_FIX) && Configurator::IsPlayer()) ? CFunction::Return() : &_return_value; }
     % endif
 
     public:

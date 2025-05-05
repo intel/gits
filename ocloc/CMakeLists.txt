@@ -43,17 +43,17 @@ add_library(ocloc_recorder
 include_directories(recorder)
 
 list(APPEND ocloc_interceptor_files
-  ../common/tools_lite.cpp
-  ../common/exception.cpp
-  ../common/dynamic_linker.cpp
-  ../common/gitsLoader.cpp
-  ../common/log.cpp
+  ../common/legacy/tools_lite.cpp
+  ../common/legacy/exception.cpp
+  ../common/legacy/dynamic_linker.cpp
+  ../common/legacy/gitsLoader.cpp
+  ../common/legacy/log.cpp
   interceptor/gitsPluginOcloc.cpp
   interceptor/include/gitsPluginOcloc.h
   interceptor/oclocEntryPoints.cpp
 )
 if(WIN32)
-  list(APPEND ocloc_interceptor_files ../common/tools_windows.cpp)
+  list(APPEND ocloc_interceptor_files ../common/legacy/tools_windows.cpp)
 endif()
 
 add_library(ocloc_interceptor SHARED ${ocloc_interceptor_files})

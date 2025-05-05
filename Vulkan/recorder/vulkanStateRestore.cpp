@@ -396,7 +396,7 @@ void gits::Vulkan::PrepareTemporaryResources(CScheduler& scheduler, CStateDynami
     auto& deviceResources = deviceResourcesPair.second;
 
     deviceResources.submitableResources.resize(
-        Config::Get().vulkan.recorder.reusableStateRestoreResourcesCount,
+        Configurator::Get().vulkan.recorder.reusableStateRestoreResourcesCount,
         {VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE});
 
     // Create temporary command pool
@@ -473,7 +473,7 @@ void gits::Vulkan::PrepareTemporaryResources(CScheduler& scheduler, CStateDynami
       }
 
       if ((TBufferStateRestoration::WITH_NON_HOST_VISIBLE_MEMORY_ONLY ==
-           Config::Get().vulkan.recorder.crossPlatformStateRestoration.buffers) &&
+           Configurator::Get().vulkan.recorder.crossPlatformStateRestoration.buffers) &&
           (checkMemoryMappingFeasibility(
               device,
               bufferState->binding->deviceMemoryStateStore->memoryAllocateInfoData.Value()
@@ -509,7 +509,7 @@ void gits::Vulkan::PrepareTemporaryResources(CScheduler& scheduler, CStateDynami
 
     deviceResources.maxBufferSize =
         std::max(static_cast<VkDeviceSize>(
-                     Config::Get().vulkan.recorder.reusableStateRestoreBufferSize * 1000000),
+                     Configurator::Get().vulkan.recorder.reusableStateRestoreBufferSize * 1000000),
                  deviceResources.maxBufferSize);
   }
 }
@@ -665,7 +665,7 @@ void gits::Vulkan::RestoreMappedMemory(CScheduler& scheduler, CStateDynamic& sd)
     if (checkMemoryMappingFeasibility(
             deviceMemoryState.second->deviceStateStore->deviceHandle,
             deviceMemoryState.second->memoryAllocateInfoData.Value()->memoryTypeIndex, false)) {
-      if (TMemoryStateRestoration::NONE != Config::Get().vulkan.recorder.memoryRestoration) {
+      if (TMemoryStateRestoration::NONE != Configurator::Get().vulkan.recorder.memoryRestoration) {
         scheduler.Register(new CGitsVkMemoryRestore(
             deviceMemoryState.second->deviceStateStore->deviceHandle, deviceMemoryState.first,
             deviceMemoryState.second->memoryAllocateInfoData.Value()->allocationSize));
@@ -694,7 +694,7 @@ void gits::Vulkan::RestoreImage(CScheduler& scheduler, CStateDynamic& sd) {
 
     if (nullptr != imageState.second->imageCreateInfoData.Value()) {
       auto imageCreateInfo = *imageState.second->imageCreateInfoData.Value();
-      if (Config::Get().vulkan.recorder.crossPlatformStateRestoration.images) {
+      if (Configurator::Get().vulkan.recorder.crossPlatformStateRestoration.images) {
         imageCreateInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
       }
       scheduler.Register(new CvkCreateImage(VK_SUCCESS,
@@ -865,7 +865,7 @@ void gits::Vulkan::RestoreBuffer(CScheduler& scheduler, CStateDynamic& sd) {
     {
       auto bufferCreateInfo = *bufferState->bufferCreateInfoData.Value();
       if (TBufferStateRestoration::NONE !=
-          Config::Get().vulkan.recorder.crossPlatformStateRestoration.buffers) {
+          Configurator::Get().vulkan.recorder.crossPlatformStateRestoration.buffers) {
         bufferCreateInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
       }
       scheduler.Register(
@@ -2324,7 +2324,7 @@ void gits::Vulkan::RestoreAllocatedCommandBuffers(CScheduler& scheduler, CStateD
 
 void gits::Vulkan::RestoreCommandBuffers(CScheduler& scheduler, CStateDynamic& sd, bool force) {
   auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
-  if (Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit ||
+  if (Configurator::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit ||
       (api3dIface.CfgRec_IsSubFrameMode() && !force)) {
     return;
   }
@@ -2506,7 +2506,7 @@ bool isResourceOmittedFromContentsRestoration(uint64_t resource,
     if (!imageState->swapchainKHRStateStore &&
         ((!imageState->imageCreateInfoData.Value()) ||
          (imageState->imageCreateInfoData.Value()->samples != VK_SAMPLE_COUNT_1_BIT &&
-          !gits::Config::Get().vulkan.recorder.restoreMultisampleImagesWA))) {
+          !gits::Configurator::Get().vulkan.recorder.restoreMultisampleImagesWA))) {
       return true;
     }
 
@@ -2587,7 +2587,7 @@ bool isResourceOmittedFromContentsRestoration(uint64_t resource,
     }
 
     if ((gits::TBufferStateRestoration::WITH_NON_HOST_VISIBLE_MEMORY_ONLY ==
-         gits::Config::Get().vulkan.recorder.crossPlatformStateRestoration.buffers) &&
+         gits::Configurator::Get().vulkan.recorder.crossPlatformStateRestoration.buffers) &&
         (gits::Vulkan::checkMemoryMappingFeasibility(
             device,
             bufferState->binding->deviceMemoryStateStore->memoryAllocateInfoData.Value()
@@ -2643,7 +2643,7 @@ inline bool useSynchronization2(VkPhysicalDevice physicalDevice, VkDevice device
 // Image contents
 
 void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd) {
-  if (!Config::Get().vulkan.recorder.crossPlatformStateRestoration.images) {
+  if (!Configurator::Get().vulkan.recorder.crossPlatformStateRestoration.images) {
     return;
   }
 
@@ -3039,7 +3039,7 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
 
     // Create temporary buffers used for contents restoration
     if (deviceAndResourcesPair.second.maxBufferSize > 0) {
-      uint32_t count = Config::Get().vulkan.recorder.reusableStateRestoreResourcesCount;
+      uint32_t count = Configurator::Get().vulkan.recorder.reusableStateRestoreResourcesCount;
       for (uint32_t i = 0; i < count; ++i) {
         CreateTemporaryBuffer(scheduler, device, deviceAndResourcesPair.second.maxBufferSize);
       }
@@ -3335,7 +3335,7 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
 
 void gits::Vulkan::RestoreBufferContents(CScheduler& scheduler, CStateDynamic& sd) {
   if (TBufferStateRestoration::NONE ==
-      Config::Get().vulkan.recorder.crossPlatformStateRestoration.buffers) {
+      Configurator::Get().vulkan.recorder.crossPlatformStateRestoration.buffers) {
     return;
   }
 
@@ -3469,7 +3469,7 @@ void gits::Vulkan::RestoreBufferContents(CScheduler& scheduler, CStateDynamic& s
     // When image contents restoration was skipped, create temporary buffers here
     if ((deviceResources.temporaryBuffers.empty()) && (buffersToRestore.size() > 0) &&
         deviceResources.maxBufferSize > 0) {
-      uint32_t count = Config::Get().vulkan.recorder.reusableStateRestoreResourcesCount;
+      uint32_t count = Configurator::Get().vulkan.recorder.reusableStateRestoreResourcesCount;
       for (uint32_t i = 0; i < count; ++i) {
         CreateTemporaryBuffer(scheduler, device, deviceResources.maxBufferSize);
       }
@@ -4082,19 +4082,19 @@ void gits::Vulkan::PrepareVkQueueSubmits(CStateDynamic& sd) {
   auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
   if (api3dIface.CfgRec_IsSubFrameMode()) {
     CVkSubmitInfoArrayWrap submitInfoForPrepare =
-        getSubmitInfoForPrepare(Config::Get().vulkan.recorder.objRange.rangeSpecial.objVector,
-                                Config::Get().vulkan.recorder.objRange.rangeSpecial.range,
-                                Config::Get().vulkan.recorder.objRange.rangeSpecial.objMode);
+        getSubmitInfoForPrepare(Configurator::Get().vulkan.recorder.objRange.rangeSpecial.objVector,
+                                Configurator::Get().vulkan.recorder.objRange.rangeSpecial.range,
+                                Configurator::Get().vulkan.recorder.objRange.rangeSpecial.objMode);
     if (api3dIface.CfgRec_IsRenderPassMode() || api3dIface.CfgRec_IsBlitRangeMode() ||
         api3dIface.CfgRec_IsDispatchRangeMode()) {
-      restoreCommandBufferSettings(Config::Get().vulkan.recorder.objRange.rangeSpecial.range,
-                                   submitInfoForPrepare,
-                                   Config::Get().vulkan.recorder.objRange.rangeSpecial.objMode);
+      restoreCommandBufferSettings(
+          Configurator::Get().vulkan.recorder.objRange.rangeSpecial.range, submitInfoForPrepare,
+          Configurator::Get().vulkan.recorder.objRange.rangeSpecial.objMode);
     } else if (api3dIface.CfgRec_IsDrawsRangeMode()) {
       restoreCommandBufferSettings(
-          Config::Get().vulkan.recorder.objRange.rangeSpecial.range, submitInfoForPrepare,
-          Config::Get().vulkan.recorder.objRange.rangeSpecial.objMode,
-          Config::Get().vulkan.recorder.objRange.rangeSpecial.objVector.back());
+          Configurator::Get().vulkan.recorder.objRange.rangeSpecial.range, submitInfoForPrepare,
+          Configurator::Get().vulkan.recorder.objRange.rangeSpecial.objMode,
+          Configurator::Get().vulkan.recorder.objRange.rangeSpecial.objVector.back());
     }
     auto queueHandle = sd.lastQueueSubmit->queueStateStore->queueHandle;
     if (nullptr != submitInfoForPrepare.submitInfoData.Value()) {
@@ -4116,15 +4116,15 @@ void gits::Vulkan::PrepareVkQueueSubmits(CStateDynamic& sd) {
     }
     drvVk.vkQueueWaitIdle(queueHandle);
 
-    CVkSubmitInfoArrayWrap submitInfoForSchedule =
-        getSubmitInfoForSchedule(Config::Get().vulkan.recorder.objRange.rangeSpecial.objVector,
-                                 Config::Get().vulkan.recorder.objRange.rangeSpecial.range,
-                                 Config::Get().vulkan.recorder.objRange.rangeSpecial.objMode);
+    CVkSubmitInfoArrayWrap submitInfoForSchedule = getSubmitInfoForSchedule(
+        Configurator::Get().vulkan.recorder.objRange.rangeSpecial.objVector,
+        Configurator::Get().vulkan.recorder.objRange.rangeSpecial.range,
+        Configurator::Get().vulkan.recorder.objRange.rangeSpecial.objMode);
     sd.objectsUsedInQueueSubmit.clear();
     sd.objectsUsedInQueueSubmit = getPointersUsedInQueueSubmit(
-        submitInfoForSchedule, Config::Get().vulkan.recorder.objRange.rangeSpecial.objVector,
-        Config::Get().vulkan.recorder.objRange.rangeSpecial.range,
-        Config::Get().vulkan.recorder.objRange.rangeSpecial.objMode);
+        submitInfoForSchedule, Configurator::Get().vulkan.recorder.objRange.rangeSpecial.objVector,
+        Configurator::Get().vulkan.recorder.objRange.rangeSpecial.range,
+        Configurator::Get().vulkan.recorder.objRange.rangeSpecial.objMode);
 
     for (auto& state : sd._devicestates) {
       drvVk.vkDeviceWaitIdle(state.first);
@@ -4137,10 +4137,10 @@ void gits::Vulkan::PostRestoreVkQueueSubmits(CScheduler& scheduler, CStateDynami
 
   if (api3dIface.CfgRec_IsSubFrameMode()) {
     scheduler.Register(new gits::CTokenFrameNumber(CToken::ID_FRAME_START, 1));
-    CVkSubmitInfoArrayWrap submitInfoForSchedule =
-        getSubmitInfoForSchedule(Config::Get().vulkan.recorder.objRange.rangeSpecial.objVector,
-                                 Config::Get().vulkan.recorder.objRange.rangeSpecial.range,
-                                 Config::Get().vulkan.recorder.objRange.rangeSpecial.objMode);
+    CVkSubmitInfoArrayWrap submitInfoForSchedule = getSubmitInfoForSchedule(
+        Configurator::Get().vulkan.recorder.objRange.rangeSpecial.objVector,
+        Configurator::Get().vulkan.recorder.objRange.rangeSpecial.range,
+        Configurator::Get().vulkan.recorder.objRange.rangeSpecial.objMode);
     auto submitInfoDataValues = submitInfoForSchedule.submitInfoData.Value();
     auto submitInfo2DataValues = submitInfoForSchedule.submitInfo2Data.Value();
     RestoreCommandBuffers(scheduler, sd, true);
@@ -4159,12 +4159,13 @@ void gits::Vulkan::PostRestoreVkQueueSubmits(CScheduler& scheduler, CStateDynami
             commandBufferState->beginCommandBuffer->commandBufferBeginInfoData.Value()));
         if (api3dIface.CfgRec_IsDrawsRangeMode()) {
           commandBufferState->tokensBuffer.ScheduleDraw(
-              ScheduleTokens, Config::Get().vulkan.recorder.objRange.rangeSpecial.objVector.back(),
-              Config::Get().vulkan.recorder.objRange.rangeSpecial.range);
+              ScheduleTokens,
+              Configurator::Get().vulkan.recorder.objRange.rangeSpecial.objVector.back(),
+              Configurator::Get().vulkan.recorder.objRange.rangeSpecial.range);
         } else {
           commandBufferState->tokensBuffer.ScheduleObject(
-              ScheduleTokens, Config::Get().vulkan.recorder.objRange.rangeSpecial.range,
-              Config::Get().vulkan.recorder.objRange.rangeSpecial.objMode);
+              ScheduleTokens, Configurator::Get().vulkan.recorder.objRange.rangeSpecial.range,
+              Configurator::Get().vulkan.recorder.objRange.rangeSpecial.objMode);
         }
 
         if (commandBufferState->ended) {

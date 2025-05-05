@@ -82,9 +82,9 @@ void handle_mapping_remove(int kind, MappingContext& ctx) {
 }
 
 #define GENERATE_CAPTURE_FRAME_CODE(option)                                                        \
-  if (!Config::Get().opengl.player.option.empty()) {                                               \
+  if (!Configurator::Get().opengl.player.option.empty()) {                                         \
     static unsigned frame_num = 1;                                                                 \
-    const auto& path = Config::Get().ccode.outputPath;                                             \
+    const auto& path = Configurator::Get().ccode.outputPath;                                       \
     const std::string fileName = getDumpFrameFileName(frame_num);                                  \
     gits::OpenGL::capture_drawbuffer(path, fileName, true);                                        \
     frame_num++;                                                                                   \
@@ -520,9 +520,9 @@ BOOL wglSwapBuffers_wrap(ObjName org_hdc,
                          bool ret_val) {
   UpdateWindows_(org_hwnd, winparams, wp_size, wnd_del, dw_size);
   OnFrameEnd();
-  if (Config::Get().common.player.captureFrames[CGits::Instance().CurrentFrame()]) {
+  if (Configurator::Get().common.player.captureFrames[CGits::Instance().CurrentFrame()]) {
     const std::string fileName = getDumpFrameFileName(CGits::Instance().CurrentFrame());
-    gits::OpenGL::capture_drawbuffer(Config::Get().ccode.outputPath, fileName, true);
+    gits::OpenGL::capture_drawbuffer(Configurator::Get().ccode.outputPath, fileName, true);
   }
   auto ret = SwapBuffers(UpdateHDC(org_hdc, org_hwnd));
   return ret;
@@ -687,8 +687,8 @@ BOOL wglShareLists_wrap(ObjName lhs, ObjName rhs, bool ret_val) {
 // ************************** EGL API wrappers ****************************************
 void eglSwapBuffers_wrap(ObjName org_dpy, ObjName org_surf) {
   OnFrameEnd();
-  if (Config::Get().common.player.captureFrames[CGits::Instance().CurrentFrame()]) {
-    const auto& path = Config::Get().ccode.outputPath;
+  if (Configurator::Get().common.player.captureFrames[CGits::Instance().CurrentFrame()]) {
+    const auto& path = Configurator::Get().ccode.outputPath;
     const std::string fileName = getDumpFrameFileName(CGits::Instance().CurrentFrame());
     gits::OpenGL::capture_drawbuffer(path, fileName, true);
   }

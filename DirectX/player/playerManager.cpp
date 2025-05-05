@@ -64,7 +64,7 @@ PlayerManager::~PlayerManager() {
 }
 
 PlayerManager::PlayerManager() {
-  auto& cfg = Config::Get();
+  auto& cfg = Configurator::Get();
   executeCommands_ = cfg.directx.player.execute;
   multithreadedShaderCompilation_ =
       cfg.directx.player.multithreadedShaderCompilation && !cfg.directx.features.subcapture.enabled;
@@ -260,7 +260,7 @@ void PlayerManager::loadDirectML() {
   }
   Log(INFO) << "Loaded DirectML runtime (D3D12\\DirectML.dll)";
 
-  if (Config::Get().directx.player.debugLayer) {
+  if (Configurator::Get().directx.player.debugLayer) {
     dmlDebugDll_ = LoadLibrary(".\\D3D12\\DirectML.Debug.dll");
     if (!dmlDebugDll_) {
       Log(ERR) << "Failed to load DirectML debug runtime (D3D12\\DirectML.Debug.dll)";

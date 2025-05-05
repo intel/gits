@@ -136,7 +136,7 @@ void ChooseQueueIndex(const ze_device_handle_t& hDevice, const uint32_t& ordinal
 }
 
 inline void HandleDumpSpv(const ze_module_desc_t* desc) {
-  if (ShouldDumpSpv(Config::Get().levelzero.player.dumpSpv, desc)) {
+  if (ShouldDumpSpv(Configurator::Get().levelzero.player.dumpSpv, desc)) {
     static int programSourceIdx = 0;
     std::stringstream stream;
     stream << "l0Programs/kernel_source_" << std::setfill('0') << std::setw(2) << programSourceIdx++
@@ -166,7 +166,7 @@ inline void zeCommandListAppendLaunchKernel_RUNWRAP(Cze_result_t& _return_value,
   if (isImmediate) {
     TranslatePointers(sd);
   }
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   if (CaptureKernels(cfg) && IsDumpInputMode(cfg)) {
     AppendLaunchKernel(*_hCommandList, *_hKernel, *_pLaunchFuncArgs, *_hSignalEvent, true);
   }
@@ -191,7 +191,7 @@ inline void zeCommandListAppendLaunchCooperativeKernel_RUNWRAP(
   if (isImmediate) {
     TranslatePointers(sd);
   }
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   if (CaptureKernels(cfg) && IsDumpInputMode(cfg)) {
     AppendLaunchKernel(*_hCommandList, *_hKernel, *_pLaunchFuncArgs, *_hSignalEvent, true);
   }
@@ -217,7 +217,7 @@ inline void zeCommandListAppendLaunchKernelIndirect_RUNWRAP(
   if (isImmediate) {
     TranslatePointers(sd);
   }
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   if (CaptureKernels(cfg) && IsDumpInputMode(cfg)) {
     AppendLaunchKernel(*_hCommandList, *_hKernel, *_pLaunchArgumentsBuffer, *_hSignalEvent, true);
   }
@@ -246,7 +246,7 @@ inline void zeCommandListAppendLaunchMultipleKernelsIndirect_RUNWRAP(
   }
   for (auto i = 0U; i < *_numKernels; i++) {
     KernelCountUp(CGits::Instance());
-    const auto& cfg = Config::Get();
+    const auto& cfg = Configurator::Get();
     if (CaptureKernels(cfg) && IsDumpInputMode(cfg)) {
       AppendLaunchKernel(*_hCommandList, (*_phKernels)[i], *_pLaunchArgumentsBuffer, *_hSignalEvent,
                          true);
@@ -373,7 +373,7 @@ inline void zeMemAllocHost_RUNWRAP(Cze_result_t& _return_value,
                                    Csize_t& _alignment,
                                    CMappedPtr::CSMapArray& _pptr) {
   auto size = *_size;
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   _return_value.Value() = drv.zeMemAllocHost(*_hContext, *_host_desc, size, *_alignment, *_pptr);
   if (_return_value.Value() == ZE_RESULT_SUCCESS && CaptureKernels(cfg)) {
     Log(TRACEV) << "^-- Original pointer: " << ToStringHelper(CMappedPtr::GetOriginal((*_pptr)[0]));
@@ -392,7 +392,7 @@ inline void zeMemAllocDevice_RUNWRAP(Cze_result_t& _return_value,
                                      Csize_t& _alignment,
                                      Cze_device_handle_t& _hDevice,
                                      CMappedPtr::CSMapArray& _pptr) {
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   void* originalPtr = _pptr.Original()[0];
   const auto IsAddressTranslationDisabled =
       IsMemoryTypeAddressTranslationDisabled(cfg, UnifiedMemoryType::device);
@@ -453,7 +453,7 @@ inline void zeMemAllocShared_RUNWRAP(Cze_result_t& _return_value,
                                      Cze_device_handle_t& _hDevice,
                                      CMappedPtr::CSMapArray& _pptr) {
   auto size = *_size;
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   _return_value.Value() = drv.zeMemAllocShared(*_hContext, *_device_desc, *_host_desc, size,
                                                *_alignment, *_hDevice, *_pptr);
   if (_return_value.Value() == ZE_RESULT_SUCCESS && CaptureKernels(cfg)) {
@@ -473,7 +473,7 @@ inline void zeImageCreate_RUNWRAP(Cze_result_t& _return_value,
                                   Cze_image_desc_t::CSArray& _desc,
                                   Cze_image_handle_t::CSMapArray& _phImage) {
   _return_value.Value() = drv.zeImageCreate(*_hContext, *_hDevice, *_desc, *_phImage);
-  if (*_return_value == ZE_RESULT_SUCCESS && CheckCfgZeroInitialization(Config::Get())) {
+  if (*_return_value == ZE_RESULT_SUCCESS && CheckCfgZeroInitialization(Configurator::Get())) {
     const auto commandList = GetCommandListImmediate(SD(), drv, *_hContext);
     ZeroInitializeImage(drv, commandList, *_phImage, *_desc);
   }
@@ -649,7 +649,7 @@ inline void zeMemFree_RUNWRAP(Cze_result_t& _return_value,
                               CMappedPtr& _ptr) {
   if (*_ptr != nullptr) {
     auto& allocState = SD().Get<CAllocState>(*_ptr, EXCEPTION_MESSAGE);
-    const auto& cfg = Config::Get();
+    const auto& cfg = Configurator::Get();
     const auto IsAddressTranslationDisabled =
         IsMemoryTypeAddressTranslationDisabled(cfg, allocState.memType);
     if (IsAddressTranslationDisabled && allocState.memType == UnifiedMemoryType::device) {
@@ -679,7 +679,7 @@ inline void zeVirtualMemReserve_V1_RUNWRAP(Cze_result_t& _return_value,
                                            Csize_t& _size,
                                            CMappedPtr::CSMapArray& _pptr) {
   _return_value.Value() = drv.zeVirtualMemReserve(*_hContext, *_pStart, *_size, *_pptr);
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   if (_return_value.Value() == ZE_RESULT_SUCCESS &&
       !cfg.levelzero.player.omitOriginalAddressCheck) {
     const void* originalPtrValue = *_pStart;

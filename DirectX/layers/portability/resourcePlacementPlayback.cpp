@@ -8,6 +8,7 @@
 
 #include "resourcePlacementPlayback.h"
 #include "gits.h"
+#include "configurationLib.h"
 
 #include <filesystem>
 #include <fstream>
@@ -34,8 +35,9 @@ void ResourcePlacementPlayback::createPlacedResource(unsigned resourceKey, UINT6
 }
 
 void ResourcePlacementPlayback::calculateResourcePlacement(ID3D12Device* device) {
-  std::filesystem::path filePath = Config::IsPlayer() ? Config::Get().common.player.streamDir
-                                                      : Config::Get().common.recorder.dumpPath;
+  std::filesystem::path filePath = Configurator::IsPlayer()
+                                       ? Configurator::Get().common.player.streamDir
+                                       : Configurator::Get().common.recorder.dumpPath;
   filePath /= "resourcePlacementData.dat";
 
   std::unordered_map<unsigned, std::vector<ResourcePlacementShiftInfo>> infos;

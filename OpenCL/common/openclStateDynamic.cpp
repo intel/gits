@@ -163,7 +163,7 @@ void CCLKernelState::SetArgument(cl_uint index, size_t size, const void* value) 
       }
     }
     if (size == sizeof(value) &&
-        (Config::IsRecorder() || !stream_older_than(GITS_OPENCL_SET_USM_ARG))) {
+        (Configurator::IsRecorder() || !stream_older_than(GITS_OPENCL_SET_USM_ARG))) {
       auto* ptr_value = reinterpret_cast<void*>(*reinterpret_cast<const uintptr_t*>(value));
       auto* ptr = GetSvmOrUsmFromRegion(ptr_value).first;
       if (SD().CheckIfUSMAllocExists(ptr)) {
@@ -292,7 +292,7 @@ void CCLProgramState::GetProgramInfoNumDevices(const cl_uint& num_devices) {
 void CCLProgramState::GetProgramInfoBinaries(const size_t& size, void* value) {
   const auto nDevices = size / sizeof(uint8_t*);
   auto* ptr = reinterpret_cast<const uint8_t**>(value);
-  if (Config::IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     _binaryHash = HashBinaryData(nDevices, ptr, _binarySizes.data());
   } else {
     Binaries(nDevices, ptr, _binarySizes.data());
@@ -706,7 +706,7 @@ LayoutBuilder::LayoutBuilder() {
 std::string LayoutBuilder::ModifyRecorderBuildOptions(const std::string& options,
                                                       const bool& hasHeaders) {
   std::string new_options = options;
-  if (Config::IsRecorder()) {
+  if (Configurator::IsRecorder()) {
     new_options = AppendKernelArgInfoOption(new_options);
     new_options = AppendStreamPathToIncludePath(new_options, hasHeaders);
   }
@@ -781,7 +781,7 @@ void LayoutBuilder::SaveLayoutToJsonFile() {
     return;
   }
   _layout["cl_kernels"] = _clKernels;
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   const auto path = GetDumpPath(cfg) / "layout.json";
   SaveJsonFile(_layout, path);
 }

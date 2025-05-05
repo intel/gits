@@ -9,16 +9,16 @@
 list(APPEND player_SOURCE
   include/display.h
   include/player.h
-  include/playerOptions.h
   include/sequentialExecutor.h
   include/statistics.h
   include/window.h
+  include/playerUtils.h
 
   player.cpp
   playerMain.cpp
-  playerOptions.cpp
   sequentialExecutor.cpp
   statistics.cpp
+  playerUtils.cpp
 )
 
 if(MSVC)
@@ -61,7 +61,8 @@ if(WITH_DIRECTX)
   )
 endif()
 
-target_link_libraries(gitsPlayer png zlib lua)
+target_include_directories(gitsPlayer PRIVATE ${ARGS_SOURCE_DIR})
+target_link_libraries(gitsPlayer png zlib lua configuration)
 
 if(MSVC)
   target_link_libraries(gitsPlayer stackwalker)

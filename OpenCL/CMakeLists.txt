@@ -120,14 +120,14 @@ if(MSVC)
 endif()
 
 list(APPEND OpenCL_interceptor_external_cpps
-  ../common/tools_lite.cpp
-  ../common/exception.cpp
-  ../common/dynamic_linker.cpp
-  ../common/gitsLoader.cpp
-  ../common/log.cpp
+  ../common/legacy/tools_lite.cpp
+  ../common/legacy/exception.cpp
+  ../common/legacy/dynamic_linker.cpp
+  ../common/legacy/gitsLoader.cpp
+  ../common/legacy/log.cpp
 )
 if(WIN32)
-  list(APPEND OpenCL_interceptor_external_cpps ../common/tools_windows.cpp)
+  list(APPEND OpenCL_interceptor_external_cpps ../common/legacy/tools_windows.cpp)
 endif()
 
 add_library(OpenCL_interceptor SHARED

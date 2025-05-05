@@ -8,6 +8,7 @@
 
 #include "screenshotsLayer.h"
 #include "gits.h"
+#include "configurationLib.h"
 
 #include <wrl/client.h>
 #include <filesystem>
@@ -16,20 +17,21 @@ namespace gits {
 namespace DirectX {
 
 ScreenshotsLayer::ScreenshotsLayer()
-    : Layer("Screenshots"), screenshotRange_(Config::Get().directx.features.screenshots.frames) {
-  auto dumpPath = Config::Get().common.player.outputDir;
-  if (Config::Get().IsRecorder()) {
-    dumpPath = Config::Get().common.recorder.dumpPath / "gitsScreenshots/gitsRecorder";
-  } else if (Config::Get().IsPlayer() && dumpPath.empty()) {
-    dumpPath = Config::Get().common.player.streamDir / "gitsScreenshots/gitsPlayer";
+    : Layer("Screenshots"),
+      screenshotRange_(Configurator::Get().directx.features.screenshots.frames) {
+  auto dumpPath = Configurator::Get().common.player.outputDir;
+  if (Configurator::IsRecorder()) {
+    dumpPath = Configurator::Get().common.recorder.dumpPath / "gitsScreenshots/gitsRecorder";
+  } else if (Configurator::IsPlayer() && dumpPath.empty()) {
+    dumpPath = Configurator::Get().common.player.streamDir / "gitsScreenshots/gitsPlayer";
   }
   if (!dumpPath.empty() && !std::filesystem::exists(dumpPath)) {
     std::filesystem::create_directories(dumpPath);
   }
   dumpPath_ = dumpPath;
 
-  if (!Config::Get().common.player.captureFrames.empty()) {
-    screenshotRange_ = Config::Get().common.player.captureFrames;
+  if (!Configurator::Get().common.player.captureFrames.empty()) {
+    screenshotRange_ = Configurator::Get().common.player.captureFrames;
   }
 }
 

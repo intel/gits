@@ -15,6 +15,11 @@
 #include "recorderIface.h"
 #include "config.h"
 #include "log.h"
+#include "gits.h"
+#include "diagnostic.h"
+#include "recorderUtils.h"
+
+#include <fstream>
 
 namespace {
 
@@ -34,12 +39,13 @@ gits::FPrintHandler STDCALL PrintHandlerGet(const char* dir) {
   }
 }
 
-const gits::Config* STDCALL Configure(const char* cfgDir) {
+gits::Configuration* STDCALL Configure(const char* cfgDir) {
   try {
-    if (!gits::Config::Set(std::filesystem::path(cfgDir) / gits::Config::CONFIG_FILE_NAME)) {
+    if (!gits::ConfigureRecorder(std::filesystem::path(cfgDir) /
+                                 gits::Configurator::ConfigFileName())) {
       return nullptr;
     }
-    return &gits::Config::Get();
+    return &gits::Configurator::GetMutable();
   } catch (const std::exception& ex) {
     Log(ERR) << "Cannot configure GITS: " << ex.what() << std::endl;
     exit(EXIT_FAILURE);

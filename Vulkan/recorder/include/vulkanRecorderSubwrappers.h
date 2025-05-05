@@ -476,7 +476,7 @@ inline void vkQueuePresentKHR_RECWRAP(VkResult return_value,
     }
 
 #ifdef GITS_PLATFORM_WINDOWS
-    if (!Config::Get().vulkan.recorder.usePresentSrcLayoutTransitionAsAFrameBoundary) {
+    if (!Configurator::Get().vulkan.recorder.usePresentSrcLayoutTransitionAsAFrameBoundary) {
       for (auto& surfaceState : surfacesStates) {
         auto& hwndState = SD()._hwndstates[surfaceState->surfaceCreateInfoWin32Data.Value()->hwnd];
 
@@ -535,7 +535,8 @@ inline void vkQueuePresentKHR_RECWRAP(VkResult return_value,
     }
 #endif
 
-    if (Config::Get().vulkan.recorder.dumpScreenshots[gits::CGits::Instance().CurrentFrame()]) {
+    if (Configurator::Get()
+            .vulkan.recorder.dumpScreenshots[gits::CGits::Instance().CurrentFrame()]) {
       writeScreenshot(queue, *pPresentInfo);
     }
 
@@ -616,7 +617,8 @@ inline void vkQueueSubmit_RECWRAP(VkResult return_value,
     //         bufferState.second->binding->deviceMemoryStateStore->deviceMemoryHandle);
     //   }
     // }
-  } else if (TMemoryUpdateStates::ALL_MAPPED == Config::Get().vulkan.recorder.memoryUpdateState) {
+  } else if (TMemoryUpdateStates::ALL_MAPPED ==
+             Configurator::Get().vulkan.recorder.memoryUpdateState) {
     for (auto& memoryState : SD()._devicememorystates) {
       if (memoryState.second->IsMapped()) {
         _memoryToUpdate.insert(memoryState.first);
@@ -625,7 +627,7 @@ inline void vkQueueSubmit_RECWRAP(VkResult return_value,
   }
 
   if (recorder.Running()) {
-    if (Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
+    if (Configurator::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
       for (uint32_t i = 0; i < submitCount; i++) {
         for (uint32_t j = 0; j < pSubmits[i].commandBufferCount; j++) {
           const auto cmdBuf = pSubmits[i].pCommandBuffers[j];
@@ -646,7 +648,7 @@ inline void vkQueueSubmit_RECWRAP(VkResult return_value,
       }
     }
 
-    if (Config::Get().vulkan.recorder.memoryUpdateState != TMemoryUpdateStates::USING_TAGS) {
+    if (Configurator::Get().vulkan.recorder.memoryUpdateState != TMemoryUpdateStates::USING_TAGS) {
       for (auto memory : _memoryToUpdate) {
         std::vector<VkBufferCopy> updatedRanges;
         getRangesForMemoryUpdate(memory, updatedRanges, false);
@@ -657,7 +659,7 @@ inline void vkQueueSubmit_RECWRAP(VkResult return_value,
       }
     }
     recorder.Schedule(new CvkQueueSubmit(return_value, queue, submitCount, pSubmits, fence));
-  } else if (Config::Get().vulkan.recorder.shadowMemory) {
+  } else if (Configurator::Get().vulkan.recorder.shadowMemory) {
     for (auto memory : _memoryToUpdate) {
       flushShadowMemory(memory, false);
     }
@@ -760,7 +762,8 @@ inline void vkQueueSubmit2_RECWRAP(VkResult return_value,
     //         bufferState.second->binding->deviceMemoryStateStore->deviceMemoryHandle);
     //   }
     // }
-  } else if (TMemoryUpdateStates::ALL_MAPPED == Config::Get().vulkan.recorder.memoryUpdateState) {
+  } else if (TMemoryUpdateStates::ALL_MAPPED ==
+             Configurator::Get().vulkan.recorder.memoryUpdateState) {
     for (auto& memoryState : SD()._devicememorystates) {
       if (memoryState.second->IsMapped()) {
         _memoryToUpdate.insert(memoryState.first);
@@ -769,7 +772,7 @@ inline void vkQueueSubmit2_RECWRAP(VkResult return_value,
   }
 
   if (recorder.Running()) {
-    if (Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
+    if (Configurator::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
       for (uint32_t i = 0; i < submitCount; i++) {
         for (uint32_t j = 0; j < pSubmits[i].commandBufferInfoCount; j++) {
           const auto cmdBuf = pSubmits[i].pCommandBufferInfos[j].commandBuffer;
@@ -790,7 +793,7 @@ inline void vkQueueSubmit2_RECWRAP(VkResult return_value,
       }
     }
 
-    if (Config::Get().vulkan.recorder.memoryUpdateState != TMemoryUpdateStates::USING_TAGS) {
+    if (Configurator::Get().vulkan.recorder.memoryUpdateState != TMemoryUpdateStates::USING_TAGS) {
       for (auto memory : _memoryToUpdate) {
         std::vector<VkBufferCopy> updatedRanges;
         getRangesForMemoryUpdate(memory, updatedRanges, false);
@@ -806,7 +809,7 @@ inline void vkQueueSubmit2_RECWRAP(VkResult return_value,
     } else {
       recorder.Schedule(new CvkQueueSubmit2(return_value, queue, submitCount, pSubmits, fence));
     }
-  } else if (Config::Get().vulkan.recorder.shadowMemory) {
+  } else if (Configurator::Get().vulkan.recorder.shadowMemory) {
     for (auto memory : _memoryToUpdate) {
       flushShadowMemory(memory, false);
     }
@@ -859,7 +862,7 @@ inline void vkBeginCommandBuffer_RECWRAP(VkResult return_value,
                                          const VkCommandBufferBeginInfo* pBeginInfo,
                                          CRecorder& recorder) {
   if (recorder.Running() &&
-      !Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
+      !Configurator::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
     recorder.Schedule(new CvkBeginCommandBuffer(return_value, cmdBuf, pBeginInfo));
   }
   vkBeginCommandBuffer_SD(return_value, cmdBuf, pBeginInfo);
@@ -869,7 +872,7 @@ inline void vkEndCommandBuffer_RECWRAP(VkResult return_value,
                                        VkCommandBuffer cmdBuf,
                                        CRecorder& recorder) {
   if (recorder.Running() &&
-      !Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
+      !Configurator::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
     recorder.Schedule(new CvkEndCommandBuffer(return_value, cmdBuf));
   }
   vkEndCommandBuffer_SD(return_value, cmdBuf);
@@ -946,7 +949,7 @@ inline void vkDestroyCommandPool_RECWRAP(VkDevice device,
 
 inline void vkUnmapMemory_RECWRAP(VkDevice device, VkDeviceMemory memory, CRecorder& recorder) {
   if (recorder.Running()) {
-    if (Config::Get().vulkan.recorder.memoryUpdateState != TMemoryUpdateStates::USING_TAGS) {
+    if (Configurator::Get().vulkan.recorder.memoryUpdateState != TMemoryUpdateStates::USING_TAGS) {
       std::vector<VkBufferCopy> updatedRanges;
       getRangesForMemoryUpdate(memory, updatedRanges, true);
       if (updatedRanges.size() > 0) {
@@ -955,7 +958,7 @@ inline void vkUnmapMemory_RECWRAP(VkDevice device, VkDeviceMemory memory, CRecor
       }
     }
     recorder.Schedule(new CvkUnmapMemory(device, memory));
-  } else if (Config::Get().vulkan.recorder.shadowMemory) {
+  } else if (Configurator::Get().vulkan.recorder.shadowMemory) {
     flushShadowMemory(memory, true);
   }
   vkUnmapMemory_SD(device, memory);
@@ -1001,7 +1004,8 @@ inline void vkCreateBuffer_RECWRAP(VkResult return_value,
   };
 
   // Record opaque/capture device address only when requested
-  if (Config::Get().vulkan.recorder.useCaptureReplayFeaturesForBuffersAndAccelerationStructures &&
+  if (Configurator::Get()
+          .vulkan.recorder.useCaptureReplayFeaturesForBuffersAndAccelerationStructures &&
       isBitSet(pCreateInfo->flags, VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT)) {
     VkBufferDeviceAddressInfo addressInfo = {
         VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO, // VkStructureType    sType;
@@ -1075,7 +1079,7 @@ inline void vkTagMemoryContentsUpdateGITS_RECWRAP(VkDevice /* device */,
                                                   const VkBufferCopy* pRegions,
                                                   CRecorder& recorder) {
   if (recorder.Running() &&
-      (Config::Get().vulkan.recorder.memoryUpdateState == TMemoryUpdateStates::USING_TAGS)) {
+      (Configurator::Get().vulkan.recorder.memoryUpdateState == TMemoryUpdateStates::USING_TAGS)) {
     recorder.Schedule(new CGitsVkMemoryUpdate2(memory, regionCount, pRegions));
   }
 }
@@ -1095,7 +1099,8 @@ inline void vkAllocateMemory_RECWRAP(VkResult return_value,
   };
 
   // Record opaque/capture device address only when requested
-  if (Config::Get().vulkan.recorder.useCaptureReplayFeaturesForBuffersAndAccelerationStructures) {
+  if (Configurator::Get()
+          .vulkan.recorder.useCaptureReplayFeaturesForBuffersAndAccelerationStructures) {
     auto allocateFlagsInfo = (VkMemoryAllocateFlagsInfo*)getPNextStructure(
         pAllocateInfo->pNext, VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO);
     if ((allocateFlagsInfo != nullptr) &&
@@ -1129,7 +1134,8 @@ inline void vkCreateAccelerationStructureKHR_RECWRAP(
     CRecorder& recorder) {
   auto accelerationStructureCreateInfo = *pCreateInfo;
 
-  if (Config::Get().vulkan.recorder.useCaptureReplayFeaturesForBuffersAndAccelerationStructures) {
+  if (Configurator::Get()
+          .vulkan.recorder.useCaptureReplayFeaturesForBuffersAndAccelerationStructures) {
     VkAccelerationStructureDeviceAddressInfoKHR addressInfo = {
         VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR, // VkStructureType              sType;
         nullptr,                // const void                 * pNext;
@@ -1198,7 +1204,7 @@ inline void vkCreateRayTracingPipelinesKHR_RECWRAP(
     for (uint32_t g = 0; g < currentCreateInfo.groupCount; ++g) {
       groupsForCurrentCreateInfo.emplace_back(currentCreateInfo.pGroups[g]);
 
-      if (Config::Get().vulkan.recorder.useCaptureReplayFeaturesForRayTracingPipelines) {
+      if (Configurator::Get().vulkan.recorder.useCaptureReplayFeaturesForRayTracingPipelines) {
         auto& currentGroup = groupsForCurrentCreateInfo.back();
         auto handleSize = getRayTracingShaderGroupCaptureReplayHandleSize(device);
 
@@ -1346,7 +1352,7 @@ inline void vkCmdPipelineBarrier_RECWRAP(VkCommandBuffer cmdBuf,
                                          const VkImageMemoryBarrier* pImageMemoryBarriers,
                                          CRecorder& recorder) {
   if (recorder.Running() &&
-      !Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
+      !Configurator::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
     recorder.Schedule(new CvkCmdPipelineBarrier(cmdBuf, srcStageMask, dstStageMask, dependencyFlags,
                                                 memoryBarrierCount, pMemoryBarriers,
                                                 bufferMemoryBarrierCount, pBufferMemoryBarriers,
@@ -1359,7 +1365,7 @@ inline void vkCmdPipelineBarrier_RECWRAP(VkCommandBuffer cmdBuf,
   }
 #ifdef GITS_PLATFORM_WINDOWS
   // Offscreen applications support
-  if (!Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit &&
+  if (!Configurator::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit &&
       usePresentSrcLayoutTransitionAsAFrameBoundary()) {
     auto device =
         SD()._commandbufferstates[cmdBuf]->commandPoolStateStore->deviceStateStore->deviceHandle;
@@ -1390,14 +1396,14 @@ inline void vkCmdPipelineBarrier2UnifiedGITS_RECWRAP(VkCommandBuffer cmdBuf,
                                                      const VkDependencyInfo* pDependencyInfo,
                                                      CRecorder& recorder) {
   if (recorder.Running() &&
-      !Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
+      !Configurator::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
     recorder.Schedule(new CvkCmdPipelineBarrier2UnifiedGITS(cmdBuf, pDependencyInfo));
   } else {
     SD()._commandbufferstates[cmdBuf]->tokensBuffer.Add(
         new CvkCmdPipelineBarrier2UnifiedGITS(cmdBuf, pDependencyInfo));
   }
 #ifdef GITS_PLATFORM_WINDOWS
-  if (!Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
+  if (!Configurator::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
     barriers2HelperForOffscreenApplications(cmdBuf, pDependencyInfo, recorder);
   }
 #endif
@@ -1408,14 +1414,14 @@ inline void vkCmdPipelineBarrier2_RECWRAP(VkCommandBuffer cmdBuf,
                                           const VkDependencyInfo* pDependencyInfo,
                                           CRecorder& recorder) {
   if (recorder.Running() &&
-      !Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
+      !Configurator::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
     recorder.Schedule(new CvkCmdPipelineBarrier2(cmdBuf, pDependencyInfo));
   } else {
     SD()._commandbufferstates[cmdBuf]->tokensBuffer.Add(
         new CvkCmdPipelineBarrier2(cmdBuf, pDependencyInfo));
   }
 #ifdef GITS_PLATFORM_WINDOWS
-  if (!Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
+  if (!Configurator::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
     barriers2HelperForOffscreenApplications(cmdBuf, pDependencyInfo, recorder);
   }
 #endif
@@ -1426,14 +1432,14 @@ inline void vkCmdPipelineBarrier2KHR_RECWRAP(VkCommandBuffer cmdBuf,
                                              const VkDependencyInfo* pDependencyInfo,
                                              CRecorder& recorder) {
   if (recorder.Running() &&
-      !Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
+      !Configurator::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
     recorder.Schedule(new CvkCmdPipelineBarrier2KHR(cmdBuf, pDependencyInfo));
   } else {
     SD()._commandbufferstates[cmdBuf]->tokensBuffer.Add(
         new CvkCmdPipelineBarrier2KHR(cmdBuf, pDependencyInfo));
   }
 #ifdef GITS_PLATFORM_WINDOWS
-  if (!Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
+  if (!Configurator::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
     barriers2HelperForOffscreenApplications(cmdBuf, pDependencyInfo, recorder);
   }
 #endif
@@ -1445,14 +1451,14 @@ inline void vkCmdSetEvent2_RECWRAP(VkCommandBuffer cmdBuf,
                                    const VkDependencyInfo* pDependencyInfo,
                                    CRecorder& recorder) {
   if (recorder.Running() &&
-      !Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
+      !Configurator::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
     recorder.Schedule(new CvkCmdSetEvent2(cmdBuf, event, pDependencyInfo));
   } else {
     SD()._commandbufferstates[cmdBuf]->tokensBuffer.Add(
         new CvkCmdSetEvent2(cmdBuf, event, pDependencyInfo));
   }
 #ifdef GITS_PLATFORM_WINDOWS
-  if (!Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
+  if (!Configurator::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
     barriers2HelperForOffscreenApplications(cmdBuf, pDependencyInfo, recorder);
   }
 #endif
@@ -1464,14 +1470,14 @@ inline void vkCmdSetEvent2KHR_RECWRAP(VkCommandBuffer cmdBuf,
                                       const VkDependencyInfo* pDependencyInfo,
                                       CRecorder& recorder) {
   if (recorder.Running() &&
-      !Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
+      !Configurator::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
     recorder.Schedule(new CvkCmdSetEvent2KHR(cmdBuf, event, pDependencyInfo));
   } else {
     SD()._commandbufferstates[cmdBuf]->tokensBuffer.Add(
         new CvkCmdSetEvent2KHR(cmdBuf, event, pDependencyInfo));
   }
 #ifdef GITS_PLATFORM_WINDOWS
-  if (!Config::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
+  if (!Configurator::Get().vulkan.recorder.scheduleCommandBuffersBeforeQueueSubmit) {
     barriers2HelperForOffscreenApplications(cmdBuf, pDependencyInfo, recorder);
   }
 #endif

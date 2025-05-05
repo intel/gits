@@ -18,7 +18,7 @@ namespace DirectX {
 class LogDxErrorLayer : public Layer {
 public:
   LogDxErrorLayer() : Layer("LogDxError") {
-    isPlayer_ = Config::Get().IsPlayer();
+    isPlayer_ = Configurator::IsPlayer();
   }
 
   virtual void post(ID3D12FenceGetCompletedValueCommand& command);

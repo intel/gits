@@ -26,7 +26,7 @@ RenderDocUtil::RenderDocCapturer::RenderDocCapturer(VkInstance instance)
       isRecording(false) {}
 
 void RenderDocUtil::RenderDocCapturer::SetCapturePath() {
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   const auto& cfgRenderDoc = cfg.vulkan.player.renderDoc;
 
   std::string baseName;

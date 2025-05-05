@@ -41,10 +41,10 @@ bool CheckArgTypeInfo(cl_kernel kernel, unsigned index) {
   return type_qualifier & CL_KERNEL_ARG_TYPE_CONST;
 }
 bool IsReadOnlyObject(cl_kernel kernel, cl_uint index) {
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   auto isReadOnly = false;
-  if ((cfg.IsPlayer() ? cfg.opencl.player.omitReadOnlyObjects
-                      : cfg.opencl.recorder.omitReadOnlyObjects)) {
+  if ((Configurator::IsPlayer() ? cfg.opencl.player.omitReadOnlyObjects
+                                : cfg.opencl.recorder.omitReadOnlyObjects)) {
     const auto& kernelState = SD().GetKernelState(kernel, EXCEPTION_MESSAGE);
     const auto& arg = kernelState.GetArgument(index);
     if (kernelState.programState->isKernelArgInfoAvailable && CheckArgTypeInfo(kernel, index)) {
@@ -312,7 +312,7 @@ void SaveImage(char* image,
                const cl_image_format& format,
                const cl_image_desc& desc,
                const std::string& name) {
-  auto& cfg = Config::Get();
+  auto& cfg = Configurator::Get();
   const unsigned rgba8TexelSize = 4;
   const auto dumpPath = GetDumpPath(cfg);
   std::filesystem::create_directories(dumpPath);
@@ -343,7 +343,7 @@ void SaveImage(char* image,
 }
 
 void SaveBuffer(const std::string& name, const std::vector<char>& data) {
-  auto& cfg = Config::Get();
+  auto& cfg = Configurator::Get();
   std::string filename = name + ".dat";
   const auto dumpPath = GetDumpPath(cfg);
   std::filesystem::path path = dumpPath / filename;
@@ -354,7 +354,7 @@ void SaveBuffer(const std::string& name, const std::vector<char>& data) {
 }
 
 void SaveBuffer(const std::string& name, const CBinaryResource& data) {
-  auto& cfg = Config::Get();
+  auto& cfg = Configurator::Get();
   std::string filename = name + ".dat";
   const auto dumpPath = GetDumpPath(cfg);
   std::filesystem::path path = dumpPath / filename;
@@ -366,7 +366,7 @@ void SaveBuffer(const std::string& name, const CBinaryResource& data) {
 
 void D3DWarning() {
   static auto called = false;
-  if (!called && !IsDXUnsharingEnabled(Config::Get())) {
+  if (!called && !IsDXUnsharingEnabled(Configurator::Get())) {
     Log(WARN) << "DX-sharing is used. In order to make the stream replayable, include 'DX' in "
                  "RemoveAPISharing recorder's option";
     called = true;
@@ -832,7 +832,7 @@ void CreateStateFromSharedImage(cl_mem return_value,
 }
 
 bool IsSharingEventFilteringNeeded(const cl_event& event) {
-  const auto& cfg = Config::Get().common.recorder;
+  const auto& cfg = Configurator::Get().common.recorder;
   const auto& eventState = SD()._eventStates[event];
   const auto haveToRemoveGLEvent = cfg.removeGLSharing && eventState->isGLSharingEvent;
   const auto haveToRemoveDXEvent = cfg.removeDXSharing && eventState->isDXSharingEvent;
@@ -857,7 +857,7 @@ void InjectKernelArgOperations(cl_kernel kernel,
   std::vector<std::vector<char>> buffers(kernelState.GetArguments().size());
   std::unordered_map<cl_mem, cl_uint> injectedMemIndex;
   int enqueueCallNumber = CGits::Instance().CurrentKernelCount();
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   for (auto it = kernelState.GetArguments().begin(); it != kernelState.GetArguments().end(); ++it) {
     if (DumpableObject(it->second.type)) {
       if (IsReadOnlyObject(kernel, it->first)) {
@@ -873,7 +873,8 @@ void InjectKernelArgOperations(cl_kernel kernel,
           std::string filename = SD().layoutBuilder.GetFileName();
           SaveBuffer(filename, buffers[injectedMemIndex[handle]]);
           const auto& memState = SD().GetMemState(handle, EXCEPTION_MESSAGE);
-          if ((cfg.IsPlayer() ? cfg.opencl.player.captureImages : cfg.opencl.recorder.dumpImages) &&
+          if ((Configurator::IsPlayer() ? cfg.opencl.player.captureImages
+                                        : cfg.opencl.recorder.dumpImages) &&
               memState.image) {
             SaveImage(buffers[injectedMemIndex[handle]].data(), memState.image_format,
                       memState.image_desc, filename);
@@ -897,7 +898,7 @@ std::vector<char> InjectObjOperations(cl_command_queue cmdQ,
                                       KernelArgType type,
                                       KernelSetType setType) {
   static int injectedCounter = 0;
-  auto& cfg = Config::Get();
+  auto& cfg = Configurator::Get();
   std::vector<char> buffer;
   std::map<size_t, bool> indirectionMap;
   void* hPointer = const_cast<void*>(argValue);
@@ -937,14 +938,15 @@ std::vector<char> InjectObjOperations(cl_command_queue cmdQ,
       drvOcl.clEnqueueReadBuffer(cmdQ, handle, CL_BLOCKING, 0, buffer.size(), buffer.data(),
                                  event_wait_list ? 1 : 0, event_wait_list, nullptr);
     }
-    if ((cfg.IsPlayer() ? cfg.opencl.player.captureImages : cfg.opencl.recorder.dumpImages) &&
+    if ((Configurator::IsPlayer() ? cfg.opencl.player.captureImages
+                                  : cfg.opencl.recorder.dumpImages) &&
         memState.image) {
       SaveImage(buffer.data(), memState.image_format, memState.image_desc, fileName);
     }
   }
   if (!buffer.empty()) {
     Log(TRACE) << "^------------------ injected read #" << ++injectedCounter;
-    const bool nullIndirection = Config::IsPlayer()
+    const bool nullIndirection = Configurator::IsPlayer()
                                      ? !cfg.opencl.player.disableNullIndirectPointersInBuffer
                                      : cfg.opencl.recorder.nullIndirectPointersInBuffer;
     if (nullIndirection && !indirectionMap.empty()) {
@@ -1189,18 +1191,18 @@ bool IsReadOnlyBuffer(const cl_svm_mem_flags& memFlags) {
 }
 
 bool CheckCfgZeroInitialization(const Config& cfg, const bool& isReadOnlyObj) {
-  const auto zeroInit = cfg.IsPlayer() ? cfg.opencl.player.injectBufferResetAfterCreate
-                                       : cfg.opencl.recorder.bufferResetAfterCreate;
+  const auto zeroInit = Configurator::IsPlayer() ? cfg.opencl.player.injectBufferResetAfterCreate
+                                                 : cfg.opencl.recorder.bufferResetAfterCreate;
   if (!zeroInit) {
     return false;
   }
-  const auto omitReadOnly = cfg.IsPlayer() ? cfg.opencl.player.omitReadOnlyObjects
-                                           : cfg.opencl.recorder.omitReadOnlyObjects;
+  const auto omitReadOnly = Configurator::IsPlayer() ? cfg.opencl.player.omitReadOnlyObjects
+                                                     : cfg.opencl.recorder.omitReadOnlyObjects;
   if (omitReadOnly && isReadOnlyObj) {
     return false;
   }
-  const auto dumpBuffers = cfg.IsPlayer() ? !cfg.opencl.player.captureKernels.empty()
-                                          : !cfg.opencl.recorder.dumpKernels.empty();
+  const auto dumpBuffers = Configurator::IsPlayer() ? !cfg.opencl.player.captureKernels.empty()
+                                                    : !cfg.opencl.recorder.dumpKernels.empty();
   return dumpBuffers;
 }
 
@@ -1313,16 +1315,16 @@ std::string AppendBuildOption(const std::string& options, const std::string& opt
 
 std::string AppendKernelArgInfoOption(const std::string& options) {
   const std::string kernelArgInfoOption = "-cl-kernel-arg-info";
-  if (Config::Get().opencl.player.omitReadOnlyObjects) {
+  if (Configurator::Get().opencl.player.omitReadOnlyObjects) {
     return AppendBuildOption(options, kernelArgInfoOption);
   }
   return options;
 }
 
 std::string AppendStreamPathToIncludePath(const std::string& options, const bool& hasHeaders) {
-  const auto& cfg = Config::Get();
+  const auto& cfg = Configurator::Get();
   const auto& streamPath =
-      Config::IsPlayer() ? cfg.common.player.streamDir : cfg.common.recorder.dumpPath;
+      Configurator::IsPlayer() ? cfg.common.player.streamDir : cfg.common.recorder.dumpPath;
   const std::string includeStreamDir = "-I \"" + streamPath.string() + "\"";
   std::string new_options = AppendBuildOption(options, includeStreamDir);
 

@@ -83,7 +83,7 @@ public:
     } else {
       auto iter = get_map().find(key);
       if (iter == get_map().end()) {
-        if (Config::Get().IsPlayer()) {
+        if (Configurator::IsPlayer()) {
           Log(ERR) << "Couldn't map Vulkan object name " << key;
           throw std::runtime_error(EXCEPTION_MESSAGE);
         } else {
@@ -211,7 +211,7 @@ private:
   }
   static bool useVectorMapper() {
     static bool useVectorMap =
-        !stream_older_than(GITS_REC_PLAY_PTR_VECTOR_MAPS) && Config::IsPlayer();
+        !stream_older_than(GITS_REC_PLAY_PTR_VECTOR_MAPS) && Configurator::IsPlayer();
     return useVectorMap;
   }
 };

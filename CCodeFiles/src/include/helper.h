@@ -50,7 +50,7 @@ private:
 
 inline CResourceManager2& GetResourceManager() {
   static CResourceManager2 resourceManager(
-      resource_filenames(Config::Get().common.player.streamDir));
+      resource_filenames(Configurator::Get().common.player.streamDir));
   return resourceManager;
 }
 
@@ -174,7 +174,7 @@ class TextFile {
 
 public:
   TextFile(const char* filename) : _filename(filename) {
-    std::filesystem::path filePath = Config::Get().common.player.streamDir / _filename;
+    std::filesystem::path filePath = Configurator::Get().common.player.streamDir / _filename;
     uint64_t fileSize = FileSize(_filename);
 
     if (fileSize > 0) {
