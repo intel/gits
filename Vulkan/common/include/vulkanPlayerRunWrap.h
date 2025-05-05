@@ -2333,7 +2333,8 @@ void PatchSBTHelper(const CCommandBufferState& cmdBufState,
                             gitsPipelines.getPatchShaderGroupHandlesInSBT());
 
     auto dispatchComputeShader = [&](const VkStridedDeviceAddressRegionKHR* pSBT) {
-      if (pSBT && pSBT->deviceAddress && pSBT->size && pSBT->stride) {
+      if (pSBT && pSBT->deviceAddress && pSBT->size) {
+        auto stride = pSBT->stride > 0 ? pSBT->stride : pSBT->size;
         struct PushConstantsData {
           VkDeviceAddress OldHandlesMap;
           VkDeviceAddress NewHandlesMap;
@@ -2341,14 +2342,14 @@ void PatchSBTHelper(const CCommandBufferState& cmdBufState,
           uint32_t Stride;
           uint32_t Size;
         } pushConstants = {
-            oldHandlesMap,          // VkDeviceAddress OldHandlesMap;
-            newHandlesMap,          // VkDeviceAddress NewHandlesMap;
-            pSBT->deviceAddress,    // VkDeviceAddress SBTBaseAddress;
-            (uint32_t)pSBT->stride, // uint32_t Stride;
-            (uint32_t)pSBT->size    // uint32_t Size;
+            oldHandlesMap,       // VkDeviceAddress OldHandlesMap;
+            newHandlesMap,       // VkDeviceAddress NewHandlesMap;
+            pSBT->deviceAddress, // VkDeviceAddress SBTBaseAddress;
+            (uint32_t)stride,    // uint32_t Stride;
+            (uint32_t)pSBT->size // uint32_t Size;
         };
         // 32 is a performance optimization - 32 local invocations of a compute shader are dispatched
-        uint32_t divisor = pSBT->stride * 32;
+        uint32_t divisor = stride * 32;
         uint32_t invocationsCount = (pSBT->size / divisor) + ((pSBT->size % divisor > 0) ? 1 : 0);
 
         drvVk.vkCmdPushConstants(cmdBuf, gitsPipelines.getLayout(), VK_SHADER_STAGE_COMPUTE_BIT, 0,
