@@ -973,9 +973,8 @@ public:
     if (dictSize <= _cargs.max_size()) {
       _cargs.resize(dictSize);
       for (unsigned i = 0; i < dictSize; i++) {
-        std::shared_ptr<TKeyArg> keyArgPtr(new TKeyArg());
-        keyArgPtr->Read(stream);
-        _cargs[i] = std::move(keyArgPtr);
+        _cargs[i] = std::make_shared<TKeyArg>();
+        _cargs[i]->Read(stream);
       }
     } else {
       throw std::runtime_error(EXCEPTION_MESSAGE);

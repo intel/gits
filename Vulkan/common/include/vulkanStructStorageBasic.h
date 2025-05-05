@@ -31,9 +31,9 @@ public:
       return;
     }
 
+    _cargsDict.resize(size);
     for (size_t i = 0; i < size; i++) {
-      auto obj = std::make_shared<TKeyArg>(&dictionary[i]);
-      _cargsDict.push_back(std::move(obj));
+      _cargsDict[i] = std::make_shared<TKeyArg>(&dictionary[i]);
     }
   }
   void AddElem(const TKey* elem) {
@@ -50,9 +50,9 @@ public:
       return;
     }
 
+    _cargsDict.resize(size);
     for (size_t i = 0; i < size; i++) {
-      auto obj = std::make_shared<TKeyArg>(&dictionary[i], arg3);
-      _cargsDict.push_back(std::move(obj));
+      _cargsDict[i] = std::make_shared<TKeyArg>(&dictionary[i], arg3);
     }
   }
   template <class WRAP_T2, class WRAP_T3>
@@ -71,9 +71,9 @@ public:
       return;
     }
 
+    _cargsDict.resize(size);
     for (size_t i = 0; i < size; i++) {
-      auto obj = std::make_shared<TKeyArg>(&dictionary[i]);
-      _cargsDict.push_back(std::move(obj));
+      _cargsDict[i] = std::make_shared<TKeyArg>(&dictionary[i]);
     }
   }
   std::vector<std::shared_ptr<TKeyArg>>& Vector() {
@@ -501,50 +501,36 @@ typedef CSimpleData<xcb_connection_t*> Cxcb_connection_tData;
 typedef CSimpleData<xcb_window_t> Cxcb_window_tData;
 typedef CSimpleData<Display*> CVkDisplayData;
 typedef CSimpleData<Window> CVkWindowData;
-// typedef CDataArray<uint32_t, CcharData> CVulkanShaderData;
+
 class CVulkanShaderData {
 private:
-  std::vector<std::shared_ptr<Cuint32_tData>> _cargsDict;
   std::vector<uint32_t> _data;
 
 public:
   CVulkanShaderData() {}
-  CVulkanShaderData(size_t size, const uint32_t* dictionary) {
-    if (dictionary == NULL) {
+  CVulkanShaderData(size_t size, const uint32_t* pData) {
+    if ((size == 0) || (pData == NULL)) {
       return;
     }
 
-    for (size_t i = 0; i < size / 4; i++) {
-      auto obj = std::make_shared<Cuint32_tData>(&dictionary[i]);
-      _cargsDict.push_back(std::move(obj));
-    }
+    _data.resize(size);
+    memcpy(_data.data(), pData, size);
   }
-  CVulkanShaderData(size_t size, uint32_t* dictionary) {
-    if (dictionary == NULL) {
+  CVulkanShaderData(size_t size, uint32_t* pData) {
+    if ((size == 0) || (pData == NULL)) {
       return;
     }
 
-    for (size_t i = 0; i < size / 4; i++) {
-      auto obj = std::make_shared<Cuint32_tData>(&dictionary[i]);
-      _cargsDict.push_back(std::move(obj));
-    }
-  }
-  std::vector<std::shared_ptr<Cuint32_tData>>& Vector() {
-    return _cargsDict;
-  }
-  const std::vector<std::shared_ptr<Cuint32_tData>>& Vector() const {
-    return _cargsDict;
+    _data.resize(size);
+    memcpy(_data.data(), pData, size);
   }
 
   uint32_t* Value() {
-    if (_cargsDict.size() == 0) {
+    if (_data.size() == 0) {
       return 0;
     }
-    _data.clear();
-    for (size_t i = 0; i < _cargsDict.size(); i++) {
-      _data.push_back(**_cargsDict[i]);
-    }
-    return &_data[0];
+
+    return _data.data();
   }
   uint32_t* operator*() {
     return Value();
