@@ -2384,39 +2384,37 @@ void getRangesForMemoryUpdate(VkDeviceMemory memory,
                               std::vector<VkBufferCopy>& updatedRanges,
                               bool unmap) {
   auto& memoryState = SD()._devicememorystates[memory];
-
   auto& mapping = memoryState->mapping;
-  std::uint64_t unmapSize = mapping->sizeData.Value();
-  char* pointer = (char*)mapping->ppDataData.Value();
+  uint64_t unmapSize = mapping->size;
+  char* pointer = mapping->pData;
 
   // External memory option enabled
   if (isUseExternalMemoryExtensionUsed() ||
       Configurator::Get().vulkan.recorder.writeWatchDetection) {
-    std::vector<std::pair<void*, size_t>> touchedPages;
+    std::vector<std::pair<char*, size_t>> touchedPages;
     if (isUseExternalMemoryExtensionUsed()) {
       touchedPages = WriteWatchSniffer::GetTouchedPagesAndReset(
-          (char*)memoryState->externalMemory + mapping->offsetData.Value(), unmapSize);
+          (char*)memoryState->externalMemory + mapping->offset, unmapSize);
     } else {
       touchedPages = WriteWatchSniffer::GetTouchedPagesAndReset(pointer, unmapSize);
     }
 
     for (auto& page : touchedPages) {
-      VkDeviceSize offset = (char*)page.first - (char*)pointer;
+      VkDeviceSize offset = page.first - pointer;
       VkDeviceSize size = page.second;
 
       if (Configurator::Get().vulkan.recorder.memorySegmentSize) {
         std::vector<std::pair<const uint8_t*, const uint8_t*>> optimizePagesMap =
-            GetChangedMemorySubranges(&mapping->compareData[offset], (char*)pointer + offset, size,
+            GetChangedMemorySubranges(&mapping->compareData[offset], pointer + offset, size,
                                       Configurator::Get().vulkan.recorder.memorySegmentSize);
 
         for (auto& startEndPtrPair : optimizePagesMap) {
-          std::uint64_t optimize_range_size = startEndPtrPair.second - startEndPtrPair.first;
+          uint64_t optimize_range_size = startEndPtrPair.second - startEndPtrPair.first;
 
           if (optimize_range_size > 0) {
-            std::uint64_t optimize_offset =
-                (std::uint64_t)((char*)startEndPtrPair.first - (char*)pointer);
+            uint64_t optimize_offset = (uint64_t)((char*)startEndPtrPair.first - pointer);
 
-            memcpy(&mapping->compareData[(size_t)optimize_offset], (char*)pointer + optimize_offset,
+            memcpy(&mapping->compareData[optimize_offset], pointer + optimize_offset,
                    optimize_range_size);
             updatedRanges.push_back({
                 optimize_offset,    // VkDeviceSize srcOffset;
@@ -2434,9 +2432,9 @@ void getRangesForMemoryUpdate(VkDeviceMemory memory,
       }
     }
   } else if (Configurator::Get().vulkan.recorder.memoryAccessDetection) {
-    std::pair<const void*, size_t> baseRange = {(char*)pointer, (size_t)unmapSize};
+    std::pair<const void*, size_t> baseRange = {pointer, (size_t)unmapSize};
     auto sniffedRegionHandle = mapping->sniffedRegionHandle;
-    std::vector<std::pair<std::uint64_t, std::uint64_t>> pagesMap =
+    std::vector<std::pair<uint64_t, uint64_t>> pagesMap =
         GetIntervalSetFromMemoryPages(baseRange, (**sniffedRegionHandle).GetTouchedPagesAndReset());
 
     if (!unmap) {
@@ -2447,25 +2445,23 @@ void getRangesForMemoryUpdate(VkDeviceMemory memory,
     }
 
     for (auto& startEndPtrPair : pagesMap) {
-      std::uint64_t range_size = startEndPtrPair.second - startEndPtrPair.first;
+      uint64_t range_size = startEndPtrPair.second - startEndPtrPair.first;
 
       if (range_size > 0) {
-        std::uint64_t offset = (std::uint64_t)((char*)startEndPtrPair.first - (char*)pointer);
+        uint64_t offset = (uint64_t)((char*)startEndPtrPair.first - pointer);
 
         if (Configurator::Get().vulkan.recorder.memorySegmentSize) {
           std::vector<std::pair<const uint8_t*, const uint8_t*>> optimizePagesMap =
-              GetChangedMemorySubranges(&mapping->compareData[(size_t)offset],
-                                        (char*)pointer + offset, range_size,
+              GetChangedMemorySubranges(&mapping->compareData[offset], pointer + offset, range_size,
                                         Configurator::Get().vulkan.recorder.memorySegmentSize);
 
           for (auto& startEndPtrPair : optimizePagesMap) {
-            std::uint64_t optimize_range_size = startEndPtrPair.second - startEndPtrPair.first;
-            std::uint64_t optimize_offset =
-                (std::uint64_t)((char*)startEndPtrPair.first - (char*)pointer);
+            uint64_t optimize_range_size = startEndPtrPair.second - startEndPtrPair.first;
+            uint64_t optimize_offset = (uint64_t)((char*)startEndPtrPair.first - pointer);
 
             if (optimize_range_size > 0) {
-              memcpy(&mapping->compareData[(size_t)optimize_offset],
-                     (char*)pointer + optimize_offset, optimize_range_size);
+              memcpy(&mapping->compareData[optimize_offset], pointer + optimize_offset,
+                     optimize_range_size);
               updatedRanges.push_back({
                   optimize_offset,    // VkDeviceSize srcOffset;
                   optimize_offset,    // VkDeviceSize dstOffset;
@@ -2484,17 +2480,16 @@ void getRangesForMemoryUpdate(VkDeviceMemory memory,
     }
   } else if (Configurator::Get().vulkan.recorder.memorySegmentSize) {
     std::vector<std::pair<const uint8_t*, const uint8_t*>> optimizePagesMap =
-        GetChangedMemorySubranges(&mapping->compareData[0], (char*)pointer, unmapSize,
+        GetChangedMemorySubranges(&mapping->compareData[0], pointer, unmapSize,
                                   Configurator::Get().vulkan.recorder.memorySegmentSize);
 
     for (auto& startEndPtrPair : optimizePagesMap) {
-      std::uint64_t optimize_range_size = startEndPtrPair.second - startEndPtrPair.first;
+      uint64_t optimize_range_size = startEndPtrPair.second - startEndPtrPair.first;
 
       if (optimize_range_size > 0) {
-        std::uint64_t optimize_offset =
-            (std::uint64_t)((char*)startEndPtrPair.first - (char*)pointer);
+        uint64_t optimize_offset = (uint64_t)((char*)startEndPtrPair.first - pointer);
 
-        memcpy(&mapping->compareData[(size_t)optimize_offset], (char*)pointer + optimize_offset,
+        memcpy(&mapping->compareData[optimize_offset], pointer + optimize_offset,
                optimize_range_size);
         updatedRanges.push_back({
             optimize_offset,    // VkDeviceSize srcOffset;
@@ -2514,28 +2509,27 @@ void getRangesForMemoryUpdate(VkDeviceMemory memory,
 
 void flushShadowMemory(VkDeviceMemory memory, bool unmap) {
   auto& memoryState = SD()._devicememorystates[memory];
+  auto& mapping = memoryState->mapping;
 
-  std::uint64_t unmapSize = memoryState->mapping->sizeData.Value();
-  void* pointer = (char*)memoryState->mapping->ppDataData.Value();
-
-  std::uint64_t offset = memoryState->mapping->offsetData.Value();
+  uint64_t unmapSize = mapping->size;
+  char* pointer = mapping->pData;
+  uint64_t offset = mapping->offset;
 
   if (Configurator::Get().vulkan.recorder.memoryAccessDetection) {
     std::pair<const void*, size_t> baseRange;
-    baseRange.first = (char*)pointer;
-    baseRange.second = (size_t)unmapSize;
+    baseRange.first = pointer;
+    baseRange.second = unmapSize;
     auto subRange = GetSubrangeOverlappingMemoryPages(
-        baseRange, (**memoryState->mapping->sniffedRegionHandle).GetTouchedPagesAndReset());
+        baseRange, (**mapping->sniffedRegionHandle).GetTouchedPagesAndReset());
 
     if (!unmap) {
-      if (!MemorySniffer::Get().Protect(memoryState->mapping->sniffedRegionHandle)) {
-        Log(WARN) << "Protecting memory region: "
-                  << (**memoryState->mapping->sniffedRegionHandle).BeginAddress() << " - "
-                  << (**memoryState->mapping->sniffedRegionHandle).EndAddress() << " FAILED!.";
+      if (!MemorySniffer::Get().Protect(mapping->sniffedRegionHandle)) {
+        Log(WARN) << "Protecting memory region: " << (**mapping->sniffedRegionHandle).BeginAddress()
+                  << " - " << (**mapping->sniffedRegionHandle).EndAddress() << " FAILED!.";
       }
     }
 
-    offset += (std::uint64_t)subRange.first - (std::uint64_t)pointer;
+    offset += (uint64_t)subRange.first - (uint64_t)pointer;
     unmapSize = subRange.second;
 
     if (unmapSize == 0) {
@@ -2544,16 +2538,16 @@ void flushShadowMemory(VkDeviceMemory memory, bool unmap) {
   }
 
   if (Configurator::Get().vulkan.recorder.writeWatchDetection) {
-    std::vector<std::pair<void*, size_t>> touchedPages =
+    std::vector<std::pair<char*, size_t>> touchedPages =
         WriteWatchSniffer::GetTouchedPagesAndReset(pointer, unmapSize);
 
     for (auto& page : touchedPages) {
-      VkDeviceSize totalOffset = ((char*)page.first - (char*)pointer) + offset;
+      VkDeviceSize totalOffset = page.first - pointer + offset;
       VkDeviceSize size = page.second;
-      memoryState->shadowMemory->Flush((size_t)totalOffset, (size_t)size);
+      memoryState->shadowMemory->Flush(totalOffset, size);
     }
   } else {
-    memoryState->shadowMemory->Flush((size_t)offset, (size_t)unmapSize);
+    memoryState->shadowMemory->Flush(offset, unmapSize);
   }
 }
 

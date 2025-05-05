@@ -685,7 +685,8 @@ inline void vkMapMemory_SD(VkResult return_value,
     unmapSize = memoryState->memoryAllocateInfoData.Value()->allocationSize - offset;
   }
 
-  memoryState->mapping.reset(new CDeviceMemoryState::CMapping(&offset, &unmapSize, &flags, ppData));
+  memoryState->mapping.reset(
+      new CDeviceMemoryState::CMapping(offset, unmapSize, flags, (char*)*ppData));
 
   if (Configurator::Get().vulkan.player.printMemUsageVk) {
     SD().currentlyMappedMemory += unmapSize;
@@ -729,7 +730,7 @@ inline void vkUnmapMemory_SD(VkDevice device, VkDeviceMemory memory) {
     }
 
     if (Configurator::Get().vulkan.player.printMemUsageVk) {
-      SD().currentlyMappedMemory -= memoryState->mapping->sizeData.Value();
+      SD().currentlyMappedMemory -= memoryState->mapping->size;
     }
 
     memoryState->mapping.reset();

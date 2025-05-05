@@ -222,51 +222,52 @@ bool SetPagesProtection(PageMemoryProtection access, void* ptr, size_t size) {
 //
 //**************************************************************************************************
 
-std::vector<std::pair<void*, size_t>> WriteWatchSniffer::GetTouchedPagesAndReset(void* ptr,
+std::vector<std::pair<char*, size_t>> WriteWatchSniffer::GetTouchedPagesAndReset(char* ptr,
                                                                                  size_t size) {
 #ifdef GITS_PLATFORM_WINDOWS
-  auto pageSize = GetVirtualMemoryPageSize();
-  ULONG_PTR pageCount = (size / pageSize) + ((size % pageSize > 0) ? 1 : 0);
-  std::vector<void*> touchedPages(pageCount);
-  DWORD granularity = 0;
-  UINT returnValue = GetWriteWatch(WRITE_WATCH_FLAG_RESET, ptr, size, touchedPages.data(),
-                                   &pageCount, &granularity);
-  if ((returnValue == 0) && (pageCount > 0)) {
+  static auto pageSize = GetVirtualMemoryPageSize();
 
-    std::vector<std::pair<void*, size_t>> touchedMemory;
-    void* basePtr = touchedPages[0];
-    size_t length = pageSize;
+  // Largest memory address aligned to a page size smaller than the ptr
+  auto baseAddress = ptr - ((size_t)ptr % pageSize);
+  auto adjustedSize = ptr + size - baseAddress;
+
+  ULONG_PTR pageCount = (adjustedSize / pageSize) + ((adjustedSize % pageSize > 0) ? 1 : 0);
+
+  std::vector<char*> touchedPages(pageCount);
+  DWORD granularity = 0;
+  UINT returnValue = GetWriteWatch(WRITE_WATCH_FLAG_RESET, ptr, size, (void**)touchedPages.data(),
+                                   &pageCount, &granularity);
+
+  if ((returnValue == 0) && (pageCount > 0)) {
+    std::vector<std::pair<char*, size_t>> touchedMemory{{touchedPages[0], pageSize}};
+    auto& currentElement = touchedMemory.front();
+
+    // Adjust the base ptr of the first entry
+    if (currentElement.first < ptr) {
+      auto diff = ptr - currentElement.first;
+      currentElement.first = ptr;
+      currentElement.second -= diff;
+    }
 
     for (size_t i = 1; i < pageCount; ++i) {
-      if (touchedPages[i] == ((char*)basePtr + length)) {
-        length += pageSize;
+      if (touchedPages[i] == (currentElement.first + currentElement.second)) {
+        currentElement.second += pageSize;
       } else {
-        touchedMemory.push_back(std::make_pair(basePtr, length));
-        basePtr = touchedPages[i];
-        length = pageSize;
+        touchedMemory.emplace_back(touchedPages[i], pageSize);
+        currentElement = touchedMemory.back();
       }
-    }
-    if (length > 0) {
-      touchedMemory.push_back(std::make_pair(basePtr, length));
-    }
-    // Adjust the base ptr of the first entry
-    auto& firstEntry = touchedMemory.front();
-    if (firstEntry.first < ptr) {
-      auto diff = (char*)ptr - (char*)firstEntry.first;
-      firstEntry.first = ptr;
-      firstEntry.second -= diff;
     }
 
     // Trim the length of the last entry
-    auto& lastEntry = touchedMemory.back();
-    if (((char*)lastEntry.first + lastEntry.second) > ((char*)ptr + size)) {
-      lastEntry.second = (char*)ptr + size - (char*)lastEntry.first;
+    if ((currentElement.first + currentElement.second) > (ptr + size)) {
+      auto diff = (currentElement.first + currentElement.second) - (ptr + size);
+      currentElement.second -= diff;
     }
     return touchedMemory;
   }
 #endif
 
-  return std::vector<std::pair<void*, size_t>>();
+  return std::vector<std::pair<char*, size_t>>();
 }
 
 //**************************************************************************************************

@@ -671,13 +671,12 @@ void gits::Vulkan::RestoreMappedMemory(CScheduler& scheduler, CStateDynamic& sd)
             deviceMemoryState.second->memoryAllocateInfoData.Value()->allocationSize));
       }
       if (deviceMemoryState.second->IsMapped()) {
-        VkDeviceMemory deviceMemory = deviceMemoryState.first;
+        auto device = deviceMemoryState.second->deviceStateStore->deviceHandle;
+        auto memory = deviceMemoryState.first;
         auto& mapping = deviceMemoryState.second->mapping;
-        void* data = mapping->ppDataData.Value();
-        scheduler.Register(
-            new CvkMapMemory(VK_SUCCESS, deviceMemoryState.second->deviceStateStore->deviceHandle,
-                             deviceMemory, mapping->offsetData.Value(), mapping->sizeData.Value(),
-                             mapping->flagsData.Value(), &data));
+        void* data = mapping->pData;
+        scheduler.Register(new CvkMapMemory(VK_SUCCESS, device, memory, mapping->offset,
+                                            mapping->size, mapping->flags, &data));
       }
     }
   }

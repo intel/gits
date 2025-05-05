@@ -112,28 +112,30 @@ gits::Vulkan::CGitsVkMemoryUpdate::CGitsVkMemoryUpdate(VkDevice device,
     : _device(std::make_unique<CVkDevice>(device)), _mem(std::make_unique<CVkDeviceMemory>(mem)) {
 
   auto& memoryState = SD()._devicememorystates[mem];
-  if (device == memoryState->deviceStateStore->deviceHandle) {
-    std::uint64_t unmapSize = memoryState->mapping->sizeData.Value();
-    void* pointer = (char*)memoryState->mapping->ppDataData.Value();
+  auto& mapping = memoryState->mapping;
 
-    std::uint64_t offset = 0;
+  if (device == memoryState->deviceStateStore->deviceHandle) {
+    uint64_t unmapSize = mapping->size;
+    char* pointer = mapping->pData;
+
+    uint64_t offset = 0;
 
     if (Configurator::Get().vulkan.recorder.memoryAccessDetection) {
       std::pair<const void*, size_t> baseRange;
-      baseRange.first = (char*)pointer;
-      baseRange.second = (size_t)unmapSize;
+      baseRange.first = pointer;
+      baseRange.second = unmapSize;
       auto subRange = GetSubrangeOverlappingMemoryPages(
-          baseRange, (**memoryState->mapping->sniffedRegionHandle).GetTouchedPagesAndReset());
+          baseRange, (**mapping->sniffedRegionHandle).GetTouchedPagesAndReset());
 
       if (!unmap) {
-        if (!MemorySniffer::Get().Protect(memoryState->mapping->sniffedRegionHandle)) {
+        if (!MemorySniffer::Get().Protect(mapping->sniffedRegionHandle)) {
           Log(WARN) << "Protecting memory region: "
-                    << (**memoryState->mapping->sniffedRegionHandle).BeginAddress() << " - "
-                    << (**memoryState->mapping->sniffedRegionHandle).EndAddress() << " FAILED!.";
+                    << (**mapping->sniffedRegionHandle).BeginAddress() << " - "
+                    << (**mapping->sniffedRegionHandle).EndAddress() << " FAILED!.";
         }
       }
 
-      offset = (std::uint64_t)subRange.first - (std::uint64_t)pointer;
+      offset = (uint64_t)subRange.first - (uint64_t)pointer;
       unmapSize = subRange.second;
 
       if (unmapSize == 0) {
@@ -145,20 +147,19 @@ gits::Vulkan::CGitsVkMemoryUpdate::CGitsVkMemoryUpdate(VkDevice device,
     }
     if (Configurator::Get().vulkan.recorder.memorySegmentSize) {
       std::vector<char> mappedMemCopy;
-      mappedMemCopy.resize((size_t)unmapSize);
-      char* pointerToData = (char*)pointer + offset;
-      memcpy(mappedMemCopy.data(), pointerToData, (size_t)unmapSize);
-      std::uint64_t lengthNew = unmapSize;
-      std::uint64_t offsetNew = offset;
-      GetDiffSubRange(memoryState->mapping->compareData, mappedMemCopy, lengthNew, offsetNew);
+      mappedMemCopy.resize(unmapSize);
+      char* pointerToData = pointer + offset;
+      memcpy(mappedMemCopy.data(), pointerToData, unmapSize);
+      uint64_t lengthNew = unmapSize;
+      uint64_t offsetNew = offset;
+      GetDiffSubRange(mapping->compareData, mappedMemCopy, lengthNew, offsetNew);
       _offset = std::make_unique<Cuint64_t>(offset + offsetNew);
       _length = std::make_unique<Cuint64_t>(lengthNew);
 
       if (lengthNew > 0) {
-        memcpy(&memoryState->mapping->compareData[(size_t) * *_offset],
-               &mappedMemCopy[(size_t)offsetNew], (size_t)lengthNew);
-        _resource = std::make_unique<CDeclaredBinaryResource>(
-            RESOURCE_DATA_RAW, &mappedMemCopy[(size_t)offsetNew], (size_t) * *_length);
+        memcpy(&mapping->compareData[**_offset], &mappedMemCopy[offsetNew], (size_t)lengthNew);
+        _resource = std::make_unique<CDeclaredBinaryResource>(RESOURCE_DATA_RAW,
+                                                              &mappedMemCopy[offsetNew], **_length);
       } else {
         _resource = std::make_unique<CDeclaredBinaryResource>();
       }
@@ -167,14 +168,14 @@ gits::Vulkan::CGitsVkMemoryUpdate::CGitsVkMemoryUpdate(VkDevice device,
       _offset = std::make_unique<Cuint64_t>(offset);
       _length = std::make_unique<Cuint64_t>(unmapSize);
       if (**_length != 0) {
-        _resource = std::make_unique<CDeclaredBinaryResource>(
-            RESOURCE_DATA_RAW, (char*)pointer + **_offset, (size_t) * *_length);
+        _resource = std::make_unique<CDeclaredBinaryResource>(RESOURCE_DATA_RAW,
+                                                              pointer + **_offset, **_length);
       } else {
         _resource = std::make_unique<CDeclaredBinaryResource>();
       }
     }
     if (Configurator::Get().vulkan.recorder.shadowMemory) {
-      memoryState->shadowMemory->Flush((size_t) * *_offset, (size_t) * *_length);
+      memoryState->shadowMemory->Flush(**_offset, **_length);
     }
   } else {
     throw std::runtime_error("device from StateDynamic doesn't match device from vkMemoryUpdate");
@@ -183,7 +184,7 @@ gits::Vulkan::CGitsVkMemoryUpdate::CGitsVkMemoryUpdate(VkDevice device,
 
 void gits::Vulkan::CGitsVkMemoryUpdate::Run() {
   if (**_resource) {
-    void* pointer = SD()._devicememorystates[**_mem]->mapping->ppDataData.Value();
+    void* pointer = SD()._devicememorystates[**_mem]->mapping->pData;
     char* pointerToData = (char*)pointer + **_offset;
     std::memcpy(pointerToData, **_resource, (size_t) * *_length);
   }
@@ -237,12 +238,12 @@ gits::Vulkan::CGitsVkMemoryUpdate2::CGitsVkMemoryUpdate2(VkDeviceMemory memory,
       _size(std::make_unique<Cuint64_t>(regionCount)) {
 
   auto& memoryState = SD()._devicememorystates[memory];
-  void* pointer = (char*)memoryState->mapping->ppDataData.Value();
+  char* pointer = (char*)memoryState->mapping->pData;
 
   for (uint32_t i = 0; i < regionCount; ++i) {
     size_t offset = (size_t)pRegions[i].dstOffset;
     size_t length = (size_t)pRegions[i].size;
-    char* pointerToData = (char*)pointer + offset;
+    char* pointerToData = pointer + offset;
     std::vector<char> mappedMemCopy;
 
     _offset.push_back(std::make_shared<Cuint64_t>(offset));
@@ -259,7 +260,7 @@ gits::Vulkan::CGitsVkMemoryUpdate2::CGitsVkMemoryUpdate2(VkDeviceMemory memory,
     if (Configurator::Get().vulkan.recorder.shadowMemory) {
       size_t offset_flush = offset;
       if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
-        offset_flush += memoryState->mapping->offsetData.Value();
+        offset_flush += memoryState->mapping->offset;
       }
       memoryState->shadowMemory->Flush(offset_flush, length);
     }
@@ -293,7 +294,7 @@ void gits::Vulkan::CGitsVkMemoryUpdate2::Run() {
             **_length[i]                           // VkDeviceSize size;
         });
 
-        void* pointer = memoryState->mapping->ppDataData.Value();
+        char* pointer = memoryState->mapping->pData;
         std::memcpy((char*)pointer + updatedRegions[i].dstOffset, resourcePtr,
                     (size_t)updatedRegions[i].size);
       }
@@ -420,10 +421,11 @@ gits::Vulkan::CGitsVkMemoryRestore::CGitsVkMemoryRestore(VkDevice device,
   assert((size > 0) && "Restoring empty memory!\n");
 
   auto& memoryState = SD()._devicememorystates[mem];
+  auto& mapping = memoryState->mapping;
   void* pointer = nullptr;
+
   if (memoryState->IsMapped()) {
-    pointer =
-        (char*)memoryState->mapping->ppDataData.Value() - memoryState->mapping->offsetData.Value();
+    pointer = mapping->pData - mapping->offset;
   } else {
     VkResult mapMemoryResult = drvVk.vkMapMemory(device, mem, 0, size, 0, &pointer);
     if (mapMemoryResult != VK_SUCCESS) {
@@ -435,9 +437,9 @@ gits::Vulkan::CGitsVkMemoryRestore::CGitsVkMemoryRestore(VkDevice device,
   }
 
   if (Configurator::Get().vulkan.recorder.memoryAccessDetection && memoryState->IsMapped()) {
-    auto& dereferencedRegionHandle = **memoryState->mapping->sniffedRegionHandle;
+    auto& dereferencedRegionHandle = **mapping->sniffedRegionHandle;
     dereferencedRegionHandle.Reset();
-    if (!MemorySniffer::Get().Protect(memoryState->mapping->sniffedRegionHandle)) {
+    if (!MemorySniffer::Get().Protect(mapping->sniffedRegionHandle)) {
       Log(WARN) << "Protecting memory region: " << dereferencedRegionHandle.BeginAddress() << " - "
                 << dereferencedRegionHandle.EndAddress() << " FAILED!.";
     }
@@ -445,24 +447,23 @@ gits::Vulkan::CGitsVkMemoryRestore::CGitsVkMemoryRestore(VkDevice device,
 
   std::vector<char> rangeCopy(size);
   memcpy(rangeCopy.data(), (char*)pointer, (size_t)size);
-  std::uint64_t offsetNew = 0;
-  std::uint64_t lengthNew = size;
+  uint64_t offsetNew = 0;
+  uint64_t lengthNew = size;
   GetDiffFromZero(rangeCopy, lengthNew, offsetNew);
   _offset = std::make_unique<Cuint64_t>(offsetNew);
   _length = std::make_unique<Cuint64_t>(lengthNew);
   if (lengthNew > 0) {
     if (Configurator::Get().vulkan.recorder.memorySegmentSize && memoryState->IsMapped()) {
-      memcpy(memoryState->mapping->compareData.data(), memoryState->mapping->ppDataData.Value(),
-             (size_t)memoryState->mapping->sizeData.Value());
+      memcpy(mapping->compareData.data(), mapping->pData, mapping->size);
     }
-    _resource = std::make_unique<CDeclaredBinaryResource>(
-        RESOURCE_DATA_RAW, &rangeCopy[(size_t)offsetNew], (size_t)lengthNew);
+    _resource = std::make_unique<CDeclaredBinaryResource>(RESOURCE_DATA_RAW, &rangeCopy[offsetNew],
+                                                          lengthNew);
   } else {
     _resource = std::make_unique<CDeclaredBinaryResource>();
   }
 
   if (Configurator::Get().vulkan.recorder.shadowMemory && memoryState->IsMapped()) {
-    memoryState->shadowMemory->Flush((size_t) * *_offset, (size_t) * *_length);
+    memoryState->shadowMemory->Flush(**_offset, **_length);
   }
 
   if (!memoryState->IsMapped()) {
@@ -479,14 +480,14 @@ gits::Vulkan::CGitsVkMemoryRestore::CGitsVkMemoryRestore(VkDevice device,
 
   std::vector<char> rangeCopy(size);
   memcpy(rangeCopy.data(), mappedPtr, size);
-  std::uint64_t offsetNew = 0;
-  std::uint64_t lengthNew = size;
+  uint64_t offsetNew = 0;
+  uint64_t lengthNew = size;
   GetDiffFromZero(rangeCopy, lengthNew, offsetNew);
   _offset = std::make_unique<Cuint64_t>(offsetNew);
   _length = std::make_unique<Cuint64_t>(lengthNew);
   if (lengthNew > 0) {
-    _resource = std::make_unique<CDeclaredBinaryResource>(
-        RESOURCE_DATA_RAW, &rangeCopy[(size_t)offsetNew], (size_t)lengthNew);
+    _resource = std::make_unique<CDeclaredBinaryResource>(RESOURCE_DATA_RAW, &rangeCopy[offsetNew],
+                                                          lengthNew);
   } else {
     _resource = std::make_unique<CDeclaredBinaryResource>();
   }
@@ -504,15 +505,15 @@ void gits::Vulkan::CGitsVkMemoryRestore::Run() {
           **_offset, // VkDeviceSize dstOffset
           **_length  // VkDeviceSize size
       };
-      std::memcpy((char*)memoryState->mapping->ppDataData.Value() + updatedRegion.dstOffset,
-                  **_resource, (size_t)updatedRegion.size);
+      std::memcpy(memoryState->mapping->pData + updatedRegion.dstOffset, **_resource,
+                  updatedRegion.size);
 
       VkMappedMemoryRange range = {
-          VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, // VkStructureType   sType
-          nullptr,                               // const void      * pNext
-          memory,                                // VkDeviceMemory    memory
-          memoryState->mapping->offsetData.Value() + updatedRegion.dstOffset, // VkDeviceSize offset
-          updatedRegion.size // VkDeviceSize      size
+          VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,                  // VkStructureType   sType
+          nullptr,                                                // const void      * pNext
+          memory,                                                 // VkDeviceMemory    memory
+          memoryState->mapping->offset + updatedRegion.dstOffset, // VkDeviceSize      offset
+          updatedRegion.size                                      // VkDeviceSize      size
       };
       drvVk.vkFlushMappedMemoryRanges(device, 1, &range);
       drvVk.vkTagMemoryContentsUpdateGITS(device, memory, 1, &updatedRegion);
@@ -613,7 +614,7 @@ void gits::Vulkan::CGitsVkMemoryReset::Run() {
 
   auto& memoryState = SD()._devicememorystates[memory];
   if (memoryState && memoryState->IsMapped()) {
-    memset(memoryState->mapping->ppDataData.Value(), 0, (size_t)updatedRegion.size);
+    memset(memoryState->mapping->pData, 0, updatedRegion.size);
     drvVk.vkTagMemoryContentsUpdateGITS(device, memory, 1, &updatedRegion);
   } else {
     checkMemoryMappingFeasibility(device, memory);
@@ -621,7 +622,7 @@ void gits::Vulkan::CGitsVkMemoryReset::Run() {
     void* pointer = nullptr;
     drvVk.vkMapMemory(device, memory, updatedRegion.dstOffset, updatedRegion.size, 0, &pointer);
 
-    memset(pointer, 0, (size_t)updatedRegion.size);
+    memset(pointer, 0, updatedRegion.size);
     drvVk.vkTagMemoryContentsUpdateGITS(device, memory, 1, &updatedRegion);
 
     drvVk.vkUnmapMemory(device, memory);

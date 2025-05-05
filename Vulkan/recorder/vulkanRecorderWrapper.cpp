@@ -178,16 +178,17 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit(VkQueue queue,
           auto memoryStatePair = SD()._devicememorystates.find(obj2.first);
           if (memoryStatePair != SD()._devicememorystates.end()) {
             auto& memoryState = memoryStatePair->second;
+
             if (memoryState->IsMapped()) {
+              auto& mapping = memoryState->mapping;
+
               for (auto& obj3 : obj2.second.getIntervals()) {
-                uint64_t offset = std::max(obj3.first, memoryState->mapping->offsetData.Value());
+                uint64_t offset = std::max(obj3.first, mapping->offset);
                 uint64_t size = 0;
                 uint64_t high_value = obj3.second;
 
-                if (obj3.second > (memoryState->mapping->offsetData.Value() +
-                                   memoryState->mapping->sizeData.Value())) {
-                  high_value = memoryState->mapping->offsetData.Value() +
-                               memoryState->mapping->sizeData.Value();
+                if (obj3.second > (mapping->offset + mapping->size)) {
+                  high_value = mapping->offset + mapping->size;
                 }
                 if (offset < high_value) {
                   size = high_value - offset;
@@ -230,40 +231,38 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit(VkQueue queue,
 
     for (auto& obj2 : toUpdate.intervalMapMemory) {
       auto& memoryState = SD()._devicememorystates[obj2.first];
-      void* pointer = (char*)memoryState->mapping->ppDataData.Value();
+      auto& mapping = memoryState->mapping;
+      char* pointer = mapping->pData;
 
       for (auto& obj3 : obj2.second.getIntervals()) {
-        uint64_t offset = obj3.first - memoryState->mapping->offsetData.Value();
+        uint64_t offset = obj3.first - mapping->offset;
         uint64_t size = obj3.second - obj3.first;
 
-        if (offset + size <= memoryState->mapping->sizeData.Value()) {
+        if (offset + size <= mapping->size) {
           if (Configurator::Get().vulkan.recorder.shadowMemory) {
             if (Configurator::Get().vulkan.recorder.memoryAccessDetection) {
-              SetPagesProtection(PageMemoryProtection::READ_WRITE, (char*)pointer + offset,
-                                 (size_t)size);
+              SetPagesProtection(PageMemoryProtection::READ_WRITE, pointer + offset, size);
+
               if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
-                memoryState->shadowMemory->UpdateShadow(
-                    (size_t)(offset + memoryState->mapping->offsetData.Value()), (size_t)size);
+                memoryState->shadowMemory->UpdateShadow(offset + mapping->offset, size);
               } else {
-                memoryState->shadowMemory->UpdateShadow((size_t)offset, (size_t)size);
+                memoryState->shadowMemory->UpdateShadow(offset, size);
               }
-              SetPagesProtection(PageMemoryProtection::READ_ONLY, (char*)pointer + offset,
-                                 (size_t)size);
+
+              SetPagesProtection(PageMemoryProtection::READ_ONLY, pointer + offset, size);
             } else {
               if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
-                memoryState->shadowMemory->UpdateShadow(
-                    (size_t)(offset + memoryState->mapping->offsetData.Value()), (size_t)size);
+                memoryState->shadowMemory->UpdateShadow(offset + mapping->offset, size);
               } else {
-                memoryState->shadowMemory->UpdateShadow((size_t)offset, (size_t)size);
+                memoryState->shadowMemory->UpdateShadow(offset, size);
               }
               if (Configurator::Get().vulkan.recorder.writeWatchDetection) {
-                WriteWatchSniffer::ResetTouchedPages((char*)pointer + offset, (size_t)size);
+                WriteWatchSniffer::ResetTouchedPages(pointer + offset, size);
               }
             }
           }
           if (Configurator::Get().vulkan.recorder.memorySegmentSize) {
-            memcpy(&memoryState->mapping->compareData[(size_t)offset], (char*)pointer + offset,
-                   (size_t)size);
+            memcpy(&mapping->compareData[offset], pointer + offset, size);
           }
         } else {
           Log(WARN) << "Updating memory after QueueSubmit failed. Invalid values.";
@@ -302,15 +301,15 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit2(VkQueue queue,
           if (memoryStatePair != SD()._devicememorystates.end()) {
             auto& memoryState = memoryStatePair->second;
             if (memoryState->IsMapped()) {
+              auto& mapping = memoryState->mapping;
+
               for (auto& obj3 : obj2.second.getIntervals()) {
-                uint64_t offset = std::max(obj3.first, memoryState->mapping->offsetData.Value());
+                uint64_t offset = std::max(obj3.first, mapping->offset);
                 uint64_t size = 0;
                 uint64_t high_value = obj3.second;
 
-                if (obj3.second > (memoryState->mapping->offsetData.Value() +
-                                   memoryState->mapping->sizeData.Value())) {
-                  high_value = memoryState->mapping->offsetData.Value() +
-                               memoryState->mapping->sizeData.Value();
+                if (obj3.second > (mapping->offset + mapping->size)) {
+                  high_value = mapping->offset + mapping->size;
                 }
                 if (offset < high_value) {
                   size = high_value - offset;
@@ -353,40 +352,38 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit2(VkQueue queue,
 
     for (auto& obj2 : toUpdate.intervalMapMemory) {
       auto& memoryState = SD()._devicememorystates[obj2.first];
-      void* pointer = (char*)memoryState->mapping->ppDataData.Value();
+      auto& mapping = memoryState->mapping;
+      char* pointer = mapping->pData;
 
       for (auto& obj3 : obj2.second.getIntervals()) {
-        uint64_t offset = obj3.first - memoryState->mapping->offsetData.Value();
+        uint64_t offset = obj3.first - mapping->offset;
         uint64_t size = obj3.second - obj3.first;
 
-        if (offset + size <= memoryState->mapping->sizeData.Value()) {
+        if (offset + size <= mapping->size) {
           if (Configurator::Get().vulkan.recorder.shadowMemory) {
             if (Configurator::Get().vulkan.recorder.memoryAccessDetection) {
-              SetPagesProtection(PageMemoryProtection::READ_WRITE, (char*)pointer + offset,
-                                 (size_t)size);
+              SetPagesProtection(PageMemoryProtection::READ_WRITE, pointer + offset, size);
+
               if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
-                memoryState->shadowMemory->UpdateShadow(
-                    (size_t)(offset + memoryState->mapping->offsetData.Value()), (size_t)size);
+                memoryState->shadowMemory->UpdateShadow(offset + mapping->offset, size);
               } else {
-                memoryState->shadowMemory->UpdateShadow((size_t)offset, (size_t)size);
+                memoryState->shadowMemory->UpdateShadow(offset, size);
               }
-              SetPagesProtection(PageMemoryProtection::READ_ONLY, (char*)pointer + offset,
-                                 (size_t)size);
+
+              SetPagesProtection(PageMemoryProtection::READ_ONLY, pointer + offset, size);
             } else {
               if (CGits::Instance().apis.Iface3D().CfgRec_IsSubcapture()) {
-                memoryState->shadowMemory->UpdateShadow(
-                    (size_t)(offset + memoryState->mapping->offsetData.Value()), (size_t)size);
+                memoryState->shadowMemory->UpdateShadow(offset + mapping->offset, size);
               } else {
-                memoryState->shadowMemory->UpdateShadow((size_t)offset, (size_t)size);
+                memoryState->shadowMemory->UpdateShadow(offset, size);
               }
               if (Configurator::Get().vulkan.recorder.writeWatchDetection) {
-                WriteWatchSniffer::ResetTouchedPages((char*)pointer + offset, (size_t)size);
+                WriteWatchSniffer::ResetTouchedPages(pointer + offset, size);
               }
             }
           }
           if (Configurator::Get().vulkan.recorder.memorySegmentSize) {
-            memcpy(&memoryState->mapping->compareData[(size_t)offset], (char*)pointer + offset,
-                   (size_t)size);
+            memcpy(&mapping->compareData[offset], pointer + offset, size);
           }
         } else {
           Log(WARN) << "Updating memory after QueueSubmit failed. Invalid values.";

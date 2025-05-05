@@ -422,26 +422,19 @@ struct CSamplerState : public UniqueResourceHandle {
 
 struct CDeviceMemoryState : public UniqueResourceHandle {
   struct CMapping {
-    Cuint64_tData offsetData;
-    Cuint64_tData sizeData;
-    Cuint32_tData flagsData;
-    CvoidPtrData ppDataData;
+    uint64_t offset;
+    uint64_t size;
+    uint32_t flags;
+    char* pData;
     PagedMemoryRegionHandle sniffedRegionHandle;
     std::vector<char> compareData;
 
   public:
-    CMapping(const VkDeviceSize* _offset,
-             VkDeviceSize* _size,
-             VkMemoryMapFlags* _flags,
-             void** _ppData)
-        : offsetData(_offset),
-          sizeData(_size),
-          flagsData(_flags),
-          ppDataData(*_ppData),
-          sniffedRegionHandle(0) {
+    CMapping(VkDeviceSize _offset, VkDeviceSize _size, VkMemoryMapFlags _flags, char* _pData)
+        : offset(_offset), size(_size), flags(_flags), pData(_pData), sniffedRegionHandle(0) {
       if (Configurator::IsRecorder() && Configurator::Get().vulkan.recorder.memorySegmentSize) {
-        compareData.resize((size_t)*_size);
-        memcpy(&compareData[0], (char*)*_ppData, (size_t)*_size);
+        compareData.resize(_size);
+        memcpy(compareData.data(), _pData, _size);
       }
     }
   };
