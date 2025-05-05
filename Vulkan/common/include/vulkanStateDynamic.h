@@ -1027,12 +1027,8 @@ struct CPipelineState : public UniqueResourceHandle {
     VkDeviceAddress deviceAddress;
     bool patchingRequired;
 
-    CShaderGroupHandlesManagement()
-        : count(0),
-          dataSize(0),
-          mappedMemoryPtr(nullptr),
-          deviceAddress(0),
-          patchingRequired(true) {}
+    CShaderGroupHandlesManagement(uint32_t _count = 0, uint32_t _dataSize = 0)
+        : count(_count), dataSize(_dataSize), deviceAddress(0), patchingRequired(true) {}
     ~CShaderGroupHandlesManagement();
   } shaderGroupHandles;
 
@@ -1048,8 +1044,7 @@ struct CPipelineState : public UniqueResourceHandle {
         deviceStateStore(_deviceState),
         pipelineLayoutStateStore(_pipelineLayoutState),
         renderPassStateStore(_renderPassState),
-        isLibrary(false),
-        shaderGroupHandles() {}
+        isLibrary(false) {}
 
   CPipelineState(VkPipeline const* _pPipeline,
                  VkComputePipelineCreateInfo const* _pCreateInfo,
@@ -1061,8 +1056,7 @@ struct CPipelineState : public UniqueResourceHandle {
         rayTracingPipelineCreateInfoData(nullptr, VK_NULL_HANDLE),
         deviceStateStore(_deviceState),
         pipelineLayoutStateStore(_pipelineLayoutState),
-        isLibrary(false),
-        shaderGroupHandles() {}
+        isLibrary(false) {}
 
   CPipelineState(VkPipeline const* _pPipeline,
                  VkRayTracingPipelineCreateInfoKHR const* _pCreateInfo,
@@ -1075,7 +1069,8 @@ struct CPipelineState : public UniqueResourceHandle {
         deviceStateStore(_deviceState),
         pipelineLayoutStateStore(_pipelineLayoutState),
         isLibrary(false),
-        shaderGroupHandles() {}
+        shaderGroupHandles(_pCreateInfo->groupCount,
+                           _pCreateInfo->groupCount * CDeviceState::shaderGroupHandleSize) {}
 
   std::set<uint64_t> GetMappedPointers() {
     std::set<uint64_t> pointers;

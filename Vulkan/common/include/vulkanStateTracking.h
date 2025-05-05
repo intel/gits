@@ -2090,99 +2090,91 @@ inline void vkCreateRayTracingPipelinesKHR_SD(VkResult return_value,
                                               const VkRayTracingPipelineCreateInfoKHR* pCreateInfos,
                                               const VkAllocationCallbacks* pAllocator,
                                               VkPipeline* pPipelines) {
-  if (!pCreateInfos) {
+  if (!pCreateInfos || (VK_SUCCESS != return_value)) {
     return;
   }
 
-  if (VK_SUCCESS == return_value) {
-    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
 
-    for (uint32_t i = 0; i < createInfoCount; i++) {
-      if (pPipelines[i] == VK_NULL_HANDLE) {
-        continue;
+  for (uint32_t i = 0; i < createInfoCount; i++) {
+    if (pPipelines[i] == VK_NULL_HANDLE) {
+      continue;
+    }
+
+    const auto* pCreateInfo = &pCreateInfos[i];
+    auto pipelineState =
+        std::make_shared<CPipelineState>(&pPipelines[i], pCreateInfo, SD()._devicestates[device],
+                                         SD()._pipelinelayoutstates[pCreateInfo->layout]);
+    pipelineState->isLibrary = isBitSet(pCreateInfo->flags, VK_PIPELINE_CREATE_LIBRARY_BIT_KHR);
+
+    for (unsigned int j = 0; j < pCreateInfo->stageCount; j++) {
+      const auto& stageInfo = pCreateInfo->pStages[j];
+      const auto& shaderModuleState = SD()._shadermodulestates[stageInfo.module];
+      pipelineState->shaderModuleStateStoreList.push_back(shaderModuleState);
+      pipelineState->stageShaderHashMapping[stageInfo.stage] = shaderModuleState->shaderHash;
+    }
+
+    SD()._pipelinestates.emplace(pPipelines[i], pipelineState);
+
+    // Shader group handles
+    auto& shaderGroup = pipelineState->shaderGroupHandles;
+
+    // Handles assigned on a current platform
+    std::vector<uint8_t> currentHandles;
+    {
+      currentHandles.resize(shaderGroup.dataSize);
+      drvVk.vkGetRayTracingShaderGroupHandlesKHR(device, pPipelines[i], 0, shaderGroup.count,
+                                                 shaderGroup.dataSize, currentHandles.data());
+    }
+
+    // Handles assigned during stream recording (passed from a recorder)
+    auto* pOriginalHandles = (VkOriginalShaderGroupHandlesGITS*)getPNextStructure(
+        pCreateInfo->pNext, VK_STRUCTURE_TYPE_ORIGINAL_SHADER_GROUP_HANDLES_GITS);
+    std::vector<uint8_t>& originalHandles = shaderGroup.originalHandles;
+    {
+      originalHandles.resize(shaderGroup.dataSize);
+      if (pOriginalHandles) {
+        memcpy(originalHandles.data(), pOriginalHandles->pData, shaderGroup.dataSize);
+        shaderGroup.patchingRequired =
+            Config::Get().vulkan.player.patchShaderGroupHandles &&
+            (memcmp(originalHandles.data(), currentHandles.data(), shaderGroup.dataSize) != 0);
+      } else {
+        originalHandles = currentHandles;
+        shaderGroup.patchingRequired = false;
       }
+    }
 
-      const auto* pCreateInfo = &pCreateInfos[i];
-      auto pipelineState =
-          std::make_shared<CPipelineState>(&pPipelines[i], pCreateInfo, SD()._devicestates[device],
-                                           SD()._pipelinelayoutstates[pCreateInfo->layout]);
-      pipelineState->isLibrary = isBitSet(pCreateInfo->flags, VK_PIPELINE_CREATE_LIBRARY_BIT_KHR);
+    // Create a per RT-pipeline buffer to store shader group handles which are used later during
+    // SBT patching. The buffer contains both original (recorder-side) and current (player-side)
+    // handles, that's why its size is twice as large.
+    if (shaderGroup.patchingRequired) {
+      shaderGroup.memoryBufferPair = createTemporaryBuffer(
+          device, 2 * shaderGroup.dataSize, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, nullptr,
+          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
-      for (unsigned int j = 0; j < pCreateInfo->stageCount; j++) {
-        const auto& stageInfo = pCreateInfo->pStages[j];
-        const auto& shaderModuleState = SD()._shadermodulestates[stageInfo.module];
-        pipelineState->shaderModuleStateStoreList.push_back(shaderModuleState);
-        pipelineState->stageShaderHashMapping[stageInfo.stage] = shaderModuleState->shaderHash;
-      }
+      auto memory = shaderGroup.memoryBufferPair.first->deviceMemoryHandle;
+      auto buffer = shaderGroup.memoryBufferPair.second->bufferHandle;
+      shaderGroup.deviceAddress = getBufferDeviceAddress(device, buffer);
 
-      SD()._pipelinestates.emplace(pPipelines[i], pipelineState);
+      char* mappedMemoryPtr;
+      drvVk.vkMapMemory(device, memory, 0, VK_WHOLE_SIZE, 0, (void**)&mappedMemoryPtr);
 
-      // Shader group handles
-      auto& shaderGroup = pipelineState->shaderGroupHandles;
-      shaderGroup.count = pCreateInfo->groupCount;
-      shaderGroup.dataSize = pCreateInfo->groupCount * CDeviceState::shaderGroupHandleSize;
+      // Buffer used to patch shader group handles contains original and current handles
 
-      // Handles assigned on a current platform
-      std::vector<uint8_t> currentHandles;
-      {
-        currentHandles.resize(shaderGroup.dataSize);
-        drvVk.vkGetRayTracingShaderGroupHandlesKHR(device, pPipelines[i], 0, shaderGroup.count,
-                                                   shaderGroup.dataSize, currentHandles.data());
-      }
+      // Copy original shader group handles passed from a recorder
+      memcpy(mappedMemoryPtr, originalHandles.data(), shaderGroup.dataSize);
+      // Copy current shader group handles acquired from a driver
+      memcpy(mappedMemoryPtr + shaderGroup.dataSize, currentHandles.data(), shaderGroup.dataSize);
 
-      // Handles assigned during stream recording (passed from a recorder)
-      auto* pOriginalHandles = (VkOriginalShaderGroupHandlesGITS*)getPNextStructure(
-          pCreateInfo->pNext, VK_STRUCTURE_TYPE_ORIGINAL_SHADER_GROUP_HANDLES_GITS);
-      std::vector<uint8_t>& originalHandles = shaderGroup.originalHandles;
-      {
-        originalHandles.resize(shaderGroup.dataSize);
-        if (pOriginalHandles) {
-          memcpy(originalHandles.data(), pOriginalHandles->pData, shaderGroup.dataSize);
-        } else {
-          originalHandles = currentHandles;
-        }
-      }
-
-      // Prepare data for patching and perform patching ONLY when:
-      // - there are original handles AND
-      // - patching option is enabled AND
-      // - original and current handles are different
-      shaderGroup.patchingRequired =
-          pOriginalHandles && Config::Get().vulkan.player.patchShaderGroupHandles &&
-          (memcmp(originalHandles.data(), currentHandles.data(), shaderGroup.dataSize) != 0);
-
-      // Create a per RT-pipeline buffer to store shader group handles which are used later during
-      // SBT patching. The buffer contains both original (recorder-side) and current (player-side)
-      // handles, that's why its size is twice as large.
-      if (shaderGroup.patchingRequired) {
-        shaderGroup.memoryBufferPair = createTemporaryBuffer(
-            device, 2 * shaderGroup.dataSize, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, nullptr,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-
-        auto memory = shaderGroup.memoryBufferPair.first->deviceMemoryHandle;
-        auto buffer = shaderGroup.memoryBufferPair.second->bufferHandle;
-        shaderGroup.deviceAddress = getBufferDeviceAddress(device, buffer);
-
-        char* mappedMemoryPtr;
-        drvVk.vkMapMemory(device, memory, 0, VK_WHOLE_SIZE, 0, (void**)&mappedMemoryPtr);
-
-        // Buffer used to patch shader group handles contains original and current handles
-
-        // Copy original shader group handles passed from a recorder
-        memcpy(mappedMemoryPtr, originalHandles.data(), shaderGroup.dataSize);
-        // Copy current shader group handles acquired from a driver
-        memcpy(mappedMemoryPtr + shaderGroup.dataSize, currentHandles.data(), shaderGroup.dataSize);
-
-        VkMappedMemoryRange range = {
-            VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, // VkStructureType sType;
-            nullptr,                               // const void* pNext;
-            memory,                                // VkDeviceMemory memory;
-            0,                                     // VkDeviceSize offset;
-            shaderGroup.dataSize * 2               // VkDeviceSize size;
-        };
-        drvVk.vkFlushMappedMemoryRanges(device, 1, &range);
-        drvVk.vkUnmapMemory(device, memory);
-      }
+      VkMappedMemoryRange range = {
+          VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, // VkStructureType sType;
+          nullptr,                               // const void* pNext;
+          memory,                                // VkDeviceMemory memory;
+          0,                                     // VkDeviceSize offset;
+          shaderGroup.dataSize * 2               // VkDeviceSize size;
+      };
+      drvVk.vkFlushMappedMemoryRanges(device, 1, &range);
+      drvVk.vkUnmapMemory(device, memory);
     }
   }
 }

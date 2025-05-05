@@ -225,42 +225,49 @@ bool SetPagesProtection(PageMemoryProtection access, void* ptr, size_t size) {
 std::vector<std::pair<char*, size_t>> WriteWatchSniffer::GetTouchedPagesAndReset(char* ptr,
                                                                                  size_t size) {
 #ifdef GITS_PLATFORM_WINDOWS
-  static auto pageSize = GetVirtualMemoryPageSize();
+  static const auto pageSize = GetVirtualMemoryPageSize();
 
   // Largest memory address aligned to a page size smaller than the ptr
-  auto baseAddress = ptr - ((size_t)ptr % pageSize);
-  auto adjustedSize = ptr + size - baseAddress;
+  const auto pageSizeRemainder = ((size_t)ptr % pageSize);
+  const auto baseAddress = ptr - pageSizeRemainder;
+  const auto adjustedSize = size + pageSizeRemainder;
 
   ULONG_PTR pageCount = (adjustedSize / pageSize) + ((adjustedSize % pageSize > 0) ? 1 : 0);
 
+  // Retrieve a list of modified memory pages
   std::vector<char*> touchedPages(pageCount);
   DWORD granularity = 0;
-  UINT returnValue = GetWriteWatch(WRITE_WATCH_FLAG_RESET, ptr, size, (void**)touchedPages.data(),
-                                   &pageCount, &granularity);
+  const UINT returnValue = GetWriteWatch(WRITE_WATCH_FLAG_RESET, ptr, size,
+                                         (void**)touchedPages.data(), &pageCount, &granularity);
 
+  // Combine adjacent memory pages into single entries with larger sizes (If memory pages
+  // are next to each other, they are merged into a single entry with adjusted size)
   if ((returnValue == 0) && (pageCount > 0)) {
+    touchedPages.resize(pageCount);
     std::vector<std::pair<char*, size_t>> touchedMemory{{touchedPages[0], pageSize}};
     auto* currentElement = &touchedMemory.front();
 
     // Adjust the base ptr of the first entry
     if (currentElement->first < ptr) {
-      auto diff = ptr - currentElement->first;
+      const auto diff = ptr - currentElement->first;
       currentElement->first = ptr;
       currentElement->second -= diff;
     }
 
-    for (size_t i = 1; i < pageCount; ++i) {
-      if (touchedPages[i] == (currentElement->first + currentElement->second)) {
+    for (auto* page : touchedPages) {
+      if (page == (currentElement->first + currentElement->second)) {
+        // Combine memory pages if they are adjacent
         currentElement->second += pageSize;
       } else {
-        touchedMemory.emplace_back(touchedPages[i], pageSize);
+        // Add new entries otherwise
+        touchedMemory.emplace_back(page, pageSize);
         currentElement = &touchedMemory.back();
       }
     }
 
     // Trim the length of the last entry
     if ((currentElement->first + currentElement->second) > (ptr + size)) {
-      auto diff = (currentElement->first + currentElement->second) - (ptr + size);
+      const auto diff = (currentElement->first + currentElement->second) - (ptr + size);
       currentElement->second -= diff;
     }
     return touchedMemory;

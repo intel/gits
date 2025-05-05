@@ -500,20 +500,20 @@ void gits::Vulkan::CGitsVkMemoryRestore::Run() {
 
     auto& memoryState = SD()._devicememorystates[memory];
     if (memoryState && memoryState->IsMapped()) {
+      auto& mapping = memoryState->mapping;
       VkBufferCopy updatedRegion = {
           **_offset, // VkDeviceSize srcOffset
           **_offset, // VkDeviceSize dstOffset
           **_length  // VkDeviceSize size
       };
-      std::memcpy(memoryState->mapping->pData + updatedRegion.dstOffset, **_resource,
-                  updatedRegion.size);
+      std::memcpy(mapping->pData + updatedRegion.dstOffset, **_resource, updatedRegion.size);
 
       VkMappedMemoryRange range = {
-          VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,                  // VkStructureType   sType
-          nullptr,                                                // const void      * pNext
-          memory,                                                 // VkDeviceMemory    memory
-          memoryState->mapping->offset + updatedRegion.dstOffset, // VkDeviceSize      offset
-          updatedRegion.size                                      // VkDeviceSize      size
+          VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,     // VkStructureType   sType
+          nullptr,                                   // const void      * pNext
+          memory,                                    // VkDeviceMemory    memory
+          mapping->offset + updatedRegion.dstOffset, // VkDeviceSize      offset
+          updatedRegion.size                         // VkDeviceSize      size
       };
       drvVk.vkFlushMappedMemoryRanges(device, 1, &range);
       drvVk.vkTagMemoryContentsUpdateGITS(device, memory, 1, &updatedRegion);

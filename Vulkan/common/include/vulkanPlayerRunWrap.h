@@ -2316,84 +2316,81 @@ void PatchSBTHelper(const CCommandBufferState& cmdBufState,
                     const VkStridedDeviceAddressRegionKHR* pMissSBT,
                     const VkStridedDeviceAddressRegionKHR* pHitSBT,
                     const VkStridedDeviceAddressRegionKHR* pCallableSBT,
-                    bool isSBTPatchingRequired,
                     VkDeviceAddress oldHandlesMap,
                     VkDeviceAddress newHandlesMap,
                     uint32_t handlesMapEntriesCount) {
-  if (isSBTPatchingRequired) {
-    // Patch shader group handles in a SBT before tracing rays
-    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+  // Patch shader group handles in a SBT before tracing rays
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
 
-    const auto device = cmdBufState.commandPoolStateStore->deviceStateStore->deviceHandle;
-    const auto cmdBuf = cmdBufState.commandBufferHandle;
+  const auto device = cmdBufState.commandPoolStateStore->deviceStateStore->deviceHandle;
+  const auto cmdBuf = cmdBufState.commandBufferHandle;
 
-    // Inject compute - patch shader group handles in SBT with current values
-    {
-      VkMemoryBarrier barrierPre = {
-          VK_STRUCTURE_TYPE_MEMORY_BARRIER,                      // VkStructureType sType;
-          nullptr,                                               // const void* pNext;
-          VK_ACCESS_MEMORY_WRITE_BIT,                            // VkAccessFlags srcAccessMask;
-          VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT // VkAccessFlags dstAccessMask;
-      };
-      drvVk.vkCmdPipelineBarrier(cmdBuf, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &barrierPre, 0,
-                                 nullptr, 0, nullptr);
+  // Inject compute - patch shader group handles in SBT with current values
+  {
+    VkMemoryBarrier barrierPre = {
+        VK_STRUCTURE_TYPE_MEMORY_BARRIER,                      // VkStructureType sType;
+        nullptr,                                               // const void* pNext;
+        VK_ACCESS_MEMORY_WRITE_BIT,                            // VkAccessFlags srcAccessMask;
+        VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT // VkAccessFlags dstAccessMask;
+    };
+    drvVk.vkCmdPipelineBarrier(cmdBuf, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                               VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &barrierPre, 0, nullptr,
+                               0, nullptr);
 
-      auto& gitsPipelines = SD().internalResources.internalPipelines[device];
-      drvVk.vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_COMPUTE,
-                              gitsPipelines.getPatchShaderGroupHandlesInSBT());
+    auto& gitsPipelines = SD().internalResources.internalPipelines[device];
+    drvVk.vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_COMPUTE,
+                            gitsPipelines.getPatchShaderGroupHandlesInSBT());
 
-      auto dispatchComputeShader = [&](const VkStridedDeviceAddressRegionKHR* pSBT) {
-        if (pSBT && pSBT->deviceAddress && pSBT->size && pSBT->stride) {
-          struct PushConstantsData {
-            VkDeviceAddress OldHandlesMap;
-            VkDeviceAddress NewHandlesMap;
-            VkDeviceAddress SBTBaseAddress;
-            uint32_t Stride;
-            uint32_t Size;
-          } pushConstants = {
-              oldHandlesMap,          // VkDeviceAddress OldHandlesMap;
-              newHandlesMap,          // VkDeviceAddress NewHandlesMap;
-              pSBT->deviceAddress,    // VkDeviceAddress SBTBaseAddress;
-              (uint32_t)pSBT->stride, // uint32_t Stride;
-              (uint32_t)pSBT->size    // uint32_t Size;
-          };
-          // 32 is a performance optimization - 32 local invocations of a compute shader are dispatched
-          uint32_t divisor = pSBT->stride * 32;
-          uint32_t invocationsCount = (pSBT->size / divisor) + ((pSBT->size % divisor > 0) ? 1 : 0);
+    auto dispatchComputeShader = [&](const VkStridedDeviceAddressRegionKHR* pSBT) {
+      if (pSBT && pSBT->deviceAddress && pSBT->size && pSBT->stride) {
+        struct PushConstantsData {
+          VkDeviceAddress OldHandlesMap;
+          VkDeviceAddress NewHandlesMap;
+          VkDeviceAddress SBTBaseAddress;
+          uint32_t Stride;
+          uint32_t Size;
+        } pushConstants = {
+            oldHandlesMap,          // VkDeviceAddress OldHandlesMap;
+            newHandlesMap,          // VkDeviceAddress NewHandlesMap;
+            pSBT->deviceAddress,    // VkDeviceAddress SBTBaseAddress;
+            (uint32_t)pSBT->stride, // uint32_t Stride;
+            (uint32_t)pSBT->size    // uint32_t Size;
+        };
+        // 32 is a performance optimization - 32 local invocations of a compute shader are dispatched
+        uint32_t divisor = pSBT->stride * 32;
+        uint32_t invocationsCount = (pSBT->size / divisor) + ((pSBT->size % divisor > 0) ? 1 : 0);
 
-          drvVk.vkCmdPushConstants(cmdBuf, gitsPipelines.getLayout(), VK_SHADER_STAGE_COMPUTE_BIT,
-                                   0, sizeof(PushConstantsData), &pushConstants);
-          drvVk.vkCmdDispatch(cmdBuf, invocationsCount, handlesMapEntriesCount, 1);
-        }
-      };
-
-      dispatchComputeShader(pRaygenSBT);
-      dispatchComputeShader(pMissSBT);
-      dispatchComputeShader(pHitSBT);
-      dispatchComputeShader(pCallableSBT);
-
-      VkMemoryBarrier barrierPost = {
-          VK_STRUCTURE_TYPE_MEMORY_BARRIER,                       // VkStructureType sType;
-          nullptr,                                                // const void* pNext;
-          VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, // VkAccessFlags srcAccessMask;
-          VK_ACCESS_SHADER_READ_BIT                               // VkAccessFlags dstAccessMask;
-      };
-      drvVk.vkCmdPipelineBarrier(cmdBuf, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                                 VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR, 0, 1, &barrierPost,
-                                 0, nullptr, 0, nullptr);
-    }
-
-    // Restore original push constants data
-    if (cmdBufState.currentPipeline != VK_NULL_HANDLE) {
-      drvVk.vkCmdBindPipeline(cmdBuf, cmdBufState.currentPipelineBindPoint,
-                              cmdBufState.currentPipeline);
-      if (cmdBufState.pushContantsData.data.size()) {
-        auto& pushContants = cmdBufState.pushContantsData;
-        drvVk.vkCmdPushConstants(cmdBuf, pushContants.layout, pushContants.stageFlags,
-                                 pushContants.offset, pushContants.data.size(),
-                                 pushContants.data.data());
+        drvVk.vkCmdPushConstants(cmdBuf, gitsPipelines.getLayout(), VK_SHADER_STAGE_COMPUTE_BIT, 0,
+                                 sizeof(PushConstantsData), &pushConstants);
+        drvVk.vkCmdDispatch(cmdBuf, invocationsCount, handlesMapEntriesCount, 1);
       }
+    };
+
+    dispatchComputeShader(pRaygenSBT);
+    dispatchComputeShader(pMissSBT);
+    dispatchComputeShader(pHitSBT);
+    dispatchComputeShader(pCallableSBT);
+
+    VkMemoryBarrier barrierPost = {
+        VK_STRUCTURE_TYPE_MEMORY_BARRIER,                       // VkStructureType sType;
+        nullptr,                                                // const void* pNext;
+        VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, // VkAccessFlags srcAccessMask;
+        VK_ACCESS_SHADER_READ_BIT                               // VkAccessFlags dstAccessMask;
+    };
+    drvVk.vkCmdPipelineBarrier(cmdBuf, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                               VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR, 0, 1, &barrierPost, 0,
+                               nullptr, 0, nullptr);
+  }
+
+  // Restore original push constants data
+  if (cmdBufState.currentPipeline != VK_NULL_HANDLE) {
+    drvVk.vkCmdBindPipeline(cmdBuf, cmdBufState.currentPipelineBindPoint,
+                            cmdBufState.currentPipeline);
+    if (cmdBufState.pushContantsData.data.size()) {
+      auto& pushContants = cmdBufState.pushContantsData;
+      drvVk.vkCmdPushConstants(cmdBuf, pushContants.layout, pushContants.stageFlags,
+                               pushContants.offset, pushContants.data.size(),
+                               pushContants.data.data());
     }
   }
 }
@@ -2420,18 +2417,20 @@ inline void vkCmdTraceRaysKHR_WRAPRUN(
   const auto originalHandlesAddress = groupHandles.deviceAddress;
   const auto newHandlesAddress = groupHandles.deviceAddress + groupHandles.dataSize;
 
-  PatchSBTHelper(cmdBufState, pRaygenSBT, pMissSBT, pHitSBT, pCallableSBT,
-                 groupHandles.patchingRequired, originalHandlesAddress, newHandlesAddress,
-                 groupHandles.count);
+  if (groupHandles.patchingRequired) {
+    PatchSBTHelper(cmdBufState, pRaygenSBT, pMissSBT, pHitSBT, pCallableSBT, originalHandlesAddress,
+                   newHandlesAddress, groupHandles.count);
+  }
 
   drvVk.vkCmdTraceRaysKHR(cmdBuf, pRaygenSBT, pMissSBT, pHitSBT, pCallableSBT, *_width, *_height,
                           *_depth);
   vkCmdTraceRaysKHR_SD(cmdBuf, pRaygenSBT, pMissSBT, pHitSBT, pCallableSBT, *_width, *_height,
                        *_depth);
 
-  PatchSBTHelper(cmdBufState, pRaygenSBT, pMissSBT, pHitSBT, pCallableSBT,
-                 groupHandles.patchingRequired, newHandlesAddress, originalHandlesAddress,
-                 groupHandles.count);
+  if (groupHandles.patchingRequired) {
+    PatchSBTHelper(cmdBufState, pRaygenSBT, pMissSBT, pHitSBT, pCallableSBT, newHandlesAddress,
+                   originalHandlesAddress, groupHandles.count);
+  }
 }
 
 inline void vkCmdTraceRaysIndirectKHR_WRAPRUN(
@@ -2452,18 +2451,20 @@ inline void vkCmdTraceRaysIndirectKHR_WRAPRUN(
   const auto originalHandlesAddress = groupHandles.deviceAddress;
   const auto newHandlesAddress = groupHandles.deviceAddress + groupHandles.dataSize;
 
-  PatchSBTHelper(cmdBufState, pRaygenSBT, pMissSBT, pHitSBT, pCallableSBT,
-                 groupHandles.patchingRequired, originalHandlesAddress, newHandlesAddress,
-                 groupHandles.count);
+  if (groupHandles.patchingRequired) {
+    PatchSBTHelper(cmdBufState, pRaygenSBT, pMissSBT, pHitSBT, pCallableSBT, originalHandlesAddress,
+                   newHandlesAddress, groupHandles.count);
+  }
 
   drvVk.vkCmdTraceRaysIndirectKHR(cmdBuf, pRaygenSBT, pMissSBT, pHitSBT, pCallableSBT,
                                   *_indirectDeviceAddress);
   vkCmdTraceRaysIndirectKHR_SD(cmdBuf, pRaygenSBT, pMissSBT, pHitSBT, pCallableSBT,
                                *_indirectDeviceAddress);
 
-  PatchSBTHelper(cmdBufState, pRaygenSBT, pMissSBT, pHitSBT, pCallableSBT,
-                 groupHandles.patchingRequired, newHandlesAddress, originalHandlesAddress,
-                 groupHandles.count);
+  if (groupHandles.patchingRequired) {
+    PatchSBTHelper(cmdBufState, pRaygenSBT, pMissSBT, pHitSBT, pCallableSBT, newHandlesAddress,
+                   originalHandlesAddress, groupHandles.count);
+  }
 }
 
 } // namespace Vulkan
