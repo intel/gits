@@ -461,7 +461,7 @@ inline void vkCreateInstance_WRAPRUN(CVkResult& recorderSideReturnValue,
   }
 #endif
 
-  if (isGitsRecorderAttached() && Config::Get().vulkan.player.patchShaderGroupHandles) {
+  if (isGitsRecorderAttached() && Configurator::Get().vulkan.player.patchShaderGroupHandles) {
     // Currently, shader group handle patching in SBT cannot be used during
     // substream recording. Inform user about this problem.
     auto& cfg = Configurator::GetMutable();

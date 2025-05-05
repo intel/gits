@@ -2179,7 +2179,7 @@ inline void vkCreateRayTracingPipelinesKHR_SD(VkResult return_value,
       if (pOriginalHandles) {
         memcpy(originalHandles.data(), pOriginalHandles->pData, shaderGroup.dataSize);
         shaderGroup.patchingRequired =
-            Config::Get().vulkan.player.patchShaderGroupHandles &&
+            Configurator::Get().vulkan.player.patchShaderGroupHandles &&
             (memcmp(originalHandles.data(), currentHandles.data(), shaderGroup.dataSize) != 0);
       } else {
         originalHandles = currentHandles;
