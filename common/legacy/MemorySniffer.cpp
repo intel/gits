@@ -243,7 +243,6 @@ std::vector<std::pair<char*, size_t>> WriteWatchSniffer::GetTouchedPagesAndReset
   // Combine adjacent memory pages into single entries with larger sizes (If memory pages
   // are next to each other, they are merged into a single entry with adjusted size)
   if ((returnValue == 0) && (pageCount > 0)) {
-    touchedPages.resize(pageCount);
     std::vector<std::pair<char*, size_t>> touchedMemory{{touchedPages[0], pageSize}};
     auto* currentElement = &touchedMemory.front();
 
@@ -254,13 +253,13 @@ std::vector<std::pair<char*, size_t>> WriteWatchSniffer::GetTouchedPagesAndReset
       currentElement->second -= diff;
     }
 
-    for (auto* page : touchedPages) {
-      if (page == (currentElement->first + currentElement->second)) {
+    for (size_t i = 1; i < pageCount; ++i) {
+      if (touchedPages[i] == (currentElement->first + currentElement->second)) {
         // Combine memory pages if they are adjacent
         currentElement->second += pageSize;
       } else {
         // Add new entries otherwise
-        touchedMemory.emplace_back(page, pageSize);
+        touchedMemory.emplace_back(touchedPages[i], pageSize);
         currentElement = &touchedMemory.back();
       }
     }

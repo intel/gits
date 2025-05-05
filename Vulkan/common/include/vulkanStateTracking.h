@@ -665,6 +665,49 @@ inline void vkDestroySampler_SD(VkDevice device,
   }
 }
 
+// SamplerYcbcrConversion
+
+inline void vkCreateSamplerYcbcrConversion_SD(VkResult return_value,
+                                              VkDevice device,
+                                              const VkSamplerYcbcrConversionCreateInfo* pCreateInfo,
+                                              const VkAllocationCallbacks* pAllocator,
+                                              VkSamplerYcbcrConversion* pYcbcrConversion) {
+  if ((return_value == VK_SUCCESS) && (*pYcbcrConversion != VK_NULL_HANDLE)) {
+    SD()._ycbcrConversiontates.emplace(
+        *pYcbcrConversion, std::make_shared<CYcbcrConversionState>(pYcbcrConversion, pCreateInfo,
+                                                                   SD()._devicestates[device]));
+  }
+}
+
+inline void vkCreateSamplerYcbcrConversionKHR_SD(
+    VkResult return_value,
+    VkDevice device,
+    const VkSamplerYcbcrConversionCreateInfo* pCreateInfo,
+    const VkAllocationCallbacks* pAllocator,
+    VkSamplerYcbcrConversion* pYcbcrConversion) {
+  if ((return_value == VK_SUCCESS) && (*pYcbcrConversion != VK_NULL_HANDLE)) {
+    SD()._ycbcrConversiontates.emplace(
+        *pYcbcrConversion, std::make_shared<CYcbcrConversionState>(pYcbcrConversion, pCreateInfo,
+                                                                   SD()._devicestates[device]));
+  }
+}
+
+inline void vkDestroySamplerYcbcrConversion_SD(VkDevice device,
+                                               VkSamplerYcbcrConversion ycbcrConversion,
+                                               const VkAllocationCallbacks* pAllocator) {
+  if (ycbcrConversion != VK_NULL_HANDLE) {
+    SD()._ycbcrConversiontates.erase(ycbcrConversion);
+  }
+}
+
+inline void vkDestroySamplerYcbcrConversionKHR_SD(VkDevice device,
+                                                  VkSamplerYcbcrConversion ycbcrConversion,
+                                                  const VkAllocationCallbacks* pAllocator) {
+  if (ycbcrConversion != VK_NULL_HANDLE) {
+    SD()._ycbcrConversiontates.erase(ycbcrConversion);
+  }
+}
+
 // Device memory
 
 inline void vkMapMemory_SD(VkResult return_value,

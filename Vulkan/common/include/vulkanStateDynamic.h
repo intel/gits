@@ -42,6 +42,7 @@ struct CSwapchainKHRState;
 struct CDescriptorPoolState;
 struct CCommandPoolState;
 struct CSamplerState;
+struct CYcbcrConversionState;
 struct CDeviceMemoryState;
 struct CImageState;
 struct CImageViewState;
@@ -412,6 +413,33 @@ struct CSamplerState : public UniqueResourceHandle {
       pointers.insert((uint64_t)obj);
     }
     for (auto obj : samplerCreateInfoData.GetMappedPointers()) {
+      pointers.insert((uint64_t)obj);
+    }
+    return pointers;
+  }
+};
+
+// SamplerYcbcrConversion
+
+struct CYcbcrConversionState : public UniqueResourceHandle {
+  VkSamplerYcbcrConversion ycbcrConversionHandle;
+  CVkSamplerYcbcrConversionCreateInfoData ycbcrConversionCreateInfoData;
+  std::shared_ptr<CDeviceState> deviceStateStore;
+
+  CYcbcrConversionState(VkSamplerYcbcrConversion const* _pYcbcrConversion,
+                        VkSamplerYcbcrConversionCreateInfo const* _pCreateInfo,
+                        std::shared_ptr<CDeviceState>& _deviceState)
+      : ycbcrConversionHandle(*_pYcbcrConversion),
+        ycbcrConversionCreateInfoData(_pCreateInfo),
+        deviceStateStore(_deviceState) {}
+
+  std::set<uint64_t> GetMappedPointers() {
+    std::set<uint64_t> pointers;
+    pointers.insert((uint64_t)deviceStateStore->deviceHandle);
+    for (auto obj : deviceStateStore->GetMappedPointers()) {
+      pointers.insert((uint64_t)obj);
+    }
+    for (auto obj : ycbcrConversionCreateInfoData.GetMappedPointers()) {
       pointers.insert((uint64_t)obj);
     }
     return pointers;
@@ -1709,6 +1737,8 @@ public:
       TDescriptorPoolStates;
   typedef std::unordered_map<VkCommandPool, std::shared_ptr<CCommandPoolState>> TCommandPoolStates;
   typedef std::unordered_map<VkSampler, std::shared_ptr<CSamplerState>> TSamplerStates;
+  typedef std::unordered_map<VkSamplerYcbcrConversion, std::shared_ptr<CYcbcrConversionState>>
+      TYcbcrConversionStates;
   typedef std::unordered_map<VkDeviceMemory, std::shared_ptr<CDeviceMemoryState>>
       TDeviceMemoryStates;
   typedef std::unordered_map<VkImage, std::shared_ptr<CImageState>> TImageStates;
@@ -1753,6 +1783,7 @@ public:
   TDescriptorPoolStates _descriptorpoolstates;
   TCommandPoolStates _commandpoolstates;
   TSamplerStates _samplerstates;
+  TYcbcrConversionStates _ycbcrConversiontates;
   TDeviceMemoryStates _devicememorystates;
   TImageStates _imagestates;
   TImageViewStates _imageviewstates;

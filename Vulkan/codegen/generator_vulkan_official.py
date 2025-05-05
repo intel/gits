@@ -2560,20 +2560,20 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CN
 arg4=ArgDef(name='pSampler', type='VkSampler*', wrapType='CVkSampler::CSMapArray', wrapParams='1, pSampler')
 )
 
-Function(name='vkCreateSamplerYcbcrConversion', enabled=False, type=FuncType.PARAM,
+Function(name='vkCreateSamplerYcbcrConversion', enabled=True, type=FuncType.PARAM, stateTrack=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pCreateInfo', type='const VkSamplerYcbcrConversionCreateInfo*'),
-arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*'),
-arg4=ArgDef(name='pYcbcrConversion', type='VkSamplerYcbcrConversion*')
+arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper'),
+arg4=ArgDef(name='pYcbcrConversion', type='VkSamplerYcbcrConversion*', wrapType='CVkSamplerYcbcrConversion::CSMapArray', wrapParams='1, pYcbcrConversion')
 )
 
-Function(name='vkCreateSamplerYCbCrConversionKHR', enabled=False, type=FuncType.PARAM,
+Function(name='vkCreateSamplerYcbcrConversionKHR', enabled=True, type=FuncType.PARAM, stateTrack=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pCreateInfo', type='const VkSamplerYcbcrConversionCreateInfo*'),
-arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*'),
-arg4=ArgDef(name='pYcbcrConversion', type='VkSamplerYcbcrConversion*')
+arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper'),
+arg4=ArgDef(name='pYcbcrConversion', type='VkSamplerYcbcrConversion*', wrapType='CVkSamplerYcbcrConversion::CSMapArray', wrapParams='1, pYcbcrConversion')
 )
 
 #Function(name='vkCreateScreenSurfaceQNX', enabled=False, type=FuncType.NONE,
@@ -2986,18 +2986,18 @@ arg2=ArgDef(name='sampler', type='VkSampler', removeMapping=True),
 arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper')
 )
 
-Function(name='vkDestroySamplerYcbcrConversion', enabled=False, type=FuncType.PARAM,
+Function(name='vkDestroySamplerYcbcrConversion', enabled=True, type=FuncType.PARAM, stateTrack=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='ycbcrConversion', type='VkSamplerYcbcrConversion'),
-arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*')
+arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper')
 )
 
-Function(name='vkDestroySamplerYCbCrConversionKHR', enabled=False, type=FuncType.PARAM,
+Function(name='vkDestroySamplerYcbcrConversionKHR', enabled=True, type=FuncType.PARAM, stateTrack=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='ycbcrConversion', type='VkSamplerYcbcrConversion'),
-arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*')
+arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper')
 )
 
 Function(name='vkDestroySemaphore', enabled=True, type=FuncType.PARAM, stateTrack=True,
@@ -17461,7 +17461,7 @@ var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='reductionMode', type='VkSamplerReductionMode')
 )
 
-Struct(name='VkSamplerYcbcrConversionCreateInfo_', enabled=False,
+Struct(name='VkSamplerYcbcrConversionCreateInfo_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='format', type='VkFormat'),
@@ -17480,7 +17480,7 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='combinedImageSamplerDescriptorCount', type='uint32_t')
 )
 
-Struct(name='VkSamplerYcbcrConversionInfo_', enabled=False,
+Struct(name='VkSamplerYcbcrConversionInfo_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='conversion', type='VkSamplerYcbcrConversion')
