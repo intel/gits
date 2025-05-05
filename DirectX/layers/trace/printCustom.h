@@ -9,6 +9,9 @@
 #pragma once
 
 #include "directx.h"
+#define INTC_IGDEXT_D3D12
+#include "igdext.h"
+#include "igdext_tools.h"
 #include "arguments.h"
 #include "printEnumsAuto.h"
 #include "printStructuresAuto.h"
@@ -68,6 +71,15 @@ FastOStream& operator<<(FastOStream& stream, const D3D12_RECT& value);
 FastOStream& operator<<(FastOStream& stream, const D3D12_RECT* value);
 FastOStream& operator<<(FastOStream& stream, const POINT& value);
 FastOStream& operator<<(FastOStream& stream, const DML_SCALAR_UNION& value);
+
+FastOStream& operator<<(FastOStream& stream, const INTCExtensionInfo& value);
+FastOStream& operator<<(FastOStream& stream, const INTCExtensionInfo* value);
+FastOStream& operator<<(FastOStream& stream, const INTCExtensionVersion& value);
+FastOStream& operator<<(FastOStream& stream, const INTCDeviceInfo& value);
+FastOStream& operator<<(FastOStream& stream, const INTCExtensionAppInfo& value);
+FastOStream& operator<<(FastOStream& stream, const INTCAppInfoVersion& value);
+FastOStream& operator<<(FastOStream& stream, const INTCExtensionAppInfo1& value);
+FastOStream& operator<<(FastOStream& stream, const INTCExtensionAppInfo1* value);
 
 } // namespace DirectX
 } // namespace gits

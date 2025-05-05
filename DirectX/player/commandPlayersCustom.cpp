@@ -227,6 +227,11 @@ void INTC_D3D12_CreateDeviceExtensionContext1Player::Run() {
     }
   }
 
+  // The current implementation of INTC_D3D12_CreateDeviceExtensionContext1 is changing the value of pExtensionAppInfo with invalid data
+  // Once the issue is fixed, this workaround won't be necessary (since the pointers will be preserved)
+  command.pExtensionAppInfo_.value->pApplicationName = command.pExtensionAppInfo_.pApplicationName;
+  command.pExtensionAppInfo_.value->pEngineName = command.pExtensionAppInfo_.pEngineName;
+
   for (Layer* layer : manager.getPostLayers()) {
     layer->post(command);
   }

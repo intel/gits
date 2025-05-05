@@ -171,6 +171,7 @@ void decode(char* src, unsigned& offset, PointerArgument<D3D12_DISPATCH_RAYS_DES
 void decode(char* src,
             unsigned& offset,
             ArrayArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>& arg);
+void decode(char* src, unsigned& offset, PointerArgument<INTCExtensionInfo>& arg);
 void decode(char* src, unsigned& offset, PointerArgument<INTCExtensionAppInfo>& arg);
 void decode(char* src, unsigned& offset, PointerArgument<INTCExtensionAppInfo1>& arg);
 void decode(char* src,

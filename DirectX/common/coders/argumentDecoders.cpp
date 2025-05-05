@@ -1122,6 +1122,22 @@ void decode(char* src, unsigned& offset, D3D12_SHADER_RESOURCE_VIEW_DESC_Argumen
   }
 }
 
+// This decode function does not have a getSize/encode counterpart
+// Set pDeviceDriverDesc and pDeviceDriverVersion to 0 (the capture time strings are NOT encoded in the stream)
+// Note: Encoding and decoding these values would cause compatibility issues with already existing streams
+void decode(char* src, unsigned& offset, PointerArgument<INTCExtensionInfo>& arg) {
+  if (decodeNullPtr(src, offset, arg)) {
+    return;
+  }
+
+  arg.value = reinterpret_cast<INTCExtensionInfo*>(src + offset);
+  offset += sizeof(INTCExtensionInfo);
+
+  // Always set pDeviceDriverDesc and pDeviceDriverVersion to 0
+  arg.value->pDeviceDriverDesc = 0;
+  arg.value->pDeviceDriverVersion = 0;
+}
+
 void decode(char* src, unsigned& offset, PointerArgument<INTCExtensionAppInfo>& arg) {
   if (decodeNullPtr(src, offset, arg)) {
     return;

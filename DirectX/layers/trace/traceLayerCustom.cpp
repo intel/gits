@@ -237,7 +237,7 @@ void TraceLayer::pre(INTC_D3D12_GetSupportedVersionsCommand& command) {
   if (printPre_) {
     CommandPrinter p(streamPre_, statePre_, command, "INTC_D3D12_GetSupportedVersions");
     p.addArgument(command.pDevice_);
-    p.addArgument(command.pSupportedExtVersions_.value);
+    p.addArgument(command.pSupportedExtVersions_);
     p.addArgument(command.pSupportedExtVersionsCount_);
     p.addResult(command.result_);
     p.print(flush_);
@@ -248,7 +248,7 @@ void TraceLayer::post(INTC_D3D12_GetSupportedVersionsCommand& command) {
   if (printPost_) {
     CommandPrinter p(streamPost_, statePost_, command, "INTC_D3D12_GetSupportedVersions");
     p.addArgument(command.pDevice_);
-    p.addArgument(command.pSupportedExtVersions_.value);
+    p.addArgument(command.pSupportedExtVersions_);
     p.addArgument(command.pSupportedExtVersionsCount_);
     p.addResult(command.result_);
     p.print(flush_);

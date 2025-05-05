@@ -708,5 +708,85 @@ FastOStream& operator<<(FastOStream& stream, const DSTORAGE_REQUEST* value) {
   return stream;
 }
 
+FastOStream& operator<<(FastOStream& stream, const INTCExtensionInfo& value) {
+  stream << "INTCExtensionInfo{";
+  stream << value.RequestedExtensionVersion << ", ";
+  stream << value.IntelDeviceInfo << ", ";
+  printString(stream, value.pDeviceDriverDesc) << ", ";
+  printString(stream, value.pDeviceDriverVersion) << ", ";
+  stream << value.DeviceDriverBuildNumber;
+  stream << "}";
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const INTCExtensionInfo* value) {
+  if (value) {
+    stream << *value;
+  } else {
+    stream << "nullptr";
+  }
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const INTCExtensionVersion& value) {
+  stream << "INTCExtensionVersion{";
+  stream << value.HWFeatureLevel << ", ";
+  stream << value.APIVersion << ", ";
+  stream << value.Revision;
+  stream << "}";
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const INTCDeviceInfo& value) {
+  stream << "INTCDeviceInfo{";
+  stream << value.GPUMaxFreq << ", ";
+  stream << value.GPUMinFreq << ", ";
+  stream << value.GTGeneration << ", ";
+  stream << value.EUCount << ", ";
+  stream << value.PackageTDP << ", ";
+  stream << value.MaxFillRate << ", ";
+  printString(stream, value.GTGenerationName);
+  stream << "}";
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const INTCExtensionAppInfo& value) {
+  stream << "INTCExtensionAppInfo{";
+  printString(stream, value.pApplicationName) << ", ";
+  stream << value.ApplicationVersion << ", ";
+  printString(stream, value.pEngineName) << ", ";
+  stream << value.EngineVersion;
+  stream << "}";
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const INTCAppInfoVersion& value) {
+  stream << "INTCAppInfoVersion{";
+  stream << value.major << ", ";
+  stream << value.minor << ", ";
+  stream << value.patch;
+  stream << "}";
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const INTCExtensionAppInfo1& value) {
+  stream << "INTCExtensionAppInfo1{";
+  printString(stream, value.pApplicationName) << ", ";
+  stream << value.ApplicationVersion << ", ";
+  printString(stream, value.pEngineName) << ", ";
+  stream << value.EngineVersion;
+  stream << "}";
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const INTCExtensionAppInfo1* value) {
+  if (value) {
+    stream << *value;
+  } else {
+    stream << "nullptr";
+  }
+  return stream;
+}
+
 } // namespace DirectX
 } // namespace gits
