@@ -2353,10 +2353,10 @@ void PatchSBTHelper(const CCommandBufferState& cmdBufState,
       auto dispatchComputeShader = [&](const VkStridedDeviceAddressRegionKHR* pSBT) {
         if (pSBT && pSBT->deviceAddress && pSBT->size && pSBT->stride) {
           PushConstantsData pushConstants = {
-              oldHandlesMap,       // VkDeviceAddress OldHandlesMap;
-              newHandlesMap,       // VkDeviceAddress NewHandlesMap;
-              pSBT->deviceAddress, // VkDeviceAddress SBTBaseAddress;
-              pSBT->stride         // uint32_t Stride;
+              oldHandlesMap,         // VkDeviceAddress OldHandlesMap;
+              newHandlesMap,         // VkDeviceAddress NewHandlesMap;
+              pSBT->deviceAddress,   // VkDeviceAddress SBTBaseAddress;
+              (uint32_t)pSBT->stride // uint32_t Stride;
           };
           drvVk.vkCmdPushConstants(cmdBuf, gitsPipelines.getLayout(), VK_SHADER_STAGE_COMPUTE_BIT,
                                    0, sizeof(PushConstantsData), &pushConstants);
