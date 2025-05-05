@@ -1731,33 +1731,32 @@ unsigned getSize(const DML_CheckFeatureSupport_BufferArgument& arg) {
     return sizeof(void*);
   }
 
-  auto totalSize = getSize(static_cast<const BufferArgument&>(arg));
-
-  totalSize += sizeof(arg.feature);
-  if ((DML_FEATURE)arg.feature == DML_FEATURE_FEATURE_LEVELS) {
-
+  size_t totalSize = sizeof(void*) + sizeof(arg.size) + arg.size + sizeof(arg.feature);
+  if (arg.feature == DML_FEATURE_FEATURE_LEVELS) {
     auto* featlevels = reinterpret_cast<DML_FEATURE_QUERY_FEATURE_LEVELS*>(arg.value);
-    if (featlevels->RequestedFeatureLevelCount > 0) {
-      totalSize += sizeof(DML_FEATURE_LEVEL) * featlevels->RequestedFeatureLevelCount;
-    }
+    totalSize += featlevels->RequestedFeatureLevelCount * sizeof(DML_FEATURE_LEVEL);
   }
+
   return totalSize;
 }
 
 void encode(char* dest, unsigned& offset, const DML_CheckFeatureSupport_BufferArgument& arg) {
-
-  encode(dest, offset, static_cast<const BufferArgument&>(arg));
-  if (!arg.value) {
+  if (encodeNullPtr(dest, offset, arg)) {
     return;
   }
+  encode(dest, offset, arg.size);
+  encode(dest, offset, arg.feature);
 
-  dml::encode(&arg.feature, 1, dest, offset);
-  if ((DML_FEATURE)arg.feature == DML_FEATURE_FEATURE_LEVELS) {
+  if (arg.feature == DML_FEATURE_FEATURE_LEVELS) {
     auto* featlevels = reinterpret_cast<DML_FEATURE_QUERY_FEATURE_LEVELS*>(arg.value);
+    encode(dest, offset, *featlevels);
     if (featlevels->RequestedFeatureLevelCount > 0) {
       dml::encode(featlevels->RequestedFeatureLevels, featlevels->RequestedFeatureLevelCount, dest,
                   offset);
     }
+  } else {
+    memcpy(dest + offset, arg.value, arg.size);
+    offset += arg.size;
   }
 }
 

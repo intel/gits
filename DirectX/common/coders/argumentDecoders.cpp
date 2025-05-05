@@ -893,19 +893,20 @@ void decode(char* src, unsigned& offset, DML_GRAPH_DESC_Argument& arg) {
 }
 
 void decode(char* src, unsigned& offset, DML_CheckFeatureSupport_BufferArgument& arg) {
-
-  decode(src, offset, static_cast<BufferArgument&>(arg));
-  if (!arg.value) {
+  if (decodeNullPtr(src, offset, arg)) {
     return;
   }
+  decode(src, offset, arg.size);
+  decode(src, offset, arg.feature);
 
-  dml::decode(&arg.feature, 1, src, offset);
-  if ((DML_FEATURE)arg.feature == DML_FEATURE_FEATURE_LEVELS) {
+  arg.value = const_cast<char*>(src + offset);
+  if (arg.feature == DML_FEATURE_FEATURE_LEVELS) {
     auto* featlevels = reinterpret_cast<DML_FEATURE_QUERY_FEATURE_LEVELS*>(arg.value);
-    if (featlevels->RequestedFeatureLevelCount > 0) {
-      dml::decode(featlevels->RequestedFeatureLevels, featlevels->RequestedFeatureLevelCount, src,
-                  offset);
-    }
+    offset += sizeof(DML_FEATURE_QUERY_FEATURE_LEVELS);
+    featlevels->RequestedFeatureLevels = reinterpret_cast<const DML_FEATURE_LEVEL*>(src + offset);
+    offset += featlevels->RequestedFeatureLevelCount * sizeof(DML_FEATURE_LEVEL);
+  } else {
+    offset += arg.size;
   }
 }
 

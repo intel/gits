@@ -490,12 +490,13 @@ struct DML_OPERATOR_DESC_Argument {
   DML_OPERATOR_DESC* value{};
 };
 
-struct DML_CheckFeatureSupport_BufferArgument : public BufferArgument {
+struct DML_CheckFeatureSupport_BufferArgument {
   DML_CheckFeatureSupport_BufferArgument(const void* value_, size_t size_, DML_FEATURE feat)
-      : BufferArgument(value_, size_), feature{feat} {}
+      : value{const_cast<void*>(value_)}, size{size_}, feature{feat} {}
 
-  DML_CheckFeatureSupport_BufferArgument() : BufferArgument() {}
-
+  DML_CheckFeatureSupport_BufferArgument() {}
+  void* value{};
+  size_t size{};
   DML_FEATURE feature{};
 };
 

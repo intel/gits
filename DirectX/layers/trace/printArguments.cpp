@@ -1213,7 +1213,7 @@ FastOStream& operator<<(FastOStream& stream, xess_d3d12_execute_params_t_Argumen
 }
 
 FastOStream& operator<<(FastOStream& stream, DML_CheckFeatureSupport_BufferArgument& arg) {
-  return stream << "DML_CheckFeatureSupport{" << arg.feature << "}";
+  return stream << "FeatureQueryDataBuffer{" << arg.size << "}";
 }
 
 FastOStream& operator<<(FastOStream& stream, DSTORAGE_QUEUE_DESC_Argument& arg) {
