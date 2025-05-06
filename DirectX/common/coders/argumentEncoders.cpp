@@ -38,7 +38,14 @@ unsigned getSize(const OutputBufferArgument& arg) {
 }
 
 void encode(char* dest, unsigned& offset, const OutputBufferArgument& arg) {
-  memcpy(dest + offset, arg.captureValue ? &arg.captureValue : arg.value, sizeof(void*));
+  auto* value = arg.captureValue ? &arg.captureValue : arg.value;
+  if (value == nullptr) {
+    // WA for nullptr input to ID3D12Resource::Map
+    void* null{};
+    memcpy(dest + offset, &null, sizeof(void*));
+  } else {
+    memcpy(dest + offset, value, sizeof(void*));
+  }
   offset += sizeof(void*);
 }
 
