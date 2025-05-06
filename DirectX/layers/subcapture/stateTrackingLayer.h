@@ -225,11 +225,13 @@ public:
 
 private:
   void setAsChildInParent(unsigned parentKey, unsigned childKey);
-  bool isResourceHeapMappable(D3D12_HEAP_PROPERTIES& heapProperties) {
+  bool isResourceHeapMappable(const D3D12_HEAP_PROPERTIES& heapProperties,
+                              const D3D12_TEXTURE_LAYOUT& textureLayout) {
     return !(heapProperties.Type == D3D12_HEAP_TYPE_DEFAULT ||
-             heapProperties.CPUPageProperty == D3D12_CPU_PAGE_PROPERTY_NOT_AVAILABLE);
+             heapProperties.CPUPageProperty == D3D12_CPU_PAGE_PROPERTY_NOT_AVAILABLE ||
+             textureLayout == D3D12_TEXTURE_LAYOUT_UNKNOWN);
   }
-  bool isResourceHeapMappable(unsigned heapKey);
+  bool isResourceHeapMappable(unsigned heapKey, const D3D12_TEXTURE_LAYOUT& textureLayout);
   bool isResourceBarrierRestricted(D3D12_RESOURCE_FLAGS flags);
   void releaseSwapChainBuffers(unsigned key, unsigned referenceCount);
 

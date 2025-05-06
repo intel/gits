@@ -66,19 +66,20 @@ void StateTrackingLayer::setAsChildInParent(unsigned parentKey, unsigned childKe
   parentState->childrenKeys.insert(childKey);
 }
 
-bool StateTrackingLayer::isResourceHeapMappable(unsigned heapKey) {
+bool StateTrackingLayer::isResourceHeapMappable(unsigned heapKey,
+                                                const D3D12_TEXTURE_LAYOUT& textureLayout) {
   ObjectState* state = stateService_.getState(heapKey);
   if (state->id == ObjectState::D3D12_HEAP) {
     D3D12HeapState* heapState = static_cast<D3D12HeapState*>(state);
-    return isResourceHeapMappable(heapState->desc.Properties);
+    return isResourceHeapMappable(heapState->desc.Properties, textureLayout);
   } else if (state->id == ObjectState::D3D12_HEAP1) {
     D3D12Heap1State* heapState = static_cast<D3D12Heap1State*>(state);
-    return isResourceHeapMappable(heapState->desc.Properties);
+    return isResourceHeapMappable(heapState->desc.Properties, textureLayout);
   } else if (state->id == ObjectState::D3D12_HEAPFROMADDRESS) {
     return true;
   } else if (state->id == ObjectState::D3D12_INTC_HEAP) {
     D3D12INTCHeapState* heapState = static_cast<D3D12INTCHeapState*>(state);
-    return isResourceHeapMappable(heapState->d3dDesc.Properties);
+    return isResourceHeapMappable(heapState->d3dDesc.Properties, textureLayout);
   } else {
     GITS_ASSERT(0 && "Unexpected state type");
   }
@@ -837,7 +838,7 @@ void StateTrackingLayer::post(ID3D12DeviceCreateCommittedResourceCommand& c) {
     state->clearValue = *c.pOptimizedClearValue_.value;
   }
   state->iid = c.riidResource_.value;
-  state->isMappable = isResourceHeapMappable(state->heapProperties);
+  state->isMappable = isResourceHeapMappable(state->heapProperties, state->desc.Layout);
   state->isGenericRead = state->initialResourceState == D3D12_RESOURCE_STATE_GENERIC_READ;
   stateService_.storeState(state);
 
@@ -873,7 +874,7 @@ void StateTrackingLayer::post(ID3D12Device4CreateCommittedResource1Command& c) {
   }
   state->protectedSessionKey = c.pProtectedSession_.key;
   state->iid = c.riidResource_.value;
-  state->isMappable = isResourceHeapMappable(state->heapProperties);
+  state->isMappable = isResourceHeapMappable(state->heapProperties, state->desc.Layout);
   state->isGenericRead = state->initialResourceState == D3D12_RESOURCE_STATE_GENERIC_READ;
   stateService_.storeState(state);
   if (state->initialResourceState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
@@ -908,7 +909,7 @@ void StateTrackingLayer::post(ID3D12Device8CreateCommittedResource2Command& c) {
   }
   state->protectedSessionKey = c.pProtectedSession_.key;
   state->iid = c.riidResource_.value;
-  state->isMappable = isResourceHeapMappable(state->heapProperties);
+  state->isMappable = isResourceHeapMappable(state->heapProperties, state->desc.Layout);
   state->isGenericRead = state->initialResourceState == D3D12_RESOURCE_STATE_GENERIC_READ;
   stateService_.storeState(state);
 
@@ -947,7 +948,7 @@ void StateTrackingLayer::post(ID3D12Device10CreateCommittedResource3Command& c) 
     state->castableFormats.push_back(c.pCastableFormats_.value[i]);
   }
   state->iid = c.riidResource_.value;
-  state->isMappable = isResourceHeapMappable(state->heapProperties);
+  state->isMappable = isResourceHeapMappable(state->heapProperties, state->desc.Layout);
   state->isGenericRead = state->initialLayout == D3D12_BARRIER_LAYOUT_GENERIC_READ;
   stateService_.storeState(state);
 
@@ -980,7 +981,7 @@ void StateTrackingLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
     state->clearValue = *c.pOptimizedClearValue_.value;
   }
   state->iid = c.riid_.value;
-  state->isMappable = isResourceHeapMappable(state->heapKey);
+  state->isMappable = isResourceHeapMappable(state->heapKey, state->desc.Layout);
   state->isGenericRead = state->initialResourceState == D3D12_RESOURCE_STATE_GENERIC_READ;
   state->isBarrierRestricted = isResourceBarrierRestricted(c.pDesc_.value->Flags);
   stateService_.storeState(state);
@@ -1013,7 +1014,7 @@ void StateTrackingLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
     state->clearValue = *c.pOptimizedClearValue_.value;
   }
   state->iid = c.riid_.value;
-  state->isMappable = isResourceHeapMappable(state->heapKey);
+  state->isMappable = isResourceHeapMappable(state->heapKey, state->desc.Layout);
   state->isGenericRead = state->initialResourceState == D3D12_RESOURCE_STATE_GENERIC_READ;
   state->isBarrierRestricted = isResourceBarrierRestricted(c.pDesc_.value->Flags);
   stateService_.storeState(state);
@@ -1049,7 +1050,7 @@ void StateTrackingLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
     state->castableFormats.push_back(c.pCastableFormats_.value[i]);
   }
   state->iid = c.riid_.value;
-  state->isMappable = isResourceHeapMappable(state->heapKey);
+  state->isMappable = isResourceHeapMappable(state->heapKey, state->desc.Layout);
   state->isGenericRead = state->initialLayout == D3D12_BARRIER_LAYOUT_GENERIC_READ;
   state->isBarrierRestricted = isResourceBarrierRestricted(c.pDesc_.value->Flags);
   stateService_.storeState(state);
@@ -1376,7 +1377,7 @@ void StateTrackingLayer::post(INTC_D3D12_CreateCommittedResourceCommand& c) {
     state->clearValue = *c.pOptimizedClearValue_.value;
   }
   state->iid = c.riidResource_.value;
-  state->isMappable = isResourceHeapMappable(state->heapProperties);
+  state->isMappable = isResourceHeapMappable(state->heapProperties, state->desc.Layout);
   stateService_.storeState(state);
 
   resourceStateTrackingService_.addResource(
@@ -1407,7 +1408,7 @@ void StateTrackingLayer::post(INTC_D3D12_CreatePlacedResourceCommand& c) {
     state->clearValue = *c.pOptimizedClearValue_.value;
   }
   state->iid = c.riid_.value;
-  state->isMappable = isResourceHeapMappable(state->heapKey);
+  state->isMappable = isResourceHeapMappable(state->heapKey, state->desc.Layout);
   stateService_.storeState(state);
 
   resourceStateTrackingService_.addResource(
