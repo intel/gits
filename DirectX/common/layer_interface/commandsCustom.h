@@ -150,6 +150,70 @@ public:
   LPCWSTR_Argument pExportName_{};
 };
 
+class ID3D12ResourceWriteToSubresourceCommand : public Command {
+public:
+  ID3D12ResourceWriteToSubresourceCommand(unsigned threadId,
+                                          ID3D12Resource* object,
+                                          UINT DstSubresource,
+                                          const D3D12_BOX* pDstBox,
+                                          const void* pSrcData,
+                                          UINT SrcRowPitch,
+                                          UINT SrcDepthPitch)
+      : Command{CommandId::ID_ID3D12RESOURCE_WRITETOSUBRESOURCE, threadId},
+        object_{object},
+        DstSubresource_{DstSubresource},
+        pDstBox_{pDstBox},
+        SrcRowPitch_{SrcRowPitch},
+        SrcDepthPitch_{SrcDepthPitch} {
+    UINT depth = (pDstBox) ? (pDstBox->back - pDstBox->front) : 1;
+    size_t pSrcDataSize = SrcDepthPitch * depth;
+    pSrcData_ = {pSrcData, pSrcDataSize};
+  }
+  ID3D12ResourceWriteToSubresourceCommand()
+      : Command(CommandId::ID_ID3D12RESOURCE_WRITETOSUBRESOURCE) {}
+
+public:
+  InterfaceArgument<ID3D12Resource> object_{};
+  Argument<HRESULT> result_{};
+  Argument<UINT> DstSubresource_{};
+  PointerArgument<D3D12_BOX> pDstBox_{};
+  BufferArgument pSrcData_{};
+  Argument<UINT> SrcRowPitch_{};
+  Argument<UINT> SrcDepthPitch_{};
+};
+
+class ID3D12ResourceReadFromSubresourceCommand : public Command {
+public:
+  ID3D12ResourceReadFromSubresourceCommand(unsigned threadId,
+                                           ID3D12Resource* object,
+                                           void* pDstData,
+                                           UINT DstRowPitch,
+                                           UINT DstDepthPitch,
+                                           UINT SrcSubresource,
+                                           const D3D12_BOX* pSrcBox)
+      : Command{CommandId::ID_ID3D12RESOURCE_READFROMSUBRESOURCE, threadId},
+        object_{object},
+        DstRowPitch_{DstRowPitch},
+        DstDepthPitch_{DstDepthPitch},
+        SrcSubresource_{SrcSubresource},
+        pSrcBox_{pSrcBox} {
+    UINT depth = (pSrcBox) ? (pSrcBox->back - pSrcBox->front) : 1;
+    size_t pDstDataSize = DstDepthPitch * depth;
+    pDstData_ = {pDstData, pDstDataSize};
+  }
+  ID3D12ResourceReadFromSubresourceCommand()
+      : Command(CommandId::ID_ID3D12RESOURCE_READFROMSUBRESOURCE) {}
+
+public:
+  InterfaceArgument<ID3D12Resource> object_{};
+  Argument<HRESULT> result_{};
+  BufferArgument pDstData_{};
+  Argument<UINT> DstRowPitch_{};
+  Argument<UINT> DstDepthPitch_{};
+  Argument<UINT> SrcSubresource_{};
+  PointerArgument<D3D12_BOX> pSrcBox_{};
+};
+
 class INTC_D3D12_GetSupportedVersionsCommand : public Command {
 public:
   INTC_D3D12_GetSupportedVersionsCommand(unsigned threadId,

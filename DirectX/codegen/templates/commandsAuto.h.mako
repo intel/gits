@@ -21,6 +21,8 @@ custom = [
     'ID3D12GraphicsCommandListOMSetRenderTargets',
     'ID3D12DeviceGetResourceTiling',
     'ID3D12StateObjectPropertiesGetShaderIdentifier',
+    'ID3D12ResourceWriteToSubresource',
+    'ID3D12ResourceReadFromSubresource',
     'IDMLDeviceCheckFeatureSupport'
 ]
 %>\
