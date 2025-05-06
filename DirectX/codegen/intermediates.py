@@ -40,6 +40,8 @@ class Parameter:
     sal_size: str = '' # _In_reads_, _Out_writes_, _Inout_updates_bytes_, _Field_size_, _In_opt_count_, _In_count_
     is_parameter: bool = True
     structure_with_interfaces: bool = False
+    is_context: bool = False
+    is_context_output: bool = False
 
 @dataclass
 class Function:

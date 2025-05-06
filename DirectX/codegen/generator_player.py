@@ -9,7 +9,7 @@
 # ===================== end_copyright_notice ==============================
 
 from generator_helpers import *
-from generator_xess import is_xess_function, is_context_output_in_params, is_context_in_params
+from generator_xess_helpers import *
 
 def command_runner_call_parameters(function, indent):
     str = ''
@@ -25,9 +25,7 @@ def command_runner_call_parameters(function, indent):
 def generate_player_files(context, out_path):
     additional_context = { 
         'command_runner_call_parameters': command_runner_call_parameters,
-        'is_xess_function': is_xess_function,
-        'is_context_output_in_params': is_context_output_in_params,
-        'is_context_in_params': is_context_in_params
+        'is_xess_function': is_xess_function
     }
     files_to_generate = [
         'commandPlayersAuto.h',

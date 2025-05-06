@@ -49,7 +49,7 @@ void LogDxErrorLayer::pre(${function.name}Command& command) {
 
 void LogDxErrorLayer::post(${function.name}Command& command) {
   if (isFailureXess(command.result_.value)) {
-    Log(ERR) << callKeyToStr(command.key) << " ${function.name} failed " << printResultXess(command.result_.value);
+    Log(ERR) << callKeyToStr(command.key) << " ${function.name} failed " << toStr(command.result_.value);
   }
 }
 
@@ -213,43 +213,6 @@ std::string LogDxErrorLayer::printResult(HRESULT result) {
     return "DXGI_ERROR_WAS_STILL_DRAWING";
   case DXGI_ERROR_DRIVER_INTERNAL_ERROR:
     return "DXGI_ERROR_DRIVER_INTERNAL_ERROR";
-  default:
-    std::stringstream s;
-    s << "0x" << std::hex << result;
-    return s.str();
-  }
-}
-
-std::string LogDxErrorLayer::printResultXess(xess_result_t result) {
-  switch (result) {
-  case XESS_RESULT_WARNING_NONEXISTING_FOLDER:
-    return "XESS_RESULT_WARNING_NONEXISTING_FOLDER";
-  case XESS_RESULT_WARNING_OLD_DRIVER:
-    return "XESS_RESULT_WARNING_OLD_DRIVER";
-  case XESS_RESULT_ERROR_UNSUPPORTED_DEVICE:
-    return "XESS_RESULT_ERROR_UNSUPPORTED_DEVICE";
-  case XESS_RESULT_ERROR_UNSUPPORTED_DRIVER:
-    return "XESS_RESULT_ERROR_UNSUPPORTED_DRIVER";
-  case XESS_RESULT_ERROR_UNINITIALIZED:
-    return "XESS_RESULT_ERROR_UNINITIALIZED";
-  case XESS_RESULT_ERROR_INVALID_ARGUMENT:
-    return "XESS_RESULT_ERROR_INVALID_ARGUMENT";
-  case XESS_RESULT_ERROR_DEVICE_OUT_OF_MEMORY:
-    return "XESS_RESULT_ERROR_DEVICE_OUT_OF_MEMORY";
-  case XESS_RESULT_ERROR_DEVICE:
-    return "XESS_RESULT_ERROR_DEVICE";
-  case XESS_RESULT_ERROR_NOT_IMPLEMENTED:
-    return "XESS_RESULT_ERROR_NOT_IMPLEMENTED";
-  case XESS_RESULT_ERROR_INVALID_CONTEXT:
-    return "XESS_RESULT_ERROR_INVALID_CONTEXT";
-  case XESS_RESULT_ERROR_OPERATION_IN_PROGRESS:
-    return "XESS_RESULT_ERROR_OPERATION_IN_PROGRESS";
-  case XESS_RESULT_ERROR_UNSUPPORTED:
-    return "XESS_RESULT_ERROR_UNSUPPORTED";
-  case XESS_RESULT_ERROR_CANT_LOAD_LIBRARY:
-    return "XESS_RESULT_ERROR_CANT_LOAD_LIBRARY";
-  case XESS_RESULT_ERROR_UNKNOWN:
-    return "XESS_RESULT_ERROR_UNKNOWN";
   default:
     std::stringstream s;
     s << "0x" << std::hex << result;

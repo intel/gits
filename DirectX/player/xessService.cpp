@@ -94,6 +94,18 @@ void XessService::loadXess() {
   xessDispatchTable_.xessD3D12Execute =
       reinterpret_cast<decltype(xessD3D12Execute)*>(GetProcAddress(xessDll_, "xessD3D12Execute"));
 
+  xessDispatchTable_.xessSetMaxResponsiveMaskValue =
+      reinterpret_cast<decltype(xessSetMaxResponsiveMaskValue)*>(
+          GetProcAddress(xessDll_, "xessSetMaxResponsiveMaskValue"));
+
+  xessDispatchTable_.xessGetMaxResponsiveMaskValue =
+      reinterpret_cast<decltype(xessGetMaxResponsiveMaskValue)*>(
+          GetProcAddress(xessDll_, "xessGetMaxResponsiveMaskValue"));
+
+  xessDispatchTable_.xessGetPipelineBuildStatus =
+      reinterpret_cast<decltype(xessGetPipelineBuildStatus)*>(
+          GetProcAddress(xessDll_, "xessGetPipelineBuildStatus"));
+
   xess_version_t version = {};
   xessDispatchTable_.xessGetVersion(&version);
   Log(INFO) << "Loaded XeSS (version " << version.major << "." << version.minor << "."

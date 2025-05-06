@@ -409,7 +409,7 @@ class DirectXTex(Repository):
 
 class XeSS(Repository):
     def set_branch(self):
-        self.branch = "v1.3.1"
+        self.branch = "v2.0.1"
 
     def init(self):
         self.name = "xess"

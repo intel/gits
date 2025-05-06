@@ -219,6 +219,10 @@ def postprocess(functions, interfaces, structures):
         'DSTORAGE_REQUEST'
     }
 
+    context_params = {
+        'xess_context_handle_t'
+    }
+
     for struct in structures:
         for field in struct.fields:
             if isinstance(field, Parameter):
@@ -231,6 +235,11 @@ def postprocess(functions, interfaces, structures):
         for param in function.params:
             if param.type in structures_with_interfaces:
                 param.structure_with_interfaces = True
+            elif param.type in context_params:
+                if param.is_pointer:
+                    param.is_context_output = True
+                else:
+                    param.is_context = True
 
     for interface in interfaces:
         for function in interface.functions:

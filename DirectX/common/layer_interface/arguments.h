@@ -8,8 +8,6 @@
 
 #pragma once
 
-#include "xess.h"
-#include "xess_d3d12.h"
 #include "directx.h"
 
 #include <vector>

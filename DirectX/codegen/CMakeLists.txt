@@ -29,6 +29,7 @@ set(SCRIPTS_SRC
   generator_skip_calls.py
   plugin_generator.py
   generator_xess.py
+  generator_xess_helpers.py
 )
 source_group("scripts" FILES ${SCRIPTS_SRC})
 

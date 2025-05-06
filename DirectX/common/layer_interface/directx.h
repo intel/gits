@@ -23,6 +23,7 @@
 #define DML_TARGET_VERSION_USE_LATEST
 #include <DirectML.h>
 
-#include <xess.h>
-#include <xess_d3d12.h>
 #include <dstorage.h>
+
+#include <xess/xess.h>
+#include <xess/xess_d3d12.h>

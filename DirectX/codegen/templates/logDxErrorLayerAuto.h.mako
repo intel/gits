@@ -73,7 +73,6 @@ private:
   bool isFailureXess(xess_result_t result) {
     return result != XESS_RESULT_SUCCESS && (!isPlayer_ || result != preResultXess_);
   }
-  std::string printResultXess(xess_result_t result);
 
 private:
   bool isPlayer_{};

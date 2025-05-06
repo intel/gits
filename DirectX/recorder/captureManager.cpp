@@ -448,15 +448,23 @@ void CaptureManager::interceptXessFunctions() {
 
     xessDispatchTable_.xessD3D12Execute =
         reinterpret_cast<decltype(xessD3D12Execute)*>(GetProcAddress(xessDll_, "xessD3D12Execute"));
+
+    xessDispatchTable_.xessSetMaxResponsiveMaskValue =
+        reinterpret_cast<decltype(xessSetMaxResponsiveMaskValue)*>(
+            GetProcAddress(xessDll_, "xessSetMaxResponsiveMaskValue"));
+
+    xessDispatchTable_.xessGetMaxResponsiveMaskValue =
+        reinterpret_cast<decltype(xessGetMaxResponsiveMaskValue)*>(
+            GetProcAddress(xessDll_, "xessGetMaxResponsiveMaskValue"));
+
+    xessDispatchTable_.xessGetPipelineBuildStatus =
+        reinterpret_cast<decltype(xessGetPipelineBuildStatus)*>(
+            GetProcAddress(xessDll_, "xessGetPipelineBuildStatus"));
   }
 
   xess_version_t xessVersion{};
   xess_result_t res = xessDispatchTable_.xessGetVersion(&xessVersion);
   GITS_ASSERT(res == XESS_RESULT_SUCCESS);
-  if (xessVersion.major > 1) {
-    Log(WARN)
-        << "XeSS 2.0 (or newer) is loaded. GITS will not record XeSS 2.0 (or newer) API calls.";
-  }
 
   Log(INFO) << "Loaded XeSS (libxess.dll) version: " << xessVersion.major << "."
             << xessVersion.minor << "." << xessVersion.patch;
@@ -480,7 +488,7 @@ void CaptureManager::interceptXessFunctions() {
   GITS_ASSERT(ret == NO_ERROR);
   ret = DetourAttach(&xessDispatchTable_.xessSetVelocityScale, xessSetVelocityScaleWrapper);
   GITS_ASSERT(ret == NO_ERROR);
-  if (xessVersion.minor >= 1) {
+  if (xessVersion.major == 1 && xessVersion.minor >= 1) {
     ret = DetourAttach(&xessDispatchTable_.xessGetJitterScale, xessGetJitterScaleWrapper);
     GITS_ASSERT(ret == NO_ERROR);
     ret = DetourAttach(&xessDispatchTable_.xessGetVelocityScale, xessGetVelocityScaleWrapper);
@@ -488,12 +496,12 @@ void CaptureManager::interceptXessFunctions() {
     ret = DetourAttach(&xessDispatchTable_.xessIsOptimalDriver, xessIsOptimalDriverWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xessVersion.minor >= 2) {
+  if (xessVersion.major == 1 && xessVersion.minor >= 2) {
     ret = DetourAttach(&xessDispatchTable_.xessGetOptimalInputResolution,
                        xessGetOptimalInputResolutionWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xessVersion.minor >= 3) {
+  if (xessVersion.major == 1 && xessVersion.minor >= 3) {
     ret = DetourAttach(&xessDispatchTable_.xessSetExposureMultiplier,
                        xessSetExposureMultiplierWrapper);
     GITS_ASSERT(ret == NO_ERROR);
@@ -505,6 +513,8 @@ void CaptureManager::interceptXessFunctions() {
                        xessForceLegacyScaleFactorsWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
+  ret = DetourAttach(&xessDispatchTable_.xessSetLoggingCallback, xessSetLoggingCallbackWrapper);
+  GITS_ASSERT(ret == NO_ERROR);
   ret = DetourAttach(&xessDispatchTable_.xessD3D12CreateContext, xessD3D12CreateContextWrapper);
   GITS_ASSERT(ret == NO_ERROR);
   ret = DetourAttach(&xessDispatchTable_.xessD3D12Init, xessD3D12InitWrapper);
@@ -515,6 +525,18 @@ void CaptureManager::interceptXessFunctions() {
   GITS_ASSERT(ret == NO_ERROR);
   ret = DetourAttach(&xessDispatchTable_.xessD3D12Execute, xessD3D12ExecuteWrapper);
   GITS_ASSERT(ret == NO_ERROR);
+
+  if (xessVersion.major > 1) {
+    ret = DetourAttach(&xessDispatchTable_.xessSetMaxResponsiveMaskValue,
+                       xessSetMaxResponsiveMaskValueWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+    ret = DetourAttach(&xessDispatchTable_.xessGetMaxResponsiveMaskValue,
+                       xessGetMaxResponsiveMaskValueWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+    ret = DetourAttach(&xessDispatchTable_.xessGetPipelineBuildStatus,
+                       xessGetPipelineBuildStatusWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
 
   ret = DetourTransactionCommit();
   GITS_ASSERT(ret == NO_ERROR);

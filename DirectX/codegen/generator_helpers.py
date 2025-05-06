@@ -67,6 +67,9 @@ def is_interface_creation(function):
             break
     return creation
 
+def is_context_creation(function):
+    return any(param.is_context_output for param in function.params)
+
 def generate_file(context, file_name, out_path):
     in_file = os.path.join("templates", file_name + ".mako")
     out_file = os.path.join(out_path, file_name)
@@ -77,7 +80,8 @@ def generate_file(context, file_name, out_path):
         'generate_return': generate_return,
         'generate_params': generate_params,
         'generate_args': generate_args,
-        'is_interface_creation': is_interface_creation
+        'is_interface_creation': is_interface_creation,
+        'is_context_creation': is_context_creation
     }
 
     print('Generating file: ' + out_file)
@@ -97,7 +101,8 @@ def generate_plugin_file(context, file_name, out_path):
         'generate_return': generate_return,
         'generate_params': generate_params,
         'generate_args': generate_args,
-        'is_interface_creation': is_interface_creation
+        'is_interface_creation': is_interface_creation,
+        'is_context_creation': is_context_creation
     }
 
     print('Generating file: ' + artifact_file)

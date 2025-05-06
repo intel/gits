@@ -9,8 +9,8 @@ ${header}
 
 #pragma once
 
-#include "xess.h"
-#include "xess_d3d12.h"
+#include "xess/xess.h"
+#include "xess/xess_d3d12.h"
 
 namespace gits {
 namespace DirectX {

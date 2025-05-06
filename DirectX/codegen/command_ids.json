@@ -6,7 +6,7 @@
         "D3D12": 277,
         "D3D12_DEBUG": 75,
         "DML": 28,
-        "XESS": 21,
+        "XESS": 24,
         "DSTORAGE": 32
     },
     "command_ids": {
@@ -617,7 +617,10 @@
             "ID_XESSD3D12BUILDPIPELINES": 862225,
             "ID_XESSD3D12INIT": 862226,
             "ID_XESSD3D12GETINITPARAMS": 862227,
-            "ID_XESSD3D12EXECUTE": 862228
+            "ID_XESSD3D12EXECUTE": 862228,
+            "ID_XESSSETMAXRESPONSIVEMASKVALUE": 862229,
+            "ID_XESSGETMAXRESPONSIVEMASKVALUE": 862230,
+            "ID_XESSGETPIPELINEBUILDSTATUS": 862231
         },
         "DSTORAGE": {
             "ID_DSTORAGESETCONFIGURATION": 863489,

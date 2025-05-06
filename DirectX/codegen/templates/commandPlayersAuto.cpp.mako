@@ -32,7 +32,7 @@ namespace DirectX {
   %if param.is_interface and not param.is_interface_creation or param.structure_with_interfaces:
   updateInterface(manager, command.${param.name}_);
   %endif
-  %if param.type == 'xess_context_handle_t' and not param.is_pointer:
+  %if param.is_context:
   updateContext(manager, command.${param.name}_);
   %endif
   %endfor
@@ -46,7 +46,7 @@ namespace DirectX {
     if (!command.skip) {
       ${'command.result_.value = ' if not function.ret.is_void else ''}xessDispatchTable.${function.name}(${command_runner_call_parameters(function, '            ')}
     }
-    %if is_context_output_in_params(function.params):
+    %if is_context_creation(function):
 
     if (command.result_.value == XESS_RESULT_SUCCESS) {
       updateOutputContext(manager, command.${param.name}_);

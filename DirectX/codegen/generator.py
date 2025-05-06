@@ -75,8 +75,8 @@ def main():
         CppHeader(path=inpath_dxgi + 'dxgitype.h', api=Api.DXGI),
         CppHeader(path=inpath_dxgi + '../um/dxgidebug.h', api=Api.DXGI_DEBUG),
         CppHeader(path=inpath_dml + 'DirectML.h', api=Api.DML),
-        CppHeader(path=inpath_xess + 'xess.h', api=Api.XESS),
-        CppHeader(path=inpath_xess + 'xess_d3d12.h', api=Api.XESS),
+        CppHeader(path=inpath_xess + 'xess/xess.h', api=Api.XESS),
+        CppHeader(path=inpath_xess + 'xess/xess_d3d12.h', api=Api.XESS),
         CppHeader(path=inpath_dstorage + 'dstorage.h', api=Api.DSTORAGE)
     ]
 

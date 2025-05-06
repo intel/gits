@@ -9,7 +9,7 @@
 # ===================== end_copyright_notice ==============================
 
 from generator_helpers import *
-from generator_xess import is_get_xess_context_needed, is_set_xess_context_needed, is_xess_d3d12_init
+from generator_xess_helpers import *
 from intermediates import Parameter
 from intermediates import Api
 
@@ -48,8 +48,6 @@ def generate_recorder_files(context, out_path):
     additional_context = {
         'wrappers_update_created': wrappers_update_created,
         'get_dispatch_table': get_dispatch_table,
-        'is_get_xess_context_needed': is_get_xess_context_needed,
-        'is_set_xess_context_needed': is_set_xess_context_needed,
         'is_xess_d3d12_init': is_xess_d3d12_init
     }
     files_to_generate = [

@@ -25,9 +25,7 @@ params = generate_params(function)
 args = generate_args(function)
 dispatch_table = get_dispatch_table(function)
 update_created = wrappers_update_created(function, '    ')
-needs_get_xess_context = is_get_xess_context_needed(function)
-needs_set_xess_context = is_set_xess_context_needed(function)
-xess_init = is_xess_d3d12_init(function)
+xess_d3d12_init = is_xess_d3d12_init(function)
 args_simple = []
 for param in function.params:
     args_simple.append(param.name)
@@ -53,11 +51,10 @@ ${generate_return(function)} ${function.name}Wrapper(${'' if params else ') {'}
         %endfor
         ${args_simple[-1]});
         %endif
-    %if needs_get_xess_context:
-    command.hContext_.key = manager.getXessContextMap().getKey(reinterpret_cast<std::uintptr_t>(hContext));
-    %endif
     %for param in function.params:
-    %if param.is_interface and not param.is_interface_creation and not param.is_const:
+    %if param.is_context:
+    command.${param.name}_.key = manager.getXessContextMap().getKey(reinterpret_cast<std::uintptr_t>(${param.name}));
+    %elif param.is_interface and not param.is_interface_creation and not param.is_const:
     %if not param.sal_size:
     updateInterface(command.${param.name}_, ${param.name});
     %else:
@@ -69,7 +66,7 @@ ${generate_return(function)} ${function.name}Wrapper(${'' if params else ') {'}
     UpdateInterface<${param.type}_Argument, ${param.type}> update_${param.name}(command.${param.name}_, ${param.name});
     %endif
     %endfor
-    %if xess_init:
+    %if xess_d3d12_init:
     command.pInitParams_.key = manager.createWrapperKey(); // Used for subcapture restore order
     %endif
 
@@ -88,13 +85,15 @@ ${generate_return(function)} ${function.name}Wrapper(${'' if params else ') {'}
           %endif
     }
 
-    %if needs_set_xess_context:
+    %for param in function.params:
+    %if param.is_context_output:
     if (result == XESS_RESULT_SUCCESS) {
-      command.phContext_.key = manager.createWrapperKey();
-      auto context = reinterpret_cast<std::uintptr_t>(*command.phContext_.value);
-      manager.getXessContextMap().setContext(context, command.phContext_.key);
+      command.${param.name}_.key = manager.createWrapperKey();
+      auto context = reinterpret_cast<std::uintptr_t>(*command.${param.name}_.value);
+      manager.getXessContextMap().setContext(context, command.${param.name}_.key);
     }
     %endif
+    %endfor
     %if not function.ret.is_void:
     %if update_created:
     ${update_created}

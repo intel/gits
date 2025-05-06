@@ -1140,29 +1140,7 @@ FastOStream& operator<<(FastOStream& stream, xess_d3d12_init_params_t_Argument& 
   }
   stream << "xess_d3d12_init_params_t{";
   stream << "{" << arg.value->outputResolution.x << ", " << arg.value->outputResolution.y << "}, ";
-  switch (arg.value->qualitySetting) {
-  case XESS_QUALITY_SETTING_ULTRA_PERFORMANCE:
-    stream << "XESS_QUALITY_SETTING_ULTRA_PERFORMANCE";
-    break;
-  case XESS_QUALITY_SETTING_PERFORMANCE:
-    stream << "XESS_QUALITY_SETTING_PERFORMANCE";
-    break;
-  case XESS_QUALITY_SETTING_BALANCED:
-    stream << "XESS_QUALITY_SETTING_BALANCED";
-    break;
-  case XESS_QUALITY_SETTING_QUALITY:
-    stream << "XESS_QUALITY_SETTING_QUALITY";
-    break;
-  case XESS_QUALITY_SETTING_ULTRA_QUALITY:
-    stream << "XESS_QUALITY_SETTING_ULTRA_QUALITY";
-    break;
-  case XESS_QUALITY_SETTING_ULTRA_QUALITY_PLUS:
-    stream << "XESS_QUALITY_SETTING_ULTRA_QUALITY_PLUS";
-    break;
-  case XESS_QUALITY_SETTING_AA:
-    stream << "XESS_QUALITY_SETTING_AA";
-    break;
-  }
+  stream << toStr(arg.value->qualitySetting);
   stream << ", ";
   stream << arg.value->initFlags << ", ";
   stream << arg.value->creationNodeMask << ", ";
