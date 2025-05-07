@@ -7,50 +7,9 @@
 # ===================== end_copyright_notice ==============================
 
 import os
-import typing
 import yaml
 
-from enum import Enum
-
-
-class AccessLevel(Enum):
-    BASIC = "Basic"
-    ADVANCED = "Advanced"
-    EXPERT = "Expert"
-    DEVELOPER = "Developer"
-
-    def __str__(self):
-        return self.value
-
-    @staticmethod
-    def from_string(value):
-        try:
-            return AccessLevel(value)
-        except ValueError:
-            return None
-
-
-def fixUpCapitalizationInstance(name):
-    chars = list(name)
-    for i in range(len(name) - 1, -1, -1):
-        if name[i].isupper():
-            chars[i] = chars[i].lower()
-        else:
-            break
-    return ''.join(chars)
-
-
-def fixCapitalizationName(name):
-    if len(name) > 1:
-        return name[0].upper() + name[1:]
-    return name[0].upper()
-
-
-def get_if_present(node, key, default):
-    if key in node:
-        return node[key]
-    return default
-
+from utils import fixCapitalizationName, get_if_present, fixUpCapitalizationInstance
 
 blank_types = []
 
@@ -83,7 +42,7 @@ class ConfigurationEntry:
 
         self.type = get_if_present(node, 'Type', 'Entry')
         self.is_group = self.type == 'Group'
-        
+
         # process accessibility
         self.is_derived = False
         self.argument_only = False
@@ -97,7 +56,7 @@ class ConfigurationEntry:
 
         # Tags are optional
         self.tags = list(get_if_present(node, 'Tags', namespace))
-        self.tags.extend(get_if_present(node, 'Platforms', []))
+        self.tags.extend(get_if_present(node, 'OSVisibility', []))
 
         self.description = ''
         self.short_description = ''
@@ -115,21 +74,40 @@ class ConfigurationEntry:
                 self.description = node[key]
                 self.short_description = node[key]
 
+        self.os_visibility = None
+        if 'OSVisibility' in node:
+            self.os_visibility = node['OSVisibility']
+
+
     def __str__(self):
         return f'Type: {self.type}'
 
+
     def __repr__(self):
         return str(self)
-    
+
+
     def get_tags_escaped(self):
         return "{" + ", ".join([f"\"{tag}\"" for tag in self.get_tags()]) + "}"
 
+
     def get_tags(self):
         return [tag for tag in self.tags if tag != 'Configuration']
-    
+
+
     def has_leafs(self):
         return self.leaf_count - self.derived_count > 0
-    
+
+
+    def is_os_visible(self, platform):
+        if self.os_visibility is None:
+            return True
+        if platform == 'win32':
+            os = "WINDOWS"
+        else:
+            os = "X11"
+        return os in self.os_visibility
+
 
 class ConfigurationOption(ConfigurationEntry):
     ENVIRONMENT_PREFIX = 'GITS_'
@@ -138,6 +116,7 @@ class ConfigurationOption(ConfigurationEntry):
 
     VALUETYPES_NEED_QUOTES = ['std::string', 'std::filesystem::path', 'BitRange', 'VulkanObjectRange']
     STRING_TYPES = ['std::string', 'std::filesystem::path']
+
 
     def __init__(self, option, namespace, instance_namespace):
         super().__init__(option, namespace, instance_namespace)
@@ -166,6 +145,13 @@ class ConfigurationOption(ConfigurationEntry):
         else:
             self.default = self.process_default(self.default)
 
+        self.defaults_per_platform = {}
+        if 'DefaultsPerPlatform' in option:
+            defaults_per_platform_lst = option['DefaultsPerPlatform']
+            for d in defaults_per_platform_lst:
+                for key, value in d.items():
+                    self.defaults_per_platform[key] = self.process_default(value)
+
         self.shorthands = get_if_present(option, 'Arguments', [])
         self.has_custom_shorthands = len(self.shorthands) > 0
 
@@ -173,16 +159,25 @@ class ConfigurationOption(ConfigurationEntry):
         self.needs_quotes_in_yml = self.type in ConfigurationOption.VALUETYPES_NEED_QUOTES
         self.is_string_type = self.type in ConfigurationOption.STRING_TYPES
 
-        access_level_str = get_if_present(option, 'AccessLevel', 'Developer')
-        self.access_level = AccessLevel(access_level_str)
+        self.access_level = get_if_present(option, 'AccessLevel', 'Developer')
         self.tags.append(f"{ConfigurationOption.ARGS_TAG_PREFIX_ACCESS_LEVEL}:{self.access_level}")
+
+        self.default_condition = {}
+        if 'DefaultCondition' in option:
+            default_condition_lst = option['DefaultCondition']
+            for d in default_condition_lst:
+                for key, value in d.items():
+                    self.default_condition[key] = self.process_default(value)
+
 
     def __str__(self):
         return (f'Name: {self.name}, Type: {self.type}, Default: {self.default}, '
                 f'Short Description: {self.short_description}, Description: {self.description}')
 
+
     def __repr__(self):
         return str(self)
+
 
     def process_default(self, default) -> str:
         global blank_types
@@ -218,11 +213,38 @@ class ConfigurationOption(ConfigurationEntry):
 
         return str(result)
 
+
+    def get_default(self, platform: str = None, install_path = None, conditions=[]) -> str:
+        value = self.default
+        for condition in conditions:
+            if condition in self.default_condition.keys():
+                value = self.default_condition[condition]
+        if platform:
+          if self.defaults_per_platform and platform in self.defaults_per_platform:
+              value = self.defaults_per_platform[platform]
+
+          if platform != 'win32':
+            if platform == "lnx_32":
+              arch = 'i386'
+            elif platform == "lnx_64":
+              arch = 'x86_64'
+            elif platform == "lnx_arm":
+              arch = 'aarch64'
+            else:
+              raise ValueError(f"Unknown platform: {platform}")
+
+            value = value.replace('{arch}', arch)
+        if install_path:
+            value = value.replace('{install_path}', install_path)
+        return value
+
+
     def get_argument_type(self) -> str:
         if self.type == 'bool':
             return f"args::Flag"
         else:
             return f"args::ValueFlag<{self.type}>"
+
 
     def get_shorthands(self) -> str:
         tmp_list= [self.argument_path + ConfigurationOption.ARGS_SUFFIX_HIDE_OPTION] + self.shorthands
@@ -230,9 +252,11 @@ class ConfigurationOption(ConfigurationEntry):
         lst.extend([f'"{item}"' for item in tmp_list if len(item) > 1])
         return ", ".join(lst)
 
+
     def get_environment_string(self) -> str:
         return f"{ConfigurationOption.ENVIRONMENT_PREFIX}{self.argument_path.upper().replace('.', '_')}"
-    
+
+
     def get_csv_dictionary(self):
         return {
             'Path': self.namespace_str,
@@ -246,7 +270,7 @@ class ConfigurationOption(ConfigurationEntry):
             'ArgumentOnly': str(self.argument_only),
             'Default': self.default
         }
-    
+
 
 class ConfigurationGroup(ConfigurationEntry):
     ARGUMENT_PREFIX = 'Arg'
@@ -274,12 +298,15 @@ class ConfigurationGroup(ConfigurationEntry):
             f"{ConfigurationGroup.ARGUMENT_PREFIX}{namespace}" for namespace in self.namespace]
         self.argument_namespace_str = '::'.join(self.argument_namespace)
 
+
     def __str__(self):
         return f"Name: {self.name}, Options: [{', '.join(str(option) for option in self.options)}]"
 
+
     def __repr__(self):
         return str(self)
-    
+
+
     def get_csv_dictionary(self):
         namespace_str = '::'.join(self.namespace[:-1])
         return {
@@ -294,19 +321,20 @@ class ConfigurationGroup(ConfigurationEntry):
             'ArgumentOnly': str(self.argument_only),
             'Default': ''
         }
-    
+
+
     def get_config_groups(self):
         # TODO - filter for groups that are in the configfile
         return [option for option in self.options if option.is_group]
 
+
     def get_config_options(self):
         # TODO - filter for groups that are in the configfile
         return [option for option in self.options if not option.is_group]
-                
 
 
 def parse_group_node(node, parent_namespace=None, parent_instance_namespace=None):
-    # assumption we are called on a group
+    # assumption: we are called on a group
     options = []
     namespace = [node['Name'][0].upper() + node['Name'][1:]]
     if not parent_namespace is None:
@@ -327,7 +355,7 @@ def parse_group_node(node, parent_namespace=None, parent_instance_namespace=None
     is_group_derived = False
     if 'IsDerived' in node:
         is_group_derived = node['IsDerived']
-    
+
     dependencies = []
     for option in node['Options']:
         if option['Type'] == 'Group':
@@ -340,7 +368,6 @@ def parse_group_node(node, parent_namespace=None, parent_instance_namespace=None
                 entry.is_derived = True
 
         options.append(entry)
-    # TODO !!!Config isDerived: if parent group is derived, also child-groups are derived
 
     group = ConfigurationGroup(node, options, namespace, instance_namespace)
     dependencies += [group]

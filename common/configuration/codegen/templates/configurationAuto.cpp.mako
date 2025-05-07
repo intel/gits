@@ -33,9 +33,9 @@ ${render_group(option)}\
   % else:
     % if not option.is_derived:
       % if option.is_string_type:
-  ${".".join(option.instance_namespace[1:])}.${option.instance_name} = "${option.default}";
+  ${".".join(option.instance_namespace[1:])}.${option.instance_name} = "${option.get_default(platform)}";
       % else:
-  ${".".join(option.instance_namespace[1:])}.${option.instance_name} = stringTo<${option.type}>("${option.default}");
+  ${".".join(option.instance_namespace[1:])}.${option.instance_name} = stringTo<${option.type}>("${option.get_default(platform)}");
       % endif
     % endif
   % endif

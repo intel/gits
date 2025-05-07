@@ -7,10 +7,9 @@
 # ===================== end_copyright_notice ==============================
 
 import os
-import typing
 import yaml
 
-from configuration_element import get_if_present, fixCapitalizationName
+from utils import get_if_present
 
 
 class ConfigurationEnumValue:
@@ -21,7 +20,7 @@ class ConfigurationEnumValue:
 
         if 'Labels' in node:
             self.labels = node['Labels']
-        else:    
+        else:
             label_parts = self.value.split('_')
             label_parts = [part.capitalize() for part in label_parts]
             self.labels = [''.join(label_parts)]
@@ -39,6 +38,7 @@ class ConfigurationEnum:
             self.values = []
         self.description = get_if_present(node, 'Description', '')
         self.type = get_if_present(node, 'Type', None)
+
 
     def __str__(self):
         return (f"Name: {self.name}, Description: {self.description},"

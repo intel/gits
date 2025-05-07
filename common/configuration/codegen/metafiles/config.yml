@@ -7,2212 +7,2332 @@
 # ===================== end_copyright_notice ==============================
 
 Configuration:
-- Name: CCode
-  InstanceName: ccode
-  Type: Group
-  Options:
-  - Name: outputPath
-    Type: std::filesystem::path
-    Default: ''
-    Accessibility: Derived
-  - Name: benchmarkStartFrame
-    Type: uint32_t
-    Default: ''
-    Accessibility: Derived
-- Name: Common
-  Type: Group
-  Options:
-  - Name: mode
-    Type: GITSMode
-    Default: ''
-    Accessibility: Derived
-  - Name: Shared
+  - Name: CCode
+    InstanceName: ccode
     Type: Group
     Options:
-    - Name: thresholdLogLevel
-      Type: LogLevel
-      Default: INFO
-      Arguments: [logLevel, loglevel]
-      Description: Only info with level greater or equal to this will be logged.
-      LongDescription: 'The levels are: TRACEVERBOSE, TRACE, INFOVERBOSE,  INFO (default),
-        WARNING, ERROR and OFF. With TRACE level API calls are logged. With TRACEVERBOSE
-        additional details are logged, for example in OGL streams log will contain
-        state like list of bound framebuffers with attachments, pipelines, programs,
-        shaders, buffers and textures.'
-      ConfigName: LogLevel
-    - Name: logToConsole
-      Type: bool
-      Default: false
-    - Name: traceDataOpts
-      Type: std::set<TraceData>
-      Default: '[]'
-      Accessibility: ArgumentOnly
-      Arguments: [traceData]
-      Description: Avaliable if '--logLevel TRACE' selected.
-      LongDescription: |
-        Enables logging additional info to trace specified by comma separated options. 
-        Options: 
-        * vkStructs - instead of logging addresses of Vulkan objects, GITS will log the structures, tables or other data behind them. 
-        * frameNumber - dump frame number for every api call.
-      ConfigName: traceData
-    - Name: useEvents
-      Type: bool
-      Default: ''
-      Accessibility: Derived
-    - Name: scriptArgsStr
-      Type: std::string
-      Default: ''
-      Accessibility: Derived
-      Description: Lua script arguments. String with lua script arguments may be read
-        by lua script.
-    - Name: libGL
-      Type: std::filesystem::path
-      Default: ''
-      Accessibility: ArgumentOnly
-      Arguments: [libGLPath]
-      Platform: [WINDOWS, X11]
-      Description: Override for library path containing GL functions
-    - Name: libEGL
-      Type: std::filesystem::path
-      Default: ''
-      Accessibility: ArgumentOnly
-      Arguments: [libEGLPath]
-      Platform: [WINDOWS, X11]
-      Description: Override for library containing EGL functions
-    - Name: libGLESv1
-      Type: std::filesystem::path
-      Default: ''
-      Accessibility: ArgumentOnly
-      Arguments: [libGLESv1Path]
-      Platform: [WINDOWS, X11]
-      Description: Override for library path containing GLES 1 functions
-    - Name: libGLESv2
-      Type: std::filesystem::path
-      Default: ''
-      Accessibility: ArgumentOnly
-      Arguments: [libGLESv2Path]
-      Platform: [WINDOWS, X11]
-      Description: Override for library path containing GLES 2 functions
-    - Name: libClPath
-      Type: std::filesystem::path
-      Default: ''
-      Accessibility: ArgumentOnly
-      Arguments: [libOCLPath]
-      Platform: [WINDOWS, X11]
-      Description: Use a custom path to the OpenCL shared library.
-    - Name: libVK
-      Type: std::filesystem::path
-      Default: ''
-      Accessibility: ArgumentOnly
-      Arguments: [libVKPath]
-      Platform: [WINDOWS, X11]
-      Description: Override for Vulkan Loader library path.
-    - Name: libOcloc
-      Type: std::filesystem::path
-      Default: ''
-      Accessibility: Derived
-    - Name: libL0Driver
-      Type: std::filesystem::path
-      Default: ''
-      Accessibility: Derived
-    - Name: libL0
-      Type: std::filesystem::path
-      Default: ''
-      Accessibility: Derived
-  - Name: Player
-    Type: Group
-    Options:
-    - Name: applicationPath
-      Type: std::filesystem::path
-      Default: ''
-      Accessibility: Derived
-    - Name: stats
-      Type: bool
-      Default: ''
-      Accessibility: ArgumentOnly
-      Arguments: [stats, s]
-      Description: GITS will not play specified file but instead will create some
-        statistics about it.
-    - Name: version
-      Type: bool
-      Default: ''
-      Accessibility: ArgumentOnly
-      Arguments: [version, v]
-      Description: Displays gitsPlayer version.
-    - Name: diags
-      Type: bool
-      Default: ''
-      Accessibility: ArgumentOnly
-      Arguments: [recorderDiags]
-      Description: Causes player to output diagnostic info gathered during stream
-        recording. Then, player exits.
-    - Name: libGL
-      Type: std::filesystem::path
-      Default: OpenGL32.dll
-    - Name: libEGL
-      Type: std::filesystem::path
-      Default: libEGL.dll
-    - Name: libGLESv1
-      Type: std::filesystem::path
-      Default: libGLESv1_CM.dll
-      ConfigName: libGLES1
-    - Name: libGLESv2
-      Type: std::filesystem::path
-      Default: libGLESv2.dll
-      ConfigName: libGLES2
-    - Name: libClPath
-      Type: std::filesystem::path
-      Default: OpenCL.dll
-      ConfigName: libCL
-    - Name: libVK
-      Type: std::filesystem::path
-      Default: vulkan-1.dll
-    - Name: libOcloc
-      Type: std::filesystem::path
-      Default: ocloc64.dll
-    - Name: libL0
-      Type: std::filesystem::path
-      Default: ze_loader.dll
-    - Name: streamPath
-      Type: std::filesystem::path
-      Default: ''
-    - Name: streamDir
-      Type: std::filesystem::path
-      Default: ''
-      Accessibility: Derived
-    - Name: subcapturePath
-      Type: std::filesystem::path
-      Default: ''
-    - Name: tokenBurst
-      Type: uint32_t
-      Default: 10000
-      Arguments: [tokenBurstLimit]
-      Description: Specifies number of tokens to be loaded from stream file in one
-        burst. Burst is a group of tokens that have to be all loaded before execution
-        of first token in a burst will start. This option is mutually exclusive with
-        loadWholeStreamBeforePlayback option.
-      ConfigName: tokenBurstLimit
-    - Name: tokenBurstNum
-      Type: uint32_t
-      Default: 5
-      Arguments: [tokenBurstNum]
-      Description: Specifies maximum number of 'bursts' loaded, waiting for execution,
-        at any one time by player
-    - Name: exitFrame
-      Type: uint32_t
-      Default: 1000000
-      Arguments: [exitFrame]
-      Description: Stop playback after this frame.
-    - Name: endFrameSleep
-      Type: uint32_t
-      Default: 0
-      Description: Sleep this many milliseconds after a swap.
-    - Name: exitOnError
-      Type: bool
-      Default: false
-      Arguments: [exitOnError]
-      Description: Stop playback when API function call returns error value.
-    - Name: useEvents
-      Type: bool
-      Default: ''
-      Accessibility: Derived
-    - Name: eventScript
-      Type: std::filesystem::path
-      Default: ''
-      Arguments: [eventScript]
-      Description: Path to lua event script.
-      LongDescription: |
-        Path to lua event script.
-        Following functions can be provided in script file for event handlers:
-        * all GL / WGL / EGL / GLX functions
-        * gitsFrameBegin(nr)
-        * gitsFrameEnd(nr)
-        * gitsLoopBegin(nr)
-        * gitsLoopEnd(nr)
-        * gitsStateRestoreBegin()
-        * gitsStateRestoreEnd()
-        * gitsProgramStart()
-        * gitsProgramExit()
-        * gitsLogging(log)
-        Following functions exposed by GITS may be used inside lua scripts:
-        * string udtToStr(userdata udt) - casts lua userdata to string.
-        * number udtToInt(userdata udt) - casts user data to int.
-        * userdata getUdt(userdata carray, number index) - extracts userdata from carray's index.
-        * number getInt(userdata carray, number index) - extracts int from carray's index.
-        * number getFloat(userdata carray, number index) - extracts float from carray's index.
-        * void setUdt(userdata carray, number index, number value) - sets userdata at array's index.
-        * void setInt(userdata carray, number index, number value) - sets int at array's index.
-        * void setFloat(userdata carray, number index, number value) - sets float at array's index.
-        * userdata nullUdt() - returns null user data \(void*)0\.
-        * number currTime() - returns time in microseconds from the start of the player.
-        * void msgBox(string title, string message, number type) - Windows exclusive functions.Displays a message box with arbitral title, message and typ.
-        * userdata allocBytes(number size) - Allocates memory and returns userdata(pointer to allocated data in C).
-        * void freeBytes(userdata pointer) - Deallocates memory.
-        * string getArgsStr() - returns string with args passed through gitsPlayer option --scriptArgsStr.
-        * string getOutDir() - returns output directory for artifacts defined with gitsPlayer option --outputDir.
-        * gitsGlDebugProc() - returns userdata containing pointer to callback function which is being set by glDebugMessageCallback.
-    - Name: scriptArgsStr
-      Type: std::string
-      Default: ''
-      Arguments: [scriptArgsStr]
-      ConfigName: scriptArgs
-    - Name: benchmark
-      Type: bool
-      Default: false
-      Arguments: [benchmark, b]
-      Description: Enables performance measurement in OpenGL streams on frame base. Results are being stored in benchmark.csv file in CWD or
-    - Name: showWindowBorder
-      Type: bool
-      Default: false
-      Arguments: [showWindowBorder]
-      Platform: [WINDOWS, X11]
-      Description: Forces player to show window border (ignored in fullscreen).
-    - Name: captureFrames
-      Type: BitRange
-      Default: '-'
-      Arguments: [captureFrames]
-      Description: List of frames that will be captured by gits during playback.
-      LongDescription: |
-        List of frames that will be captured  during playback. 
-        Specifiedas single string without spaces of  following format:  
-        * pattern = frame_list | frame_list/Repeat-Count
-        * frame_list = element | frame_list, ',', element
-        * element = Frame | Begin-End | Begin-End:Step
-    - Name: outputDir
-      Type: std::filesystem::path
-      Default: ''
-      Arguments: [outputDir]
-      Description: Specifies directory where all the artifacts will be stored.
-    - Name: traceSelectedFrames
-      Type: BitRange
-      Default: '-'
-      Arguments: [traceSelectedFrames]
-      Description: List of frames for which trace (log) will be generated during playback.
-      LongDescription: |
-        List of frames for which trace (log) will be generated during playback.
-        Specified as a single string without spaces with the following format:
-        * pattern = frame_list | frame_list/Repeat-Count
-        * frame_list = element |frame_list, ',', element
-        * element = Frame | Begin-End | Begin-End:Step
-    - Name: interactive
-      Type: bool
-      Default: false
-      Arguments: [i, interactive]
-      Description: Enables the interactive mode.
-    - Name: outputTracePath
-      Type: std::filesystem::path
-      Default: ''
-      Arguments: [outputTracePath]
-      Description: Specifies file path where gits traces will be stored.
-    - Name: logFncs
-      Type: bool
-      Default: false
-      Arguments: [logFncs]
-      Description: All played tokens are logged to standard output.
-    - Name: faithfulThreading
-      Type: bool
-      Default: false
-      Arguments: [faithfulThreading]
-      Description: GITS, by default, plays the stream in single thread, synthesizing
-        necessary GL context switches. This option causes GITS to use as many threads
-        as original application for playback. This also makes it impossible to create
-        a subcapture from the stream.
-    - Name: loadWholeStreamBeforePlayback
-      Type: bool
-      Default: false
-      Arguments: [loadWholeStreamBeforePlayback]
-      Description: Forces load of entire stream to memory before playback. May cause
-        memory issues and errors related to max value being exceeded. This option
-        is mutually exclusive with tokenBurstLimit option.
-    - Name: showWindowsWA
-      Type: bool
-      Default: false
-      Arguments: [showWindowsWA]
-      Description: Enables workaround that makes all windows visible all the time by default.
-    - Name: disableExceptionHandling
-      Type: bool
-      Default: false
-      Arguments: [noseh, x]
-      Description: If specified, structured exceptions raised during playback  will
-        be passed to system unhandled.
-      LongDescription: If specified, structured exceptions raised during playback
-        will be passed to system unhandled.
-    - Name: captureScreenshot
-      Type: bool
-      Default: false
-      Arguments: [captureScreenshot]
-      Platform: [WINDOWS]
-      Description: Modifies captureFrames option to capture a WinAPI screenshot instead
-        of  buffer read. Forces vsync.
-      LongDescription: Modifies captureFrames option to capture a WinAPI screenshot
-        instead of buffer read. Forces vsync.
-    - Name: logLoadedTokens
-      Type: bool
-      Default: false
-      Arguments: [logLoadedTokens]
-      Description: Prints token names after they are loaded.
-    - Name: escalatePriority
-      Type: bool
-      Default: false
-      Arguments: [realtime]
-      Description: If specified, gitsPlayer will request realtime priority from the
-        system.
-    - Name: swapAfterPrepare
-      Type: bool
-      Default: false
-      Arguments: [swapAfterPrepare]
-      Description: If specified, gitsPlayer will issue additional swap after state
-        restoration calls.
-    - Name: stopAfterFrames
-      Type: BitRange
-      Default: '-'
-      Arguments: [stopAfterFrames]
-      Description: List of frames to stop after  during playback. 
-      LongDescription: |
-        List of frames to stop after during playback. Specified as single string without spaces of following format: 
-        * pattern = frame_list | frame_list/Repeat-Count  
-        * frame_list = element | frame_list, element
-        * element = Frame | Begin-End | Begin-End:Step
-    - Name: nullRun
-      Type: bool
-      Default: false
-      Arguments: [nullRun]
-      Description: No functions are played back. This option is useful only for characterization
-        of GITS player framework performance.
-    - Name: waitForEnter
-      Type: bool
-      Default: false
-      Arguments: [waitForEnter]
-      Description: Before and after playing back the stream, wait for ENTER keypress.
-    - Name: cleanResourcesOnExit
-      Type: bool
-      Default: false
-      Arguments: [cleanResourcesOnExit]
-      Description: 'Deletes unreleased resources at the end of the stream (with additional
-        API functions calls).\n - OpenGL - the first 2000 names of the following resources
-        are destroyed: FBOs, RBOs, VAOs, Textures, Buffers, Shaders, Programs, ARBPrograms,
-        DisplayLists, Queries.\n - Vulkan - all created resources are destroyed.'
-    - Name: renderOffscreen
-      Type: bool
-      Default: false
-      Arguments: [renderOffscreen]
-      Platform: [WINDOWS]
-      Description: Forces offscreen rendering in EGL or Vulkan.
-      LongDescription: |
-        Offscreen rendering: 
-        - in EGL to a pbuffer, 
-        - in Vulkan to a swapchain without presentation. 
-        Not supported for other API types. Use --captureFrames or similar option to get rendering output.
-    - Name: forceOrigScreenResolution
-      Type: bool
-      Default: false
-      Arguments: [forceOrigScreenResolution]
-      Platform: [WINDOWS]
-      Description: Forces player to set original screen resolution used during recording.
-        Useful to replay full screen mode.
-    - Name: forceInvisibleWindows
-      Type: bool
-      Default: false
-      Arguments: [forceInvisibleWindows]
-      Platform: [WINDOWS]
-      Description: Forces windows to be hidden.
-    - Name: fullscreen
-      Type: bool
-      Default: false
-      Arguments: [fullscreen, f]
-      Platform: [WINDOWS, X11]
-      Description: Attempts to display the window in the exclusive fullscreen mode
-        for maximum performance. Window covers everything, including OS bars, docks,
-        etc. Display resolution gets changed if necessary to match the stream dimensions.
-    - Name: windowMode
-      Type: WindowMode
-      Default: ''
-      Accessibility: Derived
-    - Name: ForceWindowPosStr
-      Type: std::string
-      Default: ''
-      Accessibility: ArgumentOnly
-      Arguments: [forceWindowPos]
-      Description: Specified coordinates (e.g. 100x100) will be used as position of  all
-        windows created during stream playback. Window position updates will be inhibited.
-    - Name: ForceWindowPos
-      Type: Group
-      Options:
-      - Name: enabled
-        Type: bool
-        Default: false
-      - Name: x
-        Type: uint32_t
-        Default: 0
-      - Name: y
-        Type: uint32_t
-        Default: 0
-    - Name: ForceWindowSizeStr
-      Type: std::string
-      Default: ''
-      Accessibility: ArgumentOnly
-      Arguments: [forceWindowSize]
-      Description: Forces windows, viewport and scissor box sizes to specified  values.
-    - Name: ForceWindowSize
-      Type: Group
-      Options:
-      - Name: enabled
-        Type: bool
-        Default: false
-      - Name: width
-        Type: uint32_t
-        Default: 0
-      - Name: height
-        Type: uint32_t
-        Default: 0
-    - Name: ForceScissorVector
-      Type: std::vector<uint32_t>
-      Default: []
-      Accessibility: ArgumentOnly
-      Arguments: [forceScissor]
-      Description: Forces scissor x,y,width,height
-    - Name: ForceScissor
-      Type: Group
-      Options:
-      - Name: enabled
-        Type: bool
-        Default: false
-      - Name: x
-        Type: uint32_t
-        Default: 0
-      - Name: y
-        Type: uint32_t
-        Default: 0
-      - Name: width
-        Type: uint32_t
-        Default: 0
-      - Name: height
-        Type: uint32_t
-        Default: 0
-    - Name: ForceDesktopResolutionStr
-      Type: std::string
-      Default: ''
-      Accessibility: ArgumentOnly
-      Arguments: [forceDesktopResolution]
-      Platform: [WINDOWS]
-      Description: Forces specified desktop resolution before playing stream. Returns
-        to previous resolution after execution. Accepts 'width,height' argument. E.g.
-        --forceDesktopResolution 1024,768
-    - Name: ForceDesktopResolution
-      Type: Group
-      Options:
-      - Name: enabled
-        Type: bool
-        Default: false
-      - Name: width
-        Type: uint32_t
-        Default: 0
-      - Name: height
-        Type: uint32_t
-        Default: 0
-      ConfigName: forceDesktopResolution
-  - Name: Recorder
-    Type: Group
-    Options:
-    - Name: libGL
-      Type: std::filesystem::path
-      Default: C:\Windows\System32\OpenGL32.dll
-    - Name: libEGL
-      Type: std::filesystem::path
-      Default: C:\Windows\System32\libEGL.dll
-    - Name: libGLESv1
-      Type: std::filesystem::path
-      Default: C:\Windows\System32\libGLESv1_CM.dll
-      ConfigName: libGLES1
-    - Name: libGLESv2
-      Type: std::filesystem::path
-      Default: C:\Windows\System32\libGLESv2.dll
-      ConfigName: libGLES2
-    - Name: libClPath
-      Type: std::filesystem::path
-      Default: C:\Windows\System32\OpenCL.dll
-      ConfigName: libCL
-    - Name: libVK
-      Type: std::filesystem::path
-      Default: C:\Windows\System32\vulkan-1.dll
-    - Name: libOcloc
-      Type: std::filesystem::path
-      Default: C:\Windows\System32\ocloc64.dll
-    - Name: libL0
-      Type: std::filesystem::path
-      Default: C:\Windows\System32\ze_loader.dll
-    - Name: recordingMode
-      Type: RecordingMode
-      Default: Binary
-    - Name: exitKeysStr
-      Type: std::vector<std::string>
-      Default: []
-      ConfigName: exitKeys
-    - Name: exitKeys
-      Type: std::vector<uint32_t>
-      Default: []
-      Accessibility: Derived
-    - Name: exitAfterAPICall
-      Type: uint32_t
-      Default: 0
-    - Name: exitSignal
-      Type: uint32_t
-      Default: ''
-      Accessibility: Derived
-    - Name: tokenBurst
-      Type: uint32_t
-      Default: 10000
-      ConfigName: tokenBurstLimit
-    - Name: tokenBurstNum
-      Type: uint32_t
-      Default: 5
-    - Name: installPath
-      Type: std::filesystem::path
-      Default: ''
-      ConfigName: InstallationPath
-    - Name: dumpPath
-      Type: std::filesystem::path
-      Default: ''
-      ConfigName: dumpDirectoryPath
-    - Name: uniqueDumpDirectory
-      Type: bool
-      Default: true
-    - Name: enabled
-      Type: bool
-      Default: ''
-      Accessibility: Derived
-    - Name: useEvents
-      Type: bool
-      Default: ''
-      Accessibility: Derived
-    - Name: eventScript
-      Type: std::filesystem::path
-      Default: ''
-    - Name: scriptArgsStr
-      Type: std::string
-      Default: ''
-      ConfigName: scriptArgs
-    - Name: Compression
-      Type: Group
-      Options:
-      - Name: type
-        Type: CompressionType
-        Default: LZ4
-      - Name: level
-        Type: uint32_t
-        Default: 10
-      - Name: chunkSize
-        Type: uint32_t
-        Default: 2097152
-    - Name: extendedDiagnosticInfo
-      Type: bool
-      Default: true
-      ConfigName: extendedDiagnostic
-    - Name: forceDumpOnError
-      Type: bool
-      Default: true
-    - Name: zipTextFiles
-      Type: bool
-      Default: true
-    - Name: highIntegrity
-      Type: bool
-      Default: false
-    - Name: nullIO
-      Type: bool
-      Default: false
-    - Name: removeDXSharing
-      Type: bool
-      Default: false
-    - Name: removeGLSharing
-      Type: bool
-      Default: false
-    - Name: benchmark
-      Type: bool
-      Default: true
-    - Name: closeAppOnStopRecording
-      Type: bool
-      Default: true
-    - Name: windowsKeyHandling
-      Type: WindowsKeyHandling
-      Default: MessageLoop
-- Name: DirectX
-  Type: Group
-  Options:
-  - Name: Capture
-    Type: Group
-    Options:
-    - Name: record
-      Type: bool
-      Default: true
-      Description: Record the API commands
-    - Name: shadowMemory
-      Type: bool
-      Default: false
-      Description: Use an extra copy of the resource to track memory updates (Map
-        / Unmap).
-    - Name: captureIntelExtensions
-      Type: bool
-      Default: true
-    - Name: captureDirectML
-      Type: bool
-      Default: true
-      Description: If false DirectML capture is done on D3D12 level
-    - Name: captureDirectStorage
-      Type: bool
-      Default: false
-    - Name: captureXess
-      Type: bool
-      Default: true
-      Description: If false XeSS capture is done on Intel Extensions level
-    - Name: debugLayer
-      Type: bool
-      Default: false
-      Description: Enable the DirectX Debug Layer
-    - Name: forceGlobalSynchronization
-      Type: bool
-      Default: false
-    - Name: plugins
-      Type: std::vector<std::string>
-      Default: []
-      Description: List of plugins to enable
-    - Name: tokenBurstChunkSize
-      Type: uint64_t
-      Default: 5242880
-    - Name: Portability
-      Type: Group
-      Options:
-      - Name: resourcePlacementStorage
-        Type: bool
-        Default: false
-        Description: Store the resource placement data on capture
-      - Name: Raytracing
-        Type: Group
-        Options:
-        - Name: accelerationStructurePadding
-          Type: float
-          Default: 1.0
-        - Name: accelerationStructureScratchPadding
-          Type: float
-          Default: 1.0
-  - Name: Player
-    Type: Group
-    Options:
-    - Name: execute
-      Type: bool
-      Default: true
-      Description: Execute the API commands (driver / null driver)
-    - Name: debugLayer
-      Type: bool
-      Default: false
-      Description: Enable the DirectX Debug Layer
-    - Name: waitOnEventCompletion
-      Type: bool
-      Default: false
-      Description: CPU waits for GPU on SetEventOnCompletion and SetEventOnMultipleFenceCompletion
-    - Name: useCopyQueueOnRestore
-      Type: bool
-      Default: false
-      Description: Use a D3D12_COMMAND_LIST_TYPE_COPY to restore resource states
-    - Name: uavBarrierAfterCopyRaytracingASWorkaround
-      Type: bool
-      Default: ''
-    - Name: skipResolveQueryData
-      Type: bool
-      Default: true
-      Description: Don't replay ID3D12GraphicsCommandList::ResolveQueryData commands
-    - Name: multithreadedShaderCompilation
-      Type: bool
-      Default: true
-      Description: Use a thread pool for D3D12 methods which cause hardware shader
-        compilation
-    - Name: plugins
-      Type: std::vector<std::string>
-      Default: []
-      Description: List of plugins to enable
-    - Name: tokenBurstChunkSize
-      Type: uint64_t
-      Default: 5242880
-      Description: 'Default size: 5 MB'
-    - Name: AdapterOverride
-      Type: Group
-      Description: 'Select the adapter used on D3D12CreateDevice. Set the Vendor and
-        Index for that vendor (or global index if Vendor is empty). For example: Index:
-        1, Vendor: ''Intel'' will select the second Intel adapter enumerated.'
-      Options:
-      - Name: enabled
-        Type: bool
-        Default: false
-        Description: Whether adapter override is enabled or not
-      - Name: index
-        Type: uint32_t
-        Default: 0
-        Description: Index of the adapter to use
-      - Name: vendor
-        Type: std::string
-        Default: ''
-        Description: Vendor of the adapter (Empty / AMD / NVIDIA / Intel).
-    - Name: ApplicationInfoOverride
-      Type: Group
-      Description: Override arguments for INTC_D3D12_SetApplicationInfo. By default
-        only the ApplicationName will be set and it will use the Process Name from
-        capture.
-      Options:
-      - Name: enabled
-        Type: bool
-        Default: ''
-        Description: Whether application info override is enabled or not
-      - Name: applicationName
-        Type: std::string
-        Default: ''
-        Description: Application name
-      - Name: applicationVersion
-        Type: std::string
-        Default: 0.0.0
-        Description: 'Application version: ''major.minor.patch'', Example: ''1.2.3'''
-      - Name: engineName
-        Type: std::string
-        Default: ''
-        Description: Engine name
-      - Name: engineVersion
-        Type: std::string
-        Default: 0.0.0
-        Description: 'Engine version: ''major.minor.patch'', Example: ''1.2.3'''
-    - Name: Portability
-      Type: Group
-      Options:
-      - Name: resourcePlacement
-        Type: std::string
-        Default: none
-      - Name: portabilityChecks
-        Type: bool
-        Default: false
-    ConfigName: Playback
-  - Name: Features
-    Type: Group
-    Options:
-    - Name: Trace
-      Type: Group
-      Options:
-      - Name: enabled
-        Type: bool
-        Default: false
-        Description: Whether tracing is enabled or not
-      - Name: flushMethod
-        Type: std::string
-        Default: ipc
-        Description: Method how to flush
-      - Name: Print
-        Type: Group
-        Options:
-        - Name: postCalls
-          Type: bool
-          Default: true
-          Description: Print information after API calls
-        - Name: preCalls
-          Type: bool
-          Default: false
-          Description: Print information before API calls
-        - Name: debugLayerWarnings
-          Type: bool
-          Default: false
-          Description: Print debug layer warnings
-        - Name: gpuExecution
-          Type: bool
-          Default: false
-          Description: Print GPU execution information
-          ConfigName: gPUExecution
-    - Name: Subcapture
-      Type: Group
-      Options:
-      - Name: enabled
-        Type: bool
-        Default: false
-        Description: Whether subcapture is enabled or not
-      - Name: serializeAccelerationStructures
-        Type: bool
-        Default: false
-      - Name: restoreTLASes
-        Type: bool
-        Default: false
-      - Name: frames
-        Type: std::string
-        Default: ''
-        Description: Frame range. For example '3-6'
-    - Name: Screenshots
-      Type: Group
-      Options:
-      - Name: enabled
-        Type: bool
-        Default: false
-        Description: Whether subcapture is enabled or not
-      - Name: frames
-        Type: std::string
-        Default: ''
-        Description: Frame range (supports multiple ranges and strides). For example
-          '3-6:2,9'
-      - Name: format
-        Type: std::string
-        Default: png
-        Description: 'Format of the screenshots: png'
-    - Name: ResourcesDump
-      Type: Group
-      Options:
-      - Name: enabled
-        Type: bool
-        Default: false
-        Description: Whether resource dumping is enabled or not
-      - Name: resourceKeys
-        Type: std::string
-        Default: ''
-        Description: Comma separated list of resource keys
-      - Name: commandKeys
-        Type: std::string
-        Default: ''
-        Description: Comma separated list of command lists call keys
-      - Name: textureRescaleRange
-        Type: std::string
-        Default: ''
-        Description: Texture rescaling factor range between 0.0-1.0, if empty no rescaling.
-          For example '0-0.5'
-      - Name: format
-        Type: std::string
-        Default: png
-    - Name: RenderTargetsDump
-      Type: Group
-      Options:
-      - Name: enabled
-        Type: bool
-        Default: false
-        Description: Whether render targets dumping is enabled or not
-      - Name: frames
-        Type: std::string
-        Default: ''
-        Description: Frame range. For example '3-6'
-      - Name: draws
-        Type: std::string
-        Default: ''
-        Description: Draw range (supports multiple ranges and strides). For example
-          '1-100:5'
-      - Name: format
-        Type: std::string
-        Default: png
-    - Name: RaytracingDump
-      Type: Group
-      Options:
-      - Name: bindingTablesPre
-        Type: bool
-        Default: false
-        Description: Dumps binding table buffers before patching
-      - Name: bindingTablesPost
-        Type: bool
-        Default: false
-        Description: Dumps binding table buffers after patching
-      - Name: instancesPre
-        Type: bool
-        Default: false
-        Description: Dumps instances buffers before patching
-      - Name: instancesPost
-        Type: bool
-        Default: false
-        Description: Dumps instances buffers after patching
-      - Name: blases
-        Type: bool
-        Default: false
-        ConfigName: bLASes
-      - Name: commandKeys
-        Type: std::string
-        Default: ''
-      - Name: commandListModuloStep
-        Type: std::string
-        Default: ''
-    - Name: ExecuteIndirectDump
-      Type: Group
-      Options:
-      - Name: argumentBufferPre
-        Type: bool
-        Default: false
-        Description: Dumps arguments buffers for specified ExecuteIndirect calls before
-          patching
-      - Name: argumentBufferPost
-        Type: bool
-        Default: false
-        Description: Dumps arguments buffers for specified ExecuteIndirect calls after
-          patching
-      - Name: commandKeys
-        Type: std::string
-        Default: ''
-    - Name: RootSignatureDump
-      Type: Group
-      Options:
-      - Name: enabled
-        Type: bool
-        Default: false
-      - Name: commandKeys
-        Type: std::string
-        Default: ''
-    - Name: SkipCalls
-      Type: Group
-      Options:
-      - Name: enabled
-        Type: bool
-        Default: false
-        Description: Whether skipping calls is enabled or not
-      - Name: commandKeys
-        Type: std::string
-        Default: ''
-        Description: Comma separated list of call keys to skip
-    - Name: Portability
-      Type: Group
-      Options:
-      - Name: enabled
-        Type: bool
-        Default: false
-      - Name: storePlacedResourceDataOnCapture
-        Type: bool
-        Default: true
-      - Name: storePlacedResourceDataOnPlayback
-        Type: bool
-        Default: false
-- Name: OpenGL
-  Type: Group
-  Options:
-  - Name: Shared
-    Type: Group
-    Options:
-    - Name: forceGLVersion
-      Type: std::string
-      Default: ''
-    - Name: forceGLVersionMajor
-      Type: uint32_t
-      Default: ''
-      Accessibility: ArgumentOnly
-      Arguments: [forceGLVersionMajor]
-      Platform: [WINDOWS, X11]
-      Description: Forces OpenGL version major number.
-    - Name: forceGLVersionMinor
-      Type: uint32_t
-      Default: ''
-      Accessibility: ArgumentOnly
-      Arguments: [forceGLVersionMinor]
-      Platform: [WINDOWS, X11]
-      Description: Forces OpenGL version minor number.
-    - Name: traceGLError
-      Type: bool
-      Default: false
-      Arguments: [traceGLError]
-      Description: If specified, glGetError will be called for each gl call and errors
-        will be logged.
-  - Name: Player
-    Type: Group
-    Options:
-    - Name: forceGLProfile
-      Type: GLProfile
-      Default: NONE
-      Arguments: [forceGLProfile]
-      Description: 'Forces OpenGL Profile:  COMPAT, CORE or ES. This option
-        may cause a crash if API used in stream or shaders does not match selected
-        profile.'
-    - Name: forceGLNativeAPI
-      Type: GLNativeApi
-      Default: NONE
-      Arguments: [forceGLNativeAPI]
-      Description: 'Forces OpenGL native API: EGL, GLX or WGL.'
-      LongDescription: 'Forces OpenGL native API: EGL, GLX or WGL. Option useful
-        on OS/driver configurations where multiple native APIs are available. For
-        instance some intel drivers support EGL and WGL on Windows. In this case it
-        allows to run for example stream from application using WGL through EGL.'
-    - Name: skipQueries
-      Type: bool
-      Default: false
-      Arguments: [skipQueries]
-      Description: 'Do not call any Query related functions (glBeginQuery, etc).
-        WARNING: This may corrupt the rendering.'
-    - Name: scaleFactor
-      Type: float
-      Default: 1.0
-      Arguments: [scaleFactor]
-      Description: 'Rendering will be scaled by specified factor. WARNING: This
-        may produce corrupted rendering in some cases.'
-    - Name: captureFramesHashes
-      Type: bool
-      Default: false
-      Arguments: [captureFramesHashes]
-      Description: Modifies captureFrames option to just print image hash instead
-        of frame dumping.
-    - Name: dontForceBackBufferGL
-      Type: bool
-      Default: false
-      Arguments: [dontForceBackBufferGL]
-      Description: 'For OpenGL: modifies --captureFrames, --captureReadPixels,
-        --captureFinishFrame, --captureFlushFrame, --captureBindFboFrame options to 
-        dump currently bound framebuffer'
-      LongDescription: >
-        When OpenGL API is used this option modifies --captureFrames, --captureReadPixels,
-        --captureFinishFrame, --captureFlushFrame, --captureBindFboFrame options by
-        letting player dump currently bound framebuffer (by default these options
-        force player to dump back buffer contents).
-    - Name: captureWholeWindow
-      Type: bool
-      Default: false
-      Arguments: [captureWholeWindow]
-      Platform: [WINDOWS, X11]
-      Description: Causes '--captureFrames' to capture whole current window instead
-        of current viewport.
-    - Name: capture2DTexs
-      Type: BitRange
-      Default: '-'
-      Arguments: [capture2DTexs]
-      Description: List of glTexImage2D API calls, ordered by execution time.
-      LongDescription: |
-        List of glTexImage2D API calls, ordered by execution time, specified as single string without spaces of following format: 
-        * texs_list = element | texs_list, element
-        * element = Number | Begin-End | Begin-End:Step 
-        Captured textures name format is: tex2D_<texture object>_<texture load number>.png
-    - Name: captureDraws2DTexs
-      Type: BitRange
-      Default: '-'
-      Arguments: [captureDraws2DTexs]
-      Description: List of drawcalls specified as single string without spaces
-      LongDescription: |
-        List of drawcalls specified as single string without spaces of following format: 
-        * draw_list = element | draw_list, '','', element
-        * element = Number | Begin-End | Begin-End:Step 
-        Captured textures name format is: draw<drawcall number>_unit<unitnumber>_tex<texture load number>.png'
-    - Name: captureDraws
-      Type: BitRange
-      Default: '-'
-      Arguments: [captureDraws]
-      Description: List of draws that will be captured during playback. 
-      LongDescription: |
-        List of drawcall numbers that will be captured by gits during playback. 
-        Specified as single string without spaces of following format:
-          * pattern = draw_list | draw_list/Repeat-Count  
-          * draw_list = element | draw_list,',', element  
-          * element = Number | Begin-End | Begin-End:Step
-    - Name: captureDrawsPre
-      Type: bool
-      Default: false
-      Arguments: [captureDrawsPre]
-      Description: Causes 'captureDraws' to capture drawbuffer content not only after
-        specified drawcall, but also before it.
-    - Name: captureFinishFrame
-      Type: BitRange
-      Default: '-'
-      Arguments: [captureFinishFrame]
-      Description: Capture framebuffer content on glFinish (the same numbering
-        as captureFrames option).
-    - Name: captureReadPixels
-      Type: BitRange
-      Default: '-'
-      Arguments: [captureReadPixels]
-      Description: Capture framebuffer content on glReadPixels (the same numbering
-        as captureFrames option).
-    - Name: captureFlushFrame
-      Type: BitRange
-      Default: '-'
-      Arguments: [captureFlushFrame]
-      Description: Capture framebuffer content on glFlush (the same numbering as captureFrames
-        option).
-    - Name: captureBindFboFrame
-      Type: BitRange
-      Default: '-'
-      Arguments: [captureBindFboFrame]
-      Description: Capture framebuffer content on glBindFramebuffer (the same numbering
-        as captureFrames option).
-    - Name: keepDraws
-      Type: BitRange
-      Default: all
-      Arguments: [keepDraws]
-      Description: List of drawcall numbers to be executed by gits during playback.
-      LongDescription: |
-        List of drawcall numbers to be executed by gits during playback.
-        Rest of drawcalls won''t be executed. Specified as single string without spaces of following format:
-        * pattern = draw_list | draw_list/Repeat-Count  
-        * draw_list = element | draw_list, element
-        * element = Number | Begin-End | Begin-End:Step
-    - Name: keepFrames
-      Type: BitRange
-      Default: all
-      Arguments: [keepFrames]
-      Description: List of frames whose draw calls should be played back.
-      LongDescription: List of frames whose draw calls should be played back. All
-        drawcalls outside specified range will be skipped. Uses the same format as
-        other frame specifications. Defaults to 'all frames'.
-    - Name: minimalConfig
-      Type: bool
-      Default: false
-      Arguments: [minimalConfig]
-      Description: Removes most pixel attributes from EGL and WGL pixel format
-        selection. This allows player to use pixel formats that are slightly different
-        from the ones used in recorder, but still compatible with them.
-      LongDescription: When selecting a pixel format in EGL or WGL, this option causes
-        most pixel format attributes to be removed; only the essential ones are preserved.
-        This allows player to use pixel formats that are slightly different from the
-        ones used in recorder, but still compatible with them. This option is useful
-        when a stream recorded on one platform is being replayed on another platform.
-        Without it, some unimportant attribute mismatch could cause the driver to
-        return no usable pixel formats.
-    - Name: traceGitsInternal
-      Type: bool
-      Default: false
-      Arguments: [traceGitsInternal]
-      Description: Print additional calls generated by Gits internally when `LogLevel=TRACEVERBOSE`.
-      LongDescription: Causes --logLevel TRACEVERBOSE to print additional calls generated
-        by Gits internally.
-    - Name: linkGetProgBinary
-      Type: bool
-      Default: false
-      Arguments: [linkGetProgBinary]
-      Description: After each link program query resulting program binary and store
-        it in files for future use.
-    - Name: linkUseProgBinary
-      Type: bool
-      Default: false
-      Arguments: [linkUseProgBinary]
-      Description: Instead of linking a program source them from binary files.
-    - Name: affectViewport
-      Type: bool
-      Default: ''
-      Accessibility: Derived
-      Description: 'Causes certain other options to affect only a viewports specified
-        with ''width,height'' dimmensions. This option has influence on following
-        options: forceScissor, forceWindowSize.'
-    - Name: affectedViewport
-      Type: std::vector<int>
-      Default: []
-      Arguments: [affectViewport]
-    - Name: traceGLBufferHashes
-      Type: BitRange
-      Default: '-'
-      Arguments: [traceGLBufferHashes]
-      Description: Together with --loglevel TRACEVERBOSE causes additional info
-        to be printed in the form of buffer objects hashes used for specified draw-call
-        execution. inspecting current VAO state - enabled attributes and element array
-        buffer binding
-    - Name: forceNoMSAA
-      Type: bool
-      Default: false
-      Arguments: [forceNoMSAA]
-      Description: Force pixelformat to not use multisampling. Renderbuffers are forced
-        to 0 sampels. Multisampled textures are not supported by this option. If multisampled
-        textures are used, GITS will abort the stream.
-    - Name: destroyContextsOnExit
-      Type: bool
-      Default: false
-      Arguments: [destroyContextsOnExit]
-      Description: Playing additional API calls in the end of the stream to delete
-        all existing contexts.
-    - Name: forceWaylandWindow
-      Type: bool
-      Default: ''
-      Accessibility: ArgumentOnly
-      Arguments: [forceWaylandWindow]
-      Platform: [X11]
-      Description: Forces using Wayland windows instead of X11.
-  - Name: Recorder
-    Type: Group
-    Options:
-    - Name: mode
-      Type: OpenGLRecorderMode
-      Default: All
-    - Name: All
-      Type: Group
-      Options:
-      - Name: exitFrame
-        Type: uint32_t
-        Default: 1000000
-      - Name: exitDeleteContext
-        Type: uint32_t
-        Default: 0
-    - Name: Frames
-      Type: Group
-      Options:
-      - Name: startFrame
-        Type: uint32_t
-        Default: 1
-      - Name: stopFrame
-        Type: uint32_t
-        Default: 1000000
-      - Name: startKeysStr
-        Type: std::vector<std::string>
-        Default: []
-        ConfigName: startKeys
-      - Name: startKeys
-        Type: std::vector<uint32_t>
-        Default: []
-        Accessibility: Derived
-      - Name: FrameSeparators
-        Type: Group
-        Options:
-        - Name: glFinishSep
-          Type: bool
-          Default: false
-          ConfigName: glFinish
-        - Name: glFlushSep
-          Type: bool
-          Default: false
-          ConfigName: glFlush
-    - Name: OglSingleDraw
-      Type: Group
-      Options:
-      - Name: number
-        Type: uint32_t
-        Default: 1
-    - Name: OglDrawsRange
-      Type: Group
-      Options:
-      - Name: startDraw
-        Type: uint32_t
-        Default: 1
-      - Name: stopDraw
-        Type: uint32_t
-        Default: 100000
-      - Name: frame
-        Type: uint32_t
-        Default: 0
-    - Name: dumpScreenshots
-      Type: BitRange
-      Default: '-'
-    - Name: dumpDrawsFromFrames
-      Type: BitRange
-      Default: '-'
-    - Name: suppressExtensions
-      Type: std::vector<std::string>
-      Default:
-      - GL_ARB_get_program_binary
-    - Name: suppressProgramBinary
-      Type: bool
-      Default: true
-    - Name: endFrameSleep
-      Type: uint32_t
-      Default: 0
-      Arguments: [endFrameSleep]
-      Description: Sleep this many milliseconds after a swap.
-    - Name: restoreDefaultFB
-      Type: bool
-      Default: true
-    - Name: doNotRemoveWin
-      Type: bool
-      Default: false
-      ConfigName: doNotRemoveWindow
-    - Name: multiApiProtectBypass
-      Type: bool
-      Default: false
-    - Name: carrayMemCmpType
-      Type: uint32_t
-      Default: 1
-      ConfigName: cArrayMemCmpType
-    - Name: stripIndicesValues
-      Type: uint32_t
-      Default: 4294967295
-      NumericFormat: Hexadecimal
-    - Name: optimizeBufferSize
-      Type: bool
-      Default: true
-    - Name: retryFunctionLoads
-      Type: bool
-      Default: true
-    - Name: detectRecursion
-      Type: bool
-      Default: true
-    - Name: buffersState
-      Type: BuffersState
-      Default: Mixed
-    - Name: texturesState
-      Type: TexturesState
-      Default: Mixed
-    - Name: coherentMapUpdatePerFrame
-      Type: bool
-      Default: true
-    - Name: bufferMapAccessMask
-      Type: uint32_t
-      Default: 4294967283
-      NumericFormat: Hexadecimal
-    - Name: bufferStorageFlagsMask
-      Type: uint32_t
-      Default: 1
-    - Name: coherentMapBehaviorWA
-      Type: bool
-      Default: false
-    - Name: schedulefboEXTAsCoreWA
-      Type: bool
-      Default: false
-      ConfigName: scheduleFboEXTAsCoreWA
-    - Name: useGlGetTexImageAndRestoreBuffersWhenPossibleES
-      Type: bool
-      Default: true
-    - Name: trackTextureBindingWA
-      Type: bool
-      Default: false
-    - Name: forceBuffersStateCaptureAlwaysWA
-      Type: bool
-      Default: false
-    - Name: restoreIndexedTexturesWA
-      Type: bool
-      Default: false
-    - Name: mtDriverWA
-      Type: bool
-      Default: true
-      ConfigName: mTDriverWA
-    - Name: ccodeRangesWA
-      Type: bool
-      Default: false
-      ConfigName: cCodeRangesWA
-- Name: Vulkan
-  Type: Group
-  Options:
-  - Name: Shared
-    Type: Group
-    Options:
-    - Name: suppressPhysicalDeviceFeatures
-      Type: std::vector<std::string>
-      Default: []
-      Arguments: [suppressVKDeviceFeatures]
-      Platform: [WINDOWS]
-      Description: Disable physical device features during logical device creation.
-        Option accepts list of comma (,) separated names of physical device features
-        (as specified in the VkPhysicalDeviceFeatures structure definition).
-    - Name: suppressExtensions
-      Type: std::vector<std::string>
-      Default:
-      - VK_EXT_debug_marker
-      - VK_EXT_shader_module_identifier
-      Arguments: [suppressVKExtensions]
-      Platform: [WINDOWS]
-      Description: Disable extensions during instance and/or logical device creation.
-        Option accepts list of comma (,) separated names of extensions.
-    - Name: suppressLayers
-      Type: std::vector<std::string>
-      Default: []
-      Arguments: [suppressVKLayers]
-      Platform: [WINDOWS]
-      Description: Disable layers during instance and/or logical device creation.
-        Option accepts list of comma (,) separated names of layers.
-  - Name: Player
-    Type: Group
-    Options:
-    - Name: exitOnVkQueueSubmitFail
-      Type: bool
-      Default: false
-      Arguments: [exitOnVkQueueSubmitFail]
-      Platform: [WINDOWS, X11]
-      Description: Stop playback when vkQueueSubmit returns error value.
-    - Name: captureVulkanSubmits
-      Type: BitRange
-      Default: '-'
-      Arguments: [captureVulkanSubmits]
-      Description: List of Vulkan queue submits, whose render passes will be captured
-        by gits during playback.
-      LongDescription: |
-        List of Vulkan queue submits, whose render passes will be captured by gits during playback. 
-        Render targets from all render passes will be dumped per command buffer after submission, so each command buffer is executed in a separate queue submit. 
-        Specified as single string without spaces of following format:  
-        * pattern = cmdBuff_list | cmdBuff_list/Repeat-Count
-        * cmdBuff_list = element | cmdBuff_list, ',', element
-        * element = Frame | Begin-End | Begin-End:Step
-    - Name: captureVulkanSubmitsResources
-      Type: BitRange
-      Default: '-'
-      Arguments: [captureVulkanSubmitsResources]
-      Description: List of Vulkan queue submits, whose storage buffers, storage images,
-        destination buffers and destination textures will be captured by gits during
-        playback.
-      LongDescription: |
-        List of Vulkan queue submits, whose storage buffers, storage images, destination buffers and destination textures will be captured by gits during playback.
-        Resources will be dumped per command buffer after submission, so each command buffer is executed in a separate queue submit. 
-        Specified as single string without spaces of following format:
-        * pattern = cmdBuff_list | cmdBuff_list/Repeat-Count
-        * cmdBuff_list = element | cmdBuff_list, ',', element
-        * element = Frame | Begin-End | Begin-End:Step
-    - Name: captureVulkanSubmitsGroupType
-      Type: CaptureGroupType
-      Default: CmdBuffer
-      Arguments: [captureVulkanSubmitsGroupType]
-      Description: 'Set Group Type for captureVulkanSubmits: CmdBuffer, RenderPass'
-      LongDescription: |
-        Set Group Type for captureVulkanSubmits:
-        * CmdBuffer - default; creating list of textures from renderpasses and dumping (each texture aredumped only once)
-        * RenderPass - dumping textures per each renderpass (if renderpasses use the same images for some render targets then each image may be dumped several times)
-    - Name: captureVulkanRenderPasses
-      Type: VulkanObjectRange
-      Default: ''
-      Arguments: [captureVulkanRenderPasses]
-      Description: 'List of Vulkan render passes, whose attachments will be captured
-        during playback. The format consists of a hierarchy of numbers: 
-        #queue_submit/#command_buffer_batch/#command_buffer/#render_pass_range.
-        Each number can be a single number, a list and/or a range: 1-3,4,6-10:2 ==>
-        1,2,3,4,6,8,10.'
-      LongDescription: |
-        List of Vulkan render passes, whose attachments will be captured during playback. 
-        The format consists of a hierarchy of numbers: 
-        > queue_submit_number/command_buffer_batch_number/command_buffer_number/render_pass_range
-        which can be adapted. 
-        User may omit elements, starting from the rightmost (e.g. omit  renderpass number and use the  queue_submit_number/command_buffer_batch_number/command_buffer_number form or even omit  everything except the queue submit number). 
-        Additionally the rightmost number may be replaced with an elemspec (creating a  number/number/number/elemspec form or even a form consisting of just a single  elemspec specifying queues).
-        Example elemspecs:
-        * '1/2/3/4' specifies queue submit number 1, command\buffer batch number 2, commandbuffer number 3, render pass number 4
-        * '3,5-10' specifies queue submit number 3 and queue submits from 5 to 10 (it's actually a normal elemspec)
-        * '7/2/1-20,30,40-50:2' specifies queue submit number 7, command buffer batch 2, command buffers from 1 to 20, command buffer 30 and even numbered command buffers between 40 and 50 (all ranges are inclusive).
-    - Name: captureVulkanRenderPassesResources
-      Type: VulkanObjectRange
-      Default: ''
-      Arguments: [captureVulkanRenderPassesResources]
-      Description: List of Vulkan render passes, whose storage buffers, storage images, destination buffers and destination textures be captured during playback.
-      LongDescription: |
-        List of Vulkan render passes, whose storage buffers, storage images, destination buffers and destination textures be captured during playback.
-        The format consists of a hierarchy of numbers:\n queue_submit_number/command_buffer_batch_number/command_buffer_number/render_pass_range which can be adapted. 
-        User may omit elements, starting from the rightmost (e.g. omit renderpass number and use the queue_submit_number/command_buffer_batch_number/command_buffer_number form or even omit everything except the queue submit number). 
-        Additionally the rightmost number may be replaced with an elemspec (creating a number/number/number/elemspec form or even a form consisting of just a single elemspec specifying queues).
-        Example elemspecs:
-        * '1/2/3/4' specifies queue submit number 1, command buffer batch number 2, commandbuffer number 3, render pass number 4
-        * '3,5-10' specifies queue submit number 3 and queue submits from 5 to 10 (it's actually a normal elemspec)
-        * '7/2/1-20,30,40-50:2' specifies queue submit number 7, command buffer batch 2, command buffers from 1 to 20, command buffer 30 and even numbered command buffers between 40 and 50 (all ranges are inclusive).
-    - Name: captureVulkanDraws
-      Type: VulkanObjectRange
-      Default: ''
-      Arguments: [captureVulkanDraws]
-      Description: List of Vulkan draws, whose render pass attachments will be captured
-        during playback. 
-      LongDescription: |
-        List of Vulkan draws, whose render pass attachments will be captured during playback.
-        The format consists of a hierarchy of numbers:
-        > queue_submit_number/command_buffer_batch_number/command_buffer_number/render_pass_number/draws_range 
-        which can be adapted. 
-        User may omit elements, starting from the rightmost (e.g. omit draw number and use the queue_submit_number/command_buffer_batch_number/command_buffer_number/render_pass_number form or even omit everything except the queue submit number). 
-        Additionally the rightmost number may be replaced with an elemspec (creating a number/number/number/number/elemspec form or even a form consisting of just a single elemspec specifying queues).
-        Example elemspecs:
-        * '1/2/3/4' specifies queue submit number 1, command buffer batch number 2, commandbuffer number 3, render pass number 4,
-        * '3,5-10' specifies queue submit number 3 and queue submits from 5 to 10 (it's actually a normal elemspec),
-        * '7/2/1-20,30,40-50:2' specifies queue submit number 7, command buffer batch 2, command buffers from 1 to 20, command buffer 30 and even numbered command buffers between 40 and 50 (all ranges are inclusive).
-    - Name: captureVulkanResources
-      Type: VulkanObjectRange
-      Default: ''
-      Arguments: [captureVulkanResources]
-      Description: List of Vulkan draws, blits, dispatches, whose storage buffers,
-        storage images, destination buffers and destination textures be captured during
-        playback.
-      LongDescription: |
-        List of Vulkan draws, blits, dispatches, whose storage buffers, storage images, destination buffers and destination textures be captured during playback.
-        The format consists of a hierarchy of numbers:queue_submit_number/command_buffer_batch_number/command_buffer_number which can be adapted. 
-        User may omit elements, starting from the rightmost (e.g. omit command buffer number and use the queue_submit_number/command_buffer_batch_number form or even omit everything except the queue submit number). 
-        Additionally the rightmost number may be replaced with an elemspec (creating a number/number/number/elemspec form or even a form consisting of just a single elemspec specifying queues).
-        Example elemspecs:
-         * '1/2/3/4' specifies queue submit number 1, command buffer batch number 2, commandbuffer number 3, render pass number 4,
-         * '3,5-10' specifies queue submit number 3 and queue submits from 5 to 10 (it's actually a normal elemspec),
-         * '7/2/1-20,30,40-50:2' specifies queue submit number 7, command buffer batch 2, command buffers from 1 to 20, command buffer 30 and even numbered command buffers between 40 and 50 (all ranges are inclusive).
-    - Name: skipNonDeterministicImages
-      Type: bool
-      Default: false
-      Arguments: [skipNonDeterministicImages]
-      Platform: [WINDOWS, X11]
-      Description: Skip images with potential corruptions. Use only with --captureVulkanSubmits.
-    - Name: ignoreVKCrossPlatformIncompatibilitiesWA
-      Type: bool
-      Default: false
-      Arguments: [ignoreVKCrossPlatformIncompatibilitiesWA]
-      Description: Forces stream to continue playback even if platform's properties
-        are not compatible with recorded parameters.
-    - Name: waitAfterQueueSubmitWA
-      Type: bool
-      Default: false
-      Arguments: [waitAfterQueueSubmitWA]
-      Description: Vulkan specific option. This WA calls vkQueueWaitIdle after vkQueueSubmit.
-    - Name: traceVKShaderHashes
-      Type: bool
-      Default: false
-      Arguments: [traceVKShaderHashes]
-      Description: Prints information about shader hashes in gits output (log).  To
-        match with drawing commands, use this option together with --logLevel TRACE.
-    - Name: maxAllowedVkSwapchainRewinds
-      Type: uint32_t
-      Default: 100
-      Arguments: [maxAllowedVkSwapchainRewinds]
-      Description: Vulkan specific option. Changes the number of maximum allowed Vulkan
-        swapchain rewinds (defaults to 100).
-    - Name: overrideVKPipelineCache
-      Type: std::filesystem::path
-      Default: ''
-      Arguments: [overrideVKPipelineCache]
-      Description: Overrides all pipeline cache uses with a single, global pipeline
-        cache object. Initial and final data is loaded from and stored in a specified
-        file.
-    - Name: oneVulkanDrawPerCommandBuffer
-      Type: bool
-      Default: false
-      Arguments: [oneVulkanDrawPerCommandBuffer]
-      Platform: [WINDOWS]
-      Description: Force to split command buffers. Each draw will  be executed in
-        separate command buffer. It affects performance.
-    - Name: oneVulkanRenderPassPerCommandBuffer
-      Type: bool
-      Default: false
-      Arguments: [oneVulkanRenderPassPerCommandBuffer]
-      Platform: [WINDOWS]
-      Description: Force to split command buffers. Each render pass will  be executed
-        in separate command buffer. It affects performance.
-    - Name: vulkanForcedPhysicalDeviceIndex
-      Type: uint32_t
-      Default: 0
-      Arguments: [useVKPhysicalDeviceIndex]
-      Platform: [WINDOWS, X11]
-      Description: Forces selected physical device index to be used for logical device
-        creation.
-      ConfigName: forcedPhysicalDeviceIndex
-    - Name: vulkanForcedPhysicalDeviceName
-      Type: std::string
-      Default: ''
-      Arguments: [useVKPhysicalDeviceName]
-      Platform: [WINDOWS, X11]
-      Description: Forces physical device with a given name to be used for logical
-        device creation.
-      ConfigName: forcedPhysicalDeviceName
-    - Name: vulkanForcedPhysicalDeviceType
-      Type: DeviceType
-      Default: any
-      Arguments: [useVKPhysicalDeviceType]
-      Platform: [WINDOWS, X11]
-      Description: Forces integrated or discrete physical device to be used for logical
-        device creation.
-      ConfigName: forcedPhysicalDeviceType
-    - Name: printStateRestoreLogsVk
-      Type: bool
-      Default: false
-      Arguments: [printStateRestoreLogsVk]
-      Description: Log state restore phases and their duration in Vulkan workloads.
-    - Name: printMemUsageVk
-      Type: bool
-      Default: false
-      Arguments: [printMemUsageVk]
-      Description: Log memory usage in Vulkan workloads (on vkAllocateMemory, vkFreeMemory,
-        vkMapMemory  API calls.
-    - Name: forceMultithreadedPipelineCompilation
-      Type: bool
-      Default: false
-      Arguments: [forceMultithreadedPipelineCompilation]
-      Description: Forces pipeline objects to be created concurrently on multiple
-        threads.
-    - Name: execCmdBuffsBeforeQueueSubmit
-      Type: bool
-      Default: false
-      Arguments: [execCmdBuffsBeforeQueueSubmit]
-      Description: Executing commandBuffers operation just before QueueSubmit, instead
-        of doing that in the same way as app/benchmark/game.
-    - Name: patchShaderGroupHandles
-      Type: bool
-      Default: true
-    - Name: disableShaderGroupHandlesPatching
-      Type: bool
-      Default: false
-      Accessibility: ArgumentOnly
-      Arguments: [disableShaderGroupHandlesPatching]
-      Description: Vulkan specific option. Forces shader group handles patching in
-        Shader Binding Tables  to be disabled during playback.
-      LongDescription: Vulkan specific option. Forces shader group handles patching
-        in Shader Binding Tables to be  disabled during playback. The patching mechanism
-        injects a compute shader before ray  tracing commands which updates shader
-        group handles, potentially improving cross-platform  compatiblity of streams.
-        When patching is disabled, a stream replay uses capture/replay  features,
-        if they were enabled during recording (depending on a config option), or just  replays
-        the stream as is.
-    - Name: renderDocCaptureFrames
-      Type: BitRange
-      Default: '-'
-      Accessibility: ArgumentOnly
-      Arguments: [renderDocCaptureFrames]
-      Platform: [WINDOWS]
-      Description: Range of frames that will be captured by RenderDoc during playback.
-      LongDescription: |
-        Range of frames that will be captured by RenderDoc during playback.
-        Specified as string of following format:
-        * --renderDocCaptureFrames frameNumber
-        * --renderDocCaptureFrames beginFrame-endFrame
-        Captures will be saved in the stream folder. Option cannot be combined with option 'renderDocCaptureVKSubmits'
-    - Name: renderDocCaptureVKSubmits
-      Type: BitRange
-      Default: '-'
-      Accessibility: ArgumentOnly
-      Arguments: [renderDocCaptureVKSubmits]
-      Platform: [WINDOWS]
-      Description: Range of queue submits that will be captured by RenderDoc during
-        playback.
-      LongDescription: |
-        Range of queue submits that will be captured by RenderDoc during playback. 
-        Specified as string of following format:
-          * --renderDocCaptureVKSubmits queueSubmit
-          * --renderDocCaptureVKSubmits beginQueueSubmit-endQueueSubmit
-        Captures will be saved in the stream folder. Option cannot be combined with option 'renderDocCaptureFrames'.
-    - Name: RenderDoc
-      Type: Group
-      Options:
-      - Name: mode
-        Type: VkRenderDocCaptureMode
-        Default: None
-      - Name: captureRange
-        Type: BitRange
-        Default: '-'
-        ConfigName: range
-      - Name: dllPath
+      - Name: outputPath
         Type: std::filesystem::path
-        Default: ''
-        Accessibility: ArgumentOnly
-        Arguments: [renderDocDllPath]
-        Platform: [WINDOWS]
-        Description: By default, RenderDoc is found automatically, and this option
-          is not necessary. However, if RenderDoc cannot be found, use this option
-          to specify renderdoc.dll path.
-      - Name: continuousCapture
-        Type: bool
-        Default: false
-        Arguments: [renderDocContinuousCapture]
-        Platform: [WINDOWS]
-        Description: Option must be combined with 'renderDocCaptureFrames' or 'renderDocCaptureVKSubmits'.
-          Range of frames or queue submits specified by those options will be dumped
-          into one file instead of separate files.
-      - Name: enableUI
-        Type: bool
-        Default: false
-        Arguments: [renderDocEnableUI]
-        Platform: [WINDOWS]
-        Description: Option must be combined with 'renderDocCaptureFrames' or 'renderDocCaptureVKSubmits'.
-          Opens RenderDoc with recorded captures. Captures are not saved by default
-          but can be saved via RenderDoc UI.
-  - Name: Recorder
+        Default: ""
+        Accessibility: Derived
+      - Name: benchmarkStartFrame
+        Type: uint32_t
+        Default: ""
+        Accessibility: Derived
+  - Name: Common
     Type: Group
     Options:
-    - Name: mode
-      Type: VulkanRecorderMode
-      Default: All
-    - Name: All
-      Type: Group
-      Options:
-      - Name: exitFrame
-        Type: uint32_t
-        Default: 1000000
-    - Name: Frames
-      Type: Group
-      Options:
-      - Name: startFrame
-        Type: uint32_t
-        Default: 1
-      - Name: stopFrame
-        Type: uint32_t
-        Default: 1000000
-      - Name: startKeysStr
-        Type: std::vector<std::string>
-        Default: []
-        ConfigName: StartKeys
-      - Name: startKeys
-        Type: std::vector<uint32_t>
-        Default: []
+      - Name: mode
+        Type: GITSMode
+        Default: ""
         Accessibility: Derived
-    - Name: QueueSubmit
-      Type: Group
-      Options:
-      - Name: queueSubmitStr
-        Type: std::string
-        Default: 1
-        ConfigName: Number
-    - Name: CommandBuffersRange
-      Type: Group
-      Options:
-      - Name: commandBuffersRangeStr
-        Type: std::string
-        Default: 1/0/0
-        ConfigName: Range
-    - Name: RenderPassRange
-      Type: Group
-      Options:
-      - Name: renderPassRangeStr
-        Type: std::string
-        Default: 1/0/0/0
-        ConfigName: Range
-    - Name: DrawsRange
-      Type: Group
-      Options:
-      - Name: drawsRangeStr
-        Type: std::string
-        Default: 1/0/0/0/0
-        ConfigName: Range
-    - Name: DispatchRange
-      Type: Group
-      Options:
-      - Name: dispatchRangeStr
-        Type: std::string
-        Default: 1/0/0/0
-        ConfigName: Range
-    - Name: BlitRange
-      Type: Group
-      Options:
-      - Name: blitRangeStr
-        Type: std::string
-        Default: 1/0/0/0
-        ConfigName: Range
-    - Name: ObjRange
-      Type: Group
-      Accessibility: Derived
-      Options:
-      - Name: rangeSpecial
-        Type: VulkanObjectRange
-        Default: ''
-        Accessibility: Derived
-    - Name: dumpScreenshots
-      Type: BitRange
-      Default: '-'
-    - Name: dumpSubmits
-      Type: BitRange
-      Default: '-'
-    - Name: traceVkStructs
-      Type: bool
-      Default: true
-      Arguments: [traceVKStructs]
-      Description: '[DEPRECATED] Legacy equivalent of the --traceData vkStructs option.'
-      ConfigName: traceVKStructs
-    - Name: memorySegmentSize
-      Type: uint32_t
-      Default: 512
-    - Name: shadowMemory
-      Type: bool
-      Default: ''
-      Accessibility: Derived
-    - Name: memoryAccessDetection
-      Type: bool
-      Default: ''
-      Accessibility: Derived
-    - Name: writeWatchDetection
-      Type: bool
-      Default: ''
-      Accessibility: Derived
-    - Name: memoryTrackingMode
-      Type: MemoryTrackingMode
-      Default: External
-    - Name: memoryUpdateState
-      Type: MemoryUpdateState
-      Default: OnlyUsed
-    - Name: forceUniversalRecording
-      Type: bool
-      Default: false
-    - Name: delayFenceChecksCount
-      Type: uint32_t
-      Default: 0
-    - Name: shortenFenceWaitTime
-      Type: uint32_t
-      Default: 0
-    - Name: addImageUsageFlags
-      Type: uint32_t
-      Default: 2
-      NumericFormat: Hexadecimal
-    - Name: addBufferUsageFlags
-      Type: uint32_t
-      Default: 1
-      NumericFormat: Hexadecimal
-    - Name: scheduleCommandBuffersBeforeQueueSubmit
-      Type: bool
-      Default: false
-      ConfigName: scheduleCommandBuffersBeforeQueueSubmitWA
-    - Name: minimalStateRestore
-      Type: bool
-      Default: true
-    - Name: reusableStateRestoreResourcesCount
-      Type: uint32_t
-      Default: 3
-    - Name: reusableStateRestoreBufferSize
-      Type: uint32_t
-      Default: 80
-    - Name: IncreaseImageMemorySizeRequirement
-      Type: MemorySizeRequirementOverride
-      Default: ''
-      Accessibility: Derived
-    - Name: IncreaseImageMemorySizeRequirementGrp
-      Type: Group
-      Default: ''
-      Options:
-      - Name: fixedAmount
-        Type: uint32_t
-        Default: 0
-      - Name: percent
-        Type: uint32_t
-        Default: 0
-      ConfigName: IncreaseImageMemorySizeRequirement
-    - Name: IncreaseAccelerationStructureMemorySizeRequirement
-      Type: Group
-      Accessibility: Derived
-      Options:
-      - Name: accelerationStructureSize
-        Type: MemorySizeRequirementOverride
-        Default: ''
-      - Name: buildScratchSize
-        Type: MemorySizeRequirementOverride
-        Default: ''
-      - Name: updateScratchSize
-        Type: MemorySizeRequirementOverride
-        Default: ''
-    - Name: MemoryOffsetAlignmentOverride
-      Type: Group
-      Options:
-      - Name: images
-        Type: uint32_t
-        Default: 0
-      - Name: buffers
-        Type: uint32_t
-        Default: 0
-      - Name: descriptors
-        Type: uint32_t
-        Default: 0
-    - Name: CrossPlatformStateRestoration
-      Type: Group
-      Options:
-      - Name: images
-        Type: bool
-        Default: true
-      - Name: buffers
-        Type: BufferStateRestoration
-        Default: WithNonHostVisibleMemoryOnly
-    - Name: memoryRestoration
-      Type: MemoryStateRestoration
-      Default: HostVisible
-    - Name: restoreMultisampleImagesWA
-      Type: bool
-      Default: false
-    - Name: maxArraySizeForCCode
-      Type: uint32_t
-      Default: 400
-    - Name: useCaptureReplayFeaturesForBuffersAndAccelerationStructures
-      Type: bool
-      Default: true
-    - Name: useCaptureReplayFeaturesForRayTracingPipelines
-      Type: bool
-      Default: true
-    - Name: useExternalMemoryExtension
-      Type: bool
-      Default: ''
-      Accessibility: Derived
-    - Name: usePresentSrcLayoutTransitionAsAFrameBoundary
-      Type: bool
-      Default: false
-    - Name: renderDocCompatibility
-      Type: bool
-      Default: true
-- Name: OpenCL
-  Type: Group
-  Options:
-  - Name: Player
+      - Name: Shared
+        Type: Group
+        Options:
+          - Name: thresholdLogLevel
+            Type: LogLevel
+            Default: INFO
+            Arguments: [logLevel, loglevel]
+            Description: Only info with level greater or equal to this will be logged.
+            LongDescription:
+              "The levels are: TRACEVERBOSE, TRACE, INFOVERBOSE,  INFO (default),
+              WARNING, ERROR and OFF. With TRACE level API calls are logged. With TRACEVERBOSE
+              additional details are logged, for example in OGL streams log will contain
+              state like list of bound framebuffers with attachments, pipelines, programs,
+              shaders, buffers and textures."
+            ConfigName: LogLevel
+          - Name: logToConsole
+            Type: bool
+            Default: false
+          - Name: traceDataOpts
+            Type: std::set<TraceData>
+            Default: "[]"
+            Accessibility: ArgumentOnly
+            Arguments: [traceData]
+            Description: Avaliable if '--logLevel TRACE' selected.
+            LongDescription: |
+              Enables logging additional info to trace specified by comma separated options. 
+              Options: 
+              * vkStructs - instead of logging addresses of Vulkan objects, GITS will log the structures, tables or other data behind them. 
+              * frameNumber - dump frame number for every api call.
+            ConfigName: traceData
+          - Name: useEvents
+            Type: bool
+            Default: ""
+            Accessibility: Derived
+          - Name: scriptArgsStr
+            Type: std::string
+            Default: ""
+            Accessibility: Derived
+            Description:
+              Lua script arguments. String with lua script arguments may be read
+              by lua script.
+          - Name: libGL
+            Type: std::filesystem::path
+            Default: ""
+            Accessibility: ArgumentOnly
+            Arguments: [libGLPath]
+            Description: Override for library path containing GL functions
+          - Name: libEGL
+            Type: std::filesystem::path
+            Default: ""
+            Accessibility: ArgumentOnly
+            Arguments: [libEGLPath]
+            Description: Override for library containing EGL functions
+          - Name: libGLESv1
+            Type: std::filesystem::path
+            Default: ""
+            Accessibility: ArgumentOnly
+            Arguments: [libGLESv1Path]
+            Description: Override for library path containing GLES 1 functions
+          - Name: libGLESv2
+            Type: std::filesystem::path
+            Default: ""
+            Accessibility: ArgumentOnly
+            Arguments: [libGLESv2Path]
+            Description: Override for library path containing GLES 2 functions
+          - Name: libClPath
+            Type: std::filesystem::path
+            Default: ""
+            Accessibility: ArgumentOnly
+            Arguments: [libOCLPath]
+            Description: Use a custom path to the OpenCL shared library.
+          - Name: libVK
+            Type: std::filesystem::path
+            Default: ""
+            Accessibility: ArgumentOnly
+            Arguments: [libVKPath]
+            Description: Override for Vulkan Loader library path.
+          - Name: libOcloc
+            Type: std::filesystem::path
+            Default: ""
+            Accessibility: Derived
+          - Name: libL0Driver
+            Type: std::filesystem::path
+            Default: ""
+            Accessibility: Derived
+          - Name: libL0
+            Type: std::filesystem::path
+            Default: ""
+            Accessibility: Derived
+      - Name: Player
+        Type: Group
+        Options:
+          - Name: applicationPath
+            Type: std::filesystem::path
+            Default: ""
+            Accessibility: Derived
+          - Name: stats
+            Type: bool
+            Default: ""
+            Accessibility: ArgumentOnly
+            Arguments: [stats, s]
+            Description:
+              GITS will not play specified file but instead will create some
+              statistics about it.
+          - Name: version
+            Type: bool
+            Default: ""
+            Accessibility: ArgumentOnly
+            Arguments: [version, v]
+            Description: Displays gitsPlayer version.
+          - Name: diags
+            Type: bool
+            Default: ""
+            Accessibility: ArgumentOnly
+            Arguments: [recorderDiags]
+            Description:
+              Causes player to output diagnostic info gathered during stream
+              recording. Then, player exits.
+          - Name: libGL
+            Type: std::filesystem::path
+            Default: libGL.so.1
+            DefaultsPerPlatform:
+              - win32: OpenGL32.dll
+              - lnx_32: libGL.so
+          - Name: libEGL
+            Type: std::filesystem::path
+            Default: libEGL.so.1
+            DefaultsPerPlatform:
+              - win32: libEGL.dll
+          - Name: libGLESv1
+            Type: std::filesystem::path
+            Default: libGLESv1_CM.so.1
+            DefaultsPerPlatform:
+              - win32: libGLESv1_CM.dll
+            ConfigName: libGLES1
+          - Name: libGLESv2
+            Type: std::filesystem::path
+            Default: libGLESv2.so.2
+            DefaultsPerPlatform:
+              - win32: libGLESv2.dll
+            ConfigName: libGLES2
+          - Name: libClPath
+            Type: std::filesystem::path
+            Default: libOpenCL.so.1
+            DefaultsPerPlatform:
+              - win32: OpenCL.dll
+              - lnx_32: libOpenCL.so
+            ConfigName: libCL
+          - Name: libVK
+            Type: std::filesystem::path
+            Default: libvulkan.so.1
+            DefaultsPerPlatform:
+              - win32: vulkan-1.dll
+          - Name: libOcloc
+            Type: std::filesystem::path
+            Default: libocloc.so
+            DefaultsPerPlatform:
+              - win32: ocloc64.dll
+          - Name: libL0
+            Type: std::filesystem::path
+            Default: libze_loader.so.1
+            DefaultsPerPlatform:
+              - win32: ze_loader.dll
+          - Name: streamPath
+            Type: std::filesystem::path
+            Default: ""
+          - Name: streamDir
+            Type: std::filesystem::path
+            Default: ""
+            Accessibility: Derived
+          - Name: subcapturePath
+            Type: std::filesystem::path
+            Default: ""
+            OSVisibility: [WINDOWS]
+          - Name: tokenBurst
+            Type: uint32_t
+            Default: 10000
+            Arguments: [tokenBurstLimit]
+            Description:
+              Specifies number of tokens to be loaded from stream file in one
+              burst. Burst is a group of tokens that have to be all loaded before execution
+              of first token in a burst will start. This option is mutually exclusive with
+              loadWholeStreamBeforePlayback option.
+            ConfigName: tokenBurstLimit
+          - Name: tokenBurstNum
+            Type: uint32_t
+            Default: 5
+            Arguments: [tokenBurstNum]
+            Description:
+              Specifies maximum number of 'bursts' loaded, waiting for execution,
+              at any one time by player
+          - Name: exitFrame
+            Type: uint32_t
+            Default: 1000000
+            Arguments: [exitFrame]
+            Description: Stop playback after this frame.
+          - Name: endFrameSleep
+            Type: uint32_t
+            Default: 0
+            Description: Sleep this many milliseconds after a swap.
+          - Name: exitOnError
+            Type: bool
+            Default: false
+            Arguments: [exitOnError]
+            Description: Stop playback when API function call returns error value.
+          - Name: useEvents
+            Type: bool
+            Default: ""
+            Accessibility: Derived
+          - Name: eventScript
+            Type: std::filesystem::path
+            Default: ""
+            Arguments: [eventScript]
+            Description: Path to lua event script.
+            LongDescription: |
+              Path to lua event script.
+              Following functions can be provided in script file for event handlers:
+              * all GL / WGL / EGL / GLX functions
+              * gitsFrameBegin(nr)
+              * gitsFrameEnd(nr)
+              * gitsLoopBegin(nr)
+              * gitsLoopEnd(nr)
+              * gitsStateRestoreBegin()
+              * gitsStateRestoreEnd()
+              * gitsProgramStart()
+              * gitsProgramExit()
+              * gitsLogging(log)
+              Following functions exposed by GITS may be used inside lua scripts:
+              * string udtToStr(userdata udt) - casts lua userdata to string.
+              * number udtToInt(userdata udt) - casts user data to int.
+              * userdata getUdt(userdata carray, number index) - extracts userdata from carray's index.
+              * number getInt(userdata carray, number index) - extracts int from carray's index.
+              * number getFloat(userdata carray, number index) - extracts float from carray's index.
+              * void setUdt(userdata carray, number index, number value) - sets userdata at array's index.
+              * void setInt(userdata carray, number index, number value) - sets int at array's index.
+              * void setFloat(userdata carray, number index, number value) - sets float at array's index.
+              * userdata nullUdt() - returns null user data \(void*)0\.
+              * number currTime() - returns time in microseconds from the start of the player.
+              * void msgBox(string title, string message, number type) - Windows exclusive functions.Displays a message box with arbitral title, message and typ.
+              * userdata allocBytes(number size) - Allocates memory and returns userdata(pointer to allocated data in C).
+              * void freeBytes(userdata pointer) - Deallocates memory.
+              * string getArgsStr() - returns string with args passed through gitsPlayer option --scriptArgsStr.
+              * string getOutDir() - returns output directory for artifacts defined with gitsPlayer option --outputDir.
+              * gitsGlDebugProc() - returns userdata containing pointer to callback function which is being set by glDebugMessageCallback.
+          - Name: scriptArgsStr
+            Type: std::string
+            Default: ""
+            Arguments: [scriptArgsStr]
+            ConfigName: scriptArgs
+          - Name: benchmark
+            Type: bool
+            Default: false
+            Arguments: [benchmark, b]
+            Description: Enables performance measurement in OpenGL streams on frame base. Results are being stored in benchmark.csv file in CWD or
+          - Name: showWindowBorder
+            Type: bool
+            Default: false
+            Arguments: [showWindowBorder]
+            Description: Forces player to show window border (ignored in fullscreen).
+          - Name: captureFrames
+            Type: BitRange
+            Default: "-"
+            Arguments: [captureFrames]
+            Description: List of frames that will be captured by gits during playback.
+            LongDescription: |
+              List of frames that will be captured  during playback. 
+              Specifiedas single string without spaces of  following format:  
+              * pattern = frame_list | frame_list/Repeat-Count
+              * frame_list = element | frame_list, ',', element
+              * element = Frame | Begin-End | Begin-End:Step
+          - Name: outputDir
+            Type: std::filesystem::path
+            Default: ""
+            Arguments: [outputDir]
+            Description: Specifies directory where all the artifacts will be stored.
+          - Name: traceSelectedFrames
+            Type: BitRange
+            Default: "-"
+            Arguments: [traceSelectedFrames]
+            Description: List of frames for which trace (log) will be generated during playback.
+            LongDescription: |
+              List of frames for which trace (log) will be generated during playback.
+              Specified as a single string without spaces with the following format:
+              * pattern = frame_list | frame_list/Repeat-Count
+              * frame_list = element |frame_list, ',', element
+              * element = Frame | Begin-End | Begin-End:Step
+          - Name: interactive
+            Type: bool
+            Default: false
+            Arguments: [i, interactive]
+            Description: Enables the interactive mode.
+          - Name: outputTracePath
+            Type: std::filesystem::path
+            Default: ""
+            Arguments: [outputTracePath]
+            Description: Specifies file path where gits traces will be stored.
+          - Name: logFncs
+            Type: bool
+            Default: false
+            Arguments: [logFncs]
+            Description: All played tokens are logged to standard output.
+          - Name: faithfulThreading
+            Type: bool
+            Default: false
+            Arguments: [faithfulThreading]
+            Description:
+              GITS, by default, plays the stream in single thread, synthesizing
+              necessary GL context switches. This option causes GITS to use as many threads
+              as original application for playback. This also makes it impossible to create
+              a subcapture from the stream.
+          - Name: loadWholeStreamBeforePlayback
+            Type: bool
+            Default: false
+            Arguments: [loadWholeStreamBeforePlayback]
+            Description:
+              Forces load of entire stream to memory before playback. May cause
+              memory issues and errors related to max value being exceeded. This option
+              is mutually exclusive with tokenBurstLimit option.
+          - Name: showWindowsWA
+            Type: bool
+            Default: false
+            Arguments: [showWindowsWA]
+            Description: Enables workaround that makes all windows visible all the time by default.
+          - Name: disableExceptionHandling
+            Type: bool
+            Default: false
+            Arguments: [noseh, x]
+            Description:
+              If specified, structured exceptions raised during playback  will
+              be passed to system unhandled.
+            LongDescription:
+              If specified, structured exceptions raised during playback
+              will be passed to system unhandled.
+          - Name: captureScreenshot
+            Type: bool
+            Default: false
+            Arguments: [captureScreenshot]
+            OSVisibility: [WINDOWS]
+            Description:
+              Modifies captureFrames option to capture a WinAPI screenshot instead
+              of  buffer read. Forces vsync.
+            LongDescription:
+              Modifies captureFrames option to capture a WinAPI screenshot
+              instead of buffer read. Forces vsync.
+          - Name: logLoadedTokens
+            Type: bool
+            Default: false
+            Arguments: [logLoadedTokens]
+            Description: Prints token names after they are loaded.
+          - Name: escalatePriority
+            Type: bool
+            Default: false
+            Arguments: [realtime]
+            Description:
+              If specified, gitsPlayer will request realtime priority from the
+              system.
+          - Name: swapAfterPrepare
+            Type: bool
+            Default: false
+            Arguments: [swapAfterPrepare]
+            Description:
+              If specified, gitsPlayer will issue additional swap after state
+              restoration calls.
+          - Name: stopAfterFrames
+            Type: BitRange
+            Default: "-"
+            Arguments: [stopAfterFrames]
+            Description: List of frames to stop after  during playback.
+            LongDescription: |
+              List of frames to stop after during playback. Specified as single string without spaces of following format: 
+              * pattern = frame_list | frame_list/Repeat-Count  
+              * frame_list = element | frame_list, element
+              * element = Frame | Begin-End | Begin-End:Step
+          - Name: nullRun
+            Type: bool
+            Default: false
+            Arguments: [nullRun]
+            Description:
+              No functions are played back. This option is useful only for characterization
+              of GITS player framework performance.
+          - Name: waitForEnter
+            Type: bool
+            Default: false
+            Arguments: [waitForEnter]
+            Description: Before and after playing back the stream, wait for ENTER keypress.
+          - Name: cleanResourcesOnExit
+            Type: bool
+            Default: false
+            Arguments: [cleanResourcesOnExit]
+            Description:
+              'Deletes unreleased resources at the end of the stream (with additional
+              API functions calls).\n - OpenGL - the first 2000 names of the following resources
+              are destroyed: FBOs, RBOs, VAOs, Textures, Buffers, Shaders, Programs, ARBPrograms,
+              DisplayLists, Queries.\n - Vulkan - all created resources are destroyed.'
+          - Name: renderOffscreen
+            Type: bool
+            Default: false
+            Arguments: [renderOffscreen]
+            Description: Forces offscreen rendering in EGL or Vulkan.
+            LongDescription: |
+              Offscreen rendering: 
+              - in EGL to a pbuffer, 
+              - in Vulkan to a swapchain without presentation. 
+              Not supported for other API types. Use --captureFrames or similar option to get rendering output.
+          - Name: forceOrigScreenResolution
+            Type: bool
+            Default: false
+            Arguments: [forceOrigScreenResolution]
+            Description:
+              Forces player to set original screen resolution used during recording.
+              Useful to replay full screen mode.
+          - Name: forceInvisibleWindows
+            Type: bool
+            Default: false
+            Arguments: [forceInvisibleWindows]
+            Description: Forces windows to be hidden.
+          - Name: fullscreen
+            Type: bool
+            Default: false
+            Arguments: [fullscreen, f]
+            Description:
+              Attempts to display the window in the exclusive fullscreen mode
+              for maximum performance. Window covers everything, including OS bars, docks,
+              etc. Display resolution gets changed if necessary to match the stream dimensions.
+          - Name: windowMode
+            Type: WindowMode
+            Default: ""
+            Accessibility: Derived
+          - Name: ForceWindowPosStr
+            Type: std::string
+            Default: ""
+            Accessibility: ArgumentOnly
+            Arguments: [forceWindowPos]
+            Description:
+              Specified coordinates (e.g. 100x100) will be used as position of  all
+              windows created during stream playback. Window position updates will be inhibited.
+          - Name: ForceWindowPos
+            Type: Group
+            Options:
+              - Name: enabled
+                Type: bool
+                Default: false
+              - Name: x
+                Type: uint32_t
+                Default: 0
+              - Name: y
+                Type: uint32_t
+                Default: 0
+          - Name: ForceWindowSizeStr
+            Type: std::string
+            Default: ""
+            Accessibility: ArgumentOnly
+            Arguments: [forceWindowSize]
+            Description: Forces windows, viewport and scissor box sizes to specified  values.
+          - Name: ForceWindowSize
+            Type: Group
+            Options:
+              - Name: enabled
+                Type: bool
+                Default: false
+              - Name: width
+                Type: uint32_t
+                Default: 0
+              - Name: height
+                Type: uint32_t
+                Default: 0
+          - Name: ForceScissorVector
+            Type: std::vector<uint32_t>
+            Default: []
+            Accessibility: ArgumentOnly
+            Arguments: [forceScissor]
+            Description: Forces scissor x,y,width,height
+          - Name: ForceScissor
+            Type: Group
+            Options:
+              - Name: enabled
+                Type: bool
+                Default: false
+              - Name: x
+                Type: uint32_t
+                Default: 0
+              - Name: y
+                Type: uint32_t
+                Default: 0
+              - Name: width
+                Type: uint32_t
+                Default: 0
+              - Name: height
+                Type: uint32_t
+                Default: 0
+          - Name: ForceDesktopResolutionStr
+            Type: std::string
+            Default: ""
+            Accessibility: ArgumentOnly
+            Arguments: [forceDesktopResolution]
+            OSVisibility: [WINDOWS]
+            Description:
+              Forces specified desktop resolution before playing stream. Returns
+              to previous resolution after execution. Accepts 'width,height' argument. E.g.
+              --forceDesktopResolution 1024,768
+          - Name: ForceDesktopResolution
+            Type: Group
+            ConfigName: forceDesktopResolution
+            OSVisibility: [WINDOWS]
+            Options:
+              - Name: enabled
+                Type: bool
+                Default: false
+              - Name: width
+                Type: uint32_t
+                Default: 0
+              - Name: height
+                Type: uint32_t
+                Default: 0
+      - Name: Recorder
+        Type: Group
+        Options:
+          - Name: libGL
+            Type: std::filesystem::path
+            Default: /usr/lib/{arch}-linux-gnu/libGL.so.1
+            DefaultsPerPlatform:
+              - win32: C:\Windows\System32\OpenGL32.dll
+          - Name: libEGL
+            Type: std::filesystem::path
+            Default: /usr/lib/{arch}-linux-gnu/libEGL.so.1
+            DefaultsPerPlatform:
+              - win32: C:\Windows\System32\libEGL.dll
+          - Name: libGLESv1
+            Type: std::filesystem::path
+            Default: /usr/lib/{arch}-linux-gnu/libGLESv1_CM.so.1
+            DefaultsPerPlatform:
+              - win32: C:\Windows\System32\libGLESv1_CM.dll
+            ConfigName: libGLES1
+          - Name: libGLESv2
+            Type: std::filesystem::path
+            Default: /usr/lib/{arch}-linux-gnu/libGLESv2.so.2
+            DefaultsPerPlatform:
+              - win32: C:\Windows\System32\libGLESv2.dll
+            ConfigName: libGLES2
+          - Name: libClPath
+            Type: std::filesystem::path
+            Default: /usr/lib/{arch}-linux-gnu/libOpenCL.so.1
+            DefaultsPerPlatform:
+              - lnx_32: /usr/lib/{arch}-linux-gnu/libOpenCL.so
+              - win32: C:\Windows\System32\OpenCL.dll
+            ConfigName: libCL
+          - Name: libVK
+            Type: std::filesystem::path
+            Default: /usr/lib/{arch}-linux-gnu/libvulkan.so.1
+            DefaultsPerPlatform:
+              - win32: C:\Windows\System32\vulkan-1.dll
+          - Name: libOcloc
+            Type: std::filesystem::path
+            Default: /usr/lib/{arch}-linux-gnu/libocloc.so
+            DefaultsPerPlatform:
+              - win32: C:\Windows\System32\ocloc64.dll
+          - Name: libL0
+            Type: std::filesystem::path
+            Default: /usr/lib/{arch}-linux-gnu/libze_loader.so.1
+            DefaultsPerPlatform:
+              - win32: C:\Windows\System32\ze_loader.dll
+          - Name: recordingMode
+            Type: RecordingMode
+            Default: Binary
+          - Name: exitKeysStr
+            Type: std::vector<std::string>
+            Default: []
+            ConfigName: exitKeys
+          - Name: exitKeys
+            Type: std::vector<uint32_t>
+            Default: []
+            Accessibility: Derived
+          - Name: exitAfterAPICall
+            Type: uint32_t
+            Default: 0
+          - Name: exitSignal
+            Type: uint32_t
+            Default: 12
+            OSVisibility: [X11]
+            Accessibility: Derived
+          - Name: tokenBurst
+            Type: uint32_t
+            Default: 10000
+            ConfigName: tokenBurstLimit
+          - Name: tokenBurstNum
+            Type: uint32_t
+            Default: 5
+          - Name: installPath
+            Type: std::filesystem::path
+            Default: "{install_path}/Recorder"
+            DefaultsPerPlatform:
+              - win32: "{install_path}\\Recorder"
+            ConfigName: InstallationPath
+          - Name: dumpPath
+            Type: std::filesystem::path
+            Default: "{install_path}/dump/stream-%p%"
+            DefaultsPerPlatform:
+              - win32: "{install_path}\\dump\\%n%_%p%"
+            ConfigName: dumpDirectoryPath
+          - Name: uniqueDumpDirectory
+            Type: bool
+            Default: true
+          - Name: enabled
+            Type: bool
+            Default: ""
+            Accessibility: Derived
+          - Name: useEvents
+            Type: bool
+            Default: ""
+            Accessibility: Derived
+          - Name: eventScript
+            Type: std::filesystem::path
+            Default: ""
+          - Name: scriptArgsStr
+            Type: std::string
+            Default: ""
+            ConfigName: scriptArgs
+          - Name: Compression
+            Type: Group
+            Options:
+              - Name: type
+                Type: CompressionType
+                Default: LZ4
+                DefaultCondition:
+                  - is_compute: ZSTD
+              - Name: level
+                Type: uint32_t
+                Default: 10
+                DefaultCondition:
+                  - is_compute: 5
+              - Name: chunkSize
+                Type: uint32_t
+                Default: 2097152
+          - Name: extendedDiagnosticInfo
+            Type: bool
+            Default: true
+            ConfigName: extendedDiagnostic
+          - Name: forceDumpOnError
+            Type: bool
+            Default: true
+          - Name: zipTextFiles
+            Type: bool
+            Default: true
+          - Name: highIntegrity
+            Type: bool
+            Default: false
+          - Name: nullIO
+            Type: bool
+            Default: false
+          - Name: removeDXSharing
+            Type: bool
+            Default: false
+          - Name: removeGLSharing
+            Type: bool
+            Default: false
+          - Name: benchmark
+            Type: bool
+            Default: true
+          - Name: closeAppOnStopRecording
+            Type: bool
+            Default: true
+            OSVisibility: [WINDOWS]
+          - Name: windowsKeyHandling
+            Type: WindowsKeyHandling
+            Default: MessageLoop
+            OSVisibility: [WINDOWS]
+  - Name: DirectX
+    Type: Group
+    OSVisibility: [WINDOWS]
+    Options:
+      - Name: Capture
+        Type: Group
+        Options:
+          - Name: record
+            Type: bool
+            Default: true
+            Description: Record the API commands
+          - Name: shadowMemory
+            Type: bool
+            Default: false
+            Description:
+              Use an extra copy of the resource to track memory updates (Map
+              / Unmap).
+          - Name: captureIntelExtensions
+            Type: bool
+            Default: true
+          - Name: captureDirectML
+            Type: bool
+            Default: true
+            Description: If false DirectML capture is done on D3D12 level
+          - Name: captureDirectStorage
+            Type: bool
+            Default: false
+          - Name: captureXess
+            Type: bool
+            Default: true
+            Description: If false XeSS capture is done on Intel Extensions level
+          - Name: debugLayer
+            Type: bool
+            Default: false
+            Description: Enable the DirectX Debug Layer
+          - Name: forceGlobalSynchronization
+            Type: bool
+            Default: false
+          - Name: plugins
+            Type: std::vector<std::string>
+            Default: []
+            Description: List of plugins to enable
+          - Name: tokenBurstChunkSize
+            Type: uint64_t
+            Default: 5242880
+          - Name: Portability
+            Type: Group
+            Options:
+              - Name: resourcePlacementStorage
+                Type: bool
+                Default: false
+                Description: Store the resource placement data on capture
+              - Name: Raytracing
+                Type: Group
+                Options:
+                  - Name: accelerationStructurePadding
+                    Type: float
+                    Default: 1.0
+                  - Name: accelerationStructureScratchPadding
+                    Type: float
+                    Default: 1.0
+      - Name: Player
+        Type: Group
+        Options:
+          - Name: execute
+            Type: bool
+            Default: true
+            Description: Execute the API commands (driver / null driver)
+          - Name: debugLayer
+            Type: bool
+            Default: false
+            Description: Enable the DirectX Debug Layer
+          - Name: waitOnEventCompletion
+            Type: bool
+            Default: false
+            Description: CPU waits for GPU on SetEventOnCompletion and SetEventOnMultipleFenceCompletion
+          - Name: useCopyQueueOnRestore
+            Type: bool
+            Default: false
+            Description: Use a D3D12_COMMAND_LIST_TYPE_COPY to restore resource states
+          - Name: uavBarrierAfterCopyRaytracingASWorkaround
+            Type: bool
+            Default: ""
+          - Name: skipResolveQueryData
+            Type: bool
+            Default: true
+            Description: Don't replay ID3D12GraphicsCommandList::ResolveQueryData commands
+          - Name: multithreadedShaderCompilation
+            Type: bool
+            Default: true
+            Description:
+              Use a thread pool for D3D12 methods which cause hardware shader
+              compilation
+          - Name: plugins
+            Type: std::vector<std::string>
+            Default: []
+            Description: List of plugins to enable
+          - Name: tokenBurstChunkSize
+            Type: uint64_t
+            Default: 5242880
+            Description: "Default size: 5 MB"
+          - Name: AdapterOverride
+            Type: Group
+            Description:
+              "Select the adapter used on D3D12CreateDevice. Set the Vendor and
+              Index for that vendor (or global index if Vendor is empty). For example: Index:
+              1, Vendor: 'Intel' will select the second Intel adapter enumerated."
+            Options:
+              - Name: enabled
+                Type: bool
+                Default: false
+                Description: Whether adapter override is enabled or not
+              - Name: index
+                Type: uint32_t
+                Default: 0
+                Description: Index of the adapter to use
+              - Name: vendor
+                Type: std::string
+                Default: ""
+                Description: Vendor of the adapter (Empty / AMD / NVIDIA / Intel).
+          - Name: ApplicationInfoOverride
+            Type: Group
+            Description:
+              Override arguments for INTC_D3D12_SetApplicationInfo. By default
+              only the ApplicationName will be set and it will use the Process Name from
+              capture.
+            Options:
+              - Name: enabled
+                Type: bool
+                Default: ""
+                Description: Whether application info override is enabled or not
+              - Name: applicationName
+                Type: std::string
+                Default: ""
+                Description: Application name
+              - Name: applicationVersion
+                Type: std::string
+                Default: 0.0.0
+                Description: "Application version: 'major.minor.patch', Example: '1.2.3'"
+              - Name: engineName
+                Type: std::string
+                Default: ""
+                Description: Engine name
+              - Name: engineVersion
+                Type: std::string
+                Default: 0.0.0
+                Description: "Engine version: 'major.minor.patch', Example: '1.2.3'"
+          - Name: Portability
+            Type: Group
+            Options:
+              - Name: resourcePlacement
+                Type: std::string
+                Default: none
+              - Name: portabilityChecks
+                Type: bool
+                Default: false
+        ConfigName: Playback
+      - Name: Features
+        Type: Group
+        Options:
+          - Name: Trace
+            Type: Group
+            Options:
+              - Name: enabled
+                Type: bool
+                Default: false
+                Description: Whether tracing is enabled or not
+              - Name: flushMethod
+                Type: std::string
+                Default: ipc
+                Description: Method how to flush
+              - Name: Print
+                Type: Group
+                Options:
+                  - Name: postCalls
+                    Type: bool
+                    Default: true
+                    Description: Print information after API calls
+                  - Name: preCalls
+                    Type: bool
+                    Default: false
+                    Description: Print information before API calls
+                  - Name: debugLayerWarnings
+                    Type: bool
+                    Default: false
+                    Description: Print debug layer warnings
+                  - Name: gpuExecution
+                    Type: bool
+                    Default: false
+                    Description: Print GPU execution information
+                    ConfigName: gPUExecution
+          - Name: Subcapture
+            Type: Group
+            Options:
+              - Name: enabled
+                Type: bool
+                Default: false
+                Description: Whether subcapture is enabled or not
+              - Name: serializeAccelerationStructures
+                Type: bool
+                Default: false
+              - Name: restoreTLASes
+                Type: bool
+                Default: false
+              - Name: frames
+                Type: std::string
+                Default: ""
+                Description: Frame range. For example '3-6'
+          - Name: Screenshots
+            Type: Group
+            Options:
+              - Name: enabled
+                Type: bool
+                Default: false
+                Description: Whether subcapture is enabled or not
+              - Name: frames
+                Type: std::string
+                Default: ""
+                Description:
+                  Frame range (supports multiple ranges and strides). For example
+                  '3-6:2,9'
+              - Name: format
+                Type: std::string
+                Default: png
+                Description: "Format of the screenshots: png"
+          - Name: ResourcesDump
+            Type: Group
+            Options:
+              - Name: enabled
+                Type: bool
+                Default: false
+                Description: Whether resource dumping is enabled or not
+              - Name: resourceKeys
+                Type: std::string
+                Default: ""
+                Description: Comma separated list of resource keys
+              - Name: commandKeys
+                Type: std::string
+                Default: ""
+                Description: Comma separated list of command lists call keys
+              - Name: textureRescaleRange
+                Type: std::string
+                Default: ""
+                Description:
+                  Texture rescaling factor range between 0.0-1.0, if empty no rescaling.
+                  For example '0-0.5'
+              - Name: format
+                Type: std::string
+                Default: png
+          - Name: RenderTargetsDump
+            Type: Group
+            Options:
+              - Name: enabled
+                Type: bool
+                Default: false
+                Description: Whether render targets dumping is enabled or not
+              - Name: frames
+                Type: std::string
+                Default: ""
+                Description: Frame range. For example '3-6'
+              - Name: draws
+                Type: std::string
+                Default: ""
+                Description:
+                  Draw range (supports multiple ranges and strides). For example
+                  '1-100:5'
+              - Name: format
+                Type: std::string
+                Default: png
+          - Name: RaytracingDump
+            Type: Group
+            Options:
+              - Name: bindingTablesPre
+                Type: bool
+                Default: false
+                Description: Dumps binding table buffers before patching
+              - Name: bindingTablesPost
+                Type: bool
+                Default: false
+                Description: Dumps binding table buffers after patching
+              - Name: instancesPre
+                Type: bool
+                Default: false
+                Description: Dumps instances buffers before patching
+              - Name: instancesPost
+                Type: bool
+                Default: false
+                Description: Dumps instances buffers after patching
+              - Name: blases
+                Type: bool
+                Default: false
+                ConfigName: bLASes
+              - Name: commandKeys
+                Type: std::string
+                Default: ""
+              - Name: commandListModuloStep
+                Type: std::string
+                Default: ""
+          - Name: ExecuteIndirectDump
+            Type: Group
+            Options:
+              - Name: argumentBufferPre
+                Type: bool
+                Default: false
+                Description:
+                  Dumps arguments buffers for specified ExecuteIndirect calls before
+                  patching
+              - Name: argumentBufferPost
+                Type: bool
+                Default: false
+                Description:
+                  Dumps arguments buffers for specified ExecuteIndirect calls after
+                  patching
+              - Name: commandKeys
+                Type: std::string
+                Default: ""
+          - Name: RootSignatureDump
+            Type: Group
+            Options:
+              - Name: enabled
+                Type: bool
+                Default: false
+              - Name: commandKeys
+                Type: std::string
+                Default: ""
+          - Name: SkipCalls
+            Type: Group
+            Options:
+              - Name: enabled
+                Type: bool
+                Default: false
+                Description: Whether skipping calls is enabled or not
+              - Name: commandKeys
+                Type: std::string
+                Default: ""
+                Description: Comma separated list of call keys to skip
+          - Name: Portability
+            Type: Group
+            Options:
+              - Name: enabled
+                Type: bool
+                Default: false
+              - Name: storePlacedResourceDataOnCapture
+                Type: bool
+                Default: true
+              - Name: storePlacedResourceDataOnPlayback
+                Type: bool
+                Default: false
+  - Name: OpenGL
     Type: Group
     Options:
-    - Name: captureImages
-      Type: bool
-      Default: false
-      Arguments: [clCaptureImages]
-      Platform: [WINDOWS, X11]
-      Description: Capture OpenCL images after each clEnqueueReadImage call. Assume
-        they all are 2D RGBA8 images.
-    - Name: removeSourceLengths
-      Type: bool
-      Default: false
-      Arguments: [clRemoveSourceLengths]
-      Platform: [WINDOWS, X11]
-      Description: Removes source lengths. Makes driver assume strings are null-terminated
-        in clCreateProgramWithSource
-    - Name: captureReads
-      Type: bool
-      Default: false
-      Arguments: [clCaptureReads]
-      Description: Enables dumping of CL memory objects to directory specified in
-        --outputDir (implicitly to 'dump' in stream directory). Option may be used
-        with  --clOmitReadOnlyObjects)
-      LongDescription: Enables dumping of CL memory objects to directory specified
-        in --outputDir (implicitly to 'dump' in stream directory). Option may be
-        used with --clOmitReadOnlyObjects
-    - Name: captureKernels
-      Type: BitRange
-      Default: '-'
-      Arguments: [clCaptureKernels]
-      Description: Injects clEnqueueRead*() after specified occurence of NDRange call
-        for each used buffer to allow contents verification.
-      LongDescription: |
-        Injects clEnqueueRead*() after specified occurence of NDRange call for each used buffer to allow contents verification. 
-        Number of NDRange calls must be specified as a single string without spaces of following format:        
-        * num1-num2 ex. 1-7 - will dump buffers used in the range of calls
-        * num1,num2,num3 ex. 2,5,7 - will dump buffers used in specified occurence of NRange calls
-        Approaches may be combined ex. 2-5,14,17 Buffers will be stored in directory specified in --outputDir (implicitly to 'dump' in stream directory). 
-        Option may be used with --clOmitReadOnlyObjects
-    - Name: omitReadOnlyObjects
-      Type: bool
-      Default: false
-      Arguments: [clOmitReadOnlyObjects]
-      Description: Omits dumping for objects created with CL_MEM_READ_ONLY. Takes
-        effect  only when --clCaptureReads or --clCaptureKernels is used.
-    - Name: dumpLayoutOnly
-      Type: bool
-      Default: false
-      Arguments: [clDumpLayoutOnly]
-      Description: Omits dumping injected buffers and images. Only layout.json file  with
-        structure of expected dumps. Takes effect only when --clCaptureKernels is
-        used.
-    - Name: injectBufferResetAfterCreate
-      Type: bool
-      Default: false
-      Arguments: [clInjectBufferResetAfterCreate]
-      Description: Nullifies Buffer, Image, USM and SVM memory regions immediately
-        after their  creation to produce deterministic results when verifying buffers.
-    - Name: disableNullIndirectPointersInBuffer
-      Type: bool
-      Default: false
-    - Name: noOpenCL
-      Type: bool
-      Default: false
-      Arguments: [noOpenCL]
-      Platform: [WINDOWS, X11]
-      Description: Do not initialize OpenCL subsystem. This will cause GITS to crash
-        in case OpenCL is actually used by the stream.
-    - Name: aubSignaturesCL
-      Type: bool
-      Default: false
-      Arguments: [aubSignaturesCL]
-      Description: Append signatures at the end of each mem object. Currently has
-        to be used with --clInjectBufferResetAfterCreate.
-  - Name: Recorder
+      - Name: Shared
+        Type: Group
+        Options:
+          - Name: forceGLVersion
+            Type: std::string
+            Default: ""
+          - Name: forceGLVersionMajor
+            Type: uint32_t
+            Default: ""
+            Accessibility: ArgumentOnly
+            Arguments: [forceGLVersionMajor]
+            Description: Forces OpenGL version major number.
+          - Name: forceGLVersionMinor
+            Type: uint32_t
+            Default: ""
+            Accessibility: ArgumentOnly
+            Arguments: [forceGLVersionMinor]
+            Description: Forces OpenGL version minor number.
+          - Name: traceGLError
+            Type: bool
+            Default: false
+            Arguments: [traceGLError]
+            Description:
+              If specified, glGetError will be called for each gl call and errors
+              will be logged.
+      - Name: Player
+        Type: Group
+        Options:
+          - Name: forceGLProfile
+            Type: GLProfile
+            Default: NONE
+            Arguments: [forceGLProfile]
+            Description:
+              "Forces OpenGL Profile:  COMPAT, CORE or ES. This option
+              may cause a crash if API used in stream or shaders does not match selected
+              profile."
+          - Name: forceGLNativeAPI
+            Type: GLNativeApi
+            Default: NONE
+            Arguments: [forceGLNativeAPI]
+            Description: "Forces OpenGL native API: EGL, GLX or WGL."
+            LongDescription:
+              "Forces OpenGL native API: EGL, GLX or WGL. Option useful
+              on OS/driver configurations where multiple native APIs are available. For
+              instance some intel drivers support EGL and WGL on Windows. In this case it
+              allows to run for example stream from application using WGL through EGL."
+          - Name: skipQueries
+            Type: bool
+            Default: false
+            Arguments: [skipQueries]
+            Description:
+              "Do not call any Query related functions (glBeginQuery, etc).
+              WARNING: This may corrupt the rendering."
+          - Name: scaleFactor
+            Type: float
+            Default: 1.0
+            Arguments: [scaleFactor]
+            Description:
+              "Rendering will be scaled by specified factor. WARNING: This
+              may produce corrupted rendering in some cases."
+          - Name: captureFramesHashes
+            Type: bool
+            Default: false
+            Arguments: [captureFramesHashes]
+            Description:
+              Modifies captureFrames option to just print image hash instead
+              of frame dumping.
+          - Name: dontForceBackBufferGL
+            Type: bool
+            Default: false
+            Arguments: [dontForceBackBufferGL]
+            Description:
+              "For OpenGL: modifies --captureFrames, --captureReadPixels,
+              --captureFinishFrame, --captureFlushFrame, --captureBindFboFrame options to
+              dump currently bound framebuffer"
+            LongDescription: >
+              When OpenGL API is used this option modifies --captureFrames, --captureReadPixels,
+              --captureFinishFrame, --captureFlushFrame, --captureBindFboFrame options by
+              letting player dump currently bound framebuffer (by default these options
+              force player to dump back buffer contents).
+          - Name: captureWholeWindow
+            Type: bool
+            Default: false
+            Arguments: [captureWholeWindow]
+            Description:
+              Causes '--captureFrames' to capture whole current window instead
+              of current viewport.
+          - Name: capture2DTexs
+            Type: BitRange
+            Default: "-"
+            Arguments: [capture2DTexs]
+            Description: List of glTexImage2D API calls, ordered by execution time.
+            LongDescription: |
+              List of glTexImage2D API calls, ordered by execution time, specified as single string without spaces of following format: 
+              * texs_list = element | texs_list, element
+              * element = Number | Begin-End | Begin-End:Step 
+              Captured textures name format is: tex2D_<texture object>_<texture load number>.png
+          - Name: captureDraws2DTexs
+            Type: BitRange
+            Default: "-"
+            Arguments: [captureDraws2DTexs]
+            Description: List of drawcalls specified as single string without spaces
+            LongDescription: |
+              List of drawcalls specified as single string without spaces of following format: 
+              * draw_list = element | draw_list, '','', element
+              * element = Number | Begin-End | Begin-End:Step 
+              Captured textures name format is: draw<drawcall number>_unit<unitnumber>_tex<texture load number>.png'
+          - Name: captureDraws
+            Type: BitRange
+            Default: "-"
+            Arguments: [captureDraws]
+            Description: List of draws that will be captured during playback.
+            LongDescription: |
+              List of drawcall numbers that will be captured by gits during playback. 
+              Specified as single string without spaces of following format:
+                * pattern = draw_list | draw_list/Repeat-Count  
+                * draw_list = element | draw_list,',', element  
+                * element = Number | Begin-End | Begin-End:Step
+          - Name: captureDrawsPre
+            Type: bool
+            Default: false
+            Arguments: [captureDrawsPre]
+            Description:
+              Causes 'captureDraws' to capture drawbuffer content not only after
+              specified drawcall, but also before it.
+          - Name: captureFinishFrame
+            Type: BitRange
+            Default: "-"
+            Arguments: [captureFinishFrame]
+            Description:
+              Capture framebuffer content on glFinish (the same numbering
+              as captureFrames option).
+          - Name: captureReadPixels
+            Type: BitRange
+            Default: "-"
+            Arguments: [captureReadPixels]
+            Description:
+              Capture framebuffer content on glReadPixels (the same numbering
+              as captureFrames option).
+          - Name: captureFlushFrame
+            Type: BitRange
+            Default: "-"
+            Arguments: [captureFlushFrame]
+            Description:
+              Capture framebuffer content on glFlush (the same numbering as captureFrames
+              option).
+          - Name: captureBindFboFrame
+            Type: BitRange
+            Default: "-"
+            Arguments: [captureBindFboFrame]
+            Description:
+              Capture framebuffer content on glBindFramebuffer (the same numbering
+              as captureFrames option).
+          - Name: keepDraws
+            Type: BitRange
+            Default: all
+            Arguments: [keepDraws]
+            Description: List of drawcall numbers to be executed by gits during playback.
+            LongDescription: |
+              List of drawcall numbers to be executed by gits during playback.
+              Rest of drawcalls won''t be executed. Specified as single string without spaces of following format:
+              * pattern = draw_list | draw_list/Repeat-Count  
+              * draw_list = element | draw_list, element
+              * element = Number | Begin-End | Begin-End:Step
+          - Name: keepFrames
+            Type: BitRange
+            Default: all
+            Arguments: [keepFrames]
+            Description: List of frames whose draw calls should be played back.
+            LongDescription:
+              List of frames whose draw calls should be played back. All
+              drawcalls outside specified range will be skipped. Uses the same format as
+              other frame specifications. Defaults to 'all frames'.
+          - Name: minimalConfig
+            Type: bool
+            Default: false
+            Arguments: [minimalConfig]
+            Description:
+              Removes most pixel attributes from EGL and WGL pixel format
+              selection. This allows player to use pixel formats that are slightly different
+              from the ones used in recorder, but still compatible with them.
+            LongDescription:
+              When selecting a pixel format in EGL or WGL, this option causes
+              most pixel format attributes to be removed; only the essential ones are preserved.
+              This allows player to use pixel formats that are slightly different from the
+              ones used in recorder, but still compatible with them. This option is useful
+              when a stream recorded on one platform is being replayed on another platform.
+              Without it, some unimportant attribute mismatch could cause the driver to
+              return no usable pixel formats.
+          - Name: traceGitsInternal
+            Type: bool
+            Default: false
+            Arguments: [traceGitsInternal]
+            Description: Print additional calls generated by Gits internally when `LogLevel=TRACEVERBOSE`.
+            LongDescription:
+              Causes --logLevel TRACEVERBOSE to print additional calls generated
+              by Gits internally.
+          - Name: linkGetProgBinary
+            Type: bool
+            Default: false
+            Arguments: [linkGetProgBinary]
+            Description:
+              After each link program query resulting program binary and store
+              it in files for future use.
+          - Name: linkUseProgBinary
+            Type: bool
+            Default: false
+            Arguments: [linkUseProgBinary]
+            Description: Instead of linking a program source them from binary files.
+          - Name: affectViewport
+            Type: bool
+            Default: ""
+            Accessibility: Derived
+            Description:
+              "Causes certain other options to affect only a viewports specified
+              with 'width,height' dimmensions. This option has influence on following
+              options: forceScissor, forceWindowSize."
+          - Name: affectedViewport
+            Type: std::vector<int>
+            Default: []
+            Arguments: [affectViewport]
+          - Name: traceGLBufferHashes
+            Type: BitRange
+            Default: "-"
+            Arguments: [traceGLBufferHashes]
+            Description:
+              Together with --loglevel TRACEVERBOSE causes additional info
+              to be printed in the form of buffer objects hashes used for specified draw-call
+              execution. inspecting current VAO state - enabled attributes and element array
+              buffer binding
+          - Name: forceNoMSAA
+            Type: bool
+            Default: false
+            Arguments: [forceNoMSAA]
+            Description:
+              Force pixelformat to not use multisampling. Renderbuffers are forced
+              to 0 sampels. Multisampled textures are not supported by this option. If multisampled
+              textures are used, GITS will abort the stream.
+          - Name: destroyContextsOnExit
+            Type: bool
+            Default: false
+            Arguments: [destroyContextsOnExit]
+            Description:
+              Playing additional API calls in the end of the stream to delete
+              all existing contexts.
+          - Name: forceWaylandWindow
+            Type: bool
+            Default: ""
+            Accessibility: ArgumentOnly
+            Arguments: [forceWaylandWindow]
+            OSVisibility: [X11]
+            Description: Forces using Wayland windows instead of X11.
+      - Name: Recorder
+        Type: Group
+        Options:
+          - Name: mode
+            Type: OpenGLRecorderMode
+            Default: All
+          - Name: All
+            Type: Group
+            Options:
+              - Name: exitFrame
+                Type: uint32_t
+                Default: 1000000
+              - Name: exitDeleteContext
+                Type: uint32_t
+                Default: 0
+          - Name: Frames
+            Type: Group
+            Options:
+              - Name: startFrame
+                Type: uint32_t
+                Default: 1
+              - Name: stopFrame
+                Type: uint32_t
+                Default: 1000000
+              - Name: startKeysStr
+                Type: std::vector<std::string>
+                Default: []
+                ConfigName: startKeys
+              - Name: startKeys
+                Type: std::vector<uint32_t>
+                Default: []
+                Accessibility: Derived
+              - Name: FrameSeparators
+                Type: Group
+                Options:
+                  - Name: glFinishSep
+                    Type: bool
+                    Default: false
+                    ConfigName: glFinish
+                  - Name: glFlushSep
+                    Type: bool
+                    Default: false
+                    ConfigName: glFlush
+          - Name: OglSingleDraw
+            Type: Group
+            Options:
+              - Name: number
+                Type: uint32_t
+                Default: 1
+          - Name: OglDrawsRange
+            Type: Group
+            Options:
+              - Name: startDraw
+                Type: uint32_t
+                Default: 1
+              - Name: stopDraw
+                Type: uint32_t
+                Default: 100000
+              - Name: frame
+                Type: uint32_t
+                Default: 0
+          - Name: dumpScreenshots
+            Type: BitRange
+            Default: "-"
+          - Name: dumpDrawsFromFrames
+            Type: BitRange
+            Default: "-"
+          - Name: suppressExtensions
+            Type: std::vector<std::string>
+            Default:
+              - GL_ARB_get_program_binary
+          - Name: suppressProgramBinary
+            Type: bool
+            Default: true
+          - Name: endFrameSleep
+            Type: uint32_t
+            Default: 0
+            Arguments: [endFrameSleep]
+            Description: Sleep this many milliseconds after a swap.
+          - Name: restoreDefaultFB
+            Type: bool
+            Default: true
+          - Name: doNotRemoveWin
+            Type: bool
+            Default: false
+            ConfigName: doNotRemoveWindow
+          - Name: multiApiProtectBypass
+            Type: bool
+            Default: false
+          - Name: carrayMemCmpType
+            Type: uint32_t
+            Default: 1
+            ConfigName: cArrayMemCmpType
+          - Name: stripIndicesValues
+            Type: uint32_t
+            Default: 4294967295
+            NumericFormat: Hexadecimal
+          - Name: optimizeBufferSize
+            Type: bool
+            Default: true
+          - Name: retryFunctionLoads
+            Type: bool
+            Default: true
+          - Name: detectRecursion
+            Type: bool
+            Default: true
+          - Name: buffersState
+            Type: BuffersState
+            Default: Mixed
+          - Name: texturesState
+            Type: TexturesState
+            Default: Mixed
+          - Name: coherentMapUpdatePerFrame
+            Type: bool
+            Default: true
+          - Name: bufferMapAccessMask
+            Type: uint32_t
+            Default: 4294967283
+            NumericFormat: Hexadecimal
+          - Name: bufferStorageFlagsMask
+            Type: uint32_t
+            Default: 1
+          - Name: coherentMapBehaviorWA
+            Type: bool
+            Default: false
+          - Name: schedulefboEXTAsCoreWA
+            Type: bool
+            Default: false
+            ConfigName: scheduleFboEXTAsCoreWA
+            OSVisibility: [WINDOWS]
+          - Name: useGlGetTexImageAndRestoreBuffersWhenPossibleES
+            Type: bool
+            Default: true
+            OSVisibility: [WINDOWS]
+          - Name: trackTextureBindingWA
+            Type: bool
+            Default: false
+            OSVisibility: [WINDOWS]
+          - Name: forceBuffersStateCaptureAlwaysWA
+            Type: bool
+            Default: false
+            OSVisibility: [WINDOWS]
+          - Name: restoreIndexedTexturesWA
+            Type: bool
+            Default: false
+            OSVisibility: [WINDOWS]
+          - Name: mtDriverWA
+            Type: bool
+            Default: true
+            ConfigName: mTDriverWA
+            OSVisibility: [WINDOWS]
+          - Name: ccodeRangesWA
+            Type: bool
+            Default: false
+            ConfigName: cCodeRangesWA
+  - Name: Vulkan
     Type: Group
     Options:
-    - Name: mode
-      Type: OpenCLRecorderMode
-      Default: All
-    - Name: OclSingleKernel
-      Type: Group
-      Options:
-      - Name: number
-        Type: uint32_t
-        Default: 1
-    - Name: OclKernelsRange
-      Type: Group
-      Options:
-      - Name: startKernel
-        Type: uint32_t
-        Default: 1
-      - Name: stopKernel
-        Type: uint32_t
-        Default: 10
-      ConfigName: oclKernelsRange
-    - Name: dumpKernels
-      Type: BitRange
-      Default: '-'
-    - Name: dumpImages
-      Type: bool
-      Default: false
-    - Name: omitReadOnlyObjects
-      Type: bool
-      Default: false
-    - Name: bufferResetAfterCreate
-      Type: bool
-      Default: false
-    - Name: nullIndirectPointersInBuffer
-      Type: bool
-      Default: true
-- Name: LevelZero
-  InstanceName: levelzero
-  Type: Group
-  Options:
-  - Name: Player
+      - Name: Shared
+        Type: Group
+        Options:
+          - Name: suppressPhysicalDeviceFeatures
+            Type: std::vector<std::string>
+            Default: []
+            Arguments: [suppressVKDeviceFeatures]
+            Description:
+              Disable physical device features during logical device creation.
+              Option accepts list of comma (,) separated names of physical device features
+              (as specified in the VkPhysicalDeviceFeatures structure definition).
+          - Name: suppressExtensions
+            Type: std::vector<std::string>
+            Default:
+              - VK_EXT_debug_marker
+              - VK_EXT_shader_module_identifier
+            Arguments: [suppressVKExtensions]
+            Description:
+              Disable extensions during instance and/or logical device creation.
+              Option accepts list of comma (,) separated names of extensions.
+          - Name: suppressLayers
+            Type: std::vector<std::string>
+            Default: []
+            Arguments: [suppressVKLayers]
+            Description:
+              Disable layers during instance and/or logical device creation.
+              Option accepts list of comma (,) separated names of layers.
+      - Name: Player
+        Type: Group
+        Options:
+          - Name: exitOnVkQueueSubmitFail
+            Type: bool
+            Default: false
+            Arguments: [exitOnVkQueueSubmitFail]
+            Description: Stop playback when vkQueueSubmit returns error value.
+          - Name: captureVulkanSubmits
+            Type: BitRange
+            Default: "-"
+            Arguments: [captureVulkanSubmits]
+            Description:
+              List of Vulkan queue submits, whose render passes will be captured
+              by gits during playback.
+            LongDescription: |
+              List of Vulkan queue submits, whose render passes will be captured by gits during playback. 
+              Render targets from all render passes will be dumped per command buffer after submission, so each command buffer is executed in a separate queue submit. 
+              Specified as single string without spaces of following format:  
+              * pattern = cmdBuff_list | cmdBuff_list/Repeat-Count
+              * cmdBuff_list = element | cmdBuff_list, ',', element
+              * element = Frame | Begin-End | Begin-End:Step
+          - Name: captureVulkanSubmitsResources
+            Type: BitRange
+            Default: "-"
+            Arguments: [captureVulkanSubmitsResources]
+            Description:
+              List of Vulkan queue submits, whose storage buffers, storage images,
+              destination buffers and destination textures will be captured by gits during
+              playback.
+            LongDescription: |
+              List of Vulkan queue submits, whose storage buffers, storage images, destination buffers and destination textures will be captured by gits during playback.
+              Resources will be dumped per command buffer after submission, so each command buffer is executed in a separate queue submit. 
+              Specified as single string without spaces of following format:
+              * pattern = cmdBuff_list | cmdBuff_list/Repeat-Count
+              * cmdBuff_list = element | cmdBuff_list, ',', element
+              * element = Frame | Begin-End | Begin-End:Step
+          - Name: captureVulkanSubmitsGroupType
+            Type: CaptureGroupType
+            Default: CmdBuffer
+            Arguments: [captureVulkanSubmitsGroupType]
+            Description: "Set Group Type for captureVulkanSubmits: CmdBuffer, RenderPass"
+            LongDescription: |
+              Set Group Type for captureVulkanSubmits:
+              * CmdBuffer - default; creating list of textures from renderpasses and dumping (each texture aredumped only once)
+              * RenderPass - dumping textures per each renderpass (if renderpasses use the same images for some render targets then each image may be dumped several times)
+          - Name: captureVulkanRenderPasses
+            Type: VulkanObjectRange
+            Default: ""
+            Arguments: [captureVulkanRenderPasses]
+            Description:
+              "List of Vulkan render passes, whose attachments will be captured
+              during playback. The format consists of a hierarchy of numbers:
+              #queue_submit/#command_buffer_batch/#command_buffer/#render_pass_range.
+              Each number can be a single number, a list and/or a range: 1-3,4,6-10:2 ==>
+              1,2,3,4,6,8,10."
+            LongDescription: |
+              List of Vulkan render passes, whose attachments will be captured during playback. 
+              The format consists of a hierarchy of numbers: 
+              > queue_submit_number/command_buffer_batch_number/command_buffer_number/render_pass_range
+              which can be adapted. 
+              User may omit elements, starting from the rightmost (e.g. omit  renderpass number and use the  queue_submit_number/command_buffer_batch_number/command_buffer_number form or even omit  everything except the queue submit number). 
+              Additionally the rightmost number may be replaced with an elemspec (creating a  number/number/number/elemspec form or even a form consisting of just a single  elemspec specifying queues).
+              Example elemspecs:
+              * '1/2/3/4' specifies queue submit number 1, command\buffer batch number 2, commandbuffer number 3, render pass number 4
+              * '3,5-10' specifies queue submit number 3 and queue submits from 5 to 10 (it's actually a normal elemspec)
+              * '7/2/1-20,30,40-50:2' specifies queue submit number 7, command buffer batch 2, command buffers from 1 to 20, command buffer 30 and even numbered command buffers between 40 and 50 (all ranges are inclusive).
+          - Name: captureVulkanRenderPassesResources
+            Type: VulkanObjectRange
+            Default: ""
+            Arguments: [captureVulkanRenderPassesResources]
+            Description: List of Vulkan render passes, whose storage buffers, storage images, destination buffers and destination textures be captured during playback.
+            LongDescription: |
+              List of Vulkan render passes, whose storage buffers, storage images, destination buffers and destination textures be captured during playback.
+              The format consists of a hierarchy of numbers:\n queue_submit_number/command_buffer_batch_number/command_buffer_number/render_pass_range which can be adapted. 
+              User may omit elements, starting from the rightmost (e.g. omit renderpass number and use the queue_submit_number/command_buffer_batch_number/command_buffer_number form or even omit everything except the queue submit number). 
+              Additionally the rightmost number may be replaced with an elemspec (creating a number/number/number/elemspec form or even a form consisting of just a single elemspec specifying queues).
+              Example elemspecs:
+              * '1/2/3/4' specifies queue submit number 1, command buffer batch number 2, commandbuffer number 3, render pass number 4
+              * '3,5-10' specifies queue submit number 3 and queue submits from 5 to 10 (it's actually a normal elemspec)
+              * '7/2/1-20,30,40-50:2' specifies queue submit number 7, command buffer batch 2, command buffers from 1 to 20, command buffer 30 and even numbered command buffers between 40 and 50 (all ranges are inclusive).
+          - Name: captureVulkanDraws
+            Type: VulkanObjectRange
+            Default: ""
+            Arguments: [captureVulkanDraws]
+            Description:
+              List of Vulkan draws, whose render pass attachments will be captured
+              during playback.
+            LongDescription: |
+              List of Vulkan draws, whose render pass attachments will be captured during playback.
+              The format consists of a hierarchy of numbers:
+              > queue_submit_number/command_buffer_batch_number/command_buffer_number/render_pass_number/draws_range 
+              which can be adapted. 
+              User may omit elements, starting from the rightmost (e.g. omit draw number and use the queue_submit_number/command_buffer_batch_number/command_buffer_number/render_pass_number form or even omit everything except the queue submit number). 
+              Additionally the rightmost number may be replaced with an elemspec (creating a number/number/number/number/elemspec form or even a form consisting of just a single elemspec specifying queues).
+              Example elemspecs:
+              * '1/2/3/4' specifies queue submit number 1, command buffer batch number 2, commandbuffer number 3, render pass number 4,
+              * '3,5-10' specifies queue submit number 3 and queue submits from 5 to 10 (it's actually a normal elemspec),
+              * '7/2/1-20,30,40-50:2' specifies queue submit number 7, command buffer batch 2, command buffers from 1 to 20, command buffer 30 and even numbered command buffers between 40 and 50 (all ranges are inclusive).
+          - Name: captureVulkanResources
+            Type: VulkanObjectRange
+            Default: ""
+            Arguments: [captureVulkanResources]
+            Description:
+              List of Vulkan draws, blits, dispatches, whose storage buffers,
+              storage images, destination buffers and destination textures be captured during
+              playback.
+            LongDescription: |
+              List of Vulkan draws, blits, dispatches, whose storage buffers, storage images, destination buffers and destination textures be captured during playback.
+              The format consists of a hierarchy of numbers:queue_submit_number/command_buffer_batch_number/command_buffer_number which can be adapted. 
+              User may omit elements, starting from the rightmost (e.g. omit command buffer number and use the queue_submit_number/command_buffer_batch_number form or even omit everything except the queue submit number). 
+              Additionally the rightmost number may be replaced with an elemspec (creating a number/number/number/elemspec form or even a form consisting of just a single elemspec specifying queues).
+              Example elemspecs:
+               * '1/2/3/4' specifies queue submit number 1, command buffer batch number 2, commandbuffer number 3, render pass number 4,
+               * '3,5-10' specifies queue submit number 3 and queue submits from 5 to 10 (it's actually a normal elemspec),
+               * '7/2/1-20,30,40-50:2' specifies queue submit number 7, command buffer batch 2, command buffers from 1 to 20, command buffer 30 and even numbered command buffers between 40 and 50 (all ranges are inclusive).
+          - Name: skipNonDeterministicImages
+            Type: bool
+            Default: false
+            Arguments: [skipNonDeterministicImages]
+            Description: Skip images with potential corruptions. Use only with --captureVulkanSubmits.
+          - Name: ignoreVKCrossPlatformIncompatibilitiesWA
+            Type: bool
+            Default: false
+            Arguments: [ignoreVKCrossPlatformIncompatibilitiesWA]
+            Description:
+              Forces stream to continue playback even if platform's properties
+              are not compatible with recorded parameters.
+          - Name: waitAfterQueueSubmitWA
+            Type: bool
+            Default: false
+            Arguments: [waitAfterQueueSubmitWA]
+            Description: Vulkan specific option. This WA calls vkQueueWaitIdle after vkQueueSubmit.
+          - Name: traceVKShaderHashes
+            Type: bool
+            Default: false
+            Arguments: [traceVKShaderHashes]
+            Description:
+              Prints information about shader hashes in gits output (log).  To
+              match with drawing commands, use this option together with --logLevel TRACE.
+          - Name: maxAllowedVkSwapchainRewinds
+            Type: uint32_t
+            Default: 100
+            Arguments: [maxAllowedVkSwapchainRewinds]
+            Description:
+              Vulkan specific option. Changes the number of maximum allowed Vulkan
+              swapchain rewinds (defaults to 100).
+          - Name: overrideVKPipelineCache
+            Type: std::filesystem::path
+            Default: ""
+            Arguments: [overrideVKPipelineCache]
+            Description:
+              Overrides all pipeline cache uses with a single, global pipeline
+              cache object. Initial and final data is loaded from and stored in a specified
+              file.
+          - Name: oneVulkanDrawPerCommandBuffer
+            Type: bool
+            Default: false
+            Arguments: [oneVulkanDrawPerCommandBuffer]
+            Description:
+              Force to split command buffers. Each draw will  be executed in
+              separate command buffer. It affects performance.
+          - Name: oneVulkanRenderPassPerCommandBuffer
+            Type: bool
+            Default: false
+            Arguments: [oneVulkanRenderPassPerCommandBuffer]
+            Description:
+              Force to split command buffers. Each render pass will  be executed
+              in separate command buffer. It affects performance.
+          - Name: vulkanForcedPhysicalDeviceIndex
+            Type: uint32_t
+            Default: 0
+            Arguments: [useVKPhysicalDeviceIndex]
+            Description:
+              Forces selected physical device index to be used for logical device
+              creation.
+            ConfigName: forcedPhysicalDeviceIndex
+          - Name: vulkanForcedPhysicalDeviceName
+            Type: std::string
+            Default: ""
+            Arguments: [useVKPhysicalDeviceName]
+            Description:
+              Forces physical device with a given name to be used for logical
+              device creation.
+            ConfigName: forcedPhysicalDeviceName
+          - Name: vulkanForcedPhysicalDeviceType
+            Type: DeviceType
+            Default: any
+            Arguments: [useVKPhysicalDeviceType]
+            Description:
+              Forces integrated or discrete physical device to be used for logical
+              device creation.
+            ConfigName: forcedPhysicalDeviceType
+          - Name: printStateRestoreLogsVk
+            Type: bool
+            Default: false
+            Arguments: [printStateRestoreLogsVk]
+            Description: Log state restore phases and their duration in Vulkan workloads.
+          - Name: printMemUsageVk
+            Type: bool
+            Default: false
+            Arguments: [printMemUsageVk]
+            Description:
+              Log memory usage in Vulkan workloads (on vkAllocateMemory, vkFreeMemory,
+              vkMapMemory  API calls.
+          - Name: forceMultithreadedPipelineCompilation
+            Type: bool
+            Default: false
+            Arguments: [forceMultithreadedPipelineCompilation]
+            Description:
+              Forces pipeline objects to be created concurrently on multiple
+              threads.
+          - Name: execCmdBuffsBeforeQueueSubmit
+            Type: bool
+            Default: false
+            Arguments: [execCmdBuffsBeforeQueueSubmit]
+            Description:
+              Executing commandBuffers operation just before QueueSubmit, instead
+              of doing that in the same way as app/benchmark/game.
+          - Name: patchShaderGroupHandles
+            Type: bool
+            Default: true
+          - Name: disableShaderGroupHandlesPatching
+            Type: bool
+            Default: false
+            Accessibility: ArgumentOnly
+            Arguments: [disableShaderGroupHandlesPatching]
+            Description:
+              Vulkan specific option. Forces shader group handles patching in
+              Shader Binding Tables  to be disabled during playback.
+            LongDescription:
+              Vulkan specific option. Forces shader group handles patching
+              in Shader Binding Tables to be  disabled during playback. The patching mechanism
+              injects a compute shader before ray  tracing commands which updates shader
+              group handles, potentially improving cross-platform  compatiblity of streams.
+              When patching is disabled, a stream replay uses capture/replay  features,
+              if they were enabled during recording (depending on a config option), or just  replays
+              the stream as is.
+          - Name: renderDocCaptureFrames
+            Type: BitRange
+            Default: "-"
+            Accessibility: ArgumentOnly
+            Arguments: [renderDocCaptureFrames]
+            Description: Range of frames that will be captured by RenderDoc during playback.
+            LongDescription: |
+              Range of frames that will be captured by RenderDoc during playback.
+              Specified as string of following format:
+              * --renderDocCaptureFrames frameNumber
+              * --renderDocCaptureFrames beginFrame-endFrame
+              Captures will be saved in the stream folder. Option cannot be combined with option 'renderDocCaptureVKSubmits'
+          - Name: renderDocCaptureVKSubmits
+            Type: BitRange
+            Default: "-"
+            Accessibility: ArgumentOnly
+            Arguments: [renderDocCaptureVKSubmits]
+            Description:
+              Range of queue submits that will be captured by RenderDoc during
+              playback.
+            LongDescription: |
+              Range of queue submits that will be captured by RenderDoc during playback. 
+              Specified as string of following format:
+                * --renderDocCaptureVKSubmits queueSubmit
+                * --renderDocCaptureVKSubmits beginQueueSubmit-endQueueSubmit
+              Captures will be saved in the stream folder. Option cannot be combined with option 'renderDocCaptureFrames'.
+          - Name: RenderDoc
+            Type: Group
+            Options:
+              - Name: mode
+                Type: VkRenderDocCaptureMode
+                Default: None
+              - Name: captureRange
+                Type: BitRange
+                Default: "-"
+                ConfigName: range
+              - Name: dllPath
+                Type: std::filesystem::path
+                Default: ""
+                Accessibility: ArgumentOnly
+                Arguments: [renderDocDllPath]
+                Description:
+                  By default, RenderDoc is found automatically, and this option
+                  is not necessary. However, if RenderDoc cannot be found, use this option
+                  to specify renderdoc.dll path.
+              - Name: continuousCapture
+                Type: bool
+                Default: false
+                Arguments: [renderDocContinuousCapture]
+                Description:
+                  Option must be combined with 'renderDocCaptureFrames' or 'renderDocCaptureVKSubmits'.
+                  Range of frames or queue submits specified by those options will be dumped
+                  into one file instead of separate files.
+              - Name: enableUI
+                Type: bool
+                Default: false
+                Arguments: [renderDocEnableUI]
+                Description:
+                  Option must be combined with 'renderDocCaptureFrames' or 'renderDocCaptureVKSubmits'.
+                  Opens RenderDoc with recorded captures. Captures are not saved by default
+                  but can be saved via RenderDoc UI.
+      - Name: Recorder
+        Type: Group
+        Options:
+          - Name: mode
+            Type: VulkanRecorderMode
+            Default: All
+          - Name: All
+            Type: Group
+            Options:
+              - Name: exitFrame
+                Type: uint32_t
+                Default: 1000000
+          - Name: Frames
+            Type: Group
+            Options:
+              - Name: startFrame
+                Type: uint32_t
+                Default: 1
+              - Name: stopFrame
+                Type: uint32_t
+                Default: 1000000
+              - Name: startKeysStr
+                Type: std::vector<std::string>
+                Default: []
+                ConfigName: StartKeys
+              - Name: startKeys
+                Type: std::vector<uint32_t>
+                Default: []
+                Accessibility: Derived
+          - Name: QueueSubmit
+            Type: Group
+            Options:
+              - Name: queueSubmitStr
+                Type: std::string
+                Default: 1
+                ConfigName: Number
+          - Name: CommandBuffersRange
+            Type: Group
+            Options:
+              - Name: commandBuffersRangeStr
+                Type: std::string
+                Default: 1/0/0
+                ConfigName: Range
+          - Name: RenderPassRange
+            Type: Group
+            Options:
+              - Name: renderPassRangeStr
+                Type: std::string
+                Default: 1/0/0/0
+                ConfigName: Range
+          - Name: DrawsRange
+            Type: Group
+            Options:
+              - Name: drawsRangeStr
+                Type: std::string
+                Default: 1/0/0/0/0
+                ConfigName: Range
+          - Name: DispatchRange
+            Type: Group
+            Options:
+              - Name: dispatchRangeStr
+                Type: std::string
+                Default: 1/0/0/0
+                ConfigName: Range
+          - Name: BlitRange
+            Type: Group
+            Options:
+              - Name: blitRangeStr
+                Type: std::string
+                Default: 1/0/0/0
+                ConfigName: Range
+          - Name: ObjRange
+            Type: Group
+            Accessibility: Derived
+            Options:
+              - Name: rangeSpecial
+                Type: VulkanObjectRange
+                Default: ""
+                Accessibility: Derived
+          - Name: dumpScreenshots
+            Type: BitRange
+            Default: "-"
+          - Name: dumpSubmits
+            Type: BitRange
+            Default: "-"
+          - Name: traceVkStructs
+            Type: bool
+            Default: true
+            Arguments: [traceVKStructs]
+            Description: "[DEPRECATED] Legacy equivalent of the --traceData vkStructs option."
+            ConfigName: traceVKStructs
+          - Name: memorySegmentSize
+            Type: uint32_t
+            Default: 512
+          - Name: shadowMemory
+            Type: bool
+            Default: ""
+            Accessibility: Derived
+          - Name: memoryAccessDetection
+            Type: bool
+            Default: ""
+            Accessibility: Derived
+          - Name: writeWatchDetection
+            Type: bool
+            Default: ""
+            Accessibility: Derived
+          - Name: memoryTrackingMode
+            Type: MemoryTrackingMode
+            Default: FullMemoryDump
+            DefaultsPerPlatform:
+              - win32: External
+          - Name: memoryUpdateState
+            Type: MemoryUpdateState
+            Default: AllMapped
+            DefaultsPerPlatform:
+              - win32: OnlyUsed
+          - Name: forceUniversalRecording
+            Type: bool
+            Default: false
+          - Name: delayFenceChecksCount
+            Type: uint32_t
+            Default: 0
+          - Name: shortenFenceWaitTime
+            Type: uint32_t
+            Default: 0
+          - Name: addImageUsageFlags
+            Type: uint32_t
+            Default: 2
+            NumericFormat: Hexadecimal
+          - Name: addBufferUsageFlags
+            Type: uint32_t
+            Default: 1
+            NumericFormat: Hexadecimal
+          - Name: scheduleCommandBuffersBeforeQueueSubmit
+            Type: bool
+            Default: false
+            ConfigName: scheduleCommandBuffersBeforeQueueSubmitWA
+          - Name: minimalStateRestore
+            Type: bool
+            Default: true
+          - Name: reusableStateRestoreResourcesCount
+            Type: uint32_t
+            Default: 3
+          - Name: reusableStateRestoreBufferSize
+            Type: uint32_t
+            Default: 80
+          - Name: IncreaseImageMemorySizeRequirement
+            Type: MemorySizeRequirementOverride
+            Default: ""
+            Accessibility: Derived
+          - Name: IncreaseImageMemorySizeRequirementGrp
+            Type: Group
+            Default: ""
+            Options:
+              - Name: fixedAmount
+                Type: uint32_t
+                Default: 0
+              - Name: percent
+                Type: uint32_t
+                Default: 0
+            ConfigName: IncreaseImageMemorySizeRequirement
+          - Name: IncreaseAccelerationStructureMemorySizeRequirement
+            Type: Group
+            Accessibility: Derived
+            Options:
+              - Name: accelerationStructureSize
+                Type: MemorySizeRequirementOverride
+                Default: ""
+              - Name: buildScratchSize
+                Type: MemorySizeRequirementOverride
+                Default: ""
+              - Name: updateScratchSize
+                Type: MemorySizeRequirementOverride
+                Default: ""
+          - Name: MemoryOffsetAlignmentOverride
+            Type: Group
+            Options:
+              - Name: images
+                Type: uint32_t
+                Default: 0
+              - Name: buffers
+                Type: uint32_t
+                Default: 0
+              - Name: descriptors
+                Type: uint32_t
+                Default: 0
+          - Name: CrossPlatformStateRestoration
+            Type: Group
+            Options:
+              - Name: images
+                Type: bool
+                Default: true
+              - Name: buffers
+                Type: BufferStateRestoration
+                Default: WithNonHostVisibleMemoryOnly
+          - Name: memoryRestoration
+            Type: MemoryStateRestoration
+            Default: HostVisible
+          - Name: restoreMultisampleImagesWA
+            Type: bool
+            Default: false
+          - Name: maxArraySizeForCCode
+            Type: uint32_t
+            Default: 400
+          - Name: useCaptureReplayFeaturesForBuffersAndAccelerationStructures
+            Type: bool
+            Default: true
+          - Name: useCaptureReplayFeaturesForRayTracingPipelines
+            Type: bool
+            Default: true
+          - Name: useExternalMemoryExtension
+            Type: bool
+            Default: ""
+            Accessibility: Derived
+          - Name: usePresentSrcLayoutTransitionAsAFrameBoundary
+            Type: bool
+            Default: false
+            OSVisibility: [WINDOWS]
+          - Name: renderDocCompatibility
+            Type: bool
+            Default: true
+            OSVisibility: [WINDOWS]
+  - Name: OpenCL
     Type: Group
     Options:
-    - Name: captureImages
-      Type: bool
-      Default: false
-      Arguments: [l0CaptureImages]
-      Platform: [WINDOWS, X11]
-      Description: Capture L0 images. Assume they all are 2D RGBA8 images. option
-        has to be used with --l0CaptureKernels <range>
-      ConfigName: CaptureImages
-    - Name: dumpSpv
-      Type: bool
-      Default: false
-    - Name: captureKernels
-      Type: BitRange
-      Default: -/-/-
-      Accessibility: Derived
-    - Name: captureKernelsStr
-      Type: std::string
-      Default: -/-/-
-      Arguments: [l0CaptureKernels]
-      Description: 'Special option for capturing every single kernel argument. Injects
-        synchronization points and reads for adequate queue mode reads are injected
-        into gits reserved memory space, gits allocated memory last until sync'
-      LongDescription: |
-        Special option for capturing every single kernel argument injects synchronization points and reads for adequate queue mode reads are injected into gits reserved memory space, gits allocated memory last until sync
-        the symantics: 
-        - for kernel dumping: 
-          > QueueSubmitNumberRange/CommandListNumberRange/AppendKernelsRange
-        - for command list dumping: 
-          > QueueSubmitNumberRange/CommandListNumberRange 
-        
-        Note: 
-        - Numeration of kernels is the order of appending the kernel launch call to a command list
-        - Numeration of command lists is the order in which they were created 
-        - Numeration of command queue submit is the queue submit number 
-        - Numeration calls must be specified as a single string without spaces 
-        - As spec says command queue's command lists execution is happening in a fifo manner 
-        - Numeration of Immediate command lists on creation increments number of queue submit and command list
-        
-        Examples: 
-        * '1/2/3-4' specifies queue submit number 1, command list number 2, kernels 3 and 4 
-        * '3,5-10/10,5,12-100' specifies queue submit number 3 and from 5 to 10, dumps command lists number 5, kernel: 10 and from 12 to 100 
-        * '+/+/+' dumps everything , ''+'' sign indicates choosing all of the possible range 
-        * '2/5' dumps 2nd queue submit and every kernel from 5th command list to check numbering, please look at recorders log and make sure log_level is set to at least TRACE 
-        Option may be used with --l0CaptureAfterSubmit to reduce memory used by GITS, in a cost of each kernel buffer verificaiton.
-        Buffers will be stored in directory specified in --outputDir (implicitly to 'dump' in stream directory)'
-      ConfigName: captureKernels
-    - Name: captureCommandLists
-      Type: BitRange
-      Default: '-'
-      Accessibility: Derived
-    - Name: captureCommandQueues
-      Type: BitRange
-      Default: '-'
-      Accessibility: Derived
-    - Name: dumpLayoutOnly
-      Type: bool
-      Default: false
-      Arguments: [l0DumpLayoutOnly]
-      Description: Omits dumping injected buffers and images. Only dumps layout.json
-        file with structure of expected dumps. Takes effect only when --l0CaptureKernels
-        is used.
-    - Name: captureAfterSubmit
-      Type: bool
-      Default: false
-      Arguments: [l0CaptureAfterSubmit]
-      Description: Used with l0CaptureKernels, modifies the way kernel arguments are dumped.
-      LongDescription: Used with l0CaptureKernels, modifies the way kernel arguments are
-        dumped. Injects immediate command lists, reads and synchronization points
-        after queue submit, instead of injecting read after every appendKernel call.
-        This way dumping process is after command queue execution containing N command
-        lists. If kernel argument is overwritten by many kernels, the output buffer
-        will have the value after last executed kernel that used it. All of other
-        same buffers are skipped. Option reduces allocated memory by GITS
-    - Name: captureInputKernels
-      Type: bool
-      Default: false
-      Arguments: [l0CaptureInputKernels]
-      Description: Debug option to dump input kernels. Must be used with l0CaptureKernels.
-    - Name: injectBufferResetAfterCreate
-      Type: bool
-      Default: false
-      Arguments: [l0InjectBufferResetAfterCreate]
-      Description: Nullifies USM Buffer and Image memory regions immediately after
-        their creation to produce deterministic results when verifying buffers.
-    - Name: disableNullIndirectPointersInBuffer
-      Type: bool
-      Default: false
-      Arguments: [l0DisableNullIndirectPointersInBuffer]
-      Description: Disable nullification of indirect pointers inside buffers. Call
-        this option when you want to disable it. GITS l0_gits_indirect_access_pointers_locations
-        extension required.
-    - Name: disableAddressTranslation
-      Type: uint32_t
-      Default: 0
-      Arguments: [l0DisableAddressTranslation]
-      Platform: [WINDOWS, X11]
-      Description: '1: only host addresses; 2: only device addresses; 4: only shared addresses option value is treated as bitfield and might be used in combination.'
-    - Name: omitOriginalAddressCheck
-      Type: bool
-      Default: false
-      Arguments: [l0OmitOriginalAddressCheck]
-      Description: Do not throw when expected address is not equal to originally requested.
-  - Name: Recorder
+      - Name: Player
+        Type: Group
+        Options:
+          - Name: captureImages
+            Type: bool
+            Default: false
+            Arguments: [clCaptureImages]
+            Description:
+              Capture OpenCL images after each clEnqueueReadImage call. Assume
+              they all are 2D RGBA8 images.
+          - Name: removeSourceLengths
+            Type: bool
+            Default: false
+            Arguments: [clRemoveSourceLengths]
+            Description:
+              Removes source lengths. Makes driver assume strings are null-terminated
+              in clCreateProgramWithSource
+          - Name: captureReads
+            Type: bool
+            Default: false
+            Arguments: [clCaptureReads]
+            Description:
+              Enables dumping of CL memory objects to directory specified in
+              --outputDir (implicitly to 'dump' in stream directory). Option may be used
+              with  --clOmitReadOnlyObjects)
+            LongDescription:
+              Enables dumping of CL memory objects to directory specified
+              in --outputDir (implicitly to 'dump' in stream directory). Option may be
+              used with --clOmitReadOnlyObjects
+          - Name: captureKernels
+            Type: BitRange
+            Default: "-"
+            Arguments: [clCaptureKernels]
+            Description:
+              Injects clEnqueueRead*() after specified occurence of NDRange call
+              for each used buffer to allow contents verification.
+            LongDescription: |
+              Injects clEnqueueRead*() after specified occurence of NDRange call for each used buffer to allow contents verification. 
+              Number of NDRange calls must be specified as a single string without spaces of following format:        
+              * num1-num2 ex. 1-7 - will dump buffers used in the range of calls
+              * num1,num2,num3 ex. 2,5,7 - will dump buffers used in specified occurence of NRange calls
+              Approaches may be combined ex. 2-5,14,17 Buffers will be stored in directory specified in --outputDir (implicitly to 'dump' in stream directory). 
+              Option may be used with --clOmitReadOnlyObjects
+          - Name: omitReadOnlyObjects
+            Type: bool
+            Default: false
+            Arguments: [clOmitReadOnlyObjects]
+            Description:
+              Omits dumping for objects created with CL_MEM_READ_ONLY. Takes
+              effect  only when --clCaptureReads or --clCaptureKernels is used.
+          - Name: dumpLayoutOnly
+            Type: bool
+            Default: false
+            Arguments: [clDumpLayoutOnly]
+            Description:
+              Omits dumping injected buffers and images. Only layout.json file  with
+              structure of expected dumps. Takes effect only when --clCaptureKernels is
+              used.
+          - Name: injectBufferResetAfterCreate
+            Type: bool
+            Default: false
+            Arguments: [clInjectBufferResetAfterCreate]
+            Description:
+              Nullifies Buffer, Image, USM and SVM memory regions immediately
+              after their  creation to produce deterministic results when verifying buffers.
+          - Name: disableNullIndirectPointersInBuffer
+            Type: bool
+            Default: false
+          - Name: noOpenCL
+            Type: bool
+            Default: false
+            Arguments: [noOpenCL]
+            Description:
+              Do not initialize OpenCL subsystem. This will cause GITS to crash
+              in case OpenCL is actually used by the stream.
+          - Name: aubSignaturesCL
+            Type: bool
+            Default: false
+            Arguments: [aubSignaturesCL]
+            Description:
+              Append signatures at the end of each mem object. Currently has
+              to be used with --clInjectBufferResetAfterCreate.
+      - Name: Recorder
+        Type: Group
+        Options:
+          - Name: mode
+            Type: OpenCLRecorderMode
+            Default: All
+          - Name: OclSingleKernel
+            Type: Group
+            Options:
+              - Name: number
+                Type: uint32_t
+                Default: 1
+          - Name: OclKernelsRange
+            Type: Group
+            Options:
+              - Name: startKernel
+                Type: uint32_t
+                Default: 1
+              - Name: stopKernel
+                Type: uint32_t
+                Default: 10
+            ConfigName: oclKernelsRange
+          - Name: dumpKernels
+            Type: BitRange
+            Default: "-"
+          - Name: dumpImages
+            Type: bool
+            Default: false
+          - Name: omitReadOnlyObjects
+            Type: bool
+            Default: false
+          - Name: bufferResetAfterCreate
+            Type: bool
+            Default: false
+          - Name: nullIndirectPointersInBuffer
+            Type: bool
+            Default: true
+  - Name: LevelZero
+    InstanceName: levelzero
     Type: Group
     Options:
-    - Name: mode
-      Type: LevelZeroRecorderMode
-      Default: All
-    - Name: Kernel
-      Type: Group
-      Options:
-      - Name: kernelRangeStr
-        Type: std::string
-        Default: 1/1/1
-        ConfigName: Range
-      - Name: startKernel
-        Type: uint32_t
-        Default: ''
-        Accessibility: Derived
-      - Name: stopKernel
-        Type: uint32_t
-        Default: ''
-        Accessibility: Derived
-        ConfigName: range
-      - Name: stopCommandList
-        Type: uint32_t
-        Default: ''
-        Accessibility: Derived
-      - Name: startCommandList
-        Type: uint32_t
-        Default: ''
-        Accessibility: Derived
-      - Name: stopCommandQueueSubmit
-        Type: uint32_t
-        Default: ''
-        Accessibility: Derived
-      - Name: startCommandQueueSubmit
-        Type: uint32_t
-        Default: ''
-        Accessibility: Derived
-      - Name: singleCapture
-        Type: bool
-        Default: ''
-        Accessibility: Derived
-    - Name: dumpKernelsStr
-      Type: std::string
-      Default: -/-/-
-      ConfigName: dumpKernels
-    - Name: captureCommandQueues
-      Type: BitRange
-      Default: '-'
-      Accessibility: Derived
-    - Name: captureKernels
-      Type: BitRange
-      Default: '-'
-      Accessibility: Derived
-    - Name: captureCommandLists
-      Type: BitRange
-      Default: '-'
-      Accessibility: Derived
-    - Name: captureAfterSubmit
-      Type: bool
-      Default: false
-      ConfigName: dumpAfterSubmit
-    - Name: captureImages
-      Type: bool
-      Default: false
-      ConfigName: DumpImages
-    - Name: bufferResetAfterCreate
-      Type: bool
-      Default: false
-    - Name: nullIndirectPointersInBuffer
-      Type: bool
-      Default: true
-    - Name: dumpInputKernels
-      Type: bool
-      Default: false
-    - Name: BruteForceScanForIndirectPointers
-      Type: Group
-      Options:
-      - Name: memoryType
-        Type: uint32_t
-        Default: 0
-      - Name: iterations
-        Type: uint32_t
-        Default: 0
-    - Name: DisableAddressTranslation
-      InstanceName: disableAddressTranslation
-      Type: Group
-      Options:
-      - Name: memoryType
-        Type: uint32_t
-        Default: ''
-      - Name: virtualDeviceMemorySize
-        Type: uint64_t
-        Default: 1099511627776
-      - Name: virtualHostMemorySize
-        Type: uint64_t
-        Default: 1099511627776
-    - Name: dumpLayoutOnly
-      Type: bool
-      Default: false
+      - Name: Player
+        Type: Group
+        Options:
+          - Name: captureImages
+            Type: bool
+            Default: false
+            Arguments: [l0CaptureImages]
+            Description:
+              Capture L0 images. Assume they all are 2D RGBA8 images. option
+              has to be used with --l0CaptureKernels <range>
+            ConfigName: CaptureImages
+          - Name: dumpSpv
+            Type: bool
+            Default: false
+          - Name: captureKernels
+            Type: BitRange
+            Default: -/-/-
+            Accessibility: Derived
+          - Name: captureKernelsStr
+            Type: std::string
+            Default: -/-/-
+            Arguments: [l0CaptureKernels]
+            Description:
+              "Special option for capturing every single kernel argument. Injects
+              synchronization points and reads for adequate queue mode reads are injected
+              into gits reserved memory space, gits allocated memory last until sync"
+            LongDescription: |
+              Special option for capturing every single kernel argument injects synchronization points and reads for adequate queue mode reads are injected into gits reserved memory space, gits allocated memory last until sync
+              the symantics: 
+              - for kernel dumping: 
+                > QueueSubmitNumberRange/CommandListNumberRange/AppendKernelsRange
+              - for command list dumping: 
+                > QueueSubmitNumberRange/CommandListNumberRange 
+
+              Note: 
+              - Numeration of kernels is the order of appending the kernel launch call to a command list
+              - Numeration of command lists is the order in which they were created 
+              - Numeration of command queue submit is the queue submit number 
+              - Numeration calls must be specified as a single string without spaces 
+              - As spec says command queue's command lists execution is happening in a fifo manner 
+              - Numeration of Immediate command lists on creation increments number of queue submit and command list
+
+              Examples: 
+              * '1/2/3-4' specifies queue submit number 1, command list number 2, kernels 3 and 4 
+              * '3,5-10/10,5,12-100' specifies queue submit number 3 and from 5 to 10, dumps command lists number 5, kernel: 10 and from 12 to 100 
+              * '+/+/+' dumps everything , ''+'' sign indicates choosing all of the possible range 
+              * '2/5' dumps 2nd queue submit and every kernel from 5th command list to check numbering, please look at recorders log and make sure log_level is set to at least TRACE 
+              Option may be used with --l0CaptureAfterSubmit to reduce memory used by GITS, in a cost of each kernel buffer verificaiton.
+              Buffers will be stored in directory specified in --outputDir (implicitly to 'dump' in stream directory)'
+            ConfigName: captureKernels
+          - Name: captureCommandLists
+            Type: BitRange
+            Default: "-"
+            Accessibility: Derived
+          - Name: captureCommandQueues
+            Type: BitRange
+            Default: "-"
+            Accessibility: Derived
+          - Name: dumpLayoutOnly
+            Type: bool
+            Default: false
+            Arguments: [l0DumpLayoutOnly]
+            Description:
+              Omits dumping injected buffers and images. Only dumps layout.json
+              file with structure of expected dumps. Takes effect only when --l0CaptureKernels
+              is used.
+          - Name: captureAfterSubmit
+            Type: bool
+            Default: false
+            Arguments: [l0CaptureAfterSubmit]
+            Description: Used with l0CaptureKernels, modifies the way kernel arguments are dumped.
+            LongDescription:
+              Used with l0CaptureKernels, modifies the way kernel arguments are
+              dumped. Injects immediate command lists, reads and synchronization points
+              after queue submit, instead of injecting read after every appendKernel call.
+              This way dumping process is after command queue execution containing N command
+              lists. If kernel argument is overwritten by many kernels, the output buffer
+              will have the value after last executed kernel that used it. All of other
+              same buffers are skipped. Option reduces allocated memory by GITS
+          - Name: captureInputKernels
+            Type: bool
+            Default: false
+            Arguments: [l0CaptureInputKernels]
+            Description: Debug option to dump input kernels. Must be used with l0CaptureKernels.
+          - Name: injectBufferResetAfterCreate
+            Type: bool
+            Default: false
+            Arguments: [l0InjectBufferResetAfterCreate]
+            Description:
+              Nullifies USM Buffer and Image memory regions immediately after
+              their creation to produce deterministic results when verifying buffers.
+          - Name: disableNullIndirectPointersInBuffer
+            Type: bool
+            Default: false
+            Arguments: [l0DisableNullIndirectPointersInBuffer]
+            Description:
+              Disable nullification of indirect pointers inside buffers. Call
+              this option when you want to disable it. GITS l0_gits_indirect_access_pointers_locations
+              extension required.
+          - Name: disableAddressTranslation
+            Type: uint32_t
+            Default: 0
+            Arguments: [l0DisableAddressTranslation]
+            Description: "1: only host addresses; 2: only device addresses; 4: only shared addresses option value is treated as bitfield and might be used in combination."
+          - Name: omitOriginalAddressCheck
+            Type: bool
+            Default: false
+            Arguments: [l0OmitOriginalAddressCheck]
+            Description: Do not throw when expected address is not equal to originally requested.
+      - Name: Recorder
+        Type: Group
+        Options:
+          - Name: mode
+            Type: LevelZeroRecorderMode
+            Default: All
+          - Name: Kernel
+            Type: Group
+            Options:
+              - Name: kernelRangeStr
+                Type: std::string
+                Default: 1/1/1
+                ConfigName: Range
+              - Name: startKernel
+                Type: uint32_t
+                Default: ""
+                Accessibility: Derived
+              - Name: stopKernel
+                Type: uint32_t
+                Default: ""
+                Accessibility: Derived
+                ConfigName: range
+              - Name: stopCommandList
+                Type: uint32_t
+                Default: ""
+                Accessibility: Derived
+              - Name: startCommandList
+                Type: uint32_t
+                Default: ""
+                Accessibility: Derived
+              - Name: stopCommandQueueSubmit
+                Type: uint32_t
+                Default: ""
+                Accessibility: Derived
+              - Name: startCommandQueueSubmit
+                Type: uint32_t
+                Default: ""
+                Accessibility: Derived
+              - Name: singleCapture
+                Type: bool
+                Default: ""
+                Accessibility: Derived
+          - Name: dumpKernelsStr
+            Type: std::string
+            Default: -/-/-
+            ConfigName: dumpKernels
+          - Name: captureCommandQueues
+            Type: BitRange
+            Default: "-"
+            Accessibility: Derived
+          - Name: captureKernels
+            Type: BitRange
+            Default: "-"
+            Accessibility: Derived
+          - Name: captureCommandLists
+            Type: BitRange
+            Default: "-"
+            Accessibility: Derived
+          - Name: captureAfterSubmit
+            Type: bool
+            Default: false
+            ConfigName: dumpAfterSubmit
+          - Name: captureImages
+            Type: bool
+            Default: false
+            ConfigName: DumpImages
+          - Name: bufferResetAfterCreate
+            Type: bool
+            Default: false
+          - Name: nullIndirectPointersInBuffer
+            Type: bool
+            Default: true
+          - Name: dumpInputKernels
+            Type: bool
+            Default: false
+          - Name: BruteForceScanForIndirectPointers
+            Type: Group
+            Options:
+              - Name: memoryType
+                Type: uint32_t
+                Default: 0
+              - Name: iterations
+                Type: uint32_t
+                Default: 0
+          - Name: DisableAddressTranslation
+            InstanceName: disableAddressTranslation
+            Type: Group
+            Options:
+              - Name: memoryType
+                Type: uint32_t
+                Default: ""
+              - Name: virtualDeviceMemorySize
+                Type: uint64_t
+                Default: 1099511627776
+              - Name: virtualHostMemorySize
+                Type: uint64_t
+                Default: 1099511627776
+          - Name: dumpLayoutOnly
+            Type: bool
+            Default: false

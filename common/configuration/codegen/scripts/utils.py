@@ -34,6 +34,28 @@ def extract_last_suffix(s):
     return s
 
 
+def fixUpCapitalizationInstance(name):
+    chars = list(name)
+    for i in range(len(name) - 1, -1, -1):
+        if name[i].isupper():
+            chars[i] = chars[i].lower()
+        else:
+            break
+    return ''.join(chars)
+
+
+def fixCapitalizationName(name):
+    if len(name) > 1:
+        return name[0].upper() + name[1:]
+    return name[0].upper()
+
+
+def get_if_present(node, key, default):
+    if key in node:
+        return node[key]
+    return default
+
+
 def sanitize_struct_name(struct_path, prefix='', suffix=''):
     return prefix + replace_chars(struct_path, '') + suffix
 
