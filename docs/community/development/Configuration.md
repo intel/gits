@@ -27,7 +27,7 @@ The CLI argument(s) for an option are defined in the configuration metafile by t
 Additionally _every_ option (that is not derived) can be set by a _hidden CLI argument_ in the form of a keypath:
 
 ```bash
-gitsPlayer --Common.Player.Fullscreen=true
+gitsPlayer --Common.Player.Fullscreen # it's a flag, so presence ==> true
 ```
 
 ### Environment

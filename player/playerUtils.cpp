@@ -102,17 +102,22 @@ bool ConfigurePlayer(const std::filesystem::path& playerPath, ArgumentParser& ar
         }
       }
 
-      if (matching_paths.empty()) {
-        throw std::runtime_error("Specified directory does not contain a stream file.");
-      }
-      if (matching_paths.size() > 1) {
-        throw std::runtime_error(
-            "Too many stream files in specified directory. Specify stream file explicitly.");
+      if (matching_paths.size() != 1) {
+        if (matching_paths.empty()) {
+          Log(ERR) << "Specified directory does not contain a stream file.";
+        }
+        if (matching_paths.size() > 1) {
+          Log(ERR)
+              << "Too many stream files in specified directory. Specify stream file explicitly.";
+        }
+        Log(ERR) << "Please run player with the \"--help\" argument to see usage info.";
+        return false;
       }
       streamPath = matching_paths[0];
       Log(INFO) << "Using stream file '" << streamPath << "'\n";
     }
 
+    streamPath = std::filesystem::absolute(streamPath);
     cfg.common.player.streamPath = streamPath;
     cfg.common.player.streamDir = streamPath.parent_path();
   }
