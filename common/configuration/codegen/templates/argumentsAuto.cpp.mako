@@ -24,7 +24,7 @@ bool ${group.argument_namespace_str}::Validate() {
 
 void ${group.argument_namespace_str}::UpdateConfiguration(${group.namespace_str} *config) {
 % for option in group.options:
-%  if not option.is_derived  and option.has_leafs():
+%  if (option.argument_only or not option.is_derived) and option.has_leafs():
 %   if option.type != 'Group':
   if (${option.instance_name}) {
     config->${option.instance_name} = ${option.instance_name}.Get();
