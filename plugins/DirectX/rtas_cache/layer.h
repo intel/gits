@@ -9,14 +9,15 @@
 #pragma once
 
 #include "layerAuto.h"
-#include "accelerationStructuresSerializer.h"
-#include "accelerationStructuresDeserializer.h"
+#include "rtasSerializer.h"
+#include "rtasDeserializer.h"
 
 namespace gits {
 class CGits;
 namespace DirectX {
 
 struct RtasCacheConfig {
+  std::string cacheFile = "rtas_cache.dat";
   bool record = false;
   bool stateRestoreOnly = true;
 };
@@ -42,16 +43,17 @@ private:
     return cfg_.record && (cfg_.stateRestoreOnly ? stateRestore_ : true);
   }
   bool replay() const {
-    return !cfg_.record && (cfg_.stateRestoreOnly ? stateRestore_ : true);
+    return !cfg_.record && isCompatible_ && (cfg_.stateRestoreOnly ? stateRestore_ : true);
   }
 
 private:
   CGits& gits_;
   RtasCacheConfig cfg_;
-  AccelerationStructuresSerializer accelerationStructuresSerializer_;
-  AccelerationStructuresDeserializer accelerationStructuresDeserializer_;
-  bool stateRestore_{};
-  unsigned blasCount_{};
+  RtasSerializer serializer_;
+  RtasDeserializer deserializer_;
+  bool stateRestore_{false};
+  bool isCompatible_{true};
+  unsigned blasCount_{0};
 };
 
 } // namespace DirectX

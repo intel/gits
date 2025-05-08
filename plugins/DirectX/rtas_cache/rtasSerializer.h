@@ -16,16 +16,21 @@ namespace gits {
 class CGits;
 namespace DirectX {
 
-class AccelerationStructuresSerializer : public ResourceDump {
+class RtasSerializer : public ResourceDump {
 public:
-  AccelerationStructuresSerializer(CGits& gits, bool enabled);
-  ~AccelerationStructuresSerializer();
-  void serializeAccelerationStructure(unsigned buildKey,
-                                      ID3D12GraphicsCommandList4* commandList,
-                                      D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc);
+  RtasSerializer(CGits& gits, const std::string& cacheFile);
+  ~RtasSerializer();
+
+  // Disallow copying (gits::noncopyable is not available here).
+  RtasSerializer(const RtasSerializer&) = delete;
+  RtasSerializer& operator=(const RtasSerializer&) = delete;
+
+  void serialize(unsigned buildKey,
+                 ID3D12GraphicsCommandList4* commandList,
+                 D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc);
 
 protected:
-  struct AccelerationStructuresDumpInfo : public DumpInfo {
+  struct RtasDumpInfo : public DumpInfo {
     Microsoft::WRL::ComPtr<ID3D12Resource> serializedBuffer{};
     Microsoft::WRL::ComPtr<ID3D12Resource> postbuildInfoBuffer{};
     DumpInfo postbuildInfo;
@@ -33,9 +38,12 @@ protected:
   void dumpStagedResource(DumpInfo& dumpInfo) override;
 
 private:
+  void initialize();
+
   CGits& gits_;
-  bool enabled_{};
-  std::wstring cachePath_;
+  bool initialized_{false};
+  std::wstring tmpCacheDir_;
+  std::string cacheFile_;
 };
 
 } // namespace DirectX

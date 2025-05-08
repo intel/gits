@@ -35,6 +35,7 @@ public:
       }
 
       RtasCacheConfig cfg = {};
+      cfg.cacheFile = cfgYaml["Config"]["CacheFile"].as<std::string>();
       cfg.record = cfgYaml["Config"]["Record"].as<bool>();
       cfg.stateRestoreOnly = cfgYaml["Config"]["StateRestoreOnly"].as<bool>();
 

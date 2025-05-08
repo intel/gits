@@ -29,10 +29,10 @@ set(ROOT_SRC
   plugin.cpp
   layer.h
   layer.cpp
-  accelerationStructuresSerializer.h
-  accelerationStructuresSerializer.cpp
-  accelerationStructuresDeserializer.h
-  accelerationStructuresDeserializer.cpp
+  rtasSerializer.h
+  rtasSerializer.cpp
+  rtasDeserializer.h
+  rtasDeserializer.cpp
 )
 source_group("" FILES ${ROOT_SRC})
 

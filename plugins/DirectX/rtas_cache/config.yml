@@ -11,5 +11,6 @@ Info:
   Description: 'Caches BLASes through serialization/deserialization by CopyRaytracingAccelerationStructure.'
 
 Config:
+  CacheFile: 'rtas_cache.dat'
   Record: false
   StateRestoreOnly: true

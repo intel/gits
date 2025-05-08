@@ -6,7 +6,7 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "accelerationStructuresDeserializer.h"
+#include "rtasDeserializer.h"
 #include "pluginUtils.h"
 
 #include <filesystem>
@@ -16,18 +16,43 @@
 namespace gits {
 namespace DirectX {
 
-AccelerationStructuresDeserializer::AccelerationStructuresDeserializer(CGits& gits) : gits_(gits) {
-  cacheFile_.open("rtas_cache.dat", std::ios_base::binary);
+RtasDeserializer::RtasDeserializer(CGits& gits, const std::string& cacheFile) : gits_(gits) {
+  cacheFile_.open(cacheFile, std::ios_base::binary);
 }
 
-AccelerationStructuresDeserializer::~AccelerationStructuresDeserializer() {
+RtasDeserializer::~RtasDeserializer() {
   cleanup();
 }
 
-void AccelerationStructuresDeserializer::deserializeAccelerationStructure(
-    unsigned buildKey,
-    ID3D12GraphicsCommandList4* commandList,
-    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc) {
+bool RtasDeserializer::isCompatible(ID3D12Device5* device) {
+  if (!device) {
+    return false;
+  }
+
+  auto initialPos = cacheFile_.tellg();
+  // Read the key and size
+  unsigned key, size;
+  cacheFile_.read(reinterpret_cast<char*>(&key), sizeof(key));
+  cacheFile_.read(reinterpret_cast<char*>(&size), sizeof(size));
+  // Read the RTAS header
+  D3D12_SERIALIZED_RAYTRACING_ACCELERATION_STRUCTURE_HEADER header;
+  cacheFile_.read(reinterpret_cast<char*>(&header), sizeof(header));
+  // Rewind to file
+  cacheFile_.seekg(initialPos);
+
+  // Check the driver identifier
+  auto status = device->CheckDriverMatchingIdentifier(
+      D3D12_SERIALIZED_DATA_RAYTRACING_ACCELERATION_STRUCTURE, &header.DriverMatchingIdentifier);
+  if (status != D3D12_DRIVER_MATCHING_IDENTIFIER_COMPATIBLE_WITH_DEVICE) {
+    log(gits_, "RtasCache: Driver identifier mismatch for ", key, " with size ", size);
+    return false;
+  }
+  return true;
+}
+
+void RtasDeserializer::deserialize(unsigned buildKey,
+                                   ID3D12GraphicsCommandList4* commandList,
+                                   D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc) {
 
   cleanup();
 
@@ -85,11 +110,11 @@ void AccelerationStructuresDeserializer::deserializeAccelerationStructure(
   }
 }
 
-void AccelerationStructuresDeserializer::executeCommandLists(unsigned key,
-                                                             unsigned commandQueueKey,
-                                                             ID3D12CommandQueue* commandQueue,
-                                                             ID3D12CommandList** commandLists,
-                                                             unsigned commandListNum) {
+void RtasDeserializer::executeCommandLists(unsigned key,
+                                           unsigned commandQueueKey,
+                                           ID3D12CommandQueue* commandQueue,
+                                           ID3D12CommandList** commandLists,
+                                           unsigned commandListNum) {
   bool found = false;
   for (unsigned i = 0; i < commandListNum; ++i) {
     auto itCommandList = buffersByCommandList_.find(commandLists[i]);
@@ -134,7 +159,7 @@ void AccelerationStructuresDeserializer::executeCommandLists(unsigned key,
   itCommandQueue->second.executes.push(executeInfo);
 }
 
-void AccelerationStructuresDeserializer::cleanup() {
+void RtasDeserializer::cleanup() {
   for (auto& it : commandQueues_) {
     UINT64 completedValue = it.second.fence->GetCompletedValue();
     while (!it.second.executes.empty()) {

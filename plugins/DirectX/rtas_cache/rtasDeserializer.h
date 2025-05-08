@@ -20,18 +20,19 @@ namespace gits {
 class CGits;
 namespace DirectX {
 
-class AccelerationStructuresDeserializer {
+class RtasDeserializer {
 public:
-  AccelerationStructuresDeserializer(CGits& gits);
-  ~AccelerationStructuresDeserializer();
+  RtasDeserializer(CGits&, const std::string& cacheFile);
+  ~RtasDeserializer();
 
   // Disallow copying (gits::noncopyable is not available here).
-  AccelerationStructuresDeserializer(const AccelerationStructuresDeserializer&) = delete;
-  AccelerationStructuresDeserializer& operator=(const AccelerationStructuresDeserializer&) = delete;
+  RtasDeserializer(const RtasDeserializer&) = delete;
+  RtasDeserializer& operator=(const RtasDeserializer&) = delete;
 
-  void deserializeAccelerationStructure(unsigned buildKey,
-                                        ID3D12GraphicsCommandList4* commandList,
-                                        D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc);
+  bool isCompatible(ID3D12Device5* device);
+  void deserialize(unsigned buildKey,
+                   ID3D12GraphicsCommandList4* commandList,
+                   D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc);
   void executeCommandLists(unsigned key,
                            unsigned commandQueueKey,
                            ID3D12CommandQueue* commandQueue,

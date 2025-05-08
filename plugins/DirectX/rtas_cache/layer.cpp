@@ -16,20 +16,11 @@ RtasCacheLayer::RtasCacheLayer(CGits& gits, const RtasCacheConfig& cfg)
     : Layer("RtasCache"),
       gits_(gits),
       cfg_(cfg),
-      accelerationStructuresSerializer_(gits, cfg_.record),
-      accelerationStructuresDeserializer_(gits) {}
+      serializer_(gits, cfg_.cacheFile),
+      deserializer_(gits, cfg_.cacheFile) {}
 
 RtasCacheLayer::~RtasCacheLayer() {
-  try {
-    if (replay()) {
-      log(gits_, "RtasCache: deserialized ", blasCount_, " BLASes");
-    }
-    if (record()) {
-      log(gits_, "RtasCache: serialized ", blasCount_, " BLASes");
-    }
-  } catch (...) {
-    std::cerr << "Unhandled exception caught in RtasCacheLayer::~RtasCacheLayer";
-  }
+  log(gits_, "RtasCache: ", cfg_.record ? "Serialized " : "Deserialized ", blasCount_, " BLASes");
 }
 
 void RtasCacheLayer::pre(D3D12CreateDeviceCommand& c) {
@@ -39,26 +30,30 @@ void RtasCacheLayer::pre(D3D12CreateDeviceCommand& c) {
 }
 
 void RtasCacheLayer::pre(IDXGISwapChainPresentCommand& c) {
-  if (replay()) {
-    log(gits_, "RtasCache: deserialized ", blasCount_, " BLASes");
-  }
-  if (record()) {
-    log(gits_, "RtasCache: serialized ", blasCount_, " BLASes");
-  }
   stateRestore_ = false;
 }
 
 void RtasCacheLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
+  static bool firstBuildCall = true;
   if (replay()) {
+    if (firstBuildCall) {
+      Microsoft::WRL::ComPtr<ID3D12Device5> device;
+      HRESULT hr = c.object_.value->GetDevice(IID_PPV_ARGS(&device));
+      assert(hr == S_OK);
+
+      isCompatible_ = deserializer_.isCompatible(device.Get());
+    }
+
     if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
       return;
     }
 
-    accelerationStructuresDeserializer_.deserializeAccelerationStructure(c.key, c.object_.value,
-                                                                         *c.pDesc_.value);
+    deserializer_.deserialize(c.key, c.object_.value, *c.pDesc_.value);
     c.skip = true;
     ++blasCount_;
   }
+
+  firstBuildCall = false;
 }
 
 void RtasCacheLayer::post(
@@ -68,52 +63,48 @@ void RtasCacheLayer::post(
       return;
     }
 
-    accelerationStructuresSerializer_.serializeAccelerationStructure(c.key, c.object_.value,
-                                                                     *c.pDesc_.value);
+    serializer_.serialize(c.key, c.object_.value, *c.pDesc_.value);
     ++blasCount_;
   }
 }
 
 void RtasCacheLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
   if (record()) {
-    accelerationStructuresSerializer_.executeCommandLists(
-        c.key, c.object_.key, c.object_.value, c.ppCommandLists_.value, c.NumCommandLists_.value);
-  } else {
-    accelerationStructuresDeserializer_.executeCommandLists(
-        c.key, c.object_.key, c.object_.value, c.ppCommandLists_.value, c.NumCommandLists_.value);
+    serializer_.executeCommandLists(c.key, c.object_.key, c.object_.value, c.ppCommandLists_.value,
+                                    c.NumCommandLists_.value);
+  } else if (replay()) {
+    deserializer_.executeCommandLists(c.key, c.object_.key, c.object_.value,
+                                      c.ppCommandLists_.value, c.NumCommandLists_.value);
   }
 }
 
 void RtasCacheLayer::post(ID3D12CommandQueueWaitCommand& c) {
   if (record()) {
-    accelerationStructuresSerializer_.commandQueueWait(c.key, c.object_.key, c.pFence_.key,
-                                                       c.Value_.value);
+    serializer_.commandQueueWait(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
   }
 }
 
 void RtasCacheLayer::post(ID3D12CommandQueueSignalCommand& c) {
   if (record()) {
-    accelerationStructuresSerializer_.commandQueueSignal(c.key, c.object_.key, c.pFence_.key,
-                                                         c.Value_.value);
+    serializer_.commandQueueSignal(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
   }
 }
 
 void RtasCacheLayer::post(ID3D12FenceSignalCommand& c) {
   if (record()) {
-    accelerationStructuresSerializer_.fenceSignal(c.key, c.object_.key, c.Value_.value);
+    serializer_.fenceSignal(c.key, c.object_.key, c.Value_.value);
   }
 }
 
 void RtasCacheLayer::post(ID3D12DeviceCreateFenceCommand& c) {
   if (record()) {
-    accelerationStructuresSerializer_.fenceSignal(c.key, c.ppFence_.key, c.InitialValue_.value);
+    serializer_.fenceSignal(c.key, c.ppFence_.key, c.InitialValue_.value);
   }
 }
 
 void RtasCacheLayer::post(ID3D12Device3EnqueueMakeResidentCommand& c) {
   if (record()) {
-    accelerationStructuresSerializer_.fenceSignal(c.key, c.pFenceToSignal_.key,
-                                                  c.FenceValueToSignal_.value);
+    serializer_.fenceSignal(c.key, c.pFenceToSignal_.key, c.FenceValueToSignal_.value);
   }
 }
 
