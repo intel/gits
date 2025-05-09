@@ -171,6 +171,13 @@ int MainBody(int argc, char* argv[]) {
     return 0;
   }
 
+  if (args.Version) {
+    // Print version and quit.
+    CGits& inst = CGits::Instance();
+    Log(INFO, NO_PREFIX) << inst << "\n";
+    return 0;
+  }
+
   if (!ConfigurePlayer(playerPath, args)) {
     Log(ERR) << "Encountered error while configuring player";
     return 1;

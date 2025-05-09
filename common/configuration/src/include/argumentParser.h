@@ -32,6 +32,7 @@ struct ArgumentParser {
   args::Positional<std::filesystem::path> StreamPath;
   args::HelpFlag Help;
   args::ValueFlag<std::string> HelpMenu;
+  args::Flag Version;
   args::Flag SkipEnvironment;
   args::ValueFlag<std::filesystem::path> ConfigFile;
   ArgConfiguration ArgumentConfig;
@@ -45,6 +46,7 @@ struct ArgumentParser {
         Help(Parser, "help", "Display this help menu", {'h', "help"}),
         HelpMenu(
             Parser, "filter help", "Filter help by sections/platforms/API/operation/...", {"hh"}),
+        Version(Parser, "version", "Print version and quit", {'v', "version"}),
         SkipEnvironment(
             Parser, "skip environment", "Don't use environment variables", {"skip-environment"}),
         ConfigFile(Parser,

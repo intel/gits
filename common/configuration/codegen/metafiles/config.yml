@@ -130,12 +130,6 @@ Configuration:
             Description:
               GITS will not play specified file but instead will create some
               statistics about it.
-          - Name: version
-            Type: bool
-            Default: ""
-            Accessibility: ArgumentOnly
-            Arguments: [version, v]
-            Description: Displays gitsPlayer version.
           - Name: diags
             Type: bool
             Default: ""
