@@ -15,9 +15,9 @@
 namespace gits {
 namespace DirectX {
 
-class SubcaptureRecorder {
+class ExecutionSerializationRecorder {
 public:
-  SubcaptureRecorder();
+  ExecutionSerializationRecorder();
   void record(CToken* token);
   void frameEnd();
   bool isRunning();

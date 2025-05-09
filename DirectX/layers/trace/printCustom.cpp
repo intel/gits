@@ -21,8 +21,12 @@ FastOStream& printObjectKey(FastOStream& stream, unsigned key) {
 
     if (key & Command::stateRestoreKeyMask) {
       stream << "S";
+      key &= ~Command::stateRestoreKeyMask;
+    } else if (key & Command::executionSerializationKeyMask) {
+      stream << "E";
+      key &= ~Command::executionSerializationKeyMask;
     }
-    stream << (key & ~Command::stateRestoreKeyMask);
+    stream << key;
   }
   return stream;
 }

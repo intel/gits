@@ -13,9 +13,9 @@
 namespace gits {
 namespace DirectX {
 
-class DirectXApi : public ApisIface::Api3d {
+class DirectXApiIfaceSubcapture : public ApisIface::Api3d {
 public:
-  DirectXApi() : Api3d(ApisIface::DirectX) {}
+  DirectXApiIfaceSubcapture() : Api3d(ApisIface::DirectX) {}
   virtual bool CfgRec_IsAllMode() const {
     return !Configurator::Get().directx.features.subcapture.enabled;
   }
@@ -51,5 +51,6 @@ public:
     }
   }
 };
+
 } // namespace DirectX
 } // namespace gits

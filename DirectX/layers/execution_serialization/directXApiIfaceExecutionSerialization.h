@@ -9,31 +9,22 @@
 #pragma once
 
 #include "apis_iface.h"
+#include "gits.h"
 
 namespace gits {
 namespace DirectX {
-class DirectXApi : public ApisIface::Api3d {
+
+class DirectXApiIfaceExecutionSerialization : public ApisIface::Api3d {
 public:
-  DirectXApi() : Api3d(ApisIface::DirectX) {}
+  DirectXApiIfaceExecutionSerialization() : Api3d(ApisIface::DirectX) {}
   virtual bool CfgRec_IsAllMode() const {
-    return !Configurator::Get().directx.features.subcapture.enabled;
+    return false;
   }
   virtual bool CfgRec_IsFramesMode() const {
-    return Configurator::Get().directx.features.subcapture.enabled;
+    return true;
   };
   virtual int CfgRec_StartFrame() const {
-    auto& cfgDirectX = Configurator::Get().directx;
-    if (cfgDirectX.features.subcapture.enabled) {
-      const std::string& frames = Configurator::Get().directx.features.subcapture.frames;
-      size_t pos = frames.find("-");
-      if (pos != std::string::npos) {
-        return std::stoi(frames.substr(0, pos));
-      } else {
-        return std::stoi(frames);
-      }
-    } else {
-      return 1;
-    }
+    return 1;
   }
   virtual int CfgRec_StopFrame() const {
     auto& cfgDirectX = Configurator::Get().directx;
@@ -50,5 +41,6 @@ public:
     }
   }
 };
+
 } // namespace DirectX
 } // namespace gits

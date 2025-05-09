@@ -9,17 +9,17 @@
 #include "subcaptureFactory.h"
 #include "stateTrackingLayer.h"
 #include "recordingLayerAuto.h"
-#include "directXApi.h"
 #include "directStorageResourcesLayer.h"
 #include "analyzerResults.h"
-#include "configurationLib.h"
+#include "gits.h"
 
 namespace gits {
 namespace DirectX {
 
 SubcaptureFactory::SubcaptureFactory() {
 
-  if (!Configurator::Get().directx.features.subcapture.enabled) {
+  if (!Configurator::Get().directx.features.subcapture.enabled ||
+      Configurator::Get().directx.features.subcapture.executionSerialization) {
     return;
   }
 
@@ -42,7 +42,8 @@ SubcaptureFactory::SubcaptureFactory() {
     recordingLayer_ = std::make_unique<RecordingLayer>(*recorder_);
     directStorageResourcesLayer_ = std::make_unique<DirectStorageResourcesLayer>();
   } else {
-    const_cast<gits::Config&>(Configurator::Get()).directx.features.subcapture.enabled = false;
+    const_cast<gits::Configuration&>(Configurator::Get()).directx.features.subcapture.enabled =
+        false;
     analyzerLayer_ = std::make_unique<AnalyzerLayer>();
     Log(INFO) << "SUBCAPTURE ANALYSIS. RUN AGAIN FOR SUBCAPTURE RECORDING.";
   }

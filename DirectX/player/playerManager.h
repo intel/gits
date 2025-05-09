@@ -20,6 +20,7 @@
 #include "intelExtensionsService.h"
 #include "xessService.h"
 #include "subcaptureFactory.h"
+#include "executionSerializationFactory.h"
 #include "analyzerLayerAuto.h"
 #include "resourceDumpingFactory.h"
 #include "skipCallsFactory.h"
@@ -121,6 +122,7 @@ private:
   // Factory classes encapsulate layer creation logic.
   TraceFactory traceFactory_;
   SubcaptureFactory subcaptureFactory_;
+  ExecutionSerializationFactory executionSerializationFactory_;
   ResourceDumpingFactory resourceDumpingFactory_;
   SkipCallsFactory skipCallsFactory_;
   PortabilityFactory portabilityFactory_;

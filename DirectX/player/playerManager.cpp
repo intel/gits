@@ -86,6 +86,8 @@ PlayerManager::PlayerManager() {
   std::unique_ptr<Layer> analyzerLayer = subcaptureFactory_.getAnalyzerLayer();
   std::unique_ptr<Layer> directStorageResourcesLayer =
       subcaptureFactory_.getDirectStorageResourcesLayer();
+  std::unique_ptr<Layer> executionSerializationLayer =
+      executionSerializationFactory_.getExecutionSerializationLayer();
   std::unique_ptr<Layer> screenshotsLayer = resourceDumpingFactory_.getScreenshotsLayer();
   std::unique_ptr<Layer> resourceDumpLayer = resourceDumpingFactory_.getResourceDumpLayer();
   std::unique_ptr<Layer> renderTargetsDumpLayer =
@@ -126,6 +128,7 @@ PlayerManager::PlayerManager() {
   enablePreLayer(debugHelperLayer);
   enablePreLayer(traceLayer);
   enablePreLayer(stateTrackingLayer);
+  enablePreLayer(executionSerializationLayer);
   enablePreLayer(gpuPatchLayer);
   enablePreLayer(replayCustomizationLayer);
   enablePreLayer(screenshotsLayer);
@@ -162,6 +165,7 @@ PlayerManager::PlayerManager() {
   enablePostLayer(accelerationStructuresDumpLayer);
   enablePostLayer(rootSignatureDumpLayer);
   enablePostLayer(recordingLayer);
+  enablePostLayer(executionSerializationLayer);
 
   // Let layersOwner_ take the ownership of layers
   auto retainLayer = [this](std::unique_ptr<Layer>&& layer) {
@@ -184,6 +188,7 @@ PlayerManager::PlayerManager() {
   retainLayer(std::move(gpuPatchLayer));
   retainLayer(std::move(recordingLayer));
   retainLayer(std::move(analyzerLayer));
+  retainLayer(std::move(executionSerializationLayer));
   retainLayer(std::move(screenshotsLayer));
   retainLayer(std::move(resourceDumpLayer));
   retainLayer(std::move(renderTargetsDumpLayer));

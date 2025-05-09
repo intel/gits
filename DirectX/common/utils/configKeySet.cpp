@@ -21,10 +21,14 @@ ConfigKeySet::ConfigKeySet(const std::string& keys) {
         ++p;
       }
       std::string key(begin, p);
-      if (key[0] == 'S') {
+      if (key[0] == 'S' || key[0] == 'E') {
         key = key.substr(1);
         unsigned k = std::stoi(key);
-        k |= Command::stateRestoreKeyMask;
+        if (key[0] == 'S') {
+          k |= Command::stateRestoreKeyMask;
+        } else if (key[0] == 'E') {
+          k |= Command::executionSerializationKeyMask;
+        }
         commandKeys_.insert(k);
       } else {
         commandKeys_.insert(std::stoi(key));

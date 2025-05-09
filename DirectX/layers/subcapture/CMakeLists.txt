@@ -18,6 +18,7 @@ source_group("" FILES ${ROOT_SRC})
 set(RECORDING_SRC
   ${SRC_DIR}/subcaptureRecorder.h
   ${SRC_DIR}/subcaptureRecorder.cpp
+  ${SRC_DIR}/directXApiIfaceSubcapture.h
   ${SRC_DIR}/recordingLayerAuto.h
   ${SRC_DIR}/recordingLayerAuto.cpp
   ${SRC_DIR}/recordingLayerCustom.cpp

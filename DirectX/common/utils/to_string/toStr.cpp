@@ -23,8 +23,12 @@ std::string callKeyToStr(unsigned key) {
   std::string result;
   if (key & Command::stateRestoreKeyMask) {
     result += 'S';
+    key &= ~Command::stateRestoreKeyMask;
+  } else if (key & Command::executionSerializationKeyMask) {
+    result += 'E';
+    key &= ~Command::executionSerializationKeyMask;
   }
-  return result + std::to_string(key & ~Command::stateRestoreKeyMask);
+  return result + std::to_string(key);
 }
 
 std::wstring callKeyToWStr(unsigned key) {

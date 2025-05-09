@@ -6,36 +6,36 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "subcaptureRecorder.h"
-#include "directXApiIfaceSubcapture.h"
+#include "executionSerializationRecorder.h"
+#include "directXApiIfaceExecutionSerialization.h"
 
 #include <filesystem>
 
 namespace gits {
 namespace DirectX {
 
-SubcaptureRecorder::SubcaptureRecorder() {
+ExecutionSerializationRecorder::ExecutionSerializationRecorder() {
 
   if (!Configurator::Get().directx.features.subcapture.enabled ||
-      Configurator::Get().directx.features.subcapture.executionSerialization) {
+      !Configurator::Get().directx.features.subcapture.executionSerialization) {
     return;
   }
   CGits::Instance().apis.UseApi3dIface(
-      std::shared_ptr<ApisIface::Api3d>(new DirectXApiIfaceSubcapture()));
+      std::shared_ptr<ApisIface::Api3d>(new DirectXApiIfaceExecutionSerialization()));
   CRecorder::Instance();
 }
 
-void SubcaptureRecorder::record(CToken* token) {
+void ExecutionSerializationRecorder::record(CToken* token) {
   std::lock_guard<std::mutex> lock(mutex_);
   CRecorder::Instance().Schedule(token);
 }
 
-void SubcaptureRecorder::frameEnd() {
+void ExecutionSerializationRecorder::frameEnd() {
   std::lock_guard<std::mutex> lock(mutex_);
   CRecorder::Instance().FrameEnd();
 }
 
-bool SubcaptureRecorder::isRunning() {
+bool ExecutionSerializationRecorder::isRunning() {
   return CRecorder::Instance().Running();
 }
 

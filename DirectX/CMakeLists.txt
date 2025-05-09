@@ -42,6 +42,7 @@ add_subdirectory(common/utils)
 add_subdirectory(layers/trace)
 add_subdirectory(layers/api_debug)
 add_subdirectory(layers/subcapture)
+add_subdirectory(layers/execution_serialization)
 add_subdirectory(layers/resource_dumping)
 add_subdirectory(layers/skip_calls)
 add_subdirectory(layers/portability)
@@ -83,6 +84,12 @@ add_dependencies(DirectX_subcapture
 	DirectX_utils
 )
 
+add_dependencies(DirectX_execution_serialization
+    DirectX_layer_interface
+	DirectX_coders
+	DirectX_utils
+)
+
 add_dependencies(DirectX_coders
     DirectX_layer_interface
 )
@@ -110,7 +117,13 @@ target_include_directories(DirectX_player PRIVATE ${ARGS_SOURCE_DIR})
 
 target_link_libraries(DirectX_subcapture PRIVATE
     DirectX_dstorage_resources
-    DirectX_utils
+	DirectX_utils
+	DirectX_coders
+)
+
+target_link_libraries(DirectX_execution_serialization PRIVATE
+	DirectX_utils
+	DirectX_coders
 )
 
 target_link_libraries(DirectX_recorder PRIVATE
@@ -118,7 +131,6 @@ target_link_libraries(DirectX_recorder PRIVATE
     DirectX_trace
     DirectX_dstorage_resources
     DirectX_coders
-    DirectX_subcapture
     DirectX_utils
     DirectX_resource_dumping
     DirectX_portability
@@ -130,14 +142,10 @@ target_link_libraries(DirectX_player PRIVATE
     DirectX_trace
     DirectX_resource_dumping
     DirectX_subcapture
+    DirectX_execution_serialization
     DirectX_coders
     DirectX_utils
     DirectX_skip_calls
     DirectX_portability
-    configuration
-)
-
-target_link_libraries(DirectX_subcapture PRIVATE
-    DirectX_coders
     configuration
 )

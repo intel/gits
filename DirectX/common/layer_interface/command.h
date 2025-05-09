@@ -27,6 +27,7 @@ public:
 
 public:
   static const unsigned stateRestoreKeyMask{1u << 31};
+  static const unsigned executionSerializationKeyMask{1u << 30};
   unsigned key{};
   unsigned threadId{};
   bool skip{false};

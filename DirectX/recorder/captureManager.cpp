@@ -21,9 +21,8 @@
 #include "globalSynchronizationLayerAuto.h"
 #include "logDxErrorLayerAuto.h"
 #include "directStorageResourcesLayer.h"
-
+#include "directXApiIfaceRecorder.h"
 #include "gits.h"
-#include "directXApi.h"
 
 #include <detours.h>
 #include <setupapi.h>
@@ -84,7 +83,7 @@ void CaptureManager::exchangeD3D12DispatchTables(const D3D12DispatchTable& syste
 CaptureManager::CaptureManager() {
 
   gits::CGits::Instance().apis.UseApi3dIface(
-      std::shared_ptr<gits::ApisIface::Api3d>(new DirectXApi()));
+      std::shared_ptr<gits::ApisIface::Api3d>(new DirectXApiIfaceRecorder()));
 
   dxgiDispatchTableWrapper_.CreateDXGIFactory = CreateDXGIFactoryWrapper;
   dxgiDispatchTableWrapper_.CreateDXGIFactory1 = CreateDXGIFactory1Wrapper;

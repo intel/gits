@@ -1,0 +1,207 @@
+// ===================== begin_copyright_notice ============================
+//
+// Copyright (C) 2023-2025 Intel Corporation
+//
+// SPDX-License-Identifier: MIT
+//
+// ===================== end_copyright_notice ==============================
+
+#include "executionSerializationLayerAuto.h"
+#include "commandWritersAuto.h"
+#include "commandWritersCustom.h"
+#include "intelExtensions.h"
+
+namespace gits {
+namespace DirectX {
+
+void ExecutionSerializationLayer::pre(IDXGISwapChainPresentCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new IDXGISwapChainPresentWriter(c));
+  }
+  if (!(c.Flags_.value & DXGI_PRESENT_TEST) && !(c.key & Command::stateRestoreKeyMask)) {
+    recorder_.frameEnd();
+  }
+}
+
+void ExecutionSerializationLayer::pre(IDXGISwapChain1Present1Command& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new IDXGISwapChain1Present1Writer(c));
+  }
+  if (!(c.PresentFlags_.value & DXGI_PRESENT_TEST) && !(c.key & Command::stateRestoreKeyMask)) {
+    recorder_.frameEnd();
+  }
+}
+
+void ExecutionSerializationLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
+  if (recorder_.isRunning()) {
+    executionService_.executeCommandLists(c.key, c.object_.key, c.ppCommandLists_.keys);
+  }
+}
+
+void ExecutionSerializationLayer::pre(ID3D12DeviceCreateCommandListCommand& c) {
+  if (recorder_.isRunning()) {
+    executionService_.createCommandList(c.ppCommandList_.key, c.pCommandAllocator_.key);
+    recorder_.record(new ID3D12DeviceCreateCommandListWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(ID3D12CommandAllocatorResetCommand& c) {
+  if (recorder_.isRunning()) {
+    executionService_.commandAllocatorReset(c.object_.key);
+    recorder_.record(new ID3D12CommandAllocatorResetWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(ID3D12GraphicsCommandListResetCommand& c) {
+  if (recorder_.isRunning()) {
+    executionService_.commandListReset(c.object_.key);
+    executionService_.commandListCommand(c.object_.key,
+                                         new ID3D12GraphicsCommandListResetWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(ID3D12CommandQueueWaitCommand& c) {
+  if (recorder_.isRunning()) {
+    executionService_.commandQueueWait(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
+  }
+}
+
+void ExecutionSerializationLayer::pre(ID3D12CommandQueueSignalCommand& c) {
+  if (recorder_.isRunning()) {
+    executionService_.commandQueueSignal(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
+  }
+}
+
+void ExecutionSerializationLayer::pre(ID3D12FenceSignalCommand& c) {
+  if (recorder_.isRunning()) {
+    executionService_.fenceSignal(c.key, c.object_.key, c.Value_.value);
+  }
+}
+
+void ExecutionSerializationLayer::pre(ID3D12DeviceCreateFenceCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new ID3D12DeviceCreateFenceWriter(c));
+    executionService_.fenceSignal(c.key, c.ppFence_.key, c.InitialValue_.value);
+  }
+}
+
+void ExecutionSerializationLayer::pre(ID3D12Device3EnqueueMakeResidentCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new ID3D12Device3EnqueueMakeResidentWriter(c));
+    executionService_.fenceSignal(c.key, c.pFenceToSignal_.key, c.FenceValueToSignal_.value);
+  }
+}
+
+void ExecutionSerializationLayer::pre(ID3D12DeviceCreateCommandQueueCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new ID3D12DeviceCreateCommandQueueWriter(c));
+    executionService_.createCommandQueue(c.object_.key, c.ppCommandQueue_.key);
+  }
+}
+
+void ExecutionSerializationLayer::pre(ID3D12FenceGetCompletedValueCommand& c) {}
+
+void ExecutionSerializationLayer::pre(ID3D12FenceSetEventOnCompletionCommand& c) {}
+
+void ExecutionSerializationLayer::pre(CreateWindowMetaCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new CreateWindowMetaWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(MappedDataMetaCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new MappedDataMetaWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(CreateHeapAllocationMetaCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new CreateHeapAllocationMetaWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(WaitForFenceSignaledCommand& c) {}
+
+void ExecutionSerializationLayer::pre(IUnknownQueryInterfaceCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new IUnknownQueryInterfaceWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(IUnknownAddRefCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new IUnknownAddRefWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(IUnknownReleaseCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new IUnknownReleaseWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(INTC_D3D12_CreateDeviceExtensionContextCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new INTC_D3D12_CreateDeviceExtensionContextWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(INTC_D3D12_CreateDeviceExtensionContext1Command& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new INTC_D3D12_CreateDeviceExtensionContext1Writer(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(INTC_DestroyDeviceExtensionContextCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new INTC_DestroyDeviceExtensionContextWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(INTC_D3D12_SetFeatureSupportCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new INTC_D3D12_SetFeatureSupportWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(INTC_D3D12_CreateComputePipelineStateCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new INTC_D3D12_CreateComputePipelineStateWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(INTC_D3D12_CreatePlacedResourceCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new INTC_D3D12_CreatePlacedResourceWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(INTC_D3D12_CreateCommittedResourceCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new INTC_D3D12_CreateCommittedResourceWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(INTC_D3D12_CreateReservedResourceCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new INTC_D3D12_CreateReservedResourceWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(INTC_D3D12_CreateCommandQueueCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new INTC_D3D12_CreateCommandQueueWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(INTC_D3D12_CreateHeapCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new INTC_D3D12_CreateHeapWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(IDXGIAdapter3QueryVideoMemoryInfoCommand& c) {}
+
+} // namespace DirectX
+} // namespace gits

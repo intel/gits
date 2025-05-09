@@ -43,6 +43,7 @@ set(CAPTURE_SRC
   ${SRC_DIR}/d3d12Recorder.cpp
   ${SRC_DIR}/gitsRecorder.h
   ${SRC_DIR}/gitsRecorder.cpp
+  ${SRC_DIR}/directXApiIfaceRecorder.h
   ${SRC_DIR}/captureCustomizationLayer.h
   ${SRC_DIR}/captureCustomizationLayer.cpp
   ${SRC_DIR}/captureSynchronizationLayer.h
