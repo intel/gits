@@ -302,11 +302,17 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
         offsets[i] /= sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
       }
 
+      auto offsetsByteSize = sizeof(unsigned) * offsets.size();
+      if (offsetsByteSize > instancesAoPPatchOffsetsBufferSize_) {
+        Log(ERR) << "Raytracing array of pointers offsets buffer is too small!";
+        exit(EXIT_FAILURE);
+      }
+
       void* data{};
       HRESULT hr =
           instancesAoPPatchOffsetsStagingBuffers_[patchBufferIndex]->Map(0, nullptr, &data);
       GITS_ASSERT(hr == S_OK);
-      memcpy(data, offsets.data(), sizeof(unsigned) * offsets.size());
+      memcpy(data, offsets.data(), offsetsByteSize);
       instancesAoPPatchOffsetsStagingBuffers_[patchBufferIndex]->Unmap(0, nullptr);
 
       commandList->CopyResource(instancesAoPPatchOffsetsBuffers_[patchBufferIndex],
