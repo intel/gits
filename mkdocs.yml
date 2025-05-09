@@ -109,6 +109,7 @@ nav:
     - Development:
       - Documentation: 'community/development/Documentation.md'
       - Configuration & Arguments: 'community/development/Configuration.md'
+      - Project Setup: 'community/development/ProjectSetup.md'
 
 markdown_extensions:
   - pymdownx.striphtml:

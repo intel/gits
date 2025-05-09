@@ -89,22 +89,22 @@ Here's the structure to define a configuration option:
       - {set_value}: string #     opt. if `set_value` is present
 ```
 
-| Name               | Description                                                                                                                                                                                                                                 |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Name               | The cpp variable name and config name.                                                                                                                                                                                                      |
-| Type               | The cpp type. *Can not be "Group" :wink:.*                                                                                                                                                                                                  |
-| Default            | The default value.                                                                                                                                                                                                                          |
-| ConfigName         | Custom option name used in the configuration file.                                                                                                                                                                                          |
-| Description        | A short description, e.g. for the CLI help.                                                                                                                                                                                                 |
-| LongDescription    | A long description, e.g. for the markdown documentation.                                                                                                                                                                                    |
-| Accessibility      | The way this option is accessed: `Derived`,`ArgumentOnly`. A `Derived` option is not read from the configuration file and can not be set a CLI argument. A `ArgumentOnly` option can be set via CLI argument, but not from the config file. |
-| AccessLevel        | Intended audience: `Beginner`,`Advanced`,`Expert`,`Developer`(default).                                                                                                                                                                     |
-| NumericFormat      | Output format for default value: `Hexadecimal`,`Binary`,``Decimal`(default).                                                                                                                                                                |
-| Arguments          | (case-sensitive) CLI-Argument(s) to set this option's value.                                                                                                                                                                                |
-| Tags               | Tag(s) for help filtering and future use-cases. All groups "above" a value - the path segments - are added to the tags automatically.                                                                                                       |
-| OSVisibility       | OS(s) that use the option: `WINDOWS`,`X11`.                                                                                                                                                                                                 |
-| DefaultPerPlatform | Specify defaults for specifi platforms. The value set by `Default` is a fallback, when no platform matched.                                                                                                                                 |
-| DefaultCondition   | Specify defaults if certain conditions are _present_. Is evaluated after `DefaultPerPlatform`. When unmatched, the value set by `Default` is used.                                                                                          |
+| Name                 | Description                                                                                                                                                                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Name`               | The cpp variable name and config name.                                                                                                                                                                                                      |
+| `Type`               | The cpp type. *Can not be "Group" :wink:.*                                                                                                                                                                                                  |
+| `Default`            | The default value.                                                                                                                                                                                                                          |
+| `ConfigName`         | Custom option name used in the configuration file.                                                                                                                                                                                          |
+| `Description`        | A short description, e.g. for the CLI help.                                                                                                                                                                                                 |
+| `LongDescription`    | A long description, e.g. for the markdown documentation.                                                                                                                                                                                    |
+| `Accessibility`      | The way this option is accessed: `Derived`,`ArgumentOnly`. A `Derived` option is not read from the configuration file and can not be set a CLI argument. A `ArgumentOnly` option can be set via CLI argument, but not from the config file. |
+| `AccessLevel`        | Intended audience: `Beginner`,`Advanced`,`Expert`,`Developer`(default).                                                                                                                                                                     |
+| `NumericFormat`      | Output format for default value: `Hexadecimal`,`Binary`,``Decimal`(default).                                                                                                                                                                |
+| `Arguments`          | (case-sensitive) CLI-Argument(s) to set this option's value.                                                                                                                                                                                |
+| `Tags`               | Tag(s) for help filtering and future use-cases. All groups "above" a value - the path segments - are added to the tags automatically.                                                                                                       |
+| `OSVisibility`       | OS(s) that use the option: `WINDOWS`,`X11`.                                                                                                                                                                                                 |
+| `DefaultPerPlatform` | Specify defaults for specific platforms. The value set by `Default` is a fallback, when no platform matched.                                                                                                                                 |
+| `DefaultCondition`   | Specify defaults if certain conditions are _present_. Is evaluated before `DefaultPerPlatform`. When unmatched, the value set by `Default` is used.                                                                                          |
 
 #### Group
 
@@ -120,15 +120,15 @@ The following defines a configuration option:
   OSVisibility: [string]    #     opt. OSs that support this option.
 ```
 
-| Name            | Description                                              |
-| --------------- | -------------------------------------------------------- |
-| Name            | The cpp struct, (lowercased) instance and config name.   |
-| Type            | **Must be "Group".**                                     |
-| Options         | The options within the group.                            |
-| InstanceName    | Custom cpp instance name.                                |
-| Description     | A short description, e.g. for the CLI help.              |
-| LongDescription | A long description, e.g. for the markdown documentation. |
-| OSVisibility    | OS(s) that use the group: `WINDOWS`,`X11`.               |
+| Name              | Description                                              |
+| ----------------- | -------------------------------------------------------- |
+| `Name`            | The cpp struct, (lowercased) instance and config name.   |
+| `Type`            | **Must be "Group".**                                     |
+| `Options`         | The options within the group.                            |
+| `InstanceName`    | Custom cpp instance name.                                |
+| `Description`     | A short description, e.g. for the CLI help.              |
+| `LongDescription` | A long description, e.g. for the markdown documentation. |
+| `OSVisibility`    | OS(s) that use the group: `WINDOWS`,`X11`.               |
 
 
 ### Generation
@@ -146,7 +146,7 @@ generate.py --step <Step>                       # generation step to run
 
 where `Step` can be one of the following:
 
-| `Step`                 | Description                                     |
+| Step                 | Description                                     |
 | ---------------------- | ----------------------------------------------- |
 | `Enum`                 | 1. Generate all enum related cpp files.         |
 | `Configuration`        | 2. Generate the configuration system cpp files. |
@@ -155,3 +155,25 @@ where `Step` can be one of the following:
 
 *Note: the steps can be run in an arbitrary order. However, the steps with cpp files build up and higher numbered steps require to lower ones to work.*
 
+#### Details
+
+The general flow is at follows:
+
+- Check the arguments and assemble required data (`generate.py`, `generators.py`)
+- Transform configuration an enum metafile into internal representations used by the mako scripts (`configuration_element.py`, `configuration_enum.py`)
+- Generate all files required by a step (`template_manager.py`)
+
+The codegen consists of 6 scripts:
+
+1. `generate.py`  
+  Main entry point for processing. Checks the arguments and populates all relevant data in a `GeneratorTask` instance.
+2. `generators.py`  
+  Executes the task (based on the step) by creating the required context for the mako files and fill in all templates for a task step.
+3. `template_manager.py`  
+  The `TemplateManager` stores which templates are used to create which files for a given step. Does the actual "fill in the context" file generation
+4. `configuration_element.py`  
+  Transforms the configuration metafile in a nested structure of python objects that represent either a configuration group or an option. These objects are filled into the mako files.
+1. `configuration_enum.py`  
+  Transforms the enum metafile in a structure of python objects that represent either an enum or its values. These objects are filled into the mako files.
+1. `utils.py`  
+  Various helper functions used by the scripts.
