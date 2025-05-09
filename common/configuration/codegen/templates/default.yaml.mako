@@ -5,15 +5,28 @@
 # SPDX-License-Identifier: MIT
 #
 # ===================== end_copyright_notice ==============================
-# This file is auto-generated, manual changes will be lost on next run.
-#
-# generated @ ${time}
 
 <%!
 def whitespace(number):
     return ' ' * number * 2
 %>
 <%def name="render_group(data, indentation)">\
+## This creates the pretty section separators
+% if indentation == 0:
+<%
+  box_width = 59
+  text = data.config_name + ' Settings'
+  total_padding = box_width - len(text)
+  left_padding = total_padding // 2
+  right_padding = total_padding - left_padding - 2
+%>
+${'#' * box_width}
+#${' ' * (box_width - 2)}#
+#${' ' * left_padding}${text}${' ' * right_padding}#
+#${' ' * (box_width - 2)}#
+${'#' * box_width}
+
+% endif
 ${whitespace(indentation)}${data.config_name}:
 % for option in data.options:
     % if option.is_os_visible(platform):
@@ -25,9 +38,9 @@ ${render_group(option, indentation+1)}\
         % else:
             % if not option.is_derived or not option.argument_only:
                 % if option.needs_quotes_in_yml:
-${whitespace(indentation + 1)}${option.config_name}: '${option.get_default(platform, installpath, conditions)}'
+${whitespace(indentation + 1)}${option.config_name}: '${option.get_default(platform, installpath, conditions)}' # ${option.short_description}
                 % else:
-${whitespace(indentation + 1)}${option.config_name}: ${option.get_default(platform, installpath, conditions)}
+${whitespace(indentation + 1)}${option.config_name}: ${option.get_default(platform, installpath, conditions)} # ${option.short_description}
                 % endif
             % endif
         % endif
@@ -43,5 +56,20 @@ ${render_group(option, 0)}\
       % endif
     % endif
 % endfor
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#                                                         #
+#                       OVERRIDES                         #
+#                                                         #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+# Override gits_config.yml with settings based on the executable name
+# GITS will override the base configuration with the YAML under each entry
+
+# Example entry (disable recording for MyApplication.exe):
+#   MyApplication:
+#     Common:
+#       Recorder:
+#         RecordingMode: 'None'
 
 Overrides:
