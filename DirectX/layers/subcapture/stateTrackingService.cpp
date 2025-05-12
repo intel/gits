@@ -278,9 +278,10 @@ void StateTrackingService::storeINTCFeature(INTC_D3D12_FEATURE feature) {
 }
 
 void StateTrackingService::storeINTCApplicationInfo(INTC_D3D12_SetApplicationInfoCommand& c) {
-  intcApplicationInfoEncoded_.reset(new char[getSize(c.pExtensionAppInfo_)]);
+  intcApplicationInfo_.infoEncoded.reset(new char[getSize(c.pExtensionAppInfo_)]);
   unsigned offset{};
-  encode(intcApplicationInfoEncoded_.get(), offset, c.pExtensionAppInfo_);
+  encode(intcApplicationInfo_.infoEncoded.get(), offset, c.pExtensionAppInfo_);
+  intcApplicationInfo_.isInfo = true;
 }
 
 void StateTrackingService::releaseObject(unsigned key, ULONG result) {
@@ -1149,12 +1150,15 @@ void StateTrackingService::restoreD3D12INTCDeviceExtensionContext1(
 }
 
 void StateTrackingService::restoreINTCApplicationInfo() {
+  if (!intcApplicationInfo_.isInfo) {
+    return;
+  }
   INTC_D3D12_SetApplicationInfoCommand c;
   c.key = getUniqueCommandKey();
 
   PointerArgument<INTCExtensionAppInfo1> extensionAppInfoArg;
   unsigned offset{};
-  decode(intcApplicationInfoEncoded_.get(), offset, extensionAppInfoArg);
+  decode(intcApplicationInfo_.infoEncoded.get(), offset, extensionAppInfoArg);
   c.pExtensionAppInfo_ = extensionAppInfoArg;
 
   recorder_.record(new INTC_D3D12_SetApplicationInfoWriter(c));

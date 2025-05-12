@@ -180,7 +180,11 @@ private:
   ResidencyService& residencyService_;
   unsigned deviceKey_{};
   INTC_D3D12_FEATURE intcFeature_{};
-  std::unique_ptr<char[]> intcApplicationInfoEncoded_;
+  struct IntcApplicationInfo {
+    bool isInfo{};
+    std::unique_ptr<char[]> infoEncoded;
+  };
+  IntcApplicationInfo intcApplicationInfo_;
 
 private:
   class SwapChainService {
