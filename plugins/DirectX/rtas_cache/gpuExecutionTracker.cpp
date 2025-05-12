@@ -61,7 +61,10 @@ void GpuExecutionTracker::fenceSignal(unsigned callKey, unsigned fenceKey, UINT6
         while (!it.second.empty()) {
           QueueEvent* queueEvent = it.second.front();
           if (queueEvent->type == QueueEvent::Wait) {
-            break;
+            auto* waitEvent = static_cast<WaitEvent*>(queueEvent);
+            if (fenceKey != waitEvent->fence.key || fenceValue < waitEvent->fence.value) {
+              break;
+            }
           } else if (queueEvent->type == QueueEvent::Execute) {
             readyExecutables_.push_back(static_cast<Executable*>(queueEvent));
           } else if (queueEvent->type == QueueEvent::Signal) {
