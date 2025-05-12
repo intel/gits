@@ -473,65 +473,101 @@ void CaptureManager::interceptXessFunctions() {
   ret = DetourUpdateThread(GetCurrentThread());
   GITS_ASSERT(ret == NO_ERROR);
 
-  ret = DetourAttach(&xessDispatchTable_.xessGetVersion, xessGetVersionWrapper);
-  GITS_ASSERT(ret == NO_ERROR);
-  ret = DetourAttach(&xessDispatchTable_.xessGetIntelXeFXVersion, xessGetIntelXeFXVersionWrapper);
-  GITS_ASSERT(ret == NO_ERROR);
-  ret = DetourAttach(&xessDispatchTable_.xessGetProperties, xessGetPropertiesWrapper);
-  GITS_ASSERT(ret == NO_ERROR);
-  ret = DetourAttach(&xessDispatchTable_.xessGetInputResolution, xessGetInputResolutionWrapper);
-  GITS_ASSERT(ret == NO_ERROR);
-  ret = DetourAttach(&xessDispatchTable_.xessDestroyContext, xessDestroyContextWrapper);
-  GITS_ASSERT(ret == NO_ERROR);
-  ret = DetourAttach(&xessDispatchTable_.xessSetJitterScale, xessSetJitterScaleWrapper);
-  GITS_ASSERT(ret == NO_ERROR);
-  ret = DetourAttach(&xessDispatchTable_.xessSetVelocityScale, xessSetVelocityScaleWrapper);
-  GITS_ASSERT(ret == NO_ERROR);
-  if (xessVersion.major == 1 && xessVersion.minor >= 1) {
+  if (xessDispatchTable_.xessGetVersion) {
+    ret = DetourAttach(&xessDispatchTable_.xessGetVersion, xessGetVersionWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xessDispatchTable_.xessGetIntelXeFXVersion) {
+    ret = DetourAttach(&xessDispatchTable_.xessGetIntelXeFXVersion, xessGetIntelXeFXVersionWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xessDispatchTable_.xessGetProperties) {
+    ret = DetourAttach(&xessDispatchTable_.xessGetProperties, xessGetPropertiesWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xessDispatchTable_.xessGetInputResolution) {
+    ret = DetourAttach(&xessDispatchTable_.xessGetInputResolution, xessGetInputResolutionWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xessDispatchTable_.xessDestroyContext) {
+    ret = DetourAttach(&xessDispatchTable_.xessDestroyContext, xessDestroyContextWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xessDispatchTable_.xessSetJitterScale) {
+    ret = DetourAttach(&xessDispatchTable_.xessSetJitterScale, xessSetJitterScaleWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xessDispatchTable_.xessSetVelocityScale) {
+    ret = DetourAttach(&xessDispatchTable_.xessSetVelocityScale, xessSetVelocityScaleWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xessDispatchTable_.xessGetJitterScale) {
     ret = DetourAttach(&xessDispatchTable_.xessGetJitterScale, xessGetJitterScaleWrapper);
     GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xessDispatchTable_.xessGetVelocityScale) {
     ret = DetourAttach(&xessDispatchTable_.xessGetVelocityScale, xessGetVelocityScaleWrapper);
     GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xessDispatchTable_.xessIsOptimalDriver) {
     ret = DetourAttach(&xessDispatchTable_.xessIsOptimalDriver, xessIsOptimalDriverWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xessVersion.major == 1 && xessVersion.minor >= 2) {
+  if (xessDispatchTable_.xessGetOptimalInputResolution) {
     ret = DetourAttach(&xessDispatchTable_.xessGetOptimalInputResolution,
                        xessGetOptimalInputResolutionWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  if (xessVersion.major == 1 && xessVersion.minor >= 3) {
+  if (xessDispatchTable_.xessSetExposureMultiplier) {
     ret = DetourAttach(&xessDispatchTable_.xessSetExposureMultiplier,
                        xessSetExposureMultiplierWrapper);
     GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xessDispatchTable_.xessGetExposureMultiplier) {
     ret = DetourAttach(&xessDispatchTable_.xessGetExposureMultiplier,
                        xessGetExposureMultiplierWrapper);
     GITS_ASSERT(ret == NO_ERROR);
-
+  }
+  if (xessDispatchTable_.xessForceLegacyScaleFactors) {
     ret = DetourAttach(&xessDispatchTable_.xessForceLegacyScaleFactors,
                        xessForceLegacyScaleFactorsWrapper);
     GITS_ASSERT(ret == NO_ERROR);
   }
-  ret = DetourAttach(&xessDispatchTable_.xessSetLoggingCallback, xessSetLoggingCallbackWrapper);
-  GITS_ASSERT(ret == NO_ERROR);
-  ret = DetourAttach(&xessDispatchTable_.xessD3D12CreateContext, xessD3D12CreateContextWrapper);
-  GITS_ASSERT(ret == NO_ERROR);
-  ret = DetourAttach(&xessDispatchTable_.xessD3D12Init, xessD3D12InitWrapper);
-  GITS_ASSERT(ret == NO_ERROR);
-  ret = DetourAttach(&xessDispatchTable_.xessD3D12BuildPipelines, xessD3D12BuildPipelinesWrapper);
-  GITS_ASSERT(ret == NO_ERROR);
-  ret = DetourAttach(&xessDispatchTable_.xessD3D12GetInitParams, xessD3D12GetInitParamsWrapper);
-  GITS_ASSERT(ret == NO_ERROR);
-  ret = DetourAttach(&xessDispatchTable_.xessD3D12Execute, xessD3D12ExecuteWrapper);
-  GITS_ASSERT(ret == NO_ERROR);
-
-  if (xessVersion.major > 1) {
+  if (xessDispatchTable_.xessSetLoggingCallback) {
+    ret = DetourAttach(&xessDispatchTable_.xessSetLoggingCallback, xessSetLoggingCallbackWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xessDispatchTable_.xessD3D12CreateContext) {
+    ret = DetourAttach(&xessDispatchTable_.xessD3D12CreateContext, xessD3D12CreateContextWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xessDispatchTable_.xessD3D12Init) {
+    ret = DetourAttach(&xessDispatchTable_.xessD3D12Init, xessD3D12InitWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xessDispatchTable_.xessD3D12BuildPipelines) {
+    ret = DetourAttach(&xessDispatchTable_.xessD3D12BuildPipelines, xessD3D12BuildPipelinesWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xessDispatchTable_.xessD3D12GetInitParams) {
+    ret = DetourAttach(&xessDispatchTable_.xessD3D12GetInitParams, xessD3D12GetInitParamsWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xessDispatchTable_.xessD3D12Execute) {
+    ret = DetourAttach(&xessDispatchTable_.xessD3D12Execute, xessD3D12ExecuteWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xessDispatchTable_.xessSetMaxResponsiveMaskValue) {
     ret = DetourAttach(&xessDispatchTable_.xessSetMaxResponsiveMaskValue,
                        xessSetMaxResponsiveMaskValueWrapper);
     GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xessDispatchTable_.xessGetMaxResponsiveMaskValue) {
     ret = DetourAttach(&xessDispatchTable_.xessGetMaxResponsiveMaskValue,
                        xessGetMaxResponsiveMaskValueWrapper);
     GITS_ASSERT(ret == NO_ERROR);
+  }
+  if (xessDispatchTable_.xessGetPipelineBuildStatus) {
     ret = DetourAttach(&xessDispatchTable_.xessGetPipelineBuildStatus,
                        xessGetPipelineBuildStatusWrapper);
     GITS_ASSERT(ret == NO_ERROR);
