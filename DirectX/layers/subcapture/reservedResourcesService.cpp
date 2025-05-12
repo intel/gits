@@ -358,9 +358,12 @@ void ReservedResourcesService::restoreContent() {
     // copy resources contents into readback resource
 
     std::vector<bool> subresourceFullyMappedFlags(tiledResource->subresources.size(), true);
+    std::set<unsigned> heapKeys;
     for (const auto& tile : tiledResource->tiles) {
       if (!tile.heapKey) {
         subresourceFullyMappedFlags.at(tile.subresourceIndex) = false;
+      } else {
+        heapKeys.insert(tile.heapKey);
       }
     }
 
@@ -510,6 +513,17 @@ void ReservedResourcesService::restoreContent() {
 
     commandList_->Close();
 
+    // increase residency count or make resident
+
+    std::vector<ID3D12Pageable*> residencyObjects;
+    for (const auto heapKey : heapKeys) {
+      ObjectState* heapState = stateService_.getState(heapKey);
+      residencyObjects.push_back(static_cast<ID3D12Pageable*>(heapState->object));
+    }
+    if (!residencyObjects.empty()) {
+      device_->MakeResident(residencyObjects.size(), residencyObjects.data());
+    }
+
     ID3D12CommandList* commandLists[] = {commandList_};
     commandQueue_->ExecuteCommandLists(1, commandLists);
     commandQueue_->Signal(fence_, ++currentFenceValue_);
@@ -520,6 +534,13 @@ void ReservedResourcesService::restoreContent() {
     GITS_ASSERT(hr == S_OK);
     hr = commandList_->Reset(commandAllocator_, nullptr);
     GITS_ASSERT(hr == S_OK);
+
+    // decrese residency count or evict
+
+    if (!residencyObjects.empty()) {
+      HRESULT hr = device_->Evict(residencyObjects.size(), residencyObjects.data());
+      GITS_ASSERT(hr == S_OK);
+    }
 
     // create upload resource with resources contents in subcaptured stream
 
@@ -638,6 +659,22 @@ void ReservedResourcesService::restoreContent() {
     commandListClose.object_.key = commandListKey_;
     stateService_.recorder_.record(new ID3D12GraphicsCommandListCloseWriter(commandListClose));
 
+    // increase residency count or make resident
+
+    if (!heapKeys.empty()) {
+      ID3D12DeviceMakeResidentCommand makeResident;
+      makeResident.key = stateService_.getUniqueCommandKey();
+      makeResident.object_.key = deviceKey;
+      makeResident.NumObjects_.value = heapKeys.size();
+      ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
+      makeResident.ppObjects_.value = &fakePtr;
+      makeResident.ppObjects_.size = heapKeys.size();
+      for (unsigned key : heapKeys) {
+        makeResident.ppObjects_.keys.push_back(key);
+      }
+      stateService_.recorder_.record(new ID3D12DeviceMakeResidentWriter(makeResident));
+    }
+
     ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
     executeCommandLists.key = stateService_.getUniqueCommandKey();
     executeCommandLists.object_.key = commandQueueKey_;
@@ -678,6 +715,22 @@ void ReservedResourcesService::restoreContent() {
     releaseCommand.key = stateService_.getUniqueCommandKey();
     releaseCommand.object_.key = uploadResourceKey;
     stateService_.recorder_.record(new IUnknownReleaseWriter(releaseCommand));
+
+    // decrese residency count or evict
+
+    if (!heapKeys.empty()) {
+      ID3D12DeviceEvictCommand evict;
+      evict.key = stateService_.getUniqueCommandKey();
+      evict.object_.key = deviceKey;
+      evict.NumObjects_.value = heapKeys.size();
+      ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
+      evict.ppObjects_.value = &fakePtr;
+      evict.ppObjects_.size = heapKeys.size();
+      for (unsigned key : heapKeys) {
+        evict.ppObjects_.keys.push_back(key);
+      }
+      stateService_.recorder_.record(new ID3D12DeviceEvictWriter(evict));
+    }
   }
 
   cleanupRestore();
