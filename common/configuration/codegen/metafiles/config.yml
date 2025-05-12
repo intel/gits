@@ -773,6 +773,12 @@ Configuration:
             Type: bool
             Default: true
             Description: Don't replay ID3D12GraphicsCommandList::ResolveQueryData commands
+          - Name: infiniteWaitForFence
+            Type: bool
+            Default: false
+            Description:
+              Set the timeout to INFINITE when waiting for fences (GPU to CPU synchronization) instead
+              of the default (5sec)
           - Name: multithreadedShaderCompilation
             Type: bool
             Default: true
