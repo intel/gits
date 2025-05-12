@@ -62,6 +62,8 @@ gits::CFunction* DirectXLibrary::FunctionCreate(unsigned type) const {
     return new INTC_D3D12_CreateCommittedResourcePlayer();
   case CommandId::INTC_D3D12_CREATEHEAP:
     return new INTC_D3D12_CreateHeapPlayer();
+  case CommandId::INTC_D3D12_SETAPPLICATIONINFO:
+    return new INTC_D3D12_SetApplicationInfoPlayer();
   %for function in functions:
   case CommandId::ID_${function.name.upper()}:
     return new ${function.name}Player();
