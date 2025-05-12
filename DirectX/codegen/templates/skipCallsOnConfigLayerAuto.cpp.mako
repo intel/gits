@@ -76,6 +76,13 @@ void SkipCallsOnConfigLayer::pre(INTC_D3D12_CreateDeviceExtensionContext1Command
   }
 }
 
+void SkipCallsOnConfigLayer::pre(INTC_D3D12_SetApplicationInfoCommand& command) {
+  if (configKeySet_.contains(command.key)) {
+    command.skip = true;
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " INTC_D3D12_SetApplicationInfo";
+  }
+}
+
 void SkipCallsOnConfigLayer::pre(INTC_DestroyDeviceExtensionContextCommand& command) {
   if (configKeySet_.contains(command.key)) {
     command.skip = true;

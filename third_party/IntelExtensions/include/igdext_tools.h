@@ -64,6 +64,18 @@ typedef HRESULT ( *PFNINTCDX11EXT_API_CALLBACK_ENDUAVOVERLAP )(
     PFNINTCDX11EXT_ENDUAVOVERLAP pfnEndUAVOverlap,
     INTCExtensionContext*        pExtensionContext );
 
+typedef HRESULT ( *PFNINTCDX11EXT_BEGIN_RETRIEVE_RESOURCE_HANDLE )(
+    INTCExtensionContext* pExtensionContext );
+typedef HRESULT ( *PFNINTCDX11EXT_API_CALLBACK_BEGIN_RETRIEVE_RESOURCE_HANDLE )(
+    PFNINTCDX11EXT_BEGIN_RETRIEVE_RESOURCE_HANDLE pfnBegin_Retrieve_Resource_Handle,
+    INTCExtensionContext*                         pExtensionContext );
+
+typedef HRESULT ( *PFNINTCDX11EXT_END_RETRIEVE_RESOURCE_HANDLE )(
+    INTCExtensionContext* pExtensionContext );
+typedef HRESULT ( *PFNINTCDX11EXT_API_CALLBACK_END_RETRIEVE_RESOURCE_HANDLE )(
+    PFNINTCDX11EXT_END_RETRIEVE_RESOURCE_HANDLE pfnEnd_Retrieve_Resource_Handle,
+    INTCExtensionContext*                       pExtensionContext );
+
 typedef void ( *PFNINTCDX11EXT_MULTIDRAWINSTANCEDINDIRECT )(
     INTCExtensionContext* pExtensionContext,
     ID3D11DeviceContext*  pDeviceContext,
@@ -819,6 +831,8 @@ struct INTC_D3D11_API_CALLBACKS
 
     PFNINTCDX11EXT_API_CALLBACK_BEGINUAVOVERLAP                                INTC_D3D11_BeginUAVOverlap;
     PFNINTCDX11EXT_API_CALLBACK_ENDUAVOVERLAP                                  INTC_D3D11_EndUAVOverlap;
+    PFNINTCDX11EXT_API_CALLBACK_BEGIN_RETRIEVE_RESOURCE_HANDLE                 INTC_D3D11_Begin_Retrieve_Resource_Handle;
+    PFNINTCDX11EXT_API_CALLBACK_END_RETRIEVE_RESOURCE_HANDLE                   INTC_D3D11_End_Retrieve_Resource_Handle;
     PFNINTCDX11EXT_API_CALLBACK_MULTIDRAWINSTANCEDINDIRECT                     INTC_D3D11_MultiDrawInstancedIndirect;
     PFNINTCDX11EXT_API_CALLBACK_MULTIDRAWINDEXEDINSTANCEDINDIRECT              INTC_D3D11_MultiDrawIndexedInstancedIndirect;
     PFNINTCDX11EXT_API_CALLBACK_MULTIDRAWINSTANCEDINDIRECTCOUNTINDIRECT        INTC_D3D11_MultiDrawInstancedIndirectCountIndirect;

@@ -88,6 +88,12 @@ HRESULT INTC_D3D12_CreateDeviceExtensionContextWrapper(
     }
     command.result_.value = result;
 
+    // The current implementation of INTC_D3D12_CreateDeviceExtensionContext1 is changing the value of pExtensionAppInfo with invalid data
+    // Once the issue is fixed, this workaround won't be necessary (since the pointers will be preserved)
+    command.pExtensionAppInfo_.value->pApplicationName =
+        command.pExtensionAppInfo_.pApplicationName;
+    command.pExtensionAppInfo_.value->pEngineName = command.pExtensionAppInfo_.pEngineName;
+
     for (Layer* layer : manager.getPostLayers()) {
       layer->post(command);
     }
@@ -137,6 +143,12 @@ HRESULT INTC_D3D12_CreateDeviceExtensionContext1Wrapper(
           command.ppExtensionContext_.key);
     }
     command.result_.value = result;
+
+    // The current implementation of INTC_D3D12_CreateDeviceExtensionContext1 is changing the value of pExtensionAppInfo with invalid data
+    // Once the issue is fixed, this workaround won't be necessary (since the pointers will be preserved)
+    command.pExtensionAppInfo_.value->pApplicationName =
+        command.pExtensionAppInfo_.pApplicationName;
+    command.pExtensionAppInfo_.value->pEngineName = command.pExtensionAppInfo_.pEngineName;
 
     for (Layer* layer : manager.getPostLayers()) {
       layer->post(command);
@@ -783,12 +795,29 @@ HRESULT INTC_D3D12_RemoveShaderBinariesPathWrapper(
 HRESULT INTC_D3D12_SetApplicationInfoWrapper(
     PFNINTCDX12EXT_SETAPPLICATIONINFO pfnSetApplicationInfo,
     INTCExtensionAppInfo1* pExtensionAppInfo) {
-  static bool logged = false;
-  if (!logged) {
-    Log(ERR) << "INTC_D3D12_SetApplicationInfo not handled.";
-    logged = true;
+  HRESULT result{};
+
+  auto& manager = CaptureManager::get();
+  if (auto atTopOfStack = AtTopOfStackLocal()) {
+
+    INTC_D3D12_SetApplicationInfoCommand command(GetCurrentThreadId(), pExtensionAppInfo);
+
+    for (Layer* layer : manager.getPreLayers()) {
+      layer->pre(command);
+    }
+
+    command.key = manager.createCommandKey();
+    if (!command.skip) {
+      result = pfnSetApplicationInfo(command.pExtensionAppInfo_.value);
+    }
+    command.result_.value = result;
+    for (Layer* layer : manager.getPostLayers()) {
+      layer->post(command);
+    }
+  } else {
+    result = pfnSetApplicationInfo(pExtensionAppInfo);
   }
-  HRESULT result = pfnSetApplicationInfo(pExtensionAppInfo);
+
   return result;
 }
 

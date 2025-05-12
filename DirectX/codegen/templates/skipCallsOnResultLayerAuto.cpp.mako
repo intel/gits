@@ -30,6 +30,12 @@ void SkipCallsOnResultLayer::pre(INTC_D3D12_CreateDeviceExtensionContext1Command
   }
 }
 
+void SkipCallsOnResultLayer::pre(INTC_D3D12_SetApplicationInfoCommand& command) {
+  if (command.result_.value != S_OK) {
+    command.skip = true;
+  }
+}
+
 void SkipCallsOnResultLayer::pre(INTC_DestroyDeviceExtensionContextCommand& command) {
   if (command.result_.value != S_OK) {
     command.skip = true;

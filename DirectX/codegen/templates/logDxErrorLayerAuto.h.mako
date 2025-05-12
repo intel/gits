@@ -44,6 +44,8 @@ public:
   virtual void post(INTC_D3D12_CreateDeviceExtensionContextCommand& command);
   virtual void pre(INTC_D3D12_CreateDeviceExtensionContext1Command& command);
   virtual void post(INTC_D3D12_CreateDeviceExtensionContext1Command& command);
+  virtual void pre(INTC_D3D12_SetApplicationInfoCommand& command);
+  virtual void post(INTC_D3D12_SetApplicationInfoCommand& command);
   virtual void pre(INTC_DestroyDeviceExtensionContextCommand& command);
   virtual void post(INTC_DestroyDeviceExtensionContextCommand& command);
   virtual void pre(INTC_D3D12_CheckFeatureSupportCommand& command);

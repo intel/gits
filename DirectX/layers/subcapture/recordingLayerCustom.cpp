@@ -88,6 +88,12 @@ void RecordingLayer::post(INTC_D3D12_CreateDeviceExtensionContext1Command& comma
   }
 }
 
+void RecordingLayer::post(INTC_D3D12_SetApplicationInfoCommand& command) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new INTC_D3D12_SetApplicationInfoWriter(command));
+  }
+}
+
 void RecordingLayer::post(INTC_DestroyDeviceExtensionContextCommand& command) {
   if (recorder_.isRunning()) {
     recorder_.record(new INTC_DestroyDeviceExtensionContextWriter(command));

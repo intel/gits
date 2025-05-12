@@ -217,6 +217,25 @@ private:
   INTC_D3D12_CreateDeviceExtensionContext1Command command;
 };
 
+class INTC_D3D12_SetApplicationInfoPlayer : public CommandPlayer {
+public:
+  unsigned Id() const override {
+    return static_cast<unsigned>(CommandId::INTC_D3D12_SETAPPLICATIONINFO);
+  }
+  const char* Name() const override {
+    return "INTC_D3D12_SetApplicationInfo";
+  }
+  void Run() override;
+
+protected:
+  void decodeCommand() override {
+    decode(data_.data(), command);
+  }
+
+private:
+  INTC_D3D12_SetApplicationInfoCommand command;
+};
+
 class INTC_DestroyDeviceExtensionContextPlayer : public CommandPlayer {
 public:
   unsigned Id() const override {

@@ -40,6 +40,10 @@ void EncoderLayer::post(INTC_D3D12_CreateDeviceExtensionContext1Command& command
   recorder_.record(command.key, new INTC_D3D12_CreateDeviceExtensionContext1Writer(command));
 }
 
+void EncoderLayer::post(INTC_D3D12_SetApplicationInfoCommand& command) {
+  recorder_.record(command.key, new INTC_D3D12_SetApplicationInfoWriter(command));
+}
+
 void EncoderLayer::post(INTC_DestroyDeviceExtensionContextCommand& command) {
   recorder_.record(command.key, new INTC_DestroyDeviceExtensionContextWriter(command));
 }

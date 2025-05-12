@@ -29,6 +29,7 @@
 
 namespace gits {
 namespace DirectX {
+class INTC_D3D12_SetApplicationInfoCommand;
 
 class StateTrackingService : public gits::noncopyable {
 public:
@@ -66,6 +67,7 @@ public:
   void keepState(unsigned objectKey);
   void storeState(ObjectState* state);
   void storeINTCFeature(INTC_D3D12_FEATURE feature);
+  void storeINTCApplicationInfo(INTC_D3D12_SetApplicationInfoCommand& c);
   void releaseObject(unsigned key, ULONG result);
   void setReferenceCount(unsigned objectKey, ULONG referenceCount);
   ObjectState* getState(unsigned key);
@@ -87,6 +89,7 @@ private:
                                                 D3D12_RESOURCE_DIMENSION dimension);
   D3D12_BARRIER_LAYOUT getResourceInitialLayout(ResourceState& state,
                                                 D3D12_RESOURCE_DIMENSION dimension);
+  void restoreINTCApplicationInfo();
   void restoreResidencyPriority(unsigned deviceKey,
                                 unsigned objectKey,
                                 D3D12_RESIDENCY_PRIORITY residencyPriority);
@@ -177,6 +180,7 @@ private:
   ResidencyService& residencyService_;
   unsigned deviceKey_{};
   INTC_D3D12_FEATURE intcFeature_{};
+  std::unique_ptr<char[]> intcApplicationInfoEncoded_;
 
 private:
   class SwapChainService {

@@ -101,6 +101,16 @@ void LogDxErrorLayer::post(INTC_D3D12_CreateDeviceExtensionContext1Command& comm
   }
 }
 
+void LogDxErrorLayer::pre(INTC_D3D12_SetApplicationInfoCommand& command) {
+  preResult_ = command.result_.value;
+}
+
+void LogDxErrorLayer::post(INTC_D3D12_SetApplicationInfoCommand& command) {
+  if (isFailure(command.result_.value)) {
+    Log(ERR) << callKeyToStr(command.key) << " INTC_D3D12_SetApplicationInfo failed " << printResult(command.result_.value);
+  }
+}
+
 void LogDxErrorLayer::pre(INTC_DestroyDeviceExtensionContextCommand& command) {
   preResult_ = command.result_.value;
 }

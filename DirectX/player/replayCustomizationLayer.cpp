@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "replayCustomizationLayer.h"
+#include "configurator.h"
 #include "playerManager.h"
 #include "interfaceArgumentUpdaters.h"
 #include "gits.h"
@@ -62,9 +63,6 @@ void ReplayCustomizationLayer::pre(D3D12CreateDeviceCommand& c) {
   std::wstring descriptionW = desc.Description;
   std::string description(descriptionW.begin(), descriptionW.end());
   Log(INFO) << "D3D12CreateDevice - Using adapter: " << description;
-
-  manager_.getIntelExtensionsService().loadIntelExtensions(desc.VendorId, desc.DeviceId);
-  manager_.getIntelExtensionsService().setApplicationInfo();
 }
 
 void ReplayCustomizationLayer::pre(IDXGISwapChainSetFullscreenStateCommand& c) {
@@ -908,6 +906,26 @@ void ReplayCustomizationLayer::pre(ID3DBlobGetBufferPointerCommand& c) {
 
 void ReplayCustomizationLayer::pre(ID3DBlobGetBufferSizeCommand& c) {
   c.skip = true;
+}
+
+void ReplayCustomizationLayer::pre(INTC_D3D12_SetApplicationInfoCommand& c) {
+  if (Configurator::Get().directx.player.applicationInfoOverride.enabled) {
+    c.skip = true;
+  } else {
+    // Print application info (may affect driver behavior on playback)
+    std::wstring appNameW = c.pExtensionAppInfo_.pApplicationName;
+    auto appName = std::string(appNameW.begin(), appNameW.end());
+    std::wstring engineNameW = c.pExtensionAppInfo_.pEngineName;
+    auto engineName = std::string(engineNameW.begin(), engineNameW.end());
+    Log(INFO) << "INTC_D3D12_SetApplicationInfo - Application: \"" << appName << "\" ("
+              << c.pExtensionAppInfo_.value->ApplicationVersion.major << "."
+              << c.pExtensionAppInfo_.value->ApplicationVersion.minor << "."
+              << c.pExtensionAppInfo_.value->ApplicationVersion.patch << ")"
+              << ", Engine: \"" << engineName << "\" ("
+              << c.pExtensionAppInfo_.value->EngineVersion.major << "."
+              << c.pExtensionAppInfo_.value->EngineVersion.minor << "."
+              << c.pExtensionAppInfo_.value->EngineVersion.patch << ")";
+  }
 }
 
 void ReplayCustomizationLayer::fillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg) {

@@ -303,6 +303,24 @@ void TraceLayer::post(INTC_D3D12_CreateDeviceExtensionContext1Command& command) 
   }
 }
 
+void TraceLayer::pre(INTC_D3D12_SetApplicationInfoCommand& command) {
+  if (printPre_) {
+    CommandPrinter p(streamPre_, statePre_, command, "INTC_D3D12_SetApplicationInfo");
+    p.addArgument(command.pExtensionAppInfo_);
+    p.addResult(command.result_);
+    p.print(flush_);
+  }
+}
+
+void TraceLayer::post(INTC_D3D12_SetApplicationInfoCommand& command) {
+  if (printPost_) {
+    CommandPrinter p(streamPost_, statePost_, command, "INTC_D3D12_SetApplicationInfo");
+    p.addArgument(command.pExtensionAppInfo_);
+    p.addResult(command.result_);
+    p.print(flush_);
+  }
+}
+
 void TraceLayer::pre(INTC_DestroyDeviceExtensionContextCommand& command) {
   if (printPre_) {
     CommandPrinter p(streamPre_, statePre_, command, "INTC_DestroyDeviceExtensionContext");

@@ -201,6 +201,8 @@ PlayerManager::PlayerManager() {
   loadDirectML();
   getXessService().loadXess();
   loadDirectStorage();
+  getIntelExtensionsService().loadIntelExtensions();
+  getIntelExtensionsService().setApplicationInfo();
 
   pluginService_ = std::make_unique<PluginService>();
   pluginService_->loadPlugins();

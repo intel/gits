@@ -32,6 +32,8 @@ public:
   void post(INTC_D3D12_CreateDeviceExtensionContextCommand& command) override;
   void pre(INTC_D3D12_CreateDeviceExtensionContext1Command& command) override;
   void post(INTC_D3D12_CreateDeviceExtensionContext1Command& command) override;
+  void pre(INTC_D3D12_SetApplicationInfoCommand& command) override;
+  void post(INTC_D3D12_SetApplicationInfoCommand& command) override;
   void pre(INTC_DestroyDeviceExtensionContextCommand& command) override;
   void post(INTC_DestroyDeviceExtensionContextCommand& command) override;
   void pre(INTC_D3D12_CheckFeatureSupportCommand& command) override;

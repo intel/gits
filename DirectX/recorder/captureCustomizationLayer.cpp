@@ -774,6 +774,13 @@ void CaptureCustomizationLayer::pre(INTC_D3D12_CreateDeviceExtensionContext1Comm
   }
 }
 
+void CaptureCustomizationLayer::pre(INTC_D3D12_SetApplicationInfoCommand& c) {
+  if (c.pExtensionAppInfo_.value) {
+    c.pExtensionAppInfo_.pApplicationName = c.pExtensionAppInfo_.value->pApplicationName;
+    c.pExtensionAppInfo_.pEngineName = c.pExtensionAppInfo_.value->pEngineName;
+  }
+}
+
 void CaptureCustomizationLayer::pre(INTC_D3D12_CreateComputePipelineStateCommand& c) {
   c.pDesc_.cs = c.pDesc_.value->CS.pShaderBytecode;
   c.pDesc_.compileOptions = c.pDesc_.value->CompileOptions;

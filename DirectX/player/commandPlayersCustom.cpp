@@ -237,6 +237,22 @@ void INTC_D3D12_CreateDeviceExtensionContext1Player::Run() {
   }
 }
 
+void INTC_D3D12_SetApplicationInfoPlayer::Run() {
+  auto& manager = PlayerManager::get();
+
+  for (Layer* layer : manager.getPreLayers()) {
+    layer->pre(command);
+  }
+
+  if (manager.executeCommands() && command.result_.value == S_OK && !command.skip) {
+    command.result_.value = INTC_D3D12_SetApplicationInfo(command.pExtensionAppInfo_.value);
+  }
+
+  for (Layer* layer : manager.getPostLayers()) {
+    layer->post(command);
+  }
+}
+
 void INTC_DestroyDeviceExtensionContextPlayer::Run() {
   auto& manager = PlayerManager::get();
 

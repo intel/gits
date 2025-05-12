@@ -283,6 +283,18 @@ public:
   Argument<HRESULT> result_{};
 };
 
+class INTC_D3D12_SetApplicationInfoCommand : public Command {
+public:
+  INTC_D3D12_SetApplicationInfoCommand(unsigned threadId, INTCExtensionAppInfo1* pExtensionAppInfo)
+      : Command{CommandId::INTC_D3D12_SETAPPLICATIONINFO, threadId},
+        pExtensionAppInfo_{pExtensionAppInfo} {}
+  INTC_D3D12_SetApplicationInfoCommand() : Command(CommandId::INTC_D3D12_SETAPPLICATIONINFO) {}
+
+public:
+  PointerArgument<INTCExtensionAppInfo1> pExtensionAppInfo_;
+  Argument<HRESULT> result_{};
+};
+
 class INTC_DestroyDeviceExtensionContextCommand : public Command {
 public:
   INTC_DestroyDeviceExtensionContextCommand(unsigned threadId,

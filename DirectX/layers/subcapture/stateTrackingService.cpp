@@ -10,6 +10,7 @@
 #include "commandsAuto.h"
 #include "commandWritersAuto.h"
 #include "commandWritersCustom.h"
+#include "argumentEncoders.h"
 #include "argumentDecoders.h"
 #include "gits.h"
 #include "configurationLib.h"
@@ -276,6 +277,12 @@ void StateTrackingService::storeINTCFeature(INTC_D3D12_FEATURE feature) {
   intcFeature_ = feature;
 }
 
+void StateTrackingService::storeINTCApplicationInfo(INTC_D3D12_SetApplicationInfoCommand& c) {
+  intcApplicationInfoEncoded_.reset(new char[getSize(c.pExtensionAppInfo_)]);
+  unsigned offset{};
+  encode(intcApplicationInfoEncoded_.get(), offset, c.pExtensionAppInfo_);
+}
+
 void StateTrackingService::releaseObject(unsigned key, ULONG result) {
   auto itState = statesByKey_.find(key);
   if (itState == statesByKey_.end()) {
@@ -441,6 +448,8 @@ void StateTrackingService::restoreDXGIAdapter(DXGIAdapterState* state) {
   c.riid_.value = state->iid;
   c.ppvAdapter_.key = state->key;
   recorder_.record(new IDXGIFactory6EnumAdapterByGpuPreferenceWriter(c));
+
+  restoreINTCApplicationInfo();
 }
 
 void StateTrackingService::restoreDXGIAdapterByLuid(DXGIAdapterByLuidState* state) {
@@ -451,6 +460,8 @@ void StateTrackingService::restoreDXGIAdapterByLuid(DXGIAdapterByLuidState* stat
   c.riid_.value = state->iid;
   c.ppvAdapter_.key = state->key;
   recorder_.record(new IDXGIFactory4EnumAdapterByLuidWriter(c));
+
+  restoreINTCApplicationInfo();
 }
 
 void StateTrackingService::restoreDXGIGetParent(DXGIGetParentState* state) {
@@ -1135,6 +1146,18 @@ void StateTrackingService::restoreD3D12INTCDeviceExtensionContext1(
     c.pFeature_.value = &intcFeature_;
     recorder_.record(new INTC_D3D12_SetFeatureSupportWriter(c));
   }
+}
+
+void StateTrackingService::restoreINTCApplicationInfo() {
+  INTC_D3D12_SetApplicationInfoCommand c;
+  c.key = getUniqueCommandKey();
+
+  PointerArgument<INTCExtensionAppInfo1> extensionAppInfoArg;
+  unsigned offset{};
+  decode(intcApplicationInfoEncoded_.get(), offset, extensionAppInfoArg);
+  c.pExtensionAppInfo_ = extensionAppInfoArg;
+
+  recorder_.record(new INTC_D3D12_SetApplicationInfoWriter(c));
 }
 
 void StateTrackingService::restoreD3D12INTCCommittedResource(

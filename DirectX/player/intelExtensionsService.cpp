@@ -13,6 +13,7 @@
 #include <map>
 #include <setupapi.h>
 #include <ntddvdeo.h>
+#include <wrl.h>
 
 namespace gits {
 namespace DirectX {
@@ -23,18 +24,37 @@ IntelExtensionsService::~IntelExtensionsService() {
   }
 }
 
-void IntelExtensionsService::loadIntelExtensions(const uint32_t& vendorID,
-                                                 const uint32_t& deviceID) {
+void IntelExtensionsService::loadIntelExtensions() {
   if (intelExtensionLoaded_) {
     return;
   }
 
-  HRESULT result = INTC_LoadExtensionsLibrary(false, vendorID, deviceID);
-  if (FAILED(result)) {
-    Log(WARN) << "INTC_LoadExtensionsLibrary failed.";
+  // Intel Extensions DLL is part of the Intel GPU driver and needs to be loaded after the driver DLLs
+  Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter;
+  Microsoft::WRL::ComPtr<IDXGIFactory6> factory;
+  HRESULT hr = CreateDXGIFactory2(0, IID_PPV_ARGS(&factory));
+  GITS_ASSERT(hr == S_OK);
+
+  // EnumAdapters will load the driver DLLs and is necessary in order to call INTC_LoadExtensionsLibrary
+  // This code assumes that the main adapter is the Intel GPU
+  hr = factory->EnumAdapters1(0, &adapter);
+  GITS_ASSERT(hr == S_OK);
+
+  DXGI_ADAPTER_DESC1 desc{};
+  hr = adapter->GetDesc1(&desc);
+  GITS_ASSERT(hr == S_OK);
+
+  std::wstring descriptionW = desc.Description;
+  std::string description(descriptionW.begin(), descriptionW.end());
+
+  // If the extensions cannot be loaded (e.g. not an Intel GPU) just print a warning
+  hr = INTC_LoadExtensionsLibrary(false, desc.VendorId, desc.DeviceId);
+  if (FAILED(hr)) {
+    Log(WARN) << "Failed to load Intel Extensions (" << description << ")";
     return;
   }
   intelExtensionLoaded_ = true;
+  Log(INFO) << "Loaded Intel Extensions (" << description << ")";
 }
 
 void IntelExtensionsService::setApplicationInfo() {
@@ -82,10 +102,10 @@ void IntelExtensionsService::setApplicationInfo() {
 
   HRESULT hr = INTC_D3D12_SetApplicationInfo(&appInfo);
   if (hr != S_OK) {
-    Log(ERR) << "INTC_D3D12_SetApplicationInfo failed - application name is not set.";
+    Log(ERR) << "INTC_D3D12_SetApplicationInfo failed - Application name is not set.";
   } else {
-    Log(INFO) << "INTC_D3D12_SetApplicationInfo - application: \"" << appName << "\" ("
-              << appVersion << "), engine: \"" << engineName << "\" (" << engineVersion << ")";
+    Log(INFO) << "INTC_D3D12_SetApplicationInfo - Application: \"" << appName << "\" ("
+              << appVersion << "), Engine: \"" << engineName << "\" (" << engineVersion << ")";
     applicationNameSet_ = true;
   }
 }

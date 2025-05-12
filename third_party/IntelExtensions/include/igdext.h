@@ -420,6 +420,18 @@ HRESULT INTC_D3D11_EndUAVOverlap(
     INTCExtensionContext* pExtensionContext );
 
 //////////////////////////////////////////////////////////////////////////
+/// @brief Begin_Retrieve_Resource_Handle marks the beginning point for retrieving the resource driver handle, it turns on the handle retrieval flag. flag off means no subsequent resource handle retrieval, thus no performance impact for normal resource creation flow.
+/// @param pExtensionContext A pointer to the extension context associated with the current Device.
+HRESULT INTC_D3D11_Begin_Retrieve_Resource_Handle(
+    INTCExtensionContext* pExtensionContext );
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief End_Retrieve_Resource_Handle marks the end point for retrieving the resource driver handle, it writes the resource handle to the destination memory where the application provides.
+/// @param pExtensionContext A pointer to the extension context associated with the current Device.
+HRESULT INTC_D3D11_End_Retrieve_Resource_Handle(
+    INTCExtensionContext* pExtensionContext );
+
+//////////////////////////////////////////////////////////////////////////
 /// @brief MultiDrawInstancedIndirect function submits multiple DrawInstancedIndirect in one call.
 /// @param pExtensionContext A pointer to the extension context associated with the current Device.
 /// @param pDeviceContext A pointer to the device context that will be used to generate rendering commands.

@@ -22,6 +22,7 @@ void decode(char* src, WaitForFenceSignaledCommand& command);
 void decode(char* src, INTC_D3D12_GetSupportedVersionsCommand& command);
 void decode(char* src, INTC_D3D12_CreateDeviceExtensionContextCommand& command);
 void decode(char* src, INTC_D3D12_CreateDeviceExtensionContext1Command& command);
+void decode(char* src, INTC_D3D12_SetApplicationInfoCommand& command);
 void decode(char* src, INTC_DestroyDeviceExtensionContextCommand& command);
 void decode(char* src, INTC_D3D12_CheckFeatureSupportCommand& command);
 void decode(char* src, INTC_D3D12_CreateCommandQueueCommand& command);

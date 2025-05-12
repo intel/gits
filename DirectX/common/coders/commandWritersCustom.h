@@ -138,6 +138,18 @@ public:
   }
 };
 
+class INTC_D3D12_SetApplicationInfoWriter : public CommandWriter {
+public:
+  INTC_D3D12_SetApplicationInfoWriter(INTC_D3D12_SetApplicationInfoCommand& command) {
+    dataSize_ = getSize(command);
+    data_.reset(new char[dataSize_]);
+    encode(command, data_.get());
+  }
+  unsigned Id() const override {
+    return static_cast<unsigned>(CommandId::INTC_D3D12_SETAPPLICATIONINFO);
+  }
+};
+
 class INTC_DestroyDeviceExtensionContextWriter : public CommandWriter {
 public:
   INTC_DestroyDeviceExtensionContextWriter(INTC_DestroyDeviceExtensionContextCommand& command) {

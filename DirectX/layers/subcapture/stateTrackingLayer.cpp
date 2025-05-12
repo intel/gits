@@ -1350,6 +1350,10 @@ void StateTrackingLayer::post(INTC_D3D12_CreateDeviceExtensionContext1Command& c
   deviceByINTCExtensionContext_[state->key] = state->deviceKey;
 }
 
+void StateTrackingLayer::post(INTC_D3D12_SetApplicationInfoCommand& c) {
+  stateService_.storeINTCApplicationInfo(c);
+}
+
 void StateTrackingLayer::post(INTC_DestroyDeviceExtensionContextCommand& c) {
   stateService_.releaseObject(c.ppExtensionContext_.key, c.result_.value);
   deviceByINTCExtensionContext_.erase(c.ppExtensionContext_.key);

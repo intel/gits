@@ -19,7 +19,7 @@ public:
   IntelExtensionsService() = default;
   ~IntelExtensionsService();
 
-  void loadIntelExtensions(const uint32_t& vendorID, const uint32_t& deviceID);
+  void loadIntelExtensions();
   void setApplicationInfo();
 
 private:
