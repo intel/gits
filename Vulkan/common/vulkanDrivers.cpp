@@ -577,7 +577,6 @@ void CVkDriver::InitializeUnifiedAPI(const VkDeviceCreateInfo* pCreateInfo,
   // Core 1.0 version
   if ((instanceDispatchTable.majorVersion == 1) && (instanceDispatchTable.minorVersion == 0)) {
     deviceDispatchTable.vkGetDeviceQueue2 = nullptr;
-    drvVk.vkGetDeviceQueue2 = nullptr;
   }
 
   // Enabled extensions
