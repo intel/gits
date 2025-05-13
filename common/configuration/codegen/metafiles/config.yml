@@ -702,10 +702,18 @@ Configuration:
             Default: false
             Description:
               Use an extra copy of the resource to track memory updates (Map
-              / Unmap).
+              / Unmap)
+            LongDescription:
+              Use an extra copy of the resource to track memory updates (Map
+              / Unmap). By default GITS uses write watch mechanics to track memory updates.
           - Name: captureIntelExtensions
             Type: bool
             Default: true
+            Description: If false Intel Extensions capture is done on D3D12 level
+            LongDescription:
+              If false Intel Extensions capture is done on D3D12 level. Capturing Intel Extensions 
+              calls is needed to ensure the stream will be compatible with future Intel drivers. Not
+              all applications use Intel Extensions.
           - Name: captureDirectML
             Type: bool
             Default: true
@@ -724,6 +732,10 @@ Configuration:
           - Name: forceGlobalSynchronization
             Type: bool
             Default: false
+            Description: All the D3D12 calls are serialized and processed from a single thread
+            LongDescription:
+              All the D3D12 calls are serialized and processed from a single thread. This will 
+              make the capture process very slow. Recommended for GITS developers only.
           - Name: plugins
             Type: std::vector<std::string>
             Default: []
@@ -768,7 +780,8 @@ Configuration:
             Description: Use a D3D12_COMMAND_LIST_TYPE_COPY to restore resource states
           - Name: uavBarrierAfterCopyRaytracingASWorkaround
             Type: bool
-            Default: ""
+            Default: false
+            Description: Temporary workaround required to playback some workloads correctly on Intel GPUs
           - Name: skipResolveQueryData
             Type: bool
             Default: true
@@ -821,7 +834,7 @@ Configuration:
             Options:
               - Name: enabled
                 Type: bool
-                Default: ""
+                Default: false
                 Description: Whether application info override is enabled or not
               - Name: applicationName
                 Type: std::string
@@ -845,15 +858,26 @@ Configuration:
               - Name: resourcePlacement
                 Type: std::string
                 Default: none
+                Description: Portability feature to use for placed resources (use/store/none)
+                LongDescription: |
+                  Portability feature to use for placed resources.
+                  Options:
+                  * `none`: Don't do anything special (playback the stream as-is)
+                  * `use`: Use existing file containing placed resources data
+                  * `store`: Create a file containing placed resources data
               - Name: portabilityChecks
                 Type: bool
                 Default: false
+                Description: Checks and logs portability issues
         ConfigName: Playback
       - Name: Features
         Type: Group
         Options:
           - Name: Trace
             Type: Group
+            Description: 
+              Trace is used to output a text file (tracefile.txt) with all the API calls as they
+              are being executed (or recorded)
             Options:
               - Name: enabled
                 Type: bool
@@ -862,7 +886,13 @@ Configuration:
               - Name: flushMethod
                 Type: std::string
                 Default: ipc
-                Description: Method how to flush
+                Description: Method used to flush the trace file (off/ipc/file)
+                LongDescription: |
+                  Method used to flush the trace file.
+                  Options: 
+                  * `off`: Does not flush the stream
+                  * `ipc`: Flush into shared memory and save to file from a different process
+                  * `file`: Flush directly into a file
               - Name: Print
                 Type: Group
                 Options:
@@ -910,7 +940,7 @@ Configuration:
               - Name: enabled
                 Type: bool
                 Default: false
-                Description: Whether subcapture is enabled or not
+                Description: Whether screenshots are enabled or not
               - Name: frames
                 Type: std::string
                 Default: ""
@@ -920,7 +950,7 @@ Configuration:
               - Name: format
                 Type: std::string
                 Default: png
-                Description: "Format of the screenshots: png"
+                Description: Format (png/jpg)
           - Name: ResourcesDump
             Type: Group
             Options:
@@ -945,6 +975,7 @@ Configuration:
               - Name: format
                 Type: std::string
                 Default: png
+                Description: Format (png/jpg)
           - Name: RenderTargetsDump
             Type: Group
             Options:
@@ -965,6 +996,7 @@ Configuration:
               - Name: format
                 Type: std::string
                 Default: png
+                Description: Format (png/jpg)
           - Name: RaytracingDump
             Type: Group
             Options:
@@ -1032,18 +1064,6 @@ Configuration:
                 Type: std::string
                 Default: ""
                 Description: Comma separated list of call keys to skip
-          - Name: Portability
-            Type: Group
-            Options:
-              - Name: enabled
-                Type: bool
-                Default: false
-              - Name: storePlacedResourceDataOnCapture
-                Type: bool
-                Default: true
-              - Name: storePlacedResourceDataOnPlayback
-                Type: bool
-                Default: false
   - Name: OpenGL
     Type: Group
     Options:
