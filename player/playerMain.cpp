@@ -178,8 +178,15 @@ int MainBody(int argc, char* argv[]) {
     return 0;
   }
 
-  if (!ConfigurePlayer(playerPath, args)) {
-    Log(ERR) << "Encountered error while configuring player";
+  try {
+    if (!ConfigurePlayer(playerPath, args)) {
+      Log(ERR) << "Encountered error while configuring player";
+      Log(ERR) << "Please run player with the \"--help\" argument to see usage info.";
+      return 1;
+    }
+  } catch (const std::runtime_error& e) {
+    Log(ERR) << "Encountered error while configuring player:\n" << e.what();
+    Log(ERR) << "Please run player with the \"--help\" argument to see usage info.";
     return 1;
   }
 
