@@ -179,7 +179,7 @@ class Repository:
             self.repository_path.mkdir()
         if clone:
             clone_cmd = [
-                f"git clone {self.url} --branch {self.branch} --recursive {self.name}"
+                f"git clone {self.url} --depth 1 --branch {self.branch} --recursive {self.name}"
             ]
             if USE_PARALLEL_GIT:
                 clone_cmd.append("-j 8")
@@ -190,7 +190,8 @@ class Repository:
                 cwd=self.repository_path.parent,
             )
             if self.commit_id:
-                self.execute(f"git reset --hard {self.commit_id}")
+                self.execute(f"git fetch --depth 1 origin {self.commit_id}")
+                self.execute(f"git checkout {self.commit_id}")
 
     def scan_repositories(self) -> None:
         modules_paths = self.repository_path.rglob(".git")
