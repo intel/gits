@@ -220,6 +220,7 @@ Configuration:
             Type: uint32_t
             Default: 0
             Description: Sleep this many milliseconds after a swap.
+            Arguments: [endFrameSleep]
           - Name: exitOnError
             Type: bool
             Default: false
@@ -1396,7 +1397,6 @@ Configuration:
           - Name: endFrameSleep
             Type: uint32_t
             Default: 0
-            Arguments: [endFrameSleep]
             Description: Sleep this many milliseconds after a swap.
           - Name: restoreDefaultFB
             Type: bool
