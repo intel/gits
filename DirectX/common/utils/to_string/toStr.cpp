@@ -19,6 +19,13 @@
 namespace gits {
 namespace DirectX {
 
+std::string toStr(const wchar_t* s) {
+  // Convert wide string to narrow string by truncating the characters
+  // Note: Will not work for non-ASCII characters
+  std::wstring wStr = s;
+  return std::string(wStr.begin(), wStr.end());
+}
+
 std::string callKeyToStr(unsigned key) {
   std::string result;
   if (key & Command::stateRestoreKeyMask) {

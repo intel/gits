@@ -162,11 +162,9 @@ private:
   void fillCpuDescriptorHandleArgument(DescriptorHandleArgument<D3D12_CPU_DESCRIPTOR_HANDLE>& arg);
   void waitForFence(unsigned commandKey, ID3D12Fence* fence, unsigned fenceValue);
   void removeCachedPSO(D3D12_PIPELINE_STATE_STREAM_DESC& desc);
-  void overrideAdapter(D3D12CreateDeviceCommand& command);
 
 private:
   PlayerManager& manager_;
-  Microsoft::WRL::ComPtr<IDXGIAdapter1> adapterOverride_;
   PipelineLibraryService& pipelineLibraryService_;
   HANDLE waitForFenceEvent_{};
 };

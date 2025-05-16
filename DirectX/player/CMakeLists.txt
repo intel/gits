@@ -40,6 +40,7 @@ set(SERVICES_SRC
   ${SRC_DIR}/heapAllocationService.h
   ${SRC_DIR}/heapAllocationService.cpp
   ${SRC_DIR}/adapterService.h
+  ${SRC_DIR}/adapterService.cpp
   ${SRC_DIR}/intelExtensionsService.h
   ${SRC_DIR}/intelExtensionsService.cpp  
   ${SRC_DIR}/pipelineLibraryService.h

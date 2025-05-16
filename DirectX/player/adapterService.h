@@ -9,37 +9,28 @@
 #pragma once
 
 #include "gits.h"
+#include "directx.h"
 
-#include <dxgi.h>
 #include <map>
+#include <wrl/client.h>
 
 namespace gits {
 namespace DirectX {
 
-class AdapterService {
+class AdapterService : public gits::noncopyable {
 public:
-  void setCaptureAdapterLuid(unsigned key, LUID captureLuid) {
-    captureLuids_[key] = captureLuid;
-  }
+  AdapterService() = default;
+  ~AdapterService() = default;
 
-  void setCurrentAdapterLuid(unsigned key, LUID currentLuid) {
-    auto it = captureLuids_.find(key);
-    GITS_ASSERT(it != captureLuids_.end());
-    luidsByCaptureLuid_[it->second] = currentLuid;
-    captureLuids_.erase(it);
-  }
+  void loadAdapters();
+  bool isAdapterOverride() const;
+  IDXGIAdapter1* getAdapter() const;
 
-  LUID getCurrentLuid(LUID captureLuid) {
-    if (luidsByCaptureLuid_.empty()) {
-      return LUID{0};
-    }
-    auto it = luidsByCaptureLuid_.find(captureLuid);
-    GITS_ASSERT(it != luidsByCaptureLuid_.end());
-    return it->second;
-  }
+  void setCaptureAdapterLuid(unsigned key, LUID captureLuid);
+  void setCurrentAdapterLuid(unsigned key, LUID currentLuid);
+  LUID getCurrentLuid(LUID captureLuid);
 
 private:
-  std::map<unsigned, LUID> captureLuids_;
   struct LessLuid {
     bool operator()(const LUID& l1, const LUID& l2) const {
       return l1.LowPart < l2.LowPart
@@ -47,6 +38,9 @@ private:
                  : (l1.LowPart == l2.LowPart && l1.HighPart < l2.HighPart ? true : false);
     }
   };
+
+  Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter_;
+  std::map<unsigned, LUID> captureLuids_;
   std::map<LUID, LUID, LessLuid> luidsByCaptureLuid_;
 };
 

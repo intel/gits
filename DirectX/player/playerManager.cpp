@@ -197,11 +197,15 @@ PlayerManager::PlayerManager() {
   retainLayer(std::move(directStorageLayer));
   retainLayer(std::move(directStorageResourcesLayer));
 
+  // Load DirectX runtimes
   loadAgilitySdk();
   loadDirectML();
-  getXessService().loadXess();
   loadDirectStorage();
-  getIntelExtensionsService().loadIntelExtensions();
+
+  // Load services
+  getAdapterService().loadAdapters();
+  getXessService().loadXess();
+  getIntelExtensionsService().loadIntelExtensions(getAdapterService().getAdapter());
   getIntelExtensionsService().setApplicationInfo();
 
   pluginService_ = std::make_unique<PluginService>();

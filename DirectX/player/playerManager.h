@@ -106,6 +106,7 @@ public:
 private:
   PlayerManager();
 
+  void loadAdapterOverride();
   void loadAgilitySdk();
   void loadDirectML();
   void loadDirectStorage();

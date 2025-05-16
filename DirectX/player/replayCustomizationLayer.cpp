@@ -11,6 +11,7 @@
 #include "playerManager.h"
 #include "interfaceArgumentUpdaters.h"
 #include "gits.h"
+#include "to_string/toStr.h"
 
 #include <d3dx12.h>
 #include <setupapi.h>
@@ -41,28 +42,27 @@ void ReplayCustomizationLayer::post(IUnknownAddRefCommand& c) {
 }
 
 void ReplayCustomizationLayer::pre(D3D12CreateDeviceCommand& c) {
+  const auto& adapterService = manager_.getAdapterService();
+  // Set the adapter override if needed
+  if (adapterService.isAdapterOverride()) {
+    c.pAdapter_.value = adapterService.getAdapter();
+  }
 
-  overrideAdapter(c);
+  // Print adapter description
 
   Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter;
-  if (c.pAdapter_.value) {
+  if (!c.pAdapter_.value) {
+    // Will get description from the default adapter
+    adapter = adapterService.getAdapter();
+  } else {
     c.pAdapter_.value->QueryInterface(IID_PPV_ARGS(&adapter));
-  }
-  if (!adapter) {
-    Microsoft::WRL::ComPtr<IDXGIFactory6> factory;
-    HRESULT hr = CreateDXGIFactory2(0, IID_PPV_ARGS(&factory));
-    GITS_ASSERT(hr == S_OK);
-    hr = factory->EnumAdapters1(0, &adapter);
-    GITS_ASSERT(hr == S_OK);
   }
 
   DXGI_ADAPTER_DESC1 desc{};
   HRESULT hr = adapter->GetDesc1(&desc);
   GITS_ASSERT(hr == S_OK);
 
-  std::wstring descriptionW = desc.Description;
-  std::string description(descriptionW.begin(), descriptionW.end());
-  Log(INFO) << "D3D12CreateDevice - Using adapter: " << description;
+  Log(INFO) << "D3D12CreateDevice - Using adapter: " << toStr(desc.Description);
 }
 
 void ReplayCustomizationLayer::pre(IDXGISwapChainSetFullscreenStateCommand& c) {
@@ -1075,74 +1075,6 @@ void ReplayCustomizationLayer::removeCachedPSO(D3D12_PIPELINE_STATE_STREAM_DESC&
       GITS_ASSERT(0 && "Unexpected subobject type");
       break;
     }
-  }
-}
-
-void ReplayCustomizationLayer::overrideAdapter(D3D12CreateDeviceCommand& command) {
-  const auto& adapterOverride = Configurator::Get().directx.player.adapterOverride;
-  if (!adapterOverride.enabled) {
-    return;
-  }
-
-  // Use existing adapter if already overridden
-  if (adapterOverride_) {
-    command.pAdapter_.value = adapterOverride_.Get();
-    return;
-  }
-
-  const std::unordered_map<std::string, unsigned> adapterMap = {
-      {"", 0}, {"intel", 0x8086}, {"amd", 0x1002}, {"nvidia", 0x10de}};
-
-  std::string adapterVendor = adapterOverride.vendor;
-  for (char& c : adapterVendor) {
-    c = std::tolower(c);
-  }
-  if (adapterMap.count(adapterVendor) == 0) {
-    Log(WARN) << "AdapterOverride - Unknown vendor: " << adapterOverride.vendor;
-    return;
-  }
-
-  Microsoft::WRL::ComPtr<IDXGIFactory6> factory;
-  CreateDXGIFactory2(0, IID_PPV_ARGS(&factory));
-  GITS_ASSERT(factory);
-
-  Log(INFO) << "Adapters:";
-  unsigned vendorId = adapterMap.at(adapterVendor);
-  unsigned adapterIndex = 0;
-  unsigned adapterFromVendorIndex = 0;
-  unsigned adapterOverrideIndex = 0;
-  Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter;
-  while (SUCCEEDED(factory->EnumAdapters1(adapterIndex, &adapter))) {
-    DXGI_ADAPTER_DESC1 adapterDesc{};
-    HRESULT hr = adapter->GetDesc1(&adapterDesc);
-    GITS_ASSERT(hr == S_OK);
-
-    std::wstring descriptionW = adapterDesc.Description;
-    std::string description(descriptionW.begin(), descriptionW.end());
-
-    Log(INFO) << "  (" << adapterIndex << ")" << std::hex << std::setfill('0') << " VendorId = 0x"
-              << std::setw(4) << adapterDesc.VendorId << " DeviceId = 0x" << std::setw(4)
-              << adapterDesc.DeviceId << " Description = " << std::setw(4) << description;
-
-    bool found = vendorId == 0 && adapterIndex == adapterOverride.index;
-    if (adapterDesc.VendorId == vendorId) {
-      found = adapterFromVendorIndex == adapterOverride.index;
-      ++adapterFromVendorIndex;
-    }
-
-    if (found) {
-      adapterOverride_ = adapter;
-      adapterOverrideIndex = adapterIndex;
-    }
-
-    ++adapterIndex;
-  }
-
-  if (adapterOverride_) {
-    command.pAdapter_.value = adapterOverride_.Get();
-    Log(INFO) << "AdapterOverride - Set adapter found at index " << adapterOverrideIndex;
-  } else {
-    Log(WARN) << "AdapterOverride - Adapter not found, will use default adapter (index 0)";
   }
 }
 

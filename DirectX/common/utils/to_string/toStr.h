@@ -22,6 +22,7 @@
 namespace gits {
 namespace DirectX {
 
+std::string toStr(const wchar_t* s);
 std::string callKeyToStr(unsigned key);
 std::wstring callKeyToWStr(unsigned key);
 

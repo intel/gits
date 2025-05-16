@@ -19,7 +19,7 @@ public:
   IntelExtensionsService() = default;
   ~IntelExtensionsService();
 
-  void loadIntelExtensions();
+  void loadIntelExtensions(IDXGIAdapter1* adapter);
   void setApplicationInfo();
 
 private:
