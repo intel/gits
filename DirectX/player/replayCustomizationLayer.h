@@ -155,6 +155,7 @@ public:
   void pre(ID3DBlobGetBufferPointerCommand& command) override;
   void pre(ID3DBlobGetBufferSizeCommand& command) override;
   void pre(INTC_D3D12_SetApplicationInfoCommand& command) override;
+  void pre(INTC_D3D12_GetSupportedVersionsCommand& command) override;
 
 private:
   void fillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg);
