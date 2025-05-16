@@ -11,8 +11,27 @@
 #include "commandWritersAuto.h"
 #include "gits.h"
 
+#include <filesystem>
+
 namespace gits {
 namespace DirectX {
+
+void CommandListExecutionService::copyAuxiliaryFiles() {
+  std::filesystem::path streamDir = Configurator::Get().common.player.streamDir;
+  std::filesystem::path subcapturePath = Configurator::Get().common.player.subcapturePath;
+  if (std::filesystem::exists(streamDir / "raytracingArraysOfPointers.dat")) {
+    std::filesystem::copy(streamDir / "raytracingArraysOfPointers.dat", subcapturePath,
+                          std::filesystem::copy_options::overwrite_existing);
+  }
+  if (std::filesystem::exists(streamDir / "executeIndirectRaytracing.txt")) {
+    std::filesystem::copy(streamDir / "executeIndirectRaytracing.txt", subcapturePath,
+                          std::filesystem::copy_options::overwrite_existing);
+  }
+  if (std::filesystem::exists(streamDir / "resourcePlacementData.dat")) {
+    std::filesystem::copy(streamDir / "resourcePlacementData.dat", subcapturePath,
+                          std::filesystem::copy_options::overwrite_existing);
+  }
+}
 
 void CommandListExecutionService::commandListCommand(unsigned commandListKey,
                                                      CommandWriter* command) {

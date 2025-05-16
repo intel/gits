@@ -23,7 +23,10 @@ namespace DirectX {
 
 class CommandListExecutionService {
 public:
-  CommandListExecutionService(ExecutionSerializationRecorder& recorder) : recorder_(recorder) {}
+  CommandListExecutionService(ExecutionSerializationRecorder& recorder) : recorder_(recorder) {
+    copyAuxiliaryFiles();
+  }
+  void copyAuxiliaryFiles();
   void commandListCommand(unsigned commandListKey, CommandWriter* command);
   void executeCommandLists(unsigned callKey,
                            unsigned commandQueueKey,
