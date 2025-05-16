@@ -8,6 +8,7 @@
 
 #include "subcaptureRecorder.h"
 #include "directXApiIfaceSubcapture.h"
+#include "gits.h"
 
 #include <filesystem>
 #include <string>
@@ -17,16 +18,14 @@ namespace DirectX {
 
 SubcaptureRecorder::SubcaptureRecorder() {
 
-  if (!Configurator::Get().directx.features.subcapture.enabled ||
-      Configurator::Get().directx.features.subcapture.executionSerialization) {
+  const gits::Configuration& config = Configurator::Get();
+
+  if (!config.directx.features.subcapture.enabled ||
+      config.directx.features.subcapture.executionSerialization) {
     return;
   }
-  CGits::Instance().apis.UseApi3dIface(
-      std::shared_ptr<ApisIface::Api3d>(new DirectXApiIfaceSubcapture()));
-  CRecorder::Instance();
 
-  std::string commandListExecutions =
-      Configurator::Get().directx.features.subcapture.commandListExecutions;
+  std::string commandListExecutions = config.directx.features.subcapture.commandListExecutions;
   if (!commandListExecutions.empty()) {
     size_t pos = commandListExecutions.find("-");
     if (pos != std::string::npos) {
@@ -35,7 +34,21 @@ SubcaptureRecorder::SubcaptureRecorder() {
     } else {
       executionRangeStart_ = executionRangeEnd_ = std::stoi(commandListExecutions);
     }
+
+    std::filesystem::path subcapturePath = config.common.player.subcapturePath;
+    std::string path = subcapturePath.parent_path().string();
+    path += "/frame_" + config.directx.features.subcapture.frames;
+    path += "/" + config.common.player.streamDir.filename().string() + "_execution_";
+    path += std::to_string(executionRangeStart_);
+    if (executionRangeEnd_ != executionRangeStart_) {
+      path += "-" + std::to_string(executionRangeEnd_);
+    }
+    const_cast<std::filesystem::path&>(config.common.player.subcapturePath) = path;
   }
+
+  CGits::Instance().apis.UseApi3dIface(
+      std::shared_ptr<ApisIface::Api3d>(new DirectXApiIfaceSubcapture()));
+  CRecorder::Instance();
 }
 
 SubcaptureRecorder::~SubcaptureRecorder() {

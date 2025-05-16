@@ -20,18 +20,17 @@ ExecutionSerializationRecorder::ExecutionSerializationRecorder() {
       !Configurator::Get().directx.features.subcapture.executionSerialization) {
     return;
   }
+
   CGits::Instance().apis.UseApi3dIface(
       std::shared_ptr<ApisIface::Api3d>(new DirectXApiIfaceExecutionSerialization()));
   CRecorder::Instance();
 }
 
 void ExecutionSerializationRecorder::record(CToken* token) {
-  std::lock_guard<std::mutex> lock(mutex_);
   CRecorder::Instance().Schedule(token);
 }
 
 void ExecutionSerializationRecorder::frameEnd() {
-  std::lock_guard<std::mutex> lock(mutex_);
   CRecorder::Instance().FrameEnd();
 }
 

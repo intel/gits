@@ -21,9 +21,6 @@ public:
   void record(CToken* token);
   void frameEnd();
   bool isRunning();
-
-private:
-  std::mutex mutex_;
 };
 
 } // namespace DirectX

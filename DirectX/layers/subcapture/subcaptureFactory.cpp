@@ -30,6 +30,12 @@ SubcaptureFactory::SubcaptureFactory() {
       Log(ERR) << "Subcapture from frame 1 is not supported";
       exit(EXIT_FAILURE);
     }
+    if (!Configurator::Get().directx.features.subcapture.commandListExecutions.empty()) {
+      if (frames.find("-") != std::string::npos) {
+        Log(ERR) << "Subcapture of command list executions must have one frame range";
+        exit(EXIT_FAILURE);
+      }
+    }
   } catch (...) {
     Log(ERR) << "Invalid subcapture range: '" +
                     Configurator::Get().directx.features.subcapture.frames + "'";
