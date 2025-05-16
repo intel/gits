@@ -29,6 +29,7 @@ custom = [
     'ID3D12FenceGetCompletedValue',
     'ID3D12FenceSetEventOnCompletion',
     'ID3D12DeviceCreateCommandQueue',
+    'ID3D12DeviceCreateCommandList',
     'ID3D12GraphicsCommandListReset',
     'ID3D12GraphicsCommandListClose'
 ]

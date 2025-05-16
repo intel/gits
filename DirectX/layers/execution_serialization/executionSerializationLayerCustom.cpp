@@ -38,6 +38,13 @@ void ExecutionSerializationLayer::pre(ID3D12CommandQueueExecuteCommandListsComma
   }
 }
 
+void ExecutionSerializationLayer::pre(ID3D12DeviceCreateCommandListCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new ID3D12DeviceCreateCommandListWriter(c));
+    executionService_.createCommandList(c.ppCommandList_.key, c.pCommandAllocator_.key);
+  }
+}
+
 void ExecutionSerializationLayer::pre(ID3D12GraphicsCommandListResetCommand& c) {
   if (recorder_.isRunning()) {
     executionService_.commandListReset(c.key, c.object_.key, c.pAllocator_.key);
@@ -46,16 +53,7 @@ void ExecutionSerializationLayer::pre(ID3D12GraphicsCommandListResetCommand& c) 
   }
 }
 
-void ExecutionSerializationLayer::pre(ID3D12GraphicsCommandListCloseCommand& c) {
-  if (recorder_.isRunning()) {
-    if (executionService_.isCommandListEmpty(c.object_.key)) {
-      recorder_.record(new ID3D12GraphicsCommandListCloseWriter(c));
-    } else {
-      executionService_.commandListCommand(c.object_.key,
-                                           new ID3D12GraphicsCommandListCloseWriter(c));
-    }
-  }
-}
+void ExecutionSerializationLayer::pre(ID3D12GraphicsCommandListCloseCommand& c) {}
 
 void ExecutionSerializationLayer::pre(ID3D12CommandQueueWaitCommand& c) {
   if (recorder_.isRunning()) {

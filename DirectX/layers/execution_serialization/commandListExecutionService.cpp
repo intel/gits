@@ -57,16 +57,23 @@ void CommandListExecutionService::executeCommandLists(unsigned callKey,
   executeReadyExecutables();
 }
 
+void CommandListExecutionService::createCommandList(unsigned commandListKey,
+                                                    unsigned allocatorKey) {
+  commandListCreationAllocators_[commandListKey] = allocatorKey;
+  {
+    ID3D12GraphicsCommandListCloseCommand closeCommand;
+    closeCommand.key = ++restoreCommandKey_;
+    closeCommand.object_.key = commandListKey;
+    recorder_.record(new ID3D12GraphicsCommandListCloseWriter(closeCommand));
+  }
+}
+
 void CommandListExecutionService::commandListReset(unsigned commandKey,
                                                    unsigned commandListKey,
                                                    unsigned allocatorKey) {
   CommandList& commandList = commandListsByKey_[commandListKey];
   commandList.commands.clear();
-}
-
-bool CommandListExecutionService::isCommandListEmpty(unsigned commandListKey) {
-  CommandList& commandList = commandListsByKey_[commandListKey];
-  return commandList.commands.empty();
+  commandList.reset = true;
 }
 
 void CommandListExecutionService::commandQueueWait(unsigned callKey,
@@ -128,8 +135,24 @@ void CommandListExecutionService::executeExecutable(ExecuteCommandLists& executa
 
   UINT64& fenceValue = fenceByCommandQueue_[executable.commandQueueKey].second;
   for (CommandList& commandList : executable.commandLists) {
+    if (!commandList.reset) {
+      auto it = commandListCreationAllocators_.find(commandList.commandListKey);
+      if (it != commandListCreationAllocators_.end()) {
+        ID3D12GraphicsCommandListResetCommand resetCommand;
+        resetCommand.key = ++restoreCommandKey_;
+        resetCommand.object_.key = commandList.commandListKey;
+        resetCommand.pAllocator_.key = it->second;
+        recorder_.record(new ID3D12GraphicsCommandListResetWriter(resetCommand));
+      }
+    }
     for (CommandWriter* command : commandList.commands) {
       recorder_.record(command);
+    }
+    {
+      ID3D12GraphicsCommandListCloseCommand closeCommand;
+      closeCommand.key = ++restoreCommandKey_;
+      closeCommand.object_.key = commandList.commandListKey;
+      recorder_.record(new ID3D12GraphicsCommandListCloseWriter(closeCommand));
     }
     {
       ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
