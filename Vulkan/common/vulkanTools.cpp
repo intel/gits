@@ -3313,6 +3313,11 @@ TemporaryBufferPairType createTemporaryBuffer(VkDevice device,
       0,                                    // uint32_t               queueFamilyIndexCount;
       nullptr                               // const uint32_t       * pQueueFamilyIndices;
   };
+  if (isBitSet(bufferUsage, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) &&
+      Configurator::Get()
+          .vulkan.recorder.useCaptureReplayFeaturesForBuffersAndAccelerationStructures) {
+    bufferCreateInfo.flags |= VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
+  }
   if (drvVk.vkCreateBuffer(device, &bufferCreateInfo, nullptr, &buffer) != VK_SUCCESS) {
     throw std::runtime_error("Could not create a temporary buffer! Exiting!");
   }
