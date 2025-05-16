@@ -51,9 +51,14 @@ void CommandPrinter::print(bool flush, bool newLine) {
             << (command_.key & Command::stateRestoreKeyMask ? 0 : CGits::Instance().CurrentFrame())
             << " end";
     state_.drawCount = 0;
+    state_.commandListExecutionCount = 0;
   } else if (command_.getId() == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DRAWINSTANCED ||
              command_.getId() == CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DRAWINDEXEDINSTANCED) {
     stream_ << " Draw #" << ++state_.drawCount << " from frame #"
+            << (state_.stateRestorePhase ? 0 : CGits::Instance().CurrentFrame());
+  } else if (command_.getId() == CommandId::ID_ID3D12COMMANDQUEUE_EXECUTECOMMANDLISTS &&
+             command_.key & Command::executionSerializationKeyMask) {
+    stream_ << " Execute #" << ++state_.commandListExecutionCount << " from frame #"
             << (state_.stateRestorePhase ? 0 : CGits::Instance().CurrentFrame());
   }
   if (newLine) {

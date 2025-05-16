@@ -23,6 +23,7 @@ struct CommandPrinterState {
   CommandPrinterState(std::mutex& m) : mutex(m) {}
   std::mutex& mutex;
   unsigned drawCount{};
+  unsigned commandListExecutionCount{};
   bool stateRestorePhase{};
 };
 
