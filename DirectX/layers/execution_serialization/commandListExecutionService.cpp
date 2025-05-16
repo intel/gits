@@ -16,7 +16,9 @@ namespace DirectX {
 
 void CommandListExecutionService::commandListCommand(unsigned commandListKey,
                                                      CommandWriter* command) {
-  commandsByCommandList_[commandListKey].push_back(command);
+  CommandList& commandList = commandListsByKey_[commandListKey];
+  commandList.commandListKey = commandListKey;
+  commandList.commands.push_back(command);
 }
 
 void CommandListExecutionService::executeCommandLists(unsigned callKey,
@@ -26,35 +28,26 @@ void CommandListExecutionService::executeCommandLists(unsigned callKey,
   execute->callKey = callKey;
   execute->commandQueueKey = commandQueueKey;
   for (unsigned commandListKey : commandListKeys) {
-    auto it = commandsByCommandList_.find(commandListKey);
-    GITS_ASSERT(it != commandsByCommandList_.end());
-    execute->commandsByCommandList.push_back(std::make_pair(commandListKey, std::move(it->second)));
-    commandsByCommandList_.erase(commandListKey);
+    auto it = commandListsByKey_.find(commandListKey);
+    if (it != commandListsByKey_.end()) {
+      execute->commandLists.push_back(std::move(it->second));
+      commandListsByKey_.erase(commandListKey);
+    }
   }
   executionTracker_.execute(callKey, commandQueueKey, execute);
   executeReadyExecutables();
 }
 
-void CommandListExecutionService::createCommandList(unsigned commandListKey,
-                                                    unsigned allocatorKey) {
-  commandListByAllocator_[allocatorKey] = commandListKey;
+void CommandListExecutionService::commandListReset(unsigned commandKey,
+                                                   unsigned commandListKey,
+                                                   unsigned allocatorKey) {
+  CommandList& commandList = commandListsByKey_[commandListKey];
+  commandList.commands.clear();
 }
 
-void CommandListExecutionService::commandAllocatorReset(unsigned allocatorKey) {
-  auto itAllocator = commandListByAllocator_.find(allocatorKey);
-  if (itAllocator != commandListByAllocator_.end()) {
-    commandListReset(itAllocator->second);
-  }
-}
-
-void CommandListExecutionService::commandListReset(unsigned commandListKey) {
-  auto it = commandsByCommandList_.find(commandListKey);
-  if (it != commandsByCommandList_.end()) {
-    for (CommandWriter* command : it->second) {
-      recorder_.record(command);
-    }
-    commandsByCommandList_.erase(it);
-  }
+bool CommandListExecutionService::isCommandListEmpty(unsigned commandListKey) {
+  CommandList& commandList = commandListsByKey_[commandListKey];
+  return commandList.commands.empty();
 }
 
 void CommandListExecutionService::commandQueueWait(unsigned callKey,
@@ -115,8 +108,8 @@ void CommandListExecutionService::executeExecutable(ExecuteCommandLists& executa
   }
 
   UINT64& fenceValue = fenceByCommandQueue_[executable.commandQueueKey].second;
-  for (auto& it : executable.commandsByCommandList) {
-    for (CommandWriter* command : it.second) {
+  for (CommandList& commandList : executable.commandLists) {
+    for (CommandWriter* command : commandList.commands) {
       recorder_.record(command);
     }
     {
@@ -127,7 +120,7 @@ void CommandListExecutionService::executeExecutable(ExecuteCommandLists& executa
       executeCommandLists.ppCommandLists_.value = reinterpret_cast<ID3D12CommandList**>(1);
       executeCommandLists.ppCommandLists_.size = 1;
       executeCommandLists.ppCommandLists_.keys.resize(1);
-      executeCommandLists.ppCommandLists_.keys[0] = it.first;
+      executeCommandLists.ppCommandLists_.keys[0] = commandList.commandListKey;
       recorder_.record(new ID3D12CommandQueueExecuteCommandListsWriter(executeCommandLists));
     }
     {

@@ -14,6 +14,7 @@
 #include "command.h"
 
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 #include <d3d12.h>
 
@@ -27,9 +28,8 @@ public:
   void executeCommandLists(unsigned callKey,
                            unsigned commandQueueKey,
                            std::vector<unsigned>& commandListKeys);
-  void createCommandList(unsigned commandListKey, unsigned allocatorKey);
-  void commandAllocatorReset(unsigned allocatorKey);
-  void commandListReset(unsigned commandListKey);
+  void commandListReset(unsigned commandKey, unsigned commandListKey, unsigned allocatorKey);
+  bool isCommandListEmpty(unsigned commandListKey);
   void commandQueueWait(unsigned callKey,
                         unsigned commandQueueKey,
                         unsigned fenceKey,
@@ -42,10 +42,15 @@ public:
   void createCommandQueue(unsigned deviceKey, unsigned commandQueueKey);
 
 private:
+  struct CommandList {
+    unsigned commandListKey;
+    std::vector<CommandWriter*> commands;
+  };
+
   struct ExecuteCommandLists : public GpuExecutionTracker::Executable {
     unsigned callKey;
     unsigned commandQueueKey;
-    std::vector<std::pair<unsigned, std::vector<CommandWriter*>>> commandsByCommandList;
+    std::vector<CommandList> commandLists;
   };
 
 private:
@@ -55,10 +60,9 @@ private:
 private:
   ExecutionSerializationRecorder& recorder_;
   GpuExecutionTracker executionTracker_;
-  std::unordered_map<unsigned, std::vector<CommandWriter*>> commandsByCommandList_;
+  std::unordered_map<unsigned, CommandList> commandListsByKey_;
   std::unordered_map<unsigned, unsigned> deviceByCommandQueue_;
   std::unordered_map<unsigned, std::pair<unsigned, UINT64>> fenceByCommandQueue_;
-  std::unordered_map<unsigned, unsigned> commandListByAllocator_;
   unsigned restoreCommandKey_{Command::executionSerializationKeyMask};
   unsigned restoreObjectKey_{Command::executionSerializationKeyMask};
 };
