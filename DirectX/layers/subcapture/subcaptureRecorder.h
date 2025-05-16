@@ -18,6 +18,7 @@ namespace DirectX {
 class SubcaptureRecorder {
 public:
   SubcaptureRecorder();
+  ~SubcaptureRecorder();
   void record(CToken* token);
   void frameEnd();
   bool isRunning();

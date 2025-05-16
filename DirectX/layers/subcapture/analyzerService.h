@@ -20,6 +20,7 @@ namespace DirectX {
 class AnalyzerService {
 public:
   AnalyzerService();
+  ~AnalyzerService();
   void commandListCommand(unsigned commandListKey);
   void present(unsigned callKey);
   void executeCommandLists(unsigned callKey,
@@ -40,6 +41,7 @@ public:
 
 private:
   void clearReadyExecutables();
+  void dumpAnalysisFile();
 
 private:
   struct ExecuteCommandListCommand : public GpuExecutionTracker::Executable {

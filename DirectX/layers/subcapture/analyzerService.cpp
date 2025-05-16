@@ -33,6 +33,13 @@ AnalyzerService::AnalyzerService() {
   }
 }
 
+AnalyzerService::~AnalyzerService() {
+  if (inRange_) {
+    Log(ERR) << "Subcapture analysis terminated prematurely";
+    dumpAnalysisFile();
+  }
+}
+
 void AnalyzerService::commandListCommand(unsigned commandListKey) {
   if (inRange_) {
     auto it = commandListsReset_.find(commandListKey);
@@ -66,15 +73,7 @@ void AnalyzerService::present(unsigned callKey) {
   } else if (currentFrame == endFrame_) {
     if (inRange_) {
       inRange_ = false;
-      std::ofstream out(AnalyzerResults::getAnalysisFileName());
-      out << "COMMAND_LIST_KEYS\n";
-      for (unsigned key : commandListsForRestore_) {
-        out << key << "\n";
-      }
-      out << "COMMAND_QUEUE_COMMANDS\n";
-      for (unsigned key : commandQueueCommandsForRestore_) {
-        out << key << "\n";
-      }
+      dumpAnalysisFile();
     }
   }
 }
@@ -155,6 +154,18 @@ void AnalyzerService::clearReadyExecutables() {
     delete executable;
   }
   executables.clear();
+}
+
+void AnalyzerService::dumpAnalysisFile() {
+  std::ofstream out(AnalyzerResults::getAnalysisFileName());
+  out << "COMMAND_LIST_KEYS\n";
+  for (unsigned key : commandListsForRestore_) {
+    out << key << "\n";
+  }
+  out << "COMMAND_QUEUE_COMMANDS\n";
+  for (unsigned key : commandQueueCommandsForRestore_) {
+    out << key << "\n";
+  }
 }
 
 } // namespace DirectX

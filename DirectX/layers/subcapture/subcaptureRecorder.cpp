@@ -25,6 +25,12 @@ SubcaptureRecorder::SubcaptureRecorder() {
   CRecorder::Instance();
 }
 
+SubcaptureRecorder::~SubcaptureRecorder() {
+  if (isRunning()) {
+    Log(ERR) << "Subcapture recorder terminated prematurely";
+  }
+}
+
 void SubcaptureRecorder::record(CToken* token) {
   std::lock_guard<std::mutex> lock(mutex_);
   CRecorder::Instance().Schedule(token);
