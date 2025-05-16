@@ -10,6 +10,7 @@
 #include "directXApiIfaceSubcapture.h"
 
 #include <filesystem>
+#include <string>
 
 namespace gits {
 namespace DirectX {
@@ -23,6 +24,18 @@ SubcaptureRecorder::SubcaptureRecorder() {
   CGits::Instance().apis.UseApi3dIface(
       std::shared_ptr<ApisIface::Api3d>(new DirectXApiIfaceSubcapture()));
   CRecorder::Instance();
+
+  std::string commandListExecutions =
+      Configurator::Get().directx.features.subcapture.commandListExecutions;
+  if (!commandListExecutions.empty()) {
+    size_t pos = commandListExecutions.find("-");
+    if (pos != std::string::npos) {
+      executionRangeStart_ = std::stoi(commandListExecutions.substr(0, pos));
+      executionRangeEnd_ = std::stoi(commandListExecutions.substr(pos + 1));
+    } else {
+      executionRangeStart_ = executionRangeEnd_ = std::stoi(commandListExecutions);
+    }
+  }
 }
 
 SubcaptureRecorder::~SubcaptureRecorder() {
@@ -32,17 +45,39 @@ SubcaptureRecorder::~SubcaptureRecorder() {
 }
 
 void SubcaptureRecorder::record(CToken* token) {
-  std::lock_guard<std::mutex> lock(mutex_);
   CRecorder::Instance().Schedule(token);
 }
 
 void SubcaptureRecorder::frameEnd() {
-  std::lock_guard<std::mutex> lock(mutex_);
+  executionCount_ = 0;
   CRecorder::Instance().FrameEnd();
 }
 
+void SubcaptureRecorder::executionStart() {
+  ++executionCount_;
+  insideExecution_ = true;
+}
+
+void SubcaptureRecorder::executionEnd() {
+  insideExecution_ = false;
+}
+
+bool SubcaptureRecorder::isExecutionRangeStart() {
+  if (!executionRangeStart_ || !CRecorder::Instance().Running()) {
+    return false;
+  }
+  return executionCount_ == executionRangeStart_ - 1;
+}
+
 bool SubcaptureRecorder::isRunning() {
-  return CRecorder::Instance().Running();
+  bool frameRunning = CRecorder::Instance().Running();
+  if (!executionRangeStart_ || !frameRunning) {
+    return frameRunning;
+  }
+  if (!insideExecution_) {
+    return false;
+  }
+  return executionCount_ >= executionRangeStart_ && executionCount_ <= executionRangeEnd_;
 }
 
 } // namespace DirectX

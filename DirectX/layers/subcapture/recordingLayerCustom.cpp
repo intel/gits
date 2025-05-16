@@ -34,6 +34,20 @@ void RecordingLayer::post(IDXGISwapChain1Present1Command& command) {
   }
 }
 
+void RecordingLayer::post(ID3D12GraphicsCommandListResetCommand& command) {
+  recorder_.executionStart();
+  if (recorder_.isRunning()) {
+    recorder_.record(new ID3D12GraphicsCommandListResetWriter(command));
+  }
+}
+
+void RecordingLayer::post(ID3D12FenceGetCompletedValueCommand& command) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new ID3D12FenceGetCompletedValueWriter(command));
+  }
+  recorder_.executionEnd();
+}
+
 void RecordingLayer::post(CreateWindowMetaCommand& command) {
   if (recorder_.isRunning()) {
     recorder_.record(new CreateWindowMetaWriter(command));

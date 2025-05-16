@@ -36,7 +36,8 @@ SubcaptureFactory::SubcaptureFactory() {
     exit(EXIT_FAILURE);
   }
 
-  if (AnalyzerResults::isAnalysis()) {
+  if (AnalyzerResults::isAnalysis() ||
+      !Configurator::Get().directx.features.subcapture.commandListExecutions.empty()) {
     recorder_ = std::make_unique<SubcaptureRecorder>();
     stateTrackingLayer_ = std::make_unique<StateTrackingLayer>(*recorder_);
     recordingLayer_ = std::make_unique<RecordingLayer>(*recorder_);

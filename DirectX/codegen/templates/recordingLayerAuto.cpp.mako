@@ -17,7 +17,9 @@ namespace DirectX {
 custom = [
     'IDXGISwapChainPresent',
     'IDXGISwapChain1Present1',
-    'IDXGIAdapter3QueryVideoMemoryInfo'
+    'IDXGIAdapter3QueryVideoMemoryInfo',
+    'ID3D12GraphicsCommandListReset',
+    'ID3D12FenceGetCompletedValue'
 ]
 %>\
 %for function in functions:

@@ -56,6 +56,11 @@ StateTrackingLayer::StateTrackingLayer(SubcaptureRecorder& recorder)
     throw Exception("Invalid subcapture range: '" +
                     Configurator::Get().directx.features.subcapture.frames + "'");
   }
+  const std::string& commandListExecutions =
+      Configurator::Get().directx.features.subcapture.commandListExecutions;
+  if (!commandListExecutions.empty()) {
+    commandListSubcapture_ = true;
+  }
 }
 
 void StateTrackingLayer::setAsChildInParent(unsigned parentKey, unsigned childKey) {
@@ -98,11 +103,13 @@ void StateTrackingLayer::post(IDXGISwapChainPresentCommand& c) {
   if (c.Flags_.value & DXGI_PRESENT_TEST || c.key & Command::stateRestoreKeyMask) {
     return;
   }
-  unsigned currentFrame = CGits::Instance().CurrentFrame();
-  if (currentFrame == startFrame_ - 1) {
-    Log(INFOV) << "Start subcapture frame " << currentFrame + 1 << " call " << c.key;
-    gpuExecutionFlusher_.flushCommandQueues();
-    stateService_.restoreState();
+  if (!commandListSubcapture_) {
+    unsigned currentFrame = CGits::Instance().CurrentFrame();
+    if (currentFrame == startFrame_ - 1) {
+      Log(INFOV) << "Start subcapture frame " << currentFrame + 1 << " call " << c.key;
+      gpuExecutionFlusher_.flushCommandQueues();
+      stateService_.restoreState();
+    }
   }
 }
 
@@ -110,11 +117,13 @@ void StateTrackingLayer::post(IDXGISwapChain1Present1Command& c) {
   if (c.PresentFlags_.value & DXGI_PRESENT_TEST || c.key & Command::stateRestoreKeyMask) {
     return;
   }
-  unsigned currentFrame = CGits::Instance().CurrentFrame();
-  if (currentFrame == startFrame_ - 1) {
-    Log(INFOV) << "Start subcapture frame " << currentFrame + 1 << " call " << c.key;
-    gpuExecutionFlusher_.flushCommandQueues();
-    stateService_.restoreState();
+  if (!commandListSubcapture_) {
+    unsigned currentFrame = CGits::Instance().CurrentFrame();
+    if (currentFrame == startFrame_ - 1) {
+      Log(INFOV) << "Start subcapture frame " << currentFrame + 1 << " call " << c.key;
+      gpuExecutionFlusher_.flushCommandQueues();
+      stateService_.restoreState();
+    }
   }
 }
 
@@ -1644,6 +1653,12 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandList4DispatchRaysCommand& c) 
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListResetCommand& c) {
+
+  if (commandListSubcapture_ && recorder_.isExecutionRangeStart()) {
+    Log(INFOV) << "Start command lists subcapture call " << c.key;
+    gpuExecutionFlusher_.flushCommandQueues();
+    stateService_.restoreState();
+  }
 
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
   state->clearCommands();

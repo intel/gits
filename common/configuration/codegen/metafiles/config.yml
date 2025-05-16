@@ -931,6 +931,10 @@ Configuration:
                 Type: std::string
                 Default: ""
                 Description: Frame range. For example '3-6'
+              - Name: commandListExecutions
+                Type: std::string
+                Default: ""
+                Description: Command lists executions range for command lists subcapture, can be used only with serialized executions stream
               - Name: executionSerialization
                 Type: bool
                 Default: false

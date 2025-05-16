@@ -21,10 +21,16 @@ public:
   ~SubcaptureRecorder();
   void record(CToken* token);
   void frameEnd();
+  void executionStart();
+  void executionEnd();
+  bool isExecutionRangeStart();
   bool isRunning();
 
 private:
-  std::mutex mutex_;
+  unsigned executionCount_{};
+  unsigned executionRangeStart_{};
+  unsigned executionRangeEnd_{};
+  bool insideExecution_{};
 };
 
 } // namespace DirectX

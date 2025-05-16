@@ -255,6 +255,7 @@ private:
   ResidencyService residencyService_;
   GpuExecutionFlusher gpuExecutionFlusher_;
   unsigned startFrame_;
+  bool commandListSubcapture_{};
   std::vector<D3D12_GPU_VIRTUAL_ADDRESS> lastCallCaptureGpuAddresses_;
   std::unordered_map<unsigned, std::unordered_set<unsigned>> resourceHeaps_;
   std::unordered_map<unsigned, std::vector<unsigned>> swapchainBuffers_;
