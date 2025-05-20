@@ -642,8 +642,7 @@ public:
 };
 
 template <typename T = std::byte>
-class HeapArray
-{
+class HeapArray {
 public:
   HeapArray() {}
   HeapArray(const std::size_t size) : size_(size) {
@@ -669,7 +668,7 @@ public:
   HeapArray& operator=(const HeapArray& other) = delete;
   HeapArray(const HeapArray& other) = delete;
 
-  HeapArray& operator=(HeapArray&& other) {
+  HeapArray& operator=(HeapArray&& other) noexcept {
     delete[] data_;
     data_ = other.data_;
     size_ = other.size_;

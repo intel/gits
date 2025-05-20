@@ -51,7 +51,7 @@ public:
     unsigned size = 0;
     stream.read(reinterpret_cast<char*>(&size), sizeof(unsigned));
     data_ = HeapArray<char>(size);
-    stream.read(reinterpret_cast<char*>(data_.data()), size);
+    stream.read(data_.data(), size);
 
     decodeCommand();
   }
