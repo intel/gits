@@ -641,4 +641,56 @@ public:
   }
 };
 
+template <typename T = std::byte>
+class HeapArray
+{
+public:
+  HeapArray() {}
+  HeapArray(const std::size_t size) : size_(size) {
+    data_ = new T[size];
+  }
+
+  ~HeapArray() {
+    delete[] data_;
+  }
+
+  std::size_t size() const {
+    return size_;
+  }
+
+  const T* data() const {
+    return data_;
+  }
+
+  T* data() {
+    return data_;
+  }
+
+  HeapArray& operator=(const HeapArray& other) = delete;
+  HeapArray(const HeapArray& other) = delete;
+
+  HeapArray& operator=(HeapArray&& other) {
+    delete[] data_;
+    data_ = other.data_;
+    size_ = other.size_;
+
+    other.data_ = nullptr;
+    other.size_ = 0;
+
+    return *this;
+  }
+
+  HeapArray(HeapArray&& other) {
+    data_ = other.data_;
+    size_ = other.size_;
+
+    other.data_ = nullptr;
+    other.size_ = 0;
+  }
+
+private:
+  T* data_ = nullptr;
+  std::size_t size_ = 0;
+};
+
 } // namespace gits
