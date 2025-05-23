@@ -20,7 +20,11 @@ RtasCacheLayer::RtasCacheLayer(CGits& gits, const RtasCacheConfig& cfg)
       deserializer_(gits, cfg_.cacheFile) {}
 
 RtasCacheLayer::~RtasCacheLayer() {
-  log(gits_, "RtasCache: ", cfg_.record ? "Serialized " : "Deserialized ", blasCount_, " BLASes");
+  try {
+    log(gits_, "RtasCache: ", cfg_.record ? "Serialized " : "Deserialized ", blasCount_, " BLASes");
+  } catch (...) {
+    fprintf(stderr, "Exception in RtasCacheLayer::~RtasCacheLayer");
+  }
 }
 
 void RtasCacheLayer::pre(D3D12CreateDeviceCommand& c) {

@@ -34,9 +34,13 @@ AnalyzerService::AnalyzerService() {
 }
 
 AnalyzerService::~AnalyzerService() {
-  if (inRange_) {
-    Log(ERR) << "Subcapture analysis terminated prematurely";
-    dumpAnalysisFile();
+  try {
+    if (inRange_) {
+      Log(ERR) << "Subcapture analysis terminated prematurely";
+      dumpAnalysisFile();
+    }
+  } catch (...) {
+    topmost_exception_handler("AnalyzerService::~AnalyzerService");
   }
 }
 

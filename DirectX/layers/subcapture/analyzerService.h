@@ -21,6 +21,10 @@ class AnalyzerService {
 public:
   AnalyzerService();
   ~AnalyzerService();
+
+  AnalyzerService(const AnalyzerService&) = delete;
+  AnalyzerService& operator=(const AnalyzerService&) = delete;
+
   void commandListCommand(unsigned commandListKey);
   void present(unsigned callKey);
   void executeCommandLists(unsigned callKey,

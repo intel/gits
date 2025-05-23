@@ -473,10 +473,9 @@ void CaptureManager::interceptXessFunctions() {
   ret = DetourUpdateThread(GetCurrentThread());
   GITS_ASSERT(ret == NO_ERROR);
 
-  if (xessDispatchTable_.xessGetVersion) {
-    ret = DetourAttach(&xessDispatchTable_.xessGetVersion, xessGetVersionWrapper);
-    GITS_ASSERT(ret == NO_ERROR);
-  }
+  ret = DetourAttach(&xessDispatchTable_.xessGetVersion, xessGetVersionWrapper);
+  GITS_ASSERT(ret == NO_ERROR);
+
   if (xessDispatchTable_.xessGetIntelXeFXVersion) {
     ret = DetourAttach(&xessDispatchTable_.xessGetIntelXeFXVersion, xessGetIntelXeFXVersionWrapper);
     GITS_ASSERT(ret == NO_ERROR);

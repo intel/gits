@@ -52,8 +52,12 @@ SubcaptureRecorder::SubcaptureRecorder() {
 }
 
 SubcaptureRecorder::~SubcaptureRecorder() {
-  if (isRunning()) {
-    Log(ERR) << "Subcapture recorder terminated prematurely";
+  try {
+    if (isRunning()) {
+      Log(ERR) << "Subcapture recorder terminated prematurely";
+    }
+  } catch (...) {
+    topmost_exception_handler("SubcaptureRecorder::~SubcaptureRecorder");
   }
 }
 
