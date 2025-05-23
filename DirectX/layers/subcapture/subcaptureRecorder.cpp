@@ -37,12 +37,9 @@ SubcaptureRecorder::SubcaptureRecorder() {
 
     std::filesystem::path subcapturePath = config.common.player.subcapturePath;
     std::string path = subcapturePath.parent_path().string();
-    path += "/frame_" + config.directx.features.subcapture.frames;
-    path += "/" + config.common.player.streamDir.filename().string() + "_execution_";
-    path += std::to_string(executionRangeStart_);
-    if (executionRangeEnd_ != executionRangeStart_) {
-      path += "-" + std::to_string(executionRangeEnd_);
-    }
+    path += "/" + config.common.player.streamDir.filename().string();
+    path += "_frames_" + config.directx.features.subcapture.frames;
+    path += "_executions_" + commandListExecutions;
     const_cast<std::filesystem::path&>(config.common.player.subcapturePath) = path;
   }
 
