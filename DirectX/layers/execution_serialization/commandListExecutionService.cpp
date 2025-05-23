@@ -9,6 +9,7 @@
 #include "commandListExecutionService.h"
 #include "commandsAuto.h"
 #include "commandWritersAuto.h"
+#include "cpuDescriptorsService.h"
 #include "gits.h"
 
 #include <filesystem>
@@ -62,7 +63,7 @@ void CommandListExecutionService::createCommandList(unsigned commandListKey,
   commandListCreationAllocators_[commandListKey] = allocatorKey;
   {
     ID3D12GraphicsCommandListCloseCommand closeCommand;
-    closeCommand.key = ++restoreCommandKey_;
+    closeCommand.key = getUniqueCommandKey();
     closeCommand.object_.key = commandListKey;
     recorder_.record(new ID3D12GraphicsCommandListCloseWriter(closeCommand));
   }
@@ -117,12 +118,12 @@ void CommandListExecutionService::executeExecutable(ExecuteCommandLists& executa
   unsigned fenceKey{};
   auto it = fenceByCommandQueue_.find(executable.commandQueueKey);
   if (it == fenceByCommandQueue_.end()) {
-    fenceKey = ++restoreObjectKey_;
+    fenceKey = getUniqueObjectKey();
     fenceByCommandQueue_[executable.commandQueueKey].first = fenceKey;
     unsigned deviceKey = deviceByCommandQueue_[executable.commandQueueKey];
     GITS_ASSERT(deviceKey);
     ID3D12DeviceCreateFenceCommand createFence;
-    createFence.key = ++restoreCommandKey_;
+    createFence.key = getUniqueCommandKey();
     createFence.object_.key = deviceKey;
     createFence.InitialValue_.value = 0;
     createFence.Flags_.value = D3D12_FENCE_FLAG_NONE;
@@ -139,7 +140,7 @@ void CommandListExecutionService::executeExecutable(ExecuteCommandLists& executa
       auto it = commandListCreationAllocators_.find(commandList.commandListKey);
       if (it != commandListCreationAllocators_.end()) {
         ID3D12GraphicsCommandListResetCommand resetCommand;
-        resetCommand.key = ++restoreCommandKey_;
+        resetCommand.key = getUniqueCommandKey();
         resetCommand.object_.key = commandList.commandListKey;
         resetCommand.pAllocator_.key = it->second;
         recorder_.record(new ID3D12GraphicsCommandListResetWriter(resetCommand));
@@ -150,13 +151,13 @@ void CommandListExecutionService::executeExecutable(ExecuteCommandLists& executa
     }
     {
       ID3D12GraphicsCommandListCloseCommand closeCommand;
-      closeCommand.key = ++restoreCommandKey_;
+      closeCommand.key = getUniqueCommandKey();
       closeCommand.object_.key = commandList.commandListKey;
       recorder_.record(new ID3D12GraphicsCommandListCloseWriter(closeCommand));
     }
     {
       ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
-      executeCommandLists.key = ++restoreCommandKey_;
+      executeCommandLists.key = getUniqueCommandKey();
       executeCommandLists.object_.key = executable.commandQueueKey;
       executeCommandLists.NumCommandLists_.value = 1;
       executeCommandLists.ppCommandLists_.value = reinterpret_cast<ID3D12CommandList**>(1);
@@ -167,7 +168,7 @@ void CommandListExecutionService::executeExecutable(ExecuteCommandLists& executa
     }
     {
       ID3D12CommandQueueSignalCommand commandQueueSignal;
-      commandQueueSignal.key = ++restoreCommandKey_;
+      commandQueueSignal.key = getUniqueCommandKey();
       commandQueueSignal.object_.key = executable.commandQueueKey;
       commandQueueSignal.pFence_.key = fenceKey;
       commandQueueSignal.Value_.value = ++fenceValue;
@@ -175,12 +176,18 @@ void CommandListExecutionService::executeExecutable(ExecuteCommandLists& executa
     }
     {
       ID3D12FenceGetCompletedValueCommand getCompletedValue;
-      getCompletedValue.key = ++restoreCommandKey_;
+      getCompletedValue.key = getUniqueCommandKey();
       getCompletedValue.object_.key = fenceKey;
       getCompletedValue.result_.value = fenceValue;
       recorder_.record(new ID3D12FenceGetCompletedValueWriter(getCompletedValue));
     }
   }
+
+  std::vector<unsigned> commandListKeys;
+  for (CommandList& commandList : executable.commandLists) {
+    commandListKeys.push_back(commandList.commandListKey);
+  }
+  cpuDescriptorsService_.executeCommandLists(commandListKeys);
 }
 
 } // namespace DirectX

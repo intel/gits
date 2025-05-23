@@ -14,14 +14,19 @@ ${header}
 #include "commandsCustom.h"
 #include "executionSerializationRecorder.h"
 #include "commandListExecutionService.h"
+#include "cpuDescriptorsService.h"
 
 namespace gits {
 namespace DirectX {
 
 class ExecutionSerializationLayer : public Layer {
 public:
-  ExecutionSerializationLayer(ExecutionSerializationRecorder& recorder) 
-      : Layer("ExecutionSerialization"), recorder_(recorder), executionService_(recorder) {}
+  ExecutionSerializationLayer(ExecutionSerializationRecorder& recorder)
+      : Layer("ExecutionSerialization"),
+        recorder_(recorder),
+        executionService_(recorder, cpuDescriptorsService_),
+        cpuDescriptorsService_(recorder, executionService_) {}
+
   void pre(CreateWindowMetaCommand& c) override;
   void pre(MappedDataMetaCommand& c) override;
   void pre(CreateHeapAllocationMetaCommand& c) override;
@@ -29,6 +34,11 @@ public:
   void pre(IUnknownQueryInterfaceCommand& c) override;
   void pre(IUnknownAddRefCommand& c) override;
   void pre(IUnknownReleaseCommand& c) override;
+  void post(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) override;
+  void post(ID3D12GraphicsCommandListClearDepthStencilViewCommand& c) override;
+  void post(ID3D12GraphicsCommandListClearRenderTargetViewCommand& c) override;
+  void post(ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& c) override;
+  void post(ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c) override;
   %for function in functions:
   void pre(${function.name}Command& c) override;
   %endfor
@@ -51,6 +61,7 @@ public:
 private:
   ExecutionSerializationRecorder& recorder_;
   CommandListExecutionService executionService_;
+  CpuDescriptorsService cpuDescriptorsService_;
 };
 
 } // namespace DirectX

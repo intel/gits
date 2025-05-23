@@ -20,6 +20,8 @@ set(ROOT_SRC
   ${SRC_DIR}/directXApiIfaceExecutionSerialization.h
   ${SRC_DIR}/commandListExecutionService.h
   ${SRC_DIR}/commandListExecutionService.cpp
+  ${SRC_DIR}/cpuDescriptorsService.h
+  ${SRC_DIR}/cpuDescriptorsService.cpp
 )
 source_group("" FILES ${ROOT_SRC})
 

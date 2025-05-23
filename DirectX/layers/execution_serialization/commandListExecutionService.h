@@ -21,9 +21,13 @@
 namespace gits {
 namespace DirectX {
 
+class CpuDescriptorsService;
+
 class CommandListExecutionService {
 public:
-  CommandListExecutionService(ExecutionSerializationRecorder& recorder) : recorder_(recorder) {
+  CommandListExecutionService(ExecutionSerializationRecorder& recorder,
+                              CpuDescriptorsService& cpuDescriptorsService)
+      : recorder_(recorder), cpuDescriptorsService_(cpuDescriptorsService) {
     copyAuxiliaryFiles();
   }
   void copyAuxiliaryFiles();
@@ -43,6 +47,12 @@ public:
                           UINT64 fenceValue);
   void fenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue);
   void createCommandQueue(unsigned deviceKey, unsigned commandQueueKey);
+  unsigned getUniqueCommandKey() {
+    return ++restoreCommandKey_;
+  };
+  unsigned getUniqueObjectKey() {
+    return ++restoreObjectKey_;
+  };
 
 private:
   struct CommandList {
@@ -63,6 +73,7 @@ private:
 
 private:
   ExecutionSerializationRecorder& recorder_;
+  CpuDescriptorsService& cpuDescriptorsService_;
   GpuExecutionTracker executionTracker_;
   std::unordered_map<unsigned, CommandList> commandListsByKey_;
   std::unordered_map<unsigned, unsigned> deviceByCommandQueue_;

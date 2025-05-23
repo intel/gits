@@ -40,8 +40,16 @@ void ExecutionSerializationLayer::pre(ID3D12CommandQueueExecuteCommandListsComma
 
 void ExecutionSerializationLayer::pre(ID3D12DeviceCreateCommandListCommand& c) {
   if (recorder_.isRunning()) {
+    cpuDescriptorsService_.createCommandList(c.object_.key);
     recorder_.record(new ID3D12DeviceCreateCommandListWriter(c));
     executionService_.createCommandList(c.ppCommandList_.key, c.pCommandAllocator_.key);
+  }
+}
+
+void ExecutionSerializationLayer::pre(ID3D12Device4CreateCommandList1Command& c) {
+  if (recorder_.isRunning()) {
+    cpuDescriptorsService_.createCommandList(c.object_.key);
+    recorder_.record(new ID3D12Device4CreateCommandList1Writer(c));
   }
 }
 
@@ -58,6 +66,60 @@ void ExecutionSerializationLayer::pre(ID3D12GraphicsCommandListCloseCommand& c) 
 void ExecutionSerializationLayer::pre(ID3D12CommandQueueWaitCommand& c) {
   if (recorder_.isRunning()) {
     executionService_.commandQueueWait(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
+  }
+}
+
+void ExecutionSerializationLayer::pre(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) {}
+
+void ExecutionSerializationLayer::post(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) {
+  if (recorder_.isRunning()) {
+    cpuDescriptorsService_.preserveDescriptor(c);
+    executionService_.commandListCommand(c.object_.key,
+                                         new ID3D12GraphicsCommandListOMSetRenderTargetsWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(ID3D12GraphicsCommandListClearDepthStencilViewCommand& c) {}
+
+void ExecutionSerializationLayer::post(ID3D12GraphicsCommandListClearDepthStencilViewCommand& c) {
+  if (recorder_.isRunning()) {
+    cpuDescriptorsService_.preserveDescriptor(c);
+    executionService_.commandListCommand(
+        c.object_.key, new ID3D12GraphicsCommandListClearDepthStencilViewWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(ID3D12GraphicsCommandListClearRenderTargetViewCommand& c) {}
+
+void ExecutionSerializationLayer::post(ID3D12GraphicsCommandListClearRenderTargetViewCommand& c) {
+  if (recorder_.isRunning()) {
+    cpuDescriptorsService_.preserveDescriptor(c);
+    executionService_.commandListCommand(
+        c.object_.key, new ID3D12GraphicsCommandListClearRenderTargetViewWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(
+    ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& c) {}
+
+void ExecutionSerializationLayer::post(
+    ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& c) {
+  if (recorder_.isRunning()) {
+    cpuDescriptorsService_.preserveDescriptor(c);
+    executionService_.commandListCommand(
+        c.object_.key, new ID3D12GraphicsCommandListClearUnorderedAccessViewUintWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(
+    ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c) {}
+
+void ExecutionSerializationLayer::post(
+    ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c) {
+  if (recorder_.isRunning()) {
+    cpuDescriptorsService_.preserveDescriptor(c);
+    executionService_.commandListCommand(
+        c.object_.key, new ID3D12GraphicsCommandListClearUnorderedAccessViewFloatWriter(c));
   }
 }
 

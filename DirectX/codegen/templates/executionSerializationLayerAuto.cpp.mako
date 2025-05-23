@@ -30,8 +30,14 @@ custom = [
     'ID3D12FenceSetEventOnCompletion',
     'ID3D12DeviceCreateCommandQueue',
     'ID3D12DeviceCreateCommandList',
+    'ID3D12Device4CreateCommandList1',
     'ID3D12GraphicsCommandListReset',
-    'ID3D12GraphicsCommandListClose'
+    'ID3D12GraphicsCommandListClose',
+    'ID3D12GraphicsCommandListClearDepthStencilView',
+    'ID3D12GraphicsCommandListClearRenderTargetView',
+    'ID3D12GraphicsCommandListClearUnorderedAccessViewFloat',
+    'ID3D12GraphicsCommandListClearUnorderedAccessViewUint',
+    'ID3D12GraphicsCommandListOMSetRenderTargets'
 ]
 %>\
 %for interface in interfaces:
