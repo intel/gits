@@ -14,3 +14,4 @@ Config:
   CacheFile: 'rtas_cache.dat'
   Record: false
   StateRestoreOnly: true
+  DumpCacheInfoFile: false

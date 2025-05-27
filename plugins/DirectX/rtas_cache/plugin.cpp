@@ -38,6 +38,7 @@ public:
       cfg.cacheFile = cfgYaml["Config"]["CacheFile"].as<std::string>();
       cfg.record = cfgYaml["Config"]["Record"].as<bool>();
       cfg.stateRestoreOnly = cfgYaml["Config"]["StateRestoreOnly"].as<bool>();
+      cfg.dumpCacheInfoFile = cfgYaml["Config"]["DumpCacheInfoFile"].as<bool>();
 
       pluginLayer_ = std::make_unique<RtasCacheLayer>(gits_, cfg);
     }

@@ -20,6 +20,7 @@ struct RtasCacheConfig {
   std::string cacheFile = "rtas_cache.dat";
   bool record = false;
   bool stateRestoreOnly = true;
+  bool dumpCacheInfoFile = false;
 };
 
 class RtasCacheLayer : public Layer {

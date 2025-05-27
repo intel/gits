@@ -16,7 +16,7 @@ RtasCacheLayer::RtasCacheLayer(CGits& gits, const RtasCacheConfig& cfg)
     : Layer("RtasCache"),
       gits_(gits),
       cfg_(cfg),
-      serializer_(gits, cfg_.cacheFile),
+      serializer_(gits, cfg_.cacheFile, cfg_.dumpCacheInfoFile),
       deserializer_(gits, cfg_.cacheFile) {}
 
 RtasCacheLayer::~RtasCacheLayer() {

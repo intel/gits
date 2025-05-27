@@ -16,8 +16,12 @@
 namespace gits {
 namespace DirectX {
 
-RtasSerializer::RtasSerializer(CGits& gits, const std::string& cacheFile)
-    : ResourceDump(), gits_(gits), cacheFile_(cacheFile), initialized_(false) {}
+RtasSerializer::RtasSerializer(CGits& gits, const std::string& cacheFile, bool dumpCacheInfo)
+    : ResourceDump(),
+      gits_(gits),
+      cacheFile_(cacheFile),
+      dumpCacheInfo_(dumpCacheInfo),
+      initialized_(false) {}
 
 RtasSerializer::~RtasSerializer() {
   if (!initialized_) {
@@ -63,6 +67,10 @@ RtasSerializer::~RtasSerializer() {
     cache.flush();
 
     std::filesystem::remove_all(tmpCacheDir_);
+
+    if (dumpCacheInfo_) {
+      dumpCacheInfo();
+    }
   } catch (...) {
     std::cerr << "Unhandled exception caught in RtasSerializer::~RtasSerializer";
   }
@@ -72,6 +80,8 @@ void RtasSerializer::serialize(unsigned buildKey,
                                ID3D12GraphicsCommandList4* commandList,
                                D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc) {
   initialize();
+
+  cacheInfoByBuildKey[buildKey].destVA = desc.DestAccelerationStructureData;
 
   Microsoft::WRL::ComPtr<ID3D12Device5> device;
   HRESULT hr = commandList->GetDevice(IID_PPV_ARGS(&device));
@@ -234,6 +244,16 @@ void RtasSerializer::initialize() {
     std::filesystem::create_directory(tmpCacheDir_);
   }
   initialized_ = true;
+}
+
+void RtasSerializer::dumpCacheInfo() {
+  std::filesystem::path cacheInfoFile =
+      cacheFile_.parent_path() / (cacheFile_.stem().string() + "_info.csv");
+  std::ofstream cacheInfo(cacheInfoFile);
+  cacheInfo << "BuildKey,DestVA\n";
+  for (const auto& [buildKey, info] : cacheInfoByBuildKey) {
+    cacheInfo << buildKey << "," << info.destVA << '\n';
+  }
 }
 
 } // namespace DirectX
