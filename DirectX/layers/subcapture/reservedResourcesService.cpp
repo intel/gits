@@ -379,6 +379,9 @@ void ReservedResourcesService::restoreContent() {
         }
       }
     }
+    if (totalSize == 0) {
+      continue;
+    }
 
     D3D12_HEAP_PROPERTIES heapPropertiesReadback{};
     heapPropertiesReadback.Type = D3D12_HEAP_TYPE_READBACK;
