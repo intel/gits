@@ -44,7 +44,7 @@ void GpuPatchLayer::pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
     addressService_.addGpuCaptureAddress(c.object_.value, c.object_.key, desc.Width,
                                          c.result_.value);
   }
-  resourceInfos_[c.object_.key] = ResourceInfo{c.object_.value, c.result_.value};
+  resourceInfos_[c.object_.key] = ResourceInfo{c.object_.value};
 }
 
 void GpuPatchLayer::post(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
@@ -105,7 +105,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
 
   if (c.pDesc_.value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY) {
 
-    unsigned offset = c.pDesc_.value->Inputs.InstanceDescs - infoInstanceDescs.captureStart;
+    unsigned offset = c.pDesc_.inputOffsets[0];
     unsigned size = c.pDesc_.value->Inputs.NumDescs * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
     if (size > patchBufferSize_) {
       Log(ERR) << "Raytracing patch buffer is too small for instances!";
@@ -248,7 +248,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
       if (genericReadResources_.find(instanceDescsKey) != genericReadResources_.end()) {
         resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
       }
-      unsigned offset = c.pDesc_.value->Inputs.InstanceDescs - infoInstanceDescs.captureStart;
+      unsigned offset = c.pDesc_.inputOffsets[0];
       dumpService_.dumpInstancesArrayOfPointers(commandList, infoInstanceDescs.resource,
                                                 instanceDescsKey, offset, size, resourceState,
                                                 c.key, true);

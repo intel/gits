@@ -189,7 +189,6 @@ private:
 
   struct ResourceInfo {
     ID3D12Resource* resource{};
-    D3D12_GPU_VIRTUAL_ADDRESS captureStart{};
   };
   std::unordered_map<unsigned, ResourceInfo> resourceInfos_;
 };
