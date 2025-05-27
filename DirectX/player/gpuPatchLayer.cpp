@@ -44,7 +44,7 @@ void GpuPatchLayer::pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
     addressService_.addGpuCaptureAddress(c.object_.value, c.object_.key, desc.Width,
                                          c.result_.value);
   }
-  resourceInfos_[c.object_.key] = ResourceInfo{c.object_.value};
+  resourceByKey_[c.object_.key] = c.object_.value;
 }
 
 void GpuPatchLayer::post(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
@@ -100,8 +100,8 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
                             mappingCountStagingBuffers_[mappingBufferIndex]);
 
   unsigned instanceDescsKey = c.pDesc_.inputKeys[0];
-  ResourceInfo infoInstanceDescs = resourceInfos_[instanceDescsKey];
-  GITS_ASSERT(infoInstanceDescs.resource);
+  ID3D12Resource* instanceDescs = resourceByKey_[instanceDescsKey];
+  GITS_ASSERT(instanceDescs);
 
   if (c.pDesc_.value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY) {
 
@@ -123,21 +123,21 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
       commandList->ResourceBarrier(1, &barrier);
 
       // workaround for improper mapping gpu address to buffer in capture
-      D3D12_RESOURCE_DESC desc = infoInstanceDescs.resource->GetDesc();
+      D3D12_RESOURCE_DESC desc = instanceDescs->GetDesc();
       bool denyShaderResource = desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
       bool setSourceBarrier =
           genericReadResources_.find(instanceDescsKey) == genericReadResources_.end() &&
           !denyShaderResource;
       if (setSourceBarrier) {
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        barrier.Transition.pResource = infoInstanceDescs.resource;
+        barrier.Transition.pResource = instanceDescs;
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
         commandList->ResourceBarrier(1, &barrier);
       }
 
-      commandList->CopyBufferRegion(patchBuffers_[patchBufferIndex], 0, infoInstanceDescs.resource,
-                                    offset, size);
+      commandList->CopyBufferRegion(patchBuffers_[patchBufferIndex], 0, instanceDescs, offset,
+                                    size);
 
       barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
       barrier.Transition.pResource = patchBuffers_[patchBufferIndex];
@@ -147,7 +147,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
 
       if (setSourceBarrier) {
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        barrier.Transition.pResource = infoInstanceDescs.resource;
+        barrier.Transition.pResource = instanceDescs;
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
         commandList->ResourceBarrier(1, &barrier);
@@ -249,9 +249,8 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
         resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
       }
       unsigned offset = c.pDesc_.inputOffsets[0];
-      dumpService_.dumpInstancesArrayOfPointers(commandList, infoInstanceDescs.resource,
-                                                instanceDescsKey, offset, size, resourceState,
-                                                c.key, true);
+      dumpService_.dumpInstancesArrayOfPointers(commandList, instanceDescs, instanceDescsKey,
+                                                offset, size, resourceState, c.key, true);
     }
 
     unsigned patchBufferIndex = getPatchBufferIndex(c.object_.key);

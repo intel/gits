@@ -187,10 +187,7 @@ private:
   std::unordered_set<unsigned> genericReadResources_;
   std::unordered_map<unsigned, std::vector<D3D12_GPU_VIRTUAL_ADDRESS>> instancesArraysOfPointers_;
 
-  struct ResourceInfo {
-    ID3D12Resource* resource{};
-  };
-  std::unordered_map<unsigned, ResourceInfo> resourceInfos_;
+  std::unordered_map<unsigned, ID3D12Resource*> resourceByKey_;
 };
 
 } // namespace DirectX

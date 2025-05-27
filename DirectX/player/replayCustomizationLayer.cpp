@@ -844,14 +844,15 @@ void ReplayCustomizationLayer::pre(
   }
   c.pDesc_.value->ScratchAccelerationStructureData = manager_.getGpuAddressService().getGpuAddress(
       c.pDesc_.scratchAccelerationStructureKey, c.pDesc_.scratchAccelerationStructureOffset);
-  if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-    c.pDesc_.value->Inputs.InstanceDescs = manager_.getGpuAddressService().getGpuAddress(
-        c.pDesc_.inputKeys[0], c.pDesc_.inputOffsets[0]);
-  }
 
   unsigned inputIndex = 0;
   if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-    // c.pDesc_.value->Inputs.InstanceDescs set in GpuPatchLayer
+    if (c.pDesc_.value->Inputs.NumDescs == 0) {
+      c.pDesc_.value->Inputs.InstanceDescs = manager_.getGpuAddressService().getGpuAddress(
+          c.pDesc_.inputKeys[0], c.pDesc_.inputOffsets[0]);
+    } else {
+      // c.pDesc_.value->Inputs.InstanceDescs set in GpuPatchLayer
+    }
     ++inputIndex;
   } else {
     for (unsigned i = 0; i < c.pDesc_.value->Inputs.NumDescs; ++i) {
