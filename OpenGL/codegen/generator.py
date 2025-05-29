@@ -3559,6 +3559,14 @@ function(name='glCreateSamplers', enabled=True, function_type=FuncType.CREATE, s
     ],
 )
 
+function(name='glCreateSemaphoresNV', enabled=False, function_type=FuncType.CREATE,
+    return_value=ReturnValue(type='void'),
+    args=[
+        Argument(name='n', type='GLsizei'),
+        Argument(name='semaphores', type='GLuint*'),
+    ],
+)
+
 function(name='glCreateShader', enabled=True, function_type=FuncType.CREATE, state_track=True,
     return_value=ReturnValue(type='GLuint', wrap_type='CGLProgram'),
     args=[
@@ -6335,7 +6343,7 @@ function(name='glGenSamplers', enabled=True, function_type=FuncType.GEN, state_t
     ],
 )
 
-function(name='glGenSemaphoresEXT', enabled=False, function_type=FuncType.NONE,
+function(name='glGenSemaphoresEXT', enabled=False, function_type=FuncType.GEN,
     return_value=ReturnValue(type='void'),
     args=[
         Argument(name='n', type='GLsizei'),
@@ -8985,7 +8993,16 @@ function(name='glGetSamplerParameteriv', enabled=True, function_type=FuncType.GE
     ],
 )
 
-function(name='glGetSemaphoreParameterui64vEXT', enabled=False, function_type=FuncType.NONE,
+function(name='glGetSemaphoreParameterivNV', enabled=False, function_type=FuncType.GET,
+    return_value=ReturnValue(type='void'),
+    args=[
+        Argument(name='semaphore', type='GLuint'),
+        Argument(name='pname', type='GLenum'),
+        Argument(name='params', type='GLint*'),
+    ],
+)
+
+function(name='glGetSemaphoreParameterui64vEXT', enabled=False, function_type=FuncType.GET,
     return_value=ReturnValue(type='void'),
     args=[
         Argument(name='semaphore', type='GLuint'),
@@ -18062,7 +18079,16 @@ function(name='glSelectPerfMonitorCountersAMD', enabled=True, function_type=Func
     ],
 )
 
-function(name='glSemaphoreParameterui64vEXT', enabled=False, function_type=FuncType.NONE,
+function(name='glSemaphoreParameterivNV', enabled=False, function_type=FuncType.PARAM,
+    return_value=ReturnValue(type='void'),
+    args=[
+        Argument(name='semaphore', type='GLuint'),
+        Argument(name='pname', type='GLenum'),
+        Argument(name='params', type='const GLint*'),
+    ],
+)
+
+function(name='glSemaphoreParameterui64vEXT', enabled=False, function_type=FuncType.PARAM,
     return_value=ReturnValue(type='void'),
     args=[
         Argument(name='semaphore', type='GLuint'),
