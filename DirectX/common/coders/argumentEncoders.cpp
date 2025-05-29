@@ -1544,6 +1544,34 @@ void encode(char* dest,
   offset += sizeof(unsigned) * arg.size;
 }
 
+unsigned getSize(
+    const PointerArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>& arg) {
+  if (!arg.value) {
+    return sizeof(void*);
+  }
+  return sizeof(void*) + sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC) +
+         sizeof(unsigned) * 2;
+}
+
+void encode(
+    char* dest,
+    unsigned& offset,
+    const PointerArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>& arg) {
+  if (encodeNullPtr(dest, offset, arg)) {
+    return;
+  }
+
+  memcpy(dest + offset, arg.value,
+         sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC));
+  offset += sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC);
+
+  memcpy(dest + offset, &arg.destBufferKey, sizeof(unsigned));
+  offset += sizeof(unsigned);
+
+  memcpy(dest + offset, &arg.destBufferOffset, sizeof(unsigned));
+  offset += sizeof(unsigned);
+}
+
 unsigned getSize(const D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument& arg) {
   if (!arg.value) {
     return sizeof(void*);

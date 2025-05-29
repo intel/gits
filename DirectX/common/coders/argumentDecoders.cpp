@@ -1070,6 +1070,24 @@ void decode(char* src,
   offset += arg.size * sizeof(unsigned);
 }
 
+void decode(char* src,
+            unsigned& offset,
+            PointerArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>& arg) {
+  if (decodeNullPtr(src, offset, arg)) {
+    return;
+  }
+
+  arg.value =
+      reinterpret_cast<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC*>(src + offset);
+  offset += sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC);
+
+  memcpy(&arg.destBufferKey, src + offset, sizeof(unsigned));
+  offset += sizeof(unsigned);
+
+  memcpy(&arg.destBufferOffset, src + offset, sizeof(unsigned));
+  offset += sizeof(unsigned);
+}
+
 void decode(char* src, unsigned& offset, D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument& arg) {
   if (decodeNullPtr(src, offset, arg)) {
     return;

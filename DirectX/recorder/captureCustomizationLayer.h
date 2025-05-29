@@ -87,6 +87,8 @@ public:
   void pre(ID3D12GraphicsCommandList4BeginRenderPassCommand& command) override;
   void pre(ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& command) override;
   void pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& command) override;
+  void pre(ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand&
+               command) override;
   void pre(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& command) override;
   void pre(ID3D12GraphicsCommandList4DispatchRaysCommand& command) override;
   void pre(INTC_D3D12_CreateDeviceExtensionContextCommand& command) override;

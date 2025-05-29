@@ -746,6 +746,22 @@ void CaptureCustomizationLayer::pre(
 }
 
 void CaptureCustomizationLayer::pre(
+    ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c) {
+  {
+    GpuAddressService::GpuAddressInfo info =
+        manager_.getGpuAddressService().getGpuAddressInfo(c.pDesc_.value->DestBuffer);
+    c.pDesc_.destBufferKey = info.resourceKey;
+    c.pDesc_.destBufferOffset = info.offset;
+  }
+  for (unsigned i = 0; i < c.NumSourceAccelerationStructures_.value; ++i) {
+    GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
+        c.pSourceAccelerationStructureData_.value[i]);
+    c.pSourceAccelerationStructureData_.interfaceKeys[i] = info.resourceKey;
+    c.pSourceAccelerationStructureData_.offsets[i] = info.offset;
+  }
+}
+
+void CaptureCustomizationLayer::pre(
     ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
   {
     GpuAddressService::GpuAddressInfo info =

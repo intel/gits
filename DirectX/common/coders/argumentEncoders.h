@@ -280,6 +280,13 @@ void encode(char* dest,
             unsigned& offset,
             const ArrayArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>& arg);
 
+unsigned getSize(
+    const PointerArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>& arg);
+void encode(
+    char* dest,
+    unsigned& offset,
+    const PointerArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>& arg);
+
 unsigned getSize(const D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument& arg);
 void encode(char* dest,
             unsigned& offset,

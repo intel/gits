@@ -132,7 +132,12 @@ FastOStream& operator<<(FastOStream& stream, D3D12_RENDER_PASS_RENDER_TARGET_DES
 FastOStream& operator<<(FastOStream& stream, D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument& arg);
 FastOStream& operator<<(FastOStream& stream,
                         PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>& arg);
-FastOStream& operator<<(FastOStream& stream, PointerArgument<D3D12_DISPATCH_RAYS_DESC>& arg);
+FastOStream& operator<<(
+    FastOStream& stream,
+    ArrayArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>& arg);
+FastOStream& operator<<(
+    FastOStream& stream,
+    PointerArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>& arg);
 FastOStream& operator<<(FastOStream& stream, DML_BINDING_TABLE_DESC_Argument& arg);
 FastOStream& operator<<(FastOStream& stream, DML_GRAPH_DESC_Argument& arg);
 FastOStream& operator<<(FastOStream& stream, DML_BINDING_DESC_Argument& arg);

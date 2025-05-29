@@ -921,7 +921,13 @@ void ReplayCustomizationLayer::pre(
 
 void ReplayCustomizationLayer::pre(
     ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c) {
-  c.skip = true;
+  c.pDesc_.value->DestBuffer = manager_.getGpuAddressService().getGpuAddress(
+      c.pDesc_.destBufferKey, c.pDesc_.destBufferOffset);
+  for (unsigned i = 0; i < c.NumSourceAccelerationStructures_.value; ++i) {
+    c.pSourceAccelerationStructureData_.value[i] = manager_.getGpuAddressService().getGpuAddress(
+        c.pSourceAccelerationStructureData_.interfaceKeys[i],
+        c.pSourceAccelerationStructureData_.offsets[i]);
+  }
 }
 
 void ReplayCustomizationLayer::pre(D3D12CreateRootSignatureDeserializerCommand& c) {

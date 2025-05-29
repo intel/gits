@@ -989,6 +989,43 @@ FastOStream& operator<<(FastOStream& stream,
   return stream;
 }
 
+FastOStream& operator<<(
+    FastOStream& stream,
+    ArrayArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>& arg) {
+  if (!arg.value) {
+    return stream << "nullptr";
+  }
+
+  stream << "[";
+  for (unsigned i = 0; i < arg.destBufferKeys.size(); ++i) {
+    if (i > 0) {
+      stream << ", ";
+    }
+    stream << "D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC{{";
+    printObjectKey(stream, arg.destBufferKeys[i]);
+    stream << ", " << arg.destBufferOffsets[i] << "}, ";
+    stream << arg.value->InfoType;
+    stream << "}";
+  }
+  stream << "]";
+  return stream;
+}
+
+FastOStream& operator<<(
+    FastOStream& stream,
+    PointerArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>& arg) {
+  if (!arg.value) {
+    return stream << "nullptr";
+  }
+
+  stream << "D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC{{";
+  printObjectKey(stream, arg.destBufferKey);
+  stream << ", " << arg.destBufferOffset << "}, ";
+  stream << arg.value->InfoType;
+  stream << "}";
+  return stream;
+}
+
 FastOStream& operator<<(FastOStream& stream, PointerArgument<D3D12_DISPATCH_RAYS_DESC>& arg) {
   if (!arg.value) {
     return stream << "nullptr";

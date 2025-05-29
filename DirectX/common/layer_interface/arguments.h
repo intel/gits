@@ -336,6 +336,16 @@ struct ArrayArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC
 };
 
 template <>
+struct PointerArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC> {
+  PointerArgument(const D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC* value_)
+      : value(const_cast<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC*>(value_)) {}
+  PointerArgument() {}
+  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC* value{};
+  unsigned destBufferKey{};
+  unsigned destBufferOffset{};
+};
+
+template <>
 struct PointerArgument<D3D12_DISPATCH_RAYS_DESC> {
   PointerArgument(const D3D12_DISPATCH_RAYS_DESC* value_)
       : value(const_cast<D3D12_DISPATCH_RAYS_DESC*>(value_)) {}
