@@ -16,7 +16,9 @@ namespace gits {
 namespace DirectX {
 
 void CpuDescriptorsService::createCommandList(unsigned deviceKey) {
-  GITS_ASSERT(deviceKey_ == deviceKey || !deviceKey_);
+  if (deviceKey_ && deviceKey_ != deviceKey) {
+    Log(ERR) << "Execution serialization - multiple devices not handled";
+  }
   deviceKey_ = deviceKey;
 }
 
