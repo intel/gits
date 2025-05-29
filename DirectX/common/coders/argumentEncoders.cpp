@@ -1330,6 +1330,66 @@ void encode(char* dest, unsigned& offset, const Argument<D3D12_HEAP_FLAGS>& arg)
   offset += sizeof(D3D12_HEAP_FLAGS);
 }
 
+unsigned getSize(const PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS>& arg) {
+  if (!arg.value) {
+    return sizeof(void*);
+  }
+
+  unsigned size = sizeof(void*) + sizeof(D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS);
+  if (arg.value->Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
+    if (arg.value->DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY) {
+      size += arg.value->NumDescs * sizeof(D3D12_RAYTRACING_GEOMETRY_DESC);
+    } else if (arg.value->DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS) {
+      size += arg.value->NumDescs * sizeof(D3D12_RAYTRACING_GEOMETRY_DESC*);
+      size += arg.value->NumDescs * sizeof(D3D12_RAYTRACING_GEOMETRY_DESC);
+    }
+  }
+
+  size += sizeof(unsigned) + sizeof(unsigned) * arg.inputKeys.size() * 2;
+
+  return size;
+}
+
+void encode(char* dest,
+            unsigned& offset,
+            const PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS>& arg) {
+  if (encodeNullPtr(dest, offset, arg)) {
+    return;
+  }
+
+  memcpy(dest + offset, arg.value, sizeof(D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS));
+  offset += sizeof(D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS);
+
+  if (arg.value->Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
+    if (arg.value->DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY) {
+      if (arg.value->pGeometryDescs) {
+        memcpy(dest + offset, arg.value->pGeometryDescs,
+               sizeof(D3D12_RAYTRACING_GEOMETRY_DESC) * arg.value->NumDescs);
+        offset += sizeof(D3D12_RAYTRACING_GEOMETRY_DESC) * arg.value->NumDescs;
+      }
+    } else if (arg.value->DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS) {
+      if (arg.value->ppGeometryDescs) {
+        memcpy(dest + offset, arg.value->ppGeometryDescs,
+               sizeof(D3D12_RAYTRACING_GEOMETRY_DESC*) * arg.value->NumDescs);
+        offset += sizeof(D3D12_RAYTRACING_GEOMETRY_DESC*) * arg.value->NumDescs;
+      }
+      for (unsigned i = 0; i < arg.value->NumDescs; ++i) {
+        memcpy(dest + offset, arg.value->ppGeometryDescs[i],
+               sizeof(D3D12_RAYTRACING_GEOMETRY_DESC));
+        offset += sizeof(D3D12_RAYTRACING_GEOMETRY_DESC);
+      }
+    }
+  }
+
+  unsigned size = arg.inputKeys.size();
+  memcpy(dest + offset, &size, sizeof(size));
+  offset += sizeof(size);
+  memcpy(dest + offset, arg.inputKeys.data(), sizeof(unsigned) * size);
+  offset += sizeof(unsigned) * size;
+  memcpy(dest + offset, arg.inputOffsets.data(), sizeof(unsigned) * size);
+  offset += sizeof(unsigned) * size;
+}
+
 unsigned getSize(const PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>& arg) {
   if (!arg.value) {
     return sizeof(void*);

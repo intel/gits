@@ -297,6 +297,16 @@ struct D3D12_STATE_OBJECT_DESC_Argument {
 };
 
 template <>
+struct PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS> {
+  PointerArgument(const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS* value_)
+      : value(const_cast<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS*>(value_)) {}
+  PointerArgument() {}
+  D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS* value{};
+  std::vector<unsigned> inputKeys{};
+  std::vector<unsigned> inputOffsets{};
+};
+
+template <>
 struct PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC> {
   PointerArgument(const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC* value_)
       : value(const_cast<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC*>(value_)) {}

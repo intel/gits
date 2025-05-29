@@ -438,7 +438,34 @@ void ReplayCustomizationLayer::pre(ID3D12DeviceCheckFeatureSupportCommand& c) {
 
 void ReplayCustomizationLayer::pre(
     ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& c) {
-  c.skip = true;
+  unsigned inputIndex = 0;
+  if (c.pDesc_.value->Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+    // requires instances patching
+    c.skip = true;
+    ++inputIndex;
+  } else {
+    for (unsigned i = 0; i < c.pDesc_.value->NumDescs; ++i) {
+      D3D12_RAYTRACING_GEOMETRY_DESC& desc = const_cast<D3D12_RAYTRACING_GEOMETRY_DESC&>(
+          c.pDesc_.value->DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY
+              ? c.pDesc_.value->pGeometryDescs[i]
+              : *c.pDesc_.value->ppGeometryDescs[i]);
+      if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
+        desc.Triangles.Transform3x4 = manager_.getGpuAddressService().getGpuAddress(
+            c.pDesc_.inputKeys[inputIndex], c.pDesc_.inputOffsets[inputIndex]);
+        ++inputIndex;
+        desc.Triangles.IndexBuffer = manager_.getGpuAddressService().getGpuAddress(
+            c.pDesc_.inputKeys[inputIndex], c.pDesc_.inputOffsets[inputIndex]);
+        ++inputIndex;
+        desc.Triangles.VertexBuffer.StartAddress = manager_.getGpuAddressService().getGpuAddress(
+            c.pDesc_.inputKeys[inputIndex], c.pDesc_.inputOffsets[inputIndex]);
+        ++inputIndex;
+      } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
+        desc.AABBs.AABBs.StartAddress = manager_.getGpuAddressService().getGpuAddress(
+            c.pDesc_.inputKeys[inputIndex], c.pDesc_.inputOffsets[inputIndex]);
+        ++inputIndex;
+      }
+    }
+  }
 }
 
 void ReplayCustomizationLayer::pre(ID3D12Device1CreatePipelineLibraryCommand& c) {

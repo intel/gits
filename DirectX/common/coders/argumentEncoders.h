@@ -261,6 +261,11 @@ void encode(char* dest, unsigned& offset, const PointerArgument<D3D12_HEAP_DESC>
 unsigned getSize(const Argument<D3D12_HEAP_FLAGS>& arg);
 void encode(char* dest, unsigned& offset, const Argument<D3D12_HEAP_FLAGS>& arg);
 
+unsigned getSize(const PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS>& arg);
+void encode(char* dest,
+            unsigned& offset,
+            const PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS>& arg);
+
 unsigned getSize(const PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>& arg);
 void encode(char* dest,
             unsigned& offset,

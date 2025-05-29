@@ -166,6 +166,9 @@ void decode(char* src, unsigned& offset, DML_CheckFeatureSupport_BufferArgument&
 
 void decode(char* src,
             unsigned& offset,
+            PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS>& arg);
+void decode(char* src,
+            unsigned& offset,
             PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>& arg);
 void decode(char* src, unsigned& offset, PointerArgument<D3D12_DISPATCH_RAYS_DESC>& arg);
 void decode(char* src,

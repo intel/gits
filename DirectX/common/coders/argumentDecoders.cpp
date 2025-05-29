@@ -912,6 +912,49 @@ void decode(char* src, unsigned& offset, DML_CheckFeatureSupport_BufferArgument&
 
 void decode(char* src,
             unsigned& offset,
+            PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS>& arg) {
+  if (decodeNullPtr(src, offset, arg)) {
+    return;
+  }
+
+  arg.value = reinterpret_cast<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS*>(src + offset);
+  offset += sizeof(D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS);
+
+  if (arg.value->Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
+    if (arg.value->DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY) {
+      if (arg.value->pGeometryDescs) {
+        arg.value->pGeometryDescs = reinterpret_cast<D3D12_RAYTRACING_GEOMETRY_DESC*>(src + offset);
+        offset += sizeof(D3D12_RAYTRACING_GEOMETRY_DESC) * arg.value->NumDescs;
+      }
+    } else if (arg.value->DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS) {
+      if (arg.value->ppGeometryDescs) {
+        arg.value->ppGeometryDescs =
+            reinterpret_cast<D3D12_RAYTRACING_GEOMETRY_DESC**>(src + offset);
+        offset += sizeof(D3D12_RAYTRACING_GEOMETRY_DESC*) * arg.value->NumDescs;
+      }
+      for (unsigned i = 0; i < arg.value->NumDescs; ++i) {
+        const_cast<D3D12_RAYTRACING_GEOMETRY_DESC**>(arg.value->ppGeometryDescs)[i] =
+            reinterpret_cast<D3D12_RAYTRACING_GEOMETRY_DESC*>(src + offset);
+        offset += sizeof(D3D12_RAYTRACING_GEOMETRY_DESC);
+      }
+    }
+  }
+
+  unsigned size{};
+  memcpy(&size, src + offset, sizeof(size));
+  offset += sizeof(size);
+
+  arg.inputKeys.resize(size);
+  memcpy(arg.inputKeys.data(), src + offset, size * sizeof(unsigned));
+  offset += size * sizeof(unsigned);
+
+  arg.inputOffsets.resize(size);
+  memcpy(arg.inputOffsets.data(), src + offset, size * sizeof(unsigned));
+  offset += size * sizeof(unsigned);
+}
+
+void decode(char* src,
+            unsigned& offset,
             PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>& arg) {
   if (decodeNullPtr(src, offset, arg)) {
     return;

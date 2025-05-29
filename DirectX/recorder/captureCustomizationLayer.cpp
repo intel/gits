@@ -664,6 +664,34 @@ void CaptureCustomizationLayer::pre(ID3D12GraphicsCommandList4BeginRenderPassCom
 }
 
 void CaptureCustomizationLayer::pre(
+    ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& c) {
+  auto resolveInputsGpuAddress = [&](D3D12_GPU_VIRTUAL_ADDRESS address) {
+    GpuAddressService::GpuAddressInfo info =
+        manager_.getGpuAddressService().getGpuAddressInfo(address);
+    c.pDesc_.inputKeys.push_back(info.resourceKey);
+    c.pDesc_.inputOffsets.push_back(info.offset);
+  };
+
+  if (c.pDesc_.value->Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+    resolveInputsGpuAddress(c.pDesc_.value->InstanceDescs);
+  } else {
+    for (unsigned i = 0; i < c.pDesc_.value->NumDescs; ++i) {
+      const D3D12_RAYTRACING_GEOMETRY_DESC& desc =
+          c.pDesc_.value->DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY
+              ? c.pDesc_.value->pGeometryDescs[i]
+              : *c.pDesc_.value->ppGeometryDescs[i];
+      if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
+        resolveInputsGpuAddress(desc.Triangles.Transform3x4);
+        resolveInputsGpuAddress(desc.Triangles.IndexBuffer);
+        resolveInputsGpuAddress(desc.Triangles.VertexBuffer.StartAddress);
+      } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
+        resolveInputsGpuAddress(desc.AABBs.AABBs.StartAddress);
+      }
+    }
+  }
+}
+
+void CaptureCustomizationLayer::pre(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
   {
     GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
