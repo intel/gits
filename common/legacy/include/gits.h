@@ -46,6 +46,7 @@
 #define GITS_OPENCL_SET_USM_ARG       GITS_MAKE_VERSION4(2, 0, 8, 23)
 #define GITS_TOKEN_COMPRESSION        GITS_MAKE_VERSION3(2, 0, 10)
 #define GITS_API_INFO                 GITS_MAKE_VERSION3(2, 0, 11)
+#define GITS_DX12_ENCODING_FIX        GITS_MAKE_VERSION3(2, 0, 12)
 
 struct lua_State;
 
