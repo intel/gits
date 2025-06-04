@@ -594,9 +594,13 @@ void gits::OpenGL::CVariableVertexAttribInfo::Get() {
       drv.gl.glGetVertexAttribiv(i, GL_VERTEX_ATTRIB_BINDING, &_vertexAttribs[i]._binding);
       drv.gl.glGetVertexAttribiv(i, GL_VERTEX_ATTRIB_RELATIVE_OFFSET,
                                  &_vertexAttribs[i]._relativeOffset);
-      drv.gl.glGetIntegeri_v(GL_VERTEX_BINDING_OFFSET, i, &_vertexAttribs[i]._bindingOffset);
-      drv.gl.glGetIntegeri_v(GL_VERTEX_BINDING_STRIDE, i, &_vertexAttribs[i]._bindingStride);
-      drv.gl.glGetIntegeri_v(GL_VERTEX_BINDING_DIVISOR, i, &_vertexAttribs[i]._bindingDivisor);
+      GLuint bindingIndex = _vertexAttribs[i]._binding;
+      drv.gl.glGetIntegeri_v(GL_VERTEX_BINDING_OFFSET, bindingIndex,
+                             &_vertexAttribs[i]._bindingOffset);
+      drv.gl.glGetIntegeri_v(GL_VERTEX_BINDING_STRIDE, bindingIndex,
+                             &_vertexAttribs[i]._bindingStride);
+      drv.gl.glGetIntegeri_v(GL_VERTEX_BINDING_DIVISOR, bindingIndex,
+                             &_vertexAttribs[i]._bindingDivisor);
     }
     drv.gl.glGetVertexAttribPointerv(i, GL_VERTEX_ATTRIB_ARRAY_POINTER,
                                      &_vertexAttribs[i]._pointer);
