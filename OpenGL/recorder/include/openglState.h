@@ -978,6 +978,7 @@ class CVariableVertexAttribInfo : public gits::CComponentState::CVariable {
   static GLint _maxVertexAttribs;
   struct TVertexAttribData {
     TVertexAttribData();
+    // TODO: Give them proper types where needed, like GLintptr, GLuint, GLsizei, etc.
     GLint _enabled;
     GLint _size;
     GLint _type;

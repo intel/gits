@@ -580,6 +580,7 @@ void gits::OpenGL::CVariableVertexAttribInfo::Get() {
   }
 
   for (GLint i = 0; i < _maxVertexAttribs; ++i) {
+    // TODO: request proper types for each value, not just signed ints for everything.
     drv.gl.glGetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &_vertexAttribs[i]._enabled);
     drv.gl.glGetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_SIZE, &_vertexAttribs[i]._size);
     drv.gl.glGetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_TYPE, &_vertexAttribs[i]._type);
