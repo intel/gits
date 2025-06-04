@@ -2203,8 +2203,8 @@ void gits::OpenGL::CVariableBufferInfo::Get() {
 
 void gits::OpenGL::CVariableBufferInfo::Schedule(CScheduler& scheduler,
                                                  const CVariable& lastValue) const {
-  auto list = SD().GetCurrentSharedStateData().Buffers().List();
-  auto& indexedTargets = SD().GetCurrentSharedStateData().IndexedBoundBuffers().TargetsInfo();
+  const auto& list = SD().GetCurrentSharedStateData().Buffers().List();
+  const auto& indexedTargets = SD().GetCurrentSharedStateData().IndexedBoundBuffers().TargetsInfo();
 
   if (!_supported) {
     return;
