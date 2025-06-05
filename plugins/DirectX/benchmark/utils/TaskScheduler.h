@@ -36,7 +36,7 @@ private:
   std::mutex mutex_;
   std::thread thread_;
   std::condition_variable cv_;
-  std::atomic<bool> done_{false};
+  bool done_{false};
 };
 
 } // namespace DirectX

@@ -58,7 +58,7 @@ private:
   std::deque<ObjectCreationTask*> tasksQueue_;
   std::mutex mutex_;
   std::condition_variable cv_;
-  std::atomic<bool> done_;
+  bool done_;
 };
 
 } // namespace DirectX

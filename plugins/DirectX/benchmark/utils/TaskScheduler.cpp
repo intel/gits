@@ -44,7 +44,10 @@ namespace DirectX {
 TaskScheduler::TaskScheduler(const std::string name) : name_{name} {}
 
 TaskScheduler::~TaskScheduler() {
-  done_ = true;
+  {
+    std::unique_lock<std::mutex> lock(mutex_);
+    done_ = true;
+  }
   cv_.notify_all();
   if (thread_.joinable()) {
     thread_.join();

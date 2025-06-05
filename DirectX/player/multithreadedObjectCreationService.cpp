@@ -40,7 +40,10 @@ MultithreadedObjectCreationService::~MultithreadedObjectCreationService() {
 }
 
 void MultithreadedObjectCreationService::shutdown() {
-  done_ = true;
+  {
+    std::unique_lock<std::mutex> lock(mutex_);
+    done_ = true;
+  }
   cv_.notify_all();
   for (auto& worker : workers_) {
     if (worker.joinable()) {
