@@ -32,11 +32,11 @@ ${whitespace(indentation)}${data.config_name}:
     % if option.is_os_visible(platform):
     % if option.has_leafs():
         % if option.is_group: 
-            % if not option.is_derived or not option.argument_only:
+            % if not (option.is_derived or option.argument_only):
 ${render_group(option, indentation+1)}\
             % endif
         % else:
-            % if not option.is_derived or not option.argument_only:
+            % if not (option.is_derived or option.argument_only):
                 % if option.needs_quotes_in_yml:
 ${whitespace(indentation + 1)}${option.config_name}: '${option.get_default(platform, installpath, conditions)}'${" # " + option.short_description if option.short_description else ''}
                 % else:
