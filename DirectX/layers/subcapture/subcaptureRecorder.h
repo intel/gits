@@ -24,7 +24,7 @@ public:
   SubcaptureRecorder& operator=(const SubcaptureRecorder&) = delete;
 
   void record(CToken* token);
-  void frameEnd();
+  void frameEnd(bool stateRestore);
   void executionStart();
   void executionEnd();
   bool isExecutionRangeStart();
@@ -35,6 +35,7 @@ private:
   unsigned executionRangeStart_{};
   unsigned executionRangeEnd_{};
   bool insideExecution_{};
+  bool zeroOrFirstFrame_{true};
 };
 
 } // namespace DirectX

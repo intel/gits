@@ -62,9 +62,12 @@ void SubcaptureRecorder::record(CToken* token) {
   CRecorder::Instance().Schedule(token);
 }
 
-void SubcaptureRecorder::frameEnd() {
+void SubcaptureRecorder::frameEnd(bool stateRestore) {
   executionCount_ = 0;
-  CRecorder::Instance().FrameEnd();
+  zeroOrFirstFrame_ = false;
+  if (!stateRestore) {
+    CRecorder::Instance().FrameEnd();
+  }
 }
 
 void SubcaptureRecorder::executionStart() {
@@ -77,6 +80,9 @@ void SubcaptureRecorder::executionEnd() {
 }
 
 bool SubcaptureRecorder::isExecutionRangeStart() {
+  if (zeroOrFirstFrame_) {
+    return false;
+  }
   if (!executionRangeStart_ || !CRecorder::Instance().Running()) {
     return false;
   }
@@ -84,6 +90,9 @@ bool SubcaptureRecorder::isExecutionRangeStart() {
 }
 
 bool SubcaptureRecorder::isRunning() {
+  if (zeroOrFirstFrame_) {
+    return false;
+  }
   bool frameRunning = CRecorder::Instance().Running();
   if (!executionRangeStart_ || !frameRunning) {
     return frameRunning;

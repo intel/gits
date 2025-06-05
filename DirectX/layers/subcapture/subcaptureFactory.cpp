@@ -24,13 +24,16 @@ SubcaptureFactory::SubcaptureFactory() {
   }
 
   const std::string& frames = Configurator::Get().directx.features.subcapture.frames;
+  const std::string& executions =
+      Configurator::Get().directx.features.subcapture.commandListExecutions;
   try {
-    int startFrame = std::stoi(frames);
-    if (startFrame == 1) {
-      Log(ERR) << "Subcapture from frame 1 is not supported";
-      exit(EXIT_FAILURE);
-    }
-    if (!Configurator::Get().directx.features.subcapture.commandListExecutions.empty()) {
+    if (executions.empty()) {
+      int startFrame = std::stoi(frames);
+      if (startFrame == 1) {
+        Log(ERR) << "Subcapture from frame 1 is not supported";
+        exit(EXIT_FAILURE);
+      }
+    } else {
       if (frames.find("-") != std::string::npos) {
         Log(ERR) << "Subcapture of command list executions must have one frame range";
         exit(EXIT_FAILURE);

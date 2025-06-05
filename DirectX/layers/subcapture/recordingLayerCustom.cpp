@@ -18,9 +18,8 @@ void RecordingLayer::post(IDXGISwapChainPresentCommand& command) {
   if (recorder_.isRunning()) {
     recorder_.record(new IDXGISwapChainPresentWriter(command));
   }
-  if (!(command.Flags_.value & DXGI_PRESENT_TEST) &&
-      !(command.key & Command::stateRestoreKeyMask)) {
-    recorder_.frameEnd();
+  if (!(command.Flags_.value & DXGI_PRESENT_TEST)) {
+    recorder_.frameEnd(command.key & Command::stateRestoreKeyMask);
   }
 }
 
@@ -28,9 +27,8 @@ void RecordingLayer::post(IDXGISwapChain1Present1Command& command) {
   if (recorder_.isRunning()) {
     recorder_.record(new IDXGISwapChain1Present1Writer(command));
   }
-  if (!(command.PresentFlags_.value & DXGI_PRESENT_TEST) &&
-      !(command.key & Command::stateRestoreKeyMask)) {
-    recorder_.frameEnd();
+  if (!(command.PresentFlags_.value & DXGI_PRESENT_TEST)) {
+    recorder_.frameEnd(command.key & Command::stateRestoreKeyMask);
   }
 }
 
