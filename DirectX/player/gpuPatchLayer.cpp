@@ -396,16 +396,6 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
           commandList, "GITS_BuildRaytracingAccelerationStructure-Patch", c.object_.key));
 }
 
-void GpuPatchLayer::post(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
-  if (Configurator::Get().directx.player.uavBarrierAfterCopyRaytracingASWorkaround) {
-    ID3D12GraphicsCommandList* commandList = c.object_.value;
-    D3D12_RESOURCE_BARRIER barrier{};
-    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-    barrier.UAV.pResource = nullptr;
-    commandList->ResourceBarrier(1, &barrier);
-  }
-}
-
 void GpuPatchLayer::pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
   ID3D12GraphicsCommandList* commandList = c.object_.value;
   if (!initialized_) {

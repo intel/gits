@@ -42,7 +42,6 @@ public:
   void pre(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) override;
   void post(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) override;
   void pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) override;
-  void post(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) override;
   void pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) override;
   void post(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) override;
   void post(ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c) override;

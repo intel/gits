@@ -789,10 +789,6 @@ Configuration:
             Type: bool
             Default: false
             Description: Use a D3D12_COMMAND_LIST_TYPE_COPY to restore resource states
-          - Name: uavBarrierAfterCopyRaytracingASWorkaround
-            Type: bool
-            Default: false
-            Description: Temporary workaround required to playback some workloads correctly on Intel GPUs
           - Name: skipResolveQueryData
             Type: bool
             Default: true
