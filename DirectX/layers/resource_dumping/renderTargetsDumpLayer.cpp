@@ -81,6 +81,10 @@ void RenderTargetsDumpLayer::post(ID3D12DeviceCopyDescriptorsSimpleCommand& c) {
 }
 
 void RenderTargetsDumpLayer::post(ID3D12DeviceCopyDescriptorsCommand& c) {
+  if (!c.NumDestDescriptorRanges_.value || !c.NumSrcDescriptorRanges_.value) {
+    return;
+  }
+
   unsigned destRangeIndex = 0;
   unsigned destIndex = 0;
   unsigned destRangeSize =

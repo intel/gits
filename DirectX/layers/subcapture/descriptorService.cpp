@@ -122,20 +122,14 @@ void DescriptorService::copyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand
 }
 
 void DescriptorService::copyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c) {
+  if (!c.NumDestDescriptorRanges_.value || !c.NumSrcDescriptorRanges_.value) {
+    return;
+  }
+
   unsigned destRangeIndex = 0;
   unsigned destIndex = 0;
   unsigned destRangeSize =
       c.pDestDescriptorRangeSizes_.value ? c.pDestDescriptorRangeSizes_.value[destRangeIndex] : 1;
-
-  if (destRangeSize == 0) {
-    Log(ERR) << "DescriptorService::copyDescriptors destRangeSize == 0 at call " << c.key;
-    return;
-  }
-  if (c.pDestDescriptorRangeStarts_.interfaceKeys.empty()) {
-    Log(ERR) << "DescriptorService::copyDescriptors destRangeStarts.interfaceKeys.empty at call "
-             << c.key;
-    return;
-  }
 
   unsigned destHeapKey = c.pDestDescriptorRangeStarts_.interfaceKeys[destRangeIndex];
 
