@@ -22,8 +22,7 @@ ConfigKeySet::ConfigKeySet(const std::string& keys) {
       }
       std::string key(begin, p);
       if (key[0] == 'S' || key[0] == 'E') {
-        key = key.substr(1);
-        unsigned k = std::stoi(key);
+        unsigned k = std::stoi(key.substr(1));
         if (key[0] == 'S') {
           k |= Command::stateRestoreKeyMask;
         } else if (key[0] == 'E') {
