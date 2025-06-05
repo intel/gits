@@ -53,6 +53,7 @@ Configuration:
             LongDescription: |
               Enables logging additional info to trace specified by comma separated options. 
               Options: 
+
               * vkStructs - instead of logging addresses of Vulkan objects, GITS will log the structures, tables or other data behind them. 
               * frameNumber - dump frame number for every api call.
             ConfigName: traceData
@@ -238,6 +239,7 @@ Configuration:
             LongDescription: |
               Path to lua event script.
               Following functions can be provided in script file for event handlers:
+
               * all GL / WGL / EGL / GLX functions
               * gitsFrameBegin(nr)
               * gitsFrameEnd(nr)
@@ -248,7 +250,9 @@ Configuration:
               * gitsProgramStart()
               * gitsProgramExit()
               * gitsLogging(log)
+
               Following functions exposed by GITS may be used inside lua scripts:
+
               * string udtToStr(userdata udt) - casts lua userdata to string.
               * number udtToInt(userdata udt) - casts user data to int.
               * userdata getUdt(userdata carray, number index) - extracts userdata from carray's index.
@@ -287,7 +291,8 @@ Configuration:
             Description: List of frames that will be captured by gits during playback.
             LongDescription: |
               List of frames that will be captured  during playback. 
-              Specifiedas single string without spaces of  following format:  
+              Specified as single string without spaces of  following format:
+
               * pattern = frame_list | frame_list/Repeat-Count
               * frame_list = element | frame_list, ',', element
               * element = Frame | Begin-End | Begin-End:Step
@@ -304,6 +309,7 @@ Configuration:
             LongDescription: |
               List of frames for which trace (log) will be generated during playback.
               Specified as a single string without spaces with the following format:
+
               * pattern = frame_list | frame_list/Repeat-Count
               * frame_list = element |frame_list, ',', element
               * element = Frame | Begin-End | Begin-End:Step
@@ -390,7 +396,8 @@ Configuration:
             Arguments: [stopAfterFrames]
             Description: List of frames to stop after  during playback.
             LongDescription: |
-              List of frames to stop after during playback. Specified as single string without spaces of following format: 
+              List of frames to stop after during playback. Specified as single string without spaces of following format:
+
               * pattern = frame_list | frame_list/Repeat-Count  
               * frame_list = element | frame_list, element
               * element = Frame | Begin-End | Begin-End:Step
@@ -410,11 +417,12 @@ Configuration:
             Type: bool
             Default: false
             Arguments: [cleanResourcesOnExit]
-            Description:
-              'Deletes unreleased resources at the end of the stream (with additional
-              API functions calls).\n - OpenGL - the first 2000 names of the following resources
-              are destroyed: FBOs, RBOs, VAOs, Textures, Buffers, Shaders, Programs, ARBPrograms,
-              DisplayLists, Queries.\n - Vulkan - all created resources are destroyed.'
+            Description: Delete unreleased resources at the end of the stream (with additional API functions calls).
+            LongDescription: |
+              Deletes unreleased resources at the end of the stream (with additional API functions calls).
+
+              - OpenGL: the first 2000 names of the following resources are destroyed: FBOs, RBOs, VAOs, Textures, Buffers, Shaders, Programs, ARBPrograms, DisplayLists, Queries.
+              - Vulkan: all created resources are destroyed.
           - Name: renderOffscreen
             Type: bool
             Default: false
@@ -422,8 +430,10 @@ Configuration:
             Description: Forces offscreen rendering in EGL or Vulkan.
             LongDescription: |
               Offscreen rendering: 
+
               - in EGL to a pbuffer, 
               - in Vulkan to a swapchain without presentation. 
+
               Not supported for other API types. Use --captureFrames or similar option to get rendering output.
           - Name: forceOrigScreenResolution
             Type: bool
@@ -863,6 +873,7 @@ Configuration:
                 LongDescription: |
                   Portability feature to use for placed resources.
                   Options:
+
                   * `none`: Don't do anything special (playback the stream as-is)
                   * `use`: Use existing file containing placed resources data
                   * `store`: Create a file containing placed resources data
@@ -890,7 +901,8 @@ Configuration:
                 Description: Method used to flush the trace file (off/ipc/file)
                 LongDescription: |
                   Method used to flush the trace file.
-                  Options: 
+                  Options:
+
                   * `off`: Does not flush the stream
                   * `ipc`: Flush into shared memory and save to file from a different process
                   * `file`: Flush directly into a file
@@ -1166,8 +1178,10 @@ Configuration:
             Description: List of glTexImage2D API calls, ordered by execution time.
             LongDescription: |
               List of glTexImage2D API calls, ordered by execution time, specified as single string without spaces of following format: 
+
               * texs_list = element | texs_list, element
               * element = Number | Begin-End | Begin-End:Step 
+
               Captured textures name format is: tex2D_<texture object>_<texture load number>.png
           - Name: captureDraws2DTexs
             Type: BitRange
@@ -1176,8 +1190,10 @@ Configuration:
             Description: List of drawcalls specified as single string without spaces
             LongDescription: |
               List of drawcalls specified as single string without spaces of following format: 
+
               * draw_list = element | draw_list, '','', element
               * element = Number | Begin-End | Begin-End:Step 
+
               Captured textures name format is: draw<drawcall number>_unit<unitnumber>_tex<texture load number>.png'
           - Name: captureDraws
             Type: BitRange
@@ -1187,6 +1203,7 @@ Configuration:
             LongDescription: |
               List of drawcall numbers that will be captured by gits during playback. 
               Specified as single string without spaces of following format:
+
                 * pattern = draw_list | draw_list/Repeat-Count  
                 * draw_list = element | draw_list,',', element  
                 * element = Number | Begin-End | Begin-End:Step
@@ -1233,6 +1250,7 @@ Configuration:
             LongDescription: |
               List of drawcall numbers to be executed by gits during playback.
               Rest of drawcalls won''t be executed. Specified as single string without spaces of following format:
+
               * pattern = draw_list | draw_list/Repeat-Count  
               * draw_list = element | draw_list, element
               * element = Number | Begin-End | Begin-End:Step
@@ -1527,6 +1545,7 @@ Configuration:
               List of Vulkan queue submits, whose render passes will be captured by gits during playback. 
               Render targets from all render passes will be dumped per command buffer after submission, so each command buffer is executed in a separate queue submit. 
               Specified as single string without spaces of following format:  
+
               * pattern = cmdBuff_list | cmdBuff_list/Repeat-Count
               * cmdBuff_list = element | cmdBuff_list, ',', element
               * element = Frame | Begin-End | Begin-End:Step
@@ -1542,6 +1561,7 @@ Configuration:
               List of Vulkan queue submits, whose storage buffers, storage images, destination buffers and destination textures will be captured by gits during playback.
               Resources will be dumped per command buffer after submission, so each command buffer is executed in a separate queue submit. 
               Specified as single string without spaces of following format:
+
               * pattern = cmdBuff_list | cmdBuff_list/Repeat-Count
               * cmdBuff_list = element | cmdBuff_list, ',', element
               * element = Frame | Begin-End | Begin-End:Step
@@ -1552,6 +1572,7 @@ Configuration:
             Description: "Set Group Type for captureVulkanSubmits: CmdBuffer, RenderPass"
             LongDescription: |
               Set Group Type for captureVulkanSubmits:
+
               * CmdBuffer - default; creating list of textures from renderpasses and dumping (each texture aredumped only once)
               * RenderPass - dumping textures per each renderpass (if renderpasses use the same images for some render targets then each image may be dumped several times)
           - Name: captureVulkanRenderPasses
@@ -1572,6 +1593,7 @@ Configuration:
               User may omit elements, starting from the rightmost (e.g. omit  renderpass number and use the  queue_submit_number/command_buffer_batch_number/command_buffer_number form or even omit  everything except the queue submit number). 
               Additionally the rightmost number may be replaced with an elemspec (creating a  number/number/number/elemspec form or even a form consisting of just a single  elemspec specifying queues).
               Example elemspecs:
+
               * '1/2/3/4' specifies queue submit number 1, command\buffer batch number 2, commandbuffer number 3, render pass number 4
               * '3,5-10' specifies queue submit number 3 and queue submits from 5 to 10 (it's actually a normal elemspec)
               * '7/2/1-20,30,40-50:2' specifies queue submit number 7, command buffer batch 2, command buffers from 1 to 20, command buffer 30 and even numbered command buffers between 40 and 50 (all ranges are inclusive).
@@ -1582,10 +1604,12 @@ Configuration:
             Description: List of Vulkan render passes, whose storage buffers, storage images, destination buffers and destination textures be captured during playback.
             LongDescription: |
               List of Vulkan render passes, whose storage buffers, storage images, destination buffers and destination textures be captured during playback.
-              The format consists of a hierarchy of numbers:\n queue_submit_number/command_buffer_batch_number/command_buffer_number/render_pass_range which can be adapted. 
+              The format consists of a hierarchy of numbers:
+               queue_submit_number/command_buffer_batch_number/command_buffer_number/render_pass_range which can be adapted. 
               User may omit elements, starting from the rightmost (e.g. omit renderpass number and use the queue_submit_number/command_buffer_batch_number/command_buffer_number form or even omit everything except the queue submit number). 
               Additionally the rightmost number may be replaced with an elemspec (creating a number/number/number/elemspec form or even a form consisting of just a single elemspec specifying queues).
               Example elemspecs:
+
               * '1/2/3/4' specifies queue submit number 1, command buffer batch number 2, commandbuffer number 3, render pass number 4
               * '3,5-10' specifies queue submit number 3 and queue submits from 5 to 10 (it's actually a normal elemspec)
               * '7/2/1-20,30,40-50:2' specifies queue submit number 7, command buffer batch 2, command buffers from 1 to 20, command buffer 30 and even numbered command buffers between 40 and 50 (all ranges are inclusive).
@@ -1604,6 +1628,7 @@ Configuration:
               User may omit elements, starting from the rightmost (e.g. omit draw number and use the queue_submit_number/command_buffer_batch_number/command_buffer_number/render_pass_number form or even omit everything except the queue submit number). 
               Additionally the rightmost number may be replaced with an elemspec (creating a number/number/number/number/elemspec form or even a form consisting of just a single elemspec specifying queues).
               Example elemspecs:
+
               * '1/2/3/4' specifies queue submit number 1, command buffer batch number 2, commandbuffer number 3, render pass number 4,
               * '3,5-10' specifies queue submit number 3 and queue submits from 5 to 10 (it's actually a normal elemspec),
               * '7/2/1-20,30,40-50:2' specifies queue submit number 7, command buffer batch 2, command buffers from 1 to 20, command buffer 30 and even numbered command buffers between 40 and 50 (all ranges are inclusive).
@@ -1621,7 +1646,8 @@ Configuration:
               User may omit elements, starting from the rightmost (e.g. omit command buffer number and use the queue_submit_number/command_buffer_batch_number form or even omit everything except the queue submit number). 
               Additionally the rightmost number may be replaced with an elemspec (creating a number/number/number/elemspec form or even a form consisting of just a single elemspec specifying queues).
               Example elemspecs:
-               * '1/2/3/4' specifies queue submit number 1, command buffer batch number 2, commandbuffer number 3, render pass number 4,
+
+              * '1/2/3/4' specifies queue submit number 1, command buffer batch number 2, commandbuffer number 3, render pass number 4,
                * '3,5-10' specifies queue submit number 3 and queue submits from 5 to 10 (it's actually a normal elemspec),
                * '7/2/1-20,30,40-50:2' specifies queue submit number 7, command buffer batch 2, command buffers from 1 to 20, command buffer 30 and even numbered command buffers between 40 and 50 (all ranges are inclusive).
           - Name: skipNonDeterministicImages
@@ -1755,6 +1781,7 @@ Configuration:
             LongDescription: |
               Range of frames that will be captured by RenderDoc during playback.
               Specified as string of following format:
+
               * --renderDocCaptureFrames frameNumber
               * --renderDocCaptureFrames beginFrame-endFrame
               Captures will be saved in the stream folder. Option cannot be combined with option 'renderDocCaptureVKSubmits'
@@ -1769,6 +1796,7 @@ Configuration:
             LongDescription: |
               Range of queue submits that will be captured by RenderDoc during playback. 
               Specified as string of following format:
+
                 * --renderDocCaptureVKSubmits queueSubmit
                 * --renderDocCaptureVKSubmits beginQueueSubmit-endQueueSubmit
               Captures will be saved in the stream folder. Option cannot be combined with option 'renderDocCaptureFrames'.
@@ -2071,6 +2099,7 @@ Configuration:
             LongDescription: |
               Injects clEnqueueRead*() after specified occurence of NDRange call for each used buffer to allow contents verification. 
               Number of NDRange calls must be specified as a single string without spaces of following format:        
+
               * num1-num2 ex. 1-7 - will dump buffers used in the range of calls
               * num1,num2,num3 ex. 2,5,7 - will dump buffers used in specified occurence of NRange calls
               Approaches may be combined ex. 2-5,14,17 Buffers will be stored in directory specified in --outputDir (implicitly to 'dump' in stream directory). 
@@ -2183,13 +2212,15 @@ Configuration:
               into gits reserved memory space, gits allocated memory last until sync"
             LongDescription: |
               Special option for capturing every single kernel argument injects synchronization points and reads for adequate queue mode reads are injected into gits reserved memory space, gits allocated memory last until sync
-              the symantics: 
+              the semantics:
+
               - for kernel dumping: 
                 > QueueSubmitNumberRange/CommandListNumberRange/AppendKernelsRange
               - for command list dumping: 
                 > QueueSubmitNumberRange/CommandListNumberRange 
 
               Note: 
+
               - Numeration of kernels is the order of appending the kernel launch call to a command list
               - Numeration of command lists is the order in which they were created 
               - Numeration of command queue submit is the queue submit number 
@@ -2198,6 +2229,7 @@ Configuration:
               - Numeration of Immediate command lists on creation increments number of queue submit and command list
 
               Examples: 
+
               * '1/2/3-4' specifies queue submit number 1, command list number 2, kernels 3 and 4 
               * '3,5-10/10,5,12-100' specifies queue submit number 3 and from 5 to 10, dumps command lists number 5, kernel: 10 and from 12 to 100 
               * '+/+/+' dumps everything , ''+'' sign indicates choosing all of the possible range 

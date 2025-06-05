@@ -108,3 +108,4 @@ DirectX/**/*Auto.h
 # Configuration
 common/configuration/**/*Auto.cpp
 common/configuration/**/*Auto.h
+docs/**/*Auto.md

@@ -97,3 +97,39 @@ add_custom_command(
   COMMAND ${Python3_EXECUTABLE} ${CONFIG_GENERATOR} --step Argumentparser --configYML ${METAFILE_CONFIG} --enumYML ${METAFILE_ENUM} --outDir ${GENERATED_FILES_DIR} --platform ${PLATFORM}
   WORKING_DIRECTORY ${CONFIG_GENERATOR_SCRIPTS_DIR}
 )
+
+if(NOT DEFINED BUILD_FOR_CCODE)
+set(GENERATED_DOCS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../docs/documentation/configuration)
+
+set(GENERATED_DOCS
+  ${GENERATED_DOCS_DIR}/CommonAuto.md
+  ${GENERATED_DOCS_DIR}/DirectXAuto.md
+  ${GENERATED_DOCS_DIR}/EnumsAuto.md
+  ${GENERATED_DOCS_DIR}/LevelZeroAuto.md
+  ${GENERATED_DOCS_DIR}/OpenCLAuto.md
+  ${GENERATED_DOCS_DIR}/OpenGLAuto.md
+  ${GENERATED_DOCS_DIR}/VulkanAuto.md
+)
+
+add_custom_command(
+  OUTPUT ${GENERATED_DOCS}
+  COMMAND ${CMAKE_COMMAND} -E echo "Running configuration documentation generation script..."
+  DEPENDS ${DEPENDENT_FILES}
+  COMMAND ${Python3_EXECUTABLE} ${CONFIG_GENERATOR} --step DocsConfiguration --configYML ${METAFILE_CONFIG} --enumYML ${METAFILE_ENUM} --outDir ${GENERATED_DOCS_DIR} --platform ${PLATFORM}
+  COMMAND ${Python3_EXECUTABLE} ${CONFIG_GENERATOR} --step DocsEnum --configYML ${METAFILE_CONFIG} --enumYML ${METAFILE_ENUM} --outDir ${GENERATED_DOCS_DIR} --platform ${PLATFORM}
+  WORKING_DIRECTORY ${CONFIG_GENERATOR_SCRIPTS_DIR}
+)
+
+add_custom_target(config_docs_gen DEPENDS ${GENERATED_DOCS})
+set_target_properties(config_docs_gen PROPERTIES FOLDER config)
+
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.20")
+  target_sources(config_docs_gen PRIVATE
+    ${MAKO_TEMPLATES}
+    ${SCRIPTS_SRC}
+    ${META_SRC}
+  )
+endif()
+
+add_dependencies(config_codegen config_docs_gen)
+endif()

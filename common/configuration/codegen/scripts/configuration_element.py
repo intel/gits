@@ -108,6 +108,9 @@ class ConfigurationEntry:
             os = "X11"
         return os in self.os_visibility
 
+    def is_os_limited(self):
+        return self.os_visibility is not None
+
 
 class ConfigurationOption(ConfigurationEntry):
     ENVIRONMENT_PREFIX = 'GITS_'
@@ -252,6 +255,11 @@ class ConfigurationOption(ConfigurationEntry):
         lst.extend([f'"{item}"' for item in tmp_list if len(item) > 1])
         return ", ".join(lst)
 
+    def get_custom_shorthands(self) -> str:
+        lst = [f"`-{item}`" for item in self.shorthands if len(item) == 1]
+        lst.extend([f"`--{item}`" for item in self.shorthands if len(item) > 1])
+        return ", ".join(lst)
+
 
     def get_environment_string(self) -> str:
         return f"{ConfigurationOption.ENVIRONMENT_PREFIX}{self.argument_path.upper().replace('.', '_')}"
@@ -331,6 +339,9 @@ class ConfigurationGroup(ConfigurationEntry):
     def get_config_options(self):
         # TODO - filter for groups that are in the configfile
         return [option for option in self.options if not option.is_group]
+
+    def get_config_path(self):
+        return '.'.join(self.namespace[1:])
 
 
 def parse_group_node(node, parent_namespace=None, parent_instance_namespace=None):

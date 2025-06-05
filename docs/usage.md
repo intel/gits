@@ -53,7 +53,6 @@ Here are some of the most commonly used arguments:
 | Argument                        | Windows                                                    |
 | ------------------------------- | ---------------------------------------------------------- |
 | `--help`                        | Basic usage info                                           |
-| `--hh all`                      | List all available options                                 |
 | `--stats`                       | Show stream statistics                                     |
 | `--captureFrames`               | Dump rendered frames to disk                               |
 | `--captureFrames 23,420-450:10` | Dump rendered frames `#23, #420, #430, #440, #450` to disk |
@@ -70,4 +69,4 @@ Aside from various binaries there's also the pre-configured `gits_config.yml` in
 
 ### Further Information
 
-You can find further information about the [configuration file](documentation/configuration/general_options.md) in the **documentation** section.
+You can find details of the configuration file options in the **Configuration** section of the documentation: e.g [Common](documentation/configuration/CommonAuto.md), [DirectX](documentation/configuration/DirectXAuto.md)

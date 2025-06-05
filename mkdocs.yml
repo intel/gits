@@ -80,11 +80,13 @@ nav:
       - Binary Streams: 'documentation/streams/binary_stream.md'
       - C-Code Streams: 'documentation/streams/ccode_stream.md'
     - Configuration: 
-      - General: 'documentation/configuration/general_options.md'
-      - Level Zero: 'documentation/configuration/LevelZero.md'
-      - OpenCL: 'documentation/configuration/OpenCL.md'
-      - OpenGL: 'documentation/configuration/OpenGL.md'
-      - Vulkan: 'documentation/configuration/vulkan.md'
+      - Common: 'documentation/configuration/CommonAuto.md'
+      - DirectX: 'documentation/configuration/DirectXAuto.md'
+      - Level Zero: 'documentation/configuration/LevelZeroAuto.md'
+      - OpenCL: 'documentation/configuration/OpenCLAuto.md'
+      - OpenGL: 'documentation/configuration/OpenGLAuto.md'
+      - Vulkan: 'documentation/configuration/VulkanAuto.md'
+      - Enums: 'documentation/configuration/EnumsAuto.md'
     - API:
       - DirectX: 
         - 'documentation/DirectX/Overview.md'

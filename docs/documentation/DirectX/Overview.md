@@ -29,7 +29,7 @@ Using **GITS** is straightforward. Copy the API shims into the application direc
 6. Rename `gitsPlayer.exe` to the desired executable name. This enables driver-side optimizations based on the executable name.
 7. Run `gitsPlayer.exe PATH/TO/STREAM`.
 
-Learn more about the configuration file options [here](../configuration/DirectX.md).
+Learn more about the configuration file options [here](../configuration/DirectXAuto.md).
 
 ## Sub-capture
 

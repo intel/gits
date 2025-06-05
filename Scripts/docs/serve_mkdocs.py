@@ -33,7 +33,7 @@ env = os.environ.copy()
 env['PYTHONPATH'] = module_dir + os.pathsep + env.get('PYTHONPATH', '')
 
 # Run MkDocs and stream the output
-process = subprocess.Popen(['mkdocs', 'serve'], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+process = subprocess.Popen(['python', '-m', 'mkdocs', 'serve'], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
 # Create threads to handle stdout and stderr
 stdout_thread = threading.Thread(target=stream_output, args=(process.stdout, "STDOUT: "))

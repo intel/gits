@@ -62,21 +62,21 @@ class TemplateManager:
         ]
         self.templates[Step.DOCS_ENUMS] = [
             ('documentationEnumAuto.md.mako',
-             os.path.join('documentation', 'configuration', 'EnumsAuto.md'), ()),
+             os.path.join('EnumsAuto.md'), ()),
         ]
         self.templates[Step.DOCS_CONFIG] = [
             ('documentationConfigAuto.md.mako',
-             os.path.join('documentation', 'configuration', 'Auto.md'), ('Common', 'octicons/book-24')),
+             os.path.join('Auto.md'), ('Common', 'octicons/book-24')),
             ('documentationConfigAuto.md.mako',
-             os.path.join('documentation', 'configuration', 'Auto.md'), ('DirectX', 'material/microsoft')),
+             os.path.join('Auto.md'), ('DirectX', 'material/microsoft')),
             ('documentationConfigAuto.md.mako',
-             os.path.join('documentation', 'configuration', 'Auto.md'), ('OpenGL', 'simple/opengl')),
+             os.path.join('Auto.md'), ('OpenGL', 'simple/opengl')),
             ('documentationConfigAuto.md.mako',
-             os.path.join('documentation', 'configuration', 'Auto.md'), ('OpenCL', 'simple/opengl')),
+             os.path.join('Auto.md'), ('OpenCL', 'simple/opengl')),
             ('documentationConfigAuto.md.mako',
-             os.path.join('documentation', 'configuration', 'Auto.md'), ('Vulkan', 'simple/vulkan')),
+             os.path.join('Auto.md'), ('Vulkan', 'simple/vulkan')),
             ('documentationConfigAuto.md.mako',
-             os.path.join('documentation', 'configuration', 'Auto.md'), ('LevelZero', 'simple/intel')),
+             os.path.join('Auto.md'), ('LevelZero', 'simple/intel')),
         ]
 
         self.template_directory = os.path.normpath(template_directory)

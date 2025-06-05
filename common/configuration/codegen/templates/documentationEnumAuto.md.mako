@@ -14,6 +14,9 @@ icon: material/format-list-numbered
 <%!
 def string_labels(labels):
     return '`' + (', ').join([label for label in labels]) +'`'
+
+def format_description(description):
+   return description.replace('\n', '  \n')
 %>
 
 # Enums
@@ -27,7 +30,7 @@ argument or environment variable.
 ${'## ' + enum.name}
 
 % if enum.description:
-${enum.description}
+${format_description(enum.description)}
 % endif
 
 | Value | Labels | Description |
