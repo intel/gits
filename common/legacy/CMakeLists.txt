@@ -122,6 +122,7 @@ add_library(common ${common_SOURCES})
 
 add_definitions(-DGITS_COMMON_PROJ)
 
+add_dependencies(common config_codegen)
 target_link_libraries(common OpenGL_common xxhash murmurhash lz4 libzstd_static configuration)
 
 if(WITH_VULKAN)

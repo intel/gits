@@ -203,9 +203,9 @@ if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   target_link_libraries(L0_interceptor dl pthread)
 endif()
 
-add_dependencies(L0_common common L0_codegen)
-add_dependencies(L0_recorder L0_codegen)
-add_dependencies(L0_interceptor L0_codegen)
+add_dependencies(L0_common common L0_codegen config_codegen)
+add_dependencies(L0_recorder L0_codegen config_codegen)
+add_dependencies(L0_interceptor L0_codegen config_codegen)
 
 set_target_properties(
   L0_codegen L0_common L0_recorder L0_interceptor

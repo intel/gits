@@ -28,6 +28,7 @@ endif()
 
 add_executable(gitsPlayer ${player_SOURCE})
 
+add_dependencies(gitsPlayer config_codegen)
 target_link_libraries(gitsPlayer common OpenGL_common)
 
 if(WITH_LEVELZERO)

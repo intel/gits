@@ -99,6 +99,7 @@ if(UNIX)
   set(recorderIfaceLibs ${recorderIfaceLibs} -Wl,-no-whole-archive)
 endif()
 
+add_dependencies(GitsRecorder config_codegen)
 target_link_libraries(GitsRecorder ${recorderIfaceLibs} ${recorderCommonLibs} common png lua zlib)
 
 if(UNIX)

@@ -69,7 +69,7 @@ add_dependencies(DirectX_api_debug
 
 add_dependencies(DirectX_layer_interface
     DirectX_codegen
-    configuration
+    config_codegen
 )
 
 add_dependencies(DirectX_player
@@ -111,6 +111,9 @@ add_dependencies(DirectX_portability
     DirectX_layer_interface
 )
 
+add_dependencies(DirectX_utils
+    config_codegen
+)
 target_include_directories(DirectX_subcapture PRIVATE ${ARGS_SOURCE_DIR})
 target_include_directories(DirectX_recorder PRIVATE ${ARGS_SOURCE_DIR})
 target_include_directories(DirectX_player PRIVATE ${ARGS_SOURCE_DIR})

@@ -52,10 +52,10 @@ add_subdirectory(recorder)
 add_subdirectory(interceptor)
 add_subdirectory(layer)
 
-add_dependencies(Vulkan_common Vulkan_codegen)
-add_dependencies(Vulkan_recorder Vulkan_codegen)
-add_dependencies(Vulkan_interceptor Vulkan_codegen)
-add_dependencies(Vulkan_layer Vulkan_codegen)
+add_dependencies(Vulkan_common Vulkan_codegen config_codegen)
+add_dependencies(Vulkan_recorder Vulkan_codegen config_codegen)
+add_dependencies(Vulkan_interceptor Vulkan_codegen config_codegen)
+add_dependencies(Vulkan_layer Vulkan_codegen config_codegen)
 
 set(Vulkan_CCode_SOURCES
   common/vkWindowing.cpp

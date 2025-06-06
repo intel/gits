@@ -70,7 +70,9 @@ if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   target_link_libraries(ocloc_interceptor dl pthread)
 endif()
 
-add_dependencies(ocloc_common common)
+add_dependencies(ocloc_common common config_codegen)
+add_dependencies(ocloc_recorder config_codegen)
+add_dependencies(ocloc_interceptor config_codegen)
 
 set_target_properties(ocloc_common PROPERTIES FOLDER ocloc)
 set_target_properties(ocloc_recorder PROPERTIES FOLDER ocloc)

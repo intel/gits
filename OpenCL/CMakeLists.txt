@@ -148,9 +148,9 @@ if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   target_link_libraries(OpenCL_interceptor dl pthread)
 endif()
 
-add_dependencies(OpenCL_common common OpenCL_codegen)
-add_dependencies(OpenCL_recorder OpenCL_codegen)
-add_dependencies(OpenCL_interceptor OpenCL_codegen)
+add_dependencies(OpenCL_common common OpenCL_codegen config_codegen)
+add_dependencies(OpenCL_recorder OpenCL_codegen config_codegen)
+add_dependencies(OpenCL_interceptor OpenCL_codegen config_codegen)
 
 set_target_properties(OpenCL_codegen PROPERTIES FOLDER OpenCL)
 set_target_properties(OpenCL_common PROPERTIES FOLDER OpenCL)
