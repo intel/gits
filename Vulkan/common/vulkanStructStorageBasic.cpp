@@ -314,6 +314,8 @@ void gits::Vulkan::CDeviceOrHostAddressAccelerationStructureVertexDataGITSData::
   }
 
   if (isSubcaptureBeforeRestorationPhase()) {
+    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
     // The whole vertex data needs to be copied for state restoration purposes. This is done with
     // a compute shader because the source data is provided via a device address and is
     // additionally offset by indices (which are unknown to us). The compute shader performs more

@@ -170,6 +170,8 @@ bool vulkanCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer bufferHandle, std:
     return false;
   }
 
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
   VkBufferCreateInfo* targetBufferCreateInfo = bufferState->bufferCreateInfoData.Value();
 
   VkBufferCopy bufferCopy = {
@@ -329,6 +331,8 @@ bool vulkanCopyImage(VkCommandBuffer commandBuffer,
         imageState->imageCreateInfoData.Value()->samples != VK_SAMPLE_COUNT_1_BIT))) {
     return false;
   }
+
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
 
   uint32_t numArrayLayers = 1;
   uint32_t numMipmapLevels = 1;
@@ -614,6 +618,8 @@ void vulkanScheduleCopyRenderPasses(VkCommandBuffer cmdBuffer,
 }
 
 void vulkanDumpBuffer(std::shared_ptr<RenderGenericAttachment> attachment) {
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
   VkBuffer bufferHandle = attachment->sourceBuffer;
   auto& bufferState = SD()._bufferstates[bufferHandle];
   VkDevice device = bufferState->deviceStateStore->deviceHandle;
@@ -656,6 +662,8 @@ void vulkanDumpBuffer(std::shared_ptr<RenderGenericAttachment> attachment) {
 }
 
 void vulkanDumpImage(std::shared_ptr<RenderGenericAttachment> attachment) {
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
   VkImage image = attachment->sourceImage;
   auto& imageState = SD()._imagestates[image];
   uint32_t width =
@@ -806,6 +814,8 @@ bool writeScreenshotUtil(std::string fileName,
       (storeOp == VK_ATTACHMENT_STORE_OP_DONT_CARE) || isMultisampleImage) {
     return false;
   }
+
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
 
   auto& queueFamilyCommandPoolMap = internalResources.deviceResourcesMap[device];
   auto iterator = queueFamilyCommandPoolMap.find(queueFamilyIndex);
@@ -1375,6 +1385,9 @@ void writeBufferUtil(std::string fileName, VkQueue& queue, VkBuffer& sourceBuffe
       (bufferState->bufferCreateInfoData.Value()->size == 0) || (!bufferState->binding)) {
     return;
   }
+
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
 #ifndef BUILD_FOR_CCODE
   auto& queueState = SD()._queuestates[queue];
   VkDevice device = queueState->deviceStateStore->deviceHandle;
@@ -1858,6 +1871,8 @@ bool checkForSupportForInstanceExtensions(uint32_t requestedExtensionsCount,
     return true;
   }
 
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
   uint32_t availableExtensionsCount = 0;
   if ((drvVk.vkEnumerateInstanceExtensionProperties(nullptr, &availableExtensionsCount, nullptr) !=
        VK_SUCCESS) ||
@@ -1899,6 +1914,8 @@ bool checkForSupportForInstanceLayers(uint32_t requestedLayersCount,
     return true;
   }
 
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
   uint32_t availableLayersCount = 0;
   if ((drvVk.vkEnumerateInstanceLayerProperties(&availableLayersCount, nullptr) != VK_SUCCESS) ||
       (availableLayersCount == 0)) {
@@ -1938,6 +1955,8 @@ bool checkForSupportForPhysicalDeviceFeatures(VkPhysicalDevice physicalDevice,
   if (!enabledFeatures) {
     return true;
   }
+
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
 
   VkPhysicalDeviceFeatures availableFeatures;
   drvVk.vkGetPhysicalDeviceFeatures(physicalDevice, &availableFeatures);
@@ -2960,6 +2979,8 @@ CVkSubmitInfoArrayWrap getSubmitInfoForSchedule(const std::vector<uint32_t>& cou
 
 namespace {
 std::vector<bool> getMemoryMappingFeasibility(VkPhysicalDevice physicalDevice) {
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
   VkPhysicalDeviceMemoryProperties memoryProperties;
   drvVk.vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
   std::vector<bool> mappableMemory(memoryProperties.memoryTypeCount);
@@ -3216,6 +3237,8 @@ uint32_t findCompatibleMemoryTypeIndex(VkMemoryPropertyFlags originalMemoryPrope
 }
 
 VkDeviceAddress getBufferDeviceAddress(VkDevice device, VkBuffer buffer) {
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
   VkBufferDeviceAddressInfo addressInfo = {
       VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO, // VkStructureType    sType;
       nullptr,                                      // const void       * pNext;
@@ -3262,6 +3285,8 @@ VkBuffer findBufferFromDeviceAddress(VkDeviceAddress deviceAddress) {
 uint32_t getRayTracingShaderGroupCaptureReplayHandleSize(VkDevice device) {
   static std::map<VkDevice, uint32_t> shaderGroupCaptureReplayHandleSize;
 
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
   auto it = shaderGroupCaptureReplayHandleSize.find(device);
   if (it == shaderGroupCaptureReplayHandleSize.end()) {
     VkPhysicalDeviceRayTracingPipelinePropertiesKHR rayTracingPipelineProperties = {
@@ -3298,8 +3323,14 @@ TemporaryBufferPairType createTemporaryBuffer(VkDevice device,
                                               VkDeviceSize size,
                                               VkBufferUsageFlags bufferUsage,
                                               CCommandBufferState* commandBufferState,
-                                              VkMemoryPropertyFlags requiredMemoryPropertyFlags) {
-  auto& deviceState = SD()._devicestates[device];
+                                              VkMemoryPropertyFlags requiredMemoryPropertyFlags,
+                                              bool ignoreInRecorder) {
+  std::unique_ptr<CAutoCaller> autoCaller;
+
+  if (ignoreInRecorder) {
+    autoCaller =
+        std::make_unique<CAutoCaller>(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+  }
 
   // Create buffer
   VkBuffer buffer;
@@ -3313,12 +3344,6 @@ TemporaryBufferPairType createTemporaryBuffer(VkDevice device,
       0,                                    // uint32_t               queueFamilyIndexCount;
       nullptr                               // const uint32_t       * pQueueFamilyIndices;
   };
-  if (Configurator::IsRecorder() &&
-      (isBitSet(bufferUsage, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) &&
-       Configurator::Get()
-           .vulkan.recorder.useCaptureReplayFeaturesForBuffersAndAccelerationStructures)) {
-    bufferCreateInfo.flags |= VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
-  }
   if (drvVk.vkCreateBuffer(device, &bufferCreateInfo, nullptr, &buffer) != VK_SUCCESS) {
     throw std::runtime_error("Could not create a temporary buffer! Exiting!");
   }
@@ -3326,35 +3351,33 @@ TemporaryBufferPairType createTemporaryBuffer(VkDevice device,
   VkMemoryRequirements bufferMemoryRequirements;
   drvVk.vkGetBufferMemoryRequirements(device, buffer, &bufferMemoryRequirements);
 
+  VkMemoryAllocateInfo memoryAllocateInfo = {
+      VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, // VkStructureType    sType
+      nullptr,                                // const void       * pNext
+      bufferMemoryRequirements.size,          // VkDeviceSize       allocationSize
+      0                                       // uint32_t           memoryTypeIndex
+  };
+  VkMemoryAllocateFlagsInfo memoryAllocateFlags = {
+      VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO, // VkStructureType          sType;
+      nullptr,                                      // const void             * pNext;
+      VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT,        // VkMemoryAllocateFlags    flags;
+      1                                             // uint32_t                 deviceMask;
+  };
+  if (isBitSet(bufferUsage, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)) {
+    memoryAllocateInfo.pNext = &memoryAllocateFlags;
+  }
+
+  auto& deviceState = SD()._devicestates[device];
   VkPhysicalDeviceMemoryProperties memoryProperties =
       deviceState->physicalDeviceStateStore->memoryPropertiesCurrent;
-
   VkDeviceMemory memory = VK_NULL_HANDLE;
-  VkMemoryAllocateInfo memoryAllocateInfo;
 
   // Find appropriate memory type index
   for (uint32_t type = 0; type < memoryProperties.memoryTypeCount; ++type) {
     void* pNext = nullptr;
     if (isBitSet(bufferMemoryRequirements.memoryTypeBits, 1 << type) &&
         isBitSet(memoryProperties.memoryTypes[type].propertyFlags, requiredMemoryPropertyFlags)) {
-
-      VkMemoryAllocateFlagsInfo memoryAllocateFlags = {
-          VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO, // VkStructureType          sType;
-          nullptr,                                      // const void             * pNext;
-          VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT,        // VkMemoryAllocateFlags    flags;
-          1                                             // uint32_t                 deviceMask;
-      };
-
-      if (isBitSet(bufferUsage, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)) {
-        pNext = &memoryAllocateFlags;
-      }
-
-      memoryAllocateInfo = {
-          VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, // VkStructureType    sType
-          pNext,                                  // const void       * pNext
-          bufferMemoryRequirements.size,          // VkDeviceSize       allocationSize
-          type                                    // uint32_t           memoryTypeIndex
-      };
+      memoryAllocateInfo.memoryTypeIndex = type;
 
       VkResult result = drvVk.vkAllocateMemory(device, &memoryAllocateInfo, nullptr, &memory);
       if (VK_SUCCESS == result) {
@@ -3386,6 +3409,8 @@ TemporaryBufferPairType createTemporaryBuffer(VkDevice device,
 
 VkDescriptorSet getTemporaryDescriptorSet(VkDevice device,
                                           CCommandBufferState& commandBufferState) {
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
 #define MAX_DESCRIPTOR_SETS 24
 
   if ((commandBufferState.temporaryDescriptors.size() == 0) ||
@@ -3452,6 +3477,8 @@ void injectCopyCommand(VkCommandBuffer commandBuffer,
                        VkDeviceSize dstOffset,
                        VkAccessFlags dstAccessMaskPre,
                        VkAccessFlags dstAccessMaskPost) {
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
   // Pre-copy barrier
   {
     std::vector<VkBufferMemoryBarrier> preBarriers = {
@@ -3528,6 +3555,8 @@ void mapMemoryAndCopyData(VkDevice device,
                           VkDeviceSize offset,
                           const void* source,
                           VkDeviceSize dataSize) {
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
   void* dst;
   if (drvVk.vkMapMemory(device, destination, offset, VK_WHOLE_SIZE, 0, &dst) != VK_SUCCESS) {
     throw std::runtime_error("Could not map and copy data.");
@@ -3549,6 +3578,8 @@ void mapMemoryAndCopyData(void* destination,
                           VkDeviceMemory source,
                           VkDeviceSize offset,
                           VkDeviceSize dataSize) {
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
   void* src;
   if (drvVk.vkMapMemory(device, source, offset, VK_WHOLE_SIZE, 0, &src) != VK_SUCCESS) {
     throw std::runtime_error("Could not map and copy data.");
@@ -3568,6 +3599,8 @@ void mapMemoryAndCopyData(void* destination,
 
 VkDeviceAddress getAccelerationStructureDeviceAddress(
     VkDevice device, VkAccelerationStructureKHR accelerationStructure) {
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
   VkAccelerationStructureDeviceAddressInfoKHR addressInfo = {
       VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR, // VkStructureType              sType;
       nullptr,              // const void                 * pNext;
@@ -3589,6 +3622,8 @@ VkAccelerationStructureBuildControlDataGITS prepareAccelerationStructureControlD
 namespace {
 
 VkShaderModule createShaderModule(VkDevice device, uint32_t codeSize, uint32_t const* codePtr) {
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
   VkShaderModuleCreateInfo createInfo = {
       VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, // VkStructureType             sType
       nullptr,                                     // const void                * pNext
@@ -3611,6 +3646,7 @@ VkShaderModule createShaderModule(VkDevice device, uint32_t codeSize, uint32_t c
 
 std::shared_ptr<CDescriptorSetLayoutState> createInternalDescriptorSetLayout(VkDevice device) {
   CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
   VkDescriptorSetLayoutBinding descriptorSetLayoutBinding = {
       0,                                 // uint32_t              binding;
       VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, // VkDescriptorType      descriptorType;

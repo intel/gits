@@ -139,12 +139,12 @@ uint32_t getRayTracingShaderGroupCaptureReplayHandleSize(VkDevice device);
 using TemporaryBufferPairType =
     std::pair<std::shared_ptr<CDeviceMemoryState>, std::shared_ptr<CBufferState>>;
 
-TemporaryBufferPairType createTemporaryBuffer(
-    VkDevice device,
-    VkDeviceSize size,
-    VkBufferUsageFlags bufferUsage,
-    CCommandBufferState* commandBufferState = nullptr,
-    VkMemoryPropertyFlags requiredMemoryPropertyFlags = 0);
+TemporaryBufferPairType createTemporaryBuffer(VkDevice device,
+                                              VkDeviceSize size,
+                                              VkBufferUsageFlags bufferUsage,
+                                              CCommandBufferState* commandBufferState = nullptr,
+                                              VkMemoryPropertyFlags requiredMemoryPropertyFlags = 0,
+                                              bool ignoreInRecorder = true);
 VkDescriptorSet getTemporaryDescriptorSet(VkDevice device, CCommandBufferState& commandBufferState);
 void injectCopyCommand(VkCommandBuffer commandBuffer,
                        VkPipelineStageFlags srcPipelineStageFlags,

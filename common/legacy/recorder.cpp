@@ -143,6 +143,7 @@ void InterruptHandler(int sig) {
 gits::CRecorder::CRecorder()
     : _recordingOverride(false),
       _running(false),
+      _pauseDepth(0),
       _runningStarted(false),
       _isMarkedForDeletion(false),
       _exitHotKeyId(0),
@@ -882,10 +883,19 @@ void gits::CRecorder::Close() {
 
 void gits::CRecorder::Pause() {
   _running = false;
+  _pauseDepth++;
 }
 
 void gits::CRecorder::Continue() {
-  _running = _runningStarted;
+  assert(_pauseDepth > 0);
+  _pauseDepth--;
+  if (_pauseDepth == 0) {
+    _running = _runningStarted;
+  }
+}
+
+bool gits::CRecorder::IsPaused() {
+  return _pauseDepth > 0;
 }
 
 #if defined(GITS_PLATFORM_LINUX)

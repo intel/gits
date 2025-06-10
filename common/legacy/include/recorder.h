@@ -64,6 +64,7 @@ class CRecorder : private gits::noncopyable {
   static CRecorder* _instance;
   bool _recordingOverride;
   bool _running;
+  int _pauseDepth;
   bool _runningStarted;
   bool _isMarkedForDeletion;
   InputListener::CInputListener _inputListener;
@@ -113,6 +114,7 @@ public:
   }
   void Pause();
   void Continue();
+  bool IsPaused();
 
   // interface for proxy library
   void DrawBegin();

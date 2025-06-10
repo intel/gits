@@ -1033,7 +1033,7 @@ VkResult recExecWrap_vkCreateBuffer(VkDevice device,
                                     const VkAllocationCallbacks* pAllocator,
                                     VkBuffer* pBuffer) {
   // Global changes - propagate to recorded streams
-  {
+  if (!CGitsPluginVulkan::RecorderWrapper().IsPaused()) {
     VkBufferCreateInfo* originalCreateInfo = const_cast<VkBufferCreateInfo*>(pCreateInfo);
 
     // Make sure that a device address for buffers used as a storage for AS can be retrieved and saved in a stream

@@ -74,6 +74,10 @@ void CRecorderWrapper::ContinueRecording() {
   _recorder.Continue();
 }
 
+bool CRecorderWrapper::IsPaused() const {
+  return _recorder.IsPaused();
+}
+
 void CRecorderWrapper::StreamFinishedEvent(std::function<void()> event) {
   _recorder.RegisterDisposeEvent(std::move(event));
 }

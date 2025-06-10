@@ -177,6 +177,8 @@ inline void vkDestroyInstance_SD(VkInstance instance, const VkAllocationCallback
 
 namespace {
 void getSupportedExtensions(std::shared_ptr<CPhysicalDeviceState>& physicalDeviceState) {
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
   uint32_t supportedExtensionsCount = 0;
   if ((drvVk.vkEnumerateDeviceExtensionProperties(physicalDeviceState->physicalDeviceHandle,
                                                   nullptr, &supportedExtensionsCount,
@@ -1257,6 +1259,8 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
                                       uint32_t descriptorCopyCount,
                                       const VkCopyDescriptorSet* pDescriptorCopies) {
   if (Configurator::IsRecorder() || captureRenderPassesResources()) {
+    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
     for (unsigned int i = 0; i < descriptorWriteCount; i++) {
       auto& descriptorSetState = SD()._descriptorsetstates[pDescriptorWrites[i].dstSet];
 
@@ -1678,6 +1682,8 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
     VkDescriptorUpdateTemplate descriptorUpdateTemplate,
     const void* pData) {
   if (Configurator::IsRecorder() || captureRenderPassesResources()) {
+    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
     const auto& descriptorSetState = SD()._descriptorsetstates[descriptorSet];
     const auto& descriptorUpdateTemplateState =
         SD()._descriptorupdatetemplatestates[descriptorUpdateTemplate];
@@ -2545,6 +2551,8 @@ inline void vkBeginCommandBuffer_SD(VkResult /* return_value */,
   if (Configurator::IsRecorder()) {
     if (nullptr != pBeginInfo->pInheritanceInfo) {
       if (VK_NULL_HANDLE != pBeginInfo->pInheritanceInfo->framebuffer) {
+        CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
         for (const auto& imageViewState :
              SD()._framebufferstates[pBeginInfo->pInheritanceInfo->framebuffer]
                  ->imageViewStateStoreList) {
@@ -2661,6 +2669,8 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
   if (!Configurator::IsRecorder()) {
     return;
   }
+
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
   auto device =
       SD()._commandbufferstates[cmdBuf]->commandPoolStateStore->deviceStateStore->deviceHandle;
 
@@ -3198,6 +3208,8 @@ inline void vkCmdBeginRenderPass_SD(VkCommandBuffer cmdBuf,
     }
   }
   if (Configurator::IsRecorder()) {
+    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
     if (!(SD()._framebufferstates[pRenderPassBegin->framebuffer]
               ->framebufferCreateInfoData.Value()
               ->flags &
@@ -3396,6 +3408,8 @@ inline void vkCmdBeginRendering_SD(VkCommandBuffer cmdBuf, const VkRenderingInfo
   }
 
   if (Configurator::IsRecorder()) {
+    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
     for (uint32_t i = 0; i < beginRenderPassState->imageViewStateStoreListKHR.size(); i++) {
       const auto& imageState = beginRenderPassState->imageViewStateStoreListKHR[i]->imageStateStore;
 
@@ -3585,6 +3599,8 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer cmdBuf,
   if (!isSubcaptureBeforeRestorationPhase()) {
     return;
   }
+
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
 
   for (unsigned int i = 0; i < descriptorWriteCount; i++) {
     for (unsigned int j = 0; j < pDescriptorWrites[i].descriptorCount; j++) {
@@ -4577,6 +4593,8 @@ void ProcessDestinationImage(std::shared_ptr<CImageState>& imageState,
 
   if (imageState->imageCreateInfoData.Value() &&
       (imageState->imageCreateInfoData.Value()->tiling == VK_IMAGE_TILING_LINEAR)) {
+    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
     for (uint32_t i = 0; i < regionCount; i++) {
       const auto imageSubresource = getImageSubresource(pRegions[i]);
 
@@ -4808,6 +4826,8 @@ void CopyImageToBufferHelper(VkCommandBuffer cmdBuf,
       const auto& bufferBinding = dstIt->second->binding;
 
       if (bufferBinding) {
+        CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
         const auto& bufferState = dstIt->second;
         const auto memory = bufferBinding->deviceMemoryStateStore->deviceMemoryHandle;
 
@@ -4970,6 +4990,8 @@ inline void vkCmdClearColorImage_SD(VkCommandBuffer cmdBuf,
   }
 
   if (Configurator::IsRecorder()) {
+    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
     const auto& imageState = dstIt->second;
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {
@@ -5013,6 +5035,8 @@ inline void vkCmdClearDepthStencilImage_SD(VkCommandBuffer cmdBuf,
   }
 
   if (Configurator::IsRecorder()) {
+    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
     const auto& imageState = dstIt->second;
 
     if (updateOnlyUsedMemory() || isSubcaptureBeforeRestorationPhase()) {

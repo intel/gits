@@ -3741,11 +3741,11 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
         return bufferDeviceAddressData._originalDeviceAddress;
       }
 
-      auto memoryBufferPair = createTemporaryBuffer(
-          device, structStorageData->GetDataSize(),
-          VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
-              VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-          nullptr, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+      auto usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+                   VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+      auto memoryBufferPair =
+          createTemporaryBuffer(device, structStorageData->GetDataSize(), usage, nullptr,
+                                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, false);
       auto memory = (VkDeviceMemory)memoryBufferPair.first->GetUniqueStateID();
       auto buffer = (VkBuffer)memoryBufferPair.second->GetUniqueStateID();
       auto deviceAddress = getBufferDeviceAddress(device, memoryBufferPair.second->bufferHandle);
@@ -3774,6 +3774,9 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
 
       temporaryBuffers.push_back(buffer);
       temporaryMemoryObjects.push_back(memory);
+
+      drvVk.vkDestroyBuffer(device, memoryBufferPair.second->bufferHandle, nullptr);
+      drvVk.vkFreeMemory(device, memoryBufferPair.first->deviceMemoryHandle, nullptr);
 
       bufferDeviceAddressData._offset = -structStorageData->GetOffset();
       bufferDeviceAddressData._originalDeviceAddress = deviceAddress;
@@ -3944,12 +3947,14 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
               (VkAccelerationStructureKHR)accelerationStructureState.GetUniqueStateID();
 
           auto createInfo = *accelerationStructureState.accelerationStructureCreateInfoData.Value();
+          auto usage =
+              accelerationStructureState.bufferStateStore->bufferCreateInfoData.Value()->usage;
 
           auto tmpMemoryBufferPair = createTemporaryBuffer(
               device,
               std::max(accelerationStructureState.buildSizeInfo.accelerationStructureSize,
                        createInfo.size),
-              accelerationStructureState.bufferStateStore->bufferCreateInfoData.Value()->usage);
+              usage, nullptr, 0, false);
           auto& memoryState = *tmpMemoryBufferPair.first;
           auto& bufferState = *tmpMemoryBufferPair.second;
           auto memory = (VkDeviceMemory)memoryState.GetUniqueStateID();
@@ -3982,6 +3987,9 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
           // Schedule update commands
           scheduleBuild(accelerationStructure, buffer, accelerationStructureState.updateInfo.get(),
                         commandBuffer);
+
+          drvVk.vkDestroyBuffer(device, tmpMemoryBufferPair.second->bufferHandle, nullptr);
+          drvVk.vkFreeMemory(device, tmpMemoryBufferPair.first->deviceMemoryHandle, nullptr);
 
           return accelerationStructure;
         };

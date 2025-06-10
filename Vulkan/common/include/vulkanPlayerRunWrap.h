@@ -202,6 +202,8 @@ std::vector<VkPhysicalDevice> GetPhysicalDevicesFromGroupProperties(
 
 void HandlePhysicalDeviceMapping(std::vector<VkPhysicalDevice> const& recorderSideDevices,
                                  std::vector<VkPhysicalDevice> const& playerSideDevices) {
+  CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
   uint32_t selectedPhysicalDeviceIndex =
       Configurator::Get().vulkan.player.vulkanForcedPhysicalDeviceIndex;
 
@@ -409,6 +411,8 @@ inline void vkCreateInstance_WRAPRUN(CVkResult& recorderSideReturnValue,
   if (CGits::Instance().IsStateRestoration()) {
     CGits::Instance().apis.Iface3D().Play_StateRestoreBegin();
   }
+
+  drvVk.Initialize();
 
   VkInstanceCreateInfo* createInfoPtrOrig = *pCreateInfo;
   if (createInfoPtrOrig == nullptr) {
@@ -1352,7 +1356,6 @@ inline void vkWaitForFences_WRAPRUN(CVkResult& return_value,
         drvVk.vkWaitForFences(*device, (uint32_t)fences.size(), &fences[0], *waitAll, *timeout));
 
     if (*return_value != VK_SUCCESS && (*return_value != recRetVal)) {
-      CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
       return_value.Assign(drvVk.vkWaitForFences(*device, (uint32_t)fences.size(), &fences[0],
                                                 VK_TRUE, 0xFFFFFFFFFFFFFFFF));
     }
@@ -1368,7 +1371,6 @@ inline void vkWaitSemaphoresUnifiedGITS_WRAPRUN(CVkResult& return_value,
   return_value.Assign(drvVk.vkWaitSemaphoresUnifiedGITS(*device, *pWaitInfo, *timeout));
 
   if ((*return_value != VK_SUCCESS) && (*return_value != recRetVal)) {
-    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
     return_value.Assign(drvVk.vkWaitSemaphoresUnifiedGITS(*device, *pWaitInfo, 0xFFFFFFFFFFFFFFFF));
   }
 }
@@ -1717,6 +1719,8 @@ inline void vkCreateSwapchainKHR_WRAPRUN(CVkResult& recorderSideReturnValue,
   VkSwapchainKHR* swapchainPtr = *pSwapchain;
 
   if (Configurator::Get().common.player.renderOffscreen && (swapchainPtr != nullptr)) {
+    CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
+
     auto& swapchainState = SD()._swapchainkhrstates[*swapchainPtr];
     for (uint32_t i = 0; i < swapchainState->imageStateStoreList.size(); ++i) {
       uint32_t imageIndex;

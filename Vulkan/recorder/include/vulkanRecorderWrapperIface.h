@@ -25,6 +25,7 @@ class IRecorderWrapper {
 public:
   virtual void PauseRecording() = 0;
   virtual void ContinueRecording() = 0;
+  virtual bool IsPaused() const = 0;
   virtual void StreamFinishedEvent(std::function<void()> e) = 0;
   virtual void CloseRecorderIfRequired() = 0;
   virtual CVkDriver& Drivers() const = 0;

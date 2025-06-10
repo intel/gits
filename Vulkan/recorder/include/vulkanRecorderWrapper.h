@@ -53,6 +53,7 @@ public:
   CRecorderWrapper& operator=(const CRecorderWrapper& ref) = delete;
   void PauseRecording() override;
   void ContinueRecording() override;
+  bool IsPaused() const override;
   void StreamFinishedEvent(std::function<void()> e);
   void CloseRecorderIfRequired() override;
   CVkDriver& Drivers() const override;
