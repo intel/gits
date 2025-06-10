@@ -1028,10 +1028,9 @@ VkResult recExecWrap_vkCreateImage(VkDevice device,
                                                                       pAllocator, pImage);
 }
 
-VkResult recExecWrap_vkCreateBuffer(VkDevice device,
-                                    const VkBufferCreateInfo* pCreateInfo,
-                                    const VkAllocationCallbacks* pAllocator,
-                                    VkBuffer* pBuffer) {
+namespace {
+
+VkBufferCreateInfo OverwriteBufferCreateInfo(const VkBufferCreateInfo* pCreateInfo) {
   // Global changes - propagate to recorded streams
   if (!CGitsPluginVulkan::RecorderWrapper().IsPaused()) {
     VkBufferCreateInfo* originalCreateInfo = const_cast<VkBufferCreateInfo*>(pCreateInfo);
@@ -1062,9 +1061,20 @@ VkResult recExecWrap_vkCreateBuffer(VkDevice device,
              .vulkan.recorder.crossPlatformStateRestoration.buffers)) {
       localCreateInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     }
-    return CGitsPluginVulkan::RecorderWrapper().Drivers().vkCreateBuffer(device, &localCreateInfo,
-                                                                         pAllocator, pBuffer);
+
+    return localCreateInfo;
   }
+}
+
+} // namespace
+
+VkResult recExecWrap_vkCreateBuffer(VkDevice device,
+                                    const VkBufferCreateInfo* pCreateInfo,
+                                    const VkAllocationCallbacks* pAllocator,
+                                    VkBuffer* pBuffer) {
+  auto localCreateInfo = OverwriteBufferCreateInfo(pCreateInfo);
+  return CGitsPluginVulkan::RecorderWrapper().Drivers().vkCreateBuffer(device, &localCreateInfo,
+                                                                       pAllocator, pBuffer);
 }
 
 VkResult recExecWrap_vkCreateSwapchainKHR(VkDevice device,
@@ -1284,6 +1294,31 @@ void recExecWrap_vkGetBufferMemoryRequirements2KHR(VkDevice device,
                                                    VkMemoryRequirements2* pMemoryRequirements) {
   CGitsPluginVulkan::RecorderWrapper().Drivers().vkGetBufferMemoryRequirements2KHR(
       device, pInfo, pMemoryRequirements);
+  ProcessBufferMemoryRequirements(&pMemoryRequirements->memoryRequirements);
+}
+
+void recExecWrap_vkGetDeviceBufferMemoryRequirements(VkDevice device,
+                                                     const VkDeviceBufferMemoryRequirements* pInfo,
+                                                     VkMemoryRequirements2* pMemoryRequirements) {
+  auto memoryReqsInfo = *pInfo;
+  auto createInfo = OverwriteBufferCreateInfo(memoryReqsInfo.pCreateInfo);
+  memoryReqsInfo.pCreateInfo = &createInfo;
+
+  CGitsPluginVulkan::RecorderWrapper().Drivers().vkGetDeviceBufferMemoryRequirements(
+      device, &memoryReqsInfo, pMemoryRequirements);
+  ProcessBufferMemoryRequirements(&pMemoryRequirements->memoryRequirements);
+}
+
+void recExecWrap_vkGetDeviceBufferMemoryRequirementsKHR(
+    VkDevice device,
+    const VkDeviceBufferMemoryRequirements* pInfo,
+    VkMemoryRequirements2* pMemoryRequirements) {
+  auto memoryReqsInfo = *pInfo;
+  auto createInfo = OverwriteBufferCreateInfo(memoryReqsInfo.pCreateInfo);
+  memoryReqsInfo.pCreateInfo = &createInfo;
+
+  CGitsPluginVulkan::RecorderWrapper().Drivers().vkGetDeviceBufferMemoryRequirementsKHR(
+      device, &memoryReqsInfo, pMemoryRequirements);
   ProcessBufferMemoryRequirements(&pMemoryRequirements->memoryRequirements);
 }
 

@@ -3392,14 +3392,14 @@ arg2=ArgDef(name='pVersionInfo', type='const VkAccelerationStructureVersionInfoK
 arg3=ArgDef(name='pCompatibility', type='VkAccelerationStructureCompatibilityKHR*')
 )
 
-Function(name='vkGetDeviceBufferMemoryRequirements', enabled=False, type=FuncType.PARAM,
+Function(name='vkGetDeviceBufferMemoryRequirements', enabled=False, type=FuncType.PARAM, recExecWrap=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pInfo', type='const VkDeviceBufferMemoryRequirements*'),
 arg3=ArgDef(name='pMemoryRequirements', type='VkMemoryRequirements2*')
 )
 
-Function(name='vkGetDeviceBufferMemoryRequirementsKHR', enabled=False, type=FuncType.PARAM,
+Function(name='vkGetDeviceBufferMemoryRequirementsKHR', enabled=False, type=FuncType.PARAM, recExecWrap=True, 
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pInfo', type='const VkDeviceBufferMemoryRequirements*'),
