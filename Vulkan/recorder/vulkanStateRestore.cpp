@@ -2465,34 +2465,45 @@ VkDeviceSize calculateCurrentOffset(VkDeviceSize numToRound, VkDeviceSize multip
 };
 
 // timestamp, handle, isImage
-std::vector<std::pair<uint64_t, std::pair<uint64_t, bool>>> GetSortedAliasedResources(
-    std::set<std::pair<uint64_t, bool>> const& aliasedResources, gits::Vulkan::CStateDynamic& sd) {
-  std::vector<std::pair<uint64_t, std::pair<uint64_t, bool>>> sortedByTimestamp;
+std::vector<uint64_t> GetTimestampsOfAliasedResources(
+    std::set<gits::Vulkan::MemoryAliasingTracker::ResourceIdentifier> const& aliasedResources,
+    gits::Vulkan::CStateDynamic& sd) {
+  std::vector<uint64_t> timestamps;
 
   for (auto& resource : aliasedResources) {
-    if (resource.second) {
+    switch (resource.second) {
+    case gits::Vulkan::ResourceType::IMAGE: {
       auto it = sd._imagestates.find((VkImage)resource.first);
       if (it != sd._imagestates.end()) {
-        sortedByTimestamp.emplace_back(it->second->timestamp, resource);
+        timestamps.emplace_back(it->second->timestamp);
       }
-    } else {
+      break;
+    }
+    case gits::Vulkan::ResourceType::BUFFER: {
       auto it = sd._bufferstates.find((VkBuffer)resource.first);
       if (it != sd._bufferstates.end()) {
-        sortedByTimestamp.emplace_back(it->second->timestamp, resource);
+        timestamps.emplace_back(it->second->timestamp);
       }
+      break;
+    }
+    case gits::Vulkan::ResourceType::ACCELERATION_STRUCTURE: {
+      auto it = sd._accelerationstructurekhrstates.find((VkAccelerationStructureKHR)resource.first);
+      if (it != sd._accelerationstructurekhrstates.end()) {
+        timestamps.emplace_back(it->second->timestamp);
+      }
+      break;
+    }
     }
   }
 
-  std::sort(sortedByTimestamp.begin(), sortedByTimestamp.end(),
-            [](const auto& a, const auto& b) { return a.first > b.first; });
-
-  return sortedByTimestamp;
+  return timestamps;
 }
 
 bool isResourceOmittedFromContentsRestoration(uint64_t resource,
-                                              bool isImage,
+                                              gits::Vulkan::ResourceType resourceType,
                                               gits::Vulkan::CStateDynamic& sd) {
-  if (isImage) {
+  switch (resourceType) {
+  case gits::Vulkan::ResourceType::IMAGE: {
     VkImage image = (VkImage)resource;
     auto& imageState = sd._imagestates[image];
 
@@ -2563,18 +2574,22 @@ bool isResourceOmittedFromContentsRestoration(uint64_t resource,
 
     // Check if there are other resources aliased with this one which were used more recently
     if (imageState->binding) {
-      auto sortedAliasedResources = GetSortedAliasedResources(
+      auto timestamps = GetTimestampsOfAliasedResources(
           imageState->binding->deviceMemoryStateStore->aliasingTracker.GetAliasedResourcesForImage(
               imageState->binding->memoryOffset, imageState->binding->memorySizeRequirement, image),
           sd);
 
-      for (auto& resourcePair : sortedAliasedResources) {
-        if (resourcePair.first > imageState->timestamp) {
+      for (auto& timestamp : timestamps) {
+        if (timestamp > imageState->timestamp) {
+          Log(INFO) << "Omitting restoration of an image " << image
+                    << " because it's memory is aliased with another resource.";
           return true;
         }
       }
     }
-  } else {
+    break;
+  }
+  case gits::Vulkan::ResourceType::BUFFER: {
     VkBuffer buffer = (VkBuffer)resource;
     auto& bufferState = sd._bufferstates[buffer];
 
@@ -2585,47 +2600,130 @@ bool isResourceOmittedFromContentsRestoration(uint64_t resource,
     VkDevice device = bufferState->deviceStateStore->deviceHandle;
 
     if ((!bufferState->bufferCreateInfoData.Value()) ||
-        (bufferState->bufferCreateInfoData.Value()->size == 0) || (!bufferState->binding)) {
+        (bufferState->bufferCreateInfoData.Value()->size == 0)) {
       return true;
     }
 
-    if ((gits::TBufferStateRestoration::WITH_NON_HOST_VISIBLE_MEMORY_ONLY ==
-         gits::Configurator::Get().vulkan.recorder.crossPlatformStateRestoration.buffers) &&
-        (gits::Vulkan::checkMemoryMappingFeasibility(
-            device,
-            bufferState->binding->deviceMemoryStateStore->memoryAllocateInfoData.Value()
-                ->memoryTypeIndex,
-            false))) {
-      return true;
-    }
-
-    // Skip restoring buffers whose memory objects are already destroyed
-    if (bufferState->binding) {
-      auto deviceMemory = bufferState->binding->deviceMemoryStateStore->deviceMemoryHandle;
-      auto it = sd._devicememorystates.find(deviceMemory);
-      if ((it == sd._devicememorystates.end()) ||
-          (it->second->GetUniqueStateID() !=
-           bufferState->binding->deviceMemoryStateStore->GetUniqueStateID())) {
-        return true;
-      }
-    } else if (bufferState->sparseBindings.empty()) {
-      return true;
-    }
-
-    // Check if there are other resources aliased with this one which were used more recently
-    if (bufferState->binding) {
-      auto sortedAliasedResources = GetSortedAliasedResources(
-          bufferState->binding->deviceMemoryStateStore->aliasingTracker
-              .GetAliasedResourcesForBuffer(bufferState->binding->memoryOffset,
-                                            bufferState->binding->memorySizeRequirement, buffer),
-          sd);
-
-      for (auto& resourcePair : sortedAliasedResources) {
-        if (resourcePair.first > bufferState->timestamp) {
+    auto checkMemoryBinding = [&sd](gits::Vulkan::CBufferState& bufferState,
+                                    gits::Vulkan::CDeviceMemoryState& memoryState,
+                                    VkDeviceSize offset, VkDeviceSize size) {
+      {
+        auto it = sd._devicememorystates.find(memoryState.deviceMemoryHandle);
+        if ((it == sd._devicememorystates.end()) ||
+            (it->second->GetUniqueStateID() != memoryState.GetUniqueStateID())) {
           return true;
         }
       }
+
+      if ((gits::TBufferStateRestoration::WITH_NON_HOST_VISIBLE_MEMORY_ONLY ==
+           gits::Configurator::Get().vulkan.recorder.crossPlatformStateRestoration.buffers) &&
+          (gits::Vulkan::checkMemoryMappingFeasibility(
+              bufferState.deviceStateStore->deviceHandle,
+              memoryState.memoryAllocateInfoData.Value()->memoryTypeIndex, false))) {
+        return true;
+      }
+
+      {
+        auto timestamps = GetTimestampsOfAliasedResources(
+            memoryState.aliasingTracker.GetAliasedResourcesForBuffer(offset, size,
+                                                                     bufferState.bufferHandle),
+            sd);
+
+        for (auto& timestamp : timestamps) {
+          if (timestamp > bufferState.timestamp) {
+            Log(INFO) << "Omitting restoration of a buffer " << bufferState.bufferHandle
+                      << " because it's memory is aliased with another resource.";
+            return true;
+          }
+        }
+      }
+
+      return false;
+    };
+
+    // Skip restoring buffers whose memory objects are already destroyed
+    if (bufferState->binding) {
+      if (checkMemoryBinding(*bufferState, *bufferState->binding->deviceMemoryStateStore,
+                             bufferState->binding->memoryOffset,
+                             bufferState->binding->memorySizeRequirement)) {
+        return true;
+      }
+    } else if (!bufferState->sparseBindings.empty()) {
+      for (auto& sparseData : bufferState->sparseBindings) {
+        auto pSparse = sparseData->Value();
+        if (pSparse->memory == VK_NULL_HANDLE) {
+          continue;
+        }
+
+        auto& memoryState = sd._devicememorystates[pSparse->memory];
+        if (!memoryState) {
+          return true;
+        }
+        if (checkMemoryBinding(*bufferState, *memoryState, pSparse->memoryOffset, pSparse->size)) {
+          return true;
+        }
+      }
+    } else {
+      return true;
     }
+    break;
+  }
+  case gits::Vulkan::ResourceType::ACCELERATION_STRUCTURE: {
+    auto accelerationStructure = (VkAccelerationStructureKHR)resource;
+    auto& accelerationStructureState = sd._accelerationstructurekhrstates[accelerationStructure];
+
+    if (!accelerationStructureState ||
+        !accelerationStructureState->accelerationStructureCreateInfoData.Value()) {
+      return true;
+    }
+
+    auto* pCreateInfo = accelerationStructureState->accelerationStructureCreateInfoData.Value();
+    {
+      auto buffer = pCreateInfo->buffer;
+      if ((buffer == VK_NULL_HANDLE) || (pCreateInfo->size == 0) ||
+          (sd._bufferstates.find(buffer) == sd._bufferstates.end())) {
+        return true;
+      }
+    }
+
+    auto& bufferState = accelerationStructureState->bufferStateStore;
+    if (!bufferState || !bufferState->bufferCreateInfoData.Value() ||
+        (bufferState->bufferCreateInfoData.Value()->size == 0)) {
+      return true;
+    }
+
+    // Skip restoring acceleration structures whose buffers are bound to non-existen memory objects
+    if (bufferState->binding) {
+      auto& memoryState = bufferState->binding->deviceMemoryStateStore;
+      {
+        auto it = sd._devicememorystates.find(memoryState->deviceMemoryHandle);
+        if ((it == sd._devicememorystates.end()) ||
+            (it->second->GetUniqueStateID() != memoryState->GetUniqueStateID())) {
+          return true;
+        }
+      }
+
+      {
+        auto timestamps = GetTimestampsOfAliasedResources(
+            memoryState->aliasingTracker.GetAliasedResourcesForAccelerationStructure(
+                pCreateInfo->offset, pCreateInfo->size, accelerationStructure,
+                bufferState->bufferHandle),
+            sd);
+
+        for (auto& timestamp : timestamps) {
+          if (timestamp > accelerationStructureState->timestamp) {
+            Log(INFO) << "Omitting restoration of an acceleration structure "
+                      << accelerationStructure
+                      << " because it's memory is aliased with another resource.";
+            return true;
+          }
+        }
+      }
+    } else {
+      return true;
+    }
+    break;
+  }
   }
 
   // Restore a resource
@@ -2769,7 +2867,7 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
       format = imageState->imageCreateInfoData.Value()->format;
     }
 
-    if (isResourceOmittedFromContentsRestoration((uint64_t)image, true, sd)) {
+    if (isResourceOmittedFromContentsRestoration((uint64_t)image, ResourceType::IMAGE, sd)) {
       // Don't restore image contents, perform only a layout transition
 
       for (uint32_t l = 0; l < arrayLayers; ++l) {
@@ -3385,7 +3483,7 @@ void gits::Vulkan::RestoreBufferContents(CScheduler& scheduler, CStateDynamic& s
       continue;
     }
 
-    if (isResourceOmittedFromContentsRestoration((uint64_t)dstBuffer, false, sd)) {
+    if (isResourceOmittedFromContentsRestoration((uint64_t)dstBuffer, ResourceType::BUFFER, sd)) {
       continue;
     }
 
@@ -3688,8 +3786,7 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
   for (auto& deviceResourcesPair : temporaryDeviceResources) {
     VkDevice device = deviceResourcesPair.first;
 
-    std::vector<std::pair<VkDeviceSize, VkAccelerationStructureKHR>>
-        accelerationStructuresToRestore;
+    std::vector<std::pair<uint64_t, VkAccelerationStructureKHR>> accelerationStructuresToRestore;
     accelerationStructuresToRestore.reserve(sd._accelerationstructurekhrstates.size());
 
     for (auto& accelerationStructureState : sd._accelerationstructurekhrstates) {
@@ -3710,13 +3807,17 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
         continue;
       }
 
-      accelerationStructuresToRestore.emplace_back(
-          accelerationStructureState.second->buildSizeInfo.accelerationStructureSize,
-          accelerationStructureState.first);
+      if (isResourceOmittedFromContentsRestoration((uint64_t)accelerationStructureState.first,
+                                                   ResourceType::ACCELERATION_STRUCTURE, sd)) {
+        continue;
+      }
+
+      accelerationStructuresToRestore.emplace_back(accelerationStructureState.second->timestamp,
+                                                   accelerationStructureState.first);
     }
 
     std::sort(accelerationStructuresToRestore.begin(), accelerationStructuresToRestore.end(),
-              [](const auto& a, const auto& b) { return a.first > b.first; });
+              [](const auto& a, const auto& b) { return a.first < b.first; });
 
     std::function<VkAccelerationStructureKHR(
         CAccelerationStructureKHRState & accelerationStructureState, VkCommandBuffer commandBuffer)>

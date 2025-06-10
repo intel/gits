@@ -69,29 +69,86 @@ struct CMemoryUpdateState;
 
 // Resource Type
 
-typedef enum _VulkanResourceType {
-  VULKAN_NONE_RESOURCE,
-  //READ_WRITE
-  VULKAN_STORAGE_IMAGE,
-  VULKAN_STORAGE_BUFFER,
-  VULKAN_STORAGE_TEXEL_BUFFER,
-  VULKAN_STORAGE_BUFFER_DYNAMIC,
-  //READ_ONLY
-  VULKAN_SAMPLED_IMAGE,
-  VULKAN_UNIFORM_TEXEL_BUFFER,
-  VULKAN_UNIFORM_BUFFER,
-  VULKAN_UNIFORM_BUFFER_DYNAMIC,
-  VULKAN_INLINE_UNIFORM_BLOCK_EXT,
-  VULKAN_INPUT_ATTACHMENT,
-  VULKAN_ACCELARATION_STRUCTURE_KHR,
-  VULKAN_ACCELARATION_STRUCTURE_NV,
-  VULKAN_SAMPLER,
-  VULKAN_COMBINED_IMAGE_SAMPLER,
-  //WRITE
-  VULKAN_BLIT_DESTINATION_BUFFER,
-  VULKAN_BLIT_DESTINATION_IMAGE,
-  VULKAN_RESOLVE_IMAGE
-} VulkanResourceType;
+enum class ResourceType {
+  NONE,
+  // GENERAL
+  IMAGE,
+  BUFFER,
+  ACCELERATION_STRUCTURE,
+  // READ_WRITE
+  STORAGE_IMAGE,
+  STORAGE_BUFFER,
+  STORAGE_TEXEL_BUFFER,
+  STORAGE_BUFFER_DYNAMIC,
+  // READ_ONLY
+  SAMPLED_IMAGE,
+  UNIFORM_TEXEL_BUFFER,
+  UNIFORM_BUFFER,
+  UNIFORM_BUFFER_DYNAMIC,
+  INLINE_UNIFORM_BLOCK_EXT,
+  INPUT_ATTACHMENT,
+  SAMPLER,
+  COMBINED_IMAGE_SAMPLER,
+  // WRITE
+  BLIT_DESTINATION_BUFFER,
+  BLIT_DESTINATION_IMAGE,
+  RESOLVE_IMAGE
+};
+
+// Memory aliasing tracker
+
+// Kudos to Piotr Horodecki
+class MemoryAliasingTracker {
+public:
+  using ResourceIdentifier = std::pair<uint64_t, ResourceType>;
+
+private:
+  struct Range {
+    uint64_t offset;
+    uint64_t size;
+
+    mutable std::set<ResourceIdentifier> resources;
+
+    // We make this struct a functor, so it can be used as a comparator.
+    bool operator()(Range const& lRange, Range const& rRange) const;
+  };
+
+  // The set contains Ranges and uses Range->operator() to compare them.
+  using RangeSetType = std::set<Range, Range>;
+  RangeSetType MemoryRanges;
+
+  RangeSetType::iterator GetRange(uint64_t offset);
+  void SplitRange(uint64_t offset);
+  void AddResource(uint64_t offset, uint64_t size, ResourceIdentifier const& resource);
+  void RemoveResource(uint64_t offset, uint64_t size, ResourceIdentifier const& resource);
+  std::set<ResourceIdentifier> GetAliasedResourcesForResource(uint64_t offset,
+                                                              uint64_t size,
+                                                              ResourceIdentifier const& resource);
+
+public:
+  MemoryAliasingTracker(uint64_t size);
+  void AddImage(uint64_t offset, uint64_t size, VkImage image);
+  void AddBuffer(uint64_t offset, uint64_t size, VkBuffer buffer);
+  void AddAccelerationStructure(uint64_t offset,
+                                uint64_t size,
+                                VkAccelerationStructureKHR accelerationStructure);
+  void RemoveImage(uint64_t offset, uint64_t size, VkImage image);
+  void RemoveBuffer(uint64_t offset, uint64_t size, VkBuffer buffer);
+  void RemoveAccelerationStructure(uint64_t offset,
+                                   uint64_t size,
+                                   VkAccelerationStructureKHR accelerationStructure);
+  std::set<ResourceIdentifier> GetAliasedResourcesForImage(uint64_t offset,
+                                                           uint64_t size,
+                                                           VkImage image);
+  std::set<ResourceIdentifier> GetAliasedResourcesForBuffer(uint64_t offset,
+                                                            uint64_t size,
+                                                            VkBuffer buffer);
+  std::set<ResourceIdentifier> GetAliasedResourcesForAccelerationStructure(
+      uint64_t offset,
+      uint64_t size,
+      VkAccelerationStructureKHR accelerationStructure,
+      VkBuffer buffer);
+};
 
 // Creation function
 
@@ -804,8 +861,8 @@ struct CDescriptorSetState : public UniqueResourceHandle {
   CpNextWrapperData extensionsDataChain;
   std::unordered_map<uint32_t, std::shared_ptr<CBufferState>> descriptorBuffers;
   std::unordered_map<uint32_t, std::shared_ptr<CImageState>> descriptorImages;
-  std::unordered_map<uint32_t, std::pair<VulkanResourceType, VkBuffer>> descriptorWriteBuffers;
-  std::unordered_map<uint32_t, std::pair<VulkanResourceType, VkImage>> descriptorWriteImages;
+  std::unordered_map<uint32_t, std::pair<ResourceType, VkBuffer>> descriptorWriteBuffers;
+  std::unordered_map<uint32_t, std::pair<ResourceType, VkImage>> descriptorWriteImages;
   std::unordered_map<uint32_t, CDescriptorSetBindingData> descriptorSetBindings;
   std::unordered_map<uint32_t, std::unordered_map<VkDeviceMemory, IntervalSet<uint64_t>>>
       descriptorMapMemory;
@@ -1402,9 +1459,9 @@ struct CCommandBufferState : public UniqueResourceHandle {
   std::unordered_map<VkPipeline, std::shared_ptr<CPipelineState>> pipelineStateStoreList;
   std::unordered_map<VkCommandBuffer, std::shared_ptr<CCommandBufferState>>
       secondaryCommandBuffersStateStoreList;
-  std::unordered_map<VkBuffer, VulkanResourceType> resourceWriteBuffers;
-  std::unordered_map<VkImage, VulkanResourceType> resourceWriteImages;
-  std::vector<std::pair<uint64_t, bool>> touchedResources; // true for images, false for buffers
+  std::unordered_map<VkBuffer, ResourceType> resourceWriteBuffers;
+  std::unordered_map<VkImage, ResourceType> resourceWriteImages;
+  std::vector<std::pair<uint64_t, ResourceType>> touchedResources;
   std::unordered_set<VkImage> clearedImages;
   std::vector<std::shared_ptr<RenderGenericAttachment>> renderPassImages;
   std::vector<std::shared_ptr<RenderGenericAttachment>> renderPassResourceImages;
@@ -1431,14 +1488,15 @@ struct CCommandBufferState : public UniqueResourceHandle {
         commandPoolStateStore(_commandPoolState) {}
   void removeBlitsFromResourceMap() {
     for (auto obj = begin(resourceWriteBuffers); obj != end(resourceWriteBuffers);) {
-      if (obj->second == VULKAN_BLIT_DESTINATION_BUFFER) {
+      if (obj->second == ResourceType::BLIT_DESTINATION_BUFFER) {
         obj = resourceWriteBuffers.erase(obj);
       } else {
         ++obj;
       }
     }
     for (auto obj = begin(resourceWriteImages); obj != end(resourceWriteImages);) {
-      if (obj->second == VULKAN_BLIT_DESTINATION_IMAGE || obj->second == VULKAN_RESOLVE_IMAGE) {
+      if (obj->second == ResourceType::BLIT_DESTINATION_IMAGE ||
+          obj->second == ResourceType::RESOLVE_IMAGE) {
         obj = resourceWriteImages.erase(obj);
       } else {
         ++obj;
@@ -1527,6 +1585,7 @@ struct CAccelerationStructureKHRState : public UniqueResourceHandle {
   std::shared_ptr<CBuildInfo> updateInfo;
   std::shared_ptr<CCopyInfo> copyInfo;
   VkAccelerationStructureBuildSizesInfoKHR buildSizeInfo;
+  uint64_t timestamp;
 
   static std::unordered_map<VkDeviceAddress, VkAccelerationStructureKHR> deviceAddresses;
   static uint32_t globalAccelerationStructureBuildCommandIndex; // used for generating hashes

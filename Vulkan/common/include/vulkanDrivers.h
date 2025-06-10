@@ -140,6 +140,26 @@ private:
 
 extern CVkDriver drvVk;
 
+// Auto caller a function both on a constructor and destructor
+
+class CAutoCaller {
+  using FunctionPtr = void_t(STDCALL*)(void);
+
+  FunctionPtr onDestructor;
+
+public:
+  CAutoCaller(FunctionPtr _onConstructor, FunctionPtr _onDestructor) : onDestructor(_onDestructor) {
+    _onConstructor();
+  }
+
+  CAutoCaller(CAutoCaller&) = delete;
+  CAutoCaller& operator=(CAutoCaller&) = delete;
+
+  ~CAutoCaller() {
+    onDestructor();
+  }
+};
+
 /**
     * @brief List of GITS-specific, fake function names used to communicate GITS-specific behavior to VK Shims or GITS recorder.
     *

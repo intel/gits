@@ -112,7 +112,7 @@ std::string GetFileNameResourcesScreenshot(unsigned int frameNumber,
                                            unsigned int renderpassNumber,
                                            unsigned int drawNumber,
                                            uint64_t objectNumber,
-                                           VulkanResourceType resType,
+                                           ResourceType resType,
                                            VulkanDumpingMode dumpingMode) {
   auto path = Configurator::Get().common.player.outputDir;
   if (path.empty()) {
@@ -126,19 +126,19 @@ std::string GetFileNameResourcesScreenshot(unsigned int frameNumber,
     }
   }
   std::stringstream suffix;
-  if (resType == VULKAN_STORAGE_IMAGE) {
+  if (resType == ResourceType::STORAGE_IMAGE) {
     suffix << "_storageImage_";
-  } else if (resType == VULKAN_STORAGE_BUFFER) {
+  } else if (resType == ResourceType::STORAGE_BUFFER) {
     suffix << "_storageBuffer_";
-  } else if (resType == VULKAN_STORAGE_TEXEL_BUFFER) {
+  } else if (resType == ResourceType::STORAGE_TEXEL_BUFFER) {
     suffix << "_storageTexelBuffer_";
-  } else if (resType == VULKAN_STORAGE_BUFFER_DYNAMIC) {
+  } else if (resType == ResourceType::STORAGE_BUFFER_DYNAMIC) {
     suffix << "_storageBufferDynamic_";
-  } else if (resType == VULKAN_BLIT_DESTINATION_IMAGE) {
+  } else if (resType == ResourceType::BLIT_DESTINATION_IMAGE) {
     suffix << "_blitDestinationImage_";
-  } else if (resType == VULKAN_BLIT_DESTINATION_BUFFER) {
+  } else if (resType == ResourceType::BLIT_DESTINATION_BUFFER) {
     suffix << "_blitDestinationBuffer_";
-  } else if (resType == VULKAN_RESOLVE_IMAGE) {
+  } else if (resType == ResourceType::RESOLVE_IMAGE) {
     suffix << "_resolveImage_";
   }
   std::stringstream fileName;

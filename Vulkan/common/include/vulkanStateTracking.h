@@ -1347,7 +1347,7 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
 
               if (descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
                 descriptorSetState->descriptorWriteImages[currentBinding] = {
-                    VULKAN_STORAGE_IMAGE, imageState->imageHandle};
+                    ResourceType::STORAGE_IMAGE, imageState->imageHandle};
 
                 if ((Configurator::Get().vulkan.recorder.memorySegmentSize ||
                      Configurator::Get().vulkan.recorder.shadowMemory) &&
@@ -1389,7 +1389,7 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
               }
               if (descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
                 descriptorSetState->descriptorWriteBuffers[currentBinding] = {
-                    VULKAN_STORAGE_TEXEL_BUFFER, bufferState->bufferHandle};
+                    ResourceType::STORAGE_TEXEL_BUFFER, bufferState->bufferHandle};
 
                 if ((Configurator::Get().vulkan.recorder.memorySegmentSize ||
                      Configurator::Get().vulkan.recorder.shadowMemory) &&
@@ -1430,9 +1430,9 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
               }
               if ((descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) ||
                   (descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
-                VulkanResourceType resType = descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
-                                                 ? VULKAN_STORAGE_BUFFER
-                                                 : VULKAN_STORAGE_BUFFER_DYNAMIC;
+                ResourceType resType = descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
+                                           ? ResourceType::STORAGE_BUFFER
+                                           : ResourceType::STORAGE_BUFFER_DYNAMIC;
                 descriptorSetState->descriptorWriteBuffers[currentBinding] = {resType,
                                                                               bufferInfo.buffer};
 
@@ -1789,7 +1789,7 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
               descriptorSetState->descriptorWriteImages[descriptorUpdateTemplateCreateInfoData
                                                             ->pDescriptorUpdateEntries[i]
                                                             .dstBinding] = {
-                  VULKAN_STORAGE_IMAGE, imageState->imageHandle};
+                  ResourceType::STORAGE_IMAGE, imageState->imageHandle};
 
               if ((Configurator::Get().vulkan.recorder.memorySegmentSize ||
                    Configurator::Get().vulkan.recorder.shadowMemory) &&
@@ -1847,7 +1847,7 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
               descriptorSetState->descriptorWriteBuffers[descriptorUpdateTemplateCreateInfoData
                                                              ->pDescriptorUpdateEntries[i]
                                                              .dstBinding] = {
-                  VULKAN_STORAGE_TEXEL_BUFFER, bufferState->bufferHandle};
+                  ResourceType::STORAGE_TEXEL_BUFFER, bufferState->bufferHandle};
 
               if ((Configurator::Get().vulkan.recorder.memorySegmentSize ||
                    Configurator::Get().vulkan.recorder.shadowMemory) &&
@@ -1906,9 +1906,9 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
 
             if ((descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) ||
                 (descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
-              VulkanResourceType resType = (descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
-                                               ? VULKAN_STORAGE_BUFFER
-                                               : VULKAN_STORAGE_BUFFER_DYNAMIC;
+              ResourceType resType = (descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
+                                         ? ResourceType::STORAGE_BUFFER
+                                         : ResourceType::STORAGE_BUFFER_DYNAMIC;
               descriptorSetState->descriptorWriteBuffers[descriptorUpdateTemplateCreateInfoData
                                                              ->pDescriptorUpdateEntries[i]
                                                              .dstBinding] = {
@@ -2635,6 +2635,12 @@ inline void vkCreateAccelerationStructureKHR_SD(
           buffer                                        // VkBuffer buffer;
       };
       vkGetBufferDeviceAddressUnifiedGITS_SD(address, device, &info);
+
+      if (isSubcaptureBeforeRestorationPhase()) {
+        accelerationStructureState->bufferStateStore->binding->deviceMemoryStateStore
+            ->aliasingTracker.AddAccelerationStructure(pCreateInfo->offset, pCreateInfo->size,
+                                                       *pAccelerationStructure);
+      }
     }
   }
 }
@@ -2643,8 +2649,17 @@ inline void vkDestroyAccelerationStructureKHR_SD(VkDevice device,
                                                  VkAccelerationStructureKHR accelerationStructure,
                                                  const VkAllocationCallbacks* pAllocator) {
   if (accelerationStructure != VK_NULL_HANDLE) { // Doom Eternal fix
-    CAccelerationStructureKHRState::deviceAddresses.erase(
-        SD()._accelerationstructurekhrstates[accelerationStructure]->deviceAddress);
+    auto& state = SD()._accelerationstructurekhrstates[accelerationStructure];
+
+    if (Configurator::IsRecorder() && isSubcaptureBeforeRestorationPhase()) {
+      auto* pCreateInfo = state->accelerationStructureCreateInfoData.Value();
+
+      state->bufferStateStore->binding->deviceMemoryStateStore->aliasingTracker
+          .RemoveAccelerationStructure(pCreateInfo->offset, pCreateInfo->size,
+                                       accelerationStructure);
+    }
+
+    CAccelerationStructureKHRState::deviceAddresses.erase(state->deviceAddress);
     SD()._accelerationstructurekhrstates.erase(accelerationStructure);
   }
 }
@@ -2671,8 +2686,8 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
   }
 
   CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
-  auto device =
-      SD()._commandbufferstates[cmdBuf]->commandPoolStateStore->deviceStateStore->deviceHandle;
+  auto& cmdBufState = SD()._commandbufferstates[cmdBuf];
+  auto device = cmdBufState->commandPoolStateStore->deviceStateStore->deviceHandle;
 
   for (uint32_t acc = 0; acc < infoCount; ++acc) {
     // Struct storage data is going to be injected into original structures via pNext
@@ -2701,6 +2716,8 @@ inline void vkCmdBuildAccelerationStructuresKHR_SD(
           device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, buildInfo,
           primitivesCount.data(), &buildSizeInfo);
       accelerationStructureState->buildSizeInfo = buildSizeInfo;
+      cmdBufState->touchedResources.emplace_back((uint64_t)buildInfo->dstAccelerationStructure,
+                                                 ResourceType::ACCELERATION_STRUCTURE);
     }
 
     if (buildInfo->mode == VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR) {
@@ -2808,6 +2825,10 @@ inline void vkCmdCopyAccelerationStructureKHR_SD(VkCommandBuffer cmdBuf,
     dstAccelerationStructureState->copyInfo.reset(new CAccelerationStructureKHRState::CCopyInfo(
         pInfo, srcAccelerationStructureState, getCommandExecutionSide(cmdBuf)));
     dstAccelerationStructureState->buildSizeInfo = srcAccelerationStructureState->buildSizeInfo;
+
+    auto& cmdBufState = SD()._commandbufferstates[cmdBuf];
+    cmdBufState->touchedResources.emplace_back((uint64_t)pInfo->dst,
+                                               ResourceType::ACCELERATION_STRUCTURE);
   }
 }
 
@@ -2881,15 +2902,22 @@ inline void vkQueueSubmit_setTimestamps(std::shared_ptr<CCommandBufferState>& co
   if (isSubcaptureBeforeRestorationPhase()) {
     for (uint32_t i = 0; i < commandBufferState->touchedResources.size(); ++i) {
       const auto& touchedResource = commandBufferState->touchedResources[i];
-      if (touchedResource.second) {
+      switch (touchedResource.second) {
+      case ResourceType::IMAGE:
         SD()._imagestates[(VkImage)touchedResource.first]->timestamp =
             SD().internalResources.timestamp + i;
-      } else {
+        break;
+      case ResourceType::BUFFER:
         SD()._bufferstates[(VkBuffer)touchedResource.first]->timestamp =
             SD().internalResources.timestamp + i;
+        break;
+      case ResourceType::ACCELERATION_STRUCTURE: {
+        SD()._accelerationstructurekhrstates[(VkAccelerationStructureKHR)touchedResource.first]
+            ->timestamp = SD().internalResources.timestamp + i;
+        break;
+      }
       }
     }
-
     SD().internalResources.timestamp += commandBufferState->touchedResources.size();
   }
 }
@@ -3330,7 +3358,8 @@ inline void vkCmdEndRenderPass_SD(VkCommandBuffer cmdBuf) {
           continue;
         }
 
-        commandBufferState->touchedResources.push_back({(uint64_t)imageState->imageHandle, true});
+        commandBufferState->touchedResources.push_back(
+            {(uint64_t)imageState->imageHandle, ResourceType::IMAGE});
         auto& commandBufferImageState =
             commandBufferState->imageLayoutAfterSubmit[imageState->imageHandle];
         if (!commandBufferImageState.size()) {
@@ -3564,11 +3593,13 @@ inline void vkCmdBindDescriptorSets_SD(VkCommandBuffer cmdBuf,
       }
       for (const auto& obj :
            SD()._descriptorsetstates[pDescriptorSets[i]]->descriptorWriteBuffers) {
-        commandBufferState->touchedResources.emplace_back((uint64_t)obj.second.second, false);
+        commandBufferState->touchedResources.emplace_back((uint64_t)obj.second.second,
+                                                          ResourceType::BUFFER);
         commandBufferState->resourceWriteBuffers[obj.second.second] = obj.second.first;
       }
       for (const auto& obj : SD()._descriptorsetstates[pDescriptorSets[i]]->descriptorWriteImages) {
-        commandBufferState->touchedResources.emplace_back((uint64_t)obj.second.second, true);
+        commandBufferState->touchedResources.emplace_back((uint64_t)obj.second.second,
+                                                          ResourceType::IMAGE);
         commandBufferState->resourceWriteImages[obj.second.second] = obj.second.first;
       }
       if (Configurator::Get().vulkan.recorder.memorySegmentSize ||
@@ -3622,9 +3653,9 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer cmdBuf,
 
           if (VK_DESCRIPTOR_TYPE_STORAGE_IMAGE == descriptorType) {
             SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back(
-                (uint64_t)imageState->imageHandle, true);
+                (uint64_t)imageState->imageHandle, ResourceType::IMAGE);
             SD()._commandbufferstates[cmdBuf]->resourceWriteImages[imageState->imageHandle] =
-                VULKAN_STORAGE_IMAGE;
+                ResourceType::STORAGE_IMAGE;
           }
 
           if (updateOnlyUsedMemory()) {
@@ -3660,9 +3691,9 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer cmdBuf,
             const auto cmdBufIt = SD()._commandbufferstates.find(cmdBuf);
             if (cmdBufIt != SD()._commandbufferstates.end()) {
               cmdBufIt->second->touchedResources.emplace_back((uint64_t)bufferState->bufferHandle,
-                                                              false);
+                                                              ResourceType::BUFFER);
               cmdBufIt->second->resourceWriteBuffers[bufferState->bufferHandle] =
-                  VULKAN_STORAGE_TEXEL_BUFFER;
+                  ResourceType::STORAGE_TEXEL_BUFFER;
             }
           }
 
@@ -3702,9 +3733,9 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer cmdBuf,
           if ((VK_DESCRIPTOR_TYPE_STORAGE_BUFFER == descriptorType) ||
               (VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC == descriptorType)) {
             SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back(
-                (uint64_t)bufferState->bufferHandle, false);
+                (uint64_t)bufferState->bufferHandle, ResourceType::BUFFER);
             SD()._commandbufferstates[cmdBuf]->resourceWriteBuffers[bufferState->bufferHandle] =
-                VULKAN_STORAGE_BUFFER_DYNAMIC;
+                ResourceType::STORAGE_BUFFER_DYNAMIC;
           }
 
           if (updateOnlyUsedMemory()) {
@@ -4340,7 +4371,8 @@ inline void vkCmdCopyQueryPoolResults_SD(VkCommandBuffer cmdBuf,
       SD().bindingBuffers[cmdBuf].insert(bufferState);
     }
 
-    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstBuffer, false);
+    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstBuffer,
+                                                                     ResourceType::BUFFER);
 
     if (Configurator::Get().vulkan.recorder.memorySegmentSize ||
         Configurator::Get().vulkan.recorder.shadowMemory) {
@@ -4362,7 +4394,7 @@ inline void vkCmdUpdateBuffer_SD(VkCommandBuffer cmdBuf,
                                  const void* pData) {
   if (Configurator::IsPlayer() && captureRenderPassesResources() && (dstBuffer != NULL)) {
     SD()._commandbufferstates[cmdBuf]->resourceWriteBuffers[dstBuffer] =
-        VULKAN_BLIT_DESTINATION_BUFFER;
+        ResourceType::BLIT_DESTINATION_BUFFER;
   }
   if (Configurator::IsRecorder()) {
     const auto it = SD()._bufferstates.find(dstBuffer);
@@ -4376,7 +4408,8 @@ inline void vkCmdUpdateBuffer_SD(VkCommandBuffer cmdBuf,
       SD().bindingBuffers[cmdBuf].insert(bufferState);
     }
 
-    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstBuffer, false);
+    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstBuffer,
+                                                                     ResourceType::BUFFER);
 
     if (Configurator::Get().vulkan.recorder.memorySegmentSize ||
         Configurator::Get().vulkan.recorder.shadowMemory) {
@@ -4397,7 +4430,7 @@ inline void vkCmdFillBuffer_SD(VkCommandBuffer cmdBuf,
                                uint32_t data) {
   if (Configurator::IsPlayer() && captureRenderPassesResources() && (dstBuffer != NULL)) {
     SD()._commandbufferstates[cmdBuf]->resourceWriteBuffers[dstBuffer] =
-        VULKAN_BLIT_DESTINATION_BUFFER;
+        ResourceType::BLIT_DESTINATION_BUFFER;
   }
   if (Configurator::IsRecorder()) {
     const auto it = SD()._bufferstates.find(dstBuffer);
@@ -4411,7 +4444,8 @@ inline void vkCmdFillBuffer_SD(VkCommandBuffer cmdBuf,
       SD().bindingBuffers[cmdBuf].insert(bufferState);
     }
 
-    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstBuffer, false);
+    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstBuffer,
+                                                                     ResourceType::BUFFER);
 
     if (Configurator::Get().vulkan.recorder.memorySegmentSize ||
         Configurator::Get().vulkan.recorder.shadowMemory) {
@@ -4434,7 +4468,7 @@ inline void vkCmdCopyBuffer_SD(VkCommandBuffer cmdBuf,
                                const VkBufferCopy* pRegions) {
   if (Configurator::IsPlayer() && captureRenderPassesResources() && (dstBuffer != NULL)) {
     SD()._commandbufferstates[cmdBuf]->resourceWriteBuffers[dstBuffer] =
-        VULKAN_BLIT_DESTINATION_BUFFER;
+        ResourceType::BLIT_DESTINATION_BUFFER;
   }
   if (Configurator::IsRecorder()) {
     const auto dstIt = SD()._bufferstates.find(dstBuffer);
@@ -4455,7 +4489,8 @@ inline void vkCmdCopyBuffer_SD(VkCommandBuffer cmdBuf,
       return;
     }
 
-    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstBuffer, false);
+    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstBuffer,
+                                                                     ResourceType::BUFFER);
 
     if (Configurator::Get().vulkan.recorder.memorySegmentSize ||
         Configurator::Get().vulkan.recorder.shadowMemory) {
@@ -4476,7 +4511,7 @@ inline void vkCmdCopyBuffer2_SD(VkCommandBuffer cmdBuf, const VkCopyBufferInfo2*
   if (Configurator::IsPlayer() && captureRenderPassesResources() &&
       (pCopyBufferInfo->dstBuffer != NULL)) {
     SD()._commandbufferstates[cmdBuf]->resourceWriteBuffers[pCopyBufferInfo->dstBuffer] =
-        VULKAN_BLIT_DESTINATION_BUFFER;
+        ResourceType::BLIT_DESTINATION_BUFFER;
   }
 
   if (Configurator::IsRecorder() && pCopyBufferInfo) {
@@ -4499,7 +4534,7 @@ inline void vkCmdCopyBuffer2_SD(VkCommandBuffer cmdBuf, const VkCopyBufferInfo2*
     }
 
     SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back(
-        (uint64_t)pCopyBufferInfo->dstBuffer, false);
+        (uint64_t)pCopyBufferInfo->dstBuffer, ResourceType::BUFFER);
 
     if (Configurator::Get().vulkan.recorder.memorySegmentSize ||
         Configurator::Get().vulkan.recorder.shadowMemory) {
@@ -4625,7 +4660,7 @@ inline void vkCmdCopyBufferToImage_SD(VkCommandBuffer cmdBuf,
                                       const VkBufferImageCopy* pRegions) {
   if (Configurator::IsPlayer() && captureRenderPassesResources() && (dstImage != NULL)) {
     SD()._commandbufferstates[cmdBuf]->resourceWriteImages[dstImage] =
-        VULKAN_BLIT_DESTINATION_IMAGE;
+        ResourceType::BLIT_DESTINATION_IMAGE;
   }
 
   if (Configurator::IsRecorder()) {
@@ -4645,7 +4680,8 @@ inline void vkCmdCopyBufferToImage_SD(VkCommandBuffer cmdBuf,
       return;
     }
 
-    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstImage, true);
+    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstImage,
+                                                                     ResourceType::IMAGE);
 
     if ((!Configurator::Get().vulkan.recorder.memorySegmentSize &&
          !Configurator::Get().vulkan.recorder.shadowMemory) ||
@@ -4663,7 +4699,7 @@ inline void vkCmdCopyBufferToImage2_SD(VkCommandBuffer cmdBuf,
   if (Configurator::IsPlayer() && captureRenderPassesResources() &&
       (pCopyBufferToImageInfo->dstImage != NULL)) {
     SD()._commandbufferstates[cmdBuf]->resourceWriteImages[pCopyBufferToImageInfo->dstImage] =
-        VULKAN_BLIT_DESTINATION_IMAGE;
+        ResourceType::BLIT_DESTINATION_IMAGE;
   }
 
   if (Configurator::IsRecorder() && pCopyBufferToImageInfo) {
@@ -4685,7 +4721,7 @@ inline void vkCmdCopyBufferToImage2_SD(VkCommandBuffer cmdBuf,
     }
 
     SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back(
-        (uint64_t)pCopyBufferToImageInfo->dstImage, true);
+        (uint64_t)pCopyBufferToImageInfo->dstImage, ResourceType::IMAGE);
 
     if ((!Configurator::Get().vulkan.recorder.memorySegmentSize &&
          !Configurator::Get().vulkan.recorder.shadowMemory) ||
@@ -4708,7 +4744,7 @@ inline void vkCmdCopyImage_SD(VkCommandBuffer cmdBuf,
                               const VkImageCopy* pRegions) {
   if (Configurator::IsPlayer() && captureRenderPassesResources() && (dstImage != NULL)) {
     SD()._commandbufferstates[cmdBuf]->resourceWriteImages[dstImage] =
-        VULKAN_BLIT_DESTINATION_IMAGE;
+        ResourceType::BLIT_DESTINATION_IMAGE;
   }
 
   if (Configurator::IsRecorder()) {
@@ -4732,7 +4768,8 @@ inline void vkCmdCopyImage_SD(VkCommandBuffer cmdBuf,
       return;
     }
 
-    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstImage, true);
+    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstImage,
+                                                                     ResourceType::IMAGE);
 
     if ((!Configurator::Get().vulkan.recorder.memorySegmentSize &&
          !Configurator::Get().vulkan.recorder.shadowMemory) ||
@@ -4749,7 +4786,7 @@ inline void vkCmdCopyImage2_SD(VkCommandBuffer cmdBuf, const VkCopyImageInfo2* p
   if (Configurator::IsPlayer() && captureRenderPassesResources() &&
       (pCopyImageInfo->dstImage != NULL)) {
     SD()._commandbufferstates[cmdBuf]->resourceWriteImages[pCopyImageInfo->dstImage] =
-        VULKAN_BLIT_DESTINATION_IMAGE;
+        ResourceType::BLIT_DESTINATION_IMAGE;
   }
   if (Configurator::IsRecorder()) {
     const auto dstIt = SD()._imagestates.find(pCopyImageInfo->dstImage);
@@ -4771,7 +4808,7 @@ inline void vkCmdCopyImage2_SD(VkCommandBuffer cmdBuf, const VkCopyImageInfo2* p
     }
 
     SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back(
-        (uint64_t)pCopyImageInfo->dstImage, true);
+        (uint64_t)pCopyImageInfo->dstImage, ResourceType::IMAGE);
 
     if ((!Configurator::Get().vulkan.recorder.memorySegmentSize &&
          !Configurator::Get().vulkan.recorder.shadowMemory) ||
@@ -4798,7 +4835,7 @@ void CopyImageToBufferHelper(VkCommandBuffer cmdBuf,
                              const REGION_TYPE* pRegions) {
   if (Configurator::IsPlayer() && captureRenderPassesResources() && (dstBuffer != VK_NULL_HANDLE)) {
     SD()._commandbufferstates[cmdBuf]->resourceWriteBuffers[dstBuffer] =
-        VULKAN_BLIT_DESTINATION_BUFFER;
+        ResourceType::BLIT_DESTINATION_BUFFER;
   }
   if (Configurator::IsRecorder()) {
     const auto srcIt = SD()._imagestates.find(srcImage);
@@ -4819,7 +4856,8 @@ void CopyImageToBufferHelper(VkCommandBuffer cmdBuf,
       return;
     }
 
-    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstBuffer, false);
+    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstBuffer,
+                                                                     ResourceType::BUFFER);
 
     if (Configurator::Get().vulkan.recorder.memorySegmentSize ||
         Configurator::Get().vulkan.recorder.shadowMemory) {
@@ -4897,7 +4935,7 @@ void BlitOrResolveImageHelper(VkCommandBuffer cmdBuf,
                               const REGION_TYPE* pRegions) {
   if (Configurator::IsPlayer() && captureRenderPassesResources() && (dstImage != VK_NULL_HANDLE)) {
     SD()._commandbufferstates[cmdBuf]->resourceWriteImages[dstImage] =
-        VULKAN_BLIT_DESTINATION_IMAGE;
+        ResourceType::BLIT_DESTINATION_IMAGE;
   }
 
   if (Configurator::IsRecorder()) {
@@ -4919,7 +4957,8 @@ void BlitOrResolveImageHelper(VkCommandBuffer cmdBuf,
       return;
     }
 
-    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstImage, true);
+    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)dstImage,
+                                                                     ResourceType::IMAGE);
 
     if ((!Configurator::Get().vulkan.recorder.memorySegmentSize &&
          !Configurator::Get().vulkan.recorder.shadowMemory) ||
@@ -4998,7 +5037,8 @@ inline void vkCmdClearColorImage_SD(VkCommandBuffer cmdBuf,
       SD().bindingImages[cmdBuf].insert(imageState);
     }
 
-    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)image, true);
+    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)image,
+                                                                     ResourceType::IMAGE);
 
     if ((!Configurator::Get().vulkan.recorder.memorySegmentSize &&
          !Configurator::Get().vulkan.recorder.shadowMemory) ||
@@ -5043,7 +5083,8 @@ inline void vkCmdClearDepthStencilImage_SD(VkCommandBuffer cmdBuf,
       SD().bindingImages[cmdBuf].insert(imageState);
     }
 
-    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)image, true);
+    SD()._commandbufferstates[cmdBuf]->touchedResources.emplace_back((uint64_t)image,
+                                                                     ResourceType::IMAGE);
 
     if ((!Configurator::Get().vulkan.recorder.memorySegmentSize &&
          !Configurator::Get().vulkan.recorder.shadowMemory) ||
