@@ -18,8 +18,7 @@ namespace DirectX {
 
 RenderTargetsDumpLayer::RenderTargetsDumpLayer()
     : Layer("RenderTargetsDump"),
-      resourceDump_(Configurator::Get().directx.features.renderTargetsDump.format == "jpg" ? true
-                                                                                           : false),
+      resourceDump_(Configurator::Get().directx.features.renderTargetsDump.format),
       frameRange_(Configurator::Get().directx.features.renderTargetsDump.frames),
       drawRange_(Configurator::Get().directx.features.renderTargetsDump.draws) {
 

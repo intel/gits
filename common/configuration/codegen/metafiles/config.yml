@@ -961,9 +961,9 @@ Configuration:
                   Frame range (supports multiple ranges and strides). For example
                   '3-6:2,9'
               - Name: format
-                Type: std::string
-                Default: png
-                Description: Format (png/jpg)
+                Type: ImageFormat
+                Default: PNG
+                Description: Format (PNG/JPEG)
           - Name: ResourcesDump
             Type: Group
             Options:
@@ -986,9 +986,9 @@ Configuration:
                   Texture rescaling factor range between 0.0-1.0, if empty no rescaling.
                   For example '0-0.5'
               - Name: format
-                Type: std::string
-                Default: png
-                Description: Format (png/jpg)
+                Type: ImageFormat
+                Default: PNG
+                Description: Format (PNG/JPEG)
           - Name: RenderTargetsDump
             Type: Group
             Options:
@@ -1007,9 +1007,9 @@ Configuration:
                   Draw range (supports multiple ranges and strides). For example
                   '1-100:5'
               - Name: format
-                Type: std::string
-                Default: png
-                Description: Format (png/jpg)
+                Type: ImageFormat
+                Default: PNG
+                Description: Format (PNG/JPEG)
           - Name: RaytracingDump
             Type: Group
             Options:

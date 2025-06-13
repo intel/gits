@@ -9,6 +9,7 @@
 #pragma once
 
 #include "gpuExecutionTracker.h"
+#include "configurationLib.h"
 #include "tools_lite.h"
 
 #include <d3d12.h>
@@ -26,7 +27,7 @@ namespace DirectX {
 
 class ResourceDump : public gits::noncopyable {
 public:
-  ResourceDump(bool dumpJpg = true, const std::string& textureRescaleRange = "");
+  ResourceDump(ImageFormat format = ImageFormat::JPEG, const std::string& textureRescaleRange = "");
   virtual ~ResourceDump();
   void dumpResource(ID3D12GraphicsCommandList* commandList,
                     ID3D12Resource* resource,
@@ -82,7 +83,7 @@ private:
   HANDLE fenceEvent_{};
   UINT64 fenceValue_{};
 
-  bool dumpJpg_{};
+  ImageFormat format_{ImageFormat::JPEG};
   std::optional<std::pair<float, float>> textureRescaleRange_;
 
 protected:

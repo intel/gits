@@ -9,6 +9,7 @@
 #pragma once
 
 #include "directx.h"
+#include "configurationLib.h"
 
 #include <string>
 #include <thread>
@@ -41,7 +42,7 @@ private:
   D3D12_PLACED_SUBRESOURCE_FOOTPRINT backBufferFootprint_{};
   Microsoft::WRL::ComPtr<ID3D12Resource> stagingBuffer_;
   std::unique_ptr<std::thread> dumpThread_{};
-  bool dumpJpg{};
+  ImageFormat format_{ImageFormat::PNG};
 };
 
 } // namespace DirectX

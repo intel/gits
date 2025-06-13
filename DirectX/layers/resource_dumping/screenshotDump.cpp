@@ -18,10 +18,7 @@ namespace gits {
 namespace DirectX {
 
 ScreenshotDump::ScreenshotDump(ID3D12CommandQueue* commandQueue) {
-  std::string format = Configurator::Get().directx.features.screenshots.format;
-  if (format == "jpg") {
-    dumpJpg = true;
-  }
+  format_ = Configurator::Get().directx.features.screenshots.format;
 
   HRESULT hr = commandQueue->QueryInterface(IID_PPV_ARGS(&commandQueue_));
   GITS_ASSERT(hr == S_OK);
@@ -159,11 +156,17 @@ void ScreenshotDump::dumpStagedResource(std::wstring dumpName) {
   image.slicePitch = backBufferFootprint_.Footprint.RowPitch * backBufferDesc_.Height;
   image.pixels = reinterpret_cast<uint8_t*>(data) + backBufferFootprint_.Offset;
 
+  auto codec = ::DirectX::WIC_CODEC_PNG;
+  auto ext = L".png";
+  auto* pixelFormat = &GUID_WICPixelFormat48bppRGB;
+  if (format_ == ImageFormat::JPEG) {
+    codec = ::DirectX::WIC_CODEC_JPEG;
+    ext = L".jpg";
+    pixelFormat = nullptr;
+  }
   auto saveToWICFile = [&]() {
-    hr = SaveToWICFile(image, ::DirectX::WIC_FLAGS_FORCE_SRGB,
-                       GetWICCodec(dumpJpg ? ::DirectX::WIC_CODEC_JPEG : ::DirectX::WIC_CODEC_PNG),
-                       (dumpName + (dumpJpg ? L".jpg" : L".png")).c_str(),
-                       dumpJpg ? nullptr : &GUID_WICPixelFormat48bppRGB);
+    hr = SaveToWICFile(image, ::DirectX::WIC_FLAGS_FORCE_SRGB, GetWICCodec(codec),
+                       (dumpName + ext).c_str(), pixelFormat);
   };
   saveToWICFile();
   static bool initialized = false;

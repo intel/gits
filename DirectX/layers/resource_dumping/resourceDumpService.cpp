@@ -17,8 +17,7 @@ namespace gits {
 namespace DirectX {
 
 ResourceDumpService::ResourceDumpService()
-    : resourceDump_(Configurator::Get().directx.features.resourcesDump.format == "jpg" ? true
-                                                                                       : false,
+    : resourceDump_(Configurator::Get().directx.features.resourcesDump.format,
                     Configurator::Get().directx.features.resourcesDump.textureRescaleRange),
       resourceKeys_(Configurator::Get().directx.features.resourcesDump.resourceKeys),
       callKeys_(Configurator::Get().directx.features.resourcesDump.commandKeys) {

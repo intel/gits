@@ -201,3 +201,8 @@ Enums:
     Values:
       - Value: NORMAL
       - Value: EXCLUSIVE_FULLSCREEN
+  - Name: ImageFormat
+    Description: Format used to dump images (such as screenshots or render targets)
+    Values:
+      - Value: PNG
+      - Value: JPEG

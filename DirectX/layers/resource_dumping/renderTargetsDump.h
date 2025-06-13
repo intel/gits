@@ -15,7 +15,7 @@ namespace DirectX {
 
 class RenderTargetsDump : public ResourceDump {
 public:
-  RenderTargetsDump(bool dumpJpg) : ResourceDump(dumpJpg) {}
+  RenderTargetsDump(ImageFormat format) : ResourceDump(format) {}
   ~RenderTargetsDump();
   void dumpResource(ID3D12GraphicsCommandList* commandList,
                     ID3D12Resource* resource,

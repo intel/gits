@@ -15,8 +15,8 @@
 namespace gits {
 namespace DirectX {
 
-ResourceDump::ResourceDump(bool dumpJpg, const std::string& textureRescaleRange) {
-  dumpJpg_ = dumpJpg;
+ResourceDump::ResourceDump(ImageFormat format, const std::string& textureRescaleRange) {
+  format_ = format;
   if (!textureRescaleRange.empty()) {
     try {
       float min = std::stof(textureRescaleRange);
@@ -438,12 +438,17 @@ void ResourceDump::dumpTexture(DumpInfo& dumpInfo, void* data) {
     }
 
     HRESULT hr{};
+    auto codec = ::DirectX::WIC_CODEC_PNG;
+    auto ext = L".png";
+    auto* pixelFormat = &GUID_WICPixelFormat48bppRGB;
+    if (format_ == ImageFormat::JPEG) {
+      codec = ::DirectX::WIC_CODEC_JPEG;
+      ext = L".jpg";
+      pixelFormat = nullptr;
+    }
     auto saveToWICFile = [&]() {
-      hr = SaveToWICFile(
-          *imageConverted, ::DirectX::WIC_FLAGS_FORCE_SRGB,
-          GetWICCodec(dumpJpg_ ? ::DirectX::WIC_CODEC_JPEG : ::DirectX::WIC_CODEC_PNG),
-          (dumpNameW + (dumpJpg_ ? L".jpg" : L".png")).c_str(),
-          dumpJpg_ ? nullptr : &GUID_WICPixelFormat48bppRGB);
+      hr = SaveToWICFile(*imageConverted, ::DirectX::WIC_FLAGS_FORCE_SRGB, GetWICCodec(codec),
+                         (dumpNameW + ext).c_str(), pixelFormat);
     };
     saveToWICFile();
     if (!initialized && hr != S_OK) {
