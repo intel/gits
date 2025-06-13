@@ -13,6 +13,12 @@ namespace gits {
 namespace DirectX {
 
 enum class CommandId {
+  // gits::CToken::ID_HELPER_TOKENS
+  ID_INIT_START = 0x0,
+  ID_INIT_END = 0x1,
+  ID_FRAME_START = 0x2,
+  ID_FRAME_END = 0x3,
+
   // gits::CToken::ID_DirectX (13 * 0x10000)
   ID_META_BEGIN = 0xD0000,
   ID_META_CREATE_WINDOW = 0xD0001,

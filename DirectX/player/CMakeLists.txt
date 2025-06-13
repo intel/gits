@@ -62,6 +62,8 @@ set(RUNNER_SRC
   ${SRC_DIR}/commandPlayersAuto.cpp
   ${SRC_DIR}/directXLibrary.h
   ${SRC_DIR}/directXLibraryAuto.cpp
+  ${SRC_DIR}/commonEventsHandler.h
+  ${SRC_DIR}/commonEventsHandler.cpp
 )
 source_group("runner" FILES ${RUNNER_SRC})
 

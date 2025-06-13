@@ -11,6 +11,42 @@
 namespace gits {
 namespace DirectX {
 
+void TraceLayer::pre(StateRestoreBeginCommand& command) {
+  if (printPre_) {
+    streamPre_ << "STATE_RESTORE_BEGIN\n";
+    if (flush_) {
+      streamPre_.flush();
+    }
+  }
+}
+
+void TraceLayer::post(StateRestoreBeginCommand& command) {
+  if (printPost_) {
+    streamPost_ << "STATE_RESTORE_BEGIN\n";
+    if (flush_) {
+      streamPost_.flush();
+    }
+  }
+}
+
+void TraceLayer::pre(StateRestoreEndCommand& command) {
+  if (printPre_) {
+    streamPre_ << "STATE_RESTORE_END\n";
+    if (flush_) {
+      streamPre_.flush();
+    }
+  }
+}
+
+void TraceLayer::post(StateRestoreEndCommand& command) {
+  if (printPost_) {
+    streamPost_ << "STATE_RESTORE_END\n";
+    if (flush_) {
+      streamPost_.flush();
+    }
+  }
+}
+
 #pragma region MetaCommands
 
 void TraceLayer::pre(CreateWindowMetaCommand& command) {

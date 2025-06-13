@@ -794,24 +794,21 @@ void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListResolveQueryDataComm
 }
 
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateCommandQueueCommand& c) {
-  if (c.ppCommandQueue_.key & Command::stateRestoreKeyMask &&
-      c.pDesc_.value->Type == D3D12_COMMAND_LIST_TYPE_COPY &&
+  if (stateRestorePhase_ && c.pDesc_.value->Type == D3D12_COMMAND_LIST_TYPE_COPY &&
       !Configurator::Get().directx.player.useCopyQueueOnRestore) {
     c.pDesc_.value->Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
   }
 }
 
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateCommandAllocatorCommand& c) {
-  if (c.ppCommandAllocator_.key & Command::stateRestoreKeyMask &&
-      c.type_.value == D3D12_COMMAND_LIST_TYPE_COPY &&
+  if (stateRestorePhase_ && c.type_.value == D3D12_COMMAND_LIST_TYPE_COPY &&
       !Configurator::Get().directx.player.useCopyQueueOnRestore) {
     c.type_.value = D3D12_COMMAND_LIST_TYPE_DIRECT;
   }
 }
 
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateCommandListCommand& c) {
-  if (c.ppCommandList_.key & Command::stateRestoreKeyMask &&
-      c.type_.value == D3D12_COMMAND_LIST_TYPE_COPY &&
+  if (stateRestorePhase_ && c.type_.value == D3D12_COMMAND_LIST_TYPE_COPY &&
       !Configurator::Get().directx.player.useCopyQueueOnRestore) {
     c.type_.value = D3D12_COMMAND_LIST_TYPE_DIRECT;
   }

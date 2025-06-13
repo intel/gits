@@ -38,6 +38,12 @@ public:
         printPost_(streamPost.isOpen()),
         flush_(flush) {}
 
+  void pre(StateRestoreBeginCommand& command) override;
+  void post(StateRestoreBeginCommand& command) override;
+
+  void pre(StateRestoreEndCommand& command) override;
+  void post(StateRestoreEndCommand& command) override;
+
   void pre(CreateWindowMetaCommand& command) override;
   void post(CreateWindowMetaCommand& command) override;
 

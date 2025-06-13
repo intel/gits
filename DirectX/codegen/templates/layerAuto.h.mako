@@ -26,6 +26,15 @@ public:
     return name_;
   }
 
+  virtual void pre(StateRestoreBeginCommand& command) {}
+  virtual void post(StateRestoreBeginCommand& command) {}
+
+  virtual void pre(StateRestoreEndCommand& command) {}
+  virtual void post(StateRestoreEndCommand& command) {}
+
+  virtual void pre(FrameEndCommand& command) {}
+  virtual void post(FrameEndCommand& command) {}
+
   virtual void pre(CreateWindowMetaCommand& command) {}
   virtual void post(CreateWindowMetaCommand& command) {}
 

@@ -9,6 +9,7 @@
 #pragma once
 
 #include "library.h"
+#include "commonEventsHandler.h"
 
 namespace gits {
 namespace DirectX {
@@ -25,6 +26,9 @@ public:
   const char* Name() const override {
     return "DirectX";
   }
+
+private:
+  CommonEventsHandler commonEventsHandler_;
 };
 
 } // namespace DirectX

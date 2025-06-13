@@ -32,9 +32,6 @@ RenderTargetsDumpLayer::RenderTargetsDumpLayer()
 };
 
 void RenderTargetsDumpLayer::post(ID3D12DeviceCreateRenderTargetViewCommand& c) {
-  if (c.key & Command::stateRestoreKeyMask) {
-    stateRestorePhase_ = true;
-  }
   RenderTarget renderTarget{};
   renderTarget.resource = c.pResource_.value;
   renderTarget.resourceKey = c.pResource_.key;
@@ -48,9 +45,6 @@ void RenderTargetsDumpLayer::post(ID3D12DeviceCreateRenderTargetViewCommand& c) 
 }
 
 void RenderTargetsDumpLayer::post(ID3D12DeviceCreateDepthStencilViewCommand& c) {
-  if (c.key & Command::stateRestoreKeyMask) {
-    stateRestorePhase_ = true;
-  }
   DepthStencil depthStencil;
   depthStencil.resource = c.pResource_.value;
   depthStencil.resourceKey = c.pResource_.key;
@@ -402,7 +396,6 @@ void RenderTargetsDumpLayer::post(IDXGISwapChainPresentCommand& c) {
   if (!(c.Flags_.value & DXGI_PRESENT_TEST)) {
     drawCount_ = 0;
     executeCount_ = 0;
-    stateRestorePhase_ = false;
   }
 }
 
@@ -410,7 +403,6 @@ void RenderTargetsDumpLayer::post(IDXGISwapChain1Present1Command& c) {
   if (!(c.PresentFlags_.value & DXGI_PRESENT_TEST)) {
     drawCount_ = 0;
     executeCount_ = 0;
-    stateRestorePhase_ = false;
   }
 }
 

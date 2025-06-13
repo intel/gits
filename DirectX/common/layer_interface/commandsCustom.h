@@ -30,6 +30,24 @@ struct INTC_D3D12_HEAP_DESC;
 namespace gits {
 namespace DirectX {
 
+class StateRestoreBeginCommand : public Command {
+public:
+  StateRestoreBeginCommand() : Command(CommandId::ID_INIT_START) {}
+};
+
+class StateRestoreEndCommand : public Command {
+public:
+  StateRestoreEndCommand() : Command(CommandId::ID_INIT_END) {}
+};
+
+class FrameEndCommand : public Command {
+public:
+  FrameEndCommand(unsigned frameNum) : Command(CommandId::ID_FRAME_END), frameNum_(frameNum) {}
+
+public:
+  unsigned frameNum_{};
+};
+
 class IUnknownQueryInterfaceCommand : public Command {
 public:
   IUnknownQueryInterfaceCommand(unsigned threadId, IUnknown* object, REFIID riid, void** ppvObject)
