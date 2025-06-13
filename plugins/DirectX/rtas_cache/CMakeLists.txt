@@ -8,7 +8,7 @@
 
 add_library(DirectX_rtas_cache SHARED)
 set_target_properties(DirectX_rtas_cache PROPERTIES OUTPUT_NAME plugin)
-target_link_libraries(DirectX_rtas_cache common)
+target_link_libraries(DirectX_rtas_cache common DirectX_plugin_utils)
 
 set(PLUGINS_SRC
   ${PLUGINS_DIR}/IPlugin.h
@@ -17,8 +17,6 @@ set(PLUGINS_SRC
 source_group("plugins" FILES ${PLUGINS_SRC})
 
 set(UTILS_SRC
-  gpuExecutionTracker.h
-  gpuExecutionTracker.cpp
   resourceDump.h
   resourceDump.cpp
 )
@@ -52,6 +50,7 @@ PRIVATE
   ${XESS_HEADERS_DIR}
   ${PLUGINS_DIR}
   ${PLUGINS_DIR}/common/
+  ${PLUGINS_DIR}/DirectX/common/utils
 )
 
 set_target_properties(DirectX_rtas_cache PROPERTIES FOLDER Plugins/DirectX)

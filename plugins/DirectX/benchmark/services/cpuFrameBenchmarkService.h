@@ -9,7 +9,7 @@
 #pragma once
 
 #include "../config.h"
-#include "TaskScheduler.h"
+#include "taskScheduler.h"
 
 #include <fstream>
 #include <chrono>

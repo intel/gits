@@ -24,9 +24,13 @@ std::string hrToString(HRESULT hr) {
   return std::string(s_str);
 }
 
-void logAndThrow(const std::string& errorMsg) {
+void logError(const std::string& errorMsg) {
   assert(g_gits);
-  log(*g_gits, errorMsg);
+  logE(*g_gits, errorMsg);
+}
+
+void logAndThrow(const std::string& errorMsg) {
+  logError(errorMsg);
   throw std::runtime_error(errorMsg);
 }
 

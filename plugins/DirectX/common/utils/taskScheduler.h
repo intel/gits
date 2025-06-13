@@ -15,11 +15,12 @@
 #include <thread>
 #include <condition_variable>
 #include <atomic>
+#include "tools_lite.h"
 
 namespace gits {
 namespace DirectX {
 
-class TaskScheduler {
+class TaskScheduler : public gits::noncopyable {
 public:
   using Task = std::function<void()>;
   TaskScheduler(const std::string name = "");

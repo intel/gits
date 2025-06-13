@@ -8,7 +8,7 @@
 
 add_library(DirectX_benchmark SHARED)
 set_target_properties(DirectX_benchmark PROPERTIES OUTPUT_NAME plugin)
-target_link_libraries(DirectX_benchmark common)
+target_link_libraries(DirectX_benchmark common DirectX_plugin_utils)
 
 set(SERVICES_DIR services)
 set (SERVICES_SRC
@@ -17,15 +17,6 @@ set (SERVICES_SRC
 
 )
 source_group("services" FILES ${SERVICES_SRC})
-
-set(UTILS_DIR utils)
-set (UTILS_SRC
-  ${UTILS_DIR}/benchmarkUtils.h
-  ${UTILS_DIR}/benchmarkUtils.cpp
-  ${UTILS_DIR}/TaskScheduler.h
-  ${UTILS_DIR}/TaskScheduler.cpp
-)
-source_group("utils" FILES ${UTILS_SRC})
 
 target_sources(DirectX_benchmark
 PRIVATE
@@ -37,7 +28,6 @@ PRIVATE
   config.yml
   config.h
   ${SERVICES_SRC}
-  ${UTILS_SRC}
 )
 
 target_include_directories(DirectX_benchmark
@@ -50,7 +40,7 @@ PRIVATE
   ${PLUGINS_DIR}
   ${PLUGINS_DIR}/common
   ${SERVICES_DIR}
-  ${UTILS_DIR}
+  ${PLUGINS_DIR}/DirectX/common/utils
 )
 
 add_dependencies(DirectX_benchmark

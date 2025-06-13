@@ -15,6 +15,7 @@ add_definitions(-DGITS_PLUGIN_EXPORT_API)
 
 if(BUILD_DIRECTX_PLUGINS)
   add_subdirectory(DirectX/hello_plugin)
+  add_subdirectory(DirectX/common/utils)
   add_subdirectory(DirectX/benchmark)
   add_subdirectory(DirectX/rtas_cache)
 endif()
