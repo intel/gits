@@ -22,6 +22,7 @@ public:
   ~PortabilityLayer();
 
 public:
+  void pre(D3D12CreateDeviceCommand& c) override;
   void pre(ID3D12DeviceCreateHeapCommand& c) override;
   void post(ID3D12DeviceCreateHeapCommand& c) override;
   void pre(ID3D12Device4CreateHeap1Command& c) override;

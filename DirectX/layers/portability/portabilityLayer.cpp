@@ -8,6 +8,7 @@
 
 #include "portabilityLayer.h"
 #include "gits.h"
+#include "to_string/toStr.h"
 #include "configurationLib.h"
 
 namespace gits {
@@ -57,6 +58,21 @@ PortabilityLayer::~PortabilityLayer() {
     }
   } catch (...) {
     topmost_exception_handler("PortabilityLayer::~PortabilityLayer");
+  }
+}
+
+void PortabilityLayer::pre(D3D12CreateDeviceCommand& c) {
+  if (!portabilityChecks_) {
+    return;
+  }
+
+  // Check if the minimum feature level is supported and set it to D3D_FEATURE_LEVEL_12_0 if not
+  auto hr =
+      D3D12CreateDevice(c.pAdapter_.value, c.MinimumFeatureLevel_.value, IID_ID3D12Device, nullptr);
+  if (hr != S_FALSE) {
+    Log(WARN) << "D3D12CreateDevice - Minimum feature level " << toStr(c.MinimumFeatureLevel_.value)
+              << " is not supported by the adapter. Will set D3D_FEATURE_LEVEL_12_0.";
+    c.MinimumFeatureLevel_.value = D3D_FEATURE_LEVEL_12_0;
   }
 }
 

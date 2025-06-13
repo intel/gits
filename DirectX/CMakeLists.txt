@@ -109,6 +109,7 @@ add_dependencies(DirectX_skip_calls
 
 add_dependencies(DirectX_portability
     DirectX_layer_interface
+    DirectX_utils
 )
 
 add_dependencies(DirectX_utils

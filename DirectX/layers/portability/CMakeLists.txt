@@ -29,7 +29,7 @@ target_sources(DirectX_portability PRIVATE
 
 target_include_directories(DirectX_portability PRIVATE
   ${DIRECTX_DIR}/common/layer_interface
-  ${SRC_DIR}/utils
+  ${DIRECTX_DIR}/common/utils
   ${D3D12_HEADERS_DIR}
   ${DML_HEADERS_DIR}
   ${DSTORAGE_HEADERS_DIR}
