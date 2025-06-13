@@ -258,6 +258,9 @@ public:
     _lua = L;
     _playbackEvents = e;
   }
+  void RegisterPlaybackEvents(const Events& e) {
+    _playbackEvents = e;
+  }
   const Events& PlaybackEvents() const {
     return _playbackEvents;
   }
