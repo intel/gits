@@ -42,10 +42,11 @@ public:
 
 class FrameEndCommand : public Command {
 public:
-  FrameEndCommand(unsigned frameNum) : Command(CommandId::ID_FRAME_END), frameNum_(frameNum) {}
+  FrameEndCommand(unsigned frameNumber)
+      : Command(CommandId::ID_FRAME_END), frameNumber_(frameNumber) {}
 
 public:
-  unsigned frameNum_{};
+  unsigned frameNumber_{};
 };
 
 class IUnknownQueryInterfaceCommand : public Command {

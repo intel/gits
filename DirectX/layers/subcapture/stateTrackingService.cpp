@@ -27,8 +27,7 @@ StateTrackingService::~StateTrackingService() {
 }
 
 void StateTrackingService::restoreState() {
-  unsigned frameNumber = CGits::Instance().CurrentFrame();
-  recorder_.record(new CTokenFrameNumber(CToken::ID_INIT_START, frameNumber));
+  recorder_.record(new CTokenFrameNumber(CToken::ID_INIT_START, 0));
 
   for (auto& it : statesByKey_) {
     restoreState(it.second);
@@ -47,7 +46,7 @@ void StateTrackingService::restoreState() {
   restoreReferenceCount();
 
   swapChainService_.restoreBackBufferSequence();
-  recorder_.record(new CTokenFrameNumber(CToken::ID_INIT_END, frameNumber));
+  recorder_.record(new CTokenFrameNumber(CToken::ID_INIT_END, 0));
   // one Present after ID_INIT_END to enable PIX first frame capture in gits interactive mode
   swapChainService_.recordSwapChainPresent();
 

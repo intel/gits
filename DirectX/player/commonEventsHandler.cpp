@@ -51,8 +51,8 @@ void CommonEventsHandler::stateRestoreEnd() {
   }
 }
 
-void CommonEventsHandler::frameEnd(int frameNum) {
-  FrameEndCommand command(frameNum);
+void CommonEventsHandler::frameEnd(int frameNumber) {
+  FrameEndCommand command(frameNumber);
   auto& manager = PlayerManager::get();
   for (Layer* layer : manager.getPreLayers()) {
     layer->pre(command);

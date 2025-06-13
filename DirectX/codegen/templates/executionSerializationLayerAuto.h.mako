@@ -26,7 +26,9 @@ public:
         recorder_(recorder),
         executionService_(recorder, cpuDescriptorsService_),
         cpuDescriptorsService_(recorder, executionService_) {}
-
+  
+  void post(StateRestoreBeginCommand& c) override;
+  void post(StateRestoreEndCommand& c) override;
   void pre(CreateWindowMetaCommand& c) override;
   void pre(MappedDataMetaCommand& c) override;
   void pre(CreateHeapAllocationMetaCommand& c) override;

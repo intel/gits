@@ -16,8 +16,8 @@ public:
   CommonEventsHandler();
 
 private:
-  static void frameBegin(int frameNum) {}
-  static void frameEnd(int frameNum);
+  static void frameBegin(int frameNumber) {}
+  static void frameEnd(int frameNumber);
   static void loopBegin(int num) {}
   static void loopEnd(int num) {}
   static void stateRestoreBegin();
