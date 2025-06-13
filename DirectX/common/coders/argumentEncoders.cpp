@@ -38,7 +38,7 @@ unsigned getSize(const OutputBufferArgument& arg) {
 }
 
 void encode(char* dest, unsigned& offset, const OutputBufferArgument& arg) {
-  auto* value = arg.captureValue ? &arg.captureValue : arg.value;
+  void* const* value = arg.captureValue ? &arg.captureValue : arg.value;
   if (value == nullptr) {
     // WA for nullptr input to ID3D12Resource::Map
     void* null{};
@@ -1287,47 +1287,6 @@ void encode(char* dest, unsigned& offset, const D3D12_PIPELINE_STATE_STREAM_DESC
 
   memcpy(dest + offset, &arg.rootSignatureKey, sizeof(arg.rootSignatureKey));
   offset += sizeof(arg.rootSignatureKey);
-}
-
-unsigned getSize(const PointerArgument<D3D12_HEAP_PROPERTIES>& arg) {
-  if (!arg.value) {
-    return sizeof(void*);
-  }
-  return sizeof(void*) + sizeof(D3D12_HEAP_PROPERTIES);
-}
-
-void encode(char* dest, unsigned& offset, const PointerArgument<D3D12_HEAP_PROPERTIES>& arg) {
-  if (encodeNullPtr(dest, offset, arg)) {
-    return;
-  }
-
-  memcpy(dest + offset, arg.value, sizeof(D3D12_HEAP_PROPERTIES));
-  offset += sizeof(D3D12_HEAP_PROPERTIES);
-}
-
-unsigned getSize(const PointerArgument<D3D12_HEAP_DESC>& arg) {
-  if (!arg.value) {
-    return sizeof(void*);
-  }
-  return sizeof(void*) + sizeof(D3D12_HEAP_DESC);
-}
-
-void encode(char* dest, unsigned& offset, const PointerArgument<D3D12_HEAP_DESC>& arg) {
-  if (encodeNullPtr(dest, offset, arg)) {
-    return;
-  }
-
-  memcpy(dest + offset, arg.value, sizeof(D3D12_HEAP_DESC));
-  offset += sizeof(D3D12_HEAP_DESC);
-}
-
-unsigned getSize(const Argument<D3D12_HEAP_FLAGS>& arg) {
-  return sizeof(D3D12_HEAP_FLAGS);
-}
-
-void encode(char* dest, unsigned& offset, const Argument<D3D12_HEAP_FLAGS>& arg) {
-  memcpy(dest + offset, &arg.value, sizeof(D3D12_HEAP_FLAGS));
-  offset += sizeof(D3D12_HEAP_FLAGS);
 }
 
 unsigned getSize(const PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS>& arg) {

@@ -119,6 +119,7 @@ target_include_directories(DirectX_recorder PRIVATE ${ARGS_SOURCE_DIR})
 target_include_directories(DirectX_player PRIVATE ${ARGS_SOURCE_DIR})
 
 target_link_libraries(DirectX_subcapture PRIVATE
+    DirectX_layer_interface
     DirectX_dstorage_resources
 	DirectX_utils
 	DirectX_coders
@@ -130,6 +131,7 @@ target_link_libraries(DirectX_execution_serialization PRIVATE
 )
 
 target_link_libraries(DirectX_recorder PRIVATE
+    DirectX_layer_interface
     DirectX_api_debug
     DirectX_trace
     DirectX_dstorage_resources
@@ -141,6 +143,7 @@ target_link_libraries(DirectX_recorder PRIVATE
 )
 
 target_link_libraries(DirectX_player PRIVATE
+    DirectX_layer_interface
     DirectX_api_debug
     DirectX_trace
     DirectX_resource_dumping

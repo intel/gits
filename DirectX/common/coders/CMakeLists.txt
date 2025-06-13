@@ -10,7 +10,6 @@ add_library(DirectX_coders STATIC)
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(COMMON_SRC
-  ${SRC_DIR}/intelExtensions.h
   ${SRC_DIR}/dmlCodersCustom.h
   ${SRC_DIR}/dmlCodersCustom.cpp
   ${SRC_DIR}/dmlCodersAuto.h
