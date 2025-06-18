@@ -27,6 +27,10 @@ public:
     return "DirectX";
   }
 
+  void RegisterEvents() override {
+    commonEventsHandler_.RegisterEvents();
+  }
+
 private:
   CommonEventsHandler commonEventsHandler_;
 };

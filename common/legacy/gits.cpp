@@ -743,6 +743,9 @@ CBinIStream& operator>>(CBinIStream& stream, CFile& file) {
     stream.ReadHelper(reinterpret_cast<char*>(&api3D), sizeof(ApisIface::TApi));
     if (api3D != ApisIface::TApi::ApiNotSet) {
       CGits::Instance().SetApi3D(api3D);
+      if (api3D == ApisIface::TApi::DirectX) {
+        CGits::Instance().Library(gits::CLibrary::TId::ID_DirectX).RegisterEvents();
+      }
     }
 
     ApisIface::TApi apiCompute = ApisIface::TApi::ApiNotSet;

@@ -14,8 +14,10 @@
 namespace gits {
 namespace DirectX {
 
-CommonEventsHandler::CommonEventsHandler() {
-  const_cast<gits::Configuration&>(Configurator::Get()).common.shared.useEvents = true;
+CommonEventsHandler::CommonEventsHandler() {}
+
+void CommonEventsHandler::RegisterEvents() {
+  Configurator::GetMutable().common.shared.useEvents = true;
   gits::Events events{};
   events.frameBegin = frameBegin;
   events.frameEnd = frameEnd;

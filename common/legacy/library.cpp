@@ -27,4 +27,6 @@ CState* CLibrary::StateCreate() const {
   return _func();
 }
 
+void CLibrary::RegisterEvents() {}
+
 } // namespace gits

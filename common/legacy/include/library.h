@@ -70,6 +70,7 @@ public:
   CState* StateCreate() const;
 
   virtual const char* Name() const = 0;
+  virtual void RegisterEvents();
 };
 
 } // namespace gits

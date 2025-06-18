@@ -14,6 +14,7 @@ namespace DirectX {
 class CommonEventsHandler {
 public:
   CommonEventsHandler();
+  void RegisterEvents();
 
 private:
   static void frameBegin(int frameNumber) {}
