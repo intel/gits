@@ -56,7 +56,8 @@ void GpuAddressService::createPlacedResource(unsigned resourceKey,
                                              ID3D12Resource* resource,
                                              unsigned heapKey,
                                              ID3D12Heap* heap,
-                                             UINT64 heapOffset) {
+                                             UINT64 heapOffset,
+                                             bool raytracingAS) {
   D3D12_HEAP_DESC heapDesc = heap->GetDesc();
   if (heapDesc.Flags & D3D12_HEAP_FLAG_DENY_BUFFERS) {
     return;
@@ -80,6 +81,7 @@ void GpuAddressService::createPlacedResource(unsigned resourceKey,
   resourceInfo->end = resourceInfo->start + desc.Width;
   resourceInfo->heapInfo = heapInfo;
   resourceInfo->heapKey = heapKey;
+  resourceInfo->raytracingAS = raytracingAS;
 
   GITS_ASSERT(resourceInfo->start);
 
@@ -200,7 +202,7 @@ D3D12_GPU_VIRTUAL_ADDRESS GpuAddressService::getHeapGPUVirtualAddress(ID3D12Heap
 }
 
 GpuAddressService::GpuAddressInfo GpuAddressService::getGpuAddressInfo(
-    D3D12_GPU_VIRTUAL_ADDRESS gpuAddress) {
+    D3D12_GPU_VIRTUAL_ADDRESS gpuAddress, bool raytracingAS) {
 
   if (!gpuAddress) {
     return GpuAddressInfo{};
@@ -231,7 +233,7 @@ GpuAddressService::GpuAddressInfo GpuAddressService::getGpuAddressInfo(
       }
     }
     if (heapInfo) {
-      resourceInfo = getResourceFromHeap(heapInfo, gpuAddress);
+      resourceInfo = getResourceFromHeap(heapInfo, gpuAddress, raytracingAS);
     }
   }
 
@@ -264,7 +266,7 @@ GpuAddressService::GpuAddressInfo GpuAddressService::getGpuAddressInfo(
 }
 
 GpuAddressService::ResourceInfo* GpuAddressService::getResourceFromHeap(
-    HeapInfoLayered* heapInfo, D3D12_GPU_VIRTUAL_ADDRESS gpuAddress) {
+    HeapInfoLayered* heapInfo, D3D12_GPU_VIRTUAL_ADDRESS gpuAddress, bool raytracingAS) {
 
   PlacedResourceInfo* resourceInfo = nullptr;
   for (unsigned layerIndex = 0; layerIndex < heapInfo->resources.size(); ++layerIndex) {
@@ -283,8 +285,10 @@ GpuAddressService::ResourceInfo* GpuAddressService::getResourceFromHeap(
   if (resourceInfo && !resourceInfo->intersecting.empty()) {
     PlacedResourceInfo* selectedResource = resourceInfo;
     for (PlacedResourceInfo* resource : resourceInfo->intersecting) {
-      if (gpuAddress >= resource->start && gpuAddress < resource->end) {
-        if (resource->end > selectedResource->end) {
+      if (gpuAddress >= resource->start && gpuAddress < resource->end &&
+          resource->raytracingAS == raytracingAS) {
+        if (resource->end > selectedResource->end ||
+            selectedResource->raytracingAS != raytracingAS) {
           selectedResource = resource;
         }
       }

@@ -172,24 +172,26 @@ void CaptureCustomizationLayer::post(ID3D12Device10CreateReservedResource2Comman
 void CaptureCustomizationLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
   if (c.result_.value == S_OK) {
     ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.ppvResource_.value);
-    manager_.getGpuAddressService().createPlacedResource(c.ppvResource_.key, resource, c.pHeap_.key,
-                                                         c.pHeap_.value, c.HeapOffset_.value);
+    manager_.getGpuAddressService().createPlacedResource(
+        c.ppvResource_.key, resource, c.pHeap_.key, c.pHeap_.value, c.HeapOffset_.value,
+        c.InitialState_.value == D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
   }
 }
 
 void CaptureCustomizationLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
   if (c.result_.value == S_OK) {
     ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.ppvResource_.value);
-    manager_.getGpuAddressService().createPlacedResource(c.ppvResource_.key, resource, c.pHeap_.key,
-                                                         c.pHeap_.value, c.HeapOffset_.value);
+    manager_.getGpuAddressService().createPlacedResource(
+        c.ppvResource_.key, resource, c.pHeap_.key, c.pHeap_.value, c.HeapOffset_.value,
+        c.InitialState_.value == D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
   }
 }
 
 void CaptureCustomizationLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
   if (c.result_.value == S_OK) {
     ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.ppvResource_.value);
-    manager_.getGpuAddressService().createPlacedResource(c.ppvResource_.key, resource, c.pHeap_.key,
-                                                         c.pHeap_.value, c.HeapOffset_.value);
+    manager_.getGpuAddressService().createPlacedResource(
+        c.ppvResource_.key, resource, c.pHeap_.key, c.pHeap_.value, c.HeapOffset_.value, false);
   }
 }
 
@@ -307,7 +309,7 @@ void CaptureCustomizationLayer::pre(ID3D12DeviceCreateShaderResourceViewCommand&
   if (c.pDesc_.value &&
       c.pDesc_.value->ViewDimension == D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE) {
     GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-        c.pDesc_.value->RaytracingAccelerationStructure.Location);
+        c.pDesc_.value->RaytracingAccelerationStructure.Location, true);
     c.pDesc_.raytracingLocationKey = info.resourceKey;
     c.pDesc_.raytracingLocationOffset = info.offset;
   }
@@ -695,13 +697,13 @@ void CaptureCustomizationLayer::pre(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
   {
     GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-        c.pDesc_.value->DestAccelerationStructureData);
+        c.pDesc_.value->DestAccelerationStructureData, true);
     c.pDesc_.destAccelerationStructureKey = info.resourceKey;
     c.pDesc_.destAccelerationStructureOffset = info.offset;
   }
   if (c.pDesc_.value->SourceAccelerationStructureData) {
     GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-        c.pDesc_.value->SourceAccelerationStructureData);
+        c.pDesc_.value->SourceAccelerationStructureData, true);
     c.pDesc_.sourceAccelerationStructureKey = info.resourceKey;
     c.pDesc_.sourceAccelerationStructureOffset = info.offset;
   }
@@ -764,14 +766,14 @@ void CaptureCustomizationLayer::pre(
 void CaptureCustomizationLayer::pre(
     ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
   {
-    GpuAddressService::GpuAddressInfo info =
-        manager_.getGpuAddressService().getGpuAddressInfo(c.DestAccelerationStructureData_.value);
+    GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
+        c.DestAccelerationStructureData_.value, true);
     c.DestAccelerationStructureData_.interfaceKey = info.resourceKey;
     c.DestAccelerationStructureData_.offset = info.offset;
   }
   {
-    GpuAddressService::GpuAddressInfo info =
-        manager_.getGpuAddressService().getGpuAddressInfo(c.SourceAccelerationStructureData_.value);
+    GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
+        c.SourceAccelerationStructureData_.value, true);
     c.SourceAccelerationStructureData_.interfaceKey = info.resourceKey;
     c.SourceAccelerationStructureData_.offset = info.offset;
   }

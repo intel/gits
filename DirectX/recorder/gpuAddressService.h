@@ -30,9 +30,10 @@ public:
                             ID3D12Resource* resource,
                             unsigned heapKey,
                             ID3D12Heap* heap,
-                            UINT64 heapOffset);
+                            UINT64 heapOffset,
+                            bool raytracingAS);
   void createHeap(unsigned heapKey, ID3D12Heap* heap);
-  GpuAddressInfo getGpuAddressInfo(UINT64 gpuAddress);
+  GpuAddressInfo getGpuAddressInfo(UINT64 gpuAddress, bool raytracingAS = false);
   void destroyInterface(unsigned interfaceKey);
 
 private:
@@ -51,6 +52,7 @@ private:
     HeapInfo* heapInfo;
     unsigned heapKey;
     unsigned layer;
+    bool raytracingAS;
     std::unordered_set<PlacedResourceInfo*> intersecting;
   };
   struct HeapInfoLayered : public HeapInfo {
@@ -69,7 +71,8 @@ private:
 
 private:
   ResourceInfo* getResourceFromHeap(HeapInfoLayered* heapInfo,
-                                    D3D12_GPU_VIRTUAL_ADDRESS gpuAddress);
+                                    D3D12_GPU_VIRTUAL_ADDRESS gpuAddress,
+                                    bool raytracingAS);
   D3D12_GPU_VIRTUAL_ADDRESS getHeapGPUVirtualAddress(ID3D12Heap* heap);
 };
 
