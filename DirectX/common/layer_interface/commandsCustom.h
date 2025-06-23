@@ -186,7 +186,8 @@ public:
         SrcDepthPitch_{SrcDepthPitch} {
     UINT depth = (pDstBox) ? (pDstBox->back - pDstBox->front) : 1;
     size_t pSrcDataSize = SrcDepthPitch * depth;
-    pSrcData_ = {pSrcData, pSrcDataSize};
+    pSrcData_.value = const_cast<void*>(pSrcData);
+    pSrcData_.size = pSrcDataSize;
   }
   ID3D12ResourceWriteToSubresourceCommand()
       : Command(CommandId::ID_ID3D12RESOURCE_WRITETOSUBRESOURCE) {}
@@ -218,7 +219,8 @@ public:
         pSrcBox_{pSrcBox} {
     UINT depth = (pSrcBox) ? (pSrcBox->back - pSrcBox->front) : 1;
     size_t pDstDataSize = DstDepthPitch * depth;
-    pDstData_ = {pDstData, pDstDataSize};
+    pDstData_.value = const_cast<void*>(pDstData);
+    pDstData_.size = pDstDataSize;
   }
   ID3D12ResourceReadFromSubresourceCommand()
       : Command(CommandId::ID_ID3D12RESOURCE_READFROMSUBRESOURCE) {}

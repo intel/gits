@@ -26,7 +26,7 @@ BufferArgument::BufferArgument(const BufferArgument& arg) {
 
 BufferArgument::~BufferArgument() {
   if (copy) {
-    delete value;
+    delete static_cast<uint8_t*>(value);
   }
 }
 
@@ -333,7 +333,7 @@ D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument::D3D12_GRAPHICS_PIPELINE_STATE_DESC_
   if (value->StreamOutput.pBufferStrides) {
     value->StreamOutput.pBufferStrides = new UINT[value->StreamOutput.NumEntries];
     memcpy(const_cast<UINT*>(value->StreamOutput.pBufferStrides),
-           value->StreamOutput.pBufferStrides, value->StreamOutput.NumEntries * sizeof(UINT));
+           arg.value->StreamOutput.pBufferStrides, value->StreamOutput.NumEntries * sizeof(UINT));
   }
   value->InputLayout.pInputElementDescs =
       new D3D12_INPUT_ELEMENT_DESC[arg.value->InputLayout.NumElements];
@@ -356,11 +356,11 @@ D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument::D3D12_GRAPHICS_PIPELINE_STATE_DESC_
 
 D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument::~D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument() {
   if (copy) {
-    delete[] value->VS.pShaderBytecode;
-    delete[] value->PS.pShaderBytecode;
-    delete[] value->DS.pShaderBytecode;
-    delete[] value->HS.pShaderBytecode;
-    delete[] value->GS.pShaderBytecode;
+    delete[] static_cast<const uint8_t*>(value->VS.pShaderBytecode);
+    delete[] static_cast<const uint8_t*>(value->PS.pShaderBytecode);
+    delete[] static_cast<const uint8_t*>(value->DS.pShaderBytecode);
+    delete[] static_cast<const uint8_t*>(value->HS.pShaderBytecode);
+    delete[] static_cast<const uint8_t*>(value->GS.pShaderBytecode);
     for (unsigned i = 0; i < value->StreamOutput.NumEntries; ++i) {
       delete[] value->StreamOutput.pSODeclaration[i].SemanticName;
     }
@@ -370,7 +370,7 @@ D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument::~D3D12_GRAPHICS_PIPELINE_STATE_DESC
       delete[] value->InputLayout.pInputElementDescs[i].SemanticName;
     }
     delete[] value->InputLayout.pInputElementDescs;
-    delete[] value->CachedPSO.pCachedBlob;
+    delete[] static_cast<const uint8_t*>(value->CachedPSO.pCachedBlob);
     delete value;
   }
 }
@@ -398,8 +398,8 @@ D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument::D3D12_COMPUTE_PIPELINE_STATE_DESC_Ar
 
 D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument::~D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument() {
   if (copy) {
-    delete[] value->CS.pShaderBytecode;
-    delete[] value->CachedPSO.pCachedBlob;
+    delete[] static_cast<const uint8_t*>(value->CS.pShaderBytecode);
+    delete[] static_cast<const uint8_t*>(value->CachedPSO.pCachedBlob);
     delete value;
   }
 }
@@ -768,42 +768,42 @@ D3D12_PIPELINE_STATE_STREAM_DESC_Argument::~D3D12_PIPELINE_STATE_STREAM_DESC_Arg
         break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_VS: {
         D3D12_SHADER_BYTECODE& desc = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_VS*>(data);
-        delete[] desc.pShaderBytecode;
+        delete[] static_cast<const uint8_t*>(desc.pShaderBytecode);
         offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_VS);
       } break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_PS: {
         D3D12_SHADER_BYTECODE& desc = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_PS*>(data);
-        delete[] desc.pShaderBytecode;
+        delete[] static_cast<const uint8_t*>(desc.pShaderBytecode);
         offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_PS);
       } break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DS: {
         D3D12_SHADER_BYTECODE& desc = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_DS*>(data);
-        delete[] desc.pShaderBytecode;
+        delete[] static_cast<const uint8_t*>(desc.pShaderBytecode);
         offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_DS);
       } break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_HS: {
         D3D12_SHADER_BYTECODE& desc = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_HS*>(data);
-        delete[] desc.pShaderBytecode;
+        delete[] static_cast<const uint8_t*>(desc.pShaderBytecode);
         offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_HS);
       } break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_GS: {
         D3D12_SHADER_BYTECODE& desc = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_GS*>(data);
-        delete[] desc.pShaderBytecode;
+        delete[] static_cast<const uint8_t*>(desc.pShaderBytecode);
         offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_GS);
       } break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_CS: {
         D3D12_SHADER_BYTECODE& desc = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_CS*>(data);
-        delete[] desc.pShaderBytecode;
+        delete[] static_cast<const uint8_t*>(desc.pShaderBytecode);
         offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_CS);
       } break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_AS: {
         D3D12_SHADER_BYTECODE& desc = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_AS*>(data);
-        delete[] desc.pShaderBytecode;
+        delete[] static_cast<const uint8_t*>(desc.pShaderBytecode);
         offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_AS);
       } break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_MS: {
         D3D12_SHADER_BYTECODE& desc = *static_cast<CD3DX12_PIPELINE_STATE_STREAM_MS*>(data);
-        delete[] desc.pShaderBytecode;
+        delete[] static_cast<const uint8_t*>(desc.pShaderBytecode);
         offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_MS);
       } break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_STREAM_OUTPUT: {
@@ -888,7 +888,7 @@ D3D12_PIPELINE_STATE_STREAM_DESC_Argument::~D3D12_PIPELINE_STATE_STREAM_DESC_Arg
       } break;
       }
     }
-    delete[] value->pPipelineStateSubobjectStream;
+    delete[] static_cast<const uint8_t*>(value->pPipelineStateSubobjectStream);
     delete value;
   }
 }
@@ -1458,9 +1458,9 @@ PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>::PointerArgument(
 PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>::~PointerArgument() {
   if (copy) {
     delete value->pD3D12Desc;
-    delete[] cs;
-    delete[] compileOptions;
-    delete[] internalOptions;
+    delete[] static_cast<const uint8_t*>(cs);
+    delete[] static_cast<const char*>(compileOptions);
+    delete[] static_cast<const char*>(internalOptions);
     delete value;
   }
 }
