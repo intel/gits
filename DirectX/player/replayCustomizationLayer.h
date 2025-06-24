@@ -23,12 +23,6 @@ class PlayerManager;
 class ReplayCustomizationLayer : public Layer {
 public:
   ReplayCustomizationLayer(PlayerManager& manager);
-  void post(StateRestoreBeginCommand& c) override {
-    stateRestorePhase_ = true;
-  }
-  void post(StateRestoreEndCommand& c) override {
-    stateRestorePhase_ = false;
-  }
   void post(IUnknownReleaseCommand& command) override;
   void post(IUnknownAddRefCommand& command) override;
   void pre(D3D12CreateDeviceCommand& command) override;
@@ -174,7 +168,6 @@ private:
   PlayerManager& manager_;
   PipelineLibraryService& pipelineLibraryService_;
   HANDLE waitForFenceEvent_{};
-  bool stateRestorePhase_{};
 };
 
 } // namespace DirectX
