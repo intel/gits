@@ -30,7 +30,8 @@ def generate_coders_files(context, out_path):
         'commandEncodersAuto.cpp',
         'commandDecodersAuto.h',
         'commandDecodersAuto.cpp',
-        'commandWritersAuto.h'
+        'commandWritersAuto.h',
+        'commandWritersFactoryAuto.cpp'
     ]
     for file_name in files_to_generate:
         generate_file(context | additional_context, file_name, out_path)

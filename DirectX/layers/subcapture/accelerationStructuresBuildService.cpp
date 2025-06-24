@@ -78,9 +78,8 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
     tlases_.insert(std::make_pair(state->destKey, state->destOffset));
   }
 
-  state->descEncoded.reset(new char[getSize(c.pDesc_)]);
-  unsigned offset{};
-  encode(state->descEncoded.get(), offset, c.pDesc_);
+  state->desc.reset(
+      new PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>(c.pDesc_));
 
   auto storeBuffer = [&](unsigned inputIndex, unsigned size) {
     unsigned inputKey = c.pDesc_.inputKeys[inputIndex];
@@ -204,7 +203,8 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
     createCommandQueue.pDesc_.value = &commandQueueDesc;
     createCommandQueue.riid_.value = IID_ID3D12CommandQueue;
     createCommandQueue.ppCommandQueue_.key = commandQueueKey_;
-    stateService_.recorder_.record(new ID3D12DeviceCreateCommandQueueWriter(createCommandQueue));
+    stateService_.getRecorder().record(
+        new ID3D12DeviceCreateCommandQueueWriter(createCommandQueue));
 
     commandAllocatorKey_ = stateService_.getUniqueObjectKey();
     ID3D12DeviceCreateCommandAllocatorCommand createCommandAllocator;
@@ -213,7 +213,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
     createCommandAllocator.type_.value = D3D12_COMMAND_LIST_TYPE_COPY;
     createCommandAllocator.riid_.value = IID_ID3D12CommandAllocator;
     createCommandAllocator.ppCommandAllocator_.key = commandAllocatorKey_;
-    stateService_.recorder_.record(
+    stateService_.getRecorder().record(
         new ID3D12DeviceCreateCommandAllocatorWriter(createCommandAllocator));
 
     ID3D12DeviceCreateCommandListCommand createCommandList;
@@ -225,7 +225,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
     createCommandList.pInitialState_.value = nullptr;
     createCommandList.riid_.value = IID_ID3D12CommandList;
     createCommandList.ppCommandList_.key = commandListKey_;
-    stateService_.recorder_.record(new ID3D12DeviceCreateCommandListWriter(createCommandList));
+    stateService_.getRecorder().record(new ID3D12DeviceCreateCommandListWriter(createCommandList));
 
     fenceKey_ = stateService_.getUniqueObjectKey();
     ID3D12DeviceCreateFenceCommand createFence;
@@ -235,7 +235,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
     createFence.Flags_.value = D3D12_FENCE_FLAG_NONE;
     createFence.riid_.value = IID_ID3D12Fence;
     createFence.ppFence_.key = fenceKey_;
-    stateService_.recorder_.record(new ID3D12DeviceCreateFenceWriter(createFence));
+    stateService_.getRecorder().record(new ID3D12DeviceCreateFenceWriter(createFence));
   }
 
   unsigned scratchResourceKey = stateService_.getUniqueObjectKey();
@@ -399,32 +399,32 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
           barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
           barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
           barrierCommand.pBarriers_.resourceKeys[0] = it.first;
-          stateService_.recorder_.record(
+          stateService_.getRecorder().record(
               new ID3D12GraphicsCommandListResourceBarrierWriter(barrierCommand));
         }
       }
 
-      PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC> descArg;
-      unsigned offset{};
-      decode(state->descEncoded.get(), offset, descArg);
+      state->desc->scratchAccelerationStructureKey = scratchResourceKey;
+      state->desc->scratchAccelerationStructureOffset = 0;
 
-      descArg.scratchAccelerationStructureKey = scratchResourceKey;
-      descArg.scratchAccelerationStructureOffset = 0;
-
-      ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand build;
-      build.key = state->commandKey;
-      build.object_.key = commandListKey_;
-      build.pDesc_ = std::move(descArg);
-      build.NumPostbuildInfoDescs_.value = 0;
-      build.pPostbuildInfoDescs_.value = nullptr;
-      recorder_.record(
-          new ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureWriter(build));
+      {
+        ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand build;
+        build.key = state->commandKey;
+        build.object_.key = commandListKey_;
+        build.pDesc_ = *state->desc;
+        build.pDesc_.copy = false;
+        build.NumPostbuildInfoDescs_.value = 0;
+        build.pPostbuildInfoDescs_.value = nullptr;
+        recorder_.record(
+            new ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureWriter(build));
+      }
 
       {
         ID3D12GraphicsCommandListCloseCommand commandListClose;
         commandListClose.key = stateService_.getUniqueCommandKey();
         commandListClose.object_.key = commandListKey_;
-        stateService_.recorder_.record(new ID3D12GraphicsCommandListCloseWriter(commandListClose));
+        stateService_.getRecorder().record(
+            new ID3D12GraphicsCommandListCloseWriter(commandListClose));
 
         ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
         executeCommandLists.key = stateService_.getUniqueCommandKey();
@@ -434,7 +434,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
         executeCommandLists.ppCommandLists_.size = 1;
         executeCommandLists.ppCommandLists_.keys.resize(1);
         executeCommandLists.ppCommandLists_.keys[0] = commandListKey_;
-        stateService_.recorder_.record(
+        stateService_.getRecorder().record(
             new ID3D12CommandQueueExecuteCommandListsWriter(executeCommandLists));
 
         ID3D12CommandQueueSignalCommand commandQueueSignal;
@@ -442,18 +442,19 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
         commandQueueSignal.object_.key = commandQueueKey_;
         commandQueueSignal.pFence_.key = fenceKey_;
         commandQueueSignal.Value_.value = ++recordedFenceValue_;
-        stateService_.recorder_.record(new ID3D12CommandQueueSignalWriter(commandQueueSignal));
+        stateService_.getRecorder().record(new ID3D12CommandQueueSignalWriter(commandQueueSignal));
 
         ID3D12FenceGetCompletedValueCommand getCompletedValue;
         getCompletedValue.key = stateService_.getUniqueCommandKey();
         getCompletedValue.object_.key = fenceKey_;
         getCompletedValue.result_.value = recordedFenceValue_;
-        stateService_.recorder_.record(new ID3D12FenceGetCompletedValueWriter(getCompletedValue));
+        stateService_.getRecorder().record(
+            new ID3D12FenceGetCompletedValueWriter(getCompletedValue));
 
         ID3D12CommandAllocatorResetCommand commandAllocatorReset;
         commandAllocatorReset.key = stateService_.getUniqueCommandKey();
         commandAllocatorReset.object_.key = commandAllocatorKey_;
-        stateService_.recorder_.record(
+        stateService_.getRecorder().record(
             new ID3D12CommandAllocatorResetWriter(commandAllocatorReset));
 
         ID3D12GraphicsCommandListResetCommand commandListReset;
@@ -461,13 +462,14 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
         commandListReset.object_.key = commandListKey_;
         commandListReset.pAllocator_.key = commandAllocatorKey_;
         commandListReset.pInitialState_.key = 0;
-        stateService_.recorder_.record(new ID3D12GraphicsCommandListResetWriter(commandListReset));
+        stateService_.getRecorder().record(
+            new ID3D12GraphicsCommandListResetWriter(commandListReset));
 
         for (unsigned uploadResourceKey : uploadBuffers) {
           IUnknownReleaseCommand releaseCommand;
           releaseCommand.key = stateService_.getUniqueCommandKey();
           releaseCommand.object_.key = uploadResourceKey;
-          stateService_.recorder_.record(new IUnknownReleaseWriter(releaseCommand));
+          stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommand));
         }
       }
     } else {
@@ -484,14 +486,15 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
       copy.SourceAccelerationStructureData_.interfaceKey = state->sourceAccelerationStructureKey;
       copy.SourceAccelerationStructureData_.offset = state->sourceAccelerationStructureOffset;
       copy.Mode_.value = state->mode;
-      stateService_.recorder_.record(
+      stateService_.getRecorder().record(
           new ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureWriter(copy));
 
       {
         ID3D12GraphicsCommandListCloseCommand commandListClose;
         commandListClose.key = stateService_.getUniqueCommandKey();
         commandListClose.object_.key = commandListKey_;
-        stateService_.recorder_.record(new ID3D12GraphicsCommandListCloseWriter(commandListClose));
+        stateService_.getRecorder().record(
+            new ID3D12GraphicsCommandListCloseWriter(commandListClose));
 
         ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
         executeCommandLists.key = stateService_.getUniqueCommandKey();
@@ -501,7 +504,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
         executeCommandLists.ppCommandLists_.size = 1;
         executeCommandLists.ppCommandLists_.keys.resize(1);
         executeCommandLists.ppCommandLists_.keys[0] = commandListKey_;
-        stateService_.recorder_.record(
+        stateService_.getRecorder().record(
             new ID3D12CommandQueueExecuteCommandListsWriter(executeCommandLists));
 
         ID3D12CommandQueueSignalCommand commandQueueSignal;
@@ -509,18 +512,19 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
         commandQueueSignal.object_.key = commandQueueKey_;
         commandQueueSignal.pFence_.key = fenceKey_;
         commandQueueSignal.Value_.value = ++recordedFenceValue_;
-        stateService_.recorder_.record(new ID3D12CommandQueueSignalWriter(commandQueueSignal));
+        stateService_.getRecorder().record(new ID3D12CommandQueueSignalWriter(commandQueueSignal));
 
         ID3D12FenceGetCompletedValueCommand getCompletedValue;
         getCompletedValue.key = stateService_.getUniqueCommandKey();
         getCompletedValue.object_.key = fenceKey_;
         getCompletedValue.result_.value = recordedFenceValue_;
-        stateService_.recorder_.record(new ID3D12FenceGetCompletedValueWriter(getCompletedValue));
+        stateService_.getRecorder().record(
+            new ID3D12FenceGetCompletedValueWriter(getCompletedValue));
 
         ID3D12CommandAllocatorResetCommand commandAllocatorReset;
         commandAllocatorReset.key = stateService_.getUniqueCommandKey();
         commandAllocatorReset.object_.key = commandAllocatorKey_;
-        stateService_.recorder_.record(
+        stateService_.getRecorder().record(
             new ID3D12CommandAllocatorResetWriter(commandAllocatorReset));
 
         ID3D12GraphicsCommandListResetCommand commandListReset;
@@ -528,7 +532,8 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
         commandListReset.object_.key = commandListKey_;
         commandListReset.pAllocator_.key = commandAllocatorKey_;
         commandListReset.pInitialState_.key = 0;
-        stateService_.recorder_.record(new ID3D12GraphicsCommandListResetWriter(commandListReset));
+        stateService_.getRecorder().record(
+            new ID3D12GraphicsCommandListResetWriter(commandListReset));
       }
     }
   }
@@ -536,7 +541,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
   IUnknownReleaseCommand release{};
   release.key = stateService_.getUniqueCommandKey();
   release.object_.key = scratchResourceKey;
-  stateService_.recorder_.record(new IUnknownReleaseWriter(release));
+  stateService_.getRecorder().record(new IUnknownReleaseWriter(release));
 
   restored_ = true;
 }

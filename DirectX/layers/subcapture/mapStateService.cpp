@@ -24,7 +24,7 @@ void MapStateService::restoreMapState() {
       c.pReadRange_.value = nullptr;
       c.ppData_.captureValue = itSubresource.second;
       c.ppData_.value = &itSubresource.second;
-      stateService_.recorder_.record(new ID3D12ResourceMapWriter(c));
+      stateService_.getRecorder().record(new ID3D12ResourceMapWriter(c));
     }
   }
 }

@@ -61,7 +61,7 @@ void gits::DirectX::ResidencyService::restoreResidency() {
       c.ppObjects_.keys = std::move(objectKeyRepeat);
       ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
       c.ppObjects_.value = &fakePtr;
-      stateService_.recorder_.record(new ID3D12DeviceMakeResidentWriter(c));
+      stateService_.getRecorder().record(new ID3D12DeviceMakeResidentWriter(c));
     } else if (residencyInfo.residencyCount == 0 && !residencyInfo.createdNotResident) {
       ID3D12DeviceEvictCommand c;
       c.key = stateService_.getUniqueCommandKey();
@@ -71,7 +71,7 @@ void gits::DirectX::ResidencyService::restoreResidency() {
       c.ppObjects_.keys = {objectKey};
       ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
       c.ppObjects_.value = &fakePtr;
-      stateService_.recorder_.record(new ID3D12DeviceEvictWriter(c));
+      stateService_.getRecorder().record(new ID3D12DeviceEvictWriter(c));
     }
   }
 }

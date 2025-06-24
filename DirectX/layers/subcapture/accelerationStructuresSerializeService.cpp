@@ -112,7 +112,8 @@ void AccelerationStructuresSerializeService::restoreAccelerationStructures() {
     createCommandQueue.pDesc_.value = &commandQueueDesc;
     createCommandQueue.riid_.value = IID_ID3D12CommandQueue;
     createCommandQueue.ppCommandQueue_.key = commandQueueKey_;
-    stateService_.recorder_.record(new ID3D12DeviceCreateCommandQueueWriter(createCommandQueue));
+    stateService_.getRecorder().record(
+        new ID3D12DeviceCreateCommandQueueWriter(createCommandQueue));
 
     commandAllocatorKey_ = stateService_.getUniqueObjectKey();
     ID3D12DeviceCreateCommandAllocatorCommand createCommandAllocator;
@@ -121,7 +122,7 @@ void AccelerationStructuresSerializeService::restoreAccelerationStructures() {
     createCommandAllocator.type_.value = D3D12_COMMAND_LIST_TYPE_COPY;
     createCommandAllocator.riid_.value = IID_ID3D12CommandAllocator;
     createCommandAllocator.ppCommandAllocator_.key = commandAllocatorKey_;
-    stateService_.recorder_.record(
+    stateService_.getRecorder().record(
         new ID3D12DeviceCreateCommandAllocatorWriter(createCommandAllocator));
 
     commandListKey_ = stateService_.getUniqueObjectKey();
@@ -134,7 +135,7 @@ void AccelerationStructuresSerializeService::restoreAccelerationStructures() {
     createCommandList.pInitialState_.value = nullptr;
     createCommandList.riid_.value = IID_ID3D12GraphicsCommandList4;
     createCommandList.ppCommandList_.key = commandListKey_;
-    stateService_.recorder_.record(new ID3D12DeviceCreateCommandListWriter(createCommandList));
+    stateService_.getRecorder().record(new ID3D12DeviceCreateCommandListWriter(createCommandList));
 
     fenceKey_ = stateService_.getUniqueObjectKey();
     ID3D12DeviceCreateFenceCommand createFence;
@@ -144,7 +145,7 @@ void AccelerationStructuresSerializeService::restoreAccelerationStructures() {
     createFence.Flags_.value = D3D12_FENCE_FLAG_NONE;
     createFence.riid_.value = IID_ID3D12Fence;
     createFence.ppFence_.key = fenceKey_;
-    stateService_.recorder_.record(new ID3D12DeviceCreateFenceWriter(createFence));
+    stateService_.getRecorder().record(new ID3D12DeviceCreateFenceWriter(createFence));
   }
 
   unsigned infoBufferSize =
@@ -299,7 +300,7 @@ void AccelerationStructuresSerializeService::restoreAccelerationStructures() {
     createUploadResource.pOptimizedClearValue_.value = nullptr;
     createUploadResource.riidResource_.value = IID_ID3D12Resource;
     createUploadResource.ppvResource_.key = uploadResourceKey;
-    stateService_.recorder_.record(
+    stateService_.getRecorder().record(
         new ID3D12DeviceCreateCommittedResourceWriter(createUploadResource));
 
     void* mappedData{};
@@ -313,7 +314,7 @@ void AccelerationStructuresSerializeService::restoreAccelerationStructures() {
     mapCommand.pReadRange_.value = nullptr;
     mapCommand.ppData_.captureValue = stateService_.getUniqueFakePointer();
     mapCommand.ppData_.value = &mapCommand.ppData_.captureValue;
-    stateService_.recorder_.record(new ID3D12ResourceMapWriter(mapCommand));
+    stateService_.getRecorder().record(new ID3D12ResourceMapWriter(mapCommand));
 
     MappedDataMetaCommand metaCommand;
     metaCommand.key = stateService_.getUniqueCommandKey();
@@ -322,14 +323,14 @@ void AccelerationStructuresSerializeService::restoreAccelerationStructures() {
     metaCommand.offset_.value = 0;
     metaCommand.data_.value = mappedData;
     metaCommand.data_.size = resourceDesc.Width;
-    stateService_.recorder_.record(new MappedDataMetaWriter(metaCommand));
+    stateService_.getRecorder().record(new MappedDataMetaWriter(metaCommand));
 
     ID3D12ResourceUnmapCommand unmapCommand;
     unmapCommand.key = stateService_.getUniqueCommandKey();
     unmapCommand.object_.key = uploadResourceKey;
     unmapCommand.Subresource_.value = 0;
     unmapCommand.pWrittenRange_.value = nullptr;
-    stateService_.recorder_.record(new ID3D12ResourceUnmapWriter(unmapCommand));
+    stateService_.getRecorder().record(new ID3D12ResourceUnmapWriter(unmapCommand));
 
     serializedStagingResource->Unmap(0, nullptr);
 
@@ -343,13 +344,13 @@ void AccelerationStructuresSerializeService::restoreAccelerationStructures() {
     copyASCommand.SourceAccelerationStructureData_.interfaceKey = uploadResourceKey;
     copyASCommand.SourceAccelerationStructureData_.offset = 0;
     copyASCommand.Mode_.value = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_DESERIALIZE;
-    stateService_.recorder_.record(
+    stateService_.getRecorder().record(
         new ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureWriter(copyASCommand));
 
     ID3D12GraphicsCommandListCloseCommand commandListClose;
     commandListClose.key = stateService_.getUniqueCommandKey();
     commandListClose.object_.key = commandListKey_;
-    stateService_.recorder_.record(new ID3D12GraphicsCommandListCloseWriter(commandListClose));
+    stateService_.getRecorder().record(new ID3D12GraphicsCommandListCloseWriter(commandListClose));
 
     ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
     executeCommandLists.key = stateService_.getUniqueCommandKey();
@@ -359,7 +360,7 @@ void AccelerationStructuresSerializeService::restoreAccelerationStructures() {
     executeCommandLists.ppCommandLists_.size = 1;
     executeCommandLists.ppCommandLists_.keys.resize(1);
     executeCommandLists.ppCommandLists_.keys[0] = commandListKey_;
-    stateService_.recorder_.record(
+    stateService_.getRecorder().record(
         new ID3D12CommandQueueExecuteCommandListsWriter(executeCommandLists));
 
     ID3D12CommandQueueSignalCommand commandQueueSignal;
@@ -367,30 +368,31 @@ void AccelerationStructuresSerializeService::restoreAccelerationStructures() {
     commandQueueSignal.object_.key = commandQueueKey_;
     commandQueueSignal.pFence_.key = fenceKey_;
     commandQueueSignal.Value_.value = ++recordedFenceValue_;
-    stateService_.recorder_.record(new ID3D12CommandQueueSignalWriter(commandQueueSignal));
+    stateService_.getRecorder().record(new ID3D12CommandQueueSignalWriter(commandQueueSignal));
 
     ID3D12FenceGetCompletedValueCommand getCompletedValue;
     getCompletedValue.key = stateService_.getUniqueCommandKey();
     getCompletedValue.object_.key = fenceKey_;
     getCompletedValue.result_.value = recordedFenceValue_;
-    stateService_.recorder_.record(new ID3D12FenceGetCompletedValueWriter(getCompletedValue));
+    stateService_.getRecorder().record(new ID3D12FenceGetCompletedValueWriter(getCompletedValue));
 
     ID3D12CommandAllocatorResetCommand commandAllocatorReset;
     commandAllocatorReset.key = stateService_.getUniqueCommandKey();
     commandAllocatorReset.object_.key = commandAllocatorKey_;
-    stateService_.recorder_.record(new ID3D12CommandAllocatorResetWriter(commandAllocatorReset));
+    stateService_.getRecorder().record(
+        new ID3D12CommandAllocatorResetWriter(commandAllocatorReset));
 
     ID3D12GraphicsCommandListResetCommand commandListReset;
     commandListReset.key = stateService_.getUniqueCommandKey();
     commandListReset.object_.key = commandListKey_;
     commandListReset.pAllocator_.key = commandAllocatorKey_;
     commandListReset.pInitialState_.key = 0;
-    stateService_.recorder_.record(new ID3D12GraphicsCommandListResetWriter(commandListReset));
+    stateService_.getRecorder().record(new ID3D12GraphicsCommandListResetWriter(commandListReset));
 
     IUnknownReleaseCommand releaseCommand;
     releaseCommand.key = stateService_.getUniqueCommandKey();
     releaseCommand.object_.key = uploadResourceKey;
-    stateService_.recorder_.record(new IUnknownReleaseWriter(releaseCommand));
+    stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommand));
 
     ++index;
   }

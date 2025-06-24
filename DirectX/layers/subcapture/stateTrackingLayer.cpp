@@ -74,17 +74,17 @@ void StateTrackingLayer::setAsChildInParent(unsigned parentKey, unsigned childKe
 bool StateTrackingLayer::isResourceHeapMappable(unsigned heapKey,
                                                 const D3D12_TEXTURE_LAYOUT& textureLayout) {
   ObjectState* state = stateService_.getState(heapKey);
-  if (state->id == ObjectState::D3D12_HEAP) {
-    D3D12HeapState* heapState = static_cast<D3D12HeapState*>(state);
-    return isResourceHeapMappable(heapState->desc.Properties, textureLayout);
-  } else if (state->id == ObjectState::D3D12_HEAP1) {
-    D3D12Heap1State* heapState = static_cast<D3D12Heap1State*>(state);
-    return isResourceHeapMappable(heapState->desc.Properties, textureLayout);
-  } else if (state->id == ObjectState::D3D12_HEAPFROMADDRESS) {
+  if (state->creationCommand->getId() == CommandId::ID_ID3D12DEVICE_CREATEHEAP) {
+    auto* command = static_cast<ID3D12DeviceCreateHeapCommand*>(state->creationCommand.get());
+    return isResourceHeapMappable(command->pDesc_.value->Properties, textureLayout);
+  } else if (state->creationCommand->getId() == CommandId::ID_ID3D12DEVICE4_CREATEHEAP1) {
+    auto* command = static_cast<ID3D12DeviceCreateHeapCommand*>(state->creationCommand.get());
+    return isResourceHeapMappable(command->pDesc_.value->Properties, textureLayout);
+  } else if (state->creationCommand->getId() == CommandId::ID_CREATE_HEAP_ALLOCATION) {
     return true;
-  } else if (state->id == ObjectState::D3D12_INTC_HEAP) {
-    D3D12INTCHeapState* heapState = static_cast<D3D12INTCHeapState*>(state);
-    return isResourceHeapMappable(heapState->d3dDesc.Properties, textureLayout);
+  } else if (state->creationCommand->getId() == CommandId::INTC_D3D12_CREATEHEAP) {
+    auto* command = static_cast<INTC_D3D12_CreateHeapCommand*>(state->creationCommand.get());
+    return isResourceHeapMappable(command->pDesc_.value->pD3D12Desc->Properties, textureLayout);
   } else {
     GITS_ASSERT(0 && "Unexpected state type");
   }
@@ -157,15 +157,17 @@ void StateTrackingLayer::releaseSwapChainBuffers(unsigned key, unsigned referenc
     return;
   }
 
-  auto* state = stateService_.getState(key);
-  if (!state || state->id != ObjectState::DXGI_SWAPCHAINBUFFER) {
+  ObjectState* state = stateService_.getState(key);
+  if (!state || state->creationCommand->getId() != CommandId::ID_IDXGISWAPCHAIN_GETBUFFER) {
     return;
   }
 
   // SwapChain buffers share the same reference count
   // Remove all buffers from the same SwapChain if one of them has 0 references
-  auto* bufState = static_cast<DXGISwapChainBufferState*>(state);
-  for (unsigned bufferKey : swapchainBuffers_[bufState->swapChainKey]) {
+  IDXGISwapChainGetBufferCommand* command =
+      static_cast<IDXGISwapChainGetBufferCommand*>(state->creationCommand.get());
+  unsigned swapChainKey = command->object_.key;
+  for (unsigned bufferKey : swapchainBuffers_[swapChainKey]) {
     if (bufferKey == key) {
       continue;
     }
@@ -173,7 +175,7 @@ void StateTrackingLayer::releaseSwapChainBuffers(unsigned key, unsigned referenc
     descriptorService_.removeState(bufferKey);
     stateService_.releaseObject(bufferKey, 0);
   }
-  swapchainBuffers_.erase(bufState->swapChainKey);
+  swapchainBuffers_.erase(swapChainKey);
 }
 
 void StateTrackingLayer::post(IUnknownAddRefCommand& c) {
@@ -198,15 +200,16 @@ void StateTrackingLayer::post(IUnknownQueryInterfaceCommand& c) {
     state->key = c.ppvObject_.key;
 
     setAsChildInParent(state->parentKey, state->key);
+    state->creationCommand.reset(new IUnknownQueryInterfaceCommand(c));
     stateService_.storeState(state);
   } else if ((riid == __uuidof(IDStorageCustomDecompressionQueue)) ||
              (riid == __uuidof(IDStorageCustomDecompressionQueue1))) {
-    DStorageCustomDecompressionQueueState* state = new DStorageCustomDecompressionQueueState();
+    ObjectState* state = new ObjectState();
     state->parentKey = c.object_.key;
     state->key = c.ppvObject_.key;
-    state->iid = riid;
 
     setAsChildInParent(state->parentKey, state->key);
+    state->creationCommand.reset(new IUnknownQueryInterfaceCommand(c));
     stateService_.storeState(state);
   }
 }
@@ -215,11 +218,10 @@ void StateTrackingLayer::post(CreateDXGIFactoryCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  DXGIFactoryState* state = new DXGIFactoryState();
+  ObjectState* state = new ObjectState();
   state->key = c.ppFactory_.key;
   state->object = static_cast<IUnknown*>(*c.ppFactory_.value);
-  state->flags = 0;
-  state->iid = c.riid_.value;
+  state->creationCommand.reset(new CreateDXGIFactoryCommand(c));
   stateService_.storeState(state);
 }
 
@@ -227,11 +229,10 @@ void StateTrackingLayer::post(CreateDXGIFactory1Command& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  DXGIFactoryState* state = new DXGIFactoryState();
+  ObjectState* state = new ObjectState();
   state->key = c.ppFactory_.key;
   state->object = static_cast<IUnknown*>(*c.ppFactory_.value);
-  state->flags = 0;
-  state->iid = c.riid_.value;
+  state->creationCommand.reset(new CreateDXGIFactory1Command(c));
   stateService_.storeState(state);
 }
 
@@ -239,11 +240,10 @@ void StateTrackingLayer::post(CreateDXGIFactory2Command& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  DXGIFactoryState* state = new DXGIFactoryState();
+  ObjectState* state = new ObjectState();
   state->key = c.ppFactory_.key;
   state->object = static_cast<IUnknown*>(*c.ppFactory_.value);
-  state->flags = c.Flags_.value;
-  state->iid = c.riid_.value;
+  state->creationCommand.reset(new CreateDXGIFactory2Command(c));
   stateService_.storeState(state);
 }
 
@@ -251,13 +251,11 @@ void StateTrackingLayer::post(IDXGIFactoryEnumAdaptersCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  DXGIAdapterState* state = new DXGIAdapterState();
+  ObjectState* state = new ObjectState();
   state->parentKey = c.object_.key;
   state->key = c.ppAdapter_.key;
-  state->object = *c.ppAdapter_.value;
-  state->adapter = c.Adapter_.value;
-  state->gpuPreference = DXGI_GPU_PREFERENCE_UNSPECIFIED;
-  state->iid = IID_IDXGIAdapter;
+  state->object = static_cast<IUnknown*>(*c.ppAdapter_.value);
+  state->creationCommand.reset(new IDXGIFactoryEnumAdaptersCommand(c));
   stateService_.storeState(state);
 
   setAsChildInParent(state->parentKey, state->key);
@@ -267,13 +265,11 @@ void StateTrackingLayer::post(IDXGIFactory1EnumAdapters1Command& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  DXGIAdapterState* state = new DXGIAdapterState();
+  ObjectState* state = new ObjectState();
   state->parentKey = c.object_.key;
   state->key = c.ppAdapter_.key;
-  state->object = *c.ppAdapter_.value;
-  state->adapter = c.Adapter_.value;
-  state->gpuPreference = DXGI_GPU_PREFERENCE_UNSPECIFIED;
-  state->iid = IID_IDXGIAdapter;
+  state->object = static_cast<IUnknown*>(*c.ppAdapter_.value);
+  state->creationCommand.reset(new IDXGIFactory1EnumAdapters1Command(c));
   stateService_.storeState(state);
 
   setAsChildInParent(state->parentKey, state->key);
@@ -283,13 +279,11 @@ void StateTrackingLayer::post(IDXGIFactory6EnumAdapterByGpuPreferenceCommand& c)
   if (c.result_.value != S_OK) {
     return;
   }
-  DXGIAdapterState* state = new DXGIAdapterState();
+  ObjectState* state = new ObjectState();
   state->parentKey = c.object_.key;
   state->key = c.ppvAdapter_.key;
   state->object = static_cast<IUnknown*>(*c.ppvAdapter_.value);
-  state->adapter = c.Adapter_.value;
-  state->gpuPreference = c.GpuPreference_.value;
-  state->iid = c.riid_.value;
+  state->creationCommand.reset(new IDXGIFactory6EnumAdapterByGpuPreferenceCommand(c));
   stateService_.storeState(state);
 
   setAsChildInParent(state->parentKey, state->key);
@@ -299,12 +293,11 @@ void StateTrackingLayer::post(IDXGIFactory4EnumAdapterByLuidCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  DXGIAdapterByLuidState* state = new DXGIAdapterByLuidState();
+  ObjectState* state = new ObjectState();
   state->parentKey = c.object_.key;
   state->key = c.ppvAdapter_.key;
   state->object = static_cast<IUnknown*>(*c.ppvAdapter_.value);
-  state->adapterLuid = c.AdapterLuid_.value;
-  state->iid = c.riid_.value;
+  state->creationCommand.reset(new IDXGIFactory4EnumAdapterByLuidCommand(c));
   stateService_.storeState(state);
 
   setAsChildInParent(state->parentKey, state->key);
@@ -314,11 +307,10 @@ void StateTrackingLayer::post(IDXGIObjectGetParentCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  DXGIGetParentState* state = new DXGIGetParentState();
-  state->objectKey = c.object_.key;
+  ObjectState* state = new ObjectState();
   state->key = c.ppParent_.key;
   state->object = static_cast<IUnknown*>(*c.ppParent_.value);
-  state->iid = c.riid_.value;
+  state->creationCommand.reset(new IDXGIObjectGetParentCommand(c));
   stateService_.storeState(state);
 }
 
@@ -326,12 +318,10 @@ void StateTrackingLayer::post(D3D12CreateDeviceCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12DeviceState* state = new D3D12DeviceState();
-  state->adapterKey = 0; //c.pAdapter_.key;
+  ObjectState* state = new ObjectState();
   state->key = c.ppDevice_.key;
   state->object = static_cast<IUnknown*>(*c.ppDevice_.value);
-  state->minimumFeatureLevel = c.MinimumFeatureLevel_.value;
-  state->iid = c.riid_.value;
+  state->creationCommand.reset(new D3D12CreateDeviceCommand(c));
   stateService_.storeState(state);
 }
 
@@ -339,17 +329,14 @@ void StateTrackingLayer::post(ID3D12DeviceCreateCommandQueueCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12CommandQueueState* state = new D3D12CommandQueueState();
-  state->deviceKey = c.object_.key;
+  ObjectState* state = new ObjectState();
   state->key = c.ppCommandQueue_.key;
   state->object = static_cast<IUnknown*>(*c.ppCommandQueue_.value);
-  state->desc = *c.pDesc_.value;
-  state->iid = c.riid_.value;
-  state->commandQueue = static_cast<ID3D12CommandQueue*>(*c.ppCommandQueue_.value);
+  state->creationCommand.reset(new ID3D12DeviceCreateCommandQueueCommand(c));
   stateService_.storeState(state);
+
   accelerationStructuresSerializeService_.setDevice(c.object_.value, c.object_.key);
   accelerationStructuresBuildService_.setDeviceKey(c.object_.key);
-
   gpuExecutionFlusher_.createCommandQueue(
       c.ppCommandQueue_.key, *reinterpret_cast<ID3D12CommandQueue**>(c.ppCommandQueue_.value));
 }
@@ -358,14 +345,10 @@ void StateTrackingLayer::post(ID3D12Device9CreateCommandQueue1Command& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12CommandQueue1State* state = new D3D12CommandQueue1State();
-  state->deviceKey = c.object_.key;
+  ObjectState* state = new ObjectState();
   state->key = c.ppCommandQueue_.key;
   state->object = static_cast<IUnknown*>(*c.ppCommandQueue_.value);
-  state->desc = *c.pDesc_.value;
-  state->creatorId = c.CreatorID_.value;
-  state->iid = c.riid_.value;
-  state->commandQueue = static_cast<ID3D12CommandQueue*>(*c.ppCommandQueue_.value);
+  state->creationCommand.reset(new ID3D12Device9CreateCommandQueue1Command(c));
   stateService_.storeState(state);
 
   gpuExecutionFlusher_.createCommandQueue(
@@ -376,13 +359,10 @@ void StateTrackingLayer::post(IDXGIFactoryCreateSwapChainCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  DXGISwapChainState* state = new DXGISwapChainState();
-  state->deviceKey = c.pDevice_.key;
+  ObjectState* state = new ObjectState();
   state->key = c.ppSwapChain_.key;
-  state->object = *c.ppSwapChain_.value;
-  state->factoryKey = c.object_.key;
-  state->desc = *c.pDesc_.value;
-  state->swapChain = *c.ppSwapChain_.value;
+  state->object = static_cast<IUnknown*>(*c.ppSwapChain_.value);
+  state->creationCommand.reset(new IDXGIFactoryCreateSwapChainCommand(c));
   stateService_.storeState(state);
 }
 
@@ -390,18 +370,10 @@ void StateTrackingLayer::post(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  DXGISwapChainForHwndState* state = new DXGISwapChainForHwndState();
-  state->deviceKey = c.pDevice_.key;
+  ObjectState* state = new ObjectState();
   state->key = c.ppSwapChain_.key;
-  state->object = *c.ppSwapChain_.value;
-  state->factoryKey = c.object_.key;
-  state->hWnd = c.hWnd_.value;
-  state->desc = *c.pDesc_.value;
-  if (state->isFullscreenDesc = c.pFullscreenDesc_.value ? true : false) {
-    state->fullscreenDesc = *c.pFullscreenDesc_.value;
-  }
-  state->restrictToOutputKey = c.pRestrictToOutput_.key;
-  state->swapChain = *c.ppSwapChain_.value;
+  state->object = static_cast<IUnknown*>(*c.ppSwapChain_.value);
+  state->creationCommand.reset(new IDXGIFactory2CreateSwapChainForHwndCommand(c));
   stateService_.storeState(state);
 }
 
@@ -410,27 +382,31 @@ void StateTrackingLayer::post(IDXGISwapChainResizeBuffersCommand& c) {
     return;
   }
   ObjectState* objectState = stateService_.getState(c.object_.key);
-  if (objectState->id == ObjectState::DXGI_SWAPCHAINFORHWND) {
-    DXGISwapChainForHwndState* state = static_cast<DXGISwapChainForHwndState*>(objectState);
-    state->desc.Width = c.Width_.value;
-    state->desc.Height = c.Height_.value;
-    state->desc.Flags = c.SwapChainFlags_.value;
+  if (objectState->creationCommand->getId() == CommandId::ID_IDXGIFACTORY_CREATESWAPCHAIN) {
+    IDXGIFactoryCreateSwapChainCommand* command =
+        static_cast<IDXGIFactoryCreateSwapChainCommand*>(objectState->creationCommand.get());
+    command->pDesc_.value->BufferDesc.Width = c.Width_.value;
+    command->pDesc_.value->BufferDesc.Height = c.Height_.value;
+    command->pDesc_.value->Flags = c.SwapChainFlags_.value;
     if (c.BufferCount_.value) {
-      state->desc.BufferCount = c.BufferCount_.value;
+      command->pDesc_.value->BufferCount = c.BufferCount_.value;
     }
     if (c.NewFormat_.value != DXGI_FORMAT_UNKNOWN) {
-      state->desc.Format = c.NewFormat_.value;
+      command->pDesc_.value->BufferDesc.Format = c.NewFormat_.value;
     }
-  } else if (objectState->id == ObjectState::DXGI_SWAPCHAIN) {
-    DXGISwapChainState* state = static_cast<DXGISwapChainState*>(objectState);
-    state->desc.BufferDesc.Width = c.Width_.value;
-    state->desc.BufferDesc.Height = c.Height_.value;
-    state->desc.Flags = c.SwapChainFlags_.value;
+  } else if (objectState->creationCommand->getId() ==
+             CommandId::ID_IDXGIFACTORY2_CREATESWAPCHAINFORHWND) {
+    IDXGIFactory2CreateSwapChainForHwndCommand* command =
+        static_cast<IDXGIFactory2CreateSwapChainForHwndCommand*>(
+            objectState->creationCommand.get());
+    command->pDesc_.value->Width = c.Width_.value;
+    command->pDesc_.value->Height = c.Height_.value;
+    command->pDesc_.value->Flags = c.SwapChainFlags_.value;
     if (c.BufferCount_.value) {
-      state->desc.BufferCount = c.BufferCount_.value;
+      command->pDesc_.value->BufferCount = c.BufferCount_.value;
     }
     if (c.NewFormat_.value != DXGI_FORMAT_UNKNOWN) {
-      state->desc.BufferDesc.Format = c.NewFormat_.value;
+      command->pDesc_.value->Format = c.NewFormat_.value;
     }
   }
 }
@@ -449,11 +425,9 @@ void StateTrackingLayer::post(ID3D12DeviceCreateDescriptorHeapCommand& c) {
     return;
   }
   D3D12DescriptorHeapState* state = new D3D12DescriptorHeapState();
-  state->deviceKey = c.object_.key;
   state->key = c.ppvHeap_.key;
   state->object = static_cast<IUnknown*>(*c.ppvHeap_.value);
-  state->desc = *c.pDescriptorHeapDesc_.value;
-  state->iid = c.riid_.value;
+  state->creationCommand.reset(new ID3D12DeviceCreateDescriptorHeapCommand(c));
   stateService_.storeState(state);
 }
 
@@ -461,16 +435,15 @@ void StateTrackingLayer::post(ID3D12DeviceCreateHeapCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12HeapState* state = new D3D12HeapState();
+  HeapState* state = new HeapState();
   state->deviceKey = c.object_.key;
   state->key = c.ppvHeap_.key;
   state->object = static_cast<IUnknown*>(*c.ppvHeap_.value);
-  state->desc = *c.pDesc_.value;
-  state->iid = c.riid_.value;
+  state->creationCommand.reset(new ID3D12DeviceCreateHeapCommand(c));
   stateService_.storeState(state);
 
-  if (state->desc.Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
-    residencyService_.createNotResident(state->key, state->deviceKey);
+  if (c.pDesc_.value->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+    residencyService_.createNotResident(state->key, c.object_.key);
   }
 }
 
@@ -478,17 +451,15 @@ void StateTrackingLayer::post(ID3D12Device4CreateHeap1Command& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12Heap1State* state = new D3D12Heap1State();
+  HeapState* state = new HeapState();
   state->deviceKey = c.object_.key;
   state->key = c.ppvHeap_.key;
   state->object = static_cast<IUnknown*>(*c.ppvHeap_.value);
-  state->desc = *c.pDesc_.value;
-  state->protectedSessionKey = c.pProtectedSession_.key;
-  state->iid = c.riid_.value;
+  state->creationCommand.reset(new ID3D12Device4CreateHeap1Command(c));
   stateService_.storeState(state);
 
-  if (state->desc.Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
-    residencyService_.createNotResident(state->key, state->deviceKey);
+  if (c.pDesc_.value->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+    residencyService_.createNotResident(state->key, c.object_.key);
   }
 }
 
@@ -496,29 +467,24 @@ void StateTrackingLayer::post(ID3D12DeviceCreateQueryHeapCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12QueryHeapState* state = new D3D12QueryHeapState();
-  state->deviceKey = c.object_.key;
+  ObjectState* state = new ObjectState();
   state->key = c.ppvHeap_.key;
   state->object = static_cast<IUnknown*>(*c.ppvHeap_.value);
-  state->desc = *c.pDesc_.value;
-  state->iid = c.riid_.value;
+  state->creationCommand.reset(new ID3D12DeviceCreateQueryHeapCommand(c));
   stateService_.storeState(state);
 }
 
 void StateTrackingLayer::post(CreateHeapAllocationMetaCommand& c) {
   D3D12HeapFromAddressState* state = new D3D12HeapFromAddressState();
   state->key = c.heap_.key;
-  state->address = c.address_.value;
-  state->buffer.resize(c.data_.size);
-  memcpy(state->buffer.data(), c.data_.value, c.data_.size);
+  state->creationCommand.reset(new CreateHeapAllocationMetaCommand(c));
   heapAllocationStateService_.setHeapState(state);
 }
 
 void StateTrackingLayer::post(ID3D12Device3OpenExistingHeapFromAddressCommand& c) {
   D3D12HeapFromAddressState* state = heapAllocationStateService_.getHeapState(c.ppvHeap_.key);
-  state->deviceKey = c.object_.key;
-  state->object = static_cast<IUnknown*>(*c.ppvHeap_.value);
-  state->iid = c.riid_.value;
+  state->openExistingHeapFromAddressCommand.reset(
+      new ID3D12Device3OpenExistingHeapFromAddressCommand(c));
   stateService_.storeState(state);
 }
 
@@ -526,20 +492,18 @@ void StateTrackingLayer::post(IDXGISwapChainGetBufferCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  DXGISwapChainBufferState* state = new DXGISwapChainBufferState();
-  state->swapChainKey = c.object_.key;
-  state->parentKey = state->swapChainKey;
+  ObjectState* state = new ObjectState();
+  state->parentKey = c.object_.key;
   state->key = c.ppSurface_.key;
   state->object = static_cast<IUnknown*>(*c.ppSurface_.value);
-  state->buffer = c.Buffer_.value;
-  state->iid = c.riid_.value;
+  state->creationCommand.reset(new IDXGISwapChainGetBufferCommand(c));
   stateService_.storeState(state);
 
   resourceStateTrackingService_.addResource(0, static_cast<ID3D12Resource*>(*c.ppSurface_.value),
                                             state->key, D3D12_RESOURCE_STATE_COMMON, false);
 
   // Keep track of the buffer key
-  swapchainBuffers_[state->swapChainKey].push_back(state->key);
+  swapchainBuffers_[c.object_.key].push_back(state->key);
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateRenderTargetViewCommand& c) {
@@ -572,12 +536,10 @@ void StateTrackingLayer::post(ID3D12DeviceCreateCommandAllocatorCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12CommandAllocatorState* state = new D3D12CommandAllocatorState();
-  state->deviceKey = c.object_.key;
+  ObjectState* state = new ObjectState();
   state->key = c.ppCommandAllocator_.key;
   state->object = static_cast<IUnknown*>(*c.ppCommandAllocator_.value);
-  state->type = c.type_.value;
-  state->iid = c.riid_.value;
+  state->creationCommand.reset(new ID3D12DeviceCreateCommandAllocatorCommand(c));
   stateService_.storeState(state);
 }
 
@@ -585,15 +547,10 @@ void StateTrackingLayer::post(ID3D12DeviceCreateRootSignatureCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12RootSignatureState* state = new D3D12RootSignatureState();
-  state->deviceKey = c.object_.key;
+  ObjectState* state = new ObjectState();
   state->key = c.ppvRootSignature_.key;
   state->object = static_cast<IUnknown*>(*c.ppvRootSignature_.value);
-  state->nodeMask = c.nodeMask_.value;
-  state->blob.reset(new char[c.blobLengthInBytes_.value]);
-  memcpy(state->blob.get(), c.pBlobWithRootSignature_.value, c.blobLengthInBytes_.value);
-  state->blobSize = c.blobLengthInBytes_.value;
-  state->iid = c.riid_.value;
+  state->creationCommand.reset(new ID3D12DeviceCreateRootSignatureCommand(c));
   stateService_.storeState(state);
 }
 
@@ -601,14 +558,10 @@ void StateTrackingLayer::post(ID3D12Device1CreatePipelineLibraryCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12PipelineLibraryState* state = new D3D12PipelineLibraryState();
-  state->deviceKey = c.object_.key;
+  ObjectState* state = new ObjectState();
   state->key = c.ppPipelineLibrary_.key;
   state->object = static_cast<IUnknown*>(*c.ppPipelineLibrary_.value);
-  state->blob.reset(new char[c.BlobLength_.value]);
-  memcpy(state->blob.get(), c.pLibraryBlob_.value, c.BlobLength_.value);
-  state->blobSize = c.BlobLength_.value;
-  state->iid = c.riid_.value;
+  state->creationCommand.reset(new ID3D12Device1CreatePipelineLibraryCommand(c));
   stateService_.storeState(state);
 }
 
@@ -616,22 +569,14 @@ void StateTrackingLayer::post(ID3D12PipelineLibrary1LoadPipelineCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-
-  ObjectState* state = stateService_.getState(c.ppPipelineState_.key);
-  if (state) {
-    ++state->refCount;
+  ObjectState* exisitingState = stateService_.getState(c.ppPipelineState_.key);
+  if (exisitingState) {
+    ++exisitingState->refCount;
   } else {
-    D3D12LoadPipelineState* state = new D3D12LoadPipelineState();
-    state->pipelineLibraryKey = c.object_.key;
+    ObjectState* state = new ObjectState();
     state->key = c.ppPipelineState_.key;
     state->object = static_cast<IUnknown*>(*c.ppPipelineState_.value);
-    state->name = c.pName_.value;
-    state->iid = c.riid_.value;
-
-    state->descEncoded.reset(new char[getSize(c.pDesc_)]);
-    unsigned offset{};
-    encode(state->descEncoded.get(), offset, c.pDesc_);
-
+    state->creationCommand.reset(new ID3D12PipelineLibrary1LoadPipelineCommand(c));
     stateService_.storeState(state);
   }
 }
@@ -640,22 +585,14 @@ void StateTrackingLayer::post(ID3D12PipelineLibraryLoadGraphicsPipelineCommand& 
   if (c.result_.value != S_OK) {
     return;
   }
-
-  ObjectState* state = stateService_.getState(c.ppPipelineState_.key);
-  if (state) {
-    ++state->refCount;
+  ObjectState* exisitingState = stateService_.getState(c.ppPipelineState_.key);
+  if (exisitingState) {
+    ++exisitingState->refCount;
   } else {
-    D3D12LoadGraphicsPipelineState* state = new D3D12LoadGraphicsPipelineState();
-    state->pipelineLibraryKey = c.object_.key;
+    ObjectState* state = new ObjectState();
     state->key = c.ppPipelineState_.key;
     state->object = static_cast<IUnknown*>(*c.ppPipelineState_.value);
-    state->name = c.pName_.value;
-    state->iid = c.riid_.value;
-
-    state->descEncoded.reset(new char[getSize(c.pDesc_)]);
-    unsigned offset{};
-    encode(state->descEncoded.get(), offset, c.pDesc_);
-
+    state->creationCommand.reset(new ID3D12PipelineLibraryLoadGraphicsPipelineCommand(c));
     stateService_.storeState(state);
   }
 }
@@ -664,22 +601,14 @@ void StateTrackingLayer::post(ID3D12PipelineLibraryLoadComputePipelineCommand& c
   if (c.result_.value != S_OK) {
     return;
   }
-
-  ObjectState* state = stateService_.getState(c.ppPipelineState_.key);
-  if (state) {
-    ++state->refCount;
+  ObjectState* exisitingState = stateService_.getState(c.ppPipelineState_.key);
+  if (exisitingState) {
+    ++exisitingState->refCount;
   } else {
-    D3D12LoadComputePipelineState* state = new D3D12LoadComputePipelineState();
-    state->pipelineLibraryKey = c.object_.key;
+    ObjectState* state = new ObjectState();
     state->key = c.ppPipelineState_.key;
     state->object = static_cast<IUnknown*>(*c.ppPipelineState_.value);
-    state->name = c.pName_.value;
-    state->iid = c.riid_.value;
-
-    state->descEncoded.reset(new char[getSize(c.pDesc_)]);
-    unsigned offset{};
-    encode(state->descEncoded.get(), offset, c.pDesc_);
-
+    state->creationCommand.reset(new ID3D12PipelineLibraryLoadComputePipelineCommand(c));
     stateService_.storeState(state);
   }
 }
@@ -688,17 +617,10 @@ void StateTrackingLayer::post(ID3D12DeviceCreateCommandSignatureCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12CommandSignatureState* state = new D3D12CommandSignatureState();
-  state->deviceKey = c.object_.key;
+  ObjectState* state = new ObjectState();
   state->key = c.ppvCommandSignature_.key;
   state->object = static_cast<IUnknown*>(*c.ppvCommandSignature_.value);
-  state->rootSignatureKey = c.pRootSignature_.key;
-  state->iid = c.riid_.value;
-
-  state->descEncoded.reset(new char[getSize(c.pDesc_)]);
-  unsigned offset{};
-  encode(state->descEncoded.get(), offset, c.pDesc_);
-
+  state->creationCommand.reset(new ID3D12DeviceCreateCommandSignatureCommand(c));
   stateService_.storeState(state);
 }
 
@@ -706,16 +628,10 @@ void StateTrackingLayer::post(ID3D12DeviceCreateGraphicsPipelineStateCommand& c)
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12GraphicsPipelineState* state = new D3D12GraphicsPipelineState();
-  state->deviceKey = c.object_.key;
+  ObjectState* state = new ObjectState();
   state->key = c.ppPipelineState_.key;
   state->object = static_cast<IUnknown*>(*c.ppPipelineState_.value);
-  state->iid = c.riid_.value;
-
-  state->descEncoded.reset(new char[getSize(c.pDesc_)]);
-  unsigned offset{};
-  encode(state->descEncoded.get(), offset, c.pDesc_);
-
+  state->creationCommand.reset(new ID3D12DeviceCreateGraphicsPipelineStateCommand(c));
   stateService_.storeState(state);
 }
 
@@ -723,16 +639,10 @@ void StateTrackingLayer::post(ID3D12DeviceCreateComputePipelineStateCommand& c) 
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12ComputePipelineState* state = new D3D12ComputePipelineState();
-  state->deviceKey = c.object_.key;
+  ObjectState* state = new ObjectState();
   state->key = c.ppPipelineState_.key;
   state->object = static_cast<IUnknown*>(*c.ppPipelineState_.value);
-  state->iid = c.riid_.value;
-
-  state->descEncoded.reset(new char[getSize(c.pDesc_)]);
-  unsigned offset{};
-  encode(state->descEncoded.get(), offset, c.pDesc_);
-
+  state->creationCommand.reset(new ID3D12DeviceCreateComputePipelineStateCommand(c));
   stateService_.storeState(state);
 }
 
@@ -740,16 +650,10 @@ void StateTrackingLayer::post(ID3D12Device2CreatePipelineStateCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12PipelineStateStreamState* state = new D3D12PipelineStateStreamState();
-  state->deviceKey = c.object_.key;
+  ObjectState* state = new ObjectState();
   state->key = c.ppPipelineState_.key;
   state->object = static_cast<IUnknown*>(*c.ppPipelineState_.value);
-  state->iid = c.riid_.value;
-
-  state->descEncoded.reset(new char[getSize(c.pDesc_)]);
-  unsigned offset{};
-  encode(state->descEncoded.get(), offset, c.pDesc_);
-
+  state->creationCommand.reset(new ID3D12Device2CreatePipelineStateCommand(c));
   stateService_.storeState(state);
 }
 
@@ -757,17 +661,12 @@ void StateTrackingLayer::post(ID3D12Device5CreateStateObjectCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12StateObjectState* state = new D3D12StateObjectState();
-  state->deviceKey = c.object_.key;
+  ObjectState* state = new ObjectState();
   state->key = c.ppStateObject_.key;
   state->object = static_cast<IUnknown*>(*c.ppStateObject_.value);
-  state->iid = c.riid_.value;
-
-  state->descEncoded.reset(new char[getSize(c.pDesc_)]);
-  unsigned offset{};
-  encode(state->descEncoded.get(), offset, c.pDesc_);
-
+  state->creationCommand.reset(new ID3D12Device5CreateStateObjectCommand(c));
   stateService_.storeState(state);
+
   accelerationStructuresSerializeService_.setDevice(c.object_.value, c.object_.key);
   accelerationStructuresBuildService_.setDeviceKey(c.object_.key);
 }
@@ -776,17 +675,10 @@ void StateTrackingLayer::post(ID3D12Device7AddToStateObjectCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12AddToStateObjectState* state = new D3D12AddToStateObjectState();
-  state->deviceKey = c.object_.key;
+  ObjectState* state = new ObjectState();
   state->key = c.ppNewStateObject_.key;
   state->object = static_cast<IUnknown*>(*c.ppNewStateObject_.value);
-  state->stateObjectToGrowFromKey = c.pStateObjectToGrowFrom_.key;
-  state->iid = c.riid_.value;
-
-  state->descEncoded.reset(new char[getSize(c.pAddition_)]);
-  unsigned offset{};
-  encode(state->descEncoded.get(), offset, c.pAddition_);
-
+  state->creationCommand.reset(new ID3D12Device7AddToStateObjectCommand(c));
   stateService_.storeState(state);
 
   stateService_.keepState(c.pStateObjectToGrowFrom_.key);
@@ -796,15 +688,10 @@ void StateTrackingLayer::post(ID3D12DeviceCreateCommandListCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12CommandListState* state = new D3D12CommandListState();
-  state->deviceKey = c.object_.key;
+  CommandListState* state = new CommandListState();
   state->key = c.ppCommandList_.key;
   state->object = static_cast<IUnknown*>(*c.ppCommandList_.value);
-  state->nodeMask = c.nodeMask_.value;
-  state->type = c.type_.value;
-  state->allocatorKey = c.pCommandAllocator_.key;
-  state->initialStateKey = c.pInitialState_.key;
-  state->iid = c.riid_.value;
+  state->creationCommand.reset(new ID3D12DeviceCreateCommandListCommand(c));
   stateService_.storeState(state);
 
   commandListService_.addCommandList(state);
@@ -814,14 +701,10 @@ void StateTrackingLayer::post(ID3D12Device4CreateCommandList1Command& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12CommandList1State* state = new D3D12CommandList1State();
-  state->deviceKey = c.object_.key;
+  CommandListState* state = new CommandListState();
   state->key = c.ppCommandList_.key;
   state->object = static_cast<IUnknown*>(*c.ppCommandList_.value);
-  state->nodeMask = c.nodeMask_.value;
-  state->type = c.type_.value;
-  state->flags = c.flags_.value;
-  state->iid = c.riid_.value;
+  state->creationCommand.reset(new ID3D12Device4CreateCommandList1Command(c));
   stateService_.storeState(state);
 
   commandListService_.addCommandList(state);
@@ -835,29 +718,26 @@ void StateTrackingLayer::post(ID3D12DeviceCreateCommittedResourceCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12CommittedResourceState* state = new D3D12CommittedResourceState();
+  ResourceState* state = new ResourceState();
   state->key = c.ppvResource_.key;
   state->object = static_cast<IUnknown*>(*c.ppvResource_.value);
+  state->creationCommand.reset(new ID3D12DeviceCreateCommittedResourceCommand(c));
+
   state->deviceKey = c.object_.key;
-  state->heapProperties = *c.pHeapProperties_.value;
-  state->heapFlags = c.HeapFlags_.value;
-  state->desc = *c.pDesc_.value;
-  state->initialResourceState = c.InitialResourceState_.value;
-  if (state->isClearValue = c.pOptimizedClearValue_.value ? true : false) {
-    state->clearValue = *c.pOptimizedClearValue_.value;
-  }
-  state->iid = c.riidResource_.value;
-  state->isMappable = isResourceHeapMappable(state->heapProperties, state->desc.Layout);
-  state->isGenericRead = state->initialResourceState == D3D12_RESOURCE_STATE_GENERIC_READ;
+  state->initialState = c.InitialResourceState_.value;
+  state->dimension = c.pDesc_.value->Dimension;
+  state->sampleCount = c.pDesc_.value->SampleDesc.Count;
+  state->isMappable = isResourceHeapMappable(*c.pHeapProperties_.value, c.pDesc_.value->Layout);
+  state->isGenericRead = state->initialState == D3D12_RESOURCE_STATE_GENERIC_READ;
+
   stateService_.storeState(state);
 
-  if (state->initialResourceState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
-    resourceStateTrackingService_.addResource(
-        state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
-        state->initialResourceState, !state->isMappable);
+  if (state->initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
+    resourceStateTrackingService_.addResource(state->deviceKey,
+                                              static_cast<ID3D12Resource*>(*c.ppvResource_.value),
+                                              state->key, state->initialState, !state->isMappable);
   }
-
-  if (state->heapFlags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+  if (c.HeapFlags_.value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
     residencyService_.createNotResident(state->key, state->deviceKey);
   }
 }
@@ -870,29 +750,26 @@ void StateTrackingLayer::post(ID3D12Device4CreateCommittedResource1Command& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12CommittedResource1State* state = new D3D12CommittedResource1State();
+  ResourceState* state = new ResourceState();
   state->key = c.ppvResource_.key;
   state->object = static_cast<IUnknown*>(*c.ppvResource_.value);
-  state->deviceKey = c.object_.key;
-  state->heapProperties = *c.pHeapProperties_.value;
-  state->heapFlags = c.HeapFlags_.value;
-  state->desc = *c.pDesc_.value;
-  state->initialResourceState = c.InitialResourceState_.value;
-  if (state->isClearValue = c.pOptimizedClearValue_.value ? true : false) {
-    state->clearValue = *c.pOptimizedClearValue_.value;
-  }
-  state->protectedSessionKey = c.pProtectedSession_.key;
-  state->iid = c.riidResource_.value;
-  state->isMappable = isResourceHeapMappable(state->heapProperties, state->desc.Layout);
-  state->isGenericRead = state->initialResourceState == D3D12_RESOURCE_STATE_GENERIC_READ;
-  stateService_.storeState(state);
-  if (state->initialResourceState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
-    resourceStateTrackingService_.addResource(
-        state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
-        state->initialResourceState, !state->isMappable);
-  }
+  state->creationCommand.reset(new ID3D12Device4CreateCommittedResource1Command(c));
 
-  if (state->heapFlags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+  state->deviceKey = c.object_.key;
+  state->initialState = c.InitialResourceState_.value;
+  state->dimension = c.pDesc_.value->Dimension;
+  state->sampleCount = c.pDesc_.value->SampleDesc.Count;
+  state->isMappable = isResourceHeapMappable(*c.pHeapProperties_.value, c.pDesc_.value->Layout);
+  state->isGenericRead = state->initialState == D3D12_RESOURCE_STATE_GENERIC_READ;
+
+  stateService_.storeState(state);
+
+  if (state->initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
+    resourceStateTrackingService_.addResource(state->deviceKey,
+                                              static_cast<ID3D12Resource*>(*c.ppvResource_.value),
+                                              state->key, state->initialState, !state->isMappable);
+  }
+  if (c.HeapFlags_.value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
     residencyService_.createNotResident(state->key, state->deviceKey);
   }
 }
@@ -905,30 +782,26 @@ void StateTrackingLayer::post(ID3D12Device8CreateCommittedResource2Command& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12CommittedResource2State* state = new D3D12CommittedResource2State();
+  ResourceState* state = new ResourceState();
   state->key = c.ppvResource_.key;
   state->object = static_cast<IUnknown*>(*c.ppvResource_.value);
+  state->creationCommand.reset(new ID3D12Device8CreateCommittedResource2Command(c));
+
   state->deviceKey = c.object_.key;
-  state->heapProperties = *c.pHeapProperties_.value;
-  state->heapFlags = c.HeapFlags_.value;
-  state->desc = *c.pDesc_.value;
-  state->initialResourceState = c.InitialResourceState_.value;
-  if (state->isClearValue = c.pOptimizedClearValue_.value ? true : false) {
-    state->clearValue = *c.pOptimizedClearValue_.value;
-  }
-  state->protectedSessionKey = c.pProtectedSession_.key;
-  state->iid = c.riidResource_.value;
-  state->isMappable = isResourceHeapMappable(state->heapProperties, state->desc.Layout);
-  state->isGenericRead = state->initialResourceState == D3D12_RESOURCE_STATE_GENERIC_READ;
+  state->initialState = c.InitialResourceState_.value;
+  state->dimension = c.pDesc_.value->Dimension;
+  state->sampleCount = c.pDesc_.value->SampleDesc.Count;
+  state->isMappable = isResourceHeapMappable(*c.pHeapProperties_.value, c.pDesc_.value->Layout);
+  state->isGenericRead = state->initialState == D3D12_RESOURCE_STATE_GENERIC_READ;
+
   stateService_.storeState(state);
 
-  if (state->initialResourceState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
-    resourceStateTrackingService_.addResource(
-        state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
-        state->initialResourceState, !state->isMappable);
+  if (state->initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
+    resourceStateTrackingService_.addResource(state->deviceKey,
+                                              static_cast<ID3D12Resource*>(*c.ppvResource_.value),
+                                              state->key, state->initialState, !state->isMappable);
   }
-
-  if (state->heapFlags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+  if (c.HeapFlags_.value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
     residencyService_.createNotResident(state->key, state->deviceKey);
   }
 }
@@ -941,31 +814,24 @@ void StateTrackingLayer::post(ID3D12Device10CreateCommittedResource3Command& c) 
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12CommittedResource3State* state = new D3D12CommittedResource3State();
+  ResourceState* state = new ResourceState();
   state->key = c.ppvResource_.key;
   state->object = static_cast<IUnknown*>(*c.ppvResource_.value);
+  state->creationCommand.reset(new ID3D12Device10CreateCommittedResource3Command(c));
+
   state->deviceKey = c.object_.key;
-  state->heapProperties = *c.pHeapProperties_.value;
-  state->heapFlags = c.HeapFlags_.value;
-  state->desc = *c.pDesc_.value;
   state->initialLayout = c.InitialLayout_.value;
-  if (state->isClearValue = c.pOptimizedClearValue_.value ? true : false) {
-    state->clearValue = *c.pOptimizedClearValue_.value;
-  }
-  state->protectedSessionKey = c.pProtectedSession_.key;
-  for (unsigned i = 0; i < c.NumCastableFormats_.value; ++i) {
-    state->castableFormats.push_back(c.pCastableFormats_.value[i]);
-  }
-  state->iid = c.riidResource_.value;
-  state->isMappable = isResourceHeapMappable(state->heapProperties, state->desc.Layout);
+  state->dimension = c.pDesc_.value->Dimension;
+  state->sampleCount = c.pDesc_.value->SampleDesc.Count;
+  state->isMappable = isResourceHeapMappable(*c.pHeapProperties_.value, c.pDesc_.value->Layout);
   state->isGenericRead = state->initialLayout == D3D12_BARRIER_LAYOUT_GENERIC_READ;
+
   stateService_.storeState(state);
 
   resourceStateTrackingService_.addResource(state->deviceKey,
                                             static_cast<ID3D12Resource*>(*c.ppvResource_.value),
                                             state->key, state->initialLayout, !state->isMappable);
-
-  if (state->heapFlags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+  if (c.HeapFlags_.value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
     residencyService_.createNotResident(state->key, state->deviceKey);
   }
 }
@@ -978,28 +844,28 @@ void StateTrackingLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12PlacedResourceState* state = new D3D12PlacedResourceState();
+  ResourceState* state = new ResourceState();
   state->key = c.ppvResource_.key;
   state->object = static_cast<IUnknown*>(*c.ppvResource_.value);
+  state->creationCommand.reset(new ID3D12DeviceCreatePlacedResourceCommand(c));
+
   state->deviceKey = c.object_.key;
-  state->heapKey = c.pHeap_.key;
-  state->heapOffset = c.HeapOffset_.value;
-  state->desc = *c.pDesc_.value;
-  state->initialResourceState = c.InitialState_.value;
-  if (state->isClearValue = c.pOptimizedClearValue_.value ? true : false) {
-    state->clearValue = *c.pOptimizedClearValue_.value;
-  }
-  state->iid = c.riid_.value;
-  state->isMappable = isResourceHeapMappable(state->heapKey, state->desc.Layout);
-  state->isGenericRead = state->initialResourceState == D3D12_RESOURCE_STATE_GENERIC_READ;
+  state->initialState = c.InitialState_.value;
+  state->dimension = c.pDesc_.value->Dimension;
+  state->sampleCount = c.pDesc_.value->SampleDesc.Count;
+  state->isMappable = isResourceHeapMappable(c.pHeap_.key, c.pDesc_.value->Layout);
+  state->isGenericRead = state->initialLayout == D3D12_BARRIER_LAYOUT_GENERIC_READ;
   state->isBarrierRestricted = isResourceBarrierRestricted(c.pDesc_.value->Flags);
+  state->heapKey = c.pHeap_.key;
+
   stateService_.storeState(state);
+
   resourceHeaps_[c.pHeap_.key].insert(c.ppvResource_.key);
 
-  if (state->initialResourceState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
+  if (state->initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
     resourceStateTrackingService_.addResource(
         state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
-        state->initialResourceState, !(state->isMappable || state->isBarrierRestricted));
+        state->initialState, !(state->isMappable || state->isBarrierRestricted));
   }
 }
 
@@ -1011,28 +877,28 @@ void StateTrackingLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12PlacedResource1State* state = new D3D12PlacedResource1State();
+  ResourceState* state = new ResourceState();
   state->key = c.ppvResource_.key;
   state->object = static_cast<IUnknown*>(*c.ppvResource_.value);
+  state->creationCommand.reset(new ID3D12Device8CreatePlacedResource1Command(c));
+
   state->deviceKey = c.object_.key;
-  state->heapKey = c.pHeap_.key;
-  state->heapOffset = c.HeapOffset_.value;
-  state->desc = *c.pDesc_.value;
-  state->initialResourceState = c.InitialState_.value;
-  if (state->isClearValue = c.pOptimizedClearValue_.value ? true : false) {
-    state->clearValue = *c.pOptimizedClearValue_.value;
-  }
-  state->iid = c.riid_.value;
-  state->isMappable = isResourceHeapMappable(state->heapKey, state->desc.Layout);
-  state->isGenericRead = state->initialResourceState == D3D12_RESOURCE_STATE_GENERIC_READ;
+  state->initialState = c.InitialState_.value;
+  state->dimension = c.pDesc_.value->Dimension;
+  state->sampleCount = c.pDesc_.value->SampleDesc.Count;
+  state->isMappable = isResourceHeapMappable(c.pHeap_.key, c.pDesc_.value->Layout);
+  state->isGenericRead = state->initialLayout == D3D12_BARRIER_LAYOUT_GENERIC_READ;
   state->isBarrierRestricted = isResourceBarrierRestricted(c.pDesc_.value->Flags);
+  state->heapKey = c.pHeap_.key;
+
   stateService_.storeState(state);
+
   resourceHeaps_[c.pHeap_.key].insert(c.ppvResource_.key);
 
-  if (state->initialResourceState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
+  if (state->initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
     resourceStateTrackingService_.addResource(
         state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
-        state->initialResourceState, !(state->isMappable || state->isBarrierRestricted));
+        state->initialState, !(state->isMappable || state->isBarrierRestricted));
   }
 }
 
@@ -1044,30 +910,27 @@ void StateTrackingLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12PlacedResource2State* state = new D3D12PlacedResource2State();
+  ResourceState* state = new ResourceState();
   state->key = c.ppvResource_.key;
   state->object = static_cast<IUnknown*>(*c.ppvResource_.value);
+  state->creationCommand.reset(new ID3D12Device10CreatePlacedResource2Command(c));
+
   state->deviceKey = c.object_.key;
-  state->heapKey = c.pHeap_.key;
-  state->heapOffset = c.HeapOffset_.value;
-  state->desc = *c.pDesc_.value;
   state->initialLayout = c.InitialLayout_.value;
-  if (state->isClearValue = c.pOptimizedClearValue_.value ? true : false) {
-    state->clearValue = *c.pOptimizedClearValue_.value;
-  }
-  for (unsigned i = 0; i < c.NumCastableFormats_.value; ++i) {
-    state->castableFormats.push_back(c.pCastableFormats_.value[i]);
-  }
-  state->iid = c.riid_.value;
-  state->isMappable = isResourceHeapMappable(state->heapKey, state->desc.Layout);
+  state->dimension = c.pDesc_.value->Dimension;
+  state->sampleCount = c.pDesc_.value->SampleDesc.Count;
+  state->isMappable = isResourceHeapMappable(c.pHeap_.key, c.pDesc_.value->Layout);
   state->isGenericRead = state->initialLayout == D3D12_BARRIER_LAYOUT_GENERIC_READ;
   state->isBarrierRestricted = isResourceBarrierRestricted(c.pDesc_.value->Flags);
+  state->heapKey = c.pHeap_.key;
+
   stateService_.storeState(state);
+
   resourceHeaps_[c.pHeap_.key].insert(c.ppvResource_.key);
 
   resourceStateTrackingService_.addResource(
       state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
-      state->initialLayout, !(state->isMappable || state->isBarrierRestricted));
+      state->initialState, !(state->isMappable || state->isBarrierRestricted));
 }
 
 void StateTrackingLayer::pre(ID3D12DeviceCreateReservedResourceCommand& c) {
@@ -1078,23 +941,23 @@ void StateTrackingLayer::post(ID3D12DeviceCreateReservedResourceCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12ReservedResourceState* state = new D3D12ReservedResourceState();
+  ResourceState* state = new ResourceState();
   state->key = c.ppvResource_.key;
   state->object = static_cast<IUnknown*>(*c.ppvResource_.value);
+  state->creationCommand.reset(new ID3D12DeviceCreateReservedResourceCommand(c));
+
   state->deviceKey = c.object_.key;
-  state->desc = *c.pDesc_.value;
-  state->initialResourceState = c.InitialState_.value;
-  if (state->isClearValue = c.pOptimizedClearValue_.value ? true : false) {
-    state->clearValue = *c.pOptimizedClearValue_.value;
-  }
-  state->iid = c.riid_.value;
-  state->isGenericRead = state->initialResourceState == D3D12_RESOURCE_STATE_GENERIC_READ;
+  state->initialState = c.InitialState_.value;
+  state->dimension = c.pDesc_.value->Dimension;
+  state->sampleCount = c.pDesc_.value->SampleDesc.Count;
+  state->isGenericRead = state->initialState == D3D12_RESOURCE_STATE_GENERIC_READ;
+
   stateService_.storeState(state);
 
-  if (state->initialResourceState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
-    resourceStateTrackingService_.addResource(
-        state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
-        state->initialResourceState, !state->isMappable);
+  if (state->initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
+    resourceStateTrackingService_.addResource(state->deviceKey,
+                                              static_cast<ID3D12Resource*>(*c.ppvResource_.value),
+                                              state->key, state->initialState, !state->isMappable);
   }
 }
 
@@ -1106,24 +969,23 @@ void StateTrackingLayer::post(ID3D12Device4CreateReservedResource1Command& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12ReservedResource1State* state = new D3D12ReservedResource1State();
+  ResourceState* state = new ResourceState();
   state->key = c.ppvResource_.key;
   state->object = static_cast<IUnknown*>(*c.ppvResource_.value);
+  state->creationCommand.reset(new ID3D12Device4CreateReservedResource1Command(c));
+
   state->deviceKey = c.object_.key;
-  state->desc = *c.pDesc_.value;
-  state->initialResourceState = c.InitialState_.value;
-  if (state->isClearValue = c.pOptimizedClearValue_.value ? true : false) {
-    state->clearValue = *c.pOptimizedClearValue_.value;
-  }
-  state->protectedSessionKey = c.pProtectedSession_.key;
-  state->iid = c.riid_.value;
-  state->isGenericRead = state->initialResourceState == D3D12_RESOURCE_STATE_GENERIC_READ;
+  state->initialState = c.InitialState_.value;
+  state->dimension = c.pDesc_.value->Dimension;
+  state->sampleCount = c.pDesc_.value->SampleDesc.Count;
+  state->isGenericRead = state->initialState == D3D12_RESOURCE_STATE_GENERIC_READ;
+
   stateService_.storeState(state);
 
-  if (state->initialResourceState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
-    resourceStateTrackingService_.addResource(
-        state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
-        state->initialResourceState, !state->isMappable);
+  if (state->initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
+    resourceStateTrackingService_.addResource(state->deviceKey,
+                                              static_cast<ID3D12Resource*>(*c.ppvResource_.value),
+                                              state->key, state->initialState, !state->isMappable);
   }
 }
 
@@ -1135,21 +997,17 @@ void StateTrackingLayer::post(ID3D12Device10CreateReservedResource2Command& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12ReservedResource2State* state = new D3D12ReservedResource2State();
+  ResourceState* state = new ResourceState();
   state->key = c.ppvResource_.key;
   state->object = static_cast<IUnknown*>(*c.ppvResource_.value);
+  state->creationCommand.reset(new ID3D12Device10CreateReservedResource2Command(c));
+
   state->deviceKey = c.object_.key;
-  state->desc = *c.pDesc_.value;
   state->initialLayout = c.InitialLayout_.value;
-  if (state->isClearValue = c.pOptimizedClearValue_.value ? true : false) {
-    state->clearValue = *c.pOptimizedClearValue_.value;
-  }
-  state->protectedSessionKey = c.pProtectedSession_.key;
-  for (unsigned i = 0; i < c.NumCastableFormats_.value; ++i) {
-    state->castableFormats.push_back(c.pCastableFormats_.value[i]);
-  }
-  state->iid = c.riid_.value;
+  state->dimension = c.pDesc_.value->Dimension;
+  state->sampleCount = c.pDesc_.value->SampleDesc.Count;
   state->isGenericRead = state->initialLayout == D3D12_BARRIER_LAYOUT_GENERIC_READ;
+
   stateService_.storeState(state);
 
   resourceStateTrackingService_.addResource(state->deviceKey,
@@ -1179,12 +1037,10 @@ void StateTrackingLayer::post(ID3D12DeviceCreateFenceCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12FenceState* state = new D3D12FenceState();
-  state->deviceKey = c.object_.key;
+  ObjectState* state = new ObjectState();
   state->key = c.ppFence_.key;
   state->object = static_cast<IUnknown*>(*c.ppFence_.value);
-  state->flags = c.Flags_.value;
-  state->iid = c.riid_.value;
+  state->creationCommand.reset(new ID3D12DeviceCreateFenceCommand(c));
   stateService_.storeState(state);
 
   fenceTrackingService_.setFenceValue(c.ppFence_.key, c.InitialValue_.value);
@@ -1321,42 +1177,23 @@ void StateTrackingLayer::post(ID3D12DeviceCopyDescriptorsCommand& c) {
 }
 
 void StateTrackingLayer::post(INTC_D3D12_CreateDeviceExtensionContextCommand& c) {
-  D3D12INTCDeviceExtensionContextState* state = new D3D12INTCDeviceExtensionContextState();
-  state->deviceKey = c.pDevice_.key;
+  ObjectState* state = new ObjectState();
   state->key = c.ppExtensionContext_.key;
-
-  state->extensionInfoEncoded.reset(new char[getSize(c.pExtensionInfo_)]);
-  unsigned offset{};
-  encode(state->extensionInfoEncoded.get(), offset, c.pExtensionInfo_);
-
-  if (state->isExtensionAppInfo = c.pExtensionAppInfo_.value ? true : false) {
-    state->extensionAppInfoEncoded.reset(new char[getSize(c.pExtensionAppInfo_)]);
-    unsigned offset{};
-    encode(state->extensionAppInfoEncoded.get(), offset, c.pExtensionAppInfo_);
-  }
-  setAsChildInParent(state->deviceKey, state->key);
+  state->creationCommand.reset(new INTC_D3D12_CreateDeviceExtensionContextCommand(c));
   stateService_.storeState(state);
-  deviceByINTCExtensionContext_[state->key] = state->deviceKey;
+
+  setAsChildInParent(c.pDevice_.key, state->key);
+  deviceByINTCExtensionContext_[state->key] = c.pDevice_.key;
 }
 
 void StateTrackingLayer::post(INTC_D3D12_CreateDeviceExtensionContext1Command& c) {
-  D3D12INTCDeviceExtensionContext1State* state = new D3D12INTCDeviceExtensionContext1State();
-  state->deviceKey = c.pDevice_.key;
+  ObjectState* state = new ObjectState();
   state->key = c.ppExtensionContext_.key;
-
-  state->extensionInfoEncoded.reset(new char[getSize(c.pExtensionInfo_)]);
-  unsigned offset{};
-  encode(state->extensionInfoEncoded.get(), offset, c.pExtensionInfo_);
-
-  if (state->isExtensionAppInfo = c.pExtensionAppInfo_.value ? true : false) {
-    state->extensionAppInfoEncoded.reset(new char[getSize(c.pExtensionAppInfo_)]);
-    unsigned offset{};
-    encode(state->extensionAppInfoEncoded.get(), offset, c.pExtensionAppInfo_);
-  }
-  setAsChildInParent(state->deviceKey, state->key);
+  state->creationCommand.reset(new INTC_D3D12_CreateDeviceExtensionContext1Command(c));
   stateService_.storeState(state);
 
-  deviceByINTCExtensionContext_[state->key] = state->deviceKey;
+  setAsChildInParent(c.pDevice_.key, state->key);
+  deviceByINTCExtensionContext_[state->key] = c.pDevice_.key;
 }
 
 void StateTrackingLayer::post(INTC_D3D12_SetApplicationInfoCommand& c) {
@@ -1376,28 +1213,27 @@ void StateTrackingLayer::post(INTC_D3D12_CreateCommittedResourceCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12INTCCommittedResourceState* state = new D3D12INTCCommittedResourceState();
+  ResourceState* state = new ResourceState();
   state->key = c.ppvResource_.key;
   state->object = static_cast<IUnknown*>(*c.ppvResource_.value);
+  state->creationCommand.reset(new INTC_D3D12_CreateCommittedResourceCommand(c));
+
   state->deviceKey = deviceByINTCExtensionContext_[c.pExtensionContext_.key];
-  state->extensionContextKey = c.pExtensionContext_.key;
-  state->heapProperties = *c.pHeapProperties_.value;
-  state->heapFlags = c.HeapFlags_.value;
-  state->descIntc = *c.pDesc_.value;
-  state->desc = *c.pDesc_.value->pD3D12Desc;
-  state->initialResourceState = c.InitialResourceState_.value;
-  if (state->isClearValue = c.pOptimizedClearValue_.value ? true : false) {
-    state->clearValue = *c.pOptimizedClearValue_.value;
-  }
-  state->iid = c.riidResource_.value;
-  state->isMappable = isResourceHeapMappable(state->heapProperties, state->desc.Layout);
+  state->initialState = c.InitialResourceState_.value;
+  state->dimension = c.pDesc_.value->pD3D12Desc->Dimension;
+  state->sampleCount = c.pDesc_.value->pD3D12Desc->SampleDesc.Count;
+  state->isMappable =
+      isResourceHeapMappable(*c.pHeapProperties_.value, c.pDesc_.value->pD3D12Desc->Layout);
+  state->isGenericRead = state->initialState == D3D12_RESOURCE_STATE_GENERIC_READ;
+
   stateService_.storeState(state);
 
-  resourceStateTrackingService_.addResource(
-      state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
-      state->initialResourceState, !state->isMappable);
-
-  if (state->heapFlags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+  if (state->initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
+    resourceStateTrackingService_.addResource(state->deviceKey,
+                                              static_cast<ID3D12Resource*>(*c.ppvResource_.value),
+                                              state->key, state->initialState, !state->isMappable);
+  }
+  if (c.HeapFlags_.value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
     residencyService_.createNotResident(state->key, state->deviceKey);
   }
 }
@@ -1406,66 +1242,63 @@ void StateTrackingLayer::post(INTC_D3D12_CreatePlacedResourceCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12INTCPlacedResourceState* state = new D3D12INTCPlacedResourceState();
+  ResourceState* state = new ResourceState();
   state->key = c.ppvResource_.key;
   state->object = static_cast<IUnknown*>(*c.ppvResource_.value);
+  state->creationCommand.reset(new INTC_D3D12_CreatePlacedResourceCommand(c));
+
   state->deviceKey = deviceByINTCExtensionContext_[c.pExtensionContext_.key];
-  state->extensionContextKey = c.pExtensionContext_.key;
-  state->extensionContext = c.pExtensionContext_.value;
+  state->initialState = c.InitialState_.value;
+  state->dimension = c.pDesc_.value->pD3D12Desc->Dimension;
+  state->sampleCount = c.pDesc_.value->pD3D12Desc->SampleDesc.Count;
+  state->isMappable = isResourceHeapMappable(c.pHeap_.key, c.pDesc_.value->pD3D12Desc->Layout);
+  state->isGenericRead = state->initialLayout == D3D12_BARRIER_LAYOUT_GENERIC_READ;
+  state->isBarrierRestricted = isResourceBarrierRestricted(c.pDesc_.value->pD3D12Desc->Flags);
   state->heapKey = c.pHeap_.key;
-  state->heapOffset = c.HeapOffset_.value;
-  state->descIntc = *c.pDesc_.value;
-  state->desc = *c.pDesc_.value->pD3D12Desc;
-  state->initialResourceState = c.InitialState_.value;
-  if (state->isClearValue = c.pOptimizedClearValue_.value ? true : false) {
-    state->clearValue = *c.pOptimizedClearValue_.value;
-  }
-  state->iid = c.riid_.value;
-  state->isMappable = isResourceHeapMappable(state->heapKey, state->desc.Layout);
+
   stateService_.storeState(state);
 
-  resourceStateTrackingService_.addResource(
-      state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
-      state->initialResourceState, !(state->isMappable || state->isBarrierRestricted));
+  resourceHeaps_[c.pHeap_.key].insert(c.ppvResource_.key);
+
+  if (state->initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
+    resourceStateTrackingService_.addResource(
+        state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
+        state->initialState, !(state->isMappable || state->isBarrierRestricted));
+  }
 }
 
 void StateTrackingLayer::post(INTC_D3D12_CreateReservedResourceCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12INTCReservedResourceState* state = new D3D12INTCReservedResourceState();
+  ResourceState* state = new ResourceState();
   state->key = c.ppvResource_.key;
   state->object = static_cast<IUnknown*>(*c.ppvResource_.value);
+  state->creationCommand.reset(new INTC_D3D12_CreateReservedResourceCommand(c));
+
   state->deviceKey = deviceByINTCExtensionContext_[c.pExtensionContext_.key];
-  state->extensionContextKey = c.pExtensionContext_.key;
-  state->extensionContext = c.pExtensionContext_.value;
-  state->descIntc = *c.pDesc_.value;
-  state->desc = *c.pDesc_.value->pD3D12Desc;
-  state->initialResourceState = c.InitialState_.value;
-  if (state->isClearValue = c.pOptimizedClearValue_.value ? true : false) {
-    state->clearValue = *c.pOptimizedClearValue_.value;
-  }
-  state->iid = c.riid_.value;
+  state->initialState = c.InitialState_.value;
+  state->dimension = c.pDesc_.value->pD3D12Desc->Dimension;
+  state->sampleCount = c.pDesc_.value->pD3D12Desc->SampleDesc.Count;
+  state->isGenericRead = state->initialState == D3D12_RESOURCE_STATE_GENERIC_READ;
+
   stateService_.storeState(state);
 
-  resourceStateTrackingService_.addResource(
-      state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
-      state->initialResourceState, !(state->isMappable));
+  if (state->initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
+    resourceStateTrackingService_.addResource(state->deviceKey,
+                                              static_cast<ID3D12Resource*>(*c.ppvResource_.value),
+                                              state->key, state->initialState, !state->isMappable);
+  }
 }
 
 void StateTrackingLayer::post(INTC_D3D12_CreateCommandQueueCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12INTCCommandQueueState* state = new D3D12INTCCommandQueueState();
-  state->extensionContextKey = c.pExtensionContext_.key;
-  state->deviceKey = deviceByINTCExtensionContext_[c.pExtensionContext_.key];
+  ObjectState* state = new ObjectState();
   state->key = c.ppCommandQueue_.key;
   state->object = static_cast<IUnknown*>(*c.ppCommandQueue_.value);
-  state->d3dDesc = *c.pDesc_.value->pD3D12Desc;
-  state->desc = *c.pDesc_.value;
-  state->desc.pD3D12Desc = &state->d3dDesc;
-  state->iid = c.riid_.value;
+  state->creationCommand.reset(new INTC_D3D12_CreateCommandQueueCommand(c));
   stateService_.storeState(state);
 
   gpuExecutionFlusher_.createCommandQueue(
@@ -1476,18 +1309,14 @@ void StateTrackingLayer::post(INTC_D3D12_CreateHeapCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12INTCHeapState* state = new D3D12INTCHeapState();
-  state->extensionContextKey = c.pExtensionContext_.key;
+  HeapState* state = new HeapState();
   state->deviceKey = deviceByINTCExtensionContext_[c.pExtensionContext_.key];
   state->key = c.ppvHeap_.key;
   state->object = static_cast<IUnknown*>(*c.ppvHeap_.value);
-  state->d3dDesc = *c.pDesc_.value->pD3D12Desc;
-  state->desc = *c.pDesc_.value;
-  state->desc.pD3D12Desc = &state->d3dDesc;
-  state->iid = c.riid_.value;
+  state->creationCommand.reset(new INTC_D3D12_CreateHeapCommand(c));
   stateService_.storeState(state);
 
-  if (state->d3dDesc.Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+  if (c.pDesc_.value->pD3D12Desc->Flags & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
     residencyService_.createNotResident(state->key, state->deviceKey);
   }
 }
@@ -1502,15 +1331,10 @@ void StateTrackingLayer::post(INTC_D3D12_CreateComputePipelineStateCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  D3D12INTCComputePipelineState* state = new D3D12INTCComputePipelineState();
+  ObjectState* state = new ObjectState();
   state->key = c.ppPipelineState_.key;
-  state->extensionContextKey = c.pExtensionContext_.key;
-
-  state->descEncoded.reset(new char[getSize(c.pDesc_)]);
-  unsigned offset{};
-  encode(state->descEncoded.get(), offset, c.pDesc_);
-
-  state->iid = c.riid_.value;
+  state->object = static_cast<IUnknown*>(*c.ppPipelineState_.value);
+  state->creationCommand.reset(new INTC_D3D12_CreateComputePipelineStateCommand(c));
   stateService_.storeState(state);
 }
 
@@ -1521,13 +1345,16 @@ void StateTrackingLayer::post(ID3D12Device1SetResidencyPriorityCommand& c) {
   for (unsigned i = 0; i < c.NumObjects_.value; ++i) {
     ObjectState* state = stateService_.getState(c.ppObjects_.keys[i]);
     GITS_ASSERT(state);
-    if (state->id != ObjectState::D3D12_COMMITTEDRESOURCE &&
-        state->id != ObjectState::D3D12_COMMITTEDRESOURCE1 &&
-        state->id != ObjectState::D3D12_COMMITTEDRESOURCE2 &&
-        state->id != ObjectState::D3D12_COMMITTEDRESOURCE3 &&
-        state->id != ObjectState::D3D12_INTC_COMMITTEDRESOURCE &&
-        state->id != ObjectState::D3D12_HEAP && state->id != ObjectState::D3D12_HEAP1) {
-      Log(WARN) << "SetResidencyPriority not handled for " << state->id;
+    if (state->creationCommand->getId() != CommandId::ID_ID3D12DEVICE_CREATECOMMITTEDRESOURCE &&
+        state->creationCommand->getId() != CommandId::ID_ID3D12DEVICE4_CREATECOMMITTEDRESOURCE1 &&
+        state->creationCommand->getId() != CommandId::ID_ID3D12DEVICE8_CREATECOMMITTEDRESOURCE2 &&
+        state->creationCommand->getId() != CommandId::ID_ID3D12DEVICE10_CREATECOMMITTEDRESOURCE3 &&
+        state->creationCommand->getId() != CommandId::INTC_D3D12_CREATECOMMITTEDRESOURCE &&
+        state->creationCommand->getId() != CommandId::ID_ID3D12DEVICE_CREATEHEAP &&
+        state->creationCommand->getId() != CommandId::ID_ID3D12DEVICE4_CREATEHEAP1 &&
+        state->creationCommand->getId() != CommandId::INTC_D3D12_CREATEHEAP) {
+      Log(WARN) << "SetResidencyPriority not handled for command "
+                << static_cast<unsigned>(state->creationCommand->getId());
     }
     state->residencyPriority = c.pPriorities_.value[i];
   }
@@ -1663,9 +1490,11 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListResetCommand& c) {
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
   state->clearCommands();
 
-  if (state->id == ObjectState::D3D12_COMMANDLIST) {
-    static_cast<D3D12CommandListState*>(state)->allocatorKey = c.pAllocator_.key;
-    static_cast<D3D12CommandListState*>(state)->initialStateKey = c.pInitialState_.key;
+  if (state->creationCommand->getId() == CommandId::ID_ID3D12DEVICE_CREATECOMMANDLIST) {
+    ID3D12DeviceCreateCommandListCommand* command =
+        static_cast<ID3D12DeviceCreateCommandListCommand*>(state->creationCommand.get());
+    command->pCommandAllocator_.key = c.pAllocator_.key;
+    command->pInitialState_.key = c.pInitialState_.key;
   }
 
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
@@ -2297,9 +2126,7 @@ void StateTrackingLayer::post(xessD3D12CreateContextCommand& c) {
 
 void StateTrackingLayer::post(xessD3D12InitCommand& c) {
   XessStateService::ContextState* state = xessStateService_.getContextState(c.hContext_.key);
-  state->initParamsEncoded.reset(new char[getSize(c.pInitParams_)]);
-  unsigned offset{};
-  encode(state->initParamsEncoded.get(), offset, c.pInitParams_);
+  state->initParams = xess_d3d12_init_params_t_Argument(c.pInitParams_);
 }
 
 void StateTrackingLayer::pre(xessDestroyContextCommand& c) {
@@ -2348,10 +2175,10 @@ void StateTrackingLayer::post(DStorageGetFactoryCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  DStorageFactoryState* state = new DStorageFactoryState();
+  ObjectState* state = new ObjectState();
   state->key = c.ppv_.key;
   state->object = static_cast<IUnknown*>(*c.ppv_.value);
-  state->iid = c.riid_.value;
+  state->creationCommand.reset(new DStorageGetFactoryCommand(c));
   stateService_.storeState(state);
 }
 
@@ -2359,12 +2186,11 @@ void StateTrackingLayer::post(IDStorageFactoryOpenFileCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  DStorageFileState* state = new DStorageFileState();
-  state->key = c.ppv_.key;
+  ObjectState* state = new ObjectState();
   state->parentKey = c.object_.key;
+  state->key = c.ppv_.key;
   state->object = static_cast<IUnknown*>(*c.ppv_.value);
-  state->iid = c.riid_.value;
-  state->path = c.path_.value;
+  state->creationCommand.reset(new IDStorageFactoryOpenFileCommand(c));
   stateService_.storeState(state);
 
   setAsChildInParent(state->parentKey, state->key);
@@ -2374,17 +2200,13 @@ void StateTrackingLayer::post(IDStorageFactoryCreateQueueCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  DStorageQueueState* state = new DStorageQueueState();
-  state->key = c.ppv_.key;
+  ObjectState* state = new ObjectState();
   state->parentKey = c.object_.key;
+  state->key = c.ppv_.key;
   state->object = static_cast<IUnknown*>(*c.ppv_.value);
-  state->iid = c.riid_.value;
-  state->desc = *c.desc_.value;
-  state->deviceKey = c.desc_.deviceKey;
-  if (c.desc_.value->Name) {
-    state->name = c.desc_.value->Name;
-  }
+  state->creationCommand.reset(new IDStorageFactoryCreateQueueCommand(c));
   stateService_.storeState(state);
+
   setAsChildInParent(state->parentKey, state->key);
 }
 
@@ -2392,16 +2214,12 @@ void StateTrackingLayer::post(IDStorageFactoryCreateStatusArrayCommand& c) {
   if (c.result_.value != S_OK) {
     return;
   }
-  DStorageStatusArrayState* state = new DStorageStatusArrayState();
-  state->key = c.ppv_.key;
+  ObjectState* state = new ObjectState();
   state->parentKey = c.object_.key;
+  state->key = c.ppv_.key;
   state->object = static_cast<IUnknown*>(*c.ppv_.value);
-  state->iid = c.riid_.value;
-  if (c.name_.value) {
-    state->name = c.name_.value;
-  }
-  state->capacity = c.capacity_.value;
-  stateService_.storeState(state);
+  state->creationCommand.reset(new IDStorageFactoryCreateStatusArrayCommand(c));
+
   setAsChildInParent(state->parentKey, state->key);
 }
 

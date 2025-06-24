@@ -72,7 +72,6 @@ public:
   void setReferenceCount(unsigned objectKey, ULONG referenceCount);
   ObjectState* getState(unsigned key);
 
-private:
   unsigned getUniqueCommandKey() {
     return ++restoreCommandKey_;
   };
@@ -82,6 +81,23 @@ private:
   void* getUniqueFakePointer() {
     return reinterpret_cast<void*>(++restoreFakePointer_);
   };
+  SubcaptureRecorder& getRecorder() {
+    return recorder_;
+  }
+  AnalyzerResults& getAnalyzerResults() {
+    return analyzerResults_;
+  }
+  DescriptorService& getDescriptorService() {
+    return descriptorService_;
+  }
+  ResourceStateTrackingService& getResourceStateTrackingService() {
+    return resourceStateTrackingService_;
+  }
+  unsigned getDeviceKey() {
+    return deviceKey_;
+  }
+
+private:
   void copyAuxiliaryFiles();
   void restoreState(ObjectState* state);
   void restoreReferenceCount();
@@ -93,73 +109,22 @@ private:
   void restoreResidencyPriority(unsigned deviceKey,
                                 unsigned objectKey,
                                 D3D12_RESIDENCY_PRIORITY residencyPriority);
-  void restoreDXGIFactory(DXGIFactoryState* state);
-  void restoreDXGIAdapter(DXGIAdapterState* state);
-  void restoreDXGIAdapterByLuid(DXGIAdapterByLuidState* state);
-  void restoreDXGIGetParent(DXGIGetParentState* state);
-  void restoreSwapChain(DXGISwapChainState* state);
-  void restoreSwapChainForHwnd(DXGISwapChainForHwndState* state);
-  void restoreSwapChainBuffer(DXGISwapChainBufferState* state);
-  void restoreD3D12Device(D3D12DeviceState* state);
-  void restoreD3D12CommandQueue(D3D12CommandQueueState* state);
-  void restoreD3D12CommandQueue1(D3D12CommandQueue1State* state);
-  void restoreD3D12DescriptorHeap(D3D12DescriptorHeapState* state);
-  void restoreD3D12Heap(D3D12HeapState* state);
-  void restoreD3D12Heap1(D3D12Heap1State* state);
-  void restoreD3D12HeapFromAddress(D3D12HeapFromAddressState* state);
-  void restoreD3D12QueryHeap(D3D12QueryHeapState* state);
-  void restoreD3D12CommandAllocator(D3D12CommandAllocatorState* state);
-  void restoreD3D12RootSignature(D3D12RootSignatureState* state);
-  void restoreD3D12PipelineLibrary(D3D12PipelineLibraryState* state);
-  void restoreD3D12LoadPipelineState(D3D12LoadPipelineState* state);
-  void restoreD3D12LoadGraphicsPipelineState(D3D12LoadGraphicsPipelineState* state);
-  void restoreD3D12LoadComputePipelineState(D3D12LoadComputePipelineState* state);
-  void restoreD3D12CommandSignature(D3D12CommandSignatureState* state);
-  void restoreD3D12GraphicsPipelineState(D3D12GraphicsPipelineState* state);
-  void restoreD3D12ComputePipelineState(D3D12ComputePipelineState* state);
-  void restoreD3D12PipelineStateStreamState(D3D12PipelineStateStreamState* state);
-  void restoreD3D12StateObjectState(D3D12StateObjectState* state);
-  void restoreD3D12AddToStateObjectState(D3D12AddToStateObjectState* state);
-  void restoreD3D12StateObjectPropertiesState(D3D12StateObjectPropertiesState* state);
-  void restoreD3D12CommandList(D3D12CommandListState* state);
-  void restoreD3D12CommandList1(D3D12CommandList1State* state);
-  void restoreD3D12CommittedResource(D3D12CommittedResourceState* state);
-  void restoreD3D12CommittedResource1(D3D12CommittedResource1State* state);
-  void restoreD3D12CommittedResource2(D3D12CommittedResource2State* state);
-  void restoreD3D12CommittedResource3(D3D12CommittedResource3State* state);
-  void restoreD3D12PlacedResource(D3D12PlacedResourceState* state);
-  void restoreD3D12PlacedResource1(D3D12PlacedResource1State* state);
-  void restoreD3D12ReservedResource(D3D12ReservedResourceState* state);
-  void restoreD3D12ReservedResource1(D3D12ReservedResource1State* state);
+  void restoreDXGISwapChain(ObjectState* state);
+  void restoreDXGIAdapter(ObjectState* state);
+  void restoreD3D12DescriptorHeap(ObjectState* state);
+  void restoreD3D12Device(ObjectState* state);
+  void restoreQueryInterface(ObjectState* state);
+  void restoreD3D12Fence(ObjectState* state);
+  void restoreD3D12CommandList(ObjectState* state);
+  void restoreD3D12Heap(ObjectState* state);
+  void restoreD3D12HeapFromAddress(ObjectState* state);
+  void restoreD3D12CommittedResource(ObjectState* state);
+  void restoreD3D12PlacedResource(ObjectState* state);
+  void restoreD3D12ReservedResource(ObjectState* state);
   void restoreGpuVirtualAddress(ResourceState* state);
-  void restoreD3D12Fence(D3D12FenceState* state);
-  void restoreD3D12INTCDeviceExtensionContext(D3D12INTCDeviceExtensionContextState* state);
-  void restoreD3D12INTCDeviceExtensionContext1(D3D12INTCDeviceExtensionContext1State* state);
-  void restoreD3D12INTCCommittedResource(D3D12INTCCommittedResourceState* state);
-  void restoreD3D12INTCPlacedResource(D3D12INTCPlacedResourceState* state);
-  void restoreD3D12INTCReservedResource(D3D12INTCReservedResourceState* state);
-  void restoreD3D12INTCCommandQueue(D3D12INTCCommandQueueState* state);
-  void restoreD3D12INTCComputePipelineState(D3D12INTCComputePipelineState* state);
-  void restoreD3D12INTCHeapState(D3D12INTCHeapState* state);
-  void restoreDStorageFactoryState(DStorageFactoryState* state);
-  void restoreDStorageFileState(DStorageFileState* state);
-  void restoreDStorageQueueState(DStorageQueueState* state);
-  void restoreDStorageCustomDecompressionQueueState(DStorageCustomDecompressionQueueState* state);
-  void restoreDStorageStatusArrayState(DStorageStatusArrayState* state);
+  void restoreD3D12INTCDeviceExtensionContext(ObjectState* state);
 
 private:
-  friend class ResourceContentRestore;
-  friend class MapStateService;
-  friend class ResourceStateTrackingService;
-  friend class ReservedResourcesService;
-  friend class DescriptorService;
-  friend class CommandListService;
-  friend class CommandQueueService;
-  friend class XessStateService;
-  friend class AccelerationStructuresBuildService;
-  friend class AccelerationStructuresSerializeService;
-  friend class AccelerationStructuresBufferContentRestore;
-  friend class ResidencyService;
   SubcaptureRecorder& recorder_;
   ResourceContentRestore resourceContentRestore_;
   std::map<unsigned, ObjectState*> statesByKey_;
@@ -180,11 +145,7 @@ private:
   ResidencyService& residencyService_;
   unsigned deviceKey_{};
   INTC_D3D12_FEATURE intcFeature_{};
-  struct IntcApplicationInfo {
-    bool isInfo{};
-    std::unique_ptr<char[]> infoEncoded;
-  };
-  IntcApplicationInfo intcApplicationInfo_;
+  std::unique_ptr<INTC_D3D12_SetApplicationInfoCommand> setApplicationInfoCommand_;
 
 private:
   class SwapChainService {

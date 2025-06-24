@@ -55,7 +55,7 @@ private:
   };
 
   struct BuildRaytracingAccelerationStructureState : public RaytracingAccelerationStructureState {
-    std::unique_ptr<char[]> descEncoded;
+    std::unique_ptr<PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>> desc{};
     unsigned destKey{};
     unsigned destOffset{};
     unsigned sourceKey{};

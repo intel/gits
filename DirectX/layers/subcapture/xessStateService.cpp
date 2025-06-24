@@ -49,15 +49,12 @@ void XessStateService::restoreContextState(ContextState* state) {
   c.pDevice_.key = state->deviceKey;
   recorder_.record(new xessD3D12CreateContextWriter(c));
 
-  if (state->initParamsEncoded) {
-    xess_d3d12_init_params_t_Argument initParams;
-    unsigned offset{};
-    decode(state->initParamsEncoded.get(), offset, initParams);
-
+  if (state->initParams) {
     xessD3D12InitCommand c;
     c.key = stateService_.getUniqueCommandKey();
     c.hContext_.key = state->key;
-    c.pInitParams_ = initParams;
+    c.pInitParams_ = state->initParams.value();
+    c.pInitParams_.copy = false;
     recorder_.record(new xessD3D12InitWriter(c));
   }
 

@@ -9,6 +9,7 @@
 #pragma once
 
 #include "subcaptureRecorder.h"
+#include "commandsAuto.h"
 
 #include <memory>
 #include <optional>
@@ -26,7 +27,7 @@ public:
     unsigned key{};
     unsigned deviceKey{};
     ID3D12Device* device{};
-    std::unique_ptr<char[]> initParamsEncoded;
+    std::optional<xess_d3d12_init_params_t_Argument> initParams;
     std::unique_ptr<float[]> jitterScale;
     std::optional<float> exposureScale;
     std::unique_ptr<float[]> velocityScale;

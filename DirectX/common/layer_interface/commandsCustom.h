@@ -246,7 +246,8 @@ public:
         pSupportedExtVersionsCount_{pSupportedExtVersionsCount},
         pSupportedExtVersions_{} {
     if (pSupportedExtVersionsCount) {
-      pSupportedExtVersions_ = {pSupportedExtVersions, *pSupportedExtVersionsCount};
+      pSupportedExtVersions_.value = pSupportedExtVersions;
+      pSupportedExtVersions_.size = *pSupportedExtVersionsCount;
     }
   }
   INTC_D3D12_GetSupportedVersionsCommand() : Command(CommandId::INTC_D3D12_GETSUPPORTEDVERSIONS) {}

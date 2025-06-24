@@ -27,6 +27,8 @@ set(ENCODERS_SRC
   ${SRC_DIR}/commandWritersCustom.h
   ${SRC_DIR}/commandEncodersCustom.h
   ${SRC_DIR}/commandEncodersCustom.cpp
+  ${SRC_DIR}/commandWritersFactory.h
+  ${SRC_DIR}/commandWritersFactoryAuto.cpp
 )
 source_group("encoders" FILES ${ENCODERS_SRC})
 

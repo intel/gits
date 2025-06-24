@@ -170,7 +170,7 @@ void DescriptorService::restoreD3D12RenderTargetView(D3D12RenderTargetViewState*
   c.DestDescriptor_.value = state->destDescriptor;
   c.DestDescriptor_.interfaceKey = state->destDescriptorKey;
   c.DestDescriptor_.index = state->destDescriptorIndex;
-  stateService_.recorder_.record(new ID3D12DeviceCreateRenderTargetViewWriter(c));
+  stateService_.getRecorder().record(new ID3D12DeviceCreateRenderTargetViewWriter(c));
 }
 
 void DescriptorService::restoreD3D12DepthStencilView(D3D12DepthStencilViewState* state) {
@@ -182,7 +182,7 @@ void DescriptorService::restoreD3D12DepthStencilView(D3D12DepthStencilViewState*
   c.DestDescriptor_.value = state->destDescriptor;
   c.DestDescriptor_.interfaceKey = state->destDescriptorKey;
   c.DestDescriptor_.index = state->destDescriptorIndex;
-  stateService_.recorder_.record(new ID3D12DeviceCreateDepthStencilViewWriter(c));
+  stateService_.getRecorder().record(new ID3D12DeviceCreateDepthStencilViewWriter(c));
 }
 
 void DescriptorService::restoreD3D12ShaderResourceView(D3D12ShaderResourceViewState* state) {
@@ -201,7 +201,7 @@ void DescriptorService::restoreD3D12ShaderResourceView(D3D12ShaderResourceViewSt
   c.DestDescriptor_.value = state->destDescriptor;
   c.DestDescriptor_.interfaceKey = state->destDescriptorKey;
   c.DestDescriptor_.index = state->destDescriptorIndex;
-  stateService_.recorder_.record(new ID3D12DeviceCreateShaderResourceViewWriter(c));
+  stateService_.getRecorder().record(new ID3D12DeviceCreateShaderResourceViewWriter(c));
 }
 
 void DescriptorService::restoreD3D12UnorderedAccessView(D3D12UnorderedAccessViewState* state) {
@@ -214,7 +214,7 @@ void DescriptorService::restoreD3D12UnorderedAccessView(D3D12UnorderedAccessView
   c.DestDescriptor_.value = state->destDescriptor;
   c.DestDescriptor_.interfaceKey = state->destDescriptorKey;
   c.DestDescriptor_.index = state->destDescriptorIndex;
-  stateService_.recorder_.record(new ID3D12DeviceCreateUnorderedAccessViewWriter(c));
+  stateService_.getRecorder().record(new ID3D12DeviceCreateUnorderedAccessViewWriter(c));
 }
 
 void DescriptorService::restoreD3D12ConstantBufferView(D3D12ConstantBufferViewState* state) {
@@ -227,7 +227,7 @@ void DescriptorService::restoreD3D12ConstantBufferView(D3D12ConstantBufferViewSt
   c.DestDescriptor_.value = state->destDescriptor;
   c.DestDescriptor_.interfaceKey = state->destDescriptorKey;
   c.DestDescriptor_.index = state->destDescriptorIndex;
-  stateService_.recorder_.record(new ID3D12DeviceCreateConstantBufferViewWriter(c));
+  stateService_.getRecorder().record(new ID3D12DeviceCreateConstantBufferViewWriter(c));
 }
 
 void DescriptorService::restoreD3D12Sampler(D3D12SamplerState* state) {
@@ -238,7 +238,7 @@ void DescriptorService::restoreD3D12Sampler(D3D12SamplerState* state) {
   c.DestDescriptor_.value = state->destDescriptor;
   c.DestDescriptor_.interfaceKey = state->destDescriptorKey;
   c.DestDescriptor_.index = state->destDescriptorIndex;
-  stateService_.recorder_.record(new ID3D12DeviceCreateSamplerWriter(c));
+  stateService_.getRecorder().record(new ID3D12DeviceCreateSamplerWriter(c));
 }
 
 } // namespace DirectX

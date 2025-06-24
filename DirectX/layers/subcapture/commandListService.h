@@ -80,7 +80,6 @@ struct CommandListClearUnorderedAccessViewFloat : public CommandListCommand {
 };
 
 struct CommandListState : public ObjectState, gits::noncopyable {
-  CommandListState(StateId id) : ObjectState(id) {}
   ~CommandListState() {
     clearCommands();
   }
@@ -96,17 +95,6 @@ struct CommandListState : public ObjectState, gits::noncopyable {
   IID iid{};
   std::vector<CommandListCommand*> commands;
   std::vector<unsigned> descriptorHeapKeys{};
-};
-
-struct D3D12CommandListState : public CommandListState {
-  D3D12CommandListState() : CommandListState(D3D12_COMMANDLIST) {}
-  unsigned allocatorKey{};
-  unsigned initialStateKey{};
-};
-
-struct D3D12CommandList1State : public CommandListState {
-  D3D12CommandList1State() : CommandListState(D3D12_COMMANDLIST1) {}
-  D3D12_COMMAND_LIST_FLAGS flags{};
 };
 
 class StateTrackingService;

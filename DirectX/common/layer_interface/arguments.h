@@ -870,7 +870,6 @@ struct DSTORAGE_QUEUE_DESC_Argument {
   ~DSTORAGE_QUEUE_DESC_Argument();
   DSTORAGE_QUEUE_DESC* value{};
   size_t deviceKey{};
-  const char* name{};
   bool copy{};
 };
 
@@ -885,7 +884,6 @@ struct DSTORAGE_REQUEST_Argument {
   unsigned fileKey{};
   unsigned resourceKey{};
   UINT64 newOffset{};
-  const char* name{};
   bool copy{};
 };
 
