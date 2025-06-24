@@ -88,6 +88,9 @@ void StateTrackingService::restoreState(ObjectState* state) {
   if (state->restored) {
     return;
   }
+  if (state->parentKey) {
+    restoreState(getState(state->parentKey));
+  }
 
   switch (state->id) {
   case ObjectState::DXGI_FACTORY:
