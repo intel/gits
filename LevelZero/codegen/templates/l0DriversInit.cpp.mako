@@ -103,8 +103,10 @@ ${func.get('type')} __zecall special_${func.get('name')}(
   ${arg['type']} ${arg['name']}${'' if loop.last else ','}
   %endfor
 ) {
-  %if func.get('type') != 'void':
+  %if func.get('type') == 'ze_result_t':
   ze_result_t ret = ZE_RESULT_SUCCESS;
+  %elif func.get('type') != 'void':
+  ${func.get('type')} ret{};
   %endif
   %if func.get('log', True):
   L0Log(TRACE, NO_NEWLINE) << "${func.get('name')}(";
@@ -132,7 +134,7 @@ ${func.get('type')} __zecall special_${func.get('name')}(
         }
         call_orig = false;
         const auto top = lua_gettop(L);
-        ret = lua_to_ext<ze_result_t>(L, top);  
+        ret = lua_to_ext<${func.get('type')}>(L, top);
         lua_pop(L, top);
         L0Log(TRACE, NO_PREFIX) << "${name}" << " Lua End = " << ret;
       }
@@ -179,7 +181,7 @@ ${func.get('type')} __zecall default_${func.get('name')}(
   if (drv.original.${func.get('name')} == nullptr) {
     if (!load_l0_function(drv.original.${func.get('name')}, "${func.get('name')}")) {
       L0Log(ERR) << "Could not load ${func.get('name')} function.";
-      return ZE_RESULT_ERROR_UNINITIALIZED;
+      return ${'ZE_RESULT_ERROR_UNINITIALIZED' if func.get('type') == 'ze_result_t' else 'nullptr'};
     }
   }
   %endif

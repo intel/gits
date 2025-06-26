@@ -22,7 +22,7 @@ namespace l0 {
 %endif
 void CRecorderWrapper::${func.get('name')}(
   %if func.get('type') != 'void':
-  ${'ze_result_t return_value' if func['enabled'] else 'ze_result_t'}${',' if len(func['args']) > 0 else ''}
+  ${func.get('type')+ ' return_value' if func['enabled'] else func.get('type') }${',' if len(func['args']) > 0 else ''}
   %endif
   %for arg in func['args']:
   ${get_arg_type(arg['name'], arg['type'])}${' ' + arg['name'] if func['enabled'] else ''}${'' if loop.last else ','}

@@ -7330,6 +7330,16 @@ arg1=ArgDef(name='hTracer',type='zel_tracer_handle_t',tag='in'),
 arg2=ArgDef(name='pCoreCbs',type='zel_core_callbacks_t*',tag='in'),
 )
 
+Function(name='zeLoaderInit',component='zel',enabled=False,
+retV=RetDef(type='ze_result_t'),
+)
+
+Function(name='zelLoaderGetVersionsInternal',component='zel',enabled=False,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='num_elems',type='size_t*',tag='in'),
+arg2=ArgDef(name='versions',type='zel_component_version_t *',tag='inout',wrapType='COutArgument'),
+)
+
 Function(name='zelLoaderGetVersions',component='zel',enabled=False,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='num_elems',type='size_t*',tag='in'),
@@ -7348,7 +7358,28 @@ Function(name='zelDisableTracingLayer',component='zel',enabled=False,
 retV=RetDef(type='ze_result_t'),
 )
 
+Function(name='zeLoaderGetTracingHandle',component='zel',enabled=False,
+retV=RetDef(type='void*'),
+)
+
 Function(name='zelLoaderTranslateHandle',component='zel',enabled=False,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='handleType',type='zel_handle_type_t',tag='in'),
+arg2=ArgDef(name='handleIn',type='void *',tag='in',wrapType='COutArgument'),
+arg3=ArgDef(name='handleOut',type='void **',tag='inout',wrapType='COutArgument'),
+)
+
+Function(name='zelLoaderDriverCheck',component='zel',enabled=False,
+retV=RetDef(type='ze_result_t'),
+arg1=ArgDef(name='flags',type='ze_init_flags_t',tag='in'),
+arg2=ArgDef(name='desc',type='ze_init_driver_type_desc_t*',tag='in',wrapType='COutArgument'),
+arg3=ArgDef(name='globalInitStored',type='ze_global_dditable_t *',tag='inout',wrapType='COutArgument'),
+arg4=ArgDef(name='sysmanGlobalInitStored',type='zes_global_dditable_t *',tag='inout',wrapType='COutArgument'),
+arg5=ArgDef(name='requireDdiReinit',type='bool*',tag='inout',wrapType='COutArgument'),
+arg6=ArgDef(name='sysmanOnly',type='bool',tag='in',wrapType='COutArgument'),
+)
+
+Function(name='zelLoaderTranslateHandleInternal',component='zel',enabled=False,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='handleType',type='zel_handle_type_t',tag='in'),
 arg2=ArgDef(name='handleIn',type='void *',tag='in',wrapType='COutArgument'),
