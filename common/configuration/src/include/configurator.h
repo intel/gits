@@ -12,10 +12,11 @@
 
 #include "configurationAuto.h"
 #include "platform.h"
+#include "tools_lite.h"
 
 namespace gits {
 
-class Configurator {
+class Configurator : public gits::noncopyable {
 public:
   static bool IsRecorder() {
     return Get().common.mode == GITSMode::MODE_RECORDER;
@@ -47,8 +48,6 @@ public:
   }
 
 public: // Singleton
-  Configurator(const Configurator&) = delete;
-  Configurator& operator=(const Configurator&) = delete;
   static Configurator& Instance();
   static const Configuration& Get();
   static Configuration& GetMutable();

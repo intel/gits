@@ -78,35 +78,34 @@ void LoadGitsRawFile(const std::string& fileName) {
 #endif
 
 int main(int argc, char* argv[]) {
-  auto& cfg = Configurator::GetMutable();
-
-  cfg.common.mode = GITSMode::MODE_PLAYER;
+  try {
+    auto& cfg = Configurator::GetMutable();
+    cfg.common.mode = GITSMode::MODE_PLAYER;
 
 #if defined GITS_PLATFORM_WINDOWS
-  cfg.common.shared.libGL = "OpenGL32.dll";
-  cfg.common.shared.libEGL = "libEGL.dll";
-  cfg.common.shared.libGLESv1 = "libGLESv1_CM.dll";
-  cfg.common.shared.libGLESv2 = "libGLESv2.dll";
-  cfg.common.shared.libClPath = "OpenCL.dll";
-  cfg.common.shared.libVK = "vulkan-1.dll";
-  cfg.common.shared.libOcloc = "ocloc64.dll";
-  cfg.common.shared.libL0Driver = "ze_intel_gpu64.dll";
-  cfg.common.shared.libL0 = "ze_loader.dll";
+    cfg.common.shared.libGL = "OpenGL32.dll";
+    cfg.common.shared.libEGL = "libEGL.dll";
+    cfg.common.shared.libGLESv1 = "libGLESv1_CM.dll";
+    cfg.common.shared.libGLESv2 = "libGLESv2.dll";
+    cfg.common.shared.libClPath = "OpenCL.dll";
+    cfg.common.shared.libVK = "vulkan-1.dll";
+    cfg.common.shared.libOcloc = "ocloc64.dll";
+    cfg.common.shared.libL0Driver = "ze_intel_gpu64.dll";
+    cfg.common.shared.libL0 = "ze_loader.dll";
 #elif defined GITS_PLATFORM_X11
-  cfg.common.shared.libGL = "libGL.so.1";
-  cfg.common.shared.libEGL = "libEGL.so.1";
-  cfg.common.shared.libGLESv1 = "libGLESv1_CM.so.1";
-  cfg.common.shared.libGLESv2 = "libGLESv2.so.2";
-  cfg.common.shared.libClPath = "libOpenCL.so.1";
-  cfg.common.shared.libVK = "libvulkan.so.1";
-  cfg.common.shared.libOcloc = "libocloc.so";
-  cfg.common.shared.libL0Driver = "libze_intel_gpu.so.1";
-  cfg.common.shared.libL0 = "libze_loader.so.1";
+    cfg.common.shared.libGL = "libGL.so.1";
+    cfg.common.shared.libEGL = "libEGL.so.1";
+    cfg.common.shared.libGLESv1 = "libGLESv1_CM.so.1";
+    cfg.common.shared.libGLESv2 = "libGLESv2.so.2";
+    cfg.common.shared.libClPath = "libOpenCL.so.1";
+    cfg.common.shared.libVK = "libvulkan.so.1";
+    cfg.common.shared.libOcloc = "libocloc.so";
+    cfg.common.shared.libL0Driver = "libze_intel_gpu.so.1";
+    cfg.common.shared.libL0 = "libze_loader.so.1";
 #else
 #error Invalid platform.
 #endif
 
-  try {
     // command line options parser
     CGetOpt options(argc, argv);
 

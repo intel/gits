@@ -40,7 +40,7 @@ bool ConfigureRecorder(const std::filesystem::path& configPath) {
 #elif defined GITS_PLATFORM_LINUX
   auto processName = GetLinuxProcessName(getpid());
 #endif
-  Configurator::Instance().ApplyOverrides(configPath, processName);
+  Configurator::Instance().ApplyOverrides(configPath, std::move(processName));
 
   Configurator::GetMutable().common.mode = GITSMode::MODE_RECORDER;
 

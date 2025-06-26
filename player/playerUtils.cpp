@@ -69,7 +69,7 @@ bool ConfigurePlayer(const std::filesystem::path& playerPath, ArgumentParser& ar
 #elif defined GITS_PLATFORM_LINUX
   auto processName = GetLinuxProcessName(getpid());
 #endif
-  Configurator::Instance().ApplyOverrides(configPath, processName);
+  Configurator::Instance().ApplyOverrides(configPath, std::move(processName));
 
   auto& cfg = Configurator::GetMutable();
   cfg.common.mode = GITSMode::MODE_PLAYER;
@@ -142,7 +142,7 @@ bool ConfigurePlayer(const std::filesystem::path& playerPath, ArgumentParser& ar
 
     file->SetDiagnosticInfo(configPath);
 
-    file->SetConfig(configPath);
+    file->SetConfig(std::move(configPath));
 
     inst.RegisterFileRecorder(std::move(file));
   }

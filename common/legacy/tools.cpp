@@ -313,7 +313,7 @@ void SaveJsonFile(const nlohmann::ordered_json& json, const std::filesystem::pat
 #endif
 
 void CheckMinimumAvailableDiskSize() {
-  auto config = Configurator::Get();
+  auto& config = Configurator::Get();
 #if defined GITS_PLATFORM_WINDOWS
   auto path = config.common.recorder.dumpPath;
   if (Configurator::IsPlayer() && config.directx.features.subcapture.enabled) {
