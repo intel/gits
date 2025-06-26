@@ -66,25 +66,18 @@ Corresponding response file will have following content:
 ```
 
 Options in GITS player are divided into a number of groups. To list the
-help on specific option group use `-hh <groupname>` option. Options are
-generally assigned to a group based on the functionality of the options,
-however some options fit many groups - they will still be assigned to
-only one of the following groups:
+help on a specific option group use `-hh <group_name>` option.
+Currently the following API-based groups are available:
 
 | group       | description                                          |
 | ----------- | ---------------------------------------------------- |
-| general     | general GITS behavior options                        |
-| playback    | playback control options (like early stream exit)    |
-| image       | options for images (png files) gathering             |
-| metrics     | options for doing various measurements/statistics    |
-| performance | options that can affect GITS playback performance    |
-| mutators    | options that modify GITS api stream in some way      |
-| workaround  | workarounds needed for stream playback in some cases |
-| internal    | options of interest mostly for GITS dev team         |
+| Common      | Options common to all APIs                           |
+| Vulkan      | Vulkan specific options                              |
+| OpenGL      | OpenGL specific options                              |
+| OpenCL      | OpenCL specific options                              |
+| LevelZero   | LevelZero specific options                           |
 | all         | all the options (union of prev. mentioned groups)    |
 
-
-Also note, that not all options are available on all platforms. Consult
-'-hh all' option to verify option presence on particular platform (or
-just attempt to use one).
+More groups will be coming in the future, and will be based on their intended
+target audience and usage.
 

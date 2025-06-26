@@ -118,8 +118,21 @@ bool argsFilterTagsFunc(const args::Base& item) {
   if (argsFilterTags.size() <= 0) {
     return true;
   }
+
+  // The lambdas are used to make the filtering case insensitive
+  auto toUpper = [](const std::string& str) {
+    std::string upperStr = str;
+    std::transform(upperStr.begin(), upperStr.end(), upperStr.begin(), ::toupper);
+    return upperStr;
+  };
+
   for (const auto& entry : item.GetTags()) {
-    if (argsFilterTags.find(entry) != argsFilterTags.end()) {
+    auto comparisonFunc = [&toUpper, &entry](const std::string& tag) {
+      return toUpper(tag) == toUpper(entry);
+    };
+
+    if (std::find_if(argsFilterTags.begin(), argsFilterTags.end(), comparisonFunc) !=
+        argsFilterTags.end()) {
       return true;
     }
   }

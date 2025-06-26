@@ -1,12 +1,12 @@
-From 1600bec8959270f712bca5f634b5e20a74e1cfa9 Mon Sep 17 00:00:00 2001
-From: Sebastian Schaefer <sebastian.schafer@intel.com>
-Date: Mon, 28 Apr 2025 11:46:24 +0200
-Subject: [PATCH] tags to filter, hide options and no tests
+From 6f881bc5b538811a51d4306457f992417babca54 Mon Sep 17 00:00:00 2001
+From: "Lobacz, Boguslaw" <boguslaw.lobacz@intel.com>
+Date: Thu, 12 Jun 2025 11:57:30 +0200
+Subject: [PATCH] [PATCH] tags to filter, hide options and no tests
 
 ---
  CMakeLists.txt | 35 -------------------------
- args.hxx       | 70 ++++++++++++++++++++++++++++++++++++++++++++------
- 2 files changed, 62 insertions(+), 43 deletions(-)
+ args.hxx       | 71 +++++++++++++++++++++++++++++++++++++++++++-------
+ 2 files changed, 62 insertions(+), 44 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
 index 73a2062..09c40a6 100644
@@ -55,7 +55,7 @@ index 73a2062..09c40a6 100644
  export(
      TARGETS args
 diff --git a/args.hxx b/args.hxx
-index c0ec54a..5a87bd7 100644
+index c0ec54a..33b81e6 100644
 --- a/args.hxx
 +++ b/args.hxx
 @@ -60,6 +60,7 @@
@@ -66,21 +66,13 @@ index c0ec54a..5a87bd7 100644
  #else
  
  /** \namespace args
-@@ -67,7 +68,23 @@ namespace argstest
+@@ -67,7 +68,15 @@ namespace argstest
   */
  namespace args
  {
 +    class Base;
  #endif
 +    typedef bool (*FilterFunction)(const args::Base&);
-+
-+    static bool FilterAllowAll(const args::Base&) {
-+        return true;
-+    }
-+
-+    static bool FilterAllowNone(const args::Base&) {
-+        return true;
-+    }
 +
 +    static FilterFunction GlobalFilterOption = nullptr;
 +
@@ -90,7 +82,7 @@ index c0ec54a..5a87bd7 100644
      /** Getter to grab the value from the argument type.
       *
       * If the Get() function of the type returns a reference, so does this, and
-@@ -480,7 +497,13 @@ namespace args
+@@ -480,7 +489,13 @@ namespace args
               */
              bool Match(const std::string &flag) const
              {
@@ -105,7 +97,7 @@ index c0ec54a..5a87bd7 100644
              }
  
              /** (INTERNAL) Check if there is a match of a flag
-@@ -795,6 +818,7 @@ namespace args
+@@ -795,6 +810,7 @@ namespace args
      {
          private:
              Options options = {};
@@ -113,7 +105,7 @@ index c0ec54a..5a87bd7 100644
  
          protected:
              bool matched = false;
-@@ -871,6 +895,14 @@ namespace args
+@@ -871,6 +887,14 @@ namespace args
                  return false;
              }
  
@@ -128,7 +120,7 @@ index c0ec54a..5a87bd7 100644
              virtual bool HasPositional() const
              {
                  return false;
-@@ -999,6 +1031,9 @@ namespace args
+@@ -999,8 +1023,18 @@ namespace args
  
              virtual std::vector<std::tuple<std::string, std::string, unsigned>> GetDescription(const HelpParams &params, const unsigned indentLevel) const override
              {
@@ -136,9 +128,19 @@ index c0ec54a..5a87bd7 100644
 +                    return {};
 +                }
                  std::tuple<std::string, std::string, unsigned> description;
-                 std::get<0>(description) = GetNameString(params);
+-                std::get<0>(description) = GetNameString(params);
++
++                auto nameString = GetNameString(params);
++                if (nameString.empty()){
++                    // This means that option has no shorthand arguments
++                    return {};
++                }
++
++                std::get<0>(description) = nameString;
                  std::get<1>(description) = help;
-@@ -1089,13 +1124,23 @@ namespace args
+                 std::get<2>(description) = indentLevel;
+ 
+@@ -1089,13 +1123,23 @@ namespace args
                  std::string flags;
                  const auto flagStrings = matcher.GetFlagStrings();
                  const bool useValueNameOnce = flagStrings.size() == 1 ? false : params.useValueNameOnce;
@@ -163,7 +165,7 @@ index c0ec54a..5a87bd7 100644
  
                      flags += flag.isShort ? params.shortPrefix : params.longPrefix;
                      flags += flag.str();
-@@ -1531,7 +1576,7 @@ namespace args
+@@ -1531,7 +1575,7 @@ namespace args
  
                  // Push that group description on the back if not empty
                  unsigned addindent = 0;
@@ -172,7 +174,7 @@ index c0ec54a..5a87bd7 100644
                  {
                      descriptions.emplace_back(help, "", indent);
                      addindent = 1;
-@@ -1545,12 +1590,18 @@ namespace args
+@@ -1545,12 +1589,18 @@ namespace args
                      }
  
                      auto groupDescriptions = child->GetDescription(params, indent + addindent);
@@ -196,7 +198,7 @@ index c0ec54a..5a87bd7 100644
              }
  
              /** Get the names of positional parameters
-@@ -3007,6 +3058,9 @@ namespace args
+@@ -3007,6 +3057,9 @@ namespace args
                      const auto info = Wrap(std::get<1>(desc), helpParams.width - (helpParams.helpindent + groupindent));
  
                      std::string::size_type flagssize = 0;
@@ -207,5 +209,5 @@ index c0ec54a..5a87bd7 100644
                      {
                          if (flagsit != std::begin(flags))
 -- 
-2.46.1.windows.1
+2.48.1.windows.1
 

@@ -156,19 +156,25 @@ class Repository:
 
     def apply_patches(self):
         for i in self.modules:
-            for patch in Path(PATCH_PATH / i).glob("*.patch"):
+            patch_list = list(Path(PATCH_PATH / i).glob("*.patch"))
+            if len(patch_list) == 0:
+                continue
+            logger.info(f"resetting repo {i}")
+            self.execute(
+                f"git reset --hard",
+                cwd=self.repository_path.parent / i,
+                must_pass=True
+            )
+            self.execute(
+                f"git clean -fdx",
+                cwd=self.repository_path.parent / i,
+                must_pass=True
+            )
+            for patch in patch_list:
                 logger.info(f"applying patch {patch}")
-                process = self.execute(
-                    f"git apply --check {str(patch)}",
-                    cwd=self.repository_path.parent / i,
-                    must_pass=False,
+                self.execute(
+                    f"git apply {patch}", cwd=self.repository_path.parent / i
                 )
-                if len(process.stderr) == 0:
-                    self.execute(
-                        f"git apply {patch}", cwd=self.repository_path.parent / i
-                    )
-                else:
-                    logger.info(f"Patch {patch} is already applied")
 
     def clone(self):
         clone = True

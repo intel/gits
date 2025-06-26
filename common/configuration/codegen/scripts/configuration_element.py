@@ -57,6 +57,7 @@ class ConfigurationEntry:
         # Tags are optional
         self.tags = list(get_if_present(node, 'Tags', namespace))
         self.tags.extend(get_if_present(node, 'OSVisibility', []))
+        self.tags.append('all')
 
         self.description = ''
         self.short_description = ''
