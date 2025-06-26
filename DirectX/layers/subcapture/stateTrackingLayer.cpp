@@ -145,7 +145,13 @@ void StateTrackingLayer::pre(IUnknownReleaseCommand& c) {
     if (it != resourceHeaps_.end()) {
       for (unsigned resourceKey : it->second) {
         stateService_.releaseObject(resourceKey, 0);
+        mapStateService_.destroyResource(resourceKey);
+        resourceStateTrackingService_.destroyResource(resourceKey);
+        descriptorService_.removeState(resourceKey);
+        accelerationStructuresSerializeService_.destroyResource(resourceKey);
+        residencyService_.destroyObject(resourceKey);
       }
+      resourceHeaps_.erase(it);
     }
 
     gpuExecutionFlusher_.destroyCommandQueue(c.object_.key);
