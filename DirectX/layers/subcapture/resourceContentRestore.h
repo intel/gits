@@ -36,7 +36,8 @@ private:
 private:
   void restoreMappableResources();
   unsigned restoreUnmappableResources(std::vector<ResourceInfo>& unmappableResourceStates,
-                                      unsigned resourceStartIndex);
+                                      unsigned resourceStartIndex,
+                                      UINT64 maxChunkSize);
   void getSubresourceSizes(
       ID3D12Device* device,
       D3D12_RESOURCE_DESC& desc,

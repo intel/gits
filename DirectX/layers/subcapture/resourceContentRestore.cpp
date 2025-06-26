@@ -76,7 +76,7 @@ void ResourceContentRestore::restoreContent() {
     unsigned startIndex = 0;
     unsigned restored = 0;
     do {
-      restored = restoreUnmappableResources(unmappableResourceBuffers_, startIndex);
+      restored = restoreUnmappableResources(unmappableResourceBuffers_, startIndex, 0x100000);
       startIndex += restored;
     } while (restored);
     unmappableResourceBuffers_.clear();
@@ -84,7 +84,7 @@ void ResourceContentRestore::restoreContent() {
     startIndex = 0;
     restored = 0;
     do {
-      restored = restoreUnmappableResources(unmappableResourceTextures_, startIndex);
+      restored = restoreUnmappableResources(unmappableResourceTextures_, startIndex, 0x1000);
       startIndex += restored;
     } while (restored);
     unmappableResourceTextures_.clear();
@@ -132,7 +132,9 @@ void ResourceContentRestore::restoreMappableResources() {
 }
 
 unsigned ResourceContentRestore::restoreUnmappableResources(
-    std::vector<ResourceInfo>& unmappableResourceStates, unsigned resourceStartIndex) {
+    std::vector<ResourceInfo>& unmappableResourceStates,
+    unsigned resourceStartIndex,
+    UINT64 maxChunkSize) {
   if (resourceStartIndex >= unmappableResourceStates.size()) {
     return 0;
   }
@@ -152,7 +154,6 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
     }
   }
 
-  const UINT64 maxChunkSize = 0x100000;
   unsigned resourcesCount = 0;
   UINT64 totalSize = 0;
   UINT64 totalSizeRestored = 0;
