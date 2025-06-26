@@ -55,10 +55,12 @@ def get_api_version_from_string(api_version: str):
     return api_version.replace('ZE_API_VERSION_', '').replace('_', '.')
 
 def is_function_included(api_version:str, function_version :str):
-    if function_version == '0':
+    if function_version == '0.0':
         return True
     api_version = get_api_version_from_string(api_version)
-    if api_version >= function_version:
+    major_api, minor_api = api_version.split(".")
+    major_function, minor_function = function_version.split(".")
+    if int(major_api) >= int(major_function) and int(minor_api) >= int(minor_function):
         return True
     return False
 
@@ -85,7 +87,7 @@ def get_ddi_table_functions(func, ddi_helper_functions, api_version: str):
         if not is_latest_version(ddi_helper_functions, tmp_func):
             continue
         if tmp_func.get("component") == component and is_function_included(
-            api_version, tmp_func.get("api_version", "0")
+            api_version, tmp_func.get("api_version", "0.0")
         ):
             component_functions.add(cut_version(name, tmp_func.get("version")))
     return component_functions
