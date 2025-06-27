@@ -42,24 +42,7 @@ ${whitespace(indentation + 1)}${option.type} ${option.instance_name};
     % endif
 % endfor
 
-${whitespace(indentation + 1)}void updateFromEnvironment() {
-% for option in data.options:
-% if not option.is_derived:
-    %if option.is_group:
-${whitespace(indentation + 2)}${option.instance_name}.updateFromEnvironment();
-    %else:
-${whitespace(indentation + 2)}const char* env_${option.name} = getEnvVar("${option.get_environment_string()}");
-${whitespace(indentation + 2)}if (env_${option.name}) {
-${whitespace(indentation + 3)}try {
-${whitespace(indentation + 4)}${option.instance_name} = stringTo<${option.type}>(env_${option.name});
-${whitespace(indentation + 3)}} catch (const std::exception& e) {
-${whitespace(indentation + 4)}Log(ERR) << "Error parsing environment variable ${option.get_environment_string()}: " << e.what() << std::endl;
-${whitespace(indentation + 3)}}    
-${whitespace(indentation + 2)}}
-% endif
-    %endif
-% endfor
-${whitespace(indentation + 1)}}
+${whitespace(indentation + 1)}void updateFromEnvironment();
 % if indentation == 0:
 ${whitespace(indentation + 1)}Configuration();
 };

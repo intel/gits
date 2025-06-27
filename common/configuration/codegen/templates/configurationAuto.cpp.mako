@@ -26,6 +26,10 @@
 #endif
 
 namespace gits {
+<%!
+def whitespace(number):
+    return ' ' * number * 2
+%>
 <%def name="render_group(data)">\
 % for option in data.options:
   % if option.is_group:
@@ -45,6 +49,26 @@ Configuration::Configuration() {
   // Initialize all the options to their default values
 ${render_group(data)}
 }
+
+% for group in groups:
+void ${group.namespace_str}::updateFromEnvironment() {
+% for option in group.options:
+% if option.is_group:
+${whitespace(2)}${option.instance_name}.updateFromEnvironment();
+% else:
+${whitespace(2)}const char* env_${option.name} = getEnvVar("${option.get_environment_string()}");
+${whitespace(2)}if (env_${option.name}) {
+${whitespace(3)}try {
+${whitespace(4)}${option.instance_name} = stringTo<${option.type}>(env_${option.name});
+${whitespace(3)}} catch (const std::exception& e) {
+${whitespace(4)}Log(ERR) << "Error parsing environment variable ${option.get_environment_string()}: " << e.what() << std::endl;
+${whitespace(3)}}
+${whitespace(2)}}
+
+% endif
+% endfor
+}
+% endfor
 
 #ifndef BUILD_FOR_CCODE
 % for group in groups:
