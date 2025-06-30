@@ -16,8 +16,8 @@ void ResourceUsageTrackingService::addResource(unsigned resourceKey) {
 }
 
 void ResourceUsageTrackingService::commandListResourceUsage(unsigned commandListKey,
-                                                            unsigned resourceKeys) {
-  commandListResourceUsage_[commandListKey].push_back(resourceKeys);
+                                                            unsigned resourceKey) {
+  commandListResourceUsage_[commandListKey].push_back(resourceKey);
 }
 
 void ResourceUsageTrackingService::commandListResourceUsage(unsigned commandListKey,

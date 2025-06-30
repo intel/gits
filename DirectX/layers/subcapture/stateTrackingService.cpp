@@ -309,48 +309,21 @@ void StateTrackingService::restoreResources() {
   {
     ResourceBatchType prevType{};
     for (unsigned resourceKey : orderedResources) {
-      auto* state = getState(resourceKey);
+      ResourceState* state = static_cast<ResourceState*>(getState(resourceKey));
       if (!state) {
         continue;
       }
 
       ResourceBatchType type{};
-      const auto commandId = state->creationCommand->getId();
+      CommandId commandId = state->creationCommand->getId();
       bool isReservedResource = commandId == CommandId::ID_ID3D12DEVICE_CREATERESERVEDRESOURCE ||
                                 commandId == CommandId::ID_ID3D12DEVICE4_CREATERESERVEDRESOURCE1 ||
                                 commandId == CommandId::ID_ID3D12DEVICE10_CREATERESERVEDRESOURCE2 ||
                                 commandId == CommandId::INTC_D3D12_CREATERESERVEDRESOURCE;
 
-      auto isReservedResourceBuffer = [state](CommandId id) -> bool {
-        switch (id) {
-        case CommandId::ID_ID3D12DEVICE_CREATERESERVEDRESOURCE: {
-          auto* cmd =
-              static_cast<ID3D12DeviceCreateReservedResourceCommand*>(state->creationCommand.get());
-          return cmd->pDesc_.value->Dimension == D3D12_RESOURCE_DIMENSION_BUFFER;
-        }
-        case CommandId::ID_ID3D12DEVICE4_CREATERESERVEDRESOURCE1: {
-          auto* cmd = static_cast<ID3D12Device4CreateReservedResource1Command*>(
-              state->creationCommand.get());
-          return cmd->pDesc_.value->Dimension == D3D12_RESOURCE_DIMENSION_BUFFER;
-        }
-        case CommandId::ID_ID3D12DEVICE10_CREATERESERVEDRESOURCE2: {
-          auto* cmd = static_cast<ID3D12Device10CreateReservedResource2Command*>(
-              state->creationCommand.get());
-          return cmd->pDesc_.value->Dimension == D3D12_RESOURCE_DIMENSION_BUFFER;
-        }
-        case CommandId::INTC_D3D12_CREATERESERVEDRESOURCE: {
-          auto* cmd =
-              static_cast<INTC_D3D12_CreateReservedResourceCommand*>(state->creationCommand.get());
-          return cmd->pDesc_.value->pD3D12Desc->Dimension == D3D12_RESOURCE_DIMENSION_BUFFER;
-        }
-        default:
-          return false;
-        }
-      };
-
       if (isReservedResource) {
         type = ReservedResourceTexture;
-        if (isReservedResourceBuffer(commandId)) {
+        if (state->dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
           type = ReservedResourceBuffer;
         }
       } else {

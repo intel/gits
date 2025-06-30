@@ -19,7 +19,7 @@ namespace DirectX {
 class ResourceUsageTrackingService {
 public:
   void addResource(unsigned resourceKey);
-  void commandListResourceUsage(unsigned commandListKey, unsigned resourceKeys);
+  void commandListResourceUsage(unsigned commandListKey, unsigned resourceKey);
   void commandListResourceUsage(unsigned commandListKey, std::vector<unsigned>& resourceKeys);
   void commandListReset(unsigned commandListKey);
   void executeCommandLists(unsigned commandKey,
