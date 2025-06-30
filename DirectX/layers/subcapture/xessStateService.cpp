@@ -53,8 +53,11 @@ void XessStateService::restoreContextState(ContextState* state) {
     xessD3D12InitCommand c;
     c.key = stateService_.getUniqueCommandKey();
     c.hContext_.key = state->key;
-    c.pInitParams_ = state->initParams.value();
-    c.pInitParams_.copy = false;
+    c.pInitParams_.value = state->initParams.value().value;
+    c.pInitParams_.key = state->initParams.value().key;
+    c.pInitParams_.tempBufferHeapKey = state->initParams.value().tempBufferHeapKey;
+    c.pInitParams_.tempTextureHeapKey = state->initParams.value().tempTextureHeapKey;
+    c.pInitParams_.pipelineLibraryKey = state->initParams.value().pipelineLibraryKey;
     recorder_.record(new xessD3D12InitWriter(c));
   }
 

@@ -71,6 +71,7 @@ CommandWriter* createCommandWriter(Command* command) {
   %endfor
   %endfor
   }
+  return nullptr;
 }
 
 } // namespace DirectX

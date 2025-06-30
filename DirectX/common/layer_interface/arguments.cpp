@@ -874,7 +874,7 @@ D3D12_PIPELINE_STATE_STREAM_DESC_Argument::~D3D12_PIPELINE_STATE_STREAM_DESC_Arg
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_CACHED_PSO: {
         D3D12_CACHED_PIPELINE_STATE& desc =
             *static_cast<CD3DX12_PIPELINE_STATE_STREAM_CACHED_PSO*>(data);
-        delete[] desc.pCachedBlob;
+        delete[] static_cast<const uint8_t*>(desc.pCachedBlob);
         offset += sizeof(CD3DX12_PIPELINE_STATE_STREAM_CACHED_PSO);
       } break;
       case D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_FLAGS:
@@ -1076,15 +1076,28 @@ D3D12_STATE_OBJECT_DESC_Argument::~D3D12_STATE_OBJECT_DESC_Argument() {
     for (unsigned i = 0; i < value->NumSubobjects; ++i) {
       D3D12_STATE_SUBOBJECT& sub = const_cast<D3D12_STATE_SUBOBJECT*>(value->pSubobjects)[i];
       switch (sub.Type) {
+      case D3D12_STATE_SUBOBJECT_TYPE_STATE_OBJECT_CONFIG: {
+        delete static_cast<const D3D12_STATE_OBJECT_CONFIG*>(sub.pDesc);
+      } break;
+      case D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE: {
+        delete static_cast<const D3D12_GLOBAL_ROOT_SIGNATURE*>(sub.pDesc);
+      } break;
+      case D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE: {
+        delete static_cast<const D3D12_LOCAL_ROOT_SIGNATURE*>(sub.pDesc);
+      } break;
+      case D3D12_STATE_SUBOBJECT_TYPE_NODE_MASK: {
+        delete static_cast<const D3D12_NODE_MASK*>(sub.pDesc);
+      } break;
       case D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY: {
         D3D12_DXIL_LIBRARY_DESC& desc =
             *static_cast<D3D12_DXIL_LIBRARY_DESC*>(const_cast<void*>(sub.pDesc));
-        delete[] desc.DXILLibrary.pShaderBytecode;
+        delete[] static_cast<const uint8_t*>(desc.DXILLibrary.pShaderBytecode);
         for (unsigned j = 0; j < desc.NumExports; ++j) {
           delete[] desc.pExports[j].Name;
           delete[] desc.pExports[j].ExportToRename;
         }
         delete[] desc.pExports;
+        delete static_cast<const D3D12_DXIL_LIBRARY_DESC*>(sub.pDesc);
       } break;
       case D3D12_STATE_SUBOBJECT_TYPE_EXISTING_COLLECTION: {
         D3D12_EXISTING_COLLECTION_DESC& desc =
@@ -1094,6 +1107,7 @@ D3D12_STATE_OBJECT_DESC_Argument::~D3D12_STATE_OBJECT_DESC_Argument() {
           delete[] desc.pExports[j].ExportToRename;
         }
         delete[] desc.pExports;
+        delete static_cast<const D3D12_EXISTING_COLLECTION_DESC*>(sub.pDesc);
       } break;
       case D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION: {
         D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION& desc =
@@ -1102,6 +1116,7 @@ D3D12_STATE_OBJECT_DESC_Argument::~D3D12_STATE_OBJECT_DESC_Argument() {
           delete[] desc.pExports[j];
         }
         delete[] desc.pExports;
+        delete static_cast<const D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION*>(sub.pDesc);
       } break;
       case D3D12_STATE_SUBOBJECT_TYPE_DXIL_SUBOBJECT_TO_EXPORTS_ASSOCIATION: {
         D3D12_DXIL_SUBOBJECT_TO_EXPORTS_ASSOCIATION& desc =
@@ -1112,7 +1127,15 @@ D3D12_STATE_OBJECT_DESC_Argument::~D3D12_STATE_OBJECT_DESC_Argument() {
           delete[] desc.pExports[j];
         }
         delete[] desc.pExports;
+        delete static_cast<const D3D12_DXIL_SUBOBJECT_TO_EXPORTS_ASSOCIATION*>(sub.pDesc);
       } break;
+      case D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG: {
+        delete static_cast<const D3D12_RAYTRACING_SHADER_CONFIG*>(sub.pDesc);
+      } break;
+      case D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG: {
+        delete static_cast<const D3D12_RAYTRACING_PIPELINE_CONFIG*>(sub.pDesc);
+      } break;
+
       case D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP: {
         D3D12_HIT_GROUP_DESC& desc =
             *static_cast<D3D12_HIT_GROUP_DESC*>(const_cast<void*>(sub.pDesc));
@@ -1120,9 +1143,12 @@ D3D12_STATE_OBJECT_DESC_Argument::~D3D12_STATE_OBJECT_DESC_Argument() {
         delete[] desc.AnyHitShaderImport;
         delete[] desc.ClosestHitShaderImport;
         delete[] desc.IntersectionShaderImport;
+        delete static_cast<const D3D12_HIT_GROUP_DESC*>(sub.pDesc);
+      } break;
+      case D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG1: {
+        delete static_cast<const D3D12_RAYTRACING_PIPELINE_CONFIG1*>(sub.pDesc);
       } break;
       }
-      delete sub.pDesc;
     }
     delete[] value->pSubobjects;
     delete value;
@@ -1766,7 +1792,7 @@ DML_CheckFeatureSupport_BufferArgument::DML_CheckFeatureSupport_BufferArgument(
 
 DML_CheckFeatureSupport_BufferArgument::~DML_CheckFeatureSupport_BufferArgument() {
   if (copy) {
-    delete[] value;
+    delete[] static_cast<const uint8_t*>(value);
   }
 }
 

@@ -411,8 +411,17 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
         ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand build;
         build.key = state->commandKey;
         build.object_.key = commandListKey_;
-        build.pDesc_ = *state->desc;
-        build.pDesc_.copy = false;
+        build.pDesc_.value = state->desc->value;
+        build.pDesc_.destAccelerationStructureKey = state->desc->destAccelerationStructureKey;
+        build.pDesc_.destAccelerationStructureOffset = state->desc->destAccelerationStructureOffset;
+        build.pDesc_.sourceAccelerationStructureKey = state->desc->sourceAccelerationStructureKey;
+        build.pDesc_.sourceAccelerationStructureOffset =
+            state->desc->sourceAccelerationStructureOffset;
+        build.pDesc_.scratchAccelerationStructureKey = state->desc->scratchAccelerationStructureKey;
+        build.pDesc_.scratchAccelerationStructureOffset =
+            state->desc->scratchAccelerationStructureOffset;
+        build.pDesc_.inputKeys = state->desc->inputKeys;
+        build.pDesc_.inputOffsets = state->desc->inputOffsets;
         build.NumPostbuildInfoDescs_.value = 0;
         build.pPostbuildInfoDescs_.value = nullptr;
         recorder_.record(

@@ -57,7 +57,7 @@ struct PointerArgument {
     }
     copy = true;
   }
-  PointerArgument& operator=(const PointerArgument<T>&) = default;
+  PointerArgument& operator=(const PointerArgument<T>&) = delete;
   ~PointerArgument() {
     if (copy) {
       delete static_cast<T*>(value);
@@ -94,7 +94,7 @@ struct BufferArgument {
       : value(const_cast<void*>(value_)), size(size_) {}
   BufferArgument() {}
   BufferArgument(const BufferArgument& arg);
-  BufferArgument& operator=(const BufferArgument&) = default;
+  BufferArgument& operator=(const BufferArgument&) = delete;
   ~BufferArgument();
   void* value{};
   size_t size{};
@@ -105,8 +105,8 @@ struct OutputBufferArgument {
   OutputBufferArgument(void** value_) : value(value_) {}
   OutputBufferArgument() {}
   OutputBufferArgument(const OutputBufferArgument& arg);
-  OutputBufferArgument& operator=(const OutputBufferArgument&) = default;
-  ~OutputBufferArgument() = default;
+  OutputBufferArgument& operator=(const OutputBufferArgument&) = delete;
+  ~OutputBufferArgument() {}
   void** value{};
   void* captureValue{};
   void* data{};
@@ -131,8 +131,8 @@ struct InterfaceArrayArgument {
     memcpy(data.data(), arg.value, size * sizeof(T*));
     value = data.data();
   }
-  InterfaceArrayArgument& operator=(const InterfaceArrayArgument&) = default;
-  ~InterfaceArrayArgument() = default;
+  InterfaceArrayArgument& operator=(const InterfaceArrayArgument&) = delete;
+  ~InterfaceArrayArgument() {}
   T** value{};
   size_t size{};
   std::vector<unsigned> keys{};
@@ -148,8 +148,8 @@ struct InterfaceOutputArgument {
     data = *arg.value;
     value = &data;
   }
-  InterfaceOutputArgument& operator=(const InterfaceOutputArgument&) = default;
-  ~InterfaceOutputArgument() = default;
+  InterfaceOutputArgument& operator=(const InterfaceOutputArgument&) = delete;
+  ~InterfaceOutputArgument() {}
   T** value{};
   unsigned key{};
   T* data{};
@@ -159,7 +159,7 @@ struct LPCWSTR_Argument {
   LPCWSTR_Argument(LPCWSTR value_) : value(const_cast<LPWSTR>(value_)) {}
   LPCWSTR_Argument() {}
   LPCWSTR_Argument(const LPCWSTR_Argument& arg);
-  LPCWSTR_Argument& operator=(const LPCWSTR_Argument&) = default;
+  LPCWSTR_Argument& operator=(const LPCWSTR_Argument&) = delete;
   ~LPCWSTR_Argument();
   LPWSTR value{};
   bool copy{};
@@ -169,7 +169,7 @@ struct LPCSTR_Argument {
   LPCSTR_Argument(LPCSTR value_) : value(const_cast<LPSTR>(value_)) {}
   LPCSTR_Argument() {}
   LPCSTR_Argument(const LPCSTR_Argument& arg);
-  LPCSTR_Argument& operator=(const LPCSTR_Argument&) = default;
+  LPCSTR_Argument& operator=(const LPCSTR_Argument&) = delete;
   ~LPCSTR_Argument();
   LPSTR value{};
   bool copy{};
@@ -206,8 +206,8 @@ struct DescriptorHandleArrayArgument {
     memcpy(data.data(), arg.value, size * sizeof(T));
     value = data.data();
   }
-  DescriptorHandleArrayArgument& operator=(DescriptorHandleArrayArgument const&) = default;
-  ~DescriptorHandleArrayArgument() = default;
+  DescriptorHandleArrayArgument& operator=(DescriptorHandleArrayArgument const&) = delete;
+  ~DescriptorHandleArrayArgument() {}
   T* value{};
   size_t size{};
   std::vector<unsigned> interfaceKeys{};
@@ -243,8 +243,8 @@ struct ShaderIdentifierArgument {
   ShaderIdentifierArgument(const void* value_) : value(const_cast<void*>(value_)) {}
   ShaderIdentifierArgument() {}
   ShaderIdentifierArgument(const ShaderIdentifierArgument& arg);
-  ShaderIdentifierArgument& operator=(ShaderIdentifierArgument const&) = default;
-  ~ShaderIdentifierArgument() = default;
+  ShaderIdentifierArgument& operator=(ShaderIdentifierArgument const&) = delete;
+  ~ShaderIdentifierArgument() {}
   void* value{};
   std::vector<uint8_t> data;
 };
@@ -255,7 +255,7 @@ struct PointerArgument<D3D12_ROOT_SIGNATURE_DESC> {
       : value(const_cast<D3D12_ROOT_SIGNATURE_DESC*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<D3D12_ROOT_SIGNATURE_DESC>& arg);
-  PointerArgument& operator=(const PointerArgument<D3D12_ROOT_SIGNATURE_DESC>&) = default;
+  PointerArgument& operator=(const PointerArgument<D3D12_ROOT_SIGNATURE_DESC>&) = delete;
   ~PointerArgument();
   D3D12_ROOT_SIGNATURE_DESC* value{};
   bool copy{};
@@ -267,7 +267,7 @@ struct PointerArgument<D3D12_VERSIONED_ROOT_SIGNATURE_DESC> {
       : value(const_cast<D3D12_VERSIONED_ROOT_SIGNATURE_DESC*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<D3D12_VERSIONED_ROOT_SIGNATURE_DESC>& arg);
-  PointerArgument& operator=(const PointerArgument<D3D12_VERSIONED_ROOT_SIGNATURE_DESC>&) = default;
+  PointerArgument& operator=(const PointerArgument<D3D12_VERSIONED_ROOT_SIGNATURE_DESC>&) = delete;
   ~PointerArgument();
   D3D12_VERSIONED_ROOT_SIGNATURE_DESC* value{};
   bool copy{};
@@ -280,7 +280,7 @@ struct D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument {
   D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument(
       const D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument& arg);
   D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument& operator=(
-      const D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument&) = default;
+      const D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument&) = delete;
   ~D3D12_GRAPHICS_PIPELINE_STATE_DESC_Argument();
   D3D12_GRAPHICS_PIPELINE_STATE_DESC* value{};
   unsigned rootSignatureKey{};
@@ -293,7 +293,7 @@ struct D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument {
   D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument() {}
   D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument(const D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument& arg);
   D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument& operator=(
-      const D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument&) = default;
+      const D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument&) = delete;
   ~D3D12_COMPUTE_PIPELINE_STATE_DESC_Argument();
   D3D12_COMPUTE_PIPELINE_STATE_DESC* value{};
   unsigned rootSignatureKey{};
@@ -306,7 +306,7 @@ struct D3D12_TEXTURE_COPY_LOCATION_Argument {
   D3D12_TEXTURE_COPY_LOCATION_Argument() {}
   D3D12_TEXTURE_COPY_LOCATION_Argument(const D3D12_TEXTURE_COPY_LOCATION_Argument& arg);
   D3D12_TEXTURE_COPY_LOCATION_Argument& operator=(const D3D12_TEXTURE_COPY_LOCATION_Argument&) =
-      default;
+      delete;
   ~D3D12_TEXTURE_COPY_LOCATION_Argument();
   D3D12_TEXTURE_COPY_LOCATION* value{};
   unsigned resourceKey{};
@@ -321,7 +321,7 @@ struct D3D12_RESOURCE_BARRIERs_Argument {
   }
   D3D12_RESOURCE_BARRIERs_Argument() {}
   D3D12_RESOURCE_BARRIERs_Argument(const D3D12_RESOURCE_BARRIERs_Argument& arg);
-  D3D12_RESOURCE_BARRIERs_Argument& operator=(const D3D12_RESOURCE_BARRIERs_Argument&) = default;
+  D3D12_RESOURCE_BARRIERs_Argument& operator=(const D3D12_RESOURCE_BARRIERs_Argument&) = delete;
   ~D3D12_RESOURCE_BARRIERs_Argument();
   D3D12_RESOURCE_BARRIER* value{};
   size_t size{};
@@ -336,7 +336,7 @@ struct D3D12_SHADER_RESOURCE_VIEW_DESC_Argument {
   D3D12_SHADER_RESOURCE_VIEW_DESC_Argument() {}
   D3D12_SHADER_RESOURCE_VIEW_DESC_Argument(const D3D12_SHADER_RESOURCE_VIEW_DESC_Argument& arg);
   D3D12_SHADER_RESOURCE_VIEW_DESC_Argument& operator=(
-      const D3D12_SHADER_RESOURCE_VIEW_DESC_Argument&) = default;
+      const D3D12_SHADER_RESOURCE_VIEW_DESC_Argument&) = delete;
   ~D3D12_SHADER_RESOURCE_VIEW_DESC_Argument();
   D3D12_SHADER_RESOURCE_VIEW_DESC* value{};
   unsigned raytracingLocationKey{};
@@ -349,7 +349,7 @@ struct D3D12_INDEX_BUFFER_VIEW_Argument {
       : value(const_cast<D3D12_INDEX_BUFFER_VIEW*>(value_)) {}
   D3D12_INDEX_BUFFER_VIEW_Argument() {}
   D3D12_INDEX_BUFFER_VIEW_Argument(const D3D12_INDEX_BUFFER_VIEW_Argument& arg);
-  D3D12_INDEX_BUFFER_VIEW_Argument& operator=(const D3D12_INDEX_BUFFER_VIEW_Argument&) = default;
+  D3D12_INDEX_BUFFER_VIEW_Argument& operator=(const D3D12_INDEX_BUFFER_VIEW_Argument&) = delete;
   ~D3D12_INDEX_BUFFER_VIEW_Argument();
   D3D12_INDEX_BUFFER_VIEW* value{};
   unsigned bufferLocationKey{};
@@ -363,7 +363,7 @@ struct D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument {
   D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument() {}
   D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument(const D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument& arg);
   D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument& operator=(
-      const D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument&) = default;
+      const D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument&) = delete;
   ~D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument();
   D3D12_CONSTANT_BUFFER_VIEW_DESC* value{};
   unsigned bufferLocationKey{};
@@ -399,7 +399,7 @@ struct D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument {
   D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument() {}
   D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument(const D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument& arg);
   D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument& operator=(
-      const D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument&) = default;
+      const D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument&) = delete;
   ~D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argument();
   D3D12_STREAM_OUTPUT_BUFFER_VIEW* value{};
   size_t size{};
@@ -421,7 +421,7 @@ struct D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument {
   D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument(
       const D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument& arg);
   D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument& operator=(
-      const D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument&) = default;
+      const D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument&) = delete;
   ~D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument();
   D3D12_WRITEBUFFERIMMEDIATE_PARAMETER* value{};
   size_t size{};
@@ -446,7 +446,7 @@ struct D3D12_STATE_OBJECT_DESC_Argument {
       : value(const_cast<D3D12_STATE_OBJECT_DESC*>(value_)) {}
   D3D12_STATE_OBJECT_DESC_Argument() {}
   D3D12_STATE_OBJECT_DESC_Argument(const D3D12_STATE_OBJECT_DESC_Argument& arg);
-  D3D12_STATE_OBJECT_DESC_Argument& operator=(const D3D12_STATE_OBJECT_DESC_Argument&) = default;
+  D3D12_STATE_OBJECT_DESC_Argument& operator=(const D3D12_STATE_OBJECT_DESC_Argument&) = delete;
   ~D3D12_STATE_OBJECT_DESC_Argument();
   D3D12_STATE_OBJECT_DESC* value{};
   std::map<unsigned, unsigned> interfaceKeysBySubobject;
@@ -460,7 +460,7 @@ struct PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS> {
   PointerArgument() {}
   PointerArgument(const PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS>& arg);
   PointerArgument& operator=(
-      const PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS>&) = default;
+      const PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS>&) = delete;
   ~PointerArgument();
   D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS* value{};
   std::vector<unsigned> inputKeys{};
@@ -475,7 +475,7 @@ struct PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC> {
   PointerArgument() {}
   PointerArgument(const PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>& arg);
   PointerArgument& operator=(
-      const PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>&) = default;
+      const PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>&) = delete;
   ~PointerArgument();
   D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC* value{};
   unsigned destAccelerationStructureKey{};
@@ -499,7 +499,7 @@ struct ArrayArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC
   ArrayArgument(
       const ArrayArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>& arg);
   ArrayArgument& operator=(
-      const ArrayArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>&) = default;
+      const ArrayArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>&) = delete;
   ~ArrayArgument();
   D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC* value{};
   size_t size{};
@@ -516,8 +516,7 @@ struct PointerArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DE
   PointerArgument(
       const PointerArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>& arg);
   PointerArgument& operator=(
-      const PointerArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>&) =
-      default;
+      const PointerArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>&) = delete;
   ~PointerArgument();
   D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC* value{};
   unsigned destBufferKey{};
@@ -531,7 +530,7 @@ struct PointerArgument<D3D12_DISPATCH_RAYS_DESC> {
       : value(const_cast<D3D12_DISPATCH_RAYS_DESC*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<D3D12_DISPATCH_RAYS_DESC>& arg);
-  PointerArgument& operator=(const PointerArgument<D3D12_DISPATCH_RAYS_DESC>&) = default;
+  PointerArgument& operator=(const PointerArgument<D3D12_DISPATCH_RAYS_DESC>&) = delete;
   ~PointerArgument();
   D3D12_DISPATCH_RAYS_DESC* value{};
   unsigned rayGenerationShaderRecordKey{};
@@ -553,7 +552,7 @@ struct D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument {
   D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument(
       const D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument& arg);
   D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument& operator=(
-      const D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument&) = default;
+      const D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument&) = delete;
   ~D3D12_RENDER_PASS_RENDER_TARGET_DESCs_Argument();
   D3D12_RENDER_PASS_RENDER_TARGET_DESC* value{};
   size_t size{};
@@ -572,7 +571,7 @@ struct D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument {
   D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument(
       const D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument& arg);
   D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument& operator=(
-      const D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument&) = default;
+      const D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument&) = delete;
   ~D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument();
   unsigned descriptorKey{};
   unsigned descriptorIndex{};
@@ -589,7 +588,7 @@ struct PointerArgument<D3D12_COMMAND_SIGNATURE_DESC> {
       : value(const_cast<D3D12_COMMAND_SIGNATURE_DESC*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>& arg);
-  PointerArgument& operator=(const PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>&) = default;
+  PointerArgument& operator=(const PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>&) = delete;
   ~PointerArgument();
   D3D12_COMMAND_SIGNATURE_DESC* value{};
   bool copy{};
@@ -601,7 +600,7 @@ struct ArrayArgument<D3D12_META_COMMAND_DESC> {
       : value(const_cast<D3D12_META_COMMAND_DESC*>(value_)), size(size_) {}
   ArrayArgument() {}
   ArrayArgument(const ArrayArgument<D3D12_META_COMMAND_DESC>& arg);
-  ArrayArgument& operator=(const ArrayArgument<D3D12_META_COMMAND_DESC>&) = default;
+  ArrayArgument& operator=(const ArrayArgument<D3D12_META_COMMAND_DESC>&) = delete;
   ~ArrayArgument();
   D3D12_META_COMMAND_DESC* value{};
   size_t size{};
@@ -627,8 +626,8 @@ struct ContextOutputArgument {
     data = *arg.value;
     value = &data;
   }
-  ContextOutputArgument& operator=(const ContextOutputArgument&) = default;
-  ~ContextOutputArgument() = default;
+  ContextOutputArgument& operator=(const ContextOutputArgument&) = delete;
+  ~ContextOutputArgument() {}
   T* value{};
   T data{};
   unsigned key{};
@@ -646,7 +645,7 @@ struct PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC> {
   PointerArgument() {}
   PointerArgument(const PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg);
   PointerArgument& operator=(const PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>&) =
-      default;
+      delete;
   ~PointerArgument();
   INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC* value{};
   const void* cs{};
@@ -675,7 +674,7 @@ struct PointerArgument<INTCExtensionAppInfo1> {
       : value(const_cast<INTCExtensionAppInfo1*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<INTCExtensionAppInfo1>& arg);
-  PointerArgument& operator=(const PointerArgument<INTCExtensionAppInfo1>&) = default;
+  PointerArgument& operator=(const PointerArgument<INTCExtensionAppInfo1>&) = delete;
   ~PointerArgument();
   INTCExtensionAppInfo1* value{};
   const wchar_t* pApplicationName{};
@@ -689,7 +688,7 @@ struct PointerArgument<INTC_D3D12_HEAP_DESC> {
       : value(const_cast<INTC_D3D12_HEAP_DESC*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<INTC_D3D12_HEAP_DESC>& arg);
-  PointerArgument& operator=(const PointerArgument<INTC_D3D12_HEAP_DESC>&) = default;
+  PointerArgument& operator=(const PointerArgument<INTC_D3D12_HEAP_DESC>&) = delete;
   ~PointerArgument();
   INTC_D3D12_HEAP_DESC* value{};
   bool copy{};
@@ -701,7 +700,7 @@ struct PointerArgument<INTC_D3D12_RESOURCE_DESC_0001> {
       : value(const_cast<INTC_D3D12_RESOURCE_DESC_0001*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<INTC_D3D12_RESOURCE_DESC_0001>& arg);
-  PointerArgument& operator=(const PointerArgument<INTC_D3D12_RESOURCE_DESC_0001>&) = default;
+  PointerArgument& operator=(const PointerArgument<INTC_D3D12_RESOURCE_DESC_0001>&) = delete;
   ~PointerArgument();
   INTC_D3D12_RESOURCE_DESC_0001* value{};
   bool copy{};
@@ -713,7 +712,7 @@ struct PointerArgument<INTC_D3D12_FEATURE> {
       : value(const_cast<INTC_D3D12_FEATURE*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<INTC_D3D12_FEATURE>& arg);
-  PointerArgument& operator=(const PointerArgument<INTC_D3D12_FEATURE>&) = default;
+  PointerArgument& operator=(const PointerArgument<INTC_D3D12_FEATURE>&) = delete;
   ~PointerArgument();
   INTC_D3D12_FEATURE* value{};
   bool copy{};
@@ -725,7 +724,7 @@ struct PointerArgument<INTC_D3D12_RESOURCE_DESC> {
       : value(const_cast<INTC_D3D12_RESOURCE_DESC*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<INTC_D3D12_RESOURCE_DESC>& arg);
-  PointerArgument& operator=(const PointerArgument<INTC_D3D12_RESOURCE_DESC>&) = default;
+  PointerArgument& operator=(const PointerArgument<INTC_D3D12_RESOURCE_DESC>&) = delete;
   ~PointerArgument();
   INTC_D3D12_RESOURCE_DESC* value{};
   bool copy{};
@@ -737,7 +736,7 @@ struct PointerArgument<INTC_D3D12_COMMAND_QUEUE_DESC_0001> {
       : value(const_cast<INTC_D3D12_COMMAND_QUEUE_DESC_0001*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<INTC_D3D12_COMMAND_QUEUE_DESC_0001>& arg);
-  PointerArgument& operator=(const PointerArgument<INTC_D3D12_COMMAND_QUEUE_DESC_0001>&) = default;
+  PointerArgument& operator=(const PointerArgument<INTC_D3D12_COMMAND_QUEUE_DESC_0001>&) = delete;
   ~PointerArgument();
   INTC_D3D12_COMMAND_QUEUE_DESC_0001* value{};
   bool copy{};
@@ -749,7 +748,7 @@ struct PointerArgument<INTCExtensionInfo> {
       : value(const_cast<INTCExtensionInfo*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<INTCExtensionInfo>& arg);
-  PointerArgument& operator=(const PointerArgument<INTCExtensionInfo>&) = default;
+  PointerArgument& operator=(const PointerArgument<INTCExtensionInfo>&) = delete;
   ~PointerArgument();
   INTCExtensionInfo* value{};
   bool copy{};
@@ -763,7 +762,7 @@ struct ArrayArgument<INTCExtensionVersion> {
       : value(const_cast<INTCExtensionVersion*>(value_)), size(size_) {}
   ArrayArgument() {}
   ArrayArgument(const ArrayArgument<INTCExtensionVersion>& arg);
-  ArrayArgument& operator=(const ArrayArgument<INTCExtensionVersion>&) = default;
+  ArrayArgument& operator=(const ArrayArgument<INTCExtensionVersion>&) = delete;
   ~ArrayArgument();
   INTCExtensionVersion* value{};
   size_t size{};
@@ -779,7 +778,7 @@ struct DML_BINDING_TABLE_DESC_Argument {
       : value(const_cast<DML_BINDING_TABLE_DESC*>(value_)) {}
   DML_BINDING_TABLE_DESC_Argument() {}
   DML_BINDING_TABLE_DESC_Argument(const DML_BINDING_TABLE_DESC_Argument& arg);
-  DML_BINDING_TABLE_DESC_Argument& operator=(const DML_BINDING_TABLE_DESC_Argument&) = default;
+  DML_BINDING_TABLE_DESC_Argument& operator=(const DML_BINDING_TABLE_DESC_Argument&) = delete;
   ~DML_BINDING_TABLE_DESC_Argument();
   DML_BINDING_TABLE_DESC* value{};
   struct Data {
@@ -797,7 +796,7 @@ struct DML_BINDING_DESC_Argument {
       : value(const_cast<DML_BINDING_DESC*>(value_)) {}
   DML_BINDING_DESC_Argument() {}
   DML_BINDING_DESC_Argument(const DML_BINDING_DESC_Argument& arg);
-  DML_BINDING_DESC_Argument& operator=(const DML_BINDING_DESC_Argument&) = default;
+  DML_BINDING_DESC_Argument& operator=(const DML_BINDING_DESC_Argument&) = delete;
   ~DML_BINDING_DESC_Argument();
   DML_BINDING_DESC* value{};
   size_t resourceKeysSize{};
@@ -810,7 +809,7 @@ struct DML_BINDING_DESCs_Argument {
       : value(const_cast<DML_BINDING_DESC*>(value_)), size(size_) {}
   DML_BINDING_DESCs_Argument() {}
   DML_BINDING_DESCs_Argument(const DML_BINDING_DESCs_Argument& arg);
-  DML_BINDING_DESCs_Argument& operator=(const DML_BINDING_DESCs_Argument&) = default;
+  DML_BINDING_DESCs_Argument& operator=(const DML_BINDING_DESCs_Argument&) = delete;
   ~DML_BINDING_DESCs_Argument();
   DML_BINDING_DESC* value{};
   size_t size{};
@@ -824,7 +823,7 @@ struct DML_GRAPH_DESC_Argument {
       : value(const_cast<DML_GRAPH_DESC*>(value_)) {}
   DML_GRAPH_DESC_Argument() {}
   DML_GRAPH_DESC_Argument(const DML_GRAPH_DESC_Argument& arg);
-  DML_GRAPH_DESC_Argument& operator=(const DML_GRAPH_DESC_Argument&) = default;
+  DML_GRAPH_DESC_Argument& operator=(const DML_GRAPH_DESC_Argument&) = delete;
   ~DML_GRAPH_DESC_Argument();
   DML_GRAPH_DESC* value{};
   size_t operatorKeysSize{};
@@ -837,7 +836,7 @@ struct DML_OPERATOR_DESC_Argument {
       : value(const_cast<DML_OPERATOR_DESC*>(value_)) {}
   DML_OPERATOR_DESC_Argument() {}
   DML_OPERATOR_DESC_Argument(const DML_OPERATOR_DESC_Argument& arg);
-  DML_OPERATOR_DESC_Argument& operator=(const DML_OPERATOR_DESC_Argument&) = default;
+  DML_OPERATOR_DESC_Argument& operator=(const DML_OPERATOR_DESC_Argument&) = delete;
   ~DML_OPERATOR_DESC_Argument();
   DML_OPERATOR_DESC* value{};
   bool copy{};
@@ -849,7 +848,7 @@ struct DML_CheckFeatureSupport_BufferArgument {
   DML_CheckFeatureSupport_BufferArgument() {}
   DML_CheckFeatureSupport_BufferArgument(const DML_CheckFeatureSupport_BufferArgument& arg);
   DML_CheckFeatureSupport_BufferArgument& operator=(const DML_CheckFeatureSupport_BufferArgument&) =
-      default;
+      delete;
   ~DML_CheckFeatureSupport_BufferArgument();
   void* value{};
   size_t size{};
@@ -866,7 +865,7 @@ struct DSTORAGE_QUEUE_DESC_Argument {
       : value(const_cast<DSTORAGE_QUEUE_DESC*>(value)) {}
   DSTORAGE_QUEUE_DESC_Argument() {}
   DSTORAGE_QUEUE_DESC_Argument(const DSTORAGE_QUEUE_DESC_Argument& arg);
-  DSTORAGE_QUEUE_DESC_Argument& operator=(const DSTORAGE_QUEUE_DESC_Argument&) = default;
+  DSTORAGE_QUEUE_DESC_Argument& operator=(const DSTORAGE_QUEUE_DESC_Argument&) = delete;
   ~DSTORAGE_QUEUE_DESC_Argument();
   DSTORAGE_QUEUE_DESC* value{};
   size_t deviceKey{};
@@ -878,7 +877,7 @@ struct DSTORAGE_REQUEST_Argument {
       : value(const_cast<DSTORAGE_REQUEST*>(value)) {}
   DSTORAGE_REQUEST_Argument() {}
   DSTORAGE_REQUEST_Argument(const DSTORAGE_REQUEST_Argument& arg);
-  DSTORAGE_REQUEST_Argument& operator=(const DSTORAGE_REQUEST_Argument&) = default;
+  DSTORAGE_REQUEST_Argument& operator=(const DSTORAGE_REQUEST_Argument&) = delete;
   ~DSTORAGE_REQUEST_Argument();
   DSTORAGE_REQUEST* value{};
   unsigned fileKey{};
@@ -896,7 +895,7 @@ struct xess_d3d12_init_params_t_Argument {
       : value(const_cast<xess_d3d12_init_params_t*>(value_)) {}
   xess_d3d12_init_params_t_Argument() {}
   xess_d3d12_init_params_t_Argument(const xess_d3d12_init_params_t_Argument& arg);
-  xess_d3d12_init_params_t_Argument& operator=(const xess_d3d12_init_params_t_Argument&) = default;
+  xess_d3d12_init_params_t_Argument& operator=(const xess_d3d12_init_params_t_Argument&) = delete;
   ~xess_d3d12_init_params_t_Argument();
   xess_d3d12_init_params_t* value{};
   unsigned key{}; // Used for subcapture restore order
@@ -912,7 +911,7 @@ struct xess_d3d12_execute_params_t_Argument {
   xess_d3d12_execute_params_t_Argument() {}
   xess_d3d12_execute_params_t_Argument(const xess_d3d12_execute_params_t_Argument& arg);
   xess_d3d12_execute_params_t_Argument& operator=(const xess_d3d12_execute_params_t_Argument&) =
-      default;
+      delete;
   ~xess_d3d12_execute_params_t_Argument();
   xess_d3d12_execute_params_t* value{};
   unsigned colorTextureKey{};

@@ -2178,7 +2178,7 @@ void StateTrackingLayer::post(xessD3D12CreateContextCommand& c) {
 
 void StateTrackingLayer::post(xessD3D12InitCommand& c) {
   XessStateService::ContextState* state = xessStateService_.getContextState(c.hContext_.key);
-  state->initParams = xess_d3d12_init_params_t_Argument(c.pInitParams_);
+  state->initParams.emplace(c.pInitParams_);
 }
 
 void StateTrackingLayer::pre(xessDestroyContextCommand& c) {
