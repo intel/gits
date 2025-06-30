@@ -44,7 +44,7 @@ ${whitespace(indentation + 1)}${option.type} ${option.instance_name};
 
 ${whitespace(indentation + 1)}void updateFromEnvironment();
 % if indentation == 0:
-${whitespace(indentation + 1)}Configuration();
+${whitespace(indentation + 1)}Configuration(bool& validityFlag);
 };
 % else:
 ${whitespace(indentation)}} ${data.instance_name};

@@ -207,7 +207,10 @@ gits::CLog::~CLog() {
       _buffer << std::endl;
     }
 #ifdef GITS_COMMON_PROJ
-    if (Configurator::Get().common.shared.useEvents && gits::CGits::InstancePtr() != nullptr) {
+    // We check for validity of configuration here in case we are logging errors
+    // before configuration could be properly initialized
+    if (Configurator::ConfigurationValid() && Configurator::Get().common.shared.useEvents &&
+        gits::CGits::InstancePtr() != nullptr) {
       gits::CGits::Instance().PlaybackEvents().logging(_buffer.str().c_str());
     }
 #endif

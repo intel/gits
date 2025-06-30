@@ -197,7 +197,7 @@ int MainBody(int argc, char* argv[]) {
       Log(ERR) << "Please run player with the \"--help\" argument to see usage info.";
       return 1;
     }
-  } catch (const std::runtime_error& e) {
+  } catch (const std::exception& e) {
     Log(ERR) << "Encountered error while configuring player:\n" << e.what();
     Log(ERR) << "Please run player with the \"--help\" argument to see usage info.";
     return 1;

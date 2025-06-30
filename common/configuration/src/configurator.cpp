@@ -34,9 +34,15 @@
 
 #include "log.h"
 
+namespace {
+bool g_configurationValid = false;
+}
+
 namespace gits {
-Configurator::Configurator() {
-  // nothing
+Configurator::Configurator() : configuration(g_configurationValid) {}
+
+bool Configurator::ConfigurationValid() {
+  return g_configurationValid;
 }
 
 #ifdef GITS_PLATFORM_WINDOWS

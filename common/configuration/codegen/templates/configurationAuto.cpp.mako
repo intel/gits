@@ -45,9 +45,11 @@ ${render_group(option)}\
   % endif
 % endfor
 </%def>
-Configuration::Configuration() {
+Configuration::Configuration(bool& validityFlag) {
   // Initialize all the options to their default values
 ${render_group(data)}
+
+  validityFlag = true;
 }
 
 % for group in groups:

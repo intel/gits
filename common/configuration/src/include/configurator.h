@@ -18,6 +18,8 @@ namespace gits {
 
 class Configurator : public gits::noncopyable {
 public:
+  static bool ConfigurationValid();
+
   static bool IsRecorder() {
     return Get().common.mode == GITSMode::MODE_RECORDER;
   }
