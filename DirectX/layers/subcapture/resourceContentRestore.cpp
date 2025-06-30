@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "resourceContentRestore.h"
+#include "resourceStateTrackingService.h"
 #include "stateTrackingService.h"
 #include "commandsAuto.h"
 #include "commandWritersAuto.h"
@@ -31,11 +32,11 @@ void ResourceContentRestore::addCommittedResourceState(ResourceState* resourceSt
   ResourceInfo state{static_cast<ID3D12Resource*>(resourceState->object), resourceState->key, 0,
                      resourceState->deviceKey};
   if (resourceState->isMappable) {
-    mappableResourceStates_.push_back(state);
+    mappableResourceStates_[state.key] = state;
   } else if (resourceState->dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
-    unmappableResourceBuffers_.push_back(state);
+    unmappableResourceBuffers_[state.key] = state;
   } else {
-    unmappableResourceTextures_.push_back(state);
+    unmappableResourceTextures_[state.key] = state;
   }
 }
 
@@ -50,54 +51,95 @@ void ResourceContentRestore::addPlacedResourceState(ResourceState* resourceState
   ResourceInfo state{static_cast<ID3D12Resource*>(resourceState->object), resourceState->key,
                      resourceState->heapKey, resourceState->deviceKey};
   if (resourceState->isMappable) {
-    mappableResourceStates_.push_back(state);
+    mappableResourceStates_[state.key] = state;
   } else if (resourceState->dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
-    unmappableResourceBuffers_.push_back(state);
+    unmappableResourceBuffers_[state.key] = state;
   } else {
-    unmappableResourceTextures_.push_back(state);
+    unmappableResourceTextures_[state.key] = state;
   }
 }
 
-void ResourceContentRestore::restoreContent() {
+void ResourceContentRestore::restoreContent(const std::vector<unsigned>& resourceKeys) {
+  enum ResourceBatchType {
+    MappableResource,
+    UnmappableResourceBuffer,
+    UnmappableResourceTexture,
+  };
 
-  ID3D12Resource* resource{};
-  if (!unmappableResourceBuffers_.empty()) {
-    resource = unmappableResourceBuffers_[0].resource;
-  } else if (!unmappableResourceTextures_.empty()) {
-    resource = unmappableResourceTextures_[0].resource;
+  std::vector<std::pair<ResourceBatchType, std::vector<ResourceInfo>>> batches;
+
+  // prepare batches
+  {
+    ResourceBatchType prevType{};
+
+    for (unsigned resourceKey : resourceKeys) {
+      ResourceBatchType type{};
+      ResourceInfo resourceInfo{};
+      if (mappableResourceStates_.find(resourceKey) != mappableResourceStates_.end()) {
+        type = MappableResource;
+        resourceInfo = mappableResourceStates_[resourceKey];
+      } else if (unmappableResourceBuffers_.find(resourceKey) != unmappableResourceBuffers_.end()) {
+        type = UnmappableResourceBuffer;
+        resourceInfo = unmappableResourceBuffers_[resourceKey];
+      } else if (unmappableResourceTextures_.find(resourceKey) !=
+                 unmappableResourceTextures_.end()) {
+        type = UnmappableResourceTexture;
+        resourceInfo = unmappableResourceTextures_[resourceKey];
+      } else {
+        continue;
+      }
+
+      if (batches.empty() || type != prevType) {
+        batches.push_back({type, {resourceInfo}});
+      } else {
+        batches.back().second.push_back(resourceInfo);
+      }
+
+      prevType = type;
+    }
   }
 
-  if (resource) {
-    HRESULT hr = resource->GetDevice(IID_PPV_ARGS(&device_));
-    GITS_ASSERT(hr == S_OK);
+  // restore batches
+  {
+    auto restoreUnmappable = [this](std::vector<ResourceInfo>& resourceInfos, size_t chunkSize) {
+      unsigned startIndex = 0;
+      unsigned restored = 0;
+      do {
+        restored = restoreUnmappableResources(resourceInfos, startIndex, chunkSize);
+        startIndex += restored;
+      } while (restored);
+    };
 
-    initRestoreUnmappableResources();
+    bool initUnmappable{};
+    for (auto& [type, resourceInfos] : batches) {
+      if (type == MappableResource) {
+        restoreMappableResources(resourceInfos);
+      } else {
+        if (!initUnmappable) {
+          ID3D12Resource* resource = resourceInfos[0].resource;
+          HRESULT hr = resource->GetDevice(IID_PPV_ARGS(&device_));
+          GITS_ASSERT(hr == S_OK);
+          initRestoreUnmappableResources();
+          initUnmappable = true;
+        }
 
-    unsigned startIndex = 0;
-    unsigned restored = 0;
-    do {
-      restored = restoreUnmappableResources(unmappableResourceBuffers_, startIndex, 0x100000);
-      startIndex += restored;
-    } while (restored);
-    unmappableResourceBuffers_.clear();
+        if (type == UnmappableResourceBuffer) {
+          restoreUnmappable(resourceInfos, 0x100000);
+        } else if (type == UnmappableResourceTexture) {
+          restoreUnmappable(resourceInfos, 0x1000);
+        }
+      }
+    }
 
-    startIndex = 0;
-    restored = 0;
-    do {
-      restored = restoreUnmappableResources(unmappableResourceTextures_, startIndex, 0x1000);
-      startIndex += restored;
-    } while (restored);
-    unmappableResourceTextures_.clear();
-
-    cleanupRestoreUnmappableResources();
+    if (initUnmappable) {
+      cleanupRestoreUnmappableResources();
+    }
   }
-
-  restoreMappableResources();
-  mappableResourceStates_.clear();
 }
 
-void ResourceContentRestore::restoreMappableResources() {
-  for (ResourceInfo& state : mappableResourceStates_) {
+void ResourceContentRestore::restoreMappableResources(
+    const std::vector<ResourceInfo>& resourceInfos) {
+  for (const ResourceInfo& state : resourceInfos) {
     void* mappedData = nullptr;
     HRESULT hr = state.resource->Map(0, nullptr, &mappedData);
     GITS_ASSERT(hr == S_OK);
@@ -495,6 +537,9 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
         stateService_.getRecorder().record(
             new ID3D12GraphicsCommandListCopyTextureRegionWriter(copyTextureRegion));
       }
+
+      resourceStateTrackingService_.restoreResourceState(commandListKey_, state.key);
+
       offsetUpload += getAlignedSize(subresourceSize);
     }
   }

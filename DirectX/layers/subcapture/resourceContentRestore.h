@@ -12,18 +12,22 @@
 
 #include <vector>
 #include <map>
+#include <unordered_map>
 
 namespace gits {
 namespace DirectX {
 
 class StateTrackingService;
+class ResourceStateTrackingService;
 
 class ResourceContentRestore {
 public:
-  ResourceContentRestore(StateTrackingService& stateService) : stateService_(stateService) {}
+  ResourceContentRestore(StateTrackingService& stateService,
+                         ResourceStateTrackingService& resourceStateTrackingService)
+      : stateService_(stateService), resourceStateTrackingService_(resourceStateTrackingService) {}
   void addCommittedResourceState(ResourceState* resourceState);
   void addPlacedResourceState(ResourceState* resourceState);
-  void restoreContent();
+  void restoreContent(const std::vector<unsigned>& resourceKeys);
 
 private:
   struct ResourceInfo {
@@ -34,7 +38,7 @@ private:
   };
 
 private:
-  void restoreMappableResources();
+  void restoreMappableResources(const std::vector<ResourceInfo>& resourceInfos);
   unsigned restoreUnmappableResources(std::vector<ResourceInfo>& unmappableResourceStates,
                                       unsigned resourceStartIndex,
                                       UINT64 maxChunkSize);
@@ -51,9 +55,10 @@ private:
 
 private:
   StateTrackingService& stateService_;
-  std::vector<ResourceInfo> mappableResourceStates_;
-  std::vector<ResourceInfo> unmappableResourceBuffers_;
-  std::vector<ResourceInfo> unmappableResourceTextures_;
+  ResourceStateTrackingService& resourceStateTrackingService_;
+  std::unordered_map<unsigned, ResourceInfo> mappableResourceStates_;
+  std::unordered_map<unsigned, ResourceInfo> unmappableResourceBuffers_;
+  std::unordered_map<unsigned, ResourceInfo> unmappableResourceTextures_;
 
   ID3D12Device* device_{};
   ID3D12CommandQueue* commandQueue_{};

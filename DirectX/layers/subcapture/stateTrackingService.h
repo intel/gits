@@ -22,6 +22,7 @@
 #include "accelerationStructuresBuildService.h"
 #include "accelerationStructuresSerializeService.h"
 #include "residencyService.h"
+#include "resourceUsageTrackingService.h"
 #include "analyzerResults.h"
 
 #include <vector>
@@ -46,9 +47,10 @@ public:
       AccelerationStructuresSerializeService& accelerationStructuresSerializeService,
       AccelerationStructuresBuildService& accelerationStructuresBuildService,
       ResidencyService& residencyService,
-      AnalyzerResults& analyzerResults)
+      AnalyzerResults& analyzerResults,
+      ResourceUsageTrackingService& resourceUsageTrackingService)
       : recorder_(recorder),
-        resourceContentRestore_(*this),
+        resourceContentRestore_(*this, resourceStateTrackingService),
         swapChainService_(*this),
         analyzerResults_(analyzerResults),
         fenceTrackingService_(fenceTrackingService),
@@ -61,7 +63,8 @@ public:
         xessStateService_(xessStateService),
         accelerationStructuresSerializeService_(accelerationStructuresSerializeService),
         accelerationStructuresBuildService_(accelerationStructuresBuildService),
-        residencyService_(residencyService) {}
+        residencyService_(residencyService),
+        resourceUsageTrackingService_(resourceUsageTrackingService) {}
   ~StateTrackingService();
   void restoreState();
   void keepState(unsigned objectKey);
@@ -101,6 +104,7 @@ private:
   void copyAuxiliaryFiles();
   void restoreState(ObjectState* state);
   void restoreReferenceCount();
+  void restoreResources();
   D3D12_RESOURCE_STATES getResourceInitialState(ResourceState& state,
                                                 D3D12_RESOURCE_DIMENSION dimension);
   D3D12_BARRIER_LAYOUT getResourceInitialLayout(ResourceState& state,
@@ -143,6 +147,7 @@ private:
   AccelerationStructuresSerializeService& accelerationStructuresSerializeService_;
   AccelerationStructuresBuildService& accelerationStructuresBuildService_;
   ResidencyService& residencyService_;
+  ResourceUsageTrackingService& resourceUsageTrackingService_;
   unsigned deviceKey_{};
   INTC_D3D12_FEATURE intcFeature_{};
   std::unique_ptr<INTC_D3D12_SetApplicationInfoCommand> setApplicationInfoCommand_;

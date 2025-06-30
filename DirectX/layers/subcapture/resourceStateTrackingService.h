@@ -49,7 +49,8 @@ public:
   D3D12_RESOURCE_STATES getResourceState(unsigned resourceKey);
   D3D12_RESOURCE_STATES getSubresourceState(unsigned resourceKey, unsigned subresource);
   D3D12_BARRIER_LAYOUT getResourceLayout(unsigned resourceKey);
-  void restoreResourceStates();
+  void restoreResourceState(unsigned commandListKey, unsigned resourceKey);
+  void restoreResourceAliasing();
 
 private:
   unsigned getSubresourcesCount(ID3D12Resource* resource);

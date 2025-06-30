@@ -253,6 +253,7 @@ private:
   AccelerationStructuresSerializeService accelerationStructuresSerializeService_;
   AccelerationStructuresBuildService accelerationStructuresBuildService_;
   ResidencyService residencyService_;
+  ResourceUsageTrackingService resourceUsageTrackingService_;
   GpuExecutionFlusher gpuExecutionFlusher_;
   unsigned startFrame_;
   bool commandListSubcapture_{};

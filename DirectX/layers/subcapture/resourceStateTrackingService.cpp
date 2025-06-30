@@ -257,8 +257,50 @@ D3D12_BARRIER_LAYOUT ResourceStateTrackingService::getResourceLayout(unsigned re
   return getResourceLayout(state);
 }
 
-void ResourceStateTrackingService::restoreResourceStates() {
-  if (recreateStateResources_.empty()) {
+void ResourceStateTrackingService::restoreResourceState(unsigned commandListKey,
+                                                        unsigned resourceKey) {
+  if (recreateStateResources_.find(resourceKey) == recreateStateResources_.end()) {
+    return;
+  }
+
+  auto writeResourceBarrier = [&](unsigned subresource, D3D12_RESOURCE_STATES beforeState,
+                                  D3D12_RESOURCE_STATES afterState) {
+    ID3D12GraphicsCommandListResourceBarrierCommand barrierCommand;
+    barrierCommand.key = stateService_.getUniqueCommandKey();
+    barrierCommand.object_.key = commandListKey;
+    barrierCommand.NumBarriers_.value = 1;
+    D3D12_RESOURCE_BARRIER barrier{};
+    barrierCommand.pBarriers_.value = &barrier;
+    barrierCommand.pBarriers_.size = 1;
+    barrierCommand.pBarriers_.resourceKeys.resize(1);
+    barrierCommand.pBarriers_.resourceAfterKeys.resize(1);
+    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+    barrier.Transition.Subresource = subresource;
+    barrier.Transition.StateBefore = beforeState;
+    barrier.Transition.StateAfter = afterState;
+    barrierCommand.pBarriers_.resourceKeys[0] = resourceKey;
+    stateService_.getRecorder().record(
+        new ID3D12GraphicsCommandListResourceBarrierWriter(barrierCommand));
+  };
+  ResourceStates& resourceStates = getResourceStates(resourceKey);
+  if (resourceStates.allEqual) {
+    if (resourceStates.subresourceStates[0] != D3D12_RESOURCE_STATE_COPY_DEST) {
+      writeResourceBarrier(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_COPY_DEST,
+                           resourceStates.subresourceStates[0]);
+    }
+  } else {
+    for (unsigned i = 0; i < resourceStates.subresourceStates.size(); ++i) {
+      if (resourceStates.subresourceStates[i] != D3D12_RESOURCE_STATE_COPY_DEST) {
+        writeResourceBarrier(i, D3D12_RESOURCE_STATE_COPY_DEST,
+                             resourceStates.subresourceStates[i]);
+      }
+    }
+  }
+}
+
+void ResourceStateTrackingService::restoreResourceAliasing() {
+  if (aliasingBarriersOrdered_.empty()) {
     return;
   }
 
@@ -304,43 +346,6 @@ void ResourceStateTrackingService::restoreResourceStates() {
   createFence.riid_.value = IID_ID3D12Fence;
   createFence.ppFence_.key = fenceKey;
   stateService_.getRecorder().record(new ID3D12DeviceCreateFenceWriter(createFence));
-
-  for (unsigned resourceKey : recreateStateResources_) {
-    auto writeResourceBarrier = [&](unsigned subresource, D3D12_RESOURCE_STATES beforeState,
-                                    D3D12_RESOURCE_STATES afterState) {
-      ID3D12GraphicsCommandListResourceBarrierCommand barrierCommand;
-      barrierCommand.key = stateService_.getUniqueCommandKey();
-      barrierCommand.object_.key = commandListKey;
-      barrierCommand.NumBarriers_.value = 1;
-      D3D12_RESOURCE_BARRIER barrier{};
-      barrierCommand.pBarriers_.value = &barrier;
-      barrierCommand.pBarriers_.size = 1;
-      barrierCommand.pBarriers_.resourceKeys.resize(1);
-      barrierCommand.pBarriers_.resourceAfterKeys.resize(1);
-      barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-      barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-      barrier.Transition.Subresource = subresource;
-      barrier.Transition.StateBefore = beforeState;
-      barrier.Transition.StateAfter = afterState;
-      barrierCommand.pBarriers_.resourceKeys[0] = resourceKey;
-      stateService_.getRecorder().record(
-          new ID3D12GraphicsCommandListResourceBarrierWriter(barrierCommand));
-    };
-    ResourceStates& resourceStates = getResourceStates(resourceKey);
-    if (resourceStates.allEqual) {
-      if (resourceStates.subresourceStates[0] != D3D12_RESOURCE_STATE_COPY_DEST) {
-        writeResourceBarrier(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-                             D3D12_RESOURCE_STATE_COPY_DEST, resourceStates.subresourceStates[0]);
-      }
-    } else {
-      for (unsigned i = 0; i < resourceStates.subresourceStates.size(); ++i) {
-        if (resourceStates.subresourceStates[i] != D3D12_RESOURCE_STATE_COPY_DEST) {
-          writeResourceBarrier(i, D3D12_RESOURCE_STATE_COPY_DEST,
-                               resourceStates.subresourceStates[i]);
-        }
-      }
-    }
-  }
 
   for (auto& it : aliasingBarriersOrdered_) {
     AliasingBarrierKeys& keys = it.first;

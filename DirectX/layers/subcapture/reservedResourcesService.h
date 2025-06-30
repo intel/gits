@@ -19,6 +19,7 @@ namespace gits {
 namespace DirectX {
 
 class StateTrackingService;
+class ResourceStateTrackingService;
 
 class ReservedResourcesService {
 public:
@@ -48,14 +49,16 @@ public:
   using TileRegionsBySubresource = std::unordered_map<unsigned, std::vector<TileRegion>>;
 
 public:
-  ReservedResourcesService(StateTrackingService& stateService) : stateService_(stateService) {}
+  ReservedResourcesService(StateTrackingService& stateService,
+                           ResourceStateTrackingService& resourceStateTrackingService)
+      : stateService_(stateService), resourceStateTrackingService_(resourceStateTrackingService) {}
   void addUpdateTileMappings(ID3D12CommandQueueUpdateTileMappingsCommand& c);
   void destroyObject(unsigned objectKey);
   void updateTileMappings(TiledResource& tiledResource,
                           unsigned commandQueueKey,
                           TileRegionsBySubresource* tileRegions);
   TiledResource* getTiledResource(unsigned resourceKey);
-  void restoreContent();
+  void restoreContent(const std::vector<unsigned>& resourceKeys);
 
 private:
   std::unordered_map<unsigned, std::unique_ptr<TiledResource>> resources_;
@@ -71,6 +74,7 @@ private:
 
 private:
   StateTrackingService& stateService_;
+  ResourceStateTrackingService& resourceStateTrackingService_;
 
   ID3D12Device* device_{};
   ID3D12CommandQueue* commandQueue_{};

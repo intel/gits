@@ -37,9 +37,7 @@ void StateTrackingService::restoreState() {
   descriptorService_.restoreState();
   accelerationStructuresSerializeService_.restoreAccelerationStructures();
   accelerationStructuresBuildService_.restoreAccelerationStructures();
-  reservedResourcesService_.restoreContent();
-  resourceContentRestore_.restoreContent();
-  resourceStateTrackingService_.restoreResourceStates();
+  restoreResources();
   mapStateService_.restoreMapState();
   residencyService_.restoreResidency();
   commandListService_.restoreCommandLists();
@@ -293,6 +291,101 @@ void StateTrackingService::restoreReferenceCount() {
       recorder_.record(new IUnknownAddRefWriter(c));
     }
   }
+}
+
+void StateTrackingService::restoreResources() {
+  std::vector<unsigned> orderedResources = resourceUsageTrackingService_.getOrderedResources();
+
+  enum ResourceBatchType {
+    ReservedResourceBuffer,
+    ReservedResourceTexture,
+    CommittedOrPlacedResource,
+  };
+
+  std::vector<unsigned> reservedResourceBuffers; // handled separately
+  std::vector<std::pair<ResourceBatchType, std::vector<unsigned>>> batches;
+
+  // prepare batches
+  {
+    ResourceBatchType prevType{};
+    for (unsigned resourceKey : orderedResources) {
+      auto* state = getState(resourceKey);
+      if (!state) {
+        continue;
+      }
+
+      ResourceBatchType type{};
+      const auto commandId = state->creationCommand->getId();
+      bool isReservedResource = commandId == CommandId::ID_ID3D12DEVICE_CREATERESERVEDRESOURCE ||
+                                commandId == CommandId::ID_ID3D12DEVICE4_CREATERESERVEDRESOURCE1 ||
+                                commandId == CommandId::ID_ID3D12DEVICE10_CREATERESERVEDRESOURCE2 ||
+                                commandId == CommandId::INTC_D3D12_CREATERESERVEDRESOURCE;
+
+      auto isReservedResourceBuffer = [state](CommandId id) -> bool {
+        switch (id) {
+        case CommandId::ID_ID3D12DEVICE_CREATERESERVEDRESOURCE: {
+          auto* cmd =
+              static_cast<ID3D12DeviceCreateReservedResourceCommand*>(state->creationCommand.get());
+          return cmd->pDesc_.value->Dimension == D3D12_RESOURCE_DIMENSION_BUFFER;
+        }
+        case CommandId::ID_ID3D12DEVICE4_CREATERESERVEDRESOURCE1: {
+          auto* cmd = static_cast<ID3D12Device4CreateReservedResource1Command*>(
+              state->creationCommand.get());
+          return cmd->pDesc_.value->Dimension == D3D12_RESOURCE_DIMENSION_BUFFER;
+        }
+        case CommandId::ID_ID3D12DEVICE10_CREATERESERVEDRESOURCE2: {
+          auto* cmd = static_cast<ID3D12Device10CreateReservedResource2Command*>(
+              state->creationCommand.get());
+          return cmd->pDesc_.value->Dimension == D3D12_RESOURCE_DIMENSION_BUFFER;
+        }
+        case CommandId::INTC_D3D12_CREATERESERVEDRESOURCE: {
+          auto* cmd =
+              static_cast<INTC_D3D12_CreateReservedResourceCommand*>(state->creationCommand.get());
+          return cmd->pDesc_.value->pD3D12Desc->Dimension == D3D12_RESOURCE_DIMENSION_BUFFER;
+        }
+        default:
+          return false;
+        }
+      };
+
+      if (isReservedResource) {
+        type = ReservedResourceTexture;
+        if (isReservedResourceBuffer(commandId)) {
+          type = ReservedResourceBuffer;
+        }
+      } else {
+        type = CommittedOrPlacedResource;
+      }
+
+      if (type == ReservedResourceBuffer) {
+        reservedResourceBuffers.push_back(resourceKey);
+      } else if (batches.empty() || type != prevType) {
+        batches.push_back({type, {resourceKey}});
+      } else {
+        batches.back().second.push_back(resourceKey);
+      }
+
+      prevType = type;
+    }
+  }
+
+  // restore batches
+  {
+    // restore reserved resource buffers first
+    reservedResourcesService_.restoreContent(reservedResourceBuffers);
+
+    // restore batches in the order of usage
+    for (const auto& [type, resourceKeys] : batches) {
+      if (type == CommittedOrPlacedResource) {
+        resourceContentRestore_.restoreContent(resourceKeys);
+      } else if (type == ReservedResourceTexture) {
+        reservedResourcesService_.restoreContent(resourceKeys);
+      }
+    }
+  }
+
+  // restore aliasing
+  resourceStateTrackingService_.restoreResourceAliasing();
 }
 
 D3D12_RESOURCE_STATES StateTrackingService::getResourceInitialState(

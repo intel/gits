@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "reservedResourcesService.h"
+#include "resourceStateTrackingService.h"
 #include "stateTrackingService.h"
 #include "commandWritersAuto.h"
 #include "commandWritersCustom.h"
@@ -335,16 +336,18 @@ void ReservedResourcesService::updateTileMappings(TiledResource& tiledResource,
   }
 }
 
-void ReservedResourcesService::restoreContent() {
-
+void ReservedResourcesService::restoreContent(const std::vector<unsigned>& resourceKeys) {
   if (resources_.empty()) {
     return;
   }
 
   initRestore();
 
-  for (auto& itResource : resources_) {
-    TiledResource* tiledResource = itResource.second.get();
+  for (unsigned resourceKey : resourceKeys) {
+    if (resources_.find(resourceKey) == resources_.end()) {
+      continue;
+    }
+    TiledResource* tiledResource = resources_.at(resourceKey).get();
     if (tiledResource->destroyed) {
       continue;
     }
@@ -659,6 +662,11 @@ void ReservedResourcesService::restoreContent() {
         }
       }
     }
+
+    // restore state
+
+    stateService_.getResourceStateTrackingService().restoreResourceState(
+        commandListKey_, tiledResource->resourceKey);
 
     ID3D12GraphicsCommandListCloseCommand commandListClose;
     commandListClose.key = stateService_.getUniqueCommandKey();

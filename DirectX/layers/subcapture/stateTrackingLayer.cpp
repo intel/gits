@@ -31,11 +31,12 @@ StateTrackingLayer::StateTrackingLayer(SubcaptureRecorder& recorder)
                     accelerationStructuresSerializeService_,
                     accelerationStructuresBuildService_,
                     residencyService_,
-                    analyzerResults_),
+                    analyzerResults_,
+                    resourceUsageTrackingService_),
       recorder_(recorder),
       mapStateService_(stateService_),
       resourceStateTrackingService_(stateService_),
-      reservedResourcesService_(stateService_),
+      reservedResourcesService_(stateService_, resourceStateTrackingService_),
       descriptorService_(stateService_),
       commandListService_(stateService_),
       commandQueueService_(stateService_),
@@ -140,6 +141,7 @@ void StateTrackingLayer::pre(IUnknownReleaseCommand& c) {
     xessStateService_.destroyDevice(c.object_.key);
     accelerationStructuresSerializeService_.destroyResource(c.object_.key);
     residencyService_.destroyObject(c.object_.key);
+    resourceUsageTrackingService_.destroyResource(c.object_.key);
 
     auto it = resourceHeaps_.find(c.object_.key);
     if (it != resourceHeaps_.end()) {
@@ -150,6 +152,7 @@ void StateTrackingLayer::pre(IUnknownReleaseCommand& c) {
         descriptorService_.removeState(resourceKey);
         accelerationStructuresSerializeService_.destroyResource(resourceKey);
         residencyService_.destroyObject(resourceKey);
+        resourceUsageTrackingService_.destroyResource(resourceKey);
       }
       resourceHeaps_.erase(it);
     }
@@ -738,6 +741,8 @@ void StateTrackingLayer::post(ID3D12DeviceCreateCommittedResourceCommand& c) {
 
   stateService_.storeState(state);
 
+  resourceUsageTrackingService_.addResource(state->key);
+
   if (state->initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
     resourceStateTrackingService_.addResource(state->deviceKey,
                                               static_cast<ID3D12Resource*>(*c.ppvResource_.value),
@@ -769,6 +774,7 @@ void StateTrackingLayer::post(ID3D12Device4CreateCommittedResource1Command& c) {
   state->isGenericRead = state->initialState == D3D12_RESOURCE_STATE_GENERIC_READ;
 
   stateService_.storeState(state);
+  resourceUsageTrackingService_.addResource(state->key);
 
   if (state->initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
     resourceStateTrackingService_.addResource(state->deviceKey,
@@ -802,6 +808,8 @@ void StateTrackingLayer::post(ID3D12Device8CreateCommittedResource2Command& c) {
 
   stateService_.storeState(state);
 
+  resourceUsageTrackingService_.addResource(state->key);
+
   if (state->initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
     resourceStateTrackingService_.addResource(state->deviceKey,
                                               static_cast<ID3D12Resource*>(*c.ppvResource_.value),
@@ -833,6 +841,8 @@ void StateTrackingLayer::post(ID3D12Device10CreateCommittedResource3Command& c) 
   state->isGenericRead = state->initialLayout == D3D12_BARRIER_LAYOUT_GENERIC_READ;
 
   stateService_.storeState(state);
+
+  resourceUsageTrackingService_.addResource(state->key);
 
   resourceStateTrackingService_.addResource(state->deviceKey,
                                             static_cast<ID3D12Resource*>(*c.ppvResource_.value),
@@ -868,6 +878,8 @@ void StateTrackingLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
 
   resourceHeaps_[c.pHeap_.key].insert(c.ppvResource_.key);
 
+  resourceUsageTrackingService_.addResource(state->key);
+
   if (state->initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
     resourceStateTrackingService_.addResource(
         state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
@@ -900,6 +912,8 @@ void StateTrackingLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
   stateService_.storeState(state);
 
   resourceHeaps_[c.pHeap_.key].insert(c.ppvResource_.key);
+
+  resourceUsageTrackingService_.addResource(state->key);
 
   if (state->initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
     resourceStateTrackingService_.addResource(
@@ -934,6 +948,8 @@ void StateTrackingLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
 
   resourceHeaps_[c.pHeap_.key].insert(c.ppvResource_.key);
 
+  resourceUsageTrackingService_.addResource(state->key);
+
   resourceStateTrackingService_.addResource(
       state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
       state->initialState, !(state->isMappable || state->isBarrierRestricted));
@@ -959,6 +975,8 @@ void StateTrackingLayer::post(ID3D12DeviceCreateReservedResourceCommand& c) {
   state->isGenericRead = state->initialState == D3D12_RESOURCE_STATE_GENERIC_READ;
 
   stateService_.storeState(state);
+
+  resourceUsageTrackingService_.addResource(state->key);
 
   if (state->initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
     resourceStateTrackingService_.addResource(state->deviceKey,
@@ -988,6 +1006,8 @@ void StateTrackingLayer::post(ID3D12Device4CreateReservedResource1Command& c) {
 
   stateService_.storeState(state);
 
+  resourceUsageTrackingService_.addResource(state->key);
+
   if (state->initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
     resourceStateTrackingService_.addResource(state->deviceKey,
                                               static_cast<ID3D12Resource*>(*c.ppvResource_.value),
@@ -1015,6 +1035,8 @@ void StateTrackingLayer::post(ID3D12Device10CreateReservedResource2Command& c) {
   state->isGenericRead = state->initialLayout == D3D12_BARRIER_LAYOUT_GENERIC_READ;
 
   stateService_.storeState(state);
+
+  resourceUsageTrackingService_.addResource(state->key);
 
   resourceStateTrackingService_.addResource(state->deviceKey,
                                             static_cast<ID3D12Resource*>(*c.ppvResource_.value),
@@ -1052,6 +1074,7 @@ void StateTrackingLayer::post(ID3D12DeviceCreateFenceCommand& c) {
   fenceTrackingService_.setFenceValue(c.ppFence_.key, c.InitialValue_.value);
   accelerationStructuresBuildService_.fenceSignal(c.key, c.ppFence_.key, c.InitialValue_.value);
   gpuExecutionFlusher_.fenceSignal(c.key, c.ppFence_.key, c.InitialValue_.value);
+  resourceUsageTrackingService_.fenceSignal(c.key, c.ppFence_.key, c.InitialValue_.value);
 }
 
 void StateTrackingLayer::post(ID3D12CommandQueueSignalCommand& c) {
@@ -1066,6 +1089,8 @@ void StateTrackingLayer::post(ID3D12CommandQueueSignalCommand& c) {
 
   accelerationStructuresBuildService_.commandQueueSignal(c);
   gpuExecutionFlusher_.commandQueueSignal(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
+  resourceUsageTrackingService_.commandQueueSignal(c.key, c.object_.key, c.pFence_.key,
+                                                   c.Value_.value);
 }
 
 void StateTrackingLayer::post(ID3D12CommandQueueWaitCommand& c) {
@@ -1078,6 +1103,8 @@ void StateTrackingLayer::post(ID3D12CommandQueueWaitCommand& c) {
 
   accelerationStructuresBuildService_.commandQueueWait(c);
   gpuExecutionFlusher_.commandQueueWait(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
+  resourceUsageTrackingService_.commandQueueWait(c.key, c.object_.key, c.pFence_.key,
+                                                 c.Value_.value);
 }
 
 void StateTrackingLayer::post(ID3D12FenceSignalCommand& c) {
@@ -1087,6 +1114,7 @@ void StateTrackingLayer::post(ID3D12FenceSignalCommand& c) {
   fenceTrackingService_.setFenceValue(c.object_.key, c.Value_.value);
   accelerationStructuresBuildService_.fenceSignal(c.key, c.object_.key, c.Value_.value);
   gpuExecutionFlusher_.fenceSignal(c.key, c.object_.key, c.Value_.value);
+  resourceUsageTrackingService_.fenceSignal(c.key, c.object_.key, c.Value_.value);
 }
 
 void StateTrackingLayer::post(ID3D12Device3EnqueueMakeResidentCommand& c) {
@@ -1099,6 +1127,8 @@ void StateTrackingLayer::post(ID3D12Device3EnqueueMakeResidentCommand& c) {
   gpuExecutionFlusher_.fenceSignal(c.key, c.pFenceToSignal_.key, c.FenceValueToSignal_.value);
 
   residencyService_.makeResident(c.ppObjects_.keys, c.object_.key);
+  resourceUsageTrackingService_.fenceSignal(c.key, c.pFenceToSignal_.key,
+                                            c.FenceValueToSignal_.value);
 }
 
 void StateTrackingLayer::post(ID3D12DeviceMakeResidentCommand& c) {
@@ -1234,6 +1264,8 @@ void StateTrackingLayer::post(INTC_D3D12_CreateCommittedResourceCommand& c) {
 
   stateService_.storeState(state);
 
+  resourceUsageTrackingService_.addResource(state->key);
+
   if (state->initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
     resourceStateTrackingService_.addResource(state->deviceKey,
                                               static_cast<ID3D12Resource*>(*c.ppvResource_.value),
@@ -1266,6 +1298,8 @@ void StateTrackingLayer::post(INTC_D3D12_CreatePlacedResourceCommand& c) {
 
   resourceHeaps_[c.pHeap_.key].insert(c.ppvResource_.key);
 
+  resourceUsageTrackingService_.addResource(state->key);
+
   if (state->initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
     resourceStateTrackingService_.addResource(
         state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
@@ -1289,6 +1323,8 @@ void StateTrackingLayer::post(INTC_D3D12_CreateReservedResourceCommand& c) {
   state->isGenericRead = state->initialState == D3D12_RESOURCE_STATE_GENERIC_READ;
 
   stateService_.storeState(state);
+
+  resourceUsageTrackingService_.addResource(state->key);
 
   if (state->initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
     resourceStateTrackingService_.addResource(state->deviceKey,
@@ -1374,6 +1410,7 @@ void StateTrackingLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
     accelerationStructuresSerializeService_.executeCommandLists(c);
     accelerationStructuresBuildService_.executeCommandLists(c);
   }
+  resourceUsageTrackingService_.executeCommandLists(c.key, c.object_.key, c.ppCommandLists_.keys);
 }
 
 void StateTrackingLayer::pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
@@ -1506,6 +1543,8 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListResetCommand& c) {
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListResetWriter(c));
   state->commands.push_back(command);
+
+  resourceUsageTrackingService_.commandListReset(state->key);
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListCloseCommand& c) {
@@ -1544,6 +1583,7 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListDispatchCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListCopyBufferRegionCommand& c) {
+  resourceUsageTrackingService_.commandListResourceUsage(c.object_.key, c.pDstBuffer_.key);
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListCopyBufferRegionWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1551,6 +1591,7 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListCopyBufferRegionCommand& 
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListCopyTextureRegionCommand& c) {
+  resourceUsageTrackingService_.commandListResourceUsage(c.object_.key, c.pDst_.resourceKey);
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListCopyTextureRegionWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1558,6 +1599,7 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListCopyTextureRegionCommand&
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListCopyResourceCommand& c) {
+  resourceUsageTrackingService_.commandListResourceUsage(c.object_.key, c.pDstResource_.key);
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListCopyResourceWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1565,6 +1607,7 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListCopyResourceCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListCopyTilesCommand& c) {
+  resourceUsageTrackingService_.commandListResourceUsage(c.object_.key, c.pTiledResource_.key);
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListCopyTilesWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1621,6 +1664,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListSetPipelineStateCommand& 
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListResourceBarrierCommand& c) {
+  resourceUsageTrackingService_.commandListResourceUsage(c.object_.key, c.pBarriers_.resourceKeys);
+  resourceUsageTrackingService_.commandListResourceUsage(c.object_.key,
+                                                         c.pBarriers_.resourceAfterKeys);
   resourceStateTrackingService_.resourceBarrier(
       c.object_.key, c.pBarriers_.value, c.pBarriers_.resourceKeys, c.pBarriers_.resourceAfterKeys);
 
