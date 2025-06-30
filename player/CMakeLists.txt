@@ -46,6 +46,7 @@ endif()
 if(WITH_OCLOC)
   target_link_libraries(gitsPlayer ocloc_common)
 endif(WITH_OCLOC)
+
 if(WITH_DIRECTX)
   include_directories(../DirectX/player)
   target_link_libraries(gitsPlayer
@@ -55,6 +56,7 @@ if(WITH_DIRECTX)
     directxtex
     ${DML_DIR}/bin/x64-win/DirectML.lib
     ${DSTORAGE_DIR}/native/lib/x64/dstorage.lib
+    ImGuiHUD
   )
   set_target_properties(gitsPlayer PROPERTIES 
     LINK_FLAGS 

@@ -21,6 +21,7 @@
 #include "debugInfoLayerAuto.h"
 #include "debugHelperLayer.h"
 #include "logDxErrorLayerAuto.h"
+#include "imguiHudLayer.h"
 
 #include <wrl/client.h>
 
@@ -98,6 +99,7 @@ PlayerManager::PlayerManager() {
       resourceDumpingFactory_.getRootSignatureDumpLayer();
   std::unique_ptr<Layer> skipCallsOnConfigLayer = skipCallsFactory_.getSkipCallsOnConfigLayer();
   std::unique_ptr<Layer> skipCallsOnResultLayer = skipCallsFactory_.getSkipCallsOnResultLayer();
+  std::unique_ptr<Layer> imGuiHUDLayer = std::make_unique<ImGuiHUDLayer>();
 
   if (executeCommands_) {
     replayCustomizationLayer = std::make_unique<ReplayCustomizationLayer>(*this);
@@ -139,6 +141,9 @@ PlayerManager::PlayerManager() {
   enablePreLayer(directStorageLayer);
   enablePreLayer(directStorageResourcesLayer);
   enablePreLayer(accelerationStructuresDumpLayer);
+  if (cfg.common.shared.hud.enabled) {
+    enablePreLayer(imGuiHUDLayer);
+  }
 
   // Enable Post layers
   // Insertion order determines execution order
@@ -166,6 +171,9 @@ PlayerManager::PlayerManager() {
   enablePostLayer(rootSignatureDumpLayer);
   enablePostLayer(recordingLayer);
   enablePostLayer(executionSerializationLayer);
+  if (cfg.common.shared.hud.enabled) {
+    enablePostLayer(imGuiHUDLayer);
+  }
 
   // Let layersOwner_ take the ownership of layers
   auto retainLayer = [this](std::unique_ptr<Layer>&& layer) {
@@ -196,6 +204,7 @@ PlayerManager::PlayerManager() {
   retainLayer(std::move(rootSignatureDumpLayer));
   retainLayer(std::move(directStorageLayer));
   retainLayer(std::move(directStorageResourcesLayer));
+  retainLayer(std::move(imGuiHUDLayer));
 
   // Load DirectX runtimes
   loadAgilitySdk();

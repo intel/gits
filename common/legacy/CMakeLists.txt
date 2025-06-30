@@ -119,11 +119,12 @@ if(WIN32)
 endif()
 
 add_library(common ${common_SOURCES})
+set_target_properties(common PROPERTIES FOLDER "common")
 
 add_definitions(-DGITS_COMMON_PROJ)
 
 add_dependencies(common config_codegen)
-target_link_libraries(common OpenGL_common xxhash murmurhash lz4 libzstd_static configuration)
+target_link_libraries(common OpenGL_common xxhash murmurhash lz4 libzstd_static configuration ImGuiHUD)
 
 if(WITH_VULKAN)
   target_link_libraries(common Vulkan_common)

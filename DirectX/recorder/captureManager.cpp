@@ -21,6 +21,7 @@
 #include "globalSynchronizationLayerAuto.h"
 #include "logDxErrorLayerAuto.h"
 #include "directStorageResourcesLayer.h"
+#include "imguiHudLayer.h"
 #include "directXApiIfaceRecorder.h"
 #include "gits.h"
 
@@ -130,6 +131,7 @@ void CaptureManager::createLayers() {
   std::unique_ptr<Layer> encoderLayer;
   std::unique_ptr<Layer> gpuPatchLayer;
   std::unique_ptr<Layer> portabilityLayer;
+  std::unique_ptr<Layer> imGuiHUDLayer = std::make_unique<ImGuiHUDLayer>();
 
   if (cfg.directx.capture.debugLayer) {
     debugInfoLayer = std::make_unique<DebugInfoLayer>();
@@ -166,6 +168,9 @@ void CaptureManager::createLayers() {
   enablePreLayer(screenshotsLayer);
   enablePreLayer(portabilityLayer);
   enablePreLayer(directStorageResourcesLayer);
+  if (cfg.common.shared.hud.enabled) {
+    enablePreLayer(imGuiHUDLayer);
+  }
 
   // Enable Post layers
   // Insertion order determines execution order
@@ -185,6 +190,9 @@ void CaptureManager::createLayers() {
   enablePostLayer(traceLayer);
   enablePostLayer(screenshotsLayer);
   enablePostLayer(directStorageResourcesLayer);
+  if (cfg.common.shared.hud.enabled) {
+    enablePostLayer(imGuiHUDLayer);
+  }
 
   pluginService_.loadPlugins();
   for (const auto& plugin : pluginService_.getPlugins()) {
@@ -218,6 +226,7 @@ void CaptureManager::createLayers() {
   retainLayer(std::move(directStorageResourcesLayer));
   retainLayer(std::move(portabilityLayer));
   retainLayer(std::move(globalSynchronizationLayer));
+  retainLayer(std::move(imGuiHUDLayer));
 }
 
 void CaptureManager::interceptDirectMLFunctions() {

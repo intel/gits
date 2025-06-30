@@ -25,6 +25,7 @@
 #include "tools.h"
 #include "automateCCode.h"
 #include "diagnostic.h"
+#include "imGuiHUD.h"
 
 #include <string>
 #include <iostream>
@@ -612,6 +613,14 @@ void CGits::ResourceManagerInit(const std::filesystem::path& dump_dir) {
   } else {
     _resources2.reset(new CResourceManager2(mappings));
   }
+}
+
+void CGits::SetImGuiHUD(std::unique_ptr<ImGuiHUD> pImGuiHUD) {
+  _imGuiHUD = std::move(pImGuiHUD);
+}
+
+ImGuiHUD* CGits::GetImGuiHUD() {
+  return _imGuiHUD.get();
 }
 
 void CGits::CompressorInit(CompressionType compressionType) {

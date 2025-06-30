@@ -50,8 +50,10 @@ class GitCheck:
             return int(m.group(1)), int(m.group(2)), int(m.group(3))
 
     def check(self) -> bool:
-        min_major, min_minor, min_patch = self.get_versions(GIT_VERSION_PARALLEL)
-        cur_major, cur_minor, cur_patch = self.get_versions(self.current_version)
+        min_major, min_minor, min_patch = self.get_versions(
+            GIT_VERSION_PARALLEL)
+        cur_major, cur_minor, cur_patch = self.get_versions(
+            self.current_version)
         if cur_major > min_major:
             return True
         if cur_major == min_major and cur_minor > min_minor:
@@ -215,7 +217,8 @@ class Repository:
     def install(self):
         try:
             if self.check_skip_os():
-                logger.debug("Skipping %s installation due to os limitation", self.name)
+                logger.debug(
+                    "Skipping %s installation due to OS limitation", self.name)
                 return 0
             install = True
             if self.repository_path.exists():
@@ -296,7 +299,8 @@ def download_and_extract_nuget_package(package_url, output_directory: Path, fold
                 # Move the contents from the temporary directory to the output directory
                 temp_dir_path = Path(temp_dir)
                 for item in (temp_dir_path / folder_to_extract).iterdir():
-                     shutil.move(temp_dir_path / folder_to_extract / item, output_directory)
+                    shutil.move(temp_dir_path / folder_to_extract /
+                                item, output_directory)
         else:
             zip_ref.extractall(output_directory)
 
@@ -308,19 +312,25 @@ class Nuget(Repository):
     def install(self):
         try:
             if self.check_skip_os():
-                logger.debug("Skipping %s installation due to os limitation", self.name)
+                logger.debug(
+                    "Skipping %s installation due to os limitation", self.name)
                 return 0
             install = True
             if self.repository_path.exists() and any(self.repository_path.iterdir()):
-                logger.info(f"Package is already downloaded and extracted: {self.name}")
+                logger.info(
+                    f"Package is already downloaded and extracted: {self.name}")
                 install = False
             if install:
-                logger.info(f"Starting download and extraction of package: {self.name}")
-                download_and_extract_nuget_package(self.package_url + self.version, self.repository_path, self.folder_to_extract)
-                logger.info(f"Download and extraction completed for package: {self.name}")
+                logger.info(
+                    f"Starting download and extraction of package: {self.name}")
+                download_and_extract_nuget_package(
+                    self.package_url + self.version, self.repository_path, self.folder_to_extract)
+                logger.info(
+                    f"Download and extraction completed for package: {self.name}")
                 # Check if the directory is empty after extraction
                 if not any(self.repository_path.iterdir()):
-                    raise Exception(f"Extraction failed, {self.repository_path} is empty.")
+                    raise Exception(
+                        f"Extraction failed, {self.repository_path} is empty.")
         except Exception as e:
             logger.exception("Issue installing nuget package.")
             return -1
@@ -523,6 +533,24 @@ class ArgsHXX(Repository):
         self.url = "https://github.com/Taywee/args.git"
 
 
+class IMGUI(Repository):
+    def set_branch(self):
+        self.branch = "v1.91.9b"
+
+    def init(self):
+        self.name = "imgui"
+        self.url = "https://github.com/ocornut/imgui"
+
+
+class IntelOneMono(Repository):
+    def set_branch(self):
+        self.branch = "V1.4.0"
+
+    def init(self):
+        self.name = "intel-one-mono"
+        self.url = "https://github.com/intel/intel-one-mono"
+
+
 class Repositories:
     def __init__(self, args) -> None:
         self.repos = []
@@ -568,6 +596,10 @@ class Repositories:
             self.repos.append(YamlCPP())
         if args.with_all or args.with_argshxx:
             self.repos.append(ArgsHXX())
+        if args.with_all or args.with_imgui:
+            self.repos.append(IMGUI())
+        if args.with_all or args.with_intel_one_mono:
+            self.repos.append(IntelOneMono())
 
     def __iter__(self):
         for value in self.repos:
@@ -616,6 +648,8 @@ def setup_parser(root_parser):
     root_parser.add_argument("--with-json", action="store_true")
     root_parser.add_argument("--with-yamlcpp", action="store_true")
     root_parser.add_argument("--with-argshxx", action="store_true")
+    root_parser.add_argument("--with-imgui", action="store_true")
+    root_parser.add_argument("--with-intel-one-mono", action="store_true")
 
 
 def install_dependencies(args):

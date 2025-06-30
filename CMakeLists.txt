@@ -152,6 +152,8 @@ include(import_yamlcpp)
 include(import_lz4)
 include(import_zstd)
 include(import_argshxx)
+include(import_imgui)
+include(import_intel_one_mono)
 
 if(WIN32)
   set(PLTFRM "win32")

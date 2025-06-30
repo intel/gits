@@ -116,6 +116,52 @@ Configuration:
             Type: std::filesystem::path
             Default: ""
             Accessibility: Derived
+          - Name: HUD
+            Description: GITS uses ImGui to display a HUD.
+            Type: Group
+            Options:
+            - Name: Enabled
+              Type: bool
+              Default: false
+              Description: Show the HUD during playback / recording
+              Arguments: [hud]
+            - Name: Position
+              Type: HUDAnchor
+              Default: TopRight
+              Description: The position of the HUD.
+            - Name: Opacity
+              Type: float
+              Default: 0.5
+              Description: Opacity of the HUD
+            - Name: UIScale
+              InstanceName: uiScale
+              Type: float
+              Default: 1.0
+              Description: Scales the HUD UI
+            - Name: Fields
+              Type: Group
+              Options:
+              - Name: ApplicationInfo
+                Type: bool
+                Default: true
+                Description: Show the application info (name/pid)
+              - Name: Version
+                Type: bool
+                Default: true
+                Description: Show the GITS version currently running in the HUD
+              - Name: BackBufferResolution
+                Type: bool
+                Default: true
+                Description: Show the back buffer resolution in the HUD
+              - Name: FrameNumber
+                Type: bool
+                Default: true
+                Description: Show the current framenumber in the HUD
+              - Name: FPS
+                InstanceName: fps
+                Type: bool
+                Default: true
+                Description: Show the FPS counter in the HUD
       - Name: Player
         Type: Group
         Options:

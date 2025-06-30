@@ -21,7 +21,7 @@ set(GENERATED_FILES
 )
 
 add_custom_target(config_codegen DEPENDS ${GENERATED_FILES})
-set_target_properties(config_codegen PROPERTIES FOLDER config)
+set_target_properties(config_codegen PROPERTIES FOLDER "common/config")
 
 set(META_DIR ${CMAKE_CURRENT_SOURCE_DIR}/metafiles)
 set(CONFIG_GENERATOR_SCRIPTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/scripts CACHE INTERNAL "Path to the configuration generator scripts")
@@ -121,7 +121,7 @@ add_custom_command(
 )
 
 add_custom_target(config_docs_gen DEPENDS ${GENERATED_DOCS})
-set_target_properties(config_docs_gen PROPERTIES FOLDER config)
+set_target_properties(config_docs_gen PROPERTIES FOLDER "common/config")
 
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.20")
   target_sources(config_docs_gen PRIVATE

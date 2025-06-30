@@ -81,7 +81,7 @@ source_group("Generated Files" REGULAR_EXPRESSION ".*Auto.*")
 add_library(configuration STATIC ${CPP_FILES} ${HEADER_FILES} ${AUTO_FILES})
 add_dependencies(configuration config_codegen)
 
-set_target_properties(configuration PROPERTIES FOLDER config)
+set_target_properties(configuration PROPERTIES FOLDER "common/config")
 
 SET(PRIVATE_INCLUDE_DIRS)
 
@@ -93,7 +93,7 @@ endif()
 
 target_include_directories(configuration
   PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/include>
+  $<BUILD_INTERFACE:${HEADER_SRC}>
   $<INSTALL_INTERFACE:include>
   PRIVATE
   ${PRIVATE_INCLUDE_DIRS}

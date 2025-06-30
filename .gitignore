@@ -106,6 +106,8 @@ DirectX/**/*Auto.cpp
 DirectX/**/*Auto.h
 
 # Configuration
-common/configuration/**/*Auto.cpp
-common/configuration/**/*Auto.h
+common/**/*Auto.cpp
+common/**/*Auto.h
+
+# Documentation
 docs/**/*Auto.md

@@ -20,6 +20,7 @@
 #include "log.h"
 #include "gits.h"
 #include "diagnostic.h"
+#include "imGuiHUD.h"
 
 namespace gits {
 bool ConfigureRecorder(const std::filesystem::path& configPath) {
@@ -36,10 +37,13 @@ bool ConfigureRecorder(const std::filesystem::path& configPath) {
   }
 
 #ifdef GITS_PLATFORM_WINDOWS
-  auto processName = gits::GetWindowsProcessName(_getpid());
+  auto pid = _getpid();
+  auto processName = gits::GetWindowsProcessName(pid);
 #elif defined GITS_PLATFORM_LINUX
-  auto processName = GetLinuxProcessName(getpid());
+  auto pid = getpid();
+  auto processName = GetLinuxProcessName(pid);
 #endif
+  auto processNameHUD = processName.empty() ? "<unknown>" : processName;
   Configurator::Instance().ApplyOverrides(configPath, std::move(processName));
 
   Configurator::GetMutable().common.mode = GITSMode::MODE_RECORDER;
@@ -57,6 +61,10 @@ bool ConfigureRecorder(const std::filesystem::path& configPath) {
   file->SetConfig(configPath);
 
   inst.RegisterFileRecorder(std::move(file));
+
+  auto pImGuiHUD = std::make_unique<ImGuiHUD>();
+  CGits::Instance().SetImGuiHUD(std::move(pImGuiHUD));
+  CGits::Instance().GetImGuiHUD()->SetApplicationInfo(processNameHUD, pid);
 
   configured = true;
   return true;

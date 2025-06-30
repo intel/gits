@@ -92,6 +92,7 @@ if(WITH_DIRECTX)
   directxtex
   ${DML_DIR}/bin/x64-win/DirectML.lib
   ${DSTORAGE_DIR}/native/lib/x64/dstorage.lib
+  ImGuiHUD
   )
 endif()
 

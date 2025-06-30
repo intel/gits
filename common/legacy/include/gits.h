@@ -58,6 +58,7 @@ class CBinIStream;
 class CBehavior;
 class CAction;
 class CToken;
+class ImGuiHUD;
 
 class CFile : private gits::noncopyable {
 public:
@@ -217,6 +218,8 @@ private:
   std::unordered_map<void*, uint64_t> _ptrToOrderedId;
 
   MessageBus _messageBus;
+
+  std::unique_ptr<ImGuiHUD> _imGuiHUD;
 
   CGits();
   CGits(uint16_t v0, uint16_t v1, uint16_t v2, uint16_t v3);
@@ -486,6 +489,9 @@ public:
   MessageBus& GetMessageBus() {
     return _messageBus;
   }
+
+  void SetImGuiHUD(std::unique_ptr<ImGuiHUD> gitsHUD);
+  ImGuiHUD* GetImGuiHUD();
 
   friend std::ostream& operator<<(std::ostream& stream, const CGits& g);
   friend CBinOStream& operator<<(CBinOStream& stream, const CGits& g);

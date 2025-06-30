@@ -47,24 +47,25 @@ add_subdirectory(layers/resource_dumping)
 add_subdirectory(layers/skip_calls)
 add_subdirectory(layers/portability)
 add_subdirectory(layers/dstorage_resources)
+add_subdirectory(layers/imgui_hud)
 add_subdirectory(${PLUGINS_DIR} DirectX_plugins)
 
 add_dependencies(DirectX_recorder
-    DirectX_codegen
-    DirectX_trace
-    DirectX_dstorage_resources
-    DirectX_layer_interface
-    DirectX_coders
-    DirectX_utils
+  DirectX_codegen
+  DirectX_trace
+  DirectX_dstorage_resources
+  DirectX_layer_interface
+  DirectX_coders
+  DirectX_utils
 )
 
 add_dependencies(DirectX_trace
-    DirectX_layer_interface
-    DirectX_utils
+  DirectX_layer_interface
+  DirectX_utils
 )
 
 add_dependencies(DirectX_api_debug
-    DirectX_layer_interface
+  DirectX_layer_interface
 )
 
 add_dependencies(DirectX_layer_interface
@@ -73,43 +74,47 @@ add_dependencies(DirectX_layer_interface
 )
 
 add_dependencies(DirectX_player
-    DirectX_layer_interface
-    DirectX_utils
+  DirectX_layer_interface
+  DirectX_utils
 )
 
 add_dependencies(DirectX_subcapture
-    DirectX_layer_interface
-    DirectX_dstorage_resources
-    DirectX_coders
-	DirectX_utils
+  DirectX_layer_interface
+  DirectX_dstorage_resources
+  DirectX_coders
+  DirectX_utils
 )
 
 add_dependencies(DirectX_execution_serialization
-    DirectX_layer_interface
-	DirectX_coders
-	DirectX_utils
+  DirectX_layer_interface
+  DirectX_coders
+  DirectX_utils
 )
 
 add_dependencies(DirectX_coders
-    DirectX_layer_interface
+  DirectX_layer_interface
 )
 
 add_dependencies(DirectX_dstorage_resources
-    DirectX_layer_interface
+  DirectX_layer_interface
 )
 
 add_dependencies(DirectX_resource_dumping
-    DirectX_layer_interface
-	DirectX_utils
+  DirectX_layer_interface
+  DirectX_utils
 )
 
 add_dependencies(DirectX_skip_calls
-    DirectX_layer_interface
+  DirectX_layer_interface
 )
 
 add_dependencies(DirectX_portability
     DirectX_layer_interface
     DirectX_utils
+)
+
+add_dependencies(DirectX_imgui_hud
+  DirectX_layer_interface
 )
 
 add_dependencies(DirectX_utils
@@ -127,32 +132,34 @@ target_link_libraries(DirectX_subcapture PRIVATE
 )
 
 target_link_libraries(DirectX_execution_serialization PRIVATE
-	DirectX_utils
-	DirectX_coders
+  DirectX_utils
+  DirectX_coders
 )
 
 target_link_libraries(DirectX_recorder PRIVATE
-    DirectX_layer_interface
-    DirectX_api_debug
-    DirectX_trace
-    DirectX_dstorage_resources
-    DirectX_coders
-    DirectX_utils
-    DirectX_resource_dumping
-    DirectX_portability
-    configuration
+  DirectX_api_debug
+  DirectX_trace
+  DirectX_dstorage_resources
+  DirectX_coders
+  DirectX_imgui_hud
+  DirectX_utils
+  DirectX_resource_dumping
+  DirectX_portability
+  configuration
+  DirectX_layer_interface
 )
 
 target_link_libraries(DirectX_player PRIVATE
-    DirectX_layer_interface
-    DirectX_api_debug
-    DirectX_trace
-    DirectX_resource_dumping
-    DirectX_subcapture
-    DirectX_execution_serialization
-    DirectX_coders
-    DirectX_utils
-    DirectX_skip_calls
-    DirectX_portability
-    configuration
+  DirectX_layer_interface
+  DirectX_api_debug
+  DirectX_trace
+  DirectX_resource_dumping
+  DirectX_subcapture
+  DirectX_execution_serialization
+  DirectX_coders
+  DirectX_imgui_hud
+  DirectX_utils
+  DirectX_skip_calls
+  DirectX_portability
+  configuration
 )

@@ -6,6 +6,8 @@
 #
 # ===================== end_copyright_notice ==============================
 
-add_subdirectory(configuration)
-add_subdirectory(imguiHUD)
-add_subdirectory(legacy)
+if(NOT DEFINED IMGUI_SOURCE_DIR)
+  install_dependencies("--with-imgui")
+  set(IMGUI_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui")
+  set(IMGUI_BACKEND_DIR "${IMGUI_SOURCE_DIR}/backends")
+endif()

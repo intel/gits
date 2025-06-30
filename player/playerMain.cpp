@@ -60,6 +60,7 @@
 #include "configurationLib.h"
 #include "diagnostic.h"
 #include "playerUtils.h"
+#include "imGuiHUD.h"
 
 #include <sstream>
 #include <iostream>
@@ -320,6 +321,18 @@ int MainBody(int argc, char* argv[]) {
 
     // print not supported functions if exist
     player.NotSupportedFunctionsPrint();
+
+    auto pImGuiHUD = std::make_unique<ImGuiHUD>();
+    CGits::Instance().SetImGuiHUD(std::move(pImGuiHUD));
+#ifdef GITS_PLATFORM_WINDOWS
+    auto pid = _getpid();
+    auto processName = gits::GetWindowsProcessName(pid);
+#elif defined GITS_PLATFORM_LINUX
+    auto pid = getpid();
+    auto processName = GetLinuxProcessName(pid);
+#endif
+    processName = processName.empty() ? "<unknown>" : processName;
+    CGits::Instance().GetImGuiHUD()->SetApplicationInfo(processName, pid);
 
     // check if all functions can be run on that system
     Log(INFO, NO_PREFIX) << "Playing...";

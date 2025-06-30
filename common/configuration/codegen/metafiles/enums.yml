@@ -201,6 +201,18 @@ Enums:
     Values:
       - Value: NORMAL
       - Value: EXCLUSIVE_FULLSCREEN
+  - Name: HUDAnchor
+    Description: Defines the placement of a window within a 2D-area
+    Values:
+      - Value: TOP_LEFT
+      - Value: TOP_CENTER
+      - Value: TOP_RIGHT
+      - Value: CENTER_LEFT
+      - Value: CENTER
+      - Value: CENTER_RIGHT
+      - Value: BOTTOM_LEFT
+      - Value: BOTTOM_CENTER
+      - Value: BOTTOM_RIGHT
   - Name: ImageFormat
     Description: Format used to dump images (such as screenshots or render targets)
     Values:
