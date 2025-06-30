@@ -83,6 +83,9 @@ void StateTrackingService::keepState(unsigned objectKey) {
     ResourceState* resourceState = static_cast<ResourceState*>(state);
     keepState(resourceState->heapKey);
   }
+  if (state->parentKey) {
+    keepState(state->parentKey);
+  }
 }
 
 void StateTrackingService::restoreState(ObjectState* state) {
@@ -90,7 +93,9 @@ void StateTrackingService::restoreState(ObjectState* state) {
     return;
   }
   if (state->parentKey) {
-    restoreState(getState(state->parentKey));
+    ObjectState* parentState = getState(state->parentKey);
+    GITS_ASSERT(parentState);
+    restoreState(parentState);
   }
   switch (state->creationCommand->getId()) {
   case CommandId::ID_IDXGIFACTORY_CREATESWAPCHAIN:
@@ -209,7 +214,7 @@ void StateTrackingService::releaseObject(unsigned key, ULONG result) {
     }
   }
 
-  for (auto childKey : itState->second->childrenKeys) {
+  for (unsigned childKey : itState->second->childrenKeys) {
     if (childKey) {
       auto itChildState = statesByKey_.find(childKey);
       if (itChildState != statesByKey_.end()) {
