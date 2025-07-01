@@ -2703,22 +2703,22 @@ bool isResourceOmittedFromContentsRestoration(uint64_t resource,
         }
       }
 
-      {
-        auto timestamps = GetTimestampsOfAliasedResources(
-            memoryState->aliasingTracker.GetAliasedResourcesForAccelerationStructure(
-                pCreateInfo->offset, pCreateInfo->size, accelerationStructure,
-                bufferState->bufferHandle),
-            sd);
-
-        for (auto& timestamp : timestamps) {
-          if (timestamp > accelerationStructureState->timestamp) {
-            Log(INFO) << "Omitting restoration of an acceleration structure "
-                      << accelerationStructure
-                      << " because it's memory is aliased with another resource.";
-            return true;
-          }
-        }
-      }
+      //{
+      //  auto timestamps = GetTimestampsOfAliasedResources(
+      //      memoryState->aliasingTracker.GetAliasedResourcesForAccelerationStructure(
+      //          pCreateInfo->offset, pCreateInfo->size, accelerationStructure,
+      //          bufferState->bufferHandle),
+      //      sd);
+      //
+      //  for (auto& timestamp : timestamps) {
+      //    if (timestamp > accelerationStructureState->timestamp) {
+      //      Log(INFO) << "Omitting restoration of an acceleration structure "
+      //                << accelerationStructure
+      //                << " because it's memory is aliased with another resource.";
+      //      return true;
+      //    }
+      //  }
+      //}
     } else {
       return true;
     }
