@@ -50,7 +50,7 @@ public:
   void Read(CBinIStream& stream) override {
     unsigned size = 0;
     stream.read(reinterpret_cast<char*>(&size), sizeof(unsigned));
-    data_.resize(size);
+    data_ = HeapArray<char>(size);
     stream.read(data_.data(), size);
 
     decodeCommand();
@@ -64,7 +64,7 @@ protected:
   virtual void decodeCommand() {}
 
 protected:
-  std::vector<char> data_;
+  HeapArray<char> data_;
 
 private:
   FakeArgument argument_;
