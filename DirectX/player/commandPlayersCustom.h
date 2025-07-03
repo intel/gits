@@ -31,7 +31,7 @@ public:
 
 protected:
   void decodeCommand() override {
-    decode(data_.data(), command);
+    decode(data_.get(), command);
   }
 
 private:
@@ -50,7 +50,7 @@ public:
 
 protected:
   void decodeCommand() override {
-    decode(data_.data(), command);
+    decode(data_.get(), command);
   }
 
 private:
@@ -69,7 +69,7 @@ public:
 
 protected:
   void decodeCommand() override {
-    decode(data_.data(), command);
+    decode(data_.get(), command);
   }
 
 private:
@@ -92,7 +92,7 @@ public:
 
 protected:
   void decodeCommand() override {
-    decode(data_.data(), command);
+    decode(data_.get(), command);
   }
 
 private:
@@ -111,7 +111,7 @@ public:
 
 protected:
   void decodeCommand() override {
-    decode(data_.data(), command);
+    decode(data_.get(), command);
   }
 
 private:
@@ -130,7 +130,7 @@ public:
 
 protected:
   void decodeCommand() override {
-    decode(data_.data(), command);
+    decode(data_.get(), command);
   }
 
 private:
@@ -149,7 +149,7 @@ public:
 
 protected:
   void decodeCommand() override {
-    decode(data_.data(), command);
+    decode(data_.get(), command);
   }
 
 private:
@@ -172,7 +172,7 @@ public:
 
 protected:
   void decodeCommand() override {
-    decode(data_.data(), command);
+    decode(data_.get(), command);
   }
 
 private:
@@ -191,7 +191,7 @@ public:
 
 protected:
   void decodeCommand() override {
-    decode(data_.data(), command);
+    decode(data_.get(), command);
   }
 
 private:
@@ -210,7 +210,7 @@ public:
 
 protected:
   void decodeCommand() override {
-    decode(data_.data(), command);
+    decode(data_.get(), command);
   }
 
 private:
@@ -229,7 +229,7 @@ public:
 
 protected:
   void decodeCommand() override {
-    decode(data_.data(), command);
+    decode(data_.get(), command);
   }
 
 private:
@@ -248,7 +248,7 @@ public:
 
 protected:
   void decodeCommand() override {
-    decode(data_.data(), command);
+    decode(data_.get(), command);
   }
 
 private:
@@ -267,7 +267,7 @@ public:
 
 protected:
   void decodeCommand() override {
-    decode(data_.data(), command);
+    decode(data_.get(), command);
   }
 
 private:
@@ -286,7 +286,7 @@ public:
 
 protected:
   void decodeCommand() override {
-    decode(data_.data(), command);
+    decode(data_.get(), command);
   }
 
 private:
@@ -305,7 +305,7 @@ public:
 
 protected:
   void decodeCommand() override {
-    decode(data_.data(), command);
+    decode(data_.get(), command);
   }
 
 private:
@@ -324,7 +324,7 @@ public:
 
 protected:
   void decodeCommand() override {
-    decode(data_.data(), command);
+    decode(data_.get(), command);
   }
 
 private:
@@ -343,7 +343,7 @@ public:
 
 protected:
   void decodeCommand() override {
-    decode(data_.data(), command);
+    decode(data_.get(), command);
   }
 
 private:
@@ -362,7 +362,7 @@ public:
 
 protected:
   void decodeCommand() override {
-    decode(data_.data(), command);
+    decode(data_.get(), command);
   }
 
 private:
@@ -381,7 +381,7 @@ public:
 
 protected:
   void decodeCommand() override {
-    decode(data_.data(), command);
+    decode(data_.get(), command);
   }
 
 private:
@@ -400,7 +400,7 @@ public:
 
 protected:
   void decodeCommand() override {
-    decode(data_.data(), command);
+    decode(data_.get(), command);
   }
 
 private:
@@ -419,7 +419,7 @@ public:
 
 protected:
   void decodeCommand() override {
-    decode(data_.data(), command);
+    decode(data_.get(), command);
   }
 
 private:

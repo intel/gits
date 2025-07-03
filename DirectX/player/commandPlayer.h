@@ -12,6 +12,7 @@
 #include "argument.h"
 
 #include <vector>
+#include <memory>
 
 namespace gits {
 namespace DirectX {
@@ -48,26 +49,26 @@ public:
   }
 
   void Read(CBinIStream& stream) override {
-    unsigned size = 0;
-    stream.read(reinterpret_cast<char*>(&size), sizeof(unsigned));
-    data_.resize(size);
-    stream.read(data_.data(), size);
+    stream.read(reinterpret_cast<char*>(&dataSize_), sizeof(unsigned));
+    data_.reset(new char[dataSize_]);
+    stream.read(data_.get(), dataSize_);
 
     decodeCommand();
   }
 
   uint64_t Size() const override {
-    return sizeof(unsigned) + data_.size();
+    return sizeof(unsigned) + dataSize_;
   }
 
 protected:
   virtual void decodeCommand() {}
 
 protected:
-  std::vector<char> data_;
+  std::unique_ptr<char[]> data_;
 
 private:
   FakeArgument argument_;
+  unsigned dataSize_{};
 };
 
 } // namespace DirectX
