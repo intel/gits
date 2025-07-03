@@ -40,7 +40,7 @@ public:
   void post(IDXGISwapChainResizeBuffersCommand& command) override;
 
 private:
-  void createRenderTarget();
+  bool createFrameContext(unsigned bufferCount);
   bool initializeResources(IUnknown* device, IDXGISwapChain* swapChain);
   void initializeImGui(DXGI_FORMAT format);
 

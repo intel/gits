@@ -60,9 +60,19 @@ void ImGuiHUD::SetBackBufferInfo(uint64_t width, uint64_t height, size_t count) 
     auto& io = ImGui::GetIO();
     io.DisplaySize = ImVec2(width, height);
   }
+
   _backBufferSize = ImVec2(static_cast<float>(width), static_cast<float>(height));
-  _backBufferCount = count >= 1 ? count : 1;
+  _backBufferCount = count;
   _backBufferSet = true;
+
+  // Print a warning if the width or height changed after initialization
+  static uint64_t initialWidth = width;
+  static uint64_t initialHeight = height;
+  static bool printWarning = false;
+  if (!printWarning && (initialWidth != width || initialHeight != height)) {
+    Log(WARN) << "ImGui HUD: BackBuffer resized - HUD can appear 'stretched'.";
+    printWarning = true;
+  }
 }
 
 void ImGuiHUD::Render() {

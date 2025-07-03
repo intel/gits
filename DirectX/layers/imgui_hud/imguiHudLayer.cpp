@@ -135,6 +135,7 @@ void ImGuiHUDLayer::pre(IDXGISwapChainResizeBuffersCommand& command) {
     return;
   }
 
+  // Release all the backbuffers
   for (auto& frameCtx : frameContext_) {
     frameCtx.rtResource.Reset();
   }
@@ -145,118 +146,128 @@ void ImGuiHUDLayer::post(IDXGISwapChainResizeBuffersCommand& command) {
     return;
   }
 
-  static UINT currentWidth = command.Width_.value;
-  static UINT currentHeight = command.Height_.value;
-
-  if (!resizeBuffersWarning_ &&
-      (currentWidth != command.Width_.value || currentHeight != command.Height_.value)) {
-    Log(WARN) << "ImGui HUD: BackBuffer resized - HUD can appear 'stretched'.";
-    resizeBuffersWarning_ = true;
+  // ResizeBuffers can be called with BufferCount set to 0 (to keep the current count)
+  static unsigned currentBufferCount = frameContext_.size();
+  unsigned bufferCount = command.BufferCount_.value;
+  if (bufferCount == 0) {
+    bufferCount = currentBufferCount;
+  } else {
+    currentBufferCount = bufferCount;
   }
 
-  currentWidth = command.Width_.value;
-  currentHeight = command.Height_.value;
-
-  createRenderTarget();
-
+  if (!createFrameContext(bufferCount)) {
+    Log(ERR) << "ImGui HUD: Failed to correctly create frame context on ResizeBuffers";
+  }
   CGits::Instance().GetImGuiHUD()->SetBackBufferInfo(command.Width_.value, command.Height_.value,
-                                                     command.BufferCount_.value);
+                                                     bufferCount);
 }
 
-void ImGuiHUDLayer::createRenderTarget() {
-  if (!swapChain_ || !device_ || frameContext_.empty()) {
-    return;
+bool ImGuiHUDLayer::createFrameContext(unsigned bufferCount) {
+  if (!swapChain_ || !device_) {
+    return false;
   }
 
-  for (UINT i = 0; i < frameContext_.size(); ++i) {
-    ID3D12Resource* backBuffer = nullptr;
-    if (FAILED(swapChain_->GetBuffer(i, IID_PPV_ARGS(&backBuffer)))) {
+  auto rtvHandleSize = device_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+  auto rtvHandle = rtvDescHeap_->GetCPUDescriptorHandleForHeapStart();
+
+  frameContext_.resize(bufferCount);
+  for (UINT i = 0; i < bufferCount; ++i) {
+    FrameContext& frameCtx = frameContext_[i];
+
+    // Get the backBuffer
+    Microsoft::WRL::ComPtr<ID3D12Resource> backBuffer;
+    auto hr = swapChain_->GetBuffer(i, IID_PPV_ARGS(&backBuffer));
+    if (hr != S_OK) {
       Log(ERR) << "ImGui HUD: Failed to get back buffer";
-      return;
+      return false;
     }
-    device_->CreateRenderTargetView(backBuffer, nullptr, frameContext_[i].rtvHandle);
-    frameContext_[i].rtResource = backBuffer;
+
+    // Create the RTV for backBuffer
+    frameCtx.rtvHandle = rtvHandle;
+    device_->CreateRenderTargetView(backBuffer.Get(), nullptr, frameCtx.rtvHandle);
+    frameCtx.rtResource = backBuffer.Get();
+
+    // Create the CommandAllocators
+    hr = device_->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
+                                         IID_PPV_ARGS(&frameCtx.commandAllocator));
+    if (hr != S_OK) {
+      Log(ERR) << "ImGui HUD: Failed to create CommandAllocator";
+      return false;
+    }
+    frameCtx.commandAllocator->SetName(L"ImGuiHUDLayer Command Allocator");
+
+    // Increment RTV handle
+    rtvHandle.ptr += rtvHandleSize;
   }
+
+  return true;
 }
 
 bool ImGuiHUDLayer::initializeResources(IUnknown* device, IDXGISwapChain* swapChain) {
   device->QueryInterface(IID_PPV_ARGS(&commandQueue_));
   swapChain->QueryInterface(IID_PPV_ARGS(&swapChain_));
-  if (!SUCCEEDED(swapChain_->GetDevice(IID_PPV_ARGS(&device_)))) {
+  swapChain_->GetDevice(IID_PPV_ARGS(&device_));
+  if (!commandQueue_ || !swapChain_ || !device_) {
     return false;
   }
 
-  DXGI_SWAP_CHAIN_DESC sdesc;
-  swapChain_->GetDesc(&sdesc);
-  window_ = sdesc.OutputWindow;
-
-  frameContext_.resize(sdesc.BufferCount);
-
-  {
-    D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-    desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-    desc.NumDescriptors = frameContext_.size();
-    desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-    desc.NodeMask = 1;
-    if (device_->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&rtvDescHeap_)) != S_OK) {
-      Log(ERR) << "ImGui HUD: Failed to create RTV descriptor heap";
-      return false;
-    }
-    rtvDescHeap_->SetName(L"ImGuiHUDLayer RTV Descriptor Heap");
-
-    SIZE_T rtvDescriptorSize =
-        device_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-    D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rtvDescHeap_->GetCPUDescriptorHandleForHeapStart();
-
-    for (auto& frameCtx : frameContext_) {
-      frameCtx.rtvHandle = rtvHandle;
-      rtvHandle.ptr += rtvDescriptorSize;
-    }
-
-    {
-      D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-      desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-      desc.NumDescriptors = 1;
-      desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-      if (device_->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&srvDescHeap_)) != S_OK) {
-        Log(ERR) << "ImGui HUD: Failed to create SRV descriptor heap";
-        return false;
-      }
-    }
-    srvDescHeap_->SetName(L"ImGuiHUDLayer SRV Descriptor Heap");
-
-    {
-      for (auto& frameCtx : frameContext_) {
-        device_->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
-                                        IID_PPV_ARGS(&frameCtx.commandAllocator));
-        frameCtx.commandAllocator->SetName(L"ImGuiHUDLayer Command Allocator");
-      }
-
-      if (device_->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
-                                     frameContext_[0].commandAllocator.Get(), NULL,
-                                     IID_PPV_ARGS(&commandList_)) != S_OK ||
-          commandList_->Close() != S_OK) {
-        Log(ERR) << "ImGui HUD: Failed to create command list";
-        return false;
-      }
-      commandList_->SetName(L"ImGuiHUDLayer Command List");
-    }
-
-    fenceValue_ = 0;
-    if (device_->CreateFence(fenceValue_, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence_)) != S_OK) {
-      Log(ERR) << "ImGui HUD: Failed to create fence";
-      return false;
-    }
-    fence_->SetName(L"ImGuiHUDLayer Fence");
-
-    createRenderTarget();
-
-    initializeImGui(sdesc.BufferDesc.Format);
-    CGits::Instance().GetImGuiHUD()->SetBackBufferInfo(sdesc.BufferDesc.Width,
-                                                       sdesc.BufferDesc.Height, sdesc.BufferCount);
-
-    return true;
+  DXGI_SWAP_CHAIN_DESC swapChainDesc;
+  swapChain_->GetDesc(&swapChainDesc);
+  if (swapChainDesc.BufferCount == 0) {
+    return false;
   }
+
+  window_ = swapChainDesc.OutputWindow;
+
+  // Create RTV Descriptor Heap
+  D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+  desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+  desc.NumDescriptors = DXGI_MAX_SWAP_CHAIN_BUFFERS;
+  desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+  desc.NodeMask = 1;
+  if (device_->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&rtvDescHeap_)) != S_OK) {
+    Log(ERR) << "ImGui HUD: Failed to create RTV descriptor heap";
+    return false;
+  }
+  rtvDescHeap_->SetName(L"ImGuiHUDLayer RTV Descriptor Heap");
+
+  // Create SRV Descriptor Heap
+  desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+  desc.NumDescriptors = 1;
+  desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+  if (device_->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&srvDescHeap_)) != S_OK) {
+    Log(ERR) << "ImGui HUD: Failed to create SRV descriptor heap";
+    return false;
+  }
+  srvDescHeap_->SetName(L"ImGuiHUDLayer SRV Descriptor Heap");
+
+  if (!createFrameContext(swapChainDesc.BufferCount)) {
+    return false;
+  }
+
+  // Create Fence
+  fenceValue_ = 0;
+  if (device_->CreateFence(fenceValue_, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence_)) != S_OK) {
+    Log(ERR) << "ImGui HUD: Failed to create fence";
+    return false;
+  }
+  fence_->SetName(L"ImGuiHUDLayer Fence");
+
+  // Create CommandList (using the first CommandAllocator)
+  if (device_->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
+                                 frameContext_[0].commandAllocator.Get(), NULL,
+                                 IID_PPV_ARGS(&commandList_)) != S_OK) {
+    Log(ERR) << "ImGui HUD: Failed to create command list";
+    return false;
+  }
+  commandList_->Close();
+  commandList_->SetName(L"ImGuiHUDLayer Command List");
+
+  initializeImGui(swapChainDesc.BufferDesc.Format);
+  CGits::Instance().GetImGuiHUD()->SetBackBufferInfo(
+      swapChainDesc.BufferDesc.Width, swapChainDesc.BufferDesc.Height, swapChainDesc.BufferCount);
+
+  return true;
 }
 
 void ImGuiHUDLayer::initializeImGui(DXGI_FORMAT format) {
