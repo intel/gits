@@ -174,11 +174,11 @@ void AccelerationStructuresBuildService::copyAccelerationStructure(
   state->commandKey = c.key;
   state->commandListKey = commandListKey_;
   state->destAccelerationStructureData = c.DestAccelerationStructureData_.value;
-  state->destAccelerationStructureKey = c.DestAccelerationStructureData_.interfaceKey;
-  state->destAccelerationStructureOffset = c.DestAccelerationStructureData_.offset;
+  state->destKey = c.DestAccelerationStructureData_.interfaceKey;
+  state->destOffset = c.DestAccelerationStructureData_.offset;
   state->sourceAccelerationStructureData = c.SourceAccelerationStructureData_.value;
-  state->sourceAccelerationStructureKey = c.SourceAccelerationStructureData_.interfaceKey;
-  state->sourceAccelerationStructureOffset = c.SourceAccelerationStructureData_.offset;
+  state->sourceKey = c.SourceAccelerationStructureData_.interfaceKey;
+  state->sourceOffset = c.SourceAccelerationStructureData_.offset;
   state->mode = c.Mode_.value;
 
   stateService_.keepState(c.DestAccelerationStructureData_.interfaceKey);
@@ -187,7 +187,7 @@ void AccelerationStructuresBuildService::copyAccelerationStructure(
 }
 
 void AccelerationStructuresBuildService::restoreAccelerationStructures() {
-  if (states_.empty()) {
+  if (statesById_.empty()) {
     return;
   }
 
@@ -277,81 +277,12 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
   getAddress.object_.key = scratchResourceKey;
   recorder_.record(new ID3D12ResourceGetGPUVirtualAddressWriter(getAddress));
 
-  // remove previous builds to the same destination
-  std::map<std::pair<unsigned, unsigned>, std::unordered_set<unsigned>>
-      restoreBuildsByDestKeyOffset;
-  std::map<std::pair<unsigned, unsigned>, std::unordered_set<unsigned>> copiedBuildsByKeyOffset;
-  std::map<std::pair<unsigned, unsigned>, std::unordered_set<unsigned>> updatedBuildsByKeyOffset;
-  for (auto& itState : states_) {
-    if (itState->buildState) {
-      BuildRaytracingAccelerationStructureState* state =
-          static_cast<BuildRaytracingAccelerationStructureState*>(itState.get());
-      if (!state->update) {
-        auto itRestoreBuilds =
-            restoreBuildsByDestKeyOffset.find(std::pair(state->destKey, state->destOffset));
-        if (itRestoreBuilds != restoreBuildsByDestKeyOffset.end()) {
-          restoreBuildsByDestKeyOffset.erase(itRestoreBuilds);
-        }
-      } else if (state->sourceKey) {
-        auto itSourceRestoreBuilds =
-            restoreBuildsByDestKeyOffset.find(std::pair(state->sourceKey, state->sourceOffset));
-        if (itSourceRestoreBuilds != restoreBuildsByDestKeyOffset.end()) {
-          auto& updatedBuilds =
-              updatedBuildsByKeyOffset[std::pair(state->sourceKey, state->sourceOffset)];
-          for (unsigned buildKey : itSourceRestoreBuilds->second) {
-            updatedBuilds.insert(buildKey);
-          }
-        }
-      }
-      restoreBuildsByDestKeyOffset[std::pair(state->destKey, state->destOffset)].insert(
-          state->commandKey);
-    } else {
-      CopyRaytracingAccelerationStructureState* state =
-          static_cast<CopyRaytracingAccelerationStructureState*>(itState.get());
-
-      auto itSourceRestoreBuilds = restoreBuildsByDestKeyOffset.find(std::pair(
-          state->sourceAccelerationStructureKey, state->sourceAccelerationStructureOffset));
-      if (itSourceRestoreBuilds != restoreBuildsByDestKeyOffset.end()) {
-        auto& copiedBuilds = copiedBuildsByKeyOffset[std::pair(
-            state->sourceAccelerationStructureKey, state->sourceAccelerationStructureOffset)];
-        for (unsigned buildKey : itSourceRestoreBuilds->second) {
-          copiedBuilds.insert(buildKey);
-        }
-      }
-
-      auto itDestRestoreBuilds = restoreBuildsByDestKeyOffset.find(
-          std::pair(state->destAccelerationStructureKey, state->destAccelerationStructureOffset));
-      if (itDestRestoreBuilds != restoreBuildsByDestKeyOffset.end()) {
-        restoreBuildsByDestKeyOffset.erase(itDestRestoreBuilds);
-      }
-    }
-  }
-
   std::map<std::pair<unsigned, unsigned>, uint64_t> bufferHashesByKeyOffset;
   std::unordered_map<unsigned, std::unordered_set<unsigned>> tiledResourceUpdatesRestored;
-
-  for (auto& itState : states_) {
-    if (itState->buildState) {
+  for (auto& itState : statesById_) {
+    if (itState.second->buildState) {
       BuildRaytracingAccelerationStructureState* state =
-          static_cast<BuildRaytracingAccelerationStructureState*>(itState.get());
-
-      // remove previous builds to the same destination
-      auto itRestoreBuilds =
-          restoreBuildsByDestKeyOffset.find(std::pair(state->destKey, state->destOffset));
-      if (itRestoreBuilds == restoreBuildsByDestKeyOffset.end() ||
-          itRestoreBuilds->second.find(state->commandKey) == itRestoreBuilds->second.end()) {
-        auto itCopiedBuilds =
-            copiedBuildsByKeyOffset.find(std::pair(state->destKey, state->destOffset));
-        if (itCopiedBuilds == copiedBuildsByKeyOffset.end() ||
-            itCopiedBuilds->second.find(state->commandKey) == itCopiedBuilds->second.end()) {
-          auto itUpdatedBuilds =
-              updatedBuildsByKeyOffset.find(std::pair(state->destKey, state->destOffset));
-          if (itUpdatedBuilds == updatedBuildsByKeyOffset.end() ||
-              itUpdatedBuilds->second.find(state->commandKey) == itUpdatedBuilds->second.end()) {
-            continue;
-          }
-        }
-      }
+          static_cast<BuildRaytracingAccelerationStructureState*>(itState.second);
 
       std::unordered_set<unsigned> restoredBuffers;
       std::unordered_set<unsigned> uploadBuffers;
@@ -483,17 +414,17 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
       }
     } else {
       CopyRaytracingAccelerationStructureState* state =
-          static_cast<CopyRaytracingAccelerationStructureState*>(itState.get());
+          static_cast<CopyRaytracingAccelerationStructureState*>(itState.second);
 
       ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand copy;
       copy.key = state->commandKey;
       copy.object_.key = commandListKey_;
       copy.DestAccelerationStructureData_.value = state->destAccelerationStructureData;
-      copy.DestAccelerationStructureData_.interfaceKey = state->destAccelerationStructureKey;
-      copy.DestAccelerationStructureData_.offset = state->destAccelerationStructureOffset;
+      copy.DestAccelerationStructureData_.interfaceKey = state->destKey;
+      copy.DestAccelerationStructureData_.offset = state->destOffset;
       copy.SourceAccelerationStructureData_.value = state->sourceAccelerationStructureData;
-      copy.SourceAccelerationStructureData_.interfaceKey = state->sourceAccelerationStructureKey;
-      copy.SourceAccelerationStructureData_.offset = state->sourceAccelerationStructureOffset;
+      copy.SourceAccelerationStructureData_.interfaceKey = state->sourceKey;
+      copy.SourceAccelerationStructureData_.offset = state->sourceOffset;
       copy.Mode_.value = state->mode;
       stateService_.getRecorder().record(
           new ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureWriter(copy));
@@ -545,6 +476,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
             new ID3D12GraphicsCommandListResetWriter(commandListReset));
       }
     }
+    delete itState.second;
   }
 
   IUnknownReleaseCommand release{};
@@ -563,8 +495,8 @@ void AccelerationStructuresBuildService::executeCommandLists(
   for (unsigned commandListKey : c.ppCommandLists_.keys) {
     auto itStates = statesByCommandList_.find(commandListKey);
     if (itStates != statesByCommandList_.end()) {
-      for (auto& it : itStates->second) {
-        states_.push_back(std::move(it));
+      for (RaytracingAccelerationStructureState* state : itStates->second) {
+        storeState(state);
       }
       statesByCommandList_.erase(itStates);
     }
@@ -585,6 +517,53 @@ void AccelerationStructuresBuildService::fenceSignal(unsigned key,
                                                      unsigned fenceKey,
                                                      UINT64 fenceValue) {
   bufferContentRestore_.fenceSignal(key, fenceKey, fenceValue);
+}
+
+void AccelerationStructuresBuildService::storeState(RaytracingAccelerationStructureState* state) {
+
+  unsigned stateId = ++stateUniqueId_;
+  statesById_[stateId] = state;
+  if (state->sourceKey) {
+    unsigned sourceId = stateByKeyOffset_[{state->sourceKey, state->sourceOffset}];
+    stateSourceByDest_[stateId] = sourceId;
+    stateDestsBySource_[sourceId].insert(stateId);
+  }
+
+  // remove previous state if not a source for any AS
+  auto itState = stateByKeyOffset_.find({state->destKey, state->destOffset});
+  if (itState != stateByKeyOffset_.end()) {
+    auto itDests = stateDestsBySource_.find(itState->second);
+    if (itDests == stateDestsBySource_.end()) {
+      removeState(itState->second);
+    }
+  }
+
+  stateByKeyOffset_[{state->destKey, state->destOffset}] = stateId;
+}
+
+void AccelerationStructuresBuildService::removeState(unsigned stateId) {
+
+  // remove state sources chain
+  auto itSource = stateSourceByDest_.find(stateId);
+  if (itSource != stateSourceByDest_.end()) {
+    auto itDests = stateDestsBySource_.find(itSource->second);
+    GITS_ASSERT(itDests != stateDestsBySource_.end());
+    itDests->second.erase(stateId);
+    if (itDests->second.empty()) {
+      removeState(itSource->second);
+      stateDestsBySource_.erase(itDests);
+    }
+    stateSourceByDest_.erase(itSource);
+  }
+
+  // remove state
+  auto itState = statesById_.find(stateId);
+  GITS_ASSERT(itState != statesById_.end());
+  if (itState->second->buildState) {
+    bufferContentRestore_.removeBuild(itState->second->commandKey);
+  }
+  stateByKeyOffset_.erase({itState->second->destKey, itState->second->destOffset});
+  statesById_.erase(itState);
 }
 
 } // namespace DirectX

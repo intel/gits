@@ -12,6 +12,7 @@
 #include "commandWriter.h"
 
 #include <unordered_map>
+#include <unordered_set>
 #include <mutex>
 
 namespace gits {
@@ -39,12 +40,13 @@ public:
                    unsigned offset,
                    unsigned size,
                    D3D12_RESOURCE_STATES resourceState,
-                   unsigned callKey,
+                   unsigned buildCallKey,
                    bool isMappable,
                    unsigned uploadResourceKey);
-  std::vector<BufferRestoreInfo>& getRestoreInfos(unsigned callKey) {
-    return restoreCommands_[callKey];
+  std::vector<BufferRestoreInfo>& getRestoreInfos(unsigned buildCallKey) {
+    return restoreBuildCommands_[buildCallKey];
   }
+  void removeBuild(unsigned buildCallKey);
   void setDeviceKey(unsigned deviceKey) {
     deviceKey_ = deviceKey;
   }
@@ -52,7 +54,7 @@ public:
 protected:
   struct BufferInfo : public DumpInfo {
     unsigned resourceKey;
-    unsigned callKey;
+    unsigned buildCallKey;
     unsigned commandListKey;
     bool isMappable;
     unsigned uploadResourceKey;
@@ -62,7 +64,8 @@ protected:
 
 private:
   StateTrackingService& stateService_;
-  std::unordered_map<unsigned, std::vector<BufferRestoreInfo>> restoreCommands_;
+  std::unordered_set<unsigned> restoreBuilds_;
+  std::unordered_map<unsigned, std::vector<BufferRestoreInfo>> restoreBuildCommands_;
   unsigned deviceKey_{};
   std::mutex mutex_;
 };

@@ -52,14 +52,14 @@ private:
     unsigned commandKey{};
     unsigned commandListKey{};
     bool buildState{};
-  };
-
-  struct BuildRaytracingAccelerationStructureState : public RaytracingAccelerationStructureState {
-    std::unique_ptr<PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>> desc{};
     unsigned destKey{};
     unsigned destOffset{};
     unsigned sourceKey{};
     unsigned sourceOffset{};
+  };
+
+  struct BuildRaytracingAccelerationStructureState : public RaytracingAccelerationStructureState {
+    std::unique_ptr<PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>> desc{};
     bool update{};
     std::unordered_map<unsigned, ResourceState*> buffers;
     std::vector<unsigned> uploadBuffers;
@@ -68,22 +68,23 @@ private:
 
   struct CopyRaytracingAccelerationStructureState : public RaytracingAccelerationStructureState {
     D3D12_GPU_VIRTUAL_ADDRESS destAccelerationStructureData{};
-    unsigned destAccelerationStructureKey{};
-    unsigned destAccelerationStructureOffset{};
     D3D12_GPU_VIRTUAL_ADDRESS sourceAccelerationStructureData{};
-    unsigned sourceAccelerationStructureKey{};
-    unsigned sourceAccelerationStructureOffset{};
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE mode{};
   };
-
-  using RaytracingAccelerationStructureStates =
-      std::vector<std::unique_ptr<RaytracingAccelerationStructureState>>;
-  RaytracingAccelerationStructureStates states_;
-  std::unordered_map<unsigned, RaytracingAccelerationStructureStates> statesByCommandList_;
 
   using KeyOffset = std::pair<unsigned, unsigned>;
   std::set<KeyOffset> tlases_;
 
+  std::unordered_map<unsigned, std::vector<RaytracingAccelerationStructureState*>>
+      statesByCommandList_;
+
+  std::map<unsigned, RaytracingAccelerationStructureState*> statesById_;
+
+  std::map<KeyOffset, unsigned> stateByKeyOffset_;
+  std::unordered_map<unsigned, unsigned> stateSourceByDest_;
+  std::unordered_map<unsigned, std::unordered_set<unsigned>> stateDestsBySource_;
+
+  unsigned stateUniqueId_{};
   unsigned maxBuildScratchSpace_{};
   unsigned deviceKey_{};
 
@@ -95,6 +96,10 @@ private:
   bool restored_{};
   bool serializeMode_{};
   bool restoreTLASes_{};
+
+private:
+  void storeState(RaytracingAccelerationStructureState* state);
+  void removeState(unsigned stateId);
 };
 
 } // namespace DirectX

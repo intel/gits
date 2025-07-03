@@ -23,32 +23,41 @@ void AccelerationStructuresBufferContentRestore::storeBuffer(ID3D12GraphicsComma
                                                              unsigned offset,
                                                              unsigned size,
                                                              D3D12_RESOURCE_STATES resourceState,
-                                                             unsigned callKey,
+                                                             unsigned buildCallKey,
                                                              bool isMappable,
                                                              unsigned uploadResourceKey) {
   BufferInfo* info = new BufferInfo();
   info->offset = offset;
   info->size = size;
-  info->callKey = callKey;
+  info->buildCallKey = buildCallKey;
   info->resourceKey = resourceKey;
   info->commandListKey = commandListKey;
   info->isMappable = isMappable;
   info->uploadResourceKey = uploadResourceKey;
-  info->dumpName =
-      L"BLAS build " + std::to_wstring(callKey) + L" resource O" + std::to_wstring(resourceKey);
+  info->dumpName = L"BLAS build " + std::to_wstring(buildCallKey) + L" resource O" +
+                   std::to_wstring(resourceKey);
 
+  restoreBuilds_.insert(buildCallKey);
   stageResource(commandList, resource, resourceState, *info);
 }
 
 void AccelerationStructuresBufferContentRestore::dumpBuffer(DumpInfo& dumpInfo, void* data) {
 
   BufferInfo& info = static_cast<BufferInfo&>(dumpInfo);
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (restoreBuilds_.find(info.buildCallKey) == restoreBuilds_.end()) {
+      return;
+    }
+  }
 
   BufferRestoreInfo restoreInfo{};
   restoreInfo.bufferKey = info.resourceKey;
   restoreInfo.uploadResourceKey = info.uploadResourceKey;
   restoreInfo.offset = info.offset;
   restoreInfo.bufferHash = ComputeHash(data, info.size, THashType::XX);
+
+  std::lock_guard<std::mutex> lock(mutex_);
 
   if (info.isMappable) {
 
@@ -153,8 +162,21 @@ void AccelerationStructuresBufferContentRestore::dumpBuffer(DumpInfo& dumpInfo, 
         new ID3D12GraphicsCommandListCopyBufferRegionWriter(copyBufferRegion));
   }
 
+  restoreBuildCommands_[info.buildCallKey].push_back(std::move(restoreInfo));
+}
+
+void AccelerationStructuresBufferContentRestore::removeBuild(unsigned buildCallKey) {
   std::lock_guard<std::mutex> lock(mutex_);
-  restoreCommands_[info.callKey].push_back(std::move(restoreInfo));
+  restoreBuilds_.erase(buildCallKey);
+  auto it = restoreBuildCommands_.find(buildCallKey);
+  if (it != restoreBuildCommands_.end()) {
+    for (BufferRestoreInfo& restoreInfo : it->second) {
+      for (CommandWriter* writer : restoreInfo.restoreCommands) {
+        delete writer;
+      }
+    }
+    restoreBuildCommands_.erase(buildCallKey);
+  }
 }
 
 } // namespace DirectX
