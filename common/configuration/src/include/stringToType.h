@@ -164,4 +164,7 @@ T stringTo(const std::string& str) {
   readFromStream(iss, result);
   return result;
 }
+
+template <>
+bool stringTo<bool>(const std::string& str);
 } // namespace gits

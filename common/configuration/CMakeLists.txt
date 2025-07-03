@@ -23,6 +23,7 @@ if(NOT DEFINED BUILD_FOR_CCODE)
     ${CPP_SRC}/deriveData.cpp
     ${CPP_SRC}/helper.cpp
     ${CPP_SRC}/stringFromType.cpp
+    ${CPP_SRC}/stringToType.cpp
   )
   set(HEADER_FILES
     ${HEADER_SRC}/argumentParser.h
@@ -56,6 +57,7 @@ else()
     ${CPP_SRC}/customTypes.cpp
     ${CPP_SRC}/helper.cpp
     ${CPP_SRC}/stringFromType.cpp
+    ${CPP_SRC}/stringToType.cpp
   )
   set(HEADER_FILES
     ${HEADER_SRC}/configurator.h
