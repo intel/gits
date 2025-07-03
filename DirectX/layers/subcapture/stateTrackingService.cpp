@@ -492,6 +492,9 @@ void StateTrackingService::restoreD3D12CommandList(ObjectState* state) {
   unsigned initialStateKey = command->pInitialState_.key;
 
   ObjectState* allocatorState = getState(allocatorKey);
+  if (!allocatorState) {
+    return;
+  }
   restoreState(allocatorState);
   if (initialStateKey) {
     ObjectState* initialState = getState(initialStateKey);
