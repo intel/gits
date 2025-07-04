@@ -277,7 +277,6 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
   getAddress.object_.key = scratchResourceKey;
   recorder_.record(new ID3D12ResourceGetGPUVirtualAddressWriter(getAddress));
 
-  std::map<std::pair<unsigned, unsigned>, uint64_t> bufferHashesByKeyOffset;
   std::unordered_map<unsigned, std::unordered_set<unsigned>> tiledResourceUpdatesRestored;
   for (auto& itState : statesById_) {
     if (itState.second->buildState) {
@@ -287,14 +286,9 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
       std::unordered_set<unsigned> restoredBuffers;
       std::unordered_set<unsigned> uploadBuffers;
 
-      std::vector<AccelerationStructuresBufferContentRestore::BufferRestoreInfo>& restoreInfos =
-          bufferContentRestore_.getRestoreInfos(state->commandKey);
-      for (AccelerationStructuresBufferContentRestore::BufferRestoreInfo& info : restoreInfos) {
-        auto itHash = bufferHashesByKeyOffset.find(std::pair(info.bufferKey, info.offset));
-        if (itHash != bufferHashesByKeyOffset.end() && itHash->second == info.bufferHash) {
-          continue;
-        }
-        bufferHashesByKeyOffset[std::pair(info.bufferKey, info.offset)] = info.bufferHash;
+      auto& restoreInfos = bufferContentRestore_.getRestoreInfos(state->commandKey);
+      for (auto& it : restoreInfos) {
+        AccelerationStructuresBufferContentRestore::BufferRestoreInfo& info = it.second;
         restoredBuffers.insert(info.bufferKey);
         uploadBuffers.insert(info.uploadResourceKey);
 
@@ -528,6 +522,9 @@ void AccelerationStructuresBuildService::storeState(RaytracingAccelerationStruct
     stateSourceByDest_[stateId] = sourceId;
     stateDestsBySource_[sourceId].insert(stateId);
   }
+  if (state->buildState) {
+    bufferContentRestore_.setBuildStateId(state->commandKey, stateId);
+  }
 
   // remove previous state if not a source for any AS
   auto itState = stateByKeyOffset_.find({state->destKey, state->destOffset});
@@ -560,7 +557,7 @@ void AccelerationStructuresBuildService::removeState(unsigned stateId) {
   auto itState = statesById_.find(stateId);
   GITS_ASSERT(itState != statesById_.end());
   if (itState->second->buildState) {
-    bufferContentRestore_.removeBuild(itState->second->commandKey);
+    bufferContentRestore_.removeRestoreInfos(itState->second->commandKey);
   }
   stateByKeyOffset_.erase({itState->second->destKey, itState->second->destOffset});
   statesById_.erase(itState);
