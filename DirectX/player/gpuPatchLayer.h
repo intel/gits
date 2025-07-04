@@ -121,7 +121,7 @@ private:
   std::array<ID3D12Resource*, patchBufferPoolSize_> executeIndirectCountStagingBuffers_{};
   const unsigned executeIndirectCountBufferSize_{0x10};
 
-  static const unsigned mappingBufferPoolSize_{16};
+  static const unsigned mappingBufferPoolSize_{24};
 
   std::array<ID3D12Resource*, mappingBufferPoolSize_> gpuAddressBuffers_{};
   std::array<ID3D12Resource*, mappingBufferPoolSize_> gpuAddressStagingBuffers_{};
