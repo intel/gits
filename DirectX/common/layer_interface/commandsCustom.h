@@ -135,8 +135,8 @@ public:
         FirstSubresourceTilingToGet_{FirstSubresourceTilingToGet},
         pSubresourceTilingsForNonPackedMips_{} {
     if (pNumSubresourceTilings) {
-      pSubresourceTilingsForNonPackedMips_ = {pSubresourceTilingsForNonPackedMips,
-                                              *pNumSubresourceTilings};
+      pSubresourceTilingsForNonPackedMips_.value = pSubresourceTilingsForNonPackedMips;
+      pSubresourceTilingsForNonPackedMips_.size = *pNumSubresourceTilings;
     }
   }
   ID3D12DeviceGetResourceTilingCommand() : Command(CommandId::ID_ID3D12DEVICE_GETRESOURCETILING) {}

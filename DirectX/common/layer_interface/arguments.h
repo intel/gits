@@ -79,6 +79,7 @@ struct ArrayArgument {
     }
     copy = true;
   }
+  ArrayArgument& operator=(const ArrayArgument<T>&) = delete;
   ~ArrayArgument() {
     if (copy) {
       delete[] value;
@@ -379,6 +380,7 @@ struct D3D12_VERTEX_BUFFER_VIEWs_Argument {
   }
   D3D12_VERTEX_BUFFER_VIEWs_Argument() {}
   D3D12_VERTEX_BUFFER_VIEWs_Argument(const D3D12_VERTEX_BUFFER_VIEWs_Argument& arg);
+  D3D12_VERTEX_BUFFER_VIEWs_Argument& operator=(const D3D12_VERTEX_BUFFER_VIEWs_Argument&) = delete;
   ~D3D12_VERTEX_BUFFER_VIEWs_Argument();
   D3D12_VERTEX_BUFFER_VIEW* value{};
   size_t size{};
@@ -435,6 +437,8 @@ struct D3D12_PIPELINE_STATE_STREAM_DESC_Argument {
       : value(const_cast<D3D12_PIPELINE_STATE_STREAM_DESC*>(value_)) {}
   D3D12_PIPELINE_STATE_STREAM_DESC_Argument() {}
   D3D12_PIPELINE_STATE_STREAM_DESC_Argument(const D3D12_PIPELINE_STATE_STREAM_DESC_Argument& arg);
+  D3D12_PIPELINE_STATE_STREAM_DESC_Argument& operator=(
+      const D3D12_PIPELINE_STATE_STREAM_DESC_Argument&) = delete;
   ~D3D12_PIPELINE_STATE_STREAM_DESC_Argument();
   D3D12_PIPELINE_STATE_STREAM_DESC* value{};
   unsigned rootSignatureKey{};
@@ -661,6 +665,7 @@ struct PointerArgument<INTCExtensionAppInfo> {
       : value(const_cast<INTCExtensionAppInfo*>(value_)) {}
   PointerArgument() {}
   PointerArgument(const PointerArgument<INTCExtensionAppInfo>& arg);
+  PointerArgument& operator=(const PointerArgument<INTCExtensionAppInfo>&) = delete;
   ~PointerArgument();
   INTCExtensionAppInfo* value{};
   const wchar_t* pApplicationName{};

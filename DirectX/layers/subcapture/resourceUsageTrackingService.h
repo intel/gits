@@ -59,7 +59,7 @@ private:
   void processReadyExecutables();
   void updateUsage(const std::vector<unsigned>& usedResources);
 
-  unsigned executeNumber_;
+  unsigned executeNumber_{};
   GpuExecutionTracker gpuExecutionTracker_;
   std::map<unsigned, UsageNumber> usageByResource_;
   std::unordered_map<unsigned, std::vector<unsigned>> commandListResourceUsage_;

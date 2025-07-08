@@ -2767,6 +2767,7 @@ void StateTrackingLayer::post(IDStorageFactoryCreateStatusArrayCommand& c) {
   state->key = c.ppv_.key;
   state->object = static_cast<IUnknown*>(*c.ppv_.value);
   state->creationCommand.reset(new IDStorageFactoryCreateStatusArrayCommand(c));
+  stateService_.storeState(state);
 
   setAsChildInParent(state->parentKey, state->key);
 }

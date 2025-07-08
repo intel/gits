@@ -20,6 +20,7 @@ class Command {
 public:
   Command(CommandId id, unsigned threadId_) : id_(id), threadId(threadId_) {}
   Command(CommandId id) : id_{id} {}
+  virtual ~Command() {}
 
   CommandId getId() const {
     return id_;

@@ -44,8 +44,8 @@ void ResourceUsageTrackingService::executeCommandLists(unsigned commandKey,
 
   const bool isWaiting = gpuExecutionTracker_.isCommandQueueWaiting(commandQueueKey);
   if (isWaiting) {
-    auto* executable = new ResourceUsage{};
-    executable->usedResources = usedResources;
+    ResourceUsage* executable = new ResourceUsage{};
+    executable->usedResources = std::move(usedResources);
     gpuExecutionTracker_.execute(commandKey, commandQueueKey, executable);
   } else {
     updateUsage(usedResources);
@@ -103,11 +103,11 @@ void ResourceUsageTrackingService::processReadyExecutables() {
 }
 
 void ResourceUsageTrackingService::updateUsage(const std::vector<unsigned>& usedResources) {
-  executeNumber_++;
+  ++executeNumber_;
 
   unsigned commandNumber{};
   for (unsigned resourceKey : usedResources) {
-    usageByResource_[resourceKey] = {executeNumber_, commandNumber++};
+    usageByResource_[resourceKey] = {executeNumber_, ++commandNumber};
   }
 }
 
