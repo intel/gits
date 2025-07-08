@@ -8,8 +8,6 @@
 
 #include "multithreadedObjectCreationLayer.h"
 #include "interfaceArgumentUpdaters.h"
-#include "argumentEncoders.h"
-#include "argumentDecoders.h"
 #include "pipelineLibraryService.h"
 
 namespace gits {
@@ -39,14 +37,11 @@ void MultithreadedObjectCreationLayer::scheduleCreate(CommandT& c) {
     state = &c.ppPipelineState_;
   }
 
-  char* data = new char[getSize(c.pDesc_)];
-  unsigned offset{};
-  encode(data, offset, c.pDesc_);
-  using DescT = decltype(c.pDesc_);
+  decltype(c.pDesc_) desc(c.pDesc_);
 
   auto device = c.object_.value;
-  auto riid = c.riid_.value;
-  auto key = state->key;
+  REFIID riid = c.riid_.value;
+  unsigned key = state->key;
 
   auto& service = manager_.getMultithreadedObjectCreationService();
   service.addDependency(c.object_.key, key);
@@ -66,11 +61,7 @@ void MultithreadedObjectCreationLayer::scheduleCreate(CommandT& c) {
   }
 
   service.schedule(
-      [data, device, riid, key]() -> MultithreadedObjectCreationService::ObjectCreationOutput {
-        DescT desc;
-        unsigned offset{};
-        decode(data, offset, desc);
-
+      [desc, device, riid, key]() -> MultithreadedObjectCreationService::ObjectCreationOutput {
         void* object{};
         HRESULT result;
         if constexpr (std::is_same_v<CommandT, ID3D12DeviceCreateGraphicsPipelineStateCommand>) {
@@ -89,9 +80,6 @@ void MultithreadedObjectCreationLayer::scheduleCreate(CommandT& c) {
         if (result == S_OK) {
           setD3D12ObjectName(object, key);
         }
-
-        delete data;
-
         return {result, object};
       },
       key);
@@ -105,15 +93,12 @@ void MultithreadedObjectCreationLayer::scheduleLoad(CommandT& c) {
     return;
   }
 
-  char* data = new char[getSize(c.pDesc_)];
-  unsigned offset{};
-  encode(data, offset, c.pDesc_);
-  using DescT = decltype(c.pDesc_);
+  decltype(c.pDesc_) desc(c.pDesc_);
 
   auto library = c.object_.value;
-  auto riid = c.riid_.value;
+  REFIID riid = c.riid_.value;
   std::wstring name = c.pName_.value;
-  auto key = c.ppPipelineState_.key;
+  unsigned key = c.ppPipelineState_.key;
 
   auto& service = manager_.getMultithreadedObjectCreationService();
   service.addDependency(c.object_.key, key);
@@ -122,18 +107,12 @@ void MultithreadedObjectCreationLayer::scheduleLoad(CommandT& c) {
   PipelineLibraryService& pipelineLibraryService = manager_.getPipelineLibraryService();
 
   service.schedule(
-      [data, library, riid, name = std::move(name), key,
+      [desc, library, riid, name = std::move(name), key,
        &pipelineLibraryService]() -> MultithreadedObjectCreationService::ObjectCreationOutput {
-        DescT desc;
-        unsigned offset{};
-        decode(data, offset, desc);
-
         void* object{};
         HRESULT result = pipelineLibraryService.loadPipelineState(library, name.c_str(), desc.value,
                                                                   riid, key, &object);
         setD3D12ObjectName(object, key);
-
-        delete data;
         return {result, object};
       },
       key);
