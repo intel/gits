@@ -124,22 +124,17 @@ public:
   void post(INTC_D3D12_CreateReservedResourceCommand& c) override;
   void post(INTC_D3D12_CreateCommandQueueCommand& c) override;
   void post(INTC_D3D12_CreateHeapCommand& c) override;
-  void pre(INTC_D3D12_CreateComputePipelineStateCommand& c) override;
   void post(INTC_D3D12_CreateComputePipelineStateCommand& c) override;
   void post(ID3D12Device1SetResidencyPriorityCommand& c) override;
   void post(ID3D12CommandQueueExecuteCommandListsCommand& c) override;
   void pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) override;
-  void post(ID3D12ResourceGetGPUVirtualAddressCommand& c) override;
   void pre(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) override;
-  void post(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) override;
   void pre(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) override;
-  void post(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) override;
   void pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& command) override;
   void post(
       ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& command) override;
   void pre(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& command) override;
   void post(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& command) override;
-  void pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) override;
   void post(ID3D12GraphicsCommandList4DispatchRaysCommand& c) override;
   void post(ID3D12GraphicsCommandListResetCommand& c) override;
   void post(ID3D12GraphicsCommandListCloseCommand& c) override;
@@ -237,6 +232,7 @@ private:
   void releaseSwapChainBuffers(unsigned key, unsigned referenceCount);
 
 private:
+  bool stateRestored_{};
   std::map<unsigned, unsigned> deviceByINTCExtensionContext_;
   StateTrackingService stateService_;
   SubcaptureRecorder& recorder_;
@@ -257,7 +253,6 @@ private:
   GpuExecutionFlusher gpuExecutionFlusher_;
   unsigned startFrame_;
   bool commandListSubcapture_{};
-  std::vector<D3D12_GPU_VIRTUAL_ADDRESS> lastCallCaptureGpuAddresses_;
   std::unordered_map<unsigned, std::unordered_set<unsigned>> resourceHeaps_;
   std::unordered_map<unsigned, std::vector<unsigned>> swapchainBuffers_;
 };

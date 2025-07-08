@@ -101,6 +101,9 @@ bool StateTrackingLayer::isResourceBarrierRestricted(D3D12_RESOURCE_FLAGS flags)
 }
 
 void StateTrackingLayer::post(IDXGISwapChainPresentCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.Flags_.value & DXGI_PRESENT_TEST || c.key & Command::stateRestoreKeyMask) {
     return;
   }
@@ -110,11 +113,15 @@ void StateTrackingLayer::post(IDXGISwapChainPresentCommand& c) {
       Log(INFOV) << "Start subcapture frame " << currentFrame + 1 << " call " << c.key;
       gpuExecutionFlusher_.flushCommandQueues();
       stateService_.restoreState();
+      stateRestored_ = true;
     }
   }
 }
 
 void StateTrackingLayer::post(IDXGISwapChain1Present1Command& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.PresentFlags_.value & DXGI_PRESENT_TEST || c.key & Command::stateRestoreKeyMask) {
     return;
   }
@@ -124,11 +131,15 @@ void StateTrackingLayer::post(IDXGISwapChain1Present1Command& c) {
       Log(INFOV) << "Start subcapture frame " << currentFrame + 1 << " call " << c.key;
       gpuExecutionFlusher_.flushCommandQueues();
       stateService_.restoreState();
+      stateRestored_ = true;
     }
   }
 }
 
 void StateTrackingLayer::pre(IUnknownReleaseCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   releaseSwapChainBuffers(c.object_.key, c.result_.value);
   stateService_.releaseObject(c.object_.key, c.result_.value);
   if (c.result_.value == 0) {
@@ -188,10 +199,16 @@ void StateTrackingLayer::releaseSwapChainBuffers(unsigned key, unsigned referenc
 }
 
 void StateTrackingLayer::post(IUnknownAddRefCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   stateService_.setReferenceCount(c.object_.key, c.result_.value);
 }
 
 void StateTrackingLayer::post(IUnknownQueryInterfaceCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -224,6 +241,9 @@ void StateTrackingLayer::post(IUnknownQueryInterfaceCommand& c) {
 }
 
 void StateTrackingLayer::post(CreateDXGIFactoryCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -235,6 +255,9 @@ void StateTrackingLayer::post(CreateDXGIFactoryCommand& c) {
 }
 
 void StateTrackingLayer::post(CreateDXGIFactory1Command& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -246,6 +269,9 @@ void StateTrackingLayer::post(CreateDXGIFactory1Command& c) {
 }
 
 void StateTrackingLayer::post(CreateDXGIFactory2Command& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -257,6 +283,9 @@ void StateTrackingLayer::post(CreateDXGIFactory2Command& c) {
 }
 
 void StateTrackingLayer::post(IDXGIFactoryEnumAdaptersCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -271,6 +300,9 @@ void StateTrackingLayer::post(IDXGIFactoryEnumAdaptersCommand& c) {
 }
 
 void StateTrackingLayer::post(IDXGIFactory1EnumAdapters1Command& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -285,6 +317,9 @@ void StateTrackingLayer::post(IDXGIFactory1EnumAdapters1Command& c) {
 }
 
 void StateTrackingLayer::post(IDXGIFactory6EnumAdapterByGpuPreferenceCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -299,6 +334,9 @@ void StateTrackingLayer::post(IDXGIFactory6EnumAdapterByGpuPreferenceCommand& c)
 }
 
 void StateTrackingLayer::post(IDXGIFactory4EnumAdapterByLuidCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -313,6 +351,9 @@ void StateTrackingLayer::post(IDXGIFactory4EnumAdapterByLuidCommand& c) {
 }
 
 void StateTrackingLayer::post(IDXGIObjectGetParentCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -324,6 +365,9 @@ void StateTrackingLayer::post(IDXGIObjectGetParentCommand& c) {
 }
 
 void StateTrackingLayer::post(D3D12CreateDeviceCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -335,6 +379,9 @@ void StateTrackingLayer::post(D3D12CreateDeviceCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateCommandQueueCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -351,6 +398,9 @@ void StateTrackingLayer::post(ID3D12DeviceCreateCommandQueueCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12Device9CreateCommandQueue1Command& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -365,6 +415,9 @@ void StateTrackingLayer::post(ID3D12Device9CreateCommandQueue1Command& c) {
 }
 
 void StateTrackingLayer::post(IDXGIFactoryCreateSwapChainCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -376,6 +429,9 @@ void StateTrackingLayer::post(IDXGIFactoryCreateSwapChainCommand& c) {
 }
 
 void StateTrackingLayer::post(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -387,6 +443,9 @@ void StateTrackingLayer::post(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
 }
 
 void StateTrackingLayer::post(IDXGISwapChainResizeBuffersCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -421,6 +480,9 @@ void StateTrackingLayer::post(IDXGISwapChainResizeBuffersCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12ObjectSetNameCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   ObjectState* state = stateService_.getState(c.object_.key);
   if (state == nullptr) {
     Log(ERR) << "StateTrackingLayer: SetName failed. Cannot find object O" << c.object_.key << ".";
@@ -430,6 +492,9 @@ void StateTrackingLayer::post(ID3D12ObjectSetNameCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateDescriptorHeapCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -441,6 +506,9 @@ void StateTrackingLayer::post(ID3D12DeviceCreateDescriptorHeapCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateHeapCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -457,6 +525,9 @@ void StateTrackingLayer::post(ID3D12DeviceCreateHeapCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12Device4CreateHeap1Command& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -473,6 +544,9 @@ void StateTrackingLayer::post(ID3D12Device4CreateHeap1Command& c) {
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateQueryHeapCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -484,6 +558,9 @@ void StateTrackingLayer::post(ID3D12DeviceCreateQueryHeapCommand& c) {
 }
 
 void StateTrackingLayer::post(CreateHeapAllocationMetaCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   D3D12HeapFromAddressState* state = new D3D12HeapFromAddressState();
   state->key = c.heap_.key;
   state->creationCommand.reset(new CreateHeapAllocationMetaCommand(c));
@@ -491,6 +568,9 @@ void StateTrackingLayer::post(CreateHeapAllocationMetaCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12Device3OpenExistingHeapFromAddressCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   D3D12HeapFromAddressState* state = heapAllocationStateService_.getHeapState(c.ppvHeap_.key);
   state->openExistingHeapFromAddressCommand.reset(
       new ID3D12Device3OpenExistingHeapFromAddressCommand(c));
@@ -498,6 +578,9 @@ void StateTrackingLayer::post(ID3D12Device3OpenExistingHeapFromAddressCommand& c
 }
 
 void StateTrackingLayer::post(IDXGISwapChainGetBufferCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -516,6 +599,9 @@ void StateTrackingLayer::post(IDXGISwapChainGetBufferCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateRenderTargetViewCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   D3D12RenderTargetViewState* state = new D3D12RenderTargetViewState();
   state->deviceKey = c.object_.key;
   state->resourceKey = c.pResource_.key;
@@ -529,6 +615,9 @@ void StateTrackingLayer::post(ID3D12DeviceCreateRenderTargetViewCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateDepthStencilViewCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   D3D12DepthStencilViewState* state = new D3D12DepthStencilViewState();
   state->deviceKey = c.object_.key;
   state->resourceKey = c.pResource_.key;
@@ -542,6 +631,9 @@ void StateTrackingLayer::post(ID3D12DeviceCreateDepthStencilViewCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateCommandAllocatorCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -553,6 +645,9 @@ void StateTrackingLayer::post(ID3D12DeviceCreateCommandAllocatorCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateRootSignatureCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -564,6 +659,9 @@ void StateTrackingLayer::post(ID3D12DeviceCreateRootSignatureCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12Device1CreatePipelineLibraryCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -575,6 +673,9 @@ void StateTrackingLayer::post(ID3D12Device1CreatePipelineLibraryCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12PipelineLibrary1LoadPipelineCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -591,6 +692,9 @@ void StateTrackingLayer::post(ID3D12PipelineLibrary1LoadPipelineCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12PipelineLibraryLoadGraphicsPipelineCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -607,6 +711,9 @@ void StateTrackingLayer::post(ID3D12PipelineLibraryLoadGraphicsPipelineCommand& 
 }
 
 void StateTrackingLayer::post(ID3D12PipelineLibraryLoadComputePipelineCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -623,6 +730,9 @@ void StateTrackingLayer::post(ID3D12PipelineLibraryLoadComputePipelineCommand& c
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateCommandSignatureCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -634,6 +744,9 @@ void StateTrackingLayer::post(ID3D12DeviceCreateCommandSignatureCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateGraphicsPipelineStateCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -645,6 +758,9 @@ void StateTrackingLayer::post(ID3D12DeviceCreateGraphicsPipelineStateCommand& c)
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateComputePipelineStateCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -656,6 +772,9 @@ void StateTrackingLayer::post(ID3D12DeviceCreateComputePipelineStateCommand& c) 
 }
 
 void StateTrackingLayer::post(ID3D12Device2CreatePipelineStateCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -667,6 +786,9 @@ void StateTrackingLayer::post(ID3D12Device2CreatePipelineStateCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12Device5CreateStateObjectCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -681,6 +803,9 @@ void StateTrackingLayer::post(ID3D12Device5CreateStateObjectCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12Device7AddToStateObjectCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -694,6 +819,9 @@ void StateTrackingLayer::post(ID3D12Device7AddToStateObjectCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateCommandListCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -707,6 +835,9 @@ void StateTrackingLayer::post(ID3D12DeviceCreateCommandListCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12Device4CreateCommandList1Command& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -720,10 +851,16 @@ void StateTrackingLayer::post(ID3D12Device4CreateCommandList1Command& c) {
 }
 
 void StateTrackingLayer::pre(ID3D12DeviceCreateCommittedResourceCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   c.pDesc_.value->Flags &= ~D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateCommittedResourceCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -754,10 +891,16 @@ void StateTrackingLayer::post(ID3D12DeviceCreateCommittedResourceCommand& c) {
 }
 
 void StateTrackingLayer::pre(ID3D12Device4CreateCommittedResource1Command& c) {
+  if (stateRestored_) {
+    return;
+  }
   c.pDesc_.value->Flags &= ~D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 }
 
 void StateTrackingLayer::post(ID3D12Device4CreateCommittedResource1Command& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -787,10 +930,16 @@ void StateTrackingLayer::post(ID3D12Device4CreateCommittedResource1Command& c) {
 }
 
 void StateTrackingLayer::pre(ID3D12Device8CreateCommittedResource2Command& c) {
+  if (stateRestored_) {
+    return;
+  }
   c.pDesc_.value->Flags &= ~D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 }
 
 void StateTrackingLayer::post(ID3D12Device8CreateCommittedResource2Command& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -821,10 +970,16 @@ void StateTrackingLayer::post(ID3D12Device8CreateCommittedResource2Command& c) {
 }
 
 void StateTrackingLayer::pre(ID3D12Device10CreateCommittedResource3Command& c) {
+  if (stateRestored_) {
+    return;
+  }
   c.pDesc_.value->Flags &= ~D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 }
 
 void StateTrackingLayer::post(ID3D12Device10CreateCommittedResource3Command& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -853,10 +1008,16 @@ void StateTrackingLayer::post(ID3D12Device10CreateCommittedResource3Command& c) 
 }
 
 void StateTrackingLayer::pre(ID3D12DeviceCreatePlacedResourceCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   c.pDesc_.value->Flags &= ~D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -888,10 +1049,16 @@ void StateTrackingLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
 }
 
 void StateTrackingLayer::pre(ID3D12Device8CreatePlacedResource1Command& c) {
+  if (stateRestored_) {
+    return;
+  }
   c.pDesc_.value->Flags &= ~D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 }
 
 void StateTrackingLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -923,10 +1090,16 @@ void StateTrackingLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
 }
 
 void StateTrackingLayer::pre(ID3D12Device10CreatePlacedResource2Command& c) {
+  if (stateRestored_) {
+    return;
+  }
   c.pDesc_.value->Flags &= ~D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 }
 
 void StateTrackingLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -956,10 +1129,16 @@ void StateTrackingLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
 }
 
 void StateTrackingLayer::pre(ID3D12DeviceCreateReservedResourceCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   c.pDesc_.value->Flags &= ~D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateReservedResourceCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -986,10 +1165,16 @@ void StateTrackingLayer::post(ID3D12DeviceCreateReservedResourceCommand& c) {
 }
 
 void StateTrackingLayer::pre(ID3D12Device4CreateReservedResource1Command& c) {
+  if (stateRestored_) {
+    return;
+  }
   c.pDesc_.value->Flags &= ~D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 }
 
 void StateTrackingLayer::post(ID3D12Device4CreateReservedResource1Command& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -1016,10 +1201,16 @@ void StateTrackingLayer::post(ID3D12Device4CreateReservedResource1Command& c) {
 }
 
 void StateTrackingLayer::pre(ID3D12Device10CreateReservedResource2Command& c) {
+  if (stateRestored_) {
+    return;
+  }
   c.pDesc_.value->Flags &= ~D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 }
 
 void StateTrackingLayer::post(ID3D12Device10CreateReservedResource2Command& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -1044,6 +1235,9 @@ void StateTrackingLayer::post(ID3D12Device10CreateReservedResource2Command& c) {
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateShaderResourceViewCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   D3D12ShaderResourceViewState* state = new D3D12ShaderResourceViewState();
   state->deviceKey = c.object_.key;
   state->resourceKey = c.pResource_.key;
@@ -1062,6 +1256,9 @@ void StateTrackingLayer::post(ID3D12DeviceCreateShaderResourceViewCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateFenceCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -1078,6 +1275,9 @@ void StateTrackingLayer::post(ID3D12DeviceCreateFenceCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12CommandQueueSignalCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -1094,6 +1294,9 @@ void StateTrackingLayer::post(ID3D12CommandQueueSignalCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12CommandQueueWaitCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -1108,6 +1311,9 @@ void StateTrackingLayer::post(ID3D12CommandQueueWaitCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12FenceSignalCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -1118,6 +1324,9 @@ void StateTrackingLayer::post(ID3D12FenceSignalCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12Device3EnqueueMakeResidentCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -1132,6 +1341,9 @@ void StateTrackingLayer::post(ID3D12Device3EnqueueMakeResidentCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12DeviceMakeResidentCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -1139,6 +1351,9 @@ void StateTrackingLayer::post(ID3D12DeviceMakeResidentCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12DeviceEvictCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -1146,6 +1361,9 @@ void StateTrackingLayer::post(ID3D12DeviceEvictCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateSamplerCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   D3D12SamplerState* state = new D3D12SamplerState();
   state->deviceKey = c.object_.key;
   state->desc = *c.pDesc_.value;
@@ -1156,6 +1374,9 @@ void StateTrackingLayer::post(ID3D12DeviceCreateSamplerCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateUnorderedAccessViewCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   D3D12UnorderedAccessViewState* state = new D3D12UnorderedAccessViewState();
   state->deviceKey = c.object_.key;
   state->resourceKey = c.pResource_.key;
@@ -1170,6 +1391,9 @@ void StateTrackingLayer::post(ID3D12DeviceCreateUnorderedAccessViewCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateConstantBufferViewCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   D3D12ConstantBufferViewState* state = new D3D12ConstantBufferViewState();
   state->deviceKey = c.object_.key;
   if (state->isDesc = c.pDesc_.value ? true : false) {
@@ -1185,10 +1409,16 @@ void StateTrackingLayer::post(ID3D12DeviceCreateConstantBufferViewCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12ResourceMapCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   mapStateService_.mapResource(c.object_.key, c.Subresource_.value, c.ppData_.captureValue);
 }
 
 void StateTrackingLayer::post(ID3D12CommandQueueUpdateTileMappingsCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (analyzerResults_.restoreCommandQueueCommand(c.key)) {
     commandQueueService_.addUpdateTileMappings(c);
   } else {
@@ -1197,6 +1427,9 @@ void StateTrackingLayer::post(ID3D12CommandQueueUpdateTileMappingsCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12CommandQueueCopyTileMappingsCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   static bool logged = false;
   if (!logged) {
     Log(ERR) << "ID3D12CommandQueue::CopyTileMappings not handled in subcapture!";
@@ -1205,14 +1438,23 @@ void StateTrackingLayer::post(ID3D12CommandQueueCopyTileMappingsCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCopyDescriptorsSimpleCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   descriptorService_.copyDescriptors(c);
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCopyDescriptorsCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   descriptorService_.copyDescriptors(c);
 }
 
 void StateTrackingLayer::post(INTC_D3D12_CreateDeviceExtensionContextCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   ObjectState* state = new ObjectState();
   state->key = c.ppExtensionContext_.key;
   state->creationCommand.reset(new INTC_D3D12_CreateDeviceExtensionContextCommand(c));
@@ -1223,6 +1465,9 @@ void StateTrackingLayer::post(INTC_D3D12_CreateDeviceExtensionContextCommand& c)
 }
 
 void StateTrackingLayer::post(INTC_D3D12_CreateDeviceExtensionContext1Command& c) {
+  if (stateRestored_) {
+    return;
+  }
   ObjectState* state = new ObjectState();
   state->key = c.ppExtensionContext_.key;
   state->creationCommand.reset(new INTC_D3D12_CreateDeviceExtensionContext1Command(c));
@@ -1233,19 +1478,31 @@ void StateTrackingLayer::post(INTC_D3D12_CreateDeviceExtensionContext1Command& c
 }
 
 void StateTrackingLayer::post(INTC_D3D12_SetApplicationInfoCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   stateService_.storeINTCApplicationInfo(c);
 }
 
 void StateTrackingLayer::post(INTC_DestroyDeviceExtensionContextCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   stateService_.releaseObject(c.ppExtensionContext_.key, c.result_.value);
   deviceByINTCExtensionContext_.erase(c.ppExtensionContext_.key);
 }
 
 void StateTrackingLayer::post(INTC_D3D12_SetFeatureSupportCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   stateService_.storeINTCFeature(*c.pFeature_.value);
 }
 
 void StateTrackingLayer::post(INTC_D3D12_CreateCommittedResourceCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -1277,6 +1534,9 @@ void StateTrackingLayer::post(INTC_D3D12_CreateCommittedResourceCommand& c) {
 }
 
 void StateTrackingLayer::post(INTC_D3D12_CreatePlacedResourceCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -1308,6 +1568,9 @@ void StateTrackingLayer::post(INTC_D3D12_CreatePlacedResourceCommand& c) {
 }
 
 void StateTrackingLayer::post(INTC_D3D12_CreateReservedResourceCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -1334,6 +1597,9 @@ void StateTrackingLayer::post(INTC_D3D12_CreateReservedResourceCommand& c) {
 }
 
 void StateTrackingLayer::post(INTC_D3D12_CreateCommandQueueCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -1348,6 +1614,9 @@ void StateTrackingLayer::post(INTC_D3D12_CreateCommandQueueCommand& c) {
 }
 
 void StateTrackingLayer::post(INTC_D3D12_CreateHeapCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -1363,13 +1632,10 @@ void StateTrackingLayer::post(INTC_D3D12_CreateHeapCommand& c) {
   }
 }
 
-void StateTrackingLayer::pre(INTC_D3D12_CreateComputePipelineStateCommand& c) {
-  c.pDesc_.cs = c.pDesc_.value->CS.pShaderBytecode;
-  c.pDesc_.compileOptions = c.pDesc_.value->CompileOptions;
-  c.pDesc_.internalOptions = c.pDesc_.value->InternalOptions;
-}
-
 void StateTrackingLayer::post(INTC_D3D12_CreateComputePipelineStateCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -1381,6 +1647,9 @@ void StateTrackingLayer::post(INTC_D3D12_CreateComputePipelineStateCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12Device1SetResidencyPriorityCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -1403,6 +1672,9 @@ void StateTrackingLayer::post(ID3D12Device1SetResidencyPriorityCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (analyzerResults_.restoreCommandQueueCommand(c.key)) {
     commandQueueService_.addExecuteCommandLists(c);
   } else {
@@ -1414,18 +1686,18 @@ void StateTrackingLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
 }
 
 void StateTrackingLayer::pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   ResourceState* state = static_cast<ResourceState*>(stateService_.getState(c.object_.key));
   GITS_ASSERT(state);
   state->gpuVirtualAddress = c.result_.value;
 }
 
-void StateTrackingLayer::post(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
-  ResourceState* state = static_cast<ResourceState*>(stateService_.getState(c.object_.key));
-  GITS_ASSERT(state);
-  c.result_.value = state->gpuVirtualAddress;
-}
-
 void StateTrackingLayer::pre(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   D3D12StateObjectPropertiesState* state =
       static_cast<D3D12StateObjectPropertiesState*>(stateService_.getState(c.object_.key));
   GITS_ASSERT(state);
@@ -1439,45 +1711,30 @@ void StateTrackingLayer::pre(ID3D12StateObjectPropertiesGetShaderIdentifierComma
   }
 }
 
-void StateTrackingLayer::post(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) {
-  D3D12StateObjectPropertiesState* state =
-      static_cast<D3D12StateObjectPropertiesState*>(stateService_.getState(c.object_.key));
-  GITS_ASSERT(state);
-  auto& shaderIdentifier = state->shaderIdentifiers[c.pExportName_.value];
-  for (unsigned i = 0; i < D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES; ++i) {
-    static_cast<uint8_t*>(c.result_.value)[i] = shaderIdentifier[i];
-  }
-}
-
 void StateTrackingLayer::pre(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   D3D12DescriptorHeapState* state =
       static_cast<D3D12DescriptorHeapState*>(stateService_.getState(c.object_.key));
   GITS_ASSERT(state);
   state->gpuDescriptorHandle = c.result_.value;
 }
 
-void StateTrackingLayer::post(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) {
-  D3D12DescriptorHeapState* state =
-      static_cast<D3D12DescriptorHeapState*>(stateService_.getState(c.object_.key));
-  GITS_ASSERT(state);
-  c.result_.value = state->gpuDescriptorHandle;
-}
-
 void StateTrackingLayer::pre(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
-  accelerationStructuresBuildService_.buildAccelerationStructure(c);
-  if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-    lastCallCaptureGpuAddresses_.push_back(c.pDesc_.value->Inputs.InstanceDescs);
+  if (stateRestored_) {
+    return;
   }
+  accelerationStructuresBuildService_.buildAccelerationStructure(c);
 }
 
 void StateTrackingLayer::post(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
-  accelerationStructuresSerializeService_.buildAccelerationStructure(c);
-  if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-    c.pDesc_.value->Inputs.InstanceDescs = lastCallCaptureGpuAddresses_[0];
-    lastCallCaptureGpuAddresses_.clear();
+  if (stateRestored_) {
+    return;
   }
+  accelerationStructuresSerializeService_.buildAccelerationStructure(c);
 
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(
@@ -1488,11 +1745,17 @@ void StateTrackingLayer::post(
 
 void StateTrackingLayer::pre(
     ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   accelerationStructuresBuildService_.copyAccelerationStructure(c);
 }
 
 void StateTrackingLayer::post(
     ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   accelerationStructuresSerializeService_.copyAccelerationStructure(c);
 
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
@@ -1502,20 +1765,10 @@ void StateTrackingLayer::post(
   state->commands.push_back(command);
 }
 
-void StateTrackingLayer::pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
-  lastCallCaptureGpuAddresses_.push_back(c.pDesc_.value->RayGenerationShaderRecord.StartAddress);
-  lastCallCaptureGpuAddresses_.push_back(c.pDesc_.value->MissShaderTable.StartAddress);
-  lastCallCaptureGpuAddresses_.push_back(c.pDesc_.value->HitGroupTable.StartAddress);
-  lastCallCaptureGpuAddresses_.push_back(c.pDesc_.value->CallableShaderTable.StartAddress);
-}
-
 void StateTrackingLayer::post(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
-  c.pDesc_.value->RayGenerationShaderRecord.StartAddress = lastCallCaptureGpuAddresses_[0];
-  c.pDesc_.value->MissShaderTable.StartAddress = lastCallCaptureGpuAddresses_[1];
-  c.pDesc_.value->HitGroupTable.StartAddress = lastCallCaptureGpuAddresses_[2];
-  c.pDesc_.value->CallableShaderTable.StartAddress = lastCallCaptureGpuAddresses_[3];
-  lastCallCaptureGpuAddresses_.clear();
-
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandList4DispatchRaysWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1523,6 +1776,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandList4DispatchRaysCommand& c) 
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListResetCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
 
   if (commandListSubcapture_ && recorder_.isExecutionRangeStart()) {
     Log(INFOV) << "Start command lists subcapture call " << c.key;
@@ -1548,6 +1804,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListResetCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListCloseCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListCloseWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1555,6 +1814,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListCloseCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListClearStateCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListClearStateWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1562,6 +1824,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListClearStateCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListDrawInstancedCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListDrawInstancedWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1569,6 +1834,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListDrawInstancedCommand& c) 
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListDrawIndexedInstancedCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListDrawIndexedInstancedWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1576,6 +1844,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListDrawIndexedInstancedComma
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListDispatchCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListDispatchWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1583,6 +1854,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListDispatchCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListCopyBufferRegionCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   resourceUsageTrackingService_.commandListResourceUsage(c.object_.key, c.pDstBuffer_.key);
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListCopyBufferRegionWriter(c));
@@ -1591,6 +1865,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListCopyBufferRegionCommand& 
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListCopyTextureRegionCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   resourceUsageTrackingService_.commandListResourceUsage(c.object_.key, c.pDst_.resourceKey);
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListCopyTextureRegionWriter(c));
@@ -1599,6 +1876,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListCopyTextureRegionCommand&
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListCopyResourceCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   resourceUsageTrackingService_.commandListResourceUsage(c.object_.key, c.pDstResource_.key);
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListCopyResourceWriter(c));
@@ -1607,6 +1887,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListCopyResourceCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListCopyTilesCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   resourceUsageTrackingService_.commandListResourceUsage(c.object_.key, c.pTiledResource_.key);
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListCopyTilesWriter(c));
@@ -1615,6 +1898,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListCopyTilesCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListResolveSubresourceCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListResolveSubresourceWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1622,6 +1908,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListResolveSubresourceCommand
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListIASetPrimitiveTopologyCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListIASetPrimitiveTopologyWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1629,6 +1918,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListIASetPrimitiveTopologyCom
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListRSSetViewportsCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListRSSetViewportsWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1636,6 +1928,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListRSSetViewportsCommand& c)
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListRSSetScissorRectsCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListRSSetScissorRectsWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1643,6 +1938,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListRSSetScissorRectsCommand&
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListOMSetBlendFactorCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListOMSetBlendFactorWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1650,6 +1948,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListOMSetBlendFactorCommand& 
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListOMSetStencilRefCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListOMSetStencilRefWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1657,6 +1958,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListOMSetStencilRefCommand& c
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListSetPipelineStateCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListSetPipelineStateWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1664,6 +1968,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListSetPipelineStateCommand& 
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListResourceBarrierCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   resourceUsageTrackingService_.commandListResourceUsage(c.object_.key, c.pBarriers_.resourceKeys);
   resourceUsageTrackingService_.commandListResourceUsage(c.object_.key,
                                                          c.pBarriers_.resourceAfterKeys);
@@ -1676,6 +1983,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListResourceBarrierCommand& c
   state->commands.push_back(command);
 }
 void StateTrackingLayer::post(ID3D12GraphicsCommandListExecuteBundleCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListExecuteBundleWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1683,6 +1993,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListExecuteBundleCommand& c) 
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListSetDescriptorHeapsWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1691,6 +2004,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListSetDescriptorHeapsCommand
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListSetComputeRootSignatureWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1698,6 +2014,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListSetComputeRootSignatureCo
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListSetGraphicsRootSignatureCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListSetGraphicsRootSignatureWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1705,6 +2024,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListSetGraphicsRootSignatureC
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListSetComputeRootDescriptorTableWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1712,6 +2034,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListSetComputeRootDescriptorT
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListSetGraphicsRootDescriptorTableCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(
       new ID3D12GraphicsCommandListSetGraphicsRootDescriptorTableWriter(c));
@@ -1720,6 +2045,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListSetGraphicsRootDescriptor
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListSetComputeRoot32BitConstantCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListSetComputeRoot32BitConstantWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1727,6 +2055,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListSetComputeRoot32BitConsta
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListSetGraphicsRoot32BitConstantCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListSetGraphicsRoot32BitConstantWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1734,6 +2065,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListSetGraphicsRoot32BitConst
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListSetComputeRoot32BitConstantsCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListSetComputeRoot32BitConstantsWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1741,6 +2075,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListSetComputeRoot32BitConsta
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListSetGraphicsRoot32BitConstantsCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListSetGraphicsRoot32BitConstantsWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1748,6 +2085,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListSetGraphicsRoot32BitConst
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListSetComputeRootConstantBufferViewCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(
       new ID3D12GraphicsCommandListSetComputeRootConstantBufferViewWriter(c));
@@ -1757,6 +2097,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListSetComputeRootConstantBuf
 
 void StateTrackingLayer::post(
     ID3D12GraphicsCommandListSetGraphicsRootConstantBufferViewCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(
       new ID3D12GraphicsCommandListSetGraphicsRootConstantBufferViewWriter(c));
@@ -1765,6 +2108,9 @@ void StateTrackingLayer::post(
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(
       new ID3D12GraphicsCommandListSetComputeRootShaderResourceViewWriter(c));
@@ -1774,6 +2120,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListSetComputeRootShaderResou
 
 void StateTrackingLayer::post(
     ID3D12GraphicsCommandListSetGraphicsRootShaderResourceViewCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(
       new ID3D12GraphicsCommandListSetGraphicsRootShaderResourceViewWriter(c));
@@ -1783,6 +2132,9 @@ void StateTrackingLayer::post(
 
 void StateTrackingLayer::post(
     ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(
       new ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewWriter(c));
@@ -1792,6 +2144,9 @@ void StateTrackingLayer::post(
 
 void StateTrackingLayer::post(
     ID3D12GraphicsCommandListSetGraphicsRootUnorderedAccessViewCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(
       new ID3D12GraphicsCommandListSetGraphicsRootUnorderedAccessViewWriter(c));
@@ -1800,6 +2155,9 @@ void StateTrackingLayer::post(
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListIASetIndexBufferCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListIASetIndexBufferWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1807,6 +2165,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListIASetIndexBufferCommand& 
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListIASetVertexBuffersCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListIASetVertexBuffersWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1814,6 +2175,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListIASetVertexBuffersCommand
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListSOSetTargetsCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListSOSetTargetsWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1821,6 +2185,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListSOSetTargetsCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListOMSetRenderTargets* command = new CommandListOMSetRenderTargets(c.key);
   command->renderTargetViews.resize(c.NumRenderTargetDescriptors_.value);
   for (unsigned i = 0; i < c.NumRenderTargetDescriptors_.value; ++i) {
@@ -1848,6 +2215,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListOMSetRenderTargetsCommand
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListClearDepthStencilViewCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListClearDepthStencilView* command = new CommandListClearDepthStencilView(c.key);
   if (c.DepthStencilView_.interfaceKey) {
     DescriptorState* descriptorState = descriptorService_.getDescriptorState(
@@ -1872,6 +2242,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListClearDepthStencilViewComm
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListClearRenderTargetViewCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListClearRenderTargetView* command = new CommandListClearRenderTargetView(c.key);
   if (c.RenderTargetView_.interfaceKey) {
     DescriptorState* descriptorState = descriptorService_.getDescriptorState(
@@ -1897,6 +2270,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListClearRenderTargetViewComm
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListClearUnorderedAccessViewUint* command =
       new CommandListClearUnorderedAccessViewUint(c.key);
   if (c.ViewGPUHandleInCurrentHeap_.interfaceKey) {
@@ -1931,6 +2307,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListClearUnorderedAccessViewU
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListClearUnorderedAccessViewFloat* command =
       new CommandListClearUnorderedAccessViewFloat(c.key);
   if (c.ViewGPUHandleInCurrentHeap_.interfaceKey) {
@@ -1965,6 +2344,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListClearUnorderedAccessViewF
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListDiscardResourceCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListDiscardResourceWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1972,6 +2354,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListDiscardResourceCommand& c
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListBeginQueryCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListBeginQueryWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1979,6 +2364,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListBeginQueryCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListEndQueryCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListEndQueryWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1986,6 +2374,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListEndQueryCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListResolveQueryDataCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListResolveQueryDataWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -1993,6 +2384,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListResolveQueryDataCommand& 
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListSetPredicationCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListSetPredicationWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -2000,6 +2394,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListSetPredicationCommand& c)
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListSetMarkerCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListSetMarkerWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -2007,6 +2404,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListSetMarkerCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListBeginEventCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListBeginEventWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -2014,6 +2414,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListBeginEventCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListEndEventCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListEndEventWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -2021,6 +2424,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListEndEventCommand& c) {
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListExecuteIndirectWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -2028,6 +2434,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListExecuteIndirectCommand& c
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandList1AtomicCopyBufferUINTCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandList1AtomicCopyBufferUINTWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -2035,6 +2444,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandList1AtomicCopyBufferUINTComm
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandList1AtomicCopyBufferUINT64Command& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandList1AtomicCopyBufferUINT64Writer(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -2042,6 +2454,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandList1AtomicCopyBufferUINT64Co
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandList1OMSetDepthBoundsCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandList1OMSetDepthBoundsWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -2049,6 +2464,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandList1OMSetDepthBoundsCommand&
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandList1SetSamplePositionsCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandList1SetSamplePositionsWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -2056,6 +2474,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandList1SetSamplePositionsComman
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandList1ResolveSubresourceRegionCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandList1ResolveSubresourceRegionWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -2063,6 +2484,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandList1ResolveSubresourceRegion
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandList1SetViewInstanceMaskCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandList1SetViewInstanceMaskWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -2070,6 +2494,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandList1SetViewInstanceMaskComma
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandList2WriteBufferImmediateWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -2077,6 +2504,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandList2WriteBufferImmediateComm
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandList3SetProtectedResourceSessionCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandList3SetProtectedResourceSessionWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -2084,6 +2514,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandList3SetProtectedResourceSess
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandList4BeginRenderPassCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandList4BeginRenderPassWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -2092,6 +2525,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandList4BeginRenderPassCommand& 
 
 void StateTrackingLayer::post(
     ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(
       new ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoWriter(c));
@@ -2100,6 +2536,9 @@ void StateTrackingLayer::post(
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandList4EndRenderPassCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandList4EndRenderPassWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -2107,6 +2546,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandList4EndRenderPassCommand& c)
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandList4ExecuteMetaCommandCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   static bool logged = false;
   if (!logged) {
     Log(ERR) << "ID3D12GraphicsCommandList4ExecuteMetaCommand is not supported in subcapture.";
@@ -2119,6 +2561,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandList4ExecuteMetaCommandComman
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandList4InitializeMetaCommandCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandList4InitializeMetaCommandWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -2126,6 +2571,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandList4InitializeMetaCommandCom
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandList4SetPipelineState1Command& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandList4SetPipelineState1Writer(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -2133,6 +2581,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandList4SetPipelineState1Command
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandList5RSSetShadingRateCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandList5RSSetShadingRateWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -2140,6 +2591,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandList5RSSetShadingRateCommand&
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandList5RSSetShadingRateImageCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandList5RSSetShadingRateImageWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -2147,6 +2601,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandList5RSSetShadingRateImageCom
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandList6DispatchMeshCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandList6DispatchMeshWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
@@ -2154,6 +2611,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandList6DispatchMeshCommand& c) 
 }
 
 void StateTrackingLayer::post(ID3D12GraphicsCommandList7BarrierCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   static bool logged = false;
   if (!logged) {
     Log(ERR) << "ID3D12GraphicsCommandList7::Barrier is not supported in subcapture.";
@@ -2166,6 +2626,9 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandList7BarrierCommand& c) {
 }
 
 void StateTrackingLayer::post(xessD3D12CreateContextCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != XESS_RESULT_SUCCESS) {
     return;
   }
@@ -2177,16 +2640,25 @@ void StateTrackingLayer::post(xessD3D12CreateContextCommand& c) {
 }
 
 void StateTrackingLayer::post(xessD3D12InitCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   XessStateService::ContextState* state = xessStateService_.getContextState(c.hContext_.key);
   state->initParams.emplace(c.pInitParams_);
 }
 
 void StateTrackingLayer::pre(xessDestroyContextCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   XessStateService::ContextState* state = xessStateService_.getContextState(c.hContext_.key);
   state->device->AddRef();
 }
 
 void StateTrackingLayer::post(xessDestroyContextCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   XessStateService::ContextState* state = xessStateService_.getContextState(c.hContext_.key);
   ULONG ref = state->device->Release();
   if (ref == 0) {
@@ -2196,6 +2668,9 @@ void StateTrackingLayer::post(xessDestroyContextCommand& c) {
 }
 
 void StateTrackingLayer::post(xessSetJitterScaleCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   XessStateService::ContextState* state = xessStateService_.getContextState(c.hContext_.key);
   if (!state->jitterScale) {
     state->jitterScale = std::make_unique<float[]>(2);
@@ -2205,6 +2680,9 @@ void StateTrackingLayer::post(xessSetJitterScaleCommand& c) {
 }
 
 void StateTrackingLayer::post(xessSetVelocityScaleCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   XessStateService::ContextState* state = xessStateService_.getContextState(c.hContext_.key);
   if (!state->velocityScale) {
     state->velocityScale = std::make_unique<float[]>(2);
@@ -2214,16 +2692,25 @@ void StateTrackingLayer::post(xessSetVelocityScaleCommand& c) {
 }
 
 void StateTrackingLayer::post(xessSetExposureMultiplierCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   XessStateService::ContextState* state = xessStateService_.getContextState(c.hContext_.key);
   state->exposureScale = c.scale_.value;
 }
 
 void StateTrackingLayer::post(xessForceLegacyScaleFactorsCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   XessStateService::ContextState* state = xessStateService_.getContextState(c.hContext_.key);
   state->forceLegacyScaleFactors = c.force_.value;
 }
 
 void StateTrackingLayer::post(DStorageGetFactoryCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -2235,6 +2722,9 @@ void StateTrackingLayer::post(DStorageGetFactoryCommand& c) {
 }
 
 void StateTrackingLayer::post(IDStorageFactoryOpenFileCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -2249,6 +2739,9 @@ void StateTrackingLayer::post(IDStorageFactoryOpenFileCommand& c) {
 }
 
 void StateTrackingLayer::post(IDStorageFactoryCreateQueueCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }
@@ -2263,6 +2756,9 @@ void StateTrackingLayer::post(IDStorageFactoryCreateQueueCommand& c) {
 }
 
 void StateTrackingLayer::post(IDStorageFactoryCreateStatusArrayCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
   if (c.result_.value != S_OK) {
     return;
   }

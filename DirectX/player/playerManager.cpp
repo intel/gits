@@ -84,6 +84,8 @@ PlayerManager::PlayerManager() {
   std::unique_ptr<Layer> logDxErrorLayer = std::make_unique<LogDxErrorLayer>();
   std::unique_ptr<Layer> stateTrackingLayer = subcaptureFactory_.getStateTrackingLayer();
   std::unique_ptr<Layer> recordingLayer = subcaptureFactory_.getRecordingLayer();
+  std::unique_ptr<Layer> commandPreservationLayer =
+      subcaptureFactory_.getCommandPreservationLayer();
   std::unique_ptr<Layer> analyzerLayer = subcaptureFactory_.getAnalyzerLayer();
   std::unique_ptr<Layer> directStorageResourcesLayer =
       subcaptureFactory_.getDirectStorageResourcesLayer();
@@ -129,6 +131,7 @@ PlayerManager::PlayerManager() {
   enablePreLayer(multithreadedObjectAwaitLayer);
   enablePreLayer(debugHelperLayer);
   enablePreLayer(traceLayer);
+  enablePreLayer(commandPreservationLayer);
   enablePreLayer(stateTrackingLayer);
   enablePreLayer(executionSerializationLayer);
   enablePreLayer(gpuPatchLayer);
@@ -162,6 +165,7 @@ PlayerManager::PlayerManager() {
   enablePostLayer(traceLayer);
   enablePostLayer(showExecutionLayer);
   enablePostLayer(debugHelperLayer);
+  enablePostLayer(commandPreservationLayer);
   enablePostLayer(stateTrackingLayer);
   enablePostLayer(analyzerLayer);
   enablePostLayer(screenshotsLayer);
@@ -195,6 +199,7 @@ PlayerManager::PlayerManager() {
   retainLayer(std::move(stateTrackingLayer));
   retainLayer(std::move(gpuPatchLayer));
   retainLayer(std::move(recordingLayer));
+  retainLayer(std::move(commandPreservationLayer));
   retainLayer(std::move(analyzerLayer));
   retainLayer(std::move(executionSerializationLayer));
   retainLayer(std::move(screenshotsLayer));

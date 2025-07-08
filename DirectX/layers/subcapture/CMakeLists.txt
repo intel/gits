@@ -22,6 +22,8 @@ set(RECORDING_SRC
   ${SRC_DIR}/recordingLayerAuto.h
   ${SRC_DIR}/recordingLayerAuto.cpp
   ${SRC_DIR}/recordingLayerCustom.cpp
+  ${SRC_DIR}/commandPreservationLayer.h
+  ${SRC_DIR}/commandPreservationLayer.cpp
 )
 source_group("recording" FILES ${RECORDING_SRC})
 

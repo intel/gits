@@ -9,6 +9,7 @@
 #include "subcaptureFactory.h"
 #include "stateTrackingLayer.h"
 #include "recordingLayerAuto.h"
+#include "commandPreservationLayer.h"
 #include "directStorageResourcesLayer.h"
 #include "analyzerResults.h"
 #include "gits.h"
@@ -50,6 +51,7 @@ SubcaptureFactory::SubcaptureFactory() {
     recorder_ = std::make_unique<SubcaptureRecorder>();
     stateTrackingLayer_ = std::make_unique<StateTrackingLayer>(*recorder_);
     recordingLayer_ = std::make_unique<RecordingLayer>(*recorder_);
+    commandPreservationLayer_ = std::make_unique<CommandPreservationLayer>();
     directStorageResourcesLayer_ = std::make_unique<DirectStorageResourcesLayer>();
   } else {
     const_cast<gits::Configuration&>(Configurator::Get()).directx.features.subcapture.enabled =
