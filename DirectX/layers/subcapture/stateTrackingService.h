@@ -50,7 +50,7 @@ public:
       AnalyzerResults& analyzerResults,
       ResourceUsageTrackingService& resourceUsageTrackingService)
       : recorder_(recorder),
-        resourceContentRestore_(*this, resourceStateTrackingService),
+        resourceContentRestore_(*this),
         swapChainService_(*this),
         analyzerResults_(analyzerResults),
         fenceTrackingService_(fenceTrackingService),

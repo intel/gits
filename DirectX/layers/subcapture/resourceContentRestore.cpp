@@ -538,8 +538,6 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
             new ID3D12GraphicsCommandListCopyTextureRegionWriter(copyTextureRegion));
       }
 
-      resourceStateTrackingService_.restoreResourceState(commandListKey_, state.key);
-
       offsetUpload += getAlignedSize(subresourceSize);
     }
   }

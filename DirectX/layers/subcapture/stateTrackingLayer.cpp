@@ -35,7 +35,7 @@ StateTrackingLayer::StateTrackingLayer(SubcaptureRecorder& recorder)
       recorder_(recorder),
       mapStateService_(stateService_),
       resourceStateTrackingService_(stateService_),
-      reservedResourcesService_(stateService_, resourceStateTrackingService_),
+      reservedResourcesService_(stateService_),
       descriptorService_(stateService_),
       commandListService_(stateService_),
       commandQueueService_(stateService_),

@@ -22,9 +22,7 @@ class ResourceStateTrackingService;
 
 class ResourceContentRestore {
 public:
-  ResourceContentRestore(StateTrackingService& stateService,
-                         ResourceStateTrackingService& resourceStateTrackingService)
-      : stateService_(stateService), resourceStateTrackingService_(resourceStateTrackingService) {}
+  ResourceContentRestore(StateTrackingService& stateService) : stateService_(stateService) {}
   void addCommittedResourceState(ResourceState* resourceState);
   void addPlacedResourceState(ResourceState* resourceState);
   void restoreContent(const std::vector<unsigned>& resourceKeys);
@@ -55,7 +53,6 @@ private:
 
 private:
   StateTrackingService& stateService_;
-  ResourceStateTrackingService& resourceStateTrackingService_;
   std::unordered_map<unsigned, ResourceInfo> mappableResourceStates_;
   std::unordered_map<unsigned, ResourceInfo> unmappableResourceBuffers_;
   std::unordered_map<unsigned, ResourceInfo> unmappableResourceTextures_;

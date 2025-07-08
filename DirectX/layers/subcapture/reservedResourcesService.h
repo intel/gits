@@ -49,9 +49,7 @@ public:
   using TileRegionsBySubresource = std::unordered_map<unsigned, std::vector<TileRegion>>;
 
 public:
-  ReservedResourcesService(StateTrackingService& stateService,
-                           ResourceStateTrackingService& resourceStateTrackingService)
-      : stateService_(stateService), resourceStateTrackingService_(resourceStateTrackingService) {}
+  ReservedResourcesService(StateTrackingService& stateService) : stateService_(stateService) {}
   void addUpdateTileMappings(ID3D12CommandQueueUpdateTileMappingsCommand& c);
   void destroyObject(unsigned objectKey);
   void updateTileMappings(TiledResource& tiledResource,
@@ -74,7 +72,6 @@ private:
 
 private:
   StateTrackingService& stateService_;
-  ResourceStateTrackingService& resourceStateTrackingService_;
 
   ID3D12Device* device_{};
   ID3D12CommandQueue* commandQueue_{};

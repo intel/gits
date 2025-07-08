@@ -49,8 +49,7 @@ public:
   D3D12_RESOURCE_STATES getResourceState(unsigned resourceKey);
   D3D12_RESOURCE_STATES getSubresourceState(unsigned resourceKey, unsigned subresource);
   D3D12_BARRIER_LAYOUT getResourceLayout(unsigned resourceKey);
-  void restoreResourceState(unsigned commandListKey, unsigned resourceKey);
-  void restoreResourceAliasing();
+  void restoreResourceStates(const std::vector<unsigned>& orderedResources);
 
 private:
   unsigned getSubresourcesCount(ID3D12Resource* resource);

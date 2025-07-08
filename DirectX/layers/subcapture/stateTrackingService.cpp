@@ -355,8 +355,8 @@ void StateTrackingService::restoreResources() {
     }
   }
 
-  // restore aliasing
-  resourceStateTrackingService_.restoreResourceAliasing();
+  // restore states
+  resourceStateTrackingService_.restoreResourceStates(orderedResources);
 }
 
 D3D12_RESOURCE_STATES StateTrackingService::getResourceInitialState(

@@ -663,11 +663,6 @@ void ReservedResourcesService::restoreContent(const std::vector<unsigned>& resou
       }
     }
 
-    // restore state
-
-    stateService_.getResourceStateTrackingService().restoreResourceState(
-        commandListKey_, tiledResource->resourceKey);
-
     ID3D12GraphicsCommandListCloseCommand commandListClose;
     commandListClose.key = stateService_.getUniqueCommandKey();
     commandListClose.object_.key = commandListKey_;
