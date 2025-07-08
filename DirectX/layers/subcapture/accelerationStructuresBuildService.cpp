@@ -26,7 +26,8 @@ AccelerationStructuresBuildService::AccelerationStructuresBuildService(
       recorder_(recorder),
       reservedResourcesService_(reservedResourcesService),
       bufferContentRestore_(stateService) {
-  commandListKey_ = stateService_.getUniqueObjectKey();
+  commandListCopyKey_ = stateService_.getUniqueObjectKey();
+  commandListDirectKey_ = stateService_.getUniqueObjectKey();
   serializeMode_ = Configurator::Get().directx.features.subcapture.serializeAccelerationStructures;
   restoreTLASes_ = Configurator::Get().directx.features.subcapture.restoreTLASes;
 }
@@ -62,7 +63,7 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
   BuildRaytracingAccelerationStructureState* state =
       new BuildRaytracingAccelerationStructureState();
   state->commandKey = c.key;
-  state->commandListKey = commandListKey_;
+  state->commandListKey = commandListDirectKey_;
   state->buildState = true;
   state->destKey = c.pDesc_.destAccelerationStructureKey;
   state->destOffset = c.pDesc_.destAccelerationStructureOffset;
@@ -89,7 +90,7 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
     D3D12_RESOURCE_STATES resourceState = bufferState->isGenericRead
                                               ? D3D12_RESOURCE_STATE_GENERIC_READ
                                               : D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-    bufferContentRestore_.storeBuffer(c.object_.value, commandListKey_,
+    bufferContentRestore_.storeBuffer(c.object_.value, commandListCopyKey_,
                                       static_cast<ID3D12Resource*>(bufferState->object), inputKey,
                                       inputOffset, size, resourceState, c.key,
                                       bufferState->isMappable, uploadResourceKey);
@@ -170,7 +171,7 @@ void AccelerationStructuresBuildService::copyAccelerationStructure(
   }
   CopyRaytracingAccelerationStructureState* state = new CopyRaytracingAccelerationStructureState();
   state->commandKey = c.key;
-  state->commandListKey = commandListKey_;
+  state->commandListKey = commandListDirectKey_;
   state->destAccelerationStructureData = c.DestAccelerationStructureData_.value;
   state->destKey = c.DestAccelerationStructureData_.interfaceKey;
   state->destOffset = c.DestAccelerationStructureData_.offset;
@@ -192,7 +193,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
   bufferContentRestore_.waitUntilDumped();
 
   {
-    commandQueueKey_ = stateService_.getUniqueObjectKey();
+    commandQueueCopyKey_ = stateService_.getUniqueObjectKey();
     D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
     commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
     ID3D12DeviceCreateCommandQueueCommand createCommandQueue;
@@ -200,17 +201,17 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
     createCommandQueue.object_.key = deviceKey_;
     createCommandQueue.pDesc_.value = &commandQueueDesc;
     createCommandQueue.riid_.value = IID_ID3D12CommandQueue;
-    createCommandQueue.ppCommandQueue_.key = commandQueueKey_;
+    createCommandQueue.ppCommandQueue_.key = commandQueueCopyKey_;
     stateService_.getRecorder().record(
         new ID3D12DeviceCreateCommandQueueWriter(createCommandQueue));
 
-    commandAllocatorKey_ = stateService_.getUniqueObjectKey();
+    commandAllocatorCopyKey_ = stateService_.getUniqueObjectKey();
     ID3D12DeviceCreateCommandAllocatorCommand createCommandAllocator;
     createCommandAllocator.key = stateService_.getUniqueCommandKey();
     createCommandAllocator.object_.key = deviceKey_;
     createCommandAllocator.type_.value = D3D12_COMMAND_LIST_TYPE_COPY;
     createCommandAllocator.riid_.value = IID_ID3D12CommandAllocator;
-    createCommandAllocator.ppCommandAllocator_.key = commandAllocatorKey_;
+    createCommandAllocator.ppCommandAllocator_.key = commandAllocatorCopyKey_;
     stateService_.getRecorder().record(
         new ID3D12DeviceCreateCommandAllocatorWriter(createCommandAllocator));
 
@@ -222,9 +223,44 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
     createCommandList.type_.value = D3D12_COMMAND_LIST_TYPE_COPY;
     createCommandList.pInitialState_.value = nullptr;
     createCommandList.riid_.value = IID_ID3D12CommandList;
-    createCommandList.ppCommandList_.key = commandListKey_;
+    createCommandList.ppCommandList_.key = commandListCopyKey_;
     stateService_.getRecorder().record(new ID3D12DeviceCreateCommandListWriter(createCommandList));
+  }
+  {
+    commandQueueDirectKey_ = stateService_.getUniqueObjectKey();
+    D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
+    commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+    ID3D12DeviceCreateCommandQueueCommand createCommandQueue;
+    createCommandQueue.key = stateService_.getUniqueCommandKey();
+    createCommandQueue.object_.key = deviceKey_;
+    createCommandQueue.pDesc_.value = &commandQueueDesc;
+    createCommandQueue.riid_.value = IID_ID3D12CommandQueue;
+    createCommandQueue.ppCommandQueue_.key = commandQueueDirectKey_;
+    stateService_.getRecorder().record(
+        new ID3D12DeviceCreateCommandQueueWriter(createCommandQueue));
 
+    commandAllocatorDirectKey_ = stateService_.getUniqueObjectKey();
+    ID3D12DeviceCreateCommandAllocatorCommand createCommandAllocator;
+    createCommandAllocator.key = stateService_.getUniqueCommandKey();
+    createCommandAllocator.object_.key = deviceKey_;
+    createCommandAllocator.type_.value = D3D12_COMMAND_LIST_TYPE_DIRECT;
+    createCommandAllocator.riid_.value = IID_ID3D12CommandAllocator;
+    createCommandAllocator.ppCommandAllocator_.key = commandAllocatorDirectKey_;
+    stateService_.getRecorder().record(
+        new ID3D12DeviceCreateCommandAllocatorWriter(createCommandAllocator));
+
+    ID3D12DeviceCreateCommandListCommand createCommandList;
+    createCommandList.key = stateService_.getUniqueCommandKey();
+    createCommandList.object_.key = deviceKey_;
+    createCommandList.nodeMask_.value = 0;
+    createCommandList.pCommandAllocator_.key = createCommandAllocator.ppCommandAllocator_.key;
+    createCommandList.type_.value = D3D12_COMMAND_LIST_TYPE_DIRECT;
+    createCommandList.pInitialState_.value = nullptr;
+    createCommandList.riid_.value = IID_ID3D12CommandList;
+    createCommandList.ppCommandList_.key = commandListDirectKey_;
+    stateService_.getRecorder().record(new ID3D12DeviceCreateCommandListWriter(createCommandList));
+  }
+  {
     fenceKey_ = stateService_.getUniqueObjectKey();
     ID3D12DeviceCreateFenceCommand createFence;
     createFence.key = stateService_.getUniqueCommandKey();
@@ -294,8 +330,8 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
           auto it = tiledResourceUpdatesRestored.find(info.bufferKey);
           if (it == tiledResourceUpdatesRestored.end() ||
               it->second.find(itTiledResource.second.updateId) == it->second.end()) {
-            reservedResourcesService_.updateTileMappings(itTiledResource.second, commandQueueKey_,
-                                                         nullptr);
+            reservedResourcesService_.updateTileMappings(itTiledResource.second,
+                                                         commandQueueCopyKey_, nullptr);
             tiledResourceUpdatesRestored[info.bufferKey].insert(itTiledResource.second.updateId);
           }
         }
@@ -305,11 +341,58 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
         }
       }
 
+      {
+        ID3D12GraphicsCommandListCloseCommand commandListClose;
+        commandListClose.key = stateService_.getUniqueCommandKey();
+        commandListClose.object_.key = commandListCopyKey_;
+        stateService_.getRecorder().record(
+            new ID3D12GraphicsCommandListCloseWriter(commandListClose));
+
+        ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
+        executeCommandLists.key = stateService_.getUniqueCommandKey();
+        executeCommandLists.object_.key = commandQueueCopyKey_;
+        executeCommandLists.NumCommandLists_.value = 1;
+        executeCommandLists.ppCommandLists_.value = reinterpret_cast<ID3D12CommandList**>(1);
+        executeCommandLists.ppCommandLists_.size = 1;
+        executeCommandLists.ppCommandLists_.keys.resize(1);
+        executeCommandLists.ppCommandLists_.keys[0] = commandListCopyKey_;
+        stateService_.getRecorder().record(
+            new ID3D12CommandQueueExecuteCommandListsWriter(executeCommandLists));
+
+        ID3D12CommandQueueSignalCommand commandQueueSignal;
+        commandQueueSignal.key = stateService_.getUniqueCommandKey();
+        commandQueueSignal.object_.key = commandQueueCopyKey_;
+        commandQueueSignal.pFence_.key = fenceKey_;
+        commandQueueSignal.Value_.value = ++recordedFenceValue_;
+        stateService_.getRecorder().record(new ID3D12CommandQueueSignalWriter(commandQueueSignal));
+
+        ID3D12FenceGetCompletedValueCommand getCompletedValue;
+        getCompletedValue.key = stateService_.getUniqueCommandKey();
+        getCompletedValue.object_.key = fenceKey_;
+        getCompletedValue.result_.value = recordedFenceValue_;
+        stateService_.getRecorder().record(
+            new ID3D12FenceGetCompletedValueWriter(getCompletedValue));
+
+        ID3D12CommandAllocatorResetCommand commandAllocatorReset;
+        commandAllocatorReset.key = stateService_.getUniqueCommandKey();
+        commandAllocatorReset.object_.key = commandAllocatorCopyKey_;
+        stateService_.getRecorder().record(
+            new ID3D12CommandAllocatorResetWriter(commandAllocatorReset));
+
+        ID3D12GraphicsCommandListResetCommand commandListReset;
+        commandListReset.key = stateService_.getUniqueCommandKey();
+        commandListReset.object_.key = commandListCopyKey_;
+        commandListReset.pAllocator_.key = commandAllocatorCopyKey_;
+        commandListReset.pInitialState_.key = 0;
+        stateService_.getRecorder().record(
+            new ID3D12GraphicsCommandListResetWriter(commandListReset));
+      }
+
       for (auto& it : state->buffers) {
         if (!it.second->isMappable && restoredBuffers.find(it.first) != restoredBuffers.end()) {
           ID3D12GraphicsCommandListResourceBarrierCommand barrierCommand;
           barrierCommand.key = stateService_.getUniqueCommandKey();
-          barrierCommand.object_.key = commandListKey_;
+          barrierCommand.object_.key = commandListDirectKey_;
           barrierCommand.NumBarriers_.value = 1;
           D3D12_RESOURCE_BARRIER barrier{};
           barrierCommand.pBarriers_.value = &barrier;
@@ -333,7 +416,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
       {
         ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand build;
         build.key = state->commandKey;
-        build.object_.key = commandListKey_;
+        build.object_.key = commandListDirectKey_;
         build.pDesc_.value = state->desc->value;
         build.pDesc_.destAccelerationStructureKey = state->desc->destAccelerationStructureKey;
         build.pDesc_.destAccelerationStructureOffset = state->desc->destAccelerationStructureOffset;
@@ -354,24 +437,24 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
       {
         ID3D12GraphicsCommandListCloseCommand commandListClose;
         commandListClose.key = stateService_.getUniqueCommandKey();
-        commandListClose.object_.key = commandListKey_;
+        commandListClose.object_.key = commandListDirectKey_;
         stateService_.getRecorder().record(
             new ID3D12GraphicsCommandListCloseWriter(commandListClose));
 
         ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
         executeCommandLists.key = stateService_.getUniqueCommandKey();
-        executeCommandLists.object_.key = commandQueueKey_;
+        executeCommandLists.object_.key = commandQueueDirectKey_;
         executeCommandLists.NumCommandLists_.value = 1;
         executeCommandLists.ppCommandLists_.value = reinterpret_cast<ID3D12CommandList**>(1);
         executeCommandLists.ppCommandLists_.size = 1;
         executeCommandLists.ppCommandLists_.keys.resize(1);
-        executeCommandLists.ppCommandLists_.keys[0] = commandListKey_;
+        executeCommandLists.ppCommandLists_.keys[0] = commandListDirectKey_;
         stateService_.getRecorder().record(
             new ID3D12CommandQueueExecuteCommandListsWriter(executeCommandLists));
 
         ID3D12CommandQueueSignalCommand commandQueueSignal;
         commandQueueSignal.key = stateService_.getUniqueCommandKey();
-        commandQueueSignal.object_.key = commandQueueKey_;
+        commandQueueSignal.object_.key = commandQueueDirectKey_;
         commandQueueSignal.pFence_.key = fenceKey_;
         commandQueueSignal.Value_.value = ++recordedFenceValue_;
         stateService_.getRecorder().record(new ID3D12CommandQueueSignalWriter(commandQueueSignal));
@@ -385,18 +468,19 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
 
         ID3D12CommandAllocatorResetCommand commandAllocatorReset;
         commandAllocatorReset.key = stateService_.getUniqueCommandKey();
-        commandAllocatorReset.object_.key = commandAllocatorKey_;
+        commandAllocatorReset.object_.key = commandAllocatorDirectKey_;
         stateService_.getRecorder().record(
             new ID3D12CommandAllocatorResetWriter(commandAllocatorReset));
 
         ID3D12GraphicsCommandListResetCommand commandListReset;
         commandListReset.key = stateService_.getUniqueCommandKey();
-        commandListReset.object_.key = commandListKey_;
-        commandListReset.pAllocator_.key = commandAllocatorKey_;
+        commandListReset.object_.key = commandListDirectKey_;
+        commandListReset.pAllocator_.key = commandAllocatorDirectKey_;
         commandListReset.pInitialState_.key = 0;
         stateService_.getRecorder().record(
             new ID3D12GraphicsCommandListResetWriter(commandListReset));
-
+      }
+      {
         for (unsigned uploadResourceKey : uploadBuffers) {
           IUnknownReleaseCommand releaseCommand;
           releaseCommand.key = stateService_.getUniqueCommandKey();
@@ -410,7 +494,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
 
       ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand copy;
       copy.key = state->commandKey;
-      copy.object_.key = commandListKey_;
+      copy.object_.key = commandListDirectKey_;
       copy.DestAccelerationStructureData_.value = state->destAccelerationStructureData;
       copy.DestAccelerationStructureData_.interfaceKey = state->destKey;
       copy.DestAccelerationStructureData_.offset = state->destOffset;
@@ -424,24 +508,24 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
       {
         ID3D12GraphicsCommandListCloseCommand commandListClose;
         commandListClose.key = stateService_.getUniqueCommandKey();
-        commandListClose.object_.key = commandListKey_;
+        commandListClose.object_.key = commandListDirectKey_;
         stateService_.getRecorder().record(
             new ID3D12GraphicsCommandListCloseWriter(commandListClose));
 
         ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
         executeCommandLists.key = stateService_.getUniqueCommandKey();
-        executeCommandLists.object_.key = commandQueueKey_;
+        executeCommandLists.object_.key = commandQueueDirectKey_;
         executeCommandLists.NumCommandLists_.value = 1;
         executeCommandLists.ppCommandLists_.value = reinterpret_cast<ID3D12CommandList**>(1);
         executeCommandLists.ppCommandLists_.size = 1;
         executeCommandLists.ppCommandLists_.keys.resize(1);
-        executeCommandLists.ppCommandLists_.keys[0] = commandListKey_;
+        executeCommandLists.ppCommandLists_.keys[0] = commandListDirectKey_;
         stateService_.getRecorder().record(
             new ID3D12CommandQueueExecuteCommandListsWriter(executeCommandLists));
 
         ID3D12CommandQueueSignalCommand commandQueueSignal;
         commandQueueSignal.key = stateService_.getUniqueCommandKey();
-        commandQueueSignal.object_.key = commandQueueKey_;
+        commandQueueSignal.object_.key = commandQueueDirectKey_;
         commandQueueSignal.pFence_.key = fenceKey_;
         commandQueueSignal.Value_.value = ++recordedFenceValue_;
         stateService_.getRecorder().record(new ID3D12CommandQueueSignalWriter(commandQueueSignal));
@@ -455,14 +539,14 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
 
         ID3D12CommandAllocatorResetCommand commandAllocatorReset;
         commandAllocatorReset.key = stateService_.getUniqueCommandKey();
-        commandAllocatorReset.object_.key = commandAllocatorKey_;
+        commandAllocatorReset.object_.key = commandAllocatorDirectKey_;
         stateService_.getRecorder().record(
             new ID3D12CommandAllocatorResetWriter(commandAllocatorReset));
 
         ID3D12GraphicsCommandListResetCommand commandListReset;
         commandListReset.key = stateService_.getUniqueCommandKey();
-        commandListReset.object_.key = commandListKey_;
-        commandListReset.pAllocator_.key = commandAllocatorKey_;
+        commandListReset.object_.key = commandListDirectKey_;
+        commandListReset.pAllocator_.key = commandAllocatorDirectKey_;
         commandListReset.pInitialState_.key = 0;
         stateService_.getRecorder().record(
             new ID3D12GraphicsCommandListResetWriter(commandListReset));

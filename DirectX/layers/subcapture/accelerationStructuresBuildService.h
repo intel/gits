@@ -88,9 +88,12 @@ private:
   unsigned maxBuildScratchSpace_{};
   unsigned deviceKey_{};
 
-  unsigned commandQueueKey_{};
-  unsigned commandAllocatorKey_{};
-  unsigned commandListKey_{};
+  unsigned commandQueueCopyKey_{};
+  unsigned commandAllocatorCopyKey_{};
+  unsigned commandListCopyKey_{};
+  unsigned commandQueueDirectKey_{};
+  unsigned commandAllocatorDirectKey_{};
+  unsigned commandListDirectKey_{};
   unsigned fenceKey_{};
   UINT64 recordedFenceValue_{};
   bool restored_{};
