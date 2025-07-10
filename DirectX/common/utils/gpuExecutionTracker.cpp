@@ -47,10 +47,7 @@ void GpuExecutionTracker::commandQueueSignal(unsigned callKey,
 }
 
 void GpuExecutionTracker::fenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue) {
-  auto it = signaledFences_.find(fenceKey);
-  if (it == signaledFences_.end() || it->second < fenceValue) {
-    signaledFences_[fenceKey] = fenceValue;
-  }
+  signaledFences_[fenceKey] = fenceValue;
 
   for (auto& it : queueEvents_) {
     while (!it.second.empty()) {
