@@ -349,6 +349,23 @@ void StateTrackingLayer::post(IDXGIFactory4EnumAdapterByLuidCommand& c) {
   setAsChildInParent(state->parentKey, state->key);
 }
 
+void StateTrackingLayer::post(IDXGIAdapterEnumOutputsCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  if (c.result_.value != S_OK) {
+    return;
+  }
+  ObjectState* state = new ObjectState();
+  state->parentKey = c.object_.key;
+  state->key = c.ppOutput_.key;
+  state->object = static_cast<IUnknown*>(*c.ppOutput_.value);
+  state->creationCommand.reset(new IDXGIAdapterEnumOutputsCommand(c));
+  stateService_.storeState(state);
+
+  setAsChildInParent(state->parentKey, state->key);
+}
+
 void StateTrackingLayer::post(IDXGIObjectGetParentCommand& c) {
   if (stateRestored_) {
     return;

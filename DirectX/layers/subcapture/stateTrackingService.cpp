@@ -200,12 +200,8 @@ void StateTrackingService::releaseObject(unsigned key, ULONG result) {
     if (itParentState != statesByKey_.end()) {
       itParentState->second->object->AddRef();
       ULONG refCount = itParentState->second->object->Release();
-      if (refCount == 1) {
-        itParentState->second->destroyed = true;
-        if (!itParentState->second->keepDestroyed) {
-          delete itParentState->second;
-          statesByKey_.erase(itParentState);
-        }
+      if (refCount == 1 && !itParentState->second->destroyed) {
+        releaseObject(itParentState->first, 0);
       }
     }
   }
@@ -213,12 +209,8 @@ void StateTrackingService::releaseObject(unsigned key, ULONG result) {
   for (unsigned childKey : itState->second->childrenKeys) {
     if (childKey) {
       auto itChildState = statesByKey_.find(childKey);
-      if (itChildState != statesByKey_.end()) {
-        itChildState->second->destroyed = true;
-        if (!itChildState->second->keepDestroyed) {
-          delete itChildState->second;
-          statesByKey_.erase(itChildState);
-        }
+      if (itChildState != statesByKey_.end() && !itChildState->second->destroyed) {
+        releaseObject(itChildState->first, 0);
       }
     }
   }

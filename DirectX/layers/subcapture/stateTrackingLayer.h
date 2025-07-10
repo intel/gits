@@ -47,6 +47,7 @@ public:
   void post(IDXGIFactory1EnumAdapters1Command& c) override;
   void post(IDXGIFactory6EnumAdapterByGpuPreferenceCommand& c) override;
   void post(IDXGIFactory4EnumAdapterByLuidCommand& c) override;
+  void post(IDXGIAdapterEnumOutputsCommand& c) override;
   void post(IDXGIObjectGetParentCommand& c) override;
   void post(D3D12CreateDeviceCommand& c) override;
   void post(ID3D12DeviceCreateCommandQueueCommand& c) override;
