@@ -137,7 +137,7 @@ private:
   unsigned auxiliaryUavGpuDescriptorHeapIndex_{};
   unsigned auxiliaryUavCpuDescriptorHeapKey_{};
   unsigned auxiliaryUavCpuDescriptorHeapIndex_{};
-  const unsigned auxiliaryHeapSize_{64};
+  const unsigned auxiliaryHeapSize_{96};
 };
 
 } // namespace DirectX
