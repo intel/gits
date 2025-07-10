@@ -110,6 +110,8 @@ void CommandListService::restoreCommandState(CommandListOMSetRenderTargets* comm
     }
     D3D12DepthStencilViewState* view = command->depthStencilView.get();
     if (view) {
+      c.pDepthStencilDescriptor_.interfaceKeys.resize(1);
+      c.pDepthStencilDescriptor_.indexes.resize(1);
       c.pDepthStencilDescriptor_.interfaceKeys[0] = view->destDescriptorKey;
       c.pDepthStencilDescriptor_.indexes[0] = view->destDescriptorIndex;
       c.pDepthStencilDescriptor_.size = 1;
