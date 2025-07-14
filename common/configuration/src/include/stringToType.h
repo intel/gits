@@ -121,16 +121,7 @@ inline std::istream& operator>>(std::istream& lhs, BitRange& rhs) {
 inline std::istream& operator>>(std::istream& in, gits::VulkanObjectRange& data) {
   std::string input;
   if (std::getline(in, input)) {
-    std::istringstream iss(input);
-    std::string vectorStr, rangeStr, modeStr;
-    if (std::getline(iss, vectorStr, '/') && std::getline(iss, rangeStr, '/') &&
-        std::getline(iss, modeStr)) {
-      data.objVector = gits::stringTo<std::vector<uint32_t>>(vectorStr);
-      data.range = gits::stringTo<BitRange>(rangeStr);
-      data.objMode = gits::stringTo<gits::VulkanObjectMode>(modeStr);
-    } else {
-      in.setstate(std::ios::failbit);
-    }
+    data.SetFromString(input);
   } else {
     in.setstate(std::ios::failbit);
   }

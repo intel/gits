@@ -388,6 +388,25 @@ void DeriveConfigData<Configuration::OpenGL::Recorder>(Configuration::OpenGL::Re
 template <>
 void DeriveConfigData<Configuration::Vulkan::Player>(Configuration::Vulkan::Player& obj,
                                                      Configuration& config) {
+  if (!config.vulkan.player.captureVulkanRenderPasses.empty() ||
+      !config.vulkan.player.captureVulkanRenderPassesResources.empty() ||
+      config.vulkan.player.oneVulkanDrawPerCommandBuffer ||
+      config.vulkan.player.oneVulkanRenderPassPerCommandBuffer ||
+      !config.vulkan.player.captureVulkanDraws.empty() ||
+      !config.vulkan.player.captureVulkanResources.empty()) {
+    obj.execCmdBuffsBeforeQueueSubmit = true;
+  }
+
+  if (!config.vulkan.player.captureVulkanDraws.empty() ||
+      !config.vulkan.player.captureVulkanResources.empty()) {
+    obj.oneVulkanDrawPerCommandBuffer = true;
+  }
+
+  if (!config.vulkan.player.captureVulkanRenderPasses.empty() ||
+      !config.vulkan.player.captureVulkanRenderPassesResources.empty()) {
+    obj.oneVulkanRenderPassPerCommandBuffer = true;
+  }
+
   if (config.vulkan.player.disableShaderGroupHandlesPatching) {
     obj.patchShaderGroupHandles = false;
   }
