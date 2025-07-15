@@ -968,6 +968,10 @@ Configuration:
                     Default: false
                     Description: Print GPU execution information
                     ConfigName: gPUExecution
+                  - Name: timestamp
+                    Type: bool
+                    Default: false
+                    Description: Print a timestamp before each API call
           - Name: Subcapture
             Type: Group
             Options:

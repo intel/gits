@@ -13,12 +13,30 @@
 namespace gits {
 namespace DirectX {
 
+static void printDateTime(FastOStream& stream) {
+  auto now = std::chrono::system_clock::now();
+  auto timeT = std::chrono::system_clock::to_time_t(now);
+  auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+
+  // Print formatted date and time on a pre-allocated buffer
+  char buffer[32];
+  size_t offset =
+      std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", std::localtime(&timeT));
+  std::snprintf(&buffer[offset], sizeof(buffer) - offset, ".%03d ", static_cast<int>(ms.count()));
+
+  // Print to the FastOStream
+  stream << static_cast<char*>(buffer);
+}
+
 CommandPrinter::CommandPrinter(FastOStream& stream,
                                CommandPrinterState& state,
                                Command& command,
                                const char* name,
                                unsigned objectId)
     : stream_(stream), state_(state), command_(command), lock_(state.mutex) {
+  if (Configurator::Get().directx.features.trace.print.timestamp) {
+    printDateTime(stream_);
+  }
   if (command.skip) {
     stream_ << "[SKIPPED] ";
   }
