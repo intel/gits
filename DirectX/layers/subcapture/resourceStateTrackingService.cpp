@@ -259,7 +259,7 @@ D3D12_BARRIER_LAYOUT ResourceStateTrackingService::getResourceLayout(unsigned re
 
 void ResourceStateTrackingService::restoreResourceStates(
     const std::vector<unsigned>& orderedResources) {
-  if (aliasingBarriersOrdered_.empty()) {
+  if (orderedResources.empty() && aliasingBarriersOrdered_.empty()) {
     return;
   }
 
