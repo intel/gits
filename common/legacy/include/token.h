@@ -67,7 +67,7 @@ public:
   virtual void Exec(){};
   virtual void StateTrack(){};
   virtual uint64_t Size() const {
-    return 0;
+    return CId::Size;
   }
 
   void Serialize(CBinOStream& stream);
@@ -88,14 +88,11 @@ public:
   static void operator delete(void* pointer);
 };
 
-class CTokenFrameNumber : public CToken {
+class CTokenMarker : public CToken {
   TId _id;
-  uint32_t _frameNumber;
 
 public:
-  CTokenFrameNumber(TId id, unsigned frameNumber);
-  CTokenFrameNumber(TId id);
-
+  CTokenMarker(TId id);
   virtual unsigned Id() const {
     return _id;
   }
@@ -103,7 +100,6 @@ public:
   virtual void Read(CBinIStream& stream);
   virtual void Write(CCodeOStream& stream) const;
   virtual void Run();
-  virtual uint64_t Size() const;
 };
 
 class CTokenPlayerRecorderSync : public CToken {
@@ -118,6 +114,7 @@ public:
   virtual void Read(CBinIStream& stream);
   virtual void Write(CCodeOStream& /*stream*/) const {}
   virtual void Run();
+  virtual uint64_t Size() const;
 };
 
 // In multithreaded playback switches thread, in flattened one switches context.
@@ -135,6 +132,7 @@ public:
   virtual void Read(CBinIStream& stream);
   virtual void Write(CCodeOStream& /*stream*/) const {}
   virtual void Run();
+  virtual uint64_t Size() const;
 };
 
 // In multithreaded playback switches thread, in flattened one does nothing.
@@ -152,6 +150,7 @@ public:
   virtual void Read(CBinIStream& stream);
   virtual void Write(CCodeOStream& /*stream*/) const {}
   virtual void Run();
+  virtual uint64_t Size() const;
 };
 
 class CTokenScreenResolution : public CToken {
@@ -168,6 +167,7 @@ public:
   virtual void Read(CBinIStream& stream);
   virtual void Write(CCodeOStream& /*stream*/) const {}
   virtual void Run();
+  virtual uint64_t Size() const;
 };
 
 } // namespace gits

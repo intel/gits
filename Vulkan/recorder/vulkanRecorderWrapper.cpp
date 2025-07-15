@@ -499,10 +499,8 @@ void CRecorderWrapper::StartStateRestore() const {
   if (cfg.vulkan.recorder.mode == TVulkanRecorderMode::ALL && Configurator::DumpCCode() &&
       !CGits::Instance().IsCCodeStateRestore()) {
     CGits::Instance().CCodeStateRestoreStart();
-    _recorder.Schedule(
-        new CTokenFrameNumber(CToken::ID_PRE_RECORD_END, CGits::Instance().CurrentFrame()));
-    _recorder.Schedule(
-        new CTokenFrameNumber(CToken::ID_INIT_START, CGits::Instance().CurrentFrame()));
+    _recorder.Schedule(new CTokenMarker(CToken::ID_PRE_RECORD_END));
+    _recorder.Schedule(new CTokenMarker(CToken::ID_INIT_START));
   }
 }
 
@@ -510,10 +508,8 @@ void CRecorderWrapper::EndStateRestore() const {
   auto& cfg = Configurator::Get();
   if (cfg.vulkan.recorder.mode == TVulkanRecorderMode::ALL && Configurator::DumpCCode() &&
       CGits::Instance().IsCCodeStateRestore()) {
-    _recorder.Schedule(
-        new CTokenFrameNumber(CToken::ID_INIT_END, CGits::Instance().CurrentFrame()));
-    _recorder.Schedule(
-        new CTokenFrameNumber(CToken::ID_FRAME_START, CGits::Instance().CurrentFrame()));
+    _recorder.Schedule(new CTokenMarker(CToken::ID_INIT_END));
+    _recorder.Schedule(new CTokenMarker(CToken::ID_FRAME_START));
     CGits::Instance().CCodeStateRestoreEnd();
   }
 }
@@ -523,10 +519,8 @@ bool CRecorderWrapper::IsCCodeStateRestore() const {
 }
 
 void CRecorderWrapper::StartFrame() const {
-  _recorder.Schedule(
-      new CTokenFrameNumber(CToken::ID_PRE_RECORD_END, CGits::Instance().CurrentFrame()));
-  _recorder.Schedule(
-      new CTokenFrameNumber(CToken::ID_FRAME_START, CGits::Instance().CurrentFrame()));
+  _recorder.Schedule(new CTokenMarker(CToken::ID_PRE_RECORD_END));
+  _recorder.Schedule(new CTokenMarker(CToken::ID_FRAME_START));
 }
 
 void* CRecorderWrapper::CreateExternalMemory(VkDeviceSize size) const {

@@ -14,6 +14,7 @@ namespace DirectX {
 
 enum class CommandId {
   // gits::CToken::ID_HELPER_TOKENS
+  // Note: CommandId does not match token ids (TId in token.h)
   ID_INIT_START = 0x0,
   ID_INIT_END = 0x1,
   ID_FRAME_START = 0x2,

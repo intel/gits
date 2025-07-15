@@ -233,19 +233,19 @@ void EraseFromFirstNullChar(std::string& str) {
 CToken* CTokenCreate(CId id) {
   switch (*id) {
   case CToken::ID_INIT_START:
-    return new CTokenFrameNumber(CToken::ID_INIT_START);
+    return new CTokenMarker(CToken::ID_INIT_START);
   case CToken::ID_INIT_END:
-    return new CTokenFrameNumber(CToken::ID_INIT_END);
+    return new CTokenMarker(CToken::ID_INIT_END);
   case CToken::ID_FRAME_START:
-    return new CTokenFrameNumber(CToken::ID_FRAME_START);
+    return new CTokenMarker(CToken::ID_FRAME_START);
   case CToken::ID_FRAME_END:
-    return new CTokenFrameNumber(CToken::ID_FRAME_END);
+    return new CTokenMarker(CToken::ID_FRAME_END);
   case CToken::ID_PRE_RECORD_START:
-    return new CTokenFrameNumber(CToken::ID_PRE_RECORD_START);
+    return new CTokenMarker(CToken::ID_PRE_RECORD_START);
   case CToken::ID_PRE_RECORD_END:
-    return new CTokenFrameNumber(CToken::ID_PRE_RECORD_END);
+    return new CTokenMarker(CToken::ID_PRE_RECORD_END);
   case CToken::ID_CCODE_FINISH:
-    return new CTokenFrameNumber(CToken::ID_CCODE_FINISH);
+    return new CTokenMarker(CToken::ID_CCODE_FINISH);
   case CToken::ID_PLAYER_RECORDER_SYNC:
     return new CTokenPlayerRecorderSync;
   case CToken::ID_MAKE_CURRENT_THREAD:

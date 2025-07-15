@@ -24,16 +24,16 @@ CId::CId() : _id(0) {}
 CId::CId(uint32_t id) : _id(id) {}
 
 void CId::Write(CBinOStream& stream) const {
-  uint16_t subid = (uint16_t)(_id & 0xFFFF);
-  char type = (char)(_id >> 16 & 0xFF);
+  uint8_t type = (uint8_t)(_id >> 16 & 0xFF);
   write_to_stream(stream, type);
+
+  uint16_t subid = (uint16_t)(_id & 0xFFFF);
   write_to_stream(stream, subid);
 }
 
 void CId::Read(CBinIStream& stream) {
-  // streams has written:
-  // uint8_t -> api type
-  // uint16_t -> token subid
+  // uint8_t  -> API type
+  // uint16_t -> Token subid
   uint8_t id[3];
   read_from_stream(stream, id);
   _id = id[0] << 16 | id[2] << 8 | id[1] << 0;

@@ -15,11 +15,11 @@ namespace gits {
 namespace DirectX {
 
 void ExecutionSerializationLayer::post(StateRestoreBeginCommand& c) {
-  recorder_.record(new CTokenFrameNumber(CToken::ID_INIT_START, 0));
+  recorder_.record(new CTokenMarker(CToken::ID_INIT_START));
 }
 
 void ExecutionSerializationLayer::post(StateRestoreEndCommand& c) {
-  recorder_.record(new CTokenFrameNumber(CToken::ID_INIT_END, 0));
+  recorder_.record(new CTokenMarker(CToken::ID_INIT_END));
 }
 
 void ExecutionSerializationLayer::pre(IDXGISwapChainPresentCommand& c) {

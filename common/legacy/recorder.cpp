@@ -396,8 +396,7 @@ gits::CBehavior& gits::CRecorder::Behavior() const {
  * @param wrapper Recorder wrapper to be used during capture
  */
 void gits::CRecorder::Init() {
-  Scheduler().Register(
-      new CTokenFrameNumber(CToken::ID_PRE_RECORD_START, CGits::Instance().CurrentFrame()));
+  Scheduler().Register(new CTokenMarker(CToken::ID_PRE_RECORD_START));
 
   if (Configurator::Get().common.shared.useEvents) {
     CGits::Instance().PlaybackEvents().programStart();
@@ -534,7 +533,7 @@ void gits::CRecorder::Start() {
   const bool stateNeedsRestoring = shouldRestore3DState || shouldRestoreComputeState;
 
   if (stateNeedsRestoring && !Configurator::IsPlayer()) {
-    Scheduler().Register(new CTokenFrameNumber(CToken::ID_PRE_RECORD_END, inst.CurrentFrame()));
+    Scheduler().Register(new CTokenMarker(CToken::ID_PRE_RECORD_END));
     for (auto it = inst.LibraryBegin(); it != inst.LibraryEnd(); ++it) {
       // schedule current library state only if not init frame number
       auto state((*it)->StateCreate());
@@ -542,9 +541,9 @@ void gits::CRecorder::Start() {
         inst.StateRestoreStarted();
         state->Prepare();
         state->Get();
-        Scheduler().Register(new CTokenFrameNumber(CToken::ID_INIT_START, inst.CurrentFrame()));
+        Scheduler().Register(new CTokenMarker(CToken::ID_INIT_START));
         state->Schedule(Scheduler());
-        Scheduler().Register(new CTokenFrameNumber(CToken::ID_INIT_END, inst.CurrentFrame()));
+        Scheduler().Register(new CTokenMarker(CToken::ID_INIT_END));
         inst.StateRestoreFinished();
         if (inst.apis.Has3D()) {
           inst.apis.Iface3D().Rec_StateRestoreFinished();
@@ -562,8 +561,8 @@ void gits::CRecorder::Start() {
   // First frame is a special case.
   // TODO: Make it so that any frame number logic is not necessary in compute-only streams.
   if (inst.CurrentFrame() == 1 && (!Configurator::DumpCCode() || !isVulkan)) {
-    Scheduler().Register(new CTokenFrameNumber(CToken::ID_PRE_RECORD_END, inst.CurrentFrame()));
-    Scheduler().Register(new CTokenFrameNumber(CToken::ID_FRAME_START, 1));
+    Scheduler().Register(new CTokenMarker(CToken::ID_PRE_RECORD_END));
+    Scheduler().Register(new CTokenMarker(CToken::ID_FRAME_START));
     //first frame start time stamp
     if (inst.apis.Has3D() && Configurator::Get().common.recorder.benchmark) {
       inst.Timers().frame.Start();
@@ -616,7 +615,7 @@ void gits::CRecorder::Stop() {
         }
       }
     }
-    Scheduler().Register(new gits::CTokenFrameNumber(CToken::ID_CCODE_FINISH, inst.CurrentFrame()));
+    Scheduler().Register(new gits::CTokenMarker(CToken::ID_CCODE_FINISH));
   }
 
   _running = false;
@@ -692,7 +691,7 @@ void gits::CRecorder::FrameEnd() {
     const auto& api3dIface = inst.apis.Iface3D();
 
     if (Running()) {
-      Schedule(new CTokenFrameNumber(CToken::ID_FRAME_END, inst.CurrentFrame()));
+      Schedule(new CTokenMarker(CToken::ID_FRAME_END));
 
       if (api3dIface.CfgRec_EndFrameSleep() > 0) {
         sleep_millisec(api3dIface.CfgRec_EndFrameSleep());
@@ -726,7 +725,7 @@ void gits::CRecorder::FrameEnd() {
 
     // we are at the next frame
     if (Running()) {
-      Schedule(new gits::CTokenFrameNumber(CToken::ID_FRAME_START, inst.CurrentFrame()));
+      Schedule(new gits::CTokenMarker(CToken::ID_FRAME_START));
 
       //frame start time stamp
       if (Configurator::Get().common.recorder.benchmark) {
@@ -754,7 +753,7 @@ void gits::CRecorder::DrawBegin() {
           api3dIface.CfgRec_Frame() == frameCount)) &&
         drawCount != 0) {
       Start();
-      Schedule(new gits::CTokenFrameNumber(CToken::ID_FRAME_START, inst.CurrentFrame()));
+      Schedule(new gits::CTokenMarker(CToken::ID_FRAME_START));
     }
   }
 }

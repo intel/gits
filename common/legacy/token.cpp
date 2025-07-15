@@ -80,33 +80,34 @@ void CToken::Serialize(CCodeOStream& stream) {
   this->Write(stream);
 }
 
-/* ******************************** FRAME NUMBER ****************************** */
+/* ******************************** MARKER ****************************** */
 
-CTokenFrameNumber::CTokenFrameNumber(TId id, unsigned frameNumber)
-    : _id(id), _frameNumber(frameNumber) {}
+CTokenMarker::CTokenMarker(TId id) : _id(id) {}
 
-CTokenFrameNumber::CTokenFrameNumber(TId id) : _id(id), _frameNumber(0) {}
+void CTokenMarker::Write(CBinOStream& stream) const {}
 
-void CTokenFrameNumber::Write(CBinOStream& stream) const {}
+void CTokenMarker::Read(CBinIStream& stream) {}
 
-void CTokenFrameNumber::Read(CBinIStream& stream) {}
+void CTokenMarker::Write(CCodeOStream& stream) const {
+  // Frame number is only used by CCode and not encoded in binary stream
+  // Note: GITS starts frame numbering from 1
+  static unsigned frameNumber = 1;
 
-void CTokenFrameNumber::Write(CCodeOStream& stream) const {
   std::stringstream functionName;
   switch (_id) {
   case CToken::ID_FRAME_START:
-    functionName << "RunFrame" << std::setfill('0') << std::setw(6) << std::dec << _frameNumber
+    functionName << "RunFrame" << std::setfill('0') << std::setw(6) << std::dec << frameNumber
                  << "()";
     break;
   case CToken::ID_INIT_START:
     CGits::Instance().CCodeStateRestoreStart();
-    functionName << "PrepareFrame" << std::setfill('0') << std::setw(6) << std::dec << _frameNumber
+    functionName << "PrepareFrame" << std::setfill('0') << std::setw(6) << std::dec << frameNumber
                  << "()";
     break;
   case CToken::ID_PRE_RECORD_START:
     CGits::Instance().CCodePreRecordStart();
     functionName << "NativePreRecord" << std::setfill('0') << std::setw(6) << std::dec
-                 << _frameNumber << "()";
+                 << frameNumber << "()";
     break;
     //some frame related function ended - close its '}'
   case CToken::ID_PRE_RECORD_END:
@@ -141,6 +142,10 @@ void CTokenFrameNumber::Write(CCodeOStream& stream) const {
     stream.select(CCodeOStream::GITS_MAIN_CPP)
         << "  extern void " << fname << ";\n  " << fname << ";" << std::endl;
   }
+
+  if (_id == CToken::ID_FRAME_END) {
+    frameNumber++;
+  }
 }
 
 static void OnFrameBeginImpl() {
@@ -157,7 +162,7 @@ static void OnFrameEndImpl() {
   }
 }
 
-void CTokenFrameNumber::Run() {
+void CTokenMarker::Run() {
   using namespace OpenGL;
   auto& cfg = Configurator::Get();
 
@@ -275,10 +280,6 @@ void CTokenFrameNumber::Run() {
   }
 }
 
-uint64_t CTokenFrameNumber::Size() const {
-  return sizeof(_id) + sizeof(_frameNumber);
-}
-
 /* ******************************** PLAYER RECORDER SYNC ****************************** */
 
 CTokenPlayerRecorderSync::CTokenPlayerRecorderSync() {
@@ -298,6 +299,10 @@ void CTokenPlayerRecorderSync::Read(CBinIStream& stream) {
 }
 
 void CTokenPlayerRecorderSync::Run() {}
+
+uint64_t CTokenPlayerRecorderSync::Size() const {
+  return CToken::Size() + sizeof(_timeStamp);
+}
 
 /* ******************************** TOKEN MAKE CURRENT THREAD ****************************** */
 
@@ -348,6 +353,10 @@ void CTokenMakeCurrentThread::Run() {
   }
 }
 
+uint64_t CTokenMakeCurrentThread::Size() const {
+  return CToken::Size() + sizeof(_threadId);
+}
+
 /* ******************************** TOKEN MAKE CURRENT THREAD NO CTX SWITCH ****************************** */
 
 CTokenMakeCurrentThreadNoCtxSwitch::CTokenMakeCurrentThreadNoCtxSwitch(int threadid)
@@ -389,6 +398,10 @@ void CTokenMakeCurrentThreadNoCtxSwitch::Run() {
   }
 }
 
+uint64_t CTokenMakeCurrentThreadNoCtxSwitch::Size() const {
+  return CToken::Size() + sizeof(_threadId);
+}
+
 /* ******************************** RECORDER SCREEN RESOLUTION **************************** */
 
 CTokenScreenResolution::CTokenScreenResolution(int width, int height)
@@ -418,6 +431,10 @@ void CTokenScreenResolution::Run() {
   Log(INFO) << "Changing screen resolution to: " << _screenWidth << "x" << _screenHeight << ".";
   ChangeDisplaySettings(&dmScreenSettings, CDS_FULLSCREEN);
 #endif
+}
+
+uint64_t CTokenScreenResolution::Size() const {
+  return CToken::Size() + sizeof(_screenWidth) + sizeof(_screenHeight);
 }
 
 } // namespace gits

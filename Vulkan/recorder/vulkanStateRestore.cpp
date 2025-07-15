@@ -4248,7 +4248,7 @@ void gits::Vulkan::PostRestoreVkQueueSubmits(CScheduler& scheduler, CStateDynami
   auto& api3dIface = gits::CGits::Instance().apis.Iface3D();
 
   if (api3dIface.CfgRec_IsSubFrameMode()) {
-    scheduler.Register(new gits::CTokenFrameNumber(CToken::ID_FRAME_START, 1));
+    scheduler.Register(new gits::CTokenMarker(CToken::ID_FRAME_START));
     CVkSubmitInfoArrayWrap submitInfoForSchedule = getSubmitInfoForSchedule(
         Configurator::Get().vulkan.recorder.objRange.rangeSpecial.objVector,
         Configurator::Get().vulkan.recorder.objRange.rangeSpecial.range,

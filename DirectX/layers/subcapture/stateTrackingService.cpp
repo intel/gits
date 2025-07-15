@@ -26,7 +26,7 @@ StateTrackingService::~StateTrackingService() {
 }
 
 void StateTrackingService::restoreState() {
-  recorder_.record(new CTokenFrameNumber(CToken::ID_INIT_START, 0));
+  recorder_.record(new CTokenMarker(CToken::ID_INIT_START));
 
   for (auto& it : statesByKey_) {
     restoreState(it.second);
@@ -43,7 +43,7 @@ void StateTrackingService::restoreState() {
   restoreReferenceCount();
 
   swapChainService_.restoreBackBufferSequence();
-  recorder_.record(new CTokenFrameNumber(CToken::ID_INIT_END, 0));
+  recorder_.record(new CTokenMarker(CToken::ID_INIT_END));
   // one Present after ID_INIT_END to enable PIX first frame capture in gits interactive mode
   swapChainService_.recordSwapChainPresent();
 

@@ -31,6 +31,10 @@ class CId {
   uint32_t _id;
 
 public:
+  // uint8_t  -> API type
+  // uint16_t -> Token subid
+  static const uint64_t Size = 3;
+
   CId();
   explicit CId(uint32_t id);
 
