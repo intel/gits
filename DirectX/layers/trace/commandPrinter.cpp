@@ -16,15 +16,14 @@ namespace DirectX {
 static void printDateTime(FastOStream& stream) {
   auto now = std::chrono::system_clock::now();
   auto timeT = std::chrono::system_clock::to_time_t(now);
-  auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+  auto ms = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()) % 1000000;
 
   // Print formatted date and time on a pre-allocated buffer
   char buffer[32];
   size_t offset =
       std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", std::localtime(&timeT));
-  std::snprintf(&buffer[offset], sizeof(buffer) - offset, ".%03d ", static_cast<int>(ms.count()));
+  std::snprintf(&buffer[offset], sizeof(buffer) - offset, ".%06d ", static_cast<int>(ms.count()));
 
-  // Print to the FastOStream
   stream << static_cast<char*>(buffer);
 }
 
