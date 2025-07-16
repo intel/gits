@@ -20,6 +20,30 @@
 #include <map>
 #include <stdexcept>
 
+#if defined GITS_API_OCL && !defined CCODE_FOR_EGL
+namespace cl {
+
+typedef void(CL_CALLBACK* FCallbackContext)(const char*, const void*, size_t, void*);
+typedef void(CL_CALLBACK* FCallbackProgram)(cl_program, void*);
+typedef void(CL_CALLBACK* FCallbackEvent)(cl_event, cl_int, void*);
+typedef void(CL_CALLBACK* FCallbackMem)(cl_mem, void*);
+typedef int TUserData;
+
+void CL_CALLBACK CallbackContext(const char*, const void*, size_t, void*);
+void CL_CALLBACK CallbackProgram(cl_program, void*);
+void CL_CALLBACK CallbackEvent(cl_event, cl_int, void*);
+void CL_CALLBACK CallbackMem(cl_mem, void*);
+extern TUserData userData;
+
+} // namespace cl
+
+void CLInit();
+void Load(const std::string& fileName, size_t bufferSize, char* buffer);
+void Load(const std::string& fileName, unsigned offset, size_t bufferSize, char* buffer);
+void SleepIf(bool exprResult, long milliseconds);
+
+#endif /* GITS_API_OCL */
+
 using namespace gits::OpenCL;
 using gits::OpenCL::COclDriver;
 using gits::OpenCL::drvOcl;

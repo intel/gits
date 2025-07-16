@@ -24,6 +24,9 @@
 #ifdef GITS_API_VK
 #include "helperVk.h"
 #endif
+#if defined GITS_API_OCL && !defined CCODE_FOR_EGL
+#include "helperCL.h"
+#endif
 
 #ifdef _WIN32
 #include <direct.h>

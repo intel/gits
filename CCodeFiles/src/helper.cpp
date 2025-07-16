@@ -19,9 +19,6 @@
 #include <unistd.h>
 #endif
 
-#if defined GITS_API_OCL
-#include "openclDrivers.h"
-#endif
 #if defined WITH_LEVELZERO and defined GITS_API_L0
 #include "l0Drivers.h"
 #endif
@@ -293,75 +290,6 @@ void OnFrameEnd() {
     CGits::Instance().StartPlaybackTimer();
   }
 }
-
-#if defined GITS_API_OCL && !defined CCODE_FOR_EGL
-
-namespace cl {
-
-void CL_CALLBACK CallbackContext(const char*, const void*, size_t, void*) {}
-void CL_CALLBACK CallbackProgram(cl_program, void*) {}
-void CL_CALLBACK CallbackEvent(cl_event, cl_int, void*) {}
-void CL_CALLBACK CallbackMem(cl_mem, void*) {}
-cl::TUserData userData;
-} // namespace cl
-
-void Load(const std::string& fileName, size_t bufferSize, char* buffer) {
-  int fileSize = (int)FileSize(fileName);
-  if (fileSize != bufferSize) {
-    std::cerr << "Buffer size (" << bufferSize << ") do not match file size (" << fileSize
-              << ") of: " << fileName << "\n";
-    exit(EXIT_FAILURE);
-  }
-
-  std::string filePath = Configurator::Get().common.player.streamDir.string() + fileName;
-  std::ifstream file(filePath.c_str(), std::ios::binary);
-  if (!file.is_open()) {
-    std::cerr << "Failed to open file: " << filePath << "\n";
-    exit(EXIT_FAILURE);
-  }
-
-  file.read(buffer, bufferSize);
-  if (!file) {
-    std::cerr << "Failed reading: " << filePath << "\n";
-    exit(EXIT_FAILURE);
-  }
-}
-
-void Load(const std::string& fileName, unsigned offset, size_t bufferSize, char* buffer) {
-  uint64_t fileSize = FileSize(fileName);
-  if (fileSize < bufferSize) {
-    std::cerr << "Buffer size is bigger than the file size of: " << fileName << "\n";
-    exit(EXIT_FAILURE);
-  }
-  std::string filePath = Configurator::Get().common.player.streamDir.string() + fileName;
-  std::ifstream file(filePath.c_str(), std::ios::binary);
-  if (!file.is_open()) {
-    std::cerr << "Failed to open file: " << filePath << "\n";
-    exit(EXIT_FAILURE);
-  }
-
-  file.seekg(offset, std::ios::beg);
-  file.read(buffer, bufferSize);
-  if (!file) {
-    std::cerr << "Failed reading: " << filePath << "\n";
-    exit(EXIT_FAILURE);
-  }
-}
-
-void SleepIf(bool exprResult, float miliseconds) {
-  if (exprResult)
-#ifdef GITS_PLATFORM_WINDOWS
-    Sleep((DWORD)miliseconds);
-#else
-    sleep(miliseconds);
-#endif
-}
-
-void CLInit() {
-  gits::OpenCL::drvOcl.Initialize();
-}
-
-#endif /* GITS_API_OCL */
 
 #ifdef WITH_LEVELZERO
 void InitL0() {
