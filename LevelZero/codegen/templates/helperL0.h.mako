@@ -13,6 +13,10 @@
 #endif
 #include "mapping.h"
 
+#ifdef WITH_LEVELZERO
+void InitL0();
+#endif
+
 class CArgHandle : public CArgument {
   intptr_t key_;
 public:
@@ -99,6 +103,7 @@ private:
     return objects_map;
   }
 };
+
 namespace api {
 %for name, func in functions.items():
   %if is_latest_version(functions, func):

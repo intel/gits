@@ -8,6 +8,12 @@
 
 #include "helperL0.h"
 
+#ifdef WITH_LEVELZERO
+void InitL0() {
+  gits::l0::drv.Initialize();
+}
+#endif
+
 namespace api {
 %for name, func in functions.items():
   %if is_latest_version(functions, func):

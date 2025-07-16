@@ -27,6 +27,9 @@
 #if defined GITS_API_OCL && !defined CCODE_FOR_EGL
 #include "helperCL.h"
 #endif
+#if defined WITH_LEVELZERO and defined GITS_API_L0
+#include "helperL0.h"
+#endif
 
 #ifdef _WIN32
 #include <direct.h>
