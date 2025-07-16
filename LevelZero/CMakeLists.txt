@@ -49,6 +49,8 @@ add_custom_command(
     "codegen/templates/l0Log.h.mako"
     "codegen/templates/l0APITest.lua.mako"
     "codegen/templates/l0Constants.lua.mako"
+    "codegen/templates/helperL0.h.mako"
+    "codegen/templates/helperL0.cpp.mako"
 )
 
 if(WITH_OCLOC)
