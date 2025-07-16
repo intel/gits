@@ -22,9 +22,6 @@
 #include "key_value.h"
 #include "config.h"
 #include "windowContextState.h"
-#ifdef BUILD_FOR_CCODE
-#include "fake_ptbl.h"
-#endif
 
 namespace gits {
 namespace OpenGL {
