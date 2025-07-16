@@ -13,11 +13,11 @@
 #include "resource_manager.h"
 #include "platform.h"
 #include "getopt_.h"
-#include "openglDrivers.h"
 #ifdef GITS_PLATFORM_WINDOWS
 #include <windows.h>
 #endif
 #ifdef GITS_API_OGL
+#include "helperGL.h"
 #include "windowing.h"
 #include "windowContextState.h"
 #endif

@@ -17,8 +17,6 @@
 #include "config.h"
 #include "resource_manager.h"
 
-#include "openglDrivers.h"
-
 #include <iostream>
 #include <fstream>
 
@@ -244,8 +242,9 @@ public:
   operator const uint32_t*() const {
     return (const uint32_t*)_data.data();
   }
-  operator const GLubyte*() const {
-    return (const GLubyte*)_data.data();
+  // For compatibility with GLubyte without knowing it exists.
+  operator const unsigned char*() const {
+    return (const unsigned char*)_data.data();
   }
   operator const char*() const {
     return _data.data();

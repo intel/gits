@@ -17,6 +17,7 @@
 #include "helper.h"
 
 #ifdef GITS_API_OGL
+#include "openglDrivers.h"
 #include "openglEnums.h"
 #include "openglTypes.h"
 
