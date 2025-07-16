@@ -26,9 +26,9 @@ cl::TUserData userData;
 } // namespace cl
 
 void Load(const std::string& fileName, size_t bufferSize, char* buffer) {
-  int fileSize = (int)FileSize(fileName);
+  size_t fileSize = FileSize(fileName);
   if (fileSize != bufferSize) {
-    std::cerr << "Buffer size (" << bufferSize << ") do not match file size (" << fileSize
+    std::cerr << "Buffer size (" << bufferSize << ") does not match file size (" << fileSize
               << ") of: " << fileName << "\n";
     exit(EXIT_FAILURE);
   }
@@ -48,11 +48,12 @@ void Load(const std::string& fileName, size_t bufferSize, char* buffer) {
 }
 
 void Load(const std::string& fileName, unsigned offset, size_t bufferSize, char* buffer) {
-  uint64_t fileSize = FileSize(fileName);
+  size_t fileSize = FileSize(fileName);
   if (fileSize < bufferSize) {
     std::cerr << "Buffer size is bigger than the file size of: " << fileName << "\n";
     exit(EXIT_FAILURE);
   }
+
   std::string filePath = Configurator::Get().common.player.streamDir.string() + fileName;
   std::ifstream file(filePath.c_str(), std::ios::binary);
   if (!file.is_open()) {
