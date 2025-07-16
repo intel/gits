@@ -12,6 +12,8 @@
 // When defined, _TIMING_MASK_AND_FRAME_LOOP_ allows passing parameters to time GLblocks and loop the rendered image.
 //#define _TIMING_MASK_AND_FRAME_LOOP_
 
+#pragma once
+
 #include "helper.h"
 
 #ifdef GITS_API_OGL

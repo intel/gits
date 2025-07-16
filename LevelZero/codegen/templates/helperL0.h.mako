@@ -6,6 +6,8 @@
 //
 // ===================== end_copyright_notice ==============================
 
+#pragma once
+
 #include "helper.h"
 
 #ifdef GITS_API_L0
