@@ -41,12 +41,11 @@ std::vector<cl_context_properties> gits::OpenCL::MapContextProperties(
       // Adobe After Effects requests this, but doesn't use DX11. Apps that
       // actually use DX11 will likely fail. Thus, we don't crash, but we do
       // warn the user.
-      Log(WARN) << "The application has requested DirectX 11 interoperability "
-                   "support, but this feature is not supported in GITS. The playback "
-                   "will continue, but there may be various problems, such as crashes or "
-                   "corruption. If you don't need DX11 or any other API sharing in your "
-                   "OpenCL stream, consider recording the stream again with the "
-                   "Include 'DX' to RemoveAPISharing option in recorder config.";
+      Log(WARN) << "The application has requested DirectX 11 interoperability support, but this "
+                   "feature is not supported in GITS. The playback will continue, but there may be "
+                   "various problems, such as crashes or corruption. If you don't need DirectX API "
+                   "sharing in your OpenCL stream, consider recording the stream again with the "
+                   "RemoveDXSharing option set to true in the config file.";
       break;
     }
     case CL_CONTEXT_INTEROP_USER_SYNC:
