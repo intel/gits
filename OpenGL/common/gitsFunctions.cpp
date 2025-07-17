@@ -389,6 +389,12 @@ void SetProgramBlockBindings(GLuint program,
                                                     max_name_length + 100, nullptr, name.data());
       std::string name_string(name.data());
 
+      // TODO: Remove it once substreams are generated offline by the player.
+      if (setter == gits::OpenGL::drv.gl.glUniformBlockBinding) {
+        // It needs to be in the substream so player can map block indices properly.
+        gits::OpenGL::drv.gl.glGetUniformBlockIndex(program, name.data());
+      }
+
       if (blockBindingsMap.end() != blockBindingsMap.find(name_string)) {
         setter(program, i, blockBindingsMap[name_string]);
       }
