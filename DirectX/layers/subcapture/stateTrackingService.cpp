@@ -261,6 +261,7 @@ void StateTrackingService::restoreReferenceCount() {
         state->creationCommand->getId() == CommandId::ID_CREATEDXGIFACTORY1 ||
         state->creationCommand->getId() == CommandId::ID_CREATEDXGIFACTORY2 ||
         state->creationCommand->getId() == CommandId::ID_IDXGISWAPCHAIN_GETBUFFER ||
+        state->creationCommand->getId() == CommandId::ID_IDXGIADAPTER_ENUMOUTPUTS ||
         state->creationCommand->getId() == CommandId::ID_ID3D12DEVICE_CREATEROOTSIGNATURE ||
         state->creationCommand->getId() == CommandId::ID_ID3D12DEVICE1_CREATEPIPELINELIBRARY ||
         state->creationCommand->getId() ==
