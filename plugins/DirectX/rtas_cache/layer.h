@@ -28,8 +28,8 @@ public:
   RtasCacheLayer(CGits& gits, const RtasCacheConfig& cfg);
   ~RtasCacheLayer();
 
-  void pre(D3D12CreateDeviceCommand& c) override;
-  void pre(IDXGISwapChainPresentCommand& c) override;
+  void pre(StateRestoreBeginCommand& c) override;
+  void pre(StateRestoreEndCommand& c) override;
   void pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) override;
   void post(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) override;
   void post(ID3D12CommandQueueExecuteCommandListsCommand& c) override;

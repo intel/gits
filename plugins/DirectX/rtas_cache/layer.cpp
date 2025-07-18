@@ -17,7 +17,8 @@ RtasCacheLayer::RtasCacheLayer(CGits& gits, const RtasCacheConfig& cfg)
       gits_(gits),
       cfg_(cfg),
       serializer_(gits, cfg_.cacheFile, cfg_.dumpCacheInfoFile),
-      deserializer_(gits, cfg_.cacheFile) {}
+      deserializer_(gits, cfg_.cacheFile),
+      stateRestore_(false) {}
 
 RtasCacheLayer::~RtasCacheLayer() {
   try {
@@ -27,13 +28,11 @@ RtasCacheLayer::~RtasCacheLayer() {
   }
 }
 
-void RtasCacheLayer::pre(D3D12CreateDeviceCommand& c) {
-  if (c.key & Command::stateRestoreKeyMask) {
-    stateRestore_ = true;
-  }
+void RtasCacheLayer::pre(StateRestoreBeginCommand& c) {
+  stateRestore_ = true;
 }
 
-void RtasCacheLayer::pre(IDXGISwapChainPresentCommand& c) {
+void RtasCacheLayer::pre(StateRestoreEndCommand& c) {
   stateRestore_ = false;
 }
 
