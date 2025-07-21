@@ -601,6 +601,15 @@ void AccelerationStructuresBuildService::storeState(RaytracingAccelerationStruct
   statesById_[stateId] = state;
   if (state->sourceKey) {
     unsigned sourceId = stateByKeyOffset_[{state->sourceKey, state->sourceOffset}];
+
+    // remove intermediate update
+    if (state->sourceKey == state->destKey && state->sourceOffset == state->destOffset) {
+      auto itPrimarySource = stateSourceByDest_.find(sourceId);
+      if (itPrimarySource != stateSourceByDest_.end()) {
+        sourceId = itPrimarySource->second;
+      }
+    }
+
     stateSourceByDest_[stateId] = sourceId;
     stateDestsBySource_[sourceId].insert(stateId);
   }
