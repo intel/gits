@@ -49,6 +49,7 @@ void GpuExecutionTracker::commandQueueSignal(unsigned callKey,
 void GpuExecutionTracker::fenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue) {
   signaledFences_[fenceKey] = fenceValue;
 
+  std::vector<SignalEvent*> signaled;
   for (auto& it : queueEvents_) {
     while (!it.second.empty()) {
       QueueEvent* queueEvent = it.second.front();
@@ -56,21 +57,22 @@ void GpuExecutionTracker::fenceSignal(unsigned callKey, unsigned fenceKey, UINT6
         WaitEvent* waitEvent = static_cast<WaitEvent*>(queueEvent);
         auto itFence = signaledFences_.find(waitEvent->fence.key);
         if (itFence != signaledFences_.end() && itFence->second >= waitEvent->fence.value) {
-          it.second.pop_front();
           delete queueEvent;
         } else {
           break;
         }
       } else if (queueEvent->type == QueueEvent::Execute) {
-        it.second.pop_front();
         readyExecutables_.push_back(static_cast<Executable*>(queueEvent));
       } else if (queueEvent->type == QueueEvent::Signal) {
-        it.second.pop_front();
-        SignalEvent* signalEvent = static_cast<SignalEvent*>(queueEvent);
-        fenceSignal(signalEvent->callKey, signalEvent->fence.key, signalEvent->fence.value);
-        delete queueEvent;
+        signaled.push_back(static_cast<SignalEvent*>(queueEvent));
       }
+      it.second.pop_front();
     }
+  }
+
+  for (SignalEvent* signal : signaled) {
+    fenceSignal(signal->callKey, signal->fence.key, signal->fence.value);
+    delete signal;
   }
 }
 
