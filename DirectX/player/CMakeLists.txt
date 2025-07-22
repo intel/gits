@@ -31,8 +31,8 @@ source_group("player" FILES ${PLAYER_SRC})
 set(SERVICES_SRC
   ${SRC_DIR}/windowService.h
   ${SRC_DIR}/windowService.cpp
-  ${SRC_DIR}/gpuAddressService.h
-  ${SRC_DIR}/gpuAddressService.cpp
+  ${SRC_DIR}/playerGpuAddressService.h
+  ${SRC_DIR}/playerGpuAddressService.cpp
   ${SRC_DIR}/replayDescriptorHandleService.h
   ${SRC_DIR}/replayDescriptorHandleService.cpp
   ${SRC_DIR}/mapTrackingService.h
@@ -70,8 +70,6 @@ source_group("runner" FILES ${RUNNER_SRC})
 set(GPU_PATCH_SRC
   ${SRC_DIR}/gpuPatchLayer.h
   ${SRC_DIR}/gpuPatchLayer.cpp
-  ${SRC_DIR}/gpuPatchAddressService.h
-  ${SRC_DIR}/gpuPatchAddressService.cpp
   ${SRC_DIR}/raytracingShaderPatchService.h
   ${SRC_DIR}/raytracingShaderPatchService.cpp
   ${SRC_DIR}/shaderIdentifierService.h

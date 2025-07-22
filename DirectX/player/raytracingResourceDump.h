@@ -9,7 +9,7 @@
 #pragma once
 
 #include "resourceDump.h"
-#include "gpuPatchAddressService.h"
+#include "capturePlayerGpuAddressService.h"
 #include "shaderIdentifierService.h"
 #include "gpuPatchDescriptorHandleService.h"
 
@@ -34,7 +34,7 @@ public:
     BindingTable
   };
 
-  RaytracingResourceDump(GpuPatchAddressService& addressService,
+  RaytracingResourceDump(CapturePlayerGpuAddressService& addressService,
                          ShaderIdentifierService& shaderIdentifierService,
                          GpuPatchDescriptorHandleService& descriptorHandleService)
       : addressService_(addressService),
@@ -61,7 +61,7 @@ protected:
   void dumpBuffer(DumpInfo& dumpInfo, void* data) override;
 
 private:
-  GpuPatchAddressService& addressService_;
+  CapturePlayerGpuAddressService& addressService_;
   ShaderIdentifierService& shaderIdentifierService_;
   GpuPatchDescriptorHandleService& descriptorHandleService_;
 

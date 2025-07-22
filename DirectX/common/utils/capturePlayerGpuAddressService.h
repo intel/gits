@@ -17,7 +17,7 @@
 namespace gits {
 namespace DirectX {
 
-class GpuPatchAddressService {
+class CapturePlayerGpuAddressService {
 public:
   struct GpuAddressMapping {
     D3D12_GPU_VIRTUAL_ADDRESS captureStart;
@@ -72,7 +72,7 @@ public:
   void getMappings(std::vector<GpuAddressMapping>& mappings) {
     gpuPatchAddress_.getMappings(mappings);
   }
-  void enableDumpLookup() {
+  void enablePlayerAddressLookup() {
     gpuPatchPlayerAddress_.reset(new GpuPatchAddress());
   }
 

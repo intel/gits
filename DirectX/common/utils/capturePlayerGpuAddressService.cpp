@@ -6,7 +6,7 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "gpuPatchAddressService.h"
+#include "capturePlayerGpuAddressService.h"
 #include "gits.h"
 
 #include <algorithm>
@@ -14,9 +14,8 @@
 namespace gits {
 namespace DirectX {
 
-void GpuPatchAddressService::GpuPatchAddress::createPlacedResource(unsigned heapKey,
-                                                                   unsigned resourceKey,
-                                                                   D3D12_RESOURCE_FLAGS flags) {
+void CapturePlayerGpuAddressService::GpuPatchAddress::createPlacedResource(
+    unsigned heapKey, unsigned resourceKey, D3D12_RESOURCE_FLAGS flags) {
   HeapInfo* heapInfo{};
   auto it = heapsByKey_.find(heapKey);
   if (it != heapsByKey_.end()) {
@@ -33,7 +32,7 @@ void GpuPatchAddressService::GpuPatchAddress::createPlacedResource(unsigned heap
   }
 }
 
-void GpuPatchAddressService::GpuPatchAddress::addGpuCaptureAddress(
+void CapturePlayerGpuAddressService::GpuPatchAddress::addGpuCaptureAddress(
     ID3D12Resource* resource,
     unsigned resourceKey,
     unsigned size,
@@ -97,7 +96,7 @@ void GpuPatchAddressService::GpuPatchAddress::addGpuCaptureAddress(
   }
 }
 
-void GpuPatchAddressService::GpuPatchAddress::addGpuPlayerAddress(
+void CapturePlayerGpuAddressService::GpuPatchAddress::addGpuPlayerAddress(
     unsigned resourceKey, D3D12_GPU_VIRTUAL_ADDRESS playerAddress) {
   auto itHeap = heapsByResourceKey_.find(resourceKey);
   if (itHeap != heapsByResourceKey_.end()) {
@@ -118,7 +117,7 @@ void GpuPatchAddressService::GpuPatchAddress::addGpuPlayerAddress(
   }
 }
 
-void GpuPatchAddressService::GpuPatchAddress::destroyInterface(unsigned interfaceKey) {
+void CapturePlayerGpuAddressService::GpuPatchAddress::destroyInterface(unsigned interfaceKey) {
   {
     auto it = resourcesByKey_.find(interfaceKey);
     if (it != resourcesByKey_.end()) {
@@ -164,8 +163,8 @@ void GpuPatchAddressService::GpuPatchAddress::destroyInterface(unsigned interfac
   deniedShaderResources_.erase(interfaceKey);
 }
 
-GpuPatchAddressService::ResourceInfo* GpuPatchAddressService::GpuPatchAddress::getResourceInfo(
-    D3D12_GPU_VIRTUAL_ADDRESS address) {
+CapturePlayerGpuAddressService::ResourceInfo* CapturePlayerGpuAddressService::GpuPatchAddress::
+    getResourceInfo(D3D12_GPU_VIRTUAL_ADDRESS address) {
 
   ResourceInfo* resourceInfo{};
   if (!address) {
@@ -220,8 +219,8 @@ GpuPatchAddressService::ResourceInfo* GpuPatchAddressService::GpuPatchAddress::g
   return placedResourceInfo;
 }
 
-void GpuPatchAddressService::GpuPatchAddress::getMappings(
-    std::vector<GpuPatchAddressService::GpuAddressMapping>& mappings) {
+void CapturePlayerGpuAddressService::GpuPatchAddress::getMappings(
+    std::vector<CapturePlayerGpuAddressService::GpuAddressMapping>& mappings) {
   mappings.resize(resourcesByAddress_.size() + heapsByKey_.size());
   unsigned index = 0;
   for (auto& it : resourcesByAddress_) {
@@ -238,8 +237,8 @@ void GpuPatchAddressService::GpuPatchAddress::getMappings(
   }
 
   std::sort(mappings.begin(), mappings.end(),
-            [](GpuPatchAddressService::GpuAddressMapping& m1,
-               GpuPatchAddressService::GpuAddressMapping& m2) {
+            [](CapturePlayerGpuAddressService::GpuAddressMapping& m1,
+               CapturePlayerGpuAddressService::GpuAddressMapping& m2) {
               return m1.captureStart < m2.captureStart;
             });
 }

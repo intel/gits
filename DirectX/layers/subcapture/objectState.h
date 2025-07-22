@@ -27,6 +27,7 @@ struct ObjectState {
   std::unique_ptr<Command> creationCommand;
   unsigned key{};
   unsigned parentKey{};
+  unsigned linkedLifetimeKey{};
   std::unordered_set<unsigned> childrenKeys{};
   IUnknown* object{};
   std::wstring name;

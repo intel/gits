@@ -24,6 +24,8 @@ set(RECORDING_SRC
   ${SRC_DIR}/recordingLayerCustom.cpp
   ${SRC_DIR}/commandPreservationLayer.h
   ${SRC_DIR}/commandPreservationLayer.cpp
+  ${SRC_DIR}/subcaptureRange.h
+  ${SRC_DIR}/subcaptureRange.cpp
 )
 source_group("recording" FILES ${RECORDING_SRC})
 
@@ -74,6 +76,14 @@ set(ANALYSIS_SRC
   ${SRC_DIR}/analyzerService.cpp
   ${SRC_DIR}/analyzerResults.h
   ${SRC_DIR}/analyzerResults.cpp
+  ${SRC_DIR}/bindingService.h
+  ${SRC_DIR}/bindingService.cpp
+  ${SRC_DIR}/rootSignatureService.h
+  ${SRC_DIR}/rootSignatureService.cpp
+  ${SRC_DIR}/analyzerRaytracingService.h
+  ${SRC_DIR}/analyzerRaytracingService.cpp
+  ${SRC_DIR}/raytracingInstancesDump.h
+  ${SRC_DIR}/raytracingInstancesDump.cpp
 )
 source_group("analysis" FILES ${ANALYSIS_SRC})
 

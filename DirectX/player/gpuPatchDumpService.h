@@ -9,7 +9,7 @@
 #pragma once
 
 #include "raytracingResourceDump.h"
-#include "gpuPatchAddressService.h"
+#include "capturePlayerGpuAddressService.h"
 #include "shaderIdentifierService.h"
 #include "gpuPatchDescriptorHandleService.h"
 #include "executeIndirectDump.h"
@@ -30,7 +30,7 @@ public:
   };
 
 public:
-  GpuPatchDumpService(GpuPatchAddressService& addressService,
+  GpuPatchDumpService(CapturePlayerGpuAddressService& addressService,
                       ShaderIdentifierService& shaderIdentifierService,
                       GpuPatchDescriptorHandleService& descriptorHandleService);
   void dumpInstances(ID3D12GraphicsCommandList* commandList,

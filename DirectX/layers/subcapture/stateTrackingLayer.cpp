@@ -16,7 +16,8 @@
 namespace gits {
 namespace DirectX {
 
-StateTrackingLayer::StateTrackingLayer(SubcaptureRecorder& recorder)
+StateTrackingLayer::StateTrackingLayer(SubcaptureRecorder& recorder,
+                                       SubcaptureRange& subcaptureRange)
     : Layer("StateTracking"),
       stateService_(recorder,
                     fenceTrackingService_,
@@ -33,35 +34,17 @@ StateTrackingLayer::StateTrackingLayer(SubcaptureRecorder& recorder)
                     analyzerResults_,
                     resourceUsageTrackingService_),
       recorder_(recorder),
+      subcaptureRange_(subcaptureRange),
       mapStateService_(stateService_),
       resourceStateTrackingService_(stateService_),
       reservedResourcesService_(stateService_),
-      descriptorService_(stateService_),
+      descriptorService_(&stateService_),
       commandListService_(stateService_),
       commandQueueService_(stateService_),
       xessStateService_(stateService_, recorder),
       accelerationStructuresSerializeService_(stateService_, recorder_),
       accelerationStructuresBuildService_(stateService_, recorder_, reservedResourcesService_),
-      residencyService_(stateService_) {
-
-  const std::string& frames = Configurator::Get().directx.features.subcapture.frames;
-  size_t pos = frames.find("-");
-  try {
-    if (pos != std::string::npos) {
-      startFrame_ = std::stoi(frames.substr(0, pos));
-    } else {
-      startFrame_ = std::stoi(frames);
-    }
-  } catch (...) {
-    throw Exception("Invalid subcapture range: '" +
-                    Configurator::Get().directx.features.subcapture.frames + "'");
-  }
-  const std::string& commandListExecutions =
-      Configurator::Get().directx.features.subcapture.commandListExecutions;
-  if (!commandListExecutions.empty()) {
-    commandListSubcapture_ = true;
-  }
-}
+      residencyService_(stateService_) {}
 
 void StateTrackingLayer::setAsChildInParent(unsigned parentKey, unsigned childKey) {
   ObjectState* parentState = stateService_.getState(parentKey);
@@ -103,17 +86,13 @@ void StateTrackingLayer::post(IDXGISwapChainPresentCommand& c) {
   if (stateRestored_) {
     return;
   }
-  if (c.Flags_.value & DXGI_PRESENT_TEST || c.key & Command::stateRestoreKeyMask) {
+  if (c.Flags_.value & DXGI_PRESENT_TEST) {
     return;
   }
-  if (!commandListSubcapture_) {
-    unsigned currentFrame = CGits::Instance().CurrentFrame();
-    if (currentFrame == startFrame_ - 1) {
-      Log(INFOV) << "Start subcapture frame " << currentFrame + 1 << " call " << c.key;
-      gpuExecutionFlusher_.flushCommandQueues();
-      stateService_.restoreState();
-      stateRestored_ = true;
-    }
+  if (!subcaptureRange_.commandListSubcapture() && subcaptureRange_.isFrameRangeStart()) {
+    gpuExecutionFlusher_.flushCommandQueues();
+    stateService_.restoreState();
+    stateRestored_ = true;
   }
 }
 
@@ -121,17 +100,13 @@ void StateTrackingLayer::post(IDXGISwapChain1Present1Command& c) {
   if (stateRestored_) {
     return;
   }
-  if (c.PresentFlags_.value & DXGI_PRESENT_TEST || c.key & Command::stateRestoreKeyMask) {
+  if (c.PresentFlags_.value & DXGI_PRESENT_TEST) {
     return;
   }
-  if (!commandListSubcapture_) {
-    unsigned currentFrame = CGits::Instance().CurrentFrame();
-    if (currentFrame == startFrame_ - 1) {
-      Log(INFOV) << "Start subcapture frame " << currentFrame + 1 << " call " << c.key;
-      gpuExecutionFlusher_.flushCommandQueues();
-      stateService_.restoreState();
-      stateRestored_ = true;
-    }
+  if (!subcaptureRange_.commandListSubcapture() && subcaptureRange_.isFrameRangeStart()) {
+    gpuExecutionFlusher_.flushCommandQueues();
+    stateService_.restoreState();
+    stateRestored_ = true;
   }
 }
 
@@ -222,6 +197,7 @@ void StateTrackingLayer::post(IUnknownQueryInterfaceCommand& c) {
   if (riid == IID_ID3D12StateObjectProperties) {
     D3D12StateObjectPropertiesState* state = new D3D12StateObjectPropertiesState();
     state->parentKey = c.object_.key;
+    state->linkedLifetimeKey = c.object_.key;
     state->key = c.ppvObject_.key;
 
     setAsChildInParent(state->parentKey, state->key);
@@ -231,6 +207,7 @@ void StateTrackingLayer::post(IUnknownQueryInterfaceCommand& c) {
              (riid == __uuidof(IDStorageCustomDecompressionQueue1))) {
     ObjectState* state = new ObjectState();
     state->parentKey = c.object_.key;
+    state->linkedLifetimeKey = c.object_.key;
     state->key = c.ppvObject_.key;
 
     setAsChildInParent(state->parentKey, state->key);
@@ -290,6 +267,7 @@ void StateTrackingLayer::post(IDXGIFactoryEnumAdaptersCommand& c) {
   }
   ObjectState* state = new ObjectState();
   state->parentKey = c.object_.key;
+  state->linkedLifetimeKey = c.object_.key;
   state->key = c.ppAdapter_.key;
   state->object = static_cast<IUnknown*>(*c.ppAdapter_.value);
   state->creationCommand.reset(new IDXGIFactoryEnumAdaptersCommand(c));
@@ -307,6 +285,7 @@ void StateTrackingLayer::post(IDXGIFactory1EnumAdapters1Command& c) {
   }
   ObjectState* state = new ObjectState();
   state->parentKey = c.object_.key;
+  state->linkedLifetimeKey = c.object_.key;
   state->key = c.ppAdapter_.key;
   state->object = static_cast<IUnknown*>(*c.ppAdapter_.value);
   state->creationCommand.reset(new IDXGIFactory1EnumAdapters1Command(c));
@@ -324,6 +303,7 @@ void StateTrackingLayer::post(IDXGIFactory6EnumAdapterByGpuPreferenceCommand& c)
   }
   ObjectState* state = new ObjectState();
   state->parentKey = c.object_.key;
+  state->linkedLifetimeKey = c.object_.key;
   state->key = c.ppvAdapter_.key;
   state->object = static_cast<IUnknown*>(*c.ppvAdapter_.value);
   state->creationCommand.reset(new IDXGIFactory6EnumAdapterByGpuPreferenceCommand(c));
@@ -341,6 +321,7 @@ void StateTrackingLayer::post(IDXGIFactory4EnumAdapterByLuidCommand& c) {
   }
   ObjectState* state = new ObjectState();
   state->parentKey = c.object_.key;
+  state->linkedLifetimeKey = c.object_.key;
   state->key = c.ppvAdapter_.key;
   state->object = static_cast<IUnknown*>(*c.ppvAdapter_.value);
   state->creationCommand.reset(new IDXGIFactory4EnumAdapterByLuidCommand(c));
@@ -402,6 +383,7 @@ void StateTrackingLayer::post(ID3D12DeviceCreateCommandQueueCommand& c) {
     return;
   }
   ObjectState* state = new ObjectState();
+  state->parentKey = c.object_.key;
   state->key = c.ppCommandQueue_.key;
   state->object = static_cast<IUnknown*>(*c.ppCommandQueue_.value);
   state->creationCommand.reset(new ID3D12DeviceCreateCommandQueueCommand(c));
@@ -421,6 +403,7 @@ void StateTrackingLayer::post(ID3D12Device9CreateCommandQueue1Command& c) {
     return;
   }
   ObjectState* state = new ObjectState();
+  state->parentKey = c.object_.key;
   state->key = c.ppCommandQueue_.key;
   state->object = static_cast<IUnknown*>(*c.ppCommandQueue_.value);
   state->creationCommand.reset(new ID3D12Device9CreateCommandQueue1Command(c));
@@ -438,6 +421,7 @@ void StateTrackingLayer::post(IDXGIFactoryCreateSwapChainCommand& c) {
     return;
   }
   ObjectState* state = new ObjectState();
+  state->parentKey = c.object_.key;
   state->key = c.ppSwapChain_.key;
   state->object = static_cast<IUnknown*>(*c.ppSwapChain_.value);
   state->creationCommand.reset(new IDXGIFactoryCreateSwapChainCommand(c));
@@ -452,6 +436,7 @@ void StateTrackingLayer::post(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
     return;
   }
   ObjectState* state = new ObjectState();
+  state->parentKey = c.object_.key;
   state->key = c.ppSwapChain_.key;
   state->object = static_cast<IUnknown*>(*c.ppSwapChain_.value);
   state->creationCommand.reset(new IDXGIFactory2CreateSwapChainForHwndCommand(c));
@@ -515,6 +500,7 @@ void StateTrackingLayer::post(ID3D12DeviceCreateDescriptorHeapCommand& c) {
     return;
   }
   D3D12DescriptorHeapState* state = new D3D12DescriptorHeapState();
+  state->parentKey = c.object_.key;
   state->key = c.ppvHeap_.key;
   state->object = static_cast<IUnknown*>(*c.ppvHeap_.value);
   state->creationCommand.reset(new ID3D12DeviceCreateDescriptorHeapCommand(c));
@@ -529,6 +515,7 @@ void StateTrackingLayer::post(ID3D12DeviceCreateHeapCommand& c) {
     return;
   }
   HeapState* state = new HeapState();
+  state->parentKey = c.object_.key;
   state->deviceKey = c.object_.key;
   state->key = c.ppvHeap_.key;
   state->object = static_cast<IUnknown*>(*c.ppvHeap_.value);
@@ -548,6 +535,7 @@ void StateTrackingLayer::post(ID3D12Device4CreateHeap1Command& c) {
     return;
   }
   HeapState* state = new HeapState();
+  state->parentKey = c.object_.key;
   state->deviceKey = c.object_.key;
   state->key = c.ppvHeap_.key;
   state->object = static_cast<IUnknown*>(*c.ppvHeap_.value);
@@ -567,6 +555,7 @@ void StateTrackingLayer::post(ID3D12DeviceCreateQueryHeapCommand& c) {
     return;
   }
   ObjectState* state = new ObjectState();
+  state->parentKey = c.object_.key;
   state->key = c.ppvHeap_.key;
   state->object = static_cast<IUnknown*>(*c.ppvHeap_.value);
   state->creationCommand.reset(new ID3D12DeviceCreateQueryHeapCommand(c));
@@ -588,6 +577,7 @@ void StateTrackingLayer::post(ID3D12Device3OpenExistingHeapFromAddressCommand& c
     return;
   }
   D3D12HeapFromAddressState* state = heapAllocationStateService_.getHeapState(c.ppvHeap_.key);
+  state->parentKey = c.object_.key;
   state->openExistingHeapFromAddressCommand.reset(
       new ID3D12Device3OpenExistingHeapFromAddressCommand(c));
   stateService_.storeState(state);
@@ -602,6 +592,7 @@ void StateTrackingLayer::post(IDXGISwapChainGetBufferCommand& c) {
   }
   ObjectState* state = new ObjectState();
   state->parentKey = c.object_.key;
+  state->linkedLifetimeKey = c.object_.key;
   state->key = c.ppSurface_.key;
   state->object = static_cast<IUnknown*>(*c.ppSurface_.value);
   state->creationCommand.reset(new IDXGISwapChainGetBufferCommand(c));
@@ -668,6 +659,7 @@ void StateTrackingLayer::post(ID3D12DeviceCreateRootSignatureCommand& c) {
     return;
   }
   ObjectState* state = new ObjectState();
+  state->parentKey = c.object_.key;
   state->key = c.ppvRootSignature_.key;
   state->object = static_cast<IUnknown*>(*c.ppvRootSignature_.value);
   state->creationCommand.reset(new ID3D12DeviceCreateRootSignatureCommand(c));
@@ -682,6 +674,7 @@ void StateTrackingLayer::post(ID3D12Device1CreatePipelineLibraryCommand& c) {
     return;
   }
   ObjectState* state = new ObjectState();
+  state->parentKey = c.object_.key;
   state->key = c.ppPipelineLibrary_.key;
   state->object = static_cast<IUnknown*>(*c.ppPipelineLibrary_.value);
   state->creationCommand.reset(new ID3D12Device1CreatePipelineLibraryCommand(c));
@@ -700,6 +693,7 @@ void StateTrackingLayer::post(ID3D12PipelineLibrary1LoadPipelineCommand& c) {
     ++exisitingState->refCount;
   } else {
     ObjectState* state = new ObjectState();
+    state->parentKey = c.object_.key;
     state->key = c.ppPipelineState_.key;
     state->object = static_cast<IUnknown*>(*c.ppPipelineState_.value);
     state->creationCommand.reset(new ID3D12PipelineLibrary1LoadPipelineCommand(c));
@@ -719,6 +713,7 @@ void StateTrackingLayer::post(ID3D12PipelineLibraryLoadGraphicsPipelineCommand& 
     ++exisitingState->refCount;
   } else {
     ObjectState* state = new ObjectState();
+    state->parentKey = c.object_.key;
     state->key = c.ppPipelineState_.key;
     state->object = static_cast<IUnknown*>(*c.ppPipelineState_.value);
     state->creationCommand.reset(new ID3D12PipelineLibraryLoadGraphicsPipelineCommand(c));
@@ -738,6 +733,7 @@ void StateTrackingLayer::post(ID3D12PipelineLibraryLoadComputePipelineCommand& c
     ++exisitingState->refCount;
   } else {
     ObjectState* state = new ObjectState();
+    state->parentKey = c.object_.key;
     state->key = c.ppPipelineState_.key;
     state->object = static_cast<IUnknown*>(*c.ppPipelineState_.value);
     state->creationCommand.reset(new ID3D12PipelineLibraryLoadComputePipelineCommand(c));
@@ -753,6 +749,7 @@ void StateTrackingLayer::post(ID3D12DeviceCreateCommandSignatureCommand& c) {
     return;
   }
   ObjectState* state = new ObjectState();
+  state->parentKey = c.object_.key;
   state->key = c.ppvCommandSignature_.key;
   state->object = static_cast<IUnknown*>(*c.ppvCommandSignature_.value);
   state->creationCommand.reset(new ID3D12DeviceCreateCommandSignatureCommand(c));
@@ -767,6 +764,7 @@ void StateTrackingLayer::post(ID3D12DeviceCreateGraphicsPipelineStateCommand& c)
     return;
   }
   ObjectState* state = new ObjectState();
+  state->parentKey = c.object_.key;
   state->key = c.ppPipelineState_.key;
   state->object = static_cast<IUnknown*>(*c.ppPipelineState_.value);
   state->creationCommand.reset(new ID3D12DeviceCreateGraphicsPipelineStateCommand(c));
@@ -781,6 +779,7 @@ void StateTrackingLayer::post(ID3D12DeviceCreateComputePipelineStateCommand& c) 
     return;
   }
   ObjectState* state = new ObjectState();
+  state->parentKey = c.object_.key;
   state->key = c.ppPipelineState_.key;
   state->object = static_cast<IUnknown*>(*c.ppPipelineState_.value);
   state->creationCommand.reset(new ID3D12DeviceCreateComputePipelineStateCommand(c));
@@ -795,6 +794,7 @@ void StateTrackingLayer::post(ID3D12Device2CreatePipelineStateCommand& c) {
     return;
   }
   ObjectState* state = new ObjectState();
+  state->parentKey = c.object_.key;
   state->key = c.ppPipelineState_.key;
   state->object = static_cast<IUnknown*>(*c.ppPipelineState_.value);
   state->creationCommand.reset(new ID3D12Device2CreatePipelineStateCommand(c));
@@ -809,6 +809,7 @@ void StateTrackingLayer::post(ID3D12Device5CreateStateObjectCommand& c) {
     return;
   }
   ObjectState* state = new ObjectState();
+  state->parentKey = c.object_.key;
   state->key = c.ppStateObject_.key;
   state->object = static_cast<IUnknown*>(*c.ppStateObject_.value);
   state->creationCommand.reset(new ID3D12Device5CreateStateObjectCommand(c));
@@ -826,6 +827,7 @@ void StateTrackingLayer::post(ID3D12Device7AddToStateObjectCommand& c) {
     return;
   }
   ObjectState* state = new ObjectState();
+  state->parentKey = c.object_.key;
   state->key = c.ppNewStateObject_.key;
   state->object = static_cast<IUnknown*>(*c.ppNewStateObject_.value);
   state->creationCommand.reset(new ID3D12Device7AddToStateObjectCommand(c));
@@ -842,6 +844,7 @@ void StateTrackingLayer::post(ID3D12DeviceCreateCommandListCommand& c) {
     return;
   }
   CommandListState* state = new CommandListState();
+  state->parentKey = c.object_.key;
   state->key = c.ppCommandList_.key;
   state->object = static_cast<IUnknown*>(*c.ppCommandList_.value);
   state->creationCommand.reset(new ID3D12DeviceCreateCommandListCommand(c));
@@ -858,6 +861,7 @@ void StateTrackingLayer::post(ID3D12Device4CreateCommandList1Command& c) {
     return;
   }
   CommandListState* state = new CommandListState();
+  state->parentKey = c.object_.key;
   state->key = c.ppCommandList_.key;
   state->object = static_cast<IUnknown*>(*c.ppCommandList_.value);
   state->creationCommand.reset(new ID3D12Device4CreateCommandList1Command(c));
@@ -881,6 +885,7 @@ void StateTrackingLayer::post(ID3D12DeviceCreateCommittedResourceCommand& c) {
     return;
   }
   ResourceState* state = new ResourceState();
+  state->parentKey = c.object_.key;
   state->key = c.ppvResource_.key;
   state->object = static_cast<IUnknown*>(*c.ppvResource_.value);
   state->creationCommand.reset(new ID3D12DeviceCreateCommittedResourceCommand(c));
@@ -921,6 +926,7 @@ void StateTrackingLayer::post(ID3D12Device4CreateCommittedResource1Command& c) {
     return;
   }
   ResourceState* state = new ResourceState();
+  state->parentKey = c.object_.key;
   state->key = c.ppvResource_.key;
   state->object = static_cast<IUnknown*>(*c.ppvResource_.value);
   state->creationCommand.reset(new ID3D12Device4CreateCommittedResource1Command(c));
@@ -960,6 +966,7 @@ void StateTrackingLayer::post(ID3D12Device8CreateCommittedResource2Command& c) {
     return;
   }
   ResourceState* state = new ResourceState();
+  state->parentKey = c.object_.key;
   state->key = c.ppvResource_.key;
   state->object = static_cast<IUnknown*>(*c.ppvResource_.value);
   state->creationCommand.reset(new ID3D12Device8CreateCommittedResource2Command(c));
@@ -1000,6 +1007,7 @@ void StateTrackingLayer::post(ID3D12Device10CreateCommittedResource3Command& c) 
     return;
   }
   ResourceState* state = new ResourceState();
+  state->parentKey = c.object_.key;
   state->key = c.ppvResource_.key;
   state->object = static_cast<IUnknown*>(*c.ppvResource_.value);
   state->creationCommand.reset(new ID3D12Device10CreateCommittedResource3Command(c));
@@ -1038,6 +1046,7 @@ void StateTrackingLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
     return;
   }
   ResourceState* state = new ResourceState();
+  state->parentKey = c.pHeap_.key;
   state->key = c.ppvResource_.key;
   state->object = static_cast<IUnknown*>(*c.ppvResource_.value);
   state->creationCommand.reset(new ID3D12DeviceCreatePlacedResourceCommand(c));
@@ -1079,6 +1088,7 @@ void StateTrackingLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
     return;
   }
   ResourceState* state = new ResourceState();
+  state->parentKey = c.pHeap_.key;
   state->key = c.ppvResource_.key;
   state->object = static_cast<IUnknown*>(*c.ppvResource_.value);
   state->creationCommand.reset(new ID3D12Device8CreatePlacedResource1Command(c));
@@ -1120,6 +1130,7 @@ void StateTrackingLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
     return;
   }
   ResourceState* state = new ResourceState();
+  state->parentKey = c.pHeap_.key;
   state->key = c.ppvResource_.key;
   state->object = static_cast<IUnknown*>(*c.ppvResource_.value);
   state->creationCommand.reset(new ID3D12Device10CreatePlacedResource2Command(c));
@@ -1159,6 +1170,7 @@ void StateTrackingLayer::post(ID3D12DeviceCreateReservedResourceCommand& c) {
     return;
   }
   ResourceState* state = new ResourceState();
+  state->parentKey = c.object_.key;
   state->key = c.ppvResource_.key;
   state->object = static_cast<IUnknown*>(*c.ppvResource_.value);
   state->creationCommand.reset(new ID3D12DeviceCreateReservedResourceCommand(c));
@@ -1195,6 +1207,7 @@ void StateTrackingLayer::post(ID3D12Device4CreateReservedResource1Command& c) {
     return;
   }
   ResourceState* state = new ResourceState();
+  state->parentKey = c.object_.key;
   state->key = c.ppvResource_.key;
   state->object = static_cast<IUnknown*>(*c.ppvResource_.value);
   state->creationCommand.reset(new ID3D12Device4CreateReservedResource1Command(c));
@@ -1231,6 +1244,7 @@ void StateTrackingLayer::post(ID3D12Device10CreateReservedResource2Command& c) {
     return;
   }
   ResourceState* state = new ResourceState();
+  state->parentKey = c.object_.key;
   state->key = c.ppvResource_.key;
   state->object = static_cast<IUnknown*>(*c.ppvResource_.value);
   state->creationCommand.reset(new ID3D12Device10CreateReservedResource2Command(c));
@@ -1279,6 +1293,7 @@ void StateTrackingLayer::post(ID3D12DeviceCreateFenceCommand& c) {
     return;
   }
   ObjectState* state = new ObjectState();
+  state->parentKey = c.object_.key;
   state->key = c.ppFence_.key;
   state->object = static_cast<IUnknown*>(*c.ppFence_.value);
   state->creationCommand.reset(new ID3D12DeviceCreateFenceCommand(c));
@@ -1796,8 +1811,7 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListResetCommand& c) {
     return;
   }
 
-  if (commandListSubcapture_ && recorder_.isExecutionRangeStart()) {
-    Log(INFOV) << "Start command lists subcapture call " << c.key;
+  if (subcaptureRange_.isExecutionRangeStart()) {
     gpuExecutionFlusher_.flushCommandQueues();
     stateService_.restoreState();
   }
@@ -2746,6 +2760,7 @@ void StateTrackingLayer::post(IDStorageFactoryOpenFileCommand& c) {
   }
   ObjectState* state = new ObjectState();
   state->parentKey = c.object_.key;
+  state->linkedLifetimeKey = c.object_.key;
   state->key = c.ppv_.key;
   state->object = static_cast<IUnknown*>(*c.ppv_.value);
   state->creationCommand.reset(new IDStorageFactoryOpenFileCommand(c));
@@ -2763,6 +2778,7 @@ void StateTrackingLayer::post(IDStorageFactoryCreateQueueCommand& c) {
   }
   ObjectState* state = new ObjectState();
   state->parentKey = c.object_.key;
+  state->linkedLifetimeKey = c.object_.key;
   state->key = c.ppv_.key;
   state->object = static_cast<IUnknown*>(*c.ppv_.value);
   state->creationCommand.reset(new IDStorageFactoryCreateQueueCommand(c));
@@ -2780,6 +2796,7 @@ void StateTrackingLayer::post(IDStorageFactoryCreateStatusArrayCommand& c) {
   }
   ObjectState* state = new ObjectState();
   state->parentKey = c.object_.key;
+  state->linkedLifetimeKey = c.object_.key;
   state->key = c.ppv_.key;
   state->object = static_cast<IUnknown*>(*c.ppv_.value);
   state->creationCommand.reset(new IDStorageFactoryCreateStatusArrayCommand(c));

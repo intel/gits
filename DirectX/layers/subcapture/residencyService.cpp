@@ -47,6 +47,9 @@ void ResidencyService::destroyObject(const unsigned key) {
 
 void gits::DirectX::ResidencyService::restoreResidency() {
   for (const auto& [objectKey, residencyInfo] : residency_) {
+    if (!stateService_.getAnalyzerResults().restoreObject(objectKey)) {
+      continue;
+    }
     if (residencyInfo.residencyCount >= 2 ||
         (residencyInfo.createdNotResident && residencyInfo.residencyCount == 1)) {
       const auto repeatCount = residencyInfo.createdNotResident ? residencyInfo.residencyCount

@@ -46,17 +46,20 @@ SubcaptureFactory::SubcaptureFactory() {
     exit(EXIT_FAILURE);
   }
 
-  if (AnalyzerResults::isAnalysis() ||
-      !Configurator::Get().directx.features.subcapture.commandListExecutions.empty()) {
+  subcaptureRange_ = std::make_unique<SubcaptureRange>();
+
+  if (AnalyzerResults::isAnalysis()) {
     recorder_ = std::make_unique<SubcaptureRecorder>();
-    stateTrackingLayer_ = std::make_unique<StateTrackingLayer>(*recorder_);
-    recordingLayer_ = std::make_unique<RecordingLayer>(*recorder_);
+    stateTrackingLayer_ = std::make_unique<StateTrackingLayer>(*recorder_, *subcaptureRange_);
+    recordingLayer_ = std::make_unique<RecordingLayer>(*recorder_, *subcaptureRange_);
     commandPreservationLayer_ = std::make_unique<CommandPreservationLayer>();
     directStorageResourcesLayer_ = std::make_unique<DirectStorageResourcesLayer>();
   } else {
     const_cast<gits::Configuration&>(Configurator::Get()).directx.features.subcapture.enabled =
         false;
-    analyzerLayer_ = std::make_unique<AnalyzerLayer>();
+    AnalyzerLayer* analyzerLayer = new AnalyzerLayer(*subcaptureRange_);
+    analyzerLayer_.reset(analyzerLayer);
+    objectUsageNotifier_ = analyzerLayer;
     Log(INFO) << "SUBCAPTURE ANALYSIS. RUN AGAIN FOR SUBCAPTURE RECORDING.";
   }
 }

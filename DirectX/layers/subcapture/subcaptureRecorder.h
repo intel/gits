@@ -18,24 +18,9 @@ namespace DirectX {
 class SubcaptureRecorder {
 public:
   SubcaptureRecorder();
-  ~SubcaptureRecorder();
-
-  SubcaptureRecorder(const SubcaptureRecorder&) = delete;
-  SubcaptureRecorder& operator=(const SubcaptureRecorder&) = delete;
 
   void record(CToken* token);
-  void frameEnd(bool stateRestore);
-  void executionStart();
-  void executionEnd();
-  bool isExecutionRangeStart();
-  bool isRunning();
-
-private:
-  unsigned executionCount_{};
-  unsigned executionRangeStart_{};
-  unsigned executionRangeEnd_{};
-  bool insideExecution_{};
-  bool zeroOrFirstFrame_{true};
+  void frameEnd();
 };
 
 } // namespace DirectX

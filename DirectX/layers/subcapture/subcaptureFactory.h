@@ -10,6 +10,7 @@
 
 #include "layerAuto.h"
 #include "subcaptureRecorder.h"
+#include "subcaptureRange.h"
 #include "analyzerLayerAuto.h"
 
 #include <memory>
@@ -40,14 +41,19 @@ public:
   std::unique_ptr<Layer> getDirectStorageResourcesLayer() {
     return std::move(directStorageResourcesLayer_);
   }
+  ObjectUsageNotifier* getObjectUsageNotifier() {
+    return objectUsageNotifier_;
+  }
 
 private:
   std::unique_ptr<SubcaptureRecorder> recorder_;
+  std::unique_ptr<SubcaptureRange> subcaptureRange_;
   std::unique_ptr<Layer> stateTrackingLayer_;
   std::unique_ptr<Layer> recordingLayer_;
   std::unique_ptr<Layer> commandPreservationLayer_;
   std::unique_ptr<Layer> analyzerLayer_;
   std::unique_ptr<Layer> directStorageResourcesLayer_;
+  ObjectUsageNotifier* objectUsageNotifier_{};
 };
 
 } // namespace DirectX

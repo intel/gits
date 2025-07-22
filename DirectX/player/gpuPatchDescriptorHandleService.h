@@ -56,7 +56,7 @@ public:
   unsigned samplerHeapIncrement() {
     return samplerHeapIncrement_;
   }
-  void enableDumpLookup() {
+  void enablePlayerHandleLookup() {
     dumpLookup_ = true;
   }
 

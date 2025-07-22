@@ -9,7 +9,7 @@
 #pragma once
 
 #include "layerAuto.h"
-#include "gpuPatchAddressService.h"
+#include "capturePlayerGpuAddressService.h"
 #include "raytracingShaderPatchService.h"
 #include "executeIndirectShaderPatchService.h"
 #include "shaderIdentifierService.h"
@@ -125,7 +125,8 @@ private:
 
   std::array<ID3D12Resource*, mappingBufferPoolSize_> gpuAddressBuffers_{};
   std::array<ID3D12Resource*, mappingBufferPoolSize_> gpuAddressStagingBuffers_{};
-  unsigned gpuAddressBufferSize_{sizeof(GpuPatchAddressService::GpuAddressMapping) * 0x10000};
+  unsigned gpuAddressBufferSize_{sizeof(CapturePlayerGpuAddressService::GpuAddressMapping) *
+                                 0x10000};
 
   std::array<ID3D12Resource*, mappingBufferPoolSize_> shaderIdentifierBuffers_{};
   std::array<ID3D12Resource*, mappingBufferPoolSize_> shaderIdentifierStagingBuffers_{};
@@ -173,7 +174,7 @@ private:
   bool initialized_{};
   bool initializedInstancesAoP_{};
 
-  GpuPatchAddressService addressService_;
+  CapturePlayerGpuAddressService addressService_;
   ShaderIdentifierService shaderIdentifierService_;
   GpuPatchDescriptorHandleService descriptorHandleService_;
   RaytracingShaderPatchService raytracingShaderPatchService_;

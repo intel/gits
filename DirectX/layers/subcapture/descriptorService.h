@@ -80,7 +80,8 @@ class StateTrackingService;
 
 class DescriptorService {
 public:
-  DescriptorService(StateTrackingService& stateService) : stateService_(stateService) {}
+  DescriptorService() {}
+  DescriptorService(StateTrackingService* stateService) : stateService_(stateService) {}
   void storeState(DescriptorState* state);
   void removeState(unsigned key);
   void restoreState();
@@ -103,7 +104,7 @@ private:
   void restoreD3D12Sampler(D3D12SamplerState* state);
 
 private:
-  StateTrackingService& stateService_;
+  StateTrackingService* stateService_{};
   std::map<unsigned, std::map<unsigned, std::unique_ptr<DescriptorState>>> statesByHeapIndex_;
   std::set<unsigned> resources_;
 };

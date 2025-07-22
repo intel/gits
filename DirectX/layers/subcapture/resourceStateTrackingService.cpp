@@ -310,6 +310,9 @@ void ResourceStateTrackingService::restoreResourceStates(
     if (recreateStateResources_.find(resourceKey) == recreateStateResources_.end()) {
       continue;
     }
+    if (!stateService_.getAnalyzerResults().restoreObject(resourceKey)) {
+      continue;
+    }
 
     auto writeResourceBarrier = [&](unsigned subresource, D3D12_RESOURCE_STATES beforeState,
                                     D3D12_RESOURCE_STATES afterState) {
@@ -349,6 +352,11 @@ void ResourceStateTrackingService::restoreResourceStates(
 
   for (auto& it : aliasingBarriersOrdered_) {
     AliasingBarrierKeys& keys = it.first;
+    if (!stateService_.getAnalyzerResults().restoreObject(keys.first) ||
+        !stateService_.getAnalyzerResults().restoreObject(keys.second)) {
+      continue;
+    }
+
     unsigned count = aliasingBarriersCounted_[keys];
     if (it.second != count) {
       continue;

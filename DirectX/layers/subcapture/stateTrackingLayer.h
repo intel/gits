@@ -11,6 +11,7 @@
 #include "layerAuto.h"
 #include "stateTrackingService.h"
 #include "subcaptureRecorder.h"
+#include "subcaptureRange.h"
 #include "fenceTrackingService.h"
 #include "mapStateService.h"
 #include "resourceStateTrackingService.h"
@@ -33,7 +34,7 @@ namespace gits {
 namespace DirectX {
 class StateTrackingLayer : public Layer {
 public:
-  StateTrackingLayer(SubcaptureRecorder& recorder);
+  StateTrackingLayer(SubcaptureRecorder& recorder, SubcaptureRange& subcaptureRange);
 
   void post(IDXGISwapChainPresentCommand& c) override;
   void post(IDXGISwapChain1Present1Command& c) override;
@@ -237,6 +238,7 @@ private:
   std::map<unsigned, unsigned> deviceByINTCExtensionContext_;
   StateTrackingService stateService_;
   SubcaptureRecorder& recorder_;
+  SubcaptureRange& subcaptureRange_;
   AnalyzerResults analyzerResults_;
   FenceTrackingService fenceTrackingService_;
   MapStateService mapStateService_;
@@ -253,7 +255,6 @@ private:
   ResourceUsageTrackingService resourceUsageTrackingService_;
   GpuExecutionFlusher gpuExecutionFlusher_;
   unsigned startFrame_;
-  bool commandListSubcapture_{};
   std::unordered_map<unsigned, std::unordered_set<unsigned>> resourceHeaps_;
   std::unordered_map<unsigned, std::vector<unsigned>> swapchainBuffers_;
 };

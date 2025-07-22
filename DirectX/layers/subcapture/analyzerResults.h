@@ -10,6 +10,7 @@
 
 #include <string>
 #include <unordered_set>
+#include <set>
 
 namespace gits {
 namespace DirectX {
@@ -27,13 +28,20 @@ public:
   bool restoreCommandQueueCommand(unsigned commandKey) {
     return commandQueueCommands_.find(commandKey) != commandQueueCommands_.end();
   }
+  bool restoreObject(unsigned objectKey);
+  bool restoreDescriptor(unsigned heapKey, unsigned index);
+  bool restoreBlas(std::pair<unsigned, unsigned> blas);
 
   static bool isAnalysis();
   static std::string getAnalysisFileName();
 
 private:
+  bool optimize_{};
   std::unordered_set<unsigned> commandListKeys_;
   std::unordered_set<unsigned> commandQueueCommands_;
+  std::unordered_set<unsigned> objectKeys_;
+  std::set<std::pair<unsigned, unsigned>> descriptors_;
+  std::set<std::pair<unsigned, unsigned>> blases_;
 };
 
 } // namespace DirectX

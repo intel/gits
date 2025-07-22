@@ -6,7 +6,7 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "gpuAddressService.h"
+#include "playerGpuAddressService.h"
 #include "gits.h"
 
 #include <wrl/client.h>
@@ -14,7 +14,7 @@
 namespace gits {
 namespace DirectX {
 
-void GpuAddressService::createResource(unsigned resourceKey, ID3D12Resource* resource) {
+void PlayerGpuAddressService::createResource(unsigned resourceKey, ID3D12Resource* resource) {
 
   D3D12_RESOURCE_DESC desc = resource->GetDesc();
   if (desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
@@ -27,11 +27,11 @@ void GpuAddressService::createResource(unsigned resourceKey, ID3D12Resource* res
   startAddressesByKey_[resourceKey] = startAddress;
 }
 
-void GpuAddressService::createPlacedResource(unsigned resourceKey,
-                                             ID3D12Resource* resource,
-                                             unsigned heapKey,
-                                             ID3D12Heap* heap,
-                                             UINT64 heapOffset) {
+void PlayerGpuAddressService::createPlacedResource(unsigned resourceKey,
+                                                   ID3D12Resource* resource,
+                                                   unsigned heapKey,
+                                                   ID3D12Heap* heap,
+                                                   UINT64 heapOffset) {
 
   D3D12_HEAP_DESC heapDesc = heap->GetDesc();
   if (heapDesc.Flags & D3D12_HEAP_FLAG_DENY_BUFFERS) {
@@ -51,7 +51,7 @@ void GpuAddressService::createPlacedResource(unsigned resourceKey,
   startAddressesByKey_[resourceKey] = resourceStartAddress;
 }
 
-void GpuAddressService::createHeap(unsigned heapKey, ID3D12Heap* heap) {
+void PlayerGpuAddressService::createHeap(unsigned heapKey, ID3D12Heap* heap) {
 
   D3D12_HEAP_DESC desc = heap->GetDesc();
   if (desc.Flags & D3D12_HEAP_FLAG_DENY_BUFFERS) {
@@ -62,7 +62,7 @@ void GpuAddressService::createHeap(unsigned heapKey, ID3D12Heap* heap) {
   startAddressesByKey_[heapKey] = startAddress;
 }
 
-D3D12_GPU_VIRTUAL_ADDRESS GpuAddressService::getHeapGPUVirtualAddress(ID3D12Heap* heap) {
+D3D12_GPU_VIRTUAL_ADDRESS PlayerGpuAddressService::getHeapGPUVirtualAddress(ID3D12Heap* heap) {
 
   D3D12_HEAP_DESC heapDesc = heap->GetDesc();
 
@@ -103,7 +103,8 @@ D3D12_GPU_VIRTUAL_ADDRESS GpuAddressService::getHeapGPUVirtualAddress(ID3D12Heap
   return gpuAddress;
 }
 
-D3D12_GPU_VIRTUAL_ADDRESS GpuAddressService::getGpuAddress(unsigned resourceKey, unsigned offset) {
+D3D12_GPU_VIRTUAL_ADDRESS PlayerGpuAddressService::getGpuAddress(unsigned resourceKey,
+                                                                 unsigned offset) {
   if (!resourceKey) {
     return 0;
   }
@@ -112,7 +113,7 @@ D3D12_GPU_VIRTUAL_ADDRESS GpuAddressService::getGpuAddress(unsigned resourceKey,
   return it->second + offset;
 }
 
-void GpuAddressService::destroyInterface(unsigned interfaceKey) {
+void PlayerGpuAddressService::destroyInterface(unsigned interfaceKey) {
 
   startAddressesByKey_.erase(interfaceKey);
 

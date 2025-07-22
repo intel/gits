@@ -73,6 +73,9 @@ void ResourceContentRestore::restoreContent(const std::vector<unsigned>& resourc
     ResourceBatchType prevType{};
 
     for (unsigned resourceKey : resourceKeys) {
+      if (!stateService_.getAnalyzerResults().restoreObject(resourceKey)) {
+        continue;
+      }
       ResourceBatchType type{};
       ResourceInfo resourceInfo{};
       if (mappableResourceStates_.find(resourceKey) != mappableResourceStates_.end()) {

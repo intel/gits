@@ -17,7 +17,6 @@ namespace gits {
 namespace DirectX {
 
 SubcaptureRecorder::SubcaptureRecorder() {
-
   const gits::Configuration& config = Configurator::Get();
 
   if (!config.directx.features.subcapture.enabled ||
@@ -27,14 +26,6 @@ SubcaptureRecorder::SubcaptureRecorder() {
 
   std::string commandListExecutions = config.directx.features.subcapture.commandListExecutions;
   if (!commandListExecutions.empty()) {
-    size_t pos = commandListExecutions.find("-");
-    if (pos != std::string::npos) {
-      executionRangeStart_ = std::stoi(commandListExecutions.substr(0, pos));
-      executionRangeEnd_ = std::stoi(commandListExecutions.substr(pos + 1));
-    } else {
-      executionRangeStart_ = executionRangeEnd_ = std::stoi(commandListExecutions);
-    }
-
     std::filesystem::path subcapturePath = config.common.player.subcapturePath;
     std::string path = subcapturePath.parent_path().string();
     path += "/" + config.common.player.streamDir.filename().string();
@@ -48,59 +39,12 @@ SubcaptureRecorder::SubcaptureRecorder() {
   CRecorder::Instance();
 }
 
-SubcaptureRecorder::~SubcaptureRecorder() {
-  try {
-    if (isRunning()) {
-      Log(ERR) << "Subcapture recorder terminated prematurely";
-    }
-  } catch (...) {
-    topmost_exception_handler("SubcaptureRecorder::~SubcaptureRecorder");
-  }
-}
-
 void SubcaptureRecorder::record(CToken* token) {
   CRecorder::Instance().Schedule(token);
 }
 
-void SubcaptureRecorder::frameEnd(bool stateRestore) {
-  executionCount_ = 0;
-  zeroOrFirstFrame_ = false;
-  if (!stateRestore) {
-    CRecorder::Instance().FrameEnd();
-  }
-}
-
-void SubcaptureRecorder::executionStart() {
-  ++executionCount_;
-  insideExecution_ = true;
-}
-
-void SubcaptureRecorder::executionEnd() {
-  insideExecution_ = false;
-}
-
-bool SubcaptureRecorder::isExecutionRangeStart() {
-  if (zeroOrFirstFrame_) {
-    return false;
-  }
-  if (!executionRangeStart_ || !CRecorder::Instance().Running()) {
-    return false;
-  }
-  return executionCount_ == executionRangeStart_ - 1;
-}
-
-bool SubcaptureRecorder::isRunning() {
-  if (zeroOrFirstFrame_) {
-    return false;
-  }
-  bool frameRunning = CRecorder::Instance().Running();
-  if (!executionRangeStart_ || !frameRunning) {
-    return frameRunning;
-  }
-  if (!insideExecution_) {
-    return false;
-  }
-  return executionCount_ >= executionRangeStart_ && executionCount_ <= executionRangeEnd_;
+void SubcaptureRecorder::frameEnd() {
+  CRecorder::Instance().FrameEnd();
 }
 
 } // namespace DirectX

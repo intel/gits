@@ -82,7 +82,7 @@ void RaytracingResourceDump::dumpInstancesBuffer(RaytracingDumpInfo& dumpInfo, v
 
     stream << "  AccelerationStructure " << std::hex << std::setw(16) << std::setfill('0')
            << instances[i].AccelerationStructure << std::dec;
-    GpuPatchAddressService::ResourceInfo* info{};
+    CapturePlayerGpuAddressService::ResourceInfo* info{};
     unsigned offset{};
     if (dumpInfo.fromCapture) {
       info = addressService_.getResourceInfoByCaptureAddress(instances[i].AccelerationStructure);
@@ -142,7 +142,7 @@ void RaytracingResourceDump::dumpBindingTableBuffer(RaytracingDumpInfo& dumpInfo
       UINT64* address = reinterpret_cast<UINT64*>(p + sizeof(UINT64) * i);
       stream << std::hex << std::setw(16) << std::setfill('0') << *address << std::dec;
 
-      GpuPatchAddressService::ResourceInfo* resourceInfo{};
+      CapturePlayerGpuAddressService::ResourceInfo* resourceInfo{};
       if (dumpInfo.fromCapture) {
         resourceInfo = addressService_.getResourceInfoByCaptureAddress(*address);
       } else {
@@ -198,7 +198,7 @@ void RaytracingResourceDump::printGpuAddress(std::ostream& stream,
 
   stream << "{0x" << std::hex << std::setw(16) << std::setfill('0') << address << std::dec;
   if (address) {
-    GpuPatchAddressService::ResourceInfo* info{};
+    CapturePlayerGpuAddressService::ResourceInfo* info{};
     unsigned offset{};
     if (fromCapture) {
       info = addressService_.getResourceInfoByCaptureAddress(address);

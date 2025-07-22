@@ -190,6 +190,8 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
     return;
   }
 
+  optimize();
+
   bufferContentRestore_.waitUntilDumped();
 
   {
@@ -655,6 +657,25 @@ void AccelerationStructuresBuildService::removeState(unsigned stateId) {
   }
   stateByKeyOffset_.erase({itState->second->destKey, itState->second->destOffset});
   statesById_.erase(itState);
+}
+
+void AccelerationStructuresBuildService::optimize() {
+  if (!Configurator::Get().directx.features.subcapture.optimizeRaytracing) {
+    return;
+  }
+  std::vector<unsigned> removedStates;
+  for (auto& [stateId, state] : statesById_) {
+    auto itDests = stateDestsBySource_.find(stateId);
+    if (itDests == stateDestsBySource_.end() || itDests->second.empty()) {
+      if (!stateService_.getAnalyzerResults().restoreBlas(
+              std::make_pair(state->destKey, state->destOffset))) {
+        removedStates.push_back(stateId);
+      }
+    }
+  }
+  for (unsigned stateId : removedStates) {
+    removeState(stateId);
+  }
 }
 
 } // namespace DirectX

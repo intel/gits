@@ -39,7 +39,7 @@ public:
   std::wstring& getExportNameByPlayerIdentifier(ShaderIdentifier identifier) {
     return m_ExportNamesByPlayerIdentifier[identifier];
   }
-  void enableDumpLookup() {
+  void enablePlayerIdentifierLookup() {
     dumpLookup_ = true;
   }
 

@@ -203,7 +203,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
 
     std::vector<InstanceInfo*> instanceInfos(arrayOfPointers.size());
     for (unsigned i = 0; i < arrayOfPointers.size(); ++i) {
-      GpuPatchAddressService::ResourceInfo* resourceInfo =
+      CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
           addressService_.getResourceInfoByCaptureAddress(arrayOfPointers[i]);
       GITS_ASSERT(resourceInfo);
       auto it = instancesByResourceKey.find(resourceInfo->key);
@@ -444,7 +444,7 @@ void GpuPatchLayer::patchDispatchRays(ID3D12GraphicsCommandList* commandList,
                                UINT64 strideInBytes,
                                GpuPatchDumpService::BindingTableType bindingTableType) {
     if (startAddress) {
-      GpuPatchAddressService::ResourceInfo* info =
+      CapturePlayerGpuAddressService::ResourceInfo* info =
           addressService_.getResourceInfoByCaptureAddress(startAddress);
       GITS_ASSERT(info);
       unsigned offset = startAddress - info->captureStart;
@@ -868,12 +868,12 @@ void GpuPatchLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
 
   MappingCount mappingCount{};
 
-  std::vector<GpuPatchAddressService::GpuAddressMapping> gpuAddressMappings;
+  std::vector<CapturePlayerGpuAddressService::GpuAddressMapping> gpuAddressMappings;
   addressService_.getMappings(gpuAddressMappings);
   mappingCount.gpuAddressCount = gpuAddressMappings.size();
 
   if (gpuAddressMappings.size() >
-      gpuAddressBufferSize_ / sizeof(GpuPatchAddressService::GpuAddressMapping)) {
+      gpuAddressBufferSize_ / sizeof(CapturePlayerGpuAddressService::GpuAddressMapping)) {
     Log(ERR) << "Raytracing gpuAddressMappings buffer is too small!";
     exit(EXIT_FAILURE);
   }
@@ -882,7 +882,7 @@ void GpuPatchLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
     HRESULT hr = gpuAddressStagingBuffers_[index]->Map(0, nullptr, &data);
     GITS_ASSERT(hr == S_OK);
     memcpy(data, gpuAddressMappings.data(),
-           sizeof(GpuPatchAddressService::GpuAddressMapping) * gpuAddressMappings.size());
+           sizeof(CapturePlayerGpuAddressService::GpuAddressMapping) * gpuAddressMappings.size());
     gpuAddressStagingBuffers_[index]->Unmap(0, nullptr);
   }
 

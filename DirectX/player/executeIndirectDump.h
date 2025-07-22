@@ -9,14 +9,15 @@
 #pragma once
 
 #include "resourceDump.h"
-#include "gpuPatchAddressService.h"
+#include "capturePlayerGpuAddressService.h"
 
 namespace gits {
 namespace DirectX {
 
 class ExecuteIndirectDump : public ResourceDump {
 public:
-  ExecuteIndirectDump(GpuPatchAddressService& addressService) : addressService_(addressService) {}
+  ExecuteIndirectDump(CapturePlayerGpuAddressService& addressService)
+      : addressService_(addressService) {}
   ~ExecuteIndirectDump();
   void dumpArgumentBuffer(ID3D12GraphicsCommandList* commandList,
                           D3D12_COMMAND_SIGNATURE_DESC& commandSignature,
@@ -42,7 +43,7 @@ protected:
   void printGpuAddress(std::ostream& stream, D3D12_GPU_VIRTUAL_ADDRESS address, bool fromCapture);
 
 private:
-  GpuPatchAddressService& addressService_;
+  CapturePlayerGpuAddressService& addressService_;
 };
 
 } // namespace DirectX

@@ -24,7 +24,7 @@ custom = [
 %>\
 %for function in functions:
 void RecordingLayer::post(${function.name}Command& command) {
-  if (recorder_.isRunning()) {
+  if (subcaptureRange_.inRange()) {
     recorder_.record(new ${function.name}Writer(command));
   }
 }
@@ -34,7 +34,7 @@ void RecordingLayer::post(${function.name}Command& command) {
 %for function in interface.functions:
 %if not interface.name + function.name in custom:
 void RecordingLayer::post(${interface.name}${function.name}Command& command) {
-  if (recorder_.isRunning()) {
+  if (subcaptureRange_.inRange()) {
     recorder_.record(new ${interface.name}${function.name}Writer(command));
   }
 }

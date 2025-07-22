@@ -13,14 +13,19 @@ ${header}
 #include "commandsAuto.h"
 #include "commandsCustom.h"
 #include "subcaptureRecorder.h"
+#include "subcaptureRange.h"
 
 namespace gits {
 namespace DirectX {
 
 class RecordingLayer : public Layer {
 public:
-  RecordingLayer(SubcaptureRecorder& recorder) 
-      : Layer("Recording"), recorder_(recorder) {}
+  RecordingLayer(SubcaptureRecorder& recorder, SubcaptureRange& subcaptureRange) 
+      : Layer("Recording"), recorder_(recorder), subcaptureRange_(subcaptureRange) {}
+  ~RecordingLayer();
+
+  RecordingLayer(const RecordingLayer&) = delete;
+  RecordingLayer& operator=(const RecordingLayer&) = delete;
 
   void post(CreateWindowMetaCommand& command) override;
   void post(MappedDataMetaCommand& command) override;
@@ -52,6 +57,7 @@ public:
 
 private:
   SubcaptureRecorder& recorder_;
+  SubcaptureRange& subcaptureRange_;
 };
 
 } // namespace DirectX

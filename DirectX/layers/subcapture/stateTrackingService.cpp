@@ -29,7 +29,9 @@ void StateTrackingService::restoreState() {
   recorder_.record(new CTokenMarker(CToken::ID_INIT_START));
 
   for (auto& it : statesByKey_) {
-    restoreState(it.second);
+    if (analyzerResults_.restoreObject(it.first)) {
+      restoreState(it.second);
+    }
   }
   xessStateService_.restoreState();
   descriptorService_.restoreState();
@@ -194,14 +196,14 @@ void StateTrackingService::releaseObject(unsigned key, ULONG result) {
     return;
   }
 
-  unsigned parentKey = itState->second->parentKey;
-  if (parentKey) {
-    auto itParentState = statesByKey_.find(parentKey);
-    if (itParentState != statesByKey_.end()) {
-      itParentState->second->object->AddRef();
-      ULONG refCount = itParentState->second->object->Release();
-      if (refCount == 1 && !itParentState->second->destroyed) {
-        releaseObject(itParentState->first, 0);
+  unsigned linkedLifetimeKey = itState->second->linkedLifetimeKey;
+  if (linkedLifetimeKey) {
+    auto itLinkedLifetimeState = statesByKey_.find(linkedLifetimeKey);
+    if (itLinkedLifetimeState != statesByKey_.end()) {
+      itLinkedLifetimeState->second->object->AddRef();
+      ULONG refCount = itLinkedLifetimeState->second->object->Release();
+      if (refCount == 1 && !itLinkedLifetimeState->second->destroyed) {
+        releaseObject(itLinkedLifetimeState->first, 0);
       }
     }
   }
@@ -240,7 +242,7 @@ ObjectState* StateTrackingService::getState(unsigned key) {
 void StateTrackingService::restoreReferenceCount() {
   for (auto& it : statesByKey_) {
     ObjectState* state = it.second;
-    if (!state->object) {
+    if (!state->object || !analyzerResults_.restoreObject(it.first)) {
       continue;
     }
     if (it.second->destroyed) {

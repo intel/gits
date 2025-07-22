@@ -12,7 +12,7 @@
 #include "windowService.h"
 #include "replayDescriptorHandleService.h"
 #include "mapTrackingService.h"
-#include "gpuAddressService.h"
+#include "playerGpuAddressService.h"
 #include "heapAllocationService.h"
 #include "pluginService.h"
 #include "traceFactory.h"
@@ -28,6 +28,7 @@
 #include "multithreadedObjectCreationService.h"
 #include "pipelineLibraryService.h"
 #include "contextMapService.h"
+#include "analyzerService.h"
 
 #include <vector>
 #include <memory>
@@ -70,7 +71,7 @@ public:
   MapTrackingService& getMapTrackingService() {
     return mapTrackingService_;
   }
-  GpuAddressService& getGpuAddressService() {
+  PlayerGpuAddressService& getGpuAddressService() {
     return gpuAddressService_;
   }
   HeapAllocationService& getHeapAllocationService() {
@@ -134,7 +135,7 @@ private:
   WindowService windowService_;
   ReplayDescriptorHandleService descriptorHandleService_;
   MapTrackingService mapTrackingService_;
-  GpuAddressService gpuAddressService_;
+  PlayerGpuAddressService gpuAddressService_;
   HeapAllocationService heapAllocationService_;
   AdapterService adapterService_;
   IntelExtensionsService intelExtensionsService_;
@@ -142,6 +143,7 @@ private:
   XessService xessService_;
   MultithreadedObjectCreationService multithreadedObjectCreationService_;
   PipelineLibraryService pipelineLibraryService_;
+  ObjectUsageNotifier* objectUsageNotifier_{};
 
   HMODULE d3d12CoreDll_{};
   HMODULE dmlDll_{};

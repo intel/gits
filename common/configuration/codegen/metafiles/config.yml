@@ -997,6 +997,14 @@ Configuration:
                 Type: bool
                 Default: false
                 Description: Creates stream with serialized CPU and GPU execution
+              - Name: optimize
+                Type: bool
+                Default: false
+                Description: Uses optimization information from subcapture analysis to restore only necessary objects
+              - Name: optimizeRaytracing
+                Type: bool
+                Default: false
+                Description: Uses optimization information from subcapture analysis to restore only necessary raytracing acceleration structures
           - Name: Screenshots
             Type: Group
             Options:

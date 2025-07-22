@@ -18,6 +18,8 @@ set(UTILS_FILES
   ${SRC_DIR}/gpuExecutionTracker.cpp
   ${SRC_DIR}/configKeySet.h
   ${SRC_DIR}/configKeySet.cpp
+  ${SRC_DIR}/capturePlayerGpuAddressService.h
+  ${SRC_DIR}/capturePlayerGpuAddressService.cpp
 )
 source_group("" FILES ${UTILS_FILES})
 

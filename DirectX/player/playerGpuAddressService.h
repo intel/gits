@@ -16,7 +16,7 @@
 namespace gits {
 namespace DirectX {
 
-class GpuAddressService {
+class PlayerGpuAddressService {
 public:
   void createResource(unsigned resourceKey, ID3D12Resource* resource);
   void createPlacedResource(unsigned resourceKey,

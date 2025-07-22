@@ -200,7 +200,7 @@ void ExecuteIndirectDump::printGpuAddress(std::ostream& stream,
 
   stream << "{0x" << std::hex << std::setw(16) << std::setfill('0') << address << std::dec;
   if (address) {
-    GpuPatchAddressService::ResourceInfo* info{};
+    CapturePlayerGpuAddressService::ResourceInfo* info{};
     unsigned offset{};
     if (fromCapture) {
       info = addressService_.getResourceInfoByCaptureAddress(address);

@@ -16,7 +16,7 @@
 namespace gits {
 namespace DirectX {
 
-GpuPatchDumpService::GpuPatchDumpService(GpuPatchAddressService& addressService,
+GpuPatchDumpService::GpuPatchDumpService(CapturePlayerGpuAddressService& addressService,
                                          ShaderIdentifierService& shaderIdentifierService,
                                          GpuPatchDescriptorHandleService& descriptorHandleService)
     : resourceDump_(addressService, shaderIdentifierService, descriptorHandleService),
@@ -36,14 +36,14 @@ GpuPatchDumpService::GpuPatchDumpService(GpuPatchAddressService& addressService,
 
   if (dumpInstancesPre_ || dumpInstancesPost_ || dumpBindingTablesPre_ || dumpBindingTablesPost_ ||
       dumpArgumentBufferPre_ || dumpArgumentBufferPost_) {
-    addressService.enableDumpLookup();
+    addressService.enablePlayerAddressLookup();
   } else {
     return;
   }
 
   if (dumpBindingTablesPre_ || dumpBindingTablesPost_) {
-    shaderIdentifierService.enableDumpLookup();
-    descriptorHandleService.enableDumpLookup();
+    shaderIdentifierService.enablePlayerIdentifierLookup();
+    descriptorHandleService.enablePlayerHandleLookup();
   }
 
   std::filesystem::path dumpPath = Configurator::Get().common.player.outputDir.empty()

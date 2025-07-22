@@ -10,6 +10,9 @@
 
 #include "commandsAuto.h"
 #include "gpuExecutionTracker.h"
+#include "bindingService.h"
+#include "analyzerRaytracingService.h"
+#include "subcaptureRange.h"
 
 #include <set>
 #include <string>
@@ -19,18 +22,27 @@ namespace DirectX {
 
 class AnalyzerService {
 public:
-  AnalyzerService();
+  AnalyzerService(SubcaptureRange& subcaptureRange,
+                  BindingService& bindingService,
+                  AnalyzerRaytracingService& raytracingService);
   ~AnalyzerService();
-
   AnalyzerService(const AnalyzerService&) = delete;
   AnalyzerService& operator=(const AnalyzerService&) = delete;
 
+  bool inRange() {
+    return inRange_;
+  }
+
+  void notifyObject(unsigned objectKey);
+
   void commandListCommand(unsigned commandListKey);
-  void present(unsigned callKey);
+  void present(unsigned callKey, unsigned swapChainKey);
   void executeCommandLists(unsigned callKey,
                            unsigned commandQueueKey,
                            std::vector<unsigned>& commandListKeys);
-  void commandListReset(unsigned commandListKey);
+  void commandListReset(unsigned commandListKey, unsigned allocatorKey, unsigned initialStateKey);
+  void executionStart();
+  void executionEnd();
   void commandQueueWait(unsigned callKey,
                         unsigned commandQueueKey,
                         unsigned fenceKey,
@@ -48,15 +60,17 @@ private:
   void dumpAnalysisFile();
 
 private:
+  SubcaptureRange& subcaptureRange_;
+  BindingService& bindingService_;
+  AnalyzerRaytracingService& raytracingService_;
+
   struct ExecuteCommandListCommand : public GpuExecutionTracker::Executable {
     std::vector<unsigned> commandListKeys;
   };
 
   GpuExecutionTracker gpuExecutionTracker_;
-  bool inRange_{};
   bool beforeRange_{true};
-  unsigned startFrame_;
-  unsigned endFrame_;
+  bool inRange_{};
 
   std::set<unsigned> commandListsResetBeforeExecution_;
   std::set<unsigned> commandListsExecuted_;
@@ -64,6 +78,8 @@ private:
   std::set<unsigned> commandListsForRestore_;
 
   std::set<unsigned> commandQueueCommandsForRestore_;
+
+  std::set<unsigned> objectsForRestore_;
 };
 
 } // namespace DirectX

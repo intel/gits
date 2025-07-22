@@ -103,6 +103,7 @@ private:
 private:
   void storeState(RaytracingAccelerationStructureState* state);
   void removeState(unsigned stateId);
+  void optimize();
 };
 
 } // namespace DirectX
