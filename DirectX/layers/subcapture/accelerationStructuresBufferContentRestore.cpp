@@ -37,7 +37,7 @@ void AccelerationStructuresBufferContentRestore::storeBuffer(ID3D12GraphicsComma
   info->dumpName = L"BLAS build " + std::to_wstring(buildCallKey) + L" resource O" +
                    std::to_wstring(resourceKey);
 
-  buildCallKeysForRestore_.insert(buildCallKey);
+  restoreBuilds_.insert(buildCallKey);
   stageResource(commandList, resource, resourceState, *info);
 }
 
@@ -46,12 +46,11 @@ void AccelerationStructuresBufferContentRestore::dumpBuffer(DumpInfo& dumpInfo, 
   BufferInfo& info = static_cast<BufferInfo&>(dumpInfo);
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    if (buildCallKeysForRestore_.find(info.buildCallKey) == buildCallKeysForRestore_.end()) {
+    if (restoreBuilds_.find(info.buildCallKey) == restoreBuilds_.end()) {
       return;
     }
   }
 
-  unsigned restoreInfoId = ++restoreInfoUniqueId_;
   BufferRestoreInfo restoreInfo{};
   restoreInfo.bufferKey = info.resourceKey;
   restoreInfo.uploadResourceKey = info.uploadResourceKey;
@@ -59,10 +58,6 @@ void AccelerationStructuresBufferContentRestore::dumpBuffer(DumpInfo& dumpInfo, 
   restoreInfo.bufferHash = ComputeHash(data, info.size, THashType::XX);
 
   std::lock_guard<std::mutex> lock(mutex_);
-  if (!bufferHashCheck_.dumpBuffer(info.buildCallKey, restoreInfoId, restoreInfo.bufferKey,
-                                   restoreInfo.offset, restoreInfo.bufferHash)) {
-    return;
-  }
 
   if (info.isMappable) {
 
@@ -167,67 +162,21 @@ void AccelerationStructuresBufferContentRestore::dumpBuffer(DumpInfo& dumpInfo, 
         new ID3D12GraphicsCommandListCopyBufferRegionWriter(copyBufferRegion));
   }
 
-  restoreInfos_[info.buildCallKey][restoreInfoId] = std::move(restoreInfo);
+  restoreBuildCommands_[info.buildCallKey].push_back(std::move(restoreInfo));
 }
 
-void AccelerationStructuresBufferContentRestore::removeRestoreInfos(unsigned buildCallKey) {
+void AccelerationStructuresBufferContentRestore::removeBuild(unsigned buildCallKey) {
   std::lock_guard<std::mutex> lock(mutex_);
-  buildCallKeysForRestore_.erase(buildCallKey);
-  auto itInfos = restoreInfos_.find(buildCallKey);
-  if (itInfos != restoreInfos_.end()) {
-    for (auto& it : itInfos->second) {
-      for (CommandWriter* writer : it.second.restoreCommands) {
+  restoreBuilds_.erase(buildCallKey);
+  auto it = restoreBuildCommands_.find(buildCallKey);
+  if (it != restoreBuildCommands_.end()) {
+    for (BufferRestoreInfo& restoreInfo : it->second) {
+      for (CommandWriter* writer : restoreInfo.restoreCommands) {
         delete writer;
       }
     }
-    restoreInfos_.erase(buildCallKey);
+    restoreBuildCommands_.erase(buildCallKey);
   }
-}
-
-void AccelerationStructuresBufferContentRestore::setBuildStateId(unsigned buildCallKey,
-                                                                 unsigned stateId) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  bufferHashCheck_.setBuildStateId(buildCallKey, stateId);
-}
-
-void AccelerationStructuresBufferContentRestore::BufferHashCheck::setBuildStateId(
-    unsigned buildCallKey, unsigned stateId) {
-  buildStateIdByCallKey_[buildCallKey] = stateId;
-  buildCallKeyByStateId_[stateId] = buildCallKey;
-}
-
-bool AccelerationStructuresBufferContentRestore::BufferHashCheck::dumpBuffer(unsigned buildCallKey,
-                                                                             unsigned restoreInfoId,
-                                                                             unsigned bufferKey,
-                                                                             unsigned bufferOffset,
-                                                                             uint64_t hash) {
-  unsigned stateId = buildStateIdByCallKey_[buildCallKey];
-  GITS_ASSERT(stateId);
-  auto itAll = bufferHashesByKeyOffset_.find({bufferKey, bufferOffset});
-  if (itAll == bufferHashesByKeyOffset_.end()) {
-    bufferHashesByKeyOffset_[{bufferKey, bufferOffset}][hash] = {stateId, restoreInfoId};
-  } else {
-    auto it = itAll->second.find(hash);
-    if (it == itAll->second.end()) {
-      bufferHashesByKeyOffset_[{bufferKey, bufferOffset}][hash] = {stateId, restoreInfoId};
-    } else {
-      if (it->second.stateId < stateId) {
-        return false;
-      } else {
-        unsigned callKey = buildCallKeyByStateId_[it->second.stateId];
-        BufferRestoreInfo& info = contentRestore_.restoreInfos_[callKey][it->second.restoreId];
-        for (CommandWriter* writer : info.restoreCommands) {
-          delete writer;
-        }
-        contentRestore_.restoreInfos_[callKey].erase(it->second.restoreId);
-        if (contentRestore_.restoreInfos_[callKey].empty()) {
-          contentRestore_.restoreInfos_.erase(callKey);
-        }
-        bufferHashesByKeyOffset_[{bufferKey, bufferOffset}][hash] = {stateId, restoreInfoId};
-      }
-    }
-  }
-  return true;
 }
 
 } // namespace DirectX
