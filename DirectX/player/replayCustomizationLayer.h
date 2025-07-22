@@ -156,6 +156,20 @@ public:
   void pre(ID3DBlobGetBufferSizeCommand& command) override;
   void pre(INTC_D3D12_SetApplicationInfoCommand& command) override;
   void pre(INTC_D3D12_GetSupportedVersionsCommand& command) override;
+  void pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) override;
+  void pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) override;
+  void pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) override;
+
+private:
+  struct NvAPIShaderExtnSlot {
+    unsigned deviceKey;
+    unsigned uavSlot;
+    unsigned uavSpace;
+
+    bool operator==(const NvAPIShaderExtnSlot& other) const {
+      return deviceKey == other.deviceKey && uavSlot == other.uavSlot && uavSpace == other.uavSpace;
+    }
+  };
 
 private:
   void fillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg);
@@ -168,6 +182,7 @@ private:
   PlayerManager& manager_;
   PipelineLibraryService& pipelineLibraryService_;
   HANDLE waitForFenceEvent_{};
+  std::vector<NvAPIShaderExtnSlot> nvapiShaderExtnSlotsUsed_;
 };
 
 } // namespace DirectX

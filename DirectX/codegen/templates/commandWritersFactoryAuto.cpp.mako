@@ -60,6 +60,16 @@ CommandWriter* createCommandWriter(Command* command) {
     return new INTC_D3D12_CreateCommittedResourceWriter(*static_cast<INTC_D3D12_CreateCommittedResourceCommand*>(command));
   case CommandId::INTC_D3D12_CREATEHEAP:
     return new INTC_D3D12_CreateHeapWriter(*static_cast<INTC_D3D12_CreateHeapCommand*>(command));
+  case CommandId::ID_NVAPI_INITIALIZE:
+    return new NvAPI_InitializeWriter(*static_cast<NvAPI_InitializeCommand*>(command));
+  case CommandId::ID_NVAPI_UNLOAD:
+    return new NvAPI_UnloadWriter(*static_cast<NvAPI_UnloadCommand*>(command));
+  case CommandId::ID_NVAPI_D3D12_SETNVSHADEREXTNSLOTSPACELOCALTHREAD:
+    return new NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadWriter(*static_cast<NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand*>(command));
+  case CommandId::ID_NVAPI_D3D12_BUILDRAYTRACINGACCELERATIONSTRUCTUREEX:
+    return new NvAPI_D3D12_BuildRaytracingAccelerationStructureExWriter(*static_cast<NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand*>(command));
+  case CommandId::ID_NVAPI_D3D12_BUILDRAYTRACINGOPACITYMICROMAPARRAY:
+    return new NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayWriter(*static_cast<NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand*>(command));
   %for function in functions:
   case CommandId::ID_${function.name.upper()}:
     return new ${function.name}Writer(*static_cast<${function.name}Command*>(command));

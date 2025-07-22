@@ -54,6 +54,11 @@ public:
   void post(INTC_D3D12_CreateReservedResourceCommand& command) override;
   void post(INTC_D3D12_CreateCommandQueueCommand& command) override;
   void post(INTC_D3D12_CreateHeapCommand& command) override;
+  void post(NvAPI_InitializeCommand& command) override;
+  void post(NvAPI_UnloadCommand& command) override;
+  void post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) override;
+  void post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) override;
+  void post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) override;
 
 private:
   SubcaptureRecorder& recorder_;

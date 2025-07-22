@@ -33,6 +33,9 @@ set(INTERCEPTOR_SRC
   ${SRC_DIR}/interfaceArgumentUpdaters.cpp
   ${SRC_DIR}/intelExtensionsWrappers.h
   ${SRC_DIR}/intelExtensionsWrappers.cpp
+  ${SRC_DIR}/nvapiWrappers.h
+  ${SRC_DIR}/nvapiWrappers.cpp
+  ${SRC_DIR}/nvapiDispatchTable.h
   ${SRC_DIR}/xessDispatchTableAuto.h
 )
 source_group("interceptor" FILES ${INTERCEPTOR_SRC})
@@ -113,6 +116,6 @@ target_include_directories(DirectX_recorder PRIVATE
   ${SRC_DIR}
 )
 
-target_link_libraries(DirectX_recorder PRIVATE ${INTEL_EXT_DIR}/lib/igdext64.lib)
+target_link_libraries(DirectX_recorder PRIVATE ${INTEL_EXT_DIR}/lib/igdext64.lib ${NVAPI_DIR}/amd64/nvapi64.lib)
 
 set_target_properties(DirectX_recorder PROPERTIES FOLDER DirectX)

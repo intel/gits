@@ -22,6 +22,16 @@ struct INTC_D3D12_COMMAND_QUEUE_DESC_0001;
 struct INTCExtensionInfo;
 struct INTCExtensionVersion;
 
+typedef enum _NvAPI_Status NvAPI_Status;
+typedef struct _NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS_V1
+    NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS_V1;
+typedef NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS_V1
+    NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS;
+typedef struct _NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS_V1
+    NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS_V1;
+typedef NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS_V1
+    NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS;
+
 #include <vector>
 #include <map>
 
@@ -926,6 +936,57 @@ struct xess_d3d12_execute_params_t_Argument {
   unsigned responsivePixelMaskTextureKey{};
   unsigned outputTextureKey{};
   unsigned descriptorHeapKey{};
+  bool copy{};
+};
+
+#pragma endregion
+
+#pragma region NVAPI
+
+template <>
+struct PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS> {
+  PointerArgument(const NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS* value_)
+      : value(const_cast<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS*>(value_)) {}
+  PointerArgument() {}
+  PointerArgument(
+      const PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS>& arg);
+  PointerArgument& operator=(
+      const PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS>&) = delete;
+  ~PointerArgument();
+  NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS* value{};
+  unsigned destAccelerationStructureKey{};
+  unsigned destAccelerationStructureOffset{};
+  unsigned sourceAccelerationStructureKey{};
+  unsigned sourceAccelerationStructureOffset{};
+  unsigned scratchAccelerationStructureKey{};
+  unsigned scratchAccelerationStructureOffset{};
+  std::vector<unsigned> inputKeys{};
+  std::vector<unsigned> inputOffsets{};
+  std::vector<unsigned> destPostBuildBufferKeys{};
+  std::vector<unsigned> destPostBuildBufferOffsets{};
+  bool copy{};
+};
+
+template <>
+struct PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS> {
+  PointerArgument(const NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS* value_)
+      : value(const_cast<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS*>(value_)) {}
+  PointerArgument() {}
+  PointerArgument(const PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>& arg);
+  PointerArgument& operator=(
+      const PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>&) = delete;
+  ~PointerArgument();
+  NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS* value{};
+  unsigned destOpacityMicromapArrayDataKey{};
+  unsigned destOpacityMicromapArrayDataOffset{};
+  unsigned inputBufferKey{};
+  unsigned inputBufferOffset{};
+  unsigned perOMMDescsKey{};
+  unsigned perOMMDescsOffset{};
+  unsigned scratchOpacityMicromapArrayDataKey{};
+  unsigned scratchOpacityMicromapArrayDataOffset{};
+  std::vector<unsigned> destPostBuildBufferKeys{};
+  std::vector<unsigned> destPostBuildBufferOffsets{};
   bool copy{};
 };
 

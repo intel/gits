@@ -606,6 +606,106 @@ void TraceLayer::post(INTC_D3D12_CreateHeapCommand& command) {
   }
 }
 
+void TraceLayer::pre(NvAPI_InitializeCommand& command) {
+  if (printPre_) {
+    CommandPrinter p(streamPre_, statePre_, command, "NvAPI_Initialize");
+    p.addResult(command.result_);
+    p.print(flush_);
+  }
+}
+
+void TraceLayer::post(NvAPI_InitializeCommand& command) {
+  if (printPost_) {
+    CommandPrinter p(streamPost_, statePost_, command, "NvAPI_Initialize");
+    p.addResult(command.result_);
+    p.print(flush_);
+  }
+}
+
+void TraceLayer::pre(NvAPI_UnloadCommand& command) {
+  if (printPre_) {
+    CommandPrinter p(streamPre_, statePre_, command, "NvAPI_Unload");
+    p.addResult(command.result_);
+    p.print(flush_);
+  }
+}
+
+void TraceLayer::post(NvAPI_UnloadCommand& command) {
+  if (printPost_) {
+    CommandPrinter p(streamPost_, statePost_, command, "NvAPI_Unload");
+    p.addResult(command.result_);
+    p.print(flush_);
+  }
+}
+
+void TraceLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
+  if (printPre_) {
+    CommandPrinter p(streamPre_, statePre_, command,
+                     "NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread");
+    p.addArgument(command.pDev_);
+    p.addArgument(command.uavSlot_);
+    p.addArgument(command.uavSpace_);
+    p.addResult(command.result_);
+    p.print(flush_);
+  }
+}
+
+void TraceLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
+  if (printPost_) {
+    CommandPrinter p(streamPost_, statePost_, command,
+                     "NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread");
+    p.addArgument(command.pDev_);
+    p.addArgument(command.uavSlot_);
+    p.addArgument(command.uavSpace_);
+    p.addResult(command.result_);
+    p.print(flush_);
+  }
+}
+
+void TraceLayer::pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
+  if (printPre_) {
+    CommandPrinter p(streamPre_, statePre_, command,
+                     "NvAPI_D3D12_BuildRaytracingAccelerationStructureEx");
+    p.addArgument(command.pCommandList_);
+    p.addArgument(command.pParams);
+    p.addResult(command.result_);
+    p.print(flush_);
+  }
+}
+
+void TraceLayer::post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
+  if (printPost_) {
+    CommandPrinter p(streamPost_, statePost_, command,
+                     "NvAPI_D3D12_BuildRaytracingAccelerationStructureEx");
+    p.addArgument(command.pCommandList_);
+    p.addArgument(command.pParams);
+    p.addResult(command.result_);
+    p.print(flush_);
+  }
+}
+
+void TraceLayer::pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
+  if (printPre_) {
+    CommandPrinter p(streamPre_, statePre_, command,
+                     "NvAPI_D3D12_BuildRaytracingOpacityMicromapArray");
+    p.addArgument(command.pCommandList_);
+    p.addArgument(command.pParams);
+    p.addResult(command.result_);
+    p.print(flush_);
+  }
+}
+
+void TraceLayer::post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
+  if (printPost_) {
+    CommandPrinter p(streamPost_, statePost_, command,
+                     "NvAPI_D3D12_BuildRaytracingOpacityMicromapArray");
+    p.addArgument(command.pCommandList_);
+    p.addArgument(command.pParams);
+    p.addResult(command.result_);
+    p.print(flush_);
+  }
+}
+
 #pragma endregion
 
 } // namespace DirectX

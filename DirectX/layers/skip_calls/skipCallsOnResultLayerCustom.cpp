@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "skipCallsOnResultLayerAuto.h"
+#include "nvapi.h"
 
 namespace gits {
 namespace DirectX {
@@ -19,6 +20,37 @@ void SkipCallsOnResultLayer::pre(IDXGISwapChainPresentCommand& command) {
 
 void SkipCallsOnResultLayer::pre(IDXGISwapChain1Present1Command& command) {
   if (FAILED(command.result_.value)) {
+    command.skip = true;
+  }
+}
+
+void SkipCallsOnResultLayer::pre(NvAPI_InitializeCommand& command) {
+  if (command.result_.value != NVAPI_OK) {
+    command.skip = true;
+  }
+}
+
+void SkipCallsOnResultLayer::pre(NvAPI_UnloadCommand& command) {
+  if (command.result_.value != NVAPI_OK) {
+    command.skip = true;
+  }
+}
+
+void SkipCallsOnResultLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
+  if (command.result_.value != NVAPI_OK) {
+    command.skip = true;
+  }
+}
+
+void SkipCallsOnResultLayer::pre(
+    NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
+  if (command.result_.value != NVAPI_OK) {
+    command.skip = true;
+  }
+}
+
+void SkipCallsOnResultLayer::pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
+  if (command.result_.value != NVAPI_OK) {
     command.skip = true;
   }
 }

@@ -64,6 +64,16 @@ public:
   virtual void post(INTC_D3D12_CreateReservedResourceCommand& command);
   virtual void pre(INTC_D3D12_CreateHeapCommand& command);
   virtual void post(INTC_D3D12_CreateHeapCommand& command);
+  virtual void pre(NvAPI_InitializeCommand& command) override;
+  virtual void post(NvAPI_InitializeCommand& command) override;
+  virtual void pre(NvAPI_UnloadCommand& command) override;
+  virtual void post(NvAPI_UnloadCommand& command) override;
+  virtual void pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) override;
+  virtual void post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) override;
+  virtual void pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) override;
+  virtual void post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) override;
+  virtual void pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) override;
+  virtual void post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) override;
 
 private:
   bool isFailure(HRESULT result) {
@@ -76,10 +86,14 @@ private:
     return result != XESS_RESULT_SUCCESS && (!isPlayer_ || result != preResultXess_);
   }
 
+  bool isFailureNvAPI(NvAPI_Status result);
+  std::string printResult(NvAPI_Status result);
+
 private:
   bool isPlayer_{};
   HRESULT preResult_{};
   xess_result_t preResultXess_{};
+  NvAPI_Status preResultNvAPI_{};
 };
 
 } // namespace DirectX

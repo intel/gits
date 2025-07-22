@@ -148,6 +148,11 @@ FastOStream& operator<<(FastOStream& stream, xess_d3d12_execute_params_t_Argumen
 FastOStream& operator<<(FastOStream& stream, DML_CheckFeatureSupport_BufferArgument& arg);
 FastOStream& operator<<(FastOStream& stream, DSTORAGE_QUEUE_DESC_Argument& arg);
 FastOStream& operator<<(FastOStream& stream, DSTORAGE_REQUEST_Argument& arg);
+FastOStream& operator<<(
+    FastOStream& stream,
+    PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS>& arg);
+FastOStream& operator<<(FastOStream& stream,
+                        PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>& arg);
 
 } // namespace DirectX
 } // namespace gits

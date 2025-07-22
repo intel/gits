@@ -426,6 +426,101 @@ private:
   INTC_D3D12_CreateHeapCommand command;
 };
 
+class NvAPI_InitializePlayer : public CommandPlayer {
+public:
+  unsigned Id() const override {
+    return static_cast<unsigned>(CommandId::ID_NVAPI_INITIALIZE);
+  }
+  const char* Name() const override {
+    return "NvAPI_Initialize";
+  }
+  void Run() override;
+
+protected:
+  void decodeCommand() override {
+    decode(data_.get(), command);
+  }
+
+private:
+  NvAPI_InitializeCommand command;
+};
+
+class NvAPI_UnloadPlayer : public CommandPlayer {
+public:
+  unsigned Id() const override {
+    return static_cast<unsigned>(CommandId::ID_NVAPI_UNLOAD);
+  }
+  const char* Name() const override {
+    return "NvAPI_Unload";
+  }
+  void Run() override;
+
+protected:
+  void decodeCommand() override {
+    decode(data_.get(), command);
+  }
+
+private:
+  NvAPI_UnloadCommand command;
+};
+
+class NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadPlayer : public CommandPlayer {
+public:
+  unsigned Id() const override {
+    return static_cast<unsigned>(CommandId::ID_NVAPI_D3D12_SETNVSHADEREXTNSLOTSPACELOCALTHREAD);
+  }
+  const char* Name() const override {
+    return "NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread";
+  }
+  void Run() override;
+
+protected:
+  void decodeCommand() override {
+    decode(data_.get(), command);
+  }
+
+private:
+  NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand command;
+};
+
+class NvAPI_D3D12_BuildRaytracingAccelerationStructureExPlayer : public CommandPlayer {
+public:
+  unsigned Id() const override {
+    return static_cast<unsigned>(CommandId::ID_NVAPI_D3D12_BUILDRAYTRACINGACCELERATIONSTRUCTUREEX);
+  }
+  const char* Name() const override {
+    return "NvAPI_D3D12_BuildRaytracingAccelerationStructureEx";
+  }
+  void Run() override;
+
+protected:
+  void decodeCommand() override {
+    decode(data_.get(), command);
+  }
+
+private:
+  NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand command;
+};
+
+class NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayPlayer : public CommandPlayer {
+public:
+  unsigned Id() const override {
+    return static_cast<unsigned>(CommandId::ID_NVAPI_D3D12_BUILDRAYTRACINGOPACITYMICROMAPARRAY);
+  }
+  const char* Name() const override {
+    return "NvAPI_D3D12_BuildRaytracingOpacityMicromapArray";
+  }
+  void Run() override;
+
+protected:
+  void decodeCommand() override {
+    decode(data_.get(), command);
+  }
+
+private:
+  NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand command;
+};
+
 #pragma endregion
 
 } // namespace DirectX

@@ -234,5 +234,47 @@ void decode(char* src, INTC_D3D12_CreateHeapCommand& command) {
   decode(src, offset, command.result_);
 }
 
+void decode(char* src, NvAPI_InitializeCommand& command) {
+  unsigned offset = 0;
+  decode(src, offset, command.key);
+  decode(src, offset, command.threadId);
+  decode(src, offset, command.result_);
+}
+
+void decode(char* src, NvAPI_UnloadCommand& command) {
+  unsigned offset = 0;
+  decode(src, offset, command.key);
+  decode(src, offset, command.threadId);
+  decode(src, offset, command.result_);
+}
+
+void decode(char* src, NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
+  unsigned offset = 0;
+  decode(src, offset, command.key);
+  decode(src, offset, command.threadId);
+  decode(src, offset, command.pDev_);
+  decode(src, offset, command.uavSlot_);
+  decode(src, offset, command.uavSpace_);
+  decode(src, offset, command.result_);
+}
+
+void decode(char* src, NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
+  unsigned offset = 0;
+  decode(src, offset, command.key);
+  decode(src, offset, command.threadId);
+  decode(src, offset, command.pCommandList_);
+  decode(src, offset, command.pParams);
+  decode(src, offset, command.result_);
+}
+
+void decode(char* src, NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
+  unsigned offset = 0;
+  decode(src, offset, command.key);
+  decode(src, offset, command.threadId);
+  decode(src, offset, command.pCommandList_);
+  decode(src, offset, command.pParams);
+  decode(src, offset, command.result_);
+}
+
 } // namespace DirectX
 } // namespace gits

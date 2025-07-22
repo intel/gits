@@ -550,6 +550,16 @@ class IntelOneMono(Repository):
         self.name = "intel-one-mono"
         self.url = "https://github.com/intel/intel-one-mono"
 
+class NvAPI(Repository):
+    def set_branch(self):
+        self.branch = "main"
+
+    def set_commit(self):
+        self.commit_id = "7cb76fce2f52de818b3da497af646af1ec16ce27"
+
+    def init(self):
+        self.name = "nvapi"
+        self.url = "https://github.com/NVIDIA/nvapi.git"
 
 class Repositories:
     def __init__(self, args) -> None:
@@ -600,6 +610,8 @@ class Repositories:
             self.repos.append(IMGUI())
         if args.with_all or args.with_intel_one_mono:
             self.repos.append(IntelOneMono())
+        if args.with_all or args.with_nvapi:
+            self.repos.append(NvAPI())
 
     def __iter__(self):
         for value in self.repos:
@@ -650,6 +662,7 @@ def setup_parser(root_parser):
     root_parser.add_argument("--with-argshxx", action="store_true")
     root_parser.add_argument("--with-imgui", action="store_true")
     root_parser.add_argument("--with-intel-one-mono", action="store_true")
+    root_parser.add_argument("--with-nvapi", action="store_true")
 
 
 def install_dependencies(args):

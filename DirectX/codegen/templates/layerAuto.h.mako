@@ -111,6 +111,21 @@ public:
   virtual void pre(INTC_D3D12_CreateHeapCommand& command) {}
   virtual void post(INTC_D3D12_CreateHeapCommand& command) {}
 
+  virtual void pre(NvAPI_InitializeCommand& command) {}
+  virtual void post(NvAPI_InitializeCommand& command) {}
+
+  virtual void pre(NvAPI_UnloadCommand& command) {}
+  virtual void post(NvAPI_UnloadCommand& command) {}
+
+  virtual void pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {}
+  virtual void post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {}
+
+  virtual void pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {}
+  virtual void post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {}
+
+  virtual void pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {}
+  virtual void post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {}
+
 private:
   std::string name_;
 };

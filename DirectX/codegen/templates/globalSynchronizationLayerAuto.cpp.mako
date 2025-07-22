@@ -147,6 +147,46 @@ void GlobalSynchronizationLayer::pre(INTC_D3D12_CreateHeapCommand& command) {
 void GlobalSynchronizationLayer::post(INTC_D3D12_CreateHeapCommand& command) {
   mutex_.unlock();
 }
+
+void GlobalSynchronizationLayer::pre(NvAPI_InitializeCommand& command) {
+  mutex_.lock();
+}
+
+void GlobalSynchronizationLayer::post(NvAPI_InitializeCommand& command) {
+  mutex_.unlock();
+}
+
+void GlobalSynchronizationLayer::pre(NvAPI_UnloadCommand& command) {
+  mutex_.lock();
+}
+
+void GlobalSynchronizationLayer::post(NvAPI_UnloadCommand& command) {
+  mutex_.unlock();
+}
+
+void GlobalSynchronizationLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
+  mutex_.lock();
+}
+
+void GlobalSynchronizationLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
+  mutex_.unlock();
+}
+
+void GlobalSynchronizationLayer::pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
+  mutex_.lock();
+}
+
+void GlobalSynchronizationLayer::post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
+  mutex_.unlock();
+}
+
+void GlobalSynchronizationLayer::pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
+  mutex_.lock();
+}
+
+void GlobalSynchronizationLayer::post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
+  mutex_.unlock();
+}
 %for function in functions:
 
 void GlobalSynchronizationLayer::pre(${function.name}Command& command) {

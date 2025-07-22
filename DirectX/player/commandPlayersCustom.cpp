@@ -428,5 +428,98 @@ void INTC_D3D12_CreateHeapPlayer::Run() {
 }
 #pragma endregion
 
+#pragma region NVAPI
+
+void NvAPI_InitializePlayer::Run() {
+  auto& manager = PlayerManager::get();
+
+  for (Layer* layer : manager.getPreLayers()) {
+    layer->pre(command);
+  }
+
+  if (manager.executeCommands() && command.result_.value == NVAPI_OK && !command.skip) {
+    command.result_.value = NvAPI_Initialize();
+  }
+
+  for (Layer* layer : manager.getPostLayers()) {
+    layer->post(command);
+  }
+}
+
+void NvAPI_UnloadPlayer::Run() {
+  auto& manager = PlayerManager::get();
+
+  for (Layer* layer : manager.getPreLayers()) {
+    layer->pre(command);
+  }
+
+  if (manager.executeCommands() && command.result_.value == NVAPI_OK && !command.skip) {
+    command.result_.value = NvAPI_Unload();
+  }
+
+  for (Layer* layer : manager.getPostLayers()) {
+    layer->post(command);
+  }
+}
+
+void NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadPlayer::Run() {
+  auto& manager = PlayerManager::get();
+
+  updateInterface(manager, command.pDev_);
+
+  for (Layer* layer : manager.getPreLayers()) {
+    layer->pre(command);
+  }
+
+  if (manager.executeCommands() && command.result_.value == NVAPI_OK && !command.skip) {
+    command.result_.value = NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread(
+        command.pDev_.value, command.uavSlot_.value, command.uavSpace_.value);
+  }
+
+  for (Layer* layer : manager.getPostLayers()) {
+    layer->post(command);
+  }
+}
+
+void NvAPI_D3D12_BuildRaytracingAccelerationStructureExPlayer::Run() {
+  auto& manager = PlayerManager::get();
+
+  updateInterface(manager, command.pCommandList_);
+
+  for (Layer* layer : manager.getPreLayers()) {
+    layer->pre(command);
+  }
+
+  if (manager.executeCommands() && command.result_.value == NVAPI_OK && !command.skip) {
+    command.result_.value = NvAPI_D3D12_BuildRaytracingAccelerationStructureEx(
+        command.pCommandList_.value, command.pParams.value);
+  }
+
+  for (Layer* layer : manager.getPostLayers()) {
+    layer->post(command);
+  }
+}
+
+void NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayPlayer::Run() {
+  auto& manager = PlayerManager::get();
+
+  updateInterface(manager, command.pCommandList_);
+
+  for (Layer* layer : manager.getPreLayers()) {
+    layer->pre(command);
+  }
+
+  if (manager.executeCommands() && command.result_.value == NVAPI_OK && !command.skip) {
+    command.result_.value = NvAPI_D3D12_BuildRaytracingOpacityMicromapArray(
+        command.pCommandList_.value, command.pParams.value);
+  }
+
+  for (Layer* layer : manager.getPostLayers()) {
+    layer->post(command);
+  }
+}
+
+#pragma endregion
+
 } // namespace DirectX
 } // namespace gits

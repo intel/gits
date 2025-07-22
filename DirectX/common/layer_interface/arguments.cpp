@@ -8,6 +8,7 @@
 
 #include "arguments.h"
 #include "intelExtensions.h"
+#include "nvapi.h"
 #include <d3dx12/d3dx12_pipeline_state_stream.h>
 
 namespace gits {
@@ -1888,6 +1889,237 @@ xess_d3d12_execute_params_t_Argument::xess_d3d12_execute_params_t_Argument(
 
 xess_d3d12_execute_params_t_Argument::~xess_d3d12_execute_params_t_Argument() {
   if (copy) {
+    delete value;
+  }
+}
+
+#pragma endregion
+
+#pragma region NVAPI
+
+PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS>::PointerArgument(
+    const PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS>& arg) {
+  if (!arg.value) {
+    return;
+  }
+  value = new NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS();
+  *value = *arg.value;
+
+  value->pDesc = new NVAPI_D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC_EX();
+  auto pDescMod =
+      const_cast<NVAPI_D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC_EX*>(value->pDesc);
+  *pDescMod = *arg.value->pDesc;
+
+  if (value->pDesc->inputs.type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
+    if (value->pDesc->inputs.descsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY) {
+      if (value->pDesc->inputs.pGeometryDescs) {
+        pDescMod->inputs.pGeometryDescs =
+            reinterpret_cast<NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX*>(
+                new char[value->pDesc->inputs.geometryDescStrideInBytes *
+                         value->pDesc->inputs.numDescs]);
+        memcpy(const_cast<NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX*>(
+                   value->pDesc->inputs.pGeometryDescs),
+               arg.value->pDesc->inputs.pGeometryDescs,
+               value->pDesc->inputs.geometryDescStrideInBytes * value->pDesc->inputs.numDescs);
+
+        for (unsigned i = 0; i < value->pDesc->inputs.numDescs; ++i) {
+          NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX& desc =
+              *(NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX*)((char*)(value->pDesc->inputs
+                                                                      .pGeometryDescs) +
+                                                          value->pDesc->inputs
+                                                                  .geometryDescStrideInBytes *
+                                                              i);
+          NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX& argDesc =
+              *(NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX*)((char*)(arg.value->pDesc->inputs
+                                                                      .pGeometryDescs) +
+                                                          arg.value->pDesc->inputs
+                                                                  .geometryDescStrideInBytes *
+                                                              i);
+          if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES_EX) {
+            desc.ommTriangles.ommAttachment.pOMMUsageCounts =
+                new NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_USAGE_COUNT
+                    [desc.ommTriangles.ommAttachment.numOMMUsageCounts];
+            memcpy(const_cast<NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_USAGE_COUNT*>(
+                       desc.ommTriangles.ommAttachment.pOMMUsageCounts),
+                   argDesc.ommTriangles.ommAttachment.pOMMUsageCounts,
+                   sizeof(NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_USAGE_COUNT) *
+                       desc.ommTriangles.ommAttachment.numOMMUsageCounts);
+          } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_DMM_TRIANGLES_EX) {
+            desc.dmmTriangles.dmmAttachment.pDMMUsageCounts =
+                new NVAPI_D3D12_RAYTRACING_DISPLACEMENT_MICROMAP_USAGE_COUNT
+                    [desc.dmmTriangles.dmmAttachment.numDMMUsageCounts];
+            memcpy(const_cast<NVAPI_D3D12_RAYTRACING_DISPLACEMENT_MICROMAP_USAGE_COUNT*>(
+                       desc.dmmTriangles.dmmAttachment.pDMMUsageCounts),
+                   argDesc.dmmTriangles.dmmAttachment.pDMMUsageCounts,
+                   sizeof(NVAPI_D3D12_RAYTRACING_DISPLACEMENT_MICROMAP_USAGE_COUNT) *
+                       desc.dmmTriangles.dmmAttachment.numDMMUsageCounts);
+          }
+        }
+      }
+    } else if (value->pDesc->inputs.descsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS) {
+      if (value->pDesc->inputs.ppGeometryDescs) {
+        pDescMod->inputs.ppGeometryDescs =
+            new NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX*[value->pDesc->inputs.numDescs];
+        for (unsigned i = 0; i < value->pDesc->inputs.numDescs; ++i) {
+          const_cast<NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX**>(
+              value->pDesc->inputs.ppGeometryDescs)[i] =
+              new NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX();
+
+          NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX& desc =
+              *const_cast<NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX**>(
+                  value->pDesc->inputs.ppGeometryDescs)[i];
+          NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX& argDesc =
+              *const_cast<NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX**>(
+                  arg.value->pDesc->inputs.ppGeometryDescs)[i];
+          desc = argDesc;
+
+          if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES_EX) {
+            desc.ommTriangles.ommAttachment.pOMMUsageCounts =
+                new NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_USAGE_COUNT
+                    [desc.ommTriangles.ommAttachment.numOMMUsageCounts];
+            memcpy(const_cast<NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_USAGE_COUNT*>(
+                       desc.ommTriangles.ommAttachment.pOMMUsageCounts),
+                   argDesc.ommTriangles.ommAttachment.pOMMUsageCounts,
+                   sizeof(NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_USAGE_COUNT) *
+                       desc.ommTriangles.ommAttachment.numOMMUsageCounts);
+          } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_DMM_TRIANGLES_EX) {
+            desc.dmmTriangles.dmmAttachment.pDMMUsageCounts =
+                new NVAPI_D3D12_RAYTRACING_DISPLACEMENT_MICROMAP_USAGE_COUNT
+                    [desc.dmmTriangles.dmmAttachment.numDMMUsageCounts];
+            memcpy(const_cast<NVAPI_D3D12_RAYTRACING_DISPLACEMENT_MICROMAP_USAGE_COUNT*>(
+                       desc.dmmTriangles.dmmAttachment.pDMMUsageCounts),
+                   argDesc.dmmTriangles.dmmAttachment.pDMMUsageCounts,
+                   sizeof(NVAPI_D3D12_RAYTRACING_DISPLACEMENT_MICROMAP_USAGE_COUNT) *
+                       desc.dmmTriangles.dmmAttachment.numDMMUsageCounts);
+          }
+        }
+      }
+    }
+  }
+  destAccelerationStructureKey = arg.destAccelerationStructureKey;
+  destAccelerationStructureOffset = arg.destAccelerationStructureOffset;
+  sourceAccelerationStructureKey = arg.sourceAccelerationStructureKey;
+  sourceAccelerationStructureOffset = arg.sourceAccelerationStructureOffset;
+  scratchAccelerationStructureKey = arg.scratchAccelerationStructureKey;
+  scratchAccelerationStructureOffset = arg.scratchAccelerationStructureOffset;
+  inputKeys = arg.inputKeys;
+  inputOffsets = arg.inputOffsets;
+  destPostBuildBufferKeys = arg.destPostBuildBufferKeys;
+  destPostBuildBufferOffsets = arg.destPostBuildBufferOffsets;
+
+  if (value->pPostbuildInfoDescs) {
+    value->pPostbuildInfoDescs = new D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC
+        [value->numPostbuildInfoDescs];
+    memcpy(const_cast<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC*>(
+               value->pPostbuildInfoDescs),
+           arg.value->pPostbuildInfoDescs,
+           sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC) *
+               value->numPostbuildInfoDescs);
+  }
+
+  copy = true;
+}
+
+PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS>::~PointerArgument() {
+  if (copy) {
+    if (value->pDesc->inputs.type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
+      if (value->pDesc->inputs.descsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY) {
+        for (unsigned i = 0; i < value->pDesc->inputs.numDescs; ++i) {
+          NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX& desc =
+              *(NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX*)((char*)(value->pDesc->inputs
+                                                                      .pGeometryDescs) +
+                                                          value->pDesc->inputs
+                                                                  .geometryDescStrideInBytes *
+                                                              i);
+          if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES_EX) {
+            delete[] desc.ommTriangles.ommAttachment.pOMMUsageCounts;
+          } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_DMM_TRIANGLES_EX) {
+            delete[] desc.dmmTriangles.dmmAttachment.pDMMUsageCounts;
+          }
+        }
+        delete[] value->pDesc->inputs.pGeometryDescs;
+      } else if (value->pDesc->inputs.descsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS) {
+        for (unsigned i = 0; i < value->pDesc->inputs.numDescs; ++i) {
+          const NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX* desc =
+              value->pDesc->inputs.ppGeometryDescs[i];
+          if (desc->type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES_EX) {
+            delete[] desc->ommTriangles.ommAttachment.pOMMUsageCounts;
+          } else if (desc->type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_DMM_TRIANGLES_EX) {
+            delete[] desc->dmmTriangles.dmmAttachment.pDMMUsageCounts;
+          }
+          delete value->pDesc->inputs.ppGeometryDescs[i];
+        }
+        delete[] value->pDesc->inputs.ppGeometryDescs;
+      }
+    }
+
+    if (value->pPostbuildInfoDescs) {
+      delete[] value->pPostbuildInfoDescs;
+    }
+
+    delete value->pDesc;
+    delete value;
+  }
+}
+
+PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>::PointerArgument(
+    const PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>& arg) {
+  if (!arg.value) {
+    return;
+  }
+  value = new NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS();
+  *value = *arg.value;
+
+  value->pDesc = new NVAPI_D3D12_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_DESC();
+  auto* pDescMod =
+      const_cast<NVAPI_D3D12_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_DESC*>(value->pDesc);
+  *pDescMod = *arg.value->pDesc;
+
+  if (value->pDesc->inputs.pOMMUsageCounts) {
+    pDescMod->inputs.pOMMUsageCounts =
+        new NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_USAGE_COUNT[value->pDesc->inputs
+                                                                    .numOMMUsageCounts];
+    memcpy(const_cast<NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_USAGE_COUNT*>(
+               pDescMod->inputs.pOMMUsageCounts),
+           arg.value->pDesc->inputs.pOMMUsageCounts,
+           value->pDesc->inputs.numOMMUsageCounts *
+               sizeof(NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_USAGE_COUNT));
+  }
+
+  destOpacityMicromapArrayDataKey = arg.destOpacityMicromapArrayDataKey;
+  destOpacityMicromapArrayDataOffset = arg.destOpacityMicromapArrayDataOffset;
+  inputBufferKey = arg.inputBufferKey;
+  inputBufferOffset = arg.inputBufferOffset;
+  perOMMDescsKey = arg.perOMMDescsKey;
+  perOMMDescsOffset = arg.perOMMDescsOffset;
+  scratchOpacityMicromapArrayDataKey = arg.scratchOpacityMicromapArrayDataKey;
+  scratchOpacityMicromapArrayDataOffset = arg.scratchOpacityMicromapArrayDataOffset;
+  destPostBuildBufferKeys = arg.destPostBuildBufferKeys;
+  destPostBuildBufferOffsets = arg.destPostBuildBufferOffsets;
+
+  if (value->pPostbuildInfoDescs) {
+    value->pPostbuildInfoDescs =
+        new NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_POSTBUILD_INFO_DESC
+            [value->numPostbuildInfoDescs];
+    memcpy(const_cast<NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_POSTBUILD_INFO_DESC*>(
+               value->pPostbuildInfoDescs),
+           arg.value->pPostbuildInfoDescs,
+           sizeof(NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_POSTBUILD_INFO_DESC) *
+               value->numPostbuildInfoDescs);
+  }
+
+  copy = true;
+}
+
+PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>::~PointerArgument() {
+  if (copy) {
+    if (value->pDesc->inputs.pOMMUsageCounts) {
+      delete[] value->pDesc->inputs.pOMMUsageCounts;
+    }
+    if (value->pPostbuildInfoDescs) {
+      delete[] value->pPostbuildInfoDescs;
+    }
+    delete value->pDesc;
     delete value;
   }
 }

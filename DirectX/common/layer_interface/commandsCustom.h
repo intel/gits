@@ -27,6 +27,17 @@ struct INTC_D3D12_RESOURCE_DESC;
 struct INTC_D3D12_COMMAND_QUEUE_DESC_0001;
 struct INTC_D3D12_HEAP_DESC;
 
+typedef enum _NvAPI_Status NvAPI_Status;
+typedef struct _NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS_V1
+    NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS_V1;
+typedef NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS_V1
+    NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS;
+typedef struct _NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS_V1
+    NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS_V1;
+typedef NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS_V1
+    NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS;
+typedef unsigned long NvU32;
+
 namespace gits {
 namespace DirectX {
 
@@ -633,6 +644,82 @@ public:
   DML_CheckFeatureSupport_BufferArgument featureQueryData_{};
   Argument<UINT> featureSupportDataSize_{};
   BufferArgument featureSupportData_{};
+};
+
+#pragma region NVAPI
+
+class NvAPI_InitializeCommand : public Command {
+public:
+  NvAPI_InitializeCommand(unsigned threadId) : Command{CommandId::ID_NVAPI_INITIALIZE, threadId} {}
+  NvAPI_InitializeCommand() : Command(CommandId::ID_NVAPI_INITIALIZE) {}
+
+public:
+  Argument<NvAPI_Status> result_{};
+};
+
+class NvAPI_UnloadCommand : public Command {
+public:
+  NvAPI_UnloadCommand(unsigned threadId) : Command{CommandId::ID_NVAPI_UNLOAD, threadId} {}
+  NvAPI_UnloadCommand() : Command(CommandId::ID_NVAPI_UNLOAD) {}
+
+public:
+  Argument<NvAPI_Status> result_{};
+};
+
+class NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand : public Command {
+public:
+  NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand(unsigned threadId,
+                                                         IUnknown* pDev,
+                                                         NvU32 uavSlot,
+                                                         NvU32 uavSpace)
+      : Command{CommandId::ID_NVAPI_D3D12_SETNVSHADEREXTNSLOTSPACELOCALTHREAD, threadId},
+        pDev_{pDev},
+        uavSlot_{uavSlot},
+        uavSpace_{uavSpace} {}
+  NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand()
+      : Command(CommandId::ID_NVAPI_D3D12_SETNVSHADEREXTNSLOTSPACELOCALTHREAD) {}
+
+public:
+  InterfaceArgument<IUnknown> pDev_{};
+  Argument<NvU32> uavSlot_{};
+  Argument<NvU32> uavSpace_{};
+  Argument<NvAPI_Status> result_{};
+};
+
+class NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand : public Command {
+public:
+  NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand(
+      unsigned threadId,
+      ID3D12GraphicsCommandList4* pCommandList,
+      const NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS* pParams)
+      : Command{CommandId::ID_NVAPI_D3D12_BUILDRAYTRACINGACCELERATIONSTRUCTUREEX, threadId},
+        pCommandList_{pCommandList},
+        pParams{pParams} {}
+  NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand()
+      : Command(CommandId::ID_NVAPI_D3D12_BUILDRAYTRACINGACCELERATIONSTRUCTUREEX) {}
+
+public:
+  InterfaceArgument<ID3D12GraphicsCommandList4> pCommandList_{};
+  PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS> pParams{};
+  Argument<NvAPI_Status> result_{};
+};
+
+class NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand : public Command {
+public:
+  NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand(
+      unsigned threadId,
+      ID3D12GraphicsCommandList4* pCommandList,
+      const NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS* pParams)
+      : Command{CommandId::ID_NVAPI_D3D12_BUILDRAYTRACINGOPACITYMICROMAPARRAY, threadId},
+        pCommandList_{pCommandList},
+        pParams{pParams} {}
+  NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand()
+      : Command(CommandId::ID_NVAPI_D3D12_BUILDRAYTRACINGOPACITYMICROMAPARRAY) {}
+
+public:
+  InterfaceArgument<ID3D12GraphicsCommandList4> pCommandList_{};
+  PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS> pParams{};
+  Argument<NvAPI_Status> result_{};
 };
 
 #pragma endregion

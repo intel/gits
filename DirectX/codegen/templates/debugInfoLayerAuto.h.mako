@@ -30,6 +30,8 @@ public:
   void pre(DMLCreateDeviceCommand& command) override;
   void pre(DMLCreateDevice1Command& command) override;
   void post(DStorageGetFactoryCommand& command) override;
+  void post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) override;
+  void post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) override;
 
   %for interface in interfaces:
   %for function in interface.functions:

@@ -349,5 +349,70 @@ void encode(const INTC_D3D12_CreateHeapCommand& command, char* dest) {
   encode(dest, offset, command.result_);
 }
 
+unsigned getSize(const NvAPI_InitializeCommand& command) {
+  return getSize(command.key) + getSize(command.threadId) + getSize(command.result_);
+}
+
+void encode(const NvAPI_InitializeCommand& command, char* dest) {
+  unsigned offset = 0;
+  encode(dest, offset, command.key);
+  encode(dest, offset, command.threadId);
+  encode(dest, offset, command.result_);
+}
+
+unsigned getSize(const NvAPI_UnloadCommand& command) {
+  return getSize(command.key) + getSize(command.threadId) + getSize(command.result_);
+}
+
+void encode(const NvAPI_UnloadCommand& command, char* dest) {
+  unsigned offset = 0;
+  encode(dest, offset, command.key);
+  encode(dest, offset, command.threadId);
+  encode(dest, offset, command.result_);
+}
+
+unsigned getSize(const NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
+  return getSize(command.key) + getSize(command.threadId) + getSize(command.pDev_) +
+         getSize(command.uavSlot_) + getSize(command.uavSpace_) + getSize(command.result_);
+}
+
+void encode(const NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command, char* dest) {
+  unsigned offset = 0;
+  encode(dest, offset, command.key);
+  encode(dest, offset, command.threadId);
+  encode(dest, offset, command.pDev_);
+  encode(dest, offset, command.uavSlot_);
+  encode(dest, offset, command.uavSpace_);
+  encode(dest, offset, command.result_);
+}
+
+unsigned getSize(const NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
+  return getSize(command.key) + getSize(command.threadId) + getSize(command.pCommandList_) +
+         getSize(command.pParams) + getSize(command.result_);
+}
+
+void encode(const NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command, char* dest) {
+  unsigned offset = 0;
+  encode(dest, offset, command.key);
+  encode(dest, offset, command.threadId);
+  encode(dest, offset, command.pCommandList_);
+  encode(dest, offset, command.pParams);
+  encode(dest, offset, command.result_);
+}
+
+unsigned getSize(const NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
+  return getSize(command.key) + getSize(command.threadId) + getSize(command.pCommandList_) +
+         getSize(command.pParams) + getSize(command.result_);
+}
+
+void encode(const NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command, char* dest) {
+  unsigned offset = 0;
+  encode(dest, offset, command.key);
+  encode(dest, offset, command.threadId);
+  encode(dest, offset, command.pCommandList_);
+  encode(dest, offset, command.pParams);
+  encode(dest, offset, command.result_);
+}
+
 } // namespace DirectX
 } // namespace gits

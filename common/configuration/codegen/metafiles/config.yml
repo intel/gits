@@ -771,6 +771,10 @@ Configuration:
               If false Intel Extensions capture is done on D3D12 level. Capturing Intel Extensions 
               calls is needed to ensure the stream will be compatible with future Intel drivers. Not
               all applications use Intel Extensions.
+          - Name: captureNvAPI
+            Type: bool
+            Default: true
+            Description: If false NvAPI capture is done on D3D12 level
           - Name: captureDirectML
             Type: bool
             Default: true

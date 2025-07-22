@@ -79,8 +79,8 @@ void DebugInfo::createD3D12DevicePost(D3D12CreateDeviceCommand& command) {
   }
 
   Microsoft::WRL::ComPtr<ID3D12InfoQueue1> infoQueue;
-  HRESULT hr = static_cast<ID3D12Device*>(*command.ppDevice_.value)
-                   ->QueryInterface(IID_PPV_ARGS(&infoQueue));
+  ID3D12Device* device = static_cast<ID3D12Device*>(*command.ppDevice_.value);
+  HRESULT hr = device->QueryInterface(IID_PPV_ARGS(&infoQueue));
   if (hr != S_OK) {
     Log(INFOV) << "QueryInterface to ID3D12InfoQueue1 failed.";
     return;
@@ -93,6 +93,8 @@ void DebugInfo::createD3D12DevicePost(D3D12CreateDeviceCommand& command) {
   }
 
   d3d12CallbackRegistered_ = true;
+
+  initNvAPIValidation(device);
 }
 
 void DebugInfo::createDMLDevicePre(DMLCreateDeviceCommand& command) {
@@ -136,6 +138,8 @@ void DebugInfo::checkDXGIDebugInfo(Command& command, IUnknown* object) {
 }
 
 void DebugInfo::checkD3D12DebugInfo(Command& command, IUnknown* object) {
+  flushNvAPIValidation(object);
+
   if (d3d12CallbackRegistered_) {
     return;
   }
@@ -182,6 +186,33 @@ void __stdcall DebugInfo::debugMessageCallback(D3D12_MESSAGE_CATEGORY category,
                                                void* context) {
   DebugInfo* debugInfo = static_cast<DebugInfo*>(context);
   debugInfo->traceMessage(severity, description);
+}
+
+void __stdcall DebugInfo::NvAPIdebugMessageCallback(
+    void* context,
+    NVAPI_D3D12_RAYTRACING_VALIDATION_MESSAGE_SEVERITY severity,
+    const char* messageCode,
+    const char* message,
+    const char* messageDetails) {
+  std::string description;
+  description = "NvAPI code: ";
+  description += messageCode;
+  description += ", message: ";
+  description += message;
+  description += ", details: ";
+  description += messageDetails;
+
+  D3D12_MESSAGE_SEVERITY d3d12Severity{};
+  if (severity == NVAPI_D3D12_RAYTRACING_VALIDATION_MESSAGE_SEVERITY_ERROR) {
+    d3d12Severity = D3D12_MESSAGE_SEVERITY_ERROR;
+  } else if (severity == NVAPI_D3D12_RAYTRACING_VALIDATION_MESSAGE_SEVERITY_WARNING) {
+    d3d12Severity = D3D12_MESSAGE_SEVERITY_WARNING;
+  } else {
+    Log(ERR) << "Unknown NvAPI message severity: " << severity;
+  }
+
+  DebugInfo* debugInfo = static_cast<DebugInfo*>(context);
+  debugInfo->traceMessage(d3d12Severity, description.c_str());
 }
 
 void DebugInfo::traceMessage(D3D12_MESSAGE_SEVERITY severity, const char* message) {
@@ -387,6 +418,63 @@ void DebugInfo::logDredPageFaults(const D3D12_DRED_PAGE_FAULT_OUTPUT& pageFaultO
   printAllocationNodes(pageFaultOutput.pHeadRecentFreedAllocationNode);
   dredFile_ << "  Existing Allocations:\n";
   printAllocationNodes(pageFaultOutput.pHeadExistingAllocationNode);
+}
+
+void DebugInfo::initNvAPIValidation(ID3D12Device* device) {
+  auto status = NvAPI_Initialize();
+  if (status == NVAPI_LIBRARY_NOT_FOUND || status == NVAPI_NVIDIA_DEVICE_NOT_FOUND) {
+    return;
+  } else if (status != NVAPI_OK) {
+    Log(ERR) << "NvAPI_Initialize failed! NvAPI Raytracing Validation not enabled";
+    return;
+  }
+
+  Microsoft::WRL::ComPtr<ID3D12Device5> device5{};
+  device->QueryInterface(IID_PPV_ARGS(&device5));
+  if (!device5) {
+    Log(ERR) << "ID3D12Device5 not available! NvAPI Raytracing Validation not enabled";
+    return;
+  }
+
+  status = NvAPI_D3D12_EnableRaytracingValidation(device5.Get(),
+                                                  NVAPI_D3D12_RAYTRACING_VALIDATION_FLAG_NONE);
+  if (status == NVAPI_OK) {
+    void* handle{};
+    status = NvAPI_D3D12_RegisterRaytracingValidationMessageCallback(
+        device5.Get(), NvAPIdebugMessageCallback, this, &handle);
+    if (status != NVAPI_OK) {
+      Log(ERR) << "NvAPI_D3D12_RegisterRaytracingValidationMessageCallback failed! Status: "
+               << status;
+    }
+  } else if (status == NVAPI_ACCESS_DENIED) {
+    Log(ERR) << "NvAPI_D3D12_EnableRaytracingValidation failed! Environment variables: "
+                "NV_ALLOW_RAYTRACING_VALIDATION needs to be set to 1";
+  } else {
+    Log(ERR) << "NvAPI_D3D12_EnableRaytracingValidation failed! Status: " << status;
+  }
+}
+
+void DebugInfo::flushNvAPIValidation(IUnknown* object) {
+  Microsoft::WRL::ComPtr<ID3D12Device> device;
+  object->QueryInterface(IID_PPV_ARGS(&device));
+  if (!device) {
+    Microsoft::WRL::ComPtr<ID3D12DeviceChild> deviceChild;
+    object->QueryInterface(IID_PPV_ARGS(&deviceChild));
+    if (!deviceChild) {
+      return;
+    }
+    deviceChild->GetDevice(IID_PPV_ARGS(&device));
+    if (!device) {
+      return;
+    }
+  }
+
+  Microsoft::WRL::ComPtr<ID3D12Device5> device5;
+  device->QueryInterface(IID_PPV_ARGS(&device5));
+  if (!device5) {
+    return;
+  }
+  NvAPI_D3D12_FlushRaytracingValidationMessages(device5.Get());
 }
 
 } // namespace DirectX

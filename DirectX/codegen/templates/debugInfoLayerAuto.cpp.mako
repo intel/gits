@@ -57,6 +57,20 @@ void DebugInfoLayer::post(DStorageGetFactoryCommand& command) {
   factory->SetDebugFlags(DSTORAGE_DEBUG_SHOW_ERRORS | DSTORAGE_DEBUG_RECORD_OBJECT_NAMES);
 }
 
+void DebugInfoLayer::post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
+  if (!command.skip) {
+    debugInfo_.checkD3D12DebugInfo(command, command.pCommandList_.value);
+    debugInfo_.checkD3D12DeviceRemoval(command, command.pCommandList_.value);
+  }
+}
+
+void DebugInfoLayer::post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
+  if (!command.skip) {
+    debugInfo_.checkD3D12DebugInfo(command, command.pCommandList_.value);
+    debugInfo_.checkD3D12DeviceRemoval(command, command.pCommandList_.value);
+  }
+}
+
 %for interface in interfaces:
 %for function in interface.functions:
 %if interface.api == Api.D3D12 or interface.api == Api.DML or interface.api == Api.DXGI:

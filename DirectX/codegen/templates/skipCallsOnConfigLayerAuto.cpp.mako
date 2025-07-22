@@ -153,6 +153,41 @@ void SkipCallsOnConfigLayer::pre(INTC_D3D12_CreateHeapCommand& command) {
   }
 }
 
+void SkipCallsOnConfigLayer::pre(NvAPI_InitializeCommand& command) {
+  if (configKeySet_.contains(command.key)) {
+    command.skip = true;
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " NvAPI_InitializeCommand";
+  }
+}
+
+void SkipCallsOnConfigLayer::pre(NvAPI_UnloadCommand& command) {
+  if (configKeySet_.contains(command.key)) {
+    command.skip = true;
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " NvAPI_UnloadCommand";
+  }
+}
+
+void SkipCallsOnConfigLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
+  if (configKeySet_.contains(command.key)) {
+    command.skip = true;
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand";
+  }
+}
+
+void SkipCallsOnConfigLayer::pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
+  if (configKeySet_.contains(command.key)) {
+    command.skip = true;
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand";
+  }
+}
+
+void SkipCallsOnConfigLayer::pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
+  if (configKeySet_.contains(command.key)) {
+    command.skip = true;
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand";
+  }
+}
+
 %for function in functions:
 void SkipCallsOnConfigLayer::pre(${function.name}Command& command) {
   if (configKeySet_.contains(command.key)) {

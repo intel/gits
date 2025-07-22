@@ -9,6 +9,7 @@
 #pragma once
 
 #include "layerAuto.h"
+#include "nvapi.h"
 
 #include <fstream>
 
@@ -37,10 +38,18 @@ private:
                                              D3D12_MESSAGE_ID id,
                                              LPCSTR description,
                                              void* context);
+  static void __stdcall NvAPIdebugMessageCallback(
+      void* pUserData,
+      NVAPI_D3D12_RAYTRACING_VALIDATION_MESSAGE_SEVERITY severity,
+      const char* messageCode,
+      const char* message,
+      const char* messageDetails);
   void traceMessage(D3D12_MESSAGE_SEVERITY severity, const char* message);
   void initDredLog();
   void logDredBreadcrumbs(const D3D12_AUTO_BREADCRUMB_NODE* headNode);
   void logDredPageFaults(const D3D12_DRED_PAGE_FAULT_OUTPUT& pageFaultOutput);
+  void initNvAPIValidation(ID3D12Device* device);
+  void flushNvAPIValidation(IUnknown* object);
 
 private:
   bool d3d12CallbackRegistered_{};

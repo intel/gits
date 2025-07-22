@@ -33,6 +33,11 @@ void decode(char* src, INTC_D3D12_CreateComputePipelineStateCommand& command);
 void decode(char* src, INTC_D3D12_CreatePlacedResourceCommand& command);
 void decode(char* src, INTC_D3D12_CreateCommittedResourceCommand& command);
 void decode(char* src, INTC_D3D12_CreateHeapCommand& command);
+void decode(char* src, NvAPI_InitializeCommand& command);
+void decode(char* src, NvAPI_UnloadCommand& command);
+void decode(char* src, NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command);
+void decode(char* src, NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command);
+void decode(char* src, NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command);
 
 } // namespace DirectX
 } // namespace gits

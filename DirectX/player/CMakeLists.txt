@@ -133,7 +133,7 @@ target_include_directories(DirectX_player PRIVATE
   ${SRC_DIR}
 )
 
-target_link_libraries(DirectX_player PRIVATE ${INTEL_EXT_DIR}/lib/igdext64.lib)
+target_link_libraries(DirectX_player PRIVATE ${INTEL_EXT_DIR}/lib/igdext64.lib ${NVAPI_DIR}/amd64/nvapi64.lib)
 
 set_target_properties(DirectX_player PROPERTIES FOLDER DirectX)
 
@@ -160,3 +160,4 @@ install(FILES ${DXC_DIR}/LICENSE-LLVM.txt DESTINATION Player/D3D12 RENAME LICENS
 install(FILES ${XESS_SDK_DIR}/LICENSE.txt DESTINATION Player/D3D12 RENAME LICENSE_XESS.txt)
 install(FILES ${DML_DIR}/LICENSE.txt DESTINATION Player/D3D12 RENAME LICENSE_DirectML.txt)
 install(FILES ${DSTORAGE_DIR}/LICENSE.txt DESTINATION Player/D3D12 RENAME LICENSE_DirectStorage.txt)
+install(FILES ${NVAPI_DIR}/License.txt DESTINATION Player/D3D12 RENAME LICENSE_NvAPI.txt)

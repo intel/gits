@@ -1,0 +1,29 @@
+// ===================== begin_copyright_notice ============================
+//
+// Copyright (C) 2023-2025 Intel Corporation
+//
+// SPDX-License-Identifier: MIT
+//
+// ===================== end_copyright_notice ==============================
+
+#pragma once
+
+#include "nvapi.h"
+
+namespace gits {
+namespace DirectX {
+
+struct NvAPIDispatchTable {
+  void* (*nvapi_QueryInterface)(unsigned int);
+  decltype(NvAPI_Initialize)* NvAPI_Initialize;
+  decltype(NvAPI_Unload)* NvAPI_Unload;
+  decltype(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread)*
+      NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread;
+  decltype(NvAPI_D3D12_BuildRaytracingOpacityMicromapArray)*
+      NvAPI_D3D12_BuildRaytracingOpacityMicromapArray;
+  decltype(NvAPI_D3D12_BuildRaytracingAccelerationStructureEx)*
+      NvAPI_D3D12_BuildRaytracingAccelerationStructureEx;
+};
+
+} // namespace DirectX
+} // namespace gits

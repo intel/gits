@@ -33,6 +33,7 @@ target_include_directories(DirectX_layer_interface PRIVATE
   ${DSTORAGE_HEADERS_DIR}
   ${INTEL_EXT_DIR}/include
   ${XESS_HEADERS_DIR}
+  ${NVAPI_DIR}
 )
 
 set_target_properties(DirectX_layer_interface PROPERTIES LINKER_LANGUAGE CXX)

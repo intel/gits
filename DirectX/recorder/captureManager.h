@@ -12,6 +12,7 @@
 #include "functionDispatchTables.h"
 #include "intelExtensions.h"
 #include "xessDispatchTableAuto.h"
+#include "nvapiDispatchTable.h"
 #include "captureDescriptorHandleService.h"
 #include "mapTrackingService.h"
 #include "rootSignatureService.h"
@@ -62,6 +63,9 @@ public:
   }
   XessDispatchTable& getXessDispatchTable() {
     return xessDispatchTable_;
+  }
+  NvAPIDispatchTable& getNvAPIDispatchTable() {
+    return nvapiDispatchTable_;
   }
 
   std::vector<Layer*>& getPreLayers() {
@@ -123,6 +127,9 @@ public:
   ContextMapService& getXessContextMap() {
     return xessContextMap_;
   }
+  std::unordered_map<std::string, unsigned int>& getNvAPIFunctionIds() {
+    return nvapiFunctionIds_;
+  }
 
   void interceptXessFunctions();
   void loadIntelExtension(const uint32_t& vendorID, const uint32_t& deviceID);
@@ -135,6 +142,7 @@ private:
   void interceptDirectMLFunctions();
   void interceptDirectStorageFunctions();
   void interceptKernelFunctions();
+  void interceptNvAPIFunctions();
 
 private:
   static CaptureManager* instance_;
@@ -147,6 +155,7 @@ private:
   DStorageDispatchTable dstorageDispatchTable_{};
   Kernel32DispatchTable kernel32DispatchTableSystem_{};
   XessDispatchTable xessDispatchTable_{};
+  NvAPIDispatchTable nvapiDispatchTable_{};
 
   // These hold pointers to Layers stored in layersOwner_. Layer order is important.
   std::vector<Layer*> preLayers_;
@@ -187,6 +196,8 @@ private:
   HMODULE xessDll_{};
   bool loadingXessDll_{};
   bool intelExtensionLoaded_{};
+  HMODULE nvapiDll_{};
+  std::unordered_map<std::string, unsigned int> nvapiFunctionIds_;
 };
 
 } // namespace DirectX

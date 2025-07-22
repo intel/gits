@@ -99,6 +99,8 @@ public:
   void post(INTC_D3D12_CreateHeapCommand& command) override;
   void pre(IDMLDeviceCreateBindingTableCommand& command) override;
   void pre(IDMLBindingTableResetCommand& command) override;
+  void pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) override;
+  void pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) override;
 
 private:
   // Heaps (and resources) may require their D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS to be updated (for writewatch)

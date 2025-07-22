@@ -10,6 +10,7 @@
 
 #include "command.h"
 #include "intelExtensions.h"
+#include "nvapi.h"
 
 namespace gits {
 namespace DirectX {
@@ -340,6 +341,17 @@ void encode(char* dest, unsigned& offset, const DSTORAGE_QUEUE_DESC_Argument& ar
 
 unsigned getSize(const DSTORAGE_REQUEST_Argument& arg);
 void encode(char* dest, unsigned& offset, const DSTORAGE_REQUEST_Argument& arg);
+
+unsigned getSize(
+    const PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS>& arg);
+void encode(char* dest,
+            unsigned& offset,
+            const PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS>& arg);
+
+unsigned getSize(const PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>& arg);
+void encode(char* dest,
+            unsigned& offset,
+            const PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>& arg);
 
 } // namespace DirectX
 } // namespace gits

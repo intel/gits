@@ -19,6 +19,7 @@
 #include "adapterService.h"
 #include "intelExtensionsService.h"
 #include "xessService.h"
+#include "nvapi.h"
 #include "subcaptureFactory.h"
 #include "executionSerializationFactory.h"
 #include "analyzerLayerAuto.h"

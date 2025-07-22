@@ -74,5 +74,20 @@ void encode(const INTC_D3D12_CreateCommittedResourceCommand& command, char* dest
 unsigned getSize(const INTC_D3D12_CreateHeapCommand& command);
 void encode(const INTC_D3D12_CreateHeapCommand& command, char* dest);
 
+unsigned getSize(const NvAPI_InitializeCommand& command);
+void encode(const NvAPI_InitializeCommand& command, char* dest);
+
+unsigned getSize(const NvAPI_UnloadCommand& command);
+void encode(const NvAPI_UnloadCommand& command, char* dest);
+
+unsigned getSize(const NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command);
+void encode(const NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command, char* dest);
+
+unsigned getSize(const NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command);
+void encode(const NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command, char* dest);
+
+unsigned getSize(const NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command);
+void encode(const NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command, char* dest);
+
 } // namespace DirectX
 } // namespace gits

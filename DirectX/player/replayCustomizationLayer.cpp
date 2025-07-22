@@ -970,6 +970,182 @@ void ReplayCustomizationLayer::pre(INTC_D3D12_GetSupportedVersionsCommand& c) {
   c.skip = true;
 }
 
+void ReplayCustomizationLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& c) {
+  if (c.result_.value != NVAPI_OK || !manager_.multithreadedShaderCompilation()) {
+    return;
+  }
+
+  c.skip = true;
+
+  if (c.uavSlot_.value == ~0u) {
+    return;
+  }
+
+  NvAPIShaderExtnSlot slot{c.pDev_.key, c.uavSlot_.value, c.uavSpace_.value};
+  if (std::find(nvapiShaderExtnSlotsUsed_.begin(), nvapiShaderExtnSlotsUsed_.end(), slot) ==
+      nvapiShaderExtnSlotsUsed_.end()) {
+    nvapiShaderExtnSlotsUsed_.push_back(slot);
+    NvAPI_D3D12_SetNvShaderExtnSlotSpace(c.pDev_.value, c.uavSlot_.value, c.uavSpace_.value);
+  }
+}
+
+void ReplayCustomizationLayer::pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
+  auto* pDescMod = const_cast<NVAPI_D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC_EX*>(
+      c.pParams.value->pDesc);
+  pDescMod->destAccelerationStructureData = manager_.getGpuAddressService().getGpuAddress(
+      c.pParams.destAccelerationStructureKey, c.pParams.destAccelerationStructureOffset);
+  if (pDescMod->sourceAccelerationStructureData) {
+    pDescMod->sourceAccelerationStructureData = manager_.getGpuAddressService().getGpuAddress(
+        c.pParams.sourceAccelerationStructureKey, c.pParams.sourceAccelerationStructureOffset);
+  }
+  pDescMod->scratchAccelerationStructureData = manager_.getGpuAddressService().getGpuAddress(
+      c.pParams.scratchAccelerationStructureKey, c.pParams.scratchAccelerationStructureOffset);
+
+  unsigned inputIndex = 0;
+  if (pDescMod->inputs.type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+    if (pDescMod->inputs.numDescs == 0) {
+      pDescMod->inputs.instanceDescs = manager_.getGpuAddressService().getGpuAddress(
+          c.pParams.inputKeys[0], c.pParams.inputOffsets[0]);
+    } else {
+      Log(ERR) << "NvAPI_D3D12_BuildRaytracingAccelerationStructureEx TLAS build not handled!";
+    }
+    ++inputIndex;
+  } else {
+    for (unsigned i = 0; i < pDescMod->inputs.numDescs; ++i) {
+      NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX& desc =
+          const_cast<NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX&>(
+              pDescMod->inputs.descsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY
+                  ? *(NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX*)((char*)(pDescMod->inputs
+                                                                            .pGeometryDescs) +
+                                                                pDescMod->inputs
+                                                                        .geometryDescStrideInBytes *
+                                                                    i)
+                  : *pDescMod->inputs.ppGeometryDescs[i]);
+      if (desc.type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
+        desc.triangles.Transform3x4 = manager_.getGpuAddressService().getGpuAddress(
+            c.pParams.inputKeys[inputIndex], c.pParams.inputOffsets[inputIndex]);
+        ++inputIndex;
+        desc.triangles.IndexBuffer = manager_.getGpuAddressService().getGpuAddress(
+            c.pParams.inputKeys[inputIndex], c.pParams.inputOffsets[inputIndex]);
+        ++inputIndex;
+        desc.triangles.VertexBuffer.StartAddress = manager_.getGpuAddressService().getGpuAddress(
+            c.pParams.inputKeys[inputIndex], c.pParams.inputOffsets[inputIndex]);
+        ++inputIndex;
+      } else if (desc.type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
+        desc.aabbs.AABBs.StartAddress = manager_.getGpuAddressService().getGpuAddress(
+            c.pParams.inputKeys[inputIndex], c.pParams.inputOffsets[inputIndex]);
+        ++inputIndex;
+      } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES_EX) {
+        desc.ommTriangles.triangles.Transform3x4 = manager_.getGpuAddressService().getGpuAddress(
+            c.pParams.inputKeys[inputIndex], c.pParams.inputOffsets[inputIndex]);
+        ++inputIndex;
+        desc.ommTriangles.triangles.IndexBuffer = manager_.getGpuAddressService().getGpuAddress(
+            c.pParams.inputKeys[inputIndex], c.pParams.inputOffsets[inputIndex]);
+        ++inputIndex;
+        desc.ommTriangles.triangles.VertexBuffer.StartAddress =
+            manager_.getGpuAddressService().getGpuAddress(c.pParams.inputKeys[inputIndex],
+                                                          c.pParams.inputOffsets[inputIndex]);
+        ++inputIndex;
+        desc.ommTriangles.ommAttachment.opacityMicromapIndexBuffer.StartAddress =
+            manager_.getGpuAddressService().getGpuAddress(c.pParams.inputKeys[inputIndex],
+                                                          c.pParams.inputOffsets[inputIndex]);
+        ++inputIndex;
+        desc.ommTriangles.ommAttachment.opacityMicromapArray =
+            manager_.getGpuAddressService().getGpuAddress(c.pParams.inputKeys[inputIndex],
+                                                          c.pParams.inputOffsets[inputIndex]);
+        ++inputIndex;
+      } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_DMM_TRIANGLES_EX) {
+        desc.dmmTriangles.triangles.Transform3x4 = manager_.getGpuAddressService().getGpuAddress(
+            c.pParams.inputKeys[inputIndex], c.pParams.inputOffsets[inputIndex]);
+        ++inputIndex;
+        desc.dmmTriangles.triangles.IndexBuffer = manager_.getGpuAddressService().getGpuAddress(
+            c.pParams.inputKeys[inputIndex], c.pParams.inputOffsets[inputIndex]);
+        ++inputIndex;
+        desc.dmmTriangles.triangles.VertexBuffer.StartAddress =
+            manager_.getGpuAddressService().getGpuAddress(c.pParams.inputKeys[inputIndex],
+                                                          c.pParams.inputOffsets[inputIndex]);
+        ++inputIndex;
+        desc.dmmTriangles.dmmAttachment.triangleMicromapIndexBuffer.StartAddress =
+            manager_.getGpuAddressService().getGpuAddress(c.pParams.inputKeys[inputIndex],
+                                                          c.pParams.inputOffsets[inputIndex]);
+        ++inputIndex;
+        desc.dmmTriangles.dmmAttachment.trianglePrimitiveFlagsBuffer.StartAddress =
+            manager_.getGpuAddressService().getGpuAddress(c.pParams.inputKeys[inputIndex],
+                                                          c.pParams.inputOffsets[inputIndex]);
+        ++inputIndex;
+        desc.dmmTriangles.dmmAttachment.vertexBiasAndScaleBuffer.StartAddress =
+            manager_.getGpuAddressService().getGpuAddress(c.pParams.inputKeys[inputIndex],
+                                                          c.pParams.inputOffsets[inputIndex]);
+        ++inputIndex;
+        desc.dmmTriangles.dmmAttachment.vertexDisplacementVectorBuffer.StartAddress =
+            manager_.getGpuAddressService().getGpuAddress(c.pParams.inputKeys[inputIndex],
+                                                          c.pParams.inputOffsets[inputIndex]);
+        ++inputIndex;
+        desc.dmmTriangles.dmmAttachment.displacementMicromapArray =
+            manager_.getGpuAddressService().getGpuAddress(c.pParams.inputKeys[inputIndex],
+                                                          c.pParams.inputOffsets[inputIndex]);
+        ++inputIndex;
+      } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_SPHERES_EX) {
+        desc.spheres.vertexPositionBuffer.StartAddress =
+            manager_.getGpuAddressService().getGpuAddress(c.pParams.inputKeys[inputIndex],
+                                                          c.pParams.inputOffsets[inputIndex]);
+        ++inputIndex;
+        desc.spheres.vertexRadiusBuffer.StartAddress =
+            manager_.getGpuAddressService().getGpuAddress(c.pParams.inputKeys[inputIndex],
+                                                          c.pParams.inputOffsets[inputIndex]);
+        ++inputIndex;
+        desc.spheres.indexBuffer.StartAddress = manager_.getGpuAddressService().getGpuAddress(
+            c.pParams.inputKeys[inputIndex], c.pParams.inputOffsets[inputIndex]);
+        ++inputIndex;
+      } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_LSS_EX) {
+        desc.lss.vertexPositionBuffer.StartAddress = manager_.getGpuAddressService().getGpuAddress(
+            c.pParams.inputKeys[inputIndex], c.pParams.inputOffsets[inputIndex]);
+        ++inputIndex;
+        desc.lss.vertexRadiusBuffer.StartAddress = manager_.getGpuAddressService().getGpuAddress(
+            c.pParams.inputKeys[inputIndex], c.pParams.inputOffsets[inputIndex]);
+        ++inputIndex;
+        desc.lss.indexBuffer.StartAddress = manager_.getGpuAddressService().getGpuAddress(
+            c.pParams.inputKeys[inputIndex], c.pParams.inputOffsets[inputIndex]);
+        ++inputIndex;
+      }
+    }
+  }
+
+  for (unsigned i = 0; i < c.pParams.value->numPostbuildInfoDescs; ++i) {
+    const_cast<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC*>(
+        c.pParams.value->pPostbuildInfoDescs)[i]
+        .DestBuffer = manager_.getGpuAddressService().getGpuAddress(
+        c.pParams.destPostBuildBufferKeys[i], c.pParams.destPostBuildBufferOffsets[i]);
+  }
+}
+
+void ReplayCustomizationLayer::pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
+  if (c.pParams.value->pDesc) {
+    auto* pDescMod = const_cast<NVAPI_D3D12_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_DESC*>(
+        c.pParams.value->pDesc);
+
+    pDescMod->destOpacityMicromapArrayData = manager_.getGpuAddressService().getGpuAddress(
+        c.pParams.destOpacityMicromapArrayDataKey, c.pParams.destOpacityMicromapArrayDataOffset);
+
+    pDescMod->inputs.inputBuffer = manager_.getGpuAddressService().getGpuAddress(
+        c.pParams.inputBufferKey, c.pParams.inputBufferOffset);
+
+    pDescMod->inputs.perOMMDescs.StartAddress = manager_.getGpuAddressService().getGpuAddress(
+        c.pParams.perOMMDescsKey, c.pParams.perOMMDescsOffset);
+
+    pDescMod->scratchOpacityMicromapArrayData = manager_.getGpuAddressService().getGpuAddress(
+        c.pParams.scratchOpacityMicromapArrayDataKey,
+        c.pParams.scratchOpacityMicromapArrayDataOffset);
+  }
+
+  for (unsigned i = 0; i < c.pParams.value->numPostbuildInfoDescs; ++i) {
+    const_cast<NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_POSTBUILD_INFO_DESC*>(
+        c.pParams.value->pPostbuildInfoDescs)[i]
+        .destBuffer = manager_.getGpuAddressService().getGpuAddress(
+        c.pParams.destPostBuildBufferKeys[i], c.pParams.destPostBuildBufferOffsets[i]);
+  }
+}
+
 void ReplayCustomizationLayer::fillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg) {
   if (arg.value) {
     arg.value = manager_.getGpuAddressService().getGpuAddress(arg.interfaceKey, arg.offset);

@@ -10,6 +10,7 @@
 
 #include "command.h"
 #include "intelExtensions.h"
+#include "nvapi.h"
 
 namespace gits {
 namespace DirectX {
@@ -192,6 +193,12 @@ void decode(char* src, unsigned& offset, xess_d3d12_init_params_t_Argument& arg)
 void decode(char* src, unsigned& offset, xess_d3d12_execute_params_t_Argument& arg);
 void decode(char* src, unsigned& offset, DSTORAGE_QUEUE_DESC_Argument& arg);
 void decode(char* src, unsigned& offset, DSTORAGE_REQUEST_Argument& arg);
+void decode(char* src,
+            unsigned& offset,
+            PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS>& arg);
+void decode(char* src,
+            unsigned& offset,
+            PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>& arg);
 
 } // namespace DirectX
 } // namespace gits

@@ -14,6 +14,8 @@
 #include "captureCustomizationLayer.h"
 #include "kernelWrappers.h"
 #include "intelExtensionsWrappers.h"
+#include "nvapiWrappers.h"
+#include "nvapi_interface.h"
 #include "captureSynchronizationLayer.h"
 #include "gpuPatchLayer.h"
 #include "portabilityLayer.h"
@@ -46,6 +48,9 @@ CaptureManager& CaptureManager::get() {
     if (Configurator::Get().directx.capture.captureDirectML) {
       instance_->interceptDirectMLFunctions();
     }
+    if (Configurator::Get().directx.capture.captureNvAPI) {
+      instance_->interceptNvAPIFunctions();
+    }
   }
 
   return *instance_;
@@ -66,6 +71,9 @@ CaptureManager::~CaptureManager() {
   }
   if (intelExtensionLoaded_) {
     INTC_UnloadExtensionsLibrary();
+  }
+  if (nvapiDll_) {
+    FreeLibrary(nvapiDll_);
   }
 }
 
@@ -639,6 +647,85 @@ void CaptureManager::loadIntelExtension(const uint32_t& vendorID, const uint32_t
   }
 
   intelExtensionLoaded_ = true;
+}
+
+void CaptureManager::interceptNvAPIFunctions() {
+  {
+    NvAPI_Status status = NvAPI_Initialize();
+    if (status != NVAPI_OK) {
+      return;
+    }
+    nvapiDll_ = LoadLibrary("nvapi64.dll");
+    if (!nvapiDll_) {
+      return;
+    }
+    status = NvAPI_Unload();
+    GITS_ASSERT(status == NVAPI_OK)
+  }
+
+  Log(INFO) << "Loaded NvAPI";
+
+  for (const auto& iface : nvapi_interface_table) {
+    nvapiFunctionIds_[iface.func] = iface.id;
+  }
+
+  {
+    nvapiDispatchTable_.nvapi_QueryInterface =
+        reinterpret_cast<decltype(nvapi_QueryInterfaceWrapper)*>(
+            GetProcAddress(nvapiDll_, "nvapi_QueryInterface"));
+
+    nvapiDispatchTable_.NvAPI_Initialize =
+        (decltype(NvAPI_Initialize)*)nvapiDispatchTable_.nvapi_QueryInterface(
+            nvapiFunctionIds_.at("NvAPI_Initialize"));
+
+    nvapiDispatchTable_.NvAPI_Unload =
+        (decltype(NvAPI_Unload)*)nvapiDispatchTable_.nvapi_QueryInterface(
+            nvapiFunctionIds_.at("NvAPI_Unload"));
+
+    nvapiDispatchTable_.NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread =
+        (decltype(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread)*)
+            nvapiDispatchTable_.nvapi_QueryInterface(
+                nvapiFunctionIds_.at("NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread"));
+
+    nvapiDispatchTable_.NvAPI_D3D12_BuildRaytracingAccelerationStructureEx =
+        (decltype(NvAPI_D3D12_BuildRaytracingAccelerationStructureEx)*)
+            nvapiDispatchTable_.nvapi_QueryInterface(
+                nvapiFunctionIds_.at("NvAPI_D3D12_BuildRaytracingAccelerationStructureEx"));
+
+    nvapiDispatchTable_.NvAPI_D3D12_BuildRaytracingOpacityMicromapArray =
+        (decltype(NvAPI_D3D12_BuildRaytracingOpacityMicromapArray)*)
+            nvapiDispatchTable_.nvapi_QueryInterface(
+                nvapiFunctionIds_.at("NvAPI_D3D12_BuildRaytracingOpacityMicromapArray"));
+  }
+
+  LONG ret = DetourTransactionBegin();
+  GITS_ASSERT(ret == NO_ERROR);
+  ret = DetourUpdateThread(GetCurrentThread());
+  GITS_ASSERT(ret == NO_ERROR);
+
+  ret = DetourAttach(&nvapiDispatchTable_.nvapi_QueryInterface, nvapi_QueryInterfaceWrapper);
+  GITS_ASSERT(ret == NO_ERROR);
+
+  ret = DetourAttach(&nvapiDispatchTable_.NvAPI_Initialize, NvAPI_InitializeWrapper);
+  GITS_ASSERT(ret == NO_ERROR);
+
+  ret = DetourAttach(&nvapiDispatchTable_.NvAPI_Unload, NvAPI_UnloadWrapper);
+  GITS_ASSERT(ret == NO_ERROR);
+
+  ret = DetourAttach(&nvapiDispatchTable_.NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread,
+                     NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadWrapper);
+  GITS_ASSERT(ret == NO_ERROR);
+
+  ret = DetourAttach(&nvapiDispatchTable_.NvAPI_D3D12_BuildRaytracingAccelerationStructureEx,
+                     NvAPI_D3D12_BuildRaytracingAccelerationStructureExWrapper);
+  GITS_ASSERT(ret == NO_ERROR);
+
+  ret = DetourAttach(&nvapiDispatchTable_.NvAPI_D3D12_BuildRaytracingOpacityMicromapArray,
+                     NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayWrapper);
+  GITS_ASSERT(ret == NO_ERROR);
+
+  ret = DetourTransactionCommit();
+  GITS_ASSERT(ret == NO_ERROR);
 }
 
 } // namespace DirectX

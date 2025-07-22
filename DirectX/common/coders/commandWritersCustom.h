@@ -271,5 +271,68 @@ public:
   }
 };
 
+class NvAPI_InitializeWriter : public CommandWriter {
+public:
+  NvAPI_InitializeWriter(NvAPI_InitializeCommand& command) {
+    dataSize_ = getSize(command);
+    data_.reset(new char[dataSize_]);
+    encode(command, data_.get());
+  }
+  unsigned Id() const override {
+    return static_cast<unsigned>(CommandId::ID_NVAPI_INITIALIZE);
+  }
+};
+
+class NvAPI_UnloadWriter : public CommandWriter {
+public:
+  NvAPI_UnloadWriter(NvAPI_UnloadCommand& command) {
+    dataSize_ = getSize(command);
+    data_.reset(new char[dataSize_]);
+    encode(command, data_.get());
+  }
+  unsigned Id() const override {
+    return static_cast<unsigned>(CommandId::ID_NVAPI_UNLOAD);
+  }
+};
+
+class NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadWriter : public CommandWriter {
+public:
+  NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadWriter(
+      NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
+    dataSize_ = getSize(command);
+    data_.reset(new char[dataSize_]);
+    encode(command, data_.get());
+  }
+  unsigned Id() const override {
+    return static_cast<unsigned>(CommandId::ID_NVAPI_D3D12_SETNVSHADEREXTNSLOTSPACELOCALTHREAD);
+  }
+};
+
+class NvAPI_D3D12_BuildRaytracingAccelerationStructureExWriter : public CommandWriter {
+public:
+  NvAPI_D3D12_BuildRaytracingAccelerationStructureExWriter(
+      NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
+    dataSize_ = getSize(command);
+    data_.reset(new char[dataSize_]);
+    encode(command, data_.get());
+  }
+  unsigned Id() const override {
+    return static_cast<unsigned>(CommandId::ID_NVAPI_D3D12_BUILDRAYTRACINGACCELERATIONSTRUCTUREEX);
+  }
+};
+
+class NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayWriter : public CommandWriter {
+public:
+  NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayWriter(
+      NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
+    dataSize_ = getSize(command);
+    data_.reset(new char[dataSize_]);
+    encode(command, data_.get());
+  }
+  unsigned Id() const override {
+    return static_cast<unsigned>(CommandId::ID_NVAPI_D3D12_BUILDRAYTRACINGOPACITYMICROMAPARRAY);
+  }
+};
+
 } // namespace DirectX
 } // namespace gits

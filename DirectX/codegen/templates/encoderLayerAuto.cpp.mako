@@ -84,6 +84,26 @@ void EncoderLayer::post(INTC_D3D12_CreateHeapCommand& command) {
   recorder_.record(command.key, new INTC_D3D12_CreateHeapWriter(command));
 }
 
+void EncoderLayer::post(NvAPI_InitializeCommand& command) {
+  recorder_.record(command.key, new NvAPI_InitializeWriter(command));
+}
+
+void EncoderLayer::post(NvAPI_UnloadCommand& command) {
+  recorder_.record(command.key, new NvAPI_UnloadWriter(command));
+}
+
+void EncoderLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
+  recorder_.record(command.key, new NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadWriter(command));
+}
+
+void EncoderLayer::post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
+  recorder_.record(command.key, new NvAPI_D3D12_BuildRaytracingAccelerationStructureExWriter(command));
+}
+
+void EncoderLayer::post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
+  recorder_.record(command.key, new NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayWriter(command));
+}
+
 <%
 custom = [
     'IDXGISwapChainPresent',

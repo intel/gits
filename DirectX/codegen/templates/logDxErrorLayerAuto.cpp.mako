@@ -10,6 +10,7 @@ ${header}
 #include "logDxErrorLayerAuto.h"
 #include "toStr.h"
 #include "log.h"
+#include "nvapi.h"
 
 namespace gits {
 namespace DirectX {
@@ -201,6 +202,56 @@ void LogDxErrorLayer::post(INTC_D3D12_CreateHeapCommand& command) {
   }
 }
 
+void LogDxErrorLayer::pre(NvAPI_InitializeCommand& command) {
+  preResultNvAPI_ = command.result_.value;
+}
+
+void LogDxErrorLayer::post(NvAPI_InitializeCommand& command) {
+  if (isFailureNvAPI(command.result_.value)) {
+    Log(ERR) << callKeyToStr(command.key) << " NvAPI_InitializeCommand failed " << printResult(command.result_.value);
+  }
+}
+
+void LogDxErrorLayer::pre(NvAPI_UnloadCommand& command) {
+  preResultNvAPI_ = command.result_.value;
+}
+
+void LogDxErrorLayer::post(NvAPI_UnloadCommand& command) {
+  if (isFailureNvAPI(command.result_.value)) {
+    Log(ERR) << callKeyToStr(command.key) << " NvAPI_UnloadCommand failed " << printResult(command.result_.value);
+  }
+}
+
+void LogDxErrorLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
+  preResultNvAPI_ = command.result_.value;
+}
+
+void LogDxErrorLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
+  if (isFailureNvAPI(command.result_.value)) {
+    Log(ERR) << callKeyToStr(command.key) << " NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand failed " << printResult(command.result_.value);
+  }
+}
+
+void LogDxErrorLayer::pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
+  preResultNvAPI_ = command.result_.value;
+}
+
+void LogDxErrorLayer::post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
+  if (isFailureNvAPI(command.result_.value)) {
+    Log(ERR) << callKeyToStr(command.key) << " NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand failed " << printResult(command.result_.value);
+  }
+}
+
+void LogDxErrorLayer::pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
+  preResultNvAPI_ = command.result_.value;
+}
+
+void LogDxErrorLayer::post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
+  if (isFailureNvAPI(command.result_.value)) {
+    Log(ERR) << callKeyToStr(command.key) << " NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand failed " << printResult(command.result_.value);
+  }
+}
+
 std::string LogDxErrorLayer::printResult(HRESULT result) {
   switch (result) {
   case E_INVALIDARG:
@@ -223,6 +274,27 @@ std::string LogDxErrorLayer::printResult(HRESULT result) {
     return "DXGI_ERROR_WAS_STILL_DRAWING";
   case DXGI_ERROR_DRIVER_INTERNAL_ERROR:
     return "DXGI_ERROR_DRIVER_INTERNAL_ERROR";
+  default:
+    std::stringstream s;
+    s << "0x" << std::hex << result;
+    return s.str();
+  }
+}
+
+bool LogDxErrorLayer::isFailureNvAPI(NvAPI_Status result) {
+    return result != NVAPI_OK && (!isPlayer_ || result != preResultNvAPI_);
+  }
+
+std::string LogDxErrorLayer::printResult(NvAPI_Status result) {
+  switch (result) {
+  case NVAPI_OK:
+    return "NVAPI_OK";
+  case NVAPI_ERROR:
+    return "NVAPI_ERROR";
+  case NVAPI_LIBRARY_NOT_FOUND:
+    return "NVAPI_LIBRARY_NOT_FOUND";
+  case NVAPI_NVIDIA_DEVICE_NOT_FOUND:
+    return "NVAPI_NVIDIA_DEVICE_NOT_FOUND";
   default:
     std::stringstream s;
     s << "0x" << std::hex << result;

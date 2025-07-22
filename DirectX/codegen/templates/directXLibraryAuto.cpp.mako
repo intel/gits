@@ -64,6 +64,16 @@ gits::CFunction* DirectXLibrary::FunctionCreate(unsigned type) const {
     return new INTC_D3D12_CreateHeapPlayer();
   case CommandId::INTC_D3D12_SETAPPLICATIONINFO:
     return new INTC_D3D12_SetApplicationInfoPlayer();
+  case CommandId::ID_NVAPI_INITIALIZE:
+    return new NvAPI_InitializePlayer();
+  case CommandId::ID_NVAPI_UNLOAD:
+    return new NvAPI_UnloadPlayer();
+  case CommandId::ID_NVAPI_D3D12_SETNVSHADEREXTNSLOTSPACELOCALTHREAD:
+    return new NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadPlayer();
+  case CommandId::ID_NVAPI_D3D12_BUILDRAYTRACINGACCELERATIONSTRUCTUREEX:
+    return new NvAPI_D3D12_BuildRaytracingAccelerationStructureExPlayer();
+  case CommandId::ID_NVAPI_D3D12_BUILDRAYTRACINGOPACITYMICROMAPARRAY:
+    return new NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayPlayer();
   %for function in functions:
   case CommandId::ID_${function.name.upper()}:
     return new ${function.name}Player();
