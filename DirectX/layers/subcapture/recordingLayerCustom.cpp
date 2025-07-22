@@ -183,28 +183,44 @@ void RecordingLayer::post(INTC_D3D12_CreateHeapCommand& command) {
 void RecordingLayer::post(IDXGIAdapter3QueryVideoMemoryInfoCommand& command) {}
 
 void RecordingLayer::post(NvAPI_InitializeCommand& command) {
-  if (recorder_.isRunning()) {
+  if (subcaptureRange_.inRange()) {
     recorder_.record(new NvAPI_InitializeWriter(command));
   }
 }
 
 void RecordingLayer::post(NvAPI_UnloadCommand& command) {
-  if (recorder_.isRunning()) {
+  if (subcaptureRange_.inRange()) {
     recorder_.record(new NvAPI_UnloadWriter(command));
   }
 }
 void RecordingLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
-  if (recorder_.isRunning()) {
+  static bool logged = false;
+  if (!logged) {
+    Log(ERR) << "NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand not handled in subcapture";
+    logged = true;
+  }
+  if (subcaptureRange_.inRange()) {
     recorder_.record(new NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadWriter(command));
   }
 }
 void RecordingLayer::post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
-  if (recorder_.isRunning()) {
+  static bool logged = false;
+  if (!logged) {
+    Log(ERR)
+        << "NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand not handled in subcapture";
+    logged = true;
+  }
+  if (subcaptureRange_.inRange()) {
     recorder_.record(new NvAPI_D3D12_BuildRaytracingAccelerationStructureExWriter(command));
   }
 }
 void RecordingLayer::post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
-  if (recorder_.isRunning()) {
+  static bool logged = false;
+  if (!logged) {
+    Log(ERR) << "NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand not handled in subcapture";
+    logged = true;
+  }
+  if (subcaptureRange_.inRange()) {
     recorder_.record(new NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayWriter(command));
   }
 }
