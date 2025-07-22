@@ -13,40 +13,54 @@
 namespace gits {
 namespace DirectX {
 
-RtasSizeCheckLayer::RtasSizeCheckLayer(CGits& gits) : Layer("RtasSizeCheck"), gits_(gits) {}
+RtasSizeCheckLayer::RtasSizeCheckLayer(CGits& gits)
+    : Layer("RtasSizeCheck"), gits_(gits), lastCaptureTimePrebuildInfo_{} {}
+
+void RtasSizeCheckLayer::pre(
+    ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& command) {
+  lastCaptureTimePrebuildInfo_ = *command.pInfo_.value;
+}
 
 void RtasSizeCheckLayer::post(
     ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& command) {
   ID3D12Device5* device = command.object_.value;
-  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO playbackPrebuildInfo{};
-  device->GetRaytracingAccelerationStructurePrebuildInfo(command.pDesc_.value,
-                                                         &playbackPrebuildInfo);
 
-  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO* capturePrebuildInfo = command.pInfo_.value;
+  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO playbackPrebuildInfo{};
+  if (command.pInfo_.value) {
+    playbackPrebuildInfo = *command.pInfo_.value;
+  }
+
+  // If it was skipped then call it here
+  if (command.skip) {
+    device->GetRaytracingAccelerationStructurePrebuildInfo(command.pDesc_.value,
+                                                           &playbackPrebuildInfo);
+  }
 
   if (playbackPrebuildInfo.ResultDataMaxSizeInBytes >
-      capturePrebuildInfo->ResultDataMaxSizeInBytes) {
+      lastCaptureTimePrebuildInfo_.ResultDataMaxSizeInBytes) {
     logT(gits_,
          "ERROR: RTAS ResultDataMaxSizeInBytes during playback is bigger than during capture on "
          "command ",
          command.key);
     logT(gits_,
          "Playback ResultDataMaxSizeInBytes: ", playbackPrebuildInfo.ResultDataMaxSizeInBytes);
-    logT(gits_,
-         "Capture ResultDataMaxSizeInBytes: ", capturePrebuildInfo->ResultDataMaxSizeInBytes);
+    logT(gits_, "Capture ResultDataMaxSizeInBytes: ",
+         lastCaptureTimePrebuildInfo_.ResultDataMaxSizeInBytes);
   }
 
-  if (playbackPrebuildInfo.ScratchDataSizeInBytes > capturePrebuildInfo->ScratchDataSizeInBytes) {
+  if (playbackPrebuildInfo.ScratchDataSizeInBytes >
+      lastCaptureTimePrebuildInfo_.ScratchDataSizeInBytes) {
     logT(gits_,
          "ERROR: RTAS ScratchDataSizeInBytes during playback is bigger than during capture on "
          "command ",
          command.key);
     logT(gits_, "Playback ScratchDataSizeInBytes: ", playbackPrebuildInfo.ScratchDataSizeInBytes);
-    logT(gits_, "Capture ScratchDataSizeInBytes: ", capturePrebuildInfo->ScratchDataSizeInBytes);
+    logT(gits_,
+         "Capture ScratchDataSizeInBytes: ", lastCaptureTimePrebuildInfo_.ScratchDataSizeInBytes);
   }
 
   if (playbackPrebuildInfo.UpdateScratchDataSizeInBytes >
-      capturePrebuildInfo->UpdateScratchDataSizeInBytes) {
+      lastCaptureTimePrebuildInfo_.UpdateScratchDataSizeInBytes) {
     logT(
         gits_,
         "ERROR: RTAS UpdateScratchDataSizeInBytes during playback is bigger than during capture on "
@@ -55,8 +69,9 @@ void RtasSizeCheckLayer::post(
     logT(gits_, "Playback UpdateScratchDataSizeInBytes: ",
          playbackPrebuildInfo.UpdateScratchDataSizeInBytes);
     logT(gits_, "Capture UpdateScratchDataSizeInBytes: ",
-         capturePrebuildInfo->UpdateScratchDataSizeInBytes);
+         lastCaptureTimePrebuildInfo_.UpdateScratchDataSizeInBytes);
   }
+  lastCaptureTimePrebuildInfo_ = {};
 }
 
 } // namespace DirectX
