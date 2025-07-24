@@ -2063,16 +2063,6 @@ bool checkForSupportForQueues(VkPhysicalDevice physicalDevice,
     uint32_t requestedQueueFamilyIndex = requestedQueueCreateInfos[i].queueFamilyIndex;
     uint32_t requestedQueueCountForFamily = requestedQueueCreateInfos[i].queueCount;
 
-    auto currentFlags = availableQueueFamilies[requestedQueueFamilyIndex].queueFlags;
-    auto originalFlags = queueFamilyPropertiesOriginal[requestedQueueFamilyIndex].queueFlags;
-
-#ifdef GITS_PLATFORM_WINDOWS
-    if (Configurator::Get().vulkan.player.renderDoc.mode != TVkRenderDocCaptureMode::NONE) {
-      currentFlags &= ~VK_QUEUE_PROTECTED_BIT;
-      originalFlags &= ~VK_QUEUE_PROTECTED_BIT;
-    }
-#endif
-
     if ((requestedQueueFamilyIndex > availableQueueFamiliesCount - 1) ||
         (requestedQueueCountForFamily >
          availableQueueFamilies[requestedQueueFamilyIndex].queueCount)) {
@@ -2090,7 +2080,19 @@ bool checkForSupportForQueues(VkPhysicalDevice physicalDevice,
                  << " queue(s) for family index: " << requestedQueueFamilyIndex << ".";
       }
       return false;
-    } else if (!isBitSet(currentFlags, originalFlags)) {
+    }
+
+    auto currentFlags = availableQueueFamilies[requestedQueueFamilyIndex].queueFlags;
+    auto originalFlags = queueFamilyPropertiesOriginal[requestedQueueFamilyIndex].queueFlags;
+
+#ifdef GITS_PLATFORM_WINDOWS
+    if (Configurator::Get().vulkan.player.renderDoc.mode != TVkRenderDocCaptureMode::NONE) {
+      currentFlags &= ~VK_QUEUE_PROTECTED_BIT;
+      originalFlags &= ~VK_QUEUE_PROTECTED_BIT;
+    }
+#endif
+
+    if (!isBitSet(currentFlags, originalFlags)) {
       Log(ERR) << "Queue families are not compatible!";
       VkLog(ERR) << "Original queue family flags at index " << requestedQueueFamilyIndex << ": "
                  << (VkQueueFlagBits)originalFlags;
@@ -3764,7 +3766,7 @@ VkPipeline createInternalPipeline(VkDevice device,
 }
 
 bool isVulkanAPIVersionSupported(uint32_t major, uint32_t minor, VkPhysicalDevice physicalDevice) {
-  auto instanceState = SD()._physicaldevicestates[physicalDevice]->instanceStateStore;
+  const auto& instanceState = SD()._physicaldevicestates[physicalDevice]->instanceStateStore;
   return (instanceState->vulkanVersionMajor > major) ||
          ((instanceState->vulkanVersionMajor == major) &&
           (instanceState->vulkanVersionMinor >= minor));

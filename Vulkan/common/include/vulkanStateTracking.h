@@ -329,10 +329,14 @@ inline void vkCreateDevice_SD(VkResult return_value,
 
     for (uint32_t qci = 0; qci < pCreateInfo->queueCreateInfoCount; ++qci) {
       auto flags = pCreateInfo->pQueueCreateInfos[qci].flags;
+      uint32_t queueFamilyIndex = pCreateInfo->pQueueCreateInfos[qci].queueFamilyIndex;
+
+      if (queueFamilyIndex >= queueFamilies.size()) {
+        continue;
+      }
 
       for (uint32_t qc = 0; qc < pCreateInfo->pQueueCreateInfos[qci].queueCount; ++qc) {
         VkQueue queue = VK_NULL_HANDLE;
-        uint32_t queueFamilyIndex = pCreateInfo->pQueueCreateInfos[qci].queueFamilyIndex;
         uint32_t queueIndex = qc;
 
         if (drvVk.GetDeviceDispatchTable(device).vkGetDeviceQueue2) {

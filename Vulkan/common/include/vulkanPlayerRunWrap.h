@@ -1637,7 +1637,8 @@ inline void vkCreateDevice_WRAPRUN(CVkResult& recorderSideReturnValue,
   allSupported &= areDeviceExtensionsSupported(*physicalDevice, createInfo.enabledExtensionCount,
                                                createInfo.ppEnabledExtensionNames, true);
   allSupported &= checkForSupportForQueues(*physicalDevice, createInfo.queueCreateInfoCount,
-                                           createInfo.pQueueCreateInfos);
+                                           createInfo.pQueueCreateInfos) ||
+                  Configurator::Get().vulkan.player.ignoreMissingQueuesWA;
 
   Log(TRACE, NO_PREFIX) << "";
 
@@ -1685,6 +1686,37 @@ inline void vkCreateDevice_WRAPRUN(CVkResult& recorderSideReturnValue,
     if (pipelineCache != VK_NULL_HANDLE) {
       SD().internalResources.pipelineCacheHandles[*devicePtr] = pipelineCache;
     }
+  }
+}
+
+inline void vkGetDeviceQueue_WRAPRUN(CVkDevice& device,
+                                     Cuint32_t& queueFamilyIndex,
+                                     Cuint32_t& queueIndex,
+                                     CVkQueue::CSMapArray& pQueue) {
+  const auto& queueFamilies =
+      SD()._devicestates[*device]->physicalDeviceStateStore->queueFamilyPropertiesCurrent;
+
+  if (*queueFamilyIndex >= queueFamilies.size()) {
+    Log(ERR) << "Ignoring vkGetDeviceQueue() call because requested family index is not supported "
+                "on the current hardware.";
+  } else {
+    drvVk.vkGetDeviceQueue(*device, *queueFamilyIndex, *queueIndex, *pQueue);
+  }
+}
+
+inline void vkGetDeviceQueue2_WRAPRUN(CVkDevice& device,
+                                      CVkDeviceQueueInfo2& pQueueInfo,
+                                      CVkQueue::CSMapArray& pQueue) {
+  const auto& queueFamilies =
+      SD()._devicestates[*device]->physicalDeviceStateStore->queueFamilyPropertiesCurrent;
+
+  auto* queueInfo = pQueueInfo.Value();
+
+  if (queueInfo->queueFamilyIndex >= queueFamilies.size()) {
+    Log(ERR) << "Ignoring vkGetDeviceQueue2() call because requested family index is not supported "
+                "on the current hardware.";
+  } else {
+    drvVk.vkGetDeviceQueue2(*device, queueInfo, *pQueue);
   }
 }
 

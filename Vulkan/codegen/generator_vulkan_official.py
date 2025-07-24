@@ -3520,7 +3520,7 @@ arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pName', type='const char*')
 )
 
-Function(name='vkGetDeviceQueue', enabled=True, type=FuncType.PARAM, stateTrack=False, ccodeWrap=True,
+Function(name='vkGetDeviceQueue', enabled=True, type=FuncType.PARAM, stateTrack=False, ccodeWrap=True, runWrap=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='queueFamilyIndex', type='uint32_t'),
@@ -3528,7 +3528,7 @@ arg3=ArgDef(name='queueIndex', type='uint32_t'),
 arg4=ArgDef(name='pQueue', type='VkQueue*', wrapType='CVkQueue::CSMapArray', wrapParams='1, pQueue')
 )
 
-Function(name='vkGetDeviceQueue2', enabled=True, type=FuncType.PARAM, stateTrack=False, ccodeWrap=True,
+Function(name='vkGetDeviceQueue2', enabled=True, type=FuncType.PARAM, stateTrack=False, ccodeWrap=True, runWrap=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pQueueInfo', type='const VkDeviceQueueInfo2*'),

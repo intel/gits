@@ -1733,6 +1733,12 @@ Configuration:
             Description:
               Forces stream to continue playback even if platform's properties
               are not compatible with recorded parameters.
+          - Name: ignoreMissingQueuesWA
+            Type: bool
+            Default: false
+            Arguments: [ignoreMissingQueuesWA]
+            Description:
+              Forces stream to continue playback even if a platform doesn't support all the queues that are requested during device creation.
           - Name: waitAfterQueueSubmitWA
             Type: bool
             Default: false
