@@ -553,20 +553,27 @@ void vulkanScheduleCopyResources(VkCommandBuffer cmdBuffer,
                                  uint64_t drawNumber) {
   if (SD()._commandbufferstates.find(cmdBuffer) != SD()._commandbufferstates.end()) {
     auto& commandBufferState = SD()._commandbufferstates[cmdBuffer];
+    auto& resourceFilter = Configurator::Get().vulkan.player.captureVulkanResourcesFilter;
     for (auto& obj : commandBufferState->resourceWriteBuffers) {
       VkBuffer swapBuffer = obj.first;
-      std::string fileName = GetFileNameResourcesScreenshot(
-          CGits::Instance().CurrentFrame(), queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
-          objNumber, drawNumber, SD().bufferCounter[swapBuffer], obj.second, dumpingMode);
-      vulkanCopyBuffer(cmdBuffer, swapBuffer, std::move(fileName));
+      uint64_t bufferCounter = SD().bufferCounter[swapBuffer];
+      if (resourceFilter.empty() || resourceFilter[bufferCounter]) {
+        std::string fileName = GetFileNameResourcesScreenshot(
+            CGits::Instance().CurrentFrame(), queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
+            objNumber, drawNumber, bufferCounter, obj.second, dumpingMode);
+        vulkanCopyBuffer(cmdBuffer, swapBuffer, std::move(fileName));
+      }
     }
     for (auto& obj : commandBufferState->resourceWriteImages) {
       VkImage swapImg = obj.first;
-      std::string fileName = GetFileNameResourcesScreenshot(
-          CGits::Instance().CurrentFrame(), queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
-          objNumber, drawNumber, SD().imageCounter[swapImg], obj.second, dumpingMode);
-      vulkanCopyImage(cmdBuffer, swapImg, std::move(fileName), true, VK_ATTACHMENT_STORE_OP_STORE,
-                      dumpingMode);
+      uint64_t imageCounter = SD().imageCounter[swapImg];
+      if (resourceFilter.empty() || resourceFilter[imageCounter]) {
+        std::string fileName = GetFileNameResourcesScreenshot(
+            CGits::Instance().CurrentFrame(), queueSubmitNumber, cmdBuffBatchNumber, cmdBuffNumber,
+            objNumber, drawNumber, imageCounter, obj.second, dumpingMode);
+        vulkanCopyImage(cmdBuffer, swapImg, std::move(fileName), true, VK_ATTACHMENT_STORE_OP_STORE,
+                        dumpingMode);
+      }
     }
     commandBufferState->removeBlitsFromResourceMap();
   }
@@ -1357,24 +1364,30 @@ void writeResources(VkQueue queue,
                     uint32_t cmdBufferNumber) {
   if (SD()._commandbufferstates.find(cmdbuffer) != SD()._commandbufferstates.end()) {
     auto& commandBufferState = SD()._commandbufferstates[cmdbuffer];
-
+    auto& resourceFilter = Configurator::Get().vulkan.player.captureVulkanResourcesFilter;
     for (auto& obj : commandBufferState->resourceWriteBuffers) {
       VkBuffer swapBuffer = obj.first;
-      std::string fileName = GetFileNameResourcesScreenshot(
-          CGits::Instance().CurrentFrame(),
-          (uint32_t)CGits::Instance().vkCounters.CurrentQueueSubmitCount(),
-          commandBufferBatchNumber, cmdBufferNumber, 0, 0, SD().bufferCounter[swapBuffer],
-          obj.second, VulkanDumpingMode::VULKAN_PER_COMMAND_BUFFER);
-      writeBufferUtil(std::move(fileName), queue, swapBuffer);
+      uint64_t bufferCounter = SD().bufferCounter[swapBuffer];
+      if (resourceFilter.empty() || resourceFilter[bufferCounter]) {
+        std::string fileName = GetFileNameResourcesScreenshot(
+            CGits::Instance().CurrentFrame(),
+            (uint32_t)CGits::Instance().vkCounters.CurrentQueueSubmitCount(),
+            commandBufferBatchNumber, cmdBufferNumber, 0, 0, bufferCounter, obj.second,
+            VulkanDumpingMode::VULKAN_PER_COMMAND_BUFFER);
+        writeBufferUtil(std::move(fileName), queue, swapBuffer);
+      }
     }
     for (auto& obj : commandBufferState->resourceWriteImages) {
       VkImage swapImg = obj.first;
-      std::string fileName = GetFileNameResourcesScreenshot(
-          CGits::Instance().CurrentFrame(),
-          (uint32_t)CGits::Instance().vkCounters.CurrentQueueSubmitCount(),
-          commandBufferBatchNumber, cmdBufferNumber, 0, 0, SD().imageCounter[swapImg], obj.second,
-          VulkanDumpingMode::VULKAN_PER_COMMAND_BUFFER);
-      writeScreenshotUtil(std::move(fileName), queue, swapImg, VULKAN_MODE_RESOURCES);
+      uint64_t imageCounter = SD().imageCounter[swapImg];
+      if (resourceFilter.empty() || resourceFilter[imageCounter]) {
+        std::string fileName = GetFileNameResourcesScreenshot(
+            CGits::Instance().CurrentFrame(),
+            (uint32_t)CGits::Instance().vkCounters.CurrentQueueSubmitCount(),
+            commandBufferBatchNumber, cmdBufferNumber, 0, 0, imageCounter, obj.second,
+            VulkanDumpingMode::VULKAN_PER_COMMAND_BUFFER);
+        writeScreenshotUtil(std::move(fileName), queue, swapImg, VULKAN_MODE_RESOURCES);
+      }
     }
   }
 }

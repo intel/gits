@@ -1708,6 +1708,19 @@ Configuration:
               * '1/2/3/4' specifies queue submit number 1, command buffer batch number 2, commandbuffer number 3, render pass number 4,
                * '3,5-10' specifies queue submit number 3 and queue submits from 5 to 10 (it's actually a normal elemspec),
                * '7/2/1-20,30,40-50:2' specifies queue submit number 7, command buffer batch 2, command buffers from 1 to 20, command buffer 30 and even numbered command buffers between 40 and 50 (all ranges are inclusive).
+          - Name: captureVulkanResourcesFilter
+            Type: BitRange
+            Default: "-"
+            Arguments: [captureVulkanResourcesFilter]
+            Description:
+              List of Vulkan resource IDs to capture during playback.
+            LongDescription: |
+              List of Vulkan resource IDs to capture during playback.
+              Specified as single string without spaces of following format:
+
+              * pattern = id_list | id_list/Repeat-Count
+              * id_list = element | id_list, ',', element
+              * element = ID | Begin-End | Begin-End:Step
           - Name: skipNonDeterministicImages
             Type: bool
             Default: false
