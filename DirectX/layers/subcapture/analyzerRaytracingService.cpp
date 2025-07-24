@@ -33,6 +33,8 @@ void AnalyzerRaytracingService::buildTlas(
     state = D3D12_RESOURCE_STATE_GENERIC_READ;
   }
   instancesDump_.buildTlas(c.object_.value, instances, offset, size, state, c.key);
+  tlases_.insert(std::make_pair(c.pDesc_.destAccelerationStructureKey,
+                                c.pDesc_.destAccelerationStructureOffset));
 }
 
 void AnalyzerRaytracingService::flush() {

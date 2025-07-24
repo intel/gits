@@ -14,6 +14,7 @@
 
 #include <unordered_map>
 #include <unordered_set>
+#include <set>
 
 namespace gits {
 namespace DirectX {
@@ -51,12 +52,16 @@ public:
   std::vector<unsigned>& getStateObjectSubobjects(unsigned stateObjectKey) {
     return stateObjectsSubobjects_[stateObjectKey];
   }
-  std::vector<std::pair<unsigned, unsigned>>& getBlasesForTlas(unsigned tlasBuildKey) {
+  using KeyOffset = std::pair<unsigned, unsigned>;
+  std::vector<KeyOffset>& getBlasesForTlas(unsigned tlasBuildKey) {
     return blasesByTlas_[tlasBuildKey];
   }
-  using BlasesByTlas = std::unordered_map<unsigned, std::vector<std::pair<unsigned, unsigned>>>;
+  using BlasesByTlas = std::unordered_map<unsigned, std::vector<KeyOffset>>;
   BlasesByTlas& getBlases() {
     return blasesByTlas_;
+  }
+  std::set<KeyOffset>& getTlases() {
+    return tlases_;
   }
 
 private:
@@ -64,6 +69,7 @@ private:
   std::unordered_map<unsigned, std::vector<unsigned>> stateObjectsSubobjects_;
   RaytracingInstancesDump instancesDump_;
   BlasesByTlas blasesByTlas_;
+  std::set<KeyOffset> tlases_;
   std::unordered_map<unsigned, ID3D12Resource*> resourceByKey_;
   std::unordered_set<unsigned> genericReadResources_;
 };

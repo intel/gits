@@ -220,14 +220,18 @@ void AnalyzerService::dumpAnalysisFile() {
     out << heapKey << " " << index << "\n";
   }
   out << "ACCELERATION_STRUCTURES\n";
-  std::set<std::pair<unsigned, unsigned>> blases;
+  std::set<std::pair<unsigned, unsigned>> ases;
   AnalyzerRaytracingService::BlasesByTlas& blasesByTlas = raytracingService_.getBlases();
   for (auto& itTlas : blasesByTlas) {
     for (auto& blas : itTlas.second) {
-      blases.insert(blas);
+      ases.insert(blas);
     }
   }
-  for (auto& [resourceKey, offset] : blases) {
+  std::set<std::pair<unsigned, unsigned>>& tlases = raytracingService_.getTlases();
+  for (auto& it : tlases) {
+    ases.insert(it);
+  }
+  for (auto& [resourceKey, offset] : ases) {
     out << resourceKey << " " << offset << "\n";
   }
 }
