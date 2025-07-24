@@ -18,6 +18,12 @@ namespace gits {
 
 class Configurator : public gits::noncopyable {
 public:
+  struct ConfigEntry {
+    std::string Path;
+    std::string Value;
+    std::string Default;
+  };
+
   static bool ConfigurationValid();
 
   static bool IsRecorder() {
@@ -62,6 +68,13 @@ public: // Singleton
 
   bool ApplyOverrides(const std::filesystem::path filepath, std::string processName);
   void DeriveData();
+
+  void ClearChangedFieldsVector();
+  const std::vector<ConfigEntry>& GetChangedFields() const;
+  void AddChangedField(const std::string& path,
+                       const std::string& value,
+                       const std::string& defaultValue);
+  void LogChangedFields();
 #endif
 
 public: // Configuration
@@ -71,5 +84,6 @@ private:
   Configurator();
 
   Configuration configuration;
+  std::vector<ConfigEntry> changedFields;
 };
 } // namespace gits

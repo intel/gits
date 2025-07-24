@@ -208,6 +208,8 @@ int MainBody(int argc, char* argv[]) {
   CGits& inst = CGits::Instance();
   Log(INFO, NO_PREFIX) << inst << "\n";
 
+  Configurator::Instance().LogChangedFields();
+
   inst.GetMessageBus().subscribe({PUBLISHER_PLUGIN, TOPIC_LOG}, [](Topic t, const MessagePtr& m) {
     auto msg = std::dynamic_pointer_cast<LogMessage>(m);
     if (msg && ShouldLog(msg->getLevel())) {

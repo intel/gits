@@ -37,6 +37,18 @@ std::string stringFrom<std::vector<uint32_t>>(const std::vector<uint32_t>& value
 }
 
 template <>
+std::string stringFrom<std::vector<std::string>>(const std::vector<std::string>& value) {
+  std::ostringstream oss;
+  for (size_t i = 0; i < value.size(); ++i) {
+    if (i > 0) {
+      oss << ",";
+    }
+    oss << value[i];
+  }
+  return oss.str();
+}
+
+template <>
 std::string stringFrom<BitRange>(const BitRange& value) {
   std::ostringstream oss;
   if (value.full()) {

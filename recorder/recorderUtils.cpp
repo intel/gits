@@ -66,6 +66,8 @@ bool ConfigureRecorder(const std::filesystem::path& configPath) {
   CGits::Instance().SetImGuiHUD(std::move(pImGuiHUD));
   CGits::Instance().GetImGuiHUD()->SetApplicationInfo(processNameHUD, pid);
 
+  Configurator::Instance().LogChangedFields();
+
   Log(INFO) << "GITS configured for process: " << processNameHUD;
 
   configured = true;

@@ -179,5 +179,30 @@ bool Configurator::ApplyOverrides(const std::filesystem::path filepath, std::str
   }
   return false;
 }
+
+void Configurator::ClearChangedFieldsVector() {
+  changedFields.clear();
+}
+
+void Configurator::AddChangedField(const std::string& path,
+                                   const std::string& value,
+                                   const std::string& defaultValue) {
+  changedFields.emplace_back(ConfigEntry{path, value, defaultValue});
+}
+
+const std::vector<Configurator::ConfigEntry>& Configurator::GetChangedFields() const {
+  return changedFields;
+}
+
+void Configurator::LogChangedFields() {
+  if (!changedFields.empty()) {
+    Log(INFO, NO_PREFIX) << "The following config values are changed from default:";
+    for (const auto& entry : changedFields) {
+      Log(INFO, NO_PREFIX) << "--" << entry.Path << "=\"" << entry.Value << "\"";
+    }
+    Log(INFO, NO_PREFIX) << "";
+  }
+}
+
 #endif
 } // namespace gits

@@ -10,14 +10,33 @@
 // generated @ ${time}
 
 #include "configurationYAMLAuto.h"
+#include "configurator.h"
 #include "log.h"
 
 #include <yaml-cpp/yaml.h>
 
 #include <string>
 #include <set>
+#include <unordered_set>
 
 using namespace gits;
+namespace {
+template <typename T>
+bool isContained(const std::vector<T>& v1, const std::vector<T>& v2) {
+    std::unordered_set<T> setV2(v2.begin(), v2.end());
+    for (const auto& entryV1 : v1) {
+        if (setV2.find(entryV1) == setV2.end()) {            
+            return false;
+        }
+    }
+    return true;
+}
+
+template <typename T>
+bool sameEntries(const std::vector<T>& v1, const std::vector<T>& v2) {
+    return isContained(v1, v2) && isContained(v2, v1);
+}
+}
 
 namespace YAML{
 
@@ -76,7 +95,19 @@ bool convert<${group.namespace_str}>::decode(const Node& node, ${group.namespace
   }
 %     else:
   if (node["${option.config_name}"]) {
-    rhs.${option.instance_name} = node["${option.config_name}"].as<${option.type}>();
+    auto defaultValue = "${option.get_default(platform)}";
+%       if not option.is_vector_type:
+    auto configValue = node["${option.config_name}"].Scalar();
+    if (configValue != defaultValue) {
+%       else:
+    auto vecYAML = node["${option.config_name}"].as<${option.type}>();
+    auto vecConfig = stringTo<${option.type}>(defaultValue);
+    auto configValue = stringFrom<${option.type}>(vecYAML);
+    if (!sameEntries(vecYAML, vecConfig)) {
+%       endif
+        rhs.${option.instance_name} = node["${option.config_name}"].as<${option.type}>();
+        Configurator::Instance().AddChangedField("${option.get_path()}", configValue, defaultValue);
+    }
   }
 %     endif
 %   endif

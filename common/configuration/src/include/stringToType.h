@@ -25,13 +25,13 @@ std::vector<std::string> splitString(const std::string& str, char delimiter) {
   std::stringstream ss(str);
   std::string item;
   while (std::getline(ss, item, delimiter)) {
+    // Trim whitespace from the beginning and end of the item
+    item.erase(0, item.find_first_not_of(" \t"));
+    item.erase(item.find_last_not_of(" \t") + 1);
     // Trim single quotes from the beginning and end of the item if present
     if (!item.empty() && item.front() == '\'' && item.back() == '\'') {
       item = item.substr(1, item.size() - 2);
     }
-    // Trim whitespace from the beginning and end of the item
-    item.erase(0, item.find_first_not_of(" \t"));
-    item.erase(item.find_last_not_of(" \t") + 1);
     elements.push_back(item);
   }
   return elements;

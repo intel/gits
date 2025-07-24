@@ -88,6 +88,10 @@ class ConfigurationEntry:
         return str(self)
 
 
+    def get_path(self):
+        return '.'.join(self.namespace) + '.' + self.name
+
+
     def get_tags_escaped(self):
         return "{" + ", ".join([f"\"{tag}\"" for tag in self.get_tags()]) + "}"
 
