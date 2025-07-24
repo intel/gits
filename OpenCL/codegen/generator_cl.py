@@ -126,7 +126,7 @@ arg4=ArgDef(name='errcode_ret',tag='out',type='cl_int*')
 
 Function(name='clCreateFromGLRenderbuffer',enabled=True,availableFrom='1.0',extension=True,inheritFrom='clCreateFromGLBuffer')
 
-Function(name='clCreateFromGLTexture',enabled=True,availableFrom='1.2',extension=False,type=Creator,stateTrack=True,recWrap=True,
+Function(name='clCreateFromGLTexture',enabled=True,availableFrom='1.2',extension=True,type=Creator,stateTrack=True,recWrap=True,
 retV=RetDef(type='cl_mem'),
 arg1=ArgDef(name='context',tag='in',type='cl_context'),
 arg2=ArgDef(name='flags',tag='in',type='cl_mem_flags'),
