@@ -57,6 +57,7 @@ public:
   void post(ID3D12DeviceCreateRootSignatureCommand& c) override;
   void post(ID3D12Device5CreateStateObjectCommand& c) override;
   void pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) override;
+  void pre(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) override;
   void pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) override;
   void post(ID3D12ResourceGetGPUVirtualAddressCommand& c) override;
   void post(IUnknownReleaseCommand& command) override;

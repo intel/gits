@@ -24,6 +24,9 @@ public:
   AnalyzerRaytracingService() : instancesDump_(*this) {}
   void createStateObject(ID3D12Device5CreateStateObjectCommand& c);
   void buildTlas(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
+  void addAccelerationStructureSource(unsigned key, unsigned offset) {
+    sources_.insert(std::make_pair(key, offset));
+  }
   void flush();
   void executeCommandLists(unsigned key,
                            unsigned commandQueueKey,
@@ -63,6 +66,9 @@ public:
   std::set<KeyOffset>& getTlases() {
     return tlases_;
   }
+  std::set<KeyOffset>& getSources() {
+    return sources_;
+  }
 
 private:
   CapturePlayerGpuAddressService gpuAddressService_;
@@ -70,6 +76,7 @@ private:
   RaytracingInstancesDump instancesDump_;
   BlasesByTlas blasesByTlas_;
   std::set<KeyOffset> tlases_;
+  std::set<KeyOffset> sources_;
   std::unordered_map<unsigned, ID3D12Resource*> resourceByKey_;
   std::unordered_set<unsigned> genericReadResources_;
 };

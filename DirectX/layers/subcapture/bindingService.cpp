@@ -314,6 +314,20 @@ void BindingService::buildRaytracingAccelerationStructure(
       raytracingService_.buildTlas(c);
     }
   }
+  if (analyzerService_.inRange()) {
+    if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
+      if (c.pDesc_.sourceAccelerationStructureKey) {
+        raytracingService_.addAccelerationStructureSource(
+            c.pDesc_.sourceAccelerationStructureKey, c.pDesc_.sourceAccelerationStructureOffset);
+      }
+    }
+  }
+}
+
+void BindingService::copyRaytracingAccelerationStructure(
+    ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
+  raytracingService_.addAccelerationStructureSource(c.SourceAccelerationStructureData_.interfaceKey,
+                                                    c.SourceAccelerationStructureData_.offset);
 }
 
 unsigned BindingService::getNumDescriptors(unsigned commandListKey, unsigned descriptorHeapKey) {

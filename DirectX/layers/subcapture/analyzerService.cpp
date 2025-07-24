@@ -231,6 +231,10 @@ void AnalyzerService::dumpAnalysisFile() {
   for (auto& it : tlases) {
     ases.insert(it);
   }
+  std::set<std::pair<unsigned, unsigned>>& sources = raytracingService_.getSources();
+  for (auto& it : sources) {
+    ases.insert(it);
+  }
   for (auto& [resourceKey, offset] : ases) {
     out << resourceKey << " " << offset << "\n";
   }

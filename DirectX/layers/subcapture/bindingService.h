@@ -67,6 +67,8 @@ public:
   void setPipelineState(ID3D12GraphicsCommandList4SetPipelineState1Command& c);
   void buildRaytracingAccelerationStructure(
       ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
+  void copyRaytracingAccelerationStructure(
+      ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c);
 
 private:
   unsigned getNumDescriptors(unsigned commandListKey, unsigned descriptorHeapKey);

@@ -313,6 +313,10 @@ void AnalyzerLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
   bindingService_.buildRaytracingAccelerationStructure(c);
 }
 
+void AnalyzerLayer::pre(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
+  bindingService_.copyRaytracingAccelerationStructure(c);
+}
+
 void AnalyzerLayer::pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
   raytracingService_.captureGPUVirtualAddress(c);
 }

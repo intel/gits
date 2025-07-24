@@ -1427,7 +1427,7 @@ void decode(char* src,
           offset += arg.value->pDesc->inputs.numDescs *
                     arg.value->pDesc->inputs.geometryDescStrideInBytes;
 
-          for (int i = 0; i < arg.value->pDesc->inputs.numDescs; ++i) {
+          for (unsigned i = 0; i < arg.value->pDesc->inputs.numDescs; ++i) {
             NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX& desc = *(
                 NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX*)((char*)(pDescMod->inputs.pGeometryDescs) +
                                                           pDescMod->inputs
