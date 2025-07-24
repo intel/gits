@@ -295,6 +295,18 @@ public:
   }
 };
 
+class NvAPI_D3D12_SetNvShaderExtnSlotSpaceWriter : public CommandWriter {
+public:
+  NvAPI_D3D12_SetNvShaderExtnSlotSpaceWriter(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
+    dataSize_ = getSize(command);
+    data_.reset(new char[dataSize_]);
+    encode(command, data_.get());
+  }
+  unsigned Id() const override {
+    return static_cast<unsigned>(CommandId::ID_NVAPI_D3D12_SETNVSHADEREXTNSLOTSPACE);
+  }
+};
+
 class NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadWriter : public CommandWriter {
 public:
   NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadWriter(

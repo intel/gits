@@ -248,6 +248,16 @@ void decode(char* src, NvAPI_UnloadCommand& command) {
   decode(src, offset, command.result_);
 }
 
+void decode(char* src, NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
+  unsigned offset = 0;
+  decode(src, offset, command.key);
+  decode(src, offset, command.threadId);
+  decode(src, offset, command.pDev_);
+  decode(src, offset, command.uavSlot_);
+  decode(src, offset, command.uavSpace_);
+  decode(src, offset, command.result_);
+}
+
 void decode(char* src, NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
   unsigned offset = 0;
   decode(src, offset, command.key);

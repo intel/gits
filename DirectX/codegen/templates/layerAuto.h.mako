@@ -117,6 +117,9 @@ public:
   virtual void pre(NvAPI_UnloadCommand& command) {}
   virtual void post(NvAPI_UnloadCommand& command) {}
 
+  virtual void pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {}
+  virtual void post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {}
+  
   virtual void pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {}
   virtual void post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {}
 

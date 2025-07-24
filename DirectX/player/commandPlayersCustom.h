@@ -464,6 +464,25 @@ private:
   NvAPI_UnloadCommand command;
 };
 
+class NvAPI_D3D12_SetNvShaderExtnSlotSpacePlayer : public CommandPlayer {
+public:
+  unsigned Id() const override {
+    return static_cast<unsigned>(CommandId::ID_NVAPI_D3D12_SETNVSHADEREXTNSLOTSPACE);
+  }
+  const char* Name() const override {
+    return "NvAPI_D3D12_SetNvShaderExtnSlotSpace";
+  }
+  void Run() override;
+
+protected:
+  void decodeCommand() override {
+    decode(data_.get(), command);
+  }
+
+private:
+  NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand command;
+};
+
 class NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadPlayer : public CommandPlayer {
 public:
   unsigned Id() const override {

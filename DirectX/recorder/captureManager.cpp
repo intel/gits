@@ -682,6 +682,10 @@ void CaptureManager::interceptNvAPIFunctions() {
         (decltype(NvAPI_Unload)*)nvapiDispatchTable_.nvapi_QueryInterface(
             nvapiFunctionIds_.at("NvAPI_Unload"));
 
+    nvapiDispatchTable_.NvAPI_D3D12_SetNvShaderExtnSlotSpace =
+        (decltype(NvAPI_D3D12_SetNvShaderExtnSlotSpace)*)nvapiDispatchTable_.nvapi_QueryInterface(
+            nvapiFunctionIds_.at("NvAPI_D3D12_SetNvShaderExtnSlotSpace"));
+
     nvapiDispatchTable_.NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread =
         (decltype(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread)*)
             nvapiDispatchTable_.nvapi_QueryInterface(
@@ -696,6 +700,26 @@ void CaptureManager::interceptNvAPIFunctions() {
         (decltype(NvAPI_D3D12_BuildRaytracingOpacityMicromapArray)*)
             nvapiDispatchTable_.nvapi_QueryInterface(
                 nvapiFunctionIds_.at("NvAPI_D3D12_BuildRaytracingOpacityMicromapArray"));
+
+    nvapiDispatchTable_.NvAPI_D3D12_RelocateRaytracingOpacityMicromapArray =
+        (decltype(NvAPI_D3D12_RelocateRaytracingOpacityMicromapArray)*)
+            nvapiDispatchTable_.nvapi_QueryInterface(
+                nvapiFunctionIds_.at("NvAPI_D3D12_RelocateRaytracingOpacityMicromapArray"));
+
+    nvapiDispatchTable_.NvAPI_D3D12_EmitRaytracingOpacityMicromapArrayPostbuildInfo =
+        (decltype(NvAPI_D3D12_EmitRaytracingOpacityMicromapArrayPostbuildInfo)*)
+            nvapiDispatchTable_.nvapi_QueryInterface(nvapiFunctionIds_.at(
+                "NvAPI_D3D12_EmitRaytracingOpacityMicromapArrayPostbuildInfo"));
+
+    nvapiDispatchTable_.NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation =
+        (decltype(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation)*)
+            nvapiDispatchTable_.nvapi_QueryInterface(
+                nvapiFunctionIds_.at("NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation"));
+
+    nvapiDispatchTable_.NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirect =
+        (decltype(NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirect)*)
+            nvapiDispatchTable_.nvapi_QueryInterface(
+                nvapiFunctionIds_.at("NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirect"));
   }
 
   LONG ret = DetourTransactionBegin();
@@ -712,6 +736,10 @@ void CaptureManager::interceptNvAPIFunctions() {
   ret = DetourAttach(&nvapiDispatchTable_.NvAPI_Unload, NvAPI_UnloadWrapper);
   GITS_ASSERT(ret == NO_ERROR);
 
+  ret = DetourAttach(&nvapiDispatchTable_.NvAPI_D3D12_SetNvShaderExtnSlotSpace,
+                     NvAPI_D3D12_SetNvShaderExtnSlotSpaceWrapper);
+  GITS_ASSERT(ret == NO_ERROR);
+
   ret = DetourAttach(&nvapiDispatchTable_.NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread,
                      NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadWrapper);
   GITS_ASSERT(ret == NO_ERROR);
@@ -722,6 +750,24 @@ void CaptureManager::interceptNvAPIFunctions() {
 
   ret = DetourAttach(&nvapiDispatchTable_.NvAPI_D3D12_BuildRaytracingOpacityMicromapArray,
                      NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayWrapper);
+  GITS_ASSERT(ret == NO_ERROR);
+
+  ret = DetourAttach(&nvapiDispatchTable_.NvAPI_D3D12_RelocateRaytracingOpacityMicromapArray,
+                     NvAPI_D3D12_RelocateRaytracingOpacityMicromapArrayWrapper);
+  GITS_ASSERT(ret == NO_ERROR);
+
+  ret =
+      DetourAttach(&nvapiDispatchTable_.NvAPI_D3D12_EmitRaytracingOpacityMicromapArrayPostbuildInfo,
+                   NvAPI_D3D12_EmitRaytracingOpacityMicromapArrayPostbuildInfoWrapper);
+  GITS_ASSERT(ret == NO_ERROR);
+
+  ret =
+      DetourAttach(&nvapiDispatchTable_.NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation,
+                   NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationWrapper);
+  GITS_ASSERT(ret == NO_ERROR);
+
+  ret = DetourAttach(&nvapiDispatchTable_.NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirect,
+                     NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirectWrapper);
   GITS_ASSERT(ret == NO_ERROR);
 
   ret = DetourTransactionCommit();

@@ -156,6 +156,7 @@ public:
   void pre(ID3DBlobGetBufferSizeCommand& command) override;
   void pre(INTC_D3D12_SetApplicationInfoCommand& command) override;
   void pre(INTC_D3D12_GetSupportedVersionsCommand& command) override;
+  void pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) override;
   void pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) override;
   void pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) override;
   void pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) override;

@@ -193,6 +193,16 @@ void RecordingLayer::post(NvAPI_UnloadCommand& command) {
     recorder_.record(new NvAPI_UnloadWriter(command));
   }
 }
+void RecordingLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
+  static bool logged = false;
+  if (!logged) {
+    Log(ERR) << "NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand not handled in subcapture";
+    logged = true;
+  }
+  if (subcaptureRange_.inRange()) {
+    recorder_.record(new NvAPI_D3D12_SetNvShaderExtnSlotSpaceWriter(command));
+  }
+}
 void RecordingLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
   static bool logged = false;
   if (!logged) {

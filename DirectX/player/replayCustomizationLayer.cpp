@@ -970,6 +970,16 @@ void ReplayCustomizationLayer::pre(INTC_D3D12_GetSupportedVersionsCommand& c) {
   c.skip = true;
 }
 
+void ReplayCustomizationLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& c) {
+  if (c.result_.value != NVAPI_OK || !manager_.multithreadedShaderCompilation()) {
+    return;
+  }
+
+  if (c.uavSlot_.value == ~0u) {
+    c.skip = true;
+  }
+}
+
 void ReplayCustomizationLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& c) {
   if (c.result_.value != NVAPI_OK || !manager_.multithreadedShaderCompilation()) {
     return;

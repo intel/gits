@@ -68,6 +68,8 @@ gits::CFunction* DirectXLibrary::FunctionCreate(unsigned type) const {
     return new NvAPI_InitializePlayer();
   case CommandId::ID_NVAPI_UNLOAD:
     return new NvAPI_UnloadPlayer();
+  case CommandId::ID_NVAPI_D3D12_SETNVSHADEREXTNSLOTSPACE:
+    return new NvAPI_D3D12_SetNvShaderExtnSlotSpacePlayer();
   case CommandId::ID_NVAPI_D3D12_SETNVSHADEREXTNSLOTSPACELOCALTHREAD:
     return new NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadPlayer();
   case CommandId::ID_NVAPI_D3D12_BUILDRAYTRACINGACCELERATIONSTRUCTUREEX:

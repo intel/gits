@@ -36,6 +36,12 @@ void SkipCallsOnResultLayer::pre(NvAPI_UnloadCommand& command) {
   }
 }
 
+void SkipCallsOnResultLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
+  if (command.result_.value != NVAPI_OK) {
+    command.skip = true;
+  }
+}
+
 void SkipCallsOnResultLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
   if (command.result_.value != NVAPI_OK) {
     command.skip = true;

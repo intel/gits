@@ -45,6 +45,7 @@ public:
   virtual void pre(INTC_D3D12_CreateHeapCommand& command) override;
   virtual void pre(NvAPI_InitializeCommand& command) override;
   virtual void pre(NvAPI_UnloadCommand& command) override;
+  virtual void pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) override;
   virtual void pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) override;
   virtual void pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) override;
   virtual void pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) override;

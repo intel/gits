@@ -666,6 +666,26 @@ public:
   Argument<NvAPI_Status> result_{};
 };
 
+class NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand : public Command {
+public:
+  NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand(unsigned threadId,
+                                              IUnknown* pDev,
+                                              NvU32 uavSlot,
+                                              NvU32 uavSpace)
+      : Command{CommandId::ID_NVAPI_D3D12_SETNVSHADEREXTNSLOTSPACE, threadId},
+        pDev_{pDev},
+        uavSlot_{uavSlot},
+        uavSpace_{uavSpace} {}
+  NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand()
+      : Command(CommandId::ID_NVAPI_D3D12_SETNVSHADEREXTNSLOTSPACE) {}
+
+public:
+  InterfaceArgument<IUnknown> pDev_{};
+  Argument<NvU32> uavSlot_{};
+  Argument<NvU32> uavSpace_{};
+  Argument<NvAPI_Status> result_{};
+};
+
 class NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand : public Command {
 public:
   NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand(unsigned threadId,

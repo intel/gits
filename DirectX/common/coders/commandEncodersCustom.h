@@ -80,6 +80,9 @@ void encode(const NvAPI_InitializeCommand& command, char* dest);
 unsigned getSize(const NvAPI_UnloadCommand& command);
 void encode(const NvAPI_UnloadCommand& command, char* dest);
 
+unsigned getSize(const NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command);
+void encode(const NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command, char* dest);
+
 unsigned getSize(const NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command);
 void encode(const NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command, char* dest);
 

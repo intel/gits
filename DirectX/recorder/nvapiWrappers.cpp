@@ -84,6 +84,38 @@ NvAPI_Status NvAPI_UnloadWrapper() {
   return result;
 }
 
+NvAPI_Status NvAPI_D3D12_SetNvShaderExtnSlotSpaceWrapper(IUnknown* pDev,
+                                                         NvU32 uavSlot,
+                                                         NvU32 uavSpace) {
+  NvAPI_Status result{};
+
+  auto& manager = CaptureManager::get();
+  if (auto atTopOfStack = AtTopOfStackLocal()) {
+    NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand command(GetCurrentThreadId(), pDev, uavSlot,
+                                                        uavSpace);
+
+    updateInterface(command.pDev_, pDev);
+    for (Layer* layer : manager.getPreLayers()) {
+      layer->pre(command);
+    }
+
+    command.key = manager.createCommandKey();
+    if (!command.skip) {
+      result = manager.getNvAPIDispatchTable().NvAPI_D3D12_SetNvShaderExtnSlotSpace(pDev, uavSlot,
+                                                                                    uavSpace);
+    }
+    command.result_.value = result;
+    for (Layer* layer : manager.getPostLayers()) {
+      layer->post(command);
+    }
+  } else {
+    result = manager.getNvAPIDispatchTable().NvAPI_D3D12_SetNvShaderExtnSlotSpace(pDev, uavSlot,
+                                                                                  uavSpace);
+  }
+
+  return result;
+}
+
 NvAPI_Status NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadWrapper(IUnknown* pDev,
                                                                     NvU32 uavSlot,
                                                                     NvU32 uavSpace) {
@@ -182,6 +214,58 @@ NvAPI_Status NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayWrapper(
   }
 
   return result;
+}
+
+NvAPI_Status NvAPI_D3D12_RelocateRaytracingOpacityMicromapArrayWrapper(
+    ID3D12GraphicsCommandList4* pCommandList,
+    const NVAPI_RELOCATE_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS* pParams) {
+  static bool logged = false;
+  if (!logged) {
+    Log(ERR) << "NvAPI_D3D12_RelocateRaytracingOpacityMicromapArray not handled!";
+    logged = true;
+  }
+  auto& manager = CaptureManager::get();
+  return manager.getNvAPIDispatchTable().NvAPI_D3D12_RelocateRaytracingOpacityMicromapArray(
+      pCommandList, pParams);
+}
+
+NvAPI_Status NvAPI_D3D12_EmitRaytracingOpacityMicromapArrayPostbuildInfoWrapper(
+    ID3D12GraphicsCommandList4* pCommandList,
+    const NVAPI_EMIT_RAYTRACING_OPACITY_MICROMAP_ARRAY_POSTBUILD_INFO_PARAMS* pParams) {
+  static bool logged = false;
+  if (!logged) {
+    Log(ERR) << "NvAPI_D3D12_EmitRaytracingOpacityMicromapArrayPostbuildInfo not handled!";
+    logged = true;
+  }
+  auto& manager = CaptureManager::get();
+  return manager.getNvAPIDispatchTable()
+      .NvAPI_D3D12_EmitRaytracingOpacityMicromapArrayPostbuildInfo(pCommandList, pParams);
+}
+
+NvAPI_Status NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationWrapper(
+    ID3D12GraphicsCommandList4* pCommandList,
+    const NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS* pParams) {
+  static bool logged = false;
+  if (!logged) {
+    Log(ERR) << "NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation not handled!";
+    logged = true;
+  }
+  auto& manager = CaptureManager::get();
+  return manager.getNvAPIDispatchTable().NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation(
+      pCommandList, pParams);
+}
+
+NvAPI_Status NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirectWrapper(
+    ID3D12GraphicsCommandList4* pCommandList,
+    const NVAPI_BUILD_RAYTRACING_PARTITIONED_TLAS_INDIRECT_PARAMS* pParams) {
+  static bool logged = false;
+  if (!logged) {
+    Log(ERR) << "NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirect not handled!";
+    logged = true;
+  }
+  auto& manager = CaptureManager::get();
+  return manager.getNvAPIDispatchTable().NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirect(
+      pCommandList, pParams);
 }
 
 } // namespace DirectX

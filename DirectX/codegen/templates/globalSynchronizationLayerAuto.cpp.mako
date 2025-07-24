@@ -164,6 +164,14 @@ void GlobalSynchronizationLayer::post(NvAPI_UnloadCommand& command) {
   mutex_.unlock();
 }
 
+void GlobalSynchronizationLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
+  mutex_.lock();
+}
+
+void GlobalSynchronizationLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
+  mutex_.unlock();
+}
+
 void GlobalSynchronizationLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
   mutex_.lock();
 }

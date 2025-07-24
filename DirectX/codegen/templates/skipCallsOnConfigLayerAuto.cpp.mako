@@ -167,6 +167,13 @@ void SkipCallsOnConfigLayer::pre(NvAPI_UnloadCommand& command) {
   }
 }
 
+void SkipCallsOnConfigLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
+  if (configKeySet_.contains(command.key)) {
+    command.skip = true;
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand";
+  }
+}
+
 void SkipCallsOnConfigLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
   if (configKeySet_.contains(command.key)) {
     command.skip = true;

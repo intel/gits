@@ -462,6 +462,25 @@ void NvAPI_UnloadPlayer::Run() {
   }
 }
 
+void NvAPI_D3D12_SetNvShaderExtnSlotSpacePlayer::Run() {
+  auto& manager = PlayerManager::get();
+
+  updateInterface(manager, command.pDev_);
+
+  for (Layer* layer : manager.getPreLayers()) {
+    layer->pre(command);
+  }
+
+  if (manager.executeCommands() && command.result_.value == NVAPI_OK && !command.skip) {
+    command.result_.value = NvAPI_D3D12_SetNvShaderExtnSlotSpace(
+        command.pDev_.value, command.uavSlot_.value, command.uavSpace_.value);
+  }
+
+  for (Layer* layer : manager.getPostLayers()) {
+    layer->post(command);
+  }
+}
+
 void NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadPlayer::Run() {
   auto& manager = PlayerManager::get();
 

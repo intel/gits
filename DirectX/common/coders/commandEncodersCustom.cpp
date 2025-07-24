@@ -371,6 +371,21 @@ void encode(const NvAPI_UnloadCommand& command, char* dest) {
   encode(dest, offset, command.result_);
 }
 
+unsigned getSize(const NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
+  return getSize(command.key) + getSize(command.threadId) + getSize(command.pDev_) +
+         getSize(command.uavSlot_) + getSize(command.uavSpace_) + getSize(command.result_);
+}
+
+void encode(const NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command, char* dest) {
+  unsigned offset = 0;
+  encode(dest, offset, command.key);
+  encode(dest, offset, command.threadId);
+  encode(dest, offset, command.pDev_);
+  encode(dest, offset, command.uavSlot_);
+  encode(dest, offset, command.uavSpace_);
+  encode(dest, offset, command.result_);
+}
+
 unsigned getSize(const NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
   return getSize(command.key) + getSize(command.threadId) + getSize(command.pDev_) +
          getSize(command.uavSlot_) + getSize(command.uavSpace_) + getSize(command.result_);

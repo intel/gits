@@ -638,6 +638,28 @@ void TraceLayer::post(NvAPI_UnloadCommand& command) {
   }
 }
 
+void TraceLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
+  if (printPre_) {
+    CommandPrinter p(streamPre_, statePre_, command, "NvAPI_D3D12_SetNvShaderExtnSlotSpace");
+    p.addArgument(command.pDev_);
+    p.addArgument(command.uavSlot_);
+    p.addArgument(command.uavSpace_);
+    p.addResult(command.result_);
+    p.print(flush_);
+  }
+}
+
+void TraceLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
+  if (printPost_) {
+    CommandPrinter p(streamPost_, statePost_, command, "NvAPI_D3D12_SetNvShaderExtnSlotSpace");
+    p.addArgument(command.pDev_);
+    p.addArgument(command.uavSlot_);
+    p.addArgument(command.uavSpace_);
+    p.addResult(command.result_);
+    p.print(flush_);
+  }
+}
+
 void TraceLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
   if (printPre_) {
     CommandPrinter p(streamPre_, statePre_, command,

@@ -126,6 +126,9 @@ public:
   void pre(NvAPI_UnloadCommand& command) override;
   void post(NvAPI_UnloadCommand& command) override;
 
+  void pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) override;
+  void post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) override;
+
   void pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) override;
   void post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) override;
 

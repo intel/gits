@@ -68,6 +68,8 @@ public:
   virtual void post(NvAPI_InitializeCommand& command) override;
   virtual void pre(NvAPI_UnloadCommand& command) override;
   virtual void post(NvAPI_UnloadCommand& command) override;
+  virtual void pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) override;
+  virtual void post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) override;
   virtual void pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) override;
   virtual void post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) override;
   virtual void pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) override;
