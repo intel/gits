@@ -21,7 +21,8 @@ class ConfigurationEntry:
         self.derived_count = 0
 
         self.name = fixCapitalizationName(node['Name'])
-        self.config_name = fixCapitalizationName(get_if_present(node, 'ConfigName', node['Name']))
+        self.config_name = fixCapitalizationName(
+            get_if_present(node, 'ConfigName', node['Name']))
         self.tags = []
 
         # ensure the first letter is lowercase
@@ -30,7 +31,8 @@ class ConfigurationEntry:
             self.instance_name = node['Name'][0].lower() + node['Name'][1:]
         else:
             self.instance_name = node['Name'][0].lower()
-        self.instance_name = get_if_present(node, 'InstanceName', self.instance_name)
+        self.instance_name = get_if_present(
+            node, 'InstanceName', self.instance_name)
 
         self.namespace = namespace
         if not namespace:
@@ -41,6 +43,10 @@ class ConfigurationEntry:
             self.instance_namespace = [self.instance_name]
 
         self.type = get_if_present(node, 'Type', 'Entry')
+        self.argument_data_type = self.type
+        if self.type == 'bool':
+            self.argument_data_type = 'FlexiBool'
+
         self.is_group = self.type == 'Group'
 
         # process accessibility
@@ -79,30 +85,23 @@ class ConfigurationEntry:
         if 'OSVisibility' in node:
             self.os_visibility = node['OSVisibility']
 
-
     def __str__(self):
         return f'Type: {self.type}'
-
 
     def __repr__(self):
         return str(self)
 
-
     def get_path(self):
         return '.'.join(self.namespace) + '.' + self.name
-
 
     def get_tags_escaped(self):
         return "{" + ", ".join([f"\"{tag}\"" for tag in self.get_tags()]) + "}"
 
-
     def get_tags(self):
         return [tag for tag in self.tags if tag != 'Configuration']
 
-
     def has_leafs(self):
         return self.leaf_count - self.derived_count > 0
-
 
     def is_os_visible(self, platform):
         if self.os_visibility is None:
@@ -122,9 +121,9 @@ class ConfigurationOption(ConfigurationEntry):
     ARGS_SUFFIX_HIDE_OPTION = '!'
     ARGS_TAG_PREFIX_ACCESS_LEVEL = 'accLvl'
 
-    VALUETYPES_NEED_QUOTES = ['std::string', 'std::filesystem::path', 'BitRange', 'VulkanObjectRange']
+    VALUETYPES_NEED_QUOTES = [
+        'std::string', 'std::filesystem::path', 'BitRange', 'VulkanObjectRange']
     STRING_TYPES = ['std::string', 'std::filesystem::path']
-
 
     def __init__(self, option, namespace, instance_namespace):
         super().__init__(option, namespace, instance_namespace)
@@ -149,7 +148,8 @@ class ConfigurationOption(ConfigurationEntry):
                 else:
                     raise ValueError(f"Unknown NumericFormat: {target_format}")
             except Exception as e:
-                print(f"Error processing NumericFormat for {self.name}: NumericFormat={target_format}: {e}")
+                print(
+                    f"Error processing NumericFormat for {self.name}: NumericFormat={target_format}: {e}")
         else:
             self.default = self.process_default(self.default)
 
@@ -158,17 +158,20 @@ class ConfigurationOption(ConfigurationEntry):
             defaults_per_platform_lst = option['DefaultsPerPlatform']
             for d in defaults_per_platform_lst:
                 for key, value in d.items():
-                    self.defaults_per_platform[key] = self.process_default(value)
+                    self.defaults_per_platform[key] = self.process_default(
+                        value)
 
         self.shorthands = get_if_present(option, 'Arguments', [])
         self.has_custom_shorthands = len(self.shorthands) > 0
 
-        self.is_vector_type = self.type.startswith('std::vector') or self.type.startswith('std::set')
+        self.is_vector_type = self.type.startswith(
+            'std::vector') or self.type.startswith('std::set')
         self.needs_quotes_in_yml = self.type in ConfigurationOption.VALUETYPES_NEED_QUOTES
         self.is_string_type = self.type in ConfigurationOption.STRING_TYPES
 
         self.access_level = get_if_present(option, 'AccessLevel', 'Developer')
-        self.tags.append(f"{ConfigurationOption.ARGS_TAG_PREFIX_ACCESS_LEVEL}:{self.access_level}")
+        self.tags.append(
+            f"{ConfigurationOption.ARGS_TAG_PREFIX_ACCESS_LEVEL}:{self.access_level}")
 
         self.default_condition = {}
         if 'DefaultCondition' in option:
@@ -177,15 +180,12 @@ class ConfigurationOption(ConfigurationEntry):
                 for key, value in d.items():
                     self.default_condition[key] = self.process_default(value)
 
-
     def __str__(self):
         return (f'Name: {self.name}, Type: {self.type}, Default: {self.default}, '
                 f'Short Description: {self.short_description}, Description: {self.description}')
 
-
     def __repr__(self):
         return str(self)
-
 
     def process_default(self, default) -> str:
         global blank_types
@@ -221,54 +221,48 @@ class ConfigurationOption(ConfigurationEntry):
 
         return str(result)
 
-
-    def get_default(self, platform: str = None, install_path = None, conditions=[]) -> str:
+    def get_default(self, platform: str = None, install_path=None, conditions=[]) -> str:
         value = self.default
         for condition in conditions:
             if condition in self.default_condition.keys():
                 value = self.default_condition[condition]
         if platform:
-          if self.defaults_per_platform and platform in self.defaults_per_platform:
-              value = self.defaults_per_platform[platform]
+            if self.defaults_per_platform and platform in self.defaults_per_platform:
+                value = self.defaults_per_platform[platform]
 
-          if platform != 'win32':
-            if platform == "lnx_32":
-              arch = 'i386'
-            elif platform == "lnx_64":
-              arch = 'x86_64'
-            elif platform == "lnx_arm":
-              arch = 'aarch64'
-            else:
-              raise ValueError(f"Unknown platform: {platform}")
+            if platform != 'win32':
+                if platform == "lnx_32":
+                    arch = 'i386'
+                elif platform == "lnx_64":
+                    arch = 'x86_64'
+                elif platform == "lnx_arm":
+                    arch = 'aarch64'
+                else:
+                    raise ValueError(f"Unknown platform: {platform}")
 
-            value = value.replace('{arch}', arch)
+                value = value.replace('{arch}', arch)
         if install_path:
             value = value.replace('{install_path}', install_path)
         return value
 
-
     def get_argument_type(self) -> str:
-        if self.type == 'bool':
-            return f"args::Flag"
-        else:
-            return f"args::ValueFlag<{self.type}>"
-
+        return f"args::ValueFlag<{self.argument_data_type}>"
 
     def get_shorthands(self) -> str:
-        tmp_list= [self.argument_path + ConfigurationOption.ARGS_SUFFIX_HIDE_OPTION] + self.shorthands
+        tmp_list = [self.argument_path +
+                    ConfigurationOption.ARGS_SUFFIX_HIDE_OPTION] + self.shorthands
         lst = [f"'{item}'" for item in tmp_list if len(item) == 1]
         lst.extend([f'"{item}"' for item in tmp_list if len(item) > 1])
         return ", ".join(lst)
 
     def get_custom_shorthands(self) -> str:
         lst = [f"`-{item}`" for item in self.shorthands if len(item) == 1]
-        lst.extend([f"`--{item}`" for item in self.shorthands if len(item) > 1])
+        lst.extend(
+            [f"`--{item}`" for item in self.shorthands if len(item) > 1])
         return ", ".join(lst)
-
 
     def get_environment_string(self) -> str:
         return f"{ConfigurationOption.ENVIRONMENT_PREFIX}{self.argument_path.upper().replace('.', '_')}"
-
 
     def get_csv_dictionary(self):
         return {
@@ -294,7 +288,8 @@ class ConfigurationGroup(ConfigurationEntry):
         self.leaf_count = 0
 
         self.instance_name = fixUpCapitalizationInstance(self.instance_name)
-        self.instance_name = get_if_present(node, 'InstanceName', self.instance_name)
+        self.instance_name = get_if_present(
+            node, 'InstanceName', self.instance_name)
 
         self.type = 'Group'
         self.options = []
@@ -302,7 +297,8 @@ class ConfigurationGroup(ConfigurationEntry):
             self.options = options
             self.leaf_count = sum(option.leaf_count for option in options)
             self.args_count = sum(option.args_count for option in options)
-            self.derived_count = sum(option.derived_count for option in options)
+            self.derived_count = sum(
+                option.derived_count for option in options)
 
         self.namespace_str = '::'.join(self.namespace)
 
@@ -311,14 +307,11 @@ class ConfigurationGroup(ConfigurationEntry):
             f"{ConfigurationGroup.ARGUMENT_PREFIX}{namespace}" for namespace in self.namespace]
         self.argument_namespace_str = '::'.join(self.argument_namespace)
 
-
     def __str__(self):
         return f"Name: {self.name}, Options: [{', '.join(str(option) for option in self.options)}]"
 
-
     def __repr__(self):
         return str(self)
-
 
     def get_csv_dictionary(self):
         namespace_str = '::'.join(self.namespace[:-1])
@@ -335,11 +328,9 @@ class ConfigurationGroup(ConfigurationEntry):
             'Default': ''
         }
 
-
     def get_config_groups(self):
         # TODO - filter for groups that are in the configfile
         return [option for option in self.options if option.is_group]
-
 
     def get_config_options(self):
         # TODO - filter for groups that are in the configfile

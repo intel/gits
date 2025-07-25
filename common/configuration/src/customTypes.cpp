@@ -47,4 +47,30 @@ void VulkanObjectRange::SetFromString(const std::string& str) {
     objVector.push_back(std::stoul(obj, nullptr, 0));
   }
 }
+
+FlexiBool::FlexiBool() {
+  value = false;
+}
+
+FlexiBool::FlexiBool(bool val) {
+  value = val;
+}
+
+FlexiBool::FlexiBool(const std::string& boolStr) {
+  std::string str = boolStr;
+  std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+
+  if (str == "true" || str == "1") {
+    value = true;
+  } else if (str == "false" || str == "0") {
+    value = false;
+  } else {
+    throw std::invalid_argument("Invalid string for boolean conversion: " + boolStr);
+  }
+}
+
+std::string FlexiBool::toString() const {
+  return value ? "true" : "false";
+}
+
 } // namespace gits
