@@ -27,11 +27,7 @@ void ${group.argument_namespace_str}::UpdateConfiguration(${group.namespace_str}
 %  if (option.argument_only or not option.is_derived) and option.has_leafs():
 %   if option.type != 'Group':
   if (${option.instance_name}) {
-%     if option.argument_data_type == 'FlexiBool':
-    config->${option.instance_name} = ${option.instance_name}.Get().value;
-%     else:
     config->${option.instance_name} = ${option.instance_name}.Get();
-%     endif
   }
 %   else:
   ${option.instance_name}.UpdateConfiguration(&(config->${option.instance_name}));

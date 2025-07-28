@@ -27,7 +27,7 @@ The CLI argument(s) for an option are defined in the configuration metafile by t
 Additionally _every_ option (that is not derived) can be set by a _hidden CLI argument_ in the form of a keypath:
 
 ```bash
-gitsPlayer --Common.Player.Fullscreen=true # you could also use 'True', 'TRUE' or '1', and similar variants of 'false' and '0'
+gitsPlayer --Common.Player.Fullscreen # it's a flag, so presence ==> true
 ```
 
 ### Environment
@@ -103,8 +103,8 @@ Here's the structure to define a configuration option:
 | `Arguments`          | (case-sensitive) CLI-Argument(s) to set this option's value.                                                                                                                                                                                |
 | `Tags`               | Tag(s) for help filtering and future use-cases. All groups "above" a value - the path segments - are added to the tags automatically.                                                                                                       |
 | `OSVisibility`       | OS(s) that use the option: `WINDOWS`,`X11`.                                                                                                                                                                                                 |
-| `DefaultPerPlatform` | Specify defaults for specific platforms. The value set by `Default` is a fallback, when no platform matched.                                                                                                                                |
-| `DefaultCondition`   | Specify defaults if certain conditions are _present_. Is evaluated before `DefaultPerPlatform`. When unmatched, the value set by `Default` is used.                                                                                         |
+| `DefaultPerPlatform` | Specify defaults for specific platforms. The value set by `Default` is a fallback, when no platform matched.                                                                                                                                 |
+| `DefaultCondition`   | Specify defaults if certain conditions are _present_. Is evaluated before `DefaultPerPlatform`. When unmatched, the value set by `Default` is used.                                                                                          |
 
 #### Group
 
@@ -146,7 +146,7 @@ generate.py --step <Step>                       # generation step to run
 
 where `Step` can be one of the following:
 
-| Step                   | Description                                     |
+| Step                 | Description                                     |
 | ---------------------- | ----------------------------------------------- |
 | `Enum`                 | 1. Generate all enum related cpp files.         |
 | `Configuration`        | 2. Generate the configuration system cpp files. |

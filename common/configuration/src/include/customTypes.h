@@ -33,13 +33,4 @@ struct VulkanObjectRange : ObjectRange {
   bool operator[](uint64_t queueSubmitNumber) const;
   void SetFromString(const std::string& str);
 };
-
-struct FlexiBool {
-  FlexiBool();
-  FlexiBool(bool val);
-  FlexiBool(const std::string& boolStr);
-
-  std::string toString() const;
-  bool value;
-};
 } // namespace gits
