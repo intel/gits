@@ -9,6 +9,8 @@
 #include "gpuExecutionTracker.h"
 #include "gits.h"
 
+#include <queue>
+
 namespace gits {
 namespace DirectX {
 
@@ -47,32 +49,38 @@ void GpuExecutionTracker::commandQueueSignal(unsigned callKey,
 }
 
 void GpuExecutionTracker::fenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue) {
-  signaledFences_[fenceKey] = fenceValue;
+  std::queue<SignalEvent*> signaled;
+  auto* initialSignal = new SignalEvent{};
+  initialSignal->callKey = callKey;
+  initialSignal->fence = {fenceKey, fenceValue};
+  signaled.push(initialSignal);
 
-  std::vector<SignalEvent*> signaled;
-  for (auto& it : queueEvents_) {
-    while (!it.second.empty()) {
-      QueueEvent* queueEvent = it.second.front();
-      if (queueEvent->type == QueueEvent::Wait) {
-        WaitEvent* waitEvent = static_cast<WaitEvent*>(queueEvent);
-        auto itFence = signaledFences_.find(waitEvent->fence.key);
-        if (itFence != signaledFences_.end() && itFence->second >= waitEvent->fence.value) {
-          delete queueEvent;
-        } else {
-          break;
+  while (!signaled.empty()) {
+    SignalEvent* signalEvent = signaled.front();
+    signaledFences_[signalEvent->fence.key] = signalEvent->fence.value;
+
+    for (auto& it : queueEvents_) {
+      while (!it.second.empty()) {
+        QueueEvent* queueEvent = it.second.front();
+        if (queueEvent->type == QueueEvent::Wait) {
+          WaitEvent* waitEvent = static_cast<WaitEvent*>(queueEvent);
+          auto itFence = signaledFences_.find(waitEvent->fence.key);
+          if (itFence != signaledFences_.end() && itFence->second >= waitEvent->fence.value) {
+            delete queueEvent;
+          } else {
+            break;
+          }
+        } else if (queueEvent->type == QueueEvent::Execute) {
+          readyExecutables_.push_back(static_cast<Executable*>(queueEvent));
+        } else if (queueEvent->type == QueueEvent::Signal) {
+          signaled.push(static_cast<SignalEvent*>(queueEvent));
         }
-      } else if (queueEvent->type == QueueEvent::Execute) {
-        readyExecutables_.push_back(static_cast<Executable*>(queueEvent));
-      } else if (queueEvent->type == QueueEvent::Signal) {
-        signaled.push_back(static_cast<SignalEvent*>(queueEvent));
+        it.second.pop_front();
       }
-      it.second.pop_front();
     }
-  }
 
-  for (SignalEvent* signal : signaled) {
-    fenceSignal(signal->callKey, signal->fence.key, signal->fence.value);
-    delete signal;
+    delete signalEvent;
+    signaled.pop();
   }
 }
 
