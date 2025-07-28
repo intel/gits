@@ -34,7 +34,6 @@ public:
   void pre(ID3D12GraphicsCommandListClearStateCommand& command) override;
   void pre(ID3D12GraphicsCommandListSetPipelineStateCommand& command) override;
   void pre(ID3D12GraphicsCommandList4SetPipelineState1Command& command) override;
-  void pre(ID3D12PipelineLibraryStorePipelineCommand& command) override;
   void pre(ID3D12DeviceMakeResidentCommand& command) override;
   void pre(ID3D12DeviceEvictCommand& command) override;
   void pre(ID3D12Device1SetResidencyPriorityCommand& command) override;

@@ -20,12 +20,11 @@ MultithreadedObjectAwaitLayer::collectResult(unsigned objectKey) {
     preCollectedOutputs_.erase(it);
     return result;
   }
-
   return manager_.getMultithreadedObjectCreationService().complete(objectKey);
 }
 
 bool MultithreadedObjectAwaitLayer::completeObject(unsigned key) {
-  if (!key) {
+  if (!key || manager_.findObject(key)) {
     return false;
   }
 
@@ -82,7 +81,6 @@ void MultithreadedObjectAwaitLayer::pre(IUnknownAddRefCommand& c) {
 
 void MultithreadedObjectAwaitLayer::pre(IUnknownReleaseCommand& c) {
   auto& service = manager_.getMultithreadedObjectCreationService();
-
   if (c.result_.value == 0) {
     completeArgument(c.object_);
 
@@ -163,10 +161,6 @@ void MultithreadedObjectAwaitLayer::pre(ID3D12GraphicsCommandListSetPipelineStat
 
 void MultithreadedObjectAwaitLayer::pre(ID3D12GraphicsCommandList4SetPipelineState1Command& c) {
   completeArgument(c.pStateObject_);
-}
-
-void MultithreadedObjectAwaitLayer::pre(ID3D12PipelineLibraryStorePipelineCommand& c) {
-  completeArgument(c.pPipeline_);
 }
 
 void MultithreadedObjectAwaitLayer::pre(ID3D12DeviceMakeResidentCommand& c) {
