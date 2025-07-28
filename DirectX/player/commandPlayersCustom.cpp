@@ -538,6 +538,25 @@ void NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayPlayer::Run() {
   }
 }
 
+void NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationPlayer::Run() {
+  auto& manager = PlayerManager::get();
+
+  updateInterface(manager, command.pCommandList_);
+
+  for (Layer* layer : manager.getPreLayers()) {
+    layer->pre(command);
+  }
+
+  if (manager.executeCommands() && command.result_.value == NVAPI_OK && !command.skip) {
+    command.result_.value = NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation(
+        command.pCommandList_.value, command.pParams.value);
+  }
+
+  for (Layer* layer : manager.getPostLayers()) {
+    layer->post(command);
+  }
+}
+
 #pragma endregion
 
 } // namespace DirectX

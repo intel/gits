@@ -245,14 +245,38 @@ NvAPI_Status NvAPI_D3D12_EmitRaytracingOpacityMicromapArrayPostbuildInfoWrapper(
 NvAPI_Status NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationWrapper(
     ID3D12GraphicsCommandList4* pCommandList,
     const NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS* pParams) {
-  static bool logged = false;
-  if (!logged) {
-    Log(ERR) << "NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation not handled!";
-    logged = true;
-  }
+  NvAPI_Status result{};
+
   auto& manager = CaptureManager::get();
-  return manager.getNvAPIDispatchTable().NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation(
-      pCommandList, pParams);
+  if (auto atTopOfStack = AtTopOfStackLocal()) {
+    GITS_ASSERT(pParams->version ==
+                NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS_VER);
+
+    NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand command(
+        GetCurrentThreadId(), pCommandList, pParams);
+
+    updateInterface(command.pCommandList_, pCommandList);
+    for (Layer* layer : manager.getPreLayers()) {
+      layer->pre(command);
+    }
+
+    command.key = manager.createCommandKey();
+    if (!command.skip) {
+      result =
+          manager.getNvAPIDispatchTable()
+              .NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation(pCommandList, pParams);
+    }
+    command.result_.value = result;
+    for (Layer* layer : manager.getPostLayers()) {
+      layer->post(command);
+    }
+  } else {
+    result =
+        manager.getNvAPIDispatchTable().NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation(
+            pCommandList, pParams);
+  }
+
+  return result;
 }
 
 NvAPI_Status NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirectWrapper(

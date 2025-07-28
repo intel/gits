@@ -92,5 +92,9 @@ void encode(const NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& com
 unsigned getSize(const NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command);
 void encode(const NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command, char* dest);
 
+unsigned getSize(const NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command);
+void encode(const NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command,
+            char* dest);
+
 } // namespace DirectX
 } // namespace gits

@@ -195,6 +195,13 @@ void SkipCallsOnConfigLayer::pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArray
   }
 }
 
+void SkipCallsOnConfigLayer::pre(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
+  if (configKeySet_.contains(command.key)) {
+    command.skip = true;
+    Log(INFO) << "[SKIPPED] call " << callKeyToStr(command.key) << " NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand";
+  }
+}
+
 %for function in functions:
 void SkipCallsOnConfigLayer::pre(${function.name}Command& command) {
   if (configKeySet_.contains(command.key)) {

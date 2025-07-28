@@ -195,6 +195,14 @@ void GlobalSynchronizationLayer::pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapA
 void GlobalSynchronizationLayer::post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
   mutex_.unlock();
 }
+
+void GlobalSynchronizationLayer::pre(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
+  mutex_.lock();
+}
+
+void GlobalSynchronizationLayer::post(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
+  mutex_.unlock();
+}
 %for function in functions:
 
 void GlobalSynchronizationLayer::pre(${function.name}Command& command) {

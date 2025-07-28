@@ -346,5 +346,19 @@ public:
   }
 };
 
+class NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationWriter : public CommandWriter {
+public:
+  NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationWriter(
+      NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
+    dataSize_ = getSize(command);
+    data_.reset(new char[dataSize_]);
+    encode(command, data_.get());
+  }
+  unsigned Id() const override {
+    return static_cast<unsigned>(
+        CommandId::ID_NVAPI_D3D12_RAYTRACINGEXECUTEMULTIINDIRECTCLUSTEROPERATION);
+  }
+};
+
 } // namespace DirectX
 } // namespace gits

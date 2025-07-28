@@ -76,6 +76,8 @@ gits::CFunction* DirectXLibrary::FunctionCreate(unsigned type) const {
     return new NvAPI_D3D12_BuildRaytracingAccelerationStructureExPlayer();
   case CommandId::ID_NVAPI_D3D12_BUILDRAYTRACINGOPACITYMICROMAPARRAY:
     return new NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayPlayer();
+  case CommandId::ID_NVAPI_D3D12_RAYTRACINGEXECUTEMULTIINDIRECTCLUSTEROPERATION:
+    return new NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationPlayer();
   %for function in functions:
   case CommandId::ID_${function.name.upper()}:
     return new ${function.name}Player();

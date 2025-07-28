@@ -31,6 +31,10 @@ typedef struct _NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS_V1
     NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS_V1;
 typedef NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS_V1
     NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS;
+typedef struct _NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS_V1
+    NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS_V1;
+typedef NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS_V1
+    NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS;
 
 #include <vector>
 #include <map>
@@ -987,6 +991,35 @@ struct PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS> {
   unsigned scratchOpacityMicromapArrayDataOffset{};
   std::vector<unsigned> destPostBuildBufferKeys{};
   std::vector<unsigned> destPostBuildBufferOffsets{};
+  bool copy{};
+};
+
+template <>
+struct PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS> {
+  PointerArgument(const NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS* value_)
+      : value(
+            const_cast<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS*>(value_)) {
+  }
+  PointerArgument() {}
+  PointerArgument(
+      const PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS>& arg);
+  PointerArgument& operator=(
+      const PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS>&) =
+      delete;
+  ~PointerArgument();
+  NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS* value{};
+  unsigned batchResultDataKey{};
+  unsigned batchResultDataOffset{};
+  unsigned batchScratchDataKey{};
+  unsigned batchScratchDataOffset{};
+  unsigned destinationAddressArrayKey{};
+  unsigned destinationAddressArrayOffset{};
+  unsigned resultSizeArrayKey{};
+  unsigned resultSizeArrayOffset{};
+  unsigned indirectArgArrayKey{};
+  unsigned indirectArgArrayOffset{};
+  unsigned indirectArgCountKey{};
+  unsigned indirectArgCountOffset{};
   bool copy{};
 };
 

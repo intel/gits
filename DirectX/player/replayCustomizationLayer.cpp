@@ -1156,6 +1156,40 @@ void ReplayCustomizationLayer::pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArr
   }
 }
 
+void ReplayCustomizationLayer::pre(
+    NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& c) {
+  if (c.pParams.value->pDesc) {
+    auto* pDescMod = const_cast<NVAPI_D3D12_RAYTRACING_MULTI_INDIRECT_CLUSTER_OPERATION_DESC*>(
+        c.pParams.value->pDesc);
+
+    pDescMod->batchResultData = manager_.getGpuAddressService().getGpuAddress(
+        c.pParams.batchResultDataKey, c.pParams.batchResultDataOffset);
+
+    pDescMod->batchScratchData = manager_.getGpuAddressService().getGpuAddress(
+        c.pParams.batchScratchDataKey, c.pParams.batchScratchDataOffset);
+
+    pDescMod->destinationAddressArray.StartAddress = manager_.getGpuAddressService().getGpuAddress(
+        c.pParams.destinationAddressArrayKey, c.pParams.destinationAddressArrayOffset);
+
+    pDescMod->resultSizeArray.StartAddress = manager_.getGpuAddressService().getGpuAddress(
+        c.pParams.resultSizeArrayKey, c.pParams.resultSizeArrayOffset);
+
+    pDescMod->indirectArgArray.StartAddress = manager_.getGpuAddressService().getGpuAddress(
+        c.pParams.indirectArgArrayKey, c.pParams.indirectArgArrayOffset);
+
+    pDescMod->indirectArgCount = manager_.getGpuAddressService().getGpuAddress(
+        c.pParams.indirectArgCountKey, c.pParams.indirectArgCountOffset);
+  }
+
+  static bool logged = false;
+  if (!logged) {
+    Log(ERR) << "NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand not handled!";
+    logged = true;
+  }
+
+  c.skip = true;
+}
+
 void ReplayCustomizationLayer::fillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg) {
   if (arg.value) {
     arg.value = manager_.getGpuAddressService().getGpuAddress(arg.interfaceKey, arg.offset);

@@ -728,6 +728,28 @@ void TraceLayer::post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& co
   }
 }
 
+void TraceLayer::pre(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
+  if (printPre_) {
+    CommandPrinter p(streamPre_, statePre_, command,
+                     "NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation");
+    p.addArgument(command.pCommandList_);
+    p.addArgument(command.pParams);
+    p.addResult(command.result_);
+    p.print(flush_);
+  }
+}
+
+void TraceLayer::post(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
+  if (printPost_) {
+    CommandPrinter p(streamPost_, statePost_, command,
+                     "NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation");
+    p.addArgument(command.pCommandList_);
+    p.addArgument(command.pParams);
+    p.addResult(command.result_);
+    p.print(flush_);
+  }
+}
+
 #pragma endregion
 
 } // namespace DirectX

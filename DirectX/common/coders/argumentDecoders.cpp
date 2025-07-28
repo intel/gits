@@ -1606,5 +1606,55 @@ void decode(char* src,
   }
 }
 
+void decode(
+    char* src,
+    unsigned& offset,
+    PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS>& arg) {
+  if (decodeNullPtr(src, offset, arg)) {
+    return;
+  }
+
+  arg.value = reinterpret_cast<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS*>(
+      src + offset);
+  offset += sizeof(NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS);
+  if (arg.value->pDesc) {
+    arg.value->pDesc =
+        reinterpret_cast<NVAPI_D3D12_RAYTRACING_MULTI_INDIRECT_CLUSTER_OPERATION_DESC*>(src +
+                                                                                        offset);
+    offset += sizeof(NVAPI_D3D12_RAYTRACING_MULTI_INDIRECT_CLUSTER_OPERATION_DESC);
+  }
+
+  memcpy(&arg.batchResultDataKey, src + offset, sizeof(arg.batchResultDataKey));
+  offset += sizeof(arg.batchResultDataKey);
+  memcpy(&arg.batchResultDataOffset, src + offset, sizeof(arg.batchResultDataOffset));
+  offset += sizeof(arg.batchResultDataOffset);
+
+  memcpy(&arg.batchScratchDataKey, src + offset, sizeof(arg.batchScratchDataKey));
+  offset += sizeof(arg.batchScratchDataKey);
+  memcpy(&arg.batchScratchDataOffset, src + offset, sizeof(arg.batchScratchDataOffset));
+  offset += sizeof(arg.batchScratchDataOffset);
+
+  memcpy(&arg.destinationAddressArrayKey, src + offset, sizeof(arg.destinationAddressArrayKey));
+  offset += sizeof(arg.destinationAddressArrayKey);
+  memcpy(&arg.destinationAddressArrayOffset, src + offset,
+         sizeof(arg.destinationAddressArrayOffset));
+  offset += sizeof(arg.destinationAddressArrayOffset);
+
+  memcpy(&arg.resultSizeArrayKey, src + offset, sizeof(arg.resultSizeArrayKey));
+  offset += sizeof(arg.resultSizeArrayKey);
+  memcpy(&arg.resultSizeArrayOffset, src + offset, sizeof(arg.resultSizeArrayOffset));
+  offset += sizeof(arg.resultSizeArrayOffset);
+
+  memcpy(&arg.indirectArgArrayKey, src + offset, sizeof(arg.indirectArgArrayKey));
+  offset += sizeof(arg.indirectArgArrayKey);
+  memcpy(&arg.indirectArgArrayOffset, src + offset, sizeof(arg.indirectArgArrayOffset));
+  offset += sizeof(arg.indirectArgArrayOffset);
+
+  memcpy(&arg.indirectArgCountKey, src + offset, sizeof(arg.indirectArgCountKey));
+  offset += sizeof(arg.indirectArgCountKey);
+  memcpy(&arg.indirectArgCountOffset, src + offset, sizeof(arg.indirectArgCountOffset));
+  offset += sizeof(arg.indirectArgCountOffset);
+}
+
 } // namespace DirectX
 } // namespace gits

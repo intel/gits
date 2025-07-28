@@ -108,6 +108,10 @@ void EncoderLayer::post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& 
   recorder_.record(command.key, new NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayWriter(command));
 }
 
+void EncoderLayer::post(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
+  recorder_.record(command.key, new NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationWriter(command));
+}
+
 <%
 custom = [
     'IDXGISwapChainPresent',

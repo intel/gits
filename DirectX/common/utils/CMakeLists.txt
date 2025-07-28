@@ -28,6 +28,8 @@ set(TO_STR_FILES
   ${SRC_DIR}/to_string/toStr.cpp
   ${SRC_DIR}/to_string/enumToStrAuto.h
   ${SRC_DIR}/to_string/enumToStrAuto.cpp
+  ${SRC_DIR}/to_string/enumToStrCustom.h
+  ${SRC_DIR}/to_string/enumToStrCustom.cpp
   ${SRC_DIR}/to_string/guidToStrAuto.h
   ${SRC_DIR}/to_string/guidToStrAuto.cpp
 )

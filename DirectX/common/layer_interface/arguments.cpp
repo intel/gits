@@ -2124,6 +2124,43 @@ PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>::~PointerA
   }
 }
 
+PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS>::PointerArgument(
+    const PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS>& arg) {
+  if (!arg.value) {
+    return;
+  }
+  value = new NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS();
+  *value = *arg.value;
+
+  value->pDesc = new NVAPI_D3D12_RAYTRACING_MULTI_INDIRECT_CLUSTER_OPERATION_DESC();
+  auto* pDescMod =
+      const_cast<NVAPI_D3D12_RAYTRACING_MULTI_INDIRECT_CLUSTER_OPERATION_DESC*>(value->pDesc);
+  *pDescMod = *arg.value->pDesc;
+
+  batchResultDataKey = arg.batchResultDataKey;
+  batchResultDataOffset = arg.batchResultDataOffset;
+  batchScratchDataKey = arg.batchScratchDataKey;
+  batchScratchDataOffset = arg.batchScratchDataOffset;
+  destinationAddressArrayKey = arg.destinationAddressArrayKey;
+  destinationAddressArrayOffset = arg.destinationAddressArrayOffset;
+  resultSizeArrayKey = arg.resultSizeArrayKey;
+  resultSizeArrayOffset = arg.resultSizeArrayOffset;
+  indirectArgArrayKey = arg.indirectArgArrayKey;
+  indirectArgArrayOffset = arg.indirectArgArrayOffset;
+  indirectArgCountKey = arg.indirectArgCountKey;
+  indirectArgCountOffset = arg.indirectArgCountOffset;
+
+  copy = true;
+}
+
+PointerArgument<
+    NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS>::~PointerArgument() {
+  if (copy) {
+    delete value->pDesc;
+    delete value;
+  }
+}
+
 #pragma endregion
 
 } // namespace DirectX

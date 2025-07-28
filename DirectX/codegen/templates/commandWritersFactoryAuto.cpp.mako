@@ -72,6 +72,8 @@ CommandWriter* createCommandWriter(Command* command) {
     return new NvAPI_D3D12_BuildRaytracingAccelerationStructureExWriter(*static_cast<NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand*>(command));
   case CommandId::ID_NVAPI_D3D12_BUILDRAYTRACINGOPACITYMICROMAPARRAY:
     return new NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayWriter(*static_cast<NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand*>(command));
+  case CommandId::ID_NVAPI_D3D12_RAYTRACINGEXECUTEMULTIINDIRECTCLUSTEROPERATION:
+    return new NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationWriter(*static_cast<NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand*>(command));
   %for function in functions:
   case CommandId::ID_${function.name.upper()}:
     return new ${function.name}Writer(*static_cast<${function.name}Command*>(command));

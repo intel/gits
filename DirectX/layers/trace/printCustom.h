@@ -12,6 +12,7 @@
 #define INTC_IGDEXT_D3D12
 #include "igdext.h"
 #include "igdext_tools.h"
+#include "nvapi.h"
 #include "arguments.h"
 #include "printEnumsAuto.h"
 #include "printStructuresAuto.h"
@@ -80,6 +81,38 @@ FastOStream& operator<<(FastOStream& stream, const INTCExtensionAppInfo& value);
 FastOStream& operator<<(FastOStream& stream, const INTCAppInfoVersion& value);
 FastOStream& operator<<(FastOStream& stream, const INTCExtensionAppInfo1& value);
 FastOStream& operator<<(FastOStream& stream, const INTCExtensionAppInfo1* value);
+
+FastOStream& operator<<(FastOStream& stream,
+                        NVAPI_D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS_EX value);
+FastOStream& operator<<(FastOStream& stream, NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_EX value);
+FastOStream& operator<<(FastOStream& stream, NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_FORMAT value);
+FastOStream& operator<<(FastOStream& stream,
+                        NVAPI_D3D12_RAYTRACING_DISPLACEMENT_MICROMAP_FORMAT value);
+FastOStream& operator<<(FastOStream& stream, NVAPI_D3D12_RAYTRACING_LSS_ENDCAP_MODE value);
+FastOStream& operator<<(FastOStream& stream, NVAPI_D3D12_RAYTRACING_LSS_PRIMITIVE_FORMAT value);
+FastOStream& operator<<(FastOStream& stream,
+                        NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_BUILD_FLAGS value);
+FastOStream& operator<<(FastOStream& stream,
+                        NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_POSTBUILD_INFO_TYPE value);
+FastOStream& operator<<(FastOStream& stream,
+                        NVAPI_D3D12_RAYTRACING_MULTI_INDIRECT_CLUSTER_OPERATION_FLAGS value);
+FastOStream& operator<<(
+    FastOStream& stream,
+    NVAPI_D3D12_RAYTRACING_MULTI_INDIRECT_CLUSTER_OPERATION_CLUSTER_FLAGS value);
+FastOStream& operator<<(
+    FastOStream& stream,
+    NVAPI_D3D12_RAYTRACING_MULTI_INDIRECT_CLUSTER_OPERATION_GEOMETRY_FLAGS value);
+FastOStream& operator<<(FastOStream& stream,
+                        NVAPI_D3D12_RAYTRACING_MULTI_INDIRECT_CLUSTER_OPERATION_TYPE value);
+FastOStream& operator<<(FastOStream& stream,
+                        NVAPI_3D12_RAYTRACING_MULTI_INDIRECT_CLUSTER_OPERATION_INDEX_FORMAT value);
+FastOStream& operator<<(FastOStream& stream,
+                        NVAPI_D3D12_RAYTRACING_MULTI_INDIRECT_CLUSTER_OPERATION_MODE value);
+FastOStream& operator<<(FastOStream& stream,
+                        NVAPI_D3D12_RAYTRACING_MULTI_INDIRECT_CLUSTER_OPERATION_MOVE_TYPE value);
+FastOStream& operator<<(
+    FastOStream& stream,
+    NVAPI_D3D12_RAYTRACING_MULTI_INDIRECT_CLUSTER_OPERATION_ADDRESS_RESOLUTION_FLAGS value);
 
 } // namespace DirectX
 } // namespace gits

@@ -49,6 +49,7 @@ public:
   virtual void pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) override;
   virtual void pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) override;
   virtual void pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) override;
+  virtual void pre(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) override;
   
   %for function in functions:
   virtual void pre(${function.name}Command& command) override;

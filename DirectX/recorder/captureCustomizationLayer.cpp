@@ -951,28 +951,28 @@ void CaptureCustomizationLayer::pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapAr
   if (c.pParams.value->pDesc) {
     {
       GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-          c.pParams.value->pDesc->destOpacityMicromapArrayData, true);
+          c.pParams.value->pDesc->destOpacityMicromapArrayData);
       c.pParams.destOpacityMicromapArrayDataKey = info.resourceKey;
       c.pParams.destOpacityMicromapArrayDataOffset = info.offset;
     }
 
     {
       GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-          c.pParams.value->pDesc->inputs.inputBuffer, true);
+          c.pParams.value->pDesc->inputs.inputBuffer);
       c.pParams.inputBufferKey = info.resourceKey;
       c.pParams.inputBufferOffset = info.offset;
     }
 
     {
       GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-          c.pParams.value->pDesc->inputs.perOMMDescs.StartAddress, true);
+          c.pParams.value->pDesc->inputs.perOMMDescs.StartAddress);
       c.pParams.perOMMDescsKey = info.resourceKey;
       c.pParams.perOMMDescsOffset = info.offset;
     }
 
     {
       GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
-          c.pParams.value->pDesc->scratchOpacityMicromapArrayData, true);
+          c.pParams.value->pDesc->scratchOpacityMicromapArrayData);
       c.pParams.scratchOpacityMicromapArrayDataKey = info.resourceKey;
       c.pParams.scratchOpacityMicromapArrayDataOffset = info.offset;
     }
@@ -983,6 +983,53 @@ void CaptureCustomizationLayer::pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapAr
         c.pParams.value->pPostbuildInfoDescs[i].destBuffer);
     c.pParams.destPostBuildBufferKeys.push_back(info.resourceKey);
     c.pParams.destPostBuildBufferOffsets.push_back(info.offset);
+  }
+}
+
+void CaptureCustomizationLayer::pre(
+    NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& c) {
+  if (c.pParams.value->pDesc) {
+    {
+      GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
+          c.pParams.value->pDesc->batchResultData);
+      c.pParams.batchResultDataKey = info.resourceKey;
+      c.pParams.batchResultDataOffset = info.offset;
+    }
+
+    {
+      GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
+          c.pParams.value->pDesc->batchScratchData);
+      c.pParams.batchScratchDataKey = info.resourceKey;
+      c.pParams.batchScratchDataOffset = info.offset;
+    }
+
+    {
+      GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
+          c.pParams.value->pDesc->destinationAddressArray.StartAddress);
+      c.pParams.destinationAddressArrayKey = info.resourceKey;
+      c.pParams.destinationAddressArrayOffset = info.offset;
+    }
+
+    {
+      GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
+          c.pParams.value->pDesc->resultSizeArray.StartAddress);
+      c.pParams.resultSizeArrayKey = info.resourceKey;
+      c.pParams.resultSizeArrayOffset = info.offset;
+    }
+
+    {
+      GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
+          c.pParams.value->pDesc->indirectArgArray.StartAddress);
+      c.pParams.indirectArgArrayKey = info.resourceKey;
+      c.pParams.indirectArgArrayOffset = info.offset;
+    }
+
+    {
+      GpuAddressService::GpuAddressInfo info = manager_.getGpuAddressService().getGpuAddressInfo(
+          c.pParams.value->pDesc->indirectArgCount);
+      c.pParams.indirectArgCountKey = info.resourceKey;
+      c.pParams.indirectArgCountOffset = info.offset;
+    }
   }
 }
 

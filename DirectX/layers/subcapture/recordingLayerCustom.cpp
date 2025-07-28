@@ -234,6 +234,18 @@ void RecordingLayer::post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand
     recorder_.record(new NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayWriter(command));
   }
 }
+void RecordingLayer::post(
+    NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
+  static bool logged = false;
+  if (!logged) {
+    Log(ERR) << "NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand not handled in "
+                "subcapture";
+    logged = true;
+  }
+  if (subcaptureRange_.inRange()) {
+    recorder_.record(new NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationWriter(command));
+  }
+}
 
 } // namespace DirectX
 } // namespace gits

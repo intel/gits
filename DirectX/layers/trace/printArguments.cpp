@@ -1606,5 +1606,67 @@ FastOStream& operator<<(
   return stream;
 }
 
+FastOStream& operator<<(
+    FastOStream& stream,
+    PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS>& arg) {
+  if (!arg.value) {
+    return stream << "nullptr";
+  }
+  stream << "NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS{";
+
+  stream << arg.value->version << ", ";
+
+  stream << arg.value->pDesc->inputs.maxArgCount << ", " << arg.value->pDesc->inputs.flags << ", "
+         << arg.value->pDesc->inputs.type << ", " << arg.value->pDesc->inputs.mode << ", {";
+
+  if (arg.value->pDesc->inputs.type ==
+      NVAPI_D3D12_RAYTRACING_MULTI_INDIRECT_CLUSTER_OPERATION_TYPE_BUILD_BLAS_FROM_CLAS) {
+    stream << arg.value->pDesc->inputs.clasDesc.maxTotalClasCount << ", "
+           << arg.value->pDesc->inputs.clasDesc.maxClasCountPerArg;
+  } else if (arg.value->pDesc->inputs.type ==
+             NVAPI_D3D12_RAYTRACING_MULTI_INDIRECT_CLUSTER_OPERATION_TYPE_MOVE_CLUSTER_OBJECT) {
+    stream << arg.value->pDesc->inputs.movesDesc.type << ", "
+           << arg.value->pDesc->inputs.movesDesc.maxBytesMoved;
+  } else {
+    stream << static_cast<DXGI_FORMAT>(arg.value->pDesc->inputs.trianglesDesc.vertexFormat) << ", "
+           << arg.value->pDesc->inputs.trianglesDesc.maxGeometryIndexValue << ", "
+           << arg.value->pDesc->inputs.trianglesDesc.maxUniqueGeometryCountPerArg << ", "
+           << arg.value->pDesc->inputs.trianglesDesc.maxTriangleCountPerArg << ", "
+           << arg.value->pDesc->inputs.trianglesDesc.maxVertexCountPerArg << ", "
+           << arg.value->pDesc->inputs.trianglesDesc.maxTotalTriangleCount << ", "
+           << arg.value->pDesc->inputs.trianglesDesc.maxTotalVertexCount << ", "
+           << arg.value->pDesc->inputs.trianglesDesc.minPositionTruncateBitCount;
+  }
+
+  stream << "}}, ";
+  stream << static_cast<
+                NVAPI_D3D12_RAYTRACING_MULTI_INDIRECT_CLUSTER_OPERATION_ADDRESS_RESOLUTION_FLAGS>(
+                arg.value->pDesc->addressResolutionFlags)
+         << ", {";
+
+  printObjectKey(stream, arg.batchResultDataKey);
+  stream << ", " << arg.batchResultDataOffset << "}, {";
+
+  printObjectKey(stream, arg.batchScratchDataKey);
+  stream << ", " << arg.batchScratchDataOffset << "}, {{";
+
+  printObjectKey(stream, arg.destinationAddressArrayKey);
+  stream << ", " << arg.destinationAddressArrayOffset << "}, "
+         << arg.value->pDesc->destinationAddressArray.StrideInBytes << "}, {{";
+
+  printObjectKey(stream, arg.resultSizeArrayKey);
+  stream << ", " << arg.resultSizeArrayOffset << "}, "
+         << arg.value->pDesc->resultSizeArray.StrideInBytes << "}, {{";
+
+  printObjectKey(stream, arg.indirectArgArrayKey);
+  stream << ", " << arg.indirectArgArrayOffset << "}, "
+         << arg.value->pDesc->indirectArgArray.StrideInBytes << "}, {";
+
+  printObjectKey(stream, arg.indirectArgCountKey);
+  stream << ", " << arg.indirectArgCountOffset << "}";
+
+  return stream;
+}
+
 } // namespace DirectX
 } // namespace gits

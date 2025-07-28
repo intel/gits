@@ -353,5 +353,12 @@ void encode(char* dest,
             unsigned& offset,
             const PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>& arg);
 
+unsigned getSize(
+    const PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS>& arg);
+void encode(
+    char* dest,
+    unsigned& offset,
+    const PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS>& arg);
+
 } // namespace DirectX
 } // namespace gits

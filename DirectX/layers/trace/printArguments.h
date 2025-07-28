@@ -153,6 +153,9 @@ FastOStream& operator<<(
     PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS>& arg);
 FastOStream& operator<<(FastOStream& stream,
                         PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>& arg);
+FastOStream& operator<<(
+    FastOStream& stream,
+    PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS>& arg);
 
 } // namespace DirectX
 } // namespace gits

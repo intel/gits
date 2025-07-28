@@ -540,6 +540,26 @@ private:
   NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand command;
 };
 
+class NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationPlayer : public CommandPlayer {
+public:
+  unsigned Id() const override {
+    return static_cast<unsigned>(
+        CommandId::ID_NVAPI_D3D12_RAYTRACINGEXECUTEMULTIINDIRECTCLUSTEROPERATION);
+  }
+  const char* Name() const override {
+    return "NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation";
+  }
+  void Run() override;
+
+protected:
+  void decodeCommand() override {
+    decode(data_.get(), command);
+  }
+
+private:
+  NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand command;
+};
+
 #pragma endregion
 
 } // namespace DirectX

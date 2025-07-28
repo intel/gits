@@ -15,6 +15,7 @@
 
 #include "directx.h"
 #include "enumToStrAuto.h"
+#include "enumToStrCustom.h"
 #include "guidToStrAuto.h"
 
 #include <string>

@@ -286,5 +286,14 @@ void decode(char* src, NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c
   decode(src, offset, command.result_);
 }
 
+void decode(char* src, NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
+  unsigned offset = 0;
+  decode(src, offset, command.key);
+  decode(src, offset, command.threadId);
+  decode(src, offset, command.pCommandList_);
+  decode(src, offset, command.pParams);
+  decode(src, offset, command.result_);
+}
+
 } // namespace DirectX
 } // namespace gits

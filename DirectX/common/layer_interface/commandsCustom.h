@@ -36,6 +36,10 @@ typedef struct _NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS_V1
     NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS_V1;
 typedef NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS_V1
     NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS;
+typedef struct _NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS_V1
+    NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS_V1;
+typedef NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS_V1
+    NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS;
 typedef unsigned long NvU32;
 
 namespace gits {
@@ -739,6 +743,24 @@ public:
 public:
   InterfaceArgument<ID3D12GraphicsCommandList4> pCommandList_{};
   PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS> pParams{};
+  Argument<NvAPI_Status> result_{};
+};
+
+class NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand : public Command {
+public:
+  NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand(
+      unsigned threadId,
+      ID3D12GraphicsCommandList4* pCommandList,
+      const NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS* pParams)
+      : Command{CommandId::ID_NVAPI_D3D12_RAYTRACINGEXECUTEMULTIINDIRECTCLUSTEROPERATION, threadId},
+        pCommandList_{pCommandList},
+        pParams{pParams} {}
+  NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand()
+      : Command(CommandId::ID_NVAPI_D3D12_RAYTRACINGEXECUTEMULTIINDIRECTCLUSTEROPERATION) {}
+
+public:
+  InterfaceArgument<ID3D12GraphicsCommandList4> pCommandList_{};
+  PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS> pParams{};
   Argument<NvAPI_Status> result_{};
 };
 

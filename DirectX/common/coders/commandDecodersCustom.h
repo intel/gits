@@ -39,6 +39,7 @@ void decode(char* src, NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command);
 void decode(char* src, NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command);
 void decode(char* src, NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command);
 void decode(char* src, NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command);
+void decode(char* src, NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command);
 
 } // namespace DirectX
 } // namespace gits

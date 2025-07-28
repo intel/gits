@@ -137,6 +137,9 @@ public:
 
   void pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) override;
   void post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) override;
+
+  void pre(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) override;
+  void post(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) override;
 };
 
 } // namespace DirectX

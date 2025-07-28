@@ -262,6 +262,16 @@ void LogDxErrorLayer::post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayComman
   }
 }
 
+void LogDxErrorLayer::pre(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
+  preResultNvAPI_ = command.result_.value;
+}
+
+void LogDxErrorLayer::post(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
+  if (isFailureNvAPI(command.result_.value)) {
+    Log(ERR) << callKeyToStr(command.key) << " NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand failed " << printResult(command.result_.value);
+  }
+}
+
 std::string LogDxErrorLayer::printResult(HRESULT result) {
   switch (result) {
   case E_INVALIDARG:

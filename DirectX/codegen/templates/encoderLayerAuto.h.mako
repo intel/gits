@@ -42,6 +42,7 @@ public:
   void post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) override;
   void post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) override;
   void post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) override;
+  void post(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) override;
 
   %for function in functions:
   void post(${function.name}Command& command) override;

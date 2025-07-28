@@ -76,6 +76,8 @@ public:
   virtual void post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) override;
   virtual void pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) override;
   virtual void post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) override;
+  virtual void pre(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) override;
+  virtual void post(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) override;
 
 private:
   bool isFailure(HRESULT result) {

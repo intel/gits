@@ -129,6 +129,9 @@ public:
   virtual void pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {}
   virtual void post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {}
 
+  virtual void pre(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {}
+  virtual void post(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {}
+
 private:
   std::string name_;
 };

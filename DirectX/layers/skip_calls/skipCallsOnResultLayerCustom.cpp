@@ -61,5 +61,12 @@ void SkipCallsOnResultLayer::pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArray
   }
 }
 
+void SkipCallsOnResultLayer::pre(
+    NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
+  if (command.result_.value != NVAPI_OK) {
+    command.skip = true;
+  }
+}
+
 } // namespace DirectX
 } // namespace gits
