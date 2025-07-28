@@ -221,6 +221,7 @@ void AnalyzerService::dumpAnalysisFile() {
   }
   out << "ACCELERATION_STRUCTURES\n";
   std::set<std::pair<unsigned, unsigned>> ases;
+  raytracingService_.flush();
   AnalyzerRaytracingService::BlasesByTlas& blasesByTlas = raytracingService_.getBlases();
   for (auto& itTlas : blasesByTlas) {
     for (auto& blas : itTlas.second) {
