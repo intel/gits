@@ -16,6 +16,7 @@
 
 #include <unordered_map>
 #include <memory>
+#include <set>
 
 namespace gits {
 namespace DirectX {
@@ -80,7 +81,7 @@ private:
 
   std::map<unsigned, RaytracingAccelerationStructureState*> statesById_;
 
-  std::map<KeyOffset, unsigned> stateByKeyOffset_;
+  std::map<KeyOffset, std::set<unsigned>> stateByKeyOffset_;
   std::unordered_map<unsigned, unsigned> stateSourceByDest_;
   std::unordered_map<unsigned, std::unordered_set<unsigned>> stateDestsBySource_;
 
@@ -102,6 +103,7 @@ private:
 
 private:
   void storeState(RaytracingAccelerationStructureState* state);
+  unsigned getState(unsigned key, unsigned offset);
   void removeState(unsigned stateId);
   void optimize();
 };

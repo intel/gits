@@ -608,7 +608,8 @@ void AccelerationStructuresBuildService::storeState(RaytracingAccelerationStruct
   unsigned stateId = ++stateUniqueId_;
   statesById_[stateId] = state;
   if (state->sourceKey) {
-    unsigned sourceId = stateByKeyOffset_[{state->sourceKey, state->sourceOffset}];
+    unsigned sourceId = getState(state->sourceKey, state->sourceOffset);
+    GITS_ASSERT(sourceId);
 
     // remove intermediate update
     if (state->sourceKey == state->destKey && state->sourceOffset == state->destOffset) {
@@ -623,15 +624,23 @@ void AccelerationStructuresBuildService::storeState(RaytracingAccelerationStruct
   }
 
   // remove previous state if not a source for any AS
-  auto itState = stateByKeyOffset_.find({state->destKey, state->destOffset});
-  if (itState != stateByKeyOffset_.end()) {
-    auto itDests = stateDestsBySource_.find(itState->second);
+  unsigned prevStateId = getState(state->destKey, state->destOffset);
+  if (prevStateId) {
+    auto itDests = stateDestsBySource_.find(prevStateId);
     if (itDests == stateDestsBySource_.end()) {
-      removeState(itState->second);
+      removeState(prevStateId);
     }
   }
 
-  stateByKeyOffset_[{state->destKey, state->destOffset}] = stateId;
+  stateByKeyOffset_[{state->destKey, state->destOffset}].insert(stateId);
+}
+
+unsigned AccelerationStructuresBuildService::getState(unsigned key, unsigned offset) {
+  auto itStates = stateByKeyOffset_.find({key, offset});
+  if (itStates == stateByKeyOffset_.end() || itStates->second.empty()) {
+    return 0;
+  }
+  return *itStates->second.rbegin();
 }
 
 void AccelerationStructuresBuildService::removeState(unsigned stateId) {
@@ -655,8 +664,11 @@ void AccelerationStructuresBuildService::removeState(unsigned stateId) {
   if (itState->second->buildState) {
     bufferContentRestore_.removeBuild(itState->second->commandKey);
   }
-  stateByKeyOffset_.erase({itState->second->destKey, itState->second->destOffset});
-  statesById_.erase(itState);
+  auto it = stateByKeyOffset_.find({itState->second->destKey, itState->second->destOffset});
+  it->second.erase(stateId);
+  if (it->second.empty()) {
+    stateByKeyOffset_.erase(it);
+  }
 }
 
 void AccelerationStructuresBuildService::optimize() {
