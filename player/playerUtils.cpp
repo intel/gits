@@ -1,14 +1,3 @@
-#include "playerUtils.h"
-
-#include <string>
-#include <filesystem>
-
-#include "configurationLib.h"
-#include "argumentParser.h"
-#include "tools.h"
-#include "log.h"
-#include "gits.h"
-
 // ===================== begin_copyright_notice ============================
 //
 // Copyright (C) 2023-2025 Intel Corporation
@@ -23,6 +12,17 @@
  * @brief Utility functions for the gitsPlayer.
  *
  */
+
+#include "playerUtils.h"
+
+#include "configurationLib.h"
+#include "argumentParser.h"
+#include "tools.h"
+#include "log.h"
+#include "gits.h"
+
+#include <string>
+#include <filesystem>
 
 namespace gits {
 bool ends_with(const std::string& str, const std::string& ending) {
