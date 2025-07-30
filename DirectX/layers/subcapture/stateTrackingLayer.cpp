@@ -339,6 +339,7 @@ void StateTrackingLayer::post(IDXGIAdapterEnumOutputsCommand& c) {
   }
   ObjectState* state = new ObjectState();
   state->parentKey = c.object_.key;
+  state->linkedLifetimeKey = c.object_.key;
   state->key = c.ppOutput_.key;
   state->object = static_cast<IUnknown*>(*c.ppOutput_.value);
   state->creationCommand.reset(new IDXGIAdapterEnumOutputsCommand(c));
