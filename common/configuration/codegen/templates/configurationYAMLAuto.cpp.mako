@@ -76,7 +76,7 @@ bool convert<${group.namespace_str}>::decode(const Node& node, ${group.namespace
     if (expectedEntries.size()){
       msg = "Expected entries: ";
       size_t i = 0;
-      for (auto &entry : expectedEntries) {
+      for (const auto& entry : expectedEntries) {
         msg += entry + ((++i < expectedEntries.size()) ? ", " : "");
       }
     } else {
@@ -95,14 +95,14 @@ bool convert<${group.namespace_str}>::decode(const Node& node, ${group.namespace
   }
 %     else:
   if (node["${option.config_name}"]) {
-    auto defaultValue = "${option.get_default(platform)}";
+    const auto& defaultValue = "${option.get_default(platform)}";
 %       if not option.is_vector_type:
-    auto configValue = node["${option.config_name}"].Scalar();
+    const auto& configValue = node["${option.config_name}"].Scalar();
     if (configValue != defaultValue) {
 %       else:
-    auto vecYAML = node["${option.config_name}"].as<${option.type}>();
-    auto vecConfig = stringTo<${option.type}>(defaultValue);
-    auto configValue = stringFrom<${option.type}>(vecYAML);
+    const auto& vecYAML = node["${option.config_name}"].as<${option.type}>();
+    const auto& vecConfig = stringTo<${option.type}>(defaultValue);
+    const auto& configValue = stringFrom<${option.type}>(vecYAML);
     if (!sameEntries(vecYAML, vecConfig)) {
 %       endif
         rhs.${option.instance_name} = node["${option.config_name}"].as<${option.type}>();
