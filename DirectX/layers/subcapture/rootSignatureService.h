@@ -17,6 +17,9 @@ namespace DirectX {
 
 class RootSignatureService {
 public:
+  RootSignatureService() {}
+  RootSignatureService(const RootSignatureService&) = delete;
+  RootSignatureService& operator=(const RootSignatureService&) = delete;
   ~RootSignatureService();
   void createRootSignature(ID3D12DeviceCreateRootSignatureCommand& c);
   std::vector<unsigned> getDescriptorTableIndexes(unsigned rootSignatureKey,

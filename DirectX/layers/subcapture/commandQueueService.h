@@ -17,9 +17,11 @@ namespace DirectX {
 
 class StateTrackingService;
 
-class CommandQueueService : gits::noncopyable {
+class CommandQueueService {
 public:
   CommandQueueService(StateTrackingService& stateService);
+  CommandQueueService(const CommandQueueService&) = delete;
+  CommandQueueService& operator=(const CommandQueueService&) = delete;
   ~CommandQueueService();
   void addExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c);
   void addUpdateTileMappings(ID3D12CommandQueueUpdateTileMappingsCommand& c);

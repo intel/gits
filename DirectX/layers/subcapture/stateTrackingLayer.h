@@ -254,7 +254,6 @@ private:
   ResidencyService residencyService_;
   ResourceUsageTrackingService resourceUsageTrackingService_;
   GpuExecutionFlusher gpuExecutionFlusher_;
-  unsigned startFrame_;
   std::unordered_map<unsigned, std::unordered_set<unsigned>> resourceHeaps_;
   std::unordered_map<unsigned, std::vector<unsigned>> swapchainBuffers_;
 };

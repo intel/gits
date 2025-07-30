@@ -665,6 +665,7 @@ void AccelerationStructuresBuildService::removeState(unsigned stateId) {
     bufferContentRestore_.removeBuild(itState->second->commandKey);
   }
   auto it = stateByKeyOffset_.find({itState->second->destKey, itState->second->destOffset});
+  GITS_ASSERT(it != stateByKeyOffset_.end());
   it->second.erase(stateId);
   if (it->second.empty()) {
     stateByKeyOffset_.erase(it);
