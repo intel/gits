@@ -45,6 +45,10 @@ void RtasCacheLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationSt
       assert(hr == S_OK);
 
       isCompatible_ = deserializer_.isCompatible(device.Get());
+      firstBuildCall = false;
+      if (!isCompatible_) {
+        return;
+      }
     }
 
     if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
@@ -55,8 +59,6 @@ void RtasCacheLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationSt
     c.skip = true;
     ++blasCount_;
   }
-
-  firstBuildCall = false;
 }
 
 void RtasCacheLayer::post(
