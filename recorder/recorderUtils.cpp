@@ -31,20 +31,20 @@ bool ConfigureRecorder(const std::filesystem::path& configPath) {
 
   Configurator::Instance().UpdateFromEnvironment();
 
-  auto result = Configurator::Instance().Load(configPath);
+  const auto result = Configurator::Instance().Load(configPath);
   if (!result) {
     return false;
   }
 
 #ifdef GITS_PLATFORM_WINDOWS
-  auto pid = _getpid();
-  auto processName = gits::GetWindowsProcessName(pid);
+  const auto pid = _getpid();
+  const auto& processName = gits::GetWindowsProcessName(pid);
 #elif defined GITS_PLATFORM_LINUX
-  auto pid = getpid();
-  auto processName = GetLinuxProcessName(pid);
+  const auto pid = getpid();
+  const auto& processName = GetLinuxProcessName(pid);
 #endif
-  auto processNameHUD = processName.empty() ? "<unknown>" : processName;
-  Configurator::Instance().ApplyOverrides(configPath, std::move(processName));
+  const auto& processNameHUD = processName.empty() ? "<unknown>" : processName;
+  Configurator::Instance().ApplyOverrides(configPath, processName);
 
   Configurator::GetMutable().common.mode = GITSMode::MODE_RECORDER;
 

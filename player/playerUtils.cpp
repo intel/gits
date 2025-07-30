@@ -41,13 +41,13 @@ bool ConfigurePlayer(const std::filesystem::path& playerPath, ArgumentParser& ar
 
   Configurator::Instance().UpdateFromEnvironment();
 
-  std::filesystem::path configPath =
+  const std::filesystem::path configPath =
       args.ConfigFile ? std::filesystem::absolute(args.ConfigFile.Get())
                       : playerPath.parent_path() / Configurator::ConfigFileName();
 
   if (std::filesystem::exists(configPath)) {
     Log(INFO) << "Using configuration from: " << configPath;
-    auto result = Configurator::Instance().Load(configPath);
+    const auto result = Configurator::Instance().Load(configPath);
     if (!result) {
       Log(ERR) << "Error reading in configuration from: " << configPath;
       return false;
@@ -65,11 +65,11 @@ bool ConfigurePlayer(const std::filesystem::path& playerPath, ArgumentParser& ar
   args.ArgumentConfig.UpdateConfiguration(&Configurator::GetMutable());
 
 #ifdef GITS_PLATFORM_WINDOWS
-  auto processName = gits::GetWindowsProcessName(_getpid());
+  const auto& processName = gits::GetWindowsProcessName(_getpid());
 #elif defined GITS_PLATFORM_LINUX
-  auto processName = GetLinuxProcessName(getpid());
+  const auto& processName = GetLinuxProcessName(getpid());
 #endif
-  Configurator::Instance().ApplyOverrides(configPath, std::move(processName));
+  Configurator::Instance().ApplyOverrides(configPath, processName);
 
   auto& cfg = Configurator::GetMutable();
   cfg.common.mode = GITSMode::MODE_PLAYER;

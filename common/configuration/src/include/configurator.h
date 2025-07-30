@@ -61,12 +61,12 @@ public: // Singleton
   static Configuration& GetMutable();
 
 #ifndef BUILD_FOR_CCODE
-  static bool LoadInto(const std::filesystem::path filepath, Configuration* config);
+  static bool LoadInto(const std::filesystem::path& filepath, Configuration* config);
   bool Load(const std::filesystem::path& filepath);
 
-  static bool Save(const std::filesystem::path filepath, const Configuration& config);
+  static bool Save(const std::filesystem::path& filepath, const Configuration& config);
 
-  bool ApplyOverrides(const std::filesystem::path filepath, std::string processName);
+  bool ApplyOverrides(const std::filesystem::path& filepath, const std::string& processName);
   void DeriveData();
 
   void ClearChangedFieldsVector();

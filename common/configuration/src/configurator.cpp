@@ -99,7 +99,7 @@ void Configurator::DeriveData() {
   configuration.DeriveData(configuration);
 }
 
-bool Configurator::LoadInto(const std::filesystem::path filepath, Configuration* config) {
+bool Configurator::LoadInto(const std::filesystem::path& filepath, Configuration* config) {
   std::ifstream fin(filepath);
   if (!fin) {
     Log(ERR) << "Failed to open file: " << filepath << std::endl;
@@ -136,7 +136,7 @@ bool Configurator::Load(const std::filesystem::path& filepath) {
   return LoadInto(filepath, &configuration);
 }
 
-bool Configurator::Save(const std::filesystem::path filepath, const Configuration& config) {
+bool Configurator::Save(const std::filesystem::path& filepath, const Configuration& config) {
   try {
     YAML::Node node = YAML::convert<Configuration>::encode(config);
     std::ofstream fout(filepath);
@@ -153,7 +153,8 @@ bool Configurator::Save(const std::filesystem::path filepath, const Configuratio
   }
 }
 
-bool Configurator::ApplyOverrides(const std::filesystem::path filepath, std::string processName) {
+bool Configurator::ApplyOverrides(const std::filesystem::path& filepath,
+                                  const std::string& processName) {
   std::ifstream fin(filepath);
   if (!fin) {
     Log(ERR) << "Failed to open file: " << filepath << std::endl;
