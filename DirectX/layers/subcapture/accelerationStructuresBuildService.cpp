@@ -670,6 +670,7 @@ void AccelerationStructuresBuildService::removeState(unsigned stateId) {
   if (it->second.empty()) {
     stateByKeyOffset_.erase(it);
   }
+  statesById_.erase(itState);
 }
 
 void AccelerationStructuresBuildService::optimize() {
