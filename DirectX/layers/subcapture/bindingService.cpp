@@ -51,7 +51,9 @@ void BindingService::setRootDescriptorTable(
     ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c) {
   if (analyzerService_.inRange()) {
     unsigned rootSignatureKey = computeRootSignatureByCommandList_[c.object_.key];
-    GITS_ASSERT(rootSignatureKey);
+    if (!rootSignatureKey) {
+      return;
+    }
     unsigned numDescriptors = getNumDescriptors(c.object_.key, c.BaseDescriptor_.interfaceKey);
     GITS_ASSERT(numDescriptors);
     std::vector<unsigned> indexes = rootSignatureService_.getDescriptorTableIndexes(
@@ -73,7 +75,9 @@ void BindingService::setRootDescriptorTable(
     ID3D12GraphicsCommandListSetGraphicsRootDescriptorTableCommand& c) {
   if (analyzerService_.inRange()) {
     unsigned rootSignatureKey = graphicsRootSignatureByCommandList_[c.object_.key];
-    GITS_ASSERT(rootSignatureKey);
+    if (!rootSignatureKey) {
+      return;
+    }
     unsigned numDescriptors = getNumDescriptors(c.object_.key, c.BaseDescriptor_.interfaceKey);
     GITS_ASSERT(numDescriptors);
     std::vector<unsigned> indexes = rootSignatureService_.getDescriptorTableIndexes(
