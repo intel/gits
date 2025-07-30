@@ -1597,7 +1597,8 @@ struct CAccelerationStructureKHRState : public UniqueResourceHandle {
         accelerationStructureCreateInfoData(_pCreateInfo),
         deviceAddress(0),
         bufferStateStore(_bufferState),
-        buildSizeInfo{} {}
+        buildSizeInfo{},
+        timestamp(0) {}
 
   std::set<uint64_t> GetMappedPointers() {
     std::set<uint64_t> pointers;
