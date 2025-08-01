@@ -8,6 +8,7 @@
 
 #include "rtasDeserializer.h"
 #include "pluginUtils.h"
+#include "to_string/toStr.h"
 
 #include <filesystem>
 #include <cassert>
@@ -15,6 +16,30 @@
 
 namespace gits {
 namespace DirectX {
+
+static std::string IdentifierToStr(
+    const D3D12_SERIALIZED_DATA_DRIVER_MATCHING_IDENTIFIER& identifier) {
+  const auto* pBlob = reinterpret_cast<const uint8_t*>(&identifier);
+  static_assert(sizeof(D3D12_SERIALIZED_DATA_DRIVER_MATCHING_IDENTIFIER) == 32);
+
+  auto printBytes = [](std::ostringstream& oss, const uint8_t* bytes, size_t count) {
+    for (size_t i = 0; i < count; ++i) {
+      oss << "0x" << std::hex << std::setw(2) << std::setfill('0')
+          << static_cast<unsigned>(bytes[i]);
+      if (i < (count - 1)) {
+        oss << ", ";
+      }
+    }
+  };
+
+  std::ostringstream oss;
+  oss << "GUID = {";
+  printBytes(oss, pBlob, 16);
+  oss << "}, VersioningData = {";
+  printBytes(oss, pBlob + 16, 16);
+  oss << "}";
+  return oss.str();
+}
 
 RtasDeserializer::RtasDeserializer(CGits& gits, const std::string& cacheFile) : gits_(gits) {
   cacheFile_.open(cacheFile, std::ios_base::binary);
@@ -43,8 +68,10 @@ bool RtasDeserializer::isCompatible(ID3D12Device5* device) {
   // Check the driver identifier
   auto status = device->CheckDriverMatchingIdentifier(
       D3D12_SERIALIZED_DATA_RAYTRACING_ACCELERATION_STRUCTURE, &header.DriverMatchingIdentifier);
+  log(gits_, "RtasCache - Driver identifier check: ", toStr(status));
   if (status != D3D12_DRIVER_MATCHING_IDENTIFIER_COMPATIBLE_WITH_DEVICE) {
-    log(gits_, "RtasCache: Driver identifier mismatch for ", key, " with size ", size);
+    logW(gits_, "RtasCache - Driver identifier mismatch for cache!");
+    logW(gits_, "RtasCache - Cache identifier: ", IdentifierToStr(header.DriverMatchingIdentifier));
     return false;
   }
   return true;
@@ -59,7 +86,7 @@ void RtasDeserializer::deserialize(unsigned buildKey,
   unsigned key{};
   cacheFile_.read(reinterpret_cast<char*>(&key), sizeof(key));
   if (key != buildKey) {
-    logE(gits_, "RtasCache: expected BLAS ", buildKey, " deserialized ", key);
+    logE(gits_, "RtasCache - Expected BLAS ", buildKey, " deserialized ", key);
   }
   unsigned size{};
   cacheFile_.read(reinterpret_cast<char*>(&size), sizeof(size));
@@ -97,7 +124,7 @@ void RtasDeserializer::deserialize(unsigned buildKey,
 
     cacheFile_.read(static_cast<char*>(data), size);
     if (!cacheFile_) {
-      logE(gits_, "RtasCache: error reading BLAS ", buildKey);
+      logE(gits_, "RtasCache - Error reading BLAS ", buildKey);
     }
 
     serializedBuffer->Unmap(0, nullptr);

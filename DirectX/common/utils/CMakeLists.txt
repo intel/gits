@@ -46,7 +46,10 @@ target_sources(DirectX_utils PRIVATE
   ${ALL_SRC}
 )
 
-target_include_directories(DirectX_utils PRIVATE
+target_include_directories(DirectX_utils 
+PUBLIC
+  ${SRC_DIR}
+PRIVATE
   ${DIRECTX_DIR}/common/layer_interface
   ${D3D12_HEADERS_DIR}
   ${DML_HEADERS_DIR}

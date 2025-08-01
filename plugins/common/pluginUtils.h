@@ -20,6 +20,14 @@ void log(CGits& gits, Args&&... args) {
       std::make_shared<LogMessage>(LogLevel::INFO, std::forward<Args>(args)...));
 }
 
+// Log message with LogLevel::WARN
+template <typename... Args>
+void logW(CGits& gits, Args&&... args) {
+  gits.GetMessageBus().publish(
+      {PUBLISHER_PLUGIN, TOPIC_LOG},
+      std::make_shared<LogMessage>(LogLevel::WARN, std::forward<Args>(args)...));
+}
+
 // Log message with LogLevel::ERR
 template <typename... Args>
 void logE(CGits& gits, Args&&... args) {

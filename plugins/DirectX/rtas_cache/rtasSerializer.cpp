@@ -31,7 +31,7 @@ RtasSerializer::~RtasSerializer() {
   try {
     waitUntilDumped();
 
-    log(gits_, "RtasCache: Writing ", cacheFile_);
+    log(gits_, "RtasCache - Writing ", cacheFile_);
 
     std::map<unsigned, unsigned> blases;
     for (std::filesystem::directory_entry file :
@@ -51,7 +51,7 @@ RtasSerializer::~RtasSerializer() {
       std::vector<char> data(size);
       file.read(data.data(), size);
       if (file.fail()) {
-        logE(gits_, "RtasCache: Error reading BLAS ", buildKey);
+        logE(gits_, "RtasCache - Error reading BLAS ", buildKey);
         break;
       }
       file.close();
@@ -59,7 +59,7 @@ RtasSerializer::~RtasSerializer() {
       cache.write(reinterpret_cast<char*>(&size), sizeof(size));
       cache.write(data.data(), size);
       if (cache.bad()) {
-        logE(gits_, "RtasCache: Error writing BLAS ", buildKey);
+        logE(gits_, "RtasCache - Error writing BLAS ", buildKey);
         break;
       }
     }

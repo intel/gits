@@ -18,11 +18,15 @@ RtasCacheLayer::RtasCacheLayer(CGits& gits, const RtasCacheConfig& cfg)
       cfg_(cfg),
       serializer_(gits, cfg_.cacheFile, cfg_.dumpCacheInfoFile),
       deserializer_(gits, cfg_.cacheFile),
-      stateRestore_(false) {}
+      stateRestore_(false) {
+  log(gits_, "RtasCache - Cache file: ", cfg.cacheFile);
+  log(gits_, "RtasCache - State restore only: ", cfg.stateRestoreOnly ? "true" : "false");
+}
 
 RtasCacheLayer::~RtasCacheLayer() {
   try {
-    log(gits_, "RtasCache: ", cfg_.record ? "Serialized " : "Deserialized ", blasCount_, " BLASes");
+    log(gits_, "RtasCache - ", cfg_.record ? "Serialized " : "Deserialized ", blasCount_,
+        " BLASes");
   } catch (...) {
     fprintf(stderr, "Exception in RtasCacheLayer::~RtasCacheLayer");
   }
