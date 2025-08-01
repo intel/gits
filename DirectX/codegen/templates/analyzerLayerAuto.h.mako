@@ -27,12 +27,8 @@ public:
 
 class AnalyzerLayer : public Layer, public ObjectUsageNotifier {
 public:
-  AnalyzerLayer(SubcaptureRange& subcaptureRange)
-      : Layer("Analyzer"),
-        subcaptureRange_(subcaptureRange),
-        analyzerService_(subcaptureRange, bindingService_, raytracingService_),
-        bindingService_(
-            analyzerService_, descriptorService_, rootSignatureService_, raytracingService_) {}
+  AnalyzerLayer(SubcaptureRange& subcaptureRange);
+
   void notifyObject(unsigned objectKey) override;
 
   void post(IDXGISwapChainPresentCommand& c) override;

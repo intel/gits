@@ -33,6 +33,7 @@ AnalyzerResults::AnalyzerResults() {
         objects = true;
       } else if (str == "DESCRIPTORS") {
         objects = false;
+        descriptors = true;
       } else if (str == "ACCELERATION_STRUCTURES") {
         descriptors = false;
       } else {

@@ -13,6 +13,7 @@ namespace gits {
 namespace DirectX {
 <%
 custom = [
+    'ID3D12GraphicsCommandListReset',
     'ID3D12GraphicsCommandListSetDescriptorHeaps',
     'ID3D12GraphicsCommandListSetComputeRootSignature',
     'ID3D12GraphicsCommandListSetGraphicsRootSignature',
@@ -32,13 +33,14 @@ custom = [
     'ID3D12GraphicsCommandListClearRenderTargetView',
     'ID3D12GraphicsCommandListClearUnorderedAccessViewUint',
     'ID3D12GraphicsCommandListClearUnorderedAccessViewFloat',
-    'ID3D12GraphicsCommandList4SetPipelineState1'
+    'ID3D12GraphicsCommandList4SetPipelineState1',
+    'ID3D12GraphicsCommandList2WriteBufferImmediate'
 ]
 %>\
 %for interface in interfaces:
 %for function in interface.functions:
-%if interface.name.startswith('ID3D12GraphicsCommandList') and not function.name.startswith('Reset') \
-	and not function.name.startswith('SetName') and not interface.name + function.name in custom:
+%if interface.name.startswith('ID3D12GraphicsCommandList') and not function.name.startswith('SetName') \
+	and not interface.name + function.name in custom:
 void AnalyzerLayer::post(${interface.name}${function.name}Command& c) {
   analyzerService_.commandListCommand(c.object_.key);
 }

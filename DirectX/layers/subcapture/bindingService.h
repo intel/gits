@@ -17,6 +17,7 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <set>
+#include <memory>
 
 namespace gits {
 namespace DirectX {
@@ -28,7 +29,8 @@ public:
   BindingService(AnalyzerService& analyzerService,
                  DescriptorService& descriptorService,
                  RootSignatureService& rootSignatureService,
-                 AnalyzerRaytracingService& raytracingService);
+                 AnalyzerRaytracingService& raytracingService,
+                 bool commandListSubcapture);
 
   std::unordered_set<unsigned>& getObjectsForRestore() {
     return objectsForRestore_;
@@ -37,6 +39,8 @@ public:
     return descriptors_;
   }
 
+  void commandListsRestore(const std::set<unsigned>& commandLists);
+  void commandListReset(ID3D12GraphicsCommandListResetCommand& c);
   void setDescriptorHeaps(ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c);
   void setRootSignature(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c);
   void setRootSignature(ID3D12GraphicsCommandListSetGraphicsRootSignatureCommand& c);
@@ -62,15 +66,49 @@ public:
   void clearView(ID3D12GraphicsCommandListClearRenderTargetViewCommand& c);
   void clearView(ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& c);
   void clearView(ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c);
-  void copyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& c);
-  void copyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c);
   void setPipelineState(ID3D12GraphicsCommandList4SetPipelineState1Command& c);
   void buildRaytracingAccelerationStructure(
       ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
   void copyRaytracingAccelerationStructure(
       ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c);
+  void writeBufferImmediate(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c);
+  void copyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& c);
+  void copyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c);
 
 private:
+  void setDescriptorHeapsImpl(ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c);
+  void setRootSignatureImpl(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c);
+  void setRootSignatureImpl(ID3D12GraphicsCommandListSetGraphicsRootSignatureCommand& c);
+  void setRootDescriptorTableImpl(ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c);
+  void setRootDescriptorTableImpl(
+      ID3D12GraphicsCommandListSetGraphicsRootDescriptorTableCommand& c);
+  void setRootConstantBufferViewImpl(
+      ID3D12GraphicsCommandListSetComputeRootConstantBufferViewCommand& c);
+  void setRootConstantBufferViewImpl(
+      ID3D12GraphicsCommandListSetGraphicsRootConstantBufferViewCommand& c);
+  void setRootShaderResourceViewImpl(
+      ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand& c);
+  void setRootShaderResourceViewImpl(
+      ID3D12GraphicsCommandListSetGraphicsRootShaderResourceViewCommand& c);
+  void setRootUnorderedAccessViewImpl(
+      ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& c);
+  void setRootUnorderedAccessViewImpl(
+      ID3D12GraphicsCommandListSetGraphicsRootUnorderedAccessViewCommand& c);
+  void setIndexBufferImpl(ID3D12GraphicsCommandListIASetIndexBufferCommand& c);
+  void setVertexBuffersImpl(ID3D12GraphicsCommandListIASetVertexBuffersCommand& c);
+  void setSOTargetsImpl(ID3D12GraphicsCommandListSOSetTargetsCommand& c);
+  void setRenderTargetsImpl(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c);
+  void clearViewImpl(ID3D12GraphicsCommandListClearDepthStencilViewCommand& c);
+  void clearViewImpl(ID3D12GraphicsCommandListClearRenderTargetViewCommand& c);
+  void clearViewImpl(ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& c);
+  void clearViewImpl(ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c);
+  void setPipelineStateImpl(ID3D12GraphicsCommandList4SetPipelineState1Command& c);
+  void buildRaytracingAccelerationStructureImpl(
+      ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
+  void copyRaytracingAccelerationStructureImpl(
+      ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c);
+  void writeBufferImmediateImpl(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c);
+  void commandListRestore(unsigned commandListKey);
   unsigned getNumDescriptors(unsigned commandListKey, unsigned descriptorHeapKey);
 
 private:
@@ -78,6 +116,7 @@ private:
   DescriptorService& descriptorService_;
   RootSignatureService& rootSignatureService_;
   AnalyzerRaytracingService& raytracingService_;
+  bool commandListSubcapture_{};
 
   std::unordered_map<unsigned, unsigned> computeRootSignatureByCommandList_;
   std::unordered_map<unsigned, unsigned> graphicsRootSignatureByCommandList_;
@@ -87,6 +126,8 @@ private:
     unsigned numDescriptors;
   };
   std::unordered_map<unsigned, std::vector<DescriptorHeap>> descriptorHeapsByCommandList_;
+
+  std::unordered_map<unsigned, std::vector<std::unique_ptr<Command>>> commandsByCommandList_;
 
   std::unordered_set<unsigned> objectsForRestore_;
   std::set<std::pair<unsigned, unsigned>> descriptors_;

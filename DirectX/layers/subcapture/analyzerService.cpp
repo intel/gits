@@ -82,6 +82,7 @@ void AnalyzerService::present(unsigned callKey, unsigned swapChainKey) {
 
   subcaptureRange_.frameEnd(callKey & Command::stateRestoreKeyMask);
   if (!subcaptureRange_.inRange() && inRange_) {
+    bindingService_.commandListsRestore(commandListsForRestore_);
     inRange_ = false;
     dumpAnalysisFile();
   }

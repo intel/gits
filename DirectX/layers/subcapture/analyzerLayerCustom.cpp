@@ -17,6 +17,16 @@
 namespace gits {
 namespace DirectX {
 
+AnalyzerLayer::AnalyzerLayer(SubcaptureRange& subcaptureRange)
+    : Layer("Analyzer"),
+      subcaptureRange_(subcaptureRange),
+      analyzerService_(subcaptureRange, bindingService_, raytracingService_),
+      bindingService_(analyzerService_,
+                      descriptorService_,
+                      rootSignatureService_,
+                      raytracingService_,
+                      subcaptureRange_.commandListSubcapture()) {}
+
 void AnalyzerLayer::notifyObject(unsigned objectKey) {
   analyzerService_.notifyObject(objectKey);
 }
@@ -48,6 +58,7 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListResetCommand& c) {
   analyzerService_.executionStart();
   subcaptureRange_.executionStart();
   analyzerService_.commandListReset(c.object_.key, c.pAllocator_.key, c.pInitialState_.key);
+  bindingService_.commandListReset(c);
 }
 
 void AnalyzerLayer::post(ID3D12FenceGetCompletedValueCommand& c) {
@@ -384,6 +395,11 @@ void AnalyzerLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
       raytracingService_.genericReadResource(c.ppvResource_.key);
     }
   }
+}
+
+void AnalyzerLayer::post(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c) {
+  analyzerService_.commandListCommand(c.object_.key);
+  bindingService_.writeBufferImmediate(c);
 }
 
 } // namespace DirectX
