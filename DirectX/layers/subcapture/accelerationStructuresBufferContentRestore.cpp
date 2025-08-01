@@ -37,8 +37,10 @@ void AccelerationStructuresBufferContentRestore::storeBuffer(ID3D12GraphicsComma
   info->dumpName = L"BLAS build " + std::to_wstring(buildCallKey) + L" resource O" +
                    std::to_wstring(resourceKey);
 
-  restoreBuilds_.insert(buildCallKey);
   stageResource(commandList, resource, resourceState, *info);
+
+  std::lock_guard<std::mutex> lock(mutex_);
+  restoreBuilds_.insert(buildCallKey);
 }
 
 void AccelerationStructuresBufferContentRestore::dumpBuffer(DumpInfo& dumpInfo, void* data) {
