@@ -43,6 +43,9 @@ static std::string IdentifierToStr(
 
 RtasDeserializer::RtasDeserializer(CGits& gits, const std::string& cacheFile) : gits_(gits) {
   cacheFile_.open(cacheFile, std::ios_base::binary);
+  if (!cacheFile_) {
+    logE(gits_, "RtasCache - Failed to open ", cacheFile);
+  }
 }
 
 RtasDeserializer::~RtasDeserializer() {
@@ -54,9 +57,13 @@ bool RtasDeserializer::isCompatible(ID3D12Device5* device) {
     return false;
   }
 
+  if (!cacheFile_) {
+    return false;
+  }
+
   auto initialPos = cacheFile_.tellg();
   // Read the key and size
-  unsigned key, size;
+  unsigned key, size = {};
   cacheFile_.read(reinterpret_cast<char*>(&key), sizeof(key));
   cacheFile_.read(reinterpret_cast<char*>(&size), sizeof(size));
   // Read the RTAS header
