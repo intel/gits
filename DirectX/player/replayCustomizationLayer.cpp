@@ -1223,7 +1223,7 @@ void ReplayCustomizationLayer::waitForFence(unsigned commandKey,
   }
   HRESULT hr = fence->SetEventOnCompletion(fenceValue, waitForFenceEvent_);
   GITS_ASSERT(hr == S_OK);
-  DWORD timeout = 5000; // 5 sec
+  DWORD timeout = 60000; // 60 sec
   if (Configurator::Get().directx.player.infiniteWaitForFence) {
     timeout = INFINITE;
   }
