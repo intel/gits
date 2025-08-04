@@ -74,8 +74,6 @@ set(GPU_PATCH_SRC
   ${SRC_DIR}/raytracingShaderPatchService.cpp
   ${SRC_DIR}/shaderIdentifierService.h
   ${SRC_DIR}/shaderIdentifierService.cpp
-  ${SRC_DIR}/gpuPatchDescriptorHandleService.h
-  ${SRC_DIR}/gpuPatchDescriptorHandleService.cpp
   ${SRC_DIR}/gpuPatchCommandListService.h
   ${SRC_DIR}/gpuPatchCommandListService.cpp
   ${SRC_DIR}/raytracingResourceDump.h

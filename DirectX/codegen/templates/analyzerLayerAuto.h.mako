@@ -54,16 +54,20 @@ public:
   void post(ID3D12Device5CreateStateObjectCommand& c) override;
   void pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) override;
   void pre(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) override;
+  void pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) override;
   void pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) override;
   void post(ID3D12ResourceGetGPUVirtualAddressCommand& c) override;
+  void pre(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) override;
+  void post(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) override;
   void post(IUnknownReleaseCommand& command) override;
   void post(ID3D12DeviceCreateCommittedResourceCommand& c) override;
   void post(ID3D12Device4CreateCommittedResource1Command& c) override;
   void post(ID3D12Device8CreateCommittedResource2Command& c) override;
   void post(ID3D12Device10CreateCommittedResource3Command& c) override;
-  void post(ID3D12DeviceCreatePlacedResourceCommand& command) override;
-  void post(ID3D12Device8CreatePlacedResource1Command& command) override;
-  void post(ID3D12Device10CreatePlacedResource2Command& command) override;
+  void post(ID3D12DeviceCreatePlacedResourceCommand& c) override;
+  void post(ID3D12Device8CreatePlacedResource1Command& c) override;
+  void post(ID3D12Device10CreatePlacedResource2Command& c) override;
+  void post(MappedDataMetaCommand& c) override;
   %for interface in interfaces:
   %for function in interface.functions:
   %if interface.name.startswith('ID3D12GraphicsCommandList') and not function.name.startswith('SetName'):

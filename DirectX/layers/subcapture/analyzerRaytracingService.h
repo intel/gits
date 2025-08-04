@@ -10,7 +10,10 @@
 
 #include "commandsAuto.h"
 #include "raytracingInstancesDump.h"
+#include "bindingTablesDump.h"
 #include "capturePlayerGpuAddressService.h"
+#include "capturePlayerDescriptorHandleService.h"
+#include "descriptorService.h"
 
 #include <unordered_map>
 #include <unordered_set>
@@ -21,9 +24,11 @@ namespace DirectX {
 
 class AnalyzerRaytracingService {
 public:
-  AnalyzerRaytracingService() : instancesDump_(*this) {}
+  AnalyzerRaytracingService(DescriptorService& descriptorService)
+      : instancesDump_(*this), bindingTablesDump_(*this), descriptorService_(descriptorService) {}
   void createStateObject(ID3D12Device5CreateStateObjectCommand& c);
   void buildTlas(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
+  void dispatchRays(ID3D12GraphicsCommandList4DispatchRaysCommand& c);
   void addAccelerationStructureSource(unsigned key, unsigned offset) {
     sources_.insert(std::make_pair(key, offset));
   }
@@ -44,12 +49,20 @@ public:
   void fenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue);
   void captureGPUVirtualAddress(ID3D12ResourceGetGPUVirtualAddressCommand& c);
   void playerGPUVirtualAddress(ID3D12ResourceGetGPUVirtualAddressCommand& c);
+  void captureGPUDescriptorHandle(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c);
+  void playerGPUDescriptorHandle(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c);
   void genericReadResource(unsigned resourceKey) {
     genericReadResources_.insert(resourceKey);
   }
 
   CapturePlayerGpuAddressService& getGpuAddressService() {
     return gpuAddressService_;
+  }
+  CapturePlayerDescriptorHandleService& getDescriptorHandleService() {
+    return descriptorHandleService_;
+  }
+  DescriptorService& getDescriptorService() {
+    return descriptorService_;
   }
 
   std::vector<unsigned>& getStateObjectSubobjects(unsigned stateObjectKey) {
@@ -69,11 +82,21 @@ public:
   std::set<KeyOffset>& getSources() {
     return sources_;
   }
+  std::unordered_set<unsigned>& getBindingTablesResources() {
+    return bindingTablesDump_.getBindingTablesResources();
+  }
+  std::set<std::pair<unsigned, unsigned>>& getBindingTablesDescriptors() {
+    return bindingTablesDump_.getBindingTablesDescriptors();
+  }
 
 private:
   CapturePlayerGpuAddressService gpuAddressService_;
+  CapturePlayerDescriptorHandleService descriptorHandleService_;
+  DescriptorService& descriptorService_;
+
   std::unordered_map<unsigned, std::vector<unsigned>> stateObjectsSubobjects_;
   RaytracingInstancesDump instancesDump_;
+  BindingTablesDump bindingTablesDump_;
   BlasesByTlas blasesByTlas_;
   std::set<KeyOffset> tlases_;
   std::set<KeyOffset> sources_;

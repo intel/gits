@@ -11,7 +11,7 @@
 #include "resourceDump.h"
 #include "capturePlayerGpuAddressService.h"
 #include "shaderIdentifierService.h"
-#include "gpuPatchDescriptorHandleService.h"
+#include "capturePlayerDescriptorHandleService.h"
 
 #include <d3d12.h>
 #include <string>
@@ -36,7 +36,7 @@ public:
 
   RaytracingResourceDump(CapturePlayerGpuAddressService& addressService,
                          ShaderIdentifierService& shaderIdentifierService,
-                         GpuPatchDescriptorHandleService& descriptorHandleService)
+                         CapturePlayerDescriptorHandleService& descriptorHandleService)
       : addressService_(addressService),
         shaderIdentifierService_(shaderIdentifierService),
         descriptorHandleService_(descriptorHandleService) {}
@@ -63,7 +63,7 @@ protected:
 private:
   CapturePlayerGpuAddressService& addressService_;
   ShaderIdentifierService& shaderIdentifierService_;
-  GpuPatchDescriptorHandleService& descriptorHandleService_;
+  CapturePlayerDescriptorHandleService& descriptorHandleService_;
 
   void dumpInstancesBuffer(RaytracingDumpInfo& dumpInfo, void* data);
   void dumpInstancesArrayOfPointersBuffer(RaytracingDumpInfo& dumpInfo, void* data);

@@ -14,7 +14,7 @@
 #include "executeIndirectShaderPatchService.h"
 #include "shaderIdentifierService.h"
 #include "gpuPatchCommandListService.h"
-#include "gpuPatchDescriptorHandleService.h"
+#include "capturePlayerDescriptorHandleService.h"
 #include "gpuPatchDumpService.h"
 
 #include <d3d12.h>
@@ -135,13 +135,13 @@ private:
 
   std::array<ID3D12Resource*, mappingBufferPoolSize_> viewDescriptorBuffers_{};
   std::array<ID3D12Resource*, mappingBufferPoolSize_> viewDescriptorStagingBuffers_{};
-  unsigned viewDescriptorBufferSize_{sizeof(GpuPatchDescriptorHandleService::DescriptorMapping) *
-                                     0x10000};
+  unsigned viewDescriptorBufferSize_{
+      sizeof(CapturePlayerDescriptorHandleService::DescriptorMapping) * 0x10000};
 
   std::array<ID3D12Resource*, mappingBufferPoolSize_> sampleDescriptorBuffers_{};
   std::array<ID3D12Resource*, mappingBufferPoolSize_> sampleDescriptorStagingBuffers_{};
-  unsigned sampleDescriptorBufferSize_{sizeof(GpuPatchDescriptorHandleService::DescriptorMapping) *
-                                       0x1000};
+  unsigned sampleDescriptorBufferSize_{
+      sizeof(CapturePlayerDescriptorHandleService::DescriptorMapping) * 0x1000};
 
   struct MappingCount {
     unsigned gpuAddressCount;
@@ -176,7 +176,7 @@ private:
 
   CapturePlayerGpuAddressService addressService_;
   ShaderIdentifierService shaderIdentifierService_;
-  GpuPatchDescriptorHandleService descriptorHandleService_;
+  CapturePlayerDescriptorHandleService descriptorHandleService_;
   RaytracingShaderPatchService raytracingShaderPatchService_;
   ExecuteIndirectShaderPatchService executeIndirectShaderPatchService_;
   GpuPatchCommandListService commandListService_;

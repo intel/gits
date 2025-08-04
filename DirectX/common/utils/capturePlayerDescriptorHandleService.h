@@ -16,7 +16,7 @@
 namespace gits {
 namespace DirectX {
 
-class GpuPatchDescriptorHandleService {
+class CapturePlayerDescriptorHandleService {
 public:
   struct DescriptorHeapInfo {
     UINT64 captureStart;

@@ -14,7 +14,7 @@
 namespace gits {
 namespace DirectX {
 
-void CapturePlayerGpuAddressService::GpuPatchAddress::createPlacedResource(
+void CapturePlayerGpuAddressService::GpuAddressService::createPlacedResource(
     unsigned heapKey, unsigned resourceKey, D3D12_RESOURCE_FLAGS flags) {
   HeapInfo* heapInfo{};
   auto it = heapsByKey_.find(heapKey);
@@ -32,7 +32,7 @@ void CapturePlayerGpuAddressService::GpuPatchAddress::createPlacedResource(
   }
 }
 
-void CapturePlayerGpuAddressService::GpuPatchAddress::addGpuCaptureAddress(
+void CapturePlayerGpuAddressService::GpuAddressService::addGpuCaptureAddress(
     ID3D12Resource* resource,
     unsigned resourceKey,
     unsigned size,
@@ -96,7 +96,7 @@ void CapturePlayerGpuAddressService::GpuPatchAddress::addGpuCaptureAddress(
   }
 }
 
-void CapturePlayerGpuAddressService::GpuPatchAddress::addGpuPlayerAddress(
+void CapturePlayerGpuAddressService::GpuAddressService::addGpuPlayerAddress(
     unsigned resourceKey, D3D12_GPU_VIRTUAL_ADDRESS playerAddress) {
   auto itHeap = heapsByResourceKey_.find(resourceKey);
   if (itHeap != heapsByResourceKey_.end()) {
@@ -117,7 +117,7 @@ void CapturePlayerGpuAddressService::GpuPatchAddress::addGpuPlayerAddress(
   }
 }
 
-void CapturePlayerGpuAddressService::GpuPatchAddress::destroyInterface(unsigned interfaceKey) {
+void CapturePlayerGpuAddressService::GpuAddressService::destroyInterface(unsigned interfaceKey) {
   {
     auto it = resourcesByKey_.find(interfaceKey);
     if (it != resourcesByKey_.end()) {
@@ -163,7 +163,7 @@ void CapturePlayerGpuAddressService::GpuPatchAddress::destroyInterface(unsigned 
   deniedShaderResources_.erase(interfaceKey);
 }
 
-CapturePlayerGpuAddressService::ResourceInfo* CapturePlayerGpuAddressService::GpuPatchAddress::
+CapturePlayerGpuAddressService::ResourceInfo* CapturePlayerGpuAddressService::GpuAddressService::
     getResourceInfo(D3D12_GPU_VIRTUAL_ADDRESS address) {
 
   ResourceInfo* resourceInfo{};
@@ -219,7 +219,7 @@ CapturePlayerGpuAddressService::ResourceInfo* CapturePlayerGpuAddressService::Gp
   return placedResourceInfo;
 }
 
-void CapturePlayerGpuAddressService::GpuPatchAddress::getMappings(
+void CapturePlayerGpuAddressService::GpuAddressService::getMappings(
     std::vector<CapturePlayerGpuAddressService::GpuAddressMapping>& mappings) {
   mappings.resize(resourcesByAddress_.size() + heapsByKey_.size());
   unsigned index = 0;

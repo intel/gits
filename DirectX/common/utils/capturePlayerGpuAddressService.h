@@ -32,52 +32,52 @@ public:
 
 public:
   void createPlacedResource(unsigned heapKey, unsigned resourceKey, D3D12_RESOURCE_FLAGS flags) {
-    gpuPatchAddress_.createPlacedResource(heapKey, resourceKey, flags);
-    if (gpuPatchPlayerAddress_) {
-      gpuPatchPlayerAddress_->createPlacedResource(heapKey, resourceKey, flags);
+    gpuAddressService_.createPlacedResource(heapKey, resourceKey, flags);
+    if (gpuPlayerAddress_) {
+      gpuPlayerAddress_->createPlacedResource(heapKey, resourceKey, flags);
     }
   }
   void addGpuCaptureAddress(ID3D12Resource* resource,
                             unsigned resourceKey,
                             unsigned size,
                             D3D12_GPU_VIRTUAL_ADDRESS captureAddress) {
-    gpuPatchAddress_.addGpuCaptureAddress(resource, resourceKey, size, captureAddress);
+    gpuAddressService_.addGpuCaptureAddress(resource, resourceKey, size, captureAddress);
   }
   void addGpuPlayerAddress(ID3D12Resource* resource,
                            unsigned resourceKey,
                            unsigned size,
                            D3D12_GPU_VIRTUAL_ADDRESS playerAddress) {
-    gpuPatchAddress_.addGpuPlayerAddress(resourceKey, playerAddress);
-    if (gpuPatchPlayerAddress_) {
-      gpuPatchPlayerAddress_->addGpuCaptureAddress(resource, resourceKey, size, playerAddress);
-      gpuPatchPlayerAddress_->addGpuPlayerAddress(resourceKey, playerAddress);
+    gpuAddressService_.addGpuPlayerAddress(resourceKey, playerAddress);
+    if (gpuPlayerAddress_) {
+      gpuPlayerAddress_->addGpuCaptureAddress(resource, resourceKey, size, playerAddress);
+      gpuPlayerAddress_->addGpuPlayerAddress(resourceKey, playerAddress);
     }
   }
   void destroyInterface(unsigned interfaceKey) {
-    gpuPatchAddress_.destroyInterface(interfaceKey);
-    if (gpuPatchPlayerAddress_) {
-      gpuPatchPlayerAddress_->destroyInterface(interfaceKey);
+    gpuAddressService_.destroyInterface(interfaceKey);
+    if (gpuPlayerAddress_) {
+      gpuPlayerAddress_->destroyInterface(interfaceKey);
     }
   }
   ResourceInfo* getResourceInfoByCaptureAddress(D3D12_GPU_VIRTUAL_ADDRESS address) {
-    return gpuPatchAddress_.getResourceInfo(address);
+    return gpuAddressService_.getResourceInfo(address);
   }
   ResourceInfo* getResourceInfoByPlayerAddress(D3D12_GPU_VIRTUAL_ADDRESS address) {
-    if (gpuPatchPlayerAddress_) {
-      return gpuPatchPlayerAddress_->getResourceInfo(address);
+    if (gpuPlayerAddress_) {
+      return gpuPlayerAddress_->getResourceInfo(address);
     } else {
       return nullptr;
     }
   }
   void getMappings(std::vector<GpuAddressMapping>& mappings) {
-    gpuPatchAddress_.getMappings(mappings);
+    gpuAddressService_.getMappings(mappings);
   }
   void enablePlayerAddressLookup() {
-    gpuPatchPlayerAddress_.reset(new GpuPatchAddress());
+    gpuPlayerAddress_.reset(new GpuAddressService());
   }
 
 private:
-  class GpuPatchAddress {
+  class GpuAddressService {
   public:
     void createPlacedResource(unsigned heapKey, unsigned resourceKey, D3D12_RESOURCE_FLAGS flags);
     void addGpuCaptureAddress(ID3D12Resource* resource,
@@ -112,8 +112,8 @@ private:
     std::unordered_map<unsigned, std::unique_ptr<PlacedResourceInfo>> placedResourcesByKey_;
     std::unordered_set<unsigned> deniedShaderResources_;
   };
-  GpuPatchAddress gpuPatchAddress_;
-  std::unique_ptr<GpuPatchAddress> gpuPatchPlayerAddress_;
+  GpuAddressService gpuAddressService_;
+  std::unique_ptr<GpuAddressService> gpuPlayerAddress_;
 };
 
 } // namespace DirectX

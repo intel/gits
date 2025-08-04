@@ -490,6 +490,17 @@ void BindingService::buildRaytracingAccelerationStructure(
       raytracingService_.buildTlas(c);
     }
   }
+
+  objectsForRestore_.insert(c.pDesc_.destAccelerationStructureKey);
+  if (c.pDesc_.sourceAccelerationStructureKey) {
+    objectsForRestore_.insert(c.pDesc_.sourceAccelerationStructureKey);
+  }
+  if (!(c.pDesc_.scratchAccelerationStructureKey & Command::stateRestoreKeyMask)) {
+    objectsForRestore_.insert(c.pDesc_.scratchAccelerationStructureKey);
+  }
+  for (unsigned key : c.pDesc_.inputKeys) {
+    objectsForRestore_.insert(key);
+  }
 }
 
 void BindingService::buildRaytracingAccelerationStructureImpl(
@@ -514,12 +525,33 @@ void BindingService::copyRaytracingAccelerationStructure(
     commandsByCommandList_[c.object_.key].emplace_back(
         new ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand(c));
   }
+
+  objectsForRestore_.insert(c.DestAccelerationStructureData_.interfaceKey);
+  objectsForRestore_.insert(c.SourceAccelerationStructureData_.interfaceKey);
 }
 
 void BindingService::copyRaytracingAccelerationStructureImpl(
     ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
   raytracingService_.addAccelerationStructureSource(c.SourceAccelerationStructureData_.interfaceKey,
                                                     c.SourceAccelerationStructureData_.offset);
+}
+
+void BindingService::dispatchRays(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
+  if (analyzerService_.inRange()) {
+    commandListRestore(c.object_.key);
+    dispatchRaysImpl(c);
+  } else if (!commandListSubcapture_) {
+    commandsByCommandList_[c.object_.key].emplace_back(
+        new ID3D12GraphicsCommandList4DispatchRaysCommand(c));
+  }
+}
+
+void BindingService::dispatchRaysImpl(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
+  raytracingService_.dispatchRays(c);
+  objectsForRestore_.insert(c.pDesc_.rayGenerationShaderRecordKey);
+  objectsForRestore_.insert(c.pDesc_.missShaderTableKey);
+  objectsForRestore_.insert(c.pDesc_.hitGroupTableKey);
+  objectsForRestore_.insert(c.pDesc_.callableShaderTableKey);
 }
 
 void BindingService::writeBufferImmediate(
@@ -677,6 +709,9 @@ void BindingService::commandListRestore(unsigned commandListKey) {
       copyRaytracingAccelerationStructureImpl(
           static_cast<ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand&>(
               *command));
+      break;
+    case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST4_DISPATCHRAYS:
+      dispatchRaysImpl(static_cast<ID3D12GraphicsCommandList4DispatchRaysCommand&>(*command));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST2_WRITEBUFFERIMMEDIATE:
       writeBufferImmediateImpl(

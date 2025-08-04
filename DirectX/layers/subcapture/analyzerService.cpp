@@ -184,6 +184,12 @@ void AnalyzerService::updateTileMappings(unsigned callKey, unsigned commandQueue
   }
 }
 
+void AnalyzerService::mappedDataMeta(unsigned resourceKey) {
+  if (inRange_) {
+    objectsForRestore_.insert(resourceKey);
+  }
+}
+
 void AnalyzerService::clearReadyExecutables() {
   std::vector<GpuExecutionTracker::Executable*>& executables =
       gpuExecutionTracker_.getReadyExecutables();
@@ -211,13 +217,23 @@ void AnalyzerService::dumpAnalysisFile() {
   for (unsigned key : bindingService_.getObjectsForRestore()) {
     keys.insert(key);
   }
+  for (unsigned key : bindingService_.getBindingTablesResources()) {
+    keys.insert(key);
+  }
   for (unsigned key : keys) {
     if (key) {
       out << key << "\n";
     }
   }
   out << "DESCRIPTORS\n";
+  std::set<std::pair<unsigned, unsigned>> descriptors;
   for (auto& [heapKey, index] : bindingService_.getDescriptors()) {
+    descriptors.insert({heapKey, index});
+  }
+  for (auto& [heapKey, index] : bindingService_.getBindingTablesDescriptors()) {
+    descriptors.insert({heapKey, index});
+  }
+  for (auto& [heapKey, index] : descriptors) {
     out << heapKey << " " << index << "\n";
   }
   out << "ACCELERATION_STRUCTURES\n";

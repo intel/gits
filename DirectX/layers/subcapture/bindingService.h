@@ -38,6 +38,12 @@ public:
   std::set<std::pair<unsigned, unsigned>>& getDescriptors() {
     return descriptors_;
   }
+  std::unordered_set<unsigned>& getBindingTablesResources() {
+    return raytracingService_.getBindingTablesResources();
+  }
+  std::set<std::pair<unsigned, unsigned>>& getBindingTablesDescriptors() {
+    return raytracingService_.getBindingTablesDescriptors();
+  }
 
   void commandListsRestore(const std::set<unsigned>& commandLists);
   void commandListReset(ID3D12GraphicsCommandListResetCommand& c);
@@ -71,6 +77,7 @@ public:
       ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
   void copyRaytracingAccelerationStructure(
       ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c);
+  void dispatchRays(ID3D12GraphicsCommandList4DispatchRaysCommand& c);
   void writeBufferImmediate(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c);
   void copyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& c);
   void copyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c);
@@ -107,6 +114,7 @@ private:
       ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
   void copyRaytracingAccelerationStructureImpl(
       ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c);
+  void dispatchRaysImpl(ID3D12GraphicsCommandList4DispatchRaysCommand& c);
   void writeBufferImmediateImpl(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c);
   void commandListRestore(unsigned commandListKey);
   unsigned getNumDescriptors(unsigned commandListKey, unsigned descriptorHeapKey);

@@ -54,6 +54,7 @@ public:
   void fenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue);
   void copyTileMappings(unsigned callKey, unsigned commandQueueKey);
   void updateTileMappings(unsigned callKey, unsigned commandQueueKey);
+  void mappedDataMeta(unsigned resourceKey);
 
 private:
   void clearReadyExecutables();

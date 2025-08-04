@@ -90,6 +90,7 @@ void StateTrackingService::restoreState(ObjectState* state) {
   if (state->restored) {
     return;
   }
+  state->restored = true;
   if (state->parentKey) {
     ObjectState* parentState = getState(state->parentKey);
     GITS_ASSERT(parentState);
@@ -152,6 +153,9 @@ void StateTrackingService::restoreState(ObjectState* state) {
   case CommandId::INTC_D3D12_CREATEDEVICEEXTENSIONCONTEXT1:
     restoreD3D12INTCDeviceExtensionContext(state);
     break;
+  case CommandId::ID_ID3D12DEVICE5_CREATESTATEOBJECT:
+    restoreD3D12StateObject(state);
+    break;
   default:
     recorder_.record(createCommandWriter(state->creationCommand.get()));
   }
@@ -163,8 +167,6 @@ void StateTrackingService::restoreState(ObjectState* state) {
     c.Name_.value = state->name.data();
     recorder_.record(new ID3D12ObjectSetNameWriter(c));
   }
-
-  state->restored = true;
 }
 
 void StateTrackingService::storeState(ObjectState* state) {
@@ -666,6 +668,15 @@ void StateTrackingService::restoreD3D12INTCDeviceExtensionContext(ObjectState* s
     c.pExtensionContext_.key = state->key;
     c.pFeature_.value = &intcFeature_;
     recorder_.record(new INTC_D3D12_SetFeatureSupportWriter(c));
+  }
+}
+
+void StateTrackingService::restoreD3D12StateObject(ObjectState* state) {
+  recorder_.record(createCommandWriter(state->creationCommand.get()));
+  for (unsigned key : state->childrenKeys) {
+    auto it = statesByKey_.find(key);
+    GITS_ASSERT(it != statesByKey_.end());
+    restoreState(it->second);
   }
 }
 

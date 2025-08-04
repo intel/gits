@@ -904,11 +904,11 @@ void GpuPatchLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
     shaderIdentifierStagingBuffers_[index]->Unmap(0, nullptr);
   }
 
-  std::vector<GpuPatchDescriptorHandleService::DescriptorMapping> viewDescriptorMappings;
+  std::vector<CapturePlayerDescriptorHandleService::DescriptorMapping> viewDescriptorMappings;
   descriptorHandleService_.getViewMappings(viewDescriptorMappings);
   mappingCount.viewDescriptorCount = viewDescriptorMappings.size();
   if (viewDescriptorMappings.size() >
-      viewDescriptorBufferSize_ / sizeof(GpuPatchDescriptorHandleService::DescriptorMapping)) {
+      viewDescriptorBufferSize_ / sizeof(CapturePlayerDescriptorHandleService::DescriptorMapping)) {
     Log(ERR) << "Raytracing viewDescriptorMappings buffer is too small!";
     exit(EXIT_FAILURE);
   }
@@ -917,16 +917,17 @@ void GpuPatchLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
     HRESULT hr = viewDescriptorStagingBuffers_[index]->Map(0, nullptr, &data);
     GITS_ASSERT(hr == S_OK);
     memcpy(data, viewDescriptorMappings.data(),
-           sizeof(GpuPatchDescriptorHandleService::DescriptorMapping) *
+           sizeof(CapturePlayerDescriptorHandleService::DescriptorMapping) *
                viewDescriptorMappings.size());
     viewDescriptorStagingBuffers_[index]->Unmap(0, nullptr);
   }
 
-  std::vector<GpuPatchDescriptorHandleService::DescriptorMapping> sampleDescriptorMappings;
+  std::vector<CapturePlayerDescriptorHandleService::DescriptorMapping> sampleDescriptorMappings;
   descriptorHandleService_.getViewMappings(sampleDescriptorMappings);
   mappingCount.sampleDescriptorCount = sampleDescriptorMappings.size();
   if (sampleDescriptorMappings.size() >
-      sampleDescriptorBufferSize_ / sizeof(GpuPatchDescriptorHandleService::DescriptorMapping)) {
+      sampleDescriptorBufferSize_ /
+          sizeof(CapturePlayerDescriptorHandleService::DescriptorMapping)) {
     Log(ERR) << "Raytracing sampleDescriptorMappings buffer is too small!";
     exit(EXIT_FAILURE);
   }
@@ -935,7 +936,7 @@ void GpuPatchLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
     HRESULT hr = sampleDescriptorStagingBuffers_[index]->Map(0, nullptr, &data);
     GITS_ASSERT(hr == S_OK);
     memcpy(data, sampleDescriptorMappings.data(),
-           sizeof(GpuPatchDescriptorHandleService::DescriptorMapping) *
+           sizeof(CapturePlayerDescriptorHandleService::DescriptorMapping) *
                sampleDescriptorMappings.size());
     sampleDescriptorStagingBuffers_[index]->Unmap(0, nullptr);
   }

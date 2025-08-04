@@ -16,9 +16,10 @@
 namespace gits {
 namespace DirectX {
 
-GpuPatchDumpService::GpuPatchDumpService(CapturePlayerGpuAddressService& addressService,
-                                         ShaderIdentifierService& shaderIdentifierService,
-                                         GpuPatchDescriptorHandleService& descriptorHandleService)
+GpuPatchDumpService::GpuPatchDumpService(
+    CapturePlayerGpuAddressService& addressService,
+    ShaderIdentifierService& shaderIdentifierService,
+    CapturePlayerDescriptorHandleService& descriptorHandleService)
     : resourceDump_(addressService, shaderIdentifierService, descriptorHandleService),
       executeIndirectDump_(addressService),
       raytracingKeys_(Configurator::Get().directx.features.raytracingDump.commandKeys),

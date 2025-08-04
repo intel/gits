@@ -37,8 +37,38 @@ void AnalyzerRaytracingService::buildTlas(
                                 c.pDesc_.destAccelerationStructureOffset));
 }
 
+void AnalyzerRaytracingService::dispatchRays(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
+
+  auto dumpBindingTable = [&](unsigned resourceKey, unsigned offset, UINT64 size, UINT64 stride) {
+    if (resourceKey) {
+      ID3D12Resource* resource = resourceByKey_[resourceKey];
+      GITS_ASSERT(resource);
+      D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+      if (genericReadResources_.find(resourceKey) != genericReadResources_.end()) {
+        state = D3D12_RESOURCE_STATE_GENERIC_READ;
+      }
+      bindingTablesDump_.dumpBindingTable(c.object_.value, resource, offset, size, stride, state,
+                                          c.key);
+    }
+  };
+
+  dumpBindingTable(c.pDesc_.rayGenerationShaderRecordKey, c.pDesc_.rayGenerationShaderRecordOffset,
+                   c.pDesc_.value->RayGenerationShaderRecord.SizeInBytes,
+                   c.pDesc_.value->RayGenerationShaderRecord.SizeInBytes);
+  dumpBindingTable(c.pDesc_.missShaderTableKey, c.pDesc_.missShaderTableOffset,
+                   c.pDesc_.value->MissShaderTable.SizeInBytes,
+                   c.pDesc_.value->MissShaderTable.StrideInBytes);
+  dumpBindingTable(c.pDesc_.hitGroupTableKey, c.pDesc_.hitGroupTableOffset,
+                   c.pDesc_.value->HitGroupTable.SizeInBytes,
+                   c.pDesc_.value->HitGroupTable.StrideInBytes);
+  dumpBindingTable(c.pDesc_.callableShaderTableKey, c.pDesc_.callableShaderTableOffset,
+                   c.pDesc_.value->CallableShaderTable.SizeInBytes,
+                   c.pDesc_.value->CallableShaderTable.StrideInBytes);
+}
+
 void AnalyzerRaytracingService::flush() {
   instancesDump_.waitUntilDumped();
+  bindingTablesDump_.waitUntilDumped();
 }
 
 void AnalyzerRaytracingService::executeCommandLists(unsigned key,
@@ -48,6 +78,8 @@ void AnalyzerRaytracingService::executeCommandLists(unsigned key,
                                                     unsigned commandListNum) {
   instancesDump_.executeCommandLists(key, commandQueueKey, commandQueue, commandLists,
                                      commandListNum);
+  bindingTablesDump_.executeCommandLists(key, commandQueueKey, commandQueue, commandLists,
+                                         commandListNum);
 }
 
 void AnalyzerRaytracingService::commandQueueWait(unsigned key,
@@ -55,6 +87,7 @@ void AnalyzerRaytracingService::commandQueueWait(unsigned key,
                                                  unsigned fenceKey,
                                                  UINT64 fenceValue) {
   instancesDump_.commandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
+  bindingTablesDump_.commandQueueWait(key, commandQueueKey, fenceKey, fenceValue);
 }
 
 void AnalyzerRaytracingService::commandQueueSignal(unsigned key,
@@ -62,10 +95,12 @@ void AnalyzerRaytracingService::commandQueueSignal(unsigned key,
                                                    unsigned fenceKey,
                                                    UINT64 fenceValue) {
   instancesDump_.commandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
+  bindingTablesDump_.commandQueueSignal(key, commandQueueKey, fenceKey, fenceValue);
 }
 
 void AnalyzerRaytracingService::fenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue) {
   instancesDump_.fenceSignal(key, fenceKey, fenceValue);
+  bindingTablesDump_.fenceSignal(key, fenceKey, fenceValue);
 }
 
 void AnalyzerRaytracingService::captureGPUVirtualAddress(
@@ -79,8 +114,18 @@ void AnalyzerRaytracingService::captureGPUVirtualAddress(
 void AnalyzerRaytracingService::playerGPUVirtualAddress(
     ID3D12ResourceGetGPUVirtualAddressCommand& c) {
   D3D12_RESOURCE_DESC desc = c.object_.value->GetDesc();
-  gpuAddressService_.addGpuCaptureAddress(c.object_.value, c.object_.key, desc.Width,
-                                          c.result_.value);
+  gpuAddressService_.addGpuPlayerAddress(c.object_.value, c.object_.key, desc.Width,
+                                         c.result_.value);
+}
+
+void AnalyzerRaytracingService::captureGPUDescriptorHandle(
+    ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) {
+  descriptorHandleService_.addCaptureHandle(c.object_.value, c.object_.key, c.result_.value);
+}
+
+void AnalyzerRaytracingService::playerGPUDescriptorHandle(
+    ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) {
+  descriptorHandleService_.addPlayerHandle(c.object_.key, c.result_.value);
 }
 
 } // namespace DirectX

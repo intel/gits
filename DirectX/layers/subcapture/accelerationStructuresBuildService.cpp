@@ -674,7 +674,8 @@ void AccelerationStructuresBuildService::removeState(unsigned stateId) {
 }
 
 void AccelerationStructuresBuildService::optimize() {
-  if (!Configurator::Get().directx.features.subcapture.optimizeRaytracing) {
+  if (!Configurator::Get().directx.features.subcapture.optimize &&
+      !Configurator::Get().directx.features.subcapture.optimizeRaytracing) {
     return;
   }
   std::vector<unsigned> removedStates;

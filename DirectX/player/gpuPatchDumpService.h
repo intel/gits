@@ -11,7 +11,7 @@
 #include "raytracingResourceDump.h"
 #include "capturePlayerGpuAddressService.h"
 #include "shaderIdentifierService.h"
-#include "gpuPatchDescriptorHandleService.h"
+#include "capturePlayerDescriptorHandleService.h"
 #include "executeIndirectDump.h"
 #include "configKeySet.h"
 
@@ -32,7 +32,7 @@ public:
 public:
   GpuPatchDumpService(CapturePlayerGpuAddressService& addressService,
                       ShaderIdentifierService& shaderIdentifierService,
-                      GpuPatchDescriptorHandleService& descriptorHandleService);
+                      CapturePlayerDescriptorHandleService& descriptorHandleService);
   void dumpInstances(ID3D12GraphicsCommandList* commandList,
                      ID3D12Resource* resource,
                      unsigned resourceKey,

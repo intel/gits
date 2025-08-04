@@ -25,7 +25,8 @@ AnalyzerLayer::AnalyzerLayer(SubcaptureRange& subcaptureRange)
                       descriptorService_,
                       rootSignatureService_,
                       raytracingService_,
-                      subcaptureRange_.commandListSubcapture()) {}
+                      subcaptureRange_.commandListSubcapture()),
+      raytracingService_(descriptorService_) {}
 
 void AnalyzerLayer::notifyObject(unsigned objectKey) {
   analyzerService_.notifyObject(objectKey);
@@ -329,12 +330,24 @@ void AnalyzerLayer::pre(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStru
   bindingService_.copyRaytracingAccelerationStructure(c);
 }
 
+void AnalyzerLayer::pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
+  bindingService_.dispatchRays(c);
+}
+
 void AnalyzerLayer::pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
   raytracingService_.captureGPUVirtualAddress(c);
 }
 
 void AnalyzerLayer::post(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
   raytracingService_.playerGPUVirtualAddress(c);
+}
+
+void AnalyzerLayer::pre(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) {
+  raytracingService_.captureGPUDescriptorHandle(c);
+}
+
+void AnalyzerLayer::post(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) {
+  raytracingService_.playerGPUDescriptorHandle(c);
 }
 
 void AnalyzerLayer::post(IUnknownReleaseCommand& c) {
@@ -400,6 +413,10 @@ void AnalyzerLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
 void AnalyzerLayer::post(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c) {
   analyzerService_.commandListCommand(c.object_.key);
   bindingService_.writeBufferImmediate(c);
+}
+
+void AnalyzerLayer::post(MappedDataMetaCommand& c) {
+  analyzerService_.mappedDataMeta(c.resource_.key);
 }
 
 } // namespace DirectX

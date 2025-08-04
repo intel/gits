@@ -158,7 +158,7 @@ void RaytracingResourceDump::dumpBindingTableBuffer(RaytracingDumpInfo& dumpInfo
         stream << " resource O" << resourceInfo->key << " offset " << offset;
       }
 
-      GpuPatchDescriptorHandleService::DescriptorHeapInfo* heapInfo{};
+      CapturePlayerDescriptorHandleService::DescriptorHeapInfo* heapInfo{};
       unsigned stride{};
       if (dumpInfo.fromCapture) {
         heapInfo = descriptorHandleService_.getViewDescriptorHeapInfoByCaptureHandle(*address);

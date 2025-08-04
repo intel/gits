@@ -6,7 +6,7 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "gpuPatchDescriptorHandleService.h"
+#include "capturePlayerDescriptorHandleService.h"
 #include "gits.h"
 
 #include <wrl/client.h>
@@ -14,9 +14,8 @@
 namespace gits {
 namespace DirectX {
 
-void GpuPatchDescriptorHandleService::addCaptureHandle(ID3D12DescriptorHeap* heap,
-                                                       unsigned heapKey,
-                                                       D3D12_GPU_DESCRIPTOR_HANDLE captureHandle) {
+void CapturePlayerDescriptorHandleService::addCaptureHandle(
+    ID3D12DescriptorHeap* heap, unsigned heapKey, D3D12_GPU_DESCRIPTOR_HANDLE captureHandle) {
 
   auto itView = viewHeapsByKey_.find(heapKey);
   if (itView != viewHeapsByKey_.end()) {
@@ -57,8 +56,8 @@ void GpuPatchDescriptorHandleService::addCaptureHandle(ID3D12DescriptorHeap* hea
   }
 }
 
-void GpuPatchDescriptorHandleService::addPlayerHandle(unsigned heapKey,
-                                                      D3D12_GPU_DESCRIPTOR_HANDLE playerHandle) {
+void CapturePlayerDescriptorHandleService::addPlayerHandle(
+    unsigned heapKey, D3D12_GPU_DESCRIPTOR_HANDLE playerHandle) {
   auto it = viewHeapsByKey_.find(heapKey);
   if (it != viewHeapsByKey_.end()) {
     it->second->playerStart = playerHandle.ptr;
@@ -76,7 +75,7 @@ void GpuPatchDescriptorHandleService::addPlayerHandle(unsigned heapKey,
   }
 }
 
-void GpuPatchDescriptorHandleService::destroyHeap(unsigned heapKey) {
+void CapturePlayerDescriptorHandleService::destroyHeap(unsigned heapKey) {
   auto itView = viewHeapsByKey_.find(heapKey);
   if (itView != viewHeapsByKey_.end()) {
     viewHeapsByCaptureHandle_.erase(itView->second->captureStart);
@@ -96,7 +95,8 @@ void GpuPatchDescriptorHandleService::destroyHeap(unsigned heapKey) {
   }
 }
 
-bool GpuPatchDescriptorHandleService::getViewMappings(std::vector<DescriptorMapping>& mappings) {
+bool CapturePlayerDescriptorHandleService::getViewMappings(
+    std::vector<DescriptorMapping>& mappings) {
   mappings.resize(viewHeapsByCaptureHandle_.size());
   unsigned i = 0;
   for (auto& it : viewHeapsByCaptureHandle_) {
@@ -110,7 +110,8 @@ bool GpuPatchDescriptorHandleService::getViewMappings(std::vector<DescriptorMapp
   return changed;
 }
 
-bool GpuPatchDescriptorHandleService::getSamplerMappings(std::vector<DescriptorMapping>& mappings) {
+bool CapturePlayerDescriptorHandleService::getSamplerMappings(
+    std::vector<DescriptorMapping>& mappings) {
   mappings.resize(samplerHeapsByCaptureHandle_.size());
   unsigned i = 0;
   for (auto& it : samplerHeapsByCaptureHandle_) {
@@ -124,7 +125,7 @@ bool GpuPatchDescriptorHandleService::getSamplerMappings(std::vector<DescriptorM
   return changed;
 }
 
-GpuPatchDescriptorHandleService::DescriptorHeapInfo* GpuPatchDescriptorHandleService::
+CapturePlayerDescriptorHandleService::DescriptorHeapInfo* CapturePlayerDescriptorHandleService::
     getViewDescriptorHeapInfo(DescriptorHandleMap& descriptorHandleMap,
                               UINT64 handle,
                               bool fromCapture) {

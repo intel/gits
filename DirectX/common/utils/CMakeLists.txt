@@ -20,6 +20,8 @@ set(UTILS_FILES
   ${SRC_DIR}/configKeySet.cpp
   ${SRC_DIR}/capturePlayerGpuAddressService.h
   ${SRC_DIR}/capturePlayerGpuAddressService.cpp
+  ${SRC_DIR}/capturePlayerDescriptorHandleService.h
+  ${SRC_DIR}/capturePlayerDescriptorHandleService.cpp
 )
 source_group("" FILES ${UTILS_FILES})
 
