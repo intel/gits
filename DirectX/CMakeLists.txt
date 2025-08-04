@@ -127,13 +127,17 @@ target_include_directories(DirectX_player PRIVATE ${ARGS_SOURCE_DIR})
 target_link_libraries(DirectX_subcapture PRIVATE
     DirectX_layer_interface
     DirectX_dstorage_resources
-	DirectX_utils
-	DirectX_coders
+    DirectX_utils
+    DirectX_coders
+    common
+    configuration
 )
 
 target_link_libraries(DirectX_execution_serialization PRIVATE
   DirectX_utils
   DirectX_coders
+  common
+  configuration
 )
 
 target_link_libraries(DirectX_recorder PRIVATE
@@ -147,6 +151,7 @@ target_link_libraries(DirectX_recorder PRIVATE
   DirectX_portability
   configuration
   DirectX_layer_interface
+  common
 )
 
 target_link_libraries(DirectX_player PRIVATE
@@ -162,4 +167,21 @@ target_link_libraries(DirectX_player PRIVATE
   DirectX_skip_calls
   DirectX_portability
   configuration
+  common
 )
+
+target_link_libraries(DirectX_utils PRIVATE common configuration)
+
+target_link_libraries(DirectX_resource_dumping PRIVATE common configuration)
+
+target_link_libraries(DirectX_api_debug PRIVATE common configuration)
+
+target_link_libraries(DirectX_skip_calls PRIVATE common configuration)
+
+target_link_libraries(DirectX_dstorage_resources PRIVATE common configuration)
+
+target_link_libraries(DirectX_trace PRIVATE common configuration)
+
+target_link_libraries(DirectX_coders PRIVATE common configuration)
+
+target_link_libraries(DirectX_portability PRIVATE common configuration)

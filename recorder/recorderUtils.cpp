@@ -20,7 +20,10 @@
 #include "log.h"
 #include "gits.h"
 #include "diagnostic.h"
+
+#if defined WITH_DIRECTX
 #include "imGuiHUD.h"
+#endif
 
 namespace gits {
 bool ConfigureRecorder(const std::filesystem::path& configPath) {
@@ -62,9 +65,11 @@ bool ConfigureRecorder(const std::filesystem::path& configPath) {
 
   inst.RegisterFileRecorder(std::move(file));
 
+#if defined WITH_DIRECTX
   auto pImGuiHUD = std::make_unique<ImGuiHUD>();
   CGits::Instance().SetImGuiHUD(std::move(pImGuiHUD));
   CGits::Instance().GetImGuiHUD()->SetApplicationInfo(processNameHUD, pid);
+#endif
 
   Configurator::Instance().LogChangedFields();
 

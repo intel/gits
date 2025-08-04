@@ -8,7 +8,8 @@
 
 add_library(DirectX_rtas_cache SHARED)
 set_target_properties(DirectX_rtas_cache PROPERTIES OUTPUT_NAME plugin)
-target_link_libraries(DirectX_rtas_cache common DirectX_utils DirectX_plugin_utils)
+add_dependencies(DirectX_rtas_cache common)
+target_link_libraries(DirectX_rtas_cache PRIVATE common DirectX_utils DirectX_plugin_utils)
 
 set(PLUGINS_SRC
   ${PLUGINS_DIR}/IPlugin.h

@@ -147,8 +147,10 @@ add_library(L0_common
   common/mockListExecutor.cpp
 )
 include_directories(common/include)
+
+target_link_libraries(L0_common PRIVATE common configuration)
 if(MSVC)
-  target_link_libraries(L0_common SetupAPI.lib)
+  target_link_libraries(L0_common PRIVATE SetupAPI.lib)
 endif()
 
 add_library(L0_recorder
@@ -164,6 +166,8 @@ add_library(L0_recorder
   ${CMAKE_CURRENT_BINARY_DIR}/l0Header.h
 )
 include_directories(recorder/include)
+
+target_link_libraries(L0_recorder PRIVATE GitsRecorderInterface common configuration)
 
 set(L0_interceptor_sources
   ../common/legacy/tools_lite.cpp
@@ -201,8 +205,10 @@ endif()
 include_directories(interceptor/include)
 
 set_target_properties(L0_interceptor PROPERTIES OUTPUT_NAME ze_loader)
+
+target_link_libraries(L0_interceptor PRIVATE GitsRecorderInterface common configuration)
 if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
-  target_link_libraries(L0_interceptor dl pthread)
+  target_link_libraries(L0_interceptor PRIVATE dl pthread)
 endif()
 
 add_dependencies(L0_common common L0_codegen config_codegen)

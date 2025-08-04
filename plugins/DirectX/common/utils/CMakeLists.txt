@@ -7,7 +7,8 @@
 # ===================== end_copyright_notice ==============================
 
 add_library(DirectX_plugin_utils STATIC)
-target_link_libraries(DirectX_plugin_utils common)
+add_dependencies(DirectX_plugin_utils config_codegen)
+target_link_libraries(DirectX_plugin_utils PRIVATE common configuration)
 
 target_sources(DirectX_plugin_utils
 PRIVATE

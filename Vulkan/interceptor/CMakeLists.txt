@@ -43,11 +43,13 @@ add_library(Vulkan_interceptor SHARED
 source_group("External Files" FILES ${Vulkan_interceptor_external_cpps})
 source_group("Generated Files" FILES ${Vulkan_DEF} REGULAR_EXPRESSION ".*Auto.*")
 
+target_link_libraries(Vulkan_interceptor PRIVATE GitsRecorderInterface common configuration)
+
 if(MSVC)
   set_target_properties(Vulkan_interceptor PROPERTIES OUTPUT_NAME vulkan-1)
 else()
   set_target_properties(Vulkan_interceptor PROPERTIES OUTPUT_NAME Vulkan)
-  target_link_libraries(Vulkan_interceptor pthread dl)
+  target_link_libraries(Vulkan_interceptor PRIVATE pthread dl)
 endif()
 
 set_target_properties(Vulkan_interceptor PROPERTIES FOLDER Vulkan)

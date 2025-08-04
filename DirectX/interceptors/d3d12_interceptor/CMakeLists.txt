@@ -7,7 +7,7 @@
 # ===================== end_copyright_notice ==============================
 
 add_library(d3d12_interceptor SHARED)
-target_link_libraries(d3d12_interceptor common detours)
+target_link_libraries(d3d12_interceptor PRIVATE GitsRecorderInterface common configuration detours)
 
 set(COMMON_SRC
   ${CMAKE_SOURCE_DIR}/common/legacy/tools_lite.cpp

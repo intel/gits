@@ -6,6 +6,9 @@
 #
 # ===================== end_copyright_notice ==============================
 
+set(RECORDER_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(RECORDER_HEADER_DIR ${RECORDER_SOURCE_DIR}/include)
+
 set(recorder_DEF )
 if(MSVC)
   set(recorder_DEF ${CMAKE_CURRENT_BINARY_DIR}/recorder.def)
@@ -38,15 +41,19 @@ if(MSVC)
 endif()
 
 list(APPEND recorder_SOURCES
-  include/recorderIface.h
-  include/recorderUtils.h
-  recorderIface.cpp
-  recorderDLL.cpp
-  recorderUtils.cpp
+  ${RECORDER_HEADER_DIR}/recorderIface.h
+  ${RECORDER_HEADER_DIR}/recorderUtils.h
+  ${RECORDER_SOURCE_DIR}/recorderIface.cpp
+  ${RECORDER_SOURCE_DIR}/recorderDLL.cpp
+  ${RECORDER_SOURCE_DIR}/recorderUtils.cpp
   ${recorder_DEF}
 )
 
 add_library(GitsRecorder SHARED ${recorder_SOURCES})
+target_include_directories(GitsRecorder PRIVATE ${RECORDER_HEADER_DIR})
+
+add_library(GitsRecorderInterface INTERFACE)
+target_include_directories(GitsRecorderInterface INTERFACE ${RECORDER_HEADER_DIR})
 
 add_definitions(-DGITS_RECORDER_EXPORTS)
 
@@ -101,12 +108,12 @@ if(UNIX)
 endif()
 
 add_dependencies(GitsRecorder config_codegen)
-target_link_libraries(GitsRecorder ${recorderIfaceLibs} ${recorderCommonLibs} common png lua zlib)
+target_link_libraries(GitsRecorder PRIVATE ${recorderIfaceLibs} ${recorderCommonLibs} common)
 
 if(UNIX)
-  target_link_libraries(GitsRecorder pthread rt xcb X11-xcb X11 GL wayland-client wayland-egl)
+  target_link_libraries(GitsRecorder PRIVATE pthread rt xcb X11-xcb X11 GL wayland-client wayland-egl)
 elseif(MSVC)
-  target_link_libraries(GitsRecorder OpenGL32)
+  target_link_libraries(GitsRecorder PRIVATE OpenGL32)
 endif()
 
 if(WIN32)

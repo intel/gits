@@ -6,19 +6,22 @@
 #
 # ===================== end_copyright_notice ==============================
 
-list(APPEND player_SOURCE
-  include/display.h
-  include/player.h
-  include/sequentialExecutor.h
-  include/statistics.h
-  include/window.h
-  include/playerUtils.h
+set(PLAYER_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(PLAYER_HEADER_DIR ${PLAYER_SOURCE_DIR}/include)
 
-  player.cpp
-  playerMain.cpp
-  sequentialExecutor.cpp
-  statistics.cpp
-  playerUtils.cpp
+list(APPEND player_SOURCE
+  ${PLAYER_HEADER_DIR}/display.h
+  ${PLAYER_HEADER_DIR}/player.h
+  ${PLAYER_HEADER_DIR}/sequentialExecutor.h
+  ${PLAYER_HEADER_DIR}/statistics.h
+  ${PLAYER_HEADER_DIR}/window.h
+  ${PLAYER_HEADER_DIR}/playerUtils.h
+
+  ${PLAYER_SOURCE_DIR}/player.cpp
+  ${PLAYER_SOURCE_DIR}/playerMain.cpp
+  ${PLAYER_SOURCE_DIR}/sequentialExecutor.cpp
+  ${PLAYER_SOURCE_DIR}/statistics.cpp
+  ${PLAYER_SOURCE_DIR}/playerUtils.cpp
 )
 
 if(MSVC)
@@ -28,28 +31,32 @@ endif()
 
 add_executable(gitsPlayer ${player_SOURCE})
 
+target_include_directories(gitsPlayer PRIVATE ${PLAYER_HEADER_DIR})
+
 add_dependencies(gitsPlayer config_codegen)
-target_link_libraries(gitsPlayer common OpenGL_common)
+target_link_libraries(gitsPlayer PRIVATE common OpenGL_common)
 
 if(WITH_LEVELZERO)
-  target_link_libraries(gitsPlayer L0_common)
+  target_link_libraries(gitsPlayer PRIVATE L0_common)
 endif()
 
 if(WITH_OPENCL)
-  target_link_libraries(gitsPlayer OpenCL_common)
+  target_link_libraries(gitsPlayer PRIVATE OpenCL_common)
 endif()
 
 if(WITH_VULKAN)
-  target_link_libraries(gitsPlayer Vulkan_common)
+  target_link_libraries(gitsPlayer PRIVATE Vulkan_common)
 endif()
 
 if(WITH_OCLOC)
-  target_link_libraries(gitsPlayer ocloc_common)
+  target_link_libraries(gitsPlayer PRIVATE ocloc_common)
 endif(WITH_OCLOC)
 
 if(WITH_DIRECTX)
+#!!! TODO: This should come from linking to DirectX_player
   include_directories(../DirectX/player)
   target_link_libraries(gitsPlayer
+    PRIVATE
     d3d12.lib
     dxgi.lib
     DirectX_player
@@ -65,19 +72,19 @@ if(WITH_DIRECTX)
 endif()
 
 target_include_directories(gitsPlayer PRIVATE ${ARGS_SOURCE_DIR})
-target_link_libraries(gitsPlayer png zlib lua configuration)
+target_link_libraries(gitsPlayer PRIVATE configuration)
 
 if(MSVC)
-  target_link_libraries(gitsPlayer stackwalker)
+  target_link_libraries(gitsPlayer PRIVATE stackwalker)
 endif()
 
 if(UNIX)
-  target_link_libraries(gitsPlayer pthread)
-  target_link_libraries(gitsPlayer GL X11 xcb X11-xcb dl)
+  target_link_libraries(gitsPlayer PRIVATE pthread)
+  target_link_libraries(gitsPlayer PRIVATE GL X11 xcb X11-xcb dl)
 endif()
 
 if(MSVC)
-  target_link_libraries(gitsPlayer OpenGL32)
+  target_link_libraries(gitsPlayer PRIVATE OpenGL32)
 endif()
 
 install(TARGETS gitsPlayer DESTINATION Player)

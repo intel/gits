@@ -97,6 +97,8 @@ add_library(OpenCL_common
   common/openclHelperFunctions.cpp
 )
 
+target_link_libraries(OpenCL_common PRIVATE common configuration)
+
 add_library(OpenCL_recorder
   recorder/include/openclRecorderSubwrappers.h
   recorder/include/openclRecorderWrapper.h
@@ -109,6 +111,8 @@ add_library(OpenCL_recorder
   ${CMAKE_CURRENT_BINARY_DIR}/openclRecorderWrapperAuto.cpp
   recorder/openclStateRestore.cpp
 )
+
+target_link_libraries(OpenCL_recorder PRIVATE GitsRecorderInterface common configuration)
 
 set(OpenCL_DEF )
 if(MSVC)
@@ -144,8 +148,10 @@ source_group("External Files" FILES ${OpenCL_interceptor_external_cpps})
 source_group("Generated Files" FILES ${OpenCL_DEF} REGULAR_EXPRESSION ".*Auto.*")
 
 set_target_properties(OpenCL_interceptor PROPERTIES OUTPUT_NAME OpenCL)
+
+target_link_libraries(OpenCL_interceptor PRIVATE GitsRecorderInterface common configuration)
 if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
-  target_link_libraries(OpenCL_interceptor dl pthread)
+  target_link_libraries(OpenCL_interceptor PRIVATE dl pthread)
 endif()
 
 add_dependencies(OpenCL_common common OpenCL_codegen config_codegen)

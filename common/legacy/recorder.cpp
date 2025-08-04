@@ -43,8 +43,6 @@
 #include <csignal>
 #endif
 
-#include "openglRecorderWrapper.h"
-
 #include <memory>
 #include <filesystem>
 #include <fstream>

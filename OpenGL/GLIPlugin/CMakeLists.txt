@@ -6,24 +6,27 @@
 #
 # ===================== end_copyright_notice ==============================
 
+set(OPENGL_INTERCEPTOR_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(OPENGL_INTERCEPTOR_HEADER_DIR ${OPENGL_INTERCEPTOR_SOURCE_DIR}/include)
+
 set_source_files_properties(
-  ${CMAKE_CURRENT_SOURCE_DIR}/GLIPlugin64.def
-  ${CMAKE_CURRENT_SOURCE_DIR}/GLIPlugin32.def
-  ${CMAKE_CURRENT_SOURCE_DIR}/gitsPluginPrePostAuto.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/gitsPluginPrePostAuto.h
+  ${OPENGL_INTERCEPTOR_SOURCE_DIR}/GLIPlugin64.def
+  ${OPENGL_INTERCEPTOR_SOURCE_DIR}/GLIPlugin32.def
+  ${OPENGL_INTERCEPTOR_SOURCE_DIR}/gitsPluginPrePostAuto.cpp
+  ${OPENGL_INTERCEPTOR_SOURCE_DIR}/include/gitsPluginPrePostAuto.h
   PROPERTIES GENERATED 1
 )
 
 set(OpenGL_DEF )
 if(MSVC)
   if("${CMAKE_GENERATOR_PLATFORM}" MATCHES "Win32")
-    set(OpenGL_DEF ${CMAKE_CURRENT_SOURCE_DIR}/GLIPlugin32.def)
+    set(OpenGL_DEF ${OPENGL_INTERCEPTOR_SOURCE_DIR}/GLIPlugin32.def)
   elseif("${CMAKE_GENERATOR_PLATFORM}" MATCHES "x64")
-    set(OpenGL_DEF ${CMAKE_CURRENT_SOURCE_DIR}/GLIPlugin64.def)
+    set(OpenGL_DEF ${OPENGL_INTERCEPTOR_SOURCE_DIR}/GLIPlugin64.def)
   else()
     message(STATUS "Unknown generator platform, treating it as x64. "
                     "(OpenGL interceptor will not export EGL calls.)")
-    set(OpenGL_DEF ${CMAKE_CURRENT_SOURCE_DIR}/GLIPlugin64.def)
+    set(OpenGL_DEF ${OPENGL_INTERCEPTOR_SOURCE_DIR}/GLIPlugin64.def)
   endif()
 endif()
 
@@ -40,24 +43,28 @@ if(WIN32)
 endif()
 
 add_library(OpenGL_interceptor SHARED
-  include/functionMap.h
-  include/gitsPlugin.h
-  include/gitsPluginPrePost.h
-  include/gitsPluginPrePostAuto.h
-  include/openglInterceptorExecOverride.h
+  ${OPENGL_INTERCEPTOR_HEADER_DIR}/functionMap.h
+  ${OPENGL_INTERCEPTOR_HEADER_DIR}/gitsPlugin.h
+  ${OPENGL_INTERCEPTOR_HEADER_DIR}/gitsPluginPrePost.h
+  ${OPENGL_INTERCEPTOR_HEADER_DIR}/gitsPluginPrePostAuto.h
+  ${OPENGL_INTERCEPTOR_HEADER_DIR}/openglInterceptorExecOverride.h
 
   ${OpenGL_interceptor_external_cpps}
-  gitsPlugin.cpp
-  gitsPluginPrePost.cpp
-  gitsPluginPrePostAuto.cpp
+  ${OPENGL_INTERCEPTOR_SOURCE_DIR}/gitsPlugin.cpp
+  ${OPENGL_INTERCEPTOR_SOURCE_DIR}/gitsPluginPrePost.cpp
+  ${OPENGL_INTERCEPTOR_SOURCE_DIR}/gitsPluginPrePostAuto.cpp
   ${OpenGL_DEF}
 )
+
+target_include_directories(OpenGL_interceptor PRIVATE ${OPENGL_INTERCEPTOR_HEADER_DIR})
 
 source_group("External Files" FILES ${OpenGL_interceptor_external_cpps})
 source_group("Generated Files" FILES ${OpenGL_DEF} REGULAR_EXPRESSION ".*Auto.*")
 
+target_link_libraries(OpenGL_interceptor PRIVATE GitsRecorderInterface OpenGL_recorder_interface common configuration)
+
 if(NOT MSVC)
-  target_link_libraries(OpenGL_interceptor pthread dl)
+  target_link_libraries(OpenGL_interceptor PRIVATE pthread dl)
 endif()
 
 if(MSVC)
@@ -67,7 +74,7 @@ else()
 endif()
 
 if(NOT MSVC)
-  target_link_libraries(OpenGL_interceptor "-Wl,-Bsymbolic")
+  target_link_libraries(OpenGL_interceptor PRIVATE "-Wl,-Bsymbolic")
 endif()
 
 set_target_properties(OpenGL_interceptor PROPERTIES FOLDER OpenGL)

@@ -21,6 +21,5 @@ add_library(yamlcpp
 )
 
 include_directories(SYSTEM "${YAMLCPP_ABS_PATH}/include")
-link_libraries(yamlcpp)
 
 set_target_properties(yamlcpp PROPERTIES FOLDER External)

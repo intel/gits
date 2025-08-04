@@ -34,6 +34,8 @@ add_library(ocloc_common
 )
 include_directories(common/include)
 
+target_link_libraries(ocloc_common PRIVATE common configuration)
+
 add_library(ocloc_recorder
   recorder/oclocRecorderWrapper.cpp
   recorder/oclocRecorderWrapper.h
@@ -41,6 +43,8 @@ add_library(ocloc_recorder
 )
 
 include_directories(recorder)
+
+target_link_libraries(ocloc_recorder PRIVATE GitsRecorderInterface common configuration)
 
 list(APPEND ocloc_interceptor_files
   ../common/legacy/tools_lite.cpp
@@ -66,8 +70,10 @@ else()
 endif()
 
 set_target_properties(ocloc_interceptor PROPERTIES OUTPUT_NAME ${OCLOC_LIBRARY_NAME})
+
+target_link_libraries(ocloc_interceptor PRIVATE GitsRecorderInterface common configuration)
 if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
-  target_link_libraries(ocloc_interceptor dl pthread)
+  target_link_libraries(ocloc_interceptor PRIVATE dl pthread)
 endif()
 
 add_dependencies(ocloc_common common config_codegen)

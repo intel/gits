@@ -116,6 +116,6 @@ target_include_directories(DirectX_recorder PRIVATE
   ${SRC_DIR}
 )
 
-target_link_libraries(DirectX_recorder PRIVATE ${INTEL_EXT_DIR}/lib/igdext64.lib ${NVAPI_DIR}/amd64/nvapi64.lib)
+target_link_libraries(DirectX_recorder PRIVATE GitsRecorderInterface ${INTEL_EXT_DIR}/lib/igdext64.lib ${NVAPI_DIR}/amd64/nvapi64.lib)
 
 set_target_properties(DirectX_recorder PROPERTIES FOLDER DirectX)

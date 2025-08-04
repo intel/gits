@@ -88,8 +88,9 @@ set_target_properties(configuration PROPERTIES FOLDER "common/config")
 SET(PRIVATE_INCLUDE_DIRS)
 
 if(NOT DEFINED BUILD_FOR_CCODE)
-  target_link_libraries(configuration PRIVATE yamlcpp)
-  target_link_libraries(configuration PUBLIC common)
+  # Needed for OpenGL types and enums
+  target_link_libraries(configuration PUBLIC OpenGL_common_interface)
+  target_link_libraries(configuration PRIVATE common yamlcpp)
   SET(PRIVATE_INCLUDE_DIRS ${ARGS_SOURCE_DIR})
 endif()
 

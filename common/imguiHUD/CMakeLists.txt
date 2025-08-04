@@ -76,4 +76,4 @@ endif()
 set_target_properties(generateFontHeader PROPERTIES FOLDER "common/ImGuiHUD")
 set_target_properties(ImGuiHUD PROPERTIES FOLDER "common/ImGuiHUD")
 
-target_link_libraries(ImGuiHUD PUBLIC common configuration)
+target_link_libraries(ImGuiHUD PRIVATE common configuration)

@@ -8,7 +8,7 @@
 
 add_library(DirectX_rtas_size_check SHARED)
 set_target_properties(DirectX_rtas_size_check PROPERTIES OUTPUT_NAME plugin)
-target_link_libraries(DirectX_rtas_size_check common)
+target_link_libraries(DirectX_rtas_size_check PRIVATE common)
 
 target_sources(DirectX_rtas_size_check
 PRIVATE
@@ -33,6 +33,7 @@ PRIVATE
 
 add_dependencies(DirectX_rtas_size_check
     DirectX_layer_interface
+    common
 )
 
 set_target_properties(DirectX_rtas_size_check PROPERTIES FOLDER Plugins/DirectX)

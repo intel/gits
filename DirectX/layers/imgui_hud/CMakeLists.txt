@@ -61,6 +61,6 @@ add_dependencies(DirectX_imgui_hud
   DirectX_layer_interface
 )
 
-target_link_libraries(DirectX_imgui_hud PUBLIC ImGuiHUD)
+target_link_libraries(DirectX_imgui_hud PRIVATE ImGuiHUD common configuration)
 
 set_target_properties(DirectX_imgui_hud PROPERTIES FOLDER DirectX/DirectX_layers)

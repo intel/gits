@@ -8,7 +8,7 @@
 
 add_library(DirectX_benchmark SHARED)
 set_target_properties(DirectX_benchmark PROPERTIES OUTPUT_NAME plugin)
-target_link_libraries(DirectX_benchmark common DirectX_plugin_utils)
+target_link_libraries(DirectX_benchmark PRIVATE common DirectX_plugin_utils)
 
 set(SERVICES_DIR services)
 set (SERVICES_SRC

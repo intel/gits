@@ -6,115 +6,114 @@
 #
 # ===================== end_copyright_notice ==============================
 
-list(APPEND common_SOURCES
-  include/apis_iface.h
-  include/argument.h
-  include/bit_range.h
-  include/buffer.h
-  include/config.h
-  include/configTypes.h
-  include/configYamlTemplates.h
-  include/configUtils.h
-  include/diagnostic.h
-  include/dynamic_linker.h
-  include/exception.h
-  include/function.h
-  include/getopt_.h
-  include/gits.h
-  include/id.h
-  include/InputListener.h
-  include/istdhash.h
-  include/keyEvents.h
-  include/key_value.h
-  include/library.h
-  include/log.h
-  include/lua_bindings.h
-  include/macros.h
-  include/malloc_allocator.h
-  include/MemorySniffer.h
-  include/message_pump.h
-  include/messageBus.h
-  include/performance.h
-  include/platform.h
-  include/pragmas.h
-  include/resource_manager.h
-  include/runner.h
-  include/scheduler.h
-  include/streams.h
-  include/texture_converter.h
-  include/timer.h
-  include/token.h
-  include/tools_lite.h
-  include/tools.h
-  include/version.h
-  include/automateCCode.h
-  include/ccodeWriteWrap.h
-  include/intervalSet.h
-  include/controlHandler.h
-  include/gitsLoader.h
-  include/recorderBehaviors.h
-  include/recorder.h
-  include/state.h
-  include/vectorMapper.h
+set(COMMON_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(COMMON_HEADER_DIR ${COMMON_SOURCE_DIR}/include)
 
-  apis_iface.cpp
-  argument.cpp
-  bit_range.cpp
-  buffer.cpp
-  config.cpp
-  configUtils.cpp
-  diagnostic.cpp
-  exception.cpp
-  function.cpp
-  gits.cpp
-  getopt.cpp
-  id.cpp
-  library.cpp
-  log.cpp
-  MemorySniffer.cpp
-  message_pump.cpp
-  messageBus.cpp
-  performance.cpp
-  resource_manager.cpp
-  runner.cpp
-  scheduler.cpp
-  streams.cpp
-  timer.cpp
-  token.cpp
-  tools_lite.cpp
-  tools.cpp
-  version.cpp
-  dynamic_linker.cpp
-  lua_bindings.cpp
-  InputListener.cpp
-  keyEvents.cpp
-  texture_converter.cpp
-  automateCCode.cpp
-  ccodeWriteWrap.cpp
-  controlHandler.cpp
-  gitsLoader.cpp
-  recorderBehaviors.cpp
-  recorder.cpp
-  state.cpp
+list(APPEND common_SOURCES
+  ${COMMON_HEADER_DIR}/apis_iface.h
+  ${COMMON_HEADER_DIR}/argument.h
+  ${COMMON_HEADER_DIR}/bit_range.h
+  ${COMMON_HEADER_DIR}/buffer.h
+  ${COMMON_HEADER_DIR}/config.h
+  ${COMMON_HEADER_DIR}/configTypes.h
+  ${COMMON_HEADER_DIR}/configYamlTemplates.h
+  ${COMMON_HEADER_DIR}/configUtils.h
+  ${COMMON_HEADER_DIR}/diagnostic.h
+  ${COMMON_HEADER_DIR}/dynamic_linker.h
+  ${COMMON_HEADER_DIR}/exception.h
+  ${COMMON_HEADER_DIR}/function.h
+  ${COMMON_HEADER_DIR}/getopt_.h
+  ${COMMON_HEADER_DIR}/gits.h
+  ${COMMON_HEADER_DIR}/id.h
+  ${COMMON_HEADER_DIR}/InputListener.h
+  ${COMMON_HEADER_DIR}/istdhash.h
+  ${COMMON_HEADER_DIR}/keyEvents.h
+  ${COMMON_HEADER_DIR}/key_value.h
+  ${COMMON_HEADER_DIR}/library.h
+  ${COMMON_HEADER_DIR}/log.h
+  ${COMMON_HEADER_DIR}/lua_bindings.h
+  ${COMMON_HEADER_DIR}/macros.h
+  ${COMMON_HEADER_DIR}/malloc_allocator.h
+  ${COMMON_HEADER_DIR}/MemorySniffer.h
+  ${COMMON_HEADER_DIR}/message_pump.h
+  ${COMMON_HEADER_DIR}/messageBus.h
+  ${COMMON_HEADER_DIR}/performance.h
+  ${COMMON_HEADER_DIR}/platform.h
+  ${COMMON_HEADER_DIR}/pragmas.h
+  ${COMMON_HEADER_DIR}/resource_manager.h
+  ${COMMON_HEADER_DIR}/runner.h
+  ${COMMON_HEADER_DIR}/scheduler.h
+  ${COMMON_HEADER_DIR}/streams.h
+  ${COMMON_HEADER_DIR}/texture_converter.h
+  ${COMMON_HEADER_DIR}/timer.h
+  ${COMMON_HEADER_DIR}/token.h
+  ${COMMON_HEADER_DIR}/tools_lite.h
+  ${COMMON_HEADER_DIR}/tools.h
+  ${COMMON_HEADER_DIR}/version.h
+  ${COMMON_HEADER_DIR}/automateCCode.h
+  ${COMMON_HEADER_DIR}/ccodeWriteWrap.h
+  ${COMMON_HEADER_DIR}/intervalSet.h
+  ${COMMON_HEADER_DIR}/controlHandler.h
+  ${COMMON_HEADER_DIR}/recorderBehaviors.h
+  ${COMMON_HEADER_DIR}/recorder.h
+  ${COMMON_HEADER_DIR}/state.h
+  ${COMMON_HEADER_DIR}/vectorMapper.h
+
+  ${COMMON_SOURCE_DIR}/apis_iface.cpp
+  ${COMMON_SOURCE_DIR}/argument.cpp
+  ${COMMON_SOURCE_DIR}/bit_range.cpp
+  ${COMMON_SOURCE_DIR}/buffer.cpp
+  ${COMMON_SOURCE_DIR}/config.cpp
+  ${COMMON_SOURCE_DIR}/configUtils.cpp
+  ${COMMON_SOURCE_DIR}/diagnostic.cpp
+  ${COMMON_SOURCE_DIR}/exception.cpp
+  ${COMMON_SOURCE_DIR}/function.cpp
+  ${COMMON_SOURCE_DIR}/gits.cpp
+  ${COMMON_SOURCE_DIR}/getopt.cpp
+  ${COMMON_SOURCE_DIR}/id.cpp
+  ${COMMON_SOURCE_DIR}/library.cpp
+  ${COMMON_SOURCE_DIR}/log.cpp
+  ${COMMON_SOURCE_DIR}/MemorySniffer.cpp
+  ${COMMON_SOURCE_DIR}/message_pump.cpp
+  ${COMMON_SOURCE_DIR}/messageBus.cpp
+  ${COMMON_SOURCE_DIR}/performance.cpp
+  ${COMMON_SOURCE_DIR}/resource_manager.cpp
+  ${COMMON_SOURCE_DIR}/runner.cpp
+  ${COMMON_SOURCE_DIR}/scheduler.cpp
+  ${COMMON_SOURCE_DIR}/streams.cpp
+  ${COMMON_SOURCE_DIR}/timer.cpp
+  ${COMMON_SOURCE_DIR}/token.cpp
+  ${COMMON_SOURCE_DIR}/tools_lite.cpp
+  ${COMMON_SOURCE_DIR}/tools.cpp
+  ${COMMON_SOURCE_DIR}/version.cpp
+  ${COMMON_SOURCE_DIR}/dynamic_linker.cpp
+  ${COMMON_SOURCE_DIR}/lua_bindings.cpp
+  ${COMMON_SOURCE_DIR}/InputListener.cpp
+  ${COMMON_SOURCE_DIR}/keyEvents.cpp
+  ${COMMON_SOURCE_DIR}/texture_converter.cpp
+  ${COMMON_SOURCE_DIR}/automateCCode.cpp
+  ${COMMON_SOURCE_DIR}/ccodeWriteWrap.cpp
+  ${COMMON_SOURCE_DIR}/controlHandler.cpp
+  ${COMMON_SOURCE_DIR}/recorderBehaviors.cpp
+  ${COMMON_SOURCE_DIR}/recorder.cpp
+  ${COMMON_SOURCE_DIR}/state.cpp
 )
 source_group("recorder" FILES
-  include/controlHandler.h
-  include/gitsLoader.h
-  include/recorderBehaviors.h
-  include/recorder.h
-  include/state.cpp
+  ${COMMON_HEADER_DIR}/controlHandler.h
+  ${COMMON_HEADER_DIR}/recorderBehaviors.h
+  ${COMMON_HEADER_DIR}/recorder.h
+  ${COMMON_HEADER_DIR}/state.cpp
 
-  controlHandler.cpp
-  gitsLoader.cpp
-  recorderBehaviors.cpp
-  recorder.cpp
-  state.cpp
+  ${COMMON_SOURCE_DIR}/controlHandler.cpp
+  ${COMMON_SOURCE_DIR}/recorderBehaviors.cpp
+  ${COMMON_SOURCE_DIR}/recorder.cpp
+  ${COMMON_SOURCE_DIR}/state.cpp
 )
 
 if(WIN32)
   list(APPEND common_SOURCES
-    include/tools_windows.h
-    tools_windows.cpp
+    ${COMMON_HEADER_DIR}/tools_windows.h
+    ${COMMON_SOURCE_DIR}/tools_windows.cpp
   )
 endif()
 
@@ -124,59 +123,61 @@ set_target_properties(common PROPERTIES FOLDER "common")
 add_definitions(-DGITS_COMMON_PROJ)
 
 add_dependencies(common config_codegen)
-target_link_libraries(common OpenGL_common xxhash murmurhash lz4 libzstd_static configuration ImGuiHUD)
+target_include_directories(common PUBLIC ${COMMON_HEADER_DIR})
+target_link_libraries(common PRIVATE OpenGL_common xxhash murmurhash lz4 libzstd_static ImGuiHUD GitsRecorderInterface png lua zlib)
+target_link_libraries(common PUBLIC configuration)
 
 if(WITH_VULKAN)
-  target_link_libraries(common Vulkan_common)
+  target_link_libraries(common PRIVATE Vulkan_common)
 endif()
 
 if(UNIX)
-  target_link_libraries(common rt dl lua)
+  target_link_libraries(common PRIVATE rt dl lua)
 endif()
 
 set(common_CCode_SOURCES
-  config.cpp
-  texture_converter.cpp
-  timer.cpp
-  log.cpp
-  bit_range.cpp
-  message_pump.cpp
-  tools_lite.cpp
-  tools.cpp
-  resource_manager.cpp
-  exception.cpp
-  dynamic_linker.cpp
-  keyEvents.cpp
-  getopt.cpp
-  streams.cpp)
+  ${COMMON_SOURCE_DIR}/config.cpp
+  ${COMMON_SOURCE_DIR}/texture_converter.cpp
+  ${COMMON_SOURCE_DIR}/timer.cpp
+  ${COMMON_SOURCE_DIR}/log.cpp
+  ${COMMON_SOURCE_DIR}/bit_range.cpp
+  ${COMMON_SOURCE_DIR}/message_pump.cpp
+  ${COMMON_SOURCE_DIR}/tools_lite.cpp
+  ${COMMON_SOURCE_DIR}/tools.cpp
+  ${COMMON_SOURCE_DIR}/resource_manager.cpp
+  ${COMMON_SOURCE_DIR}/exception.cpp
+  ${COMMON_SOURCE_DIR}/dynamic_linker.cpp
+  ${COMMON_SOURCE_DIR}/keyEvents.cpp
+  ${COMMON_SOURCE_DIR}/getopt.cpp
+  ${COMMON_SOURCE_DIR}/streams.cpp)
 if(WIN32)
-  list(APPEND common_CCode_SOURCES tools_windows.cpp)
+  list(APPEND common_CCode_SOURCES ${COMMON_SOURCE_DIR}/tools_windows.cpp)
 endif()
 
 set(common_CCode_HEADERS
-  include/timer.h
-  include/config.h
-  include/configTypes.h
-  include/message_pump.h
-  include/tools_lite.h
-  include/tools.h
-  include/resource_manager.h
-  include/exception.h
-  include/dynamic_linker.h
-  include/key_value.h
-  include/log.h
-  include/malloc_allocator.h
-  include/texture_converter.h
-  include/platform.h
-  include/pragmas.h
-  include/bit_range.h
-  include/keyEvents.h
-  include/getopt_.h
-  include/streams.h
-  include/intervalSet.h
-  include/vectorMapper.h)
+  ${COMMON_HEADER_DIR}/timer.h
+  ${COMMON_HEADER_DIR}/config.h
+  ${COMMON_HEADER_DIR}/configTypes.h
+  ${COMMON_HEADER_DIR}/message_pump.h
+  ${COMMON_HEADER_DIR}/tools_lite.h
+  ${COMMON_HEADER_DIR}/tools.h
+  ${COMMON_HEADER_DIR}/resource_manager.h
+  ${COMMON_HEADER_DIR}/exception.h
+  ${COMMON_HEADER_DIR}/dynamic_linker.h
+  ${COMMON_HEADER_DIR}/key_value.h
+  ${COMMON_HEADER_DIR}/log.h
+  ${COMMON_HEADER_DIR}/malloc_allocator.h
+  ${COMMON_HEADER_DIR}/texture_converter.h
+  ${COMMON_HEADER_DIR}/platform.h
+  ${COMMON_HEADER_DIR}/pragmas.h
+  ${COMMON_HEADER_DIR}/bit_range.h
+  ${COMMON_HEADER_DIR}/keyEvents.h
+  ${COMMON_HEADER_DIR}/getopt_.h
+  ${COMMON_HEADER_DIR}/streams.h
+  ${COMMON_HEADER_DIR}/intervalSet.h
+  ${COMMON_HEADER_DIR}/vectorMapper.h)
 if(WIN32)
-  list(APPEND common_CCode_HEADERS include/tools_windows.h)
+  list(APPEND common_CCode_HEADERS ${COMMON_HEADER_DIR}/tools_windows.h)
 endif()
 
 install(FILES ${common_CCode_SOURCES} DESTINATION CCode/CCodeSource)
