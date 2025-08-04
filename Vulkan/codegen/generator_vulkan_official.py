@@ -12615,7 +12615,7 @@ var3=VarDef(name='minLod', type='float')
 #var5=VarDef(name='numPhases', type='uint32_t')
 #)
 
-Struct(name='VkImageViewSlicedCreateInfoEXT_', enabled=False,
+Struct(name='VkImageViewSlicedCreateInfoEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='sliceOffset', type='uint32_t'),
@@ -13791,7 +13791,7 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='combinedImageSamplerDensityMapDescriptorSize', type='size_t')
 )
 
-Struct(name='VkPhysicalDeviceDescriptorBufferFeaturesEXT_', enabled=False,
+Struct(name='VkPhysicalDeviceDescriptorBufferFeaturesEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='descriptorBuffer', type='VkBool32'),
@@ -14011,7 +14011,7 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='dynamicRendering', type='VkBool32')
 )
 
-Struct(name='VkPhysicalDeviceDynamicRenderingLocalReadFeaturesKHR_', enabled=False,
+Struct(name='VkPhysicalDeviceDynamicRenderingLocalReadFeaturesKHR_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='dynamicRenderingLocalRead', type='VkBool32')
@@ -14318,7 +14318,7 @@ var4=VarDef(name='maxFragmentDensityTexelSize', type='VkExtent2D'),
 var5=VarDef(name='fragmentDensityInvocations', type='VkBool32')
 )
 
-Struct(name='VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR_', enabled=False,
+Struct(name='VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='fragmentShaderBarycentric', type='VkBool32')
@@ -14790,7 +14790,7 @@ var3=VarDef(name='maxPerSetDescriptors', type='uint32_t'),
 var4=VarDef(name='maxMemoryAllocationSize', type='VkDeviceSize')
 )
 
-Struct(name='VkPhysicalDeviceMaintenance4Features_', enabled=False,
+Struct(name='VkPhysicalDeviceMaintenance4Features_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='maintenance4', type='VkBool32')
