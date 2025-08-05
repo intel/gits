@@ -47,6 +47,9 @@ void AnalyzerRaytracingService::dispatchRays(ID3D12GraphicsCommandList4DispatchR
       if (genericReadResources_.find(resourceKey) != genericReadResources_.end()) {
         state = D3D12_RESOURCE_STATE_GENERIC_READ;
       }
+      if (stride == 0) {
+        stride = size;
+      }
       bindingTablesDump_.dumpBindingTable(c.object_.value, resource, offset, size, stride, state,
                                           c.key);
     }
