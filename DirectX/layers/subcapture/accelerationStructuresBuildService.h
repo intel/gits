@@ -10,6 +10,7 @@
 
 #include "subcaptureRecorder.h"
 #include "commandsAuto.h"
+#include "commandsCustom.h"
 #include "accelerationStructuresBufferContentRestore.h"
 #include "reservedResourcesService.h"
 #include "objectState.h"
@@ -32,6 +33,10 @@ public:
       ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& command);
   void copyAccelerationStructure(
       ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& command);
+  void nvapiBuildAccelerationStructureEx(
+      NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command);
+  void nvapiBuildOpacityMicromapArray(
+      NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command);
   void setDeviceKey(unsigned deviceKey) {
     deviceKey_ = deviceKey;
     bufferContentRestore_.setDeviceKey(deviceKey);
@@ -49,10 +54,17 @@ private:
   AccelerationStructuresBufferContentRestore bufferContentRestore_;
 
   struct RaytracingAccelerationStructureState {
+    enum StateType {
+      Build,
+      Copy,
+      NvAPIBuild,
+      NvAPIOMM
+    };
+
     virtual ~RaytracingAccelerationStructureState() {}
     unsigned commandKey{};
     unsigned commandListKey{};
-    bool buildState{};
+    StateType stateType{};
     unsigned destKey{};
     unsigned destOffset{};
     unsigned sourceKey{};
@@ -71,6 +83,24 @@ private:
     D3D12_GPU_VIRTUAL_ADDRESS destAccelerationStructureData{};
     D3D12_GPU_VIRTUAL_ADDRESS sourceAccelerationStructureData{};
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE mode{};
+  };
+
+  struct NvAPIBuildRaytracingAccelerationStructureExState
+      : public RaytracingAccelerationStructureState {
+    std::unique_ptr<PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS>>
+        desc{};
+    bool update{};
+    std::unordered_map<unsigned, ResourceState*> buffers;
+    std::vector<unsigned> uploadBuffers;
+    std::unordered_map<unsigned, ReservedResourcesService::TiledResource> tiledResources;
+  };
+
+  struct NvAPIBuildRaytracingOpacityMicromapArrayState
+      : public RaytracingAccelerationStructureState {
+    std::unique_ptr<PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>> desc{};
+    std::unordered_map<unsigned, ResourceState*> buffers;
+    std::vector<unsigned> uploadBuffers;
+    std::unordered_map<unsigned, ReservedResourcesService::TiledResource> tiledResources;
   };
 
   using KeyOffset = std::pair<unsigned, unsigned>;

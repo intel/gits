@@ -9,7 +9,9 @@
 #include "stateTrackingLayer.h"
 #include "descriptorService.h"
 #include "commandWritersAuto.h"
+#include "commandWritersCustom.h"
 #include "configurationLib.h"
+#include "nvapi.h"
 
 #include <wrl/client.h>
 
@@ -2804,6 +2806,84 @@ void StateTrackingLayer::post(IDStorageFactoryCreateStatusArrayCommand& c) {
   stateService_.storeState(state);
 
   setAsChildInParent(state->parentKey, state->key);
+}
+
+void StateTrackingLayer::post(NvAPI_InitializeCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  if (c.result_.value != NVAPI_OK) {
+    return;
+  }
+  stateService_.getNvAPIGlobalStateService().incrementInitialize();
+}
+
+void StateTrackingLayer::post(NvAPI_UnloadCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  if (c.result_.value != NVAPI_OK) {
+    return;
+  }
+  stateService_.getNvAPIGlobalStateService().decrementInitialize();
+}
+
+void StateTrackingLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  if (c.result_.value != NVAPI_OK) {
+    return;
+  }
+  stateService_.getNvAPIGlobalStateService().addSetNvShaderExtnSlotSpaceCommand(c);
+}
+
+void StateTrackingLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  if (c.result_.value != NVAPI_OK) {
+    return;
+  }
+  stateService_.getNvAPIGlobalStateService().addSetNvShaderExtnSlotSpaceLocalThreadCommand(c);
+}
+
+void StateTrackingLayer::pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  accelerationStructuresBuildService_.nvapiBuildAccelerationStructureEx(c);
+}
+
+void StateTrackingLayer::post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+
+  CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
+  command->commandWriter.reset(new NvAPI_D3D12_BuildRaytracingAccelerationStructureExWriter(c));
+  CommandListState* state =
+      static_cast<CommandListState*>(stateService_.getState(c.pCommandList_.key));
+  state->commands.push_back(command);
+}
+
+void StateTrackingLayer::pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  accelerationStructuresBuildService_.nvapiBuildOpacityMicromapArray(c);
+}
+
+void StateTrackingLayer::post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+
+  CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
+  command->commandWriter.reset(new NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayWriter(c));
+  CommandListState* state =
+      static_cast<CommandListState*>(stateService_.getState(c.pCommandList_.key));
+  state->commands.push_back(command);
 }
 
 } // namespace DirectX

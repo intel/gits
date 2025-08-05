@@ -33,6 +33,7 @@ void StateTrackingService::restoreState() {
       restoreState(it.second);
     }
   }
+  nvapiGlobalStateService_.restureInitializeCount();
   xessStateService_.restoreState();
   descriptorService_.restoreState();
   accelerationStructuresSerializeService_.restoreAccelerationStructures();
@@ -672,6 +673,7 @@ void StateTrackingService::restoreD3D12INTCDeviceExtensionContext(ObjectState* s
 }
 
 void StateTrackingService::restoreD3D12StateObject(ObjectState* state) {
+  nvapiGlobalStateService_.restoreShaderExtnSlotSpaceBeforeCommand(state->creationCommand->key);
   recorder_.record(createCommandWriter(state->creationCommand.get()));
   for (unsigned key : state->childrenKeys) {
     auto it = statesByKey_.find(key);
@@ -726,6 +728,49 @@ void StateTrackingService::SwapChainService::recordSwapChainPresent() {
   presentCommand.SyncInterval_.value = 0;
   presentCommand.Flags_.value = 0;
   stateService_.recorder_.record(new IDXGISwapChainPresentWriter(presentCommand));
+}
+
+void StateTrackingService::NvAPIGlobalStateService::incrementInitialize() {
+  ++nvapiInitializeCount_;
+}
+
+void StateTrackingService::NvAPIGlobalStateService::decrementInitialize() {
+  if (nvapiInitializeCount_ > 0) {
+    --nvapiInitializeCount_;
+  }
+}
+
+void StateTrackingService::NvAPIGlobalStateService::addSetNvShaderExtnSlotSpaceCommand(
+    const NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
+  setNvShaderExtnSlotSpaceCommands_.push(OrderedCommand{
+      command.key, std::make_unique<NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand>(command)});
+}
+
+void StateTrackingService::NvAPIGlobalStateService::addSetNvShaderExtnSlotSpaceLocalThreadCommand(
+    const NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
+  setNvShaderExtnSlotSpaceCommands_.push(OrderedCommand{
+      command.key,
+      std::make_unique<NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand>(command)});
+}
+
+void StateTrackingService::NvAPIGlobalStateService::restureInitializeCount() {
+  for (unsigned i = 0; i < nvapiInitializeCount_; ++i) {
+    NvAPI_InitializeCommand initializeCommand;
+    initializeCommand.key = stateService_.getUniqueCommandKey();
+    stateService_.recorder_.record(new NvAPI_InitializeWriter(initializeCommand));
+  }
+}
+
+void StateTrackingService::NvAPIGlobalStateService::restoreShaderExtnSlotSpaceBeforeCommand(
+    unsigned commandKey) {
+  while (!setNvShaderExtnSlotSpaceCommands_.empty()) {
+    const auto& command = setNvShaderExtnSlotSpaceCommands_.top();
+    if (command.key >= commandKey) {
+      break;
+    }
+    stateService_.recorder_.record(createCommandWriter(command.command.get()));
+    setNvShaderExtnSlotSpaceCommands_.pop();
+  }
 }
 
 } // namespace DirectX

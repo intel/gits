@@ -193,47 +193,31 @@ void RecordingLayer::post(NvAPI_UnloadCommand& command) {
     recorder_.record(new NvAPI_UnloadWriter(command));
   }
 }
+
 void RecordingLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
-  static bool logged = false;
-  if (!logged) {
-    Log(ERR) << "NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand not handled in subcapture";
-    logged = true;
-  }
   if (subcaptureRange_.inRange()) {
     recorder_.record(new NvAPI_D3D12_SetNvShaderExtnSlotSpaceWriter(command));
   }
 }
+
 void RecordingLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) {
-  static bool logged = false;
-  if (!logged) {
-    Log(ERR) << "NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand not handled in subcapture";
-    logged = true;
-  }
   if (subcaptureRange_.inRange()) {
     recorder_.record(new NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadWriter(command));
   }
 }
+
 void RecordingLayer::post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) {
-  static bool logged = false;
-  if (!logged) {
-    Log(ERR)
-        << "NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand not handled in subcapture";
-    logged = true;
-  }
   if (subcaptureRange_.inRange()) {
     recorder_.record(new NvAPI_D3D12_BuildRaytracingAccelerationStructureExWriter(command));
   }
 }
+
 void RecordingLayer::post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) {
-  static bool logged = false;
-  if (!logged) {
-    Log(ERR) << "NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand not handled in subcapture";
-    logged = true;
-  }
   if (subcaptureRange_.inRange()) {
     recorder_.record(new NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayWriter(command));
   }
 }
+
 void RecordingLayer::post(
     NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
   static bool logged = false;

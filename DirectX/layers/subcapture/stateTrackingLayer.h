@@ -220,6 +220,14 @@ public:
   void post(IDStorageFactoryOpenFileCommand& c) override;
   void post(IDStorageFactoryCreateQueueCommand& c) override;
   void post(IDStorageFactoryCreateStatusArrayCommand& c) override;
+  void post(NvAPI_InitializeCommand& c) override;
+  void post(NvAPI_UnloadCommand& c) override;
+  void post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& c) override;
+  void post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& c) override;
+  void pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) override;
+  void post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) override;
+  void pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) override;
+  void post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) override;
 
 private:
   void setAsChildInParent(unsigned parentKey, unsigned childKey);

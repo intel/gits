@@ -14,6 +14,7 @@
 #include "reservedResourcesService.h"
 #include "gits.h"
 #include "configurationLib.h"
+#include "nvapi.h"
 
 namespace gits {
 namespace DirectX {
@@ -64,7 +65,7 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
       new BuildRaytracingAccelerationStructureState();
   state->commandKey = c.key;
   state->commandListKey = commandListDirectKey_;
-  state->buildState = true;
+  state->stateType = RaytracingAccelerationStructureState::Build;
   state->destKey = c.pDesc_.destAccelerationStructureKey;
   state->destOffset = c.pDesc_.destAccelerationStructureOffset;
   state->sourceKey = c.pDesc_.sourceAccelerationStructureKey;
@@ -172,6 +173,7 @@ void AccelerationStructuresBuildService::copyAccelerationStructure(
   CopyRaytracingAccelerationStructureState* state = new CopyRaytracingAccelerationStructureState();
   state->commandKey = c.key;
   state->commandListKey = commandListDirectKey_;
+  state->stateType = RaytracingAccelerationStructureState::Copy;
   state->destAccelerationStructureData = c.DestAccelerationStructureData_.value;
   state->destKey = c.DestAccelerationStructureData_.interfaceKey;
   state->destOffset = c.DestAccelerationStructureData_.offset;
@@ -183,6 +185,473 @@ void AccelerationStructuresBuildService::copyAccelerationStructure(
   stateService_.keepState(c.DestAccelerationStructureData_.interfaceKey);
 
   statesByCommandList_[c.object_.key].emplace_back(state);
+}
+
+void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
+    NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
+  const NVAPI_D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC_EX* pDesc = c.pParams.value->pDesc;
+  if (!restoreTLASes_ &&
+      pDesc->inputs.type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+    return;
+  }
+
+  if (restored_) {
+    return;
+  }
+
+  NVAPI_D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS_EX inputs = pDesc->inputs;
+
+  Microsoft::WRL::ComPtr<ID3D12Device5> device;
+  HRESULT hr = c.pCommandList_.value->GetDevice(IID_PPV_ARGS(&device));
+  GITS_ASSERT(hr == S_OK);
+  NVAPI_GET_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO_EX_PARAMS params{};
+  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info{};
+  params.version = NVAPI_GET_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO_EX_PARAMS_VER;
+  params.pDesc = &inputs;
+  params.pInfo = &info;
+  NvAPI_D3D12_GetRaytracingAccelerationStructurePrebuildInfoEx(device.Get(), &params);
+  if (info.ScratchDataSizeInBytes > maxBuildScratchSpace_) {
+    maxBuildScratchSpace_ = info.ScratchDataSizeInBytes;
+  }
+  if (info.UpdateScratchDataSizeInBytes > maxBuildScratchSpace_) {
+    maxBuildScratchSpace_ = info.UpdateScratchDataSizeInBytes;
+  }
+
+  NvAPIBuildRaytracingAccelerationStructureExState* state =
+      new NvAPIBuildRaytracingAccelerationStructureExState();
+  state->commandKey = c.key;
+  state->commandListKey = commandListDirectKey_;
+  state->stateType = RaytracingAccelerationStructureState::NvAPIBuild;
+  state->destKey = c.pParams.destAccelerationStructureKey;
+  state->destOffset = c.pParams.destAccelerationStructureOffset;
+  state->sourceKey = c.pParams.sourceAccelerationStructureKey;
+  state->sourceOffset = c.pParams.sourceAccelerationStructureOffset;
+  state->update = pDesc->inputs.flags &
+                  NVAPI_D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE_EX;
+
+  if (serializeMode_ &&
+      pDesc->inputs.type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+    tlases_.insert(std::make_pair(state->destKey, state->destOffset));
+  }
+
+  state->desc.reset(
+      new PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS>(c.pParams));
+
+  auto storeBuffer = [&](unsigned inputIndex, unsigned size) {
+    unsigned inputKey = c.pParams.inputKeys[inputIndex];
+    unsigned inputOffset = c.pParams.inputOffsets[inputIndex];
+    stateService_.keepState(inputKey);
+    ResourceState* bufferState = static_cast<ResourceState*>(stateService_.getState(inputKey));
+    unsigned uploadResourceKey = stateService_.getUniqueObjectKey();
+    state->uploadBuffers.push_back(uploadResourceKey);
+    D3D12_RESOURCE_STATES resourceState = bufferState->isGenericRead
+                                              ? D3D12_RESOURCE_STATE_GENERIC_READ
+                                              : D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+    bufferContentRestore_.storeBuffer(c.pCommandList_.value, commandListCopyKey_,
+                                      static_cast<ID3D12Resource*>(bufferState->object), inputKey,
+                                      inputOffset, size, resourceState, c.key,
+                                      bufferState->isMappable, uploadResourceKey);
+    state->buffers[inputKey] = bufferState;
+    ReservedResourcesService::TiledResource* tiledResource =
+        reservedResourcesService_.getTiledResource(inputKey);
+    if (tiledResource) {
+      auto it = state->tiledResources.find(inputKey);
+      if (it == state->tiledResources.end()) {
+        state->tiledResources[inputKey] = *tiledResource;
+      }
+      for (ReservedResourcesService::Tile& tile : tiledResource->tiles) {
+        if (tile.heapKey) {
+          stateService_.keepState(tile.heapKey);
+        }
+      }
+    }
+  };
+
+  stateService_.keepState(c.pParams.destAccelerationStructureKey);
+
+  unsigned inputIndex = 0;
+  if (inputs.type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL && inputs.numDescs) {
+    if (inputs.numDescs) {
+      unsigned size = inputs.numDescs * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
+      storeBuffer(inputIndex, size);
+    }
+  } else {
+    for (unsigned i = 0; i < inputs.numDescs; ++i) {
+      const NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX& desc =
+          pDesc->inputs.descsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY
+              ? *(const NVAPI_D3D12_RAYTRACING_GEOMETRY_DESC_EX*)((char*)(pDesc->inputs
+                                                                              .pGeometryDescs) +
+                                                                  pDesc->inputs
+                                                                          .geometryDescStrideInBytes *
+                                                                      i)
+              : *pDesc->inputs.ppGeometryDescs[i];
+      if (desc.type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
+        if (desc.triangles.Transform3x4) {
+          unsigned size = sizeof(float) * 3 * 4;
+          storeBuffer(inputIndex, size);
+        }
+        ++inputIndex;
+        if (desc.triangles.IndexBuffer && desc.triangles.IndexCount) {
+          unsigned size = desc.triangles.IndexCount *
+                          (desc.triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
+          storeBuffer(inputIndex, size);
+        }
+        ++inputIndex;
+        if (desc.triangles.VertexBuffer.StartAddress && desc.triangles.VertexCount) {
+          unsigned stride = desc.triangles.VertexBuffer.StrideInBytes;
+          if (!stride) {
+            if (desc.triangles.VertexFormat == DXGI_FORMAT_R16G16B16A16_SNORM) {
+              stride = 8;
+            }
+          }
+          unsigned size = desc.triangles.VertexCount * stride;
+          storeBuffer(inputIndex, size);
+        }
+        ++inputIndex;
+      } else if (desc.type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
+        if (desc.aabbs.AABBs.StartAddress && desc.aabbs.AABBCount) {
+          unsigned size = desc.aabbs.AABBCount * desc.aabbs.AABBs.StrideInBytes;
+          storeBuffer(inputIndex, size);
+        }
+        ++inputIndex;
+      } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES_EX) {
+        if (desc.ommTriangles.triangles.Transform3x4) {
+          unsigned size = sizeof(float) * 3 * 4;
+          storeBuffer(inputIndex, size);
+        }
+        ++inputIndex;
+        if (desc.ommTriangles.triangles.IndexBuffer && desc.ommTriangles.triangles.IndexCount) {
+          unsigned size = desc.ommTriangles.triangles.IndexCount *
+                          (desc.ommTriangles.triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
+          storeBuffer(inputIndex, size);
+        }
+        ++inputIndex;
+        if (desc.ommTriangles.triangles.VertexBuffer.StartAddress &&
+            desc.ommTriangles.triangles.VertexCount) {
+          unsigned stride = desc.ommTriangles.triangles.VertexBuffer.StrideInBytes;
+          if (!stride) {
+            if (desc.ommTriangles.triangles.VertexFormat == DXGI_FORMAT_R16G16B16A16_SNORM) {
+              stride = 8;
+            }
+          }
+          unsigned size = desc.ommTriangles.triangles.VertexCount * stride;
+          storeBuffer(inputIndex, size);
+        }
+        ++inputIndex;
+        if (desc.ommTriangles.ommAttachment.opacityMicromapIndexBuffer.StartAddress) {
+          unsigned stride =
+              desc.ommTriangles.ommAttachment.opacityMicromapIndexBuffer.StrideInBytes;
+          if (!stride) {
+            if (desc.ommTriangles.ommAttachment.opacityMicromapIndexFormat ==
+                DXGI_FORMAT_R32_UINT) {
+              stride = 4;
+            } else if (desc.ommTriangles.ommAttachment.opacityMicromapIndexFormat ==
+                       DXGI_FORMAT_R16_UINT) {
+              stride = 2;
+            }
+          }
+          GITS_ASSERT(stride);
+          unsigned ommCount{};
+          for (unsigned j = 0; j < desc.ommTriangles.ommAttachment.numOMMUsageCounts; ++j) {
+            ommCount += desc.ommTriangles.ommAttachment.pOMMUsageCounts[j].count;
+          }
+          if (!ommCount) {
+            ommCount = desc.ommTriangles.triangles.IndexCount / 3;
+          }
+          unsigned size = ommCount * stride;
+          if (size) {
+            storeBuffer(inputIndex, size);
+          }
+        }
+        ++inputIndex;
+        ++inputIndex;
+      } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_DMM_TRIANGLES_EX) {
+        if (desc.dmmTriangles.triangles.Transform3x4) {
+          unsigned size = sizeof(float) * 3 * 4;
+          storeBuffer(inputIndex, size);
+        }
+        ++inputIndex;
+        if (desc.dmmTriangles.triangles.IndexBuffer && desc.dmmTriangles.triangles.IndexCount) {
+          unsigned size = desc.dmmTriangles.triangles.IndexCount *
+                          (desc.dmmTriangles.triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
+          storeBuffer(inputIndex, size);
+        }
+        ++inputIndex;
+        if (desc.dmmTriangles.triangles.VertexBuffer.StartAddress &&
+            desc.dmmTriangles.triangles.VertexCount) {
+          unsigned stride = desc.dmmTriangles.triangles.VertexBuffer.StrideInBytes;
+          if (!stride) {
+            if (desc.dmmTriangles.triangles.VertexFormat == DXGI_FORMAT_R16G16B16A16_SNORM) {
+              stride = 8;
+            }
+          }
+          unsigned size = desc.dmmTriangles.triangles.VertexCount * stride;
+          storeBuffer(inputIndex, size);
+        }
+        ++inputIndex;
+        if (desc.dmmTriangles.dmmAttachment.triangleMicromapIndexBuffer.StartAddress) {
+          unsigned stride =
+              desc.dmmTriangles.dmmAttachment.triangleMicromapIndexBuffer.StrideInBytes;
+          if (!stride) {
+            if (desc.dmmTriangles.dmmAttachment.triangleMicromapIndexFormat ==
+                DXGI_FORMAT_R32_UINT) {
+              stride = 4;
+            } else if (desc.dmmTriangles.dmmAttachment.triangleMicromapIndexFormat ==
+                       DXGI_FORMAT_R16_UINT) {
+              stride = 2;
+            }
+          }
+          GITS_ASSERT(stride);
+          unsigned dmmCount{};
+          for (unsigned j = 0; j < desc.dmmTriangles.dmmAttachment.numDMMUsageCounts; ++j) {
+            dmmCount += desc.dmmTriangles.dmmAttachment.pDMMUsageCounts[j].count;
+          }
+          if (!dmmCount) {
+            dmmCount = desc.dmmTriangles.triangles.IndexCount / 3;
+          }
+          unsigned size = dmmCount * stride;
+          if (size) {
+            storeBuffer(inputIndex, size);
+          }
+        }
+        ++inputIndex;
+        if (desc.dmmTriangles.dmmAttachment.trianglePrimitiveFlagsBuffer.StartAddress) {
+          unsigned size = desc.dmmTriangles.triangles.VertexCount;
+          storeBuffer(inputIndex, size);
+        }
+        ++inputIndex;
+        if (desc.dmmTriangles.dmmAttachment.vertexBiasAndScaleBuffer.StartAddress) {
+          unsigned stride = desc.dmmTriangles.dmmAttachment.vertexBiasAndScaleBuffer.StrideInBytes;
+          if (!stride) {
+            if (desc.dmmTriangles.dmmAttachment.vertexBiasAndScaleFormat ==
+                DXGI_FORMAT_R32G32_FLOAT) {
+              stride = 8;
+            } else if (desc.dmmTriangles.dmmAttachment.vertexBiasAndScaleFormat ==
+                       DXGI_FORMAT_R16G16_FLOAT) {
+              stride = 4;
+            }
+          }
+          GITS_ASSERT(stride);
+          unsigned size = desc.dmmTriangles.triangles.VertexCount * stride;
+          storeBuffer(inputIndex, size);
+        }
+        ++inputIndex;
+        if (desc.dmmTriangles.dmmAttachment.vertexDisplacementVectorBuffer.StartAddress) {
+          unsigned stride =
+              desc.dmmTriangles.dmmAttachment.vertexDisplacementVectorBuffer.StrideInBytes;
+          if (!stride) {
+            // The Alpha channel is ignored
+            if (desc.dmmTriangles.dmmAttachment.vertexDisplacementVectorFormat ==
+                    DXGI_FORMAT_R32G32B32A32_FLOAT ||
+                desc.dmmTriangles.dmmAttachment.vertexDisplacementVectorFormat ==
+                    DXGI_FORMAT_R32G32B32_FLOAT) {
+              stride = 12;
+            } else if (desc.dmmTriangles.dmmAttachment.vertexDisplacementVectorFormat ==
+                       DXGI_FORMAT_R16G16B16A16_FLOAT) {
+              stride = 6;
+            }
+          }
+          GITS_ASSERT(stride);
+          unsigned size = desc.dmmTriangles.triangles.VertexCount * stride;
+          storeBuffer(inputIndex, size);
+        }
+        ++inputIndex;
+        ++inputIndex;
+      } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_SPHERES_EX) {
+        if (desc.spheres.vertexPositionBuffer.StartAddress) {
+          unsigned stride = desc.spheres.vertexPositionBuffer.StrideInBytes;
+          // Supports the same formats as the triangle vertex buffers
+          if (!stride) {
+            if (desc.spheres.vertexPositionFormat == DXGI_FORMAT_R16G16B16A16_SNORM) {
+              stride = 8;
+            }
+          }
+          GITS_ASSERT(stride);
+          unsigned size = desc.spheres.vertexCount * stride;
+          storeBuffer(inputIndex, size);
+        }
+        ++inputIndex;
+        if (desc.spheres.vertexRadiusBuffer.StartAddress) {
+          unsigned stride{};
+          if (desc.spheres.vertexRadiusFormat == DXGI_FORMAT_R32_FLOAT) {
+            stride = 4;
+          } else if (desc.spheres.vertexRadiusFormat == DXGI_FORMAT_R16_FLOAT) {
+            stride = 2;
+          }
+          GITS_ASSERT(stride);
+          unsigned size = desc.spheres.vertexCount * stride;
+          storeBuffer(inputIndex, size);
+        }
+        ++inputIndex;
+        if (desc.spheres.indexBuffer.StartAddress) {
+          unsigned stride = desc.spheres.indexBuffer.StrideInBytes;
+          if (!stride) {
+            if (desc.spheres.indexFormat == DXGI_FORMAT_R32_UINT) {
+              stride = 4;
+            } else if (desc.spheres.indexFormat == DXGI_FORMAT_R16_UINT) {
+              stride = 2;
+            } else if (desc.spheres.indexFormat == DXGI_FORMAT_R8_UINT) {
+              stride = 1;
+            }
+          }
+          GITS_ASSERT(stride);
+          unsigned size = desc.spheres.indexCount * stride;
+          storeBuffer(inputIndex, size);
+        }
+        ++inputIndex;
+      } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_LSS_EX) {
+        if (desc.lss.vertexPositionBuffer.StartAddress) {
+          unsigned stride = desc.lss.vertexPositionBuffer.StrideInBytes;
+          // Supports the same formats as the triangle vertex buffers
+          if (!stride) {
+            if (desc.lss.vertexPositionFormat == DXGI_FORMAT_R16G16B16A16_SNORM) {
+              stride = 8;
+            }
+          }
+          GITS_ASSERT(stride);
+          unsigned size = desc.lss.primitiveCount * stride;
+          storeBuffer(inputIndex, size);
+        }
+        ++inputIndex;
+        if (desc.lss.vertexRadiusBuffer.StartAddress) {
+          unsigned stride{};
+          if (desc.lss.vertexRadiusFormat == DXGI_FORMAT_R32_FLOAT) {
+            stride = 4;
+          } else if (desc.lss.vertexRadiusFormat == DXGI_FORMAT_R16_FLOAT) {
+            stride = 2;
+          }
+          GITS_ASSERT(stride);
+          unsigned size = desc.lss.primitiveCount * stride;
+          storeBuffer(inputIndex, size);
+        }
+        ++inputIndex;
+        if (desc.lss.indexBuffer.StartAddress) {
+          unsigned stride = desc.lss.indexBuffer.StrideInBytes;
+          if (!stride) {
+            if (desc.lss.indexFormat == DXGI_FORMAT_R32_UINT) {
+              stride = 4;
+            } else if (desc.lss.indexFormat == DXGI_FORMAT_R16_UINT) {
+              stride = 2;
+            } else if (desc.lss.indexFormat == DXGI_FORMAT_R8_UINT) {
+              stride = 1;
+            }
+          }
+          GITS_ASSERT(stride);
+          unsigned size = desc.lss.indexCount * stride;
+          storeBuffer(inputIndex, size);
+        }
+        ++inputIndex;
+      }
+    }
+  }
+
+  statesByCommandList_[c.pCommandList_.key].emplace_back(state);
+}
+
+void AccelerationStructuresBuildService::nvapiBuildOpacityMicromapArray(
+    NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
+  if (restored_) {
+    return;
+  }
+
+  const NVAPI_D3D12_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_DESC* pDesc = c.pParams.value->pDesc;
+
+  NVAPI_D3D12_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_INPUTS inputs = pDesc->inputs;
+
+  Microsoft::WRL::ComPtr<ID3D12Device5> device;
+  HRESULT hr = c.pCommandList_.value->GetDevice(IID_PPV_ARGS(&device));
+  GITS_ASSERT(hr == S_OK);
+  NVAPI_GET_RAYTRACING_OPACITY_MICROMAP_ARRAY_PREBUILD_INFO_PARAMS params{};
+  NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_PREBUILD_INFO info{};
+  params.version = NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS_VER;
+  params.pDesc = &inputs;
+  params.pInfo = &info;
+  NvAPI_D3D12_GetRaytracingOpacityMicromapArrayPrebuildInfo(device.Get(), &params);
+  if (info.scratchDataSizeInBytes > maxBuildScratchSpace_) {
+    maxBuildScratchSpace_ = info.scratchDataSizeInBytes;
+  }
+
+  NvAPIBuildRaytracingOpacityMicromapArrayState* state =
+      new NvAPIBuildRaytracingOpacityMicromapArrayState();
+  state->commandKey = c.key;
+  state->commandListKey = commandListDirectKey_;
+  state->stateType = RaytracingAccelerationStructureState::NvAPIOMM;
+  state->destKey = c.pParams.destOpacityMicromapArrayDataKey;
+  state->destOffset = c.pParams.destOpacityMicromapArrayDataOffset;
+
+  state->desc.reset(
+      new PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>(c.pParams));
+
+  auto storeBuffer = [&](unsigned inputKey, unsigned inputOffset, unsigned size) {
+    stateService_.keepState(inputKey);
+    ResourceState* bufferState = static_cast<ResourceState*>(stateService_.getState(inputKey));
+    unsigned uploadResourceKey = stateService_.getUniqueObjectKey();
+    state->uploadBuffers.push_back(uploadResourceKey);
+    D3D12_RESOURCE_STATES resourceState = bufferState->isGenericRead
+                                              ? D3D12_RESOURCE_STATE_GENERIC_READ
+                                              : D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+    bufferContentRestore_.storeBuffer(c.pCommandList_.value, commandListCopyKey_,
+                                      static_cast<ID3D12Resource*>(bufferState->object), inputKey,
+                                      inputOffset, size, resourceState, c.key,
+                                      bufferState->isMappable, uploadResourceKey);
+    state->buffers[inputKey] = bufferState;
+    ReservedResourcesService::TiledResource* tiledResource =
+        reservedResourcesService_.getTiledResource(inputKey);
+    if (tiledResource) {
+      auto it = state->tiledResources.find(inputKey);
+      if (it == state->tiledResources.end()) {
+        state->tiledResources[inputKey] = *tiledResource;
+      }
+      for (ReservedResourcesService::Tile& tile : tiledResource->tiles) {
+        if (tile.heapKey) {
+          stateService_.keepState(tile.heapKey);
+        }
+      }
+    }
+  };
+
+  stateService_.keepState(c.pParams.destOpacityMicromapArrayDataKey);
+
+  {
+    unsigned ommCount{};
+    size_t inputSize{};
+    for (unsigned i = 0; i < pDesc->inputs.numOMMUsageCounts; ++i) {
+      const auto& usage = pDesc->inputs.pOMMUsageCounts[i];
+      ommCount += usage.count;
+
+      unsigned numMicroTriangles = 1u << (2 * usage.subdivisionLevel);
+      unsigned bitsPerTriangle{};
+      if (usage.format == NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_FORMAT_OC1_4_STATE) {
+        bitsPerTriangle = 2;
+      } else if (usage.format == NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_FORMAT_OC1_2_STATE) {
+        bitsPerTriangle = 1;
+      }
+      GITS_ASSERT(bitsPerTriangle);
+
+      unsigned bitsPerOMM = numMicroTriangles * bitsPerTriangle;
+      unsigned bytesPerOMM = (bitsPerOMM + 7) / 8; // round up to full byte
+
+      inputSize += usage.count * bytesPerOMM;
+    }
+
+    auto alignUp = [](size_t value, size_t alignment) {
+      return (value + alignment - 1) & ~(alignment - 1);
+    };
+    inputSize = alignUp(inputSize, 256);
+
+    if (pDesc->inputs.inputBuffer) {
+      storeBuffer(c.pParams.inputBufferKey, c.pParams.inputBufferOffset, inputSize);
+    }
+    if (pDesc->inputs.perOMMDescs.StartAddress) {
+      unsigned stride = pDesc->inputs.perOMMDescs.StrideInBytes;
+      if (!stride) {
+        stride = sizeof(NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_USAGE_COUNT);
+      }
+      storeBuffer(c.pParams.perOMMDescsKey, c.pParams.perOMMDescsOffset, stride * ommCount);
+    }
+  }
+
+  statesByCommandList_[c.pCommandList_.key].emplace_back(state);
 }
 
 void AccelerationStructuresBuildService::restoreAccelerationStructures() {
@@ -316,7 +785,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
   std::map<std::pair<unsigned, unsigned>, uint64_t> bufferHashesByKeyOffset;
   std::unordered_map<unsigned, std::unordered_set<unsigned>> tiledResourceUpdatesRestored;
   for (auto& itState : statesById_) {
-    if (itState.second->buildState) {
+    if (itState.second->stateType == RaytracingAccelerationStructureState::Build) {
       BuildRaytracingAccelerationStructureState* state =
           static_cast<BuildRaytracingAccelerationStructureState*>(itState.second);
 
@@ -496,7 +965,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
           stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommand));
         }
       }
-    } else {
+    } else if (itState.second->stateType == RaytracingAccelerationStructureState::Copy) {
       CopyRaytracingAccelerationStructureState* state =
           static_cast<CopyRaytracingAccelerationStructureState*>(itState.second);
 
@@ -559,6 +1028,370 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
         stateService_.getRecorder().record(
             new ID3D12GraphicsCommandListResetWriter(commandListReset));
       }
+    } else if (itState.second->stateType == RaytracingAccelerationStructureState::NvAPIBuild) {
+      NvAPIBuildRaytracingAccelerationStructureExState* state =
+          static_cast<NvAPIBuildRaytracingAccelerationStructureExState*>(itState.second);
+
+      std::unordered_set<unsigned> restoredBuffers;
+      std::unordered_set<unsigned> uploadBuffers;
+
+      std::vector<AccelerationStructuresBufferContentRestore::BufferRestoreInfo>& restoreInfos =
+          bufferContentRestore_.getRestoreInfos(state->commandKey);
+      for (AccelerationStructuresBufferContentRestore::BufferRestoreInfo& info : restoreInfos) {
+        auto itHash = bufferHashesByKeyOffset.find(std::pair(info.bufferKey, info.offset));
+        if (itHash != bufferHashesByKeyOffset.end() && itHash->second == info.bufferHash) {
+          continue;
+        }
+        bufferHashesByKeyOffset[std::pair(info.bufferKey, info.offset)] = info.bufferHash;
+        restoredBuffers.insert(info.bufferKey);
+        uploadBuffers.insert(info.uploadResourceKey);
+
+        for (auto& itTiledResource : state->tiledResources) {
+          auto it = tiledResourceUpdatesRestored.find(info.bufferKey);
+          if (it == tiledResourceUpdatesRestored.end() ||
+              it->second.find(itTiledResource.second.updateId) == it->second.end()) {
+            reservedResourcesService_.updateTileMappings(itTiledResource.second,
+                                                         commandQueueCopyKey_, nullptr);
+            tiledResourceUpdatesRestored[info.bufferKey].insert(itTiledResource.second.updateId);
+          }
+        }
+
+        for (CommandWriter* command : info.restoreCommands) {
+          recorder_.record(command);
+        }
+      }
+
+      {
+        ID3D12GraphicsCommandListCloseCommand commandListClose;
+        commandListClose.key = stateService_.getUniqueCommandKey();
+        commandListClose.object_.key = commandListCopyKey_;
+        stateService_.getRecorder().record(
+            new ID3D12GraphicsCommandListCloseWriter(commandListClose));
+
+        ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
+        executeCommandLists.key = stateService_.getUniqueCommandKey();
+        executeCommandLists.object_.key = commandQueueCopyKey_;
+        executeCommandLists.NumCommandLists_.value = 1;
+        executeCommandLists.ppCommandLists_.value = reinterpret_cast<ID3D12CommandList**>(1);
+        executeCommandLists.ppCommandLists_.size = 1;
+        executeCommandLists.ppCommandLists_.keys.resize(1);
+        executeCommandLists.ppCommandLists_.keys[0] = commandListCopyKey_;
+        stateService_.getRecorder().record(
+            new ID3D12CommandQueueExecuteCommandListsWriter(executeCommandLists));
+
+        ID3D12CommandQueueSignalCommand commandQueueSignal;
+        commandQueueSignal.key = stateService_.getUniqueCommandKey();
+        commandQueueSignal.object_.key = commandQueueCopyKey_;
+        commandQueueSignal.pFence_.key = fenceKey_;
+        commandQueueSignal.Value_.value = ++recordedFenceValue_;
+        stateService_.getRecorder().record(new ID3D12CommandQueueSignalWriter(commandQueueSignal));
+
+        ID3D12FenceGetCompletedValueCommand getCompletedValue;
+        getCompletedValue.key = stateService_.getUniqueCommandKey();
+        getCompletedValue.object_.key = fenceKey_;
+        getCompletedValue.result_.value = recordedFenceValue_;
+        stateService_.getRecorder().record(
+            new ID3D12FenceGetCompletedValueWriter(getCompletedValue));
+
+        ID3D12CommandAllocatorResetCommand commandAllocatorReset;
+        commandAllocatorReset.key = stateService_.getUniqueCommandKey();
+        commandAllocatorReset.object_.key = commandAllocatorCopyKey_;
+        stateService_.getRecorder().record(
+            new ID3D12CommandAllocatorResetWriter(commandAllocatorReset));
+
+        ID3D12GraphicsCommandListResetCommand commandListReset;
+        commandListReset.key = stateService_.getUniqueCommandKey();
+        commandListReset.object_.key = commandListCopyKey_;
+        commandListReset.pAllocator_.key = commandAllocatorCopyKey_;
+        commandListReset.pInitialState_.key = 0;
+        stateService_.getRecorder().record(
+            new ID3D12GraphicsCommandListResetWriter(commandListReset));
+      }
+
+      for (auto& it : state->buffers) {
+        if (!it.second->isMappable && restoredBuffers.find(it.first) != restoredBuffers.end()) {
+          ID3D12GraphicsCommandListResourceBarrierCommand barrierCommand;
+          barrierCommand.key = stateService_.getUniqueCommandKey();
+          barrierCommand.object_.key = commandListDirectKey_;
+          barrierCommand.NumBarriers_.value = 1;
+          D3D12_RESOURCE_BARRIER barrier{};
+          barrierCommand.pBarriers_.value = &barrier;
+          barrierCommand.pBarriers_.size = 1;
+          barrierCommand.pBarriers_.resourceKeys.resize(1);
+          barrierCommand.pBarriers_.resourceAfterKeys.resize(1);
+          barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+          barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+          barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+          barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+          barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+          barrierCommand.pBarriers_.resourceKeys[0] = it.first;
+          stateService_.getRecorder().record(
+              new ID3D12GraphicsCommandListResourceBarrierWriter(barrierCommand));
+        }
+      }
+
+      state->desc->scratchAccelerationStructureKey = scratchResourceKey;
+      state->desc->scratchAccelerationStructureOffset = 0;
+
+      {
+        NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand build;
+        build.key = state->commandKey;
+        build.pCommandList_.key = commandListDirectKey_;
+        build.pParams.value = state->desc->value;
+        build.pParams.destAccelerationStructureKey = state->desc->destAccelerationStructureKey;
+        build.pParams.destAccelerationStructureOffset =
+            state->desc->destAccelerationStructureOffset;
+        build.pParams.sourceAccelerationStructureKey = state->desc->sourceAccelerationStructureKey;
+        build.pParams.sourceAccelerationStructureOffset =
+            state->desc->sourceAccelerationStructureOffset;
+        build.pParams.scratchAccelerationStructureKey =
+            state->desc->scratchAccelerationStructureKey;
+        build.pParams.scratchAccelerationStructureOffset =
+            state->desc->scratchAccelerationStructureOffset;
+        build.pParams.inputKeys = state->desc->inputKeys;
+        build.pParams.inputOffsets = state->desc->inputOffsets;
+        build.pParams.value->numPostbuildInfoDescs = 0;
+        build.pParams.value->pPostbuildInfoDescs = nullptr;
+        recorder_.record(new NvAPI_D3D12_BuildRaytracingAccelerationStructureExWriter(build));
+      }
+
+      {
+        ID3D12GraphicsCommandListCloseCommand commandListClose;
+        commandListClose.key = stateService_.getUniqueCommandKey();
+        commandListClose.object_.key = commandListDirectKey_;
+        stateService_.getRecorder().record(
+            new ID3D12GraphicsCommandListCloseWriter(commandListClose));
+
+        ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
+        executeCommandLists.key = stateService_.getUniqueCommandKey();
+        executeCommandLists.object_.key = commandQueueDirectKey_;
+        executeCommandLists.NumCommandLists_.value = 1;
+        executeCommandLists.ppCommandLists_.value = reinterpret_cast<ID3D12CommandList**>(1);
+        executeCommandLists.ppCommandLists_.size = 1;
+        executeCommandLists.ppCommandLists_.keys.resize(1);
+        executeCommandLists.ppCommandLists_.keys[0] = commandListDirectKey_;
+        stateService_.getRecorder().record(
+            new ID3D12CommandQueueExecuteCommandListsWriter(executeCommandLists));
+
+        ID3D12CommandQueueSignalCommand commandQueueSignal;
+        commandQueueSignal.key = stateService_.getUniqueCommandKey();
+        commandQueueSignal.object_.key = commandQueueDirectKey_;
+        commandQueueSignal.pFence_.key = fenceKey_;
+        commandQueueSignal.Value_.value = ++recordedFenceValue_;
+        stateService_.getRecorder().record(new ID3D12CommandQueueSignalWriter(commandQueueSignal));
+
+        ID3D12FenceGetCompletedValueCommand getCompletedValue;
+        getCompletedValue.key = stateService_.getUniqueCommandKey();
+        getCompletedValue.object_.key = fenceKey_;
+        getCompletedValue.result_.value = recordedFenceValue_;
+        stateService_.getRecorder().record(
+            new ID3D12FenceGetCompletedValueWriter(getCompletedValue));
+
+        ID3D12CommandAllocatorResetCommand commandAllocatorReset;
+        commandAllocatorReset.key = stateService_.getUniqueCommandKey();
+        commandAllocatorReset.object_.key = commandAllocatorDirectKey_;
+        stateService_.getRecorder().record(
+            new ID3D12CommandAllocatorResetWriter(commandAllocatorReset));
+
+        ID3D12GraphicsCommandListResetCommand commandListReset;
+        commandListReset.key = stateService_.getUniqueCommandKey();
+        commandListReset.object_.key = commandListDirectKey_;
+        commandListReset.pAllocator_.key = commandAllocatorDirectKey_;
+        commandListReset.pInitialState_.key = 0;
+        stateService_.getRecorder().record(
+            new ID3D12GraphicsCommandListResetWriter(commandListReset));
+      }
+      {
+        for (unsigned uploadResourceKey : uploadBuffers) {
+          IUnknownReleaseCommand releaseCommand;
+          releaseCommand.key = stateService_.getUniqueCommandKey();
+          releaseCommand.object_.key = uploadResourceKey;
+          stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommand));
+        }
+      }
+    } else if (itState.second->stateType == RaytracingAccelerationStructureState::NvAPIOMM) {
+      NvAPIBuildRaytracingOpacityMicromapArrayState* state =
+          static_cast<NvAPIBuildRaytracingOpacityMicromapArrayState*>(itState.second);
+
+      std::unordered_set<unsigned> restoredBuffers;
+      std::unordered_set<unsigned> uploadBuffers;
+
+      std::vector<AccelerationStructuresBufferContentRestore::BufferRestoreInfo>& restoreInfos =
+          bufferContentRestore_.getRestoreInfos(state->commandKey);
+      for (AccelerationStructuresBufferContentRestore::BufferRestoreInfo& info : restoreInfos) {
+        auto itHash = bufferHashesByKeyOffset.find(std::pair(info.bufferKey, info.offset));
+        if (itHash != bufferHashesByKeyOffset.end() && itHash->second == info.bufferHash) {
+          continue;
+        }
+        bufferHashesByKeyOffset[std::pair(info.bufferKey, info.offset)] = info.bufferHash;
+        restoredBuffers.insert(info.bufferKey);
+        uploadBuffers.insert(info.uploadResourceKey);
+
+        for (auto& itTiledResource : state->tiledResources) {
+          auto it = tiledResourceUpdatesRestored.find(info.bufferKey);
+          if (it == tiledResourceUpdatesRestored.end() ||
+              it->second.find(itTiledResource.second.updateId) == it->second.end()) {
+            reservedResourcesService_.updateTileMappings(itTiledResource.second,
+                                                         commandQueueCopyKey_, nullptr);
+            tiledResourceUpdatesRestored[info.bufferKey].insert(itTiledResource.second.updateId);
+          }
+        }
+
+        for (CommandWriter* command : info.restoreCommands) {
+          recorder_.record(command);
+        }
+      }
+
+      {
+        ID3D12GraphicsCommandListCloseCommand commandListClose;
+        commandListClose.key = stateService_.getUniqueCommandKey();
+        commandListClose.object_.key = commandListCopyKey_;
+        stateService_.getRecorder().record(
+            new ID3D12GraphicsCommandListCloseWriter(commandListClose));
+
+        ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
+        executeCommandLists.key = stateService_.getUniqueCommandKey();
+        executeCommandLists.object_.key = commandQueueCopyKey_;
+        executeCommandLists.NumCommandLists_.value = 1;
+        executeCommandLists.ppCommandLists_.value = reinterpret_cast<ID3D12CommandList**>(1);
+        executeCommandLists.ppCommandLists_.size = 1;
+        executeCommandLists.ppCommandLists_.keys.resize(1);
+        executeCommandLists.ppCommandLists_.keys[0] = commandListCopyKey_;
+        stateService_.getRecorder().record(
+            new ID3D12CommandQueueExecuteCommandListsWriter(executeCommandLists));
+
+        ID3D12CommandQueueSignalCommand commandQueueSignal;
+        commandQueueSignal.key = stateService_.getUniqueCommandKey();
+        commandQueueSignal.object_.key = commandQueueCopyKey_;
+        commandQueueSignal.pFence_.key = fenceKey_;
+        commandQueueSignal.Value_.value = ++recordedFenceValue_;
+        stateService_.getRecorder().record(new ID3D12CommandQueueSignalWriter(commandQueueSignal));
+
+        ID3D12FenceGetCompletedValueCommand getCompletedValue;
+        getCompletedValue.key = stateService_.getUniqueCommandKey();
+        getCompletedValue.object_.key = fenceKey_;
+        getCompletedValue.result_.value = recordedFenceValue_;
+        stateService_.getRecorder().record(
+            new ID3D12FenceGetCompletedValueWriter(getCompletedValue));
+
+        ID3D12CommandAllocatorResetCommand commandAllocatorReset;
+        commandAllocatorReset.key = stateService_.getUniqueCommandKey();
+        commandAllocatorReset.object_.key = commandAllocatorCopyKey_;
+        stateService_.getRecorder().record(
+            new ID3D12CommandAllocatorResetWriter(commandAllocatorReset));
+
+        ID3D12GraphicsCommandListResetCommand commandListReset;
+        commandListReset.key = stateService_.getUniqueCommandKey();
+        commandListReset.object_.key = commandListCopyKey_;
+        commandListReset.pAllocator_.key = commandAllocatorCopyKey_;
+        commandListReset.pInitialState_.key = 0;
+        stateService_.getRecorder().record(
+            new ID3D12GraphicsCommandListResetWriter(commandListReset));
+      }
+
+      for (auto& it : state->buffers) {
+        if (!it.second->isMappable && restoredBuffers.find(it.first) != restoredBuffers.end()) {
+          ID3D12GraphicsCommandListResourceBarrierCommand barrierCommand;
+          barrierCommand.key = stateService_.getUniqueCommandKey();
+          barrierCommand.object_.key = commandListDirectKey_;
+          barrierCommand.NumBarriers_.value = 1;
+          D3D12_RESOURCE_BARRIER barrier{};
+          barrierCommand.pBarriers_.value = &barrier;
+          barrierCommand.pBarriers_.size = 1;
+          barrierCommand.pBarriers_.resourceKeys.resize(1);
+          barrierCommand.pBarriers_.resourceAfterKeys.resize(1);
+          barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+          barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+          barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+          barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+          barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+          barrierCommand.pBarriers_.resourceKeys[0] = it.first;
+          stateService_.getRecorder().record(
+              new ID3D12GraphicsCommandListResourceBarrierWriter(barrierCommand));
+        }
+      }
+
+      state->desc->scratchOpacityMicromapArrayDataKey = scratchResourceKey;
+      state->desc->scratchOpacityMicromapArrayDataOffset = 0;
+
+      {
+        NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand build;
+        build.key = state->commandKey;
+        build.pCommandList_.key = commandListDirectKey_;
+        build.pParams.value = state->desc->value;
+        build.pParams.destOpacityMicromapArrayDataKey =
+            state->desc->destOpacityMicromapArrayDataKey;
+        build.pParams.destOpacityMicromapArrayDataOffset =
+            state->desc->destOpacityMicromapArrayDataOffset;
+        build.pParams.inputBufferKey = state->desc->inputBufferKey;
+        build.pParams.inputBufferOffset = state->desc->inputBufferOffset;
+        build.pParams.perOMMDescsKey = state->desc->perOMMDescsKey;
+        build.pParams.perOMMDescsOffset = state->desc->perOMMDescsOffset;
+        build.pParams.scratchOpacityMicromapArrayDataKey =
+            state->desc->scratchOpacityMicromapArrayDataKey;
+        build.pParams.scratchOpacityMicromapArrayDataOffset =
+            state->desc->scratchOpacityMicromapArrayDataOffset;
+        build.pParams.value->numPostbuildInfoDescs = 0;
+        build.pParams.value->pPostbuildInfoDescs = nullptr;
+        recorder_.record(new NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayWriter(build));
+      }
+
+      {
+        ID3D12GraphicsCommandListCloseCommand commandListClose;
+        commandListClose.key = stateService_.getUniqueCommandKey();
+        commandListClose.object_.key = commandListDirectKey_;
+        stateService_.getRecorder().record(
+            new ID3D12GraphicsCommandListCloseWriter(commandListClose));
+
+        ID3D12CommandQueueExecuteCommandListsCommand executeCommandLists;
+        executeCommandLists.key = stateService_.getUniqueCommandKey();
+        executeCommandLists.object_.key = commandQueueDirectKey_;
+        executeCommandLists.NumCommandLists_.value = 1;
+        executeCommandLists.ppCommandLists_.value = reinterpret_cast<ID3D12CommandList**>(1);
+        executeCommandLists.ppCommandLists_.size = 1;
+        executeCommandLists.ppCommandLists_.keys.resize(1);
+        executeCommandLists.ppCommandLists_.keys[0] = commandListDirectKey_;
+        stateService_.getRecorder().record(
+            new ID3D12CommandQueueExecuteCommandListsWriter(executeCommandLists));
+
+        ID3D12CommandQueueSignalCommand commandQueueSignal;
+        commandQueueSignal.key = stateService_.getUniqueCommandKey();
+        commandQueueSignal.object_.key = commandQueueDirectKey_;
+        commandQueueSignal.pFence_.key = fenceKey_;
+        commandQueueSignal.Value_.value = ++recordedFenceValue_;
+        stateService_.getRecorder().record(new ID3D12CommandQueueSignalWriter(commandQueueSignal));
+
+        ID3D12FenceGetCompletedValueCommand getCompletedValue;
+        getCompletedValue.key = stateService_.getUniqueCommandKey();
+        getCompletedValue.object_.key = fenceKey_;
+        getCompletedValue.result_.value = recordedFenceValue_;
+        stateService_.getRecorder().record(
+            new ID3D12FenceGetCompletedValueWriter(getCompletedValue));
+
+        ID3D12CommandAllocatorResetCommand commandAllocatorReset;
+        commandAllocatorReset.key = stateService_.getUniqueCommandKey();
+        commandAllocatorReset.object_.key = commandAllocatorDirectKey_;
+        stateService_.getRecorder().record(
+            new ID3D12CommandAllocatorResetWriter(commandAllocatorReset));
+
+        ID3D12GraphicsCommandListResetCommand commandListReset;
+        commandListReset.key = stateService_.getUniqueCommandKey();
+        commandListReset.object_.key = commandListDirectKey_;
+        commandListReset.pAllocator_.key = commandAllocatorDirectKey_;
+        commandListReset.pInitialState_.key = 0;
+        stateService_.getRecorder().record(
+            new ID3D12GraphicsCommandListResetWriter(commandListReset));
+      }
+      {
+        for (unsigned uploadResourceKey : uploadBuffers) {
+          IUnknownReleaseCommand releaseCommand;
+          releaseCommand.key = stateService_.getUniqueCommandKey();
+          releaseCommand.object_.key = uploadResourceKey;
+          stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommand));
+        }
+      }
+    } else {
+      GITS_ASSERT(0 && "unknown state");
     }
     delete itState.second;
   }
@@ -625,7 +1458,7 @@ void AccelerationStructuresBuildService::storeState(RaytracingAccelerationStruct
 
   // remove previous state if not a source for any AS
   unsigned prevStateId = getState(state->destKey, state->destOffset);
-  if (prevStateId) {
+  if (prevStateId && state->stateType != RaytracingAccelerationStructureState::NvAPIOMM) {
     auto itDests = stateDestsBySource_.find(prevStateId);
     if (itDests == stateDestsBySource_.end()) {
       removeState(prevStateId);
@@ -661,7 +1494,7 @@ void AccelerationStructuresBuildService::removeState(unsigned stateId) {
   // remove state
   auto itState = statesById_.find(stateId);
   GITS_ASSERT(itState != statesById_.end());
-  if (itState->second->buildState) {
+  if (itState->second->stateType != RaytracingAccelerationStructureState::Copy) {
     bufferContentRestore_.removeBuild(itState->second->commandKey);
   }
   auto it = stateByKeyOffset_.find({itState->second->destKey, itState->second->destOffset});

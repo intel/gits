@@ -27,6 +27,7 @@
 
 #include <vector>
 #include <unordered_map>
+#include <queue>
 
 namespace gits {
 namespace DirectX {
@@ -64,7 +65,8 @@ public:
         accelerationStructuresSerializeService_(accelerationStructuresSerializeService),
         accelerationStructuresBuildService_(accelerationStructuresBuildService),
         residencyService_(residencyService),
-        resourceUsageTrackingService_(resourceUsageTrackingService) {}
+        resourceUsageTrackingService_(resourceUsageTrackingService),
+        nvapiGlobalStateService_(*this) {}
   ~StateTrackingService();
   void restoreState();
   void keepState(unsigned objectKey);
@@ -98,6 +100,40 @@ public:
   }
   unsigned getDeviceKey() {
     return deviceKey_;
+  }
+
+  class NvAPIGlobalStateService {
+  public:
+    NvAPIGlobalStateService(StateTrackingService& stateService) : stateService_(stateService) {}
+    void incrementInitialize();
+    void decrementInitialize();
+    void addSetNvShaderExtnSlotSpaceCommand(
+        const NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command);
+    void addSetNvShaderExtnSlotSpaceLocalThreadCommand(
+        const NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command);
+    void restureInitializeCount();
+    void restoreShaderExtnSlotSpaceBeforeCommand(unsigned commandKey);
+
+  private:
+    struct OrderedCommand {
+      unsigned key{};
+      std::unique_ptr<Command> command;
+    };
+
+    struct CompareCommand {
+      bool operator()(const OrderedCommand& a, const OrderedCommand& b) const {
+        return a.key > b.key; // reverse order for min-heap
+      }
+    };
+
+    StateTrackingService& stateService_;
+    unsigned nvapiInitializeCount_{};
+    std::priority_queue<OrderedCommand, std::vector<OrderedCommand>, CompareCommand>
+        setNvShaderExtnSlotSpaceCommands_;
+  };
+
+  NvAPIGlobalStateService& getNvAPIGlobalStateService() {
+    return nvapiGlobalStateService_;
   }
 
 private:
@@ -152,6 +188,7 @@ private:
   unsigned deviceKey_{};
   INTC_D3D12_FEATURE intcFeature_{};
   std::unique_ptr<INTC_D3D12_SetApplicationInfoCommand> setApplicationInfoCommand_;
+  NvAPIGlobalStateService nvapiGlobalStateService_;
 
 private:
   class SwapChainService {
