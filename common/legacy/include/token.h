@@ -45,6 +45,7 @@ public:
     ID_REC_SCREEN_RESOLUTION,
     ID_MAKE_CURRENT_THREAD_NO_CTX_SWITCH,
     ID_CCODE_FINISH,
+    ID_MARKER_UINT64,
 
     ID_OPENGL = 1 * 0x10000,
     ID_GL_HELPER_TOKENS = 2 * 0x10000,
@@ -100,6 +101,26 @@ public:
   virtual void Read(CBinIStream& stream);
   virtual void Write(CCodeOStream& stream) const;
   virtual void Run();
+};
+
+class CTokenMarkerUInt64 : public CToken {
+protected:
+  uint64_t _value = 0;
+
+public:
+  // APIs can use values higher than 0x10000
+  static const uint64_t COMMON_RESERVED = 0x10000;
+
+  CTokenMarkerUInt64() = default;
+  CTokenMarkerUInt64(uint64_t value);
+  virtual unsigned Id() const {
+    return ID_MARKER_UINT64;
+  }
+  virtual void Write(CBinOStream& stream) const;
+  virtual void Read(CBinIStream& stream);
+  virtual void Write(CCodeOStream& /*stream*/) const {}
+  virtual void Run();
+  virtual uint64_t Size() const;
 };
 
 class CTokenPlayerRecorderSync : public CToken {

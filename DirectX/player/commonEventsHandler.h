@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace gits {
 namespace DirectX {
 
@@ -26,6 +28,7 @@ private:
   static void programExit() {}
   static void programStart() {}
   static void logging(const char* msg) {}
+  static void markerUInt64(uint64_t value);
 };
 
 } // namespace DirectX

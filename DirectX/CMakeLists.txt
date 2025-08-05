@@ -48,6 +48,7 @@ add_subdirectory(layers/skip_calls)
 add_subdirectory(layers/portability)
 add_subdirectory(layers/dstorage_resources)
 add_subdirectory(layers/imgui_hud)
+add_subdirectory(layers/print_status)
 add_subdirectory(${PLUGINS_DIR} DirectX_plugins)
 
 add_dependencies(DirectX_recorder
@@ -120,6 +121,11 @@ add_dependencies(DirectX_imgui_hud
 add_dependencies(DirectX_utils
     config_codegen
 )
+
+add_dependencies(DirectX_print_status
+  DirectX_layer_interface
+)
+
 target_include_directories(DirectX_subcapture PRIVATE ${ARGS_SOURCE_DIR})
 target_include_directories(DirectX_recorder PRIVATE ${ARGS_SOURCE_DIR})
 target_include_directories(DirectX_player PRIVATE ${ARGS_SOURCE_DIR})
@@ -166,6 +172,7 @@ target_link_libraries(DirectX_player PRIVATE
   DirectX_utils
   DirectX_skip_calls
   DirectX_portability
+  DirectX_print_status
   configuration
   common
 )

@@ -26,25 +26,33 @@ StateTrackingService::~StateTrackingService() {
 }
 
 void StateTrackingService::restoreState() {
-  recorder_.record(new CTokenMarker(CToken::ID_INIT_START));
+  auto recordStatus = [this](MarkerUInt64Command::Value state) {
+    recorder_.record(new CTokenMarkerUInt64(state));
+  };
 
+  recorder_.record(new CTokenMarker(CToken::ID_INIT_START));
+  recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_OBJECTS_BEGIN);
   for (auto& it : statesByKey_) {
     if (analyzerResults_.restoreObject(it.first)) {
       restoreState(it.second);
     }
   }
+  recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_OBJECTS_END);
   nvapiGlobalStateService_.restureInitializeCount();
   xessStateService_.restoreState();
   descriptorService_.restoreState();
+  recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RTAS_BEGIN);
   accelerationStructuresSerializeService_.restoreAccelerationStructures();
   accelerationStructuresBuildService_.restoreAccelerationStructures();
+  recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RTAS_END);
+  recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RESOURCES_BEGIN);
   restoreResources();
+  recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RESOURCES_END);
   mapStateService_.restoreMapState();
   residencyService_.restoreResidency();
   commandListService_.restoreCommandLists();
   commandQueueService_.restoreCommandQueues();
   restoreReferenceCount();
-
   swapChainService_.restoreBackBufferSequence();
   recorder_.record(new CTokenMarker(CToken::ID_INIT_END));
   // one Present after ID_INIT_END to enable PIX first frame capture in gits interactive mode

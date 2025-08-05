@@ -35,6 +35,9 @@ public:
   virtual void pre(FrameEndCommand& command) {}
   virtual void post(FrameEndCommand& command) {}
 
+  virtual void pre(MarkerUInt64Command& command) {}
+  virtual void post(MarkerUInt64Command& command) {}
+
   virtual void pre(CreateWindowMetaCommand& command) {}
   virtual void post(CreateWindowMetaCommand& command) {}
 

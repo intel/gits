@@ -254,6 +254,8 @@ CToken* CTokenCreate(CId id) {
     return new CTokenMakeCurrentThreadNoCtxSwitch;
   case CToken::ID_REC_SCREEN_RESOLUTION:
     return new CTokenScreenResolution;
+  case CToken::ID_MARKER_UINT64:
+    return new CTokenMarkerUInt64;
   default:
     return nullptr;
   }

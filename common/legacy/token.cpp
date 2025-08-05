@@ -280,6 +280,29 @@ void CTokenMarker::Run() {
   }
 }
 
+/* ******************************** TOKEN MARKER UINT64 ****************************** */
+
+CTokenMarkerUInt64::CTokenMarkerUInt64(uint64_t value) : _value(value) {}
+
+void CTokenMarkerUInt64::Write(CBinOStream& stream) const {
+  write_to_stream(stream, _value);
+}
+
+void CTokenMarkerUInt64::Read(CBinIStream& stream) {
+  read_from_stream(stream, _value);
+}
+
+void CTokenMarkerUInt64::Run() {
+  auto& cfg = Configurator::Get();
+  if (cfg.common.shared.useEvents) {
+    CGits::Instance().PlaybackEvents().markerUInt64(_value);
+  }
+}
+
+uint64_t CTokenMarkerUInt64::Size() const {
+  return CToken::Size() + sizeof(_value);
+}
+
 /* ******************************** PLAYER RECORDER SYNC ****************************** */
 
 CTokenPlayerRecorderSync::CTokenPlayerRecorderSync() {

@@ -28,6 +28,7 @@ void CommonEventsHandler::RegisterEvents() {
   events.programExit = programExit;
   events.programStart = programStart;
   events.logging = logging;
+  events.markerUInt64 = markerUInt64;
   CGits::Instance().RegisterPlaybackEvents(events);
 }
 
@@ -55,6 +56,17 @@ void CommonEventsHandler::stateRestoreEnd() {
 
 void CommonEventsHandler::frameEnd(int frameNumber) {
   FrameEndCommand command(frameNumber);
+  auto& manager = PlayerManager::get();
+  for (Layer* layer : manager.getPreLayers()) {
+    layer->pre(command);
+  }
+  for (Layer* layer : manager.getPostLayers()) {
+    layer->post(command);
+  }
+}
+
+void CommonEventsHandler::markerUInt64(uint64_t value) {
+  MarkerUInt64Command command(value);
   auto& manager = PlayerManager::get();
   for (Layer* layer : manager.getPreLayers()) {
     layer->pre(command);

@@ -124,6 +124,7 @@ target_include_directories(DirectX_player PRIVATE
   ${DIRECTX_DIR}/layers/resource_dumping
   ${DIRECTX_DIR}/layers/skip_calls
   ${DIRECTX_DIR}/layers/portability
+  ${DIRECTX_DIR}/layers/print_status
   ${DIRECTX_DIR}/recorder
   ${CMAKE_SOURCE_DIR}/third_party/DirectXTex/DirectXTex
   ${PLUGINS_DIR}

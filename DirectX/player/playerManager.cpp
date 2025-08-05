@@ -18,6 +18,7 @@
 #include "portabilityLayer.h"
 #include "accelerationStructuresDumpLayer.h"
 #include "dstorage/directStorageLayer.h"
+#include "printStatusLayer.h"
 #include "debugInfoLayerAuto.h"
 #include "debugHelperLayer.h"
 #include "logDxErrorLayerAuto.h"
@@ -102,6 +103,7 @@ PlayerManager::PlayerManager() {
   std::unique_ptr<Layer> skipCallsOnConfigLayer = skipCallsFactory_.getSkipCallsOnConfigLayer();
   std::unique_ptr<Layer> skipCallsOnResultLayer = skipCallsFactory_.getSkipCallsOnResultLayer();
   std::unique_ptr<Layer> imGuiHUDLayer = std::make_unique<ImGuiHUDLayer>();
+  std::unique_ptr<Layer> printStatusLayer = std::make_unique<PrintStatusLayer>();
 
   if (executeCommands_) {
     replayCustomizationLayer = std::make_unique<ReplayCustomizationLayer>(*this);
@@ -145,6 +147,7 @@ PlayerManager::PlayerManager() {
   enablePreLayer(directStorageLayer);
   enablePreLayer(directStorageResourcesLayer);
   enablePreLayer(accelerationStructuresDumpLayer);
+  enablePreLayer(printStatusLayer);
   if (cfg.common.shared.hud.enabled) {
     enablePreLayer(imGuiHUDLayer);
   }
@@ -176,6 +179,7 @@ PlayerManager::PlayerManager() {
   enablePostLayer(rootSignatureDumpLayer);
   enablePostLayer(recordingLayer);
   enablePostLayer(executionSerializationLayer);
+  enablePostLayer(printStatusLayer);
   if (cfg.common.shared.hud.enabled) {
     enablePostLayer(imGuiHUDLayer);
   }
@@ -211,6 +215,7 @@ PlayerManager::PlayerManager() {
   retainLayer(std::move(directStorageLayer));
   retainLayer(std::move(directStorageResourcesLayer));
   retainLayer(std::move(imGuiHUDLayer));
+  retainLayer(std::move(printStatusLayer));
 
   objectUsageNotifier_ = subcaptureFactory_.getObjectUsageNotifier();
 

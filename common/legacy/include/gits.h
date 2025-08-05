@@ -124,6 +124,7 @@ struct Events {
   std::function<void()> programExit;
   std::function<void()> programStart;
   std::function<void(const char*)> logging;
+  std::function<void(uint64_t value)> markerUInt64;
 };
 
 //

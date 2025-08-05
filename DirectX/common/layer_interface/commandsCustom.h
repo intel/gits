@@ -64,6 +64,23 @@ public:
   unsigned frameNumber_{};
 };
 
+class MarkerUInt64Command : public Command {
+public:
+  enum Value : uint64_t {
+    NONE = 0x10000 + 1, // CTokenMarkerUInt64::COMMON_RESERVED + 1
+    STATE_RESTORE_OBJECTS_BEGIN,
+    STATE_RESTORE_OBJECTS_END,
+    STATE_RESTORE_RTAS_BEGIN,
+    STATE_RESTORE_RTAS_END,
+    STATE_RESTORE_RESOURCES_BEGIN,
+    STATE_RESTORE_RESOURCES_END,
+  };
+  MarkerUInt64Command(uint64_t value) : Command(CommandId::ID_MARKER_UINT64), value_(value) {}
+
+public:
+  uint64_t value_{};
+};
+
 class IUnknownQueryInterfaceCommand : public Command {
 public:
   IUnknownQueryInterfaceCommand(unsigned threadId, IUnknown* object, REFIID riid, void** ppvObject)

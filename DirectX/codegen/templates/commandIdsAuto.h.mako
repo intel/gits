@@ -19,6 +19,7 @@ enum class CommandId {
   ID_INIT_END = 0x1,
   ID_FRAME_START = 0x2,
   ID_FRAME_END = 0x3,
+  ID_MARKER_UINT64 = 0x4,
 
   // gits::CToken::ID_DirectX (13 * 0x10000)
   ID_META_BEGIN = 0xD0000,
