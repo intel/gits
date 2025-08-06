@@ -182,6 +182,8 @@ void StateTrackingService::storeState(ObjectState* state) {
   auto it = statesByKey_.find(state->key);
   if (it == statesByKey_.end()) {
     statesByKey_[state->key] = state;
+  } else {
+    it->second->object = state->object;
   }
   if (!state->refCount) {
     state->refCount = 1;
