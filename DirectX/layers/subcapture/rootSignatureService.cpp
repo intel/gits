@@ -83,6 +83,10 @@ std::vector<unsigned> RootSignatureService::getDescriptorTableIndexes(unsigned r
         continue;
       }
       numDescriptors = heapNumDescriptors - index;
+    } else {
+      if (boundedRetrieved(descriptorHeapKey, index, numDescriptors)) {
+        continue;
+      }
     }
     for (unsigned j = 0; j < numDescriptors; ++j) {
       indexes.push_back(index);
@@ -99,6 +103,20 @@ bool RootSignatureService::unboundedRetrieved(unsigned descriptorHeapKey, unsign
     return true;
   }
   unboundedRetrieved_[descriptorHeapKey] = index;
+  return false;
+}
+
+bool RootSignatureService::boundedRetrieved(unsigned descriptorHeapKey,
+                                            unsigned index,
+                                            unsigned numDescriptors) {
+  auto itHeap = boundedRetrieved_.find(descriptorHeapKey);
+  if (itHeap != boundedRetrieved_.end()) {
+    auto it = itHeap->second.find(index);
+    if (it != itHeap->second.end() && it->second >= numDescriptors) {
+      return true;
+    }
+  }
+  boundedRetrieved_[descriptorHeapKey][index] = numDescriptors;
   return false;
 }
 

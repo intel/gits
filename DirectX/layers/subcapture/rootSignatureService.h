@@ -30,10 +30,12 @@ public:
 
 private:
   bool unboundedRetrieved(unsigned descriptorHeapKey, unsigned index);
+  bool boundedRetrieved(unsigned descriptorHeapKey, unsigned index, unsigned numDescriptors);
 
 private:
   std::unordered_map<unsigned, D3D12_ROOT_SIGNATURE_DESC*> rootSignatureDescs_;
   std::unordered_map<unsigned, unsigned> unboundedRetrieved_;
+  std::unordered_map<unsigned, std::unordered_map<unsigned, unsigned>> boundedRetrieved_;
 };
 
 } // namespace DirectX

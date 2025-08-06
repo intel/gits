@@ -164,6 +164,18 @@ void DescriptorService::copyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c) {
   }
 }
 
+DescriptorState* DescriptorService::getDescriptorState(unsigned heapKey, unsigned descriptorIndex) {
+  auto heapIt = statesByHeapIndex_.find(heapKey);
+  if (heapIt == statesByHeapIndex_.end()) {
+    return nullptr;
+  }
+  auto stateIt = heapIt->second.find(descriptorIndex);
+  if (stateIt == heapIt->second.end()) {
+    return nullptr;
+  }
+  return stateIt->second.get();
+}
+
 void DescriptorService::restoreD3D12RenderTargetView(D3D12RenderTargetViewState* state) {
   ID3D12DeviceCreateRenderTargetViewCommand c;
   c.key = stateService_->getUniqueCommandKey();
