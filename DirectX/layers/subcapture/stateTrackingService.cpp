@@ -183,7 +183,10 @@ void StateTrackingService::storeState(ObjectState* state) {
   if (it == statesByKey_.end()) {
     statesByKey_[state->key] = state;
   } else {
+    // if the same objects in capture are not the same in replay
     it->second->object = state->object;
+    delete state;
+    state = it->second;
   }
   if (!state->refCount) {
     state->refCount = 1;
