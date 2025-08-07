@@ -33,7 +33,7 @@ RtasSerializer::~RtasSerializer() {
 
     log(gits_, "RtasCache - Writing ", cacheFile_);
 
-    std::map<unsigned, unsigned> blases;
+    std::unordered_map<unsigned, unsigned> blases;
     for (std::filesystem::directory_entry file :
          std::filesystem::directory_iterator(tmpCacheDir_)) {
       std::string name = file.path().filename().string();
@@ -42,11 +42,11 @@ RtasSerializer::~RtasSerializer() {
       blases[buildKey] = size;
     }
 
+    // Serialize the RTASes based on build key serialization order
     std::ofstream cache(cacheFile_, std::ios_base::binary);
-    for (auto& it : blases) {
-      unsigned buildKey = it.first;
+    for (unsigned buildKey : buildKeys_) {
       std::wstring name = std::to_wstring(buildKey);
-      unsigned size = it.second;
+      unsigned size = blases[buildKey];
       std::ifstream file(tmpCacheDir_ + L"/" + name, std::ios_base::binary);
       std::vector<char> data(size);
       file.read(data.data(), size);
@@ -66,6 +66,8 @@ RtasSerializer::~RtasSerializer() {
 
     cache.flush();
 
+    log(gits_, "RtasCache - Writing done");
+
     std::filesystem::remove_all(tmpCacheDir_);
 
     if (dumpCacheInfo_) {
@@ -81,6 +83,7 @@ void RtasSerializer::serialize(unsigned buildKey,
                                D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc) {
   initialize();
 
+  buildKeys_.push_back(buildKey);
   cacheInfoByBuildKey[buildKey].destVA = desc.DestAccelerationStructureData;
 
   Microsoft::WRL::ComPtr<ID3D12Device5> device;

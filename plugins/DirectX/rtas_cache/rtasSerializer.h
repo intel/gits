@@ -52,6 +52,7 @@ private:
   std::wstring tmpCacheDir_;
   std::filesystem::path cacheFile_;
   bool dumpCacheInfo_{false};
+  std::vector<unsigned> buildKeys_;
   std::map<unsigned, CacheInfo> cacheInfoByBuildKey;
 };
 
