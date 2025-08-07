@@ -30,7 +30,7 @@ public:
   RtasDeserializer& operator=(const RtasDeserializer&) = delete;
 
   bool isCompatible(ID3D12Device5* device);
-  void deserialize(unsigned buildKey,
+  bool deserialize(unsigned buildKey,
                    ID3D12GraphicsCommandList4* commandList,
                    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc);
   void executeCommandLists(unsigned key,

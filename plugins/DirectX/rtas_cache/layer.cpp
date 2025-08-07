@@ -59,9 +59,14 @@ void RtasCacheLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationSt
       return;
     }
 
-    deserializer_.deserialize(c.key, c.object_.value, *c.pDesc_.value);
-    c.skip = true;
-    ++blasCount_;
+    if (deserializer_.deserialize(c.key, c.object_.value, *c.pDesc_.value)) {
+      c.skip = true;
+      ++blasCount_;
+    } else {
+      logE(gits_,
+           "RtasCache - Failed to deserialize RTAS. Will no longer try to load from the cache.");
+      isCompatible_ = false;
+    }
   }
 }
 

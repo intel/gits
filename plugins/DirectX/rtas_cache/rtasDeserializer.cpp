@@ -84,7 +84,7 @@ bool RtasDeserializer::isCompatible(ID3D12Device5* device) {
   return true;
 }
 
-void RtasDeserializer::deserialize(unsigned buildKey,
+bool RtasDeserializer::deserialize(unsigned buildKey,
                                    ID3D12GraphicsCommandList4* commandList,
                                    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc) {
 
@@ -94,6 +94,7 @@ void RtasDeserializer::deserialize(unsigned buildKey,
   cacheFile_.read(reinterpret_cast<char*>(&key), sizeof(key));
   if (key != buildKey) {
     logE(gits_, "RtasCache - Expected BLAS ", buildKey, " deserialized ", key);
+    return false;
   }
   unsigned size{};
   cacheFile_.read(reinterpret_cast<char*>(&size), sizeof(size));
@@ -132,6 +133,7 @@ void RtasDeserializer::deserialize(unsigned buildKey,
     cacheFile_.read(static_cast<char*>(data), size);
     if (!cacheFile_) {
       logE(gits_, "RtasCache - Error reading BLAS ", buildKey);
+      return false;
     }
 
     serializedBuffer->Unmap(0, nullptr);
@@ -142,6 +144,8 @@ void RtasDeserializer::deserialize(unsigned buildKey,
 
     buffersByCommandList_[commandList].emplace_back(serializedBuffer);
   }
+
+  return true;
 }
 
 void RtasDeserializer::executeCommandLists(unsigned key,
