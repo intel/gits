@@ -23,14 +23,17 @@ namespace gits {
 def whitespace(number):
     return ' ' * number * 2
 
-def initialize_argument(option, namespace_str):
+def initialize_argument(option, namespace_str, indentation):
     if option.is_group:
         return f'{option.instance_name}(group)'
+    if option.type == 'bool':
+       return f'{option.instance_name}(group, "{option.instance_name}", "{option.short_description}", {{{option.get_shorthands()}}}),\r\n' + \
+              whitespace(indentation + 1) + f'  {option.get_negative_instance_name()}(group, "{option.get_negative_instance_name()}", "Sets {option.instance_name} option to false", {{{option.get_negative_shorthands()}}})'
     return f'{option.instance_name}(group, "{option.instance_name}", "{option.short_description}", {{{option.get_shorthands()}}})'
 
 def initialize_arguments(options, namespace_str, indentation):
     prefix = ",\r\n  " + whitespace(indentation + 1)
-    return "  " + prefix.join([initialize_argument(option, namespace_str) for option in options if (not option.is_derived or option.argument_only) and option.has_leafs()])
+    return "  " + prefix.join([initialize_argument(option, namespace_str, indentation) for option in options if (not option.is_derived or option.argument_only) and option.has_leafs()])
 
 %>
 
@@ -45,9 +48,15 @@ ${whitespace(indentation + 1)}args::Group group;
     % else:
 ${whitespace(indentation + 1)}${f"{option.get_argument_type()} {option.instance_name};"}
     % endif
+%    if option.type == 'bool' and not option.is_derived:
+${whitespace(indentation + 1)}${f"{option.get_argument_type()} {option.get_negative_instance_name()};"}
+%    endif
 %  else:
 %    if option.argument_only:
 ${whitespace(indentation + 1)}${f"{option.get_argument_type()} {option.instance_name};"}
+%    if option.type == 'bool':
+${whitespace(indentation + 1)}${f"{option.get_argument_type()} {option.get_negative_instance_name()};"}
+%    endif
 %    endif
 %  endif
 % endfor
@@ -62,6 +71,9 @@ ${whitespace(indentation + 2)}group.SetTags(${option.get_tags_escaped()});
 % for option in group.options:
 %  if not option.is_derived and not option.is_group:
 ${whitespace(indentation + 2)}${option.instance_name}.SetTags(${option.get_tags_escaped()});
+%    if option.type == 'bool':
+${whitespace(indentation + 2)}${option.get_negative_instance_name()}.SetTags(${option.get_tags_escaped()});
+%    endif
 %  endif
 % endfor
 ${whitespace(indentation + 1)}}

@@ -90,4 +90,11 @@ ${render_group(subgroup, indentation+1)}
 % endfor
 
 </%def>
+# Options
+
+Below is a list (auto generated) of all configuration options for this group.  
+When invoking the player each option can be either used by its shorthand (if available, e.g. --logLevel), or by its "full path". (e.g. --Common.Shared.ThresholdLogLevel).  
+For each bool flag we also generate corresponding negative flag prefixed with "no" that will set the corresponding value to false. (e.g. --fullscreen and --noFullscreen or --Common.Player.Fullscreen and --noCommon.Player.Fullscreen).  
+These can be used to set bool values that are by default true to false, as well as being useful to quickly test something if the config file sets the value to true (since command line overrides config file).  
+
 ${render_group(get_group_by_name(data, meta_data[0]), 1)}
