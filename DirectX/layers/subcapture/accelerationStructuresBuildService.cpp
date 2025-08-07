@@ -351,13 +351,7 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
             }
           }
           GITS_ASSERT(stride);
-          unsigned ommCount{};
-          for (unsigned j = 0; j < desc.ommTriangles.ommAttachment.numOMMUsageCounts; ++j) {
-            ommCount += desc.ommTriangles.ommAttachment.pOMMUsageCounts[j].count;
-          }
-          if (!ommCount) {
-            ommCount = desc.ommTriangles.triangles.IndexCount / 3;
-          }
+          unsigned ommCount = desc.ommTriangles.triangles.IndexCount / 3;
           unsigned size = ommCount * stride;
           if (size) {
             storeBuffer(inputIndex, size);
@@ -1458,7 +1452,7 @@ void AccelerationStructuresBuildService::storeState(RaytracingAccelerationStruct
 
   // remove previous state if not a source for any AS
   unsigned prevStateId = getState(state->destKey, state->destOffset);
-  if (prevStateId && state->stateType != RaytracingAccelerationStructureState::NvAPIOMM) {
+  if (prevStateId) {
     auto itDests = stateDestsBySource_.find(prevStateId);
     if (itDests == stateDestsBySource_.end()) {
       removeState(prevStateId);
@@ -1477,6 +1471,11 @@ unsigned AccelerationStructuresBuildService::getState(unsigned key, unsigned off
 }
 
 void AccelerationStructuresBuildService::removeState(unsigned stateId) {
+  auto itState = statesById_.find(stateId);
+  GITS_ASSERT(itState != statesById_.end());
+  if (itState->second->stateType == RaytracingAccelerationStructureState::NvAPIOMM) {
+    return;
+  }
 
   // remove state sources chain
   auto itSource = stateSourceByDest_.find(stateId);
@@ -1492,8 +1491,6 @@ void AccelerationStructuresBuildService::removeState(unsigned stateId) {
   }
 
   // remove state
-  auto itState = statesById_.find(stateId);
-  GITS_ASSERT(itState != statesById_.end());
   if (itState->second->stateType != RaytracingAccelerationStructureState::Copy) {
     bufferContentRestore_.removeBuild(itState->second->commandKey);
   }
