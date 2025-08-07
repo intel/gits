@@ -13,6 +13,7 @@
 #include <memory>
 #include <d3d12.h>
 #include <unordered_set>
+#include <mutex>
 
 namespace gits {
 namespace DirectX {
@@ -32,6 +33,7 @@ public:
 
 public:
   void createPlacedResource(unsigned heapKey, unsigned resourceKey, D3D12_RESOURCE_FLAGS flags) {
+    std::lock_guard<std::mutex> lock(mutex_);
     gpuAddressService_.createPlacedResource(heapKey, resourceKey, flags);
     if (gpuPlayerAddress_) {
       gpuPlayerAddress_->createPlacedResource(heapKey, resourceKey, flags);
@@ -41,12 +43,14 @@ public:
                             unsigned resourceKey,
                             unsigned size,
                             D3D12_GPU_VIRTUAL_ADDRESS captureAddress) {
+    std::lock_guard<std::mutex> lock(mutex_);
     gpuAddressService_.addGpuCaptureAddress(resource, resourceKey, size, captureAddress);
   }
   void addGpuPlayerAddress(ID3D12Resource* resource,
                            unsigned resourceKey,
                            unsigned size,
                            D3D12_GPU_VIRTUAL_ADDRESS playerAddress) {
+    std::lock_guard<std::mutex> lock(mutex_);
     gpuAddressService_.addGpuPlayerAddress(resourceKey, playerAddress);
     if (gpuPlayerAddress_) {
       gpuPlayerAddress_->addGpuCaptureAddress(resource, resourceKey, size, playerAddress);
@@ -54,16 +58,19 @@ public:
     }
   }
   void destroyInterface(unsigned interfaceKey) {
+    std::lock_guard<std::mutex> lock(mutex_);
     gpuAddressService_.destroyInterface(interfaceKey);
     if (gpuPlayerAddress_) {
       gpuPlayerAddress_->destroyInterface(interfaceKey);
     }
   }
   ResourceInfo* getResourceInfoByCaptureAddress(D3D12_GPU_VIRTUAL_ADDRESS address) {
+    std::lock_guard<std::mutex> lock(mutex_);
     return gpuAddressService_.getResourceInfo(address);
   }
   ResourceInfo* getResourceInfoByPlayerAddress(D3D12_GPU_VIRTUAL_ADDRESS address) {
     if (gpuPlayerAddress_) {
+      std::lock_guard<std::mutex> lock(mutex_);
       return gpuPlayerAddress_->getResourceInfo(address);
     } else {
       return nullptr;
@@ -114,6 +121,7 @@ private:
   };
   GpuAddressService gpuAddressService_;
   std::unique_ptr<GpuAddressService> gpuPlayerAddress_;
+  std::mutex mutex_;
 };
 
 } // namespace DirectX
