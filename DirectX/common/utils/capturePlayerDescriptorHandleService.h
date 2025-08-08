@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <memory>
 #include <d3d12.h>
+#include <mutex>
 
 namespace gits {
 namespace DirectX {
@@ -42,12 +43,15 @@ public:
     return getViewDescriptorHeapInfo(viewHeapsByCaptureHandle_, handle, true);
   }
   DescriptorHeapInfo* getSamplerDescriptorHeapInfoByCaptureHandle(UINT64 handle) {
+    std::lock_guard<std::mutex> lock(mutex_);
     return getViewDescriptorHeapInfo(samplerHeapsByCaptureHandle_, handle, true);
   }
   DescriptorHeapInfo* getViewDescriptorHeapInfoByPlayerHandle(UINT64 handle) {
+    std::lock_guard<std::mutex> lock(mutex_);
     return getViewDescriptorHeapInfo(viewHeapsByPlayerHandle_, handle, false);
   }
   DescriptorHeapInfo* getSamplerDescriptorHeapInfoByPlayerHandle(UINT64 handle) {
+    std::lock_guard<std::mutex> lock(mutex_);
     return getViewDescriptorHeapInfo(samplerHeapsByPlayerHandle_, handle, false);
   }
   unsigned viewHeapIncrement() {
@@ -73,6 +77,7 @@ private:
   bool viewHeapsChanged_{};
   bool samplerHeapsChanged_{};
   bool dumpLookup_{};
+  std::mutex mutex_;
 
 private:
   DescriptorHeapInfo* getViewDescriptorHeapInfo(DescriptorHandleMap& descriptorHandleMap,

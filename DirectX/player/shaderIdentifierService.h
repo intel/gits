@@ -13,6 +13,7 @@
 #include <array>
 #include <d3d12.h>
 #include <string>
+#include <mutex>
 
 namespace gits {
 namespace DirectX {
@@ -33,10 +34,12 @@ public:
                                  ShaderIdentifier playerIdentifier,
                                  LPWSTR exportName);
   bool getMappings(std::vector<ShaderIdentifierMapping>& mappings);
-  std::wstring& getExportNameByCaptureIdentifier(ShaderIdentifier identifier) {
+  std::wstring getExportNameByCaptureIdentifier(ShaderIdentifier identifier) {
+    std::lock_guard<std::mutex> lock(mutex_);
     return m_ExportNamesByCaptureIdentifier[identifier];
   }
-  std::wstring& getExportNameByPlayerIdentifier(ShaderIdentifier identifier) {
+  std::wstring getExportNameByPlayerIdentifier(ShaderIdentifier identifier) {
+    std::lock_guard<std::mutex> lock(mutex_);
     return m_ExportNamesByPlayerIdentifier[identifier];
   }
   void enablePlayerIdentifierLookup() {
@@ -50,6 +53,7 @@ private:
   std::map<ShaderIdentifier, std::wstring> m_ExportNamesByPlayerIdentifier;
   bool changed_{};
   bool dumpLookup_{};
+  std::mutex mutex_;
 };
 
 } // namespace DirectX

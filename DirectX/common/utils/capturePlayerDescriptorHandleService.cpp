@@ -16,6 +16,7 @@ namespace DirectX {
 
 void CapturePlayerDescriptorHandleService::addCaptureHandle(
     ID3D12DescriptorHeap* heap, unsigned heapKey, D3D12_GPU_DESCRIPTOR_HANDLE captureHandle) {
+  std::lock_guard<std::mutex> lock(mutex_);
 
   auto itView = viewHeapsByKey_.find(heapKey);
   if (itView != viewHeapsByKey_.end()) {
@@ -58,6 +59,8 @@ void CapturePlayerDescriptorHandleService::addCaptureHandle(
 
 void CapturePlayerDescriptorHandleService::addPlayerHandle(
     unsigned heapKey, D3D12_GPU_DESCRIPTOR_HANDLE playerHandle) {
+  std::lock_guard<std::mutex> lock(mutex_);
+
   auto it = viewHeapsByKey_.find(heapKey);
   if (it != viewHeapsByKey_.end()) {
     it->second->playerStart = playerHandle.ptr;
@@ -76,6 +79,8 @@ void CapturePlayerDescriptorHandleService::addPlayerHandle(
 }
 
 void CapturePlayerDescriptorHandleService::destroyHeap(unsigned heapKey) {
+  std::lock_guard<std::mutex> lock(mutex_);
+
   auto itView = viewHeapsByKey_.find(heapKey);
   if (itView != viewHeapsByKey_.end()) {
     viewHeapsByCaptureHandle_.erase(itView->second->captureStart);

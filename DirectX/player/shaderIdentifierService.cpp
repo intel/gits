@@ -15,6 +15,8 @@ namespace DirectX {
 void ShaderIdentifierService::addCaptureShaderIdentifier(unsigned commandKey,
                                                          ShaderIdentifier captureIdentifier,
                                                          LPWSTR exportName) {
+  std::lock_guard<std::mutex> lock(mutex_);
+
   m_ShaderIdentifiersByCommandKey[commandKey] = captureIdentifier;
   if (dumpLookup_) {
     m_ExportNamesByCaptureIdentifier[captureIdentifier] = exportName;
@@ -24,6 +26,8 @@ void ShaderIdentifierService::addCaptureShaderIdentifier(unsigned commandKey,
 void ShaderIdentifierService::addPlayerShaderIdentifier(unsigned commandKey,
                                                         ShaderIdentifier playerIdentifier,
                                                         LPWSTR exportName) {
+  std::lock_guard<std::mutex> lock(mutex_);
+
   auto itByCommandKey = m_ShaderIdentifiersByCommandKey.find(commandKey);
   GITS_ASSERT(itByCommandKey != m_ShaderIdentifiersByCommandKey.end());
 
