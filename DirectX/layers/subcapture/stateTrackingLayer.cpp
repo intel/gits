@@ -830,7 +830,7 @@ void StateTrackingLayer::post(ID3D12Device7AddToStateObjectCommand& c) {
     return;
   }
   ObjectState* state = new ObjectState();
-  state->parentKey = c.object_.key;
+  state->parentKey = c.pStateObjectToGrowFrom_.key;
   state->key = c.ppNewStateObject_.key;
   state->object = static_cast<IUnknown*>(*c.ppNewStateObject_.value);
   state->creationCommand.reset(new ID3D12Device7AddToStateObjectCommand(c));
