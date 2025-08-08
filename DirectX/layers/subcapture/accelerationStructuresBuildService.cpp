@@ -1493,10 +1493,6 @@ void AccelerationStructuresBuildService::removeState(unsigned stateId) {
     auto itDests = stateDestsBySource_.find(itSource->second);
     GITS_ASSERT(itDests != stateDestsBySource_.end());
     itDests->second.erase(stateId);
-    if (itDests->second.empty()) {
-      removeState(itSource->second);
-      stateDestsBySource_.erase(itDests);
-    }
     stateSourceByDest_.erase(itSource);
   }
 
