@@ -254,6 +254,7 @@ void ReservedResourcesService::updateTileMappings(TiledResource& tiledResource,
   }
 
   for (unsigned heapKey : heapKeys) {
+    stateService_.restoreState(heapKey);
 
     ID3D12CommandQueueUpdateTileMappingsCommand command;
     command.key = stateService_.getUniqueCommandKey();

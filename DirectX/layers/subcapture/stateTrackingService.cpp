@@ -95,6 +95,12 @@ void StateTrackingService::keepState(unsigned objectKey) {
   }
 }
 
+void StateTrackingService::restoreState(unsigned key) {
+  auto it = statesByKey_.find(key);
+  GITS_ASSERT(it != statesByKey_.end())
+  restoreState(it->second);
+}
+
 void StateTrackingService::restoreState(ObjectState* state) {
   if (state->restored) {
     return;

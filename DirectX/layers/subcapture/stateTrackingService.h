@@ -76,6 +76,7 @@ public:
   void releaseObject(unsigned key, ULONG result);
   void setReferenceCount(unsigned objectKey, ULONG referenceCount);
   ObjectState* getState(unsigned key);
+  void restoreState(unsigned key);
 
   unsigned getUniqueCommandKey() {
     return ++restoreCommandKey_;
