@@ -1439,10 +1439,20 @@ void AccelerationStructuresBuildService::storeState(RaytracingAccelerationStruct
     GITS_ASSERT(sourceId);
 
     // remove intermediate update
-    if (state->sourceKey == state->destKey && state->sourceOffset == state->destOffset) {
-      auto itPrimarySource = stateSourceByDest_.find(sourceId);
-      if (itPrimarySource != stateSourceByDest_.end()) {
-        sourceId = itPrimarySource->second;
+    if (state->stateType == RaytracingAccelerationStructureState::Build) {
+      BuildRaytracingAccelerationStructureState* buildState =
+          static_cast<BuildRaytracingAccelerationStructureState*>(state);
+      if (buildState->update) {
+        auto itPrimarySource = stateSourceByDest_.find(sourceId);
+        if (itPrimarySource != stateSourceByDest_.end()) {
+          sourceId = itPrimarySource->second;
+          auto itPrimarySourceState = statesById_.find(sourceId);
+          GITS_ASSERT(itPrimarySourceState != statesById_.end());
+          buildState->sourceKey = itPrimarySourceState->second->destKey;
+          buildState->sourceOffset = itPrimarySourceState->second->destOffset;
+          buildState->desc->sourceAccelerationStructureKey = buildState->sourceKey;
+          buildState->desc->sourceAccelerationStructureOffset = buildState->sourceOffset;
+        }
       }
     }
 
