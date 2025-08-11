@@ -25,13 +25,8 @@ target_sources(DirectX_dstorage_resources PRIVATE
   ${ALL_SRC}
 )
 
-target_include_directories(DirectX_dstorage_resources PRIVATE
-  ${DIRECTX_DIR}/common/layer_interface
-  ${D3D12_HEADERS_DIR}
-  ${DML_HEADERS_DIR}
-  ${DSTORAGE_HEADERS_DIR}
-  ${INTEL_EXT_DIR}/include
-  ${XESS_HEADERS_DIR}
+target_link_libraries(DirectX_dstorage_resources PRIVATE
+  DirectX_layer_interface
 )
 
 set_target_properties(DirectX_dstorage_resources PROPERTIES FOLDER DirectX/DirectX_layers)

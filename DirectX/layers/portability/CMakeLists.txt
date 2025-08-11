@@ -27,14 +27,9 @@ target_sources(DirectX_portability PRIVATE
   ${ALL_SRC}
 )
 
-target_include_directories(DirectX_portability PRIVATE
-  ${DIRECTX_DIR}/common/layer_interface
-  ${DIRECTX_DIR}/common/utils
-  ${D3D12_HEADERS_DIR}
-  ${DML_HEADERS_DIR}
-  ${DSTORAGE_HEADERS_DIR}
-  ${INTEL_EXT_DIR}/include
-  ${XESS_HEADERS_DIR}
+target_link_libraries(DirectX_portability PRIVATE
+  DirectX_layer_interface
+  DirectX_utils
 )
 
 set_target_properties(DirectX_portability PROPERTIES FOLDER DirectX/DirectX_layers)

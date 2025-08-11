@@ -27,13 +27,24 @@ target_sources(DirectX_layer_interface PRIVATE
   ${LAYER_INTERFACE_SRC}
 )
 
-target_include_directories(DirectX_layer_interface PRIVATE
+target_include_directories(DirectX_layer_interface PUBLIC
   ${D3D12_HEADERS_DIR}
   ${DML_HEADERS_DIR}
   ${DSTORAGE_HEADERS_DIR}
   ${INTEL_EXT_DIR}/include
   ${XESS_HEADERS_DIR}
   ${NVAPI_DIR}
+  ${SRC_DIR}
+)
+
+add_dependencies(DirectX_layer_interface
+  DirectX_codegen
+  config_codegen
+)
+
+target_link_libraries(DirectX_layer_interface PUBLIC
+  configuration
+  common
 )
 
 set_target_properties(DirectX_layer_interface PROPERTIES LINKER_LANGUAGE CXX)

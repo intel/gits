@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "resourceDumpService.h"
-#include "toStr.h"
+#include "to_string/toStr.h"
 #include "gits.h"
 #include "configurationLib.h"
 

@@ -32,11 +32,11 @@ target_sources(d3d12_interceptor PRIVATE
 
 target_include_directories(d3d12_interceptor PRIVATE
   ${DIRECTX_DIR}/recorder
-  ${DIRECTX_DIR}/common/layer_interface
-  ${D3D12_HEADERS_DIR}
-  ${DML_HEADERS_DIR}
-  ${XESS_HEADERS_DIR}
-  ${DSTORAGE_HEADERS_DIR}
+)
+
+target_link_libraries(d3d12_interceptor PRIVATE
+  DirectX_layer_interface
+  DirectX_recorder
 )
 
 set_target_properties(d3d12_interceptor PROPERTIES OUTPUT_NAME d3d12)

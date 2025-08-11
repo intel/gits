@@ -16,7 +16,7 @@
 #include "arguments.h"
 #include "printEnumsAuto.h"
 #include "printStructuresAuto.h"
-#include "toStr.h"
+#include "to_string/toStr.h"
 #include "fastOStream.h"
 
 #include <iostream>

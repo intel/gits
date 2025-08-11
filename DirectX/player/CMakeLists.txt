@@ -109,14 +109,7 @@ target_sources(DirectX_player PRIVATE
 )
 
 target_include_directories(DirectX_player PRIVATE
-  ${D3D12_HEADERS_DIR}
-  ${DML_HEADERS_DIR}
-  ${DXC_HEADERS_DIR}
-  ${DSTORAGE_HEADERS_DIR}
-  ${INTEL_EXT_DIR}/include
-  ${DIRECTX_DIR}/common/layer_interface
   ${DIRECTX_DIR}/common/coders
-  ${DIRECTX_DIR}/common/utils
   ${DIRECTX_DIR}/layers/trace
   ${DIRECTX_DIR}/layers/subcapture
   ${DIRECTX_DIR}/layers/execution_serialization
@@ -128,11 +121,27 @@ target_include_directories(DirectX_player PRIVATE
   ${DIRECTX_DIR}/recorder
   ${CMAKE_SOURCE_DIR}/third_party/DirectXTex/DirectXTex
   ${PLUGINS_DIR}
-  ${XESS_HEADERS_DIR}
   ${SRC_DIR}
 )
 
-target_link_libraries(DirectX_player PRIVATE ${INTEL_EXT_DIR}/lib/igdext64.lib ${NVAPI_DIR}/amd64/nvapi64.lib)
+target_link_libraries(DirectX_player PRIVATE
+  DirectX_layer_interface
+  DirectX_api_debug
+  DirectX_trace
+  DirectX_resource_dumping
+  DirectX_subcapture
+  DirectX_execution_serialization
+  DirectX_coders
+  DirectX_imgui_hud
+  DirectX_utils
+  DirectX_skip_calls
+  DirectX_portability
+  DirectX_print_status
+  configuration
+  common
+  ${INTEL_EXT_DIR}/lib/igdext64.lib
+  ${NVAPI_DIR}/amd64/nvapi64.lib
+)
 
 set_target_properties(DirectX_player PROPERTIES FOLDER DirectX)
 

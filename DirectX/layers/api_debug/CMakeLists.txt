@@ -37,14 +37,12 @@ target_sources(DirectX_api_debug PRIVATE
 )
 
 target_include_directories(DirectX_api_debug PRIVATE
-  ${DIRECTX_DIR}/common/layer_interface
-  ${DIRECTX_DIR}/common/utils/to_string
-  ${DIRECTX_DIR}/common/utils
-  ${D3D12_HEADERS_DIR}
-  ${DML_HEADERS_DIR}
-  ${DSTORAGE_HEADERS_DIR}
-  ${XESS_HEADERS_DIR}
   ${FASTIO_DIR}/include
+)
+
+target_link_libraries(DirectX_api_debug PRIVATE
+  DirectX_layer_interface
+  DirectX_utils
 )
 
 set_target_properties(DirectX_api_debug PROPERTIES FOLDER DirectX/DirectX_layers)

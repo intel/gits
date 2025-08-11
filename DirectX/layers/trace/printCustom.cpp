@@ -8,7 +8,7 @@
 
 #include "printCustom.h"
 #include "command.h"
-#include "guidToStrAuto.h"
+#include "to_string/guidToStrAuto.h"
 #include <unordered_map>
 
 namespace gits {

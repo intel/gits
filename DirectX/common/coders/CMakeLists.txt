@@ -63,4 +63,9 @@ target_include_directories(DirectX_coders PRIVATE
   ../layer_interface
 )
 
+target_link_libraries(DirectX_coders PRIVATE
+  DirectX_layer_interface
+  DirectX_utils
+)
+
 set_target_properties(DirectX_coders PROPERTIES FOLDER DirectX/DirectX_common)

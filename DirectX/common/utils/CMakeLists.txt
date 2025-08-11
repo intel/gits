@@ -52,14 +52,12 @@ target_include_directories(DirectX_utils
 PUBLIC
   ${SRC_DIR}
 PRIVATE
-  ${DIRECTX_DIR}/common/layer_interface
-  ${D3D12_HEADERS_DIR}
-  ${DML_HEADERS_DIR}
-  ${XESS_HEADERS_DIR}
-  ${DSTORAGE_HEADERS_DIR}
-  ${XESS_HEADERS_DIR}
   ${PLUGINS_DIR}
   ${CMAKE_SOURCE_DIR}/third_party/DirectXTex/DirectXTex
+)
+
+target_link_libraries(DirectX_utils PRIVATE
+  DirectX_layer_interface
 )
 
 set_target_properties(DirectX_utils PROPERTIES LINKER_LANGUAGE CXX)

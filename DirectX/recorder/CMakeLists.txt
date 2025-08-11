@@ -98,14 +98,7 @@ target_sources(DirectX_recorder PRIVATE
 
 target_include_directories(DirectX_recorder PRIVATE
   ${CMAKE_SOURCE_DIR}/third_party/Detours/src
-  ${D3D12_HEADERS_DIR}
-  ${DML_HEADERS_DIR}
-  ${DSTORAGE_HEADERS_DIR}
-  ${INTEL_EXT_DIR}/include
-  ${XESS_HEADERS_DIR}
-  ${DIRECTX_DIR}/common/layer_interface
   ${DIRECTX_DIR}/common/coders
-  ${DIRECTX_DIR}/common/utils
   ${DIRECTX_DIR}/layers/trace
   ${DIRECTX_DIR}/layers/resource_dumping
   ${DIRECTX_DIR}/layers/portability
@@ -113,9 +106,25 @@ target_include_directories(DirectX_recorder PRIVATE
   ${DIRECTX_DIR}/layers/dstorage_resources
   ${CMAKE_SOURCE_DIR}/third_party/DirectXTex/DirectXTex
   ${PLUGINS_DIR}
+  ${ARGS_SOURCE_DIR}
   ${SRC_DIR}
 )
 
-target_link_libraries(DirectX_recorder PRIVATE GitsRecorderInterface ${INTEL_EXT_DIR}/lib/igdext64.lib ${NVAPI_DIR}/amd64/nvapi64.lib)
+target_link_libraries(DirectX_recorder PRIVATE
+  GitsRecorderInterface
+  DirectX_layer_interface
+  DirectX_api_debug
+  DirectX_trace
+  DirectX_dstorage_resources
+  DirectX_coders
+  DirectX_imgui_hud
+  DirectX_utils
+  DirectX_resource_dumping
+  DirectX_portability
+  configuration
+  common
+  ${INTEL_EXT_DIR}/lib/igdext64.lib 
+  ${NVAPI_DIR}/amd64/nvapi64.lib
+)
 
 set_target_properties(DirectX_recorder PROPERTIES FOLDER DirectX)

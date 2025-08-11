@@ -35,15 +35,9 @@ target_sources(DirectX_skip_calls PRIVATE
   ${ALL_SRC}
 )
 
-target_include_directories(DirectX_skip_calls PRIVATE
-  ${DIRECTX_DIR}/common/layer_interface
-  ${DIRECTX_DIR}/common/utils/to_string
-  ${DIRECTX_DIR}/common/utils
-  ${D3D12_HEADERS_DIR}
-  ${DML_HEADERS_DIR}
-  ${DSTORAGE_HEADERS_DIR}
-  ${INTEL_EXT_DIR}/include
-  ${XESS_HEADERS_DIR}
+target_link_libraries(DirectX_skip_calls PRIVATE
+  DirectX_layer_interface
+  DirectX_utils
 )
 
 set_target_properties(DirectX_skip_calls PROPERTIES FOLDER DirectX/DirectX_layers)

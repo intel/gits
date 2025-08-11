@@ -10,7 +10,7 @@ ${header}
 #pragma once
 
 #include "printEnumsAuto.h"
-#include "enumToStrAuto.h"
+#include "to_string/enumToStrAuto.h"
 
 namespace gits {
 namespace DirectX {

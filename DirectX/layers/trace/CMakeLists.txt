@@ -57,15 +57,12 @@ target_sources(DirectX_trace PRIVATE
 add_subdirectory(ipc)
 
 target_include_directories(DirectX_trace PRIVATE
-  ${DIRECTX_DIR}/common/layer_interface
-  ${DIRECTX_DIR}/common/utils/to_string
-  ${DIRECTX_DIR}/common/utils
-  ${INTEL_EXT_DIR}/include
-  ${D3D12_HEADERS_DIR}
-  ${DML_HEADERS_DIR}
-  ${DSTORAGE_HEADERS_DIR}
-  ${XESS_HEADERS_DIR}
   ${FASTIO_DIR}/include
+)
+
+target_link_libraries(DirectX_trace PRIVATE
+  DirectX_layer_interface
+  DirectX_utils
 )
 
 set_target_properties(DirectX_trace PROPERTIES FOLDER DirectX/DirectX_layers)

@@ -10,8 +10,8 @@
 #include "log.h"
 #include "config.h"
 #include "configurationLib.h"
-#include "enumToStrAuto.h"
-#include "toStr.h"
+#include "to_string/enumToStrAuto.h"
+#include "to_string/toStr.h"
 #include "gits.h"
 
 #include <sstream>

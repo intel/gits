@@ -103,16 +103,19 @@ target_sources(DirectX_subcapture PRIVATE
 )
 
 target_include_directories(DirectX_subcapture PRIVATE
-  ${DIRECTX_DIR}/common/layer_interface
   ${DIRECTX_DIR}/common/coders
-  ${DIRECTX_DIR}/common/utils
   ${DIRECTX_DIR}/layers/dstorage_resources
-  ${D3D12_HEADERS_DIR}
-  ${DML_HEADERS_DIR}
-  ${DSTORAGE_HEADERS_DIR}
-  ${INTEL_EXT_DIR}/include
-  ${XESS_HEADERS_DIR}
   ${CMAKE_SOURCE_DIR}/third_party/DirectXTex/DirectXTex
+  ${ARGS_SOURCE_DIR}
+)
+
+target_link_libraries(DirectX_subcapture PRIVATE
+    DirectX_layer_interface
+    DirectX_dstorage_resources
+    DirectX_utils
+    DirectX_coders
+    common
+    configuration
 )
 
 set_target_properties(DirectX_subcapture PROPERTIES FOLDER DirectX/DirectX_layers)
