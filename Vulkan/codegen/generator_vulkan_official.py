@@ -2412,7 +2412,7 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*'),
 arg4=ArgDef(name='pIndirectExecutionSet', type='VkIndirectExecutionSetEXT*')
 )
 
-Function(name='vkCreateInstance', enabled=True, type=FuncType.PARAM, recExecWrap=True, runWrap=True, stateTrack=True, customDriver=True, level=FuncLevel.GLOBAL,
+Function(name='vkCreateInstance', enabled=True, type=FuncType.PARAM, recExecWrap=True, recWrap=True, runWrap=True, stateTrack=True, customDriver=True, level=FuncLevel.GLOBAL,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='pCreateInfo', type='const VkInstanceCreateInfo*'),
 arg2=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper'),

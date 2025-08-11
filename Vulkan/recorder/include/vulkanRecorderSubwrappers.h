@@ -463,6 +463,19 @@ void scheduleCopyToSwapchainAndPresent(VkDevice device, VkQueue queue, CRecorder
 }
 
 } // namespace
+
+void vkCreateInstance_RECWRAP(VkResult return_value,
+                              const VkInstanceCreateInfo* pCreateInfo,
+                              const VkAllocationCallbacks* pAllocator,
+                              VkInstance* pInstance,
+                              CRecorder& recorder) {
+  vkCreateInstance_SD(return_value, pCreateInfo, pAllocator, pInstance);
+
+  if (recorder.Running()) {
+    recorder.Schedule(new CvkCreateInstance(return_value, pCreateInfo, pAllocator, pInstance));
+  }
+}
+
 inline void vkQueuePresentKHR_RECWRAP(VkResult return_value,
                                       VkQueue queue,
                                       const VkPresentInfoKHR* pPresentInfo,

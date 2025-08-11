@@ -53,13 +53,12 @@ const std::array<gits::Vulkan::ArgInfo, ${len(token.args)}> gits::Vulkan::${cnam
 gits::Vulkan::${cname}::${cname}()
 {
 }
-
-
+% if params:
 gits::Vulkan::${cname}::${cname}(${params}):
   ${member_initializer_list}
 {
 }
-
+% endif
 gits::CArgument &gits::Vulkan::${cname}::Argument(unsigned idx)
 {
 % if normal_args:

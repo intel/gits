@@ -53,7 +53,9 @@ namespace gits {
 
     public:
       ${cname}();
+% if params:
       ${cname}(${params});
+% endif
       virtual unsigned Id() const override { return ${id_str}; }
       virtual unsigned Type() const { return ${func_type_flags};}
       virtual const char *Name() const override { return "${token.name}"; }
