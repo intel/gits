@@ -17,6 +17,7 @@
 #include "vulkanTracerAuto.h"
 
 #include "gits.h"
+#include "configurationLib.h"
 #ifndef BUILD_FOR_CCODE
 #include "lua_bindings.h"
 
@@ -27,8 +28,6 @@ namespace lua {
 } // namespace gits
 
 #endif
-
-#include "configurationLib.h"
 
 namespace gits {
 namespace Vulkan {
