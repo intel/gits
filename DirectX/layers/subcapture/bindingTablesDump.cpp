@@ -19,13 +19,11 @@ void BindingTablesDump::dumpBindingTable(ID3D12GraphicsCommandList* commandList,
                                          unsigned offset,
                                          unsigned size,
                                          unsigned stride,
-                                         D3D12_RESOURCE_STATES state,
-                                         unsigned callKey) {
+                                         D3D12_RESOURCE_STATES state) {
   BindingTablesInfo* info = new BindingTablesInfo();
   info->offset = offset;
   info->size = size;
   info->stride = stride;
-  info->dispatchCall = callKey;
 
   stageResource(commandList, resource, state, *info);
 }
@@ -50,8 +48,8 @@ void BindingTablesDump::dumpBuffer(DumpInfo& dumpInfo, void* data) {
 
       unsigned stride{};
       CapturePlayerDescriptorHandleService::DescriptorHeapInfo* heapInfo =
-          raytracingService_.getDescriptorHandleService()
-              .getSamplerDescriptorHeapInfoByCaptureHandle(*address);
+          raytracingService_.getDescriptorHandleService().getViewDescriptorHeapInfoByCaptureHandle(
+              *address);
       stride = raytracingService_.getDescriptorHandleService().viewHeapIncrement();
       if (!heapInfo) {
         heapInfo = raytracingService_.getDescriptorHandleService()

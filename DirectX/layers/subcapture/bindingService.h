@@ -13,6 +13,7 @@
 #include "descriptorService.h"
 #include "rootSignatureService.h"
 #include "analyzerRaytracingService.h"
+#include "analyzerExecuteIndirectService.h"
 
 #include <unordered_set>
 #include <unordered_map>
@@ -30,6 +31,7 @@ public:
                  DescriptorService& descriptorService,
                  RootSignatureService& rootSignatureService,
                  AnalyzerRaytracingService& raytracingService,
+                 AnalyzerExecuteIndirectService& executeIndirectService,
                  bool commandListSubcapture);
 
   std::unordered_set<unsigned>& getObjectsForRestore() {
@@ -45,6 +47,9 @@ public:
     return raytracingService_.getBindingTablesDescriptors();
   }
 
+  void addObjectForRestore(unsigned key) {
+    objectsForRestore_.insert(key);
+  }
   void commandListsRestore(const std::set<unsigned>& commandLists);
   void commandListReset(ID3D12GraphicsCommandListResetCommand& c);
   void setDescriptorHeaps(ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c);
@@ -78,6 +83,7 @@ public:
   void copyRaytracingAccelerationStructure(
       ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c);
   void dispatchRays(ID3D12GraphicsCommandList4DispatchRaysCommand& c);
+  void executeIndirect(ID3D12GraphicsCommandListExecuteIndirectCommand& c);
   void writeBufferImmediate(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c);
   void copyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& c);
   void copyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c);
@@ -115,6 +121,7 @@ private:
   void copyRaytracingAccelerationStructureImpl(
       ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c);
   void dispatchRaysImpl(ID3D12GraphicsCommandList4DispatchRaysCommand& c);
+  void executeIndirectImpl(ID3D12GraphicsCommandListExecuteIndirectCommand& c);
   void writeBufferImmediateImpl(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c);
   void commandListRestore(unsigned commandListKey);
   unsigned getNumDescriptors(unsigned commandListKey, unsigned descriptorHeapKey);
@@ -124,6 +131,7 @@ private:
   DescriptorService& descriptorService_;
   RootSignatureService& rootSignatureService_;
   AnalyzerRaytracingService& raytracingService_;
+  AnalyzerExecuteIndirectService& executeIndirectService_;
   bool commandListSubcapture_{};
 
   std::unordered_map<unsigned, unsigned> computeRootSignatureByCommandList_;

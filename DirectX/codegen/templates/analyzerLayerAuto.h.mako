@@ -15,6 +15,9 @@ ${header}
 #include "bindingService.h"
 #include "rootSignatureService.h"
 #include "analyzerRaytracingService.h"
+#include "analyzerExecuteIndirectService.h"
+#include "capturePlayerGpuAddressService.h"
+#include "capturePlayerDescriptorHandleService.h"
 #include "subcaptureRange.h"
 
 namespace gits {
@@ -40,8 +43,6 @@ public:
   void post(ID3D12DeviceCreateFenceCommand& c) override;
   void post(ID3D12Device3EnqueueMakeResidentCommand& c) override;
   void post(ID3D12FenceGetCompletedValueCommand& c) override;
-  void post(ID3D12CommandQueueCopyTileMappingsCommand& c) override;
-  void post(ID3D12CommandQueueUpdateTileMappingsCommand& c) override;
   void post(ID3D12DeviceCopyDescriptorsSimpleCommand& c) override;
   void post(ID3D12DeviceCopyDescriptorsCommand& c) override;
   void post(ID3D12DeviceCreateRenderTargetViewCommand& c) override;
@@ -55,11 +56,13 @@ public:
   void pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) override;
   void pre(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) override;
   void pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) override;
+  void pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) override;
   void pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) override;
   void post(ID3D12ResourceGetGPUVirtualAddressCommand& c) override;
   void pre(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) override;
   void post(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) override;
   void post(IUnknownReleaseCommand& command) override;
+  void post(ID3D12DeviceCreateCommandSignatureCommand& c) override;
   void post(ID3D12DeviceCreateCommittedResourceCommand& c) override;
   void post(ID3D12Device4CreateCommittedResource1Command& c) override;
   void post(ID3D12Device8CreateCommittedResource2Command& c) override;
@@ -82,7 +85,10 @@ private:
   BindingService bindingService_;
   DescriptorService descriptorService_;
   RootSignatureService rootSignatureService_;
+  CapturePlayerGpuAddressService gpuAddressService_;
+  CapturePlayerDescriptorHandleService descriptorHandleService_;
   AnalyzerRaytracingService raytracingService_;
+  AnalyzerExecuteIndirectService executeIndirectService_;
 };
 
 } // namespace DirectX

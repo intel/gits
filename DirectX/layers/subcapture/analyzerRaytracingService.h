@@ -24,11 +24,23 @@ namespace DirectX {
 
 class AnalyzerRaytracingService {
 public:
-  AnalyzerRaytracingService(DescriptorService& descriptorService)
-      : instancesDump_(*this), bindingTablesDump_(*this), descriptorService_(descriptorService) {}
+  AnalyzerRaytracingService(DescriptorService& descriptorService,
+                            CapturePlayerGpuAddressService& gpuAddressService,
+                            CapturePlayerDescriptorHandleService& descriptorHandleService)
+      : gpuAddressService_(gpuAddressService),
+        descriptorHandleService_(descriptorHandleService),
+        descriptorService_(descriptorService),
+        instancesDump_(*this),
+        bindingTablesDump_(*this) {}
   void createStateObject(ID3D12Device5CreateStateObjectCommand& c);
   void buildTlas(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
   void dispatchRays(ID3D12GraphicsCommandList4DispatchRaysCommand& c);
+  void dumpBindingTable(ID3D12GraphicsCommandList* commandList,
+                        ID3D12Resource* resource,
+                        unsigned resourceKey,
+                        unsigned offset,
+                        UINT64 size,
+                        UINT64 stride);
   void addAccelerationStructureSource(unsigned key, unsigned offset) {
     sources_.insert(std::make_pair(key, offset));
   }
@@ -47,10 +59,7 @@ public:
                           unsigned fenceKey,
                           UINT64 fenceValue);
   void fenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue);
-  void captureGPUVirtualAddress(ID3D12ResourceGetGPUVirtualAddressCommand& c);
-  void playerGPUVirtualAddress(ID3D12ResourceGetGPUVirtualAddressCommand& c);
-  void captureGPUDescriptorHandle(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c);
-  void playerGPUDescriptorHandle(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c);
+  void getGPUVirtualAddress(ID3D12ResourceGetGPUVirtualAddressCommand& c);
   void genericReadResource(unsigned resourceKey) {
     genericReadResources_.insert(resourceKey);
   }
@@ -90,8 +99,8 @@ public:
   }
 
 private:
-  CapturePlayerGpuAddressService gpuAddressService_;
-  CapturePlayerDescriptorHandleService descriptorHandleService_;
+  CapturePlayerGpuAddressService& gpuAddressService_;
+  CapturePlayerDescriptorHandleService& descriptorHandleService_;
   DescriptorService& descriptorService_;
 
   std::unordered_map<unsigned, std::vector<unsigned>> stateObjectsSubobjects_;

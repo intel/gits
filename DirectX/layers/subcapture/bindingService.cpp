@@ -18,11 +18,13 @@ BindingService::BindingService(AnalyzerService& analyzerService,
                                DescriptorService& descriptorService,
                                RootSignatureService& rootSignatureService,
                                AnalyzerRaytracingService& raytracingService,
+                               AnalyzerExecuteIndirectService& executeIndirectService,
                                bool commandListSubcapture)
     : analyzerService_(analyzerService),
       descriptorService_(descriptorService),
       rootSignatureService_(rootSignatureService),
       raytracingService_(raytracingService),
+      executeIndirectService_(executeIndirectService),
       commandListSubcapture_(commandListSubcapture) {
   restoreTlases_ = Configurator::Get().directx.features.subcapture.restoreTLASes;
 }
@@ -552,6 +554,20 @@ void BindingService::dispatchRaysImpl(ID3D12GraphicsCommandList4DispatchRaysComm
   objectsForRestore_.insert(c.pDesc_.missShaderTableKey);
   objectsForRestore_.insert(c.pDesc_.hitGroupTableKey);
   objectsForRestore_.insert(c.pDesc_.callableShaderTableKey);
+}
+
+void BindingService::executeIndirect(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
+  if (analyzerService_.inRange()) {
+    commandListRestore(c.object_.key);
+    executeIndirectImpl(c);
+  } else if (!commandListSubcapture_) {
+    commandsByCommandList_[c.object_.key].emplace_back(
+        new ID3D12GraphicsCommandListExecuteIndirectCommand(c));
+  }
+}
+
+void BindingService::executeIndirectImpl(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
+  executeIndirectService_.executeIndirect(c);
 }
 
 void BindingService::writeBufferImmediate(

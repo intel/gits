@@ -82,6 +82,8 @@ set(ANALYSIS_SRC
   ${SRC_DIR}/rootSignatureService.cpp
   ${SRC_DIR}/analyzerRaytracingService.h
   ${SRC_DIR}/analyzerRaytracingService.cpp
+  ${SRC_DIR}/analyzerExecuteIndirectService.h
+  ${SRC_DIR}/analyzerExecuteIndirectService.cpp
   ${SRC_DIR}/raytracingInstancesDump.h
   ${SRC_DIR}/raytracingInstancesDump.cpp
   ${SRC_DIR}/bindingTablesDump.h

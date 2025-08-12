@@ -170,20 +170,6 @@ void AnalyzerService::fenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fe
   }
 }
 
-void AnalyzerService::copyTileMappings(unsigned callKey, unsigned commandQueueKey) {
-  if (beforeRange_) {
-    GpuExecutionTracker::Executable* executable = new GpuExecutionTracker::Executable{};
-    gpuExecutionTracker_.execute(callKey, commandQueueKey, executable);
-  }
-}
-
-void AnalyzerService::updateTileMappings(unsigned callKey, unsigned commandQueueKey) {
-  if (beforeRange_) {
-    GpuExecutionTracker::Executable* executable = new GpuExecutionTracker::Executable{};
-    gpuExecutionTracker_.execute(callKey, commandQueueKey, executable);
-  }
-}
-
 void AnalyzerService::mappedDataMeta(unsigned resourceKey) {
   if (inRange_) {
     objectsForRestore_.insert(resourceKey);

@@ -28,8 +28,7 @@ public:
                         unsigned offset,
                         unsigned size,
                         unsigned stride,
-                        D3D12_RESOURCE_STATES state,
-                        unsigned callKey);
+                        D3D12_RESOURCE_STATES state);
   void dumpBuffer(DumpInfo& dumpInfo, void* data) override;
 
   std::unordered_set<unsigned>& getBindingTablesResources() {
@@ -46,7 +45,6 @@ private:
   std::set<std::pair<unsigned, unsigned>> bindingTablesDescriptors_;
 
   struct BindingTablesInfo : DumpInfo {
-    unsigned dispatchCall{};
     unsigned stride{};
   };
 };
