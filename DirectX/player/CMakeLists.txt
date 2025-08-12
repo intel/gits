@@ -109,7 +109,6 @@ target_sources(DirectX_player PRIVATE
 )
 
 target_include_directories(DirectX_player PRIVATE
-  ${DIRECTX_DIR}/common/coders
   ${DIRECTX_DIR}/layers/trace
   ${DIRECTX_DIR}/layers/subcapture
   ${DIRECTX_DIR}/layers/execution_serialization
@@ -137,8 +136,6 @@ target_link_libraries(DirectX_player PRIVATE
   DirectX_skip_calls
   DirectX_portability
   DirectX_print_status
-  configuration
-  common
   ${INTEL_EXT_DIR}/lib/igdext64.lib
   ${NVAPI_DIR}/amd64/nvapi64.lib
 )

@@ -7,38 +7,38 @@
 # ===================== end_copyright_notice ==============================
 
 add_library(DirectX_coders STATIC)
-set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 set(COMMON_SRC
-  ${SRC_DIR}/dmlCodersCustom.h
+  ${SRC_DIR}/include/dmlCodersCustom.h
+  ${SRC_DIR}/include/dmlCodersAuto.h
   ${SRC_DIR}/dmlCodersCustom.cpp
-  ${SRC_DIR}/dmlCodersAuto.h
   ${SRC_DIR}/dmlCodersAuto.cpp
 )
 source_group("common" FILES ${COMMON_SRC})
 
 set(ENCODERS_SRC
-  ${SRC_DIR}/commandWriter.h
-  ${SRC_DIR}/commandWritersAuto.h
-  ${SRC_DIR}/commandEncodersAuto.h
-  ${SRC_DIR}/commandEncodersAuto.cpp
-  ${SRC_DIR}/argumentEncoders.h
+  ${SRC_DIR}/include/argumentEncoders.h
+  ${SRC_DIR}/include/commandWriters.h
+  ${SRC_DIR}/include/commandWritersFactory.h
+  ${SRC_DIR}/include/commandWritersCustom.h
+  ${SRC_DIR}/include/commandEncodersCustom.h
+  ${SRC_DIR}/include/commandWritersAuto.h
+  ${SRC_DIR}/include/commandEncodersAuto.h
   ${SRC_DIR}/argumentEncoders.cpp
-  ${SRC_DIR}/commandWritersCustom.h
-  ${SRC_DIR}/commandEncodersCustom.h
+  ${SRC_DIR}/commandEncodersAuto.cpp
   ${SRC_DIR}/commandEncodersCustom.cpp
-  ${SRC_DIR}/commandWritersFactory.h
   ${SRC_DIR}/commandWritersFactoryAuto.cpp
 )
 source_group("encoders" FILES ${ENCODERS_SRC})
 
 set(DECODERS_SRC
-  ${SRC_DIR}/argumentDecoders.h
+  ${SRC_DIR}/include/argumentDecoders.h
+  ${SRC_DIR}/include/commandDecodersAuto.h
+  ${SRC_DIR}/include/commandDecodersCustom.h
   ${SRC_DIR}/argumentDecoders.cpp
-  ${SRC_DIR}/commandDecodersAuto.h
-  ${SRC_DIR}/commandDecodersAuto.cpp
-  ${SRC_DIR}/commandDecodersCustom.h
   ${SRC_DIR}/commandDecodersCustom.cpp
+  ${SRC_DIR}/commandDecodersAuto.cpp
 )
 source_group("decoders" FILES ${DECODERS_SRC})
 
@@ -54,13 +54,8 @@ target_sources(DirectX_coders PRIVATE
   ${ALL_SRC}
 )
 
-target_include_directories(DirectX_coders PRIVATE
-  ${D3D12_HEADERS_DIR}
-  ${DML_HEADERS_DIR}
-  ${DSTORAGE_HEADERS_DIR}
-  ${INTEL_EXT_DIR}/include
-  ${XESS_HEADERS_DIR}
-  ../layer_interface
+target_include_directories(DirectX_coders PUBLIC
+  ${SRC_DIR}/include
 )
 
 target_link_libraries(DirectX_coders PRIVATE

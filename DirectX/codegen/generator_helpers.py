@@ -71,7 +71,7 @@ def is_context_creation(function):
     return any(param.is_context_output for param in function.params)
 
 def generate_file(context, file_name, out_path):
-    in_file = os.path.join("templates", file_name + ".mako")
+    in_file = os.path.join("templates", os.path.basename(file_name) + ".mako")
     out_file = os.path.join(out_path, file_name)
     
     base_context = {

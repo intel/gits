@@ -7,24 +7,24 @@
 # ===================== end_copyright_notice ==============================
 
 add_library(DirectX_layer_interface STATIC)
-set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-set(LAYER_INTERFACE_SRC
-  ${SRC_DIR}/directx.h
-  ${SRC_DIR}/intelExtensions.h
-  ${SRC_DIR}/commandIdsAuto.h
-  ${SRC_DIR}/commandsAuto.h
-  ${SRC_DIR}/commandsCustom.h
-  ${SRC_DIR}/layerAuto.h
-  ${SRC_DIR}/command.h
-  ${SRC_DIR}/arguments.h
+set(ALL_SRC
+  ${SRC_DIR}/include/directx.h
+  ${SRC_DIR}/include/intelExtensions.h
+  ${SRC_DIR}/include/commandIdsAuto.h
+  ${SRC_DIR}/include/commandsAuto.h
+  ${SRC_DIR}/include/commandsCustom.h
+  ${SRC_DIR}/include/layerAuto.h
+  ${SRC_DIR}/include/command.h
+  ${SRC_DIR}/include/arguments.h
   ${SRC_DIR}/arguments.cpp
 )
-source_group("" FILES ${LAYER_INTERFACE_SRC})
-set_auto_generated_property(FILE_LIST ${LAYER_INTERFACE_SRC})
+
+set_auto_generated_property(FILE_LIST ${ALL_SRC})
 
 target_sources(DirectX_layer_interface PRIVATE
-  ${LAYER_INTERFACE_SRC}
+  ${ALL_SRC}
 )
 
 target_include_directories(DirectX_layer_interface PUBLIC
@@ -34,7 +34,7 @@ target_include_directories(DirectX_layer_interface PUBLIC
   ${INTEL_EXT_DIR}/include
   ${XESS_HEADERS_DIR}
   ${NVAPI_DIR}
-  ${SRC_DIR}
+  ${SRC_DIR}/include
 )
 
 add_dependencies(DirectX_layer_interface

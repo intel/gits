@@ -10,7 +10,7 @@
 
 #include "commandsAuto.h"
 #include "commandIdsAuto.h"
-#include "commandWriter.h"
+#include "commandWriters.h"
 
 namespace gits {
 namespace DirectX {

@@ -117,9 +117,9 @@ def generate_layer_files(context, out_path):
         'generate_params_for_function': generate_params_for_function
     }
     files_to_generate = [
-        'commandIdsAuto.h',
-        'commandsAuto.h',
-        'layerAuto.h',
+        'include/commandIdsAuto.h',
+        'include/commandsAuto.h',
+        'include/layerAuto.h',
     ]
     for file_name in files_to_generate:
         generate_file(context | additional_context, file_name, out_path)

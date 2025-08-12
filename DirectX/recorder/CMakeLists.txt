@@ -98,7 +98,6 @@ target_sources(DirectX_recorder PRIVATE
 
 target_include_directories(DirectX_recorder PRIVATE
   ${CMAKE_SOURCE_DIR}/third_party/Detours/src
-  ${DIRECTX_DIR}/common/coders
   ${DIRECTX_DIR}/layers/trace
   ${DIRECTX_DIR}/layers/resource_dumping
   ${DIRECTX_DIR}/layers/portability
@@ -121,8 +120,6 @@ target_link_libraries(DirectX_recorder PRIVATE
   DirectX_utils
   DirectX_resource_dumping
   DirectX_portability
-  configuration
-  common
   ${INTEL_EXT_DIR}/lib/igdext64.lib 
   ${NVAPI_DIR}/amd64/nvapi64.lib
 )

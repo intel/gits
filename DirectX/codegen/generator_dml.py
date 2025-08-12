@@ -62,7 +62,7 @@ def generate_dml_files(context, out_path):
         'dml_enum_is_valid': dml_enum_is_valid,
     }
     files_to_generate = [
-        'dmlCodersAuto.h',
+        'include/dmlCodersAuto.h',
         'dmlCodersAuto.cpp'
     ]
     for file_name in files_to_generate:

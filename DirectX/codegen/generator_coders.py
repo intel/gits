@@ -26,11 +26,11 @@ def generate_coders_files(context, out_path):
         'command_encoders_sum_sizes': command_encoders_sum_sizes
     }
     files_to_generate = [
-        'commandEncodersAuto.h',
+        'include/commandEncodersAuto.h',
         'commandEncodersAuto.cpp',
-        'commandDecodersAuto.h',
+        'include/commandDecodersAuto.h',
         'commandDecodersAuto.cpp',
-        'commandWritersAuto.h',
+        'include/commandWritersAuto.h',
         'commandWritersFactoryAuto.cpp'
     ]
     for file_name in files_to_generate:

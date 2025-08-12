@@ -8,13 +8,11 @@
 
 add_library(DirectX_benchmark SHARED)
 set_target_properties(DirectX_benchmark PROPERTIES OUTPUT_NAME plugin)
-target_link_libraries(DirectX_benchmark PRIVATE common DirectX_plugin_utils)
 
 set(SERVICES_DIR services)
 set (SERVICES_SRC
   ${SERVICES_DIR}/cpuFrameBenchmarkService.h
   ${SERVICES_DIR}/cpuFrameBenchmarkService.cpp
-
 )
 source_group("services" FILES ${SERVICES_SRC})
 
@@ -30,21 +28,8 @@ PRIVATE
   ${SERVICES_SRC}
 )
 
-target_include_directories(DirectX_benchmark
-PRIVATE
-  ${DML_HEADERS_DIR}
-  ${DSTORAGE_HEADERS_DIR}
-  ${AGILITY_SDK_DIR}/include
-  ${CMAKE_SOURCE_DIR}/DirectX/common/layer_interface
-  ${XESS_HEADERS_DIR}
-  ${PLUGINS_DIR}
-  ${PLUGINS_DIR}/common
-  ${SERVICES_DIR}
-  ${PLUGINS_DIR}/DirectX/common/utils
-)
-
-add_dependencies(DirectX_benchmark
-    DirectX_layer_interface
+target_link_libraries(DirectX_benchmark PRIVATE
+  DirectX_plugin_utils
 )
 
 set_target_properties(DirectX_benchmark PROPERTIES FOLDER Plugins/DirectX)

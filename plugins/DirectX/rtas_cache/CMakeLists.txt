@@ -8,8 +8,6 @@
 
 add_library(DirectX_rtas_cache SHARED)
 set_target_properties(DirectX_rtas_cache PROPERTIES OUTPUT_NAME plugin)
-add_dependencies(DirectX_rtas_cache common)
-target_link_libraries(DirectX_rtas_cache PRIVATE common DirectX_utils DirectX_plugin_utils)
 
 set(PLUGINS_SRC
   ${PLUGINS_DIR}/IPlugin.h
@@ -42,16 +40,8 @@ PRIVATE
   ${ROOT_SRC}
 )
 
-target_include_directories(DirectX_rtas_cache
-PRIVATE
-  ${DML_HEADERS_DIR}
-  ${DSTORAGE_HEADERS_DIR}
-  ${AGILITY_SDK_DIR}/include
-  ${CMAKE_SOURCE_DIR}/DirectX/common/layer_interface
-  ${XESS_HEADERS_DIR}
-  ${PLUGINS_DIR}
-  ${PLUGINS_DIR}/common/
-  ${PLUGINS_DIR}/DirectX/common/utils
+target_link_libraries(DirectX_rtas_cache PRIVATE
+  DirectX_plugin_utils
 )
 
 set_target_properties(DirectX_rtas_cache PROPERTIES FOLDER Plugins/DirectX)

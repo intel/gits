@@ -7,28 +7,30 @@
 # ===================== end_copyright_notice ==============================
 
 add_library(DirectX_plugin_utils STATIC)
-add_dependencies(DirectX_plugin_utils config_codegen)
-target_link_libraries(DirectX_plugin_utils PRIVATE common configuration)
+set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_sources(DirectX_plugin_utils
 PRIVATE
   ${PLUGINS_DIR}/common/pluginUtils.h
-  gpuExecutionTracker.h
-  gpuExecutionTracker.cpp
-  taskScheduler.h
-  taskScheduler.cpp
-  benchmarkUtils.h
-  benchmarkUtils.cpp
+  ${SRC_DIR}/gpuExecutionTracker.h
+  ${SRC_DIR}/gpuExecutionTracker.cpp
+  ${SRC_DIR}/taskScheduler.h
+  ${SRC_DIR}/taskScheduler.cpp
+  ${SRC_DIR}/benchmarkUtils.h
+  ${SRC_DIR}/benchmarkUtils.cpp
 )
 
 target_include_directories(DirectX_plugin_utils
-PRIVATE
-  ${DML_HEADERS_DIR}
-  ${DSTORAGE_HEADERS_DIR}
-  ${AGILITY_SDK_DIR}/include
-  ${XESS_HEADERS_DIR}
+PUBLIC
   ${PLUGINS_DIR}
   ${PLUGINS_DIR}/common
+  ${SRC_DIR}
+)
+
+target_link_libraries(DirectX_plugin_utils 
+PUBLIC
+  DirectX_layer_interface
+  DirectX_utils
 )
 
 set_target_properties(DirectX_plugin_utils PROPERTIES FOLDER Plugins/DirectX/DirectX_common)

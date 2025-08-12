@@ -8,7 +8,6 @@
 
 add_library(DirectX_hello_plugin SHARED)
 set_target_properties(DirectX_hello_plugin PROPERTIES OUTPUT_NAME plugin)
-target_link_libraries(DirectX_hello_plugin PRIVATE common)
 
 target_sources(DirectX_hello_plugin
 PRIVATE
@@ -20,20 +19,8 @@ PRIVATE
   config.yml
 )
 
-target_include_directories(DirectX_hello_plugin
-PRIVATE
-  ${DML_HEADERS_DIR}
-  ${DSTORAGE_HEADERS_DIR}
-  ${AGILITY_SDK_DIR}/include
-  ${CMAKE_SOURCE_DIR}/DirectX/common/layer_interface
-  ${XESS_HEADERS_DIR}
-  ${PLUGINS_DIR}
-  ${PLUGINS_DIR}/common/
-)
-
-add_dependencies(DirectX_hello_plugin
-    DirectX_layer_interface
-    common
+target_link_libraries(DirectX_hello_plugin PRIVATE
+  DirectX_plugin_utils
 )
 
 set_target_properties(DirectX_hello_plugin PROPERTIES FOLDER Plugins/DirectX)
