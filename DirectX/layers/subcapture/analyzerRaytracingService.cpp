@@ -21,7 +21,8 @@ void AnalyzerRaytracingService::createStateObject(ID3D12Device5CreateStateObject
 
 void AnalyzerRaytracingService::buildTlas(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
-  if (!c.pDesc_.value->Inputs.NumDescs) {
+  if (!c.pDesc_.value->Inputs.NumDescs ||
+      c.pDesc_.value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS) {
     return;
   }
   ID3D12Resource* instances = resourceByKey_[c.pDesc_.inputKeys[0]];
