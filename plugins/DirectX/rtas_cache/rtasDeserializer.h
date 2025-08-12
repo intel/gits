@@ -29,7 +29,8 @@ public:
   RtasDeserializer(const RtasDeserializer&) = delete;
   RtasDeserializer& operator=(const RtasDeserializer&) = delete;
 
-  bool isCompatible(ID3D12Device5* device);
+  bool preloadCache(ID3D12Device5* device);
+
   bool deserialize(unsigned buildKey,
                    ID3D12GraphicsCommandList4* commandList,
                    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc);
@@ -40,6 +41,7 @@ public:
                            unsigned commandListNum);
 
 private:
+  bool isCompatible(std::ifstream& cacheFile, ID3D12Device5* device);
   void cleanup();
 
 private:
@@ -58,7 +60,8 @@ private:
   };
   std::unordered_map<ID3D12CommandQueue*, CommandQueueInfo> commandQueues_;
 
-  std::ifstream cacheFile_;
+  std::string cacheFilePath_;
+  std::unordered_map<unsigned, std::vector<uint8_t>> cacheData_;
 };
 
 } // namespace DirectX

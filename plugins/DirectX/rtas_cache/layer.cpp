@@ -12,6 +12,14 @@
 namespace gits {
 namespace DirectX {
 
+static std::string getFileSize(const std::string& filePath) {
+  auto fileSize = std::filesystem::file_size(filePath);
+  auto fileSizeMB = static_cast<double>(fileSize) / (1024 * 1024);
+  std::ostringstream oss;
+  oss << std::fixed << std::setprecision(2) << fileSizeMB << "MB";
+  return oss.str();
+}
+
 RtasCacheLayer::RtasCacheLayer(CGits& gits, const RtasCacheConfig& cfg)
     : Layer("RtasCache"),
       gits_(gits),
@@ -19,14 +27,27 @@ RtasCacheLayer::RtasCacheLayer(CGits& gits, const RtasCacheConfig& cfg)
       serializer_(gits, cfg_.cacheFile, cfg_.dumpCacheInfoFile),
       deserializer_(gits, cfg_.cacheFile),
       stateRestore_(false) {
-  log(gits_, "RtasCache - Cache file: ", cfg.cacheFile);
   log(gits_, "RtasCache - State restore only: ", cfg.stateRestoreOnly ? "true" : "false");
+  log(gits_, "RtasCache - Cache file: ", cfg.cacheFile);
+  if (!cfg.record) {
+    if (std::filesystem::exists(cfg.cacheFile)) {
+      log(gits_, "RtasCache - Cache file size is ", getFileSize(cfg_.cacheFile));
+    } else {
+      logE(gits_, "RtasCache - Cache file does not exist!");
+      isValid_ = false;
+    }
+  }
 }
 
 RtasCacheLayer::~RtasCacheLayer() {
   try {
-    log(gits_, "RtasCache - ", cfg_.record ? "Serialized " : "Deserialized ", blasCount_,
-        " BLASes");
+    if (cfg_.record) {
+      log(gits_, "RtasCache - Serialized ", blasCount_, " BLASes");
+      serializer_.writeCache();
+      log(gits_, "RtasCache - Cache file size is ", getFileSize(cfg_.cacheFile));
+    } else {
+      log(gits_, "RtasCache - Deserialized ", cachedBlasCount_, "/", blasCount_, " BLASes");
+    }
   } catch (...) {
     fprintf(stderr, "Exception in RtasCacheLayer::~RtasCacheLayer");
   }
@@ -42,44 +63,43 @@ void RtasCacheLayer::pre(StateRestoreEndCommand& c) {
 
 void RtasCacheLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
   static bool firstBuildCall = true;
+  if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+    return;
+  }
+
   if (replay()) {
     if (firstBuildCall) {
+      firstBuildCall = false;
+
       Microsoft::WRL::ComPtr<ID3D12Device5> device;
       HRESULT hr = c.object_.value->GetDevice(IID_PPV_ARGS(&device));
       assert(hr == S_OK);
 
-      isCompatible_ = deserializer_.isCompatible(device.Get());
-      firstBuildCall = false;
-      if (!isCompatible_) {
+      isValid_ = deserializer_.preloadCache(device.Get());
+      if (!isValid_) {
+        logE(gits_, "RtasCache - Failed to preload RTAS cache. Will not deserialize.");
         return;
       }
     }
 
-    if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-      return;
-    }
-
     if (deserializer_.deserialize(c.key, c.object_.value, *c.pDesc_.value)) {
       c.skip = true;
-      ++blasCount_;
-    } else {
-      logE(gits_,
-           "RtasCache - Failed to deserialize RTAS. Will no longer try to load from the cache.");
-      isCompatible_ = false;
+      ++cachedBlasCount_;
     }
   }
 }
 
 void RtasCacheLayer::post(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
-  if (record()) {
-    if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-      return;
-    }
-
-    serializer_.serialize(c.key, c.object_.value, *c.pDesc_.value);
-    ++blasCount_;
+  if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+    return;
   }
+
+  if (record()) {
+    serializer_.serialize(c.key, c.object_.value, *c.pDesc_.value);
+  }
+
+  ++blasCount_;
 }
 
 void RtasCacheLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {

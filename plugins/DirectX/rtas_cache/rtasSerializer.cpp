@@ -24,58 +24,7 @@ RtasSerializer::RtasSerializer(CGits& gits, const std::string& cacheFile, bool d
       initialized_(false) {}
 
 RtasSerializer::~RtasSerializer() {
-  if (!initialized_) {
-    return;
-  }
-
-  try {
-    waitUntilDumped();
-
-    log(gits_, "RtasCache - Writing ", cacheFile_);
-
-    std::unordered_map<unsigned, unsigned> blases;
-    for (std::filesystem::directory_entry file :
-         std::filesystem::directory_iterator(tmpCacheDir_)) {
-      std::string name = file.path().filename().string();
-      unsigned size = file.file_size();
-      unsigned buildKey = std::stoi(name);
-      blases[buildKey] = size;
-    }
-
-    // Serialize the RTASes based on build key serialization order
-    std::ofstream cache(cacheFile_, std::ios_base::binary);
-    for (unsigned buildKey : buildKeys_) {
-      std::wstring name = std::to_wstring(buildKey);
-      unsigned size = blases[buildKey];
-      std::ifstream file(tmpCacheDir_ + L"/" + name, std::ios_base::binary);
-      std::vector<char> data(size);
-      file.read(data.data(), size);
-      if (file.fail()) {
-        logE(gits_, "RtasCache - Error reading BLAS ", buildKey);
-        break;
-      }
-      file.close();
-      cache.write(reinterpret_cast<char*>(&buildKey), sizeof(buildKey));
-      cache.write(reinterpret_cast<char*>(&size), sizeof(size));
-      cache.write(data.data(), size);
-      if (cache.bad()) {
-        logE(gits_, "RtasCache - Error writing BLAS ", buildKey);
-        break;
-      }
-    }
-
-    cache.flush();
-
-    log(gits_, "RtasCache - Writing done");
-
-    std::filesystem::remove_all(tmpCacheDir_);
-
-    if (dumpCacheInfo_) {
-      dumpCacheInfo();
-    }
-  } catch (...) {
-    std::cerr << "Unhandled exception caught in RtasSerializer::~RtasSerializer";
-  }
+  writeCache();
 }
 
 void RtasSerializer::serialize(unsigned buildKey,
@@ -204,6 +153,63 @@ void RtasSerializer::serialize(unsigned buildKey,
   }
 
   stagedResources_[commandList].push_back(dumpInfo);
+}
+
+void RtasSerializer::writeCache() {
+  static bool written = false;
+  if (!initialized_ || written) {
+    return;
+  }
+
+  try {
+    waitUntilDumped();
+
+    log(gits_, "RtasCache - Writing ", cacheFile_);
+
+    std::unordered_map<unsigned, unsigned> blases;
+    for (std::filesystem::directory_entry file :
+         std::filesystem::directory_iterator(tmpCacheDir_)) {
+      std::string name = file.path().filename().string();
+      unsigned size = file.file_size();
+      unsigned buildKey = std::stoi(name);
+      blases[buildKey] = size;
+    }
+
+    // Serialize the RTASes based on build key serialization order
+    std::ofstream cache(cacheFile_, std::ios_base::binary);
+    for (unsigned buildKey : buildKeys_) {
+      std::wstring name = std::to_wstring(buildKey);
+      unsigned size = blases[buildKey];
+      std::ifstream file(tmpCacheDir_ + L"/" + name, std::ios_base::binary);
+      std::vector<char> data(size);
+      file.read(data.data(), size);
+      if (file.fail()) {
+        logE(gits_, "RtasCache - Error reading BLAS ", buildKey);
+        break;
+      }
+      file.close();
+      cache.write(reinterpret_cast<char*>(&buildKey), sizeof(buildKey));
+      cache.write(reinterpret_cast<char*>(&size), sizeof(size));
+      cache.write(data.data(), size);
+      if (cache.bad()) {
+        logE(gits_, "RtasCache - Error writing BLAS ", buildKey);
+        break;
+      }
+    }
+    cache.flush();
+
+    log(gits_, "RtasCache - Writing done");
+
+    std::filesystem::remove_all(tmpCacheDir_);
+
+    if (dumpCacheInfo_) {
+      dumpCacheInfo();
+    }
+
+    written = true;
+  } catch (...) {
+    std::cerr << "Unhandled exception caught in RtasSerializer::writeCache()";
+  }
 }
 
 void RtasSerializer::dumpStagedResource(DumpInfo& dumpInfo) {

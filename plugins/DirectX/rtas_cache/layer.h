@@ -44,7 +44,7 @@ private:
     return cfg_.record && (cfg_.stateRestoreOnly ? stateRestore_ : true);
   }
   bool replay() const {
-    return !cfg_.record && isCompatible_ && (cfg_.stateRestoreOnly ? stateRestore_ : true);
+    return !cfg_.record && isValid_ && (cfg_.stateRestoreOnly ? stateRestore_ : true);
   }
 
 private:
@@ -53,7 +53,8 @@ private:
   RtasSerializer serializer_;
   RtasDeserializer deserializer_;
   bool stateRestore_{false};
-  bool isCompatible_{true};
+  bool isValid_{true};
+  unsigned cachedBlasCount_{0};
   unsigned blasCount_{0};
 };
 

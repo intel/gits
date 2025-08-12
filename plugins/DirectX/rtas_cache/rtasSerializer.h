@@ -30,6 +30,7 @@ public:
   void serialize(unsigned buildKey,
                  ID3D12GraphicsCommandList4* commandList,
                  D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc);
+  void writeCache();
 
 protected:
   struct RtasDumpInfo : public DumpInfo {

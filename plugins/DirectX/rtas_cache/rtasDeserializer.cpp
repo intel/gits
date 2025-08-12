@@ -41,36 +41,61 @@ static std::string IdentifierToStr(
   return oss.str();
 }
 
-RtasDeserializer::RtasDeserializer(CGits& gits, const std::string& cacheFile) : gits_(gits) {
-  cacheFile_.open(cacheFile, std::ios_base::binary);
-  if (!cacheFile_) {
-    logE(gits_, "RtasCache - Failed to open ", cacheFile);
-  }
-}
+RtasDeserializer::RtasDeserializer(CGits& gits, const std::string& cacheFile)
+    : gits_(gits), cacheFilePath_(cacheFile) {}
 
 RtasDeserializer::~RtasDeserializer() {
   cleanup();
 }
 
-bool RtasDeserializer::isCompatible(ID3D12Device5* device) {
-  if (!device) {
+bool RtasDeserializer::preloadCache(ID3D12Device5* device) {
+  std::ifstream cacheFile(cacheFilePath_, std::ios_base::binary);
+  if (!cacheFile) {
+    logE(gits_, "RtasCache - Failed to open ", cacheFilePath_);
+  }
+
+  // Check if the cache file is compatible with the current device
+  if (!isCompatible(cacheFile, device)) {
+    logE(gits_, "RtasCache - Cache is not compatible with the current device");
     return false;
   }
 
-  if (!cacheFile_) {
+  // Read the cache file
+  while (cacheFile) {
+    unsigned key, size = {};
+    cacheFile.read(reinterpret_cast<char*>(&key), sizeof(key));
+    cacheFile.read(reinterpret_cast<char*>(&size), sizeof(size));
+
+    std::vector<uint8_t> data(size);
+    cacheFile.read(reinterpret_cast<char*>(data.data()), size);
+    if (size > 0 && !cacheFile) {
+      logE(gits_, "RtasCache - Error reading BLAS ", key);
+      cacheData_.clear();
+      return false;
+    }
+
+    cacheData_[key] = std::move(data);
+  }
+  log(gits_, "RtasCache - Cache file read successfully, total BLASes: ", cacheData_.size());
+
+  return true;
+}
+
+bool RtasDeserializer::isCompatible(std::ifstream& cacheFile, ID3D12Device5* device) {
+  if (!device || !cacheFile) {
     return false;
   }
 
-  auto initialPos = cacheFile_.tellg();
+  auto initialPos = cacheFile.tellg();
   // Read the key and size
   unsigned key, size = {};
-  cacheFile_.read(reinterpret_cast<char*>(&key), sizeof(key));
-  cacheFile_.read(reinterpret_cast<char*>(&size), sizeof(size));
+  cacheFile.read(reinterpret_cast<char*>(&key), sizeof(key));
+  cacheFile.read(reinterpret_cast<char*>(&size), sizeof(size));
   // Read the RTAS header
   D3D12_SERIALIZED_RAYTRACING_ACCELERATION_STRUCTURE_HEADER header;
-  cacheFile_.read(reinterpret_cast<char*>(&header), sizeof(header));
+  cacheFile.read(reinterpret_cast<char*>(&header), sizeof(header));
   // Rewind to file
-  cacheFile_.seekg(initialPos);
+  cacheFile.seekg(initialPos);
 
   // Check the driver identifier
   auto status = device->CheckDriverMatchingIdentifier(
@@ -90,14 +115,20 @@ bool RtasDeserializer::deserialize(unsigned buildKey,
 
   cleanup();
 
-  unsigned key{};
-  cacheFile_.read(reinterpret_cast<char*>(&key), sizeof(key));
-  if (key != buildKey) {
-    logE(gits_, "RtasCache - Expected BLAS ", buildKey, " deserialized ", key);
+  auto& it = cacheData_.find(buildKey);
+  if (it == cacheData_.end()) {
+    logW(gits_, "RtasCache - BLAS ", buildKey, " not found in cache");
     return false;
   }
-  unsigned size{};
-  cacheFile_.read(reinterpret_cast<char*>(&size), sizeof(size));
+
+  auto key = it->first;
+  auto size = static_cast<unsigned>(it->second.size());
+  auto& data = it->second;
+
+  if (size == 0 || data.empty()) {
+    logW(gits_, "RtasCache - BLAS ", buildKey, " has no data in cache");
+    return false;
+  }
 
   Microsoft::WRL::ComPtr<ID3D12Device> device;
   HRESULT hr = commandList->GetDevice(IID_PPV_ARGS(&device));
@@ -127,15 +158,9 @@ bool RtasDeserializer::deserialize(unsigned buildKey,
                                          IID_PPV_ARGS(&serializedBuffer));
     assert(hr == S_OK);
 
-    void* data{};
-    hr = serializedBuffer->Map(0, nullptr, &data);
-
-    cacheFile_.read(static_cast<char*>(data), size);
-    if (!cacheFile_) {
-      logE(gits_, "RtasCache - Error reading BLAS ", buildKey);
-      return false;
-    }
-
+    void* bufferData{};
+    hr = serializedBuffer->Map(0, nullptr, &bufferData);
+    memcpy(bufferData, data.data(), size);
     serializedBuffer->Unmap(0, nullptr);
 
     commandList->CopyRaytracingAccelerationStructure(
@@ -144,6 +169,8 @@ bool RtasDeserializer::deserialize(unsigned buildKey,
 
     buffersByCommandList_[commandList].emplace_back(serializedBuffer);
   }
+
+  data.clear();
 
   return true;
 }
