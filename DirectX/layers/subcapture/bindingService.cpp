@@ -36,9 +36,7 @@ void BindingService::commandListsRestore(const std::set<unsigned>& commandLists)
 }
 
 void BindingService::commandListReset(ID3D12GraphicsCommandListResetCommand& c) {
-  if (!analyzerService_.inRange()) {
-    commandsByCommandList_.erase(c.object_.key);
-  }
+  commandsByCommandList_.erase(c.object_.key);
 }
 
 void BindingService::setDescriptorHeaps(ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c) {
