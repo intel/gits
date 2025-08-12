@@ -28,6 +28,7 @@
 #include "exception.h"
 #include "config.h"
 #include "log.h"
+#include "log2.h"
 #include "config.h"
 #include "controlHandler.h"
 #include "recorderBehaviors.h"
@@ -158,7 +159,7 @@ gits::CRecorder::CRecorder()
   inst.GetMessageBus().subscribe({PUBLISHER_PLUGIN, TOPIC_LOG}, [](Topic t, const MessagePtr& m) {
     auto msg = std::dynamic_pointer_cast<LogMessage>(m);
     if (msg) {
-      CLog(msg->getLevel(), NORMAL) << msg->getText();
+      PLOG(log::GetSeverity(msg->getLevel())) << msg->getText();
     }
   });
 

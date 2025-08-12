@@ -10,6 +10,7 @@
 #include "captureManager.h"
 #include "commandsCustom.h"
 #include "interfaceArgumentUpdaters.h"
+#include "log2.h"
 
 namespace gits {
 namespace DirectX {
@@ -390,7 +391,7 @@ HRESULT INTC_D3D12_CreateCommittedResource1Wrapper(
     void** ppvResource) {
   static bool logged = false;
   if (!logged) {
-    Log(ERR) << "INTC_D3D12_CreateCommittedResource1 not handled.";
+    LOG_ERROR << "INTC_D3D12_CreateCommittedResource1 not handled.";
     logged = true;
   }
   HRESULT result = pfnCreateCommittedResource1(pExtensionContext, pHeapProperties, HeapFlags, pDesc,
@@ -497,7 +498,7 @@ HRESULT INTC_D3D12_CreateHostRTASResourceWrapper(
     void** ppvResource) {
   static bool logged = false;
   if (!logged) {
-    Log(ERR) << "INTC_D3D12_CreateHostRTASResource not handled.";
+    LOG_ERROR << "INTC_D3D12_CreateHostRTASResource not handled.";
     logged = true;
   }
   HRESULT result =
@@ -514,7 +515,7 @@ void INTC_D3D12_BuildRaytracingAccelerationStructure_HostWrapper(
     UINT NumInstances) {
   static bool logged = false;
   if (!logged) {
-    Log(ERR) << "INTC_D3D12_BuildRaytracingAccelerationStructure_Host not handled.";
+    LOG_ERROR << "INTC_D3D12_BuildRaytracingAccelerationStructure_Host not handled.";
     logged = true;
   }
   pfnBuildRaytracingAccelerationStructure_Host(pExtensionContext, pDesc, pInstanceGPUVAs,
@@ -530,7 +531,7 @@ void INTC_D3D12_CopyRaytracingAccelerationStructure_HostWrapper(
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE Mode) {
   static bool logged = false;
   if (!logged) {
-    Log(ERR) << "INTC_D3D12_CopyRaytracingAccelerationStructure_Host not handled.";
+    LOG_ERROR << "INTC_D3D12_CopyRaytracingAccelerationStructure_Host not handled.";
     logged = true;
   }
   pfnCopyRaytracingAccelerationStructure_Host(pExtensionContext, DestAccelerationStructureData,
@@ -546,7 +547,7 @@ void INTC_D3D12_EmitRaytracingAccelerationStructurePostbuildInfo_HostWrapper(
     const void* SourceRTAS) {
   static bool logged = false;
   if (!logged) {
-    Log(ERR) << "INTC_D3D12_EmitRaytracingAccelerationStructurePostbuildInfo_Host not handled.";
+    LOG_ERROR << "INTC_D3D12_EmitRaytracingAccelerationStructurePostbuildInfo_Host not handled.";
     logged = true;
   }
   pfnEmitRaytracingAccelerationStructurePostbuildInfo_Host(pExtensionContext, InfoType, DestBuffer,
@@ -561,7 +562,7 @@ void INTC_D3D12_GetRaytracingAccelerationStructurePrebuildInfo_HostWrapper(
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO* pInfo) {
   static bool logged = false;
   if (!logged) {
-    Log(ERR) << "INTC_D3D12_GetRaytracingAccelerationStructurePrebuildInfo_Host not handled.";
+    LOG_ERROR << "INTC_D3D12_GetRaytracingAccelerationStructurePrebuildInfo_Host not handled.";
     logged = true;
   }
   pfnGetRaytracingAccelerationStructurePrebuildInfo_Host(pExtensionContext, pDesc, pInfo);
@@ -575,7 +576,7 @@ void INTC_D3D12_TransferHostRTASWrapper(PFNINTCDX12EXT_TRANSFERHOSTRTAS pfnTrans
                                         D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE Mode) {
   static bool logged = false;
   if (!logged) {
-    Log(ERR) << "INTC_D3D12_TransferHostRTAS not handled.";
+    LOG_ERROR << "INTC_D3D12_TransferHostRTAS not handled.";
     logged = true;
   }
   pfnTransferHostRTAS(pExtensionContext, pCommandList, DestAccelerationStructureData,
@@ -589,7 +590,7 @@ void INTC_D3D12_SetDriverEventMetadataWrapper(
     UINT64 Metadata) {
   static bool logged = false;
   if (!logged) {
-    Log(ERR) << "INTC_D3D12_SetDriverEventMetadata not handled.";
+    LOG_ERROR << "INTC_D3D12_SetDriverEventMetadata not handled.";
     logged = true;
   }
   pfnSetDriverEventMetadata(pExtensionContext, pCommandList, Metadata);
@@ -602,7 +603,7 @@ void INTC_D3D12_QueryCpuVisibleVidmemWrapper(
     UINT64* pFreeBytes) {
   static bool logged = false;
   if (!logged) {
-    Log(ERR) << "INTC_D3D12_QueryCpuVisibleVidmem not handled.";
+    LOG_ERROR << "INTC_D3D12_QueryCpuVisibleVidmem not handled.";
     logged = true;
   }
   pfnQueryCpuVisibleVidmem(pExtensionContext, pTotalBytes, pFreeBytes);
@@ -615,7 +616,7 @@ HRESULT INTC_D3D12_CreateStateObjectWrapper(PFNINTCDX12EXT_CREATESTATEOBJECT pfn
                                             void** ppPipelineState) {
   static bool logged = false;
   if (!logged) {
-    Log(ERR) << "INTC_D3D12_CreateStateObject not handled.";
+    LOG_ERROR << "INTC_D3D12_CreateStateObject not handled.";
     logged = true;
   }
   HRESULT result = pfnCreateStateObject(pExtensionContext, pDesc, riid, ppPipelineState);
@@ -633,7 +634,7 @@ void INTC_D3D12_BuildRaytracingAccelerationStructureWrapper(
         pComparisonDataDesc) {
   static bool logged = false;
   if (!logged) {
-    Log(ERR) << "INTC_D3D12_BuildRaytracingAccelerationStructure not handled.";
+    LOG_ERROR << "INTC_D3D12_BuildRaytracingAccelerationStructure not handled.";
     logged = true;
   }
   pfnBuildRaytracingAccelerationStructure(pExtensionContext, pCommandList, pDesc,
@@ -651,7 +652,7 @@ void INTC_D3D12_GetRaytracingAccelerationStructurePrebuildInfoWrapper(
         pComparisonDataDesc) {
   static bool logged = false;
   if (!logged) {
-    Log(ERR) << "INTC_D3D12_GetRaytracingAccelerationStructurePrebuildInfo not handled.";
+    LOG_ERROR << "INTC_D3D12_GetRaytracingAccelerationStructurePrebuildInfo not handled.";
     logged = true;
   }
   pfnGetRaytracingAccelerationStructurePrebuildInfo(pExtensionContext, pDesc, pInfo,
@@ -776,7 +777,7 @@ HRESULT INTC_D3D12_AddShaderBinariesPathWrapper(
     const wchar_t* filePath) {
   static bool logged = false;
   if (!logged) {
-    Log(ERR) << "INTC_D3D12_AddShaderBinariesPath not handled.";
+    LOG_ERROR << "INTC_D3D12_AddShaderBinariesPath not handled.";
     logged = true;
   }
   HRESULT result = pfnAddShaderBinariesPath(pExtensionContext, filePath);
@@ -789,7 +790,7 @@ HRESULT INTC_D3D12_RemoveShaderBinariesPathWrapper(
     const wchar_t* filePath) {
   static bool logged = false;
   if (!logged) {
-    Log(ERR) << "INTC_D3D12_RemoveShaderBinariesPath not handled.";
+    LOG_ERROR << "INTC_D3D12_RemoveShaderBinariesPath not handled.";
     logged = true;
   }
   HRESULT result = pfnRemoveShaderBinariesPath(pExtensionContext, filePath);

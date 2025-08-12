@@ -13,6 +13,7 @@
 #include "directStorageResourcesLayer.h"
 #include "analyzerResults.h"
 #include "gits.h"
+#include "log2.h"
 
 namespace gits {
 namespace DirectX {
@@ -31,18 +32,18 @@ SubcaptureFactory::SubcaptureFactory() {
     if (executions.empty()) {
       int startFrame = std::stoi(frames);
       if (startFrame == 1) {
-        Log(ERR) << "Subcapture from frame 1 is not supported";
+        LOG_ERROR << "Subcapture from frame 1 is not supported";
         exit(EXIT_FAILURE);
       }
     } else {
       if (frames.find("-") != std::string::npos) {
-        Log(ERR) << "Subcapture of command list executions must have one frame range";
+        LOG_ERROR << "Subcapture of command list executions must have one frame range";
         exit(EXIT_FAILURE);
       }
     }
   } catch (...) {
-    Log(ERR) << "Invalid subcapture range: '" +
-                    Configurator::Get().directx.features.subcapture.frames + "'";
+    LOG_ERROR << "Invalid subcapture range: '" +
+                     Configurator::Get().directx.features.subcapture.frames + "'";
     exit(EXIT_FAILURE);
   }
 
@@ -60,7 +61,7 @@ SubcaptureFactory::SubcaptureFactory() {
     AnalyzerLayer* analyzerLayer = new AnalyzerLayer(*subcaptureRange_);
     analyzerLayer_.reset(analyzerLayer);
     objectUsageNotifier_ = analyzerLayer;
-    Log(INFO) << "SUBCAPTURE ANALYSIS. RUN AGAIN FOR SUBCAPTURE RECORDING.";
+    LOG_INFO << "SUBCAPTURE ANALYSIS. RUN AGAIN FOR SUBCAPTURE RECORDING.";
   }
 }
 

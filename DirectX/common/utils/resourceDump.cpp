@@ -8,6 +8,7 @@
 
 #include "resourceDump.h"
 #include "gits.h"
+#include "log2.h"
 
 #include <fstream>
 #include <wincodec.h>
@@ -30,7 +31,7 @@ ResourceDump::ResourceDump(ImageFormat format, const std::string& textureRescale
       }
       textureRescaleRange_ = std::make_pair(min, max);
     } catch (...) {
-      Log(ERR) << "Improper TextureRescaleRange.";
+      LOG_ERROR << "Improper TextureRescaleRange.";
     }
   }
 }
@@ -124,11 +125,11 @@ void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
                                                  IID_PPV_ARGS(&dumpInfo.stagingBuffer));
     if (hr != S_OK) {
       if (hr == E_OUTOFMEMORY) {
-        Log(ERR) << "Resource dumping - create staging buffer failed - E_OUTOFMEMORY - try with "
-                    "less resources.";
+        LOG_ERROR << "Resource dumping - create staging buffer failed - E_OUTOFMEMORY - try with "
+                     "less resources.";
       } else {
-        Log(ERR) << "Resource dumping - create staging buffer failed - 0x" << std::hex << hr
-                 << std::dec << " - try with less resources.";
+        LOG_ERROR << "Resource dumping - create staging buffer failed - 0x" << std::hex << hr
+                  << std::dec << " - try with less resources.";
       }
       exit(EXIT_FAILURE);
     }
@@ -153,12 +154,12 @@ void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
                                                    IID_PPV_ARGS(&dumpInfo.resolvedResource));
       if (hr != S_OK) {
         if (hr == E_OUTOFMEMORY) {
-          Log(ERR)
+          LOG_ERROR
               << "Resource dumping - create resolved resource failed - E_OUTOFMEMORY - try with "
                  "less resources.";
         } else {
-          Log(ERR) << "Resource dumping - create resolved resource failed - 0x" << std::hex << hr
-                   << std::dec << " - try with less resources.";
+          LOG_ERROR << "Resource dumping - create resolved resource failed - 0x" << std::hex << hr
+                    << std::dec << " - try with less resources.";
         }
         exit(EXIT_FAILURE);
       }
@@ -331,7 +332,7 @@ void ResourceDump::dumpStagedResource(DumpInfo& dumpInfo) {
       }
     };
     std::string dumpName(dumpInfo.dumpName.begin(), dumpInfo.dumpName.end());
-    Log(ERR) << "ResourceDump - Map failed " << printHr(hr) << " " << dumpName;
+    LOG_ERROR << "ResourceDump - Map failed " << printHr(hr) << " " << dumpName;
     return;
   }
 
@@ -404,8 +405,8 @@ void ResourceDump::dumpTexture(DumpInfo& dumpInfo, void* data) {
     if (::DirectX::IsCompressed(image.format)) {
       HRESULT hr = ::DirectX::Decompress(image, destFormat, scratchImage);
       if (hr != S_OK) {
-        Log(ERR) << "Dumping " + dumpNameA + " format " << formatToString(dumpInfo.desc.Format)
-                 << " failed in Decompress 0x" << std::hex << hr << std::dec;
+        LOG_ERROR << "Dumping " + dumpNameA + " format " << formatToString(dumpInfo.desc.Format)
+                  << " failed in Decompress 0x" << std::hex << hr << std::dec;
         return;
       }
       imageConverted = scratchImage.GetImage(0, 0, 0);
@@ -427,8 +428,8 @@ void ResourceDump::dumpTexture(DumpInfo& dumpInfo, void* data) {
         }
       }
       if (hr != S_OK) {
-        Log(ERR) << "Dumping " + dumpNameA + " format " << formatToString(dumpInfo.desc.Format)
-                 << " failed 0x" << std::hex << hr << std::dec;
+        LOG_ERROR << "Dumping " + dumpNameA + " format " << formatToString(dumpInfo.desc.Format)
+                  << " failed 0x" << std::hex << hr << std::dec;
         return;
       }
 
@@ -457,8 +458,8 @@ void ResourceDump::dumpTexture(DumpInfo& dumpInfo, void* data) {
       initialized = true;
     }
     if (hr != S_OK) {
-      Log(ERR) << "Dumping " + dumpNameA + " format " << formatToString(dumpInfo.desc.Format)
-               << " failed in SaveToWICFile 0x" << std::hex << hr << std::dec;
+      LOG_ERROR << "Dumping " + dumpNameA + " format " << formatToString(dumpInfo.desc.Format)
+                << " failed in SaveToWICFile 0x" << std::hex << hr << std::dec;
     }
   }
 }

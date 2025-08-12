@@ -9,7 +9,7 @@
 #pragma once
 
 #include "xessService.h"
-#include "log.h"
+#include "log2.h"
 
 namespace gits {
 namespace DirectX {
@@ -24,7 +24,7 @@ void XessService::loadXess() {
   if (!xessDll_) {
     xessDll_ = LoadLibrary(".\\D3D12\\libxess.dll");
     if (!xessDll_) {
-      Log(ERR) << "Failed to load XeSS (D3D12\\libxess.dll). Playback issues may occur.";
+      LOG_ERROR << "Failed to load XeSS (D3D12\\libxess.dll). Playback issues may occur.";
       return;
     }
   }
@@ -108,8 +108,8 @@ void XessService::loadXess() {
 
   xess_version_t version = {};
   xessDispatchTable_.xessGetVersion(&version);
-  Log(INFO) << "Loaded XeSS (version " << version.major << "." << version.minor << "."
-            << version.patch << ")";
+  LOG_INFO << "Loaded XeSS (version " << version.major << "." << version.minor << "."
+           << version.patch << ")";
 }
 
 } // namespace DirectX

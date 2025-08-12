@@ -11,6 +11,7 @@
 #include "stateTrackingService.h"
 #include "commandWritersAuto.h"
 #include "commandWritersCustom.h"
+#include "log2.h"
 
 #include <wrl/client.h>
 #include <set>
@@ -100,7 +101,7 @@ void ReservedResourcesService::addUpdateTileMappings(
       } else if (heapRangeFlag == D3D12_TILE_RANGE_FLAG_SKIP) {
         static bool logged = false;
         if (!logged) {
-          Log(ERR) << "D3D12_TILE_RANGE_FLAG_SKIP is not handled in subcapture!";
+          LOG_ERROR << "D3D12_TILE_RANGE_FLAG_SKIP is not handled in subcapture!";
           logged = true;
         }
       }
@@ -477,7 +478,7 @@ void ReservedResourcesService::restoreContent(const std::vector<unsigned>& resou
           GITS_ASSERT(!region.packed);
           static bool logged = false;
           if (!logged) {
-            Log(WARN) << "Subresource not fully mapped. Using CopyTiles";
+            LOG_WARNING << "Subresource not fully mapped. Using CopyTiles";
             logged = true;
           }
           commandList_->CopyTiles(tiledResource->resource, &region.coord, &region.size,

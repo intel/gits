@@ -9,6 +9,7 @@
 #include "pluginService.h"
 #include "config.h"
 #include "gits.h"
+#include "log2.h"
 
 #include <unordered_set>
 
@@ -67,11 +68,11 @@ void PluginService::loadPlugins() {
   }
 
   if (isValidPluginsPath(pluginsPath)) {
-    Log(INFO) << "PluginService - Loading plugins from: " << pluginsPath.string();
+    LOG_INFO << "PluginService - Loading plugins from: " << pluginsPath.string();
   } else {
-    Log(ERR) << "PluginService - Plugin directory does not exist! Expected:"
-             << pluginsPath.string();
-    Log(ERR) << "PluginService - Will not load any plugin...";
+    LOG_ERROR << "PluginService - Plugin directory does not exist! Expected:"
+              << pluginsPath.string();
+    LOG_ERROR << "PluginService - Will not load any plugin...";
     return;
   }
 
@@ -88,7 +89,7 @@ void PluginService::loadPlugins() {
 
     auto pluginPath = entry.path() / "plugin.dll";
     if (!std::filesystem::exists(pluginPath) || !std::filesystem::is_regular_file(pluginPath)) {
-      Log(ERR) << "PluginService - Can't find: " << pluginPath << ". The plugin will not load";
+      LOG_ERROR << "PluginService - Can't find: " << pluginPath << ". The plugin will not load";
       continue;
     }
 
@@ -104,7 +105,7 @@ void PluginService::loadPlugins() {
         }
         auto dll = LoadLibrary(dependency.path().string().c_str());
         if (!dll) {
-          Log(ERR) << "PluginService - Failed to load dependency DLL: " << dependency.path();
+          LOG_ERROR << "PluginService - Failed to load dependency DLL: " << dependency.path();
           continue;
         }
         plugin.dependencies.push_back(dll);
@@ -114,15 +115,15 @@ void PluginService::loadPlugins() {
     // Load the main plugin DLL
     plugin.dll = LoadLibrary(plugin.dllPath.string().c_str());
     if (!plugin.dll) {
-      Log(ERR) << "PluginService - Failed to load Plugin DLL: " << plugin.dllPath;
+      LOG_ERROR << "PluginService - Failed to load Plugin DLL: " << plugin.dllPath;
       continue;
     }
 
     auto createPlugin =
         reinterpret_cast<CreatePluginPtr>(GetProcAddress(plugin.dll, "createPlugin"));
     if (!createPlugin) {
-      Log(ERR) << "PluginService - Failed to locate the 'createPlugin' function in DLL: "
-               << plugin.dllPath;
+      LOG_ERROR << "PluginService - Failed to locate the 'createPlugin' function in DLL: "
+                << plugin.dllPath;
       plugin.free();
       continue;
     }
@@ -131,28 +132,28 @@ void PluginService::loadPlugins() {
         reinterpret_cast<DestroyPluginPtr>(GetProcAddress(plugin.dll, "destroyPlugin"));
     plugin.impl = createPlugin(gits, plugin.dllPath.string().c_str());
     if (!plugin.impl) {
-      Log(ERR) << "PluginService - Could not create the plugin instance for DLL: "
-               << plugin.dllPath;
+      LOG_ERROR << "PluginService - Could not create the plugin instance for DLL: "
+                << plugin.dllPath;
       plugin.free();
       continue;
     }
 
     auto pluginName = plugin.impl->getName();
     if (pluginsToEnable.count(toLowerCase(pluginName)) == 0) {
-      Log(INFOV) << "PluginService - Plugin '" << pluginName
-                 << "' found but not enabled in the GITS config file";
+      LOG_DEBUG << "PluginService - Plugin '" << pluginName
+                << "' found but not enabled in the GITS config file";
       plugin.free();
       continue;
     }
 
-    Log(INFO) << "PluginService - Loaded '" << pluginName << "' plugin";
+    LOG_INFO << "PluginService - Loaded '" << pluginName << "' plugin";
     plugins_.emplace_back(std::move(plugin));
   }
 
   if (plugins_.size() != pluginNames.size()) {
-    Log(ERR) << "PluginService - Loaded " << plugins_.size() << " plugins out of "
-             << pluginNames.size() << " requested";
-    Log(ERR) << "PluginService - Check the plugin names in the GITS config file";
+    LOG_ERROR << "PluginService - Loaded " << plugins_.size() << " plugins out of "
+              << pluginNames.size() << " requested";
+    LOG_ERROR << "PluginService - Check the plugin names in the GITS config file";
   }
 }
 

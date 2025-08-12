@@ -10,6 +10,7 @@
 #include "commandWritersAuto.h"
 #include "commandWritersCustom.h"
 #include "intelExtensions.h"
+#include "log2.h"
 
 namespace gits {
 namespace DirectX {
@@ -17,7 +18,7 @@ namespace DirectX {
 RecordingLayer::~RecordingLayer() {
   try {
     if (subcaptureRange_.inRange()) {
-      Log(ERR) << "Subcapture recording terminated prematurely";
+      LOG_ERROR << "Subcapture recording terminated prematurely";
     }
   } catch (...) {
     topmost_exception_handler("RecordingLayer::~RecordingLayer");
@@ -222,8 +223,8 @@ void RecordingLayer::post(
     NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) {
   static bool logged = false;
   if (!logged) {
-    Log(ERR) << "NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand not handled in "
-                "subcapture";
+    LOG_ERROR << "NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand not handled in "
+                 "subcapture";
     logged = true;
   }
   if (subcaptureRange_.inRange()) {

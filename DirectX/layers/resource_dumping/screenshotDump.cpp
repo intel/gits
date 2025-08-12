@@ -8,6 +8,7 @@
 
 #include "screenshotDump.h"
 #include "gits.h"
+#include "log2.h"
 #include "configurationLib.h"
 
 #include <DirectXTex.h>
@@ -178,9 +179,9 @@ void ScreenshotDump::dumpStagedResource(std::wstring dumpName) {
   if (hr != S_OK) {
     std::string name(dumpName.begin(), dumpName.end());
     if (hr == 0x80070032) {
-      Log(ERR) << "Dumping " + name + " failed: format not supported";
+      LOG_ERROR << "Dumping " + name + " failed: format not supported";
     } else {
-      Log(ERR) << "Dumping " + name + " failed: 0x" << std::hex << hr << std::dec;
+      LOG_ERROR << "Dumping " + name + " failed: 0x" << std::hex << hr << std::dec;
     }
   }
 

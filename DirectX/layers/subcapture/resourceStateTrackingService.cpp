@@ -13,6 +13,7 @@
 #include "commandsCustom.h"
 #include "commandWritersCustom.h"
 #include "gits.h"
+#include "log2.h"
 
 #include <wrl/client.h>
 
@@ -175,7 +176,7 @@ D3D12_RESOURCE_STATES ResourceStateTrackingService::getResourceState(D3D12_BARRI
     state = D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE;
     break;
   default:
-    Log(ERR) << "Barrier layout not handled " << layout << "!";
+    LOG_ERROR << "Barrier layout not handled " << layout << "!";
   }
 
   return state;
@@ -224,7 +225,7 @@ D3D12_BARRIER_LAYOUT ResourceStateTrackingService::getResourceLayout(D3D12_RESOU
     layout = D3D12_BARRIER_LAYOUT_SHADING_RATE_SOURCE;
     break;
   default:
-    Log(ERR) << "Barrier state not handled " << state << "!";
+    LOG_ERROR << "Barrier state not handled " << state << "!";
   }
 
   return layout;

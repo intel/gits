@@ -12,7 +12,7 @@
 #include <imgui_impl_win32.h>
 #include <imgui_impl_dx12.h>
 
-#include "log.h"
+#include "log2.h"
 #include "gits.h"
 #include "imGuiHUD.h"
 
@@ -38,7 +38,7 @@ void ImGuiHUDLayer::post(IDXGIFactoryCreateSwapChainCommand& c) {
 
   initialized_ = initializeResources(c.pDevice_.value, *c.ppSwapChain_.value);
   if (!initialized_) {
-    Log(ERR) << "ImGui HUD: Failed to initialize resources";
+    LOG_ERROR << "ImGui HUD: Failed to initialize resources";
     return;
   }
 }
@@ -50,7 +50,7 @@ void ImGuiHUDLayer::post(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
 
   initialized_ = initializeResources(c.pDevice_.value, *c.ppSwapChain_.value);
   if (!initialized_) {
-    Log(ERR) << "ImGui HUD: Failed to initialize resources";
+    LOG_ERROR << "ImGui HUD: Failed to initialize resources";
     return;
   }
 }
@@ -62,7 +62,7 @@ void ImGuiHUDLayer::post(IDXGIFactory2CreateSwapChainForCoreWindowCommand& c) {
 
   initialized_ = initializeResources(c.pDevice_.value, *c.ppSwapChain_.value);
   if (!initialized_) {
-    Log(ERR) << "ImGui HUD: Failed to initialize resources";
+    LOG_ERROR << "ImGui HUD: Failed to initialize resources";
     return;
   }
 }
@@ -74,7 +74,7 @@ void ImGuiHUDLayer::post(IDXGIFactory2CreateSwapChainForCompositionCommand& c) {
 
   initialized_ = initializeResources(c.pDevice_.value, *c.ppSwapChain_.value);
   if (!initialized_) {
-    Log(ERR) << "ImGui HUD: Failed to initialize resources";
+    LOG_ERROR << "ImGui HUD: Failed to initialize resources";
     return;
   }
 }
@@ -156,7 +156,7 @@ void ImGuiHUDLayer::post(IDXGISwapChainResizeBuffersCommand& command) {
   }
 
   if (!createFrameContext(bufferCount)) {
-    Log(ERR) << "ImGui HUD: Failed to correctly create frame context on ResizeBuffers";
+    LOG_ERROR << "ImGui HUD: Failed to correctly create frame context on ResizeBuffers";
   }
   CGits::Instance().GetImGuiHUD()->SetBackBufferInfo(command.Width_.value, command.Height_.value,
                                                      bufferCount);
@@ -178,7 +178,7 @@ bool ImGuiHUDLayer::createFrameContext(unsigned bufferCount) {
     Microsoft::WRL::ComPtr<ID3D12Resource> backBuffer;
     auto hr = swapChain_->GetBuffer(i, IID_PPV_ARGS(&backBuffer));
     if (hr != S_OK) {
-      Log(ERR) << "ImGui HUD: Failed to get back buffer";
+      LOG_ERROR << "ImGui HUD: Failed to get back buffer";
       return false;
     }
 
@@ -191,7 +191,7 @@ bool ImGuiHUDLayer::createFrameContext(unsigned bufferCount) {
     hr = device_->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
                                          IID_PPV_ARGS(&frameCtx.commandAllocator));
     if (hr != S_OK) {
-      Log(ERR) << "ImGui HUD: Failed to create CommandAllocator";
+      LOG_ERROR << "ImGui HUD: Failed to create CommandAllocator";
       return false;
     }
     frameCtx.commandAllocator->SetName(L"ImGuiHUDLayer Command Allocator");
@@ -226,7 +226,7 @@ bool ImGuiHUDLayer::initializeResources(IUnknown* device, IDXGISwapChain* swapCh
   desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
   desc.NodeMask = 1;
   if (device_->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&rtvDescHeap_)) != S_OK) {
-    Log(ERR) << "ImGui HUD: Failed to create RTV descriptor heap";
+    LOG_ERROR << "ImGui HUD: Failed to create RTV descriptor heap";
     return false;
   }
   rtvDescHeap_->SetName(L"ImGuiHUDLayer RTV Descriptor Heap");
@@ -236,7 +236,7 @@ bool ImGuiHUDLayer::initializeResources(IUnknown* device, IDXGISwapChain* swapCh
   desc.NumDescriptors = 1;
   desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
   if (device_->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&srvDescHeap_)) != S_OK) {
-    Log(ERR) << "ImGui HUD: Failed to create SRV descriptor heap";
+    LOG_ERROR << "ImGui HUD: Failed to create SRV descriptor heap";
     return false;
   }
   srvDescHeap_->SetName(L"ImGuiHUDLayer SRV Descriptor Heap");
@@ -248,7 +248,7 @@ bool ImGuiHUDLayer::initializeResources(IUnknown* device, IDXGISwapChain* swapCh
   // Create Fence
   fenceValue_ = 0;
   if (device_->CreateFence(fenceValue_, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence_)) != S_OK) {
-    Log(ERR) << "ImGui HUD: Failed to create fence";
+    LOG_ERROR << "ImGui HUD: Failed to create fence";
     return false;
   }
   fence_->SetName(L"ImGuiHUDLayer Fence");
@@ -257,7 +257,7 @@ bool ImGuiHUDLayer::initializeResources(IUnknown* device, IDXGISwapChain* swapCh
   if (device_->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
                                  frameContext_[0].commandAllocator.Get(), NULL,
                                  IID_PPV_ARGS(&commandList_)) != S_OK) {
-    Log(ERR) << "ImGui HUD: Failed to create command list";
+    LOG_ERROR << "ImGui HUD: Failed to create command list";
     return false;
   }
   commandList_->Close();

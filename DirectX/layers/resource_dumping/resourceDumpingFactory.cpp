@@ -13,6 +13,7 @@
 #include "accelerationStructuresDumpLayer.h"
 #include "rootSignatureDumpLayer.h"
 #include "gits.h"
+#include "log2.h"
 #include "configurationLib.h"
 
 namespace gits {
@@ -33,7 +34,7 @@ ResourceDumpingFactory::ResourceDumpingFactory() {
     if (Configurator::Get().directx.player.debugLayer) {
       accelerationStructuresDumpLayer_ = std::make_unique<AccelerationStructuresDumpLayer>();
     } else {
-      Log(ERR) << "Dumping acceleration structures demands directx debug layer turned on.";
+      LOG_ERROR << "Dumping acceleration structures demands directx debug layer turned on.";
     }
   }
   if (Configurator::Get().directx.features.rootSignatureDump.enabled) {

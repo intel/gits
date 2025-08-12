@@ -43,7 +43,6 @@ add_dependencies(DirectX_layer_interface
 )
 
 target_link_libraries(DirectX_layer_interface PUBLIC
-  configuration
   common
 )
 

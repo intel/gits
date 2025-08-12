@@ -10,6 +10,7 @@
 #include "nvapiWrappers.h"
 #include "commandsCustom.h"
 #include "interfaceArgumentUpdaters.h"
+#include "log2.h"
 
 namespace gits {
 namespace DirectX {
@@ -20,7 +21,7 @@ void* nvapi_QueryInterfaceWrapper(unsigned int id) {
   const auto& nvapiFunctionIds = manager.getNvAPIFunctionIds();
   for (const auto& [functionName, functionId] : nvapiFunctionIds) {
     if (functionId == id) {
-      Log(INFOV) << functionName;
+      LOG_VERBOSE << functionName;
       break;
     }
   }
@@ -221,7 +222,7 @@ NvAPI_Status NvAPI_D3D12_RelocateRaytracingOpacityMicromapArrayWrapper(
     const NVAPI_RELOCATE_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS* pParams) {
   static bool logged = false;
   if (!logged) {
-    Log(ERR) << "NvAPI_D3D12_RelocateRaytracingOpacityMicromapArray not handled!";
+    LOG_ERROR << "NvAPI_D3D12_RelocateRaytracingOpacityMicromapArray not handled!";
     logged = true;
   }
   auto& manager = CaptureManager::get();
@@ -234,7 +235,7 @@ NvAPI_Status NvAPI_D3D12_EmitRaytracingOpacityMicromapArrayPostbuildInfoWrapper(
     const NVAPI_EMIT_RAYTRACING_OPACITY_MICROMAP_ARRAY_POSTBUILD_INFO_PARAMS* pParams) {
   static bool logged = false;
   if (!logged) {
-    Log(ERR) << "NvAPI_D3D12_EmitRaytracingOpacityMicromapArrayPostbuildInfo not handled!";
+    LOG_ERROR << "NvAPI_D3D12_EmitRaytracingOpacityMicromapArrayPostbuildInfo not handled!";
     logged = true;
   }
   auto& manager = CaptureManager::get();
@@ -284,7 +285,7 @@ NvAPI_Status NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirectWrapper(
     const NVAPI_BUILD_RAYTRACING_PARTITIONED_TLAS_INDIRECT_PARAMS* pParams) {
   static bool logged = false;
   if (!logged) {
-    Log(ERR) << "NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirect not handled!";
+    LOG_ERROR << "NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirect not handled!";
     logged = true;
   }
   auto& manager = CaptureManager::get();

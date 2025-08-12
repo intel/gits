@@ -9,6 +9,7 @@
 #include "analyzerService.h"
 #include "analyzerResults.h"
 #include "gits.h"
+#include "log2.h"
 
 #include <fstream>
 #include <sstream>
@@ -26,7 +27,7 @@ AnalyzerService::AnalyzerService(SubcaptureRange& subcaptureRange,
 AnalyzerService::~AnalyzerService() {
   try {
     if (inRange_) {
-      Log(ERR) << "Subcapture analysis terminated prematurely";
+      LOG_ERROR << "Subcapture analysis terminated prematurely";
       dumpAnalysisFile();
     }
   } catch (...) {

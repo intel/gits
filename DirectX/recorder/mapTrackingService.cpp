@@ -9,6 +9,7 @@
 #include "mapTrackingService.h"
 #include "commandWritersCustom.h"
 #include "captureManager.h"
+#include "log2.h"
 
 #include <processthreadsapi.h>
 #include <wrl/client.h>
@@ -150,7 +151,7 @@ void MapTrackingService::captureModifiedData(MappedInfo* info) {
   if (ret != 0) {
     static bool logged = false;
     if (!logged) {
-      Log(ERR) << "GetWriteWatch failed " << ret << ". Try ShadowMemory option if not used.";
+      LOG_ERROR << "GetWriteWatch failed " << ret << ". Try ShadowMemory option if not used.";
       logged = true;
     }
   }

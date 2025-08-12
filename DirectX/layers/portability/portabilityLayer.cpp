@@ -8,6 +8,7 @@
 
 #include "portabilityLayer.h"
 #include "gits.h"
+#include "log2.h"
 #include "to_string/toStr.h"
 #include "configurationLib.h"
 
@@ -70,8 +71,9 @@ void PortabilityLayer::pre(D3D12CreateDeviceCommand& c) {
   auto hr =
       D3D12CreateDevice(c.pAdapter_.value, c.MinimumFeatureLevel_.value, IID_ID3D12Device, nullptr);
   if (hr != S_FALSE) {
-    Log(WARN) << "D3D12CreateDevice - Minimum feature level " << toStr(c.MinimumFeatureLevel_.value)
-              << " is not supported by the adapter. Will set D3D_FEATURE_LEVEL_12_0.";
+    LOG_WARNING << "D3D12CreateDevice - Minimum feature level "
+                << toStr(c.MinimumFeatureLevel_.value)
+                << " is not supported by the adapter. Will set D3D_FEATURE_LEVEL_12_0.";
     c.MinimumFeatureLevel_.value = D3D_FEATURE_LEVEL_12_0;
   }
 }
@@ -168,9 +170,9 @@ void PortabilityLayer::post(
   if (portabilityChecks_) {
     static bool logged = false;
     if (!logged) {
-      Log(WARN) << "Portability - padding in capture post build info in "
-                   "EmitRaytracingAccelerationStructurePostbuildInfo not "
-                   "supported";
+      LOG_WARNING << "Portability - padding in capture post build info in "
+                     "EmitRaytracingAccelerationStructurePostbuildInfo not "
+                     "supported";
       logged = true;
     }
   }
@@ -181,8 +183,8 @@ void PortabilityLayer::post(
   if (portabilityChecks_ && c.pPostbuildInfoDescs_.value) {
     static bool logged = false;
     if (!logged) {
-      Log(WARN) << "Portability - padding in capture post build info in "
-                   "BuildRaytracingAccelerationStructure not supported";
+      LOG_WARNING << "Portability - padding in capture post build info in "
+                     "BuildRaytracingAccelerationStructure not supported";
       logged = true;
     }
   }
@@ -212,7 +214,7 @@ void PortabilityLayer::checkHeapCreationFlags(unsigned heapKey,
   HRESULT hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &featureOptions,
                                            sizeof(featureOptions));
   if (FAILED(hr)) {
-    Log(ERR) << "Portability - Failed to CheckFeatureSupport (D3D12_FEATURE_D3D12_OPTIONS)";
+    LOG_ERROR << "Portability - Failed to CheckFeatureSupport (D3D12_FEATURE_D3D12_OPTIONS)";
     return;
   }
 

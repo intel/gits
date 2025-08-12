@@ -44,8 +44,6 @@ target_link_libraries(DirectX_execution_serialization PRIVATE
   DirectX_dstorage_resources
   DirectX_utils
   DirectX_coders
-  common
-  configuration
 )
 
 set_target_properties(DirectX_execution_serialization PROPERTIES FOLDER DirectX/DirectX_layers)

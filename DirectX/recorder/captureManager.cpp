@@ -26,6 +26,7 @@
 #include "imguiHudLayer.h"
 #include "directXApiIfaceRecorder.h"
 #include "gits.h"
+#include "log2.h"
 
 #include <detours.h>
 #include <setupapi.h>
@@ -482,8 +483,8 @@ void CaptureManager::interceptXessFunctions() {
   xess_result_t res = xessDispatchTable_.xessGetVersion(&xessVersion);
   GITS_ASSERT(res == XESS_RESULT_SUCCESS);
 
-  Log(INFO) << "Loaded XeSS (libxess.dll) version: " << xessVersion.major << "."
-            << xessVersion.minor << "." << xessVersion.patch;
+  LOG_INFO << "Loaded XeSS (libxess.dll) version: " << xessVersion.major << "." << xessVersion.minor
+           << "." << xessVersion.patch;
 
   LONG ret = DetourTransactionBegin();
   GITS_ASSERT(ret == NO_ERROR);
@@ -643,7 +644,7 @@ void CaptureManager::loadIntelExtension(const uint32_t& vendorID, const uint32_t
 
   result = INTC_D3D12_RegisterApplicationCallbacks(&callbacks);
   if (FAILED(result)) {
-    Log(ERR) << "IntelExtensions: INTC_D3D12_RegisterApplicationCallbacks failed.";
+    LOG_ERROR << "IntelExtensions: INTC_D3D12_RegisterApplicationCallbacks failed.";
   }
 
   intelExtensionLoaded_ = true;
@@ -663,7 +664,7 @@ void CaptureManager::interceptNvAPIFunctions() {
     GITS_ASSERT(status == NVAPI_OK)
   }
 
-  Log(INFO) << "Loaded NvAPI";
+  LOG_INFO << "Loaded NvAPI";
 
   for (const auto& iface : nvapi_interface_table) {
     nvapiFunctionIds_[iface.func] = iface.id;

@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "resourceDumpLayerAuto.h"
-#include "log.h"
+#include "log2.h"
 
 namespace gits {
 namespace DirectX {
@@ -81,7 +81,7 @@ void ResourceDumpLayer::post(ID3D12Device8CreateCommittedResource2Command& c) {
 }
 
 void ResourceDumpLayer::post(ID3D12Device10CreateCommittedResource3Command& c) {
-  Log(ERR) << "Resource dumping: ID3D12Device10::CreateCommittedResource3 not handled";
+  LOG_ERROR << "Resource dumping: ID3D12Device10::CreateCommittedResource3 not handled";
 }
 
 void ResourceDumpLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
@@ -101,7 +101,7 @@ void ResourceDumpLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
 }
 
 void ResourceDumpLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
-  Log(ERR) << "Resource dumping: ID3D12Device10::CreatePlacedResource2 not handled";
+  LOG_ERROR << "Resource dumping: ID3D12Device10::CreatePlacedResource2 not handled";
 }
 
 void ResourceDumpLayer::post(ID3D12DeviceCreateReservedResourceCommand& c) {
@@ -121,7 +121,7 @@ void ResourceDumpLayer::post(ID3D12Device4CreateReservedResource1Command& c) {
 }
 
 void ResourceDumpLayer::post(ID3D12Device10CreateReservedResource2Command& c) {
-  Log(ERR) << "Resource dumping: ID3D12Device10::CreateReservedResource2 not handled";
+  LOG_ERROR << "Resource dumping: ID3D12Device10::CreateReservedResource2 not handled";
 }
 
 } // namespace DirectX

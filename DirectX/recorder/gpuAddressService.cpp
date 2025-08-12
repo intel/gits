@@ -8,6 +8,7 @@
 
 #include "gpuAddressService.h"
 #include "gits.h"
+#include "log2.h"
 
 #include <wrl/client.h>
 
@@ -28,7 +29,7 @@ void GpuAddressService::createResource(unsigned resourceKey, ID3D12Resource* res
   resourceInfo->start = resource->GetGPUVirtualAddress();
   resourceInfo->end = resourceInfo->start + desc.Width;
   if (!resourceInfo->start) {
-    Log(ERR) << "GpuAddressService: can't GetGPUVirtualAddress for O" << resourceKey;
+    LOG_ERROR << "GpuAddressService: can't GetGPUVirtualAddress for O" << resourceKey;
   }
 
   {
@@ -250,7 +251,7 @@ GpuAddressService::GpuAddressInfo GpuAddressService::getGpuAddressInfo(
   }
 
   if (!resourceInfo && !heapInfo) {
-    Log(ERR) << "GpuAddressService: can't find resource for gpu address " << gpuAddress;
+    LOG_ERROR << "GpuAddressService: can't find resource for gpu address " << gpuAddress;
   }
 
   GpuAddressInfo info{};

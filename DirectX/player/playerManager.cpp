@@ -23,6 +23,7 @@
 #include "debugHelperLayer.h"
 #include "logDxErrorLayerAuto.h"
 #include "imguiHudLayer.h"
+#include "log2.h"
 
 #include <wrl/client.h>
 
@@ -41,7 +42,7 @@ PlayerManager& PlayerManager::get() {
 
 PlayerManager::~PlayerManager() {
   try {
-    Log(INFO) << "PlayerManager: Playback completed. Cleaning up...";
+    LOG_INFO << "PlayerManager: Playback completed. Cleaning up...";
     multithreadedObjectCreationService_.shutdown();
     pluginService_.reset();
   } catch (...) {
@@ -242,6 +243,9 @@ PlayerManager::PlayerManager() {
       postLayers_.push_back(layer);
     }
   }
+
+  PLOGI << "PlayerManager: Initialized with " << preLayers_.size() << " pre-layers and "
+        << postLayers_.size() << " post-layers";
 }
 
 void PlayerManager::addObject(unsigned objectKey, IUnknown* object) {
@@ -272,7 +276,7 @@ IUnknown* PlayerManager::findObject(unsigned objectKey) {
 void PlayerManager::loadAgilitySdk() {
   d3d12CoreDll_ = LoadLibrary(".\\D3D12\\D3D12Core.dll");
   if (!d3d12CoreDll_) {
-    Log(ERR) << "Agility SDK - Failed to load (D3D12\\D3D12Core.dll)";
+    LOG_ERROR << "Agility SDK - Failed to load (D3D12\\D3D12Core.dll)";
     return;
   }
   UINT sdkVersion = *reinterpret_cast<UINT*>(GetProcAddress(d3d12CoreDll_, "D3D12SDKVersion"));
@@ -280,50 +284,50 @@ void PlayerManager::loadAgilitySdk() {
   Microsoft::WRL::ComPtr<ID3D12SDKConfiguration> sdkConfiguration;
   HRESULT hr = D3D12GetInterface(CLSID_D3D12SDKConfiguration, IID_PPV_ARGS(&sdkConfiguration));
   if (hr != S_OK) {
-    Log(ERR) << "Agility SDK - D3D12GetInterface(ID3D12SDKConfiguration) failed";
+    LOG_ERROR << "Agility SDK - D3D12GetInterface(ID3D12SDKConfiguration) failed";
     return;
   }
 
   hr = sdkConfiguration->SetSDKVersion(sdkVersion, ".\\D3D12\\");
   if (hr != S_OK) {
-    Log(ERR) << "Agility SDK - SetSDKVersion call failed. This method can be used only in "
-             << "Windows Developer Mode. Check settings !";
+    LOG_ERROR << "Agility SDK - SetSDKVersion call failed. This method can be used only in "
+              << "Windows Developer Mode. Check settings !";
     return;
   }
 
-  Log(INFO) << "Agility SDK - Loaded SDK version (" << sdkVersion << ")";
+  LOG_INFO << "Agility SDK - Loaded SDK version (" << sdkVersion << ")";
 }
 
 void PlayerManager::loadDirectML() {
   dmlDll_ = LoadLibrary(".\\D3D12\\DirectML.dll");
   if (!dmlDll_) {
-    Log(ERR) << "Failed to load DirectML runtime (D3D12\\DirectML.dll)";
+    LOG_ERROR << "Failed to load DirectML runtime (D3D12\\DirectML.dll)";
     return;
   }
-  Log(INFO) << "Loaded DirectML runtime (D3D12\\DirectML.dll)";
+  LOG_INFO << "Loaded DirectML runtime (D3D12\\DirectML.dll)";
 
   if (Configurator::Get().directx.player.debugLayer) {
     dmlDebugDll_ = LoadLibrary(".\\D3D12\\DirectML.Debug.dll");
     if (!dmlDebugDll_) {
-      Log(ERR) << "Failed to load DirectML debug runtime (D3D12\\DirectML.Debug.dll)";
+      LOG_ERROR << "Failed to load DirectML debug runtime (D3D12\\DirectML.Debug.dll)";
       return;
     }
-    Log(INFO) << "Loaded DirectML debug runtime (D3D12\\DirectML.Debug.dll)";
+    LOG_INFO << "Loaded DirectML debug runtime (D3D12\\DirectML.Debug.dll)";
   }
 }
 
 void PlayerManager::loadDirectStorage() {
   dStorageDll_ = LoadLibrary(".\\D3D12\\dstorage.dll");
   if (!dStorageDll_) {
-    Log(ERR) << "DirectStorage - Failed to load (D3D12\\dstorage.dll)";
+    LOG_ERROR << "DirectStorage - Failed to load (D3D12\\dstorage.dll)";
     return;
   }
   dStorageCoreDll_ = LoadLibrary(".\\D3D12\\dstoragecore.dll");
   if (!dStorageCoreDll_) {
-    Log(ERR) << "DirectStorage - Failed to load (D3D12\\dstoragecore.dll)";
+    LOG_ERROR << "DirectStorage - Failed to load (D3D12\\dstoragecore.dll)";
     return;
   }
-  Log(INFO) << "Loaded DirectStorage runtime (D3D12\\dstorage.dll and D3D12\\dstoragecore.dll)";
+  LOG_INFO << "Loaded DirectStorage runtime (D3D12\\dstorage.dll and D3D12\\dstoragecore.dll)";
 }
 
 } // namespace DirectX

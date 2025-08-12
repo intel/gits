@@ -11,6 +11,7 @@
 #include "playerManager.h"
 #include "interfaceArgumentUpdaters.h"
 #include "gits.h"
+#include "log2.h"
 #include "to_string/toStr.h"
 
 #include <d3dx12.h>
@@ -62,13 +63,13 @@ void ReplayCustomizationLayer::pre(D3D12CreateDeviceCommand& c) {
   HRESULT hr = adapter->GetDesc1(&desc);
   GITS_ASSERT(hr == S_OK);
 
-  Log(INFO) << "D3D12CreateDevice - Using adapter: " << toStr(desc.Description);
+  LOG_INFO << "D3D12CreateDevice - Using adapter: " << toStr(desc.Description);
 }
 
 void ReplayCustomizationLayer::pre(IDXGISwapChainSetFullscreenStateCommand& c) {
   if (c.Fullscreen_.value && Configurator::Get().common.player.showWindowBorder) {
     c.Fullscreen_.value = false;
-    Log(INFO) << "SetFullscreenState: Force windowed mode due to 'showWindowBorder'";
+    LOG_INFO << "SetFullscreenState: Force windowed mode due to 'showWindowBorder'";
   }
 }
 
@@ -77,7 +78,7 @@ void ReplayCustomizationLayer::pre(IDXGIFactoryCreateSwapChainCommand& c) {
       manager_.getWindowService().getCurrentHwnd(c.pDesc_.value->OutputWindow);
   if (Configurator::Get().common.player.showWindowBorder) {
     c.pDesc_.value->Windowed = true;
-    Log(INFO) << "CreateSwapChain: Force windowed mode due to 'showWindowBorder'";
+    LOG_INFO << "CreateSwapChain: Force windowed mode due to 'showWindowBorder'";
   }
 }
 
@@ -85,7 +86,7 @@ void ReplayCustomizationLayer::pre(IDXGIFactory2CreateSwapChainForHwndCommand& c
   c.hWnd_.value = manager_.getWindowService().getCurrentHwnd(c.hWnd_.value);
   if (c.pFullscreenDesc_.value && Configurator::Get().common.player.showWindowBorder) {
     c.pFullscreenDesc_.value->Windowed = true;
-    Log(INFO) << "CreateSwapChainForHwnd: Force windowed mode due to 'showWindowBorder'";
+    LOG_INFO << "CreateSwapChainForHwnd: Force windowed mode due to 'showWindowBorder'";
   }
 }
 
@@ -236,7 +237,7 @@ void ReplayCustomizationLayer::pre(ID3D12Device1SetEventOnMultipleFenceCompletio
   static bool printed = false;
   if (!printed) {
     // not implemented yet in capture
-    Log(ERR) << "ID3D12Device1::SetEventOnMultipleFenceCompletion not handled!";
+    LOG_ERROR << "ID3D12Device1::SetEventOnMultipleFenceCompletion not handled!";
     printed = true;
   }
 }
@@ -626,8 +627,8 @@ void ReplayCustomizationLayer::pre(IDXGIFactory4EnumAdapterByLuidCommand& c) {
   c.AdapterLuid_.value = manager_.getAdapterService().getCurrentLuid(c.AdapterLuid_.value);
   if ((c.AdapterLuid_.value.HighPart == 0) && (c.AdapterLuid_.value.LowPart == 0)) {
     c.skip = true;
-    Log(WARN) << "EnumAdapterByLuid - Cannot find capture-to-current LUID in map. Command "
-              << c.key;
+    LOG_WARNING << "EnumAdapterByLuid - Cannot find capture-to-current LUID in map. Command "
+                << c.key;
   }
 }
 
@@ -786,7 +787,7 @@ void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListResolveQueryDataComm
         c.Type_.value == D3D12_QUERY_TYPE_BINARY_OCCLUSION) {
       static bool logged = false;
       if (!logged) {
-        Log(WARN) << "Skipping ResolveQueryData for occlusion queries may result in corruptions";
+        LOG_WARNING << "Skipping ResolveQueryData for occlusion queries may result in corruptions";
         logged = true;
       }
     }
@@ -955,14 +956,14 @@ void ReplayCustomizationLayer::pre(INTC_D3D12_SetApplicationInfoCommand& c) {
     auto appName = std::string(appNameW.begin(), appNameW.end());
     std::wstring engineNameW = c.pExtensionAppInfo_.pEngineName;
     auto engineName = std::string(engineNameW.begin(), engineNameW.end());
-    Log(INFO) << "INTC_D3D12_SetApplicationInfo - Application: \"" << appName << "\" ("
-              << c.pExtensionAppInfo_.value->ApplicationVersion.major << "."
-              << c.pExtensionAppInfo_.value->ApplicationVersion.minor << "."
-              << c.pExtensionAppInfo_.value->ApplicationVersion.patch << ")"
-              << ", Engine: \"" << engineName << "\" ("
-              << c.pExtensionAppInfo_.value->EngineVersion.major << "."
-              << c.pExtensionAppInfo_.value->EngineVersion.minor << "."
-              << c.pExtensionAppInfo_.value->EngineVersion.patch << ")";
+    LOG_INFO << "INTC_D3D12_SetApplicationInfo - Application: \"" << appName << "\" ("
+             << c.pExtensionAppInfo_.value->ApplicationVersion.major << "."
+             << c.pExtensionAppInfo_.value->ApplicationVersion.minor << "."
+             << c.pExtensionAppInfo_.value->ApplicationVersion.patch << ")"
+             << ", Engine: \"" << engineName << "\" ("
+             << c.pExtensionAppInfo_.value->EngineVersion.major << "."
+             << c.pExtensionAppInfo_.value->EngineVersion.minor << "."
+             << c.pExtensionAppInfo_.value->EngineVersion.patch << ")";
   }
 }
 
@@ -1017,7 +1018,7 @@ void ReplayCustomizationLayer::pre(NvAPI_D3D12_BuildRaytracingAccelerationStruct
       pDescMod->inputs.instanceDescs = manager_.getGpuAddressService().getGpuAddress(
           c.pParams.inputKeys[0], c.pParams.inputOffsets[0]);
     } else {
-      Log(ERR) << "NvAPI_D3D12_BuildRaytracingAccelerationStructureEx TLAS build not handled!";
+      LOG_ERROR << "NvAPI_D3D12_BuildRaytracingAccelerationStructureEx TLAS build not handled!";
     }
     ++inputIndex;
   } else {
@@ -1183,7 +1184,7 @@ void ReplayCustomizationLayer::pre(
 
   static bool logged = false;
   if (!logged) {
-    Log(ERR) << "NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand not handled!";
+    LOG_ERROR << "NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand not handled!";
     logged = true;
   }
 
@@ -1230,8 +1231,8 @@ void ReplayCustomizationLayer::waitForFence(unsigned commandKey,
   DWORD ret = WaitForSingleObject(waitForFenceEvent_, timeout);
   if (ret == WAIT_TIMEOUT) {
     value = fence->GetCompletedValue();
-    Log(ERR) << "GetCompletedValue - timeout while waiting for fence value " << fenceValue
-             << ". Current value " << value << ". Command " << commandKey;
+    LOG_ERROR << "GetCompletedValue - timeout while waiting for fence value " << fenceValue
+              << ". Current value " << value << ". Command " << commandKey;
   }
 }
 

@@ -9,6 +9,7 @@
 #include "windowService.h"
 #include "message_pump.h"
 #include "gits.h"
+#include "log2.h"
 #include "playerManager.h"
 
 namespace gits {
@@ -44,8 +45,8 @@ HWND WindowService::createWindow(HWND captureHwnd, int width, int height) {
 HWND WindowService::getCurrentHwnd(HWND captureHwnd) {
   auto it = windowMap_.find(captureHwnd);
   if (it == windowMap_.end()) {
-    Log(WARN) << "Cannot find window for hWnd from capture: " << std::hex << captureHwnd
-              << std::dec;
+    LOG_WARNING << "Cannot find window for hWnd from capture: " << std::hex << captureHwnd
+                << std::dec;
     return 0;
   }
   return it->second;

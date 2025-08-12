@@ -8,6 +8,7 @@
 
 #include "renderTargetsDumpLayer.h"
 #include "gits.h"
+#include "log2.h"
 #include "configurationLib.h"
 
 #include <d3dx12.h>
@@ -136,9 +137,9 @@ void RenderTargetsDumpLayer::post(ID3D12GraphicsCommandListOMSetRenderTargetsCom
       auto it = renderTargetsByDescriptorHandle_.find(std::make_pair(
           c.pRenderTargetDescriptors_.interfaceKeys[i], c.pRenderTargetDescriptors_.indexes[i]));
       if (it == renderTargetsByDescriptorHandle_.end()) {
-        Log(ERR) << "RenderTargetsDumpLayer - cannot find rendertarget O"
-                 << c.pRenderTargetDescriptors_.interfaceKeys[i] << " "
-                 << c.pRenderTargetDescriptors_.indexes[i];
+        LOG_ERROR << "RenderTargetsDumpLayer - cannot find rendertarget O"
+                  << c.pRenderTargetDescriptors_.interfaceKeys[i] << " "
+                  << c.pRenderTargetDescriptors_.indexes[i];
         continue;
       }
       it->second.slot = i;
@@ -152,9 +153,9 @@ void RenderTargetsDumpLayer::post(ID3D12GraphicsCommandListOMSetRenderTargetsCom
     if (it != depthStencilsByDescriptorHandle_.end()) {
       depthStencilByCommandList_[c.object_.key] = it->second;
     } else {
-      Log(ERR) << "RenderTargetsDumpLayer - cannot find depthstencil O"
-               << c.pDepthStencilDescriptor_.interfaceKeys[0] << " "
-               << c.pDepthStencilDescriptor_.indexes[0];
+      LOG_ERROR << "RenderTargetsDumpLayer - cannot find depthstencil O"
+                << c.pDepthStencilDescriptor_.interfaceKeys[0] << " "
+                << c.pDepthStencilDescriptor_.indexes[0];
     }
   }
 }

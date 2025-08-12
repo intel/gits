@@ -12,6 +12,7 @@
 #include "commandsAuto.h"
 #include "captureManager.h"
 #include "commandWritersCustom.h"
+#include "log2.h"
 
 namespace gits {
 namespace DirectX {
@@ -115,7 +116,7 @@ void FenceService::waitSignaled(HANDLE hObjectToWaitOn, HANDLE hObjectToSignal) 
 
   static bool printed = false;
   if (!printed) {
-    Log(ERR) << "SignalObjectAndWait is not handled!";
+    LOG_ERROR << "SignalObjectAndWait is not handled!";
     printed = true;
   }
   mutex_.unlock();

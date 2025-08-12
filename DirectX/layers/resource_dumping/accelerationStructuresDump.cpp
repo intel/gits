@@ -8,6 +8,7 @@
 
 #include "accelerationStructuresDump.h"
 #include "gits.h"
+#include "log2.h"
 
 #include <fstream>
 #include <iomanip>
@@ -56,10 +57,10 @@ void AccelerationStructuresDump::dumpAccelerationStructure(
                                          IID_PPV_ARGS(&dumpInfo->decodedBuffer));
     if (hr != S_OK) {
       if (hr == E_OUTOFMEMORY) {
-        Log(ERR) << "BLAS dumping - create buffer failed - E_OUTOFMEMORY - try with less buffers.";
+        LOG_ERROR << "BLAS dumping - create buffer failed - E_OUTOFMEMORY - try with less buffers.";
       } else {
-        Log(ERR) << "BLAS dumping - create staging buffer failed - 0x" << std::hex << hr << std::dec
-                 << " - try with less buffers.";
+        LOG_ERROR << "BLAS dumping - create staging buffer failed - 0x" << std::hex << hr
+                  << std::dec << " - try with less buffers.";
       }
       exit(EXIT_FAILURE);
     }
@@ -72,10 +73,10 @@ void AccelerationStructuresDump::dumpAccelerationStructure(
                                          IID_PPV_ARGS(&dumpInfo->stagingBuffer));
     if (hr != S_OK) {
       if (hr == E_OUTOFMEMORY) {
-        Log(ERR) << "BLAS dumping - create buffer failed - E_OUTOFMEMORY - try with less buffers.";
+        LOG_ERROR << "BLAS dumping - create buffer failed - E_OUTOFMEMORY - try with less buffers.";
       } else {
-        Log(ERR) << "BLAS dumping - create staging buffer failed - 0x" << std::hex << hr << std::dec
-                 << " - try with less buffers.";
+        LOG_ERROR << "BLAS dumping - create staging buffer failed - 0x" << std::hex << hr
+                  << std::dec << " - try with less buffers.";
       }
       exit(EXIT_FAILURE);
     }
@@ -112,8 +113,8 @@ void AccelerationStructuresDump::dumpStagedResource(DumpInfo& dumpInfo) {
   memcpy(&type, static_cast<uint8_t*>(data) + offset, sizeof(unsigned));
   offset += sizeof(unsigned);
   if (type != D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
-    Log(ERR) << "Can't dump bottom level acceleration structure "
-             << std::string(dumpInfo.dumpName.begin(), dumpInfo.dumpName.end());
+    LOG_ERROR << "Can't dump bottom level acceleration structure "
+              << std::string(dumpInfo.dumpName.begin(), dumpInfo.dumpName.end());
     return;
   }
 

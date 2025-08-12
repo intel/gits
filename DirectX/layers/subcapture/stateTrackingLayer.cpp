@@ -12,6 +12,7 @@
 #include "commandWritersCustom.h"
 #include "configurationLib.h"
 #include "nvapi.h"
+#include "log2.h"
 
 #include <wrl/client.h>
 
@@ -489,7 +490,7 @@ void StateTrackingLayer::post(ID3D12ObjectSetNameCommand& c) {
   }
   ObjectState* state = stateService_.getState(c.object_.key);
   if (state == nullptr) {
-    Log(ERR) << "StateTrackingLayer: SetName failed. Cannot find object O" << c.object_.key << ".";
+    LOG_ERROR << "StateTrackingLayer: SetName failed. Cannot find object O" << c.object_.key << ".";
     return;
   }
   state->name = c.Name_.value;
@@ -1466,7 +1467,7 @@ void StateTrackingLayer::post(ID3D12CommandQueueCopyTileMappingsCommand& c) {
   }
   static bool logged = false;
   if (!logged) {
-    Log(ERR) << "ID3D12CommandQueue::CopyTileMappings not handled in subcapture!";
+    LOG_ERROR << "ID3D12CommandQueue::CopyTileMappings not handled in subcapture!";
     logged = true;
   }
 }
@@ -1698,8 +1699,8 @@ void StateTrackingLayer::post(ID3D12Device1SetResidencyPriorityCommand& c) {
         state->creationCommand->getId() != CommandId::ID_ID3D12DEVICE_CREATEHEAP &&
         state->creationCommand->getId() != CommandId::ID_ID3D12DEVICE4_CREATEHEAP1 &&
         state->creationCommand->getId() != CommandId::INTC_D3D12_CREATEHEAP) {
-      Log(WARN) << "SetResidencyPriority not handled for command "
-                << static_cast<unsigned>(state->creationCommand->getId());
+      LOG_WARNING << "SetResidencyPriority not handled for command "
+                  << static_cast<unsigned>(state->creationCommand->getId());
     }
     state->residencyPriority = c.pPriorities_.value[i];
   }
@@ -2584,7 +2585,7 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandList4ExecuteMetaCommandComman
   }
   static bool logged = false;
   if (!logged) {
-    Log(ERR) << "ID3D12GraphicsCommandList4ExecuteMetaCommand is not supported in subcapture.";
+    LOG_ERROR << "ID3D12GraphicsCommandList4ExecuteMetaCommand is not supported in subcapture.";
     logged = true;
   }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
@@ -2649,7 +2650,7 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandList7BarrierCommand& c) {
   }
   static bool logged = false;
   if (!logged) {
-    Log(ERR) << "ID3D12GraphicsCommandList7::Barrier is not supported in subcapture.";
+    LOG_ERROR << "ID3D12GraphicsCommandList7::Barrier is not supported in subcapture.";
     logged = true;
   }
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);

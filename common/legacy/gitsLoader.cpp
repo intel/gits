@@ -23,6 +23,7 @@
 #include "config.h"
 #include "exception.h"
 #include "log.h"
+#include "log2.h"
 
 #if defined GITS_PLATFORM_WINDOWS
 #include "Windows.h"
@@ -48,6 +49,8 @@ CGitsLoader::CGitsLoader(const char* recorderWrapperFactoryName)
     configPath = std::filesystem::path(envConfigPath);
   }
 
+  log::Initialize(plog::info);
+  log::SetLogFile(libPath.parent_path());
   CLog::LogFile(libPath);
 
   // get GITS binaries path
@@ -125,6 +128,7 @@ CGitsLoader::CGitsLoader(const char* recorderWrapperFactoryName)
     Log(ERR) << "Parsing configuration file: " << configPath << " failed!!!";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
+  plog::get()->setMaxSeverity(log::GetSeverity(config_->common.shared.thresholdLogLevel));
   // Because log can't use config directly, see log.cpp for info.
   // CLog::SetLogLevel(config_->common.shared.thresholdLogLevel);
 

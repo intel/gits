@@ -8,6 +8,7 @@
 
 #include "resourcePlacementPlayback.h"
 #include "gits.h"
+#include "log2.h"
 #include "configurationLib.h"
 
 #include <filesystem>
@@ -62,7 +63,7 @@ void ResourcePlacementPlayback::calculateResourcePlacement(
   for (ResourcePlacementShiftInfo& info : infos) {
     D3D12_RESOURCE_ALLOCATION_INFO allocInfo = device->GetResourceAllocationInfo(0, 1, &info.desc);
     if (allocInfo.SizeInBytes == UINT64_MAX) {
-      Log(ERR) << "Portability - GetResourceAllocationInfo failed for resource O" << info.key;
+      LOG_ERROR << "Portability - GetResourceAllocationInfo failed for resource O" << info.key;
       continue;
     }
     if (allocInfo.SizeInBytes > info.size) {

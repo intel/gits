@@ -60,6 +60,7 @@
 #include "configurationLib.h"
 #include "diagnostic.h"
 #include "playerUtils.h"
+#include "log2.h"
 
 #if defined WITH_DIRECTX
 #include "imGuiHUD.h"
@@ -215,15 +216,16 @@ int MainBody(int argc, char* argv[]) {
 
   inst.GetMessageBus().subscribe({PUBLISHER_PLUGIN, TOPIC_LOG}, [](Topic t, const MessagePtr& m) {
     auto msg = std::dynamic_pointer_cast<LogMessage>(m);
-    if (msg && ShouldLog(msg->getLevel())) {
-      CLog(msg->getLevel(), NORMAL) << msg->getText();
+    if (msg) {
+      PLOG(log::GetSeverity(msg->getLevel())) << msg->getText();
     }
   });
 
   const auto& cfg = Configurator::Get();
-
+  log::Initialize(log::GetSeverity(cfg.common.shared.thresholdLogLevel));
   if (!cfg.common.player.outputTracePath.empty()) {
     CLog::LogFilePlayer(cfg.common.player.outputTracePath);
+    log::SetLogFile(cfg.common.player.outputTracePath);
   }
 
   int returnValue = EXIT_SUCCESS;

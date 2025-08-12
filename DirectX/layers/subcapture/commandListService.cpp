@@ -11,6 +11,7 @@
 #include "stateTrackingService.h"
 #include "commandWritersAuto.h"
 #include "analyzerResults.h"
+#include "log2.h"
 
 #include <fstream>
 
@@ -348,7 +349,7 @@ void CommandListService::createAuxiliaryRtv(D3D12RenderTargetViewState* view) {
   initAuxiliaryRtvHeap(view->deviceKey);
 
   if (auxiliaryRtvDescriptorHeapIndex_ >= auxiliaryHeapSize_) {
-    Log(ERR) << "Auxiliary RTV descriptor heap too small.";
+    LOG_ERROR << "Auxiliary RTV descriptor heap too small.";
     exit(EXIT_FAILURE);
   }
   ID3D12DeviceCreateRenderTargetViewCommand c;
@@ -368,7 +369,7 @@ void CommandListService::createAuxiliaryDsv(D3D12DepthStencilViewState* view) {
   initAuxiliaryDsvHeap(view->deviceKey);
 
   if (auxiliaryDsvDescriptorHeapIndex_ >= auxiliaryHeapSize_) {
-    Log(ERR) << "Auxiliary DSV descriptor heap too small.";
+    LOG_ERROR << "Auxiliary DSV descriptor heap too small.";
     exit(EXIT_FAILURE);
   }
   ID3D12DeviceCreateDepthStencilViewCommand c;
@@ -388,7 +389,7 @@ void CommandListService::createAuxiliaryUavGpu(D3D12UnorderedAccessViewState* vi
   initAuxiliaryUavGpuHeap(view->deviceKey);
 
   if (auxiliaryUavGpuDescriptorHeapIndex_ >= auxiliaryHeapSize_) {
-    Log(ERR) << "Auxiliary UAV GPU descriptor heap too small.";
+    LOG_ERROR << "Auxiliary UAV GPU descriptor heap too small.";
     exit(EXIT_FAILURE);
   }
   ID3D12DeviceCreateUnorderedAccessViewCommand c;
@@ -408,7 +409,7 @@ void CommandListService::createAuxiliaryUavCpu(D3D12UnorderedAccessViewState* vi
   initAuxiliaryUavCpuHeap(view->deviceKey);
 
   if (auxiliaryUavCpuDescriptorHeapIndex_ >= auxiliaryHeapSize_) {
-    Log(ERR) << "Auxiliary UAV CPU descriptor heap too small.";
+    LOG_ERROR << "Auxiliary UAV CPU descriptor heap too small.";
     exit(EXIT_FAILURE);
   }
   ID3D12DeviceCreateUnorderedAccessViewCommand c;

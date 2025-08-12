@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "fastOStream.h"
-#include "log.h"
+#include "log2.h"
 #include "configurationLib.h"
 #include "ipc/common.h"
 #include <filesystem>
@@ -96,7 +96,7 @@ void FastOStringStream::initializeIpcFlush() {
   }
 
   if (!std::filesystem::exists(executablePath)) {
-    Log(ERR) << "Could not locate the DirectX_trace_ipc.exe";
+    LOG_ERROR << "Could not locate the DirectX_trace_ipc.exe";
     return;
   }
 
@@ -124,7 +124,7 @@ void FastOStringStream::initializeIpcFlush() {
 
   if (!CreateProcess(NULL, (char*)commandLine.c_str(), &securityAttributes, &securityAttributes,
                      FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
-    Log(ERR) << "CreateProcess failed: " << GetLastError();
+    LOG_ERROR << "CreateProcess failed: " << GetLastError();
     return;
   }
 
@@ -134,21 +134,21 @@ void FastOStringStream::initializeIpcFlush() {
     flushInfo_.hEvent = OpenEventA(SYNCHRONIZE, FALSE, eventName.c_str());
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     if (--numOfTries == 0) {
-      Log(ERR) << "Could not open event: " << GetLastError();
-      Log(ERR) << "Ipc process failed to run, check ipc_log.txt";
+      LOG_ERROR << "Could not open event: " << GetLastError();
+      LOG_ERROR << "Ipc process failed to run, check ipc_log.txt";
       return;
     }
   }
 
   if (WaitForSingleObject(flushInfo_.hEvent, 3000) == WAIT_TIMEOUT) {
-    Log(ERR) << "WaitForSingleObject timed out";
-    Log(ERR) << "Ipc process failed to run, check ipc_log.txt";
+    LOG_ERROR << "WaitForSingleObject timed out";
+    LOG_ERROR << "Ipc process failed to run, check ipc_log.txt";
     return;
   }
 
   flushInfo_.hMapFile = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, sharedMemoryName.c_str());
   if (flushInfo_.hMapFile == nullptr) {
-    Log(ERR) << "Could not open file mapping object: " << GetLastError();
+    LOG_ERROR << "Could not open file mapping object: " << GetLastError();
     CloseHandle(flushInfo_.hEvent);
     return;
   }
@@ -156,7 +156,7 @@ void FastOStringStream::initializeIpcFlush() {
   flushInfo_.pBuf =
       MapViewOfFile(flushInfo_.hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, SHARED_MEMORY_SIZE);
   if (flushInfo_.pBuf == nullptr) {
-    Log(ERR) << "Could not map view of file: " << GetLastError();
+    LOG_ERROR << "Could not map view of file: " << GetLastError();
     CloseHandle(flushInfo_.hMapFile);
     CloseHandle(flushInfo_.hEvent);
     return;

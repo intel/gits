@@ -9,6 +9,7 @@
 #include "gpuPatchLayer.h"
 #include "playerManager.h"
 #include "gits.h"
+#include "log2.h"
 
 #include <fstream>
 
@@ -108,7 +109,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
     unsigned offset = c.pDesc_.inputOffsets[0];
     unsigned size = c.pDesc_.value->Inputs.NumDescs * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
     if (size > patchBufferSize_) {
-      Log(ERR) << "Raytracing patch buffer is too small for instances!";
+      LOG_ERROR << "Raytracing patch buffer is too small for instances!";
       exit(EXIT_FAILURE);
     }
 
@@ -231,7 +232,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
 
     unsigned size = c.pDesc_.value->Inputs.NumDescs * sizeof(D3D12_GPU_VIRTUAL_ADDRESS);
     if (size > instancesAoPStagingBufferSize_) {
-      Log(ERR) << "Raytracing staging buffer is too small for array of pointers to instances!";
+      LOG_ERROR << "Raytracing staging buffer is too small for array of pointers to instances!";
       exit(EXIT_FAILURE);
     }
 
@@ -290,7 +291,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
 
       unsigned size = offsets.back() + sizeof(D3D12_RAYTRACING_INSTANCE_DESC) - offsets[0];
       if (size > instancesAoPPatchBufferSize_) {
-        Log(ERR)
+        LOG_ERROR
             << "Raytracing patch buffer is too small for instances pointed by array of pointers!";
         exit(EXIT_FAILURE);
       }
@@ -303,7 +304,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
 
       auto offsetsByteSize = sizeof(unsigned) * offsets.size();
       if (offsetsByteSize > instancesAoPPatchOffsetsBufferSize_) {
-        Log(ERR) << "Raytracing array of pointers offsets buffer is too small!";
+        LOG_ERROR << "Raytracing array of pointers offsets buffer is too small!";
         exit(EXIT_FAILURE);
       }
 
@@ -455,7 +456,7 @@ void GpuPatchLayer::patchDispatchRays(ID3D12GraphicsCommandList* commandList,
       unsigned count = sizeInBytes / strideInBytes;
 
       if (stride * count > patchBufferSize_) {
-        Log(ERR) << "Raytracing patch buffer is too small for binding table!";
+        LOG_ERROR << "Raytracing patch buffer is too small for binding table!";
         exit(EXIT_FAILURE);
       }
 
@@ -540,7 +541,7 @@ void GpuPatchLayer::patchDispatchRays(ID3D12GraphicsCommandList* commandList,
                     GpuPatchDumpService::Callable);
 
   if (patchBufferOffset > patchBufferSize_) {
-    Log(ERR) << "Raytracing patch buffer is too small for binding tables!";
+    LOG_ERROR << "Raytracing patch buffer is too small for binding tables!";
     exit(EXIT_FAILURE);
   }
 
@@ -874,7 +875,7 @@ void GpuPatchLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
 
   if (gpuAddressMappings.size() >
       gpuAddressBufferSize_ / sizeof(CapturePlayerGpuAddressService::GpuAddressMapping)) {
-    Log(ERR) << "Raytracing gpuAddressMappings buffer is too small!";
+    LOG_ERROR << "Raytracing gpuAddressMappings buffer is too small!";
     exit(EXIT_FAILURE);
   }
   for (unsigned index : mappingBuffers) {
@@ -891,7 +892,7 @@ void GpuPatchLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
   mappingCount.shaderIdentiferCount = shaderIdentifierMappings.size();
   if (shaderIdentifierMappings.size() >
       shaderIdentifierBufferSize_ / sizeof(ShaderIdentifierService::ShaderIdentifierMapping)) {
-    Log(ERR) << "Raytracing shaderIdentifierMappings buffer is too small!";
+    LOG_ERROR << "Raytracing shaderIdentifierMappings buffer is too small!";
     exit(EXIT_FAILURE);
   }
   for (unsigned index : mappingBuffers) {
@@ -909,7 +910,7 @@ void GpuPatchLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
   mappingCount.viewDescriptorCount = viewDescriptorMappings.size();
   if (viewDescriptorMappings.size() >
       viewDescriptorBufferSize_ / sizeof(CapturePlayerDescriptorHandleService::DescriptorMapping)) {
-    Log(ERR) << "Raytracing viewDescriptorMappings buffer is too small!";
+    LOG_ERROR << "Raytracing viewDescriptorMappings buffer is too small!";
     exit(EXIT_FAILURE);
   }
   for (unsigned index : mappingBuffers) {
@@ -928,7 +929,7 @@ void GpuPatchLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
   if (sampleDescriptorMappings.size() >
       sampleDescriptorBufferSize_ /
           sizeof(CapturePlayerDescriptorHandleService::DescriptorMapping)) {
-    Log(ERR) << "Raytracing sampleDescriptorMappings buffer is too small!";
+    LOG_ERROR << "Raytracing sampleDescriptorMappings buffer is too small!";
     exit(EXIT_FAILURE);
   }
   for (unsigned index : mappingBuffers) {
@@ -1391,7 +1392,7 @@ unsigned GpuPatchLayer::getMappingBufferIndex(unsigned commandListKey) {
     }
     UINT64 value = mappingFences_[i].fence->GetCompletedValue();
     if (value == UINT64_MAX) {
-      Log(ERR) << "getMappingBufferIndex - device removed!";
+      LOG_ERROR << "getMappingBufferIndex - device removed!";
       exit(EXIT_FAILURE);
     }
     if (value == mappingFences_[i].fenceValue) {
@@ -1401,7 +1402,7 @@ unsigned GpuPatchLayer::getMappingBufferIndex(unsigned commandListKey) {
     }
   }
 
-  Log(ERR) << "Mappings buffer pool is too small!";
+  LOG_ERROR << "Mappings buffer pool is too small!";
   exit(EXIT_FAILURE);
 }
 
@@ -1412,7 +1413,7 @@ unsigned GpuPatchLayer::getPatchBufferIndex(unsigned commandListKey) {
     }
     UINT64 value = patchBufferFences_[i].fence->GetCompletedValue();
     if (value == UINT64_MAX) {
-      Log(ERR) << "getPatchBufferIndex - device removed!";
+      LOG_ERROR << "getPatchBufferIndex - device removed!";
       exit(EXIT_FAILURE);
     }
     if (value == patchBufferFences_[i].fenceValue) {
@@ -1422,7 +1423,7 @@ unsigned GpuPatchLayer::getPatchBufferIndex(unsigned commandListKey) {
     }
   }
 
-  Log(ERR) << "Patch buffer pool is too small!";
+  LOG_ERROR << "Patch buffer pool is too small!";
   exit(EXIT_FAILURE);
 }
 
@@ -1433,7 +1434,7 @@ unsigned GpuPatchLayer::getInstancesAoPPatchBufferIndex(unsigned commandListKey)
     }
     UINT64 value = instancesAoPPatchBufferFences_[i].fence->GetCompletedValue();
     if (value == UINT64_MAX) {
-      Log(ERR) << "getInstancesAoPPatchBufferIndex - device removed!";
+      LOG_ERROR << "getInstancesAoPPatchBufferIndex - device removed!";
       exit(EXIT_FAILURE);
     }
     if (value == instancesAoPPatchBufferFences_[i].fenceValue) {
@@ -1443,7 +1444,7 @@ unsigned GpuPatchLayer::getInstancesAoPPatchBufferIndex(unsigned commandListKey)
     }
   }
 
-  Log(ERR) << "Instances array of pointers patch buffer pool is too small!";
+  LOG_ERROR << "Instances array of pointers patch buffer pool is too small!";
   exit(EXIT_FAILURE);
 }
 
@@ -1454,7 +1455,7 @@ unsigned GpuPatchLayer::getInstancesAoPStagingBufferIndex(unsigned commandListKe
     }
     UINT64 value = instancesAoPStagingBufferFences_[i].fence->GetCompletedValue();
     if (value == UINT64_MAX) {
-      Log(ERR) << "getInstancesAoPStagingBufferIndex - device removed!";
+      LOG_ERROR << "getInstancesAoPStagingBufferIndex - device removed!";
       exit(EXIT_FAILURE);
     }
     if (value == instancesAoPStagingBufferFences_[i].fenceValue) {
@@ -1464,7 +1465,7 @@ unsigned GpuPatchLayer::getInstancesAoPStagingBufferIndex(unsigned commandListKe
     }
   }
 
-  Log(ERR) << "Instances array of pointers staging buffer pool is too small!";
+  LOG_ERROR << "Instances array of pointers staging buffer pool is too small!";
   exit(EXIT_FAILURE);
 }
 
@@ -1491,7 +1492,7 @@ void GpuPatchLayer::loadExecuteIndirectDispatchRays() {
     if (it != executeIndirectDispatchRays_.end()) {
       static bool logged = false;
       if (!logged) {
-        Log(ERR) << "Multiple DispatchRays for ExecuteIndirect call not supported!";
+        LOG_ERROR << "Multiple DispatchRays for ExecuteIndirect call not supported!";
         logged = true;
       }
     }

@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "executionSerializationFactory.h"
+#include "log2.h"
 
 namespace gits {
 namespace DirectX {
@@ -22,12 +23,12 @@ ExecutionSerializationFactory::ExecutionSerializationFactory() {
   try {
     int startFrame = std::stoi(frames);
     if (startFrame != 1) {
-      Log(ERR) << "Execution serialization must start from frame 1";
+      LOG_ERROR << "Execution serialization must start from frame 1";
       exit(EXIT_FAILURE);
     }
   } catch (...) {
-    Log(ERR) << "Invalid execution serialization range: '" +
-                    Configurator::Get().directx.features.subcapture.frames + "'";
+    LOG_ERROR << "Invalid execution serialization range: '" +
+                     Configurator::Get().directx.features.subcapture.frames + "'";
     exit(EXIT_FAILURE);
   }
 

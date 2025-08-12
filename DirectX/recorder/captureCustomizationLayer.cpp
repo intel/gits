@@ -14,6 +14,7 @@
 #include "iunknownWrapper.h"
 #include "wrapperUtils.h"
 #include "gits.h"
+#include "log2.h"
 
 #include <windows.h>
 
@@ -584,7 +585,7 @@ void CaptureCustomizationLayer::pre(ID3D12FenceSetEventOnCompletionCommand& c) {
 void CaptureCustomizationLayer::pre(ID3D12Device1SetEventOnMultipleFenceCompletionCommand& c) {
   static bool printed = false;
   if (!printed) {
-    Log(ERR) << "ID3D12Device1::SetEventOnMultipleFenceCompletion not handled!";
+    LOG_ERROR << "ID3D12Device1::SetEventOnMultipleFenceCompletion not handled!";
     printed = true;
   }
 }
@@ -634,7 +635,7 @@ void CaptureCustomizationLayer::post(ID3D12DeviceOpenSharedHandleCommand& c) {
 
     manager_.updateCommandKey(c);
   } else {
-    Log(ERR)
+    LOG_ERROR
         << "ID3D12Device::OpenSharedHandle handled only for ID3D12Resource/1/2 and ID3D12Fence/1.";
   }
 }

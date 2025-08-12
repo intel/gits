@@ -8,6 +8,7 @@
 
 #include "intelExtensionsService.h"
 #include "gits.h"
+#include "log2.h"
 #include "configurationLib.h"
 #include "to_string/toStr.h"
 
@@ -41,11 +42,11 @@ void IntelExtensionsService::loadIntelExtensions(IDXGIAdapter1* adapter) {
   // If the extensions cannot be loaded (e.g. not an Intel GPU) just print a warning
   hr = INTC_LoadExtensionsLibrary(false, desc.VendorId, desc.DeviceId);
   if (FAILED(hr)) {
-    Log(WARN) << "Failed to load Intel Extensions (" << toStr(desc.Description) << ")";
+    LOG_WARNING << "Failed to load Intel Extensions (" << toStr(desc.Description) << ")";
     return;
   }
   intelExtensionLoaded_ = true;
-  Log(INFO) << "Loaded Intel Extensions (" << toStr(desc.Description) << ")";
+  LOG_INFO << "Loaded Intel Extensions (" << toStr(desc.Description) << ")";
 }
 
 void IntelExtensionsService::setApplicationInfo() {
@@ -93,10 +94,10 @@ void IntelExtensionsService::setApplicationInfo() {
 
   HRESULT hr = INTC_D3D12_SetApplicationInfo(&appInfo);
   if (hr != S_OK) {
-    Log(ERR) << "INTC_D3D12_SetApplicationInfo failed - Application name is not set.";
+    LOG_ERROR << "INTC_D3D12_SetApplicationInfo failed - Application name is not set.";
   } else {
-    Log(INFO) << "INTC_D3D12_SetApplicationInfo - Application: \"" << appName << "\" ("
-              << appVersion << "), Engine: \"" << engineName << "\" (" << engineVersion << ")";
+    LOG_INFO << "INTC_D3D12_SetApplicationInfo - Application: \"" << appName << "\" (" << appVersion
+             << "), Engine: \"" << engineName << "\" (" << engineVersion << ")";
     applicationNameSet_ = true;
   }
 }

@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "adapterService.h"
+#include "log2.h"
 #include "to_string/toStr.h"
 
 namespace gits {
@@ -22,7 +23,7 @@ void AdapterService::loadAdapters() {
     c = std::tolower(c);
   }
   if (adapterMap.count(adapterVendor) == 0) {
-    Log(WARN) << "AdapterOverride - Unknown vendor: " << adapterOverride.vendor;
+    LOG_WARNING << "AdapterOverride - Unknown vendor: " << adapterOverride.vendor;
     return;
   }
 
@@ -30,7 +31,7 @@ void AdapterService::loadAdapters() {
   CreateDXGIFactory2(0, IID_PPV_ARGS(&factory));
   GITS_ASSERT(factory);
 
-  Log(INFO) << "Adapters:";
+  LOG_INFO << "Adapters:";
   unsigned vendorId = adapterMap.at(adapterVendor);
   unsigned adapterIndex = 0;
   unsigned adapterFromVendorIndex = 0;
@@ -47,10 +48,10 @@ void AdapterService::loadAdapters() {
     HRESULT hr = adapter->GetDesc1(&adapterDesc);
     GITS_ASSERT(hr == S_OK);
 
-    Log(INFO) << "  (" << adapterIndex << ")" << std::hex << std::setfill('0') << " VendorId = 0x"
-              << std::setw(4) << adapterDesc.VendorId << " DeviceId = 0x" << std::setw(4)
-              << adapterDesc.DeviceId << " Description = " << std::setw(4)
-              << toStr(adapterDesc.Description);
+    LOG_INFO << "  (" << adapterIndex << ")" << std::hex << std::setfill(L'0') << " VendorId = 0x"
+             << std::setw(4) << adapterDesc.VendorId << " DeviceId = 0x" << std::setw(4)
+             << adapterDesc.DeviceId << " Description = " << std::setw(4)
+             << toStr(adapterDesc.Description);
 
     // Check if the DXGIAdapter is the one we want to override
     bool isMatch = vendorId == 0 && adapterIndex == adapterOverride.index;
@@ -70,9 +71,9 @@ void AdapterService::loadAdapters() {
   // Print out information about the overriden DXGIAdapter (if the option was set)
   if (adapterOverride.enabled) {
     if (overrideFound) {
-      Log(INFO) << "AdapterOverride - Adapter override found at index " << adapterOverrideIndex;
+      LOG_INFO << "AdapterOverride - Adapter override found at index " << adapterOverrideIndex;
     } else {
-      Log(WARN)
+      LOG_WARNING
           << "AdapterOverride - Adapter override not found, will use default adapter (index 0)";
     }
   }

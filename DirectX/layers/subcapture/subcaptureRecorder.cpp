@@ -9,6 +9,7 @@
 #include "subcaptureRecorder.h"
 #include "directXApiIfaceSubcapture.h"
 #include "gits.h"
+#include "log2.h"
 
 #include <filesystem>
 #include <string>

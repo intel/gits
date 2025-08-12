@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "debugInfo.h"
-#include "log.h"
+#include "log2.h"
 #include "config.h"
 #include "configurationLib.h"
 #include "to_string/enumToStrAuto.h"
@@ -31,7 +31,7 @@ void DebugInfo::createDXGIFactory(CreateDXGIFactoryCommand& command) {
     command.result_.value = hr;
     command.skip = true;
   } else {
-    Log(ERR) << "CreateDXGIFactory2 with DXGI_CREATE_FACTORY_DEBUG failed.";
+    LOG_ERROR << "CreateDXGIFactory2 with DXGI_CREATE_FACTORY_DEBUG failed.";
   }
 }
 
@@ -43,7 +43,7 @@ void DebugInfo::createDXGIFactory1(CreateDXGIFactory1Command& command) {
     command.result_.value = hr;
     command.skip = true;
   } else {
-    Log(ERR) << "CreateDXGIFactory2 with DXGI_CREATE_FACTORY_DEBUG failed.";
+    LOG_ERROR << "CreateDXGIFactory2 with DXGI_CREATE_FACTORY_DEBUG failed.";
   }
 }
 
@@ -57,7 +57,7 @@ void DebugInfo::createD3D12DevicePre(D3D12CreateDeviceCommand& command) {
   Microsoft::WRL::ComPtr<ID3D12Debug> debug;
   HRESULT hr = D3D12GetDebugInterface(IID_PPV_ARGS(&debug));
   if (hr != S_OK) {
-    Log(ERR) << "D3D12GetDebugInterface (ID3D12Debug) failed.";
+    LOG_ERROR << "D3D12GetDebugInterface (ID3D12Debug) failed.";
     return;
   }
   debug->EnableDebugLayer();
@@ -66,7 +66,7 @@ void DebugInfo::createD3D12DevicePre(D3D12CreateDeviceCommand& command) {
   Microsoft::WRL::ComPtr<ID3D12DeviceRemovedExtendedDataSettings> dredSettings;
   hr = D3D12GetDebugInterface(IID_PPV_ARGS(&dredSettings));
   if (hr != S_OK) {
-    Log(ERR) << "D3D12GetDebugInterface (ID3D12DeviceRemovedExtendedDataSettings) failed.";
+    LOG_ERROR << "D3D12GetDebugInterface (ID3D12DeviceRemovedExtendedDataSettings) failed.";
     return;
   }
   dredSettings->SetAutoBreadcrumbsEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
@@ -82,14 +82,14 @@ void DebugInfo::createD3D12DevicePost(D3D12CreateDeviceCommand& command) {
   ID3D12Device* device = static_cast<ID3D12Device*>(*command.ppDevice_.value);
   HRESULT hr = device->QueryInterface(IID_PPV_ARGS(&infoQueue));
   if (hr != S_OK) {
-    Log(INFOV) << "QueryInterface to ID3D12InfoQueue1 failed.";
+    LOG_DEBUG << "QueryInterface to ID3D12InfoQueue1 failed.";
     return;
   }
   DWORD callbackCookie{};
   hr = infoQueue->RegisterMessageCallback(debugMessageCallback, D3D12_MESSAGE_CALLBACK_FLAG_NONE,
                                           this, &callbackCookie);
   if (hr != S_OK) {
-    Log(ERR) << "ID3D12InfoQueue1::RegisterMessageCallback failed.";
+    LOG_ERROR << "ID3D12InfoQueue1::RegisterMessageCallback failed.";
   }
 
   d3d12CallbackRegistered_ = true;
@@ -208,7 +208,7 @@ void __stdcall DebugInfo::NvAPIdebugMessageCallback(
   } else if (severity == NVAPI_D3D12_RAYTRACING_VALIDATION_MESSAGE_SEVERITY_WARNING) {
     d3d12Severity = D3D12_MESSAGE_SEVERITY_WARNING;
   } else {
-    Log(ERR) << "Unknown NvAPI message severity: " << severity;
+    LOG_ERROR << "Unknown NvAPI message severity: " << severity;
   }
 
   DebugInfo* debugInfo = static_cast<DebugInfo*>(context);
@@ -425,14 +425,14 @@ void DebugInfo::initNvAPIValidation(ID3D12Device* device) {
   if (status == NVAPI_LIBRARY_NOT_FOUND || status == NVAPI_NVIDIA_DEVICE_NOT_FOUND) {
     return;
   } else if (status != NVAPI_OK) {
-    Log(ERR) << "NvAPI_Initialize failed! NvAPI Raytracing Validation not enabled";
+    LOG_ERROR << "NvAPI_Initialize failed! NvAPI Raytracing Validation not enabled";
     return;
   }
 
   Microsoft::WRL::ComPtr<ID3D12Device5> device5{};
   device->QueryInterface(IID_PPV_ARGS(&device5));
   if (!device5) {
-    Log(ERR) << "ID3D12Device5 not available! NvAPI Raytracing Validation not enabled";
+    LOG_ERROR << "ID3D12Device5 not available! NvAPI Raytracing Validation not enabled";
     return;
   }
 
@@ -443,14 +443,14 @@ void DebugInfo::initNvAPIValidation(ID3D12Device* device) {
     status = NvAPI_D3D12_RegisterRaytracingValidationMessageCallback(
         device5.Get(), NvAPIdebugMessageCallback, this, &handle);
     if (status != NVAPI_OK) {
-      Log(ERR) << "NvAPI_D3D12_RegisterRaytracingValidationMessageCallback failed! Status: "
-               << status;
+      LOG_ERROR << "NvAPI_D3D12_RegisterRaytracingValidationMessageCallback failed! Status: "
+                << status;
     }
   } else if (status == NVAPI_ACCESS_DENIED) {
-    Log(ERR) << "NvAPI_D3D12_EnableRaytracingValidation failed! Environment variables: "
-                "NV_ALLOW_RAYTRACING_VALIDATION needs to be set to 1";
+    LOG_ERROR << "NvAPI_D3D12_EnableRaytracingValidation failed! Environment variables: "
+                 "NV_ALLOW_RAYTRACING_VALIDATION needs to be set to 1";
   } else {
-    Log(ERR) << "NvAPI_D3D12_EnableRaytracingValidation failed! Status: " << status;
+    LOG_ERROR << "NvAPI_D3D12_EnableRaytracingValidation failed! Status: " << status;
   }
 }
 

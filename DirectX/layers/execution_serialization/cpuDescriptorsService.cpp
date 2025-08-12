@@ -11,13 +11,14 @@
 #include "commandWritersAuto.h"
 #include "to_string/enumToStrAuto.h"
 #include "gits.h"
+#include "log2.h"
 
 namespace gits {
 namespace DirectX {
 
 void CpuDescriptorsService::createCommandList(unsigned deviceKey) {
   if (deviceKey_ && deviceKey_ != deviceKey) {
-    Log(ERR) << "Execution serialization - multiple devices not handled";
+    LOG_ERROR << "Execution serialization - multiple devices not handled";
   }
   deviceKey_ = deviceKey;
 }
@@ -128,8 +129,8 @@ unsigned CpuDescriptorsService::DescriptorHeap<SIZE>::preserveDescriptor(unsigne
     }
   }
   if (preservedIndex == descriptorUsage_.size()) {
-    Log(ERR) << "Execution serialization - auxiliary descriptor heap " << toStr(type_)
-             << " too small!";
+    LOG_ERROR << "Execution serialization - auxiliary descriptor heap " << toStr(type_)
+              << " too small!";
   }
 
   descriptorUsage_.set(preservedIndex);

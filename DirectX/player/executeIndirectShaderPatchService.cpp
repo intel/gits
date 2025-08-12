@@ -9,6 +9,7 @@
 #include "executeIndirectShaderPatchService.h"
 #include "config.h"
 #include "gits.h"
+#include "log2.h"
 
 #include <wrl/client.h>
 #include <dxcapi.h>
@@ -270,7 +271,7 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
       hr = compileResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errors), nullptr);
       GITS_ASSERT(hr == S_OK);
       std::string error = static_cast<char*>(errors->GetBufferPointer());
-      Log(ERR) << "Shader compilation for SBT failed: " + error;
+      LOG_ERROR << "Shader compilation for SBT failed: " + error;
     }
 
     D3D12_COMPUTE_PIPELINE_STATE_DESC desc{};

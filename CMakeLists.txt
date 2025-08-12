@@ -159,6 +159,7 @@ include(import_zstd)
 include(import_argshxx)
 include(import_imgui)
 include(import_intel_one_mono)
+include(import_plog)
 
 if(WIN32)
   set(PLTFRM "win32")

@@ -561,6 +561,15 @@ class NvAPI(Repository):
         self.name = "nvapi"
         self.url = "https://github.com/NVIDIA/nvapi.git"
 
+class Plog(Repository):
+    def set_commit(self):
+        self.commit_id = "3da4729da2086a2987ce75cd31c4d04e8ca54fcf"
+
+    def init(self):
+        self.name = "plog"
+        self.url = "https://github.com/SergiusTheBest/plog.git"
+
+
 class Repositories:
     def __init__(self, args) -> None:
         self.repos = []
@@ -612,6 +621,8 @@ class Repositories:
             self.repos.append(IntelOneMono())
         if args.with_all or args.with_nvapi:
             self.repos.append(NvAPI())
+        if args.with_all or args.with_plog:
+            self.repos.append(Plog())
 
     def __iter__(self):
         for value in self.repos:
@@ -663,7 +674,7 @@ def setup_parser(root_parser):
     root_parser.add_argument("--with-imgui", action="store_true")
     root_parser.add_argument("--with-intel-one-mono", action="store_true")
     root_parser.add_argument("--with-nvapi", action="store_true")
-
+    root_parser.add_argument("--with-plog", action="store_true")
 
 def install_dependencies(args):
     for repo in Repositories(args):

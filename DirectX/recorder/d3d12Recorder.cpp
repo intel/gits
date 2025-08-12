@@ -8,6 +8,7 @@
 
 #include "d3d12Recorder.h"
 #include "captureManager.h"
+#include "log2.h"
 
 namespace gits {
 namespace DirectX {
@@ -32,7 +33,7 @@ gits::DirectX::IRecorderWrapper* STDCALL GITSRecorderD3D12() {
     try {
       g_recorderWrapper = std::make_unique<gits::DirectX::RecorderWrapper>();
     } catch (const std::exception& ex) {
-      Log(ERR) << "Cannot initialize recorder: " << ex.what() << std::endl;
+      LOG_ERROR << "Cannot initialize recorder: " << ex.what() << std::endl;
       exit(EXIT_FAILURE);
     }
   }

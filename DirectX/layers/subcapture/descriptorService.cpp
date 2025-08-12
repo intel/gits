@@ -10,6 +10,7 @@
 #include "commandsAuto.h"
 #include "commandWritersAuto.h"
 #include "stateTrackingService.h"
+#include "log2.h"
 
 namespace gits {
 namespace DirectX {
@@ -107,7 +108,7 @@ void DescriptorService::copyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand
   if (srcHeapIt == statesByHeapIndex_.end()) {
     static bool logged = false;
     if (!logged) {
-      Log(ERR) << "DescriptorService::copyDescriptors - descriptor states for heap not found";
+      LOG_ERROR << "DescriptorService::copyDescriptors - descriptor states for heap not found";
       logged = true;
     }
     return;

@@ -8,7 +8,7 @@
 
 #include "printStatusLayer.h"
 #include "config.h"
-#include "log.h"
+#include "log2.h"
 
 namespace gits {
 namespace DirectX {
@@ -31,12 +31,12 @@ std::string formatDuration(Duration duration) {
 
 void PrintStatusLayer::post(StateRestoreBeginCommand& c) {
   initialTime_ = std::chrono::steady_clock::now();
-  Log(INFO) << "PlayerStatus - State restore started";
+  LOG_INFO << "PlayerStatus - State restore started";
 }
 
 void PrintStatusLayer::post(StateRestoreEndCommand& c) {
-  Log(INFO) << "PlayerStatus - State restore duration: "
-            << formatDuration(std::chrono::steady_clock::now() - initialTime_);
+  LOG_INFO << "PlayerStatus - State restore duration: "
+           << formatDuration(std::chrono::steady_clock::now() - initialTime_);
 }
 
 void PrintStatusLayer::post(MarkerUInt64Command& c) {
@@ -48,16 +48,16 @@ void PrintStatusLayer::post(MarkerUInt64Command& c) {
     timeBegin = std::chrono::steady_clock::now();
     break;
   case MarkerUInt64Command::Value::STATE_RESTORE_OBJECTS_END:
-    Log(INFO) << "PlayerStatus - Objects restored in "
-              << formatDuration(std::chrono::steady_clock::now() - timeBegin);
+    LOG_INFO << "PlayerStatus - Objects restored in "
+             << formatDuration(std::chrono::steady_clock::now() - timeBegin);
     break;
   case MarkerUInt64Command::Value::STATE_RESTORE_RTAS_END:
-    Log(INFO) << "PlayerStatus - RTAS restored in "
-              << formatDuration(std::chrono::steady_clock::now() - timeBegin);
+    LOG_INFO << "PlayerStatus - RTAS restored in "
+             << formatDuration(std::chrono::steady_clock::now() - timeBegin);
     break;
   case MarkerUInt64Command::Value::STATE_RESTORE_RESOURCES_END:
-    Log(INFO) << "PlayerStatus - Resources restored in "
-              << formatDuration(std::chrono::steady_clock::now() - timeBegin);
+    LOG_INFO << "PlayerStatus - Resources restored in "
+             << formatDuration(std::chrono::steady_clock::now() - timeBegin);
     break;
   default:
     break;

@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "multithreadedObjectCreationService.h"
-#include "log.h"
+#include "log2.h"
 #include "gits.h"
 
 #include <processthreadsapi.h> // Used for SetThreadDescription
@@ -65,9 +65,9 @@ void MultithreadedObjectCreationService::schedule(CreationFunction creationFunct
   } else {
     static bool logged = false;
     if (!logged) {
-      Log(ERR) << "MultithreadedObjectCreationService - schedule failed, creation function for "
-                  "object key: "
-               << objectKey << " already exists!";
+      LOG_ERROR << "MultithreadedObjectCreationService - schedule failed, creation function for "
+                   "object key: "
+                << objectKey << " already exists!";
       logged = true;
     }
   }
