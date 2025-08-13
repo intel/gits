@@ -62,6 +62,7 @@ private:
   SubcaptureRange& subcaptureRange_;
   BindingService& bindingService_;
   AnalyzerRaytracingService& raytracingService_;
+  bool optimize_{};
 
   struct ExecuteCommandListCommand : public GpuExecutionTracker::Executable {
     std::vector<unsigned> commandListKeys;

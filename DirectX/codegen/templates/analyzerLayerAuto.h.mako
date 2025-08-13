@@ -89,6 +89,8 @@ private:
   CapturePlayerDescriptorHandleService descriptorHandleService_;
   AnalyzerRaytracingService raytracingService_;
   AnalyzerExecuteIndirectService executeIndirectService_;
+  bool optimize_{};
+  bool optimizeRaytracing_{};
 };
 
 } // namespace DirectX

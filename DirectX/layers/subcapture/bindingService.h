@@ -133,6 +133,7 @@ private:
   AnalyzerRaytracingService& raytracingService_;
   AnalyzerExecuteIndirectService& executeIndirectService_;
   bool commandListSubcapture_{};
+  bool optimize_{};
 
   std::unordered_map<unsigned, unsigned> computeRootSignatureByCommandList_;
   std::unordered_map<unsigned, unsigned> graphicsRootSignatureByCommandList_;

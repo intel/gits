@@ -27,6 +27,7 @@ BindingService::BindingService(AnalyzerService& analyzerService,
       executeIndirectService_(executeIndirectService),
       commandListSubcapture_(commandListSubcapture) {
   restoreTlases_ = Configurator::Get().directx.features.subcapture.restoreTLASes;
+  optimize_ = Configurator::Get().directx.features.subcapture.optimize;
 }
 
 void BindingService::commandListsRestore(const std::set<unsigned>& commandLists) {
@@ -491,15 +492,17 @@ void BindingService::buildRaytracingAccelerationStructure(
     }
   }
 
-  objectsForRestore_.insert(c.pDesc_.destAccelerationStructureKey);
-  if (c.pDesc_.sourceAccelerationStructureKey) {
-    objectsForRestore_.insert(c.pDesc_.sourceAccelerationStructureKey);
-  }
-  if (!(c.pDesc_.scratchAccelerationStructureKey & Command::stateRestoreKeyMask)) {
-    objectsForRestore_.insert(c.pDesc_.scratchAccelerationStructureKey);
-  }
-  for (unsigned key : c.pDesc_.inputKeys) {
-    objectsForRestore_.insert(key);
+  if (optimize_) {
+    objectsForRestore_.insert(c.pDesc_.destAccelerationStructureKey);
+    if (c.pDesc_.sourceAccelerationStructureKey) {
+      objectsForRestore_.insert(c.pDesc_.sourceAccelerationStructureKey);
+    }
+    if (!(c.pDesc_.scratchAccelerationStructureKey & Command::stateRestoreKeyMask)) {
+      objectsForRestore_.insert(c.pDesc_.scratchAccelerationStructureKey);
+    }
+    for (unsigned key : c.pDesc_.inputKeys) {
+      objectsForRestore_.insert(key);
+    }
   }
 }
 
@@ -526,8 +529,10 @@ void BindingService::copyRaytracingAccelerationStructure(
         new ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand(c));
   }
 
-  objectsForRestore_.insert(c.DestAccelerationStructureData_.interfaceKey);
-  objectsForRestore_.insert(c.SourceAccelerationStructureData_.interfaceKey);
+  if (optimize_) {
+    objectsForRestore_.insert(c.DestAccelerationStructureData_.interfaceKey);
+    objectsForRestore_.insert(c.SourceAccelerationStructureData_.interfaceKey);
+  }
 }
 
 void BindingService::copyRaytracingAccelerationStructureImpl(

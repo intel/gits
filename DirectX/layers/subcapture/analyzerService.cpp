@@ -22,7 +22,9 @@ AnalyzerService::AnalyzerService(SubcaptureRange& subcaptureRange,
                                  AnalyzerRaytracingService& raytracingService)
     : subcaptureRange_(subcaptureRange),
       bindingService_(bindingService),
-      raytracingService_(raytracingService) {}
+      raytracingService_(raytracingService) {
+  optimize_ = Configurator::Get().directx.features.subcapture.optimize;
+}
 
 AnalyzerService::~AnalyzerService() {
   try {
@@ -36,7 +38,7 @@ AnalyzerService::~AnalyzerService() {
 }
 
 void AnalyzerService::notifyObject(unsigned objectKey) {
-  if (inRange_) {
+  if (optimize_ && inRange_) {
     objectsForRestore_.insert(objectKey);
   }
 }
