@@ -10,7 +10,7 @@
 
 #include "objectState.h"
 #include "commandIdsAuto.h"
-#include "commandWriters.h"
+#include "commandWriter.h"
 #include "descriptorService.h"
 
 #include <vector>

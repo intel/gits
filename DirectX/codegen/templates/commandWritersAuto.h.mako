@@ -9,7 +9,7 @@ ${header}
 
 #pragma once
 
-#include "commandWriters.h"
+#include "commandWriter.h"
 #include "commandsAuto.h"
 #include "commandsCustom.h"
 #include "commandIdsAuto.h"

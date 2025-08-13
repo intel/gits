@@ -9,7 +9,7 @@
 #pragma once
 
 #include "resourceDump.h"
-#include "commandWriters.h"
+#include "commandWriter.h"
 
 #include <unordered_map>
 #include <unordered_set>

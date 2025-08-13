@@ -19,7 +19,7 @@ source_group("common" FILES ${COMMON_SRC})
 
 set(ENCODERS_SRC
   ${SRC_DIR}/include/argumentEncoders.h
-  ${SRC_DIR}/include/commandWriters.h
+  ${SRC_DIR}/include/commandWriter.h
   ${SRC_DIR}/include/commandWritersFactory.h
   ${SRC_DIR}/include/commandWritersCustom.h
   ${SRC_DIR}/include/commandEncodersCustom.h
