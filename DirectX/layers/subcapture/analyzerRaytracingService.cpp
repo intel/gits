@@ -29,10 +29,17 @@ void AnalyzerRaytracingService::buildTlas(
   GITS_ASSERT(instances);
   unsigned offset = c.pDesc_.inputOffsets[0];
   unsigned size = c.pDesc_.value->Inputs.NumDescs * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
+
   D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
   if (genericReadResources_.find(c.pDesc_.inputKeys[0]) != genericReadResources_.end()) {
     state = D3D12_RESOURCE_STATE_GENERIC_READ;
   }
+
+  // workaround for improper mapping gpu address to buffer in capture
+  if (instances->GetDesc().Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) {
+    state = D3D12_RESOURCE_STATE_GENERIC_READ;
+  }
+
   instancesDump_.buildTlas(c.object_.value, instances, offset, size, state, c.key);
   tlases_.insert(std::make_pair(c.pDesc_.destAccelerationStructureKey,
                                 c.pDesc_.destAccelerationStructureOffset));
@@ -70,6 +77,12 @@ void AnalyzerRaytracingService::dumpBindingTable(ID3D12GraphicsCommandList* comm
   if (genericReadResources_.find(resourceKey) != genericReadResources_.end()) {
     state = D3D12_RESOURCE_STATE_GENERIC_READ;
   }
+
+  // workaround for improper mapping gpu address to buffer in capture
+  if (resource->GetDesc().Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) {
+    state = D3D12_RESOURCE_STATE_GENERIC_READ;
+  }
+
   if (stride == 0) {
     stride = size;
   }
