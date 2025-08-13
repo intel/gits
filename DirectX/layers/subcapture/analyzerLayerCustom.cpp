@@ -126,13 +126,6 @@ void AnalyzerLayer::post(ID3D12Device3EnqueueMakeResidentCommand& c) {
   }
 }
 
-void AnalyzerLayer::post(ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c) {
-  analyzerService_.commandListCommand(c.object_.key);
-  if (optimize_) {
-    bindingService_.setDescriptorHeaps(c);
-  }
-}
-
 void AnalyzerLayer::post(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) {
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
@@ -365,6 +358,15 @@ void AnalyzerLayer::post(ID3D12DeviceCreateSamplerCommand& c) {
     state->destDescriptorKey = c.DestDescriptor_.interfaceKey;
     state->destDescriptorIndex = c.DestDescriptor_.index;
     descriptorService_.storeState(state);
+  }
+}
+
+void AnalyzerLayer::post(ID3D12DeviceCreateDescriptorHeapCommand& c) {
+  if (c.result_.value != S_OK) {
+    return;
+  }
+  if (optimize_) {
+    bindingService_.createDescriptorHeap(c);
   }
 }
 

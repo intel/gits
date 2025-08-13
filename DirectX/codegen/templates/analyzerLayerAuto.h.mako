@@ -51,6 +51,7 @@ public:
   void post(ID3D12DeviceCreateUnorderedAccessViewCommand& c) override;
   void post(ID3D12DeviceCreateConstantBufferViewCommand& c) override;
   void post(ID3D12DeviceCreateSamplerCommand& c) override;
+  void post(ID3D12DeviceCreateDescriptorHeapCommand& c) override;
   void post(ID3D12DeviceCreateRootSignatureCommand& c) override;
   void post(ID3D12Device5CreateStateObjectCommand& c) override;
   void pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) override;

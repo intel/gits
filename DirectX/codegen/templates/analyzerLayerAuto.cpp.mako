@@ -14,7 +14,6 @@ namespace DirectX {
 <%
 custom = [
     'ID3D12GraphicsCommandListReset',
-    'ID3D12GraphicsCommandListSetDescriptorHeaps',
     'ID3D12GraphicsCommandListSetComputeRootSignature',
     'ID3D12GraphicsCommandListSetGraphicsRootSignature',
     'ID3D12GraphicsCommandListSetComputeRootDescriptorTable',

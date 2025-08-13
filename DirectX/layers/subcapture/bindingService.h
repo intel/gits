@@ -52,7 +52,7 @@ public:
   }
   void commandListsRestore(const std::set<unsigned>& commandLists);
   void commandListReset(ID3D12GraphicsCommandListResetCommand& c);
-  void setDescriptorHeaps(ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c);
+  void createDescriptorHeap(ID3D12DeviceCreateDescriptorHeapCommand& c);
   void setRootSignature(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c);
   void setRootSignature(ID3D12GraphicsCommandListSetGraphicsRootSignatureCommand& c);
   void setRootDescriptorTable(ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c);
@@ -89,7 +89,6 @@ public:
   void copyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c);
 
 private:
-  void setDescriptorHeapsImpl(ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c);
   void setRootSignatureImpl(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c);
   void setRootSignatureImpl(ID3D12GraphicsCommandListSetGraphicsRootSignatureCommand& c);
   void setRootDescriptorTableImpl(ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c);
@@ -124,7 +123,6 @@ private:
   void executeIndirectImpl(ID3D12GraphicsCommandListExecuteIndirectCommand& c);
   void writeBufferImmediateImpl(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c);
   void commandListRestore(unsigned commandListKey);
-  unsigned getNumDescriptors(unsigned commandListKey, unsigned descriptorHeapKey);
 
 private:
   AnalyzerService& analyzerService_;
@@ -138,11 +136,7 @@ private:
   std::unordered_map<unsigned, unsigned> computeRootSignatureByCommandList_;
   std::unordered_map<unsigned, unsigned> graphicsRootSignatureByCommandList_;
 
-  struct DescriptorHeap {
-    unsigned key;
-    unsigned numDescriptors;
-  };
-  std::unordered_map<unsigned, std::vector<DescriptorHeap>> descriptorHeapsByCommandList_;
+  std::unordered_map<unsigned, unsigned> descriptorHeapSize_;
 
   std::unordered_map<unsigned, std::vector<std::unique_ptr<Command>>> commandsByCommandList_;
 
