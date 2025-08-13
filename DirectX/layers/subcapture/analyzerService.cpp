@@ -179,6 +179,20 @@ void AnalyzerService::mappedDataMeta(unsigned resourceKey) {
   }
 }
 
+void AnalyzerService::createXessContext(xessD3D12CreateContextCommand& c) {
+  objectsForRestore_.insert(c.phContext_.key);
+}
+
+void AnalyzerService::createDeviceExtensionContext(
+    INTC_D3D12_CreateDeviceExtensionContextCommand& c) {
+  objectsForRestore_.insert(c.ppExtensionContext_.key);
+}
+
+void AnalyzerService::createDeviceExtensionContext(
+    INTC_D3D12_CreateDeviceExtensionContext1Command& c) {
+  objectsForRestore_.insert(c.ppExtensionContext_.key);
+}
+
 void AnalyzerService::clearReadyExecutables() {
   std::vector<GpuExecutionTracker::Executable*>& executables =
       gpuExecutionTracker_.getReadyExecutables();

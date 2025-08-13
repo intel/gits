@@ -72,6 +72,9 @@ public:
   void post(ID3D12Device8CreatePlacedResource1Command& c) override;
   void post(ID3D12Device10CreatePlacedResource2Command& c) override;
   void post(MappedDataMetaCommand& c) override;
+  void post(xessD3D12CreateContextCommand& c) override;
+  void post(INTC_D3D12_CreateDeviceExtensionContextCommand& c) override;
+  void post(INTC_D3D12_CreateDeviceExtensionContext1Command& c) override;
   %for interface in interfaces:
   %for function in interface.functions:
   %if interface.name.startswith('ID3D12GraphicsCommandList') and not function.name.startswith('SetName'):

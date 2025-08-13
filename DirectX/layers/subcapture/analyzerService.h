@@ -53,6 +53,9 @@ public:
                           UINT64 fenceValue);
   void fenceSignal(unsigned callKey, unsigned fenceKey, UINT64 fenceValue);
   void mappedDataMeta(unsigned resourceKey);
+  void createXessContext(xessD3D12CreateContextCommand& c);
+  void createDeviceExtensionContext(INTC_D3D12_CreateDeviceExtensionContextCommand& c);
+  void createDeviceExtensionContext(INTC_D3D12_CreateDeviceExtensionContext1Command& c);
 
 private:
   void clearReadyExecutables();

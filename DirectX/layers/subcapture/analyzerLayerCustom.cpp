@@ -543,5 +543,23 @@ void AnalyzerLayer::post(MappedDataMetaCommand& c) {
   }
 }
 
+void AnalyzerLayer::post(xessD3D12CreateContextCommand& c) {
+  if (optimize_) {
+    analyzerService_.createXessContext(c);
+  }
+}
+
+void AnalyzerLayer::post(INTC_D3D12_CreateDeviceExtensionContextCommand& c) {
+  if (optimize_) {
+    analyzerService_.createDeviceExtensionContext(c);
+  }
+}
+
+void AnalyzerLayer::post(INTC_D3D12_CreateDeviceExtensionContext1Command& c) {
+  if (optimize_) {
+    analyzerService_.createDeviceExtensionContext(c);
+  }
+}
+
 } // namespace DirectX
 } // namespace gits
