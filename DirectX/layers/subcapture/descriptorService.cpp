@@ -178,6 +178,10 @@ DescriptorState* DescriptorService::getDescriptorState(unsigned heapKey, unsigne
 }
 
 void DescriptorService::restoreD3D12RenderTargetView(D3D12RenderTargetViewState* state) {
+  if (!stateService_->getAnalyzerResults().restoreObject(state->resourceKey) &&
+      stateService_->getState(state->resourceKey)) {
+    stateService_->restoreState(state->resourceKey);
+  }
   ID3D12DeviceCreateRenderTargetViewCommand c;
   c.key = stateService_->getUniqueCommandKey();
   c.object_.key = state->deviceKey;
@@ -190,6 +194,10 @@ void DescriptorService::restoreD3D12RenderTargetView(D3D12RenderTargetViewState*
 }
 
 void DescriptorService::restoreD3D12DepthStencilView(D3D12DepthStencilViewState* state) {
+  if (!stateService_->getAnalyzerResults().restoreObject(state->resourceKey) &&
+      stateService_->getState(state->resourceKey)) {
+    stateService_->restoreState(state->resourceKey);
+  }
   ID3D12DeviceCreateDepthStencilViewCommand c;
   c.key = stateService_->getUniqueCommandKey();
   c.object_.key = state->deviceKey;
@@ -202,6 +210,10 @@ void DescriptorService::restoreD3D12DepthStencilView(D3D12DepthStencilViewState*
 }
 
 void DescriptorService::restoreD3D12ShaderResourceView(D3D12ShaderResourceViewState* state) {
+  if (!stateService_->getAnalyzerResults().restoreObject(state->resourceKey) &&
+      stateService_->getState(state->resourceKey)) {
+    stateService_->restoreState(state->resourceKey);
+  }
   ID3D12DeviceCreateShaderResourceViewCommand c;
   c.key = stateService_->getUniqueCommandKey();
   c.object_.key = state->deviceKey;
@@ -221,6 +233,10 @@ void DescriptorService::restoreD3D12ShaderResourceView(D3D12ShaderResourceViewSt
 }
 
 void DescriptorService::restoreD3D12UnorderedAccessView(D3D12UnorderedAccessViewState* state) {
+  if (!stateService_->getAnalyzerResults().restoreObject(state->resourceKey) &&
+      stateService_->getState(state->resourceKey)) {
+    stateService_->restoreState(state->resourceKey);
+  }
   ID3D12DeviceCreateUnorderedAccessViewCommand c;
   c.key = stateService_->getUniqueCommandKey();
   c.object_.key = state->deviceKey;
@@ -234,6 +250,10 @@ void DescriptorService::restoreD3D12UnorderedAccessView(D3D12UnorderedAccessView
 }
 
 void DescriptorService::restoreD3D12ConstantBufferView(D3D12ConstantBufferViewState* state) {
+  if (!stateService_->getAnalyzerResults().restoreObject(state->resourceKey) &&
+      stateService_->getState(state->resourceKey)) {
+    stateService_->restoreState(state->resourceKey);
+  }
   ID3D12DeviceCreateConstantBufferViewCommand c;
   c.key = stateService_->getUniqueCommandKey();
   c.object_.key = state->deviceKey;
@@ -247,6 +267,10 @@ void DescriptorService::restoreD3D12ConstantBufferView(D3D12ConstantBufferViewSt
 }
 
 void DescriptorService::restoreD3D12Sampler(D3D12SamplerState* state) {
+  if (!stateService_->getAnalyzerResults().restoreObject(state->resourceKey) &&
+      stateService_->getState(state->resourceKey)) {
+    stateService_->restoreState(state->resourceKey);
+  }
   ID3D12DeviceCreateSamplerCommand c;
   c.key = stateService_->getUniqueCommandKey();
   c.object_.key = state->deviceKey;
