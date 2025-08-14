@@ -1500,15 +1500,15 @@ PointerArgument<INTCExtensionAppInfo>::PointerArgument(
   value = new INTCExtensionAppInfo();
   *value = *arg.value;
   if (arg.value->pApplicationName) {
-    const void* str = arg.pApplicationName ? arg.pApplicationName : arg.value->pApplicationName;
-    unsigned len = strlen(static_cast<const char*>(str));
+    const auto* str = arg.pApplicationName ? arg.pApplicationName : arg.value->pApplicationName;
+    unsigned len = wcslen(str);
     pApplicationName = new wchar_t[len + 1];
     memcpy(const_cast<wchar_t*>(pApplicationName), str, len * 2 + 2);
     value->pApplicationName = const_cast<wchar_t*>(pApplicationName);
   }
   if (arg.value->pEngineName) {
-    const void* str = arg.pEngineName ? arg.pEngineName : arg.value->pEngineName;
-    unsigned len = strlen(static_cast<const char*>(str));
+    const auto* str = arg.pEngineName ? arg.pEngineName : arg.value->pEngineName;
+    unsigned len = wcslen(str);
     pEngineName = new wchar_t[len + 1];
     memcpy(const_cast<wchar_t*>(pEngineName), str, len * 2 + 2);
     value->pEngineName = const_cast<wchar_t*>(pEngineName);
@@ -1532,15 +1532,15 @@ PointerArgument<INTCExtensionAppInfo1>::PointerArgument(
   value = new INTCExtensionAppInfo1();
   *value = *arg.value;
   if (arg.value->pApplicationName) {
-    const void* str = arg.pApplicationName ? arg.pApplicationName : arg.value->pApplicationName;
-    unsigned len = strlen(static_cast<const char*>(str));
+    const auto* str = arg.pApplicationName ? arg.pApplicationName : arg.value->pApplicationName;
+    unsigned len = wcslen(str);
     pApplicationName = new wchar_t[len + 1];
     memcpy(const_cast<wchar_t*>(pApplicationName), str, len * 2 + 2);
     value->pApplicationName = const_cast<wchar_t*>(pApplicationName);
   }
   if (arg.value->pEngineName) {
-    const void* str = arg.pEngineName ? arg.pEngineName : arg.value->pEngineName;
-    unsigned len = strlen(static_cast<const char*>(str));
+    const auto* str = arg.pEngineName ? arg.pEngineName : arg.value->pEngineName;
+    unsigned len = wcslen(str);
     pEngineName = new wchar_t[len + 1];
     memcpy(const_cast<wchar_t*>(pEngineName), str, len * 2 + 2);
     value->pEngineName = const_cast<wchar_t*>(pEngineName);
