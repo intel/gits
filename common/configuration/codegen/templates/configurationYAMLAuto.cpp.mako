@@ -105,9 +105,9 @@ bool convert<${group.namespace_str}>::decode(const Node& node, ${group.namespace
     const auto& configValue = stringFrom<${option.type}>(vecYAML);
     if (!sameEntries(vecYAML, vecConfig)) {
 %       endif
-        rhs.${option.instance_name} = node["${option.config_name}"].as<${option.type}>();
         Configurator::Instance().AddChangedField("${option.get_path()}", configValue, defaultValue);
     }
+    rhs.${option.instance_name} = node["${option.config_name}"].as<${option.type}>();
   }
 %     endif
 %   endif
