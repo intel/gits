@@ -154,6 +154,7 @@ public:
   void pre(ID3D12DeviceOpenSharedHandleCommand& command) override;
   void pre(ID3DBlobGetBufferPointerCommand& command) override;
   void pre(ID3DBlobGetBufferSizeCommand& command) override;
+  void pre(INTC_D3D12_SetFeatureSupportCommand& command) override;
   void pre(INTC_D3D12_SetApplicationInfoCommand& command) override;
   void pre(INTC_D3D12_GetSupportedVersionsCommand& command) override;
   void pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) override;
@@ -185,6 +186,7 @@ private:
   PipelineLibraryService& pipelineLibraryService_;
   HANDLE waitForFenceEvent_{};
   std::vector<NvAPIShaderExtnSlot> nvapiShaderExtnSlotsUsed_;
+  bool intcFeatureSupportSet_{false};
 };
 
 } // namespace DirectX
