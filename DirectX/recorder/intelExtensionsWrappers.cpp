@@ -15,6 +15,22 @@
 namespace gits {
 namespace DirectX {
 
+static bool isVersionLower(const INTCExtensionVersion& current, const INTCExtensionVersion& min) {
+  if (current.HWFeatureLevel < min.HWFeatureLevel) {
+    return true;
+  }
+  if (current.HWFeatureLevel > min.HWFeatureLevel) {
+    return false;
+  }
+  if (current.APIVersion < min.APIVersion) {
+    return true;
+  }
+  if (current.APIVersion > min.APIVersion) {
+    return false;
+  }
+  return current.Revision < min.Revision;
+}
+
 HRESULT INTC_D3D12_GetSupportedVersionsWrapper(
     PFNINTCDX12EXT_GETSUPPORTEDVERSIONS pfnGetSupportedVersions,
     const ID3D12Device* pDevice,
@@ -62,9 +78,11 @@ HRESULT INTC_D3D12_CreateDeviceExtensionContextWrapper(
   auto& manager = CaptureManager::get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
-    INTCExtensionVersion version = {4, 15, 0};
+    INTCExtensionVersion minVersion{4, 15, 0};
     INTCExtensionInfo extensionInfo = *pExtensionInfo;
-    extensionInfo.RequestedExtensionVersion = version;
+    if (isVersionLower(extensionInfo.RequestedExtensionVersion, minVersion)) {
+      extensionInfo.RequestedExtensionVersion = minVersion;
+    }
 
     INTC_D3D12_CreateDeviceExtensionContextCommand command(
         GetCurrentThreadId(), pDevice, ppExtensionContext, &extensionInfo, pExtensionAppInfo);
@@ -120,9 +138,11 @@ HRESULT INTC_D3D12_CreateDeviceExtensionContext1Wrapper(
   auto& manager = CaptureManager::get();
   if (auto atTopOfStack = AtTopOfStackLocal()) {
 
-    INTCExtensionVersion version = {4, 15, 0};
+    INTCExtensionVersion minVersion{4, 15, 0};
     INTCExtensionInfo extensionInfo = *pExtensionInfo;
-    extensionInfo.RequestedExtensionVersion = version;
+    if (isVersionLower(extensionInfo.RequestedExtensionVersion, minVersion)) {
+      extensionInfo.RequestedExtensionVersion = minVersion;
+    }
 
     INTC_D3D12_CreateDeviceExtensionContext1Command command(
         GetCurrentThreadId(), pDevice, ppExtensionContext, &extensionInfo, pExtensionAppInfo);
