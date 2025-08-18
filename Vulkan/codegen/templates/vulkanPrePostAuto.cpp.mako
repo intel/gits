@@ -10,10 +10,7 @@ ${AUTO_GENERATED_HEADER}
 
 
 #include "vulkanExecWrap.h"
-
-namespace {
-  std::recursive_mutex globalMutex;
-} // namespace
+#include "vulkanThreadSync.h"
 
 using namespace gits::Vulkan;
 
@@ -37,8 +34,13 @@ void thread_tracker() {
 
 namespace {
   // Avoid recording API - recursive functions.
-  uint32_t recursionDepth = 0;
+  thread_local uint32_t recursionDepth = 0;
   const uint32_t disableDepth = 1000;
+
+  // Global thread synchronization
+  std::recursive_mutex globalMutex;
+  std::condition_variable_any globalConditionVariable;
+  std::unordered_map<VkSemaphore, uint64_t> globalSemaphoreConditionMap;
 } // namespace
 
 void PrePostDisableVulkan() {
@@ -117,6 +119,9 @@ VKATTRIB VISIBLE ${token.return_value.type} VKAPI_CALL ${token.name}(${params}) 
   CGitsPluginVulkan::Initialize();
   % endif
   GITS_ENTRY_VK
+  % if token.wait_operation:
+  waitOperation_${token.name}(${normal_args}, lock);
+  % endif
   % if not token.exec_post_recorder_wrap:
   ${call}
   % endif
@@ -129,12 +134,15 @@ VKATTRIB VISIBLE ${token.return_value.type} VKAPI_CALL ${token.name}(${params}) 
   % if token.exec_post_recorder_wrap:
   ${call}
   % endif
+  % if token.signal_operation:
+  signalOperation_${token.name}(${normal_args});
+  % endif
   % if has_retval:
   return return_value;
   % endif
 }
 % endfor
-}
+} // extern "C"
 
 const std::unordered_map<std::string, PFN_vkVoidFunction> interceptorExportedFunctions = {
 % for token in vk_functions:

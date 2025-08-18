@@ -33,6 +33,7 @@ endif()
 add_library(Vulkan_interceptor SHARED
   include/gitsPluginVulkan.h
   include/vulkanExecWrap.h
+  include/vulkanThreadSync.h
 
   ${Vulkan_interceptor_external_cpps}
   include/gitsPluginVulkan.cpp

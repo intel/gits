@@ -70,7 +70,7 @@ Function(name='vkIAmRecorderGITS', enabled=False, type=FuncType.PARAM, level=Fun
 retV=RetDef(type='void')
 )
 
-Function(name='vkWaitSemaphoresUnifiedGITS', enabled=False, type=FuncType.PARAM,
+Function(name='vkWaitSemaphoresUnifiedGITS', enabled=False, type=FuncType.PARAM, waitOperation=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pWaitInfo', type='const VkSemaphoreWaitInfo*'),

@@ -4849,7 +4849,7 @@ arg4=ArgDef(name='image', type='VkImage'),
 arg5=ArgDef(name='pNativeFenceFd', type='int*')
 )
 
-Function(name='vkQueueSubmit', enabled=True, type=FuncType.QUEUE_SUBMIT, stateTrack=True, recWrap=True, runWrap=True, recExecWrap=True, execPostRecWrap=True, ccodeWrap=True,
+Function(name='vkQueueSubmit', enabled=True, type=FuncType.QUEUE_SUBMIT, stateTrack=True, recWrap=True, runWrap=True, recExecWrap=True, execPostRecWrap=True, ccodeWrap=True, signalOperation=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='queue', type='VkQueue'),
 arg2=ArgDef(name='submitCount', type='uint32_t'),
@@ -4857,7 +4857,7 @@ arg3=ArgDef(name='pSubmits', type='const VkSubmitInfo*', wrapType='CVkSubmitInfo
 arg4=ArgDef(name='fence', type='VkFence')
 )
 
-Function(name='vkQueueSubmit2', enabled=True, type=FuncType.QUEUE_SUBMIT, stateTrack=True, recWrap=True, runWrap=True, recExecWrap=True, execPostRecWrap=True, ccodeWrap=True,
+Function(name='vkQueueSubmit2', enabled=True, type=FuncType.QUEUE_SUBMIT, stateTrack=True, recWrap=True, runWrap=True, recExecWrap=True, execPostRecWrap=True, ccodeWrap=True, signalOperation=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='queue', type='VkQueue'),
 arg2=ArgDef(name='submitCount', type='uint32_t'),
@@ -4865,7 +4865,7 @@ arg3=ArgDef(name='pSubmits', type='const VkSubmitInfo2*', wrapType='CVkSubmitInf
 arg4=ArgDef(name='fence', type='VkFence')
 )
 
-Function(name='vkQueueSubmit2KHR', enabled=True, type=FuncType.QUEUE_SUBMIT, stateTrack=True, recWrap=True, runWrap=True, recExecWrap=True, execPostRecWrap=True, ccodeWrap=True,
+Function(name='vkQueueSubmit2KHR', enabled=True, type=FuncType.QUEUE_SUBMIT, stateTrack=True, recWrap=True, runWrap=True, recExecWrap=True, execPostRecWrap=True, ccodeWrap=True, signalOperation=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='queue', type='VkQueue'),
 arg2=ArgDef(name='submitCount', type='uint32_t'),
@@ -5066,13 +5066,13 @@ arg4=ArgDef(name='privateDataSlot', type='VkPrivateDataSlot'),
 arg5=ArgDef(name='data', type='uint64_t')
 )
 
-Function(name='vkSignalSemaphore', enabled=True, type=FuncType.PARAM,
+Function(name='vkSignalSemaphore', enabled=True, type=FuncType.PARAM, signalOperation=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pSignalInfo', type='const VkSemaphoreSignalInfo*')
 )
 
-Function(name='vkSignalSemaphoreKHR', enabled=True, type=FuncType.PARAM,
+Function(name='vkSignalSemaphoreKHR', enabled=True, type=FuncType.PARAM, signalOperation=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pSignalInfo', type='const VkSemaphoreSignalInfo*')
@@ -5194,14 +5194,14 @@ arg3=ArgDef(name='presentId', type='uint64_t'),
 arg4=ArgDef(name='timeout', type='uint64_t')
 )
 
-Function(name='vkWaitSemaphores', enabled=True, type=FuncType.PARAM, runWrap=True,
+Function(name='vkWaitSemaphores', enabled=True, type=FuncType.PARAM, runWrap=True, waitOperation=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pWaitInfo', type='const VkSemaphoreWaitInfo*'),
 arg3=ArgDef(name='timeout', type='uint64_t')
 )
 
-Function(name='vkWaitSemaphoresKHR', enabled=True, type=FuncType.PARAM, runWrap=True,
+Function(name='vkWaitSemaphoresKHR', enabled=True, type=FuncType.PARAM, runWrap=True, waitOperation=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pWaitInfo', type='const VkSemaphoreWaitInfo*'),

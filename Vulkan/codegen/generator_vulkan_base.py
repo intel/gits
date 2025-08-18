@@ -159,6 +159,8 @@ class Token:
     recorder_wrap: bool | str = False
     exec_post_recorder_wrap: bool = False
     recorder_exec_wrap: bool = False
+    signal_operation: bool = False
+    wait_operation: bool = False
     run_wrap: bool | str = False
     ccode_wrap: bool = False
     ccode_write_wrap: bool = False
@@ -275,6 +277,8 @@ def _rename_keys(dictionary: dict) -> dict:
         ('tokenCache', 'token_cache'),
         ('retV', 'return_value'),
         ('canonicalUnionMember', 'canonical_union_member'),
+        ('signalOperation', 'signal_operation'),
+        ('waitOperation', 'wait_operation'),
     ]
 
     for old, new in replacements:
