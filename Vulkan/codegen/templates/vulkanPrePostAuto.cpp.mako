@@ -28,7 +28,7 @@ void thread_tracker() {
   //If thread changed schedule thread change
   if (currentThreadId != threadIdMap[std::this_thread::get_id()]) {
     currentThreadId = threadIdMap[std::this_thread::get_id()];
-    Log(TRACE) << "ThreadID: " << currentThreadId;
+    LOG_TRACE << "ThreadID: " << currentThreadId;
   }
 }
 

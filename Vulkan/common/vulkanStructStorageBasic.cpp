@@ -35,11 +35,11 @@ gits::Vulkan::CVkGenericArgumentData::CVkGenericArgumentData(const void* vkgener
 #include "vulkanPNextWrappers.inl"
 
     default:
-      VkLog(ERR) << "Unknown enum value: " << *(VkStructureType*)vkgenericargumentdata
-                 << " for CVkGenericArgumentData";
+      LOG_ERROR << "Unknown enum value: " << *(VkStructureType*)vkgenericargumentdata
+                << " for CVkGenericArgumentData";
       const void* pNext = ((const VkBaseInStructure*)vkgenericargumentdata)->pNext;
       while (pNext != nullptr) {
-        VkLog(WARN) << "Additional structure pointed to by pNext: " << *(VkStructureType*)pNext;
+        LOG_WARNING << "Additional structure pointed to by pNext: " << *(VkStructureType*)pNext;
         pNext = ((const VkBaseInStructure*)pNext)->pNext;
       }
       break;
@@ -79,7 +79,7 @@ VkClearColorValue* gits::Vulkan::CVkClearColorValueData::Value() {
         _ClearColorValue->uint32[i] = uint32Values[i];
       }
     } else {
-      Log(ERR) << "The pointer to array **_uint32 is null.";
+      LOG_ERROR << "The pointer to array **_uint32 is null.";
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
   }
@@ -309,7 +309,7 @@ void gits::Vulkan::CDeviceOrHostAddressAccelerationStructureVertexDataGITSData::
 
   if (_bufferDeviceAddress._offset < 0) {
     CALL_ONCE[] {
-      Log(INFO) << "Application uses negative offsets for buffer device addresses!";
+      LOG_INFO << "Application uses negative offsets for buffer device addresses!";
     };
   }
 

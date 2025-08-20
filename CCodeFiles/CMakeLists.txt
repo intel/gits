@@ -32,6 +32,9 @@ endif()
 
 include_directories(CCodeProject CCodeSource/StreamFiles CCodeSource/include CCodeSource/imports)
 
+set(PLOG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/plog/")
+include_directories(CCodeProject ${PLOG_SOURCE_DIR}/include)
+
 include(custom_functions)
 
 include(import_zlib)
@@ -60,6 +63,7 @@ FILE(GLOB CCodeProject_SOURCES
   ${PROJECT_SOURCE_DIR}/CCodeSource/gits.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/glEnumStrings.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/log.cpp
+  ${PROJECT_SOURCE_DIR}/CCodeSource/log2.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/message_pump.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/openclDrivers.cpp
   ${PROJECT_SOURCE_DIR}/CCodeSource/openclDriversInit.cpp

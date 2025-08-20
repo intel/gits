@@ -12,6 +12,10 @@
 #include <windows.h>
 #else
 #include <syslog.h>
+// Undefine the macros to avoid conflicts with the GITS logging macros
+#undef LOG_DEBUG
+#undef LOG_INFO
+#undef LOG_WARNING
 #endif
 
 #include "lua_bindings.h"

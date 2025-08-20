@@ -29,7 +29,7 @@ std::string gits::Vulkan::CVulkanEnumTypeTraits<${enum.name}>::GetVariantName(${
     return "${enumerator.name}";
   % endfor
   default:
-    Log(WARN) << "Unknown enum variant: " << variant << " of ${enum.name}";
+    LOG_WARNING << "Unknown enum variant: " << variant << " of ${enum.name}";
     return "(${enum.name})" + std::to_string((int)variant);
   }
 }

@@ -68,12 +68,12 @@ CFunction* CFunction::Create(unsigned id) {
 #include "vulkanIDswitch.h"
   default:;
   }
-  Log(ERR) << "Unknown Vulkan function with ID: " << id;
+  LOG_ERROR << "Unknown Vulkan function with ID: " << id;
   throw EOperationFailed(EXCEPTION_MESSAGE);
 }
 
 CArgument& CFunction::Result(unsigned idx) {
-  Log(ERR) << "Results not supported in Vulkan!!!";
+  LOG_ERROR << "Results not supported in Vulkan!!!";
   throw EOperationFailed(EXCEPTION_MESSAGE);
 }
 
@@ -178,8 +178,8 @@ void CFunction::Write(CCodeOStream& stream) const {
 CQueueSubmitFunction::CQueueSubmitFunction() {}
 
 void CQueueSubmitFunction::Trace() {
-  Log(TRACE, NO_NEWLINE) << "QueueSubmit nr: "
-                         << CGits::Instance().vkCounters.CurrentQueueSubmitCount() << " ";
+  LOG_FORMAT_RAW
+  LOG_TRACE << "QueueSubmit nr: " << CGits::Instance().vkCounters.CurrentQueueSubmitCount() << " ";
 }
 
 void CQueueSubmitFunction::CountUp() {
@@ -195,7 +195,8 @@ void CQueueSubmitFunction::Run() {
 CImageFunction::CImageFunction() {}
 
 void CImageFunction::Trace() {
-  Log(TRACE, NO_NEWLINE) << "Image nr: " << CGits::Instance().vkCounters.CurrentImageCount() << " ";
+  LOG_FORMAT_RAW
+  LOG_TRACE << "Image nr: " << CGits::Instance().vkCounters.CurrentImageCount() << " ";
 }
 
 void CImageFunction::CountUp() {
@@ -211,8 +212,8 @@ void CImageFunction::Run() {
 CBufferFunction::CBufferFunction() {}
 
 void CBufferFunction::Trace() {
-  Log(TRACE, NO_NEWLINE) << "Buffer nr: " << CGits::Instance().vkCounters.CurrentBufferCount()
-                         << " ";
+  LOG_FORMAT_RAW
+  LOG_TRACE << "Buffer nr: " << CGits::Instance().vkCounters.CurrentBufferCount() << " ";
 }
 
 void CBufferFunction::CountUp() {

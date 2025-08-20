@@ -25,6 +25,22 @@
 #endif
 
 namespace plog {
+
+std::atomic<bool> FormatRawScope::s_isRaw = false;
+std::mutex FormatRawScope::s_mutex = {};
+
+FormatRawScope::FormatRawScope() : lock_(s_mutex) {
+  s_isRaw = true;
+}
+
+FormatRawScope::~FormatRawScope() {
+  s_isRaw = false;
+}
+
+bool FormatRawScope::IsRaw() {
+  return s_isRaw;
+}
+
 class GitsFormatter {
 public:
   static util::nstring header() {
@@ -32,10 +48,6 @@ public:
   }
 
   static util::nstring format(const Record& record) {
-    auto now = std::chrono::system_clock::now();
-    auto timeT = std::chrono::system_clock::to_time_t(now);
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
-
     auto toStr = [](Severity severity) {
       switch (severity) {
       case fatal:
@@ -55,15 +67,26 @@ public:
       }
     };
 
-    // Print formatted date and time on a pre-allocated buffer
-    char buffer[32];
-    size_t offset =
-        std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", std::localtime(&timeT));
-    std::snprintf(&buffer[offset], sizeof(buffer) - offset, ".%03d", static_cast<int>(ms.count()));
-
     util::nostringstream ss;
-    ss << static_cast<char*>(buffer) << " - " << toStr(record.getSeverity()) << " - "
-       << record.getMessage() << "\n";
+    if (FormatRawScope::IsRaw()) {
+      ss << record.getMessage();
+    } else {
+      auto now = std::chrono::system_clock::now();
+      auto timeT = std::chrono::system_clock::to_time_t(now);
+      auto ms =
+          std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+
+      // Print formatted date and time on a pre-allocated buffer
+      char buffer[32];
+      size_t offset =
+          std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", std::localtime(&timeT));
+      std::snprintf(&buffer[offset], sizeof(buffer) - offset, ".%03d",
+                    static_cast<int>(ms.count()));
+
+      ss << static_cast<char*>(buffer) << " - " << toStr(record.getSeverity()) << " - "
+         << record.getMessage() << "\n";
+    }
+
     return ss.str();
   }
 };

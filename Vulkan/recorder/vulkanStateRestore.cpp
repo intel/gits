@@ -140,7 +140,7 @@ gits::Vulkan::TemporaryBufferStruct gits::Vulkan::CreateTemporaryBuffer(CSchedul
     VkResult result =
         drvVk.vkCreateBuffer(device, &localBufferCreateInfo, nullptr, &newBuffer.buffer);
     if (result != VK_SUCCESS) {
-      VkLog(ERR) << "Could not create buffer: " << result << "!!!";
+      LOG_ERROR << "Could not create buffer: " << result << "!!!";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
 
@@ -156,8 +156,8 @@ gits::Vulkan::TemporaryBufferStruct gits::Vulkan::CreateTemporaryBuffer(CSchedul
 
         result = drvVk.vkAllocateMemory(device, &memoryAllocateInfo, nullptr, &newBuffer.memory);
         if (result != VK_SUCCESS) {
-          VkLog(ERR) << "Could not allocate memory for a buffer using the " << i
-                     << " memory type due to: " << result << "!!!";
+          LOG_ERROR << "Could not allocate memory for a buffer using the " << i
+                    << " memory type due to: " << result << "!!!";
         } else {
           allocatedMemory = true;
           break;
@@ -166,19 +166,19 @@ gits::Vulkan::TemporaryBufferStruct gits::Vulkan::CreateTemporaryBuffer(CSchedul
     }
 
     if (!allocatedMemory) {
-      Log(ERR) << "Could not allocate memory for a buffer!!!";
+      LOG_ERROR << "Could not allocate memory for a buffer!!!";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
     result = drvVk.vkBindBufferMemory(device, newBuffer.buffer, newBuffer.memory, 0);
     if (result != VK_SUCCESS) {
-      Log(ERR) << "Could not bind memory to a buffer!!!";
+      LOG_ERROR << "Could not bind memory to a buffer!!!";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
     newBuffer.size = size;
 
     result = drvVk.vkMapMemory(device, newBuffer.memory, 0, VK_WHOLE_SIZE, 0, &newBuffer.mappedPtr);
     if (result != VK_SUCCESS) {
-      Log(ERR) << "vkMapMemory() on the temporary buffer returned the following error: " << result;
+      LOG_ERROR << "vkMapMemory() on the temporary buffer returned the following error: " << result;
     }
   }
 
@@ -1166,8 +1166,8 @@ bool RestoreSamplerDescriptorHelper(
     VkWriteDescriptorSet& descriptorWrite,
     const VkDevice device) {
   if (!descriptorData.pImageInfo) {
-    Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice because image descriptor "
-                 "info is null.";
+    LOG_INFO << "Omitting restore of vkUpdateDescriptorSets for VkDevice because image descriptor "
+                "info is null.";
     return false;
   }
 
@@ -1177,8 +1177,8 @@ bool RestoreSamplerDescriptorHelper(
   if ((samplerStateIt == sd._samplerstates.end()) ||
       (descriptorData.samplerStateStore->GetUniqueStateID() !=
        samplerStateIt->second->GetUniqueStateID())) {
-    Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
-              << " because used VkSampler " << sampler << " doesn't exist.";
+    LOG_INFO << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
+             << " because used VkSampler " << sampler << " doesn't exist.";
     return false;
   }
 
@@ -1193,8 +1193,8 @@ bool RestoreCombinedImageSamplerDescriptorHelper(
     VkWriteDescriptorSet& descriptorWrite,
     const VkDevice device) {
   if (!descriptorData.pImageInfo) {
-    Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice because image descriptor "
-                 "info is null.";
+    LOG_INFO << "Omitting restore of vkUpdateDescriptorSets for VkDevice because image descriptor "
+                "info is null.";
     return false;
   }
 
@@ -1204,8 +1204,8 @@ bool RestoreCombinedImageSamplerDescriptorHelper(
   if ((samplerStateIt == sd._samplerstates.end()) ||
       (descriptorData.samplerStateStore->GetUniqueStateID() !=
        samplerStateIt->second->GetUniqueStateID())) {
-    Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
-              << " because used VkSampler " << sampler << " doesn't exist.";
+    LOG_INFO << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
+             << " because used VkSampler " << sampler << " doesn't exist.";
     return false;
   }
 
@@ -1215,8 +1215,8 @@ bool RestoreCombinedImageSamplerDescriptorHelper(
   if ((imageViewStateIt == sd._imageviewstates.end()) ||
       (descriptorData.imageViewStateStore->GetUniqueStateID() !=
        imageViewStateIt->second->GetUniqueStateID())) {
-    Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
-              << " because used VkImageView " << imageView << " doesn't exist.";
+    LOG_INFO << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
+             << " because used VkImageView " << imageView << " doesn't exist.";
     return false;
   }
 
@@ -1226,8 +1226,8 @@ bool RestoreCombinedImageSamplerDescriptorHelper(
   if ((imageStateIt == sd._imagestates.end()) ||
       (imageStateIt->second->GetUniqueStateID() !=
        imageViewStateIt->second->imageStateStore->GetUniqueStateID())) {
-    Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
-              << " because used VkImage " << image << " doesn't exist.";
+    LOG_INFO << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
+             << " because used VkImage " << image << " doesn't exist.";
     return false;
   }
 
@@ -1242,8 +1242,8 @@ bool RestoreImageDescriptorHelper(
     VkWriteDescriptorSet& descriptorWrite,
     const VkDevice device) {
   if (!descriptorData.pImageInfo) {
-    Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice because image descriptor "
-                 "info is null.";
+    LOG_INFO << "Omitting restore of vkUpdateDescriptorSets for VkDevice because image descriptor "
+                "info is null.";
     return false;
   }
 
@@ -1253,8 +1253,8 @@ bool RestoreImageDescriptorHelper(
   if ((imageViewStateIt == sd._imageviewstates.end()) ||
       (descriptorData.imageViewStateStore->GetUniqueStateID() !=
        imageViewStateIt->second->GetUniqueStateID())) {
-    Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
-              << " because used VkImageView " << imageView << " doesn't exist.";
+    LOG_INFO << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
+             << " because used VkImageView " << imageView << " doesn't exist.";
     return false;
   }
 
@@ -1264,8 +1264,8 @@ bool RestoreImageDescriptorHelper(
   if ((imageStateIt == sd._imagestates.end()) ||
       (imageStateIt->second->GetUniqueStateID() !=
        imageViewStateIt->second->imageStateStore->GetUniqueStateID())) {
-    Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
-              << " because used VkImage " << image << " doesn't exist.";
+    LOG_INFO << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
+             << " because used VkImage " << image << " doesn't exist.";
     return false;
   }
 
@@ -1280,8 +1280,8 @@ bool RestoreTexelBufferDescriptorHelper(
     VkWriteDescriptorSet& descriptorWrite,
     const VkDevice device) {
   if (!descriptorData.pTexelBufferView) {
-    Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice because texel buffer "
-                 "descriptor info is null.";
+    LOG_INFO << "Omitting restore of vkUpdateDescriptorSets for VkDevice because texel buffer "
+                "descriptor info is null.";
     return false;
   }
 
@@ -1291,8 +1291,8 @@ bool RestoreTexelBufferDescriptorHelper(
   if ((bufferViewStateIt == sd._bufferviewstates.end()) ||
       (descriptorData.bufferViewStateStore->GetUniqueStateID() !=
        bufferViewStateIt->second->GetUniqueStateID())) {
-    Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
-              << " because used VkBufferView " << texelBufferView << " doesn't exist.";
+    LOG_INFO << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
+             << " because used VkBufferView " << texelBufferView << " doesn't exist.";
     return false;
   }
 
@@ -1302,8 +1302,8 @@ bool RestoreTexelBufferDescriptorHelper(
   if ((bufferStateIt == sd._bufferstates.end()) ||
       (bufferStateIt->second->GetUniqueStateID() !=
        bufferViewStateIt->second->bufferStateStore->GetUniqueStateID())) {
-    Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
-              << " because used VkBuffer " << buffer << " doesn't exist.";
+    LOG_INFO << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
+             << " because used VkBuffer " << buffer << " doesn't exist.";
     return false;
   }
 
@@ -1318,8 +1318,8 @@ bool RestoreBufferDescriptorHelper(
     VkWriteDescriptorSet& descriptorWrite,
     const VkDevice device) {
   if (!descriptorData.pBufferInfo) {
-    Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice because buffer "
-                 "descriptor info is null.";
+    LOG_INFO << "Omitting restore of vkUpdateDescriptorSets for VkDevice because buffer "
+                "descriptor info is null.";
     return false;
   }
 
@@ -1329,8 +1329,8 @@ bool RestoreBufferDescriptorHelper(
   if ((bufferStateIt == sd._bufferstates.end()) ||
       (descriptorData.bufferStateStore->GetUniqueStateID() !=
        bufferStateIt->second->GetUniqueStateID())) {
-    Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
-              << " because used VkBuffer " << buffer << " doesn't exist.";
+    LOG_INFO << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
+             << " because used VkBuffer " << buffer << " doesn't exist.";
     return false;
   }
 
@@ -1346,8 +1346,8 @@ bool RestoreAccelerationStructureDescriptorHelper(
     std::list<VkWriteDescriptorSetAccelerationStructureKHR>& accelerationStructureWrites,
     const VkDevice device) {
   if (!descriptorData.accelerationStructureStateStore) {
-    Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice acceleration structure "
-                 "descriptor info is null.";
+    LOG_INFO << "Omitting restore of vkUpdateDescriptorSets for VkDevice acceleration structure "
+                "descriptor info is null.";
     return false;
   }
 
@@ -1358,8 +1358,8 @@ bool RestoreAccelerationStructureDescriptorHelper(
   if ((accStructStateIt == sd._accelerationstructurekhrstates.end()) ||
       (descriptorData.accelerationStructureStateStore->GetUniqueStateID() !=
        accStructStateIt->second->GetUniqueStateID())) {
-    Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
-              << " because used VkAccelerationStructureKHR " << accStruct << " doesn't exist.";
+    LOG_INFO << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
+             << " because used VkAccelerationStructureKHR " << accStruct << " doesn't exist.";
     return false;
   }
 
@@ -1370,8 +1370,8 @@ bool RestoreAccelerationStructureDescriptorHelper(
   if ((bufferStateIt == sd._bufferstates.end()) ||
       (descriptorData.accelerationStructureStateStore->bufferStateStore->GetUniqueStateID() !=
        bufferStateIt->second->GetUniqueStateID())) {
-    Log(INFO) << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
-              << " because used buffer " << buffer << " doesn't exist.";
+    LOG_INFO << "Omitting restore of vkUpdateDescriptorSets for VkDevice " << device
+             << " because used buffer " << buffer << " doesn't exist.";
     return false;
   }
 
@@ -1475,8 +1475,8 @@ void gits::Vulkan::RestoreDescriptorSetsUpdates(CScheduler& scheduler, CStateDyn
                 sd, currentBindingData, descriptorWrite, accelerationStructureWrites, device);
             break;
           default:
-            Log(TRACE) << "Not handled VkDescriptorType enumeration: "
-                       << descriptorSetBinding.descriptorType;
+            LOG_TRACE << "Not handled VkDescriptorType enumeration: "
+                      << descriptorSetBinding.descriptorType;
             break;
           }
 
@@ -2257,7 +2257,7 @@ void gits::Vulkan::RestoreQueryPool(CScheduler& scheduler, CStateDynamic& sd) {
       for (uint32_t i = 0; i < queryPoolState->usedQueries.size(); ++i) {
         if (queryPoolState->usedQueries[i]) {
           if (!queryPoolState->resetQueries[i]) {
-            Log(ERR) << "Query " << i << " from pool " << queryPool << " used but wasn't reset!";
+            LOG_ERROR << "Query " << i << " from pool " << queryPool << " used but wasn't reset!";
           }
           switch (queryPoolState->queryPoolCreateInfoData.Value()->queryType) {
           case VK_QUERY_TYPE_TIMESTAMP:
@@ -2343,7 +2343,7 @@ void gits::Vulkan::RestoreCommandBuffers(CScheduler& scheduler, CStateDynamic& s
 
     // Check if a command buffer should be restored
     if (commandBufferState->beginCommandBuffer->oneTimeSubmit && commandBufferState->submitted) {
-      Log(WARN)
+      LOG_WARNING
           << "Omitting restore of VKCommandBuffer " << commandBuffer
           << " because it's a ONE_TIME_SUBMIT command buffer and it's been already submitted.";
       return;
@@ -2353,8 +2353,8 @@ void gits::Vulkan::RestoreCommandBuffers(CScheduler& scheduler, CStateDynamic& s
       auto it = sd._bufferstates.find(bufferState->bufferHandle);
       if ((it == sd._bufferstates.end()) ||
           (it->second->GetUniqueStateID() != bufferState->GetUniqueStateID())) {
-        Log(WARN) << "Omitting restore of VKCommandBuffer " << commandBuffer
-                  << " because used VKBuffer " << bufferState->bufferHandle << " doesn't exist.";
+        LOG_WARNING << "Omitting restore of VKCommandBuffer " << commandBuffer
+                    << " because used VKBuffer " << bufferState->bufferHandle << " doesn't exist.";
         return;
       }
     }
@@ -2365,8 +2365,8 @@ void gits::Vulkan::RestoreCommandBuffers(CScheduler& scheduler, CStateDynamic& s
       auto it = sd._imagestates.find(obj->imageHandle);
       if ((it == sd._imagestates.end()) ||
           (it->second->GetUniqueStateID() != obj->GetUniqueStateID())) {
-        Log(WARN) << "Omitting restore of VKCommandBuffer " << commandBuffer
-                  << " because used VKImage " << obj->imageHandle << " doesn't exist.";
+        LOG_WARNING << "Omitting restore of VKCommandBuffer " << commandBuffer
+                    << " because used VKImage " << obj->imageHandle << " doesn't exist.";
         return;
       }
     }
@@ -2375,9 +2375,9 @@ void gits::Vulkan::RestoreCommandBuffers(CScheduler& scheduler, CStateDynamic& s
       auto it = sd._descriptorsetstates.find(descriptorSetState.first);
       if ((it == sd._descriptorsetstates.end()) ||
           (it->second->GetUniqueStateID() != descriptorSetState.second->GetUniqueStateID())) {
-        Log(WARN) << "Omitting restore of VKCommandBuffer " << commandBuffer
-                  << " because used VkDescriptorSet " << descriptorSetState.first
-                  << " doesn't exist.";
+        LOG_WARNING << "Omitting restore of VKCommandBuffer " << commandBuffer
+                    << " because used VkDescriptorSet " << descriptorSetState.first
+                    << " doesn't exist.";
         return;
       }
     }
@@ -2386,8 +2386,8 @@ void gits::Vulkan::RestoreCommandBuffers(CScheduler& scheduler, CStateDynamic& s
       auto it = sd._pipelinestates.find(pipelineState.first);
       if ((it == sd._pipelinestates.end()) ||
           (it->second->GetUniqueStateID() != pipelineState.second->GetUniqueStateID())) {
-        Log(WARN) << "Omitting restore of VKCommandBuffer " << commandBuffer
-                  << " because used VkPipeline " << pipelineState.first << " doesn't exist.";
+        LOG_WARNING << "Omitting restore of VKCommandBuffer " << commandBuffer
+                    << " because used VkPipeline " << pipelineState.first << " doesn't exist.";
         return;
       }
     }
@@ -2398,22 +2398,22 @@ void gits::Vulkan::RestoreCommandBuffers(CScheduler& scheduler, CStateDynamic& s
       if ((it == sd._commandbufferstates.end()) ||
           (it->second->GetUniqueStateID() !=
            secondaryCommandBufferState.second->GetUniqueStateID())) {
-        Log(WARN) << "Omitting restore of VKCommandBuffer " << commandBuffer
-                  << " because used secondary VkCommandBuffer " << secondaryCommandBufferState.first
-                  << " doesn't exist.";
+        LOG_WARNING << "Omitting restore of VKCommandBuffer " << commandBuffer
+                    << " because used secondary VkCommandBuffer "
+                    << secondaryCommandBufferState.first << " doesn't exist.";
         return;
       }
       if (!secondaryCommandBufferState.second->ended) {
-        Log(WARN) << "Omitting restore of VKCommandBuffer " << commandBuffer
-                  << " because recording of a used secondary VkCommandBuffer "
-                  << secondaryCommandBufferState.first << " is not finished.";
+        LOG_WARNING << "Omitting restore of VKCommandBuffer " << commandBuffer
+                    << " because recording of a used secondary VkCommandBuffer "
+                    << secondaryCommandBufferState.first << " is not finished.";
         return;
       }
       if (restoredCommandBuffers.find(secondaryCommandBufferState.first) ==
           restoredCommandBuffers.end()) {
-        Log(WARN) << "Omitting restore of VKCommandBuffer " << commandBuffer
-                  << " because restoring of a used secondary VkCommandBuffer "
-                  << secondaryCommandBufferState.first << " was also omitted.";
+        LOG_WARNING << "Omitting restore of VKCommandBuffer " << commandBuffer
+                    << " because restoring of a used secondary VkCommandBuffer "
+                    << secondaryCommandBufferState.first << " was also omitted.";
         return;
       }
     }
@@ -2581,8 +2581,8 @@ bool isResourceOmittedFromContentsRestoration(uint64_t resource,
 
       for (auto& timestamp : timestamps) {
         if (timestamp > imageState->timestamp) {
-          Log(INFO) << "Omitting restoration of an image " << image
-                    << " because it's memory is aliased with another resource.";
+          LOG_INFO << "Omitting restoration of an image " << image
+                   << " because it's memory is aliased with another resource.";
           return true;
         }
       }
@@ -2631,8 +2631,8 @@ bool isResourceOmittedFromContentsRestoration(uint64_t resource,
 
         for (auto& timestamp : timestamps) {
           if (timestamp > bufferState.timestamp) {
-            Log(INFO) << "Omitting restoration of a buffer " << bufferState.bufferHandle
-                      << " because it's memory is aliased with another resource.";
+            LOG_INFO << "Omitting restoration of a buffer " << bufferState.bufferHandle
+                     << " because it's memory is aliased with another resource.";
             return true;
           }
         }
@@ -2712,7 +2712,7 @@ bool isResourceOmittedFromContentsRestoration(uint64_t resource,
       //
       //  for (auto& timestamp : timestamps) {
       //    if (timestamp > accelerationStructureState->timestamp) {
-      //      Log(INFO) << "Omitting restoration of an acceleration structure "
+      //      LOG_INFO << "Omitting restoration of an acceleration structure "
       //                << accelerationStructure
       //                << " because it's memory is aliased with another resource.";
       //      return true;
@@ -2800,8 +2800,8 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
 
     // Skip resources due to a minimal state restore
     if (gits::Vulkan::IsObjectToSkip((uint64_t)image)) {
-      Log(INFO) << "Omitting restoration of an image " << image
-                << " due to a minimal state restore.";
+      LOG_INFO << "Omitting restoration of an image " << image
+               << " due to a minimal state restore.";
       continue;
     }
 
@@ -2809,8 +2809,8 @@ void gits::Vulkan::RestoreImageContents(CScheduler& scheduler, CStateDynamic& sd
     auto device = imageState->deviceStateStore->deviceHandle;
 
     if (temporaryDeviceResources.find(device) == temporaryDeviceResources.end()) {
-      Log(INFO) << "Omitting restoration of an image " << image
-                << " because it was created for an ignored device.";
+      LOG_INFO << "Omitting restoration of an image " << image
+               << " because it was created for an ignored device.";
       continue;
     }
 
@@ -3478,8 +3478,8 @@ void gits::Vulkan::RestoreBufferContents(CScheduler& scheduler, CStateDynamic& s
 
     // Skip resources due to a minimal state restore
     if (gits::Vulkan::IsObjectToSkip((uint64_t)dstBuffer)) {
-      Log(INFO) << "Omitting restoration of a buffer " << dstBuffer
-                << " due to a minimal state restore.";
+      LOG_INFO << "Omitting restoration of a buffer " << dstBuffer
+               << " due to a minimal state restore.";
       continue;
     }
 
@@ -3490,8 +3490,8 @@ void gits::Vulkan::RestoreBufferContents(CScheduler& scheduler, CStateDynamic& s
     auto device = bufferAndStatePair.second->deviceStateStore->deviceHandle;
 
     if (temporaryDeviceResources.find(device) == temporaryDeviceResources.end()) {
-      Log(INFO) << "Omitting restoration of a buffer " << dstBuffer
-                << " because it was created for an ignored device.";
+      LOG_INFO << "Omitting restoration of a buffer " << dstBuffer
+               << " because it was created for an ignored device.";
       continue;
     }
 
@@ -3802,8 +3802,8 @@ void gits::Vulkan::RestoreAccelerationStructureContents(CScheduler& scheduler, C
           (!accelerationStructureState.second->buildInfo &&
            !accelerationStructureState.second->updateInfo &&
            !accelerationStructureState.second->copyInfo)) {
-        Log(INFO) << "Omitting restoration of an acceleration structure "
-                  << accelerationStructureState.first << ".";
+        LOG_INFO << "Omitting restoration of an acceleration structure "
+                 << accelerationStructureState.first << ".";
         continue;
       }
 

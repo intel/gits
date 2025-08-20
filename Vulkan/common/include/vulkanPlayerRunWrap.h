@@ -111,14 +111,14 @@ inline void vkAcquireNextImage2KHR_WRAPRUN(CVkResult& return_value,
 
     if (recorderIndex != *indexPtr &&
         (recorderReturnValue == VK_SUCCESS || recorderReturnValue == VK_SUBOPTIMAL_KHR)) {
-      Log(TRACE) << "vkAcquireNextImage2KHR restore section begin.";
+      LOG_TRACE << "vkAcquireNextImage2KHR restore section begin.";
       uint32_t maxAllowedVkSwapchainRewinds =
           Configurator::Get().vulkan.player.maxAllowedVkSwapchainRewinds;
       uint32_t rewindCount = 0;
       while (recorderIndex != *indexPtr) {
         if (++rewindCount > maxAllowedVkSwapchainRewinds) {
-          Log(ERR) << "Maximum swapchain rewind limit (" << maxAllowedVkSwapchainRewinds
-                   << ") exceeded.";
+          LOG_ERROR << "Maximum swapchain rewind limit (" << maxAllowedVkSwapchainRewinds
+                    << ") exceeded.";
           throw std::runtime_error(EXCEPTION_MESSAGE);
         }
 
@@ -128,7 +128,7 @@ inline void vkAcquireNextImage2KHR_WRAPRUN(CVkResult& return_value,
 
         return_value.Assign(drvVk.vkAcquireNextImage2KHR(*device, acquireInfo, indexPtr));
       }
-      Log(TRACE) << "vkAcquireNextImage2KHR restore section end.";
+      LOG_TRACE << "vkAcquireNextImage2KHR restore section end.";
     }
   }
 
@@ -162,14 +162,14 @@ inline void vkAcquireNextImageKHR_WRAPRUN(CVkResult& return_value,
 
     if (recorderIndex != *indexPtr &&
         (recorderReturnValue == VK_SUCCESS || recorderReturnValue == VK_SUBOPTIMAL_KHR)) {
-      Log(TRACE) << "vkAcquireNextImageKHR restore section begin.";
+      LOG_TRACE << "vkAcquireNextImageKHR restore section begin.";
       uint32_t maxAllowedVkSwapchainRewinds =
           Configurator::Get().vulkan.player.maxAllowedVkSwapchainRewinds;
       uint32_t rewindCount = 0;
       while (recorderIndex != *indexPtr) {
         if (++rewindCount > maxAllowedVkSwapchainRewinds) {
-          Log(ERR) << "Maximum swapchain rewind limit (" << maxAllowedVkSwapchainRewinds
-                   << ") exceeded.";
+          LOG_ERROR << "Maximum swapchain rewind limit (" << maxAllowedVkSwapchainRewinds
+                    << ") exceeded.";
           throw std::runtime_error(EXCEPTION_MESSAGE);
         }
         RewindSwapchainImageIndex(*device,
@@ -179,7 +179,7 @@ inline void vkAcquireNextImageKHR_WRAPRUN(CVkResult& return_value,
         return_value.Assign(drvVk.vkAcquireNextImageKHR(*device, *swapchain, *timeout, *semaphore,
                                                         *fence, indexPtr));
       }
-      Log(TRACE) << "vkAcquireNextImageKHR restore section end.";
+      LOG_TRACE << "vkAcquireNextImageKHR restore section end.";
     }
   }
 
@@ -240,8 +240,9 @@ void HandlePhysicalDeviceMapping(std::vector<VkPhysicalDevice> const& recorderSi
   }
 
   if (selectedPhysicalDeviceIndex >= playerSideDevices.size()) {
-    Log(WARN) << "Selected physical device index is greater than the number of enumerated physical "
-                 "devices. Defaulting to 0.";
+    LOG_WARNING
+        << "Selected physical device index is greater than the number of enumerated physical "
+           "devices. Defaulting to 0.";
     selectedPhysicalDeviceIndex = 0;
   }
 
@@ -250,16 +251,16 @@ void HandlePhysicalDeviceMapping(std::vector<VkPhysicalDevice> const& recorderSi
       playerSideDevicesProperties[selectedPhysicalDeviceIndex];
 
   CALL_ONCE[&physicalDeviceProperties] {
-    Log(INFO) << "Playing stream on a"
-              << ((physicalDeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
-                      ? ("n integrated")
-                      : (" discrete"))
-              << " device named \"" << physicalDeviceProperties.deviceName << "\".";
+    LOG_INFO << "Playing stream on a"
+             << ((physicalDeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
+                     ? ("n integrated")
+                     : (" discrete"))
+             << " device named \"" << physicalDeviceProperties.deviceName << "\".";
   };
   if (playerSideDevices.size() > 1) {
     CALL_ONCE[] {
-      Log(INFO, NO_PREFIX) << "      (To change device, use the following option: "
-                              "--useVKPhysicalDeviceIndex <index>)";
+      LOG_INFO << "      (To change device, use the following option: "
+               << "--useVKPhysicalDeviceIndex <index>)";
     };
   }
 
@@ -433,25 +434,23 @@ inline void vkCreateInstance_WRAPRUN(CVkResult& recorderSideReturnValue,
                          createInfo.enabledLayerCount, createInfo.ppEnabledLayerNames);
 
   bool allSupported = true;
-  Log(TRACE, NO_PREFIX) << "";
-  Log(TRACE) << " ------------------ ";
-  Log(TRACE) << "Instance compatibility check section begin.\n";
+
+  LOG_TRACE << " ------------------ ";
+  LOG_TRACE << "Instance compatibility check section begin.";
 
   allSupported &= checkForSupportForInstanceExtensions(createInfo.enabledExtensionCount,
                                                        createInfo.ppEnabledExtensionNames);
   allSupported &= checkForSupportForInstanceLayers(createInfo.enabledLayerCount,
                                                    createInfo.ppEnabledLayerNames);
-  Log(TRACE, NO_PREFIX) << "";
-
   if (!allSupported &&
       !Configurator::Get().vulkan.player.ignoreVKCrossPlatformIncompatibilitiesWA) {
     throw std::runtime_error("Error - stream uses instance extensions and/or layers which are not "
                              "supported on a current platform. Exiting!");
   }
 
-  Log(TRACE) << "Instance compatibility check section end"
-             << (allSupported ? "." : " - please read warning messages!!");
-  Log(TRACE) << " ------------------ \n";
+  LOG_TRACE << "Instance compatibility check section end"
+            << (allSupported ? "." : " - please read warning messages!!");
+  LOG_TRACE << " ------------------ ";
 
   VkResult playerSideReturnValue = drvVk.vkCreateInstance(&createInfo, *pAllocator, *pInstance);
   checkReturnValue(playerSideReturnValue, recorderSideReturnValue, "vkCreateInstance");
@@ -470,8 +469,8 @@ inline void vkCreateInstance_WRAPRUN(CVkResult& recorderSideReturnValue,
     // substream recording. Inform user about this problem.
     auto& cfg = Configurator::GetMutable();
     cfg.vulkan.player.patchShaderGroupHandles = false;
-    Log(WARN) << "Shader group handles patching cannot be used during substream recording. GITS "
-                 "will disable it for this replay.";
+    LOG_WARNING << "Shader group handles patching cannot be used during substream recording. GITS "
+                   "will disable it for this replay.";
   }
 }
 
@@ -621,7 +620,7 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
         TODO("Adjust behavior of vkQueueSubmit to other functions which use checkReturnValue().")
         return_value.Assign(drvVk.vkQueueSubmit(*queue, 1, &submitInfoOrig, fenceNew));
         if (*return_value != VK_SUCCESS) {
-          Log(WARN) << "vkQueueSubmit failed.";
+          LOG_WARNING << "vkQueueSubmit failed.";
           if (Configurator::Get().vulkan.player.exitOnVkQueueSubmitFail) {
             std::ostringstream error;
             error << "vkQueueSubmit function returned the " << *return_value << " error!\n";
@@ -667,7 +666,7 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
         }
         return_value.Assign(drvVk.vkQueueSubmit(*queue, 1, &submitInfoNew, fenceNew));
         if (*return_value != VK_SUCCESS) {
-          Log(WARN) << "vkQueueSubmit failed.";
+          LOG_WARNING << "vkQueueSubmit failed.";
           if (Configurator::Get().vulkan.player.exitOnVkQueueSubmitFail) {
             std::ostringstream error;
             error << "vkQueueSubmit function returned the " << *return_value << " error!\n";
@@ -723,7 +722,7 @@ inline void vkQueueSubmit_WRAPRUN(CVkResult& return_value,
     HandleQueueSubmitRenderDocStart();
     return_value.Assign(drvVk.vkQueueSubmit(*queue, *submitCount, *pSubmits, *fence));
     if (*return_value != VK_SUCCESS) {
-      Log(WARN) << "vkQueueSubmit failed.";
+      LOG_WARNING << "vkQueueSubmit failed.";
       if (Configurator::Get().vulkan.player.exitOnVkQueueSubmitFail) {
         std::ostringstream error;
         error << "vkQueueSubmit function returned the " << *return_value << " error!\n";
@@ -768,7 +767,7 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
           return_value.Assign(drvVk.vkQueueSubmit2(*queue, 1, &submitInfoOrig, fenceNew));
         }
         if (*return_value != VK_SUCCESS) {
-          Log(WARN) << "vkQueueSubmit2 failed.";
+          LOG_WARNING << "vkQueueSubmit2 failed.";
           if (Configurator::Get().vulkan.player.exitOnVkQueueSubmitFail) {
             std::ostringstream error;
             error << "vkQueueSubmit2 function returned the " << *return_value << " error!\n";
@@ -826,7 +825,7 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
           return_value.Assign(drvVk.vkQueueSubmit2(*queue, 1, &submitInfoNew, fenceNew));
         }
         if (*return_value != VK_SUCCESS) {
-          Log(WARN) << "vkQueueSubmit2 failed.";
+          LOG_WARNING << "vkQueueSubmit2 failed.";
           if (Configurator::Get().vulkan.player.exitOnVkQueueSubmitFail) {
             std::ostringstream error;
             error << "vkQueueSubmit2 function returned the " << *return_value << " error!\n";
@@ -889,7 +888,7 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
     }
 
     if (*return_value != VK_SUCCESS) {
-      Log(WARN) << "vkQueueSubmit2 failed.";
+      LOG_WARNING << "vkQueueSubmit2 failed.";
       if (Configurator::Get().vulkan.player.exitOnVkQueueSubmitFail) {
         std::ostringstream error;
         error << "vkQueueSubmit2 function returned the " << *return_value << " error!\n";
@@ -1104,8 +1103,8 @@ inline void vkAllocateMemory_WRAPRUN(CVkResult& recorderSideReturnValue,
       memset(ptr, 0, (size_t)allocateInfoPtr->allocationSize);
       drvVk.vkUnmapMemory(device, memory);
     } else {
-      Log(WARN) << "vkMapMemory() was used to clear allocated memory but failed with the code: "
-                << map_return_value << ". It can cause rendering errors!";
+      LOG_WARNING << "vkMapMemory() was used to clear allocated memory but failed with the code: "
+                  << map_return_value << ". It can cause rendering errors!";
     }
   }
 }
@@ -1124,15 +1123,16 @@ inline void vkGetImageSubresourceLayout_WRAPRUN(CVkDevice& device,
 
   if (layout.offset != layout_original.offset) {
     CALL_ONCE[] {
-      Log(WARN) << "vkGetImageSubresourceLayout() returned different offset than in gits Recorder. "
-                   "Stream was probably recorded on a different HW platform. "
-                   "It can cause a crash and/or corruptions.";
+      LOG_WARNING
+          << "vkGetImageSubresourceLayout() returned different offset than in gits Recorder. "
+             "Stream was probably recorded on a different HW platform. "
+             "It can cause a crash and/or corruptions.";
     };
   }
 
   if (layout.rowPitch != layout_original.rowPitch) {
     CALL_ONCE[] {
-      Log(WARN)
+      LOG_WARNING
           << "vkGetImageSubresourceLayout() returned different rowPitch than in gits Recorder. "
              "Stream was probably recorded on a different HW platform. "
              "It can cause a crash and/or corruptions.";
@@ -1145,9 +1145,9 @@ void GetBufferMemoryRequirementsHelper(VkDeviceSize originalAlignment,
                                        VkDeviceSize currentAlignment) {
   if ((currentAlignment != 0) && (originalAlignment % currentAlignment) != 0) {
     CALL_ONCE[&] {
-      Log(WARN) << "Stream recorded on a platform with alignment: " << originalAlignment
-                << " Current alignment: " << currentAlignment
-                << " It can cause a crash or corruptions.";
+      LOG_WARNING << "Stream recorded on a platform with alignment: " << originalAlignment
+                  << " Current alignment: " << currentAlignment
+                  << " It can cause a crash or corruptions.";
     };
   }
 }
@@ -1232,9 +1232,9 @@ void GetImageMemoryRequirementsHelper(VkDeviceSize originalAlignment,
                                       VkDeviceSize currentAlignment) {
   if ((currentAlignment != 0) && (originalAlignment % currentAlignment) != 0) {
     CALL_ONCE[&] {
-      Log(WARN) << "Stream recorded on a platform with alignment: " << originalAlignment
-                << " Current alignment: " << currentAlignment
-                << " It can cause a crash or corruptions.";
+      LOG_WARNING << "Stream recorded on a platform with alignment: " << originalAlignment
+                  << " Current alignment: " << currentAlignment
+                  << " It can cause a crash or corruptions.";
     };
   }
 }
@@ -1402,25 +1402,24 @@ void BindBufferMemory_WRAPRUNHelper(VkDevice device,
   bool incompatibilityError = false;
 
   if ((memRequirements.alignment > 0) && ((memoryOffset % memRequirements.alignment) != 0)) {
-    Log(ERR) << "Offset of a memory bound to a buffer is not divisible by the required alignment. "
-                "It can cause crash or corruptions!!";
-    Log(ERR, NO_PREFIX) << "    Memory offset used: " << memoryOffset;
-    Log(ERR, NO_PREFIX) << "    Required alignment: " << memRequirements.alignment;
+    LOG_ERROR << "Offset of a memory bound to a buffer is not divisible by the required alignment. "
+                 "It can cause crash or corruptions!!";
+    LOG_ERROR << "    Memory offset used: " << memoryOffset;
+    LOG_ERROR << "    Required alignment: " << memRequirements.alignment;
     incompatibilityError = true;
   }
 
   if (((1 << memAllocateInfo->memoryTypeIndex) & memRequirements.memoryTypeBits) == 0) {
-    Log(ERR) << "Memory object bound to a buffer is allocated from an incompatible memory type "
-                "index. It can cause crash or corruptions!!";
+    LOG_ERROR << "Memory object bound to a buffer is allocated from an incompatible memory type "
+                 "index. It can cause crash or corruptions!!";
     incompatibilityError = true;
   }
 
   if ((memAllocateInfo->allocationSize - (memoryOffset)) < memRequirements.size) {
-    Log(ERR) << "Too small memory block bound to a buffer. It can cause crash or corruptions!!";
-    Log(ERR, NO_PREFIX) << "    Memory object's allocation size: "
-                        << memAllocateInfo->allocationSize;
-    Log(ERR, NO_PREFIX) << "    Provided offset: " << memoryOffset;
-    Log(ERR, NO_PREFIX) << "    Required size: " << memRequirements.size;
+    LOG_ERROR << "Too small memory block bound to a buffer. It can cause crash or corruptions!!";
+    LOG_ERROR << "    Memory object's allocation size: " << memAllocateInfo->allocationSize;
+    LOG_ERROR << "    Provided offset: " << memoryOffset;
+    LOG_ERROR << "    Required size: " << memRequirements.size;
     incompatibilityError = true;
   }
 
@@ -1500,25 +1499,24 @@ void BindImageMemory_WRAPRUNHelper(VkDevice device,
   bool incompatibilityError = false;
 
   if ((memRequirements.alignment > 0) && ((memoryOffset % memRequirements.alignment) != 0)) {
-    Log(ERR) << "Offset of a memory bound to an image is not divisible by the required alignment. "
-                "It can cause crash or corruptions!!";
-    Log(ERR, NO_PREFIX) << "    Memory offset used: " << memoryOffset;
-    Log(ERR, NO_PREFIX) << "    Required alignment: " << memRequirements.alignment;
+    LOG_ERROR << "Offset of a memory bound to an image is not divisible by the required alignment. "
+                 "It can cause crash or corruptions!!";
+    LOG_ERROR << "    Memory offset used: " << memoryOffset;
+    LOG_ERROR << "    Required alignment: " << memRequirements.alignment;
     incompatibilityError = true;
   }
 
   if (((1 << memAllocateInfo->memoryTypeIndex) & memRequirements.memoryTypeBits) == 0) {
-    Log(ERR) << "Memory object bound to an image is allocated from an incompatible memory type "
-                "index. It can cause crash or corruptions!!";
+    LOG_ERROR << "Memory object bound to an image is allocated from an incompatible memory type "
+                 "index. It can cause crash or corruptions!!";
     incompatibilityError = true;
   }
 
   if ((memAllocateInfo->allocationSize - (memoryOffset)) < memRequirements.size) {
-    Log(ERR) << "Too small memory block bound to an image. It can cause crash or corruptions!!";
-    Log(ERR, NO_PREFIX) << "    Memory object's allocation size: "
-                        << memAllocateInfo->allocationSize;
-    Log(ERR, NO_PREFIX) << "    Provided offset: " << memoryOffset;
-    Log(ERR, NO_PREFIX) << "    Required size: " << memRequirements.size;
+    LOG_ERROR << "Too small memory block bound to an image. It can cause crash or corruptions!!";
+    LOG_ERROR << "    Memory object's allocation size: " << memAllocateInfo->allocationSize;
+    LOG_ERROR << "    Provided offset: " << memoryOffset;
+    LOG_ERROR << "    Required size: " << memRequirements.size;
     incompatibilityError = true;
   }
 
@@ -1623,14 +1621,13 @@ inline void vkCreateDevice_WRAPRUN(CVkResult& recorderSideReturnValue,
     }
   }
 
-  Log(TRACE, NO_PREFIX) << "";
-  Log(TRACE) << " ------------------ ";
-  Log(TRACE) << "Device compatibility check section begin.\n";
+  LOG_TRACE << " ------------------ ";
+  LOG_TRACE << "Device compatibility check section begin.";
   // Trace memory properties from the original platform the stream was recorded on
-  VkLog(TRACE) << "Memory properties of the platform the (original) stream was recorded on: "
-                  "VkPhysicalDevice physicalDevice="
-               << *physicalDevice << ", VkPhysicalDeviceMemoryProperties* pMemoryProperties="
-               << &SD()._physicaldevicestates[*physicalDevice]->memoryPropertiesOriginal;
+  LOG_TRACE << "Memory properties of the platform the (original) stream was recorded on: "
+               "VkPhysicalDevice physicalDevice="
+            << *physicalDevice << ", VkPhysicalDeviceMemoryProperties* pMemoryProperties="
+            << &SD()._physicaldevicestates[*physicalDevice]->memoryPropertiesOriginal;
 
   allSupported &= checkForSupportForPhysicalDeviceFeatures(
       *physicalDevice, const_cast<VkPhysicalDeviceFeatures*>(createInfo.pEnabledFeatures));
@@ -1640,16 +1637,14 @@ inline void vkCreateDevice_WRAPRUN(CVkResult& recorderSideReturnValue,
                                            createInfo.pQueueCreateInfos) ||
                   Configurator::Get().vulkan.player.ignoreMissingQueuesWA;
 
-  Log(TRACE, NO_PREFIX) << "";
-
   if (!allSupported &&
       !Configurator::Get().vulkan.player.ignoreVKCrossPlatformIncompatibilitiesWA) {
     throw std::runtime_error("Error - stream is incompatible with the current platform. Exiting!");
   }
 
-  Log(TRACE) << "Device compatibility check section end"
-             << (allSupported ? "." : " - please read warning messages!!");
-  Log(TRACE) << " ------------------ \n";
+  LOG_TRACE << "Device compatibility check section end"
+            << (allSupported ? "." : " - please read warning messages!!");
+  LOG_TRACE << " ------------------ ";
 
   VkResult playerSideReturnValue =
       drvVk.vkCreateDevice(*physicalDevice, &createInfo, *pAllocator, *pDevice);
@@ -1697,8 +1692,8 @@ inline void vkGetDeviceQueue_WRAPRUN(CVkDevice& device,
       SD()._devicestates[*device]->physicalDeviceStateStore->queueFamilyPropertiesCurrent;
 
   if (*queueFamilyIndex >= queueFamilies.size()) {
-    Log(ERR) << "Ignoring vkGetDeviceQueue() call because requested family index is not supported "
-                "on the current hardware.";
+    LOG_ERROR << "Ignoring vkGetDeviceQueue() call because requested family index is not supported "
+                 "on the current hardware.";
   } else {
     drvVk.vkGetDeviceQueue(*device, *queueFamilyIndex, *queueIndex, *pQueue);
   }
@@ -1713,8 +1708,9 @@ inline void vkGetDeviceQueue2_WRAPRUN(CVkDevice& device,
   auto* queueInfo = pQueueInfo.Value();
 
   if (queueInfo->queueFamilyIndex >= queueFamilies.size()) {
-    Log(ERR) << "Ignoring vkGetDeviceQueue2() call because requested family index is not supported "
-                "on the current hardware.";
+    LOG_ERROR
+        << "Ignoring vkGetDeviceQueue2() call because requested family index is not supported "
+           "on the current hardware.";
   } else {
     drvVk.vkGetDeviceQueue2(*device, queueInfo, *pQueue);
   }
@@ -1736,7 +1732,7 @@ inline void vkCreateSwapchainKHR_WRAPRUN(CVkResult& recorderSideReturnValue,
       !Configurator::Get().vulkan.player.captureVulkanDraws.empty() ||
       !Configurator::Get().vulkan.player.captureVulkanResources.empty()) {
     createInfo.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-    Log(TRACE) << "Modifying swapchain usage for frames/render targets capturing!!";
+    LOG_TRACE << "Modifying swapchain usage for frames/render targets capturing!!";
   }
   if (Configurator::Get().common.player.forceWindowSize.enabled) {
     createInfo.imageExtent.width = Configurator::Get().common.player.forceWindowSize.width;
@@ -1976,7 +1972,7 @@ inline void vkCreateImage_WRAPRUN(CVkResult& recorderSideReturnValue,
       !Configurator::Get().vulkan.player.captureVulkanDraws.empty() ||
       !Configurator::Get().vulkan.player.captureVulkanResources.empty()) {
     createInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-    Log(TRACE) << "Modifying image usage for render targets capturing!!";
+    LOG_TRACE << "Modifying image usage for render targets capturing!!";
   }
   VkResult playerSideReturnValue = drvVk.vkCreateImage(*device, &createInfo, *pAllocator, *image);
   checkReturnValue(playerSideReturnValue, recorderSideReturnValue, "vkCreateImage");
@@ -1997,7 +1993,7 @@ inline void vkCreateBuffer_WRAPRUN(CVkResult& recorderSideReturnValue,
       !Configurator::Get().vulkan.player.captureVulkanRenderPassesResources.empty() ||
       !Configurator::Get().vulkan.player.captureVulkanResources.empty()) {
     createInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    Log(TRACE) << "Modifying buffer usage for resource capturing!!";
+    LOG_TRACE << "Modifying buffer usage for resource capturing!!";
   }
   VkResult playerSideReturnValue =
       drvVk.vkCreateBuffer(*device, &createInfo, *pAllocator, *pBuffer);

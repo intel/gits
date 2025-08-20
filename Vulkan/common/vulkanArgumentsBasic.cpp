@@ -84,7 +84,7 @@ VkClearColorValue* gits::Vulkan::CVkClearColorValue::Value() {
         _ClearColorValue->uint32[i] = uint32Values[i];
       }
     } else {
-      Log(ERR) << "The pointer to array **_uint32 is null.";
+      LOG_ERROR << "The pointer to array **_uint32 is null.";
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
   }
@@ -103,7 +103,7 @@ gits::PtrConverter<VkClearColorValue> gits::Vulkan::CVkClearColorValue::Original
         _ClearColorValueOriginal->uint32[i] = uint32ValuesOriginal[i];
       }
     } else {
-      Log(ERR) << "The pointer to array _uint32->Original() is null.";
+      LOG_ERROR << "The pointer to array _uint32->Original() is null.";
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
   }
@@ -244,7 +244,7 @@ void gits::Vulkan::CVkGenericArgument::InitArgument(uint32_t type) {
 
   default:
     _skipped = std::make_unique<Cbool>(true);
-    Log(ERR) << "Unknown enum value: " << type << " for CVkGenericArgument";
+    LOG_ERROR << "Unknown enum value: " << type << " for CVkGenericArgument";
     break;
   }
 }
@@ -262,7 +262,7 @@ void gits::Vulkan::CVkGenericArgument::CreateArgument(uint32_t type,
 
   default:
     _skipped = std::make_unique<Cbool>(true);
-    Log(ERR) << "Unknown enum value: " << type << " for CVkGenericArgument";
+    LOG_ERROR << "Unknown enum value: " << type << " for CVkGenericArgument";
     break;
   }
 }
@@ -311,8 +311,8 @@ void gits::Vulkan::CVkGenericArgument::Read(CBinIStream& stream) {
       InitArgument(**_sType);
       _argument->Read(stream);
     } else {
-      VkLog(ERR) << "Due to unknown enum value: " << **_sType
-                 << " structure was not recorded into CVkGenericArgument.";
+      LOG_ERROR << "Due to unknown enum value: " << **_sType
+                << " structure was not recorded into CVkGenericArgument.";
     }
   }
 }
@@ -434,7 +434,7 @@ gits::Vulkan::CDescriptorUpdateTemplateObject::CDescriptorUpdateTemplateObject(
         (VkAccelerationStructureKHR*)((char*)pData + offset));
     break;
   default:
-    VkLog(WARN) << "Unknown descriptor type " << descType
+    LOG_WARNING << "Unknown descriptor type " << descType
                 << " in CDescriptorUpdateTemplateObject constructor!";
     _size = nullptr;
     _argument = nullptr;
@@ -467,8 +467,8 @@ void gits::Vulkan::CDescriptorUpdateTemplateObject::Read(CBinIStream& stream) {
     _argument = std::make_unique<CVkAccelerationStructureKHR>();
     break;
   default:
-    Log(TRACE) << "Not handled CDescriptorUpdateTemplateObject enumeration: " +
-                      std::string(_descType->Name());
+    LOG_TRACE << "Not handled CDescriptorUpdateTemplateObject enumeration: " +
+                     std::string(_descType->Name());
     break;
   }
   _argument->Read(stream);

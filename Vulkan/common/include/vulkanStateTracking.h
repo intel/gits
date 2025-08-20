@@ -308,7 +308,7 @@ inline void vkDestroySurfaceKHR_SD(VkInstance instance,
 #endif
     SD()._surfacekhrstates.erase(surface);
   } else {
-    Log(WARN) << "Destroying null VkSurfaceKHR";
+    LOG_WARNING << "Destroying null VkSurfaceKHR";
   }
 }
 
@@ -454,8 +454,9 @@ inline void vkCreateSwapchainKHR_SD(VkResult return_value,
         if (SD().imageCounter.find(image) == SD().imageCounter.end()) {
           CGits::Instance().vkCounters.ImageCountUp();
           SD().imageCounter[image] = CGits::Instance().vkCounters.CurrentImageCount();
-          Log(TRACE) << "Image nr: " << SD().imageCounter[image] << " (Swapchain image: " << image
-                     << " )";
+          LOG_FORMAT_RAW
+          LOG_TRACE << "Image nr: " << SD().imageCounter[image] << " (Swapchain image: " << image
+                    << " )\n";
         }
         auto imageState = std::make_shared<CImageState>(&image, swapchainState);
         SD()._imagestates.emplace(image, imageState);
@@ -739,10 +740,10 @@ inline void vkMapMemory_SD(VkResult return_value,
 
   if (Configurator::Get().vulkan.player.printMemUsageVk) {
     SD().currentlyMappedMemory += unmapSize;
-    Log(INFO) << "Currently Allocated Memory TOTAL: " << SD().currentlyAllocatedMemoryAll / 1000000
-              << " MB; GPU_ONLY: " << SD().currentlyAllocatedMemoryGPU / 1000000
-              << " MB; CPU_GPU_Shared: " << SD().currentlyAllocatedMemoryCPU_GPU / 1000000
-              << " MB; Currently mapped memory: " << SD().currentlyMappedMemory / 1000000 << " MB";
+    LOG_INFO << "Currently Allocated Memory TOTAL: " << SD().currentlyAllocatedMemoryAll / 1000000
+             << " MB; GPU_ONLY: " << SD().currentlyAllocatedMemoryGPU / 1000000
+             << " MB; CPU_GPU_Shared: " << SD().currentlyAllocatedMemoryCPU_GPU / 1000000
+             << " MB; Currently mapped memory: " << SD().currentlyMappedMemory / 1000000 << " MB";
   }
 
   if (Configurator::IsRecorder()) {
@@ -755,15 +756,15 @@ inline void vkMapMemory_SD(VkResult return_value,
       auto& sniffedRegionHandle = memoryState->mapping->sniffedRegionHandle;
       sniffedRegionHandle = MemorySniffer::Get().CreateRegion(*ppData, (size_t)unmapSize);
       if ((0 == sniffedRegionHandle) || (0 == *sniffedRegionHandle)) {
-        Log(ERR) << "MemorySniffer setup for memory: " << memory << " with mapped ptr: " << *ppData
-                 << " failed.";
+        LOG_ERROR << "MemorySniffer setup for memory: " << memory << " with mapped ptr: " << *ppData
+                  << " failed.";
         throw std::runtime_error(EXCEPTION_MESSAGE);
       }
       if (!MemorySniffer::Get().Protect(sniffedRegionHandle)) {
-        Log(ERR) << "Protecting memory region: " << (**sniffedRegionHandle).BeginAddress() << " - "
-                 << (**sniffedRegionHandle).EndAddress() << " FAILED!.";
+        LOG_ERROR << "Protecting memory region: " << (**sniffedRegionHandle).BeginAddress() << " - "
+                  << (**sniffedRegionHandle).EndAddress() << " FAILED!.";
         if (!Configurator::Get().vulkan.recorder.shadowMemory) {
-          Log(ERR) << "Please try to record with enabled ShadowMemory option.";
+          LOG_ERROR << "Please try to record with enabled ShadowMemory option.";
         }
       }
     }
@@ -807,12 +808,10 @@ inline void vkAllocateMemory_SD(VkResult return_value,
       } else {
         SD().currentlyAllocatedMemoryGPU += pAllocInfo->allocationSize;
       }
-      Log(INFO) << "Currently Allocated Memory TOTAL: "
-                << SD().currentlyAllocatedMemoryAll / 1000000
-                << " MB; GPU_ONLY: " << SD().currentlyAllocatedMemoryGPU / 1000000
-                << " MB; CPU_GPU_Shared: " << SD().currentlyAllocatedMemoryCPU_GPU / 1000000
-                << " MB; Currently mapped memory: " << SD().currentlyMappedMemory / 1000000
-                << " MB";
+      LOG_INFO << "Currently Allocated Memory TOTAL: " << SD().currentlyAllocatedMemoryAll / 1000000
+               << " MB; GPU_ONLY: " << SD().currentlyAllocatedMemoryGPU / 1000000
+               << " MB; CPU_GPU_Shared: " << SD().currentlyAllocatedMemoryCPU_GPU / 1000000
+               << " MB; Currently mapped memory: " << SD().currentlyMappedMemory / 1000000 << " MB";
     }
   }
 }
@@ -838,10 +837,10 @@ inline void vkFreeMemory_SD(VkDevice device,
       SD().currentlyAllocatedMemoryGPU -=
           SD()._devicememorystates[memory]->memoryAllocateInfoData.Value()->allocationSize;
     }
-    Log(INFO) << "Currently Allocated Memory TOTAL: " << SD().currentlyAllocatedMemoryAll / 1000000
-              << " MB; GPU_ONLY: " << SD().currentlyAllocatedMemoryGPU / 1000000
-              << " MB; CPU_GPU_Shared: " << SD().currentlyAllocatedMemoryCPU_GPU / 1000000
-              << " MB; Currently mapped memory: " << SD().currentlyMappedMemory / 1000000 << " MB";
+    LOG_INFO << "Currently Allocated Memory TOTAL: " << SD().currentlyAllocatedMemoryAll / 1000000
+             << " MB; GPU_ONLY: " << SD().currentlyAllocatedMemoryGPU / 1000000
+             << " MB; CPU_GPU_Shared: " << SD().currentlyAllocatedMemoryCPU_GPU / 1000000
+             << " MB; Currently mapped memory: " << SD().currentlyMappedMemory / 1000000 << " MB";
   }
   SD()._devicememorystates.erase(memory); // Stardust
 }
@@ -995,7 +994,7 @@ inline void vkDestroyBuffer_SD(VkDevice device,
   if (Configurator::IsRecorder()) {
     const auto it = SD()._bufferstates.find(buffer);
     if (it == SD()._bufferstates.end()) {
-      Log(WARN) << "Unknown buffer destroyed: " << buffer;
+      LOG_WARNING << "Unknown buffer destroyed: " << buffer;
       return;
     }
 
@@ -1282,8 +1281,8 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
                 &descriptorSetBinding->descriptorData[0].inlineUniformBlockData[currentArrayOffset];
             memcpy(dst_ptr, block->pData, block->dataSize);
           } else {
-            Log(ERR) << "Inline uniform block descriptor write is missing "
-                        "VkWriteDescriptorSetInlineUniformBlock structure";
+            LOG_ERROR << "Inline uniform block descriptor write is missing "
+                         "VkWriteDescriptorSetInlineUniformBlock structure";
             throw std::runtime_error(EXCEPTION_MESSAGE);
           }
         }
@@ -1479,8 +1478,8 @@ inline void vkUpdateDescriptorSets_SD(VkDevice device,
             }
           } break;
           default:
-            Log(TRACE) << "Not handled VkDescriptorType enumeration: " +
-                              std::to_string(descriptorType);
+            LOG_TRACE << "Not handled VkDescriptorType enumeration: " +
+                             std::to_string(descriptorType);
             break;
           }
           currentArrayOffset++;
@@ -1588,8 +1587,8 @@ inline void vkCreatePipelineLayout_SD(VkResult return_value,
         if (it != SD()._descriptorsetlayoutstates.end()) {
           state->descriptorSetLayoutStates.push_back(it->second);
         } else {
-          Log(ERR) << "Couldn't find state for VkDescriptorSetLayout: "
-                   << pCreateInfo->pSetLayouts[i];
+          LOG_ERROR << "Couldn't find state for VkDescriptorSetLayout: "
+                    << pCreateInfo->pSetLayouts[i];
           throw std::runtime_error(EXCEPTION_MESSAGE);
         }
       }
@@ -1944,8 +1943,8 @@ inline void vkUpdateDescriptorSetWithTemplate_SD(
           }
         } break;
         default:
-          Log(TRACE) << "Not handled VkDescriptorType enumeration: " +
-                            std::to_string(descriptorType);
+          LOG_TRACE << "Not handled VkDescriptorType enumeration: " +
+                           std::to_string(descriptorType);
           break;
         }
       }
@@ -3764,7 +3763,7 @@ inline void vkCmdPushDescriptorSetKHR_SD(VkCommandBuffer cmdBuf,
         }
       } break;
       default:
-        Log(TRACE) << "Not handled VkDescriptorType enumeration: " + std::to_string(descriptorType);
+        LOG_TRACE << "Not handled VkDescriptorType enumeration: " + std::to_string(descriptorType);
         break;
       }
     }

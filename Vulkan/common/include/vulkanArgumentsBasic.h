@@ -76,7 +76,7 @@ public:
     if (useVectorMapper()) {
       T val = get_vector_mapper()[(size_type)key];
       if (val == get_vector_mapper().NotMappedVal()) {
-        Log(ERR) << "Couldn't map Vulkan object name " << key;
+        LOG_ERROR << "Couldn't map Vulkan object name " << key;
         throw std::runtime_error(EXCEPTION_MESSAGE);
       }
       return val;
@@ -84,7 +84,7 @@ public:
       auto iter = get_map().find(key);
       if (iter == get_map().end()) {
         if (Configurator::IsPlayer()) {
-          Log(ERR) << "Couldn't map Vulkan object name " << key;
+          LOG_ERROR << "Couldn't map Vulkan object name " << key;
           throw std::runtime_error(EXCEPTION_MESSAGE);
         } else {
           return key;
@@ -131,14 +131,14 @@ public:
     if (useVectorMapper()) {
       auto& vector_mapper = get_vector_mapper();
       if (vector_mapper[(size_type)key_] == vector_mapper.NotMappedVal()) {
-        Log(ERR) << "Couldn't map Vulkan object name " << key_;
+        LOG_ERROR << "Couldn't map Vulkan object name " << key_;
         throw std::runtime_error(EXCEPTION_MESSAGE);
       }
       return &vector_mapper[(size_type)key_];
     } else {
       auto& map = get_map();
       if (map.find(key_) == map.end()) {
-        Log(ERR) << "Couldn't map Vulkan object name " << key_;
+        LOG_ERROR << "Couldn't map Vulkan object name " << key_;
         throw std::runtime_error(EXCEPTION_MESSAGE);
       }
       return &map[key_];
@@ -297,7 +297,7 @@ public:
     } else if (_uint32 == VK_FALSE) {
       stream << "VK_FALSE";
     } else {
-      Log(ERR) << "Invalid VkBool32 value: " << _uint32;
+      LOG_ERROR << "Invalid VkBool32 value: " << _uint32;
       throw ENotSupported(EXCEPTION_MESSAGE);
     }
   }
@@ -321,7 +321,7 @@ public:
   CNullWrapper(const VkAllocationCallbacks* ptr) : _ptr((std::uint64_t)ptr) {
     if (ptr != NULL) {
       CALL_ONCE[] {
-        Log(WARN) << "Non-null allocation callbacks detected\n";
+        LOG_WARNING << "Non-null allocation callbacks detected\n";
       };
     }
   }
@@ -366,7 +366,7 @@ public:
   }
   virtual void Write(CCodeOStream& stream) const override {
     if (_ptr) {
-      Log(WARN) << "Pointer is " << _ptr << "while it should be null.";
+      LOG_WARNING << "Pointer is " << _ptr << "while it should be null.";
       stream << hex(_ptr) << " /* nullptr was expected here */";
     } else {
       stream << "nullptr";

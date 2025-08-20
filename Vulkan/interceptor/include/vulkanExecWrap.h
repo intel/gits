@@ -18,6 +18,7 @@
 #include "gitsPluginVulkan.h"
 #include "vulkanTools_lite.h"
 #include "vulkanRecorderWrapper.h"
+#include "log2.h"
 
 #if defined GITS_PLATFORM_X11
 #include <dlfcn.h>
@@ -108,7 +109,7 @@ PFN_vkVoidFunction recExecWrap_vkGetDeviceProcAddr(VkDevice device, const char* 
   PFN_vkVoidFunction return_value =
       CGitsPluginVulkan::RecorderWrapper().Drivers().vkGetDeviceProcAddr(device, pName);
 #endif
-  Log(WARN) << "vkGetDeviceProcAddr() returned driver function for: " << pName;
+  LOG_WARNING << "vkGetDeviceProcAddr() returned driver function for: " << pName;
   return return_value;
 }
 
@@ -147,7 +148,7 @@ PFN_vkVoidFunction recExecWrap_vkGetInstanceProcAddr(VkInstance instance, const 
       CGitsPluginVulkan::RecorderWrapper().Drivers().vkGetInstanceProcAddr(instance, pName);
 #endif
 
-  Log(WARN) << "vkGetInstanceProcAddr() returned driver function for: " << pName;
+  LOG_WARNING << "vkGetInstanceProcAddr() returned driver function for: " << pName;
   return return_value;
 }
 
@@ -172,7 +173,7 @@ PFN_vkVoidFunction recExecWrap_GetPhysicalDeviceProcAddr(VkInstance instance, co
       CGitsPluginVulkan::RecorderWrapper().Drivers().GetPhysicalDeviceProcAddr(instance, pName);
 #endif
 
-  Log(WARN) << "GetPhysicalDeviceProcAddr() returned driver function for: " << pName;
+  LOG_WARNING << "GetPhysicalDeviceProcAddr() returned driver function for: " << pName;
   return return_value;
 }
 
@@ -198,7 +199,7 @@ VkResult recExecWrap_vkQueueSubmit(VkQueue queue,
         }
         return_value = drvVk.vkQueueSubmit(queue, 1, &submitInfoOrig, fenceNew);
         if (return_value != VK_SUCCESS) {
-          Log(WARN) << "vkQueueSubmit failed.";
+          LOG_WARNING << "vkQueueSubmit failed.";
         }
       }
 
@@ -227,7 +228,7 @@ VkResult recExecWrap_vkQueueSubmit(VkQueue queue,
         }
         return_value = drvVk.vkQueueSubmit(queue, 1, &submitInfoNew, fenceNew);
         if (return_value != VK_SUCCESS) {
-          Log(WARN) << "vkQueueSubmit failed. Cannot dump submit image.";
+          LOG_WARNING << "vkQueueSubmit failed. Cannot dump submit image.";
         } else {
           CGitsPluginVulkan::RecorderWrapper().dumpScreenshot(queue, cmdbuffer, i, cmdBufIndex);
         }
@@ -266,7 +267,7 @@ VkResult recExecWrap_vkQueueSubmit2(VkQueue queue,
           return_value = drvVk.vkQueueSubmit2(queue, 1, &submitInfoOrig, fenceNew);
         }
         if (return_value != VK_SUCCESS) {
-          Log(WARN) << "vkQueueSubmit2 failed.";
+          LOG_WARNING << "vkQueueSubmit2 failed.";
         }
       }
 
@@ -307,7 +308,7 @@ VkResult recExecWrap_vkQueueSubmit2(VkQueue queue,
           return_value = drvVk.vkQueueSubmit2(queue, 1, &submitInfoNew, fenceNew);
         }
         if (return_value != VK_SUCCESS) {
-          Log(WARN) << "vkQueueSubmit2 failed. Cannot dump submit image.";
+          LOG_WARNING << "vkQueueSubmit2 failed. Cannot dump submit image.";
         } else {
           CGitsPluginVulkan::RecorderWrapper().dumpScreenshot(
               queue, cmdbufferSubmitInfo.commandBuffer, i, cmdBufIndex);
@@ -439,9 +440,10 @@ VkResult recExecWrap_vkAllocateMemory(VkDevice device,
         memset(ptr, 0, (size_t)localAllocateInfo.allocationSize);
         drvVk.vkUnmapMemory(device, *pMemory);
       } else {
-        Log(WARN) << "vkMapMemory() was used to clear previously allocated memory but failed with "
-                     "the code: "
-                  << map_return_value << ". It may cause rendering errors!";
+        LOG_WARNING
+            << "vkMapMemory() was used to clear previously allocated memory but failed with "
+               "the code: "
+            << map_return_value << ". It may cause rendering errors!";
       }
     }
 
@@ -471,7 +473,7 @@ VkResult recExecWrap_vkCreateDebugReportCallbackEXT(
     const VkAllocationCallbacks* pAllocator,
     VkDebugReportCallbackEXT* pCallback) {
   // due to bug for Autodesk Scaleform GfxPlayer
-  Log(WARN) << "Omitting vkCreateDebugReportCallbackEXT calling.";
+  LOG_WARNING << "Omitting vkCreateDebugReportCallbackEXT calling.";
   return VK_SUCCESS;
 }
 
@@ -479,7 +481,7 @@ VkResult recExecWrap_vkDestroyDebugReportCallbackEXT(VkInstance instance,
                                                      VkDebugReportCallbackEXT callback,
                                                      const VkAllocationCallbacks* pAllocator) {
   // due to bug for Autodesk Scaleform GfxPlayer
-  Log(WARN) << "Omitting vkDestroyDebugReportCallbackEXT calling.";
+  LOG_WARNING << "Omitting vkDestroyDebugReportCallbackEXT calling.";
   return VK_SUCCESS;
 }
 
@@ -615,8 +617,8 @@ VkResult recExecWrap_vkCreateDevice(VkPhysicalDevice physicalDevice,
       cfg.vulkan.recorder.useCaptureReplayFeaturesForRayTracingPipelines = false;
 
       CALL_ONCE[] {
-        Log(WARN) << "Capture/replay feature for recording ray tracing pipeline handles is by "
-                     "default disabled on non-Intel hardware.";
+        LOG_WARNING << "Capture/replay feature for recording ray tracing pipeline handles is by "
+                       "default disabled on non-Intel hardware.";
       };
     }
   }
@@ -753,7 +755,7 @@ VkResult recExecWrap_vkCreateDevice(VkPhysicalDevice physicalDevice,
   VkResult return_value = CGitsPluginVulkan::RecorderWrapper().Drivers().vkCreateDevice(
       physicalDevice, &createInfo, pAllocator, pDevice);
   if (return_value != VK_SUCCESS) {
-    Log(WARN) << "Device creation failed with the following error: " << return_value;
+    LOG_WARNING << "Device creation failed with the following error: " << return_value;
   }
   return return_value;
 }
@@ -1163,7 +1165,7 @@ void ProcessImageMemoryRequirements(VkMemoryRequirements* pMemoryRequirements) {
           (config.vulkan.recorder.memoryOffsetAlignmentOverride.images %
                pMemoryRequirements->alignment !=
            0)) {
-        Log(WARN)
+        LOG_WARNING
             << "Override memory offset alignment: "
             << config.vulkan.recorder.memoryOffsetAlignmentOverride.images
             << " is lower and/or not a multiple of the required image memory offset alignment: "
@@ -1186,7 +1188,7 @@ void ProcessBufferMemoryRequirements(VkMemoryRequirements* pMemoryRequirements) 
         (config.vulkan.recorder.memoryOffsetAlignmentOverride.buffers %
              pMemoryRequirements->alignment !=
          0)) {
-      Log(WARN)
+      LOG_WARNING
           << "Override memory offset alignment: "
           << config.vulkan.recorder.memoryOffsetAlignmentOverride.buffers
           << " is lower and/or not a multiple of the required buffer memory offset alignment: "
@@ -1207,10 +1209,11 @@ void ProcessPhysicalDeviceProperties(VkPhysicalDeviceProperties* pProperties) {
         (config.vulkan.recorder.memoryOffsetAlignmentOverride.descriptors %
              pProperties->limits.minTexelBufferOffsetAlignment !=
          0)) {
-      Log(WARN) << "Override memory offset alignment: "
-                << config.vulkan.recorder.memoryOffsetAlignmentOverride.descriptors
-                << " is lower and/or not a multiple of the required minTexelBufferOffsetAlignment: "
-                << pProperties->limits.minTexelBufferOffsetAlignment << ". Override ignored!";
+      LOG_WARNING
+          << "Override memory offset alignment: "
+          << config.vulkan.recorder.memoryOffsetAlignmentOverride.descriptors
+          << " is lower and/or not a multiple of the required minTexelBufferOffsetAlignment: "
+          << pProperties->limits.minTexelBufferOffsetAlignment << ". Override ignored!";
     } else {
       pProperties->limits.minTexelBufferOffsetAlignment =
           config.vulkan.recorder.memoryOffsetAlignmentOverride.descriptors;
@@ -1221,7 +1224,7 @@ void ProcessPhysicalDeviceProperties(VkPhysicalDeviceProperties* pProperties) {
         (config.vulkan.recorder.memoryOffsetAlignmentOverride.descriptors %
              pProperties->limits.minUniformBufferOffsetAlignment !=
          0)) {
-      Log(WARN)
+      LOG_WARNING
           << "Override memory offset alignment: "
           << config.vulkan.recorder.memoryOffsetAlignmentOverride.descriptors
           << " is lower and/or not a multiple of the required minUniformBufferOffsetAlignment: "
@@ -1236,7 +1239,7 @@ void ProcessPhysicalDeviceProperties(VkPhysicalDeviceProperties* pProperties) {
         (config.vulkan.recorder.memoryOffsetAlignmentOverride.descriptors %
              pProperties->limits.minStorageBufferOffsetAlignment !=
          0)) {
-      Log(WARN)
+      LOG_WARNING
           << "Override memory offset alignment: "
           << config.vulkan.recorder.memoryOffsetAlignmentOverride.descriptors
           << " is lower and/or not a multiple of the required minStorageBufferOffsetAlignment: "

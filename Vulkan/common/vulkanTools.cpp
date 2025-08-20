@@ -56,7 +56,7 @@ std::string GetFileNameFrameScreenshot(unsigned int frameNumber) {
     } else if (Configurator::IsPlayer()) {
       path = Configurator::Get().common.player.streamDir / "gitsScreenshots/gitsPlayer";
     } else {
-      Log(ERR) << "Neither in player nor recorder!!!";
+      LOG_ERROR << "Neither in player nor recorder!!!";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
   }
@@ -82,7 +82,7 @@ std::string GetFileNameDrawcallScreenshot(unsigned int frameNumber,
     } else if (Configurator::IsPlayer()) {
       path = Configurator::Get().common.player.streamDir / "gitsScreenshots/gitsPlayer";
     } else {
-      Log(ERR) << "Neither in player nor recorder!!!";
+      LOG_ERROR << "Neither in player nor recorder!!!";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
   }
@@ -121,7 +121,7 @@ std::string GetFileNameResourcesScreenshot(unsigned int frameNumber,
     } else if (Configurator::IsPlayer()) {
       path = Configurator::Get().common.player.streamDir / "gitsScreenshots/gitsPlayer";
     } else {
-      Log(ERR) << "Neither in player nor recorder!!!";
+      LOG_ERROR << "Neither in player nor recorder!!!";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
   }
@@ -196,7 +196,7 @@ bool vulkanCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer bufferHandle, std:
     };
     VkResult result = drvVk.vkCreateBuffer(device, &localBufferCreateInfo, nullptr, &localBuffer);
     if (result != VK_SUCCESS) {
-      VkLog(ERR) << "Could not create buffer: " << result << "!!!";
+      LOG_ERROR << "Could not create buffer: " << result << "!!!";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
   }
@@ -219,7 +219,7 @@ bool vulkanCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer bufferHandle, std:
 
           drvVk.vkAllocateMemory(device, &memInfo, nullptr, &localMemory);
           if (localMemory == VK_NULL_HANDLE) {
-            Log(ERR) << "Could not allocate memory for a buffer.";
+            LOG_ERROR << "Could not allocate memory for a buffer.";
             throw std::runtime_error(EXCEPTION_MESSAGE);
           }
           drvVk.vkBindBufferMemory(device, localBuffer, localMemory, 0);
@@ -413,7 +413,7 @@ bool vulkanCopyImage(VkCommandBuffer commandBuffer,
                     drvVk.vkAllocateMemory(imageState->deviceStateStore->deviceHandle, &memInfo,
                                            nullptr, &attachment->devMemory);
                     if (attachment->devMemory == VK_NULL_HANDLE) {
-                      Log(ERR) << "Could not allocate memory for a buffer.";
+                      LOG_ERROR << "Could not allocate memory for a buffer.";
                       throw std::runtime_error(EXCEPTION_MESSAGE);
                     }
                     drvVk.vkBindBufferMemory(imageState->deviceStateStore->deviceHandle,
@@ -637,7 +637,7 @@ void vulkanDumpBuffer(std::shared_ptr<RenderGenericAttachment> attachment) {
   std::vector<char> bufferData;
   bufferData.resize(bufferState->bufferCreateInfoData.Value()->size);
   if (attachment->devMemory == VK_NULL_HANDLE) {
-    Log(ERR) << "Could not allocate memory for a buffer to dump.";
+    LOG_ERROR << "Could not allocate memory for a buffer to dump.";
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
   unsigned char* ptr;
@@ -646,7 +646,7 @@ void vulkanDumpBuffer(std::shared_ptr<RenderGenericAttachment> attachment) {
 
   std::string outputFileNameBin = attachment->fileName;
   if (outputFileNameBin.empty()) {
-    Log(ERR) << "Could not generate a name for the buffer to be dumped.";
+    LOG_ERROR << "Could not generate a name for the buffer to be dumped.";
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
   outputFileNameBin.append(".bin");
@@ -658,7 +658,7 @@ void vulkanDumpBuffer(std::shared_ptr<RenderGenericAttachment> attachment) {
 
   outFile = fopen(binaryFileName, "wb");
   if (outFile == nullptr) {
-    Log(ERR) << "Could not open a file: " << outputFileNameBin;
+    LOG_ERROR << "Could not open a file: " << outputFileNameBin;
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
   fwrite(&bufferData[0], sizeof(uint8_t), bufferState->bufferCreateInfoData.Value()->size, outFile);
@@ -739,8 +739,8 @@ void vulkanDumpImage(std::shared_ptr<RenderGenericAttachment> attachment) {
         nameSuffix << "_stencil";
         break;
       default:
-        Log(TRACE) << "Not handled VkImageAspectFlagBits enumeration: " +
-                          std::to_string(attachment->aspect);
+        LOG_TRACE << "Not handled VkImageAspectFlagBits enumeration: " +
+                         std::to_string(attachment->aspect);
         break;
       }
       nameSuffix << ".png";
@@ -750,7 +750,7 @@ void vulkanDumpImage(std::shared_ptr<RenderGenericAttachment> attachment) {
       }
     }
   } catch (...) {
-    Log(ERR) << "Could not convert image data to RGBA8 format.";
+    LOG_ERROR << "Could not convert image data to RGBA8 format.";
   }
   drvVk.vkUnmapMemory(imageState->deviceStateStore->deviceHandle, attachment->devMemory);
   drvVk.vkFreeMemory(imageState->deviceStateStore->deviceHandle, attachment->devMemory, nullptr);
@@ -1142,7 +1142,7 @@ bool writeScreenshotUtil(std::string fileName,
           try {
             normalize_texture_data(getTexelToConvertFromImageFormat(imageState.imageFormat), screenshotData, width, height);
           } catch(...) {
-            VkLog(WARN) << "Could not normalize texture data with format " << imageState.imageFormat << ".";
+            LOG_WARNING << "Could not normalize texture data with format " << imageState.imageFormat << ".";
           }
         }
         */
@@ -1201,8 +1201,8 @@ bool writeScreenshotUtil(std::string fileName,
               nameSuffix << "_stencil";
               break;
             default:
-              Log(TRACE) << "Not handled VkImageAspectFlagBits enumeration: " +
-                                std::to_string(target[l][m][a].aspect);
+              LOG_TRACE << "Not handled VkImageAspectFlagBits enumeration: " +
+                               std::to_string(target[l][m][a].aspect);
               break;
             }
             nameSuffix << ".png";
@@ -1213,7 +1213,7 @@ bool writeScreenshotUtil(std::string fileName,
             }
           }
         } catch (...) {
-          Log(ERR) << "Could not convert image data to RGBA8 format.";
+          LOG_ERROR << "Could not convert image data to RGBA8 format.";
         }
 
         drvVk.vkFreeMemory(device, target[l][m][a].memory, nullptr);
@@ -1489,7 +1489,7 @@ void writeBufferUtil(std::string fileName, VkQueue& queue, VkBuffer& sourceBuffe
     };
     VkResult result = drvVk.vkCreateBuffer(device, &localBufferCreateInfo, nullptr, &localBuffer);
     if (result != VK_SUCCESS) {
-      VkLog(ERR) << "Could not create buffer: " << result << "!!!";
+      LOG_ERROR << "Could not create buffer: " << result << "!!!";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
   }
@@ -1605,7 +1605,7 @@ void writeBufferUtil(std::string fileName, VkQueue& queue, VkBuffer& sourceBuffe
   std::vector<char> bufferData;
   bufferData.resize(targetBufferCreateInfo->size);
   if (localMemory == VK_NULL_HANDLE) {
-    Log(ERR) << "Could not allocate memory for a buffer to dump.";
+    LOG_ERROR << "Could not allocate memory for a buffer to dump.";
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
   unsigned char* ptr;
@@ -1613,7 +1613,7 @@ void writeBufferUtil(std::string fileName, VkQueue& queue, VkBuffer& sourceBuffe
   memcpy(bufferData.data(), ptr, targetBufferCreateInfo->size);
 
   if (fileName.empty()) {
-    Log(ERR) << "Could not generate a name for the buffer to be dumped.";
+    LOG_ERROR << "Could not generate a name for the buffer to be dumped.";
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
   fileName.append(".bin");
@@ -1625,7 +1625,7 @@ void writeBufferUtil(std::string fileName, VkQueue& queue, VkBuffer& sourceBuffe
 
   outFile = fopen(binaryFileName, "wb");
   if (outFile == nullptr) {
-    Log(ERR) << "Could not open a file: " << fileName;
+    LOG_ERROR << "Could not open a file: " << fileName;
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
   fwrite(&bufferData[0], sizeof(uint8_t), targetBufferCreateInfo->size, outFile);
@@ -1785,7 +1785,7 @@ texel_type getTexelToConvertFromImageFormat(VkFormat format) {
     return texel_type::D32fS8ui;
     // All other formats are currently unsupported
   default:
-    VkLog(WARN) << "The " << format << " format cannot be converted to GITS internal format.";
+    LOG_WARNING << "The " << format << " format cannot be converted to GITS internal format.";
     throw ENotSupported(EXCEPTION_MESSAGE);
   }
 }
@@ -1799,7 +1799,7 @@ void suppressPhysicalDeviceFeatures(std::vector<std::string> const& suppressFeat
   for (auto& suppress : suppressFeatures) {
 #define SUPPRESS_SELECTED_PHYSICAL_DEVICE_FEATURE(feature)                                         \
   if (suppress == #feature) {                                                                      \
-    VkLog(WARN) << "Disabling physical device feature named: \"" #feature "\"!!!";                 \
+    LOG_WARNING << "Disabling physical device feature named: \"" #feature "\"!!!";                 \
     features->feature = 0;                                                                         \
     continue;                                                                                      \
   }
@@ -1913,9 +1913,9 @@ bool checkForSupportForInstanceExtensions(uint32_t requestedExtensionsCount,
   }
 
   if (warningLog.str().size() > 0) {
-    Log(ERR) << "The following instance extensions are enabled but are not supported by the "
-                "current hardware:"
-             << warningLog.str();
+    LOG_ERROR << "The following instance extensions are enabled but are not supported by the "
+                 "current hardware:"
+              << warningLog.str();
     return false;
   }
   return true;
@@ -1955,9 +1955,9 @@ bool checkForSupportForInstanceLayers(uint32_t requestedLayersCount,
   }
 
   if (warningLog.str().size() > 0) {
-    Log(ERR) << "The following instance layers are enabled but are not supported by the current "
-                "hardware:"
-             << warningLog.str();
+    LOG_ERROR << "The following instance layers are enabled but are not supported by the current "
+                 "hardware:"
+              << warningLog.str();
     return false;
   }
   return true;
@@ -2039,11 +2039,11 @@ bool checkForSupportForPhysicalDeviceFeatures(VkPhysicalDevice physicalDevice,
   COMPARE_PHYSICAL_DEVICE_FEATURE(inheritedQueries)
 
   if (warningLog.str().size() > 0) {
-    Log(ERR) << "The following features are enabled in the stream but are not supported by the "
-                "current hardware:"
-             << warningLog.str() << "\n";
-    Log(ERR) << "The unsupported features will be disabled but remember this may lead to incorect "
-                "results!";
+    LOG_ERROR << "The following features are enabled in the stream but are not supported by the "
+                 "current hardware:"
+              << warningLog.str() << "\n";
+    LOG_ERROR << "The unsupported features will be disabled but remember this may lead to incorect "
+                 "results!";
     return false;
   }
   return true;
@@ -2066,18 +2066,18 @@ bool checkForSupportForQueues(VkPhysicalDevice physicalDevice,
     if ((requestedQueueFamilyIndex > availableQueueFamiliesCount - 1) ||
         (requestedQueueCountForFamily >
          availableQueueFamilies[requestedQueueFamilyIndex].queueCount)) {
-      Log(ERR) << "Stream requests queues that are not available on the current hardware!";
-      Log(ERR) << "Requested queue family index: " << requestedQueueFamilyIndex << " with "
-               << requestedQueueCountForFamily << " queue(s).";
+      LOG_ERROR << "Stream requests queues that are not available on the current hardware!";
+      LOG_ERROR << "Requested queue family index: " << requestedQueueFamilyIndex << " with "
+                << requestedQueueCountForFamily << " queue(s).";
 
       if (requestedQueueFamilyIndex > availableQueueFamiliesCount - 1) {
-        Log(ERR) << "Current platform supports " << availableQueueFamiliesCount
-                 << " queue family(ies).";
+        LOG_ERROR << "Current platform supports " << availableQueueFamiliesCount
+                  << " queue family(ies).";
       } else if (requestedQueueCountForFamily >
                  availableQueueFamilies[requestedQueueFamilyIndex].queueCount) {
-        Log(ERR) << "Current platform supports "
-                 << availableQueueFamilies[requestedQueueFamilyIndex].queueCount
-                 << " queue(s) for family index: " << requestedQueueFamilyIndex << ".";
+        LOG_ERROR << "Current platform supports "
+                  << availableQueueFamilies[requestedQueueFamilyIndex].queueCount
+                  << " queue(s) for family index: " << requestedQueueFamilyIndex << ".";
       }
       return false;
     }
@@ -2093,11 +2093,11 @@ bool checkForSupportForQueues(VkPhysicalDevice physicalDevice,
 #endif
 
     if (!isBitSet(currentFlags, originalFlags)) {
-      Log(ERR) << "Queue families are not compatible!";
-      VkLog(ERR) << "Original queue family flags at index " << requestedQueueFamilyIndex << ": "
-                 << (VkQueueFlagBits)originalFlags;
-      VkLog(ERR) << "Current platform queue family flags at index " << requestedQueueFamilyIndex
-                 << ": " << (VkQueueFlagBits)currentFlags;
+      LOG_ERROR << "Queue families are not compatible!";
+      LOG_ERROR << "Original queue family flags at index " << requestedQueueFamilyIndex << ": "
+                << (VkQueueFlagBits)originalFlags;
+      LOG_ERROR << "Current platform queue family flags at index " << requestedQueueFamilyIndex
+                << ": " << (VkQueueFlagBits)currentFlags;
       return false;
     }
   }
@@ -2135,9 +2135,9 @@ bool areDeviceExtensionsSupported(VkPhysicalDevice physicalDevice,
   }
 
   if (printErrorLog && (warningLog.str().size() > 0)) {
-    Log(ERR) << "The following device extensions are enabled but are not supported by the current "
-                "hardware:"
-             << warningLog.str();
+    LOG_ERROR << "The following device extensions are enabled but are not supported by the current "
+                 "hardware:"
+              << warningLog.str();
   }
   return allExtensionsSupported;
 }
@@ -2179,12 +2179,12 @@ void printShaderHashes(VkPipeline pipeline) {
   if ((Configurator::Get().vulkan.player.traceVKShaderHashes) && (VK_NULL_HANDLE != pipeline)) {
     auto& pipelineState = SD()._pipelinestates[pipeline];
 
-    VkLog(TRACE) << "Shader hashes:";
+    LOG_TRACE << "Shader hashes:";
     for (auto& stage : pipelineState->stageShaderHashMapping) {
 #ifdef GITS_PLATFORM_WINDOWS
-      VkLog(TRACE) << "               " << stage.first << ": " << std::hex << stage.second;
+      LOG_TRACE << "               " << stage.first << ": " << std::hex << stage.second;
 #else
-      VkLog(TRACE) << "               " << stage.first << ": " << stage.second;
+      LOG_TRACE << "               " << stage.first << ": " << stage.second;
 #endif
     }
   }
@@ -2473,8 +2473,8 @@ void getRangesForMemoryUpdate(VkDeviceMemory memory,
 
     if (!unmap) {
       if (!MemorySniffer::Get().Protect(sniffedRegionHandle)) {
-        Log(WARN) << "Protecting memory region: " << (**sniffedRegionHandle).BeginAddress() << " - "
-                  << (**sniffedRegionHandle).EndAddress() << " FAILED!.";
+        LOG_WARNING << "Protecting memory region: " << (**sniffedRegionHandle).BeginAddress()
+                    << " - " << (**sniffedRegionHandle).EndAddress() << " FAILED!.";
       }
     }
 
@@ -2558,8 +2558,9 @@ void flushShadowMemory(VkDeviceMemory memory, bool unmap) {
 
     if (!unmap) {
       if (!MemorySniffer::Get().Protect(mapping->sniffedRegionHandle)) {
-        Log(WARN) << "Protecting memory region: " << (**mapping->sniffedRegionHandle).BeginAddress()
-                  << " - " << (**mapping->sniffedRegionHandle).EndAddress() << " FAILED!.";
+        LOG_WARNING << "Protecting memory region: "
+                    << (**mapping->sniffedRegionHandle).BeginAddress() << " - "
+                    << (**mapping->sniffedRegionHandle).EndAddress() << " FAILED!.";
       }
     }
 
@@ -3025,9 +3026,9 @@ bool checkMemoryMappingFeasibility(VkDevice device, VkDeviceMemory memory, bool 
       SD()._devicememorystates[memory]->memoryAllocateInfoData.Value()->memoryTypeIndex;
   if (!isMemoryMappable(device, memoryIndex)) {
     if (throwException) {
-      Log(ERR) << "Stream tries to map memory object " << memory
-               << " which was allocated from a non-host-visible memory type at index "
-               << memoryIndex;
+      LOG_ERROR << "Stream tries to map memory object " << memory
+                << " which was allocated from a non-host-visible memory type at index "
+                << memoryIndex;
       if (!Configurator::Get().vulkan.player.ignoreVKCrossPlatformIncompatibilitiesWA) {
         throw std::runtime_error("Memory object cannot be mapped on a current platform. Exiting!!");
       }
@@ -3041,9 +3042,9 @@ bool checkMemoryMappingFeasibility(VkDevice device, VkDeviceMemory memory, bool 
 bool checkMemoryMappingFeasibility(VkDevice device, uint32_t memoryTypeIndex, bool throwException) {
   if (!isMemoryMappable(device, memoryTypeIndex)) {
     if (throwException) {
-      Log(ERR) << "Stream tries to map memory object which was allocated from a non-host-visible "
-                  "memory type at index "
-               << memoryTypeIndex;
+      LOG_ERROR << "Stream tries to map memory object which was allocated from a non-host-visible "
+                   "memory type at index "
+                << memoryTypeIndex;
       if (!Configurator::Get().vulkan.player.ignoreVKCrossPlatformIncompatibilitiesWA) {
         throw std::runtime_error("Memory object cannot be mapped on a current platform. Exiting!!");
       }
@@ -3207,14 +3208,14 @@ std::unordered_map<uint32_t, uint32_t> matchCorrespondingMemoryTypeIndexes(
   }
 
   if (originalPlatformProperties.memoryTypeCount != memoryTypeIndexes.size()) {
-    VkLog(ERR) << "Cannot find proper mapping for memory type indexes";
-    VkLog(ERR) << "Original memory types: ";
+    LOG_ERROR << "Cannot find proper mapping for memory type indexes";
+    LOG_ERROR << "Original memory types: ";
     for (uint32_t i = 0; i < originalPlatformProperties.memoryTypeCount; i++) {
-      VkLog(ERR) << "[" << i << "]: " << originalPlatformProperties.memoryTypes[i];
+      LOG_ERROR << "[" << i << "]: " << originalPlatformProperties.memoryTypes[i];
     }
-    VkLog(ERR) << "Current platform memory types: ";
+    LOG_ERROR << "Current platform memory types: ";
     for (uint32_t i = 0; i < currentPlatformProperties.memoryTypeCount; i++) {
-      VkLog(ERR) << "[" << i << "]: " << currentPlatformProperties.memoryTypes[i];
+      LOG_ERROR << "[" << i << "]: " << currentPlatformProperties.memoryTypes[i];
     }
     throw std::runtime_error("Cannot find proper mapping for memory type indexes");
   }
@@ -3227,10 +3228,11 @@ uint32_t getMappedMemoryTypeIndex(VkDevice device, uint32_t memoryTypeIndexOrigi
       SD()._devicestates[device]->physicalDeviceStateStore->correspondingMemoryTypeIndexes;
 
   if (correspondingMemoryTypeIndexes.empty()) {
-    Log(ERR) << "Memory type index mapping does not exist for this stream. The reason is that "
-                "there is no vkPassPhysicalDeviceMemoryPropertiesGITS token recorded. The solution "
-                "is to record a new stream.";
-    Log(ERR) << "Skipping mapping and returning orignal index of memory type.";
+    LOG_ERROR
+        << "Memory type index mapping does not exist for this stream. The reason is that "
+           "there is no vkPassPhysicalDeviceMemoryPropertiesGITS token recorded. The solution "
+           "is to record a new stream.";
+    LOG_ERROR << "Skipping mapping and returning orignal index of memory type.";
     return memoryTypeIndexOriginal;
   }
 
@@ -3293,7 +3295,7 @@ VkBuffer findBufferFromDeviceAddress(VkDeviceAddress deviceAddress) {
   }
 
   // No element found
-  Log(WARN) << "Trying to find a buffer from an unknown address space: " << deviceAddress;
+  LOG_WARNING << "Trying to find a buffer from an unknown address space: " << deviceAddress;
   return VK_NULL_HANDLE;
 }
 
@@ -3776,9 +3778,9 @@ void checkReturnValue(VkResult playerSideReturnValue,
                       CVkResult& recorderSideReturnValue,
                       const char* functionName) {
   if ((playerSideReturnValue < 0) && (playerSideReturnValue != *recorderSideReturnValue)) {
-    VkLog(ERR) << functionName << " returned \"" << playerSideReturnValue
-               << "\" error which is different than the \"" << *recorderSideReturnValue
-               << "\" value returned during recording. Exiting!";
+    LOG_ERROR << functionName << " returned \"" << playerSideReturnValue
+              << "\" error which is different than the \"" << *recorderSideReturnValue
+              << "\" value returned during recording. Exiting!";
     throw std::runtime_error("Return value mismatch error occurred.");
   }
 }

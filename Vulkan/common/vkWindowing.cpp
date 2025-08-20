@@ -19,6 +19,7 @@
 #include <xcb/xcb.h>
 #include <cstring>
 #include "log.h"
+#include "log2.h"
 #include "gits.h"
 #endif
 
@@ -239,7 +240,7 @@ win_ptr_t CreateWinXCB(int width, int height, int x, int y, bool show) {
                                      value_mask,  // value mask (which values will be on the list)
                                      value_list); // value list
   if ((error = xcb_request_check(connection, cookie))) {
-    Log(ERR) << "Could not create a window.";
+    LOG_ERROR << "Could not create a window.";
     free(error);
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
@@ -258,14 +259,14 @@ win_ptr_t CreateWinXCB(int width, int height, int x, int y, bool show) {
 
   cookie = xcb_map_window_checked(connection, window);
   if ((error = xcb_request_check(connection, cookie))) {
-    Log(ERR) << "Could not map a window.";
+    LOG_ERROR << "Could not map a window.";
     free(error);
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
 
   if (xcb_flush(connection) <= 0) {
-    Log(WARN) << "Could not flush commands to X server after window creation. "
-                 "This might potentially cause some windowing-related issues.";
+    LOG_WARNING << "Could not flush commands to X server after window creation. "
+                   "This might potentially cause some windowing-related issues.";
   }
 
   // Some window managers ignore window position specified during window

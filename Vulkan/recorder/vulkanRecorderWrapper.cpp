@@ -53,7 +53,7 @@ gits::Vulkan::IRecorderWrapper* STDCALL GITSRecorderVulkan() {
       auto library = new gits::Vulkan::CLibrary([] { return new gits::Vulkan::CState; });
       recorder.Register(std::shared_ptr<gits::CLibrary>(library));
     } catch (const std::exception& ex) {
-      Log(ERR) << "Cannot initialize recorder: " << ex.what() << std::endl;
+      LOG_ERROR << "Cannot initialize recorder: " << ex.what() << std::endl;
       exit(EXIT_FAILURE);
     }
   }
@@ -203,10 +203,10 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit(VkQueue queue,
               }
             }
           } else {
-            Log(WARN) << "VkDeviceMemory " << obj2.first
-                      << " scheduled for update in command buffer "
-                      << pSubmits[i].pCommandBuffers[j]
-                      << " has been freed, before the command buffer finished execution!";
+            LOG_WARNING << "VkDeviceMemory " << obj2.first
+                        << " scheduled for update in command buffer "
+                        << pSubmits[i].pCommandBuffers[j]
+                        << " has been freed, before the command buffer finished execution!";
           }
         }
       }
@@ -269,7 +269,7 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit(VkQueue queue,
             memcpy(&mapping->compareData[offset], pointer + offset, size);
           }
         } else {
-          Log(WARN) << "Updating memory after QueueSubmit failed. Invalid values.";
+          LOG_WARNING << "Updating memory after QueueSubmit failed. Invalid values.";
         }
       }
     }
@@ -324,10 +324,10 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit2(VkQueue queue,
               }
             }
           } else {
-            Log(WARN) << "VkDeviceMemory " << obj2.first
-                      << " scheduled for update in command buffer "
-                      << pSubmits[i].pCommandBufferInfos[j].commandBuffer
-                      << " has been freed, before the command buffer finished execution!";
+            LOG_WARNING << "VkDeviceMemory " << obj2.first
+                        << " scheduled for update in command buffer "
+                        << pSubmits[i].pCommandBufferInfos[j].commandBuffer
+                        << " has been freed, before the command buffer finished execution!";
           }
         }
       }
@@ -390,7 +390,7 @@ void CRecorderWrapper::resetMemoryAfterQueueSubmit2(VkQueue queue,
             memcpy(&mapping->compareData[offset], pointer + offset, size);
           }
         } else {
-          Log(WARN) << "Updating memory after QueueSubmit failed. Invalid values.";
+          LOG_WARNING << "Updating memory after QueueSubmit failed. Invalid values.";
         }
       }
     }
@@ -474,8 +474,8 @@ void CRecorderWrapper::DisableConfigOptions() const {
   // method of memory changes tracking (with tags). Use the universal
   // recording/memory tracking only when forced through config option.
   if (!cfg.vulkan.recorder.forceUniversalRecording) {
-    Log(INFO) << "Recording a (sub)stream from GITS Player. Disabling all memory tracking-related "
-                 "options!";
+    LOG_INFO << "Recording a (sub)stream from GITS Player. Disabling all memory tracking-related "
+                "options!";
 
     cfg.vulkan.recorder.memoryAccessDetection = false;
     cfg.vulkan.recorder.memorySegmentSize = 0;

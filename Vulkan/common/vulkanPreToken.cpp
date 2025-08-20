@@ -129,9 +129,9 @@ gits::Vulkan::CGitsVkMemoryUpdate::CGitsVkMemoryUpdate(VkDevice device,
 
       if (!unmap) {
         if (!MemorySniffer::Get().Protect(mapping->sniffedRegionHandle)) {
-          Log(WARN) << "Protecting memory region: "
-                    << (**mapping->sniffedRegionHandle).BeginAddress() << " - "
-                    << (**mapping->sniffedRegionHandle).EndAddress() << " FAILED!.";
+          LOG_WARNING << "Protecting memory region: "
+                      << (**mapping->sniffedRegionHandle).BeginAddress() << " - "
+                      << (**mapping->sniffedRegionHandle).EndAddress() << " FAILED!.";
         }
       }
 
@@ -430,8 +430,8 @@ gits::Vulkan::CGitsVkMemoryRestore::CGitsVkMemoryRestore(VkDevice device,
     VkResult mapMemoryResult = drvVk.vkMapMemory(device, mem, 0, size, 0, &pointer);
     if (mapMemoryResult != VK_SUCCESS) {
       pointer = nullptr;
-      Log(ERR) << "vkMapMemory returned error: " << mapMemoryResult
-               << ". It can cause a corruption in a subcaptured stream.";
+      LOG_ERROR << "vkMapMemory returned error: " << mapMemoryResult
+                << ". It can cause a corruption in a subcaptured stream.";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
   }
@@ -440,8 +440,8 @@ gits::Vulkan::CGitsVkMemoryRestore::CGitsVkMemoryRestore(VkDevice device,
     auto& dereferencedRegionHandle = **mapping->sniffedRegionHandle;
     dereferencedRegionHandle.Reset();
     if (!MemorySniffer::Get().Protect(mapping->sniffedRegionHandle)) {
-      Log(WARN) << "Protecting memory region: " << dereferencedRegionHandle.BeginAddress() << " - "
-                << dereferencedRegionHandle.EndAddress() << " FAILED!.";
+      LOG_WARNING << "Protecting memory region: " << dereferencedRegionHandle.BeginAddress()
+                  << " - " << dereferencedRegionHandle.EndAddress() << " FAILED!.";
     }
   }
 
@@ -1093,8 +1093,8 @@ void gits::Vulkan::CGitsInitializeImage::Run() {
   if (state->imageCreateInfoData.Value() &&
       state->imageCreateInfoData.Value()->samples != VK_SAMPLE_COUNT_1_BIT) {
     CALL_ONCE[] {
-      Log(WARN) << "Restoring multisample image. Calling vkCmdCopyBufferToImage with number of "
-                   "samples greater than one is against specification.";
+      LOG_WARNING << "Restoring multisample image. Calling vkCmdCopyBufferToImage with number of "
+                     "samples greater than one is against specification.";
     };
   }
   if (Configurator::Get().vulkan.player.execCmdBuffsBeforeQueueSubmit) {
@@ -1490,8 +1490,8 @@ void gits::Vulkan::CGitsInitializeMultipleImages::Run() {
     if (state->imageCreateInfoData.Value() &&
         state->imageCreateInfoData.Value()->samples != VK_SAMPLE_COUNT_1_BIT) {
       CALL_ONCE[] {
-        Log(WARN) << "Restoring multisample image. Calling vkCmdCopyBufferToImage with"
-                     " number of samples greater than one is against specification.";
+        LOG_WARNING << "Restoring multisample image. Calling vkCmdCopyBufferToImage with"
+                       " number of samples greater than one is against specification.";
       };
       break;
     }
@@ -2220,7 +2220,7 @@ void gits::Vulkan::CGitsVkStateRestoreInfo::Run() {
       double timeElapsedMs = timeElapsedNs / 1e6;
       resultText += " in " + std::to_string(timeElapsedMs) + " ms";
     }
-    Log(INFO) << resultText;
+    LOG_INFO << resultText;
   }
 }
 

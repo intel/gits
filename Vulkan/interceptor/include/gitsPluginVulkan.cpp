@@ -14,6 +14,7 @@
 
 #include "gitsPluginVulkan.h"
 #include "vulkanRecorderWrapperIface.h"
+#include "log2.h"
 
 #include <thread>
 #include <mutex>
@@ -67,15 +68,15 @@ void CGitsPluginVulkan::Initialize() {
 
     initialized = true;
   } catch (const Exception& ex) {
-    Log(ERR) << "Unhandled GITS exception: " << ex.what();
+    LOG_ERROR << "Unhandled GITS exception: " << ex.what();
     _loader.reset();
     fast_exit(EXIT_FAILURE);
   } catch (const std::exception& ex) {
-    Log(ERR) << "Unhandled STD exception: " << ex.what();
+    LOG_ERROR << "Unhandled STD exception: " << ex.what();
     _loader.reset();
     fast_exit(EXIT_FAILURE);
   } catch (...) {
-    Log(ERR) << "Unhandled Unknown exception caught";
+    LOG_ERROR << "Unhandled Unknown exception caught";
     _loader.reset();
     fast_exit(EXIT_FAILURE);
   }

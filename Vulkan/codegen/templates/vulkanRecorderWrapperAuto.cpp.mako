@@ -74,7 +74,7 @@ void CRecorderWrapper::${token.name}(${params}) const
   % endif  # wrapper_pre_post_macro
   ${token.name}_RECWRAP(${rec_wrap_args});
 % else:  # --------------------------------------------------------------------
-  CALL_ONCE [] { Log(ERR) << "function ${token.name} not implemented"; };
+  CALL_ONCE [] { LOG_ERROR << "function ${token.name} not implemented"; };
 % endif  # --------------------------------------------------------------------
 }
 

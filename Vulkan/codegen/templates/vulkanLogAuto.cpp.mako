@@ -12,25 +12,27 @@ ${AUTO_GENERATED_HEADER}
 #include "vulkanLog.h"
 #include "vulkanTools_lite.h"
 
-namespace gits {
-namespace Vulkan {
+using namespace gits;
+using namespace gits::Vulkan;
+
+namespace plog {
 
 % for struct in vk_structs:
-CVkLog & CVkLog::operator<<(const ${struct.name}& c) {
+Record& operator<<(Record& record, const ${struct.name}& c) {
   ${make_struct_log_code(struct.fields)}
-  return *this;
+  return record;
 }
 
-CVkLog & CVkLog::operator<<(const ${struct.name}* c) {
+Record& operator<<(Record& record, const ${struct.name}* c) {
   if (c != nullptr) {
     if (Configurator::IsTraceDataOptPresent(TraceData::VK_STRUCTS))
-      *this << *c;
+      record << *c;
     else
-      _buffer << "{ " << (void*)c << " }";
+      record << "{ " << (void*)c << " }";
   } else {
-    _buffer << "{ 0 }";
+    record << "{ 0 }";
   }
-  return *this;
+  return record;
 }
 
 % endfor
@@ -48,7 +50,7 @@ CVkLog & CVkLog::operator<<(const ${struct.name}* c) {
       sorted_enumerators = sorted_enumerators[:-1]
 %>\
 % if 'Bits' in enum.name:
-CVkLog & CVkLog::operator<<(const ${enum.name}& c) {
+Record& operator<<(Record& record, const ${enum.name}& c) {
   std::underlying_type_t<${enum.name}> e = c;
   std::ostringstream os;
   % if zero_enumerator is not None:
@@ -65,7 +67,7 @@ CVkLog & CVkLog::operator<<(const ${enum.name}& c) {
   for (decltype(e) i = 1; i <= e; i <<= 1) {
     if (i & e) {
       os << i << " | ";
-      Log(WARN) << "Unknown enum number: " << i << " for ${enum.name}";
+      LOG_WARNING << "Unknown enum number: " << i << " for ${enum.name}";
       break;
     }
   }
@@ -75,67 +77,66 @@ CVkLog & CVkLog::operator<<(const ${enum.name}& c) {
   } else {
     str = "0";
   }
-  _buffer << "{ " << str << " }";
-  return *this;
+  record << "{ " << str << " }";
+  return record;
 }
 % else:
-CVkLog & CVkLog::operator<<(const ${enum.name}& c) {
+Record& operator<<(Record& record, const ${enum.name}& c) {
   switch (c) {
     % for enumerator in enum.enumerators:
     case ${enumerator.value}:
-      _buffer << "${enumerator.name}";
+      record << "${enumerator.name}";
       break;
     %endfor
     default:
-      _buffer << c;
-      Log(WARN) << "Unknown enum number: " << c << " for ${enum.name}";
+      record << c;
+      LOG_WARNING << "Unknown enum number: " << c << " for ${enum.name}";
       break;
   }
-  return *this;
+  return record;
 }
 % endif
 
 % endfor
 #if defined(__LP64__) || defined(_WIN64) || defined(__x86_64__) || defined(_M_X64) || defined(__ia64) || defined (_M_IA64) || defined(__aarch64__) || defined(__powerpc64__)
 % for type_name in vulkan_mapped_types_nondisp:
-CVkLog & CVkLog::operator<<(const ${type_name}& c) {
-  *this << "{ " << (void*)c << " }";
-  return *this;
+Record& operator<<(Record& record, const ${type_name}& c) {
+  record << "{ " << (void*)c << " }";
+  return record;
 }
 
-CVkLog & CVkLog::operator<<(const ${type_name}* c) {
+Record& operator<<(Record& record, const ${type_name}* c) {
   if (c != nullptr) {
     if (Configurator::IsTraceDataOptPresent(TraceData::VK_STRUCTS))
-      *this << *c;
+      record << *c;
     else
-      _buffer << "{ " << (void*)c << " }";
+      record << "{ " << (void*)c << " }";
   } else {
-    _buffer << "{ 0 }";
+    record << "{ 0 }";
   }
-  return *this;
+  return record;
 }
 
 % endfor
 #endif
 % for type_name in vulkan_mapped_types:
-CVkLog & CVkLog::operator<<(const ${type_name}& c) {
-  *this << "{ " << (void *)c << " }";
-  return *this;
+Record& operator<<(Record& record, const ${type_name}& c) {
+  record << "{ " << (void *)c << " }";
+  return record;
 }
 
-CVkLog & CVkLog::operator<<(const ${type_name}* c) {
+Record& operator<<(Record& record, const ${type_name}* c) {
   if (c != nullptr) {
     if (Configurator::IsTraceDataOptPresent(TraceData::VK_STRUCTS))
-      *this << *c;
+      record << *c;
     else
-      _buffer << "{ " << (void*)c << " }";
+      record << "{ " << (void*)c << " }";
   } else {
-    _buffer << "{ 0 }";
+    record << "{ 0 }";
   }
-  return *this;
+  return record;
 }
 
 % endfor
 
-} // namespace Vulkan
-} // namespace gits
+} // namespace plog

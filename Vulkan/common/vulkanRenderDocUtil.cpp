@@ -8,6 +8,7 @@
 
 #include "vulkanRenderDocUtil.h"
 #include "vulkanStateDynamic.h"
+#include "log2.h"
 
 #ifdef GITS_PLATFORM_WINDOWS
 
@@ -53,7 +54,7 @@ void RenderDocUtil::RenderDocCapturer::SetCapturePath() {
               << capturerID;
   std::string capturePathStr = capturePath.str();
   rdoc->SetCaptureFilePathTemplate(capturePathStr.c_str());
-  Log(INFO) << "Set RenderDoc capture path to: " << capturePathStr;
+  LOG_INFO << "Set RenderDoc capture path to: " << capturePathStr;
 }
 
 void RenderDocUtil::RenderDocCapturer::Start() {
@@ -62,7 +63,7 @@ void RenderDocUtil::RenderDocCapturer::Start() {
   }
   rdoc->StartFrameCapture(device, nullptr);
   isRecording = true;
-  Log(INFO) << "Renderdoc capture started";
+  LOG_INFO << "Renderdoc capture started";
 }
 
 void RenderDocUtil::RenderDocCapturer::Stop() {
@@ -72,7 +73,7 @@ void RenderDocUtil::RenderDocCapturer::Stop() {
   SetCapturePath();
   rdoc->EndFrameCapture(device, nullptr);
   isRecording = false;
-  Log(INFO) << "Renderdoc capture ended";
+  LOG_INFO << "Renderdoc capture ended";
 }
 
 void RenderDocUtil::RenderDocCapturer::LaunchUI() {

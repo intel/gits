@@ -499,17 +499,17 @@ def make_struct_field_log_code(field: Field) -> str:
         result += inspect.cleandoc(f'''
             ;
               if ((Configurator::IsTraceDataOptPresent(TraceData::VK_STRUCTS)){additional_conditions}) {{
-                *this << "{{";
+                record << "{{";
                 for (uint32_t i = 0; i < (uint32_t){count}; ++i) {{
-                  *this << " [" << i << "]:" << {type_cast}c.{field.name}[i];
+                  record << " [" << i << "]:" << {type_cast}c.{field.name}[i];
                 }}
-                *this << " }}";
+                record << " }}";
               }} else {{
-                *this << (void*)c.{field.name};
+                record << (void*)c.{field.name};
               }}
             ''')
         result += '\n'
-        result += '  *this << ", " << '
+        result += '  record << ", " << '
     else:
         result += f' << {type_cast}c.{field.name} << ", " << '
 
@@ -517,7 +517,7 @@ def make_struct_field_log_code(field: Field) -> str:
 
 def make_struct_log_code(fields: list[Field]) -> str:
     """Return C++ code for logging Fields of a VkStruct."""
-    fields_str = '*this << "{" << '
+    fields_str = 'record << "{" << '
 
     field: Field
     for field in fields:
@@ -549,17 +549,17 @@ def make_argument_log_code(argument: Argument, count_is_a_pointer: bool) -> str:
         result += inspect.cleandoc(f'''
             ;
                 if ((Configurator::IsTraceDataOptPresent(TraceData::VK_STRUCTS)){additional_conditions}) {{
-                  VkLog(TRACE, RAW) << "{{";
+                  LOG_TRACE << "{{";
                   for (uint32_t i = 0; i < (uint32_t){dereference}{argument.count}; ++i) {{
-                    VkLog(TRACE, RAW) << " [" << i << "]:" << {type_cast}{argument.name}[i];
+                    LOG_TRACE << " [" << i << "]:" << {type_cast}{argument.name}[i];
                   }}
-                  VkLog(TRACE, RAW) << " }}";
+                  LOG_TRACE << " }}";
                 }} else {{
-                  VkLog(TRACE, RAW) << {argument.name};
+                  LOG_TRACE << {argument.name};
                 }}
             ''')
         result += '\n'
-        result += '    VkLog(TRACE, RAW) << '
+        result += '    LOG_TRACE << '
     else:
         result += f' << {type_cast}{argument.name} << '
 

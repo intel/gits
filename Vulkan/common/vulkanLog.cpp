@@ -10,169 +10,111 @@
 #include "vulkanLog.h"
 #include "vulkanTools_lite.h"
 
-namespace gits {
-namespace Vulkan {
+namespace plog {
 
-CVkLog::CVkLog(LogLevel lvl, LogStyle style) : CLog(lvl, style) {}
-
-CVkLog& CVkLog::operator<<(int32_t c) {
-  _buffer << c;
-  return *this;
-}
-
-CVkLog& CVkLog::operator<<(int64_t c) {
-  _buffer << c;
-  return *this;
-}
-
-CVkLog& CVkLog::operator<<(uint32_t c) {
-  _buffer << c;
-  return *this;
-}
-
-CVkLog& CVkLog::operator<<(uint64_t c) {
-  _buffer << c;
-  return *this;
-}
-
-CVkLog& CVkLog::operator<<(float c) {
-  _buffer << c;
-  return *this;
-}
-
-CVkLog& CVkLog::operator<<(double c) {
-  _buffer << c;
-  return *this;
-}
-
-CVkLog& CVkLog::operator<<(const uint32_t* c) {
+Record& operator<<(Record& record, PFN_vkAllocationFunction c) {
   if (c != nullptr) {
-    _buffer << *c;
+    record << (void*)c;
   } else {
-    _buffer << "0";
+    record << "0";
   }
-  return *this;
+  return record;
 }
 
-CVkLog& CVkLog::operator<<(const char* c) {
+Record& operator<<(Record& record, PFN_vkReallocationFunction c) {
   if (c != nullptr) {
-    _buffer << c;
+    record << (void*)c;
   } else {
-    _buffer << "0";
+    record << "0";
   }
-  return *this;
+  return record;
 }
 
-CVkLog& CVkLog::operator<<(const void* c) {
+Record& operator<<(Record& record, PFN_vkDebugReportCallbackEXT c) {
   if (c != nullptr) {
-    _buffer << c;
+    record << (void*)c;
   } else {
-    _buffer << "0";
+    record << "0";
   }
-  return *this;
+  return record;
 }
 
-CVkLog& CVkLog::operator<<(PFN_vkAllocationFunction c) {
+Record& operator<<(Record& record, PFN_vkFreeFunction c) {
   if (c != nullptr) {
-    _buffer << (void*)c;
+    record << (void*)c;
   } else {
-    _buffer << "0";
+    record << "0";
   }
-  return *this;
+  return record;
 }
 
-CVkLog& CVkLog::operator<<(PFN_vkReallocationFunction c) {
+Record& operator<<(Record& record, PFN_vkInternalAllocationNotification c) {
   if (c != nullptr) {
-    _buffer << (void*)c;
+    record << (void*)c;
   } else {
-    _buffer << "0";
+    record << "0";
   }
-  return *this;
+  return record;
 }
 
-CVkLog& CVkLog::operator<<(PFN_vkDebugReportCallbackEXT c) {
+Record& operator<<(Record& record, PFN_vkDebugUtilsMessengerCallbackEXT c) {
   if (c != nullptr) {
-    _buffer << (void*)c;
+    record << (void*)c;
   } else {
-    _buffer << "0";
+    record << "0";
   }
-  return *this;
+  return record;
 }
 
-CVkLog& CVkLog::operator<<(PFN_vkFreeFunction c) {
+Record& operator<<(Record& record, PFN_vkDeviceMemoryReportCallbackEXT c) {
   if (c != nullptr) {
-    _buffer << (void*)c;
+    record << (void*)c;
   } else {
-    _buffer << "0";
+    record << "0";
   }
-  return *this;
+  return record;
 }
 
-CVkLog& CVkLog::operator<<(PFN_vkInternalAllocationNotification c) {
+Record& operator<<(Record& record, PFN_vkFaultCallbackFunction c) {
   if (c != nullptr) {
-    _buffer << (void*)c;
+    record << (void*)c;
   } else {
-    _buffer << "0";
+    record << "0";
   }
-  return *this;
+  return record;
 }
 
-CVkLog& CVkLog::operator<<(PFN_vkDebugUtilsMessengerCallbackEXT c) {
+Record& operator<<(Record& record, PFN_vkVoidFunction c) {
   if (c != nullptr) {
-    _buffer << (void*)c;
+    record << (void*)c;
   } else {
-    _buffer << "0";
+    record << "0";
   }
-  return *this;
+  return record;
 }
 
-CVkLog& CVkLog::operator<<(PFN_vkDeviceMemoryReportCallbackEXT c) {
+Record& operator<<(Record& record, PFN_vkGetInstanceProcAddr c) {
   if (c != nullptr) {
-    _buffer << (void*)c;
+    record << (void*)c;
   } else {
-    _buffer << "0";
+    record << "0";
   }
-  return *this;
+  return record;
 }
 
-CVkLog& CVkLog::operator<<(PFN_vkFaultCallbackFunction c) {
+Record& operator<<(Record& record, PFN_vkGetDeviceProcAddr c) {
   if (c != nullptr) {
-    _buffer << (void*)c;
+    record << (void*)c;
   } else {
-    _buffer << "0";
+    record << "0";
   }
-  return *this;
+  return record;
 }
 
-CVkLog& CVkLog::operator<<(PFN_vkVoidFunction c) {
-  if (c != nullptr) {
-    _buffer << (void*)c;
-  } else {
-    _buffer << "0";
-  }
-  return *this;
-}
+Record& operator<<(Record& record, PNextPointerTypeTag pNext) {
+  using namespace gits;
 
-CVkLog& CVkLog::operator<<(PFN_vkGetInstanceProcAddr c) {
-  if (c != nullptr) {
-    _buffer << (void*)c;
-  } else {
-    _buffer << "0";
-  }
-  return *this;
-}
-
-CVkLog& CVkLog::operator<<(PFN_vkGetDeviceProcAddr c) {
-  if (c != nullptr) {
-    _buffer << (void*)c;
-  } else {
-    _buffer << "0";
-  }
-  return *this;
-}
-
-CVkLog& CVkLog::operator<<(PNextPointerTypeTag pNext) {
-  pNext = (PNextPointerTypeTag)ignoreLoaderSpecificStructureTypes(pNext);
+  pNext = (PNextPointerTypeTag)gits::Vulkan::ignoreLoaderSpecificStructureTypes(pNext);
 
   if (pNext != nullptr) {
     if (Configurator::IsTraceDataOptPresent(TraceData::VK_STRUCTS)) {
@@ -181,31 +123,22 @@ CVkLog& CVkLog::operator<<(PNextPointerTypeTag pNext) {
 
 #define PNEXT_WRAPPER(STRUCTURE_TYPE, structure, ...)                                              \
   case STRUCTURE_TYPE:                                                                             \
-    *this << *(const structure*)pNext;                                                             \
+    record << *(const structure*)pNext;                                                            \
     break;
 
 #include "vulkanPNextWrappers.inl"
 
       default:
-        _buffer << (const void*)pNext;
+        record << (const void*)pNext;
         break;
       }
     } else {
-      _buffer << (const void*)pNext;
+      record << (const void*)pNext;
     }
   } else {
-    _buffer << "0";
+    record << "0";
   }
-  return *this;
+  return record;
 }
 
-#if !defined GITS_PLATFORM_X11 || defined GITS_ARCH_X86
-// On Linux x64 and ARM, unsigned long is the same as uint64_t and it causes a redefinition error.
-CVkLog& CVkLog::operator<<(unsigned long c) {
-  _buffer << c;
-  return *this;
-}
-#endif
-
-} // namespace Vulkan
-} // namespace gits
+} // namespace plog

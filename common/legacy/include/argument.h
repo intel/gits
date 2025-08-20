@@ -16,6 +16,7 @@
 #pragma once
 
 #include "log.h"
+#include "log2.h"
 #include "gits.h"
 #include "apis_iface.h"
 #include "exception.h"

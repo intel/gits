@@ -34,7 +34,7 @@ namespace Vulkan {
 using std::uint64_t;
 
 NOINLINE void LogFunctionBeforeContext(const char* func) {
-  Log(WARN) << "Function " << func << " called before any context creation";
+  LOG_WARNING << "Function " << func << " called before any context creation";
 }
 
 //==========================================================================================================//
@@ -270,9 +270,11 @@ void checkReturnValue<PFN_vkVoidFunction>(const char*, PFN_vkVoidFunction) {}
     const Configuration& gits_cfg = Configurator::Get();                                           \
     bool doTrace = ShouldLog(LogLevel::TRACE);                                                     \
     if (doTrace) {                                                                                 \
-      if (Configurator::IsTraceDataOptPresent(TraceData::FRAME_NUMBER))                            \
-        Log(TRACE, RAW) << "Frame: " << CGits::Instance().CurrentFrame() << " ";                   \
-      Log(TRACE, NO_NEWLINE) << #function_name;                                                    \
+      LOG_FORMAT_RAW                                                                               \
+      if (Configurator::IsTraceDataOptPresent(TraceData::FRAME_NUMBER)) {                          \
+        LOG_TRACE << "Frame: " << CGits::Instance().CurrentFrame() << " ";                         \
+      }                                                                                            \
+      LOG_TRACE << #function_name;                                                                 \
     }                                                                                              \
     return_type gits_ret = (return_type)0;                                                         \
     bool call_shd = true;                                                                          \
@@ -311,7 +313,8 @@ NOINLINE bool UseSpecial(const char*) {
   return_type STDCALL special_##function_name function_arguments {                                 \
     bool doTrace = ShouldLog(LogLevel::TRACE);                                                     \
     if (doTrace) {                                                                                 \
-      Log(TRACE, NO_NEWLINE) << #function_name;                                                    \
+      LOG_FORMAT_RAW                                                                               \
+      LOG_TRACE << #function_name;                                                                 \
     }                                                                                              \
     return_type gits_ret = default_##function_name arguments_call;                                 \
     if (doTrace) {                                                                                 \
@@ -376,7 +379,7 @@ CVkDriver::~CVkDriver() {
 void CVkDriver::Initialize() {
   CALL_ONCE[&] {
     Configurator::Get();
-    Log(INFO) << "Initializing Vulkan API";
+    LOG_INFO << "Initializing Vulkan API";
 
 #define VK_GLOBAL_LEVEL_FUNCTION(return_type, function_name, function_arguments, arguments_call)   \
   if (UseSpecial(#function_name)) {                                                                \
@@ -623,7 +626,7 @@ void CVkDriver::InitializeUnifiedAPI(const VkDeviceCreateInfo* pCreateInfo,
 
 void CVkDriver::Destroy(VkInstance instance, const VkAllocationCallbacks* pAllocator) {
   if (instance == nullptr) {
-    Log(INFO) << "vkDestroyInstance was called on nullptr handle";
+    LOG_INFO << "vkDestroyInstance was called on nullptr handle";
     return;
   }
 
@@ -636,7 +639,7 @@ void CVkDriver::Destroy(VkInstance instance, const VkAllocationCallbacks* pAlloc
 
 void CVkDriver::Destroy(VkDevice device, const VkAllocationCallbacks* pAllocator) {
   if (device == nullptr) {
-    Log(INFO) << "vkDestroyDevice was called on nullptr handle";
+    LOG_INFO << "vkDestroyDevice was called on nullptr handle";
     return;
   }
 

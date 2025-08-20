@@ -31,7 +31,31 @@ This mapping is temporary and will be removed in the future (leaving only the pl
 #include <plog/Log.h>
 
 // Use the main Plog macros for logging
-// LOG_VERBOSE, LOG_DEBUG, LOG_INFO, LOG_WARNING PLOG_WARNING, LOG_ERROR, LOG_FATAL, LOG_NONE
+// LOG_VERBOSE, LOG_DEBUG, LOG_INFO, LOG_WARNING, LOG_ERROR, LOG_FATAL, LOG_NONE
+
+// The LOG_TRACE macro is not defined in Plog
+// For now we map it to LOG_DEBUG since it is not used in the legacy backends that use logging for trace
+#define LOG_TRACE LOG_DEBUG
+
+#include <atomic>
+#include <mutex>
+namespace plog {
+class FormatRawScope {
+public:
+  static bool IsRaw();
+  FormatRawScope();
+  ~FormatRawScope();
+
+private:
+  static std::mutex s_mutex;
+  static std::atomic<bool> s_isRaw;
+  std::lock_guard<std::mutex> lock_;
+};
+} // namespace plog
+
+// This macro is not part of the Plog library and should only be used to help with the transition
+// For now it is only intended to be used for LOG_TRACE
+#define LOG_FORMAT_RAW plog::FormatRawScope formatRawScopeInstance;
 
 namespace gits {
 namespace log {

@@ -164,7 +164,7 @@ public:
     hwnd.AddMapping(win->handle());
     hinstance.AddMapping((xcb_connection_t*)win->native_display());
 #else
-    Log(ERR) << "Vulkan window creation not implemented on this platform.";
+    LOG_ERROR << "Vulkan window creation not implemented on this platform.";
     throw ENotImplemented(EXCEPTION_MESSAGE);
 #endif
   }
@@ -280,7 +280,7 @@ public:
     hwnd.AddMapping(win->handle());
     hinstance.AddMapping((Display*)win->native_display());
 #else
-    Log(ERR) << "Vulkan XLIB window creation not implemented on this platform.";
+    LOG_ERROR << "Vulkan XLIB window creation not implemented on this platform.";
     throw ENotImplemented(EXCEPTION_MESSAGE);
 #endif
   }
@@ -423,7 +423,7 @@ public:
     win->set_position(xpos, ypos);
     win->set_visibility(visible);
 #else
-      Log(ERR) << "Vulkan window updates not implemented on this platform.";
+      LOG_ERROR << "Vulkan window updates not implemented on this platform.";
       throw ENotImplemented(EXCEPTION_MESSAGE);
 #endif
   }

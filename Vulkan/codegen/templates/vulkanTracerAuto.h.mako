@@ -17,12 +17,14 @@ namespace gits {
 
   template<class T>
   void trace_return_value(T r) {
-    VkLog(TRACE, NO_PREFIX) << " = " << r;
+    LOG_FORMAT_RAW
+    LOG_TRACE << " = " << r << "\n";
   }
 
   template<>
   void trace_return_value<void_t>(void_t) {
-    VkLog(TRACE, NO_PREFIX) << "";
+    LOG_FORMAT_RAW
+    LOG_TRACE << "\n";
   }
 
 % for token in vk_functions:
