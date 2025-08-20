@@ -265,7 +265,7 @@ ObjectState* StateTrackingService::getState(unsigned key) {
 void StateTrackingService::restoreReferenceCount() {
   for (auto& it : statesByKey_) {
     ObjectState* state = it.second;
-    if (!state->object || !analyzerResults_.restoreObject(it.first)) {
+    if (!state->object || !state->restored) {
       continue;
     }
     if (it.second->destroyed) {
