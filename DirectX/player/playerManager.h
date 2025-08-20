@@ -90,6 +90,7 @@ public:
   MultithreadedObjectCreationService& getMultithreadedObjectCreationService() {
     return multithreadedObjectCreationService_;
   }
+  void flushMultithreadedShaderCompilation();
   PipelineLibraryService& getPipelineLibraryService() {
     return pipelineLibraryService_;
   }

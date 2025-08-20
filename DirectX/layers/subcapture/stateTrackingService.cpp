@@ -53,6 +53,7 @@ void StateTrackingService::restoreState() {
   commandListService_.restoreCommandLists();
   commandQueueService_.restoreCommandQueues();
   restoreReferenceCount();
+  nvapiGlobalStateService_.finalizeRestore();
   swapChainService_.restoreBackBufferSequence();
   recorder_.record(new CTokenMarker(CToken::ID_INIT_END));
   // one Present after ID_INIT_END to enable PIX first frame capture in gits interactive mode
@@ -698,6 +699,8 @@ void StateTrackingService::restoreD3D12StateObject(ObjectState* state) {
     GITS_ASSERT(itState != statesByKey_.end());
     restoreState(itState->second);
   }
+  nvapiGlobalStateService_.restoreCreatePipelineStateOptionsBeforeCommand(
+      state->creationCommand->key);
   nvapiGlobalStateService_.restoreShaderExtnSlotSpaceBeforeCommand(state->creationCommand->key);
   recorder_.record(createCommandWriter(state->creationCommand.get()));
   for (unsigned key : state->childrenKeys) {
@@ -765,6 +768,12 @@ void StateTrackingService::NvAPIGlobalStateService::decrementInitialize() {
   }
 }
 
+void StateTrackingService::NvAPIGlobalStateService::addSetCreatePipelineStateOptionsCommand(
+    const NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {
+  setCreatePipelineStateOptionsCommands_.push(OrderedCommand{
+      command.key, std::make_unique<NvAPI_D3D12_SetCreatePipelineStateOptionsCommand>(command)});
+}
+
 void StateTrackingService::NvAPIGlobalStateService::addSetNvShaderExtnSlotSpaceCommand(
     const NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
   setNvShaderExtnSlotSpaceCommands_.push(OrderedCommand{
@@ -786,6 +795,18 @@ void StateTrackingService::NvAPIGlobalStateService::restureInitializeCount() {
   }
 }
 
+void StateTrackingService::NvAPIGlobalStateService::restoreCreatePipelineStateOptionsBeforeCommand(
+    unsigned commandKey) {
+  while (!setCreatePipelineStateOptionsCommands_.empty()) {
+    const auto& command = setCreatePipelineStateOptionsCommands_.top();
+    if (command.key >= commandKey) {
+      break;
+    }
+    stateService_.recorder_.record(createCommandWriter(command.command.get()));
+    setCreatePipelineStateOptionsCommands_.pop();
+  }
+}
+
 void StateTrackingService::NvAPIGlobalStateService::restoreShaderExtnSlotSpaceBeforeCommand(
     unsigned commandKey) {
   while (!setNvShaderExtnSlotSpaceCommands_.empty()) {
@@ -795,6 +816,20 @@ void StateTrackingService::NvAPIGlobalStateService::restoreShaderExtnSlotSpaceBe
     }
     stateService_.recorder_.record(createCommandWriter(command.command.get()));
     setNvShaderExtnSlotSpaceCommands_.pop();
+  }
+}
+
+void StateTrackingService::NvAPIGlobalStateService::finalizeRestore() {
+  while (!setNvShaderExtnSlotSpaceCommands_.empty()) {
+    const auto& command = setNvShaderExtnSlotSpaceCommands_.top();
+    stateService_.recorder_.record(createCommandWriter(command.command.get()));
+    setNvShaderExtnSlotSpaceCommands_.pop();
+  }
+
+  while (!setCreatePipelineStateOptionsCommands_.empty()) {
+    const auto& command = setCreatePipelineStateOptionsCommands_.top();
+    stateService_.recorder_.record(createCommandWriter(command.command.get()));
+    setCreatePipelineStateOptionsCommands_.pop();
   }
 }
 

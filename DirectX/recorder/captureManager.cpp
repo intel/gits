@@ -683,6 +683,11 @@ void CaptureManager::interceptNvAPIFunctions() {
         (decltype(NvAPI_Unload)*)nvapiDispatchTable_.nvapi_QueryInterface(
             nvapiFunctionIds_.at("NvAPI_Unload"));
 
+    nvapiDispatchTable_.NvAPI_D3D12_SetCreatePipelineStateOptions =
+        (decltype(NvAPI_D3D12_SetCreatePipelineStateOptions)*)
+            nvapiDispatchTable_.nvapi_QueryInterface(
+                nvapiFunctionIds_.at("NvAPI_D3D12_SetCreatePipelineStateOptions"));
+
     nvapiDispatchTable_.NvAPI_D3D12_SetNvShaderExtnSlotSpace =
         (decltype(NvAPI_D3D12_SetNvShaderExtnSlotSpace)*)nvapiDispatchTable_.nvapi_QueryInterface(
             nvapiFunctionIds_.at("NvAPI_D3D12_SetNvShaderExtnSlotSpace"));
@@ -739,6 +744,10 @@ void CaptureManager::interceptNvAPIFunctions() {
 
   ret = DetourAttach(&nvapiDispatchTable_.NvAPI_D3D12_SetNvShaderExtnSlotSpace,
                      NvAPI_D3D12_SetNvShaderExtnSlotSpaceWrapper);
+  GITS_ASSERT(ret == NO_ERROR);
+
+  ret = DetourAttach(&nvapiDispatchTable_.NvAPI_D3D12_SetCreatePipelineStateOptions,
+                     NvAPI_D3D12_SetCreatePipelineStateOptionsWrapper);
   GITS_ASSERT(ret == NO_ERROR);
 
   ret = DetourAttach(&nvapiDispatchTable_.NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread,

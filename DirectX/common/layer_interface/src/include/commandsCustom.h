@@ -28,6 +28,11 @@ struct INTC_D3D12_COMMAND_QUEUE_DESC_0001;
 struct INTC_D3D12_HEAP_DESC;
 
 typedef enum _NvAPI_Status NvAPI_Status;
+typedef unsigned long NvU32;
+typedef struct _NVAPI_D3D12_SET_CREATE_PIPELINE_STATE_OPTIONS_PARAMS_V1
+    NVAPI_D3D12_SET_CREATE_PIPELINE_STATE_OPTIONS_PARAMS_V1;
+typedef NVAPI_D3D12_SET_CREATE_PIPELINE_STATE_OPTIONS_PARAMS_V1
+    NVAPI_D3D12_SET_CREATE_PIPELINE_STATE_OPTIONS_PARAMS;
 typedef struct _NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS_V1
     NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS_V1;
 typedef NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS_V1
@@ -40,7 +45,6 @@ typedef struct _NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS
     NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS_V1;
 typedef NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS_V1
     NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS;
-typedef unsigned long NvU32;
 
 namespace gits {
 namespace DirectX {
@@ -684,6 +688,24 @@ public:
   NvAPI_UnloadCommand() : Command(CommandId::ID_NVAPI_UNLOAD) {}
 
 public:
+  Argument<NvAPI_Status> result_{};
+};
+
+class NvAPI_D3D12_SetCreatePipelineStateOptionsCommand : public Command {
+public:
+  NvAPI_D3D12_SetCreatePipelineStateOptionsCommand(
+      unsigned threadId,
+      ID3D12Device5* pDevice,
+      const NVAPI_D3D12_SET_CREATE_PIPELINE_STATE_OPTIONS_PARAMS* pState)
+      : Command{CommandId::ID_NVAPI_D3D12_SETCREATEPIPELINESTATEOPTIONS, threadId},
+        pDevice_{pDevice},
+        pState_{pState} {}
+  NvAPI_D3D12_SetCreatePipelineStateOptionsCommand()
+      : Command(CommandId::ID_NVAPI_D3D12_SETCREATEPIPELINESTATEOPTIONS) {}
+
+public:
+  InterfaceArgument<ID3D12Device5> pDevice_{};
+  PointerArgument<NVAPI_D3D12_SET_CREATE_PIPELINE_STATE_OPTIONS_PARAMS> pState_{};
   Argument<NvAPI_Status> result_{};
 };
 

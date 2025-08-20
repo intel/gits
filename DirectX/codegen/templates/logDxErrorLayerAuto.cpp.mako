@@ -222,6 +222,16 @@ void LogDxErrorLayer::post(NvAPI_UnloadCommand& command) {
   }
 }
 
+void LogDxErrorLayer::pre(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {
+  preResultNvAPI_ = command.result_.value;
+}
+
+void LogDxErrorLayer::post(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {
+  if (isFailureNvAPI(command.result_.value)) {
+    LOG_ERROR << callKeyToStr(command.key) << " NvAPI_D3D12_SetCreatePipelineStateOptionsCommand failed " << printResult(command.result_.value);
+  }
+}
+
 void LogDxErrorLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
   preResultNvAPI_ = command.result_.value;
 }

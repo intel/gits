@@ -157,6 +157,7 @@ public:
   void pre(INTC_D3D12_SetFeatureSupportCommand& command) override;
   void pre(INTC_D3D12_SetApplicationInfoCommand& command) override;
   void pre(INTC_D3D12_GetSupportedVersionsCommand& command) override;
+  void pre(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) override;
   void pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) override;
   void pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command) override;
   void pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) override;

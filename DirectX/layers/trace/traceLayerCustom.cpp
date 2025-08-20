@@ -638,6 +638,26 @@ void TraceLayer::post(NvAPI_UnloadCommand& command) {
   }
 }
 
+void TraceLayer::pre(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {
+  if (printPre_) {
+    CommandPrinter p(streamPre_, statePre_, command, "NvAPI_D3D12_SetCreatePipelineStateOptions");
+    p.addArgument(command.pDevice_);
+    p.addArgument(command.pState_);
+    p.addResult(command.result_);
+    p.print(flush_);
+  }
+}
+
+void TraceLayer::post(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {
+  if (printPost_) {
+    CommandPrinter p(streamPost_, statePost_, command, "NvAPI_D3D12_SetCreatePipelineStateOptions");
+    p.addArgument(command.pDevice_);
+    p.addArgument(command.pState_);
+    p.addResult(command.result_);
+    p.print(flush_);
+  }
+}
+
 void TraceLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
   if (printPre_) {
     CommandPrinter p(streamPre_, statePre_, command, "NvAPI_D3D12_SetNvShaderExtnSlotSpace");

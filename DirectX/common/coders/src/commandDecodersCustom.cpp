@@ -248,6 +248,15 @@ void decode(char* src, NvAPI_UnloadCommand& command) {
   decode(src, offset, command.result_);
 }
 
+void decode(char* src, NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {
+  unsigned offset = 0;
+  decode(src, offset, command.key);
+  decode(src, offset, command.threadId);
+  decode(src, offset, command.pDevice_);
+  decode(src, offset, command.pState_);
+  decode(src, offset, command.result_);
+}
+
 void decode(char* src, NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
   unsigned offset = 0;
   decode(src, offset, command.key);

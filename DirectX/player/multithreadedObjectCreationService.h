@@ -36,6 +36,7 @@ public:
   void addDependency(unsigned providerKey, unsigned consumerKey);
   std::vector<unsigned> collectConsumers(unsigned providerKey);
   std::optional<ObjectCreationOutput> complete(unsigned objectKey);
+  std::vector<std::pair<unsigned, ObjectCreationOutput>> completeAll();
   bool scheduleUpdateRefCount(unsigned objectKey, int count);
 
 private:

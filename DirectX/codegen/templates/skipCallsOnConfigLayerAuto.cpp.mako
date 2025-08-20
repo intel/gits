@@ -168,6 +168,13 @@ void SkipCallsOnConfigLayer::pre(NvAPI_UnloadCommand& command) {
   }
 }
 
+void SkipCallsOnConfigLayer::pre(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {
+  if (configKeySet_.contains(command.key)) {
+    command.skip = true;
+    LOG_INFO << "[SKIPPED] call " << callKeyToStr(command.key) << " NvAPI_D3D12_SetCreatePipelineStateOptionsCommand";
+  }
+}
+
 void SkipCallsOnConfigLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
   if (configKeySet_.contains(command.key)) {
     command.skip = true;

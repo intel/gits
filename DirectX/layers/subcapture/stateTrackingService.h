@@ -108,12 +108,16 @@ public:
     NvAPIGlobalStateService(StateTrackingService& stateService) : stateService_(stateService) {}
     void incrementInitialize();
     void decrementInitialize();
+    void addSetCreatePipelineStateOptionsCommand(
+        const NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command);
     void addSetNvShaderExtnSlotSpaceCommand(
         const NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command);
     void addSetNvShaderExtnSlotSpaceLocalThreadCommand(
         const NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& command);
     void restureInitializeCount();
+    void restoreCreatePipelineStateOptionsBeforeCommand(unsigned commandKey);
     void restoreShaderExtnSlotSpaceBeforeCommand(unsigned commandKey);
+    void finalizeRestore();
 
   private:
     struct OrderedCommand {
@@ -129,6 +133,8 @@ public:
 
     StateTrackingService& stateService_;
     unsigned nvapiInitializeCount_{};
+    std::priority_queue<OrderedCommand, std::vector<OrderedCommand>, CompareCommand>
+        setCreatePipelineStateOptionsCommands_;
     std::priority_queue<OrderedCommand, std::vector<OrderedCommand>, CompareCommand>
         setNvShaderExtnSlotSpaceCommands_;
   };

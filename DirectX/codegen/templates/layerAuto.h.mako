@@ -120,6 +120,9 @@ public:
   virtual void pre(NvAPI_UnloadCommand& command) {}
   virtual void post(NvAPI_UnloadCommand& command) {}
 
+  virtual void pre(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {}
+  virtual void post(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {}
+
   virtual void pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {}
   virtual void post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {}
   

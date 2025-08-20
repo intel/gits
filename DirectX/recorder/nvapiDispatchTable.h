@@ -17,6 +17,7 @@ struct NvAPIDispatchTable {
   void* (*nvapi_QueryInterface)(unsigned int);
   decltype(NvAPI_Initialize)* NvAPI_Initialize;
   decltype(NvAPI_Unload)* NvAPI_Unload;
+  decltype(NvAPI_D3D12_SetCreatePipelineStateOptions)* NvAPI_D3D12_SetCreatePipelineStateOptions;
   decltype(NvAPI_D3D12_SetNvShaderExtnSlotSpace)* NvAPI_D3D12_SetNvShaderExtnSlotSpace;
   decltype(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread)*
       NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread;

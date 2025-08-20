@@ -248,6 +248,18 @@ PlayerManager::PlayerManager() {
         << postLayers_.size() << " post-layers";
 }
 
+void PlayerManager::flushMultithreadedShaderCompilation() {
+  const auto& results = multithreadedObjectCreationService_.completeAll();
+
+  for (const auto& [key, output] : results) {
+    if (output.result != S_OK) {
+      continue;
+    }
+
+    addObject(key, static_cast<IUnknown*>(output.object));
+  }
+}
+
 void PlayerManager::addObject(unsigned objectKey, IUnknown* object) {
   objects_[objectKey] = object;
   if (objectUsageNotifier_) {

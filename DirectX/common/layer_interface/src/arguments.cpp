@@ -8,7 +8,6 @@
 
 #include "arguments.h"
 #include "intelExtensions.h"
-#include "nvapi.h"
 #include <d3dx12/d3dx12_pipeline_state_stream.h>
 
 namespace gits {

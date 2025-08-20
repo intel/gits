@@ -117,6 +117,18 @@ MultithreadedObjectCreationService::complete(unsigned objectKey) {
   }
 }
 
+std::vector<std::pair<unsigned, MultithreadedObjectCreationService::ObjectCreationOutput>>
+MultithreadedObjectCreationService::completeAll() {
+  std::vector<std::pair<unsigned, ObjectCreationOutput>> results;
+  while (!tasks_.empty()) {
+    unsigned key = tasks_.begin()->first;
+    auto creationOutput = complete(key);
+    GITS_ASSERT(creationOutput.has_value());
+    results.emplace_back(key, creationOutput.value());
+  }
+  return results;
+}
+
 bool MultithreadedObjectCreationService::scheduleUpdateRefCount(unsigned objectKey, int count) {
   std::lock_guard<std::mutex> guard(mutex_);
 

@@ -2829,6 +2829,16 @@ void StateTrackingLayer::post(NvAPI_UnloadCommand& c) {
   stateService_.getNvAPIGlobalStateService().decrementInitialize();
 }
 
+void StateTrackingLayer::post(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  if (c.result_.value != NVAPI_OK) {
+    return;
+  }
+  stateService_.getNvAPIGlobalStateService().addSetCreatePipelineStateOptionsCommand(c);
+}
+
 void StateTrackingLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& c) {
   if (stateRestored_) {
     return;

@@ -85,6 +85,38 @@ NvAPI_Status NvAPI_UnloadWrapper() {
   return result;
 }
 
+NvAPI_Status NvAPI_D3D12_SetCreatePipelineStateOptionsWrapper(
+    ID3D12Device5* pDevice, const NVAPI_D3D12_SET_CREATE_PIPELINE_STATE_OPTIONS_PARAMS* pState) {
+  NvAPI_Status result{};
+
+  auto& manager = CaptureManager::get();
+  if (auto atTopOfStack = AtTopOfStackLocal()) {
+    GITS_ASSERT(pState->version == NVAPI_D3D12_SET_CREATE_PIPELINE_STATE_OPTIONS_PARAMS_VER);
+
+    NvAPI_D3D12_SetCreatePipelineStateOptionsCommand command(GetCurrentThreadId(), pDevice, pState);
+
+    updateInterface(command.pDevice_, pDevice);
+    for (Layer* layer : manager.getPreLayers()) {
+      layer->pre(command);
+    }
+
+    command.key = manager.createCommandKey();
+    if (!command.skip) {
+      result = manager.getNvAPIDispatchTable().NvAPI_D3D12_SetCreatePipelineStateOptions(pDevice,
+                                                                                         pState);
+    }
+    command.result_.value = result;
+    for (Layer* layer : manager.getPostLayers()) {
+      layer->post(command);
+    }
+  } else {
+    result =
+        manager.getNvAPIDispatchTable().NvAPI_D3D12_SetCreatePipelineStateOptions(pDevice, pState);
+  }
+
+  return result;
+}
+
 NvAPI_Status NvAPI_D3D12_SetNvShaderExtnSlotSpaceWrapper(IUnknown* pDev,
                                                          NvU32 uavSlot,
                                                          NvU32 uavSpace) {

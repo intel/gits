@@ -371,6 +371,20 @@ void encode(const NvAPI_UnloadCommand& command, char* dest) {
   encode(dest, offset, command.result_);
 }
 
+unsigned getSize(const NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {
+  return getSize(command.key) + getSize(command.threadId) + getSize(command.pDevice_) +
+         getSize(command.pState_) + getSize(command.result_);
+}
+
+void encode(const NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command, char* dest) {
+  unsigned offset = 0;
+  encode(dest, offset, command.key);
+  encode(dest, offset, command.threadId);
+  encode(dest, offset, command.pDevice_);
+  encode(dest, offset, command.pState_);
+  encode(dest, offset, command.result_);
+}
+
 unsigned getSize(const NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
   return getSize(command.key) + getSize(command.threadId) + getSize(command.pDev_) +
          getSize(command.uavSlot_) + getSize(command.uavSpace_) + getSize(command.result_);

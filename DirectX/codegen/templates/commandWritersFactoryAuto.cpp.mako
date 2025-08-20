@@ -64,6 +64,8 @@ CommandWriter* createCommandWriter(Command* command) {
     return new NvAPI_InitializeWriter(*static_cast<NvAPI_InitializeCommand*>(command));
   case CommandId::ID_NVAPI_UNLOAD:
     return new NvAPI_UnloadWriter(*static_cast<NvAPI_UnloadCommand*>(command));
+  case CommandId::ID_NVAPI_D3D12_SETCREATEPIPELINESTATEOPTIONS:
+    return new NvAPI_D3D12_SetCreatePipelineStateOptionsWriter(*static_cast<NvAPI_D3D12_SetCreatePipelineStateOptionsCommand*>(command));
   case CommandId::ID_NVAPI_D3D12_SETNVSHADEREXTNSLOTSPACE:
     return new NvAPI_D3D12_SetNvShaderExtnSlotSpaceWriter(*static_cast<NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand*>(command));
   case CommandId::ID_NVAPI_D3D12_SETNVSHADEREXTNSLOTSPACELOCALTHREAD:

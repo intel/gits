@@ -462,6 +462,25 @@ void NvAPI_UnloadPlayer::Run() {
   }
 }
 
+void NvAPI_D3D12_SetCreatePipelineStateOptionsPlayer::Run() {
+  auto& manager = PlayerManager::get();
+
+  updateInterface(manager, command.pDevice_);
+
+  for (Layer* layer : manager.getPreLayers()) {
+    layer->pre(command);
+  }
+
+  if (manager.executeCommands() && command.result_.value == NVAPI_OK && !command.skip) {
+    command.result_.value =
+        NvAPI_D3D12_SetCreatePipelineStateOptions(command.pDevice_.value, command.pState_.value);
+  }
+
+  for (Layer* layer : manager.getPostLayers()) {
+    layer->post(command);
+  }
+}
+
 void NvAPI_D3D12_SetNvShaderExtnSlotSpacePlayer::Run() {
   auto& manager = PlayerManager::get();
 

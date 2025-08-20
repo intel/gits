@@ -92,6 +92,10 @@ void EncoderLayer::post(NvAPI_UnloadCommand& command) {
   recorder_.record(command.key, new NvAPI_UnloadWriter(command));
 }
 
+void EncoderLayer::post(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {
+  recorder_.record(command.key, new NvAPI_D3D12_SetCreatePipelineStateOptionsWriter(command));
+}
+
 void EncoderLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
   recorder_.record(command.key, new NvAPI_D3D12_SetNvShaderExtnSlotSpaceWriter(command));
 }

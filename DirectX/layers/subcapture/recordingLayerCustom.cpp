@@ -195,6 +195,12 @@ void RecordingLayer::post(NvAPI_UnloadCommand& command) {
   }
 }
 
+void RecordingLayer::post(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) {
+  if (subcaptureRange_.inRange()) {
+    recorder_.record(new NvAPI_D3D12_SetCreatePipelineStateOptionsWriter(command));
+  }
+}
+
 void RecordingLayer::post(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) {
   if (subcaptureRange_.inRange()) {
     recorder_.record(new NvAPI_D3D12_SetNvShaderExtnSlotSpaceWriter(command));

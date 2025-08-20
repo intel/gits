@@ -464,6 +464,25 @@ private:
   NvAPI_UnloadCommand command;
 };
 
+class NvAPI_D3D12_SetCreatePipelineStateOptionsPlayer : public CommandPlayer {
+public:
+  unsigned Id() const override {
+    return static_cast<unsigned>(CommandId::ID_NVAPI_D3D12_SETCREATEPIPELINESTATEOPTIONS);
+  }
+  const char* Name() const override {
+    return "NvAPI_D3D12_SetCreatePipelineStateOptions";
+  }
+  void Run() override;
+
+protected:
+  void decodeCommand() override {
+    decode(data_.get(), command);
+  }
+
+private:
+  NvAPI_D3D12_SetCreatePipelineStateOptionsCommand command;
+};
+
 class NvAPI_D3D12_SetNvShaderExtnSlotSpacePlayer : public CommandPlayer {
 public:
   unsigned Id() const override {
