@@ -56,6 +56,8 @@ public:
   void post(ID3D12Device5CreateStateObjectCommand& c) override;
   void pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) override;
   void pre(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) override;
+  void pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) override;
+  void pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) override;
   void pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) override;
   void pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) override;
   void pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) override;
@@ -75,6 +77,8 @@ public:
   void post(xessD3D12CreateContextCommand& c) override;
   void post(INTC_D3D12_CreateDeviceExtensionContextCommand& c) override;
   void post(INTC_D3D12_CreateDeviceExtensionContext1Command& c) override;
+  void post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) override;
+  void post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) override;
   %for interface in interfaces:
   %for function in interface.functions:
   %if interface.name.startswith('ID3D12GraphicsCommandList') and not function.name.startswith('SetName'):

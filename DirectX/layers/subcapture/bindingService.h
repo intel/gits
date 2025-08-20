@@ -82,6 +82,9 @@ public:
       ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
   void copyRaytracingAccelerationStructure(
       ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c);
+  void nvapiBuildAccelerationStructureEx(
+      NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c);
+  void nvapiBuildOpacityMicromapArray(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c);
   void dispatchRays(ID3D12GraphicsCommandList4DispatchRaysCommand& c);
   void executeIndirect(ID3D12GraphicsCommandListExecuteIndirectCommand& c);
   void writeBufferImmediate(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c);
@@ -119,6 +122,8 @@ private:
       ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
   void copyRaytracingAccelerationStructureImpl(
       ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c);
+  void nvapiBuildAccelerationStructureExImpl(
+      NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c);
   void dispatchRaysImpl(ID3D12GraphicsCommandList4DispatchRaysCommand& c);
   void executeIndirectImpl(ID3D12GraphicsCommandListExecuteIndirectCommand& c);
   void writeBufferImmediateImpl(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c);

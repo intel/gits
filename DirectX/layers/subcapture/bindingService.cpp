@@ -10,6 +10,8 @@
 #include "analyzerService.h"
 #include "rootSignatureService.h"
 #include "gits.h"
+#include "nvapi.h"
+#include "log2.h"
 
 namespace gits {
 namespace DirectX {
@@ -519,10 +521,66 @@ void BindingService::copyRaytracingAccelerationStructure(
   }
 }
 
+void BindingService::nvapiBuildAccelerationStructureEx(
+    NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
+  if (analyzerService_.inRange()) {
+    commandListRestore(c.pCommandList_.key);
+    nvapiBuildAccelerationStructureExImpl(c);
+  } else if (!commandListSubcapture_) {
+    commandsByCommandList_[c.pCommandList_.key].emplace_back(
+        new NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand(c));
+  }
+  if (!analyzerService_.inRange() && restoreTlases_) {
+    if (c.pParams.value->pDesc->inputs.type ==
+        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+      LOG_ERROR << "NvAPI top level build not handled";
+    }
+  }
+
+  objectsForRestore_.insert(c.pParams.destAccelerationStructureKey);
+  if (c.pParams.sourceAccelerationStructureKey) {
+    objectsForRestore_.insert(c.pParams.sourceAccelerationStructureKey);
+  }
+  if (!(c.pParams.scratchAccelerationStructureKey & Command::stateRestoreKeyMask)) {
+    objectsForRestore_.insert(c.pParams.scratchAccelerationStructureKey);
+  }
+  for (unsigned key : c.pParams.inputKeys) {
+    objectsForRestore_.insert(key);
+  }
+}
+
+void BindingService::nvapiBuildOpacityMicromapArray(
+    NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
+  objectsForRestore_.insert(c.pParams.destOpacityMicromapArrayDataKey);
+  if (c.pParams.inputBufferKey) {
+    objectsForRestore_.insert(c.pParams.inputBufferKey);
+  }
+  if (c.pParams.perOMMDescsKey) {
+    objectsForRestore_.insert(c.pParams.perOMMDescsKey);
+  }
+  if (!(c.pParams.scratchOpacityMicromapArrayDataKey & Command::stateRestoreKeyMask)) {
+    objectsForRestore_.insert(c.pParams.scratchOpacityMicromapArrayDataKey);
+  }
+}
+
 void BindingService::copyRaytracingAccelerationStructureImpl(
     ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
   raytracingService_.addAccelerationStructureSource(c.SourceAccelerationStructureData_.interfaceKey,
                                                     c.SourceAccelerationStructureData_.offset);
+}
+
+void BindingService::nvapiBuildAccelerationStructureExImpl(
+    NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
+  if (c.pParams.value->pDesc->inputs.type ==
+      D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+    LOG_ERROR << "NvAPI top level build not handled";
+  } else if (c.pParams.value->pDesc->inputs.type ==
+             D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
+    if (c.pParams.sourceAccelerationStructureKey) {
+      raytracingService_.addAccelerationStructureSource(
+          c.pParams.sourceAccelerationStructureKey, c.pParams.sourceAccelerationStructureOffset);
+    }
+  }
 }
 
 void BindingService::dispatchRays(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
@@ -708,6 +766,10 @@ void BindingService::commandListRestore(unsigned commandListKey) {
       copyRaytracingAccelerationStructureImpl(
           static_cast<ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand&>(
               *command));
+      break;
+    case CommandId::ID_NVAPI_D3D12_BUILDRAYTRACINGACCELERATIONSTRUCTUREEX:
+      nvapiBuildAccelerationStructureExImpl(
+          static_cast<NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand&>(*command));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST4_DISPATCHRAYS:
       dispatchRaysImpl(static_cast<ID3D12GraphicsCommandList4DispatchRaysCommand&>(*command));

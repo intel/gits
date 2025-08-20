@@ -407,6 +407,18 @@ void AnalyzerLayer::pre(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStru
   }
 }
 
+void AnalyzerLayer::pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
+  if (optimize_ || optimizeRaytracing_) {
+    bindingService_.nvapiBuildAccelerationStructureEx(c);
+  }
+}
+
+void AnalyzerLayer::pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
+  if (optimize_ || optimizeRaytracing_) {
+    bindingService_.nvapiBuildOpacityMicromapArray(c);
+  }
+}
+
 void AnalyzerLayer::pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
   if (optimize_) {
     bindingService_.dispatchRays(c);
@@ -541,6 +553,14 @@ void AnalyzerLayer::post(MappedDataMetaCommand& c) {
   if (optimize_) {
     analyzerService_.mappedDataMeta(c.resource_.key);
   }
+}
+
+void AnalyzerLayer::post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
+  analyzerService_.commandListCommand(c.pCommandList_.key);
+}
+
+void AnalyzerLayer::post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
+  analyzerService_.commandListCommand(c.pCommandList_.key);
 }
 
 void AnalyzerLayer::post(xessD3D12CreateContextCommand& c) {
