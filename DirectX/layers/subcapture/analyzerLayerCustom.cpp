@@ -389,6 +389,15 @@ void AnalyzerLayer::post(ID3D12Device5CreateStateObjectCommand& c) {
   }
 }
 
+void AnalyzerLayer::post(ID3D12Device7AddToStateObjectCommand& c) {
+  if (c.result_.value != S_OK) {
+    return;
+  }
+  if (optimize_) {
+    raytracingService_.addToStateObject(c);
+  }
+}
+
 void AnalyzerLayer::post(ID3D12GraphicsCommandList4SetPipelineState1Command& c) {
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {

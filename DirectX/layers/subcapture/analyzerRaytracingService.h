@@ -31,6 +31,7 @@ public:
                             CapturePlayerDescriptorHandleService& descriptorHandleService,
                             BindingService& bindingService);
   void createStateObject(ID3D12Device5CreateStateObjectCommand& c);
+  void addToStateObject(ID3D12Device7AddToStateObjectCommand& c);
   void buildTlas(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
   void dispatchRays(ID3D12GraphicsCommandList4DispatchRaysCommand& c);
   void dumpBindingTable(ID3D12GraphicsCommandList* commandList,
@@ -72,9 +73,7 @@ public:
     return descriptorService_;
   }
 
-  std::vector<unsigned>& getStateObjectSubobjects(unsigned stateObjectKey) {
-    return stateObjectsSubobjects_[stateObjectKey];
-  }
+  std::set<unsigned> getStateObjectAllSubobjects(unsigned stateObjectKey);
   using KeyOffset = std::pair<unsigned, unsigned>;
   std::vector<KeyOffset>& getBlasesForTlas(unsigned tlasBuildKey) {
     return blasesByTlas_[tlasBuildKey];
@@ -105,7 +104,7 @@ private:
   DescriptorService& descriptorService_;
   BindingService& bindingService_;
 
-  std::unordered_map<unsigned, std::vector<unsigned>> stateObjectsSubobjects_;
+  std::unordered_map<unsigned, std::set<unsigned>> stateObjectsDirectSubobjects_;
   RaytracingInstancesDump instancesDump_;
   BindingTablesDump bindingTablesDump_;
   BlasesByTlas blasesByTlas_;

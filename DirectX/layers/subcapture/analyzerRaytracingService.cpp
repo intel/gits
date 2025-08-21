@@ -11,6 +11,7 @@
 #include "gits.h"
 
 #include <fstream>
+#include <queue>
 
 namespace gits {
 namespace DirectX {
@@ -30,10 +31,18 @@ AnalyzerRaytracingService::AnalyzerRaytracingService(
 }
 
 void AnalyzerRaytracingService::createStateObject(ID3D12Device5CreateStateObjectCommand& c) {
-  std::vector<unsigned>& subobjects = stateObjectsSubobjects_[c.ppStateObject_.key];
+  std::set<unsigned>& subobjects = stateObjectsDirectSubobjects_[c.ppStateObject_.key];
   for (auto& it : c.pDesc_.interfaceKeysBySubobject) {
-    subobjects.push_back(it.second);
+    subobjects.insert(it.second);
   }
+}
+
+void AnalyzerRaytracingService::addToStateObject(ID3D12Device7AddToStateObjectCommand& c) {
+  std::set<unsigned>& subobjects = stateObjectsDirectSubobjects_[c.ppNewStateObject_.key];
+  for (auto& it : c.pAddition_.interfaceKeysBySubobject) {
+    subobjects.insert(it.second);
+  }
+  subobjects.insert(c.pStateObjectToGrowFrom_.key);
 }
 
 void AnalyzerRaytracingService::buildTlas(
@@ -209,6 +218,35 @@ void AnalyzerRaytracingService::fenceSignal(unsigned key, unsigned fenceKey, UIN
 
 void AnalyzerRaytracingService::getGPUVirtualAddress(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
   resourceByKey_[c.object_.key] = c.object_.value;
+}
+
+std::set<unsigned> AnalyzerRaytracingService::getStateObjectAllSubobjects(unsigned stateObjectKey) {
+
+  std::set<unsigned> subobjects;
+  // search the graph of connected subobjects
+  {
+    std::queue<unsigned> subobjectsToProcess;
+    {
+      const auto& directSubobjects = stateObjectsDirectSubobjects_[stateObjectKey];
+      for (unsigned directSubobjectKey : directSubobjects) {
+        subobjectsToProcess.push(directSubobjectKey);
+      }
+    }
+
+    while (!subobjectsToProcess.empty()) {
+      unsigned key = subobjectsToProcess.front();
+      subobjectsToProcess.pop();
+      subobjects.insert(key);
+      const auto& directSubobjects = stateObjectsDirectSubobjects_[key];
+      for (unsigned directSubobjectKey : directSubobjects) {
+        if (subobjects.find(directSubobjectKey) == subobjects.end()) {
+          subobjectsToProcess.push(directSubobjectKey);
+        }
+      }
+    }
+  }
+
+  return subobjects;
 }
 
 void AnalyzerRaytracingService::loadInstancesArraysOfPointers() {

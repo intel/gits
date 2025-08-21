@@ -456,11 +456,17 @@ void BindingService::setPipelineState(ID3D12GraphicsCommandList4SetPipelineState
 }
 
 void BindingService::setPipelineStateImpl(ID3D12GraphicsCommandList4SetPipelineState1Command& c) {
-  std::vector<unsigned>& subobjects =
-      raytracingService_.getStateObjectSubobjects(c.pStateObject_.key);
+  if (checkedStateObjectSubobjects_.find(c.pStateObject_.key) !=
+      checkedStateObjectSubobjects_.end()) {
+    return;
+  }
+
+  const std::set<unsigned> subobjects =
+      raytracingService_.getStateObjectAllSubobjects(c.pStateObject_.key);
   for (unsigned key : subobjects) {
     objectsForRestore_.insert(key);
   }
+  checkedStateObjectSubobjects_.insert(c.pStateObject_.key);
 }
 
 void BindingService::buildRaytracingAccelerationStructure(

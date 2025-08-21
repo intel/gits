@@ -54,6 +54,7 @@ public:
   void post(ID3D12DeviceCreateDescriptorHeapCommand& c) override;
   void post(ID3D12DeviceCreateRootSignatureCommand& c) override;
   void post(ID3D12Device5CreateStateObjectCommand& c) override;
+  void post(ID3D12Device7AddToStateObjectCommand& c) override;
   void pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) override;
   void pre(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) override;
   void pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) override;

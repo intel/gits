@@ -147,6 +147,8 @@ private:
 
   std::unordered_map<unsigned, std::vector<std::unique_ptr<Command>>> commandsByCommandList_;
 
+  std::set<unsigned> checkedStateObjectSubobjects_;
+
   std::unordered_set<unsigned> objectsForRestore_;
   std::set<std::pair<unsigned, unsigned>> descriptors_;
   bool restoreTlases_{};
