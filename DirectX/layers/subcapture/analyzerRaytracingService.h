@@ -22,16 +22,14 @@
 namespace gits {
 namespace DirectX {
 
+class BindingService;
+
 class AnalyzerRaytracingService {
 public:
   AnalyzerRaytracingService(DescriptorService& descriptorService,
                             CapturePlayerGpuAddressService& gpuAddressService,
-                            CapturePlayerDescriptorHandleService& descriptorHandleService)
-      : gpuAddressService_(gpuAddressService),
-        descriptorHandleService_(descriptorHandleService),
-        descriptorService_(descriptorService),
-        instancesDump_(*this),
-        bindingTablesDump_(*this) {}
+                            CapturePlayerDescriptorHandleService& descriptorHandleService,
+                            BindingService& bindingService);
   void createStateObject(ID3D12Device5CreateStateObjectCommand& c);
   void buildTlas(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
   void dispatchRays(ID3D12GraphicsCommandList4DispatchRaysCommand& c);
@@ -99,9 +97,13 @@ public:
   }
 
 private:
+  void loadInstancesArraysOfPointers();
+
+private:
   CapturePlayerGpuAddressService& gpuAddressService_;
   CapturePlayerDescriptorHandleService& descriptorHandleService_;
   DescriptorService& descriptorService_;
+  BindingService& bindingService_;
 
   std::unordered_map<unsigned, std::vector<unsigned>> stateObjectsSubobjects_;
   RaytracingInstancesDump instancesDump_;
@@ -111,6 +113,7 @@ private:
   std::set<KeyOffset> sources_;
   std::unordered_map<unsigned, ID3D12Resource*> resourceByKey_;
   std::unordered_set<unsigned> genericReadResources_;
+  std::unordered_map<unsigned, std::vector<D3D12_GPU_VIRTUAL_ADDRESS>> instancesArraysOfPointers_;
 };
 
 } // namespace DirectX

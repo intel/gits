@@ -27,6 +27,13 @@ public:
                  unsigned size,
                  D3D12_RESOURCE_STATES state,
                  unsigned buildCall);
+  void buildTlasArrayOfPointers(ID3D12GraphicsCommandList* commandList,
+                                ID3D12Resource* resource,
+                                unsigned offset,
+                                unsigned size,
+                                D3D12_RESOURCE_STATES state,
+                                unsigned buildCall,
+                                std::vector<unsigned>& arrayOfPointersOffsets);
   void dumpBuffer(DumpInfo& dumpInfo, void* data) override;
 
 private:
@@ -35,6 +42,7 @@ private:
 
   struct InstancesInfo : DumpInfo {
     unsigned buildCall{};
+    std::vector<unsigned> arrayOfPointersOffsets;
   };
 };
 

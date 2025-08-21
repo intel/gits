@@ -48,7 +48,9 @@ public:
   }
 
   void addObjectForRestore(unsigned key) {
-    objectsForRestore_.insert(key);
+    if (optimize_) {
+      objectsForRestore_.insert(key);
+    }
   }
   void commandListsRestore(const std::set<unsigned>& commandLists);
   void commandListReset(ID3D12GraphicsCommandListResetCommand& c);

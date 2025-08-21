@@ -27,7 +27,8 @@ AnalyzerLayer::AnalyzerLayer(SubcaptureRange& subcaptureRange)
                       raytracingService_,
                       executeIndirectService_,
                       subcaptureRange_.commandListSubcapture()),
-      raytracingService_(descriptorService_, gpuAddressService_, descriptorHandleService_),
+      raytracingService_(
+          descriptorService_, gpuAddressService_, descriptorHandleService_, bindingService_),
       executeIndirectService_(gpuAddressService_, raytracingService_, bindingService_) {
   optimize_ = Configurator::Get().directx.features.subcapture.optimize;
   optimizeRaytracing_ = Configurator::Get().directx.features.subcapture.optimizeRaytracing;
