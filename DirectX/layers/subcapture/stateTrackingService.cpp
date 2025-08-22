@@ -170,6 +170,7 @@ void StateTrackingService::restoreState(ObjectState* state) {
     restoreD3D12INTCDeviceExtensionContext(state);
     break;
   case CommandId::ID_ID3D12DEVICE5_CREATESTATEOBJECT:
+  case CommandId::ID_ID3D12DEVICE7_ADDTOSTATEOBJECT:
     restoreD3D12StateObject(state);
     break;
   default:
@@ -693,15 +694,26 @@ void StateTrackingService::restoreD3D12INTCDeviceExtensionContext(ObjectState* s
 }
 
 void StateTrackingService::restoreD3D12StateObject(ObjectState* state) {
-  auto* command = static_cast<ID3D12Device5CreateStateObjectCommand*>(state->creationCommand.get());
-  for (auto& it : command->pDesc_.interfaceKeysBySubobject) {
-    auto itState = statesByKey_.find(it.second);
-    GITS_ASSERT(itState != statesByKey_.end());
-    restoreState(itState->second);
+  if (state->creationCommand->getId() == CommandId::ID_ID3D12DEVICE5_CREATESTATEOBJECT) {
+    auto* command =
+        static_cast<ID3D12Device5CreateStateObjectCommand*>(state->creationCommand.get());
+    for (auto& it : command->pDesc_.interfaceKeysBySubobject) {
+      auto itState = statesByKey_.find(it.second);
+      GITS_ASSERT(itState != statesByKey_.end());
+      restoreState(itState->second);
+    }
+    nvapiGlobalStateService_.restoreCreatePipelineStateOptionsBeforeCommand(
+        state->creationCommand->key);
+    nvapiGlobalStateService_.restoreShaderExtnSlotSpaceBeforeCommand(state->creationCommand->key);
+  } else if (state->creationCommand->getId() == CommandId::ID_ID3D12DEVICE7_ADDTOSTATEOBJECT) {
+    auto* command =
+        static_cast<ID3D12Device7AddToStateObjectCommand*>(state->creationCommand.get());
+    for (auto& it : command->pAddition_.interfaceKeysBySubobject) {
+      auto itState = statesByKey_.find(it.second);
+      GITS_ASSERT(itState != statesByKey_.end());
+      restoreState(itState->second);
+    }
   }
-  nvapiGlobalStateService_.restoreCreatePipelineStateOptionsBeforeCommand(
-      state->creationCommand->key);
-  nvapiGlobalStateService_.restoreShaderExtnSlotSpaceBeforeCommand(state->creationCommand->key);
   recorder_.record(createCommandWriter(state->creationCommand.get()));
   for (unsigned key : state->childrenKeys) {
     auto it = statesByKey_.find(key);
