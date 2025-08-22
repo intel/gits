@@ -704,9 +704,6 @@ void StateTrackingService::restoreD3D12StateObject(ObjectState* state) {
       GITS_ASSERT(itState != statesByKey_.end());
       restoreState(itState->second);
     }
-    nvapiGlobalStateService_.restoreCreatePipelineStateOptionsBeforeCommand(
-        state->creationCommand->key);
-    nvapiGlobalStateService_.restoreShaderExtnSlotSpaceBeforeCommand(state->creationCommand->key);
   } else if (state->creationCommand->getId() == CommandId::ID_ID3D12DEVICE7_ADDTOSTATEOBJECT) {
     auto* command =
         static_cast<ID3D12Device7AddToStateObjectCommand*>(state->creationCommand.get());
@@ -716,6 +713,9 @@ void StateTrackingService::restoreD3D12StateObject(ObjectState* state) {
       restoreState(itState->second);
     }
   }
+  nvapiGlobalStateService_.restoreCreatePipelineStateOptionsBeforeCommand(
+      state->creationCommand->key);
+  nvapiGlobalStateService_.restoreShaderExtnSlotSpaceBeforeCommand(state->creationCommand->key);
   recorder_.record(createCommandWriter(state->creationCommand.get()));
   for (unsigned key : state->childrenKeys) {
     auto it = statesByKey_.find(key);
