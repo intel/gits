@@ -95,6 +95,7 @@ struct CommandListState : public ObjectState, gits::noncopyable {
   IID iid{};
   std::vector<CommandListCommand*> commands;
   std::vector<unsigned> descriptorHeapKeys{};
+  bool closed{};
 };
 
 class StateTrackingService;

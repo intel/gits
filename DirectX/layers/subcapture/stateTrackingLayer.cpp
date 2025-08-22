@@ -1844,6 +1844,7 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListCloseCommand& c) {
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListCloseWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
+  state->closed = true;
   state->commands.push_back(command);
 }
 

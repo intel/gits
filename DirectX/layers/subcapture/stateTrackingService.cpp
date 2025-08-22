@@ -525,10 +525,12 @@ void StateTrackingService::restoreD3D12CommandList(ObjectState* state) {
 
   recorder_.record(createCommandWriter(state->creationCommand.get()));
 
-  ID3D12GraphicsCommandListCloseCommand close;
-  close.key = getUniqueCommandKey();
-  close.object_.key = state->key;
-  recorder_.record(new ID3D12GraphicsCommandListCloseWriter(close));
+  if (static_cast<CommandListState*>(state)->closed) {
+    ID3D12GraphicsCommandListCloseCommand close;
+    close.key = getUniqueCommandKey();
+    close.object_.key = state->key;
+    recorder_.record(new ID3D12GraphicsCommandListCloseWriter(close));
+  }
 }
 
 void StateTrackingService::restoreD3D12Heap(ObjectState* state) {
