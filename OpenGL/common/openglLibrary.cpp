@@ -89,7 +89,7 @@ void PreSwap() {
     FrameBufferSave(CGits::Instance().CurrentFrame());
   }
 
-  Log(TRACE) << "Frame end. Total drawcalls: " << CGits::Instance().CurrentDrawCount();
+  LOG_TRACE << "Frame end. Total drawcalls: " << CGits::Instance().CurrentDrawCount();
 }
 
 } //namespace OpenGL

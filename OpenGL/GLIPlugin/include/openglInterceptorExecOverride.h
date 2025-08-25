@@ -67,8 +67,8 @@ const GLubyte* execWrap_glGetString(GLenum name) {
       for (const auto& extStr : suprExts) {
         size_t pos = str.find(extStr);
         if (pos != std::string::npos) {
-          Log(WARN) << "Suppressing extension " << extStr
-                    << " by removing it from the available extensions string";
+          LOG_WARNING << "Suppressing extension " << extStr
+                      << " by removing it from the available extensions string";
           if (pos != 0) {
             pos--; //also remove leading space
           }
@@ -89,8 +89,8 @@ const GLubyte* execWrap_glGetStringi(GLenum name, GLuint index) {
   const auto& suprExts = CGitsPlugin::Configuration().opengl.recorder.suppressExtensions;
   if (!suprExts.empty() && name == GL_EXTENSIONS && return_value) {
     if (std::find(suprExts.begin(), suprExts.end(), (const char*)return_value) != suprExts.end()) {
-      Log(WARN) << "Suppressing extension " << return_value
-                << " by returning a string GL_GITS_removed_extension";
+      LOG_WARNING << "Suppressing extension " << return_value
+                  << " by returning a string GL_GITS_removed_extension";
       return_value = (const GLubyte*)"GL_GITS_removed_extension";
     }
   }

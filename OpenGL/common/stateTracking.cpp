@@ -174,7 +174,7 @@ std::vector<uint8_t> gits::OpenGL::GetBufferData(GLenum target, GLintptr offset,
   std::vector<uint8_t> tmpData(size);
   uint8_t* pSrc = (uint8_t*)drv.gl.glMapBufferRange(target, offset, size, GL_MAP_READ_BIT);
   if (pSrc == nullptr) {
-    Log(ERR) << "glMapBufferRange failed, cannot get data from GPU-side buffer.";
+    LOG_ERROR << "glMapBufferRange failed, cannot get data from GPU-side buffer.";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   memcpy(tmpData.data(), pSrc, size);
@@ -189,7 +189,7 @@ std::vector<uint8_t> gits::OpenGL::GetNamedBufferData(GLuint buffer,
   std::vector<uint8_t> tmpData(size);
   uint8_t* pSrc = (uint8_t*)drv.gl.glMapNamedBufferRange(buffer, offset, size, GL_MAP_READ_BIT);
   if (pSrc == nullptr) {
-    Log(ERR) << "glMapNamedBufferRange failed, cannot get data from GPU-side buffer.";
+    LOG_ERROR << "glMapNamedBufferRange failed, cannot get data from GPU-side buffer.";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   memcpy(tmpData.data(), pSrc, size);

@@ -213,8 +213,8 @@ public:
       _array.assign(array, array + 4);
       break;
     default:
-      Log(ERR) << "Cannot create array for '" << Name() << "' and type: '0x" << std::hex << pname
-               << "'!!!";
+      LOG_ERROR << "Cannot create array for '" << Name() << "' and type: '0x" << std::hex << pname
+                << "'!!!";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
   }
@@ -334,8 +334,8 @@ public:
       break;
 
     default:
-      Log(ERR) << "Cannot create array for '" << Name() << "' and target: '0x" << std::hex << target
-               << "'!!!";
+      LOG_ERROR << "Cannot create array for '" << Name() << "' and target: '0x" << std::hex
+                << target << "'!!!";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
   }
@@ -360,8 +360,8 @@ public:
       _array.assign(array, array + uorder * vorder * 4);
       break;
     default:
-      Log(ERR) << "Cannot create array for '" << Name() << "' and target: '0x" << std::hex << target
-               << "'!!!";
+      LOG_ERROR << "Cannot create array for '" << Name() << "' and target: '0x" << std::hex
+                << target << "'!!!";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
   }
@@ -548,8 +548,8 @@ protected:
 class CInvalidArgument {
 public:
   CInvalidArgument() {
-    Log(ERR) << "Unsupported CArgument-derived data type. " << (std::string)EXCEPTION_MESSAGE
-             << std::endl;
+    LOG_ERROR << "Unsupported CArgument-derived data type. " << (std::string)EXCEPTION_MESSAGE
+              << std::endl;
     UNREACHABLE_CODE_WA
     throw ENotSupported(EXCEPTION_MESSAGE);
   }
@@ -1984,8 +1984,8 @@ public:
   GLbitfield operator*() {
     if (((~*_mask) & *_access) != 0) {
       CALL_ONCE[&] {
-        Log(WARN) << "Map access bit mask " << std::hex << *_mask
-                  << " used in recorder has influence on playback.";
+        LOG_WARNING << "Map access bit mask " << std::hex << *_mask
+                    << " used in recorder has influence on playback.";
       };
     }
     return *_access & *_mask;
@@ -2153,8 +2153,8 @@ public:
       GLint params = -1;
       drv.gl.glGetProgramResourceiv(*_program, GL_UNIFORM, index, 1, &prop, 1, &length, &params);
       if (length != 1) {
-        Log(WARN) << "CGLResourceIndex: expected 1 param from glGetProgramResourceiv, got "
-                  << length;
+        LOG_WARNING << "CGLResourceIndex: expected 1 param from glGetProgramResourceiv, got "
+                    << length;
       }
       return static_cast<GLuint>(params);
     } else {
@@ -2189,7 +2189,7 @@ public:
                          "1, &temp_length, &temp_params);\n";
       stream.Indent() << "if (temp_length != 1) {\n";
       stream.ScopeBegin();
-      stream.Indent() << "Log(WARN) << \"CGLResourceIndex: expected 1 param from "
+      stream.Indent() << "LOG_WARNING << \"CGLResourceIndex: expected 1 param from "
                          "glGetProgramResourceiv, got \" << temp_length;\n";
       stream.ScopeEnd();
       stream.Indent() << "}\n\n";

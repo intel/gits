@@ -104,7 +104,7 @@ void CRecorderWrapper::${name}(${params}) const
   GITS_REC_ENTRY_GL
   ${token.recorder_wrap}_RECWRAP(${rec_wrap_args});
 % else:
-  CALL_ONCE [] { Log(WARN) << "function ${name} not implemented"; };
+  CALL_ONCE [] { LOG_WARNING << "function ${name} not implemented"; };
 % endif  # token.enabled and (not) token.recorder_wrap
 }
 

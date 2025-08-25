@@ -78,12 +78,12 @@ inline bool ConditionBufferData(
                forceBuffersStateCaptureAlwaysWA;
   bool skip = false;
   if (size < 0) {
-    Log(WARN) << "Skipping glBufferData - size < 0";
+    LOG_WARNING << "Skipping glBufferData - size < 0";
     skip = true;
   }
 
   if (target == 0) {
-    Log(WARN) << "Skipping glBufferData - target = 0";
+    LOG_WARNING << "Skipping glBufferData - target = 0";
     skip = true;
   }
 
@@ -105,11 +105,11 @@ inline bool ConditionBufferStorage(
                forceBuffersStateCaptureAlwaysWA;
   bool skip = false;
   if (size < 0) {
-    Log(WARN) << "Skipping glBufferStorage - size < 0";
+    LOG_WARNING << "Skipping glBufferStorage - size < 0";
     skip = true;
   }
   if (target == 0) {
-    Log(WARN) << "Skipping glBufferStorage - target = 0";
+    LOG_WARNING << "Skipping glBufferStorage - target = 0";
     skip = true;
   }
 
@@ -129,7 +129,7 @@ inline bool ConditionTexImageES(CRecorder& recorder, GLenum format, GLenum type)
   }
 
   if (format <= 0 || type <= 0) { //WA for Antutu Android Benchmark invalid enums;
-    Log(WARN) << "glTexImage2D call skipped due to invalid enum values.";
+    LOG_WARNING << "glTexImage2D call skipped due to invalid enum values.";
     skip = true;
   }
 

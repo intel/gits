@@ -80,12 +80,12 @@ int CContextStateDynamic::Version() {
 
   const char* ver = (const char*)drv.gl.glGetString(GL_VERSION);
   if (ver == nullptr) {
-    Log(WARN) << "glGetString(GL_VERSION) returned 0";
+    LOG_WARNING << "glGetString(GL_VERSION) returned 0";
     _version = 0;
     return _version;
   }
 
-  Log(INFO) << "Queried context version: " << ver;
+  LOG_INFO << "Queried context version: " << ver;
 
   std::string version;
   std::stringstream str(ver);
@@ -131,7 +131,7 @@ bool CContextStateDynamic::IsEs() {
 
   const char* ver = (const char*)drv.gl.glGetString(GL_VERSION);
   if (ver == nullptr) {
-    Log(WARN) << "glGetString(GL_VERSION) returned 0. Using legacy method.";
+    LOG_WARNING << "glGetString(GL_VERSION) returned 0. Using legacy method.";
     return drv.gl.Api() != CGlDriver::API_GL;
   }
 
@@ -176,7 +176,7 @@ GLint CContextStateDynamic::ProfileMask() {
   drv.gl.glGetIntegerv(GL_CONTEXT_PROFILE_MASK, &_profileMask);
   if (drv.gl.glGetError() != GL_NO_ERROR) {
     CALL_ONCE[&] {
-      Log(WARN) << "GL_CONTEXT_PROFILE_MASK. Error querying profile mask";
+      LOG_WARNING << "GL_CONTEXT_PROFILE_MASK. Error querying profile mask";
     };
     _profileMask = 0;
   }
@@ -224,14 +224,14 @@ std::function<void()> CStateDynamic::CreateCArraysRestorePoint() {
 
 CStateDynamic::CContextStateData* CStateDynamic::GetContextStateData(void* context) {
   if (context == nullptr) {
-    Log(WARN) << "Trying to get state dynamic data from null context";
+    LOG_WARNING << "Trying to get state dynamic data from null context";
     return nullptr;
   }
 
   CContextMap::iterator contextData = _contextMap.find(context);
   if (contextData == _contextMap.end()) {
     CALL_ONCE[] {
-      Log(WARN) << "Trying to get state dynamic data from unknown context";
+      LOG_WARNING << "Trying to get state dynamic data from unknown context";
     };
     return nullptr;
   }
@@ -724,7 +724,7 @@ Window_* CStateDynamicNative::MapFindWindowPlayer(win_handle_t winhandle) {
   if (iter != _winMapPlay.end()) {
     return iter->second;
   } else {
-    Log(ERR) << "Unknown window with handle: " << winhandle;
+    LOG_ERROR << "Unknown window with handle: " << winhandle;
     throw ENotFound(EXCEPTION_MESSAGE);
   }
 }

@@ -48,8 +48,8 @@ void RestoreDisplayListState(CRecorder& recorder);
 
 inline void glDeleteObjectARB_RECWRAP(GLhandleARB obj, CRecorder& recorder) {
   if (SD().GetCurrentContext() == 0) {
-    Log(WARN) << "glDeleteObjectARB called while Current context is 0 - call ommited (workaround "
-                 "for X-plane 10).";
+    LOG_WARNING << "glDeleteObjectARB called while Current context is 0 - call ommited (workaround "
+                   "for X-plane 10).";
     return;
   } else if (Recording(recorder)) {
     recorder.Schedule(new CglDeleteObjectARB(obj));
@@ -123,7 +123,7 @@ inline void glDeleteShader_RECWRAP(GLuint shader, CRecorder& recorder) {
   CGLSLShaderStateObj* shaderStateObjPtr =
       SD().GetCurrentSharedStateData().GLSLShaders().Get(shader);
   if (shaderStateObjPtr == 0) {
-    Log(WARN) << "Deleted shader object: " << shader << " was not found. Ignoring function";
+    LOG_WARNING << "Deleted shader object: " << shader << " was not found. Ignoring function";
     return;
   }
 
@@ -145,8 +145,8 @@ inline void glBindFramebuffer_RECWRAP(GLenum target, GLuint framebuffer, CRecord
   glBindFramebuffer_SD(target, framebuffer, Recording(recorder));
   if (!SD().GetCurrentContextStateData().FramebuffersEXT().List().empty()) {
     CALL_ONCE[] {
-      Log(WARN) << "Mixed Framebuffers calls (EXT and Core). Consider enabling "
-                   "ScheduleFboEXTAsCoreWA in recorder config.";
+      LOG_WARNING << "Mixed Framebuffers calls (EXT and Core). Consider enabling "
+                     "ScheduleFboEXTAsCoreWA in recorder config.";
     };
   }
 }
@@ -162,8 +162,8 @@ inline void glBindFramebufferEXT_RECWRAP(GLenum target, GLuint framebuffer, CRec
     glBindFramebufferEXT_SD(target, framebuffer, Recording(recorder));
     if (!SD().GetCurrentContextStateData().Framebuffers().List().empty()) {
       CALL_ONCE[] {
-        Log(WARN) << "Mixed Framebuffers calls (EXT and Core). Consider enabling "
-                     "ScheduleFboEXTAsCoreWA in recorder config.";
+        LOG_WARNING << "Mixed Framebuffers calls (EXT and Core). Consider enabling "
+                       "ScheduleFboEXTAsCoreWA in recorder config.";
       };
     }
   }
@@ -177,8 +177,8 @@ inline void glBindFramebufferOES_RECWRAP(GLenum target, GLuint framebuffer, CRec
   glBindFramebufferEXT_SD(target, framebuffer, Recording(recorder));
   if (!SD().GetCurrentContextStateData().Framebuffers().List().empty()) {
     CALL_ONCE[] {
-      Log(WARN) << "Mixed Framebuffers calls (EXT and Core). Consider enabling "
-                   "ScheduleFboEXTAsCoreWA in recorder config.";
+      LOG_WARNING << "Mixed Framebuffers calls (EXT and Core). Consider enabling "
+                     "ScheduleFboEXTAsCoreWA in recorder config.";
     };
   }
 }

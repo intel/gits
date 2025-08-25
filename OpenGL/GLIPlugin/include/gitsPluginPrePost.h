@@ -53,7 +53,7 @@ void post_gits_wrapper();
   static bool logged = false;                                                                      \
   if (!logged) {                                                                                   \
     logged = true;                                                                                 \
-    Log(WARN) << "Not supported function: " << __FUNCTION__;                                       \
+    LOG_WARNING << "Not supported function: " << __FUNCTION__;                                     \
   }
 
 void entry();

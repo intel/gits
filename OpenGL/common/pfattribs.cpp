@@ -20,6 +20,7 @@
 
 #include "pfattribs.h"
 #include "log.h"
+#include "log2.h"
 #include "openglEnums.h"
 #include <unordered_map>
 
@@ -241,7 +242,7 @@ void gits::GetPFDFromAttribs(int size,
     default:
       // This is unknown attribute, its not necessarily an error as pfd does not
       // support all pixel formats (eg. ones with multisampling).
-      Log(WARN) << "Unknown pixelformat attribute '" << *attribs << "' with value '" << *values;
+      LOG_WARNING << "Unknown pixelformat attribute '" << *attribs << "' with value '" << *values;
     }
   }
 }

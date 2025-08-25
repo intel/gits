@@ -48,8 +48,8 @@ static bool isEGLInitialized = false;
 
 #define CHECK_FOR_EGL_INITIALIZATION(apiName)                                                      \
   if (!isEGLInitialized) {                                                                         \
-    Log(WARN) << std::endl                                                                         \
-              << "Skipped " << apiName << " execution as initialize_egl() is not yet called.";     \
+    LOG_WARNING << std::endl                                                                       \
+                << "Skipped " << apiName << " execution as initialize_egl() is not yet called.";   \
     return;                                                                                        \
   }
 
@@ -76,8 +76,8 @@ void log_config_properties(EGLDisplay dpy, EGLConfig config) {
   drv.egl.eglGetConfigAttrib(dpy, config, EGL_DEPTH_SIZE, &depth_size);
   drv.egl.eglGetConfigAttrib(dpy, config, EGL_STENCIL_SIZE, &stencil_size);
   drv.egl.eglGetConfigAttrib(dpy, config, EGL_SAMPLES, &samples);
-  Log(TRACE) << "Received config attributes: id=" << id << " color=" << buffer_size
-             << " depth=" << depth_size << " stencil=" << stencil_size << " samples=" << samples;
+  LOG_TRACE << "Received config attributes: id=" << id << " color=" << buffer_size
+            << " depth=" << depth_size << " stencil=" << stencil_size << " samples=" << samples;
 }
 } // namespace
 
@@ -570,8 +570,8 @@ void gits::OpenGL::CeglCreateWindowSurface::Run() {
     width = static_cast<EGLint>(scale * find_attrib(EGL_WIDTH, _surface_attribs.Vector()));
     height = static_cast<EGLint>(scale * find_attrib(EGL_HEIGHT, _surface_attribs.Vector()));
   } catch (...) {
-    Log(WARN) << "Couldn't find surface attribs! Using default values for width and height. This "
-                 "may result in undefined behavior.";
+    LOG_WARNING << "Couldn't find surface attribs! Using default values for width and height. This "
+                   "may result in undefined behavior.";
     width = 800;
     height = 600;
   }
@@ -668,7 +668,7 @@ void gits::OpenGL::CeglCreatePbufferSurface::Run() {
 
   EGLSurface surface = ptbl_eglCreatePbufferSurface(*_dpy, config, *_attrib_list);
   if (surface == nullptr) {
-    Log(WARN) << "PBuffer creation failed.";
+    LOG_WARNING << "PBuffer creation failed.";
   }
   _return_value.AddMapping(surface);
 }
@@ -1429,8 +1429,8 @@ gits::CArgument& gits::OpenGL::CeglCreateImageKHR::Argument(unsigned idx) {
 
 void gits::OpenGL::CeglCreateImageKHR::Run() {
   if (PtblNtvApi() != PtblNtvStreamApi()) {
-    Log(ERR) << "Stream may not be portable - egl images can't be translated to other native APIs. "
-                "eglCreateImageKHR skipped.";
+    LOG_ERROR << "Stream may not be portable - egl images can't be translated to other native "
+                 "APIs. eglCreateImageKHR skipped.";
     return;
   }
 
@@ -1444,21 +1444,21 @@ void gits::OpenGL::CeglCreateImageKHR::Run() {
        *_target <= EGL_GL_TEXTURE_CUBE_MAP_NEGATIVE_Z_KHR)) {
     if (!CGLTexture::CheckMapping(bufferOrig)) {
       //After implementing ES texture restoration this texture will need to be restored in this token
-      Log(WARN) << "Texture used to create eglImage not restored - eglCreateImageKHR will fail - "
-                   "shouldn't influence rendered image.";
+      LOG_WARNING << "Texture used to create eglImage not restored - eglCreateImageKHR will fail - "
+                     "shouldn't influence rendered image.";
     } else {
       buffer = (EGLClientBuffer)(uintptr_t)CGLTexture::GetMapping(bufferOrig);
     }
   } else if (_target.Original() == EGL_GL_RENDERBUFFER_KHR) {
     if (!CGLRenderbuffer::CheckMapping(bufferOrig)) {
       //After implementing ES texture restoration this texture will need to be restored in this token
-      Log(WARN) << "Renderbuffer used to create eglImage not restored - eglCreateImageKHR will "
-                   "fail - shouldn't influence rendered image.";
+      LOG_WARNING << "Renderbuffer used to create eglImage not restored - eglCreateImageKHR will "
+                     "fail - shouldn't influence rendered image.";
     } else {
       buffer = (EGLClientBuffer)(uintptr_t)CGLRenderbuffer::GetMapping(bufferOrig);
     }
   } else {
-    Log(ERR) << "Not supported eglCreateImageKHR target: " << *_target;
+    LOG_ERROR << "Not supported eglCreateImageKHR target: " << *_target;
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
 
@@ -1590,8 +1590,8 @@ gits::CArgument& gits::OpenGL::CeglDestroyImageKHR::Argument(unsigned idx) {
 
 void gits::OpenGL::CeglDestroyImageKHR::Run() {
   if (PtblNtvApi() != PtblNtvStreamApi()) {
-    Log(ERR) << "Stream may not be portable - egl images can't be translated to other native APIs. "
-                "eglDestroyImageKHR skipped.";
+    LOG_ERROR << "Stream may not be portable - egl images can't be translated to other native "
+                 "APIs. eglDestroyImageKHR skipped.";
     return;
   }
   drv.egl.eglDestroyImageKHR(*_dpy, *_image);
@@ -2073,10 +2073,10 @@ void gits::OpenGL::CeglSetBlobCacheFuncsANDROID::Run() {
   drv.egl.eglSetBlobCacheFuncsANDROID(
       *_dpy,
       [](const void* key, EGLsizeiANDROID keySize, const void* value,
-         EGLsizeiANDROID valueSize) -> void { Log(WARN) << "Set blob cache function used."; },
+         EGLsizeiANDROID valueSize) -> void { LOG_WARNING << "Set blob cache function used."; },
       [](const void* key, EGLsizeiANDROID keySize, void* value,
          EGLsizeiANDROID valueSize) -> EGLsizeiANDROID {
-        Log(WARN) << "Get blob cache function used, returning nothing";
+        LOG_WARNING << "Get blob cache function used, returning nothing";
         return 0;
       });
 }

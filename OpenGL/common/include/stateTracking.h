@@ -1933,8 +1933,8 @@ inline void glDeleteProgram_SD(GLuint program, GLboolean recording = 0 /*= false
         SD().GetCurrentSharedStateData().GLSLPrograms();
 
     if (programsState.Get(CGLSLProgramStateObj(program)) == 0) {
-      Log(WARN) << "Deleting unknown program: " << program
-                << ". This event will be not tracked by GITS state tracking system.";
+      LOG_WARNING << "Deleting unknown program: " << program
+                  << ". This event will be not tracked by GITS state tracking system.";
       return;
     }
 
@@ -2285,7 +2285,7 @@ inline void glNamedProgramLocalParameters4fvEXT_SD(GLuint program,
                                                    GLboolean recording = 0 /*= false*/) {
   if (Configurator::IsRecorder()) {
     if (SD().GetCurrentSharedStateData().ARBPrograms().Get(program) == 0) {
-      Log(WARN) << "glNamedProgramLocalParameters4fvEXT called without program binding";
+      LOG_WARNING << "glNamedProgramLocalParameters4fvEXT called without program binding";
       return;
     }
     for (GLsizei i = 0; i < count; i++) {
@@ -2454,7 +2454,7 @@ inline void glProgramLocalParameters4fvEXT_SD(GLenum target,
     drv.gl.glGetProgramivARB(target, GL_PROGRAM_BINDING_ARB, &programId);
 
     if (SD().GetCurrentSharedStateData().ARBPrograms().Get(programId) == 0) {
-      Log(WARN) << "glProgramLocalParameters4fv called without program binding";
+      LOG_WARNING << "glProgramLocalParameters4fv called without program binding";
       return;
     }
 

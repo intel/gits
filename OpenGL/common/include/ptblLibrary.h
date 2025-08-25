@@ -45,7 +45,7 @@ public:
 #elif defined GITS_PLATFORM_X11
       if (_api != EGL && _api != GLX) {
 #endif
-        Log(ERR) << "Preselected API type not supported on current platform";
+        LOG_ERROR << "Preselected API type not supported on current platform";
         throw std::runtime_error(EXCEPTION_MESSAGE);
       }
     } else {

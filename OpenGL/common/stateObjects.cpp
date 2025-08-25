@@ -53,7 +53,7 @@ void CTextureStateData::Restored::GetNewObjectForTarget(GLenum target) {
     ptr.reset(new CTextureBufferData());
     break;
   default:
-    Log(ERR) << "Not supported texture target: " << target;
+    LOG_ERROR << "Not supported texture target: " << target;
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
 }
@@ -78,8 +78,8 @@ void CTextureStateObj::SetTexLevelParams(GLint level,
       auto longest = std::max(_data.track.mipmapData[0].width, _data.track.mipmapData[0].height);
       longest = std::max(longest, _data.track.mipmapData[0].depth);
       if (log2i(longest) < level) {
-        Log(WARN) << "Skipping tracking of level: " << level << " of texture: " << Name()
-                  << " due to be greater then max possible texture level for this texture.";
+        LOG_WARNING << "Skipping tracking of level: " << level << " of texture: " << Name()
+                    << " due to be greater then max possible texture level for this texture.";
         return;
       }
     }

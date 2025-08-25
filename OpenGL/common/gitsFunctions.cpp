@@ -500,7 +500,7 @@ void gits::OpenGL::CgitsRenderbufferStorage::renderBufferStorageRun() {
   }
   GLenum fboStatus = drv.gl.glCheckFramebufferStatus(GL_FRAMEBUFFER);
   if (fboStatus != GL_FRAMEBUFFER_COMPLETE) {
-    Log(ERR)
+    LOG_ERROR
         << "Renderbuffer restoration failed (targetFBO) - Framebuffer incomplete - FBO status: "
         << fboStatus;
     throw EOperationFailed(EXCEPTION_MESSAGE);
@@ -536,7 +536,7 @@ void gits::OpenGL::CgitsRenderbufferStorage::renderBufferStorageEXTRun() {
     }
     GLenum fboStatus = drv.gl.glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
     if (fboStatus != GL_FRAMEBUFFER_COMPLETE) {
-      Log(ERR)
+      LOG_ERROR
           << "Renderbuffer restoration failed (targetFBO) - Framebuffer incomplete - FBO status: "
           << fboStatus;
       throw EOperationFailed(EXCEPTION_MESSAGE);
@@ -563,11 +563,11 @@ gits::OpenGL::CgitsUnmapBuffer::CgitsUnmapBuffer(GLenum target, GLint buffer)
   }
 
   if (buffer == 0) {
-    Log(WARN) << "CgitsUnmapBuffer: unmapping buffer zero. Ignoring call.";
+    LOG_WARNING << "CgitsUnmapBuffer: unmapping buffer zero. Ignoring call.";
     return;
     // Workaround for Outerra engine.
   } else if (SD().GetCurrentSharedStateData().Buffers().Get(buffer) == nullptr) {
-    Log(WARN) << "CgitsUnmapBuffer: unmaping unknown buffer object. Ignoring call.";
+    LOG_WARNING << "CgitsUnmapBuffer: unmaping unknown buffer object. Ignoring call.";
     return;
     // Workaround for Outerra engine.
   }
@@ -736,7 +736,7 @@ void gits::OpenGL::CgitsUnmapBuffer::Run() {
       throw EOperationFailed((std::string)EXCEPTION_MESSAGE + " - unknown buffer object");
     }
     if (!SD().GetCurrentSharedStateData().Buffers().Get(playBuff)->Data().restore.mapped) {
-      Log(WARN) << "Unmapping unmapped buffer";
+      LOG_WARNING << "Unmapping unmapped buffer";
     } else {
       if (pointer == nullptr) {
         throw EOperationFailed((std::string)EXCEPTION_MESSAGE +
@@ -930,9 +930,9 @@ void gits::OpenGL::CRestoreDefaultGLFramebuffer::Run() {
 
   GLenum fboStatus = drv.gl.glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
   if (fboStatus != GL_FRAMEBUFFER_COMPLETE) {
-    Log(ERR) << "Renderbuffer restoration failed (sourceFrameBuffer) (GLColor) - Framebuffer "
-                "incomplete - FBO status: "
-             << fboStatus;
+    LOG_ERROR << "Renderbuffer restoration failed (sourceFrameBuffer) (GLColor) - Framebuffer "
+                 "incomplete - FBO status: "
+              << fboStatus;
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
 
@@ -1011,7 +1011,7 @@ void gits::OpenGL::CgitsFlushMappedBufferRange::Run() {
     drv.gl.glGetBufferPointerv(*_target, GL_BUFFER_MAP_POINTER, &pointer);
 
     if (!SD().GetCurrentSharedStateData().Buffers().Get(buffer)->Data().restore.mapped) {
-      Log(WARN) << "Flushing unmapped buffer";
+      LOG_WARNING << "Flushing unmapped buffer";
     }
 
     std::memcpy(((GLubyte*)pointer) + *_offset, *_resource, *_length);

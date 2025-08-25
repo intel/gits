@@ -35,7 +35,7 @@ inline bool ConditionExtension(std::string ext_name) {
     return true;
   } else {
     if (ext_set.find(ext_name) == ext_set.end()) {
-      Log(WARN) << "" + ext_name + " is not available on current platform.";
+      LOG_WARNING << "" + ext_name + " is not available on current platform.";
       ext_set.insert(std::move(ext_name));
     }
     return false;
@@ -54,7 +54,7 @@ inline bool ConditionAlwaysFalse(unsigned token_id) {
   static std::set<unsigned> token_ids_set;
   if (token_ids_set.find(token_id) == token_ids_set.end()) {
     CFunction* func = CFunction::Create(token_id);
-    Log(WARN) << func->Name() << " calls skipped";
+    LOG_WARNING << func->Name() << " calls skipped";
     token_ids_set.insert(token_id);
   }
   return false;

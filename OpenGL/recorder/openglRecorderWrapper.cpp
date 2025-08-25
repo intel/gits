@@ -59,7 +59,7 @@ gits::OpenGL::IRecorderWrapper* STDCALL GITSRecorderOpenGL() {
       auto library = new gits::OpenGL::CLibraryRecorder;
       recorder.Register(std::shared_ptr<gits::CLibrary>(library)); // TODO: VS2010 workaround
     } catch (const std::exception& ex) {
-      Log(ERR) << "Cannot initialize recorder: " << ex.what() << std::endl;
+      LOG_ERROR << "Cannot initialize recorder: " << ex.what() << std::endl;
       exit(EXIT_FAILURE);
     }
   }
@@ -859,7 +859,8 @@ void CRecorderWrapper::wglMakeCurrent(bool return_value, HDC hdc, HGLRC hglrc) c
   int windowThread = CStateDynamicNative::Get().GetWindowThread(WindowFromDC(hdc));
   int currentThread = CGits::Instance().CurrentThreadId();
   if (windowThread != currentThread) {
-    Log(WARN) << "Scheduling thread switch for window params update (WA for thread affine winapi)";
+    LOG_WARNING
+        << "Scheduling thread switch for window params update (WA for thread affine winapi)";
 
     HWND hwnd = WindowFromDC(hdc);
     _recorder.Schedule(new CTokenMakeCurrentThreadNoCtxSwitch(windowThread));
@@ -898,9 +899,9 @@ void CRecorderWrapper::wglSwapLayerBuffers(bool return_value, HDC hdc, unsigned 
     int windowThread = CStateDynamicNative::Get().GetWindowThread(WindowFromDC(hdc));
     int currentThread = CGits::Instance().CurrentThreadId();
     if (windowThread != currentThread) {
-      Log(WARN) << "Current thread does not match thread which created window: "
-                << WindowFromDC(hdc);
-      Log(WARN)
+      LOG_WARNING << "Current thread does not match thread which created window: "
+                  << WindowFromDC(hdc);
+      LOG_WARNING
           << "Scheduling thread switch for window params update (WA for thread affine winapi)";
 
       HWND hwnd = WindowFromDC(hdc);
@@ -924,9 +925,9 @@ void CRecorderWrapper::wglSwapBuffers(bool return_value, HDC hdc) const {
     int windowThread = CStateDynamicNative::Get().GetWindowThread(WindowFromDC(hdc));
     int currentThread = CGits::Instance().CurrentThreadId();
     if (windowThread != currentThread) {
-      Log(WARN) << "Current thread does not match thread which created window: "
-                << WindowFromDC(hdc);
-      Log(WARN)
+      LOG_WARNING << "Current thread does not match thread which created window: "
+                  << WindowFromDC(hdc);
+      LOG_WARNING
           << "Scheduling thread switch for window params update (WA for thread affine winapi)";
 
       HWND hwnd = WindowFromDC(hdc);

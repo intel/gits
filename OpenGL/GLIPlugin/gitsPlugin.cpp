@@ -87,15 +87,15 @@ void CGitsPlugin::Initialize() {
     CGitsPlugin::_recorderWrapper->StreamFinishedEvent(PrePostDisableGL);
     initialized = true;
   } catch (const Exception& ex) {
-    Log(ERR) << "Unhandled GITS exception: " << ex.what();
+    LOG_ERROR << "Unhandled GITS exception: " << ex.what();
     _loader.reset();
     fast_exit(EXIT_FAILURE);
   } catch (const std::exception& ex) {
-    Log(ERR) << "Unhandled STD exception: " << ex.what();
+    LOG_ERROR << "Unhandled STD exception: " << ex.what();
     _loader.reset();
     fast_exit(EXIT_FAILURE);
   } catch (...) {
-    Log(ERR) << "Unhandled Unknown exception caught";
+    LOG_ERROR << "Unhandled Unknown exception caught";
     _loader.reset();
     fast_exit(EXIT_FAILURE);
   }
@@ -282,7 +282,7 @@ void* get_proc_address(const char* name) {
 
   auto pos = std::find(exclusionList.begin(), exclusionList.end(), std::string(name));
   if (pos != exclusionList.end()) {
-    Log(WARN) << "Explicitly ignored function load request for: " << *pos;
+    LOG_WARNING << "Explicitly ignored function load request for: " << *pos;
     proc = nullptr;
   }
 
@@ -305,7 +305,7 @@ void* get_proc_address(const char* name) {
 
   auto& drv_ = CGitsPlugin::RecorderWrapper().Drivers();
   if (drv_.gl.Api() == CGlDriver::API_NULL) {
-    Log(WARN) << "Application queried function address before setting context - API unknown.";
+    LOG_WARNING << "Application queried function address before setting context - API unknown.";
     return nullptr;
   }
 
@@ -322,10 +322,11 @@ void* get_proc_address(const char* name) {
 
   if (firstEvent) {
     if (proc == nullptr) {
-      Log(WARN) << "Application queried address of unavailable function " << name << " returned 0";
+      LOG_WARNING << "Application queried address of unavailable function " << name
+                  << " returned 0";
     } else {
-      Log(WARN) << "Application queried address of unavailable function " << name
-                << " returned underlying implementation";
+      LOG_WARNING << "Application queried address of unavailable function " << name
+                  << " returned underlying implementation";
     }
   }
 

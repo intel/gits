@@ -119,7 +119,7 @@ void gits::OpenGL::ptblInitialize(CGlDriver::TApiType api) {
     drv.gl.Initialize(api);
     return;
   }
-  Log(INFO) << "Initializing modified GL Version";
+  LOG_INFO << "Initializing modified GL Version";
 
   if (Configurator::Get().opengl.player.forceGLProfile == TForcedGLProfile::CORE ||
       Configurator::Get().opengl.player.forceGLProfile == TForcedGLProfile::COMPAT) {

@@ -604,12 +604,12 @@ CFunction* CFunction::Create(unsigned id) {
   default:;
   }
 
-  Log(ERR) << "Unknown OpenGL function with ID: " << id;
+  LOG_ERROR << "Unknown OpenGL function with ID: " << id;
   throw EOperationFailed(EXCEPTION_MESSAGE);
 }
 
 CArgument& CFunction::Result(unsigned idx) {
-  Log(ERR) << "Results not supported in OpenGL!!!";
+  LOG_ERROR << "Results not supported in OpenGL!!!";
   throw EOperationFailed(EXCEPTION_MESSAGE);
 }
 
@@ -740,9 +740,9 @@ NOINLINE void HandleTrace() {
     StatePrinter statePrinter;
     statePrinter.PrintToLog();
   }
-  Log(TRACE, NO_NEWLINE) << "draw: " << currentDrawCount
-                         << " frame: " << CGits::Instance().CurrentFrame()
-                         << " drawInFrame: " << CGits::Instance().CurrentDrawInFrameCount() << "  ";
+  LOG_FORMAT_RAW
+  LOG_TRACE << "draw: " << currentDrawCount << " frame: " << CGits::Instance().CurrentFrame()
+            << " drawInFrame: " << CGits::Instance().CurrentDrawInFrameCount() << "  ";
 }
 
 NOINLINE void HandleCaptureDraws() {

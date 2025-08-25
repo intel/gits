@@ -2483,13 +2483,13 @@ std::string gits::OpenGL::CShaderSource::GetFileName(ShaderType shaderType,
         stream << "geometryNV";
         break;
       default:
-        Log(ERR) << "Unknown target: " << target << " for '" << Name() << "'!!!";
+        LOG_ERROR << "Unknown target: " << target << " for '" << Name() << "'!!!";
         throw EOperationFailed(EXCEPTION_MESSAGE);
       }
 
       stream << "_ARB_" << std::setfill('0') << std::setw(2) << _programStringIdx++ << ".txt";
     } else {
-      Log(ERR) << "Unknown target: 0x" << std::hex << target << " for " << Name() << "()!!!";
+      LOG_ERROR << "Unknown target: 0x" << std::hex << target << " for " << Name() << "()!!!";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
   }
@@ -2604,7 +2604,7 @@ gits::OpenGL::CDataPtr::CDataPtr(GLint buffer, GLenum target, const void* ptr)
   }
 
   if (target == GL_DRAW_INDIRECT_BUFFER && !*_isBuff) {
-    Log(ERR) << "Indirect client data not supported";
+    LOG_ERROR << "Indirect client data not supported";
     throw ENotImplemented(EXCEPTION_MESSAGE);
   }
 }
@@ -2640,7 +2640,7 @@ void* gits::OpenGL::CDataPtr::Value() {
 
   if (*_ptr == 0) {
     CALL_ONCE[&] {
-      Log(WARN) << "passing invalid NULL pointer: " << std::hex << *_ptr << " to GL API.";
+      LOG_WARNING << "passing invalid NULL pointer: " << std::hex << *_ptr << " to GL API.";
     };
     return (char*)*_ptr;
   }
@@ -2657,8 +2657,8 @@ void* gits::OpenGL::CDataPtr::Value() {
   // Return client data ptr
   if (memTracker[areaRecPtr].size() <= areaOffset) {
     CALL_ONCE[&] {
-      Log(WARN) << "passing invalid pointer: " << std::hex << *_ptr
-                << " to GL API because it seems to not being used.";
+      LOG_WARNING << "passing invalid pointer: " << std::hex << *_ptr
+                  << " to GL API because it seems to not being used.";
     };
     return (char*)*_ptr;
   } else {
@@ -2747,8 +2747,8 @@ void gits::OpenGL::CDataPtrArray::Declare(CCodeOStream& stream) const {
         // Return client data ptr
         if (memTracker[areaRecPtr].size() <= areaOffset) {
           CALL_ONCE[&] {
-            Log(WARN) << "passing invalid pointer: " << std::hex << areaRecPtr
-                      << " to GL API because it seems to not being used.";
+            LOG_WARNING << "passing invalid pointer: " << std::hex << areaRecPtr
+                        << " to GL API because it seems to not being used.";
           };
           stream << "(void*)" << areaRecPtr;
         } else {
@@ -2791,8 +2791,8 @@ const void** gits::OpenGL::CDataPtrArray::Value() {
       // Return client data ptr
       if (memTracker[areaRecPtr].size() <= areaOffset) {
         CALL_ONCE[&] {
-          Log(WARN) << "passing invalid pointer: " << std::hex << areaRecPtr
-                    << " to GL API because it seems to not being used.";
+          LOG_WARNING << "passing invalid pointer: " << std::hex << areaRecPtr
+                      << " to GL API because it seems to not being used.";
         };
         _ptrsPlayer.push_back((void*)areaRecPtr);
       } else {
@@ -3364,7 +3364,7 @@ void gits::OpenGL::CCoherentBufferUpdate::Apply() {
       throw EOperationFailed((std::string)EXCEPTION_MESSAGE + " unknown buffer object");
     }
     if (!SD().GetCurrentSharedStateData().Buffers().Get(playBuff)->Data().restore.mapped) {
-      Log(WARN) << "Unmapping unmapped buffer";
+      LOG_WARNING << "Unmapping unmapped buffer";
     } else {
       std::memcpy(((GLubyte*)pointer) + offset, &updateRef.playerCache[0],
                   updateRef.playerCache.size());

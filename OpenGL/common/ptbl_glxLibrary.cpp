@@ -588,7 +588,7 @@ int xerrorhandler(Display* dsp, XErrorEvent* error) {
   char errorstring[128];
   XGetErrorText(dsp, error->error_code, errorstring, 128);
 
-  Log(ERR) << "X error--" << errorstring << std::endl;
+  LOG_ERROR << "X error--" << errorstring << std::endl;
   return 1;
 }
 #endif
@@ -619,7 +619,7 @@ void gits::OpenGL::execSetContextGLX(PtblHandle ctx) {
         (Display*)GetNativeDisplay(), DefaultScreen((Display*)GetNativeDisplay()),
         &PtblToGLXARBAttribs(pfState.attribs)[0], &fbConfigCount);
     if (fbConfigs == nullptr) {
-      Log(ERR) << "glXChooseFBConfig failed - no config matches were found";
+      LOG_ERROR << "glXChooseFBConfig failed - no config matches were found";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
     ptblPF.True(*fbConfigs);
@@ -633,7 +633,7 @@ void gits::OpenGL::execSetContextGLX(PtblHandle ctx) {
       GLXPbuffer pbuff =
           drv.glx.glXCreatePbuffer((Display*)GetNativeDisplay(), ptblPF.True(), attribs);
       if (pbuff == (GLXPbuffer)0) {
-        Log(ERR) << "glXCreatePbuffer failed";
+        LOG_ERROR << "glXCreatePbuffer failed";
         throw EOperationFailed(EXCEPTION_MESSAGE);
       }
       ptblSurf.True(pbuff);
@@ -652,7 +652,7 @@ void gits::OpenGL::execSetContextGLX(PtblHandle ctx) {
     GLXContext glxCtx = drv.glx.glXCreateContextAttribsARB(
         (Display*)GetNativeDisplay(), ptblPF.True(), nullptr, true, &glxCtxParams[0]);
     if (glxCtx == nullptr) {
-      Log(ERR) << "glXCreateContextAttribsARB failed";
+      LOG_ERROR << "glXCreateContextAttribsARB failed";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
     ctx.True(glxCtx);

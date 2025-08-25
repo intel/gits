@@ -23,6 +23,7 @@
 
 #include "openglTypes.h"
 #include "tools.h"
+#include "log2.h"
 
 #ifndef BUILD_FOR_CCODE
 #include "argument.h"
@@ -323,39 +324,10 @@ public:
   void PrintToLog();
 };
 
-//CGLLog is specialized CLog converting GLenum values into strings
-class CGLLog : public gits::CLog {
-public:
-  CGLLog(LogLevel lvl, LogStyle style);
-  template <class T>
-  CGLLog& operator<<(const T& t);
-  CGLLog& operator<<(const char c);
-  CGLLog& operator<<(const unsigned char c);
-  CGLLog& operator<<(const char* c);
-  CGLLog& operator<<(char* c);
-  CGLLog& operator<<(const unsigned char* c);
-  CGLLog& operator<<(const unsigned int glenum);
-  CGLLog& operator<<(PIXELFORMATDESCRIPTOR& pfd);
-  CGLLog& operator<<(manip t);
-};
-// See common/include/log.h for explanations of these macros.
-#define GLLog1(lvl)                                                                                \
-  if (gits::ShouldLog(LogLevel::lvl))                                                              \
-  gits::OpenGL::CGLLog(LogLevel::lvl, gits::LogStyle::NORMAL)
-#define GLLog2(lvl, style)                                                                         \
-  if (gits::ShouldLog(LogLevel::lvl))                                                              \
-  gits::OpenGL::CGLLog(LogLevel::lvl, gits::LogStyle::style)
-// Workaround for a MSVC bug, see https://stackoverflow.com/a/5134656/
-#define EXPAND(x) x
-// Magic to call different variants based on the number of arguments.
-#define GET_OVERLOAD(PLACEHOLDER1, PLACEHOLDER2, NAME, ...) NAME
-#define GLLog(...)                                          EXPAND(GET_OVERLOAD(__VA_ARGS__, GLLog2, GLLog1)(__VA_ARGS__))
-
-template <class T>
-CGLLog& CGLLog::operator<<(const T& t) {
-  _buffer << t;
-  return *this;
-}
+plog::Record& operator<<(plog::Record& record, const unsigned char* c);
+plog::Record& operator<<(plog::Record& record, GLboolean value);
+plog::Record& operator<<(plog::Record& record, GLenum value);
+plog::Record& operator<<(plog::Record& record, PIXELFORMATDESCRIPTOR& pfd);
 
 void CleanResources();
 void DestroyContext(void* ctx);

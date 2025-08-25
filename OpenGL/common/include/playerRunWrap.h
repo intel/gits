@@ -56,7 +56,8 @@ inline void glProgramStringARB_WRAPRUN(CGLenum& target,
   drv.gl.glProgramStringARB(*target, *format, (GLsizei)string.Text().size(), *string);
   if (ShouldLog(LogLevel::TRACE)) {
     std::string file_name = string.GetShaderFileName();
-    Log(TRACE, NO_NEWLINE) << "code: " << file_name << "  ";
+    LOG_FORMAT_RAW
+    LOG_TRACE << "code: " << file_name << "  ";
   }
 }
 
@@ -77,7 +78,7 @@ inline void glGetSubroutineIndex_WRAPRUN(CGLuint& return_value,
                                          const CGLchar::CSArray& name) {
   GLuint actualSubIdx = drv.gl.glGetSubroutineIndex(*program, *shadertype, *name);
   if (actualSubIdx == GL_INVALID_INDEX) {
-    Log(WARN) << "Invalid index found in glGetSubroutineIndex";
+    LOG_WARNING << "Invalid index found in glGetSubroutineIndex";
   } else {
     CGLSubroutineIndex::AddMapping(program.Original(), *shadertype, *return_value, actualSubIdx);
   }
@@ -169,8 +170,8 @@ inline void glEGLImageTargetTexture2DOES_WRAPRUN(CGLenum& target, CEGLImageKHR& 
   if (image.CheckMapping()) {
     drv.gl.glEGLImageTargetTexture2DOES(*target, *image);
   } else {
-    Log(WARN) << "glEGLImageTargetTexture2DOES skipped due to not mapped eglImage (probably "
-                 "eglImages are not supported on this system)";
+    LOG_WARNING << "glEGLImageTargetTexture2DOES skipped due to not mapped eglImage (probably "
+                   "eglImages are not supported on this system)";
   }
 }
 
@@ -497,9 +498,9 @@ void HandleUniformLocationMapping(const CRecUniformLocation& retVal,
       // application was setting values of optimized away uniforms in original
       // stream by computing their locations.
       CALL_ONCE[] {
-        Log(WARN) << "Uniform array size during recording was smaller than it is now - corruptions "
-                     "may appear"
-                     " if application was setting inactive uniform array elements";
+        LOG_WARNING
+            << "Uniform array size during recording was smaller than it is now - corruptions may "
+               "appear if application was setting inactive uniform array elements";
       };
     }
   }
@@ -605,7 +606,8 @@ inline void glShaderSource_WRAPRUN(CGLProgram& shader,
   glShaderSource_SD(*shader, *count, *string, *length);
   if (ShouldLog(LogLevel::TRACE)) {
     std::string file_name = string.GetShaderFileName();
-    Log(TRACE, NO_NEWLINE) << "code: " << file_name << "  ";
+    LOG_FORMAT_RAW
+    LOG_TRACE << "code: " << file_name << "  ";
     if (*shader != 0 && ShouldLog(LogLevel::TRACEV)) {
       SD().GetCurrentSharedStateData().GLSLShaders().Get(*shader)->SetShaderName(file_name);
     }
@@ -619,7 +621,8 @@ inline void glShaderSourceARB_WRAPRUN(CGLProgram& shaderObj,
   glShaderSource_SD(*shaderObj, *count, *string, *length);
   if (ShouldLog(LogLevel::TRACE)) {
     std::string file_name = string.GetShaderFileName();
-    Log(TRACE, NO_NEWLINE) << "code: " << file_name << "  ";
+    LOG_FORMAT_RAW
+    LOG_TRACE << "code: " << file_name << "  ";
     if (*shaderObj != 0 && ShouldLog(LogLevel::TRACEV)) {
       SD().GetCurrentSharedStateData().GLSLShaders().Get(*shaderObj)->SetShaderName(file_name);
     }
@@ -634,7 +637,8 @@ inline void glCreateShaderProgramv_WRAPRUN(CGLProgram& return_value,
   glCreateShaderProgramv_SD(*return_value, *type, 1, *strings);
   if (ShouldLog(LogLevel::TRACE)) {
     std::string file_name = strings.GetShaderFileName();
-    Log(TRACE, NO_NEWLINE) << "code: " << file_name << "  ";
+    LOG_FORMAT_RAW
+    LOG_TRACE << "code: " << file_name << "  ";
   }
 }
 inline void glCreateShaderProgramvEXT_WRAPRUN(CGLProgram& return_value,
@@ -645,7 +649,8 @@ inline void glCreateShaderProgramvEXT_WRAPRUN(CGLProgram& return_value,
   glCreateShaderProgramv_SD(*return_value, *type, 1, *strings);
   if (ShouldLog(LogLevel::TRACE)) {
     std::string file_name = strings.GetShaderFileName();
-    Log(TRACE, NO_NEWLINE) << "code: " << file_name << "  ";
+    LOG_FORMAT_RAW
+    LOG_TRACE << "code: " << file_name << "  ";
   }
 }
 inline void glGetCompressedTexImage_WRAPRUN(CGLenum& target, CGLint& level, CGLvoid_ptr& img) {
@@ -679,15 +684,15 @@ inline void glClientWaitSync_WRAPRUN(CGLenum& return_value,
   GLenum recRetVal = *return_value;
   GLuint64 wait = *timeout;
   if (wait > MAX_TIMEOUT) {
-    Log(WARN) << "Timeout provided for glClientWaitSync is ridiculously large. Clamping it to 100 "
-                 "milliseconds.";
+    LOG_WARNING << "Timeout provided for glClientWaitSync is ridiculously large. Clamping it to "
+                   "100 milliseconds.";
     wait = MAX_TIMEOUT;
   }
   GLenum playRetVal = drv.gl.glClientWaitSync(*sync, *flags, wait);
   if ((playRetVal == GL_TIMEOUT_EXPIRED || playRetVal == GL_WAIT_FAILED) &&
       (playRetVal != recRetVal)) {
-    Log(TRACE) << "Calling additional glClientWaitSync, because original return different value as "
-                  "in recorder.";
+    LOG_TRACE << "Calling additional glClientWaitSync, because original return different value as "
+                 "in recorder.";
     playRetVal = drv.gl.glClientWaitSync(*sync, 0, 10 * MAX_TIMEOUT);
   }
 }
@@ -711,8 +716,8 @@ inline void glGetSynciv_WRAPRUN(CGLsync& sync,
     }
 
     if (!sameValues) {
-      Log(TRACE) << "Calling additional glClientWaitSync, because values returned from "
-                    "glGetSynciv in player differ from those returned in recorder.";
+      LOG_TRACE << "Calling additional glClientWaitSync, because values returned from "
+                   "glGetSynciv in player differ from those returned in recorder.";
 
       drv.gl.glClientWaitSync(*sync, 0, MAX_TIMEOUT);
     }

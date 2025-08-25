@@ -27,7 +27,7 @@ unsigned indexSize(GLenum type) {
   case GL_UNSIGNED_INT:
     return sizeof(GLuint);
   default:
-    Log(ERR) << "Index type: '0x" << std::hex << type << "'!!!";
+    LOG_ERROR << "Index type: '0x" << std::hex << type << "'!!!";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
 }
@@ -68,7 +68,7 @@ unsigned texelElementsNum(GLenum format) {
   case GL_ABGR_EXT:
     return 4;
   default:
-    Log(ERR) << "Texture format: '0x" << std::hex << format << "'!!!";
+    LOG_ERROR << "Texture format: '0x" << std::hex << format << "'!!!";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
 }
@@ -111,7 +111,7 @@ unsigned basicTexelSize(GLenum format, GLenum type) {
     dataSize = sizeof(GLfloat) + sizeof(GLuint);
     break;
   default:
-    Log(ERR) << "Texture type: '0x" << std::hex << type << "'!!!";
+    LOG_ERROR << "Texture type: '0x" << std::hex << type << "'!!!";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   return (dataNum / dataComp) * dataSize;
@@ -186,7 +186,7 @@ const char* typeName(GLenum type) {
     return "GLhalf";
     break;
   default:
-    Log(ERR) << "Unknown GL type in 'typeName()' - " << type;
+    LOG_ERROR << "Unknown GL type in 'typeName()' - " << type;
     throw EOperationFailed((std::string)EXCEPTION_MESSAGE + "Unknown GL type");
   }
 }
@@ -206,7 +206,7 @@ const char* shaderTypeAbrvName(GLenum type) {
   case GL_COMPUTE_SHADER:
     return "comp";
   default:
-    Log(WARN) << "Unknown shader type in 'shaderTypeAbrvName()' - " << type;
+    LOG_WARNING << "Unknown shader type in 'shaderTypeAbrvName()' - " << type;
     return "unknown";
   }
 }
@@ -261,12 +261,12 @@ GLenum GetBindingEnum(GLenum target) {
   // http://www.opengl.org/registry/specs/ARB/texture_buffer_object.txt to query
   // the binding point.
   if (target == GL_TEXTURE_BUFFER) {
-    Log(WARN) << "Buffer binding point for GL_TEXTURE_BUFFER queried";
+    LOG_WARNING << "Buffer binding point for GL_TEXTURE_BUFFER queried";
   }
 
   map_t::iterator iter = bindingEnumMap.find(target);
   if (iter == bindingEnumMap.end()) {
-    Log(ERR) << "Unknown target enum: " << target << " to get binding enum.";
+    LOG_ERROR << "Unknown target enum: " << target << " to get binding enum.";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   return iter->second;
@@ -531,7 +531,7 @@ void FboToImageMatch(GLenum fboAttachment, GLenum& format, GLenum& type) {
     type = GL_UNSIGNED_INT_24_8;
     break;
   default:
-    Log(ERR) << "Unknown Fbo attachment: " << fboAttachment;
+    LOG_ERROR << "Unknown Fbo attachment: " << fboAttachment;
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
 }
@@ -627,7 +627,7 @@ GLenum InternalFormatToFboMatch(GLenum format) {
   if (formatToFboMap.find(format) != formatToFboMap.end()) {
     return formatToFboMap[format];
   } else {
-    Log(ERR) << "Unknown Texture Format: " << format;
+    LOG_ERROR << "Unknown Texture Format: " << format;
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
 }
@@ -643,7 +643,7 @@ GLenum FboToBlitMask(GLenum attachment) {
   case GL_DEPTH_STENCIL_ATTACHMENT:
     return GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
   default:
-    Log(ERR) << "Unknown Fbo attachment: " << attachment;
+    LOG_ERROR << "Unknown Fbo attachment: " << attachment;
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
 }
@@ -707,7 +707,7 @@ const char* DrawBufferToSuffixStr(GLenum buffer) {
   case GL_STENCIL_ATTACHMENT:
     return "_stencil";
   default:
-    Log(ERR) << "Unknown buffer: " << buffer;
+    LOG_ERROR << "Unknown buffer: " << buffer;
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
 }
@@ -848,7 +848,7 @@ unsigned DataTypeSize(GLenum type) {
   case GL_4_BYTES:
     return 4 * sizeof(GLbyte);
   default:
-    Log(ERR) << "Unknown pointer type GLenum: 0x" << std::hex << type << "!!!";
+    LOG_ERROR << "Unknown pointer type GLenum: 0x" << std::hex << type << "!!!";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
 }

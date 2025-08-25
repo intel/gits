@@ -202,7 +202,7 @@ public:
         return foundElsewhere.value();
       }
 
-      Log(WARN) << "Couldn't map object name " << key << " of typeid " << MapObjectId;
+      LOG_WARNING << "Couldn't map object name " << key << " of typeid " << MapObjectId;
       return (Type)gl_name_cast<typename ptr_to_void<Type>::type>(1000000);
     }
 
@@ -411,14 +411,14 @@ std::optional<Type> handleFBOExtMixing(Type key) {
   if constexpr (MapObjectId == OGL_FRAME_BUFFER_MAP) {
     if (CGLFramebufferEXT::CheckMapping(key)) {
       CALL_ONCE[message] {
-        Log(WARN) << message;
+        LOG_WARNING << message;
       };
       return CGLFramebufferEXT::GetMapping(key);
     }
   } else if constexpr (MapObjectId == OGL_RENDER_BUFFER_MAP) {
     if (CGLRenderbufferEXT::CheckMapping(key)) {
       CALL_ONCE[message] {
-        Log(WARN) << message;
+        LOG_WARNING << message;
       };
       return CGLRenderbufferEXT::GetMapping(key);
     }

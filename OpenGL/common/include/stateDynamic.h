@@ -560,7 +560,7 @@ public:
     if (search != _ctxVisualInfoMap.end()) {
       return search->second;
     } else {
-      Log(ERR) << "Couldn't get info about an unknown GLXContext: " << ctx;
+      LOG_ERROR << "Couldn't get info about an unknown GLXContext: " << ctx;
       throw ENotFound(EXCEPTION_MESSAGE);
     }
   }

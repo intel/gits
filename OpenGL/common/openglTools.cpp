@@ -63,8 +63,8 @@ void get_capture_viewport(std::vector<GLint>& dims) {
     dims[1] = 0;
     dims[2] = w;
     dims[3] = h;
-    Log(INFO) << "Window info: " << window << " " << x << " " << y << " " << w << " " << h << " "
-              << b << " " << d;
+    LOG_INFO << "Window info: " << window << " " << x << " " << y << " " << w << " " << h << " "
+             << b << " " << d;
     return;
   }
 #endif
@@ -94,7 +94,7 @@ GLenum GetTextureTarget(GLint name) {
       return target;
     }
   }
-  Log(ERR) << "Texture name bound to unknown texture target.";
+  LOG_ERROR << "Texture name bound to unknown texture target.";
   throw EOperationFailed(EXCEPTION_MESSAGE);
 }
 
@@ -211,7 +211,7 @@ bool ReadPixelsWrapper(GLint x,
 bool IsEsProfile() {
   const char* ver = (const char*)drv.gl.glGetString(GL_VERSION);
   if (ver == nullptr) {
-    Log(WARN) << "glGetString(GL_VERSION) failed. Using legacy method of detecting OGL/GLES.";
+    LOG_WARNING << "glGetString(GL_VERSION) failed. Using legacy method of detecting OGL/GLES.";
     return drv.gl.Api() != CGlDriver::API_GL;
   }
 
@@ -263,7 +263,7 @@ void capture_drawbuffer(
 
     if (!Configurator::Get().common.player.captureFrames.empty() &&
         Configurator::Get().opengl.player.captureFramesHashes) {
-      Log(INFO) << file_name + suffix.str() << " CRC: " << HwCrc32ishHash(&data[0], data.size(), 0);
+      LOG_INFO << file_name + suffix.str() << " CRC: " << HwCrc32ishHash(&data[0], data.size(), 0);
     } else {
       CGits::Instance().WriteImage(path_color.string(), capture_dims[2], capture_dims[3],
                                    !curctx::IsOgl(), data);
@@ -274,7 +274,7 @@ void capture_drawbuffer(
   };
 
   if (capture_dims[2] == 0 || capture_dims[3] == 0) {
-    Log(WARN) << "Incorrect image dimensions for frame " << file_name << std::endl;
+    LOG_WARNING << "Incorrect image dimensions for frame " << file_name << std::endl;
     return;
   }
 
@@ -390,7 +390,7 @@ std::filesystem::path GetPathForImageDumping() {
     } else if (Configurator::IsPlayer()) {
       path = Configurator::Get().common.player.streamDir / "gitsScreenshots/gitsPlayer";
     } else {
-      Log(ERR) << "Neither in player nor recorder!!!";
+      LOG_ERROR << "Neither in player nor recorder!!!";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
   }
@@ -497,7 +497,7 @@ void capture_bound_texture2D(GLenum target,
       GLenum fboStatus = checkFramebufferStatus(GL_FRAMEBUFFER);
       bool fboComplete = fboStatus == GL_FRAMEBUFFER_COMPLETE;
       if (!fboComplete) {
-        Log(WARN) << "FBO Icomplete - texture dump failed";
+        LOG_WARNING << "FBO Icomplete - texture dump failed";
         return;
       }
 
@@ -509,7 +509,7 @@ void capture_bound_texture2D(GLenum target,
       drv.gl.glReadPixels(0, 0, texWidth, texHeight, GL_RGBA, GL_UNSIGNED_BYTE, &data[0]);
       GLint error = drv.gl.glGetError();
       if (error != 0) {
-        Log(WARN) << "Texture content dump skipped";
+        LOG_WARNING << "Texture content dump skipped";
         return;
       }
       path /= file_name + ".png";
@@ -565,7 +565,7 @@ void RestoreFramebufferEXT(
   }
   GLenum fboStatus = drv.gl.glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
   if (fboStatus != GL_FRAMEBUFFER_COMPLETE) {
-    Log(ERR)
+    LOG_ERROR
         << "Renderbuffer restoration failed (sourceFBO) - Framebuffer incomplete - FBO status: "
         << fboStatus;
     throw EOperationFailed(EXCEPTION_MESSAGE);
@@ -579,7 +579,7 @@ void RestoreFramebufferEXT(
                               FboToBlitMask(tmpFboAttachment), GL_NEAREST);
   CGits::Instance().DrawCountUp();
 
-  Log(INFO) << "glBlitFramebufferEXT (FBO state restore) call emitted";
+  LOG_INFO << "glBlitFramebufferEXT (FBO state restore) call emitted";
 
   //Clear temporary objects
   drv.gl.glDeleteFramebuffersEXT(1, &sourceFBO);
@@ -619,7 +619,7 @@ void RestoreFramebuffer(
   }
   GLenum fboStatus = drv.gl.glCheckFramebufferStatus(GL_FRAMEBUFFER);
   if (fboStatus != GL_FRAMEBUFFER_COMPLETE) {
-    Log(ERR)
+    LOG_ERROR
         << "Renderbuffer restoration failed (sourceFBO) - Framebuffer incomplete - FBO status: "
         << fboStatus;
     throw EOperationFailed(EXCEPTION_MESSAGE);
@@ -633,7 +633,7 @@ void RestoreFramebuffer(
                            FboToBlitMask(tmpFboAttachment), GL_NEAREST);
   CGits::Instance().DrawCountUp();
 
-  Log(INFO) << "glBlitFramebuffer (FBO state restore) call emitted";
+  LOG_INFO << "glBlitFramebuffer (FBO state restore) call emitted";
 
   //Clear temporary objects
   drv.gl.glDeleteFramebuffers(1, &sourceFBO);
@@ -848,8 +848,8 @@ unsigned getTexImageSize(GLsizei width, GLsizei height, GLsizei depth, GLenum fo
 
   if (width <= 0 || height <= 0 || depth <= 0 ||
       (height == 1 && depth != 1)) { // When height = 1, buffer is 2D. Hence depth should also be 1.
-    Log(ERR) << "Dimension(s) is not set correctly: width-" << width << ", height-" << height
-             << ", depth-" << depth;
+    LOG_ERROR << "Dimension(s) is not set correctly: width-" << width << ", height-" << height
+              << ", depth-" << depth;
     throw ENotInitialized(EXCEPTION_MESSAGE);
   }
 
@@ -1434,7 +1434,7 @@ bool SetCurrentContext(void* context) {
 
     // Drawable does not exist
     if (!status) {
-      Log(WARN) << "Surface does not exist. Setting current context to 0.";
+      LOG_WARNING << "Surface does not exist. Setting current context to 0.";
       context = nullptr;
     }
 
@@ -1561,7 +1561,7 @@ TBuffersState ESBufferState() {
   }
   checked = true;
   if (!can_read) {
-    Log(ERR) << "Buffers State option not supported";
+    LOG_ERROR << "Buffers State option not supported";
     throw ENotSupported(EXCEPTION_MESSAGE);
   } else {
     buffers_state = Configurator::Get().opengl.recorder.buffersState;
@@ -1594,10 +1594,10 @@ bool IsGlGetTexImagePresentOnGLES() {
       drv.gl.glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, &pixelsRead);
 
       if (pixelsRead == pixelsWrite) {
-        Log(INFO) << "glGetTexImage seems to be present in OpenGL ES API";
+        LOG_INFO << "glGetTexImage seems to be present in OpenGL ES API";
         presence = true;
       } else {
-        Log(INFO) << "glGetTexImage seems to be unsupported on this OpenGL ES driver";
+        LOG_INFO << "glGetTexImage seems to be unsupported on this OpenGL ES driver";
       }
 
       drv.gl.glBindTexture(GL_TEXTURE_2D, oldBinding);
@@ -1640,7 +1640,7 @@ bool IsGlGetCompressedTexImagePresentOnGLES() {
       }
 
       if (formatToCheck == 0) {
-        Log(INFO) << "Unable to find proper format for glGetCompressedTexImage presence check";
+        LOG_INFO << "Unable to find proper format for glGetCompressedTexImage presence check";
         presenceChecked = true;
         return presence;
       }
@@ -1660,9 +1660,9 @@ bool IsGlGetCompressedTexImagePresentOnGLES() {
       }
 
       if (presence) {
-        Log(INFO) << "glGetCompressedTexImage seems to be present in OpenGL ES API";
+        LOG_INFO << "glGetCompressedTexImage seems to be present in OpenGL ES API";
       } else {
-        Log(INFO) << "glGetCompressedTexImage seems to be unsupported on this OpenGL ES driver";
+        LOG_INFO << "glGetCompressedTexImage seems to be unsupported on this OpenGL ES driver";
       }
 
       drv.gl.glBindTexture(GL_TEXTURE_2D, oldBinding);
@@ -1690,8 +1690,8 @@ StatePrinter::RBO::RBO(GLint name) : _name(name) {
   rboBindStateStash.Restore();
 }
 void StatePrinter::RBO::Write() {
-  GLLog(TRACE) << "GL_RENDERBUFFER - " << _name << " - Internal Format: " << _internalFormat
-               << " - msaa: " << _msaaSamples;
+  LOG_TRACE << "GL_RENDERBUFFER - " << _name << " - Internal Format: " << _internalFormat
+            << " - msaa: " << _msaaSamples;
 }
 
 StatePrinter::Texture::Texture(GLenum target, GLint name, GLenum texture)
@@ -1717,11 +1717,11 @@ StatePrinter::Texture::Texture(GLenum target, GLint name, GLenum texture)
 }
 void StatePrinter::Texture::Write() {
   if (_texture != 0) {
-    GLLog(TRACE) << _target << " - " << _name << " Texture: " << _texture
-                 << " - Internal Format: " << _internalFormat << " - msaa: " << _msaaSamples;
+    LOG_TRACE << _target << " - " << _name << " Texture: " << _texture
+              << " - Internal Format: " << _internalFormat << " - msaa: " << _msaaSamples;
   } else {
-    GLLog(TRACE) << _target << " - " << _name << " - Internal Format: " << _internalFormat
-                 << " - msaa: " << _msaaSamples;
+    LOG_TRACE << _target << " - " << _name << " - Internal Format: " << _internalFormat
+              << " - msaa: " << _msaaSamples;
   }
 }
 
@@ -1773,9 +1773,10 @@ StatePrinter::FBO::FBO(GLenum target, GLint name) : _name(name), _target(target)
   }
 }
 void StatePrinter::FBO::Write() {
-  GLLog(TRACE) << _target << " - " << _name;
+  LOG_TRACE << _target << " - " << _name;
   for (auto& attachm : _attachments) {
-    GLLog(TRACE, NO_NEWLINE) << "  - " << attachm.first << " - ";
+    LOG_FORMAT_RAW
+    LOG_TRACE << "  - " << attachm.first << " - ";
     attachm.second->Write();
   }
 }
@@ -1792,18 +1793,18 @@ void StatePrinter::GLSLPrograms::Write() {
         CGLSLShaderStateObj* shaderStateObjPtr =
             SD().GetCurrentSharedStateData().GLSLShaders().Get(shader);
         if (shaderStateObjPtr) {
-          Log(TRACE) << "GL_PROGRAM: " << _name << " GL_SHADER:" << shaderStateObjPtr->Name()
-                     << " SHADER FILE NAME: " << shaderStateObjPtr->GetShaderName();
+          LOG_TRACE << "GL_PROGRAM: " << _name << " GL_SHADER:" << shaderStateObjPtr->Name()
+                    << " SHADER FILE NAME: " << shaderStateObjPtr->GetShaderName();
           printedShaders++;
         }
       }
     }
     if (!printedShaders) {
-      Log(TRACE) << "GL_PROGRAM: " << _name;
+      LOG_TRACE << "GL_PROGRAM: " << _name;
     }
   }
 #else
-    Log(TRACE) << "GL_PROGRAM: " << _name;
+    LOG_TRACE << "GL_PROGRAM: " << _name;
 #endif
 }
 
@@ -1814,20 +1815,20 @@ void StatePrinter::GLSLPipelines::Write() {
   if (pipelineStateObjPtr != nullptr) {
     for (auto& stage : pipelineStateObjPtr->Data().track.stages) {
       const CGLSLProgramStateData& progData = *stage.second;
-      Log(TRACE) << "GL_PIPELINE: " << _name << " GL_PROGRAM: " << progData.track.name;
+      LOG_TRACE << "GL_PIPELINE: " << _name << " GL_PROGRAM: " << progData.track.name;
     }
   }
 #else
-    Log(TRACE) << "GL_PIPELINE: " << _name;
+    LOG_TRACE << "GL_PIPELINE: " << _name;
 #endif
 }
 
 void StatePrinter::ARBProgram::Write() {
-  GLLog(TRACE) << _target << " - name: " << _name;
+  LOG_TRACE << _target << " - name: " << _name;
 }
 
 void StatePrinter::BoundBuffers::Write() {
-  GLLog(TRACE) << "Bound Buffer: Target: " << _target << " Buffer: " << _buffer;
+  LOG_TRACE << "Bound Buffer: Target: " << _target << " Buffer: " << _buffer;
 }
 
 StatePrinter::StatePrinter() {
@@ -1928,67 +1929,39 @@ void StatePrinter::PrintToLog() {
   }
 #endif
   if (_objects.size() > 0) {
-    Log(TRACE) << "/**********************CURRENT BOUND STATE************************/";
-    Log(TRACE) << " ";
+    LOG_TRACE << "/**********************CURRENT BOUND STATE************************/";
+    LOG_TRACE << " ";
     for (auto& object : _objects) {
       object->Write();
-      Log(TRACE) << " ";
+      LOG_TRACE << " ";
     }
   }
 #ifndef BUILD_FOR_CCODE
   if (Configurator::Get().opengl.player.traceGLBufferHashes[CGits::Instance().CurrentDrawCount()]) {
-    Log(TRACE) << "Buffer objects used for rendering";
+    LOG_TRACE << "Buffer objects used for rendering";
     for (const auto& elem : bufferHashses) {
-      Log(TRACE) << elem.first << " - " << std::hex << elem.second;
+      LOG_TRACE << elem.first << " - " << std::hex << elem.second;
     }
   }
 #endif
   if (_objects.size() > 0) {
-    Log(TRACE) << "/*****************************************************************/";
+    LOG_TRACE << "/*****************************************************************/";
   }
 }
 
-CGLLog::CGLLog(LogLevel lvl, LogStyle style) : CLog(lvl, style) {}
-
-CGLLog& CGLLog::operator<<(const unsigned int glenum) {
+plog::Record& operator<<(plog::Record& record, GLenum value) {
   //This operator converts all unsigned int values higher then threshold (1000) into enum string. As we can't differentiate between GLuint
-  //and GLenum types there is an issue that GLuint values higher then threshold are converted to GLenum string and lower GLenuma are not converted at all.
-  if (glenum > 1000) {
-    _buffer << GetGLEnumString(glenum);
+  //and GLenum types there is an issue that GLuint values higher then threshold are converted to GLenum string and lower GLenum are not converted at all.
+  if (value > 1000) {
+    record << GetGLEnumString(value);
   } else {
-    _buffer << glenum;
+    record << std::to_string(value);
   }
-  return *this;
+  return record;
 }
 
-CGLLog& CGLLog::operator<<(manip t) {
-  _buffer << t;
-  return *this;
-}
-
-CGLLog& CGLLog::operator<<(const char c) {
-  return operator<< <int>(c);
-}
-
-CGLLog& CGLLog::operator<<(const unsigned char c) {
-  return operator<< <unsigned>(c);
-}
-
-CGLLog& CGLLog::operator<<(const char* c) {
-  if (c != nullptr) {
-    _buffer << c;
-  } else {
-    _buffer << (const void*)c;
-  }
-  return *this;
-}
-
-CGLLog& CGLLog::operator<<(char* c) {
-  _buffer << (const void*)c;
-  return *this;
-}
-
-CGLLog& CGLLog::operator<<(const unsigned char* c) {
+static std::string toStrUCharPtr(const unsigned char* c) {
+  std::stringstream ss;
   if (c != nullptr) {
     uint64_t pageSize = 4 * 1024;
     const unsigned char* pageEndPtr =
@@ -2000,18 +1973,25 @@ CGLLog& CGLLog::operator<<(const unsigned char* c) {
     // is a string. Otherwise we treat it as a pointer to data.
     while (ptr <= pageEndPtr) {
       if (*ptr == 0) {
-        _buffer << c;
-        return *this;
+        ss << c;
+        return ss.str();
       } else if (*ptr > 127) {
-        _buffer << (const void*)c;
-        return *this;
+        ss << (const void*)c;
+        return ss.str();
       }
       ptr++;
     }
   }
 
-  _buffer << (const void*)c;
-  return *this;
+  ss << (const void*)c;
+  return ss.str();
+}
+plog::Record& operator<<(plog::Record& record, const unsigned char* c) {
+  return record << toStrUCharPtr(c);
+}
+
+plog::Record& operator<<(plog::Record& record, GLboolean value) {
+  return record << (value ? "GL_TRUE" : "GL_FALSE");
 }
 
 namespace {
@@ -2094,38 +2074,38 @@ std::string DescribeLayerType(BYTE iLayerType) {
 }
 } // namespace
 
-CGLLog& CGLLog::operator<<(PIXELFORMATDESCRIPTOR& pfd) {
-  _buffer << std::showbase;
-  _buffer << "{ \n"
-          << "pfd.nSize: " << pfd.nSize << ", \n"
-          << "pfd.nVersion: " << pfd.nVersion << ", \n"
-          << "pfd.dwFlags: " << DescribePixelFormatFlags(pfd.dwFlags) << ", \n"
-          << "pfd.iPixelType: " << DescribePixelType(pfd.iPixelType)
-          << ", \n"
-          // Use to_string so they get interpreted as numbers, not chars.
-          << "pfd.cColorBits: " << std::to_string(pfd.cColorBits) << ", \n"
-          << "pfd.cRedBits: " << std::to_string(pfd.cRedBits) << ", \n"
-          << "pfd.cRedShift: " << std::to_string(pfd.cRedShift) << ", \n"
-          << "pfd.cGreenBits: " << std::to_string(pfd.cGreenBits) << ", \n"
-          << "pfd.cGreenShift: " << std::to_string(pfd.cGreenShift) << ", \n"
-          << "pfd.cBlueBits: " << std::to_string(pfd.cBlueBits) << ", \n"
-          << "pfd.cBlueShift: " << std::to_string(pfd.cBlueShift) << ", \n"
-          << "pfd.cAlphaBits: " << std::to_string(pfd.cAlphaBits) << ", \n"
-          << "pfd.cAlphaShift: " << std::to_string(pfd.cAlphaShift) << ", \n"
-          << "pfd.cAccumBits: " << std::to_string(pfd.cAccumBits) << ", \n"
-          << "pfd.cAccumRedBits: " << std::to_string(pfd.cAccumRedBits) << ", \n"
-          << "pfd.cAccumGreenBits: " << std::to_string(pfd.cAccumGreenBits) << ", \n"
-          << "pfd.cAccumBlueBits: " << std::to_string(pfd.cAccumBlueBits) << ", \n"
-          << "pfd.cAccumAlphaBits: " << std::to_string(pfd.cAccumAlphaBits) << ", \n"
-          << "pfd.cDepthBits: " << std::to_string(pfd.cDepthBits) << ", \n"
-          << "pfd.cStencilBits: " << std::to_string(pfd.cStencilBits) << ", \n"
-          << "pfd.cAuxBuffers: " << std::to_string(pfd.cAuxBuffers) << ", \n"
-          << "pfd.iLayerType: " << DescribeLayerType(pfd.iLayerType) << ", \n"
-          << "pfd.bReserved: " << std::to_string(pfd.bReserved) << ", \n"
-          << "pfd.dwLayerMask: " << pfd.dwLayerMask << ", \n"
-          << "pfd.dwVisibleMask: " << pfd.dwVisibleMask << ", \n"
-          << "pfd.dwDamageMask: " << pfd.dwDamageMask << " \n}";
-  return *this;
+plog::Record& operator<<(plog::Record& record, PIXELFORMATDESCRIPTOR& pfd) {
+  record << std::showbase;
+  record << "{ \n"
+         << "pfd.nSize: " << pfd.nSize << ", \n"
+         << "pfd.nVersion: " << pfd.nVersion << ", \n"
+         << "pfd.dwFlags: " << DescribePixelFormatFlags(pfd.dwFlags) << ", \n"
+         << "pfd.iPixelType: " << DescribePixelType(pfd.iPixelType)
+         << ", \n"
+         // Use to_string so they get interpreted as numbers, not chars.
+         << "pfd.cColorBits: " << std::to_string(pfd.cColorBits) << ", \n"
+         << "pfd.cRedBits: " << std::to_string(pfd.cRedBits) << ", \n"
+         << "pfd.cRedShift: " << std::to_string(pfd.cRedShift) << ", \n"
+         << "pfd.cGreenBits: " << std::to_string(pfd.cGreenBits) << ", \n"
+         << "pfd.cGreenShift: " << std::to_string(pfd.cGreenShift) << ", \n"
+         << "pfd.cBlueBits: " << std::to_string(pfd.cBlueBits) << ", \n"
+         << "pfd.cBlueShift: " << std::to_string(pfd.cBlueShift) << ", \n"
+         << "pfd.cAlphaBits: " << std::to_string(pfd.cAlphaBits) << ", \n"
+         << "pfd.cAlphaShift: " << std::to_string(pfd.cAlphaShift) << ", \n"
+         << "pfd.cAccumBits: " << std::to_string(pfd.cAccumBits) << ", \n"
+         << "pfd.cAccumRedBits: " << std::to_string(pfd.cAccumRedBits) << ", \n"
+         << "pfd.cAccumGreenBits: " << std::to_string(pfd.cAccumGreenBits) << ", \n"
+         << "pfd.cAccumBlueBits: " << std::to_string(pfd.cAccumBlueBits) << ", \n"
+         << "pfd.cAccumAlphaBits: " << std::to_string(pfd.cAccumAlphaBits) << ", \n"
+         << "pfd.cDepthBits: " << std::to_string(pfd.cDepthBits) << ", \n"
+         << "pfd.cStencilBits: " << std::to_string(pfd.cStencilBits) << ", \n"
+         << "pfd.cAuxBuffers: " << std::to_string(pfd.cAuxBuffers) << ", \n"
+         << "pfd.iLayerType: " << DescribeLayerType(pfd.iLayerType) << ", \n"
+         << "pfd.bReserved: " << std::to_string(pfd.bReserved) << ", \n"
+         << "pfd.dwLayerMask: " << pfd.dwLayerMask << ", \n"
+         << "pfd.dwVisibleMask: " << pfd.dwVisibleMask << ", \n"
+         << "pfd.dwDamageMask: " << pfd.dwDamageMask << " \n}";
+  return record;
 }
 
 std::string GetCurrentProgramShaderText(GLenum shtype) {
@@ -2214,7 +2194,7 @@ void CleanResources() {
       drv.gl.glFlush();
       drv.gl.glFinish();
     } else {
-      Log(WARN) << "Resources cleanup failed. SetCurrentContext returned 0.";
+      LOG_WARNING << "Resources cleanup failed. SetCurrentContext returned 0.";
     }
   }
 #endif
@@ -2314,7 +2294,7 @@ size_t GetPatchParameterValuesCount(GLenum pname) {
   default:
     // GL_PATCH_VERTICES should be used only in glPatchParameteri.
     // Other enums should not be used in glPatchParameter* functions at all.
-    Log(ERR) << "Unexpected parameter name in glPatchParameterfv: " << pname;
+    LOG_ERROR << "Unexpected parameter name in glPatchParameterfv: " << pname;
     throw std::invalid_argument(EXCEPTION_MESSAGE);
   }
 }
@@ -2327,7 +2307,7 @@ GLenum GetTargetOfTextureOrCrash(GLuint texName) {
   if (texState != nullptr) {
     return texState->Target();
   } else {
-    Log(ERR) << "Texture not found, likely an issue with state tracking.";
+    LOG_ERROR << "Texture not found, likely an issue with state tracking.";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
 }

@@ -175,7 +175,7 @@ void gits::OpenGL::CglXCreateContext::Run() {
   // Choose visual
   XVisualInfo* vis = ptbl_glXChooseVisual(dpy, ptbl_DefaultScreen(dpy), *_attribs);
   if (vis == nullptr) {
-    Log(ERR) << "glXChooseVisual failed: undefined GLX attribute encountered in attribList";
+    LOG_ERROR << "glXChooseVisual failed: undefined GLX attribute encountered in attribList";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   _vis.AddMapping(vis);
@@ -183,7 +183,7 @@ void gits::OpenGL::CglXCreateContext::Run() {
   // Create context
   GLXContext ctx = ptbl_glXCreateContext(dpy, vis, nullptr, GL_TRUE);
   if (ctx == nullptr) {
-    Log(ERR) << "glXCreateContext failed on the client side";
+    LOG_ERROR << "glXCreateContext failed on the client side";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   _return_value.AddMapping(ctx);
@@ -193,7 +193,7 @@ void gits::OpenGL::CglXCreateContext::Run() {
   GLXFBConfig* fbConfigs =
       ptbl_glXChooseFBConfig(dpy, ptbl_DefaultScreen(dpy), *_fbAttribs, &fbConfigCount);
   if (fbConfigs == nullptr) {
-    Log(ERR) << "glXChooseFBConfig failed: no config matches were found";
+    LOG_ERROR << "glXChooseFBConfig failed: no config matches were found";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
 
@@ -244,8 +244,8 @@ gits::OpenGL::CglXMakeCurrent::CglXMakeCurrent(Bool return_value,
     // Redundant check, so Klocwork doesn't complain.
     ctxManager = GlxWinCtxMngr::Get(ctx);
     if (ctxManager == nullptr) {
-      Log(ERR) << "Value for context " << ctx
-               << " not found in map, even though it was just added there.";
+      LOG_ERROR << "Value for context " << ctx
+                << " not found in map, even though it was just added there.";
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
   }
@@ -253,7 +253,7 @@ gits::OpenGL::CglXMakeCurrent::CglXMakeCurrent(Bool return_value,
   // Get Window data.
   GlxRecorderMngr* glxRecorderMngr = dynamic_cast<GlxRecorderMngr*>(ctxManager);
   if (glxRecorderMngr == nullptr) {
-    Log(ERR) << "GlxRecorderMngr is not properly set.";
+    LOG_ERROR << "GlxRecorderMngr is not properly set.";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   glxRecorderMngr->UpdateWindowHandle();
@@ -278,7 +278,7 @@ void gits::OpenGL::CglXMakeCurrent::Run() {
   GlxPlayerMngr* glxPlayerMngr = dynamic_cast<GlxPlayerMngr*>(GlxWinCtxMngr::Get(*_ctx));
 
   if (glxPlayerMngr == nullptr) {
-    Log(ERR) << "CglXMakeCurrent called on unmapped context";
+    LOG_ERROR << "CglXMakeCurrent called on unmapped context";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
 
@@ -967,7 +967,7 @@ void gits::OpenGL::CglXCreateNewContext::AddFbConfigAttrib(Display* dpy,
 #ifdef GITS_PLATFORM_X11
   int value;
   if (drv.glx.glXGetFBConfigAttrib(dpy, config, attribute, &value) == GLX_BAD_ATTRIBUTE) {
-    Log(ERR) << "Invalid attribute in glXGetFBConfigAttrib(...): " << attribute;
+    LOG_ERROR << "Invalid attribute in glXGetFBConfigAttrib(...): " << attribute;
     throw ENotFound(EXCEPTION_MESSAGE);
   }
   _fbconfig_attribs.Vector().push_back(attribute);
@@ -990,7 +990,7 @@ void gits::OpenGL::CglXCreateNewContext::Run() {
                                                   ptbl_DefaultScreen((Display*)GetNativeDisplay()),
                                                   *_fbconfig_attribs, &fbConfigCount);
   if (fbConfigs == nullptr) {
-    Log(ERR) << "glXChooseFBConfig failed: no config matches were found";
+    LOG_ERROR << "glXChooseFBConfig failed: no config matches were found";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   _config.AddMapping(fbConfigs[0]);
@@ -999,7 +999,7 @@ void gits::OpenGL::CglXCreateNewContext::Run() {
   GLXContext ctx = ptbl_glXCreateNewContext((Display*)GetNativeDisplay(), fbConfigs[0],
                                             *_renderType, nullptr, *_direct);
   if (ctx == nullptr) {
-    Log(ERR) << "glXCreateNewContext failed on the client side";
+    LOG_ERROR << "glXCreateNewContext failed on the client side";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   _return_value.AddMapping(ctx);
@@ -1028,15 +1028,15 @@ gits::OpenGL::CglXMakeContextCurrent::CglXMakeContextCurrent(
     // Redundant check, so Klocwork doesn't complain.
     ctxManager = GlxWinCtxMngr::Get(ctx);
     if (ctxManager == nullptr) {
-      Log(ERR) << "Value for context " << ctx
-               << " not found in map, even though it was just added there.";
+      LOG_ERROR << "Value for context " << ctx
+                << " not found in map, even though it was just added there.";
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
   }
   // Get Window data.
   GlxRecorderMngr* glxRecorderMngr = dynamic_cast<GlxRecorderMngr*>(ctxManager);
   if (glxRecorderMngr == nullptr) {
-    Log(ERR) << "GlxRecorderMngr is not properly set.";
+    LOG_ERROR << "GlxRecorderMngr is not properly set.";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   glxRecorderMngr->UpdateWindowHandle();
@@ -1061,7 +1061,7 @@ void gits::OpenGL::CglXMakeContextCurrent::Run() {
   GlxPlayerMngr* glxPlayerMngr = dynamic_cast<GlxPlayerMngr*>(GlxWinCtxMngr::Get(*_ctx));
 
   if (glxPlayerMngr == nullptr) {
-    Log(ERR) << "CglXMakeContextCurrent called on unmapped context";
+    LOG_ERROR << "CglXMakeContextCurrent called on unmapped context";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
 
@@ -1542,7 +1542,7 @@ void gits::OpenGL::CglXCreateContextAttribsARB::AddFbConfigAttrib(Display* dpy,
 #ifdef GITS_PLATFORM_X11
   int value;
   if (drv.glx.glXGetFBConfigAttrib(dpy, config, attribute, &value) == GLX_BAD_ATTRIBUTE) {
-    Log(ERR) << "Invalid attribute in glXGetFBConfigAttrib(...): " << attribute;
+    LOG_ERROR << "Invalid attribute in glXGetFBConfigAttrib(...): " << attribute;
     throw ENotFound(EXCEPTION_MESSAGE);
   }
   _fbconfig_attribs.Vector().push_back(attribute);
@@ -1566,7 +1566,7 @@ void gits::OpenGL::CglXCreateContextAttribsARB::Run() {
                                                   ptbl_DefaultScreen((Display*)GetNativeDisplay()),
                                                   *_fbconfig_attribs, &fbConfigCount);
   if (fbConfigs == nullptr) {
-    Log(ERR) << "glXChooseFBConfig failed: no config matches were found";
+    LOG_ERROR << "glXChooseFBConfig failed: no config matches were found";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   _config.AddMapping(fbConfigs[0]);
@@ -1575,7 +1575,7 @@ void gits::OpenGL::CglXCreateContextAttribsARB::Run() {
   GLXContext ctx = ptbl_glXCreateContextAttribsARB((Display*)GetNativeDisplay(), fbConfigs[0],
                                                    nullptr, *_direct, *_attrib_list);
   if (ctx == nullptr) {
-    Log(ERR) << "glXCreateContextAttribsARB failed on the client side";
+    LOG_ERROR << "glXCreateContextAttribsARB failed on the client side";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   _return_value.AddMapping(ctx);

@@ -105,7 +105,7 @@ void GetPixelFormatParams(HDC hdc, int format, Cint::CSArray& attribs, Cint::CSA
         hdc, format, 0, nAttribs, &attribs.Vector()[0], &values.Vector()[0]);
 
     if (_return_value == 0) {
-      Log(WARN)
+      LOG_WARNING
           << "Choosing pixel format using ARB Extension function failed. Using WIN GDI function.";
       PIXELFORMATDESCRIPTOR pfd_current;
       drv.wgl.wglDescribePixelFormat(hdc, format, sizeof(PIXELFORMATDESCRIPTOR), &pfd_current);
@@ -168,7 +168,7 @@ int SelectPixelFormat(HDC dc, Cint::CSArray& attribs, Cint::CSArray& values) {
     int _return_value =
         ptbl_wglChoosePixelFormatARB(dc, &attribs_values[0], nullptr, 1, &piFormat, &numFormats);
     if (_return_value == 0) {
-      Log(WARN)
+      LOG_WARNING
           << "Choosing pixel format using ARB Extension function failed. Using WIN GDI function.";
 
       //CHOOSE PIXEL FORMAT USING WIN GDI FUNCTION
@@ -223,7 +223,7 @@ void UpdateWindowsRec(HWND hwnd, Cint::CSArray& winparams, CHWND::CSArray& hwnd_
       state.MapUpdateWindowRecorder((void*)hwnd, winparams_current);
     }
   } else {
-    Log(WARN) << "Ignoring update parameters of an unknown window";
+    LOG_WARNING << "Ignoring update parameters of an unknown window";
     //throw gits::EOperationFailed(EXCEPTION_MESSAGE); - Maya 2012 workaround
   }
   if (Configurator::Get().opengl.recorder.doNotRemoveWin) {
@@ -353,7 +353,7 @@ gits::OpenGL::CwglSetPixelFormat::CwglSetPixelFormat(BOOL return_value,
 
   //Add window to map
   state.MapAddWindowRecorder((void*)hwnd, _winparams.Vector());
-  Log(INFO) << "Application setting pixelformat: " << format;
+  LOG_INFO << "Application setting pixelformat: " << format;
 }
 #else
 {
@@ -604,8 +604,8 @@ gits::OpenGL::CwglMakeCurrent::CwglMakeCurrent(BOOL return_value, HDC hdc, HGLRC
   if (return_value && (hglrc != nullptr) && (SD().GetContextStateData(hglrc) == nullptr)) {
     // If the wglMakeCurrent function succeeds but the context data has not yet been tracked,
     // initiate tracking of the context data at this point.
-    Log(WARN) << "wglMakeCurrent function succeeded, yet context data remains untracked. "
-                 "Initiating tracking now.";
+    LOG_WARNING << "wglMakeCurrent function succeeded, yet context data remains untracked. "
+                   "Initiating tracking now.";
     SD().AddContext(hglrc, nullptr);
   }
 
@@ -632,8 +632,8 @@ void gits::OpenGL::CwglMakeCurrent::Run() {
 
   if (!_hglrc.CheckMapping()) {
     // Ensure the context is created before calling wglMakeCurrent. If not, proceed to create it.
-    Log(WARN) << "The context required for wglMakeCurrent has not been created. Proceeding to "
-                 "create the context.";
+    LOG_WARNING << "The context required for wglMakeCurrent has not been created. Proceeding to "
+                   "create the context.";
     _hglrc.AddMapping(ptbl_wglCreateContext(hdc));
     SD().AddContext(*_hglrc, nullptr);
   }
@@ -866,8 +866,9 @@ gits::OpenGL::CwglSwapMultipleBuffers::CwglSwapMultipleBuffers(BOOL return_value
 #if defined GITS_PLATFORM_WINDOWS
 
   if (buffers > 1) {
-    Log(WARN) << "wglSwapMultipleBuffers with more then 1 buffer used. GITS updates window params "
-                 "for first buffer only";
+    LOG_WARNING
+        << "wglSwapMultipleBuffers with more then 1 buffer used. GITS updates window params "
+           "for first buffer only";
   }
 
   UpdateWindowsRec(_hwnd.Original(), _winparams, _hwnd_del_list);
@@ -887,8 +888,9 @@ void gits::OpenGL::CwglSwapMultipleBuffers::Run() {
 #if defined GITS_PLATFORM_WINDOWS
 
   if (*_buffers > 1) {
-    Log(WARN) << "wglSwapMultipleBuffers with more then 1 buffer used. GITS updates window params "
-                 "for first buffer only";
+    LOG_WARNING
+        << "wglSwapMultipleBuffers with more then 1 buffer used. GITS updates window params "
+           "for first buffer only";
   }
 
   CHDC xhdc(**_hdc);
@@ -1606,7 +1608,7 @@ void gits::OpenGL::CwglCreatePbufferEXT::Run() {
                                   *_iWidth, *_iHeight, *_piAttribList);
   CHPBUFFEREXT::AddMapping(_return_value.Original(), hpbuffer);
 #else
-  Log(ERR) << "" << Name() << "portability not implemented.";
+  LOG_ERROR << "" << Name() << "portability not implemented.";
   throw ENotImplemented(EXCEPTION_MESSAGE);
 #endif
 }
@@ -1778,7 +1780,7 @@ void gits::OpenGL::CwglChoosePixelFormatEXT::Run() {
   drv.wgl.wglChoosePixelFormatEXT((HDC)UpdateHDC(_hdc, _hwnd), *_piAttribIList, *_pfAttribFList,
                                   *_nMaxFormats, *_piFormats, &nNumFormats);
 #else
-  Log(ERR) << "" << Name() << "wglCreatePbufferEXT portability not implemented.";
+  LOG_ERROR << "" << Name() << "wglCreatePbufferEXT portability not implemented.";
   throw ENotImplemented(EXCEPTION_MESSAGE);
 #endif
 }

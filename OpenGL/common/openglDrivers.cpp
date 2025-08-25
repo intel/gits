@@ -161,11 +161,11 @@ NOINLINE void GLErrorLog() {
   if (glGetErrorLocal != nullptr) {
     error = glGetErrorLocal();
   } else {
-    Log(ERR) << "Logging failed - can't load glGetError";
+    LOG_ERROR << "Logging failed - can't load glGetError";
   }
 
   if (error != 0) {
-    GLLog(TRACE) << "GL Error: " << (GLenum)error;
+    LOG_TRACE << "GL Error: " << (GLenum)error;
   }
 }
 
@@ -281,9 +281,9 @@ void CheckForRecursion(dl::SharedObject library) {
   if (Configurator::IsRecorder() && Configurator::Get().opengl.recorder.detectRecursion &&
       (dl::load_symbol(library, "GITSIdentificationToken") !=
        nullptr)) { // This token is exposed only by proxy i.e. gits library
-    Log(ERR) << "Recursion detected while loading the library.";
-    Log(ERR) << "LibDirectory value not set correctly in gits.ini file. Please refer to the "
-                "\"OpenGL Options\" section in gits.ini for more details.";
+    LOG_ERROR << "Recursion detected while loading the library.";
+    LOG_ERROR << "LibDirectory value not set correctly in gits.ini file. Please refer to the "
+                 "\"OpenGL Options\" section in gits.ini for more details.";
     exit(EXIT_FAILURE);
   }
 }
@@ -295,7 +295,7 @@ NOINLINE bool UseTracing(const char* func) {
 }
 
 NOINLINE void LogFunctionNotFoundShutdown(const char* func) {
-  Log(ERR) << "Function " << func << " couldn't be loaded";
+  LOG_ERROR << "Function " << func << " couldn't be loaded";
   drv.trigger_terminate_event();
   exit(1);
 }
@@ -310,15 +310,15 @@ NOINLINE void LogFunctionNotFoundShutdown(const char* func) {
 #define DEFAULT_FUNCTION(b, c, d, e, load_func, drv_name)                                          \
   b STDCALL default_##c d {                                                                        \
     if (!load_func(drv_name.c, #c)) {                                                              \
-      Log(ERR) << "Application called the function " << #c << ", but it "                          \
-               << "couldn't be loaded. The driver call will be skipped.";                          \
+      LOG_ERROR << "Application called the function " << #c << ", but it "                         \
+                << "couldn't be loaded. The driver call will be skipped.";                         \
       if (Configurator::Get().opengl.recorder.retryFunctionLoads) {                                \
-        Log(ERR) << "Function load will be reattempted the next time "                             \
-                    "application calls this function.";                                            \
+        LOG_ERROR << "Function load will be reattempted the next time "                            \
+                     "application calls this function.";                                           \
         drv_name.c = default_##c;                                                                  \
       } else {                                                                                     \
-        Log(ERR) << "If application calls this function again, "                                   \
-                    "there will be a crash, caused by the nullptr call.";                          \
+        LOG_ERROR << "If application calls this function again, "                                  \
+                     "there will be a crash, caused by the nullptr call.";                         \
       }                                                                                            \
       return (b)0;                                                                                 \
     }                                                                                              \
@@ -363,11 +363,11 @@ void DumpPostDrawCall() {
       isFunLoaded = load_func(drv_name.c, #c);                                                     \
     }                                                                                              \
     if (!isFunLoaded) {                                                                            \
-      Log(WARN) << "Function " #c " called before any context creation";                           \
+      LOG_WARNING << "Function " #c " called before any context creation";                         \
       return (b)0;                                                                                 \
     } else {                                                                                       \
       if (drawFunc == 0 && drv_name.c == 0) {                                                      \
-        Log(ERR) << "Function " #c " couldn't be loaded";                                          \
+        LOG_ERROR << "Function " #c " couldn't be loaded";                                         \
         drv.trigger_terminate_event();                                                             \
         exit(1);                                                                                   \
       } else {                                                                                     \
@@ -506,7 +506,7 @@ dl::SharedObject CEglDriver::Library() {
   _lib_egl = dl::open_library(path.string().c_str());
 
   if (_lib_egl == nullptr) {
-    Log(ERR) << "Couldn't open EGL library: " << path.string();
+    LOG_ERROR << "Couldn't open EGL library: " << path.string();
     exit(1);
   }
 
@@ -536,7 +536,7 @@ dl::SharedObject CGlxDriver::Library() {
   _lib = dl::open_library(libGL.string().c_str());
 
   if (_lib == nullptr) {
-    Log(ERR) << "Couldn't open GLX library: " << libGL.string();
+    LOG_ERROR << "Couldn't open GLX library: " << libGL.string();
     exit(1);
   }
 
@@ -600,7 +600,7 @@ dl::SharedObject CWglDriver::Library() {
   _lib = dl::open_library(libGL.string().c_str());
 
   if (_lib == nullptr) {
-    Log(ERR) << "Couldn't open WGL library: " << libGL.string();
+    LOG_ERROR << "Couldn't open WGL library: " << libGL.string();
     exit(1);
   }
 
@@ -625,7 +625,7 @@ CGlDriver::CGlDriver() : _api(API_NULL), _initialized(false), _lib(nullptr) {
 void CGlDriver::Initialize(TApiType api) {
   if (Configurator::Get().common.mode == GITSMode::MODE_RECORDER &&
       !Configurator::Get().opengl.recorder.multiApiProtectBypass && _initialized && api != _api) {
-    Log(ERR) << "Multiple OGL API types applications not supported";
+    LOG_ERROR << "Multiple OGL API types applications not supported";
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
   if (_initialized) {
@@ -637,15 +637,15 @@ void CGlDriver::Initialize(TApiType api) {
   switch (api) {
   case API_GL:
     path = Configurator::Get().common.shared.libGL;
-    Log(INFO) << "Initializing OpenGL API";
+    LOG_INFO << "Initializing OpenGL API";
     break;
   case API_GLES1:
     path = Configurator::Get().common.shared.libGLESv1;
-    Log(INFO) << "Initializing OpenGLES 1.1 API";
+    LOG_INFO << "Initializing OpenGLES 1.1 API";
     break;
   case API_GLES2:
     path = Configurator::Get().common.shared.libGLESv2;
-    Log(INFO) << "Initializing OpenGLES 2.0 API";
+    LOG_INFO << "Initializing OpenGLES 2.0 API";
     break;
   default:
     throw std::runtime_error("bad api specified for GL function loader");
@@ -703,7 +703,7 @@ bool CGlDriver::CanReadWriteonlyMappings() const {
 
   const char* const ptr = (char*)func_map(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
   can_read = (strcmp(data, ptr) == 0);
-  Log(WARN) << "Reading from writeonly buffer mappings " << (can_read ? "" : "im") << "possible";
+  LOG_WARNING << "Reading from writeonly buffer mappings " << (can_read ? "" : "im") << "possible";
   func_unmap(GL_ARRAY_BUFFER);
 
   drv.gl.glDeleteBuffers(1, &buffer);

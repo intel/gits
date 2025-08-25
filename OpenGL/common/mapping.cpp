@@ -153,7 +153,7 @@ GLint CGLUniformSubroutineLocation::operator*() const {
   auto& locationsMap = shadersMap[type_];
   auto optionalLocationData = locationsMap.find(location_);
   if (!optionalLocationData) {
-    Log(WARN) << "Uniform subroutine location couldn't be found, returning -1";
+    LOG_WARNING << "Uniform subroutine location couldn't be found, returning -1";
     return -1;
   }
 
@@ -190,7 +190,7 @@ GLuint CGLSubroutineIndex::GetMapping(GLint program, GLenum type, GLuint index) 
   auto& idx_map = getShadersMap()[program][type];
   auto iter = idx_map.find(index);
   if (iter == idx_map.end()) {
-    Log(WARN) << "subroutine index mapping not found";
+    LOG_WARNING << "subroutine index mapping not found";
     return index;
   }
   return iter->second;
@@ -227,7 +227,7 @@ GLint CGLUniformBlockIndex::operator*() const {
   auto& idx_map = getProgramsMap()[program_];
   auto iter = idx_map.find(index_);
   if (iter == idx_map.end()) {
-    Log(WARN) << "Couldn't map uniform block index";
+    LOG_WARNING << "Couldn't map uniform block index";
     return index_;
   }
   return iter->second;
@@ -266,7 +266,7 @@ GLuint CGLStorageBlockIndex::operator*() const {
   auto& idx_map = getProgramsMap()[program_];
   auto iter = idx_map.find(index_);
   if (iter == idx_map.end()) {
-    Log(WARN) << "Couldn't map storage block index";
+    LOG_WARNING << "Couldn't map storage block index";
     return index_;
   }
   return iter->second;

@@ -191,8 +191,8 @@ void InitializeWaylandServer() {
   wl_display_dispatch(dpy);
   wl_display_roundtrip(dpy);
   if (wlCompositor == nullptr || wlShell == nullptr) {
-    Log(ERR) << "Wayland server init failed. wl_compositor: " << wlCompositor
-             << ", wl_shell: " << wlShell;
+    LOG_ERROR << "Wayland server init failed. wl_compositor: " << wlCompositor
+              << ", wl_shell: " << wlShell;
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
   initialized = true;
@@ -202,7 +202,7 @@ win_ptr_t CreateWinWaylandEglImpl(GLint width, GLint height, GLint x, GLint y) {
   InitializeWaylandServer();
   wl_surface* surf = wl_compositor_create_surface(wlCompositor);
   if (surf == nullptr) {
-    Log(ERR) << "Wayland surface creation failed.";
+    LOG_ERROR << "Wayland surface creation failed.";
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
   wl_shell_surface* shellSurf = wl_shell_get_shell_surface(wlShell, surf);
@@ -210,7 +210,7 @@ win_ptr_t CreateWinWaylandEglImpl(GLint width, GLint height, GLint x, GLint y) {
 
   wl_egl_window* win = wl_egl_window_create(surf, width, height);
   if (win == nullptr) {
-    Log(ERR) << "Wayland window creation failed.";
+    LOG_ERROR << "Wayland window creation failed.";
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
   wl_egl_window_resize(win, width, height, x, y);
@@ -270,7 +270,7 @@ win_handle_t GetWinHandleWaylandEgl(win_ptr_t winptr) {
 native_disp_t GetNativeDisplayWaylandEgl() {
   static wl_display* dpy = wl_display_connect((char*)nullptr);
   if (dpy == nullptr) {
-    Log(ERR) << "Wayland display connection failed.";
+    LOG_ERROR << "Wayland display connection failed.";
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
   return (native_disp_t)dpy;

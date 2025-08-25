@@ -491,7 +491,7 @@ void gits::OpenGL::execSetContextEGL(PtblHandle ctx) {
     EGLBoolean result = drv.egl.eglChooseConfig(
         GetEGLDisplay(), &PtblToEGLAttribs(pstate.pfs[ptblPf].attribs)[0], &pf, 1, &num);
     if (result == 0) {
-      Log(ERR) << "eglChooseConfig failed. EGL Error: " << drv.egl.eglGetError();
+      LOG_ERROR << "eglChooseConfig failed. EGL Error: " << drv.egl.eglGetError();
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
     ptblPf.True(pf);
@@ -505,7 +505,7 @@ void gits::OpenGL::execSetContextEGL(PtblHandle ctx) {
     ctx.True(newctx);
     EGLint err = drv.egl.eglGetError();
     if (err != EGL_SUCCESS) {
-      Log(ERR) << "eglCreateContext failed. EGL Error: " << err;
+      LOG_ERROR << "eglCreateContext failed. EGL Error: " << err;
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
   }
@@ -546,7 +546,7 @@ void gits::OpenGL::execSetContextEGL(PtblHandle ctx) {
           drv.egl.eglCreatePbufferSurface(GetEGLDisplay(), ptblPf.True(), &attribs[0]);
       EGLint err = drv.egl.eglGetError();
       if (err != EGL_SUCCESS) {
-        Log(ERR) << "eglCreatePbufferSurface failed. EGL Error: " << err;
+        LOG_ERROR << "eglCreatePbufferSurface failed. EGL Error: " << err;
         throw std::runtime_error(EXCEPTION_MESSAGE);
       }
       ptblEglSurf.True(surf);
@@ -557,7 +557,7 @@ void gits::OpenGL::execSetContextEGL(PtblHandle ctx) {
           drv.egl.eglCreateWindowSurface(GetEGLDisplay(), ptblPf.True(), ptblSurf.True(), nullptr);
       EGLint err = drv.egl.eglGetError();
       if (err != EGL_SUCCESS) {
-        Log(ERR) << "eglCreateWindowSurface failed. EGL Error: " << err;
+        LOG_ERROR << "eglCreateWindowSurface failed. EGL Error: " << err;
         throw std::runtime_error(EXCEPTION_MESSAGE);
       }
       ptblEglSurf.True(surf);

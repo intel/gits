@@ -1339,7 +1339,7 @@ class CVariableTextureInfo : public gits::CComponentState::CVariable {
       if (it != list.end()) {
         return GCC433WA_0(it)->Data();
       } else {
-        Log(ERR) << "Texture " << _id << " not found to be bound to target " << _target;
+        LOG_ERROR << "Texture " << _id << " not found to be bound to target " << _target;
         throw EOperationFailed(EXCEPTION_MESSAGE);
       }
     }
@@ -1371,11 +1371,11 @@ class CVariableTextureInfo : public gits::CComponentState::CVariable {
   class CTexture1D : public CTexture {
     virtual void GetTextureLevelsDataGL();
     virtual void GetTextureLevelsDataGLES() {
-      Log(ERR) << "GL_TEXTURE_1D restoration for OGLES not implemented.";
+      LOG_ERROR << "GL_TEXTURE_1D restoration for OGLES not implemented.";
       throw ENotImplemented(EXCEPTION_MESSAGE);
     }
     virtual void ScheduleSameTargetTextureGLES(CScheduler& scheduler) const {
-      Log(ERR) << "GL_TEXTURE_1D restoration for OGLES not implemented.";
+      LOG_ERROR << "GL_TEXTURE_1D restoration for OGLES not implemented.";
       throw ENotImplemented(EXCEPTION_MESSAGE);
     }
     virtual void ScheduleSameTargetTextureGL(CScheduler& scheduler) const;
@@ -1392,11 +1392,11 @@ class CVariableTextureInfo : public gits::CComponentState::CVariable {
     virtual void GetTextureLevelsDataGL();
     virtual void ScheduleSameTargetTextureGL(CScheduler& scheduler) const;
     virtual void GetTextureLevelsDataGLES() {
-      Log(ERR) << "GL_TEXTURE_1D_ARRAY restoration for OGLES not implemented.";
+      LOG_ERROR << "GL_TEXTURE_1D_ARRAY restoration for OGLES not implemented.";
       throw ENotImplemented(EXCEPTION_MESSAGE);
     }
     virtual void ScheduleSameTargetTextureGLES(CScheduler& scheduler) const {
-      Log(ERR) << "GL_TEXTURE_1D_ARRAY restoration for OGLES not implemented.";
+      LOG_ERROR << "GL_TEXTURE_1D_ARRAY restoration for OGLES not implemented.";
       throw ENotImplemented(EXCEPTION_MESSAGE);
     }
     CTextureStateData::CTextureNDData& Texture1DArrayData() const {
@@ -1441,12 +1441,12 @@ class CVariableTextureInfo : public gits::CComponentState::CVariable {
   class CTexture2DArray : public CTexture {
     virtual void GetTextureLevelsDataGL();
     virtual void GetTextureLevelsDataGLES() {
-      Log(ERR) << "GL_TEXTURE_2D_ARRAY restoration for OGLES not implemented.";
+      LOG_ERROR << "GL_TEXTURE_2D_ARRAY restoration for OGLES not implemented.";
       throw ENotImplemented(EXCEPTION_MESSAGE);
     }
     virtual void ScheduleSameTargetTextureGL(CScheduler& scheduler) const;
     virtual void ScheduleSameTargetTextureGLES(CScheduler& scheduler) const {
-      Log(ERR) << "GL_TEXTURE_2D_ARRAY restoration for OGLES not implemented.";
+      LOG_ERROR << "GL_TEXTURE_2D_ARRAY restoration for OGLES not implemented.";
       throw ENotImplemented(EXCEPTION_MESSAGE);
     }
     CTextureStateData::CTextureNDData& Texture2DArrayData() const {
@@ -1478,12 +1478,12 @@ class CVariableTextureInfo : public gits::CComponentState::CVariable {
   class CTexture3D : public CTexture {
     virtual void GetTextureLevelsDataGL();
     virtual void GetTextureLevelsDataGLES() {
-      Log(ERR) << "GL_TEXTURE_3D restoration for OGLES not implemented.";
+      LOG_ERROR << "GL_TEXTURE_3D restoration for OGLES not implemented.";
       throw ENotImplemented(EXCEPTION_MESSAGE);
     }
     virtual void ScheduleSameTargetTextureGL(CScheduler& scheduler) const;
     virtual void ScheduleSameTargetTextureGLES(CScheduler& scheduler) const {
-      Log(ERR) << "GL_TEXTURE_3D restoration for OGLES not implemented.";
+      LOG_ERROR << "GL_TEXTURE_3D restoration for OGLES not implemented.";
       throw ENotImplemented(EXCEPTION_MESSAGE);
     }
     CTextureStateData::CTextureNDData& Texture3DData() const {

@@ -56,7 +56,7 @@ void spillGL() {
     std::string path = (gits::OpenGL::CGitsPlugin::Configuration().common.shared.libGL).string();
     void* handleLibGL = dlopen(path.c_str(), RTLD_NOW | RTLD_GLOBAL);
     if (handleLibGL == nullptr) {
-      Log(ERR) << "Failed to load GL library: " << path;
+      LOG_ERROR << "Failed to load GL library: " << path;
       exit(1);
     }
   };
@@ -69,7 +69,7 @@ void spillEGL() {
     std::string path = (gits::OpenGL::CGitsPlugin::Configuration().common.shared.libEGL).string();
     void* handleLibEGL = dlopen(path.c_str(), RTLD_NOW | RTLD_GLOBAL);
     if (handleLibEGL == nullptr) {
-      Log(ERR) << "Failed to load EGL library: " << path;
+      LOG_ERROR << "Failed to load EGL library: " << path;
       exit(1);
     }
   };
@@ -331,8 +331,8 @@ GLAPI EGLContext GLAPIENTRY eglCreateContext(EGLDisplay arg0,
     wrapper.GLInitialize(api);
   } break;
   default:
-    Log(ERR) << "Attempted to create unsupported by GITS context type:"
-             << wrapper.Drivers().egl.eglQueryAPI();
+    LOG_ERROR << "Attempted to create unsupported by GITS context type:"
+              << wrapper.Drivers().egl.eglQueryAPI();
     abort();
   }
   GITS_WRAPPER_PRE
@@ -1201,8 +1201,8 @@ GLAPI BOOL GLAPIENTRY wglSetPixelFormat(HDC arg0, int arg1, const PIXELFORMATDES
     }
 
     if (deadlock) {
-      Log(WARN) << "Deadlock detected in " << __FUNCTION__
-                << ", function will not be processed by GITS.";
+      LOG_WARNING << "Deadlock detected in " << __FUNCTION__
+                  << ", function will not be processed by GITS.";
       gits::OpenGL::IRecorderWrapper& wrapper = gits::OpenGL::CGitsPlugin::RecorderWrapper();
       return wrapper.Drivers().wgl.wglSetPixelFormat(arg0, arg1, arg2);
     }

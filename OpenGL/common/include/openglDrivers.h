@@ -30,22 +30,26 @@ namespace gits {
 struct Tracer {
   template <class T>
   NOINLINE void trace_ret(T r) {
-    GLLog(TRACE, NO_PREFIX) << " = " << r;
+    LOG_FORMAT_RAW
+    LOG_TRACE << " = " << r << "\n";
   }
 
   NOINLINE void trace_ret(void_t r) {
-    GLLog(TRACE, NO_PREFIX) << "";
+    LOG_FORMAT_RAW
+    LOG_TRACE << "\n";
   }
 
-  void print_args(OpenGL::CGLLog& s) {}
+  void print_args(plog::Record& s) {}
 
   template <class T>
-  NOINLINE void print_args(OpenGL::CGLLog& s, T t) {
+  NOINLINE void print_args(plog::Record& s, T t) {
+    using namespace gits::OpenGL;
     s << t;
   }
 
   template <class Head, class... Rest>
-  NOINLINE void print_args(OpenGL::CGLLog& s, Head h, Rest... r) {
+  NOINLINE void print_args(plog::Record& s, Head h, Rest... r) {
+    using namespace gits::OpenGL;
     s << h << ", ";
     print_args(s, r...);
   }
@@ -54,10 +58,13 @@ struct Tracer {
 
   template <class... Args>
   NOINLINE void trace(Args... args) {
-    auto log = OpenGL::CGLLog(LogLevel::TRACE, NO_NEWLINE);
+    auto log = plog::Record(plog::debug, PLOG_GET_FUNC(), __LINE__, PLOG_GET_FILE(),
+                            PLOG_GET_THIS(), PLOG_DEFAULT_INSTANCE_ID);
     log << name << "(";
     print_args(log, args...);
     log << ")";
+    LOG_FORMAT_RAW
+    plog::get()->operator+=(log);
   }
 
 private:

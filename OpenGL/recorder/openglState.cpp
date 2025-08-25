@@ -395,8 +395,8 @@ void gits::OpenGL::CState::ScheduleCurrentContextEGL(CScheduler& scheduler, void
   EGLSurface eglDrawDrawable = CStateDynamicNative::Get().GetEglDrawSurfaceFromContext(context);
   EGLSurface eglReadDrawable = CStateDynamicNative::Get().GetEglReadSurfaceFromContext(context);
   if (eglDrawDrawable == nullptr || eglReadDrawable == nullptr) {
-    Log(ERR) << "Can't schedule eglMakeCurrent to get state of context:" << context
-             << " unknown drawable";
+    LOG_ERROR << "Can't schedule eglMakeCurrent to get state of context:" << context
+              << " unknown drawable";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   scheduler.Register(new CeglMakeCurrent(true, drv.egl.eglGetCurrentDisplay(),
@@ -414,8 +414,8 @@ void gits::OpenGL::CState::ScheduleCurrentContext(CScheduler& scheduler, void* c
   else if (drv.gl.Api() == CGlDriver::API_GL || curctx::IsOgl()) {
     HDC hdc = (HDC)CStateDynamicNative::Get().GetHdcFromHglrc(context);
     if (hdc == 0) {
-      Log(ERR) << "Can't schedule wglMakeCurrent to get state of context:" << context
-               << " unknown hdc";
+      LOG_ERROR << "Can't schedule wglMakeCurrent to get state of context:" << context
+                << " unknown hdc";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
     scheduler.Register(new CwglMakeCurrent(true, hdc, (HGLRC)context));
@@ -429,8 +429,8 @@ void gits::OpenGL::CState::ScheduleCurrentContext(CScheduler& scheduler, void* c
     GLXDrawable glXDrawDrawable = CStateDynamicNative::Get().GetglXDrawSurfaceFromContext(context);
     GLXDrawable glXReadDrawable = CStateDynamicNative::Get().GetglXReadSurfaceFromContext(context);
     if (glXDrawDrawable == 0 || glXReadDrawable == 0) {
-      Log(ERR) << "Can't schedule glXMakeContextCurrent to get state of context:" << context
-               << " unknown drawable";
+      LOG_ERROR << "Can't schedule glXMakeContextCurrent to get state of context:" << context
+                << " unknown drawable";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
     scheduler.Register(
@@ -2628,8 +2628,8 @@ void gits::OpenGL::CVariableTextureInfo::CTexture2D::GetTextureLevelsDataGLES() 
       Texture2DData().pixels.at(level) =
           CGits::Instance().ResourceManager2().put(RESOURCE_TEXTURE, &data[0], data.size());
     } else {
-      Log(WARN) << "Texture: " << TextureId() << " level: " << level
-                << " content will not be restored.";
+      LOG_WARNING << "Texture: " << TextureId() << " level: " << level
+                  << " content will not be restored.";
     }
 
     level++;
@@ -2722,9 +2722,9 @@ void gits::OpenGL::CVariableTextureInfo::CTexture2D::ScheduleSameTargetTextureGL
       scheduler.Register(new CglTexImage2D(Target(), i, currMip.internalFormat, currMip.width,
                                            currMip.height, currMip.border, currMip.format,
                                            currMip.type, nullptr));
-      Log(WARN) << "Texture " << TextureId()
-                << " not restored. Visual corruptions possible. In case of corruptions try another "
-                   "textures recording mode.";
+      LOG_WARNING << "Texture " << TextureId()
+                  << " not restored. Visual corruptions possible. In case of corruptions try "
+                     "another textures recording mode.";
     }
   }
 }
@@ -3023,7 +3023,7 @@ void gits::OpenGL::CVariableTextureInfo::CTextureCube::GetTextureLevelsDataGLES(
           hashes.at(i) =
               CGits::Instance().ResourceManager2().put(RESOURCE_TEXTURE, &data[0], data.size());
         } else {
-          Log(WARN) << "Texture: " << TextureId() << " content will not be restored.";
+          LOG_WARNING << "Texture: " << TextureId() << " content will not be restored.";
         }
       }
     }
@@ -3116,9 +3116,9 @@ void gits::OpenGL::CVariableTextureInfo::CTextureCube::ScheduleSameTargetTexture
           scheduler.Register(new CglTexImage2D(
               GL_TEXTURE_CUBE_MAP_POSITIVE_X + j, i, currMip.internalFormat, currMip.width,
               currMip.height, currMip.border, currMip.format, currMip.type, nullptr));
-          Log(WARN) << "Texture " << TextureId()
-                    << " not restored. Visual corruptions possible. In case of corruptions try "
-                       "another textures recording mode.";
+          LOG_WARNING << "Texture " << TextureId()
+                      << " not restored. Visual corruptions possible. In case of corruptions try "
+                         "another textures recording mode.";
         }
       }
     }
@@ -4228,8 +4228,8 @@ void gits::OpenGL::CVariableGLSLInfo::Schedule(CScheduler& scheduler,
                 new CglUniformMatrix4x3fv(newLocation, dataSize / 12, false, dataPtr));
             break;
           default:
-            Log(ERR) << "Unknown float uniform type: " << GetGLEnumString(uniformInfo.type) << " ("
-                     << gits::hex(uniformInfo.type) << ")";
+            LOG_ERROR << "Unknown float uniform type: " << GetGLEnumString(uniformInfo.type) << " ("
+                      << gits::hex(uniformInfo.type) << ")";
             throw ENotImplemented(EXCEPTION_MESSAGE);
           }
         }
@@ -4263,7 +4263,7 @@ void gits::OpenGL::CVariableGLSLInfo::Schedule(CScheduler& scheduler,
             scheduler.Register(new CglUniform4iv(newLocation, count, dataPtr));
             break;
           default:
-            Log(ERR) << "Expected dimensionality between 1 and 4, got " << dimensionality << ".";
+            LOG_ERROR << "Expected dimensionality between 1 and 4, got " << dimensionality << ".";
             throw ENotImplemented(EXCEPTION_MESSAGE);
           }
         }
@@ -4296,7 +4296,7 @@ void gits::OpenGL::CVariableGLSLInfo::Schedule(CScheduler& scheduler,
             scheduler.Register(new CglUniform4uiv(newLocation, count, dataPtr));
             break;
           default:
-            Log(ERR) << "Expected dimensionality between 1 and 4, got " << dimensionality << ".";
+            LOG_ERROR << "Expected dimensionality between 1 and 4, got " << dimensionality << ".";
             throw ENotImplemented(EXCEPTION_MESSAGE);
           }
         }
@@ -4417,8 +4417,8 @@ void gits::OpenGL::CVariableGLSLInfo::Schedule(CScheduler& scheduler,
           drv.gl.glGetProgramResourceiv(program.Name(), GL_SHADER_STORAGE_BLOCK, i, 1,
                                         &buffBindingEnum, 1, &actualLength, &blockBindingOutput);
           if (actualLength != 1) {
-            Log(ERR) << "glGetProgramResourceiv in CVariableGLSLInfo return size " << actualLength
-                     << " instead of 1.";
+            LOG_ERROR << "glGetProgramResourceiv in CVariableGLSLInfo return size " << actualLength
+                      << " instead of 1.";
           }
           scheduler.Register(new CglGetProgramResourceIndex(return_value, program.Name(),
                                                             GL_SHADER_STORAGE_BLOCK, name.c_str()));
@@ -4577,11 +4577,11 @@ void gits::OpenGL::CVariableGLSLInfo::ObtainUniform(GLuint programId,
       drv.gl.glGetUniformuiv(programId, location + i, uiuniform.data[i].data());
     }
   } else {
-    Log(ERR) << "Type " << GetGLEnumString(dimensionality.first) << " ("
-             << gits::hex(dimensionality.first) << ") is not one of: ";
-    Log(ERR) << " - GL_INT (" << gits::hex(GL_INT) << ")";
-    Log(ERR) << " - GL_FLOAT (" << gits::hex(GL_FLOAT) << ")";
-    Log(ERR) << " - GL_UNSIGNED_INT (" << gits::hex(GL_UNSIGNED_INT) << ")";
+    LOG_ERROR << "Type " << GetGLEnumString(dimensionality.first) << " ("
+              << gits::hex(dimensionality.first) << ") is not one of: ";
+    LOG_ERROR << " - GL_INT (" << gits::hex(GL_INT) << ")";
+    LOG_ERROR << " - GL_FLOAT (" << gits::hex(GL_FLOAT) << ")";
+    LOG_ERROR << " - GL_UNSIGNED_INT (" << gits::hex(GL_UNSIGNED_INT) << ")";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
 }
@@ -4728,7 +4728,8 @@ std::pair<GLenum, GLuint> gits::OpenGL::CVariableGLSLInfo::UniformDimensions(GLe
   if (it != typeMap.end()) {
     return it->second;
   } else {
-    Log(ERR) << "Unknown uniform type: " << GetGLEnumString(type) << " (" << gits::hex(type) << ")";
+    LOG_ERROR << "Unknown uniform type: " << GetGLEnumString(type) << " (" << gits::hex(type)
+              << ")";
     throw ENotImplemented(EXCEPTION_MESSAGE);
   }
 }
@@ -5306,9 +5307,9 @@ bool gits::OpenGL::CVariableDefaultFramebuffer::FormatSetup() {
     _dsAttachment = GL_DEPTH_STENCIL_ATTACHMENT;
     return false;
   } else {
-    Log(WARN) << "Unknown DepthStencil format during restoration of default framebuffer.";
-    Log(WARN) << "Depth value: " << depthsize << ", stencil value: " << stencilsize << ".";
-    Log(WARN)
+    LOG_WARNING << "Unknown DepthStencil format during restoration of default framebuffer.";
+    LOG_WARNING << "Depth value: " << depthsize << ", stencil value: " << stencilsize << ".";
+    LOG_WARNING
         << "Gits will skip restoration of default framebuffer, and continue to record normally.";
     return false;
   }
@@ -5347,9 +5348,9 @@ bool gits::OpenGL::CVariableDefaultFramebuffer::SaveFramebufferData(GLenum inter
 
   GLenum fboStatus = drv.gl.glCheckFramebufferStatus(GL_FRAMEBUFFER);
   if (fboStatus != GL_FRAMEBUFFER_COMPLETE) {
-    Log(WARN) << "Default framebuffer restoration failed - framebuffer incomplete - FBO status: "
-              << fboStatus;
-    Log(WARN)
+    LOG_WARNING << "Default framebuffer restoration failed - framebuffer incomplete - FBO status: "
+                << fboStatus;
+    LOG_WARNING
         << "Gits will skip restoration of default framebuffer, and continue to record normally.";
     drv.gl.glBindTexture(GL_TEXTURE_2D, origTexture);
     return false;
@@ -5474,10 +5475,10 @@ void gits::OpenGL::CVariableRenderbufferEXTInfo::Get() {
                                            &internalformat);
     GLint currentSamples = 0;
     drv.gl.glGetRenderbufferParameterivEXT(target, GL_RENDERBUFFER_SAMPLES_EXT, &currentSamples);
-    Log(WARN) << "For renderbuffer: " << iter->Name()
-              << " there were: " << iter->Data().track.samples
-              << " requested. Value returned by the driver is: " << currentSamples
-              << ". Potential problems with MSAA buffers contents restoration!!!";
+    LOG_WARNING << "For renderbuffer: " << iter->Name()
+                << " there were: " << iter->Data().track.samples
+                << " requested. Value returned by the driver is: " << currentSamples
+                << ". Potential problems with MSAA buffers contents restoration!!!";
 
     // Check Render buffer content
     GLint depthSize = 0;
@@ -5522,8 +5523,8 @@ void gits::OpenGL::CVariableRenderbufferEXTInfo::Get() {
       }
       GLenum fboStatus = drv.gl.glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
       if (fboStatus != GL_FRAMEBUFFER_COMPLETE) {
-        Log(ERR) << "Renderbuffer restoration failed - Framebuffer incomplete - FBO status: "
-                 << fboStatus;
+        LOG_ERROR << "Renderbuffer restoration failed - Framebuffer incomplete - FBO status: "
+                  << fboStatus;
         throw EOperationFailed(EXCEPTION_MESSAGE);
       }
 
@@ -5556,8 +5557,8 @@ void gits::OpenGL::CVariableRenderbufferEXTInfo::Get() {
       }
     } else {
       datahash = 0;
-      Log(WARN) << "Can't restore renderbuffer content (multisampled renderbuffers content "
-                   "restoration not supported).";
+      LOG_WARNING << "Can't restore renderbuffer content (multisampled renderbuffers content "
+                     "restoration not supported).";
     }
 
     GCC433WA_0(iter)->Data().restore.width = width;
@@ -5704,10 +5705,10 @@ void gits::OpenGL::CVariableRenderbufferInfo::Get() {
     GLint currentSamples = 0;
     drv.gl.glGetRenderbufferParameteriv(target, GL_RENDERBUFFER_SAMPLES, &currentSamples);
     if (currentSamples > 0 && iter->Data().track.samples != static_cast<GLuint>(currentSamples)) {
-      Log(WARN) << "For renderbuffer: " << iter->Name()
-                << " there were: " << iter->Data().track.samples
-                << "samples requested. Value returned by the driver is: " << currentSamples
-                << ". Potential problems with MSAA buffers contents restoration!!!";
+      LOG_WARNING << "For renderbuffer: " << iter->Name()
+                  << " there were: " << iter->Data().track.samples
+                  << "samples requested. Value returned by the driver is: " << currentSamples
+                  << ". Potential problems with MSAA buffers contents restoration!!!";
     }
 
     // Get Render Buffer Content if renderbuffer contains color and is not tied
@@ -5715,8 +5716,8 @@ void gits::OpenGL::CVariableRenderbufferInfo::Get() {
     if (width != 0 && height != 0 && curctx::IsOgl() && iter->Data().track.eglImage == nullptr &&
         InternalFormatToFboMatch(internalformat) != GL_STENCIL_ATTACHMENT) {
       if (samples > 0) {
-        Log(WARN) << "MSAA renderbuffer will be resolved to single image! This may cause "
-                     "corruptions. Consider disabling MSAA renderbuffers if possible.";
+        LOG_WARNING << "MSAA renderbuffer will be resolved to single image! This may cause "
+                       "corruptions. Consider disabling MSAA renderbuffers if possible.";
       }
 
       // save bound framebuffers
@@ -5753,8 +5754,8 @@ void gits::OpenGL::CVariableRenderbufferInfo::Get() {
       }
       GLenum fboStatus = drv.gl.glCheckFramebufferStatus(GL_FRAMEBUFFER);
       if (fboStatus != GL_FRAMEBUFFER_COMPLETE) {
-        Log(ERR) << "Renderbuffer restoration failed - Framebuffer incomplete - FBO status: "
-                 << fboStatus;
+        LOG_ERROR << "Renderbuffer restoration failed - Framebuffer incomplete - FBO status: "
+                  << fboStatus;
         throw EOperationFailed(EXCEPTION_MESSAGE);
       }
 
@@ -5773,8 +5774,8 @@ void gits::OpenGL::CVariableRenderbufferInfo::Get() {
       }
     } else {
       datahash = 0;
-      Log(WARN) << "Can't restore renderbuffer content (multisampled renderbuffers content "
-                   "restoration not supported).";
+      LOG_WARNING << "Can't restore renderbuffer content (multisampled renderbuffers content "
+                     "restoration not supported).";
     }
 
     GCC433WA_0(iter)->Data().restore.width = width;
@@ -5947,7 +5948,7 @@ void gits::OpenGL::CVariableFramebufferInfoGITS::Get() {
         GCC433WA_0(iter)->Attachments()[GL_STENCIL_ATTACHMENT_EXT].name != 0) {
       GCC433WA_0(iter)->Attachments()[GL_STENCIL_ATTACHMENT_EXT] =
           GCC433WA_0(iter)->Attachments()[GL_DEPTH_ATTACHMENT_EXT];
-      Log(WARN) << "Depth stencil attachment driver WA";
+      LOG_WARNING << "Depth stencil attachment driver WA";
     }
 
     if (!curctx::IsEs2Plus()) {
@@ -6014,11 +6015,11 @@ void gits::OpenGL::CVariableFramebufferInfoGITS::createFramebuffer(
                                                     attInfo.cubeFace, attInfo.name, attInfo.level);
         break;
       default:
-        GLLog(ERR) << "Unsupported texture target: " << target;
+        LOG_ERROR << "Unsupported texture target: " << target;
         throw EOperationFailed(EXCEPTION_MESSAGE);
       }
     } else {
-      GLLog(ERR) << "Unsupported attachment type: " << attInfo.type;
+      LOG_ERROR << "Unsupported attachment type: " << attInfo.type;
       throw ENotSupported(EXCEPTION_MESSAGE);
     }
   }
@@ -6512,7 +6513,7 @@ void gits::OpenGL::CVariableMappedTexture::Get() {}
 void gits::OpenGL::CVariableMappedTexture::Schedule(CScheduler& scheduler,
                                                     const CVariable& lastValue) const {
   // Registering new mapped textures
-  Log(WARN)
+  LOG_WARNING
       << "Current implementation of state restore for Mapped Textures Intel extension works in "
          "such way that "
          "it always uses glTexParameteri(Target(), GL_TEXTURE_MEMORY_LAYOUT_INTEL, "
