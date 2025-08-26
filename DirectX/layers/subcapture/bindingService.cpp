@@ -527,6 +527,12 @@ void BindingService::copyRaytracingAccelerationStructure(
   }
 }
 
+void BindingService::copyRaytracingAccelerationStructureImpl(
+    ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
+  raytracingService_.addAccelerationStructureSource(c.SourceAccelerationStructureData_.interfaceKey,
+                                                    c.SourceAccelerationStructureData_.offset);
+}
+
 void BindingService::nvapiBuildAccelerationStructureEx(
     NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
   if (analyzerService_.inRange()) {
@@ -555,26 +561,6 @@ void BindingService::nvapiBuildAccelerationStructureEx(
   }
 }
 
-void BindingService::nvapiBuildOpacityMicromapArray(
-    NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
-  objectsForRestore_.insert(c.pParams.destOpacityMicromapArrayDataKey);
-  if (c.pParams.inputBufferKey) {
-    objectsForRestore_.insert(c.pParams.inputBufferKey);
-  }
-  if (c.pParams.perOMMDescsKey) {
-    objectsForRestore_.insert(c.pParams.perOMMDescsKey);
-  }
-  if (!(c.pParams.scratchOpacityMicromapArrayDataKey & Command::stateRestoreKeyMask)) {
-    objectsForRestore_.insert(c.pParams.scratchOpacityMicromapArrayDataKey);
-  }
-}
-
-void BindingService::copyRaytracingAccelerationStructureImpl(
-    ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
-  raytracingService_.addAccelerationStructureSource(c.SourceAccelerationStructureData_.interfaceKey,
-                                                    c.SourceAccelerationStructureData_.offset);
-}
-
 void BindingService::nvapiBuildAccelerationStructureExImpl(
     NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
   if (c.pParams.value->pDesc->inputs.type ==
@@ -586,6 +572,20 @@ void BindingService::nvapiBuildAccelerationStructureExImpl(
       raytracingService_.addAccelerationStructureSource(
           c.pParams.sourceAccelerationStructureKey, c.pParams.sourceAccelerationStructureOffset);
     }
+  }
+}
+
+void BindingService::nvapiBuildOpacityMicromapArray(
+    NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
+  objectsForRestore_.insert(c.pParams.destOpacityMicromapArrayDataKey);
+  if (c.pParams.inputBufferKey) {
+    objectsForRestore_.insert(c.pParams.inputBufferKey);
+  }
+  if (c.pParams.perOMMDescsKey) {
+    objectsForRestore_.insert(c.pParams.perOMMDescsKey);
+  }
+  if (!(c.pParams.scratchOpacityMicromapArrayDataKey & Command::stateRestoreKeyMask)) {
+    objectsForRestore_.insert(c.pParams.scratchOpacityMicromapArrayDataKey);
   }
 }
 

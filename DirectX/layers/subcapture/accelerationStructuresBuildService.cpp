@@ -653,6 +653,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
     return;
   }
 
+  removeSourcesWithoutDestinations();
   optimize();
 
   bufferContentRestore_.waitUntilDumped();
@@ -1480,7 +1481,7 @@ unsigned AccelerationStructuresBuildService::getState(unsigned key, unsigned off
   return *itStates->second.rbegin();
 }
 
-void AccelerationStructuresBuildService::removeState(unsigned stateId) {
+void AccelerationStructuresBuildService::removeState(unsigned stateId, bool removeSource) {
   auto itState = statesById_.find(stateId);
   GITS_ASSERT(itState != statesById_.end());
   if (itState->second->stateType == RaytracingAccelerationStructureState::NvAPIOMM) {
@@ -1493,6 +1494,14 @@ void AccelerationStructuresBuildService::removeState(unsigned stateId) {
     auto itDests = stateDestsBySource_.find(itSource->second);
     GITS_ASSERT(itDests != stateDestsBySource_.end());
     itDests->second.erase(stateId);
+    if (itDests->second.empty()) {
+      if (removeSource) {
+        removeState(itSource->second);
+        stateDestsBySource_.erase(itDests);
+      } else {
+        sourcesWithoutDestinations_.insert(itSource->second);
+      }
+    }
     stateSourceByDest_.erase(itSource);
   }
 
@@ -1525,7 +1534,18 @@ void AccelerationStructuresBuildService::optimize() {
     }
   }
   for (unsigned stateId : removedStates) {
-    removeState(stateId);
+    removeState(stateId, true);
+  }
+}
+
+void AccelerationStructuresBuildService::removeSourcesWithoutDestinations() {
+  for (unsigned source : sourcesWithoutDestinations_) {
+    auto itDests = stateDestsBySource_.find(source);
+    GITS_ASSERT(itDests != stateDestsBySource_.end());
+    if (itDests->second.empty()) {
+      removeState(source, true);
+      stateDestsBySource_.erase(itDests);
+    }
   }
 }
 

@@ -16,6 +16,7 @@
 #include "objectState.h"
 
 #include <unordered_map>
+#include <unordered_set>
 #include <memory>
 #include <set>
 
@@ -114,6 +115,7 @@ private:
   std::map<KeyOffset, std::set<unsigned>> stateByKeyOffset_;
   std::unordered_map<unsigned, unsigned> stateSourceByDest_;
   std::unordered_map<unsigned, std::unordered_set<unsigned>> stateDestsBySource_;
+  std::unordered_set<unsigned> sourcesWithoutDestinations_;
 
   unsigned stateUniqueId_{};
   unsigned maxBuildScratchSpace_{};
@@ -134,8 +136,9 @@ private:
 private:
   void storeState(RaytracingAccelerationStructureState* state);
   unsigned getState(unsigned key, unsigned offset);
-  void removeState(unsigned stateId);
+  void removeState(unsigned stateId, bool removeSource = false);
   void optimize();
+  void removeSourcesWithoutDestinations();
 };
 
 } // namespace DirectX
