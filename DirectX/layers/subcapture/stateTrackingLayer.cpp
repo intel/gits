@@ -41,7 +41,8 @@ StateTrackingLayer::StateTrackingLayer(SubcaptureRecorder& recorder,
       mapStateService_(stateService_),
       resourceStateTrackingService_(stateService_),
       reservedResourcesService_(stateService_),
-      descriptorService_(&stateService_),
+      resourceForCBVRestoreService_(stateService_),
+      descriptorService_(&stateService_, &resourceForCBVRestoreService_),
       commandListService_(stateService_),
       commandQueueService_(stateService_),
       xessStateService_(stateService_, recorder),
@@ -1070,6 +1071,9 @@ void StateTrackingLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
 
   resourceUsageTrackingService_.addResource(state->key);
 
+  resourceForCBVRestoreService_.addResourceCreationCommand(
+      state->key, state->heapKey, new ID3D12DeviceCreatePlacedResourceCommand(c));
+
   if (state->initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
     resourceStateTrackingService_.addResource(
         state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
@@ -1112,6 +1116,9 @@ void StateTrackingLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
 
   resourceUsageTrackingService_.addResource(state->key);
 
+  resourceForCBVRestoreService_.addResourceCreationCommand(
+      state->key, state->heapKey, new ID3D12Device8CreatePlacedResource1Command(c));
+
   if (state->initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
     resourceStateTrackingService_.addResource(
         state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
@@ -1153,6 +1160,9 @@ void StateTrackingLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
   resourceHeaps_[c.pHeap_.key].insert(c.ppvResource_.key);
 
   resourceUsageTrackingService_.addResource(state->key);
+
+  resourceForCBVRestoreService_.addResourceCreationCommand(
+      state->key, state->heapKey, new ID3D12Device10CreatePlacedResource2Command(c));
 
   resourceStateTrackingService_.addResource(
       state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
@@ -1594,6 +1604,9 @@ void StateTrackingLayer::post(INTC_D3D12_CreatePlacedResourceCommand& c) {
   resourceHeaps_[c.pHeap_.key].insert(c.ppvResource_.key);
 
   resourceUsageTrackingService_.addResource(state->key);
+
+  resourceForCBVRestoreService_.addResourceCreationCommand(
+      state->key, state->heapKey, new INTC_D3D12_CreatePlacedResourceCommand(c));
 
   if (state->initialState != D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE) {
     resourceStateTrackingService_.addResource(

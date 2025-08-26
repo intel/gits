@@ -26,6 +26,7 @@
 #include "gpuExecutionFlusher.h"
 #include "residencyService.h"
 #include "analyzerResults.h"
+#include "resourceForCBVRestoreService.h"
 
 #include <map>
 #include <array>
@@ -254,6 +255,7 @@ private:
   ResourceStateTrackingService resourceStateTrackingService_;
   HeapAllocationStateService heapAllocationStateService_;
   ReservedResourcesService reservedResourcesService_;
+  ResourceForCBVRestoreService resourceForCBVRestoreService_;
   DescriptorService descriptorService_;
   CommandListService commandListService_;
   CommandQueueService commandQueueService_;

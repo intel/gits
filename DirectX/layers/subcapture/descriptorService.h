@@ -77,11 +77,14 @@ struct D3D12SamplerState : public DescriptorState {
 };
 
 class StateTrackingService;
+class ResourceForCBVRestoreService;
 
 class DescriptorService {
 public:
   DescriptorService() {}
-  DescriptorService(StateTrackingService* stateService) : stateService_(stateService) {}
+  DescriptorService(StateTrackingService* stateService,
+                    ResourceForCBVRestoreService* resourceForCBVRestoreService)
+      : stateService_(stateService), resourceForCBVRestoreService_(resourceForCBVRestoreService) {}
   void storeState(DescriptorState* state);
   void removeState(unsigned key);
   void restoreState();
@@ -103,6 +106,7 @@ private:
 
 private:
   StateTrackingService* stateService_{};
+  ResourceForCBVRestoreService* resourceForCBVRestoreService_{};
   std::map<unsigned, std::map<unsigned, std::unique_ptr<DescriptorState>>> statesByHeapIndex_;
   std::set<unsigned> resources_;
 };

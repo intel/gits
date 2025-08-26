@@ -10,6 +10,7 @@
 #include "commandsAuto.h"
 #include "commandWritersAuto.h"
 #include "stateTrackingService.h"
+#include "resourceForCBVRestoreService.h"
 #include "log2.h"
 
 namespace gits {
@@ -33,14 +34,14 @@ void DescriptorService::restoreState() {
   for (auto& itHeap : statesByHeapIndex_) {
     for (auto& it : itHeap.second) {
       DescriptorState* state = it.second.get();
-      if (resources_.find(state->resourceKey) != resources_.end()) {
-        if (stateService_->getAnalyzerResults().restoreDescriptor(state->destDescriptorKey,
-                                                                  state->destDescriptorIndex)) {
-          restoreState(state);
-        }
+      if (stateService_->getAnalyzerResults().restoreDescriptor(state->destDescriptorKey,
+                                                                state->destDescriptorIndex)) {
+        restoreState(state);
       }
     }
   }
+
+  resourceForCBVRestoreService_->releaseResources();
 }
 
 void DescriptorService::restoreState(DescriptorState* state) {
@@ -178,6 +179,9 @@ DescriptorState* DescriptorService::getDescriptorState(unsigned heapKey, unsigne
 }
 
 void DescriptorService::restoreD3D12RenderTargetView(D3D12RenderTargetViewState* state) {
+  if (resources_.find(state->resourceKey) == resources_.end()) {
+    return;
+  }
   if (!stateService_->getAnalyzerResults().restoreObject(state->resourceKey) &&
       stateService_->getState(state->resourceKey)) {
     stateService_->restoreState(state->resourceKey);
@@ -194,6 +198,9 @@ void DescriptorService::restoreD3D12RenderTargetView(D3D12RenderTargetViewState*
 }
 
 void DescriptorService::restoreD3D12DepthStencilView(D3D12DepthStencilViewState* state) {
+  if (resources_.find(state->resourceKey) == resources_.end()) {
+    return;
+  }
   if (!stateService_->getAnalyzerResults().restoreObject(state->resourceKey) &&
       stateService_->getState(state->resourceKey)) {
     stateService_->restoreState(state->resourceKey);
@@ -210,6 +217,9 @@ void DescriptorService::restoreD3D12DepthStencilView(D3D12DepthStencilViewState*
 }
 
 void DescriptorService::restoreD3D12ShaderResourceView(D3D12ShaderResourceViewState* state) {
+  if (resources_.find(state->resourceKey) == resources_.end()) {
+    return;
+  }
   if (!stateService_->getAnalyzerResults().restoreObject(state->resourceKey) &&
       stateService_->getState(state->resourceKey)) {
     stateService_->restoreState(state->resourceKey);
@@ -233,6 +243,9 @@ void DescriptorService::restoreD3D12ShaderResourceView(D3D12ShaderResourceViewSt
 }
 
 void DescriptorService::restoreD3D12UnorderedAccessView(D3D12UnorderedAccessViewState* state) {
+  if (resources_.find(state->resourceKey) == resources_.end()) {
+    return;
+  }
   if (!stateService_->getAnalyzerResults().restoreObject(state->resourceKey) &&
       stateService_->getState(state->resourceKey)) {
     stateService_->restoreState(state->resourceKey);
@@ -250,10 +263,15 @@ void DescriptorService::restoreD3D12UnorderedAccessView(D3D12UnorderedAccessView
 }
 
 void DescriptorService::restoreD3D12ConstantBufferView(D3D12ConstantBufferViewState* state) {
-  if (!stateService_->getAnalyzerResults().restoreObject(state->resourceKey) &&
-      stateService_->getState(state->resourceKey)) {
+  if (stateService_->getState(state->resourceKey)) {
     stateService_->restoreState(state->resourceKey);
+  } else {
+    bool restored = resourceForCBVRestoreService_->restoreResourceObject(state->resourceKey);
+    if (!restored) {
+      return;
+    }
   }
+
   ID3D12DeviceCreateConstantBufferViewCommand c;
   c.key = stateService_->getUniqueCommandKey();
   c.object_.key = state->deviceKey;
@@ -267,6 +285,9 @@ void DescriptorService::restoreD3D12ConstantBufferView(D3D12ConstantBufferViewSt
 }
 
 void DescriptorService::restoreD3D12Sampler(D3D12SamplerState* state) {
+  if (resources_.find(state->resourceKey) == resources_.end()) {
+    return;
+  }
   if (!stateService_->getAnalyzerResults().restoreObject(state->resourceKey) &&
       stateService_->getState(state->resourceKey)) {
     stateService_->restoreState(state->resourceKey);
