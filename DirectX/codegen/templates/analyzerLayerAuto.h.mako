@@ -90,8 +90,9 @@ public:
   %endfor
 
 private:
+  bool optimize_{};
+  bool optimizeRaytracing_{};
   SubcaptureRange& subcaptureRange_;
-  AnalyzerService analyzerService_;
   BindingService bindingService_;
   AnalyzerCommandListRestoreService commandListRestoreService_;
   DescriptorService descriptorService_;
@@ -100,8 +101,7 @@ private:
   CapturePlayerDescriptorHandleService descriptorHandleService_;
   AnalyzerRaytracingService raytracingService_;
   AnalyzerExecuteIndirectService executeIndirectService_;
-  bool optimize_{};
-  bool optimizeRaytracing_{};
+  AnalyzerService analyzerService_;
 };
 
 } // namespace DirectX
