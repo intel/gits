@@ -34,6 +34,8 @@ set(TO_STR_FILES
   ${SRC_DIR}/to_string/enumToStrCustom.cpp
   ${SRC_DIR}/to_string/guidToStrAuto.h
   ${SRC_DIR}/to_string/guidToStrAuto.cpp
+  ${SRC_DIR}/to_string/utfConversion.h
+  ${SRC_DIR}/to_string/utfConversion.cpp
 )
 source_group("to_string" FILES ${TO_STR_FILES})
 

@@ -101,6 +101,8 @@ public:
 
   TResourceHandle2 get_resource_handle(hash_t);
 
+  const std::filesystem::path& getIndexFilename() const;
+
   static const hash_t EmptyHash = 0;
 
 private:

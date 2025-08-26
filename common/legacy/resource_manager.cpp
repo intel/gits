@@ -258,4 +258,8 @@ TResourceHandle2 CResourceManager2::get_resource_handle(hash_t toFind) {
   return it->second;
 }
 
+const std::filesystem::path& CResourceManager2::getIndexFilename() const {
+  return index_filename_;
+}
+
 } // namespace gits
