@@ -13,6 +13,7 @@ ${header}
 #include "analyzerService.h"
 #include "descriptorService.h"
 #include "bindingService.h"
+#include "analyzerCommandListRestoreService.h"
 #include "rootSignatureService.h"
 #include "analyzerRaytracingService.h"
 #include "analyzerExecuteIndirectService.h"
@@ -92,6 +93,7 @@ private:
   SubcaptureRange& subcaptureRange_;
   AnalyzerService analyzerService_;
   BindingService bindingService_;
+  AnalyzerCommandListRestoreService commandListRestoreService_;
   DescriptorService descriptorService_;
   RootSignatureService rootSignatureService_;
   CapturePlayerGpuAddressService gpuAddressService_;

@@ -33,7 +33,18 @@ custom = [
     'ID3D12GraphicsCommandListClearUnorderedAccessViewUint',
     'ID3D12GraphicsCommandListClearUnorderedAccessViewFloat',
     'ID3D12GraphicsCommandList4SetPipelineState1',
-    'ID3D12GraphicsCommandList2WriteBufferImmediate'
+    'ID3D12GraphicsCommandList2WriteBufferImmediate',
+    'ID3D12GraphicsCommandListCopyBufferRegion',
+    'ID3D12GraphicsCommandListCopyResource',
+    'ID3D12GraphicsCommandListCopyTextureRegion',
+    'ID3D12GraphicsCommandListCopyTiles',
+    'ID3D12GraphicsCommandListDiscardResource',
+    'ID3D12GraphicsCommandListResolveSubresource',
+    'ID3D12GraphicsCommandListResourceBarrier',
+    'ID3D12GraphicsCommandListSetPipelineState',
+    'ID3D12GraphicsCommandList1ResolveSubresourceRegion',
+    'ID3D12GraphicsCommandList3SetProtectedResourceSession',
+    'ID3D12GraphicsCommandList4InitializeMetaCommand',
 ]
 %>\
 %for interface in interfaces:

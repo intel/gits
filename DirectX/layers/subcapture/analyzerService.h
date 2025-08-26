@@ -11,6 +11,7 @@
 #include "commandsAuto.h"
 #include "gpuExecutionTracker.h"
 #include "bindingService.h"
+#include "analyzerCommandListRestoreService.h"
 #include "analyzerRaytracingService.h"
 #include "subcaptureRange.h"
 
@@ -24,6 +25,7 @@ class AnalyzerService {
 public:
   AnalyzerService(SubcaptureRange& subcaptureRange,
                   BindingService& bindingService,
+                  AnalyzerCommandListRestoreService& commandListRestoreService,
                   AnalyzerRaytracingService& raytracingService);
   ~AnalyzerService();
   AnalyzerService(const AnalyzerService&) = delete;
@@ -64,6 +66,7 @@ private:
 private:
   SubcaptureRange& subcaptureRange_;
   BindingService& bindingService_;
+  AnalyzerCommandListRestoreService& commandListRestoreService_;
   AnalyzerRaytracingService& raytracingService_;
   bool optimize_{};
 

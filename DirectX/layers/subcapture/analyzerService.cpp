@@ -19,9 +19,11 @@ namespace DirectX {
 
 AnalyzerService::AnalyzerService(SubcaptureRange& subcaptureRange,
                                  BindingService& bindingService,
+                                 AnalyzerCommandListRestoreService& commandListRestoreService,
                                  AnalyzerRaytracingService& raytracingService)
     : subcaptureRange_(subcaptureRange),
       bindingService_(bindingService),
+      commandListRestoreService_(commandListRestoreService),
       raytracingService_(raytracingService) {
   optimize_ = Configurator::Get().directx.features.subcapture.optimize;
 }
@@ -86,6 +88,7 @@ void AnalyzerService::present(unsigned callKey, unsigned swapChainKey) {
   subcaptureRange_.frameEnd(callKey & Command::stateRestoreKeyMask);
   if (!subcaptureRange_.inRange() && inRange_) {
     bindingService_.commandListsRestore(commandListsForRestore_);
+    commandListRestoreService_.commandListsRestore(commandListsForRestore_);
     inRange_ = false;
     dumpAnalysisFile();
   }
@@ -218,6 +221,9 @@ void AnalyzerService::dumpAnalysisFile() {
     keys.insert(key);
   }
   for (unsigned key : bindingService_.getObjectsForRestore()) {
+    keys.insert(key);
+  }
+  for (unsigned key : commandListRestoreService_.getObjectsForRestore()) {
     keys.insert(key);
   }
   for (unsigned key : bindingService_.getBindingTablesResources()) {

@@ -20,7 +20,8 @@ namespace DirectX {
 AnalyzerLayer::AnalyzerLayer(SubcaptureRange& subcaptureRange)
     : Layer("Analyzer"),
       subcaptureRange_(subcaptureRange),
-      analyzerService_(subcaptureRange, bindingService_, raytracingService_),
+      analyzerService_(
+          subcaptureRange, bindingService_, commandListRestoreService_, raytracingService_),
       bindingService_(analyzerService_,
                       descriptorService_,
                       rootSignatureService_,
@@ -29,7 +30,8 @@ AnalyzerLayer::AnalyzerLayer(SubcaptureRange& subcaptureRange)
                       subcaptureRange_.commandListSubcapture()),
       raytracingService_(
           descriptorService_, gpuAddressService_, descriptorHandleService_, bindingService_),
-      executeIndirectService_(gpuAddressService_, raytracingService_, bindingService_) {
+      executeIndirectService_(gpuAddressService_, raytracingService_, bindingService_),
+      commandListRestoreService_(analyzerService_, subcaptureRange_.commandListSubcapture()) {
   optimize_ = Configurator::Get().directx.features.subcapture.optimize;
   optimizeRaytracing_ = Configurator::Get().directx.features.subcapture.optimizeRaytracing;
 }
@@ -69,6 +71,9 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListResetCommand& c) {
   analyzerService_.commandListReset(c.object_.key, c.pAllocator_.key, c.pInitialState_.key);
   if (optimize_ || optimizeRaytracing_) {
     bindingService_.commandListReset(c);
+  }
+  if (optimize_) {
+    commandListRestoreService_.commandListReset(c);
   }
 }
 
@@ -556,6 +561,83 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& 
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     bindingService_.writeBufferImmediate(c);
+  }
+}
+
+void AnalyzerLayer::post(ID3D12GraphicsCommandListCopyBufferRegionCommand& c) {
+  analyzerService_.commandListCommand(c.object_.key);
+  if (optimize_) {
+    commandListRestoreService_.copyBufferRegion(c);
+  }
+}
+
+void AnalyzerLayer::post(ID3D12GraphicsCommandListCopyTextureRegionCommand& c) {
+  analyzerService_.commandListCommand(c.object_.key);
+  if (optimize_) {
+    commandListRestoreService_.copyTextureRegion(c);
+  }
+}
+
+void AnalyzerLayer::post(ID3D12GraphicsCommandListCopyResourceCommand& c) {
+  analyzerService_.commandListCommand(c.object_.key);
+  if (optimize_) {
+    commandListRestoreService_.copyResource(c);
+  }
+}
+
+void AnalyzerLayer::post(ID3D12GraphicsCommandListCopyTilesCommand& c) {
+  analyzerService_.commandListCommand(c.object_.key);
+  if (optimize_) {
+    commandListRestoreService_.copyTiles(c);
+  }
+}
+
+void AnalyzerLayer::post(ID3D12GraphicsCommandListResolveSubresourceCommand& c) {
+  analyzerService_.commandListCommand(c.object_.key);
+  if (optimize_) {
+    commandListRestoreService_.resolveSubresource(c);
+  }
+}
+
+void AnalyzerLayer::post(ID3D12GraphicsCommandListDiscardResourceCommand& c) {
+  analyzerService_.commandListCommand(c.object_.key);
+  if (optimize_) {
+    commandListRestoreService_.discardResource(c);
+  }
+}
+
+void AnalyzerLayer::post(ID3D12GraphicsCommandListSetPipelineStateCommand& c) {
+  analyzerService_.commandListCommand(c.object_.key);
+  if (optimize_) {
+    commandListRestoreService_.setPipelineState(c);
+  }
+}
+
+void AnalyzerLayer::post(ID3D12GraphicsCommandListResourceBarrierCommand& c) {
+  analyzerService_.commandListCommand(c.object_.key);
+  if (optimize_) {
+    commandListRestoreService_.resourceBarrier(c);
+  }
+}
+
+void AnalyzerLayer::post(ID3D12GraphicsCommandList1ResolveSubresourceRegionCommand& c) {
+  analyzerService_.commandListCommand(c.object_.key);
+  if (optimize_) {
+    commandListRestoreService_.resolveSubresourceRegion(c);
+  }
+}
+
+void AnalyzerLayer::post(ID3D12GraphicsCommandList3SetProtectedResourceSessionCommand& c) {
+  analyzerService_.commandListCommand(c.object_.key);
+  if (optimize_) {
+    commandListRestoreService_.setProtectedResourceSession(c);
+  }
+}
+
+void AnalyzerLayer::post(ID3D12GraphicsCommandList4InitializeMetaCommandCommand& c) {
+  analyzerService_.commandListCommand(c.object_.key);
+  if (optimize_) {
+    commandListRestoreService_.initializeMetaCommand(c);
   }
 }
 
