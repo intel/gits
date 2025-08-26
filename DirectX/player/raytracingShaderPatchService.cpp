@@ -375,6 +375,9 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
   }
   for (uint i = 4; i < recordSize; ++i) {
     uint64_t captureAddress = bindingTable[bindingTableOffset + i];
+    if (!captureAddress) {
+      continue;
+    }
     bool found = false;
     if (viewDescriptorCount) {
       int first = 0;
