@@ -792,13 +792,8 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
         // VkCommandBuffer can be recreated inside method ExecCmdBuffer(), so we want to get actual pointer below
         cmdbufferSubmitInfo.commandBuffer = CVkCommandBuffer::GetMapping(
             pSubmits.Original()[i].pCommandBufferInfos[cmdBufIndex].commandBuffer);
-        if (cmdBufIndex ==
-            submitInfoOrig.commandBufferInfoCount -
-                1) //last command buffer in queue submit (restoring original settings)
-        {
-          if (i == (*submitCount - 1)) { //last submit in QueueSubmit (restoring original fence)
-            fenceNew = *fence;
-          }
+        if (cmdBufIndex == submitInfoOrig.commandBufferInfoCount - 1) {
+          // Last command buffer in queue submit (restoring original settings).
           submitInfoNew = {VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
                            submitInfoOrig.pNext,
                            submitInfoOrig.flags,
@@ -808,6 +803,10 @@ inline void vkQueueSubmit2_WRAPRUN(CVkResult& return_value,
                            &cmdbufferSubmitInfo,
                            submitInfoOrig.signalSemaphoreInfoCount,
                            submitInfoOrig.pSignalSemaphoreInfos};
+
+          if (i == (*submitCount - 1)) { // Last submit in QueueSubmit (restoring original fence).
+            fenceNew = *fence;
+          }
         } else {
           submitInfoNew = {VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
                            nullptr,
