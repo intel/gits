@@ -38,7 +38,8 @@ public:
                          D3D12_GPU_VIRTUAL_ADDRESS shaderIdentiferBuffer,
                          D3D12_GPU_VIRTUAL_ADDRESS viewDescriptorBuffer,
                          D3D12_GPU_VIRTUAL_ADDRESS sampleDescriptorBuffer,
-                         D3D12_GPU_VIRTUAL_ADDRESS mappingCountBuffer);
+                         D3D12_GPU_VIRTUAL_ADDRESS mappingCountBuffer,
+                         bool patchGpuAdresses);
 
 private:
   void initializeInstances(ID3D12Device* device);

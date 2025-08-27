@@ -251,7 +251,8 @@ void RaytracingShaderPatchService::patchBindingTable(
     D3D12_GPU_VIRTUAL_ADDRESS shaderIdentiferBuffer,
     D3D12_GPU_VIRTUAL_ADDRESS viewDescriptorBuffer,
     D3D12_GPU_VIRTUAL_ADDRESS sampleDescriptorBuffer,
-    D3D12_GPU_VIRTUAL_ADDRESS mappingCountBuffer) {
+    D3D12_GPU_VIRTUAL_ADDRESS mappingCountBuffer,
+    bool patchGpuAdresses) {
   if (!bindingTablePipelineState_) {
     Microsoft::WRL::ComPtr<ID3D12Device> device;
     HRESULT hr = commandList->GetDevice(IID_PPV_ARGS(&device));
@@ -271,6 +272,7 @@ void RaytracingShaderPatchService::patchBindingTable(
   commandList->SetComputeRootConstantBufferView(5, mappingCountBuffer);
   unsigned size = recordSize / sizeof(D3D12_GPU_VIRTUAL_ADDRESS);
   commandList->SetComputeRoot32BitConstant(6, size, 0);
+  commandList->SetComputeRoot32BitConstant(7, patchGpuAdresses, 0);
 
   commandList->Dispatch(recordCount, 1, 1);
 }
@@ -278,8 +280,8 @@ void RaytracingShaderPatchService::patchBindingTable(
 void RaytracingShaderPatchService::initializeBindingTable(ID3D12Device* device) {
   {
     D3D12_ROOT_SIGNATURE_DESC desc{};
-    D3D12_ROOT_PARAMETER parameters[7]{};
-    desc.NumParameters = 7;
+    D3D12_ROOT_PARAMETER parameters[8]{};
+    desc.NumParameters = 8;
     desc.pParameters = parameters;
     parameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_UAV;
     parameters[0].Descriptor.ShaderRegister = 0;
@@ -303,6 +305,10 @@ void RaytracingShaderPatchService::initializeBindingTable(ID3D12Device* device) 
     parameters[6].Constants.Num32BitValues = 1;
     parameters[6].Constants.ShaderRegister = 1;
     parameters[6].Constants.RegisterSpace = 0;
+    parameters[7].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+    parameters[7].Constants.Num32BitValues = 1;
+    parameters[7].Constants.ShaderRegister = 2;
+    parameters[7].Constants.RegisterSpace = 0;
 
     Microsoft::WRL::ComPtr<ID3DBlob> signature;
     Microsoft::WRL::ComPtr<ID3DBlob> error;
@@ -343,9 +349,14 @@ cbuffer MappingCount : register(b0)
   uint sampleDescriptorCount;
 };
 
-cbuffer ConstantBuffer : register(b1)
+cbuffer RecordSize : register(b1)
 {
   uint recordSize;
+};
+
+cbuffer PatchGpuAddresses : register(b2)
+{
+  uint patchGpuAddresses;
 };
 
 [numthreads(1, 1, 1)]
@@ -419,7 +430,7 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
         }
       }
     }
-    if (!found) {
+    if (!found && patchGpuAddresses) {
       int first = 0;
       int last = gpuAddressCount - 1;
       while (first <= last) {

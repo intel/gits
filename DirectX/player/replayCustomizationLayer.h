@@ -187,7 +187,8 @@ private:
   PipelineLibraryService& pipelineLibraryService_;
   HANDLE waitForFenceEvent_{};
   std::vector<NvAPIShaderExtnSlot> nvapiShaderExtnSlotsUsed_;
-  bool intcFeatureSupportSet_{false};
+  bool intcFeatureSupportSet_{};
+  bool useAddressPinning_{};
 };
 
 } // namespace DirectX

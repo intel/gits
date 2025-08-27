@@ -20,8 +20,11 @@ GpuPatchLayer::GpuPatchLayer(PlayerManager& manager)
     : Layer("RaytracingGpuPatch"),
       manager_(manager),
       dumpService_(addressService_, shaderIdentifierService_, descriptorHandleService_) {
+  useAddressPinning_ = Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE;
   loadExecuteIndirectDispatchRays();
-  loadInstancesArraysOfPointers();
+  if (!useAddressPinning_) {
+    loadInstancesArraysOfPointers();
+  }
 }
 
 GpuPatchLayer::~GpuPatchLayer() {
@@ -78,6 +81,10 @@ void GpuPatchLayer::post(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartC
 }
 
 void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
+  if (useAddressPinning_) {
+    return;
+  }
+
   if (c.pDesc_.value->Inputs.Type != D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL ||
       c.pDesc_.value->Inputs.NumDescs == 0) {
     return;
@@ -411,8 +418,10 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
   unsigned patchBufferIndex = getPatchBufferIndex(c.object_.key);
 
   unsigned mappingBufferIndex = getMappingBufferIndex(c.object_.key);
-  commandList->CopyResource(gpuAddressBuffers_[mappingBufferIndex],
-                            gpuAddressStagingBuffers_[mappingBufferIndex]);
+  if (!useAddressPinning_) {
+    commandList->CopyResource(gpuAddressBuffers_[mappingBufferIndex],
+                              gpuAddressStagingBuffers_[mappingBufferIndex]);
+  }
   commandList->CopyResource(shaderIdentifierBuffers_[mappingBufferIndex],
                             shaderIdentifierStagingBuffers_[mappingBufferIndex]);
   commandList->CopyResource(viewDescriptorBuffers_[mappingBufferIndex],
@@ -507,11 +516,11 @@ void GpuPatchLayer::patchDispatchRays(ID3D12GraphicsCommandList* commandList,
 
       raytracingShaderPatchService_.patchBindingTable(
           commandList, patchBufferAddress + patchBufferOffset, count, stride,
-          gpuAddressBuffers_[mappingBufferIndex]->GetGPUVirtualAddress(),
+          useAddressPinning_ ? 0 : gpuAddressBuffers_[mappingBufferIndex]->GetGPUVirtualAddress(),
           shaderIdentifierBuffers_[mappingBufferIndex]->GetGPUVirtualAddress(),
           viewDescriptorBuffers_[mappingBufferIndex]->GetGPUVirtualAddress(),
           sampleDescriptorBuffers_[mappingBufferIndex]->GetGPUVirtualAddress(),
-          mappingCountBuffers_[mappingBufferIndex]->GetGPUVirtualAddress());
+          mappingCountBuffers_[mappingBufferIndex]->GetGPUVirtualAddress(), !useAddressPinning_);
 
       dumpService_.dumpBindingTable(commandList, patchBuffers_[patchBufferIndex], patchBufferOffset,
                                     sizeInBytes, stride, callKey, bindingTableType, false);
@@ -687,19 +696,21 @@ void GpuPatchLayer::initialize(ID3D12GraphicsCommandList* commandList) {
     GITS_ASSERT(hr == S_OK);
   }
 
-  for (unsigned i = 0; i < mappingBufferPoolSize_; ++i) {
-    resourceDesc.Width = gpuAddressBufferSize_;
-    resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-    hr = device->CreateCommittedResource(&heapPropertiesDefault, D3D12_HEAP_FLAG_NONE,
-                                         &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr,
-                                         IID_PPV_ARGS(&gpuAddressBuffers_[i]));
-    GITS_ASSERT(hr == S_OK);
+  if (!useAddressPinning_) {
+    for (unsigned i = 0; i < mappingBufferPoolSize_; ++i) {
+      resourceDesc.Width = gpuAddressBufferSize_;
+      resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+      hr = device->CreateCommittedResource(&heapPropertiesDefault, D3D12_HEAP_FLAG_NONE,
+                                           &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr,
+                                           IID_PPV_ARGS(&gpuAddressBuffers_[i]));
+      GITS_ASSERT(hr == S_OK);
 
-    resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-    hr = device->CreateCommittedResource(&heapPropertiesUpload, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-                                         D3D12_RESOURCE_STATE_COMMON, nullptr,
-                                         IID_PPV_ARGS(&gpuAddressStagingBuffers_[i]));
-    GITS_ASSERT(hr == S_OK);
+      resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+      hr = device->CreateCommittedResource(&heapPropertiesUpload, D3D12_HEAP_FLAG_NONE,
+                                           &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr,
+                                           IID_PPV_ARGS(&gpuAddressStagingBuffers_[i]));
+      GITS_ASSERT(hr == S_OK);
+    }
   }
 
   for (unsigned i = 0; i < mappingBufferPoolSize_; ++i) {
@@ -869,22 +880,24 @@ void GpuPatchLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
 
   MappingCount mappingCount{};
 
-  std::vector<CapturePlayerGpuAddressService::GpuAddressMapping> gpuAddressMappings;
-  addressService_.getMappings(gpuAddressMappings);
-  mappingCount.gpuAddressCount = gpuAddressMappings.size();
+  if (!useAddressPinning_) {
+    std::vector<CapturePlayerGpuAddressService::GpuAddressMapping> gpuAddressMappings;
+    addressService_.getMappings(gpuAddressMappings);
+    mappingCount.gpuAddressCount = gpuAddressMappings.size();
 
-  if (gpuAddressMappings.size() >
-      gpuAddressBufferSize_ / sizeof(CapturePlayerGpuAddressService::GpuAddressMapping)) {
-    LOG_ERROR << "Raytracing gpuAddressMappings buffer is too small!";
-    exit(EXIT_FAILURE);
-  }
-  for (unsigned index : mappingBuffers) {
-    void* data{};
-    HRESULT hr = gpuAddressStagingBuffers_[index]->Map(0, nullptr, &data);
-    GITS_ASSERT(hr == S_OK);
-    memcpy(data, gpuAddressMappings.data(),
-           sizeof(CapturePlayerGpuAddressService::GpuAddressMapping) * gpuAddressMappings.size());
-    gpuAddressStagingBuffers_[index]->Unmap(0, nullptr);
+    if (gpuAddressMappings.size() >
+        gpuAddressBufferSize_ / sizeof(CapturePlayerGpuAddressService::GpuAddressMapping)) {
+      LOG_ERROR << "Raytracing gpuAddressMappings buffer is too small!";
+      exit(EXIT_FAILURE);
+    }
+    for (unsigned index : mappingBuffers) {
+      void* data{};
+      HRESULT hr = gpuAddressStagingBuffers_[index]->Map(0, nullptr, &data);
+      GITS_ASSERT(hr == S_OK);
+      memcpy(data, gpuAddressMappings.data(),
+             sizeof(CapturePlayerGpuAddressService::GpuAddressMapping) * gpuAddressMappings.size());
+      gpuAddressStagingBuffers_[index]->Unmap(0, nullptr);
+    }
   }
 
   std::vector<ShaderIdentifierService::ShaderIdentifierMapping> shaderIdentifierMappings;
@@ -975,28 +988,30 @@ void GpuPatchLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
       currentPatchBuffersByCommandList_.erase(itCurrentBuffers);
     }
 
-    auto itInstancesAoPCurrentBuffers = currentInstancesAoPPatchBuffersByCommandList_.find(key);
-    if (itInstancesAoPCurrentBuffers != currentInstancesAoPPatchBuffersByCommandList_.end()) {
-      for (unsigned patchBufferIndex : itInstancesAoPCurrentBuffers->second) {
-        HRESULT hr =
-            c.object_.value->Signal(instancesAoPPatchBufferFences_[patchBufferIndex].fence,
-                                    ++instancesAoPPatchBufferFences_[patchBufferIndex].fenceValue);
-        GITS_ASSERT(hr == S_OK);
-        instancesAoPPatchBufferFences_[patchBufferIndex].waitingForExecute = false;
+    if (!useAddressPinning_) {
+      auto itInstancesAoPCurrentBuffers = currentInstancesAoPPatchBuffersByCommandList_.find(key);
+      if (itInstancesAoPCurrentBuffers != currentInstancesAoPPatchBuffersByCommandList_.end()) {
+        for (unsigned patchBufferIndex : itInstancesAoPCurrentBuffers->second) {
+          HRESULT hr = c.object_.value->Signal(
+              instancesAoPPatchBufferFences_[patchBufferIndex].fence,
+              ++instancesAoPPatchBufferFences_[patchBufferIndex].fenceValue);
+          GITS_ASSERT(hr == S_OK);
+          instancesAoPPatchBufferFences_[patchBufferIndex].waitingForExecute = false;
+        }
+        currentInstancesAoPPatchBuffersByCommandList_.erase(itInstancesAoPCurrentBuffers);
       }
-      currentInstancesAoPPatchBuffersByCommandList_.erase(itInstancesAoPCurrentBuffers);
-    }
 
-    auto itCurrentInstancesBuffers = currentInstancesAoPStagingBuffersByCommandList_.find(key);
-    if (itCurrentInstancesBuffers != currentInstancesAoPStagingBuffersByCommandList_.end()) {
-      for (unsigned patchBufferIndex : itCurrentInstancesBuffers->second) {
-        HRESULT hr = c.object_.value->Signal(
-            instancesAoPStagingBufferFences_[patchBufferIndex].fence,
-            ++instancesAoPStagingBufferFences_[patchBufferIndex].fenceValue);
-        GITS_ASSERT(hr == S_OK);
-        instancesAoPStagingBufferFences_[patchBufferIndex].waitingForExecute = false;
+      auto itCurrentInstancesBuffers = currentInstancesAoPStagingBuffersByCommandList_.find(key);
+      if (itCurrentInstancesBuffers != currentInstancesAoPStagingBuffersByCommandList_.end()) {
+        for (unsigned patchBufferIndex : itCurrentInstancesBuffers->second) {
+          HRESULT hr = c.object_.value->Signal(
+              instancesAoPStagingBufferFences_[patchBufferIndex].fence,
+              ++instancesAoPStagingBufferFences_[patchBufferIndex].fenceValue);
+          GITS_ASSERT(hr == S_OK);
+          instancesAoPStagingBufferFences_[patchBufferIndex].waitingForExecute = false;
+        }
+        currentInstancesAoPStagingBuffersByCommandList_.erase(itCurrentInstancesBuffers);
       }
-      currentInstancesAoPStagingBuffersByCommandList_.erase(itCurrentInstancesBuffers);
     }
   }
 
@@ -1058,6 +1073,10 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
     return;
   }
 
+  if (!raytracing && useAddressPinning_) {
+    return;
+  }
+
   ID3D12GraphicsCommandList* commandList = c.object_.value;
   if (!initialized_) {
     initialize(commandList);
@@ -1071,8 +1090,10 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
   unsigned patchBufferIndex = getPatchBufferIndex(c.object_.key);
 
   unsigned mappingBufferIndex = getMappingBufferIndex(c.object_.key);
-  commandList->CopyResource(gpuAddressBuffers_[mappingBufferIndex],
-                            gpuAddressStagingBuffers_[mappingBufferIndex]);
+  if (!useAddressPinning_) {
+    commandList->CopyResource(gpuAddressBuffers_[mappingBufferIndex],
+                              gpuAddressStagingBuffers_[mappingBufferIndex]);
+  }
   commandList->CopyResource(mappingCountBuffers_[mappingBufferIndex],
                             mappingCountStagingBuffers_[mappingBufferIndex]);
   if (raytracing) {
@@ -1219,7 +1240,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
       patchOffsetsBuffers_[patchBufferIndex]->GetGPUVirtualAddress(), patchOffsets.size(),
       executeIndirectRaytracingPatchBuffers_[patchBufferIndex]->GetGPUVirtualAddress(),
       raytracingPatches.size(), c.MaxCommandCount_.value, commandSignature.ByteStride,
-      gpuAddressBuffers_[mappingBufferIndex]->GetGPUVirtualAddress(),
+      useAddressPinning_ ? 0 : gpuAddressBuffers_[mappingBufferIndex]->GetGPUVirtualAddress(),
       mappingCountBuffers_[mappingBufferIndex]->GetGPUVirtualAddress());
 
   dumpService_.dumpExecuteIndirectArgumentBuffer(

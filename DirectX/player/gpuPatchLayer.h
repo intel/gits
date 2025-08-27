@@ -90,6 +90,7 @@ private:
 
 private:
   PlayerManager& manager_;
+  bool useAddressPinning_{};
 
   static const unsigned patchBufferPoolSize_{48};
   std::array<ID3D12Resource*, patchBufferPoolSize_> patchBuffers_{};

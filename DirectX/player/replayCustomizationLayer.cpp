@@ -25,7 +25,9 @@ namespace DirectX {
 ReplayCustomizationLayer::ReplayCustomizationLayer(PlayerManager& manager)
     : Layer("ReplayCustomization"),
       manager_(manager),
-      pipelineLibraryService_(manager.getPipelineLibraryService()) {}
+      pipelineLibraryService_(manager.getPipelineLibraryService()) {
+  useAddressPinning_ = Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE;
+}
 
 void ReplayCustomizationLayer::post(IUnknownReleaseCommand& c) {
   if (c.result_.value == 0) {
@@ -118,7 +120,7 @@ void ReplayCustomizationLayer::pre(ID3D12DeviceCreateRenderTargetViewCommand& c)
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateShaderResourceViewCommand& c) {
   fillCpuDescriptorHandleArgument(c.DestDescriptor_);
 
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
 
@@ -259,7 +261,7 @@ void ReplayCustomizationLayer::pre(WaitForFenceSignaledCommand& c) {
 }
 
 void ReplayCustomizationLayer::post(ID3D12DeviceCreateCommittedResourceCommand& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
 
@@ -268,7 +270,7 @@ void ReplayCustomizationLayer::post(ID3D12DeviceCreateCommittedResourceCommand& 
 }
 
 void ReplayCustomizationLayer::post(ID3D12Device4CreateCommittedResource1Command& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
 
@@ -277,7 +279,7 @@ void ReplayCustomizationLayer::post(ID3D12Device4CreateCommittedResource1Command
 }
 
 void ReplayCustomizationLayer::post(ID3D12Device8CreateCommittedResource2Command& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
 
@@ -286,7 +288,7 @@ void ReplayCustomizationLayer::post(ID3D12Device8CreateCommittedResource2Command
 }
 
 void ReplayCustomizationLayer::post(ID3D12Device10CreateCommittedResource3Command& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
 
@@ -295,7 +297,7 @@ void ReplayCustomizationLayer::post(ID3D12Device10CreateCommittedResource3Comman
 }
 
 void ReplayCustomizationLayer::post(ID3D12DeviceCreateReservedResourceCommand& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
 
@@ -304,7 +306,7 @@ void ReplayCustomizationLayer::post(ID3D12DeviceCreateReservedResourceCommand& c
 }
 
 void ReplayCustomizationLayer::post(ID3D12Device4CreateReservedResource1Command& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
 
@@ -313,7 +315,7 @@ void ReplayCustomizationLayer::post(ID3D12Device4CreateReservedResource1Command&
 }
 
 void ReplayCustomizationLayer::post(ID3D12Device10CreateReservedResource2Command& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
 
@@ -322,7 +324,7 @@ void ReplayCustomizationLayer::post(ID3D12Device10CreateReservedResource2Command
 }
 
 void ReplayCustomizationLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
 
@@ -333,7 +335,7 @@ void ReplayCustomizationLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) 
 }
 
 void ReplayCustomizationLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
 
@@ -344,7 +346,7 @@ void ReplayCustomizationLayer::post(ID3D12Device8CreatePlacedResource1Command& c
 }
 
 void ReplayCustomizationLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
 
@@ -355,7 +357,7 @@ void ReplayCustomizationLayer::post(ID3D12Device10CreatePlacedResource2Command& 
 }
 
 void ReplayCustomizationLayer::post(ID3D12DeviceCreateHeapCommand& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
 
@@ -364,7 +366,7 @@ void ReplayCustomizationLayer::post(ID3D12DeviceCreateHeapCommand& c) {
 }
 
 void ReplayCustomizationLayer::post(ID3D12Device4CreateHeap1Command& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
 
@@ -378,7 +380,7 @@ void ReplayCustomizationLayer::post(INTC_D3D12_CreateHeapCommand& c) {
 }
 
 void ReplayCustomizationLayer::pre(ID3D12Device3OpenExistingHeapFromAddressCommand& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
 
@@ -387,7 +389,7 @@ void ReplayCustomizationLayer::pre(ID3D12Device3OpenExistingHeapFromAddressComma
 }
 
 void ReplayCustomizationLayer::post(ID3D12Device3OpenExistingHeapFromAddressCommand& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
 
@@ -396,7 +398,7 @@ void ReplayCustomizationLayer::post(ID3D12Device3OpenExistingHeapFromAddressComm
 }
 
 void ReplayCustomizationLayer::pre(ID3D12Device13OpenExistingHeapFromAddress1Command& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
 
@@ -405,7 +407,7 @@ void ReplayCustomizationLayer::pre(ID3D12Device13OpenExistingHeapFromAddress1Com
 }
 
 void ReplayCustomizationLayer::post(ID3D12Device13OpenExistingHeapFromAddress1Command& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
 
@@ -446,7 +448,7 @@ void ReplayCustomizationLayer::pre(
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateConstantBufferViewCommand& c) {
   fillCpuDescriptorHandleArgument(c.DestDescriptor_);
 
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
 
@@ -457,7 +459,7 @@ void ReplayCustomizationLayer::pre(ID3D12DeviceCreateConstantBufferViewCommand& 
 }
 
 void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListIASetIndexBufferCommand& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
 
@@ -468,7 +470,7 @@ void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListIASetIndexBufferComm
 }
 
 void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListIASetVertexBuffersCommand& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
 
@@ -484,7 +486,7 @@ void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListIASetVertexBuffersCo
 }
 
 void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListSOSetTargetsCommand& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
 
@@ -508,7 +510,7 @@ void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListSOSetTargetsCommand&
 }
 
 void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
 
@@ -529,7 +531,7 @@ void ReplayCustomizationLayer::pre(ID3D12DeviceCheckFeatureSupportCommand& c) {
 
 void ReplayCustomizationLayer::pre(
     ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
   unsigned inputIndex = 0;
@@ -957,7 +959,7 @@ void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandList4BeginRenderPassComm
 
 void ReplayCustomizationLayer::pre(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
   c.pDesc_.value->DestAccelerationStructureData = manager_.getGpuAddressService().getGpuAddress(
@@ -1010,7 +1012,7 @@ void ReplayCustomizationLayer::pre(
 
 void ReplayCustomizationLayer::pre(
     ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
   c.DestAccelerationStructureData_.value = manager_.getGpuAddressService().getGpuAddress(
@@ -1021,7 +1023,7 @@ void ReplayCustomizationLayer::pre(
 
 void ReplayCustomizationLayer::pre(
     ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
   c.pDesc_.value->DestBuffer = manager_.getGpuAddressService().getGpuAddress(
@@ -1122,7 +1124,7 @@ void ReplayCustomizationLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThre
 }
 
 void ReplayCustomizationLayer::pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
 
@@ -1256,7 +1258,7 @@ void ReplayCustomizationLayer::pre(NvAPI_D3D12_BuildRaytracingAccelerationStruct
 }
 
 void ReplayCustomizationLayer::pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
   if (c.pParams.value->pDesc) {
@@ -1287,7 +1289,7 @@ void ReplayCustomizationLayer::pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArr
 
 void ReplayCustomizationLayer::pre(
     NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& c) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
   if (c.pParams.value->pDesc) {
@@ -1323,7 +1325,7 @@ void ReplayCustomizationLayer::pre(
 }
 
 void ReplayCustomizationLayer::fillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg) {
-  if (Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE) {
+  if (useAddressPinning_) {
     return;
   }
 
