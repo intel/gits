@@ -30,6 +30,7 @@
 #include "pipelineLibraryService.h"
 #include "contextMapService.h"
 #include "analyzerService.h"
+#include "addressPinningFactory.h"
 
 #include <vector>
 #include <memory>
@@ -130,6 +131,7 @@ private:
   ResourceDumpingFactory resourceDumpingFactory_;
   SkipCallsFactory skipCallsFactory_;
   PortabilityFactory portabilityFactory_;
+  AddressPinningFactory addressPinningFactory_;
 
   bool executeCommands_{true};
   bool multithreadedShaderCompilation_{true};

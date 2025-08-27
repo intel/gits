@@ -77,6 +77,10 @@ void StateTrackingService::copyAuxiliaryFiles() {
     std::filesystem::copy(streamDir / "resourcePlacementData.dat", subcapturePath,
                           std::filesystem::copy_options::overwrite_existing);
   }
+  if (std::filesystem::exists(streamDir / "addressRanges.txt")) {
+    std::filesystem::copy(streamDir / "addressRanges.txt", subcapturePath,
+                          std::filesystem::copy_options::overwrite_existing);
+  }
 }
 
 void StateTrackingService::keepState(unsigned objectKey) {

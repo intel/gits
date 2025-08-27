@@ -820,6 +820,10 @@ Configuration:
                   - Name: accelerationStructureScratchPadding
                     Type: float
                     Default: 1.0
+          - Name: storeAddressPinning
+            Type: bool
+            Default: true
+            Description: Dump file with GPUVAs
       - Name: Player
         Type: Group
         Options:
@@ -927,6 +931,10 @@ Configuration:
                 Type: bool
                 Default: false
                 Description: Checks and logs portability issues
+          - Name: AddressPinning
+            Type: AddressPinningMode
+            Default: None
+            Description: None / Use - Recreate resources and heaps at capture-time GPUVAs / Store - Dump file with GPUVAs
         ConfigName: Playback
       - Name: Features
         Type: Group

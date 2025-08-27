@@ -218,3 +218,8 @@ Enums:
     Values:
       - Value: PNG
       - Value: JPEG
+  - Name: AddressPinningMode
+    Values:
+      - Value: NONE
+      - Value: STORE
+      - Value: USE

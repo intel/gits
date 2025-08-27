@@ -141,6 +141,7 @@ void CaptureManager::createLayers() {
   std::unique_ptr<Layer> gpuPatchLayer;
   std::unique_ptr<Layer> portabilityLayer;
   std::unique_ptr<Layer> imGuiHUDLayer = std::make_unique<ImGuiHUDLayer>();
+  std::unique_ptr<Layer> addressPinningLayer;
 
   if (cfg.directx.capture.debugLayer) {
     debugInfoLayer = std::make_unique<DebugInfoLayer>();
@@ -159,6 +160,7 @@ void CaptureManager::createLayers() {
       directStorageResourcesLayer = std::make_unique<DirectStorageResourcesLayer>();
     }
     portabilityLayer = portabilityFactory_.getPortabilityLayer();
+    addressPinningLayer = addressPinningFactory_.getAddressPinningLayer();
   }
 
   // Enable Pre layers
@@ -195,6 +197,7 @@ void CaptureManager::createLayers() {
   enablePostLayer(debugInfoLayer);
   enablePostLayer(encoderLayer);
   enablePostLayer(gpuPatchLayer);
+  enablePostLayer(addressPinningLayer);
   enablePostLayer(captureSynchronizationLayer);
   enablePostLayer(traceLayer);
   enablePostLayer(screenshotsLayer);
@@ -236,6 +239,7 @@ void CaptureManager::createLayers() {
   retainLayer(std::move(portabilityLayer));
   retainLayer(std::move(globalSynchronizationLayer));
   retainLayer(std::move(imGuiHUDLayer));
+  retainLayer(std::move(addressPinningLayer));
 }
 
 void CaptureManager::interceptDirectMLFunctions() {

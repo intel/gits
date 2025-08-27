@@ -103,6 +103,7 @@ target_include_directories(DirectX_recorder PRIVATE
   ${DIRECTX_DIR}/layers/portability
   ${DIRECTX_DIR}/layers/api_debug
   ${DIRECTX_DIR}/layers/dstorage_resources
+  ${DIRECTX_DIR}/layers/address_pinning
   ${CMAKE_SOURCE_DIR}/third_party/DirectXTex/DirectXTex
   ${PLUGINS_DIR}
   ${ARGS_SOURCE_DIR}
@@ -120,6 +121,7 @@ target_link_libraries(DirectX_recorder PRIVATE
   DirectX_utils
   DirectX_resource_dumping
   DirectX_portability
+  DirectX_address_pinning
   ${INTEL_EXT_DIR}/lib/igdext64.lib 
   ${NVAPI_DIR}/amd64/nvapi64.lib
 )

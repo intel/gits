@@ -25,6 +25,7 @@
 #include "directx.h"
 #include "resourceDumpingFactory.h"
 #include "portabilityFactory.h"
+#include "addressPinningFactory.h"
 
 #include <vector>
 #include <memory>
@@ -167,6 +168,7 @@ private:
   TraceFactory traceFactory_;
   ResourceDumpingFactory resourceDumpingFactory_;
   PortabilityFactory portabilityFactory_;
+  AddressPinningFactory addressPinningFactory_;
 
   std::atomic<unsigned> globalStackDepth_{0};
   static thread_local unsigned localStackDepth_;

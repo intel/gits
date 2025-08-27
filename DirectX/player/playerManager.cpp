@@ -105,6 +105,7 @@ PlayerManager::PlayerManager() {
   std::unique_ptr<Layer> skipCallsOnResultLayer = skipCallsFactory_.getSkipCallsOnResultLayer();
   std::unique_ptr<Layer> imGuiHUDLayer = std::make_unique<ImGuiHUDLayer>();
   std::unique_ptr<Layer> printStatusLayer = std::make_unique<PrintStatusLayer>();
+  std::unique_ptr<Layer> addressPinningLayer;
 
   if (executeCommands_) {
     replayCustomizationLayer = std::make_unique<ReplayCustomizationLayer>(*this);
@@ -119,6 +120,7 @@ PlayerManager::PlayerManager() {
       multithreadedObjectAwaitLayer = std::make_unique<MultithreadedObjectAwaitLayer>(*this);
     }
     portabilityLayer = portabilityFactory_.getPortabilityLayer();
+    addressPinningLayer = addressPinningFactory_.getAddressPinningLayer();
   }
 
   // Enable Pre layers
@@ -139,6 +141,7 @@ PlayerManager::PlayerManager() {
   enablePreLayer(executionSerializationLayer);
   enablePreLayer(analyzerLayer);
   enablePreLayer(gpuPatchLayer);
+  enablePreLayer(addressPinningLayer);
   enablePreLayer(replayCustomizationLayer);
   enablePreLayer(screenshotsLayer);
   enablePreLayer(debugInfoLayer);
@@ -165,6 +168,7 @@ PlayerManager::PlayerManager() {
   enablePostLayer(logDxErrorLayer);
   enablePostLayer(directStorageLayer);
   enablePostLayer(directStorageResourcesLayer);
+  enablePostLayer(addressPinningLayer);
   enablePostLayer(replayCustomizationLayer);
   enablePostLayer(gpuPatchLayer);
   enablePostLayer(traceLayer);
@@ -217,6 +221,7 @@ PlayerManager::PlayerManager() {
   retainLayer(std::move(directStorageResourcesLayer));
   retainLayer(std::move(imGuiHUDLayer));
   retainLayer(std::move(printStatusLayer));
+  retainLayer(std::move(addressPinningLayer));
 
   objectUsageNotifier_ = subcaptureFactory_.getObjectUsageNotifier();
 
