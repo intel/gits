@@ -45,6 +45,9 @@ public:
   static bool IsRaw();
   FormatRawScope();
   ~FormatRawScope();
+  // Disallow copying (gits::noncopyable is not available here).
+  FormatRawScope(const FormatRawScope&) = delete;
+  FormatRawScope& operator=(const FormatRawScope&) = delete;
 
 private:
   static std::mutex s_mutex;
