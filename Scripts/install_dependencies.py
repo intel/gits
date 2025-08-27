@@ -439,7 +439,7 @@ class AgilitySDK(Nuget):
         self.name = "AgilitySDK"
         self.package_url = "https://www.nuget.org/api/v2/package/Microsoft.Direct3D.D3D12/"
         self.folder_to_extract = "build/native/"
-        self.version = "1.614.1"
+        self.version = "1.717.1-preview"
         self.os = OperatingSystem.WINDOWS
 
 

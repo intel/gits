@@ -295,7 +295,13 @@ def parse_functions(header):
       'DXGIGetDebugInterface'
     }
     
+    skip = {
+      'D3D12CreateVersionedRootSignatureDeserializerFromSubobjectInLibrary'
+    }
+
     for cxx_function in header.data.namespace.functions:
+        if cxx_function.name.segments[0].name in skip:
+            continue
         function = parse_function(cxx_function)
         if function.name not in custom:
             function.api = header.api  
