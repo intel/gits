@@ -50,15 +50,16 @@ void RaytracingShaderPatchService::patchInstances(ID3D12GraphicsCommandList* com
   commandList->SetComputeRootUnorderedAccessView(0, instancesBuffer);
   commandList->SetComputeRootShaderResourceView(1, gpuAddressBuffer);
   commandList->SetComputeRootConstantBufferView(2, mappingCountBuffer);
+  commandList->SetComputeRoot32BitConstant(3, instancesCount, 0);
 
-  commandList->Dispatch(instancesCount, 1, 1);
+  commandList->Dispatch((instancesCount + 31) / 32, 1, 1);
 }
 
 void RaytracingShaderPatchService::initializeInstances(ID3D12Device* device) {
   {
     D3D12_ROOT_SIGNATURE_DESC desc{};
-    D3D12_ROOT_PARAMETER parameters[3]{};
-    desc.NumParameters = 3;
+    D3D12_ROOT_PARAMETER parameters[4]{};
+    desc.NumParameters = 4;
     desc.pParameters = parameters;
     parameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_UAV;
     parameters[0].Descriptor.ShaderRegister = 0;
@@ -69,6 +70,10 @@ void RaytracingShaderPatchService::initializeInstances(ID3D12Device* device) {
     parameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     parameters[2].Descriptor.ShaderRegister = 0;
     parameters[2].Descriptor.RegisterSpace = 0;
+    parameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+    parameters[3].Constants.Num32BitValues = 1;
+    parameters[3].Constants.ShaderRegister = 1;
+    parameters[3].Constants.RegisterSpace = 0;
 
     Microsoft::WRL::ComPtr<ID3DBlob> signature;
     Microsoft::WRL::ComPtr<ID3DBlob> error;
@@ -104,10 +109,18 @@ cbuffer MappingCount : register(b0)
   uint sampleDescriptorCount;
 };
 
-[numthreads(1, 1, 1)]
+cbuffer RecordSize : register(b1)
+{
+  uint instancesCount;
+};
+
+[numthreads(32, 1, 1)]
 void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID, 
                 uint3 gtId : SV_GroupThreadID, uint gi : SV_GroupIndex)
 {
+  if (dtId.x >= instancesCount) {
+        return;
+  }
   uint instancesIndex = dtId.x;
   uint64_t captureAddress = instances[instancesIndex].blas;
   int first = 0;
@@ -156,14 +169,15 @@ void RaytracingShaderPatchService::patchInstancesOffset(
   commandList->SetComputeRootShaderResourceView(1, instancesOffsetsBuffer);
   commandList->SetComputeRootShaderResourceView(2, gpuAddressBuffer);
   commandList->SetComputeRootConstantBufferView(3, mappingCountBuffer);
+  commandList->SetComputeRoot32BitConstant(4, instancesCount, 0);
 
-  commandList->Dispatch(instancesCount, 1, 1);
+  commandList->Dispatch((instancesCount + 31) / 32, 1, 1);
 }
 
 void RaytracingShaderPatchService::initializeInstancesOffset(ID3D12Device* device) {
   D3D12_ROOT_SIGNATURE_DESC desc{};
-  D3D12_ROOT_PARAMETER parameters[4]{};
-  desc.NumParameters = 4;
+  D3D12_ROOT_PARAMETER parameters[5]{};
+  desc.NumParameters = 5;
   desc.pParameters = parameters;
   parameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_UAV;
   parameters[0].Descriptor.ShaderRegister = 0;
@@ -177,6 +191,10 @@ void RaytracingShaderPatchService::initializeInstancesOffset(ID3D12Device* devic
   parameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
   parameters[3].Descriptor.ShaderRegister = 0;
   parameters[3].Descriptor.RegisterSpace = 0;
+  parameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+  parameters[4].Constants.Num32BitValues = 1;
+  parameters[4].Constants.ShaderRegister = 1;
+  parameters[4].Constants.RegisterSpace = 0;
 
   Microsoft::WRL::ComPtr<ID3DBlob> signature;
   Microsoft::WRL::ComPtr<ID3DBlob> error;
@@ -212,10 +230,18 @@ cbuffer MappingCount : register(b0)
   uint sampleDescriptorCount;
 };
 
-[numthreads(1, 1, 1)]
+cbuffer RecordSize : register(b1)
+{
+  uint instancesCount;
+};
+
+[numthreads(32, 1, 1)]
 void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID, 
                 uint3 gtId : SV_GroupThreadID, uint gi : SV_GroupIndex)
 {
+  if (dtId.x >= instancesCount) {
+        return;
+  }
   uint instancesIndex = instancesOffsets[dtId.x];
   uint64_t captureAddress = instances[instancesIndex].blas;
   int first = 0;
@@ -272,9 +298,10 @@ void RaytracingShaderPatchService::patchBindingTable(
   commandList->SetComputeRootConstantBufferView(5, mappingCountBuffer);
   unsigned size = recordSize / sizeof(D3D12_GPU_VIRTUAL_ADDRESS);
   commandList->SetComputeRoot32BitConstant(6, size, 0);
+  commandList->SetComputeRoot32BitConstant(6, recordCount, 1);
   commandList->SetComputeRoot32BitConstant(7, patchGpuAdresses, 0);
 
-  commandList->Dispatch(recordCount, 1, 1);
+  commandList->Dispatch((recordCount + 31) / 32, 1, 1);
 }
 
 void RaytracingShaderPatchService::initializeBindingTable(ID3D12Device* device) {
@@ -302,7 +329,7 @@ void RaytracingShaderPatchService::initializeBindingTable(ID3D12Device* device) 
     parameters[5].Descriptor.ShaderRegister = 0;
     parameters[5].Descriptor.RegisterSpace = 0;
     parameters[6].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-    parameters[6].Constants.Num32BitValues = 1;
+    parameters[6].Constants.Num32BitValues = 2;
     parameters[6].Constants.ShaderRegister = 1;
     parameters[6].Constants.RegisterSpace = 0;
     parameters[7].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
@@ -352,6 +379,7 @@ cbuffer MappingCount : register(b0)
 cbuffer RecordSize : register(b1)
 {
   uint recordSize;
+  uint recordCount;
 };
 
 cbuffer PatchGpuAddresses : register(b2)
@@ -359,10 +387,13 @@ cbuffer PatchGpuAddresses : register(b2)
   uint patchGpuAddresses;
 };
 
-[numthreads(1, 1, 1)]
+[numthreads(32, 1, 1)]
 void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID, 
                 uint3 gtId : SV_GroupThreadID, uint gi : SV_GroupIndex)
 {
+  if (dtId.x >= recordCount) {
+        return;
+  }
   uint bindingTableOffset = dtId.x * recordSize;
   uint64_t4 captureIdentifier;
   captureIdentifier.x = bindingTable[bindingTableOffset];
