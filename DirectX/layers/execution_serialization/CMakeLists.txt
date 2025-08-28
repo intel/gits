@@ -36,7 +36,7 @@ target_sources(DirectX_execution_serialization PRIVATE
 )
 
 target_include_directories(DirectX_execution_serialization PRIVATE
-  ${DIRECTX_DIR}/common/coders
+  ${ARGS_SOURCE_DIR}
 )
 
 target_link_libraries(DirectX_execution_serialization PRIVATE
