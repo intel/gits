@@ -580,14 +580,22 @@ std::optional<nlohmann::ordered_json> CFile::FindProperty(const std::string& key
 std::string CFile::GetApplicationName() const {
   auto appName = FindProperty("diag.original_app.name");
   if (appName) {
-    return appName->get<std::string>();
+    auto appNameStr = appName->get<std::string>();
+    if (appNameStr != "<unknown>") {
+      return appNameStr;
+    }
+    return {};
   }
   appName = FindProperty("diag.app.name");
   if (appName) {
-    return appName->get<std::string>();
+    auto appNameStr = appName->get<std::string>();
+    if (appNameStr != "<unknown>") {
+      return appNameStr;
+    }
+    return {};
   }
   Log(WARN) << "Application name not found from stream metadata.";
-  return "";
+  return {};
 }
 
 void CFile::SetDiagnosticInfo(std::filesystem::path configPath) {

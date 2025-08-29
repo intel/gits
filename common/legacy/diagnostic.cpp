@@ -58,6 +58,34 @@ template <class T>
 T get_element(void* ptr, int idx) {
   return static_cast<T*>(ptr)[idx];
 }
+
+std::string wstringToUtf8string(const std::wstring& wstr) {
+  if (wstr.empty()) {
+    return {};
+  }
+  int sizeNeeded = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, &wstr[0],
+                                       static_cast<int>(wstr.size()), nullptr, 0, nullptr, nullptr);
+  if (sizeNeeded == 0) {
+    return "<invalid arg>";
+  }
+
+  std::string outStr(sizeNeeded, 0);
+  int ret =
+      WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, &wstr[0], static_cast<int>(wstr.size()),
+                          &outStr[0], sizeNeeded, nullptr, nullptr);
+  if (ret == 0) {
+    return "<invalid arg>";
+  }
+
+  return outStr;
+}
+
+std::string BSTRtoUtf8string(BSTR bstr) {
+  if (bstr == nullptr) {
+    return {};
+  }
+  return wstringToUtf8string(std::wstring(bstr, SysStringLen(bstr)));
+}
 } // namespace
 
 std::ostream& operator<<(std::ostream& o, const VARIANT& var) {
@@ -86,7 +114,7 @@ std::ostream& operator<<(std::ostream& o, const VARIANT& var) {
         o << (bool)get_element<VARIANT_BOOL>(rawArray, i);
         break;
       case VT_BSTR:
-        o << _bstr_t(get_element<BSTR>(rawArray, i));
+        o << BSTRtoUtf8string(get_element<BSTR>(rawArray, i));
         break;
       case VT_CY:
         o << get_element<LONGLONG>(rawArray, i);
@@ -159,7 +187,7 @@ std::ostream& operator<<(std::ostream& o, const VARIANT& var) {
   case VT_BOOL:
     return o << (bool)var.boolVal;
   case VT_BSTR:
-    return o << _bstr_t(var.bstrVal);
+    return o << BSTRtoUtf8string(var.bstrVal);
   case VT_CY:
     return o << var.cyVal.int64;
   case VT_DATE:
@@ -347,29 +375,38 @@ void DescribeClass(WMIConnection& con,
 
 } // namespace
 
-std::string wstringToUtf8string(const std::wstring& wstr) {
-  if (wstr.empty()) {
-    return std::string();
-  }
-  int sizeNeeded =
-      WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), nullptr, 0, nullptr, nullptr);
-  std::string outStr(sizeNeeded, 0);
-  WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &outStr[0], sizeNeeded, nullptr,
-                      nullptr);
-  return outStr;
-}
-
 void gather_diagnostic_info(nlohmann::ordered_json& properties) {
 
   {
-    char exePathArr[MAX_PATH];
-    GetModuleFileName(NULL, exePathArr, sizeof(exePathArr));
-    std::filesystem::path exePath(exePathArr);
-    if (std::filesystem::exists(exePath)) {
-      std::string exeName = exePath.filename().string();
-      properties["diag"]["app"]["name"] = exeName;
-      properties["diag"]["app"]["path"] = exePath;
-      properties["diag"]["original_app"]["name"] = exeName;
+    wchar_t exePathArr[MAX_PATH];
+    DWORD pathLength = GetModuleFileNameW(NULL, exePathArr, MAX_PATH);
+    if (pathLength > 0) {
+      try {
+        std::filesystem::path exePath(std::wstring(exePathArr, pathLength));
+        if (std::filesystem::exists(exePath)) {
+          std::string exeName = exePath.filename().u8string();
+          std::string exePathStr = exePath.u8string();
+
+          properties["diag"]["app"]["name"] = exeName;
+          properties["diag"]["app"]["path"] = exePathStr;
+          properties["diag"]["original_app"]["name"] = exeName;
+        } else {
+          Log(ERR) << "Diagnostics: Executable path does not exist: " << exePath.u8string();
+          properties["diag"]["app"]["name"] = "<unknown>";
+          properties["diag"]["app"]["path"] = "<unknown>";
+          properties["diag"]["original_app"]["name"] = "<unknown>";
+        }
+      } catch (std::exception& e) {
+        Log(ERR) << "Diagnostics: Exception when processing executable path: " << e.what();
+        properties["diag"]["app"]["name"] = "<unknown>";
+        properties["diag"]["app"]["path"] = "<unknown>";
+        properties["diag"]["original_app"]["name"] = "<unknown>";
+      }
+    } else {
+      Log(ERR) << "Diagnostics: GetModuleFileNameW failed: " << GetLastError();
+      properties["diag"]["app"]["name"] = "<unknown>";
+      properties["diag"]["app"]["path"] = "<unknown>";
+      properties["diag"]["original_app"]["name"] = "<unknown>";
     }
   }
 
