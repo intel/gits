@@ -70,6 +70,9 @@ void AnalyzerCommandListRestoreService::commandListsRestore(
         initializeMetaCommandImpl(
             static_cast<ID3D12GraphicsCommandList4InitializeMetaCommandCommand&>(*command));
         break;
+      case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST7_BARRIER:
+        barrierImpl(static_cast<ID3D12GraphicsCommandList7BarrierCommand&>(*command));
+        break;
       }
     }
     commandsByCommandList_.erase(itCommandList);
@@ -233,6 +236,19 @@ void AnalyzerCommandListRestoreService::initializeMetaCommand(
 void AnalyzerCommandListRestoreService::initializeMetaCommandImpl(
     ID3D12GraphicsCommandList4InitializeMetaCommandCommand& c) {
   objectsForRestore_.insert(c.pMetaCommand_.key);
+}
+
+void AnalyzerCommandListRestoreService::barrier(ID3D12GraphicsCommandList7BarrierCommand& c) {
+  if (!analyzerService_.inRange() && !commandListSubcapture_) {
+    commandsByCommandList_[c.object_.key].emplace_back(
+        new ID3D12GraphicsCommandList7BarrierCommand(c));
+  }
+}
+
+void AnalyzerCommandListRestoreService::barrierImpl(ID3D12GraphicsCommandList7BarrierCommand& c) {
+  for (unsigned key : c.pBarrierGroups_.resourceKeys) {
+    objectsForRestore_.insert(key);
+  }
 }
 
 } // namespace DirectX

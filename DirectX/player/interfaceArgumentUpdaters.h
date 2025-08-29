@@ -49,6 +49,7 @@ void updateInterface(PlayerManager& manager, D3D12_RENDER_PASS_RENDER_TARGET_DES
 void updateInterface(PlayerManager& manager, D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument& arg);
 void updateInterface(PlayerManager& manager,
                      PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg);
+void updateInterface(PlayerManager& manager, D3D12_BARRIER_GROUPs_Argument& arg);
 void updateInterface(PlayerManager& manager, DML_BINDING_TABLE_DESC_Argument& arg);
 void updateInterface(PlayerManager& manager, DML_BINDING_DESC_Argument& arg);
 void updateInterface(PlayerManager& manager, DML_BINDING_DESCs_Argument& arg);

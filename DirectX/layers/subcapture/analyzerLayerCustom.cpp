@@ -647,6 +647,13 @@ void AnalyzerLayer::post(MappedDataMetaCommand& c) {
   }
 }
 
+void AnalyzerLayer::post(ID3D12GraphicsCommandList7BarrierCommand& c) {
+  analyzerService_.commandListCommand(c.object_.key);
+  if (optimize_) {
+    commandListRestoreService_.barrier(c);
+  }
+}
+
 void AnalyzerLayer::post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
   analyzerService_.commandListCommand(c.pCommandList_.key);
 }

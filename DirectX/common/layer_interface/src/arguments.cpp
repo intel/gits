@@ -1444,6 +1444,49 @@ ArrayArgument<D3D12_META_COMMAND_DESC>::~ArrayArgument() {
   }
 }
 
+D3D12_BARRIER_GROUPs_Argument::D3D12_BARRIER_GROUPs_Argument(
+    const D3D12_BARRIER_GROUPs_Argument& arg) {
+  size = arg.size;
+  if (arg.value) {
+    value = new D3D12_BARRIER_GROUP[size];
+    memcpy(value, arg.value, size * sizeof(D3D12_BARRIER_GROUP));
+
+    for (unsigned i = 0; i < size; ++i) {
+      if (value[i].Type == D3D12_BARRIER_TYPE_GLOBAL) {
+        value[i].pGlobalBarriers = new D3D12_GLOBAL_BARRIER[value[i].NumBarriers];
+        memcpy(const_cast<D3D12_GLOBAL_BARRIER*>(value[i].pGlobalBarriers),
+               arg.value[i].pGlobalBarriers, sizeof(D3D12_GLOBAL_BARRIER) * value[i].NumBarriers);
+      } else if (value[i].Type == D3D12_BARRIER_TYPE_TEXTURE) {
+        value[i].pTextureBarriers = new D3D12_TEXTURE_BARRIER[value[i].NumBarriers];
+        memcpy(const_cast<D3D12_TEXTURE_BARRIER*>(value[i].pTextureBarriers),
+               arg.value[i].pTextureBarriers, sizeof(D3D12_TEXTURE_BARRIER) * value[i].NumBarriers);
+      } else if (value[i].Type == D3D12_BARRIER_TYPE_BUFFER) {
+        value[i].pBufferBarriers = new D3D12_BUFFER_BARRIER[value[i].NumBarriers];
+        memcpy(const_cast<D3D12_BUFFER_BARRIER*>(value[i].pBufferBarriers),
+               arg.value[i].pBufferBarriers, sizeof(D3D12_BUFFER_BARRIER) * value[i].NumBarriers);
+      }
+    }
+  }
+  resourceKeys = arg.resourceKeys;
+  copy = true;
+}
+
+D3D12_BARRIER_GROUPs_Argument::~D3D12_BARRIER_GROUPs_Argument() {
+  if (copy) {
+    for (unsigned i = 0; i < size; ++i) {
+      if (value[i].Type == D3D12_BARRIER_TYPE_GLOBAL) {
+        delete[] value[i].pGlobalBarriers;
+      } else if (value[i].Type == D3D12_BARRIER_TYPE_TEXTURE) {
+        delete[] value[i].pTextureBarriers;
+      } else if (value[i].Type == D3D12_BARRIER_TYPE_BUFFER) {
+        delete[] value[i].pBufferBarriers;
+      }
+    }
+
+    delete[] value;
+  }
+}
+
 #pragma endregion
 
 #pragma region INTC

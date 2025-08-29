@@ -290,6 +290,9 @@ void encode(char* dest, unsigned& offset, const D3D12_RENDER_PASS_DEPTH_STENCIL_
 unsigned getSize(const D3D12_SHADER_RESOURCE_VIEW_DESC_Argument& arg);
 void encode(char* dest, unsigned& offset, const D3D12_SHADER_RESOURCE_VIEW_DESC_Argument& arg);
 
+unsigned getSize(const D3D12_BARRIER_GROUPs_Argument& arg);
+void encode(char* dest, unsigned& offset, const D3D12_BARRIER_GROUPs_Argument& arg);
+
 unsigned getSize(const DML_BINDING_DESC_Argument& arg);
 void encode(char* dest, unsigned& offset, const DML_BINDING_DESC_Argument& arg);
 

@@ -1027,6 +1027,61 @@ FastOStream& operator<<(
   return stream;
 }
 
+FastOStream& operator<<(FastOStream& stream, D3D12_BARRIER_GROUPs_Argument& arg) {
+  if (!arg.value) {
+    return stream << "nullptr";
+  }
+  unsigned resourceKeyIndex{};
+  stream << "D3D12_BARRIER_GROUP[";
+  for (unsigned i = 0; i < arg.size; ++i) {
+    if (i > 0) {
+      stream << ", ";
+    }
+    stream << "{" << arg.value[i].Type << ", " << arg.value[i].NumBarriers << ", ";
+    if (arg.value[i].Type == D3D12_BARRIER_TYPE_GLOBAL) {
+      stream << "D3D12_GLOBAL_BARRIER[";
+      for (unsigned j = 0; j < arg.value[i].NumBarriers; ++j) {
+        if (j > 0) {
+          stream << ", ";
+        }
+        const D3D12_GLOBAL_BARRIER& barrier = arg.value[i].pGlobalBarriers[j];
+        stream << "{" << barrier.SyncBefore << ", " << barrier.SyncAfter << ", "
+               << barrier.AccessBefore << ", " << barrier.AccessAfter << "}";
+      }
+      stream << "]";
+    } else if (arg.value[i].Type == D3D12_BARRIER_TYPE_TEXTURE) {
+      stream << "D3D12_TEXTURE_BARRIER[";
+      for (unsigned j = 0; j < arg.value[i].NumBarriers; ++j) {
+        if (j > 0) {
+          stream << ", ";
+        }
+        const D3D12_TEXTURE_BARRIER& barrier = arg.value[i].pTextureBarriers[j];
+        stream << "{" << barrier.SyncBefore << ", " << barrier.SyncAfter << ", "
+               << barrier.AccessBefore << ", " << barrier.AccessAfter << ", "
+               << barrier.LayoutBefore << ", ";
+        printObjectKey(stream, arg.resourceKeys[resourceKeyIndex++]);
+        stream << ", " << barrier.Subresources << ", " << barrier.Flags << "}";
+      }
+      stream << "]";
+    } else if (arg.value[i].Type == D3D12_BARRIER_TYPE_BUFFER) {
+      stream << "D3D12_BUFFER_BARRIER[";
+      for (unsigned j = 0; j < arg.value[i].NumBarriers; ++j) {
+        if (j > 0) {
+          stream << ", ";
+        }
+        const D3D12_BUFFER_BARRIER& barrier = arg.value[i].pBufferBarriers[j];
+        stream << "{" << barrier.SyncBefore << ", " << barrier.SyncAfter << ", "
+               << barrier.AccessBefore << ", " << barrier.AccessAfter << ", ";
+        printObjectKey(stream, arg.resourceKeys[resourceKeyIndex++]);
+        stream << ", " << barrier.Offset << ", " << barrier.Size << "}";
+      }
+      stream << "]";
+    }
+    stream << "}";
+  }
+  return stream << "]";
+}
+
 FastOStream& operator<<(FastOStream& stream, PointerArgument<D3D12_DISPATCH_RAYS_DESC>& arg) {
   if (!arg.value) {
     return stream << "nullptr";

@@ -271,6 +271,35 @@ void updateInterface(PlayerManager& manager,
   }
 }
 
+void updateInterface(PlayerManager& manager, D3D12_BARRIER_GROUPs_Argument& arg) {
+  if (!manager.executeCommands()) {
+    return;
+  }
+
+  unsigned resourceKeyIndex = 0;
+
+  for (unsigned i = 0; i < arg.size; ++i) {
+    D3D12_BARRIER_GROUP& barrierGroup = arg.value[i];
+    if (barrierGroup.Type == D3D12_BARRIER_TYPE_GLOBAL) {
+      continue;
+    } else if (barrierGroup.Type == D3D12_BARRIER_TYPE_TEXTURE) {
+      D3D12_TEXTURE_BARRIER* barriers =
+          const_cast<D3D12_TEXTURE_BARRIER*>(barrierGroup.pTextureBarriers);
+      for (unsigned j = 0; j < barrierGroup.NumBarriers; ++j) {
+        barriers[j].pResource =
+            static_cast<ID3D12Resource*>(manager.findObject(arg.resourceKeys[resourceKeyIndex++]));
+      }
+    } else if (barrierGroup.Type == D3D12_BARRIER_TYPE_BUFFER) {
+      D3D12_BUFFER_BARRIER* barriers =
+          const_cast<D3D12_BUFFER_BARRIER*>(barrierGroup.pBufferBarriers);
+      for (unsigned j = 0; j < barrierGroup.NumBarriers; ++j) {
+        barriers[j].pResource =
+            static_cast<ID3D12Resource*>(manager.findObject(arg.resourceKeys[resourceKeyIndex++]));
+      }
+    }
+  }
+}
+
 void updateInterface(PlayerManager& manager, DML_BINDING_TABLE_DESC_Argument& arg) {
   if (!manager.executeCommands()) {
     return;

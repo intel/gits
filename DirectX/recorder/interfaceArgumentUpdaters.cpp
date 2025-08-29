@@ -386,6 +386,53 @@ UpdateInterface<D3D12_RENDER_PASS_DEPTH_STENCIL_DESC_Argument,
   }
 }
 
+UpdateInterface<D3D12_BARRIER_GROUPs_Argument, D3D12_BARRIER_GROUP>::UpdateInterface(
+    D3D12_BARRIER_GROUPs_Argument& arg, const D3D12_BARRIER_GROUP* value) {
+
+  unwrapped_.resize(arg.size);
+  arg.value = unwrapped_.data();
+
+  for (unsigned i = 0; i < arg.size; ++i) {
+    const D3D12_BARRIER_GROUP& barrierGroup = value[i];
+    D3D12_BARRIER_GROUP& barrierGroupUnwrapped = unwrapped_[i];
+    barrierGroupUnwrapped = barrierGroup;
+
+    unsigned resourceKeyIndex = 0;
+    if (barrierGroup.Type == D3D12_BARRIER_TYPE_GLOBAL) {
+      unwrappedGlobalBarrierGroups_.emplace_back(
+          std::make_unique<std::vector<D3D12_GLOBAL_BARRIER>>());
+      for (unsigned j = 0; j < barrierGroup.NumBarriers; ++j) {
+        unwrappedGlobalBarrierGroups_.back()->push_back(barrierGroup.pGlobalBarriers[j]);
+      }
+      barrierGroupUnwrapped.pGlobalBarriers = unwrappedGlobalBarrierGroups_.back()->data();
+    } else if (barrierGroup.Type == D3D12_BARRIER_TYPE_TEXTURE) {
+      unwrappedTextureBarrierGroups_.emplace_back(
+          std::make_unique<std::vector<D3D12_TEXTURE_BARRIER>>());
+      for (unsigned j = 0; j < barrierGroup.NumBarriers; ++j) {
+        IUnknownWrapper* wrapper =
+            reinterpret_cast<IUnknownWrapper*>(barrierGroup.pTextureBarriers[j].pResource);
+        arg.resourceKeys[resourceKeyIndex++] = wrapper->getKey();
+        unwrappedTextureBarrierGroups_.back()->push_back(barrierGroup.pTextureBarriers[j]);
+        unwrappedTextureBarrierGroups_.back()->back().pResource =
+            wrapper->getWrappedObject<ID3D12Resource>();
+      }
+      barrierGroupUnwrapped.pTextureBarriers = unwrappedTextureBarrierGroups_.back()->data();
+    } else if (barrierGroup.Type == D3D12_BARRIER_TYPE_BUFFER) {
+      unwrappedBufferBarrierGroups_.emplace_back(
+          std::make_unique<std::vector<D3D12_BUFFER_BARRIER>>());
+      for (unsigned j = 0; j < barrierGroup.NumBarriers; ++j) {
+        IUnknownWrapper* wrapper =
+            reinterpret_cast<IUnknownWrapper*>(barrierGroup.pBufferBarriers[j].pResource);
+        arg.resourceKeys[resourceKeyIndex++] = wrapper->getKey();
+        unwrappedBufferBarrierGroups_.back()->push_back(barrierGroup.pBufferBarriers[j]);
+        unwrappedBufferBarrierGroups_.back()->back().pResource =
+            wrapper->getWrappedObject<ID3D12Resource>();
+      }
+      barrierGroupUnwrapped.pBufferBarriers = unwrappedBufferBarrierGroups_.back()->data();
+    }
+  }
+}
+
 UpdateInterface<PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>,
                 INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>::
     UpdateInterface(PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg,

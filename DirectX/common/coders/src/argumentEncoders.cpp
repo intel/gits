@@ -1677,6 +1677,57 @@ void encode(char* dest, unsigned& offset, const D3D12_SHADER_RESOURCE_VIEW_DESC_
   }
 }
 
+unsigned getSize(const D3D12_BARRIER_GROUPs_Argument& arg) {
+  if (!arg.value) {
+    return sizeof(void*);
+  }
+  unsigned size = sizeof(void*) + sizeof(arg.size) + sizeof(D3D12_BARRIER_GROUP) * arg.size;
+
+  for (unsigned i = 0; i < arg.size; ++i) {
+    if (arg.value[i].Type == D3D12_BARRIER_TYPE_GLOBAL) {
+      size += sizeof(D3D12_GLOBAL_BARRIER) * arg.value[i].NumBarriers;
+    } else if (arg.value[i].Type == D3D12_BARRIER_TYPE_TEXTURE) {
+      size += sizeof(D3D12_TEXTURE_BARRIER) * arg.value[i].NumBarriers;
+    } else if (arg.value[i].Type == D3D12_BARRIER_TYPE_BUFFER) {
+      size += sizeof(D3D12_BUFFER_BARRIER) * arg.value[i].NumBarriers;
+    }
+  }
+
+  size += sizeof(unsigned) * arg.resourceKeys.size();
+
+  return size;
+}
+
+void encode(char* dest, unsigned& offset, const D3D12_BARRIER_GROUPs_Argument& arg) {
+  if (encodeNullPtr(dest, offset, arg)) {
+    return;
+  }
+  memcpy(dest + offset, &arg.size, sizeof(arg.size));
+  offset += sizeof(arg.size);
+
+  memcpy(dest + offset, arg.value, sizeof(D3D12_BARRIER_GROUP) * arg.size);
+  offset += sizeof(D3D12_BARRIER_GROUP) * arg.size;
+
+  for (unsigned i = 0; i < arg.size; ++i) {
+    if (arg.value[i].Type == D3D12_BARRIER_TYPE_GLOBAL) {
+      memcpy(dest + offset, arg.value[i].pGlobalBarriers,
+             sizeof(D3D12_GLOBAL_BARRIER) * arg.value[i].NumBarriers);
+      offset += sizeof(D3D12_GLOBAL_BARRIER) * arg.value[i].NumBarriers;
+    } else if (arg.value[i].Type == D3D12_BARRIER_TYPE_TEXTURE) {
+      memcpy(dest + offset, arg.value[i].pTextureBarriers,
+             sizeof(D3D12_TEXTURE_BARRIER) * arg.value[i].NumBarriers);
+      offset += sizeof(D3D12_TEXTURE_BARRIER) * arg.value[i].NumBarriers;
+    } else if (arg.value[i].Type == D3D12_BARRIER_TYPE_BUFFER) {
+      memcpy(dest + offset, arg.value[i].pBufferBarriers,
+             sizeof(D3D12_BUFFER_BARRIER) * arg.value[i].NumBarriers);
+      offset += sizeof(D3D12_BUFFER_BARRIER) * arg.value[i].NumBarriers;
+    }
+  }
+
+  memcpy(dest + offset, arg.resourceKeys.data(), sizeof(unsigned) * arg.resourceKeys.size());
+  offset += sizeof(unsigned) * arg.resourceKeys.size();
+}
+
 unsigned getSize(const DML_BINDING_DESC_Argument& arg) {
   if (!arg.value) {
     return sizeof(void*);

@@ -822,6 +822,39 @@ void decode(char* src, unsigned& offset, D3D12_PIPELINE_STATE_STREAM_DESC_Argume
   offset += sizeof(arg.rootSignatureKey);
 }
 
+void decode(char* src, unsigned& offset, D3D12_BARRIER_GROUPs_Argument& arg) {
+  if (decodeNullPtr(src, offset, arg)) {
+    return;
+  }
+
+  memcpy(&arg.size, src + offset, sizeof(arg.size));
+  offset += sizeof(arg.size);
+
+  arg.value = reinterpret_cast<D3D12_BARRIER_GROUP*>(src + offset);
+  offset += arg.size * sizeof(D3D12_BARRIER_GROUP);
+
+  unsigned numResourceKeys{};
+
+  for (unsigned i = 0; i < arg.size; ++i) {
+    if (arg.value[i].Type == D3D12_BARRIER_TYPE_GLOBAL) {
+      arg.value[i].pGlobalBarriers = reinterpret_cast<D3D12_GLOBAL_BARRIER*>(src + offset);
+      offset += sizeof(D3D12_GLOBAL_BARRIER) * arg.value[i].NumBarriers;
+    } else if (arg.value[i].Type == D3D12_BARRIER_TYPE_TEXTURE) {
+      arg.value[i].pTextureBarriers = reinterpret_cast<D3D12_TEXTURE_BARRIER*>(src + offset);
+      offset += sizeof(D3D12_TEXTURE_BARRIER) * arg.value[i].NumBarriers;
+      numResourceKeys += arg.value[i].NumBarriers;
+    } else if (arg.value[i].Type == D3D12_BARRIER_TYPE_BUFFER) {
+      arg.value[i].pBufferBarriers = reinterpret_cast<D3D12_BUFFER_BARRIER*>(src + offset);
+      offset += sizeof(D3D12_BUFFER_BARRIER) * arg.value[i].NumBarriers;
+      numResourceKeys += arg.value[i].NumBarriers;
+    }
+  }
+
+  arg.resourceKeys.resize(numResourceKeys);
+  memcpy(arg.resourceKeys.data(), src + offset, numResourceKeys * sizeof(unsigned));
+  offset += numResourceKeys * sizeof(unsigned);
+}
+
 void decode(char* src, unsigned& offset, DML_BINDING_DESC_Argument& arg) {
   if (decodeNullPtr(src, offset, arg)) {
     return;

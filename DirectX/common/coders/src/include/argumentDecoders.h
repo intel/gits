@@ -158,6 +158,7 @@ void decode(char* src, unsigned& offset, D3D12_STREAM_OUTPUT_BUFFER_VIEWs_Argume
 void decode(char* src, unsigned& offset, D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_Argument& arg);
 void decode(char* src, unsigned& offset, D3D12_STATE_OBJECT_DESC_Argument& arg);
 void decode(char* src, unsigned& offset, D3D12_PIPELINE_STATE_STREAM_DESC_Argument& arg);
+void decode(char* src, unsigned& offset, D3D12_BARRIER_GROUPs_Argument& arg);
 void decode(char* src, unsigned& offset, DML_BINDING_DESC_Argument& arg);
 void decode(char* src, unsigned& offset, DML_BINDING_DESCs_Argument& arg);
 void decode(char* src, unsigned& offset, DML_BINDING_TABLE_DESC_Argument& arg);

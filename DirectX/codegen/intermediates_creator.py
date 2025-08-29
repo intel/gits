@@ -211,6 +211,7 @@ def postprocess(functions, interfaces, structures):
         'D3D12_STATE_OBJECT_DESC',
         'D3D12_RENDER_PASS_RENDER_TARGET_DESC',
         'D3D12_RENDER_PASS_DEPTH_STENCIL_DESC',        
+        'D3D12_BARRIER_GROUP',
         'DML_BUFFER_BINDING',
         'DML_GRAPH_DESC',
         'DML_BINDING_DESC',

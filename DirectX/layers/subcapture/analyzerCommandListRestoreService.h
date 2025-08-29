@@ -41,6 +41,7 @@ public:
   void resolveSubresourceRegion(ID3D12GraphicsCommandList1ResolveSubresourceRegionCommand& c);
   void setProtectedResourceSession(ID3D12GraphicsCommandList3SetProtectedResourceSessionCommand& c);
   void initializeMetaCommand(ID3D12GraphicsCommandList4InitializeMetaCommandCommand& c);
+  void barrier(ID3D12GraphicsCommandList7BarrierCommand& c);
 
 private:
   void copyBufferRegionImpl(ID3D12GraphicsCommandListCopyBufferRegionCommand& c);
@@ -55,6 +56,7 @@ private:
   void setProtectedResourceSessionImpl(
       ID3D12GraphicsCommandList3SetProtectedResourceSessionCommand& c);
   void initializeMetaCommandImpl(ID3D12GraphicsCommandList4InitializeMetaCommandCommand& c);
+  void barrierImpl(ID3D12GraphicsCommandList7BarrierCommand& c);
 
 private:
   AnalyzerService& analyzerService_;

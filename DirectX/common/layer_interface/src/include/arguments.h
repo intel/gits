@@ -612,6 +612,28 @@ struct ArrayArgument<D3D12_META_COMMAND_DESC> {
   bool copy{};
 };
 
+struct D3D12_BARRIER_GROUPs_Argument {
+  D3D12_BARRIER_GROUPs_Argument(const D3D12_BARRIER_GROUP* value_, unsigned size_)
+      : value(const_cast<D3D12_BARRIER_GROUP*>(value_)), size(size_) {
+    unsigned numResourceKeys{};
+    for (unsigned i = 0; i < size; ++i) {
+      if (value[i].Type == D3D12_BARRIER_TYPE_GLOBAL) {
+        continue;
+      }
+      numResourceKeys += value[i].NumBarriers;
+    }
+    resourceKeys.resize(numResourceKeys);
+  }
+  D3D12_BARRIER_GROUPs_Argument() {}
+  D3D12_BARRIER_GROUPs_Argument(const D3D12_BARRIER_GROUPs_Argument& arg);
+  D3D12_BARRIER_GROUPs_Argument& operator=(const D3D12_BARRIER_GROUPs_Argument&) = delete;
+  ~D3D12_BARRIER_GROUPs_Argument();
+  D3D12_BARRIER_GROUP* value{};
+  size_t size{};
+  std::vector<unsigned> resourceKeys{};
+  bool copy{};
+};
+
 #pragma endregion
 
 #pragma region INTC

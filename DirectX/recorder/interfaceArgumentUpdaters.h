@@ -197,6 +197,18 @@ private:
 };
 
 template <>
+class UpdateInterface<D3D12_BARRIER_GROUPs_Argument, D3D12_BARRIER_GROUP> {
+public:
+  UpdateInterface(D3D12_BARRIER_GROUPs_Argument& arg, const D3D12_BARRIER_GROUP* value);
+
+private:
+  std::vector<std::unique_ptr<std::vector<D3D12_GLOBAL_BARRIER>>> unwrappedGlobalBarrierGroups_;
+  std::vector<std::unique_ptr<std::vector<D3D12_TEXTURE_BARRIER>>> unwrappedTextureBarrierGroups_;
+  std::vector<std::unique_ptr<std::vector<D3D12_BUFFER_BARRIER>>> unwrappedBufferBarrierGroups_;
+  std::vector<D3D12_BARRIER_GROUP> unwrapped_;
+};
+
+template <>
 class UpdateInterface<PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>,
                       INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC> {
 public:
