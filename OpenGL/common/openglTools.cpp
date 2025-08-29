@@ -2075,36 +2075,39 @@ std::string DescribeLayerType(BYTE iLayerType) {
 } // namespace
 
 plog::Record& operator<<(plog::Record& record, PIXELFORMATDESCRIPTOR& pfd) {
-  record << std::showbase;
-  record << "{ \n"
-         << "pfd.nSize: " << pfd.nSize << ", \n"
-         << "pfd.nVersion: " << pfd.nVersion << ", \n"
-         << "pfd.dwFlags: " << DescribePixelFormatFlags(pfd.dwFlags) << ", \n"
-         << "pfd.iPixelType: " << DescribePixelType(pfd.iPixelType)
-         << ", \n"
-         // Use to_string so they get interpreted as numbers, not chars.
-         << "pfd.cColorBits: " << std::to_string(pfd.cColorBits) << ", \n"
-         << "pfd.cRedBits: " << std::to_string(pfd.cRedBits) << ", \n"
-         << "pfd.cRedShift: " << std::to_string(pfd.cRedShift) << ", \n"
-         << "pfd.cGreenBits: " << std::to_string(pfd.cGreenBits) << ", \n"
-         << "pfd.cGreenShift: " << std::to_string(pfd.cGreenShift) << ", \n"
-         << "pfd.cBlueBits: " << std::to_string(pfd.cBlueBits) << ", \n"
-         << "pfd.cBlueShift: " << std::to_string(pfd.cBlueShift) << ", \n"
-         << "pfd.cAlphaBits: " << std::to_string(pfd.cAlphaBits) << ", \n"
-         << "pfd.cAlphaShift: " << std::to_string(pfd.cAlphaShift) << ", \n"
-         << "pfd.cAccumBits: " << std::to_string(pfd.cAccumBits) << ", \n"
-         << "pfd.cAccumRedBits: " << std::to_string(pfd.cAccumRedBits) << ", \n"
-         << "pfd.cAccumGreenBits: " << std::to_string(pfd.cAccumGreenBits) << ", \n"
-         << "pfd.cAccumBlueBits: " << std::to_string(pfd.cAccumBlueBits) << ", \n"
-         << "pfd.cAccumAlphaBits: " << std::to_string(pfd.cAccumAlphaBits) << ", \n"
-         << "pfd.cDepthBits: " << std::to_string(pfd.cDepthBits) << ", \n"
-         << "pfd.cStencilBits: " << std::to_string(pfd.cStencilBits) << ", \n"
-         << "pfd.cAuxBuffers: " << std::to_string(pfd.cAuxBuffers) << ", \n"
-         << "pfd.iLayerType: " << DescribeLayerType(pfd.iLayerType) << ", \n"
-         << "pfd.bReserved: " << std::to_string(pfd.bReserved) << ", \n"
-         << "pfd.dwLayerMask: " << pfd.dwLayerMask << ", \n"
-         << "pfd.dwVisibleMask: " << pfd.dwVisibleMask << ", \n"
-         << "pfd.dwDamageMask: " << pfd.dwDamageMask << " \n}";
+  std::ostringstream oss;
+  oss << std::showbase;
+  oss << "{ \n"
+      << "pfd.nSize: " << pfd.nSize << ", \n"
+      << "pfd.nVersion: " << pfd.nVersion << ", \n"
+      << "pfd.dwFlags: " << DescribePixelFormatFlags(pfd.dwFlags) << ", \n"
+      << "pfd.iPixelType: " << DescribePixelType(pfd.iPixelType)
+      << ", \n"
+      // Use to_string so they get interpreted as numbers, not chars.
+      << "pfd.cColorBits: " << std::to_string(pfd.cColorBits) << ", \n"
+      << "pfd.cRedBits: " << std::to_string(pfd.cRedBits) << ", \n"
+      << "pfd.cRedShift: " << std::to_string(pfd.cRedShift) << ", \n"
+      << "pfd.cGreenBits: " << std::to_string(pfd.cGreenBits) << ", \n"
+      << "pfd.cGreenShift: " << std::to_string(pfd.cGreenShift) << ", \n"
+      << "pfd.cBlueBits: " << std::to_string(pfd.cBlueBits) << ", \n"
+      << "pfd.cBlueShift: " << std::to_string(pfd.cBlueShift) << ", \n"
+      << "pfd.cAlphaBits: " << std::to_string(pfd.cAlphaBits) << ", \n"
+      << "pfd.cAlphaShift: " << std::to_string(pfd.cAlphaShift) << ", \n"
+      << "pfd.cAccumBits: " << std::to_string(pfd.cAccumBits) << ", \n"
+      << "pfd.cAccumRedBits: " << std::to_string(pfd.cAccumRedBits) << ", \n"
+      << "pfd.cAccumGreenBits: " << std::to_string(pfd.cAccumGreenBits) << ", \n"
+      << "pfd.cAccumBlueBits: " << std::to_string(pfd.cAccumBlueBits) << ", \n"
+      << "pfd.cAccumAlphaBits: " << std::to_string(pfd.cAccumAlphaBits) << ", \n"
+      << "pfd.cDepthBits: " << std::to_string(pfd.cDepthBits) << ", \n"
+      << "pfd.cStencilBits: " << std::to_string(pfd.cStencilBits) << ", \n"
+      << "pfd.cAuxBuffers: " << std::to_string(pfd.cAuxBuffers) << ", \n"
+      << "pfd.iLayerType: " << DescribeLayerType(pfd.iLayerType) << ", \n"
+      << "pfd.bReserved: " << std::to_string(pfd.bReserved) << ", \n"
+      << "pfd.dwLayerMask: " << pfd.dwLayerMask << ", \n"
+      << "pfd.dwVisibleMask: " << pfd.dwVisibleMask << ", \n"
+      << "pfd.dwDamageMask: " << pfd.dwDamageMask << " \n}";
+
+  record << std::move(oss).str();
   return record;
 }
 
