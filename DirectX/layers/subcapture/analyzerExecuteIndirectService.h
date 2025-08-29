@@ -17,7 +17,7 @@ namespace DirectX {
 
 class BindingService;
 
-class AnalyzerExecuteIndirectService {
+class AnalyzerExecuteIndirectService : gits::noncopyable {
 public:
   AnalyzerExecuteIndirectService(CapturePlayerGpuAddressService& gpuAddressService,
                                  AnalyzerRaytracingService& raytracingService,
