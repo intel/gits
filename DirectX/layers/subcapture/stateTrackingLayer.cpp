@@ -820,6 +820,10 @@ void StateTrackingLayer::post(ID3D12Device5CreateStateObjectCommand& c) {
   state->creationCommand.reset(new ID3D12Device5CreateStateObjectCommand(c));
   stateService_.storeState(state);
 
+  for (auto& it : c.pDesc_.interfaceKeysBySubobject) {
+    stateService_.keepState(it.second);
+  }
+
   accelerationStructuresSerializeService_.setDevice(c.object_.value, c.object_.key);
   accelerationStructuresBuildService_.setDeviceKey(c.object_.key);
 }
@@ -837,6 +841,10 @@ void StateTrackingLayer::post(ID3D12Device7AddToStateObjectCommand& c) {
   state->object = static_cast<IUnknown*>(*c.ppNewStateObject_.value);
   state->creationCommand.reset(new ID3D12Device7AddToStateObjectCommand(c));
   stateService_.storeState(state);
+
+  for (auto& it : c.pAddition_.interfaceKeysBySubobject) {
+    stateService_.keepState(it.second);
+  }
 
   stateService_.keepState(c.pStateObjectToGrowFrom_.key);
 }
