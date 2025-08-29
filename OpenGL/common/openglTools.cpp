@@ -2077,12 +2077,12 @@ std::string DescribeLayerType(BYTE iLayerType) {
 plog::Record& operator<<(plog::Record& record, PIXELFORMATDESCRIPTOR& pfd) {
   std::ostringstream oss;
   oss << std::showbase;
+  // clang-format off
   oss << "{ \n"
       << "pfd.nSize: " << pfd.nSize << ", \n"
       << "pfd.nVersion: " << pfd.nVersion << ", \n"
       << "pfd.dwFlags: " << DescribePixelFormatFlags(pfd.dwFlags) << ", \n"
-      << "pfd.iPixelType: " << DescribePixelType(pfd.iPixelType)
-      << ", \n"
+      << "pfd.iPixelType: " << DescribePixelType(pfd.iPixelType) << ", \n"
       // Use to_string so they get interpreted as numbers, not chars.
       << "pfd.cColorBits: " << std::to_string(pfd.cColorBits) << ", \n"
       << "pfd.cRedBits: " << std::to_string(pfd.cRedBits) << ", \n"
@@ -2106,6 +2106,7 @@ plog::Record& operator<<(plog::Record& record, PIXELFORMATDESCRIPTOR& pfd) {
       << "pfd.dwLayerMask: " << pfd.dwLayerMask << ", \n"
       << "pfd.dwVisibleMask: " << pfd.dwVisibleMask << ", \n"
       << "pfd.dwDamageMask: " << pfd.dwDamageMask << " \n}";
+  // clang-format on
 
   record << std::move(oss).str();
   return record;
