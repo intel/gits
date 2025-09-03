@@ -15,6 +15,7 @@
 #include <set>
 #include <vector>
 #include <memory>
+#include <mutex>
 
 namespace gits {
 namespace DirectX {
@@ -109,6 +110,7 @@ private:
   ResourceForCBVRestoreService* resourceForCBVRestoreService_{};
   std::map<unsigned, std::map<unsigned, std::unique_ptr<DescriptorState>>> statesByHeapIndex_;
   std::set<unsigned> resources_;
+  std::mutex mutex_;
 };
 
 } // namespace DirectX

@@ -22,6 +22,8 @@ set(UTILS_FILES
   ${SRC_DIR}/capturePlayerGpuAddressService.cpp
   ${SRC_DIR}/capturePlayerDescriptorHandleService.h
   ${SRC_DIR}/capturePlayerDescriptorHandleService.cpp
+  ${SRC_DIR}/capturePlayerShaderIdentifierService.h
+  ${SRC_DIR}/capturePlayerShaderIdentifierService.cpp
 )
 source_group("" FILES ${UTILS_FILES})
 

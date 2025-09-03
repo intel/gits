@@ -18,7 +18,7 @@
 namespace gits {
 namespace DirectX {
 
-class ShaderIdentifierService {
+class CapturePlayerShaderIdentifierService {
 public:
   using ShaderIdentifier = std::array<uint8_t, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES>;
   struct ShaderIdentifierMapping {

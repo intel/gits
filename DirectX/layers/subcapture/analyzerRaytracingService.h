@@ -13,7 +13,9 @@
 #include "bindingTablesDump.h"
 #include "capturePlayerGpuAddressService.h"
 #include "capturePlayerDescriptorHandleService.h"
+#include "capturePlayerShaderIdentifierService.h"
 #include "descriptorService.h"
+#include "rootSignatureService.h"
 
 #include <unordered_map>
 #include <unordered_set>
@@ -29,12 +31,17 @@ public:
   AnalyzerRaytracingService(DescriptorService& descriptorService,
                             CapturePlayerGpuAddressService& gpuAddressService,
                             CapturePlayerDescriptorHandleService& descriptorHandleService,
-                            BindingService& bindingService);
+                            CapturePlayerShaderIdentifierService& shaderIdentifierService,
+                            BindingService& bindingService,
+                            RootSignatureService& rootSignatureService);
   void createStateObject(ID3D12Device5CreateStateObjectCommand& c);
   void addToStateObject(ID3D12Device7AddToStateObjectCommand& c);
+  void setPipelineState(ID3D12GraphicsCommandList4SetPipelineState1Command& c);
+  void setDescriptorHeaps(ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c);
   void buildTlas(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
   void dispatchRays(ID3D12GraphicsCommandList4DispatchRaysCommand& c);
   void dumpBindingTable(ID3D12GraphicsCommandList* commandList,
+                        unsigned commandListKey,
                         ID3D12Resource* resource,
                         unsigned resourceKey,
                         unsigned offset,
@@ -69,8 +76,14 @@ public:
   CapturePlayerDescriptorHandleService& getDescriptorHandleService() {
     return descriptorHandleService_;
   }
+  CapturePlayerShaderIdentifierService& getShaderIdentifierService() {
+    return shaderIdentifierService_;
+  }
   DescriptorService& getDescriptorService() {
     return descriptorService_;
+  }
+  RootSignatureService& getRootSignatureService() {
+    return rootSignatureService_;
   }
 
   std::set<unsigned> getStateObjectAllSubobjects(unsigned stateObjectKey);
@@ -101,10 +114,17 @@ private:
 private:
   CapturePlayerGpuAddressService& gpuAddressService_;
   CapturePlayerDescriptorHandleService& descriptorHandleService_;
+  CapturePlayerShaderIdentifierService& shaderIdentifierService_;
   DescriptorService& descriptorService_;
   BindingService& bindingService_;
+  RootSignatureService& rootSignatureService_;
 
   std::unordered_map<unsigned, std::set<unsigned>> stateObjectsDirectSubobjects_;
+  std::unordered_map<unsigned, std::unique_ptr<BindingTablesDump::StateObjectInfo>>
+      stateObjectInfos_;
+  std::unordered_map<unsigned, unsigned> stateObjectByComandList_;
+  std::unordered_map<unsigned, BindingTablesDump::DescriptorHeaps> descriptorHeapsByComandList_;
+
   RaytracingInstancesDump instancesDump_;
   BindingTablesDump bindingTablesDump_;
   BlasesByTlas blasesByTlas_;

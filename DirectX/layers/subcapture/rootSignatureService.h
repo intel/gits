@@ -11,6 +11,7 @@
 #include "commandsAuto.h"
 
 #include <unordered_map>
+#include <mutex>
 
 namespace gits {
 namespace DirectX {
@@ -26,7 +27,9 @@ public:
                                                   unsigned descriptorHeapKey,
                                                   unsigned parameterIndex,
                                                   unsigned baseIndex,
-                                                  unsigned heapNumDescriptors);
+                                                  unsigned heapNumDescriptors,
+                                                  bool checkRetrieved = true);
+  D3D12_ROOT_SIGNATURE_DESC* getRootSignatureDesc(unsigned rootSignatureKey);
 
 private:
   bool unboundedRetrieved(unsigned descriptorHeapKey, unsigned index);
@@ -36,6 +39,7 @@ private:
   std::unordered_map<unsigned, D3D12_ROOT_SIGNATURE_DESC*> rootSignatureDescs_;
   std::unordered_map<unsigned, unsigned> unboundedRetrieved_;
   std::unordered_map<unsigned, std::unordered_map<unsigned, unsigned>> boundedRetrieved_;
+  std::mutex mutex_;
 };
 
 } // namespace DirectX

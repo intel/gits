@@ -120,7 +120,7 @@ void RaytracingResourceDump::dumpBindingTableBuffer(RaytracingDumpInfo& dumpInfo
     stream << "BINDING TABLE " << recordIndex + 1 << " size " << dumpInfo.stride << "\n";
 
     uint8_t* p = static_cast<uint8_t*>(data) + recordIndex * dumpInfo.stride;
-    ShaderIdentifierService::ShaderIdentifier shaderIdentifier;
+    CapturePlayerShaderIdentifierService::ShaderIdentifier shaderIdentifier;
     memcpy(shaderIdentifier.data(), p, shaderIdentifier.size());
     stream << std::hex;
     for (uint8_t byte : shaderIdentifier) {

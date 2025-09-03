@@ -45,7 +45,8 @@ custom = [
     'ID3D12GraphicsCommandList1ResolveSubresourceRegion',
     'ID3D12GraphicsCommandList3SetProtectedResourceSession',
     'ID3D12GraphicsCommandList4InitializeMetaCommand',
-    'ID3D12GraphicsCommandList7Barrier'
+    'ID3D12GraphicsCommandList7Barrier',
+    'ID3D12GraphicsCommandListSetDescriptorHeaps'
 ]
 %>\
 %for interface in interfaces:

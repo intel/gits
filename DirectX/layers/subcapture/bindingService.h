@@ -46,6 +46,9 @@ public:
   std::set<std::pair<unsigned, unsigned>>& getBindingTablesDescriptors() {
     return raytracingService_.getBindingTablesDescriptors();
   }
+  unsigned getComputeRootSignatureKey(unsigned commandListKey) {
+    return computeRootSignatureByCommandList_[commandListKey];
+  }
 
   void addObjectForRestore(unsigned key) {
     if (optimize_) {
@@ -80,6 +83,7 @@ public:
   void clearView(ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& c);
   void clearView(ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c);
   void setPipelineState(ID3D12GraphicsCommandList4SetPipelineState1Command& c);
+  void setDescriptorHeaps(ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c);
   void buildRaytracingAccelerationStructure(
       ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
   void copyRaytracingAccelerationStructure(
@@ -122,6 +126,7 @@ private:
   void clearViewImpl(ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& c);
   void clearViewImpl(ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c);
   void setPipelineStateImpl(ID3D12GraphicsCommandList4SetPipelineState1Command& c);
+  void setDescriptorHeapsImpl(ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c);
   void buildRaytracingAccelerationStructureImpl(
       ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
   void emitRaytracingAccelerationStructurePostbuildInfoImpl(

@@ -60,14 +60,14 @@ void GpuPatchLayer::post(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
 }
 
 void GpuPatchLayer::pre(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) {
-  ShaderIdentifierService::ShaderIdentifier shaderIdentifier;
+  CapturePlayerShaderIdentifierService::ShaderIdentifier shaderIdentifier;
   memcpy(shaderIdentifier.data(), c.result_.value, shaderIdentifier.size());
   shaderIdentifierService_.addCaptureShaderIdentifier(c.key, shaderIdentifier,
                                                       c.pExportName_.value);
 }
 
 void GpuPatchLayer::post(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) {
-  ShaderIdentifierService::ShaderIdentifier shaderIdentifier;
+  CapturePlayerShaderIdentifierService::ShaderIdentifier shaderIdentifier;
   memcpy(shaderIdentifier.data(), c.result_.value, shaderIdentifier.size());
   shaderIdentifierService_.addPlayerShaderIdentifier(c.key, shaderIdentifier, c.pExportName_.value);
 }
@@ -900,11 +900,13 @@ void GpuPatchLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
     }
   }
 
-  std::vector<ShaderIdentifierService::ShaderIdentifierMapping> shaderIdentifierMappings;
+  std::vector<CapturePlayerShaderIdentifierService::ShaderIdentifierMapping>
+      shaderIdentifierMappings;
   shaderIdentifierService_.getMappings(shaderIdentifierMappings);
   mappingCount.shaderIdentiferCount = shaderIdentifierMappings.size();
   if (shaderIdentifierMappings.size() >
-      shaderIdentifierBufferSize_ / sizeof(ShaderIdentifierService::ShaderIdentifierMapping)) {
+      shaderIdentifierBufferSize_ /
+          sizeof(CapturePlayerShaderIdentifierService::ShaderIdentifierMapping)) {
     LOG_ERROR << "Raytracing shaderIdentifierMappings buffer is too small!";
     exit(EXIT_FAILURE);
   }
@@ -913,7 +915,7 @@ void GpuPatchLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
     HRESULT hr = shaderIdentifierStagingBuffers_[index]->Map(0, nullptr, &data);
     GITS_ASSERT(hr == S_OK);
     memcpy(data, shaderIdentifierMappings.data(),
-           sizeof(ShaderIdentifierService::ShaderIdentifierMapping) *
+           sizeof(CapturePlayerShaderIdentifierService::ShaderIdentifierMapping) *
                shaderIdentifierMappings.size());
     shaderIdentifierStagingBuffers_[index]->Unmap(0, nullptr);
   }

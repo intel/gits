@@ -456,17 +456,31 @@ void BindingService::setPipelineState(ID3D12GraphicsCommandList4SetPipelineState
 }
 
 void BindingService::setPipelineStateImpl(ID3D12GraphicsCommandList4SetPipelineState1Command& c) {
-  if (checkedStateObjectSubobjects_.find(c.pStateObject_.key) !=
-      checkedStateObjectSubobjects_.end()) {
-    return;
-  }
+  raytracingService_.setPipelineState(c);
 
-  const std::set<unsigned> subobjects =
-      raytracingService_.getStateObjectAllSubobjects(c.pStateObject_.key);
-  for (unsigned key : subobjects) {
-    objectsForRestore_.insert(key);
+  if (checkedStateObjectSubobjects_.find(c.pStateObject_.key) ==
+      checkedStateObjectSubobjects_.end()) {
+    const std::set<unsigned> subobjects =
+        raytracingService_.getStateObjectAllSubobjects(c.pStateObject_.key);
+    for (unsigned key : subobjects) {
+      objectsForRestore_.insert(key);
+    }
+    checkedStateObjectSubobjects_.insert(c.pStateObject_.key);
   }
-  checkedStateObjectSubobjects_.insert(c.pStateObject_.key);
+}
+
+void BindingService::setDescriptorHeaps(ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c) {
+  if (analyzerService_.inRange()) {
+    commandListRestore(c.object_.key);
+    setDescriptorHeapsImpl(c);
+  } else if (!commandListSubcapture_) {
+    commandsByCommandList_[c.object_.key].emplace_back(
+        new ID3D12GraphicsCommandListSetDescriptorHeapsCommand(c));
+  }
+}
+
+void BindingService::setDescriptorHeapsImpl(ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c) {
+  raytracingService_.setDescriptorHeaps(c);
 }
 
 void BindingService::buildRaytracingAccelerationStructure(
@@ -788,6 +802,10 @@ void BindingService::commandListRestore(unsigned commandListKey) {
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST4_SETPIPELINESTATE1:
       setPipelineStateImpl(
           static_cast<ID3D12GraphicsCommandList4SetPipelineState1Command&>(*command));
+      break;
+    case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_SETDESCRIPTORHEAPS:
+      setDescriptorHeapsImpl(
+          static_cast<ID3D12GraphicsCommandListSetDescriptorHeapsCommand&>(*command));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST4_BUILDRAYTRACINGACCELERATIONSTRUCTURE:
       buildRaytracingAccelerationStructureImpl(

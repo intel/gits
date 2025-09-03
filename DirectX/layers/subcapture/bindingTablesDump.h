@@ -12,6 +12,7 @@
 
 #include <mutex>
 #include <unordered_set>
+#include <unordered_map>
 #include <set>
 
 namespace gits {
@@ -21,6 +22,18 @@ class AnalyzerRaytracingService;
 
 class BindingTablesDump : public ResourceDump {
 public:
+  struct StateObjectInfo {
+    unsigned globalRootSignature;
+    std::unordered_map<std::wstring, unsigned> exportToRootSignature;
+  };
+  struct DescriptorHeaps {
+    unsigned viewDescriptorHeapKey;
+    unsigned viewDescriptorHeapSize;
+    unsigned samplerHeapKey;
+    unsigned samplerHeapSize;
+  };
+
+public:
   BindingTablesDump(AnalyzerRaytracingService& raytracingService)
       : raytracingService_(raytracingService) {}
   void dumpBindingTable(ID3D12GraphicsCommandList* commandList,
@@ -28,7 +41,10 @@ public:
                         unsigned offset,
                         unsigned size,
                         unsigned stride,
-                        D3D12_RESOURCE_STATES state);
+                        D3D12_RESOURCE_STATES state,
+                        StateObjectInfo* stateObjectInfo,
+                        DescriptorHeaps descriptorHeaps,
+                        unsigned rootSignatureKey);
   void dumpBuffer(DumpInfo& dumpInfo, void* data) override;
 
   std::unordered_set<unsigned>& getBindingTablesResources() {
@@ -39,6 +55,9 @@ public:
   }
 
 private:
+  unsigned align(unsigned value, unsigned alignment);
+
+private:
   AnalyzerRaytracingService& raytracingService_;
   std::mutex mutex_;
   std::unordered_set<unsigned> bindingTablesResources_;
@@ -46,6 +65,9 @@ private:
 
   struct BindingTablesInfo : DumpInfo {
     unsigned stride{};
+    StateObjectInfo* stateObjectInfo{};
+    DescriptorHeaps descriptorHeaps{};
+    unsigned rootSignatureKey{};
   };
 };
 

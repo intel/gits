@@ -18,7 +18,7 @@ namespace DirectX {
 
 GpuPatchDumpService::GpuPatchDumpService(
     CapturePlayerGpuAddressService& addressService,
-    ShaderIdentifierService& shaderIdentifierService,
+    CapturePlayerShaderIdentifierService& shaderIdentifierService,
     CapturePlayerDescriptorHandleService& descriptorHandleService)
     : resourceDump_(addressService, shaderIdentifierService, descriptorHandleService),
       executeIndirectDump_(addressService),

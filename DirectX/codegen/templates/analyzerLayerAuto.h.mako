@@ -19,6 +19,7 @@ ${header}
 #include "analyzerExecuteIndirectService.h"
 #include "capturePlayerGpuAddressService.h"
 #include "capturePlayerDescriptorHandleService.h"
+#include "capturePlayerShaderIdentifierService.h"
 #include "subcaptureRange.h"
 
 namespace gits {
@@ -56,6 +57,7 @@ public:
   void post(ID3D12DeviceCreateRootSignatureCommand& c) override;
   void post(ID3D12Device5CreateStateObjectCommand& c) override;
   void post(ID3D12Device7AddToStateObjectCommand& c) override;
+  void pre(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) override;
   void pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) override;
   void pre(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) override;
   void pre(ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c) override;
@@ -100,6 +102,7 @@ private:
   RootSignatureService rootSignatureService_;
   CapturePlayerGpuAddressService gpuAddressService_;
   CapturePlayerDescriptorHandleService descriptorHandleService_;
+  CapturePlayerShaderIdentifierService shaderIdentifierService_;
   AnalyzerRaytracingService raytracingService_;
   AnalyzerExecuteIndirectService executeIndirectService_;
   AnalyzerService analyzerService_;

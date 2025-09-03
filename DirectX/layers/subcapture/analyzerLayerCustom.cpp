@@ -28,12 +28,19 @@ AnalyzerLayer::AnalyzerLayer(SubcaptureRange& subcaptureRange)
                       raytracingService_,
                       executeIndirectService_,
                       subcaptureRange_.commandListSubcapture()),
-      raytracingService_(
-          descriptorService_, gpuAddressService_, descriptorHandleService_, bindingService_),
+      raytracingService_(descriptorService_,
+                         gpuAddressService_,
+                         descriptorHandleService_,
+                         shaderIdentifierService_,
+                         bindingService_,
+                         rootSignatureService_),
       executeIndirectService_(gpuAddressService_, raytracingService_, bindingService_),
       commandListRestoreService_(analyzerService_, subcaptureRange_.commandListSubcapture()) {
   optimize_ = Configurator::Get().directx.features.subcapture.optimize;
   optimizeRaytracing_ = Configurator::Get().directx.features.subcapture.optimizeRaytracing;
+  if (optimize_) {
+    shaderIdentifierService_.enablePlayerIdentifierLookup();
+  }
 }
 
 void AnalyzerLayer::notifyObject(unsigned objectKey) {
@@ -403,10 +410,24 @@ void AnalyzerLayer::post(ID3D12Device7AddToStateObjectCommand& c) {
   }
 }
 
+void AnalyzerLayer::pre(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) {
+  CapturePlayerShaderIdentifierService::ShaderIdentifier shaderIdentifier;
+  memcpy(shaderIdentifier.data(), c.result_.value, shaderIdentifier.size());
+  shaderIdentifierService_.addCaptureShaderIdentifier(c.key, shaderIdentifier,
+                                                      c.pExportName_.value);
+}
+
 void AnalyzerLayer::post(ID3D12GraphicsCommandList4SetPipelineState1Command& c) {
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
     bindingService_.setPipelineState(c);
+  }
+}
+
+void AnalyzerLayer::post(ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c) {
+  analyzerService_.commandListCommand(c.object_.key);
+  if (optimize_) {
+    bindingService_.setDescriptorHeaps(c);
   }
 }
 

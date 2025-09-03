@@ -6,15 +6,14 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "shaderIdentifierService.h"
+#include "capturePlayerShaderIdentifierService.h"
 #include "gits.h"
 
 namespace gits {
 namespace DirectX {
 
-void ShaderIdentifierService::addCaptureShaderIdentifier(unsigned commandKey,
-                                                         ShaderIdentifier captureIdentifier,
-                                                         LPWSTR exportName) {
+void CapturePlayerShaderIdentifierService::addCaptureShaderIdentifier(
+    unsigned commandKey, ShaderIdentifier captureIdentifier, LPWSTR exportName) {
   std::lock_guard<std::mutex> lock(mutex_);
 
   m_ShaderIdentifiersByCommandKey[commandKey] = captureIdentifier;
@@ -23,9 +22,8 @@ void ShaderIdentifierService::addCaptureShaderIdentifier(unsigned commandKey,
   }
 }
 
-void ShaderIdentifierService::addPlayerShaderIdentifier(unsigned commandKey,
-                                                        ShaderIdentifier playerIdentifier,
-                                                        LPWSTR exportName) {
+void CapturePlayerShaderIdentifierService::addPlayerShaderIdentifier(
+    unsigned commandKey, ShaderIdentifier playerIdentifier, LPWSTR exportName) {
   std::lock_guard<std::mutex> lock(mutex_);
 
   auto itByCommandKey = m_ShaderIdentifiersByCommandKey.find(commandKey);
@@ -46,7 +44,8 @@ void ShaderIdentifierService::addPlayerShaderIdentifier(unsigned commandKey,
   }
 }
 
-bool ShaderIdentifierService::getMappings(std::vector<ShaderIdentifierMapping>& mappings) {
+bool CapturePlayerShaderIdentifierService::getMappings(
+    std::vector<ShaderIdentifierMapping>& mappings) {
   mappings.resize(m_ShaderIdentifiers.size());
   unsigned index = 0;
   for (auto& it : m_ShaderIdentifiers) {

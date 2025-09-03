@@ -56,6 +56,8 @@ void RootSignatureService::createRootSignature(ID3D12DeviceCreateRootSignatureCo
   memcpy(const_cast<D3D12_STATIC_SAMPLER_DESC*>(desc->pStaticSamplers),
          versionedDesc->Desc_1_0.pStaticSamplers,
          desc->NumStaticSamplers * sizeof(D3D12_STATIC_SAMPLER_DESC));
+
+  std::lock_guard<std::mutex> lock(mutex_);
   rootSignatureDescs_[c.ppvRootSignature_.key] = desc;
 }
 
@@ -63,7 +65,10 @@ std::vector<unsigned> RootSignatureService::getDescriptorTableIndexes(unsigned r
                                                                       unsigned descriptorHeapKey,
                                                                       unsigned parameterIndex,
                                                                       unsigned baseIndex,
-                                                                      unsigned heapNumDescriptors) {
+                                                                      unsigned heapNumDescriptors,
+                                                                      bool checkRetrieved) {
+  std::lock_guard<std::mutex> lock(mutex_);
+
   std::vector<unsigned> indexes;
 
   auto it = rootSignatureDescs_.find(rootSignatureKey);
@@ -79,12 +84,12 @@ std::vector<unsigned> RootSignatureService::getDescriptorTableIndexes(unsigned r
     }
     unsigned numDescriptors = range.NumDescriptors;
     if (range.NumDescriptors == UINT_MAX) {
-      if (unboundedRetrieved(descriptorHeapKey, index)) {
+      if (checkRetrieved && unboundedRetrieved(descriptorHeapKey, index)) {
         continue;
       }
       numDescriptors = heapNumDescriptors - index;
     } else {
-      if (boundedRetrieved(descriptorHeapKey, index, numDescriptors)) {
+      if (checkRetrieved && boundedRetrieved(descriptorHeapKey, index, numDescriptors)) {
         continue;
       }
     }
@@ -95,6 +100,11 @@ std::vector<unsigned> RootSignatureService::getDescriptorTableIndexes(unsigned r
   }
 
   return indexes;
+}
+
+D3D12_ROOT_SIGNATURE_DESC* RootSignatureService::getRootSignatureDesc(unsigned rootSignatureKey) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  return rootSignatureDescs_[rootSignatureKey];
 }
 
 bool RootSignatureService::unboundedRetrieved(unsigned descriptorHeapKey, unsigned index) {

@@ -77,8 +77,8 @@ void AnalyzerExecuteIndirectService::executeIndirect(
     GITS_ASSERT(info);
     unsigned offset = address - info->captureStart;
     bindingService_.addObjectForRestore(info->key);
-    raytracingService_.dumpBindingTable(c.object_.value, info->resource, info->key, offset, size,
-                                        stride);
+    raytracingService_.dumpBindingTable(c.object_.value, c.object_.key, info->resource, info->key,
+                                        offset, size, stride);
   };
 
   auto it = executeIndirectDispatchRays_.find(c.key);

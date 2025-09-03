@@ -17,11 +17,15 @@ namespace gits {
 namespace DirectX {
 
 void DescriptorService::storeState(DescriptorState* state) {
+  std::lock_guard<std::mutex> lock(mutex_);
+
   statesByHeapIndex_[state->destDescriptorKey][state->destDescriptorIndex].reset(state);
   resources_.insert(state->resourceKey);
 }
 
 void DescriptorService::removeState(unsigned key) {
+  std::lock_guard<std::mutex> lock(mutex_);
+
   auto itHeap = statesByHeapIndex_.find(key);
   if (itHeap != statesByHeapIndex_.end()) {
     statesByHeapIndex_.erase(itHeap);
@@ -31,6 +35,8 @@ void DescriptorService::removeState(unsigned key) {
 }
 
 void DescriptorService::restoreState() {
+  std::lock_guard<std::mutex> lock(mutex_);
+
   for (auto& itHeap : statesByHeapIndex_) {
     for (auto& it : itHeap.second) {
       DescriptorState* state = it.second.get();
@@ -105,6 +111,9 @@ void DescriptorService::copyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand
   if (!c.NumDescriptors_.value) {
     return;
   }
+
+  std::lock_guard<std::mutex> lock(mutex_);
+
   auto& srcHeapIt = statesByHeapIndex_.find(c.SrcDescriptorRangeStart_.interfaceKey);
   if (srcHeapIt == statesByHeapIndex_.end()) {
     static bool logged = false;
@@ -130,6 +139,8 @@ void DescriptorService::copyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c) {
   if (!c.NumDestDescriptorRanges_.value || !c.NumSrcDescriptorRanges_.value) {
     return;
   }
+
+  std::lock_guard<std::mutex> lock(mutex_);
 
   unsigned destRangeIndex = 0;
   unsigned destIndex = 0;
@@ -167,6 +178,8 @@ void DescriptorService::copyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c) {
 }
 
 DescriptorState* DescriptorService::getDescriptorState(unsigned heapKey, unsigned descriptorIndex) {
+  std::lock_guard<std::mutex> lock(mutex_);
+
   auto heapIt = statesByHeapIndex_.find(heapKey);
   if (heapIt == statesByHeapIndex_.end()) {
     return nullptr;

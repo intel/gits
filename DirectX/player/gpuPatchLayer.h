@@ -12,7 +12,7 @@
 #include "capturePlayerGpuAddressService.h"
 #include "raytracingShaderPatchService.h"
 #include "executeIndirectShaderPatchService.h"
-#include "shaderIdentifierService.h"
+#include "capturePlayerShaderIdentifierService.h"
 #include "gpuPatchCommandListService.h"
 #include "capturePlayerDescriptorHandleService.h"
 #include "gpuPatchDumpService.h"
@@ -131,8 +131,8 @@ private:
 
   std::array<ID3D12Resource*, mappingBufferPoolSize_> shaderIdentifierBuffers_{};
   std::array<ID3D12Resource*, mappingBufferPoolSize_> shaderIdentifierStagingBuffers_{};
-  unsigned shaderIdentifierBufferSize_{sizeof(ShaderIdentifierService::ShaderIdentifierMapping) *
-                                       0x1000};
+  unsigned shaderIdentifierBufferSize_{
+      sizeof(CapturePlayerShaderIdentifierService::ShaderIdentifierMapping) * 0x1000};
 
   std::array<ID3D12Resource*, mappingBufferPoolSize_> viewDescriptorBuffers_{};
   std::array<ID3D12Resource*, mappingBufferPoolSize_> viewDescriptorStagingBuffers_{};
@@ -176,7 +176,7 @@ private:
   bool initializedInstancesAoP_{};
 
   CapturePlayerGpuAddressService addressService_;
-  ShaderIdentifierService shaderIdentifierService_;
+  CapturePlayerShaderIdentifierService shaderIdentifierService_;
   CapturePlayerDescriptorHandleService descriptorHandleService_;
   RaytracingShaderPatchService raytracingShaderPatchService_;
   ExecuteIndirectShaderPatchService executeIndirectShaderPatchService_;
