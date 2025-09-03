@@ -1496,7 +1496,7 @@ void AccelerationStructuresBuildService::removeState(unsigned stateId, bool remo
     itDests->second.erase(stateId);
     if (itDests->second.empty()) {
       if (removeSource) {
-        removeState(itSource->second);
+        removeState(itSource->second, removeSource);
         stateDestsBySource_.erase(itDests);
       } else {
         sourcesWithoutDestinations_.insert(itSource->second);
