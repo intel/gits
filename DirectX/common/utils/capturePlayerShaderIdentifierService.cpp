@@ -9,6 +9,8 @@
 #include "capturePlayerShaderIdentifierService.h"
 #include "gits.h"
 
+#include <algorithm>
+
 namespace gits {
 namespace DirectX {
 
@@ -52,6 +54,17 @@ bool CapturePlayerShaderIdentifierService::getMappings(
     mappings[index] = it.second;
     ++index;
   }
+
+  std::sort(mappings.begin(), mappings.end(), [](const auto& mappingA, const auto& mappingB) {
+    using ShaderIdentifierGpu =
+        std::array<uint64_t, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES / sizeof(uint64_t)>;
+    ShaderIdentifierGpu captureIdentifierA;
+    memcpy(captureIdentifierA.data(), &mappingA.captureIdentifier, sizeof(ShaderIdentifierGpu));
+    ShaderIdentifierGpu captureIdentifierB;
+    memcpy(captureIdentifierB.data(), &mappingB.captureIdentifier, sizeof(ShaderIdentifierGpu));
+    return captureIdentifierA < captureIdentifierB;
+  });
+
   changed_ = false;
   bool changed = changed_;
   changed_ = false;

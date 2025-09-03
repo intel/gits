@@ -387,6 +387,14 @@ cbuffer PatchGpuAddresses : register(b2)
   uint patchGpuAddresses;
 };
 
+bool greaterThan_uint64_t4(uint64_t4 a, uint64_t4 b)
+{
+    if (a.x != b.x) return a.x > b.x;
+    if (a.y != b.y) return a.y > b.y;
+    if (a.z != b.z) return a.z > b.z;
+    return a.w > b.w;
+}
+
 [numthreads(32, 1, 1)]
 void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID, 
                 uint3 gtId : SV_GroupThreadID, uint gi : SV_GroupIndex)
@@ -400,19 +408,23 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
   captureIdentifier.y = bindingTable[bindingTableOffset + 1];
   captureIdentifier.z = bindingTable[bindingTableOffset + 2];
   captureIdentifier.w = bindingTable[bindingTableOffset + 3];
-  for (uint i = 0; i < shaderIdentiferCount; ++i) {
-    if (shaderIdentifierMappings[i].captureIdentifier.x == captureIdentifier.x
-        && shaderIdentifierMappings[i].captureIdentifier.y == captureIdentifier.y
-        && shaderIdentifierMappings[i].captureIdentifier.z == captureIdentifier.z
-        && shaderIdentifierMappings[i].captureIdentifier.w == captureIdentifier.w) {
-      bindingTable[bindingTableOffset] = shaderIdentifierMappings[i].playerIdentifier.x;
-      bindingTable[bindingTableOffset + 1] =
-          shaderIdentifierMappings[i].playerIdentifier.y;
-      bindingTable[bindingTableOffset + 2] =
-          shaderIdentifierMappings[i].playerIdentifier.z;
-      bindingTable[bindingTableOffset + 3] =
-          shaderIdentifierMappings[i].playerIdentifier.w;
-      break;
+  if (shaderIdentiferCount) {
+    int first = 0;
+    int last = shaderIdentiferCount - 1;
+    while (first <= last) {
+      int mid = first + (last - first) / 2;
+      ShaderIdentifierMapping mapping = shaderIdentifierMappings[mid];
+      if (all(captureIdentifier == mapping.captureIdentifier)) {
+        bindingTable[bindingTableOffset] = mapping.playerIdentifier.x;
+        bindingTable[bindingTableOffset + 1] = mapping.playerIdentifier.y;
+        bindingTable[bindingTableOffset + 2] = mapping.playerIdentifier.z;
+        bindingTable[bindingTableOffset + 3] = mapping.playerIdentifier.w;
+        break;
+      } else if (greaterThan_uint64_t4(captureIdentifier, mapping.captureIdentifier)) {
+        first = mid + 1;
+      } else {
+        last = mid - 1;
+      }
     }
   }
   for (uint i = 4; i < recordSize; ++i) {
