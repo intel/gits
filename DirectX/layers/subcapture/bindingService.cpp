@@ -101,8 +101,8 @@ void BindingService::setRootDescriptorTableImpl(
         descriptorService_.getDescriptorState(c.BaseDescriptor_.interfaceKey, index);
     if (state) {
       objectsForRestore_.insert(state->resourceKey);
-      descriptors_.insert({c.BaseDescriptor_.interfaceKey, index});
     }
+    descriptors_.insert({c.BaseDescriptor_.interfaceKey, index});
   }
   objectsForRestore_.insert(c.BaseDescriptor_.interfaceKey);
 }
@@ -132,8 +132,8 @@ void BindingService::setRootDescriptorTableImpl(
         descriptorService_.getDescriptorState(c.BaseDescriptor_.interfaceKey, index);
     if (state) {
       objectsForRestore_.insert(state->resourceKey);
-      descriptors_.insert({c.BaseDescriptor_.interfaceKey, index});
     }
+    descriptors_.insert({c.BaseDescriptor_.interfaceKey, index});
   }
   objectsForRestore_.insert(c.BaseDescriptor_.interfaceKey);
 }
@@ -397,9 +397,9 @@ void BindingService::clearViewImpl(
         c.ViewGPUHandleInCurrentHeap_.interfaceKey, c.ViewGPUHandleInCurrentHeap_.index);
     if (state) {
       objectsForRestore_.insert(state->resourceKey);
-      descriptors_.insert(
-          {c.ViewGPUHandleInCurrentHeap_.interfaceKey, c.ViewGPUHandleInCurrentHeap_.index});
     }
+    descriptors_.insert(
+        {c.ViewGPUHandleInCurrentHeap_.interfaceKey, c.ViewGPUHandleInCurrentHeap_.index});
   }
   if (c.ViewCPUHandle_.interfaceKey) {
     objectsForRestore_.insert(c.ViewCPUHandle_.interfaceKey);
@@ -407,8 +407,8 @@ void BindingService::clearViewImpl(
                                                                    c.ViewCPUHandle_.index);
     if (state) {
       objectsForRestore_.insert(state->resourceKey);
-      descriptors_.insert({c.ViewCPUHandle_.interfaceKey, c.ViewCPUHandle_.index});
     }
+    descriptors_.insert({c.ViewCPUHandle_.interfaceKey, c.ViewCPUHandle_.index});
   }
 }
 
@@ -430,9 +430,9 @@ void BindingService::clearViewImpl(
         c.ViewGPUHandleInCurrentHeap_.interfaceKey, c.ViewGPUHandleInCurrentHeap_.index);
     if (state) {
       objectsForRestore_.insert(state->resourceKey);
-      descriptors_.insert(
-          {c.ViewGPUHandleInCurrentHeap_.interfaceKey, c.ViewGPUHandleInCurrentHeap_.index});
     }
+    descriptors_.insert(
+        {c.ViewGPUHandleInCurrentHeap_.interfaceKey, c.ViewGPUHandleInCurrentHeap_.index});
   }
   if (c.ViewCPUHandle_.interfaceKey) {
     objectsForRestore_.insert(c.ViewCPUHandle_.interfaceKey);
@@ -440,8 +440,8 @@ void BindingService::clearViewImpl(
                                                                    c.ViewCPUHandle_.index);
     if (state) {
       objectsForRestore_.insert(state->resourceKey);
-      descriptors_.insert({c.ViewCPUHandle_.interfaceKey, c.ViewCPUHandle_.index});
     }
+    descriptors_.insert({c.ViewCPUHandle_.interfaceKey, c.ViewCPUHandle_.index});
   }
 }
 
@@ -686,9 +686,9 @@ void BindingService::copyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& c
           c.SrcDescriptorRangeStart_.interfaceKey, c.SrcDescriptorRangeStart_.index + i);
       if (state) {
         objectsForRestore_.insert(state->resourceKey);
-        descriptors_.insert(
-            {c.SrcDescriptorRangeStart_.interfaceKey, c.SrcDescriptorRangeStart_.index + i});
       }
+      descriptors_.insert(
+          {c.SrcDescriptorRangeStart_.interfaceKey, c.SrcDescriptorRangeStart_.index + i});
     }
     objectsForRestore_.insert(c.SrcDescriptorRangeStart_.interfaceKey);
 
@@ -707,9 +707,9 @@ void BindingService::copyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c) {
                                                   c.pSrcDescriptorRangeStarts_.indexes[i] + j);
         if (state) {
           objectsForRestore_.insert(state->resourceKey);
-          descriptors_.insert({c.pSrcDescriptorRangeStarts_.interfaceKeys[i],
-                               c.pSrcDescriptorRangeStarts_.indexes[i] + j});
         }
+        descriptors_.insert({c.pSrcDescriptorRangeStarts_.interfaceKeys[i],
+                             c.pSrcDescriptorRangeStarts_.indexes[i] + j});
       }
       objectsForRestore_.insert(c.pSrcDescriptorRangeStarts_.interfaceKeys[i]);
     }
