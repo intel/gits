@@ -84,6 +84,8 @@ public:
       ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
   void copyRaytracingAccelerationStructure(
       ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c);
+  void emitRaytracingAccelerationStructurePostbuildInfo(
+      ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c);
   void nvapiBuildAccelerationStructureEx(
       NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c);
   void nvapiBuildOpacityMicromapArray(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c);
@@ -122,6 +124,8 @@ private:
   void setPipelineStateImpl(ID3D12GraphicsCommandList4SetPipelineState1Command& c);
   void buildRaytracingAccelerationStructureImpl(
       ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
+  void emitRaytracingAccelerationStructurePostbuildInfoImpl(
+      ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c);
   void copyRaytracingAccelerationStructureImpl(
       ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c);
   void nvapiBuildAccelerationStructureExImpl(

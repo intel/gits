@@ -58,6 +58,7 @@ public:
   void post(ID3D12Device7AddToStateObjectCommand& c) override;
   void pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) override;
   void pre(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) override;
+  void pre(ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c) override;
   void pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) override;
   void pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) override;
   void pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) override;

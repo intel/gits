@@ -533,6 +533,32 @@ void BindingService::copyRaytracingAccelerationStructureImpl(
                                                     c.SourceAccelerationStructureData_.offset);
 }
 
+void BindingService::emitRaytracingAccelerationStructurePostbuildInfo(
+    ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c) {
+  if (analyzerService_.inRange()) {
+    commandListRestore(c.object_.key);
+    emitRaytracingAccelerationStructurePostbuildInfoImpl(c);
+  } else if (!commandListSubcapture_) {
+    commandsByCommandList_[c.object_.key].emplace_back(
+        new ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand(c));
+  }
+}
+
+void BindingService::emitRaytracingAccelerationStructurePostbuildInfoImpl(
+    ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c) {
+  for (unsigned i = 0; i < c.NumSourceAccelerationStructures_.value; ++i) {
+    raytracingService_.addAccelerationStructureSource(
+        c.pSourceAccelerationStructureData_.interfaceKeys[i],
+        c.pSourceAccelerationStructureData_.offsets[i]);
+    if (optimize_) {
+      objectsForRestore_.insert(c.pSourceAccelerationStructureData_.interfaceKeys[i]);
+    }
+  }
+  if (optimize_) {
+    objectsForRestore_.insert(c.pDesc_.destBufferKey);
+  }
+}
+
 void BindingService::nvapiBuildAccelerationStructureEx(
     NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
   if (analyzerService_.inRange()) {
@@ -771,6 +797,12 @@ void BindingService::commandListRestore(unsigned commandListKey) {
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST4_COPYRAYTRACINGACCELERATIONSTRUCTURE:
       copyRaytracingAccelerationStructureImpl(
           static_cast<ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand&>(
+              *command));
+      break;
+    case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST4_EMITRAYTRACINGACCELERATIONSTRUCTUREPOSTBUILDINFO:
+      emitRaytracingAccelerationStructurePostbuildInfo(
+          static_cast<
+              ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand&>(
               *command));
       break;
     case CommandId::ID_NVAPI_D3D12_BUILDRAYTRACINGACCELERATIONSTRUCTUREEX:

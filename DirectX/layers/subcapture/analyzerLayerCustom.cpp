@@ -422,6 +422,13 @@ void AnalyzerLayer::pre(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStru
   }
 }
 
+void AnalyzerLayer::pre(
+    ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c) {
+  if (optimize_ || optimizeRaytracing_) {
+    bindingService_.emitRaytracingAccelerationStructurePostbuildInfo(c);
+  }
+}
+
 void AnalyzerLayer::pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
   if (optimize_ || optimizeRaytracing_) {
     bindingService_.nvapiBuildAccelerationStructureEx(c);
