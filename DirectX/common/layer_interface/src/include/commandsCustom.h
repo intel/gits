@@ -220,7 +220,15 @@ public:
         pDstBox_{pDstBox},
         SrcRowPitch_{SrcRowPitch},
         SrcDepthPitch_{SrcDepthPitch} {
-    UINT depth = (pDstBox) ? (pDstBox->back - pDstBox->front) : 1;
+    UINT depth = 1;
+    if (pDstBox) {
+      depth = (pDstBox->back - pDstBox->front);
+    } else {
+      D3D12_RESOURCE_DESC desc = object->GetDesc();
+      if (desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D) {
+        depth = desc.DepthOrArraySize;
+      }
+    }
     size_t pSrcDataSize = SrcDepthPitch * depth;
     pSrcData_.value = const_cast<void*>(pSrcData);
     pSrcData_.size = pSrcDataSize;
@@ -253,7 +261,15 @@ public:
         DstDepthPitch_{DstDepthPitch},
         SrcSubresource_{SrcSubresource},
         pSrcBox_{pSrcBox} {
-    UINT depth = (pSrcBox) ? (pSrcBox->back - pSrcBox->front) : 1;
+    UINT depth = 1;
+    if (pSrcBox) {
+      depth = (pSrcBox->back - pSrcBox->front);
+    } else {
+      D3D12_RESOURCE_DESC desc = object->GetDesc();
+      if (desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D) {
+        depth = desc.DepthOrArraySize;
+      }
+    }
     size_t pDstDataSize = DstDepthPitch * depth;
     pDstData_.value = const_cast<void*>(pDstData);
     pDstData_.size = pDstDataSize;
