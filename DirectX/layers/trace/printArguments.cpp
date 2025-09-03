@@ -969,7 +969,8 @@ FastOStream& operator<<(FastOStream& stream,
         stream << ", " << arg.inputOffsets[inputIndex] << "}, ";
         ++inputIndex;
         stream << desc.Triangles.VertexBuffer.StrideInBytes << "}";
-      } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
+      } else if (!arg.inputKeys.empty() &&
+                 desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
         stream << desc.AABBs.AABBCount << ", {{";
         printObjectKey(stream, arg.inputKeys[inputIndex]);
         stream << ", " << arg.inputOffsets[inputIndex] << "}, ";
