@@ -9,6 +9,7 @@
 #include "analyzerExecuteIndirectService.h"
 #include "bindingService.h"
 #include "gits.h"
+#include "log2.h"
 
 #include <fstream>
 
@@ -66,6 +67,13 @@ void AnalyzerExecuteIndirectService::executeIndirect(
 
   if (!view && !raytracing) {
     return;
+  }
+
+  if (view) {
+    static bool logged = false;
+    if (!logged) {
+      LOG_ERROR << "Analysis - execute indirect view arguments not handled!";
+    }
   }
 
   auto dumpBindingTable = [&](UINT64 address, UINT64 size, UINT64 stride) {
