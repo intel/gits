@@ -485,6 +485,43 @@ void StateTrackingLayer::post(IDXGISwapChainResizeBuffersCommand& c) {
   }
 }
 
+void StateTrackingLayer::post(IDXGISwapChain3ResizeBuffers1Command& c) {
+  if (stateRestored_) {
+    return;
+  }
+  if (c.result_.value != S_OK) {
+    return;
+  }
+  ObjectState* objectState = stateService_.getState(c.object_.key);
+  if (objectState->creationCommand->getId() == CommandId::ID_IDXGIFACTORY_CREATESWAPCHAIN) {
+    IDXGIFactoryCreateSwapChainCommand* command =
+        static_cast<IDXGIFactoryCreateSwapChainCommand*>(objectState->creationCommand.get());
+    command->pDesc_.value->BufferDesc.Width = c.Width_.value;
+    command->pDesc_.value->BufferDesc.Height = c.Height_.value;
+    command->pDesc_.value->Flags = c.SwapChainFlags_.value;
+    if (c.BufferCount_.value) {
+      command->pDesc_.value->BufferCount = c.BufferCount_.value;
+    }
+    if (c.Format_.value != DXGI_FORMAT_UNKNOWN) {
+      command->pDesc_.value->BufferDesc.Format = c.Format_.value;
+    }
+  } else if (objectState->creationCommand->getId() ==
+             CommandId::ID_IDXGIFACTORY2_CREATESWAPCHAINFORHWND) {
+    IDXGIFactory2CreateSwapChainForHwndCommand* command =
+        static_cast<IDXGIFactory2CreateSwapChainForHwndCommand*>(
+            objectState->creationCommand.get());
+    command->pDesc_.value->Width = c.Width_.value;
+    command->pDesc_.value->Height = c.Height_.value;
+    command->pDesc_.value->Flags = c.SwapChainFlags_.value;
+    if (c.BufferCount_.value) {
+      command->pDesc_.value->BufferCount = c.BufferCount_.value;
+    }
+    if (c.Format_.value != DXGI_FORMAT_UNKNOWN) {
+      command->pDesc_.value->Format = c.Format_.value;
+    }
+  }
+}
+
 void StateTrackingLayer::post(ID3D12ObjectSetNameCommand& c) {
   if (stateRestored_) {
     return;

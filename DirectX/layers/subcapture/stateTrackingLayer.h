@@ -57,6 +57,7 @@ public:
   void post(IDXGIFactoryCreateSwapChainCommand& c) override;
   void post(IDXGIFactory2CreateSwapChainForHwndCommand& c) override;
   void post(IDXGISwapChainResizeBuffersCommand& c) override;
+  void post(IDXGISwapChain3ResizeBuffers1Command& c) override;
   void post(ID3D12ObjectSetNameCommand& c) override;
   void post(ID3D12DeviceCreateDescriptorHeapCommand& c) override;
   void post(ID3D12DeviceCreateHeapCommand& c) override;
