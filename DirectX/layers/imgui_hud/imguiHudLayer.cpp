@@ -162,6 +162,38 @@ void ImGuiHUDLayer::post(IDXGISwapChainResizeBuffersCommand& command) {
                                                      bufferCount);
 }
 
+void ImGuiHUDLayer::pre(IDXGISwapChain3ResizeBuffers1Command& command) {
+  if (!initialized_) {
+    return;
+  }
+
+  // Release all the backbuffers
+  for (auto& frameCtx : frameContext_) {
+    frameCtx.rtResource.Reset();
+  }
+}
+
+void ImGuiHUDLayer::post(IDXGISwapChain3ResizeBuffers1Command& command) {
+  if (!initialized_) {
+    return;
+  }
+
+  // ResizeBuffers can be called with BufferCount set to 0 (to keep the current count)
+  static unsigned currentBufferCount = frameContext_.size();
+  unsigned bufferCount = command.BufferCount_.value;
+  if (bufferCount == 0) {
+    bufferCount = currentBufferCount;
+  } else {
+    currentBufferCount = bufferCount;
+  }
+
+  if (!createFrameContext(bufferCount)) {
+    LOG_ERROR << "ImGui HUD: Failed to correctly create frame context on ResizeBuffers";
+  }
+  CGits::Instance().GetImGuiHUD()->SetBackBufferInfo(command.Width_.value, command.Height_.value,
+                                                     bufferCount);
+}
+
 bool ImGuiHUDLayer::createFrameContext(unsigned bufferCount) {
   if (!swapChain_ || !device_) {
     return false;

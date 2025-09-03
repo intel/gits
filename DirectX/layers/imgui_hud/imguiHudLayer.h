@@ -38,6 +38,8 @@ public:
   void pre(IDXGISwapChainPresentCommand& command) override;
   void pre(IDXGISwapChainResizeBuffersCommand& command) override;
   void post(IDXGISwapChainResizeBuffersCommand& command) override;
+  void pre(IDXGISwapChain3ResizeBuffers1Command& command) override;
+  void post(IDXGISwapChain3ResizeBuffers1Command& command) override;
 
 private:
   bool createFrameContext(unsigned bufferCount);
