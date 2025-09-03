@@ -353,8 +353,8 @@ void ResourceStateTrackingService::restoreResourceStates(
 
   for (auto& it : aliasingBarriersOrdered_) {
     AliasingBarrierKeys& keys = it.first;
-    if (!stateService_.getAnalyzerResults().restoreObject(keys.first) ||
-        !stateService_.getAnalyzerResults().restoreObject(keys.second)) {
+    if (keys.first && !stateService_.getAnalyzerResults().restoreObject(keys.first) ||
+        keys.second && !stateService_.getAnalyzerResults().restoreObject(keys.second)) {
       continue;
     }
 
