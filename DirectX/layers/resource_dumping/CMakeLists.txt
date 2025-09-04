@@ -29,8 +29,6 @@ set(RESOURCE_DUMP_SRC
   ${SRC_DIR}/resourceDumpLayerCustom.cpp
   ${SRC_DIR}/resourceDumpService.h
   ${SRC_DIR}/resourceDumpService.cpp
-  ${SRC_DIR}/resourceStateTracker.h
-  ${SRC_DIR}/resourceStateTracker.cpp
 )
 source_group("resource_dump" FILES ${RESOURCE_DUMP_SRC})
 

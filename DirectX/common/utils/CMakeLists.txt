@@ -24,6 +24,8 @@ set(UTILS_FILES
   ${SRC_DIR}/capturePlayerDescriptorHandleService.cpp
   ${SRC_DIR}/capturePlayerShaderIdentifierService.h
   ${SRC_DIR}/capturePlayerShaderIdentifierService.cpp
+  ${SRC_DIR}/resourceStateTracker.h
+  ${SRC_DIR}/resourceStateTracker.cpp
 )
 source_group("" FILES ${UTILS_FILES})
 
