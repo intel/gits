@@ -39,7 +39,9 @@ void BindingService::commandListsRestore(const std::set<unsigned>& commandLists)
 }
 
 void BindingService::commandListReset(ID3D12GraphicsCommandListResetCommand& c) {
-  commandsByCommandList_.erase(c.object_.key);
+  if (!analyzerService_.inRange() && !commandListSubcapture_) {
+    commandsByCommandList_.erase(c.object_.key);
+  }
 }
 
 void BindingService::createDescriptorHeap(ID3D12DeviceCreateDescriptorHeapCommand& c) {
@@ -481,6 +483,9 @@ void BindingService::setDescriptorHeaps(ID3D12GraphicsCommandListSetDescriptorHe
 
 void BindingService::setDescriptorHeapsImpl(ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c) {
   raytracingService_.setDescriptorHeaps(c);
+  for (unsigned key : c.ppDescriptorHeaps_.keys) {
+    objectsForRestore_.insert(key);
+  }
 }
 
 void BindingService::buildRaytracingAccelerationStructure(
