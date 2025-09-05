@@ -7,6 +7,7 @@
 # ===================== end_copyright_notice ==============================
 
 add_subdirectory(configuration)
-add_subdirectory(imguiHUD)
+add_subdirectory(hud)
+add_subdirectory(imgui_common)
 add_subdirectory(log)
 add_subdirectory(legacy)

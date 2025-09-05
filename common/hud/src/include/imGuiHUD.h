@@ -15,6 +15,7 @@
 #include <string>
 
 #include "imgui.h"
+#include "enumsAuto.h"
 
 namespace gits {
 using RenderImGuiFunc = std::function<void()>;
@@ -31,6 +32,8 @@ public:
   void SetupImGUI(float dpi_scale);
 
 private:
+  void PositionHUD(gits::HUDAnchor anchor, const ImVec2& windowSize, const ImVec2& padding);
+
   void ExecuteCallbacks();
 
   std::vector<RenderImGuiFunc> _callbacks;

@@ -29,33 +29,34 @@ if(MSVC)
     gitsLongPath.manifest)
 endif()
 
-add_executable(gitsPlayer ${player_SOURCE})
+add_executable(gits_player ${player_SOURCE})
+set_target_properties(gits_player PROPERTIES OUTPUT_NAME "gitsPlayer")
 
-target_include_directories(gitsPlayer PRIVATE ${PLAYER_HEADER_DIR})
+target_include_directories(gits_player PRIVATE ${PLAYER_HEADER_DIR})
 
-add_dependencies(gitsPlayer config_codegen)
-target_link_libraries(gitsPlayer PRIVATE common OpenGL_common)
+add_dependencies(gits_player config_codegen)
+target_link_libraries(gits_player PRIVATE common OpenGL_common)
 
 if(WITH_LEVELZERO)
-  target_link_libraries(gitsPlayer PRIVATE L0_common)
+  target_link_libraries(gits_player PRIVATE L0_common)
 endif()
 
 if(WITH_OPENCL)
-  target_link_libraries(gitsPlayer PRIVATE OpenCL_common)
+  target_link_libraries(gits_player PRIVATE OpenCL_common)
 endif()
 
 if(WITH_VULKAN)
-  target_link_libraries(gitsPlayer PRIVATE Vulkan_common)
+  target_link_libraries(gits_player PRIVATE Vulkan_common)
 endif()
 
 if(WITH_OCLOC)
-  target_link_libraries(gitsPlayer PRIVATE ocloc_common)
+  target_link_libraries(gits_player PRIVATE ocloc_common)
 endif(WITH_OCLOC)
 
 if(WITH_DIRECTX)
 #!!! TODO: This should come from linking to DirectX_player
   include_directories(../DirectX/player)
-  target_link_libraries(gitsPlayer
+  target_link_libraries(gits_player
     PRIVATE
     d3d12.lib
     dxgi.lib
@@ -63,31 +64,31 @@ if(WITH_DIRECTX)
     directxtex
     ${DML_DIR}/bin/x64-win/DirectML.lib
     ${DSTORAGE_DIR}/native/lib/x64/dstorage.lib
-    ImGuiHUD
+    hud
   )
-  set_target_properties(gitsPlayer PROPERTIES 
+  set_target_properties(gits_player PROPERTIES 
     LINK_FLAGS 
     "/DELAYLOAD:d3d12.dll /DELAYLOAD:dxgi.dll /DELAYLOAD:DirectML.dll /DELAYLOAD:dstorage.dll /DELAYLOAD:dstoragecore.dll"
   )
 endif()
 
-target_include_directories(gitsPlayer PRIVATE ${ARGS_SOURCE_DIR})
-target_link_libraries(gitsPlayer PRIVATE configuration)
+target_include_directories(gits_player PRIVATE ${ARGS_SOURCE_DIR})
+target_link_libraries(gits_player PRIVATE configuration)
 
 if(MSVC)
-  target_link_libraries(gitsPlayer PRIVATE stackwalker)
+  target_link_libraries(gits_player PRIVATE stackwalker)
 endif()
 
 if(UNIX)
-  target_link_libraries(gitsPlayer PRIVATE pthread)
-  target_link_libraries(gitsPlayer PRIVATE GL X11 xcb X11-xcb dl)
+  target_link_libraries(gits_player PRIVATE pthread)
+  target_link_libraries(gits_player PRIVATE GL X11 xcb X11-xcb dl)
 endif()
 
 if(MSVC)
-  target_link_libraries(gitsPlayer PRIVATE OpenGL32)
+  target_link_libraries(gits_player PRIVATE OpenGL32)
 endif()
 
-install(TARGETS gitsPlayer DESTINATION Player)
+install(TARGETS gits_player DESTINATION Player)
 if(MSVC)
-  install(FILES $<TARGET_PDB_FILE:gitsPlayer> DESTINATION Player OPTIONAL)
+  install(FILES $<TARGET_PDB_FILE:gits_player> DESTINATION Player OPTIONAL)
 endif()

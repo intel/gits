@@ -111,7 +111,7 @@ target_include_directories(DirectX_recorder PRIVATE
 )
 
 target_link_libraries(DirectX_recorder PRIVATE
-  GitsRecorderInterface
+  gits_recorder_interface
   DirectX_layer_interface
   DirectX_api_debug
   DirectX_trace

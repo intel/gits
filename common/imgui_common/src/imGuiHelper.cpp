@@ -11,7 +11,6 @@
 #include <algorithm>
 
 #include "IntelOneMono-RegularAuto.h"
-#include "enumsAuto.h"
 
 namespace gits {
 namespace ImGuiHelper {
@@ -61,32 +60,6 @@ bool UpdateUIScaling(float scale) {
   io.Fonts->Build();
 
   return true;
-}
-
-void PositionWindow(gits::HUDAnchor anchor, const ImVec2& windowSize, const ImVec2& padding) {
-  const ImGuiViewport* mainViewport = ImGui::GetMainViewport();
-  float x = 0;
-  if (anchor == gits::HUDAnchor::TOP_LEFT || anchor == gits::HUDAnchor::CENTER_LEFT ||
-      anchor == gits::HUDAnchor::BOTTOM_LEFT) {
-    x = mainViewport->WorkPos.x + padding.x;
-  } else if (anchor == gits::HUDAnchor::TOP_CENTER || anchor == gits::HUDAnchor::CENTER ||
-             anchor == gits::HUDAnchor::BOTTOM_CENTER) {
-    x = mainViewport->WorkPos.x + (mainViewport->Size.x - windowSize.x) / 2.0f;
-  } else { // <X>_RIGHT
-    x = mainViewport->WorkPos.x + mainViewport->Size.x - windowSize.x - padding.x;
-  }
-
-  float y = 0;
-  if (anchor == gits::HUDAnchor::BOTTOM_LEFT || anchor == gits::HUDAnchor::BOTTOM_CENTER ||
-      anchor == gits::HUDAnchor::BOTTOM_RIGHT) {
-    y = mainViewport->WorkPos.y + mainViewport->Size.y - windowSize.y - padding.y;
-  } else if (anchor == gits::HUDAnchor::CENTER_LEFT || anchor == gits::HUDAnchor::CENTER ||
-             anchor == gits::HUDAnchor::CENTER_RIGHT) {
-    y = mainViewport->WorkPos.y + (mainViewport->Size.y - windowSize.y) / 2.0f;
-  } else { // TOP_<X>
-    y = mainViewport->WorkPos.y + padding.y;
-  }
-  ImGui::SetWindowPos(ImVec2(x, y), ImGuiCond_Always);
 }
 
 void RenderTableContent(const std::vector<std::array<std::string, 2>>& dataTable) {

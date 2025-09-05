@@ -28,5 +28,5 @@ add_library(Vulkan_recorder
 
 source_group("Generated Files" REGULAR_EXPRESSION ".*Auto.*")
 
-target_link_libraries(Vulkan_recorder PRIVATE GitsRecorderInterface common configuration Vulkan_common)
+target_link_libraries(Vulkan_recorder PRIVATE gits_recorder_interface common configuration Vulkan_common)
 set_target_properties(Vulkan_recorder PROPERTIES FOLDER Vulkan)

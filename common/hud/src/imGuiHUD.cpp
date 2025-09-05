@@ -11,6 +11,7 @@
 #include <algorithm>
 
 #include "gits.h"
+#include "enumsAuto.h"
 #include "configurator.h"
 #include "log.h"
 #include "imGuiHelper.h"
@@ -53,6 +54,34 @@ void ImGuiHUD::ExecuteCallbacks() {
   for (const auto& callback : _callbacks) {
     callback();
   }
+}
+
+void ImGuiHUD::PositionHUD(gits::HUDAnchor anchor,
+                           const ImVec2& windowSize,
+                           const ImVec2& padding) {
+  const ImGuiViewport* mainViewport = ImGui::GetMainViewport();
+  float x = 0;
+  if (anchor == gits::HUDAnchor::TOP_LEFT || anchor == gits::HUDAnchor::CENTER_LEFT ||
+      anchor == gits::HUDAnchor::BOTTOM_LEFT) {
+    x = mainViewport->WorkPos.x + padding.x;
+  } else if (anchor == gits::HUDAnchor::TOP_CENTER || anchor == gits::HUDAnchor::CENTER ||
+             anchor == gits::HUDAnchor::BOTTOM_CENTER) {
+    x = mainViewport->WorkPos.x + (mainViewport->Size.x - windowSize.x) / 2.0f;
+  } else { // <X>_RIGHT
+    x = mainViewport->WorkPos.x + mainViewport->Size.x - windowSize.x - padding.x;
+  }
+
+  float y = 0;
+  if (anchor == gits::HUDAnchor::BOTTOM_LEFT || anchor == gits::HUDAnchor::BOTTOM_CENTER ||
+      anchor == gits::HUDAnchor::BOTTOM_RIGHT) {
+    y = mainViewport->WorkPos.y + mainViewport->Size.y - windowSize.y - padding.y;
+  } else if (anchor == gits::HUDAnchor::CENTER_LEFT || anchor == gits::HUDAnchor::CENTER ||
+             anchor == gits::HUDAnchor::CENTER_RIGHT) {
+    y = mainViewport->WorkPos.y + (mainViewport->Size.y - windowSize.y) / 2.0f;
+  } else { // TOP_<X>
+    y = mainViewport->WorkPos.y + padding.y;
+  }
+  ImGui::SetWindowPos(ImVec2(x, y), ImGuiCond_Always);
 }
 
 void ImGuiHUD::SetBackBufferInfo(uint64_t width, uint64_t height, size_t count) {
@@ -136,7 +165,7 @@ void ImGuiHUD::Render() {
     }
 
     const ImVec2 windowSize = ImGui::GetWindowSize();
-    ImGuiHelper::PositionWindow(cfgHud.position, windowSize, Settings::HUD_PADDING);
+    PositionHUD(cfgHud.position, windowSize, Settings::HUD_PADDING);
   }
   ImGui::End();
 }

@@ -44,7 +44,7 @@ add_library(ocloc_recorder
 
 include_directories(recorder)
 
-target_link_libraries(ocloc_recorder PRIVATE GitsRecorderInterface common configuration)
+target_link_libraries(ocloc_recorder PRIVATE gits_recorder_interface common configuration)
 
 list(APPEND ocloc_interceptor_files
   ../common/legacy/tools_lite.cpp
@@ -71,7 +71,7 @@ endif()
 
 set_target_properties(ocloc_interceptor PROPERTIES OUTPUT_NAME ${OCLOC_LIBRARY_NAME})
 
-target_link_libraries(ocloc_interceptor PRIVATE GitsRecorderInterface common configuration)
+target_link_libraries(ocloc_interceptor PRIVATE gits_recorder_interface common configuration)
 if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   target_link_libraries(ocloc_interceptor PRIVATE dl pthread)
 endif()

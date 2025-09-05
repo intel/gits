@@ -50,7 +50,7 @@ target_include_directories(DirectX_imgui_hud PUBLIC
 )
 
 target_link_libraries(DirectX_imgui_hud PRIVATE
-  ImGuiHUD
+  hud
   DirectX_layer_interface
   DirectX_utils
 )

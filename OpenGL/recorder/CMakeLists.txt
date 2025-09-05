@@ -43,4 +43,4 @@ source_group("Generated Files" REGULAR_EXPRESSION ".*Auto.*")
 
 set_target_properties(OpenGL_recorder PROPERTIES FOLDER OpenGL)
 
-target_link_libraries(OpenGL_recorder PRIVATE GitsRecorderInterface common configuration)
+target_link_libraries(OpenGL_recorder PRIVATE gits_recorder_interface common configuration)

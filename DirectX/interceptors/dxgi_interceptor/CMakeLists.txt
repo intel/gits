@@ -34,7 +34,7 @@ target_include_directories(dxgi_interceptor PRIVATE
 )
 
 target_link_libraries(dxgi_interceptor PRIVATE
-  GitsRecorderInterface
+  gits_recorder_interface
   detours
   DirectX_layer_interface
   DirectX_recorder

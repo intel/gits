@@ -34,7 +34,7 @@ target_include_directories(d3d12_interceptor PRIVATE
 )
 
 target_link_libraries(d3d12_interceptor PRIVATE
-  GitsRecorderInterface
+  gits_recorder_interface
   detours
   DirectX_layer_interface
   DirectX_recorder

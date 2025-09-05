@@ -16,6 +16,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(CMAKE_SKIP_INSTALL_ALL_DEPENDENCY TRUE)
 
+# build options
 option(WITH_VULKAN "Build Vulkan component" ON)
 if(WITH_VULKAN)
   add_definitions(-DWITH_VULKAN)
@@ -31,6 +32,11 @@ if(WITH_LEVELZERO)
   add_definitions(-DWITH_LEVELZERO)
 endif()
 
+option(SKIP_THIRDPARTY_FETCH "Skip fetching third-party dependencies" OFF)
+if(SKIP_THIRDPARTY_FETCH)
+  add_definitions(-DSKIP_THIRDPARTY_FETCH)
+endif()
+
 if(WIN32 AND "${CMAKE_GENERATOR_PLATFORM}" MATCHES "x64")
   # DIRECTX enabled only on Windows x64
   option(WITH_DIRECTX "Build DIRECTX component" ON)
@@ -40,6 +46,13 @@ endif()
 if(WITH_DIRECTX)
   add_definitions(-DWITH_DIRECTX)
 endif()
+
+option(WITH_OCLOC "Build Ocloc component" ON)
+if(WITH_OCLOC)
+  add_definitions(-DWITH_OCLOC)
+endif()
+
+
 execute_process(COMMAND ${Python3_EXECUTABLE} -c "import mako" RESULT_VARIABLE MAKO_IMPORT OUTPUT_QUIET ERROR_QUIET)
 if(NOT MAKO_IMPORT EQUAL 0)
   message(FATAL_ERROR "Mako templates not installed. GITS requires Mako to generate files. Use 'pip install Mako' to install.")
@@ -62,12 +75,6 @@ if (WITH_DIRECTX)
     message(FATAL_ERROR "cxxheaderparser not installed. GITS requires cxxheaderparser to generate files. Use 'pip install cxxheaderparser' to install.")
   endif()
 endif()
-
-option(WITH_OCLOC "Build Ocloc component" ON)
-if(WITH_OCLOC)
-  add_definitions(-DWITH_OCLOC)
-endif()
-
 
 if(WIN32)
   set(OpenGL_INSTALL_SUBDIR "FilesToCopyOGL" CACHE INTERNAL "")
@@ -211,8 +218,8 @@ if(WITH_DIRECTX)
 endif()
 
 if(ARCH AND NOT MSVC)
-  set_target_properties(gitsPlayer PROPERTIES LINK_FLAGS ${ARCH})
-  set_target_properties(GitsRecorder PROPERTIES LINK_FLAGS ${ARCH})
+  set_target_properties(gits_player PROPERTIES LINK_FLAGS ${ARCH})
+  set_target_properties(gits_recorder PROPERTIES LINK_FLAGS ${ARCH})
   set_target_properties(OpenGL_interceptor PROPERTIES LINK_FLAGS ${ARCH})
   if(WITH_OPENCL)
     set_target_properties(OpenCL_interceptor PROPERTIES LINK_FLAGS ${ARCH})

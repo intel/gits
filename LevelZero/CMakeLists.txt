@@ -167,7 +167,7 @@ add_library(L0_recorder
 )
 include_directories(recorder/include)
 
-target_link_libraries(L0_recorder PRIVATE GitsRecorderInterface common configuration)
+target_link_libraries(L0_recorder PRIVATE gits_recorder_interface common configuration)
 
 set(L0_interceptor_sources
   ../common/legacy/tools_lite.cpp
@@ -206,7 +206,7 @@ include_directories(interceptor/include)
 
 set_target_properties(L0_interceptor PROPERTIES OUTPUT_NAME ze_loader)
 
-target_link_libraries(L0_interceptor PRIVATE GitsRecorderInterface common configuration)
+target_link_libraries(L0_interceptor PRIVATE gits_recorder_interface common configuration)
 if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   target_link_libraries(L0_interceptor PRIVATE dl pthread)
 endif()

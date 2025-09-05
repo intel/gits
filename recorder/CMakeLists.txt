@@ -49,11 +49,11 @@ list(APPEND recorder_SOURCES
   ${recorder_DEF}
 )
 
-add_library(GitsRecorder SHARED ${recorder_SOURCES})
-target_include_directories(GitsRecorder PRIVATE ${RECORDER_HEADER_DIR})
+add_library(gits_recorder SHARED ${recorder_SOURCES})
+target_include_directories(gits_recorder PRIVATE ${RECORDER_HEADER_DIR})
 
-add_library(GitsRecorderInterface INTERFACE)
-target_include_directories(GitsRecorderInterface INTERFACE ${RECORDER_HEADER_DIR})
+add_library(gits_recorder_interface INTERFACE)
+target_include_directories(gits_recorder_interface INTERFACE ${RECORDER_HEADER_DIR})
 
 add_definitions(-DGITS_RECORDER_EXPORTS)
 
@@ -99,7 +99,7 @@ if(WITH_DIRECTX)
   directxtex
   ${DML_DIR}/bin/x64-win/DirectML.lib
   ${DSTORAGE_DIR}/native/lib/x64/dstorage.lib
-  ImGuiHUD
+  hud
   )
 endif()
 
@@ -107,25 +107,28 @@ if(UNIX)
   set(recorderIfaceLibs ${recorderIfaceLibs} -Wl,-no-whole-archive)
 endif()
 
-add_dependencies(GitsRecorder config_codegen)
-target_link_libraries(GitsRecorder PRIVATE ${recorderIfaceLibs} ${recorderCommonLibs} common)
+add_dependencies(gits_recorder config_codegen)
+target_link_libraries(gits_recorder PRIVATE ${recorderIfaceLibs} ${recorderCommonLibs} common)
 
 if(UNIX)
-  target_link_libraries(GitsRecorder PRIVATE pthread rt xcb X11-xcb X11 GL wayland-client wayland-egl)
+  target_link_libraries(gits_recorder PRIVATE pthread rt xcb X11-xcb X11 GL wayland-client wayland-egl)
 elseif(MSVC)
-  target_link_libraries(GitsRecorder PRIVATE OpenGL32)
+  target_link_libraries(gits_recorder PRIVATE OpenGL32)
 endif()
 
 if(WIN32)
-  set_target_properties(GitsRecorder PROPERTIES OUTPUT_NAME "gitsRecorder")
+  set_target_properties(gits_recorder PROPERTIES OUTPUT_NAME "gitsRecorder")
+endif()
+if(UNIX)
+  set_target_properties(gits_recorder PROPERTIES OUTPUT_NAME "GitsRecorder")
 endif()
 
-install(TARGETS GitsRecorder
+install(TARGETS gits_recorder
   RUNTIME DESTINATION Recorder
   LIBRARY DESTINATION Recorder)
 
 if(MSVC)
-  install(FILES $<TARGET_PDB_FILE:GitsRecorder> DESTINATION Recorder OPTIONAL)
+  install(FILES $<TARGET_PDB_FILE:gits_recorder> DESTINATION Recorder OPTIONAL)
 endif()
 if(UNIX)
   install(CODE "execute_process(COMMAND bash -c \"

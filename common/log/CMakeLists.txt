@@ -31,7 +31,7 @@ PRIVATE
 
 add_dependencies(log config_codegen)
 
-set_target_properties(log PROPERTIES FOLDER "common/log")
+set_target_properties(log PROPERTIES FOLDER "common")
 
 # CCode
 install(FILES ${LOG_SRC_SOURCES} DESTINATION CCode/CCodeSource)
