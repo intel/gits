@@ -8,20 +8,31 @@
 
 import argparse
 import logging
-import subprocess
-import sys
 import os
 import re
-import requests
-import zipfile
-import tempfile
-from retrying import retry
 import shutil
+import subprocess
+import sys
+import tempfile
+import zipfile
+
 from enum import Enum
 from pathlib import Path
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+import requests
+from retrying import retry
+import yaml
+
+
+handler = logging.StreamHandler()
+formatter = logging.Formatter('%(name)-23s: %(levelname)-8s %(message)s')
+handler.setFormatter(formatter)
+
+logger = logging.getLogger('3rdParty')
+logger.setLevel(logging.INFO)
+if not logger.handlers:
+    logger.addHandler(handler)
+logger.propagate = False
 
 
 def get_script_path():
@@ -67,11 +78,17 @@ class GitCheck:
 THIRD_PARTY_PATH = get_root_directory() / "third_party"
 PATCH_PATH = THIRD_PARTY_PATH / "patch"
 USE_PARALLEL_GIT = GitCheck().check()
+META_FILE = "third_party.meta.yaml"
 
 
 class OperatingSystem(Enum):
     WINDOWS = 1
     LINUX = 2
+
+
+class ReturnCode(Enum):
+    SUCCESS = 0
+    FAILURE = -1
 
 
 class RetryError(Exception):
@@ -94,11 +111,13 @@ class Repository:
         self.set_commit()
         self.init()
 
+        self.logger = logger.getChild(self.name)
+
     @property
     def repository_path(self) -> Path:
         if not self._repository_path:
             self._repository_path = THIRD_PARTY_PATH / self.name
-            logger.debug("Component path: %s", str(self._repository_path))
+            self.logger.debug("Component path: %s", str(self._repository_path))
         return self._repository_path
 
     def init(self) -> None:
@@ -106,9 +125,6 @@ class Repository:
 
     def set_branch(self):
         self.branch = "master"
-
-    def build(self):
-        pass
 
     def set_commit(self):
         pass
@@ -119,7 +135,7 @@ class Repository:
 
     @retry(stop_max_attempt_number=5, wait_fixed=100000)
     def execute_with_retry(self, cmd, cwd=None, must_pass=True):
-        logger.info("Running command line: %s", cmd)
+        self.logger.info("Running command line: %s", cmd)
         process = subprocess.run(
             cmd,
             cwd=cwd if cwd else self.repository_path,
@@ -127,19 +143,19 @@ class Repository:
             stderr=subprocess.PIPE,
         )
         if must_pass and process.returncode != 0:
-            logger.error(process.stdout)
-            logger.error(process.stderr)
+            self.logger.error(process.stdout)
+            self.logger.error(process.stderr)
         if must_pass:
             try:
                 process.check_returncode()
             except subprocess.CalledProcessError as e:
                 self.cleanup()
-                logger.error(e.output)
+                self.logger.error(e.output)
                 raise RetryError()
         return process
 
     def execute(self, cmd, cwd=None, must_pass=True):
-        logger.info("Running command line: %s", cmd)
+        self.logger.info("Running command line: %s", cmd)
         process = subprocess.run(
             cmd,
             cwd=cwd if cwd else self.repository_path,
@@ -147,8 +163,8 @@ class Repository:
             stderr=subprocess.PIPE,
         )
         if must_pass and process.returncode != 0:
-            logger.error(process.stdout)
-            logger.error(process.stderr)
+            self.logger.error(process.stdout)
+            self.logger.error(process.stderr)
         if must_pass:
             try:
                 process.check_returncode()
@@ -156,12 +172,17 @@ class Repository:
                 exit(1)
         return process
 
-    def apply_patches(self):
+    def apply_patches(self, repo_meta_info):
+        patches_meta_info = repo_meta_info.get("patches", {})
         for i in self.modules:
             patch_list = list(Path(PATCH_PATH / i).glob("*.patch"))
-            if len(patch_list) == 0:
+
+            if set(patch_list) == set(patches_meta_info.get(i, [])):
+                if len(patch_list) >0:
+                    self.logger.info(f"Skipping patch application for '{i}' - already applied")
                 continue
-            logger.info(f"resetting repo {i}")
+
+            self.logger.info(f"resetting repo {i}")
             self.execute(
                 f"git reset --hard",
                 cwd=self.repository_path.parent / i,
@@ -172,16 +193,21 @@ class Repository:
                 cwd=self.repository_path.parent / i,
                 must_pass=True
             )
+            patches_meta_info[str(i)] = []
+            if len(patch_list) == 0:
+                continue
             for patch in patch_list:
-                logger.info(f"applying patch {patch}")
+                self.logger.info(f"applying patch {patch}")
                 self.execute(
                     f"git apply {patch}", cwd=self.repository_path.parent / i
                 )
+                patches_meta_info[str(i)].append(str(patch))
+        repo_meta_info["patches"] = patches_meta_info
 
     def clone(self):
         clone = True
         if self.repository_path.exists():
-            logger.info(f"Repository is already cloned: {self.name}")
+            self.logger.info(f"Repository is already cloned.")
             clone = False
         else:
             self.repository_path.mkdir()
@@ -207,39 +233,61 @@ class Repository:
             self.modules.append(
                 submodule_path.relative_to(self.repository_path.parent).parent
             )
-        logger.debug(str(self.modules))
+        self.logger.debug(str(self.modules))
 
     def check_skip_os(self) -> bool:
         return (self.os == OperatingSystem.WINDOWS and os.name != "nt") or (
             self.os == OperatingSystem.LINUX and os.name == "nt"
         )
 
-    def install(self):
+    def needs_install(self, repo_meta_info):
+        if repo_meta_info.get("status", "unknown") != "installed":
+            return True
+        if str(self.repository_path) != repo_meta_info.get("path", None):
+            return True
+        if self.branch != repo_meta_info.get("branch", None):
+            return True
+        if self.commit_id != repo_meta_info.get("commit_id", None):
+            return True
+        if self.url != repo_meta_info.get("url", None):
+            return True
+        return False
+
+    def install(self, meta_data):
+        result = ReturnCode.SUCCESS
         try:
+            repo_meta_info = meta_data.get(self.name, {})
             if self.check_skip_os():
-                logger.debug(
+                self.logger.debug(
                     "Skipping %s installation due to OS limitation", self.name)
-                return 0
-            install = True
-            if self.repository_path.exists():
-                logger.info(f"Repository is already cloned: {self.name}")
-                install = False
-            if install:
-                self.clone()
-            self.scan_repositories()
-            self.apply_patches()
-            if install:
-                self.build()
+                repo_meta_info["status"] = "skipped"
+            else:
+                install = self.needs_install(repo_meta_info)
+                if not install:
+                    self.logger.info(f"Repository is already cloned.")
+                else:
+                    self.clone()
+                    repo_meta_info["status"] = "installed"
+                    repo_meta_info["url"] = self.url
+                    repo_meta_info["commit_id"] = self.commit_id
+                    repo_meta_info["branch"] = self.branch
+                    repo_meta_info["path"] = str(self.repository_path)
+
+                    self.scan_repositories()
+                    self.apply_patches(repo_meta_info)
+
+            meta_data[self.name] = repo_meta_info
         except subprocess.CalledProcessError:
-            logger.exception("Issue installing repository.")
-            return -1
-        return 0
+            self.logger.exception("Issue installing repository.")
+            result = ReturnCode.FAILURE
+        return result
 
 
 @retry(stop_max_attempt_number=5, wait_fixed=100000)
 def download_and_extract_nuget_package(package_url, output_directory: Path, folder_to_extract=None):
     # Ensure the output directory exists
     output_directory.mkdir(parents=True, exist_ok=True)
+    logger = logger.getChild('nuget fetch')
 
     # Retrieve proxy settings from Git
     try:
@@ -309,32 +357,58 @@ def download_and_extract_nuget_package(package_url, output_directory: Path, fold
 
 
 class Nuget(Repository):
-    def install(self):
+
+    def needs_install(self, repo_meta_info):
+        if repo_meta_info.get("status", "unknown") != "installed":
+            return True
+        if self.package_url != repo_meta_info.get("package_url", None):
+            return True
+        if self.version != repo_meta_info.get("version", None):
+            return True
+        if self.folder_to_extract != repo_meta_info.get("folder_to_extract", None):
+            return True
+        return False
+
+    def install(self, meta_data):
+        result = ReturnCode.SUCCESS
         try:
+            repo_meta_info = meta_data.get(self.name, {})
+            meta_data[self.name] = repo_meta_info
             if self.check_skip_os():
-                logger.debug(
+                self.logger.debug(
                     "Skipping %s installation due to os limitation", self.name)
-                return 0
-            install = True
-            if self.repository_path.exists() and any(self.repository_path.iterdir()):
-                logger.info(
-                    f"Package is already downloaded and extracted: {self.name}")
-                install = False
-            if install:
-                logger.info(
-                    f"Starting download and extraction of package: {self.name}")
-                download_and_extract_nuget_package(
-                    self.package_url + self.version, self.repository_path, self.folder_to_extract)
-                logger.info(
-                    f"Download and extraction completed for package: {self.name}")
-                # Check if the directory is empty after extraction
-                if not any(self.repository_path.iterdir()):
-                    raise Exception(
-                        f"Extraction failed, {self.repository_path} is empty.")
+                meta_data[self.name] = {"status": "skipped"}
+            else:
+                install = self.needs_install(repo_meta_info)
+                if repo_meta_info.get("installed", False):
+                    self.logger.info(
+                        f"Package is already installed.")
+                    install = False
+                if self.repository_path.exists() and any(self.repository_path.iterdir()):
+                    self.logger.info(
+                        f"Package is already downloaded and extracted.")
+                    install = False
+                if install:
+                    self.logger.info(
+                        f"Starting download and extraction of package.")
+                    download_and_extract_nuget_package(
+                        self.package_url + self.version, self.repository_path, self.folder_to_extract)
+                    self.logger.info(
+                        f"Download and extraction completed for package.")
+                    # Check if the directory is empty after extraction
+                    if not any(self.repository_path.iterdir()):
+                        raise Exception(
+                            f"Extraction failed, {self.repository_path} is empty.")
+                meta_data[self.name] = {
+                    "version": self.version,
+                    "status": "installed",
+                    "folder_to_extract": self.folder_to_extract,
+                    "path": str(self.repository_path)
+                }
         except Exception as e:
-            logger.exception("Issue installing nuget package.")
-            return -1
-        return 0
+            self.logger.exception("Issue installing nuget package.")
+            result = ReturnCode.FAILURE
+        return result
 
 
 class Lua(Repository):
@@ -629,17 +703,20 @@ class Repositories:
             yield value
 
 
-def main(args=None):
+def main(args=None) -> int:
     if not args:
         args = process_command_line()
     logger.debug("Arguments: %s", args)
+
+    meta_data = read_meta_data(args, META_FILE)
     try:
-        install_dependencies(args)
+        install_dependencies(args, meta_data)
     except:
         logger.exception("Fatal error")
-        return -1
+        return ReturnCode.FAILURE.value
 
-    return 0
+    write_meta_data(args, META_FILE, meta_data)
+    return ReturnCode.SUCCESS.value
 
 
 def process_command_line():
@@ -675,11 +752,40 @@ def setup_parser(root_parser):
     root_parser.add_argument("--with-intel-one-mono", action="store_true")
     root_parser.add_argument("--with-nvapi", action="store_true")
     root_parser.add_argument("--with-plog", action="store_true")
+    root_parser.add_argument("--meta-path", type=str, help="Path to the directory holding the meta file", default="")
 
-def install_dependencies(args):
+
+def read_meta_data(args, meta_file):
+    meta_data = {}
+    try:
+      meta_file_path = os.path.join(args.meta_path, meta_file)
+      if os.path.exists(meta_file_path):
+        with open(meta_file_path, "r") as f:
+            meta_data = yaml.safe_load(f)
+        if meta_data is None:
+            meta_data = {}
+      else:
+          logger.info("No meta data found")
+    except Exception as e:
+        logger.error("Failed to read meta data: %s", e)
+    return meta_data
+
+
+def install_dependencies(args, meta_data):
     for repo in Repositories(args):
-        repo.install()
+        x = repo.install(meta_data)
+        if x == ReturnCode.FAILURE:
+            logger.error("Installation failed for %s", repo.name)
+    return True
 
+
+def write_meta_data(args, meta_file, meta_data):
+    meta_file_path = os.path.join(args.meta_path, meta_file)
+    try:
+      with open(meta_file_path, "w") as f:
+          yaml.dump(meta_data, f)
+    except Exception as e:
+        logger.error("Failed to write meta data: %s", e)
 
 if __name__ == "__main__":
     sys.exit(main())

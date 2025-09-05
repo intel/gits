@@ -111,3 +111,6 @@ common/**/*Auto.h
 
 # Documentation
 docs/**/*Auto.md
+
+# ThirdParty system
+third_party.meta.yaml
