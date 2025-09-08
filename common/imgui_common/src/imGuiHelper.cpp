@@ -20,8 +20,10 @@ std::string ToStr(const ImVec2& v) {
 
 ImFont* GetIntelFont(float uiScale) {
   ImGuiIO& io = ImGui::GetIO();
+  ImFontConfig font_cfg;
+  font_cfg.FontDataOwnedByAtlas = false;
   return io.Fonts->AddFontFromMemoryTTF(gits::Font::font_data, gits::Font::font_data_size,
-                                        13.0f * uiScale);
+                                        13.0f * uiScale, &font_cfg);
 }
 
 bool UpdateUIScaling(float scale) {
