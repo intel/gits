@@ -26,10 +26,11 @@ def whitespace(number):
 def initialize_argument(option, namespace_str, indentation):
     if option.is_group:
         return f'{option.instance_name}(group)'
+    declaration = f'{option.instance_name}(group, "{option.instance_name}", "{option.short_description}", {{{option.get_shorthands()}}})'
     if option.type == 'bool':
        return f'{option.instance_name}(group, "{option.instance_name}", "{option.short_description}", {{{option.get_shorthands()}}}),\r\n' + \
-              whitespace(indentation + 1) + f'  {option.get_negative_instance_name()}(group, "{option.get_negative_instance_name()}", "Sets {option.instance_name} option to false", {{{option.get_negative_shorthands()}}})'
-    return f'{option.instance_name}(group, "{option.instance_name}", "{option.short_description}", {{{option.get_shorthands()}}})'
+              whitespace(indentation + 1) + f'  {option.get_bool_value_instance_name()}(group, "{option.get_bool_value_instance_name()}", "Set a value for option `{option.instance_name}`", {{{option.get_bool_value_shorthands()}}})'
+    return declaration
 
 def initialize_arguments(options, namespace_str, indentation):
     prefix = ",\r\n  " + whitespace(indentation + 1)
@@ -49,13 +50,13 @@ ${whitespace(indentation + 1)}args::Group group;
 ${whitespace(indentation + 1)}${f"{option.get_argument_type()} {option.instance_name};"}
     % endif
 %    if option.type == 'bool' and not option.is_derived:
-${whitespace(indentation + 1)}${f"{option.get_argument_type()} {option.get_negative_instance_name()};"}
+${whitespace(indentation + 1)}${f"{option.get_bool_value_argument_type()} {option.get_bool_value_instance_name()};"}
 %    endif
 %  else:
 %    if option.argument_only:
 ${whitespace(indentation + 1)}${f"{option.get_argument_type()} {option.instance_name};"}
 %    if option.type == 'bool':
-${whitespace(indentation + 1)}${f"{option.get_argument_type()} {option.get_negative_instance_name()};"}
+${whitespace(indentation + 1)}${f"{option.get_bool_value_argument_type()} {option.get_bool_value_instance_name()};"}
 %    endif
 %    endif
 %  endif
@@ -72,7 +73,7 @@ ${whitespace(indentation + 2)}group.SetTags(${option.get_tags_escaped()});
 %  if not option.is_derived and not option.is_group:
 ${whitespace(indentation + 2)}${option.instance_name}.SetTags(${option.get_tags_escaped()});
 %    if option.type == 'bool':
-${whitespace(indentation + 2)}${option.get_negative_instance_name()}.SetTags(${option.get_tags_escaped()});
+${whitespace(indentation + 2)}${option.get_bool_value_instance_name()}.SetTags(${option.get_tags_escaped()});
 %    endif
 %  endif
 % endfor

@@ -284,21 +284,24 @@ class ConfigurationOption(ConfigurationEntry):
             'Default': self.default
         }
 
-    # Used for bool options to provide negative '--noAbc' arguments
-    def get_negative_instance_name(self) -> str:
+    def get_bool_value_instance_name(self) -> str:
         if self.type != 'bool':
-          raise ValueError('get_negative_instance_name called on a non bool option')
-        return "no" + self.instance_name[0].upper() + self.instance_name[1:]
+          raise ValueError('get_bool_value_instance_name called on a non bool option')
+        return self.instance_name + "Value"
 
-    def get_negative_shorthands(self) -> str:
+    def get_bool_value_shorthands(self) -> str:
         if self.type != 'bool':
-          raise ValueError('get_negative_shorthands called on a non bool option')
-        tmp_list = [self.argument_path + ConfigurationOption.ARGS_SUFFIX_HIDE_OPTION] + self.shorthands
-        # Simple "no" prefix
-        lst = [f'"no{item}"' for item in tmp_list if len(item) > 1]
-        # Prettier version with the first letter of the argument capitalized if needed
-        lst.extend([f'"no{item[0].upper() + item[1:]}"' for item in tmp_list if len(item) > 1 and not item[0].isupper()])
+          raise ValueError('get_bool_value_shorthands called on a non bool option')
+        tmp_list = [self.argument_path + ".Value" + ConfigurationOption.ARGS_SUFFIX_HIDE_OPTION]
+        lst = [f"'{item}'" for item in tmp_list if len(item) == 1]
+        lst.extend([f'"{item}"' for item in tmp_list if len(item) > 1])
         return ", ".join(lst)
+
+    def get_bool_value_argument_type(self) -> str:
+        if self.type != 'bool':
+          raise ValueError('get_bool_value_argument_type called on a non bool option')
+        return "args::ValueFlag<bool>"
+
 
 
 class ConfigurationGroup(ConfigurationEntry):

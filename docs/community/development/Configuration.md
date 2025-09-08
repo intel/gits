@@ -22,17 +22,49 @@ Common:
 
 ### CLI Arguments
 
-The CLI argument(s) for an option are defined in the configuration metafile by the attribute `Arguments`.
+The CLI argument(s) for an option are defined in the configuration metafile by the attribute `Arguments`, e.g.
+```yaml
+Configuration:
+  - Name: Common
+    Options:
+      - Name: Player
+        Options:
+          - Name: stopAfterFrames
+            Type: BitRange
+            Default: "-"
+            Arguments: [stopAfterFrames]
+          - Name: fullscreen
+            Type: bool
+            Default: false
+            Arguments: [fullscreen, f]
+```
+
+```bash
+gitsPlayer --stopAfterFrames=23
+
+# it's a flag, so presence ==> true
+gitsPlayer -f 
+gitsPlayer --fullscreen
+```
 
 Additionally _every_ option (that is not derived) can be set by a _hidden CLI argument_ in the form of a keypath:
 
 ```bash
-gitsPlayer --Common.Player.Fullscreen # it's a flag, so presence ==> true
+gitsPlayer --Common.Player.StopAfterFrames=23
+
+gitsPlayer --Common.Player.Fullscreen # flag again
 ```
+
+To offer full flexibility the system also generates a value-argument for every bool flag in the form of another _hidden CLI argument_ that consists of the keypath with the suffix ".Value":
+
+```bash
+gitsPlayer --Common.Player.Fullscreen.Value=0 # 0=false, 1=true
+```
+
 
 ### Environment
 
-_Every_ option (that is not derived) can be set by an evironment variable in the form of a keypath with prefix `GITS_`:
+_Every_ option (that is not derived) can be set by an environment variable in the form of a keypath with prefix `GITS_`:
 
 ```bash
 export GITS_COMMON_PLAYER_FULLSCREEN=true

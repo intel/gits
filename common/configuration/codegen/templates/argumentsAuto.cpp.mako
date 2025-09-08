@@ -33,8 +33,8 @@ void ${group.argument_namespace_str}::UpdateConfiguration(${group.namespace_str}
   ${option.instance_name}.UpdateConfiguration(&(config->${option.instance_name}));
 %   endif
 %    if option.type == 'bool':
-  if (${option.get_negative_instance_name()}) {
-    config->${option.instance_name} = false;
+  if (${option.get_bool_value_instance_name()}) {
+    config->${option.instance_name} = ${option.get_bool_value_instance_name()}.Get();
   }
 %    endif
 %  endif
