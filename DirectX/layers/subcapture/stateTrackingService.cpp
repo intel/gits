@@ -480,6 +480,7 @@ void StateTrackingService::restoreD3D12DescriptorHeap(ObjectState* state) {
 }
 
 void StateTrackingService::restoreD3D12Device(ObjectState* state) {
+  restoreD3D12EnableExperimentalFeatures();
   deviceKey_ = state->key;
   recorder_.record(createCommandWriter(state->creationCommand.get()));
 }
@@ -745,9 +746,21 @@ void StateTrackingService::storeINTCApplicationInfo(INTC_D3D12_SetApplicationInf
   setApplicationInfoCommand_.reset(new INTC_D3D12_SetApplicationInfoCommand(c));
 }
 
+void StateTrackingService::storeD3D12EnableExperimentalFeatures(
+    const D3D12EnableExperimentalFeaturesCommand& c) {
+  enableExperimentalFeaturesCommand_.reset(new D3D12EnableExperimentalFeaturesCommand(c));
+}
+
 void StateTrackingService::restoreINTCApplicationInfo() {
   if (setApplicationInfoCommand_) {
     recorder_.record(createCommandWriter(setApplicationInfoCommand_.get()));
+  }
+}
+
+void StateTrackingService::restoreD3D12EnableExperimentalFeatures() {
+  if (enableExperimentalFeaturesCommand_) {
+    recorder_.record(createCommandWriter(enableExperimentalFeaturesCommand_.get()));
+    enableExperimentalFeaturesCommand_.reset();
   }
 }
 

@@ -76,6 +76,7 @@ public:
   void storeState(ObjectState* state);
   void storeINTCFeature(INTC_D3D12_FEATURE feature);
   void storeINTCApplicationInfo(INTC_D3D12_SetApplicationInfoCommand& c);
+  void storeD3D12EnableExperimentalFeatures(const D3D12EnableExperimentalFeaturesCommand& c);
   void releaseObject(unsigned key, ULONG result);
   void setReferenceCount(unsigned objectKey, ULONG referenceCount);
   ObjectState* getState(unsigned key);
@@ -157,6 +158,7 @@ private:
   D3D12_BARRIER_LAYOUT getResourceInitialLayout(ResourceState& state,
                                                 D3D12_RESOURCE_DIMENSION dimension);
   void restoreINTCApplicationInfo();
+  void restoreD3D12EnableExperimentalFeatures();
   void restoreResidencyPriority(unsigned deviceKey,
                                 unsigned objectKey,
                                 D3D12_RESIDENCY_PRIORITY residencyPriority);
@@ -200,6 +202,7 @@ private:
   unsigned deviceKey_{};
   INTC_D3D12_FEATURE intcFeature_{};
   std::unique_ptr<INTC_D3D12_SetApplicationInfoCommand> setApplicationInfoCommand_;
+  std::unique_ptr<D3D12EnableExperimentalFeaturesCommand> enableExperimentalFeaturesCommand_;
   NvAPIGlobalStateService nvapiGlobalStateService_;
 
 private:

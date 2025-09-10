@@ -52,6 +52,7 @@ public:
   void post(IDXGIAdapterEnumOutputsCommand& c) override;
   void post(IDXGIObjectGetParentCommand& c) override;
   void post(D3D12CreateDeviceCommand& c) override;
+  void post(D3D12EnableExperimentalFeaturesCommand& c) override;
   void post(ID3D12DeviceCreateCommandQueueCommand& c) override;
   void post(ID3D12Device9CreateCommandQueue1Command& c) override;
   void post(IDXGIFactoryCreateSwapChainCommand& c) override;

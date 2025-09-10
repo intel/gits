@@ -381,6 +381,16 @@ void StateTrackingLayer::post(D3D12CreateDeviceCommand& c) {
   stateService_.storeState(state);
 }
 
+void StateTrackingLayer::post(D3D12EnableExperimentalFeaturesCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+  if (c.result_.value != S_OK) {
+    return;
+  }
+  stateService_.storeD3D12EnableExperimentalFeatures(c);
+}
+
 void StateTrackingLayer::post(ID3D12DeviceCreateCommandQueueCommand& c) {
   if (stateRestored_) {
     return;
