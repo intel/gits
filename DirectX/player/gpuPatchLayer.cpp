@@ -609,7 +609,7 @@ void GpuPatchLayer::post(ID3D12GraphicsCommandListSetPipelineStateCommand& c) {
 }
 
 void GpuPatchLayer::post(ID3D12GraphicsCommandListResetCommand& c) {
-  commandListService_.reset(c.object_.key);
+  commandListService_.reset(c.object_.key, c.pInitialState_.value);
 }
 
 void GpuPatchLayer::initialize(ID3D12GraphicsCommandList* commandList) {

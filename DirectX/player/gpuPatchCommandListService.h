@@ -31,19 +31,13 @@ public:
   void storeCommand(ID3D12DeviceCreateCommandListCommand& c);
   void storeCommand(ID3D12GraphicsCommandListSetPipelineStateCommand& c);
   void remove(unsigned commandListKey);
-  void reset(unsigned commandListKey);
+  void reset(unsigned commandListKey, ID3D12PipelineState* initialState);
   void restoreState(unsigned commandListKey, ID3D12GraphicsCommandList* commandList);
 
 private:
   struct CommandState {
     virtual ~CommandState() {}
     CommandId id;
-  };
-  struct SetComputeRootSignatureState : public CommandState {
-    ID3D12RootSignature* rootSignature;
-  };
-  struct SetPipelineState1State : public CommandState {
-    ID3D12StateObject* stateObject;
   };
   struct SetComputeRootDescriptorTableState : public CommandState {
     unsigned rootParameterIndex;
@@ -63,13 +57,19 @@ private:
     std::vector<unsigned> pSrcData;
     unsigned destOffsetIn32BitValues;
   };
-  struct SetPipelineStateState : public CommandState {
-    ID3D12PipelineState* pipelineState;
+
+  struct CommandListState {
+    struct PipelineState {
+      ID3D12Pageable* object{};
+      bool isStateObject{};
+    };
+    PipelineState currentPipelineState{};
+    ID3D12RootSignature* currentRootSignature{};
+    std::map<unsigned, std::unique_ptr<CommandState>> currentRootArguments;
   };
 
 private:
-  std::unordered_map<unsigned, std::vector<std::unique_ptr<CommandState>>> commandLists_;
-  std::unordered_map<unsigned, std::vector<std::unique_ptr<CommandState>>> commandListsCreated_;
+  std::unordered_map<unsigned, CommandListState> commandLists_;
 };
 
 } // namespace DirectX
