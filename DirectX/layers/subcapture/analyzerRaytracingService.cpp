@@ -43,40 +43,7 @@ void AnalyzerRaytracingService::createStateObject(ID3D12Device5CreateStateObject
   }
 
   BindingTablesDump::StateObjectInfo* info = new BindingTablesDump::StateObjectInfo();
-  std::unordered_map<const D3D12_STATE_SUBOBJECT*, unsigned> localSignatures;
-  for (unsigned i = 0; i < c.pDesc_.value->NumSubobjects; ++i) {
-    switch (c.pDesc_.value->pSubobjects[i].Type) {
-    case D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE: {
-      if (info->globalRootSignature) {
-        LOG_ERROR
-            << "CreateStateObject - multiple global root signatures in state object not handled.";
-      }
-      info->globalRootSignature = c.pDesc_.interfaceKeysBySubobject[i];
-    } break;
-    case D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE: {
-      localSignatures[&c.pDesc_.value->pSubobjects[i]] = c.pDesc_.interfaceKeysBySubobject[i];
-    } break;
-    case D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION: {
-      D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION& desc =
-          *static_cast<D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION*>(
-              const_cast<void*>(c.pDesc_.value->pSubobjects[i].pDesc));
-      auto it = localSignatures.find(desc.pSubobjectToAssociate);
-      if (it != localSignatures.end()) {
-        for (unsigned j = 0; j < desc.NumExports; ++j) {
-          info->exportToRootSignature[desc.pExports[j]] = it->second;
-        }
-      }
-    } break;
-    case D3D12_STATE_SUBOBJECT_TYPE_EXISTING_COLLECTION: {
-      unsigned stateObjectKey = c.pDesc_.interfaceKeysBySubobject[i];
-      auto itCollection = stateObjectInfos_.find(stateObjectKey);
-      GITS_ASSERT(itCollection != stateObjectInfos_.end());
-      for (auto& it : itCollection->second->exportToRootSignature) {
-        info->exportToRootSignature[it.first] = it.second;
-      }
-    } break;
-    }
-  }
+  fillStateObjectInfo(c.pDesc_, info);
   stateObjectInfos_[c.ppStateObject_.key].reset(info);
 }
 
@@ -95,24 +62,33 @@ void AnalyzerRaytracingService::addToStateObject(ID3D12Device7AddToStateObjectCo
   info->globalRootSignature = prevStateObjectInfo->globalRootSignature;
   info->exportToRootSignature = prevStateObjectInfo->exportToRootSignature;
 
+  fillStateObjectInfo(c.pAddition_, info);
+
+  stateObjectInfos_[c.ppNewStateObject_.key].reset(info);
+}
+
+void AnalyzerRaytracingService::fillStateObjectInfo(
+    D3D12_STATE_OBJECT_DESC_Argument& stateObjectDesc, BindingTablesDump::StateObjectInfo* info) {
+
   std::unordered_map<const D3D12_STATE_SUBOBJECT*, unsigned> localSignatures;
-  for (unsigned i = 0; i < c.pAddition_.value->NumSubobjects; ++i) {
-    switch (c.pAddition_.value->pSubobjects[i].Type) {
+  std::unordered_map<std::wstring, std::wstring> hitGroups;
+  for (unsigned i = 0; i < stateObjectDesc.value->NumSubobjects; ++i) {
+    switch (stateObjectDesc.value->pSubobjects[i].Type) {
     case D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE: {
-      if (info->globalRootSignature != c.pAddition_.interfaceKeysBySubobject[i]) {
+      if (info->globalRootSignature) {
         LOG_ERROR
-            << "AddToStateObject - multiple global root signatures in state object not handled.";
+            << "CreateStateObject - multiple global root signatures in state object not handled.";
       }
-      info->globalRootSignature = c.pAddition_.interfaceKeysBySubobject[i];
+      info->globalRootSignature = stateObjectDesc.interfaceKeysBySubobject[i];
     } break;
     case D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE: {
-      localSignatures[&c.pAddition_.value->pSubobjects[i]] =
-          c.pAddition_.interfaceKeysBySubobject[i];
+      localSignatures[&stateObjectDesc.value->pSubobjects[i]] =
+          stateObjectDesc.interfaceKeysBySubobject[i];
     } break;
     case D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION: {
       D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION& desc =
           *static_cast<D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION*>(
-              const_cast<void*>(c.pAddition_.value->pSubobjects[i].pDesc));
+              const_cast<void*>(stateObjectDesc.value->pSubobjects[i].pDesc));
       auto it = localSignatures.find(desc.pSubobjectToAssociate);
       if (it != localSignatures.end()) {
         for (unsigned j = 0; j < desc.NumExports; ++j) {
@@ -121,16 +97,39 @@ void AnalyzerRaytracingService::addToStateObject(ID3D12Device7AddToStateObjectCo
       }
     } break;
     case D3D12_STATE_SUBOBJECT_TYPE_EXISTING_COLLECTION: {
-      unsigned stateObjectKey = c.pAddition_.interfaceKeysBySubobject[i];
+      unsigned stateObjectKey = stateObjectDesc.interfaceKeysBySubobject[i];
       auto itCollection = stateObjectInfos_.find(stateObjectKey);
       GITS_ASSERT(itCollection != stateObjectInfos_.end());
       for (auto& it : itCollection->second->exportToRootSignature) {
         info->exportToRootSignature[it.first] = it.second;
       }
     } break;
+    case D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP: {
+      D3D12_HIT_GROUP_DESC& desc = *static_cast<D3D12_HIT_GROUP_DESC*>(
+          const_cast<void*>(stateObjectDesc.value->pSubobjects[i].pDesc));
+      if (desc.AnyHitShaderImport) {
+        hitGroups[desc.AnyHitShaderImport] = desc.HitGroupExport;
+      }
+      if (desc.ClosestHitShaderImport) {
+        hitGroups[desc.ClosestHitShaderImport] = desc.HitGroupExport;
+      }
+      if (desc.IntersectionShaderImport) {
+        hitGroups[desc.IntersectionShaderImport] = desc.HitGroupExport;
+      }
+    } break;
     }
   }
-  stateObjectInfos_[c.ppNewStateObject_.key].reset(info);
+
+  std::unordered_map<std::wstring, unsigned> exportToRootSignature;
+  for (auto& itExport : info->exportToRootSignature) {
+    auto it = hitGroups.find(itExport.first);
+    if (it != hitGroups.end()) {
+      exportToRootSignature[it->second] = itExport.second;
+    }
+  }
+  for (auto& it : exportToRootSignature) {
+    info->exportToRootSignature[it.first] = it.second;
+  }
 }
 
 void AnalyzerRaytracingService::setPipelineState(

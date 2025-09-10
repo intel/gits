@@ -109,6 +109,8 @@ public:
   }
 
 private:
+  void fillStateObjectInfo(D3D12_STATE_OBJECT_DESC_Argument& stateObjectDesc,
+                           BindingTablesDump::StateObjectInfo* info);
   void loadInstancesArraysOfPointers();
 
 private:
