@@ -823,7 +823,7 @@ void BindingService::commandListRestore(unsigned commandListKey) {
               *command));
       break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST4_EMITRAYTRACINGACCELERATIONSTRUCTUREPOSTBUILDINFO:
-      emitRaytracingAccelerationStructurePostbuildInfo(
+      emitRaytracingAccelerationStructurePostbuildInfoImpl(
           static_cast<
               ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand&>(
               *command));
