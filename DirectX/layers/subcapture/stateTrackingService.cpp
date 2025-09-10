@@ -106,6 +106,15 @@ void StateTrackingService::restoreState(unsigned key) {
   restoreState(it->second);
 }
 
+bool StateTrackingService::stateRestored(unsigned key) {
+  auto it = statesByKey_.find(key);
+  if (it != statesByKey_.end()) {
+    return it->second->restored;
+  } else {
+    return resourceForCBVRestoreService_.resourceRestored(key);
+  }
+}
+
 void StateTrackingService::restoreState(ObjectState* state) {
   if (state->restored) {
     return;

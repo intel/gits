@@ -24,6 +24,7 @@
 #include "residencyService.h"
 #include "resourceUsageTrackingService.h"
 #include "analyzerResults.h"
+#include "resourceForCBVRestoreService.h"
 
 #include <vector>
 #include <unordered_map>
@@ -49,7 +50,8 @@ public:
       AccelerationStructuresBuildService& accelerationStructuresBuildService,
       ResidencyService& residencyService,
       AnalyzerResults& analyzerResults,
-      ResourceUsageTrackingService& resourceUsageTrackingService)
+      ResourceUsageTrackingService& resourceUsageTrackingService,
+      ResourceForCBVRestoreService& resourceForCBVRestoreService)
       : recorder_(recorder),
         resourceContentRestore_(*this),
         swapChainService_(*this),
@@ -66,6 +68,7 @@ public:
         accelerationStructuresBuildService_(accelerationStructuresBuildService),
         residencyService_(residencyService),
         resourceUsageTrackingService_(resourceUsageTrackingService),
+        resourceForCBVRestoreService_(resourceForCBVRestoreService),
         nvapiGlobalStateService_(*this) {}
   ~StateTrackingService();
   void restoreState();
@@ -77,6 +80,7 @@ public:
   void setReferenceCount(unsigned objectKey, ULONG referenceCount);
   ObjectState* getState(unsigned key);
   void restoreState(unsigned key);
+  bool stateRestored(unsigned key);
 
   unsigned getUniqueCommandKey() {
     return ++restoreCommandKey_;
@@ -192,6 +196,7 @@ private:
   AccelerationStructuresBuildService& accelerationStructuresBuildService_;
   ResidencyService& residencyService_;
   ResourceUsageTrackingService& resourceUsageTrackingService_;
+  ResourceForCBVRestoreService& resourceForCBVRestoreService_;
   unsigned deviceKey_{};
   INTC_D3D12_FEATURE intcFeature_{};
   std::unique_ptr<INTC_D3D12_SetApplicationInfoCommand> setApplicationInfoCommand_;

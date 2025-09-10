@@ -311,7 +311,7 @@ void ResourceStateTrackingService::restoreResourceStates(
     if (recreateStateResources_.find(resourceKey) == recreateStateResources_.end()) {
       continue;
     }
-    if (!stateService_.getAnalyzerResults().restoreObject(resourceKey)) {
+    if (!stateService_.stateRestored(resourceKey)) {
       continue;
     }
 
@@ -353,8 +353,8 @@ void ResourceStateTrackingService::restoreResourceStates(
 
   for (auto& it : aliasingBarriersOrdered_) {
     AliasingBarrierKeys& keys = it.first;
-    if (keys.first && !stateService_.getAnalyzerResults().restoreObject(keys.first) ||
-        keys.second && !stateService_.getAnalyzerResults().restoreObject(keys.second)) {
+    if (keys.first && !stateService_.stateRestored(keys.first) ||
+        keys.second && !stateService_.stateRestored(keys.second)) {
       continue;
     }
 

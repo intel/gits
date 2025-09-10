@@ -47,7 +47,7 @@ void ResidencyService::destroyObject(const unsigned key) {
 
 void gits::DirectX::ResidencyService::restoreResidency() {
   for (const auto& [objectKey, residencyInfo] : residency_) {
-    if (!stateService_.getAnalyzerResults().restoreObject(objectKey)) {
+    if (!stateService_.stateRestored(objectKey)) {
       continue;
     }
     if (residencyInfo.residencyCount >= 2 ||

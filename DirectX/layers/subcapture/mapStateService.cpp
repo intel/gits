@@ -16,7 +16,7 @@ namespace DirectX {
 
 void MapStateService::restoreMapState() {
   for (auto& itResource : mappedDataBySubresource_) {
-    if (!stateService_.getAnalyzerResults().restoreObject(itResource.first)) {
+    if (!stateService_.stateRestored(itResource.first)) {
       continue;
     }
     for (auto& itSubresource : itResource.second) {

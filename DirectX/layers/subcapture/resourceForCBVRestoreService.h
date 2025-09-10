@@ -25,6 +25,7 @@ public:
   void addResourceCreationCommand(unsigned resourceKey, unsigned heapKey, Command* command);
   bool restoreResourceObject(unsigned resourceKey);
   void releaseResources();
+  bool resourceRestored(unsigned key);
 
 private:
   struct ResourceForCBVRestoreInfo {

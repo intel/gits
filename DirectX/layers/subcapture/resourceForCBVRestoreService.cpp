@@ -53,5 +53,10 @@ void ResourceForCBVRestoreService::releaseResources() {
   }
 }
 
+bool ResourceForCBVRestoreService::resourceRestored(unsigned key) {
+  auto it = restoredResourceObjects_.find(key);
+  return it != restoredResourceObjects_.end();
+}
+
 } // namespace DirectX
 } // namespace gits

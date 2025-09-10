@@ -195,8 +195,7 @@ void DescriptorService::restoreD3D12RenderTargetView(D3D12RenderTargetViewState*
   if (resources_.find(state->resourceKey) == resources_.end()) {
     return;
   }
-  if (!stateService_->getAnalyzerResults().restoreObject(state->resourceKey) &&
-      stateService_->getState(state->resourceKey)) {
+  if (stateService_->getState(state->resourceKey)) {
     stateService_->restoreState(state->resourceKey);
   }
   ID3D12DeviceCreateRenderTargetViewCommand c;
@@ -214,8 +213,7 @@ void DescriptorService::restoreD3D12DepthStencilView(D3D12DepthStencilViewState*
   if (resources_.find(state->resourceKey) == resources_.end()) {
     return;
   }
-  if (!stateService_->getAnalyzerResults().restoreObject(state->resourceKey) &&
-      stateService_->getState(state->resourceKey)) {
+  if (stateService_->getState(state->resourceKey)) {
     stateService_->restoreState(state->resourceKey);
   }
   ID3D12DeviceCreateDepthStencilViewCommand c;
@@ -233,8 +231,7 @@ void DescriptorService::restoreD3D12ShaderResourceView(D3D12ShaderResourceViewSt
   if (resources_.find(state->resourceKey) == resources_.end()) {
     return;
   }
-  if (!stateService_->getAnalyzerResults().restoreObject(state->resourceKey) &&
-      stateService_->getState(state->resourceKey)) {
+  if (stateService_->getState(state->resourceKey)) {
     stateService_->restoreState(state->resourceKey);
   }
   ID3D12DeviceCreateShaderResourceViewCommand c;
@@ -259,8 +256,7 @@ void DescriptorService::restoreD3D12UnorderedAccessView(D3D12UnorderedAccessView
   if (resources_.find(state->resourceKey) == resources_.end()) {
     return;
   }
-  if (!stateService_->getAnalyzerResults().restoreObject(state->resourceKey) &&
-      stateService_->getState(state->resourceKey)) {
+  if (stateService_->getState(state->resourceKey)) {
     stateService_->restoreState(state->resourceKey);
   }
   ID3D12DeviceCreateUnorderedAccessViewCommand c;
@@ -298,13 +294,6 @@ void DescriptorService::restoreD3D12ConstantBufferView(D3D12ConstantBufferViewSt
 }
 
 void DescriptorService::restoreD3D12Sampler(D3D12SamplerState* state) {
-  if (resources_.find(state->resourceKey) == resources_.end()) {
-    return;
-  }
-  if (!stateService_->getAnalyzerResults().restoreObject(state->resourceKey) &&
-      stateService_->getState(state->resourceKey)) {
-    stateService_->restoreState(state->resourceKey);
-  }
   ID3D12DeviceCreateSamplerCommand c;
   c.key = stateService_->getUniqueCommandKey();
   c.object_.key = state->deviceKey;

@@ -349,7 +349,7 @@ void ReservedResourcesService::restoreContent(const std::vector<unsigned>& resou
     if (resources_.find(resourceKey) == resources_.end()) {
       continue;
     }
-    if (!stateService_.getAnalyzerResults().restoreObject(resourceKey)) {
+    if (!stateService_.stateRestored(resourceKey)) {
       continue;
     }
     TiledResource* tiledResource = resources_.at(resourceKey).get();
