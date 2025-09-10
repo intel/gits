@@ -10,7 +10,6 @@
 
 #include "layerAuto.h"
 #include <wrl/client.h>
-#include <mutex>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -71,9 +70,13 @@ private:
   void preOpenExistingHeap(CommandT& command);
 
 private:
-  std::mutex mutex_;
   std::vector<D3D12_GPU_VIRTUAL_ADDRESS_RANGE> addressRanges_;
-  std::unordered_map<unsigned, D3D12_GPU_VIRTUAL_ADDRESS_RANGE> addressRangesByKey_;
+  std::unordered_map<unsigned, D3D12_GPU_VIRTUAL_ADDRESS_RANGE> resourceAddressRanges_;
+  struct HeapAllocationInfo {
+    D3D12_GPU_VIRTUAL_ADDRESS_RANGE addressRange;
+    UINT64 alignment;
+  };
+  std::unordered_map<unsigned, HeapAllocationInfo> heapAddressRanges_;
   std::unordered_set<unsigned> changedHeaps_;
   Microsoft::WRL::ComPtr<ID3D12Tools1> d3d12Tools_;
   Microsoft::WRL::ComPtr<ID3D12DeviceTools> deviceTools_;

@@ -55,13 +55,18 @@ private:
 
 private:
   std::mutex mutex_;
-  std::unordered_map<unsigned, D3D12_GPU_VIRTUAL_ADDRESS_RANGE> addressRanges_;
+  std::unordered_map<unsigned, D3D12_GPU_VIRTUAL_ADDRESS_RANGE> resourceAddressRanges_;
+
+  struct HeapAllocationInfo {
+    D3D12_GPU_VIRTUAL_ADDRESS_RANGE addressRange;
+    UINT64 alignment;
+  };
+  std::unordered_map<unsigned, HeapAllocationInfo> heapAddressRanges_;
 
   struct HeapInfo {
     unsigned heapKey;
     UINT64 offset;
   };
-
   std::unordered_map<unsigned, HeapInfo> heapInfoByPlacedResource_;
 };
 
