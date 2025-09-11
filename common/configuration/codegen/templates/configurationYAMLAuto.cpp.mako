@@ -11,7 +11,7 @@
 
 #include "configurationYAMLAuto.h"
 #include "configurator.h"
-#include "log.h"
+#include "log2.h"
 
 #include <yaml-cpp/yaml.h>
 
@@ -65,7 +65,7 @@ bool convert<${group.namespace_str}>::decode(const Node& node, ${group.namespace
 
   for (YAML::const_iterator it=node.begin(); it!=node.end(); ++it) {
     if (it->first.as<std::string>() != "Overrides" && expectedEntries.find(it->first.as<std::string>()) == expectedEntries.end()) {
-      Log(ERR) << "Unrecognized entry: ${group.namespace_str.replace("Configuration::", '').replace("::", '.')}." << it->first.as<std::string>() << " was found in the config file, execution will be stopped";
+      LOG_ERROR << "Unrecognized entry: ${group.namespace_str.replace("Configuration::", '').replace("::", '.')}." << it->first.as<std::string>() << " was found in the config file, execution will be stopped";
       encounteredUnrecognized = true;
       shouldQuit = true;
     }
@@ -82,7 +82,7 @@ bool convert<${group.namespace_str}>::decode(const Node& node, ${group.namespace
     } else {
       msg = "No entries were expected";
     }
-    Log(ERR) << msg;
+    LOG_ERROR << msg;
   }
 
 % for option in group.options:

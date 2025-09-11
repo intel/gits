@@ -16,6 +16,7 @@
 #pragma once
 
 #include "tools_lite.h"
+#include "log2.h"
 #include "exception.h"
 #include "pragmas.h"
 #if defined(GITS_PLATFORM_WINDOWS) || defined(GITS_PLATFORM_X11)
@@ -202,7 +203,7 @@ uint32_t ensure_unsigned32bit_representible(SRC value) {
   if (!(static_cast<uint64_t>(value) & 0xFFFFFFFF00000000ull)) {
     return static_cast<uint32_t>(value);
   } else {
-    Log(INFO) << "Value cannot be represented as a 32 bit unsigned integer!";
+    LOG_INFO << "Value cannot be represented as a 32 bit unsigned integer!";
     return static_cast<uint32_t>(value);
     //throw EOperationFailed(EXCEPTION_MESSAGE); Workaround for SpecViewPerf Catia
   }
@@ -214,7 +215,7 @@ int32_t ensure_signed32bit_representible(SRC value) {
       static_cast<int64_t>(value) <= std::numeric_limits<int32_t>::max()) {
     return static_cast<int32_t>(value);
   } else {
-    Log(INFO) << "Value cannot be represented as a 32 bit signed integer!";
+    LOG_INFO << "Value cannot be represented as a 32 bit signed integer!";
     return static_cast<int32_t>(value);
     //throw EOperationFailed(EXCEPTION_MESSAGE);
   }
@@ -451,10 +452,10 @@ public:
         image.Write();
       }
     } catch (std::exception& e) {
-      Log(ERR) << "Image writer thread failed: " << e.what();
+      LOG_ERROR << "Image writer thread failed: " << e.what();
       fast_exit(1);
     } catch (...) {
-      Log(ERR) << "Unknown error in image writer thread";
+      LOG_ERROR << "Unknown error in image writer thread";
       fast_exit(1);
     }
   }
@@ -626,7 +627,7 @@ public:
   SharedLibrary(const std::string& name) {
     handle = dl::open_library(name.c_str());
     if (handle == nullptr) {
-      Log(ERR) << dl::last_error();
+      LOG_ERROR << dl::last_error();
     }
   }
   ~SharedLibrary() {

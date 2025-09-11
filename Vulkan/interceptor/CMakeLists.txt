@@ -41,10 +41,16 @@ add_library(Vulkan_interceptor SHARED
   ${Vulkan_DEF}
 )
 
+if(WIN32)
+    target_compile_definitions(Vulkan_interceptor PRIVATE PLOG_IMPORT)
+else()
+    target_compile_definitions(Vulkan_interceptor PRIVATE PLOG_GLOBAL)
+endif()
+
 source_group("External Files" FILES ${Vulkan_interceptor_external_cpps})
 source_group("Generated Files" FILES ${Vulkan_DEF} REGULAR_EXPRESSION ".*Auto.*")
 
-target_link_libraries(Vulkan_interceptor PRIVATE gits_recorder_interface common configuration)
+target_link_libraries(Vulkan_interceptor PRIVATE gits_recorder gits_recorder_interface common)
 
 if(MSVC)
   set_target_properties(Vulkan_interceptor PROPERTIES OUTPUT_NAME vulkan-1)

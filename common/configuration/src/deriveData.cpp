@@ -20,7 +20,7 @@
 #include "tools.h"
 #include "exception.h"
 #include "diagnostic.h"
-#include "log.h"
+#include "log2.h"
 
 namespace {
 inline std::vector<std::string> ParseCaptureKernels(const std::string& value) {
@@ -274,15 +274,15 @@ void DeriveConfigData<Configuration::Common::Recorder>(Configuration::Common::Re
   }
 
   if (config.common.recorder.highIntegrity) {
-    Log(INFO) << "High integrity mode";
+    LOG_INFO << "High integrity mode";
     obj.tokenBurst = 1;
     obj.tokenBurstNum = 1;
     if (config.common.recorder.zipTextFiles) {
       obj.zipTextFiles = false;
-      Log(WARN) << "High Integrity mode active - overriding ZipTextFiles to False.";
+      LOG_WARNING << "High Integrity mode active - overriding ZipTextFiles to False.";
     }
     obj.compression.type = stringTo<CompressionType>("NONE");
-    Log(WARN) << "High Integrity mode active - disabling compression.";
+    LOG_WARNING << "High Integrity mode active - disabling compression.";
   }
 
   if (!config.common.recorder.eventScript.empty()) {
@@ -312,14 +312,14 @@ void DeriveConfigData<Configuration::OpenGL::Shared>(Configuration::OpenGL::Shar
       forceGLVersionMajor = gits::stoui(match[1]);
       forceGLVersionMinor = gits::stoui(match[2]);
 
-      Log(INFO) << "OpenGL version string override set to: " << obj.forceGLVersion;
-      Log(INFO) << "OpenGL version number override set to: " << forceGLVersionMajor << "."
-                << forceGLVersionMinor;
+      LOG_INFO << "OpenGL version string override set to: " << obj.forceGLVersion;
+      LOG_INFO << "OpenGL version number override set to: " << forceGLVersionMajor << "."
+               << forceGLVersionMinor;
     } else {
       auto msg =
           "Incorrect OpenGL version string specified: " + config.opengl.shared.forceGLVersion +
           "\nCheck recorder config.";
-      Log(ERR) << msg;
+      LOG_ERROR << msg;
       throw std::runtime_error((std::string)EXCEPTION_MESSAGE + " " + msg);
     }
   }
@@ -378,9 +378,9 @@ void DeriveConfigData<Configuration::OpenGL::Recorder>(Configuration::OpenGL::Re
   if (config.common.recorder.recordingMode == RecordingMode::CCODE &&
       config.opengl.recorder.mode != OpenGLRecorderMode::ALL &&
       !config.opengl.recorder.ccodeRangesWA) {
-    Log(ERR) << "CCodeDump is possible only if OpenGL.Capture.Mode is set to: All. So, if you for "
-                "example need one frame CCode stream please record one frame binary stream and "
-                "then recapture it to CCode.";
+    LOG_ERROR << "CCodeDump is possible only if OpenGL.Capture.Mode is set to: All. So, if you for "
+                 "example need one frame CCode stream please record one frame binary stream and "
+                 "then recapture it to CCode.";
     throw gits::EOperationFailed(EXCEPTION_MESSAGE);
   }
 };
@@ -430,7 +430,7 @@ void SetRangeSpecial(Configuration& config,
   if (config.vulkan.recorder.objRange.rangeSpecial.objVector.size() == expectedVecSize) {
     config.vulkan.recorder.objRange.rangeSpecial.objMode = mode;
   } else {
-    Log(ERR) << "Incorrect range for mode: " << mode;
+    LOG_ERROR << "Incorrect range for mode: " << mode;
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 }
@@ -548,8 +548,8 @@ void DeriveConfigData<Configuration::OpenCL::Recorder>(Configuration::OpenCL::Re
   }
   if (config.opencl.recorder.mode != OpenCLRecorderMode::ALL &&
       (config.common.recorder.removeGLSharing || config.common.recorder.removeDXSharing)) {
-    Log(ERR) << "Unsharing is not supported in subcapture mode. If you need a subcapture from "
-                "sharing stream, create unshared stream first, then do a subcapture of that.";
+    LOG_ERROR << "Unsharing is not supported in subcapture mode. If you need a subcapture from "
+                 "sharing stream, create unshared stream first, then do a subcapture of that.";
     throw gits::EOperationFailed(EXCEPTION_MESSAGE);
   }
 }
@@ -565,11 +565,11 @@ void DeriveConfigData<Configuration::LevelZero::Player>(Configuration::LevelZero
   } else if (parsedCaptureKernels.size() == 3) {
     obj.captureKernels = BitRange(parsedCaptureKernels[2]);
   } else {
-    Log(ERR) << "Incorrect config LevelZero.Player.CaptureKernels";
+    LOG_ERROR << "Incorrect config LevelZero.Player.CaptureKernels";
     throw gits::EOperationFailed(EXCEPTION_MESSAGE);
   }
   if (config.levelzero.player.captureInputKernels && config.levelzero.player.captureAfterSubmit) {
-    Log(ERR) << "CaptureInputKernels and CaptureAfterSubmit options are mutually exclusive.";
+    LOG_ERROR << "CaptureInputKernels and CaptureAfterSubmit options are mutually exclusive.";
     throw gits::EOperationFailed(EXCEPTION_MESSAGE);
   }
 };
@@ -586,7 +586,7 @@ void LoadLevelZeroSubcaptureSettings(Configuration& config, const std::string& k
       objectsTable.push_back(strObj);
     }
     if (objectsTable.size() != 3) {
-      Log(ERR) << "Incorrect config LevelZero.Capture.Kernel.Range";
+      LOG_ERROR << "Incorrect config LevelZero.Capture.Kernel.Range";
       throw gits::EOperationFailed(EXCEPTION_MESSAGE);
     }
 
@@ -602,12 +602,12 @@ void LoadLevelZeroSubcaptureSettings(Configuration& config, const std::string& k
     } else if (size == 1U) {
       stopCommandQueueSubmit = startCommandQueueSubmit;
     } else {
-      Log(ERR) << "Incorrect config LevelZero.Capture.Kernel.Range command queue submission";
+      LOG_ERROR << "Incorrect config LevelZero.Capture.Kernel.Range command queue submission";
       throw gits::EOperationFailed(EXCEPTION_MESSAGE);
     }
     if (startCommandQueueSubmit > stopCommandQueueSubmit) {
-      Log(ERR) << "Incorrect config: LevelZero.Capture.Kernel.Range start command queue submission "
-                  "can't be greater than stop command queue submission";
+      LOG_ERROR << "Incorrect config: LevelZero.Capture.Kernel.Range start command queue "
+                   "submission can't be greater than stop command queue submission";
       throw gits::EOperationFailed(EXCEPTION_MESSAGE);
     }
 
@@ -621,7 +621,7 @@ void LoadLevelZeroSubcaptureSettings(Configuration& config, const std::string& k
     } else if (size == 1U) {
       stopCommandList = startCommandList;
     } else {
-      Log(ERR) << "Incorrect config LevelZero.Capture.Kernel.Range command list";
+      LOG_ERROR << "Incorrect config LevelZero.Capture.Kernel.Range command list";
       throw gits::EOperationFailed(EXCEPTION_MESSAGE);
     }
 
@@ -635,12 +635,12 @@ void LoadLevelZeroSubcaptureSettings(Configuration& config, const std::string& k
     } else if (size == 1U) {
       stopKernel = startKernel;
     } else {
-      Log(ERR) << "Incorrect config LevelZero.Capture.Kernel.Range kernel";
+      LOG_ERROR << "Incorrect config LevelZero.Capture.Kernel.Range kernel";
       throw gits::EOperationFailed(EXCEPTION_MESSAGE);
     }
     if (startKernel > stopKernel) {
-      Log(ERR) << "In config LevelZero.Capture.Kernel.Range start kernel "
-                  "greater then stop kernel is not supported";
+      LOG_ERROR << "In config LevelZero.Capture.Kernel.Range start kernel "
+                   "greater then stop kernel is not supported";
       throw gits::EOperationFailed(EXCEPTION_MESSAGE);
     }
 
@@ -665,11 +665,11 @@ void DeriveConfigData<Configuration::LevelZero::Recorder>(Configuration::LevelZe
   } else if (parsedCaptureKernels.size() == 3) {
     obj.captureKernels = BitRange(parsedCaptureKernels[2]);
   } else {
-    Log(ERR) << "Incorrect config LevelZero.Recorder.DumpKernels";
+    LOG_ERROR << "Incorrect config LevelZero.Recorder.DumpKernels";
     throw gits::EOperationFailed(EXCEPTION_MESSAGE);
   }
   if (config.levelzero.recorder.captureAfterSubmit && config.levelzero.recorder.dumpInputKernels) {
-    Log(ERR) << "DumpAfterSubmit and DumpInputKernels are mutually exclusive.";
+    LOG_ERROR << "DumpAfterSubmit and DumpInputKernels are mutually exclusive.";
     throw gits::EOperationFailed(EXCEPTION_MESSAGE);
   }
 };

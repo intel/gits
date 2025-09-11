@@ -16,7 +16,7 @@
 #include "argument.h"
 #include "gits.h"
 #include "exception.h"
-#include "log.h"
+#include "log2.h"
 #include "buffer.h"
 #include "config.h"
 #include "streams.h"
@@ -29,7 +29,7 @@
 /* ******************************* A R G U M E N T ***************************** */
 
 void gits::CArgument::Fill(void* ptr) const {
-  Log(ERR) << "Argument fill not implemented";
+  LOG_ERROR << "Argument fill not implemented";
   throw ENotImplemented(EXCEPTION_MESSAGE);
 }
 
@@ -105,7 +105,7 @@ void gits::CArgumentFileText::init(const char* fileName, const char* text, unsig
     std::ofstream textStream(path, std::ios::binary);
     if (!textStream) {
       CheckMinimumAvailableDiskSize();
-      Log(ERR) << "Cannot create file '" << path << "'!!!";
+      LOG_ERROR << "Cannot create file '" << path << "'!!!";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
     // save text to a file
@@ -191,7 +191,7 @@ gits::CBinaryResource::PointerProxy gits::CBinaryResource::Data() const {
   if (Configurator::IsPlayer()) {
     return PointerProxy(_data.data(), _data.size());
   } else {
-    Log(ERR) << "CBinaryResource: Getting Data not available in Recorder";
+    LOG_ERROR << "CBinaryResource: Getting Data not available in Recorder";
     throw ENotImplemented(EXCEPTION_MESSAGE);
   }
 }
@@ -407,22 +407,20 @@ void gits::CMappedHandle::Read(CBinIStream& stream) {
     return;
   default:
     if (*version_ > currentVersion_) {
-      Log(ERR) << "This stream uses version " << *version_
-               << " of the CMappedHandle argument, but "
-                  "the highest version this GITS build supports is "
-               << currentVersion_
-               << ". Get the latest "
-                  "GITS and try again.";
+      LOG_ERROR << "This stream uses version " << *version_
+                << " of the CMappedHandle argument, "
+                   "but the highest version this GITS build supports is "
+                << currentVersion_ << ". Get the latest GITS and try again.";
       throw ENotSupported(EXCEPTION_MESSAGE);
     } else {
-      Log(ERR) << "Unknown CMappedHandle argument version: " << *version_;
+      LOG_ERROR << "Unknown CMappedHandle argument version: " << *version_;
       throw ENotSupported(EXCEPTION_MESSAGE);
     }
   }
 }
 
 void gits::CMappedHandle::Write(CCodeOStream& stream) const {
-  Log(ERR) << "External memory handles are not yet implemented in CCode.";
+  LOG_ERROR << "External memory handles are not yet implemented in CCode.";
   throw ENotImplemented(EXCEPTION_MESSAGE);
 }
 
@@ -439,7 +437,7 @@ void* gits::CMappedHandle::operator*() const {
 }
 
 std::set<uint64_t> gits::CMappedHandle::GetMappedPointers() {
-  Log(ERR) << "CMappedHandle::GetMappedPointers() is not implemented yet.";
+  LOG_ERROR << "CMappedHandle::GetMappedPointers() is not implemented yet.";
   throw ENotImplemented(EXCEPTION_MESSAGE);
 }
 
@@ -457,7 +455,7 @@ void* gits::CMappedHandle::GetMapping(void* key) {
   const auto& the_map = get_map();
   const auto iter = the_map.find(key);
   if (iter == the_map.end()) {
-    Log(ERR) << "Couldn't map handle: " << key;
+    LOG_ERROR << "Couldn't map handle: " << key;
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
   return iter->second;

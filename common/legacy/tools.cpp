@@ -85,8 +85,8 @@ void gits_assert(bool condition,
                  const char* file,
                  uint32_t line) {
   if (!condition) {
-    Log(ERR) << "Assertion failed: " << condition_string << " " << message
-             << "\n  Function: " << function << "\n  File: " << file << "\n  Line: " << line;
+    LOG_ERROR << "Assertion failed: " << condition_string << " " << message
+              << "\n  Function: " << function << "\n  File: " << file << "\n  Line: " << line;
     fast_exit(EXIT_FAILURE);
   }
 }
@@ -307,7 +307,7 @@ void SaveJsonFile(const nlohmann::ordered_json& json, const std::filesystem::pat
     file << json.dump(indent);
     file.close();
   } catch (std::filesystem::filesystem_error& fe) {
-    Log(ERR) << "Exception during creating directory. System error code: " << fe.code();
+    LOG_ERROR << "Exception during creating directory. System error code: " << fe.code();
   }
 }
 #endif
@@ -326,7 +326,7 @@ void CheckMinimumAvailableDiskSize() {
   uintmax_t minDiskSize = 104857600;
   if (diskSpaceInfo.available <= minDiskSize) {
     auto mebiByteSize = diskSpaceInfo.available >> 20;
-    Log(ERR) << "Disk might run out of space, available (MebiBytes): " << mebiByteSize;
+    LOG_ERROR << "Disk might run out of space, available (MebiBytes): " << mebiByteSize;
   }
 }
 
@@ -405,12 +405,12 @@ std::string GetWindowsProcessName(int processID) {
     BOOL retVal = QueryFullProcessImageNameA(handle, 0, buffer, &buffSize);
     CloseHandle(handle);
     if (retVal == false) {
-      Log(ERR) << "Can't get name of the process.";
+      LOG_ERROR << "Can't get name of the process.";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
     processName = buffer;
   } else {
-    Log(ERR) << "Can't open handle to the process.";
+    LOG_ERROR << "Can't open handle to the process.";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   std::string::size_type startNamePos = processName.find_last_of("/\\");
@@ -710,7 +710,7 @@ uint64_t gits::LZ4StreamCompressor::Compress(const char* uncompressedData,
                                              std::vector<char>* compressedData) {
   std::unique_lock<std::mutex> lock(mutex_);
   if (uncompressedDataSize > INT_MAX) {
-    Log(ERR) << "LZ4 Compress failed due to int overflow.";
+    LOG_ERROR << "LZ4 Compress failed due to int overflow.";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   uint64_t returnValue = 0;
@@ -724,7 +724,7 @@ uint64_t gits::LZ4StreamCompressor::Compress(const char* uncompressedData,
       static_cast<int32_t>(lz4MaxCompressedSize),
       perfModes.at(Configurator::Get().common.recorder.compression.level));
   if (returnedCompressedSize <= 0) {
-    Log(ERR) << "LZ4 Compress failed.";
+    LOG_ERROR << "LZ4 Compress failed.";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   } else {
     returnValue = returnedCompressedSize;
@@ -738,7 +738,7 @@ uint64_t gits::LZ4StreamCompressor::Decompress(const std::vector<char>& compress
                                                char* uncompressedData) {
   std::unique_lock<std::mutex> lock(mutex_);
   if (compressedDataSize > INT_MAX || expectedUncompressedSize > INT_MAX) {
-    Log(ERR) << "LZ4 Decompress failed due to int overflow.";
+    LOG_ERROR << "LZ4 Decompress failed due to int overflow.";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   uint64_t returnValue = 0;
@@ -746,7 +746,7 @@ uint64_t gits::LZ4StreamCompressor::Decompress(const std::vector<char>& compress
       compressedData.data(), uncompressedData, static_cast<int32_t>(compressedDataSize),
       static_cast<int32_t>(expectedUncompressedSize));
   if (returnedUncompressedSize <= 0) {
-    Log(ERR) << "LZ4 Decompress failed with error code:" << returnedUncompressedSize;
+    LOG_ERROR << "LZ4 Decompress failed with error code:" << returnedUncompressedSize;
     throw EOperationFailed(EXCEPTION_MESSAGE);
   } else {
     returnValue = returnedUncompressedSize;
@@ -778,7 +778,7 @@ uint64_t gits::ZSTDStreamCompressor::Compress(const char* uncompressedData,
       ZSTDContext, compressedData->data(), zstdMaxCompressedSize, uncompressedData,
       uncompressedDataSize, perfModes.at(Configurator::Get().common.recorder.compression.level));
   if (ZSTD_isError(returnedCompressedSize)) {
-    Log(ERR) << "ZSTD Compress failed with error code:" << returnedCompressedSize;
+    LOG_ERROR << "ZSTD Compress failed with error code:" << returnedCompressedSize;
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   return returnedCompressedSize;
@@ -792,7 +792,7 @@ uint64_t gits::ZSTDStreamCompressor::Decompress(const std::vector<char>& compres
   uint64_t returnedUncompressedSize = ZSTD_decompress(uncompressedData, expectedUncompressedSize,
                                                       compressedData.data(), compressedDataSize);
   if (ZSTD_isError(returnedUncompressedSize)) {
-    Log(ERR) << "ZSTD Decompress failed with error code:" << returnedUncompressedSize;
+    LOG_ERROR << "ZSTD Decompress failed with error code:" << returnedUncompressedSize;
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   return returnedUncompressedSize;

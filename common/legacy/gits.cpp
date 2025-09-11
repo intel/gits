@@ -16,7 +16,7 @@
 #include "gits.h"
 #include "streams.h"
 #include "exception.h"
-#include "log.h"
+#include "log2.h"
 #include "pragmas.h"
 #include "config.h"
 #include "scheduler.h"
@@ -388,7 +388,7 @@ CLibrary& CGits::Library(CLibrary::TId id) {
     }
   }
 
-  Log(ERR) << "Invalid library '" << id << "' requested";
+  LOG_ERROR << "Invalid library '" << id << "' requested";
   throw ENotFound(EXCEPTION_MESSAGE);
 }
 
@@ -405,7 +405,7 @@ CToken* CGits::TokenCreate(CId id) {
     }
   }
 
-  Log(ERR) << "Unknown token id requested for creation: " << *id;
+  LOG_ERROR << "Unknown token id requested for creation: " << *id;
   throw std::runtime_error("failed to create token");
 }
 
@@ -423,7 +423,7 @@ CFile& CGits::FileRecorder() const {
     return *_fileRecorder;
   }
 
-  Log(ERR) << "GITS file data was not set properly!!!";
+  LOG_ERROR << "GITS file data was not set properly!!!";
   throw ENotFound(EXCEPTION_MESSAGE);
 }
 
@@ -432,7 +432,7 @@ CFile& CGits::FilePlayer() const {
     return *_filePlayer;
   }
 
-  Log(ERR) << "GITS file data was not set properly!!!";
+  LOG_ERROR << "GITS file data was not set properly!!!";
   throw ENotFound(EXCEPTION_MESSAGE);
 }
 
@@ -507,10 +507,10 @@ CBinIStream& operator>>(CBinIStream& stream, CGits& g) {
   CVersion version;
   stream >> version;
 
-  Log(INFO, NO_PREFIX) << "Sequence recorded with: " << version;
+  LOG_INFO << "Sequence recorded with: " << version;
   // check if file was not written with a newer version of GITS software
   if (g._version < version) {
-    Log(WARN) << "File is written with newer version: " << version << "!!!";
+    LOG_WARNING << "File is written with newer version: " << version << "!!!";
   }
 
   // load file data
@@ -594,7 +594,7 @@ std::string CFile::GetApplicationName() const {
     }
     return {};
   }
-  Log(WARN) << "Application name not found from stream metadata.";
+  LOG_WARNING << "Application name not found from stream metadata.";
   return {};
 }
 
@@ -752,8 +752,8 @@ CBinIStream& operator>>(CBinIStream& stream, CFile& file) {
       result = parse_json_recorder_diags(props, *file._properties);
     }
     if (!result) {
-      Log(ERR) << "Exception thrown when parsing diagnostic information";
-      Log(ERR) << "Disabling Extras.Utilities.ExtendedDiagnostic might help.";
+      LOG_ERROR << "Exception thrown when parsing diagnostic information";
+      LOG_ERROR << "Disabling Extras.Utilities.ExtendedDiagnostic might help.";
     }
   }
 

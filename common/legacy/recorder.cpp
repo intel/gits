@@ -27,7 +27,6 @@
 #include "tools.h"
 #include "exception.h"
 #include "config.h"
-#include "log.h"
 #include "log2.h"
 #include "config.h"
 #include "controlHandler.h"
@@ -117,7 +116,7 @@ namespace {
 LONG WINAPI MyUnhandledExceptionFilter(_EXCEPTION_POINTERS* exceptionInfo) {
   using namespace gits;
   if (CRecorder::InstancePtr()) {
-    Log(ERR) << "Running user GITS unhandled exception callback";
+    LOG_ERROR << "Running user GITS unhandled exception callback";
     CRecorder::Instance().Stop();
     CRecorder::Instance().Save();
   }
@@ -152,9 +151,9 @@ gits::CRecorder::CRecorder()
 
   inst.SetSC(&this->_sc);
 
-  Log(INFO) << "-----------------------------------------------------";
-  Log(INFO) << " GITS Recorder (" << inst.Version() << ")";
-  Log(INFO) << "-----------------------------------------------------";
+  LOG_INFO << "-----------------------------------------------------";
+  LOG_INFO << " GITS Recorder (" << inst.Version() << ")";
+  LOG_INFO << "-----------------------------------------------------";
 
   inst.GetMessageBus().subscribe({PUBLISHER_PLUGIN, TOPIC_LOG}, [](Topic t, const MessagePtr& m) {
     auto msg = std::dynamic_pointer_cast<LogMessage>(m);
@@ -206,7 +205,7 @@ gits::CRecorder::CRecorder()
   // register behaviors
   const bool captureOnKeypress =
       inst.apis.Has3D() && !inst.apis.Iface3D().CfgRec_StartKeys().empty();
-  Log(INFO) << "Recorder mode: ";
+  LOG_INFO << "Recorder mode: ";
   std::ostringstream message;
 #if defined GITS_PLATFORM_WINDOWS
   bool recEnabled = config.common.recorder.enabled ||
@@ -265,7 +264,7 @@ gits::CRecorder::CRecorder()
       }
     }
   }
-  Log(INFO) << message.str();
+  LOG_INFO << message.str();
   Register(std::unique_ptr<CBehavior>(new CBehavior(*this, captureOnKeypress)));
 
   if (config.common.recorder.forceDumpOnError) {
@@ -477,7 +476,7 @@ void gits::CRecorder::Register(std::unique_ptr<CBehavior> behavior) {
 
     // check if file was created
     if (!*_sc.oBinStream) {
-      Log(ERR) << "Cannot create file '" << filename << "'!!!";
+      LOG_ERROR << "Cannot create file '" << filename << "'!!!";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
 
@@ -491,7 +490,7 @@ void gits::CRecorder::Register(std::unique_ptr<CBehavior> behavior) {
 
     // check if file was created
     if (!*_sc.oCodeStream) {
-      Log(ERR) << "Cannot create file '" << filePath << ".c'!!!";
+      LOG_ERROR << "Cannot create file '" << filePath << ".c'!!!";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
 
@@ -901,7 +900,7 @@ void detach() {
   CALL_ONCE[] {
     if (gits::CRecorder::InstancePtr()) {
       gits::CRecorder::Instance().Close();
-      Log(INFO) << "Recording done.";
+      LOG_INFO << "Recording done.";
     }
   };
 }

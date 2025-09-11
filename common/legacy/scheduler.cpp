@@ -19,7 +19,7 @@
 #include "streams.h"
 #include "buffer.h"
 #include "exception.h"
-#include "log.h"
+#include "log2.h"
 #include "config.h"
 #include "pragmas.h"
 
@@ -62,7 +62,7 @@ public:
       auto tokenCtor = [](CId id) -> CToken* {
         CToken* token = CGits::Instance().TokenCreate(id);
         if (Configurator::Get().common.player.logLoadedTokens) {
-          Log(INFO) << "Loading " << TryToDemangle(typeid(*token).name()).name << "...";
+          LOG_INFO << "Loading " << TryToDemangle(typeid(*token).name()).name << "...";
         }
         return token;
       };
@@ -106,7 +106,7 @@ public:
           token_size[typeid(*token).name()] += tokEnd - tokBegin + 2;
 #endif
           if (loaded >= maxLoaded) {
-            Log(ERR) << "Max token loaded limit in one burst exceeded.";
+            LOG_ERROR << "Max token loaded limit in one burst exceeded.";
             throw std::runtime_error(EXCEPTION_MESSAGE);
           }
 
@@ -116,7 +116,8 @@ public:
           sinceLastChk++;
 
           if (sinceLastChk == checkpointSize) {
-            Log(INFO, RAW) << "#" << std::flush;
+            LOG_FORMAT_RAW
+            LOG_INFO << "#" << std::flush;
             sinceLastChk = 0;
           }
 
@@ -140,7 +141,7 @@ public:
         }
       }
     } catch (std::exception& e) {
-      Log(ERR) << "Loader reading thread failed: Exiting!!!:" << e.what();
+      LOG_ERROR << "Loader reading thread failed: Exiting!!!:" << e.what();
       fast_exit(1);
     }
 
@@ -148,7 +149,7 @@ public:
     Purge(tokenList);
 #ifdef GITS_DEBUG_TOKEN_SIZE
     for (auto& one_size : token_size) {
-      Log(INFO, NO_PREFIX) << one_size.first << ": " << one_size.second;
+      LOG_INFO << one_size.first << ": " << one_size.second;
     }
 #endif
   }
@@ -201,13 +202,13 @@ public:
         consume_tokens(tokenList, _sched);
       }
     } catch (std::exception& e) {
-      Log(ERR) << "Error in writer thread: " << e.what();
+      LOG_ERROR << "Error in writer thread: " << e.what();
       fast_exit(1);
     } catch (...) {
-      Log(ERR) << "Unknown error in writer thread";
+      LOG_ERROR << "Unknown error in writer thread";
       fast_exit(1);
     }
-    Log(INFO) << "Stream writer thread finished.";
+    LOG_INFO << "Stream writer thread finished.";
   }
 };
 
@@ -367,7 +368,7 @@ void CScheduler::Stream(CBinIStream* stream) {
     _checkpointSize /= 8;
   }
 
-  Log(INFO) << "Will output checkpoint character '#' every " << _checkpointSize << " loaded tokens";
+  LOG_INFO << "Will output checkpoint character '#' every " << _checkpointSize << " loaded tokens";
 
   _iBinStream = stream;
 }

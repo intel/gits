@@ -18,7 +18,7 @@
 #include "argument.h"
 #include "gits.h"
 #include "config.h"
-#include "log.h"
+#include "log2.h"
 
 void gits::CRunner::Register(std::shared_ptr<CHandler> plugin) {
   _handlerList.push_back(plugin);
@@ -32,11 +32,11 @@ gits::CRunner::CRunner() {
 static NOINLINE void log_played_token(gits::CToken& token) {
   using namespace gits;
   if (CFunction* func = dynamic_cast<CFunction*>(&token)) {
-    Log(INFO) << "Processing API call: " << func->Name()
-              << " [TID = " << CGits::Instance().CurrentThreadId() << "]";
+    LOG_INFO << "Processing API call: " << func->Name()
+             << " [TID = " << CGits::Instance().CurrentThreadId() << "]";
   } else {
-    Log(INFO) << "Processing Non-function token (" << TryToDemangle(typeid(token).name()).name
-              << ") [TID = " << CGits::Instance().CurrentThreadId() << "]";
+    LOG_INFO << "Processing Non-function token (" << TryToDemangle(typeid(token).name()).name
+             << ") [TID = " << CGits::Instance().CurrentThreadId() << "]";
   }
 }
 

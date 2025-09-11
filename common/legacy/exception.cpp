@@ -12,22 +12,19 @@
 * @brief  GITS project exceptions definitions.
 *
 */
-
 #include "exception.h"
-#include "log.h"
+
+#include "platform.h"
+#include "log2.h"
 #include "tools_lite.h"
 #include <typeinfo>
 #include <map>
 #include <vector>
+#include <cstdio>
 #if defined GITS_PLATFORM_UNIX
 #include <cxxabi.h>
 #include <cstdlib>
-#else
-#endif
-#include <cstdio>
-
-#include "platform.h"
-#if defined GITS_PLATFORM_WINDOWS
+#elif defined GITS_PLATFORM_WINDOWS
 #include <Windows.h>
 #include <psapi.h>
 #endif
@@ -67,8 +64,8 @@ gits::Exception::Exception() throw() {
   if (_callback && !_inCallback) {
     _inCallback = true;
     try {
-      Log(ERR) << "Exception: " << what();
-      Log(ERR) << "Running user GITS exception callback";
+      LOG_ERROR << "Exception: " << what();
+      LOG_ERROR << "Running user GITS exception callback";
     } catch (...) {
       topmost_exception_handler("Exception::Exception() throw()");
     }
@@ -81,8 +78,8 @@ gits::Exception::Exception(std::string message) throw() : _msg(std::move(message
   if (_callback && !_inCallback) {
     _inCallback = true;
     try {
-      Log(ERR) << "Exception: " << what();
-      Log(ERR) << "Running user GITS exception callback";
+      LOG_ERROR << "Exception: " << what();
+      LOG_ERROR << "Running user GITS exception callback";
     } catch (...) {
       topmost_exception_handler("Exception::Exception(std::string message) throw()");
     }
@@ -152,7 +149,7 @@ void topmost_exception_handler(const char* funcName) {
     sprintf(msg, "Unhandled exception caught in: %s", funcName);
   }
   try {
-    Log(ERR) << "" << msg;
+    LOG_ERROR << "" << msg;
   } catch (...) {
     fprintf(stderr, "topmost_exception_handler: Exception during handling exception:\n    %s\n",
             msg);
@@ -254,8 +251,8 @@ std::string PointerModule(void* pointer) {
   std::vector<HMODULE> modules(size / sizeof(HMODULE));
   EnumProcessModules(process, &modules[0], size, &size);
 
-  Log(INFO) << "Exception address: " << pointer;
-  Log(INFO) << "Modules loaded: " << modules.size();
+  LOG_INFO << "Exception address: " << pointer;
+  LOG_INFO << "Modules loaded: " << modules.size();
 
   std::string faultyModule;
   for (auto module : modules) {
@@ -267,7 +264,7 @@ std::string PointerModule(void* pointer) {
     std::vector<char> buffer(2048, 0);
     GetModuleFileName(module, &buffer[0], 2048);
 
-    Log(INFO) << "begin: " << beginOfModule << "  end: " << endOfModule << "  name: " << &buffer[0];
+    LOG_INFO << "begin: " << beginOfModule << "  end: " << endOfModule << "  name: " << &buffer[0];
     if (pointer >= beginOfModule && pointer < endOfModule) {
       faultyModule = &buffer[0];
     }
@@ -280,10 +277,10 @@ void gits::ShowExceptionInfo(_EXCEPTION_POINTERS* exceptionPtr) {
   PEXCEPTION_RECORD rec = exceptionPtr->ExceptionRecord;
 
   std::pair<std::string, std::string> info = DescribeException(rec->ExceptionCode);
-  Log(ERR) << "Structured exception raised during GITS execution!"
-           << "\n";
-  Log(ERR) << "Exception code: " << info.first << "\n" << info.second << "\n";
-  Log(ERR) << "Exception occured in module: " << PointerModule(rec->ExceptionAddress) << "\n";
+  LOG_ERROR << "Structured exception raised during GITS execution!"
+            << "\n";
+  LOG_ERROR << "Exception code: " << info.first << "\n" << info.second << "\n";
+  LOG_ERROR << "Exception occured in module: " << PointerModule(rec->ExceptionAddress) << "\n";
 }
 
 #endif

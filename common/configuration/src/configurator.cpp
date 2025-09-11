@@ -32,7 +32,7 @@
 #include "diagnostic.h"
 #endif
 
-#include "log.h"
+#include "log2.h"
 
 namespace {
 bool g_configurationValid = false;
@@ -102,7 +102,7 @@ void Configurator::DeriveData() {
 bool Configurator::LoadInto(const std::filesystem::path& filepath, Configuration* config) {
   std::ifstream fin(filepath);
   if (!fin) {
-    Log(ERR) << "Failed to open file: " << filepath << std::endl;
+    LOG_ERROR << "Failed to open file: " << filepath << std::endl;
     return false;
   }
 
@@ -111,23 +111,23 @@ bool Configurator::LoadInto(const std::filesystem::path& filepath, Configuration
     if (YAML::convert<Configuration>::decode(node, *config)) {
       return true;
     } else {
-      Log(ERR) << "Failed to decode YAML to Configuration" << std::endl;
+      LOG_ERROR << "Failed to decode YAML to Configuration" << std::endl;
       return false;
     }
   } catch (const YAML::ParserException& e) {
-    Log(ERR) << "YAML Parser Exception: " << e.what() << std::endl;
-    Log(ERR) << "Structural inconsistency: please check the syntax and indentation at the "
-                "specified location."
-             << std::endl;
+    LOG_ERROR << "YAML Parser Exception: " << e.what() << std::endl;
+    LOG_ERROR << "Structural inconsistency: please check the syntax and indentation at the "
+                 "specified location."
+              << std::endl;
     return false;
   } catch (const YAML::BadConversion& e) {
-    Log(ERR) << "YAML Bad Conversion Exception: " << e.what() << std::endl;
-    Log(ERR) << "Ensure the data types in the YAML file match the expected types in the "
-                "Configuration class."
-             << std::endl;
+    LOG_ERROR << "YAML Bad Conversion Exception: " << e.what() << std::endl;
+    LOG_ERROR << "Ensure the data types in the YAML file match the expected types in the "
+                 "Configuration class."
+              << std::endl;
     return false;
   } catch (const YAML::Exception& e) {
-    Log(ERR) << "YAML Exception: " << e.what() << std::endl;
+    LOG_ERROR << "YAML Exception: " << e.what() << std::endl;
     return false;
   }
 }
@@ -141,14 +141,14 @@ bool Configurator::Save(const std::filesystem::path& filepath, const Configurati
     YAML::Node node = YAML::convert<Configuration>::encode(config);
     std::ofstream fout(filepath);
     if (!fout) {
-      Log(ERR) << "Failed to open file for writing: " << filepath << std::endl;
+      LOG_ERROR << "Failed to open file for writing: " << filepath << std::endl;
       return false;
     }
     fout << node;
     fout.close();
     return true;
   } catch (const std::exception& e) {
-    Log(ERR) << "Exception during save: " << e.what() << std::endl;
+    LOG_ERROR << "Exception during save: " << e.what() << std::endl;
     return false;
   }
 }
@@ -157,7 +157,7 @@ bool Configurator::ApplyOverrides(const std::filesystem::path& filepath,
                                   const std::string& processName) {
   std::ifstream fin(filepath);
   if (!fin) {
-    Log(ERR) << "Failed to open file: " << filepath << std::endl;
+    LOG_ERROR << "Failed to open file: " << filepath << std::endl;
     return false;
   }
 
@@ -170,12 +170,12 @@ bool Configurator::ApplyOverrides(const std::filesystem::path& filepath,
       if (YAML::convert<Configuration>::decode(node["Overrides"][processName], configuration)) {
         return true;
       } else {
-        Log(ERR) << "Failed to decode YAML to Configuration" << std::endl;
+        LOG_ERROR << "Failed to decode YAML to Configuration" << std::endl;
         return false;
       }
     }
   } catch (const YAML::Exception& e) {
-    Log(ERR) << "YAML Exception reading overrides: " << e.what() << std::endl;
+    LOG_ERROR << "YAML Exception reading overrides: " << e.what() << std::endl;
     return false;
   }
   return false;
@@ -197,11 +197,11 @@ const std::vector<Configurator::ConfigEntry>& Configurator::GetChangedFields() c
 
 void Configurator::LogChangedFields() {
   if (!changedFields.empty()) {
-    Log(INFO, NO_PREFIX) << "The following config values are changed from default:";
+    LOG_INFO << "The following config values are changed from default:";
     for (const auto& entry : changedFields) {
-      Log(INFO, NO_PREFIX) << "--" << entry.Path << "=\"" << entry.Value << "\"";
+      LOG_INFO << "--" << entry.Path << "=\"" << entry.Value << "\"";
     }
-    Log(INFO, NO_PREFIX) << "";
+    LOG_INFO << "";
   }
 }
 

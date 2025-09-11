@@ -28,7 +28,7 @@ void HelloPluginLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
   if (!cfg_.printGPUSubmissions) {
     return;
   }
-  log(gits_, "GPU Submission: ", ++gpuSubmissionNum);
+  logI(gits_, "GPU Submission: ", ++gpuSubmissionNum);
 }
 
 void HelloPluginLayer::newFrame() {
@@ -36,7 +36,7 @@ void HelloPluginLayer::newFrame() {
   if (!cfg_.printFrames) {
     return;
   }
-  log(gits_, "Frame: ", ++frameNum);
+  logI(gits_, "Frame: ", ++frameNum);
 }
 
 } // namespace DirectX

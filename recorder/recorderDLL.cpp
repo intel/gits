@@ -9,6 +9,7 @@
 #include "platform.h"
 #include "tools_lite.h"
 #include "recorder.h"
+#include "log2.h"
 
 #ifdef GITS_PLATFORM_WINDOWS
 #include <Windows.h>
@@ -118,6 +119,7 @@ void RestoreTerminateProcess() {
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
   switch (ul_reason_for_call) {
   case DLL_PROCESS_ATTACH:
+    gits::log::Initialize(plog::info);
     InstrumentExitProcess();
     InstrumentTerminateProcess();
     break;

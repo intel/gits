@@ -14,7 +14,7 @@ namespace gits {
 
 // Log message with LogLevel::INFO
 template <typename... Args>
-void log(CGits& gits, Args&&... args) {
+void logI(CGits& gits, Args&&... args) {
   gits.GetMessageBus().publish(
       {PUBLISHER_PLUGIN, TOPIC_LOG},
       std::make_shared<LogMessage>(LogLevel::INFO, std::forward<Args>(args)...));

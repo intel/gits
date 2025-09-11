@@ -164,7 +164,7 @@ void RtasSerializer::writeCache() {
   try {
     waitUntilDumped();
 
-    log(gits_, "RtasCache - Writing ", cacheFile_);
+    logI(gits_, "RtasCache - Writing ", cacheFile_);
 
     std::unordered_map<unsigned, unsigned> blases;
     for (std::filesystem::directory_entry file :
@@ -198,7 +198,7 @@ void RtasSerializer::writeCache() {
     }
     cache.flush();
 
-    log(gits_, "RtasCache - Writing done");
+    logI(gits_, "RtasCache - Writing done");
 
     std::filesystem::remove_all(tmpCacheDir_);
 

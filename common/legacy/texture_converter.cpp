@@ -9,7 +9,7 @@
 #include "texture_converter.h"
 #include "exception.h"
 #include "platform.h"
-#include "log.h"
+#include "log2.h"
 #include <map>
 #include <algorithm>
 
@@ -1185,15 +1185,15 @@ void convert(const std::vector<uint8_t>& input_data,
   auto output_image_size = output_texel_size * width * height;
 
   if (input_data.size() < (size_t)input_image_size) {
-    Log(ERR) << "Invalid input buffer/file size: " << input_data.size()
-             << " bytes as a source of image: " << width << "x" << height
-             << " with texel size: " << input_texel_size << " bytes.";
+    LOG_ERROR << "Invalid input buffer/file size: " << input_data.size()
+              << " bytes as a source of image: " << width << "x" << height
+              << " with texel size: " << input_texel_size << " bytes.";
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
   if (output_data.size() < (size_t)output_image_size) {
-    Log(ERR) << "Invalid output buffer/file size: " << output_data.size()
-             << " as a destination for image: " << width << "x" << height
-             << " with texel size: " << output_texel_size << " bytes.";
+    LOG_ERROR << "Invalid output buffer/file size: " << output_data.size()
+              << " as a destination for image: " << width << "x" << height
+              << " with texel size: " << output_texel_size << " bytes.";
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 

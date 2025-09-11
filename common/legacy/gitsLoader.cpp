@@ -22,7 +22,6 @@
 #include "recorderIface.h"
 #include "config.h"
 #include "exception.h"
-#include "log.h"
 #include "log2.h"
 
 #if defined GITS_PLATFORM_WINDOWS
@@ -48,10 +47,6 @@ CGitsLoader::CGitsLoader(const char* recorderWrapperFactoryName)
   if (envConfigPath) {
     configPath = std::filesystem::path(envConfigPath);
   }
-
-  log::Initialize(plog::info);
-  log::SetLogFile(libPath.parent_path());
-  CLog::LogFile(libPath);
 
   // get GITS binaries path
   // ptree is not read here from config as if there was a typo in config gits
@@ -87,7 +82,7 @@ CGitsLoader::CGitsLoader(const char* recorderWrapperFactoryName)
   // load GITS Recorder DLL
   auto recorderPath = gitsPath_ / RECORDER_LIB_NAME;
   if (!std::filesystem::exists(recorderPath)) {
-    Log(ERR) << "GITS library not found ('" << recorderPath << "')!!!";
+    std::cerr << "GITS library not found ('" << recorderPath << "')!!!";
 #ifdef GITS_PLATFORM_WINDOWS
     MessageBoxA(nullptr, "GITS library not found in installationPath, check configuration.",
                 "Error", MB_OK | MB_ICONERROR);
@@ -95,18 +90,19 @@ CGitsLoader::CGitsLoader(const char* recorderWrapperFactoryName)
     throw std::runtime_error("Failed to find required library");
   }
 
+  // After loading the recorder library we can start using Plog
   recorderLib_ = dl::open_library(recorderPath.string().c_str());
   if (recorderLib_ == nullptr) {
-    Log(ERR) << "Cannot load GITS library ('" << recorderPath << "')!!!";
-    Log(ERR) << dl::last_error();
+    std::cerr << "Cannot load GITS library ('" << recorderPath << "')!!!";
+    std::cerr << dl::last_error();
     throw std::runtime_error("Failed to load required library");
   }
 
   // set print handler
   auto printFunc = (FPrintHandlerGet)dl::load_symbol(recorderLib_, "PrintHandlerGet");
   if (printFunc == nullptr) {
-    Log(ERR) << "Could not obtain GITS print handler from the library: " << recorderPath << "!!!";
-    Log(ERR) << dl::last_error();
+    LOG_ERROR << "Could not obtain GITS print handler from the library: " << recorderPath << "!!!";
+    LOG_ERROR << dl::last_error();
     throw std::runtime_error("Failed to load required symbol");
   }
 
@@ -116,32 +112,29 @@ CGitsLoader::CGitsLoader(const char* recorderWrapperFactoryName)
   // set GITS configuration
   auto configureFunc = (FConfigure)dl::load_symbol(recorderLib_, "Configure");
   if (configureFunc == nullptr) {
-    Log(ERR) << "Could not obtain GITS configuration handle from the library: " << recorderPath
-             << "!!!";
-    Log(ERR) << dl::last_error();
+    LOG_ERROR << "Could not obtain GITS configuration handle from the library: " << recorderPath
+              << "!!!";
+    LOG_ERROR << dl::last_error();
     throw std::runtime_error("Failed to load required symbol");
   }
 
   // call the function
   config_ = configureFunc(configPath.string().c_str());
   if (!config_) {
-    Log(ERR) << "Parsing configuration file: " << configPath << " failed!!!";
+    LOG_ERROR << "Parsing configuration file: " << configPath << " failed!!!";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
-  plog::get()->setMaxSeverity(log::GetSeverity(config_->common.shared.thresholdLogLevel));
-  // Because log can't use config directly, see log.cpp for info.
-  // CLog::SetLogLevel(config_->common.shared.thresholdLogLevel);
 
   if (!config_->common.recorder.enabled) {
-    Log(INFO) << "Recording disabled in the configuration file";
+    LOG_INFO << "Recording disabled in the configuration file";
   }
 
   // obtain GITS recorder
   auto gitsRecorderFactory =
       (void*(STDCALL*)())dl::load_symbol(recorderLib_, recorderWrapperFactoryName);
   if (gitsRecorderFactory == nullptr) {
-    Log(ERR) << "Couldn't obtain GITS recorder from the library: " << recorderPath << "!!!";
-    Log(ERR) << dl::last_error();
+    LOG_ERROR << "Couldn't obtain GITS recorder from the library: " << recorderPath << "!!!";
+    LOG_ERROR << dl::last_error();
     throw std::runtime_error("Couldn't load recorder wrapper factory");
   }
   // call the function

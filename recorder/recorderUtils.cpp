@@ -17,7 +17,7 @@
 #include <filesystem>
 
 #include "configurationLib.h"
-#include "log.h"
+#include "log2.h"
 #include "gits.h"
 #include "diagnostic.h"
 
@@ -73,7 +73,17 @@ bool ConfigureRecorder(const std::filesystem::path& configPath) {
 
   Configurator::Instance().LogChangedFields();
 
-  Log(INFO) << "GITS configured for process: " << processNameHUD;
+  // Finish configuring the logger
+  if (!plog::get()) {
+    std::cerr << "ERROR - Failed to initialize logging system shared instance!" << std::endl;
+    std::cerr << "ERROR - Will create a new instance for recorder module..." << std::endl;
+    log::Initialize(plog::info);
+  }
+  plog::get()->setMaxSeverity(
+      log::GetSeverity(Configurator::Instance().Get().common.shared.thresholdLogLevel));
+  log::SetLogFile(configPath.parent_path());
+
+  LOG_INFO << "GITS configured for process: " << processNameHUD;
 
   configured = true;
   return true;

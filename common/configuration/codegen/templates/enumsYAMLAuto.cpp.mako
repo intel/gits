@@ -10,7 +10,7 @@
 // generated @ ${time}
 
 #include "configurationYAMLAuto.h"
-#include "log.h"
+#include "log2.h"
 
 #include <yaml-cpp/yaml.h>
 
@@ -24,7 +24,7 @@ Node convert<${enum.name}>::encode(const ${enum.name}& rhs) {
   try {
     node = stringFrom<${enum.name}>(rhs);
   } catch (const std::invalid_argument& e) {
-    Log(ERR) << "Caught an invalid_argument exception during encoding ${enum.name}: " << e.what() << std::endl;
+    LOG_ERROR << "Caught an invalid_argument exception during encoding ${enum.name}: " << e.what() << std::endl;
   }
   return node;
 }
@@ -37,7 +37,7 @@ bool convert<${enum.name}>::decode(const Node& node, ${enum.name}& rhs) {
     rhs = stringTo<${enum.name}>(node.as<std::string>());
     return true;
   } catch (const std::invalid_argument& e) {
-    Log(ERR) << "Caught an invalid_argument exception during decoding ${enum.name}: " << e.what() << std::endl;
+    LOG_ERROR << "Caught an invalid_argument exception during decoding ${enum.name}: " << e.what() << std::endl;
     return false;
   }
 }

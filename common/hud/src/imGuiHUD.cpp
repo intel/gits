@@ -13,7 +13,7 @@
 #include "gits.h"
 #include "enumsAuto.h"
 #include "configurator.h"
-#include "log.h"
+#include "log2.h"
 #include "imGuiHelper.h"
 
 namespace gits {
@@ -99,7 +99,7 @@ void ImGuiHUD::SetBackBufferInfo(uint64_t width, uint64_t height, size_t count) 
   static uint64_t initialHeight = height;
   static bool printWarning = false;
   if (!printWarning && (initialWidth != width || initialHeight != height)) {
-    Log(WARN) << "ImGui HUD: BackBuffer resized - HUD can appear 'stretched'.";
+    LOG_WARNING << "ImGui HUD: BackBuffer resized - HUD can appear 'stretched'.";
     printWarning = true;
   }
 }

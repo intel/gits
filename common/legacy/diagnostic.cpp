@@ -391,19 +391,19 @@ void gather_diagnostic_info(nlohmann::ordered_json& properties) {
           properties["diag"]["app"]["path"] = exePathStr;
           properties["diag"]["original_app"]["name"] = exeName;
         } else {
-          Log(ERR) << "Diagnostics: Executable path does not exist: " << exePath.u8string();
+          LOG_ERROR << "Diagnostics: Executable path does not exist: " << exePath.u8string();
           properties["diag"]["app"]["name"] = "<unknown>";
           properties["diag"]["app"]["path"] = "<unknown>";
           properties["diag"]["original_app"]["name"] = "<unknown>";
         }
       } catch (std::exception& e) {
-        Log(ERR) << "Diagnostics: Exception when processing executable path: " << e.what();
+        LOG_ERROR << "Diagnostics: Exception when processing executable path: " << e.what();
         properties["diag"]["app"]["name"] = "<unknown>";
         properties["diag"]["app"]["path"] = "<unknown>";
         properties["diag"]["original_app"]["name"] = "<unknown>";
       }
     } else {
-      Log(ERR) << "Diagnostics: GetModuleFileNameW failed: " << GetLastError();
+      LOG_ERROR << "Diagnostics: GetModuleFileNameW failed: " << GetLastError();
       properties["diag"]["app"]["name"] = "<unknown>";
       properties["diag"]["app"]["path"] = "<unknown>";
       properties["diag"]["original_app"]["name"] = "<unknown>";
@@ -433,9 +433,9 @@ void gather_diagnostic_info(nlohmann::ordered_json& properties) {
 
   try {
     if (Configurator::Get().common.recorder.extendedDiagnosticInfo) {
-      Log(INFO) << "Gathering extended diagnostic info trough WMI...";
-      Log(INFO) << "If it hangs or fails, consider disabling extended "
-                   "diagnostics in recorder settings.";
+      LOG_INFO << "Gathering extended diagnostic info trough WMI...";
+      LOG_INFO << "If it hangs or fails, consider disabling extended "
+                  "diagnostics in recorder settings.";
       WMIConnection con;
       {
         const char* props[] = {

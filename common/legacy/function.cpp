@@ -178,6 +178,6 @@ gits::CArgument* gits::CFunction::Return() {
 }
 
 NORETURN void gits::report_cargument_error(const char* func, unsigned idx) {
-  Log(ERR) << "Invalid argument number: " << func << "( " << idx << ")";
+  LOG_ERROR << "Invalid argument number: " << func << "( " << idx << ")";
   throw std::runtime_error("invalid CArgument index requested");
 }

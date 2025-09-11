@@ -10,7 +10,7 @@
 #include "exception.h"
 #include "key_value.h"
 #include "tools.h"
-#include "log.h"
+#include "log2.h"
 #include "platform.h"
 #include "pragmas.h"
 #include "config.h"
@@ -199,7 +199,7 @@ hash_t CResourceManager2::put(
   const auto& file_name = gits::get(filenames_map_, file_id);
   if (Configurator::IsPlayer()) {
     CALL_ONCE[] {
-      Log(WARN)
+      LOG_WARNING
           << "CResourceManager: Hash discrepancy. Modyfing stream files in gitsPlayer process.";
     };
   }

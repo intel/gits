@@ -34,11 +34,14 @@ target_include_directories(d3d12_interceptor PRIVATE
 )
 
 target_link_libraries(d3d12_interceptor PRIVATE
+  gits_recorder
   gits_recorder_interface
   detours
   DirectX_layer_interface
   DirectX_recorder
 )
+
+target_compile_definitions(d3d12_interceptor PRIVATE PLOG_IMPORT)
 
 set_target_properties(d3d12_interceptor PROPERTIES OUTPUT_NAME d3d12)
 set_target_properties(d3d12_interceptor PROPERTIES FOLDER DirectX/DirectX_interceptors)

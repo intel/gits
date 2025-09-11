@@ -130,7 +130,9 @@ void SetLogFile(const std::filesystem::path& logFilePath) {
     return;
   }
 
-  std::string fileName = "gits_" + std::to_string(getpid()) + ".log";
+  // Filename format: gits_<pid>.0.log
+  // In the future, the "0" may be replaced by the plog instance id
+  std::string fileName = "gits_" + std::to_string(getpid()) + ".0.log";
   std::filesystem::path logFile = logFilePath / fileName;
   fileAppender = std::make_unique<plog::RollingFileAppender<plog::GitsFormatter>>(logFile.c_str());
 

@@ -19,7 +19,7 @@
 #endif
 
 #include "lua_bindings.h"
-#include "log.h"
+#include "log2.h"
 #include "gits.h"
 #include "config.h"
 
@@ -47,12 +47,12 @@ void STDCALL GitsGlDebugProc(unsigned source,
                              int length,
                              const char* message,
                              const void* userParam) {
-  Log(INFO) << "DEBUGPROC: ";
-  Log(INFO) << "           src:  " << source;
-  Log(INFO) << "           type: " << type;
-  Log(INFO) << "           id:   " << id;
-  Log(INFO) << "           seve: " << severity;
-  Log(INFO) << "           msg:  " << message;
+  LOG_INFO << "DEBUGPROC: ";
+  LOG_INFO << "           src:  " << source;
+  LOG_INFO << "           type: " << type;
+  LOG_INFO << "           id:   " << id;
+  LOG_INFO << "           seve: " << severity;
+  LOG_INFO << "           msg:  " << message;
 }
 } // namespace OpenGL
 

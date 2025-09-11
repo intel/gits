@@ -123,6 +123,14 @@ if(UNIX)
   set_target_properties(gits_recorder PROPERTIES OUTPUT_NAME "GitsRecorder")
 endif()
 
+# Plog shared instance
+if(WIN32)
+    target_compile_definitions(gits_recorder PRIVATE PLOG_EXPORT)
+    set_target_properties(gits_recorder PROPERTIES ENABLE_EXPORTS 1)
+else()
+    target_compile_definitions(gits_recorder PRIVATE PLOG_GLOBAL)
+endif()
+
 install(TARGETS gits_recorder
   RUNTIME DESTINATION Recorder
   LIBRARY DESTINATION Recorder)

@@ -34,11 +34,14 @@ target_include_directories(dxgi_interceptor PRIVATE
 )
 
 target_link_libraries(dxgi_interceptor PRIVATE
+  gits_recorder
   gits_recorder_interface
   detours
   DirectX_layer_interface
   DirectX_recorder
 )
+
+target_compile_definitions(dxgi_interceptor PRIVATE PLOG_IMPORT)
 
 set_target_properties(dxgi_interceptor PROPERTIES OUTPUT_NAME dxgi)
 set_target_properties(dxgi_interceptor PROPERTIES FOLDER DirectX/DirectX_interceptors)

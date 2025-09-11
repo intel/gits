@@ -76,7 +76,7 @@ bool RtasDeserializer::preloadCache(ID3D12Device5* device) {
 
     cacheData_[key] = std::move(data);
   }
-  log(gits_, "RtasCache - Cache file read successfully, total BLASes: ", cacheData_.size());
+  logI(gits_, "RtasCache - Cache file read successfully, total BLASes: ", cacheData_.size());
 
   return true;
 }
@@ -100,7 +100,7 @@ bool RtasDeserializer::isCompatible(std::ifstream& cacheFile, ID3D12Device5* dev
   // Check the driver identifier
   auto status = device->CheckDriverMatchingIdentifier(
       D3D12_SERIALIZED_DATA_RAYTRACING_ACCELERATION_STRUCTURE, &header.DriverMatchingIdentifier);
-  log(gits_, "RtasCache - Driver identifier check: ", toStr(status));
+  logI(gits_, "RtasCache - Driver identifier check: ", toStr(status));
   if (status != D3D12_DRIVER_MATCHING_IDENTIFIER_COMPATIBLE_WITH_DEVICE) {
     logW(gits_, "RtasCache - Driver identifier mismatch for cache!");
     logW(gits_, "RtasCache - Cache identifier: ", IdentifierToStr(header.DriverMatchingIdentifier));

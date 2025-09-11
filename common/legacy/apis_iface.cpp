@@ -55,8 +55,8 @@ bool ApisIface::ApiCompute::MemorySnifferInstall() const {
 void ApisIface::ApiCompute::MemorySnifferProtect(PagedMemoryRegionHandle& handle) const {
   if (handle != nullptr && *handle != nullptr) {
     if (!MemorySniffer::Get().Protect(handle)) {
-      Log(WARN) << "Protecting memory region: " << (**handle).BeginAddress() << " - "
-                << (**handle).EndAddress() << " FAILED!.";
+      LOG_WARNING << "Protecting memory region: " << (**handle).BeginAddress() << " - "
+                  << (**handle).EndAddress() << " FAILED!.";
     }
   }
 }
@@ -64,8 +64,8 @@ void ApisIface::ApiCompute::MemorySnifferProtect(PagedMemoryRegionHandle& handle
 void ApisIface::ApiCompute::MemorySnifferUnProtect(PagedMemoryRegionHandle& handle) const {
   if (handle != nullptr && *handle != nullptr) {
     if (!MemorySniffer::Get().UnProtect(handle)) {
-      Log(WARN) << "Unprotecting memory region: " << (**handle).BeginAddress() << " - "
-                << (**handle).EndAddress() << " FAILED!.";
+      LOG_WARNING << "Unprotecting memory region: " << (**handle).BeginAddress() << " - "
+                  << (**handle).EndAddress() << " FAILED!.";
     }
   }
 }
@@ -77,7 +77,7 @@ void ApisIface::ApiCompute::EnableMemorySnifferForPointer(void* ptr,
     handle = MemorySniffer::Get().CreateRegion(ptr, size);
   }
   if (handle == nullptr || *handle == nullptr) {
-    Log(ERR) << "MemorySniffer setup for usm pointer: " << ptr << " failed.";
+    LOG_ERROR << "MemorySniffer setup for usm pointer: " << ptr << " failed.";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   MemorySnifferProtect(handle);
@@ -85,6 +85,6 @@ void ApisIface::ApiCompute::EnableMemorySnifferForPointer(void* ptr,
 
 void ApisIface::ApiCompute::PrintMaxLocalMemoryUsage() const {
   const auto maxLocalMemoryUsage = CGits::Instance().GetMaxLocalMemoryUsage();
-  Log(INFO, NO_PREFIX) << "Maximum local memory usage: " << maxLocalMemoryUsage << " bytes";
+  LOG_INFO << "Maximum local memory usage: " << maxLocalMemoryUsage << " bytes";
 }
 } // namespace gits

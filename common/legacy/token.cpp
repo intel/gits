@@ -171,7 +171,7 @@ void CTokenMarker::Run() {
     CGits::Instance().Timers().init.Pause();
     CGits::Instance().Timers().restoration.Start();
     CGits::Instance().StateRestoreStarted();
-    Log(INFO) << "Restoring state ...";
+    LOG_INFO << "Restoring state ...";
 
     if (cfg.common.shared.useEvents) {
       CGits::Instance().PlaybackEvents().stateRestoreBegin();
@@ -186,8 +186,8 @@ void CTokenMarker::Run() {
 
   case CToken::ID_INIT_END:
     CGits::Instance().StateRestoreFinished();
-    Log(INFO) << "Finished restoring state.";
-    Log(TRACE) << "State restore end. Total drawcalls: " << CGits::Instance().CurrentDrawCount();
+    LOG_INFO << "Finished restoring state.";
+    LOG_TRACE << "State restore end. Total drawcalls: " << CGits::Instance().CurrentDrawCount();
 
     if (CGits::Instance().apis.Has3D()) {
       CGits::Instance().apis.Iface3D().Play_StateRestoreEnd();
@@ -331,16 +331,16 @@ uint64_t CTokenPlayerRecorderSync::Size() const {
 
 CTokenMakeCurrentThread::CTokenMakeCurrentThread(int threadid) : _threadId(threadid) {
   CALL_ONCE[] {
-    Log(INFO) << "Recorded Application uses multiple threads.";
-    Log(WARN) << "Multithreaded applications have to be recorded from beginning. Subcapturing from "
-                 "stream is possible without the --faithfulThreading option.";
+    LOG_INFO << "Recorded Application uses multiple threads.";
+    LOG_WARNING << "Multithreaded applications have to be recorded from beginning. Subcapturing "
+                   "from stream is possible without the --faithfulThreading option.";
     if (Configurator::DumpCCode() && CGits::Instance().MultithreadedApp()) {
-      Log(ERR) << "CCodeDump is not possible for multithreaded application. Please record binary "
-                  "stream first and then recapture it to CCode";
+      LOG_ERROR << "CCodeDump is not possible for multithreaded application. Please record binary "
+                   "stream first and then recapture it to CCode";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
   };
-  Log(TRACE) << "Current thread: " << threadid;
+  LOG_TRACE << "Current thread: " << threadid;
   CGits::Instance().CurrentThreadId(threadid);
 }
 
@@ -354,13 +354,13 @@ void CTokenMakeCurrentThread::Read(CBinIStream& stream) {
 
 void CTokenMakeCurrentThread::Run() {
   CALL_ONCE[] {
-    Log(INFO) << "Multithreaded stream";
+    LOG_INFO << "Multithreaded stream";
   };
   CGits::Instance().CurrentThreadId(_threadId);
   if (OpenGL::SD().GetCurrentContextStateData().glBeginState &&
       !Configurator::Get().common.player.faithfulThreading) {
-    Log(ERR) << "Multithreading bypass failed: Make current thread cannot be emitted between "
-                "glBegin and glEnd";
+    LOG_ERROR << "Multithreading bypass failed: Make current thread cannot be emitted between "
+                 "glBegin and glEnd";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
 
@@ -368,11 +368,11 @@ void CTokenMakeCurrentThread::Run() {
   if (!Configurator::Get().common.player.faithfulThreading) {
     void* ctxFromThread = OpenGL::SD().GetContextFromThread(_threadId);
     OpenGL::SetCurrentContext(ctxFromThread);
-    Log(TRACE) << "Make current thread: " << _threadId
-               << " bypassed because option faithfulThreading is not used, set current context for "
-                  "second thread emitted";
+    LOG_TRACE << "Make current thread: " << _threadId
+              << " bypassed because option faithfulThreading is not used, set current context for "
+                 "second thread emitted";
   } else {
-    Log(TRACE) << "Make current thread: " << _threadId;
+    LOG_TRACE << "Make current thread: " << _threadId;
   }
 }
 
@@ -385,16 +385,16 @@ uint64_t CTokenMakeCurrentThread::Size() const {
 CTokenMakeCurrentThreadNoCtxSwitch::CTokenMakeCurrentThreadNoCtxSwitch(int threadid)
     : _threadId(threadid) {
   CALL_ONCE[] {
-    Log(INFO) << "Recorded Application uses multiple threads.";
-    Log(WARN) << "Multithreaded applications have to be recorded from beginning. Subcapturing from "
-                 "stream is possible without the --faithfulThreading option.";
+    LOG_INFO << "Recorded Application uses multiple threads.";
+    LOG_WARNING << "Multithreaded applications have to be recorded from beginning. Subcapturing "
+                   "from stream is possible without the --faithfulThreading option.";
     if (Configurator::DumpCCode() && CGits::Instance().MultithreadedApp()) {
-      Log(ERR) << "CCodeDump is not possible for multithreaded application. Please record binary "
-                  "stream first and then recapture it to CCode";
+      LOG_ERROR << "CCodeDump is not possible for multithreaded application. Please record binary "
+                   "stream first and then recapture it to CCode";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
   };
-  Log(TRACE) << "Current thread (no context switch token): " << threadid;
+  LOG_TRACE << "Current thread (no context switch token): " << threadid;
   CGits::Instance().CurrentThreadId(threadid);
 }
 
@@ -408,16 +408,16 @@ void CTokenMakeCurrentThreadNoCtxSwitch::Read(CBinIStream& stream) {
 
 void CTokenMakeCurrentThreadNoCtxSwitch::Run() {
   CALL_ONCE[] {
-    Log(INFO) << "Multithreaded stream.";
+    LOG_INFO << "Multithreaded stream.";
   };
   CGits::Instance().CurrentThreadId(_threadId);
 
   // The decision whether to truly switch threads is handled elsewhere by using either CAction or CSequentialExecutor.
   if (!Configurator::Get().common.player.faithfulThreading) {
-    Log(TRACE) << "Make current thread (no context switch token): " << _threadId
-               << " bypassed because option faithfulThreading is not used.";
+    LOG_TRACE << "Make current thread (no context switch token): " << _threadId
+              << " bypassed because option faithfulThreading is not used.";
   } else {
-    Log(TRACE) << "Make current thread (no context switch token): " << _threadId;
+    LOG_TRACE << "Make current thread (no context switch token): " << _threadId;
   }
 }
 
@@ -451,7 +451,7 @@ void CTokenScreenResolution::Run() {
   dmScreenSettings.dmPelsHeight = _screenHeight;
   dmScreenSettings.dmBitsPerPel = 32;
   dmScreenSettings.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
-  Log(INFO) << "Changing screen resolution to: " << _screenWidth << "x" << _screenHeight << ".";
+  LOG_INFO << "Changing screen resolution to: " << _screenWidth << "x" << _screenHeight << ".";
   ChangeDisplaySettings(&dmScreenSettings, CDS_FULLSCREEN);
 #endif
 }

@@ -107,8 +107,8 @@ win_ptr_t CreateWin(int width, int height, int x, int y, bool show) {
       ChangeDisplaySettings(&devMode, CDS_FULLSCREEN);
       ShowCursor(FALSE);
     } else {
-      Log(WARN) << "Cannot adjust screen resolution to match dimensions of " << width << " x "
-                << height << " pixels for a window.";
+      LOG_WARNING << "Cannot adjust screen resolution to match dimensions of " << width << " x "
+                  << height << " pixels for a window.";
     }
   } else if (gits::Configurator::Get().common.player.showWindowBorder) {
     style = WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_OVERLAPPEDWINDOW;
@@ -159,8 +159,8 @@ void ResizeWin(win_ptr_t winptr, int width, int height) {
       ChangeDisplaySettings(&devMode, CDS_FULLSCREEN);
       ShowCursor(FALSE);
     } else {
-      Log(WARN) << "Cannot adjust screen resolution to match dimensions of " << width << " x "
-                << height << " pixels for window " << winptr << ".";
+      LOG_WARNING << "Cannot adjust screen resolution to match dimensions of " << width << " x "
+                  << height << " pixels for window " << winptr << ".";
     }
   }
 }

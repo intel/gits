@@ -27,11 +27,11 @@ RtasCacheLayer::RtasCacheLayer(CGits& gits, const RtasCacheConfig& cfg)
       serializer_(gits, cfg_.cacheFile, cfg_.dumpCacheInfoFile),
       deserializer_(gits, cfg_.cacheFile),
       stateRestore_(false) {
-  log(gits_, "RtasCache - State restore only: ", cfg.stateRestoreOnly ? "true" : "false");
-  log(gits_, "RtasCache - Cache file: ", cfg.cacheFile);
+  logI(gits_, "RtasCache - State restore only: ", cfg.stateRestoreOnly ? "true" : "false");
+  logI(gits_, "RtasCache - Cache file: ", cfg.cacheFile);
   if (!cfg.record) {
     if (std::filesystem::exists(cfg.cacheFile)) {
-      log(gits_, "RtasCache - Cache file size is ", getFileSize(cfg_.cacheFile));
+      logI(gits_, "RtasCache - Cache file size is ", getFileSize(cfg_.cacheFile));
     } else {
       logE(gits_, "RtasCache - Cache file does not exist!");
       isValid_ = false;
@@ -42,11 +42,11 @@ RtasCacheLayer::RtasCacheLayer(CGits& gits, const RtasCacheConfig& cfg)
 RtasCacheLayer::~RtasCacheLayer() {
   try {
     if (cfg_.record) {
-      log(gits_, "RtasCache - Serialized ", blasCount_, " BLASes");
+      logI(gits_, "RtasCache - Serialized ", blasCount_, " BLASes");
       serializer_.writeCache();
-      log(gits_, "RtasCache - Cache file size is ", getFileSize(cfg_.cacheFile));
+      logI(gits_, "RtasCache - Cache file size is ", getFileSize(cfg_.cacheFile));
     } else {
-      log(gits_, "RtasCache - Deserialized ", cachedBlasCount_, "/", blasCount_, " BLASes");
+      logI(gits_, "RtasCache - Deserialized ", cachedBlasCount_, "/", blasCount_, " BLASes");
     }
   } catch (...) {
     fprintf(stderr, "Exception in RtasCacheLayer::~RtasCacheLayer");

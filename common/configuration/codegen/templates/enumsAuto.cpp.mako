@@ -10,7 +10,7 @@
 // generated @ ${time}
 
 #include "enumsAuto.h"
-#include "log.h"
+#include "log2.h"
 
 #include <iostream>
 #include <string>
@@ -67,10 +67,10 @@ std::ostream& operator<<(std::ostream& out, const gits::${enum.name}& value) {
   try {
     out << gits::stringFrom<gits::${enum.name}>(value);
   } catch (const std::invalid_argument& e) {
-    Log(ERR) << "Caught an invalid_argument exception: " << e.what() << std::endl;
+    LOG_ERROR << "Caught an invalid_argument exception: " << e.what() << std::endl;
     out.setstate(std::ios::failbit);
   } catch (const std::exception& e) {
-    Log(ERR) << "Caught a general exception: " << e.what() << std::endl;
+    LOG_ERROR << "Caught a general exception: " << e.what() << std::endl;
     out.setstate(std::ios::failbit);
   }
   return out;
@@ -84,10 +84,10 @@ std::istream& operator>>(std::istream& in, gits::${enum.name}& value) {
   try {
     value = gits::stringTo<gits::${enum.name}>(token);
   } catch (const std::invalid_argument& e) {
-    Log(ERR) << "Caught an invalid_argument exception ('" << token << "' as gits::${enum.name}): " << e.what() << std::endl;
+    LOG_ERROR << "Caught an invalid_argument exception ('" << token << "' as gits::${enum.name}): " << e.what() << std::endl;
     in.setstate(std::ios::failbit);
   } catch (const std::exception& e) {
-    Log(ERR) << "Caught a general exception: " << e.what() << std::endl;
+    LOG_ERROR << "Caught a general exception: " << e.what() << std::endl;
     in.setstate(std::ios::failbit);
   }
   return in;

@@ -14,7 +14,7 @@
 */
 
 #include "controlHandler.h"
-#include "log.h"
+#include "log2.h"
 #include "recorder.h"
 #include "tools.h"
 
@@ -27,22 +27,22 @@ bool CtrlHandler(DWORD fdwCtrlType) {
 
   switch (fdwCtrlType) {
   case CTRL_C_EVENT:
-    Log(INFO) << "ctrl-c";
+    LOG_INFO << "ctrl-c";
     break;
   case CTRL_CLOSE_EVENT:
-    Log(INFO) << "ctrl-close";
+    LOG_INFO << "ctrl-close";
     break;
   case CTRL_BREAK_EVENT:
-    Log(INFO) << "ctrl-break";
+    LOG_INFO << "ctrl-break";
     break;
   case CTRL_LOGOFF_EVENT:
-    Log(INFO) << "log off";
+    LOG_INFO << "log off";
     break;
   case CTRL_SHUTDOWN_EVENT:
-    Log(INFO) << "shutdown";
+    LOG_INFO << "shutdown";
     break;
   default:
-    Log(INFO) << "Stopping due to unknown event.";
+    LOG_INFO << "Stopping due to unknown event.";
   }
   call_once_impl([]() { gits::CRecorder::Instance().Close(); });
   return false;

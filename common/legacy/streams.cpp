@@ -17,7 +17,7 @@
 #include "tools.h"
 #include "exception.h"
 #include "gits.h"
-#include "log.h"
+#include "log2.h"
 
 #include <memory>
 #include <stdexcept>
@@ -28,7 +28,7 @@ namespace {
 std::streambuf* initialize_gits_streambuf(const std::filesystem::path& fileName,
                                           std::ios::openmode mode) {
   if (std::filesystem::is_directory(fileName)) {
-    Log(ERR) << "Expected stream file path, got a directory.";
+    LOG_ERROR << "Expected stream file path, got a directory.";
     throw gits::EOperationFailed(EXCEPTION_MESSAGE);
   }
   std::filebuf* fileBuf = new std::filebuf;
@@ -218,8 +218,8 @@ std::ostream& gits::CBinOStream::WriteToOstream(const char* data, uint64_t dataS
     }
     return stream;
   } catch (std::ostream::failure& e) {
-    Log(ERR) << "Failed to write to the stream. Probably not enough space on the disk.";
-    Log(ERR) << "Err code: " << e.code() << " Err msg: " << e.what();
+    LOG_ERROR << "Failed to write to the stream. Probably not enough space on the disk.";
+    LOG_ERROR << "Err code: " << e.code() << " Err msg: " << e.what();
     throw std::runtime_error("Failed to write to the stream.");
   }
 }
@@ -282,7 +282,7 @@ gits::CBinIStream::CBinIStream(const std::filesystem::path& fileName)
 #endif
   );
   if (_file == nullptr) {
-    Log(ERR) << "Couldn't open file: " << fileName;
+    LOG_ERROR << "Couldn't open file: " << fileName;
     throw std::runtime_error("failed to opeprn file");
   }
 }
@@ -755,7 +755,7 @@ std::string gits::CCodeOStream::VariableName(intptr_t key) const {
       return it2->second;
     }
   }
-  Log(ERR) << "Key '" << std::hex << key << std::dec << "' not found!!!";
+  LOG_ERROR << "Key '" << std::hex << key << std::dec << "' not found!!!";
   throw EOperationFailed(EXCEPTION_MESSAGE);
 }
 #endif

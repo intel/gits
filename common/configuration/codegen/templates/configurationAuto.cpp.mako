@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 
+#include "log2.h"
 #include "enumsAuto.h"
 #include "helper.h"
 #include "stringFromType.h"
@@ -63,7 +64,7 @@ ${whitespace(2)}if (env_${option.name}) {
 ${whitespace(3)}try {
 ${whitespace(4)}${option.instance_name} = stringTo<${option.type}>(env_${option.name});
 ${whitespace(3)}} catch (const std::exception& e) {
-${whitespace(4)}Log(ERR) << "Error parsing environment variable ${option.get_environment_string()}: " << e.what() << std::endl;
+${whitespace(4)}LOG_ERROR << "Error parsing environment variable ${option.get_environment_string()}: " << e.what() << std::endl;
 ${whitespace(3)}}
 ${whitespace(2)}}
 

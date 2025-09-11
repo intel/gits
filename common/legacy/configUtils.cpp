@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "configUtils.h"
-#include "log.h"
+#include "log2.h"
 #include <exception.h>
 
 #include <algorithm>
@@ -26,7 +26,7 @@ std::vector<uint32_t> parseKeys(const std::vector<std::string>& input) {
   std::vector<uint32_t> vec;
   std::transform(input.begin(), input.end(), std::back_inserter(vec), GetKeyVal);
   if (std::find(vec.begin(), vec.end(), 0U) != vec.end()) {
-    Log(ERR) << "Invalid exit key combination given.";
+    LOG_ERROR << "Invalid exit key combination given.";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   return vec;

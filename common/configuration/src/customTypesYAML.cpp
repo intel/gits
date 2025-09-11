@@ -11,7 +11,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include "stringFromType.h"
-#include "log.h"
+#include "log2.h"
 
 namespace YAML {
 
@@ -23,7 +23,7 @@ bool convert<gits::VulkanObjectRange>::decode(const Node& node, gits::VulkanObje
     rhs = gits::stringTo<gits::VulkanObjectRange>(node.as<std::string>());
     return true;
   } catch (const std::exception& e) {
-    Log(ERR) << "Error decoding VulkanObjectRange: " << e.what() << std::endl;
+    LOG_ERROR << "Error decoding VulkanObjectRange: " << e.what() << std::endl;
     return false;
   }
 }

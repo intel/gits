@@ -88,6 +88,13 @@ if(MSVC)
   target_link_libraries(gits_player PRIVATE OpenGL32)
 endif()
 
+# Plog shared instance
+if(WIN32)
+    target_compile_definitions(gits_player PRIVATE PLOG_EXPORT)
+else()
+    target_compile_definitions(gits_player PRIVATE PLOG_GLOBAL)
+endif()
+
 install(TARGETS gits_player DESTINATION Player)
 if(MSVC)
   install(FILES $<TARGET_PDB_FILE:gits_player> DESTINATION Player OPTIONAL)

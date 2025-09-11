@@ -29,7 +29,7 @@
 #include <string>
 #include <iostream>
 #include <algorithm>
-#include "log.h"
+#include "log2.h"
 #include "exception.h"
 
 //
@@ -164,8 +164,9 @@ bool SetPagesProtection(PageMemoryProtection access, void* ptr, size_t size) {
     default:
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
-    Log(WARN) << "VirtualProtect API failed on changing memory ptr: " << ptr << " of size: " << size
-              << " to " << winAccessStr << " with error: " << errorStr << std::endl;
+    LOG_WARNING << "VirtualProtect API failed on changing memory ptr: " << ptr
+                << " of size: " << size << " to " << winAccessStr << " with error: " << errorStr
+                << std::endl;
     return false;
   }
   return true;
@@ -207,8 +208,8 @@ bool SetPagesProtection(PageMemoryProtection access, void* ptr, size_t size) {
     default:
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
-    Log(WARN) << "mprotect API failed on changing memory ptr: " << ptr << " of size: " << size
-              << " to " << unixAccessStr << " errno: " << errno << std::endl;
+    LOG_WARNING << "mprotect API failed on changing memory ptr: " << ptr << " of size: " << size
+                << " to " << unixAccessStr << " errno: " << errno << std::endl;
     return false;
   }
   return true;
@@ -411,7 +412,7 @@ bool MemorySniffer::RemoveRegion(PagedMemoryRegionHandle handle) {
 
   bool unprotectResult = UnProtect(handle);
   if (unprotectResult == false) {
-    Log(WARN) << "Restoring memory page's access rights FAILED!!!" << std::endl;
+    LOG_WARNING << "Restoring memory page's access rights FAILED!!!" << std::endl;
   }
 
   _memRegions.erase(**handle);
@@ -632,7 +633,7 @@ LONG WINAPI MemorySnifferExceptionFilter(EXCEPTION_POINTERS* ExceptionInfo) {
       if (MemorySniffer::Get().WriteCallback(address, writeIntention)) {
         return EXCEPTION_CONTINUE_EXECUTION;
       } else {
-        Log(WARN) << "Unhandled exception on address: " << address;
+        LOG_WARNING << "Unhandled exception on address: " << address;
       }
     }
   }
@@ -653,7 +654,7 @@ void CaptureOriginalSigBusHandler() {
   struct sigaction saBus = {};
   errno = 0;
   if (sigaction(SIGBUS, nullptr, &saBus) == -1) {
-    Log(WARN) << "obtaining previous sigaction for SIGBUS failed. Errno: " << errno;
+    LOG_WARNING << "obtaining previous sigaction for SIGBUS failed. Errno: " << errno;
     originalBusInitialized = false;
     return;
   }
@@ -668,7 +669,7 @@ void CaptureOriginalSigSegvHandler() {
   struct sigaction saSegv = {};
   errno = 0;
   if (sigaction(SIGSEGV, nullptr, &saSegv) == -1) {
-    Log(WARN) << "obtaining previous sigaction for SIGSEGV failed. Errno: " << errno;
+    LOG_WARNING << "obtaining previous sigaction for SIGSEGV failed. Errno: " << errno;
     originalSegvInitialized = false;
     return;
   }
@@ -718,8 +719,8 @@ static void MemorySnifferSignalHandler(int sig, siginfo_t* si, void* unused) {
     CallOriginalSignalHandler(sig, si, unused);
   }
   if (!MemorySniffer::Get().WriteCallback(si->si_addr)) {
-    Log(WARN) << "MemorySnifferSignalHandler caught an unhandled signal: " << sig
-              << " errno: " << si->si_errno << " at address: " << si->si_addr;
+    LOG_WARNING << "MemorySnifferSignalHandler caught an unhandled signal: " << sig
+                << " errno: " << si->si_errno << " at address: " << si->si_addr;
     exit(1);
   }
 }
@@ -754,11 +755,11 @@ bool MemorySniffer::Install() {
 
   errno = 0;
   if (sigaction(SIGSEGV, &sa, nullptr) == -1) {
-    Log(WARN) << "sigaction setup SIGSEGV failed. Errno: " << errno;
+    LOG_WARNING << "sigaction setup SIGSEGV failed. Errno: " << errno;
     return false;
   }
   if (sigaction(SIGBUS, &sa, nullptr) == -1) {
-    Log(WARN) << "sigaction setup SIGBUS failed. Errno: " << errno;
+    LOG_WARNING << "sigaction setup SIGBUS failed. Errno: " << errno;
     return false;
   }
   _isInstalled = true;
@@ -779,11 +780,11 @@ bool MemorySniffer::UnInstall() {
   originalSegvInitialized = false;
   originalBusInitialized = false;
   if (sigaction(SIGSEGV, &sa, nullptr) == -1) {
-    Log(WARN) << "sigaction setup SIGSEGV failed. Errno: " << errno;
+    LOG_WARNING << "sigaction setup SIGSEGV failed. Errno: " << errno;
     return false;
   }
   if (sigaction(SIGBUS, &sa, nullptr) == -1) {
-    Log(WARN) << "sigaction setup SIGBUS failed. Errno: " << errno;
+    LOG_WARNING << "sigaction setup SIGBUS failed. Errno: " << errno;
     return false;
   }
   _isInstalled = false;
