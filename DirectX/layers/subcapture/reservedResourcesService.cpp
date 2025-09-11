@@ -38,6 +38,11 @@ void ReservedResourcesService::addUpdateTileMappings(
   }
 
   unsigned heapKey = c.pHeap_.key;
+
+  if (heapKey) {
+    resourcesByHeapKey_[heapKey].insert(c.pResource_.key);
+  }
+
   unsigned heapRangeIndex = 0;
   unsigned heapOffset = heapKey && c.pHeapRangeStartOffsets_.value
                             ? c.pHeapRangeStartOffsets_.value[heapRangeIndex]
@@ -225,10 +230,29 @@ void ReservedResourcesService::initTiledResource(TiledResource& tiledResource) {
 }
 
 void ReservedResourcesService::destroyObject(unsigned objectKey) {
-  auto it = resources_.find(objectKey);
-  if (it != resources_.end()) {
-    it->second->destroyed = true;
+  auto itResource = resources_.find(objectKey);
+  if (itResource != resources_.end()) {
+    itResource->second->destroyed = true;
+    return;
   }
+
+  auto itHeap = resourcesByHeapKey_.find(objectKey);
+  if (itHeap == resourcesByHeapKey_.end()) {
+    return;
+  }
+  for (unsigned resourceKey : itHeap->second) {
+    auto itResource = resources_.find(resourceKey);
+    if (itResource == resources_.end()) {
+      continue;
+    }
+    for (Tile& tile : itResource->second->tiles) {
+      if (tile.heapKey == objectKey) {
+        tile.heapKey = 0;
+        tile.heapOffset = 0;
+      }
+    }
+  }
+  resourcesByHeapKey_.erase(itHeap);
 }
 
 ReservedResourcesService::TiledResource* ReservedResourcesService::getTiledResource(

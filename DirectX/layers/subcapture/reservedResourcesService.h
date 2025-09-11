@@ -13,6 +13,7 @@
 #include <vector>
 #include <unordered_map>
 #include <memory>
+#include <unordered_set>
 #include <d3d12.h>
 
 namespace gits {
@@ -60,6 +61,7 @@ public:
 
 private:
   std::unordered_map<unsigned, std::unique_ptr<TiledResource>> resources_;
+  std::unordered_map<unsigned, std::unordered_set<unsigned>> resourcesByHeapKey_;
 
 private:
   void initRestore();
