@@ -50,6 +50,10 @@ endif()
 source_group("External Files" FILES ${Vulkan_interceptor_external_cpps})
 source_group("Generated Files" FILES ${Vulkan_DEF} REGULAR_EXPRESSION ".*Auto.*")
 
+if(WIN32)
+    target_link_options(Vulkan_interceptor PRIVATE "/DELAYLOAD:gitsRecorder.dll")
+endif()
+
 target_link_libraries(Vulkan_interceptor PRIVATE gits_recorder gits_recorder_interface common)
 
 if(MSVC)

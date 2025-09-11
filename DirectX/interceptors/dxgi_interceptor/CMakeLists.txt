@@ -33,6 +33,8 @@ target_include_directories(dxgi_interceptor PRIVATE
   ${DIRECTX_DIR}/recorder
 )
 
+target_link_options(dxgi_interceptor PRIVATE "/DELAYLOAD:gitsRecorder.dll")
+
 target_link_libraries(dxgi_interceptor PRIVATE
   gits_recorder
   gits_recorder_interface

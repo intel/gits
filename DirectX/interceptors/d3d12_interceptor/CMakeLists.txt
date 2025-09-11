@@ -33,6 +33,8 @@ target_include_directories(d3d12_interceptor PRIVATE
   ${DIRECTX_DIR}/recorder
 )
 
+target_link_options(d3d12_interceptor PRIVATE "/DELAYLOAD:gitsRecorder.dll")
+
 target_link_libraries(d3d12_interceptor PRIVATE
   gits_recorder
   gits_recorder_interface
