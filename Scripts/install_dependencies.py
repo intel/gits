@@ -287,7 +287,7 @@ class Repository:
 def download_and_extract_nuget_package(package_url, output_directory: Path, folder_to_extract=None):
     # Ensure the output directory exists
     output_directory.mkdir(parents=True, exist_ok=True)
-    logger = logger.getChild('nuget fetch')
+    _logger = logger.getChild('nuget fetch')
 
     # Retrieve proxy settings from Git
     try:
@@ -318,10 +318,10 @@ def download_and_extract_nuget_package(package_url, output_directory: Path, fold
     if http_proxy:
         proxies["http"] = http_proxy
         proxies["https"] = http_proxy
-        logger.info(f"Using HTTP proxy: {http_proxy}")
+        _logger.info(f"Using HTTP proxy: {http_proxy}")
     if https_proxy:
         proxies["https"] = https_proxy
-        logger.info(f"Using HTTPS proxy: {https_proxy}")
+        _logger.info(f"Using HTTPS proxy: {https_proxy}")
     if proxies:
         session.proxies = proxies
 
