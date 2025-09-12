@@ -500,14 +500,15 @@ void ReservedResourcesService::restoreContent(const std::vector<unsigned>& resou
       } else if (tileRegions.count(subresourceIndex)) {
         for (TileRegion& region : tileRegions.at(subresourceIndex)) {
           GITS_ASSERT(!region.packed);
-          static bool logged = false;
-          if (!logged) {
-            LOG_WARNING << "Subresource not fully mapped. Using CopyTiles";
-            logged = true;
+          if (tiledResource->desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
+            commandList_->CopyBufferRegion(readbackResource.Get(), offsetReadback,
+                                           tiledResource->resource, region.coord.X * tileSize,
+                                           region.size.NumTiles * tileSize);
+          } else {
+            commandList_->CopyTiles(tiledResource->resource, &region.coord, &region.size,
+                                    readbackResource.Get(), offsetReadback,
+                                    D3D12_TILE_COPY_FLAG_SWIZZLED_TILED_RESOURCE_TO_LINEAR_BUFFER);
           }
-          commandList_->CopyTiles(tiledResource->resource, &region.coord, &region.size,
-                                  readbackResource.Get(), offsetReadback,
-                                  D3D12_TILE_COPY_FLAG_SWIZZLED_TILED_RESOURCE_TO_LINEAR_BUFFER);
           offsetReadback += region.size.NumTiles * tileSize;
         }
       }
@@ -675,18 +676,30 @@ void ReservedResourcesService::restoreContent(const std::vector<unsigned>& resou
       } else if (tileRegions.count(subresourceIndex)) {
         for (TileRegion& region : tileRegions.at(subresourceIndex)) {
           GITS_ASSERT(!region.packed);
-          ID3D12GraphicsCommandListCopyTilesCommand copyTiles;
-          copyTiles.key = stateService_.getUniqueCommandKey();
-          copyTiles.object_.key = commandListKey_;
-          copyTiles.pTiledResource_.key = tiledResource->resourceKey;
-          copyTiles.pTileRegionStartCoordinate_.value = &region.coord;
-          copyTiles.pTileRegionSize_.value = &region.size;
-          copyTiles.pBuffer_.key = uploadResourceKey;
-          copyTiles.BufferStartOffsetInBytes_.value = offsetUpload;
-          copyTiles.Flags_.value = D3D12_TILE_COPY_FLAG_LINEAR_BUFFER_TO_SWIZZLED_TILED_RESOURCE;
-          stateService_.getRecorder().record(
-              new ID3D12GraphicsCommandListCopyTilesWriter(copyTiles));
-
+          if (tiledResource->desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
+            ID3D12GraphicsCommandListCopyBufferRegionCommand copyBufferRegion;
+            copyBufferRegion.key = stateService_.getUniqueCommandKey();
+            copyBufferRegion.object_.key = commandListKey_;
+            copyBufferRegion.pDstBuffer_.key = tiledResource->resourceKey;
+            copyBufferRegion.DstOffset_.value = region.coord.X * tileSize;
+            copyBufferRegion.pSrcBuffer_.key = uploadResourceKey;
+            copyBufferRegion.SrcOffset_.value = offsetUpload;
+            copyBufferRegion.NumBytes_.value = region.size.NumTiles * tileSize;
+            stateService_.getRecorder().record(
+                new ID3D12GraphicsCommandListCopyBufferRegionWriter(copyBufferRegion));
+          } else {
+            ID3D12GraphicsCommandListCopyTilesCommand copyTiles;
+            copyTiles.key = stateService_.getUniqueCommandKey();
+            copyTiles.object_.key = commandListKey_;
+            copyTiles.pTiledResource_.key = tiledResource->resourceKey;
+            copyTiles.pTileRegionStartCoordinate_.value = &region.coord;
+            copyTiles.pTileRegionSize_.value = &region.size;
+            copyTiles.pBuffer_.key = uploadResourceKey;
+            copyTiles.BufferStartOffsetInBytes_.value = offsetUpload;
+            copyTiles.Flags_.value = D3D12_TILE_COPY_FLAG_LINEAR_BUFFER_TO_SWIZZLED_TILED_RESOURCE;
+            stateService_.getRecorder().record(
+                new ID3D12GraphicsCommandListCopyTilesWriter(copyTiles));
+          }
           offsetUpload += region.size.NumTiles * tileSize;
         }
       }
