@@ -17,6 +17,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <cctype>
+#include <cstdint>
 
 namespace gits {
 template <typename T>
