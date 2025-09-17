@@ -52,6 +52,12 @@ if(WITH_OCLOC)
   add_definitions(-DWITH_OCLOC)
 endif()
 
+option(OFFLINE_MODE "Offline mode" OFF)
+if(OFFLINE_MODE)
+  add_definitions(-DOFFLINE_MODE)
+  message("Offline Mode: no download of third party libraries, assuming folders are prepopulated.")
+endif()
+
 
 execute_process(COMMAND ${Python3_EXECUTABLE} -c "import mako" RESULT_VARIABLE MAKO_IMPORT OUTPUT_QUIET ERROR_QUIET)
 if(NOT MAKO_IMPORT EQUAL 0)

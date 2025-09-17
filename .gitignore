@@ -58,6 +58,7 @@ build/
 third_party/*
 !third_party/patch
 !third_party/IntelExtensions
+!third_party/dependencies.yaml
 
 # GITS config
 recorder/gits_config.txt

@@ -1,0 +1,96 @@
+dependencies:
+  NugetPackages:
+    - name: AgilitySDK
+      argument: agility-sdk
+      package_url: https://www.nuget.org/api/v2/package/Microsoft.Direct3D.D3D12/
+      version: 1.717.1-preview
+      os: WINDOWS
+      folder_to_extract: build/native/
+    - name: dxc
+      package_url: https://www.nuget.org/api/v2/package/Microsoft.Direct3D.DXC/
+      version: 1.8.2407.12
+      os: WINDOWS
+      folder_to_extract: build/native/
+    - name: DirectML
+      package_url: https://www.nuget.org/api/v2/package/Microsoft.AI.DirectML/
+      version: 1.15.2
+      os: WINDOWS
+      folder_to_extract: null
+    - name: DirectStorage
+      package_url: https://www.nuget.org/api/v2/package/Microsoft.Direct3D.DirectStorage/
+      version: 1.2.3
+      os: WINDOWS
+      folder_to_extract: null
+  GitRepositories:
+    - name: lua
+      url: https://github.com/lua/lua.git
+      branch: v5.4.6
+    - name: MurmurHash
+      url: https://github.com/aappleby/smhasher.git
+      commit_id: 61a0530f28277f2e850bfc39600ce61d02b518de
+    - name: zlib
+      url: https://github.com/madler/zlib.git
+      branch: v1.3.1
+    - name: libpng
+      url: https://github.com/glennrp/libpng.git
+      branch: v1.6.43
+    - name: xxhash
+      url: https://github.com/Cyan4973/xxHash.git
+      branch: v0.8.1
+    - name: StackWalker
+      url: https://github.com/JochenKalmbach/StackWalker.git
+      commit_id: 045413aca44b094cf42cc85f8e62e986fe943697
+      os: WINDOWS
+    - name: OpenCL-Headers
+      argument: clheaders
+      url: https://github.com/KhronosGroup/OpenCL-Headers.git
+      branch: v2022.09.30
+    - name: Detours
+      url: https://github.com/microsoft/Detours.git
+      branch: main
+      commit_id: 4b8c659f549b0ab21cf649377c7a84eb708f5e68
+      os: WINDOWS
+    - name: DirectXTex
+      url: https://github.com/microsoft/DirectXTex.git
+      branch: sep2024
+      os: WINDOWS
+    - name: xess
+      url: https://github.com/intel/xess.git
+      branch: v2.1.0
+      os: WINDOWS
+    - name: fast_io
+      argument: fastio
+      url: https://github.com/cppfastio/fast_io.git
+      commit_id: 788cb9810f0ca881d15fe594b0dd1144901d14d8
+    - name: renderdoc
+      url: https://github.com/baldurk/renderdoc.git
+      branch: v1.21
+    - name: json
+      url: https://github.com/nlohmann/json.git
+      branch: v3.11.3
+    - name: lz4
+      url: https://github.com/lz4/lz4.git
+      branch: v1.10.0
+    - name: zstd
+      url: https://github.com/facebook/zstd.git
+      branch: v1.5.6
+    - name: yaml-cpp
+      argument: yamlcpp
+      url: https://github.com/jbeder/yaml-cpp.git
+      branch: 0.8.0
+    - name: argshxx
+      url: https://github.com/Taywee/args.git
+      commit_id: 114200a9ad5fe06c8dea76e15d92325695cf3e34
+    - name: imgui
+      url: https://github.com/ocornut/imgui
+      branch: v1.91.9b
+    - name: intel-one-mono
+      url: https://github.com/intel/intel-one-mono
+      branch: V1.4.0
+    - name: nvapi
+      url: https://github.com/NVIDIA/nvapi.git
+      branch: main
+      commit_id: 7cb76fce2f52de818b3da497af646af1ec16ce27
+    - name: plog
+      url: https://github.com/SergiusTheBest/plog.git
+      commit_id: 3da4729da2086a2987ce75cd31c4d04e8ca54fcf

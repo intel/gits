@@ -15,9 +15,12 @@ import subprocess
 import sys
 import tempfile
 import zipfile
+import hashlib
 
 from enum import Enum
 from pathlib import Path
+import shutil
+import stat
 
 import requests
 from retrying import retry
@@ -41,6 +44,16 @@ def get_script_path():
 
 def get_root_directory() -> Path:
     return Path(get_script_path()).parent
+
+
+def get_file_hash(filename, algorithm='sha256'):
+    hash_func = hashlib.new(algorithm)
+
+    with open(filename, 'rb') as f:
+        while chunk := f.read(8192):
+            hash_func.update(chunk)
+
+    return hash_func.hexdigest()
 
 
 GIT_VERSION_PARALLEL = "2.9.0"
@@ -76,6 +89,7 @@ class GitCheck:
 
 
 THIRD_PARTY_PATH = get_root_directory() / "third_party"
+DEPENDENCIES_FILE = THIRD_PARTY_PATH / "dependencies.yaml"
 PATCH_PATH = THIRD_PARTY_PATH / "patch"
 USE_PARALLEL_GIT = GitCheck().check()
 META_FILE = "third_party.meta.yaml"
@@ -85,57 +99,114 @@ class OperatingSystem(Enum):
     WINDOWS = 1
     LINUX = 2
 
+    @classmethod
+    def from_str(cls, value: str):
+        """Parse a string into an OperatingSystem or return None for unknown/empty."""
+        if not value:
+            return None
+        v = value.upper()
+        if v == "WINDOWS":
+            return cls.WINDOWS
+        if v == "LINUX":
+            return cls.LINUX
+        return None
+
 
 class ReturnCode(Enum):
     SUCCESS = 0
     FAILURE = -1
+
+    @classmethod
+    def from_bool(cls, value: bool):
+        if value:
+            return cls.SUCCESS
+        return cls.FAILURE
 
 
 class RetryError(Exception):
     pass
 
 
-class Repository:
-    def __init__(self) -> None:
+class Dependency:
+    def __init__(self, yaml_description) -> None:
         self._repository_path = None
-        self.name = ""
-        self.url = ""
-        self.branch = ""
-        self.commit_id = ""
-        self.os = None
-        self.long_paths = False
-        self.modules = []
-        if not THIRD_PARTY_PATH.exists():
-            THIRD_PARTY_PATH.mkdir()
-        self.set_branch()
-        self.set_commit()
-        self.init()
-
+        self.name = yaml_description["name"]
+        self.argument = yaml_description.get("argument", self.name.lower())
+        self.cli_argument = f"--with-{self.argument}"
+        self.arg_name = self.cli_argument[2:].replace('-', '_')
+        self.os = OperatingSystem.from_str(yaml_description.get("os", None))
         self.logger = logger.getChild(self.name)
 
     @property
     def repository_path(self) -> Path:
         if not self._repository_path:
             self._repository_path = THIRD_PARTY_PATH / self.name
-            self.logger.debug("Component path: %s", str(self._repository_path))
+            self.logger.debug(f"Component path: {self._repository_path}")
         return self._repository_path
 
-    def init(self) -> None:
-        pass
+    def relative_repository_path(self) -> Path:
+        return self.repository_path.relative_to(THIRD_PARTY_PATH.parent)
 
-    def set_branch(self):
-        self.branch = "master"
+    def check_skip_os(self) -> bool:
+        return (self.os == OperatingSystem.WINDOWS and os.name != "nt") or (
+            self.os == OperatingSystem.LINUX and os.name == "nt"
+        )
 
-    def set_commit(self):
-        pass
+
+    def prepare_folder(self, forced=False, accept_existing_folder=False):
+        def remove_readonly(func, path, _):
+            "Clear the readonly bit and reattempt the removal"
+            os.chmod(path, stat.S_IWRITE)
+            func(path)
+
+        if self.repository_path.exists():
+            self.logger.info(f"Existing dependency folder found @'{self.repository_path}'.")
+            if accept_existing_folder:
+                self.logger.info(f"Leaving it in place, assuming it's the correct git repo.")
+                return True
+            if not forced:
+                self.logger.info(f"It's not registered and/or marked as wrongfully installed so the script will attempt to delete '{self.repository_path}'.")
+            try:
+                shutil.rmtree(self.repository_path, onexc=remove_readonly)
+                self.logger.info(f"Deleted {self.repository_path}")
+            except Exception as e:
+                self.logger.error(f"Could not remove dependency at {self.repository_path}: {e}")
+                self.logger.error("Please remove folder manually and try again.")
+                return False
+
+        self.repository_path.mkdir()
+        return True
+
+    def repository_path_exists_not_empty(self):
+        return self.repository_path.exists() and any(self.repository_path.iterdir())
+
+    def compare_and_log_difference(self, field, local, required):
+        if local != required:
+            self.logger.warning(f"Mismatch '{field}': local={local}, required={required}")
+            return False
+        return True
+
+
+class GitRepository(Dependency):
+    def __init__(self, yaml_description) -> None:
+        super().__init__(yaml_description)
+        self.url = yaml_description["url"]
+        self.branch = yaml_description.get("branch", "master")
+        self.commit_id = yaml_description.get("commit_id", "")
+        self.modules = []
+        if not THIRD_PARTY_PATH.exists():
+            THIRD_PARTY_PATH.mkdir()
 
     def cleanup(self):
         if self.repository_path.exists():
-            shutil.rmtree(self.repository_path)
+            try:
+                shutil.rmtree(self.repository_path)
+            except (PermissionError, OSError) as e:
+                self.logger.warning(f"Could not remove repository path {self.repository_path}: {e}")
 
     @retry(stop_max_attempt_number=5, wait_fixed=100000)
     def execute_with_retry(self, cmd, cwd=None, must_pass=True):
-        self.logger.info("Running command line: %s", cmd)
+        self.logger.info(f"> {cmd}")
         process = subprocess.run(
             cmd,
             cwd=cwd if cwd else self.repository_path,
@@ -155,7 +226,7 @@ class Repository:
         return process
 
     def execute(self, cmd, cwd=None, must_pass=True):
-        self.logger.info("Running command line: %s", cmd)
+        self.logger.info(f"> {cmd}")
         process = subprocess.run(
             cmd,
             cwd=cwd if cwd else self.repository_path,
@@ -176,10 +247,15 @@ class Repository:
         patches_meta_info = repo_meta_info.get("patches", {})
         for i in self.modules:
             patch_list = list(Path(PATCH_PATH / i).glob("*.patch"))
+            patch_hash_list = [(patch, get_file_hash(patch)) for patch in patch_list]
+            hash_list = [hash for (patch, hash) in patch_hash_list]
 
-            if set(patch_list) == set(patches_meta_info.get(i, [])):
-                if len(patch_list) >0:
-                    self.logger.info(f"Skipping patch application for '{i}' - already applied")
+            if set(hash_list) == set(patches_meta_info.get(i, [])):
+                if len(hash_list) > 0:
+                    self.logger.info(
+                        f"Skipping patch application for '{i}' - already applied")
+                    self.logger.info(
+                        f"If patches are needed to be reapplied please rename the patch file temporarily.")
                 continue
 
             self.logger.info(f"resetting repo {i}")
@@ -194,31 +270,22 @@ class Repository:
                 must_pass=True
             )
             patches_meta_info[str(i)] = []
-            if len(patch_list) == 0:
+            if len(hash_list) == 0:
                 continue
-            for patch in patch_list:
-                self.logger.info(f"applying patch {patch}")
+            for (patch, hash) in patch_hash_list:
                 self.execute(
                     f"git apply {patch}", cwd=self.repository_path.parent / i
                 )
-                patches_meta_info[str(i)].append(str(patch))
+                patches_meta_info[str(i)].append(str(hash))
         repo_meta_info["patches"] = patches_meta_info
 
     def clone(self):
-        clone = True
-        if self.repository_path.exists():
-            self.logger.info(f"Repository is already cloned.")
-            clone = False
-        else:
-            self.repository_path.mkdir()
-        if clone:
+        try:
             clone_cmd = [
                 f"git clone {self.url} --depth 1 --branch {self.branch} --recursive {self.name}"
             ]
             if USE_PARALLEL_GIT:
                 clone_cmd.append("-j 8")
-            if self.long_paths:
-                clone_cmd.append("-c core.longpaths=true")
             self.execute_with_retry(
                 " ".join(clone_cmd),
                 cwd=self.repository_path.parent,
@@ -226,6 +293,10 @@ class Repository:
             if self.commit_id:
                 self.execute(f"git fetch --depth 1 origin {self.commit_id}")
                 self.execute(f"git checkout {self.commit_id}")
+        except Exception as e:
+            self.logger.error(f"Error during clone: {e}")
+            return False
+        return True
 
     def scan_repositories(self) -> None:
         modules_paths = self.repository_path.rglob(".git")
@@ -235,557 +306,306 @@ class Repository:
             )
         self.logger.debug(str(self.modules))
 
-    def check_skip_os(self) -> bool:
-        return (self.os == OperatingSystem.WINDOWS and os.name != "nt") or (
-            self.os == OperatingSystem.LINUX and os.name == "nt"
-        )
+    def last_install_sufficient(self, repo_meta_info):
+        if repo_meta_info.get("status", None) != "installed":
+            return False
 
-    def needs_install(self, repo_meta_info):
-        if repo_meta_info.get("status", "unknown") != "installed":
-            return True
-        if str(self.repository_path) != repo_meta_info.get("path", None):
-            return True
-        if self.branch != repo_meta_info.get("branch", None):
-            return True
-        if self.commit_id != repo_meta_info.get("commit_id", None):
-            return True
-        if self.url != repo_meta_info.get("url", None):
-            return True
-        return False
+        result = True and self.compare_and_log_difference("path", repo_meta_info.get("path", None), str(self.repository_path))
+        result = result and self.compare_and_log_difference("branch", repo_meta_info.get("branch", None), self.branch)
+        result = result and self.compare_and_log_difference("commit id", repo_meta_info.get("commit_id", None), self.commit_id)
+        result = result and self.compare_and_log_difference("URL", repo_meta_info.get("url", None), self.url)
 
-    def install(self, meta_data):
-        result = ReturnCode.SUCCESS
-        try:
-            repo_meta_info = meta_data.get(self.name, {})
-            if self.check_skip_os():
-                self.logger.debug(
-                    "Skipping %s installation due to OS limitation", self.name)
-                repo_meta_info["status"] = "skipped"
-            else:
-                install = self.needs_install(repo_meta_info)
-                if not install:
-                    self.logger.info(f"Repository is already cloned.")
-                else:
-                    self.clone()
-                    repo_meta_info["status"] = "installed"
-                    repo_meta_info["url"] = self.url
-                    repo_meta_info["commit_id"] = self.commit_id
-                    repo_meta_info["branch"] = self.branch
-                    repo_meta_info["path"] = str(self.repository_path)
-
-                    self.scan_repositories()
-                    self.apply_patches(repo_meta_info)
-
-            meta_data[self.name] = repo_meta_info
-        except subprocess.CalledProcessError:
-            self.logger.exception("Issue installing repository.")
-            result = ReturnCode.FAILURE
         return result
 
+    def install(self, repo_meta_info, offline_mode):
+        if self.check_skip_os():
+            self.logger.debug("Skipping installation due to OS limitation")
+            repo_meta_info["status"] = "skipped"
+            return True, repo_meta_info
 
-@retry(stop_max_attempt_number=5, wait_fixed=100000)
-def download_and_extract_nuget_package(package_url, output_directory: Path, folder_to_extract=None):
-    # Ensure the output directory exists
-    output_directory.mkdir(parents=True, exist_ok=True)
-    _logger = logger.getChild('nuget fetch')
-
-    # Retrieve proxy settings from Git
-    try:
-        http_proxy = subprocess.run(
-            "git config --global --get http.proxy",
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=True,
-            shell=True
-        ).stdout.decode().strip()
-    except subprocess.CalledProcessError:
-        http_proxy = None
-
-    try:
-        https_proxy = subprocess.run(
-            "git config --global --get https.proxy",
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=True,
-            shell=True
-        ).stdout.decode().strip()
-    except subprocess.CalledProcessError:
-        https_proxy = None
-
-    # Set up the requests session with proxy settings
-    session = requests.Session()
-    proxies = {}
-    if http_proxy:
-        proxies["http"] = http_proxy
-        proxies["https"] = http_proxy
-        _logger.info(f"Using HTTP proxy: {http_proxy}")
-    if https_proxy:
-        proxies["https"] = https_proxy
-        _logger.info(f"Using HTTPS proxy: {https_proxy}")
-    if proxies:
-        session.proxies = proxies
-
-    # Download the package
-    response = session.get(package_url)
-    package_path = output_directory / "package.nupkg"
-
-    # Save the package to the output directory
-    with open(package_path, "wb") as file:
-        file.write(response.content)
-
-    # Extract the package
-    with zipfile.ZipFile(package_path, 'r') as zip_ref:
-        if folder_to_extract:
-            with tempfile.TemporaryDirectory() as temp_dir:
-                for member in zip_ref.namelist():
-                    # Extract files from the main directory (e.g., licenses, README, etc.)
-                    if '/' not in member.strip('/'):
-                        zip_ref.extract(member, output_directory)
-                    # Extract files and directories from the specified subdirectory
-                    elif member.startswith(folder_to_extract):
-                        zip_ref.extract(member, temp_dir)
-                # Move the contents from the temporary directory to the output directory
-                temp_dir_path = Path(temp_dir)
-                for item in (temp_dir_path / folder_to_extract).iterdir():
-                    shutil.move(temp_dir_path / folder_to_extract /
-                                item, output_directory)
+        if self.last_install_sufficient(repo_meta_info):
+            if self.repository_path_exists_not_empty():
+                self.logger.info(f"Repository ready @ {self.relative_repository_path()}")
+                return True, repo_meta_info
         else:
-            zip_ref.extractall(output_directory)
+            if offline_mode and repo_meta_info.get("status", None) == "installed":
+                self.logger.error(f"Wrong version installed @ {self.relative_repository_path()}")
+                self.logger.error(f"Details: {repo_meta_info}")
+                self.logger.error(f"Offline mode can not change the installed version!")
+                return False, repo_meta_info
 
-    # Delete the downloaded package file
-    os.remove(package_path)
+        repo_meta_info["url"] = self.url
+        repo_meta_info["commit_id"] = self.commit_id
+        repo_meta_info["branch"] = self.branch
+        repo_meta_info["path"] = str(self.repository_path)
+        repo_meta_info["status"] = "required"
 
+        if not offline_mode:
+            if not self.prepare_folder():
+                return False, repo_meta_info
+            repo_meta_info["status"] = "folder_prepared"
+            if not self.clone():
+                return False, repo_meta_info
 
-class Nuget(Repository):
+        repo_meta_info["status"] = "cloned"
 
-    def needs_install(self, repo_meta_info):
-        if repo_meta_info.get("status", "unknown") != "installed":
-            return True
-        if self.package_url != repo_meta_info.get("package_url", None):
-            return True
-        if self.version != repo_meta_info.get("version", None):
-            return True
-        if self.folder_to_extract != repo_meta_info.get("folder_to_extract", None):
-            return True
-        return False
-
-    def install(self, meta_data):
-        result = ReturnCode.SUCCESS
-        try:
-            repo_meta_info = meta_data.get(self.name, {})
-            meta_data[self.name] = repo_meta_info
-            if self.check_skip_os():
-                self.logger.debug(
-                    "Skipping %s installation due to os limitation", self.name)
-                meta_data[self.name] = {"status": "skipped"}
+        if not self.repository_path_exists_not_empty():
+            if not offline_mode:
+                self.logger.error(f"The folder doesn't exist or is empty after the clone @ {self.repository_path}")
             else:
-                install = self.needs_install(repo_meta_info)
-                if repo_meta_info.get("installed", False):
-                    self.logger.info(
-                        f"Package is already installed.")
-                    install = False
-                if self.repository_path.exists() and any(self.repository_path.iterdir()):
-                    self.logger.info(
-                        f"Package is already downloaded and extracted.")
-                    install = False
-                if install:
-                    self.logger.info(
-                        f"Starting download and extraction of package.")
-                    download_and_extract_nuget_package(
-                        self.package_url + self.version, self.repository_path, self.folder_to_extract)
-                    self.logger.info(
-                        f"Download and extraction completed for package.")
-                    # Check if the directory is empty after extraction
-                    if not any(self.repository_path.iterdir()):
-                        raise Exception(
-                            f"Extraction failed, {self.repository_path} is empty.")
-                meta_data[self.name] = {
-                    "version": self.version,
-                    "status": "installed",
-                    "folder_to_extract": self.folder_to_extract,
-                    "path": str(self.repository_path)
-                }
-        except Exception as e:
-            self.logger.exception("Issue installing nuget package.")
-            result = ReturnCode.FAILURE
+                if not self.repository_path.exists():
+                    self.logger.error(f"The prepared folder doesn't exist @ {self.repository_path}")
+                else:
+                    self.logger.error(f"The prepared folder is empty: {self.repository_path}")
+            repo_meta_info["status"] = "clone_failure"
+            return False, repo_meta_info
+        else:
+            if offline_mode:
+                self.logger.info(f"Found prepared repository @ {self.relative_repository_path()}")
+
+        self.scan_repositories()
+        self.apply_patches(repo_meta_info)
+        repo_meta_info["status"] = "installed"
+
+        return True, repo_meta_info
+
+
+class Nuget(Dependency):
+    def __init__(self, yaml_description) -> None:
+        super().__init__(yaml_description)
+        self.package_url = yaml_description["package_url"]
+        self.version = yaml_description["version"]
+        self.folder_to_extract = yaml_description.get("folder_to_extract", '')
+        if self.folder_to_extract is None:
+            self.folder_to_extract = ''
+
+    def last_install_sufficient(self, repo_meta_info):
+        if repo_meta_info.get("status", None) != "installed":
+            return False
+
+        result = True and self.compare_and_log_difference("Package URL", repo_meta_info.get("package_url", None), self.package_url)
+        result = result and self.compare_and_log_difference("version", repo_meta_info.get("version", None), self.version)
+        result = result and self.compare_and_log_difference("Folder to extract", repo_meta_info.get("folder_to_extract", ''), str(self.folder_to_extract))
+
         return result
 
-
-class Lua(Repository):
-    def set_branch(self):
-        self.branch = "v5.4.6"
-
-    def init(self):
-        self.name = "lua"
-        self.url = "https://github.com/lua/lua.git"
-
-
-class MurmurHash(Repository):
-    def set_commit(self):
-        self.commit_id = "61a0530f28277f2e850bfc39600ce61d02b518de"
-
-    def init(self):
-        self.name = "MurmurHash"
-        self.url = "https://github.com/aappleby/smhasher.git"
-
-
-class Zlib(Repository):
-    def set_branch(self):
-        self.branch = "v1.3.1"
-
-    def init(self):
-        self.name = "zlib"
-        self.url = "https://github.com/madler/zlib.git"
-
-
-class LibPng(Repository):
-    def set_branch(self):
-        self.branch = "v1.6.43"
-
-    def init(self):
-        self.name = "libpng"
-        self.url = "https://github.com/glennrp/libpng.git"
-
-
-class Xxhash(Repository):
-    def set_branch(self):
-        self.branch = "v0.8.1"
-
-    def init(self):
-        self.name = "xxhash"
-        self.url = "https://github.com/Cyan4973/xxHash.git"
-
-
-class StackWalker(Repository):
-    def set_commit(self):
-        self.commit_id = "045413aca44b094cf42cc85f8e62e986fe943697"
-
-    def init(self):
-        self.name = "StackWalker"
-        self.url = "https://github.com/JochenKalmbach/StackWalker.git"
-        self.os = OperatingSystem.WINDOWS
-
-
-class ClHeaders(Repository):
-    def set_branch(self):
-        self.branch = "v2022.09.30"
-
-    def init(self):
-        self.name = "OpenCL-Headers"
-        self.url = "https://github.com/KhronosGroup/OpenCL-Headers.git"
-
-
-class Detours(Repository):
-    def set_branch(self):
-        self.branch = "main"
-
-    def set_commit(self):
-        self.commit_id = "4b8c659f549b0ab21cf649377c7a84eb708f5e68"
-
-    def init(self):
-        self.name = "Detours"
-        self.url = "https://github.com/microsoft/Detours.git"
-        self.os = OperatingSystem.WINDOWS
-
-
-class DirectXTex(Repository):
-    def set_branch(self):
-        self.branch = "sep2024"
-
-    def init(self):
-        self.name = "DirectXTex"
-        self.url = "https://github.com/microsoft/DirectXTex.git"
-        self.os = OperatingSystem.WINDOWS
-
-
-class XeSS(Repository):
-    def set_branch(self):
-        self.branch = "v2.1.0"
-
-    def init(self):
-        self.name = "xess"
-        self.url = "https://github.com/intel/xess.git"
-        self.os = OperatingSystem.WINDOWS
-
-
-class AgilitySDK(Nuget):
-    def init(self):
-        self.name = "AgilitySDK"
-        self.package_url = "https://www.nuget.org/api/v2/package/Microsoft.Direct3D.D3D12/"
-        self.folder_to_extract = "build/native/"
-        self.version = "1.717.1-preview"
-        self.os = OperatingSystem.WINDOWS
-
-
-class DXC(Nuget):
-    def init(self):
-        self.name = "dxc"
-        self.package_url = "https://www.nuget.org/api/v2/package/Microsoft.Direct3D.DXC/"
-        self.folder_to_extract = "build/native/"
-        self.version = "1.8.2407.12"
-        self.os = OperatingSystem.WINDOWS
-
-
-class DirectML(Nuget):
-    def init(self):
-        self.name = "DirectML"
-        self.package_url = "https://www.nuget.org/api/v2/package/Microsoft.AI.DirectML/"
-        self.folder_to_extract = None
-        self.version = "1.15.2"
-        self.os = OperatingSystem.WINDOWS
-
-
-class DirectStorage(Nuget):
-    def init(self):
-        self.name = "DirectStorage"
-        self.package_url = "https://www.nuget.org/api/v2/package/Microsoft.Direct3D.DirectStorage/"
-        self.folder_to_extract = None
-        self.version = "1.2.3"
-        self.os = OperatingSystem.WINDOWS
-
-
-class fastio(Repository):
-    def set_commit(self):
-        self.commit_id = "788cb9810f0ca881d15fe594b0dd1144901d14d8"
-
-    def init(self):
-        self.name = "fast_io"
-        self.url = "https://github.com/cppfastio/fast_io.git"
-
-
-class RenderDoc(Repository):
-    def set_branch(self):
-        self.branch = "v1.21"
-
-    def init(self):
-        self.name = "renderdoc"
-        self.url = "https://github.com/baldurk/renderdoc.git"
-
-
-class NlohmannJson(Repository):
-    def set_branch(self):
-        self.branch = "v3.11.3"
-
-    def init(self):
-        self.name = "json"
-        self.url = "https://github.com/nlohmann/json.git"
-
-
-class lz4(Repository):
-    def set_branch(self):
-        self.branch = "v1.10.0"
-
-    def init(self):
-        self.name = "lz4"
-        self.url = "https://github.com/lz4/lz4.git"
-
-
-class zstd(Repository):
-    def set_branch(self):
-        self.branch = "v1.5.6"
-
-    def init(self):
-        self.name = "zstd"
-        self.url = "https://github.com/facebook/zstd.git"
-
-
-class YamlCPP(Repository):
-    def set_branch(self):
-        self.branch = "0.8.0"
-
-    def init(self):
-        self.name = "yaml-cpp"
-        self.url = "https://github.com/jbeder/yaml-cpp.git"
-
-
-class ArgsHXX(Repository):
-    def set_commit(self):
-        self.commit_id = "114200a9ad5fe06c8dea76e15d92325695cf3e34"
-
-    def init(self):
-        self.name = "argshxx"
-        self.url = "https://github.com/Taywee/args.git"
-
-
-class IMGUI(Repository):
-    def set_branch(self):
-        self.branch = "v1.91.9b"
-
-    def init(self):
-        self.name = "imgui"
-        self.url = "https://github.com/ocornut/imgui"
-
-
-class IntelOneMono(Repository):
-    def set_branch(self):
-        self.branch = "V1.4.0"
-
-    def init(self):
-        self.name = "intel-one-mono"
-        self.url = "https://github.com/intel/intel-one-mono"
-
-class NvAPI(Repository):
-    def set_branch(self):
-        self.branch = "main"
-
-    def set_commit(self):
-        self.commit_id = "7cb76fce2f52de818b3da497af646af1ec16ce27"
-
-    def init(self):
-        self.name = "nvapi"
-        self.url = "https://github.com/NVIDIA/nvapi.git"
-
-class Plog(Repository):
-    def set_commit(self):
-        self.commit_id = "3da4729da2086a2987ce75cd31c4d04e8ca54fcf"
-
-    def init(self):
-        self.name = "plog"
-        self.url = "https://github.com/SergiusTheBest/plog.git"
-
-
-class Repositories:
-    def __init__(self, args) -> None:
-        self.repos = []
-        if args.with_all or args.with_lua:
-            self.repos.append(Lua())
-        if args.with_all or args.with_murmurhash:
-            self.repos.append(MurmurHash())
-        if args.with_all or args.with_zlib:
-            self.repos.append(Zlib())
-        if args.with_all or args.with_libpng:
-            self.repos.append(LibPng())
-        if args.with_all or args.with_xxhash:
-            self.repos.append(Xxhash())
-        if args.with_all or args.with_stackwalker:
-            self.repos.append(StackWalker())
-        if args.with_all or args.with_clheaders:
-            self.repos.append(ClHeaders())
-        if args.with_all or args.with_detours:
-            self.repos.append(Detours())
-        if args.with_all or args.with_directxtex:
-            self.repos.append(DirectXTex())
-        if args.with_all or args.with_xess:
-            self.repos.append(XeSS())
-        if args.with_all or args.with_agility_sdk:
-            self.repos.append(AgilitySDK())
-        if args.with_all or args.with_dxc:
-            self.repos.append(DXC())
-        if args.with_all or args.with_directml:
-            self.repos.append(DirectML())
-        if args.with_all or args.with_directstorage:
-            self.repos.append(DirectStorage())
-        if args.with_all or args.with_fastio:
-            self.repos.append(fastio())
-        if args.with_all or args.with_renderdoc:
-            self.repos.append(RenderDoc())
-        if args.with_all or args.with_json:
-            self.repos.append(NlohmannJson())
-        if args.with_all or args.with_lz4:
-            self.repos.append(lz4())
-        if args.with_all or args.with_zstd:
-            self.repos.append(zstd())
-        if args.with_all or args.with_yamlcpp:
-            self.repos.append(YamlCPP())
-        if args.with_all or args.with_argshxx:
-            self.repos.append(ArgsHXX())
-        if args.with_all or args.with_imgui:
-            self.repos.append(IMGUI())
-        if args.with_all or args.with_intel_one_mono:
-            self.repos.append(IntelOneMono())
-        if args.with_all or args.with_nvapi:
-            self.repos.append(NvAPI())
-        if args.with_all or args.with_plog:
-            self.repos.append(Plog())
-
-    def __iter__(self):
-        for value in self.repos:
-            yield value
-
-
-def main(args=None) -> int:
-    if not args:
-        args = process_command_line()
-    logger.debug("Arguments: %s", args)
-
-    meta_data = read_meta_data(args, META_FILE)
+    def install(self, repo_meta_info, offline_mode):
+        if repo_meta_info.get("folder_to_extract", None) is None:
+            repo_meta_info["folder_to_extract"] = ''
+
+        if self.check_skip_os():
+            self.logger.debug("Skipping installation due to OS limitation")
+            repo_meta_info["status"] = "skipped"
+            return True, repo_meta_info
+
+        if self.last_install_sufficient(repo_meta_info):
+            if self.repository_path_exists_not_empty():
+                self.logger.info(f"Nuget Package ready @ {self.relative_repository_path()}")
+                return True, repo_meta_info
+        else:
+            if offline_mode and repo_meta_info.get("status", None) == "installed":
+                self.logger.error(f"Wrong version installed @ {self.relative_repository_path()}")
+                self.logger.error(f"Details: {repo_meta_info}")
+                self.logger.error(f"Offline mode can not change the installed version!")
+                return False, repo_meta_info
+
+        repo_meta_info["version"] = self.version
+        repo_meta_info["package_url"] = self.package_url
+        repo_meta_info["folder_to_extract"] = self.folder_to_extract
+        repo_meta_info["path"] = str(self.repository_path)
+        repo_meta_info["status"] = "failed"
+
+        if not offline_mode:
+            if not self.prepare_folder():
+                return False, repo_meta_info
+            repo_meta_info["status"] = "folder_prepared"
+
+            self.logger.info(
+                f"Starting download and extraction of package @ {self.relative_repository_path()}")
+            self.download_and_extract_nuget_package(
+                self.package_url + self.version, self.repository_path)
+            self.logger.info(
+                "Download and extraction completed for package.")
+
+        repo_meta_info["status"] = "extracted"
+        if not self.repository_path_exists_not_empty():
+            if not offline_mode:
+                self.logger.error(f"The folder doesn't exist or is empty after extraction @ {self.repository_path}")
+            else:
+                if not self.repository_path.exists():
+                    self.logger.error(f"The prepared folder doesn't exist @ {self.repository_path}")
+                else:
+                    self.logger.error(f"The prepared folder is empty: {self.repository_path}")
+            repo_meta_info["status"] = "extraction_failure"
+            return False, repo_meta_info
+        else:
+            if offline_mode:
+                self.logger.info(f"Found prepared Nuget package @ {self.relative_repository_path()}")
+        repo_meta_info["status"] = "installed"
+
+        return True, repo_meta_info
+
+
+    @retry(stop_max_attempt_number=5, wait_fixed=100000)
+    def download_and_extract_nuget_package(self, package_url, output_directory: Path):
+        # Ensure the output directory exists
+        output_directory.mkdir(parents=True, exist_ok=True)
+        # Retrieve proxy settings from Git
+        try:
+            http_proxy = subprocess.run(
+                "git config --global --get http.proxy",
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+                shell=True
+            ).stdout.decode().strip()
+        except subprocess.CalledProcessError:
+            http_proxy = None
+
+        try:
+            https_proxy = subprocess.run(
+                "git config --global --get https.proxy",
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+                shell=True
+            ).stdout.decode().strip()
+        except subprocess.CalledProcessError:
+            https_proxy = None
+
+        # Set up the requests session with proxy settings
+        session = requests.Session()
+        proxies = {}
+        if http_proxy:
+            proxies["http"] = http_proxy
+            proxies["https"] = http_proxy
+            self.logger.info(f"Using HTTP proxy: {http_proxy}")
+        if https_proxy:
+            proxies["https"] = https_proxy
+            self.logger.info(f"Using HTTPS proxy: {https_proxy}")
+        if proxies:
+            session.proxies = proxies
+
+        # Download the package
+        response = session.get(package_url)
+        package_path = output_directory / "package.nupkg"
+
+        # Save the package to the output directory
+        with open(package_path, "wb") as file:
+            file.write(response.content)
+
+        # Extract the package
+        with zipfile.ZipFile(package_path, 'r') as zip_ref:
+            if self.folder_to_extract:
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    for member in zip_ref.namelist():
+                        # Extract files from the main directory (e.g., licenses, README, etc.)
+                        if '/' not in member.strip('/'):
+                            zip_ref.extract(member, output_directory)
+                        # Extract files and directories from the specified subdirectory
+                        elif member.startswith(self.folder_to_extract):
+                            zip_ref.extract(member, temp_dir)
+                    # Move the contents from the temporary directory to the output directory
+                    temp_dir_path = Path(temp_dir)
+                    for item in (temp_dir_path / self.folder_to_extract).iterdir():
+                        shutil.move(temp_dir_path / self.folder_to_extract /
+                                    item, output_directory)
+            else:
+                zip_ref.extractall(output_directory)
+
+        # Delete the downloaded package file
+        os.remove(package_path)
+
+def main(arguments=None) -> int:
+    result = True
+    dependencies = []
     try:
-        install_dependencies(args, meta_data)
+        dependencies = read_dependencies()
     except:
         logger.exception("Fatal error")
         return ReturnCode.FAILURE.value
 
-    write_meta_data(args, META_FILE, meta_data)
-    return ReturnCode.SUCCESS.value
+    args = process_command_line(dependencies, arguments)
+
+    logger.debug(f"Arguments: {args}")
+
+    meta_data = read_meta_data(args.meta_path / META_FILE)
+    try:
+        result = install_dependencies(args, dependencies, meta_data)
+    except:
+        result = False
+        logger.exception("Fatal error")
+    finally:
+        write_meta_data(args, META_FILE, meta_data)
+
+    return ReturnCode.from_bool(result).value
 
 
-def process_command_line():
+def read_dependencies():
+    with open(DEPENDENCIES_FILE, "r") as f:
+        dependencies = yaml.safe_load(f)["dependencies"]
+    return [Nuget(dep_nuget) for dep_nuget in dependencies.get("NugetPackages", [])] + [GitRepository(dep_git_repo) for dep_git_repo in dependencies.get("GitRepositories", [])]
+
+
+def process_command_line(dependencies, arguments=None):
     parser = argparse.ArgumentParser()
-    setup_parser(parser)
-    return parser.parse_args()
+    setup_parser(parser, dependencies)
+    return parser.parse_args(arguments)
 
 
-def setup_parser(root_parser):
-    root_parser.add_argument("--with-all", action="store_true")
-    root_parser.add_argument("--with-lua", action="store_true")
-    root_parser.add_argument("--with-murmurhash", action="store_true")
-    root_parser.add_argument("--with-zlib", action="store_true")
-    root_parser.add_argument("--with-libpng", action="store_true")
-    root_parser.add_argument("--with-xxhash", action="store_true")
-    root_parser.add_argument("--with-stackwalker", action="store_true")
-    root_parser.add_argument("--with-clheaders", action="store_true")
-    root_parser.add_argument("--with-lz4", action="store_true")
-    root_parser.add_argument("--with-zstd", action="store_true")
-    root_parser.add_argument("--with-detours", action="store_true")
-    root_parser.add_argument("--with-directxtex", action="store_true")
-    root_parser.add_argument("--with-xess", action="store_true")
-    root_parser.add_argument("--with-agility-sdk", action="store_true")
-    root_parser.add_argument("--with-dxc", action="store_true")
-    root_parser.add_argument("--with-directml", action="store_true")
-    root_parser.add_argument("--with-directstorage", action="store_true")
-    root_parser.add_argument("--with-fastio", action="store_true")
-    root_parser.add_argument("--with-renderdoc", action="store_true")
-    root_parser.add_argument("--with-json", action="store_true")
-    root_parser.add_argument("--with-yamlcpp", action="store_true")
-    root_parser.add_argument("--with-argshxx", action="store_true")
-    root_parser.add_argument("--with-imgui", action="store_true")
-    root_parser.add_argument("--with-intel-one-mono", action="store_true")
-    root_parser.add_argument("--with-nvapi", action="store_true")
-    root_parser.add_argument("--with-plog", action="store_true")
-    root_parser.add_argument("--meta-path", type=str, help="Path to the directory holding the meta file", default="")
+def setup_parser(root_parser, dependencies):
+    for dependency in dependencies:
+        root_parser.add_argument(
+            dependency.cli_argument, action="store_true", help=f"Install {dependency.name}")
+    root_parser.add_argument(
+        "--with-all", action="store_true", help="Install all dependencies")
+    root_parser.add_argument(
+        "--meta-path", type=Path, help="Path to the directory holding the meta file", default=str(THIRD_PARTY_PATH))
+    root_parser.add_argument(
+        "--offline-mode", action="store_true", help="Assume encountered folders contain the repository in the correct unpatched version/branch/commit id.")
 
 
-def read_meta_data(args, meta_file):
+def read_meta_data(meta_file_path):
     meta_data = {}
     try:
-      meta_file_path = os.path.join(args.meta_path, meta_file)
-      if os.path.exists(meta_file_path):
-        with open(meta_file_path, "r") as f:
-            meta_data = yaml.safe_load(f)
-        if meta_data is None:
-            meta_data = {}
-      else:
-          logger.info("No meta data found")
+        if meta_file_path.exists():
+            with open(meta_file_path, "r") as f:
+                meta_data = yaml.safe_load(f)
+            if meta_data is None:
+                meta_data = {}
+        else:
+            logger.info("No meta data found")
     except Exception as e:
-        logger.error("Failed to read meta data: %s", e)
+        logger.error(f"Failed to read meta data: {e}")
     return meta_data
 
 
-def install_dependencies(args, meta_data):
-    for repo in Repositories(args):
-        x = repo.install(meta_data)
-        if x == ReturnCode.FAILURE:
-            logger.error("Installation failed for %s", repo.name)
-    return True
+def install_dependencies(args, dependencies, meta_data) -> bool:
+    result = True
+    for dependency in dependencies:
+        if args.with_all or getattr(args, dependency.arg_name, False):
+            result_dep = False
+            try:
+                repo_meta_info = meta_data.get(dependency.name, {})
+                result_dep, repo_meta_info = dependency.install(repo_meta_info, offline_mode=args.offline_mode)
+                meta_data[dependency.name] = repo_meta_info
+            except Exception as e:
+                dependency.logger.exception(f"Encountered exception: {e}")
+                result_dep = False
+            if not result_dep:
+                logger.exception(f"Failed installing dependency {dependency.name} to {dependency.relative_repository_path}")
+            result = result or result_dep
+    return result
 
 
 def write_meta_data(args, meta_file, meta_data):
-    meta_file_path = os.path.join(args.meta_path, meta_file)
+    meta_file_path = args.meta_path /  meta_file
     try:
-      with open(meta_file_path, "w") as f:
-          yaml.dump(meta_data, f)
+        with open(meta_file_path, "w") as f:
+            yaml.dump(meta_data, f)
     except Exception as e:
-        logger.error("Failed to write meta data: %s", e)
+        logger.error(f"Failed to write meta data: {e}")
+
 
 if __name__ == "__main__":
     sys.exit(main())
