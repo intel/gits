@@ -27,6 +27,8 @@ public:
   void post(ID3D12DeviceCreateHeapCommand& command) override;
   void pre(ID3D12Device4CreateHeap1Command& command) override;
   void post(ID3D12Device4CreateHeap1Command& command) override;
+  void pre(INTC_D3D12_CreateHeapCommand& command) override;
+  void post(INTC_D3D12_CreateHeapCommand& command) override;
   void pre(CreateHeapAllocationMetaCommand& command) override;
   void pre(ID3D12Device3OpenExistingHeapFromAddressCommand& command) override;
   void pre(ID3D12Device13OpenExistingHeapFromAddress1Command& command) override;

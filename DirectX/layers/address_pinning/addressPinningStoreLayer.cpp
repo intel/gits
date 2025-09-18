@@ -104,6 +104,10 @@ void AddressPinningStoreLayer::post(ID3D12Device4CreateHeap1Command& command) {
   handleHeap(command);
 }
 
+void AddressPinningStoreLayer::post(INTC_D3D12_CreateHeapCommand& command) {
+  handleHeap(command);
+}
+
 void AddressPinningStoreLayer::post(ID3D12Device3OpenExistingHeapFromAddressCommand& command) {
   handleHeap(command);
 }

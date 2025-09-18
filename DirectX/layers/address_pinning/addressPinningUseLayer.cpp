@@ -10,6 +10,7 @@
 #include "configurationLib.h"
 #include "tools.h"
 #include "log2.h"
+#include "intelExtensions.h"
 
 #include <fstream>
 
@@ -56,6 +57,43 @@ void AddressPinningUseLayer::pre(ID3D12Device4CreateHeap1Command& command) {
 
 void AddressPinningUseLayer::post(ID3D12Device4CreateHeap1Command& command) {
   postHeap(command);
+}
+
+void AddressPinningUseLayer::pre(INTC_D3D12_CreateHeapCommand& command) {
+  if (command.result_.value != S_OK) {
+    return;
+  }
+  D3D12_HEAP_DESC* desc = command.pDesc_.value->pD3D12Desc;
+  if (desc->Flags & D3D12_HEAP_FLAG_DENY_BUFFERS) {
+    return;
+  }
+  auto it = heapAddressRanges_.find(command.ppvHeap_.key);
+  if (it == heapAddressRanges_.end()) {
+    return;
+  }
+  deviceTools_->SetNextAllocationAddress(it->second.addressRange.StartAddress);
+}
+
+void AddressPinningUseLayer::post(INTC_D3D12_CreateHeapCommand& command) {
+  if (command.result_.value != S_OK) {
+    return;
+  }
+  D3D12_HEAP_DESC* desc = command.pDesc_.value->pD3D12Desc;
+  if (desc->Flags & D3D12_HEAP_FLAG_DENY_BUFFERS) {
+    return;
+  }
+  auto it = heapAddressRanges_.find(command.ppvHeap_.key);
+  if (it == heapAddressRanges_.end()) {
+    return;
+  }
+  ID3D12Heap* heap = static_cast<ID3D12Heap*>(*command.ppvHeap_.value);
+  ID3D12PageableTools* pPageableTools = nullptr;
+  HRESULT hr = heap->QueryInterface(IID_PPV_ARGS(&pPageableTools));
+  GITS_ASSERT(hr == S_OK);
+  D3D12_GPU_VIRTUAL_ADDRESS_RANGE range{};
+  hr = pPageableTools->GetAllocation(&range);
+  GITS_ASSERT(hr == S_OK);
+  GITS_ASSERT(it->second.addressRange.StartAddress == range.StartAddress);
 }
 
 void AddressPinningUseLayer::pre(CreateHeapAllocationMetaCommand& command) {
