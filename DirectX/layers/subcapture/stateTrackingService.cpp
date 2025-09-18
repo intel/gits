@@ -436,11 +436,19 @@ void StateTrackingService::restoreResidencyPriority(unsigned deviceKey,
 void StateTrackingService::restoreDXGISwapChain(ObjectState* state) {
   if (state->creationCommand->getId() == CommandId::ID_IDXGIFACTORY_CREATESWAPCHAIN) {
     auto* command = static_cast<IDXGIFactoryCreateSwapChainCommand*>(state->creationCommand.get());
+    int width = command->pDesc_.value->BufferDesc.Width;
+    int height = command->pDesc_.value->BufferDesc.Height;
+    if (!width || !height) {
+      DXGI_SWAP_CHAIN_DESC desc{};
+      (*command->ppSwapChain_.value)->GetDesc(&desc);
+      width = desc.BufferDesc.Width;
+      height = desc.BufferDesc.Height;
+    }
     CreateWindowMetaCommand createWindowCommand;
     createWindowCommand.key = getUniqueCommandKey();
     createWindowCommand.hWnd_.value = command->pDesc_.value->OutputWindow;
-    createWindowCommand.width_.value = command->pDesc_.value->BufferDesc.Width;
-    createWindowCommand.height_.value = command->pDesc_.value->BufferDesc.Height;
+    createWindowCommand.width_.value = width;
+    createWindowCommand.height_.value = height;
     recorder_.record(new CreateWindowMetaWriter(createWindowCommand));
 
     swapChainService_.setSwapChain(state->key, *command->ppSwapChain_.value,
@@ -449,11 +457,19 @@ void StateTrackingService::restoreDXGISwapChain(ObjectState* state) {
              CommandId::ID_IDXGIFACTORY2_CREATESWAPCHAINFORHWND) {
     auto* command =
         static_cast<IDXGIFactory2CreateSwapChainForHwndCommand*>(state->creationCommand.get());
+    int width = command->pDesc_.value->Width;
+    int height = command->pDesc_.value->Height;
+    if (!width || !height) {
+      DXGI_SWAP_CHAIN_DESC1 desc{};
+      (*command->ppSwapChain_.value)->GetDesc1(&desc);
+      width = desc.Width;
+      height = desc.Height;
+    }
     CreateWindowMetaCommand createWindowCommand;
     createWindowCommand.key = getUniqueCommandKey();
     createWindowCommand.hWnd_.value = command->hWnd_.value;
-    createWindowCommand.width_.value = command->pDesc_.value->Width;
-    createWindowCommand.height_.value = command->pDesc_.value->Height;
+    createWindowCommand.width_.value = width;
+    createWindowCommand.height_.value = height;
     recorder_.record(new CreateWindowMetaWriter(createWindowCommand));
 
     swapChainService_.setSwapChain(state->key, *command->ppSwapChain_.value,
