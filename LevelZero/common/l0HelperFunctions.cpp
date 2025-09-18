@@ -22,7 +22,7 @@ gits::l0::CGitsL0MemoryUpdate::CGitsL0MemoryUpdate(const void* usmPtr) {
   auto& sd = SD();
   const auto allocInfo = GetAllocFromRegion(const_cast<void*>(usmPtr), sd);
   _usmPtr = allocInfo.first;
-  Log(TRACEV) << "CGitsL0MemoryUpdate(" << ToStringHelper(_usmPtr) << ")";
+  LOG_TRACEV << "CGitsL0MemoryUpdate(" << ToStringHelper(_usmPtr) << ")";
   auto& allocState = sd.Get<CAllocState>(_usmPtr, EXCEPTION_MESSAGE);
   auto& handle = allocState.sniffedRegionHandle;
   const auto size = allocState.size;
@@ -51,7 +51,7 @@ void gits::l0::CGitsL0MemoryUpdate::Write([[maybe_unused]] CCodeOStream& stream)
 void gits::l0::CGitsL0MemoryUpdate::Run() {
   if (_resource.Data()) {
     void* pointerToData = CMappedPtr::GetMapping(_usmPtr);
-    Log(TRACEV) << "CGitsL0MemoryUpdate(" << ToStringHelper(pointerToData) << ")";
+    LOG_TRACEV << "CGitsL0MemoryUpdate(" << ToStringHelper(pointerToData) << ")";
     // CPU Write
     std::memcpy(pointerToData, _resource.Data(), _resource.Data().Size());
     // GPU Write
@@ -137,17 +137,17 @@ gits::CArgument& gits::l0::CGitsL0TokenMakeCurrentThread::Argument(unsigned idx)
 gits::l0::CGitsL0TokenMakeCurrentThread::CGitsL0TokenMakeCurrentThread(const int& threadId)
     : _threadId(threadId) {
   CALL_ONCE[] {
-    Log(INFO) << "Recorded Application uses multiple threads.";
-    Log(WARN) << "Multithreaded applications have to be "
-                 "recorded from beginning. Subcapturing from stream is "
-                 "possible without the --faithfulThreading option.";
+    LOG_INFO << "Recorded Application uses multiple threads.";
+    LOG_WARNING << "Multithreaded applications have to be "
+                   "recorded from beginning. Subcapturing from stream is "
+                   "possible without the --faithfulThreading option.";
     if (Configurator::DumpCCode() && CGits::Instance().MultithreadedApp()) {
-      Log(ERR) << "CCodeDump is not possible for multithreaded application. Please "
-                  "record binary stream first and then recapture it to CCode";
+      LOG_ERROR << "CCodeDump is not possible for multithreaded application. Please "
+                   "record binary stream first and then recapture it to CCode";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
   };
-  Log(TRACE) << "Current thread: " << threadId;
+  LOG_TRACE << "Current thread: " << threadId;
   CGits::Instance().CurrentThreadId(threadId);
 }
 
@@ -161,10 +161,10 @@ void gits::l0::CGitsL0TokenMakeCurrentThread::Read(CBinIStream& stream) {
 
 void gits::l0::CGitsL0TokenMakeCurrentThread::Run() {
   CALL_ONCE[] {
-    Log(INFO) << "Multithreaded stream";
+    LOG_INFO << "Multithreaded stream";
   };
   CGits::Instance().CurrentThreadId(_threadId);
-  Log(TRACE) << "Make current thread: " << _threadId;
+  LOG_TRACE << "Make current thread: " << _threadId;
 }
 
 gits::CArgument& gits::l0::CGitsL0OriginalQueueFamilyInfo::Argument(unsigned idx) {

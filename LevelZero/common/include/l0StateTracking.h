@@ -80,9 +80,9 @@ bool CheckWhetherQueueCanBeSynced(const Config& cfg,
         MockListExecutor(sd, driver, commandListsToSynchronize, submittedCommandList);
     const auto isCommandQueueEligibleForSynchronization = mockListExecutor.Run();
     if (!isCommandQueueEligibleForSynchronization) {
-      Log(WARN) << "Dumping kernels from command queue: " << ToStringHelper(hCommandQueue)
-                << " will be delayed to the original application synchronization due to "
-                   "not completable event dependencies";
+      LOG_WARNING << "Dumping kernels from command queue: " << ToStringHelper(hCommandQueue)
+                  << " will be delayed to the original application synchronization due to "
+                     "not completable event dependencies";
     }
     return isCommandQueueEligibleForSynchronization;
   }
@@ -116,10 +116,10 @@ bool CheckWhetherCommandListImmediateCanBeSynced(
         MockListExecutor(sd, driver, commandListsToSynchronize, submittedCommandList);
     const auto isCommandListEligibleForSynchronization = mockListExecutor.Run();
     if (!isCommandListEligibleForSynchronization) {
-      Log(WARN) << "Dumping kernels from immediate command list: "
-                << ToStringHelper(hCommandListImmediate)
-                << " will be delayed to the original application synchronization due to "
-                   "not completable event dependencies";
+      LOG_WARNING << "Dumping kernels from immediate command list: "
+                  << ToStringHelper(hCommandListImmediate)
+                  << " will be delayed to the original application synchronization due to "
+                     "not completable event dependencies";
     }
     return isCommandListEligibleForSynchronization;
   }
@@ -1057,7 +1057,7 @@ inline void zeGitsOriginalQueueFamilyInfo_SD(
     ze_device_handle_t hDevice,
     uint32_t count,
     const ze_command_queue_group_properties_t* cqGroupProperties) {
-  Log(TRACE) << "Updating original command queue group properties...";
+  LOG_TRACE << "Updating original command queue group properties...";
   auto& originalQueueGroupProps =
       SD().Get<CDeviceState>(hDevice, EXCEPTION_MESSAGE).originalQueueGroupProperties;
   originalQueueGroupProps.clear();
@@ -1111,7 +1111,7 @@ inline void zeContextEvictMemory_SD(ze_result_t return_value,
     const auto allocInfo = GetAllocFromRegion(ptr, sd);
     auto& allocState = sd.Get<CAllocState>(allocInfo.first, EXCEPTION_MESSAGE);
     if (allocState.residencyInfo && allocState.residencyInfo->size != size) {
-      Log(WARN) << "Evicted memory size is not covering whole residency.";
+      LOG_WARNING << "Evicted memory size is not covering whole residency.";
     }
     allocState.residencyInfo.reset();
   }
@@ -1136,12 +1136,12 @@ inline void zeMemGetAllocProperties_SD([[maybe_unused]] ze_result_t return_value
             throw ENotImplemented(EXCEPTION_MESSAGE);
           }
           if (*phDevice != allocState.hDevice) {
-            Log(WARN) << "Changing " << ToStringHelper(*phDevice) << " to "
-                      << ToStringHelper(allocState.hDevice);
+            LOG_WARNING << "Changing " << ToStringHelper(*phDevice) << " to "
+                        << ToStringHelper(allocState.hDevice);
             *phDevice = allocState.hDevice;
           }
         }
-        Log(WARN) << "Changing ZE_MEMORY_TYPE_UNKNOWN to ZE_MEMORY_TYPE_DEVICE";
+        LOG_WARNING << "Changing ZE_MEMORY_TYPE_UNKNOWN to ZE_MEMORY_TYPE_DEVICE";
       }
     }
   }
@@ -1234,7 +1234,7 @@ inline void zeVirtualMemSetAccessAttribute_SD(ze_result_t return_value,
     if (allocInfo.first != nullptr) {
       auto& allocState = SD().Get<CAllocState>(allocInfo.first, EXCEPTION_MESSAGE);
       if (allocState.size != size) {
-        Log(ERR)
+        LOG_ERROR
             << "Setting only part of the virtual memory's memory access attribute is not supported";
         throw ENotImplemented(EXCEPTION_MESSAGE);
       }

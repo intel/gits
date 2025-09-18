@@ -44,7 +44,7 @@ inline void clBuildProgram_SD(cl_int return_value,
                         alreadyCreatedHeaders);
     }
     if (!programState->fileName.empty()) {
-      Log(TRACE) << "^------------- Building file " << programState->fileName;
+      LOG_TRACE << "^------------- Building file " << programState->fileName << std::endl;
     }
     programState->BuildProgram(num_devices, options);
     auto* prog = programState->GetBinaryLinkedProgram();
@@ -720,8 +720,8 @@ inline void clEnqueueNDRangeKernel_SD(cl_int return_value,
     }
     SD()._kernelStates[kernel]->name = std::move(kernelName);
   }
-  Log(TRACE) << "--- kernel call #" << CGits::Instance().CurrentKernelCount() << ", kernel name \""
-             << SD()._kernelStates[kernel]->name << "\" ---";
+  LOG_TRACE << "--- kernel call #" << CGits::Instance().CurrentKernelCount() << ", kernel name \""
+            << SD()._kernelStates[kernel]->name << "\" ---" << std::endl;
   RegisterEvents(event, command_queue, return_value);
   if (Configurator::IsRecorder() && HasUsmPtrsToUpdate(kernel)) {
     // have to wait for kernel execution before protecting memory
@@ -735,7 +735,7 @@ inline void clEnqueueNDRangeKernel_SD(cl_int return_value,
         if (SD()._eventStates.find(e) != SD()._eventStates.end() &&
             SD().GetEventState(e, EXCEPTION_MESSAGE).isUserEvent) {
           drvOcl.clSetUserEventStatus(e, CL_COMPLETE);
-          Log(INFO) << "Setting user event status to CL_COMPLETE, event: " << ToStringHelper(e);
+          LOG_INFO << "Setting user event status to CL_COMPLETE, event: " << ToStringHelper(e);
         }
       }
     }

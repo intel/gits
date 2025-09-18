@@ -25,11 +25,11 @@ CFunction* CFunction::Create(unsigned id) {
     return new CoclocFreeOutput;
   default:;
   }
-  Log(ERR) << "Unknown ocloc function with ID: " << id;
+  LOG_ERROR << "Unknown ocloc function with ID: " << id;
   throw EOperationFailed(EXCEPTION_MESSAGE);
 }
 CArgument& CFunction::Result(unsigned idx) {
-  Log(ERR) << "Results not supported in ocloc!!!";
+  LOG_ERROR << "Results not supported in ocloc!!!";
   throw EOperationFailed(EXCEPTION_MESSAGE);
 }
 } // namespace ocloc

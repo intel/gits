@@ -10,7 +10,7 @@
 
 #include "openclHeader.h"
 
-#include "log.h"
+#include "log2.h"
 #include "tools.h"
 #include "dynamic_linker.h"
 

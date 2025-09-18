@@ -34,11 +34,11 @@ CFunction * CFunction::Create(unsigned id) {
   default:
     ;
   }
-  Log(ERR) << "Unknown LevelZero function with ID: " << id;
+  LOG_ERROR << "Unknown LevelZero function with ID: " << id;
   throw EOperationFailed(EXCEPTION_MESSAGE);
 }
 CArgument &CFunction::Result(unsigned) {
-  Log(ERR) << "Results not supported in LevelZero!!!";
+  LOG_ERROR << "Results not supported in LevelZero!!!";
   throw EOperationFailed(EXCEPTION_MESSAGE);
 }
 void CFunction::Write(CCodeOStream& stream) const {

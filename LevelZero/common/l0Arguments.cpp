@@ -151,9 +151,9 @@ const void* CKernelArgValue::operator*() {
           potentialPointer =
               reinterpret_cast<uintptr_t>(GetOffsetPointer(allocPair.first, allocPair.second));
           std::memcpy(_buffer.data() + i, &potentialPointer, sizeof(uintptr_t));
-          Log(TRACEV) << "Fetching pointer("
-                      << ToStringHelper(reinterpret_cast<void*>(potentialPointer)) << ") on offset "
-                      << std::to_string(i) << " inside local memory.";
+          LOG_TRACEV << "Fetching pointer("
+                     << ToStringHelper(reinterpret_cast<void*>(potentialPointer)) << ") on offset "
+                     << std::to_string(i) << " inside local memory.";
           i += sizeof(void*) - 1;
         }
         i++;
@@ -208,8 +208,8 @@ std::string SourceFileInfo::CreateFileName(ze_module_format_t format) {
   } else if (format == ZE_MODULE_FORMAT_NATIVE) {
     stream << "binary_" << std::setfill('0') << std::setw(2) << _binarySourceIdx++ << ".bin";
   } else {
-    Log(ERR) << "Module format " << ToStringHelper<ze_module_format_t>(format)
-             << " is not supported";
+    LOG_ERROR << "Module format " << ToStringHelper<ze_module_format_t>(format)
+              << " is not supported";
     throw ENotImplemented(EXCEPTION_MESSAGE);
   }
   return stream.str();

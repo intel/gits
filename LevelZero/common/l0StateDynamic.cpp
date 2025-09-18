@@ -171,9 +171,9 @@ void GlobalSubmissionTracker::SyncCheck() {
   std::vector<uint32_t> submissionsToRemove;
   for (auto& queueSubmissionInfo : queueSubmissionTracker) {
     if (queueSubmissionInfo.second->executionInfo->hSignalEvent == nullptr) {
-      Log(WARN) << "Signal event is nullptr for kernel: "
-                << queueSubmissionInfo.second->executionInfo->handle
-                << ", cannot track kernel completion status";
+      LOG_WARNING << "Signal event is nullptr for kernel: "
+                  << queueSubmissionInfo.second->executionInfo->handle
+                  << ", cannot track kernel completion status";
       submissionsToRemove.push_back(queueSubmissionInfo.first);
     } else {
       if (drv.inject.zeEventQueryStatus(queueSubmissionInfo.second->executionInfo->hSignalEvent) ==
@@ -304,7 +304,7 @@ void CKernelExecutionInfo::SetArgument(uint32_t index, size_t typeSize, const vo
   } else {
     args[index].valueString = ToStringHelper(reinterpret_cast<void*>(*pointers.back()));
   }
-  Log(TRACE) << "Argument[" << index << "] = " << args[index].valueString;
+  LOG_TRACE << "Argument[" << index << "] = " << args[index].valueString;
   args[index].argValue = value;
   args[index].typeSize = typeSize;
 }

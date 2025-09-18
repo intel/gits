@@ -189,13 +189,13 @@ void CL_CALLBACK EventCallback(cl_event e, cl_int s, void* ud) {
     try {
       CreateEventCallbackWrapper(proxy->state, proxy->funcID)(e, s, ud);
     } catch (std::runtime_error& e) {
-      OclLog(ERR) << e.what();
+      LOG_ERROR << e.what();
       delete proxy;
       return;
     }
     delete proxy;
   } else {
-    OclLog(WARN) << "CLEventCallback: something went wrong with sending data to callback function.";
+    LOG_WARNING << "CLEventCallback: something went wrong with sending data to callback function.";
   }
 }
 
@@ -230,14 +230,13 @@ void CL_CALLBACK MemObjCallback(cl_mem m, void* ud) {
     try {
       CreateMemObjCallbackWrapper(proxy->state, proxy->funcID)(m, ud);
     } catch (std::runtime_error& e) {
-      OclLog(ERR) << e.what();
+      LOG_ERROR << e.what();
       delete proxy;
       return;
     }
     delete proxy;
   } else {
-    OclLog(WARN)
-        << "CLMemObjCallback: something went wrong with sending data to callback function.";
+    LOG_WARNING << "CLMemObjCallback: something went wrong with sending data to callback function.";
   }
 }
 
@@ -272,13 +271,13 @@ void CL_CALLBACK ProgramCallback(cl_program p, void* ud) {
     try {
       CreateProgramCallbackWrapper(proxy->state, proxy->funcID)(p, ud);
     } catch (std::runtime_error& e) {
-      OclLog(ERR) << e.what();
+      LOG_ERROR << e.what();
       delete proxy;
       return;
     }
     delete proxy;
   } else {
-    OclLog(WARN)
+    LOG_WARNING
         << "CLProgramCallback: something went wrong with sending data to callback function.";
   }
 }
@@ -317,13 +316,13 @@ void CL_CALLBACK ContextCallback(const char* ei, const void* pi, size_t cb, void
     try {
       CreateContextCallbackWrapper(proxy->state, proxy->funcID)(ei, pi, cb, ud);
     } catch (std::runtime_error& e) {
-      OclLog(ERR) << e.what();
+      LOG_ERROR << e.what();
       delete proxy;
       return;
     }
     delete proxy;
   } else {
-    OclLog(WARN)
+    LOG_WARNING
         << "CLContextCallback: something went wrong with sending data to callback function.";
   }
 }
@@ -362,13 +361,13 @@ void CL_CALLBACK SVMFreeCallback(cl_command_queue cq, cl_uint n, void** p, void*
     try {
       CreateSVMFreeCallbackWrapper(proxy->state, proxy->funcID)(cq, n, p, ud);
     } catch (std::runtime_error& e) {
-      OclLog(ERR) << e.what();
+      LOG_ERROR << e.what();
       delete proxy;
       return;
     }
     delete proxy;
   } else {
-    OclLog(WARN)
+    LOG_WARNING
         << "CLSVMFreeCallback: something went wrong with sending data to callback function.";
   }
 }
@@ -407,43 +406,31 @@ int export_CallbackData(lua_State* L) {
 }
 
 class Tracer {
-  static const LogLevel level = LogLevel::TRACE;
-
 public:
   template <class T>
   NOINLINE static void TraceRet(T r) {
-    if (ShouldLog(level)) {
-      COclLog(level, NO_PREFIX) << " = " << r;
-    }
+    LOG_TRACE << " = " << r << std::endl;
   }
 
   template <class T>
   NOINLINE static void TraceRet(T* r) {
     if (r == nullptr) {
-      if (ShouldLog(level)) {
-        COclLog(level, NO_PREFIX) << " = nullptr";
-      }
+      LOG_TRACE << " = nullptr" << std::endl;
     } else {
-      if (ShouldLog(level)) {
 #ifdef GITS_PLATFORM_LINUX
-        COclLog(level, NO_PREFIX) << " = " << r;
+      LOG_TRACE << " = " << r << std::endl;
 #else
-        COclLog(level, NO_PREFIX) << " = 0x" << r;
+      LOG_TRACE << " = 0x" << r << std::endl;
 #endif
-      }
     }
   }
 
   NOINLINE static void TraceRet(cl_int r) {
-    if (ShouldLog(level)) {
-      COclLog(level, NO_PREFIX) << " = " << CLResultToString(r);
-    }
+    LOG_TRACE << " = " << CLResultToString(r) << std::endl;
   }
 
   NOINLINE static void TraceRet(void_t r) {
-    if (ShouldLog(level)) {
-      COclLog(level, NO_PREFIX) << "";
-    }
+    LOG_TRACE << std::endl;
   }
 };
 #else

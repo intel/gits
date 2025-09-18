@@ -17,7 +17,7 @@
 #include "config.h"
 #include "exception.h"
 #include "gits.h"
-#include "log.h"
+#include "log2.h"
 #include "platform.h"
 #include "recorder.h"
 #include "tools.h"

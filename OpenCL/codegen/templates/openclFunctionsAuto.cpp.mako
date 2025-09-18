@@ -11,7 +11,7 @@
 #include "openclPlayerRunWrap.h"
 #include "openclStateTracking.h"
 #include "exception.h"
-#include "log.h"
+#include "log2.h"
 
 namespace gits {
 namespace OpenCL {

@@ -150,7 +150,7 @@ gits::CArgument& gits::OpenCL::CGitsClTokenMakeCurrentThread::Argument(unsigned 
 gits::OpenCL::CGitsClTokenMakeCurrentThread::CGitsClTokenMakeCurrentThread(const int& threadId)
     : _threadId(threadId) {
   CALL_ONCE[] {
-    Log(INFO) << "Recorded Application uses multiple threads.";
+    LOG_INFO << "Recorded Application uses multiple threads.";
     Log(WARN) << "Multithreaded applications have to be "
                  "recorded from beginning. Subcapturing from stream is "
                  "possible without the --faithfulThreading option.";
@@ -160,7 +160,7 @@ gits::OpenCL::CGitsClTokenMakeCurrentThread::CGitsClTokenMakeCurrentThread(const
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
   };
-  Log(TRACE) << "Current thread: " << threadId;
+  LOG_TRACE << "Current thread: " << threadId;
   CGits::Instance().CurrentThreadId(threadId);
 }
 
@@ -174,8 +174,8 @@ void gits::OpenCL::CGitsClTokenMakeCurrentThread::Read(CBinIStream& stream) {
 
 void gits::OpenCL::CGitsClTokenMakeCurrentThread::Run() {
   CALL_ONCE[] {
-    Log(INFO) << "Multithreaded stream";
+    LOG_INFO << "Multithreaded stream";
   };
   CGits::Instance().CurrentThreadId(_threadId);
-  Log(TRACE) << "Make current thread: " << _threadId;
+  LOG_TRACE << "Make current thread: " << _threadId;
 }

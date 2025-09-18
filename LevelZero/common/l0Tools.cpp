@@ -198,7 +198,7 @@ std::array<texel_type, 5> GetTexelTypeArrayFromLayout(ze_image_format_layout_t l
     return {SURFACE_FORMAT_UNDEFINED, SURFACE_FORMAT_UNDEFINED, SURFACE_FORMAT_UNDEFINED,
             SURFACE_FORMAT_UNDEFINED, SURFACE_FORMAT_UNDEFINED};
   default:
-    Log(WARN) << "The " << layout << " format cannot be converted to GITS internal format.";
+    LOG_WARNING << "The " << layout << " format cannot be converted to GITS internal format.";
     throw ENotSupported(EXCEPTION_MESSAGE);
   }
 }
@@ -232,7 +232,7 @@ void SaveImage(const std::filesystem::path& dir,
                                    true, frame, false, true);
     }
   } catch (const ENotImplemented& ex) {
-    Log(ERR) << ex.what();
+    LOG_ERROR << ex.what();
   }
 }
 
@@ -623,9 +623,9 @@ uint32_t GetMostCommonOrdinal(const ze_command_queue_group_property_flags_t& ori
   if (!ret.empty()) {
     return ret.front();
   }
-  Log(WARN) << "Couldn't find proper engine. Choosing first..";
+  LOG_WARNING << "Couldn't find proper engine. Choosing first..";
   for (const auto& props : currentProps) {
-    Log(TRACEV) << ToStringHelper(props.flags);
+    LOG_TRACEV << ToStringHelper(props.flags);
   }
   return 0U;
 }
@@ -829,14 +829,14 @@ uint32_t TranslatePointerOffsets(const CStateDynamic& sd,
       if (GetAllocFromRegion(ptrToFetch, sd).first != nullptr) {
         continue;
       }
-      Log(WARN) << "Couldn't translate pointer inside pAlloc: " << bufferPtr
-                << " offset: " << offset.first
-                << ". Ptr to translate: " << ToStringHelper(ptrToFetch);
+      LOG_WARNING << "Couldn't translate pointer inside pAlloc: " << bufferPtr
+                  << " offset: " << offset.first
+                  << ". Ptr to translate: " << ToStringHelper(ptrToFetch);
       continue;
     }
     translations++;
-    Log(TRACEV) << "Successfully translated pointer: " << ToStringHelper(ptrToFetch)
-                << " USM Pointer: " << ToStringHelper(allocPair.first);
+    LOG_TRACEV << "Successfully translated pointer: " << ToStringHelper(ptrToFetch)
+               << " USM Pointer: " << ToStringHelper(allocPair.first);
     ptrToFetch = GetOffsetPointer(allocPair.first, allocPair.second);
     std::memcpy(ptrLocation, &ptrToFetch, sizeof(void*));
     if (!isLocalMemory) {

@@ -43,13 +43,14 @@ std::vector<uint8_t>* FindOclocInputModule(ocloc::CStateDynamic& sd,
               (format == ZE_MODULE_FORMAT_NATIVE &&
                (StringEndsWith(oclocState.second->outputNames[i], ".bin") ||
                 StringEndsWith(oclocState.second->outputNames[i], ".ar")))) {
-            Log(TRACEV) << "Ocloc output's original hash matched: " << originalOclocHash
-                        << ", file name: " << oclocState.second->outputNames[i];
+            LOG_TRACEV << "Ocloc output's original hash matched: " << originalOclocHash
+                       << ", file name: " << oclocState.second->outputNames[i];
             return &oclocState.second->outputData[i];
           }
         }
-        Log(WARN) << "Ocloc output's original hash matched: " << originalOclocHash
-                  << " but there is no file that matches given format: " << ToStringHelper(format);
+        LOG_WARNING << "Ocloc output's original hash matched: " << originalOclocHash
+                    << " but there is no file that matches given format: "
+                    << ToStringHelper(format);
         return nullptr;
       }
     }
@@ -218,7 +219,7 @@ Cze_module_constants_t_V1::L0Type* Cze_module_constants_t_V1::Ptr() {
       _struct.pConstantValues = (const void**)pPointers.back().get();
     }
   } else {
-    Log(ERR) << "Not implemented Cze_module_constants version: " << ToStringHelper(*_version);
+    LOG_ERROR << "Not implemented Cze_module_constants version: " << ToStringHelper(*_version);
     throw ENotImplemented(EXCEPTION_MESSAGE);
   }
   return &_struct;

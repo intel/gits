@@ -19,7 +19,7 @@
 #include "l0Tools.h"
 #endif
 #include "exception.h"
-#include "log.h"
+#include "log2.h"
 
 using namespace gits::ocloc;
 

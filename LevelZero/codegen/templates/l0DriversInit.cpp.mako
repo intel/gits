@@ -9,7 +9,7 @@
 #include "l0Drivers.h"
 
 #include "dynamic_linker.h"
-#include "log.h"
+#include "log2.h"
 #include "config.h"
 #include "gits.h"
 #include "l0Header.h"
@@ -109,11 +109,12 @@ ${func.get('type')} __zecall special_${func.get('name')}(
   ${func.get('type')} ret{};
   %endif
   %if func.get('log', True):
-  L0Log(TRACE, NO_NEWLINE) << "${func.get('name')}(";
+  LOG_FORMAT_RAW
+  LOG_TRACE << LOG_PREFIX << "${func.get('name')}(";
     %for arg in func['args']:
-  L0Log(TRACE, RAW) << ${f"ToStringHelperArrayRange({get_arg_name(arg['name'])}, {arg['range']})" if arg.get('range') else get_arg_name(arg['name'])}${'' if loop.last else ' << ", "'};
+  LOG_TRACE << ${f"ToStringHelperArrayRange({get_arg_name(arg['name'])}, {arg['range']})" if arg.get('range') else f"ToStringHelper({get_arg_name(arg['name'])})"}${'' if loop.last else ' << ", "'};
     %endfor
-  L0Log(TRACE, ${'RAW' if func['type'] != 'void' else 'NO_PREFIX'}) << ")";
+  LOG_TRACE << ")${'\\n' if func['type'] == 'void' else ''}";
   %endif
   %if func.get('component') != 'ze_gits_extension':
   bool call_orig = true;
@@ -124,7 +125,7 @@ ${func.get('type')} __zecall special_${func.get('name')}(
       auto L = CGits::Instance().GetLua().get();
       bool exists = FunctionExists("${func.get('name')}", L);
       if (exists) {
-        L0Log(TRACE, NO_PREFIX) << " Lua begin";
+        LOG_TRACE << " Lua begin" << std::endl;
         lua_getglobal(L, "${func.get('name')}");
       %for arg in func['args']:
         lua_push_ext(L, ${get_arg_name(arg['name'])});
@@ -136,7 +137,7 @@ ${func.get('type')} __zecall special_${func.get('name')}(
         const auto top = lua_gettop(L);
         ret = lua_to_ext<${func.get('type')}>(L, top);
         lua_pop(L, top);
-        L0Log(TRACE, NO_PREFIX) << "${name}" << " Lua End = " << ret;
+        LOG_TRACE << "${name}" << " Lua End = " << ToStringHelper(ret) << std::endl;
       }
     }
   }
@@ -144,14 +145,14 @@ ${func.get('type')} __zecall special_${func.get('name')}(
   if (call_orig) {
     ret = drv.original.${func.get('name')}(${make_params(func)});
     %if func.get('log', True):
-    L0Log(TRACE, NO_PREFIX) << " = " << ret;
+    LOG_TRACE << " = " << ToStringHelper(ret) << std::endl;
       %for arg in func['args']:
         %if 'out' in arg['tag']:
-    L0Log(TRACEV, NO_PREFIX) << ">>>> ${arg['tag']} ${get_arg_name(arg['name'])}: " << \
+    LOG_TRACE << ">>>> ${arg['tag']} ${get_arg_name(arg['name'])}: " << \
           %if arg.get('range'):
-ToStringHelperArrayRange(${get_arg_name(arg['name'])}, ${arg['range']});
+ToStringHelperArrayRange(${get_arg_name(arg['name'])}, ${arg['range']}) << std::endl;
           %else:
-${get_arg_name(arg['name'])};
+${get_arg_name(arg['name'])} << std::endl;
           %endif
         %endif
       %endfor
@@ -160,7 +161,7 @@ ${get_arg_name(arg['name'])};
   %else:
   ${'' if func.get('type') == 'void' else 'ret = '}drv.original.${func.get('name')}(${make_params(func)});
     %if func.get('type') != 'void' and func.get('log', True):
-  L0Log(TRACE, NO_PREFIX) << " = " << ret;
+  LOG_TRACE << " = " << ToStringHelper(ret) << std::endl;
     %endif
   %endif
   %if func.get('type') != 'void':
@@ -180,7 +181,7 @@ ${func.get('type')} __zecall default_${func.get('name')}(
   %else:
   if (drv.original.${func.get('name')} == nullptr) {
     if (!load_l0_function(drv.original.${func.get('name')}, "${func.get('name')}")) {
-      L0Log(ERR) << "Could not load ${func.get('name')} function.";
+      LOG_ERROR << "Could not load ${func.get('name')} function.";
       return ${'ZE_RESULT_ERROR_UNINITIALIZED' if func.get('type') == 'ze_result_t' else 'nullptr'};
     }
   }
@@ -199,7 +200,7 @@ ${func.get('type')} __zecall inject_${func.get('name')}(
 ) {
   drv.zeGitsStopRecording(${"ZE_GITS_SWITCH_NOMENCLATURE_COUNTING" if func.get('nomenclatureModifier', False) else "ZE_GITS_RECORDING_DEFAULT"});
   ${'' if func.get('type') == 'void' else 'const auto returnValue = '}drv.${func.get('name')}(${make_params(func, )});
-  Log(TRACE) << "^------------------ injected";
+  LOG_TRACE << "^------------------ injected";
   drv.zeGitsStartRecording(${"ZE_GITS_SWITCH_NOMENCLATURE_COUNTING" if func.get('nomenclatureModifier', False) else "ZE_GITS_RECORDING_DEFAULT"});
   ${'' if func.get('type') == 'void' else 'return returnValue;'}
 }

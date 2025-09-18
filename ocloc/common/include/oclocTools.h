@@ -6,37 +6,10 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "log.h"
+#include "log2.h"
 
 namespace gits {
 namespace ocloc {
-class COclocLog : public gits::CLog {
-public:
-  using gits::CLog::CLog;
-  template <typename T>
-  COclocLog& operator<<(const T& t) {
-    _buffer << t;
-    return *this;
-  }
-  COclocLog& operator<<(const char c);
-  COclocLog& operator<<(const unsigned char c);
-  COclocLog& operator<<(const char* c);
-  COclocLog& operator<<(char* c);
-  COclocLog& operator<<(gits::manip t);
-};
-// See common/include/log.h for explanations of these macros.
-#define OclocLog1(lvl)                                                                             \
-  if (gits::ShouldLog(LogLevel::lvl))                                                              \
-  gits::ocloc::COclocLog(LogLevel::lvl, gits::LogStyle::NORMAL)
-#define OclocLog2(lvl, style)                                                                      \
-  if (gits::ShouldLog(LogLevel::lvl))                                                              \
-  gits::ocloc::COclocLog(LogLevel::lvl, gits::LogStyle::style)
-// Workaround for a MSVC bug, see https://stackoverflow.com/a/5134656/
-#define EXPAND(x) x
-// Magic to call different variants based on the number of arguments.
-#define GET_OVERLOAD(PLACEHOLDER1, PLACEHOLDER2, NAME, ...) NAME
-#define OclocLog(...)                                       EXPAND(GET_OVERLOAD(__VA_ARGS__, OclocLog2, OclocLog1)(__VA_ARGS__))
-
 void LogOclocInvokeInput(unsigned int argc,
                          const char** argv,
                          const uint32_t numSources,

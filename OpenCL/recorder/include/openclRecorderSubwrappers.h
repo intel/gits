@@ -2522,8 +2522,8 @@ inline void clCreateProgramWithBinary_V1_RECWRAP(CRecorder& recorder,
     if (cBinaryArray.GetProgramBinaryLink() == ProgramBinaryLink::program) {
       SD().GetProgramState(return_value, EXCEPTION_MESSAGE)
           .SetBinaryLinkedProgram(cBinaryArray.GetProgramOriginal());
-      Log(TRACEV) << "Setting binary linked program: "
-                  << ToStringHelper(cBinaryArray.GetProgramOriginal());
+      LOG_TRACEV << "Setting binary linked program: "
+                 << ToStringHelper(cBinaryArray.GetProgramOriginal()) << std::endl;
     }
   }
 }

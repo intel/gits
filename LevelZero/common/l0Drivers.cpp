@@ -213,7 +213,7 @@ CDriver::~CDriver() {
 }
 
 bool CDriver::OpenLibrary(const std::string& path) {
-  Log(TRACE) << "Using LibL0: " << path;
+  LOG_TRACE << "Using LibL0: " << path;
   lib_ = std::make_unique<SharedLibrary>(path.c_str());
   initialized_ = lib_->getHandle() != nullptr;
   return initialized_;

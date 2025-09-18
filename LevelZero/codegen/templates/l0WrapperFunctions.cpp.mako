@@ -42,7 +42,7 @@ void CRecorderWrapper::${func.get('name')}(
       %endif
     %endif
   %else:
-  Log(WARN) << "Function token C${func.get('name')} not implemented.";
+  LOG_WARNING << "Function token C${func.get('name')} not implemented.";
   %endif
 }
 

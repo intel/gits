@@ -1014,9 +1014,9 @@ const void* gits::OpenCL::CKernelArgValue_V1::operator*() {
           potentialPointer =
               reinterpret_cast<uintptr_t>(GetOffsetPointer(allocPair.first, allocPair.second));
           std::memcpy(_buffer.data() + i, &potentialPointer, sizeof(uintptr_t));
-          Log(TRACEV) << "Fetching pointer("
-                      << ToStringHelper(reinterpret_cast<void*>(potentialPointer)) << ") on offset "
-                      << std::to_string(i) << " inside local memory.";
+          LOG_TRACEV << "Fetching pointer("
+                     << ToStringHelper(reinterpret_cast<void*>(potentialPointer)) << ") on offset "
+                     << std::to_string(i) << " inside local memory.";
           i += sizeof(void*) - 1;
         }
         i++;

@@ -16,7 +16,7 @@
 #include "openclTools.h"
 
 #include "config.h"
-#include "log.h"
+#include "log2.h"
 
 namespace gits {
 namespace OpenCL {
@@ -58,7 +58,7 @@ void PrintBuildLog(const cl_program program,
     errCode |= drvOcl.clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, logLength,
                                             &buildLog[0], nullptr);
     if (errCode == CL_SUCCESS) {
-      Log(INFO) << "Build log:\n" << buildLog;
+      LOG_INFO << "Build log:\n" << buildLog;
     }
   }
   if (errCode != CL_SUCCESS) {
@@ -109,11 +109,11 @@ void TranslatePointers() {
       auto* tmpBuffer = new char[size];
       drvOcl.clEnqueueMemcpyINTEL(cq, CL_BLOCKING, tmpBuffer, allocState.first, size, 0, nullptr,
                                   nullptr);
-      Log(TRACEV) << "^------------------ injected read to fetch pointers";
+      LOG_TRACEV << "^------------------ injected read to fetch pointers";
       TranslatePointerOffsets(tmpBuffer, indirectOffsets);
       drvOcl.clEnqueueMemcpyINTEL(cq, CL_BLOCKING, allocState.first, tmpBuffer, size, 0, nullptr,
                                   nullptr);
-      Log(TRACEV) << "^------------------ injected write to fetch pointers";
+      LOG_TRACEV << "^------------------ injected write to fetch pointers";
       delete[] tmpBuffer;
     } else {
       TranslatePointerOffsets(allocState.first, indirectOffsets);
@@ -138,11 +138,11 @@ void TranslatePointers() {
       auto* tmpBuffer = new char[size];
       drvOcl.clEnqueueSVMMemcpy(cq, CL_BLOCKING, tmpBuffer, svmState.first, size, 0, nullptr,
                                 nullptr);
-      Log(TRACEV) << "^------------------ injected read to fetch pointers";
+      LOG_TRACEV << "^------------------ injected read to fetch pointers";
       TranslatePointerOffsets(tmpBuffer, indirectOffsets);
       drvOcl.clEnqueueSVMMemcpy(cq, CL_BLOCKING, svmState.first, tmpBuffer, size, 0, nullptr,
                                 nullptr);
-      Log(TRACEV) << "^------------------ injected write to fetch pointers";
+      LOG_TRACEV << "^------------------ injected write to fetch pointers";
       delete[] tmpBuffer;
     }
     for (auto& indirectPair : indirectOffsets) {
@@ -166,7 +166,7 @@ inline void clBuildProgram_RUNWRAP(CCLResult& _return_value,
   _return_value.Value() = drvOcl.clBuildProgram(*_program, *_num_devices, *_device_list,
                                                 options.c_str(), *_pfn_notify, *_user_data);
   if (_return_value.Value() != CL_SUCCESS) {
-    Log(INFO) << "clBuildProgram failed - Getting build log";
+    LOG_INFO << "clBuildProgram failed - Getting build log";
     PrintBuildLog(*_program, *_num_devices, _device_list._mappedArray);
   }
   clBuildProgram_SD(*_return_value, *_program, *_num_devices, *_device_list, options.c_str(),
@@ -1187,8 +1187,8 @@ inline void clGetDeviceIDs_RUNWRAP(CCLResult& _return_value,
       }
     }
     if (isRemappingPossible) {
-      Log(TRACEV) << "Original application had successfuly asked for device, "
-                     "remapping platform to the original application behavior.";
+      LOG_TRACEV << "Original application had successfuly asked for device, "
+                    "remapping platform to the original application behavior.";
       _return_value.Value() =
           drvOcl.clGetDeviceIDs(*_platform, *_device_type, *_num_entries, *_devices, *_num_devices);
     }
@@ -1306,9 +1306,9 @@ inline void clCreateProgramWithBinary_V1_RUNWRAP(CFunction* token,
   const auto* lengths = *_lengths;
   if (usingProgramLink) {
     lengths = SD().GetProgramState(program, EXCEPTION_MESSAGE).BinarySizes();
-    Log(TRACEV) << "Detected available program connection. Linking to the original: "
-                << ToStringHelper(_binaries.GetProgramOriginal())
-                << " with mapping: " << ToStringHelper(program);
+    LOG_TRACEV << "Detected available program connection. Linking to the original: "
+               << ToStringHelper(_binaries.GetProgramOriginal())
+               << " with mapping: " << ToStringHelper(program);
   }
   _return_value.Assign(drvOcl.clCreateProgramWithBinary(*_context, *_num_devices, *_device_list,
                                                         lengths, *_binaries, *_binary_status,
@@ -1342,9 +1342,9 @@ inline void clGetDeviceInfo_RUNWRAP(CCLResult& _return_value,
     const auto differentRetVal = ErrCodeSuccess(originalRetVal) != ErrCodeSuccess(*_return_value);
     if (differentParamValue || differentRetVal) {
       if (differentParamValue) {
-        Log(TRACEV) << "Looking for original application device, current: "
-                    << cl_device_typeToString(*reinterpret_cast<cl_device_type*>(*_param_value))
-                    << ", original: " << cl_device_typeToString(originalDeviceType);
+        LOG_TRACEV << "Looking for original application device, current: "
+                   << cl_device_typeToString(*reinterpret_cast<cl_device_type*>(*_param_value))
+                   << ", original: " << cl_device_typeToString(originalDeviceType);
       }
       for (const auto& state : SD()._platformIDStates) {
         const auto device = state.second->GetDeviceType(originalDeviceType);
@@ -1352,9 +1352,9 @@ inline void clGetDeviceInfo_RUNWRAP(CCLResult& _return_value,
           for (const auto& originalMap : SD().originalPlaybackPlatforms) {
             for (const auto& deviceOriginal : originalMap.second) {
               if (_device.Original() == deviceOriginal) {
-                Log(TRACEV) << "Original application received different "
-                               "device type info, "
-                               "changing device and platform mapping";
+                LOG_TRACEV << "Original application received different "
+                              "device type info, "
+                              "changing device and platform mapping";
                 Ccl_platform_id::AddMapping(originalMap.first, state.first);
                 Ccl_device_id::AddMapping(_device.Original(), device);
                 break;

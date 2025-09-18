@@ -12,7 +12,7 @@
 #include "l0PlayerRunWrap.h"
 
 #include "exception.h"
-#include "log.h"
+#include "log2.h"
 
 namespace gits {
 namespace l0 {
@@ -60,7 +60,7 @@ void C${name}::Run() {
   drv.Initialize();
       %endif
       %if func.get('skipRun'):
-  Log(TRACE) << "Function ${func.get('name')} skipped";
+  LOG_WARNING << "Function ${func.get('name')} skipped";
       %else:
   ${'_return_value.Value() = ' if func.get('type') != 'void' else ''}drv.${func.get('name')}(${make_params(func, prefix='*_')});
         %if func.get('stateTrack'):

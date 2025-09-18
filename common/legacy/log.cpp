@@ -167,7 +167,7 @@ void gits::CLog::LogFile(const std::filesystem::path& dir) {
     if (logPathEnv != nullptr) {
       logPath = logPathEnv;
     }
-    _file->open(logPath / (str.str() + ".log"), std::ios_base::app);
+    _file->open(logPath / (str.str() + ".legacy.log"), std::ios_base::app);
     _func = nullptr;
   }
 }

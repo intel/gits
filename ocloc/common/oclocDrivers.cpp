@@ -105,7 +105,8 @@ int __ocloccall special_oclocInvoke(unsigned int argc,
       auto L = CGits::Instance().GetLua().get();
       bool exists = gits::lua::FunctionExists("oclocInvoke", L);
       if (exists) {
-        OclocLog(TRACE, NO_PREFIX) << " Lua begin";
+        LOG_FORMAT_RAW
+        LOG_TRACE << " Lua begin" << std::endl;
         lua_getglobal(L, "oclocInvoke");
         gits::lua::lua_push(L, argc);
         lua_push_ext(L, argv, argc, true);
@@ -126,7 +127,7 @@ int __ocloccall special_oclocInvoke(unsigned int argc,
         }
         call_orig = false;
         lua_pop(L, lua_gettop(L));
-        OclocLog(TRACE, NO_PREFIX) << "Lua End";
+        LOG_TRACE << "Lua End" << std::endl;
       }
     }
   }
@@ -180,7 +181,8 @@ int __ocloccall special_oclocFreeOutput(uint32_t* numOutputs,
       auto L = CGits::Instance().GetLua().get();
       bool exists = gits::lua::FunctionExists("oclocFreeOutput", L);
       if (exists) {
-        OclocLog(TRACE, NO_PREFIX) << " Lua begin";
+        LOG_FORMAT_RAW
+        LOG_TRACE << " Lua begin" << std::endl;
         lua_getglobal(L, "oclocFreeOutput");
         lua_pushlightuserdata(L, (void*)numOutputs);
         lua_pushlightuserdata(L, (void*)dataOutputs);
@@ -191,16 +193,17 @@ int __ocloccall special_oclocFreeOutput(uint32_t* numOutputs,
         }
         call_orig = false;
         lua_pop(L, lua_gettop(L));
-        OclocLog(TRACE, NO_PREFIX) << "Lua End";
+        LOG_TRACE << "Lua End" << std::endl;
       }
     }
   }
 #endif
-  OclocLog(TRACE, NO_NEWLINE) << "oclocFreeOutput()";
+  LOG_FORMAT_RAW
+  LOG_TRACE << LOG_PREFIX << "oclocFreeOutput()";
   if (call_orig) {
     ret = drv.orig_oclocFreeOutput(numOutputs, dataOutputs, lenOutputs, nameOutputs);
   }
-  OclocLog(TRACE, NO_PREFIX) << " = " << ret;
+  LOG_TRACE << " = " << ret << std::endl;
   return ret;
 }
 
@@ -310,11 +313,11 @@ void CDriver::Initialize() {
     return;
   }
   const std::string path = Configurator::Get().common.shared.libOcloc.string();
-  Log(INFO) << "Initializing Ocloc API";
+  LOG_INFO << "Initializing Ocloc API";
 
   lib_ = nullptr;
   if (lib_ == nullptr) {
-    Log(TRACE) << "Using LibOcloc: " << path;
+    LOG_TRACE << "Using LibOcloc: " << path;
     lib_ = std::make_unique<SharedLibrary>(path.c_str());
 
     initialized_ = lib_->getHandle() != nullptr;

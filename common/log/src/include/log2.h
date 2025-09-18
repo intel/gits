@@ -33,13 +33,15 @@ This mapping is temporary and will be removed in the future (leaving only the pl
 // Use the main Plog macros for logging
 // LOG_VERBOSE, LOG_DEBUG, LOG_INFO, LOG_WARNING, LOG_ERROR, LOG_FATAL, LOG_NONE
 
-// The LOG_TRACE macro is not defined in Plog
-// For now we map it to LOG_DEBUG since it is not used in the legacy backends that use logging for trace
-#define LOG_TRACE LOG_DEBUG
+// The LOG_TRACE and LOG_TRACEV macros are not defined in Plog
+// For now we map them to LOG_DEBUG and LOG_VERBOSE
+#define LOG_TRACE  LOG_DEBUG
+#define LOG_TRACEV LOG_VERBOSE
 
 #include <atomic>
 #include <mutex>
 namespace plog {
+util::nstring LogPrefix(plog::Severity severity);
 class FormatRawScope {
 public:
   static bool IsRaw();
@@ -50,15 +52,17 @@ public:
   FormatRawScope& operator=(const FormatRawScope&) = delete;
 
 private:
-  static std::mutex s_mutex;
+  static std::recursive_mutex s_mutex;
   static std::atomic<bool> s_isRaw;
-  std::lock_guard<std::mutex> lock_;
+  static unsigned s_refCount;
+  std::lock_guard<std::recursive_mutex> lock_;
 };
 } // namespace plog
 
-// This macro is not part of the Plog library and should only be used to help with the transition
-// For now it is only intended to be used for LOG_TRACE
+// This macros are not part of the Plog library and should only be used to help with the transition
+// Only intended to be used for LOG_TRACE
 #define LOG_FORMAT_RAW plog::FormatRawScope formatRawScopeInstance;
+#define LOG_PREFIX     plog::LogPrefix(plog::Severity::debug)
 
 namespace gits {
 namespace log {

@@ -27,18 +27,60 @@
 namespace plog {
 
 std::atomic<bool> FormatRawScope::s_isRaw = false;
-std::mutex FormatRawScope::s_mutex = {};
+std::recursive_mutex FormatRawScope::s_mutex = {};
+unsigned FormatRawScope::s_refCount = 0;
 
 FormatRawScope::FormatRawScope() : lock_(s_mutex) {
-  s_isRaw = true;
+  if (s_refCount == 0) {
+    s_isRaw = true;
+  }
+  ++s_refCount;
 }
 
 FormatRawScope::~FormatRawScope() {
-  s_isRaw = false;
+  --s_refCount;
+  if (s_refCount == 0) {
+    s_isRaw = false;
+  }
 }
 
 bool FormatRawScope::IsRaw() {
   return s_isRaw;
+}
+
+util::nstring LogPrefix(plog::Severity severity) {
+  auto toStr = [](plog::Severity severity) {
+    switch (severity) {
+    case plog::fatal:
+      return "FATAL";
+    case plog::error:
+      return "ERROR";
+    case plog::warning:
+      return "WARNING";
+    case plog::info:
+      return "INFO";
+    // Debug and verbose will be logged as TRACE
+    case plog::debug:
+    case plog::verbose:
+      return "TRACE";
+    default:
+      return "NONE";
+    }
+  };
+
+  auto now = std::chrono::system_clock::now();
+  auto timeT = std::chrono::system_clock::to_time_t(now);
+  auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+
+  // Print formatted date and time on a pre-allocated buffer
+  char buffer[32];
+  size_t offset =
+      std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", std::localtime(&timeT));
+  std::snprintf(&buffer[offset], sizeof(buffer) - offset, ".%03d", static_cast<int>(ms.count()));
+
+  util::nostringstream ss;
+  ss << static_cast<char*>(buffer) << " - " << toStr(severity) << " - ";
+  return ss.str();
 }
 
 class GitsFormatter {
@@ -48,45 +90,12 @@ public:
   }
 
   static util::nstring format(const Record& record) {
-    auto toStr = [](Severity severity) {
-      switch (severity) {
-      case fatal:
-        return "FATAL";
-      case error:
-        return "ERROR";
-      case warning:
-        return "WARN";
-      case info:
-        return "INFO";
-      case debug:
-        return "DEBUG";
-      case verbose:
-        return "VERB";
-      default:
-        return "NONE";
-      }
-    };
-
     util::nostringstream ss;
     if (FormatRawScope::IsRaw()) {
       ss << record.getMessage();
     } else {
-      auto now = std::chrono::system_clock::now();
-      auto timeT = std::chrono::system_clock::to_time_t(now);
-      auto ms =
-          std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
-
-      // Print formatted date and time on a pre-allocated buffer
-      char buffer[32];
-      size_t offset =
-          std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", std::localtime(&timeT));
-      std::snprintf(&buffer[offset], sizeof(buffer) - offset, ".%03d",
-                    static_cast<int>(ms.count()));
-
-      ss << static_cast<char*>(buffer) << " - " << toStr(record.getSeverity()) << " - "
-         << record.getMessage() << "\n";
+      ss << LogPrefix(record.getSeverity()) << record.getMessage() << "\n";
     }
-
     return ss.str();
   }
 };
@@ -130,9 +139,8 @@ void SetLogFile(const std::filesystem::path& logFilePath) {
     return;
   }
 
-  // Filename format: gits_<pid>.0.log
-  // In the future, the "0" may be replaced by the plog instance id
-  std::string fileName = "gits_" + std::to_string(getpid()) + ".0.log";
+  // Filename format: gits_<pid>.log
+  std::string fileName = "gits_" + std::to_string(getpid()) + ".log";
   std::filesystem::path logFile = logFilePath / fileName;
   fileAppender = std::make_unique<plog::RollingFileAppender<plog::GitsFormatter>>(logFile.c_str());
 

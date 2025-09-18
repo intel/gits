@@ -9,7 +9,7 @@
 #include "oclocRecorderWrapper.h"
 
 #include "gits.h"
-#include "log.h"
+#include "log2.h"
 #include "recorder.h"
 #include "tools.h"
 
@@ -40,7 +40,7 @@ gits::ocloc::IRecorderWrapper* STDCALL GITSRecorderOcloc() {
       wrapper = new gits::ocloc::CRecorderWrapper(recorder);
       recorder.Register(std::make_shared<gits::ocloc::CLibrary>());
     } catch (const std::exception& ex) {
-      Log(ERR) << "Cannot initialize recorder: " << ex.what() << std::endl;
+      LOG_ERROR << "Cannot initialize recorder: " << ex.what() << std::endl;
       exit(EXIT_FAILURE);
     }
   }

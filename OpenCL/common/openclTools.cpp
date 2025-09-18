@@ -35,7 +35,7 @@ bool CheckArgTypeInfo(cl_kernel kernel, unsigned index) {
       drvOcl.clGetKernelArgInfo(kernel, index, CL_KERNEL_ARG_TYPE_QUALIFIER,
                                 sizeof(cl_kernel_arg_type_qualifier), &type_qualifier, nullptr);
   if (err) {
-    Log(TRACE) << "Error during clGetKernelArgInfo. Couldn't determine if buffer is constant.";
+    LOG_TRACE << "Error during clGetKernelArgInfo. Couldn't determine if buffer is constant.";
     return false;
   }
   return type_qualifier & CL_KERNEL_ARG_TYPE_CONST;
@@ -82,35 +82,6 @@ void MaskAppend(std::string& str, const std::string& maskStr) {
     str += " | ";
   }
   str += maskStr;
-}
-
-COclLog::COclLog(LogLevel prefix, LogStyle style) : CLog(prefix, style) {}
-
-COclLog& COclLog::operator<<(manip t) {
-  _buffer << t;
-  return *this;
-}
-
-COclLog& COclLog::operator<<(const char c) {
-  return operator<< <int>(c);
-}
-
-COclLog& COclLog::operator<<(const unsigned char c) {
-  return operator<< <unsigned>(c);
-}
-
-COclLog& COclLog::operator<<(const char* c) {
-  if (c != nullptr) {
-    _buffer << c;
-  } else {
-    _buffer << (const void*)c;
-  }
-  return *this;
-}
-
-COclLog& COclLog::operator<<(char* c) {
-  _buffer << (const void*)c;
-  return *this;
 }
 
 size_t PixelSize(const cl_image_format& imageFormat) {
@@ -945,7 +916,7 @@ std::vector<char> InjectObjOperations(cl_command_queue cmdQ,
     }
   }
   if (!buffer.empty()) {
-    Log(TRACE) << "^------------------ injected read #" << ++injectedCounter;
+    LOG_TRACE << "^------------------ injected read #" << ++injectedCounter;
     const bool nullIndirection = Configurator::IsPlayer()
                                      ? !cfg.opencl.player.disableNullIndirectPointersInBuffer
                                      : cfg.opencl.recorder.nullIndirectPointersInBuffer;
@@ -1215,7 +1186,7 @@ bool ZeroInitializeBuffer(const cl_command_queue& commandQueue,
   const auto zeroBuffer = std::vector<char>(size, 0);
   drvOcl.clEnqueueWriteBuffer(commandQueue, memObj, CL_BLOCKING, 0, zeroBuffer.size(),
                               zeroBuffer.data(), 0, nullptr, nullptr);
-  Log(INFO) << "^------------------ injected zero-initialization write";
+  LOG_INFO << "^------------------ injected zero-initialization write";
   return true;
 }
 
@@ -1230,7 +1201,7 @@ bool ZeroInitializeUsm(const cl_command_queue& commandQueue,
     }
     drvOcl.clEnqueueMemcpyINTEL(commandQueue, CL_BLOCKING, usmPtr, zeroBuffer.data(), size, 0,
                                 nullptr, nullptr);
-    Log(INFO) << "^------------------ injected zero-initialization write";
+    LOG_INFO << "^------------------ injected zero-initialization write";
   } else {
     std::memcpy(usmPtr, zeroBuffer.data(), size);
   }
@@ -1248,7 +1219,7 @@ bool ZeroInitializeSvm(const cl_command_queue& commandQueue,
     }
     drvOcl.clEnqueueSVMMemcpy(commandQueue, CL_BLOCKING, svmPtr, zeroBuffer.data(), size, 0,
                               nullptr, nullptr);
-    Log(INFO) << "^------------------ injected zero-initialization write";
+    LOG_INFO << "^------------------ injected zero-initialization write";
   } else {
     std::memcpy(svmPtr, zeroBuffer.data(), size);
   }
@@ -1272,7 +1243,7 @@ bool ZeroInitializeImage(const cl_command_queue& commandQueue,
   drvOcl.clEnqueueWriteImage(commandQueue, memObj, CL_BLOCKING, origin.data(), region.data(),
                              input_row_pitch, input_slice_pitch, zeroBuffer.data(), 0, nullptr,
                              nullptr);
-  Log(INFO) << "^------------------ injected zero-initialization write";
+  LOG_INFO << "^------------------ injected zero-initialization write";
   return true;
 }
 
@@ -1347,18 +1318,19 @@ uintptr_t GetPointerDifference(void* ptrRegion, void* ptrStart) {
 }
 
 void Log_clGitsIndirectAllocationOffsets(void* pAlloc, uint32_t numOffsets, size_t* pOffsets) {
-  Log(TRACE, NO_NEWLINE) << "clGitsIndirectAllocationOffsets(";
-  Log(TRACE, RAW) << pAlloc << ", ";
-  Log(TRACE, RAW) << numOffsets << ", ";
+  LOG_FORMAT_RAW
+  LOG_TRACE << LOG_PREFIX << "clGitsIndirectAllocationOffsets(";
+  LOG_TRACE << pAlloc << ", ";
+  LOG_TRACE << numOffsets << ", ";
   if (numOffsets > 0) {
-    Log(TRACE, RAW) << "{";
+    LOG_TRACE << "{";
     for (uint32_t i = 0U; i < numOffsets; i++) {
-      Log(TRACE, RAW) << pOffsets[i] << (i + 1U < numOffsets ? ", " : "}");
+      LOG_TRACE << pOffsets[i] << (i + 1U < numOffsets ? ", " : "}");
     }
   } else {
-    Log(TRACE, RAW) << pOffsets;
+    LOG_TRACE << pOffsets;
   }
-  Log(TRACE, NO_PREFIX) << ")";
+  LOG_TRACE << ")" << std::endl;
 }
 
 std::vector<uint64_t> HashBinaryData(const size_t& n,

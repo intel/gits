@@ -41,8 +41,8 @@ void TranslatePointers(CStateDynamic& sd) {
       continue;
     }
 
-    Log(TRACEV) << "Translating pointer: " << ToStringHelper(allocState.first)
-                << " size of indirect pointers: " << std::to_string(indirectOffsets.size());
+    LOG_TRACEV << "Translating pointer: " << ToStringHelper(allocState.first)
+               << " size of indirect pointers: " << std::to_string(indirectOffsets.size());
     const auto size = allocState.second->size;
     if (allocState.second->memType == UnifiedMemoryType::device) {
       ze_command_list_handle_t list = GetCommandListImmediate(sd, drv, allocState.second->hContext);
@@ -91,7 +91,7 @@ bool RedirectToOriginalQueueSubmission(ze_device_handle_t hDevice, uint32_t* des
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   const auto& originalEngine = originalProps.at(originalOrdinal);
-  Log(TRACE) << "Original queue family properties: " << ToStringHelper(originalEngine.flags);
+  LOG_TRACE << "Original queue family properties: " << ToStringHelper(originalEngine.flags);
   auto& multiContextEngineMap = deviceState.multiContextEngineMap;
   if (multiContextEngineMap.find(originalOrdinal) != multiContextEngineMap.end()) {
     *descOrdinal = multiContextEngineMap.at(originalOrdinal);
@@ -120,8 +120,8 @@ void RedirectToDefaultQueueFamily(const ze_device_handle_t& hDevice, uint32_t* d
     *descOrdinal = GetMostCommonOrdinal(commonFlags, currentEngines, blockedOrdinals);
     multiContextEngineMap[originalOrdinal] = *descOrdinal;
   }
-  Log(WARN) << "Setting new command queue group ordinal: " << *descOrdinal
-            << " with group flags: " << ToStringHelper(currentEngines[*descOrdinal].flags);
+  LOG_WARNING << "Setting new command queue group ordinal: " << *descOrdinal
+              << " with group flags: " << ToStringHelper(currentEngines[*descOrdinal].flags);
 }
 void ChooseQueueIndex(const ze_device_handle_t& hDevice, const uint32_t& ordinal, uint32_t* index) {
   auto& deviceState = SD().Get<CDeviceState>(hDevice, EXCEPTION_MESSAGE);
@@ -298,10 +298,10 @@ inline void zeModuleCreate_RUNWRAP(Cze_result_t& _return_value,
       const auto retVal =
           drv.inject.zeModuleBuildLogGetString(buildLogHandle, &size, buildLog.data());
       if (retVal == ZE_RESULT_SUCCESS) {
-        Log(ERR) << buildLog.data();
+        LOG_ERROR << buildLog.data();
       }
     } else {
-      Log(ERR) << "Build log is empty.";
+      LOG_ERROR << "Build log is empty.";
     }
   }
   if (buildLogHandle != nullptr) {
@@ -332,10 +332,10 @@ inline void zeModuleCreate_V1_RUNWRAP(CFunction* token,
       const auto retVal =
           drv.inject.zeModuleBuildLogGetString(buildLogHandle, &size, buildLog.data());
       if (retVal == ZE_RESULT_SUCCESS) {
-        Log(ERR) << buildLog.data();
+        LOG_ERROR << buildLog.data();
       }
     } else {
-      Log(ERR) << "Build log is empty.";
+      LOG_ERROR << "Build log is empty.";
     }
   }
   if (buildLogHandle != nullptr) {
@@ -376,7 +376,7 @@ inline void zeMemAllocHost_RUNWRAP(Cze_result_t& _return_value,
   const auto& cfg = Configurator::Get();
   _return_value.Value() = drv.zeMemAllocHost(*_hContext, *_host_desc, size, *_alignment, *_pptr);
   if (_return_value.Value() == ZE_RESULT_SUCCESS && CaptureKernels(cfg)) {
-    Log(TRACEV) << "^-- Original pointer: " << ToStringHelper(CMappedPtr::GetOriginal((*_pptr)[0]));
+    LOG_TRACEV << "^-- Original pointer: " << ToStringHelper(CMappedPtr::GetOriginal((*_pptr)[0]));
   }
   if (*_return_value == ZE_RESULT_SUCCESS && CheckCfgZeroInitialization(cfg)) {
     const auto commandList = GetCommandListImmediate(SD(), drv, *_hContext);
@@ -405,7 +405,7 @@ inline void zeMemAllocDevice_RUNWRAP(Cze_result_t& _return_value,
     if (retCode != ZE_RESULT_SUCCESS || virtualPtr != originalPtr) {
       if (retCode == ZE_RESULT_SUCCESS) {
         drv.zeVirtualMemFree(*_hContext, virtualPtr, size);
-        Log(ERR) << "Could not reserve the same address as pStart";
+        LOG_ERROR << "Could not reserve the same address as pStart";
       }
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
@@ -416,7 +416,7 @@ inline void zeMemAllocDevice_RUNWRAP(Cze_result_t& _return_value,
     retCode = drv.zePhysicalMemCreate(*_hContext, *_hDevice, &physical_desc, &hPhysicalMemory);
     zePhysicalMemCreate_SD(retCode, *_hContext, *_hDevice, &physical_desc, &hPhysicalMemory);
     if (retCode != ZE_RESULT_SUCCESS) {
-      Log(ERR) << "Failed to create physical memory";
+      LOG_ERROR << "Failed to create physical memory";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
     retCode = drv.zeVirtualMemMap(*_hContext, originalPtr, size, hPhysicalMemory, 0U,
@@ -424,7 +424,7 @@ inline void zeMemAllocDevice_RUNWRAP(Cze_result_t& _return_value,
     zeVirtualMemMap_SD(retCode, *_hContext, originalPtr, size, hPhysicalMemory, 0U,
                        ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
     if (retCode != ZE_RESULT_SUCCESS) {
-      Log(ERR) << "Failed to mmap virtual memory to physical memory";
+      LOG_ERROR << "Failed to mmap virtual memory to physical memory";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
     CMappedPtr::AddMapping(_pptr._array[0], originalPtr);
@@ -435,7 +435,7 @@ inline void zeMemAllocDevice_RUNWRAP(Cze_result_t& _return_value,
                         *_pptr);
   }
   if (_return_value.Value() == ZE_RESULT_SUCCESS && CaptureKernels(cfg)) {
-    Log(TRACEV) << "^-- Original pointer: " << ToStringHelper(CMappedPtr::GetOriginal((*_pptr)[0]));
+    LOG_TRACEV << "^-- Original pointer: " << ToStringHelper(CMappedPtr::GetOriginal((*_pptr)[0]));
   }
 
   if (*_return_value == ZE_RESULT_SUCCESS && CheckCfgZeroInitialization(cfg)) {
@@ -457,7 +457,7 @@ inline void zeMemAllocShared_RUNWRAP(Cze_result_t& _return_value,
   _return_value.Value() = drv.zeMemAllocShared(*_hContext, *_device_desc, *_host_desc, size,
                                                *_alignment, *_hDevice, *_pptr);
   if (_return_value.Value() == ZE_RESULT_SUCCESS && CaptureKernels(cfg)) {
-    Log(TRACEV) << "^-- Original pointer: " << ToStringHelper(CMappedPtr::GetOriginal((*_pptr)[0]));
+    LOG_TRACEV << "^-- Original pointer: " << ToStringHelper(CMappedPtr::GetOriginal((*_pptr)[0]));
   }
   if (*_return_value == ZE_RESULT_SUCCESS && CheckCfgZeroInitialization(cfg)) {
     const auto commandList = GetCommandListImmediate(SD(), drv, *_hContext);
@@ -501,14 +501,14 @@ inline void zeDeviceGetSubDevices_RUNWRAP(Cze_result_t& _return_value,
   }
   auto* pCountOriginal = *_pCount;
   if (pCountOriginal != nullptr && *pCountOriginal > count) {
-    Log(WARN) << "Stream was recorded on the device that could be partitioned into more devices("
-              << ToStringHelper(*pCountOriginal) << ") than this one: " << ToStringHelper(count);
+    LOG_WARNING << "Stream was recorded on the device that could be partitioned into more devices("
+                << ToStringHelper(*pCountOriginal) << ") than this one: " << ToStringHelper(count);
   }
   _return_value.Value() = drv.zeDeviceGetSubDevices(*_hDevice, &count, *_phSubdevices);
   if (pCountOriginal != nullptr && *pCountOriginal > 0 && *_hDevice != nullptr &&
       count < *pCountOriginal) {
-    Log(WARN) << "Adjusting " << ToStringHelper(static_cast<uint32_t>(*pCountOriginal) - count)
-              << " of out-devices mapping to the primary in-device ";
+    LOG_WARNING << "Adjusting " << ToStringHelper(static_cast<uint32_t>(*pCountOriginal) - count)
+                << " of out-devices mapping to the primary in-device ";
     for (uint32_t i = count; i < static_cast<uint32_t>(*pCountOriginal); i++) {
       Cze_device_handle_t::AddMapping(_phSubdevices._array[i], *_hDevice);
     }
@@ -597,7 +597,7 @@ inline void zeDriverGet_RUNWRAP(Cze_result_t& _return_value,
   const auto currentCount = **_pCount;
   if (_return_value.Value() == ZE_RESULT_SUCCESS && _phDrivers.Size() > 0U &&
       originalCount > currentCount) {
-    Log(WARN) << "Original application was recorded using more drivers.";
+    LOG_WARNING << "Original application was recorded using more drivers.";
     const auto firstDriver = (*_phDrivers)[0];
     for (auto i = currentCount; i < originalCount; i++) {
       const auto originalDrivers = _phDrivers.Original();
@@ -616,7 +616,7 @@ inline void zeDeviceGet_RUNWRAP(Cze_result_t& _return_value,
   const auto currentCount = **_pCount;
   if (_return_value.Value() == ZE_RESULT_SUCCESS && _phDevices.Size() > 0U &&
       originalCount > currentCount) {
-    Log(WARN) << "Original application was recorded using more devices.";
+    LOG_WARNING << "Original application was recorded using more devices.";
     const auto gpuDevice = GetGPUDevice(SD(), drv);
     for (auto i = currentCount; i < originalCount; i++) {
       const auto originalDevices = _phDevices.Original();
@@ -686,10 +686,10 @@ inline void zeVirtualMemReserve_V1_RUNWRAP(Cze_result_t& _return_value,
     const void* virtualPtrReturnedByDriver = **_pptr;
     if (originalPtrValue != nullptr && virtualPtrReturnedByDriver != originalPtrValue) {
       drv.inject.zeVirtualMemFree(*_hContext, virtualPtrReturnedByDriver, *_size);
-      Log(ERR) << "Could not reserve the same address as pStart";
+      LOG_ERROR << "Could not reserve the same address as pStart";
       if (reinterpret_cast<uintptr_t>(virtualPtrReturnedByDriver) >
           reinterpret_cast<uintptr_t>(originalPtrValue)) {
-        Log(ERR) << "Try to record application again with higher VirtualDeviceMemorySize";
+        LOG_ERROR << "Try to record application again with higher VirtualDeviceMemorySize";
       }
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
@@ -954,7 +954,7 @@ inline void zeInitDrivers_RUNWRAP(Cze_result_t& _return_value,
   const auto currentCount = **_pCount;
   if (_return_value.Value() == ZE_RESULT_SUCCESS && _phDrivers.Size() > 0U &&
       originalCount > currentCount) {
-    Log(WARN) << "Original application was recorded using more drivers.";
+    LOG_WARNING << "Original application was recorded using more drivers.";
     const auto firstDriver = (*_phDrivers)[0];
     for (auto i = currentCount; i < originalCount; i++) {
       const auto originalDrivers = _phDrivers.Original();

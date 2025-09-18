@@ -10,7 +10,7 @@
 
 #include "openclHeader.h"
 
-#include "log.h"
+#include "log2.h"
 #include "config.h"
 #include "texture_converter.h"
 
@@ -26,36 +26,6 @@ class CBinaryResource;
 namespace OpenCL {
 
 void MaskAppend(std::string& str, const std::string& maskStr);
-
-class COclLog : public gits::CLog {
-public:
-  COclLog(LogLevel prefix, LogStyle style);
-  template <class T>
-  COclLog& operator<<(const T& t);
-  COclLog& operator<<(const char c);
-  COclLog& operator<<(const unsigned char c);
-  COclLog& operator<<(const char* c);
-  COclLog& operator<<(char* c);
-  COclLog& operator<<(manip t);
-};
-// See common/include/log.h for explanations of these macros.
-#define OclLog1(lvl)                                                                               \
-  if (gits::ShouldLog(LogLevel::lvl))                                                              \
-  gits::OpenCL::COclLog(LogLevel::lvl, gits::LogStyle::NORMAL)
-#define OclLog2(lvl, style)                                                                        \
-  if (gits::ShouldLog(LogLevel::lvl))                                                              \
-  gits::OpenCL::COclLog(LogLevel::lvl, gits::LogStyle::style)
-// Workaround for a MSVC bug, see https://stackoverflow.com/a/5134656/
-#define EXPAND(x) x
-// Magic to call different variants based on the number of arguments.
-#define GET_OVERLOAD(PLACEHOLDER1, PLACEHOLDER2, NAME, ...) NAME
-#define OclLog(...)                                         EXPAND(GET_OVERLOAD(__VA_ARGS__, OclLog2, OclLog1)(__VA_ARGS__))
-
-template <class T>
-COclLog& COclLog::operator<<(const T& t) {
-  _buffer << t;
-  return *this;
-};
 
 typedef unsigned mem_signature_t;
 enum class UnifiedMemoryType : unsigned {

@@ -67,7 +67,7 @@ public:
     auto& the_map = get_map();
     auto iter = the_map.find(key);
     if (iter == the_map.end()) {
-      Log(ERR) << "Couldn't map LevelZero object name " << key;
+      LOG_ERROR << "Couldn't map LevelZero object name " << key;
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
     return iter->second;

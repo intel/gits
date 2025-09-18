@@ -37,7 +37,6 @@ namespace gits {
    inline std::string ToStringHelper(const T& handle) { return ToStringHelperArithmetic(handle); }
    template <typename T, typename = std::enable_if_t<IsPtrOrPtrPtr<T>::value>>
    inline std::string ToStringHelper(T handle) { return ToStringHelperArithmetic(handle); }
-
     template<>
     inline std::string ToStringHelper(void** val) {
       std::stringstream ss;
@@ -212,41 +211,7 @@ namespace gits {
     %endif
  %endfor
     }
-    class CL0Log : public gits::CLog {
-    public:
-      using gits::CLog::CLog;
-      template <typename T,
-                typename std::enable_if_t<std::is_arithmetic<T>::value, bool> = true>
-      CL0Log &operator<<(const T &t) {
-        _buffer << t;
-        return *this;
-      }
-      template <typename T,
-                typename std::enable_if_t<!std::is_arithmetic<T>::value, bool> = true>
-      CL0Log &operator<<(const T &t) {
-        _buffer << ToStringHelper<T>(t);
-        return *this;
-      }
-      CL0Log &operator<<(const char c);
-      CL0Log &operator<<(const unsigned char c);
-      CL0Log &operator<<(const char *c);
-      CL0Log &operator<<(std::string s);
-      CL0Log &operator<<(char *c);
-      CL0Log &operator<<(gits::manip t);
-    };
-  // See common/include/log.h for explanations of these macros.
-#define L0Log1(lvl)                                                            ${'\\'}
-  if (gits::ShouldLog(LogLevel::lvl))                                    ${'\\'}
-  gits::l0::CL0Log(LogLevel::lvl, gits::LogStyle::NORMAL)
-#define L0Log2(lvl, style)                                                     ${'\\'}
-  if (gits::ShouldLog(LogLevel::lvl))                                    ${'\\'}
-  gits::l0::CL0Log(LogLevel::lvl, gits::LogStyle::style)
-  // Workaround for a MSVC bug, see https://stackoverflow.com/a/5134656/
-#define EXPAND(x) x
-  // Magic to call different variants based on the number of arguments.
-#define GET_OVERLOAD(PLACEHOLDER1, PLACEHOLDER2, NAME, ...) NAME
-#define L0Log(...)                                                             ${'\\'}
-  EXPAND(GET_OVERLOAD(__VA_ARGS__, L0Log2, L0Log1)(__VA_ARGS__))
+
     void LogAppendKernel(const uint32_t& kernelNumber, const char* pKernelName);
     void LogKernelExecution(const uint32_t& kernelNumber,
                             const char* kernelName,

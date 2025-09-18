@@ -8,7 +8,7 @@
 
 #include "arDecoder.h"
 
-#include "log.h"
+#include "log2.h"
 #include "exception.h"
 
 namespace gits {
@@ -52,19 +52,19 @@ Ar::Ar(const uint8_t* data, size_t dataLength) {
     auto fileEntryDataPos = decodePos + sizeof(ArFileEntryHeader);
     const auto fileSize = std::stoull(fileEntryHeader->fileSizeInBytes);
     if (fileSize + (fileEntryDataPos - binary.data()) > binary.size()) {
-      Log(ERR) << "Corrupt AR archive - out of bounds data of file entry with idenfitier '" +
-                      std::string(fileEntryHeader->identifier,
-                                  sizeof(fileEntryHeader->identifier)) +
-                      "'";
+      LOG_ERROR << "Corrupt AR archive - out of bounds data of file entry with idenfitier '" +
+                       std::string(fileEntryHeader->identifier,
+                                   sizeof(fileEntryHeader->identifier)) +
+                       "'";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
 
     if (std::string(fileEntryHeader->trailingMagic, sizeof(fileEntryHeader->trailingMagic)) !=
         ArSpecialCases::arFileEntryTrailingMagic) {
-      Log(WARN) << "File entry header with identifier '" +
-                       std::string(fileEntryHeader->identifier,
-                                   sizeof(fileEntryHeader->identifier)) +
-                       "' has invalid header trailing string";
+      LOG_WARNING << "File entry header with identifier '" +
+                         std::string(fileEntryHeader->identifier,
+                                     sizeof(fileEntryHeader->identifier)) +
+                         "' has invalid header trailing string";
     }
 
     ArFileData fileEntry = {};
@@ -77,10 +77,10 @@ Ar::Ar(const uint8_t* data, size_t dataLength) {
         fileEntry.fileName = ArSpecialCases::longFileNamesFile;
         longFileNamesEntry = std::move(fileEntry);
       } else {
-        Log(ERR) << "Corrupt AR archive - file entry does not have identifier : '" +
-                        std::string(fileEntryHeader->identifier,
-                                    sizeof(fileEntryHeader->identifier)) +
-                        "'";
+        LOG_ERROR << "Corrupt AR archive - file entry does not have identifier : '" +
+                         std::string(fileEntryHeader->identifier,
+                                     sizeof(fileEntryHeader->identifier)) +
+                         "'";
         throw EOperationFailed(EXCEPTION_MESSAGE);
       }
     } else {
@@ -91,10 +91,10 @@ Ar::Ar(const uint8_t* data, size_t dataLength) {
                         longFileNamesEntry.fileData.size()),
             static_cast<size_t>(longFileNamePos));
         if (fileEntry.fileName.empty()) {
-          Log(ERR) << "Corrupt AR archive - long file name entry has broken identifier : '" +
-                          std::string(fileEntryHeader->identifier,
-                                      sizeof(fileEntryHeader->identifier)) +
-                          "'";
+          LOG_ERROR << "Corrupt AR archive - long file name entry has broken identifier : '" +
+                           std::string(fileEntryHeader->identifier,
+                                       sizeof(fileEntryHeader->identifier)) +
+                           "'";
           throw EOperationFailed(EXCEPTION_MESSAGE);
         }
       }

@@ -295,10 +295,10 @@ std::vector<size_t> AsyncBruteForce(const CStateDynamic* sd,
     const auto allocInfo = GetAllocFromRegion(reinterpret_cast<void*>(potentialPointer), *sd);
     if (allocInfo.first != nullptr) {
       offsets.push_back(i);
-      Log(TRACEV) << "Scanning pointer: " << ToStringHelper(pointerToData)
-                  << " -> Found pointer on offset " << std::to_string(i)
-                  << " pointer: " << ToStringHelper(allocInfo.first)
-                  << ", memory view: " << ToStringHelper(potentialPointer);
+      LOG_TRACEV << "Scanning pointer: " << ToStringHelper(pointerToData)
+                 << " -> Found pointer on offset " << std::to_string(i)
+                 << " pointer: " << ToStringHelper(allocInfo.first)
+                 << ", memory view: " << ToStringHelper(potentialPointer);
       i += sizeof(void*) - 1;
     }
     i++;
@@ -740,10 +740,10 @@ inline void zeCommandQueueExecuteCommandLists_RECWRAP(CRecorder& recorder,
       recorder.Schedule(
           new CzeCommandQueueSynchronize(ZE_RESULT_SUCCESS, hCommandQueue, UINT64_MAX));
     } else {
-      Log(ERR) << "Incorrect config LevelZero.Capture.Kernel.Range. The command list "
-               << l0IFace.CfgRec_StartCommandList()
-               << " doesn't exist inside command queue submission "
-               << l0IFace.CfgRec_StartCommandQueueSubmit();
+      LOG_ERROR << "Incorrect config LevelZero.Capture.Kernel.Range. The command list "
+                << l0IFace.CfgRec_StartCommandList()
+                << " doesn't exist inside command queue submission "
+                << l0IFace.CfgRec_StartCommandQueueSubmit();
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
     if (l0IFace.CfgRec_IsStopQueueSubmit()) {
@@ -761,10 +761,10 @@ inline void zeCommandQueueExecuteCommandLists_RECWRAP(CRecorder& recorder,
         recorder.Schedule(
             new CzeCommandQueueSynchronize(ZE_RESULT_SUCCESS, hCommandQueue, UINT64_MAX));
       } else {
-        Log(ERR) << "Incorrect config LevelZero.Capture.Kernel.Range. The command list "
-                 << l0IFace.CfgRec_StopCommandList()
-                 << " doesn't exist inside command queue submission "
-                 << l0IFace.CfgRec_StopCommandQueueSubmit();
+        LOG_ERROR << "Incorrect config LevelZero.Capture.Kernel.Range. The command list "
+                  << l0IFace.CfgRec_StopCommandList()
+                  << " doesn't exist inside command queue submission "
+                  << l0IFace.CfgRec_StopCommandQueueSubmit();
         throw EOperationFailed(EXCEPTION_MESSAGE);
       }
       recorder.Stop();
@@ -1296,7 +1296,7 @@ inline void zeInit_RECWRAP(CRecorder& recorder, ze_result_t return_value, ze_ini
   if (Configurator::Get().common.recorder.enabled) {
     const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
     if (!l0IFace.MemorySnifferInstall()) {
-      Log(WARN) << "Memory Sniffer installation failed";
+      LOG_WARNING << "Memory Sniffer installation failed";
     }
   }
 }
@@ -1311,8 +1311,8 @@ inline void zeGitsIndirectAllocationOffsets_RECWRAP(CRecorder& recorder,
     offsets[i] = pairAlloc.second + pOffsets[i];
   }
   if (pairAlloc.first == nullptr) {
-    Log(ERR) << "Couldn't correlate pAlloc " << ToStringHelper(pAlloc)
-             << " to any device allocation";
+    LOG_ERROR << "Couldn't correlate pAlloc " << ToStringHelper(pAlloc)
+              << " to any device allocation";
     return;
   }
   if (recorder.Running()) {
@@ -1404,7 +1404,7 @@ inline void zesInit_RECWRAP(CRecorder& recorder, ze_result_t return_value, zes_i
   if (Configurator::Get().common.recorder.enabled) {
     const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
     if (!l0IFace.MemorySnifferInstall()) {
-      Log(WARN) << "Memory Sniffer installation failed";
+      LOG_WARNING << "Memory Sniffer installation failed";
     }
   }
 }
@@ -1488,10 +1488,10 @@ inline void zeCommandListImmediateAppendCommandListsExp_RECWRAP(
       recorder.Schedule(
           new CzeCommandListHostSynchronize(ZE_RESULT_SUCCESS, hCommandListImmediate, UINT64_MAX));
     } else {
-      Log(ERR) << "Incorrect config LevelZero.Capture.Kernel.Range. The command list "
-               << l0IFace.CfgRec_StartCommandList()
-               << " doesn't exist inside immediate command list submission "
-               << l0IFace.CfgRec_StartCommandQueueSubmit();
+      LOG_ERROR << "Incorrect config LevelZero.Capture.Kernel.Range. The command list "
+                << l0IFace.CfgRec_StartCommandList()
+                << " doesn't exist inside immediate command list submission "
+                << l0IFace.CfgRec_StartCommandQueueSubmit();
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
     if (l0IFace.CfgRec_IsStopQueueSubmit()) {
@@ -1509,10 +1509,10 @@ inline void zeCommandListImmediateAppendCommandListsExp_RECWRAP(
         recorder.Schedule(new CzeCommandListHostSynchronize(ZE_RESULT_SUCCESS,
                                                             hCommandListImmediate, UINT64_MAX));
       } else {
-        Log(ERR) << "Incorrect config LevelZero.Capture.Kernel.Range. The command list "
-                 << l0IFace.CfgRec_StopCommandList()
-                 << " doesn't exist inside immediate command list submission "
-                 << l0IFace.CfgRec_StopCommandQueueSubmit();
+        LOG_ERROR << "Incorrect config LevelZero.Capture.Kernel.Range. The command list "
+                  << l0IFace.CfgRec_StopCommandList()
+                  << " doesn't exist inside immediate command list submission "
+                  << l0IFace.CfgRec_StopCommandQueueSubmit();
         throw EOperationFailed(EXCEPTION_MESSAGE);
       }
       recorder.Stop();
@@ -1534,7 +1534,7 @@ inline void zeCommandListCreateCloneExp_RECWRAP(
     [[maybe_unused]] ze_command_list_handle_t hCommandList,
     [[maybe_unused]] ze_command_list_handle_t* phClonedCommandList) {
   if (recorder.Running()) {
-    Log(ERR) << "zeCommandListCreateCloneExp is not implemented.";
+    LOG_ERROR << "zeCommandListCreateCloneExp is not implemented.";
     throw ENotImplemented(EXCEPTION_MESSAGE);
   }
 }
@@ -1589,7 +1589,7 @@ inline void zeInitDrivers_RECWRAP(CRecorder& recorder,
   if (Configurator::Get().common.recorder.enabled) {
     const auto& l0IFace = gits::CGits::Instance().apis.IfaceCompute();
     if (!l0IFace.MemorySnifferInstall()) {
-      Log(WARN) << "Memory Sniffer installation failed";
+      LOG_WARNING << "Memory Sniffer installation failed";
     }
   }
 }
