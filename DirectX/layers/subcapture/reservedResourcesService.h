@@ -58,6 +58,7 @@ public:
                           TileRegionsBySubresource* tileRegions);
   TiledResource* getTiledResource(unsigned resourceKey);
   void restoreContent(const std::vector<unsigned>& resourceKeys);
+  void cleanupRestore();
 
 private:
   std::unordered_map<unsigned, std::unique_ptr<TiledResource>> resources_;
@@ -65,7 +66,6 @@ private:
 
 private:
   void initRestore();
-  void cleanupRestore();
   void getSubresourceSizes(
       ID3D12Device* device,
       D3D12_RESOURCE_DESC& desc,
@@ -86,6 +86,7 @@ private:
   unsigned commandListKey_{};
   unsigned fenceKey_{};
   UINT64 recordedFenceValue_{};
+  bool contentRestoreInitialized_{};
 };
 
 } // namespace DirectX

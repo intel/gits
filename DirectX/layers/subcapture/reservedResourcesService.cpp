@@ -784,11 +784,12 @@ void ReservedResourcesService::restoreContent(const std::vector<unsigned>& resou
       stateService_.getRecorder().record(new ID3D12DeviceEvictWriter(evict));
     }
   }
-
-  cleanupRestore();
 }
 
 void ReservedResourcesService::initRestore() {
+  if (contentRestoreInitialized_) {
+    return;
+  }
 
   D3D12_COMMAND_QUEUE_DESC commandQueueDirectDesc{};
   commandQueueDirectDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -847,9 +848,15 @@ void ReservedResourcesService::initRestore() {
   createFence.riid_.value = IID_ID3D12Fence;
   createFence.ppFence_.key = fenceKey_;
   stateService_.getRecorder().record(new ID3D12DeviceCreateFenceWriter(createFence));
+
+  contentRestoreInitialized_ = true;
 }
 
 void ReservedResourcesService::cleanupRestore() {
+  if (!contentRestoreInitialized_) {
+    return;
+  }
+
   device_->Release();
   commandQueue_->Release();
   commandAllocator_->Release();

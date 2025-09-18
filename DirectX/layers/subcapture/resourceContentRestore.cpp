@@ -110,17 +110,15 @@ void ResourceContentRestore::restoreContent(const std::vector<unsigned>& resourc
       } while (restored);
     };
 
-    bool initUnmappable{};
     for (auto& [type, resourceInfos] : batches) {
       if (type == MappableResource) {
         restoreMappableResources(resourceInfos);
       } else {
-        if (!initUnmappable) {
+        if (!restoreUnmappableResourcesInitialized_) {
           ID3D12Resource* resource = resourceInfos[0].resource;
           HRESULT hr = resource->GetDevice(IID_PPV_ARGS(&device_));
           GITS_ASSERT(hr == S_OK);
           initRestoreUnmappableResources();
-          initUnmappable = true;
         }
 
         if (type == UnmappableResourceBuffer) {
@@ -129,10 +127,6 @@ void ResourceContentRestore::restoreContent(const std::vector<unsigned>& resourc
           restoreUnmappable(resourceInfos, 0x1000);
         }
       }
-    }
-
-    if (initUnmappable) {
-      cleanupRestoreUnmappableResources();
     }
   }
 }
@@ -646,6 +640,9 @@ void ResourceContentRestore::getSubresourceSizes(
 }
 
 void ResourceContentRestore::initRestoreUnmappableResources() {
+  if (restoreUnmappableResourcesInitialized_) {
+    return;
+  }
 
   D3D12_COMMAND_QUEUE_DESC commandQueueDirectDesc{};
   commandQueueDirectDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -704,9 +701,15 @@ void ResourceContentRestore::initRestoreUnmappableResources() {
   createFence.riid_.value = IID_ID3D12Fence;
   createFence.ppFence_.key = fenceKey_;
   stateService_.getRecorder().record(new ID3D12DeviceCreateFenceWriter(createFence));
+
+  restoreUnmappableResourcesInitialized_ = true;
 }
 
 void ResourceContentRestore::cleanupRestoreUnmappableResources() {
+  if (!restoreUnmappableResourcesInitialized_) {
+    return;
+  }
+
   device_->Release();
   commandQueue_->Release();
   commandAllocator_->Release();

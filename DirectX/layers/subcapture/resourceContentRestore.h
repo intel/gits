@@ -26,6 +26,7 @@ public:
   void addCommittedResourceState(ResourceState* resourceState);
   void addPlacedResourceState(ResourceState* resourceState);
   void restoreContent(const std::vector<unsigned>& resourceKeys);
+  void cleanupRestoreUnmappableResources();
 
 private:
   struct ResourceInfo {
@@ -45,7 +46,6 @@ private:
       D3D12_RESOURCE_DESC& desc,
       std::vector<std::pair<unsigned, D3D12_PLACED_SUBRESOURCE_FOOTPRINT>>& sizes);
   void initRestoreUnmappableResources();
-  void cleanupRestoreUnmappableResources();
   UINT64 getAlignedSize(UINT64 size);
   bool isBarrierRestricted(unsigned resourceKey);
   ID3D12Resource* createAuxiliaryPlacedResource(unsigned primaryResourceKey);
@@ -68,6 +68,7 @@ private:
   unsigned commandListKey_{};
   unsigned fenceKey_{};
   UINT64 recordedFenceValue_{};
+  bool restoreUnmappableResourcesInitialized_{};
 };
 
 } // namespace DirectX

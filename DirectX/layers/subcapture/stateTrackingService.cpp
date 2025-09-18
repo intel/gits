@@ -388,6 +388,9 @@ void StateTrackingService::restoreResources() {
     }
   }
 
+  reservedResourcesService_.cleanupRestore();
+  resourceContentRestore_.cleanupRestoreUnmappableResources();
+
   // restore states
   resourceStateTrackingService_.restoreResourceStates(orderedResources);
 }
