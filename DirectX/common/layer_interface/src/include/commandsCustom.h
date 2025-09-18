@@ -657,6 +657,17 @@ public:
   Argument<unsigned> value_{};
 };
 
+class DllContainerMetaCommand : public Command {
+public:
+  DllContainerMetaCommand(unsigned threadId)
+      : Command{CommandId::ID_META_DLL_CONTAINER, threadId} {}
+  DllContainerMetaCommand() : Command(CommandId::ID_META_DLL_CONTAINER) {}
+
+public:
+  LPCWSTR_Argument dllName_{};
+  BufferArgument dllData_{};
+};
+
 #pragma region DML
 
 class IDMLDeviceCheckFeatureSupportCommand : public Command {

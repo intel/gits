@@ -188,6 +188,12 @@ void ExecutionSerializationLayer::pre(CreateHeapAllocationMetaCommand& c) {
 
 void ExecutionSerializationLayer::pre(WaitForFenceSignaledCommand& c) {}
 
+void ExecutionSerializationLayer::pre(DllContainerMetaCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new DllContainerMetaWriter(c));
+  }
+}
+
 void ExecutionSerializationLayer::pre(IUnknownQueryInterfaceCommand& c) {
   if (recorder_.isRunning()) {
     recorder_.record(new IUnknownQueryInterfaceWriter(c));

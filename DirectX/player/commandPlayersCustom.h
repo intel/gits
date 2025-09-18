@@ -156,6 +156,25 @@ private:
   WaitForFenceSignaledCommand command;
 };
 
+class DllContainerMetaPlayer : public CommandPlayer {
+public:
+  unsigned Id() const override {
+    return static_cast<unsigned>(CommandId::ID_META_DLL_CONTAINER);
+  }
+  const char* Name() const override {
+    return "DllContainerMetaCommand";
+  }
+  void Run() override;
+
+protected:
+  void decodeCommand() override {
+    decode(data_.get(), command);
+  }
+
+private:
+  DllContainerMetaCommand command;
+};
+
 #pragma endregion
 
 #pragma region INTCExtension

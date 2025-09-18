@@ -20,11 +20,11 @@ XessService::~XessService() {
   }
 }
 
-void XessService::loadXess() {
+void XessService::loadXess(std::filesystem::path path) {
   if (!xessDll_) {
-    xessDll_ = LoadLibrary(".\\D3D12\\libxess.dll");
+    xessDll_ = LoadLibrary(path.string().c_str());
     if (!xessDll_) {
-      LOG_ERROR << "Failed to load XeSS (D3D12\\libxess.dll). Playback issues may occur.";
+      LOG_ERROR << "Failed to load XeSS (" << path.string() << "). Playback issues may occur.";
       return;
     }
   }

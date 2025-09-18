@@ -42,6 +42,13 @@ void SkipCallsOnConfigLayer::pre(WaitForFenceSignaledCommand& command) {
   }
 }
 
+void SkipCallsOnConfigLayer::pre(DllContainerMetaCommand& command) {
+  if (configKeySet_.contains(command.key)) {
+    command.skip = true;
+    LOG_INFO << "[SKIPPED] call " << callKeyToStr(command.key) << " DllContainerMeta";
+  }
+}
+
 void SkipCallsOnConfigLayer::pre(IUnknownQueryInterfaceCommand& command) {
   if (configKeySet_.contains(command.key)) {
     command.skip = true;

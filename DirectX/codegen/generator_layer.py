@@ -32,6 +32,7 @@ def generate_params_for_function(function):
         'DML_BINDING_DESC',
         'DML_OPERATOR_DESC',
         'LPCWSTR',
+        'LPCSTR',
         'PCWSTR',
         'WCHAR',
         'PCSTR',

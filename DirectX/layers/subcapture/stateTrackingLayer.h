@@ -232,6 +232,7 @@ public:
   void post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) override;
   void pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) override;
   void post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) override;
+  void post(DllContainerMetaCommand& c) override;
 
 private:
   void setAsChildInParent(unsigned parentKey, unsigned childKey);

@@ -11,6 +11,8 @@
 #include "gits.h"
 #include "xessDispatchTableAuto.h"
 
+#include <filesystem>
+
 namespace gits {
 namespace DirectX {
 
@@ -18,7 +20,7 @@ class XessService : public gits::noncopyable {
 public:
   XessService() = default;
   ~XessService();
-  void loadXess();
+  void loadXess(std::filesystem::path path);
 
   XessDispatchTable& getXessDispatchTable() {
     return xessDispatchTable_;

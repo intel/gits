@@ -32,6 +32,9 @@ void encode(const CreateHeapAllocationMetaCommand& command, char* dest);
 unsigned getSize(const WaitForFenceSignaledCommand& command);
 void encode(const WaitForFenceSignaledCommand& command, char* dest);
 
+unsigned getSize(const DllContainerMetaCommand& command);
+void encode(const DllContainerMetaCommand& command, char* dest);
+
 unsigned getSize(const INTC_D3D12_GetSupportedVersionsCommand& command);
 void encode(const INTC_D3D12_GetSupportedVersionsCommand& command, char* dest);
 

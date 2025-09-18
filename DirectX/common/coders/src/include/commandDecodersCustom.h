@@ -19,6 +19,7 @@ void decode(char* src, CreateWindowMetaCommand& command);
 void decode(char* src, MappedDataMetaCommand& command);
 void decode(char* src, CreateHeapAllocationMetaCommand& command);
 void decode(char* src, WaitForFenceSignaledCommand& command);
+void decode(char* src, DllContainerMetaCommand& command);
 void decode(char* src, INTC_D3D12_GetSupportedVersionsCommand& command);
 void decode(char* src, INTC_D3D12_CreateDeviceExtensionContextCommand& command);
 void decode(char* src, INTC_D3D12_CreateDeviceExtensionContext1Command& command);

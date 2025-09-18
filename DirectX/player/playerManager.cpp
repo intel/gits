@@ -19,6 +19,7 @@
 #include "accelerationStructuresDumpLayer.h"
 #include "dstorage/directStorageLayer.h"
 #include "printStatusLayer.h"
+#include "dllOverrideUseLayer.h"
 #include "debugInfoLayerAuto.h"
 #include "debugHelperLayer.h"
 #include "logDxErrorLayerAuto.h"
@@ -106,6 +107,7 @@ PlayerManager::PlayerManager() {
   std::unique_ptr<Layer> imGuiHUDLayer = std::make_unique<ImGuiHUDLayer>();
   std::unique_ptr<Layer> printStatusLayer = std::make_unique<PrintStatusLayer>();
   std::unique_ptr<Layer> addressPinningLayer;
+  std::unique_ptr<Layer> dllOverrideUseLayer;
 
   if (executeCommands_) {
     replayCustomizationLayer = std::make_unique<ReplayCustomizationLayer>(*this);
@@ -121,6 +123,7 @@ PlayerManager::PlayerManager() {
     }
     portabilityLayer = portabilityFactory_.getPortabilityLayer();
     addressPinningLayer = addressPinningFactory_.getAddressPinningLayer();
+    dllOverrideUseLayer = std::make_unique<DllOverrideUseLayer>(*this);
   }
 
   // Enable Pre layers
@@ -137,6 +140,7 @@ PlayerManager::PlayerManager() {
   enablePreLayer(debugHelperLayer);
   enablePreLayer(traceLayer);
   enablePreLayer(commandPreservationLayer);
+  enablePreLayer(dllOverrideUseLayer);
   enablePreLayer(stateTrackingLayer);
   enablePreLayer(executionSerializationLayer);
   enablePreLayer(analyzerLayer);
@@ -222,17 +226,16 @@ PlayerManager::PlayerManager() {
   retainLayer(std::move(imGuiHUDLayer));
   retainLayer(std::move(printStatusLayer));
   retainLayer(std::move(addressPinningLayer));
+  retainLayer(std::move(dllOverrideUseLayer));
 
   objectUsageNotifier_ = subcaptureFactory_.getObjectUsageNotifier();
 
   // Load DirectX runtimes
-  loadAgilitySdk();
   loadDirectML();
   loadDirectStorage();
 
   // Load services
   getAdapterService().loadAdapters();
-  getXessService().loadXess();
   getIntelExtensionsService().loadIntelExtensions(getAdapterService().getAdapter());
   getIntelExtensionsService().setApplicationInfo();
 
@@ -290,10 +293,11 @@ IUnknown* PlayerManager::findObject(unsigned objectKey) {
   return it->second;
 }
 
-void PlayerManager::loadAgilitySdk() {
-  d3d12CoreDll_ = LoadLibrary(".\\D3D12\\D3D12Core.dll");
+void PlayerManager::loadAgilitySdk(const std::filesystem::path& path) {
+  std::string dllPath = (path / "D3D12Core.dll").string();
+  d3d12CoreDll_ = LoadLibrary(dllPath.c_str());
   if (!d3d12CoreDll_) {
-    LOG_ERROR << "Agility SDK - Failed to load (D3D12\\D3D12Core.dll)";
+    LOG_ERROR << "Agility SDK - Failed to load (" << dllPath << ")";
     return;
   }
   UINT sdkVersion = *reinterpret_cast<UINT*>(GetProcAddress(d3d12CoreDll_, "D3D12SDKVersion"));
@@ -305,7 +309,7 @@ void PlayerManager::loadAgilitySdk() {
     return;
   }
 
-  hr = sdkConfiguration->SetSDKVersion(sdkVersion, ".\\D3D12\\");
+  hr = sdkConfiguration->SetSDKVersion(sdkVersion, path.string().c_str());
   if (hr != S_OK) {
     LOG_ERROR << "Agility SDK - SetSDKVersion call failed. This method can be used only in "
               << "Windows Developer Mode. Check settings !";

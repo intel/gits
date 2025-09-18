@@ -133,6 +133,24 @@ void TraceLayer::post(WaitForFenceSignaledCommand& command) {
   }
 }
 
+void TraceLayer::pre(DllContainerMetaCommand& command) {
+  if (printPre_) {
+    CommandPrinter p(streamPre_, statePre_, command, "DllContainerMetaCommand");
+    p.addArgument(command.dllName_);
+    p.addArgument(command.dllData_);
+    p.print(flush_);
+  }
+}
+
+void TraceLayer::post(DllContainerMetaCommand& command) {
+  if (printPost_) {
+    CommandPrinter p(streamPost_, statePost_, command, "DllContainerMetaCommand");
+    p.addArgument(command.dllName_);
+    p.addArgument(command.dllData_);
+    p.print(flush_);
+  }
+}
+
 void TraceLayer::pre(IUnknownQueryInterfaceCommand& command) {
   if (printPre_) {
     CommandPrinter p(streamPre_, statePre_, command, "IUnknown::QueryInterface",

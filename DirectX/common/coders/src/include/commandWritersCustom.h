@@ -100,6 +100,18 @@ public:
   }
 };
 
+class DllContainerMetaWriter : public CommandWriter {
+public:
+  DllContainerMetaWriter(DllContainerMetaCommand& command) {
+    dataSize_ = getSize(command);
+    data_.reset(new char[dataSize_]);
+    encode(command, data_.get());
+  }
+  unsigned Id() const override {
+    return static_cast<unsigned>(CommandId::ID_META_DLL_CONTAINER);
+  }
+};
+
 class INTC_D3D12_GetSupportedVersionsWriter : public CommandWriter {
 public:
   INTC_D3D12_GetSupportedVersionsWriter(INTC_D3D12_GetSupportedVersionsCommand& command) {

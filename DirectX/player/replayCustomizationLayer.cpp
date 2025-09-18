@@ -1051,6 +1051,10 @@ void ReplayCustomizationLayer::pre(ID3DBlobGetBufferSizeCommand& c) {
   c.skip = true;
 }
 
+void ReplayCustomizationLayer::pre(ID3D12SDKConfigurationSetSDKVersionCommand& c) {
+  c.skip = true;
+}
+
 void ReplayCustomizationLayer::pre(INTC_D3D12_SetFeatureSupportCommand& command) {
   intcFeatureSupportSet_ = true;
 }

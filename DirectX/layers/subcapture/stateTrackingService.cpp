@@ -31,6 +31,7 @@ void StateTrackingService::restoreState() {
   };
 
   recorder_.record(new CTokenMarker(CToken::ID_INIT_START));
+  restoreDllContainers();
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_OBJECTS_BEGIN);
   for (auto& it : statesByKey_) {
     if (analyzerResults_.restoreObject(it.first)) {
@@ -751,6 +752,10 @@ void StateTrackingService::storeD3D12EnableExperimentalFeatures(
   enableExperimentalFeaturesCommand_.reset(new D3D12EnableExperimentalFeaturesCommand(c));
 }
 
+void StateTrackingService::storeDllContainer(const DllContainerMetaCommand& c) {
+  dllContainerCommands_.emplace_back(new DllContainerMetaCommand(c));
+}
+
 void StateTrackingService::restoreINTCApplicationInfo() {
   if (setApplicationInfoCommand_) {
     recorder_.record(createCommandWriter(setApplicationInfoCommand_.get()));
@@ -761,6 +766,12 @@ void StateTrackingService::restoreD3D12EnableExperimentalFeatures() {
   if (enableExperimentalFeaturesCommand_) {
     recorder_.record(createCommandWriter(enableExperimentalFeaturesCommand_.get()));
     enableExperimentalFeaturesCommand_.reset();
+  }
+}
+
+void StateTrackingService::restoreDllContainers() {
+  for (const auto& command : dllContainerCommands_) {
+    recorder_.record(createCommandWriter(command.get()));
   }
 }
 

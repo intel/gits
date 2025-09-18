@@ -32,6 +32,8 @@ CommandWriter* createCommandWriter(Command* command) {
     return new CreateHeapAllocationMetaWriter(*static_cast<CreateHeapAllocationMetaCommand*>(command));
   case CommandId::ID_WAIT_FOR_FENCE_SIGNALED:
     return new WaitForFenceSignaledWriter(*static_cast<WaitForFenceSignaledCommand*>(command));
+  case CommandId::ID_META_DLL_CONTAINER:
+    return new DllContainerMetaWriter(*static_cast<DllContainerMetaCommand*>(command));
   case CommandId::INTC_D3D12_GETSUPPORTEDVERSIONS:
     return new INTC_D3D12_GetSupportedVersionsWriter(*static_cast<INTC_D3D12_GetSupportedVersionsCommand*>(command));
   case CommandId::INTC_D3D12_CREATEDEVICEEXTENSIONCONTEXT:

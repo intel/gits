@@ -23,6 +23,7 @@
 #include "globalSynchronizationLayerAuto.h"
 #include "logDxErrorLayerAuto.h"
 #include "directStorageResourcesLayer.h"
+#include "dllOverrideStoreLayer.h"
 #include "imguiHudLayer.h"
 #include "directXApiIfaceRecorder.h"
 #include "gits.h"
@@ -142,6 +143,7 @@ void CaptureManager::createLayers() {
   std::unique_ptr<Layer> portabilityLayer;
   std::unique_ptr<Layer> imGuiHUDLayer = std::make_unique<ImGuiHUDLayer>();
   std::unique_ptr<Layer> addressPinningLayer;
+  std::unique_ptr<Layer> dllOverrideStoreLayer;
 
   if (cfg.directx.capture.debugLayer) {
     debugInfoLayer = std::make_unique<DebugInfoLayer>();
@@ -161,6 +163,7 @@ void CaptureManager::createLayers() {
     }
     portabilityLayer = portabilityFactory_.getPortabilityLayer();
     addressPinningLayer = addressPinningFactory_.getAddressPinningLayer();
+    dllOverrideStoreLayer = std::make_unique<DllOverrideStoreLayer>(*this, *recorder_);
   }
 
   // Enable Pre layers
@@ -173,6 +176,7 @@ void CaptureManager::createLayers() {
   enablePreLayer(globalSynchronizationLayer); // keep as first
   enablePreLayer(traceLayer);
   enablePreLayer(interceptorCustomizationLayer);
+  enablePreLayer(dllOverrideStoreLayer);
   enablePreLayer(captureCustomizationLayer);
   enablePreLayer(debugInfoLayer);
   enablePreLayer(captureSynchronizationLayer);
@@ -192,6 +196,7 @@ void CaptureManager::createLayers() {
   };
   enablePostLayer(logDxErrorLayer);
   enablePostLayer(interceptorCustomizationLayer);
+  enablePostLayer(dllOverrideStoreLayer);
   enablePostLayer(captureCustomizationLayer);
   enablePostLayer(portabilityLayer);
   enablePostLayer(debugInfoLayer);
@@ -240,6 +245,7 @@ void CaptureManager::createLayers() {
   retainLayer(std::move(globalSynchronizationLayer));
   retainLayer(std::move(imGuiHUDLayer));
   retainLayer(std::move(addressPinningLayer));
+  retainLayer(std::move(dllOverrideStoreLayer));
 }
 
 void CaptureManager::interceptDirectMLFunctions() {

@@ -35,6 +35,7 @@
 #include <vector>
 #include <memory>
 #include <unordered_map>
+#include <filesystem>
 
 namespace gits {
 namespace DirectX {
@@ -107,11 +108,12 @@ public:
     return xessContextMap_;
   }
 
+  void loadAgilitySdk(const std::filesystem::path& path);
+
 private:
   PlayerManager();
 
   void loadAdapterOverride();
-  void loadAgilitySdk();
   void loadDirectML();
   void loadDirectStorage();
 

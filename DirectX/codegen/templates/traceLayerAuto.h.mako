@@ -56,6 +56,9 @@ public:
   void pre(WaitForFenceSignaledCommand& command) override;
   void post(WaitForFenceSignaledCommand& command) override;
 
+  void pre(DllContainerMetaCommand& command) override;
+  void post(DllContainerMetaCommand& command) override;
+
   void pre(IUnknownQueryInterfaceCommand& command) override;
   void post(IUnknownQueryInterfaceCommand& command) override;
 

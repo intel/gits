@@ -31,6 +31,7 @@ public:
   void post(MappedDataMetaCommand& command) override;
   void post(CreateHeapAllocationMetaCommand& command) override;
   void post(WaitForFenceSignaledCommand& command) override;
+  void post(DllContainerMetaCommand& command) override;
   void post(IUnknownQueryInterfaceCommand& command) override;
   void post(IUnknownAddRefCommand& command) override;
   void post(IUnknownReleaseCommand& command) override;

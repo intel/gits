@@ -110,6 +110,19 @@ void encode(const WaitForFenceSignaledCommand& command, char* dest) {
   encode(dest, offset, command.value_);
 }
 
+unsigned getSize(const DllContainerMetaCommand& command) {
+  return getSize(command.key) + getSize(command.threadId) + getSize(command.dllName_) +
+         getSize(command.dllData_);
+}
+
+void encode(const DllContainerMetaCommand& command, char* dest) {
+  unsigned offset = 0;
+  encode(dest, offset, command.key);
+  encode(dest, offset, command.threadId);
+  encode(dest, offset, command.dllName_);
+  encode(dest, offset, command.dllData_);
+}
+
 unsigned getSize(const INTC_D3D12_GetSupportedVersionsCommand& command) {
   return getSize(command.key) + getSize(command.threadId) + getSize(command.pDevice_) +
          getSize(command.pSupportedExtVersions_) + getSize(command.pSupportedExtVersionsCount_) +

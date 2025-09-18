@@ -33,6 +33,7 @@ public:
   void pre(MappedDataMetaCommand& c) override;
   void pre(CreateHeapAllocationMetaCommand& c) override;
   void pre(WaitForFenceSignaledCommand& c) override;
+  void pre(DllContainerMetaCommand& c) override;
   void pre(IUnknownQueryInterfaceCommand& c) override;
   void pre(IUnknownAddRefCommand& c) override;
   void pre(IUnknownReleaseCommand& c) override;

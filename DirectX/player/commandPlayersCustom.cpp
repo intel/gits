@@ -160,6 +160,20 @@ void WaitForFenceSignaledPlayer::Run() {
   }
 }
 
+void DllContainerMetaPlayer::Run() {
+  auto& manager = PlayerManager::get();
+
+  for (Layer* layer : manager.getPreLayers()) {
+    layer->pre(command);
+  }
+
+  // handled in DllOverrideUseLayer
+
+  for (Layer* layer : manager.getPostLayers()) {
+    layer->post(command);
+  }
+}
+
 void INTC_D3D12_GetSupportedVersionsPlayer::Run() {
   auto& manager = PlayerManager::get();
 

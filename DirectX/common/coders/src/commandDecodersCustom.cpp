@@ -79,6 +79,14 @@ void decode(char* src, WaitForFenceSignaledCommand& command) {
   decode(src, offset, command.value_);
 }
 
+void decode(char* src, DllContainerMetaCommand& command) {
+  unsigned offset = 0;
+  decode(src, offset, command.key);
+  decode(src, offset, command.threadId);
+  decode(src, offset, command.dllName_);
+  decode(src, offset, command.dllData_);
+}
+
 void decode(char* src, INTC_D3D12_GetSupportedVersionsCommand& command) {
   unsigned offset = 0;
   decode(src, offset, command.key);

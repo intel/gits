@@ -89,6 +89,12 @@ void RecordingLayer::post(WaitForFenceSignaledCommand& command) {
   }
 }
 
+void RecordingLayer::post(DllContainerMetaCommand& command) {
+  if (subcaptureRange_.inRange()) {
+    recorder_.record(new DllContainerMetaWriter(command));
+  }
+}
+
 void RecordingLayer::post(IUnknownQueryInterfaceCommand& command) {
   if (subcaptureRange_.inRange()) {
     recorder_.record(new IUnknownQueryInterfaceWriter(command));

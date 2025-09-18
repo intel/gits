@@ -859,6 +859,14 @@ Configuration:
             Description:
               Use a thread pool for D3D12 methods which cause hardware shader
               compilation
+          - Name: enableAgilitySDKDllAppOverride
+            Type: bool
+            Default: true
+            Description: Enable usage of AglitySDK DLL captured from the app
+          - Name: enableXessDllAppOverride
+            Type: bool
+            Default: true
+            Description: Enable usage of Xess DLL captured from the app
           - Name: plugins
             Type: std::vector<std::string>
             Default: []

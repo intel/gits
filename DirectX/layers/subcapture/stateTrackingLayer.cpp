@@ -2967,5 +2967,13 @@ void StateTrackingLayer::post(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCom
   state->commands.push_back(command);
 }
 
+void StateTrackingLayer::post(DllContainerMetaCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+
+  stateService_.storeDllContainer(c);
+}
+
 } // namespace DirectX
 } // namespace gits

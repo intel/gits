@@ -34,6 +34,8 @@ gits::CFunction* DirectXLibrary::FunctionCreate(unsigned type) const {
     return new CreateHeapAllocationMetaPlayer();
   case CommandId::ID_WAIT_FOR_FENCE_SIGNALED:
     return new WaitForFenceSignaledPlayer();
+  case CommandId::ID_META_DLL_CONTAINER:
+    return new DllContainerMetaPlayer();
   case CommandId::ID_IUNKNOWN_QUERYINTERFACE:
     return new IUnknownQueryInterfacePlayer();
   case CommandId::ID_IUNKNOWN_ADDREF:

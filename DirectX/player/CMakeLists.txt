@@ -22,6 +22,8 @@ set(PLAYER_SRC
   ${SRC_DIR}/multithreadedObjectCreationLayer.cpp
   ${SRC_DIR}/multithreadedObjectAwaitLayer.h
   ${SRC_DIR}/multithreadedObjectAwaitLayer.cpp
+  ${SRC_DIR}/dllOverrideUseLayer.h
+  ${SRC_DIR}/dllOverrideUseLayer.cpp
   ${SRC_DIR}/interfaceArgumentUpdaters.h
   ${SRC_DIR}/interfaceArgumentUpdaters.cpp
   ${SRC_DIR}/intelExtensions.h

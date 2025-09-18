@@ -154,6 +154,7 @@ public:
   void pre(ID3D12DeviceOpenSharedHandleCommand& command) override;
   void pre(ID3DBlobGetBufferPointerCommand& command) override;
   void pre(ID3DBlobGetBufferSizeCommand& command) override;
+  void pre(ID3D12SDKConfigurationSetSDKVersionCommand& command) override;
   void pre(INTC_D3D12_SetFeatureSupportCommand& command) override;
   void pre(INTC_D3D12_SetApplicationInfoCommand& command) override;
   void pre(INTC_D3D12_GetSupportedVersionsCommand& command) override;

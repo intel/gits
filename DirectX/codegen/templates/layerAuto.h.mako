@@ -50,6 +50,9 @@ public:
   virtual void pre(WaitForFenceSignaledCommand& command) {}
   virtual void post(WaitForFenceSignaledCommand& command) {}
 
+  virtual void pre(DllContainerMetaCommand& command) {}
+  virtual void post(DllContainerMetaCommand& command) {}
+
   virtual void pre(IUnknownQueryInterfaceCommand& command) {}
   virtual void post(IUnknownQueryInterfaceCommand& command) {}
 

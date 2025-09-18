@@ -56,6 +56,8 @@ set(CAPTURE_SRC
   ${SRC_DIR}/encoderLayerCustom.cpp
   ${SRC_DIR}/globalSynchronizationLayerAuto.h
   ${SRC_DIR}/globalSynchronizationLayerAuto.cpp
+  ${SRC_DIR}/dllOverrideStoreLayer.h
+  ${SRC_DIR}/dllOverrideStoreLayer.cpp
 )
 source_group("capture" FILES ${CAPTURE_SRC})
 

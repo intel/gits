@@ -26,6 +26,7 @@ public:
   virtual void pre(MappedDataMetaCommand& command) override;
   virtual void pre(CreateHeapAllocationMetaCommand& command) override;
   virtual void pre(WaitForFenceSignaledCommand& command) override;
+  virtual void pre(DllContainerMetaCommand& command) override;
   virtual void pre(IUnknownQueryInterfaceCommand& command) override;
   virtual void pre(IUnknownAddRefCommand& command) override;
   virtual void pre(IUnknownReleaseCommand& command) override;
