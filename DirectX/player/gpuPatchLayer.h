@@ -63,6 +63,7 @@ public:
   void post(ID3D12Device3EnqueueMakeResidentCommand& c) override;
   void post(ID3D12DeviceCreateCommandSignatureCommand& c) override;
   void pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) override;
+  void post(ID3D12GraphicsCommandListExecuteIndirectCommand& c) override;
   void post(ID3D12DeviceCreatePlacedResourceCommand& c) override;
   void post(ID3D12Device8CreatePlacedResource1Command& c) override;
   void post(ID3D12Device10CreatePlacedResource2Command& c) override;
@@ -191,6 +192,8 @@ private:
   std::unordered_map<unsigned, std::vector<D3D12_GPU_VIRTUAL_ADDRESS>> instancesArraysOfPointers_;
 
   std::unordered_map<unsigned, ID3D12Resource*> resourceByKey_;
+
+  UINT64 executeIndirectLastArgumentBufferOffset_{};
 };
 
 } // namespace DirectX

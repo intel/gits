@@ -1087,6 +1087,7 @@ void GpuPatchLayer::post(ID3D12DeviceCreateCommandSignatureCommand& c) {
 }
 
 void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
+  executeIndirectLastArgumentBufferOffset_ = c.ArgumentBufferOffset_.value;
 
   auto it = commandSignatures_.find(c.pCommandSignature_.key);
   GITS_ASSERT(it != commandSignatures_.end());
@@ -1305,6 +1306,10 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
   msgBus.publish({PUBLISHER_PLAYER, TOPIC_GITS_WORKLOAD_END},
                  std::make_shared<GitsWorkloadMessage>(commandList, "GITS_ExecuteIndirect-Patch",
                                                        c.object_.key));
+}
+
+void GpuPatchLayer::post(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
+  c.ArgumentBufferOffset_.value = executeIndirectLastArgumentBufferOffset_;
 }
 
 void GpuPatchLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
