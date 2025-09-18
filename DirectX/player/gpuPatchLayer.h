@@ -74,8 +74,9 @@ public:
 private:
   void initialize(ID3D12GraphicsCommandList* commandList);
   void initializeInstancesAoP(ID3D12GraphicsCommandList* commandList);
+  void addPatchBuffer(ID3D12GraphicsCommandList* commandList);
   unsigned getMappingBufferIndex(unsigned commandListKey);
-  unsigned getPatchBufferIndex(unsigned commandListKey);
+  unsigned getPatchBufferIndex(unsigned commandListKey, ID3D12GraphicsCommandList* commandList);
   unsigned getInstancesAoPPatchBufferIndex(unsigned commandListKey);
   unsigned getInstancesAoPStagingBufferIndex(unsigned commandListKey);
   void getPatchOffsets(const D3D12_COMMAND_SIGNATURE_DESC& commandSignature,
@@ -92,8 +93,9 @@ private:
   PlayerManager& manager_;
   bool useAddressPinning_{};
 
-  static const unsigned patchBufferPoolSize_{48};
-  std::array<ID3D12Resource*, patchBufferPoolSize_> patchBuffers_{};
+  static const unsigned patchBufferInitialPoolSize_{32};
+  unsigned patchBufferPoolSize_{};
+  std::vector<ID3D12Resource*> patchBuffers_{};
   const unsigned patchBufferSize_{0x1000000};
 
   static const unsigned instancesAoPPatchBufferPoolSize_{8};
@@ -101,7 +103,7 @@ private:
   const unsigned instancesAoPPatchBufferSize_{0x10000000};
 
   static const unsigned instancesAoPStagingBufferPoolSize_{8};
-  std::array<ID3D12Resource*, patchBufferPoolSize_> instancesAoPStagingBuffers_{};
+  std::array<ID3D12Resource*, instancesAoPStagingBufferPoolSize_> instancesAoPStagingBuffers_{};
   const unsigned instancesAoPStagingBufferSize_{0x80000};
 
   std::array<ID3D12Resource*, instancesAoPStagingBufferPoolSize_>
@@ -110,16 +112,16 @@ private:
       instancesAoPPatchOffsetsStagingBuffers_{};
   const unsigned instancesAoPPatchOffsetsBufferSize_{0x40000};
 
-  std::array<ID3D12Resource*, patchBufferPoolSize_> patchOffsetsBuffers_{};
-  std::array<ID3D12Resource*, patchBufferPoolSize_> patchOffsetsStagingBuffers_{};
+  std::vector<ID3D12Resource*> patchOffsetsBuffers_{};
+  std::vector<ID3D12Resource*> patchOffsetsStagingBuffers_{};
   const unsigned patchOffsetsBufferSize_{0x20000};
 
-  std::array<ID3D12Resource*, patchBufferPoolSize_> executeIndirectRaytracingPatchBuffers_{};
-  std::array<ID3D12Resource*, patchBufferPoolSize_> executeIndirectRaytracingPatchStagingBuffers_{};
+  std::vector<ID3D12Resource*> executeIndirectRaytracingPatchBuffers_{};
+  std::vector<ID3D12Resource*> executeIndirectRaytracingPatchStagingBuffers_{};
   const unsigned executeIndirectRaytracingPatchBufferSize_{0x100};
 
-  std::array<ID3D12Resource*, patchBufferPoolSize_> executeIndirectCountBuffers_{};
-  std::array<ID3D12Resource*, patchBufferPoolSize_> executeIndirectCountStagingBuffers_{};
+  std::vector<ID3D12Resource*> executeIndirectCountBuffers_{};
+  std::vector<ID3D12Resource*> executeIndirectCountStagingBuffers_{};
   const unsigned executeIndirectCountBufferSize_{0x10};
 
   static const unsigned mappingBufferPoolSize_{24};
@@ -162,7 +164,7 @@ private:
   std::array<FenceInfo, mappingBufferPoolSize_> mappingFences_{};
   std::unordered_map<unsigned, unsigned> currentMappingsByCommandList_;
 
-  std::array<FenceInfo, patchBufferPoolSize_> patchBufferFences_{};
+  std::vector<FenceInfo> patchBufferFences_{};
   std::unordered_map<unsigned, std::vector<unsigned>> currentPatchBuffersByCommandList_;
 
   std::array<FenceInfo, instancesAoPPatchBufferPoolSize_> instancesAoPPatchBufferFences_{};
