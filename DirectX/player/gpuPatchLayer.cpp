@@ -1166,6 +1166,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
     commandList->ResourceBarrier(2, barriers);
   }
   c.pArgumentBuffer_.value = patchBuffers_[patchBufferIndex];
+  c.ArgumentBufferOffset_.value = 0;
 
   if (c.pCountBuffer_.value) {
     D3D12_RESOURCE_BARRIER barriers[2]{};
