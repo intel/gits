@@ -593,7 +593,7 @@ def install_dependencies(args, dependencies, meta_data) -> bool:
                 dependency.logger.exception(f"Encountered exception: {e}")
                 result_dep = False
             if not result_dep:
-                logger.exception(f"Failed installing dependency {dependency.name} to {dependency.relative_repository_path}")
+                logger.exception(f"Failed installing dependency {dependency.name} to {dependency.relative_repository_path()}")
             result = result or result_dep
     return result
 
