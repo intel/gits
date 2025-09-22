@@ -975,7 +975,7 @@ void GpuPatchLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
   }
 
   std::vector<CapturePlayerDescriptorHandleService::DescriptorMapping> sampleDescriptorMappings;
-  descriptorHandleService_.getViewMappings(sampleDescriptorMappings);
+  descriptorHandleService_.getSamplerMappings(sampleDescriptorMappings);
   mappingCount.sampleDescriptorCount = sampleDescriptorMappings.size();
   if (sampleDescriptorMappings.size() >
       sampleDescriptorBufferSize_ /
