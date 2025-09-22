@@ -60,6 +60,14 @@ public:
   void pre(INTC_D3D12_CreateReservedResourceCommand& c) override;
   void pre(INTC_D3D12_CreateCommandQueueCommand& c) override;
   void pre(INTC_D3D12_CreateHeapCommand& c) override;
+  void pre(NvAPI_InitializeCommand& c) override;
+  void pre(NvAPI_UnloadCommand& c) override;
+  void pre(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& c) override;
+  void pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& c) override;
+  void pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& c) override;
+  void pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) override;
+  void pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) override;
+  void pre(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& c) override;
 
 private:
   ExecutionSerializationRecorder& recorder_;

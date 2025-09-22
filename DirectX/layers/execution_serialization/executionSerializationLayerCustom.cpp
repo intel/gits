@@ -274,5 +274,59 @@ void ExecutionSerializationLayer::pre(INTC_D3D12_CreateHeapCommand& c) {
 
 void ExecutionSerializationLayer::pre(IDXGIAdapter3QueryVideoMemoryInfoCommand& c) {}
 
+void ExecutionSerializationLayer::pre(NvAPI_InitializeCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new NvAPI_InitializeWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(NvAPI_UnloadCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new NvAPI_UnloadWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new NvAPI_D3D12_SetCreatePipelineStateOptionsWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new NvAPI_D3D12_SetNvShaderExtnSlotSpaceWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(
+    NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
+  if (recorder_.isRunning()) {
+    executionService_.commandListCommand(
+        c.pCommandList_.key, new NvAPI_D3D12_BuildRaytracingAccelerationStructureExWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
+  if (recorder_.isRunning()) {
+    executionService_.commandListCommand(
+        c.pCommandList_.key, new NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayWriter(c));
+  }
+}
+
+void ExecutionSerializationLayer::pre(
+    NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& c) {
+  if (recorder_.isRunning()) {
+    executionService_.commandListCommand(
+        c.pCommandList_.key,
+        new NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationWriter(c));
+  }
+}
+
 } // namespace DirectX
 } // namespace gits
