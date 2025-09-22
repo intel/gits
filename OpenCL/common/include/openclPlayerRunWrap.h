@@ -62,7 +62,7 @@ void PrintBuildLog(const cl_program program,
     }
   }
   if (errCode != CL_SUCCESS) {
-    Log(ERR) << "Getting build log failed";
+    LOG_ERROR << "Getting build log failed";
   }
 }
 
@@ -88,8 +88,8 @@ void TranslatePointerOffsets(void* bufferPtr, const std::map<size_t, bool>& offs
     const auto allocInfo = GetOriginalMappedPtrFromRegion(ptrToFetch);
     ptrToFetch = GetOffsetPointer(allocInfo.first, allocInfo.second);
     if (ptrToFetch == nullptr) {
-      Log(WARN) << "Couldn't translate pointer inside pAlloc: " << bufferPtr
-                << " offset: " << offsetInfo.first;
+      LOG_WARNING << "Couldn't translate pointer inside pAlloc: " << bufferPtr
+                  << " offset: " << offsetInfo.first;
     }
     std::memcpy(ptrLocation, &ptrToFetch, sizeof(void*));
   }
@@ -365,7 +365,7 @@ inline void clGetPlatformIDs_RUNWRAP(CCLResult& _return_value,
     *_return_value = drvOcl.clGetPlatformIDs(numPlatforms, platforms.data(), nullptr);
     clGetPlatformIDs_SD(*_return_value, numPlatforms, platforms.data(), *_num_platforms);
     if (*_num_entries > numPlatforms) {
-      Log(WARN) << "Original application was recorded using more platforms";
+      LOG_WARNING << "Original application was recorded using more platforms";
     }
 
     // Obtain devices and devices types for stream compatibility on any
@@ -1208,13 +1208,13 @@ inline void clCreateSubDevices_RUNWRAP(CCLResult& _return_value,
                                                     *_out_devices, &num_devices_ret);
   const auto* numDevices = *_num_devices;
   if (numDevices != nullptr && *numDevices > num_devices_ret) {
-    Log(WARN) << "Stream was recorded on the device that can be "
-                 "partitioned into more devices than this one: "
-              << ToStringHelper(num_devices_ret);
+    LOG_WARNING << "Stream was recorded on the device that can be "
+                   "partitioned into more devices than this one: "
+                << ToStringHelper(num_devices_ret);
   }
   if (!ErrCodeSuccess(*_return_value) && *_num_entries > 0 && *_in_device != nullptr &&
       *_out_devices != nullptr) {
-    Log(WARN) << "Adding a mapping of all out-devices to the primary in-device";
+    LOG_WARNING << "Adding a mapping of all out-devices to the primary in-device";
     for (uint32_t i = 0U; i < static_cast<uint32_t>(*_num_entries); i++) {
       Ccl_device_id::AddMapping(_out_devices._array[i], *_in_device);
     }
@@ -1230,8 +1230,8 @@ inline void clSetKernelArgSVMPointer_RUNWRAP(CCLResult& _return_value,
   const auto allocInfo = GetOriginalMappedPtrFromRegion(_arg_value.Original());
   void* svmPtr = GetOffsetPointer(allocInfo.first, allocInfo.second);
   if (svmPtr == nullptr) {
-    Log(WARN) << "Couldn't find mapping for SVM/USM pointer, original pointer: "
-              << _arg_value.Original();
+    LOG_WARNING << "Couldn't find mapping for SVM/USM pointer, original pointer: "
+                << _arg_value.Original();
   }
   _return_value.Value() = drvOcl.clSetKernelArgSVMPointer(*_kernel, *_arg_index, svmPtr);
   clSetKernelArgSVMPointer_SD(*_return_value, *_kernel, *_arg_index, svmPtr);

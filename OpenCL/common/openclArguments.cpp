@@ -41,11 +41,11 @@ std::vector<cl_context_properties> gits::OpenCL::MapContextProperties(
       // Adobe After Effects requests this, but doesn't use DX11. Apps that
       // actually use DX11 will likely fail. Thus, we don't crash, but we do
       // warn the user.
-      Log(WARN) << "The application has requested DirectX 11 interoperability support, but this "
-                   "feature is not supported in GITS. The playback will continue, but there may be "
-                   "various problems, such as crashes or corruption. If you don't need DirectX API "
-                   "sharing in your OpenCL stream, consider recording the stream again with the "
-                   "RemoveDXSharing option set to true in the config file.";
+      LOG_WARNING << "The application has requested DirectX 11 interoperability support, but this "
+                     "feature is not supported in GITS. The playback will continue, but there may "
+                     "be various problems, such as crashes or corruption. If you don't need "
+                     "DirectX API sharing in your OpenCL stream, consider recording the stream "
+                     "again with the RemoveDXSharing option set to true in the config file.";
       break;
     }
     case CL_CONTEXT_INTEROP_USER_SYNC:
@@ -58,7 +58,7 @@ std::vector<cl_context_properties> gits::OpenCL::MapContextProperties(
         properties[i + 1] =
             reinterpret_cast<cl_context_properties>(gits::OpenGL::CHGLRC::GetMapping(hglrc));
       } catch (ENotFound&) {
-        Log(ERR) << "Could not map GL Context." << std::endl;
+        LOG_ERROR << "Could not map GL Context." << std::endl;
         throw;
       }
       break;
@@ -69,13 +69,13 @@ std::vector<cl_context_properties> gits::OpenCL::MapContextProperties(
         properties[i + 1] =
             reinterpret_cast<cl_context_properties>(gits::OpenGL::CHDC::GetMapping(hdc));
       } catch (ENotFound&) {
-        Log(ERR) << "Could not map GL Context." << std::endl;
+        LOG_ERROR << "Could not map GL Context." << std::endl;
         throw;
       }
       break;
     }
     default:
-      Log(ERR) << cl_context_propertiesToString(type) + " is not supported yet.";
+      LOG_ERROR << cl_context_propertiesToString(type) + " is not supported yet.";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
   }
@@ -1200,7 +1200,7 @@ void* gits::OpenCL::CSVMPtr_V1::operator*() {
     if (_mappedPtr.CheckMapping()) {
       return reinterpret_cast<void*>((uintptr_t)*_mappedPtr + _offset);
     } else {
-      Log(WARN) << "Given pointer is out of bound";
+      LOG_WARNING << "Given pointer is out of bound";
       return nullptr;
     }
   } else {
@@ -1340,7 +1340,7 @@ void* gits::OpenCL::CUSMPtr::Value() {
     if (_mappedPtr.CheckMapping()) {
       return reinterpret_cast<void*>((uintptr_t)*_mappedPtr + _offset);
     } else {
-      Log(WARN) << "Given pointer is out of bound";
+      LOG_WARNING << "Given pointer is out of bound";
       return nullptr;
     }
   }

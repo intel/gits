@@ -83,7 +83,7 @@ inline void clCreateContext_RECWRAP(
     const auto platform = ExtractPlatform(props);
     const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
     if (platform == nullptr && !oclIFace.MemorySnifferInstall()) {
-      Log(WARN) << "Memory Sniffer installation failed";
+      LOG_WARNING << "Memory Sniffer installation failed";
     }
   }
   if (recorder.Running()) {
@@ -118,7 +118,7 @@ inline void clCreateContextFromType_RECWRAP(
     const auto platform = ExtractPlatform(props);
     const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
     if (platform == nullptr && !oclIFace.MemorySnifferInstall()) {
-      Log(WARN) << "Memory Sniffer installation failed";
+      LOG_WARNING << "Memory Sniffer installation failed";
     }
   }
   if (recorder.Running()) {
@@ -2408,7 +2408,7 @@ inline void clGetPlatformIDs_RECWRAP(CRecorder& recorder,
   if (Configurator::Get().common.recorder.enabled) {
     const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
     if (!oclIFace.MemorySnifferInstall()) {
-      Log(WARN) << "Memory Sniffer installation failed";
+      LOG_WARNING << "Memory Sniffer installation failed";
     }
   }
   clGetPlatformIDs_SD(return_value, num_entries, platforms, num_platforms);
@@ -2428,7 +2428,7 @@ inline void clGetDeviceIDs_RECWRAP(CRecorder& recorder,
   if (Configurator::Get().common.recorder.enabled) {
     const auto& oclIFace = gits::CGits::Instance().apis.IfaceCompute();
     if (platform == nullptr && !oclIFace.MemorySnifferInstall()) {
-      Log(WARN) << "Memory Sniffer installation failed";
+      LOG_WARNING << "Memory Sniffer installation failed";
     }
   }
   clGetDeviceIDs_SD(return_value, platform, device_type, num_entries, devices, num_devices);
@@ -2470,8 +2470,8 @@ inline void clGitsIndirectAllocationOffsets_RECWRAP(CRecorder& recorder,
   void* allocPtr = GetSvmOrUsmFromRegion(pAlloc).first;
   std::vector<size_t> offsets(numOffsets);
   if (allocPtr == nullptr) {
-    Log(ERR) << "Couldn't correlate pAlloc " << ToStringHelper(pAlloc)
-             << " to any device allocation";
+    LOG_ERROR << "Couldn't correlate pAlloc " << ToStringHelper(pAlloc)
+              << " to any device allocation";
     return;
   }
   const auto offset = GetPointerDifference(pAlloc, allocPtr);

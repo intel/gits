@@ -108,7 +108,7 @@ ${get_return_type(func)} STDCALL special_${name}(${make_params(func, with_types=
 
 ${get_return_type(func)} STDCALL default_${name}(${make_params(func, with_types=True)}) {
   if (!load_ocl_function_generic(reinterpret_cast<void*&>(drvOcl.${name}), "${name}")) {
-    Log(WARN) << "Function ${name} not found in OpenCL library";
+    LOG_WARNING << "Function ${name} not found in OpenCL library";
     return static_cast<${get_return_type(func)}>(0);
   }
   drvOcl.orig_${name} = drvOcl.${name};

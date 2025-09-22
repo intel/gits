@@ -119,7 +119,7 @@ public:
     auto& the_map = get_map();
     auto iter = the_map.find(key);
     if (iter == the_map.end()) {
-      Log(ERR) << "Couldn't map OpenCL object name " << key;
+      LOG_ERROR << "Couldn't map OpenCL object name " << key;
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
     return iter->second;
@@ -152,7 +152,7 @@ public:
         return it->first;
       }
     }
-    Log(ERR) << "Couldn't find the original OpenCL object " << value;
+    LOG_ERROR << "Couldn't find the original OpenCL object " << value;
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
 

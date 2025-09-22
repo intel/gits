@@ -44,7 +44,7 @@ gits::OpenCL::IRecorderWrapper* STDCALL GITSRecorderOpenCL() {
       recorder.Register(
           std::make_shared<gits::OpenCL::CLibrary>([] { return new gits::OpenCL::CState; }));
     } catch (const std::exception& ex) {
-      Log(ERR) << "Cannot initialize recorder: " << ex.what() << std::endl;
+      LOG_ERROR << "Cannot initialize recorder: " << ex.what() << std::endl;
       exit(EXIT_FAILURE);
     }
   }

@@ -127,11 +127,11 @@ NOINLINE bool load_ocl_function_generic(void*& func, const char* name) {
       const auto platform = GetPlatform(name);
       func = drvOcl.clGetExtensionFunctionAddressForPlatform(platform, name);
       if (func == nullptr) {
-        Log(ERR) << name << " not found";
+        LOG_ERROR << name << " not found";
         return false;
       }
     } else {
-      Log(ERR) << name << " not found";
+      LOG_ERROR << name << " not found";
       return false;
     }
   }

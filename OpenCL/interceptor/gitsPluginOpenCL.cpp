@@ -90,15 +90,15 @@ void CGitsPluginOpenCL::Initialize() {
     initialized = true;
 
   } catch (const Exception& ex) {
-    Log(ERR) << "Unhandled GITS exception: " << ex.what();
+    LOG_ERROR << "Unhandled GITS exception: " << ex.what();
     CGitsPluginOpenCL::_loader.reset();
     fast_exit(EXIT_FAILURE);
   } catch (const std::exception& ex) {
-    Log(ERR) << "Unhandled STD exception: " << ex.what();
+    LOG_ERROR << "Unhandled STD exception: " << ex.what();
     CGitsPluginOpenCL::_loader.reset();
     fast_exit(EXIT_FAILURE);
   } catch (...) {
-    Log(ERR) << "Unhandled Unknown exception caught";
+    LOG_ERROR << "Unhandled Unknown exception caught";
     CGitsPluginOpenCL::_loader.reset();
     fast_exit(EXIT_FAILURE);
   }
@@ -137,10 +137,11 @@ void* get_proc_address(const char* name) {
 
   if (firstEvent) {
     if (proc == nullptr) {
-      Log(WARN) << "Application queried address of unavailable function " << name << " returned 0";
+      LOG_WARNING << "Application queried address of unavailable function " << name
+                  << " returned 0";
     } else {
-      Log(WARN) << "Application queried address of unavailable function " << name
-                << " returned underlying implementation";
+      LOG_WARNING << "Application queried address of unavailable function " << name
+                  << " returned underlying implementation";
     }
   }
 

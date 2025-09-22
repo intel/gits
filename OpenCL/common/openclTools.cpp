@@ -146,7 +146,7 @@ size_t PixelSize(const cl_image_format& imageFormat) {
 size_t QuerySize(const cl_mem clMem) {
   size_t size;
   if (drvOcl.clGetMemObjectInfo(clMem, CL_MEM_SIZE, sizeof(size_t), &size, nullptr) != CL_SUCCESS) {
-    Log(ERR) << "Could not obtain mem object information for an OpenGL buffer";
+    LOG_ERROR << "Could not obtain mem object information for an OpenGL buffer";
     throw gits::EOperationFailed(EXCEPTION_MESSAGE);
   }
   return size;
@@ -157,7 +157,7 @@ cl_image_desc GetImageDescFromQueryImageParams(const cl_mem clMem, cl_image_form
   cl_int err = drvOcl.clGetMemObjectInfo(clMem, CL_MEM_TYPE, sizeof(cl_mem_object_type),
                                          &desc.image_type, nullptr);
   if (desc.image_type == CL_MEM_OBJECT_BUFFER || desc.image_type == CL_MEM_OBJECT_PIPE) {
-    Log(ERR) << "cl_mem object is not an image.";
+    LOG_ERROR << "cl_mem object is not an image.";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   err |= drvOcl.clGetImageInfo(clMem, CL_IMAGE_WIDTH, sizeof(size_t), &desc.image_width, nullptr);
@@ -187,8 +187,8 @@ cl_image_desc GetImageDescFromQueryImageParams(const cl_mem clMem, cl_image_form
     break;
   }
   if (err != CL_SUCCESS) {
-    Log(ERR) << "Unable to query image data. Error code was "
-             << gits::OpenCL::CLResultToString(err);
+    LOG_ERROR << "Unable to query image data. Error code was "
+              << gits::OpenCL::CLResultToString(err);
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   return desc;
@@ -274,7 +274,7 @@ std::array<size_t, 3> GetSimplifiedImageSizes(const cl_image_desc& desc) {
   case CL_MEM_OBJECT_IMAGE3D:
     return {desc.image_width, desc.image_height, desc.image_depth};
   default:
-    Log(WARN) << "Unsupported image type: " << desc.image_type;
+    LOG_WARNING << "Unsupported image type: " << desc.image_type;
     return {1, 1, 1};
   }
 }
@@ -309,7 +309,7 @@ void SaveImage(char* image,
       CGits::Instance().WriteImage(path.string(), width, height, true, convertedData, false, true);
     }
   } catch (const ENotImplemented& ex) {
-    Log(ERR) << ex.what();
+    LOG_ERROR << ex.what();
   }
 }
 
@@ -338,8 +338,8 @@ void SaveBuffer(const std::string& name, const CBinaryResource& data) {
 void D3DWarning() {
   static auto called = false;
   if (!called && !IsDXUnsharingEnabled(Configurator::Get())) {
-    Log(WARN) << "DX-sharing is used. In order to make the stream replayable, include 'DX' in "
-                 "RemoveAPISharing recorder's option";
+    LOG_WARNING << "DX-sharing is used. In order to make the stream replayable, include 'DX' in "
+                   "RemoveAPISharing recorder's option";
     called = true;
   }
 }
@@ -658,7 +658,7 @@ std::vector<T> PropertiesVectorWrapZeroEnded(const T* props) {
     propsVec.push_back(0);
     return propsVec;
   } catch (std::runtime_error&) {
-    Log(ERR) << "Exception during wrapping cl*properties std::vector";
+    LOG_ERROR << "Exception during wrapping cl*properties std::vector";
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
 }
@@ -717,7 +717,7 @@ cl_mem_object_type TextureGLEnumToCLMemType(cl_GLenum textureEnum) {
     type = CL_MEM_OBJECT_IMAGE3D;
     break;
   default:
-    Log(ERR) << "PLUGIN_UNSHARER: Creating image from GL image not implemented.";
+    LOG_ERROR << "PLUGIN_UNSHARER: Creating image from GL image not implemented.";
     throw gits::EOperationFailed(EXCEPTION_MESSAGE);
   }
   return type;
@@ -764,7 +764,7 @@ gits::CFunction* NewTokenPtrGetDevices(cl_platform_id platform) {
   cl_uint numDevices;
   auto err = drvOcl.clGetDeviceIDs(platform, deviceType, 0, nullptr, &numDevices);
   if (err != CL_SUCCESS) {
-    Log(ERR) << "PLUGIN_UNSHARER: Unable to inject query of device number";
+    LOG_ERROR << "PLUGIN_UNSHARER: Unable to inject query of device number";
     throw gits::EOperationFailed(EXCEPTION_MESSAGE);
   }
   //recorder.Schedule(new CclGetDeviceIDs(err, platform, deviceType, 0, nullptr, &numDevices));
@@ -772,7 +772,7 @@ gits::CFunction* NewTokenPtrGetDevices(cl_platform_id platform) {
   std::vector<cl_device_id> deviceArray(numDevices);
   err = drvOcl.clGetDeviceIDs(platform, deviceType, numDevices, deviceArray.data(), nullptr);
   if (err != CL_SUCCESS) {
-    Log(ERR) << "PLUGIN_UNSHARER: Unable to inject device query";
+    LOG_ERROR << "PLUGIN_UNSHARER: Unable to inject device query";
     throw gits::EOperationFailed(EXCEPTION_MESSAGE);
   }
   return new CclGetDeviceIDs(err, platform, deviceType, numDevices, deviceArray.data(), nullptr);
@@ -1254,7 +1254,7 @@ cl_device_id GetGpuDevice() {
       return device;
     }
   }
-  Log(WARN) << "Could not find any GPU devices.";
+  LOG_WARNING << "Could not find any GPU devices.";
   return nullptr;
 }
 

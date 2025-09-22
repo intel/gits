@@ -151,12 +151,12 @@ gits::OpenCL::CGitsClTokenMakeCurrentThread::CGitsClTokenMakeCurrentThread(const
     : _threadId(threadId) {
   CALL_ONCE[] {
     LOG_INFO << "Recorded Application uses multiple threads.";
-    Log(WARN) << "Multithreaded applications have to be "
-                 "recorded from beginning. Subcapturing from stream is "
-                 "possible without the --faithfulThreading option.";
+    LOG_WARNING << "Multithreaded applications have to be "
+                   "recorded from beginning. Subcapturing from stream is "
+                   "possible without the --faithfulThreading option.";
     if (Configurator::DumpCCode() && CGits::Instance().MultithreadedApp()) {
-      Log(ERR) << "CCodeDump is not possible for multithreaded application. Please "
-                  "record binary stream first and then recapture it to CCode";
+      LOG_ERROR << "CCodeDump is not possible for multithreaded application. Please "
+                   "record binary stream first and then recapture it to CCode";
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
   };

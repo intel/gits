@@ -44,11 +44,11 @@ CFunction* CFunction::Create(unsigned id) {
 #include "openclIDswitch.h"
   default:;
   }
-  Log(ERR) << "Unknown OpenCL function with ID: " << id;
+  LOG_ERROR << "Unknown OpenCL function with ID: " << id;
   throw EOperationFailed(EXCEPTION_MESSAGE);
 }
 CArgument& CFunction::Result(unsigned idx) {
-  Log(ERR) << "Results not supported in OpenCL!!!";
+  LOG_ERROR << "Results not supported in OpenCL!!!";
   throw EOperationFailed(EXCEPTION_MESSAGE);
 }
 } // namespace OpenCL
