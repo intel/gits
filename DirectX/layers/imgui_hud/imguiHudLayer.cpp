@@ -79,55 +79,20 @@ void ImGuiHUDLayer::post(IDXGIFactory2CreateSwapChainForCompositionCommand& c) {
   }
 }
 
-void ImGuiHUDLayer::pre(IDXGISwapChainPresentCommand& command) {
-  if (!initialized_) {
+void ImGuiHUDLayer::pre(IDXGISwapChainPresentCommand& c) {
+  if (c.skip || c.result_.value != S_OK || c.Flags_.value & DXGI_PRESENT_TEST ||
+      c.key & Command::stateRestoreKeyMask) {
     return;
   }
+  present();
+}
 
-  ImGui_ImplDX12_NewFrame();
-  ImGui_ImplWin32_NewFrame();
-
-  ImGui::NewFrame();
-
-  CGits::Instance().GetImGuiHUD()->Render();
-
-  UINT backBufferIdx = swapChain_->GetCurrentBackBufferIndex();
-  static UINT frameNumber = 0;
-  if (frameNumber > frameContext_.size()) {
-    fence_->SetEventOnCompletion(fenceValue_ - frameContext_.size(), NULL);
+void ImGuiHUDLayer::pre(IDXGISwapChain1Present1Command& c) {
+  if (c.skip || c.result_.value != S_OK || c.PresentFlags_.value & DXGI_PRESENT_TEST ||
+      c.key & Command::stateRestoreKeyMask) {
+    return;
   }
-  ++frameNumber;
-
-  FrameContext& frameCtx = frameContext_[backBufferIdx];
-  frameCtx.commandAllocator->Reset();
-
-  D3D12_RESOURCE_BARRIER barrier = {};
-  barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-  barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-  barrier.Transition.pResource = frameContext_[backBufferIdx].rtResource.Get();
-  barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-  barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-  barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-
-  commandList_->Reset(frameCtx.commandAllocator.Get(), nullptr);
-  commandList_->ResourceBarrier(1, &barrier);
-
-  commandList_->OMSetRenderTargets(1, &frameContext_[backBufferIdx].rtvHandle, FALSE, nullptr);
-  commandList_->SetDescriptorHeaps(1, srvDescHeap_.GetAddressOf());
-
-  ImGui::Render();
-  ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList_.Get());
-
-  barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-  barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-
-  commandList_->ResourceBarrier(1, &barrier);
-  commandList_->Close();
-
-  commandQueue_->ExecuteCommandLists(
-      1, reinterpret_cast<ID3D12CommandList* const*>(commandList_.GetAddressOf()));
-
-  commandQueue_->Signal(fence_.Get(), ++fenceValue_);
+  present();
 }
 
 void ImGuiHUDLayer::pre(IDXGISwapChainResizeBuffersCommand& command) {
@@ -313,6 +278,57 @@ void ImGuiHUDLayer::initializeImGui(DXGI_FORMAT format) {
   float dpiscale = std::max(1.0f, ImGui_ImplWin32_GetDpiScaleForHwnd(window_));
   CGits::Instance().GetImGuiHUD()->SetupImGUI(dpiscale);
   ImGui_ImplDX12_CreateDeviceObjects();
+}
+
+void ImGuiHUDLayer::present() {
+  if (!initialized_) {
+    return;
+  }
+
+  ImGui_ImplDX12_NewFrame();
+  ImGui_ImplWin32_NewFrame();
+
+  ImGui::NewFrame();
+
+  CGits::Instance().GetImGuiHUD()->Render();
+
+  UINT backBufferIdx = swapChain_->GetCurrentBackBufferIndex();
+  static UINT frameNumber = 0;
+  if (frameNumber > frameContext_.size()) {
+    fence_->SetEventOnCompletion(fenceValue_ - frameContext_.size(), NULL);
+  }
+  ++frameNumber;
+
+  FrameContext& frameCtx = frameContext_[backBufferIdx];
+  frameCtx.commandAllocator->Reset();
+
+  D3D12_RESOURCE_BARRIER barrier = {};
+  barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+  barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+  barrier.Transition.pResource = frameContext_[backBufferIdx].rtResource.Get();
+  barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+  barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+  barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+
+  commandList_->Reset(frameCtx.commandAllocator.Get(), nullptr);
+  commandList_->ResourceBarrier(1, &barrier);
+
+  commandList_->OMSetRenderTargets(1, &frameContext_[backBufferIdx].rtvHandle, FALSE, nullptr);
+  commandList_->SetDescriptorHeaps(1, srvDescHeap_.GetAddressOf());
+
+  ImGui::Render();
+  ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList_.Get());
+
+  barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+  barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+
+  commandList_->ResourceBarrier(1, &barrier);
+  commandList_->Close();
+
+  commandQueue_->ExecuteCommandLists(
+      1, reinterpret_cast<ID3D12CommandList* const*>(commandList_.GetAddressOf()));
+
+  commandQueue_->Signal(fence_.Get(), ++fenceValue_);
 }
 
 } // namespace DirectX

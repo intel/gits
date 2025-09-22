@@ -36,6 +36,7 @@ public:
   void post(IDXGIFactory2CreateSwapChainForCoreWindowCommand& c) override;
   void post(IDXGIFactory2CreateSwapChainForCompositionCommand& c) override;
   void pre(IDXGISwapChainPresentCommand& command) override;
+  void pre(IDXGISwapChain1Present1Command& command) override;
   void pre(IDXGISwapChainResizeBuffersCommand& command) override;
   void post(IDXGISwapChainResizeBuffersCommand& command) override;
   void pre(IDXGISwapChain3ResizeBuffers1Command& command) override;
@@ -45,6 +46,7 @@ private:
   bool createFrameContext(unsigned bufferCount);
   bool initializeResources(IUnknown* device, IDXGISwapChain* swapChain);
   void initializeImGui(DXGI_FORMAT format);
+  void present();
 
 private:
   bool initialized_ = false;
