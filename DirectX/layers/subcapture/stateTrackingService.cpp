@@ -439,6 +439,7 @@ void StateTrackingService::restoreResidencyPriority(unsigned deviceKey,
 void StateTrackingService::restoreDXGISwapChain(ObjectState* state) {
   if (state->creationCommand->getId() == CommandId::ID_IDXGIFACTORY_CREATESWAPCHAIN) {
     auto* command = static_cast<IDXGIFactoryCreateSwapChainCommand*>(state->creationCommand.get());
+    restoreState(command->pDevice_.key);
     int width = command->pDesc_.value->BufferDesc.Width;
     int height = command->pDesc_.value->BufferDesc.Height;
     if (!width || !height) {
@@ -460,6 +461,7 @@ void StateTrackingService::restoreDXGISwapChain(ObjectState* state) {
              CommandId::ID_IDXGIFACTORY2_CREATESWAPCHAINFORHWND) {
     auto* command =
         static_cast<IDXGIFactory2CreateSwapChainForHwndCommand*>(state->creationCommand.get());
+    restoreState(command->pDevice_.key);
     int width = command->pDesc_.value->Width;
     int height = command->pDesc_.value->Height;
     if (!width || !height) {
