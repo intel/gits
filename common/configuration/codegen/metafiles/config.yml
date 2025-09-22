@@ -861,7 +861,7 @@ Configuration:
               compilation
           - Name: enableAgilitySDKDllAppOverride
             Type: bool
-            Default: true
+            Default: false
             Description: Enable usage of AglitySDK DLL captured from the app
           - Name: enableXessDllAppOverride
             Type: bool
