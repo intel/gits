@@ -67,8 +67,11 @@ bool AnalyzerResults::restoreObject(unsigned objectKey) {
 }
 
 bool AnalyzerResults::restoreDescriptor(unsigned heapKey, unsigned index) {
-  if (!optimize_ || descriptors_.empty()) {
+  if (!optimize_) {
     return true;
+  }
+  if (descriptors_.empty()) {
+    return false;
   }
   return descriptors_.find(std::make_pair(heapKey, index)) != descriptors_.end();
 }
