@@ -932,7 +932,8 @@ FastOStream& operator<<(FastOStream& stream,
   }
   stream << "D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC{{";
   printObjectKey(stream, arg.destAccelerationStructureKey);
-  stream << ", " << arg.destAccelerationStructureOffset << "}, {";
+  stream << ", " << arg.destAccelerationStructureOffset << "} (0x";
+  printHex(stream, arg.value->DestAccelerationStructureData) << "), {";
 
   stream << arg.value->Inputs.Type << ", " << arg.value->Inputs.Flags << ", "
          << arg.value->Inputs.NumDescs << ", " << arg.value->Inputs.DescsLayout << ", ";
