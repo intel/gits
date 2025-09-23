@@ -30,8 +30,9 @@ namespace gits {
 struct Tracer {
   template <class T>
   NOINLINE void trace_ret(T r) {
+    using namespace gits::OpenGL;
     LOG_FORMAT_RAW
-    LOG_TRACE << " = " << r << "\n";
+    LOG_TRACE << " = " << ToStr(r) << "\n";
   }
 
   NOINLINE void trace_ret(void_t r) {
@@ -44,13 +45,13 @@ struct Tracer {
   template <class T>
   NOINLINE void print_args(plog::Record& s, T t) {
     using namespace gits::OpenGL;
-    s << t;
+    s << ToStr(t);
   }
 
   template <class Head, class... Rest>
   NOINLINE void print_args(plog::Record& s, Head h, Rest... r) {
     using namespace gits::OpenGL;
-    s << h << ", ";
+    s << ToStr(h) << ", ";
     print_args(s, r...);
   }
 

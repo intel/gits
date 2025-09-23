@@ -324,10 +324,36 @@ public:
   void PrintToLog();
 };
 
-plog::Record& operator<<(plog::Record& record, const unsigned char* c);
-plog::Record& operator<<(plog::Record& record, GLboolean value);
-plog::Record& operator<<(plog::Record& record, GLenum value);
-plog::Record& operator<<(plog::Record& record, PIXELFORMATDESCRIPTOR& pfd);
+template <typename T>
+std::string ToStr(const T& value) {
+  if constexpr (std::is_pointer_v<T>) {
+    if (value == nullptr) {
+      return "NULL";
+    }
+    std::ostringstream oss;
+    oss << "0x" << std::hex << reinterpret_cast<uintptr_t>(value);
+    return oss.str();
+  } else if constexpr (std::is_arithmetic_v<T>) {
+    return std::to_string(value);
+  } else if constexpr (std::is_convertible_v<T, std::string>) {
+    return std::string(value);
+  } else {
+    // Template-dependent static_assert: sizeof(T) == 0 ensures this assertion is only
+    // evaluated during template instantiation, not during initial template parsing.
+    // Using static_assert(false, ...) would cause GCC to fail compilation immediately
+    // during the parsing phase, even if this branch is never instantiated.
+    static_assert(sizeof(T) == 0, "ToStr specialization required for this type");
+  }
+  return "";
+}
+template <>
+std::string ToStr<unsigned char*>(unsigned char* const& value);
+template <>
+std::string ToStr<GLenum>(const GLenum& value);
+template <>
+std::string ToStr<GLboolean>(const GLboolean& value);
+template <>
+std::string ToStr<PIXELFORMATDESCRIPTOR>(const PIXELFORMATDESCRIPTOR& pfd);
 
 void CleanResources();
 void DestroyContext(void* ctx);

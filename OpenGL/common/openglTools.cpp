@@ -1949,15 +1949,19 @@ void StatePrinter::PrintToLog() {
   }
 }
 
-plog::Record& operator<<(plog::Record& record, GLenum value) {
+template <>
+std::string ToStr<GLenum>(const GLenum& value) {
   //This operator converts all unsigned int values higher then threshold (1000) into enum string. As we can't differentiate between GLuint
   //and GLenum types there is an issue that GLuint values higher then threshold are converted to GLenum string and lower GLenum are not converted at all.
   if (value > 1000) {
-    record << GetGLEnumString(value);
-  } else {
-    record << std::to_string(value);
+    return GetGLEnumString(value);
   }
-  return record;
+  return std::to_string(value);
+}
+
+template <>
+std::string ToStr<GLboolean>(const GLboolean& value) {
+  return value ? "GL_TRUE" : "GL_FALSE";
 }
 
 static std::string toStrUCharPtr(const unsigned char* c) {
@@ -1986,12 +1990,10 @@ static std::string toStrUCharPtr(const unsigned char* c) {
   ss << (const void*)c;
   return ss.str();
 }
-plog::Record& operator<<(plog::Record& record, const unsigned char* c) {
-  return record << toStrUCharPtr(c);
-}
 
-plog::Record& operator<<(plog::Record& record, GLboolean value) {
-  return record << (value ? "GL_TRUE" : "GL_FALSE");
+template <>
+std::string ToStr<unsigned char*>(unsigned char* const& value) {
+  return toStrUCharPtr(value);
 }
 
 namespace {
@@ -2074,7 +2076,8 @@ std::string DescribeLayerType(BYTE iLayerType) {
 }
 } // namespace
 
-plog::Record& operator<<(plog::Record& record, PIXELFORMATDESCRIPTOR& pfd) {
+template <>
+std::string ToStr<PIXELFORMATDESCRIPTOR>(const PIXELFORMATDESCRIPTOR& pfd) {
   std::ostringstream oss;
   oss << std::showbase;
   // clang-format off
@@ -2108,8 +2111,7 @@ plog::Record& operator<<(plog::Record& record, PIXELFORMATDESCRIPTOR& pfd) {
       << "pfd.dwDamageMask: " << pfd.dwDamageMask << " \n}";
   // clang-format on
 
-  record << std::move(oss).str();
-  return record;
+  return std::move(oss).str();
 }
 
 std::string GetCurrentProgramShaderText(GLenum shtype) {

@@ -165,7 +165,7 @@ NOINLINE void GLErrorLog() {
   }
 
   if (error != 0) {
-    LOG_TRACE << "GL Error: " << (GLenum)error;
+    LOG_TRACE << "GL Error: " << ToStr(static_cast<GLenum>(error));
   }
 }
 
