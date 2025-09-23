@@ -146,6 +146,8 @@ bool argsFilterTagsFunc(const args::Base& item) {
 } // namespace
 
 int MainBody(int argc, char* argv[]) {
+  log::Initialize(plog::info);
+
   std::filesystem::path playerPath = "";
   auto argsVector = std::vector<std::string>(argv, argv + argc);
   if (argsVector.size() >= 1) {
@@ -165,11 +167,11 @@ int MainBody(int argc, char* argv[]) {
 
   switch (args.ParsingResult) {
   case ParsingSyntaxError:
-    Log(ERR) << "Error during command line parsing:\n" << args.Output.str();
-    Log(ERR) << "Please run player with the \"--help\" argument to see usage info.";
+    LOG_ERROR << "Error during command line parsing:\n" << args.Output.str();
+    LOG_ERROR << "Please run player with the \"--help\" argument to see usage info.";
     return 1;
   case ParsingSemanticError:
-    Log(ERR) << "Error during command line parsing:\n" << args.Output.str();
+    LOG_ERROR << "Error during command line parsing:\n" << args.Output.str();
     return 1;
   case ShowHelp:
     break;
@@ -180,7 +182,7 @@ int MainBody(int argc, char* argv[]) {
       argsFilterTags.insert(args.HelpMenu.Get());
       args::GlobalFilterOption = argsFilterTagsFunc;
     }
-    Log(INFO)
+    std::cout
         << std::endl
         << std::endl
         << args.Parser.Help() << std::endl
@@ -192,25 +194,25 @@ int MainBody(int argc, char* argv[]) {
   if (args.Version) {
     // Print version and quit.
     CGits& inst = CGits::Instance();
-    Log(INFO, NO_PREFIX) << inst << "\n";
+    std::cout << inst << std::endl;
     return 0;
   }
 
   try {
     if (!ConfigurePlayer(playerPath, args)) {
-      Log(ERR) << "Encountered error while configuring player";
-      Log(ERR) << "Please run player with the \"--help\" argument to see usage info.";
+      LOG_ERROR << "Encountered error while configuring player";
+      LOG_ERROR << "Please run player with the \"--help\" argument to see usage info.";
       return 1;
     }
   } catch (const std::exception& e) {
-    Log(ERR) << "Encountered error while configuring player:\n" << e.what();
-    Log(ERR) << "Please run player with the \"--help\" argument to see usage info.";
+    LOG_ERROR << "Encountered error while configuring player:\n" << e.what();
+    LOG_ERROR << "Please run player with the \"--help\" argument to see usage info.";
     return 1;
   }
 
   // Print version.
   CGits& inst = CGits::Instance();
-  Log(INFO, NO_PREFIX) << inst << "\n";
+  LOG_INFO << inst;
 
   Configurator::Instance().LogChangedFields();
 
@@ -222,7 +224,7 @@ int MainBody(int argc, char* argv[]) {
   });
 
   const auto& cfg = Configurator::Get();
-  log::Initialize(log::GetSeverity(cfg.common.shared.thresholdLogLevel));
+  plog::get()->setMaxSeverity(log::GetSeverity(cfg.common.shared.thresholdLogLevel));
   if (!cfg.common.player.outputTracePath.empty()) {
     CLog::LogFilePlayer(cfg.common.player.outputTracePath);
     log::SetLogFile(cfg.common.player.outputTracePath);
@@ -232,16 +234,16 @@ int MainBody(int argc, char* argv[]) {
 
   try {
     if (cfg.common.player.waitForEnter) {
-      Log(OFF, NO_PREFIX) << "Waiting for ENTER press ...";
+      LOG_NONE << "Waiting for ENTER press ...";
       std::cin.get();
     }
 
 #if defined GITS_PLATFORM_WINDOWS
     if (cfg.common.player.escalatePriority) {
       if (SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS)) {
-        Log(INFO) << "Escalated process priority to realtime priority";
+        LOG_INFO << "Escalated process priority to realtime priority";
       } else {
-        Log(WARN) << "Priority escalation failed";
+        LOG_WARNING << "Priority escalation failed";
       }
     }
 
@@ -274,7 +276,7 @@ int MainBody(int argc, char* argv[]) {
       CGits::Instance().ProcessLuaFunctionsRegistrators();
     }
     // initialize GITS
-    Log(INFO, NO_PREFIX) << "Initializing...";
+    LOG_INFO << "Initializing...";
 #if WITH_OPENCL
     if (!cfg.opencl.player.noOpenCL) {
       inst.Register(std::shared_ptr<CLibrary>(new OpenCL::CLibrary));
@@ -296,7 +298,7 @@ int MainBody(int argc, char* argv[]) {
 
     // create player
     CPlayer player;
-    Log(INFO, NO_PREFIX) << "\nLoading...";
+    LOG_INFO << "Loading...";
 
     // load function calls from a file
     player.Load(cfg.common.player.streamPath);
@@ -346,13 +348,13 @@ int MainBody(int argc, char* argv[]) {
 #endif
 
     // check if all functions can be run on that system
-    Log(INFO, NO_PREFIX) << "Playing...";
+    LOG_INFO << "Playing...";
 
     if (Configurator::Get().common.shared.useEvents) {
       try {
         CGits::Instance().PlaybackEvents().programStart();
       } catch (std::runtime_error& e) {
-        Log(ERR) << e.what();
+        LOG_ERROR << e.what();
       }
     }
 
@@ -371,13 +373,13 @@ int MainBody(int argc, char* argv[]) {
     int64_t loadingTime = CGits::Instance().Timers().loading.Get();
     int64_t programTime = CGits::Instance().Timers().program.Get();
 
-    Log(INFO, NO_PREFIX) << "";
-    Log(INFO, NO_PREFIX) << "Startup time: " << tillInitTime / 1e6 << "ms";
-    Log(INFO, NO_PREFIX) << "Initialized in: " << initTime / 1e6 << "ms";
-    Log(INFO, NO_PREFIX) << "State restored in: " << restorationTime / 1e6 << "ms";
-    Log(INFO, NO_PREFIX) << "Stalled loading: " << loadingTime / 1e6 << "ms";
-    Log(INFO, NO_PREFIX) << "Played back in: " << playbackTime / 1e6 << "ms";
-    Log(INFO, NO_PREFIX) << "Total runtime: " << programTime / 1e6 << "ms";
+    LOG_INFO << "";
+    LOG_INFO << "Startup time: " << tillInitTime / 1e6 << "ms";
+    LOG_INFO << "Initialized in: " << initTime / 1e6 << "ms";
+    LOG_INFO << "State restored in: " << restorationTime / 1e6 << "ms";
+    LOG_INFO << "Stalled loading: " << loadingTime / 1e6 << "ms";
+    LOG_INFO << "Played back in: " << playbackTime / 1e6 << "ms";
+    LOG_INFO << "Total runtime: " << programTime / 1e6 << "ms";
 
     if (gits::CGits::Instance().apis.HasCompute()) {
       gits::CGits::Instance().apis.IfaceCompute().PrintMaxLocalMemoryUsage();
@@ -409,15 +411,15 @@ int MainBody(int argc, char* argv[]) {
     }
 #endif
 
-    Log(INFO, NO_PREFIX) << "Finishing...";
+    LOG_INFO << "Finishing...";
   } catch (Exception& ex) {
-    Log(ERR) << ex.what();
+    LOG_ERROR << ex.what();
     returnValue = EXIT_FAILURE;
   } catch (std::exception& ex) {
-    Log(ERR) << ex.what();
+    LOG_ERROR << ex.what();
     returnValue = EXIT_FAILURE;
   } catch (...) {
-    Log(ERR) << "Unrecognized exception was raised during GITS execution!!!";
+    LOG_ERROR << "Unrecognized exception was raised during GITS execution!!!";
     returnValue = EXIT_FAILURE;
   }
 
@@ -425,7 +427,7 @@ int MainBody(int argc, char* argv[]) {
     try {
       CGits::Instance().PlaybackEvents().programExit();
     } catch (std::runtime_error& e) {
-      Log(ERR) << e.what();
+      LOG_ERROR << e.what();
       returnValue = EXIT_FAILURE;
     }
   }
@@ -452,7 +454,7 @@ void ShowCallstack(PEXCEPTION_POINTERS exceptionPtr) {
   public:
     StackWalkerToConsole() : StackWalker(OptionsAll, ".") {}
     virtual void OnOutput(LPCSTR szText) {
-      Log(ERR) << szText;
+      LOG_ERROR << szText;
     }
   } sw;
   sw.ShowCallstack(GetCurrentThread(), exceptionPtr->ContextRecord);

@@ -122,6 +122,7 @@ void gits::CStatistics::Get(CScheduler& scheduler, CStatsComputer& comp) {
 void gits::CStatistics::Print() const {
   using namespace std;
 
+  cout << endl;
   cout << "Statistics" << endl;
   cout << "==========" << endl;
   cout << "API functions Num             " << _callsIds.size() << endl;

@@ -201,7 +201,6 @@ void Configurator::LogChangedFields() {
     for (const auto& entry : changedFields) {
       LOG_INFO << "--" << entry.Path << "=\"" << entry.Value << "\"";
     }
-    LOG_INFO << "";
   }
 }
 

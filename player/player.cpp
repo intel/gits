@@ -153,18 +153,14 @@ void gits::CPlayer::StatisticsPrint() const {
   CStatsComputer comp(stats);
 
   stats.Get(*_sc.scheduler, comp);
-
-  Log(INFO, RAW) << std::endl;
   stats.Print();
-  Log(INFO, RAW) << std::endl;
 }
 
 void gits::CPlayer::NotSupportedFunctionsPrint() const {
   const CFile::CSkippedCalls& skippedCalls = gits::CGits::Instance().FilePlayer().SkippedCalls();
 
   if (skippedCalls.size()) {
-    Log(INFO, RAW) << std::endl;
-    Log(INFO) << "Following not supported functions were skipped during recording:";
+    LOG_INFO << "Following not supported functions were skipped during recording:";
 
     auto& inst = CGits::Instance();
     for (const auto& skipped : skippedCalls) {
@@ -173,7 +169,7 @@ void gits::CPlayer::NotSupportedFunctionsPrint() const {
       if (function == nullptr) {
         throw EOperationFailed(EXCEPTION_MESSAGE);
       }
-      Log(INFO) << " - " << function->Name();
+      LOG_INFO << " - " << function->Name();
     }
   }
 }

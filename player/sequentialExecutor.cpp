@@ -59,13 +59,13 @@ public:
         _seqExec._condition.notify_all();
       }
     } catch (gits::Exception& ex) {
-      Log(ERR) << "Unhandled exception: " << ex.what() << " on thread: " << _threadId;
+      LOG_ERROR << "Unhandled exception: " << ex.what() << " on thread: " << _threadId;
       fast_exit(1);
     } catch (std::exception& ex) {
-      Log(ERR) << "Unhandled system exception: " << ex.what() << " on thread: " << _threadId;
+      LOG_ERROR << "Unhandled system exception: " << ex.what() << " on thread: " << _threadId;
       fast_exit(1);
     } catch (...) {
-      Log(ERR) << "Unhandled exception caught on thread: " << _threadId;
+      LOG_ERROR << "Unhandled exception caught on thread: " << _threadId;
       fast_exit(1);
     }
   }

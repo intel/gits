@@ -46,19 +46,19 @@ bool ConfigurePlayer(const std::filesystem::path& playerPath, ArgumentParser& ar
                       : playerPath.parent_path() / Configurator::ConfigFileName();
 
   if (std::filesystem::exists(configPath)) {
-    Log(INFO) << "Using configuration from: " << configPath;
+    LOG_INFO << "Using configuration from: " << configPath;
     const auto result = Configurator::Instance().Load(configPath);
     if (!result) {
-      Log(ERR) << "Error reading in configuration from: " << configPath;
+      LOG_ERROR << "Error reading in configuration from: " << configPath;
       return false;
     }
   } else {
-    Log(WARN) << "No configuration found at: " << configPath;
+    LOG_WARNING << "No configuration found at: " << configPath;
     if (args.ConfigFile) {
-      Log(ERR) << "Requested configuration file not found, terminating...";
+      LOG_ERROR << "Requested configuration file not found, terminating...";
       return false;
     } else {
-      Log(WARN) << "Built-in default configuration will be used";
+      LOG_WARNING << "Built-in default configuration will be used";
     }
   }
 
@@ -85,12 +85,12 @@ bool ConfigurePlayer(const std::filesystem::path& playerPath, ArgumentParser& ar
 
   if (!streamPath.empty()) {
     if (!std::filesystem::exists(streamPath)) {
-      Log(ERR) << "Specified stream path: '" << streamPath << "' does not exist";
+      LOG_ERROR << "Specified stream path: '" << streamPath << "' does not exist";
       return false;
     }
     if (std::filesystem::is_directory(streamPath)) {
-      Log(INFO) << "Specified stream path: '" << streamPath
-                << "' is a directory, attempting to find a stream file.";
+      LOG_INFO << "Specified stream path: '" << streamPath
+               << "' is a directory, attempting to find a stream file.";
       std::vector<std::filesystem::path> matching_paths;
       for (const auto& dirEntry : std::filesystem::directory_iterator(streamPath)) {
         if (std::filesystem::is_directory(dirEntry)) {
@@ -104,17 +104,17 @@ bool ConfigurePlayer(const std::filesystem::path& playerPath, ArgumentParser& ar
 
       if (matching_paths.size() != 1) {
         if (matching_paths.empty()) {
-          Log(ERR) << "Specified directory does not contain a stream file.";
+          LOG_ERROR << "Specified directory does not contain a stream file.";
         }
         if (matching_paths.size() > 1) {
-          Log(ERR)
+          LOG_ERROR
               << "Too many stream files in specified directory. Specify stream file explicitly.";
         }
-        Log(ERR) << "Please run player with the \"--help\" argument to see usage info.";
+        LOG_ERROR << "Please run player with the \"--help\" argument to see usage info.";
         return false;
       }
       streamPath = matching_paths[0];
-      Log(INFO) << "Using stream file '" << streamPath << "'\n";
+      LOG_INFO << "Using stream file '" << streamPath;
     }
 
     streamPath = std::filesystem::absolute(streamPath);
@@ -123,7 +123,7 @@ bool ConfigurePlayer(const std::filesystem::path& playerPath, ArgumentParser& ar
   }
 
   if (cfg.common.player.streamPath.empty()) {
-    Log(ERR) << "No stream was passed to gitsPlayer.";
+    LOG_ERROR << "No stream was passed to gitsPlayer.";
     return false;
   }
 
