@@ -16,6 +16,8 @@ namespace DirectX {
 DllOverrideUseLayer::DllOverrideUseLayer(PlayerManager& manager)
     : Layer("DllOverrideUse"), manager_(manager) {
   useAddressPinning_ = Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE;
+  dllOverridesDirectory_ =
+      Configurator::Get().common.player.applicationPath.parent_path() / dllOverridesRelativePath_;
   try {
     std::filesystem::create_directories(dllOverridesDirectory_);
   } catch (const std::filesystem::filesystem_error& e) {
@@ -49,7 +51,7 @@ void DllOverrideUseLayer::pre(DllContainerMetaCommand& c) {
       wcscmp(c.dllName_.value, L"D3D12Core.dll") == 0) {
     LOG_INFO << "Agility SDK - Applying app override";
     GITS_ASSERT(!agilitySDKLoaded_);
-    if (manager_.loadAgilitySdk(dllOverridesDirectory_)) {
+    if (manager_.loadAgilitySdk(dllOverridesRelativePath_)) {
       agilitySDKLoaded_ = true;
     }
   }

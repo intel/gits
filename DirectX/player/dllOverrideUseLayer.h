@@ -30,7 +30,8 @@ public:
 private:
   PlayerManager& manager_;
   bool useAddressPinning_{};
-  std::filesystem::path dllOverridesDirectory_ = "D3D12\\overrides\\D3D12";
+  std::filesystem::path dllOverridesDirectory_;
+  const std::filesystem::path dllOverridesRelativePath_ = "D3D12\\overrides\\D3D12";
   bool agilitySDKLoaded_{};
   bool xessLoaded_{};
 };
