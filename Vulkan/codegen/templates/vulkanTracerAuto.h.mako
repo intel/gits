@@ -17,8 +17,9 @@ namespace gits {
 
   template<class T>
   void trace_return_value(T r) {
+    using namespace Vulkan;
     LOG_FORMAT_RAW
-    LOG_TRACE << " = " << r << "\n";
+    LOG_TRACE << " = " << ToStr(r) << "\n";
   }
 
   template<>

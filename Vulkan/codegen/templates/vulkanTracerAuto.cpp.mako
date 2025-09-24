@@ -19,6 +19,7 @@ namespace gits {
     log: str = make_token_log_code(token.args)
 %>\
   void ${token.name}_trace(${params}) {
+    using namespace gits::Vulkan;
     LOG_FORMAT_RAW
     LOG_TRACE << ${log};
   };

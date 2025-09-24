@@ -10,112 +10,137 @@
 #include "vulkanLog.h"
 #include "vulkanTools_lite.h"
 
-namespace plog {
+namespace gits {
+namespace Vulkan {
 
-Record& operator<<(Record& record, PFN_vkAllocationFunction c) {
-  if (c != nullptr) {
-    record << (void*)c;
-  } else {
-    record << "0";
+std::string ToStr(const char* str) {
+  if (str == nullptr) {
+    return "NULL";
   }
-  return record;
+  return "\"" + std::string(str) + "\"";
 }
 
-Record& operator<<(Record& record, PFN_vkReallocationFunction c) {
-  if (c != nullptr) {
-    record << (void*)c;
-  } else {
-    record << "0";
+std::string ToStr(char* str) {
+  if (str == nullptr) {
+    return "NULL";
   }
-  return record;
+  return "\"" + std::string(str) + "\"";
 }
 
-Record& operator<<(Record& record, PFN_vkDebugReportCallbackEXT c) {
+std::string ToStr(PFN_vkAllocationFunction c) {
+  std::ostringstream oss;
   if (c != nullptr) {
-    record << (void*)c;
+    oss << (void*)c;
   } else {
-    record << "0";
+    oss << "0";
   }
-  return record;
+  return oss.str();
 }
 
-Record& operator<<(Record& record, PFN_vkFreeFunction c) {
+std::string ToStr(PFN_vkReallocationFunction c) {
+  std::ostringstream oss;
   if (c != nullptr) {
-    record << (void*)c;
+    oss << (void*)c;
   } else {
-    record << "0";
+    oss << "0";
   }
-  return record;
+  return oss.str();
 }
 
-Record& operator<<(Record& record, PFN_vkInternalAllocationNotification c) {
+std::string ToStr(PFN_vkDebugReportCallbackEXT c) {
+  std::ostringstream oss;
   if (c != nullptr) {
-    record << (void*)c;
+    oss << (void*)c;
   } else {
-    record << "0";
+    oss << "0";
   }
-  return record;
+  return oss.str();
 }
 
-Record& operator<<(Record& record, PFN_vkDebugUtilsMessengerCallbackEXT c) {
+std::string ToStr(PFN_vkFreeFunction c) {
+  std::ostringstream oss;
   if (c != nullptr) {
-    record << (void*)c;
+    oss << (void*)c;
   } else {
-    record << "0";
+    oss << "0";
   }
-  return record;
+  return oss.str();
 }
 
-Record& operator<<(Record& record, PFN_vkDeviceMemoryReportCallbackEXT c) {
+std::string ToStr(PFN_vkInternalAllocationNotification c) {
+  std::ostringstream oss;
   if (c != nullptr) {
-    record << (void*)c;
+    oss << (void*)c;
   } else {
-    record << "0";
+    oss << "0";
   }
-  return record;
+  return oss.str();
 }
 
-Record& operator<<(Record& record, PFN_vkFaultCallbackFunction c) {
+std::string ToStr(PFN_vkDebugUtilsMessengerCallbackEXT c) {
+  std::ostringstream oss;
   if (c != nullptr) {
-    record << (void*)c;
+    oss << (void*)c;
   } else {
-    record << "0";
+    oss << "0";
   }
-  return record;
+  return oss.str();
 }
 
-Record& operator<<(Record& record, PFN_vkVoidFunction c) {
+std::string ToStr(PFN_vkDeviceMemoryReportCallbackEXT c) {
+  std::ostringstream oss;
   if (c != nullptr) {
-    record << (void*)c;
+    oss << (void*)c;
   } else {
-    record << "0";
+    oss << "0";
   }
-  return record;
+  return oss.str();
 }
 
-Record& operator<<(Record& record, PFN_vkGetInstanceProcAddr c) {
+std::string ToStr(PFN_vkFaultCallbackFunction c) {
+  std::ostringstream oss;
   if (c != nullptr) {
-    record << (void*)c;
+    oss << (void*)c;
   } else {
-    record << "0";
+    oss << "0";
   }
-  return record;
+  return oss.str();
 }
 
-Record& operator<<(Record& record, PFN_vkGetDeviceProcAddr c) {
+std::string ToStr(PFN_vkVoidFunction c) {
+  std::ostringstream oss;
   if (c != nullptr) {
-    record << (void*)c;
+    oss << (void*)c;
   } else {
-    record << "0";
+    oss << "0";
   }
-  return record;
+  return oss.str();
 }
 
-Record& operator<<(Record& record, PNextPointerTypeTag pNext) {
-  using namespace gits;
+std::string ToStr(PFN_vkGetInstanceProcAddr c) {
+  std::ostringstream oss;
+  if (c != nullptr) {
+    oss << (void*)c;
+  } else {
+    oss << "0";
+  }
+  return oss.str();
+}
 
+std::string ToStr(PFN_vkGetDeviceProcAddr c) {
+  std::ostringstream oss;
+  if (c != nullptr) {
+    oss << (void*)c;
+  } else {
+    oss << "0";
+  }
+  return oss.str();
+}
+
+std::string ToStr(PNextPointerTypeTag pNext) {
   pNext = (PNextPointerTypeTag)gits::Vulkan::ignoreLoaderSpecificStructureTypes(pNext);
 
+  std::ostringstream oss;
   if (pNext != nullptr) {
     if (Configurator::IsTraceDataOptPresent(TraceData::VK_STRUCTS)) {
 
@@ -123,22 +148,23 @@ Record& operator<<(Record& record, PNextPointerTypeTag pNext) {
 
 #define PNEXT_WRAPPER(STRUCTURE_TYPE, structure, ...)                                              \
   case STRUCTURE_TYPE:                                                                             \
-    record << *(const structure*)pNext;                                                            \
+    oss << ToStr(*(const structure*)pNext);                                                        \
     break;
 
 #include "vulkanPNextWrappers.inl"
 
       default:
-        record << (const void*)pNext;
+        oss << (const void*)pNext;
         break;
       }
     } else {
-      record << (const void*)pNext;
+      oss << (const void*)pNext;
     }
   } else {
-    record << "0";
+    oss << "0";
   }
-  return record;
+  return oss.str();
 }
 
-} // namespace plog
+} // namespace Vulkan
+} // namespace gits

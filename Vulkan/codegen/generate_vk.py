@@ -499,25 +499,25 @@ def make_struct_field_log_code(field: Field) -> str:
         result += inspect.cleandoc(f'''
             ;
               if ((Configurator::IsTraceDataOptPresent(TraceData::VK_STRUCTS)){additional_conditions}) {{
-                record << "{{";
+                oss << "{{";
                 for (uint32_t i = 0; i < (uint32_t){count}; ++i) {{
-                  record << " [" << i << "]:" << {type_cast}c.{field.name}[i];
+                  oss << " [" << i << "]:" << ToStr({type_cast}c.{field.name}[i]);
                 }}
-                record << " }}";
+                oss << " }}";
               }} else {{
-                record << (void*)c.{field.name};
+                oss << (void*)c.{field.name};
               }}
             ''')
         result += '\n'
-        result += '  record << ", " << '
+        result += '  oss << ", " << '
     else:
-        result += f' << {type_cast}c.{field.name} << ", " << '
+        result += f' << ToStr({type_cast}c.{field.name}) << ", " << '
 
     return result
 
 def make_struct_log_code(fields: list[Field]) -> str:
     """Return C++ code for logging Fields of a VkStruct."""
-    fields_str = 'record << "{" << '
+    fields_str = 'oss << "{" << '
 
     field: Field
     for field in fields:
@@ -551,17 +551,17 @@ def make_argument_log_code(argument: Argument, count_is_a_pointer: bool) -> str:
                 if ((Configurator::IsTraceDataOptPresent(TraceData::VK_STRUCTS)){additional_conditions}) {{
                   LOG_TRACE << "{{";
                   for (uint32_t i = 0; i < (uint32_t){dereference}{argument.count}; ++i) {{
-                    LOG_TRACE << " [" << i << "]:" << {type_cast}{argument.name}[i];
+                    LOG_TRACE << " [" << i << "]:" << ToStr({type_cast}{argument.name}[i]);
                   }}
                   LOG_TRACE << " }}";
                 }} else {{
-                  LOG_TRACE << {argument.name};
+                  LOG_TRACE << ToStr({argument.name});
                 }}
             ''')
         result += '\n'
         result += '    LOG_TRACE << '
     else:
-        result += f' << {type_cast}{argument.name} << '
+        result += f' << ToStr({type_cast}{argument.name}) << '
 
     return result
 

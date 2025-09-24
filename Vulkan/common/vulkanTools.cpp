@@ -2182,9 +2182,9 @@ void printShaderHashes(VkPipeline pipeline) {
     LOG_TRACE << "Shader hashes:";
     for (auto& stage : pipelineState->stageShaderHashMapping) {
 #ifdef GITS_PLATFORM_WINDOWS
-      LOG_TRACE << "               " << stage.first << ": " << std::hex << stage.second;
+      LOG_TRACE << "               " << ToStr(stage.first) << ": " << std::hex << stage.second;
 #else
-      LOG_TRACE << "               " << stage.first << ": " << stage.second;
+      LOG_TRACE << "               " << ToStr(stage.first) << ": " << stage.second;
 #endif
     }
   }
@@ -3211,11 +3211,11 @@ std::unordered_map<uint32_t, uint32_t> matchCorrespondingMemoryTypeIndexes(
     LOG_ERROR << "Cannot find proper mapping for memory type indexes";
     LOG_ERROR << "Original memory types: ";
     for (uint32_t i = 0; i < originalPlatformProperties.memoryTypeCount; i++) {
-      LOG_ERROR << "[" << i << "]: " << originalPlatformProperties.memoryTypes[i];
+      LOG_ERROR << "[" << i << "]: " << ToStr(originalPlatformProperties.memoryTypes[i]);
     }
     LOG_ERROR << "Current platform memory types: ";
     for (uint32_t i = 0; i < currentPlatformProperties.memoryTypeCount; i++) {
-      LOG_ERROR << "[" << i << "]: " << currentPlatformProperties.memoryTypes[i];
+      LOG_ERROR << "[" << i << "]: " << ToStr(currentPlatformProperties.memoryTypes[i]);
     }
     throw std::runtime_error("Cannot find proper mapping for memory type indexes");
   }
