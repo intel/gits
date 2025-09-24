@@ -91,10 +91,9 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
     D3D12_RESOURCE_STATES resourceState = bufferState->isGenericRead
                                               ? D3D12_RESOURCE_STATE_GENERIC_READ
                                               : D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-    bufferContentRestore_.storeBuffer(c.object_.value, commandListCopyKey_,
-                                      static_cast<ID3D12Resource*>(bufferState->object), inputKey,
-                                      inputOffset, size, resourceState, c.key,
-                                      bufferState->isMappable, uploadResourceKey);
+    bufferContentRestore_.storeBuffer(
+        c.object_.value, static_cast<ID3D12Resource*>(bufferState->object), inputKey, inputOffset,
+        size, resourceState, c.key, bufferState->isMappable);
     state->buffers[inputKey] = bufferState;
     ReservedResourcesService::TiledResource* tiledResource =
         reservedResourcesService_.getTiledResource(inputKey);
@@ -247,10 +246,9 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
     D3D12_RESOURCE_STATES resourceState = bufferState->isGenericRead
                                               ? D3D12_RESOURCE_STATE_GENERIC_READ
                                               : D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-    bufferContentRestore_.storeBuffer(c.pCommandList_.value, commandListCopyKey_,
-                                      static_cast<ID3D12Resource*>(bufferState->object), inputKey,
-                                      inputOffset, size, resourceState, c.key,
-                                      bufferState->isMappable, uploadResourceKey);
+    bufferContentRestore_.storeBuffer(
+        c.pCommandList_.value, static_cast<ID3D12Resource*>(bufferState->object), inputKey,
+        inputOffset, size, resourceState, c.key, bufferState->isMappable);
     state->buffers[inputKey] = bufferState;
     ReservedResourcesService::TiledResource* tiledResource =
         reservedResourcesService_.getTiledResource(inputKey);
@@ -584,10 +582,9 @@ void AccelerationStructuresBuildService::nvapiBuildOpacityMicromapArray(
     D3D12_RESOURCE_STATES resourceState = bufferState->isGenericRead
                                               ? D3D12_RESOURCE_STATE_GENERIC_READ
                                               : D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-    bufferContentRestore_.storeBuffer(c.pCommandList_.value, commandListCopyKey_,
-                                      static_cast<ID3D12Resource*>(bufferState->object), inputKey,
-                                      inputOffset, size, resourceState, c.key,
-                                      bufferState->isMappable, uploadResourceKey);
+    bufferContentRestore_.storeBuffer(
+        c.pCommandList_.value, static_cast<ID3D12Resource*>(bufferState->object), inputKey,
+        inputOffset, size, resourceState, c.key, bufferState->isMappable);
     state->buffers[inputKey] = bufferState;
     ReservedResourcesService::TiledResource* tiledResource =
         reservedResourcesService_.getTiledResource(inputKey);
@@ -657,6 +654,8 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
   optimize();
 
   bufferContentRestore_.waitUntilDumped();
+
+  initUploadBuffer();
 
   {
     commandQueueCopyKey_ = stateService_.getUniqueObjectKey();
@@ -785,7 +784,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
           static_cast<BuildRaytracingAccelerationStructureState*>(itState.second);
 
       std::unordered_set<unsigned> restoredBuffers;
-      std::unordered_set<unsigned> uploadBuffers;
+      size_t uploadBufferOffset{};
 
       std::vector<AccelerationStructuresBufferContentRestore::BufferRestoreInfo>& restoreInfos =
           bufferContentRestore_.getRestoreInfos(state->commandKey);
@@ -796,7 +795,6 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
         }
         bufferHashesByKeyOffset[std::pair(info.bufferKey, info.offset)] = info.bufferHash;
         restoredBuffers.insert(info.bufferKey);
-        uploadBuffers.insert(info.uploadResourceKey);
 
         for (auto& itTiledResource : state->tiledResources) {
           auto it = tiledResourceUpdatesRestored.find(info.bufferKey);
@@ -808,9 +806,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
           }
         }
 
-        for (CommandWriter* command : info.restoreCommands) {
-          recorder_.record(command);
-        }
+        uploadBufferOffset += restoreBuffer(info, uploadBufferOffset);
       }
 
       {
@@ -952,14 +948,6 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
         stateService_.getRecorder().record(
             new ID3D12GraphicsCommandListResetWriter(commandListReset));
       }
-      {
-        for (unsigned uploadResourceKey : uploadBuffers) {
-          IUnknownReleaseCommand releaseCommand;
-          releaseCommand.key = stateService_.getUniqueCommandKey();
-          releaseCommand.object_.key = uploadResourceKey;
-          stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommand));
-        }
-      }
     } else if (itState.second->stateType == RaytracingAccelerationStructureState::Copy) {
       CopyRaytracingAccelerationStructureState* state =
           static_cast<CopyRaytracingAccelerationStructureState*>(itState.second);
@@ -1028,7 +1016,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
           static_cast<NvAPIBuildRaytracingAccelerationStructureExState*>(itState.second);
 
       std::unordered_set<unsigned> restoredBuffers;
-      std::unordered_set<unsigned> uploadBuffers;
+      size_t uploadBufferOffset{};
 
       std::vector<AccelerationStructuresBufferContentRestore::BufferRestoreInfo>& restoreInfos =
           bufferContentRestore_.getRestoreInfos(state->commandKey);
@@ -1039,7 +1027,6 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
         }
         bufferHashesByKeyOffset[std::pair(info.bufferKey, info.offset)] = info.bufferHash;
         restoredBuffers.insert(info.bufferKey);
-        uploadBuffers.insert(info.uploadResourceKey);
 
         for (auto& itTiledResource : state->tiledResources) {
           auto it = tiledResourceUpdatesRestored.find(info.bufferKey);
@@ -1051,9 +1038,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
           }
         }
 
-        for (CommandWriter* command : info.restoreCommands) {
-          recorder_.record(command);
-        }
+        uploadBufferOffset += restoreBuffer(info, uploadBufferOffset);
       }
 
       {
@@ -1196,20 +1181,12 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
         stateService_.getRecorder().record(
             new ID3D12GraphicsCommandListResetWriter(commandListReset));
       }
-      {
-        for (unsigned uploadResourceKey : uploadBuffers) {
-          IUnknownReleaseCommand releaseCommand;
-          releaseCommand.key = stateService_.getUniqueCommandKey();
-          releaseCommand.object_.key = uploadResourceKey;
-          stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommand));
-        }
-      }
     } else if (itState.second->stateType == RaytracingAccelerationStructureState::NvAPIOMM) {
       NvAPIBuildRaytracingOpacityMicromapArrayState* state =
           static_cast<NvAPIBuildRaytracingOpacityMicromapArrayState*>(itState.second);
 
       std::unordered_set<unsigned> restoredBuffers;
-      std::unordered_set<unsigned> uploadBuffers;
+      size_t uploadBufferOffset{};
 
       std::vector<AccelerationStructuresBufferContentRestore::BufferRestoreInfo>& restoreInfos =
           bufferContentRestore_.getRestoreInfos(state->commandKey);
@@ -1220,7 +1197,6 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
         }
         bufferHashesByKeyOffset[std::pair(info.bufferKey, info.offset)] = info.bufferHash;
         restoredBuffers.insert(info.bufferKey);
-        uploadBuffers.insert(info.uploadResourceKey);
 
         for (auto& itTiledResource : state->tiledResources) {
           auto it = tiledResourceUpdatesRestored.find(info.bufferKey);
@@ -1232,9 +1208,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
           }
         }
 
-        for (CommandWriter* command : info.restoreCommands) {
-          recorder_.record(command);
-        }
+        uploadBufferOffset += restoreBuffer(info, uploadBufferOffset);
       }
 
       {
@@ -1377,24 +1351,25 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
         stateService_.getRecorder().record(
             new ID3D12GraphicsCommandListResetWriter(commandListReset));
       }
-      {
-        for (unsigned uploadResourceKey : uploadBuffers) {
-          IUnknownReleaseCommand releaseCommand;
-          releaseCommand.key = stateService_.getUniqueCommandKey();
-          releaseCommand.object_.key = uploadResourceKey;
-          stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommand));
-        }
-      }
     } else {
       GITS_ASSERT(0 && "unknown state");
     }
     delete itState.second;
   }
 
-  IUnknownReleaseCommand release{};
-  release.key = stateService_.getUniqueCommandKey();
-  release.object_.key = scratchResourceKey;
-  stateService_.getRecorder().record(new IUnknownReleaseWriter(release));
+  {
+    IUnknownReleaseCommand release{};
+    release.key = stateService_.getUniqueCommandKey();
+    release.object_.key = scratchResourceKey;
+    stateService_.getRecorder().record(new IUnknownReleaseWriter(release));
+  }
+
+  if (uploadBufferKey_) {
+    IUnknownReleaseCommand release{};
+    release.key = stateService_.getUniqueCommandKey();
+    release.object_.key = uploadBufferKey_;
+    stateService_.getRecorder().record(new IUnknownReleaseWriter(release));
+  }
 
   restored_ = true;
 }
@@ -1516,6 +1491,136 @@ void AccelerationStructuresBuildService::removeState(unsigned stateId, bool remo
     stateByKeyOffset_.erase(it);
   }
   statesById_.erase(itState);
+}
+
+void AccelerationStructuresBuildService::initUploadBuffer() {
+  size_t maxPerBuildUploadSize = 0;
+  for (auto& itState : statesById_) {
+    std::vector<AccelerationStructuresBufferContentRestore::BufferRestoreInfo>& restoreInfos =
+        bufferContentRestore_.getRestoreInfos(itState.second->commandKey);
+    size_t uploadSize = 0;
+    for (const AccelerationStructuresBufferContentRestore::BufferRestoreInfo& info : restoreInfos) {
+      if (!info.isMappable) {
+        uploadSize += info.bufferData->size();
+      }
+    }
+
+    if (uploadSize > maxPerBuildUploadSize) {
+      maxPerBuildUploadSize = uploadSize;
+    }
+  }
+
+  if (maxPerBuildUploadSize == 0) {
+    return;
+  }
+
+  uploadBufferSize_ = maxPerBuildUploadSize;
+
+  D3D12_HEAP_PROPERTIES heapPropertiesUpload{};
+  heapPropertiesUpload.Type = D3D12_HEAP_TYPE_UPLOAD;
+  heapPropertiesUpload.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+  heapPropertiesUpload.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+  heapPropertiesUpload.CreationNodeMask = 1;
+  heapPropertiesUpload.VisibleNodeMask = 1;
+
+  D3D12_RESOURCE_DESC resourceDesc{};
+  resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+  resourceDesc.Alignment = 0;
+  resourceDesc.Width = uploadBufferSize_;
+  resourceDesc.Height = 1;
+  resourceDesc.DepthOrArraySize = 1;
+  resourceDesc.MipLevels = 1;
+  resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
+  resourceDesc.SampleDesc.Count = 1;
+  resourceDesc.SampleDesc.Quality = 0;
+  resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+  resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+  uploadBufferKey_ = stateService_.getUniqueObjectKey();
+
+  ID3D12DeviceCreateCommittedResourceCommand createUploadResource;
+  createUploadResource.key = stateService_.getUniqueCommandKey();
+  createUploadResource.object_.key = deviceKey_;
+  createUploadResource.pHeapProperties_.value = &heapPropertiesUpload;
+  createUploadResource.HeapFlags_.value = D3D12_HEAP_FLAG_NONE;
+  createUploadResource.pDesc_.value = &resourceDesc;
+  createUploadResource.InitialResourceState_.value = D3D12_RESOURCE_STATE_GENERIC_READ;
+  createUploadResource.pOptimizedClearValue_.value = nullptr;
+  createUploadResource.riidResource_.value = IID_ID3D12Resource;
+  createUploadResource.ppvResource_.key = uploadBufferKey_;
+  recorder_.record(new ID3D12DeviceCreateCommittedResourceWriter(createUploadResource));
+}
+
+size_t AccelerationStructuresBuildService::restoreBuffer(
+    const AccelerationStructuresBufferContentRestore::BufferRestoreInfo& restoreInfo,
+    size_t uploadBufferOffset) {
+  if (restoreInfo.isMappable) {
+    ID3D12ResourceMapCommand mapCommand;
+    mapCommand.key = stateService_.getUniqueCommandKey();
+    mapCommand.object_.key = restoreInfo.bufferKey;
+    mapCommand.Subresource_.value = 0;
+    mapCommand.pReadRange_.value = nullptr;
+    mapCommand.ppData_.captureValue = stateService_.getUniqueFakePointer();
+    mapCommand.ppData_.value = &mapCommand.ppData_.captureValue;
+    recorder_.record(new ID3D12ResourceMapWriter(mapCommand));
+
+    MappedDataMetaCommand metaCommand;
+    metaCommand.key = stateService_.getUniqueCommandKey();
+    metaCommand.resource_.key = restoreInfo.bufferKey;
+    metaCommand.mappedAddress_.value = mapCommand.ppData_.captureValue;
+    metaCommand.offset_.value = restoreInfo.offset;
+    metaCommand.data_.value = const_cast<char*>(restoreInfo.bufferData->data());
+    metaCommand.data_.size = restoreInfo.bufferData->size();
+    recorder_.record(new MappedDataMetaWriter(metaCommand));
+
+    ID3D12ResourceUnmapCommand unmapCommand;
+    unmapCommand.key = stateService_.getUniqueCommandKey();
+    unmapCommand.object_.key = restoreInfo.bufferKey;
+    unmapCommand.Subresource_.value = 0;
+    unmapCommand.pWrittenRange_.value = nullptr;
+    recorder_.record(new ID3D12ResourceUnmapWriter(unmapCommand));
+
+    return 0;
+  } else {
+    GITS_ASSERT(uploadBufferOffset + restoreInfo.bufferData->size() <= uploadBufferSize_);
+
+    ID3D12ResourceMapCommand mapCommand;
+    mapCommand.key = stateService_.getUniqueCommandKey();
+    mapCommand.object_.key = uploadBufferKey_;
+    mapCommand.Subresource_.value = 0;
+    mapCommand.pReadRange_.value = nullptr;
+    mapCommand.ppData_.captureValue = stateService_.getUniqueFakePointer();
+    mapCommand.ppData_.value = &mapCommand.ppData_.captureValue;
+    recorder_.record(new ID3D12ResourceMapWriter(mapCommand));
+
+    MappedDataMetaCommand metaCommand;
+    metaCommand.key = stateService_.getUniqueCommandKey();
+    metaCommand.resource_.key = uploadBufferKey_;
+    metaCommand.mappedAddress_.value = mapCommand.ppData_.captureValue;
+    metaCommand.offset_.value = uploadBufferOffset;
+    metaCommand.data_.value = const_cast<char*>(restoreInfo.bufferData->data());
+    metaCommand.data_.size = restoreInfo.bufferData->size();
+    recorder_.record(new MappedDataMetaWriter(metaCommand));
+
+    ID3D12ResourceUnmapCommand unmapCommand;
+    unmapCommand.key = stateService_.getUniqueCommandKey();
+    unmapCommand.object_.key = uploadBufferKey_;
+    unmapCommand.Subresource_.value = 0;
+    unmapCommand.pWrittenRange_.value = nullptr;
+    recorder_.record(new ID3D12ResourceUnmapWriter(unmapCommand));
+
+    ID3D12GraphicsCommandListCopyBufferRegionCommand copyBufferRegion;
+    copyBufferRegion.key = stateService_.getUniqueCommandKey();
+    copyBufferRegion.object_.key = commandListCopyKey_;
+    copyBufferRegion.pDstBuffer_.key = restoreInfo.bufferKey;
+    copyBufferRegion.DstOffset_.value = restoreInfo.offset;
+    copyBufferRegion.pSrcBuffer_.key = uploadBufferKey_;
+    copyBufferRegion.SrcOffset_.value = uploadBufferOffset;
+    copyBufferRegion.NumBytes_.value = restoreInfo.bufferData->size();
+    recorder_.record(new ID3D12GraphicsCommandListCopyBufferRegionWriter(copyBufferRegion));
+
+    return restoreInfo.bufferData->size();
+  }
 }
 
 void AccelerationStructuresBuildService::optimize() {

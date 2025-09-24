@@ -128,7 +128,9 @@ private:
   unsigned commandAllocatorDirectKey_{};
   unsigned commandListDirectKey_{};
   unsigned fenceKey_{};
+  unsigned uploadBufferKey_{};
   UINT64 recordedFenceValue_{};
+  size_t uploadBufferSize_{};
   bool restored_{};
   bool serializeMode_{};
   bool restoreTLASes_{};
@@ -137,6 +139,10 @@ private:
   void storeState(RaytracingAccelerationStructureState* state);
   unsigned getState(unsigned key, unsigned offset);
   void removeState(unsigned stateId, bool removeSource = false);
+  void initUploadBuffer();
+  size_t restoreBuffer(
+      const AccelerationStructuresBufferContentRestore::BufferRestoreInfo& restoreInfo,
+      size_t uploadBufferOffset);
   void optimize();
   void removeSourcesWithoutDestinations();
 };
