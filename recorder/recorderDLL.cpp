@@ -32,7 +32,7 @@ void STDCALL GitsExitProcess(UINT uExitCode) {
   if (gits::CRecorder::InstancePtr()) {
     gits::CRecorder::Instance().Close();
   }
-  Log(INFO) << "Recording done";
+  LOG_INFO << "Recording done";
 
   // Restore code of ExitProcess, now that we intercepted it.
   DWORD oldProtect;
@@ -58,7 +58,7 @@ void STDCALL GitsTerminateProcess(_In_ HANDLE hProcess, _In_ UINT uExitCode) {
     if (gits::CRecorder::InstancePtr()) {
       gits::CRecorder::Instance().Close();
     }
-    Log(INFO) << "Recording done by TerminateProcess() ";
+    LOG_INFO << "Recording done by TerminateProcess() ";
   }
   RestoreTerminateProcess();
   TerminateProcess(hProcess, uExitCode);

@@ -34,7 +34,7 @@ gits::FPrintHandler STDCALL PrintHandlerGet(const char* dir) {
     gits::CLog::LogFile(dir);
     return PrintHandler;
   } catch (const std::exception& ex) {
-    Log(ERR) << "Cannot establish GITS logging: " << ex.what() << std::endl;
+    std::cerr << "Cannot establish GITS logging: " << ex.what() << std::endl;
     exit(EXIT_FAILURE);
   }
 }
@@ -47,7 +47,7 @@ gits::Configuration* STDCALL Configure(const char* cfgDir) {
     }
     return &gits::Configurator::GetMutable();
   } catch (const std::exception& ex) {
-    Log(ERR) << "Cannot configure GITS: " << ex.what() << std::endl;
+    std::cerr << "Cannot configure GITS: " << ex.what() << std::endl;
     exit(EXIT_FAILURE);
   }
 }

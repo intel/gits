@@ -441,7 +441,7 @@ int MainBody(int argc, char* argv[]) {
   CGits::Instance().Dispose();
 
   if (Configurator::Get().common.player.waitForEnter) {
-    Log(OFF, NO_PREFIX) << "Waiting for ENTER press ...";
+    LOG_NONE << "Waiting for ENTER press ...";
     std::cin.get();
   }
 

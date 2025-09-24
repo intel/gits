@@ -206,8 +206,8 @@ void AddressPinningStoreLayer::handleGetGPUVirtualAddress(CommandT& command) {
   }
   auto itHeap = heapAddressRanges_.find(itHeapInfo->second.heapKey);
   if (itHeap == heapAddressRanges_.end()) {
-    Log(ERR) << "AddressPinningStoreLayer: Heap key " << itHeapInfo->second.heapKey
-             << " not found in addressRanges for placed resource key " << command.object_.key;
+    LOG_ERROR << "AddressPinningStoreLayer: Heap key " << itHeapInfo->second.heapKey
+              << " not found in addressRanges for placed resource key " << command.object_.key;
     return;
   }
   if (itHeap->second.addressRange.StartAddress) {

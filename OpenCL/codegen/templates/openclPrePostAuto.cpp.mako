@@ -59,7 +59,7 @@ void* GetExtensionFunction(const char* function_name) {
   };
   auto iter = funcMap.find(function_name);
   if (iter == funcMap.end()) {
-    Log(WARN) << "Function " << function_name << " is not implemented in GITS";
+    LOG_WARNING << "Function " << function_name << " is not implemented in GITS";
     return nullptr;
   }
   return iter->second;

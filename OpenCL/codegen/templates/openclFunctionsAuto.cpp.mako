@@ -48,7 +48,7 @@ ${'' if loop.last else ','}
 
 gits::CArgument& C${name}::Argument(unsigned idx) {
   %if len(func['args']) == 0:
-  Log(ERR) << "Invalid Argument index: C${name}::Argument(" << idx << ")";
+  LOG_ERROR << "Invalid Argument index: C${name}::Argument(" << idx << ")";
   throw ENotFound(EXCEPTION_MESSAGE);
   %else:
   return get_cargument(__FUNCTION__, idx${', ' if len(func['args']) > 0 else ''}${make_params(func, prefix='_', one_line=True)});
@@ -57,7 +57,7 @@ gits::CArgument& C${name}::Argument(unsigned idx) {
 
 gits::CArgument& C${name}::Result(unsigned idx) {
   %if func.get('type') == 'void' or name.startswith('clGetExtensionFunctionAddress'):
-  Log(ERR) << "Invalid Result index: C${name}::Result(" << idx << ")";
+  LOG_ERROR << "Invalid Result index: C${name}::Result(" << idx << ")";
   throw ENotFound(EXCEPTION_MESSAGE);
   %else:
   return get_cargument(__FUNCTION__, idx, _${'errcode_ret' if any('errcode_ret' == arg['name'] for arg in func['args']) else 'return_value'});

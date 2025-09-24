@@ -37,7 +37,7 @@ void CRecorderWrapper::${cut_version(name, func['version'])}(${make_params(func,
       %endif
     %endif
   %else:
-  Log(WARN) << "Function token C${name} not implemented.";
+  LOG_WARNING << "Function token C${name} not implemented.";
   %endif
 }
   %if 'platform' in func:
