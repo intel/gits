@@ -293,12 +293,12 @@ IUnknown* PlayerManager::findObject(unsigned objectKey) {
   return it->second;
 }
 
-void PlayerManager::loadAgilitySdk(const std::filesystem::path& path) {
+bool PlayerManager::loadAgilitySdk(const std::filesystem::path& path) {
   std::string dllPath = (path / "D3D12Core.dll").string();
   d3d12CoreDll_ = LoadLibrary(dllPath.c_str());
   if (!d3d12CoreDll_) {
     LOG_ERROR << "Agility SDK - Failed to load (" << dllPath << ")";
-    return;
+    return false;
   }
   UINT sdkVersion = *reinterpret_cast<UINT*>(GetProcAddress(d3d12CoreDll_, "D3D12SDKVersion"));
 
@@ -306,17 +306,19 @@ void PlayerManager::loadAgilitySdk(const std::filesystem::path& path) {
   HRESULT hr = D3D12GetInterface(CLSID_D3D12SDKConfiguration, IID_PPV_ARGS(&sdkConfiguration));
   if (hr != S_OK) {
     LOG_ERROR << "Agility SDK - D3D12GetInterface(ID3D12SDKConfiguration) failed";
-    return;
+    return false;
   }
 
   hr = sdkConfiguration->SetSDKVersion(sdkVersion, path.string().c_str());
   if (hr != S_OK) {
     LOG_ERROR << "Agility SDK - SetSDKVersion call failed. This method can be used only in "
               << "Windows Developer Mode. Check settings !";
-    return;
+    return false;
   }
 
   LOG_INFO << "Agility SDK - Loaded SDK version (" << sdkVersion << ")";
+
+  return true;
 }
 
 void PlayerManager::loadDirectML() {

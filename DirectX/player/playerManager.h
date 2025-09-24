@@ -108,7 +108,7 @@ public:
     return xessContextMap_;
   }
 
-  void loadAgilitySdk(const std::filesystem::path& path);
+  bool loadAgilitySdk(const std::filesystem::path& path);
 
 private:
   PlayerManager();

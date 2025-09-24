@@ -20,7 +20,7 @@ class XessService : public gits::noncopyable {
 public:
   XessService() = default;
   ~XessService();
-  void loadXess(std::filesystem::path path);
+  bool loadXess(std::filesystem::path path);
 
   XessDispatchTable& getXessDispatchTable() {
     return xessDispatchTable_;

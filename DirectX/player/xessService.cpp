@@ -20,12 +20,12 @@ XessService::~XessService() {
   }
 }
 
-void XessService::loadXess(std::filesystem::path path) {
+bool XessService::loadXess(std::filesystem::path path) {
   if (!xessDll_) {
     xessDll_ = LoadLibrary(path.string().c_str());
     if (!xessDll_) {
       LOG_ERROR << "Failed to load XeSS (" << path.string() << "). Playback issues may occur.";
-      return;
+      return false;
     }
   }
   GITS_ASSERT(xessDll_);
@@ -110,6 +110,8 @@ void XessService::loadXess(std::filesystem::path path) {
   xessDispatchTable_.xessGetVersion(&version);
   LOG_INFO << "Loaded XeSS (version " << version.major << "." << version.minor << "."
            << version.patch << ")";
+
+  return true;
 }
 
 } // namespace DirectX

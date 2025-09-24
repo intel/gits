@@ -24,8 +24,9 @@ DllOverrideUseLayer::DllOverrideUseLayer(PlayerManager& manager)
 }
 void DllOverrideUseLayer::pre(D3D12CreateDeviceCommand& c) {
   if (!agilitySDKLoaded_) {
-    manager_.loadAgilitySdk("D3D12");
-    agilitySDKLoaded_ = true;
+    if (manager_.loadAgilitySdk("D3D12")) {
+      agilitySDKLoaded_ = true;
+    }
   }
 }
 
@@ -48,30 +49,34 @@ void DllOverrideUseLayer::pre(DllContainerMetaCommand& c) {
       wcscmp(c.dllName_.value, L"D3D12Core.dll") == 0) {
     LOG_INFO << "Agility SDK - Applying app override";
     GITS_ASSERT(!agilitySDKLoaded_);
-    manager_.loadAgilitySdk(dllOverridesDirectory_);
-    agilitySDKLoaded_ = true;
+    if (manager_.loadAgilitySdk(dllOverridesDirectory_)) {
+      agilitySDKLoaded_ = true;
+    }
   }
 
   if (Configurator::Get().directx.player.enableXessDllAppOverride &&
       wcscmp(c.dllName_.value, L"libxess.dll") == 0) {
     LOG_INFO << "Xess - Applying app override";
     GITS_ASSERT(!xessLoaded_);
-    manager_.getXessService().loadXess(dllOverridesDirectory_ / "libxess.dll");
-    xessLoaded_ = true;
+    if (manager_.getXessService().loadXess(dllOverridesDirectory_ / "libxess.dll")) {
+      xessLoaded_ = true;
+    }
   }
 }
 
 void DllOverrideUseLayer::pre(xessGetVersionCommand& c) {
   if (!xessLoaded_) {
-    manager_.getXessService().loadXess("D3D12\\libxess.dll");
-    xessLoaded_ = true;
+    if (manager_.getXessService().loadXess("D3D12\\libxess.dll")) {
+      xessLoaded_ = true;
+    }
   }
 }
 
 void DllOverrideUseLayer::pre(xessD3D12CreateContextCommand& c) {
   if (!xessLoaded_) {
-    manager_.getXessService().loadXess("D3D12\\libxess.dll");
-    xessLoaded_ = true;
+    if (manager_.getXessService().loadXess("D3D12\\libxess.dll")) {
+      xessLoaded_ = true;
+    }
   }
 }
 
