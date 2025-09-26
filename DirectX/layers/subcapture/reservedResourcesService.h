@@ -85,7 +85,9 @@ private:
   unsigned commandAllocatorKey_{};
   unsigned commandListKey_{};
   unsigned fenceKey_{};
+  unsigned uploadResourceKey_{};
   UINT64 recordedFenceValue_{};
+  size_t uploadResourceSize_{};
   bool contentRestoreInitialized_{};
 };
 

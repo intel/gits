@@ -415,6 +415,8 @@ void ReservedResourcesService::restoreContent(const std::vector<unsigned>& resou
       continue;
     }
 
+    GITS_ASSERT(totalSize <= uploadResourceSize_);
+
     D3D12_HEAP_PROPERTIES heapPropertiesReadback{};
     heapPropertiesReadback.Type = D3D12_HEAP_TYPE_READBACK;
     heapPropertiesReadback.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
@@ -583,34 +585,13 @@ void ReservedResourcesService::restoreContent(const std::vector<unsigned>& resou
     // create upload resource with resources contents in subcaptured stream
 
     unsigned deviceKey = stateService_.getDeviceKey();
-    unsigned uploadResourceKey = stateService_.getUniqueObjectKey();
-
-    D3D12_HEAP_PROPERTIES heapPropertiesUpload{};
-    heapPropertiesUpload.Type = D3D12_HEAP_TYPE_UPLOAD;
-    heapPropertiesUpload.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-    heapPropertiesUpload.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-    heapPropertiesUpload.CreationNodeMask = 1;
-    heapPropertiesUpload.VisibleNodeMask = 1;
-
-    ID3D12DeviceCreateCommittedResourceCommand createUploadResource;
-    createUploadResource.key = stateService_.getUniqueCommandKey();
-    createUploadResource.object_.key = deviceKey;
-    createUploadResource.pHeapProperties_.value = &heapPropertiesUpload;
-    createUploadResource.HeapFlags_.value = D3D12_HEAP_FLAG_NONE;
-    createUploadResource.pDesc_.value = &readbackResourceDesc;
-    createUploadResource.InitialResourceState_.value = D3D12_RESOURCE_STATE_GENERIC_READ;
-    createUploadResource.pOptimizedClearValue_.value = nullptr;
-    createUploadResource.riidResource_.value = IID_ID3D12Resource;
-    createUploadResource.ppvResource_.key = uploadResourceKey;
-    stateService_.getRecorder().record(
-        new ID3D12DeviceCreateCommittedResourceWriter(createUploadResource));
 
     void* mappedData{};
     hr = readbackResource->Map(0, nullptr, &mappedData);
 
     ID3D12ResourceMapCommand mapCommand;
     mapCommand.key = stateService_.getUniqueCommandKey();
-    mapCommand.object_.key = uploadResourceKey;
+    mapCommand.object_.key = uploadResourceKey_;
     mapCommand.Subresource_.value = 0;
     mapCommand.pReadRange_.value = nullptr;
     mapCommand.ppData_.captureValue = stateService_.getUniqueFakePointer();
@@ -619,7 +600,7 @@ void ReservedResourcesService::restoreContent(const std::vector<unsigned>& resou
 
     MappedDataMetaCommand metaCommand;
     metaCommand.key = stateService_.getUniqueCommandKey();
-    metaCommand.resource_.key = uploadResourceKey;
+    metaCommand.resource_.key = uploadResourceKey_;
     metaCommand.mappedAddress_.value = mapCommand.ppData_.captureValue;
     metaCommand.offset_.value = 0;
     metaCommand.data_.value = mappedData;
@@ -628,7 +609,7 @@ void ReservedResourcesService::restoreContent(const std::vector<unsigned>& resou
 
     ID3D12ResourceUnmapCommand unmapCommand;
     unmapCommand.key = stateService_.getUniqueCommandKey();
-    unmapCommand.object_.key = uploadResourceKey;
+    unmapCommand.object_.key = uploadResourceKey_;
     unmapCommand.Subresource_.value = 0;
     unmapCommand.pWrittenRange_.value = nullptr;
     stateService_.getRecorder().record(new ID3D12ResourceUnmapWriter(unmapCommand));
@@ -647,7 +628,7 @@ void ReservedResourcesService::restoreContent(const std::vector<unsigned>& resou
           copyBufferRegion.object_.key = commandListKey_;
           copyBufferRegion.pDstBuffer_.key = tiledResource->resourceKey;
           copyBufferRegion.DstOffset_.value = 0;
-          copyBufferRegion.pSrcBuffer_.key = uploadResourceKey;
+          copyBufferRegion.pSrcBuffer_.key = uploadResourceKey_;
           copyBufferRegion.SrcOffset_.value = offsetUpload;
           copyBufferRegion.NumBytes_.value = subresourceSizes.at(subresourceIndex).first;
           stateService_.getRecorder().record(
@@ -668,7 +649,7 @@ void ReservedResourcesService::restoreContent(const std::vector<unsigned>& resou
           copyTextureRegion.pDst_.value = &dest;
           copyTextureRegion.pDst_.resourceKey = tiledResource->resourceKey;
           copyTextureRegion.pSrc_.value = &src;
-          copyTextureRegion.pSrc_.resourceKey = uploadResourceKey;
+          copyTextureRegion.pSrc_.resourceKey = uploadResourceKey_;
           stateService_.getRecorder().record(
               new ID3D12GraphicsCommandListCopyTextureRegionWriter(copyTextureRegion));
         }
@@ -682,7 +663,7 @@ void ReservedResourcesService::restoreContent(const std::vector<unsigned>& resou
             copyBufferRegion.object_.key = commandListKey_;
             copyBufferRegion.pDstBuffer_.key = tiledResource->resourceKey;
             copyBufferRegion.DstOffset_.value = region.coord.X * tileSize;
-            copyBufferRegion.pSrcBuffer_.key = uploadResourceKey;
+            copyBufferRegion.pSrcBuffer_.key = uploadResourceKey_;
             copyBufferRegion.SrcOffset_.value = offsetUpload;
             copyBufferRegion.NumBytes_.value = region.size.NumTiles * tileSize;
             stateService_.getRecorder().record(
@@ -694,7 +675,7 @@ void ReservedResourcesService::restoreContent(const std::vector<unsigned>& resou
             copyTiles.pTiledResource_.key = tiledResource->resourceKey;
             copyTiles.pTileRegionStartCoordinate_.value = &region.coord;
             copyTiles.pTileRegionSize_.value = &region.size;
-            copyTiles.pBuffer_.key = uploadResourceKey;
+            copyTiles.pBuffer_.key = uploadResourceKey_;
             copyTiles.BufferStartOffsetInBytes_.value = offsetUpload;
             copyTiles.Flags_.value = D3D12_TILE_COPY_FLAG_LINEAR_BUFFER_TO_SWIZZLED_TILED_RESOURCE;
             stateService_.getRecorder().record(
@@ -763,11 +744,6 @@ void ReservedResourcesService::restoreContent(const std::vector<unsigned>& resou
     commandListReset.pInitialState_.key = 0;
     stateService_.getRecorder().record(new ID3D12GraphicsCommandListResetWriter(commandListReset));
 
-    IUnknownReleaseCommand releaseCommand;
-    releaseCommand.key = stateService_.getUniqueCommandKey();
-    releaseCommand.object_.key = uploadResourceKey;
-    stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommand));
-
     // decrese residency count or evict
 
     if (!heapKeys.empty()) {
@@ -791,6 +767,82 @@ void ReservedResourcesService::initRestore() {
     return;
   }
 
+  size_t maxUploadSize = 0;
+  for (const auto& tiledResource : resources_) {
+    if (tiledResource.second->destroyed) {
+      continue;
+    }
+
+    std::vector<bool> subresourceFullyMappedFlags(tiledResource.second->subresources.size(), true);
+    std::map<unsigned, unsigned> numTilesBySubresourceIndex;
+    for (const auto& tile : tiledResource.second->tiles) {
+      if (tile.heapKey) {
+        ++numTilesBySubresourceIndex[tile.subresourceIndex];
+      } else {
+        subresourceFullyMappedFlags.at(tile.subresourceIndex) = false;
+      }
+    }
+
+    std::vector<std::pair<unsigned, D3D12_PLACED_SUBRESOURCE_FOOTPRINT>> subresourceSizes;
+    getSubresourceSizes(device_, tiledResource.second->desc, subresourceSizes);
+
+    const size_t tileSize = 64 * 1024;
+    size_t uploadSize = 0;
+    for (unsigned subresourceIndex = 0;
+         subresourceIndex < tiledResource.second->subresources.size(); ++subresourceIndex) {
+      if (subresourceFullyMappedFlags.at(subresourceIndex)) {
+        uploadSize += subresourceSizes[subresourceIndex].first;
+      } else if (numTilesBySubresourceIndex.count(subresourceIndex)) {
+        uploadSize += numTilesBySubresourceIndex[subresourceIndex] * tileSize;
+      }
+    }
+
+    if (uploadSize > maxUploadSize) {
+      maxUploadSize = uploadSize;
+    }
+  }
+
+  uploadResourceSize_ = maxUploadSize;
+
+  unsigned deviceKey = stateService_.getDeviceKey();
+
+  if (uploadResourceSize_) {
+    uploadResourceKey_ = stateService_.getUniqueObjectKey();
+
+    D3D12_RESOURCE_DESC resourceDesc{};
+    resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+    resourceDesc.Alignment = 0;
+    resourceDesc.Width = uploadResourceSize_;
+    resourceDesc.Height = 1;
+    resourceDesc.DepthOrArraySize = 1;
+    resourceDesc.MipLevels = 1;
+    resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
+    resourceDesc.SampleDesc.Count = 1;
+    resourceDesc.SampleDesc.Quality = 0;
+    resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+    resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+    D3D12_HEAP_PROPERTIES heapPropertiesUpload{};
+    heapPropertiesUpload.Type = D3D12_HEAP_TYPE_UPLOAD;
+    heapPropertiesUpload.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+    heapPropertiesUpload.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+    heapPropertiesUpload.CreationNodeMask = 1;
+    heapPropertiesUpload.VisibleNodeMask = 1;
+
+    ID3D12DeviceCreateCommittedResourceCommand createUploadResource;
+    createUploadResource.key = stateService_.getUniqueCommandKey();
+    createUploadResource.object_.key = deviceKey;
+    createUploadResource.pHeapProperties_.value = &heapPropertiesUpload;
+    createUploadResource.HeapFlags_.value = D3D12_HEAP_FLAG_NONE;
+    createUploadResource.pDesc_.value = &resourceDesc;
+    createUploadResource.InitialResourceState_.value = D3D12_RESOURCE_STATE_GENERIC_READ;
+    createUploadResource.pOptimizedClearValue_.value = nullptr;
+    createUploadResource.riidResource_.value = IID_ID3D12Resource;
+    createUploadResource.ppvResource_.key = uploadResourceKey_;
+    stateService_.getRecorder().record(
+        new ID3D12DeviceCreateCommittedResourceWriter(createUploadResource));
+  }
+
   D3D12_COMMAND_QUEUE_DESC commandQueueDirectDesc{};
   commandQueueDirectDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
   HRESULT hr = device_->CreateCommandQueue(&commandQueueDirectDesc, IID_PPV_ARGS(&commandQueue_));
@@ -803,8 +855,6 @@ void ReservedResourcesService::initRestore() {
   GITS_ASSERT(hr == S_OK);
   hr = device_->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence_));
   GITS_ASSERT(hr == S_OK);
-
-  unsigned deviceKey = stateService_.getDeviceKey();
 
   commandQueueKey_ = stateService_.getUniqueObjectKey();
   D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
@@ -882,6 +932,13 @@ void ReservedResourcesService::cleanupRestore() {
   releaseCommandQueue.key = stateService_.getUniqueCommandKey();
   releaseCommandQueue.object_.key = commandQueueKey_;
   stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommandQueue));
+
+  if (uploadResourceKey_) {
+    IUnknownReleaseCommand releaseUploadResource;
+    releaseUploadResource.key = stateService_.getUniqueCommandKey();
+    releaseUploadResource.object_.key = uploadResourceKey_;
+    stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseUploadResource));
+  }
 }
 
 void ReservedResourcesService::getSubresourceSizes(
