@@ -52,6 +52,9 @@ private:
   unsigned createSubcaptureAuxiliaryPlacedResource(unsigned primaryResourceKey);
 
 private:
+  static constexpr size_t texturesMaxChunkSize{0x1000};
+  static constexpr size_t buffersMaxChunkSize{0x100000};
+
   StateTrackingService& stateService_;
   std::unordered_map<unsigned, ResourceInfo> mappableResourceStates_;
   std::unordered_map<unsigned, ResourceInfo> unmappableResourceBuffers_;
@@ -67,7 +70,9 @@ private:
   unsigned commandAllocatorKey_{};
   unsigned commandListKey_{};
   unsigned fenceKey_{};
+  unsigned uploadResourceKey_{};
   UINT64 recordedFenceValue_{};
+  size_t uploadResourceSize_{};
   bool restoreUnmappableResourcesInitialized_{};
 };
 
