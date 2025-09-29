@@ -25,6 +25,7 @@ public:
 
   void post(D3D12CreateDeviceCommand& command) override;
   void post(ID3D12DeviceFactoryCreateDeviceCommand& command) override;
+  void post(D3D12GetDebugInterfaceCommand& command) override;
 
   void pre(xessGetVersionCommand& command) override;
   void pre(xessD3D12CreateContextCommand& command) override;
@@ -32,6 +33,7 @@ public:
 private:
   void captureAgilitySDKDll(Command& command);
   void captureXessDll(Command& command);
+  bool captureDll(const std::wstring& dllName, unsigned threadId);
 
   bool agilitySDKDllchecked_{};
   std::mutex agilitySDKDllMutex_{};

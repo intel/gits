@@ -24,13 +24,6 @@ DllOverrideUseLayer::DllOverrideUseLayer(PlayerManager& manager)
     LOG_ERROR << "Failed to create dll overrides directory: " << e.what();
   }
 }
-void DllOverrideUseLayer::pre(D3D12CreateDeviceCommand& c) {
-  if (!agilitySDKLoaded_) {
-    if (manager_.loadAgilitySdk("D3D12")) {
-      agilitySDKLoaded_ = true;
-    }
-  }
-}
 
 void DllOverrideUseLayer::pre(DllContainerMetaCommand& c) {
   {
@@ -47,21 +40,35 @@ void DllOverrideUseLayer::pre(DllContainerMetaCommand& c) {
     }
   }
 
-  if (Configurator::Get().directx.player.enableAgilitySDKDllAppOverride && !useAddressPinning_ &&
-      wcscmp(c.dllName_.value, L"D3D12Core.dll") == 0) {
+  if (Configurator::Get().directx.player.enableAgilitySDKDllAppOverride && !agilitySDKLoaded_ &&
+      !useAddressPinning_ && wcscmp(c.dllName_.value, L"D3D12Core.dll") == 0) {
     LOG_INFO << "Agility SDK - Applying app override";
-    GITS_ASSERT(!agilitySDKLoaded_);
     if (manager_.loadAgilitySdk(dllOverridesRelativePath_)) {
       agilitySDKLoaded_ = true;
     }
   }
 
-  if (Configurator::Get().directx.player.enableXessDllAppOverride &&
+  if (Configurator::Get().directx.player.enableXessDllAppOverride && !xessLoaded_ &&
       wcscmp(c.dllName_.value, L"libxess.dll") == 0) {
     LOG_INFO << "Xess - Applying app override";
-    GITS_ASSERT(!xessLoaded_);
     if (manager_.getXessService().loadXess(dllOverridesDirectory_ / "libxess.dll")) {
       xessLoaded_ = true;
+    }
+  }
+}
+
+void DllOverrideUseLayer::pre(D3D12CreateDeviceCommand& c) {
+  if (!agilitySDKLoaded_) {
+    if (manager_.loadAgilitySdk("D3D12")) {
+      agilitySDKLoaded_ = true;
+    }
+  }
+}
+
+void DllOverrideUseLayer::pre(D3D12GetDebugInterfaceCommand& c) {
+  if (!agilitySDKLoaded_) {
+    if (manager_.loadAgilitySdk("D3D12")) {
+      agilitySDKLoaded_ = true;
     }
   }
 }

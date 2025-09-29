@@ -22,8 +22,9 @@ public:
   DllOverrideUseLayer(PlayerManager& manager);
   ~DllOverrideUseLayer() = default;
 
-  void pre(D3D12CreateDeviceCommand& command) override;
   void pre(DllContainerMetaCommand& command) override;
+  void pre(D3D12CreateDeviceCommand& command) override;
+  void pre(D3D12GetDebugInterfaceCommand& command) override;
   void pre(xessGetVersionCommand& command) override;
   void pre(xessD3D12CreateContextCommand& command) override;
 

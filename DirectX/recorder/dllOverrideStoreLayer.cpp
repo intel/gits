@@ -30,6 +30,10 @@ void DllOverrideStoreLayer::post(ID3D12DeviceFactoryCreateDeviceCommand& c) {
   captureAgilitySDKDll(c);
 }
 
+void DllOverrideStoreLayer::post(D3D12GetDebugInterfaceCommand& c) {
+  captureAgilitySDKDll(c);
+}
+
 void DllOverrideStoreLayer::pre(xessGetVersionCommand& c) {
   captureXessDll(c);
 }
@@ -44,37 +48,10 @@ void DllOverrideStoreLayer::captureAgilitySDKDll(Command& c) {
     return;
   }
 
-  HMODULE dll = LoadLibrary("D3D12Core.dll");
-  if (!dll) {
-    return;
-  }
-  char agilitySDKDllPath[MAX_PATH];
-  DWORD result = GetModuleFileName(dll, agilitySDKDllPath, MAX_PATH);
-  FreeLibrary(dll);
-  if (result == 0) {
-    LOG_ERROR << "GetModuleFileName failed";
-    return;
-  }
-
-  if (std::filesystem::exists(agilitySDKDllPath)) {
-    std::ifstream file(agilitySDKDllPath, std::ios::binary);
-
-    file.seekg(0, std::ios::end);
-    std::size_t size = file.tellg();
-    file.seekg(0);
-
-    std::vector<char> content(size, 0);
-    file.read(content.data(), size);
-
-    DllContainerMetaCommand command(c.threadId);
-    command.key = manager_.createCommandKey();
-    command.dllName_.value = L"D3D12Core.dll";
-    command.dllData_.size = size;
-    command.dllData_.value = content.data();
-
-    recorder_.record(command.key, new DllContainerMetaWriter(command));
+  if (captureDll(L"D3D12Core.dll", c.threadId)) {
     manager_.updateCommandKey(c);
   }
+
   agilitySDKDllchecked_ = true;
 }
 
@@ -84,37 +61,51 @@ void DllOverrideStoreLayer::captureXessDll(Command& c) {
     return;
   }
 
-  HMODULE dll = LoadLibrary("libxess.dll");
+  captureDll(L"libxess.dll", c.threadId);
+  xessDllchecked_ = true;
+}
+
+bool DllOverrideStoreLayer::captureDll(const std::wstring& dllName, unsigned threadId) {
+  HMODULE dll = GetModuleHandleW(dllName.c_str());
   if (!dll) {
-    return;
+    return false;
   }
-  char xessDllPath[MAX_PATH];
-  DWORD result = GetModuleFileName(dll, xessDllPath, MAX_PATH);
-  FreeLibrary(dll);
+
+  char dllPath[MAX_PATH];
+  DWORD result = GetModuleFileName(dll, dllPath, MAX_PATH);
   if (result == 0) {
     LOG_ERROR << "GetModuleFileName failed";
-    return;
+    return false;
   }
 
-  if (std::filesystem::exists(xessDllPath)) {
-    std::ifstream file(xessDllPath, std::ios::binary);
-
-    file.seekg(0, std::ios::end);
-    std::size_t size = file.tellg();
-    file.seekg(0);
-
-    std::vector<char> content(size, 0);
-    file.read(content.data(), size);
-
-    DllContainerMetaCommand command(c.threadId);
-    command.key = manager_.createCommandKey();
-    command.dllName_.value = L"libxess.dll";
-    command.dllData_.size = size;
-    command.dllData_.value = content.data();
-
-    recorder_.record(command.key, new DllContainerMetaWriter(command));
+  if (!std::filesystem::exists(dllPath)) {
+    return false;
   }
-  xessDllchecked_ = true;
+
+  std::ifstream file(dllPath, std::ios::binary);
+  if (!file) {
+    LOG_ERROR << "Failed to open dll file";
+    return false;
+  }
+
+  file.seekg(0, std::ios::end);
+  std::size_t size = file.tellg();
+  file.seekg(0);
+
+  std::vector<char> content(size, 0);
+  if (!file.read(content.data(), size)) {
+    LOG_ERROR << "Failed to read dll file";
+    return false;
+  }
+
+  DllContainerMetaCommand command(threadId);
+  command.key = manager_.createCommandKey();
+  command.dllName_.value = const_cast<wchar_t*>(dllName.c_str());
+  command.dllData_.size = size;
+  command.dllData_.value = content.data();
+  recorder_.record(command.key, new DllContainerMetaWriter(command));
+
+  return true;
 }
 
 } // namespace DirectX
