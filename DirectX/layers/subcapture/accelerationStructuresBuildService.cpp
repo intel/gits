@@ -118,7 +118,7 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
       unsigned size = inputs.NumDescs * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
       storeBuffer(inputIndex, size);
     }
-  } else {
+  } else if (inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
     for (unsigned i = 0; i < inputs.NumDescs; ++i) {
       D3D12_RAYTRACING_GEOMETRY_DESC& desc = const_cast<D3D12_RAYTRACING_GEOMETRY_DESC&>(
           c.pDesc_.value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY
@@ -153,7 +153,115 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
           storeBuffer(inputIndex, size);
         }
         ++inputIndex;
+      } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES) {
+        if (desc.OmmTriangles.pTriangles) {
+          auto& triangles = *desc.OmmTriangles.pTriangles;
+          if (triangles.Transform3x4) {
+            unsigned size = sizeof(float) * 3 * 4;
+            storeBuffer(inputIndex, size);
+          }
+          ++inputIndex;
+          if (triangles.IndexBuffer && triangles.IndexCount) {
+            unsigned size =
+                triangles.IndexCount * (triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
+            storeBuffer(inputIndex, size);
+          }
+          ++inputIndex;
+          if (triangles.VertexBuffer.StartAddress && triangles.VertexCount) {
+            unsigned stride = triangles.VertexBuffer.StrideInBytes;
+            if (!stride) {
+              if (triangles.VertexFormat == DXGI_FORMAT_R16G16B16A16_SNORM) {
+                stride = 8;
+              }
+            }
+            unsigned size = triangles.VertexCount * stride;
+            storeBuffer(inputIndex, size);
+          }
+          ++inputIndex;
+        }
+        if (desc.OmmTriangles.pOmmLinkage) {
+          auto& ommLinkage = *desc.OmmTriangles.pOmmLinkage;
+          if (ommLinkage.OpacityMicromapIndexBuffer.StartAddress) {
+            unsigned stride = ommLinkage.OpacityMicromapIndexBuffer.StrideInBytes;
+            unsigned formatSize = 0;
+            if (!stride) {
+              if (ommLinkage.OpacityMicromapIndexFormat == DXGI_FORMAT_R32_UINT) {
+                stride = 4;
+                formatSize = 4;
+              } else if (ommLinkage.OpacityMicromapIndexFormat == DXGI_FORMAT_R16_UINT) {
+                stride = 2;
+                formatSize = 2;
+              } else if (ommLinkage.OpacityMicromapIndexFormat == DXGI_FORMAT_R8_UINT) {
+                stride = 1;
+                formatSize = 1;
+              }
+            } else {
+              if (ommLinkage.OpacityMicromapIndexFormat == DXGI_FORMAT_R32_UINT) {
+                formatSize = 4;
+              } else if (ommLinkage.OpacityMicromapIndexFormat == DXGI_FORMAT_R16_UINT) {
+                formatSize = 2;
+              } else if (ommLinkage.OpacityMicromapIndexFormat == DXGI_FORMAT_R8_UINT) {
+                formatSize = 1;
+              }
+            }
+            GITS_ASSERT(stride);
+            GITS_ASSERT(formatSize);
+            GITS_ASSERT(ommLinkage.OpacityMicromapIndexBuffer.StartAddress % formatSize == 0);
+            GITS_ASSERT(stride % formatSize == 0);
+            unsigned ommCount{};
+            if (desc.OmmTriangles.pTriangles && desc.OmmTriangles.pTriangles->IndexCount > 0) {
+              ommCount = desc.OmmTriangles.pTriangles->IndexCount / 3;
+            }
+            unsigned size = ommCount * stride;
+            if (size) {
+              storeBuffer(inputIndex, size);
+            }
+          }
+          ++inputIndex;
+          ++inputIndex;
+        }
       }
+    }
+  } else if (inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_OPACITY_MICROMAP_ARRAY) {
+    if (inputs.pOpacityMicromapArrayDesc) {
+      auto& ommDesc = *const_cast<D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_DESC*>(
+          inputs.pOpacityMicromapArrayDesc);
+      UINT totalOmmCount{};
+      size_t totalInputSize{};
+      for (unsigned i = 0; i < ommDesc.NumOmmHistogramEntries; ++i) {
+        const auto& histogramEntry = ommDesc.pOmmHistogram[i];
+        totalOmmCount += histogramEntry.Count;
+        size_t numMicroTriangles = 1ull << (2 * histogramEntry.SubdivisionLevel);
+        size_t bitsPerTriangle{};
+        if (histogramEntry.Format == D3D12_RAYTRACING_OPACITY_MICROMAP_FORMAT_OC1_4_STATE) {
+          bitsPerTriangle = 2;
+        } else if (histogramEntry.Format == D3D12_RAYTRACING_OPACITY_MICROMAP_FORMAT_OC1_2_STATE) {
+          bitsPerTriangle = 1;
+        }
+        GITS_ASSERT(bitsPerTriangle);
+        size_t bitsPerOMM = numMicroTriangles * bitsPerTriangle;
+        size_t bytesPerOMM = (bitsPerOMM + 7) / 8;
+        totalInputSize += histogramEntry.Count * bytesPerOMM;
+      }
+      GITS_ASSERT(totalOmmCount);
+      GITS_ASSERT(totalInputSize);
+
+      if (ommDesc.InputBuffer) {
+        GITS_ASSERT(ommDesc.InputBuffer % 128 == 0);
+        storeBuffer(inputIndex, totalInputSize);
+      }
+      ++inputIndex;
+      if (ommDesc.PerOmmDescs.StartAddress) {
+        unsigned stride = ommDesc.PerOmmDescs.StrideInBytes;
+        if (!stride) {
+          stride = sizeof(D3D12_RAYTRACING_OPACITY_MICROMAP_DESC);
+        }
+        GITS_ASSERT(ommDesc.PerOmmDescs.StartAddress % 4 == 0);
+        GITS_ASSERT(stride % 4 == 0);
+        unsigned size = totalOmmCount * stride;
+        storeBuffer(inputIndex, size);
+      }
+      ++inputIndex;
     }
   }
 

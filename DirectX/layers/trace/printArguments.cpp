@@ -977,10 +977,70 @@ FastOStream& operator<<(FastOStream& stream,
         stream << ", " << arg.inputOffsets[inputIndex] << "}, ";
         ++inputIndex;
         stream << desc.AABBs.AABBs.StrideInBytes << "}";
+      } else if (!arg.inputKeys.empty() &&
+                 desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES) {
+        stream << "{{";
+        if (desc.OmmTriangles.pTriangles) {
+          auto& triangles = *desc.OmmTriangles.pTriangles;
+          stream << "{";
+          printObjectKey(stream, arg.inputKeys[inputIndex]);
+          stream << ", " << arg.inputOffsets[inputIndex] << "}, ";
+          ++inputIndex;
+          stream << triangles.IndexFormat << ", " << triangles.VertexFormat << ", "
+                 << triangles.IndexCount << ", " << triangles.VertexCount << ", {";
+          printObjectKey(stream, arg.inputKeys[inputIndex]);
+          stream << ", " << arg.inputOffsets[inputIndex] << "}, {{";
+          ++inputIndex;
+          printObjectKey(stream, arg.inputKeys[inputIndex]);
+          stream << ", " << arg.inputOffsets[inputIndex] << "}, ";
+          ++inputIndex;
+          stream << triangles.VertexBuffer.StrideInBytes << "}";
+        } else {
+          stream << "nullptr";
+        }
+        stream << "}, {";
+        if (desc.OmmTriangles.pOmmLinkage) {
+          auto& ommLinkage = *desc.OmmTriangles.pOmmLinkage;
+          stream << "{{";
+          printObjectKey(stream, arg.inputKeys[inputIndex]);
+          stream << ", " << arg.inputOffsets[inputIndex] << "}, ";
+          ++inputIndex;
+          stream << ommLinkage.OpacityMicromapIndexBuffer.StrideInBytes << "}, ";
+          stream << ommLinkage.OpacityMicromapIndexFormat << ", ";
+          stream << ommLinkage.OpacityMicromapBaseLocation << ", {";
+          printObjectKey(stream, arg.inputKeys[inputIndex]);
+          stream << ", " << arg.inputOffsets[inputIndex] << "}";
+
+        } else {
+          stream << "nullptr";
+        }
+        stream << "}}";
       }
       stream << "}}";
     }
     stream << "]";
+  } else if (!arg.inputKeys.empty() &&
+             arg.value->Inputs.Type ==
+                 D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_OPACITY_MICROMAP_ARRAY) {
+    unsigned inputIndex = 0;
+    stream << "[{" << arg.value->Inputs.pOpacityMicromapArrayDesc->NumOmmHistogramEntries << ", [";
+    for (unsigned i = 0; i < arg.value->Inputs.pOpacityMicromapArrayDesc->NumOmmHistogramEntries;
+         ++i) {
+      if (i > 0) {
+        stream << ", ";
+      }
+      const auto& entry = arg.value->Inputs.pOpacityMicromapArrayDesc->pOmmHistogram[i];
+      stream << "{" << entry.Count << ", " << entry.SubdivisionLevel << ", " << entry.Format << "}";
+    }
+    stream << "], {";
+    printObjectKey(stream, arg.inputKeys[inputIndex]);
+    stream << ", " << arg.inputOffsets[inputIndex] << "}, {{";
+    ++inputIndex;
+    printObjectKey(stream, arg.inputKeys[inputIndex]);
+    stream << ", " << arg.inputOffsets[inputIndex] << "}, ";
+    ++inputIndex;
+    stream << arg.value->Inputs.pOpacityMicromapArrayDesc->PerOmmDescs.StrideInBytes << "}";
+    stream << "}]";
   }
 
   stream << "}, {";

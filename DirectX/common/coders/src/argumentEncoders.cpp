@@ -1298,9 +1298,38 @@ unsigned getSize(const PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUC
   if (arg.value->Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
     if (arg.value->DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY) {
       size += arg.value->NumDescs * sizeof(D3D12_RAYTRACING_GEOMETRY_DESC);
+      for (unsigned i = 0; i < arg.value->NumDescs; ++i) {
+        if (arg.value->pGeometryDescs[i].Type == D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES) {
+          if (arg.value->pGeometryDescs[i].OmmTriangles.pTriangles) {
+            size += sizeof(D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC);
+          }
+          if (arg.value->pGeometryDescs[i].OmmTriangles.pOmmLinkage) {
+            size += sizeof(D3D12_RAYTRACING_GEOMETRY_OMM_LINKAGE_DESC);
+          }
+        }
+      }
     } else if (arg.value->DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS) {
       size += arg.value->NumDescs * sizeof(D3D12_RAYTRACING_GEOMETRY_DESC*);
       size += arg.value->NumDescs * sizeof(D3D12_RAYTRACING_GEOMETRY_DESC);
+      for (unsigned i = 0; i < arg.value->NumDescs; ++i) {
+        if (arg.value->ppGeometryDescs[i]->Type == D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES) {
+          if (arg.value->ppGeometryDescs[i]->OmmTriangles.pTriangles) {
+            size += sizeof(D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC);
+          }
+          if (arg.value->ppGeometryDescs[i]->OmmTriangles.pOmmLinkage) {
+            size += sizeof(D3D12_RAYTRACING_GEOMETRY_OMM_LINKAGE_DESC);
+          }
+        }
+      }
+    }
+  } else if (arg.value->Type ==
+             D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_OPACITY_MICROMAP_ARRAY) {
+    if (arg.value->pOpacityMicromapArrayDesc) {
+      size += sizeof(D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_DESC);
+      if (arg.value->pOpacityMicromapArrayDesc->pOmmHistogram) {
+        size += arg.value->pOpacityMicromapArrayDesc->NumOmmHistogramEntries *
+                sizeof(D3D12_RAYTRACING_OPACITY_MICROMAP_HISTOGRAM_ENTRY);
+      }
     }
   }
 
@@ -1325,6 +1354,20 @@ void encode(char* dest,
         memcpy(dest + offset, arg.value->pGeometryDescs,
                sizeof(D3D12_RAYTRACING_GEOMETRY_DESC) * arg.value->NumDescs);
         offset += sizeof(D3D12_RAYTRACING_GEOMETRY_DESC) * arg.value->NumDescs;
+        for (unsigned i = 0; i < arg.value->NumDescs; ++i) {
+          if (arg.value->pGeometryDescs[i].Type == D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES) {
+            if (arg.value->pGeometryDescs[i].OmmTriangles.pTriangles) {
+              memcpy(dest + offset, arg.value->pGeometryDescs[i].OmmTriangles.pTriangles,
+                     sizeof(D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC));
+              offset += sizeof(D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC);
+            }
+            if (arg.value->pGeometryDescs[i].OmmTriangles.pOmmLinkage) {
+              memcpy(dest + offset, arg.value->pGeometryDescs[i].OmmTriangles.pOmmLinkage,
+                     sizeof(D3D12_RAYTRACING_GEOMETRY_OMM_LINKAGE_DESC));
+              offset += sizeof(D3D12_RAYTRACING_GEOMETRY_OMM_LINKAGE_DESC);
+            }
+          }
+        }
       }
     } else if (arg.value->DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS) {
       if (arg.value->ppGeometryDescs) {
@@ -1336,6 +1379,32 @@ void encode(char* dest,
         memcpy(dest + offset, arg.value->ppGeometryDescs[i],
                sizeof(D3D12_RAYTRACING_GEOMETRY_DESC));
         offset += sizeof(D3D12_RAYTRACING_GEOMETRY_DESC);
+        if (arg.value->ppGeometryDescs[i]->Type == D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES) {
+          if (arg.value->ppGeometryDescs[i]->OmmTriangles.pTriangles) {
+            memcpy(dest + offset, arg.value->ppGeometryDescs[i]->OmmTriangles.pTriangles,
+                   sizeof(D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC));
+            offset += sizeof(D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC);
+          }
+          if (arg.value->ppGeometryDescs[i]->OmmTriangles.pOmmLinkage) {
+            memcpy(dest + offset, arg.value->ppGeometryDescs[i]->OmmTriangles.pOmmLinkage,
+                   sizeof(D3D12_RAYTRACING_GEOMETRY_OMM_LINKAGE_DESC));
+            offset += sizeof(D3D12_RAYTRACING_GEOMETRY_OMM_LINKAGE_DESC);
+          }
+        }
+      }
+    }
+  } else if (arg.value->Type ==
+             D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_OPACITY_MICROMAP_ARRAY) {
+    if (arg.value->pOpacityMicromapArrayDesc) {
+      memcpy(dest + offset, arg.value->pOpacityMicromapArrayDesc,
+             sizeof(D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_DESC));
+      offset += sizeof(D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_DESC);
+      if (arg.value->pOpacityMicromapArrayDesc->pOmmHistogram) {
+        memcpy(dest + offset, arg.value->pOpacityMicromapArrayDesc->pOmmHistogram,
+               sizeof(D3D12_RAYTRACING_OPACITY_MICROMAP_HISTOGRAM_ENTRY) *
+                   arg.value->pOpacityMicromapArrayDesc->NumOmmHistogramEntries);
+        offset += sizeof(D3D12_RAYTRACING_OPACITY_MICROMAP_HISTOGRAM_ENTRY) *
+                  arg.value->pOpacityMicromapArrayDesc->NumOmmHistogramEntries;
       }
     }
   }
@@ -1358,9 +1427,40 @@ unsigned getSize(const PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUC
   if (arg.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
     if (arg.value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY) {
       size += arg.value->Inputs.NumDescs * sizeof(D3D12_RAYTRACING_GEOMETRY_DESC);
+      for (unsigned i = 0; i < arg.value->Inputs.NumDescs; ++i) {
+        if (arg.value->Inputs.pGeometryDescs[i].Type ==
+            D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES) {
+          if (arg.value->Inputs.pGeometryDescs[i].OmmTriangles.pTriangles) {
+            size += sizeof(D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC);
+          }
+          if (arg.value->Inputs.pGeometryDescs[i].OmmTriangles.pOmmLinkage) {
+            size += sizeof(D3D12_RAYTRACING_GEOMETRY_OMM_LINKAGE_DESC);
+          }
+        }
+      }
     } else if (arg.value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS) {
       size += arg.value->Inputs.NumDescs * sizeof(D3D12_RAYTRACING_GEOMETRY_DESC*);
       size += arg.value->Inputs.NumDescs * sizeof(D3D12_RAYTRACING_GEOMETRY_DESC);
+      for (unsigned i = 0; i < arg.value->Inputs.NumDescs; ++i) {
+        if (arg.value->Inputs.ppGeometryDescs[i]->Type ==
+            D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES) {
+          if (arg.value->Inputs.ppGeometryDescs[i]->OmmTriangles.pTriangles) {
+            size += sizeof(D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC);
+          }
+          if (arg.value->Inputs.ppGeometryDescs[i]->OmmTriangles.pOmmLinkage) {
+            size += sizeof(D3D12_RAYTRACING_GEOMETRY_OMM_LINKAGE_DESC);
+          }
+        }
+      }
+    }
+  } else if (arg.value->Inputs.Type ==
+             D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_OPACITY_MICROMAP_ARRAY) {
+    if (arg.value->Inputs.pOpacityMicromapArrayDesc) {
+      size += sizeof(D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_DESC);
+      if (arg.value->Inputs.pOpacityMicromapArrayDesc->pOmmHistogram) {
+        size += arg.value->Inputs.pOpacityMicromapArrayDesc->NumOmmHistogramEntries *
+                sizeof(D3D12_RAYTRACING_OPACITY_MICROMAP_HISTOGRAM_ENTRY);
+      }
     }
   }
 
@@ -1386,6 +1486,21 @@ void encode(char* dest,
         memcpy(dest + offset, arg.value->Inputs.pGeometryDescs,
                sizeof(D3D12_RAYTRACING_GEOMETRY_DESC) * arg.value->Inputs.NumDescs);
         offset += sizeof(D3D12_RAYTRACING_GEOMETRY_DESC) * arg.value->Inputs.NumDescs;
+        for (unsigned i = 0; i < arg.value->Inputs.NumDescs; ++i) {
+          if (arg.value->Inputs.pGeometryDescs[i].Type ==
+              D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES) {
+            if (arg.value->Inputs.pGeometryDescs[i].OmmTriangles.pTriangles) {
+              memcpy(dest + offset, arg.value->Inputs.pGeometryDescs[i].OmmTriangles.pTriangles,
+                     sizeof(D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC));
+              offset += sizeof(D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC);
+            }
+            if (arg.value->Inputs.pGeometryDescs[i].OmmTriangles.pOmmLinkage) {
+              memcpy(dest + offset, arg.value->Inputs.pGeometryDescs[i].OmmTriangles.pOmmLinkage,
+                     sizeof(D3D12_RAYTRACING_GEOMETRY_OMM_LINKAGE_DESC));
+              offset += sizeof(D3D12_RAYTRACING_GEOMETRY_OMM_LINKAGE_DESC);
+            }
+          }
+        }
       }
     } else if (arg.value->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS) {
       if (arg.value->Inputs.ppGeometryDescs) {
@@ -1397,6 +1512,33 @@ void encode(char* dest,
         memcpy(dest + offset, arg.value->Inputs.ppGeometryDescs[i],
                sizeof(D3D12_RAYTRACING_GEOMETRY_DESC));
         offset += sizeof(D3D12_RAYTRACING_GEOMETRY_DESC);
+        if (arg.value->Inputs.ppGeometryDescs[i]->Type ==
+            D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES) {
+          if (arg.value->Inputs.ppGeometryDescs[i]->OmmTriangles.pTriangles) {
+            memcpy(dest + offset, arg.value->Inputs.ppGeometryDescs[i]->OmmTriangles.pTriangles,
+                   sizeof(D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC));
+            offset += sizeof(D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC);
+          }
+          if (arg.value->Inputs.ppGeometryDescs[i]->OmmTriangles.pOmmLinkage) {
+            memcpy(dest + offset, arg.value->Inputs.ppGeometryDescs[i]->OmmTriangles.pOmmLinkage,
+                   sizeof(D3D12_RAYTRACING_GEOMETRY_OMM_LINKAGE_DESC));
+            offset += sizeof(D3D12_RAYTRACING_GEOMETRY_OMM_LINKAGE_DESC);
+          }
+        }
+      }
+    }
+  } else if (arg.value->Inputs.Type ==
+             D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_OPACITY_MICROMAP_ARRAY) {
+    if (arg.value->Inputs.pOpacityMicromapArrayDesc) {
+      memcpy(dest + offset, arg.value->Inputs.pOpacityMicromapArrayDesc,
+             sizeof(D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_DESC));
+      offset += sizeof(D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_DESC);
+      if (arg.value->Inputs.pOpacityMicromapArrayDesc->pOmmHistogram) {
+        memcpy(dest + offset, arg.value->Inputs.pOpacityMicromapArrayDesc->pOmmHistogram,
+               sizeof(D3D12_RAYTRACING_OPACITY_MICROMAP_HISTOGRAM_ENTRY) *
+                   arg.value->Inputs.pOpacityMicromapArrayDesc->NumOmmHistogramEntries);
+        offset += sizeof(D3D12_RAYTRACING_OPACITY_MICROMAP_HISTOGRAM_ENTRY) *
+                  arg.value->Inputs.pOpacityMicromapArrayDesc->NumOmmHistogramEntries;
       }
     }
   }
