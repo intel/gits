@@ -10,7 +10,6 @@ Enums:
   - Name: TraceData
     Description: Trace data type
     Values:
-      - Value: VK_STRUCTS
       - Value: FRAME_NUMBER
   - Name: GITSMode
     Description: Mode of operation

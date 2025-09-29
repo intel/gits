@@ -96,11 +96,7 @@ void DeriveConfigData<Configuration::LevelZero>(Configuration::LevelZero& obj,
 template <>
 void DeriveConfigData<Configuration::Common::Shared>(Configuration::Common::Shared& obj,
                                                      Configuration& config) {
-  if (config.vulkan.recorder.traceVkStructs) {
-    obj.traceDataOpts.insert(TraceData::VK_STRUCTS);
-  }
-
-  auto TraceDataAll = {TraceData::VK_STRUCTS, TraceData::FRAME_NUMBER};
+  auto TraceDataAll = {TraceData::FRAME_NUMBER};
   if (config.common.shared.thresholdLogLevel == LogLevel::TRACEV) {
     for (auto& opt : TraceDataAll) {
       obj.traceDataOpts.insert(opt);

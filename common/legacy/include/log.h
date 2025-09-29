@@ -56,7 +56,7 @@ enum LogStyle {
   RAW,        // example log
 };
 
-const TraceData TraceDataAll[] = {TraceData::VK_STRUCTS, TraceData::FRAME_NUMBER};
+const TraceData TraceDataAll[] = {TraceData::FRAME_NUMBER};
 
 class CLog {
 public:

@@ -25,10 +25,7 @@ std::string ToStr(const ${struct.name}& c) {
 std::string ToStr(const ${struct.name}* c) {
   std::ostringstream oss;
   if (c != nullptr) {
-    if (Configurator::IsTraceDataOptPresent(TraceData::VK_STRUCTS))
-      oss << ToStr(*c);
-    else
-      oss << "{ " << (void*)c << " }";
+    oss << ToStr(*c);
   } else {
     oss << "{ 0 }";
   }
@@ -111,10 +108,7 @@ std::string ToStr(const ${type_name}& c) {
 std::string ToStr(const ${type_name}* c) {
   std::ostringstream oss;
   if (c != nullptr) {
-    if (Configurator::IsTraceDataOptPresent(TraceData::VK_STRUCTS))
-      oss << ToStr(*c);
-    else
-      oss << "{ " << (void*)c << " }";
+    oss << ToStr(*c);
   } else {
     oss << "{ 0 }";
   }
@@ -133,10 +127,7 @@ std::string ToStr(const ${type_name}& c) {
 std::string ToStr(const ${type_name}* c) {
   std::ostringstream oss;
   if (c != nullptr) {
-    if (Configurator::IsTraceDataOptPresent(TraceData::VK_STRUCTS))
-      oss << ToStr(*c);
-    else
-      oss << "{ " << (void*)c << " }";
+    oss << ToStr(*c);
   } else {
     oss << "{ 0 }";
   }

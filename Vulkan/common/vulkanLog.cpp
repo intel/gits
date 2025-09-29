@@ -142,9 +142,7 @@ std::string ToStr(PNextPointerTypeTag pNext) {
 
   std::ostringstream oss;
   if (pNext != nullptr) {
-    if (Configurator::IsTraceDataOptPresent(TraceData::VK_STRUCTS)) {
-
-      switch (*(VkStructureType*)pNext) {
+    switch (*(VkStructureType*)pNext) {
 
 #define PNEXT_WRAPPER(STRUCTURE_TYPE, structure, ...)                                              \
   case STRUCTURE_TYPE:                                                                             \
@@ -153,12 +151,9 @@ std::string ToStr(PNextPointerTypeTag pNext) {
 
 #include "vulkanPNextWrappers.inl"
 
-      default:
-        oss << (const void*)pNext;
-        break;
-      }
-    } else {
+    default:
       oss << (const void*)pNext;
+      break;
     }
   } else {
     oss << "0";

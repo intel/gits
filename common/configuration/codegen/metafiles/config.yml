@@ -54,7 +54,6 @@ Configuration:
               Enables logging additional info to trace specified by comma separated options. 
               Options: 
 
-              * vkStructs - instead of logging addresses of Vulkan objects, GITS will log the structures, tables or other data behind them. 
               * frameNumber - dump frame number for every api call.
             ConfigName: traceData
           - Name: useEvents
@@ -2013,12 +2012,6 @@ Configuration:
           - Name: dumpSubmits
             Type: BitRange
             Default: "-"
-          - Name: traceVkStructs
-            Type: bool
-            Default: true
-            Arguments: [traceVKStructs]
-            Description: "[DEPRECATED] Legacy equivalent of the --traceData vkStructs option."
-            ConfigName: traceVKStructs
           - Name: memorySegmentSize
             Type: uint32_t
             Default: 512

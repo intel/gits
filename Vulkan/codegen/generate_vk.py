@@ -486,30 +486,40 @@ def make_struct_field_log_code(field: Field) -> str:
     if field.name == 'pNext':
         result += ' << (PNextPointerTypeTag)c.pNext << ", " << '
     elif field.count is not None:
-        additional_conditions = ''
+        conditions = ''
+
         if '[' not in field.type:  # Skip nullptr check for arrays on the stack.
-            additional_conditions += f' && (c.{field.name} != nullptr)'
+            conditions += f'(c.{field.name} != nullptr)'
         if field.log_condition is not None:
-            additional_conditions += f' && ({field.log_condition})'
+            conditions += f' && ({field.log_condition})'
 
         count: str = field.count
         if not count.isdigit():
             count = f'c.{count}'
 
-        result += inspect.cleandoc(f'''
+        if conditions:
+            result += inspect.cleandoc(f'''
             ;
-              if ((Configurator::IsTraceDataOptPresent(TraceData::VK_STRUCTS)){additional_conditions}) {{
+              if ({conditions}) {{
                 oss << "{{";
                 for (uint32_t i = 0; i < (uint32_t){count}; ++i) {{
                   oss << " [" << i << "]:" << ToStr({type_cast}c.{field.name}[i]);
                 }}
                 oss << " }}";
               }} else {{
-                oss << (void*)c.{field.name};
+                oss << "{{ 0 }}";
               }}
-            ''')
-        result += '\n'
-        result += '  oss << ", " << '
+''')
+        else:
+            result += inspect.cleandoc(f'''
+            ;
+              oss << "{{";
+              for (uint32_t i = 0; i < (uint32_t){count}; ++i) {{
+                oss << " [" << i << "]:" << ToStr({type_cast}c.{field.name}[i]);
+              }}
+              oss << " }}";
+''')
+        result += '\n  oss << ", " << '
     else:
         result += f' << ToStr({type_cast}c.{field.name}) << ", " << '
 
@@ -541,21 +551,21 @@ def make_argument_log_code(argument: Argument, count_is_a_pointer: bool) -> str:
         additional_conditions: str = ''
         dereference: str = ''
         if '[' not in argument.type:  # Skip nullptr check for arrays on the stack.
-            additional_conditions = f' && ({argument.name} != nullptr)'
+            additional_conditions = f'({argument.name} != nullptr)'
             if count_is_a_pointer:
                 additional_conditions += f' && ({argument.count} != nullptr)'
                 dereference = '*'
 
         result += inspect.cleandoc(f'''
             ;
-                if ((Configurator::IsTraceDataOptPresent(TraceData::VK_STRUCTS)){additional_conditions}) {{
+                if ({additional_conditions}) {{
                   LOG_TRACE << "{{";
                   for (uint32_t i = 0; i < (uint32_t){dereference}{argument.count}; ++i) {{
                     LOG_TRACE << " [" << i << "]:" << ToStr({type_cast}{argument.name}[i]);
                   }}
                   LOG_TRACE << " }}";
                 }} else {{
-                  LOG_TRACE << ToStr({argument.name});
+                  LOG_TRACE << "{{ 0 }}";
                 }}
             ''')
         result += '\n'
