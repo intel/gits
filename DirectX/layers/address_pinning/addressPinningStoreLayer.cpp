@@ -57,6 +57,9 @@ void AddressPinningStoreLayer::storeAddressRanges() {
 }
 
 void AddressPinningStoreLayer::post(ID3D12DeviceCreateCommittedResourceCommand& command) {
+  if (command.ppvResource_.key & Command::stateRestoreKeyMask) {
+    return;
+  }
   handleResource(command);
 }
 
@@ -118,6 +121,10 @@ void AddressPinningStoreLayer::post(ID3D12Device13OpenExistingHeapFromAddress1Co
 
 void AddressPinningStoreLayer::pre(ID3D12ResourceGetGPUVirtualAddressCommand& command) {
   if (Configurator::IsRecorder()) {
+    return;
+  }
+
+  if (command.object_.key & Command::stateRestoreKeyMask) {
     return;
   }
 
@@ -188,7 +195,7 @@ void AddressPinningStoreLayer::handleHeap(CommandT& command) {
 
 template <typename CommandT>
 void AddressPinningStoreLayer::handleGetGPUVirtualAddress(CommandT& command) {
-  if (!command.object_.value) {
+  if (!command.object_.value || command.result_.value == 0) {
     return;
   }
 

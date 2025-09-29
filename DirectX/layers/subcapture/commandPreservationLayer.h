@@ -31,6 +31,36 @@ public:
   void pre(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) override;
   void post(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) override;
   void pre(INTC_D3D12_CreateComputePipelineStateCommand& c) override;
+  void pre(ID3D12DeviceCreateConstantBufferViewCommand& c) override;
+  void post(ID3D12DeviceCreateConstantBufferViewCommand& c) override;
+  void pre(ID3D12GraphicsCommandListIASetIndexBufferCommand& c) override;
+  void post(ID3D12GraphicsCommandListIASetIndexBufferCommand& c) override;
+  void pre(ID3D12GraphicsCommandListIASetVertexBuffersCommand& c) override;
+  void post(ID3D12GraphicsCommandListIASetVertexBuffersCommand& c) override;
+  void pre(ID3D12GraphicsCommandListSOSetTargetsCommand& c) override;
+  void post(ID3D12GraphicsCommandListSOSetTargetsCommand& c) override;
+  void pre(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c) override;
+  void post(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c) override;
+  void pre(ID3D12DeviceCreateShaderResourceViewCommand& c) override;
+  void post(ID3D12DeviceCreateShaderResourceViewCommand& c) override;
+  void pre(ID3D12GraphicsCommandListSetComputeRootConstantBufferViewCommand& c) override;
+  void post(ID3D12GraphicsCommandListSetComputeRootConstantBufferViewCommand& c) override;
+  void pre(ID3D12GraphicsCommandListSetGraphicsRootConstantBufferViewCommand& c) override;
+  void post(ID3D12GraphicsCommandListSetGraphicsRootConstantBufferViewCommand& c) override;
+  void pre(ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand& c) override;
+  void post(ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand& c) override;
+  void pre(ID3D12GraphicsCommandListSetGraphicsRootShaderResourceViewCommand& c) override;
+  void post(ID3D12GraphicsCommandListSetGraphicsRootShaderResourceViewCommand& c) override;
+  void pre(ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& c) override;
+  void post(ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& c) override;
+  void pre(ID3D12GraphicsCommandListSetGraphicsRootUnorderedAccessViewCommand& c) override;
+  void post(ID3D12GraphicsCommandListSetGraphicsRootUnorderedAccessViewCommand& c) override;
+  void pre(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) override;
+  void post(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) override;
+  void pre(ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c)
+      override;
+  void post(ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c)
+      override;
 
 private:
   std::vector<D3D12_GPU_VIRTUAL_ADDRESS> captureGpuAddresses_;

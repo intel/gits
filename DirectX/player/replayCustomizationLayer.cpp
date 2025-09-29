@@ -261,7 +261,7 @@ void ReplayCustomizationLayer::pre(WaitForFenceSignaledCommand& c) {
 }
 
 void ReplayCustomizationLayer::post(ID3D12DeviceCreateCommittedResourceCommand& c) {
-  if (useAddressPinning_) {
+  if (useAddressPinning_ && !(c.ppvResource_.key & Command::stateRestoreKeyMask)) {
     return;
   }
 
@@ -375,6 +375,10 @@ void ReplayCustomizationLayer::post(ID3D12Device4CreateHeap1Command& c) {
 }
 
 void ReplayCustomizationLayer::post(INTC_D3D12_CreateHeapCommand& c) {
+  if (useAddressPinning_) {
+    return;
+  }
+
   ID3D12Heap* heap = static_cast<ID3D12Heap*>(*c.ppvHeap_.value);
   manager_.getGpuAddressService().createHeap(c.ppvHeap_.key, heap);
 }
@@ -960,8 +964,15 @@ void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandList4BeginRenderPassComm
 void ReplayCustomizationLayer::pre(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
   if (useAddressPinning_) {
+    if (c.pDesc_.scratchAccelerationStructureKey & Command::stateRestoreKeyMask) {
+      c.pDesc_.value->ScratchAccelerationStructureData =
+          manager_.getGpuAddressService().getGpuAddress(
+              c.pDesc_.scratchAccelerationStructureKey,
+              c.pDesc_.scratchAccelerationStructureOffset);
+    }
     return;
   }
+
   c.pDesc_.value->DestAccelerationStructureData = manager_.getGpuAddressService().getGpuAddress(
       c.pDesc_.destAccelerationStructureKey, c.pDesc_.destAccelerationStructureOffset);
   if (c.pDesc_.value->SourceAccelerationStructureData) {
