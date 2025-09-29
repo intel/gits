@@ -101,11 +101,11 @@ void ResourceContentRestore::restoreContent(const std::vector<unsigned>& resourc
 
   // restore batches
   {
-    auto restoreUnmappable = [this](std::vector<ResourceInfo>& resourceInfos, size_t chunkSize) {
+    auto restoreUnmappable = [this](std::vector<ResourceInfo>& resourceInfos, size_t batchSize) {
       unsigned startIndex = 0;
       unsigned restored = 0;
       do {
-        restored = restoreUnmappableResources(resourceInfos, startIndex, chunkSize);
+        restored = restoreUnmappableResources(resourceInfos, startIndex, batchSize);
         startIndex += restored;
       } while (restored);
     };
@@ -122,9 +122,9 @@ void ResourceContentRestore::restoreContent(const std::vector<unsigned>& resourc
         }
 
         if (type == UnmappableResourceBuffer) {
-          restoreUnmappable(resourceInfos, buffersMaxChunkSize);
+          restoreUnmappable(resourceInfos, buffersMaxBatchSize_);
         } else if (type == UnmappableResourceTexture) {
-          restoreUnmappable(resourceInfos, texturesMaxChunkSize);
+          restoreUnmappable(resourceInfos, texturesMaxBatchSize_);
         }
       }
     }
@@ -170,7 +170,7 @@ void ResourceContentRestore::restoreMappableResources(
 unsigned ResourceContentRestore::restoreUnmappableResources(
     std::vector<ResourceInfo>& unmappableResourceStates,
     unsigned resourceStartIndex,
-    UINT64 maxChunkSize) {
+    UINT64 maxBatchSize) {
   if (resourceStartIndex >= unmappableResourceStates.size()) {
     return 0;
   }
@@ -197,7 +197,7 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
     for (auto& entry : resourceSizes[i]) {
       totalSize += getAlignedSize(entry.first);
     }
-    if (totalSize > maxChunkSize) {
+    if (totalSize > maxBatchSize) {
       if (!resourcesCount) {
         totalSizeRestored = totalSize;
         ++resourcesCount;
@@ -620,7 +620,7 @@ void ResourceContentRestore::initRestoreUnmappableResources() {
     return;
   }
 
-  size_t maxUploadSize = std::max(buffersMaxChunkSize, texturesMaxChunkSize);
+  size_t maxUploadSize = std::max(buffersMaxBatchSize_, texturesMaxBatchSize_);
   for (const auto& textureInfo : unmappableResourceTextures_) {
     std::vector<std::pair<unsigned, D3D12_PLACED_SUBRESOURCE_FOOTPRINT>> subresourceSizes;
     D3D12_RESOURCE_DESC desc = textureInfo.second.resource->GetDesc();

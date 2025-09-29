@@ -40,7 +40,7 @@ private:
   void restoreMappableResources(const std::vector<ResourceInfo>& resourceInfos);
   unsigned restoreUnmappableResources(std::vector<ResourceInfo>& unmappableResourceStates,
                                       unsigned resourceStartIndex,
-                                      UINT64 maxChunkSize);
+                                      UINT64 maxBatchSize);
   void getSubresourceSizes(
       ID3D12Device* device,
       D3D12_RESOURCE_DESC& desc,
@@ -52,8 +52,8 @@ private:
   unsigned createSubcaptureAuxiliaryPlacedResource(unsigned primaryResourceKey);
 
 private:
-  static constexpr size_t texturesMaxChunkSize{0x1000};
-  static constexpr size_t buffersMaxChunkSize{0x100000};
+  static constexpr size_t texturesMaxBatchSize_{0x1000};
+  static constexpr size_t buffersMaxBatchSize_{0x100000};
 
   StateTrackingService& stateService_;
   std::unordered_map<unsigned, ResourceInfo> mappableResourceStates_;
