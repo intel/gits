@@ -75,6 +75,8 @@ public:
   void pre(ID3D12GraphicsCommandListSetGraphicsRootShaderResourceViewCommand& command) override;
   void pre(ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& command) override;
   void pre(ID3D12GraphicsCommandListSetGraphicsRootUnorderedAccessViewCommand& command) override;
+  void pre(ID3D12GraphicsCommandListSetPipelineStateCommand& command) override;
+  void pre(ID3D12GraphicsCommandList4SetPipelineState1Command& command) override;
   void pre(ID3D12DeviceCreateConstantBufferViewCommand& command) override;
   void pre(ID3D12GraphicsCommandListIASetIndexBufferCommand& command) override;
   void pre(ID3D12GraphicsCommandListIASetVertexBuffersCommand& command) override;

@@ -449,6 +449,18 @@ void ReplayCustomizationLayer::pre(
   fillGpuAddressArgument(c.BufferLocation_);
 }
 
+void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandListSetPipelineStateCommand& c) {
+  if (!c.pPipelineState_.key) {
+    c.skip = true;
+  }
+}
+
+void ReplayCustomizationLayer::pre(ID3D12GraphicsCommandList4SetPipelineState1Command& c) {
+  if (!c.pStateObject_.key) {
+    c.skip = true;
+  }
+}
+
 void ReplayCustomizationLayer::pre(ID3D12DeviceCreateConstantBufferViewCommand& c) {
   fillCpuDescriptorHandleArgument(c.DestDescriptor_);
 
