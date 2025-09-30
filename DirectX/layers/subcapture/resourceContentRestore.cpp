@@ -210,31 +210,38 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
 
   GITS_ASSERT(totalSizeRestored <= uploadResourceSize_);
 
-  // make resources resident
+  // make resources resident if residency changed
 
   std::vector<unsigned> residencyKeys;
   std::vector<ID3D12Pageable*> residencyObjects;
-  for (unsigned i = 0; i < resourcesCount; ++i) {
-    ResourceInfo& state = unmappableResourceStates[i + resourceStartIndex];
-    if (state.heapKey) {
-      ObjectState* heapState = stateService_.getState(state.heapKey);
-      residencyKeys.push_back(state.heapKey);
-      residencyObjects.push_back(static_cast<ID3D12Pageable*>(heapState->object));
-    } else {
-      residencyKeys.push_back(state.key);
-      residencyObjects.push_back(state.resource);
+  {
+    std::set<unsigned> residencyKeysUnique;
+    std::set<ID3D12Pageable*> residencyObjectsUnique;
+    for (unsigned i = 0; i < resourcesCount; ++i) {
+      ResourceInfo& state = unmappableResourceStates[i + resourceStartIndex];
+      if (state.heapKey) {
+        ObjectState* heapState = stateService_.getState(state.heapKey);
+        residencyKeysUnique.insert(state.heapKey);
+        residencyObjectsUnique.insert(static_cast<ID3D12Pageable*>(heapState->object));
+      } else {
+        residencyKeysUnique.insert(state.key);
+        residencyObjectsUnique.insert(state.resource);
+      }
+    }
+
+    if (residencyKeysUnique != prevResidencyKeys_) {
+      residencyKeys = std::vector<unsigned>(residencyKeysUnique.begin(), residencyKeysUnique.end());
+      residencyObjects = std::vector<ID3D12Pageable*>(residencyObjectsUnique.begin(),
+                                                      residencyObjectsUnique.end());
+      evictPrevResidencyObjects();
+      prevResidencyKeys_ = residencyKeysUnique;
+      prevResidencyObjects_ = residencyObjectsUnique;
     }
   }
 
   if (!residencyKeys.empty()) {
-    Microsoft::WRL::ComPtr<ID3D12Device3> device3;
-    HRESULT hr = device_->QueryInterface(IID_PPV_ARGS(&device3));
+    HRESULT hr = device_->MakeResident(residencyObjects.size(), residencyObjects.data());
     GITS_ASSERT(hr == S_OK);
-    hr = device3->EnqueueMakeResident(D3D12_RESIDENCY_FLAG_NONE, residencyObjects.size(),
-                                      residencyObjects.data(), fence_, ++currentFenceValue_);
-    GITS_ASSERT(hr == S_OK);
-    while (fence_->GetCompletedValue() < currentFenceValue_) {
-    }
   }
 
   // copy resources contents into readback resource
@@ -396,13 +403,6 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
 
   auxiliaryPlacedResources.clear();
 
-  // decrese residency count or evict
-
-  if (!residencyKeys.empty()) {
-    HRESULT hr = device_->Evict(residencyObjects.size(), residencyObjects.data());
-    GITS_ASSERT(hr == S_OK);
-  }
-
   // create upload resource with resources contents in subcaptured stream
 
   unsigned deviceKey = unmappableResourceStates[0].deviceKey;
@@ -440,10 +440,9 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
   // make resources resident
 
   if (!residencyKeys.empty()) {
-    ID3D12Device3EnqueueMakeResidentCommand makeResident;
+    ID3D12DeviceMakeResidentCommand makeResident;
     makeResident.key = stateService_.getUniqueCommandKey();
     makeResident.object_.key = deviceKey;
-    makeResident.Flags_.value = D3D12_RESIDENCY_FLAG_NONE;
     makeResident.NumObjects_.value = residencyKeys.size();
     ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
     makeResident.ppObjects_.value = &fakePtr;
@@ -451,15 +450,7 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
     for (unsigned key : residencyKeys) {
       makeResident.ppObjects_.keys.push_back(key);
     }
-    makeResident.pFenceToSignal_.key = fenceKey_;
-    makeResident.FenceValueToSignal_.value = ++recordedFenceValue_;
-    stateService_.getRecorder().record(new ID3D12Device3EnqueueMakeResidentWriter(makeResident));
-
-    ID3D12FenceGetCompletedValueCommand getCompletedValue;
-    getCompletedValue.key = stateService_.getUniqueCommandKey();
-    getCompletedValue.object_.key = fenceKey_;
-    getCompletedValue.result_.value = recordedFenceValue_;
-    stateService_.getRecorder().record(new ID3D12FenceGetCompletedValueWriter(getCompletedValue));
+    stateService_.getRecorder().record(new ID3D12DeviceMakeResidentWriter(makeResident));
   }
 
   // restore resources contents from upload resource in subcaptured stream
@@ -563,22 +554,6 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
     releaseCommand.key = stateService_.getUniqueCommandKey();
     releaseCommand.object_.key = key;
     stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommand));
-  }
-
-  // decrese residency count or evict
-
-  if (!residencyKeys.empty()) {
-    ID3D12DeviceEvictCommand evict;
-    evict.key = stateService_.getUniqueCommandKey();
-    evict.object_.key = deviceKey;
-    evict.NumObjects_.value = residencyKeys.size();
-    ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
-    evict.ppObjects_.value = &fakePtr;
-    evict.ppObjects_.size = residencyKeys.size();
-    for (unsigned key : residencyKeys) {
-      evict.ppObjects_.keys.push_back(key);
-    }
-    stateService_.getRecorder().record(new ID3D12DeviceEvictWriter(evict));
   }
 
   return resourcesCount;
@@ -744,6 +719,8 @@ void ResourceContentRestore::cleanupRestoreUnmappableResources() {
   if (!restoreUnmappableResourcesInitialized_) {
     return;
   }
+
+  evictPrevResidencyObjects();
 
   device_->Release();
   commandQueue_->Release();
@@ -925,6 +902,33 @@ unsigned ResourceContentRestore::createSubcaptureAuxiliaryPlacedResource(
   }
 
   return auxiliaryResourceKey;
+}
+
+void ResourceContentRestore::evictPrevResidencyObjects() {
+  if (prevResidencyKeys_.empty()) {
+    return;
+  }
+
+  std::vector<unsigned> residencyKeys(prevResidencyKeys_.begin(), prevResidencyKeys_.end());
+  std::vector<ID3D12Pageable*> residencyObjects(prevResidencyObjects_.begin(),
+                                                prevResidencyObjects_.end());
+
+  HRESULT hr = device_->Evict(residencyObjects.size(), residencyObjects.data());
+  GITS_ASSERT(hr == S_OK);
+
+  unsigned deviceKey = stateService_.getDeviceKey();
+
+  ID3D12DeviceEvictCommand evict;
+  evict.key = stateService_.getUniqueCommandKey();
+  evict.object_.key = deviceKey;
+  evict.NumObjects_.value = residencyKeys.size();
+  ID3D12Pageable* fakePtr = reinterpret_cast<ID3D12Pageable*>(1);
+  evict.ppObjects_.value = &fakePtr;
+  evict.ppObjects_.size = residencyKeys.size();
+  for (unsigned key : residencyKeys) {
+    evict.ppObjects_.keys.push_back(key);
+  }
+  stateService_.getRecorder().record(new ID3D12DeviceEvictWriter(evict));
 }
 
 } // namespace DirectX

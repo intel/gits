@@ -13,6 +13,7 @@
 #include <vector>
 #include <map>
 #include <unordered_map>
+#include <set>
 
 namespace gits {
 namespace DirectX {
@@ -50,6 +51,7 @@ private:
   bool isBarrierRestricted(unsigned resourceKey);
   ID3D12Resource* createAuxiliaryPlacedResource(unsigned primaryResourceKey);
   unsigned createSubcaptureAuxiliaryPlacedResource(unsigned primaryResourceKey);
+  void evictPrevResidencyObjects();
 
 private:
   static constexpr size_t texturesMaxBatchSize_{0x1000};
@@ -74,6 +76,8 @@ private:
   UINT64 recordedFenceValue_{};
   size_t uploadResourceSize_{};
   bool restoreUnmappableResourcesInitialized_{};
+  std::set<unsigned> prevResidencyKeys_;
+  std::set<ID3D12Pageable*> prevResidencyObjects_;
 };
 
 } // namespace DirectX
