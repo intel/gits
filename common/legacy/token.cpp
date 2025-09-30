@@ -334,11 +334,6 @@ CTokenMakeCurrentThread::CTokenMakeCurrentThread(int threadid) : _threadId(threa
     LOG_INFO << "Recorded Application uses multiple threads.";
     LOG_WARNING << "Multithreaded applications have to be recorded from beginning. Subcapturing "
                    "from stream is possible without the --faithfulThreading option.";
-    if (Configurator::DumpCCode() && CGits::Instance().MultithreadedApp()) {
-      LOG_ERROR << "CCodeDump is not possible for multithreaded application. Please record binary "
-                   "stream first and then recapture it to CCode";
-      throw EOperationFailed(EXCEPTION_MESSAGE);
-    }
   };
   LOG_TRACE << "Current thread: " << threadid;
   CGits::Instance().CurrentThreadId(threadid);
@@ -388,11 +383,6 @@ CTokenMakeCurrentThreadNoCtxSwitch::CTokenMakeCurrentThreadNoCtxSwitch(int threa
     LOG_INFO << "Recorded Application uses multiple threads.";
     LOG_WARNING << "Multithreaded applications have to be recorded from beginning. Subcapturing "
                    "from stream is possible without the --faithfulThreading option.";
-    if (Configurator::DumpCCode() && CGits::Instance().MultithreadedApp()) {
-      LOG_ERROR << "CCodeDump is not possible for multithreaded application. Please record binary "
-                   "stream first and then recapture it to CCode";
-      throw EOperationFailed(EXCEPTION_MESSAGE);
-    }
   };
   LOG_TRACE << "Current thread (no context switch token): " << threadid;
   CGits::Instance().CurrentThreadId(threadid);

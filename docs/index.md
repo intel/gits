@@ -12,7 +12,7 @@ hide:
 - [OpenGL :fontawesome-solid-arrow-up-right-from-square:](https://www.khronos.org/opengl/) and 
 - [DirectX12 :fontawesome-solid-arrow-up-right-from-square:](https://learn.microsoft.com/en-us/windows/win32/direct3d12/direct3d-12-graphics)
 
-**GITS** allows you to record sequences of API calls. You can either serialize them into binary traces that can be replayed later (we call them '*streams*'), or you can generate a C++ project from them (we call it '*CCode*'). See the [Usage section](#usage) for more info.
+**GITS** allows you to record sequences of API calls into binary traces that can be replayed later (we call them '*streams*'). See the [Usage section](#usage) for more info.
 
 ```mermaid
 flowchart LR

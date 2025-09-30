@@ -246,21 +246,6 @@ set(L0_Lua_SOURCES
 )
 install(FILES ${L0_Lua_SOURCES} DESTINATION LuaScripts/LevelZero)
 
-set(L0_CCode_SOURCES
-  ${CMAKE_CURRENT_BINARY_DIR}/helperL0.cpp
-  ${CMAKE_CURRENT_BINARY_DIR}/l0DriversInit.cpp
-  common/l0Drivers.cpp
-  common/l0Log.cpp)
-
-set(L0_CCode_HEADERS
-  ${CMAKE_CURRENT_BINARY_DIR}/helperL0.h
-  common/include/l0Drivers.h
-  ${CMAKE_CURRENT_BINARY_DIR}/l0Header.h
-  ${CMAKE_CURRENT_BINARY_DIR}/l0Log.h)
-
-install(FILES ${L0_CCode_SOURCES} DESTINATION CCode/CCodeSource)
-install(FILES ${L0_CCode_HEADERS} DESTINATION CCode/CCodeSource/include)
-
 if(WIN32)
   if(MSVC)
     install(FILES $<TARGET_PDB_FILE:L0_interceptor> RENAME ze_intel_gpu64.pdb DESTINATION Recorder/${L0_INSTALL_SUBDIR} OPTIONAL)

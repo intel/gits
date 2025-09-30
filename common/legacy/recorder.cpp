@@ -483,19 +483,6 @@ void gits::CRecorder::Register(std::unique_ptr<CBehavior> behavior) {
     Scheduler().Stream(_sc.oBinStream.get());
     (*_sc.oBinStream) << CGits::Instance();
   }
-
-  if (Configurator::DumpCCode()) {
-    // create file
-    _sc.oCodeStream.reset(new CCodeOStream(filePath));
-
-    // check if file was created
-    if (!*_sc.oCodeStream) {
-      LOG_ERROR << "Cannot create file '" << filePath << ".c'!!!";
-      throw EOperationFailed(EXCEPTION_MESSAGE);
-    }
-
-    Scheduler().Stream(_sc.oCodeStream.get());
-  }
 }
 
 /**
@@ -558,7 +545,7 @@ void gits::CRecorder::Start() {
   bool isVulkan = inst.apis.Has3D() && inst.apis.Iface3D().Api() == inst.apis.Vulkan;
   // First frame is a special case.
   // TODO: Make it so that any frame number logic is not necessary in compute-only streams.
-  if (inst.CurrentFrame() == 1 && (!Configurator::DumpCCode() || !isVulkan)) {
+  if (inst.CurrentFrame() == 1 && !isVulkan) {
     Scheduler().Register(new CTokenMarker(CToken::ID_PRE_RECORD_END));
     Scheduler().Register(new CTokenMarker(CToken::ID_FRAME_START));
     //first frame start time stamp

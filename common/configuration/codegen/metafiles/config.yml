@@ -7,18 +7,6 @@
 # ===================== end_copyright_notice ==============================
 
 Configuration:
-  - Name: CCode
-    InstanceName: ccode
-    Type: Group
-    Options:
-      - Name: outputPath
-        Type: std::filesystem::path
-        Default: ""
-        Accessibility: Derived
-      - Name: benchmarkStartFrame
-        Type: uint32_t
-        Default: ""
-        Accessibility: Derived
   - Name: Common
     Type: Group
     Options:
@@ -1565,10 +1553,6 @@ Configuration:
             Default: true
             ConfigName: mTDriverWA
             OSVisibility: [WINDOWS]
-          - Name: ccodeRangesWA
-            Type: bool
-            Default: false
-            ConfigName: cCodeRangesWA
   - Name: Vulkan
     Type: Group
     Options:

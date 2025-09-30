@@ -41,7 +41,6 @@ inline std::vector<std::string> ParseCaptureKernels(const std::string& value) {
 namespace gits {
 template <>
 void DeriveConfigData<Configuration>(Configuration& obj, Configuration& config) {
-  obj.ccode.DeriveData(config);
   obj.common.DeriveData(config);
   obj.opengl.DeriveData(config);
   obj.vulkan.DeriveData(config);
@@ -265,10 +264,6 @@ void DeriveConfigData<Configuration::Common::Recorder>(Configuration::Common::Re
   obj.dumpPath = PrepareDumpPath(config.common.recorder.dumpPath.string(),
                                  config.common.recorder.uniqueDumpDirectory);
 
-  if (config.common.recorder.recordingMode == RecordingMode::CCODE) {
-    obj.zipTextFiles = false;
-  }
-
   if (config.common.recorder.highIntegrity) {
     LOG_INFO << "High integrity mode";
     obj.tokenBurst = 1;
@@ -369,15 +364,6 @@ void DeriveConfigData<Configuration::OpenGL::Recorder>(Configuration::OpenGL::Re
     obj.frames.frameSeparators.glFinishSep = false;
     obj.frames.frameSeparators.glFlushSep = false;
     obj.oglSingleDraw.number = UINT_MAX;
-  }
-
-  if (config.common.recorder.recordingMode == RecordingMode::CCODE &&
-      config.opengl.recorder.mode != OpenGLRecorderMode::ALL &&
-      !config.opengl.recorder.ccodeRangesWA) {
-    LOG_ERROR << "CCodeDump is possible only if OpenGL.Capture.Mode is set to: All. So, if you for "
-                 "example need one frame CCode stream please record one frame binary stream and "
-                 "then recapture it to CCode.";
-    throw gits::EOperationFailed(EXCEPTION_MESSAGE);
   }
 };
 

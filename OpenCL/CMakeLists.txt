@@ -171,24 +171,6 @@ install(TARGETS OpenCL_interceptor
   RUNTIME DESTINATION Recorder/${OpenCL_INSTALL_SUBDIR}
   LIBRARY DESTINATION Recorder/${OpenCL_INSTALL_SUBDIR})
 
-set(OpenCL_CCode_SOURCES
-  common/openclDrivers.cpp
-  ${CMAKE_CURRENT_BINARY_DIR}/helperCLAuto.cpp
-  ${CMAKE_CURRENT_BINARY_DIR}/openclDriversInit.cpp)
-
-set(OpenCL_CCode_HEADERS
-  common/include/openclTracing.h
-  common/include/openclDrivers.h
-  common/include/openclDriversHelper.h
-  common/include/openclHeader.h
-  ${CMAKE_CURRENT_BINARY_DIR}/openclTracingAuto.h
-  ${CMAKE_CURRENT_BINARY_DIR}/openclHeaderAuto.h
-  ${CMAKE_CURRENT_BINARY_DIR}/openclDriversAuto.inl
-  ${CMAKE_CURRENT_BINARY_DIR}/helperCLAuto.inl)
-
-install(FILES ${OpenCL_CCode_SOURCES} DESTINATION CCode/CCodeSource)
-install(FILES ${OpenCL_CCode_HEADERS} DESTINATION CCode/CCodeSource/include)
-
 set(OpenCL_Lua_SOURCES
   ${CMAKE_CURRENT_BINARY_DIR}/clconstants.lua
 )

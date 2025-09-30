@@ -62,8 +62,6 @@ Enums:
     Values:
       - Value: NONE
       - Value: BINARY
-      - Value: CCODE
-        Labels: [CCode]
   - Name: OpenGLRecorderMode
     Values:
       - Value: ALL

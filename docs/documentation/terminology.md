@@ -15,11 +15,6 @@ Streams recorded on one system are not tied only to this particular configuratio
 
 Binary **GITS** streams are collections of files produced by **GITS** recorder. Some of those resources may not be created by **GITS** recorder, depending on feature set of application being recorded.
 
-### CCode-Stream
-
-Streams generated with c-code format have to be compiled to an executable file to be useful. Resulting executable should be put in directory containing other parts of the stream before playback, alternatively other steam assets can be put in `PATH`.
-C-code stream is not portable, so it needs to be generated on target platform.
-
 ## Recorder
 
 Recorder operates, by creating a `token` for each recorder function in the thread that invoked that API function. `Token` represents all the information necessary to play back function it represents. Recorder then passes each newly created `token` to a separate thread which is used to persist data to hdd.

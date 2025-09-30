@@ -38,10 +38,6 @@ public:
     return Get().common.recorder.recordingMode == RecordingMode::BINARY;
   }
 
-  static bool DumpCCode() {
-    return Get().common.recorder.recordingMode == RecordingMode::CCODE;
-  }
-
   static bool IsTraceDataOptPresent(TraceData option) {
     return Configurator::Get().common.shared.traceDataOpts.find(option) !=
            Configurator::Get().common.shared.traceDataOpts.end();

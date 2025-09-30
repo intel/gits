@@ -100,7 +100,6 @@ Vulkan/interceptor/vulkanPrePostAuto.cpp
 Vulkan/recorder/include/vulkanRecorderWrapperAuto.h
 Vulkan/recorder/include/vulkanRecorderWrapperIfaceAuto.h
 Vulkan/recorder/vulkanRecorderWrapperAuto.cpp
-CCodeFiles/src/include/vulkanCCodeArgumentsAuto.h
 
 #DirectX
 DirectX/**/*Auto.cpp

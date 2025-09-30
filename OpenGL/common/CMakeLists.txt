@@ -107,33 +107,3 @@ if (NOT MSVC)
 endif()
 
 set_target_properties(OpenGL_common PROPERTIES FOLDER OpenGL)
-
-set(OpenGL_CCode_SOURCES
-  ${OPENGL_COMMON_SOURCE_DIR}/windowing.cpp
-  ${OPENGL_COMMON_SOURCE_DIR}/windowContextState.cpp
-  ${OPENGL_COMMON_SOURCE_DIR}/pfattribs.cpp
-  ${OPENGL_COMMON_SOURCE_DIR}/glEnumStrings.cpp
-  ${OPENGL_COMMON_SOURCE_DIR}/openglDrivers.cpp
-  ${OPENGL_COMMON_SOURCE_DIR}/openglTools.cpp
-  ${OPENGL_COMMON_SOURCE_DIR}/openglCommon.cpp
-  ${OPENGL_COMMON_SOURCE_DIR}/mapping.cpp
-  ${OPENGL_COMMON_SOURCE_DIR}/stateDynamic.cpp
-  ${OPENGL_COMMON_SOURCE_DIR}/stateObjects.cpp)
-
-set(OpenGL_CCode_HEADERS
-  ${OPENGL_COMMON_HEADER_DIR}/windowing.h
-  ${OPENGL_COMMON_HEADER_DIR}/windowContextState.h
-  ${OPENGL_COMMON_HEADER_DIR}/pfattribs.h
-  ${OPENGL_COMMON_HEADER_DIR}/openglTypes.h
-  ${OPENGL_COMMON_HEADER_DIR}/openglEnums.h
-  ${OPENGL_COMMON_HEADER_DIR}/openglDrivers.h
-  ${OPENGL_COMMON_HEADER_DIR}/glDrivers.h
-  ${OPENGL_COMMON_HEADER_DIR}/openglTools.h
-  ${OPENGL_COMMON_HEADER_DIR}/typeDefs.h
-  ${OPENGL_COMMON_HEADER_DIR}/openglCommon.h
-  ${OPENGL_COMMON_HEADER_DIR}/mapping.h
-  ${OPENGL_COMMON_HEADER_DIR}/stateDynamic.h
-  ${OPENGL_COMMON_HEADER_DIR}/stateObjects.h)
-
-install(FILES ${OpenGL_CCode_SOURCES} DESTINATION CCode/CCodeSource)
-install(FILES ${OpenGL_CCode_HEADERS} DESTINATION CCode/CCodeSource/include)

@@ -57,36 +57,6 @@ add_dependencies(Vulkan_recorder Vulkan_codegen config_codegen)
 add_dependencies(Vulkan_interceptor Vulkan_codegen config_codegen)
 add_dependencies(Vulkan_layer Vulkan_codegen config_codegen)
 
-set(Vulkan_CCode_SOURCES
-  common/vkWindowing.cpp
-  common/vulkanDrivers.cpp
-  common/vulkanLog.cpp
-  common/vulkanLogAuto.cpp
-  common/vulkanTracerAuto.cpp
-  common/vulkanTools.cpp
-  common/vulkanTools_lite.cpp
-)
-
-set(Vulkan_CCode_HEADERS
-  common/include/vk_platform.h
-  common/include/vk_layer.h
-  common/include/vkWindowing.h
-  common/include/vulkan_basic.h
-  common/include/vulkanDrivers.h
-  common/include/vulkanDriversAuto.inl
-  common/include/vulkanHeader.h
-  common/include/vulkanLog.h
-  common/include/vulkanLogAuto.inl
-  common/include/vulkanTools.h
-  common/include/vulkanTools_lite.h
-  common/include/vulkanTracerAuto.h
-  common/include/vulkanTypes.h
-  common/include/vulkanPNextWrappers.inl
-)
-
-install(FILES ${Vulkan_CCode_SOURCES} DESTINATION CCode/CCodeSource)
-install(FILES ${Vulkan_CCode_HEADERS} DESTINATION CCode/CCodeSource/include)
-
 set(Vulkan_Layer_files
   layer/VkLayer_vulkan_GITS_recorder.json
 )

@@ -33,12 +33,3 @@ add_dependencies(log config_codegen)
 
 set_target_properties(log PROPERTIES FOLDER "common")
 
-# CCode
-install(FILES ${LOG_SRC_SOURCES} DESTINATION CCode/CCodeSource)
-install(FILES ${LOG_SRC_HEADERS} DESTINATION CCode/CCodeSource/include)
-# Copy Plog to CCode
-install(
-  DIRECTORY ${PLOG_SOURCE_DIR}/include
-  DESTINATION CCode/third_party/plog
-)
-
