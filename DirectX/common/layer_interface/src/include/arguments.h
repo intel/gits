@@ -634,6 +634,23 @@ struct D3D12_BARRIER_GROUPs_Argument {
   bool copy{};
 };
 
+template <>
+struct PointerArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO> {
+  PointerArgument(const D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO* value_)
+      : value(const_cast<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO*>(value_)) {}
+  PointerArgument() {}
+  PointerArgument(const PointerArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>& arg);
+  PointerArgument& operator=(const PointerArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>&) =
+      delete;
+  ~PointerArgument();
+  D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO* value{};
+  unsigned destKey{};
+  unsigned destOffset{};
+  unsigned sourceKey{};
+  unsigned sourceOffset{};
+  bool copy{};
+};
+
 #pragma endregion
 
 #pragma region INTC

@@ -1613,6 +1613,25 @@ D3D12_BARRIER_GROUPs_Argument::~D3D12_BARRIER_GROUPs_Argument() {
   }
 }
 
+PointerArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>::PointerArgument(
+    const PointerArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>& arg) {
+  if (arg.value) {
+    value = new D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO();
+    *value = *arg.value;
+  }
+  destKey = arg.destKey;
+  destOffset = arg.destOffset;
+  sourceKey = arg.sourceKey;
+  sourceOffset = arg.sourceOffset;
+  copy = true;
+}
+
+PointerArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>::~PointerArgument() {
+  if (copy) {
+    delete value;
+  }
+}
+
 #pragma endregion
 
 #pragma region INTC

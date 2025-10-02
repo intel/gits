@@ -1306,6 +1306,27 @@ void decode(char* src, unsigned& offset, D3D12_SHADER_RESOURCE_VIEW_DESC_Argumen
   }
 }
 
+void decode(char* src,
+            unsigned& offset,
+            PointerArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>& arg) {
+  if (decodeNullPtr(src, offset, arg)) {
+    return;
+  }
+
+  arg.value = reinterpret_cast<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO*>(src + offset);
+  offset += sizeof(D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO);
+
+  memcpy(&arg.destKey, src + offset, sizeof(arg.destKey));
+  offset += sizeof(arg.destKey);
+  memcpy(&arg.destOffset, src + offset, sizeof(arg.destOffset));
+  offset += sizeof(arg.destOffset);
+
+  memcpy(&arg.sourceKey, src + offset, sizeof(arg.sourceKey));
+  offset += sizeof(arg.sourceKey);
+  memcpy(&arg.sourceOffset, src + offset, sizeof(arg.sourceOffset));
+  offset += sizeof(arg.sourceOffset);
+}
+
 // This decode function does not have a getSize/encode counterpart
 // Set pDeviceDriverDesc and pDeviceDriverVersion to 0 (the capture time strings are NOT encoded in the stream)
 // Note: Encoding and decoding these values would cause compatibility issues with already existing streams

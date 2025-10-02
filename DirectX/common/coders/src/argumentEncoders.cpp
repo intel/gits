@@ -1870,6 +1870,36 @@ void encode(char* dest, unsigned& offset, const D3D12_BARRIER_GROUPs_Argument& a
   offset += sizeof(unsigned) * arg.resourceKeys.size();
 }
 
+unsigned getSize(const PointerArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>& arg) {
+  if (!arg.value) {
+    return sizeof(void*);
+  }
+  unsigned size = sizeof(void*) + sizeof(D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO);
+  size += sizeof(unsigned) * 4;
+  return size;
+}
+
+void encode(char* dest,
+            unsigned& offset,
+            const PointerArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>& arg) {
+  if (encodeNullPtr(dest, offset, arg)) {
+    return;
+  }
+
+  memcpy(dest + offset, arg.value, sizeof(D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO));
+  offset += sizeof(D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO);
+
+  memcpy(dest + offset, &arg.destKey, sizeof(arg.destKey));
+  offset += sizeof(arg.destKey);
+  memcpy(dest + offset, &arg.destOffset, sizeof(arg.destOffset));
+  offset += sizeof(arg.destOffset);
+
+  memcpy(dest + offset, &arg.sourceKey, sizeof(arg.sourceKey));
+  offset += sizeof(arg.sourceKey);
+  memcpy(dest + offset, &arg.sourceOffset, sizeof(arg.sourceOffset));
+  offset += sizeof(arg.sourceOffset);
+}
+
 unsigned getSize(const DML_BINDING_DESC_Argument& arg) {
   if (!arg.value) {
     return sizeof(void*);

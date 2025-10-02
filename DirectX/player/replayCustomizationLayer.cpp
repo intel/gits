@@ -1153,6 +1153,23 @@ void ReplayCustomizationLayer::pre(ID3D12SDKConfigurationSetSDKVersionCommand& c
   c.skip = true;
 }
 
+void ReplayCustomizationLayer::pre(
+    ID3D12GraphicsCommandListPreviewConvertLinearAlgebraMatrixCommand& c) {
+  if (useAddressPinning_) {
+    return;
+  }
+  if (c.pDesc_.value) {
+    if (c.pDesc_.value->DataDesc.DestVA) {
+      c.pDesc_.value->DataDesc.DestVA =
+          manager_.getGpuAddressService().getGpuAddress(c.pDesc_.destKey, c.pDesc_.destOffset);
+    }
+    if (c.pDesc_.value->DataDesc.SrcVA) {
+      c.pDesc_.value->DataDesc.SrcVA =
+          manager_.getGpuAddressService().getGpuAddress(c.pDesc_.sourceKey, c.pDesc_.sourceOffset);
+    }
+  }
+}
+
 void ReplayCustomizationLayer::pre(INTC_D3D12_SetFeatureSupportCommand& command) {
   intcFeatureSupportSet_ = true;
 }

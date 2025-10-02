@@ -293,6 +293,11 @@ void encode(char* dest, unsigned& offset, const D3D12_SHADER_RESOURCE_VIEW_DESC_
 unsigned getSize(const D3D12_BARRIER_GROUPs_Argument& arg);
 void encode(char* dest, unsigned& offset, const D3D12_BARRIER_GROUPs_Argument& arg);
 
+unsigned getSize(const PointerArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>& arg);
+void encode(char* dest,
+            unsigned& offset,
+            const PointerArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>& arg);
+
 unsigned getSize(const DML_BINDING_DESC_Argument& arg);
 void encode(char* dest, unsigned& offset, const DML_BINDING_DESC_Argument& arg);
 

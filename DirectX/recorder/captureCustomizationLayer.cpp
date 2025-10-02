@@ -843,6 +843,24 @@ void CaptureCustomizationLayer::pre(ID3D12GraphicsCommandList4DispatchRaysComman
   }
 }
 
+void CaptureCustomizationLayer::pre(
+    ID3D12GraphicsCommandListPreviewConvertLinearAlgebraMatrixCommand& c) {
+  if (c.pDesc_.value) {
+    if (c.pDesc_.value->DataDesc.DestVA) {
+      GpuAddressService::GpuAddressInfo info =
+          manager_.getGpuAddressService().getGpuAddressInfo(c.pDesc_.value->DataDesc.DestVA);
+      c.pDesc_.destKey = info.resourceKey;
+      c.pDesc_.destOffset = info.offset;
+    }
+    if (c.pDesc_.value->DataDesc.SrcVA) {
+      GpuAddressService::GpuAddressInfo info =
+          manager_.getGpuAddressService().getGpuAddressInfo(c.pDesc_.value->DataDesc.SrcVA);
+      c.pDesc_.sourceKey = info.resourceKey;
+      c.pDesc_.sourceOffset = info.offset;
+    }
+  }
+}
+
 void CaptureCustomizationLayer::pre(INTC_D3D12_CreateDeviceExtensionContextCommand& c) {
   if (c.pExtensionAppInfo_.value) {
     c.pExtensionAppInfo_.pApplicationName = c.pExtensionAppInfo_.value->pApplicationName;
