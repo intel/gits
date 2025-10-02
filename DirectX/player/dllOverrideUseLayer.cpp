@@ -45,6 +45,7 @@ void DllOverrideUseLayer::pre(DllContainerMetaCommand& c) {
     LOG_INFO << "Agility SDK - Applying app override";
     if (manager_.loadAgilitySdk(dllOverridesRelativePath_)) {
       agilitySDKLoaded_ = true;
+      agilitySDKOverrideUsed_ = true;
     }
   }
 
@@ -87,6 +88,14 @@ void DllOverrideUseLayer::pre(D3D12SerializeRootSignatureCommand& c) {
 
 void DllOverrideUseLayer::pre(D3D12SerializeVersionedRootSignatureCommand& c) {
   loadAgilitySDK();
+}
+
+void DllOverrideUseLayer::pre(ID3D12SDKConfiguration1CreateDeviceFactoryCommand& c) {
+  if (agilitySDKOverrideUsed_) {
+    c.SDKPath_.value = const_cast<char*>(dllOverridesRelativePath_.c_str());
+  } else {
+    c.SDKPath_.value = "D3D12";
+  }
 }
 
 void DllOverrideUseLayer::pre(xessGetVersionCommand& c) {

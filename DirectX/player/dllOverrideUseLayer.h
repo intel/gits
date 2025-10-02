@@ -32,6 +32,7 @@ public:
   void pre(D3D12GetInterfaceCommand& command) override;
   void pre(D3D12SerializeRootSignatureCommand& command) override;
   void pre(D3D12SerializeVersionedRootSignatureCommand& command) override;
+  void pre(ID3D12SDKConfiguration1CreateDeviceFactoryCommand& command) override;
 
   void pre(xessGetVersionCommand& command) override;
   void pre(xessD3D12CreateContextCommand& command) override;
@@ -43,9 +44,10 @@ private:
   PlayerManager& manager_;
   bool useAddressPinning_{};
   std::filesystem::path dllOverridesDirectory_;
-  const std::filesystem::path dllOverridesRelativePath_ = "D3D12\\overrides\\D3D12";
+  const std::string dllOverridesRelativePath_ = "D3D12\\overrides\\D3D12";
   bool agilitySDKLoaded_{};
   bool xessLoaded_{};
+  bool agilitySDKOverrideUsed_{};
 };
 
 } // namespace DirectX
