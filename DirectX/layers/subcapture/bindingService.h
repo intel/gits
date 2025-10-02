@@ -47,7 +47,7 @@ public:
     return raytracingService_.getBindingTablesDescriptors();
   }
   unsigned getComputeRootSignatureKey(unsigned commandListKey) {
-    return computeRootSignatureByCommandList_[commandListKey];
+    return commandListInfos_[commandListKey].computeRootSignature;
   }
 
   void addObjectForRestore(unsigned key) {
@@ -95,6 +95,9 @@ public:
   void nvapiBuildOpacityMicromapArray(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c);
   void dispatchRays(ID3D12GraphicsCommandList4DispatchRaysCommand& c);
   void executeIndirect(ID3D12GraphicsCommandListExecuteIndirectCommand& c);
+  void dispatch(ID3D12GraphicsCommandListDispatchCommand& c);
+  void draw(ID3D12GraphicsCommandListDrawIndexedInstancedCommand& c);
+  void draw(ID3D12GraphicsCommandListDrawInstancedCommand& c);
   void writeBufferImmediate(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c);
   void copyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& c);
   void copyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c);
@@ -137,8 +140,15 @@ private:
       NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c);
   void dispatchRaysImpl(ID3D12GraphicsCommandList4DispatchRaysCommand& c);
   void executeIndirectImpl(ID3D12GraphicsCommandListExecuteIndirectCommand& c);
+  void dispatchImpl(ID3D12GraphicsCommandListDispatchCommand& c);
+  void drawImpl(ID3D12GraphicsCommandListDrawIndexedInstancedCommand& c);
+  void drawImpl(ID3D12GraphicsCommandListDrawInstancedCommand& c);
   void writeBufferImmediateImpl(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c);
   void commandListRestore(unsigned commandListKey);
+  void setBindlessDescriptors(unsigned rootSignatureKey,
+                              unsigned descriptorHeapKey,
+                              D3D12_DESCRIPTOR_HEAP_TYPE heapType,
+                              unsigned heapNumDescriptors);
 
 private:
   AnalyzerService& analyzerService_;
@@ -149,10 +159,19 @@ private:
   bool commandListSubcapture_{};
   bool optimize_{};
 
-  std::unordered_map<unsigned, unsigned> computeRootSignatureByCommandList_;
-  std::unordered_map<unsigned, unsigned> graphicsRootSignatureByCommandList_;
+  struct CommandListInfo {
+    unsigned computeRootSignature{};
+    unsigned graphicsRootSignature{};
+    unsigned viewDescriptorHeap{};
+    unsigned samplerDescriptorHeap{};
+  };
+  std::unordered_map<unsigned, CommandListInfo> commandListInfos_;
 
-  std::unordered_map<unsigned, unsigned> descriptorHeapSize_;
+  struct DescriptorHeapInfo {
+    D3D12_DESCRIPTOR_HEAP_TYPE type{};
+    unsigned numDescriptors{};
+  };
+  std::unordered_map<unsigned, DescriptorHeapInfo> descriptorHeapInfos_;
 
   std::unordered_map<unsigned, std::vector<std::unique_ptr<Command>>> commandsByCommandList_;
 

@@ -75,10 +75,6 @@ void AnalyzerRaytracingService::fillStateObjectInfo(
   for (unsigned i = 0; i < stateObjectDesc.value->NumSubobjects; ++i) {
     switch (stateObjectDesc.value->pSubobjects[i].Type) {
     case D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE: {
-      if (info->globalRootSignature) {
-        LOG_ERROR
-            << "CreateStateObject - multiple global root signatures in state object not handled.";
-      }
       info->globalRootSignature = stateObjectDesc.interfaceKeysBySubobject[i];
     } break;
     case D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE: {

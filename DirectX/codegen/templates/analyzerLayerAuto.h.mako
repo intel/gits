@@ -65,6 +65,9 @@ public:
   void pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) override;
   void pre(ID3D12GraphicsCommandList4DispatchRaysCommand& c) override;
   void pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) override;
+  void pre(ID3D12GraphicsCommandListDispatchCommand& c) override;
+  void pre(ID3D12GraphicsCommandListDrawIndexedInstancedCommand& c) override;
+  void pre(ID3D12GraphicsCommandListDrawInstancedCommand& c) override;
   void pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) override;
   void post(ID3D12ResourceGetGPUVirtualAddressCommand& c) override;
   void pre(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) override;

@@ -39,13 +39,14 @@ void BindingService::commandListsRestore(const std::set<unsigned>& commandLists)
 }
 
 void BindingService::commandListReset(ID3D12GraphicsCommandListResetCommand& c) {
-  if (!analyzerService_.inRange() && !commandListSubcapture_) {
-    commandsByCommandList_.erase(c.object_.key);
-  }
+  commandsByCommandList_.erase(c.object_.key);
+  commandListInfos_.erase(c.object_.key);
 }
 
 void BindingService::createDescriptorHeap(ID3D12DeviceCreateDescriptorHeapCommand& c) {
-  descriptorHeapSize_[c.ppvHeap_.key] = c.pDescriptorHeapDesc_.value->NumDescriptors;
+  descriptorHeapInfos_[c.ppvHeap_.key].type = c.pDescriptorHeapDesc_.value->Type;
+  descriptorHeapInfos_[c.ppvHeap_.key].numDescriptors =
+      c.pDescriptorHeapDesc_.value->NumDescriptors;
 }
 
 void BindingService::setRootSignature(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) {
@@ -60,7 +61,7 @@ void BindingService::setRootSignature(ID3D12GraphicsCommandListSetComputeRootSig
 
 void BindingService::setRootSignatureImpl(
     ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) {
-  computeRootSignatureByCommandList_[c.object_.key] = c.pRootSignature_.key;
+  commandListInfos_[c.object_.key].computeRootSignature = c.pRootSignature_.key;
 }
 
 void BindingService::setRootSignature(ID3D12GraphicsCommandListSetGraphicsRootSignatureCommand& c) {
@@ -75,7 +76,7 @@ void BindingService::setRootSignature(ID3D12GraphicsCommandListSetGraphicsRootSi
 
 void BindingService::setRootSignatureImpl(
     ID3D12GraphicsCommandListSetGraphicsRootSignatureCommand& c) {
-  graphicsRootSignatureByCommandList_[c.object_.key] = c.pRootSignature_.key;
+  commandListInfos_[c.object_.key].graphicsRootSignature = c.pRootSignature_.key;
 }
 
 void BindingService::setRootDescriptorTable(
@@ -91,9 +92,9 @@ void BindingService::setRootDescriptorTable(
 
 void BindingService::setRootDescriptorTableImpl(
     ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c) {
-  unsigned rootSignatureKey = computeRootSignatureByCommandList_[c.object_.key];
+  unsigned rootSignatureKey = commandListInfos_[c.object_.key].computeRootSignature;
   GITS_ASSERT(rootSignatureKey);
-  unsigned numDescriptors = descriptorHeapSize_[c.BaseDescriptor_.interfaceKey];
+  unsigned numDescriptors = descriptorHeapInfos_[c.BaseDescriptor_.interfaceKey].numDescriptors;
   GITS_ASSERT(numDescriptors);
   std::vector<unsigned> indexes = rootSignatureService_.getDescriptorTableIndexes(
       rootSignatureKey, c.BaseDescriptor_.interfaceKey, c.RootParameterIndex_.value,
@@ -122,9 +123,9 @@ void BindingService::setRootDescriptorTable(
 
 void BindingService::setRootDescriptorTableImpl(
     ID3D12GraphicsCommandListSetGraphicsRootDescriptorTableCommand& c) {
-  unsigned rootSignatureKey = graphicsRootSignatureByCommandList_[c.object_.key];
+  unsigned rootSignatureKey = commandListInfos_[c.object_.key].graphicsRootSignature;
   GITS_ASSERT(rootSignatureKey);
-  unsigned numDescriptors = descriptorHeapSize_[c.BaseDescriptor_.interfaceKey];
+  unsigned numDescriptors = descriptorHeapInfos_[c.BaseDescriptor_.interfaceKey].numDescriptors;
   GITS_ASSERT(numDescriptors);
   std::vector<unsigned> indexes = rootSignatureService_.getDescriptorTableIndexes(
       rootSignatureKey, c.BaseDescriptor_.interfaceKey, c.RootParameterIndex_.value,
@@ -483,8 +484,17 @@ void BindingService::setDescriptorHeaps(ID3D12GraphicsCommandListSetDescriptorHe
 
 void BindingService::setDescriptorHeapsImpl(ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c) {
   raytracingService_.setDescriptorHeaps(c);
+  CommandListInfo& commandListInfo = commandListInfos_[c.object_.key];
+  commandListInfo.viewDescriptorHeap = 0;
+  commandListInfo.samplerDescriptorHeap = 0;
   for (unsigned key : c.ppDescriptorHeaps_.keys) {
     objectsForRestore_.insert(key);
+    DescriptorHeapInfo& info = descriptorHeapInfos_[key];
+    if (info.type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) {
+      commandListInfo.viewDescriptorHeap = key;
+    } else if (info.type == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER) {
+      commandListInfo.samplerDescriptorHeap = key;
+    }
   }
 }
 
@@ -650,6 +660,18 @@ void BindingService::dispatchRaysImpl(ID3D12GraphicsCommandList4DispatchRaysComm
   objectsForRestore_.insert(c.pDesc_.missShaderTableKey);
   objectsForRestore_.insert(c.pDesc_.hitGroupTableKey);
   objectsForRestore_.insert(c.pDesc_.callableShaderTableKey);
+
+  CommandListInfo& info = commandListInfos_[c.object_.key];
+  if (info.viewDescriptorHeap) {
+    DescriptorHeapInfo& heapInfo = descriptorHeapInfos_[info.viewDescriptorHeap];
+    setBindlessDescriptors(info.computeRootSignature, info.viewDescriptorHeap, heapInfo.type,
+                           heapInfo.numDescriptors);
+  }
+  if (info.samplerDescriptorHeap) {
+    DescriptorHeapInfo& heapInfo = descriptorHeapInfos_[info.samplerDescriptorHeap];
+    setBindlessDescriptors(info.computeRootSignature, info.samplerDescriptorHeap, heapInfo.type,
+                           heapInfo.numDescriptors);
+  }
 }
 
 void BindingService::executeIndirect(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
@@ -664,6 +686,101 @@ void BindingService::executeIndirect(ID3D12GraphicsCommandListExecuteIndirectCom
 
 void BindingService::executeIndirectImpl(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
   executeIndirectService_.executeIndirect(c);
+  CommandListInfo& info = commandListInfos_[c.object_.key];
+  if (info.viewDescriptorHeap) {
+    DescriptorHeapInfo& heapInfo = descriptorHeapInfos_[info.viewDescriptorHeap];
+    if (info.computeRootSignature) {
+      setBindlessDescriptors(info.computeRootSignature, info.viewDescriptorHeap, heapInfo.type,
+                             heapInfo.numDescriptors);
+    }
+    if (info.graphicsRootSignature) {
+      setBindlessDescriptors(info.graphicsRootSignature, info.viewDescriptorHeap, heapInfo.type,
+                             heapInfo.numDescriptors);
+    }
+  }
+  if (info.samplerDescriptorHeap) {
+    DescriptorHeapInfo& heapInfo = descriptorHeapInfos_[info.samplerDescriptorHeap];
+    if (info.computeRootSignature) {
+      setBindlessDescriptors(info.computeRootSignature, info.samplerDescriptorHeap, heapInfo.type,
+                             heapInfo.numDescriptors);
+    }
+    if (info.graphicsRootSignature) {
+      setBindlessDescriptors(info.graphicsRootSignature, info.samplerDescriptorHeap, heapInfo.type,
+                             heapInfo.numDescriptors);
+    }
+  }
+}
+
+void BindingService::dispatch(ID3D12GraphicsCommandListDispatchCommand& c) {
+  if (analyzerService_.inRange()) {
+    commandListRestore(c.object_.key);
+    dispatchImpl(c);
+  } else if (!commandListSubcapture_) {
+    commandsByCommandList_[c.object_.key].emplace_back(
+        new ID3D12GraphicsCommandListDispatchCommand(c));
+  }
+}
+
+void BindingService::dispatchImpl(ID3D12GraphicsCommandListDispatchCommand& c) {
+  CommandListInfo& info = commandListInfos_[c.object_.key];
+  if (info.viewDescriptorHeap) {
+    DescriptorHeapInfo& heapInfo = descriptorHeapInfos_[info.viewDescriptorHeap];
+    setBindlessDescriptors(info.computeRootSignature, info.viewDescriptorHeap, heapInfo.type,
+                           heapInfo.numDescriptors);
+  }
+  if (info.samplerDescriptorHeap) {
+    DescriptorHeapInfo& heapInfo = descriptorHeapInfos_[info.samplerDescriptorHeap];
+    setBindlessDescriptors(info.computeRootSignature, info.samplerDescriptorHeap, heapInfo.type,
+                           heapInfo.numDescriptors);
+  }
+}
+
+void BindingService::draw(ID3D12GraphicsCommandListDrawIndexedInstancedCommand& c) {
+  if (analyzerService_.inRange()) {
+    commandListRestore(c.object_.key);
+    drawImpl(c);
+  } else if (!commandListSubcapture_) {
+    commandsByCommandList_[c.object_.key].emplace_back(
+        new ID3D12GraphicsCommandListDrawIndexedInstancedCommand(c));
+  }
+}
+
+void BindingService::drawImpl(ID3D12GraphicsCommandListDrawIndexedInstancedCommand& c) {
+  CommandListInfo& info = commandListInfos_[c.object_.key];
+  if (info.viewDescriptorHeap) {
+    DescriptorHeapInfo& heapInfo = descriptorHeapInfos_[info.viewDescriptorHeap];
+    setBindlessDescriptors(info.graphicsRootSignature, info.viewDescriptorHeap, heapInfo.type,
+                           heapInfo.numDescriptors);
+  }
+  if (info.samplerDescriptorHeap) {
+    DescriptorHeapInfo& heapInfo = descriptorHeapInfos_[info.samplerDescriptorHeap];
+    setBindlessDescriptors(info.graphicsRootSignature, info.samplerDescriptorHeap, heapInfo.type,
+                           heapInfo.numDescriptors);
+  }
+}
+
+void BindingService::draw(ID3D12GraphicsCommandListDrawInstancedCommand& c) {
+  if (analyzerService_.inRange()) {
+    commandListRestore(c.object_.key);
+    drawImpl(c);
+  } else if (!commandListSubcapture_) {
+    commandsByCommandList_[c.object_.key].emplace_back(
+        new ID3D12GraphicsCommandListDrawInstancedCommand(c));
+  }
+}
+
+void BindingService::drawImpl(ID3D12GraphicsCommandListDrawInstancedCommand& c) {
+  CommandListInfo& info = commandListInfos_[c.object_.key];
+  if (info.viewDescriptorHeap) {
+    DescriptorHeapInfo& heapInfo = descriptorHeapInfos_[info.viewDescriptorHeap];
+    setBindlessDescriptors(info.graphicsRootSignature, info.viewDescriptorHeap, heapInfo.type,
+                           heapInfo.numDescriptors);
+  }
+  if (info.samplerDescriptorHeap) {
+    DescriptorHeapInfo& heapInfo = descriptorHeapInfos_[info.samplerDescriptorHeap];
+    setBindlessDescriptors(info.graphicsRootSignature, info.samplerDescriptorHeap, heapInfo.type,
+                           heapInfo.numDescriptors);
+  }
 }
 
 void BindingService::writeBufferImmediate(
@@ -835,6 +952,18 @@ void BindingService::commandListRestore(unsigned commandListKey) {
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST4_DISPATCHRAYS:
       dispatchRaysImpl(static_cast<ID3D12GraphicsCommandList4DispatchRaysCommand&>(*command));
       break;
+    case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_EXECUTEINDIRECT:
+      executeIndirectImpl(static_cast<ID3D12GraphicsCommandListExecuteIndirectCommand&>(*command));
+      break;
+    case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DISPATCH:
+      dispatchImpl(static_cast<ID3D12GraphicsCommandListDispatchCommand&>(*command));
+      break;
+    case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DRAWINDEXEDINSTANCED:
+      drawImpl(static_cast<ID3D12GraphicsCommandListDrawIndexedInstancedCommand&>(*command));
+      break;
+    case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_DRAWINSTANCED:
+      drawImpl(static_cast<ID3D12GraphicsCommandListDrawInstancedCommand&>(*command));
+      break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST2_WRITEBUFFERIMMEDIATE:
       writeBufferImmediateImpl(
           static_cast<ID3D12GraphicsCommandList2WriteBufferImmediateCommand&>(*command));
@@ -842,6 +971,22 @@ void BindingService::commandListRestore(unsigned commandListKey) {
     }
   }
   commandsByCommandList_.erase(itCommandList);
+}
+
+void BindingService::setBindlessDescriptors(unsigned rootSignatureKey,
+                                            unsigned descriptorHeapKey,
+                                            D3D12_DESCRIPTOR_HEAP_TYPE heapType,
+                                            unsigned heapNumDescriptors) {
+  std::vector<unsigned> indexes = rootSignatureService_.getBindlessDescriptorIndexes(
+      rootSignatureKey, descriptorHeapKey, heapType, heapNumDescriptors);
+  for (unsigned index : indexes) {
+    DescriptorState* state = descriptorService_.getDescriptorState(descriptorHeapKey, index);
+    if (state) {
+      objectsForRestore_.insert(state->resourceKey);
+    }
+    descriptors_.insert({descriptorHeapKey, index});
+  }
+  objectsForRestore_.insert(descriptorHeapKey);
 }
 
 } // namespace DirectX

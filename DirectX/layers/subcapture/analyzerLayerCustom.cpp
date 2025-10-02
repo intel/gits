@@ -480,6 +480,24 @@ void AnalyzerLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
   }
 }
 
+void AnalyzerLayer::pre(ID3D12GraphicsCommandListDispatchCommand& c) {
+  if (optimize_) {
+    bindingService_.dispatch(c);
+  }
+}
+
+void AnalyzerLayer::pre(ID3D12GraphicsCommandListDrawIndexedInstancedCommand& c) {
+  if (optimize_) {
+    bindingService_.draw(c);
+  }
+}
+
+void AnalyzerLayer::pre(ID3D12GraphicsCommandListDrawInstancedCommand& c) {
+  if (optimize_) {
+    bindingService_.draw(c);
+  }
+}
+
 void AnalyzerLayer::pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
   if (optimize_ || optimizeRaytracing_) {
     raytracingService_.getGPUVirtualAddress(c);

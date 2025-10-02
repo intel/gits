@@ -102,6 +102,34 @@ std::vector<unsigned> RootSignatureService::getDescriptorTableIndexes(unsigned r
   return indexes;
 }
 
+std::vector<unsigned> RootSignatureService::getBindlessDescriptorIndexes(
+    unsigned rootSignatureKey,
+    unsigned descriptorHeapKey,
+    D3D12_DESCRIPTOR_HEAP_TYPE heapType,
+    unsigned heapNumDescriptors,
+    bool checkRetrieved) {
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  std::vector<unsigned> indexes;
+
+  auto it = rootSignatureDescs_.find(rootSignatureKey);
+  GITS_ASSERT(it != rootSignatureDescs_.end());
+
+  if (it->second->Flags & D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED &&
+          heapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV ||
+      it->second->Flags & D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED &&
+          heapType == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER) {
+    if (checkRetrieved && unboundedRetrieved(descriptorHeapKey, 0)) {
+      return indexes;
+    }
+    for (unsigned i = 0; i < heapNumDescriptors; ++i) {
+      indexes.push_back(i);
+    }
+  }
+
+  return indexes;
+}
+
 D3D12_ROOT_SIGNATURE_DESC* RootSignatureService::getRootSignatureDesc(unsigned rootSignatureKey) {
   std::lock_guard<std::mutex> lock(mutex_);
   return rootSignatureDescs_[rootSignatureKey];

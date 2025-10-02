@@ -29,6 +29,11 @@ public:
                                                   unsigned baseIndex,
                                                   unsigned heapNumDescriptors,
                                                   bool checkRetrieved = true);
+  std::vector<unsigned> getBindlessDescriptorIndexes(unsigned rootSignatureKey,
+                                                     unsigned descriptorHeapKey,
+                                                     D3D12_DESCRIPTOR_HEAP_TYPE heapType,
+                                                     unsigned heapNumDescriptors,
+                                                     bool checkRetrieved = true);
   D3D12_ROOT_SIGNATURE_DESC* getRootSignatureDesc(unsigned rootSignatureKey);
 
 private:
