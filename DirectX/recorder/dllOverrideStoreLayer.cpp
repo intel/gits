@@ -26,11 +26,31 @@ void DllOverrideStoreLayer::post(D3D12CreateDeviceCommand& c) {
   captureAgilitySDKDll(c);
 }
 
-void DllOverrideStoreLayer::post(ID3D12DeviceFactoryCreateDeviceCommand& c) {
+void DllOverrideStoreLayer::post(D3D12GetDebugInterfaceCommand& c) {
   captureAgilitySDKDll(c);
 }
 
-void DllOverrideStoreLayer::post(D3D12GetDebugInterfaceCommand& c) {
+void DllOverrideStoreLayer::post(D3D12CreateRootSignatureDeserializerCommand& c) {
+  captureAgilitySDKDll(c);
+}
+
+void DllOverrideStoreLayer::post(D3D12CreateVersionedRootSignatureDeserializerCommand& c) {
+  captureAgilitySDKDll(c);
+}
+
+void DllOverrideStoreLayer::post(D3D12EnableExperimentalFeaturesCommand& c) {
+  captureAgilitySDKDll(c);
+}
+
+void DllOverrideStoreLayer::post(D3D12GetInterfaceCommand& c) {
+  captureAgilitySDKDll(c);
+}
+
+void DllOverrideStoreLayer::post(D3D12SerializeRootSignatureCommand& c) {
+  captureAgilitySDKDll(c);
+}
+
+void DllOverrideStoreLayer::post(D3D12SerializeVersionedRootSignatureCommand& c) {
   captureAgilitySDKDll(c);
 }
 

@@ -24,8 +24,13 @@ public:
   ~DllOverrideStoreLayer() = default;
 
   void post(D3D12CreateDeviceCommand& command) override;
-  void post(ID3D12DeviceFactoryCreateDeviceCommand& command) override;
   void post(D3D12GetDebugInterfaceCommand& command) override;
+  void post(D3D12CreateRootSignatureDeserializerCommand& command) override;
+  void post(D3D12CreateVersionedRootSignatureDeserializerCommand& command) override;
+  void post(D3D12EnableExperimentalFeaturesCommand& command) override;
+  void post(D3D12GetInterfaceCommand& command) override;
+  void post(D3D12SerializeRootSignatureCommand& command) override;
+  void post(D3D12SerializeVersionedRootSignatureCommand& command) override;
 
   void pre(xessGetVersionCommand& command) override;
   void pre(xessD3D12CreateContextCommand& command) override;

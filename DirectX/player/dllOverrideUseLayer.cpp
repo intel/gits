@@ -58,14 +58,46 @@ void DllOverrideUseLayer::pre(DllContainerMetaCommand& c) {
 }
 
 void DllOverrideUseLayer::pre(D3D12CreateDeviceCommand& c) {
-  if (!agilitySDKLoaded_) {
-    if (manager_.loadAgilitySdk("D3D12")) {
-      agilitySDKLoaded_ = true;
-    }
-  }
+  loadAgilitySDK();
 }
 
 void DllOverrideUseLayer::pre(D3D12GetDebugInterfaceCommand& c) {
+  loadAgilitySDK();
+}
+
+void DllOverrideUseLayer::pre(D3D12CreateRootSignatureDeserializerCommand& c) {
+  loadAgilitySDK();
+}
+
+void DllOverrideUseLayer::pre(D3D12CreateVersionedRootSignatureDeserializerCommand& c) {
+  loadAgilitySDK();
+}
+
+void DllOverrideUseLayer::pre(D3D12EnableExperimentalFeaturesCommand& c) {
+  loadAgilitySDK();
+}
+
+void DllOverrideUseLayer::pre(D3D12GetInterfaceCommand& c) {
+  loadAgilitySDK();
+}
+
+void DllOverrideUseLayer::pre(D3D12SerializeRootSignatureCommand& c) {
+  loadAgilitySDK();
+}
+
+void DllOverrideUseLayer::pre(D3D12SerializeVersionedRootSignatureCommand& c) {
+  loadAgilitySDK();
+}
+
+void DllOverrideUseLayer::pre(xessGetVersionCommand& c) {
+  loadXess();
+}
+
+void DllOverrideUseLayer::pre(xessD3D12CreateContextCommand& c) {
+  loadXess();
+}
+
+void DllOverrideUseLayer::loadAgilitySDK() {
   if (!agilitySDKLoaded_) {
     if (manager_.loadAgilitySdk("D3D12")) {
       agilitySDKLoaded_ = true;
@@ -73,15 +105,7 @@ void DllOverrideUseLayer::pre(D3D12GetDebugInterfaceCommand& c) {
   }
 }
 
-void DllOverrideUseLayer::pre(xessGetVersionCommand& c) {
-  if (!xessLoaded_) {
-    if (manager_.getXessService().loadXess("D3D12\\libxess.dll")) {
-      xessLoaded_ = true;
-    }
-  }
-}
-
-void DllOverrideUseLayer::pre(xessD3D12CreateContextCommand& c) {
+void DllOverrideUseLayer::loadXess() {
   if (!xessLoaded_) {
     if (manager_.getXessService().loadXess("D3D12\\libxess.dll")) {
       xessLoaded_ = true;

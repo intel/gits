@@ -23,12 +23,23 @@ public:
   ~DllOverrideUseLayer() = default;
 
   void pre(DllContainerMetaCommand& command) override;
+
   void pre(D3D12CreateDeviceCommand& command) override;
   void pre(D3D12GetDebugInterfaceCommand& command) override;
+  void pre(D3D12CreateRootSignatureDeserializerCommand& command) override;
+  void pre(D3D12CreateVersionedRootSignatureDeserializerCommand& command) override;
+  void pre(D3D12EnableExperimentalFeaturesCommand& command) override;
+  void pre(D3D12GetInterfaceCommand& command) override;
+  void pre(D3D12SerializeRootSignatureCommand& command) override;
+  void pre(D3D12SerializeVersionedRootSignatureCommand& command) override;
+
   void pre(xessGetVersionCommand& command) override;
   void pre(xessD3D12CreateContextCommand& command) override;
 
 private:
+  void loadAgilitySDK();
+  void loadXess();
+
   PlayerManager& manager_;
   bool useAddressPinning_{};
   std::filesystem::path dllOverridesDirectory_;
