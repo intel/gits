@@ -23,13 +23,20 @@ static std::string IdentifierToStr(
   static_assert(sizeof(D3D12_SERIALIZED_DATA_DRIVER_MATCHING_IDENTIFIER) == 32);
 
   auto printBytes = [](std::ostringstream& oss, const uint8_t* bytes, size_t count) {
+    // Save current format state
+    std::ios formatState(nullptr);
+    formatState.copyfmt(oss);
+
     for (size_t i = 0; i < count; ++i) {
       oss << "0x" << std::hex << std::setw(2) << std::setfill('0')
-          << static_cast<unsigned>(bytes[i]);
+          << static_cast<unsigned>(bytes[i]) << std::dec;
       if (i < (count - 1)) {
         oss << ", ";
       }
     }
+
+    // Restore format state
+    oss.copyfmt(formatState);
   };
 
   std::ostringstream oss;
