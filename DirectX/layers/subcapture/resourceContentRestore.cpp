@@ -234,8 +234,8 @@ unsigned ResourceContentRestore::restoreUnmappableResources(
       residencyObjects = std::vector<ID3D12Pageable*>(residencyObjectsUnique.begin(),
                                                       residencyObjectsUnique.end());
       evictPrevResidencyObjects();
-      prevResidencyKeys_ = residencyKeysUnique;
-      prevResidencyObjects_ = residencyObjectsUnique;
+      prevResidencyKeys_ = std::move(residencyKeysUnique);
+      prevResidencyObjects_ = std::move(residencyObjectsUnique);
     }
   }
 
