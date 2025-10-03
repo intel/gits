@@ -24,8 +24,12 @@ AddressPinningStoreLayer::AddressPinningStoreLayer() : Layer("AddressPinningStor
 }
 
 AddressPinningStoreLayer::~AddressPinningStoreLayer() {
-  if (Configurator::IsPlayer()) {
-    storeAddressRanges();
+  try {
+    if (Configurator::IsPlayer()) {
+      storeAddressRanges();
+    }
+  } catch (...) {
+    topmost_exception_handler("AddressPinningStoreLayer::~AddressPinningStoreLayer");
   }
 }
 
