@@ -174,6 +174,7 @@ private:
   std::unordered_map<unsigned, DescriptorHeapInfo> descriptorHeapInfos_;
 
   std::unordered_map<unsigned, std::vector<std::unique_ptr<Command>>> commandsByCommandList_;
+  std::unordered_map<unsigned, bool> resetCommandLists_;
 
   std::set<unsigned> checkedStateObjectSubobjects_;
 

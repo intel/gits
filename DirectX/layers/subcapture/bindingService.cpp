@@ -39,7 +39,11 @@ void BindingService::commandListsRestore(const std::set<unsigned>& commandLists)
 }
 
 void BindingService::commandListReset(ID3D12GraphicsCommandListResetCommand& c) {
-  commandsByCommandList_.erase(c.object_.key);
+  if (!analyzerService_.inRange() && !commandListSubcapture_) {
+    commandsByCommandList_.erase(c.object_.key);
+  } else {
+    resetCommandLists_[c.object_.key] = true;
+  }
   commandListInfos_.erase(c.object_.key);
 }
 
@@ -51,7 +55,9 @@ void BindingService::createDescriptorHeap(ID3D12DeviceCreateDescriptorHeapComman
 
 void BindingService::setRootSignature(ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     setRootSignatureImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -66,7 +72,9 @@ void BindingService::setRootSignatureImpl(
 
 void BindingService::setRootSignature(ID3D12GraphicsCommandListSetGraphicsRootSignatureCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     setRootSignatureImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -82,7 +90,9 @@ void BindingService::setRootSignatureImpl(
 void BindingService::setRootDescriptorTable(
     ID3D12GraphicsCommandListSetComputeRootDescriptorTableCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     setRootDescriptorTableImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -113,7 +123,9 @@ void BindingService::setRootDescriptorTableImpl(
 void BindingService::setRootDescriptorTable(
     ID3D12GraphicsCommandListSetGraphicsRootDescriptorTableCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     setRootDescriptorTableImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -144,7 +156,9 @@ void BindingService::setRootDescriptorTableImpl(
 void BindingService::setRootConstantBufferView(
     ID3D12GraphicsCommandListSetComputeRootConstantBufferViewCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     setRootConstantBufferViewImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -160,7 +174,9 @@ void BindingService::setRootConstantBufferViewImpl(
 void BindingService::setRootConstantBufferView(
     ID3D12GraphicsCommandListSetGraphicsRootConstantBufferViewCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     setRootConstantBufferViewImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -176,7 +192,9 @@ void BindingService::setRootConstantBufferViewImpl(
 void BindingService::setRootShaderResourceView(
     ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     setRootShaderResourceViewImpl(c);
     objectsForRestore_.insert(c.BufferLocation_.interfaceKey);
   } else if (!commandListSubcapture_) {
@@ -193,7 +211,9 @@ void BindingService::setRootShaderResourceViewImpl(
 void BindingService::setRootShaderResourceView(
     ID3D12GraphicsCommandListSetGraphicsRootShaderResourceViewCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     setRootShaderResourceViewImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -209,7 +229,9 @@ void BindingService::setRootShaderResourceViewImpl(
 void BindingService::setRootUnorderedAccessView(
     ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     setRootUnorderedAccessViewImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -225,7 +247,9 @@ void BindingService::setRootUnorderedAccessViewImpl(
 void BindingService::setRootUnorderedAccessView(
     ID3D12GraphicsCommandListSetGraphicsRootUnorderedAccessViewCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     setRootUnorderedAccessViewImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -240,7 +264,9 @@ void BindingService::setRootUnorderedAccessViewImpl(
 
 void BindingService::setIndexBuffer(ID3D12GraphicsCommandListIASetIndexBufferCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     setIndexBufferImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -254,7 +280,9 @@ void BindingService::setIndexBufferImpl(ID3D12GraphicsCommandListIASetIndexBuffe
 
 void BindingService::setVertexBuffers(ID3D12GraphicsCommandListIASetVertexBuffersCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     setVertexBuffersImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -270,7 +298,9 @@ void BindingService::setVertexBuffersImpl(ID3D12GraphicsCommandListIASetVertexBu
 
 void BindingService::setSOTargets(ID3D12GraphicsCommandListSOSetTargetsCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     setSOTargetsImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -287,7 +317,9 @@ void BindingService::setSOTargetsImpl(ID3D12GraphicsCommandListSOSetTargetsComma
 
 void BindingService::setRenderTargets(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     setRenderTargetsImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -340,7 +372,9 @@ void BindingService::setRenderTargetsImpl(ID3D12GraphicsCommandListOMSetRenderTa
 
 void BindingService::clearView(ID3D12GraphicsCommandListClearDepthStencilViewCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     clearViewImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -362,7 +396,9 @@ void BindingService::clearViewImpl(ID3D12GraphicsCommandListClearDepthStencilVie
 
 void BindingService::clearView(ID3D12GraphicsCommandListClearRenderTargetViewCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     clearViewImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -384,7 +420,9 @@ void BindingService::clearViewImpl(ID3D12GraphicsCommandListClearRenderTargetVie
 
 void BindingService::clearView(ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     clearViewImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -417,7 +455,9 @@ void BindingService::clearViewImpl(
 
 void BindingService::clearView(ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     clearViewImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -450,7 +490,9 @@ void BindingService::clearViewImpl(
 
 void BindingService::setPipelineState(ID3D12GraphicsCommandList4SetPipelineState1Command& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     setPipelineStateImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -474,7 +516,9 @@ void BindingService::setPipelineStateImpl(ID3D12GraphicsCommandList4SetPipelineS
 
 void BindingService::setDescriptorHeaps(ID3D12GraphicsCommandListSetDescriptorHeapsCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     setDescriptorHeapsImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -501,7 +545,9 @@ void BindingService::setDescriptorHeapsImpl(ID3D12GraphicsCommandListSetDescript
 void BindingService::buildRaytracingAccelerationStructure(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     buildRaytracingAccelerationStructureImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -543,7 +589,9 @@ void BindingService::buildRaytracingAccelerationStructureImpl(
 void BindingService::copyRaytracingAccelerationStructure(
     ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     copyRaytracingAccelerationStructureImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -565,7 +613,9 @@ void BindingService::copyRaytracingAccelerationStructureImpl(
 void BindingService::emitRaytracingAccelerationStructurePostbuildInfo(
     ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     emitRaytracingAccelerationStructurePostbuildInfoImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -591,7 +641,9 @@ void BindingService::emitRaytracingAccelerationStructurePostbuildInfoImpl(
 void BindingService::nvapiBuildAccelerationStructureEx(
     NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.pCommandList_.key);
+    if (!resetCommandLists_[c.pCommandList_.key]) {
+      commandListRestore(c.pCommandList_.key);
+    }
     nvapiBuildAccelerationStructureExImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.pCommandList_.key].emplace_back(
@@ -646,7 +698,9 @@ void BindingService::nvapiBuildOpacityMicromapArray(
 
 void BindingService::dispatchRays(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     dispatchRaysImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -676,7 +730,9 @@ void BindingService::dispatchRaysImpl(ID3D12GraphicsCommandList4DispatchRaysComm
 
 void BindingService::executeIndirect(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     executeIndirectImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -713,7 +769,9 @@ void BindingService::executeIndirectImpl(ID3D12GraphicsCommandListExecuteIndirec
 
 void BindingService::dispatch(ID3D12GraphicsCommandListDispatchCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     dispatchImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -737,7 +795,9 @@ void BindingService::dispatchImpl(ID3D12GraphicsCommandListDispatchCommand& c) {
 
 void BindingService::draw(ID3D12GraphicsCommandListDrawIndexedInstancedCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     drawImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -761,7 +821,9 @@ void BindingService::drawImpl(ID3D12GraphicsCommandListDrawIndexedInstancedComma
 
 void BindingService::draw(ID3D12GraphicsCommandListDrawInstancedCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     drawImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
@@ -786,7 +848,9 @@ void BindingService::drawImpl(ID3D12GraphicsCommandListDrawInstancedCommand& c) 
 void BindingService::writeBufferImmediate(
     ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c) {
   if (analyzerService_.inRange()) {
-    commandListRestore(c.object_.key);
+    if (!resetCommandLists_[c.object_.key]) {
+      commandListRestore(c.object_.key);
+    }
     writeBufferImmediateImpl(c);
   } else if (!commandListSubcapture_) {
     commandsByCommandList_[c.object_.key].emplace_back(
