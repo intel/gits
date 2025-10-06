@@ -38,11 +38,6 @@ public:
     return Get().common.recorder.recordingMode == RecordingMode::BINARY;
   }
 
-  static bool IsTraceDataOptPresent(TraceData option) {
-    return Configurator::Get().common.shared.traceDataOpts.find(option) !=
-           Configurator::Get().common.shared.traceDataOpts.end();
-  }
-
 #ifdef GITS_PLATFORM_WINDOWS
   static void PrepareSubcapturePath();
 #endif

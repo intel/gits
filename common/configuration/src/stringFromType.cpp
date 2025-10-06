@@ -67,18 +67,4 @@ std::string stringFrom(const VulkanObjectRange& value) {
       << stringFrom<BitRange>(value.range) << "/" << stringFrom<VulkanObjectMode>(value.objMode);
   return oss.str();
 }
-
-template <>
-std::string stringFrom<std::set<TraceData>>(const std::set<TraceData>& value) {
-  std::ostringstream oss;
-  int i = 0;
-  for (const auto& elem : value) {
-    if (i > 0) {
-      oss << ",";
-    }
-    oss << elem;
-    i++;
-  }
-  return oss.str();
-}
 } // namespace gits

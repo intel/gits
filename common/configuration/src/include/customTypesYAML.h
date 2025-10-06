@@ -44,10 +44,4 @@ struct convert<BitRange> {
   static Node encode(const BitRange& rhs);
 };
 
-template <>
-struct convert<std::set<gits::TraceData>> {
-  static bool decode(const Node& node, std::set<gits::TraceData>& rhs);
-  static Node encode(const std::set<gits::TraceData>& rhs);
-};
-
 } // namespace YAML

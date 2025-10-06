@@ -23,7 +23,7 @@ Configuration:
             Arguments: [logLevel, loglevel]
             Description: Only info with level greater or equal to this will be logged.
             LongDescription:
-              "The levels are: TRACEVERBOSE, TRACE, INFOVERBOSE,  INFO (default),
+              "The levels are: TRACEVERBOSE, TRACE, INFOVERBOSE, INFO (default),
               WARNING, ERROR and OFF. With TRACE level API calls are logged. With TRACEVERBOSE
               additional details are logged, for example in OGL streams log will contain
               state like list of bound framebuffers with attachments, pipelines, programs,
@@ -32,18 +32,6 @@ Configuration:
           - Name: logToConsole
             Type: bool
             Default: false
-          - Name: traceDataOpts
-            Type: std::set<TraceData>
-            Default: "[]"
-            Accessibility: ArgumentOnly
-            Arguments: [traceData]
-            Description: Avaliable if '--logLevel TRACE' selected.
-            LongDescription: |
-              Enables logging additional info to trace specified by comma separated options. 
-              Options: 
-
-              * frameNumber - dump frame number for every api call.
-            ConfigName: traceData
           - Name: useEvents
             Type: bool
             Default: ""

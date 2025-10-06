@@ -56,8 +56,6 @@ enum LogStyle {
   RAW,        // example log
 };
 
-const TraceData TraceDataAll[] = {TraceData::FRAME_NUMBER};
-
 class CLog {
 public:
   typedef void FPrintf(const char*);

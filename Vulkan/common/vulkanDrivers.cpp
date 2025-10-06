@@ -271,9 +271,6 @@ void checkReturnValue<PFN_vkVoidFunction>(const char*, PFN_vkVoidFunction) {}
     bool doTrace = ShouldLog(LogLevel::TRACE);                                                     \
     if (doTrace) {                                                                                 \
       LOG_FORMAT_RAW                                                                               \
-      if (Configurator::IsTraceDataOptPresent(TraceData::FRAME_NUMBER)) {                          \
-        LOG_TRACE << "Frame: " << CGits::Instance().CurrentFrame() << " ";                         \
-      }                                                                                            \
       LOG_TRACE << #function_name;                                                                 \
     }                                                                                              \
     return_type gits_ret = (return_type)0;                                                         \

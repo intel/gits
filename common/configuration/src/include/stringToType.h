@@ -128,16 +128,6 @@ inline std::istream& operator>>(std::istream& in, gits::VulkanObjectRange& data)
   return in;
 }
 
-inline std::istream& operator>>(std::istream& in, std::set<gits::TraceData>& sequence) {
-  auto elements = processSimpleArray(in, ',');
-  for (const auto& elem : elements) {
-    if (!elem.empty()) {
-      sequence.insert(gits::stringTo<gits::TraceData>(elem));
-    }
-  }
-  return in;
-}
-
 namespace {
 // Needed to jump namespaces for the above operators
 template <typename T>

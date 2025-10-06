@@ -84,22 +84,4 @@ Node convert<BitRange>::encode(const BitRange& rhs) {
   return node;
 }
 
-bool convert<std::set<gits::TraceData>>::decode(const Node& node, std::set<gits::TraceData>& rhs) {
-  if (!node.IsScalar()) {
-    return false;
-  }
-  try {
-    rhs = gits::stringTo<std::set<gits::TraceData>>(node.as<std::string>());
-    return true;
-  } catch (const std::exception&) {
-    return false;
-  }
-}
-
-Node convert<std::set<gits::TraceData>>::encode(const std::set<gits::TraceData>& rhs) {
-  Node node;
-  node = gits::stringFrom<std::set<gits::TraceData>>(rhs);
-  return node;
-}
-
 } // namespace YAML
