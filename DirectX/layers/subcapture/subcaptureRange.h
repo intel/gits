@@ -20,7 +20,7 @@ public:
   SubcaptureRange();
 
   void frameEnd(bool stateRestore);
-  bool isFrameRangeStart();
+  bool isFrameRangeStart(bool stateRestore);
   void executionStart();
   void executionEnd();
   bool isExecutionRangeStart();
@@ -37,7 +37,7 @@ private:
   bool inFrameRange_{};
   unsigned startFrame_{};
   unsigned endFrame_{};
-  unsigned currentFrame_{};
+  unsigned currentFrame_{1};
 };
 
 } // namespace DirectX

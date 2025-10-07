@@ -64,7 +64,7 @@ void AnalyzerService::present(unsigned callKey, unsigned swapChainKey) {
     return;
   }
 
-  if (subcaptureRange_.isFrameRangeStart()) {
+  if (subcaptureRange_.isFrameRangeStart(callKey & Command::stateRestoreKeyMask)) {
     inRange_ = true;
     beforeRange_ = false;
     clearReadyExecutables();

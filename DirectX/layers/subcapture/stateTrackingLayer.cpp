@@ -94,7 +94,8 @@ void StateTrackingLayer::post(IDXGISwapChainPresentCommand& c) {
   if (c.Flags_.value & DXGI_PRESENT_TEST) {
     return;
   }
-  if (!subcaptureRange_.commandListSubcapture() && subcaptureRange_.isFrameRangeStart()) {
+  if (!subcaptureRange_.commandListSubcapture() &&
+      subcaptureRange_.isFrameRangeStart(c.key & Command::stateRestoreKeyMask)) {
     gpuExecutionFlusher_.flushCommandQueues();
     stateService_.restoreState();
     stateRestored_ = true;
@@ -108,7 +109,8 @@ void StateTrackingLayer::post(IDXGISwapChain1Present1Command& c) {
   if (c.PresentFlags_.value & DXGI_PRESENT_TEST) {
     return;
   }
-  if (!subcaptureRange_.commandListSubcapture() && subcaptureRange_.isFrameRangeStart()) {
+  if (!subcaptureRange_.commandListSubcapture() &&
+      subcaptureRange_.isFrameRangeStart(c.key & Command::stateRestoreKeyMask)) {
     gpuExecutionFlusher_.flushCommandQueues();
     stateService_.restoreState();
     stateRestored_ = true;

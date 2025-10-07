@@ -52,11 +52,7 @@ void SubcaptureRange::frameEnd(bool stateRestore) {
   executionCount_ = 0;
   zeroOrFirstFrame_ = false;
 
-  if (stateRestore) {
-    currentFrame_ = 1;
-  } else if (!currentFrame_) {
-    currentFrame_ = 2;
-  } else {
+  if (!stateRestore) {
     ++currentFrame_;
   }
 
@@ -67,7 +63,10 @@ void SubcaptureRange::frameEnd(bool stateRestore) {
   }
 }
 
-bool SubcaptureRange::isFrameRangeStart() {
+bool SubcaptureRange::isFrameRangeStart(bool stateRestore) {
+  if (stateRestore) {
+    return false;
+  }
   return currentFrame_ == startFrame_ - 1;
 }
 
