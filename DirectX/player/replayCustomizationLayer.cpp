@@ -772,6 +772,10 @@ void ReplayCustomizationLayer::pre(
 }
 
 void ReplayCustomizationLayer::pre(IDXGIFactory4EnumAdapterByLuidCommand& c) {
+  if (c.skip) {
+    return;
+  }
+
   c.AdapterLuid_.value = manager_.getAdapterService().getCurrentLuid(c.AdapterLuid_.value);
   if ((c.AdapterLuid_.value.HighPart == 0) && (c.AdapterLuid_.value.LowPart == 0)) {
     c.skip = true;
