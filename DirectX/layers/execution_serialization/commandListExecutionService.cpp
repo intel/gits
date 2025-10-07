@@ -36,6 +36,10 @@ void CommandListExecutionService::copyAuxiliaryFiles() {
     std::filesystem::copy(streamDir / "addressRanges.txt", subcapturePath,
                           std::filesystem::copy_options::overwrite_existing);
   }
+  if (std::filesystem::exists(streamDir / "DirectStorageResources.bin")) {
+    std::filesystem::copy(streamDir / "DirectStorageResources.bin", subcapturePath,
+                          std::filesystem::copy_options::overwrite_existing);
+  }
 }
 
 void CommandListExecutionService::commandListCommand(unsigned commandListKey,
