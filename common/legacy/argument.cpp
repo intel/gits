@@ -144,13 +144,6 @@ void gits::CArgumentFileText::LoadTextFromFile() {
   }
 }
 
-void gits::CArgumentFileText::Write(CCodeOStream& stream) const {
-  //implementation - captured function calls go to this file:
-  stream.select(stream.selectCCodeFile());
-
-  stream << "TextFile(\"" << _fileName.c_str() << "\")";
-}
-
 gits::CBinaryResource::CBinaryResource() {
   _resource_hash = CResourceManager::EmptyHash;
 }
@@ -196,14 +189,6 @@ gits::CBinaryResource::PointerProxy gits::CBinaryResource::Data() const {
   }
 }
 
-void gits::CBinaryResource::Write(CCodeOStream& stream) const {
-  if (_resource_hash != 0) {
-    stream << "Resource(" << _resource_hash << ")";
-  } else {
-    stream << "nullptr";
-  }
-}
-
 gits::hash_t gits::CBinaryResource::GetResourceHash() const {
   return _resource_hash;
 }
@@ -225,10 +210,6 @@ void gits::Cchar::Write(CBinOStream& stream) const {
 
 void gits::Cchar::Read(CBinIStream& stream) {
   read_from_stream(stream, _value);
-}
-
-void gits::Cchar::Write(CCodeOStream& stream) const {
-  throw ENotImplemented(EXCEPTION_MESSAGE);
 }
 
 /* ************************* CONST CHAR ** ****************************** */
@@ -308,37 +289,6 @@ void gits::CByteStringArray<T>::Read(CBinIStream& stream) {
   }
 }
 
-template <typename T>
-void gits::CByteStringArray<T>::Write(CCodeOStream& stream) const {
-  stream << stream.VariableName(ScopeKey());
-}
-
-template <typename T>
-void gits::CByteStringArray<T>::Declare(CCodeOStream& stream) const {
-  stream.Indent() << "const char*";
-
-  if (_cStringTable.size() == 0) {
-    stream << "*";
-  }
-  stream << " " << stream.VariableName(ScopeKey());
-  if (_cStringTable.size() != 0) {
-    stream << "[]";
-  }
-  // Initialize all elements in an array.
-  if (_cStringTable.size() == 0) {
-    stream << " = 0;\n";
-  } else {
-    // Declare an array.
-    stream << " = {\n";
-    stream.ScopeBegin();
-    for (auto string : _cStringTable) {
-      stream.Indent() << "\"" << string->ToString() << "\",\n";
-    }
-    stream.ScopeEnd();
-    stream.Indent() << "};\n";
-  }
-}
-
 template <>
 const char* gits::CStringArray::NAME = "const char**";
 template <>
@@ -357,10 +307,6 @@ void gits::Cint::Write(CBinOStream& stream) const {
 
 void gits::Cint::Read(CBinIStream& stream) {
   read_from_stream(stream, _value);
-}
-
-void gits::Cint::Write(CCodeOStream& stream) const {
-  stream << _value;
 }
 
 const char* gits::Cuint8_t::NAME = "uint8_t";
@@ -417,11 +363,6 @@ void gits::CMappedHandle::Read(CBinIStream& stream) {
       throw ENotSupported(EXCEPTION_MESSAGE);
     }
   }
-}
-
-void gits::CMappedHandle::Write(CCodeOStream& stream) const {
-  LOG_ERROR << "External memory handles are not yet implemented in CCode.";
-  throw ENotImplemented(EXCEPTION_MESSAGE);
 }
 
 void* gits::CMappedHandle::Original() const {

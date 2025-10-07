@@ -119,16 +119,6 @@ public:
     hwnd.Read(stream);
     hinstance.Read(stream);
   }
-  virtual void Write(CCodeOStream& stream) const {
-    // We have a custom Write to write raw keys of hwnd and hinstance.
-    // Otherwise they would get written as GetMapping(key) and it would
-    // result in an error as the mappings will only be added inside the
-    // function.
-    stream.Indent() << Name() << "(" << x << ", " << y << ", " << w << ", " << h << ", " << vis
-                    << ", "
-                    << "(vk_win_handle_t)" << hex(hwnd.Original()) << ", "
-                    << "(connection_t)" << hex(hinstance.Original()) << ");\n";
-  }
 
   virtual unsigned Id() const {
     return ID_GITS_VK_WINDOW_CREATOR;
@@ -239,16 +229,6 @@ public:
     vis.Read(stream);
     hwnd.Read(stream);
     hinstance.Read(stream);
-  }
-  virtual void Write(CCodeOStream& stream) const {
-    // We have a custom Write to write raw keys of hwnd and hinstance.
-    // Otherwise they would get written as GetMapping(key) and it would
-    // result in an error as the mappings will only be added inside the
-    // function.
-    stream.Indent() << Name() << "(" << x << ", " << y << ", " << w << ", " << h << ", " << vis
-                    << ", "
-                    << "(vk_win_handle_t)" << hex(hwnd.Original()) << ", "
-                    << "(connection_t)" << hex(hinstance.Original()) << ");\n";
   }
 
   virtual unsigned Id() const {
@@ -442,7 +422,7 @@ class CGitsVkMemoryUpdate : public CFunction, gits::noncopyable {
   std::unique_ptr<CVkDeviceMemory> _mem;
   std::unique_ptr<Cuint64_t> _offset;
   std::unique_ptr<Cuint64_t> _length;
-  std::unique_ptr<CDeclaredBinaryResource> _resource;
+  std::unique_ptr<CBinaryResource> _resource;
 
   virtual CArgument& Argument(unsigned idx);
   virtual unsigned ArgumentCount() const {
@@ -489,11 +469,6 @@ public:
   intptr_t ScopeKey() const {
     return reinterpret_cast<intptr_t>(this);
   }
-  bool DeclarationNeeded() const {
-    return true;
-  }
-  void Declare(CCodeOStream& stream) const;
-  void Write(CCodeOStream& stream) const;
 };
 
 class CGitsVkMemoryUpdate2 : public CFunction, gits::noncopyable {
@@ -502,7 +477,7 @@ class CGitsVkMemoryUpdate2 : public CFunction, gits::noncopyable {
   std::unique_ptr<Cuint64_t> _size;
   std::vector<std::shared_ptr<Cuint64_t>> _offset;
   std::vector<std::shared_ptr<Cuint64_t>> _length;
-  std::vector<std::shared_ptr<CDeclaredBinaryResource>> _resource;
+  std::vector<std::shared_ptr<CBinaryResource>> _resource;
 
   virtual CArgument& Argument(unsigned idx) override;
   virtual unsigned ArgumentCount() const override {
@@ -523,7 +498,6 @@ public:
   }
   virtual void Write(CBinOStream& stream) const override;
   virtual void Read(CBinIStream& stream) override;
-  virtual void Write(CCodeOStream& stream) const override;
   virtual void Run() override;
   std::set<uint64_t> GetMappedPointers() {
     std::set<uint64_t> returnMap;
@@ -540,7 +514,7 @@ class CGitsVkMemoryRestore : public CFunction, gits::noncopyable {
   std::unique_ptr<CVkDeviceMemory> _mem;
   std::unique_ptr<Cuint64_t> _length;
   std::unique_ptr<Cuint64_t> _offset;
-  std::unique_ptr<CDeclaredBinaryResource> _resource;
+  std::unique_ptr<CBinaryResource> _resource;
 
   virtual CArgument& Argument(unsigned idx);
   virtual unsigned ArgumentCount() const {
@@ -606,7 +580,6 @@ public:
   }
   virtual void Write(CBinOStream& stream) const override;
   virtual void Read(CBinIStream& stream) override;
-  virtual void Write(CCodeOStream& stream) const override;
   virtual void Run();
   std::set<uint64_t> GetMappedPointers() {
     std::set<uint64_t> returnMap;
@@ -624,7 +597,7 @@ class CGitsVkCmdPatchDeviceAddresses : public CFunction {
   static const unsigned ARG_NUM = 3;
   std::unique_ptr<Cuint32_t> _count;
   std::unique_ptr<CVkCommandBuffer> _commandBuffer;
-  std::unique_ptr<CDeclaredBinaryResource>
+  std::unique_ptr<CBinaryResource>
       _resource; // An array of VkBufferDeviceAddressPatchGITS structures
 
   virtual CArgument& Argument(unsigned idx);
@@ -648,7 +621,6 @@ public:
   }
   virtual void Write(CBinOStream& stream) const override;
   virtual void Read(CBinIStream& stream) override;
-  virtual void Write(CCodeOStream& stream) const override;
   virtual void Run();
   std::set<uint64_t> GetMappedPointers() {
     std::set<uint64_t> returnMap;
@@ -678,7 +650,6 @@ public:
   virtual const char* Name() const override {
     return "CGitsDestroyVulkanDescriptorSets";
   }
-  virtual void Write(CCodeOStream& stream) const override;
   virtual void Run() override;
   std::set<uint64_t> GetMappedPointers() {
     std::set<uint64_t> returnMap;
@@ -708,7 +679,6 @@ public:
   virtual const char* Name() const override {
     return "CGitsDestroyVulkanCommandBuffers";
   }
-  virtual void Write(CCodeOStream& stream) const override;
   virtual void Run() override;
   std::set<uint64_t> GetMappedPointers() override {
     std::set<uint64_t> returnMap;
@@ -800,7 +770,6 @@ public:
   virtual const char* Name() const {
     return "CGitsInitializeImage";
   }
-  virtual void Write(CCodeOStream& stream) const override;
   virtual void Run();
   virtual void Exec();
   virtual void StateTrack();
@@ -848,7 +817,6 @@ public:
   virtual const char* Name() const {
     return "CGitsVkCmdInsertMemoryBarriers";
   }
-  virtual void Write(CCodeOStream& stream) const override;
   virtual void Run();
   virtual void Exec();
   virtual void StateTrack();
@@ -879,7 +847,6 @@ public:
   virtual const char* Name() const {
     return "CGitsVkCmdInsertMemoryBarriers2";
   }
-  virtual void Write(CCodeOStream& stream) const override;
   virtual void Run();
   virtual void Exec();
   virtual void StateTrack();
@@ -916,7 +883,6 @@ public:
   virtual const char* Name() const {
     return "CGitsInitializeMultipleImages";
   }
-  virtual void Write(CCodeOStream& stream) const override;
   virtual void Run();
   virtual void Exec();
   virtual void StateTrack();
@@ -969,7 +935,6 @@ public:
   virtual const char* Name() const {
     return "CGitsInitializeBuffer";
   }
-  virtual void Write(CCodeOStream& stream) const override;
   virtual void Run();
   virtual void Exec();
   virtual void StateTrack();
@@ -1006,7 +971,6 @@ public:
   virtual const char* Name() const {
     return "CGitsInitializeMultipleBuffers";
   }
-  virtual void Write(CCodeOStream& stream) const override;
   virtual void Run();
   virtual void Exec();
   virtual void StateTrack();
@@ -1040,46 +1004,11 @@ public:
   }
   virtual void Write(CBinOStream& stream) const override;
   virtual void Read(CBinIStream& stream) override;
-  virtual void Write(CCodeOStream& stream) const override {}
   virtual void Run() override;
   std::set<uint64_t> GetMappedPointers() {
     std::set<uint64_t> returnMap;
     return returnMap;
   }
 };
-
-template <class T_WRAP>
-inline void CVectorPrintHelper<T_WRAP>::Declare(CCodeOStream& stream) const {
-  for (const auto& wrapper : vec_) {
-    if (wrapper->DeclarationNeeded()) {
-      wrapper->Declare(stream);
-    }
-  }
-
-  stream.Register(ScopeKey(), "arr", true);
-  stream.Indent() << T_WRAP().Name(); // Name isn't static so we create an instance.
-  if (vec_.size() == 0) {
-    stream << "* " << stream.VariableName(ScopeKey()) << " = nullptr;\n";
-  } else {
-    stream << " " << stream.VariableName(ScopeKey()) << "[] = { ";
-    stream.ScopeBegin();
-    for (const auto& wrapper : vec_) {
-      stream << *wrapper << ", ";
-    }
-    stream.ScopeEnd();
-    stream << "};\n";
-  }
-}
-
-template <class T_WRAP>
-inline void CVectorPrintHelper<T_WRAP>::Write(CCodeOStream& stream) const {
-  stream << stream.VariableName(ScopeKey());
-}
-
-template <typename T_WRAP>
-gits::CCodeOStream& operator<<(gits::CCodeOStream& stream, const CVectorPrintHelper<T_WRAP>& vph) {
-  vph.Write(stream);
-  return stream;
-}
 } // namespace Vulkan
 } // namespace gits

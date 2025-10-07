@@ -86,14 +86,6 @@ namespace Vulkan {
       virtual std::set<uint64_t> GetMappedPointers();
       virtual void Write(CBinOStream& stream) const override;
       virtual void Read(CBinIStream& stream) override;
-      virtual void Write(CCodeOStream& stream) const override;
-      virtual bool AmpersandNeeded() const override;
-    % if struct.declaration_needed_wrap:
-      virtual bool DeclarationNeeded() const override; // see vulkanArgumentsWrap.cpp for definition
-    % else:
-      virtual bool DeclarationNeeded() const override { return true; }
-    % endif
-      virtual void Declare(CCodeOStream &stream) const override;
     };
 
 % endfor

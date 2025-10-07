@@ -55,7 +55,6 @@ add_library(Vulkan_common
   include/vulkanTypes.h
   include/vulkan_apis_iface.h
   include/vulkan_basic.h
-  include/vulkanCCodeWriteWrap.h
   include/vulkanPNextWrappers.inl
   include/vulkanInternalShaderModules.h
   include/vulkanRenderDocUtil.h
@@ -79,7 +78,6 @@ add_library(Vulkan_common
   vulkanTools.cpp
   vulkanTools_lite.cpp
   vulkanTracerAuto.cpp
-  vulkanCCodeWriteWrap.cpp
   vulkanInternalShaderModules.cpp
   vulkanRenderDocUtil.cpp
 )

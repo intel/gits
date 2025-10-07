@@ -171,27 +171,6 @@ opaque_handles: list[str] = (
 vulkan_mapped_types: list[str] = opaque_dispatchable_handles
 vulkan_mapped_types_nondisp: list[str] = opaque_nondispatchable_handles
 
-
-# Data for CCode
-
-types_needing_name_registration: list[str] = [
-    "StringArray",
-    "ByteStringArray",
-]
-
-types_not_needing_declaration: list[str] = (
-    [
-        "NullWrapper",
-        "VoidPtr",
-    ]
-    + vulkan_enums
-    + vulkan_uint32
-    + vulkan_uint64
-    + vulkan_other_primitives
-    + opaque_handles
-)
-
-
 def decimal_str_to_hex(decimal_text: str) -> str:
     """
     Convert text from decimal to hexadecimal.
@@ -1216,13 +1195,6 @@ def main() -> None:
     )
 
     mako_write(
-        'templates/vulkanCCodeArgumentsAuto.h.mako',
-        '../CCodeFiles/src/include/vulkanCCodeArgumentsAuto.h',
-        vulkan_mapped_types=vulkan_mapped_types,
-        vulkan_mapped_types_nondisp=vulkan_mapped_types_nondisp,
-    )
-
-    mako_write(
         'templates/vulkanArgumentsAuto.h.mako',
         'common/include/vulkanArgumentsAuto.h',
         make_cname=make_cname,
@@ -1249,7 +1221,6 @@ def main() -> None:
         primitive_types=primitive_types,
         vulkan_mapped_types=vulkan_mapped_types,
         vulkan_mapped_types_nondisp=vulkan_mapped_types_nondisp,
-        types_not_needing_declaration=types_not_needing_declaration,
     )
 
     enabled_non_custom_structs: list[VkStruct] = [s for s in enabled_structs if not s.custom]

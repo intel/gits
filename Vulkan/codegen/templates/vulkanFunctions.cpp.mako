@@ -135,13 +135,6 @@ void gits::Vulkan::${cname}::RemoveMapping()
   % endif
 % endfor
 }
-% if token.ccode_write_wrap:
-
-void gits::Vulkan::${cname}::Write(CCodeOStream& stream) const {
-  stream.select(stream.selectCCodeFile());
-  ${cname}_CCODEWRITEWRAP(stream, *this);
-}
-% endif
 % if token.token_cache:
 
 VkCommandBuffer gits::Vulkan::${cname}::CommandBuffer() {

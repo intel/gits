@@ -79,7 +79,7 @@ public:
      *
      * @param stream Output stream to use.
      */
-  virtual void Write(CCodeOStream& stream) const = 0;
+  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {};
 
   /**
      * @brief Whether the output of Write needs to be prefixed with '&'
@@ -181,8 +181,9 @@ void stream_output(std::ostream& s, const T& t) {
    * @return Output stream
    */
 template <typename T>
-gits::CCodeOStream& operator<<(gits::CCodeOStream& stream, const T& t) {
-  stream_output(stream, t);
+gits::CCodeOStream& operator<<([[maybe_unused]] gits::CCodeOStream& stream,
+                               [[maybe_unused]] const T& t) {
+  // Do nothing (all CCode suport is being removed)
   return stream;
 }
 
@@ -222,7 +223,7 @@ public:
   }
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
+  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {};
 
   const std::string& FileName() const {
     return _fileName;
@@ -272,7 +273,6 @@ public:
 
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
 
   PointerProxy Data() const;
   PointerProxy operator*() {
@@ -338,15 +338,6 @@ public:
   virtual int Size() const {
     return N;
   }
-  virtual void Write(CCodeOStream& stream) const;
-  virtual void Declare(CCodeOStream& stream) const;
-  virtual bool DeclarationNeeded() const {
-    return true;
-  }
-  virtual void DeclareElement(unsigned idx, CCodeOStream& stream) const {
-    CWrapType wrap(_array[idx]);
-    wrap.DeclareValue(stream);
-  }
 };
 
 /**
@@ -400,11 +391,6 @@ public:
   }
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
-  virtual void Declare(CCodeOStream& stream) const;
-  virtual bool DeclarationNeeded() const {
-    return true;
-  }
 };
 
 /**
@@ -493,15 +479,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     _sizedArray.Read(stream);
   }
-  virtual void Write(CCodeOStream& stream) const {
-    _sizedArray.Write(stream);
-  };
-  virtual void Declare(CCodeOStream& stream) const {
-    _sizedArray.Declare(stream);
-  }
-  virtual bool DeclarationNeeded() const {
-    return _sizedArray.DeclarationNeeded();
-  }
+  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
   virtual std::set<T_GET_MAPPED_POINTERS> GetMappedPointers() {
     return std::set<T_GET_MAPPED_POINTERS>();
   }
@@ -596,13 +574,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     _sizedArray.Read(stream);
   }
-  virtual void Write(CCodeOStream& stream) const {
-    _sizedArray.Write(stream);
-  };
-  virtual void Declare(CCodeOStream& stream) const;
-  virtual bool DeclarationNeeded() const {
-    return _sizedArray.DeclarationNeeded();
-  }
+  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
   virtual std::set<uint64_t> GetMappedPointers() {
     return std::set<uint64_t>();
   }
@@ -796,7 +768,7 @@ public:
 
   virtual void Read(CBinIStream& stream);
   virtual void Write(CBinOStream& stream) const;
-  virtual void Write(CCodeOStream& stream) const;
+  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {};
 };
 
 template <typename T>
@@ -841,11 +813,6 @@ public:
   }
   virtual void Read(CBinIStream& stream);
   virtual void Write(CBinOStream& stream) const;
-  virtual void Write(CCodeOStream& stream) const;
-  virtual void Declare(CCodeOStream& stream) const;
-  virtual bool DeclarationNeeded() const {
-    return true;
-  }
 
   size_t Count() const {
     return _cStringTable.size();
@@ -979,65 +946,6 @@ public:
       }
     } else {
       throw std::runtime_error(EXCEPTION_MESSAGE);
-    }
-  }
-  virtual void Write(CCodeOStream& stream) const {
-    stream << getVarName("arr_", this);
-  }
-  virtual bool DeclarationNeeded() const {
-    return true;
-  }
-  virtual void Declare(CCodeOStream& stream) const {
-    const size_t length = _cargs.size();
-
-    stream << "\n"; // For prettier printing of nested arrays.
-
-    for (const auto& ptr : _cargs) {
-      if (ptr->DeclarationNeeded()) {
-        ptr->Declare(stream);
-      }
-    }
-
-    stream.Indent() << Name();
-    if (length == 0) {
-      stream << "* " << getVarName("arr_", this) << " = nullptr;\n";
-    } else {
-      stream << " " << getVarName("arr_", this) << "[] = { ";
-      size_t idx = 0;
-      for (const auto& ptr : _cargs) {
-        stream << *ptr;
-        if (idx < length - 1) {
-          stream << ", ";
-        }
-        idx++;
-      }
-      stream << " };\n";
-    }
-  }
-
-  // Declares smaller parts of array, defined by start and end arguments.
-  // Needed for dividing excessive chunks of code during writing to CCode.
-  void Declare(CCodeOStream& stream, size_t start, size_t end) const {
-    stream << "\n"; // For prettier printing of nested arrays.
-
-    for (size_t i = start; i < end; i++) {
-      if (_cargs[i]->DeclarationNeeded()) {
-        _cargs[i]->Declare(stream);
-      }
-    }
-
-    stream.Indent() << Name();
-    if (start == end) {
-      stream << "* " << getVarName("arr_", this) << " = nullptr;\n";
-    } else {
-      stream << " " << getVarName("arr_", this) << "[] = { ";
-      for (size_t i = start; i < end; i++) {
-        stream << *_cargs[i];
-        if (i < end - 1) {
-          stream << ", ";
-        }
-      }
-      stream << " };\n";
     }
   }
 
@@ -1249,16 +1157,12 @@ public:
     }
   }
 
-  virtual void Write(CCodeOStream& stream) const {
-    stream << getVarName("arr_", this);
-  }
+  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
   virtual bool DeclarationNeeded() const {
     return true;
   }
 
-  void Declare([[maybe_unused]] CCodeOStream& stream) const {
-    TODO("Finish declaration for CCode - important for ray tracing")
-  }
+  void Declare([[maybe_unused]] CCodeOStream& stream) const {}
 
   virtual bool PostActionNeeded() const {
     for (const auto& outer : _cargs) {
@@ -1326,7 +1230,7 @@ public:
 
   virtual void Read(CBinIStream& stream);
   virtual void Write(CBinOStream& stream) const;
-  virtual void Write(CCodeOStream& stream) const;
+  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 //************************** Cuint64_t ***********************************
@@ -1353,9 +1257,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _uint64);
   }
-  virtual void Write(CCodeOStream& stream) const {
-    stream << _uint64;
-  }
+  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 //************************** Cint64_t ***********************************
@@ -1382,9 +1284,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _value);
   }
-  virtual void Write(CCodeOStream& stream) const {
-    stream << _value;
-  }
+  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 //************************** Cdouble ***********************************
@@ -1411,9 +1311,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _double);
   }
-  virtual void Write(CCodeOStream& stream) const {
-    stream << _double;
-  }
+  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 //************************** Cfloat ***********************************
@@ -1440,13 +1338,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _float);
   }
-  virtual void Write(CCodeOStream& stream) const {
-    if (std::isinf(_float)) {
-      stream << "INFINITY";
-    } else {
-      stream << _float;
-    }
-  }
+  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 //************************** Cuint8_t ***********************************
@@ -1475,9 +1367,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _uint8);
   }
-  virtual void Write(CCodeOStream& stream) const {
-    stream << (uint32_t)_uint8; // Cast so it gets written as text, not raw bytes.
-  }
+  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 //************************** Cint32_t ***********************************
@@ -1506,9 +1396,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _value);
   }
-  virtual void Write(CCodeOStream& stream) const {
-    stream << (int32_t)_value; // Cast so it gets written as text, not raw bytes.
-  }
+  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 //************************** Cuint16_t ***********************************
@@ -1537,9 +1425,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _uint16);
   }
-  virtual void Write(CCodeOStream& stream) const {
-    stream << _uint16;
-  }
+  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 //************************** Cint16_t ***********************************
@@ -1567,9 +1453,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _int);
   }
-  virtual void Write(CCodeOStream& stream) const {
-    stream << _int;
-  }
+  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 //************************** Cuint32_t ***********************************
@@ -1598,9 +1482,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _uint32);
   }
-  virtual void Write(CCodeOStream& stream) const {
-    stream << _uint32;
-  }
+  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 //************************** Cint32_t ***********************************
@@ -1628,9 +1510,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _int);
   }
-  virtual void Write(CCodeOStream& stream) const {
-    stream << _int;
-  }
+  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 //************************** Csize_t ***********************************
@@ -1659,9 +1539,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_size_t_from_stream(stream, _size);
   }
-  virtual void Write(CCodeOStream& stream) const {
-    stream << _size;
-  }
+  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 //**************************  CBOOL ***********************************
@@ -1689,9 +1567,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _BOOL);
   }
-  virtual void Write(CCodeOStream& stream) const {
-    stream << (_BOOL ? "true" : "false");
-  }
+  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 // **************************  CMappedHandle  **************************
@@ -1716,7 +1592,7 @@ public:
 
   virtual void Write(CBinOStream& stream) const override;
   virtual void Read(CBinIStream& stream) override;
-  virtual void Write([[maybe_unused]] CCodeOStream& stream) const override;
+  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 
   void* Original() const;
   void* Value() const;
@@ -1829,65 +1705,6 @@ void gits::CArgumentSizedArrayBase<T, T_WRAP>::Read(CBinIStream& stream) {
   }
 }
 
-template <class T, class T_WRAP>
-void gits::CArgumentSizedArrayBase<T, T_WRAP>::Write(CCodeOStream& stream) const {
-  stream << stream.VariableName(ScopeKey());
-}
-
-template <class T, class T_WRAP>
-void gits::CArgumentSizedArrayBase<T, T_WRAP>::Declare(CCodeOStream& stream) const {
-  const size_t arr_len = _array.size();
-
-  stream.Indent() << Name();
-
-  if (arr_len == 0) {
-    stream << "*";
-  }
-  stream << " " << stream.VariableName(ScopeKey());
-  if (arr_len == 0) {
-    stream << " = nullptr;\n";
-  } else {
-    stream << "[] = { ";
-    size_t idx = 0;
-    for (const auto& elem : _array) {
-      CGLtype wrapper_(elem);
-      stream << wrapper_;
-      if (idx < arr_len - 1) {
-        stream << ", ";
-      }
-      idx++;
-    }
-    stream << " };\n";
-  }
-}
-
-template <class T_WRAP>
-void gits::CArgumentSizedArray<char, T_WRAP>::Declare(CCodeOStream& stream) const {
-  VariableNameRegister(stream, false);
-  stream.Indent() << Name() << " " << stream.VariableName(ScopeKey()) << "[] = ";
-
-  if ((int)_sizedArray.Vector().size() > 0 && _sizedArray.Vector().back() == '\0') {
-    stream << "\"" << (const char*)&_sizedArray.Vector()[0] << "\";\n";
-  } else {
-    // declare an array
-    stream << "{ ";
-
-    // initiate all elements in an array
-    if ((int)_sizedArray.Vector().size() == 0) {
-      stream << "0";
-    } else {
-      for (auto iter = _sizedArray.Vector().begin(); iter != _sizedArray.Vector().end(); iter++) {
-        CGLtype wrapper_(*iter);
-        stream << wrapper_;
-        if (iter < _sizedArray.Vector().end() - 1) {
-          stream << ", ";
-        }
-      }
-    }
-    stream << " };\n";
-  }
-}
-
 template <class T, class T_WRAP, gits::MappedArrayAction T_ACTION>
 gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::CArgumentMappedSizedArray(size_t num) {
   _array.resize(num);
@@ -1969,178 +1786,42 @@ void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::Read(CBinIStream& str
 }
 
 template <class T, class T_WRAP, gits::MappedArrayAction T_ACTION>
-void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::Write(CCodeOStream& stream) const {
-  stream << stream.VariableName(ScopeKey());
-}
+void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::Write(
+    [[maybe_unused]] CCodeOStream& stream) const {}
 
 template <class T, class T_WRAP, gits::MappedArrayAction T_ACTION>
-void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::WriteArray(CCodeOStream& stream,
-                                                                      std::string name,
-                                                                      ValuesType valtype) const {
-
-  if (this->Action() == NO_ACTION) {
-    stream.Indent() << Name();
-  } else {
-    stream.Indent() << CGLtype::TypeNameStr();
-  }
-
-  if ((int)_array.size() == 0) {
-    stream << "*";
-  }
-  stream << " " << name;
-  if ((int)_array.size() != 0) {
-    stream << "[]";
-  }
-  // Initialize all elements in an array.
-  if ((int)_array.size() == 0) {
-    stream << " = nullptr;\n";
-  } else {
-    // Declare an array.
-    stream << " = { ";
-    for (auto iter = _array.begin(); iter != _array.end(); iter++) {
-      if (valtype == MAPPEDS) {
-        CGLtype wrapper_(*iter);
-        stream << wrapper_;
-      } else if (valtype == ORIGS) {
-        stream << "(" << CGLtype::TypeNameStr() << ") " << hex(*iter);
-      } else if (valtype == NULLS) {
-        stream << 0;
-      } else {
-        throw std::runtime_error(EXCEPTION_MESSAGE);
-      }
-      if (iter < _array.end() - 1) {
-        stream << ", ";
-      }
-    }
-    stream << " };\n";
-  }
-}
+void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::WriteArray(
+    [[maybe_unused]] CCodeOStream& stream,
+    [[maybe_unused]] std::string name,
+    [[maybe_unused]] ValuesType valtype) const {}
 
 template <class T, class T_WRAP, gits::MappedArrayAction T_ACTION>
 void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::WritePartArray(
-    CCodeOStream& stream, std::string name, ValuesType valtype, size_t start, size_t end) const {
-
-  if (this->Action() == NO_ACTION) {
-    stream.Indent() << Name();
-  } else {
-    stream.Indent() << CGLtype::TypeNameStr();
-  }
-
-  if ((int)_array.size() == 0) {
-    stream << "*";
-  }
-  stream << " " << name;
-  if ((int)_array.size() != 0) {
-    stream << "[]";
-  }
-  // Initialize all elements in an array.
-  if ((int)_array.size() == 0) {
-    stream << " = nullptr;\n";
-  } else {
-    // Declare an array.
-    stream << " = { ";
-    for (auto iter = _array.begin() + start; iter != _array.begin() + end; iter++) {
-      if (valtype == MAPPEDS) {
-        CGLtype wrapper_(*iter);
-        stream << wrapper_;
-      } else if (valtype == ORIGS) {
-        stream << "(" << CGLtype::TypeNameStr() << ") " << hex(*iter);
-      } else if (valtype == NULLS) {
-        stream << 0;
-      } else {
-        throw std::runtime_error(EXCEPTION_MESSAGE);
-      }
-      if (iter < _array.end() - 1) {
-        stream << ", ";
-      }
-    }
-    stream << " };\n";
-  }
-}
+    [[maybe_unused]] CCodeOStream& stream,
+    [[maybe_unused]] std::string name,
+    [[maybe_unused]] ValuesType valtype,
+    [[maybe_unused]] size_t start,
+    [[maybe_unused]] size_t end) const {}
 
 template <class T, class T_WRAP, gits::MappedArrayAction T_ACTION>
-void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::Declare(CCodeOStream& stream) const {
-  if (this->Action() == ADD_MAPPING) {
-    WriteArray(stream, stream.VariableName(ScopeKey()), ORIGS);
-  } else {
-    WriteArray(stream, stream.VariableName(ScopeKey()), MAPPEDS);
-  }
-}
+void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::Declare(
+    [[maybe_unused]] CCodeOStream& stream) const {}
 
 template <class T, class T_WRAP, gits::MappedArrayAction T_ACTION>
-void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::Declare(CCodeOStream& stream,
-                                                                   size_t start,
-                                                                   size_t end) const {
-  if (this->Action() == ADD_MAPPING) {
-    WritePartArray(stream, stream.VariableName(ScopeKey()), ORIGS, start, end);
-  } else {
-    WritePartArray(stream, stream.VariableName(ScopeKey()), MAPPEDS, start, end);
-  }
-}
+void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::Declare(
+    [[maybe_unused]] CCodeOStream& stream,
+    [[maybe_unused]] size_t start,
+    [[maybe_unused]] size_t end) const {}
 
 template <class T, class T_WRAP, gits::MappedArrayAction T_ACTION>
-void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::PostAction(CCodeOStream& stream) const {
-  static bool mappingsAreFreeFunctions =
-      gits::CGits::Instance().apis.Has3D() &&
-      gits::CGits::Instance().apis.Iface3D().Api() == ApisIface::Vulkan;
-
-  if (_array.size() == 0) {
-    return;
-  }
-
-  if (this->Action() == ADD_MAPPING) {
-    std::string origArrayName = stream.VariableName(ScopeKey()) + "_orig";
-    WriteArray(stream, origArrayName, ORIGS);
-    if (mappingsAreFreeFunctions) {
-      stream.Indent() << "AddMapping(" << origArrayName << ", " << stream.VariableName(ScopeKey())
-                      << ", " << _array.size() << ");\n";
-    } else {
-      stream.Indent() << CGLtype::WrapTypeNameStr() << "::AddMapping(" << origArrayName << ", "
-                      << stream.VariableName(ScopeKey()) << ", " << _array.size() << ");\n";
-    }
-  } else if (this->Action() == REMOVE_MAPPING) {
-    if (mappingsAreFreeFunctions) {
-      stream.Indent() << "RemoveMapping(" << stream.VariableName(ScopeKey()) << ", "
-                      << _array.size() << ");\n";
-    } else {
-      stream.Indent() << CGLtype::WrapTypeNameStr() << "::RemoveMapping("
-                      << stream.VariableName(ScopeKey()) << ", " << _array.size() << ");\n";
-    }
-  }
-}
+void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::PostAction(
+    [[maybe_unused]] CCodeOStream& stream) const {}
 
 template <class T, class T_WRAP, gits::MappedArrayAction T_ACTION>
-void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::PostAction(CCodeOStream& stream,
-                                                                      size_t start,
-                                                                      size_t end) const {
-  static bool mappingsAreFreeFunctions =
-      gits::CGits::Instance().apis.Has3D() &&
-      gits::CGits::Instance().apis.Iface3D().Api() == ApisIface::Vulkan;
-
-  if (_array.size() == 0) {
-    return;
-  }
-
-  if (this->Action() == ADD_MAPPING) {
-    std::string origArrayName = stream.VariableName(ScopeKey()) + "_orig";
-    WritePartArray(stream, origArrayName, ORIGS, start, end);
-    if (mappingsAreFreeFunctions) {
-      stream.Indent() << "AddMapping(" << origArrayName << ", " << stream.VariableName(ScopeKey())
-                      << ", " << end - start << ");\n";
-    } else {
-      stream.Indent() << CGLtype::WrapTypeNameStr() << "::AddMapping(" << origArrayName << ", "
-                      << stream.VariableName(ScopeKey()) << ", " << end - start << ");\n";
-    }
-  } else if (this->Action() == REMOVE_MAPPING) {
-    if (mappingsAreFreeFunctions) {
-      stream.Indent() << "RemoveMapping(" << stream.VariableName(ScopeKey()) << ", " << end - start
-                      << ");\n";
-    } else {
-      stream.Indent() << CGLtype::WrapTypeNameStr() << "::RemoveMapping("
-                      << stream.VariableName(ScopeKey()) << ", " << end - start << ");\n";
-    }
-  }
-}
+void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::PostAction(
+    [[maybe_unused]] CCodeOStream& stream,
+    [[maybe_unused]] size_t start,
+    [[maybe_unused]] size_t end) const {}
 
 template <class T, int N, class T_WRAP>
 void gits::CArgumentFixedArray<T, N, T_WRAP>::Read(CBinIStream& stream) {
@@ -2152,57 +1833,9 @@ void gits::CArgumentFixedArray<T, N, T_WRAP>::Read(CBinIStream& stream) {
 }
 
 template <class T, int N, class T_WRAP>
-void gits::CArgumentFixedArray<T, N, T_WRAP>::Write(CCodeOStream& stream) const {
-  stream << stream.VariableName(ScopeKey());
-}
-
-template <class T, int N, class T_WRAP>
 void gits::CArgumentFixedArray<T, N, T_WRAP>::Write(CBinOStream& stream) const {
   for (int idx = 0; idx < Size(); idx++) {
     CGLtype wrapper_(_array[idx]);
     stream << wrapper_;
   }
-}
-
-template <class T, int N, class T_WRAP>
-void gits::CArgumentFixedArray<T, N, T_WRAP>::Declare(CCodeOStream& stream,
-                                                      const std::string& declString) const {
-  // declare an array
-  stream.Indent() << declString;
-  if (Size() == 1) {
-    stream << " = ";
-    DeclareElement(0, stream);
-  } else {
-    stream << " = { ";
-    stream.ScopeBegin();
-    // initiate all elements in an array
-    for (int idx = 0; idx < Size(); idx++) {
-      DeclareElement(idx, stream);
-      if (idx < Size() - 1) {
-        stream << ", ";
-      }
-      if (!((idx + 1) % 16) && (idx != Size() - 1)) {
-        stream << "\n";
-        stream.Indent();
-      }
-    }
-    stream.ScopeEnd();
-    stream << " }";
-  }
-}
-
-template <class T, int N, class T_WRAP>
-void gits::CArgumentFixedArray<T, N, T_WRAP>::Declare(CCodeOStream& stream) const {
-  stream.Indent() << Name() << " " << stream.VariableName(ScopeKey()) << "[] = ";
-  // declare an array
-  stream << "{ ";
-
-  for (int i = 0; i < N; i++) {
-    CGLtype wrapper_(_array[i]);
-    stream << wrapper_;
-    if (i < N - 1) {
-      stream << ", ";
-    }
-  }
-  stream << " };\n";
 }

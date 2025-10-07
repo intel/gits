@@ -59,17 +59,7 @@ namespace gits {
       virtual unsigned Id() const override { return ${id_str}; }
       virtual unsigned Type() const { return ${func_type_flags};}
       virtual const char *Name() const override { return "${token.name}"; }
-    % if token.ccode_wrap:
-      virtual const char* Suffix() const { return "_CCODEWRAP"; }
-    % endif
-    % if token.ccode_post_action_needed is False:
-      virtual bool CCodePostActionNeeded() const override { return false; }
-    % endif
       virtual void ${run_function_name}() override;
-    % if token.ccode_write_wrap:
-      virtual void Write(CCodeOStream& stream) const override;
-      friend void ${cname}_CCODEWRITEWRAP(CCodeOStream& stream, const ${cname}& function);
-    % endif
     % if token.token_cache:
       virtual VkCommandBuffer CommandBuffer();
     % endif

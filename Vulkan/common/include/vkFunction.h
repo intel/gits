@@ -97,7 +97,7 @@ public:
   }
   virtual VkCommandBuffer CommandBuffer();
 
-  virtual void Write(CCodeOStream& stream) const override;
+  virtual void Write(CCodeOStream& stream) const override{};
   virtual std::set<uint64_t> GetMappedPointers() = 0;
 };
 

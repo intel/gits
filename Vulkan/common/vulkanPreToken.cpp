@@ -9,7 +9,6 @@
 #include "vulkanPreToken.h"
 #include "vulkanFunctions.h"
 #include "vulkanStateTracking.h"
-#include "vulkanCCodeWriteWrap.h"
 
 const std::array<gits::Vulkan::ArgInfo, gits::Vulkan::CGitsVkCreateNativeWindow::ARG_NUM>
     gits::Vulkan::CGitsVkCreateNativeWindow::argumentInfos_ = {{
@@ -61,7 +60,7 @@ const std::array<gits::Vulkan::ArgInfo, gits::Vulkan::CGitsVkMemoryUpdate::ARG_N
         {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // VkDeviceMemory
         {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint64_t
         {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint64_t
-        {gits::Vulkan::ArgType::OTHER, 1, false},          // void* (CDeclaredBinaryResource)
+        {gits::Vulkan::ArgType::OTHER, 1, false},          // void* (CBinaryResource)
     }};
 
 gits::Vulkan::ArgInfo gits::Vulkan::CGitsVkMemoryUpdate::ArgumentInfo(unsigned idx) const {
@@ -77,7 +76,7 @@ gits::Vulkan::CGitsVkMemoryUpdate::CGitsVkMemoryUpdate()
       _mem(std::make_unique<CVkDeviceMemory>()),
       _offset(std::make_unique<Cuint64_t>()),
       _length(std::make_unique<Cuint64_t>()),
-      _resource(std::make_unique<CDeclaredBinaryResource>()) {}
+      _resource(std::make_unique<CBinaryResource>()) {}
 
 void gits::Vulkan::CGitsVkMemoryUpdate::GetDiffSubRange(const std::vector<char>& oldData,
                                                         const std::vector<char>& newRangeData,
@@ -141,7 +140,7 @@ gits::Vulkan::CGitsVkMemoryUpdate::CGitsVkMemoryUpdate(VkDevice device,
       if (unmapSize == 0) {
         _offset = std::make_unique<Cuint64_t>(0);
         _length = std::make_unique<Cuint64_t>(0);
-        _resource = std::make_unique<CDeclaredBinaryResource>();
+        _resource = std::make_unique<CBinaryResource>();
         return;
       }
     }
@@ -158,20 +157,20 @@ gits::Vulkan::CGitsVkMemoryUpdate::CGitsVkMemoryUpdate(VkDevice device,
 
       if (lengthNew > 0) {
         memcpy(&mapping->compareData[**_offset], &mappedMemCopy[offsetNew], (size_t)lengthNew);
-        _resource = std::make_unique<CDeclaredBinaryResource>(RESOURCE_DATA_RAW,
-                                                              &mappedMemCopy[offsetNew], **_length);
+        _resource = std::make_unique<CBinaryResource>(RESOURCE_DATA_RAW, &mappedMemCopy[offsetNew],
+                                                      **_length);
       } else {
-        _resource = std::make_unique<CDeclaredBinaryResource>();
+        _resource = std::make_unique<CBinaryResource>();
       }
 
     } else {
       _offset = std::make_unique<Cuint64_t>(offset);
       _length = std::make_unique<Cuint64_t>(unmapSize);
       if (**_length != 0) {
-        _resource = std::make_unique<CDeclaredBinaryResource>(RESOURCE_DATA_RAW,
-                                                              pointer + **_offset, **_length);
+        _resource =
+            std::make_unique<CBinaryResource>(RESOURCE_DATA_RAW, pointer + **_offset, **_length);
       } else {
-        _resource = std::make_unique<CDeclaredBinaryResource>();
+        _resource = std::make_unique<CBinaryResource>();
       }
     }
     if (Configurator::Get().vulkan.recorder.shadowMemory) {
@@ -217,7 +216,7 @@ const std::array<gits::Vulkan::ArgInfo, gits::Vulkan::CGitsVkMemoryUpdate2::ARG_
         {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 1, false}, // uint64_t* (array of uint64_t)
         {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 1, false}, // uint64_t* (array of uint64_t)
         {gits::Vulkan::ArgType::OTHER, 2,
-         false}, // void** (An array of pointers to data from CDeclaredBinaryResources)
+         false}, // void** (An array of pointers to data from CBinaryResource)
     }};
 
 gits::Vulkan::ArgInfo gits::Vulkan::CGitsVkMemoryUpdate2::ArgumentInfo(unsigned idx) const {
@@ -255,7 +254,7 @@ gits::Vulkan::CGitsVkMemoryUpdate2::CGitsVkMemoryUpdate2(VkDeviceMemory memory,
       pointerToData = mappedMemCopy.data();
     }
     _resource.push_back(
-        std::make_shared<CDeclaredBinaryResource>(RESOURCE_DATA_RAW, pointerToData, length));
+        std::make_shared<CBinaryResource>(RESOURCE_DATA_RAW, pointerToData, length));
 
     if (Configurator::Get().vulkan.recorder.shadowMemory) {
       size_t offset_flush = offset;
@@ -337,36 +336,10 @@ void gits::Vulkan::CGitsVkMemoryUpdate2::Read(CBinIStream& stream) {
   }
 
   for (uint64_t i = 0; i < **_size; i++) {
-    auto binaryPtr(std::make_shared<CDeclaredBinaryResource>());
+    auto binaryPtr(std::make_shared<CBinaryResource>());
     binaryPtr->Read(stream);
     _resource.push_back(std::move(std::move(binaryPtr)));
   }
-}
-
-void gits::Vulkan::CGitsVkMemoryUpdate2::Write(CCodeOStream& stream) const {
-  if (**_size == 0) {
-    return; // To avoid littering CCode with empty updates.
-  }
-
-  // Captured function calls go to state restore file if is present or to frames file.
-  // When using execCmdBuffsBeforeQueueSubmit while dumping CCode this token is sometimes first, so switching to proper file is needed.
-  stream.select(stream.selectCCodeFile());
-  gits::Vulkan::CVectorPrintHelper<Cuint64_t> offsets(_offset);
-  gits::Vulkan::CVectorPrintHelper<Cuint64_t> lengths(_length);
-  gits::Vulkan::CVectorPrintHelper<CDeclaredBinaryResource> resources(_resource);
-
-  stream.Indent() << "{\n";
-  stream.ScopeBegin();
-
-  offsets.Declare(stream);
-  lengths.Declare(stream);
-  resources.Declare(stream);
-
-  stream.Indent() << "CGitsVkMemoryUpdate2(" << *_mem << ", " << *_size << ", " << offsets << ", "
-                  << lengths << ", " << resources << ");\n";
-
-  stream.ScopeEnd();
-  stream.Indent() << "}\n";
 }
 
 const std::array<gits::Vulkan::ArgInfo, gits::Vulkan::CGitsVkMemoryRestore::ARG_NUM>
@@ -375,7 +348,7 @@ const std::array<gits::Vulkan::ArgInfo, gits::Vulkan::CGitsVkMemoryRestore::ARG_
         {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // VkDeviceMemory
         {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint64_t
         {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint64_t
-        {gits::Vulkan::ArgType::OTHER, 1, false},          // void* (CDeclaredBinaryResource)
+        {gits::Vulkan::ArgType::OTHER, 1, false},          // void* (CBinaryResource)
     }};
 
 void gits::Vulkan::CGitsVkMemoryRestore::GetDiffFromZero(const std::vector<char>& oldData,
@@ -412,7 +385,7 @@ gits::Vulkan::CGitsVkMemoryRestore::CGitsVkMemoryRestore()
       _mem(std::make_unique<CVkDeviceMemory>()),
       _length(std::make_unique<Cuint64_t>()),
       _offset(std::make_unique<Cuint64_t>()),
-      _resource(std::make_unique<CDeclaredBinaryResource>()) {}
+      _resource(std::make_unique<CBinaryResource>()) {}
 
 gits::Vulkan::CGitsVkMemoryRestore::CGitsVkMemoryRestore(VkDevice device,
                                                          VkDeviceMemory mem,
@@ -456,10 +429,10 @@ gits::Vulkan::CGitsVkMemoryRestore::CGitsVkMemoryRestore(VkDevice device,
     if (Configurator::Get().vulkan.recorder.memorySegmentSize && memoryState->IsMapped()) {
       memcpy(mapping->compareData.data(), mapping->pData, mapping->size);
     }
-    _resource = std::make_unique<CDeclaredBinaryResource>(RESOURCE_DATA_RAW, &rangeCopy[offsetNew],
-                                                          lengthNew);
+    _resource =
+        std::make_unique<CBinaryResource>(RESOURCE_DATA_RAW, &rangeCopy[offsetNew], lengthNew);
   } else {
-    _resource = std::make_unique<CDeclaredBinaryResource>();
+    _resource = std::make_unique<CBinaryResource>();
   }
 
   if (Configurator::Get().vulkan.recorder.shadowMemory && memoryState->IsMapped()) {
@@ -486,10 +459,10 @@ gits::Vulkan::CGitsVkMemoryRestore::CGitsVkMemoryRestore(VkDevice device,
   _offset = std::make_unique<Cuint64_t>(offsetNew);
   _length = std::make_unique<Cuint64_t>(lengthNew);
   if (lengthNew > 0) {
-    _resource = std::make_unique<CDeclaredBinaryResource>(RESOURCE_DATA_RAW, &rangeCopy[offsetNew],
-                                                          lengthNew);
+    _resource =
+        std::make_unique<CBinaryResource>(RESOURCE_DATA_RAW, &rangeCopy[offsetNew], lengthNew);
   } else {
-    _resource = std::make_unique<CDeclaredBinaryResource>();
+    _resource = std::make_unique<CBinaryResource>();
   }
 }
 
@@ -641,22 +614,6 @@ void gits::Vulkan::CGitsVkMemoryReset::Read(CBinIStream& stream) {
   _length->Read(stream);
 }
 
-void gits::Vulkan::CGitsVkMemoryReset::Write(CCodeOStream& stream) const {
-  if (**_length == 0) {
-    // Avoid littering CCode with empty updates.
-    return;
-  }
-
-  stream.Indent() << "{\n";
-  stream.ScopeBegin();
-
-  stream.Indent() << "CGitsVkMemoryReset(" << *_device << ", " << *_mem << ", " << *_length
-                  << ");\n";
-
-  stream.ScopeEnd();
-  stream.Indent() << "}\n";
-}
-
 // For building top-level acceleration structures, application needs to pass data about all the bottom-level
 // acceleration structures (BLASs in short) which will be built in the top level one. BLASs are referenced
 // via their device addresses. The list of BLASs/device addresses is stored in a buffer which is also provided
@@ -674,7 +631,7 @@ const std::array<gits::Vulkan::ArgInfo, gits::Vulkan::CGitsVkCmdPatchDeviceAddre
     gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::argumentInfos_ = {{
         {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint64_t (_count)
         {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // VkCommandBuffer (_commandBuffer)
-        {gits::Vulkan::ArgType::OTHER, 1, false},          // void* (CDeclaredBinaryResource)
+        {gits::Vulkan::ArgType::OTHER, 1, false},          // void* (CBinaryResource)
     }};
 
 gits::Vulkan::ArgInfo gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::ArgumentInfo(
@@ -689,7 +646,7 @@ gits::CArgument& gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::Argument(unsigned
 gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::CGitsVkCmdPatchDeviceAddresses()
     : _count(std::make_unique<Cuint32_t>()),
       _commandBuffer(std::make_unique<CVkCommandBuffer>()),
-      _resource(std::make_unique<CDeclaredBinaryResource>()) {}
+      _resource(std::make_unique<CBinaryResource>()) {}
 
 gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::CGitsVkCmdPatchDeviceAddresses(
     VkCommandBuffer commandBuffer, CDeviceAddressPatcher& patcher, uint64_t commandId)
@@ -708,7 +665,7 @@ gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::CGitsVkCmdPatchDeviceAddresses(
   hash_t hash = CGits::Instance().ResourceManager2().getHash(RESOURCE_DATA_RAW, &hashGenerator,
                                                              sizeof(hashGenerator));
 
-  _resource = std::make_unique<CDeclaredBinaryResource>(hash);
+  _resource = std::make_unique<CBinaryResource>(hash);
   patcher.PrepareData(commandBuffer, hash);
 }
 
@@ -896,10 +853,6 @@ void gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::Read(CBinIStream& stream) {
   }
 }
 
-void gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::Write(CCodeOStream& stream) const {
-  throw std::runtime_error("Ray tracing in CCode is not yet supported.");
-}
-
 const std::array<gits::Vulkan::ArgInfo, 1>
     gits::Vulkan::CDestroyVulkanDescriptorSets::argumentInfos_ = {{
         {gits::Vulkan::ArgType::OPAQUE_HANDLE, 1, false}, // VkDescriptorSet*
@@ -918,17 +871,6 @@ gits::Vulkan::CDestroyVulkanDescriptorSets::CDestroyVulkanDescriptorSets() {}
 gits::Vulkan::CDestroyVulkanDescriptorSets::CDestroyVulkanDescriptorSets(
     size_t count, VkDescriptorSet* descSetsArray)
     : _descSetsArray(count, descSetsArray) {}
-
-void gits::Vulkan::CDestroyVulkanDescriptorSets::Write(CCodeOStream& stream) const {
-  stream.Indent() << "{" << std::endl;
-  stream.ScopeBegin();
-  _descSetsArray.VariableNameRegister(stream, false);
-  _descSetsArray.Declare(stream);
-  stream.Indent() << Name() << '(' << gits::Csize_t(_descSetsArray.Size()) << ", " << _descSetsArray
-                  << ");\n";
-  stream.ScopeEnd();
-  stream.Indent() << "}" << std::endl;
-}
 
 void gits::Vulkan::CDestroyVulkanDescriptorSets::Run() {
   _descSetsArray.RemoveMapping();
@@ -952,17 +894,6 @@ gits::Vulkan::CDestroyVulkanCommandBuffers::CDestroyVulkanCommandBuffers() {}
 gits::Vulkan::CDestroyVulkanCommandBuffers::CDestroyVulkanCommandBuffers(
     size_t count, VkCommandBuffer* cmdBufsArray)
     : _cmdBufsArray(count, cmdBufsArray) {}
-
-void gits::Vulkan::CDestroyVulkanCommandBuffers::Write(CCodeOStream& stream) const {
-  stream.Indent() << "{" << std::endl;
-  stream.ScopeBegin();
-  _cmdBufsArray.VariableNameRegister(stream, false);
-  _cmdBufsArray.Declare(stream);
-  stream.Indent() << Name() << '(' << gits::Csize_t(_cmdBufsArray.Size()) << ", " << _cmdBufsArray
-                  << ");\n";
-  stream.ScopeEnd();
-  stream.Indent() << "}" << std::endl;
-}
 
 void gits::Vulkan::CDestroyVulkanCommandBuffers::Run() {
   _cmdBufsArray.RemoveMapping();
@@ -1151,52 +1082,6 @@ void gits::Vulkan::CGitsInitializeImage::TokenBuffersUpdate() {
       _postPImageMemoryBarriers.Original()));
 }
 
-void gits::Vulkan::CGitsInitializeImage::Write(CCodeOStream& stream) const {
-  stream.Indent() << "{" << std::endl;
-  stream.ScopeBegin();
-  _prePMemoryBarriers.VariableNameRegister(stream, false);
-  _prePMemoryBarriers.Declare(stream);
-  _prePBufferMemoryBarriers.VariableNameRegister(stream, false);
-  _prePBufferMemoryBarriers.Declare(stream);
-  _prePImageMemoryBarriers.VariableNameRegister(stream, false);
-  _prePImageMemoryBarriers.Declare(stream);
-  stream.Indent() << "vkCmdPipelineBarrier(" << _commandBuffer << ", " << _preSrcStageMask << ", "
-                  << _preDstStageMask << ", " << _preDependencyFlags << ", "
-                  << _preMemoryBarrierCount << ", " << _prePMemoryBarriers << ", "
-                  << _preBufferMemoryBarrierCount << ", " << _prePBufferMemoryBarriers << ", "
-                  << _preImageMemoryBarrierCount << ", " << _prePImageMemoryBarriers << ");"
-                  << std::endl;
-  stream.ScopeEnd();
-  stream.Indent() << "}" << std::endl;
-
-  stream.Indent() << "{" << std::endl;
-  stream.ScopeBegin();
-  _copyPRegions.VariableNameRegister(stream, false);
-  _copyPRegions.Declare(stream);
-  stream.Indent() << "vkCmdCopyBufferToImage( " << _commandBuffer << ", " << _copySrcBuffer << ", "
-                  << _copyDstImage << ", " << _copyDstImageLayout << ", " << _copyRegionCount
-                  << ", " << _copyPRegions << ");" << std::endl;
-  stream.ScopeEnd();
-  stream.Indent() << "}" << std::endl;
-
-  stream.Indent() << "{" << std::endl;
-  stream.ScopeBegin();
-  _postPMemoryBarriers.VariableNameRegister(stream, false);
-  _postPMemoryBarriers.Declare(stream);
-  _postPBufferMemoryBarriers.VariableNameRegister(stream, false);
-  _postPBufferMemoryBarriers.Declare(stream);
-  _postPImageMemoryBarriers.VariableNameRegister(stream, false);
-  _postPImageMemoryBarriers.Declare(stream);
-  stream.Indent() << "vkCmdPipelineBarrier(" << _commandBuffer << ", " << _postSrcStageMask << ", "
-                  << _postDstStageMask << ", " << _postDependencyFlags << ", "
-                  << _postMemoryBarrierCount << ", " << _postPMemoryBarriers << ", "
-                  << _postBufferMemoryBarrierCount << ", " << _postPBufferMemoryBarriers << ", "
-                  << _postImageMemoryBarrierCount << ", " << _postPImageMemoryBarriers << ");"
-                  << std::endl;
-  stream.ScopeEnd();
-  stream.Indent() << "}" << std::endl;
-}
-
 std::set<uint64_t> gits::Vulkan::CGitsInitializeImage::GetMappedPointers() {
   std::set<uint64_t> returnMap;
 
@@ -1324,44 +1209,6 @@ void gits::Vulkan::CGitsVkCmdInsertMemoryBarriers::TokenBuffersUpdate() {
       _ImageMemoryBarrierCount.Original(), _PImageMemoryBarriers.Original()));
 }
 
-void gits::Vulkan::CGitsVkCmdInsertMemoryBarriers::Write(CCodeOStream& stream) const {
-  size_t chunkSize = Configurator::Get().vulkan.recorder.maxArraySizeForCCode;
-  size_t itMemoryBarriers = 0, itBufferMemoryBarriers = 0, itImageMemoryBarriers = 0;
-
-  while (itMemoryBarriers < *_MemoryBarrierCount ||
-         itBufferMemoryBarriers < *_BufferMemoryBarrierCount ||
-         itImageMemoryBarriers < *_ImageMemoryBarrierCount) {
-    size_t sizeMemoryBarrier =
-        CalculateChunkSize(*_MemoryBarrierCount, chunkSize, itMemoryBarriers);
-    size_t sizeBufferMemoryBarrier =
-        CalculateChunkSize(*_BufferMemoryBarrierCount, chunkSize, itBufferMemoryBarriers);
-    size_t sizeImageMemoryBarrier =
-        CalculateChunkSize(*_ImageMemoryBarrierCount, chunkSize, itImageMemoryBarriers);
-
-    stream.Indent() << "{" << std::endl;
-    stream.ScopeBegin();
-    _PMemoryBarriers.VariableNameRegister(stream, false);
-    _PMemoryBarriers.Declare(stream, itMemoryBarriers, itMemoryBarriers + sizeMemoryBarrier);
-    _PBufferMemoryBarriers.VariableNameRegister(stream, false);
-    _PBufferMemoryBarriers.Declare(stream, itBufferMemoryBarriers,
-                                   itBufferMemoryBarriers + sizeBufferMemoryBarrier);
-    _PImageMemoryBarriers.VariableNameRegister(stream, false);
-    _PImageMemoryBarriers.Declare(stream, itImageMemoryBarriers,
-                                  itImageMemoryBarriers + sizeImageMemoryBarrier);
-    stream.Indent() << "vkCmdPipelineBarrier(" << _commandBuffer << ", " << _SrcStageMask << ", "
-                    << _DstStageMask << ", " << _DependencyFlags << ", " << sizeMemoryBarrier
-                    << ", " << _PMemoryBarriers << ", " << sizeBufferMemoryBarrier << ", "
-                    << _PBufferMemoryBarriers << ", " << sizeImageMemoryBarrier << ", "
-                    << _PImageMemoryBarriers << ");" << std::endl;
-    stream.ScopeEnd();
-    stream.Indent() << "}" << std::endl;
-
-    itMemoryBarriers += chunkSize;
-    itBufferMemoryBarriers += chunkSize;
-    itImageMemoryBarriers += chunkSize;
-  }
-}
-
 std::set<uint64_t> gits::Vulkan::CGitsVkCmdInsertMemoryBarriers::GetMappedPointers() {
   std::set<uint64_t> returnMap;
 
@@ -1426,11 +1273,6 @@ void gits::Vulkan::CGitsVkCmdInsertMemoryBarriers2::StateTrack() {
 void gits::Vulkan::CGitsVkCmdInsertMemoryBarriers2::TokenBuffersUpdate() {
   SD()._commandbufferstates[*_commandBuffer]->tokensBuffer.Add(
       new CvkCmdPipelineBarrier2UnifiedGITS(_commandBuffer.Original(), _dependencyInfo.Original()));
-}
-
-void gits::Vulkan::CGitsVkCmdInsertMemoryBarriers2::Write(CCodeOStream& stream) const {
-  CVkDependencyInfoCCodeWriter(stream, "vkCmdPipelineBarrier2UnifiedGITS", _commandBuffer,
-                               _dependencyInfo);
 }
 
 std::set<uint64_t> gits::Vulkan::CGitsVkCmdInsertMemoryBarriers2::GetMappedPointers() {
@@ -1620,95 +1462,6 @@ void gits::Vulkan::CGitsInitializeMultipleImages::TokenBuffersUpdate() {
       VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, &copyFromBufferMemoryBarrierPost, 0, nullptr));
 }
 
-void gits::Vulkan::CGitsInitializeMultipleImages::Write(CCodeOStream& stream) const {
-  stream.Indent() << "{" << std::endl;
-  stream.ScopeBegin();
-  stream.Indent() << "VkBufferMemoryBarrier copyFromBufferMemoryBarrierPre = {" << std::endl;
-  stream.ScopeBegin();
-  stream.Indent() << "VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,    // VkStructureType sType"
-                  << std::endl;
-  stream.Indent() << "nullptr,                                    // const void* pNext"
-                  << std::endl;
-  stream.Indent() << "VK_ACCESS_HOST_WRITE_BIT,                   // VkAccessFlags srcAccessMask"
-                  << std::endl;
-  stream.Indent() << "VK_ACCESS_TRANSFER_READ_BIT,                // VkAccessFlags dstAccessMask"
-                  << std::endl;
-  stream.Indent() << "VK_QUEUE_FAMILY_IGNORED,                    // uint32_t srcQueueFamilyIndex"
-                  << std::endl;
-  stream.Indent() << "VK_QUEUE_FAMILY_IGNORED,                    // uint32_t dstQueueFamilyIndex"
-                  << std::endl;
-  stream.Indent() << _copySrcBuffer << ",                             // VkBuffer buffer"
-                  << std::endl;
-  stream.Indent() << "0,                                          // VkDeviceSize offset"
-                  << std::endl;
-  stream.Indent() << "VK_WHOLE_SIZE                               // VkDeviceSize size;"
-                  << std::endl;
-  stream.ScopeEnd();
-  stream.Indent() << "};" << std::endl;
-  stream.Indent()
-      << "vkCmdPipelineBarrier(" << _commandBuffer
-      << ", VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, "
-         "VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, &copyFromBufferMemoryBarrierPre, 0, nullptr);"
-      << std::endl;
-  stream.ScopeEnd();
-  stream.Indent() << "}" << std::endl;
-
-  size_t chunkSize = Configurator::Get().vulkan.recorder.maxArraySizeForCCode;
-  for (size_t i = 0; i < *_imagesCount; i += chunkSize) {
-    size_t size = chunkSize;
-    if (i + chunkSize > *_imagesCount) {
-      size = *_imagesCount - i;
-    }
-
-    stream.Indent() << "{" << std::endl;
-    stream.ScopeBegin();
-    _pInitializeImages.VariableNameRegister(stream, false);
-    _pInitializeImages.Declare(stream, i, i + size);
-    stream.Indent() << "for (uint32_t i = 0; i < " << size << "; ++i) {" << std::endl;
-    stream.ScopeBegin();
-    stream.Indent() << "vkCmdCopyBufferToImage( " << _commandBuffer << ", " << _copySrcBuffer
-                    << ", " << _pInitializeImages << "[i].image, " << _pInitializeImages
-                    << "[i].layout, " << _pInitializeImages << "[i].copyRegionsCount, "
-                    << _pInitializeImages << "[i].pCopyRegions);" << std::endl;
-    stream.ScopeEnd();
-    stream.Indent() << "}" << std::endl;
-    stream.ScopeEnd();
-    stream.Indent() << "}" << std::endl;
-  }
-
-  stream.Indent() << "{" << std::endl;
-  stream.ScopeBegin();
-  stream.Indent() << "VkBufferMemoryBarrier copyFromBufferMemoryBarrierPost = {" << std::endl;
-  stream.ScopeBegin();
-  stream.Indent() << "VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,    // VkStructureType sType"
-                  << std::endl;
-  stream.Indent() << "nullptr,                                    // const void* pNext"
-                  << std::endl;
-  stream.Indent() << "VK_ACCESS_TRANSFER_READ_BIT,                // VkAccessFlags srcAccessMask"
-                  << std::endl;
-  stream.Indent() << "VK_ACCESS_HOST_WRITE_BIT,                   // VkAccessFlags dstAccessMask"
-                  << std::endl;
-  stream.Indent() << "VK_QUEUE_FAMILY_IGNORED,                    // uint32_t srcQueueFamilyIndex"
-                  << std::endl;
-  stream.Indent() << "VK_QUEUE_FAMILY_IGNORED,                    // uint32_t dstQueueFamilyIndex"
-                  << std::endl;
-  stream.Indent() << _copySrcBuffer << ",                             // VkBuffer buffer"
-                  << std::endl;
-  stream.Indent() << "0,                                          // VkDeviceSize offset"
-                  << std::endl;
-  stream.Indent() << "VK_WHOLE_SIZE                               // VkDeviceSize size;"
-                  << std::endl;
-  stream.ScopeEnd();
-  stream.Indent() << "};" << std::endl;
-  stream.Indent() << "vkCmdPipelineBarrier(" << _commandBuffer
-                  << ", VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT, "
-                     "VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, "
-                     "&copyFromBufferMemoryBarrierPost, 0, nullptr);"
-                  << std::endl;
-  stream.ScopeEnd();
-  stream.Indent() << "}" << std::endl;
-}
-
 std::set<uint64_t> gits::Vulkan::CGitsInitializeMultipleImages::GetMappedPointers() {
   std::set<uint64_t> returnMap;
 
@@ -1832,52 +1585,6 @@ void gits::Vulkan::CGitsInitializeBuffer::TokenBuffersUpdate() {
       _postPMemoryBarriers.Original(), _postBufferMemoryBarrierCount.Original(),
       _postPBufferMemoryBarriers.Original(), _postImageMemoryBarrierCount.Original(),
       _postPImageMemoryBarriers.Original()));
-}
-
-void gits::Vulkan::CGitsInitializeBuffer::Write(CCodeOStream& stream) const {
-  stream.Indent() << "{" << std::endl;
-  stream.ScopeBegin();
-  _prePMemoryBarriers.VariableNameRegister(stream, false);
-  _prePMemoryBarriers.Declare(stream);
-  _prePBufferMemoryBarriers.VariableNameRegister(stream, false);
-  _prePBufferMemoryBarriers.Declare(stream);
-  _prePImageMemoryBarriers.VariableNameRegister(stream, false);
-  _prePImageMemoryBarriers.Declare(stream);
-  stream.Indent() << "vkCmdPipelineBarrier(" << _commandBuffer << ", " << _preSrcStageMask << ", "
-                  << _preDstStageMask << ", " << _preDependencyFlags << ", "
-                  << _preMemoryBarrierCount << ", " << _prePMemoryBarriers << ", "
-                  << _preBufferMemoryBarrierCount << ", " << _prePBufferMemoryBarriers << ", "
-                  << _preImageMemoryBarrierCount << ", " << _prePImageMemoryBarriers << ");"
-                  << std::endl;
-  stream.ScopeEnd();
-  stream.Indent() << "}" << std::endl;
-
-  stream.Indent() << "{" << std::endl;
-  stream.ScopeBegin();
-  _dataPRegions.VariableNameRegister(stream, false);
-  _dataPRegions.Declare(stream);
-  stream.Indent() << "vkCmdCopyBuffer( " << _commandBuffer << ", " << _dataSrcBuffer << ", "
-                  << _dataDstBuffer << ", " << _dataRegionCount << ", " << _dataPRegions << ");"
-                  << std::endl;
-  stream.ScopeEnd();
-  stream.Indent() << "}" << std::endl;
-
-  stream.Indent() << "{" << std::endl;
-  stream.ScopeBegin();
-  _postPMemoryBarriers.VariableNameRegister(stream, false);
-  _postPMemoryBarriers.Declare(stream);
-  _postPBufferMemoryBarriers.VariableNameRegister(stream, false);
-  _postPBufferMemoryBarriers.Declare(stream);
-  _postPImageMemoryBarriers.VariableNameRegister(stream, false);
-  _postPImageMemoryBarriers.Declare(stream);
-  stream.Indent() << "vkCmdPipelineBarrier(" << _commandBuffer << ", " << _postSrcStageMask << ", "
-                  << _postDstStageMask << ", " << _postDependencyFlags << ", "
-                  << _postMemoryBarrierCount << ", " << _postPMemoryBarriers << ", "
-                  << _postBufferMemoryBarrierCount << ", " << _postPBufferMemoryBarriers << ", "
-                  << _postImageMemoryBarrierCount << ", " << _postPImageMemoryBarriers << ");"
-                  << std::endl;
-  stream.ScopeEnd();
-  stream.Indent() << "}" << std::endl;
 }
 
 std::set<uint64_t> gits::Vulkan::CGitsInitializeBuffer::GetMappedPointers() {
@@ -2070,95 +1777,6 @@ void gits::Vulkan::CGitsInitializeMultipleBuffers::TokenBuffersUpdate() {
   tokensBuffer.Add(new CvkCmdPipelineBarrier(
       _commandBuffer.Original(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT,
       VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, &copyFromBufferMemoryBarrierPost, 0, nullptr));
-}
-
-void gits::Vulkan::CGitsInitializeMultipleBuffers::Write(CCodeOStream& stream) const {
-  stream.Indent() << "{" << std::endl;
-  stream.ScopeBegin();
-  stream.Indent() << "VkBufferMemoryBarrier copyFromBufferMemoryBarrierPre = {" << std::endl;
-  stream.ScopeBegin();
-  stream.Indent() << "VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,    // VkStructureType sType"
-                  << std::endl;
-  stream.Indent() << "nullptr,                                    // const void* pNext"
-                  << std::endl;
-  stream.Indent() << "VK_ACCESS_HOST_WRITE_BIT,                   // VkAccessFlags srcAccessMask"
-                  << std::endl;
-  stream.Indent() << "VK_ACCESS_TRANSFER_READ_BIT,                // VkAccessFlags dstAccessMask"
-                  << std::endl;
-  stream.Indent() << "VK_QUEUE_FAMILY_IGNORED,                    // uint32_t srcQueueFamilyIndex"
-                  << std::endl;
-  stream.Indent() << "VK_QUEUE_FAMILY_IGNORED,                    // uint32_t dstQueueFamilyIndex"
-                  << std::endl;
-  stream.Indent() << _copySrcBuffer << ",                             // VkBuffer buffer"
-                  << std::endl;
-  stream.Indent() << "0,                                          // VkDeviceSize offset"
-                  << std::endl;
-  stream.Indent() << "VK_WHOLE_SIZE                               // VkDeviceSize size;"
-                  << std::endl;
-  stream.ScopeEnd();
-  stream.Indent() << "};" << std::endl;
-  stream.Indent()
-      << "vkCmdPipelineBarrier(" << _commandBuffer
-      << ", VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, "
-         "VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, &copyFromBufferMemoryBarrierPre, 0, nullptr);"
-      << std::endl;
-  stream.ScopeEnd();
-  stream.Indent() << "}" << std::endl;
-
-  size_t chunkSize = Configurator::Get().vulkan.recorder.maxArraySizeForCCode;
-  for (size_t i = 0; i < *_buffersCount; i += chunkSize) {
-    size_t size = chunkSize;
-    if (i + chunkSize > *_buffersCount) {
-      size = *_buffersCount - i;
-    }
-
-    stream.Indent() << "{" << std::endl;
-    stream.ScopeBegin();
-    _pInitializeBuffers.VariableNameRegister(stream, false);
-    _pInitializeBuffers.Declare(stream, i, i + size);
-    stream.Indent() << "for (uint32_t i = 0; i < " << size << "; ++i) {" << std::endl;
-    stream.ScopeBegin();
-    stream.Indent() << "vkCmdCopyBuffer( " << _commandBuffer << ", " << _copySrcBuffer << ", "
-                    << _pInitializeBuffers << "[i].buffer, "
-                    << "1, "
-                    << "&" << _pInitializeBuffers << "[i].bufferCopy);" << std::endl;
-    stream.ScopeEnd();
-    stream.Indent() << "}" << std::endl;
-    stream.ScopeEnd();
-    stream.Indent() << "}" << std::endl;
-  }
-
-  stream.Indent() << "{" << std::endl;
-  stream.ScopeBegin();
-  stream.Indent() << "VkBufferMemoryBarrier copyFromBufferMemoryBarrierPost = {" << std::endl;
-  stream.ScopeBegin();
-  stream.Indent() << "VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,    // VkStructureType sType"
-                  << std::endl;
-  stream.Indent() << "nullptr,                                    // const void* pNext"
-                  << std::endl;
-  stream.Indent() << "VK_ACCESS_TRANSFER_READ_BIT,                // VkAccessFlags srcAccessMask"
-                  << std::endl;
-  stream.Indent() << "VK_ACCESS_HOST_WRITE_BIT,                   // VkAccessFlags dstAccessMask"
-                  << std::endl;
-  stream.Indent() << "VK_QUEUE_FAMILY_IGNORED,                    // uint32_t srcQueueFamilyIndex"
-                  << std::endl;
-  stream.Indent() << "VK_QUEUE_FAMILY_IGNORED,                    // uint32_t dstQueueFamilyIndex"
-                  << std::endl;
-  stream.Indent() << _copySrcBuffer << ",                             // VkBuffer buffer"
-                  << std::endl;
-  stream.Indent() << "0,                                          // VkDeviceSize offset"
-                  << std::endl;
-  stream.Indent() << "VK_WHOLE_SIZE                               // VkDeviceSize size;"
-                  << std::endl;
-  stream.ScopeEnd();
-  stream.Indent() << "};" << std::endl;
-  stream.Indent() << "vkCmdPipelineBarrier(" << _commandBuffer
-                  << ", VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT, "
-                     "VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, "
-                     "&copyFromBufferMemoryBarrierPost, 0, nullptr);"
-                  << std::endl;
-  stream.ScopeEnd();
-  stream.Indent() << "}" << std::endl;
 }
 
 std::set<uint64_t> gits::Vulkan::CGitsInitializeMultipleBuffers::GetMappedPointers() {

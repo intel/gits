@@ -33,28 +33,6 @@ const char* gits::Vulkan::CVulkanObj<Display*, gits::Vulkan::VkDisplay_TypeTag>:
 template <>
 const char* gits::Vulkan::CVulkanObj<void*, gits::Vulkan::VkWindow_TypeTag>::NAME = "Window";
 
-bool gits::Vulkan::CDeclaredBinaryResource::DeclarationNeeded() const {
-  if (_resource_hash != 0) {
-    return true;
-  } else {
-    return false; // Because we will just print nullptr, no need for a variable.
-  }
-}
-
-void gits::Vulkan::CDeclaredBinaryResource::Declare(CCodeOStream& stream) const {
-  stream.Register(ScopeKey(), "res", true);
-  stream.Indent() << "Resource " << stream.VariableName(ScopeKey()) << "(" << _resource_hash
-                  << ");\n";
-}
-
-void gits::Vulkan::CDeclaredBinaryResource::Write(CCodeOStream& stream) const {
-  if (_resource_hash != 0) {
-    stream << stream.VariableName(ScopeKey());
-  } else {
-    stream << "nullptr";
-  }
-}
-
 gits::Vulkan::CVkClearColorValue::CVkClearColorValue()
     : _uint32(std::make_unique<Cuint32_t::CSArray>()),
       _ClearColorValue(nullptr),
@@ -124,38 +102,6 @@ void gits::Vulkan::CVkClearColorValue::Read(CBinIStream& stream) {
   }
 }
 
-void gits::Vulkan::CVkClearColorValue::Declare(CCodeOStream& stream) const {
-  // TODO: print floats, ints or uints, depending on image/attachment format.
-  stream.Register(ScopeKey(), "clearColor", true);
-  stream.Indent() << Name() << " " << stream.VariableName(ScopeKey()) << " = ";
-  stream << "MakeVkClearColorValue(";
-  auto& componentVec = _uint32->Vector();
-  for (size_t i = 0; i < 4; i++) {
-    if (i != 0) {
-      stream << ", ";
-    }
-    stream << componentVec[i];
-  }
-  stream << ");" << std::endl;
-  ;
-}
-
-void gits::Vulkan::CVkClearColorValue::Write(CCodeOStream& stream) const {
-  if (!*_isNullPtr) {
-    stream << stream.VariableName(ScopeKey());
-  } else {
-    stream << "nullptr";
-  }
-}
-
-bool gits::Vulkan::CVkClearColorValue::AmpersandNeeded() const {
-  return !*_isNullPtr;
-}
-
-bool gits::Vulkan::CVkClearColorValue::DeclarationNeeded() const {
-  return !*_isNullPtr;
-}
-
 gits::Vulkan::CVkClearValue::CVkClearValue()
     : _color(std::make_unique<CVkClearColorValue>()),
       _ClearValue(nullptr),
@@ -207,23 +153,6 @@ void gits::Vulkan::CVkClearValue::Read(CBinIStream& stream) {
   if (!*_isNullPtr) {
     _color->Read(stream);
   }
-}
-
-void gits::Vulkan::CVkClearValue::Write(CCodeOStream& stream) const {
-  // TODO: print color or depthStencil, depending on the attachment.
-  if (*_isNullPtr) {
-    stream << "nullptr";
-  } else {
-    _color->Write(stream);
-  }
-}
-
-void gits::Vulkan::CVkClearValue::Declare(CCodeOStream& stream) const {
-  _color->Declare(stream);
-}
-
-bool gits::Vulkan::CVkClearValue::DeclarationNeeded() const {
-  return !*_isNullPtr && _color->DeclarationNeeded();
 }
 
 gits::Vulkan::CVkGenericArgument::CVkGenericArgument()
@@ -322,29 +251,6 @@ const char* gits::Vulkan::CVkGenericArgument::Name() const {
     return _argument->Name();
   } else {
     return "";
-  }
-}
-
-void gits::Vulkan::CVkGenericArgument::Write(CCodeOStream& stream) const {
-  if (!*_isNullPtr && !**_skipped) {
-    stream << "&";
-    _argument->Write(stream);
-  } else {
-    stream << "nullptr";
-  }
-}
-
-bool gits::Vulkan::CVkGenericArgument::AmpersandNeeded() const {
-  return !*_isNullPtr && !**_skipped;
-}
-
-bool gits::Vulkan::CVkGenericArgument::DeclarationNeeded() const {
-  return !*_isNullPtr && !**_skipped;
-}
-
-void gits::Vulkan::CVkGenericArgument::Declare(CCodeOStream& stream) const {
-  if (!*_isNullPtr && !**_skipped) {
-    _argument->Declare(stream);
   }
 }
 
@@ -479,7 +385,7 @@ gits::Vulkan::CVkPipelineCacheCreateInfo_V1::CVkPipelineCacheCreateInfo_V1()
       _pNext(std::make_unique<CpNextWrapper>()),
       _flags(std::make_unique<Cuint32_t>()),
       _initialDataSize(std::make_unique<Csize_t>()),
-      _pInitialData(std::make_unique<CDeclaredBinaryResource>()),
+      _pInitialData(std::make_unique<CBinaryResource>()),
       _PipelineCacheCreateInfo(nullptr),
       _PipelineCacheCreateInfoOriginal(nullptr),
       _isNullPtr(false) {}
@@ -494,9 +400,9 @@ gits::Vulkan::CVkPipelineCacheCreateInfo_V1::CVkPipelineCacheCreateInfo_V1(
     _pNext = std::make_unique<CpNextWrapper>(pipelinecachecreateinfo->pNext);
     _flags = std::make_unique<Cuint32_t>(pipelinecachecreateinfo->flags);
     _initialDataSize = std::make_unique<Csize_t>(pipelinecachecreateinfo->initialDataSize);
-    _pInitialData = std::make_unique<CDeclaredBinaryResource>(
-        RESOURCE_DATA_RAW, pipelinecachecreateinfo->pInitialData,
-        pipelinecachecreateinfo->initialDataSize);
+    _pInitialData =
+        std::make_unique<CBinaryResource>(RESOURCE_DATA_RAW, pipelinecachecreateinfo->pInitialData,
+                                          pipelinecachecreateinfo->initialDataSize);
   } else {
     _sType = nullptr;
     _pNext = nullptr;
@@ -571,35 +477,6 @@ void gits::Vulkan::CVkPipelineCacheCreateInfo_V1::Read(CBinIStream& stream) {
   }
 }
 
-void gits::Vulkan::CVkPipelineCacheCreateInfo_V1::Write(CCodeOStream& stream) const {
-  if (*_isNullPtr) {
-    stream << "nullptr";
-  } else {
-    stream << getVarName("vkPipelineCacheCreateInfo_", this);
-  }
-}
-
-bool gits::Vulkan::CVkPipelineCacheCreateInfo_V1::AmpersandNeeded() const {
-  return !*_isNullPtr;
-}
-
-void gits::Vulkan::CVkPipelineCacheCreateInfo_V1::Declare(CCodeOStream& stream) const {
-  if (!*_isNullPtr) {
-    _pInitialData->VariableNameRegister(stream, false);
-    _pInitialData->Declare(stream);
-
-    stream.Indent() << Name() << " " << getVarName("vkPipelineCacheCreateInfo_", this) << " = {\n";
-    stream.ScopeBegin();
-    stream.Indent() << *(this->_sType) << ", // sType\n";
-    stream.Indent() << *(this->_pNext) << ", // pNext\n";
-    stream.Indent() << *(this->_flags) << ", // flags\n";
-    stream.Indent() << *(this->_initialDataSize) << ", // initialDataSize\n";
-    stream.Indent() << *_pInitialData << ", // pInitialData\n";
-    stream.ScopeEnd();
-    stream.Indent() << "};\n";
-  }
-}
-
 gits::Vulkan::CBufferDeviceAddressObject::CBufferDeviceAddressObject(VkDeviceAddress deviceAddress)
     : _deviceAddress(0) {
   VkBuffer buffer = VK_NULL_HANDLE;
@@ -671,7 +548,7 @@ gits::Vulkan::CVkDeviceOrHostAddressConstKHR::CVkDeviceOrHostAddressConstKHR(
     //_data.resize(deviceOrHostAddressData->_dataSize);
     //memcpy(_data.data(), deviceOrHostAddressData->_inputData.data(),
     //       deviceOrHostAddressData->_dataSize);
-    //_resource = std::make_unique<CDeclaredBinaryResource>(hash);
+    //_resource = std::make_unique<CBinaryResource>(hash);
     break;
   }
 }
@@ -999,85 +876,6 @@ void gits::Vulkan::CVkDependencyInfo::Read(CBinIStream& stream) {
   }
 }
 
-void gits::Vulkan::CVkDependencyInfo::Write(CCodeOStream& stream) const {
-  if (*_isNullPtr) {
-    stream << "nullptr";
-  } else {
-    stream << stream.VariableName(ScopeKey());
-  }
-}
-
-bool gits::Vulkan::CVkDependencyInfo::AmpersandNeeded() const {
-  return !*_isNullPtr;
-}
-
-void gits::Vulkan::CVkDependencyInfo::Declare(CCodeOStream& stream) const {
-  if (!*_isNullPtr) {
-    _pNext->VariableNameRegister(stream, false);
-    _pNext->Declare(stream);
-    _pMemoryBarriers->VariableNameRegister(stream, false);
-    _pMemoryBarriers->Declare(stream);
-    _pBufferMemoryBarriers->VariableNameRegister(stream, false);
-    _pBufferMemoryBarriers->Declare(stream);
-    _pImageMemoryBarriers->VariableNameRegister(stream, false);
-    _pImageMemoryBarriers->Declare(stream);
-
-    stream.Register(ScopeKey(), "vkDependencyInfo", true);
-    stream.Indent() << Name() << " " << stream.VariableName(ScopeKey()) << " = {\n";
-    stream.ScopeBegin();
-    stream.Indent() << *(this->_sType) << ", // sType\n";
-    stream.Indent() << *_pNext << ", // pNext\n";
-    stream.Indent() << *(this->_dependencyFlags) << ", // dependencyFlags\n";
-    stream.Indent() << *(this->_memoryBarrierCount) << ", // memoryBarrierCount\n";
-    stream.Indent() << *_pMemoryBarriers << ", // pMemoryBarriers\n";
-    stream.Indent() << *(this->_bufferMemoryBarrierCount) << ", // bufferMemoryBarrierCount\n";
-    stream.Indent() << *_pBufferMemoryBarriers << ", // pBufferMemoryBarriers\n";
-    stream.Indent() << *(this->_imageMemoryBarrierCount) << ", // imageMemoryBarrierCount\n";
-    stream.Indent() << *_pImageMemoryBarriers << ", // pImageMemoryBarriers\n";
-    stream.ScopeEnd();
-    stream.Indent() << "};\n";
-  }
-}
-
-void gits::Vulkan::CVkDependencyInfo::Declare(CCodeOStream& stream,
-                                              size_t memoryBarrierStart,
-                                              size_t memoryBarrierEnd,
-                                              size_t bufferMemoryBarrierStart,
-                                              size_t bufferMemoryBarrierEnd,
-                                              size_t imageMemoryBarrierStart,
-                                              size_t imageMemoryBarrierEnd) const {
-
-  if (!*_isNullPtr) {
-    _pNext->VariableNameRegister(stream, false);
-    _pNext->Declare(stream);
-    _pMemoryBarriers->VariableNameRegister(stream, false);
-    _pMemoryBarriers->Declare(stream, memoryBarrierStart, memoryBarrierEnd);
-    _pBufferMemoryBarriers->VariableNameRegister(stream, false);
-    _pBufferMemoryBarriers->Declare(stream, bufferMemoryBarrierStart, bufferMemoryBarrierEnd);
-    _pImageMemoryBarriers->VariableNameRegister(stream, false);
-    _pImageMemoryBarriers->Declare(stream, imageMemoryBarrierStart, imageMemoryBarrierEnd);
-
-    size_t memoryBarrierSize = memoryBarrierEnd - memoryBarrierStart;
-    size_t bufferMemoryBarrierSize = bufferMemoryBarrierEnd - bufferMemoryBarrierStart;
-    size_t imageMemoryBarrierSize = imageMemoryBarrierEnd - imageMemoryBarrierStart;
-
-    stream.Register(ScopeKey(), "vkDependencyInfo", true);
-    stream.Indent() << Name() << " " << stream.VariableName(ScopeKey()) << " = {\n";
-    stream.ScopeBegin();
-    stream.Indent() << *(this->_sType) << ", // sType\n";
-    stream.Indent() << *_pNext << ", // pNext\n";
-    stream.Indent() << *(this->_dependencyFlags) << ", // dependencyFlags\n";
-    stream.Indent() << memoryBarrierSize << ", // memoryBarrierCount\n";
-    stream.Indent() << *_pMemoryBarriers << ", // pMemoryBarriers\n";
-    stream.Indent() << bufferMemoryBarrierSize << ", // bufferMemoryBarrierCount\n";
-    stream.Indent() << *_pBufferMemoryBarriers << ", // pBufferMemoryBarriers\n";
-    stream.Indent() << imageMemoryBarrierSize << ", // imageMemoryBarrierCount\n";
-    stream.Indent() << *_pImageMemoryBarriers << ", // pImageMemoryBarriers\n";
-    stream.ScopeEnd();
-    stream.Indent() << "};\n";
-  }
-}
-
 uint32_t gits::Vulkan::CVkDependencyInfo::GetMemoryBarrierCount() const {
   return **_memoryBarrierCount;
 }
@@ -1267,18 +1065,6 @@ void gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHR::Read(CBinIS
   }
 }
 
-void gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHR::Write(
-    CCodeOStream& stream) const {}
-
-bool gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHR::AmpersandNeeded() const {
-  return !*_isNullPtr;
-}
-
-void gits::Vulkan::CVkAccelerationStructureGeometryInstancesDataKHR::Declare(
-    CCodeOStream& stream) const {
-  throw ENotImplemented(EXCEPTION_MESSAGE);
-}
-
 gits::Vulkan::CVkAccelerationStructureGeometryDataKHR::CVkAccelerationStructureGeometryDataKHR(
     VkGeometryTypeKHR geometryType,
     const VkAccelerationStructureGeometryDataKHR* accelerationstructuregeometrydatakhr,
@@ -1431,22 +1217,4 @@ void gits::Vulkan::CVkAccelerationStructureGeometryDataKHR::Read(CBinIStream& st
       break;
     }
   }
-}
-
-void gits::Vulkan::CVkAccelerationStructureGeometryDataKHR::Write(CCodeOStream& stream) const {
-  if (*_isNullPtr) {
-    stream << "nullptr";
-  } else {
-    stream << getVarName("vkAccelerationStructureGeometryDataKHR_", this);
-  }
-}
-
-bool gits::Vulkan::CVkAccelerationStructureGeometryDataKHR::AmpersandNeeded() const {
-  return !*_isNullPtr;
-}
-
-void gits::Vulkan::CVkAccelerationStructureGeometryDataKHR::Declare(CCodeOStream& stream) const {
-  TODO("Implement proper handling in CCode - important for ray tracing")
-
-  throw ENotImplemented(EXCEPTION_MESSAGE);
 }

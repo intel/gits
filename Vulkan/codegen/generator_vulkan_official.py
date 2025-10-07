@@ -32,14 +32,14 @@ arg4=ArgDef(name='semaphore', type='VkSemaphore'),
 arg5=ArgDef(name='fence', type='VkFence')
 )
 
-Function(name='vkAcquireNextImage2KHR', enabled=True, type=FuncType.PARAM, runWrap=True, ccodeWrap=True, stateTrack=True,
+Function(name='vkAcquireNextImage2KHR', enabled=True, type=FuncType.PARAM, runWrap=True, stateTrack=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pAcquireInfo', type='const VkAcquireNextImageInfoKHR*'),
 arg3=ArgDef(name='pImageIndex', type='uint32_t*', wrapType='Cuint32_t::CSArray', wrapParams='1,pImageIndex')
 )
 
-Function(name='vkAcquireNextImageKHR', enabled=True, type=FuncType.PARAM, runWrap=True, ccodeWrap=True, stateTrack=True,
+Function(name='vkAcquireNextImageKHR', enabled=True, type=FuncType.PARAM, runWrap=True, stateTrack=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='swapchain', type='VkSwapchainKHR'),
@@ -1087,7 +1087,7 @@ arg2=ArgDef(name='session', type='VkOpticalFlowSessionNV'),
 arg3=ArgDef(name='pExecuteInfo', type='const VkOpticalFlowExecuteInfoNV*')
 )
 
-Function(name='vkCmdPipelineBarrier', enabled=True, type=FuncType.PARAM, stateTrack=True, recWrap=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer", ccodeWriteWrap=True,
+Function(name='vkCmdPipelineBarrier', enabled=True, type=FuncType.PARAM, stateTrack=True, recWrap=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='srcStageMask', type='VkPipelineStageFlags'),
@@ -1101,13 +1101,13 @@ arg9=ArgDef(name='imageMemoryBarrierCount', type='uint32_t'),
 arg10=ArgDef(name='pImageMemoryBarriers', type='const VkImageMemoryBarrier*', wrapType='CVkImageMemoryBarrierArray', wrapParams='imageMemoryBarrierCount, pImageMemoryBarriers', count='imageMemoryBarrierCount')
 )
 
-Function(name='vkCmdPipelineBarrier2', enabled=True, type=FuncType.PARAM, stateTrack=True, recWrap=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer", ccodeWriteWrap=True,
+Function(name='vkCmdPipelineBarrier2', enabled=True, type=FuncType.PARAM, stateTrack=True, recWrap=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pDependencyInfo', type='const VkDependencyInfo*')
 )
 
-Function(name='vkCmdPipelineBarrier2KHR', enabled=True, type=FuncType.PARAM, stateTrack=True, recWrap=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer", ccodeWriteWrap=True,
+Function(name='vkCmdPipelineBarrier2KHR', enabled=True, type=FuncType.PARAM, stateTrack=True, recWrap=True, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='pDependencyInfo', type='const VkDependencyInfo*')
@@ -2281,7 +2281,7 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CN
 arg4=ArgDef(name='pDescriptorUpdateTemplate', type='VkDescriptorUpdateTemplate*', wrapType='CVkDescriptorUpdateTemplate::CSMapArray', wrapParams='1, pDescriptorUpdateTemplate')
 )
 
-Function(name='vkCreateDevice', enabled=True, type=FuncType.PARAM, stateTrack=True, recWrap=True, recExecWrap=True, runWrap=True, ccodeWrap=True, customDriver=True, level=FuncLevel.INSTANCE,
+Function(name='vkCreateDevice', enabled=True, type=FuncType.PARAM, stateTrack=True, recWrap=True, recExecWrap=True, runWrap=True, customDriver=True, level=FuncLevel.INSTANCE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
 arg2=ArgDef(name='pCreateInfo', type='const VkDeviceCreateInfo*'),
@@ -2322,7 +2322,7 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CN
 arg4=ArgDef(name='pEvent', type='VkEvent*', wrapType='CVkEvent::CSMapArray', wrapParams='1, pEvent')
 )
 
-Function(name='vkCreateFence', enabled=True, type=FuncType.PARAM, stateTrack=True, ccodeWrap=True,
+Function(name='vkCreateFence', enabled=True, type=FuncType.PARAM, stateTrack=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pCreateInfo', type='const VkFenceCreateInfo*'),
@@ -2338,7 +2338,7 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CN
 arg4=ArgDef(name='pFramebuffer', type='VkFramebuffer*', wrapType='CVkFramebuffer::CSMapArray', wrapParams='1, pFramebuffer')
 )
 
-Function(name='vkCreateGraphicsPipelines', enabled=True, type=FuncType.PARAM, stateTrack=True, runWrap=True, ccodeWriteWrap=True,
+Function(name='vkCreateGraphicsPipelines', enabled=True, type=FuncType.PARAM, stateTrack=True, runWrap=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pipelineCache', type='VkPipelineCache'),
@@ -2364,7 +2364,7 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*'),
 arg4=ArgDef(name='pSurface', type='VkSurfaceKHR*')
 )
 
-Function(name='vkCreateImage', enabled=True, type=FuncType.CREATE_IMAGE, stateTrack=True, recExecWrap=True, runWrap=True, ccodeWrap=True,
+Function(name='vkCreateImage', enabled=True, type=FuncType.CREATE_IMAGE, stateTrack=True, recExecWrap=True, runWrap=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pCreateInfo', type='const VkImageCreateInfo*'),
@@ -2634,7 +2634,7 @@ arg5=ArgDef(name='pSwapchains', type='VkSwapchainKHR*', count='swapchainCount')
 #arg4=ArgDef(name='pSurface', type='VkSurfaceKHR*')
 #)
 
-Function(name='vkCreateSwapchainKHR', enabled=True, type=FuncType.PARAM, stateTrack=True, runWrap=True, recExecWrap=True, ccodeWrap=True,
+Function(name='vkCreateSwapchainKHR', enabled=True, type=FuncType.PARAM, stateTrack=True, runWrap=True, recExecWrap=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pCreateInfo', type='const VkSwapchainCreateInfoKHR*'),
@@ -2841,7 +2841,7 @@ arg2=ArgDef(name='descriptorUpdateTemplate', type='VkDescriptorUpdateTemplate', 
 arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper')
 )
 
-Function(name='vkDestroyDevice', enabled=True, type=FuncType.PARAM, stateTrack=True, runWrap=True, customDriver=True, ccodeWrap=True,
+Function(name='vkDestroyDevice', enabled=True, type=FuncType.PARAM, stateTrack=True, runWrap=True, customDriver=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice', removeMapping=True),
 arg2=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper')
@@ -3035,7 +3035,7 @@ arg2=ArgDef(name='surface', type='VkSurfaceKHR', removeMapping=True),
 arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*', wrapType='CNullWrapper')
 )
 
-Function(name='vkDestroySwapchainKHR', enabled=True, type=FuncType.PARAM, stateTrack=True, ccodeWrap=True,
+Function(name='vkDestroySwapchainKHR', enabled=True, type=FuncType.PARAM, stateTrack=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='swapchain', type='VkSwapchainKHR', removeMapping=True),
@@ -3113,14 +3113,14 @@ retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='pApiVersion', type='uint32_t*', wrapParams='1, pApiVersion')
 )
 
-Function(name='vkEnumeratePhysicalDeviceGroups', enabled=True, type=FuncType.PARAM, runWrap=True, ccodeWrap=True, stateTrack=True, level=FuncLevel.INSTANCE,
+Function(name='vkEnumeratePhysicalDeviceGroups', enabled=True, type=FuncType.PARAM, runWrap=True, stateTrack=True, level=FuncLevel.INSTANCE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='instance', type='VkInstance'),
 arg2=ArgDef(name='pPhysicalDeviceGroupCount', type='uint32_t*', wrapParams='1, pPhysicalDeviceGroupCount'),
 arg3=ArgDef(name='pPhysicalDeviceGroupProperties', type='VkPhysicalDeviceGroupProperties*', wrapType='CVkPhysicalDeviceGroupPropertiesArray', wrapParams='*pPhysicalDeviceGroupCount, pPhysicalDeviceGroupProperties', count='*pPhysicalDeviceGroupCount')
 )
 
-Function(name='vkEnumeratePhysicalDeviceGroupsKHR', enabled=True, type=FuncType.PARAM, runWrap=True, ccodeWrap=True, stateTrack=True, level=FuncLevel.INSTANCE,
+Function(name='vkEnumeratePhysicalDeviceGroupsKHR', enabled=True, type=FuncType.PARAM, runWrap=True, stateTrack=True, level=FuncLevel.INSTANCE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='instance', type='VkInstance'),
 arg2=ArgDef(name='pPhysicalDeviceGroupCount', type='uint32_t*', wrapParams='1, pPhysicalDeviceGroupCount'),
@@ -3136,7 +3136,7 @@ arg4=ArgDef(name='pCounters', type='VkPerformanceCounterKHR*'),
 arg5=ArgDef(name='pCounterDescriptions', type='VkPerformanceCounterDescriptionKHR*')
 )
 
-Function(name='vkEnumeratePhysicalDevices', enabled=True, type=FuncType.PARAM, runWrap=True, stateTrack=True, ccodeWrap=True, ccodePostActionNeeded=False, level=FuncLevel.INSTANCE,
+Function(name='vkEnumeratePhysicalDevices', enabled=True, type=FuncType.PARAM, runWrap=True, stateTrack=True, level=FuncLevel.INSTANCE,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='instance', type='VkInstance'),
 arg2=ArgDef(name='pPhysicalDeviceCount', type='uint32_t*', wrapParams='1, pPhysicalDeviceCount'),
@@ -3520,7 +3520,7 @@ arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pName', type='const char*')
 )
 
-Function(name='vkGetDeviceQueue', enabled=True, type=FuncType.PARAM, stateTrack=False, ccodeWrap=True, runWrap=True,
+Function(name='vkGetDeviceQueue', enabled=True, type=FuncType.PARAM, stateTrack=False, runWrap=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='queueFamilyIndex', type='uint32_t'),
@@ -3528,7 +3528,7 @@ arg3=ArgDef(name='queueIndex', type='uint32_t'),
 arg4=ArgDef(name='pQueue', type='VkQueue*', wrapType='CVkQueue::CSMapArray', wrapParams='1, pQueue')
 )
 
-Function(name='vkGetDeviceQueue2', enabled=True, type=FuncType.PARAM, stateTrack=False, ccodeWrap=True, runWrap=True,
+Function(name='vkGetDeviceQueue2', enabled=True, type=FuncType.PARAM, stateTrack=False, runWrap=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pQueueInfo', type='const VkDeviceQueueInfo2*'),
@@ -3641,7 +3641,7 @@ arg3=ArgDef(name='pFd', type='int*')
 #arg3=ArgDef(name='pHandle', type='void*')
 #)
 
-Function(name='vkGetFenceStatus', enabled=True, type=FuncType.PARAM, runWrap=True, recExecWrap=True, ccodeWriteWrap=True,
+Function(name='vkGetFenceStatus', enabled=True, type=FuncType.PARAM, runWrap=True, recExecWrap=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='fence', type='VkFence')
@@ -4759,7 +4759,7 @@ arg2=ArgDef(name='swapchain', type='VkSwapchainKHR'),
 arg3=ArgDef(name='pSleepInfo', type='const VkLatencySleepInfoNV*')
 )
 
-Function(name='vkMapMemory', enabled=True, type=FuncType.PARAM, runWrap=True, stateTrack=True, recExecWrap=True, ccodeWriteWrap=True,
+Function(name='vkMapMemory', enabled=True, type=FuncType.PARAM, runWrap=True, stateTrack=True, recExecWrap=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='memory', type='VkDeviceMemory'),
@@ -4803,7 +4803,7 @@ arg1=ArgDef(name='queue', type='VkQueue'),
 arg2=ArgDef(name='pLabelInfo', type='const VkDebugUtilsLabelEXT*')
 )
 
-Function(name='vkQueueBindSparse', enabled=True, type=FuncType.PARAM, stateTrack=True, ccodeWrap=True,
+Function(name='vkQueueBindSparse', enabled=True, type=FuncType.PARAM, stateTrack=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='queue', type='VkQueue'),
 arg2=ArgDef(name='bindInfoCount', type='uint32_t'),
@@ -4828,7 +4828,7 @@ arg1=ArgDef(name='queue', type='VkQueue'),
 arg2=ArgDef(name='pQueueTypeInfo', type='const VkOutOfBandQueueTypeInfoNV*')
 )
 
-Function(name='vkQueuePresentKHR', enabled=True, type=FuncType.PARAM, stateTrack=True, runWrap=True, recWrap=True, endFrameTag=True, ccodeWrap=True,
+Function(name='vkQueuePresentKHR', enabled=True, type=FuncType.PARAM, stateTrack=True, runWrap=True, recWrap=True, endFrameTag=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='queue', type='VkQueue'),
 arg2=ArgDef(name='pPresentInfo', type='const VkPresentInfoKHR*')
@@ -4849,7 +4849,7 @@ arg4=ArgDef(name='image', type='VkImage'),
 arg5=ArgDef(name='pNativeFenceFd', type='int*')
 )
 
-Function(name='vkQueueSubmit', enabled=True, type=FuncType.QUEUE_SUBMIT, stateTrack=True, recWrap=True, runWrap=True, recExecWrap=True, execPostRecWrap=True, ccodeWrap=True, signalOperation=True,
+Function(name='vkQueueSubmit', enabled=True, type=FuncType.QUEUE_SUBMIT, stateTrack=True, recWrap=True, runWrap=True, recExecWrap=True, execPostRecWrap=True, signalOperation=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='queue', type='VkQueue'),
 arg2=ArgDef(name='submitCount', type='uint32_t'),
@@ -4857,7 +4857,7 @@ arg3=ArgDef(name='pSubmits', type='const VkSubmitInfo*', wrapType='CVkSubmitInfo
 arg4=ArgDef(name='fence', type='VkFence')
 )
 
-Function(name='vkQueueSubmit2', enabled=True, type=FuncType.QUEUE_SUBMIT, stateTrack=True, recWrap=True, runWrap=True, recExecWrap=True, execPostRecWrap=True, ccodeWrap=True, signalOperation=True,
+Function(name='vkQueueSubmit2', enabled=True, type=FuncType.QUEUE_SUBMIT, stateTrack=True, recWrap=True, runWrap=True, recExecWrap=True, execPostRecWrap=True, signalOperation=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='queue', type='VkQueue'),
 arg2=ArgDef(name='submitCount', type='uint32_t'),
@@ -4865,7 +4865,7 @@ arg3=ArgDef(name='pSubmits', type='const VkSubmitInfo2*', wrapType='CVkSubmitInf
 arg4=ArgDef(name='fence', type='VkFence')
 )
 
-Function(name='vkQueueSubmit2KHR', enabled=True, type=FuncType.QUEUE_SUBMIT, stateTrack=True, recWrap=True, runWrap=True, recExecWrap=True, execPostRecWrap=True, ccodeWrap=True, signalOperation=True,
+Function(name='vkQueueSubmit2KHR', enabled=True, type=FuncType.QUEUE_SUBMIT, stateTrack=True, recWrap=True, runWrap=True, recExecWrap=True, execPostRecWrap=True, signalOperation=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='queue', type='VkQueue'),
 arg2=ArgDef(name='submitCount', type='uint32_t'),
@@ -4957,7 +4957,7 @@ arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='event', type='VkEvent')
 )
 
-Function(name='vkResetFences', enabled=True, type=FuncType.PARAM, stateTrack=True, ccodeWrap=True,
+Function(name='vkResetFences', enabled=True, type=FuncType.PARAM, stateTrack=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='fenceCount', type='uint32_t'),
@@ -5112,7 +5112,7 @@ retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice')
 )
 
-Function(name='vkUnmapMemory', enabled=True, type=FuncType.PARAM, preToken='CGitsVkMemoryUpdate2(memory, true)', recWrap=True, stateTrack=True, execPostRecWrap=True, ccodeWrap=True,
+Function(name='vkUnmapMemory', enabled=True, type=FuncType.PARAM, preToken='CGitsVkMemoryUpdate2(memory, true)', recWrap=True, stateTrack=True, execPostRecWrap=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='memory', type='VkDeviceMemory')
@@ -5140,7 +5140,7 @@ arg3=ArgDef(name='descriptorUpdateTemplate', type='VkDescriptorUpdateTemplate'),
 arg4=ArgDef(name='pData', type='const void*', wrapType='CUpdateDescriptorSetWithTemplateArray', wrapParams='descriptorUpdateTemplate, pData')
 )
 
-Function(name='vkUpdateDescriptorSets', enabled=True, type=FuncType.PARAM, stateTrack=True, ccodeWriteWrap=True,
+Function(name='vkUpdateDescriptorSets', enabled=True, type=FuncType.PARAM, stateTrack=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='descriptorWriteCount', type='uint32_t'),
@@ -5177,7 +5177,7 @@ retV=RetDef(type='void'),
 arg1=ArgDef(name='', type='void')
 )
 
-Function(name='vkWaitForFences', enabled=True, type=FuncType.PARAM, runWrap=True, recExecWrap=True, ccodeWriteWrap=True,
+Function(name='vkWaitForFences', enabled=True, type=FuncType.PARAM, runWrap=True, recExecWrap=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='fenceCount', type='uint32_t'),
@@ -16392,7 +16392,7 @@ var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='const void*'),
 var3=VarDef(name='flags', type='VkPipelineCacheCreateFlags'),
 var4=VarDef(name='initialDataSize', type='size_t'),
-var5=VarDef(name='pInitialData', type='const void*', wrapType='CDeclaredBinaryResource', wrapParams='RESOURCE_DATA_RAW, pipelinecachecreateinfo->pInitialData, pipelinecachecreateinfo->initialDataSize')
+var5=VarDef(name='pInitialData', type='const void*', wrapType='CBinaryResource', wrapParams='RESOURCE_DATA_RAW, pipelinecachecreateinfo->pInitialData, pipelinecachecreateinfo->initialDataSize')
 )
 
 Struct(name='VkPipelineCacheHeaderVersionOne_', enabled=False,

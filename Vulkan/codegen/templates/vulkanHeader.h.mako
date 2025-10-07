@@ -12,16 +12,7 @@ ${AUTO_GENERATED_HEADER}
 
 #include "vulkan_basic.h"
 #ifdef GITS_PLATFORM_WINDOWS
-#ifdef BUILD_FOR_CCODE
-// If we include windows.h, it includes further headers. One of them defines
-// WGL functions which we have already defined ourselves. This breaks OGL and
-// OCL CCode. So instead of including windows.h, we just declare the types we
-// need from it.
-struct _SECURITY_ATTRIBUTES;
-typedef _SECURITY_ATTRIBUTES SECURITY_ATTRIBUTES;
-#else
 #include <windows.h>
-#endif  // BUILD_FOR_CCODE
 #endif  // GITS_PLATFORM_WINDOWS
 
 typedef uint32_t VkFlags;

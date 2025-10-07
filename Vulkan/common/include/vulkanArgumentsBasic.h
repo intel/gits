@@ -178,9 +178,7 @@ public:
     read_name_from_stream(stream, key_);
   }
 
-  virtual void Write(CCodeOStream& stream) const override {
-    stream << "GetMapping((" << TypeNameStr() << ")" << hex(key_) << ")";
-  }
+  virtual void Write(CCodeOStream& stream) const override {}
 
   void Assign(T other) {
     AddMapping(other);
@@ -247,26 +245,11 @@ public:
   const char* Name() const override {
     return CVulkanEnumTypeTraits<T>::Name();
   }
-  virtual void Write(CCodeOStream& stream) const override {
-    stream << CVulkanEnumTypeTraits<T>::GetVariantName((T)_int);
-  }
 };
 
 // Since this is a pointer, we aren't limited to string literals; we can assign any pointer.
 template <class T>
 const char* CVulkanEnum<T>::NAME = CVulkanEnumTypeTraits<T>::Name();
-
-// It's just like CBinaryResource except in CCode it will declare the
-// Resource as a variable instead of using it like a value. This extends
-// Resource's lifetime until the end of the API call scope.
-class CDeclaredBinaryResource : public CBinaryResource {
-public:
-  using CBinaryResource::CBinaryResource; // Inherit constructors.
-  using CBinaryResource::Write;           // Inherit Write(CBinOStream).
-  virtual bool DeclarationNeeded() const override;
-  virtual void Declare(CCodeOStream& stream) const override;
-  virtual void Write(CCodeOStream& stream) const override;
-};
 
 class CVkBool32 : public CArgument {
 protected:
@@ -290,16 +273,6 @@ public:
   }
   virtual void Read(CBinIStream& stream) override {
     read_name_from_stream(stream, _uint32);
-  }
-  virtual void Write(CCodeOStream& stream) const override {
-    if (_uint32 == VK_TRUE) {
-      stream << "VK_TRUE";
-    } else if (_uint32 == VK_FALSE) {
-      stream << "VK_FALSE";
-    } else {
-      LOG_ERROR << "Invalid VkBool32 value: " << _uint32;
-      throw ENotSupported(EXCEPTION_MESSAGE);
-    }
   }
 };
 
@@ -364,14 +337,6 @@ public:
   virtual void Read(CBinIStream& stream) override {
     read_name_from_stream(stream, _ptr);
   }
-  virtual void Write(CCodeOStream& stream) const override {
-    if (_ptr) {
-      LOG_WARNING << "Pointer is " << _ptr << "while it should be null.";
-      stream << hex(_ptr) << " /* nullptr was expected here */";
-    } else {
-      stream << "nullptr";
-    }
-  }
   virtual std::set<uint64_t> GetMappedPointers() {
     return {};
   }
@@ -430,29 +395,14 @@ public:
   virtual void Read(CBinIStream& stream) override {
     read_name_from_stream(stream, _ptr);
   }
-  virtual void Write(CCodeOStream& stream) const override {
-    if (_type == 2) {
-      if ((void**)_ptr == nullptr) {
-        stream << "nullptr";
-      } else {
-        stream << "(void**)" << hex((void**)_ptr);
-      }
-    } else {
-      if (*(void**)_ptr == nullptr) {
-        stream << "nullptr";
-      } else {
-        stream << "(void*)" << hex(*(void**)_ptr);
-      }
-    }
-  }
   virtual std::set<uint64_t> GetMappedPointers() {
     return {};
   }
 };
 
 class CVulkanShader : public CArgument {
-  CDeclaredBinaryResource _data;
-  CDeclaredBinaryResource::PointerProxy _pCodeProxy;
+  CBinaryResource _data;
+  CBinaryResource::PointerProxy _pCodeProxy;
 
 public:
   CVulkanShader() {}
@@ -477,15 +427,6 @@ public:
   }
   virtual void Read(CBinIStream& stream) override {
     _data.Read(stream);
-  }
-  virtual void Write(CCodeOStream& stream) const override {
-    stream << _data;
-  }
-  virtual bool DeclarationNeeded() const override {
-    return _data.DeclarationNeeded();
-  }
-  virtual void Declare(CCodeOStream& stream) const override {
-    _data.Declare(stream);
   }
   virtual std::set<uint64_t> GetMappedPointers() {
     return {};
@@ -550,10 +491,6 @@ public:
   PtrConverter<VkClearColorValue> Original();
   virtual void Write(CBinOStream& stream) const override;
   virtual void Read(CBinIStream& stream) override;
-  virtual void Write(CCodeOStream& stream) const override;
-  virtual bool AmpersandNeeded() const override;
-  virtual bool DeclarationNeeded() const override;
-  virtual void Declare(CCodeOStream& stream) const override;
 };
 
 class CVkClearValue : public CArgument, gits::noncopyable {
@@ -578,9 +515,6 @@ public:
   PtrConverter<VkClearValue> Original();
   virtual void Write(CBinOStream& stream) const override;
   virtual void Read(CBinIStream& stream) override;
-  virtual void Write(CCodeOStream& stream) const override;
-  virtual void Declare(CCodeOStream& stream) const override;
-  virtual bool DeclarationNeeded() const override;
 
   virtual std::set<uint64_t> GetMappedPointers() {
     return {};
@@ -801,10 +735,6 @@ public:
   }
   virtual void Write(CBinOStream& stream) const override;
   virtual void Read(CBinIStream& stream) override;
-  virtual void Write(CCodeOStream& stream) const override;
-  virtual bool AmpersandNeeded() const override;
-  virtual bool DeclarationNeeded() const override;
-  virtual void Declare(CCodeOStream& stream) const override;
 };
 
 class CVkGenericArgumentArray : public CArgument, gits::noncopyable {
@@ -863,9 +793,6 @@ public:
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
   }
-  virtual void Write(CCodeOStream& stream) const override {
-    throw ENotImplemented(EXCEPTION_MESSAGE);
-  }
 };
 
 class CpNextWrapper : public CArgument, gits::noncopyable {
@@ -920,18 +847,6 @@ public:
       _data->Read(stream);
     }
   }
-  virtual void Write(CCodeOStream& stream) const override {
-    if ((void*)_ptr == nullptr) {
-      stream << "nullptr";
-    } else {
-      _data->Write(stream);
-    }
-  }
-  virtual void Declare(CCodeOStream& stream) const override {
-    if ((void*)_ptr != nullptr) {
-      _data->Declare(stream);
-    }
-  }
 };
 
 typedef CVulkanEnum<VkDescriptorType> CVkDescriptorType;
@@ -974,17 +889,6 @@ public:
   const char* Name() const override {
     return "CDescriptorUpdateTemplateObject";
   }
-  virtual void Write(CCodeOStream& stream) const override {
-    stream << stream.VariableName(_argument->ScopeKey());
-  }
-  virtual void Declare(CCodeOStream& stream) const override {
-    if (**_descType == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER ||
-        **_descType == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) { // VkBufferView
-      _argument->VariableNameRegister(
-          stream, false); // CVulkanObj didn't declare variable, so we are declaring it here
-    }
-    _argument->Declare(stream);
-  }
 };
 
 class CUpdateDescriptorSetWithTemplateArray : public CArgument, gits::noncopyable {
@@ -1016,23 +920,6 @@ public:
     }
   }
   virtual void Read(CBinIStream& stream) override;
-  virtual void Write(CCodeOStream& stream) const override {
-    stream << "&" << getVarName("vec_", this) << "[0]";
-  }
-  virtual bool DeclarationNeeded() const override {
-    return true;
-  }
-  virtual void Declare(CCodeOStream& stream) const override {
-    std::string vecName = getVarName("vec_", this);
-    stream.Indent() << "std::vector<char> " << vecName << "(" << (size_t) * *_size << ");\n";
-
-    for (auto& arg : _cgenericargsDict) {
-      arg.get()->Declare(stream);
-      stream.Indent() << "memcpy(&" << vecName << "[0] + " << arg->GetOffset() << ", &";
-      arg.get()->Write(stream);
-      stream << ", " << (size_t)arg->GetSize() << ");\n";
-    }
-  }
   virtual std::set<uint64_t> GetMappedPointers() {
     return {};
   }
@@ -1043,7 +930,7 @@ class CVkPipelineCacheCreateInfo_V1 : public CArgument, gits::noncopyable {
   std::unique_ptr<CpNextWrapper> _pNext;
   std::unique_ptr<Cuint32_t> _flags;
   std::unique_ptr<Csize_t> _initialDataSize;
-  std::unique_ptr<CDeclaredBinaryResource> _pInitialData;
+  std::unique_ptr<CBinaryResource> _pInitialData;
   std::vector<uint8_t> _initialData;
 
   std::unique_ptr<VkPipelineCacheCreateInfo> _PipelineCacheCreateInfo;
@@ -1069,12 +956,6 @@ public:
   virtual std::set<uint64_t> GetMappedPointers();
   virtual void Write(CBinOStream& stream) const override;
   virtual void Read(CBinIStream& stream) override;
-  virtual void Write(CCodeOStream& stream) const override;
-  virtual bool AmpersandNeeded() const override;
-  virtual bool DeclarationNeeded() const override {
-    return true;
-  }
-  virtual void Declare(CCodeOStream& stream) const override;
 };
 
 typedef struct VkBuffer_T* VkBufferTypeTag;
@@ -1135,10 +1016,6 @@ public:
   const char* Name() const override {
     return "CBufferDeviceAddressObject";
   }
-
-  virtual void Write(CCodeOStream& stream) const override {
-    throw ENotImplemented(EXCEPTION_MESSAGE);
-  }
 };
 
 typedef CVulkanEnum<VkCommandExecutionSideGITS> CVkCommandExecutionSideGITS;
@@ -1149,7 +1026,7 @@ class CVkDeviceOrHostAddressConstKHR : public CArgument {
   std::unique_ptr<CBufferDeviceAddressObject> _bufferDeviceAddress;
 
   std::unique_ptr<Csize_t> _dataSize;
-  std::unique_ptr<CDeclaredBinaryResource> _resource;
+  std::unique_ptr<CBinaryResource> _resource;
   std::vector<uint8_t> _data;
 
   std::unique_ptr<VkDeviceOrHostAddressConstKHR> _DeviceOrHostAddress;
@@ -1160,7 +1037,7 @@ public:
       : _commandExecutionSideGITS(std::make_unique<CVkCommandExecutionSideGITS>()),
         _bufferDeviceAddress(std::make_unique<CBufferDeviceAddressObject>()),
         _dataSize(std::make_unique<Csize_t>()),
-        _resource(std::make_unique<CDeclaredBinaryResource>()),
+        _resource(std::make_unique<CBinaryResource>()),
         _data(),
         _DeviceOrHostAddress(nullptr),
         _DeviceOrHostAddressOriginal(nullptr) {}
@@ -1192,20 +1069,6 @@ public:
   virtual void Write(CBinOStream& stream) const override;
 
   virtual void Read(CBinIStream& stream) override;
-
-  virtual void Write(CCodeOStream& stream) const override {
-    TODO("Implement proper CCode support.")
-    throw ENotImplemented(EXCEPTION_MESSAGE);
-  }
-
-  virtual bool DeclarationNeeded() const override {
-    return true;
-  }
-
-  virtual void Declare(CCodeOStream& stream) const override {
-    TODO("Implement proper CCode support.")
-    throw ENotImplemented(EXCEPTION_MESSAGE);
-  }
 };
 
 class CDeviceOrHostAddressAccelerationStructureVertexDataGITS
@@ -1270,20 +1133,6 @@ public:
   virtual void Write(CBinOStream& stream) const override;
 
   virtual void Read(CBinIStream& stream) override;
-
-  virtual void Write(CCodeOStream& stream) const override {
-    TODO("Implement proper CCode support.")
-    throw ENotImplemented(EXCEPTION_MESSAGE);
-  }
-
-  virtual bool DeclarationNeeded() const override {
-    return true;
-  }
-
-  virtual void Declare(CCodeOStream& stream) const override {
-    TODO("Implement proper CCode support.")
-    throw ENotImplemented(EXCEPTION_MESSAGE);
-  }
 };
 
 class CVkAccelerationStructureGeometryInstancesDataKHR : public CArgument {
@@ -1294,7 +1143,7 @@ class CVkAccelerationStructureGeometryInstancesDataKHR : public CArgument {
   std::unique_ptr<CBufferDeviceAddressObject> _bufferDeviceAddress;
 
   std::unique_ptr<Cuint32_t> _count;
-  std::unique_ptr<CDeclaredBinaryResource> _resource;
+  std::unique_ptr<CBinaryResource> _resource;
   std::vector<VkAccelerationStructureInstanceKHR> _inputData;
 
   std::unique_ptr<VkAccelerationStructureGeometryInstancesDataKHR>
@@ -1341,12 +1190,6 @@ public:
   virtual std::set<uint64_t> GetMappedPointers();
   virtual void Write(CBinOStream& stream) const override;
   virtual void Read(CBinIStream& stream) override;
-  virtual void Write(CCodeOStream& stream) const override;
-  virtual bool AmpersandNeeded() const override;
-  virtual bool DeclarationNeeded() const override {
-    return true;
-  }
-  virtual void Declare(CCodeOStream& stream) const override;
 };
 
 typedef CVulkanEnum<VkGeometryTypeKHR> CVkGeometryTypeKHR;
@@ -1399,12 +1242,6 @@ public:
   virtual std::set<uint64_t> GetMappedPointers();
   virtual void Write(CBinOStream& stream) const override;
   virtual void Read(CBinIStream& stream) override;
-  virtual void Write(CCodeOStream& stream) const override;
-  virtual bool AmpersandNeeded() const override;
-  virtual bool DeclarationNeeded() const override {
-    return true;
-  }
-  virtual void Declare(CCodeOStream& stream) const override;
 };
 
 class CVkMemoryBarrier2;
@@ -1448,19 +1285,6 @@ public:
   virtual std::set<uint64_t> GetMappedPointers();
   virtual void Write(CBinOStream& stream) const override;
   virtual void Read(CBinIStream& stream) override;
-  virtual void Write(CCodeOStream& stream) const override;
-  virtual bool AmpersandNeeded() const override;
-  virtual bool DeclarationNeeded() const override {
-    return true;
-  }
-  virtual void Declare(CCodeOStream& stream) const override;
-  void Declare(CCodeOStream& stream,
-               size_t memoryBarrierStart,
-               size_t memoryBarrierEnd,
-               size_t bufferMemoryBarrierStart,
-               size_t bufferMemoryBarrierEnd,
-               size_t imageMemoryBarrierStart,
-               size_t imageMemoryBarrierEnd) const;
   uint32_t GetMemoryBarrierCount() const;
   uint32_t GetBufferMemoryBarrierCount() const;
   uint32_t GetImageMemoryBarrierCount() const;

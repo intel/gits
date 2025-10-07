@@ -332,10 +332,6 @@ public:
 
 // ------------------------------------------------------------------------------------------------
 
-class CDeclaredBinaryResourceData : public CBinaryResourceData {
-  using CBinaryResourceData::CBinaryResourceData; // Inherit the constructor.
-};
-
 template <class T>
 class CSimpleData {
 private:

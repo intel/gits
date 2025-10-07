@@ -162,9 +162,6 @@ class Token:
     signal_operation: bool = False
     wait_operation: bool = False
     run_wrap: bool | str = False
-    ccode_wrap: bool = False
-    ccode_write_wrap: bool = False
-    ccode_post_action_needed: bool | None = None
     plugin_wrap: bool = False
     disable_in_plugin: bool = False
     custom_driver: bool = False
@@ -265,9 +262,6 @@ def _rename_keys(dictionary: dict) -> dict:
         ('execPostRecWrap', 'exec_post_recorder_wrap'),
         ('recExecWrap', 'recorder_exec_wrap'),
         ('runWrap', 'run_wrap'),
-        ('ccodeWrap', 'ccode_wrap'),
-        ('ccodeWriteWrap', 'ccode_write_wrap'),
-        ('ccodePostActionNeeded', 'ccode_post_action_needed'),
         ('pluginWrap', 'plugin_wrap'),
         ('disableInPlugin', 'disable_in_plugin'),
         ('customDriver', 'custom_driver'),

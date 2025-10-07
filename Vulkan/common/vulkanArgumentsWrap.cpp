@@ -8,11 +8,6 @@
 
 #include "vulkanStateTracking.h"
 
-bool gits::Vulkan::CVkDescriptorImageInfo::DeclarationNeeded() const {
-  // Because if it was a nullptr, we'll just print "nullptr", no need for a variable.
-  return !*_isNullPtr;
-}
-
 gits::Vulkan::CVkAccelerationStructureGeometryAabbsDataKHR::
     CVkAccelerationStructureGeometryAabbsDataKHR(
         const VkAccelerationStructureGeometryAabbsDataKHR*
