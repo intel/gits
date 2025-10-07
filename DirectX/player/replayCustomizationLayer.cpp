@@ -1174,10 +1174,6 @@ void ReplayCustomizationLayer::pre(
   }
 }
 
-void ReplayCustomizationLayer::pre(INTC_D3D12_SetFeatureSupportCommand& command) {
-  intcFeatureSupportSet_ = true;
-}
-
 void ReplayCustomizationLayer::pre(INTC_D3D12_SetApplicationInfoCommand& c) {
   if (Configurator::Get().directx.player.applicationInfoOverride.enabled) {
     c.skip = true;
@@ -1195,14 +1191,6 @@ void ReplayCustomizationLayer::pre(INTC_D3D12_SetApplicationInfoCommand& c) {
              << c.pExtensionAppInfo_.value->EngineVersion.major << "."
              << c.pExtensionAppInfo_.value->EngineVersion.minor << "."
              << c.pExtensionAppInfo_.value->EngineVersion.patch << ")";
-  }
-
-  // Skip if INTC_D3D12_SetFeatureSupport has not been called previously
-  // This is a temporary workaround for an issue with Intel Extensions for D3D12
-  if (!intcFeatureSupportSet_) {
-    LOG_WARNING
-        << "INTC_D3D12_SetApplicationInfo - SKIPPED due to missing INTC_D3D12_SetFeatureSupport";
-    c.skip = true;
   }
 }
 
