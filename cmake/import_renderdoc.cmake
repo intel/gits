@@ -7,12 +7,14 @@
 # ===================== end_copyright_notice ==============================
 
 if(NOT DEFINED RENDERDOC_ABS_PATH)
-  install_dependencies("--with-renderdoc")
+  add_thirdparty_arg_setup("--with-renderdoc" init_renderdoc)
   set(RENDERDOC_ABS_PATH "${CMAKE_CURRENT_SOURCE_DIR}/third_party/renderdoc/renderdoc/api/app")
 endif()
 
-source_group("External Files" FILES
-  ${RENDERDOC_ABS_PATH}/renderdoc_app.h
-)
+function(init_renderdoc)
+  source_group("External Files" FILES
+    ${RENDERDOC_ABS_PATH}/renderdoc_app.h
+  )
 
-include_directories(${RENDERDOC_ABS_PATH})
+  include_directories(${RENDERDOC_ABS_PATH})
+endfunction()

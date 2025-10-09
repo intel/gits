@@ -7,6 +7,6 @@
 # ===================== end_copyright_notice ==============================
 
 if(NOT DEFINED DXC_DIR)
-  install_dependencies("--with-dxc")
+  add_thirdparty_arg("--with-dxc")
   set(DXC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/dxc")
 endif()

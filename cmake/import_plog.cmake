@@ -7,6 +7,6 @@
 # ===================== end_copyright_notice ==============================
 
 if(NOT DEFINED PLOG_SOURCE_DIR)
-  install_dependencies("--with-plog")
+  add_thirdparty_arg("--with-plog")
   set(PLOG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/plog")
 endif()

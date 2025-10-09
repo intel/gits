@@ -7,6 +7,6 @@
 # ===================== end_copyright_notice ==============================
 
 if(NOT DEFINED DML_DIR)
-  install_dependencies("--with-directml")
+  add_thirdparty_arg("--with-directml")
   set(DML_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/DirectML")
 endif()

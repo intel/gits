@@ -87,8 +87,8 @@ class GitCheck:
         logger.info(f"Current GIT version {cur_major}.{cur_minor}.{cur_patch}")
         return False
 
-
-THIRD_PARTY_PATH = get_root_directory() / "third_party"
+THIRD_PARTY_FOLDER_NAME = "third_party"
+THIRD_PARTY_PATH = get_root_directory() / THIRD_PARTY_FOLDER_NAME
 DEPENDENCIES_FILE = THIRD_PARTY_PATH / "dependencies.yaml"
 PATCH_PATH = THIRD_PARTY_PATH / "patch"
 USE_PARALLEL_GIT = GitCheck().check()
@@ -182,6 +182,29 @@ class Dependency:
 
     def compare_and_log_difference(self, field, local, required):
         if local != required:
+            self.logger.warning(f"Mismatch '{field}': local={local}, required={required}")
+            return False
+        return True
+
+    def compare_and_log_difference_path(self, field, local, required):
+        if local == required:
+            return True
+
+        local_parts = list(Path(local).parts)
+        required_parts = list(Path(required).parts)
+
+        min_len = min(len(local_parts), len(required_parts))
+        paths_match = False
+
+        for i in range(1, min_len + 1):
+            local_part = local_parts[-i]
+            if local_part != required_parts[-i]:
+                break
+            if local_part == THIRD_PARTY_FOLDER_NAME:
+                paths_match = True
+                break
+
+        if not paths_match:
             self.logger.warning(f"Mismatch '{field}': local={local}, required={required}")
             return False
         return True
@@ -310,7 +333,7 @@ class GitRepository(Dependency):
         if repo_meta_info.get("status", None) != "installed":
             return False
 
-        result = True and self.compare_and_log_difference("path", repo_meta_info.get("path", None), str(self.repository_path))
+        result = True and self.compare_and_log_difference_path("path", repo_meta_info.get("path", None), str(self.repository_path))
         result = result and self.compare_and_log_difference("branch", repo_meta_info.get("branch", None), self.branch)
         result = result and self.compare_and_log_difference("commit id", repo_meta_info.get("commit_id", None), self.commit_id)
         result = result and self.compare_and_log_difference("URL", repo_meta_info.get("url", None), self.url)

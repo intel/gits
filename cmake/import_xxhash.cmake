@@ -7,18 +7,19 @@
 # ===================== end_copyright_notice ==============================
 
 if(NOT DEFINED XXHASH_ABS_PATH)
-  install_dependencies("--with-xxhash")
+  add_thirdparty_arg_setup("--with-xxhash" init_xxhash)
   set(XXHASH_ABS_PATH "${CMAKE_CURRENT_SOURCE_DIR}/third_party/xxhash")
 endif()
 
-add_definitions(-DXXH_INLINE_ALL)
+function(init_xxhash)
+  add_definitions(-DXXH_INLINE_ALL)
 
-add_library(xxhash
-  ${XXHASH_ABS_PATH}/xxhash.c
-  ${XXHASH_ABS_PATH}/xxhash.h
-)
+  add_library(xxhash
+    ${XXHASH_ABS_PATH}/xxhash.c
+    ${XXHASH_ABS_PATH}/xxhash.h
+  )
 
-set_target_properties(xxhash PROPERTIES FOLDER External)
+  set_target_properties(xxhash PROPERTIES FOLDER External)
 
-
-include_directories(${XXHASH_ABS_PATH})
+  include_directories(${XXHASH_ABS_PATH})
+endfunction()

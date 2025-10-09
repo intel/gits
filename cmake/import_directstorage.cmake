@@ -7,6 +7,6 @@
 # ===================== end_copyright_notice ==============================
 
 if(NOT DEFINED DSTORAGE_DIR)
-  install_dependencies("--with-directstorage")
+  add_thirdparty_arg("--with-directstorage")
   set(DSTORAGE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/DirectStorage")
 endif()

@@ -7,7 +7,11 @@
 # ===================== end_copyright_notice ==============================
 
 if(NOT DEFINED NVAPI_DIR)
-  install_dependencies("--with-nvapi")
+  add_thirdparty_arg_setup("--with-nvapi" init_nvapi)
   set(NVAPI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/nvapi/")
-  include_directories(${NVAPI_DIR})
 endif()
+
+function(init_nvapi)
+  include_directories(${NVAPI_DIR})
+endfunction()
+

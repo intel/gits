@@ -7,6 +7,6 @@
 # ===================== end_copyright_notice ==============================
 
 if(NOT DEFINED XESS_SDK_DIR)
-  install_dependencies("--with-xess")
+  add_thirdparty_arg("--with-xess")
   set(XESS_SDK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/xess")
 endif()

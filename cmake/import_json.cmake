@@ -7,8 +7,10 @@
 # ===================== end_copyright_notice ==============================
 
 if(NOT DEFINED JSON_ABS_PATH)
-  install_dependencies("--with-json")
+  add_thirdparty_arg_setup("--with-json" init_json)
   set(JSON_ABS_PATH "${CMAKE_CURRENT_SOURCE_DIR}/third_party/json")
 endif()
 
-include_directories("${JSON_ABS_PATH}/single_include")
+function(init_json)
+  include_directories("${JSON_ABS_PATH}/single_include")
+endfunction()

@@ -7,7 +7,10 @@
 # ===================== end_copyright_notice ==============================
 
 if(NOT DEFINED FASTIO_DIR)
-  install_dependencies("--with-fastio")
+  add_thirdparty_arg_setup("--with-fastio" init_fastio)
   set(FASTIO_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/fast_io/")
-  include_directories(${FASTIO_DIR})
 endif()
+
+function(init_fastio)
+  include_directories(${FASTIO_DIR})
+endfunction()
