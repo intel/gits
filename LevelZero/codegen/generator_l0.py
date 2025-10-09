@@ -1270,6 +1270,7 @@ var100=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_DEVICE_EXT_PROPERTIES',value='0x00020
 # var101=VarDef(name='ZE_STRUCTURE_TYPE_RTAS_GEOMETRY_AABBS_EXT_CB_PARAMS',value='0x00020035',struct='ze_rtas_geometry_aabbs_ext_cb_params_t'),
 var500=VarDef(name='ZEX_STRUCTURE_COUNTER_BASED_EVENT_DESC',value='0x0003001C',struct='zex_counter_based_event_desc_t'),
 var501=VarDef(name='ZEX_STRUCTURE_COUNTER_BASED_EVENT_EXTERNAL_SYNC_ALLOC_PROPERTIES',value='0x0003001D',struct='zex_counter_based_event_external_sync_alloc_properties_t'),
+var502=VarDef(name='ZE_STRUCTURE_TYPE_QUEUE_PRIORITY_DESC',value='0x00030028',struct='ze_queue_priority_desc_t'),
 )
 
 Enum(name='zel_structure_type_t',
@@ -4252,6 +4253,13 @@ var3=VarDef(name='deviceAddress',type='uint64_t*',tag='in',wrapType='CUSMPtr'),
 var4=VarDef(name='hostAddress',type='uint64_t*',tag='in',wrapType='CUSMPtr'),
 var5=VarDef(name='completionValue',type='uint64_t',tag='in'),
 )
+
+Argument(name='ze_queue_priority_desc_t',
+var1=VarDef(name='stype',type='ze_structure_type_t',tag='in'),
+var2=VarDef(name='pNext',type='const void*',tag='in',wrapType='CExtensionStructCore'),
+var3=VarDef(name='priority',type='int32_t',tag='in'),
+)
+
 Function(name='zeCommandListAppendBarrier',component='ze_command_list',enabled=True,api_version='1.0',ddi_pos=6,stateTrack=True,
 retV=RetDef(type='ze_result_t'),
 arg1=ArgDef(name='hCommandList',type='ze_command_list_handle_t',tag='in'),
