@@ -236,8 +236,7 @@ static NOINLINE lua_State* GetLuaState() {
     err_fun();                                                                                     \
     const Config& gits_cfg = Configurator::Get();                                                  \
     const bool doTrace = ShouldLog(LogLevel::TRACE);                                               \
-    if (doTrace &&                                                                                 \
-        (!CGits::Instance().traceGLAPIBypass || gits_cfg.opengl.player.traceGitsInternal)) {       \
+    if (doTrace && (!drv.traceGLAPIBypass || gits_cfg.opengl.player.traceGitsInternal)) {          \
       Tracer(#c).trace e;                                                                          \
     }                                                                                              \
     b gits_ret = (b)0;                                                                             \
@@ -256,8 +255,7 @@ static NOINLINE lua_State* GetLuaState() {
     if (call_shd) {                                                                                \
       gits_ret = drv_name.shd_##c e;                                                               \
     }                                                                                              \
-    if (doTrace &&                                                                                 \
-        (!CGits::Instance().traceGLAPIBypass || gits_cfg.opengl.player.traceGitsInternal)) {       \
+    if (doTrace && (!drv.traceGLAPIBypass || gits_cfg.opengl.player.traceGitsInternal)) {          \
       Tracer(#c).trace_ret(gits_ret);                                                              \
     }                                                                                              \
     return gits_ret;                                                                               \
@@ -549,7 +547,7 @@ dl::SharedObject CGlxDriver::Library() {
 
 void* load_egl_or_native(const char* name) {
   void* return_value;
-  CGits::Instance().traceGLAPIBypass = true;
+  drv.traceGLAPIBypass = true;
   if (drv.egl.Used()) {
     return_value = drv.egl.eglGetProcAddress(name);
   } else {
@@ -561,7 +559,7 @@ void* load_egl_or_native(const char* name) {
 #error "Unsupported OS"
 #endif
   }
-  CGits::Instance().traceGLAPIBypass = false;
+  drv.traceGLAPIBypass = false;
   return return_value;
 }
 

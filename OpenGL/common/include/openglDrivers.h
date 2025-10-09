@@ -935,6 +935,8 @@ struct CDrivers {
 
   CGlDriver gl;
 
+  bool traceGLAPIBypass{false};
+
   void add_terminate_event(std::function<void()> e) {
     events_.push_back(e);
   }

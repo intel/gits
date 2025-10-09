@@ -780,18 +780,18 @@ void CDrawFunction::DrawFunctionRun() {
   if (!oglplayer.captureDraws2DTexs.empty()) {
     HandleCaptureDraws2DTexs();
   }
-  CGits::Instance().traceGLAPIBypass = false;
+  drv.traceGLAPIBypass = false;
   HandleTrace();
 
   // forward to drawcall implementation
   this->RunImpl();
-  CGits::Instance().traceGLAPIBypass = true;
+  drv.traceGLAPIBypass = true;
 
   if (!oglplayer.captureDraws.empty()) {
     HandleCaptureDraws();
   }
 
-  CGits::Instance().traceGLAPIBypass = false;
+  drv.traceGLAPIBypass = false;
 
   if (scissorStatePtr && !IsClearOrBlitDrawcall(this)) {
     scissorStatePtr->Restore();

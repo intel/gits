@@ -483,7 +483,6 @@ public:
   CRunner& Runner() {
     return _runner;
   }
-  bool traceGLAPIBypass;
   ApisIface apis;
   SchedulerVersion schedulerVersion;
 

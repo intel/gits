@@ -1832,7 +1832,7 @@ void StatePrinter::BoundBuffers::Write() {
 }
 
 StatePrinter::StatePrinter() {
-  CGits::Instance().traceGLAPIBypass = true;
+  drv.traceGLAPIBypass = true;
 
   //FBOs
   if (!curctx::IsEs1()) {
@@ -1919,7 +1919,7 @@ StatePrinter::StatePrinter() {
   }
 #endif
 
-  CGits::Instance().traceGLAPIBypass = false;
+  drv.traceGLAPIBypass = false;
 }
 void StatePrinter::PrintToLog() {
 #ifndef BUILD_FOR_CCODE
