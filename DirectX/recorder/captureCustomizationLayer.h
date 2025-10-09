@@ -10,6 +10,7 @@
 
 #include "layerAuto.h"
 #include "gitsRecorder.h"
+#include "directStorageService.h"
 
 namespace gits {
 namespace DirectX {
@@ -103,6 +104,8 @@ public:
   void pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) override;
   void pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) override;
   void pre(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) override;
+  void post(IDStorageFactoryOpenFileCommand& c) override;
+  void pre(IDStorageQueueEnqueueRequestCommand& c) override;
 
 private:
   // Heaps (and resources) may require their D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS to be updated (for writewatch)
@@ -136,6 +139,7 @@ private:
   static thread_local HeapInfo s_heapInfo_;
   CaptureManager& manager_;
   GitsRecorder& recorder_;
+  DirectStorageService directStorageService_;
 };
 
 } // namespace DirectX

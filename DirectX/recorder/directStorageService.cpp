@@ -6,7 +6,7 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "directStorageResourcesLayer.h"
+#include "directStorageService.h"
 #include "config.h"
 #include "configurationLib.h"
 #include "gits.h"
@@ -17,23 +17,30 @@
 namespace gits {
 namespace DirectX {
 
-DirectStorageResourcesLayer::DirectStorageResourcesLayer() : Layer("DirectStorageResources") {
+DirectStorageService::DirectStorageService() {
   const auto& cfg = Configurator::Get();
-  const auto& outFileDir =
-      Configurator::IsPlayer() ? cfg.common.player.subcapturePath : cfg.common.recorder.dumpPath;
-  outFilePath_ = outFileDir / "DirectStorageResources.bin";
-  outFile_.open(outFilePath_, std::ios::binary);
-}
-DirectStorageResourcesLayer::~DirectStorageResourcesLayer() {}
-
-void DirectStorageResourcesLayer::post(IDStorageFactoryOpenFileCommand& c) {
-  std::lock_guard<std::mutex> lock(mapMutex_);
-  files_[c.ppv_.key] = c.path_.value;
+  captureDirectStorage_ = cfg.directx.capture.captureDirectStorage;
+  if (captureDirectStorage_) {
+    const std::filesystem::path& outFileDir =
+        Configurator::IsPlayer() ? cfg.common.player.subcapturePath : cfg.common.recorder.dumpPath;
+    outFilePath_ = outFileDir / "DirectStorageResources.bin";
+    outFile_.open(outFilePath_, std::ios::binary);
+  }
 }
 
-void DirectStorageResourcesLayer::pre(IDStorageQueueEnqueueRequestCommand& c) {
+void DirectStorageService::openFile(IDStorageFactoryOpenFileCommand& c) {
+  if (captureDirectStorage_) {
+    std::lock_guard<std::mutex> lock(mapMutex_);
+    files_[c.ppv_.key] = c.path_.value;
+  }
+}
+
+void DirectStorageService::enqueueRequest(IDStorageQueueEnqueueRequestCommand& c) {
+  if (!captureDirectStorage_) {
+    return;
+  }
   GITS_ASSERT(c.request_.value);
-  auto& request = *c.request_.value;
+  DSTORAGE_REQUEST& request = *c.request_.value;
   // Custom compression is not supported
   // Memory source is not supported
   if ((request.Options.CompressionFormat & DSTORAGE_CUSTOM_COMPRESSION_0) ||
@@ -44,9 +51,10 @@ void DirectStorageResourcesLayer::pre(IDStorageQueueEnqueueRequestCommand& c) {
   GITS_ASSERT(c.request_.fileKey);
 
   std::lock_guard<std::mutex> lock(mapMutex_);
-  const auto& filePath = files_[c.request_.fileKey];
-  auto& fileReads = fileReads_[filePath];
-  auto range = FileRange(outFile_.tellp(), request.Source.File.Offset, request.Source.File.Size);
+  const std::filesystem::path& filePath = files_[c.request_.fileKey];
+  Ranges& fileReads = fileReads_[filePath];
+  FileRange range =
+      FileRange(outFile_.tellp(), request.Source.File.Offset, request.Source.File.Size);
   auto result = fileReads.insert(range);
   // Assumes that all the chunks accessed are the same size (or smaller) than when originally accessed
   GITS_ASSERT(result.first->size >= request.Source.File.Size);

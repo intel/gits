@@ -1088,6 +1088,14 @@ void CaptureCustomizationLayer::pre(
   }
 }
 
+void CaptureCustomizationLayer::post(IDStorageFactoryOpenFileCommand& c) {
+  directStorageService_.openFile(c);
+}
+
+void CaptureCustomizationLayer::pre(IDStorageQueueEnqueueRequestCommand& c) {
+  directStorageService_.enqueueRequest(c);
+}
+
 void CaptureCustomizationLayer::fillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg) {
   if (arg.value) {
     GpuAddressService::GpuAddressInfo info =

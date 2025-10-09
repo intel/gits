@@ -22,7 +22,6 @@
 #include "debugInfoLayerAuto.h"
 #include "globalSynchronizationLayerAuto.h"
 #include "logDxErrorLayerAuto.h"
-#include "directStorageResourcesLayer.h"
 #include "dllOverrideStoreLayer.h"
 #include "imguiHudLayer.h"
 #include "directXApiIfaceRecorder.h"
@@ -135,7 +134,6 @@ void CaptureManager::createLayers() {
   std::unique_ptr<Layer> screenshotsLayer = resourceDumpingFactory_.getScreenshotsLayer();
   std::unique_ptr<Layer> debugInfoLayer;
   std::unique_ptr<Layer> globalSynchronizationLayer;
-  std::unique_ptr<Layer> directStorageResourcesLayer;
   std::unique_ptr<Layer> captureCustomizationLayer;
   std::unique_ptr<Layer> captureSynchronizationLayer;
   std::unique_ptr<Layer> encoderLayer;
@@ -158,9 +156,6 @@ void CaptureManager::createLayers() {
     captureSynchronizationLayer = std::make_unique<CaptureSynchronizationLayer>(*this);
     encoderLayer = std::make_unique<EncoderLayer>(*recorder_);
     gpuPatchLayer = std::make_unique<GpuPatchLayer>(gpuAddressService_);
-    if (cfg.directx.capture.captureDirectStorage) {
-      directStorageResourcesLayer = std::make_unique<DirectStorageResourcesLayer>();
-    }
     portabilityLayer = portabilityFactory_.getPortabilityLayer();
     addressPinningLayer = addressPinningFactory_.getAddressPinningLayer();
     dllOverrideStoreLayer = std::make_unique<DllOverrideStoreLayer>(*this, *recorder_);
@@ -182,7 +177,6 @@ void CaptureManager::createLayers() {
   enablePreLayer(captureSynchronizationLayer);
   enablePreLayer(screenshotsLayer);
   enablePreLayer(portabilityLayer);
-  enablePreLayer(directStorageResourcesLayer);
   if (cfg.common.shared.hud.enabled) {
     enablePreLayer(imGuiHUDLayer);
   }
@@ -206,7 +200,6 @@ void CaptureManager::createLayers() {
   enablePostLayer(captureSynchronizationLayer);
   enablePostLayer(traceLayer);
   enablePostLayer(screenshotsLayer);
-  enablePostLayer(directStorageResourcesLayer);
   if (cfg.common.shared.hud.enabled) {
     enablePostLayer(imGuiHUDLayer);
   }
@@ -240,7 +233,6 @@ void CaptureManager::createLayers() {
   retainLayer(std::move(debugInfoLayer));
   retainLayer(std::move(logDxErrorLayer));
   retainLayer(std::move(screenshotsLayer));
-  retainLayer(std::move(directStorageResourcesLayer));
   retainLayer(std::move(portabilityLayer));
   retainLayer(std::move(globalSynchronizationLayer));
   retainLayer(std::move(imGuiHUDLayer));

@@ -73,6 +73,8 @@ set(SERVICES_SRC
   ${SRC_DIR}/fenceService.h
   ${SRC_DIR}/fenceService.cpp
   ${SRC_DIR}/contextMapService.h
+  ${SRC_DIR}/directStorageService.h
+  ${SRC_DIR}/directStorageService.cpp
 )
 source_group("services" FILES ${SERVICES_SRC})
 
@@ -104,7 +106,6 @@ target_include_directories(DirectX_recorder PRIVATE
   ${DIRECTX_DIR}/layers/resource_dumping
   ${DIRECTX_DIR}/layers/portability
   ${DIRECTX_DIR}/layers/api_debug
-  ${DIRECTX_DIR}/layers/dstorage_resources
   ${DIRECTX_DIR}/layers/address_pinning
   ${CMAKE_SOURCE_DIR}/third_party/DirectXTex/DirectXTex
   ${PLUGINS_DIR}
@@ -117,7 +118,6 @@ target_link_libraries(DirectX_recorder PRIVATE
   DirectX_layer_interface
   DirectX_api_debug
   DirectX_trace
-  DirectX_dstorage_resources
   DirectX_coders
   DirectX_imgui_hud
   DirectX_utils

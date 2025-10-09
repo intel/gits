@@ -90,8 +90,6 @@ PlayerManager::PlayerManager() {
   std::unique_ptr<Layer> commandPreservationLayer =
       subcaptureFactory_.getCommandPreservationLayer();
   std::unique_ptr<Layer> analyzerLayer = subcaptureFactory_.getAnalyzerLayer();
-  std::unique_ptr<Layer> directStorageResourcesLayer =
-      subcaptureFactory_.getDirectStorageResourcesLayer();
   std::unique_ptr<Layer> executionSerializationLayer =
       executionSerializationFactory_.getExecutionSerializationLayer();
   std::unique_ptr<Layer> screenshotsLayer = resourceDumpingFactory_.getScreenshotsLayer();
@@ -153,7 +151,6 @@ PlayerManager::PlayerManager() {
   enablePreLayer(logDxErrorLayer);
   enablePreLayer(multithreadedObjectCreationLayer);
   enablePreLayer(directStorageLayer);
-  enablePreLayer(directStorageResourcesLayer);
   enablePreLayer(accelerationStructuresDumpLayer);
   enablePreLayer(printStatusLayer);
   if (cfg.common.shared.hud.enabled) {
@@ -171,7 +168,6 @@ PlayerManager::PlayerManager() {
   enablePostLayer(portabilityLayer);
   enablePostLayer(logDxErrorLayer);
   enablePostLayer(directStorageLayer);
-  enablePostLayer(directStorageResourcesLayer);
   enablePostLayer(addressPinningLayer);
   enablePostLayer(replayCustomizationLayer);
   enablePostLayer(gpuPatchLayer);
@@ -222,7 +218,6 @@ PlayerManager::PlayerManager() {
   retainLayer(std::move(accelerationStructuresDumpLayer));
   retainLayer(std::move(rootSignatureDumpLayer));
   retainLayer(std::move(directStorageLayer));
-  retainLayer(std::move(directStorageResourcesLayer));
   retainLayer(std::move(imGuiHUDLayer));
   retainLayer(std::move(printStatusLayer));
   retainLayer(std::move(addressPinningLayer));

@@ -38,9 +38,6 @@ public:
   std::unique_ptr<Layer> getAnalyzerLayer() {
     return std::move(analyzerLayer_);
   }
-  std::unique_ptr<Layer> getDirectStorageResourcesLayer() {
-    return std::move(directStorageResourcesLayer_);
-  }
   ObjectUsageNotifier* getObjectUsageNotifier() {
     return objectUsageNotifier_;
   }
@@ -52,7 +49,6 @@ private:
   std::unique_ptr<Layer> recordingLayer_;
   std::unique_ptr<Layer> commandPreservationLayer_;
   std::unique_ptr<Layer> analyzerLayer_;
-  std::unique_ptr<Layer> directStorageResourcesLayer_;
   ObjectUsageNotifier* objectUsageNotifier_{};
 };
 

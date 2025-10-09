@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "layerAuto.h"
+#include "commandsAuto.h"
 #include "directx.h"
 
 #include <mutex>
@@ -20,13 +20,12 @@
 namespace gits {
 namespace DirectX {
 
-class DirectStorageResourcesLayer : public Layer {
+class DirectStorageService {
 public:
-  DirectStorageResourcesLayer();
-  ~DirectStorageResourcesLayer();
+  DirectStorageService();
 
-  void post(IDStorageFactoryOpenFileCommand& c) override;
-  void pre(IDStorageQueueEnqueueRequestCommand& c) override;
+  void openFile(IDStorageFactoryOpenFileCommand& c);
+  void enqueueRequest(IDStorageQueueEnqueueRequestCommand& c);
 
 private:
   struct FileRange {
@@ -44,6 +43,7 @@ private:
   using Buffer = std::vector<char>;
   using Ranges = std::set<FileRange, CompareFileRange>;
 
+  bool captureDirectStorage_{};
   std::filesystem::path outFilePath_{};
   std::ofstream outFile_{};
   std::mutex mapMutex_{};

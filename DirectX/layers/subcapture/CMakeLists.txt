@@ -109,14 +109,12 @@ target_sources(DirectX_subcapture PRIVATE
 )
 
 target_include_directories(DirectX_subcapture PRIVATE
-  ${DIRECTX_DIR}/layers/dstorage_resources
   ${CMAKE_SOURCE_DIR}/third_party/DirectXTex/DirectXTex
   ${ARGS_SOURCE_DIR}
 )
 
 target_link_libraries(DirectX_subcapture PRIVATE
     DirectX_layer_interface
-    DirectX_dstorage_resources
     DirectX_utils
     DirectX_coders
 )

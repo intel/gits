@@ -41,7 +41,6 @@ target_include_directories(DirectX_execution_serialization PRIVATE
 
 target_link_libraries(DirectX_execution_serialization PRIVATE
   DirectX_layer_interface
-  DirectX_dstorage_resources
   DirectX_utils
   DirectX_coders
 )
