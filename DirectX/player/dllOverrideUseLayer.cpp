@@ -95,6 +95,12 @@ void DllOverrideUseLayer::pre(ID3D12SDKConfiguration1CreateDeviceFactoryCommand&
     c.SDKPath_.value = const_cast<char*>(dllOverridesRelativePath_.c_str());
   } else {
     c.SDKPath_.value = "D3D12";
+    HMODULE d3d12CoreDll = LoadLibrary("D3D12\\D3D12Core.dll");
+    if (d3d12CoreDll) {
+      UINT sdkVersion = *reinterpret_cast<UINT*>(GetProcAddress(d3d12CoreDll, "D3D12SDKVersion"));
+      c.SDKVersion_.value = sdkVersion;
+      FreeLibrary(d3d12CoreDll);
+    }
   }
 }
 
