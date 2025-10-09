@@ -176,7 +176,10 @@ void CRecorderWrapper::MarkRecorderForDeletion() {
   }
 }
 void CRecorderWrapper::TrackThread() const {
-  _recorder.TrackThread(gits::ApisIface::OpenCL);
+  int threadId = _recorder.TrackThread();
+  if (threadId >= 0) {
+    _recorder.Schedule(new CGitsClTokenMakeCurrentThread(threadId));
+  }
 }
 } // namespace OpenCL
 } // namespace gits

@@ -104,7 +104,7 @@ public:
   void Stop();
   void Save();
   std::recursive_mutex& GetMutex();
-  void TrackThread(gits::ApisIface::TApi api);
+  int TrackThread();
 
   void RecordingOverride(bool enable) {
     _recordingOverride = enable;
