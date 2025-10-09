@@ -85,6 +85,10 @@ public:
   void pre(ID3D12DeviceCheckFeatureSupportCommand& command) override;
   void pre(ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& command) override;
   void pre(ID3D12Device1CreatePipelineLibraryCommand& command) override;
+  void pre(ID3D12ObjectGetPrivateDataCommand& command) override;
+  void pre(ID3D12ObjectSetNameCommand& command) override;
+  void pre(ID3D12ObjectSetPrivateDataCommand& command) override;
+  void pre(ID3D12ObjectSetPrivateDataInterfaceCommand& command) override;
   void pre(ID3D12PipelineLibrarySerializeCommand& command) override;
   void pre(ID3D12PipelineLibraryGetSerializedSizeCommand& command) override;
   void pre(ID3D12PipelineLibraryStorePipelineCommand& command) override;
@@ -94,6 +98,7 @@ public:
   void pre(ID3D12PipelineLibraryLoadComputePipelineCommand& command) override;
   void pre(ID3D12Device2CreatePipelineStateCommand& command) override;
   void pre(ID3D12PipelineLibrary1LoadPipelineCommand& command) override;
+  void pre(ID3D12PipelineStateGetCachedBlobCommand& command) override;
   void pre(IDXGIAdapter3RegisterVideoMemoryBudgetChangeNotificationEventCommand& command) override;
   void pre(ID3D12DeviceGetAdapterLuidCommand& command) override;
   void post(ID3D12DeviceGetAdapterLuidCommand& command) override;

@@ -621,6 +621,30 @@ void ReplayCustomizationLayer::pre(ID3D12Device1CreatePipelineLibraryCommand& c)
   pipelineLibraryService_.createPipelineLibrary(c);
 }
 
+void ReplayCustomizationLayer::pre(ID3D12ObjectGetPrivateDataCommand& c) {
+  if (!c.object_.value) {
+    c.skip = true;
+  }
+}
+
+void ReplayCustomizationLayer::pre(ID3D12ObjectSetNameCommand& c) {
+  if (!c.object_.value) {
+    c.skip = true;
+  }
+}
+
+void ReplayCustomizationLayer::pre(ID3D12ObjectSetPrivateDataCommand& c) {
+  if (!c.object_.value) {
+    c.skip = true;
+  }
+}
+
+void ReplayCustomizationLayer::pre(ID3D12ObjectSetPrivateDataInterfaceCommand& c) {
+  if (!c.object_.value) {
+    c.skip = true;
+  }
+}
+
 void ReplayCustomizationLayer::pre(ID3D12PipelineLibrarySerializeCommand& c) {
   c.skip = true;
 }
@@ -673,6 +697,12 @@ void ReplayCustomizationLayer::pre(ID3D12PipelineLibrary1LoadPipelineCommand& c)
   }
   c.skip = true;
   pipelineLibraryService_.loadPipeline(c);
+}
+
+void ReplayCustomizationLayer::pre(ID3D12PipelineStateGetCachedBlobCommand& c) {
+  if (!c.object_.value) {
+    c.skip = true;
+  }
 }
 
 void ReplayCustomizationLayer::pre(
