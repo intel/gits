@@ -53,6 +53,7 @@ public:
   void post(IDXGIObjectGetParentCommand& c) override;
   void post(D3D12CreateDeviceCommand& c) override;
   void post(D3D12EnableExperimentalFeaturesCommand& c) override;
+  void post(D3D12GetInterfaceCommand& command) override;
   void post(ID3D12DeviceCreateCommandQueueCommand& c) override;
   void post(ID3D12Device9CreateCommandQueue1Command& c) override;
   void post(IDXGIFactoryCreateSwapChainCommand& c) override;
@@ -211,6 +212,8 @@ public:
   void post(ID3D12GraphicsCommandList5RSSetShadingRateImageCommand& command) override;
   void post(ID3D12GraphicsCommandList6DispatchMeshCommand& command) override;
   void post(ID3D12GraphicsCommandList7BarrierCommand& command) override;
+  void post(ID3D12SDKConfiguration1CreateDeviceFactoryCommand& command) override;
+  void post(ID3D12DeviceFactoryCreateDeviceCommand& command) override;
   void post(xessD3D12CreateContextCommand& c) override;
   void post(xessD3D12InitCommand& c) override;
   void pre(xessDestroyContextCommand& c) override;

@@ -393,6 +393,21 @@ void StateTrackingLayer::post(D3D12EnableExperimentalFeaturesCommand& c) {
   stateService_.storeD3D12EnableExperimentalFeatures(c);
 }
 
+void StateTrackingLayer::post(D3D12GetInterfaceCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+
+  if (c.result_.value != S_OK) {
+    return;
+  }
+  ObjectState* state = new ObjectState();
+  state->key = c.ppvDebug_.key;
+  state->object = static_cast<IUnknown*>(*c.ppvDebug_.value);
+  state->creationCommand.reset(new D3D12GetInterfaceCommand(c));
+  stateService_.storeState(state);
+}
+
 void StateTrackingLayer::post(ID3D12DeviceCreateCommandQueueCommand& c) {
   if (stateRestored_) {
     return;
@@ -2729,6 +2744,40 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandList7BarrierCommand& c) {
   command->commandWriter.reset(new ID3D12GraphicsCommandList7BarrierWriter(c));
   CommandListState* state = static_cast<CommandListState*>(stateService_.getState(c.object_.key));
   state->commands.push_back(command);
+}
+
+void StateTrackingLayer::post(ID3D12SDKConfiguration1CreateDeviceFactoryCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+
+  if (c.result_.value != S_OK) {
+    return;
+  }
+  ObjectState* state = new ObjectState();
+  state->parentKey = c.object_.key;
+  state->key = c.ppvFactory_.key;
+  state->object = static_cast<IUnknown*>(*c.ppvFactory_.value);
+  state->creationCommand.reset(new ID3D12SDKConfiguration1CreateDeviceFactoryCommand(c));
+  stateService_.storeState(state);
+  stateService_.keepState(state->parentKey);
+}
+
+void StateTrackingLayer::post(ID3D12DeviceFactoryCreateDeviceCommand& c) {
+  if (stateRestored_) {
+    return;
+  }
+
+  if (c.result_.value != S_OK) {
+    return;
+  }
+  ObjectState* state = new ObjectState();
+  state->parentKey = c.object_.key;
+  state->key = c.ppvDevice_.key;
+  state->object = static_cast<IUnknown*>(*c.ppvDevice_.value);
+  state->creationCommand.reset(new ID3D12DeviceFactoryCreateDeviceCommand(c));
+  stateService_.storeState(state);
+  stateService_.keepState(state->parentKey);
 }
 
 void StateTrackingLayer::post(xessD3D12CreateContextCommand& c) {

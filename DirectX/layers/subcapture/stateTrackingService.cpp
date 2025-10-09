@@ -142,6 +142,7 @@ void StateTrackingService::restoreState(ObjectState* state) {
     restoreDXGIAdapter(state);
     break;
   case CommandId::ID_D3D12CREATEDEVICE:
+  case CommandId::ID_ID3D12DEVICEFACTORY_CREATEDEVICE:
     restoreD3D12Device(state);
     break;
   case CommandId::ID_IUNKNOWN_QUERYINTERFACE:
