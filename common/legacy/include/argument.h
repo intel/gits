@@ -300,10 +300,8 @@ protected:
 template <class T, int N, class T_WRAP>
 class CArgumentFixedArray : public CArgument {
   T _array[N]; /**< @brief an array of library arguments */
-  typedef T_WRAP CGLtype;
 
 protected:
-  typedef T_WRAP CWrapType;
   void Declare(CCodeOStream& stream, const std::string& declString) const;
 
 public:
@@ -350,7 +348,6 @@ public:
 template <class T, class T_WRAP>
 class CArgumentSizedArrayBase : public CArgument {
   std::vector<T> _array;
-  typedef T_WRAP CGLtype;
 
 public:
   CArgumentSizedArrayBase(size_t num = 0);
@@ -403,7 +400,6 @@ public:
 template <class T, class T_WRAP, class T_GET_MAPPED_POINTERS = uint64_t>
 class CArgumentSizedArray : public CArgument {
   CArgumentSizedArrayBase<T, T_WRAP> _sizedArray;
-  typedef T_WRAP CGLtype;
 
 public:
   CArgumentSizedArray(size_t num = 0) : _sizedArray(num) {}
@@ -488,7 +484,6 @@ public:
 template <class T_WRAP>
 class CArgumentSizedArray<char, T_WRAP> : public CArgument {
   CArgumentSizedArrayBase<char, T_WRAP> _sizedArray;
-  typedef T_WRAP CGLtype;
 
 public:
   CArgumentSizedArray(size_t num = 0) : _sizedArray(num) {}
@@ -606,8 +601,6 @@ class CArgumentMappedSizedArray : public CArgument {
   virtual void WritePartArray(
       CCodeOStream& stream, std::string name, ValuesType valtype, size_t start, size_t end) const;
 
-  typedef T_WRAP CGLtype;
-
 public:
   MappedArrayAction Action() const {
     return T_ACTION;
@@ -620,7 +613,6 @@ public:
     std::vector<T>* _mappedArray;
     std::vector<T>* _array;
     MappedArrayAction _action;
-    typedef T_WRAP CGLtype;
 
     ProxyArray(const ProxyArray& other) = delete;
     ProxyArray& operator=(const ProxyArray& other) = delete;
@@ -631,7 +623,7 @@ public:
         if (_action == ADD_MAPPING) {
           // Add mapping
           for (size_t i = 0; i < _array->size(); i++) {
-            CGLtype::AddMapping((*_array)[i], (*_mappedArray)[i]);
+            T_WRAP::AddMapping((*_array)[i], (*_mappedArray)[i]);
           }
         }
       } catch (...) {
@@ -649,9 +641,9 @@ public:
         auto& elem = (*_array)[i];
         // if it is not ADD_MAPPING mode map GetMapping should crash if element
         // is not mapped
-        if (CGLtype::CheckMapping(elem) || _action != ADD_MAPPING) {
-          (*_mappedArray)[i] = CGLtype::GetMapping(elem);
-        } else if (CGLtype::InitializedWithOriginal()) {
+        if (T_WRAP::CheckMapping(elem) || _action != ADD_MAPPING) {
+          (*_mappedArray)[i] = T_WRAP::GetMapping(elem);
+        } else if (T_WRAP::InitializedWithOriginal()) {
           (*_mappedArray)[i] = elem;
         }
       }
@@ -695,7 +687,7 @@ public:
   }
   void RemoveMapping() {
     for (size_t i = 0; i < _array.size(); i++) {
-      CGLtype::RemoveMapping(_array[i]);
+      T_WRAP::RemoveMapping(_array[i]);
     }
   }
 
@@ -707,7 +699,7 @@ public:
   }
 
   virtual const char* Name() const {
-    return CGLtype::NAME;
+    return T_WRAP::NAME;
   }
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
@@ -1673,7 +1665,7 @@ void gits::CArgumentSizedArrayBase<T, T_WRAP>::Write(CBinOStream& stream) const 
     static constexpr bool isfloat = std::is_floating_point<T>::value;
     if constexpr (!isfloat) {
       for (unsigned idx = 0; idx < size; idx++) {
-        CGLtype wrapper_(_array[idx]);
+        T_WRAP wrapper_(_array[idx]);
         stream << wrapper_;
       }
     } else {
@@ -1693,7 +1685,7 @@ void gits::CArgumentSizedArrayBase<T, T_WRAP>::Read(CBinIStream& stream) {
       static constexpr bool isfloat = std::is_floating_point<T>::value;
       if constexpr (!isfloat) {
         for (auto idx = 0U; idx < size; idx++) {
-          CGLtype wrapper_;
+          T_WRAP wrapper_;
           stream >> wrapper_;
           _array[idx] = wrapper_.Original();
         }
@@ -1765,7 +1757,7 @@ void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::Write(CBinOStream& st
 
   if (size != 0) {
     for (unsigned idx = 0; idx < size; idx++) {
-      CGLtype wrapper_(_array[idx]);
+      T_WRAP wrapper_(_array[idx]);
       stream << wrapper_;
     }
   }
@@ -1778,7 +1770,7 @@ void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::Read(CBinIStream& str
   if (size > 0 && size <= UINT32_MAX && ret) {
     _array.resize(size);
     for (unsigned idx = 0; idx < size; idx++) {
-      CGLtype wrapper_;
+      T_WRAP wrapper_;
       stream >> wrapper_;
       _array[idx] = wrapper_.Original();
     }
@@ -1826,7 +1818,7 @@ void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::PostAction(
 template <class T, int N, class T_WRAP>
 void gits::CArgumentFixedArray<T, N, T_WRAP>::Read(CBinIStream& stream) {
   for (unsigned idx = 0; idx < N; idx++) {
-    CGLtype wrapper_;
+    T_WRAP wrapper_;
     stream >> wrapper_;
     _array[idx] = *wrapper_;
   }
@@ -1835,7 +1827,7 @@ void gits::CArgumentFixedArray<T, N, T_WRAP>::Read(CBinIStream& stream) {
 template <class T, int N, class T_WRAP>
 void gits::CArgumentFixedArray<T, N, T_WRAP>::Write(CBinOStream& stream) const {
   for (int idx = 0; idx < Size(); idx++) {
-    CGLtype wrapper_(_array[idx]);
+    T_WRAP wrapper_(_array[idx]);
     stream << wrapper_;
   }
 }
