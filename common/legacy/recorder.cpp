@@ -537,10 +537,9 @@ void gits::CRecorder::Start() {
     }
   }
 
-  bool isVulkan = inst.apis.Has3D() && inst.apis.Iface3D().Api() == inst.apis.Vulkan;
   // First frame is a special case.
   // TODO: Make it so that any frame number logic is not necessary in compute-only streams.
-  if (inst.CurrentFrame() == 1 && !isVulkan) {
+  if (inst.CurrentFrame() == 1) {
     Scheduler().Register(new CTokenMarker(CToken::ID_PRE_RECORD_END));
     Scheduler().Register(new CTokenMarker(CToken::ID_FRAME_START));
     //first frame start time stamp

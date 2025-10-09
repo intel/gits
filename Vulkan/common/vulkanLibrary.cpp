@@ -762,8 +762,6 @@ void CLibrary::CVulkanCommandBufferTokensBuffer::ScheduleDraw(
   _tokensList.clear();
 }
 
-#ifndef BUILD_FOR_CCODE
-
 COnQueueSubmitEndInterface::~COnQueueSubmitEndInterface() {}
 
 // Patches value which is found in a memory pointed to by the 'address'.
@@ -1021,6 +1019,5 @@ uint32_t CDeviceAddressPatcher::Count() const {
   return _directAddresses.size() + _indirectAddresses.size();
 }
 
-#endif
 } //namespace Vulkan
 } //namespace gits

@@ -10,16 +10,13 @@
 
 #include "vulkanTools_lite.h"
 #include "texture_converter.h"
-#ifndef BUILD_FOR_CCODE
 #include "vulkanStateDynamic.h"
 #include "vulkanArgumentsAuto.h"
 #include "vulkanStructStorageAuto.h"
-#endif
 
 namespace gits {
-#ifndef BUILD_FOR_CCODE
 bool operator==(const CGits::CCounter& counter, const VulkanObjectRange& vulkanObjRange);
-#endif
+
 namespace Vulkan {
 
 struct CBufferState;
@@ -57,10 +54,6 @@ void writeScreenshot(VkQueue queue,
                      uint32_t commandBufferBatchNumber,
                      uint32_t cmdBufferNumber);
 void writeScreenshot(VkQueue queue, const VkPresentInfoKHR& presentInfo);
-void writeCCodeScreenshot(
-    VkQueue queue,
-    const VkPresentInfoKHR& presentInfo,
-    const std::function<VkImage(VkSwapchainKHR, unsigned int)>& getImageFromSwapchain);
 void writeResources(VkQueue queue,
                     VkCommandBuffer cmdbuffer,
                     uint32_t commandBufferBatchNumber,
@@ -78,7 +71,6 @@ bool checkForSupportForInstanceLayers(uint32_t requestedLayersCount,
                                       char const* const* requestedLayers);
 bool checkForSupportForPhysicalDeviceFeatures(VkPhysicalDevice physicalDevice,
                                               VkPhysicalDeviceFeatures* enabledFeatures);
-#ifndef BUILD_FOR_CCODE
 bool checkForSupportForQueues(VkPhysicalDevice physicalDevice,
                               uint32_t requestedQueueCreateInfoCount,
                               VkDeviceQueueCreateInfo const* requestedQueueCreateInfos);
@@ -344,7 +336,6 @@ void schedulevkCmdBeginRenderingByID(unsigned int ID,
                                      void (*schedulerFunc)(Vulkan::CFunction*),
                                      const VkCommandBuffer& commandBuffer,
                                      const VkRenderingInfo* pRenderingInfo);
-#endif
 
 } // namespace Vulkan
 } // namespace gits

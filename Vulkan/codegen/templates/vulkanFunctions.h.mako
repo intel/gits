@@ -44,8 +44,6 @@ namespace gits {
       ${arg_decls.lstrip(' ')}
 
       virtual CArgument &Argument(unsigned idx) override;
-      static const std::array<ArgInfo, ${len(token.args)}> argumentInfos_;
-      virtual ArgInfo ArgumentInfo(unsigned idx) const override;
       virtual unsigned ArgumentCount() const override { return ${len(token.args)}; }
     % if has_retval:
       virtual const CArgument* Return() const { return (stream_older_than(GITS_VULKAN_RETURN_VALUE_FIX) && Configurator::IsPlayer()) ? CFunction::Return() : &_return_value; }

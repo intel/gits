@@ -37,13 +37,8 @@ inline bool isBitSet(VkFlags64 flags, VkFlags64 bit) {
   return (flags & bit) == bit;
 }
 
-// Helper function for calculating size of array to write in one chunk of CCode
-size_t CalculateChunkSize(size_t arraySize, size_t maxChunkSize, size_t arrayIterator);
-
-#ifndef BUILD_FOR_CCODE
 const void* getPNextStructure(const void* pNext, VkStructureType structureType);
 bool isImagePresentable(const VkImageCreateInfo* pCreateInfo);
-#endif
 
 } // namespace Vulkan
 } // namespace gits

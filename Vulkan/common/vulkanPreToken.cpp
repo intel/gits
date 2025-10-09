@@ -10,63 +10,6 @@
 #include "vulkanFunctions.h"
 #include "vulkanStateTracking.h"
 
-const std::array<gits::Vulkan::ArgInfo, gits::Vulkan::CGitsVkCreateNativeWindow::ARG_NUM>
-    gits::Vulkan::CGitsVkCreateNativeWindow::argumentInfos_ = {{
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // int
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // int
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // int
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // int
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // bool
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // HWND
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // HINSTANCE
-    }};
-
-gits::Vulkan::ArgInfo gits::Vulkan::CGitsVkCreateNativeWindow::ArgumentInfo(unsigned idx) const {
-  return argumentInfos_[idx];
-}
-
-const std::array<gits::Vulkan::ArgInfo, gits::Vulkan::CGitsVkCreateXlibWindow::ARG_NUM>
-    gits::Vulkan::CGitsVkCreateXlibWindow::argumentInfos_ = {{
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // int
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // int
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // int
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // int
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // bool
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // HWND
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // HINSTANCE
-    }};
-
-gits::Vulkan::ArgInfo gits::Vulkan::CGitsVkCreateXlibWindow::ArgumentInfo(unsigned idx) const {
-  return argumentInfos_[idx];
-}
-
-const std::array<gits::Vulkan::ArgInfo, gits::Vulkan::CGitsVkUpdateNativeWindow::ARG_NUM>
-    gits::Vulkan::CGitsVkUpdateNativeWindow::argumentInfos_ = {{
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // int
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // int
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // int
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // int
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // bool
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // HWND
-    }};
-
-gits::Vulkan::ArgInfo gits::Vulkan::CGitsVkUpdateNativeWindow::ArgumentInfo(unsigned idx) const {
-  return argumentInfos_[idx];
-}
-
-const std::array<gits::Vulkan::ArgInfo, gits::Vulkan::CGitsVkMemoryUpdate::ARG_NUM>
-    gits::Vulkan::CGitsVkMemoryUpdate::argumentInfos_ = {{
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // VkDevice
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // VkDeviceMemory
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint64_t
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint64_t
-        {gits::Vulkan::ArgType::OTHER, 1, false},          // void* (CBinaryResource)
-    }};
-
-gits::Vulkan::ArgInfo gits::Vulkan::CGitsVkMemoryUpdate::ArgumentInfo(unsigned idx) const {
-  return argumentInfos_[idx];
-}
-
 gits::CArgument& gits::Vulkan::CGitsVkMemoryUpdate::Argument(unsigned idx) {
   return get_cargument(__FUNCTION__, idx, *_device, *_mem, *_offset, *_length, *_resource);
 }
@@ -209,20 +152,6 @@ void gits::Vulkan::CGitsVkMemoryUpdate::Read(CBinIStream& stream) {
   }
 }
 
-const std::array<gits::Vulkan::ArgInfo, gits::Vulkan::CGitsVkMemoryUpdate2::ARG_NUM>
-    gits::Vulkan::CGitsVkMemoryUpdate2::argumentInfos_ = {{
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // VkDeviceMemory
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint64_t
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 1, false}, // uint64_t* (array of uint64_t)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 1, false}, // uint64_t* (array of uint64_t)
-        {gits::Vulkan::ArgType::OTHER, 2,
-         false}, // void** (An array of pointers to data from CBinaryResource)
-    }};
-
-gits::Vulkan::ArgInfo gits::Vulkan::CGitsVkMemoryUpdate2::ArgumentInfo(unsigned idx) const {
-  return argumentInfos_[idx];
-}
-
 gits::CArgument& gits::Vulkan::CGitsVkMemoryUpdate2::Argument(unsigned idx) {
   return get_cargument(__FUNCTION__, idx, *_mem, *_size, _offset, _length, _resource);
 }
@@ -341,16 +270,6 @@ void gits::Vulkan::CGitsVkMemoryUpdate2::Read(CBinIStream& stream) {
     _resource.push_back(std::move(std::move(binaryPtr)));
   }
 }
-
-const std::array<gits::Vulkan::ArgInfo, gits::Vulkan::CGitsVkMemoryRestore::ARG_NUM>
-    gits::Vulkan::CGitsVkMemoryRestore::argumentInfos_ = {{
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // VkDevice
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // VkDeviceMemory
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint64_t
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint64_t
-        {gits::Vulkan::ArgType::OTHER, 1, false},          // void* (CBinaryResource)
-    }};
-
 void gits::Vulkan::CGitsVkMemoryRestore::GetDiffFromZero(const std::vector<char>& oldData,
                                                          std::uint64_t& length,
                                                          std::uint64_t& offset) {
@@ -370,10 +289,6 @@ void gits::Vulkan::CGitsVkMemoryRestore::GetDiffFromZero(const std::vector<char>
 
   offset = minOldPtr - (const uint8_t*)&oldData[0];
   length = maxOldPtr - minOldPtr;
-}
-
-gits::Vulkan::ArgInfo gits::Vulkan::CGitsVkMemoryRestore::ArgumentInfo(unsigned idx) const {
-  return argumentInfos_[idx];
 }
 
 gits::CArgument& gits::Vulkan::CGitsVkMemoryRestore::Argument(unsigned idx) {
@@ -538,17 +453,6 @@ void gits::Vulkan::CGitsVkMemoryRestore::Read(CBinIStream& stream) {
   }
 }
 
-const std::array<gits::Vulkan::ArgInfo, gits::Vulkan::CGitsVkMemoryReset::ARG_NUM>
-    gits::Vulkan::CGitsVkMemoryReset::argumentInfos_ = {{
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // VkDevice
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // VkDeviceMemory
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint64_t
-    }};
-
-gits::Vulkan::ArgInfo gits::Vulkan::CGitsVkMemoryReset::ArgumentInfo(unsigned idx) const {
-  return argumentInfos_[idx];
-}
-
 gits::CArgument& gits::Vulkan::CGitsVkMemoryReset::Argument(unsigned idx) {
   return get_cargument(__FUNCTION__, idx, *_device, *_mem, *_length);
 }
@@ -626,18 +530,6 @@ void gits::Vulkan::CGitsVkMemoryReset::Read(CBinIStream& stream) {
 // This way, during replay, we can take this list and convert handles to proper device addresses. Then,
 // these device addresses are place in the original location provided to build command. This is done with
 // a compute shader just before the build command.
-
-const std::array<gits::Vulkan::ArgInfo, gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::ARG_NUM>
-    gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::argumentInfos_ = {{
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint64_t (_count)
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // VkCommandBuffer (_commandBuffer)
-        {gits::Vulkan::ArgType::OTHER, 1, false},          // void* (CBinaryResource)
-    }};
-
-gits::Vulkan::ArgInfo gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::ArgumentInfo(
-    unsigned idx) const {
-  return argumentInfos_[idx];
-}
 
 gits::CArgument& gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::Argument(unsigned idx) {
   return get_cargument(__FUNCTION__, idx, *_count, *_commandBuffer, *_resource);
@@ -853,15 +745,6 @@ void gits::Vulkan::CGitsVkCmdPatchDeviceAddresses::Read(CBinIStream& stream) {
   }
 }
 
-const std::array<gits::Vulkan::ArgInfo, 1>
-    gits::Vulkan::CDestroyVulkanDescriptorSets::argumentInfos_ = {{
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 1, false}, // VkDescriptorSet*
-    }};
-
-gits::Vulkan::ArgInfo gits::Vulkan::CDestroyVulkanDescriptorSets::ArgumentInfo(unsigned idx) const {
-  return argumentInfos_[idx];
-}
-
 gits::CArgument& gits::Vulkan::CDestroyVulkanDescriptorSets::Argument(unsigned idx) {
   return get_cargument(__FUNCTION__, idx, _descSetsArray);
 }
@@ -874,15 +757,6 @@ gits::Vulkan::CDestroyVulkanDescriptorSets::CDestroyVulkanDescriptorSets(
 
 void gits::Vulkan::CDestroyVulkanDescriptorSets::Run() {
   _descSetsArray.RemoveMapping();
-}
-
-const std::array<gits::Vulkan::ArgInfo, 1>
-    gits::Vulkan::CDestroyVulkanCommandBuffers::argumentInfos_ = {{
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 1, false}, // VkCommandBuffer*
-    }};
-
-gits::Vulkan::ArgInfo gits::Vulkan::CDestroyVulkanCommandBuffers::ArgumentInfo(unsigned idx) const {
-  return argumentInfos_[idx];
 }
 
 gits::CArgument& gits::Vulkan::CDestroyVulkanCommandBuffers::Argument(unsigned idx) {
@@ -913,16 +787,6 @@ BOOL CALLBACK Monitorenumproc(HMONITOR Arg1, HDC Arg2, LPRECT Arg3, LPARAM Arg4)
 } // namespace
 
 #endif
-
-const std::array<gits::Vulkan::ArgInfo, gits::Vulkan::CGitsVkEnumerateDisplayMonitors::ARG_NUM>
-    gits::Vulkan::CGitsVkEnumerateDisplayMonitors::argumentInfos_ = {{
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 1, false} // _monitors
-    }};
-
-gits::Vulkan::ArgInfo gits::Vulkan::CGitsVkEnumerateDisplayMonitors::ArgumentInfo(
-    unsigned idx) const {
-  return argumentInfos_[idx];
-}
 
 gits::CArgument& gits::Vulkan::CGitsVkEnumerateDisplayMonitors::Argument(unsigned idx) {
   return get_cargument(__FUNCTION__, idx, _monitors);
@@ -961,49 +825,6 @@ void gits::Vulkan::CGitsVkEnumerateDisplayMonitors::Read(CBinIStream& stream) {
 //
 // CGitsInitializeImage
 //
-
-const std::array<gits::Vulkan::ArgInfo, gits::Vulkan::CGitsInitializeImage::ARG_NUM>
-    gits::Vulkan::CGitsInitializeImage::argumentInfos_ = {{
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false}, // VkCommandBuffer (CVkCommandBuffer)
-
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // VkPipelineStageFlags (Cuint32_t)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // VkPipelineStageFlags (Cuint32_t)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // VkDependencyFlags (Cuint32_t)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint32_t (Cuint32_t)
-        {gits::Vulkan::ArgType::STRUCT, 1, false}, // const VkMemoryBarrier* (CVkMemoryBarrierArray)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint32_t (Cuint32_t)
-        {gits::Vulkan::ArgType::STRUCT, 1,
-         false}, // const VkBufferMemoryBarrier* (CVkBufferMemoryBarrierArray)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint32_t (Cuint32_t)
-        {gits::Vulkan::ArgType::STRUCT, 1,
-         false}, // const VkImageMemoryBarrier* (CVkImageMemoryBarrierArray)
-
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // VkBuffer (CVkBuffer)
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // VkImage (CVkImage)
-        {gits::Vulkan::ArgType::ENUM, 0, false},           // VkImageLayout (CVkImageLayout)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint32_t (Cuint32_t)
-        {gits::Vulkan::ArgType::STRUCT, 1,
-         false}, // const VkBufferImageCopy* (CVkBufferImageCopyArray)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint32_t (Cuint32_t)
-        {gits::Vulkan::ArgType::STRUCT, 1,
-         false}, // const VkInitializeImageGITS* (CVkInitializeImageGITSArray)
-
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // VkPipelineStageFlags (Cuint32_t)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // VkPipelineStageFlags (Cuint32_t)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // VkDependencyFlags (Cuint32_t)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint32_t (Cuint32_t)
-        {gits::Vulkan::ArgType::STRUCT, 1, false}, // const VkMemoryBarrier* (CVkMemoryBarrierArray)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint32_t (Cuint32_t)
-        {gits::Vulkan::ArgType::STRUCT, 1,
-         false}, // const VkBufferMemoryBarrier* (CVkBufferMemoryBarrierArray)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint32_t (Cuint32_t)
-        {gits::Vulkan::ArgType::STRUCT, 1,
-         false}, // const VkImageMemoryBarrier* (CVkImageMemoryBarrierArray)
-    }};
-
-gits::Vulkan::ArgInfo gits::Vulkan::CGitsInitializeImage::ArgumentInfo(unsigned idx) const {
-  return argumentInfos_[idx];
-}
 
 gits::CArgument& gits::Vulkan::CGitsInitializeImage::Argument(unsigned idx) {
   return get_cargument(
@@ -1126,27 +947,6 @@ std::set<uint64_t> gits::Vulkan::CGitsInitializeImage::GetMappedPointers() {
 // CGitsVkCmdInsertMemoryBarriers
 //
 
-const std::array<gits::Vulkan::ArgInfo, gits::Vulkan::CGitsVkCmdInsertMemoryBarriers::ARG_NUM>
-    gits::Vulkan::CGitsVkCmdInsertMemoryBarriers::argumentInfos_ = {{
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // VkCommandBuffer (CVkCommandBuffer)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // VkPipelineStageFlags (Cuint32_t)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // VkPipelineStageFlags (Cuint32_t)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // VkDependencyFlags (Cuint32_t)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint32_t (Cuint32_t)
-        {gits::Vulkan::ArgType::STRUCT, 1, false}, // const VkMemoryBarrier* (CVkMemoryBarrierArray)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint32_t (Cuint32_t)
-        {gits::Vulkan::ArgType::STRUCT, 1,
-         false}, // const VkBufferMemoryBarrier* (CVkBufferMemoryBarrierArray)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint32_t (Cuint32_t)
-        {gits::Vulkan::ArgType::STRUCT, 1,
-         false}, // const VkImageMemoryBarrier* (CVkImageMemoryBarrierArray)
-    }};
-
-gits::Vulkan::ArgInfo gits::Vulkan::CGitsVkCmdInsertMemoryBarriers::ArgumentInfo(
-    unsigned idx) const {
-  return argumentInfos_[idx];
-}
-
 gits::CArgument& gits::Vulkan::CGitsVkCmdInsertMemoryBarriers::Argument(unsigned idx) {
   return get_cargument(__FUNCTION__, idx, _commandBuffer, _SrcStageMask, _DstStageMask,
                        _DependencyFlags, _MemoryBarrierCount, _PMemoryBarriers,
@@ -1232,17 +1032,6 @@ std::set<uint64_t> gits::Vulkan::CGitsVkCmdInsertMemoryBarriers::GetMappedPointe
 // CGitsVkCmdInsertMemoryBarriers2
 //
 
-const std::array<gits::Vulkan::ArgInfo, gits::Vulkan::CGitsVkCmdInsertMemoryBarriers2::ARG_NUM>
-    gits::Vulkan::CGitsVkCmdInsertMemoryBarriers2::argumentInfos_ = {{
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false}, // VkCommandBuffer (CVkCommandBuffer)
-        {gits::Vulkan::ArgType::STRUCT, 1, true}, // const VkDependencyInfo* (CVkDependencyInfo)
-    }};
-
-gits::Vulkan::ArgInfo gits::Vulkan::CGitsVkCmdInsertMemoryBarriers2::ArgumentInfo(
-    unsigned idx) const {
-  return argumentInfos_[idx];
-}
-
 gits::CArgument& gits::Vulkan::CGitsVkCmdInsertMemoryBarriers2::Argument(unsigned idx) {
   return get_cargument(__FUNCTION__, idx, _commandBuffer, _dependencyInfo);
 }
@@ -1291,20 +1080,6 @@ std::set<uint64_t> gits::Vulkan::CGitsVkCmdInsertMemoryBarriers2::GetMappedPoint
 //
 // CGitsInitializeMultipleImages
 //
-
-const std::array<gits::Vulkan::ArgInfo, gits::Vulkan::CGitsInitializeMultipleImages::ARG_NUM>
-    gits::Vulkan::CGitsInitializeMultipleImages::argumentInfos_ = {{
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // VkCommandBuffer (CVkCommandBuffer)
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // VkBuffer (CVkBuffer)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint32_t (Cuint32_t)
-        {gits::Vulkan::ArgType::STRUCT, 1,
-         false}, // const VkInitializeImageDataGITS* (CVkInitializeImageDataGITSArray)
-    }};
-
-gits::Vulkan::ArgInfo gits::Vulkan::CGitsInitializeMultipleImages::ArgumentInfo(
-    unsigned idx) const {
-  return argumentInfos_[idx];
-}
 
 gits::CArgument& gits::Vulkan::CGitsInitializeMultipleImages::Argument(unsigned idx) {
   return get_cargument(__FUNCTION__, idx, _commandBuffer, _copySrcBuffer, _imagesCount,
@@ -1481,44 +1256,6 @@ std::set<uint64_t> gits::Vulkan::CGitsInitializeMultipleImages::GetMappedPointer
 // CGitsInitializeBuffer
 //
 
-const std::array<gits::Vulkan::ArgInfo, gits::Vulkan::CGitsInitializeBuffer::ARG_NUM>
-    gits::Vulkan::CGitsInitializeBuffer::argumentInfos_ = {{
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false}, // VkCommandBuffer (CVkCommandBuffer)
-
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // VkPipelineStageFlags (Cuint32_t)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // VkPipelineStageFlags (Cuint32_t)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // VkDependencyFlags (Cuint32_t)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint32_t (Cuint32_t)
-        {gits::Vulkan::ArgType::STRUCT, 1, false}, // const VkMemoryBarrier* (CVkMemoryBarrierArray)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint32_t (Cuint32_t)
-        {gits::Vulkan::ArgType::STRUCT, 1,
-         false}, // const VkBufferMemoryBarrier* (CVkBufferMemoryBarrierArray)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint32_t (Cuint32_t)
-        {gits::Vulkan::ArgType::STRUCT, 1,
-         false}, // const VkImageMemoryBarrier* (CVkImageMemoryBarrierArray)
-
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // VkBuffer (CVkBuffer)
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // VkBuffer (CVkBuffer)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint32_t (Cuint32_t)
-        {gits::Vulkan::ArgType::STRUCT, 1, false}, // const VkBufferCopy* (CVkBufferCopyArray)
-
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // VkPipelineStageFlags (Cuint32_t)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // VkPipelineStageFlags (Cuint32_t)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // VkDependencyFlags (Cuint32_t)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint32_t (Cuint32_t)
-        {gits::Vulkan::ArgType::STRUCT, 1, false}, // const VkMemoryBarrier* (CVkMemoryBarrierArray)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint32_t (Cuint32_t)
-        {gits::Vulkan::ArgType::STRUCT, 1,
-         false}, // const VkBufferMemoryBarrier* (CVkBufferMemoryBarrierArray)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint32_t (Cuint32_t)
-        {gits::Vulkan::ArgType::STRUCT, 1,
-         false}, // const VkImageMemoryBarrier* (CVkImageMemoryBarrierArray)
-    }};
-
-gits::Vulkan::ArgInfo gits::Vulkan::CGitsInitializeBuffer::ArgumentInfo(unsigned idx) const {
-  return argumentInfos_[idx];
-}
-
 gits::CArgument& gits::Vulkan::CGitsInitializeBuffer::Argument(unsigned idx) {
   return get_cargument(
       __FUNCTION__, idx, _commandBuffer, _preSrcStageMask, _preDstStageMask, _preDependencyFlags,
@@ -1627,20 +1364,6 @@ std::set<uint64_t> gits::Vulkan::CGitsInitializeBuffer::GetMappedPointers() {
 //
 // CGitsInitializeMultipleBuffers
 //
-
-const std::array<gits::Vulkan::ArgInfo, gits::Vulkan::CGitsInitializeMultipleBuffers::ARG_NUM>
-    gits::Vulkan::CGitsInitializeMultipleBuffers::argumentInfos_ = {{
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // VkCommandBuffer (CVkCommandBuffer)
-        {gits::Vulkan::ArgType::OPAQUE_HANDLE, 0, false},  // VkBuffer (CVkBuffer)
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // uint32_t (Cuint32_t)
-        {gits::Vulkan::ArgType::STRUCT, 1,
-         false}, // const VkInitializeBufferDataGITS* (CVkInitializeBufferDataGITSArray)
-    }};
-
-gits::Vulkan::ArgInfo gits::Vulkan::CGitsInitializeMultipleBuffers::ArgumentInfo(
-    unsigned idx) const {
-  return argumentInfos_[idx];
-}
 
 gits::CArgument& gits::Vulkan::CGitsInitializeMultipleBuffers::Argument(unsigned idx) {
   return get_cargument(__FUNCTION__, idx, _commandBuffer, _copySrcBuffer, _buffersCount,
@@ -1797,17 +1520,6 @@ std::set<uint64_t> gits::Vulkan::CGitsInitializeMultipleBuffers::GetMappedPointe
 //
 // CGitsVkStateRestoreInfo
 //
-
-const std::array<gits::Vulkan::ArgInfo, gits::Vulkan::CGitsVkStateRestoreInfo::ARG_NUM>
-    gits::Vulkan::CGitsVkStateRestoreInfo::argumentInfos_ = {{
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // Cchar
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}, // Cint
-        {gits::Vulkan::ArgType::PRIMITIVE_TYPE, 0, false}  // Cbool
-    }};
-
-gits::Vulkan::ArgInfo gits::Vulkan::CGitsVkStateRestoreInfo::ArgumentInfo(unsigned idx) const {
-  return argumentInfos_[idx];
-}
 
 gits::CArgument& gits::Vulkan::CGitsVkStateRestoreInfo::Argument(unsigned idx) {
   return get_cargument(__FUNCTION__, idx, *_phaseInfo, _timerIndex, _timerOn);

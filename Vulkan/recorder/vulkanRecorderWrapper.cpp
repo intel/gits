@@ -494,19 +494,6 @@ void CRecorderWrapper::DisableConfigOptions() const {
   vkIAmGITS_SD();
 }
 
-void CRecorderWrapper::StartStateRestore() const {}
-
-void CRecorderWrapper::EndStateRestore() const {}
-
-bool CRecorderWrapper::IsCCodeStateRestore() const {
-  return CGits::Instance().IsCCodeStateRestore();
-}
-
-void CRecorderWrapper::StartFrame() const {
-  _recorder.Schedule(new CTokenMarker(CToken::ID_PRE_RECORD_END));
-  _recorder.Schedule(new CTokenMarker(CToken::ID_FRAME_START));
-}
-
 void* CRecorderWrapper::CreateExternalMemory(VkDeviceSize size) const {
 #ifdef GITS_PLATFORM_WINDOWS
   return VirtualAlloc(nullptr, (SIZE_T)size, MEM_COMMIT | MEM_RESERVE | MEM_WRITE_WATCH,

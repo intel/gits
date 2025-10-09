@@ -31,11 +31,6 @@ ${AUTO_GENERATED_HEADER}
     deref_retval_and_args: str = args_to_str(retval_and_args, '*_{name}, ', ', ')
     original_args: str = args_to_str(token.args, '_{name}.Original(), ', ', ')
     member_initializer_list: str = args_to_str(retval_and_args, '_{name}({wrap_params}), ', ', ')
-    argument_infos: str = args_to_str(
-        token.args,
-        '  {{ gits::Vulkan::ArgType::{category}, {num_ptr}, {needs_ampersand} }}, // {type} ({ctype})\n',
-        '\n',
-    )
     func_type_flags: str = make_func_type_flags(token.function_type)
 
     inherit_type: str = make_inherit_type(token.function_type)
@@ -45,10 +40,6 @@ ${AUTO_GENERATED_HEADER}
 %>\
 
 /* ***************************** ${id_str} *************************** */
-
-const std::array<gits::Vulkan::ArgInfo, ${len(token.args)}> gits::Vulkan::${cname}::argumentInfos_ = {{
-  ${argument_infos.lstrip(' ')}
-}};
 
 gits::Vulkan::${cname}::${cname}()
 {
@@ -66,11 +57,6 @@ gits::CArgument &gits::Vulkan::${cname}::Argument(unsigned idx)
 % else:
   return get_cargument(__FUNCTION__, idx);
 % endif
-}
-
-gits::Vulkan::ArgInfo gits::Vulkan::${cname}::ArgumentInfo(unsigned idx) const
-{
-  return argumentInfos_[idx];
 }
 
 std::set<uint64_t> gits::Vulkan::${cname}::GetMappedPointers()

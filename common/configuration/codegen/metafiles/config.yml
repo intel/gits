@@ -2094,9 +2094,6 @@ Configuration:
           - Name: restoreMultisampleImagesWA
             Type: bool
             Default: false
-          - Name: maxArraySizeForCCode
-            Type: uint32_t
-            Default: 400
           - Name: useCaptureReplayFeaturesForBuffersAndAccelerationStructures
             Type: bool
             Default: true

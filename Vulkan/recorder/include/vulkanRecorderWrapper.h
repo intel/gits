@@ -87,10 +87,6 @@ public:
   const void* GetPNextStructure(const void* pNext, VkStructureType structureType) const override;
   bool IsImagePresentable(const VkImageCreateInfo* pCreateInfo) const override;
   void DisableConfigOptions() const override;
-  void StartStateRestore() const override;
-  void EndStateRestore() const override;
-  bool IsCCodeStateRestore() const override;
-  void StartFrame() const override;
   void* CreateExternalMemory(VkDeviceSize size) const override;
   void FreeExternalMemory(VkDeviceMemory memory) const override;
   void TrackMemoryState(VkResult return_value,

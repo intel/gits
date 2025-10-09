@@ -15,24 +15,6 @@ typedef struct VkCommandBuffer_T* VkCommandBuffer;
 namespace gits {
 namespace Vulkan {
 
-enum class ArgType {
-  PRIMITIVE_TYPE,
-  ENUM,
-  STRUCT,
-  OPAQUE_HANDLE,
-  // Add variants above.
-  OTHER,
-};
-
-struct ArgInfo {
-  ArgType type;
-  uint32_t numPtr;           // 0 for T, 1 for T*, 2 for T**, etc.
-  bool typeMayNeedAmpersand; // Whether it possibly needs to be prefixed
-                             // with '&' in CCode. Note: this depends on
-                             // the value of the argument. This field only
-                             // indicates a possibility.
-};
-
 /**
     * @brief Vulkan library specific function wrapper
     *
@@ -40,8 +22,6 @@ struct ArgInfo {
     * call wrapper.
     */
 class CFunction : public gits::CFunction {
-  virtual ArgInfo ArgumentInfo(unsigned idx) const = 0;
-
 public:
   enum TApiType {
     GITS_VULKAN_PARAM_APITYPE = GITS_BIT_AT_IDX(0),

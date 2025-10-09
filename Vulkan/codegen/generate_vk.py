@@ -277,18 +277,6 @@ def undecorated_type(type_name: str) -> str:
     """Strip the type to its core, e.g., const float* to just float."""
     return type_name.replace('const', '').strip('* ')
 
-def does_arg_need_ampersand(type_name: str, wrap_type: str = '') -> bool:
-    """Determine whether an Argument may ever need a '&' prefix in CCode."""
-    raw_type: str = undecorated_type(type_name)
-    num_ptr: int = type_name.count('*')
-
-    if raw_type in vulkan_unions and num_ptr == 1:
-        return True
-    elif raw_type in vulkan_structs and not wrap_type.endswith('Array'):
-        return True
-    else:
-        return False
-
 def categorize_argument(type_name: str) -> str:
     """
     Categorize the type of an Argument.
@@ -748,7 +736,6 @@ def args_to_str(
         ctype: Name of the class wrapping this argument, e.g. 'CVkDevice'.
         category: One of categories defined in C++ code, e.g., 'PRIMITIVE_TYPE'.
         num_ptr: Pointer count of type, e.g., 2 for 'int**'.
-        needs_ampersand: Whether it may ever need a '&' prefix in CCode.
 
     Parameters:
         args: Parameters of the Vulkan function.
@@ -775,7 +762,6 @@ def args_to_str(
         wrap_params: str = arg.wrap_params or name
         ctype: str = make_ctype(arg.type, wrap_type, name)
         num_ptr: int = type.count('*')
-        needs_ampersand = str(does_arg_need_ampersand(type, wrap_type)).lower()
 
         # Compute only when needed, to avoid bogus 'unknown category' warnings.
         category: str = ''
@@ -790,7 +776,6 @@ def args_to_str(
             ctype=ctype,
             category=category,
             num_ptr=num_ptr,
-            needs_ampersand=needs_ampersand,
         )
 
     return args_str.rstrip(rstrip_string)

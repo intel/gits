@@ -127,12 +127,6 @@ PFN_vkVoidFunction recExecWrap_vkGetInstanceProcAddr(VkInstance instance, const 
     // Vulkan driver. They are used for player <-> recorder communication so we
     // need to provide function pointers even though driver returns NULL for
     // them.
-  } else if (strcmp(VK_STATE_RESTORE_BEGIN_GITS_FUNCTION_NAME, pName) == 0) {
-    CGitsPluginVulkan::RecorderWrapper().StartStateRestore();
-    return NULL;
-  } else if (strcmp(VK_STATE_RESTORE_END_GITS_FUNCTION_NAME, pName) == 0) {
-    CGitsPluginVulkan::RecorderWrapper().EndStateRestore();
-    return NULL;
   } else if (return_value == NULL) {
     return NULL;
   }
@@ -530,9 +524,7 @@ VkResult recExecWrap_vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo,
   auto& cfg = CGitsPluginVulkan::Configuration();
   bool isRecordingEnabled = cfg.common.recorder.enabled;
   bool isAllMode = cfg.vulkan.recorder.mode == TVulkanRecorderMode::ALL;
-  if (!scheduled && isRecordingEnabled && isAllMode &&
-      !CGitsPluginVulkan::RecorderWrapper().IsCCodeStateRestore()) {
-    CGitsPluginVulkan::RecorderWrapper().StartFrame();
+  if (!scheduled && isRecordingEnabled && isAllMode) {
     scheduled = true;
   }
   VkResult return_value = CGitsPluginVulkan::RecorderWrapper().Drivers().vkCreateInstance(

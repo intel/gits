@@ -10,24 +10,15 @@
 #include "pragmas.h"
 #include "vulkanLog.h"
 #include "vulkanTools_lite.h"
-
-#ifndef BUILD_FOR_CCODE
 #include "istdhash.h"
 #include "vulkanFunctions.h"
 #include "vulkanStateTracking.h"
-#else
-#include "vulkanTools.h"
-#include "helperVk.h"
-#endif
 
-#if defined(GITS_PLATFORM_WINDOWS) && !defined(BUILD_FOR_CCODE)
-
+#if defined(GITS_PLATFORM_WINDOWS)
 #include <atlimage.h>
-
 #endif
 
 namespace gits {
-#ifndef BUILD_FOR_CCODE
 bool operator==(const CGits::CCounter& counter, const VulkanObjectRange& vulkanObjRange) {
   if (vulkanObjRange.empty()) {
     return false;
@@ -45,7 +36,6 @@ bool operator==(const CGits::CCounter& counter, const VulkanObjectRange& vulkanO
   }
   return false;
 }
-#endif
 namespace Vulkan {
 
 std::string GetFileNameFrameScreenshot(unsigned int frameNumber) {
@@ -104,7 +94,6 @@ std::string GetFileNameDrawcallScreenshot(unsigned int frameNumber,
   return path.string();
 }
 
-#ifndef BUILD_FOR_CCODE
 std::string GetFileNameResourcesScreenshot(unsigned int frameNumber,
                                            unsigned int submitNumber,
                                            unsigned int cmdBufferBatchNumber,
@@ -780,14 +769,12 @@ void vulkanDumpRenderPassResources(VkCommandBuffer cmdBuffer) {
   }
   SD()._commandbufferstates[cmdBuffer]->renderPassResourceBuffers.clear();
 }
-#endif
 
 bool writeScreenshotUtil(std::string fileName,
                          VkQueue& queue,
                          VkImage& sourceImage,
                          VulkanWriteScreenshotMode mode,
                          VkAttachmentStoreOp storeOp) {
-#ifndef BUILD_FOR_CCODE
   auto& queueState = SD()._queuestates[queue];
   VkDevice device = queueState->deviceStateStore->deviceHandle;
   uint32_t queueFamilyIndex = queueState->queueFamilyIndex;
@@ -802,16 +789,6 @@ bool writeScreenshotUtil(std::string fileName,
       (SD().nonDeterministicImages.find(sourceImage) != SD().nonDeterministicImages.end())) {
     return false;
   }
-#else
-  auto& queueState = globalState.queueStates[queue];
-  VkDevice device = queueState.device;
-  uint32_t queueFamilyIndex = queueState.deviceQueueList.front().queueFamilyIndex;
-  auto& imageState = globalState.imageStates.at(sourceImage);
-  auto& internalResources = globalState.internalResources;
-  bool isMultisampleImage = !imageState->swapchainCreateInfo &&
-                            (!imageState->imageCreateInfo ||
-                             imageState->imageCreateInfo->samples != VK_SAMPLE_COUNT_1_BIT);
-#endif
 
   // Skip dumping:
   // - images with compressed format
@@ -891,7 +868,6 @@ bool writeScreenshotUtil(std::string fileName,
   decltype(imageState->currentLayout) currentLayout;
   std::vector<std::vector<std::vector<CScreenshotData>>> target; // Per layer, mipmap, aspect
 
-#ifndef BUILD_FOR_CCODE
   if (imageState->swapchainKHRStateStore) {
     numArrayLayers =
         imageState->swapchainKHRStateStore->swapchainCreateInfoKHRData.Value()->imageArrayLayers;
@@ -902,17 +878,7 @@ bool writeScreenshotUtil(std::string fileName,
     numMipmapLevels = imageState->imageCreateInfoData.Value()->mipLevels;
     currentLayout = imageState->currentLayout;
   }
-#else
-  if (imageState->swapchainCreateInfo) {
-    numArrayLayers = imageState->swapchainCreateInfo->imageArrayLayers;
-    numMipmapLevels = 1;
-    currentLayout = {{{VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_ACCESS_MEMORY_READ_BIT}}};
-  } else if (imageState->imageCreateInfo) {
-    numArrayLayers = imageState->imageCreateInfo->arrayLayers;
-    numMipmapLevels = imageState->imageCreateInfo->mipLevels;
-    currentLayout = imageState->currentLayout;
-  }
-#endif
+
   for (uint32_t l = 0; l < numArrayLayers; ++l) {
     target.push_back({});
 
@@ -964,14 +930,9 @@ bool writeScreenshotUtil(std::string fileName,
                 throw EOperationFailed(
                     "vkGetBufferMemoryRequirements() returned requirement with 0 size.");
               }
-#ifndef BUILD_FOR_CCODE
+
               VkPhysicalDeviceMemoryProperties memoryProperties =
                   SD()._devicestates[device]->physicalDeviceStateStore->memoryPropertiesCurrent;
-#else
-              VkPhysicalDeviceMemoryProperties memoryProperties;
-              drvVk.vkGetPhysicalDeviceMemoryProperties(
-                  globalState.deviceStates[device].physicalDevice, &memoryProperties);
-#endif // !BUILD_FOR_CCODE
               uint32_t requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
               for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i) {
                 if ((memoryProperties.memoryTypes[i].propertyFlags & requiredFlags) ==
@@ -1169,7 +1130,7 @@ bool writeScreenshotUtil(std::string fileName,
               convert_texture_data(texel_type::R16, screenshotData, texel_type::RGBA8,
                                    convertedData, width, height);
             }
-#ifndef BUILD_FOR_CCODE
+
             if ((minMaxValues.first < 0.0 || minMaxValues.second > 1.0) &&
                 Configurator::Get().vulkan.player.skipNonDeterministicImages &&
                 !SD().depthRangeUnrestrictedEXTEnabled) {
@@ -1179,7 +1140,6 @@ bool writeScreenshotUtil(std::string fileName,
               // [0,1], or the resulting values are undefined.
               depthInProperRange = false;
             }
-#endif
           } else if (target[l][m][a].aspect == VK_IMAGE_ASPECT_STENCIL_BIT) {
             normalize_texture_data(texel_type::R8, screenshotData, width, height);
             convert_texture_data(texel_type::R8, screenshotData, texel_type::RGBA8, convertedData,
@@ -1226,7 +1186,7 @@ bool writeScreenshotUtil(std::string fileName,
 
 namespace {
 
-#if defined(GITS_PLATFORM_WINDOWS) && !defined(BUILD_FOR_CCODE)
+#if defined(GITS_PLATFORM_WINDOWS)
 
 void captureDesktopScreenshot(VkSurfaceKHR surface, const std::string& fileName) {
   std::string filename = fileName + ".png";
@@ -1272,7 +1232,6 @@ void captureDesktopScreenshot(VkSurfaceKHR surface, const std::string& fileName)
 
 } // namespace
 
-#ifndef BUILD_FOR_CCODE
 void writeScreenshot(VkQueue queue,
                      VkCommandBuffer cmdbuffer,
                      uint32_t commandBufferBatchNumber,
@@ -1401,15 +1360,9 @@ void writeBufferUtil(std::string fileName, VkQueue& queue, VkBuffer& sourceBuffe
 
   CAutoCaller autoCaller(drvVk.vkPauseRecordingGITS, drvVk.vkContinueRecordingGITS);
 
-#ifndef BUILD_FOR_CCODE
   auto& queueState = SD()._queuestates[queue];
   VkDevice device = queueState->deviceStateStore->deviceHandle;
   uint32_t queueFamilyIndex = queueState->queueFamilyIndex;
-#else
-  auto& queueState = globalState.queueStates[queue];
-  VkDevice device = queueState.device;
-  uint32_t queueFamilyIndex = queueState.deviceQueueList.front().queueFamilyIndex;
-#endif
 
   auto& queueFamilyCommandPoolMap = SD().internalResources.deviceResourcesMap[device];
   auto iterator = queueFamilyCommandPoolMap.find(queueFamilyIndex);
@@ -1501,14 +1454,9 @@ void writeBufferUtil(std::string fileName, VkQueue& queue, VkBuffer& sourceBuffe
     if (!memoryRequirements.size) {
       throw EOperationFailed("vkGetBufferMemoryRequirements() returned requirement with 0 size.");
     }
-#ifndef BUILD_FOR_CCODE
+
     VkPhysicalDeviceMemoryProperties memoryProperties =
         SD()._devicestates[device]->physicalDeviceStateStore->memoryPropertiesCurrent;
-#else
-    VkPhysicalDeviceMemoryProperties memoryProperties;
-    drvVk.vkGetPhysicalDeviceMemoryProperties(globalState.deviceStates[device].physicalDevice,
-                                              &memoryProperties);
-#endif // !BUILD_FOR_CCODE
     uint32_t requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i) {
       if ((memoryProperties.memoryTypes[i].propertyFlags & requiredFlags) == requiredFlags) {
@@ -1633,26 +1581,6 @@ void writeBufferUtil(std::string fileName, VkQueue& queue, VkBuffer& sourceBuffe
   drvVk.vkUnmapMemory(device, localMemory);
   drvVk.vkFreeMemory(device, localMemory, nullptr);
   drvVk.vkDestroyBuffer(device, localBuffer, nullptr);
-}
-#endif
-
-void writeCCodeScreenshot(
-    VkQueue queue,
-    const VkPresentInfoKHR& presentInfo,
-    const std::function<VkImage(VkSwapchainKHR, unsigned int)>& getImageFromSwapchain) {
-  std::string fileName = GetFileNameFrameScreenshot(CGits::Instance().CurrentFrame());
-  for (uint32_t i = 0; i < presentInfo.swapchainCount; ++i) {
-    std::ostringstream nameSuffix;
-    if (presentInfo.swapchainCount > 1) {
-      nameSuffix << "_swapchain_" << i;
-    }
-
-    unsigned int imageIndex = presentInfo.pImageIndices[i];
-    VkSwapchainKHR swapchain = presentInfo.pSwapchains[i];
-    VkImage image = getImageFromSwapchain(swapchain, imageIndex);
-
-    writeScreenshotUtil(fileName + nameSuffix.str(), queue, image);
-  }
 }
 
 texel_type getTexelToConvertFromImageFormat(VkFormat format) {
@@ -2049,7 +1977,6 @@ bool checkForSupportForPhysicalDeviceFeatures(VkPhysicalDevice physicalDevice,
   return true;
 }
 
-#ifndef BUILD_FOR_CCODE
 bool checkForSupportForQueues(VkPhysicalDevice physicalDevice,
                               uint32_t requestedQueueCreateInfoCount,
                               VkDeviceQueueCreateInfo const* requestedQueueCreateInfos) {
@@ -3910,6 +3837,5 @@ void schedulevkCmdBeginRenderingByID(unsigned int ID,
   }
 }
 
-#endif
 } // namespace Vulkan
 } // namespace gits

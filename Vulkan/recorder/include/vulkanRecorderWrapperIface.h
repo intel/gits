@@ -62,10 +62,6 @@ public:
   virtual const void* GetPNextStructure(const void* pNext, VkStructureType structureType) const = 0;
   virtual bool IsImagePresentable(const VkImageCreateInfo* pCreateInfo) const = 0;
   virtual void DisableConfigOptions() const = 0;
-  virtual void StartStateRestore() const = 0;
-  virtual void EndStateRestore() const = 0;
-  virtual bool IsCCodeStateRestore() const = 0;
-  virtual void StartFrame() const = 0;
   virtual void* CreateExternalMemory(VkDeviceSize size) const = 0;
   virtual void FreeExternalMemory(VkDeviceMemory memory) const = 0;
   virtual void TrackMemoryState(VkResult return_value,

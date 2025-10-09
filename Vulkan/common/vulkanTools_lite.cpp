@@ -1381,22 +1381,6 @@ VkCommandExecutionSideGITS getCommandExecutionSide(VkCommandBuffer commandBuffer
   }
 }
 
-size_t CalculateChunkSize(size_t arraySize, size_t maxChunkSize, size_t arrayIterator) {
-  if (arraySize == 0) {
-    return 0;
-  }
-  if (arrayIterator > arraySize) {
-    return 0;
-  }
-  size_t size = maxChunkSize;
-  if (arrayIterator + maxChunkSize > arraySize) {
-    size = arraySize - arrayIterator;
-  }
-  return size;
-}
-
-#ifndef BUILD_FOR_CCODE
-
 const void* getPNextStructure(const void* pNext, VkStructureType structureType) {
   const VkBaseInStructure* pNextPtr = (const VkBaseInStructure*)pNext;
   while (pNextPtr != nullptr) {
@@ -1420,8 +1404,6 @@ bool isImagePresentable(const VkImageCreateInfo* pCreateInfo) {
 
   return createInfoINTEL && colorAttachmentUsage && format;
 }
-
-#endif
 
 } // namespace Vulkan
 } // namespace gits

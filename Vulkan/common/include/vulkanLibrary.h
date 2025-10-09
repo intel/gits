@@ -80,8 +80,6 @@ public:
   };
 };
 
-#ifndef BUILD_FOR_CCODE
-
 class COnQueueSubmitEndInterface {
 protected:
   virtual ~COnQueueSubmitEndInterface() = 0;
@@ -121,7 +119,5 @@ public:
 
   uint32_t Count() const;
 };
-
-#endif
 } // namespace Vulkan
 } // namespace gits

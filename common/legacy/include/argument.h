@@ -97,18 +97,12 @@ public:
   virtual bool DeclarationNeeded() const {
     return false;
   }
-  virtual void DeclareValue(CCodeOStream& stream) const {
-    stream.VariableName(ScopeKey());
-  }
-  virtual void Declare(CCodeOStream& stream) const {
-    stream.Indent() << Name() << " " << stream.VariableName(ScopeKey()) << " = ";
-    Write(stream);
-    stream << ";" << std::endl;
-  }
+  virtual void DeclareValue([[maybe_unused]] CCodeOStream& stream) const {}
+  virtual void Declare([[maybe_unused]] CCodeOStream& stream) const {}
   virtual bool PostActionNeeded() const {
     return false;
   }
-  virtual void PostAction(CCodeOStream& /*stream*/) const {}
+  virtual void PostAction([[maybe_unused]] CCodeOStream& stream) const {}
   virtual void* GetPtrType() {
     throw ENotImplemented(EXCEPTION_MESSAGE);
   }
@@ -124,14 +118,8 @@ public:
   virtual std::string VariableNamePrefix() const {
     return Name();
   }
-  virtual void VariableNameRegister(CCodeOStream& stream, bool returnValue) const {
-    if (GlobalScopeVariable()) {
-      stream.Register(ScopeKey(), VariableNamePrefix(), true, GlobalScopeVariable());
-    } else {
-      // only arrays have sense to be declared for local scope as variables so that must be a return value
-      stream.Register(ScopeKey(), returnValue ? "ret" : "var", !returnValue);
-    }
-  }
+  virtual void VariableNameRegister([[maybe_unused]] CCodeOStream& stream,
+                                    [[maybe_unused]] bool returnValue) const {}
 
   virtual std::string ToString() const {
     return "";

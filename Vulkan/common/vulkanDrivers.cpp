@@ -18,7 +18,6 @@
 
 #include "gits.h"
 #include "configurationLib.h"
-#ifndef BUILD_FOR_CCODE
 #include "lua_bindings.h"
 
 namespace gits {
@@ -26,8 +25,6 @@ namespace lua {
 #include "vulkanLuaEnums.h"
 }
 } // namespace gits
-
-#endif
 
 namespace gits {
 namespace Vulkan {
@@ -40,8 +37,6 @@ NOINLINE void LogFunctionBeforeContext(const char* func) {
 //==========================================================================================================//
 // LUA
 //==========================================================================================================//
-
-#ifndef BUILD_FOR_CCODE
 
 using namespace lua;
 static bool bypass_luascript;
@@ -94,8 +89,6 @@ void RegisterLuaVulkanDriverFunctions() {
   luaL_newlib(L.get(), exports);
   lua_setglobal(L.get(), "drvVk");
 }
-
-#endif
 
 //==========================================================================================================//
 // Default dispatch functions
@@ -238,8 +231,6 @@ void_t STDCALL default_vkIAmRecorderGITS() {
 // Special dispatch functions (lua script calling and tracing)
 //==========================================================================================================//
 
-#ifndef BUILD_FOR_CCODE
-
 NOINLINE bool UseSpecial(const char* func) {
   const auto& cfg = Configurator::Get();
   return ShouldLog(LogLevel::TRACE) ||
@@ -299,30 +290,6 @@ void checkReturnValue<PFN_vkVoidFunction>(const char*, PFN_vkVoidFunction) {}
     return gits_ret;                                                                               \
   }
 
-#else
-
-NOINLINE bool UseSpecial(const char*) {
-  return ShouldLog(LogLevel::TRACE);
-}
-
-#define SPECIAL_FUNCTION(return_type, function_name, function_arguments, arguments_call,           \
-                         first_argument_name)                                                      \
-  return_type STDCALL special_##function_name function_arguments {                                 \
-    bool doTrace = ShouldLog(LogLevel::TRACE);                                                     \
-    if (doTrace) {                                                                                 \
-      LOG_FORMAT_RAW                                                                               \
-      LOG_TRACE << #function_name;                                                                 \
-    }                                                                                              \
-    return_type gits_ret = default_##function_name arguments_call;                                 \
-    if (doTrace) {                                                                                 \
-      function_name##_trace arguments_call;                                                        \
-      trace_return_value(gits_ret);                                                                \
-    }                                                                                              \
-    return gits_ret;                                                                               \
-  }
-
-#endif
-
 #define VK_GLOBAL_LEVEL_FUNCTION(return_type, function_name, function_arguments, arguments_call)   \
   SPECIAL_FUNCTION(return_type, function_name, function_arguments, arguments_call, )
 #define VK_INSTANCE_LEVEL_FUNCTION(return_type, function_name, function_arguments, arguments_call, \
@@ -364,9 +331,7 @@ CVkDriver::CVkDriver() : _lib(nullptr), Mode(DriverMode::INTERCEPTOR), GlobalDis
 
 #include "vulkanDriversAuto.inl"
 
-#ifndef BUILD_FOR_CCODE
   CGits::Instance().RegisterLuaFunctionsRegistrator(RegisterLuaVulkanDriverFunctions);
-#endif
 }
 
 CVkDriver::~CVkDriver() {
@@ -421,12 +386,10 @@ void CVkDriver::Initialize() {
 #include "vulkanDriversAuto.inl"
     }
 
-#ifndef BUILD_FOR_CCODE
     // Inform GITS recorder that this is the GITS Player
     if (GlobalDispatchTable.vkIAmGITS) {
       GlobalDispatchTable.vkIAmGITS();
     }
-#endif
 
     return true;
   };

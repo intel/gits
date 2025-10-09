@@ -33,8 +33,6 @@ class CGitsVkCreateNativeWindow : public CFunction, gits::noncopyable {
   virtual CArgument& Argument(unsigned idx) {
     return get_cargument(__FUNCTION__, idx, x, y, w, h, vis, hwnd, hinstance);
   };
-  static const std::array<ArgInfo, ARG_NUM> argumentInfos_;
-  virtual ArgInfo ArgumentInfo(unsigned idx) const override;
 
 public:
   CGitsVkCreateNativeWindow(){};
@@ -184,8 +182,6 @@ class CGitsVkCreateXlibWindow : public CFunction, gits::noncopyable {
   virtual CArgument& Argument(unsigned idx) {
     return get_cargument(__FUNCTION__, idx, x, y, w, h, vis, hwnd, hinstance);
   };
-  static const std::array<ArgInfo, ARG_NUM> argumentInfos_;
-  virtual ArgInfo ArgumentInfo(unsigned idx) const override;
 
 public:
   CGitsVkCreateXlibWindow(){};
@@ -294,8 +290,6 @@ class CGitsVkUpdateNativeWindow : public CFunction, gits::noncopyable {
   virtual CArgument& Argument(unsigned idx) {
     return get_cargument(__FUNCTION__, idx, x, y, w, h, vis, hwnd);
   };
-  static const std::array<ArgInfo, ARG_NUM> argumentInfos_;
-  virtual ArgInfo ArgumentInfo(unsigned idx) const override;
 #if defined(GITS_PLATFORM_WINDOWS)
   void HelperSetValues(int xx, int yy, int ww, int hh, bool is_visible, HWND window) {
 #elif defined(GITS_PLATFORM_X11)
@@ -428,8 +422,6 @@ class CGitsVkMemoryUpdate : public CFunction, gits::noncopyable {
   virtual unsigned ArgumentCount() const {
     return ARG_NUM;
   }
-  static const std::array<ArgInfo, ARG_NUM> argumentInfos_;
-  virtual ArgInfo ArgumentInfo(unsigned idx) const override;
 
 public:
   CGitsVkMemoryUpdate();
@@ -483,8 +475,6 @@ class CGitsVkMemoryUpdate2 : public CFunction, gits::noncopyable {
   virtual unsigned ArgumentCount() const override {
     return ARG_NUM;
   }
-  static const std::array<ArgInfo, ARG_NUM> argumentInfos_;
-  virtual ArgInfo ArgumentInfo(unsigned idx) const override;
 
 public:
   CGitsVkMemoryUpdate2();
@@ -520,8 +510,6 @@ class CGitsVkMemoryRestore : public CFunction, gits::noncopyable {
   virtual unsigned ArgumentCount() const {
     return ARG_NUM;
   }
-  static const std::array<ArgInfo, ARG_NUM> argumentInfos_;
-  virtual ArgInfo ArgumentInfo(unsigned idx) const override;
 
 public:
   CGitsVkMemoryRestore();
@@ -565,8 +553,6 @@ class CGitsVkMemoryReset : public CFunction, gits::noncopyable {
   virtual unsigned ArgumentCount() const {
     return ARG_NUM;
   }
-  static const std::array<ArgInfo, ARG_NUM> argumentInfos_;
-  virtual ArgInfo ArgumentInfo(unsigned idx) const override;
 
 public:
   CGitsVkMemoryReset();
@@ -604,8 +590,6 @@ class CGitsVkCmdPatchDeviceAddresses : public CFunction {
   virtual unsigned ArgumentCount() const {
     return ARG_NUM;
   }
-  static const std::array<ArgInfo, ARG_NUM> argumentInfos_;
-  virtual ArgInfo ArgumentInfo(unsigned idx) const override;
 
 public:
   CGitsVkCmdPatchDeviceAddresses();
@@ -638,8 +622,6 @@ class CDestroyVulkanDescriptorSets : public CFunction, gits::noncopyable {
   virtual unsigned ArgumentCount() const override {
     return 1;
   }
-  static const std::array<ArgInfo, 1> argumentInfos_;
-  virtual ArgInfo ArgumentInfo(unsigned idx) const override;
 
 public:
   CDestroyVulkanDescriptorSets();
@@ -667,8 +649,6 @@ class CDestroyVulkanCommandBuffers : public CFunction, gits::noncopyable {
   virtual unsigned ArgumentCount() const override {
     return 1;
   }
-  static const std::array<ArgInfo, 1> argumentInfos_;
-  virtual ArgInfo ArgumentInfo(unsigned idx) const override;
 
 public:
   CDestroyVulkanCommandBuffers();
@@ -697,8 +677,6 @@ class CGitsVkEnumerateDisplayMonitors : public CFunction, gits::noncopyable {
   virtual unsigned ArgumentCount() const override {
     return ARG_NUM;
   }
-  static const std::array<ArgInfo, ARG_NUM> argumentInfos_;
-  virtual ArgInfo ArgumentInfo(unsigned idx) const override;
 
 public:
   CGitsVkEnumerateDisplayMonitors();
@@ -758,8 +736,6 @@ class CGitsInitializeImage : public CFunction, gits::noncopyable {
   virtual unsigned ArgumentCount() const {
     return ARG_NUM;
   }
-  static const std::array<ArgInfo, ARG_NUM> argumentInfos_;
-  virtual ArgInfo ArgumentInfo(unsigned idx) const override;
 
 public:
   CGitsInitializeImage();
@@ -795,8 +771,6 @@ class CGitsVkCmdInsertMemoryBarriers : public CFunction, gits::noncopyable {
   virtual unsigned ArgumentCount() const {
     return ARG_NUM;
   }
-  static const std::array<ArgInfo, ARG_NUM> argumentInfos_;
-  virtual ArgInfo ArgumentInfo(unsigned idx) const override;
 
 public:
   CGitsVkCmdInsertMemoryBarriers();
@@ -833,8 +807,6 @@ class CGitsVkCmdInsertMemoryBarriers2 : public CFunction, gits::noncopyable {
   virtual unsigned ArgumentCount() const {
     return ARG_NUM;
   }
-  static const std::array<ArgInfo, ARG_NUM> argumentInfos_;
-  virtual ArgInfo ArgumentInfo(unsigned idx) const override;
 
 public:
   CGitsVkCmdInsertMemoryBarriers2();
@@ -868,8 +840,6 @@ class CGitsInitializeMultipleImages : public CFunction, gits::noncopyable {
   virtual unsigned ArgumentCount() const {
     return ARG_NUM;
   }
-  static const std::array<ArgInfo, ARG_NUM> argumentInfos_;
-  virtual ArgInfo ArgumentInfo(unsigned idx) const override;
 
 public:
   CGitsInitializeMultipleImages();
@@ -923,8 +893,6 @@ class CGitsInitializeBuffer : public CFunction, gits::noncopyable {
   virtual unsigned ArgumentCount() const {
     return ARG_NUM;
   }
-  static const std::array<ArgInfo, ARG_NUM> argumentInfos_;
-  virtual ArgInfo ArgumentInfo(unsigned idx) const override;
 
 public:
   CGitsInitializeBuffer();
@@ -956,8 +924,6 @@ class CGitsInitializeMultipleBuffers : public CFunction, gits::noncopyable {
   virtual unsigned ArgumentCount() const {
     return ARG_NUM;
   }
-  static const std::array<ArgInfo, ARG_NUM> argumentInfos_;
-  virtual ArgInfo ArgumentInfo(unsigned idx) const override;
 
 public:
   CGitsInitializeMultipleBuffers();
@@ -988,8 +954,6 @@ class CGitsVkStateRestoreInfo : public CFunction, gits::noncopyable {
   virtual unsigned ArgumentCount() const {
     return ARG_NUM;
   }
-  static const std::array<ArgInfo, ARG_NUM> argumentInfos_;
-  virtual ArgInfo ArgumentInfo(unsigned idx) const override;
 
 public:
   CGitsVkStateRestoreInfo();
