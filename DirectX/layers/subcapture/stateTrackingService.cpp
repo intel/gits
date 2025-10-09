@@ -194,6 +194,7 @@ void StateTrackingService::restoreState(ObjectState* state) {
     break;
   case CommandId::ID_ID3D12DEVICE_CREATEGRAPHICSPIPELINESTATE:
   case CommandId::ID_ID3D12DEVICE_CREATECOMPUTEPIPELINESTATE:
+  case CommandId::ID_ID3D12DEVICE2_CREATEPIPELINESTATE:
     restoreD3D12PipelineStateObject(state);
     break;
   default:
@@ -778,6 +779,10 @@ void StateTrackingService::restoreD3D12PipelineStateObject(ObjectState* state) {
              CommandId::ID_ID3D12DEVICE_CREATECOMPUTEPIPELINESTATE) {
     auto* command =
         static_cast<ID3D12DeviceCreateComputePipelineStateCommand*>(state->creationCommand.get());
+    restoreState(command->pDesc_.rootSignatureKey);
+  } else if (state->creationCommand->getId() == CommandId::ID_ID3D12DEVICE2_CREATEPIPELINESTATE) {
+    auto* command =
+        static_cast<ID3D12Device2CreatePipelineStateCommand*>(state->creationCommand.get());
     restoreState(command->pDesc_.rootSignatureKey);
   }
   recorder_.record(createCommandWriter(state->creationCommand.get()));
