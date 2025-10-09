@@ -191,6 +191,10 @@ void StateTrackingService::restoreState(ObjectState* state) {
   case CommandId::ID_ID3D12DEVICE7_ADDTOSTATEOBJECT:
     restoreD3D12StateObject(state);
     break;
+  case CommandId::ID_ID3D12DEVICE_CREATEGRAPHICSPIPELINESTATE:
+  case CommandId::ID_ID3D12DEVICE_CREATECOMPUTEPIPELINESTATE:
+    restoreD3D12PipelineStateObject(state);
+    break;
   default:
     recorder_.record(createCommandWriter(state->creationCommand.get()));
   }
@@ -762,6 +766,20 @@ void StateTrackingService::restoreD3D12StateObject(ObjectState* state) {
     GITS_ASSERT(it != statesByKey_.end());
     restoreState(it->second);
   }
+}
+
+void StateTrackingService::restoreD3D12PipelineStateObject(ObjectState* state) {
+  if (state->creationCommand->getId() == CommandId::ID_ID3D12DEVICE_CREATEGRAPHICSPIPELINESTATE) {
+    auto* command =
+        static_cast<ID3D12DeviceCreateGraphicsPipelineStateCommand*>(state->creationCommand.get());
+    restoreState(command->pDesc_.rootSignatureKey);
+  } else if (state->creationCommand->getId() ==
+             CommandId::ID_ID3D12DEVICE_CREATECOMPUTEPIPELINESTATE) {
+    auto* command =
+        static_cast<ID3D12DeviceCreateComputePipelineStateCommand*>(state->creationCommand.get());
+    restoreState(command->pDesc_.rootSignatureKey);
+  }
+  recorder_.record(createCommandWriter(state->creationCommand.get()));
 }
 
 void StateTrackingService::storeINTCFeature(INTC_D3D12_FEATURE feature) {

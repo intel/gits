@@ -179,6 +179,7 @@ private:
   void restoreGpuVirtualAddress(ResourceState* state);
   void restoreD3D12INTCDeviceExtensionContext(ObjectState* state);
   void restoreD3D12StateObject(ObjectState* state);
+  void restoreD3D12PipelineStateObject(ObjectState* state);
 
 private:
   SubcaptureRecorder& recorder_;
