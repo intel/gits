@@ -13,7 +13,7 @@
  *
  */
 
-#include "openglDrivers.h"
+#include "platform.h"
 #ifdef GITS_PLATFORM_WINDOWS
 #include <Windows.h>
 #endif
