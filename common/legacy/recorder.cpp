@@ -77,7 +77,6 @@ gits::CRecorder* gits::CRecorder::_instance = nullptr;
  */
 gits::CRecorder& gits::CRecorder::Instance() {
   if (!_instance) {
-    gits::OpenGL::drv.add_terminate_event([] { CRecorder::Dispose(); });
     _instance = new CRecorder;
 #ifndef GITS_PLATFORM_WINDOWS
     std::atexit(detach);

@@ -106,7 +106,9 @@ DrawCallWrapperPrePost::~DrawCallWrapperPrePost() {
 namespace gits {
 namespace OpenGL {
 
-CRecorderWrapper::CRecorderWrapper(CRecorder& recorder) : _recorder(recorder) {}
+CRecorderWrapper::CRecorderWrapper(CRecorder& recorder) : _recorder(recorder) {
+  drv.add_terminate_event([] { CRecorder::Dispose(); });
+}
 
 void CRecorderWrapper::StreamFinishedEvent(std::function<void()> event) {
   _recorder.RegisterDisposeEvent(std::move(event));
