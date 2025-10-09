@@ -399,7 +399,7 @@ void ResourceDump::dumpTexture(DumpInfo& dumpInfo, void* data) {
     image.slicePitch = dumpInfo.size / depth;
     image.pixels = reinterpret_cast<uint8_t*>(data) + slice * image.slicePitch;
 
-    static bool initialized = false;
+    static thread_local bool initialized = false;
     const ::DirectX::Image* imageConverted{};
     ::DirectX::ScratchImage scratchImage;
     if (::DirectX::IsCompressed(image.format)) {

@@ -170,7 +170,7 @@ void ScreenshotDump::dumpStagedResource(std::wstring dumpName) {
                        (dumpName + ext).c_str(), pixelFormat);
   };
   saveToWICFile();
-  static bool initialized = false;
+  static thread_local bool initialized = false;
   if (!initialized && hr != S_OK) {
     CoInitializeEx(nullptr, COINIT_MULTITHREADED);
     saveToWICFile();
