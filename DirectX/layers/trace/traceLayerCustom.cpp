@@ -268,7 +268,7 @@ void TraceLayer::pre(ID3D12GraphicsCommandListBeginEventCommand& command) {
     CommandPrinter p(streamPre_, statePre_, command, "ID3D12GraphicsCommandList::BeginEvent",
                      command.object_.key);
     p.addArgument(command.Metadata_);
-    LPCWSTR_Argument arg(static_cast<wchar_t*>(command.pData_.value) + 20);
+    LPCWSTR_Argument arg(static_cast<wchar_t*>(command.pData_.value));
     p.addArgument(arg);
     p.print(flush_);
   }
@@ -279,7 +279,7 @@ void TraceLayer::post(ID3D12GraphicsCommandListBeginEventCommand& command) {
     CommandPrinter p(streamPost_, statePost_, command, "ID3D12GraphicsCommandList::BeginEvent",
                      command.object_.key);
     p.addArgument(command.Metadata_);
-    LPCWSTR_Argument arg(static_cast<wchar_t*>(command.pData_.value) + 20);
+    LPCWSTR_Argument arg(static_cast<wchar_t*>(command.pData_.value));
     p.addArgument(arg);
     p.print(flush_);
   }
