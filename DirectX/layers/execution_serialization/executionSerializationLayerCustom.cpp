@@ -154,6 +154,12 @@ void ExecutionSerializationLayer::pre(ID3D12Device3EnqueueMakeResidentCommand& c
   if (recorder_.isRunning()) {
     recorder_.record(new ID3D12Device3EnqueueMakeResidentWriter(c));
     executionService_.fenceSignal(c.key, c.pFenceToSignal_.key, c.FenceValueToSignal_.value);
+
+    ID3D12FenceGetCompletedValueCommand getCompletedValue;
+    getCompletedValue.key = executionService_.getUniqueCommandKey();
+    getCompletedValue.object_.key = c.pFenceToSignal_.key;
+    getCompletedValue.result_.value = c.FenceValueToSignal_.value;
+    recorder_.record(new ID3D12FenceGetCompletedValueWriter(getCompletedValue));
   }
 }
 
