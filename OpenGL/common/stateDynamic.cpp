@@ -213,15 +213,6 @@ void CStateDynamic::WriteClientSizes() {
 #endif
 }
 
-std::function<void()> CStateDynamic::CreateCArraysRestorePoint() {
-  auto& ref = _memTracker;
-  return [=]() mutable { // mutable to be able to use [] on ref
-    for (auto& e : _memTracker) {
-      std::copy(ref[e.first].begin(), ref[e.first].end(), e.second.begin());
-    }
-  };
-}
-
 CStateDynamic::CContextStateData* CStateDynamic::GetContextStateData(void* context) {
   if (context == nullptr) {
     LOG_WARNING << "Trying to get state dynamic data from null context";

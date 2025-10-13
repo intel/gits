@@ -78,10 +78,6 @@ CLibrary& CLibrary::Get() {
   return static_cast<CLibrary&>(CGits::Instance().Library(ID_OPENGL));
 }
 
-std::function<void()> CLibrary::CreateRestorePoint() {
-  return SD().CreateCArraysRestorePoint();
-}
-
 void PreSwap() {
   using gits::Config;
 

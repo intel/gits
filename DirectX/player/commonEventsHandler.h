@@ -21,8 +21,6 @@ public:
 private:
   static void frameBegin(int frameNumber) {}
   static void frameEnd(int frameNumber);
-  static void loopBegin(int num) {}
-  static void loopEnd(int num) {}
   static void stateRestoreBegin();
   static void stateRestoreEnd();
   static void programExit() {}
