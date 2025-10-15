@@ -9,7 +9,6 @@
 #include "raytracingShaderPatchService.h"
 #include "gits.h"
 #include "log2.h"
-#include "config.h"
 
 #include <string>
 #include <vector>

@@ -22,7 +22,6 @@
 #include "stateDynamic.h"
 #include "openglLibrary.h"
 #endif
-#include "config.h"
 #include "log.h"
 #include "timer.h"
 #include "pragmas.h"

@@ -8,7 +8,6 @@
 
 #include "debugInfo.h"
 #include "log2.h"
-#include "config.h"
 #include "configurationLib.h"
 #include "to_string/enumToStrAuto.h"
 #include "to_string/toStr.h"

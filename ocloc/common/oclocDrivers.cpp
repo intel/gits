@@ -9,7 +9,6 @@
 #include "oclocDrivers.h"
 #include "oclocTools.h"
 
-#include "config.h"
 #include "gits.h"
 
 #include <string>

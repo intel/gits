@@ -44,7 +44,6 @@
 
 #include "player.h"
 #include "exception.h"
-#include "config.h"
 #include "log.h"
 #include "performance.h"
 #include "windowing.h"

@@ -7,7 +7,6 @@
 // ===================== end_copyright_notice ==============================
 
 #include "dllOverrideUseLayer.h"
-#include "config.h"
 #include "log2.h"
 #include "PlayerManager.h"
 

@@ -7,7 +7,6 @@
 // ===================== end_copyright_notice ==============================
 
 #include "debugHelperLayer.h"
-#include "config.h"
 #include "configurationLib.h"
 
 #include <sstream>

@@ -26,7 +26,6 @@
 #include "scheduler.h"
 #include "streams.h"
 #include "log.h"
-#include "config.h"
 #include "tools.h"
 #include "windowContextState.h"
 

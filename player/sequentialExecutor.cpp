@@ -14,7 +14,6 @@
 */
 
 #include "sequentialExecutor.h"
-#include "config.h"
 #include "token.h"
 #include "gits.h"
 

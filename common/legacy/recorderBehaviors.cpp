@@ -16,7 +16,6 @@
 #include "gits.h"
 #include "recorderBehaviors.h"
 #include "streams.h"
-#include "config.h"
 #include "apis_iface.h"
 
 #include <iostream>

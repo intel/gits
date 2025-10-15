@@ -17,7 +17,6 @@
 #endif
 
 #include "openclDriversHelper.h"
-#include "config.h"
 #include "gits.h"
 
 #include <filesystem>

@@ -30,10 +30,8 @@
 #include <set>
 #include <map>
 #include <algorithm>
-#include "config.h"
 #include "pfattribs.h"
 #include "windowing.h"
-#include "config.h"
 #include "platform.h"
 #include "ptblLibrary.h"
 #include "ptbl_wglLibrary.h"

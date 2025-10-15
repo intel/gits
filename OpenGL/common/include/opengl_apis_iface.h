@@ -15,7 +15,6 @@
 
 #pragma once
 #include "apis_iface.h"
-#include "config.h"
 
 namespace gits {
 namespace OpenGL {

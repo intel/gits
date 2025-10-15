@@ -24,10 +24,8 @@
 #include <iomanip>
 #include <set>
 #include <map>
-#include "config.h"
 #include "pfattribs.h"
 #include "stateDynamic.h"
-#include "config.h"
 #include "windowContextState.h"
 #include "ptblLibrary.h"
 #include "ptbl_glxLibrary.h"

@@ -16,7 +16,6 @@
 #include "buffer.h"
 #include "exception.h"
 #include "streams.h"
-#include "config.h"
 
 namespace gits {
 void CBuffer::initialize(const void* buffer, size_t length, bool is_mutable) {

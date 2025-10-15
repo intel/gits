@@ -11,7 +11,6 @@
 #include "gits.h"
 #include "l0Drivers.h"
 #include "l0Header.h"
-#include "config.h"
 #include "texture_converter.h"
 
 #include <memory>

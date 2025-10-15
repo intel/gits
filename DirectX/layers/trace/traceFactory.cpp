@@ -8,7 +8,6 @@
 
 #include "traceFactory.h"
 #include "traceLayerAuto.h"
-#include "config.h"
 #include "configurationLib.h"
 #include "gits.h"
 #include "showExecutionLayer.h"

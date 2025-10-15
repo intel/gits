@@ -14,7 +14,6 @@
 
 #include "openclRecorderWrapper.h"
 
-#include "config.h"
 #include "exception.h"
 #include "gits.h"
 #include "log2.h"

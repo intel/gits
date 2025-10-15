@@ -8,7 +8,6 @@
 
 #include "l0Drivers.h"
 
-#include "config.h"
 #include "gits.h"
 
 #ifndef BUILD_FOR_CCODE

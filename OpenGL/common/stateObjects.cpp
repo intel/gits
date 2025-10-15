@@ -16,7 +16,6 @@
 #include "stateObjects.h"
 #include "openglDrivers.h"
 #include "stateDynamic.h"
-#include "config.h"
 #include "tools.h"
 
 namespace gits {

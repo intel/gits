@@ -22,7 +22,6 @@
 #include "log.h"
 #include "openglDrivers.h"
 #include "buffer.h"
-#include "config.h"
 #include "platform.h"
 #include "glxArguments.h"
 #include <limits>

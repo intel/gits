@@ -6,7 +6,6 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "config.h"
 #include "vulkanLog.h"
 #include "vulkanTools_lite.h"
 

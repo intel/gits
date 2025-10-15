@@ -18,7 +18,6 @@
 #include "exception.h"
 #include "log2.h"
 #include "pragmas.h"
-#include "config.h"
 #include "scheduler.h"
 #include "token.h"
 #include "function.h"
@@ -26,6 +25,7 @@
 #include "automateCCode.h"
 #include "diagnostic.h"
 #include "imGuiHUD.h"
+#include "yaml-cpp/yaml.h"
 
 #include <string>
 #include <iostream>

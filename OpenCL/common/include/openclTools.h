@@ -11,7 +11,7 @@
 #include "openclHeader.h"
 
 #include "log2.h"
-#include "config.h"
+#include "configurationLib.h"
 #include "texture_converter.h"
 
 #include <memory>

@@ -21,7 +21,6 @@
 #include "lua_bindings.h"
 #include "log2.h"
 #include "gits.h"
-#include "config.h"
 
 #include "../../OpenGL/common/include/openglTypes.h"
 

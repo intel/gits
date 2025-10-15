@@ -13,7 +13,6 @@
 #include "log2.h"
 #include "platform.h"
 #include "pragmas.h"
-#include "config.h"
 #ifndef BUILD_FOR_CCODE
 #include "gits.h"
 #endif

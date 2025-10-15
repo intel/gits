@@ -22,7 +22,6 @@
 #include "streams.h"
 #include "exception.h"
 #include "log.h"
-#include "config.h"
 #include "configurationLib.h"
 #include "buffer.h"
 

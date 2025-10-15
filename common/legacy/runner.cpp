@@ -17,7 +17,6 @@
 #include "function.h"
 #include "argument.h"
 #include "gits.h"
-#include "config.h"
 #include "log2.h"
 
 void gits::CRunner::Register(std::shared_ptr<CHandler> plugin) {

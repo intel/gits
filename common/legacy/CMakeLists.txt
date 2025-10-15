@@ -14,9 +14,6 @@ list(APPEND common_SOURCES
   ${COMMON_HEADER_DIR}/argument.h
   ${COMMON_HEADER_DIR}/bit_range.h
   ${COMMON_HEADER_DIR}/buffer.h
-  ${COMMON_HEADER_DIR}/config.h
-  ${COMMON_HEADER_DIR}/configTypes.h
-  ${COMMON_HEADER_DIR}/configYamlTemplates.h
   ${COMMON_HEADER_DIR}/configUtils.h
   ${COMMON_HEADER_DIR}/diagnostic.h
   ${COMMON_HEADER_DIR}/dynamic_linker.h
@@ -63,7 +60,6 @@ list(APPEND common_SOURCES
   ${COMMON_SOURCE_DIR}/argument.cpp
   ${COMMON_SOURCE_DIR}/bit_range.cpp
   ${COMMON_SOURCE_DIR}/buffer.cpp
-  ${COMMON_SOURCE_DIR}/config.cpp
   ${COMMON_SOURCE_DIR}/configUtils.cpp
   ${COMMON_SOURCE_DIR}/diagnostic.cpp
   ${COMMON_SOURCE_DIR}/exception.cpp

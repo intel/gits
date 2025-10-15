@@ -19,7 +19,6 @@
 #include "exception.h"
 #include "log2.h"
 #include "gits.h"
-#include "config.h"
 #include "pragmas.h"
 
 namespace gits {

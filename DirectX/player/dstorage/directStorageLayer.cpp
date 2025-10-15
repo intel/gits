@@ -7,7 +7,8 @@
 // ===================== end_copyright_notice ==============================
 
 #include "directStorageLayer.h"
-#include "config.h"
+#include "configurationLib.h"
+#include "tools.h"
 
 namespace gits {
 namespace DirectX {

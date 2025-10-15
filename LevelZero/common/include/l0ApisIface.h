@@ -9,7 +9,6 @@
 #pragma once
 
 #include "apis_iface.h"
-#include "config.h"
 #include "l0StateDynamic.h"
 #include "gits.h"
 #include "l0Tools.h"

@@ -15,7 +15,6 @@
 #include "ptbl_wglLibrary.h"
 #include "ptbl_glxLibrary.h"
 #include "ptbl_eglLibrary.h"
-#include "config.h"
 #include "tools_lite.h"
 #include "openglEnums.h"
 

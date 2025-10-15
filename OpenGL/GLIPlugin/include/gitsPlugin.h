@@ -18,7 +18,6 @@
 #include "pragmas.h"
 #include "tools.h"
 #include "gitsLoader.h"
-#include "config.h"
 
 #include <string>
 

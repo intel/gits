@@ -10,7 +10,7 @@ ${header}
 #pragma once
 
 #include "layerAuto.h"
-#include "config.h"
+#include "configurationLib.h"
 #include "configKeySet.h"
 
 namespace gits {

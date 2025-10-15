@@ -18,7 +18,6 @@
 #include "exception.h"
 #include "log2.h"
 #include "buffer.h"
-#include "config.h"
 #include "streams.h"
 #include "pragmas.h"
 #include "tools.h"

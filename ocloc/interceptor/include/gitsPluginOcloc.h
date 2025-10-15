@@ -17,7 +17,6 @@
 #include "gitsLoader.h"
 #include "platform.h"
 #include "tools.h"
-#include "config.h"
 
 #include <string>
 

@@ -25,7 +25,6 @@
 #include "stateDynamic.h"
 #include "exception.h"
 #include "log.h"
-#include "config.h"
 #include "tools.h"
 #include "opengl_apis_iface.h"
 

@@ -8,7 +8,6 @@
 
 #pragma once
 #include "apis_iface.h"
-#include "config.h"
 #include "openclTools.h"
 #include "openclStateDynamic.h"
 

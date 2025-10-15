@@ -24,7 +24,6 @@
 #include "gitsLoader.h"
 
 #include "exception.h"
-#include "config.h"
 #include "log.h"
 #include "diagnostic.h"
 #include "tools.h"

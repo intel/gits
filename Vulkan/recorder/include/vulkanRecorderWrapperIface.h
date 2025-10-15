@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include "config.h"
+#include "configurationLib.h"
 #include "vulkanDrivers.h"
 
 #include <functional>

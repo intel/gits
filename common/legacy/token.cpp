@@ -27,7 +27,6 @@
 #include "buffer.h"
 #include "streams.h"
 #include "gits.h"
-#include "config.h"
 #include "function.h"
 #include "scheduler.h"
 #include "tools.h"

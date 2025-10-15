@@ -22,7 +22,6 @@ ${AUTO_GENERATED_HEADER}
 #include "stateDynamic.h"
 #include "exception.h"
 #include "log.h"
-#include "config.h"
 #include "tools.h"
 
 #include "gitsFunctions.h"

@@ -21,7 +21,6 @@
 #include <type_traits>
 #endif
 
-#include "config.h"
 #include "gits.h"
 
 #include <filesystem>

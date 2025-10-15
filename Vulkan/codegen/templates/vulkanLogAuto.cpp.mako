@@ -8,7 +8,6 @@
 
 ${AUTO_GENERATED_HEADER}
 
-#include "config.h"
 #include "vulkanLog.h"
 #include "vulkanTools_lite.h"
 

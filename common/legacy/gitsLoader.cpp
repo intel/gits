@@ -20,7 +20,6 @@
 
 #include "gitsLoader.h"
 #include "recorderIface.h"
-#include "config.h"
 #include "exception.h"
 #include "log2.h"
 

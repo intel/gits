@@ -54,9 +54,7 @@
 #endif
 #include <cassert>
 
-//#include "config.h"
 #include "configurationLib.h"
-#include "configTypes.h"
 
 namespace gits {
 

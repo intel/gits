@@ -8,7 +8,6 @@
 
 #include "openglDrivers.h"
 #include "log.h"
-#include "config.h"
 #include "platform.h"
 #include "openglEnums.h"
 #include "exception.h"

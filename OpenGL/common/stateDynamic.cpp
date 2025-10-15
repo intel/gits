@@ -20,7 +20,6 @@
 
 #include "openglLibrary.h"
 #include "key_value.h"
-#include "config.h"
 #include "windowContextState.h"
 
 namespace gits {

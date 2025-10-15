@@ -16,7 +16,6 @@ ${AUTO_GENERATED_HEADER}
 #include "openglTypes.h"
 #include "openglFunction.h"
 #include "openglArguments.h"
-#include "config.h"
 #include "wglArguments.h"
 #include "wglFunctions.h"
 #include "platform.h"

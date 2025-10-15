@@ -10,7 +10,6 @@
 #include "captureManager.h"
 #include "gitsRecorder.h"
 #include "commandWritersCustom.h"
-#include "config.h"
 #include "log2.h"
 
 #include <fstream>

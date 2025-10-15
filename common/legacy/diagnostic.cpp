@@ -11,7 +11,6 @@
 #include "gits.h"
 #include "tools.h"
 #include "pragmas.h"
-#include "config.h"
 
 #include <string>
 #include <sstream>

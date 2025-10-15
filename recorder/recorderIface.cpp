@@ -13,7 +13,6 @@
  */
 
 #include "recorderIface.h"
-#include "config.h"
 #include "log.h"
 #include "gits.h"
 #include "diagnostic.h"

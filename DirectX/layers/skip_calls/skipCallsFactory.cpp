@@ -7,7 +7,6 @@
 // ===================== end_copyright_notice ==============================
 
 #include "skipCallsFactory.h"
-#include "config.h"
 #include "configurationLib.h"
 #include "skipCallsOnConfigLayerAuto.h"
 #include "skipCallsOnResultLayerAuto.h"

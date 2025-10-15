@@ -18,7 +18,6 @@
 #include "gitsLoader.h"
 
 #include "exception.h"
-#include "config.h"
 #include "log2.h"
 #include "diagnostic.h"
 #include "platform.h"

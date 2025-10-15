@@ -20,7 +20,6 @@
 #include "buffer.h"
 #include "exception.h"
 #include "log2.h"
-#include "config.h"
 #include "pragmas.h"
 
 #include <iostream>

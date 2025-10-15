@@ -24,7 +24,6 @@
 #include "exception.h"
 #include "streams.h"
 #include "log.h"
-#include "config.h"
 #include "pragmas.h"
 
 #include <iostream>

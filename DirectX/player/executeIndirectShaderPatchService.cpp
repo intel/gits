@@ -7,7 +7,6 @@
 // ===================== end_copyright_notice ==============================
 
 #include "executeIndirectShaderPatchService.h"
-#include "config.h"
 #include "gits.h"
 #include "log2.h"
 

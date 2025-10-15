@@ -10,7 +10,6 @@
 
 #include "dynamic_linker.h"
 #include "log2.h"
-#include "config.h"
 #include "gits.h"
 #include "l0Header.h"
 #include "l0Log.h"

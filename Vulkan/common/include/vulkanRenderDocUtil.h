@@ -10,7 +10,6 @@
 #include "platform.h"
 #ifdef GITS_PLATFORM_WINDOWS
 
-#include "config.h"
 #include "gits.h"
 #include "vulkan_basic.h"
 

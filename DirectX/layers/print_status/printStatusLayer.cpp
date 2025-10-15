@@ -7,7 +7,6 @@
 // ===================== end_copyright_notice ==============================
 
 #include "printStatusLayer.h"
-#include "config.h"
 #include "log2.h"
 
 namespace gits {

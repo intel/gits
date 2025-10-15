@@ -15,7 +15,6 @@
 
 #include "platform.h"
 #include "windowContextState.h"
-#include "config.h"
 #include "openglDrivers.h"
 #ifndef BUILD_FOR_CCODE
 #include "ptbl_glxLibrary.h"

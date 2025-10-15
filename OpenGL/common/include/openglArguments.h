@@ -23,7 +23,6 @@
 #include "openglEnums.h"
 #include "openglDrivers.h"
 #include "stateDynamic.h"
-#include "config.h"
 #include "mapping.h"
 
 #include <set>

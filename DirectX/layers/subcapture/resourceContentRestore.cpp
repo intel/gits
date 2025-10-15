@@ -13,7 +13,6 @@
 #include "commandWritersAuto.h"
 #include "commandsCustom.h"
 #include "commandWritersCustom.h"
-#include "config.h"
 
 #include <limits>
 #include <wrl/client.h>

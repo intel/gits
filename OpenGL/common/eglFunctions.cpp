@@ -20,7 +20,6 @@
 #include "library.h"
 #include "log.h"
 #include "pragmas.h"
-#include "config.h"
 #include "platform.h"
 #include "ptblLibrary.h"
 #include "ptbl_eglLibrary.h"
