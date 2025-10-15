@@ -64,6 +64,9 @@ void BindingTablesDump::dumpBuffer(DumpInfo& dumpInfo, void* data) {
     unsigned byteOffset = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
     for (unsigned rootParameterIndex = 0; rootParameterIndex < desc->NumParameters;
          ++rootParameterIndex) {
+      if (byteOffset >= info.stride) {
+        break;
+      }
       const D3D12_ROOT_PARAMETER& param = desc->pParameters[rootParameterIndex];
       if (param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS) {
         byteOffset += sizeof(uint32_t) * param.Constants.Num32BitValues;
@@ -71,6 +74,9 @@ void BindingTablesDump::dumpBuffer(DumpInfo& dumpInfo, void* data) {
                  param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_SRV ||
                  param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_UAV) {
         byteOffset = align(byteOffset, sizeof(UINT64));
+        if (byteOffset >= info.stride) {
+          break;
+        }
 
         UINT64* address = reinterpret_cast<UINT64*>(p + byteOffset);
         if (*address) {
@@ -84,6 +90,9 @@ void BindingTablesDump::dumpBuffer(DumpInfo& dumpInfo, void* data) {
         byteOffset += sizeof(UINT64);
       } else if (param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE) {
         byteOffset = align(byteOffset, sizeof(UINT64));
+        if (byteOffset >= info.stride) {
+          break;
+        }
 
         UINT64* descriptor = reinterpret_cast<UINT64*>(p + byteOffset);
         if (*descriptor) {

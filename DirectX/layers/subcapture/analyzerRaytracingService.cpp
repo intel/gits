@@ -71,7 +71,7 @@ void AnalyzerRaytracingService::fillStateObjectInfo(
     D3D12_STATE_OBJECT_DESC_Argument& stateObjectDesc, BindingTablesDump::StateObjectInfo* info) {
 
   std::unordered_map<const D3D12_STATE_SUBOBJECT*, unsigned> localSignatures;
-  std::unordered_map<std::wstring, std::wstring> hitGroups;
+  std::unordered_map<std::wstring, std::unordered_set<std::wstring>> hitGroups;
   for (unsigned i = 0; i < stateObjectDesc.value->NumSubobjects; ++i) {
     switch (stateObjectDesc.value->pSubobjects[i].Type) {
     case D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE: {
@@ -104,13 +104,13 @@ void AnalyzerRaytracingService::fillStateObjectInfo(
       D3D12_HIT_GROUP_DESC& desc = *static_cast<D3D12_HIT_GROUP_DESC*>(
           const_cast<void*>(stateObjectDesc.value->pSubobjects[i].pDesc));
       if (desc.AnyHitShaderImport) {
-        hitGroups[desc.AnyHitShaderImport] = desc.HitGroupExport;
+        hitGroups[desc.AnyHitShaderImport].insert(desc.HitGroupExport);
       }
       if (desc.ClosestHitShaderImport) {
-        hitGroups[desc.ClosestHitShaderImport] = desc.HitGroupExport;
+        hitGroups[desc.ClosestHitShaderImport].insert(desc.HitGroupExport);
       }
       if (desc.IntersectionShaderImport) {
-        hitGroups[desc.IntersectionShaderImport] = desc.HitGroupExport;
+        hitGroups[desc.IntersectionShaderImport].insert(desc.HitGroupExport);
       }
     } break;
     }
@@ -118,9 +118,11 @@ void AnalyzerRaytracingService::fillStateObjectInfo(
 
   std::unordered_map<std::wstring, unsigned> exportToRootSignature;
   for (auto& itExport : info->exportToRootSignature) {
-    auto it = hitGroups.find(itExport.first);
-    if (it != hitGroups.end()) {
-      exportToRootSignature[it->second] = itExport.second;
+    auto itGroups = hitGroups.find(itExport.first);
+    if (itGroups != hitGroups.end()) {
+      for (auto& it : itGroups->second) {
+        exportToRootSignature[it] = itExport.second;
+      }
     }
   }
   for (auto& it : exportToRootSignature) {
