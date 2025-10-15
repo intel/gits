@@ -43,6 +43,7 @@ public:
   void post(ID3D12GraphicsCommandListCopyResourceCommand& command) override;
   void post(ID3D12GraphicsCommandListCopyTilesCommand& command) override;
   void post(ID3D12GraphicsCommandListResolveSubresourceCommand& command) override;
+  void post(ID3D12GraphicsCommandListResourceBarrierCommand& command) override;
   void post(ID3D12GraphicsCommandList1ResolveSubresourceRegionCommand& command) override;
   void post(
       ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& command) override;
@@ -53,6 +54,7 @@ public:
   void post(ID3D12GraphicsCommandList6DispatchMeshCommand& command) override;
   void post(ID3D12GraphicsCommandListOMSetRenderTargetsCommand& command) override;
   void post(ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& command) override;
+  void post(ID3D12GraphicsCommandList7BarrierCommand& command) override;
   void post(ID3D12DeviceCreateFenceCommand& command) override;
   void post(ID3D12FenceSignalCommand& command) override;
   void post(ID3D12CommandQueueSignalCommand& command) override;
@@ -65,7 +67,7 @@ private:
   std::mutex mutex_;
 
   struct Command {
-    Command(const std::string& s, bool draw = false) : str(s), isDraw(draw){};
+    Command(const std::string& s, bool draw = false) : str(s), isDraw(draw) {}
     std::string str;
     bool isDraw;
   };

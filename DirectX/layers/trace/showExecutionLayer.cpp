@@ -273,6 +273,17 @@ void ShowExecutionLayer::post(ID3D12GraphicsCommandListResolveSubresourceCommand
   commandListCommands_[command.object_.key].emplace_back(outBuff_.extractString());
 }
 
+void ShowExecutionLayer::post(ID3D12GraphicsCommandListResourceBarrierCommand& command) {
+  outBuff_.flush();
+  CommandPrinter p(outBuff_, printerState_, command, "ID3D12GraphicsCommandList::ResourceBarrier",
+                   command.object_.key);
+  p.addArgument(command.NumBarriers_);
+  p.addArgument(command.pBarriers_);
+  p.print(false);
+
+  commandListCommands_[command.object_.key].emplace_back(outBuff_.extractString());
+}
+
 void ShowExecutionLayer::post(ID3D12GraphicsCommandList1ResolveSubresourceRegionCommand& command) {
   outBuff_.flush();
   CommandPrinter p(outBuff_, printerState_, command,
@@ -386,6 +397,17 @@ void ShowExecutionLayer::post(
                    command.object_.key);
   p.addArgument(command.RootParameterIndex_);
   p.addArgument(command.BufferLocation_);
+  p.print(false);
+
+  commandListCommands_[command.object_.key].emplace_back(outBuff_.extractString());
+}
+
+void ShowExecutionLayer::post(ID3D12GraphicsCommandList7BarrierCommand& command) {
+  outBuff_.flush();
+  CommandPrinter p(outBuff_, printerState_, command, "ID3D12GraphicsCommandList7::Barrier",
+                   command.object_.key);
+  p.addArgument(command.NumBarrierGroups_);
+  p.addArgument(command.pBarrierGroups_);
   p.print(false);
 
   commandListCommands_[command.object_.key].emplace_back(outBuff_.extractString());
