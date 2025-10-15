@@ -1089,6 +1089,45 @@ FastOStream& operator<<(
   return stream;
 }
 
+FastOStream& operator<<(FastOStream& stream,
+                        PointerArgument<D3D12_UNORDERED_ACCESS_VIEW_DESC>& arg) {
+  if (!arg.value) {
+    return stream << "nullptr";
+  }
+
+  stream << "D3D12_UNORDERED_ACCESS_VIEW_DESC{";
+  stream << arg.value->Format << ", ";
+  stream << arg.value->ViewDimension << ", ";
+  stream << toStr(arg.value->ViewDimension) << "{";
+  switch (arg.value->ViewDimension) {
+  case D3D12_UAV_DIMENSION_BUFFER:
+    stream << arg.value->Buffer;
+    break;
+  case D3D12_UAV_DIMENSION_TEXTURE1D:
+    stream << arg.value->Texture1D;
+    break;
+  case D3D12_UAV_DIMENSION_TEXTURE1DARRAY:
+    stream << arg.value->Texture1DArray;
+    break;
+  case D3D12_UAV_DIMENSION_TEXTURE2D:
+    stream << arg.value->Texture2D;
+    break;
+  case D3D12_UAV_DIMENSION_TEXTURE2DARRAY:
+    stream << arg.value->Texture2DArray;
+    break;
+  case D3D12_UAV_DIMENSION_TEXTURE2DMS:
+    stream << arg.value->Texture2DMS;
+    break;
+  case D3D12_UAV_DIMENSION_TEXTURE2DMSARRAY:
+    stream << arg.value->Texture2DMSArray;
+    break;
+  case D3D12_UAV_DIMENSION_TEXTURE3D:
+    stream << arg.value->Texture3D;
+    break;
+  }
+  stream << "}}";
+}
+
 FastOStream& operator<<(FastOStream& stream, D3D12_BARRIER_GROUPs_Argument& arg) {
   if (!arg.value) {
     return stream << "nullptr";
