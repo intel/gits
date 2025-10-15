@@ -1126,6 +1126,7 @@ FastOStream& operator<<(FastOStream& stream,
     break;
   }
   stream << "}}";
+  return stream;
 }
 
 FastOStream& operator<<(FastOStream& stream, D3D12_BARRIER_GROUPs_Argument& arg) {
