@@ -742,6 +742,15 @@ FastOStream& operator<<(FastOStream& stream, const INTCExtensionVersion& value) 
   return stream;
 }
 
+FastOStream& operator<<(FastOStream& stream, const INTCExtensionVersion* value) {
+  if (value) {
+    stream << *value;
+  } else {
+    stream << "nullptr";
+  }
+  return stream;
+}
+
 FastOStream& operator<<(FastOStream& stream, const INTCDeviceInfo& value) {
   stream << "INTCDeviceInfo{";
   stream << value.GPUMaxFreq << ", ";
@@ -755,6 +764,15 @@ FastOStream& operator<<(FastOStream& stream, const INTCDeviceInfo& value) {
   return stream;
 }
 
+FastOStream& operator<<(FastOStream& stream, const INTCDeviceInfo* value) {
+  if (value) {
+    stream << *value;
+  } else {
+    stream << "nullptr";
+  }
+  return stream;
+}
+
 FastOStream& operator<<(FastOStream& stream, const INTCExtensionAppInfo& value) {
   stream << "INTCExtensionAppInfo{";
   printString(stream, value.pApplicationName) << ", ";
@@ -765,12 +783,30 @@ FastOStream& operator<<(FastOStream& stream, const INTCExtensionAppInfo& value) 
   return stream;
 }
 
+FastOStream& operator<<(FastOStream& stream, const INTCExtensionAppInfo* value) {
+  if (value) {
+    stream << *value;
+  } else {
+    stream << "nullptr";
+  }
+  return stream;
+}
+
 FastOStream& operator<<(FastOStream& stream, const INTCAppInfoVersion& value) {
   stream << "INTCAppInfoVersion{";
   stream << value.major << ", ";
   stream << value.minor << ", ";
   stream << value.patch;
   stream << "}";
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const INTCAppInfoVersion* value) {
+  if (value) {
+    stream << *value;
+  } else {
+    stream << "nullptr";
+  }
   return stream;
 }
 

@@ -66,33 +66,29 @@ void IntelExtensionsService::setApplicationInfo() {
     return {parts[0], parts[1], parts[2]};
   };
 
-  std::string appName;
+  std::string appName = CGits::Instance().FilePlayer().GetApplicationName();
   std::string appVersion = "0.0.0";
   std::string engineName;
   std::string engineVersion = "0.0.0";
-
-  INTCExtensionAppInfo1 appInfo{};
 
   const auto& appInfoConfigOverride = Configurator::Get().directx.player.applicationInfoOverride;
   if (appInfoConfigOverride.enabled) {
     appName = appInfoConfigOverride.applicationName;
 
     appVersion = appInfoConfigOverride.applicationVersion;
-    appInfo.ApplicationVersion = parseVersion(appVersion);
+    appInfo_.ApplicationVersion = parseVersion(appVersion);
 
     engineName = appInfoConfigOverride.engineName;
-    const std::wstring engineNameW(engineName.begin(), engineName.end());
-    appInfo.pEngineName = engineNameW.c_str();
+    engineName_ = std::wstring(engineName.begin(), engineName.end());
+    appInfo_.pEngineName = engineName_.c_str();
 
     engineVersion = appInfoConfigOverride.engineVersion;
-    appInfo.EngineVersion = parseVersion(engineVersion);
-  } else {
-    appName = CGits::Instance().FilePlayer().GetApplicationName();
+    appInfo_.EngineVersion = parseVersion(engineVersion);
   }
-  const std::wstring appNameW(appName.begin(), appName.end());
-  appInfo.pApplicationName = appNameW.c_str();
+  appName_ = std::wstring(appName.begin(), appName.end());
+  appInfo_.pApplicationName = appName_.c_str();
 
-  HRESULT hr = INTC_D3D12_SetApplicationInfo(&appInfo);
+  HRESULT hr = INTC_D3D12_SetApplicationInfo(&appInfo_);
   if (hr != S_OK) {
     LOG_ERROR << "INTC_D3D12_SetApplicationInfo failed - Application name is not set.";
   } else {
@@ -100,6 +96,10 @@ void IntelExtensionsService::setApplicationInfo() {
              << "), Engine: \"" << engineName << "\" (" << engineVersion << ")";
     applicationNameSet_ = true;
   }
+}
+
+const INTCExtensionAppInfo1& IntelExtensionsService::getAppInfo() const {
+  return appInfo_;
 }
 
 } // namespace DirectX

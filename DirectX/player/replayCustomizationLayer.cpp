@@ -22,6 +22,24 @@
 namespace gits {
 namespace DirectX {
 
+static std::string appInfoToStr(INTCExtensionAppInfo1* appInfo) {
+  if (!appInfo) {
+    return "Application: nullptr, Engine: nullptr";
+  }
+
+  std::wstring appNameW = appInfo->pApplicationName;
+  auto appName = std::string(appNameW.begin(), appNameW.end());
+  std::wstring engineNameW = appInfo->pEngineName;
+  auto engineName = std::string(engineNameW.begin(), engineNameW.end());
+
+  std::ostringstream oss;
+  oss << "Application :\"" << appName << "\" (" << appInfo->ApplicationVersion.major << "."
+      << appInfo->ApplicationVersion.minor << "." << appInfo->ApplicationVersion.patch << ")"
+      << ", Engine: \"" << engineName << "\" (" << appInfo->EngineVersion.major << "."
+      << appInfo->EngineVersion.minor << "." << appInfo->EngineVersion.patch << ")";
+  return oss.str();
+}
+
 ReplayCustomizationLayer::ReplayCustomizationLayer(PlayerManager& manager)
     : Layer("ReplayCustomization"),
       manager_(manager),
@@ -1209,19 +1227,48 @@ void ReplayCustomizationLayer::pre(INTC_D3D12_SetApplicationInfoCommand& c) {
     c.skip = true;
   } else {
     // Print application info (may affect driver behavior on playback)
-    std::wstring appNameW = c.pExtensionAppInfo_.pApplicationName;
-    auto appName = std::string(appNameW.begin(), appNameW.end());
-    std::wstring engineNameW = c.pExtensionAppInfo_.pEngineName;
-    auto engineName = std::string(engineNameW.begin(), engineNameW.end());
-    LOG_INFO << "INTC_D3D12_SetApplicationInfo - Application: \"" << appName << "\" ("
-             << c.pExtensionAppInfo_.value->ApplicationVersion.major << "."
-             << c.pExtensionAppInfo_.value->ApplicationVersion.minor << "."
-             << c.pExtensionAppInfo_.value->ApplicationVersion.patch << ")"
-             << ", Engine: \"" << engineName << "\" ("
-             << c.pExtensionAppInfo_.value->EngineVersion.major << "."
-             << c.pExtensionAppInfo_.value->EngineVersion.minor << "."
-             << c.pExtensionAppInfo_.value->EngineVersion.patch << ")";
+    LOG_INFO << "INTC_D3D12_SetApplicationInfo - " << appInfoToStr(c.pExtensionAppInfo_.value);
   }
+}
+
+void ReplayCustomizationLayer::pre(INTC_D3D12_CreateDeviceExtensionContextCommand& c) {
+  if (!c.pExtensionAppInfo_.value) {
+    return;
+  }
+
+  if (Configurator::Get().directx.player.applicationInfoOverride.enabled) {
+    // Override with application info from config
+    const auto& appInfo = manager_.getIntelExtensionsService().getAppInfo();
+    c.pExtensionAppInfo_.value->pApplicationName = appInfo.pApplicationName;
+    c.pExtensionAppInfo_.value->ApplicationVersion = appInfo.ApplicationVersion.major;
+    c.pExtensionAppInfo_.value->pEngineName = appInfo.pEngineName;
+    c.pExtensionAppInfo_.value->EngineVersion = appInfo.EngineVersion.major;
+  }
+  // Print application info (may affect driver behavior on playback)
+  auto* appInfo = c.pExtensionAppInfo_.value;
+  std::wstring appName = appInfo->pApplicationName ? appInfo->pApplicationName : L"";
+  std::wstring engineName = appInfo->pEngineName ? appInfo->pEngineName : L"";
+  LOG_INFO << "INTC_D3D12_CreateDeviceExtensionContext - Application: \"" << appName << "\" ("
+           << appInfo->ApplicationVersion << "), Engine: \"" << engineName << "\" ("
+           << appInfo->EngineVersion << ")";
+}
+
+void ReplayCustomizationLayer::pre(INTC_D3D12_CreateDeviceExtensionContext1Command& c) {
+  if (!c.pExtensionAppInfo_.value) {
+    return;
+  }
+
+  if (Configurator::Get().directx.player.applicationInfoOverride.enabled) {
+    // Override with application info from config
+    const auto& appInfo = manager_.getIntelExtensionsService().getAppInfo();
+    c.pExtensionAppInfo_.value->pApplicationName = appInfo.pApplicationName;
+    c.pExtensionAppInfo_.value->ApplicationVersion = appInfo.ApplicationVersion;
+    c.pExtensionAppInfo_.value->pEngineName = appInfo.pEngineName;
+    c.pExtensionAppInfo_.value->EngineVersion = appInfo.EngineVersion;
+  }
+  // Print application info (may affect driver behavior on playback)
+  LOG_INFO << "INTC_D3D12_CreateDeviceExtensionContext1 - "
+           << appInfoToStr(c.pExtensionAppInfo_.value);
 }
 
 void ReplayCustomizationLayer::pre(INTC_D3D12_GetSupportedVersionsCommand& c) {

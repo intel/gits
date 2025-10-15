@@ -164,6 +164,8 @@ public:
   void pre(ID3D12SDKConfigurationSetSDKVersionCommand& command) override;
   void pre(ID3D12GraphicsCommandListPreviewConvertLinearAlgebraMatrixCommand& command) override;
   void pre(INTC_D3D12_SetApplicationInfoCommand& command) override;
+  void pre(INTC_D3D12_CreateDeviceExtensionContextCommand& command) override;
+  void pre(INTC_D3D12_CreateDeviceExtensionContext1Command& command) override;
   void pre(INTC_D3D12_GetSupportedVersionsCommand& command) override;
   void pre(NvAPI_D3D12_SetCreatePipelineStateOptionsCommand& command) override;
   void pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& command) override;
