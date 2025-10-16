@@ -151,7 +151,8 @@ namespace gits {
         return nullptr;
       }
     }
-    inline void lua_push_ext(lua_State* L, ${arg.get('name')}& val) {
+    template<>
+    inline void lua_push_ext(lua_State* L, std::conditional_t<std::is_trivially_constructible_v<${arg.get('name')}>, ${arg.get('name')}, ${arg.get('name')}&> val) {
       lua_newtable(L);
       int pos = lua_gettop(L);
       gits::lua::lua_push(L, &val);

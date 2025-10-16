@@ -21,7 +21,7 @@ namespace l0 {
     %if (func.get('type') != 'void' or len(func['args']) > 0):
 C${name}::C${name}(
       %if func.get('type') != 'void':
-  ze_result_t return_value${',' if len(func['args']) > 0 else ''}
+  ${func.get('type')} return_value${',' if len(func['args']) > 0 else ''}
       %endif
       %for arg in func['args']:
   ${arg['type']} ${arg['name']}${'' if loop.last else ','}

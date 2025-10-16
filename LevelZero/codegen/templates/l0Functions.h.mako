@@ -26,7 +26,7 @@ namespace gits {
     %if func.get('type') != 'void':
       static const unsigned RESULT_NUM = 1;
 
-      Cze_result_t _return_value;
+      C${func.get('type')} _return_value;
     %else:
       static const unsigned RESULT_NUM = 0;
 

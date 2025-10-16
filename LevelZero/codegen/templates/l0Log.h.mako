@@ -180,6 +180,12 @@ namespace gits {
       ${struct_body(name, arg, 1)}
     }
     %endif
+    %if "const " + name in used_types:
+    template<>
+    inline std::string ToStringHelper(const ${name}& val) {\
+      ${struct_body(name, arg, 0)}
+    }
+    %endif
   %elif "handle" in name and name + "*" in used_types:
     template<>
     inline std::string ToStringHelper(${name}* val) {

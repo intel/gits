@@ -570,6 +570,7 @@ inline void zeDriverGetLastErrorDescription_RUNWRAP(Cze_result_t& _return_value,
                                                     [[maybe_unused]] COutArgument& _ppString) {
   const char* ppString = nullptr;
   _return_value.Value() = drv.zeDriverGetLastErrorDescription(*_hDriver, &ppString);
+  LOG_WARNING << ppString;
 }
 
 inline void zeCommandListAppendQueryKernelTimestamps_RUNWRAP(
@@ -963,6 +964,13 @@ inline void zeInitDrivers_RUNWRAP(Cze_result_t& _return_value,
   }
   _return_value.Value() = drv.zeInitDrivers(*_pCount, *_phDrivers, *_desc);
   zeInitDrivers_SD(*_return_value, *_pCount, *_phDrivers, *_desc);
+}
+
+inline void zerGetLastErrorDescription_RUNWRAP(Cze_result_t& _return_value,
+                                               [[maybe_unused]] COutArgument& _ppString) {
+  const char* pString = nullptr;
+  _return_value.Value() = drv.zerGetLastErrorDescription(&pString);
+  LOG_WARNING << pString;
 }
 
 } // namespace l0

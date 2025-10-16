@@ -125,6 +125,28 @@ var5=VarDef(name='pnumWaitEvents',type='uint32_t*',tag='inout'),
 var6=VarDef(name='pphWaitEvents',type='ze_event_handle_t**',tag='inout'),
 )
 
+Argument(name='ze_command_list_append_launch_kernel_with_arguments_params_t',enabled=False,
+var1=VarDef(name='phCommandList',type='ze_command_list_handle_t*',tag='inout'),
+var2=VarDef(name='phKernel',type='ze_kernel_handle_t*',tag='inout'),
+var3=VarDef(name='pgroupCounts',type='const ze_group_count_t*',tag='inout'),
+var4=VarDef(name='pgroupSizes',type='const ze_group_size_t*',tag='inout'),
+var5=VarDef(name='ppArguments',type='void ***',tag='inout'),
+var6=VarDef(name='ppNext',type='const void **',tag='inout',wrapType='CExtensionStructCore'),
+var7=VarDef(name='phSignalEvent',type='ze_event_handle_t*',tag='inout'),
+var8=VarDef(name='pnumWaitEvents',type='uint32_t*',tag='inout'),
+var9=VarDef(name='pphWaitEvents',type='ze_event_handle_t**',tag='inout'),
+)
+
+Argument(name='ze_command_list_append_launch_kernel_with_parameters_params_t',enabled=False,
+var1=VarDef(name='phCommandList',type='ze_command_list_handle_t*',tag='inout'),
+var2=VarDef(name='phKernel',type='ze_kernel_handle_t*',tag='inout'),
+var3=VarDef(name='ppGroupCounts',type='const ze_group_count_t**',tag='inout'),
+var4=VarDef(name='ppNext',type='const void **',tag='inout',wrapType='CExtensionStructCore'),
+var5=VarDef(name='phSignalEvent',type='ze_event_handle_t*',tag='inout'),
+var6=VarDef(name='pnumWaitEvents',type='uint32_t*',tag='inout'),
+var7=VarDef(name='pphWaitEvents',type='ze_event_handle_t**',tag='inout'),
+)
+
 Argument(name='ze_command_list_append_launch_multiple_kernels_indirect_params_t',enabled=False,
 var1=VarDef(name='phCommandList',type='ze_command_list_handle_t*',tag='inout'),
 var2=VarDef(name='pnumKernels',type='uint32_t*',tag='inout'),
@@ -578,6 +600,10 @@ var3=VarDef(name='pregionSize',type='size_t*',tag='inout'),
 var4=VarDef(name='pcacheRegion',type='ze_cache_ext_region_t*',tag='inout'),
 )
 
+Argument(name='ze_device_synchronize_params_t',enabled=False,
+var1=VarDef(name='phDevice',type='ze_device_handle_t*',tag='inout'),
+)
+
 Argument(name='ze_driver_get_params_t',enabled=False,
 var1=VarDef(name='ppCount',type='uint32_t**',tag='inout'),
 var2=VarDef(name='pphDrivers',type='ze_driver_handle_t**',tag='inout'),
@@ -586,6 +612,10 @@ var2=VarDef(name='pphDrivers',type='ze_driver_handle_t**',tag='inout'),
 Argument(name='ze_driver_get_api_version_params_t',enabled=False,
 var1=VarDef(name='phDriver',type='ze_driver_handle_t*',tag='inout'),
 var2=VarDef(name='pversion',type='ze_api_version_t**',tag='inout'),
+)
+
+Argument(name='ze_driver_get_default_context_params_t',enabled=False,
+var1=VarDef(name='phDriver',type='ze_driver_handle_t*',tag='inout'),
 )
 
 Argument(name='ze_driver_get_extension_function_address_params_t',enabled=False,
@@ -860,6 +890,12 @@ var3=VarDef(name='pphKernel',type='ze_kernel_handle_t**',tag='inout'),
 
 Argument(name='ze_kernel_destroy_params_t',enabled=False,
 var1=VarDef(name='phKernel',type='ze_kernel_handle_t*',tag='inout'),
+)
+
+Argument(name='ze_kernel_get_allocation_properties_exp_params_t',enabled=False,
+var1=VarDef(name='phKernel',type='ze_kernel_handle_t*',tag='inout'),
+var2=VarDef(name='ppCount',type='uint32_t**',tag='inout'),
+var3=VarDef(name='ppAllocationProperties',type='ze_kernel_allocation_exp_properties_t**',tag='inout'),
 )
 
 Argument(name='ze_kernel_get_binary_exp_params_t',enabled=False,
@@ -1374,6 +1410,20 @@ arg3=ArgDef(name='pTracerUserData',type='void*'),
 arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
 )
 
+Callback(name='ze_pfnCommandListAppendLaunchKernelWithArgumentsCb_t',component='ze_command_list_callbacks_t',
+arg1=ArgDef(name='params',type='ze_command_list_append_launch_kernel_with_arguments_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
+Callback(name='ze_pfnCommandListAppendLaunchKernelWithParametersCb_t',component='ze_command_list_callbacks_t',
+arg1=ArgDef(name='params',type='ze_command_list_append_launch_kernel_with_parameters_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
 Callback(name='ze_pfnCommandListAppendLaunchMultipleKernelsIndirectCb_t',component='ze_command_list_callbacks_t',
 arg1=ArgDef(name='params',type='ze_command_list_append_launch_multiple_kernels_indirect_params_t*'),
 arg2=ArgDef(name='result',type='ze_result_t'),
@@ -1871,6 +1921,13 @@ arg3=ArgDef(name='pTracerUserData',type='void*'),
 arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
 )
 
+Callback(name='ze_pfnDeviceSynchronizeCb_t',component='ze_device_callbacks_t',
+arg1=ArgDef(name='params',type='ze_device_synchronize_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
 Callback(name='ze_pfnDriverGetCb_t',component='ze_driver_callbacks_t',
 arg1=ArgDef(name='params',type='ze_driver_get_params_t*'),
 arg2=ArgDef(name='result',type='ze_result_t'),
@@ -1880,6 +1937,13 @@ arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
 
 Callback(name='ze_pfnDriverGetApiVersionCb_t',component='ze_driver_callbacks_t',
 arg1=ArgDef(name='params',type='ze_driver_get_api_version_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
+Callback(name='ze_pfnDriverGetDefaultContextCb_t',component='ze_driver_callbacks_t',
+arg1=ArgDef(name='params',type='ze_driver_get_default_context_params_t*'),
 arg2=ArgDef(name='result',type='ze_result_t'),
 arg3=ArgDef(name='pTracerUserData',type='void*'),
 arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
@@ -2237,6 +2301,13 @@ arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
 
 Callback(name='ze_pfnKernelDestroyCb_t',component='ze_kernel_callbacks_t',
 arg1=ArgDef(name='params',type='ze_kernel_destroy_params_t*'),
+arg2=ArgDef(name='result',type='ze_result_t'),
+arg3=ArgDef(name='pTracerUserData',type='void*'),
+arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),
+)
+
+Callback(name='ze_pfnKernelGetAllocationPropertiesExpCb_t',component='ze_kernel_exp_callbacks_t',
+arg1=ArgDef(name='params',type='ze_kernel_get_allocation_properties_exp_params_t*'),
 arg2=ArgDef(name='result',type='ze_result_t'),
 arg3=ArgDef(name='pTracerUserData',type='void*'),
 arg4=ArgDef(name='ppTracerInstanceUserData',type='void**'),

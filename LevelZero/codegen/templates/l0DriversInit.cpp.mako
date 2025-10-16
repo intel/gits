@@ -84,7 +84,7 @@ int lua_${func.get('name')}(lua_State* L) {
   auto ${get_arg_name(arg['name'])} = lua_to_ext<${get_arg_type(arg['name'], arg['type'])}>(L, ${loop.index+1});
     %endfor
   bypass_luascript = true;
-  ze_result_t ret = drv.inject.${func.get('name')}(${make_params(func)});
+  ${func.get('type')} ret = drv.inject.${func.get('name')}(${make_params(func)});
     %for arg in func['args']:
       %if 'out' in arg['tag'] and has_vars(arg['type'], arguments):
   lua_setTableFields(L, ${loop.index+1}, ${get_arg_name(arg['name'])});
@@ -92,7 +92,7 @@ int lua_${func.get('name')}(lua_State* L) {
     %endfor
   lua_pop(L, lua_gettop(L));
   bypass_luascript = false;
-  lua_push_ext<ze_result_t>(L, ret);
+  lua_push_ext<${func.get('type')}>(L, ret);
   return 1;
 }
 #endif
@@ -181,7 +181,7 @@ ${func.get('type')} __zecall default_${func.get('name')}(
   if (drv.original.${func.get('name')} == nullptr) {
     if (!load_l0_function(drv.original.${func.get('name')}, "${func.get('name')}")) {
       LOG_ERROR << "Could not load ${func.get('name')} function.";
-      return ${'ZE_RESULT_ERROR_UNINITIALIZED' if func.get('type') == 'ze_result_t' else 'nullptr'};
+      return ${'ZE_RESULT_ERROR_UNINITIALIZED' if func.get('type') == 'ze_result_t' else (f'0' if func.get('type') == 'uint32_t' else 'nullptr')};
     }
   }
   %endif
