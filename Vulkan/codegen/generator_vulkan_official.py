@@ -1421,7 +1421,7 @@ arg2=ArgDef(name='depthClampMode', type='VkDepthClampModeEXT'),
 arg3=ArgDef(name='pDepthClampRange', type='const VkDepthClampRangeEXT*')
 )
 
-Function(name='vkCmdSetDepthClipEnableEXT', enabled=False, type=FuncType.PARAM,
+Function(name='vkCmdSetDepthClipEnableEXT', enabled=True, type=FuncType.COMMAND_BUFFER_SET, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='depthClipEnable', type='VkBool32')
@@ -1703,13 +1703,13 @@ arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='rasterizationStream', type='uint32_t')
 )
 
-Function(name='vkCmdSetRasterizerDiscardEnable', enabled=False, type=FuncType.PARAM,
+Function(name='vkCmdSetRasterizerDiscardEnable', enabled=True, type=FuncType.COMMAND_BUFFER_SET, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='rasterizerDiscardEnable', type='VkBool32')
 )
 
-Function(name='vkCmdSetRasterizerDiscardEnableEXT', enabled=False, type=FuncType.PARAM,
+Function(name='vkCmdSetRasterizerDiscardEnableEXT', enabled=True, type=FuncType.COMMAND_BUFFER_SET, tokenCache="SD()._commandbufferstates[commandBuffer]->tokensBuffer",
 retV=RetDef(type='void'),
 arg1=ArgDef(name='commandBuffer', type='VkCommandBuffer'),
 arg2=ArgDef(name='rasterizerDiscardEnable', type='VkBool32')
@@ -14017,7 +14017,7 @@ var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='dynamicRenderingLocalRead', type='VkBool32')
 )
 
-Struct(name='VkPhysicalDeviceDynamicRenderingUnusedAttachmentsFeaturesEXT_', enabled=False,
+Struct(name='VkPhysicalDeviceDynamicRenderingUnusedAttachmentsFeaturesEXT_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='dynamicRenderingUnusedAttachments', type='VkBool32')
@@ -14800,12 +14800,6 @@ Struct(name='VkPhysicalDeviceMaintenance4Properties_', enabled=False,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
 var3=VarDef(name='maxBufferSize', type='VkDeviceSize')
-)
-
-Struct(name='VkPhysicalDeviceMaintenance5FeaturesKHR_', enabled=False,
-var1=VarDef(name='sType', type='VkStructureType'),
-var2=VarDef(name='pNext', type='void*'),
-var3=VarDef(name='maintenance5', type='VkBool32')
 )
 
 Struct(name='VkPhysicalDeviceMaintenance5PropertiesKHR_', enabled=False,
@@ -18999,7 +18993,7 @@ var3=VarDef(name='hostImageCopy', type='VkBool32'),
 Struct(name='VkPhysicalDeviceMaintenance5FeaturesKHR_', enabled=True,
 var1=VarDef(name='sType', type='VkStructureType'),
 var2=VarDef(name='pNext', type='void*'),
-var3=VarDef(name='maintenance5', type='VkBool32'),
+var3=VarDef(name='maintenance5', type='VkBool32')
 )
 
 Function(name='vkAllocationFunction', enabled=False, type=FuncType.PARAM, level=FuncLevel.PROTOTYPE,

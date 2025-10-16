@@ -414,13 +414,7 @@ void SetRangeSpecial(Configuration& config,
 namespace {
 #ifdef GITS_PLATFORM_WINDOWS
 std::vector<std::string> renderDocCompatibilitySuppressedExtensions = {
-    "VK_EXT_graphics_pipeline_library",
-    "VK_EXT_extended_dynamic_state3",
-    "VK_EXT_external_memory_host",
-    "VK_KHR_map_memory2",
-    "VK_EXT_dynamic_rendering_unused_attachments",
-    "VK_EXT_host_image_copy",
-    "VK_KHR_maintenance5"};
+    "VK_EXT_external_memory_host"};
 #endif
 } // namespace
 
@@ -497,7 +491,7 @@ void DeriveConfigData<Configuration::Vulkan::Recorder>(Configuration::Vulkan::Re
   }
 
 #ifdef GITS_PLATFORM_WINDOWS
-  if (config.vulkan.recorder.renderDocCompatibility) {
+  if (Configurator::IsRecorder() && config.vulkan.recorder.renderDocCompatibility) {
     auto& rdocSuppressExtensions = renderDocCompatibilitySuppressedExtensions;
     auto& suppressExtensions = config.vulkan.shared.suppressExtensions;
     std::copy_if(rdocSuppressExtensions.begin(), rdocSuppressExtensions.end(),

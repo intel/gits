@@ -38,10 +38,9 @@ typedef enum ${enum.name}_ ${parent_type}{
 % endfor
 \
 % for struct in vk_structs:
-${struct.type} ${struct.name}_;
-typedef ${struct.name}_ ${struct.name};
-
+${struct.type} ${struct.name};
 % endfor
+
 \
 % for token in vk_functions:
 <%
@@ -62,7 +61,7 @@ ${multiline_params});
 #endif
 \
 % for struct in dependency_ordered(vk_structs):
-${struct.type} ${struct.name}_ {
+${struct.type} ${struct.name} {
 ${fields_to_str(struct.fields, '  {type} {name}{bitfield}{array};\n', '\n')}
 };
 

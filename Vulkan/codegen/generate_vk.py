@@ -76,7 +76,7 @@ vulkan_uint64: list[str] = vulkan_flags64 + [
 vulkan_unions: list[str] = []
 for struct in get_structs():
   if struct.type == 'union':
-    vulkan_unions.append(struct.name.rstrip('_'))
+    vulkan_unions.append(struct.name)
 
 vulkan_other_primitives: list[str] = [
     "bool",
@@ -95,9 +95,7 @@ vulkan_other_primitives: list[str] = [
 ]
 
 vulkan_enums: list[str] = [enum.name for enum in get_enums()]
-
-# TODO: Remove the rstrip once '_' is removed from struct names in generator data.
-vulkan_structs: list[str] = [struct.name.rstrip('_') for struct in get_structs()]
+vulkan_structs: list[str] = [struct.name for struct in get_structs()]
 
 primitive_types: list[str] = (
     vulkan_enums
@@ -389,7 +387,7 @@ def without_older_versions(input: list[Versioned]) -> list[Versioned]:
 def dependency_ordered(
     structs: list[VkStruct],
     *,
-    use_undecorated_types: bool = False,
+    use_undecorated_types: bool = True,
 ) -> list[VkStruct]:
     """
     Order structs by putting dependencies first.
@@ -409,9 +407,9 @@ def dependency_ordered(
     structs = without_older_versions(structs)
 
     result: list[VkStruct] = []
-
     struct_type_names: set[str] = set((s.name for s in structs))
     declared_structs: list[str] = []
+
     while len(declared_structs) < len(structs):
         for struct in structs:
             if struct.name not in declared_structs:
@@ -419,7 +417,8 @@ def dependency_ordered(
                 all_dependencies_met: bool = True
 
                 for field in struct.fields:
-                    bare_type: str = undecorated_type(field.type)
+                    arrayless_type, array = split_arrays_from_name(field.type)
+                    bare_type: str = undecorated_type(arrayless_type)
                     type_: str = bare_type if use_undecorated_types else field.type
 
                     not_yet_declared: bool = type_ not in declared_structs
@@ -451,7 +450,7 @@ def make_struct_field_log_code(field: Field) -> str:
     type_cast = make_flagbits_type_cast(field.type)
 
     if field.name == 'pNext':
-        result += ' << (PNextPointerTypeTag)c.pNext << ", " << '
+        result += ' << ToStr((PNextPointerTypeTag)c.pNext) << ", " << '
     elif field.count is not None:
         conditions = ''
 
