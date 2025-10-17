@@ -41,8 +41,8 @@ void HeapAllocationService::destroyHeapAllocation(unsigned heapKey) {
   GITS_ASSERT(itReplayAddress != heapAllocationsByCaptureAddress_.end());
 
   VirtualFree(itReplayAddress->second, 0, MEM_RELEASE);
-  heapAllocationsByCaptureAddress_.erase(itCaptureAddress->second);
   heapAllocationsByReplayAddress_.erase(itReplayAddress->second);
+  heapAllocationsByCaptureAddress_.erase(itCaptureAddress->second);
 }
 
 } // namespace DirectX
