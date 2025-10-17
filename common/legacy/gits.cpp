@@ -103,6 +103,7 @@ CGits::CGits(uint16_t v0, uint16_t v1, uint16_t v2, uint16_t v3)
       _sc(nullptr),
       _currentLocalMemoryUsage(0),
       _maxLocalMemoryUsage(0),
+      _configuration(Configurator::Get()),
       schedulerVersion(SchedulerVersion::VERSION_1_0) {
   _ptrToOrderedId[nullptr] = 0;
 }

@@ -220,6 +220,8 @@ private:
 
   std::unique_ptr<ImGuiHUD> _imGuiHUD;
 
+  const Configuration& _configuration;
+
   CGits();
   CGits(uint16_t v0, uint16_t v1, uint16_t v2, uint16_t v3);
   ~CGits();
@@ -490,6 +492,10 @@ public:
 
   void SetImGuiHUD(std::unique_ptr<ImGuiHUD> gitsHUD);
   ImGuiHUD* GetImGuiHUD();
+
+  const Configuration& GetConfiguration() {
+    return _configuration;
+  }
 
   friend std::ostream& operator<<(std::ostream& stream, const CGits& g);
   friend CBinOStream& operator<<(CBinOStream& stream, const CGits& g);
