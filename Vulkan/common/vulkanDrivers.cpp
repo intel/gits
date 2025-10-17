@@ -19,6 +19,7 @@
 #include "gits.h"
 #include "configurationLib.h"
 #include "lua_bindings.h"
+#include "vulkanTools.h"
 
 namespace gits {
 namespace lua {
@@ -70,6 +71,12 @@ static bool bypass_luascript;
 #include "vulkanDriversAuto.inl"
 
 namespace {
+
+int export_WaitForAllVkDevices(lua_State* L) {
+  waitForAllDevices();
+  return 0;
+}
+
 const luaL_Reg exports[] = {
 #define VK_GLOBAL_LEVEL_FUNCTION(return_type, function_name, function_arguments, arguments_call)   \
   {#function_name, lua_##function_name},
@@ -81,7 +88,7 @@ const luaL_Reg exports[] = {
   {#function_name, lua_##function_name},
 
 #include "vulkanDriversAuto.inl"
-    {nullptr, nullptr}};
+    {"waitForAllVkDevices", export_WaitForAllVkDevices}, {nullptr, nullptr}};
 } // namespace
 
 void RegisterLuaVulkanDriverFunctions() {

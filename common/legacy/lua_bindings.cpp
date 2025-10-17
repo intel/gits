@@ -22,10 +22,6 @@
 #include "log2.h"
 #include "gits.h"
 
-#ifdef WITH_VULKAN
-#include "vulkanTools.h"
-#endif
-
 namespace gits {
 
 namespace lua {
@@ -517,14 +513,6 @@ int export_IsInt64InRange(lua_State* L) {
   return 1;
 }
 
-#ifdef WITH_VULKAN
-int export_WaitForAllVkDevices(lua_State* L) {
-  Vulkan::waitForAllDevices();
-
-  return 0;
-}
-#endif
-
 void CreateAndRegisterEvents(const char* script) {
   lua_ptr L(luaL_newstate(), lua_close);
   if (L.get() == nullptr) {
@@ -570,9 +558,6 @@ void CreateAndRegisterEvents(const char* script) {
                               {"getCurrentDrawInFrame", export_GetCurrentDrawInFrame},
                               {"newBitRange", export_NewBitRange},
                               {"inBitRange", export_InBitRange},
-#ifdef WITH_VULKAN
-                              {"waitForAllVkDevices", export_WaitForAllVkDevices},
-#endif
                               {nullptr, nullptr}};
 
   luaL_newlib(L.get(), exports);
