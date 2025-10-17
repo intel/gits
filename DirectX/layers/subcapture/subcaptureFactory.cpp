@@ -10,6 +10,7 @@
 #include "stateTrackingLayer.h"
 #include "recordingLayerAuto.h"
 #include "commandPreservationLayer.h"
+#include "analyzerLayerAuto.h"
 #include "analyzerResults.h"
 #include "gits.h"
 #include "log2.h"
@@ -58,7 +59,6 @@ SubcaptureFactory::SubcaptureFactory() {
         false;
     AnalyzerLayer* analyzerLayer = new AnalyzerLayer(*subcaptureRange_);
     analyzerLayer_.reset(analyzerLayer);
-    objectUsageNotifier_ = analyzerLayer;
     LOG_INFO << "SUBCAPTURE ANALYSIS. RUN AGAIN FOR SUBCAPTURE RECORDING.";
   }
 }

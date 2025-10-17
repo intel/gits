@@ -22,7 +22,6 @@
 #include "nvapi.h"
 #include "subcaptureFactory.h"
 #include "executionSerializationFactory.h"
-#include "analyzerLayerAuto.h"
 #include "resourceDumpingFactory.h"
 #include "skipCallsFactory.h"
 #include "portabilityFactory.h"
@@ -149,7 +148,6 @@ private:
   XessService xessService_;
   MultithreadedObjectCreationService multithreadedObjectCreationService_;
   PipelineLibraryService pipelineLibraryService_;
-  ObjectUsageNotifier* objectUsageNotifier_{};
 
   HMODULE d3d12CoreDll_{};
   HMODULE dmlDll_{};

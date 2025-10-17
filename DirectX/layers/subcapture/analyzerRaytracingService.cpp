@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "analyzerRaytracingService.h"
-#include "bindingService.h"
+#include "analyzerCommandListService.h"
 #include "gits.h"
 #include "log2.h"
 
@@ -22,7 +22,7 @@ AnalyzerRaytracingService::AnalyzerRaytracingService(
     CapturePlayerGpuAddressService& gpuAddressService,
     CapturePlayerDescriptorHandleService& descriptorHandleService,
     CapturePlayerShaderIdentifierService& shaderIdentifierService,
-    BindingService& bindingService,
+    AnalyzerCommandListService& commandListService,
     RootSignatureService& rootSignatureService)
     : gpuAddressService_(gpuAddressService),
       descriptorHandleService_(descriptorHandleService),
@@ -30,7 +30,7 @@ AnalyzerRaytracingService::AnalyzerRaytracingService(
       shaderIdentifierService_(shaderIdentifierService),
       instancesDump_(*this),
       bindingTablesDump_(*this),
-      bindingService_(bindingService),
+      commandListService_(commandListService),
       rootSignatureService_(rootSignatureService) {
   loadInstancesArraysOfPointers();
 }
@@ -211,7 +211,7 @@ void AnalyzerRaytracingService::buildTlas(
     for (auto& it : instancesByResourceKey) {
       InstanceInfo& instanceInfo = it.second;
 
-      bindingService_.addObjectForRestore(instanceInfo.resourceKey);
+      commandListService_.addObjectForRestore(instanceInfo.resourceKey);
 
       std::vector<unsigned> offsets(instanceInfo.offsets.size());
       std::copy(instanceInfo.offsets.begin(), instanceInfo.offsets.end(), offsets.begin());
@@ -294,7 +294,7 @@ void AnalyzerRaytracingService::dumpBindingTable(ID3D12GraphicsCommandList* comm
   auto itDescriptorHeaps = descriptorHeapsByComandList_.find(commandListKey);
   GITS_ASSERT(itDescriptorHeaps != descriptorHeapsByComandList_.end());
 
-  unsigned rootSignatureKey = bindingService_.getComputeRootSignatureKey(commandListKey);
+  unsigned rootSignatureKey = commandListService_.getComputeRootSignatureKey(commandListKey);
 
   bindingTablesDump_.dumpBindingTable(commandList, resource, offset, size, stride, state,
                                       stateObjectInfo, itDescriptorHeaps->second, rootSignatureKey);

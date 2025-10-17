@@ -18,12 +18,10 @@ namespace gits {
 namespace DirectX {
 
 AnalyzerService::AnalyzerService(SubcaptureRange& subcaptureRange,
-                                 BindingService& bindingService,
-                                 AnalyzerCommandListRestoreService& commandListRestoreService,
+                                 AnalyzerCommandListService& commandListService,
                                  AnalyzerRaytracingService& raytracingService)
     : subcaptureRange_(subcaptureRange),
-      bindingService_(bindingService),
-      commandListRestoreService_(commandListRestoreService),
+      commandListService_(commandListService),
       raytracingService_(raytracingService) {
   optimize_ = Configurator::Get().directx.features.subcapture.optimize;
 }
@@ -41,7 +39,19 @@ AnalyzerService::~AnalyzerService() {
 
 void AnalyzerService::notifyObject(unsigned objectKey) {
   if (optimize_ && inRange_) {
-    objectsForRestore_.insert(objectKey);
+    if (objectKey) {
+      objectsForRestore_.insert(objectKey);
+    }
+  }
+}
+
+void AnalyzerService::notifyObjects(const std::vector<unsigned>& objectKeys) {
+  if (optimize_ && inRange_) {
+    for (unsigned key : objectKeys) {
+      if (key) {
+        objectsForRestore_.insert(key);
+      }
+    }
   }
 }
 
@@ -71,12 +81,25 @@ void AnalyzerService::present(unsigned callKey, unsigned swapChainKey) {
     auto& queueEvents = gpuExecutionTracker_.getQueueEvents();
     for (auto& commandQueue : queueEvents) {
       for (GpuExecutionTracker::QueueEvent* event : commandQueue.second) {
-        commandQueueCommandsForRestore_.insert(event->callKey);
-        ExecuteCommandListCommand* execute = dynamic_cast<ExecuteCommandListCommand*>(event);
-        if (execute) {
+        std::vector<unsigned>& objectKeys = commandQueueCommandsForRestore_[event->callKey];
+        if (event->commandQueueKey) {
+          objectKeys.push_back(event->commandQueueKey);
+        }
+        switch (event->type) {
+        case GpuExecutionTracker::QueueEvent::Execute: {
+          auto* execute = static_cast<ExecuteCommandListCommand*>(event);
           for (unsigned commandListKey : execute->commandListKeys) {
             commandListsForRestore_.insert(commandListKey);
           }
+        } break;
+        case GpuExecutionTracker::QueueEvent::Signal: {
+          auto* signal = static_cast<GpuExecutionTracker::SignalEvent*>(event);
+          objectKeys.push_back(signal->fence.key);
+        } break;
+        case GpuExecutionTracker::QueueEvent::Wait: {
+          auto* wait = static_cast<GpuExecutionTracker::WaitEvent*>(event);
+          objectKeys.push_back(wait->fence.key);
+        } break;
         }
         delete event;
       }
@@ -87,8 +110,7 @@ void AnalyzerService::present(unsigned callKey, unsigned swapChainKey) {
 
   subcaptureRange_.frameEnd(callKey & Command::stateRestoreKeyMask);
   if (!subcaptureRange_.inRange() && inRange_) {
-    bindingService_.commandListsRestore(commandListsForRestore_);
-    commandListRestoreService_.commandListsRestore(commandListsForRestore_);
+    commandListService_.commandListsRestore(commandListsForRestore_);
     inRange_ = false;
     dumpAnalysisFile();
   }
@@ -207,44 +229,55 @@ void AnalyzerService::clearReadyExecutables() {
 
 void AnalyzerService::dumpAnalysisFile() {
   std::ofstream out(AnalyzerResults::getAnalysisFileName());
+
+  std::set<unsigned> objectKeys;
+
   out << "COMMAND_LIST_KEYS\n";
   for (unsigned key : commandListsForRestore_) {
     out << key << "\n";
+    if (optimize_) {
+      objectKeys.insert(key);
+    }
   }
+
   out << "COMMAND_QUEUE_COMMANDS\n";
-  for (unsigned key : commandQueueCommandsForRestore_) {
-    out << key << "\n";
+  for (auto& it : commandQueueCommandsForRestore_) {
+    out << it.first << "\n";
+    if (optimize_) {
+      for (unsigned key : it.second) {
+        objectKeys.insert(key);
+      }
+    }
   }
+
   out << "OBJECTS\n";
-  std::set<unsigned> keys;
   for (unsigned key : objectsForRestore_) {
-    keys.insert(key);
+    objectKeys.insert(key);
   }
-  for (unsigned key : bindingService_.getObjectsForRestore()) {
-    keys.insert(key);
+  for (unsigned key : commandListService_.getObjectsForRestore()) {
+    objectKeys.insert(key);
   }
-  for (unsigned key : commandListRestoreService_.getObjectsForRestore()) {
-    keys.insert(key);
+  for (unsigned key : commandListService_.getBindingTablesResources()) {
+    objectKeys.insert(key);
   }
-  for (unsigned key : bindingService_.getBindingTablesResources()) {
-    keys.insert(key);
-  }
-  for (unsigned key : keys) {
+  for (unsigned key : objectKeys) {
     if (key) {
       out << key << "\n";
     }
   }
+
   out << "DESCRIPTORS\n";
   std::set<std::pair<unsigned, unsigned>> descriptors;
-  for (auto& [heapKey, index] : bindingService_.getDescriptors()) {
+  for (auto& [heapKey, index] : commandListService_.getDescriptors()) {
     descriptors.insert({heapKey, index});
   }
-  for (auto& [heapKey, index] : bindingService_.getBindingTablesDescriptors()) {
+  for (auto& [heapKey, index] : commandListService_.getBindingTablesDescriptors()) {
     descriptors.insert({heapKey, index});
   }
   for (auto& [heapKey, index] : descriptors) {
     out << heapKey << " " << index << "\n";
   }
+
   out << "ACCELERATION_STRUCTURES\n";
   std::set<std::pair<unsigned, unsigned>> ases;
   raytracingService_.flush();

@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "analyzerExecuteIndirectService.h"
-#include "bindingService.h"
+#include "analyzerCommandListService.h"
 #include "gits.h"
 #include "log2.h"
 
@@ -19,10 +19,10 @@ namespace DirectX {
 AnalyzerExecuteIndirectService::AnalyzerExecuteIndirectService(
     CapturePlayerGpuAddressService& gpuAddressService,
     AnalyzerRaytracingService& raytracingService,
-    BindingService& bindingService)
+    AnalyzerCommandListService& commandListService)
     : gpuAddressService_(gpuAddressService),
       raytracingService_(raytracingService),
-      bindingService_(bindingService) {
+      commandListService_(commandListService) {
   loadExecuteIndirectDispatchRays();
 }
 
@@ -44,7 +44,7 @@ void AnalyzerExecuteIndirectService::createCommandSignature(
 
 void AnalyzerExecuteIndirectService::executeIndirect(
     ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
-  bindingService_.addObjectForRestore(c.pCommandSignature_.key);
+  commandListService_.addObjectForRestore(c.pCommandSignature_.key);
 
   auto itCommandSignature = commandSignatures_.find(c.pCommandSignature_.key);
   GITS_ASSERT(itCommandSignature != commandSignatures_.end());
@@ -84,7 +84,7 @@ void AnalyzerExecuteIndirectService::executeIndirect(
         gpuAddressService_.getResourceInfoByCaptureAddress(address);
     GITS_ASSERT(info);
     unsigned offset = address - info->captureStart;
-    bindingService_.addObjectForRestore(info->key);
+    commandListService_.addObjectForRestore(info->key);
     raytracingService_.dumpBindingTable(c.object_.value, c.object_.key, info->resource, info->key,
                                         offset, size, stride);
   };

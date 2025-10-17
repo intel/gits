@@ -24,7 +24,7 @@
 namespace gits {
 namespace DirectX {
 
-class BindingService;
+class AnalyzerCommandListService;
 
 class AnalyzerRaytracingService {
 public:
@@ -32,7 +32,7 @@ public:
                             CapturePlayerGpuAddressService& gpuAddressService,
                             CapturePlayerDescriptorHandleService& descriptorHandleService,
                             CapturePlayerShaderIdentifierService& shaderIdentifierService,
-                            BindingService& bindingService,
+                            AnalyzerCommandListService& commandListService,
                             RootSignatureService& rootSignatureService);
   void createStateObject(ID3D12Device5CreateStateObjectCommand& c);
   void addToStateObject(ID3D12Device7AddToStateObjectCommand& c);
@@ -118,7 +118,7 @@ private:
   CapturePlayerDescriptorHandleService& descriptorHandleService_;
   CapturePlayerShaderIdentifierService& shaderIdentifierService_;
   DescriptorService& descriptorService_;
-  BindingService& bindingService_;
+  AnalyzerCommandListService& commandListService_;
   RootSignatureService& rootSignatureService_;
 
   std::unordered_map<unsigned, std::set<unsigned>> stateObjectsDirectSubobjects_;

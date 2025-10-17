@@ -11,7 +11,6 @@
 #include "layerAuto.h"
 #include "subcaptureRecorder.h"
 #include "subcaptureRange.h"
-#include "analyzerLayerAuto.h"
 
 #include <memory>
 
@@ -35,11 +34,8 @@ public:
   std::unique_ptr<Layer> getCommandPreservationLayer() {
     return std::move(commandPreservationLayer_);
   }
-  std::unique_ptr<Layer> getAnalyzerLayer() {
+  std::unique_ptr<Layer> getAnalyzerOldLayer() {
     return std::move(analyzerLayer_);
-  }
-  ObjectUsageNotifier* getObjectUsageNotifier() {
-    return objectUsageNotifier_;
   }
 
 private:
@@ -49,7 +45,6 @@ private:
   std::unique_ptr<Layer> recordingLayer_;
   std::unique_ptr<Layer> commandPreservationLayer_;
   std::unique_ptr<Layer> analyzerLayer_;
-  ObjectUsageNotifier* objectUsageNotifier_{};
 };
 
 } // namespace DirectX

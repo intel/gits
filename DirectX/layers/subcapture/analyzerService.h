@@ -10,13 +10,13 @@
 
 #include "commandsAuto.h"
 #include "gpuExecutionTracker.h"
-#include "bindingService.h"
-#include "analyzerCommandListRestoreService.h"
+#include "analyzerCommandListService.h"
 #include "analyzerRaytracingService.h"
 #include "subcaptureRange.h"
 
 #include <set>
 #include <string>
+#include <vector>
 
 namespace gits {
 namespace DirectX {
@@ -24,8 +24,7 @@ namespace DirectX {
 class AnalyzerService {
 public:
   AnalyzerService(SubcaptureRange& subcaptureRange,
-                  BindingService& bindingService,
-                  AnalyzerCommandListRestoreService& commandListRestoreService,
+                  AnalyzerCommandListService& commandListService,
                   AnalyzerRaytracingService& raytracingService);
   ~AnalyzerService();
   AnalyzerService(const AnalyzerService&) = delete;
@@ -36,6 +35,7 @@ public:
   }
 
   void notifyObject(unsigned objectKey);
+  void notifyObjects(const std::vector<unsigned>& objectKeys);
 
   void commandListCommand(unsigned commandListKey);
   void present(unsigned callKey, unsigned swapChainKey);
@@ -65,8 +65,7 @@ private:
 
 private:
   SubcaptureRange& subcaptureRange_;
-  BindingService& bindingService_;
-  AnalyzerCommandListRestoreService& commandListRestoreService_;
+  AnalyzerCommandListService& commandListService_;
   AnalyzerRaytracingService& raytracingService_;
   bool optimize_{};
 
@@ -83,7 +82,7 @@ private:
   std::set<unsigned> commandListsReset_;
   std::set<unsigned> commandListsForRestore_;
 
-  std::set<unsigned> commandQueueCommandsForRestore_;
+  std::map<unsigned, std::vector<unsigned>> commandQueueCommandsForRestore_;
 
   std::set<unsigned> objectsForRestore_;
 };

@@ -15,13 +15,13 @@
 namespace gits {
 namespace DirectX {
 
-class BindingService;
+class AnalyzerCommandListService;
 
 class AnalyzerExecuteIndirectService : gits::noncopyable {
 public:
   AnalyzerExecuteIndirectService(CapturePlayerGpuAddressService& gpuAddressService,
                                  AnalyzerRaytracingService& raytracingService,
-                                 BindingService& bindingService);
+                                 AnalyzerCommandListService& commandListService);
   ~AnalyzerExecuteIndirectService();
   void createCommandSignature(ID3D12DeviceCreateCommandSignatureCommand& c);
   void executeIndirect(ID3D12GraphicsCommandListExecuteIndirectCommand& c);
@@ -32,7 +32,7 @@ private:
 private:
   CapturePlayerGpuAddressService& gpuAddressService_;
   AnalyzerRaytracingService& raytracingService_;
-  BindingService& bindingService_;
+  AnalyzerCommandListService& commandListService_;
   std::unordered_map<unsigned, D3D12_DISPATCH_RAYS_DESC> executeIndirectDispatchRays_;
   std::unordered_map<unsigned, D3D12_COMMAND_SIGNATURE_DESC> commandSignatures_;
 };

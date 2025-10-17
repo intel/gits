@@ -11,8 +11,42 @@ ${header}
 
 namespace gits {
 namespace DirectX {
+
 <%
 custom = [
+    'IDXGISwapChainPresent',
+    'IDXGISwapChain1Present1',
+    'ID3D12CommandQueueExecuteCommandLists',
+    'ID3D12CommandQueueWait',
+    'ID3D12CommandQueueSignal',
+    'ID3D12FenceSignal',
+    'ID3D12DeviceCreateFence',
+    'ID3D12Device3EnqueueMakeResident',
+    'ID3D12FenceGetCompletedValue',
+    'ID3D12DeviceCopyDescriptorsSimple',
+    'ID3D12DeviceCopyDescriptors',
+    'ID3D12DeviceCreateRenderTargetView',
+    'ID3D12DeviceCreateDepthStencilView',
+    'ID3D12DeviceCreateShaderResourceView',
+    'ID3D12DeviceCreateUnorderedAccessView',
+    'ID3D12DeviceCreateConstantBufferView',
+    'ID3D12DeviceCreateSampler',
+    'ID3D12DeviceCreateDescriptorHeap',
+    'ID3D12DeviceCreateRootSignature',
+    'ID3D12Device5CreateStateObject',
+    'ID3D12Device7AddToStateObject',
+    'ID3D12ResourceGetGPUVirtualAddress',
+    'ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStart',
+    'ID3D12DeviceCreateCommandSignature',
+    'ID3D12DeviceCreateCommittedResource',
+    'ID3D12Device4CreateCommittedResource1',
+    'ID3D12Device8CreateCommittedResource2',
+    'ID3D12Device10CreateCommittedResource3',
+    'ID3D12DeviceCreatePlacedResource',
+    'ID3D12Device8CreatePlacedResource1',
+    'ID3D12Device10CreatePlacedResource2',
+    'xessD3D12CreateContext',
+    'IDXGIDeviceCreateSurface',
     'ID3D12GraphicsCommandListReset',
     'ID3D12GraphicsCommandListSetComputeRootSignature',
     'ID3D12GraphicsCommandListSetGraphicsRootSignature',
@@ -45,16 +79,72 @@ custom = [
     'ID3D12GraphicsCommandList1ResolveSubresourceRegion',
     'ID3D12GraphicsCommandList3SetProtectedResourceSession',
     'ID3D12GraphicsCommandList4InitializeMetaCommand',
+    'ID3D12GraphicsCommandList4ExecuteMetaCommand',
     'ID3D12GraphicsCommandList7Barrier',
-    'ID3D12GraphicsCommandListSetDescriptorHeaps'
+    'ID3D12GraphicsCommandListSetDescriptorHeaps',
+    'ID3D12GraphicsCommandListClearState',
+    'ID3D12GraphicsCommandListExecuteBundle',
+    'ID3D12GraphicsCommandListBeginQuery',
+    'ID3D12GraphicsCommandListEndQuery',
+    'ID3D12GraphicsCommandListResolveQueryData',
+    'ID3D12GraphicsCommandListSetPredication',
+    'ID3D12GraphicsCommandList1AtomicCopyBufferUINT',
+    'ID3D12GraphicsCommandList1AtomicCopyBufferUINT64',
+    'ID3D12GraphicsCommandList4BeginRenderPass',
+    'ID3D12GraphicsCommandList5RSSetShadingRateImage',
+    'ID3D12GraphicsCommandList6DispatchMesh',
+    'ID3D12DeviceCreateGraphicsPipelineState',
+    'ID3D12DeviceCreateComputePipelineState',
+    'ID3D12PipelineLibraryLoadGraphicsPipeline',
+    'ID3D12PipelineLibraryLoadComputePipeline',
+    'ID3D12PipelineLibrary1LoadPipeline',
+    'ID3D12Device2CreatePipelineState',
+    'IDMLDeviceCreateBindingTable',
+    'IDMLBindingTableReset',
+    'IDMLBindingTableBindInputs',
+    'IDMLBindingTableBindOutputs',
+    'IDMLDevice1CompileGraph',
+    'xessD3D12Init',
+    'xessD3D12GetInitParams',
+    'xessD3D12Execute',
+    'IDStorageFactoryCreateQueue',
+    'IDStorageQueueEnqueueRequest'
 ]
 %>\
+%for function in functions:
+%if not function.name in custom:
+void AnalyzerLayer::post(${function.name}Command& c) {
+  %for param in function.params:
+  %if param.is_interface or param.is_interface_creation:
+  %if not param.sal_size:
+  analyzerService_.notifyObject(c.${param.name}_.key);
+  %else:
+  analyzerService_.notifyObjects(c.${param.name}_.keys);
+  %endif
+  %endif
+  %endfor
+}
+
+%endif
+%endfor
 %for interface in interfaces:
 %for function in interface.functions:
-%if interface.name.startswith('ID3D12GraphicsCommandList') and not function.name.startswith('SetName') \
-	and not interface.name + function.name in custom:
+%if not interface.name + function.name in custom:
 void AnalyzerLayer::post(${interface.name}${function.name}Command& c) {
+  analyzerService_.notifyObject(c.object_.key);
+  %for param in function.params:
+  %if param.is_interface or param.is_interface_creation:
+  %if not param.sal_size:
+  analyzerService_.notifyObject(c.${param.name}_.key);
+  %else:
+  analyzerService_.notifyObjects(c.${param.name}_.keys);
+  %endif
+  %endif
+  %endfor
+  %if interface.name.startswith('ID3D12GraphicsCommandList') and not function.name.startswith('SetName') \
+    and not interface.name + function.name in custom:
   analyzerService_.commandListCommand(c.object_.key);
+  %endif
 }
 
 %endif

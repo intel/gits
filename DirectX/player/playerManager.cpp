@@ -89,7 +89,7 @@ PlayerManager::PlayerManager() {
   std::unique_ptr<Layer> recordingLayer = subcaptureFactory_.getRecordingLayer();
   std::unique_ptr<Layer> commandPreservationLayer =
       subcaptureFactory_.getCommandPreservationLayer();
-  std::unique_ptr<Layer> analyzerLayer = subcaptureFactory_.getAnalyzerLayer();
+  std::unique_ptr<Layer> analyzerLayer = subcaptureFactory_.getAnalyzerOldLayer();
   std::unique_ptr<Layer> executionSerializationLayer =
       executionSerializationFactory_.getExecutionSerializationLayer();
   std::unique_ptr<Layer> screenshotsLayer = resourceDumpingFactory_.getScreenshotsLayer();
@@ -225,8 +225,6 @@ PlayerManager::PlayerManager() {
   retainLayer(std::move(addressPinningLayer));
   retainLayer(std::move(dllOverrideUseLayer));
 
-  objectUsageNotifier_ = subcaptureFactory_.getObjectUsageNotifier();
-
   // Load DirectX runtimes
   loadDirectML();
   loadDirectStorage();
@@ -267,25 +265,16 @@ void PlayerManager::flushMultithreadedShaderCompilation() {
 
 void PlayerManager::addObject(unsigned objectKey, IUnknown* object) {
   objects_[objectKey] = object;
-  if (objectUsageNotifier_) {
-    objectUsageNotifier_->notifyObject(objectKey);
-  }
 }
 
 void PlayerManager::removeObject(unsigned objectKey) {
   objects_.erase(objectKey);
-  if (objectUsageNotifier_) {
-    objectUsageNotifier_->notifyObject(objectKey);
-  }
 }
 
 IUnknown* PlayerManager::findObject(unsigned objectKey) {
   auto it = objects_.find(objectKey);
   if (it == objects_.end()) {
     return nullptr;
-  }
-  if (objectUsageNotifier_) {
-    objectUsageNotifier_->notifyObject(objectKey);
   }
   return it->second;
 }

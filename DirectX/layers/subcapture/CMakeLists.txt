@@ -78,8 +78,8 @@ set(ANALYSIS_SRC
   ${SRC_DIR}/analyzerService.cpp
   ${SRC_DIR}/analyzerResults.h
   ${SRC_DIR}/analyzerResults.cpp
-  ${SRC_DIR}/bindingService.h
-  ${SRC_DIR}/bindingService.cpp
+  ${SRC_DIR}/analyzerCommandListService.h
+  ${SRC_DIR}/analyzerCommandListService.cpp
   ${SRC_DIR}/rootSignatureService.h
   ${SRC_DIR}/rootSignatureService.cpp
   ${SRC_DIR}/analyzerRaytracingService.h
@@ -90,8 +90,6 @@ set(ANALYSIS_SRC
   ${SRC_DIR}/raytracingInstancesDump.cpp
   ${SRC_DIR}/bindingTablesDump.h
   ${SRC_DIR}/bindingTablesDump.cpp
-  ${SRC_DIR}/analyzerCommandListRestoreService.h
-  ${SRC_DIR}/analyzerCommandListRestoreService.cpp
 )
 source_group("analysis" FILES ${ANALYSIS_SRC})
 
