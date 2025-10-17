@@ -53,7 +53,7 @@ function preDrawAction(name)
   if (dumpPreDraw and gits.inBitRange(DrawRange, gits.getCurrentFrame())) then
     final_path = gits.getStreamDir().."/"..subpathDraws.."Pre"
     fname = "drawcall-"..gits.getCurrentDraw().."-pre"
-    gits.captureDrawBuffer(final_path, fname, false, dumpDepth, dumpStencil)
+    drv.captureDrawBuffer(final_path, fname, false, dumpDepth, dumpStencil)
   end
 end
 
@@ -61,7 +61,7 @@ function postDrawAction(name)
   if (dumpPostDraw and gits.inBitRange(DrawRange, gits.getCurrentFrame())) then
     final_path = gits.getStreamDir().."/"..subpathDraws.."Post"
     fname = "drawcall-"..gits.getCurrentDraw().."-post"
-    gits.captureDrawBuffer(final_path, fname, false, dumpDepth, dumpStencil)
+    drv.captureDrawBuffer(final_path, fname, false, dumpDepth, dumpStencil)
   end
 end
 
@@ -72,7 +72,7 @@ function preEndFrameAction(name)
   if (gits.inBitRange(FrameRange, gits.getCurrentFrame())) then
     final_path = gits.getStreamDir().."/"..subpathFrames
     fname = "frame"..gits.getCurrentFrame()
-    gits.captureDrawBuffer(final_path, fname, true, false, false)
+    drv.captureDrawBuffer(final_path, fname, true, false, false)
   end
 end
 

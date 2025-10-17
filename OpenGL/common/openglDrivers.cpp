@@ -441,6 +441,43 @@ namespace {
 #define LUA_EXPORT_WGL_EXT_FUNCTION(b, c, d, e) LUA_EXPORT_GL_FUNCTION(b, c, d, e)
 #define LUA_EXPORT_GLX_FUNCTION(b, c, d, e)     LUA_EXPORT_GL_FUNCTION(b, c, d, e)
 
+int export_CaptureDrawBuffer(lua_State* L) {
+  int top = lua_gettop(L);
+  if (top < 3 || 5 < top) {
+    luaL_error(L, "invalid number of parameters");
+  }
+
+  std::string path(lua_tostring(L, 1));
+  std::string file_name(lua_tostring(L, 2));
+  bool force_back_buffer = lua_toboolean(L, 3);
+  bool dumpDepthBuffer = lua_toboolean(L, 4);
+  bool dumpStencilBuffer = lua_toboolean(L, 5);
+
+  capture_drawbuffer(path, file_name, force_back_buffer, dumpDepthBuffer, dumpStencilBuffer);
+
+  return 0;
+}
+
+void STDCALL GitsGlDebugProc(unsigned source,
+                             unsigned type,
+                             unsigned id,
+                             unsigned severity,
+                             int length,
+                             const char* message,
+                             const void* userParam) {
+  LOG_INFO << "DEBUGPROC: ";
+  LOG_INFO << "           src:  " << source;
+  LOG_INFO << "           type: " << type;
+  LOG_INFO << "           id:   " << id;
+  LOG_INFO << "           seve: " << severity;
+  LOG_INFO << "           msg:  " << message;
+}
+
+int export_gitsGlDebugProc(lua_State* L) {
+  lua_pushlightuserdata(L, (void*)GitsGlDebugProc);
+  return 1;
+}
+
 #ifndef BUILD_FOR_CCODE
 const luaL_Reg exports[] = {GL_FUNCTIONS(LUA_EXPORT_) DRAW_FUNCTIONS(LUA_EXPORT_)
                                 EGL_FUNCTIONS(LUA_EXPORT_)
@@ -452,7 +489,9 @@ const luaL_Reg exports[] = {GL_FUNCTIONS(LUA_EXPORT_) DRAW_FUNCTIONS(LUA_EXPORT_
 #ifdef GITS_PLATFORM_X11
                                         GLX_FUNCTIONS(LUA_EXPORT_)
 #endif
-                                            {nullptr, nullptr}};
+                                            {"captureDrawBuffer", export_CaptureDrawBuffer},
+                            {"gitsGlDebugProc", export_gitsGlDebugProc},
+                            {nullptr, nullptr}};
 #endif
 } // namespace
 
@@ -617,6 +656,7 @@ CGlDriver::CGlDriver() : _api(API_NULL), _initialized(false), _lib(nullptr) {
   GL_FUNCTIONS(INITIALIZE_)
   DRAW_FUNCTIONS(INITIALIZE_)
 #undef INITIALIZE_GL_FUNCTION
+  CGits::Instance().RegisterLuaFunctionsRegistrator(RegisterLuaDriverFunctions);
 }
 
 void CGlDriver::Initialize(TApiType api) {

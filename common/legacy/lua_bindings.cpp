@@ -22,38 +22,11 @@
 #include "log2.h"
 #include "gits.h"
 
-#include "../../OpenGL/common/include/openglTypes.h"
-
 #ifdef WITH_VULKAN
 #include "vulkanTools.h"
 #endif
 
 namespace gits {
-
-namespace OpenGL {
-std::string GetCurrentProgramShaderText(unsigned shtype);
-std::string GetShaderSource(int name);
-void capture_drawbuffer(const std::filesystem::path& directory,
-                        const std::string& file_name,
-                        bool force_back_buffer,
-                        bool dump_depth = true,
-                        bool dump_stencil = true);
-void RegisterLuaDriverFunctions();
-void STDCALL GitsGlDebugProc(unsigned source,
-                             unsigned type,
-                             unsigned id,
-                             unsigned severity,
-                             int length,
-                             const char* message,
-                             const void* userParam) {
-  LOG_INFO << "DEBUGPROC: ";
-  LOG_INFO << "           src:  " << source;
-  LOG_INFO << "           type: " << type;
-  LOG_INFO << "           id:   " << id;
-  LOG_INFO << "           seve: " << severity;
-  LOG_INFO << "           msg:  " << message;
-}
-} // namespace OpenGL
 
 namespace lua {
 typedef std::shared_ptr<lua_State> lua_ptr;
@@ -441,10 +414,6 @@ int export_ArgsString(lua_State* L) {
   lua_pushstring(L, (const char*)Configurator::Get().common.shared.scriptArgsStr.c_str());
   return 1;
 }
-int export_gitsGlDebugProc(lua_State* L) {
-  lua_pushlightuserdata(L, (void*)gits::OpenGL::GitsGlDebugProc);
-  return 1;
-}
 
 int export_OutDir(lua_State* L) {
   lua_pushstring(L, (const char*)Configurator::Get().common.player.outputDir.string().c_str());
@@ -485,24 +454,6 @@ int export_Log(lua_State* L) {
   if (ShouldLog(log_level)) {
     gits::CLog(log_level, gits::LogStyle::NORMAL) << text;
   }
-
-  return 0;
-}
-
-int export_CaptureDrawBuffer(lua_State* L) {
-  int top = lua_gettop(L);
-  if (top < 3 || 5 < top) {
-    luaL_error(L, "invalid number of parameters");
-  }
-
-  std::string path(lua_tostring(L, 1));
-  std::string file_name(lua_tostring(L, 2));
-  bool force_back_buffer = lua_toboolean(L, 3);
-  bool dumpDepthBuffer = lua_toboolean(L, 4);
-  bool dumpStencilBuffer = lua_toboolean(L, 5);
-
-  gits::OpenGL::capture_drawbuffer(path, file_name, force_back_buffer, dumpDepthBuffer,
-                                   dumpStencilBuffer);
 
   return 0;
 }
@@ -610,7 +561,6 @@ void CreateAndRegisterEvents(const char* script) {
                               {"freeBytes", export_FreeByteArray},
                               {"getWndRectByHDC", export_GetWindowRectByHDC},
                               {"getArgsStr", export_ArgsString},
-                              {"gitsGlDebugProc", export_gitsGlDebugProc},
                               {"getOutDir", export_OutDir},
                               {"systemLog", export_SystemLog},
                               {"log", export_Log},
@@ -623,7 +573,6 @@ void CreateAndRegisterEvents(const char* script) {
 #ifdef WITH_VULKAN
                               {"waitForAllVkDevices", export_WaitForAllVkDevices},
 #endif
-                              {"captureDrawBuffer", export_CaptureDrawBuffer},
                               {nullptr, nullptr}};
 
   luaL_newlib(L.get(), exports);
@@ -645,7 +594,6 @@ void CreateAndRegisterEvents(const char* script) {
   events.logging = CreateWrapper<const char*>(L, "gitsLogging");
 
   CGits::Instance().RegisterPlaybackEvents(L, events);
-  gits::OpenGL::RegisterLuaDriverFunctions();
 }
 
 } // namespace lua

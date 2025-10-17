@@ -89,7 +89,7 @@ function wglMakeCurrent(hdc, ctx)
   -- set callback function only once per context
   if gits.udtToInt(ctx) ~= 0 and not usedCtxs[gits.udtToInt(ctx)] then
     usedCtxs[gits.udtToInt(ctx)] = true
-    drv.glDebugMessageCallback(gits.gitsGlDebugProc(), 0)
+    drv.glDebugMessageCallback(drv.gitsGlDebugProc(), 0)
 	end
   return ret
 end
@@ -142,7 +142,7 @@ function eglMakeCurrent(dpy, draw, read, ctx)
   -- set callback function only once per context
   if gits.udtToInt(ctx) ~= 0 and not usedCtxs[gits.udtToInt(ctx)] then
     usedCtxs[gits.udtToInt(ctx)] = true
-    drv.glDebugMessageCallback(gits.gitsGlDebugProc(), 0)
+    drv.glDebugMessageCallback(drv.gitsGlDebugProc(), 0)
 	end
   return ret
 end
