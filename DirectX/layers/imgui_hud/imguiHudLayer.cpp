@@ -80,19 +80,17 @@ void ImGuiHUDLayer::post(IDXGIFactory2CreateSwapChainForCompositionCommand& c) {
 }
 
 void ImGuiHUDLayer::pre(IDXGISwapChainPresentCommand& c) {
-  if (c.skip || c.result_.value != S_OK || c.Flags_.value & DXGI_PRESENT_TEST ||
-      c.key & Command::stateRestoreKeyMask) {
+  if (c.skip || c.result_.value != S_OK || c.Flags_.value & DXGI_PRESENT_TEST) {
     return;
   }
-  present();
+  onPrePresent();
 }
 
 void ImGuiHUDLayer::pre(IDXGISwapChain1Present1Command& c) {
-  if (c.skip || c.result_.value != S_OK || c.PresentFlags_.value & DXGI_PRESENT_TEST ||
-      c.key & Command::stateRestoreKeyMask) {
+  if (c.skip || c.result_.value != S_OK || c.PresentFlags_.value & DXGI_PRESENT_TEST) {
     return;
   }
-  present();
+  onPrePresent();
 }
 
 void ImGuiHUDLayer::pre(IDXGISwapChainResizeBuffersCommand& command) {
@@ -278,6 +276,15 @@ void ImGuiHUDLayer::initializeImGui(DXGI_FORMAT format) {
   float dpiscale = std::max(1.0f, ImGui_ImplWin32_GetDpiScaleForHwnd(window_));
   CGits::Instance().GetImGuiHUD()->SetupImGUI(dpiscale);
   ImGui_ImplDX12_CreateDeviceObjects();
+}
+
+void ImGuiHUDLayer::onPrePresent() {
+  static bool firstRun{true};
+  if (firstRun) {
+    firstRun = false;
+    present(); // assures Hud in a first frame of a stream
+  }
+  present();
 }
 
 void ImGuiHUDLayer::present() {

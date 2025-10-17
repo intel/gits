@@ -46,6 +46,7 @@ private:
   bool createFrameContext(unsigned bufferCount);
   bool initializeResources(IUnknown* device, IDXGISwapChain* swapChain);
   void initializeImGui(DXGI_FORMAT format);
+  void onPrePresent();
   void present();
 
 private:

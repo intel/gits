@@ -32,8 +32,9 @@ public:
   void SetupImGUI(float dpi_scale);
 
 private:
+  ImVec2 GetWindowSize(float uiScale);
+  ImVec2 ComputeHUDSizeHint(float uiScale);
   void PositionHUD(gits::HUDAnchor anchor, const ImVec2& windowSize, const ImVec2& padding);
-
   void ExecuteCallbacks();
 
   std::vector<RenderImGuiFunc> _callbacks;

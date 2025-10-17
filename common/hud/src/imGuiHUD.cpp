@@ -118,6 +118,7 @@ void ImGuiHUD::Render() {
   const auto winSizeMin = ImVec2(2.0f, 2.0f);
   const auto winSizeMax = ImVec2(FLT_MAX, FLT_MAX);
   ImGui::SetNextWindowSizeConstraints(winSizeMin, winSizeMax);
+
   if (ImGui::Begin("GITS HUD", nullptr, Settings::HUD_WINDOW_STYLE)) {
     if (_tableRows > 0) {
       uInt idx = 0;
@@ -164,10 +165,52 @@ void ImGuiHUD::Render() {
       ExecuteCallbacks();
     }
 
-    const ImVec2 windowSize = ImGui::GetWindowSize();
+    const ImVec2 windowSize = GetWindowSize(cfgHud.uiScale);
     PositionHUD(cfgHud.position, windowSize, Settings::HUD_PADDING);
   }
   ImGui::End();
+}
+
+ImVec2 ImGuiHUD::GetWindowSize(float uiScale) {
+  static bool initialRun{true};
+  if (!initialRun) {
+    return ImGui::GetWindowSize();
+  }
+  initialRun = false;
+  return ComputeHUDSizeHint(uiScale);
+}
+
+ImVec2 ImGuiHUD::ComputeHUDSizeHint(float uiScale) {
+  ImVec2 winSizeHint{0, 0};
+
+  if (_tableRows > 0) {
+    float contentHeight = 0.f;
+    float contentLength = 0.f;
+    auto preComputeContentSize = [this, &contentHeight, &contentLength]() {
+      float const heightCoefficient = 18.f; // from experiment
+      float const lengthCoefficient = 6.8f; // from experiment
+      constexpr unsigned margin = 17;       // from experiment
+
+      uInt maxLengths[2]{0, 0};
+      auto collectMax = [this, &maxLengths](uInt idx) {
+        for (auto i = 0u; i < sizeof(maxLengths) / sizeof(maxLengths[0]); ++i) {
+          maxLengths[i] = std::max<size_t>(maxLengths[i], _dataTable[idx][i].size());
+        }
+      };
+
+      for (auto i = 0u; i < _dataTable.size(); ++i) {
+        collectMax(i);
+      }
+      contentHeight = heightCoefficient * _dataTable.size() + margin;
+      contentLength = lengthCoefficient * (maxLengths[0] + maxLengths[1]) + margin;
+    };
+
+    preComputeContentSize();
+    winSizeHint.x = contentLength * uiScale;
+    winSizeHint.y = contentHeight * uiScale;
+  }
+
+  return winSizeHint;
 }
 
 void ImGuiHUD::SetupImGUI(float dpi_scale) {
