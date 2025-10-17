@@ -109,7 +109,9 @@ PlayerManager::PlayerManager() {
 
   if (executeCommands_) {
     replayCustomizationLayer = std::make_unique<ReplayCustomizationLayer>(*this);
-    gpuPatchLayer = std::make_unique<GpuPatchLayer>(*this);
+    if (cfg.directx.player.patchGpuBuffers) {
+      gpuPatchLayer = std::make_unique<GpuPatchLayer>(*this);
+    }
     directStorageLayer = std::make_unique<DirectStorageLayer>();
     debugHelperLayer = std::make_unique<DebugHelperLayer>();
     if (cfg.directx.player.debugLayer) {

@@ -840,6 +840,12 @@ Configuration:
             Type: bool
             Default: true
             Description: Enable usage of Xess DLL captured from the app
+          - Name: patchGpuBuffers
+            Type: bool
+            Default: true
+            Description:
+              Enable patching of IABs and SBTs on the GPU.
+              This will translate GPUVAs and other runtime data on captured GPU buffers.
           - Name: plugins
             Type: std::vector<std::string>
             Default: []
