@@ -42,12 +42,6 @@ gits::OpenGL::CGLenum::CGLenum() {}
 
 gits::OpenGL::CGLenum::CGLenum(GLenum value) : CGLtype<GLtype, type, GLushort>(value) {}
 
-void gits::OpenGL::CGLenum::Write(CCodeOStream& stream) const {
-  // stream << std::setfill('0') << std::setw(LENGTH * 2) << std::hex <<
-  // Value();
-  stream << EnumString(Value());
-}
-
 // this does not contain *_ATI nor *_NV enums
 #define ENUM_MAPPING(enum_name)                                                                    \
   { enum_name, #enum_name }
@@ -2001,14 +1995,6 @@ gits::OpenGL::CGLboolean::CGLboolean() : CGLtype<GLtype, type>() {}
 
 gits::OpenGL::CGLboolean::CGLboolean(GLboolean value) : CGLtype<GLtype, type>(value) {}
 
-void gits::OpenGL::CGLboolean::Write(CCodeOStream& stream) const {
-  if (Value()) {
-    stream << "GL_TRUE";
-  } else {
-    stream << "GL_FALSE";
-  }
-}
-
 /* ******************************* B I T F I E L D ***************************** */
 
 const char* gits::OpenGL::CGLbitfield::NAME = "GLbitfield";
@@ -2016,12 +2002,6 @@ const char* gits::OpenGL::CGLbitfield::NAME = "GLbitfield";
 gits::OpenGL::CGLbitfield::CGLbitfield() : CGLtype<GLtype, type>() {}
 
 gits::OpenGL::CGLbitfield::CGLbitfield(GLbitfield value) : CGLtype<GLtype, type>(value) {}
-
-void gits::OpenGL::CGLbitfield::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::setfill('0') << std::hex << std::setw(LENGTH * 2) << std::internal << Value();
-  stream.flags(streamFlags);
-}
 
 /* *********************************** B Y T E ********************************* */
 
@@ -2031,12 +2011,6 @@ gits::OpenGL::CGLbyte::CGLbyte() : CGLtype<GLtype, type>() {}
 
 gits::OpenGL::CGLbyte::CGLbyte(GLbyte value) : CGLtype<GLtype, type>(value) {}
 
-void gits::OpenGL::CGLbyte::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::dec << int(Value());
-  stream.flags(streamFlags);
-}
-
 /* ********************************** S H O R T ******************************** */
 
 const char* gits::OpenGL::CGLshort::NAME = "GLshort";
@@ -2044,12 +2018,6 @@ const char* gits::OpenGL::CGLshort::NAME = "GLshort";
 gits::OpenGL::CGLshort::CGLshort() : CGLtype<GLtype, type>() {}
 
 gits::OpenGL::CGLshort::CGLshort(GLshort value) : CGLtype<GLtype, type>(value) {}
-
-void gits::OpenGL::CGLshort::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::dec << Value();
-  stream.flags(streamFlags);
-}
 
 /* ************************************ I N T ********************************** */
 
@@ -2059,12 +2027,6 @@ gits::OpenGL::CGLint::CGLint() : CGLtype<GLtype, type>() {}
 
 gits::OpenGL::CGLint::CGLint(GLint value) : CGLtype<GLtype, type>(value) {}
 
-void gits::OpenGL::CGLint::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::dec << Value();
-  stream.flags(streamFlags);
-}
-
 /* ************************************ I N T 6 4 ********************************** */
 
 const char* gits::OpenGL::CGLint64::NAME = "GLint64";
@@ -2072,12 +2034,6 @@ const char* gits::OpenGL::CGLint64::NAME = "GLint64";
 gits::OpenGL::CGLint64::CGLint64() : CGLtype<GLtype, type>() {}
 
 gits::OpenGL::CGLint64::CGLint64(GLint64 value) : CGLtype<GLtype, type>(value) {}
-
-void gits::OpenGL::CGLint64::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::dec << Value();
-  stream.flags(streamFlags);
-}
 
 /* ********************************** S I Z E I ******************************** */
 
@@ -2087,12 +2043,6 @@ gits::OpenGL::CGLsizei::CGLsizei() : CGLtype<GLtype, type>() {}
 
 gits::OpenGL::CGLsizei::CGLsizei(GLsizei value) : CGLtype<GLtype, type>(value) {}
 
-void gits::OpenGL::CGLsizei::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::dec << Value();
-  stream.flags(streamFlags);
-}
-
 /* ********************************** U B Y T E ******************************** */
 
 const char* gits::OpenGL::CGLubyte::NAME = "GLubyte";
@@ -2100,12 +2050,6 @@ const char* gits::OpenGL::CGLubyte::NAME = "GLubyte";
 gits::OpenGL::CGLubyte::CGLubyte() : CGLtype<GLtype, type>() {}
 
 gits::OpenGL::CGLubyte::CGLubyte(GLubyte value) : CGLtype<GLtype, type>(value) {}
-
-void gits::OpenGL::CGLubyte::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::dec << unsigned(Value());
-  stream.flags(streamFlags);
-}
 
 /* ********************************* U S H O R T ******************************* */
 
@@ -2115,12 +2059,6 @@ gits::OpenGL::CGLushort::CGLushort() : CGLtype<GLtype, type>() {}
 
 gits::OpenGL::CGLushort::CGLushort(GLushort value) : CGLtype<GLtype, type>(value) {}
 
-void gits::OpenGL::CGLushort::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::dec << Value();
-  stream.flags(streamFlags);
-}
-
 /* *********************************** U I N T ********************************* */
 
 const char* gits::OpenGL::CGLuint::NAME = "GLuint";
@@ -2128,12 +2066,6 @@ const char* gits::OpenGL::CGLuint::NAME = "GLuint";
 gits::OpenGL::CGLuint::CGLuint() : CGLtype<GLtype, type>() {}
 
 gits::OpenGL::CGLuint::CGLuint(GLuint value) : CGLtype<GLtype, type>(value) {}
-
-void gits::OpenGL::CGLuint::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::dec << Value();
-  stream.flags(streamFlags);
-}
 
 /* *********************************** U I N T 6 4 ********************************* */
 
@@ -2143,12 +2075,6 @@ gits::OpenGL::CGLuint64::CGLuint64() : CGLtype<GLtype, type>() {}
 
 gits::OpenGL::CGLuint64::CGLuint64(GLuint64 value) : CGLtype<GLtype, type>(value) {}
 
-void gits::OpenGL::CGLuint64::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::dec << Value();
-  stream.flags(streamFlags);
-}
-
 /* ********************************** F L O A T ******************************** */
 
 const char* gits::OpenGL::CGLfloat::NAME = "GLfloat";
@@ -2156,24 +2082,6 @@ const char* gits::OpenGL::CGLfloat::NAME = "GLfloat";
 gits::OpenGL::CGLfloat::CGLfloat() : CGLtype<GLtype, type>() {}
 
 gits::OpenGL::CGLfloat::CGLfloat(GLfloat value) : CGLtype<GLtype, type>(value) {}
-
-void gits::OpenGL::CGLfloat::Write(CCodeOStream& stream) const {
-  GLfloat value = Value();
-  std::ios_base::fmtflags streamFlags(stream.flags());
-
-  if (value != value) {
-    // NaN - give any valid value
-    stream << 0;
-  } else {
-    // cap value to min/max - discard infinities
-    // bizzare parenthesis usage prevents min/max windows macros from kicking in
-    value = (std::min)((std::numeric_limits<GLfloat>::max)(), value);
-    value = (std::max)(-(std::numeric_limits<GLfloat>::max)(), value);
-
-    stream << std::showpoint << value << 'f';
-  }
-  stream.flags(streamFlags);
-}
 
 /* ********************************* C L A M P F ******************************* */
 
@@ -2183,12 +2091,6 @@ gits::OpenGL::CGLclampf::CGLclampf() : CGLtype<GLtype, type>() {}
 
 gits::OpenGL::CGLclampf::CGLclampf(GLclampf value) : CGLtype<GLtype, type>(value) {}
 
-void gits::OpenGL::CGLclampf::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::showpoint << Value() << 'f';
-  stream.flags(streamFlags);
-}
-
 /* ********************************* D O U B L E ******************************* */
 
 const char* gits::OpenGL::CGLdouble::NAME = "GLdouble";
@@ -2196,13 +2098,6 @@ const char* gits::OpenGL::CGLdouble::NAME = "GLdouble";
 gits::OpenGL::CGLdouble::CGLdouble() : CGLtype<GLtype, type>() {}
 
 gits::OpenGL::CGLdouble::CGLdouble(GLdouble value) : CGLtype<GLtype, type>(value) {}
-
-void gits::OpenGL::CGLdouble::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::showpoint << std::setprecision(std::numeric_limits<GLdouble>::digits10 + 2)
-         << Value() << std::setprecision(std::numeric_limits<float>::digits10);
-  stream.flags(streamFlags);
-}
 
 /* ********************************* C L A M P D ******************************* */
 
@@ -2212,13 +2107,6 @@ gits::OpenGL::CGLclampd::CGLclampd() : CGLtype<GLtype, type>() {}
 
 gits::OpenGL::CGLclampd::CGLclampd(GLclampd value) : CGLtype<GLtype, type>(value) {}
 
-void gits::OpenGL::CGLclampd::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::showpoint << std::setprecision(std::numeric_limits<GLclampd>::digits10 + 2)
-         << Value() << std::setprecision(std::numeric_limits<float>::digits10);
-  stream.flags(streamFlags);
-}
-
 /* ******************************** C H A R A R B ****************************** */
 
 const char* gits::OpenGL::CGLcharARB::NAME = "GLcharARB";
@@ -2227,12 +2115,6 @@ gits::OpenGL::CGLcharARB::CGLcharARB() : CGLtype<GLtype, type>() {}
 
 gits::OpenGL::CGLcharARB::CGLcharARB(GLcharARB value) : CGLtype<GLtype, type>(value) {}
 
-void gits::OpenGL::CGLcharARB::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::dec << static_cast<int>(Value());
-  stream.flags(streamFlags);
-}
-
 /* ********************************* C H A R ******************************* */
 
 const char* gits::OpenGL::CGLchar::NAME = "GLchar";
@@ -2240,12 +2122,6 @@ const char* gits::OpenGL::CGLchar::NAME = "GLchar";
 gits::OpenGL::CGLchar::CGLchar() : CGLtype<GLtype, type>() {}
 
 gits::OpenGL::CGLchar::CGLchar(GLchar value) : CGLtype<GLtype, type>(value) {}
-
-void gits::OpenGL::CGLchar::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::dec << static_cast<int>(Value());
-  stream.flags(streamFlags);
-}
 
 /* ********************************* I N T P T R ******************************* */
 
@@ -2256,12 +2132,6 @@ gits::OpenGL::CGLsizeiptr::CGLsizeiptr() : CGLtype<GLtype, type>() {}
 gits::OpenGL::CGLsizeiptr::CGLsizeiptr(GLsizeiptr value)
     : CGLtype<GLtype, type>(ensure_signed32bit_representible<GLsizeiptr>(value)) {}
 
-void gits::OpenGL::CGLsizeiptr::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::dec << Value();
-  stream.flags(streamFlags);
-}
-
 /* ********************************* H A L F N V ******************************* */
 
 const char* gits::OpenGL::CGLhalfNV::NAME = "GLhalfNV";
@@ -2270,12 +2140,6 @@ gits::OpenGL::CGLhalfNV::CGLhalfNV() : CGLtype<GLtype, type>() {}
 
 gits::OpenGL::CGLhalfNV::CGLhalfNV(GLhalfNV value) : CGLtype<GLtype, type>(value) {}
 
-void gits::OpenGL::CGLhalfNV::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::dec << Value();
-  stream.flags(streamFlags);
-}
-
 /* ********************************* H A N D L E A R B ******************************* */
 
 const char* gits::OpenGL::CGLhandleARB::NAME = "GLhandleARB";
@@ -2283,12 +2147,6 @@ const char* gits::OpenGL::CGLhandleARB::NAME = "GLhandleARB";
 gits::OpenGL::CGLhandleARB::CGLhandleARB() : CGLtype<GLtype, type>() {}
 
 gits::OpenGL::CGLhandleARB::CGLhandleARB(GLhandleARB value) : CGLtype<GLtype, type>(value) {}
-
-void gits::OpenGL::CGLhandleARB::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::hex << Value();
-  stream.flags(streamFlags);
-}
 
 /* ********************************* I N T P T R ******************************* */
 
@@ -2299,12 +2157,6 @@ gits::OpenGL::CGLintptr::CGLintptr() : CGLtype<GLtype, type>() {}
 gits::OpenGL::CGLintptr::CGLintptr(GLintptr value)
     : CGLtype<GLtype, type>(ensure_signed32bit_representible<GLintptr>(value)) {}
 
-void gits::OpenGL::CGLintptr::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::hex << Value();
-  stream.flags(streamFlags);
-}
-
 /* ********************************* GLint64EXT ******************************* */
 
 const char* gits::OpenGL::CGLint64EXT::NAME = "GLint64EXT";
@@ -2313,12 +2165,6 @@ gits::OpenGL::CGLint64EXT::CGLint64EXT() : CGLtype<GLtype, type>() {}
 
 gits::OpenGL::CGLint64EXT::CGLint64EXT(GLint64EXT value) : CGLtype<GLtype, type>(value) {}
 
-void gits::OpenGL::CGLint64EXT::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::hex << Value();
-  stream.flags(streamFlags);
-}
-
 /* ********************************* GLuint64EXT ******************************* */
 
 const char* gits::OpenGL::CGLuint64EXT::NAME = "GLuint64EXT";
@@ -2326,12 +2172,6 @@ const char* gits::OpenGL::CGLuint64EXT::NAME = "GLuint64EXT";
 gits::OpenGL::CGLuint64EXT::CGLuint64EXT() : CGLtype<GLtype, type>() {}
 
 gits::OpenGL::CGLuint64EXT::CGLuint64EXT(GLuint64EXT value) : CGLtype<GLtype, type>(value) {}
-
-void gits::OpenGL::CGLuint64EXT::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::hex << Value();
-  stream.flags(streamFlags);
-}
 
 /* ********************************* S I Z E I P T R A R B ******************************* */
 
@@ -2342,12 +2182,6 @@ gits::OpenGL::CGLsizeiptrARB::CGLsizeiptrARB() : CGLtype<GLtype, type>() {}
 gits::OpenGL::CGLsizeiptrARB::CGLsizeiptrARB(GLsizeiptrARB value)
     : CGLtype<GLtype, type>(ensure_signed32bit_representible<GLsizeiptrARB>(value)) {}
 
-void gits::OpenGL::CGLsizeiptrARB::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::dec << Value();
-  stream.flags(streamFlags);
-}
-
 /* ********************************* I N T P T R A R B ******************************* */
 
 const char* gits::OpenGL::CGLintptrARB::NAME = "GLintptrARB";
@@ -2356,12 +2190,6 @@ gits::OpenGL::CGLintptrARB::CGLintptrARB() : CGLtype<GLtype, type>() {}
 
 gits::OpenGL::CGLintptrARB::CGLintptrARB(GLintptrARB value)
     : CGLtype<GLtype, type>(ensure_signed32bit_representible<GLintptrARB>(value)) {}
-
-void gits::OpenGL::CGLintptrARB::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::hex << Value();
-  stream.flags(streamFlags);
-}
 
 /* ********************************* V O I D _ P T R ******************************* */
 
@@ -2374,12 +2202,6 @@ gits::OpenGL::CGLvoid_ptr::CGLvoid_ptr(GLvoid* value)
 
 gits::OpenGL::CGLvoid_ptr::CGLvoid_ptr(const GLvoid* value)
     : CGLtype<GLtype, type>(reinterpret_cast<uint64_t>(value)) {}
-
-void gits::OpenGL::CGLvoid_ptr::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::hex << "(void *)" << _value;
-  stream.flags(streamFlags);
-}
 
 /* ********************************* CGLMAPPEDTEXTUREPTR ******************************* */
 void gits::OpenGL::CGLMappedTexturePtr::Assign(const void* val) {
@@ -2410,12 +2232,6 @@ gits::OpenGL::CGLconstuchar_ptr::CGLconstuchar_ptr() : CGLtype<GLtype, type>() {
 gits::OpenGL::CGLconstuchar_ptr::CGLconstuchar_ptr(const unsigned char* value)
     : CGLtype<GLtype, type>(reinterpret_cast<uint64_t>(value)) {}
 
-void gits::OpenGL::CGLconstuchar_ptr::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::hex << "(const unsigned char *)" << _value;
-  stream.flags(streamFlags);
-}
-
 /* ********************************* V O I D P T R ******************************* */
 
 const char* gits::OpenGL::CGLvoidPtr::NAME = "void *";
@@ -2425,12 +2241,6 @@ gits::OpenGL::CGLvoidPtr::CGLvoidPtr() : _value(0) {}
 gits::OpenGL::CGLvoidPtr::CGLvoidPtr(GLvoid* value)
     : _value(ensure_unsigned32bit_representible<uintptr_t>(reinterpret_cast<uintptr_t>(value))) {}
 
-void gits::OpenGL::CGLvoidPtr::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::hex << _value;
-  stream.flags(streamFlags);
-}
-
 /* ********************************* C O N S T V O I D P T R ******************************* */
 
 const char* gits::OpenGL::CGLconstVoidPtr::NAME = "const VoidPointer";
@@ -2439,12 +2249,6 @@ gits::OpenGL::CGLconstVoidPtr::CGLconstVoidPtr() : _value(0) {}
 
 gits::OpenGL::CGLconstVoidPtr::CGLconstVoidPtr(const GLvoid* value)
     : _value(ensure_unsigned32bit_representible<uintptr_t>(reinterpret_cast<uintptr_t>(value))) {}
-
-void gits::OpenGL::CGLconstVoidPtr::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::hex << _value;
-  stream.flags(streamFlags);
-}
 
 /* ********************************** CShaderSource **************************** */
 
@@ -2557,12 +2361,6 @@ const char* gits::OpenGL::CGLintptrZero::NAME = "GLintptrZero";
 
 gits::OpenGL::CGLintptrZero::CGLintptrZero() {}
 
-void gits::OpenGL::CGLintptrZero::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::dec << 0;
-  stream.flags(streamFlags);
-}
-
 uint64_t GetCArraySizeFromId(uint64_t id) {
   typedef std::map<uint64_t, uint64_t> map_t;
   INIT_NEW_STATIC_OBJ(idsMap, map_t);
@@ -2615,16 +2413,6 @@ void gits::OpenGL::CDataPtr::Write(CBinOStream& stream) const {
 void gits::OpenGL::CDataPtr::Read(CBinIStream& stream) {
   stream >> _isBuff;
   stream >> _ptr;
-}
-
-void gits::OpenGL::CDataPtr::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  if (*_isBuff != 0) {
-    stream << std::hex << "(void*)" << *_ptr;
-  } else {
-    stream << "GetDataPtr(" << std::hex << _ptr << ")";
-  }
-  stream.flags(streamFlags);
 }
 
 void* gits::OpenGL::CDataPtr::Value() {
@@ -2711,55 +2499,6 @@ void gits::OpenGL::CDataPtrArray::Write(CBinOStream& stream) const {
 void gits::OpenGL::CDataPtrArray::Read(CBinIStream& stream) {
   stream >> _isBuff;
   stream >> _ptrsRecorder;
-}
-void gits::OpenGL::CDataPtrArray::Write(CCodeOStream& stream) const {
-  stream << "&" << stream.VariableName(ScopeKey()) << "[0]";
-}
-void gits::OpenGL::CDataPtrArray::Declare(CCodeOStream& stream) const {
-  stream.Indent() << Name() << "const void* " << stream.VariableName(ScopeKey()) << "[] = ";
-  // declare an array
-  stream << "{ ";
-
-  // initiate all elements in an array
-  if (_ptrsRecorder.Vector().size() == 0) {
-    stream << "0";
-  } else {
-    size_t idx = 0;
-    size_t size = _ptrsRecorder.Vector().size();
-    for (auto ptr : _ptrsRecorder.Vector()) {
-      // Buffer offset
-      if (*_isBuff != 0) {
-        if (ptr != (uintptr_t)ptr) {
-          throw std::runtime_error(EXCEPTION_MESSAGE);
-        }
-        stream << "(void*)" << ptr;
-      } else {
-        uint64_t areaOffset = GetAreaOffset(ptr);
-        uint64_t areaRecPtr = GetAreaPtr(ptr);
-        auto& memTracker = SD()._memTracker;
-
-        // Alloc client data if needed
-        if (memTracker.find(areaRecPtr) == memTracker.end()) {
-          memTracker[areaRecPtr].resize((int)GetCArraySizeFromId(areaRecPtr), 0);
-        }
-
-        // Return client data ptr
-        if (memTracker[areaRecPtr].size() <= areaOffset) {
-          CALL_ONCE[&] {
-            LOG_WARNING << "passing invalid pointer: " << std::hex << areaRecPtr
-                        << " to GL API because it seems to not being used.";
-          };
-          stream << "(void*)" << areaRecPtr;
-        } else {
-          stream << "(void*)" << (&memTracker.at(areaRecPtr)[0] + areaOffset);
-        }
-      }
-      if (++idx < size) {
-        stream << ", ";
-      }
-    }
-  }
-  stream << " };\n";
 }
 
 const void** gits::OpenGL::CDataPtrArray::Value() {
@@ -3038,15 +2777,6 @@ void gits::OpenGL::CDataUpdate::Read(CBinIStream& stream) {
           std::move(gits::CGits::Instance().ResourceManager2().get(_updates.back().hash));
     }
   }
-}
-
-void gits::OpenGL::CDataUpdate::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  for (auto& i : _updates) {
-    stream.Indent() << "DataUpdate(" << std::hex << i.area << ", " << std::dec << i.offset << ", "
-                    << std::hex << i.hash << ");\n";
-  }
-  stream.flags(streamFlags);
 }
 
 //************************************** CCoherentBufferUpdate ********************************************************
@@ -3423,12 +3153,6 @@ void gits::OpenGL::CCoherentBufferUpdate::Read(CBinIStream& stream) {
 /* ******************************** CGLSamplerType****************************** */
 const char* gits::OpenGL::CGLSamplerType::NAME = "GLuint";
 
-void gits::OpenGL::CGLSamplerType::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::dec << Value();
-  stream.flags(streamFlags);
-}
-
 /* ********************************* G L C L A M P X ******************************* */
 
 const char* gits::OpenGL::CGLclampx::NAME = "GLclampx";
@@ -3436,12 +3160,6 @@ const char* gits::OpenGL::CGLclampx::NAME = "GLclampx";
 gits::OpenGL::CGLclampx::CGLclampx() : CGLtype<GLtype, type>() {}
 
 gits::OpenGL::CGLclampx::CGLclampx(GLclampx value) : CGLtype<GLtype, type>(value) {}
-
-void gits::OpenGL::CGLclampx::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::showpoint << Value();
-  stream.flags(streamFlags);
-}
 
 /* ********************************* G L F I X E D ******************************* */
 
@@ -3451,23 +3169,11 @@ gits::OpenGL::CGLfixed::CGLfixed() : CGLtype<GLtype, type>() {}
 
 gits::OpenGL::CGLfixed::CGLfixed(GLfixed value) : CGLtype<GLtype, type>(value) {}
 
-void gits::OpenGL::CGLfixed::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::showpoint << Value();
-  stream.flags(streamFlags);
-}
-
 /* ******************************** CGLsyncType ****************************** */
 const char* gits::OpenGL::CGLsyncType::NAME = "GLsync";
 gits::OpenGL::CGLsyncType::CGLsyncType() {}
 
 gits::OpenGL::CGLsyncType::CGLsyncType(GLsync value) : CGLtype<GLtype, type>(value) {}
-
-void gits::OpenGL::CGLsyncType::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << "(GLsync)" << std::hex << static_cast<const void*>(Original());
-  stream.flags(streamFlags);
-}
 
 /*****************************************************************************/
 
@@ -3514,10 +3220,6 @@ void gits::OpenGL::CGLIndirectCmds::Read(CBinIStream& stream) {
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
   }
-}
-
-void gits::OpenGL::CGLIndirectCmds::Write(CCodeOStream& stream) const {
-  stream << "/*indirect command not supported in ccode*/";
 }
 
 gits::OpenGL::CGLGenericResource::CGLGenericResource(const GLvoid* ptr,
@@ -3570,16 +3272,6 @@ void gits::OpenGL::CGLGenericResource::Read(CBinIStream& stream) {
   } else {
     stream >> _buffOffset;
   }
-}
-
-void gits::OpenGL::CGLGenericResource::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  if (*_isBuff == 0) {
-    stream << "Resource(" << _resource.GetResourceHash() << ")";
-  } else {
-    stream << "(void*)" << std::hex << _buffOffset;
-  }
-  stream.flags(streamFlags);
 }
 
 gits::OpenGL::CGLTexResource::CGLTexResource(

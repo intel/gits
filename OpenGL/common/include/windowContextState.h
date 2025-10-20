@@ -64,7 +64,7 @@ public:
   void UpdateWindowList(std::vector<win_handle_t>& windelete);
   win_handle_t GetWindowHandle() const;
   void GetWindowParams(std::vector<int>& winparams) {
-    throw std::runtime_error("GetWindowParams is not used in player/ccode");
+    throw std::runtime_error("GetWindowParams is not used in player");
   }
 
 private:

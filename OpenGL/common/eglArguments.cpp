@@ -22,35 +22,15 @@ CEGLint::CEGLint() {}
 
 CEGLint::CEGLint(EGLint value) : CGLtype<GLtype, type>(value) {}
 
-void CEGLint::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::dec << Value();
-  stream.flags(streamFlags);
-}
-
 /* ******************************** EGLboolean ****************************** */
 CEGLBoolean::CEGLBoolean() : CGLtype<GLtype, type>() {}
 
 CEGLBoolean::CEGLBoolean(EGLBoolean value) : CGLtype<GLtype, type>(value) {}
 
-void CEGLBoolean::Write(CCodeOStream& stream) const {
-  if (Value() == EGL_FALSE) {
-    stream << "EGL_FALSE";
-  } else {
-    stream << "EGL_TRUE";
-  }
-}
-
 /* ******************************** EGLenum ****************************** */
 CEGLenum::CEGLenum() {}
 
 CEGLenum::CEGLenum(EGLenum value) : CGLtype<GLtype, type>(value) {}
-
-void CEGLenum::Write(CCodeOStream& stream) const {
-  std::ios_base::fmtflags streamFlags(stream.flags());
-  stream << std::hex << Value();
-  stream.flags(streamFlags);
-}
 
 /* ******************************** EGLConfig ****************************** */
 const char* CEGLConfig::NAME = "CEGLConfig";
@@ -59,8 +39,5 @@ CEGLConfig::CEGLConfig() {}
 
 CEGLConfig::CEGLConfig(EGLConfig value) : CGLtype(value) {}
 
-void CEGLConfig::Write(CCodeOStream& stream) const {
-  TODO("EGLConfig in sourcecode")
-}
 } // namespace OpenGL
 } // namespace gits

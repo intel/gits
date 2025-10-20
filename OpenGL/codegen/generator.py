@@ -123,8 +123,6 @@ class Token:
     recorder_wrap: bool | str = False
     exec_post_recorder_wrap: bool = False
     run_wrap: bool | str = False
-    ccode_wrap: bool = False
-    ccode_write_wrap: bool = False
     pass_token: bool = False
     interceptor_exec_override: bool = False
     prefix: str | None = None
@@ -173,7 +171,6 @@ def calculate_wrap_names(functions_dict: dict[str, list[dict[str, Any]]]) -> Non
                 func['recorder_wrap'] = func['name']
             if func.get('run_wrap') is True:
                 func['run_wrap'] = func['name']
-            # TODO: Likely other wraps (like CCode) need the same treatment.
 
 
 def handle_inheritance(functions_dict: dict[str, list[dict[str, Any]]]) -> None:
@@ -827,7 +824,7 @@ function(name='glBindSampler', enabled=True, function_type=FuncType.BIND,
     ],
 )
 
-function(name='glBindSamplers', enabled=True, function_type=FuncType.BIND, ccode_wrap=True,
+function(name='glBindSamplers', enabled=True, function_type=FuncType.BIND,
     return_value=ReturnValue(type='void'),
     args=[
         Argument(name='first', type='GLuint'),
@@ -871,7 +868,7 @@ function(name='glBindTextureUnitParameterEXT', enabled=True, function_type=FuncT
     ],
 )
 
-function(name='glBindTextures', enabled=True, function_type=FuncType.BIND, ccode_wrap=True,
+function(name='glBindTextures', enabled=True, function_type=FuncType.BIND,
     return_value=ReturnValue(type='void'),
     args=[
         Argument(name='first', type='GLuint'),
@@ -5442,7 +5439,7 @@ function(name='glFinalCombinerInputNV', enabled=True, function_type=FuncType.PAR
     ],
 )
 
-function(name='glFinish', enabled=True, function_type=FuncType.EXEC, run_wrap=True, ccode_wrap=True, recorder_wrap=True,
+function(name='glFinish', enabled=True, function_type=FuncType.EXEC, run_wrap=True, recorder_wrap=True,
     return_value=ReturnValue(type='void'),
     args=[],
 )
@@ -5486,7 +5483,7 @@ function(name='glFinishTextureSUNX', enabled=True, function_type=FuncType.EXEC,
     args=[],
 )
 
-function(name='glFlush', enabled=True, function_type=FuncType.EXEC, run_wrap=True, ccode_wrap=True, recorder_wrap=True,
+function(name='glFlush', enabled=True, function_type=FuncType.EXEC, run_wrap=True, recorder_wrap=True,
     return_value=ReturnValue(type='void'),
     args=[],
 )
@@ -8675,7 +8672,7 @@ function(name='glGetProgramPipelineiv', enabled=False, function_type=FuncType.NO
 
 function(name='glGetProgramPipelineivEXT', enabled=False, function_type=FuncType.NONE, inherit_from='glGetProgramPipelineiv')
 
-function(name='glGetProgramResourceIndex', enabled=True, function_type=FuncType.GET, run_wrap=True, ccode_wrap=True,
+function(name='glGetProgramResourceIndex', enabled=True, function_type=FuncType.GET, run_wrap=True,
     return_value=ReturnValue(type='GLuint'),
     args=[
         Argument(name='program', type='GLuint', wrap_type='CGLProgram'),
@@ -8730,7 +8727,7 @@ function(name='glGetProgramResourcefvNV', enabled=False, function_type=FuncType.
     ],
 )
 
-function(name='glGetProgramResourceiv', enabled=True, function_type=FuncType.GET_ESSENTIAL, run_wrap=True, ccode_write_wrap=True,
+function(name='glGetProgramResourceiv', enabled=True, function_type=FuncType.GET_ESSENTIAL, run_wrap=True,
     return_value=ReturnValue(type='void'),
     args=[
         Argument(name='program', type='GLuint', wrap_type='CGLProgram'),
@@ -9104,7 +9101,7 @@ function(name='glGetStringi', enabled=True, function_type=FuncType.GET, intercep
     ],
 )
 
-function(name='glGetSubroutineIndex', enabled=True, function_type=FuncType.GET, run_wrap=True, ccode_wrap=True,
+function(name='glGetSubroutineIndex', enabled=True, function_type=FuncType.GET, run_wrap=True,
     return_value=ReturnValue(type='GLuint'),
     args=[
         Argument(name='program', type='GLuint', wrap_type='CGLProgram'),
@@ -9229,7 +9226,7 @@ function(name='glGetTexGenxvOES', enabled=True, function_type=FuncType.GET,
     ],
 )
 
-function(name='glGetTexImage', enabled=True, function_type=FuncType.GET, run_wrap=True, ccode_wrap=True,
+function(name='glGetTexImage', enabled=True, function_type=FuncType.GET, run_wrap=True,
     return_value=ReturnValue(type='void'),
     args=[
         Argument(name='target', type='GLenum'),
@@ -9612,7 +9609,7 @@ function(name='glGetTranslatedShaderSourceANGLE', enabled=False, function_type=F
     ],
 )
 
-function(name='glGetUniformBlockIndex', enabled=True, function_type=FuncType.GET, run_wrap=True, ccode_wrap=True,
+function(name='glGetUniformBlockIndex', enabled=True, function_type=FuncType.GET, run_wrap=True,
     return_value=ReturnValue(type='GLuint'),
     args=[
         Argument(name='program', type='GLuint', wrap_type='CGLProgram'),
@@ -9638,7 +9635,7 @@ function(name='glGetUniformIndices', enabled=True, function_type=FuncType.GET,
     ],
 )
 
-function(name='glGetUniformLocation', enabled=True, function_type=FuncType.GET_ESSENTIAL, run_wrap=True, ccode_wrap=True,
+function(name='glGetUniformLocation', enabled=True, function_type=FuncType.GET_ESSENTIAL, run_wrap=True,
     return_value=ReturnValue(type='GLint', wrap_type='CRecUniformLocation', wrap_params='return_value, program, name'),
     args=[
         Argument(name='program', type='GLuint', wrap_type='CGLProgram'),
@@ -9646,7 +9643,7 @@ function(name='glGetUniformLocation', enabled=True, function_type=FuncType.GET_E
     ],
 )
 
-function(name='glGetUniformLocationARB', enabled=True, function_type=FuncType.GET_ESSENTIAL, run_wrap=True, ccode_wrap=True,
+function(name='glGetUniformLocationARB', enabled=True, function_type=FuncType.GET_ESSENTIAL, run_wrap=True,
     return_value=ReturnValue(type='GLint', wrap_type='CRecUniformLocation', wrap_params='return_value, programObj, name'),
     args=[
         Argument(name='programObj', type='GLhandleARB', wrap_type='CGLProgram'),
@@ -11854,7 +11851,7 @@ function(name='glMapParameterivNV', enabled=False, function_type=FuncType.NONE,
     ],
 )
 
-function(name='glMapTexture2DINTEL', enabled=True, function_type=FuncType.PARAM, ccode_wrap=True, state_track=True, interceptor_exec_override=True,
+function(name='glMapTexture2DINTEL', enabled=True, function_type=FuncType.PARAM, state_track=True, interceptor_exec_override=True,
     return_value=ReturnValue(type='void*', wrap_type='CGLMappedTexturePtr'),
     args=[
         Argument(name='texture', type='GLuint', wrap_type='CGLTexture'),
@@ -17087,7 +17084,7 @@ function(name='glReadInstrumentsSGIX', enabled=False, function_type=FuncType.NON
     ],
 )
 
-function(name='glReadPixels', enabled=True, function_type=FuncType.PARAM, run_wrap=True, ccode_wrap=True,
+function(name='glReadPixels', enabled=True, function_type=FuncType.PARAM, run_wrap=True,
     return_value=ReturnValue(type='void'),
     args=[
         Argument(name='x', type='GLint'),
@@ -21826,7 +21823,7 @@ function(name='glUnmapObjectBufferATI', enabled=True, function_type=FuncType.PAR
     ],
 )
 
-function(name='glUnmapTexture2DINTEL', enabled=True, function_type=FuncType.PARAM, ccode_wrap=True, state_track=True, exec_post_recorder_wrap=True,
+function(name='glUnmapTexture2DINTEL', enabled=True, function_type=FuncType.PARAM, state_track=True, exec_post_recorder_wrap=True,
     return_value=ReturnValue(type='void'),
     args=[
         Argument(name='texture', type='GLuint', wrap_type='CGLTexture'),
@@ -24585,7 +24582,7 @@ function(name='glVideoCaptureStreamParameterivNV', enabled=False, function_type=
     ],
 )
 
-function(name='glViewport', enabled=True, function_type=FuncType.PARAM, run_wrap=True, ccode_wrap=True, pre_token='CgitsViewportSettings(x, y, width, height)', recorder_wrap=True,
+function(name='glViewport', enabled=True, function_type=FuncType.PARAM, run_wrap=True, pre_token='CgitsViewportSettings(x, y, width, height)', recorder_wrap=True,
     return_value=ReturnValue(type='void'),
     args=[
         Argument(name='x', type='GLint'),

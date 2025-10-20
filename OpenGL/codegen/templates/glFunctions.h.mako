@@ -77,14 +77,7 @@ namespace gits {
       virtual unsigned Id() const { return ${func_id}; }
       virtual unsigned Type() const { return ${func_type_flags};}
       virtual const char* Name() const { return "${name}"; }
-% if token.ccode_wrap:
-      virtual const char* Suffix() const { return "_wrap"; }
-% endif  # token.ccode_wrap
       virtual void ${run_method_name}();
-% if token.ccode_write_wrap:
-      virtual void Write(CCodeOStream& stream) const override;
-      friend void ${cname}_CCODEWRITEWRAP(CCodeOStream& stream, const ${cname}& function);
-% endif  # token.ccode_write_wrap
       };
 
 % endfor  # for token

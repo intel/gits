@@ -24,10 +24,8 @@
 #include "openglTypes.h"
 #include "tools.h"
 #include "log2.h"
-
-#ifndef BUILD_FOR_CCODE
 #include "argument.h"
-#endif
+
 namespace gits {
 namespace OpenGL {
 GLenum GetTextureTarget(GLint name);
@@ -40,9 +38,6 @@ bool ReadPixelsWrapper(GLint x,
                        GLvoid* data,
                        GLenum readbuffer,
                        bool msaa);
-#ifdef BUILD_FOR_CCODE
-bool IsEsProfile();
-#endif
 void capture_drawbuffer(const std::filesystem::path& directory,
                         const std::string& file_name,
                         bool force_back_buffer,
@@ -56,12 +51,10 @@ void ScreenshotSave(unsigned frameNumber, HWND hWND);
 void capture_bound_texture2D(GLenum target,
                              const std::filesystem::path& directory,
                              const std::string& file_name);
-#ifndef BUILD_FOR_CCODE
 void RestoreFramebufferEXT(
     GLuint targetFBO, GLenum format, GLsizei height, GLsizei width, CBinaryResource& resource);
 void RestoreFramebuffer(
     GLuint targetFBO, GLenum format, GLsizei height, GLsizei width, CBinaryResource& resource);
-#endif
 unsigned texUnpackRowSize(GLenum format, GLenum type, GLint texWidth = 0);
 unsigned getTexImageSize(GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type);
 unsigned TexDataSize(GLenum format, GLenum type, GLsizei width, GLsizei height, GLsizei depth);
@@ -77,10 +70,8 @@ std::string GetShaderSource(GLint name);
 void GetUniformArraySizeAndOffset(
     GLuint program, const GLchar* name, GLint location, GLint& arraySize, GLint& offset);
 
-#ifndef BUILD_FOR_CCODE
 void SaveProgramBinary(GLuint program, hash_t hash);
 void RestoreProgramBinary(GLuint program, hash_t hash);
-#endif
 
 class PackPixelStoreStateStash {
   std::map<GLenum, GLint> _data;

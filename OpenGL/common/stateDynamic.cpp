@@ -207,9 +207,7 @@ void CStateDynamic::WriteClientSizes() {
   for (auto& area : _memTracker) {
     mapAreasSizes[area.first] = area.second.size();
   }
-#ifndef BUILD_FOR_CCODE
   write_map(Configurator::Get().common.recorder.dumpPath / "gitsClientSizes.dat", mapAreasSizes);
-#endif
 }
 
 CStateDynamic::CContextStateData* CStateDynamic::GetContextStateData(void* context) {
@@ -776,7 +774,6 @@ CTextureStateObj& TextureStateObject(GLenum target, GLint texture) {
 }
 
 //---------------------GEN MIPMAP State Data----------------------------------------------
-#ifndef BUILD_FOR_CCODE
 void GenMipMapStateData(GLint texture, GLenum target, GLint levels) {
   GLint bound_texture;
   if (isTrackTextureBindingWAUsed()) {
@@ -873,7 +870,6 @@ void GenMipMapStateData(GLenum target, GLint levels) {
   }
   GenMipMapStateData(texture, target, levels);
 }
-#endif
 
 //--------------------SET TARGET FOR TEXTURE--------------------------------
 void SetTargetForTexture(GLenum target, GLuint texture) {
@@ -917,7 +913,6 @@ void CStateDynamicNative::UnMapglXCtxToDispSurfBySurface(long unsigned int surfa
   }
 }
 
-#ifndef BUILD_FOR_CCODE
 bool curctx::IsOgl() {
   return SD().GetCurrentContextStateData().IsOgl();
 }
@@ -950,6 +945,5 @@ int curctx::Version() {
 bool curctx::IsNvidia() {
   return SD().GetCurrentContextStateData().IsNvidia() == 1;
 }
-#endif
 } // namespace OpenGL
 } // namespace gits

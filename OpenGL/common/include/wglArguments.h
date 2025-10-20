@@ -49,8 +49,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -73,8 +71,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -96,8 +92,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -119,8 +113,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -142,8 +134,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -165,8 +155,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -187,12 +175,6 @@ public:
   }
   virtual unsigned Length() const {
     return LENGTH;
-  }
-
-  virtual void Write(CCodeOStream& stream) const;
-  virtual void Declare(CCodeOStream& stream) const;
-  virtual bool DeclarationNeeded() const {
-    return true;
   }
 };
 } // namespace OpenGL

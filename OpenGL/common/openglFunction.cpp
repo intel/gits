@@ -797,10 +797,5 @@ void CDrawFunction::DrawFunctionRun() {
   }
 }
 
-void CDrawFunction::Write(CCodeOStream& stream) const {
-  stream << "\n/*draw: " << std::dec << _drawNum << " frame: " << _frameNum
-         << " drawInFrame: " << _drawInFrameNum << "*/";
-  gits::CFunction::Write(stream);
-}
 } // namespace OpenGL
 } // namespace gits

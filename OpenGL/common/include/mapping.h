@@ -18,9 +18,6 @@
 #include "openglTypes.h"
 #include "openglLibrary.h"
 #include "openglTools.h"
-#ifdef BUILD_FOR_CCODE
-#include "openglArguments.h" // "openglArguments.h" file for CCode is different than the one used for regular GITS builds
-#endif
 
 #include <unordered_map>
 #include <optional>
@@ -262,14 +259,6 @@ public:
     read_name_from_stream(stream, key_);
   }
 
-  virtual void Write(CCodeOStream& stream) const {
-    stream << "name<" << IdEnumStr() << ">(";
-    if (identity<std::is_pointer_v<Type>>()) {
-      stream << "0x";
-    }
-    stream << (typename ptr_to_void<Type>::type)key_ << ")";
-  }
-
   static const char* TypeNameStr() {
     return IdMappedArgMap<MapId>::TypeNameStr();
   }
@@ -459,7 +448,6 @@ public:
 
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
 
   GLint operator*() const;
 
@@ -494,7 +482,6 @@ public:
 
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
 
   GLint operator*() const;
 
@@ -541,7 +528,6 @@ public:
 
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
 
   GLint operator*() const;
 
@@ -569,7 +555,6 @@ public:
 
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
 
   GLuint operator*() const;
 

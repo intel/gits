@@ -69,9 +69,6 @@ public:
   virtual unsigned Version() const {
     return VERSION_1_1;
   }
-  virtual void Write(CCodeOStream& stream) const {
-    stream << _update;
-  }
   virtual void Run() {
     _update.Apply();
   }
@@ -124,7 +121,6 @@ public:
   }
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
   virtual void Run();
 };
 
@@ -159,7 +155,6 @@ public:
   virtual unsigned Version() const {
     return VERSION_1_1;
   }
-  virtual void Write(CCodeOStream& stream) const;
   virtual void Run();
 };
 
@@ -186,7 +181,6 @@ public:
   virtual unsigned Version() const {
     return VERSION_1_1;
   }
-  virtual void Write(CCodeOStream& stream) const;
   virtual void Run();
 };
 
@@ -233,7 +227,6 @@ public:
   virtual unsigned Version() const {
     return VERSION_1_1;
   }
-  virtual void Write(CCodeOStream& stream) const {}
   virtual void Run();
 };
 
@@ -269,7 +262,6 @@ public:
   virtual unsigned Version() const {
     return VERSION_1_1;
   }
-  virtual void Write(CCodeOStream& stream) const;
   virtual void Run();
 };
 
@@ -302,7 +294,6 @@ public:
   virtual unsigned Version() const {
     return VERSION_1_1;
   }
-  virtual void Write(CCodeOStream& stream) const;
   virtual void Run();
 };
 
@@ -334,7 +325,6 @@ public:
     return VERSION_1_1;
   }
   virtual void Run();
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -364,7 +354,6 @@ public:
   virtual unsigned Version() const {
     return VERSION_1_1;
   }
-  virtual void Write(CCodeOStream& stream) const;
   virtual void Run();
 };
 
@@ -417,7 +406,6 @@ public:
   }
 
   virtual void Run();
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -451,7 +439,6 @@ public:
   virtual unsigned Version() const {
     return VERSION_1_1;
   }
-  virtual void Write(CCodeOStream& stream) const;
   virtual void Run();
 };
 

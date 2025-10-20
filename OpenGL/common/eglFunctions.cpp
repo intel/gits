@@ -97,11 +97,6 @@ void gits::OpenGL::CeglGetError::Run() {
   drv.egl.eglGetError();
 }
 
-void gits::OpenGL::CeglGetError::Write(CCodeOStream& stream) const {
-  stream.select(CCodeOStream::GITS_FRAMES_CPP);
-  stream << Name() << "();\n";
-}
-
 /* ***************************** EGL_GET_DISPLAY *************************** */
 
 gits::OpenGL::CeglGetDisplay::CeglGetDisplay() {}
@@ -129,17 +124,6 @@ void gits::OpenGL::CeglGetDisplay::Run() {
   _return_value.AddMapping(display);
 }
 
-void gits::OpenGL::CeglGetDisplay::Write(CCodeOStream& stream) const {
-  stream.select(CCodeOStream::GITS_FRAMES_CPP);
-  stream.Indent() << "{" << std::endl;
-  CALL_ONCE[&] {
-    stream.Indent() << "drv.egl.Used(true);\n";
-  };
-  stream.Indent() << "EGLDisplay display = GetEGLDisplay();" << std::endl;
-  stream.Indent() << _return_value << " = display;" << std::endl;
-  stream.Indent() << "}" << std::endl;
-}
-
 /* ***************************** EGL_INITIALIZE *************************** */
 
 gits::OpenGL::CeglInitialize::CeglInitialize() {}
@@ -164,16 +148,6 @@ void gits::OpenGL::CeglInitialize::Run() {
   CHECK_FOR_EGL_INITIALIZATION(Name())
   EGLint minor = -1, major = -1;
   drv.egl.eglInitialize(*_dpy, &major, &minor);
-}
-
-void gits::OpenGL::CeglInitialize::Write(CCodeOStream& stream) const {
-  stream.select(CCodeOStream::GITS_FRAMES_CPP);
-  stream.Indent() << "{" << std::endl;
-  stream.ScopeBegin();
-  stream.Indent() << "EGLint minor = -1, major = -1;" << std::endl;
-  stream.Indent() << "eglInitialize(" << _dpy << std::dec << ", &major, &minor);" << std::endl;
-  stream.ScopeEnd();
-  stream.Indent() << "}" << std::endl;
 }
 
 /* ***************************** EGL_TERMINATE *************************** */
@@ -207,10 +181,6 @@ gits::OpenGL::CeglQueryString::CeglQueryString(const char* return_value,
 
 gits::CArgument& gits::OpenGL::CeglQueryString::Argument(unsigned idx) {
   return get_cargument(__FUNCTION__, idx, _dpy, _name);
-}
-
-void gits::OpenGL::CeglQueryString::Write(CCodeOStream& stream) const {
-  stream.Indent() << "eglQueryString(" << _dpy << ", " << _name << ");\n";
 }
 
 void gits::OpenGL::CeglQueryString::Run() {
@@ -250,11 +220,6 @@ void gits::OpenGL::CeglGetConfigs::Run() {
   drv.egl.eglGetConfigs(*_dpy, &configs[0], *_config_size, &num_config);
 }
 
-void gits::OpenGL::CeglGetConfigs::Write(CCodeOStream& stream) const {
-  stream.select(CCodeOStream::GITS_FRAMES_CPP);
-  stream << "//eglGetConfigs - not implemented\n";
-}
-
 /* ***************************** EGL_CHOOSE_CONFIG *************************** */
 
 gits::OpenGL::CeglChooseConfig::CeglChooseConfig() {}
@@ -274,23 +239,6 @@ gits::OpenGL::CeglChooseConfig::CeglChooseConfig(EGLBoolean return_value,
 
 gits::CArgument& gits::OpenGL::CeglChooseConfig::Argument(unsigned idx) {
   return get_cargument(__FUNCTION__, idx, _dpy, _attrib_list, _configs, _config_size, _num_config);
-}
-
-void gits::OpenGL::CeglChooseConfig::Write(CCodeOStream& stream) const {
-  CScopeGenerator generateScopedBrackets(stream);
-  stream.Indent() << "EGLint num_config;" << std::endl;
-
-  _attrib_list.VariableNameRegister(stream, false);
-  _attrib_list.Declare(stream);
-
-  stream.Indent() << "std::vector<EGLConfig> configs(" << _config_size << ");" << std::endl;
-  if (*_config_size == 0) {
-    stream.Indent() << "eglChooseConfig(" << _dpy << ", " << _attrib_list << ", 0, " << _config_size
-                    << ", &num_config);" << std::endl;
-  } else {
-    stream.Indent() << "eglChooseConfig(" << _dpy << ", " << _attrib_list << ", &configs[0], "
-                    << _config_size << ", &num_config);" << std::endl;
-  }
 }
 
 void gits::OpenGL::CeglChooseConfig::Run() {
@@ -314,14 +262,6 @@ gits::OpenGL::CeglGetConfigAttrib::CeglGetConfigAttrib(
 
 gits::CArgument& gits::OpenGL::CeglGetConfigAttrib::Argument(unsigned idx) {
   return get_cargument(__FUNCTION__, idx, _dpy, _config, _attribute, _value);
-}
-
-void gits::OpenGL::CeglGetConfigAttrib::Write(CCodeOStream& stream) const {
-  stream.Indent() << "{" << std::endl;
-  stream.Indent() << "    EGLint value;" << std::endl;
-  stream.Indent() << "    eglGetConfigAttrib(" << _dpy << ", 0, " << _attribute << ", &value);"
-                  << std::endl;
-  stream.Indent() << "}" << std::endl;
 }
 
 void gits::OpenGL::CeglGetConfigAttrib::Run() {
@@ -606,41 +546,6 @@ void gits::OpenGL::CeglCreateWindowSurface::Run() {
   _return_value.AddMapping(surface);
 }
 
-void gits::OpenGL::CeglCreateWindowSurface::Write(CCodeOStream& stream) const {
-  stream.select(CCodeOStream::GITS_FRAMES_CPP);
-  EGLint width = find_attrib(EGL_WIDTH, _surface_attribs.Vector());
-  EGLint height = find_attrib(EGL_HEIGHT, _surface_attribs.Vector());
-
-  CScopeGenerator generateScopedBrackets(stream);
-  stream.Indent() << "EGLDisplay display = " << _dpy << ";" << std::endl;
-  stream.Indent() << "int winparams[] = {0, 0," << width << ", " << height << ", 1};" << std::endl;
-
-  _config_attribs.VariableNameRegister(stream, false);
-  _config_attribs.Declare(stream);
-
-  stream.Indent() << std::endl;
-  stream.Indent() << "std::vector<int> config_attribs (" << _config_attribs << ", "
-                  << _config_attribs << " + sizeof(" << _config_attribs << ") / sizeof(EGLint) );"
-                  << std::endl;
-  stream.Indent() << "EGLConfig config = find_config(display, config_attribs);" << std::endl;
-
-#if defined GITS_PLATFORM_WINDOWS
-  stream.Indent() << "Window_* wnd = new Window_(winparams[2], winparams[3], 0, 0, true);"
-                  << std::endl;
-#elif defined GITS_PLATFORM_X11
-  stream.Indent() << "Window_* wnd = new Window_(config, winparams[2], winparams[3], 0, 0, true);"
-                  << std::endl;
-#else
-  stream.Indent() << "throw ENotImplemented(EXCEPTION_MESSAGE);" << std::endl;
-#endif
-
-  stream.Indent() << "WindowsMap::AddWindowPlayer(wnd->handle(), wnd);" << std::endl;
-  stream.Indent() << "EGLSurface surface = eglCreateWindowSurface(display, config, "
-                     "(EGLNativeWindowType)wnd->handle(), 0);"
-                  << std::endl;
-  stream.Indent() << _return_value << " = surface;" << std::endl;
-}
-
 /* ***************************** EGL_CREATE_PBUFFER_SURFACE *************************** */
 
 gits::OpenGL::CeglCreatePbufferSurface::CeglCreatePbufferSurface() {}
@@ -670,25 +575,6 @@ void gits::OpenGL::CeglCreatePbufferSurface::Run() {
     LOG_WARNING << "PBuffer creation failed.";
   }
   _return_value.AddMapping(surface);
-}
-
-void gits::OpenGL::CeglCreatePbufferSurface::Write(CCodeOStream& stream) const {
-  stream.select(CCodeOStream::GITS_FRAMES_CPP);
-  CScopeGenerator generateScopedBrackets(stream);
-
-  stream << "EGLDisplay display = " << _dpy << ";\n";
-
-  _config_attribs.VariableNameRegister(stream, false);
-  _config_attribs.Declare(stream);
-
-  stream << "std::vector<int> config_attribs (" << _config_attribs << ", " << _config_attribs
-         << " + sizeof(" << _config_attribs << ") / sizeof(EGLint) );\n";
-  stream << "EGLConfig config = find_config(display, config_attribs);\n";
-
-  _attrib_list.VariableNameRegister(stream, false);
-  _attrib_list.Declare(stream);
-
-  stream << _return_value << " = " << Name() << "(display, config, " << _attrib_list << ");\n";
 }
 
 /* ***************************** EGL_CREATE_PIXMAP_SURFACE *************************** */
@@ -762,14 +648,6 @@ gits::CArgument& gits::OpenGL::CeglQuerySurface::Argument(unsigned idx) {
   return get_cargument(__FUNCTION__, idx, _dpy, _surface, _attribute, _value);
 }
 
-void gits::OpenGL::CeglQuerySurface::Write(CCodeOStream& stream) const {
-  stream << "{" << std::endl;
-  stream << "EGLint value;" << std::endl;
-  stream << "eglQuerySurface(" << _dpy << std::dec << ", " << _surface << " , " << _attribute
-         << ", &value);" << std::endl;
-  stream << "}" << std::endl;
-}
-
 void gits::OpenGL::CeglQuerySurface::Run() {
   if (PtblNtvApi() != PtblNtvStreamApi()) {
     return;
@@ -796,11 +674,6 @@ void gits::OpenGL::CeglBindAPI::Run() {
   }
   CHECK_FOR_EGL_INITIALIZATION(Name())
   drv.egl.eglBindAPI(*_api);
-}
-
-void gits::OpenGL::CeglBindAPI::Write(CCodeOStream& stream) const {
-  stream.select(CCodeOStream::GITS_FRAMES_CPP);
-  stream.Indent() << "eglBindAPI(" << std::hex << (uintptr_t)*_api << ");" << std::endl;
 }
 
 /* ***************************** EGL_QUERY_API *************************** */
@@ -1050,29 +923,6 @@ void gits::OpenGL::CeglCreateContext::Run() {
   SD().AddContext(ctx, *_share_context);
 }
 
-void gits::OpenGL::CeglCreateContext::Write(CCodeOStream& stream) const {
-  stream.select(CCodeOStream::GITS_FRAMES_CPP);
-  CScopeGenerator generateScopedBrackets(stream);
-
-  _attrib_list.VariableNameRegister(stream, false);
-  _attrib_list.Declare(stream);
-
-  _config_attribs.VariableNameRegister(stream, false);
-  _config_attribs.Declare(stream);
-
-  stream.Indent() << std::endl;
-  stream.Indent() << "std::vector<int> config_attribs (" << _config_attribs << ", "
-                  << _config_attribs << " + " << _config_attribs.Vector().size() << ");"
-                  << std::endl;
-  stream.Indent() << "EGLConfig config = find_config(" << _dpy << ", config_attribs);" << std::endl;
-  stream.Indent() << _return_value << " =  eglCreateContext_wrap(" << _dpy << ", config, "
-                  << _share_context << ", " << _attrib_list << ");" << std::endl;
-  CALL_ONCE[&] {
-    stream.Indent() << "drv.gl.Initialize(find_attrib(" << _attrib_list
-                    << ", 12440) >= 2 ? CGlDriver::API_GLES2 : CGlDriver::API_GLES1);\n";
-  };
-}
-
 /* ***************************** EGL_DESTROY_CONTEXT *************************** */
 
 gits::OpenGL::CeglDestroyContext::CeglDestroyContext() {}
@@ -1163,11 +1013,6 @@ void gits::OpenGL::CeglGetCurrentSurface::Run() {
   }
   CHECK_FOR_EGL_INITIALIZATION(Name())
   drv.egl.eglGetCurrentSurface(*_readdraw);
-}
-
-void gits::OpenGL::CeglGetCurrentSurface::Write(CCodeOStream& stream) const {
-  stream.select(CCodeOStream::GITS_FRAMES_CPP);
-  stream << Name() << "(" << _readdraw << ");" << std::endl;
 }
 
 /* ***************************** EGL_GET_CURRENT_DISPLAY *************************** */
@@ -1272,11 +1117,6 @@ void gits::OpenGL::CeglSwapBuffers::Run() {
   ptbl_eglSwapBuffers(*_dpy, *_surface);
 }
 
-void gits::OpenGL::CeglSwapBuffers::Write(CCodeOStream& stream) const {
-  stream.select(CCodeOStream::GITS_FRAMES_CPP);
-  stream.Indent() << "eglSwapBuffers_wrap(" << _dpy << ", " << _surface << ");\n";
-}
-
 /* ***************************** EGL_COPY_BUFFERS *************************** */
 
 gits::OpenGL::CeglCopyBuffers::CeglCopyBuffers() {}
@@ -1309,8 +1149,6 @@ gits::OpenGL::CeglGetProcAddress::CeglGetProcAddress(GLsizeiptr return_value, co
 gits::CArgument& gits::OpenGL::CeglGetProcAddress::Argument(unsigned idx) {
   return get_cargument(__FUNCTION__, idx, _procname);
 }
-
-void gits::OpenGL::CeglGetProcAddress::Write(CCodeOStream& stream) const {}
 
 void gits::OpenGL::CeglGetProcAddress::Run() {
   if (PtblNtvApi() != PtblNtvStreamApi()) {
@@ -1463,19 +1301,6 @@ void gits::OpenGL::CeglCreateImageKHR::Run() {
 
   EGLImageKHR image = drv.egl.eglCreateImageKHR(*_dpy, *_ctx, *_target, buffer, *_attrib_list);
   _return_value.AddMapping(image);
-}
-
-void gits::OpenGL::CeglCreateImageKHR::Write(CCodeOStream& stream) const {
-
-  CScopeGenerator generateScopedBrackets(stream);
-  stream.Indent() << "EGLDisplay dpy = " << _dpy << ";" << std::endl;
-  stream.Indent() << "EGLContext ctx = " << _ctx << ";" << std::endl;
-  _attrib_list.VariableNameRegister(stream, false);
-  _attrib_list.Declare(stream);
-  stream.Indent() << _return_value << " = " << Name() << "_wrap(dpy, ctx, " << _target
-                  << ", (EGLClientBuffer)" << _buffer.Original() << ", " << _attrib_list << ", "
-                  << _anb_width << ", " << _anb_height << ", " << _anb_format << ", " << _anb_usage
-                  << ", " << _anb_stride << ", " << _anb_resource << ");" << std::endl;
 }
 
 /* ***************************** ID_EGL_CREATE_PIXMAP_SURFACE_HI *************************** */

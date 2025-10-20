@@ -76,10 +76,6 @@ void CGLUniformLocation::Read(CBinIStream& stream) {
   read_from_stream(stream, location_);
 }
 
-void CGLUniformLocation::Write(CCodeOStream& stream) const {
-  stream << "uloc(" << program_ << ", " << location_ << ")";
-}
-
 GLint CGLUniformLocation::operator*() const {
   auto& locationsMap = getLocationsMap()[program_];
   auto optionalLocationData = locationsMap.find(location_);
@@ -142,10 +138,6 @@ void CGLUniformSubroutineLocation::Read(CBinIStream& stream) {
   read_from_stream(stream, program_);
   read_from_stream(stream, type_);
   read_from_stream(stream, location_);
-}
-
-void CGLUniformSubroutineLocation::Write(CCodeOStream& stream) const {
-  stream << "sloc(" << program_ << ", " << type_ << ", " << location_ << ")";
 }
 
 GLint CGLUniformSubroutineLocation::operator*() const {
@@ -219,10 +211,6 @@ void CGLUniformBlockIndex::Read(CBinIStream& stream) {
   read_from_stream(stream, index_);
 }
 
-void CGLUniformBlockIndex::Write(CCodeOStream& stream) const {
-  stream << "bidx(" << program_ << ", " << index_ << ")";
-}
-
 GLint CGLUniformBlockIndex::operator*() const {
   auto& idx_map = getProgramsMap()[program_];
   auto iter = idx_map.find(index_);
@@ -256,10 +244,6 @@ void CGLStorageBlockIndex::Write(CBinOStream& stream) const {
 void CGLStorageBlockIndex::Read(CBinIStream& stream) {
   read_from_stream(stream, program_);
   read_from_stream(stream, index_);
-}
-
-void CGLStorageBlockIndex::Write(CCodeOStream& stream) const {
-  stream << "bidx(" << program_ << ", " << index_ << ")";
 }
 
 GLuint CGLStorageBlockIndex::operator*() const {

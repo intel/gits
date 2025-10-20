@@ -45,8 +45,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -68,8 +66,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -91,8 +87,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -114,8 +108,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -137,8 +129,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -160,8 +150,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -191,8 +179,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -214,8 +200,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -237,8 +221,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -260,8 +242,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -283,8 +263,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 } // namespace OpenGL

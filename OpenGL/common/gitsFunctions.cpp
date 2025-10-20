@@ -209,18 +209,6 @@ void gits::OpenGL::CgitsClientIndirectArraysUpdate::Read(CBinIStream& stream) {
   }
 }
 
-void gits::OpenGL::CgitsClientIndirectArraysUpdate::Write(CCodeOStream& stream) const {
-  //Write indirect client data
-  if (_indirectUpdatePtr.use_count() > 0) {
-    stream << *_indirectUpdatePtr;
-  }
-
-  //Write attribs client data
-  for (auto& update : _arraysUpdateVec) {
-    stream << *update;
-  }
-}
-
 void gits::OpenGL::CgitsClientIndirectArraysUpdate::Run() {
   //Apply indirect client data
   if (_indirectUpdatePtr.use_count() > 0) {
@@ -324,22 +312,6 @@ void gits::OpenGL::CgitsLinkProgramAttribsSetting::Run() {
   }
 }
 
-void gits::OpenGL::CgitsLinkProgramAttribsSetting::Write(CCodeOStream& stream) const {
-  stream.select(stream.selectCCodeFile());
-  for (const auto& location : _attrib_locations.Map()) {
-    if (strncmp(location.first.c_str(), "gl_", 3) != 0) {
-      gits::OpenGL::CglBindAttribLocation(_program.Original(), location.second,
-                                          (GLchar*)location.first.c_str())
-          .Write(stream);
-    }
-  }
-  for (const auto& location : _frag_data_locations.Map()) {
-    gits::OpenGL::CglBindFragDataLocation(_program.Original(), location.second,
-                                          (GLchar*)location.first.c_str())
-        .Write(stream);
-  }
-}
-
 /* ***************************** GITS LINK PROGRAM BUFFERS SETTING ****************** */
 
 namespace {
@@ -440,11 +412,6 @@ void gits::OpenGL::CgitsLinkProgramBuffersSetting::Run() {
     SetProgramBlockBindings(*_program, GL_SHADER_STORAGE_BLOCK, _storage_blocks_bindings.Map(),
                             drv.gl.glShaderStorageBlockBinding);
   }
-}
-
-void gits::OpenGL::CgitsLinkProgramBuffersSetting::Write(CCodeOStream& stream) const {
-  stream << "// Restoration of uniform buffers and shader blocks bindings is not yet implemented "
-            "in gits CCode.\n";
 }
 
 /* ********************************** CgitsRenderbufferStorage ********************* */
@@ -752,21 +719,6 @@ void gits::OpenGL::CgitsUnmapBuffer::Run() {
   }
 }
 
-void gits::OpenGL::CgitsUnmapBuffer::Write(CCodeOStream& stream) const {
-  stream << "{\nGLvoid *pointer;" << std::endl;
-  if (*_buffer == -1) {
-    stream << "glGetBufferPointerv(" << _target << ", GL_BUFFER_MAP_POINTER, &pointer);"
-           << std::endl;
-  } else {
-    stream << "glGetNamedBufferPointervEXT(" << _buffer << ", GL_BUFFER_MAP_POINTER, &pointer);"
-           << std::endl;
-  }
-
-  stream << "std::memcpy((GLubyte*)pointer + " << _offset << "," << _resource << "," << _length
-         << ");" << std::endl;
-  stream << "}" << std::endl;
-}
-
 /* ********************************** CgitsPersistentBufferMapping ********************* */
 
 gits::CArgument& gits::OpenGL::CgitsCoherentBufferMapping::Argument(unsigned idx) {
@@ -782,10 +734,6 @@ gits::OpenGL::CgitsCoherentBufferMapping::CgitsCoherentBufferMapping(
 
 void gits::OpenGL::CgitsCoherentBufferMapping::Run() {
   _data.Apply();
-}
-
-void gits::OpenGL::CgitsCoherentBufferMapping::Write(CCodeOStream& stream) const {
-  _data.Write(stream);
 }
 
 /* ***************************** ID_UPDATE_MAPPED_TEXTURE *************************** */
@@ -805,15 +753,6 @@ gits::CArgument& gits::OpenGL::CUpdateMappedTexture::Argument(unsigned idx) {
 void gits::OpenGL::CUpdateMappedTexture::Run() {
   SD().GetCurrentSharedStateData().GetMappedTextures().UpdateTexture(*_texture, *_level,
                                                                      _resource.Data());
-}
-
-void gits::OpenGL::CUpdateMappedTexture::Write(CCodeOStream& stream) const {
-  TResourceHandle2 rHandle =
-      gits::CGits::Instance().ResourceManager2().get_resource_handle(_resource.GetResourceHash());
-  stream.select(stream.selectCCodeFile());
-  stream.Indent() << "CMappedTextures::getInstance().UpdateTexture( " << _texture << ", " << *_level
-                  << ", " << rHandle.offsetToStart << ", " << rHandle.offsetInsideChunk << ");"
-                  << std::endl;
 }
 
 /* ***************************** ID_GITS_VIEWPORT_SETTINGS *************************** */
@@ -840,25 +779,6 @@ gits::OpenGL::CgitsViewportSettings::CgitsViewportSettings(GLint x,
 void gits::OpenGL::CgitsViewportSettings::Run() {
 #if defined GITS_PLATFORM_WINDOWS
   UpdateWindows(_hwnd, _winparams, _hwnd_del_list);
-#endif
-}
-
-void gits::OpenGL::CgitsViewportSettings::Write(CCodeOStream& stream) const {
-  stream.select(stream.selectCCodeFile()) << std::endl;
-#if defined GITS_PLATFORM_WINDOWS
-  stream.Indent() << "{\n";
-  stream.ScopeBegin();
-
-  _winparams.VariableNameRegister(stream, false);
-  _winparams.Declare(stream);
-  _hwnd_del_list.VariableNameRegister(stream, false);
-  _hwnd_del_list.Declare(stream);
-  stream.Indent() << "UpdateWindows_( " << _hwnd << ", " << _winparams << ", "
-                  << _winparams.Vector().size() << ", " << _hwnd_del_list << ", "
-                  << _hwnd_del_list.Vector().size() << ");\n";
-
-  stream.ScopeEnd();
-  stream.Indent() << "}\n";
 #endif
 }
 
@@ -959,10 +879,6 @@ void gits::OpenGL::CRestoreDefaultGLFramebuffer::Run() {
   }
 }
 
-void gits::OpenGL::CRestoreDefaultGLFramebuffer::Write(CCodeOStream& stream) const {
-  stream << "// Restoration of default framebuffer is not yet implemented in gits CCode.\n";
-}
-
 /* ********************************** CgitsFlushMappedBufferRange ********************* */
 
 gits::CArgument& gits::OpenGL::CgitsFlushMappedBufferRange::Argument(unsigned idx) {
@@ -1015,17 +931,5 @@ void gits::OpenGL::CgitsFlushMappedBufferRange::Run() {
     }
 
     std::memcpy(((GLubyte*)pointer) + *_offset, *_resource, *_length);
-  }
-}
-
-void gits::OpenGL::CgitsFlushMappedBufferRange::Write(CCodeOStream& stream) const {
-  if (_resource.GetResourceHash() != CResourceManager::EmptyHash) {
-    stream << "{\nGLvoid *pointer;" << std::endl;
-    stream << "glGetBufferPointerv(" << _target << ", GL_BUFFER_MAP_POINTER, &pointer);"
-           << std::endl;
-
-    stream << "std::memcpy((GLubyte*)pointer + " << _offset << "," << _resource << "," << _length
-           << ");" << std::endl;
-    stream << "}" << std::endl;
   }
 }

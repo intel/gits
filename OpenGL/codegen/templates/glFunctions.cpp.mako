@@ -137,12 +137,5 @@ ${remove_mappings_run}
 }
 \
 \
-% if token.ccode_write_wrap:
-
-void gits::OpenGL::${cname}::Write(CCodeOStream& stream) const {
-  stream.select(stream.selectCCodeFile());
-  ${cname}_CCODEWRITEWRAP(stream, *this);
-}
-% endif  # token.ccode_write_wrap
 % endfor  # for token
 % endfor  # for name, token_versions

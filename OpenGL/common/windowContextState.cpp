@@ -16,12 +16,8 @@
 #include "platform.h"
 #include "windowContextState.h"
 #include "openglDrivers.h"
-#ifndef BUILD_FOR_CCODE
 #include "ptbl_glxLibrary.h"
 #include "ptblLibrary.h"
-#else
-#include "fake_ptbl.h"
-#endif
 #include "openglEnums.h"
 
 using namespace gits;
@@ -61,14 +57,12 @@ GlxPlayerMngr::GlxPlayerMngr(Display* glxDpy, GLXContext glxCtx, GLXFBConfig fbc
 
 void GlxPlayerMngr::UpdateWindow(std::vector<int>& winparams) {
   if (!winparams.empty()) {
-#ifndef BUILD_FOR_CCODE
-    if (!Configurator::Get().common.player.forceWindowSize.enabled)
-#endif
+    if (!Configurator::Get().common.player.forceWindowSize.enabled) {
       _window->set_size(winparams[2], winparams[3]);
-#ifndef BUILD_FOR_CCODE
-    if (!Configurator::Get().common.player.forceWindowPos.enabled)
-#endif
+    }
+    if (!Configurator::Get().common.player.forceWindowPos.enabled) {
       _window->set_position(winparams[0], winparams[1]);
+    }
   }
 }
 
@@ -101,7 +95,6 @@ void GlxPlayerMngr::SetupWindowWithoutId(std::vector<int>& winparams) {
   int ypos = winparams[1];
   int xsize = winparams[2];
   int ysize = winparams[3];
-#ifndef BUILD_FOR_CCODE
   if (Configurator::Get().common.player.forceWindowPos.enabled) {
     xpos = Configurator::Get().common.player.forceWindowPos.x;
     ypos = Configurator::Get().common.player.forceWindowPos.y;
@@ -111,7 +104,6 @@ void GlxPlayerMngr::SetupWindowWithoutId(std::vector<int>& winparams) {
     xsize = Configurator::Get().common.player.forceWindowSize.width;
     ysize = Configurator::Get().common.player.forceWindowSize.height;
   }
-#endif
 
   int native_attribs[] = {GLX_X_VISUAL_TYPE, GLX_TRUE_COLOR, 0};
   int formats = 0;
@@ -134,7 +126,6 @@ void GlxPlayerMngr::SetupWindowWithId(std::vector<int>& winparams) {
   int xsize = winparams[2];
   int ysize = winparams[3];
 
-#ifndef BUILD_FOR_CCODE
   if (Configurator::Get().common.player.forceWindowPos.enabled) {
     xpos = Configurator::Get().common.player.forceWindowPos.x;
     ypos = Configurator::Get().common.player.forceWindowPos.y;
@@ -144,7 +135,6 @@ void GlxPlayerMngr::SetupWindowWithId(std::vector<int>& winparams) {
     xsize = Configurator::Get().common.player.forceWindowSize.width;
     ysize = Configurator::Get().common.player.forceWindowSize.height;
   }
-#endif
 
   XVisualInfo* vi =
       (XVisualInfo*)ptbl_glXGetVisualFromFBConfig((Display*)GetNativeDisplay(), _fbConfig);

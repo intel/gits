@@ -12,10 +12,8 @@
 #include "openglEnums.h"
 #include "exception.h"
 #include "gits.h"
-#ifndef BUILD_FOR_CCODE
 #include "lua_bindings.h"
 #include <tuple>
-#endif
 
 #include <sstream>
 #include <algorithm>
@@ -170,7 +168,6 @@ NOINLINE void GLErrorLog() {
 
 void noop() {}
 
-#if !defined BUILD_FOR_CCODE
 using namespace lua;
 
 #define LUA_FUNCTION(RET, NAME, ARGS_DECL, DRV)                                                    \
@@ -189,15 +186,6 @@ using namespace lua;
     return 1;                                                                                      \
   }
 
-#else
-
-#define LUA_FUNCTION(RET, NAME, ARGS_DECL, DRV)                                                    \
-  int lua_##NAME(struct lua_State* L) {                                                            \
-    return 1;                                                                                      \
-  }
-
-#endif
-
 static bool bypass_luascript;
 
 #define LUA_GL_FUNCTION(b, c, d, e)      LUA_FUNCTION(b, c, d, drv.gl)
@@ -209,10 +197,6 @@ static bool bypass_luascript;
 
 } // namespace
 
-#ifdef BUILD_FOR_CCODE
-#define LUA_SCRIPTING_INSTRUMENTATION(b, c, d, e)
-#define LUA_FUNCTION_EXISTS(function) false
-#else
 static NOINLINE lua_State* GetLuaState() {
   return CGits::Instance().GetLua().get();
 }
@@ -221,15 +205,12 @@ static NOINLINE lua_State* GetLuaState() {
 
 #define LUA_FUNCTION_EXISTS(function) lua::FunctionExists(function, GetLuaState())
 
-#endif
-
 // logging_`function` is a function that is called from
 // default_`function` when configured to do so. It assumes that
 // drv.gl.`function` is properly initialized and so stores the value
 // of it upon first call. Next it outputs its name and list of
 // parameters to GITS Log(), installs itself as drv.gl.`function`
 // and calls original function.
-#ifndef BUILD_FOR_CCODE
 #define LOGGING_FUNCTION(b, c, d, e, err_fun, drv_name)                                            \
   b STDCALL logging_##c d {                                                                        \
     err_fun();                                                                                     \
@@ -259,12 +240,6 @@ static NOINLINE lua_State* GetLuaState() {
     }                                                                                              \
     return gits_ret;                                                                               \
   }
-#else
-#define LOGGING_FUNCTION(b, c, d, e, err_fun, drv_name)                                            \
-  b STDCALL logging_##c d {                                                                        \
-    return (b)0;                                                                                   \
-  }
-#endif
 
 #define LOGGING_GL_FUNCTION(b, c, d, e)      LOGGING_FUNCTION(b, c, d, e, GLErrorLog, drv.gl)
 #define LOGGING_GL_DRAW_FUNCTION(b, c, d, e) LOGGING_FUNCTION(b, c, d, e, GLErrorLog, drv.gl)
@@ -331,58 +306,6 @@ NOINLINE void LogFunctionNotFoundShutdown(const char* func) {
     return drv_name.c e;                                                                           \
   }
 
-#ifdef BUILD_FOR_CCODE
-
-void DumpPreDrawCall() {
-  static int PreDrawCallCnt = 0;
-  if (Configurator::Get().opengl.player.captureDraws[++PreDrawCallCnt] &&
-      Configurator::Get().opengl.player.captureDrawsPre) {
-    capture_drawbuffer(Configurator::Get().ccode.outputPath,
-                       "drawcall-" + std::to_string(PreDrawCallCnt) + "-pre", false);
-  }
-}
-
-void DumpPostDrawCall() {
-  static int PostDrawCallCnt = 0;
-  if (Configurator::Get().opengl.player.captureDraws[++PostDrawCallCnt]) {
-    capture_drawbuffer(Configurator::Get().ccode.outputPath,
-                       "drawcall-" + std::to_string(PostDrawCallCnt) + "-post", false);
-  }
-}
-
-#define DEFAULT_DRAW_FUNCTION(b, c, d, e, load_func, drv_name)                                     \
-  b STDCALL draw_##c d {                                                                           \
-    static b(STDCALL* drawFunc) d;                                                                 \
-    bool isFunLoaded = false;                                                                      \
-    if (!Configurator::Get().opengl.player.captureDraws.empty()) {                                 \
-      isFunLoaded = load_func(drawFunc, #c);                                                       \
-    } else {                                                                                       \
-      isFunLoaded = load_func(drv_name.c, #c);                                                     \
-    }                                                                                              \
-    if (!isFunLoaded) {                                                                            \
-      LOG_WARNING << "Function " #c " called before any context creation";                         \
-      return (b)0;                                                                                 \
-    } else {                                                                                       \
-      if (drawFunc == 0 && drv_name.c == 0) {                                                      \
-        LOG_ERROR << "Function " #c " couldn't be loaded";                                         \
-        drv.trigger_terminate_event();                                                             \
-        exit(1);                                                                                   \
-      } else {                                                                                     \
-        if (ShouldLog(LogLevel::TRACE) || Configurator::Get().common.shared.useEvents)             \
-          return logging_##c e;                                                                    \
-        if (!Configurator::Get().opengl.player.captureDraws.empty()) {                             \
-          DumpPreDrawCall();                                                                       \
-          drawFunc e;                                                                              \
-          DumpPostDrawCall();                                                                      \
-          return 0;                                                                                \
-        } else {                                                                                   \
-          return drv_name.c e;                                                                     \
-        }                                                                                          \
-      }                                                                                            \
-    }                                                                                              \
-  }
-#endif
-
 #define DEFAULT_GL_FUNCTION(b, c, d, e)  DEFAULT_FUNCTION(b, c, d, e, load_gl_function, drv.gl)
 #define DEFAULT_EGL_FUNCTION(b, c, d, e) DEFAULT_FUNCTION(b, c, d, e, load_egl_function, drv.egl)
 #define DEFAULT_WGL_FUNCTION(b, c, d, e) DEFAULT_FUNCTION(b, c, d, e, load_wgl_function, drv.wgl)
@@ -390,12 +313,7 @@ void DumpPostDrawCall() {
   DEFAULT_FUNCTION(b, c, d, e, load_wglext_function, drv.wgl)
 #define DEFAULT_GLX_FUNCTION(b, c, d, e) DEFAULT_FUNCTION(b, c, d, e, load_glx_function, drv.glx)
 
-#ifndef BUILD_FOR_CCODE
 #define DEFAULT_GL_DRAW_FUNCTION(b, c, d, e) DEFAULT_FUNCTION(b, c, d, e, load_gl_function, drv.gl)
-#else
-#define DEFAULT_GL_DRAW_FUNCTION(b, c, d, e)                                                       \
-  DEFAULT_DRAW_FUNCTION(b, c, d, e, load_gl_function, drv.gl)
-#endif
 
 namespace {
 GL_FUNCTIONS(LOGGING_)
@@ -478,7 +396,6 @@ int export_gitsGlDebugProc(lua_State* L) {
   return 1;
 }
 
-#ifndef BUILD_FOR_CCODE
 const luaL_Reg exports[] = {GL_FUNCTIONS(LUA_EXPORT_) DRAW_FUNCTIONS(LUA_EXPORT_)
                                 EGL_FUNCTIONS(LUA_EXPORT_)
 
@@ -492,15 +409,12 @@ const luaL_Reg exports[] = {GL_FUNCTIONS(LUA_EXPORT_) DRAW_FUNCTIONS(LUA_EXPORT_
                                             {"captureDrawBuffer", export_CaptureDrawBuffer},
                             {"gitsGlDebugProc", export_gitsGlDebugProc},
                             {nullptr, nullptr}};
-#endif
 } // namespace
 
 void RegisterLuaDriverFunctions() {
-#ifndef BUILD_FOR_CCODE
   const auto L = CGits::Instance().GetLua();
   luaL_newlib(L.get(), exports);
   lua_setglobal(L.get(), "drv");
-#endif
 }
 
 #undef DEFAULT_GL_FUNCTION

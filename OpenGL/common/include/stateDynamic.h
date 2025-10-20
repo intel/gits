@@ -585,10 +585,8 @@ public:
 };
 
 CTextureStateObj& TextureStateObject(GLenum target, GLint texture = -1);
-#ifndef BUILD_FOR_CCODE
 void GenMipMapStateData(GLint texture, GLenum target, GLint levels = -1);
 void GenMipMapStateData(GLenum target, GLint levels = -1);
-#endif
 void SetTargetForTexture(GLenum target, GLuint texture);
 
 namespace curctx {

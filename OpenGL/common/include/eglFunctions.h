@@ -51,7 +51,6 @@ public:
     return VERSION_UNKNOWN;
   }
   virtual void Run();
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -85,7 +84,6 @@ public:
     return VERSION_UNKNOWN;
   }
   virtual void Run();
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -121,7 +119,6 @@ public:
     return VERSION_UNKNOWN;
   }
   virtual void Run();
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -188,7 +185,6 @@ public:
   virtual unsigned Version() const {
     return VERSION_UNKNOWN;
   }
-  virtual void Write(CCodeOStream& stream) const;
   virtual void Run();
 };
 
@@ -230,7 +226,6 @@ public:
     return VERSION_UNKNOWN;
   }
   virtual void Run();
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -272,7 +267,6 @@ public:
   virtual unsigned Version() const {
     return VERSION_UNKNOWN;
   }
-  virtual void Write(CCodeOStream& stream) const;
   virtual void Run();
 };
 
@@ -310,7 +304,6 @@ public:
   virtual unsigned Version() const {
     return VERSION_UNKNOWN;
   }
-  virtual void Write(CCodeOStream& stream) const;
   virtual void Run();
 };
 
@@ -354,7 +347,6 @@ public:
     return VERSION_UNKNOWN;
   }
   virtual void Run();
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -394,7 +386,6 @@ public:
     return VERSION_UNKNOWN;
   }
   virtual void Run();
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -505,7 +496,6 @@ public:
   virtual unsigned Version() const {
     return VERSION_UNKNOWN;
   }
-  virtual void Write(CCodeOStream& stream) const;
   virtual void Run();
 };
 
@@ -540,7 +530,6 @@ public:
     return VERSION_UNKNOWN;
   }
   virtual void Run();
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -861,7 +850,6 @@ public:
     return VERSION_UNKNOWN;
   }
   virtual void Run();
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -928,9 +916,6 @@ public:
   }
   virtual const char* Name() const {
     return "eglMakeCurrent";
-  }
-  virtual const char* Suffix() const {
-    return "_wrap";
   }
   virtual unsigned Version() const {
     return VERSION_UNKNOWN;
@@ -1001,7 +986,6 @@ public:
     return VERSION_UNKNOWN;
   }
   virtual void Run();
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -1170,7 +1154,6 @@ public:
     return VERSION_UNKNOWN;
   }
   virtual void Run();
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -1241,7 +1224,6 @@ public:
   virtual unsigned Version() const {
     return VERSION_UNKNOWN;
   }
-  virtual void Write(CCodeOStream& stream) const;
   virtual void Run();
 };
 
@@ -1388,7 +1370,6 @@ public:
     return VERSION_UNKNOWN;
   }
   virtual void Run();
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 class CeglCreatePixmapSurfaceHI : public CFunction {

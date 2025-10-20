@@ -71,9 +71,6 @@ public:
   virtual void Read(CBinIStream& stream) {
     _update.Read(stream);
   }
-  virtual void Write(CCodeOStream& stream) const {
-    _update.Write(stream);
-  }
 };
 } // namespace OpenGL
 } // namespace gits

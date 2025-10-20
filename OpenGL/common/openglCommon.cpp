@@ -11,9 +11,7 @@
 #include "tools.h"
 #include "openglDrivers.h"
 #include "openglEnums.h"
-#ifndef BUILD_FOR_CCODE
 #include "stateDynamic.h"
-#endif
 #include <cmath>
 
 namespace gits {

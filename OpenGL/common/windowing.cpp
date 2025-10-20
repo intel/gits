@@ -17,12 +17,7 @@
 #include "pragmas.h"
 #include "message_pump.h"
 #include "openglEnums.h"
-
-#ifdef BUILD_FOR_CCODE
-#include "fake_ptbl.h"
-#else
 #include "ptblLibrary.h"
-#endif
 
 #include <iostream>
 #include <algorithm>

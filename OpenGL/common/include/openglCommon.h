@@ -15,9 +15,7 @@
   number of components from format enum.
 */
 
-#ifndef BUILD_FOR_CCODE
 #include "gits.h"
-#endif
 #include "openglTypes.h"
 #include <string>
 #include <unordered_map>

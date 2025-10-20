@@ -247,30 +247,6 @@ public:
     }
   }
 
-  virtual void Write(CCodeOStream& stream) const {
-    stream << stream.VariableName(ScopeKey());
-  }
-
-  virtual void Declare(CCodeOStream& stream) const {
-    stream.Indent() << Name() << " " << stream.VariableName(ScopeKey()) << "[] = ";
-    // declare an array
-    stream << "{ ";
-
-    // initiate all elements in an array
-    if ((int)_array.size() == 0) {
-      stream << "0";
-    } else {
-      for (auto iter = _array.begin(); iter != _array.end(); ++iter) {
-        CGLtype wrapper_(*iter);
-        stream << wrapper_;
-        if (iter < _array.end() - 1) {
-          stream << ", ";
-        }
-      }
-    }
-    stream << " };\n";
-  }
-
   std::vector<T>& Vector() {
     return _array;
   }
@@ -394,30 +370,6 @@ public:
     }
   }
 
-  virtual void Write(CCodeOStream& stream) const {
-    stream << stream.VariableName(ScopeKey());
-  }
-
-  virtual void Declare(CCodeOStream& stream) const {
-    stream.Indent() << Name() << " " << stream.VariableName(ScopeKey()) << "[] = ";
-    // declare an array
-    stream << "{ ";
-
-    // initiate all elements in an array
-    if ((int)_array.size() == 0) {
-      stream << "0";
-    } else {
-      for (auto iter = _array.begin(); iter != _array.end(); ++iter) {
-        CGLtype wrapper_(*iter);
-        stream << wrapper_;
-        if (iter < _array.end() - 1) {
-          stream << ", ";
-        }
-      }
-    }
-    stream << " };\n";
-  }
-
   std::vector<T>& Vector() {
     return _array;
   }
@@ -498,7 +450,6 @@ public:
   CGLtype(const GLtype value) : _value(value){};
 
   virtual const char* Name() const = 0;
-  virtual void Write(CCodeOStream& stream) const = 0;
 
   virtual void Write(CBinOStream& stream) const {
     WrittenType to_write = (WrittenType)_value;
@@ -577,7 +528,6 @@ public:
     return NAME;
   }
 
-  virtual void Write(CCodeOStream& stream) const;
   static std::string EnumString(GLenum value);
 };
 
@@ -599,7 +549,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -621,8 +570,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -644,8 +591,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -667,8 +612,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -690,8 +633,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -713,8 +654,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -736,8 +675,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -759,8 +696,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -782,8 +717,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -805,8 +738,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -828,8 +759,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -851,8 +780,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -874,8 +801,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -897,8 +822,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -920,8 +843,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -943,8 +864,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -966,8 +885,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -989,8 +906,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -1012,8 +927,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -1035,8 +948,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -1058,8 +969,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -1081,8 +990,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -1104,8 +1011,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -1127,8 +1032,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -1150,7 +1053,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -1173,7 +1075,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-  virtual void Write(CCodeOStream& stream) const;
   void Assign(const void* val) {} // Assign method is do nothing for non mapped arguments
 
   GLvoid* operator*() {
@@ -1228,7 +1129,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-  virtual void Write(CCodeOStream& stream) const;
   void Assign(const void* val) {} // Assign method is do nothing for non mapped arguments
 
   const unsigned char* operator*() {
@@ -1266,7 +1166,6 @@ public:
   virtual const char* Name() const {
     return NAME;
   }
-  virtual void Write(CCodeOStream& stream) const;
   using gits::CArgumentBuffer::Write;
   virtual char* Buffer() {
     return 0;
@@ -1313,7 +1212,6 @@ public:
   virtual const char* Name() const {
     return NAME;
   }
-  virtual void Write(CCodeOStream& stream) const;
   using gits::CArgumentBuffer::Write;
 
   virtual char* Buffer() {
@@ -1355,7 +1253,6 @@ public:
   }
   virtual void Write(CBinOStream& stream) const {}
   virtual void Read(CBinIStream& stream) {}
-  virtual void Write(CCodeOStream& stream) const {}
 
   any_t operator*() {
     return any_t();
@@ -1437,7 +1334,6 @@ public:
     return (const GLint*)0;
   }
 
-  virtual void Write(CCodeOStream& stream) const;
   virtual void Write(CBinOStream& stream) const {}
   virtual void Read(CBinIStream& stream) {}
 };
@@ -1477,7 +1373,6 @@ public:
 
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
 
   void* Value();
   void* operator*() {
@@ -1509,11 +1404,6 @@ public:
 
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
-  virtual bool DeclarationNeeded() const {
-    return true;
-  }
-  virtual void Declare(CCodeOStream& stream) const;
 
   const void** Value();
   const void** operator*() {
@@ -1583,7 +1473,6 @@ public:
   void Apply();
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 //************************************** CCoherentBufferUpdate **************************************
@@ -1632,7 +1521,6 @@ public:
   void Apply();
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const {};
 
 private:
   std::vector<TCoherentBufferData> _updates;
@@ -1701,12 +1589,6 @@ public:
       stream >> *_heldArg;
     }
   }
-
-  virtual void Write(CCodeOStream& stream) const {
-    if (*_initialized == GL_TRUE) {
-      stream << *_heldArg;
-    }
-  }
 };
 
 void IndicesDataUpdateRecorder(GLsizei count,
@@ -1737,7 +1619,6 @@ public:
   virtual unsigned Length() const {
     return sizeof(GLuint);
   }
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /* @brief Wrapper for GLclampx OpenGL type
@@ -1758,8 +1639,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /* @brief Wrapper for GLfixed OpenGL type
@@ -1780,8 +1659,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -1803,8 +1680,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -1849,9 +1724,6 @@ public:
       stream >> location;
       _data[&name.Vector().at(0)] = *location;
     }
-  }
-  virtual void Write(CCodeOStream& stream) const {
-    stream << "/*CAttribsMap - not implemented in CCode*/";
   }
 
 private:
@@ -1926,42 +1798,6 @@ public:
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
   }
-
-  virtual bool DeclarationNeeded() const {
-    return true;
-  }
-
-  virtual void Write(CCodeOStream& stream) const {
-    stream << stream.VariableName(ScopeKey());
-  }
-
-  void Declare(CCodeOStream& stream) const {
-    stream.Indent() << Name() << " " << stream.VariableName(ScopeKey()) << "[] = {";
-    const size_t alignment =
-        strlen(Name()) + strlen(" ") + stream.VariableName(ScopeKey()).length() + strlen("[] = {");
-
-    // Initialize all elements of the array.
-    if (_array.size() == 0) {
-      stream << "\"\""; // Empty string.
-    } else {
-      for (size_t idx = 0; idx < _array.size(); ++idx) {
-        stream << "\"" << _rawarray[idx] << "\"";
-        if (idx < (_array.size() - 1)) {
-          stream << ", ";
-        }
-        if (!((idx + 1) % 16) && (idx != _array.size() - 1)) {
-          // If there's too many items in one line, we start a new line,
-          // using spaces to align quotation marks in the new and old line.
-          stream << '\n';
-          stream.Indent();
-          for (size_t i = 0; i <= alignment; ++i) {
-            stream << ' ';
-          }
-        }
-      }
-    }
-    stream << " };\n";
-  }
 };
 
 /**
@@ -1997,11 +1833,6 @@ public:
     stream >> _access;
     stream >> _mask;
   }
-  virtual void Write(CCodeOStream& stream) const {
-    std::ios_base::fmtflags streamFlags(stream.flags());
-    stream << std::hex << _access << " & " << _mask;
-    stream.flags(streamFlags);
-  }
 };
 
 /**
@@ -2030,11 +1861,6 @@ public:
   virtual void Read(CBinIStream& stream) {
     stream >> _flags;
     stream >> _mask;
-  }
-  virtual void Write(CCodeOStream& stream) const {
-    std::ios_base::fmtflags streamFlags(stream.flags());
-    stream << std::hex << _flags;
-    stream.flags(streamFlags);
   }
 };
 
@@ -2081,9 +1907,6 @@ public:
     read_from_stream(stream, _location);
     read_from_stream(stream, _array_size);
     read_from_stream(stream, _array_index);
-  }
-  virtual void Write(CCodeOStream& stream) const {
-    stream << Name() << "(" << _location << ", " << _array_size << ", " << _array_index << ")";
   }
 };
 
@@ -2165,39 +1988,6 @@ public:
     return _index;
   }
 
-  virtual bool DeclarationNeeded() const override {
-    return true;
-  }
-  virtual void Declare(CCodeOStream& stream) const override {
-    // We hardcode the variable name to "resource_name", so we can use it in
-    // the CCode wrap without relying on the name registration system.
-    stream.Indent() << "GLchar resource_name[] = \"" << *_name << "\";\n";
-    // In case of atomic counter, stream contains the name of a uniform
-    // variable associated with a given atomic counter buffer (not the name
-    // of the actual atomic counter buffer)
-    if (GL_ATOMIC_COUNTER_BUFFER == _programInterface) {
-      stream << "\n";
-      stream.Indent() << "// Get the index of the atomic counter buffer.\n";
-      stream.Indent() << "GLuint temp_program = " << _program << ";\n";
-      stream.Indent()
-          << "GLuint index = glGetProgramResourceIndex(temp_program, GL_UNIFORM, resource_name);\n";
-      stream.Indent() << "GLenum temp_prop = GL_ATOMIC_COUNTER_BUFFER_INDEX;\n";
-      stream.Indent() << "GLsizei temp_length = 0;\n";
-      stream.Indent() << "GLint temp_params = -1;\n";
-      stream.Indent() << "glGetProgramResourceiv(temp_program, GL_UNIFORM, index, 1, &temp_prop, "
-                         "1, &temp_length, &temp_params);\n";
-      stream.Indent() << "if (temp_length != 1) {\n";
-      stream.ScopeBegin();
-      stream.Indent() << "LOG_WARNING << \"CGLResourceIndex: expected 1 param from "
-                         "glGetProgramResourceiv, got \" << temp_length;\n";
-      stream.ScopeEnd();
-      stream.Indent() << "}\n\n";
-    } else {
-      stream.Indent() << "GLuint index = glGetProgramResourceIndex(" << _program << ", "
-                      << _programInterface << ", resource_name);\n";
-    }
-  }
-
   virtual void Write(CBinOStream& stream) const {
     _program.Write(stream);
     write_to_stream(stream, _programInterface);
@@ -2209,9 +1999,6 @@ public:
     read_from_stream(stream, _programInterface);
     read_from_stream(stream, _index);
     _name.Read(stream);
-  }
-  virtual void Write(CCodeOStream& stream) const {
-    stream << "index";
   }
 };
 
@@ -2254,21 +2041,6 @@ public:
     return "CGLProgramResourceivHelper";
   }
 
-  virtual bool DeclarationNeeded() const override {
-    return true;
-  }
-  virtual void Declare(CCodeOStream& stream) const override {
-    assert(Configurator::IsRecorder() && "Use _count only in recorder.");
-    stream.Indent() << "std::vector<GLint> params(" << _count << ");\n";
-    stream.Indent() << "std::vector<CRecUniformLocation> locations = {\n";
-    stream.ScopeBegin();
-    for (CRecUniformLocation location : _locations) {
-      stream.Indent() << location << ",\n";
-    }
-    stream.ScopeEnd();
-    stream.Indent() << "};\n";
-  }
-
   const std::vector<CRecUniformLocation>& Locations() const {
     return _locations;
   }
@@ -2292,9 +2064,6 @@ public:
     } else {
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
-  }
-  virtual void Write(CCodeOStream& stream) const {
-    stream << "params.data()";
   }
 };
 
@@ -2333,9 +2102,6 @@ public:
   }
   virtual void Read(CBinIStream& stream) { /* Do nothing */
   }
-  virtual void Write(CCodeOStream& stream) const {
-    stream << "outArg()";
-  }
 };
 
 struct DrawArraysIndirectCommand {
@@ -2367,8 +2133,6 @@ public:
 
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 class CGLGenericResource : public CArgument {
@@ -2391,7 +2155,6 @@ public:
   CBinaryResource::PointerProxy operator*();
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 class CGLTexResource : public CArgument {
@@ -2429,9 +2192,6 @@ public:
   }
   virtual void Read(CBinIStream& stream) {
     stream >> _resource;
-  }
-  virtual void Write(CCodeOStream& stream) const {
-    stream << _resource;
   }
 };
 
@@ -2478,9 +2238,6 @@ public:
   virtual void Read(CBinIStream& stream) {
     stream >> _resource;
   }
-  virtual void Write(CCodeOStream& stream) const {
-    stream << _resource;
-  }
 };
 
 class CGLClearTexResource : public CArgument {
@@ -2519,13 +2276,6 @@ public:
       _resource->Read(stream);
     }
   }
-  virtual void Write(CCodeOStream& stream) const {
-    if (!*_isNullPtr) {
-      _resource->Write(stream);
-    } else {
-      stream << "nullptr";
-    }
-  }
 };
 
 class CGLBitmapResource : public CArgument {
@@ -2552,9 +2302,6 @@ public:
   }
   virtual void Read(CBinIStream& stream) {
     stream >> _resource;
-  }
-  virtual void Write(CCodeOStream& stream) const {
-    stream << _resource;
   }
 };
 

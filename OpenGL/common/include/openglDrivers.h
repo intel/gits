@@ -26,7 +26,6 @@ typedef struct wl_display wl_display;
 typedef struct wl_buffer wl_buffer;
 
 namespace gits {
-#ifndef BUILD_FOR_CCODE
 struct Tracer {
   template <class T>
   NOINLINE void trace_ret(T r) {
@@ -71,7 +70,6 @@ struct Tracer {
 private:
   const char* name;
 };
-#endif
 } // namespace gits
 #include "glDrivers.h"
 
@@ -879,11 +877,7 @@ private:
   a(STDCALL* b) c;                                                                                 \
   a(STDCALL* shd_##b) c;
 
-#ifndef BUILD_FOR_CCODE
 #define DRAW_FUNCTION(a, b, c, d, e) GL_FUNCTION(a, b, c, d, e)
-#else
-#define DRAW_FUNCTION(a, b, c, d, e) a##GL_DRAW_FUNCTION(b, c, d, e)
-#endif
 
 #define DECLARE_PTR_GL_DRAW_FUNCTION(a, b, c, e)                                                   \
   a(STDCALL* b) c;                                                                                 \
@@ -956,30 +950,6 @@ extern CDrivers drv WEAK;
 extern "C" GLXContext glXGetCurrentContext();
 #endif
 
-#ifdef BUILD_FOR_CCODE
-//WA  -  It should be replaced by proper tracking of gl type per context in CCode
-namespace curctx {
-inline bool IsOgl() {
-  return drv.gl.Api() == gits::OpenGL::CGlDriver::API_GL;
-}
-inline bool IsOgl11() {
-  throw ENotImplemented(EXCEPTION_MESSAGE);
-  return false;
-}
-inline bool IsEs() {
-  return drv.gl.Api() != gits::OpenGL::CGlDriver::API_GL;
-}
-inline bool IsEs1() {
-  return drv.gl.Api() == gits::OpenGL::CGlDriver::API_GLES1;
-}
-inline bool IsEs2Plus() {
-  return drv.gl.Api() == gits::OpenGL::CGlDriver::API_GLES2;
-}
-inline bool IsEs3Plus() {
-  return drv.gl.Api() == gits::OpenGL::CGlDriver::API_GLES2;
-}
-} // namespace curctx
-#endif
 void* load_egl_or_native(const char* name);
 bool check_gl_function_availability(const char* name);
 

@@ -32,7 +32,6 @@ add_library(OpenGL_common
   ${OPENGL_COMMON_HEADER_DIR}/mapping.h
   ${OPENGL_COMMON_HEADER_DIR}/nonglArguments.h
   ${OPENGL_COMMON_HEADER_DIR}/openglArguments.h
-  ${OPENGL_COMMON_HEADER_DIR}/openglCCodeWriteWrap.h
   ${OPENGL_COMMON_HEADER_DIR}/openglCommon.h
   ${OPENGL_COMMON_HEADER_DIR}/openglDrivers.h
   ${OPENGL_COMMON_HEADER_DIR}/openglEnums.h
@@ -66,7 +65,6 @@ add_library(OpenGL_common
   ${OPENGL_COMMON_SOURCE_DIR}/mapping.cpp
   ${OPENGL_COMMON_SOURCE_DIR}/opengl_apis_iface.cpp
   ${OPENGL_COMMON_SOURCE_DIR}/openglArguments.cpp
-  ${OPENGL_COMMON_SOURCE_DIR}/openglCCodeWriteWrap.cpp
   ${OPENGL_COMMON_SOURCE_DIR}/openglCommon.cpp
   ${OPENGL_COMMON_SOURCE_DIR}/openglDrivers.cpp
   ${OPENGL_COMMON_SOURCE_DIR}/openglFunction.cpp

@@ -377,7 +377,6 @@ public:
   // Common 'Run' for all drawcalls. Do not override.
   virtual void Run();
   virtual void RunImpl() = 0;
-  virtual void Write(CCodeOStream& stream) const;
 
 private:
   unsigned _drawNum;

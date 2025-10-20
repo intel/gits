@@ -18,23 +18,19 @@
 #include "openglTools.h"
 #include "openglEnums.h"
 #include "gits.h"
-#ifndef BUILD_FOR_CCODE
 #include "stateDynamic.h"
 #include "openglLibrary.h"
-#endif
 #include "log.h"
 #include "timer.h"
 #include "pragmas.h"
 #include "openglCommon.h"
 #include <cassert>
-#ifndef BUILD_FOR_CCODE
 #include "ptblLibrary.h"
 #include "ptbl_wglLibrary.h"
 #include "ptbl_glxLibrary.h"
 #include "ptbl_eglLibrary.h"
 #include "windowContextState.h"
 #include "windowing.h"
-#endif
 #include <filesystem>
 
 namespace gits {
@@ -206,20 +202,6 @@ bool ReadPixelsWrapper(GLint x,
   return readSuccessful;
 }
 
-#ifdef BUILD_FOR_CCODE
-bool IsEsProfile() {
-  const char* ver = (const char*)drv.gl.glGetString(GL_VERSION);
-  if (ver == nullptr) {
-    LOG_WARNING << "glGetString(GL_VERSION) failed. Using legacy method of detecting OGL/GLES.";
-    return drv.gl.Api() != CGlDriver::API_GL;
-  }
-
-  std::string version(ver);
-  auto found = version.find("OpenGL ES");
-  return found != std::string::npos;
-}
-#endif
-
 void capture_drawbuffer(
     const std::filesystem::path& directory,
     const std::string& file_name,
@@ -228,11 +210,7 @@ void capture_drawbuffer(
     bool dump_stencil) //force_back_buffer forces back buffer capture only (used per swap captures)
 {
   //On desktop capture directly RGB, on ES we are guaranteed only RGBA format, so capture that
-#ifndef BUILD_FOR_CCODE
   GLenum format = curctx::IsOgl() ? GL_RGB : GL_RGBA;
-#else
-  GLenum format = IsEsProfile() ? GL_RGBA : GL_RGB; //IsOGL() in CCode is limited
-#endif
 
   std::vector<GLint> capture_dims(4);
   get_capture_viewport(capture_dims);
@@ -257,7 +235,6 @@ void capture_drawbuffer(
     std::filesystem::path path_color = directory;
     std::filesystem::create_directories(path_color);
     path_color /= file_name + suffix.str();
-#ifndef BUILD_FOR_CCODE
     // The image will be deleted in ImageWriter class after it is consumed
 
     if (!Configurator::Get().common.player.captureFrames.empty() &&
@@ -267,9 +244,6 @@ void capture_drawbuffer(
       CGits::Instance().WriteImage(path_color.string(), capture_dims[2], capture_dims[3],
                                    !curctx::IsOgl(), data);
     }
-#else
-    SavePng(path_color.string(), capture_dims[2], capture_dims[3], IsEsProfile(), &data[0]);
-#endif
   };
 
   if (capture_dims[2] == 0 || capture_dims[3] == 0) {
@@ -420,7 +394,6 @@ void ScreenshotSave(unsigned frameNumber, HWND hWND) {
 }
 #endif
 
-#ifndef BUILD_FOR_CCODE
 void capture_bound_texture2D(GLenum target,
                              const std::filesystem::path& directory,
                              const std::string& file_name) {
@@ -642,7 +615,6 @@ void RestoreFramebuffer(
   drv.gl.glBindFramebuffer(GL_DRAW_FRAMEBUFFER_EXT, boundDrawFBO);
   drv.gl.glBindFramebuffer(GL_READ_FRAMEBUFFER_EXT, boundReadFBO);
 }
-#endif
 
 unsigned texUnpackRowSize(GLenum format, GLenum type, GLint texWidth) {
   //Get texels per row
@@ -682,7 +654,6 @@ unsigned TexDataSize(GLenum format, GLenum type, GLsizei width, GLsizei height, 
   GLint imgHeight = 0;
   GLint imgOffset = 0;
   if (curctx::IsOgl() || curctx::IsEs3Plus()) {
-#ifndef BUILD_FOR_CCODE
     if (CGits::Instance().IsStateRestoration()) {
       auto* schedulerStatePtr = SD().GetCurrentContextStateData().GetSchedulerStatePtr();
       if (schedulerStatePtr == nullptr) {
@@ -693,14 +664,11 @@ unsigned TexDataSize(GLenum format, GLenum type, GLsizei width, GLsizei height, 
       imgHeight = schedulerStatePtr->GetGLParamui(GL_UNPACK_IMAGE_HEIGHT);
       imgOffset = schedulerStatePtr->GetGLParamui(GL_UNPACK_SKIP_IMAGES);
     } else {
-#endif
       drv.gl.glGetIntegerv(GL_UNPACK_SKIP_ROWS, &rowOffset);
       drv.gl.glGetIntegerv(GL_UNPACK_SKIP_PIXELS, &pixOffset);
       drv.gl.glGetIntegerv(GL_UNPACK_IMAGE_HEIGHT, &imgHeight);
       drv.gl.glGetIntegerv(GL_UNPACK_SKIP_IMAGES, &imgOffset);
-#ifndef BUILD_FOR_CCODE
     }
-#endif
   }
 
   // Get used tex data size.
@@ -733,50 +701,44 @@ unsigned CompressedTexDataSize(GLsizei width, GLsizei height, GLsizei depth, GLs
   GLint blockWidth = 0;
   GLint blockHeight = 0;
 
-#ifdef BUILD_FOR_CCODE
-  ENotImplemented(EXCEPTION_MESSAGE);
-#else
   if (curctx::Version() >= 430 || drv.gl.HasExtension("GL_ARB_compressed_texture_pixel_storage")) {
-#endif
-  drv.gl.glGetIntegerv(GL_UNPACK_COMPRESSED_BLOCK_SIZE, &blockSize);
-  drv.gl.glGetIntegerv(GL_UNPACK_COMPRESSED_BLOCK_WIDTH, &blockWidth);
-  drv.gl.glGetIntegerv(GL_UNPACK_COMPRESSED_BLOCK_HEIGHT, &blockHeight);
-#ifndef BUILD_FOR_CCODE
-}
-#endif
+    drv.gl.glGetIntegerv(GL_UNPACK_COMPRESSED_BLOCK_SIZE, &blockSize);
+    drv.gl.glGetIntegerv(GL_UNPACK_COMPRESSED_BLOCK_WIDTH, &blockWidth);
+    drv.gl.glGetIntegerv(GL_UNPACK_COMPRESSED_BLOCK_HEIGHT, &blockHeight);
+  }
 
-if (blockSize == 0 || blockWidth == 0 || blockHeight == 0) {
-  return imageSize;
-}
+  if (blockSize == 0 || blockWidth == 0 || blockHeight == 0) {
+    return imageSize;
+  }
 
-GLint skipPixels = 0;
-GLint skipRows = 0;
-GLint rowLength = 0;
-drv.gl.glGetIntegerv(GL_UNPACK_SKIP_PIXELS, &skipPixels);
-drv.gl.glGetIntegerv(GL_UNPACK_SKIP_ROWS, &skipRows);
-drv.gl.glGetIntegerv(GL_UNPACK_ROW_LENGTH, &rowLength);
-if (skipPixels == 0 && skipRows == 0 && rowLength == 0) {
-  return imageSize;
-}
+  GLint skipPixels = 0;
+  GLint skipRows = 0;
+  GLint rowLength = 0;
+  drv.gl.glGetIntegerv(GL_UNPACK_SKIP_PIXELS, &skipPixels);
+  drv.gl.glGetIntegerv(GL_UNPACK_SKIP_ROWS, &skipRows);
+  drv.gl.glGetIntegerv(GL_UNPACK_ROW_LENGTH, &rowLength);
+  if (skipPixels == 0 && skipRows == 0 && rowLength == 0) {
+    return imageSize;
+  }
 
-GLint areaWidth = width;
-GLint areaHeight = height;
-if (depth != 1) {
-  throw ENotImplemented(EXCEPTION_MESSAGE);
-}
+  GLint areaWidth = width;
+  GLint areaHeight = height;
+  if (depth != 1) {
+    throw ENotImplemented(EXCEPTION_MESSAGE);
+  }
 
-if (rowLength > 0) {
-  areaWidth = rowLength;
-} else if (skipPixels > 0) {
-  areaWidth += skipPixels;
-}
-if (skipRows > 0) {
-  areaHeight += skipRows;
-}
+  if (rowLength > 0) {
+    areaWidth = rowLength;
+  } else if (skipPixels > 0) {
+    areaWidth += skipPixels;
+  }
+  if (skipRows > 0) {
+    areaHeight += skipRows;
+  }
 
-GLint blocksWidth = (GLint)ceil(areaWidth / blockWidth);
-GLint blocksHeight = (GLint)ceil(areaHeight / blockHeight);
-return blocksWidth * blocksHeight * blockSize;
+  GLint blocksWidth = (GLint)ceil(areaWidth / blockWidth);
+  GLint blocksHeight = (GLint)ceil(areaHeight / blockHeight);
+  return blocksWidth * blocksHeight * blockSize;
 }
 
 GLenum MapAccessBitFieldToEnum(GLbitfield access) {
@@ -809,7 +771,6 @@ unsigned BitmapDataSize(GLsizei width, GLsizei height) {
   GLint length = 0;
 
   if (curctx::IsOgl()) {
-#ifndef BUILD_FOR_CCODE
     if (CGits::Instance().IsStateRestoration()) {
       auto* schedulerStatePtr = SD().GetCurrentContextStateData().GetSchedulerStatePtr();
       if (schedulerStatePtr == nullptr) {
@@ -818,12 +779,9 @@ unsigned BitmapDataSize(GLsizei width, GLsizei height) {
       alignment = schedulerStatePtr->GetGLParamui(GL_UNPACK_ALIGNMENT);
       length = schedulerStatePtr->GetGLParamui(GL_UNPACK_ROW_LENGTH);
     } else {
-#endif
       drv.gl.glGetIntegerv(GL_UNPACK_ALIGNMENT, &alignment);
       drv.gl.glGetIntegerv(GL_UNPACK_ROW_LENGTH, &length);
-#ifndef BUILD_FOR_CCODE
     }
-#endif
   }
   if (length == 0) {
     length = width;
@@ -933,7 +891,6 @@ GLint BoundTexture(GLenum target) {
   return boundTexture;
 }
 
-#ifndef BUILD_FOR_CCODE
 void SaveProgramBinary(GLuint program, hash_t hash) {
   GLint length = 0;
   drv.gl.glGetProgramiv(program, GL_PROGRAM_BINARY_LENGTH, &length);
@@ -956,7 +913,6 @@ void RestoreProgramBinary(GLuint program, hash_t hash) {
 
   drv.gl.glProgramBinary(program, *format, data_ptr, (GLsizei)data.size() - sizeof(GLenum));
 }
-#endif
 PackPixelStoreStateStash::PackPixelStoreStateStash() {
   _data[GL_PACK_ALIGNMENT] = 0;
   if (curctx::IsOgl()) {
@@ -1049,12 +1005,8 @@ void ReadBufferStateStash::Restore() {
 FboBindStateStash::FboBindStateStash() : _extFboBlitSupport(false) {
   //Check FBO binding
   if (!curctx::IsEs1()) {
-#ifndef BUILD_FOR_CCODE
     _extFboBlitSupport =
         drv.gl.HasExtension("GL_EXT_framebuffer_blit") || SD().IsCurrentContextCore();
-#else
-      _extFboBlitSupport = drv.gl.HasExtension("GL_EXT_framebuffer_blit");
-#endif
     if (!_extFboBlitSupport) {
       _data[GL_FRAMEBUFFER] = 0;
       drv.gl.glGetIntegerv(GL_FRAMEBUFFER_BINDING, &_data[GL_FRAMEBUFFER]);
@@ -1182,15 +1134,12 @@ MapBuffer::MapBuffer(GLenum target, GLint buffer) : _target(target), _ptr(nullpt
     if (_ptr == nullptr) {
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
-  }
-#ifndef BUILD_FOR_CCODE
-  else { //ES api where read write only mappings not supported
+  } else { //ES api where read write only mappings not supported
     if (SD().GetCurrentSharedStateData().Buffers().Get(buffer) == nullptr) {
       throw std::runtime_error(EXCEPTION_MESSAGE);
     }
     _ptr = (void*)&SD().GetCurrentSharedStateData().Buffers().Get(buffer)->Data().restore.buffer[0];
   }
-#endif
 }
 
 MapBuffer::~MapBuffer() {
@@ -1362,7 +1311,6 @@ std::vector<uint8_t> StencilToRgb(std::vector<uint32_t>& depthStencilData, bool 
   return colorData;
 }
 
-#ifndef BUILD_FOR_CCODE
 // If the drawable exists for given context, the function calls makeCurrent of respectice platform and returns true,
 // otherwise it returns false
 bool MakeCurrentIfDrawableExists(void* context) {
@@ -1467,7 +1415,6 @@ void* GetCurrentContextAPI() {
   throw ENotImplemented(EXCEPTION_MESSAGE);
 #endif
 }
-#endif
 
 std::set<GLuint> CurrentAttribsBuffers() {
   std::set<GLuint> buffers;
@@ -1511,7 +1458,6 @@ std::set<GLuint> CurrentAttribsBuffers() {
   return buffers;
 }
 
-#ifndef BUILD_FOR_CCODE
 std::map<GLuint, hash_t> CurrentAttribsBuffersHash() {
   std::map<GLuint, hash_t> hashes;
   GLint old = 0;
@@ -1542,7 +1488,6 @@ std::map<GLuint, hash_t> CurrentAttribsBuffersHash() {
   drv.gl.glBindBuffer(GL_ARRAY_BUFFER, old);
   return hashes;
 }
-#endif
 
 TBuffersState ESBufferState() {
   static bool checked = false;
@@ -1703,15 +1648,12 @@ StatePrinter::Texture::Texture(GLenum target, GLint name, GLenum texture)
     _internalFormat = param;
     drv.gl.glGetTexLevelParameteriv(target, 0, GL_TEXTURE_SAMPLES, &param);
     _msaaSamples = param;
-  }
-#ifndef BUILD_FOR_CCODE
-  else {
+  } else {
     CTextureStateObj* texObj =
         SD().GetCurrentSharedStateData().Textures().Get(CTextureStateObj(texture, target));
     _internalFormat = texObj->Data().track.mipmapData[0].internalFormat;
     _msaaSamples = texObj->Data().track.mipmapData[0].samples;
   }
-#endif
   texBindStateStash.Restore();
 }
 void StatePrinter::Texture::Write() {
@@ -1781,7 +1723,6 @@ void StatePrinter::FBO::Write() {
 }
 
 void StatePrinter::GLSLPrograms::Write() {
-#ifndef BUILD_FOR_CCODE
   CGLSLProgramStateObj* programStateObjPtr =
       SD().GetCurrentSharedStateData().GLSLPrograms().Get(_name);
   if (programStateObjPtr != nullptr) {
@@ -1802,13 +1743,9 @@ void StatePrinter::GLSLPrograms::Write() {
       LOG_TRACE << "GL_PROGRAM: " << _name;
     }
   }
-#else
-    LOG_TRACE << "GL_PROGRAM: " << _name;
-#endif
 }
 
 void StatePrinter::GLSLPipelines::Write() {
-#ifndef BUILD_FOR_CCODE
   CGLSLPipelineStateObj* pipelineStateObjPtr =
       SD().GetCurrentContextStateData().GLSLPipelines().Get(_name);
   if (pipelineStateObjPtr != nullptr) {
@@ -1817,9 +1754,6 @@ void StatePrinter::GLSLPipelines::Write() {
       LOG_TRACE << "GL_PIPELINE: " << _name << " GL_PROGRAM: " << progData.track.name;
     }
   }
-#else
-    LOG_TRACE << "GL_PIPELINE: " << _name;
-#endif
 }
 
 void StatePrinter::ARBProgram::Write() {
@@ -1908,7 +1842,6 @@ StatePrinter::StatePrinter() {
     }
   }
 
-#ifndef BUILD_FOR_CCODE
   //BoundBuffers
   auto& boundBuffers = SD().GetCurrentContextStateData().Bindings().BoundBuffers();
   for (auto& elem : boundBuffers) {
@@ -1916,17 +1849,14 @@ StatePrinter::StatePrinter() {
       _objects.push_back(std::shared_ptr<Object>(new BoundBuffers(elem.first, elem.second)));
     }
   }
-#endif
 
   drv.traceGLAPIBypass = false;
 }
 void StatePrinter::PrintToLog() {
-#ifndef BUILD_FOR_CCODE
   std::map<GLuint, hash_t> bufferHashses;
   if (Configurator::Get().opengl.player.traceGLBufferHashes[CGits::Instance().CurrentDrawCount()]) {
     bufferHashses = CurrentAttribsBuffersHash();
   }
-#endif
   if (_objects.size() > 0) {
     LOG_TRACE << "/**********************CURRENT BOUND STATE************************/";
     LOG_TRACE << " ";
@@ -1935,14 +1865,12 @@ void StatePrinter::PrintToLog() {
       LOG_TRACE << " ";
     }
   }
-#ifndef BUILD_FOR_CCODE
   if (Configurator::Get().opengl.player.traceGLBufferHashes[CGits::Instance().CurrentDrawCount()]) {
     LOG_TRACE << "Buffer objects used for rendering";
     for (const auto& elem : bufferHashses) {
       LOG_TRACE << elem.first << " - " << std::hex << elem.second;
     }
   }
-#endif
   if (_objects.size() > 0) {
     LOG_TRACE << "/*****************************************************************/";
   }
@@ -2114,7 +2042,6 @@ std::string ToStr<PIXELFORMATDESCRIPTOR>(const PIXELFORMATDESCRIPTOR& pfd) {
 }
 
 std::string GetCurrentProgramShaderText(GLenum shtype) {
-#ifndef BUILD_FOR_CCODE
   GLuint program = SD().GetCurrentContextStateData().Bindings().GLSLProgram();
   if (program == 0) {
     if (curctx::IsOgl()) {
@@ -2143,22 +2070,18 @@ std::string GetCurrentProgramShaderText(GLenum shtype) {
       }
     }
   }
-#endif
   return "";
 }
 
 std::string GetShaderSource(GLint name) {
-#ifndef BUILD_FOR_CCODE
   CGLSLShaderStateObj* shader = SD().GetCurrentSharedStateData().GLSLShaders().Get(name);
   if (shader) {
     return shader->Data().track.source;
   }
-#endif
   return "";
 }
 
 void CleanResources() {
-#ifndef BUILD_FOR_CCODE
   bool returnSCC;
   for (auto context : SD().GetContextVector()) {
     returnSCC = SetCurrentContext(context);
@@ -2202,11 +2125,9 @@ void CleanResources() {
       LOG_WARNING << "Resources cleanup failed. SetCurrentContext returned 0.";
     }
   }
-#endif
 }
 
 void DestroyContext(void* ctx) {
-#ifndef BUILD_FOR_CCODE
 #ifdef GITS_PLATFORM_WINDOWS
   // use EGL when libEGL.dll is loaded
   if (drv.gl.Api() == CGlDriver::API_GLES1 || drv.gl.Api() == CGlDriver::API_GLES2) {
@@ -2231,11 +2152,9 @@ void DestroyContext(void* ctx) {
 #else
   throw ENotImplemented(EXCEPTION_MESSAGE);
 #endif
-#endif
 }
 
 void DestroyAllContexts() {
-#ifndef BUILD_FOR_CCODE
   auto ctxsVector = SD().GetContextVector();
   for (auto ctx : ctxsVector) {
     DestroyContext(ctx);
@@ -2244,7 +2163,6 @@ void DestroyAllContexts() {
   if (!curctx::IsOgl()) {
     drv.egl.eglTerminate(drv.egl.eglGetDisplay((EGLNativeDisplayType)GetNativeDisplay()));
   }
-#endif
 }
 
 void GetUniformArraySizeAndOffset(
@@ -2304,9 +2222,6 @@ size_t GetPatchParameterValuesCount(GLenum pname) {
   }
 }
 
-#ifndef BUILD_FOR_CCODE
-// TODO: For CCode, we could use this: https://stackoverflow.com/a/26218031
-// `glGetTextureParameteriv(textureId, GL_TEXTURE_TARGET, &target);`
 GLenum GetTargetOfTextureOrCrash(GLuint texName) {
   const CTextureStateObj* const texState = SD().GetCurrentSharedStateData().Textures().Get(texName);
   if (texState != nullptr) {
@@ -2316,19 +2231,18 @@ GLenum GetTargetOfTextureOrCrash(GLuint texName) {
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
 }
-#endif
 bool isTrackTextureBindingWAUsed() {
 #ifdef GITS_PLATFORM_WINDOWS
   return Configurator::Get().opengl.recorder.trackTextureBindingWA;
 #else
-    return false;
+  return false;
 #endif
 }
 bool isSchedulefboEXTAsCoreWA() {
 #ifdef GITS_PLATFORM_WINDOWS
   return Configurator::Get().opengl.recorder.schedulefboEXTAsCoreWA;
 #else
-    return false;
+  return false;
 #endif
 }
 } // namespace OpenGL

@@ -34,7 +34,6 @@ public:
   virtual unsigned Length() const {
     return sizeof(EGLint);
   }
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -54,7 +53,6 @@ public:
   virtual unsigned Length() const {
     return sizeof(EGLBoolean);
   }
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -74,7 +72,6 @@ public:
   virtual unsigned Length() const {
     return sizeof(EGLenum);
   }
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -96,7 +93,6 @@ public:
   virtual unsigned Length() const {
     return sizeof(EGLConfig);
   }
-  virtual void Write(CCodeOStream& stream) const;
 };
 } // namespace OpenGL
 } // namespace gits

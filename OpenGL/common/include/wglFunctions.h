@@ -133,13 +133,9 @@ public:
   virtual const char* Name() const {
     return "wglGetPixelFormat";
   }
-  virtual const char* Suffix() const {
-    return "_wrap";
-  }
   virtual unsigned Version() const {
     return VERSION_UNKNOWN;
   }
-  virtual void Write(CCodeOStream& stream) const {}
   virtual void Run();
 };
 
@@ -1645,7 +1641,6 @@ public:
   virtual const char* Name() const {
     return "wglGetExtensionsStringEXT";
   }
-  virtual void Write(CCodeOStream& stream) const {}
   virtual unsigned Version() const {
     return VERSION_UNKNOWN;
   }

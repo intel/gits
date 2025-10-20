@@ -46,8 +46,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -69,8 +67,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -92,8 +88,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -115,8 +109,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -138,8 +130,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -161,8 +151,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -184,8 +172,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -207,8 +193,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -230,8 +214,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /**
@@ -254,7 +236,6 @@ public:
   virtual const char* Name() const {
     return NAME;
   }
-  virtual void Write(CCodeOStream& stream) const;
 
   virtual char* Buffer() {
     return 0;
@@ -293,8 +274,6 @@ public:
   virtual unsigned Length() const {
     return LENGTH;
   }
-
-  virtual void Write(CCodeOStream& stream) const;
 };
 } // namespace OpenGL
 } // namespace gits
