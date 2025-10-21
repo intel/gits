@@ -311,6 +311,10 @@ void AnalyzerCommandListService::setBindlessDescriptors(unsigned rootSignatureKe
   objectsForRestore_.insert(descriptorHeapKey);
 }
 
+bool AnalyzerCommandListService::inRange() {
+  return analyzerService_.inRange();
+}
+
 void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListClearStateCommand& c) {
   analyzerService_.notifyObject(c.pPipelineState_.key);
 }

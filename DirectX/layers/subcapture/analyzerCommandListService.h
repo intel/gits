@@ -75,6 +75,7 @@ private:
                               unsigned descriptorHeapKey,
                               D3D12_DESCRIPTOR_HEAP_TYPE heapType,
                               unsigned heapNumDescriptors);
+  bool inRange();
 
   void commandAnalysis(ID3D12GraphicsCommandListClearStateCommand& c);
   void commandAnalysis(ID3D12GraphicsCommandListDrawInstancedCommand& c);
@@ -167,7 +168,7 @@ private:
 
 template <typename CommandListCommand>
 void AnalyzerCommandListService::command(CommandListCommand& c) {
-  if (analyzerService_.inRange()) {
+  if (inRange()) {
     if (!resetCommandLists_[c.object_.key]) {
       commandListRestore(c.object_.key);
     }
