@@ -273,9 +273,6 @@ public:
   virtual const char* Name() const {
     return T_WRAP::NAME;
   }
-  virtual bool DeclarationNeeded() const {
-    return true;
-  }
 };
 
 //*************************** CArgumentGLMappedArray **************************
@@ -395,9 +392,6 @@ public:
 
   virtual const char* Name() const {
     return T_WRAP::NAME;
-  }
-  virtual bool DeclarationNeeded() const {
-    return true;
   }
 };
 
