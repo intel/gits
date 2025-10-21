@@ -74,6 +74,7 @@ public:
   void restoreState();
   void keepState(unsigned objectKey);
   void storeState(ObjectState* state);
+  void removeState(unsigned key);
   void storeINTCFeature(INTC_D3D12_FEATURE feature);
   void storeINTCApplicationInfo(INTC_D3D12_SetApplicationInfoCommand& c);
   void storeD3D12EnableExperimentalFeatures(const D3D12EnableExperimentalFeaturesCommand& c);

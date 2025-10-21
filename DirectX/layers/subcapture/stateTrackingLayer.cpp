@@ -138,7 +138,7 @@ void StateTrackingLayer::pre(IUnknownReleaseCommand& c) {
     auto it = resourceHeaps_.find(c.object_.key);
     if (it != resourceHeaps_.end()) {
       for (unsigned resourceKey : it->second) {
-        stateService_.releaseObject(resourceKey, 0);
+        stateService_.removeState(resourceKey);
         mapStateService_.destroyResource(resourceKey);
         resourceStateTrackingService_.destroyResource(resourceKey);
         descriptorService_.removeState(resourceKey);
@@ -516,7 +516,7 @@ void StateTrackingLayer::post(IDXGISwapChainResizeBuffersCommand& c) {
   for (unsigned bufferKey : swapchainBuffers_[swapChainKey]) {
     resourceStateTrackingService_.destroyResource(bufferKey);
     descriptorService_.removeState(bufferKey);
-    stateService_.releaseObject(bufferKey, 0);
+    stateService_.removeState(bufferKey);
   }
   swapchainBuffers_.erase(swapChainKey);
 }
@@ -561,7 +561,7 @@ void StateTrackingLayer::post(IDXGISwapChain3ResizeBuffers1Command& c) {
   for (unsigned bufferKey : swapchainBuffers_[swapChainKey]) {
     resourceStateTrackingService_.destroyResource(bufferKey);
     descriptorService_.removeState(bufferKey);
-    stateService_.releaseObject(bufferKey, 0);
+    stateService_.removeState(bufferKey);
   }
   swapchainBuffers_.erase(swapChainKey);
 }

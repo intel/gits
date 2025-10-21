@@ -225,6 +225,10 @@ void StateTrackingService::storeState(ObjectState* state) {
   }
 }
 
+void StateTrackingService::removeState(unsigned key) {
+  statesByKey_.erase(key);
+}
+
 void StateTrackingService::releaseObject(unsigned key, ULONG result) {
   auto itState = statesByKey_.find(key);
   if (itState == statesByKey_.end()) {
