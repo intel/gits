@@ -511,6 +511,14 @@ void StateTrackingLayer::post(IDXGISwapChainResizeBuffersCommand& c) {
       command->pDesc_.value->Format = c.NewFormat_.value;
     }
   }
+
+  unsigned swapChainKey = c.object_.key;
+  for (unsigned bufferKey : swapchainBuffers_[swapChainKey]) {
+    resourceStateTrackingService_.destroyResource(bufferKey);
+    descriptorService_.removeState(bufferKey);
+    stateService_.releaseObject(bufferKey, 0);
+  }
+  swapchainBuffers_.erase(swapChainKey);
 }
 
 void StateTrackingLayer::post(IDXGISwapChain3ResizeBuffers1Command& c) {
@@ -548,6 +556,14 @@ void StateTrackingLayer::post(IDXGISwapChain3ResizeBuffers1Command& c) {
       command->pDesc_.value->Format = c.Format_.value;
     }
   }
+
+  unsigned swapChainKey = c.object_.key;
+  for (unsigned bufferKey : swapchainBuffers_[swapChainKey]) {
+    resourceStateTrackingService_.destroyResource(bufferKey);
+    descriptorService_.removeState(bufferKey);
+    stateService_.releaseObject(bufferKey, 0);
+  }
+  swapchainBuffers_.erase(swapChainKey);
 }
 
 void StateTrackingLayer::post(ID3D12ObjectSetNameCommand& c) {
