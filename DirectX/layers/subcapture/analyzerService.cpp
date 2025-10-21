@@ -219,7 +219,9 @@ void AnalyzerService::createDeviceExtensionContext(
 }
 
 void AnalyzerService::addParent(unsigned key, unsigned parentKey) {
-  parentKeys_[key].push_back(parentKey);
+  if (key && parentKey) {
+    parentKeys_[key].push_back(parentKey);
+  }
 }
 
 void AnalyzerService::clearReadyExecutables() {
