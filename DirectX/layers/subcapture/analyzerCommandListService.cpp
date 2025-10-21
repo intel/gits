@@ -725,7 +725,37 @@ void AnalyzerCommandListService::commandAnalysis(
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandList4BeginRenderPassCommand& c) {
-  LOG_ERROR << "ID3D12GraphicsCommandList4::BeginRenderPass not handled in analysis.";
+  for (unsigned i = 0; i < c.pRenderTargets_.size; ++i) {
+    unsigned descriptorKey = c.pRenderTargets_.descriptorKeys[i];
+    if (descriptorKey) {
+      objectsForRestore_.insert(descriptorKey);
+      DescriptorState* state = descriptorService_.getDescriptorState(
+          descriptorKey, c.pRenderTargets_.descriptorIndexes[i]);
+      if (state) {
+        objectsForRestore_.insert(state->resourceKey);
+      }
+      descriptors_.insert({descriptorKey, c.pRenderTargets_.descriptorIndexes[i]});
+    }
+  }
+  for (unsigned key : c.pRenderTargets_.resolveSrcResourceKeys) {
+    objectsForRestore_.insert(key);
+  }
+  for (unsigned key : c.pRenderTargets_.resolveDstResourceKeys) {
+    objectsForRestore_.insert(key);
+  }
+  if (c.pDepthStencil_.descriptorKey) {
+    objectsForRestore_.insert(c.pDepthStencil_.descriptorKey);
+    DescriptorState* state = descriptorService_.getDescriptorState(
+        c.pDepthStencil_.descriptorKey, c.pDepthStencil_.descriptorIndex);
+    if (state) {
+      objectsForRestore_.insert(state->resourceKey);
+    }
+    descriptors_.insert({c.pDepthStencil_.descriptorKey, c.pDepthStencil_.descriptorIndex});
+  }
+  objectsForRestore_.insert(c.pDepthStencil_.resolveSrcDepthKey);
+  objectsForRestore_.insert(c.pDepthStencil_.resolveDstDepthKey);
+  objectsForRestore_.insert(c.pDepthStencil_.resolveSrcStencilKey);
+  objectsForRestore_.insert(c.pDepthStencil_.resolveDstStencilKey);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
