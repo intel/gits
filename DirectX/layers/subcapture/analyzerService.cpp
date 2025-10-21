@@ -218,6 +218,10 @@ void AnalyzerService::createDeviceExtensionContext(
   objectsForRestore_.insert(c.ppExtensionContext_.key);
 }
 
+void AnalyzerService::addParent(unsigned key, unsigned parentKey) {
+  parentKeys_[key].push_back(parentKey);
+}
+
 void AnalyzerService::clearReadyExecutables() {
   std::vector<GpuExecutionTracker::Executable*>& executables =
       gpuExecutionTracker_.getReadyExecutables();
@@ -253,6 +257,7 @@ void AnalyzerService::dumpAnalysisFile() {
   out << "OBJECTS\n";
   for (unsigned key : objectsForRestore_) {
     objectKeys.insert(key);
+    findParents(key, objectKeys);
   }
   for (unsigned key : commandListService_.getObjectsForRestore()) {
     objectKeys.insert(key);
@@ -297,6 +302,18 @@ void AnalyzerService::dumpAnalysisFile() {
   }
   for (auto& [resourceKey, offset] : ases) {
     out << resourceKey << " " << offset << "\n";
+  }
+}
+
+void AnalyzerService::findParents(unsigned key, std::set<unsigned>& objectKeys) {
+  auto it = parentKeys_.find(key);
+  if (it != parentKeys_.end()) {
+    for (unsigned parentKey : it->second) {
+      if (objectKeys.find(parentKey) == objectKeys.end()) {
+        objectKeys.insert(parentKey);
+        findParents(parentKey, objectKeys);
+      }
+    }
   }
 }
 

@@ -59,7 +59,11 @@ public:
   void createDeviceExtensionContext(INTC_D3D12_CreateDeviceExtensionContextCommand& c);
   void createDeviceExtensionContext(INTC_D3D12_CreateDeviceExtensionContext1Command& c);
 
+  void addParent(unsigned key, unsigned parentKey);
+  std::vector<unsigned>& getParents(unsigned key);
+
 private:
+  void findParents(unsigned key, std::set<unsigned>& objectKeys);
   void clearReadyExecutables();
   void dumpAnalysisFile();
 
@@ -68,6 +72,8 @@ private:
   AnalyzerCommandListService& commandListService_;
   AnalyzerRaytracingService& raytracingService_;
   bool optimize_{};
+
+  std::unordered_map<unsigned, std::vector<unsigned>> parentKeys_;
 
   struct ExecuteCommandListCommand : public GpuExecutionTracker::Executable {
     std::vector<unsigned> commandListKeys;
