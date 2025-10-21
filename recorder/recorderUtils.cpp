@@ -17,7 +17,7 @@
 #include <filesystem>
 
 #include "configurationLib.h"
-#include "log2.h"
+#include "log.h"
 #include "gits.h"
 #include "diagnostic.h"
 

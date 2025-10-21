@@ -27,7 +27,6 @@ list(APPEND common_SOURCES
   ${COMMON_HEADER_DIR}/keyEvents.h
   ${COMMON_HEADER_DIR}/key_value.h
   ${COMMON_HEADER_DIR}/library.h
-  ${COMMON_HEADER_DIR}/log.h
   ${COMMON_HEADER_DIR}/lua_bindings.h
   ${COMMON_HEADER_DIR}/macros.h
   ${COMMON_HEADER_DIR}/malloc_allocator.h
@@ -68,7 +67,6 @@ list(APPEND common_SOURCES
   ${COMMON_SOURCE_DIR}/getopt.cpp
   ${COMMON_SOURCE_DIR}/id.cpp
   ${COMMON_SOURCE_DIR}/library.cpp
-  ${COMMON_SOURCE_DIR}/log.cpp
   ${COMMON_SOURCE_DIR}/MemorySniffer.cpp
   ${COMMON_SOURCE_DIR}/message_pump.cpp
   ${COMMON_SOURCE_DIR}/messageBus.cpp

@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "fastOStream.h"
-#include "log2.h"
+#include "log.h"
 #include "configurationLib.h"
 #include "ipc/common.h"
 #include <filesystem>

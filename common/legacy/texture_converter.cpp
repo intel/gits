@@ -9,7 +9,7 @@
 #include "texture_converter.h"
 #include "exception.h"
 #include "platform.h"
-#include "log2.h"
+#include "log.h"
 #include <map>
 #include <algorithm>
 

@@ -51,7 +51,7 @@ int lua_${name}(lua_State* L) {
 ${get_return_type(func)} STDCALL special_${name}(${make_params(func, with_types=True)}) {
   ${get_return_type(func)} gits_ret = static_cast<${get_return_type(func)}>(0);
 #ifndef BUILD_FOR_CCODE
-  bool doTrace = ShouldLog(LogLevel::TRACE);
+  bool doTrace = log::ShouldLog(LogLevel::TRACE);
   if (doTrace) {
     LOG_FORMAT_RAW
     LOG_TRACE << LOG_PREFIX << "${name}(";
@@ -111,7 +111,7 @@ ${get_return_type(func)} STDCALL default_${name}(${make_params(func, with_types=
     return static_cast<${get_return_type(func)}>(0);
   }
   drvOcl.orig_${name} = drvOcl.${name};
-  if ((gits::ShouldLog(LogLevel::TRACE)) ||
+  if ((gits::log::ShouldLog(LogLevel::TRACE)) ||
       (Configurator::Get().common.shared.useEvents && LUA_FUNCTION_EXISTS("${name}")) ||
       (!Configurator::Get().common.player.traceSelectedFrames.empty())) {
     drvOcl.${name} = special_${name};

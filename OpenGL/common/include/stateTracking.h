@@ -1715,7 +1715,7 @@ inline void glCompressedTextureSubImage3DEXT_SD(GLuint texture,
 inline void glAttachObjectARB_SD(GLhandleARB containerObj,
                                  GLhandleARB obj,
                                  GLboolean recording = 0) {
-  if (Configurator::IsRecorder() || ShouldLog(LogLevel::TRACEV)) {
+  if (Configurator::IsRecorder() || log::ShouldLog(LogLevel::TRACEV)) {
     SD().GetCurrentSharedStateData()
         .GLSLPrograms()
         .Get(containerObj)
@@ -1724,7 +1724,7 @@ inline void glAttachObjectARB_SD(GLhandleARB containerObj,
 }
 
 inline void glAttachShader_SD(GLuint program, GLuint shader, GLboolean recording = 0) {
-  if (Configurator::IsRecorder() || ShouldLog(LogLevel::TRACEV) ||
+  if (Configurator::IsRecorder() || log::ShouldLog(LogLevel::TRACEV) ||
       Configurator::Get().common.shared.useEvents) {
     if (shader == 0) {
       return;
@@ -1738,7 +1738,7 @@ inline void glBindFragDataLocation_SD(GLuint program,
                                       GLuint color,
                                       const GLchar* name,
                                       GLboolean recording = 0) {
-  if (Configurator::IsRecorder() || ShouldLog(LogLevel::TRACEV)) {
+  if (Configurator::IsRecorder() || log::ShouldLog(LogLevel::TRACEV)) {
     CGLSLProgramStateObj* programStateObj =
         SD().GetCurrentSharedStateData().GLSLPrograms().Get(program);
     if (programStateObj == 0) {
@@ -1862,21 +1862,21 @@ inline void glColorPointerEXT_SD(GLint size,
 }
 
 inline void glCompileShader_SD(GLuint shader, GLboolean recording = 0) {
-  if (Configurator::IsRecorder() || ShouldLog(LogLevel::TRACEV) ||
+  if (Configurator::IsRecorder() || log::ShouldLog(LogLevel::TRACEV) ||
       Configurator::Get().common.shared.useEvents) {
     SD().GetCurrentSharedStateData().GLSLShaders().Get(shader)->Compile();
   }
 }
 
 inline void glCreateProgram_SD(GLuint retVal, GLboolean recording = 0) {
-  if (Configurator::IsRecorder() || ShouldLog(LogLevel::TRACEV) ||
+  if (Configurator::IsRecorder() || log::ShouldLog(LogLevel::TRACEV) ||
       Configurator::Get().common.shared.useEvents) {
     SD().GetCurrentSharedStateData().GLSLPrograms().Add(CGLSLProgramStateObj(retVal));
   }
 }
 
 inline void glCreateShader_SD(GLuint retVal, GLenum type, GLboolean recording = 0) {
-  if (Configurator::IsRecorder() || ShouldLog(LogLevel::TRACEV) ||
+  if (Configurator::IsRecorder() || log::ShouldLog(LogLevel::TRACEV) ||
       Configurator::Get().common.shared.useEvents) {
     SD().GetCurrentSharedStateData().GLSLShaders().Add(CGLSLShaderStateObj(retVal, type));
   }
@@ -1887,7 +1887,7 @@ inline void glDeleteObjectARB_SD(GLhandleARB obj, GLboolean recording = 0 /*= fa
     return;
   }
 
-  if (Configurator::IsRecorder() || ShouldLog(LogLevel::TRACEV)) {
+  if (Configurator::IsRecorder() || log::ShouldLog(LogLevel::TRACEV)) {
     // can be either program or shader
     CSharedStateDynamic::CGLSLPrograms& programsState =
         SD().GetCurrentSharedStateData().GLSLPrograms();
@@ -1920,14 +1920,14 @@ inline void glDeleteObjectARB_SD(GLhandleARB obj, GLboolean recording = 0 /*= fa
 }
 
 inline void glDeleteShader_SD(GLuint shader, GLboolean recording = 0 /*= false*/) {
-  if (Configurator::IsRecorder() || ShouldLog(LogLevel::TRACEV) ||
+  if (Configurator::IsRecorder() || log::ShouldLog(LogLevel::TRACEV) ||
       Configurator::Get().common.shared.useEvents) {
     SD().GetCurrentSharedStateData().GLSLShaders().Remove(1, &shader);
   }
 }
 
 inline void glDeleteProgram_SD(GLuint program, GLboolean recording = 0 /*= false*/) {
-  if (Configurator::IsRecorder() || ShouldLog(LogLevel::TRACEV) ||
+  if (Configurator::IsRecorder() || log::ShouldLog(LogLevel::TRACEV) ||
       Configurator::Get().common.shared.useEvents) {
     CSharedStateDynamic::CGLSLPrograms& programsState =
         SD().GetCurrentSharedStateData().GLSLPrograms();
@@ -2012,7 +2012,7 @@ inline void glDetachShader_SD(GLuint program, GLuint shader, GLboolean recording
 
   if ((Configurator::IsRecorder() &&
        SD().GetCurrentSharedStateData().GLSLPrograms().Get(program) != 0) ||
-      ShouldLog(LogLevel::TRACEV)) {
+      log::ShouldLog(LogLevel::TRACEV)) {
     SD().GetCurrentSharedStateData().GLSLPrograms().Get(program)->DetachShader(shader);
   }
 }
@@ -2026,7 +2026,7 @@ inline void glDetachObjectARB_SD(GLhandleARB containerObj,
 
   if ((Configurator::IsRecorder() &&
        SD().GetCurrentSharedStateData().GLSLPrograms().Get(containerObj) != 0) ||
-      ShouldLog(LogLevel::TRACEV)) {
+      log::ShouldLog(LogLevel::TRACEV)) {
     SD().GetCurrentSharedStateData().GLSLPrograms().Get(containerObj)->DetachShader(attachedObj);
   }
 }
@@ -2257,7 +2257,7 @@ inline void glVertexArrayAttribLFormat_SD(GLuint vaobj,
 }
 
 inline void glLinkProgram_SD(GLuint program, GLboolean recording = 0 /*= false*/) {
-  if (Configurator::IsRecorder() || ShouldLog(LogLevel::TRACEV) ||
+  if (Configurator::IsRecorder() || log::ShouldLog(LogLevel::TRACEV) ||
       Configurator::Get().common.shared.useEvents) {
     SD().GetCurrentSharedStateData().GLSLPrograms().Get(program)->Link();
   }
@@ -2468,7 +2468,7 @@ inline void glProgramParameteri_SD(GLuint program,
                                    GLenum pname,
                                    GLint value,
                                    GLboolean recording = 0 /*= false*/) {
-  if (Configurator::IsRecorder() || ShouldLog(LogLevel::TRACEV)) {
+  if (Configurator::IsRecorder() || log::ShouldLog(LogLevel::TRACEV)) {
     if (pname == GL_PROGRAM_SEPARABLE) {
       CGLSLProgramStateObj* programStateObj =
           SD().GetCurrentSharedStateData().GLSLPrograms().Get(program);
@@ -2523,7 +2523,7 @@ inline void glShaderSource_SD(GLuint shader,
                               const GLchar* const* string,
                               const GLint* length,
                               GLboolean recording = 0 /*= false*/) {
-  if (Configurator::IsRecorder() || ShouldLog(LogLevel::TRACEV) ||
+  if (Configurator::IsRecorder() || log::ShouldLog(LogLevel::TRACEV) ||
       Configurator::Get().common.shared.useEvents) {
     // build source string
     std::stringstream str;
@@ -2547,7 +2547,7 @@ inline void glTransformFeedbackVaryings_SD(GLuint program,
                                            const GLchar* const* varyings,
                                            GLenum bufferMode,
                                            GLboolean recording = 0 /*= false*/) {
-  if (Configurator::IsRecorder() || ShouldLog(LogLevel::TRACEV)) {
+  if (Configurator::IsRecorder() || log::ShouldLog(LogLevel::TRACEV)) {
     CGLSLProgramStateObj* programStateObj =
         SD().GetCurrentSharedStateData().GLSLPrograms().Get(program);
     if (programStateObj == 0) {
@@ -2644,7 +2644,7 @@ inline void glCreateShaderProgramv_SD(GLuint return_value,
                                       GLsizei count,
                                       const GLchar* const* strings,
                                       GLboolean recording = 0 /*= false*/) {
-  if (Configurator::IsRecorder() || ShouldLog(LogLevel::TRACEV) ||
+  if (Configurator::IsRecorder() || log::ShouldLog(LogLevel::TRACEV) ||
       Configurator::Get().common.shared.useEvents) {
     CGLSLShaderStateObj tmpShader(0, type);
     // This shader data will be attached to shader as linked but deleted though

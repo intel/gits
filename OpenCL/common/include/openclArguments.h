@@ -17,7 +17,7 @@
 #include "openclArgumentsAuto.h"
 
 #include "exception.h"
-#include "log2.h"
+#include "log.h"
 #include "gits.h"
 #include "pragmas.h"
 

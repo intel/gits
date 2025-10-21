@@ -8,7 +8,7 @@
 
 #include "arDecoder.h"
 
-#include "log2.h"
+#include "log.h"
 #include "exception.h"
 
 namespace gits {

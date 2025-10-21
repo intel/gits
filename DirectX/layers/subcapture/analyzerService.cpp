@@ -9,7 +9,7 @@
 #include "analyzerService.h"
 #include "analyzerResults.h"
 #include "gits.h"
-#include "log2.h"
+#include "log.h"
 
 #include <fstream>
 #include <sstream>

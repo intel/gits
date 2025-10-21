@@ -19,7 +19,6 @@
 #include <xcb/xcb.h>
 #include <cstring>
 #include "log.h"
-#include "log2.h"
 #include "gits.h"
 #endif
 

@@ -14,7 +14,7 @@
 
 #include "gitsPluginVulkan.h"
 #include "vulkanRecorderWrapperIface.h"
-#include "log2.h"
+#include "log.h"
 
 #include <thread>
 #include <mutex>

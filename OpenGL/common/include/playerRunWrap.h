@@ -54,7 +54,7 @@ inline void glProgramStringARB_WRAPRUN(CGLenum& target,
                                        CGLsizei& len,
                                        CShaderSource& string) {
   drv.gl.glProgramStringARB(*target, *format, (GLsizei)string.Text().size(), *string);
-  if (ShouldLog(LogLevel::TRACE)) {
+  if (log::ShouldLog(LogLevel::TRACE)) {
     std::string file_name = string.GetShaderFileName();
     LOG_FORMAT_RAW
     LOG_TRACE << "code: " << file_name << "  ";
@@ -604,11 +604,11 @@ inline void glShaderSource_WRAPRUN(CGLProgram& shader,
                                    CGLintptrZero& length) {
   drv.gl.glShaderSource(*shader, *count, *string, *length);
   glShaderSource_SD(*shader, *count, *string, *length);
-  if (ShouldLog(LogLevel::TRACE)) {
+  if (log::ShouldLog(LogLevel::TRACE)) {
     std::string file_name = string.GetShaderFileName();
     LOG_FORMAT_RAW
     LOG_TRACE << "code: " << file_name << "  ";
-    if (*shader != 0 && ShouldLog(LogLevel::TRACEV)) {
+    if (*shader != 0 && log::ShouldLog(LogLevel::TRACEV)) {
       SD().GetCurrentSharedStateData().GLSLShaders().Get(*shader)->SetShaderName(file_name);
     }
   }
@@ -619,11 +619,11 @@ inline void glShaderSourceARB_WRAPRUN(CGLProgram& shaderObj,
                                       CGLintptrZero& length) {
   drv.gl.glShaderSourceARB(*shaderObj, *count, *string, *length);
   glShaderSource_SD(*shaderObj, *count, *string, *length);
-  if (ShouldLog(LogLevel::TRACE)) {
+  if (log::ShouldLog(LogLevel::TRACE)) {
     std::string file_name = string.GetShaderFileName();
     LOG_FORMAT_RAW
     LOG_TRACE << "code: " << file_name << "  ";
-    if (*shaderObj != 0 && ShouldLog(LogLevel::TRACEV)) {
+    if (*shaderObj != 0 && log::ShouldLog(LogLevel::TRACEV)) {
       SD().GetCurrentSharedStateData().GLSLShaders().Get(*shaderObj)->SetShaderName(file_name);
     }
   }
@@ -635,7 +635,7 @@ inline void glCreateShaderProgramv_WRAPRUN(CGLProgram& return_value,
                                            CShaderSource& strings) {
   return_value.Assign(drv.gl.glCreateShaderProgramv(*type, 1, *strings));
   glCreateShaderProgramv_SD(*return_value, *type, 1, *strings);
-  if (ShouldLog(LogLevel::TRACE)) {
+  if (log::ShouldLog(LogLevel::TRACE)) {
     std::string file_name = strings.GetShaderFileName();
     LOG_FORMAT_RAW
     LOG_TRACE << "code: " << file_name << "  ";
@@ -647,7 +647,7 @@ inline void glCreateShaderProgramvEXT_WRAPRUN(CGLProgram& return_value,
                                               CShaderSource& strings) {
   return_value.Assign(drv.gl.glCreateShaderProgramvEXT(*type, 1, *strings));
   glCreateShaderProgramv_SD(*return_value, *type, 1, *strings);
-  if (ShouldLog(LogLevel::TRACE)) {
+  if (log::ShouldLog(LogLevel::TRACE)) {
     std::string file_name = strings.GetShaderFileName();
     LOG_FORMAT_RAW
     LOG_TRACE << "code: " << file_name << "  ";

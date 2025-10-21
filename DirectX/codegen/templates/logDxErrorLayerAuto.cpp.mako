@@ -9,7 +9,7 @@ ${header}
 
 #include "logDxErrorLayerAuto.h"
 #include "to_string/toStr.h"
-#include "log2.h"
+#include "log.h"
 #include "nvapi.h"
 
 namespace gits {

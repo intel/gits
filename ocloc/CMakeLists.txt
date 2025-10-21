@@ -51,7 +51,6 @@ list(APPEND ocloc_interceptor_files
   ../common/legacy/exception.cpp
   ../common/legacy/dynamic_linker.cpp
   ../common/legacy/gitsLoader.cpp
-  ../common/legacy/log.cpp
   interceptor/gitsPluginOcloc.cpp
   interceptor/include/gitsPluginOcloc.h
   interceptor/oclocEntryPoints.cpp

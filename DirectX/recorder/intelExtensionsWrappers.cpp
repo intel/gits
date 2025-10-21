@@ -10,7 +10,7 @@
 #include "captureManager.h"
 #include "commandsCustom.h"
 #include "interfaceArgumentUpdaters.h"
-#include "log2.h"
+#include "log.h"
 
 namespace gits {
 namespace DirectX {

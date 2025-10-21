@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "multithreadedObjectCreationService.h"
-#include "log2.h"
+#include "log.h"
 #include "gits.h"
 
 #include <processthreadsapi.h> // Used for SetThreadDescription

@@ -9,7 +9,7 @@
 #include "analyzerRaytracingService.h"
 #include "analyzerCommandListService.h"
 #include "gits.h"
-#include "log2.h"
+#include "log.h"
 
 #include <fstream>
 #include <queue>

@@ -9,7 +9,7 @@ ${header}
 
 #include "skipCallsOnConfigLayerAuto.h"
 #include "to_string/toStr.h"
-#include "log2.h"
+#include "log.h"
 
 namespace gits {
 namespace DirectX {

@@ -10,7 +10,7 @@
 // generated @ ${time}
 
 #include "configurationYAMLAuto.h"
-#include "log2.h"
+#include "log.h"
 
 #include <yaml-cpp/yaml.h>
 

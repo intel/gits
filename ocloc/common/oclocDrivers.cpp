@@ -159,7 +159,7 @@ int __ocloccall default_oclocInvoke(unsigned int argc,
     return -1;
   }
   drv.orig_oclocInvoke = drv.oclocInvoke;
-  if (ShouldLog(LogLevel::TRACE) || Configurator::Get().common.shared.useEvents) {
+  if (log::ShouldLog(LogLevel::TRACE) || Configurator::Get().common.shared.useEvents) {
     drv.oclocInvoke = special_oclocInvoke;
   }
   return drv.oclocInvoke(argc, argv, numSources, sources, sourceLens, sourcesNames, numInputHeaders,
@@ -214,7 +214,7 @@ int __ocloccall default_oclocFreeOutput(uint32_t* numOutputs,
     return -1;
   }
   drv.orig_oclocFreeOutput = drv.oclocFreeOutput;
-  if (ShouldLog(LogLevel::TRACE) || Configurator::Get().common.shared.useEvents) {
+  if (log::ShouldLog(LogLevel::TRACE) || Configurator::Get().common.shared.useEvents) {
     drv.oclocFreeOutput = special_oclocFreeOutput;
   }
   return drv.oclocFreeOutput(numOutputs, dataOutputs, lenOutputs, nameOutputs);

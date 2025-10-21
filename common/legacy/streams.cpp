@@ -17,7 +17,7 @@
 #include "tools.h"
 #include "exception.h"
 #include "gits.h"
-#include "log2.h"
+#include "log.h"
 
 #include <memory>
 #include <stdexcept>

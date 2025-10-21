@@ -735,7 +735,7 @@ NOINLINE void HandleCaptureDraws2DTexs() {
 NOINLINE void HandleTrace() {
   const auto currentDrawCount = CGits::Instance().CurrentDrawCount();
 
-  if (ShouldLog(LogLevel::TRACEV)) {
+  if (log::ShouldLog(LogLevel::TRACEV)) {
     StatePrinter statePrinter;
     statePrinter.PrintToLog();
   }

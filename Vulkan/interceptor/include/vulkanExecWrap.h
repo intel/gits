@@ -18,7 +18,7 @@
 #include "gitsPluginVulkan.h"
 #include "vulkanTools_lite.h"
 #include "vulkanRecorderWrapper.h"
-#include "log2.h"
+#include "log.h"
 
 #if defined GITS_PLATFORM_X11
 #include <dlfcn.h>

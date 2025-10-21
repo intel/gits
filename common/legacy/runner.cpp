@@ -17,7 +17,7 @@
 #include "function.h"
 #include "argument.h"
 #include "gits.h"
-#include "log2.h"
+#include "log.h"
 
 void gits::CRunner::Register(std::shared_ptr<CHandler> plugin) {
   _handlerList.push_back(plugin);

@@ -13,7 +13,7 @@
 #include "gits.h"
 #include "enumsAuto.h"
 #include "configurator.h"
-#include "log2.h"
+#include "log.h"
 #include "imGuiHelper.h"
 
 namespace gits {

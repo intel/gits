@@ -177,9 +177,10 @@ void CTokenMarker::Run() {
     }
     if (cfg.common.player.traceSelectedFrames.empty() ||
         cfg.common.player.traceSelectedFrames[CGits::Instance().CurrentFrame()]) {
-      CLog::SetLogLevel(cfg.common.shared.thresholdLogLevel);
+      plog::get()->setMaxSeverity(log::GetSeverity(cfg.common.shared.thresholdLogLevel));
     } else {
-      CLog::SetLogLevel(std::max(cfg.common.shared.thresholdLogLevel, LogLevel::INFOV));
+      plog::get()->setMaxSeverity(
+          log::GetSeverity(std::max(cfg.common.shared.thresholdLogLevel, LogLevel::INFOV)));
     }
     break;
 
@@ -223,9 +224,10 @@ void CTokenMarker::Run() {
     }
     if (cfg.common.player.traceSelectedFrames.empty() ||
         cfg.common.player.traceSelectedFrames[CGits::Instance().CurrentFrame()]) {
-      CLog::SetLogLevel(cfg.common.shared.thresholdLogLevel);
+      plog::get()->setMaxSeverity(log::GetSeverity(cfg.common.shared.thresholdLogLevel));
     } else {
-      CLog::SetLogLevel(std::max(cfg.common.shared.thresholdLogLevel, LogLevel::INFOV));
+      plog::get()->setMaxSeverity(
+          log::GetSeverity(std::max(cfg.common.shared.thresholdLogLevel, LogLevel::INFOV)));
     }
     break;
 

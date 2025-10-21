@@ -13,30 +13,11 @@
  */
 
 #include "recorderIface.h"
-#include "log.h"
 #include "gits.h"
 #include "diagnostic.h"
 #include "recorderUtils.h"
 
 #include <fstream>
-
-namespace {
-
-void PrintHandler(const char* text) {
-  gits::CLog(gits::LogLevel::OFF, gits::LogStyle::RAW) << text;
-}
-
-} // namespace
-
-gits::FPrintHandler STDCALL PrintHandlerGet(const char* dir) {
-  try {
-    gits::CLog::LogFile(dir);
-    return PrintHandler;
-  } catch (const std::exception& ex) {
-    std::cerr << "Cannot establish GITS logging: " << ex.what() << std::endl;
-    exit(EXIT_FAILURE);
-  }
-}
 
 gits::Configuration* STDCALL Configure(const char* cfgDir) {
   try {

@@ -9,7 +9,7 @@
 #include "windowService.h"
 #include "message_pump.h"
 #include "gits.h"
-#include "log2.h"
+#include "log.h"
 #include "playerManager.h"
 
 namespace gits {

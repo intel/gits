@@ -9,7 +9,7 @@
 #pragma once
 
 #include "xessService.h"
-#include "log2.h"
+#include "log.h"
 
 namespace gits {
 namespace DirectX {

@@ -25,7 +25,7 @@ enum TResourceType {
   RESOURCE_CLIENT_SIZES,
   RESOURCE_DATA_RAW
 };
-CLog& operator<<(CLog& log, TResourceType rt);
+
 std::unordered_map<uint32_t, std::filesystem::path> resource_filenames(
     const std::filesystem::path& prefix);
 

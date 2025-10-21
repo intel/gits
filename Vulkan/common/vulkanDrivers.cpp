@@ -240,7 +240,7 @@ void_t STDCALL default_vkIAmRecorderGITS() {
 
 NOINLINE bool UseSpecial(const char* func) {
   const auto& cfg = Configurator::Get();
-  return ShouldLog(LogLevel::TRACE) ||
+  return log::ShouldLog(LogLevel::TRACE) ||
          (cfg.common.shared.useEvents &&
           lua::FunctionExists(func, CGits::Instance().GetLua().get())) ||
          (cfg.common.player.exitOnError) || (!cfg.common.player.traceSelectedFrames.empty());
@@ -266,7 +266,7 @@ void checkReturnValue<PFN_vkVoidFunction>(const char*, PFN_vkVoidFunction) {}
                          first_argument_name)                                                      \
   return_type STDCALL special_##function_name function_arguments {                                 \
     const Configuration& gits_cfg = Configurator::Get();                                           \
-    bool doTrace = ShouldLog(LogLevel::TRACE);                                                     \
+    bool doTrace = log::ShouldLog(LogLevel::TRACE);                                                \
     if (doTrace) {                                                                                 \
       LOG_FORMAT_RAW                                                                               \
       LOG_TRACE << #function_name;                                                                 \

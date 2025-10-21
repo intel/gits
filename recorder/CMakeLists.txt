@@ -15,7 +15,6 @@ if(MSVC)
   file(WRITE ${recorder_DEF}
     "LIBRARY gitsRecorder.dll\n"
     "EXPORTS\n"
-    "  PrintHandlerGet\n"
     "  Configure\n"
     "  GITSRecorderOpenGL\n")
   if(WITH_OPENCL)

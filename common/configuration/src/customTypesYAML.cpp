@@ -11,7 +11,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include "stringFromType.h"
-#include "log2.h"
+#include "log.h"
 
 namespace YAML {
 

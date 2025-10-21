@@ -36,7 +36,6 @@ list(APPEND OpenGL_interceptor_external_cpps
   ../../common/legacy/timer.cpp
   ../../common/legacy/dynamic_linker.cpp
   ../../common/legacy/gitsLoader.cpp
-  ../../common/legacy/log.cpp
 )
 if(WIN32)
   list(APPEND OpenGL_interceptor_external_cpps ../../common/legacy/tools_windows.cpp)

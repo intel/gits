@@ -9,7 +9,7 @@
 #include "gpuPatchLayer.h"
 #include "playerManager.h"
 #include "gits.h"
-#include "log2.h"
+#include "log.h"
 
 #include <fstream>
 

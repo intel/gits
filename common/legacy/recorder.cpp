@@ -26,7 +26,7 @@
 #include "streams.h"
 #include "tools.h"
 #include "exception.h"
-#include "log2.h"
+#include "log.h"
 #include "controlHandler.h"
 #include "recorderBehaviors.h"
 #include "pragmas.h"

@@ -8,7 +8,7 @@
 
 #include "intelExtensionsService.h"
 #include "gits.h"
-#include "log2.h"
+#include "log.h"
 #include "configurationLib.h"
 #include "to_string/toStr.h"
 

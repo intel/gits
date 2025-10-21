@@ -11,7 +11,7 @@
 
 #include "configurationYAMLAuto.h"
 #include "configurator.h"
-#include "log2.h"
+#include "log.h"
 
 #include <yaml-cpp/yaml.h>
 

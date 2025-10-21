@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "debugInfo.h"
-#include "log2.h"
+#include "log.h"
 #include "configurationLib.h"
 #include "to_string/enumToStrAuto.h"
 #include "to_string/toStr.h"

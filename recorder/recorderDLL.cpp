@@ -9,7 +9,7 @@
 #include "platform.h"
 #include "tools_lite.h"
 #include "recorder.h"
-#include "log2.h"
+#include "log.h"
 
 #ifdef GITS_PLATFORM_WINDOWS
 #include <Windows.h>

@@ -15,7 +15,7 @@
 #include "openclStateTracking.h"
 #include "openclTools.h"
 
-#include "log2.h"
+#include "log.h"
 
 namespace gits {
 namespace OpenCL {

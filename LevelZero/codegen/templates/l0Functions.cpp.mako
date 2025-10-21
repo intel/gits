@@ -12,7 +12,7 @@
 #include "l0PlayerRunWrap.h"
 
 #include "exception.h"
-#include "log2.h"
+#include "log.h"
 
 namespace gits {
 namespace l0 {

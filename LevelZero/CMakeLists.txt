@@ -178,7 +178,6 @@ set(L0_interceptor_sources
   interceptor/include/gitsPluginL0.h
   interceptor/include/l0ExecWrap.h
   ${CMAKE_CURRENT_BINARY_DIR}/l0EntryPoints.cpp
-  ../common/legacy/log.cpp
 )
 if(WIN32)
   list(APPEND L0_interceptor_sources ../common/legacy/tools_windows.cpp)

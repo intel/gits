@@ -16,7 +16,7 @@
 #pragma once
 
 #include "tools_lite.h"
-#include "log2.h"
+#include "log.h"
 #include "exception.h"
 #include "pragmas.h"
 #if defined(GITS_PLATFORM_WINDOWS) || defined(GITS_PLATFORM_X11)

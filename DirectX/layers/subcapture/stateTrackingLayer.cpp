@@ -12,7 +12,7 @@
 #include "commandWritersCustom.h"
 #include "configurationLib.h"
 #include "nvapi.h"
-#include "log2.h"
+#include "log.h"
 
 #include <wrl/client.h>
 

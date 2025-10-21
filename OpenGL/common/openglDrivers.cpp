@@ -215,7 +215,7 @@ static NOINLINE lua_State* GetLuaState() {
   b STDCALL logging_##c d {                                                                        \
     err_fun();                                                                                     \
     const Config& gits_cfg = Configurator::Get();                                                  \
-    const bool doTrace = ShouldLog(LogLevel::TRACE);                                               \
+    const bool doTrace = log::ShouldLog(LogLevel::TRACE);                                          \
     if (doTrace && (!drv.traceGLAPIBypass || gits_cfg.opengl.player.traceGitsInternal)) {          \
       Tracer(#c).trace e;                                                                          \
     }                                                                                              \
@@ -262,7 +262,8 @@ void CheckForRecursion(dl::SharedObject library) {
 
 NOINLINE bool UseTracing(const char* func) {
   const auto& cfg = Configurator::Get();
-  return ShouldLog(LogLevel::TRACE) || (cfg.common.shared.useEvents && LUA_FUNCTION_EXISTS(func)) ||
+  return log::ShouldLog(LogLevel::TRACE) ||
+         (cfg.common.shared.useEvents && LUA_FUNCTION_EXISTS(func)) ||
          (!cfg.common.player.traceSelectedFrames.empty());
 }
 

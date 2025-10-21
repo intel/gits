@@ -14,7 +14,6 @@ set(COMMON_SRC
   ${CMAKE_SOURCE_DIR}/common/legacy/timer.cpp
   ${CMAKE_SOURCE_DIR}/common/legacy/dynamic_linker.cpp
   ${CMAKE_SOURCE_DIR}/common/legacy/gitsLoader.cpp
-  ${CMAKE_SOURCE_DIR}/common/legacy/log.cpp
 )
 source_group("common" FILES ${COMMON_SRC})
 

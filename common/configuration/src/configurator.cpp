@@ -32,7 +32,7 @@
 #include "diagnostic.h"
 #endif
 
-#include "log2.h"
+#include "log.h"
 
 namespace {
 bool g_configurationValid = false;

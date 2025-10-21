@@ -9,7 +9,7 @@
 #include "addressPinningUseLayer.h"
 #include "configurationLib.h"
 #include "tools.h"
-#include "log2.h"
+#include "log.h"
 #include "intelExtensions.h"
 
 #include <fstream>

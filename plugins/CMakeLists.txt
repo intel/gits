@@ -7,7 +7,6 @@
 # ===================== end_copyright_notice ==============================
 
 set(PLUGINS_DIR ${CMAKE_SOURCE_DIR}/plugins)
-set(COMMON_DIR ${CMAKE_SOURCE_DIR}/common/legacy)
 set(THIRD_PARTY_DIR ${CMAKE_SOURCE_DIR}/third_party)
 
 add_definitions(-DGITS_PLUGIN_DLL)

@@ -41,7 +41,7 @@ namespace gits {
     inline std::string ToStringHelper(void** val) {
       std::stringstream ss;
       ss << ToStringHelper(reinterpret_cast<void*>(val));
-      if (val != nullptr && gits::ShouldLog(LogLevel::TRACEV)) {
+      if (val != nullptr && gits::log::ShouldLog(LogLevel::TRACEV)) {
         ss << " { " << ToStringHelper(*val) << " }";
       }
       return ss.str();
@@ -54,7 +54,7 @@ namespace gits {
     inline std::string ToStringHelper(const void** val) {
       std::stringstream ss;
       ss << ToStringHelper(reinterpret_cast<const void*>(val));
-      if (val != nullptr && gits::ShouldLog(LogLevel::TRACEV)) {
+      if (val != nullptr && gits::log::ShouldLog(LogLevel::TRACEV)) {
         ss << " { " << ToStringHelper(*val) << " }";
       }
       return ss.str();
@@ -63,7 +63,7 @@ namespace gits {
     inline std::string ToStringHelper(uint32_t* val) {
       std::stringstream ss;
       ss << ToStringHelper(reinterpret_cast<void*>(val));
-      if (val != nullptr && gits::ShouldLog(LogLevel::TRACEV)) {
+      if (val != nullptr && gits::log::ShouldLog(LogLevel::TRACEV)) {
         ss << " { " << ToStringHelper(*val) << " }";
       }
       return ss.str();
@@ -141,11 +141,11 @@ namespace gits {
 <%def name="struct_body(name, arg, ptr)">
       std::stringstream ss;
       ss << ToStringHelper(reinterpret_cast<const void*>(${"val" if ptr else "&val"}));
-      if (gits::ShouldLog(LogLevel::TRACE)${" && val" if ptr else ""}) {
+      if (gits::log::ShouldLog(LogLevel::TRACE)${" && val" if ptr else ""}) {
         ss << ": { ";
     %for var in arg['vars']:
         %if var['tag'] != '':
-        if (gits::ShouldLog(LogLevel::TRACEV))
+        if (gits::log::ShouldLog(LogLevel::TRACEV))
           ss << "${"[" + var['tag'] + "] "}";
         %endif
         %if '[' in var['name']:
@@ -191,7 +191,7 @@ namespace gits {
     inline std::string ToStringHelper(${name}* val) {
       std::stringstream ss;
       ss << ToStringHelper(reinterpret_cast<void*>(val));
-      if (val != nullptr && gits::ShouldLog(LogLevel::TRACEV)) {
+      if (val != nullptr && gits::log::ShouldLog(LogLevel::TRACEV)) {
         ss << " { " << ToStringHelper(*val) << " }";
       }
       return ss.str();

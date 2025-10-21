@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 
-#include "log2.h"
+#include "log.h"
 #include "enumsAuto.h"
 #include "helper.h"
 #include "stringFromType.h"

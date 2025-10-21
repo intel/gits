@@ -11,7 +11,7 @@
 #include "commandWritersAuto.h"
 #include "to_string/enumToStrAuto.h"
 #include "gits.h"
-#include "log2.h"
+#include "log.h"
 
 namespace gits {
 namespace DirectX {

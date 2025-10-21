@@ -12,7 +12,7 @@
 #include "l0Header.h"
 #include "l0StateDynamic.h"
 #include "l0Tools.h"
-#include "log2.h"
+#include "log.h"
 #include "recorder.h"
 
 #include "l0ApisIface.h"

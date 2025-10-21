@@ -8,7 +8,7 @@
 
 #include "oclocTools.h"
 #include "tools_lite.h"
-#include "log2.h"
+#include "log.h"
 #include "arDecoder.h"
 
 namespace gits {

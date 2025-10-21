@@ -12,7 +12,7 @@
 #include <map>
 #include <stdexcept>
 
-#include "log2.h"
+#include "log.h"
 #include "openglTools.h"
 #include "dynamic_linker.h"
 

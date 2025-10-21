@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "configUtils.h"
-#include "log2.h"
+#include "log.h"
 #include <exception.h>
 
 #include <algorithm>

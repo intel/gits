@@ -11,7 +11,7 @@
 #include "stateTrackingService.h"
 #include "commandWritersAuto.h"
 #include "commandWritersCustom.h"
-#include "log2.h"
+#include "log.h"
 
 #include <wrl/client.h>
 #include <set>

@@ -10,7 +10,7 @@
 // generated @ ${time}
 
 #include "enumsAuto.h"
-#include "log2.h"
+#include "log.h"
 
 #include <iostream>
 #include <string>

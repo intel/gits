@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "executionSerializationFactory.h"
-#include "log2.h"
+#include "log.h"
 
 namespace gits {
 namespace DirectX {

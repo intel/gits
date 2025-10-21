@@ -15,7 +15,7 @@
 #include "exception.h"
 
 #include "platform.h"
-#include "log2.h"
+#include "log.h"
 #include "tools_lite.h"
 #include <typeinfo>
 #include <map>

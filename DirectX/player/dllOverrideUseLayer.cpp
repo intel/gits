@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "dllOverrideUseLayer.h"
-#include "log2.h"
+#include "log.h"
 #include "PlayerManager.h"
 
 namespace gits {

@@ -16,7 +16,7 @@
 #include "argument.h"
 #include "gits.h"
 #include "exception.h"
-#include "log2.h"
+#include "log.h"
 #include "buffer.h"
 #include "streams.h"
 #include "pragmas.h"

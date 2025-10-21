@@ -9,7 +9,7 @@
 #pragma once
 
 #include "log.h"
-#include "log2.h"
+#include "log.h"
 #include "vulkanHeader.h"
 
 #include <plog/Record.h>

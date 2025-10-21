@@ -29,7 +29,7 @@
 #include <string>
 #include <iostream>
 #include <algorithm>
-#include "log2.h"
+#include "log.h"
 #include "exception.h"
 
 //

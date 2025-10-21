@@ -59,7 +59,7 @@
 #include "configurationLib.h"
 #include "diagnostic.h"
 #include "playerUtils.h"
-#include "log2.h"
+#include "log.h"
 
 #if defined WITH_DIRECTX
 #include "imGuiHUD.h"
@@ -225,7 +225,6 @@ int MainBody(int argc, char* argv[]) {
   const auto& cfg = Configurator::Get();
   plog::get()->setMaxSeverity(log::GetSeverity(cfg.common.shared.thresholdLogLevel));
   if (!cfg.common.player.outputTracePath.empty()) {
-    CLog::LogFilePlayer(cfg.common.player.outputTracePath);
     log::SetLogFile(cfg.common.player.outputTracePath);
   }
 

@@ -6,7 +6,7 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "log2.h"
+#include "log.h"
 
 namespace gits {
 namespace ocloc {

@@ -21,7 +21,7 @@
 #include "gitsLoader.h"
 #include "recorderIface.h"
 #include "exception.h"
-#include "log2.h"
+#include "log.h"
 
 #if defined GITS_PLATFORM_WINDOWS
 #include "Windows.h"
@@ -96,17 +96,6 @@ CGitsLoader::CGitsLoader(const char* recorderWrapperFactoryName)
     std::cerr << dl::last_error();
     throw std::runtime_error("Failed to load required library");
   }
-
-  // set print handler
-  auto printFunc = (FPrintHandlerGet)dl::load_symbol(recorderLib_, "PrintHandlerGet");
-  if (printFunc == nullptr) {
-    LOG_ERROR << "Could not obtain GITS print handler from the library: " << recorderPath << "!!!";
-    LOG_ERROR << dl::last_error();
-    throw std::runtime_error("Failed to load required symbol");
-  }
-
-  // call the function
-  CLog::LogFunction(printFunc(configPath.string().c_str()));
 
   // set GITS configuration
   auto configureFunc = (FConfigure)dl::load_symbol(recorderLib_, "Configure");

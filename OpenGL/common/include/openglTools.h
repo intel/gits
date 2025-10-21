@@ -23,7 +23,7 @@
 
 #include "openglTypes.h"
 #include "tools.h"
-#include "log2.h"
+#include "log.h"
 #include "argument.h"
 
 namespace gits {

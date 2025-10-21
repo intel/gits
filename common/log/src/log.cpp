@@ -6,7 +6,7 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "log2.h"
+#include "log.h"
 
 // Plog
 #include <plog/Formatters/MessageOnlyFormatter.h>
@@ -146,5 +146,9 @@ void SetLogFile(const std::filesystem::path& logFilePath) {
 
   plog::get()->addAppender(fileAppender.get());
 }
-}; // namespace log
-}; // namespace gits
+
+bool ShouldLog(gits::LogLevel lvl) {
+  return plog::get()->checkSeverity(GetSeverity(lvl));
+}
+} // namespace log
+} // namespace gits

@@ -11,7 +11,7 @@
 #include "stateTrackingService.h"
 #include "commandWritersAuto.h"
 #include "analyzerResults.h"
-#include "log2.h"
+#include "log.h"
 
 #include <fstream>
 

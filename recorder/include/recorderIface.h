@@ -17,16 +17,8 @@
 #include "platform.h"
 #include "configurationLib.h"
 
-namespace gits {
-
-typedef void (*FPrintHandler)(const char* text);
-
-} // namespace gits
-
-typedef gits::FPrintHandler(STDCALL* FPrintHandlerGet)(const char* dir);
 typedef gits::Configuration*(STDCALL* FConfigure)(const char* cfgDir);
 
 extern "C" {
-gits::FPrintHandler STDCALL PrintHandlerGet(const char* dir) VISIBLE;
 gits::Configuration* STDCALL Configure(const char* cfgDir) VISIBLE;
 }

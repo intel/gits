@@ -19,7 +19,7 @@
 #endif
 
 #include "lua_bindings.h"
-#include "log2.h"
+#include "log.h"
 #include "gits.h"
 
 namespace gits {
@@ -447,9 +447,8 @@ int export_Log(lua_State* L) {
   auto log_level = (LogLevel)lua_tointeger(L, 1);
   std::string text(lua_tostring(L, 2));
 
-  if (ShouldLog(log_level)) {
-    gits::CLog(log_level, gits::LogStyle::NORMAL) << text;
-  }
+  auto severity = log::GetSeverity(log_level);
+  PLOG(severity) << text;
 
   return 0;
 }

@@ -14,7 +14,7 @@
 */
 
 #include "controlHandler.h"
-#include "log2.h"
+#include "log.h"
 #include "recorder.h"
 #include "tools.h"
 

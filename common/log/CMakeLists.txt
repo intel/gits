@@ -12,10 +12,10 @@ set(LOG_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(LOG_HEADER_DIR ${LOG_SOURCE_DIR}/include)
 
 set(LOG_SRC_HEADERS
-  ${LOG_HEADER_DIR}/log2.h
+  ${LOG_HEADER_DIR}/log.h
 )
 set(LOG_SRC_SOURCES
-  ${LOG_SOURCE_DIR}/log2.cpp
+  ${LOG_SOURCE_DIR}/log.cpp
 )
 
 add_library(log STATIC ${LOG_SRC_HEADERS} ${LOG_SRC_SOURCES})

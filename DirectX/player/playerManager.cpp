@@ -24,7 +24,7 @@
 #include "debugHelperLayer.h"
 #include "logDxErrorLayerAuto.h"
 #include "imguiHudLayer.h"
-#include "log2.h"
+#include "log.h"
 
 #include <wrl/client.h>
 

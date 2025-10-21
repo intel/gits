@@ -10,7 +10,7 @@
 #include "exception.h"
 #include "key_value.h"
 #include "tools.h"
-#include "log2.h"
+#include "log.h"
 #include "platform.h"
 #include "pragmas.h"
 #ifndef BUILD_FOR_CCODE
@@ -21,30 +21,6 @@
 #include <memory>
 
 namespace gits {
-CLog& operator<<(CLog& log, TResourceType rt) {
-  switch (rt) {
-  case RESOURCE_INDEX:
-    log << "RESOURCE_INDEX";
-    break;
-  case RESOURCE_TEXTURE:
-    log << "RESOURCE_TEXTURE";
-    break;
-  case RESOURCE_BUFFER:
-    log << "RESOURCE_BUFFER";
-    break;
-  case RESOURCE_CLIENT_SIZES:
-    log << "RESOURCE_CLIENT_SIZES";
-    break;
-  case RESOURCE_DATA_RAW:
-    log << "RESOURCE_DATA_RAW";
-    break;
-  default:
-    log << "(Unknown resource type: " << static_cast<std::underlying_type<TResourceType>::type>(rt)
-        << ")";
-  }
-  return log;
-}
-
 namespace {
 
 const std::unordered_map<uint32_t, std::filesystem::path>& base_resource_filenames() {

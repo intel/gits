@@ -11,7 +11,7 @@
 #include "commandWritersAuto.h"
 #include "stateTrackingService.h"
 #include "resourceForCBVRestoreService.h"
-#include "log2.h"
+#include "log.h"
 
 namespace gits {
 namespace DirectX {

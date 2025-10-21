@@ -19,7 +19,7 @@
 #include "streams.h"
 #include "buffer.h"
 #include "exception.h"
-#include "log2.h"
+#include "log.h"
 #include "pragmas.h"
 
 #include <iostream>

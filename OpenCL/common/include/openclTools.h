@@ -10,7 +10,7 @@
 
 #include "openclHeader.h"
 
-#include "log2.h"
+#include "log.h"
 #include "configurationLib.h"
 #include "texture_converter.h"
 

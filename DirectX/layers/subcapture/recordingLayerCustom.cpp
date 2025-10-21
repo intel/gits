@@ -10,7 +10,7 @@
 #include "commandWritersAuto.h"
 #include "commandWritersCustom.h"
 #include "intelExtensions.h"
-#include "log2.h"
+#include "log.h"
 
 namespace gits {
 namespace DirectX {

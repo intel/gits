@@ -16,7 +16,7 @@
 #include "gits.h"
 #include "streams.h"
 #include "exception.h"
-#include "log2.h"
+#include "log.h"
 #include "pragmas.h"
 #include "scheduler.h"
 #include "token.h"

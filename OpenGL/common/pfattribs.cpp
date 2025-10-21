@@ -20,7 +20,6 @@
 
 #include "pfattribs.h"
 #include "log.h"
-#include "log2.h"
 #include "openglEnums.h"
 #include <unordered_map>
 

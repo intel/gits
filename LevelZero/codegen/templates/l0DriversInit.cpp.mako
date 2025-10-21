@@ -9,7 +9,7 @@
 #include "l0Drivers.h"
 
 #include "dynamic_linker.h"
-#include "log2.h"
+#include "log.h"
 #include "gits.h"
 #include "l0Header.h"
 #include "l0Log.h"
@@ -185,7 +185,7 @@ ${func.get('type')} __zecall default_${func.get('name')}(
     }
   }
   %endif
-  if (ShouldLog(LogLevel::TRACE) || Configurator::Get().common.shared.useEvents) {
+  if (log::ShouldLog(LogLevel::TRACE) || Configurator::Get().common.shared.useEvents) {
     drv.${func.get('name')} = special_${func.get('name')};
     return drv.${func.get('name')}(${make_params(func)});
   }

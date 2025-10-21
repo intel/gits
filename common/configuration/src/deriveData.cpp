@@ -20,7 +20,7 @@
 #include "tools.h"
 #include "exception.h"
 #include "diagnostic.h"
-#include "log2.h"
+#include "log.h"
 
 namespace {
 inline std::vector<std::string> ParseCaptureKernels(const std::string& value) {
@@ -51,9 +51,6 @@ void DeriveConfigData<Configuration>(Configuration& obj, Configuration& config) 
 
 template <>
 void DeriveConfigData<Configuration::Common>(Configuration::Common& obj, Configuration& config) {
-  gits::CLog::SetLogLevel(config.common.shared.thresholdLogLevel);
-  gits::CLog::SetLogToConsole(config.common.shared.logToConsole);
-
   obj.player.DeriveData(config);
   obj.recorder.DeriveData(config);
   obj.shared.DeriveData(config);

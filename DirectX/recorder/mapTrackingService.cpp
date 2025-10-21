@@ -9,7 +9,7 @@
 #include "mapTrackingService.h"
 #include "commandWritersCustom.h"
 #include "captureManager.h"
-#include "log2.h"
+#include "log.h"
 
 #include <processthreadsapi.h>
 #include <wrl/client.h>

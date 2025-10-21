@@ -8,7 +8,7 @@
 
 #include "vulkanRenderDocUtil.h"
 #include "vulkanStateDynamic.h"
-#include "log2.h"
+#include "log.h"
 
 #ifdef GITS_PLATFORM_WINDOWS
 
