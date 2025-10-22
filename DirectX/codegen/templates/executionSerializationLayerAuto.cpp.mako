@@ -38,7 +38,8 @@ custom = [
     'ID3D12GraphicsCommandListClearRenderTargetView',
     'ID3D12GraphicsCommandListClearUnorderedAccessViewFloat',
     'ID3D12GraphicsCommandListClearUnorderedAccessViewUint',
-    'ID3D12GraphicsCommandListOMSetRenderTargets'
+    'ID3D12GraphicsCommandListOMSetRenderTargets',
+    'xessD3D12Execute'
 ]
 %>\
 %for interface in interfaces:
@@ -55,12 +56,14 @@ void ExecutionSerializationLayer::pre(${interface.name}${function.name}Command& 
 %endfor
 
 %for function in functions:
+%if not function.name in custom:
 void ExecutionSerializationLayer::pre(${function.name}Command& c) {
   if (recorder_.isRunning()) {
     recorder_.record(new ${function.name}Writer(c));
   }
 }
 
+%endif
 %endfor
 %for interface in interfaces:
 %for function in interface.functions:

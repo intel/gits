@@ -131,6 +131,12 @@ void ExecutionSerializationLayer::post(
   }
 }
 
+void ExecutionSerializationLayer::pre(xessD3D12ExecuteCommand& c) {
+  if (recorder_.isRunning()) {
+    executionService_.commandListCommand(c.pCommandList_.key, new xessD3D12ExecuteWriter(c));
+  }
+}
+
 void ExecutionSerializationLayer::pre(ID3D12CommandQueueSignalCommand& c) {
   if (recorder_.isRunning()) {
     executionService_.commandQueueSignal(c.key, c.object_.key, c.pFence_.key, c.Value_.value);
