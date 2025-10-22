@@ -123,7 +123,7 @@ void BindingTablesDump::dumpBuffer(DumpInfo& dumpInfo, void* data) {
             std::vector<unsigned> indexes =
                 raytracingService_.getRootSignatureService().getDescriptorTableIndexes(
                     rootSignatureKey, descriptorHeapKey, rootParameterIndex, descriptorIndex,
-                    descriptorHeapSize, false);
+                    descriptorHeapSize, true);
             for (unsigned index : indexes) {
               DescriptorState* state = raytracingService_.getDescriptorService().getDescriptorState(
                   descriptorHeapKey, index);
