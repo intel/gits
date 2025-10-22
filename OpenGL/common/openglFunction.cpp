@@ -796,6 +796,5 @@ void CDrawFunction::DrawFunctionRun() {
     scissorStatePtr->Restore();
   }
 }
-
 } // namespace OpenGL
 } // namespace gits

@@ -264,6 +264,8 @@ Configuration:
               * all GL / WGL / EGL / GLX functions
               * gitsFrameBegin(nr)
               * gitsFrameEnd(nr)
+              * gitsLoopBegin(nr)
+              * gitsLoopEnd(nr)
               * gitsStateRestoreBegin()
               * gitsStateRestoreEnd()
               * gitsProgramStart()

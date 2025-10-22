@@ -571,6 +571,8 @@ void CreateAndRegisterEvents(const char* script) {
   gits::Events events;
   events.frameBegin = CreateWrapper<int>(L, "gitsFrameBegin");
   events.frameEnd = CreateWrapper<int>(L, "gitsFrameEnd");
+  events.loopBegin = CreateWrapper<int>(L, "gitsLoopBegin");
+  events.loopEnd = CreateWrapper<int>(L, "gitsLoopEnd");
   events.stateRestoreBegin = CreateWrapper(L, "gitsStateRestoreBegin");
   events.stateRestoreEnd = CreateWrapper(L, "gitsStateRestoreEnd");
   events.programExit = CreateWrapper(L, "gitsProgramExit");

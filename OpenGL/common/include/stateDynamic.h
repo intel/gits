@@ -341,6 +341,7 @@ public:
   typedef std::unordered_map<uint64_t, TMemory> TMemoryAreas;
   TMemoryAreas _memTracker;
   void WriteClientSizes();
+  std::function<void()> CreateCArraysRestorePoint();
 
   // GetTexture Data
   std::vector<GLchar> _getTextureData;

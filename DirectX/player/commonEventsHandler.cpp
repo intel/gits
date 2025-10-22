@@ -21,6 +21,8 @@ void CommonEventsHandler::RegisterEvents() {
   gits::Events events{};
   events.frameBegin = frameBegin;
   events.frameEnd = frameEnd;
+  events.loopBegin = loopBegin;
+  events.loopEnd = loopEnd;
   events.stateRestoreBegin = stateRestoreBegin;
   events.stateRestoreEnd = stateRestoreEnd;
   events.programExit = programExit;

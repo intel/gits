@@ -69,6 +69,8 @@ public:
   void IncrementLinkProgramNumber() {
     _linkProgramNo++;
   }
+
+  std::function<void()> CreateRestorePoint();
 };
 
 void PreSwap();

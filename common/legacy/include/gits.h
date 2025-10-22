@@ -117,6 +117,8 @@ public:
 struct Events {
   std::function<void(int)> frameBegin;
   std::function<void(int)> frameEnd;
+  std::function<void(int)> loopBegin;
+  std::function<void(int)> loopEnd;
   std::function<void()> stateRestoreBegin;
   std::function<void()> stateRestoreEnd;
   std::function<void()> programExit;
