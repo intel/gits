@@ -20,7 +20,7 @@ ExecuteIndirectDump ::~ExecuteIndirectDump() {
 }
 
 void ExecuteIndirectDump::dumpArgumentBuffer(ID3D12GraphicsCommandList* commandList,
-                                             D3D12_COMMAND_SIGNATURE_DESC& commandSignature,
+                                             const D3D12_COMMAND_SIGNATURE_DESC* commandSignature,
                                              unsigned maxCommandCount,
                                              ID3D12Resource* argumentBuffer,
                                              unsigned argumentBufferOffset,
@@ -31,9 +31,9 @@ void ExecuteIndirectDump::dumpArgumentBuffer(ID3D12GraphicsCommandList* commandL
                                              const std::wstring& dumpName,
                                              bool fromCapture) {
   ExecuteIndirectDumpInfo* dumpInfo = new ExecuteIndirectDumpInfo();
-  dumpInfo->commandSignature = &commandSignature;
+  dumpInfo->commandSignature = commandSignature;
   dumpInfo->offset = argumentBufferOffset;
-  dumpInfo->size = commandSignature.ByteStride * maxCommandCount;
+  dumpInfo->size = commandSignature->ByteStride * maxCommandCount;
   dumpInfo->dumpName = dumpName;
   dumpInfo->fromCapture = fromCapture;
   if (countBuffer) {

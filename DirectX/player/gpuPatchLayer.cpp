@@ -27,12 +27,6 @@ GpuPatchLayer::GpuPatchLayer(PlayerManager& manager)
   }
 }
 
-GpuPatchLayer::~GpuPatchLayer() {
-  for (auto& it : commandSignatures_) {
-    delete[] it.second.pArgumentDescs;
-  }
-}
-
 void GpuPatchLayer::pre(IUnknownReleaseCommand& c) {
   if (c.result_.value == 0) {
     addressService_.destroyInterface(c.object_.key);
@@ -1078,12 +1072,8 @@ void GpuPatchLayer::post(ID3D12Device3EnqueueMakeResidentCommand& c) {
 }
 
 void GpuPatchLayer::post(ID3D12DeviceCreateCommandSignatureCommand& c) {
-  D3D12_COMMAND_SIGNATURE_DESC& desc = commandSignatures_[c.ppvCommandSignature_.key] =
-      *c.pDesc_.value;
-  desc.pArgumentDescs = new D3D12_INDIRECT_ARGUMENT_DESC[desc.NumArgumentDescs];
-  std::copy(c.pDesc_.value->pArgumentDescs,
-            c.pDesc_.value->pArgumentDescs + c.pDesc_.value->NumArgumentDescs,
-            const_cast<D3D12_INDIRECT_ARGUMENT_DESC*>(desc.pArgumentDescs));
+  commandSignatures_[c.ppvCommandSignature_.key].reset(
+      new PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>(c.pDesc_));
 }
 
 void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
@@ -1091,7 +1081,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
 
   auto it = commandSignatures_.find(c.pCommandSignature_.key);
   GITS_ASSERT(it != commandSignatures_.end());
-  D3D12_COMMAND_SIGNATURE_DESC& commandSignature = it->second;
+  D3D12_COMMAND_SIGNATURE_DESC& commandSignature = *it->second->value;
 
   bool view = false;
   bool raytracing = false;
@@ -1270,7 +1260,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
   }
 
   dumpService_.dumpExecuteIndirectArgumentBuffer(
-      c.object_.value, it->second, c.MaxCommandCount_.value, c.pArgumentBuffer_.value,
+      c.object_.value, it->second->value, c.MaxCommandCount_.value, c.pArgumentBuffer_.value,
       c.ArgumentBufferOffset_.value, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, c.pCountBuffer_.value,
       c.CountBufferOffset_.value, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT, c.key, true);
 
@@ -1284,7 +1274,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
       mappingCountBuffers_[mappingBufferIndex]->GetGPUVirtualAddress());
 
   dumpService_.dumpExecuteIndirectArgumentBuffer(
-      c.object_.value, it->second, c.MaxCommandCount_.value, c.pArgumentBuffer_.value,
+      c.object_.value, it->second->value, c.MaxCommandCount_.value, c.pArgumentBuffer_.value,
       c.ArgumentBufferOffset_.value, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, c.pCountBuffer_.value,
       c.CountBufferOffset_.value, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT, c.key, false);
 

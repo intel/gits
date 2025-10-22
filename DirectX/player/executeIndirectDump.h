@@ -20,7 +20,7 @@ public:
       : addressService_(addressService) {}
   ~ExecuteIndirectDump();
   void dumpArgumentBuffer(ID3D12GraphicsCommandList* commandList,
-                          D3D12_COMMAND_SIGNATURE_DESC& commandSignature,
+                          const D3D12_COMMAND_SIGNATURE_DESC* commandSignature,
                           unsigned maxCommandCount,
                           ID3D12Resource* argumentBuffer,
                           unsigned argumentBufferOffset,
@@ -33,7 +33,7 @@ public:
 
 protected:
   struct ExecuteIndirectDumpInfo : public DumpInfo {
-    D3D12_COMMAND_SIGNATURE_DESC* commandSignature{};
+    const D3D12_COMMAND_SIGNATURE_DESC* commandSignature{};
     DumpInfo countDumpInfo;
     bool fromCapture{};
   };

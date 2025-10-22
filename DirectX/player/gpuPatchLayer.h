@@ -32,7 +32,6 @@ class PlayerManager;
 class GpuPatchLayer : public Layer {
 public:
   GpuPatchLayer(PlayerManager& manager);
-  ~GpuPatchLayer();
 
   void pre(IUnknownReleaseCommand& c) override;
   void pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) override;
@@ -186,7 +185,8 @@ private:
   GpuPatchCommandListService commandListService_;
   GpuPatchDumpService dumpService_;
 
-  std::unordered_map<unsigned, D3D12_COMMAND_SIGNATURE_DESC> commandSignatures_;
+  std::unordered_map<unsigned, std::unique_ptr<PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>>>
+      commandSignatures_;
   std::unordered_map<unsigned, D3D12_DISPATCH_RAYS_DESC> executeIndirectDispatchRays_;
   std::unordered_set<unsigned> genericReadResources_;
   std::unordered_map<unsigned, std::vector<D3D12_GPU_VIRTUAL_ADDRESS>> instancesArraysOfPointers_;

@@ -143,7 +143,7 @@ void GpuPatchDumpService::dumpBindingTable(ID3D12GraphicsCommandList* commandLis
 
 void GpuPatchDumpService::dumpExecuteIndirectArgumentBuffer(
     ID3D12GraphicsCommandList* commandList,
-    D3D12_COMMAND_SIGNATURE_DESC& commandSignature,
+    const D3D12_COMMAND_SIGNATURE_DESC* commandSignature,
     unsigned maxCommandCount,
     ID3D12Resource* argumentBuffer,
     unsigned argumentBufferOffset,
