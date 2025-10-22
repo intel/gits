@@ -1254,6 +1254,15 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
 
   {
     D3D12_RESOURCE_BARRIER barrier{};
+    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barrier.Transition.pResource = executeIndirectRaytracingPatchBuffers_[patchBufferIndex];
+    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+    commandList->ResourceBarrier(1, &barrier);
+  }
+
+  {
+    D3D12_RESOURCE_BARRIER barrier{};
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
     barrier.UAV.pResource = nullptr;
     commandList->ResourceBarrier(1, &barrier);
