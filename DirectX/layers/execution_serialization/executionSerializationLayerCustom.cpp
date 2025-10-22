@@ -170,6 +170,13 @@ void ExecutionSerializationLayer::pre(ID3D12DeviceCreateCommandQueueCommand& c) 
   }
 }
 
+void ExecutionSerializationLayer::pre(ID3D12Device9CreateCommandQueue1Command& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new ID3D12Device9CreateCommandQueue1Writer(c));
+    executionService_.createCommandQueue(c.object_.key, c.ppCommandQueue_.key);
+  }
+}
+
 void ExecutionSerializationLayer::pre(ID3D12FenceGetCompletedValueCommand& c) {}
 
 void ExecutionSerializationLayer::pre(ID3D12FenceSetEventOnCompletionCommand& c) {}
