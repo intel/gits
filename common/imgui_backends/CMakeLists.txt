@@ -6,6 +6,6 @@
 #
 # ===================== end_copyright_notice ==============================
 
-if(WIN32)
+if(WIN32 AND WITH_VULKAN)
   add_subdirectory(imgui_win32_vulkan)
 endif()
