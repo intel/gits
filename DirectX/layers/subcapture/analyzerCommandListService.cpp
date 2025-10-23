@@ -299,6 +299,9 @@ void AnalyzerCommandListService::setBindlessDescriptors(unsigned rootSignatureKe
                                                         unsigned descriptorHeapKey,
                                                         D3D12_DESCRIPTOR_HEAP_TYPE heapType,
                                                         unsigned heapNumDescriptors) {
+  if (!rootSignatureKey || !descriptorHeapKey) {
+    return;
+  }
   std::vector<unsigned> indexes = rootSignatureService_.getBindlessDescriptorIndexes(
       rootSignatureKey, descriptorHeapKey, heapType, heapNumDescriptors);
   for (unsigned index : indexes) {
