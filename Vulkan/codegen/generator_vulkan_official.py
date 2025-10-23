@@ -2682,7 +2682,7 @@ arg3=ArgDef(name='pAllocator', type='const VkAllocationCallbacks*'),
 arg4=ArgDef(name='pSurface', type='VkSurfaceKHR*')
 )
 
-Function(name='vkCreateWin32SurfaceKHR', enabled=True, type=FuncType.PARAM, preToken='CGitsVkCreateNativeWindow(pCreateInfo->hinstance, pCreateInfo->hwnd)', postToken='CGitsVkEnumerateDisplayMonitors(true)', stateTrack=True, level=FuncLevel.INSTANCE,
+Function(name='vkCreateWin32SurfaceKHR', enabled=True, type=FuncType.PARAM, preToken='CGitsVkCreateNativeWindow(pCreateInfo->hinstance, pCreateInfo->hwnd)', postToken='CGitsVkEnumerateDisplayMonitors(true)', stateTrack=True, level=FuncLevel.INSTANCE, recExecWrap=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='instance', type='VkInstance'),
 arg2=ArgDef(name='pCreateInfo', type='const VkWin32SurfaceCreateInfoKHR*'),
@@ -3520,7 +3520,7 @@ arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='pName', type='const char*')
 )
 
-Function(name='vkGetDeviceQueue', enabled=True, type=FuncType.PARAM, stateTrack=False, runWrap=True,
+Function(name='vkGetDeviceQueue', enabled=True, type=FuncType.PARAM, stateTrack=False, runWrap=True, recExecWrap=True,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='device', type='VkDevice'),
 arg2=ArgDef(name='queueFamilyIndex', type='uint32_t'),
@@ -4828,7 +4828,7 @@ arg1=ArgDef(name='queue', type='VkQueue'),
 arg2=ArgDef(name='pQueueTypeInfo', type='const VkOutOfBandQueueTypeInfoNV*')
 )
 
-Function(name='vkQueuePresentKHR', enabled=True, type=FuncType.PARAM, stateTrack=True, runWrap=True, recWrap=True, endFrameTag=True,
+Function(name='vkQueuePresentKHR', enabled=True, type=FuncType.PARAM, stateTrack=True, runWrap=True, recWrap=True, endFrameTag=True, recExecWrap=True,
 retV=RetDef(type='VkResult'),
 arg1=ArgDef(name='queue', type='VkQueue'),
 arg2=ArgDef(name='pPresentInfo', type='const VkPresentInfoKHR*')

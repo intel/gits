@@ -17,11 +17,16 @@
 
 #if defined(GITS_PLATFORM_WINDOWS)
 #include "vulkanRenderDocUtil.h"
+#include "vulkanHudHelper.h"
 #endif
 
 namespace gits {
 namespace Vulkan {
 namespace {
+
+#if defined(GITS_PLATFORM_WINDOWS)
+VulkanHudHelper g_hudHelper;
+#endif
 
 inline VkResult AcquireFakeSwapchainImageIndex(uint32_t recorderIndex,
                                                uint32_t* imageIndex,
@@ -472,6 +477,9 @@ inline void vkCreateInstance_WRAPRUN(CVkResult& recorderSideReturnValue,
     LOG_WARNING << "Shader group handles patching cannot be used during substream recording. GITS "
                    "will disable it for this replay.";
   }
+#if defined(GITS_PLATFORM_WINDOWS)
+  g_hudHelper.OnVkCreateInstance(*pCreateInfo, *pAllocator, *pInstance);
+#endif
 }
 
 inline void vkQueuePresentKHR_WRAPRUN(CVkResult& recorderSideReturnValue,
@@ -480,6 +488,10 @@ inline void vkQueuePresentKHR_WRAPRUN(CVkResult& recorderSideReturnValue,
   if (*pPresentInfo == nullptr) {
     throw std::runtime_error(EXCEPTION_MESSAGE);
   }
+#if defined(GITS_PLATFORM_WINDOWS)
+  g_hudHelper.OnVkQueuePresentKHR(*queue, *pPresentInfo);
+#endif
+
   VkPresentInfoKHR presentInfo = *pPresentInfo;
 
   if (Configurator::Get().common.player.captureFrames[CGits::Instance().CurrentFrame()] &&
@@ -1684,6 +1696,9 @@ inline void vkCreateDevice_WRAPRUN(CVkResult& recorderSideReturnValue,
       SD().internalResources.pipelineCacheHandles[*devicePtr] = pipelineCache;
     }
   }
+#if defined(GITS_PLATFORM_WINDOWS)
+  g_hudHelper.OnVkCreateDevice(*physicalDevice, *pCreateInfo, *pAllocator, *pDevice);
+#endif
 }
 
 inline void vkGetDeviceQueue_WRAPRUN(CVkDevice& device,
@@ -1698,6 +1713,9 @@ inline void vkGetDeviceQueue_WRAPRUN(CVkDevice& device,
                  "on the current hardware.";
   } else {
     drvVk.vkGetDeviceQueue(*device, *queueFamilyIndex, *queueIndex, *pQueue);
+#if defined(GITS_PLATFORM_WINDOWS)
+    g_hudHelper.OnVkGetDeviceQueue(*device, *queueFamilyIndex, *queueIndex, *pQueue);
+#endif
   }
 }
 
@@ -1758,6 +1776,10 @@ inline void vkCreateSwapchainKHR_WRAPRUN(CVkResult& recorderSideReturnValue,
                                   VK_NULL_HANDLE, &imageIndex);
     }
   }
+#if defined(GITS_PLATFORM_WINDOWS)
+  g_hudHelper.SetWindowHandle(GetWindowHandle());
+  g_hudHelper.OnVkCreateSwapchainKHR(*device, *pCreateInfo, *pAllocator, *pSwapchain);
+#endif
 }
 
 namespace {

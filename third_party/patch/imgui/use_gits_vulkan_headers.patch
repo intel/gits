@@ -1,0 +1,741 @@
+diff --git a/backends/imgui_impl_vulkan.cpp b/backends/imgui_impl_vulkan.cpp
+index e67b74c..b986a8d 100644
+--- a/backends/imgui_impl_vulkan.cpp
++++ b/backends/imgui_impl_vulkan.cpp
+@@ -88,6 +88,7 @@
+ #ifndef IMGUI_DISABLE
+ #include "imgui_impl_vulkan.h"
+ #include <stdio.h>
++#include "vulkanDrivers.h"
+ #ifndef IM_MAX
+ #define IM_MAX(A, B)    (((A) >= (B)) ? (A) : (B))
+ #endif
+@@ -386,7 +387,7 @@ static uint32_t ImGui_ImplVulkan_MemoryType(VkMemoryPropertyFlags properties, ui
+     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
+     VkPhysicalDeviceMemoryProperties prop;
+-    vkGetPhysicalDeviceMemoryProperties(v->PhysicalDevice, &prop);
++    gits::Vulkan::drvVk.vkGetPhysicalDeviceMemoryProperties(v->PhysicalDevice, &prop);
+     for (uint32_t i = 0; i < prop.memoryTypeCount; i++)
+         if ((prop.memoryTypes[i].propertyFlags & properties) == properties && type_bits & (1 << i))
+             return i;
+@@ -415,9 +416,9 @@ static void CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory
+     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
+     VkResult err;
+     if (buffer != VK_NULL_HANDLE)
+-        vkDestroyBuffer(v->Device, buffer, v->Allocator);
++        gits::Vulkan::drvVk.vkDestroyBuffer(v->Device, buffer, v->Allocator);
+     if (buffer_memory != VK_NULL_HANDLE)
+-        vkFreeMemory(v->Device, buffer_memory, v->Allocator);
++        gits::Vulkan::drvVk.vkFreeMemory(v->Device, buffer_memory, v->Allocator);
+ 
+     VkDeviceSize buffer_size_aligned = AlignBufferSize(IM_MAX(v->MinAllocationSize, new_size), bd->BufferMemoryAlignment);
+     VkBufferCreateInfo buffer_info = {};
+@@ -425,20 +426,20 @@ static void CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory
+     buffer_info.size = buffer_size_aligned;
+     buffer_info.usage = usage;
+     buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+-    err = vkCreateBuffer(v->Device, &buffer_info, v->Allocator, &buffer);
++    err = gits::Vulkan::drvVk.vkCreateBuffer(v->Device, &buffer_info, v->Allocator, &buffer);
+     check_vk_result(err);
+ 
+     VkMemoryRequirements req;
+-    vkGetBufferMemoryRequirements(v->Device, buffer, &req);
++    gits::Vulkan::drvVk.vkGetBufferMemoryRequirements(v->Device, buffer, &req);
+     bd->BufferMemoryAlignment = (bd->BufferMemoryAlignment > req.alignment) ? bd->BufferMemoryAlignment : req.alignment;
+     VkMemoryAllocateInfo alloc_info = {};
+     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+     alloc_info.allocationSize = req.size;
+     alloc_info.memoryTypeIndex = ImGui_ImplVulkan_MemoryType(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, req.memoryTypeBits);
+-    err = vkAllocateMemory(v->Device, &alloc_info, v->Allocator, &buffer_memory);
++    err = gits::Vulkan::drvVk.vkAllocateMemory(v->Device, &alloc_info, v->Allocator, &buffer_memory);
+     check_vk_result(err);
+ 
+-    err = vkBindBufferMemory(v->Device, buffer, buffer_memory, 0);
++    err = gits::Vulkan::drvVk.vkBindBufferMemory(v->Device, buffer, buffer_memory, 0);
+     check_vk_result(err);
+     buffer_size = buffer_size_aligned;
+ }
+@@ -449,7 +450,7 @@ static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline
+ 
+     // Bind pipeline:
+     {
+-        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
++        gits::Vulkan::drvVk.vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+     }
+ 
+     // Bind Vertex And Index Buffer:
+@@ -457,8 +458,8 @@ static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline
+     {
+         VkBuffer vertex_buffers[1] = { rb->VertexBuffer };
+         VkDeviceSize vertex_offset[1] = { 0 };
+-        vkCmdBindVertexBuffers(command_buffer, 0, 1, vertex_buffers, vertex_offset);
+-        vkCmdBindIndexBuffer(command_buffer, rb->IndexBuffer, 0, sizeof(ImDrawIdx) == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
++        gits::Vulkan::drvVk.vkCmdBindVertexBuffers(command_buffer, 0, 1, vertex_buffers, vertex_offset);
++        gits::Vulkan::drvVk.vkCmdBindIndexBuffer(command_buffer, rb->IndexBuffer, 0, sizeof(ImDrawIdx) == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
+     }
+ 
+     // Setup viewport:
+@@ -470,7 +471,7 @@ static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline
+         viewport.height = (float)fb_height;
+         viewport.minDepth = 0.0f;
+         viewport.maxDepth = 1.0f;
+-        vkCmdSetViewport(command_buffer, 0, 1, &viewport);
++        gits::Vulkan::drvVk.vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+     }
+ 
+     // Setup scale and translation:
+@@ -482,8 +483,8 @@ static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline
+         float translate[2];
+         translate[0] = -1.0f - draw_data->DisplayPos.x * scale[0];
+         translate[1] = -1.0f - draw_data->DisplayPos.y * scale[1];
+-        vkCmdPushConstants(command_buffer, bd->PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 0, sizeof(float) * 2, scale);
+-        vkCmdPushConstants(command_buffer, bd->PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 2, sizeof(float) * 2, translate);
++        gits::Vulkan::drvVk.vkCmdPushConstants(command_buffer, bd->PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 0, sizeof(float) * 2, scale);
++        gits::Vulkan::drvVk.vkCmdPushConstants(command_buffer, bd->PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 2, sizeof(float) * 2, translate);
+     }
+ }
+ 
+@@ -527,9 +528,9 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
+         // Upload vertex/index data into a single contiguous GPU buffer
+         ImDrawVert* vtx_dst = nullptr;
+         ImDrawIdx* idx_dst = nullptr;
+-        VkResult err = vkMapMemory(v->Device, rb->VertexBufferMemory, 0, vertex_size, 0, (void**)&vtx_dst);
++        VkResult err = gits::Vulkan::drvVk.vkMapMemory(v->Device, rb->VertexBufferMemory, 0, vertex_size, 0, (void**)&vtx_dst);
+         check_vk_result(err);
+-        err = vkMapMemory(v->Device, rb->IndexBufferMemory, 0, index_size, 0, (void**)&idx_dst);
++        err = gits::Vulkan::drvVk.vkMapMemory(v->Device, rb->IndexBufferMemory, 0, index_size, 0, (void**)&idx_dst);
+         check_vk_result(err);
+         for (int n = 0; n < draw_data->CmdListsCount; n++)
+         {
+@@ -546,10 +547,10 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
+         range[1].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+         range[1].memory = rb->IndexBufferMemory;
+         range[1].size = VK_WHOLE_SIZE;
+-        err = vkFlushMappedMemoryRanges(v->Device, 2, range);
++        err = gits::Vulkan::drvVk.vkFlushMappedMemoryRanges(v->Device, 2, range);
+         check_vk_result(err);
+-        vkUnmapMemory(v->Device, rb->VertexBufferMemory);
+-        vkUnmapMemory(v->Device, rb->IndexBufferMemory);
++        gits::Vulkan::drvVk.vkUnmapMemory(v->Device, rb->VertexBufferMemory);
++        gits::Vulkan::drvVk.vkUnmapMemory(v->Device, rb->IndexBufferMemory);
+     }
+ 
+     // Setup desired Vulkan state
+@@ -606,14 +607,14 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
+                 scissor.offset.y = (int32_t)(clip_min.y);
+                 scissor.extent.width = (uint32_t)(clip_max.x - clip_min.x);
+                 scissor.extent.height = (uint32_t)(clip_max.y - clip_min.y);
+-                vkCmdSetScissor(command_buffer, 0, 1, &scissor);
++                gits::Vulkan::drvVk.vkCmdSetScissor(command_buffer, 0, 1, &scissor);
+ 
+                 // Bind DescriptorSet with font or user texture
+                 VkDescriptorSet desc_set = (VkDescriptorSet)pcmd->GetTexID();
+-                vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 0, 1, &desc_set, 0, nullptr);
++                gits::Vulkan::drvVk.vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, bd->PipelineLayout, 0, 1, &desc_set, 0, nullptr);
+ 
+                 // Draw
+-                vkCmdDrawIndexed(command_buffer, pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
++                gits::Vulkan::drvVk.vkCmdDrawIndexed(command_buffer, pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
+             }
+         }
+         global_idx_offset += draw_list->IdxBuffer.Size;
+@@ -629,7 +630,7 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
+     // In theory we should aim to backup/restore those values but I am not sure this is possible.
+     // We perform a call to vkCmdSetScissor() to set back a full viewport which is likely to fix things for 99% users but technically this is not perfect. (See github #4644)
+     VkRect2D scissor = { { 0, 0 }, { (uint32_t)fb_width, (uint32_t)fb_height } };
+-    vkCmdSetScissor(command_buffer, 0, 1, &scissor);
++    gits::Vulkan::drvVk.vkCmdSetScissor(command_buffer, 0, 1, &scissor);
+ }
+ 
+ bool ImGui_ImplVulkan_CreateFontsTexture()
+@@ -642,7 +643,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
+     // Destroy existing texture (if any)
+     if (bd->FontTexture.DescriptorSet)
+     {
+-        vkQueueWaitIdle(v->Queue);
++        gits::Vulkan::drvVk.vkQueueWaitIdle(v->Queue);
+         ImGui_ImplVulkan_DestroyFontsTexture();
+     }
+ 
+@@ -653,7 +654,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
+         info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+         info.flags = 0;
+         info.queueFamilyIndex = v->QueueFamily;
+-        vkCreateCommandPool(v->Device, &info, v->Allocator, &bd->TexCommandPool);
++        gits::Vulkan::drvVk.vkCreateCommandPool(v->Device, &info, v->Allocator, &bd->TexCommandPool);
+     }
+     if (bd->TexCommandBuffer == VK_NULL_HANDLE)
+     {
+@@ -661,18 +662,18 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
+         info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+         info.commandPool = bd->TexCommandPool;
+         info.commandBufferCount = 1;
+-        err = vkAllocateCommandBuffers(v->Device, &info, &bd->TexCommandBuffer);
++        err = gits::Vulkan::drvVk.vkAllocateCommandBuffers(v->Device, &info, &bd->TexCommandBuffer);
+         check_vk_result(err);
+     }
+ 
+     // Start command buffer
+     {
+-        err = vkResetCommandPool(v->Device, bd->TexCommandPool, 0);
++        err = gits::Vulkan::drvVk.vkResetCommandPool(v->Device, bd->TexCommandPool, 0);
+         check_vk_result(err);
+         VkCommandBufferBeginInfo begin_info = {};
+         begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+         begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+-        err = vkBeginCommandBuffer(bd->TexCommandBuffer, &begin_info);
++        err = gits::Vulkan::drvVk.vkBeginCommandBuffer(bd->TexCommandBuffer, &begin_info);
+         check_vk_result(err);
+     }
+ 
+@@ -698,17 +699,17 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
+         info.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+         info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+         info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+-        err = vkCreateImage(v->Device, &info, v->Allocator, &backend_tex->Image);
++        err = gits::Vulkan::drvVk.vkCreateImage(v->Device, &info, v->Allocator, &backend_tex->Image);
+         check_vk_result(err);
+         VkMemoryRequirements req;
+-        vkGetImageMemoryRequirements(v->Device, backend_tex->Image, &req);
++        gits::Vulkan::drvVk.vkGetImageMemoryRequirements(v->Device, backend_tex->Image, &req);
+         VkMemoryAllocateInfo alloc_info = {};
+         alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+         alloc_info.allocationSize = IM_MAX(v->MinAllocationSize, req.size);
+         alloc_info.memoryTypeIndex = ImGui_ImplVulkan_MemoryType(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, req.memoryTypeBits);
+-        err = vkAllocateMemory(v->Device, &alloc_info, v->Allocator, &backend_tex->Memory);
++        err = gits::Vulkan::drvVk.vkAllocateMemory(v->Device, &alloc_info, v->Allocator, &backend_tex->Memory);
+         check_vk_result(err);
+-        err = vkBindImageMemory(v->Device, backend_tex->Image, backend_tex->Memory, 0);
++        err = gits::Vulkan::drvVk.vkBindImageMemory(v->Device, backend_tex->Image, backend_tex->Memory, 0);
+         check_vk_result(err);
+     }
+ 
+@@ -722,7 +723,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
+         info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+         info.subresourceRange.levelCount = 1;
+         info.subresourceRange.layerCount = 1;
+-        err = vkCreateImageView(v->Device, &info, v->Allocator, &backend_tex->ImageView);
++        err = gits::Vulkan::drvVk.vkCreateImageView(v->Device, &info, v->Allocator, &backend_tex->ImageView);
+         check_vk_result(err);
+     }
+ 
+@@ -738,34 +739,34 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
+         buffer_info.size = upload_size;
+         buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+         buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+-        err = vkCreateBuffer(v->Device, &buffer_info, v->Allocator, &upload_buffer);
++        err = gits::Vulkan::drvVk.vkCreateBuffer(v->Device, &buffer_info, v->Allocator, &upload_buffer);
+         check_vk_result(err);
+         VkMemoryRequirements req;
+-        vkGetBufferMemoryRequirements(v->Device, upload_buffer, &req);
++        gits::Vulkan::drvVk.vkGetBufferMemoryRequirements(v->Device, upload_buffer, &req);
+         bd->BufferMemoryAlignment = (bd->BufferMemoryAlignment > req.alignment) ? bd->BufferMemoryAlignment : req.alignment;
+         VkMemoryAllocateInfo alloc_info = {};
+         alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+         alloc_info.allocationSize = IM_MAX(v->MinAllocationSize, req.size);
+         alloc_info.memoryTypeIndex = ImGui_ImplVulkan_MemoryType(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, req.memoryTypeBits);
+-        err = vkAllocateMemory(v->Device, &alloc_info, v->Allocator, &upload_buffer_memory);
++        err = gits::Vulkan::drvVk.vkAllocateMemory(v->Device, &alloc_info, v->Allocator, &upload_buffer_memory);
+         check_vk_result(err);
+-        err = vkBindBufferMemory(v->Device, upload_buffer, upload_buffer_memory, 0);
++        err = gits::Vulkan::drvVk.vkBindBufferMemory(v->Device, upload_buffer, upload_buffer_memory, 0);
+         check_vk_result(err);
+     }
+ 
+     // Upload to Buffer:
+     {
+         char* map = nullptr;
+-        err = vkMapMemory(v->Device, upload_buffer_memory, 0, upload_size, 0, (void**)(&map));
++        err = gits::Vulkan::drvVk.vkMapMemory(v->Device, upload_buffer_memory, 0, upload_size, 0, (void**)(&map));
+         check_vk_result(err);
+         memcpy(map, pixels, upload_size);
+         VkMappedMemoryRange range[1] = {};
+         range[0].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+         range[0].memory = upload_buffer_memory;
+         range[0].size = upload_size;
+-        err = vkFlushMappedMemoryRanges(v->Device, 1, range);
++        err = gits::Vulkan::drvVk.vkFlushMappedMemoryRanges(v->Device, 1, range);
+         check_vk_result(err);
+-        vkUnmapMemory(v->Device, upload_buffer_memory);
++        gits::Vulkan::drvVk.vkUnmapMemory(v->Device, upload_buffer_memory);
+     }
+ 
+     // Copy to Image:
+@@ -781,7 +782,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
+         copy_barrier[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+         copy_barrier[0].subresourceRange.levelCount = 1;
+         copy_barrier[0].subresourceRange.layerCount = 1;
+-        vkCmdPipelineBarrier(bd->TexCommandBuffer, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, copy_barrier);
++        gits::Vulkan::drvVk.vkCmdPipelineBarrier(bd->TexCommandBuffer, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, copy_barrier);
+ 
+         VkBufferImageCopy region = {};
+         region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+@@ -789,7 +790,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
+         region.imageExtent.width = width;
+         region.imageExtent.height = height;
+         region.imageExtent.depth = 1;
+-        vkCmdCopyBufferToImage(bd->TexCommandBuffer, upload_buffer, backend_tex->Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
++        gits::Vulkan::drvVk.vkCmdCopyBufferToImage(bd->TexCommandBuffer, upload_buffer, backend_tex->Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+ 
+         VkImageMemoryBarrier use_barrier[1] = {};
+         use_barrier[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+@@ -803,7 +804,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
+         use_barrier[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+         use_barrier[0].subresourceRange.levelCount = 1;
+         use_barrier[0].subresourceRange.layerCount = 1;
+-        vkCmdPipelineBarrier(bd->TexCommandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, use_barrier);
++        gits::Vulkan::drvVk.vkCmdPipelineBarrier(bd->TexCommandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, use_barrier);
+     }
+ 
+     // Store our identifier
+@@ -814,16 +815,16 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
+     end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+     end_info.commandBufferCount = 1;
+     end_info.pCommandBuffers = &bd->TexCommandBuffer;
+-    err = vkEndCommandBuffer(bd->TexCommandBuffer);
++    err = gits::Vulkan::drvVk.vkEndCommandBuffer(bd->TexCommandBuffer);
+     check_vk_result(err);
+-    err = vkQueueSubmit(v->Queue, 1, &end_info, VK_NULL_HANDLE);
++    err = gits::Vulkan::drvVk.vkQueueSubmit(v->Queue, 1, &end_info, VK_NULL_HANDLE);
+     check_vk_result(err);
+ 
+-    err = vkQueueWaitIdle(v->Queue);
++    err = gits::Vulkan::drvVk.vkQueueWaitIdle(v->Queue);
+     check_vk_result(err);
+ 
+-    vkDestroyBuffer(v->Device, upload_buffer, v->Allocator);
+-    vkFreeMemory(v->Device, upload_buffer_memory, v->Allocator);
++    gits::Vulkan::drvVk.vkDestroyBuffer(v->Device, upload_buffer, v->Allocator);
++    gits::Vulkan::drvVk.vkFreeMemory(v->Device, upload_buffer_memory, v->Allocator);
+ 
+     return true;
+ }
+@@ -843,9 +844,9 @@ void ImGui_ImplVulkan_DestroyFontsTexture()
+         backend_tex->DescriptorSet = VK_NULL_HANDLE;
+         io.Fonts->SetTexID(0);
+     }
+-    if (backend_tex->ImageView) { vkDestroyImageView(v->Device, backend_tex->ImageView, v->Allocator); backend_tex->ImageView = VK_NULL_HANDLE; }
+-    if (backend_tex->Image)     { vkDestroyImage(v->Device, backend_tex->Image, v->Allocator); backend_tex->Image = VK_NULL_HANDLE; }
+-    if (backend_tex->Memory)    { vkFreeMemory(v->Device, backend_tex->Memory, v->Allocator); backend_tex->Memory = VK_NULL_HANDLE; }
++    if (backend_tex->ImageView) { gits::Vulkan::drvVk.vkDestroyImageView(v->Device, backend_tex->ImageView, v->Allocator); backend_tex->ImageView = VK_NULL_HANDLE; }
++    if (backend_tex->Image)     { gits::Vulkan::drvVk.vkDestroyImage(v->Device, backend_tex->Image, v->Allocator); backend_tex->Image = VK_NULL_HANDLE; }
++    if (backend_tex->Memory)    { gits::Vulkan::drvVk.vkFreeMemory(v->Device, backend_tex->Memory, v->Allocator); backend_tex->Memory = VK_NULL_HANDLE; }
+ }
+ 
+ static void ImGui_ImplVulkan_CreateShaderModules(VkDevice device, const VkAllocationCallbacks* allocator)
+@@ -858,7 +859,7 @@ static void ImGui_ImplVulkan_CreateShaderModules(VkDevice device, const VkAlloca
+         vert_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+         vert_info.codeSize = sizeof(__glsl_shader_vert_spv);
+         vert_info.pCode = (uint32_t*)__glsl_shader_vert_spv;
+-        VkResult err = vkCreateShaderModule(device, &vert_info, allocator, &bd->ShaderModuleVert);
++        VkResult err = gits::Vulkan::drvVk.vkCreateShaderModule(device, &vert_info, allocator, &bd->ShaderModuleVert);
+         check_vk_result(err);
+     }
+     if (bd->ShaderModuleFrag == VK_NULL_HANDLE)
+@@ -867,7 +868,7 @@ static void ImGui_ImplVulkan_CreateShaderModules(VkDevice device, const VkAlloca
+         frag_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+         frag_info.codeSize = sizeof(__glsl_shader_frag_spv);
+         frag_info.pCode = (uint32_t*)__glsl_shader_frag_spv;
+-        VkResult err = vkCreateShaderModule(device, &frag_info, allocator, &bd->ShaderModuleFrag);
++        VkResult err = gits::Vulkan::drvVk.vkCreateShaderModule(device, &frag_info, allocator, &bd->ShaderModuleFrag);
+         check_vk_result(err);
+     }
+ }
+@@ -976,14 +977,14 @@ static void ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAllocationC
+ #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+     if (bd->VulkanInitInfo.UseDynamicRendering)
+     {
+-        IM_ASSERT(bd->VulkanInitInfo.PipelineRenderingCreateInfo.sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR && "PipelineRenderingCreateInfo sType must be VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR");
++        IM_ASSERT(bd->VulkanInitInfo.PipelineRenderingCreateInfo.sType == VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO && "PipelineRenderingCreateInfo sType must be VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR");
+         IM_ASSERT(bd->VulkanInitInfo.PipelineRenderingCreateInfo.pNext == nullptr && "PipelineRenderingCreateInfo pNext must be nullptr");
+         info.pNext = &bd->VulkanInitInfo.PipelineRenderingCreateInfo;
+         info.renderPass = VK_NULL_HANDLE; // Just make sure it's actually nullptr.
+     }
+ #endif
+ 
+-    VkResult err = vkCreateGraphicsPipelines(device, pipelineCache, 1, &info, allocator, pipeline);
++    VkResult err = gits::Vulkan::drvVk.vkCreateGraphicsPipelines(device, pipelineCache, 1, &info, allocator, pipeline);
+     check_vk_result(err);
+ }
+ 
+@@ -1007,7 +1008,7 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
+         info.minLod = -1000;
+         info.maxLod = 1000;
+         info.maxAnisotropy = 1.0f;
+-        err = vkCreateSampler(v->Device, &info, v->Allocator, &bd->TexSampler);
++        err = gits::Vulkan::drvVk.vkCreateSampler(v->Device, &info, v->Allocator, &bd->TexSampler);
+         check_vk_result(err);
+     }
+ 
+@@ -1021,7 +1022,7 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
+         info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+         info.bindingCount = 1;
+         info.pBindings = binding;
+-        err = vkCreateDescriptorSetLayout(v->Device, &info, v->Allocator, &bd->DescriptorSetLayout);
++        err = gits::Vulkan::drvVk.vkCreateDescriptorSetLayout(v->Device, &info, v->Allocator, &bd->DescriptorSetLayout);
+         check_vk_result(err);
+     }
+ 
+@@ -1036,7 +1037,7 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
+         pool_info.poolSizeCount = 1;
+         pool_info.pPoolSizes = &pool_size;
+ 
+-        err = vkCreateDescriptorPool(v->Device, &pool_info, v->Allocator, &bd->DescriptorPool);
++        err = gits::Vulkan::drvVk.vkCreateDescriptorPool(v->Device, &pool_info, v->Allocator, &bd->DescriptorPool);
+         check_vk_result(err);
+     }
+ 
+@@ -1054,7 +1055,7 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
+         layout_info.pSetLayouts = set_layout;
+         layout_info.pushConstantRangeCount = 1;
+         layout_info.pPushConstantRanges = push_constants;
+-        err = vkCreatePipelineLayout(v->Device, &layout_info, v->Allocator, &bd->PipelineLayout);
++        err = gits::Vulkan::drvVk.vkCreatePipelineLayout(v->Device, &layout_info, v->Allocator, &bd->PipelineLayout);
+         check_vk_result(err);
+     }
+ 
+@@ -1070,15 +1071,15 @@ void    ImGui_ImplVulkan_DestroyDeviceObjects()
+     ImGui_ImplVulkan_DestroyWindowRenderBuffers(v->Device, &bd->MainWindowRenderBuffers, v->Allocator);
+     ImGui_ImplVulkan_DestroyFontsTexture();
+ 
+-    if (bd->TexCommandBuffer)     { vkFreeCommandBuffers(v->Device, bd->TexCommandPool, 1, &bd->TexCommandBuffer); bd->TexCommandBuffer = VK_NULL_HANDLE; }
+-    if (bd->TexCommandPool)       { vkDestroyCommandPool(v->Device, bd->TexCommandPool, v->Allocator); bd->TexCommandPool = VK_NULL_HANDLE; }
+-    if (bd->TexSampler)           { vkDestroySampler(v->Device, bd->TexSampler, v->Allocator); bd->TexSampler = VK_NULL_HANDLE; }
+-    if (bd->ShaderModuleVert)     { vkDestroyShaderModule(v->Device, bd->ShaderModuleVert, v->Allocator); bd->ShaderModuleVert = VK_NULL_HANDLE; }
+-    if (bd->ShaderModuleFrag)     { vkDestroyShaderModule(v->Device, bd->ShaderModuleFrag, v->Allocator); bd->ShaderModuleFrag = VK_NULL_HANDLE; }
+-    if (bd->DescriptorSetLayout)  { vkDestroyDescriptorSetLayout(v->Device, bd->DescriptorSetLayout, v->Allocator); bd->DescriptorSetLayout = VK_NULL_HANDLE; }
+-    if (bd->PipelineLayout)       { vkDestroyPipelineLayout(v->Device, bd->PipelineLayout, v->Allocator); bd->PipelineLayout = VK_NULL_HANDLE; }
+-    if (bd->Pipeline)             { vkDestroyPipeline(v->Device, bd->Pipeline, v->Allocator); bd->Pipeline = VK_NULL_HANDLE; }
+-    if (bd->DescriptorPool)       { vkDestroyDescriptorPool(v->Device, bd->DescriptorPool, v->Allocator); bd->DescriptorPool = VK_NULL_HANDLE; }
++    if (bd->TexCommandBuffer)     { gits::Vulkan::drvVk.vkFreeCommandBuffers(v->Device, bd->TexCommandPool, 1, &bd->TexCommandBuffer); bd->TexCommandBuffer = VK_NULL_HANDLE; }
++    if (bd->TexCommandPool)       { gits::Vulkan::drvVk.vkDestroyCommandPool(v->Device, bd->TexCommandPool, v->Allocator); bd->TexCommandPool = VK_NULL_HANDLE; }
++    if (bd->TexSampler)           { gits::Vulkan::drvVk.vkDestroySampler(v->Device, bd->TexSampler, v->Allocator); bd->TexSampler = VK_NULL_HANDLE; }
++    if (bd->ShaderModuleVert)     { gits::Vulkan::drvVk.vkDestroyShaderModule(v->Device, bd->ShaderModuleVert, v->Allocator); bd->ShaderModuleVert = VK_NULL_HANDLE; }
++    if (bd->ShaderModuleFrag)     { gits::Vulkan::drvVk.vkDestroyShaderModule(v->Device, bd->ShaderModuleFrag, v->Allocator); bd->ShaderModuleFrag = VK_NULL_HANDLE; }
++    if (bd->DescriptorSetLayout)  { gits::Vulkan::drvVk.vkDestroyDescriptorSetLayout(v->Device, bd->DescriptorSetLayout, v->Allocator); bd->DescriptorSetLayout = VK_NULL_HANDLE; }
++    if (bd->PipelineLayout)       { gits::Vulkan::drvVk.vkDestroyPipelineLayout(v->Device, bd->PipelineLayout, v->Allocator); bd->PipelineLayout = VK_NULL_HANDLE; }
++    if (bd->Pipeline)             { gits::Vulkan::drvVk.vkDestroyPipeline(v->Device, bd->Pipeline, v->Allocator); bd->Pipeline = VK_NULL_HANDLE; }
++    if (bd->DescriptorPool)       { gits::Vulkan::drvVk.vkDestroyDescriptorPool(v->Device, bd->DescriptorPool, v->Allocator); bd->DescriptorPool = VK_NULL_HANDLE; }
+ }
+ 
+ #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+@@ -1141,7 +1142,7 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info)
+     {
+ #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+ #ifndef IMGUI_IMPL_VULKAN_USE_LOADER
+-        ImGui_ImplVulkan_LoadDynamicRenderingFunctions(info->ApiVersion, [](const char* function_name, void* user_data) { return vkGetInstanceProcAddr((VkInstance)user_data, function_name); }, (void*)info->Instance);
++        ImGui_ImplVulkan_LoadDynamicRenderingFunctions(info->ApiVersion, [](const char* function_name, void* user_data) { return gits::Vulkan::drvVk.vkGetInstanceProcAddr((VkInstance)user_data, function_name); }, (void*)info->Instance);
+ #endif
+         IM_ASSERT(ImGuiImplVulkanFuncs_vkCmdBeginRenderingKHR != nullptr);
+         IM_ASSERT(ImGuiImplVulkanFuncs_vkCmdEndRenderingKHR != nullptr);
+@@ -1210,7 +1211,7 @@ void ImGui_ImplVulkan_SetMinImageCount(uint32_t min_image_count)
+         return;
+ 
+     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
+-    VkResult err = vkDeviceWaitIdle(v->Device);
++    VkResult err = gits::Vulkan::drvVk.vkDeviceWaitIdle(v->Device);
+     check_vk_result(err);
+     ImGui_ImplVulkan_DestroyWindowRenderBuffers(v->Device, &bd->MainWindowRenderBuffers, v->Allocator);
+     bd->VulkanInitInfo.MinImageCount = min_image_count;
+@@ -1232,7 +1233,7 @@ VkDescriptorSet ImGui_ImplVulkan_AddTexture(VkSampler sampler, VkImageView image
+         alloc_info.descriptorPool = pool;
+         alloc_info.descriptorSetCount = 1;
+         alloc_info.pSetLayouts = &bd->DescriptorSetLayout;
+-        VkResult err = vkAllocateDescriptorSets(v->Device, &alloc_info, &descriptor_set);
++        VkResult err = gits::Vulkan::drvVk.vkAllocateDescriptorSets(v->Device, &alloc_info, &descriptor_set);
+         check_vk_result(err);
+     }
+ 
+@@ -1248,7 +1249,7 @@ VkDescriptorSet ImGui_ImplVulkan_AddTexture(VkSampler sampler, VkImageView image
+         write_desc[0].descriptorCount = 1;
+         write_desc[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+         write_desc[0].pImageInfo = desc_image;
+-        vkUpdateDescriptorSets(v->Device, 1, write_desc, 0, nullptr);
++        gits::Vulkan::drvVk.vkUpdateDescriptorSets(v->Device, 1, write_desc, 0, nullptr);
+     }
+     return descriptor_set;
+ }
+@@ -1258,15 +1259,15 @@ void ImGui_ImplVulkan_RemoveTexture(VkDescriptorSet descriptor_set)
+     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
+     VkDescriptorPool pool = bd->DescriptorPool ? bd->DescriptorPool : v->DescriptorPool;
+-    vkFreeDescriptorSets(v->Device, pool, 1, &descriptor_set);
++    gits::Vulkan::drvVk.vkFreeDescriptorSets(v->Device, pool, 1, &descriptor_set);
+ }
+ 
+ void ImGui_ImplVulkan_DestroyFrameRenderBuffers(VkDevice device, ImGui_ImplVulkan_FrameRenderBuffers* buffers, const VkAllocationCallbacks* allocator)
+ {
+-    if (buffers->VertexBuffer) { vkDestroyBuffer(device, buffers->VertexBuffer, allocator); buffers->VertexBuffer = VK_NULL_HANDLE; }
+-    if (buffers->VertexBufferMemory) { vkFreeMemory(device, buffers->VertexBufferMemory, allocator); buffers->VertexBufferMemory = VK_NULL_HANDLE; }
+-    if (buffers->IndexBuffer) { vkDestroyBuffer(device, buffers->IndexBuffer, allocator); buffers->IndexBuffer = VK_NULL_HANDLE; }
+-    if (buffers->IndexBufferMemory) { vkFreeMemory(device, buffers->IndexBufferMemory, allocator); buffers->IndexBufferMemory = VK_NULL_HANDLE; }
++    if (buffers->VertexBuffer) { gits::Vulkan::drvVk.vkDestroyBuffer(device, buffers->VertexBuffer, allocator); buffers->VertexBuffer = VK_NULL_HANDLE; }
++    if (buffers->VertexBufferMemory) { gits::Vulkan::drvVk.vkFreeMemory(device, buffers->VertexBufferMemory, allocator); buffers->VertexBufferMemory = VK_NULL_HANDLE; }
++    if (buffers->IndexBuffer) { gits::Vulkan::drvVk.vkDestroyBuffer(device, buffers->IndexBuffer, allocator); buffers->IndexBuffer = VK_NULL_HANDLE; }
++    if (buffers->IndexBufferMemory) { gits::Vulkan::drvVk.vkFreeMemory(device, buffers->IndexBufferMemory, allocator); buffers->IndexBufferMemory = VK_NULL_HANDLE; }
+     buffers->VertexBufferSize = 0;
+     buffers->IndexBufferSize = 0;
+ }
+@@ -1307,10 +1308,10 @@ VkSurfaceFormatKHR ImGui_ImplVulkanH_SelectSurfaceFormat(VkPhysicalDevice physic
+     // Additionally several new color spaces were introduced with Vulkan Spec v1.0.40,
+     // hence we must make sure that a format with the mostly available color space, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR, is found and used.
+     uint32_t avail_count;
+-    vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &avail_count, nullptr);
++    gits::Vulkan::drvVk.vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &avail_count, nullptr);
+     ImVector<VkSurfaceFormatKHR> avail_format;
+     avail_format.resize((int)avail_count);
+-    vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &avail_count, avail_format.Data);
++    gits::Vulkan::drvVk.vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &avail_count, avail_format.Data);
+ 
+     // First check if only one format, VK_FORMAT_UNDEFINED, is available, which would imply that any format is available
+     if (avail_count == 1)
+@@ -1349,10 +1350,10 @@ VkPresentModeKHR ImGui_ImplVulkanH_SelectPresentMode(VkPhysicalDevice physical_d
+ 
+     // Request a certain mode and confirm that it is available. If not use VK_PRESENT_MODE_FIFO_KHR which is mandatory
+     uint32_t avail_count = 0;
+-    vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &avail_count, nullptr);
++    gits::Vulkan::drvVk.vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &avail_count, nullptr);
+     ImVector<VkPresentModeKHR> avail_modes;
+     avail_modes.resize((int)avail_count);
+-    vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &avail_count, avail_modes.Data);
++    gits::Vulkan::drvVk.vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &avail_count, avail_modes.Data);
+     //for (uint32_t avail_i = 0; avail_i < avail_count; avail_i++)
+     //    printf("[vulkan] avail_modes[%d] = %d\n", avail_i, avail_modes[avail_i]);
+ 
+@@ -1367,13 +1368,13 @@ VkPresentModeKHR ImGui_ImplVulkanH_SelectPresentMode(VkPhysicalDevice physical_d
+ VkPhysicalDevice ImGui_ImplVulkanH_SelectPhysicalDevice(VkInstance instance)
+ {
+     uint32_t gpu_count;
+-    VkResult err = vkEnumeratePhysicalDevices(instance, &gpu_count, nullptr);
++    VkResult err = gits::Vulkan::drvVk.vkEnumeratePhysicalDevices(instance, &gpu_count, nullptr);
+     check_vk_result(err);
+     IM_ASSERT(gpu_count > 0);
+ 
+     ImVector<VkPhysicalDevice> gpus;
+     gpus.resize(gpu_count);
+-    err = vkEnumeratePhysicalDevices(instance, &gpu_count, gpus.Data);
++    err = gits::Vulkan::drvVk.vkEnumeratePhysicalDevices(instance, &gpu_count, gpus.Data);
+     check_vk_result(err);
+ 
+     // If a number >1 of GPUs got reported, find discrete GPU if present, or use first one available. This covers
+@@ -1382,7 +1383,7 @@ VkPhysicalDevice ImGui_ImplVulkanH_SelectPhysicalDevice(VkInstance instance)
+     for (VkPhysicalDevice& device : gpus)
+     {
+         VkPhysicalDeviceProperties properties;
+-        vkGetPhysicalDeviceProperties(device, &properties);
++        gits::Vulkan::drvVk.vkGetPhysicalDeviceProperties(device, &properties);
+         if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+             return device;
+     }
+@@ -1397,10 +1398,10 @@ VkPhysicalDevice ImGui_ImplVulkanH_SelectPhysicalDevice(VkInstance instance)
+ uint32_t ImGui_ImplVulkanH_SelectQueueFamilyIndex(VkPhysicalDevice physical_device)
+ {
+     uint32_t count;
+-    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &count, nullptr);
++    gits::Vulkan::drvVk.vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &count, nullptr);
+     ImVector<VkQueueFamilyProperties> queues_properties;
+     queues_properties.resize((int)count);
+-    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &count, queues_properties.Data);
++    gits::Vulkan::drvVk.vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &count, queues_properties.Data);
+     for (uint32_t i = 0; i < count; i++)
+         if (queues_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+             return i;
+@@ -1422,7 +1423,7 @@ void ImGui_ImplVulkanH_CreateWindowCommandBuffers(VkPhysicalDevice physical_devi
+             info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+             info.flags = 0;
+             info.queueFamilyIndex = queue_family;
+-            err = vkCreateCommandPool(device, &info, allocator, &fd->CommandPool);
++            err = gits::Vulkan::drvVk.vkCreateCommandPool(device, &info, allocator, &fd->CommandPool);
+             check_vk_result(err);
+         }
+         {
+@@ -1431,14 +1432,14 @@ void ImGui_ImplVulkanH_CreateWindowCommandBuffers(VkPhysicalDevice physical_devi
+             info.commandPool = fd->CommandPool;
+             info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+             info.commandBufferCount = 1;
+-            err = vkAllocateCommandBuffers(device, &info, &fd->CommandBuffer);
++            err = gits::Vulkan::drvVk.vkAllocateCommandBuffers(device, &info, &fd->CommandBuffer);
+             check_vk_result(err);
+         }
+         {
+             VkFenceCreateInfo info = {};
+             info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+             info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+-            err = vkCreateFence(device, &info, allocator, &fd->Fence);
++            err = gits::Vulkan::drvVk.vkCreateFence(device, &info, allocator, &fd->Fence);
+             check_vk_result(err);
+         }
+     }
+@@ -1449,9 +1450,9 @@ void ImGui_ImplVulkanH_CreateWindowCommandBuffers(VkPhysicalDevice physical_devi
+         {
+             VkSemaphoreCreateInfo info = {};
+             info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+-            err = vkCreateSemaphore(device, &info, allocator, &fsd->ImageAcquiredSemaphore);
++            err = gits::Vulkan::drvVk.vkCreateSemaphore(device, &info, allocator, &fsd->ImageAcquiredSemaphore);
+             check_vk_result(err);
+-            err = vkCreateSemaphore(device, &info, allocator, &fsd->RenderCompleteSemaphore);
++            err = gits::Vulkan::drvVk.vkCreateSemaphore(device, &info, allocator, &fsd->RenderCompleteSemaphore);
+             check_vk_result(err);
+         }
+     }
+@@ -1475,7 +1476,7 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, V
+     VkResult err;
+     VkSwapchainKHR old_swapchain = wd->Swapchain;
+     wd->Swapchain = VK_NULL_HANDLE;
+-    err = vkDeviceWaitIdle(device);
++    err = gits::Vulkan::drvVk.vkDeviceWaitIdle(device);
+     check_vk_result(err);
+ 
+     // We don't use ImGui_ImplVulkanH_DestroyWindow() because we want to preserve the old swapchain to create the new one.
+@@ -1488,9 +1489,9 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, V
+     wd->FrameSemaphores.clear();
+     wd->ImageCount = 0;
+     if (wd->RenderPass)
+-        vkDestroyRenderPass(device, wd->RenderPass, allocator);
++        gits::Vulkan::drvVk.vkDestroyRenderPass(device, wd->RenderPass, allocator);
+     if (wd->Pipeline)
+-        vkDestroyPipeline(device, wd->Pipeline, allocator);
++        gits::Vulkan::drvVk.vkDestroyPipeline(device, wd->Pipeline, allocator);
+ 
+     // If min image count was not specified, request different count of images dependent on selected present mode
+     if (min_image_count == 0)
+@@ -1499,7 +1500,7 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, V
+     // Create Swapchain
+     {
+         VkSurfaceCapabilitiesKHR cap;
+-        err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, wd->Surface, &cap);
++        err = gits::Vulkan::drvVk.vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, wd->Surface, &cap);
+         check_vk_result(err);
+ 
+         VkSwapchainCreateInfoKHR info = {};
+@@ -1530,14 +1531,14 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, V
+             info.imageExtent.width = wd->Width = cap.currentExtent.width;
+             info.imageExtent.height = wd->Height = cap.currentExtent.height;
+         }
+-        err = vkCreateSwapchainKHR(device, &info, allocator, &wd->Swapchain);
++        err = gits::Vulkan::drvVk.vkCreateSwapchainKHR(device, &info, allocator, &wd->Swapchain);
+         check_vk_result(err);
+-        err = vkGetSwapchainImagesKHR(device, wd->Swapchain, &wd->ImageCount, nullptr);
++        err = gits::Vulkan::drvVk.vkGetSwapchainImagesKHR(device, wd->Swapchain, &wd->ImageCount, nullptr);
+         check_vk_result(err);
+         VkImage backbuffers[16] = {};
+         IM_ASSERT(wd->ImageCount >= min_image_count);
+         IM_ASSERT(wd->ImageCount < IM_ARRAYSIZE(backbuffers));
+-        err = vkGetSwapchainImagesKHR(device, wd->Swapchain, &wd->ImageCount, backbuffers);
++        err = gits::Vulkan::drvVk.vkGetSwapchainImagesKHR(device, wd->Swapchain, &wd->ImageCount, backbuffers);
+         check_vk_result(err);
+ 
+         wd->SemaphoreCount = wd->ImageCount + 1;
+@@ -1549,7 +1550,7 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, V
+             wd->Frames[i].Backbuffer = backbuffers[i];
+     }
+     if (old_swapchain)
+-        vkDestroySwapchainKHR(device, old_swapchain, allocator);
++        gits::Vulkan::drvVk.vkDestroySwapchainKHR(device, old_swapchain, allocator);
+ 
+     // Create the Render Pass
+     if (wd->UseDynamicRendering == false)
+@@ -1585,7 +1586,7 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, V
+         info.pSubpasses = &subpass;
+         info.dependencyCount = 1;
+         info.pDependencies = &dependency;
+-        err = vkCreateRenderPass(device, &info, allocator, &wd->RenderPass);
++        err = gits::Vulkan::drvVk.vkCreateRenderPass(device, &info, allocator, &wd->RenderPass);
+         check_vk_result(err);
+ 
+         // We do not create a pipeline by default as this is also used by examples' main.cpp,
+@@ -1609,7 +1610,7 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, V
+         {
+             ImGui_ImplVulkanH_Frame* fd = &wd->Frames[i];
+             info.image = fd->Backbuffer;
+-            err = vkCreateImageView(device, &info, allocator, &fd->BackbufferView);
++            err = gits::Vulkan::drvVk.vkCreateImageView(device, &info, allocator, &fd->BackbufferView);
+             check_vk_result(err);
+         }
+     }
+@@ -1630,7 +1631,7 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, V
+         {
+             ImGui_ImplVulkanH_Frame* fd = &wd->Frames[i];
+             attachment[0] = fd->BackbufferView;
+-            err = vkCreateFramebuffer(device, &info, allocator, &fd->Framebuffer);
++            err = gits::Vulkan::drvVk.vkCreateFramebuffer(device, &info, allocator, &fd->Framebuffer);
+             check_vk_result(err);
+         }
+     }
+@@ -1647,7 +1648,7 @@ void ImGui_ImplVulkanH_CreateOrResizeWindow(VkInstance instance, VkPhysicalDevic
+ 
+ void ImGui_ImplVulkanH_DestroyWindow(VkInstance instance, VkDevice device, ImGui_ImplVulkanH_Window* wd, const VkAllocationCallbacks* allocator)
+ {
+-    vkDeviceWaitIdle(device); // FIXME: We could wait on the Queue if we had the queue in wd-> (otherwise VulkanH functions can't use globals)
++    gits::Vulkan::drvVk.vkDeviceWaitIdle(device); // FIXME: We could wait on the Queue if we had the queue in wd-> (otherwise VulkanH functions can't use globals)
+     //vkQueueWaitIdle(bd->Queue);
+ 
+     for (uint32_t i = 0; i < wd->ImageCount; i++)
+@@ -1656,31 +1657,31 @@ void ImGui_ImplVulkanH_DestroyWindow(VkInstance instance, VkDevice device, ImGui
+         ImGui_ImplVulkanH_DestroyFrameSemaphores(device, &wd->FrameSemaphores[i], allocator);
+     wd->Frames.clear();
+     wd->FrameSemaphores.clear();
+-    vkDestroyPipeline(device, wd->Pipeline, allocator);
+-    vkDestroyRenderPass(device, wd->RenderPass, allocator);
+-    vkDestroySwapchainKHR(device, wd->Swapchain, allocator);
+-    vkDestroySurfaceKHR(instance, wd->Surface, allocator);
++    gits::Vulkan::drvVk.vkDestroyPipeline(device, wd->Pipeline, allocator);
++    gits::Vulkan::drvVk.vkDestroyRenderPass(device, wd->RenderPass, allocator);
++    gits::Vulkan::drvVk.vkDestroySwapchainKHR(device, wd->Swapchain, allocator);
++    gits::Vulkan::drvVk.vkDestroySurfaceKHR(instance, wd->Surface, allocator);
+ 
+     *wd = ImGui_ImplVulkanH_Window();
+ }
+ 
+ void ImGui_ImplVulkanH_DestroyFrame(VkDevice device, ImGui_ImplVulkanH_Frame* fd, const VkAllocationCallbacks* allocator)
+ {
+-    vkDestroyFence(device, fd->Fence, allocator);
+-    vkFreeCommandBuffers(device, fd->CommandPool, 1, &fd->CommandBuffer);
+-    vkDestroyCommandPool(device, fd->CommandPool, allocator);
++    gits::Vulkan::drvVk.vkDestroyFence(device, fd->Fence, allocator);
++    gits::Vulkan::drvVk.vkFreeCommandBuffers(device, fd->CommandPool, 1, &fd->CommandBuffer);
++    gits::Vulkan::drvVk.vkDestroyCommandPool(device, fd->CommandPool, allocator);
+     fd->Fence = VK_NULL_HANDLE;
+     fd->CommandBuffer = VK_NULL_HANDLE;
+     fd->CommandPool = VK_NULL_HANDLE;
+ 
+-    vkDestroyImageView(device, fd->BackbufferView, allocator);
+-    vkDestroyFramebuffer(device, fd->Framebuffer, allocator);
++    gits::Vulkan::drvVk.vkDestroyImageView(device, fd->BackbufferView, allocator);
++    gits::Vulkan::drvVk.vkDestroyFramebuffer(device, fd->Framebuffer, allocator);
+ }
+ 
+ void ImGui_ImplVulkanH_DestroyFrameSemaphores(VkDevice device, ImGui_ImplVulkanH_FrameSemaphores* fsd, const VkAllocationCallbacks* allocator)
+ {
+-    vkDestroySemaphore(device, fsd->ImageAcquiredSemaphore, allocator);
+-    vkDestroySemaphore(device, fsd->RenderCompleteSemaphore, allocator);
++    gits::Vulkan::drvVk.vkDestroySemaphore(device, fsd->ImageAcquiredSemaphore, allocator);
++    gits::Vulkan::drvVk.vkDestroySemaphore(device, fsd->RenderCompleteSemaphore, allocator);
+     fsd->ImageAcquiredSemaphore = fsd->RenderCompleteSemaphore = VK_NULL_HANDLE;
+ }
+ 
+diff --git a/backends/imgui_impl_vulkan.h b/backends/imgui_impl_vulkan.h
+index c3f40e1..35e85bc 100644
+--- a/backends/imgui_impl_vulkan.h
++++ b/backends/imgui_impl_vulkan.h
+@@ -55,7 +55,8 @@
+ #ifdef IMGUI_IMPL_VULKAN_USE_VOLK
+ #include <volk.h>
+ #else
+-#include <vulkan/vulkan.h>
++// #include <vulkan/vulkan.h>
++#include "vulkanHeader.h"
+ #endif
+ #if defined(VK_VERSION_1_3) || defined(VK_KHR_dynamic_rendering)
+ #define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+@@ -98,7 +99,8 @@ struct ImGui_ImplVulkan_InitInfo
+     // Need to explicitly enable VK_KHR_dynamic_rendering extension to use this, even for Vulkan 1.3.
+     bool                            UseDynamicRendering;
+ #ifdef IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+-    VkPipelineRenderingCreateInfoKHR PipelineRenderingCreateInfo;
++    // VkPipelineRenderingCreateInfoKHR PipelineRenderingCreateInfo;
++    VkPipelineRenderingCreateInfo PipelineRenderingCreateInfo;
+ #endif
+ 
+     // (Optional) Allocation, Debugging

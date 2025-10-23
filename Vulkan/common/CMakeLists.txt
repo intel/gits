@@ -26,7 +26,7 @@ set_source_files_properties(
   PROPERTIES GENERATED 1
 )
 
-add_library(Vulkan_common
+SET(Vulkan_common_SOURCES
   include/vkFunction.h
   include/vkWindowing.h
   include/vk_platform.h
@@ -82,6 +82,16 @@ add_library(Vulkan_common
   vulkanRenderDocUtil.cpp
 )
 
+
+if(WIN32)
+  list(APPEND Vulkan_common_SOURCES
+      include/vulkanHudHelper.h
+      vulkanHudHelper.cpp
+  )
+endif()
+
+add_library(Vulkan_common STATIC ${Vulkan_common_SOURCES})
+
 source_group("Generated Files" FILES
   include/vulkanFunctions.h
   include/vulkanHeader.h
@@ -92,5 +102,8 @@ source_group("Generated Files" FILES
   REGULAR_EXPRESSION ".*Auto.*")
 
 target_link_libraries(Vulkan_common PRIVATE common configuration)
+if(WIN32)
+  target_link_libraries(Vulkan_common PUBLIC imgui_win32_vulkan hud)
+endif()
 
 set_target_properties(Vulkan_common PROPERTIES FOLDER Vulkan)

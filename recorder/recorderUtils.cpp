@@ -21,7 +21,7 @@
 #include "gits.h"
 #include "diagnostic.h"
 
-#if defined WITH_DIRECTX
+#if defined GITS_PLATFORM_WINDOWS && (WITH_DIRECTX || WITH_VULKAN)
 #include "imGuiHUD.h"
 #endif
 
@@ -65,7 +65,7 @@ bool ConfigureRecorder(const std::filesystem::path& configPath) {
 
   inst.RegisterFileRecorder(std::move(file));
 
-#if defined WITH_DIRECTX
+#if defined GITS_PLATFORM_WINDOWS && (WITH_DIRECTX || WITH_VULKAN)
   auto pImGuiHUD = std::make_unique<ImGuiHUD>();
   CGits::Instance().SetImGuiHUD(std::move(pImGuiHUD));
   CGits::Instance().GetImGuiHUD()->SetApplicationInfo(processNameHUD, pid);

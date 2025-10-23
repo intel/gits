@@ -54,6 +54,9 @@ if(WIN32)
 endif()
 
 target_link_libraries(Vulkan_interceptor PRIVATE gits_recorder gits_recorder_interface common)
+if(WIN32)
+  target_link_libraries(Vulkan_interceptor PRIVATE imgui_win32_vulkan hud)
+endif()
 
 if(MSVC)
   set_target_properties(Vulkan_interceptor PROPERTIES OUTPUT_NAME vulkan-1)

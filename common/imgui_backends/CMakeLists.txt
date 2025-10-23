@@ -6,9 +6,6 @@
 #
 # ===================== end_copyright_notice ==============================
 
-add_subdirectory(configuration)
-add_subdirectory(hud)
-add_subdirectory(imgui_common)
-add_subdirectory(log)
-add_subdirectory(legacy)
-add_subdirectory(imgui_backends)
+if(WIN32)
+  add_subdirectory(imgui_win32_vulkan)
+endif()

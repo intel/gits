@@ -529,6 +529,9 @@ VkResult recExecWrap_vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo,
   }
   VkResult return_value = CGitsPluginVulkan::RecorderWrapper().Drivers().vkCreateInstance(
       pCreateInfo, pAllocator, pInstance);
+
+  CGitsPluginVulkan::RecorderWrapper().HudOnVkCreateInstance(pCreateInfo, pAllocator, pInstance);
+
   return return_value;
 }
 
@@ -749,6 +752,10 @@ VkResult recExecWrap_vkCreateDevice(VkPhysicalDevice physicalDevice,
   if (return_value != VK_SUCCESS) {
     LOG_WARNING << "Device creation failed with the following error: " << return_value;
   }
+
+  CGitsPluginVulkan::RecorderWrapper().HudOnVkCreateDevice(physicalDevice, pCreateInfo, pAllocator,
+                                                           pDevice);
+
   return return_value;
 }
 
@@ -1092,8 +1099,13 @@ VkResult recExecWrap_vkCreateSwapchainKHR(VkDevice device,
       localCreateInfo.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     }
   }
-  return CGitsPluginVulkan::RecorderWrapper().Drivers().vkCreateSwapchainKHR(
+  auto return_value = CGitsPluginVulkan::RecorderWrapper().Drivers().vkCreateSwapchainKHR(
       device, &localCreateInfo, pAllocator, pSwapchain);
+
+  CGitsPluginVulkan::RecorderWrapper().HudOnVkCreateSwapchainKHR(device, pCreateInfo, pAllocator,
+                                                                 pSwapchain);
+
+  return return_value;
 }
 
 VkResult recExecWrap_vkCreateRayTracingPipelinesKHR(
@@ -1387,6 +1399,39 @@ void recExecWrap_vkGetPhysicalDeviceFeatures2KHR(VkPhysicalDevice physicalDevice
   CGitsPluginVulkan::RecorderWrapper().SuppressPhysicalDeviceFeatures(
       CGitsPluginVulkan::Configuration().vulkan.shared.suppressPhysicalDeviceFeatures,
       &pFeatures->features);
+}
+
+void recExecWrap_vkGetDeviceQueue(VkDevice device,
+                                  uint32_t queueFamilyIndex,
+                                  uint32_t queueIndex,
+                                  VkQueue* pQueue) {
+  CGitsPluginVulkan::RecorderWrapper().Drivers().vkGetDeviceQueue(device, queueFamilyIndex,
+                                                                  queueIndex, pQueue);
+
+  CGitsPluginVulkan::RecorderWrapper().HudOnVkGetDeviceQueue(device, queueFamilyIndex, queueIndex,
+                                                             pQueue);
+}
+
+VkResult recExecWrap_vkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR* pPresentInfo) {
+  CGitsPluginVulkan::RecorderWrapper().HudOnVkQueuePresentKHR(queue, pPresentInfo);
+
+  auto return_value =
+      CGitsPluginVulkan::RecorderWrapper().Drivers().vkQueuePresentKHR(queue, pPresentInfo);
+
+  return return_value;
+}
+
+VkResult recExecWrap_vkCreateWin32SurfaceKHR(VkInstance instance,
+                                             const VkWin32SurfaceCreateInfoKHR* pCreateInfo,
+                                             const VkAllocationCallbacks* pAllocator,
+                                             VkSurfaceKHR* pSurface) {
+  auto return_value = CGitsPluginVulkan::RecorderWrapper().Drivers().vkCreateWin32SurfaceKHR(
+      instance, pCreateInfo, pAllocator, pSurface);
+
+  CGitsPluginVulkan::RecorderWrapper().HudOnVkCreateWin32SurfaceKHR(instance, pCreateInfo,
+                                                                    pAllocator, pSurface);
+
+  return return_value;
 }
 
 namespace {

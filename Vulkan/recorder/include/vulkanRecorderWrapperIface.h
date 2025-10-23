@@ -76,6 +76,26 @@ public:
   virtual void SetConfig(Config const& cfg) const = 0;
   virtual bool IsUseExternalMemoryExtensionUsed() const = 0;
   virtual bool IsSubcaptureBeforeRestorationPhase() const = 0;
+  virtual void HudOnVkCreateInstance(const VkInstanceCreateInfo* pCreateInfo,
+                                     const VkAllocationCallbacks* pAllocator,
+                                     VkInstance* pInstance) = 0;
+  virtual void HudOnVkCreateWin32SurfaceKHR(VkInstance instance,
+                                            const VkWin32SurfaceCreateInfoKHR* pCreateInfo,
+                                            const VkAllocationCallbacks* pAllocator,
+                                            VkSurfaceKHR* pSurface) = 0;
+  virtual void HudOnVkCreateDevice(VkPhysicalDevice physicalDevice,
+                                   const VkDeviceCreateInfo* pCreateInfo,
+                                   const VkAllocationCallbacks* pAllocator,
+                                   VkDevice* pDevice) = 0;
+  virtual void HudOnVkCreateSwapchainKHR(VkDevice device,
+                                         const VkSwapchainCreateInfoKHR* pCreateInfo,
+                                         const VkAllocationCallbacks* pAllocator,
+                                         VkSwapchainKHR* pSwapchain) = 0;
+  virtual void HudOnVkGetDeviceQueue(VkDevice device,
+                                     uint32_t queueFamilyIndex,
+                                     uint32_t queueIndex,
+                                     VkQueue* pQueue) = 0;
+  virtual void HudOnVkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR* pPresentInfo) = 0;
 #include "vulkanRecorderWrapperIfaceAuto.h"
 };
 } // namespace Vulkan

@@ -70,6 +70,7 @@ target_include_directories(
 target_include_directories(
   imgui_common INTERFACE
   ${IMGUI_SOURCE_DIR}/
+  ${IMGUI_BACKEND_DIR}/
 )
 
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.20")

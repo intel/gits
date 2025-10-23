@@ -43,6 +43,9 @@ source_group("External Files" FILES ${Vulkan_layer_external_cpps})
 source_group("Generated Files" FILES ${VulkanLayer_DEF} REGULAR_EXPRESSION ".*Auto.*")
 
 target_link_libraries(Vulkan_layer PRIVATE gits_recorder_interface common configuration)
+if(WIN32)
+  target_link_libraries(Vulkan_layer PRIVATE imgui_win32_vulkan hud)
+endif()
 
 if(MSVC)
   set_target_properties(Vulkan_layer PROPERTIES OUTPUT_NAME VkLayer_vulkan_GITS_recorder)

@@ -538,5 +538,55 @@ bool CRecorderWrapper::IsSubcaptureBeforeRestorationPhase() const {
   return isSubcaptureBeforeRestorationPhase();
 }
 
+void CRecorderWrapper::HudOnVkCreateInstance(const VkInstanceCreateInfo* pCreateInfo,
+                                             const VkAllocationCallbacks* pAllocator,
+                                             VkInstance* pInstance) {
+#if defined GITS_PLATFORM_WINDOWS
+  _hudHelper.OnVkCreateInstance(pCreateInfo, pAllocator, pInstance);
+#endif
+}
+
+void CRecorderWrapper::HudOnVkCreateWin32SurfaceKHR(VkInstance instance,
+                                                    const VkWin32SurfaceCreateInfoKHR* pCreateInfo,
+                                                    const VkAllocationCallbacks* pAllocator,
+                                                    VkSurfaceKHR* pSurface) {
+#if defined GITS_PLATFORM_WINDOWS
+  _hudHelper.SetWindowHandle(pCreateInfo->hwnd);
+#endif
+}
+
+void CRecorderWrapper::HudOnVkCreateDevice(VkPhysicalDevice physicalDevice,
+                                           const VkDeviceCreateInfo* pCreateInfo,
+                                           const VkAllocationCallbacks* pAllocator,
+                                           VkDevice* pDevice) {
+#if defined GITS_PLATFORM_WINDOWS
+  _hudHelper.OnVkCreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
+#endif
+}
+
+void CRecorderWrapper::HudOnVkCreateSwapchainKHR(VkDevice device,
+                                                 const VkSwapchainCreateInfoKHR* pCreateInfo,
+                                                 const VkAllocationCallbacks* pAllocator,
+                                                 VkSwapchainKHR* pSwapchain) {
+#if defined GITS_PLATFORM_WINDOWS
+  _hudHelper.OnVkCreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
+#endif
+}
+
+void CRecorderWrapper::HudOnVkGetDeviceQueue(VkDevice device,
+                                             uint32_t queueFamilyIndex,
+                                             uint32_t queueIndex,
+                                             VkQueue* pQueue) {
+#if defined GITS_PLATFORM_WINDOWS
+  _hudHelper.OnVkGetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
+#endif
+}
+
+void CRecorderWrapper::HudOnVkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR* pPresentInfo) {
+#if defined GITS_PLATFORM_WINDOWS
+  _hudHelper.OnVkQueuePresentKHR(queue, pPresentInfo);
+#endif
+}
+
 } // namespace Vulkan
 } // namespace gits

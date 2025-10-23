@@ -17,6 +17,10 @@
 #include "tools_lite.h"
 #include "vulkanRecorderWrapperIface.h"
 
+#if defined GITS_PLATFORM_WINDOWS
+#include "vulkanHudHelper.h"
+#endif
+
 namespace gits {
 class VulkanQueueSubmitPrePost : private gits::noncopyable {
 public:
@@ -45,6 +49,9 @@ namespace Vulkan {
 class CRecorderWrapper : public IRecorderWrapper {
   CRecorder& _recorder;
   bool _ignoreNextQueuePresentGITS;
+#if defined GITS_PLATFORM_WINDOWS
+  VulkanHudHelper _hudHelper;
+#endif
 
 public:
   CRecorderWrapper(CRecorder& recorder);
@@ -101,6 +108,26 @@ public:
   void SetConfig(Config const& cfg) const override;
   bool IsUseExternalMemoryExtensionUsed() const override;
   bool IsSubcaptureBeforeRestorationPhase() const override;
+  void HudOnVkCreateInstance(const VkInstanceCreateInfo* pCreateInfo,
+                             const VkAllocationCallbacks* pAllocator,
+                             VkInstance* pInstance) override;
+  void HudOnVkCreateWin32SurfaceKHR(VkInstance instance,
+                                    const VkWin32SurfaceCreateInfoKHR* pCreateInfo,
+                                    const VkAllocationCallbacks* pAllocator,
+                                    VkSurfaceKHR* pSurface) override;
+  void HudOnVkCreateDevice(VkPhysicalDevice physicalDevice,
+                           const VkDeviceCreateInfo* pCreateInfo,
+                           const VkAllocationCallbacks* pAllocator,
+                           VkDevice* pDevice) override;
+  void HudOnVkCreateSwapchainKHR(VkDevice device,
+                                 const VkSwapchainCreateInfoKHR* pCreateInfo,
+                                 const VkAllocationCallbacks* pAllocator,
+                                 VkSwapchainKHR* pSwapchain) override;
+  void HudOnVkGetDeviceQueue(VkDevice device,
+                             uint32_t queueFamilyIndex,
+                             uint32_t queueIndex,
+                             VkQueue* pQueue) override;
+  void HudOnVkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR* pPresentInfo) override;
 #include "vulkanRecorderWrapperAuto.h"
 };
 } // namespace Vulkan
