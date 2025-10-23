@@ -96,9 +96,9 @@ Configuration:
             Type: Group
             Options:
             - Name: Enabled
-              Type: bool
-              Default: false
-              Description: Show the HUD during playback / recording
+              Type: std::vector<ApiBool>
+              Default: []
+              Description: APIs for which to show the HUD during playback / recording. Windows DX/VK only. Experimental for VK.
               Arguments: [hud]
             - Name: Position
               Type: HUDAnchor

@@ -216,3 +216,11 @@ Enums:
       - Value: NONE
       - Value: STORE
       - Value: USE
+  - Name: ApiBool
+    Description: Specifies for which APIs the bool option should be true
+    Values:
+     - Value: DX
+     - Value: VK
+     - Value: OGL
+     - Value: L0
+     - Value: OCL

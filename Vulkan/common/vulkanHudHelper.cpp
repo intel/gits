@@ -35,7 +35,7 @@ void CheckVkResult(VkResult result) {
 VulkanHudHelper::VulkanHudHelper() {}
 
 void VulkanHudHelper::CreateHudDescriptorPool() {
-  if (!Configurator::Get().common.shared.hud.enabled) {
+  if (!Configurator::IsHudEnabledForApi(ApiBool::VK)) {
     return;
   }
 
@@ -56,7 +56,7 @@ void VulkanHudHelper::CreateHudDescriptorPool() {
 }
 
 void VulkanHudHelper::SelectHudQueue() {
-  if (!Configurator::Get().common.shared.hud.enabled) {
+  if (!Configurator::IsHudEnabledForApi(ApiBool::VK)) {
     return;
   }
 
@@ -80,7 +80,7 @@ void VulkanHudHelper::SelectHudQueue() {
 }
 
 void VulkanHudHelper::CreateHudCommandPool() {
-  if (!Configurator::Get().common.shared.hud.enabled) {
+  if (!Configurator::IsHudEnabledForApi(ApiBool::VK)) {
     return;
   }
 
@@ -91,7 +91,7 @@ void VulkanHudHelper::CreateHudCommandPool() {
   CheckVkResult(drvVk.vkCreateCommandPool(m_Device, &poolInfo, nullptr, &m_CommandPool));
 }
 void VulkanHudHelper::CreateHudCommandBuffers() {
-  if (!Configurator::Get().common.shared.hud.enabled) {
+  if (!Configurator::IsHudEnabledForApi(ApiBool::VK)) {
     return;
   }
 
@@ -104,7 +104,7 @@ void VulkanHudHelper::CreateHudCommandBuffers() {
   CheckVkResult(drvVk.vkAllocateCommandBuffers(m_Device, &allocInfo, m_CommandBuffers.data()));
 }
 void VulkanHudHelper::CreateHudFences() {
-  if (!Configurator::Get().common.shared.hud.enabled) {
+  if (!Configurator::IsHudEnabledForApi(ApiBool::VK)) {
     return;
   }
 
@@ -118,7 +118,7 @@ void VulkanHudHelper::CreateHudFences() {
   }
 }
 void VulkanHudHelper::CreateHudRenderPass() {
-  if (!Configurator::Get().common.shared.hud.enabled) {
+  if (!Configurator::IsHudEnabledForApi(ApiBool::VK)) {
     return;
   }
 
@@ -151,7 +151,7 @@ void VulkanHudHelper::CreateHudRenderPass() {
   CheckVkResult(drvVk.vkCreateRenderPass(m_Device, &renderPassInfo, nullptr, &m_RenderPass));
 }
 void VulkanHudHelper::CreateHudFramebuffers() {
-  if (!Configurator::Get().common.shared.hud.enabled) {
+  if (!Configurator::IsHudEnabledForApi(ApiBool::VK)) {
     return;
   }
 
@@ -189,7 +189,7 @@ void VulkanHudHelper::CreateHudFramebuffers() {
   }
 }
 void VulkanHudHelper::CreateHudResources() {
-  if (!Configurator::Get().common.shared.hud.enabled) {
+  if (!Configurator::IsHudEnabledForApi(ApiBool::VK)) {
     return;
   }
 
@@ -202,7 +202,7 @@ void VulkanHudHelper::CreateHudResources() {
 }
 
 void VulkanHudHelper::DestroyHudResources() {
-  if (!Configurator::Get().common.shared.hud.enabled) {
+  if (!Configurator::IsHudEnabledForApi(ApiBool::VK)) {
     return;
   }
 
@@ -237,7 +237,7 @@ void VulkanHudHelper::DestroyHudResources() {
 }
 
 void VulkanHudHelper::RecreateHudResources() {
-  if (!Configurator::Get().common.shared.hud.enabled) {
+  if (!Configurator::IsHudEnabledForApi(ApiBool::VK)) {
     return;
   }
 
@@ -271,7 +271,7 @@ void VulkanHudHelper::RecreateHudResources() {
 }
 
 void VulkanHudHelper::Initialize() {
-  if (!Configurator::Get().common.shared.hud.enabled) {
+  if (!Configurator::IsHudEnabledForApi(ApiBool::VK)) {
     return;
   }
 
@@ -330,6 +330,10 @@ void VulkanHudHelper::Initialize() {
 }
 
 void VulkanHudHelper::ChangeHudQueue(uint32_t queueFamilyIndex, VkQueue queue) {
+  if (!Configurator::IsHudEnabledForApi(ApiBool::VK)) {
+    return;
+  }
+
   if (!queue) {
     assert(0 && "queue is null");
 
@@ -344,7 +348,7 @@ void VulkanHudHelper::ChangeHudQueue(uint32_t queueFamilyIndex, VkQueue queue) {
 void VulkanHudHelper::OnVkCreateInstance(const VkInstanceCreateInfo* pCreateInfo,
                                          const VkAllocationCallbacks* pAllocator,
                                          VkInstance* pInstance) {
-  if (!Configurator::Get().common.shared.hud.enabled) {
+  if (!Configurator::IsHudEnabledForApi(ApiBool::VK)) {
     return;
   }
 
@@ -361,7 +365,7 @@ void VulkanHudHelper::OnVkCreateInstance(const VkInstanceCreateInfo* pCreateInfo
 }
 
 void VulkanHudHelper::SetWindowHandle(HWND hwnd) {
-  if (!Configurator::Get().common.shared.hud.enabled) {
+  if (!Configurator::IsHudEnabledForApi(ApiBool::VK)) {
     return;
   }
 
@@ -378,7 +382,7 @@ void VulkanHudHelper::OnVkCreateDevice(VkPhysicalDevice physicalDevice,
                                        const VkDeviceCreateInfo* pCreateInfo,
                                        const VkAllocationCallbacks* pAllocator,
                                        VkDevice* pDevice) {
-  if (!Configurator::Get().common.shared.hud.enabled) {
+  if (!Configurator::IsHudEnabledForApi(ApiBool::VK)) {
     return;
   }
 
@@ -398,7 +402,7 @@ void VulkanHudHelper::OnVkCreateSwapchainKHR(VkDevice device,
                                              const VkSwapchainCreateInfoKHR* pCreateInfo,
                                              const VkAllocationCallbacks* pAllocator,
                                              VkSwapchainKHR* pSwapchain) {
-  if (!Configurator::Get().common.shared.hud.enabled) {
+  if (!Configurator::IsHudEnabledForApi(ApiBool::VK)) {
     return;
   }
 
@@ -434,7 +438,7 @@ void VulkanHudHelper::OnVkGetDeviceQueue(VkDevice device,
                                          uint32_t queueFamilyIndex,
                                          uint32_t queueIndex,
                                          VkQueue* pQueue) {
-  if (!Configurator::Get().common.shared.hud.enabled) {
+  if (!Configurator::IsHudEnabledForApi(ApiBool::VK)) {
     return;
   }
 
@@ -467,7 +471,7 @@ VkResult CreateOneTimeCommandBuffer(VkDevice device,
 }
 
 void VulkanHudHelper::OnVkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR* pPresentInfo) {
-  if (!Configurator::Get().common.shared.hud.enabled) {
+  if (!Configurator::IsHudEnabledForApi(ApiBool::VK)) {
     return;
   }
 

@@ -177,7 +177,7 @@ void CaptureManager::createLayers() {
   enablePreLayer(captureSynchronizationLayer);
   enablePreLayer(screenshotsLayer);
   enablePreLayer(portabilityLayer);
-  if (cfg.common.shared.hud.enabled) {
+  if (Configurator::IsHudEnabledForApi(ApiBool::DX)) {
     enablePreLayer(imGuiHUDLayer);
   }
 
@@ -200,7 +200,7 @@ void CaptureManager::createLayers() {
   enablePostLayer(captureSynchronizationLayer);
   enablePostLayer(traceLayer);
   enablePostLayer(screenshotsLayer);
-  if (cfg.common.shared.hud.enabled) {
+  if (Configurator::IsHudEnabledForApi(ApiBool::DX)) {
     enablePostLayer(imGuiHUDLayer);
   }
 

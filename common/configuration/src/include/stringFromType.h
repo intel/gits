@@ -30,4 +30,7 @@ std::string stringFrom<BitRange>(const BitRange& value);
 
 template <>
 std::string stringFrom<VulkanObjectRange>(const VulkanObjectRange& value);
+
+template <>
+std::string stringFrom<std::vector<ApiBool>>(const std::vector<ApiBool>& value);
 } // namespace gits

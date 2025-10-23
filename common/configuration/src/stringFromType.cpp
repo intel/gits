@@ -67,4 +67,16 @@ std::string stringFrom(const VulkanObjectRange& value) {
       << stringFrom<BitRange>(value.range) << "/" << stringFrom<VulkanObjectMode>(value.objMode);
   return oss.str();
 }
+
+template <>
+std::string stringFrom(const std::vector<ApiBool>& value) {
+  std::ostringstream oss;
+  for (size_t i = 0; i < value.size(); ++i) {
+    if (i > 0) {
+      oss << ",";
+    }
+    oss << stringFrom<ApiBool>(value[i]);
+  }
+  return oss.str();
+}
 } // namespace gits

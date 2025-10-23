@@ -128,6 +128,18 @@ inline std::istream& operator>>(std::istream& in, gits::VulkanObjectRange& data)
   return in;
 }
 
+inline std::istream& operator>>(std::istream& in, std::vector<gits::ApiBool>& rhs) {
+  auto elements = processSimpleArray(in, ',');
+  for (const auto& elem : elements) {
+    if (elem.empty()) {
+      continue;
+    } else {
+      rhs.push_back(gits::stringTo<gits::ApiBool>(elem));
+    }
+  }
+  return in;
+}
+
 namespace {
 // Needed to jump namespaces for the above operators
 template <typename T>

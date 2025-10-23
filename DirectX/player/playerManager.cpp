@@ -155,7 +155,7 @@ PlayerManager::PlayerManager() {
   enablePreLayer(directStorageLayer);
   enablePreLayer(accelerationStructuresDumpLayer);
   enablePreLayer(printStatusLayer);
-  if (cfg.common.shared.hud.enabled) {
+  if (Configurator::IsHudEnabledForApi(ApiBool::DX)) {
     enablePreLayer(imGuiHUDLayer);
   }
 
@@ -187,7 +187,7 @@ PlayerManager::PlayerManager() {
   enablePostLayer(recordingLayer);
   enablePostLayer(executionSerializationLayer);
   enablePostLayer(printStatusLayer);
-  if (cfg.common.shared.hud.enabled) {
+  if (Configurator::IsHudEnabledForApi(ApiBool::DX)) {
     enablePostLayer(imGuiHUDLayer);
   }
 
