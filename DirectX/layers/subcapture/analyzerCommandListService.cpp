@@ -43,6 +43,9 @@ void AnalyzerCommandListService::commandListRestore(unsigned commandListKey) {
   }
   for (auto& command : itCommandList->second) {
     switch (command->getId()) {
+    case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_RESET:
+      commandAnalysis(static_cast<ID3D12GraphicsCommandListResetCommand&>(*command));
+      break;
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_CLEARSTATE:
       commandAnalysis(static_cast<ID3D12GraphicsCommandListClearStateCommand&>(*command));
       break;
@@ -241,7 +244,9 @@ void AnalyzerCommandListService::commandListRestore(unsigned commandListKey) {
 
 void AnalyzerCommandListService::commandListReset(ID3D12GraphicsCommandListResetCommand& c) {
   if (!analyzerService_.inRange() && !commandListSubcapture_) {
-    commandsByCommandList_.erase(c.object_.key);
+    auto& commands = commandsByCommandList_[c.object_.key];
+    commands.clear();
+    commands.emplace_back(new ID3D12GraphicsCommandListResetCommand(c));
   } else {
     resetCommandLists_[c.object_.key] = true;
   }
@@ -318,8 +323,13 @@ bool AnalyzerCommandListService::inRange() {
   return analyzerService_.inRange();
 }
 
+void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListResetCommand& c) {
+  objectsForRestore_.insert(c.pAllocator_.key);
+  objectsForRestore_.insert(c.pInitialState_.key);
+}
+
 void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListClearStateCommand& c) {
-  analyzerService_.notifyObject(c.pPipelineState_.key);
+  objectsForRestore_.insert(c.pPipelineState_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListDrawInstancedCommand& c) {
@@ -409,7 +419,7 @@ void AnalyzerCommandListService::commandAnalysis(
 }
 
 void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListExecuteBundleCommand& c) {
-  analyzerService_.notifyObject(c.pCommandList_.key);
+  objectsForRestore_.insert(c.pCommandList_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
@@ -652,22 +662,22 @@ void AnalyzerCommandListService::commandAnalysis(
 }
 
 void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListBeginQueryCommand& c) {
-  analyzerService_.notifyObject(c.pQueryHeap_.key);
+  objectsForRestore_.insert(c.pQueryHeap_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListEndQueryCommand& c) {
-  analyzerService_.notifyObject(c.pQueryHeap_.key);
+  objectsForRestore_.insert(c.pQueryHeap_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListResolveQueryDataCommand& c) {
-  analyzerService_.notifyObject(c.pQueryHeap_.key);
-  analyzerService_.notifyObject(c.pDestinationBuffer_.key);
+  objectsForRestore_.insert(c.pQueryHeap_.key);
+  objectsForRestore_.insert(c.pDestinationBuffer_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListSetPredicationCommand& c) {
-  analyzerService_.notifyObject(c.pBuffer_.key);
+  objectsForRestore_.insert(c.pBuffer_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
@@ -700,16 +710,20 @@ void AnalyzerCommandListService::commandAnalysis(
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandList1AtomicCopyBufferUINTCommand& c) {
-  analyzerService_.notifyObject(c.pDstBuffer_.key);
-  analyzerService_.notifyObject(c.pSrcBuffer_.key);
-  analyzerService_.notifyObjects(c.ppDependentResources_.keys);
+  objectsForRestore_.insert(c.pDstBuffer_.key);
+  objectsForRestore_.insert(c.pSrcBuffer_.key);
+  for (unsigned key : c.ppDependentResources_.keys) {
+    objectsForRestore_.insert(key);
+  }
 }
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandList1AtomicCopyBufferUINT64Command& c) {
-  analyzerService_.notifyObject(c.pDstBuffer_.key);
-  analyzerService_.notifyObject(c.pSrcBuffer_.key);
-  analyzerService_.notifyObjects(c.ppDependentResources_.keys);
+  objectsForRestore_.insert(c.pDstBuffer_.key);
+  objectsForRestore_.insert(c.pSrcBuffer_.key);
+  for (unsigned key : c.ppDependentResources_.keys) {
+    objectsForRestore_.insert(key);
+  }
 }
 
 void AnalyzerCommandListService::commandAnalysis(
@@ -897,7 +911,7 @@ void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandList4Dispa
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandList5RSSetShadingRateImageCommand& c) {
-  analyzerService_.notifyObject(c.shadingRateImage_.key);
+  objectsForRestore_.insert(c.shadingRateImage_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandList6DispatchMeshCommand& c) {

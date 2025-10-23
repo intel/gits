@@ -77,6 +77,7 @@ private:
                               unsigned heapNumDescriptors);
   bool inRange();
 
+  void commandAnalysis(ID3D12GraphicsCommandListResetCommand& c);
   void commandAnalysis(ID3D12GraphicsCommandListClearStateCommand& c);
   void commandAnalysis(ID3D12GraphicsCommandListDrawInstancedCommand& c);
   void commandAnalysis(ID3D12GraphicsCommandListDrawIndexedInstancedCommand& c);
