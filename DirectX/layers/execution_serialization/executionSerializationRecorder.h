@@ -21,6 +21,9 @@ public:
   void record(CToken* token);
   void frameEnd();
   bool isRunning();
+
+private:
+  void copyAuxiliaryFiles();
 };
 
 } // namespace DirectX

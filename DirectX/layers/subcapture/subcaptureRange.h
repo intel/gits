@@ -35,6 +35,7 @@ private:
   bool zeroOrFirstFrame_{true};
 
   bool inFrameRange_{};
+  bool trimmingMode_{};
   unsigned startFrame_{};
   unsigned endFrame_{};
   unsigned currentFrame_{1};

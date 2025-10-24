@@ -17,31 +17,6 @@
 namespace gits {
 namespace DirectX {
 
-void CommandListExecutionService::copyAuxiliaryFiles() {
-  std::filesystem::path streamDir = Configurator::Get().common.player.streamDir;
-  std::filesystem::path subcapturePath = Configurator::Get().common.player.subcapturePath;
-  if (std::filesystem::exists(streamDir / "raytracingArraysOfPointers.dat")) {
-    std::filesystem::copy(streamDir / "raytracingArraysOfPointers.dat", subcapturePath,
-                          std::filesystem::copy_options::overwrite_existing);
-  }
-  if (std::filesystem::exists(streamDir / "executeIndirectRaytracing.txt")) {
-    std::filesystem::copy(streamDir / "executeIndirectRaytracing.txt", subcapturePath,
-                          std::filesystem::copy_options::overwrite_existing);
-  }
-  if (std::filesystem::exists(streamDir / "resourcePlacementData.dat")) {
-    std::filesystem::copy(streamDir / "resourcePlacementData.dat", subcapturePath,
-                          std::filesystem::copy_options::overwrite_existing);
-  }
-  if (std::filesystem::exists(streamDir / "addressRanges.txt")) {
-    std::filesystem::copy(streamDir / "addressRanges.txt", subcapturePath,
-                          std::filesystem::copy_options::overwrite_existing);
-  }
-  if (std::filesystem::exists(streamDir / "DirectStorageResources.bin")) {
-    std::filesystem::copy(streamDir / "DirectStorageResources.bin", subcapturePath,
-                          std::filesystem::copy_options::overwrite_existing);
-  }
-}
-
 void CommandListExecutionService::commandListCommand(unsigned commandListKey,
                                                      CommandWriter* command) {
   CommandList& commandList = commandListsByKey_[commandListKey];

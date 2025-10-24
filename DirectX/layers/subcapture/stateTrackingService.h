@@ -151,7 +151,6 @@ public:
   }
 
 private:
-  void copyAuxiliaryFiles();
   void restoreState(ObjectState* state);
   void restoreReferenceCount();
   void restoreResources();

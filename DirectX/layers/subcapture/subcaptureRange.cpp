@@ -45,6 +45,9 @@ SubcaptureRange::SubcaptureRange() {
     } else {
       executionRangeStart_ = executionRangeEnd_ = std::stoi(commandListExecutions);
     }
+  } else if (startFrame_ == 1) {
+    trimmingMode_ = true;
+    inFrameRange_ = true;
   }
 }
 
@@ -90,7 +93,7 @@ bool SubcaptureRange::isExecutionRangeStart() {
 }
 
 bool SubcaptureRange::inRange() {
-  if (zeroOrFirstFrame_) {
+  if (zeroOrFirstFrame_ && !trimmingMode_) {
     return false;
   }
   if (!executionRangeStart_ || !inFrameRange_) {

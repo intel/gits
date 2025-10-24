@@ -27,10 +27,7 @@ class CommandListExecutionService {
 public:
   CommandListExecutionService(ExecutionSerializationRecorder& recorder,
                               CpuDescriptorsService& cpuDescriptorsService)
-      : recorder_(recorder), cpuDescriptorsService_(cpuDescriptorsService) {
-    copyAuxiliaryFiles();
-  }
-  void copyAuxiliaryFiles();
+      : recorder_(recorder), cpuDescriptorsService_(cpuDescriptorsService) {}
   void commandListCommand(unsigned commandListKey, CommandWriter* command);
   void executeCommandLists(unsigned callKey,
                            unsigned commandQueueKey,

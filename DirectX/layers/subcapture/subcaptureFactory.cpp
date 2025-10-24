@@ -28,12 +28,13 @@ SubcaptureFactory::SubcaptureFactory() {
   const std::string& frames = Configurator::Get().directx.features.subcapture.frames;
   const std::string& executions =
       Configurator::Get().directx.features.subcapture.commandListExecutions;
+  bool trimmingMode = false;
   try {
     if (executions.empty()) {
       int startFrame = std::stoi(frames);
       if (startFrame == 1) {
-        LOG_ERROR << "Subcapture from frame 1 is not supported";
-        exit(EXIT_FAILURE);
+        trimmingMode = true;
+        LOG_INFO << "Subcapture in trimming mode";
       }
     } else {
       if (frames.find("-") != std::string::npos) {
@@ -49,7 +50,10 @@ SubcaptureFactory::SubcaptureFactory() {
 
   subcaptureRange_ = std::make_unique<SubcaptureRange>();
 
-  if (AnalyzerResults::isAnalysis()) {
+  if (trimmingMode) {
+    recorder_ = std::make_unique<SubcaptureRecorder>();
+    recordingLayer_ = std::make_unique<RecordingLayer>(*recorder_, *subcaptureRange_);
+  } else if (AnalyzerResults::isAnalysis()) {
     recorder_ = std::make_unique<SubcaptureRecorder>();
     stateTrackingLayer_ = std::make_unique<StateTrackingLayer>(*recorder_, *subcaptureRange_);
     recordingLayer_ = std::make_unique<RecordingLayer>(*recorder_, *subcaptureRange_);
