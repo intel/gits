@@ -65,6 +65,24 @@ void RecordingLayer::post(ID3D12FenceGetCompletedValueCommand& command) {
   subcaptureRange_.executionEnd();
 }
 
+void RecordingLayer::post(StateRestoreBeginCommand& command) {
+  if (subcaptureRange_.inRange()) {
+    recorder_.record(new CTokenMarker(CToken::ID_INIT_START));
+  }
+}
+
+void RecordingLayer::post(StateRestoreEndCommand& command) {
+  if (subcaptureRange_.inRange()) {
+    recorder_.record(new CTokenMarker(CToken::ID_INIT_END));
+  }
+}
+
+void RecordingLayer::post(MarkerUInt64Command& command) {
+  if (subcaptureRange_.inRange()) {
+    recorder_.record(new CTokenMarkerUInt64(command.value_));
+  }
+}
+
 void RecordingLayer::post(CreateWindowMetaCommand& command) {
   if (subcaptureRange_.inRange()) {
     recorder_.record(new CreateWindowMetaWriter(command));

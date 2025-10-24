@@ -27,6 +27,9 @@ public:
   RecordingLayer(const RecordingLayer&) = delete;
   RecordingLayer& operator=(const RecordingLayer&) = delete;
 
+  void post(StateRestoreBeginCommand& c) override;
+  void post(StateRestoreEndCommand& c) override;
+  void post(MarkerUInt64Command& c) override;
   void post(CreateWindowMetaCommand& command) override;
   void post(MappedDataMetaCommand& command) override;
   void post(CreateHeapAllocationMetaCommand& command) override;
