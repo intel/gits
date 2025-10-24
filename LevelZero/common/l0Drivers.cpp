@@ -9,10 +9,7 @@
 #include "l0Drivers.h"
 
 #include "gits.h"
-
-#ifndef BUILD_FOR_CCODE
 #include "l0ApisIface.h"
-#endif
 
 #include <string>
 
@@ -223,9 +220,7 @@ void CDriver::Initialize() {
     return;
   }
   std::string path = Configurator::Get().common.shared.libL0.string();
-#ifndef BUILD_FOR_CCODE
   gits::CGits::Instance().apis.UseApiComputeIface(std::make_shared<Api>());
-#endif
   if (OpenLibrary(path)) {
     return;
   }

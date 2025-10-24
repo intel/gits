@@ -38,11 +38,8 @@ public:
   virtual const char* Name() const;
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Declare(CCodeOStream& stream) const;
-  virtual void Write(CCodeOStream& stream) const;
   L0Type operator*();
   L0Type* Ptr();
-  virtual bool DeclarationNeeded() const;
   virtual std::set<uint64_t> GetMappedPointers();
 };
 
@@ -66,7 +63,6 @@ public:
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
 
-  virtual void Write(CCodeOStream& stream) const;
   L0Type operator*();
   L0Type* Ptr();
   virtual std::set<uint64_t> GetMappedPointers();
@@ -89,7 +85,6 @@ public:
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
 
-  virtual void Write(CCodeOStream& stream) const;
   L0Type operator*();
   L0Type* Ptr();
   virtual std::set<uint64_t> GetMappedPointers();
@@ -117,11 +112,8 @@ public:
   virtual const char* Name() const;
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Declare(CCodeOStream& stream) const;
-  virtual void Write(CCodeOStream& stream) const;
   L0Type operator*();
   L0Type* Ptr();
-  virtual bool DeclarationNeeded() const;
   virtual std::set<uint64_t> GetMappedPointers();
 };
 
@@ -146,11 +138,8 @@ public:
   virtual const char* Name() const;
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Declare(CCodeOStream& stream) const;
-  virtual void Write(CCodeOStream& stream) const;
   L0Type operator*();
   L0Type* Ptr();
-  virtual bool DeclarationNeeded() const;
   virtual std::set<uint64_t> GetMappedPointers();
   virtual std::vector<std::string> GetProgramSourcesNames();
 };
@@ -179,11 +168,8 @@ public:
   virtual const char* Name() const;
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Declare(CCodeOStream& stream) const;
-  virtual void Write(CCodeOStream& stream) const;
   L0Type operator*();
   L0Type* Ptr();
-  virtual bool DeclarationNeeded() const;
   virtual std::set<uint64_t> GetMappedPointers();
   virtual std::vector<std::string> GetProgramSourcesNames();
   void* GetPtrType() override;

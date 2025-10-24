@@ -20,18 +20,7 @@ void Cze_host_pfn_t::Read(CBinIStream& stream) {
   }
 }
 
-void Cze_host_pfn_t::Write(CCodeOStream& stream) const {
-  if (Value()) {
-    stream << "l0::host_pfn";
-  } else {
-    stream << "(ze_host_pfn_t) 0";
-  }
-}
 const char* CvoidPtr::NAME = "void *";
-
-void CvoidPtr::Write(CCodeOStream& stream) const {
-  stream << "(void *)" << std::hex << (intptr_t)Value() << std::dec;
-}
 
 CKernelArgValue::CKernelArgValue(const size_t len, const void* buffer)
     : _size(ensure_unsigned32bit_representible<size_t>(len)),
@@ -40,65 +29,6 @@ CKernelArgValue::CKernelArgValue(const size_t len, const void* buffer)
   if (_size && _ptr) {
     _buffer.resize(_size);
     std::copy_n((const char*)buffer, _size, _buffer.begin());
-  }
-}
-
-void CKernelArgValue::Declare(CCodeOStream& stream) const {
-  if (_size == sizeof(void*)) {
-    uintptr_t ptr = 0;
-    memcpy(&ptr, Value(), sizeof(void*));
-    stream.Indent() << "uintptr_t " << stream.VariableName(ScopeKey()) << " = " << hex(ptr) << ";"
-                    << std::endl;
-    stream.Indent() << "if(CArgHandle::CheckMapping(" << hex(ptr) << "))" << std::endl;
-    stream.ScopeBegin();
-    stream.Indent() << stream.VariableName(ScopeKey()) << " = CArgHandle::GetMapping(" << hex(ptr)
-                    << ");" << std::endl;
-    stream.ScopeEnd();
-  } else {
-    if (_size && _buffer.empty()) {
-      return;
-    }
-    stream.Indent() << "unsigned char " << stream.VariableName(ScopeKey()) << "[" << Length()
-                    << "]";
-    // dump buffer inlined in a code
-    stream << " = {" << std::endl;
-    stream.ScopeBegin();
-    stream.Indent();
-    std::string asciiText;
-    const unsigned CHARS_IN_ROW = 16;
-    for (unsigned i = 0; i < Length(); i++) {
-      unsigned char ch = (unsigned char)_buffer[i];
-      stream << hex(ch);
-      asciiText += std::isprint(ch) ? ch : '.';
-      if (i != Length() - 1) {
-        stream << ",";
-        if ((i + 1) % CHARS_IN_ROW == 0) {
-          stream << " // " << asciiText << std::endl;
-          asciiText.clear();
-          stream.Indent();
-        }
-      } else {
-        stream << std::setw((CHARS_IN_ROW - (i % CHARS_IN_ROW) - 1) * 5 + 1) << " "
-               << " // " << asciiText;
-        asciiText.clear();
-      }
-    }
-    stream << " " << std::endl;
-    stream.ScopeEnd();
-    stream.Indent() << "};" << std::endl;
-  }
-}
-
-void CKernelArgValue::Write(CCodeOStream& stream) const {
-  stream << "(const void*) ";
-  if (_size == sizeof(void*)) {
-    stream << "&" << stream.VariableName(ScopeKey());
-  } else {
-    if (Value() == nullptr) {
-      stream << "nullptr";
-    } else {
-      stream << stream.VariableName(ScopeKey());
-    }
   }
 }
 
@@ -176,20 +106,6 @@ void CUSMPtr::Read(CBinIStream& stream) {
   stream >> CBuffer(&_size, sizeof(_size));
   stream >> CBuffer(&_ptr, sizeof(_ptr));
   stream >> _resource;
-}
-
-void CUSMPtr::Declare(CCodeOStream& stream) const {
-  stream.Indent() << "uintptr_t " << stream.VariableName(ScopeKey()) << " = " << hex(_ptr) << ";"
-                  << std::endl;
-  stream.Indent() << "if(CArgHandle::CheckMapping(" << hex(_ptr) << "))" << std::endl;
-  stream.ScopeBegin();
-  stream.Indent() << stream.VariableName(ScopeKey()) << " = CArgHandle::GetMapping(" << hex(_ptr)
-                  << ");" << std::endl;
-  stream.ScopeEnd();
-}
-
-void CUSMPtr::Write(CCodeOStream& stream) const {
-  stream << "(void*)" << stream.VariableName(ScopeKey());
 }
 
 void CUSMPtr::FreeHostMemory() {
@@ -271,10 +187,6 @@ void CProgramSource::Read(CBinIStream& stream) {
   }
 }
 
-void CProgramSource::Write([[maybe_unused]] CCodeOStream& stream) const {
-  throw ENotImplemented(EXCEPTION_MESSAGE);
-}
-
 SourceFileInfo CProgramSource::Original() {
   return sourceFile;
 }
@@ -329,10 +241,6 @@ void CBinaryData::Read(CBinIStream& stream) {
     _buffer.resize(_resource.Data().Size());
     std::copy_n((const char*)_resource.Data(), _resource.Data().Size(), _buffer.begin());
   }
-}
-
-void CBinaryData::Write([[maybe_unused]] CCodeOStream& stream) const {
-  throw ENotImplemented(EXCEPTION_MESSAGE);
 }
 } // namespace l0
 } // namespace gits

@@ -26,7 +26,6 @@ namespace gits {
       C${name}(L0Type value) : CArg(value) {}
       virtual std::string ToString() const { return ToStringHelper(Value()); }
       virtual void Write(CBinOStream& stream) const { CArg::Write(stream); }
-      virtual void Write(CCodeOStream& stream) const { stream << "(${enum.get('name')})" << ToString(); }
     };
   %if "_structure_type_t" in name:
     template<>
@@ -78,7 +77,6 @@ namespace gits {
           _pNext->Read(stream);
         }
       }
-      virtual void Write([[maybe_unused]] CCodeOStream & stream) const {};
       void *operator*() {
         if (_stype.Value() != static_cast<StructureType>(0U)) {
           return _pNext->GetPtrType();
@@ -129,9 +127,6 @@ namespace gits {
       virtual const char* Name() const { return "${arg.get('name')}"; }
       virtual void Write(CBinOStream& stream) const;
       virtual void Read(CBinIStream& stream);
-      virtual void Write([[maybe_unused]] CCodeOStream& stream) const {};
-      virtual void Declare(CCodeOStream& stream) const;
-      virtual bool DeclarationNeeded() const { return true; }
       L0Type operator*() {
         const auto *ptr = Ptr();
         if (ptr == nullptr) {

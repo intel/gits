@@ -39,29 +39,6 @@ void C${name}::Read(CBinIStream& stream) {
   ${get_field_name(field, prefix='_')}.Read(stream);
       %endfor
 }
-void C${name}::Declare(CCodeOStream& stream) const {
-  VariableNameRegister(stream, false);
-      %for field in arg['vars']:
-  if (${get_field_name(field, prefix='_')}.DeclarationNeeded()) {
-    ${get_field_name(field, prefix='_')}.VariableNameRegister(stream, false);
-    ${get_field_name(field, prefix='_')}.Declare(stream);
-  }
-      %endfor
-  std::string varName = stream.VariableName(ScopeKey());
-  stream.Indent() << Name() << " " << varName << ";\n";
-      %for field in arg['vars']:
-  stream.Indent() << varName << ".${get_field_name(field)} = ";
-  if (${get_field_name(field, prefix='_')}.DeclarationNeeded()) {
-    if (dynamic_cast<const CSArray*>(&${get_field_name(field, prefix='_')})) {
-      stream << "&";
-    }
-    stream << stream.VariableName(${get_field_name(field, prefix='_')}.ScopeKey());
-  } else {
-    ${get_field_name(field, prefix='_')}.Write(stream);
-  }
-  stream << ";\n";
-      %endfor
-}
 C${name}::L0Type* C${name}::Ptr() {
       %for field in arg['vars']:
         %if '[' not in field['name']:

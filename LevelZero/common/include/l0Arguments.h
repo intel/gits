@@ -48,9 +48,6 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _value);
   }
-  virtual void Write(CCodeOStream& stream) const {
-    stream << ToString();
-  }
   virtual std::string ToString() const {
     return ToStringHelper(Value());
   }
@@ -192,16 +189,6 @@ public:
     read_name_from_stream(stream, key_);
   }
 
-  virtual void Declare(CCodeOStream& stream) const {
-    stream.Indent() << Name() << " " << stream.VariableName(ScopeKey()) << " = (" << TypeNameStr()
-                    << ") 0x" << ToStringHelper((void*)key_) << ";" << std::endl;
-  }
-
-  virtual void Write(CCodeOStream& stream) const {
-    stream << "(" << TypeNameStr() << ") " << WrapTypeNameStr() << "::GetMapping("
-           << ToStringHelper((void*)key_) << ")";
-  }
-
   void Assign(T other) {
     AddMapping(other);
   }
@@ -255,9 +242,6 @@ public:
   }
   virtual void Read([[maybe_unused]] CBinIStream& stream) { /* Do nothing */
   }
-  virtual void Write(CCodeOStream& stream) const {
-    stream << "outArg()";
-  }
 };
 
 class CvoidPtr : public CArg<void*, CvoidPtr> {
@@ -275,7 +259,6 @@ public:
   }
   virtual void Read([[maybe_unused]] CBinIStream& stream) { /* Do nothing */
   }
-  virtual void Write(CCodeOStream& stream) const;
 
   struct PtrConverter {
   public:
@@ -303,7 +286,6 @@ public:
     return NAME;
   }
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 class CKernelArgValue : public CArgument {
@@ -333,11 +315,6 @@ public:
   const void* operator*();
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
-  virtual bool DeclarationNeeded() const {
-    return true;
-  }
-  virtual void Declare(CCodeOStream& stream) const;
 };
 
 /** @class CMappedPtr
@@ -487,11 +464,6 @@ public:
 
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual bool DeclarationNeeded() const {
-    return true;
-  }
-  virtual void Declare(CCodeOStream& stream) const;
-  virtual void Write(CCodeOStream& stream) const;
   PointerProxy Value() {
     return PointerProxy(this);
   }
@@ -505,27 +477,8 @@ template <class T, class WRAP_T>
 class CL0StructArray : public CStructArray<T, WRAP_T> {
 public:
   using CStructArray<T, WRAP_T>::CStructArray;
-  virtual void Declare(CCodeOStream& stream) const override {
-    for (const auto& ptr : CStructArray<T, WRAP_T>::Vector()) {
-      if (ptr->DeclarationNeeded()) {
-        ptr->Declare(stream);
-      }
-      ptr->Write(stream);
-    }
-  }
   virtual void Write(CBinOStream& stream) const override {
     CStructArray<T, WRAP_T>::Write(stream);
-  }
-  virtual void Write(CCodeOStream& stream) const override {
-    for (const auto& ptr : CStructArray<T, WRAP_T>::Vector()) {
-      stream << stream.VariableName(ptr->ScopeKey());
-    }
-    if (CStructArray<T, WRAP_T>::Vector().empty()) {
-      stream << "nullptr";
-    }
-  }
-  virtual bool AmpersandNeeded() const {
-    return !CStructArray<T, WRAP_T>::Vector().empty();
   }
 };
 
@@ -569,7 +522,6 @@ public:
   const char** Value();
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
 
   SourceFileInfo Original();
 
@@ -700,10 +652,6 @@ public:
 
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
-  virtual bool DeclarationNeeded() const {
-    return Length() > 0;
-  }
   virtual std::string ToString() const override {
     return ToStringHelper(_ptr);
   }

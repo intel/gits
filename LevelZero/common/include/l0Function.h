@@ -40,7 +40,6 @@ public:
   }
   virtual CArgument& Result(unsigned idx);
 
-  virtual void Write(CCodeOStream& stream) const;
   virtual CLibrary::TId LibraryId() const {
     return CLibrary::ID_LEVELZERO;
   }

@@ -13,17 +13,13 @@
 #include "gits.h"
 #include "l0Header.h"
 #include "l0Log.h"
-#ifndef BUILD_FOR_CCODE
 #include "l0Lua.h"
 #include "l0Tools.h"
-#endif
 namespace gits {
 namespace l0 {
 namespace {
-#ifndef BUILD_FOR_CCODE
 using namespace lua;
 static bool bypass_luascript;
-#endif
 bool load_l0_function_from_original_library_generic(void*& func, const char* name) {
   auto lib = drv.Library();
   if (lib == nullptr) {
@@ -37,7 +33,6 @@ bool load_l0_function_generic(void*& func, const char* name) {
     return false;
   }
   load_l0_function_from_original_library_generic(func, name);
-#ifndef BUILD_FOR_CCODE
   if (func == nullptr) {
     const auto hDrivers = GetDrivers(drv);
     for (const auto& hDriver : hDrivers) {
@@ -46,7 +41,6 @@ bool load_l0_function_generic(void*& func, const char* name) {
       }
     }
   }
-#endif
   return func != nullptr;
 }
 template <typename Func>
@@ -74,7 +68,6 @@ bool load_l0_function_from_original_library(T& func, const char* name) {
 <% continue %>
   %endif
   %if func.get('component') != 'ze_gits_extension' and func.get('enabled', True):
-#ifndef BUILD_FOR_CCODE
 int lua_${func.get('name')}(lua_State* L) {
   int top = lua_gettop(L);
   if (top != ${len(func['args'])}) {
@@ -95,7 +88,6 @@ int lua_${func.get('name')}(lua_State* L) {
   lua_push_ext<${func.get('type')}>(L, ret);
   return 1;
 }
-#endif
   %endif
 ${func.get('type')} __zecall special_${func.get('name')}(
   %for arg in func['args']:
@@ -117,7 +109,6 @@ ${func.get('type')} __zecall special_${func.get('name')}(
   %endif
   %if func.get('component') != 'ze_gits_extension':
   bool call_orig = true;
-#ifndef BUILD_FOR_CCODE
   if (Configurator::Get().common.shared.useEvents) {
     std::unique_lock<std::recursive_mutex> lock(luaMutex);
     if (!bypass_luascript) {
@@ -140,7 +131,6 @@ ${func.get('type')} __zecall special_${func.get('name')}(
       }
     }
   }
-#endif
   if (call_orig) {
     ret = drv.original.${func.get('name')}(${make_params(func)});
     %if func.get('log', True):
@@ -205,7 +195,6 @@ ${func.get('type')} __zecall inject_${func.get('name')}(
 }
 
 %endfor
-#ifndef BUILD_FOR_CCODE
 const luaL_Reg exports[] = {
   %for name, func in functions.items():
     %if not is_latest_version(functions, func):
@@ -231,7 +220,6 @@ void RegisterLuaDriverFunctions() {
   luaL_newlib(L.get(), exports);
   lua_setglobal(L.get(), "drvl0");
 }
-#endif
 } // namespace
 
 CDriver::CDriver() {
@@ -248,9 +236,7 @@ CDriver::CDriver() {
   drv.inject.${func.get('name')} = inject_${func.get('name')};
   drv.original.${func.get('name')} = nullptr;
 %endfor
-#ifndef BUILD_FOR_CCODE
   CGits::Instance().RegisterLuaFunctionsRegistrator(RegisterLuaDriverFunctions);
-#endif
 }
 } // namespace l0
 } // namespace gits
