@@ -34,7 +34,8 @@ SubcaptureFactory::SubcaptureFactory() {
       int startFrame = std::stoi(frames);
       if (startFrame == 1) {
         trimmingMode = true;
-        LOG_INFO << "Subcapture in trimming mode";
+        Configurator::GetMutable().directx.player.execute = false;
+        LOG_INFO << "Subcapture in trimming mode. Execution disabled.";
       }
     } else {
       if (frames.find("-") != std::string::npos) {
