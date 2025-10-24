@@ -976,7 +976,6 @@ std::string RemoveDoubleDotHeaderSyntax(const std::string& src) {
 
 std::string ToStringHelper(const void* handle) {
   if (handle == nullptr) {
-    // used by CCode, nullptr will not compile
     return "0";
   }
   return gits::hex(handle).ToString();

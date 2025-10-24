@@ -14,7 +14,7 @@
 #include <string>
 #include <thread>
 
-#if defined GITS_API_OCL && !defined CCODE_FOR_EGL
+#if defined GITS_API_OCL
 
 namespace cl {
 

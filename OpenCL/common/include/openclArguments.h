@@ -35,7 +35,6 @@ public:
     return NAME;
   }
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 class CCallbackProgram : public CCLArg<void(CL_CALLBACK*)(cl_program, void*), CCallbackProgram> {
@@ -48,7 +47,6 @@ public:
     return NAME;
   }
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 class CCallbackEvent : public CCLArg<void(CL_CALLBACK*)(cl_event, cl_int, void*), CCallbackEvent> {
@@ -61,7 +59,6 @@ public:
     return NAME;
   }
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 class CCallbackMem : public CCLArg<void(CL_CALLBACK*)(cl_mem, void*), CCallbackMem> {
@@ -74,7 +71,6 @@ public:
     return NAME;
   }
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 class CCallbackSVM
@@ -88,7 +84,6 @@ public:
     return NAME;
   }
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /* *************************** PROGRAMS ******************************** */
@@ -158,13 +153,6 @@ public:
   }
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const {
-    stream << stream.VariableName(ScopeKey());
-  }
-  virtual void Declare(CCodeOStream& stream) const;
-  virtual bool DeclarationNeeded() const {
-    return true;
-  }
 
   const unsigned char** Value();
 
@@ -195,13 +183,6 @@ public:
   }
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const {
-    stream << stream.VariableName(ScopeKey());
-  }
-  virtual void Declare(CCodeOStream& stream) const;
-  virtual bool DeclarationNeeded() const {
-    return true;
-  }
   cl_program GetProgramOriginal() const {
     return _programOriginal;
   }
@@ -229,7 +210,6 @@ public:
   virtual const char* Name() const {
     return NAME;
   }
-  virtual void Write(CCodeOStream& stream) const;
   virtual std::string ToString() const override {
     return ToStringHelper(Value());
   }
@@ -290,7 +270,6 @@ public:
   }
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
   bool HasData() const {
     return _hasData;
   }
@@ -320,7 +299,6 @@ public:
   virtual const char* Name() const {
     return "void *";
   }
-  virtual void Write(CCodeOStream& stream) const;
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
 };
@@ -342,7 +320,6 @@ public:
   virtual const char* Name() const {
     return "void *";
   }
-  virtual void Write(CCodeOStream& stream) const;
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
 };
@@ -354,7 +331,6 @@ public:
   CCLUserData() {}
   CCLUserData(CLType value) : CvoidPtr(value) {}
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
 };
 
 /* **************************** BUFFERS ******************************** */
@@ -396,11 +372,6 @@ public:
 
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
-  virtual void Declare(CCodeOStream& stream) const;
-  virtual bool DeclarationNeeded() const {
-    return Length() > 0;
-  }
   virtual std::string ToString() const override {
     return ToStringHelper(_ptr);
   }
@@ -415,11 +386,6 @@ public:
   CKernelArgValue() : _obj(nullptr) {}
   CKernelArgValue(const size_t len, const void* buffer);
   const void* operator*();
-  virtual void Write(CCodeOStream& stream) const;
-  virtual bool DeclarationNeeded() const {
-    return true;
-  }
-  virtual void Declare(CCodeOStream& stream) const;
 };
 
 class CKernelArgValue_V1 : public CBinaryData {
@@ -432,11 +398,6 @@ public:
   const void* operator*();
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
-  virtual bool DeclarationNeeded() const {
-    return true;
-  }
-  virtual void Declare(CCodeOStream& stream) const;
 };
 
 class CAsyncBinaryData : public CArgument {
@@ -473,21 +434,6 @@ public:
   }
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
-  virtual bool DeclarationNeeded() const {
-    return _len > 0;
-  }
-  virtual void Declare(CCodeOStream& stream) const;
-  virtual bool GlobalScopeVariable() const {
-    return true;
-  }
-  virtual std::string VariableNamePrefix() const {
-    return "async_buffer";
-  }
-  virtual intptr_t ScopeKey() const {
-    return reinterpret_cast<intptr_t>(_appPtr);
-  }
-  virtual void VariableNameRegister(CCodeOStream& stream, bool returnValue) const;
   virtual std::string ToString() const override {
     return ToStringHelper(_appPtr);
   }
@@ -521,7 +467,6 @@ public:
   virtual const char* Name() const {
     return "void *";
   }
-  virtual void Write(CCodeOStream& stream) const;
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
   virtual std::string ToString() const override {
@@ -544,7 +489,6 @@ public:
   virtual const char* Name() const {
     return "void *";
   }
-  virtual void Write(CCodeOStream& stream) const;
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
   virtual std::string ToString() const override {
@@ -571,21 +515,12 @@ public:
   CBuildOptions() = default;
   CBuildOptions(const char* array, bool hasHeaders)
       : Cchar::CSArray(array, 0, 1), _hasHeaders(hasHeaders){};
-  void Declare(CCodeOStream& stream) const;
 };
 
 class CGetContextInfoOutArgument : public CBinaryData {
-private:
-  bool _isPostActionNeeded = false;
-
 public:
   CGetContextInfoOutArgument() = default;
   CGetContextInfoOutArgument(const size_t size, const void* buffer, cl_context_info param_info);
-  virtual bool PostActionNeeded() const {
-    return _isPostActionNeeded;
-  }
-  virtual void PostAction(CCodeOStream& stream) const;
-  virtual void Declare(CCodeOStream& stream) const;
 };
 
 class CUSMPtr : CCLArg<void*, CUSMPtr> {
@@ -609,7 +544,6 @@ public:
   virtual const char* Name() const {
     return "void *";
   }
-  virtual void Write(CCodeOStream& stream) const;
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
   virtual std::string ToString() const override {
@@ -641,7 +575,6 @@ public:
       : Ccl_resource_barrier_descriptor_intel(*value) {}
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
   CLType Original() {
     return *Ptr();
   }

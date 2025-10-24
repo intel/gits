@@ -46,11 +46,6 @@ gits::OpenCL::CGitsClMemoryUpdate::CGitsClMemoryUpdate(void* ptr) {
   }
 }
 
-void gits::OpenCL::CGitsClMemoryUpdate::Write(CCodeOStream& stream) const {
-  throw ENotImplemented("CGitsClMemoryUpdate not implemented for CCode.\nSet CCode to False in "
-                        "gits_config.txt to skip CCode dumping.");
-}
-
 void gits::OpenCL::CGitsClMemoryUpdate::Run() {
   if (_resource.Data()) {
     char* pointerToData = (char*)CCLMappedPtr::GetMapping(_ptr);

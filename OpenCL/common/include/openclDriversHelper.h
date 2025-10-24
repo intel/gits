@@ -9,7 +9,6 @@
 #pragma once
 
 #include "openclDrivers.h"
-#ifndef BUILD_FOR_CCODE
 #include "openclStateDynamic.h"
 #include "openclArgumentsAuto.h"
 #include "openclTools.h"
@@ -18,15 +17,12 @@
 
 #include <tuple>
 #include <type_traits>
-#endif
 
 #include "gits.h"
 
 #include <filesystem>
 
-#ifndef BUILD_FOR_CCODE
 using namespace gits::lua;
-#endif
 
 namespace gits {
 namespace OpenCL {
@@ -56,7 +52,6 @@ bool CheckIntelGPUPlatform(const cl_platform_id& platform) {
 }
 
 cl_platform_id GetPlatform(const char* functionName) {
-#ifndef BUILD_FOR_CCODE
   const auto& platformStates = SD()._platformIDStates;
   cl_platform_id firstGPUPlatform = nullptr;
   cl_platform_id firstNonGPUPlatform = nullptr;
@@ -88,10 +83,7 @@ cl_platform_id GetPlatform(const char* functionName) {
   if (!platformStates.empty()) {
     return platformStates.begin()->first;
   }
-#else
-  (void)functionName;
-#endif
-  //Workaround for CCode and disabled recording
+
   cl_uint numberOfPlatforms = 0;
   cl_int result = drvOcl.clGetPlatformIDs(0, nullptr, &numberOfPlatforms);
   if (result != CL_SUCCESS) {
@@ -138,7 +130,6 @@ NOINLINE bool load_ocl_function_generic(void*& func, const char* name) {
   return true;
 }
 
-#ifndef BUILD_FOR_CCODE
 static NOINLINE lua_State* GetLuaState() {
   return CGits::Instance().GetLua().get();
 }
@@ -432,8 +423,5 @@ public:
     LOG_TRACE << std::endl;
   }
 };
-#else
-#define LUA_FUNCTION_EXISTS(function) false
-#endif
 } // namespace OpenCL
 } // namespace gits

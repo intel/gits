@@ -97,7 +97,6 @@ struct Printer<void, void, false> {
 };
 } // namespace
 
-#ifndef BUILD_FOR_CCODE
 // In openclDriversAuto.h there is an additional argument to OCL_FUNCTION generated
 // with TOclType derived wrappers
 
@@ -131,7 +130,6 @@ public:
     return Printer<Base, Wrapper>::PrintElements(size, value);
   }
 };
-#endif
 
 } // namespace OpenCL
 } // namespace gits

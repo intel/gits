@@ -105,19 +105,6 @@ std::string gits::OpenCL::Ccl_buffer_region::ToString() const {
   return result.str();
 }
 
-void gits::OpenCL::Ccl_context_properties::Write(CCodeOStream& stream) const {
-  std::string prop = ToString();
-  if (prop[0] == 'C') {
-    stream << prop;
-  } else if (prop == "nullptr") {
-    stream << "0";
-  } else {
-    stream << "(" << Name() << ") (";
-    Ccl_platform_id((cl_platform_id)Value()).Write(stream);
-    stream << ")";
-  }
-}
-
 std::string gits::OpenCL::Ccl_device_partition_property::ToString() const {
   std::string text;
   MaskAppend(text, cl_device_partition_propertyToString(Value()));
@@ -173,15 +160,6 @@ void gits::OpenCL::CCallbackContext::Read(CBinIStream& stream) {
   }
 }
 
-void gits::OpenCL::CCallbackContext::Write(CCodeOStream& stream) const {
-  if (Value()) {
-    stream << "cl::CallbackContext";
-  } else {
-    stream << "(cl::FCallbackContext)"
-           << "0";
-  }
-}
-
 const char* gits::OpenCL::CCallbackProgram::NAME =
     "void (CL_CALLBACK *)(cl_program program, void * user_data)";
 
@@ -192,30 +170,12 @@ void gits::OpenCL::CCallbackProgram::Read(CBinIStream& stream) {
   Value() = nullptr;
 }
 
-void gits::OpenCL::CCallbackProgram::Write(CCodeOStream& stream) const {
-  if (Value()) {
-    stream << "cl::CallbackProgram";
-  } else {
-    stream << "(cl::FCallbackProgram)"
-           << "0";
-  }
-}
-
 const char* gits::OpenCL::CCallbackEvent::NAME = "void (CL_CALLBACK *)(cl_event, cl_int, void *)";
 
 void gits::OpenCL::CCallbackEvent::Read(CBinIStream& stream) {
   CCLArg::Read(stream);
   if (Value()) {
     Value() = Callback;
-  }
-}
-
-void gits::OpenCL::CCallbackEvent::Write(CCodeOStream& stream) const {
-  if (Value()) {
-    stream << "cl::CallbackEvent";
-  } else {
-    stream << "(cl::FCallbackEvent)"
-           << "0";
   }
 }
 
@@ -228,15 +188,6 @@ void gits::OpenCL::CCallbackMem::Read(CBinIStream& stream) {
   }
 }
 
-void gits::OpenCL::CCallbackMem::Write(CCodeOStream& stream) const {
-  if (Value()) {
-    stream << "cl::CallbackMem";
-  } else {
-    stream << "(cl::FCallbackMem)"
-           << "0";
-  }
-}
-
 const char* gits::OpenCL::CCallbackSVM::NAME =
     "void (CL_CALLBACK *)(cl_command_queue, cl_uint , void **, void*)";
 
@@ -244,15 +195,6 @@ void gits::OpenCL::CCallbackSVM::Read(CBinIStream& stream) {
   CCLArg::Read(stream);
   if (Value()) {
     Value() = Callback;
-  }
-}
-
-void gits::OpenCL::CCallbackSVM::Write(CCodeOStream& stream) const {
-  if (Value()) {
-    stream << "cl::CallbackSVM";
-  } else {
-    stream << "(cl::FCallbackSVM)"
-           << "0";
   }
 }
 
@@ -356,47 +298,6 @@ void gits::OpenCL::CBinariesArray::Read(CBinIStream& stream) {
   }
 }
 
-void gits::OpenCL::CBinariesArray::Declare(CCodeOStream& stream) const {
-  // TextFiles have to be declared earlier to prevent them from going
-  // out of scope (when declared directly in const char* array)
-  if ((int)_binaries.size() != 0) {
-    stream.Indent() << "TextFile " << stream.VariableName(ScopeKey()) << "_array[] = { ";
-    for (auto iter = _binaries.begin(); iter != _binaries.end(); ++iter) {
-      iter->get()->Write(stream);
-      if (iter < _binaries.end() - 1) {
-        stream << ", ";
-      }
-    }
-    stream << " };\n";
-  }
-
-  stream.Indent() << Name();
-
-  if ((int)_binaries.size() == 0) {
-    stream << "*";
-  }
-  stream << " " << stream.VariableName(ScopeKey());
-  if ((int)_binaries.size() != 0) {
-    stream << "[]";
-  }
-  // initiate all elements in an array
-  if ((int)_binaries.size() == 0) {
-    stream << " = 0;\n";
-  } else {
-    // declare an array
-    stream << " = { ";
-    int idx = 0;
-    for (auto iter = _binaries.begin(); iter != _binaries.end(); ++iter) {
-      stream << stream.VariableName(ScopeKey()) << "_array[" << idx << "]";
-      if (iter < _binaries.end() - 1) {
-        stream << ", ";
-      }
-      idx++;
-    }
-    stream << " };\n";
-  }
-}
-
 const unsigned char** gits::OpenCL::CBinariesArray::Value() {
   _text.clear();
   for (auto const& binary : _binaries) {
@@ -481,51 +382,6 @@ void gits::OpenCL::CBinariesArray_V1::Read(CBinIStream& stream) {
   }
 }
 
-void gits::OpenCL::CBinariesArray_V1::Declare(CCodeOStream& stream) const {
-  if (_linkMode == ProgramBinaryLink::program) {
-    throw ENotImplemented("Program binary connection with built program is not "
-                          "implemented for CCode.");
-  }
-  // TextFiles have to be declared earlier to prevent them from going
-  // out of scope (when declared directly in const char* array)
-  if (static_cast<int>(_binaries.size()) != 0) {
-    stream.Indent() << "TextFile " << stream.VariableName(ScopeKey()) << "_array[] = { ";
-    for (auto iter = _binaries.begin(); iter != _binaries.end(); ++iter) {
-      iter->get()->Write(stream);
-      if (iter < _binaries.end() - 1) {
-        stream << ", ";
-      }
-    }
-    stream << " };\n";
-  }
-
-  stream.Indent() << Name();
-
-  if (_binaries.empty()) {
-    stream << "*";
-  }
-  stream << " " << stream.VariableName(ScopeKey());
-  if (!_binaries.empty()) {
-    stream << "[]";
-  }
-  // initiate all elements in an array
-  if (_binaries.empty()) {
-    stream << " = 0;\n";
-  } else {
-    // declare an array
-    stream << " = { ";
-    int idx = 0;
-    for (auto iter = _binaries.begin(); iter != _binaries.end(); ++iter) {
-      stream << stream.VariableName(ScopeKey()) << "_array[" << idx << "]";
-      if (iter < _binaries.end() - 1) {
-        stream << ", ";
-      }
-      idx++;
-    }
-    stream << " };\n";
-  }
-}
-
 const unsigned char** gits::OpenCL::CBinariesArray_V1::Value() {
   if (_linkMode == ProgramBinaryLink::program) {
     if (_binariesArray.empty()) {
@@ -557,10 +413,6 @@ const unsigned char** gits::OpenCL::CBinariesArray_V1::Value() {
 
 const char* gits::OpenCL::CvoidPtr::NAME = "void *";
 
-void gits::OpenCL::CvoidPtr::Write(CCodeOStream& stream) const {
-  stream << "(void *)" << std::hex << (intptr_t)Value() << std::dec;
-}
-
 const char* gits::OpenCL::CCLMappedPtr::NAME = "void*";
 
 char gits::OpenCL::CCLUserData::_buffer = 0x55;
@@ -572,15 +424,6 @@ void gits::OpenCL::CCLUserData::Read(CBinIStream& stream) {
   // to the driver though.
   if (Value()) {
     Value() = &_buffer;
-  }
-}
-
-void gits::OpenCL::CCLUserData::Write(CCodeOStream& stream) const {
-  if (Value()) {
-    stream << "&cl::userData";
-  } else {
-    stream << "(" << Name() << ")"
-           << "0";
   }
 }
 
@@ -611,10 +454,6 @@ void gits::OpenCL::CCLMappedPtr::Read(CBinIStream& stream) {
   if (_hasData) {
     stream >> _data;
   }
-}
-
-void gits::OpenCL::CCLMappedPtr::Write(CCodeOStream& stream) const {
-  CCLArgObj::Write(stream);
 }
 
 void gits::OpenCL::CCLMappedPtr::SyncBuffer() {
@@ -653,11 +492,6 @@ void* gits::OpenCL::CCLKernelExecInfo::operator*() {
   } else {
     return static_cast<void*>(&*_fineGrainSystemParam);
   }
-}
-
-void gits::OpenCL::CCLKernelExecInfo::Write(CCodeOStream& stream) const {
-  throw ENotImplemented("CCLKernelExecInfo not implemented for CCode.\nSet CCode to False in "
-                        "gits_config.txt to skip CCode dumping.");
 }
 
 void gits::OpenCL::CCLKernelExecInfo::Write(CBinOStream& stream) const {
@@ -724,11 +558,6 @@ void* gits::OpenCL::CCLKernelExecInfo_V1::operator*() {
   default:
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
-}
-
-void gits::OpenCL::CCLKernelExecInfo_V1::Write(CCodeOStream& stream) const {
-  throw ENotImplemented("CCLKernelExecInfo_V1 not implemented for CCode.\nSet CCode to False in "
-                        "gits_config.txt to skip CCode dumping.");
 }
 
 void gits::OpenCL::CCLKernelExecInfo_V1::Write(CBinOStream& stream) const {
@@ -803,75 +632,6 @@ void gits::OpenCL::CBinaryData::Read(CBinIStream& stream) {
   }
 }
 
-void gits::OpenCL::CBinaryData::Write(CCodeOStream& stream) const {
-  stream << "(" << Name() << ")";
-  if (_size && _ptr) {
-    // use an array
-    if (DeclarationNeeded()) {
-      stream << stream.VariableName(ScopeKey());
-      if (Length() > CODE_STREAM_INLINE_BUFFER_SIZE_MAX) {
-        stream << ".data()";
-      }
-    } else {
-      stream << "nullptr";
-    }
-  } else {
-    stream << hex(_ptr);
-    if (_ptr) {
-      // negative scenario
-      stream << " /* WARNING: Invalid buffer passed by the application */";
-    }
-  }
-}
-
-void gits::OpenCL::CBinaryData::Declare(CCodeOStream& stream) const {
-  if (!Length() || !_ptr || _buffer.empty()) {
-    return;
-  }
-
-  if (Length() > CODE_STREAM_INLINE_BUFFER_SIZE_MAX) {
-    std::string varName = stream.VariableName(ScopeKey());
-    stream.Indent() << "std::vector<char> " << varName << "(" << Length() << ");" << std::endl;
-    if (_resource.GetResourceHash() != 0) {
-      std::string resVarName = varName + "_res";
-      stream.Indent() << "auto " << resVarName << " = " << _resource << ";" << std::endl;
-      stream.Indent() << "std::copy((const char*)" << resVarName << " + 0, (const char*)"
-                      << resVarName << " + " << resVarName << ".Size(), " << varName << ".begin());"
-                      << std::endl;
-    }
-  } else {
-    stream.Indent() << "unsigned char " << stream.VariableName(ScopeKey()) << "[" << Length()
-                    << "]";
-
-    // dump buffer inlined in a code
-    stream << " = {" << std::endl;
-    stream.ScopeBegin();
-    stream.Indent();
-    std::string asciiText;
-    const unsigned CHARS_IN_ROW = 16;
-    for (unsigned i = 0; i < Length(); i++) {
-      unsigned char ch = (unsigned char)_buffer[i];
-      stream << hex(ch);
-      asciiText += std::isprint(ch) ? ch : '.';
-      if (i != Length() - 1) {
-        stream << ",";
-        if ((i + 1) % CHARS_IN_ROW == 0) {
-          stream << " // " << asciiText << std::endl;
-          asciiText.clear();
-          stream.Indent();
-        }
-      } else {
-        stream << std::setw((CHARS_IN_ROW - (i % CHARS_IN_ROW) - 1) * 5 + 1) << " "
-               << " // " << asciiText;
-        asciiText.clear();
-      }
-    }
-    stream << " " << std::endl;
-    stream.ScopeEnd();
-    stream.Indent() << "};" << std::endl;
-  }
-}
-
 void gits::OpenCL::CBinaryData::Deallocate() {
   std::vector<char>().swap(_buffer);
 }
@@ -880,35 +640,6 @@ void gits::OpenCL::CBinaryData::Deallocate() {
 
 gits::OpenCL::CKernelArgValue::CKernelArgValue(const size_t len, const void* buffer)
     : CBinaryData(len, buffer), _obj(nullptr) {}
-
-void gits::OpenCL::CKernelArgValue::Declare(CCodeOStream& stream) const {
-  if (Length() == sizeof(void*)) {
-    uintptr_t ptr = 0;
-    memcpy(&ptr, Value(), sizeof(void*));
-    stream.Indent() << "uintptr_t " << stream.VariableName(ScopeKey()) << " = " << hex(ptr) << ";"
-                    << std::endl;
-    stream.Indent() << "if(CCLArgObj::CheckMapping(" << hex(ptr) << "))" << std::endl;
-    stream.ScopeBegin();
-    stream.Indent() << stream.VariableName(ScopeKey()) << " = CCLArgObj::GetMapping(" << hex(ptr)
-                    << ");" << std::endl;
-    stream.ScopeEnd();
-  } else {
-    CBinaryData::Declare(stream);
-  }
-}
-
-void gits::OpenCL::CKernelArgValue::Write(CCodeOStream& stream) const {
-  stream << "(const void*) ";
-  if (Length() == sizeof(void*)) {
-    stream << "&" << stream.VariableName(ScopeKey());
-  } else {
-    if (Value() == nullptr) {
-      stream << "nullptr";
-    } else {
-      stream << stream.VariableName(ScopeKey());
-    }
-  }
-}
 
 const void* gits::OpenCL::CKernelArgValue::operator*() {
   if (Value() != nullptr) {
@@ -934,35 +665,6 @@ const void* gits::OpenCL::CKernelArgValue::operator*() {
 
 gits::OpenCL::CKernelArgValue_V1::CKernelArgValue_V1(const size_t len, const void* buffer)
     : CBinaryData(len, buffer), _obj(nullptr) {}
-
-void gits::OpenCL::CKernelArgValue_V1::Declare(CCodeOStream& stream) const {
-  if (_size == sizeof(void*)) {
-    uintptr_t ptr = 0;
-    memcpy(&ptr, Value(), sizeof(void*));
-    stream.Indent() << "uintptr_t " << stream.VariableName(ScopeKey()) << " = " << hex(ptr) << ";"
-                    << std::endl;
-    stream.Indent() << "if(CCLArgObj::CheckMapping(" << hex(ptr) << "))" << std::endl;
-    stream.ScopeBegin();
-    stream.Indent() << stream.VariableName(ScopeKey()) << " = CCLArgObj::GetMapping(" << hex(ptr)
-                    << ");" << std::endl;
-    stream.ScopeEnd();
-  } else {
-    CBinaryData::Declare(stream);
-  }
-}
-
-void gits::OpenCL::CKernelArgValue_V1::Write(CCodeOStream& stream) const {
-  stream << "(const void*) ";
-  if (_size == sizeof(void*)) {
-    stream << "&" << stream.VariableName(ScopeKey());
-  } else {
-    if (Value() == nullptr) {
-      stream << "nullptr";
-    } else {
-      stream << stream.VariableName(ScopeKey());
-    }
-  }
-}
 
 void gits::OpenCL::CKernelArgValue_V1::Write(CBinOStream& stream) const {
   stream << CBuffer(&_size, sizeof(_size));
@@ -1096,46 +798,6 @@ void gits::OpenCL::CAsyncBinaryData::Read(CBinIStream& stream) {
   }
 }
 
-void gits::OpenCL::CAsyncBinaryData::Write(CCodeOStream& stream) const {
-  stream << "(" << Name() << ")";
-  if (_len) {
-    // use an array
-    stream << stream.VariableName(ScopeKey()) << ".data()";
-  } else {
-    stream << "0";
-  }
-}
-
-void gits::OpenCL::CAsyncBinaryData::Declare(CCodeOStream& stream) const {
-  if (_len) {
-    std::string varName = stream.VariableName(ScopeKey());
-    stream.select(CCodeOStream::GITS_EXTERNS_H);
-    stream.Indent() << "extern std::vector<char> " << varName << ";" << std::endl;
-    stream.select(CCodeOStream::GITS_EXTERNS_CPP);
-    stream.Indent() << "std::vector<char> " << varName << "(0);" << std::endl;
-    stream.select(CCodeOStream::GITS_FRAMES_CPP);
-    std::string resVarName = varName + "_res";
-    if (_resource.GetResourceHash() != 0) {
-      stream.Indent() << "auto " << resVarName << " = " << _resource << ";" << std::endl;
-      stream.Indent() << "if (" << resVarName << ".Size() > " << varName << ".size())" << std::endl;
-      stream.ScopeBegin(); // No real scope, just for indentation.
-      stream.Indent() << varName << ".resize(" << resVarName << ".Size());" << std::endl;
-      stream.ScopeEnd();
-      stream.Indent() << "std::copy((const char*)" << resVarName << " + 0, (const char*)"
-                      << resVarName << " + " << resVarName << ".Size(), " << varName << ".begin());"
-                      << std::endl;
-    } else {
-      stream.Indent() << "if (" << _len << " > " << varName << ".size())" << std::endl;
-      stream.Indent() << "  " << varName << ".resize(" << _len << ");" << std::endl;
-    }
-  }
-}
-
-void gits::OpenCL::CAsyncBinaryData::VariableNameRegister(CCodeOStream& stream,
-                                                          bool returnValue) const {
-  stream.Register(ScopeKey(), VariableNamePrefix(), true, GlobalScopeVariable());
-}
-
 /******************** CSVMPtr ********************/
 
 const char* gits::OpenCL::CSVMPtr::NAME = "void *";
@@ -1151,11 +813,6 @@ void* gits::OpenCL::CSVMPtr::operator*() {
   } else {
     return const_cast<void*>((const void*)*_hostPtr);
   }
-}
-
-void gits::OpenCL::CSVMPtr::Write(CCodeOStream& stream) const {
-  throw ENotImplemented("CSVMPtr not implemented for CCode.\nSet CCode to False in gits_config.txt "
-                        "to skip CCode dumping.");
 }
 
 void gits::OpenCL::CSVMPtr::Write(CBinOStream& stream) const {
@@ -1208,11 +865,6 @@ void* gits::OpenCL::CSVMPtr_V1::operator*() {
   }
 }
 
-void gits::OpenCL::CSVMPtr_V1::Write(CCodeOStream& stream) const {
-  throw ENotImplemented("CSVMPtr_V1 not implemented for CCode.\nSet CCode to "
-                        "False in gits_config.txt to skip CCode dumping.");
-}
-
 void gits::OpenCL::CSVMPtr_V1::Write(CBinOStream& stream) const {
   stream << CBuffer(&_createdByCLSVMAlloc, sizeof(_createdByCLSVMAlloc));
   stream << CBuffer(&_offset, sizeof(_offset));
@@ -1234,42 +886,10 @@ void gits::OpenCL::CSVMPtr_V1::Read(CBinIStream& stream) {
 }
 /******************** CBuildOptions ********************/
 
-void gits::OpenCL::CBuildOptions::Declare(CCodeOStream& stream) const {
-  VariableNameRegister(stream, false);
-  stream.Indent() << Name() << " " << stream.VariableName(ScopeKey()) << "[] = ";
-  if (Cchar::CSArray::Vector().size() > 0) {
-    stream << "\"" << Cchar::CSArray::ToString();
-    if (_hasHeaders) {
-      stream << " -I./gitsFiles";
-    }
-    stream << "\";\n";
-  } else {
-    stream << "{ 0 };\n";
-  }
-}
-
 gits::OpenCL::CGetContextInfoOutArgument::CGetContextInfoOutArgument(const size_t size,
                                                                      const void* buffer,
                                                                      cl_context_info param_info)
-    : CBinaryData(size, buffer) {
-  _isPostActionNeeded = param_info == CL_CONTEXT_DEVICES;
-}
-
-void gits::OpenCL::CGetContextInfoOutArgument::PostAction(CCodeOStream& stream) const {
-  if (_size == sizeof(void*)) {
-    stream.Indent() << "CCLArgObj::AddMapping(" << stream.VariableName(ScopeKey())
-                    << "_buffer.data(), " << stream.VariableName(ScopeKey()) << ", " << 1 << ");\n";
-  }
-}
-
-void gits::OpenCL::CGetContextInfoOutArgument::Declare(CCodeOStream& stream) const {
-  CBinaryData::Declare(stream);
-  if (_size == sizeof(void*)) {
-    stream.Indent() << "std::vector<unsigned char> " << stream.VariableName(ScopeKey()) + "_buffer"
-                    << "(" << stream.VariableName(ScopeKey()) << ", "
-                    << stream.VariableName(ScopeKey()) << " + " << Length() << ");" << std::endl;
-  }
-}
+    : CBinaryData(size, buffer) {}
 
 /******************** CUSMPtr ********************/
 const char* gits::OpenCL::CUSMPtr::NAME = "void *";
@@ -1308,11 +928,6 @@ void gits::OpenCL::CUSMPtr::SetMappedOffset(void* ptr) {
       return;
     }
   }
-}
-
-void gits::OpenCL::CUSMPtr::Write(CCodeOStream& stream) const {
-  throw ENotImplemented("CUSMPtr not implemented for CCode.\nSet CCode to False in gits_config.txt "
-                        "to skip CCode dumping.");
 }
 
 void gits::OpenCL::CUSMPtr::Write(CBinOStream& stream) const {
@@ -1358,11 +973,6 @@ std::string gits::OpenCL::Ccl_resource_barrier_descriptor_intel::ToString() cons
          << cl_resource_barrier_typeToString(_struct.type) << " }"
          << cl_resource_memory_scopeToString(_struct.scope) << ", ";
   return result.str();
-}
-
-void gits::OpenCL::Ccl_resource_barrier_descriptor_intel::Write(CCodeOStream& stream) const {
-  throw ENotImplemented("Experimental headers are not supported in CCode.\nSet CCode to False in "
-                        "gits_config.txt to skip CCode dumping.");
 }
 
 cl_resource_barrier_descriptor_intel* gits::OpenCL::Ccl_resource_barrier_descriptor_intel::Ptr() {

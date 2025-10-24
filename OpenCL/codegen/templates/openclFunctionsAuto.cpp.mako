@@ -95,15 +95,6 @@ void C${name}::Run() {
   %endfor
 }
 
-  %if func.get('ccodeWrap'):
-void C${name}::Write(CCodeOStream &stream) const {
-  ${func.get('ccodeWrap')}
-}
-  %elif (func.get('functionType') == Creator and func['type'] != 'cl_int') or func['name'] == 'clLinkProgram' or 'EnqueueMap' in func['name']:
-void C${name}::WritePostCall(CCodeOStream &stream) const {
-  stream.Indent() << _return_value.WrapTypeNameStr() << "::AddMapping(0x" << (void*)_return_value.Original() << ", " << stream.VariableName(_return_value.ScopeKey()) << ");" << std::endl;
-}
-  %endif
   %if 'platform' in func:
 #endif
   %endif

@@ -36,7 +36,6 @@ public:
   }
   virtual void Write(CBinOStream& stream) const override;
   virtual void Read(CBinIStream& stream) override;
-  virtual void Write(CCodeOStream& stream) const override;
   virtual void Run();
 };
 
@@ -115,7 +114,6 @@ public:
   }
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& /*stream*/) const {}
   virtual void Run();
 };
 } // namespace OpenCL

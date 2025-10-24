@@ -47,9 +47,6 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _value);
   }
-  virtual void Write(CCodeOStream& stream) const {
-    stream << ToString();
-  }
   virtual std::string ToString() const {
     return ToStringHelper(Value());
   }
@@ -189,16 +186,6 @@ public:
 
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, key_);
-  }
-
-  virtual void Declare(CCodeOStream& stream) const {
-    stream.Indent() << Name() << " " << stream.VariableName(ScopeKey()) << " = (" << TypeNameStr()
-                    << ") 0x" << (void*)key_ << ";" << std::endl;
-  }
-
-  virtual void Write(CCodeOStream& stream) const {
-    stream << "(" << TypeNameStr() << ") " << WrapTypeNameStr() << "::GetMapping(0x" << (void*)key_
-           << ")";
   }
 
   void Assign(T other) {

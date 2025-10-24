@@ -34,9 +34,6 @@ public:
   %else:
   virtual std::string ToString() const { return ${name}ToString(Value()); }
   %endif
-  %if enum.get('custom_ccode'):
-  virtual void Write(CCodeOStream&) const override;
-  %endif
 };
 
 %endfor

@@ -53,11 +53,6 @@ public:
   virtual const char* Name() const { return "${func.get('name')}"; }
   virtual unsigned Version() const { return VERSION_${func.get('availableFrom')}; }
   virtual void Run();
-  %if func.get('ccodeWrap'):
-  virtual void Write(CCodeOStream &stream) const;
-  %elif (func.get('functionType') == Creator and func['type'] != 'cl_int') or func['name'] == 'clLinkProgram' or 'EnqueueMap' in func['name']:
-  virtual void WritePostCall(CCodeOStream &stream) const;
-  %endif
 };
   %if 'platform' in func:
 #endif

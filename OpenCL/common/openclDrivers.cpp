@@ -12,14 +12,12 @@
 * @brief
 */
 #include "openclDrivers.h"
-#ifndef BUILD_FOR_CCODE
 #include "openclArgumentsAuto.h"
 #include "openclTools.h"
 #include "opencl_apis_iface.h"
 
 #include <tuple>
 #include <type_traits>
-#endif
 
 #include "gits.h"
 
@@ -34,9 +32,7 @@ void COclDriver::Initialize() {
   std::filesystem::path path = Configurator::Get().common.shared.libClPath;
   _lib = std::make_unique<SharedLibrary>(path.string());
   _initialized = _lib->getHandle() != nullptr;
-#ifndef BUILD_FOR_CCODE
   CGits::Instance().apis.UseApiComputeIface(std::make_shared<OpenCL::OpenCLApi>());
-#endif
 }
 
 COclDriver::~COclDriver() {

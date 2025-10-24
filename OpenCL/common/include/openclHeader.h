@@ -10,7 +10,7 @@
 #include "platform.h"
 #include "CL/cl_platform.h"
 
-#if defined(GITS_PLATFORM_WINDOWS) && !defined(BUILD_FOR_CCODE)
+#if defined(GITS_PLATFORM_WINDOWS)
 #include <d3d11.h>
 #include <d3d10.h>
 #include <d3d9.h>
@@ -174,7 +174,7 @@ typedef struct _cl_resource_barrier_descriptor_intel {
 #define CL_DEVICE_REFERENCE_COUNT_EXT  0x4057
 #define CL_DEVICE_PARTITION_STYLE_EXT  0x4058
 
-#if !defined(GITS_PLATFORM_WINDOWS) || defined(BUILD_FOR_CCODE)
+#if !defined(GITS_PLATFORM_WINDOWS)
 typedef unsigned int UINT;
 
 typedef void ID3D11Buffer;

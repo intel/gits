@@ -396,7 +396,6 @@ arg2=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapAr
 )
 
 Function(name='clEnqueueNDRangeKernel',enabled=True,availableFrom='1.0',extension=False,type=NDRange,stateTrack=True,recExecWrap=True,runWrap=True,recWrap=True,
-         ccodeWrap='static size_t counter = 1;\n  stream.select(CCodeOStream::GITS_FRAMES_CPP);\n  stream.Indent() << "// kernel call #" << counter << std::endl;\n  counter++;\n  gits::CFunction::Write(stream);',
 retV=RetDef(type='cl_int'),
 arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
 arg2=ArgDef(name='kernel',tag='in',type='cl_kernel'),
@@ -410,7 +409,6 @@ arg9=ArgDef(name='event',tag='out',type='cl_event*',wrapType='Ccl_event::CSMapAr
 )
 
 Function(name='clEnqueueNDCountKernelINTEL',enabled=True,availableFrom='1.2',extension=True,type=NDRange,stateTrack=True,recExecWrap=True,runWrap=True,recWrap=True,
-         ccodeWrap='static size_t counter = 1;\n  stream.select(CCodeOStream::GITS_FRAMES_CPP);\n  stream.Indent() << "// kernel call #" << counter << std::endl;\n  counter++;\n  gits::CFunction::Write(stream);',
 retV=RetDef(type='cl_int'),
 arg1=ArgDef(name='command_queue',tag='in',type='cl_command_queue'),
 arg2=ArgDef(name='kernel',tag='in',type='cl_kernel'),
@@ -1999,7 +1997,7 @@ var1=VarDef(name='CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR', value='0x2006'),
 var2=VarDef(name='CL_DEVICES_FOR_GL_CONTEXT_KHR', value='0x2007')
 )
 
-Enum(name='cl_context_properties', custom_ccode=True,
+Enum(name='cl_context_properties',
 var1=VarDef(name='CL_CONTEXT_PLATFORM', value='0x1084'),
 var2=VarDef(name='CL_CONTEXT_INTEROP_USER_SYNC', value='0x1085'),
 var3=VarDef(name='CL_GL_CONTEXT_KHR', value='0x2008'),

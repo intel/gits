@@ -10,7 +10,6 @@
 
 namespace gits {
 namespace OpenCL {
-#ifndef BUILD_FOR_CCODE
 %for name, enum in without_field(enums, 'type').items():
 extern std::string ${name}ToString(${name});
 %endfor
@@ -39,10 +38,5 @@ public:
     return CLResultToString(value);
   }
 };
-#else
-%for name, enum in without_field(enums, 'type').items():
-typedef ${name} T${name};
-%endfor
-#endif
 } // namespace OpenCL
 } // namespace gits

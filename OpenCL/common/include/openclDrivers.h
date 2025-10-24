@@ -13,10 +13,7 @@
 #include "log.h"
 #include "tools.h"
 #include "dynamic_linker.h"
-
-#ifndef BUILD_FOR_CCODE
 #include "openclTools.h"
-#endif
 
 #ifndef VOID_T_DEFINED
 #define VOID_T_DEFINED
