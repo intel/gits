@@ -30,6 +30,7 @@ public:
   }
   bool restoreObject(unsigned objectKey);
   bool restoreDescriptor(unsigned heapKey, unsigned index);
+  bool restoreTlas(unsigned blasBuildKey);
   bool restoreBlas(std::pair<unsigned, unsigned> blas);
 
   static bool isAnalysis();
@@ -41,6 +42,7 @@ private:
   std::unordered_set<unsigned> commandQueueCommands_;
   std::unordered_set<unsigned> objectKeys_;
   std::set<std::pair<unsigned, unsigned>> descriptors_;
+  std::unordered_set<unsigned> tlases_;
   std::set<std::pair<unsigned, unsigned>> blases_;
 };
 

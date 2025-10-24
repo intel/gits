@@ -30,6 +30,13 @@ AnalyzerCommandListService::AnalyzerCommandListService(
   optimize_ = Configurator::Get().directx.features.subcapture.optimize;
 }
 
+std::set<unsigned>& AnalyzerCommandListService::getTlases() {
+  if (dispatchRays_ && tlasBuildKeys_.empty()) {
+    raytracingService_.getTlases(tlasBuildKeys_);
+  }
+  return tlasBuildKeys_;
+}
+
 void AnalyzerCommandListService::commandListsRestore(const std::set<unsigned>& commandLists) {
   for (unsigned commandListKey : commandLists) {
     commandListRestore(commandListKey);
@@ -504,6 +511,12 @@ void AnalyzerCommandListService::commandAnalysis(
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand& c) {
   objectsForRestore_.insert(c.BufferLocation_.interfaceKey);
+
+  unsigned tlasBuildKey = raytracingService_.findTlas(AnalyzerRaytracingService::KeyOffset(
+      c.BufferLocation_.interfaceKey, c.BufferLocation_.offset));
+  if (tlasBuildKey) {
+    tlasBuildKeys_.insert(tlasBuildKey);
+  }
 }
 
 void AnalyzerCommandListService::commandAnalysis(
@@ -792,6 +805,7 @@ void AnalyzerCommandListService::commandAnalysis(
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c) {
   if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+    tlasBuildKeys_.insert(c.key);
     raytracingService_.buildTlas(c);
   } else if (c.pDesc_.value->Inputs.Type ==
              D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
@@ -813,10 +827,9 @@ void AnalyzerCommandListService::command(
     commandsByCommandList_[c.object_.key].emplace_back(
         new ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand(c));
   }
-  if (!analyzerService_.inRange() && restoreTlases_) {
-    if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-      raytracingService_.buildTlas(c);
-    }
+  if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL &&
+      !analyzerService_.inRange() && (restoreTlases_ || commandListSubcapture_)) {
+    raytracingService_.buildTlas(c);
   }
 
   if (optimize_) {
@@ -890,6 +903,7 @@ void AnalyzerCommandListService::commandAnalysis(
 }
 
 void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
+  dispatchRays_ = true;
   raytracingService_.dispatchRays(c);
   objectsForRestore_.insert(c.pDesc_.rayGenerationShaderRecordKey);
   objectsForRestore_.insert(c.pDesc_.missShaderTableKey);
@@ -945,11 +959,9 @@ void AnalyzerCommandListService::command(
     commandsByCommandList_[c.pCommandList_.key].emplace_back(
         new NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand(c));
   }
-  if (!analyzerService_.inRange() && restoreTlases_) {
-    if (c.pParams.value->pDesc->inputs.type ==
-        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-      LOG_ERROR << "NvAPI top level build not handled";
-    }
+  if (c.pParams.value->pDesc->inputs.type ==
+      D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+    LOG_ERROR << "NvAPI top level build not handled";
   }
 
   objectsForRestore_.insert(c.pParams.destAccelerationStructureKey);

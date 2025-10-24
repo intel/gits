@@ -50,6 +50,8 @@ public:
     return commandListInfos_[commandListKey].computeRootSignature;
   }
 
+  std::set<unsigned>& getTlases();
+
   void addObjectForRestore(unsigned key) {
     if (optimize_) {
       objectsForRestore_.insert(key);
@@ -142,6 +144,7 @@ private:
   AnalyzerExecuteIndirectService& executeIndirectService_;
   bool commandListSubcapture_{};
   bool optimize_{};
+  bool dispatchRays_{};
 
   struct CommandListInfo {
     unsigned computeRootSignature{};
@@ -164,7 +167,9 @@ private:
 
   std::unordered_set<unsigned> objectsForRestore_;
   std::set<std::pair<unsigned, unsigned>> descriptors_;
+
   bool restoreTlases_{};
+  std::set<unsigned> tlasBuildKeys_;
 };
 
 template <typename CommandListCommand>

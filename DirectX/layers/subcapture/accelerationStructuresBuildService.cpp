@@ -31,6 +31,7 @@ AccelerationStructuresBuildService::AccelerationStructuresBuildService(
   commandListDirectKey_ = stateService_.getUniqueObjectKey();
   serializeMode_ = Configurator::Get().directx.features.subcapture.serializeAccelerationStructures;
   restoreTLASes_ = Configurator::Get().directx.features.subcapture.restoreTLASes;
+  optimize_ = Configurator::Get().directx.features.subcapture.optimize;
 }
 
 void AccelerationStructuresBuildService::buildAccelerationStructure(
@@ -39,9 +40,16 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
       c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
     return;
   }
-  if (!restoreTLASes_ &&
-      c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
-    return;
+  if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL) {
+    if (optimize_) {
+      if (!stateService_.getAnalyzerResults().restoreTlas(c.key)) {
+        return;
+      }
+    } else {
+      if (!restoreTLASes_) {
+        return;
+      }
+    }
   }
   if (restored_) {
     return;
@@ -1741,7 +1749,8 @@ void AccelerationStructuresBuildService::optimize() {
     auto itDests = stateDestsBySource_.find(stateId);
     if (itDests == stateDestsBySource_.end() || itDests->second.empty()) {
       if (!stateService_.getAnalyzerResults().restoreBlas(
-              std::make_pair(state->destKey, state->destOffset))) {
+              std::make_pair(state->destKey, state->destOffset)) &&
+          !stateService_.getAnalyzerResults().restoreTlas(state->commandKey)) {
         removedStates.push_back(stateId);
       }
     }

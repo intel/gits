@@ -239,8 +239,8 @@ void AnalyzerRaytracingService::buildTlas(
     }
   }
 
-  tlases_.insert(std::make_pair(c.pDesc_.destAccelerationStructureKey,
-                                c.pDesc_.destAccelerationStructureOffset));
+  tlasBuildKeys_[{c.pDesc_.destAccelerationStructureKey,
+                  c.pDesc_.destAccelerationStructureOffset}] = c.key;
 }
 
 void AnalyzerRaytracingService::dispatchRays(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
@@ -386,6 +386,20 @@ void AnalyzerRaytracingService::loadInstancesArraysOfPointers() {
     for (unsigned i = 0; i < count; ++i) {
       stream.read(reinterpret_cast<char*>(&addresses[i]), sizeof(D3D12_GPU_VIRTUAL_ADDRESS));
     }
+  }
+}
+
+unsigned AnalyzerRaytracingService::findTlas(KeyOffset& tlas) {
+  auto it = tlasBuildKeys_.find(tlas);
+  if (it != tlasBuildKeys_.end()) {
+    return it->second;
+  }
+  return 0;
+}
+
+void AnalyzerRaytracingService::getTlases(std::set<unsigned>& tlases) {
+  for (auto& it : tlasBuildKeys_) {
+    tlases.insert(it.second);
   }
 }
 

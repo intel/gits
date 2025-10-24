@@ -134,6 +134,7 @@ private:
   bool restored_{};
   bool serializeMode_{};
   bool restoreTLASes_{};
+  bool optimize_{};
 
 private:
   void storeState(RaytracingAccelerationStructureState* state);

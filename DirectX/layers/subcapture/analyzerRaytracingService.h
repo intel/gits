@@ -88,15 +88,8 @@ public:
 
   std::set<unsigned> getStateObjectAllSubobjects(unsigned stateObjectKey);
   using KeyOffset = std::pair<unsigned, unsigned>;
-  std::vector<KeyOffset>& getBlasesForTlas(unsigned tlasBuildKey) {
+  std::vector<KeyOffset>& getBlases(unsigned tlasBuildKey) {
     return blasesByTlas_[tlasBuildKey];
-  }
-  using BlasesByTlas = std::unordered_map<unsigned, std::vector<KeyOffset>>;
-  BlasesByTlas& getBlases() {
-    return blasesByTlas_;
-  }
-  std::set<KeyOffset>& getTlases() {
-    return tlases_;
   }
   std::set<KeyOffset>& getSources() {
     return sources_;
@@ -107,6 +100,9 @@ public:
   std::set<std::pair<unsigned, unsigned>>& getBindingTablesDescriptors() {
     return bindingTablesDump_.getBindingTablesDescriptors();
   }
+
+  unsigned findTlas(KeyOffset& tlas);
+  void getTlases(std::set<unsigned>& tlases);
 
 private:
   void fillStateObjectInfo(D3D12_STATE_OBJECT_DESC_Argument& stateObjectDesc,
@@ -129,8 +125,8 @@ private:
 
   RaytracingInstancesDump instancesDump_;
   BindingTablesDump bindingTablesDump_;
-  BlasesByTlas blasesByTlas_;
-  std::set<KeyOffset> tlases_;
+  std::unordered_map<unsigned, std::vector<KeyOffset>> blasesByTlas_;
+  std::map<KeyOffset, unsigned> tlasBuildKeys_;
   std::set<KeyOffset> sources_;
   std::unordered_map<unsigned, ID3D12Resource*> resourceByKey_;
   std::unordered_set<unsigned> genericReadResources_;

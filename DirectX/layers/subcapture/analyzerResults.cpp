@@ -24,6 +24,7 @@ AnalyzerResults::AnalyzerResults() {
     bool commandQueues = false;
     bool objects = false;
     bool descriptors = false;
+    bool tlases = false;
     while (analysis >> str) {
       if (str == "COMMAND_QUEUE_COMMANDS") {
         commandLists = false;
@@ -34,8 +35,11 @@ AnalyzerResults::AnalyzerResults() {
       } else if (str == "DESCRIPTORS") {
         objects = false;
         descriptors = true;
-      } else if (str == "ACCELERATION_STRUCTURES") {
+      } else if (str == "TLASES") {
         descriptors = false;
+        tlases = true;
+      } else if (str == "BLASES") {
+        tlases = false;
       } else {
         unsigned key = std::stoi(str);
         if (commandLists) {
@@ -48,6 +52,8 @@ AnalyzerResults::AnalyzerResults() {
           analysis >> str;
           unsigned index = std::stoi(str);
           descriptors_.insert(std::make_pair(key, index));
+        } else if (tlases) {
+          tlases_.insert(key);
         } else {
           analysis >> str;
           unsigned offset = std::stoi(str);
@@ -76,7 +82,14 @@ bool AnalyzerResults::restoreDescriptor(unsigned heapKey, unsigned index) {
   return descriptors_.find(std::make_pair(heapKey, index)) != descriptors_.end();
 }
 
+bool AnalyzerResults::restoreTlas(unsigned blasBuildKey) {
+  return tlases_.find(blasBuildKey) != tlases_.end();
+}
+
 bool AnalyzerResults::restoreBlas(std::pair<unsigned, unsigned> blas) {
+  if (!optimize_) {
+    return true;
+  }
   return blases_.find(blas) != blases_.end();
 }
 

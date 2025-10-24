@@ -48,7 +48,7 @@ void RaytracingInstancesDump::dumpBuffer(DumpInfo& dumpInfo, void* data) {
 
   InstancesInfo& instancesInfo = static_cast<InstancesInfo&>(dumpInfo);
   std::vector<std::pair<unsigned, unsigned>>& blases =
-      raytracingService_.getBlasesForTlas(instancesInfo.buildCall);
+      raytracingService_.getBlases(instancesInfo.buildCall);
 
   D3D12_RAYTRACING_INSTANCE_DESC* instances = static_cast<D3D12_RAYTRACING_INSTANCE_DESC*>(data);
   unsigned numInstances = instancesInfo.size / sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
