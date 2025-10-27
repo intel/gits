@@ -11,6 +11,7 @@
 
 #include "argumentsAuto.h"
 
+#include "configurator.h"
 #include "configurationAuto.h" 
 #include "argumentParser.h"
 #include "argumentValidators.h"
@@ -27,13 +28,21 @@ void ${group.argument_namespace_str}::UpdateConfiguration(${group.namespace_str}
 %  if (option.argument_only or not option.is_derived) and option.has_leafs():
 %   if option.type != 'Group':
   if (${option.instance_name}) {
-    config->${option.instance_name} = ${option.instance_name}.Get();
+    const auto newValue = ${option.instance_name}.Get();
+    Configurator::Instance().AddChangedField("${option.get_path()}",  stringFrom<${option.type}>(newValue),
+                                            stringFrom<${option.type}>(config->${option.instance_name}),
+                                            Configurator::ConfigEntry::Source::ARGUMENT);
+    config->${option.instance_name} = newValue;
   }
 %   else:
   ${option.instance_name}.UpdateConfiguration(&(config->${option.instance_name}));
 %   endif
 %    if option.type == 'bool':
   if (${option.get_bool_value_instance_name()}) {
+    const auto newValue = ${option.instance_name}.Get();
+    Configurator::Instance().AddChangedField("${option.get_path()}",  stringFrom<${option.type}>(config->${option.instance_name}),
+                                            stringFrom<${option.type}>(newValue),
+                                            Configurator::ConfigEntry::Source::ARGUMENT);
     config->${option.instance_name} = ${option.get_bool_value_instance_name()}.Get();
   }
 %    endif

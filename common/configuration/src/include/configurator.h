@@ -9,6 +9,9 @@
 #pragma once
 
 #include <optional>
+#include <map>
+#include <string>
+#include <vector>
 
 #include "configurationAuto.h"
 #include "platform.h"
@@ -19,9 +22,35 @@ namespace gits {
 class Configurator : public gits::noncopyable {
 public:
   struct ConfigEntry {
+    enum class Source {
+      DEFAULT,
+      CONFIG_FILE,
+      ARGUMENT,
+      ENVIRONMENT_VARIABLE
+    };
+
     std::string Path;
     std::string Value;
     std::string Default;
+    Source source;
+
+    static std::string toString(Source source) {
+      switch (source) {
+      case Source::DEFAULT:
+        return "default value";
+      case Source::CONFIG_FILE:
+        return "config file";
+      case Source::ARGUMENT:
+        return "argument";
+      case Source::ENVIRONMENT_VARIABLE:
+        return "environment variable";
+      default:
+        return "<?UNKNOWN?>";
+      }
+    }
+
+    static constexpr Source SOURCES[3] = {Source::CONFIG_FILE, Source::ARGUMENT,
+                                          Source::ENVIRONMENT_VARIABLE};
   };
 
   static bool ConfigurationValid();
@@ -73,10 +102,10 @@ public: // Singleton
   void DeriveData();
 
   void ClearChangedFieldsVector();
-  const std::vector<ConfigEntry>& GetChangedFields() const;
   void AddChangedField(const std::string& path,
                        const std::string& value,
-                       const std::string& defaultValue);
+                       const std::string& defaultValue,
+                       const ConfigEntry::Source source);
   void LogChangedFields();
 #endif
 
@@ -87,6 +116,6 @@ private:
   Configurator();
 
   Configuration configuration;
-  std::vector<ConfigEntry> changedFields;
+  std::map<ConfigEntry::Source, std::vector<ConfigEntry>> changedFields;
 };
 } // namespace gits

@@ -182,24 +182,36 @@ bool Configurator::ApplyOverrides(const std::filesystem::path& filepath,
 }
 
 void Configurator::ClearChangedFieldsVector() {
+  // delete all entries in changedFields map
+  // create an empty map with vectors
   changedFields.clear();
+  for (auto source : ConfigEntry::SOURCES) {
+    changedFields[source] = std::vector<ConfigEntry>();
+  }
 }
 
 void Configurator::AddChangedField(const std::string& path,
                                    const std::string& value,
-                                   const std::string& defaultValue) {
-  changedFields.emplace_back(ConfigEntry{path, value, defaultValue});
-}
-
-const std::vector<Configurator::ConfigEntry>& Configurator::GetChangedFields() const {
-  return changedFields;
+                                   const std::string& defaultValue,
+                                   const ConfigEntry::Source source) {
+  changedFields[source].emplace_back(ConfigEntry{path, value, defaultValue, source});
 }
 
 void Configurator::LogChangedFields() {
-  if (!changedFields.empty()) {
-    LOG_INFO << "The following config values are changed from default:";
-    for (const auto& entry : changedFields) {
-      LOG_INFO << "--" << entry.Path << "=\"" << entry.Value << "\"";
+  auto isAnyEmpty =
+      std::any_of(ConfigEntry::SOURCES, std::end(ConfigEntry::SOURCES),
+                  [this](const auto& source) { return !changedFields[source].empty(); });
+  if (!isAnyEmpty) {
+    return;
+  }
+  LOG_INFO << "The following config values are changed from default:";
+  for (const auto& source : ConfigEntry::SOURCES) {
+    if (changedFields[source].empty()) {
+      continue;
+    }
+    LOG_INFO << "-- Set via " << ConfigEntry::toString(source) << ":";
+    for (const auto& entry : changedFields[source]) {
+      LOG_INFO << "  --" << entry.Path << "=\"" << entry.Value << "\"";
     }
   }
 }

@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 
-#include "log.h"
+#include "configurator.h"
 #include "enumsAuto.h"
 #include "helper.h"
 #include "stringFromType.h"
@@ -62,7 +62,11 @@ ${whitespace(2)}${option.instance_name}.updateFromEnvironment();
 ${whitespace(2)}const char* env_${option.name} = getEnvVar("${option.get_environment_string()}");
 ${whitespace(2)}if (env_${option.name}) {
 ${whitespace(3)}try {
+${whitespace(4)}auto old_${option.instance_name} = stringFrom<${option.type}>(${option.instance_name});
 ${whitespace(4)}${option.instance_name} = stringTo<${option.type}>(env_${option.name});
+${whitespace(4)}Configurator::Instance().AddChangedField("${option.get_path()}", env_${option.name},
+                                            old_${option.instance_name},
+                                            Configurator::ConfigEntry::Source::ENVIRONMENT_VARIABLE);
 ${whitespace(3)}} catch (const std::exception& e) {
 ${whitespace(4)}LOG_ERROR << "Error parsing environment variable ${option.get_environment_string()}: " << e.what() << std::endl;
 ${whitespace(3)}}

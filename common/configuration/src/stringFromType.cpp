@@ -9,11 +9,24 @@
 #include "stringFromType.h"
 #include "customTypes.h"
 
+#include <filesystem>
 #include <sstream>
 
 namespace gits {
 template <>
 std::string stringFrom<std::vector<int>>(const std::vector<int>& value) {
+  std::ostringstream oss;
+  for (size_t i = 0; i < value.size(); ++i) {
+    if (i > 0) {
+      oss << ",";
+    }
+    oss << value[i];
+  }
+  return oss.str();
+}
+
+template <>
+std::string stringFrom<std::vector<float>>(const std::vector<float>& value) {
   std::ostringstream oss;
   for (size_t i = 0; i < value.size(); ++i) {
     if (i > 0) {
@@ -79,4 +92,52 @@ std::string stringFrom(const std::vector<ApiBool>& value) {
   }
   return oss.str();
 }
+
+template <>
+std::string stringFrom<float>(const float& value) {
+  std::ostringstream oss;
+  oss << value;
+  return oss.str();
+}
+
+template <>
+std::string stringFrom<unsigned int>(const unsigned int& value) {
+  std::ostringstream oss;
+  oss << value;
+  return oss.str();
+}
+
+template <>
+std::string stringFrom<std::string>(const std::string& value) {
+  return value;
+}
+
+template <>
+std::string stringFrom<std::filesystem::path>(const std::filesystem::path& value) {
+  std::ostringstream oss;
+  oss << value;
+  return oss.str();
+}
+template <>
+std::string stringFrom<std::uint64_t>(const std::uint64_t& value) {
+  std::ostringstream oss;
+  oss << value;
+  return oss.str();
+}
+template <>
+std::string stringFrom<MemorySizeRequirementOverride>(const MemorySizeRequirementOverride& value) {
+  std::ostringstream oss;
+  if (value.fixedAmount == 0 && value.percent == 0) {
+    return std::string();
+  }
+
+  oss << value.fixedAmount << "," << value.percent;
+  return oss.str();
+}
+
+template <>
+std::string stringFrom<bool>(const bool& value) {
+  return value ? "true" : "false";
+}
+
 } // namespace gits
