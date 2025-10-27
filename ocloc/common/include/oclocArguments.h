@@ -44,9 +44,6 @@ public:
   }
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const {
-    stream << "outArg()";
-  }
 
   struct PtrConverter {
   private:

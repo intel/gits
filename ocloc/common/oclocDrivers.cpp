@@ -13,10 +13,8 @@
 
 #include <string>
 
-#ifndef BUILD_FOR_CCODE
 #include "lua_bindings.h"
 static bool bypass_luascript = false;
-#endif
 
 namespace gits {
 namespace ocloc {
@@ -37,7 +35,7 @@ template <class T>
 bool load_ocloc_function(T& func, const char* name) {
   return load_ocloc_function_generic(reinterpret_cast<void*&>(func), name);
 }
-#ifndef BUILD_FOR_CCODE
+
 template <typename T>
 inline void lua_push_ext(lua_State* L, T* arr, const uint32_t& size, bool forceString = false) {
   lua_newtable(L);
@@ -77,7 +75,6 @@ std::vector<T> lua_to_ext(lua_State* L, int pos, const uint32_t& count, bool for
                          std::string("\nLua argument type is incorrect. Your type: ") +
                          std::string(typeName));
 }
-#endif
 
 int __ocloccall special_oclocInvoke(unsigned int argc,
                                     const char** argv,
@@ -97,7 +94,6 @@ int __ocloccall special_oclocInvoke(unsigned int argc,
                       dataInputHeaders, lenInputHeaders, nameInputHeaders);
   bool call_orig = true;
   int ret = 0;
-#ifndef BUILD_FOR_CCODE
   if (Configurator::Get().common.shared.useEvents) {
     std::unique_lock<std::recursive_mutex> lock(gits::lua::luaMutex);
     if (!bypass_luascript) {
@@ -130,7 +126,6 @@ int __ocloccall special_oclocInvoke(unsigned int argc,
       }
     }
   }
-#endif
   if (call_orig) {
     ret = drv.orig_oclocInvoke(argc, argv, numSources, sources, sourceLens, sourcesNames,
                                numInputHeaders, dataInputHeaders, lenInputHeaders, nameInputHeaders,
@@ -173,7 +168,6 @@ int __ocloccall special_oclocFreeOutput(uint32_t* numOutputs,
                                         char*** nameOutputs) {
   int ret = 0;
   bool call_orig = true;
-#ifndef BUILD_FOR_CCODE
   if (Configurator::Get().common.shared.useEvents) {
     std::unique_lock<std::recursive_mutex> lock(gits::lua::luaMutex);
     if (!bypass_luascript) {
@@ -196,7 +190,6 @@ int __ocloccall special_oclocFreeOutput(uint32_t* numOutputs,
       }
     }
   }
-#endif
   LOG_FORMAT_RAW
   LOG_TRACE << LOG_PREFIX << "oclocFreeOutput()";
   if (call_orig) {
@@ -220,7 +213,7 @@ int __ocloccall default_oclocFreeOutput(uint32_t* numOutputs,
   return drv.oclocFreeOutput(numOutputs, dataOutputs, lenOutputs, nameOutputs);
 }
 } // namespace
-#ifndef BUILD_FOR_CCODE
+
 int lua_oclocInvoke(lua_State* L) {
   int top = lua_gettop(L);
   if (top != 14) {
@@ -293,14 +286,11 @@ void RegisterLuaDriverFunctions() {
   luaL_newlib(L.get(), exports);
   lua_setglobal(L.get(), "drvOcloc");
 }
-#endif
 
 CDriver::CDriver() {
   oclocInvoke = default_oclocInvoke;
   oclocFreeOutput = default_oclocFreeOutput;
-#ifndef BUILD_FOR_CCODE
   CGits::Instance().RegisterLuaFunctionsRegistrator(RegisterLuaDriverFunctions);
-#endif
 }
 
 CDriver::~CDriver() {
