@@ -178,8 +178,6 @@ public:
     read_name_from_stream(stream, key_);
   }
 
-  virtual void Write(CCodeOStream& stream) const override {}
-
   void Assign(T other) {
     AddMapping(other);
   }

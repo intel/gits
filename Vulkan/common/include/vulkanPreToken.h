@@ -452,17 +452,6 @@ public:
   }
 };
 
-template <class T_WRAP>
-class CVectorPrintHelper {
-  const std::vector<std::shared_ptr<T_WRAP>>& vec_;
-
-public:
-  CVectorPrintHelper(const std::vector<std::shared_ptr<T_WRAP>>& vec) : vec_(vec) {}
-  intptr_t ScopeKey() const {
-    return reinterpret_cast<intptr_t>(this);
-  }
-};
-
 class CGitsVkMemoryUpdate2 : public CFunction, gits::noncopyable {
   static const unsigned ARG_NUM = 5;
   std::unique_ptr<CVkDeviceMemory> _mem;
