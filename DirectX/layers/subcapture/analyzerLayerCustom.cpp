@@ -46,6 +46,7 @@ void AnalyzerLayer::post(IDXGISwapChainPresentCommand& c) {
     return;
   }
   analyzerService_.present(c.key, c.object_.key);
+  commandListService_.present();
 }
 
 void AnalyzerLayer::post(IDXGISwapChain1Present1Command& c) {
@@ -54,6 +55,7 @@ void AnalyzerLayer::post(IDXGISwapChain1Present1Command& c) {
     return;
   }
   analyzerService_.present(c.key, c.object_.key);
+  commandListService_.present();
 }
 
 void AnalyzerLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {

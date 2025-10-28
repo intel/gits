@@ -63,6 +63,7 @@ public:
   void createDescriptorHeap(ID3D12DeviceCreateDescriptorHeapCommand& c);
   void copyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& c);
   void copyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c);
+  void present();
 
   template <typename CommandListCommand>
   void command(CommandListCommand& c);
@@ -145,6 +146,7 @@ private:
   bool commandListSubcapture_{};
   bool optimize_{};
   bool dispatchRays_{};
+  bool firstFrame_{true};
 
   struct CommandListInfo {
     unsigned computeRootSignature{};

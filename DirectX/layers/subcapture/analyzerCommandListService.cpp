@@ -307,6 +307,10 @@ void AnalyzerCommandListService::copyDescriptors(ID3D12DeviceCopyDescriptorsComm
   }
 }
 
+void AnalyzerCommandListService::present() {
+  firstFrame_ = false;
+}
+
 void AnalyzerCommandListService::setBindlessDescriptors(unsigned rootSignatureKey,
                                                         unsigned descriptorHeapKey,
                                                         D3D12_DESCRIPTOR_HEAP_TYPE heapType,
@@ -828,7 +832,7 @@ void AnalyzerCommandListService::command(
         new ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand(c));
   }
   if (c.pDesc_.value->Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL &&
-      !analyzerService_.inRange() && (restoreTlases_ || commandListSubcapture_)) {
+      !analyzerService_.inRange() && (firstFrame_ || restoreTlases_ || commandListSubcapture_)) {
     raytracingService_.buildTlas(c);
   }
 
