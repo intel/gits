@@ -73,7 +73,7 @@ export GITS_COMMON_PLAYER_FULLSCREEN=true
 ## Developer guide
 ### Enums
 
-Here's the structure that define an enum:
+Here's the structure that defines an enum:
 
 ```yaml
 - Name: string                  # req.     cpp name
@@ -114,29 +114,29 @@ Here's the structure to define a configuration option:
   Tags: [string]            #     opt. tag(s) for help filtering.
   OSVisibility: [string]    #     opt. OSs that support this option.
 
-  DefaultPerPlatform:       #     opt. additional defaults
+  DefaultsPerPlatform:      #     opt. additional defaults
       - {platform}: string  #     opt. if `platform` matches
 
   DefaultCondition:         #     opt. additional defaults
       - {set_value}: string #     opt. if `set_value` is present
 ```
 
-| Name                 | Description                                                                                                                                                                                                                                 |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Name`               | The cpp variable name and config name.                                                                                                                                                                                                      |
-| `Type`               | The cpp type. *Can not be "Group" :wink:.*                                                                                                                                                                                                  |
-| `Default`            | The default value.                                                                                                                                                                                                                          |
-| `ConfigName`         | Custom option name used in the configuration file.                                                                                                                                                                                          |
-| `Description`        | A short description, e.g. for the CLI help.                                                                                                                                                                                                 |
-| `LongDescription`    | A long description, e.g. for the markdown documentation.                                                                                                                                                                                    |
-| `Accessibility`      | The way this option is accessed: `Derived`,`ArgumentOnly`. A `Derived` option is not read from the configuration file and can not be set a CLI argument. A `ArgumentOnly` option can be set via CLI argument, but not from the config file. |
-| `AccessLevel`        | Intended audience: `Beginner`,`Advanced`,`Expert`,`Developer`(default).                                                                                                                                                                     |
-| `NumericFormat`      | Output format for default value: `Hexadecimal`,`Binary`,``Decimal`(default).                                                                                                                                                                |
-| `Arguments`          | (case-sensitive) CLI-Argument(s) to set this option's value.                                                                                                                                                                                |
-| `Tags`               | Tag(s) for help filtering and future use-cases. All groups "above" a value - the path segments - are added to the tags automatically.                                                                                                       |
-| `OSVisibility`       | OS(s) that use the option: `WINDOWS`,`X11`.                                                                                                                                                                                                 |
-| `DefaultPerPlatform` | Specify defaults for specific platforms. The value set by `Default` is a fallback, when no platform matched.                                                                                                                                 |
-| `DefaultCondition`   | Specify defaults if certain conditions are _present_. Is evaluated before `DefaultPerPlatform`. When unmatched, the value set by `Default` is used.                                                                                          |
+| Name                  | Description                                                                                                                                                                                                                                 |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Name`                | The cpp variable name and config name.                                                                                                                                                                                                      |
+| `Type`                | The cpp type. *Can not be "Group" :wink:.*                                                                                                                                                                                                  |
+| `Default`             | The default value.                                                                                                                                                                                                                          |
+| `ConfigName`          | Custom option name used in the configuration file.                                                                                                                                                                                          |
+| `Description`         | A short description, e.g. for the CLI help.                                                                                                                                                                                                 |
+| `LongDescription`     | A long description, e.g. for the markdown documentation.                                                                                                                                                                                    |
+| `Accessibility`       | The way this option is accessed: `Derived`,`ArgumentOnly`. A `Derived` option is not read from the configuration file and can not be set a CLI argument. A `ArgumentOnly` option can be set via CLI argument, but not from the config file. |
+| `AccessLevel`         | Intended audience: `Beginner`,`Advanced`,`Expert`,`Developer`(default).                                                                                                                                                                     |
+| `NumericFormat`       | Output format for default value: `Hexadecimal`,`Binary`,`Decimal`(default).                                                                                                                                                                 |
+| `Arguments`           | (case-sensitive) CLI-Argument(s) to set this option's value.                                                                                                                                                                                |
+| `Tags`                | Tag(s) for help filtering and future use-cases. All groups "above" a value - the path segments - are added to the tags automatically.                                                                                                       |
+| `OSVisibility`        | OS(s) that use the option: `WINDOWS`,`X11`.                                                                                                                                                                                                 |
+| `DefaultsPerPlatform` | Specify defaults for specific platforms. The value set by `Default` is a fallback, when no platform matched.                                                                                                                                |
+| `DefaultCondition`    | Specify defaults if certain conditions are _present_. Is evaluated before `DefaultsPerPlatform`. When unmatched, the value set by `Default` is used.                                                                                        |
 
 #### Group
 
