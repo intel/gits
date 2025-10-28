@@ -31,7 +31,12 @@ Configuration:
             ConfigName: LogLevel
           - Name: logToConsole
             Type: bool
-            Default: false
+            Default: true
+            LongDescription:
+              "High logging volume might slow GITS down, so if you use tracing or add plenty of
+              debug logging, disabling logging to console can help you mitigate the performance hit.
+              You still need to set up logging to a file if you want to see the output."
+            Accessibility: Derived
           - Name: useEvents
             Type: bool
             Default: ""
@@ -140,6 +145,9 @@ Configuration:
       - Name: Player
         Type: Group
         Options:
+          - Name: logToConsole
+            Type: bool
+            Default: true
           - Name: applicationPath
             Type: std::filesystem::path
             Default: ""
@@ -569,6 +577,9 @@ Configuration:
       - Name: Recorder
         Type: Group
         Options:
+          - Name: logToConsole
+            Type: bool
+            Default: false
           - Name: libGL
             Type: std::filesystem::path
             Default: /usr/lib/{arch}-linux-gnu/libGL.so.1

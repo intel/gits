@@ -9,9 +9,10 @@
 #include "log.h"
 
 // Plog
-#include <plog/Formatters/MessageOnlyFormatter.h>
 #include <plog/Appenders/ConsoleAppender.h>
+#include <plog/Appenders/DynamicAppender.h>
 #include <plog/Appenders/RollingFileAppender.h>
+#include <plog/Formatters/MessageOnlyFormatter.h>
 #include <plog/Init.h>
 
 #include <chrono>
@@ -103,6 +104,12 @@ public:
 
 namespace gits {
 namespace log {
+
+namespace {
+static plog::ConsoleAppender<plog::GitsFormatter> consoleAppender;
+static plog::DynamicAppender dynamicAppender;
+} // namespace
+
 plog::Severity GetSeverity(gits::LogLevel lvl) {
   switch (lvl) {
   case gits::LogLevel::OFF:
@@ -123,8 +130,10 @@ plog::Severity GetSeverity(gits::LogLevel lvl) {
     return plog::Severity::none;
   }
 }
+
 void Initialize(plog::Severity severity) {
   plog::init(severity);
+  plog::get()->addAppender(&dynamicAppender);
 
 #ifdef _WIN32
   static plog::DebugOutputAppender<plog::MessageOnlyFormatter> debugAppender;
@@ -133,8 +142,11 @@ void Initialize(plog::Severity severity) {
 }
 
 void AddConsoleAppender() {
-  static plog::ConsoleAppender<plog::GitsFormatter> consoleAppender;
-  plog::get()->addAppender(&consoleAppender);
+  dynamicAppender.addAppender(&consoleAppender);
+}
+
+void RemoveConsoleAppender() {
+  dynamicAppender.removeAppender(&consoleAppender);
 }
 
 void SetLogFile(const std::filesystem::path& logFilePath) {

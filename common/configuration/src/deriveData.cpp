@@ -111,6 +111,7 @@ void DeriveConfigData<Configuration::Common::Shared>(Configuration::Common::Shar
     obj.libOcloc = config.common.player.libOcloc;
     obj.libL0 = config.common.player.libL0;
 
+    obj.logToConsole = config.common.player.logToConsole;
     obj.useEvents = config.common.player.useEvents;
     obj.scriptArgsStr = config.common.player.scriptArgsStr;
   } else {
@@ -123,6 +124,7 @@ void DeriveConfigData<Configuration::Common::Shared>(Configuration::Common::Shar
     obj.libOcloc = config.common.recorder.libOcloc;
     obj.libL0 = config.common.recorder.libL0;
 
+    obj.logToConsole = config.common.recorder.logToConsole;
     obj.useEvents = config.common.recorder.useEvents;
     obj.scriptArgsStr = config.common.recorder.scriptArgsStr;
   }

@@ -78,11 +78,12 @@ bool ConfigureRecorder(const std::filesystem::path& configPath) {
     std::cerr << "ERROR - Failed to initialize logging system shared instance!" << std::endl;
     std::cerr << "ERROR - Will create a new instance for recorder module..." << std::endl;
     log::Initialize(plog::info);
+    log::AddConsoleAppender();
   }
   const auto& cfg = Configurator::Get();
   plog::get()->setMaxSeverity(log::GetSeverity(cfg.common.shared.thresholdLogLevel));
-  if (cfg.common.shared.logToConsole) {
-    log::AddConsoleAppender();
+  if (!cfg.common.shared.logToConsole) {
+    log::RemoveConsoleAppender();
   }
   log::SetLogFile(configPath.parent_path());
 
