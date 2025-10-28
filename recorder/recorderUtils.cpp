@@ -79,8 +79,11 @@ bool ConfigureRecorder(const std::filesystem::path& configPath) {
     std::cerr << "ERROR - Will create a new instance for recorder module..." << std::endl;
     log::Initialize(plog::info);
   }
-  plog::get()->setMaxSeverity(
-      log::GetSeverity(Configurator::Instance().Get().common.shared.thresholdLogLevel));
+  const auto& cfg = Configurator::Get();
+  plog::get()->setMaxSeverity(log::GetSeverity(cfg.common.shared.thresholdLogLevel));
+  if (cfg.common.shared.logToConsole) {
+    log::AddConsoleAppender();
+  }
   log::SetLogFile(configPath.parent_path());
 
   LOG_INFO << "GITS configured for process: " << processNameHUD;

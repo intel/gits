@@ -124,13 +124,17 @@ plog::Severity GetSeverity(gits::LogLevel lvl) {
   }
 }
 void Initialize(plog::Severity severity) {
-  static plog::ConsoleAppender<plog::GitsFormatter> consoleAppender;
-  plog::init(severity).addAppender(&consoleAppender);
+  plog::init(severity);
 
 #ifdef _WIN32
   static plog::DebugOutputAppender<plog::MessageOnlyFormatter> debugAppender;
   plog::get()->addAppender(&debugAppender);
 #endif
+}
+
+void AddConsoleAppender() {
+  static plog::ConsoleAppender<plog::GitsFormatter> consoleAppender;
+  plog::get()->addAppender(&consoleAppender);
 }
 
 void SetLogFile(const std::filesystem::path& logFilePath) {

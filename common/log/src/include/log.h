@@ -68,6 +68,7 @@ namespace gits {
 namespace log {
 plog::Severity GetSeverity(gits::LogLevel lvl);
 void Initialize(plog::Severity severity);
+void AddConsoleAppender();
 void SetLogFile(const std::filesystem::path& logFilePath);
 bool ShouldLog(gits::LogLevel lvl);
 }; // namespace log

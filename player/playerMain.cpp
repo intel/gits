@@ -224,6 +224,9 @@ int MainBody(int argc, char* argv[]) {
 
   const auto& cfg = Configurator::Get();
   plog::get()->setMaxSeverity(log::GetSeverity(cfg.common.shared.thresholdLogLevel));
+  if (cfg.common.shared.logToConsole) {
+    log::AddConsoleAppender();
+  }
   if (!cfg.common.player.outputTracePath.empty()) {
     log::SetLogFile(cfg.common.player.outputTracePath);
   }
