@@ -199,6 +199,7 @@ private:
     static bool initialized = false;
     if (!initialized) {
       objects_map[0] = 0;
+      initialized = true;
     }
     return objects_map;
   }
