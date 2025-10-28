@@ -664,15 +664,6 @@ bool IsCopyResource(CFunction* cfunc) {
 }
 } // namespace
 
-CDrawFunction::CDrawFunction()
-    : _drawNum(CGits::Instance().CurrentDrawCount()),
-      _drawInFrameNum(CGits::Instance().CurrentDrawInFrameCount()),
-      _frameNum(CGits::Instance().CurrentFrame()) {}
-
-void CDrawFunction::Run() {
-  this->DrawFunctionRun();
-}
-
 NOINLINE std::unique_ptr<ScissorStateStash> HandleForceScissor(CDrawFunction* ptr) {
   std::unique_ptr<ScissorStateStash> scissorStatePtr;
   if (!IsClearOrBlitDrawcall(ptr)) {
@@ -733,15 +724,17 @@ NOINLINE void HandleCaptureDraws2DTexs() {
 }
 
 NOINLINE void HandleTrace() {
-  const auto currentDrawCount = CGits::Instance().CurrentDrawCount();
+  const auto drawNum = CGits::Instance().CurrentDrawCount();
+  const auto frameNum = CGits::Instance().CurrentFrame();
+  const auto drawInFrameNum = CGits::Instance().CurrentDrawInFrameCount();
 
   if (log::ShouldLog(LogLevel::TRACEV)) {
     StatePrinter statePrinter;
     statePrinter.PrintToLog();
   }
   LOG_FORMAT_RAW
-  LOG_TRACE << "draw: " << currentDrawCount << " frame: " << CGits::Instance().CurrentFrame()
-            << " drawInFrame: " << CGits::Instance().CurrentDrawInFrameCount() << "  ";
+  LOG_TRACE << "draw: " << drawNum << " frame: " << frameNum << " drawInFrame: " << drawInFrameNum
+            << "  ";
 }
 
 NOINLINE void HandleCaptureDraws() {
@@ -752,6 +745,22 @@ NOINLINE void HandleCaptureDraws() {
     capture_drawbuffer(GetPathForImageDumping(),
                        "drawcall-" + std::to_string(currentDrawCount) + "-post", false);
   }
+}
+
+CDrawFunction::CDrawFunction()
+    : _drawNum(CGits::Instance().CurrentDrawCount()),
+      _drawInFrameNum(CGits::Instance().CurrentDrawInFrameCount()),
+      _frameNum(CGits::Instance().CurrentFrame()) {
+  if (Configurator::IsRecorder()) {
+    // In recorder, token creation runs when app calls the corresponding API function. In player,
+    // token creation runs when tokens are loaded, in batches, long before player makes the relevant
+    // API call. Thus, in player, we log the same info on token playback, not creation.
+    HandleTrace();
+  }
+}
+
+void CDrawFunction::Run() {
+  this->DrawFunctionRun();
 }
 
 void CDrawFunction::DrawFunctionRun() {
