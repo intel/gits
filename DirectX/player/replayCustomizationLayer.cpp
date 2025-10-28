@@ -1512,6 +1512,20 @@ void ReplayCustomizationLayer::pre(
   c.skip = true;
 }
 
+void ReplayCustomizationLayer::post(CreateDXGIFactory2Command& c) {
+  if (c.skip || c.result_.value == S_OK) {
+    return;
+  }
+
+  LOG_ERROR << "CreateDXGIFactory2 failed. Playback will fail.";
+  if (c.Flags_.value & DXGI_CREATE_FACTORY_DEBUG) {
+    LOG_ERROR
+        << "CreateDXGIFactory2 with DXGI_CREATE_FACTORY_DEBUG flag failed."
+        << "Make sure that the `Graphics Tools` feature is installed."
+        << "On Windows 11 go to Settings->System->Optional features and enable `Graphics Tools`";
+  }
+}
+
 void ReplayCustomizationLayer::fillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg) {
   if (useAddressPinning_) {
     return;

@@ -173,6 +173,7 @@ public:
   void pre(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& command) override;
   void pre(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& command) override;
   void pre(NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationCommand& command) override;
+  void post(CreateDXGIFactory2Command& command) override;
 
 private:
   struct NvAPIShaderExtnSlot {
