@@ -85,7 +85,7 @@ bool ConfigureRecorder(const std::filesystem::path& configPath) {
   if (!cfg.common.shared.logToConsole) {
     log::RemoveConsoleAppender();
   }
-  log::SetLogFile(configPath.parent_path());
+  log::AddFileAppender(configPath.parent_path());
 
   LOG_INFO << "GITS configured for process: " << processNameHUD;
 

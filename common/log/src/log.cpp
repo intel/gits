@@ -149,7 +149,7 @@ void RemoveConsoleAppender() {
   dynamicAppender.removeAppender(&consoleAppender);
 }
 
-void SetLogFile(const std::filesystem::path& logFilePath) {
+void AddFileAppender(const std::filesystem::path& logFilePath) {
   static std::unique_ptr<plog::IAppender> fileAppender;
   if (logFilePath.empty()) {
     return;

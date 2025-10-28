@@ -229,7 +229,7 @@ int MainBody(int argc, char* argv[]) {
     log::RemoveConsoleAppender();
   }
   if (!cfg.common.player.outputTracePath.empty()) {
-    log::SetLogFile(cfg.common.player.outputTracePath);
+    log::AddFileAppender(cfg.common.player.outputTracePath);
   }
 
   int returnValue = EXIT_SUCCESS;
