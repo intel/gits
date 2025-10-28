@@ -13,7 +13,7 @@
 namespace gits {
 namespace Vulkan {
 /**
-    * @brief Creates Vulkan function call warapper
+    * @brief Creates Vulkan function call wrapper
     *
     * Method creates Vulkan function call wrappers based on unique
     * identifier.

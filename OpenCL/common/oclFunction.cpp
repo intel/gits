@@ -17,7 +17,7 @@ namespace gits {
 namespace OpenCL {
 
 /**
-    * @brief Creates OpenCL function call warapper
+    * @brief Creates OpenCL function call wrapper
     *
     * Method creates OpenCL function call wrappers based on unique
     * identifier.

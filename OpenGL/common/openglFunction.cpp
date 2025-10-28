@@ -32,7 +32,7 @@ namespace gits {
 namespace OpenGL {
 
 /**
- * @brief Creates OpenGL function call warapper
+ * @brief Creates OpenGL function call wrapper
  *
  * Method creates OpenGL function call wrappers based on unique
  * identifier.
