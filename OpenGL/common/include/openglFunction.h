@@ -375,7 +375,7 @@ class CDrawFunction : public CFunction {
 public:
   CDrawFunction();
   // Common 'Run' for all drawcalls. Do not override.
-  virtual void Run();
+  virtual void Run() final;
   virtual void RunImpl() = 0;
 
 private:
