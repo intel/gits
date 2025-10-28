@@ -30,6 +30,8 @@ set(ROOT_SRC
   rtasSerializer.cpp
   rtasDeserializer.h
   rtasDeserializer.cpp
+  bufferPool.h
+  bufferPool.cpp
 )
 source_group("" FILES ${ROOT_SRC})
 

@@ -80,7 +80,7 @@ bool RtasDeserializer::preloadCache(ID3D12Device5* device) {
       cacheData_.clear();
       return false;
     }
-
+    maxBufferSize_ = std::max(maxBufferSize_, size);
     cacheData_[key] = std::move(data);
   }
   logI(gits_, "RtasCache - Cache file read successfully, total BLASes: ", cacheData_.size());
@@ -137,45 +137,29 @@ bool RtasDeserializer::deserialize(unsigned buildKey,
     return false;
   }
 
-  Microsoft::WRL::ComPtr<ID3D12Device> device;
-  HRESULT hr = commandList->GetDevice(IID_PPV_ARGS(&device));
-  assert(hr == S_OK);
-
-  Microsoft::WRL::ComPtr<ID3D12Resource> serializedBuffer;
-
-  {
-    D3D12_HEAP_PROPERTIES heapProperties{};
-    heapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
-    heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-    heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-    heapProperties.CreationNodeMask = 1;
-    heapProperties.VisibleNodeMask = 1;
-
-    D3D12_RESOURCE_DESC resourceDesc{};
-    resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-    resourceDesc.Width = size;
-    resourceDesc.Height = 1;
-    resourceDesc.DepthOrArraySize = 1;
-    resourceDesc.MipLevels = 1;
-    resourceDesc.SampleDesc = {1, 0};
-    resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-
-    hr = device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-                                         D3D12_RESOURCE_STATE_COMMON, nullptr,
-                                         IID_PPV_ARGS(&serializedBuffer));
+  // Create buffer pool if not initialized
+  if (bufferPool_.size() == 0) {
+    logI(gits_, "RtasCache - Initializing buffer pool with buffer size: ",
+         FormatMemorySize(maxBufferSize_));
+    Microsoft::WRL::ComPtr<ID3D12Device> device;
+    HRESULT hr = commandList->GetDevice(IID_PPV_ARGS(&device));
     assert(hr == S_OK);
-
-    void* bufferData{};
-    hr = serializedBuffer->Map(0, nullptr, &bufferData);
-    memcpy(bufferData, data.data(), size);
-    serializedBuffer->Unmap(0, nullptr);
-
-    commandList->CopyRaytracingAccelerationStructure(
-        desc.DestAccelerationStructureData, serializedBuffer->GetGPUVirtualAddress(),
-        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_DESERIALIZE);
-
-    buffersByCommandList_[commandList].emplace_back(serializedBuffer);
+    bufferPool_.initialize(device.Get(), maxBufferSize_, 0);
   }
+
+  auto buffer = bufferPool_.acquireBuffer(buildKey);
+  assert(buffer);
+
+  void* bufferData{};
+  auto hr = buffer->Map(0, nullptr, &bufferData);
+  memcpy(bufferData, data.data(), size);
+  buffer->Unmap(0, nullptr);
+
+  commandList->CopyRaytracingAccelerationStructure(
+      desc.DestAccelerationStructureData, buffer->GetGPUVirtualAddress(),
+      D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_DESERIALIZE);
+
+  buildKeysByCommandList_[commandList].emplace_back(buildKey);
 
   data.clear();
 
@@ -189,8 +173,8 @@ void RtasDeserializer::executeCommandLists(unsigned key,
                                            unsigned commandListNum) {
   bool found = false;
   for (unsigned i = 0; i < commandListNum; ++i) {
-    auto itCommandList = buffersByCommandList_.find(commandLists[i]);
-    if (itCommandList != buffersByCommandList_.end()) {
+    auto itCommandList = buildKeysByCommandList_.find(commandLists[i]);
+    if (itCommandList != buildKeysByCommandList_.end()) {
       found = true;
       break;
     }
@@ -220,10 +204,10 @@ void RtasDeserializer::executeCommandLists(unsigned key,
   executeInfo.fenceValue = itCommandQueue->second.fenceValue;
 
   for (unsigned i = 0; i < commandListNum; ++i) {
-    auto itCommandList = buffersByCommandList_.find(commandLists[i]);
-    if (itCommandList != buffersByCommandList_.end()) {
-      for (auto& buffer : itCommandList->second) {
-        executeInfo.buffers.emplace_back(buffer);
+    auto itCommandList = buildKeysByCommandList_.find(commandLists[i]);
+    if (itCommandList != buildKeysByCommandList_.end()) {
+      for (auto buildKey : itCommandList->second) {
+        executeInfo.buildKeys.push_back(buildKey);
       }
     }
   }
@@ -238,6 +222,9 @@ void RtasDeserializer::cleanup() {
       ExecuteInfo& executeInfo = it.second.executes.front();
       if (executeInfo.fenceValue > completedValue) {
         break;
+      }
+      for (auto buildKey : executeInfo.buildKeys) {
+        bufferPool_.releaseBuffer(buildKey);
       }
       it.second.executes.pop();
     }

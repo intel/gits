@@ -8,11 +8,10 @@
 
 #pragma once
 
-#include <string>
-#include <d3d12.h>
-#include <wrl/client.h>
+#include "bufferPool.h"
+
 #include <unordered_map>
-#include <vector>
+#include <string>
 #include <queue>
 #include <fstream>
 
@@ -46,12 +45,11 @@ private:
 
 private:
   CGits& gits_;
-  std::unordered_map<ID3D12CommandList*, std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>>>
-      buffersByCommandList_;
+  std::unordered_map<ID3D12CommandList*, std::vector<unsigned>> buildKeysByCommandList_;
 
   struct ExecuteInfo {
     UINT64 fenceValue{};
-    std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> buffers;
+    std::vector<unsigned> buildKeys;
   };
   struct CommandQueueInfo {
     Microsoft::WRL::ComPtr<ID3D12Fence> fence;
@@ -62,6 +60,8 @@ private:
 
   std::string cacheFilePath_;
   std::unordered_map<unsigned, std::vector<uint8_t>> cacheData_;
+  unsigned maxBufferSize_{0};
+  BufferPool bufferPool_;
 };
 
 } // namespace DirectX
