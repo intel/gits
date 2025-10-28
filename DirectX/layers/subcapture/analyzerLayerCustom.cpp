@@ -1011,6 +1011,7 @@ void AnalyzerLayer::post(ID3D12DeviceCreateCommandSignatureCommand& c) {
   }
   if (optimize_) {
     executeIndirectService_.createCommandSignature(c);
+    commandListService_.createCommandSignature(c);
   }
 }
 

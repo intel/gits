@@ -61,6 +61,7 @@ public:
   void commandListsRestore(const std::set<unsigned>& commandLists);
   void commandListReset(ID3D12GraphicsCommandListResetCommand& c);
   void createDescriptorHeap(ID3D12DeviceCreateDescriptorHeapCommand& c);
+  void createCommandSignature(ID3D12DeviceCreateCommandSignatureCommand& c);
   void copyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& c);
   void copyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c);
   void present();
@@ -161,6 +162,7 @@ private:
     unsigned numDescriptors{};
   };
   std::unordered_map<unsigned, DescriptorHeapInfo> descriptorHeapInfos_;
+  std::unordered_set<unsigned> dispatchRaysCommandSignatures_;
 
   std::unordered_map<unsigned, std::vector<std::unique_ptr<Command>>> commandsByCommandList_;
   std::unordered_map<unsigned, bool> resetCommandLists_;

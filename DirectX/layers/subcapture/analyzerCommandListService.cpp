@@ -266,6 +266,17 @@ void AnalyzerCommandListService::createDescriptorHeap(ID3D12DeviceCreateDescript
       c.pDescriptorHeapDesc_.value->NumDescriptors;
 }
 
+void AnalyzerCommandListService::createCommandSignature(
+    ID3D12DeviceCreateCommandSignatureCommand& c) {
+  D3D12_COMMAND_SIGNATURE_DESC* desc = c.pDesc_.value;
+  for (unsigned i = 0; i < desc->NumArgumentDescs; ++i) {
+    if (desc->pArgumentDescs[i].Type == D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_RAYS) {
+      dispatchRaysCommandSignatures_.insert(c.ppvCommandSignature_.key);
+      break;
+    }
+  }
+}
+
 void AnalyzerCommandListService::copyDescriptors(ID3D12DeviceCopyDescriptorsSimpleCommand& c) {
   if (analyzerService_.inRange()) {
     for (unsigned i = 0; i < c.NumDescriptors_.value; ++i) {
@@ -699,6 +710,12 @@ void AnalyzerCommandListService::commandAnalysis(
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListExecuteIndirectCommand& c) {
+
+  if (dispatchRaysCommandSignatures_.find(c.pCommandSignature_.key) !=
+      dispatchRaysCommandSignatures_.end()) {
+    dispatchRays_ = true;
+  }
+
   executeIndirectService_.executeIndirect(c);
   CommandListInfo& info = commandListInfos_[c.object_.key];
   if (info.viewDescriptorHeap) {
