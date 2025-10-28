@@ -59,7 +59,7 @@ private:
 };
 } // namespace plog
 
-// This macros are not part of the Plog library and should only be used to help with the transition
+// These macros are not part of the Plog library and should only be used to help with the transition
 // Only intended to be used for LOG_TRACE
 #define LOG_FORMAT_RAW plog::FormatRawScope formatRawScopeInstance;
 #define LOG_PREFIX     plog::LogPrefix(plog::Severity::debug)
