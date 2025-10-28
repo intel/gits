@@ -22,6 +22,12 @@ void ExecutionSerializationLayer::post(StateRestoreEndCommand& c) {
   recorder_.record(new CTokenMarker(CToken::ID_INIT_END));
 }
 
+void ExecutionSerializationLayer::post(MarkerUInt64Command& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new CTokenMarkerUInt64(c.value_));
+  }
+}
+
 void ExecutionSerializationLayer::pre(IDXGISwapChainPresentCommand& c) {
   if (recorder_.isRunning()) {
     recorder_.record(new IDXGISwapChainPresentWriter(c));

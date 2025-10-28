@@ -29,6 +29,7 @@ public:
   
   void post(StateRestoreBeginCommand& c) override;
   void post(StateRestoreEndCommand& c) override;
+  void post(MarkerUInt64Command& c) override;
   void pre(CreateWindowMetaCommand& c) override;
   void pre(MappedDataMetaCommand& c) override;
   void pre(CreateHeapAllocationMetaCommand& c) override;
