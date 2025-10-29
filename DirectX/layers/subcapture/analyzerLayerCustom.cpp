@@ -31,7 +31,8 @@ AnalyzerLayer::AnalyzerLayer(SubcaptureRange& subcaptureRange)
                          descriptorHandleService_,
                          shaderIdentifierService_,
                          commandListService_,
-                         rootSignatureService_),
+                         rootSignatureService_,
+                         resourceStateTracker_),
       executeIndirectService_(gpuAddressService_, raytracingService_, commandListService_) {
   optimize_ = Configurator::Get().directx.features.subcapture.optimize;
   optimizeRaytracing_ = Configurator::Get().directx.features.subcapture.optimizeRaytracing;
@@ -63,6 +64,9 @@ void AnalyzerLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
   analyzerService_.notifyObjects(c.ppCommandLists_.keys);
   analyzerService_.executeCommandLists(c.key, c.object_.key, c.ppCommandLists_.keys);
   if (optimize_ || optimizeRaytracing_) {
+    resourceStateTracker_.executeCommandLists(
+        reinterpret_cast<ID3D12GraphicsCommandList**>(c.ppCommandLists_.value),
+        c.NumCommandLists_.value);
     raytracingService_.executeCommandLists(c.key, c.object_.key, c.object_.value,
                                            c.ppCommandLists_.value, c.NumCommandLists_.value);
   }
@@ -512,6 +516,7 @@ void AnalyzerLayer::post(IUnknownReleaseCommand& c) {
   if (optimize_ || optimizeRaytracing_) {
     if (c.result_.value == 0) {
       gpuAddressService_.destroyInterface(c.object_.key);
+      resourceStateTracker_.destroyResource(c.object_.key);
     }
   }
 }
@@ -583,6 +588,8 @@ void AnalyzerLayer::post(ID3D12GraphicsCommandListSetPipelineStateCommand& c) {
 void AnalyzerLayer::post(ID3D12GraphicsCommandListResourceBarrierCommand& c) {
   analyzerService_.commandListCommand(c.object_.key);
   if (optimize_) {
+    resourceStateTracker_.resourceBarrier(c.object_.value, c.pBarriers_.value, c.NumBarriers_.value,
+                                          c.pBarriers_.resourceKeys.data());
     commandListService_.command(c);
   }
 }
@@ -789,6 +796,7 @@ void AnalyzerLayer::post(INTC_D3D12_CreateReservedResourceCommand& c) {
   analyzerService_.notifyObject(c.pExtensionContext_.key);
   analyzerService_.notifyObject(c.ppvResource_.key);
   analyzerService_.addParent(c.ppvResource_.key, c.pExtensionContext_.key);
+  resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialState_.value);
 }
 
 void AnalyzerLayer::post(INTC_D3D12_SetFeatureSupportCommand& c) {
@@ -813,12 +821,14 @@ void AnalyzerLayer::post(INTC_D3D12_CreatePlacedResourceCommand& c) {
   analyzerService_.notifyObject(c.ppvResource_.key);
   analyzerService_.addParent(c.ppvResource_.key, c.pExtensionContext_.key);
   analyzerService_.addParent(c.ppvResource_.key, c.pHeap_.key);
+  resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialState_.value);
 }
 
 void AnalyzerLayer::post(INTC_D3D12_CreateCommittedResourceCommand& c) {
   analyzerService_.notifyObject(c.pExtensionContext_.key);
   analyzerService_.notifyObject(c.ppvResource_.key);
   analyzerService_.addParent(c.ppvResource_.key, c.pExtensionContext_.key);
+  resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialResourceState_.value);
 }
 
 void AnalyzerLayer::post(INTC_D3D12_CreateHeapCommand& c) {
@@ -936,11 +946,7 @@ void AnalyzerLayer::post(ID3D12DeviceCreateCommittedResourceCommand& c) {
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvResource_.key);
   analyzerService_.addParent(c.ppvResource_.key, c.object_.key);
-  if (optimize_ || optimizeRaytracing_) {
-    if (c.InitialResourceState_.value == D3D12_RESOURCE_STATE_GENERIC_READ) {
-      raytracingService_.genericReadResource(c.ppvResource_.key);
-    }
-  }
+  resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialResourceState_.value);
 }
 
 void AnalyzerLayer::post(ID3D12DeviceCreateHeapCommand& c) {
@@ -956,11 +962,9 @@ void AnalyzerLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
   analyzerService_.addParent(c.ppvResource_.key, c.pHeap_.key);
   if (optimize_ || optimizeRaytracing_) {
     if (c.result_.value == S_OK) {
+      resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialState_.value);
       gpuAddressService_.createPlacedResource(c.pHeap_.key, c.ppvResource_.key,
                                               c.pDesc_.value->Flags);
-      if (c.InitialState_.value == D3D12_RESOURCE_STATE_GENERIC_READ) {
-        raytracingService_.genericReadResource(c.ppvResource_.key);
-      }
     }
   }
 }
@@ -969,6 +973,7 @@ void AnalyzerLayer::post(ID3D12DeviceCreateReservedResourceCommand& c) {
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvResource_.key);
   analyzerService_.addParent(c.ppvResource_.key, c.object_.key);
+  resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialState_.value);
 }
 
 void AnalyzerLayer::post(ID3D12DeviceCreateSharedHandleCommand& c) {
@@ -1044,11 +1049,7 @@ void AnalyzerLayer::post(ID3D12Device4CreateCommittedResource1Command& c) {
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvResource_.key);
   analyzerService_.addParent(c.ppvResource_.key, c.object_.key);
-  if (optimize_ || optimizeRaytracing_) {
-    if (c.InitialResourceState_.value == D3D12_RESOURCE_STATE_GENERIC_READ) {
-      raytracingService_.genericReadResource(c.ppvResource_.key);
-    }
-  }
+  resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialResourceState_.value);
 }
 
 void AnalyzerLayer::post(ID3D12Device4CreateHeap1Command& c) {
@@ -1065,6 +1066,7 @@ void AnalyzerLayer::post(ID3D12Device4CreateReservedResource1Command& c) {
   analyzerService_.notifyObject(c.ppvResource_.key);
   analyzerService_.addParent(c.ppvResource_.key, c.object_.key);
   analyzerService_.addParent(c.ppvResource_.key, c.pProtectedSession_.key);
+  resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialState_.value);
 }
 
 void AnalyzerLayer::post(ID3D12Device5CreateLifetimeTrackerCommand& c) {
@@ -1106,11 +1108,7 @@ void AnalyzerLayer::post(ID3D12Device8CreateCommittedResource2Command& c) {
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvResource_.key);
   analyzerService_.addParent(c.ppvResource_.key, c.object_.key);
-  if (optimize_ || optimizeRaytracing_) {
-    if (c.InitialResourceState_.value == D3D12_RESOURCE_STATE_GENERIC_READ) {
-      raytracingService_.genericReadResource(c.ppvResource_.key);
-    }
-  }
+  resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialResourceState_.value);
 }
 
 void AnalyzerLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
@@ -1120,11 +1118,9 @@ void AnalyzerLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
   analyzerService_.addParent(c.ppvResource_.key, c.pHeap_.key);
   if (optimize_ || optimizeRaytracing_) {
     if (c.result_.value == S_OK) {
+      resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialState_.value);
       gpuAddressService_.createPlacedResource(c.pHeap_.key, c.ppvResource_.key,
                                               c.pDesc_.value->Flags);
-      if (c.InitialState_.value == D3D12_RESOURCE_STATE_GENERIC_READ) {
-        raytracingService_.genericReadResource(c.ppvResource_.key);
-      }
     }
   }
 }
@@ -1145,11 +1141,7 @@ void AnalyzerLayer::post(ID3D12Device10CreateCommittedResource3Command& c) {
   analyzerService_.notifyObject(c.object_.key);
   analyzerService_.notifyObject(c.ppvResource_.key);
   analyzerService_.addParent(c.ppvResource_.key, c.object_.key);
-  if (optimize_ || optimizeRaytracing_) {
-    if (c.InitialLayout_.value == D3D12_BARRIER_LAYOUT_GENERIC_READ) {
-      raytracingService_.genericReadResource(c.ppvResource_.key);
-    }
-  }
+  resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialLayout_.value);
 }
 
 void AnalyzerLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
@@ -1159,11 +1151,9 @@ void AnalyzerLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
   analyzerService_.addParent(c.pHeap_.key, c.pHeap_.key);
   if (optimize_ || optimizeRaytracing_) {
     if (c.result_.value == S_OK) {
+      resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialLayout_.value);
       gpuAddressService_.createPlacedResource(c.pHeap_.key, c.ppvResource_.key,
                                               c.pDesc_.value->Flags);
-      if (c.InitialLayout_.value == D3D12_BARRIER_LAYOUT_GENERIC_READ) {
-        raytracingService_.genericReadResource(c.ppvResource_.key);
-      }
     }
   }
 }
@@ -1174,6 +1164,7 @@ void AnalyzerLayer::post(ID3D12Device10CreateReservedResource2Command& c) {
   analyzerService_.notifyObject(c.ppvResource_.key);
   analyzerService_.addParent(c.ppvResource_.key, c.object_.key);
   analyzerService_.addParent(c.ppvResource_.key, c.pProtectedSession_.key);
+  resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialLayout_.value);
 }
 
 void AnalyzerLayer::post(ID3D12Device14CreateRootSignatureFromSubobjectInLibraryCommand& c) {

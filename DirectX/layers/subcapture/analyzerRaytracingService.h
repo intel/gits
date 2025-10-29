@@ -16,6 +16,7 @@
 #include "capturePlayerShaderIdentifierService.h"
 #include "descriptorService.h"
 #include "rootSignatureService.h"
+#include "resourceStateTracker.h"
 
 #include <unordered_map>
 #include <unordered_set>
@@ -33,7 +34,8 @@ public:
                             CapturePlayerDescriptorHandleService& descriptorHandleService,
                             CapturePlayerShaderIdentifierService& shaderIdentifierService,
                             AnalyzerCommandListService& commandListService,
-                            RootSignatureService& rootSignatureService);
+                            RootSignatureService& rootSignatureService,
+                            ResourceStateTracker& resourceStateTracker);
   void createStateObject(ID3D12Device5CreateStateObjectCommand& c);
   void addToStateObject(ID3D12Device7AddToStateObjectCommand& c);
   void setPipelineState(ID3D12GraphicsCommandList4SetPipelineState1Command& c);
@@ -46,7 +48,8 @@ public:
                         unsigned resourceKey,
                         unsigned offset,
                         UINT64 size,
-                        UINT64 stride);
+                        UINT64 stride,
+                        D3D12_GPU_VIRTUAL_ADDRESS address);
   void addAccelerationStructureSource(unsigned key, unsigned offset) {
     sources_.insert(std::make_pair(key, offset));
   }
@@ -66,9 +69,6 @@ public:
                           UINT64 fenceValue);
   void fenceSignal(unsigned key, unsigned fenceKey, UINT64 fenceValue);
   void getGPUVirtualAddress(ID3D12ResourceGetGPUVirtualAddressCommand& c);
-  void genericReadResource(unsigned resourceKey) {
-    genericReadResources_.insert(resourceKey);
-  }
 
   CapturePlayerGpuAddressService& getGpuAddressService() {
     return gpuAddressService_;
@@ -116,6 +116,7 @@ private:
   DescriptorService& descriptorService_;
   AnalyzerCommandListService& commandListService_;
   RootSignatureService& rootSignatureService_;
+  ResourceStateTracker& resourceStateTracker_;
 
   std::unordered_map<unsigned, std::set<unsigned>> stateObjectsDirectSubobjects_;
   std::unordered_map<unsigned, std::unique_ptr<BindingTablesDump::StateObjectInfo>>
@@ -129,7 +130,6 @@ private:
   std::map<KeyOffset, unsigned> tlasBuildKeys_;
   std::set<KeyOffset> sources_;
   std::unordered_map<unsigned, ID3D12Resource*> resourceByKey_;
-  std::unordered_set<unsigned> genericReadResources_;
   std::unordered_map<unsigned, std::vector<D3D12_GPU_VIRTUAL_ADDRESS>> instancesArraysOfPointers_;
 };
 

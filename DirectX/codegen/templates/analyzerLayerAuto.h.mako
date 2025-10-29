@@ -20,6 +20,7 @@ ${header}
 #include "capturePlayerDescriptorHandleService.h"
 #include "capturePlayerShaderIdentifierService.h"
 #include "subcaptureRange.h"
+#include "resourceStateTracker.h"
 
 namespace gits {
 namespace DirectX {
@@ -86,6 +87,7 @@ private:
   AnalyzerRaytracingService raytracingService_;
   AnalyzerExecuteIndirectService executeIndirectService_;
   AnalyzerService analyzerService_;
+  ResourceStateTracker resourceStateTracker_;
 };
 
 } // namespace DirectX
