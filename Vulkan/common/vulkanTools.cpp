@@ -3154,7 +3154,9 @@ uint32_t getMappedMemoryTypeIndex(VkDevice device, uint32_t memoryTypeIndexOrigi
   auto& correspondingMemoryTypeIndexes =
       SD()._devicestates[device]->physicalDeviceStateStore->correspondingMemoryTypeIndexes;
 
-  if (correspondingMemoryTypeIndexes.empty()) {
+  if (correspondingMemoryTypeIndexes.empty() ||
+      (correspondingMemoryTypeIndexes.find(memoryTypeIndexOriginal) ==
+       correspondingMemoryTypeIndexes.end())) {
     LOG_ERROR
         << "Memory type index mapping does not exist for this stream. The reason is that "
            "there is no vkPassPhysicalDeviceMemoryPropertiesGITS token recorded. The solution "
