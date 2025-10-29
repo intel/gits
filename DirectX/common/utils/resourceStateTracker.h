@@ -20,6 +20,7 @@ namespace DirectX {
 class ResourceStateTracker {
 public:
   void addResource(unsigned resourceKey, D3D12_RESOURCE_STATES initialState);
+  void addResource(unsigned resourceKey, D3D12_BARRIER_LAYOUT initialState);
   void resourceBarrier(ID3D12GraphicsCommandList* commandList,
                        D3D12_RESOURCE_BARRIER* barriers,
                        unsigned barriersNum,
@@ -29,6 +30,9 @@ public:
   D3D12_RESOURCE_STATES getResourceState(ID3D12GraphicsCommandList* commandList,
                                          unsigned resourceKey,
                                          unsigned subresource);
+
+private:
+  D3D12_RESOURCE_STATES getResourceState(D3D12_BARRIER_LAYOUT layout);
 
 private:
   using ResourceStatesBySubresource = std::map<unsigned, D3D12_RESOURCE_STATES>;

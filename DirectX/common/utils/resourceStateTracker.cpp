@@ -16,6 +16,11 @@ void ResourceStateTracker::addResource(unsigned resourceKey, D3D12_RESOURCE_STAT
   resourceStates_[resourceKey][D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES] = initialState;
 }
 
+void ResourceStateTracker::addResource(unsigned resourceKey, D3D12_BARRIER_LAYOUT initialState) {
+  D3D12_RESOURCE_STATES state = getResourceState(initialState);
+  addResource(resourceKey, state);
+}
+
 void ResourceStateTracker::destroyResource(unsigned resourceKey) {
   resourceStates_.erase(resourceKey);
 }
@@ -92,6 +97,54 @@ D3D12_RESOURCE_STATES ResourceStateTracker::getResourceState(ID3D12GraphicsComma
   GITS_ASSERT(it != itResource->second.end());
 
   return it->second;
+}
+
+D3D12_RESOURCE_STATES ResourceStateTracker::getResourceState(D3D12_BARRIER_LAYOUT layout) {
+
+  D3D12_RESOURCE_STATES state{};
+
+  switch (layout) {
+  case D3D12_BARRIER_LAYOUT_COMMON:
+    break;
+  case D3D12_BARRIER_LAYOUT_GENERIC_READ:
+    state = D3D12_RESOURCE_STATE_GENERIC_READ;
+    break;
+  case D3D12_BARRIER_LAYOUT_RENDER_TARGET:
+    state = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    break;
+  case D3D12_BARRIER_LAYOUT_UNORDERED_ACCESS:
+    state = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    break;
+  case D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_WRITE:
+    state = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+    break;
+  case D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_READ:
+    state = D3D12_RESOURCE_STATE_DEPTH_READ;
+    break;
+  case D3D12_BARRIER_LAYOUT_SHADER_RESOURCE:
+    state =
+        D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    break;
+  case D3D12_BARRIER_LAYOUT_COPY_SOURCE:
+    state = D3D12_RESOURCE_STATE_COPY_SOURCE;
+    break;
+  case D3D12_BARRIER_LAYOUT_COPY_DEST:
+    state = D3D12_RESOURCE_STATE_COPY_DEST;
+    break;
+  case D3D12_BARRIER_LAYOUT_RESOLVE_SOURCE:
+    state = D3D12_RESOURCE_STATE_RESOLVE_SOURCE;
+    break;
+  case D3D12_BARRIER_LAYOUT_RESOLVE_DEST:
+    state = D3D12_RESOURCE_STATE_RESOLVE_DEST;
+    break;
+  case D3D12_BARRIER_LAYOUT_SHADING_RATE_SOURCE:
+    state = D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE;
+    break;
+  default:
+    LOG_ERROR << "Barrier layout not handled " << layout << "!";
+  }
+
+  return state;
 }
 
 } // namespace DirectX
