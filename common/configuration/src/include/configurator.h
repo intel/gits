@@ -92,7 +92,6 @@ public: // Singleton
   static const Configuration& Get();
   static Configuration& GetMutable();
 
-#ifndef BUILD_FOR_CCODE
   static bool LoadInto(const std::filesystem::path& filepath, Configuration* config);
   bool Load(const std::filesystem::path& filepath);
 
@@ -107,7 +106,6 @@ public: // Singleton
                        const std::string& defaultValue,
                        const ConfigEntry::Source source);
   void LogChangedFields();
-#endif
 
 public: // Configuration
   void UpdateFromEnvironment();

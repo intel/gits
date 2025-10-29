@@ -22,9 +22,7 @@
 #include "stringFromType.h"
 #include "stringToType.h"
 #include "bit_range.h"
-#ifndef BUILD_FOR_CCODE
 #include "deriveData.h"
-#endif
 
 namespace gits {
 <%!
@@ -77,7 +75,6 @@ ${whitespace(2)}}
 }
 % endfor
 
-#ifndef BUILD_FOR_CCODE
 % for group in groups:
 void ${group.namespace_str}::DeriveData(Configuration &config) {
   DeriveConfigData(*this, config);
@@ -89,5 +86,4 @@ template <typename T>
 void DeriveConfigData(T& obj, Configuration& config) {
   return;
 }
-#endif
 } // namespace gits

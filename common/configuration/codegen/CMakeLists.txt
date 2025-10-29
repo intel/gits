@@ -98,7 +98,6 @@ add_custom_command(
   WORKING_DIRECTORY ${CONFIG_GENERATOR_SCRIPTS_DIR}
 )
 
-if(NOT DEFINED BUILD_FOR_CCODE)
 set(GENERATED_DOCS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../docs/documentation/configuration)
 
 set(GENERATED_DOCS
@@ -132,4 +131,3 @@ if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.20")
 endif()
 
 add_dependencies(config_codegen config_docs_gen)
-endif()

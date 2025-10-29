@@ -9,29 +9,19 @@
 #include "configurator.h"
 
 #include <filesystem>
-#ifndef BUILD_FOR_CCODE
 #include <yaml-cpp/yaml.h>
-#endif
 #include <iostream>
 #include <fstream>
 #include <regex>
 
 #include "configurationAuto.h"
-
-#ifndef BUILD_FOR_CCODE
 #include "configurationYAMLAuto.h"
 #include "lua_bindings.h"
 #include "configUtils.h"
-#endif
-
 #include "gits.h"
 #include "tools.h"
 #include "exception.h"
-
-#ifndef BUILD_FOR_CCODE
 #include "diagnostic.h"
-#endif
-
 #include "log.h"
 
 namespace {
@@ -94,7 +84,6 @@ void Configurator::UpdateFromEnvironment() {
   Instance().configuration.updateFromEnvironment();
 }
 
-#ifndef BUILD_FOR_CCODE
 void Configurator::DeriveData() {
   configuration.DeriveData(configuration);
 }
@@ -216,5 +205,4 @@ void Configurator::LogChangedFields() {
   }
 }
 
-#endif
 } // namespace gits

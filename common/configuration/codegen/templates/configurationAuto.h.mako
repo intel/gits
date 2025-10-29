@@ -31,9 +31,7 @@ def whitespace(number):
 %>
 <%def name="render_group(data, indentation)">
 ${whitespace(indentation)}struct ${data.name} {
-#ifndef BUILD_FOR_CCODE
 ${whitespace(indentation + 1)}void DeriveData(Configuration& config);
-#endif
 % for option in data.options:
     % if option.is_group:
 ${render_group(option, indentation+1)}
@@ -52,8 +50,6 @@ ${whitespace(indentation)}} ${data.instance_name};
 </%def>
 ${render_group(data, 0)}
 
-#ifndef BUILD_FOR_CCODE
 template <typename T>
 void DeriveConfigData(T& obj, Configuration& config);
-#endif
 } // namespace gits

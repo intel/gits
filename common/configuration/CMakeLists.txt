@@ -15,66 +15,41 @@ set(HEADER_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/include)
 
 add_subdirectory(codegen)
 
-if(NOT DEFINED BUILD_FOR_CCODE)
-  set(CPP_FILES
-    ${CPP_SRC}/configurator.cpp
-    ${CPP_SRC}/customTypes.cpp
-    ${CPP_SRC}/customTypesYAML.cpp
-    ${CPP_SRC}/deriveData.cpp
-    ${CPP_SRC}/helper.cpp
-    ${CPP_SRC}/stringFromType.cpp
-    ${CPP_SRC}/stringToType.cpp
-  )
-  set(HEADER_FILES
-    ${HEADER_SRC}/argumentParser.h
-    ${HEADER_SRC}/argumentValidators.h
-    ${HEADER_SRC}/configurationLib.h
-    ${HEADER_SRC}/configurator.h
-    ${HEADER_SRC}/customTypes.h
-    ${HEADER_SRC}/customTypesYAML.h
-    ${HEADER_SRC}/deriveData.h
-    ${HEADER_SRC}/helper.h
-    ${HEADER_SRC}/stringFromType.h
-    ${HEADER_SRC}/stringToType.h
-    ${ARGS_SOURCE_DIR}/args.hxx
-  )
-  set(AUTO_FILES
-    ${CPP_SRC}/argumentsAuto.cpp
-    ${CPP_SRC}/configurationAuto.cpp
-    ${CPP_SRC}/configurationYAMLAuto.cpp
-    ${CPP_SRC}/enumsAuto.cpp
-    ${CPP_SRC}/enumsYAMLAuto.cpp
+set(CPP_FILES
+  ${CPP_SRC}/configurator.cpp
+  ${CPP_SRC}/customTypes.cpp
+  ${CPP_SRC}/customTypesYAML.cpp
+  ${CPP_SRC}/deriveData.cpp
+  ${CPP_SRC}/helper.cpp
+  ${CPP_SRC}/stringFromType.cpp
+  ${CPP_SRC}/stringToType.cpp
+)
+set(HEADER_FILES
+  ${HEADER_SRC}/argumentParser.h
+  ${HEADER_SRC}/argumentValidators.h
+  ${HEADER_SRC}/configurationLib.h
+  ${HEADER_SRC}/configurator.h
+  ${HEADER_SRC}/customTypes.h
+  ${HEADER_SRC}/customTypesYAML.h
+  ${HEADER_SRC}/deriveData.h
+  ${HEADER_SRC}/helper.h
+  ${HEADER_SRC}/stringFromType.h
+  ${HEADER_SRC}/stringToType.h
+  ${ARGS_SOURCE_DIR}/args.hxx
+)
+set(AUTO_FILES
+  ${CPP_SRC}/argumentsAuto.cpp
+  ${CPP_SRC}/configurationAuto.cpp
+  ${CPP_SRC}/configurationYAMLAuto.cpp
+  ${CPP_SRC}/enumsAuto.cpp
+  ${CPP_SRC}/enumsYAMLAuto.cpp
 
-    ${HEADER_SRC}/argumentsAuto.h
-    ${HEADER_SRC}/configurationAuto.h
-    ${HEADER_SRC}/configurationYAMLAuto.h
-    ${HEADER_SRC}/enumsAuto.h
-    ${HEADER_SRC}/enumsYAMLAuto.h
-  )
-else()
-  set(CPP_FILES
-    ${CPP_SRC}/configurator.cpp
-    ${CPP_SRC}/customTypes.cpp
-    ${CPP_SRC}/helper.cpp
-    ${CPP_SRC}/stringFromType.cpp
-    ${CPP_SRC}/stringToType.cpp
-  )
-  set(HEADER_FILES
-    ${HEADER_SRC}/configurator.h
-    ${HEADER_SRC}/customTypes.h
-    ${HEADER_SRC}/helper.h
-    ${HEADER_SRC}/configurationLib.h
-    ${HEADER_SRC}/stringFromType.h
-    ${HEADER_SRC}/stringToType.h
-  )
-  set(AUTO_FILES
-    ${CPP_SRC}/configurationAuto.cpp
-    ${CPP_SRC}/enumsAuto.cpp
-
-    ${HEADER_SRC}/include/configurationAuto.h
-    ${HEADER_SRC}/include/enumsAuto.h
-  )
-endif()
+  ${HEADER_SRC}/argumentsAuto.h
+  ${HEADER_SRC}/configurationAuto.h
+  ${HEADER_SRC}/configurationYAMLAuto.h
+  ${HEADER_SRC}/enumsAuto.h
+  ${HEADER_SRC}/enumsYAMLAuto.h
+)
 
 set_source_files_properties(${AUTO_FILES} PROPERTIES GENERATED 1)
 
@@ -87,12 +62,10 @@ set_target_properties(configuration PROPERTIES FOLDER "common/config")
 
 SET(PRIVATE_INCLUDE_DIRS)
 
-if(NOT DEFINED BUILD_FOR_CCODE)
-  # Needed for OpenGL types and enums
-  target_link_libraries(configuration PUBLIC OpenGL_common_interface)
-  target_link_libraries(configuration PRIVATE common yamlcpp)
-  SET(PRIVATE_INCLUDE_DIRS ${ARGS_SOURCE_DIR})
-endif()
+# Needed for OpenGL types and enums
+target_link_libraries(configuration PUBLIC OpenGL_common_interface)
+target_link_libraries(configuration PRIVATE common yamlcpp)
+SET(PRIVATE_INCLUDE_DIRS ${ARGS_SOURCE_DIR})
 
 target_include_directories(configuration
   PUBLIC
