@@ -27,6 +27,9 @@ public:
   };
   struct ResourceInfo : public GpuAddressMapping {
     virtual ~ResourceInfo() {}
+    virtual bool overlapping() {
+      return false;
+    }
     ID3D12Resource* resource;
     unsigned key;
   };
@@ -98,6 +101,9 @@ private:
 
   private:
     struct PlacedResourceInfo : public ResourceInfo {
+      bool overlapping() override {
+        return !intersecting.empty();
+      }
       unsigned layer;
       std::unordered_set<PlacedResourceInfo*> intersecting;
     };
