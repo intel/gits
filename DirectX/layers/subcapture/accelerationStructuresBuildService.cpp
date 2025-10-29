@@ -22,11 +22,15 @@ namespace DirectX {
 AccelerationStructuresBuildService::AccelerationStructuresBuildService(
     StateTrackingService& stateService,
     SubcaptureRecorder& recorder,
-    ReservedResourcesService& reservedResourcesService)
+    ReservedResourcesService& reservedResourcesService,
+    ResourceStateTracker& resourceStateTracker,
+    CapturePlayerGpuAddressService& gpuAddressService)
     : stateService_(stateService),
       recorder_(recorder),
       reservedResourcesService_(reservedResourcesService),
-      bufferContentRestore_(stateService) {
+      bufferContentRestore_(stateService),
+      resourceStateTracker_(resourceStateTracker),
+      gpuAddressService_(gpuAddressService) {
   serializeMode_ = Configurator::Get().directx.features.subcapture.serializeAccelerationStructures;
   restoreTLASes_ = Configurator::Get().directx.features.subcapture.restoreTLASes;
   optimize_ = Configurator::Get().directx.features.subcapture.optimize;
@@ -87,16 +91,32 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
   state->desc.reset(
       new PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>(c.pDesc_));
 
-  auto storeBuffer = [&](unsigned inputIndex, unsigned size) {
+  auto storeBuffer = [&](unsigned inputIndex, unsigned size, D3D12_GPU_VIRTUAL_ADDRESS address) {
     unsigned inputKey = c.pDesc_.inputKeys[inputIndex];
     unsigned inputOffset = c.pDesc_.inputOffsets[inputIndex];
     stateService_.keepState(inputKey);
     ResourceState* bufferState = static_cast<ResourceState*>(stateService_.getState(inputKey));
     unsigned uploadResourceKey = stateService_.getUniqueObjectKey();
     state->uploadBuffers.push_back(uploadResourceKey);
-    D3D12_RESOURCE_STATES resourceState = bufferState->isGenericRead
-                                              ? D3D12_RESOURCE_STATE_GENERIC_READ
-                                              : D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+    D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+    D3D12_RESOURCE_STATES trackedState =
+        resourceStateTracker_.getResourceState(c.object_.value, inputKey, 0);
+    if (trackedState == D3D12_RESOURCE_STATE_GENERIC_READ ||
+        trackedState == D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
+      resourceState = trackedState;
+    } else if (trackedState != D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
+      CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
+          gpuAddressService_.getResourceInfoByCaptureAddress(address);
+      if (resourceInfo && resourceInfo->overlapping()) {
+        resourceState = trackedState;
+        static bool logged = false;
+        if (!logged) {
+          LOG_WARNING << "Subcapture state restore - tracked state of overlapped resource "
+                         "different than D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE.";
+          logged = true;
+        }
+      }
+    }
     bufferContentRestore_.storeBuffer(
         c.object_.value, static_cast<ID3D12Resource*>(bufferState->object), inputKey, inputOffset,
         size, resourceState, c.key, bufferState->isMappable);
@@ -122,7 +142,7 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
   if (inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL && inputs.NumDescs) {
     if (inputs.NumDescs) {
       unsigned size = inputs.NumDescs * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
-      storeBuffer(inputIndex, size);
+      storeBuffer(inputIndex, size, inputs.InstanceDescs);
     }
   } else if (inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
     for (unsigned i = 0; i < inputs.NumDescs; ++i) {
@@ -133,13 +153,13 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
       if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
         if (desc.Triangles.Transform3x4) {
           unsigned size = sizeof(float) * 3 * 4;
-          storeBuffer(inputIndex, size);
+          storeBuffer(inputIndex, size, desc.Triangles.Transform3x4);
         }
         ++inputIndex;
         if (desc.Triangles.IndexBuffer && desc.Triangles.IndexCount) {
           unsigned size = desc.Triangles.IndexCount *
                           (desc.Triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
-          storeBuffer(inputIndex, size);
+          storeBuffer(inputIndex, size, desc.Triangles.IndexBuffer);
         }
         ++inputIndex;
         if (desc.Triangles.VertexBuffer.StartAddress && desc.Triangles.VertexCount) {
@@ -150,13 +170,13 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
             }
           }
           unsigned size = desc.Triangles.VertexCount * stride;
-          storeBuffer(inputIndex, size);
+          storeBuffer(inputIndex, size, desc.Triangles.VertexBuffer.StartAddress);
         }
         ++inputIndex;
       } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
         if (desc.AABBs.AABBs.StartAddress && desc.AABBs.AABBCount) {
           unsigned size = desc.AABBs.AABBCount * desc.AABBs.AABBs.StrideInBytes;
-          storeBuffer(inputIndex, size);
+          storeBuffer(inputIndex, size, desc.AABBs.AABBs.StartAddress);
         }
         ++inputIndex;
       } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES) {
@@ -164,13 +184,13 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
           auto& triangles = *desc.OmmTriangles.pTriangles;
           if (triangles.Transform3x4) {
             unsigned size = sizeof(float) * 3 * 4;
-            storeBuffer(inputIndex, size);
+            storeBuffer(inputIndex, size, triangles.Transform3x4);
           }
           ++inputIndex;
           if (triangles.IndexBuffer && triangles.IndexCount) {
             unsigned size =
                 triangles.IndexCount * (triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
-            storeBuffer(inputIndex, size);
+            storeBuffer(inputIndex, size, triangles.IndexBuffer);
           }
           ++inputIndex;
           if (triangles.VertexBuffer.StartAddress && triangles.VertexCount) {
@@ -181,7 +201,7 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
               }
             }
             unsigned size = triangles.VertexCount * stride;
-            storeBuffer(inputIndex, size);
+            storeBuffer(inputIndex, size, triangles.VertexBuffer.StartAddress);
           }
           ++inputIndex;
         }
@@ -220,7 +240,7 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
             }
             unsigned size = ommCount * stride;
             if (size) {
-              storeBuffer(inputIndex, size);
+              storeBuffer(inputIndex, size, ommLinkage.OpacityMicromapIndexBuffer.StartAddress);
             }
           }
           ++inputIndex;
@@ -254,7 +274,7 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
 
       if (ommDesc.InputBuffer) {
         GITS_ASSERT(ommDesc.InputBuffer % 128 == 0);
-        storeBuffer(inputIndex, totalInputSize);
+        storeBuffer(inputIndex, totalInputSize, ommDesc.InputBuffer);
       }
       ++inputIndex;
       if (ommDesc.PerOmmDescs.StartAddress) {
@@ -265,7 +285,7 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
         GITS_ASSERT(ommDesc.PerOmmDescs.StartAddress % 4 == 0);
         GITS_ASSERT(stride % 4 == 0);
         unsigned size = totalOmmCount * stride;
-        storeBuffer(inputIndex, size);
+        storeBuffer(inputIndex, size, ommDesc.PerOmmDescs.StartAddress);
       }
       ++inputIndex;
     }
@@ -350,16 +370,32 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
   state->desc.reset(
       new PointerArgument<NVAPI_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_EX_PARAMS>(c.pParams));
 
-  auto storeBuffer = [&](unsigned inputIndex, unsigned size) {
+  auto storeBuffer = [&](unsigned inputIndex, unsigned size, D3D12_GPU_VIRTUAL_ADDRESS address) {
     unsigned inputKey = c.pParams.inputKeys[inputIndex];
     unsigned inputOffset = c.pParams.inputOffsets[inputIndex];
     stateService_.keepState(inputKey);
     ResourceState* bufferState = static_cast<ResourceState*>(stateService_.getState(inputKey));
     unsigned uploadResourceKey = stateService_.getUniqueObjectKey();
     state->uploadBuffers.push_back(uploadResourceKey);
-    D3D12_RESOURCE_STATES resourceState = bufferState->isGenericRead
-                                              ? D3D12_RESOURCE_STATE_GENERIC_READ
-                                              : D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+    D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+    D3D12_RESOURCE_STATES trackedState =
+        resourceStateTracker_.getResourceState(c.pCommandList_.value, inputKey, 0);
+    if (trackedState == D3D12_RESOURCE_STATE_GENERIC_READ ||
+        trackedState == D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
+      resourceState = trackedState;
+    } else if (trackedState != D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
+      CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
+          gpuAddressService_.getResourceInfoByCaptureAddress(address);
+      if (resourceInfo && resourceInfo->overlapping()) {
+        resourceState = trackedState;
+        static bool logged = false;
+        if (!logged) {
+          LOG_WARNING << "Subcapture state restore - tracked state of overlapped resource "
+                         "different than D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE.";
+          logged = true;
+        }
+      }
+    }
     bufferContentRestore_.storeBuffer(
         c.pCommandList_.value, static_cast<ID3D12Resource*>(bufferState->object), inputKey,
         inputOffset, size, resourceState, c.key, bufferState->isMappable);
@@ -385,7 +421,7 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
   if (inputs.type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL && inputs.numDescs) {
     if (inputs.numDescs) {
       unsigned size = inputs.numDescs * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
-      storeBuffer(inputIndex, size);
+      storeBuffer(inputIndex, size, inputs.instanceDescs);
     }
   } else {
     for (unsigned i = 0; i < inputs.numDescs; ++i) {
@@ -400,13 +436,13 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
       if (desc.type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
         if (desc.triangles.Transform3x4) {
           unsigned size = sizeof(float) * 3 * 4;
-          storeBuffer(inputIndex, size);
+          storeBuffer(inputIndex, size, desc.triangles.Transform3x4);
         }
         ++inputIndex;
         if (desc.triangles.IndexBuffer && desc.triangles.IndexCount) {
           unsigned size = desc.triangles.IndexCount *
                           (desc.triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
-          storeBuffer(inputIndex, size);
+          storeBuffer(inputIndex, size, desc.triangles.IndexBuffer);
         }
         ++inputIndex;
         if (desc.triangles.VertexBuffer.StartAddress && desc.triangles.VertexCount) {
@@ -417,25 +453,25 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
             }
           }
           unsigned size = desc.triangles.VertexCount * stride;
-          storeBuffer(inputIndex, size);
+          storeBuffer(inputIndex, size, desc.triangles.VertexBuffer.StartAddress);
         }
         ++inputIndex;
       } else if (desc.type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
         if (desc.aabbs.AABBs.StartAddress && desc.aabbs.AABBCount) {
           unsigned size = desc.aabbs.AABBCount * desc.aabbs.AABBs.StrideInBytes;
-          storeBuffer(inputIndex, size);
+          storeBuffer(inputIndex, size, desc.aabbs.AABBs.StartAddress);
         }
         ++inputIndex;
       } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES_EX) {
         if (desc.ommTriangles.triangles.Transform3x4) {
           unsigned size = sizeof(float) * 3 * 4;
-          storeBuffer(inputIndex, size);
+          storeBuffer(inputIndex, size, desc.ommTriangles.triangles.Transform3x4);
         }
         ++inputIndex;
         if (desc.ommTriangles.triangles.IndexBuffer && desc.ommTriangles.triangles.IndexCount) {
           unsigned size = desc.ommTriangles.triangles.IndexCount *
                           (desc.ommTriangles.triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
-          storeBuffer(inputIndex, size);
+          storeBuffer(inputIndex, size, desc.ommTriangles.triangles.IndexBuffer);
         }
         ++inputIndex;
         if (desc.ommTriangles.triangles.VertexBuffer.StartAddress &&
@@ -447,7 +483,7 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
             }
           }
           unsigned size = desc.ommTriangles.triangles.VertexCount * stride;
-          storeBuffer(inputIndex, size);
+          storeBuffer(inputIndex, size, desc.ommTriangles.triangles.VertexBuffer.StartAddress);
         }
         ++inputIndex;
         if (desc.ommTriangles.ommAttachment.opacityMicromapIndexBuffer.StartAddress) {
@@ -466,7 +502,8 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
           unsigned ommCount = desc.ommTriangles.triangles.IndexCount / 3;
           unsigned size = ommCount * stride;
           if (size) {
-            storeBuffer(inputIndex, size);
+            storeBuffer(inputIndex, size,
+                        desc.ommTriangles.ommAttachment.opacityMicromapIndexBuffer.StartAddress);
           }
         }
         ++inputIndex;
@@ -474,13 +511,13 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
       } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_DMM_TRIANGLES_EX) {
         if (desc.dmmTriangles.triangles.Transform3x4) {
           unsigned size = sizeof(float) * 3 * 4;
-          storeBuffer(inputIndex, size);
+          storeBuffer(inputIndex, size, desc.dmmTriangles.triangles.Transform3x4);
         }
         ++inputIndex;
         if (desc.dmmTriangles.triangles.IndexBuffer && desc.dmmTriangles.triangles.IndexCount) {
           unsigned size = desc.dmmTriangles.triangles.IndexCount *
                           (desc.dmmTriangles.triangles.IndexFormat == DXGI_FORMAT_R16_UINT ? 2 : 4);
-          storeBuffer(inputIndex, size);
+          storeBuffer(inputIndex, size, desc.dmmTriangles.triangles.IndexBuffer);
         }
         ++inputIndex;
         if (desc.dmmTriangles.triangles.VertexBuffer.StartAddress &&
@@ -492,7 +529,7 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
             }
           }
           unsigned size = desc.dmmTriangles.triangles.VertexCount * stride;
-          storeBuffer(inputIndex, size);
+          storeBuffer(inputIndex, size, desc.dmmTriangles.triangles.VertexBuffer.StartAddress);
         }
         ++inputIndex;
         if (desc.dmmTriangles.dmmAttachment.triangleMicromapIndexBuffer.StartAddress) {
@@ -517,13 +554,15 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
           }
           unsigned size = dmmCount * stride;
           if (size) {
-            storeBuffer(inputIndex, size);
+            storeBuffer(inputIndex, size,
+                        desc.dmmTriangles.dmmAttachment.triangleMicromapIndexBuffer.StartAddress);
           }
         }
         ++inputIndex;
         if (desc.dmmTriangles.dmmAttachment.trianglePrimitiveFlagsBuffer.StartAddress) {
           unsigned size = desc.dmmTriangles.triangles.VertexCount;
-          storeBuffer(inputIndex, size);
+          storeBuffer(inputIndex, size,
+                      desc.dmmTriangles.dmmAttachment.trianglePrimitiveFlagsBuffer.StartAddress);
         }
         ++inputIndex;
         if (desc.dmmTriangles.dmmAttachment.vertexBiasAndScaleBuffer.StartAddress) {
@@ -539,7 +578,8 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
           }
           GITS_ASSERT(stride);
           unsigned size = desc.dmmTriangles.triangles.VertexCount * stride;
-          storeBuffer(inputIndex, size);
+          storeBuffer(inputIndex, size,
+                      desc.dmmTriangles.dmmAttachment.vertexBiasAndScaleBuffer.StartAddress);
         }
         ++inputIndex;
         if (desc.dmmTriangles.dmmAttachment.vertexDisplacementVectorBuffer.StartAddress) {
@@ -559,7 +599,8 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
           }
           GITS_ASSERT(stride);
           unsigned size = desc.dmmTriangles.triangles.VertexCount * stride;
-          storeBuffer(inputIndex, size);
+          storeBuffer(inputIndex, size,
+                      desc.dmmTriangles.dmmAttachment.vertexDisplacementVectorBuffer.StartAddress);
         }
         ++inputIndex;
         ++inputIndex;
@@ -574,7 +615,7 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
           }
           GITS_ASSERT(stride);
           unsigned size = desc.spheres.vertexCount * stride;
-          storeBuffer(inputIndex, size);
+          storeBuffer(inputIndex, size, desc.spheres.vertexPositionBuffer.StartAddress);
         }
         ++inputIndex;
         if (desc.spheres.vertexRadiusBuffer.StartAddress) {
@@ -586,7 +627,7 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
           }
           GITS_ASSERT(stride);
           unsigned size = desc.spheres.vertexCount * stride;
-          storeBuffer(inputIndex, size);
+          storeBuffer(inputIndex, size, desc.spheres.vertexRadiusBuffer.StartAddress);
         }
         ++inputIndex;
         if (desc.spheres.indexBuffer.StartAddress) {
@@ -602,7 +643,7 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
           }
           GITS_ASSERT(stride);
           unsigned size = desc.spheres.indexCount * stride;
-          storeBuffer(inputIndex, size);
+          storeBuffer(inputIndex, size, desc.spheres.indexBuffer.StartAddress);
         }
         ++inputIndex;
       } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_LSS_EX) {
@@ -616,7 +657,7 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
           }
           GITS_ASSERT(stride);
           unsigned size = desc.lss.primitiveCount * stride;
-          storeBuffer(inputIndex, size);
+          storeBuffer(inputIndex, size, desc.lss.vertexPositionBuffer.StartAddress);
         }
         ++inputIndex;
         if (desc.lss.vertexRadiusBuffer.StartAddress) {
@@ -628,7 +669,7 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
           }
           GITS_ASSERT(stride);
           unsigned size = desc.lss.primitiveCount * stride;
-          storeBuffer(inputIndex, size);
+          storeBuffer(inputIndex, size, desc.lss.vertexRadiusBuffer.StartAddress);
         }
         ++inputIndex;
         if (desc.lss.indexBuffer.StartAddress) {
@@ -644,7 +685,7 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
           }
           GITS_ASSERT(stride);
           unsigned size = desc.lss.indexCount * stride;
-          storeBuffer(inputIndex, size);
+          storeBuffer(inputIndex, size, desc.lss.indexBuffer.StartAddress);
         }
         ++inputIndex;
       }
@@ -688,14 +729,31 @@ void AccelerationStructuresBuildService::nvapiBuildOpacityMicromapArray(
   state->desc.reset(
       new PointerArgument<NVAPI_BUILD_RAYTRACING_OPACITY_MICROMAP_ARRAY_PARAMS>(c.pParams));
 
-  auto storeBuffer = [&](unsigned inputKey, unsigned inputOffset, unsigned size) {
+  auto storeBuffer = [&](unsigned inputKey, unsigned inputOffset, unsigned size,
+                         D3D12_GPU_VIRTUAL_ADDRESS address) {
     stateService_.keepState(inputKey);
     ResourceState* bufferState = static_cast<ResourceState*>(stateService_.getState(inputKey));
     unsigned uploadResourceKey = stateService_.getUniqueObjectKey();
     state->uploadBuffers.push_back(uploadResourceKey);
-    D3D12_RESOURCE_STATES resourceState = bufferState->isGenericRead
-                                              ? D3D12_RESOURCE_STATE_GENERIC_READ
-                                              : D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+    D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+    D3D12_RESOURCE_STATES trackedState =
+        resourceStateTracker_.getResourceState(c.pCommandList_.value, inputKey, 0);
+    if (trackedState == D3D12_RESOURCE_STATE_GENERIC_READ ||
+        trackedState == D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
+      resourceState = trackedState;
+    } else if (trackedState != D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
+      CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
+          gpuAddressService_.getResourceInfoByCaptureAddress(address);
+      if (resourceInfo && resourceInfo->overlapping()) {
+        resourceState = trackedState;
+        static bool logged = false;
+        if (!logged) {
+          LOG_WARNING << "Subcapture state restore - tracked state of overlapped resource "
+                         "different than D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE.";
+          logged = true;
+        }
+      }
+    }
     bufferContentRestore_.storeBuffer(
         c.pCommandList_.value, static_cast<ID3D12Resource*>(bufferState->object), inputKey,
         inputOffset, size, resourceState, c.key, bufferState->isMappable);
@@ -745,14 +803,16 @@ void AccelerationStructuresBuildService::nvapiBuildOpacityMicromapArray(
     inputSize = alignUp(inputSize, 256);
 
     if (pDesc->inputs.inputBuffer) {
-      storeBuffer(c.pParams.inputBufferKey, c.pParams.inputBufferOffset, inputSize);
+      storeBuffer(c.pParams.inputBufferKey, c.pParams.inputBufferOffset, inputSize,
+                  pDesc->inputs.inputBuffer);
     }
     if (pDesc->inputs.perOMMDescs.StartAddress) {
       unsigned stride = pDesc->inputs.perOMMDescs.StrideInBytes;
       if (!stride) {
         stride = sizeof(NVAPI_D3D12_RAYTRACING_OPACITY_MICROMAP_USAGE_COUNT);
       }
-      storeBuffer(c.pParams.perOMMDescsKey, c.pParams.perOMMDescsOffset, stride * ommCount);
+      storeBuffer(c.pParams.perOMMDescsKey, c.pParams.perOMMDescsOffset, stride * ommCount,
+                  pDesc->inputs.perOMMDescs.StartAddress);
     }
   }
 

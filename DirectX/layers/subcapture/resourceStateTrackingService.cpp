@@ -122,16 +122,8 @@ void ResourceStateTrackingService::addResource(unsigned deviceKey,
                                                unsigned resourceKey,
                                                D3D12_BARRIER_LAYOUT initialState,
                                                bool recreateState) {
-  deviceKey_ = deviceKey;
   D3D12_RESOURCE_STATES state = getResourceState(initialState);
-  ResourceStates& states = resourceStates_[resourceKey];
-  states.subresourceStates.resize(getSubresourcesCount(resource));
-  for (unsigned i = 0; i < states.subresourceStates.size(); ++i) {
-    states.subresourceStates[i] = state;
-  }
-  if (recreateState) {
-    recreateStateResources_.insert(resourceKey);
-  }
+  addResource(deviceKey, resource, resourceKey, state, recreateState);
 }
 
 D3D12_RESOURCE_STATES ResourceStateTrackingService::getResourceState(D3D12_BARRIER_LAYOUT layout) {

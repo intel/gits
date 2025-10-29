@@ -27,6 +27,8 @@
 #include "residencyService.h"
 #include "analyzerResults.h"
 #include "resourceForCBVRestoreService.h"
+#include "resourceStateTracker.h"
+#include "capturePlayerGpuAddressService.h"
 
 #include <map>
 #include <array>
@@ -271,6 +273,8 @@ private:
   ResidencyService residencyService_;
   ResourceUsageTrackingService resourceUsageTrackingService_;
   GpuExecutionFlusher gpuExecutionFlusher_;
+  ResourceStateTracker resourceStateTracker_;
+  CapturePlayerGpuAddressService gpuAddressService_;
   std::unordered_map<unsigned, std::unordered_set<unsigned>> resourceHeaps_;
   std::unordered_map<unsigned, std::vector<unsigned>> swapchainBuffers_;
 };

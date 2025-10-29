@@ -47,7 +47,6 @@ struct ResourceState : public ObjectState {
   unsigned sampleCount{};
   D3D12_GPU_VIRTUAL_ADDRESS gpuVirtualAddress{};
   bool isMappable{};
-  bool isGenericRead{};
   bool isBarrierRestricted{};
   unsigned heapKey{};
 };

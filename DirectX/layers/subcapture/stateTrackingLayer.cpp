@@ -48,7 +48,11 @@ StateTrackingLayer::StateTrackingLayer(SubcaptureRecorder& recorder,
       commandQueueService_(stateService_),
       xessStateService_(stateService_, recorder),
       accelerationStructuresSerializeService_(stateService_, recorder_),
-      accelerationStructuresBuildService_(stateService_, recorder_, reservedResourcesService_),
+      accelerationStructuresBuildService_(stateService_,
+                                          recorder_,
+                                          reservedResourcesService_,
+                                          resourceStateTracker_,
+                                          gpuAddressService_),
       residencyService_(stateService_) {}
 
 void StateTrackingLayer::setAsChildInParent(unsigned parentKey, unsigned childKey) {
@@ -134,6 +138,8 @@ void StateTrackingLayer::pre(IUnknownReleaseCommand& c) {
     accelerationStructuresSerializeService_.destroyResource(c.object_.key);
     residencyService_.destroyObject(c.object_.key);
     resourceUsageTrackingService_.destroyResource(c.object_.key);
+    resourceStateTracker_.destroyResource(c.object_.key);
+    gpuAddressService_.destroyInterface(c.object_.key);
 
     auto it = resourceHeaps_.find(c.object_.key);
     if (it != resourceHeaps_.end()) {
@@ -989,7 +995,6 @@ void StateTrackingLayer::post(ID3D12DeviceCreateCommittedResourceCommand& c) {
   state->dimension = c.pDesc_.value->Dimension;
   state->sampleCount = c.pDesc_.value->SampleDesc.Count;
   state->isMappable = isResourceHeapMappable(*c.pHeapProperties_.value, c.pDesc_.value->Layout);
-  state->isGenericRead = state->initialState == D3D12_RESOURCE_STATE_GENERIC_READ;
 
   stateService_.storeState(state);
 
@@ -999,6 +1004,7 @@ void StateTrackingLayer::post(ID3D12DeviceCreateCommittedResourceCommand& c) {
     resourceStateTrackingService_.addResource(state->deviceKey,
                                               static_cast<ID3D12Resource*>(*c.ppvResource_.value),
                                               state->key, state->initialState, !state->isMappable);
+    resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialResourceState_.value);
   }
   if (c.HeapFlags_.value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
     residencyService_.createNotResident(state->key, state->deviceKey);
@@ -1030,7 +1036,6 @@ void StateTrackingLayer::post(ID3D12Device4CreateCommittedResource1Command& c) {
   state->dimension = c.pDesc_.value->Dimension;
   state->sampleCount = c.pDesc_.value->SampleDesc.Count;
   state->isMappable = isResourceHeapMappable(*c.pHeapProperties_.value, c.pDesc_.value->Layout);
-  state->isGenericRead = state->initialState == D3D12_RESOURCE_STATE_GENERIC_READ;
 
   stateService_.storeState(state);
   resourceUsageTrackingService_.addResource(state->key);
@@ -1039,6 +1044,7 @@ void StateTrackingLayer::post(ID3D12Device4CreateCommittedResource1Command& c) {
     resourceStateTrackingService_.addResource(state->deviceKey,
                                               static_cast<ID3D12Resource*>(*c.ppvResource_.value),
                                               state->key, state->initialState, !state->isMappable);
+    resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialResourceState_.value);
   }
   if (c.HeapFlags_.value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
     residencyService_.createNotResident(state->key, state->deviceKey);
@@ -1070,7 +1076,6 @@ void StateTrackingLayer::post(ID3D12Device8CreateCommittedResource2Command& c) {
   state->dimension = c.pDesc_.value->Dimension;
   state->sampleCount = c.pDesc_.value->SampleDesc.Count;
   state->isMappable = isResourceHeapMappable(*c.pHeapProperties_.value, c.pDesc_.value->Layout);
-  state->isGenericRead = state->initialState == D3D12_RESOURCE_STATE_GENERIC_READ;
 
   stateService_.storeState(state);
 
@@ -1080,6 +1085,7 @@ void StateTrackingLayer::post(ID3D12Device8CreateCommittedResource2Command& c) {
     resourceStateTrackingService_.addResource(state->deviceKey,
                                               static_cast<ID3D12Resource*>(*c.ppvResource_.value),
                                               state->key, state->initialState, !state->isMappable);
+    resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialResourceState_.value);
   }
   if (c.HeapFlags_.value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
     residencyService_.createNotResident(state->key, state->deviceKey);
@@ -1111,7 +1117,6 @@ void StateTrackingLayer::post(ID3D12Device10CreateCommittedResource3Command& c) 
   state->dimension = c.pDesc_.value->Dimension;
   state->sampleCount = c.pDesc_.value->SampleDesc.Count;
   state->isMappable = isResourceHeapMappable(*c.pHeapProperties_.value, c.pDesc_.value->Layout);
-  state->isGenericRead = state->initialLayout == D3D12_BARRIER_LAYOUT_GENERIC_READ;
 
   stateService_.storeState(state);
 
@@ -1120,6 +1125,7 @@ void StateTrackingLayer::post(ID3D12Device10CreateCommittedResource3Command& c) 
   resourceStateTrackingService_.addResource(state->deviceKey,
                                             static_cast<ID3D12Resource*>(*c.ppvResource_.value),
                                             state->key, state->initialLayout, !state->isMappable);
+  resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialLayout_.value);
   if (c.HeapFlags_.value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
     residencyService_.createNotResident(state->key, state->deviceKey);
   }
@@ -1150,7 +1156,6 @@ void StateTrackingLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
   state->dimension = c.pDesc_.value->Dimension;
   state->sampleCount = c.pDesc_.value->SampleDesc.Count;
   state->isMappable = isResourceHeapMappable(c.pHeap_.key, c.pDesc_.value->Layout);
-  state->isGenericRead = state->initialLayout == D3D12_BARRIER_LAYOUT_GENERIC_READ;
   state->isBarrierRestricted = isResourceBarrierRestricted(c.pDesc_.value->Flags);
   state->heapKey = c.pHeap_.key;
 
@@ -1167,7 +1172,9 @@ void StateTrackingLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
     resourceStateTrackingService_.addResource(
         state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
         state->initialState, !(state->isMappable || state->isBarrierRestricted));
+    resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialState_.value);
   }
+  gpuAddressService_.createPlacedResource(c.pHeap_.key, c.ppvResource_.key, c.pDesc_.value->Flags);
 }
 
 void StateTrackingLayer::pre(ID3D12Device8CreatePlacedResource1Command& c) {
@@ -1195,7 +1202,6 @@ void StateTrackingLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
   state->dimension = c.pDesc_.value->Dimension;
   state->sampleCount = c.pDesc_.value->SampleDesc.Count;
   state->isMappable = isResourceHeapMappable(c.pHeap_.key, c.pDesc_.value->Layout);
-  state->isGenericRead = state->initialLayout == D3D12_BARRIER_LAYOUT_GENERIC_READ;
   state->isBarrierRestricted = isResourceBarrierRestricted(c.pDesc_.value->Flags);
   state->heapKey = c.pHeap_.key;
 
@@ -1212,7 +1218,9 @@ void StateTrackingLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
     resourceStateTrackingService_.addResource(
         state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
         state->initialState, !(state->isMappable || state->isBarrierRestricted));
+    resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialState_.value);
   }
+  gpuAddressService_.createPlacedResource(c.pHeap_.key, c.ppvResource_.key, c.pDesc_.value->Flags);
 }
 
 void StateTrackingLayer::pre(ID3D12Device10CreatePlacedResource2Command& c) {
@@ -1240,7 +1248,6 @@ void StateTrackingLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
   state->dimension = c.pDesc_.value->Dimension;
   state->sampleCount = c.pDesc_.value->SampleDesc.Count;
   state->isMappable = isResourceHeapMappable(c.pHeap_.key, c.pDesc_.value->Layout);
-  state->isGenericRead = state->initialLayout == D3D12_BARRIER_LAYOUT_GENERIC_READ;
   state->isBarrierRestricted = isResourceBarrierRestricted(c.pDesc_.value->Flags);
   state->heapKey = c.pHeap_.key;
 
@@ -1256,6 +1263,8 @@ void StateTrackingLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
   resourceStateTrackingService_.addResource(
       state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
       state->initialState, !(state->isMappable || state->isBarrierRestricted));
+  resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialLayout_.value);
+  gpuAddressService_.createPlacedResource(c.pHeap_.key, c.ppvResource_.key, c.pDesc_.value->Flags);
 }
 
 void StateTrackingLayer::pre(ID3D12DeviceCreateReservedResourceCommand& c) {
@@ -1282,7 +1291,6 @@ void StateTrackingLayer::post(ID3D12DeviceCreateReservedResourceCommand& c) {
   state->initialState = c.InitialState_.value;
   state->dimension = c.pDesc_.value->Dimension;
   state->sampleCount = c.pDesc_.value->SampleDesc.Count;
-  state->isGenericRead = state->initialState == D3D12_RESOURCE_STATE_GENERIC_READ;
 
   stateService_.storeState(state);
 
@@ -1292,6 +1300,7 @@ void StateTrackingLayer::post(ID3D12DeviceCreateReservedResourceCommand& c) {
     resourceStateTrackingService_.addResource(state->deviceKey,
                                               static_cast<ID3D12Resource*>(*c.ppvResource_.value),
                                               state->key, state->initialState, !state->isMappable);
+    resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialState_.value);
   }
 }
 
@@ -1319,7 +1328,6 @@ void StateTrackingLayer::post(ID3D12Device4CreateReservedResource1Command& c) {
   state->initialState = c.InitialState_.value;
   state->dimension = c.pDesc_.value->Dimension;
   state->sampleCount = c.pDesc_.value->SampleDesc.Count;
-  state->isGenericRead = state->initialState == D3D12_RESOURCE_STATE_GENERIC_READ;
 
   stateService_.storeState(state);
 
@@ -1329,6 +1337,7 @@ void StateTrackingLayer::post(ID3D12Device4CreateReservedResource1Command& c) {
     resourceStateTrackingService_.addResource(state->deviceKey,
                                               static_cast<ID3D12Resource*>(*c.ppvResource_.value),
                                               state->key, state->initialState, !state->isMappable);
+    resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialState_.value);
   }
 }
 
@@ -1356,7 +1365,6 @@ void StateTrackingLayer::post(ID3D12Device10CreateReservedResource2Command& c) {
   state->initialLayout = c.InitialLayout_.value;
   state->dimension = c.pDesc_.value->Dimension;
   state->sampleCount = c.pDesc_.value->SampleDesc.Count;
-  state->isGenericRead = state->initialLayout == D3D12_BARRIER_LAYOUT_GENERIC_READ;
 
   stateService_.storeState(state);
 
@@ -1365,6 +1373,7 @@ void StateTrackingLayer::post(ID3D12Device10CreateReservedResource2Command& c) {
   resourceStateTrackingService_.addResource(state->deviceKey,
                                             static_cast<ID3D12Resource*>(*c.ppvResource_.value),
                                             state->key, state->initialLayout, !state->isMappable);
+  resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialLayout_.value);
 }
 
 void StateTrackingLayer::post(ID3D12DeviceCreateShaderResourceViewCommand& c) {
@@ -1651,7 +1660,6 @@ void StateTrackingLayer::post(INTC_D3D12_CreateCommittedResourceCommand& c) {
   state->sampleCount = c.pDesc_.value->pD3D12Desc->SampleDesc.Count;
   state->isMappable =
       isResourceHeapMappable(*c.pHeapProperties_.value, c.pDesc_.value->pD3D12Desc->Layout);
-  state->isGenericRead = state->initialState == D3D12_RESOURCE_STATE_GENERIC_READ;
 
   stateService_.storeState(state);
 
@@ -1661,6 +1669,7 @@ void StateTrackingLayer::post(INTC_D3D12_CreateCommittedResourceCommand& c) {
     resourceStateTrackingService_.addResource(state->deviceKey,
                                               static_cast<ID3D12Resource*>(*c.ppvResource_.value),
                                               state->key, state->initialState, !state->isMappable);
+    resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialResourceState_.value);
   }
   if (c.HeapFlags_.value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
     residencyService_.createNotResident(state->key, state->deviceKey);
@@ -1684,7 +1693,6 @@ void StateTrackingLayer::post(INTC_D3D12_CreatePlacedResourceCommand& c) {
   state->dimension = c.pDesc_.value->pD3D12Desc->Dimension;
   state->sampleCount = c.pDesc_.value->pD3D12Desc->SampleDesc.Count;
   state->isMappable = isResourceHeapMappable(c.pHeap_.key, c.pDesc_.value->pD3D12Desc->Layout);
-  state->isGenericRead = state->initialLayout == D3D12_BARRIER_LAYOUT_GENERIC_READ;
   state->isBarrierRestricted = isResourceBarrierRestricted(c.pDesc_.value->pD3D12Desc->Flags);
   state->heapKey = c.pHeap_.key;
 
@@ -1701,6 +1709,7 @@ void StateTrackingLayer::post(INTC_D3D12_CreatePlacedResourceCommand& c) {
     resourceStateTrackingService_.addResource(
         state->deviceKey, static_cast<ID3D12Resource*>(*c.ppvResource_.value), state->key,
         state->initialState, !(state->isMappable || state->isBarrierRestricted));
+    resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialState_.value);
   }
 }
 
@@ -1720,7 +1729,6 @@ void StateTrackingLayer::post(INTC_D3D12_CreateReservedResourceCommand& c) {
   state->initialState = c.InitialState_.value;
   state->dimension = c.pDesc_.value->pD3D12Desc->Dimension;
   state->sampleCount = c.pDesc_.value->pD3D12Desc->SampleDesc.Count;
-  state->isGenericRead = state->initialState == D3D12_RESOURCE_STATE_GENERIC_READ;
 
   stateService_.storeState(state);
 
@@ -1730,6 +1738,7 @@ void StateTrackingLayer::post(INTC_D3D12_CreateReservedResourceCommand& c) {
     resourceStateTrackingService_.addResource(state->deviceKey,
                                               static_cast<ID3D12Resource*>(*c.ppvResource_.value),
                                               state->key, state->initialState, !state->isMappable);
+    resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialState_.value);
   }
 }
 
@@ -1820,6 +1829,9 @@ void StateTrackingLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
     accelerationStructuresBuildService_.executeCommandLists(c);
   }
   resourceUsageTrackingService_.executeCommandLists(c.key, c.object_.key, c.ppCommandLists_.keys);
+  resourceStateTracker_.executeCommandLists(
+      reinterpret_cast<ID3D12GraphicsCommandList**>(c.ppCommandLists_.value),
+      c.NumCommandLists_.value);
 }
 
 void StateTrackingLayer::pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
@@ -1829,6 +1841,8 @@ void StateTrackingLayer::pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
   ResourceState* state = static_cast<ResourceState*>(stateService_.getState(c.object_.key));
   GITS_ASSERT(state);
   state->gpuVirtualAddress = c.result_.value;
+  gpuAddressService_.addGpuCaptureAddress(c.object_.value, c.object_.key,
+                                          c.object_.value->GetDesc().Width, c.result_.value);
 }
 
 void StateTrackingLayer::pre(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& c) {
@@ -2113,6 +2127,8 @@ void StateTrackingLayer::post(ID3D12GraphicsCommandListResourceBarrierCommand& c
                                                          c.pBarriers_.resourceAfterKeys);
   resourceStateTrackingService_.resourceBarrier(
       c.object_.key, c.pBarriers_.value, c.pBarriers_.resourceKeys, c.pBarriers_.resourceAfterKeys);
+  resourceStateTracker_.resourceBarrier(c.object_.value, c.pBarriers_.value, c.NumBarriers_.value,
+                                        c.pBarriers_.resourceKeys.data());
 
   CommandListCommand* command = new CommandListCommand(c.getId(), c.key);
   command->commandWriter.reset(new ID3D12GraphicsCommandListResourceBarrierWriter(c));

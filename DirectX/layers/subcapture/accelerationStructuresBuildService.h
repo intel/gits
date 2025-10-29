@@ -14,6 +14,8 @@
 #include "accelerationStructuresBufferContentRestore.h"
 #include "reservedResourcesService.h"
 #include "objectState.h"
+#include "resourceStateTracker.h"
+#include "capturePlayerGpuAddressService.h"
 
 #include <unordered_map>
 #include <unordered_set>
@@ -29,7 +31,9 @@ class AccelerationStructuresBuildService {
 public:
   AccelerationStructuresBuildService(StateTrackingService& stateService,
                                      SubcaptureRecorder& recorder,
-                                     ReservedResourcesService& reservedResourcesService);
+                                     ReservedResourcesService& reservedResourcesService,
+                                     ResourceStateTracker& resourceStateTracker,
+                                     CapturePlayerGpuAddressService& gpuAddressService);
   void buildAccelerationStructure(
       ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& command);
   void copyAccelerationStructure(
@@ -53,6 +57,8 @@ private:
   SubcaptureRecorder& recorder_;
   ReservedResourcesService& reservedResourcesService_;
   AccelerationStructuresBufferContentRestore bufferContentRestore_;
+  ResourceStateTracker& resourceStateTracker_;
+  CapturePlayerGpuAddressService& gpuAddressService_;
 
   struct RaytracingAccelerationStructureState {
     enum StateType {
