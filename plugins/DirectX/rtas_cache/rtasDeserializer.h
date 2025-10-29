@@ -44,9 +44,6 @@ private:
   void cleanup();
 
 private:
-  CGits& gits_;
-  std::unordered_map<ID3D12CommandList*, std::vector<unsigned>> buildKeysByCommandList_;
-
   struct ExecuteInfo {
     UINT64 fenceValue{};
     std::vector<unsigned> buildKeys;
@@ -56,12 +53,20 @@ private:
     UINT64 fenceValue{};
     std::queue<ExecuteInfo> executes;
   };
-  std::unordered_map<ID3D12CommandQueue*, CommandQueueInfo> commandQueues_;
 
+  CGits& gits_;
   std::string cacheFilePath_;
   std::unordered_map<unsigned, std::vector<uint8_t>> cacheData_;
-  unsigned maxBufferSize_{0};
+
+  // Track command execution to release buffers after GPU is done with them
+  std::unordered_map<ID3D12CommandQueue*, CommandQueueInfo> commandQueues_;
+  std::unordered_map<ID3D12CommandList*, std::vector<unsigned>> buildKeysByCommandList_;
+
+  // Buffer pool for deserialization (max 2 MB buffers) to avoid repeated allocations
+  unsigned maxBufferSize_{2 * 1024 * 1024};
   BufferPool bufferPool_;
+  // Temporary buffers (for buffers larger than maxBufferSize_)
+  std::unordered_map<unsigned, Microsoft::WRL::ComPtr<ID3D12Resource>> tmpBuffers_;
 };
 
 } // namespace DirectX

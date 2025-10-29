@@ -17,6 +17,9 @@
 namespace gits {
 namespace DirectX {
 
+// Used internally by BufferPool but can also be used externally (for larger buffers)
+ID3D12Resource* createBuffer(ID3D12Device* device, size_t bufferSize);
+
 class BufferPool {
 public:
   BufferPool() = default;
@@ -28,8 +31,6 @@ public:
   size_t size() const;
 
 private:
-  ID3D12Resource* createBuffer();
-
   ID3D12Device* device_{nullptr};
   size_t bufferSize_{0};
 

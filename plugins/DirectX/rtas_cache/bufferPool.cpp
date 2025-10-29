@@ -20,17 +20,20 @@ void BufferPool::initialize(ID3D12Device* device, size_t bufferSize, unsigned in
   device_ = device;
   bufferSize_ = bufferSize;
 
+  // Clear existing data
+  buffers_.clear();
+  keyToIndex_.clear();
+  freeIndices_ = std::stack<unsigned>();
+
   // Pre-allocate buffers and mark all as free
-  buffers_.reserve(initialCount);
   for (unsigned i = 0; i < initialCount; ++i) {
-    buffers_.push_back(createBuffer());
+    buffers_.push_back(createBuffer(device_, bufferSize_));
     freeIndices_.push(i);
   }
 }
 
 ID3D12Resource* BufferPool::acquireBuffer(unsigned key) {
   unsigned index = 0;
-
   if (!freeIndices_.empty()) {
     // Use an existing free buffer
     index = freeIndices_.top();
@@ -38,7 +41,7 @@ ID3D12Resource* BufferPool::acquireBuffer(unsigned key) {
   } else {
     // Create a new buffer
     index = static_cast<unsigned>(buffers_.size());
-    buffers_.push_back(createBuffer());
+    buffers_.push_back(createBuffer(device_, bufferSize_));
   }
 
   keyToIndex_[key] = index;
@@ -58,7 +61,7 @@ size_t BufferPool::size() const {
   return buffers_.size();
 }
 
-ID3D12Resource* BufferPool::createBuffer() {
+ID3D12Resource* createBuffer(ID3D12Device* device, size_t bufferSize) {
   D3D12_HEAP_PROPERTIES heapProperties{};
   heapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
   heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
@@ -68,7 +71,7 @@ ID3D12Resource* BufferPool::createBuffer() {
 
   D3D12_RESOURCE_DESC resourceDesc{};
   resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-  resourceDesc.Width = bufferSize_; // Always use the configured buffer size
+  resourceDesc.Width = bufferSize;
   resourceDesc.Height = 1;
   resourceDesc.DepthOrArraySize = 1;
   resourceDesc.MipLevels = 1;
@@ -76,9 +79,9 @@ ID3D12Resource* BufferPool::createBuffer() {
   resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
   ID3D12Resource* buffer = nullptr;
-  HRESULT hr =
-      device_->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-                                       D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&buffer));
+  auto hr =
+      device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                      D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&buffer));
   assert(hr == S_OK);
   return buffer;
 }

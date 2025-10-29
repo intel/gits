@@ -52,6 +52,8 @@ RtasDeserializer::RtasDeserializer(CGits& gits, const std::string& cacheFile)
     : gits_(gits), cacheFilePath_(cacheFile) {}
 
 RtasDeserializer::~RtasDeserializer() {
+  logI(gits_, "RtasCache - Cleaning up RTAS deserializer...");
+  logI(gits_, "RtasCache - Buffer pool contains ", bufferPool_.size(), " buffers");
   cleanup();
 }
 
@@ -80,10 +82,11 @@ bool RtasDeserializer::preloadCache(ID3D12Device5* device) {
       cacheData_.clear();
       return false;
     }
-    maxBufferSize_ = std::max(maxBufferSize_, size);
     cacheData_[key] = std::move(data);
   }
+
   logI(gits_, "RtasCache - Cache file read successfully, total BLASes: ", cacheData_.size());
+  logI(gits_, "RtasCache - Buffer pool size: ", FormatMemorySize(maxBufferSize_));
 
   return true;
 }
@@ -137,21 +140,28 @@ bool RtasDeserializer::deserialize(unsigned buildKey,
     return false;
   }
 
+  Microsoft::WRL::ComPtr<ID3D12Device> device;
+  HRESULT hr = commandList->GetDevice(IID_PPV_ARGS(&device));
+  assert(hr == S_OK);
+
   // Create buffer pool if not initialized
   if (bufferPool_.size() == 0) {
-    logI(gits_, "RtasCache - Initializing buffer pool with buffer size: ",
-         FormatMemorySize(maxBufferSize_));
-    Microsoft::WRL::ComPtr<ID3D12Device> device;
-    HRESULT hr = commandList->GetDevice(IID_PPV_ARGS(&device));
-    assert(hr == S_OK);
-    bufferPool_.initialize(device.Get(), maxBufferSize_, 0);
+    bufferPool_.initialize(device.Get(), maxBufferSize_, 1);
   }
 
-  auto buffer = bufferPool_.acquireBuffer(buildKey);
+  ID3D12Resource* buffer = nullptr;
+  if (size <= maxBufferSize_) {
+    buffer = bufferPool_.acquireBuffer(buildKey);
+  } else {
+    logW(gits_, "RtasCache - BLAS ", key, " with size ", FormatMemorySize(size),
+         " does not fit in the buffer pool");
+    buffer = createBuffer(device.Get(), size);
+    tmpBuffers_[buildKey] = buffer;
+  }
   assert(buffer);
 
   void* bufferData{};
-  auto hr = buffer->Map(0, nullptr, &bufferData);
+  hr = buffer->Map(0, nullptr, &bufferData);
   memcpy(bufferData, data.data(), size);
   buffer->Unmap(0, nullptr);
 
@@ -225,6 +235,7 @@ void RtasDeserializer::cleanup() {
       }
       for (auto buildKey : executeInfo.buildKeys) {
         bufferPool_.releaseBuffer(buildKey);
+        tmpBuffers_.erase(buildKey);
       }
       it.second.executes.pop();
     }
