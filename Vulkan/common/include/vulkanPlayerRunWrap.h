@@ -1640,8 +1640,8 @@ inline void vkCreateDevice_WRAPRUN(CVkResult& recorderSideReturnValue,
   // Trace memory properties from the original platform the stream was recorded on
   LOG_TRACE << "Memory properties of the platform the (original) stream was recorded on: "
                "VkPhysicalDevice physicalDevice="
-            << *physicalDevice << ", VkPhysicalDeviceMemoryProperties* pMemoryProperties="
-            << &SD()._physicaldevicestates[*physicalDevice]->memoryPropertiesOriginal;
+            << ToStr(*physicalDevice) << ", VkPhysicalDeviceMemoryProperties* pMemoryProperties="
+            << ToStr(SD()._physicaldevicestates[*physicalDevice]->memoryPropertiesOriginal);
 
   allSupported &= checkForSupportForPhysicalDeviceFeatures(
       *physicalDevice, const_cast<VkPhysicalDeviceFeatures*>(createInfo.pEnabledFeatures));
@@ -2028,12 +2028,11 @@ inline void vkCreateBuffer_WRAPRUN(CVkResult& recorderSideReturnValue,
 
 inline void vkPassPhysicalDeviceMemoryPropertiesGITS_WRAPRUN(
     CVkPhysicalDevice& physicalDevice, CVkPhysicalDeviceMemoryProperties& pMemoryProperties) {
-  if (*pMemoryProperties == nullptr) {
-    throw std::runtime_error(EXCEPTION_MESSAGE);
-  }
-  SD()._physicaldevicestates[*physicalDevice]->memoryPropertiesOriginal = *pMemoryProperties;
-  SD()._physicaldevicestates[*physicalDevice]->correspondingMemoryTypeIndexes =
-      matchCorrespondingMemoryTypeIndexes(*physicalDevice);
+  // If the function is available, it means GITS Recorder is attached and we need to pass memory properties from the original platform the stream was recorded on
+  // If the function is not available, internal GITS mechanism will prevent null-ptr function call
+  drvVk.vkPassPhysicalDeviceMemoryPropertiesGITS(*physicalDevice, *pMemoryProperties);
+
+  vkPassPhysicalDeviceMemoryPropertiesGITS_SD(*physicalDevice, *pMemoryProperties);
 }
 
 inline void vkDestroyDevice_WRAPRUN(CVkDevice& device, CNullWrapper& pAllocator) {

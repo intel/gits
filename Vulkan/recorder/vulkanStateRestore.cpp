@@ -116,9 +116,17 @@ void gits::Vulkan::SubmitWork(CScheduler& scheduler,
 gits::Vulkan::TemporaryBufferStruct gits::Vulkan::CreateTemporaryBuffer(CScheduler& scheduler,
                                                                         VkDevice device,
                                                                         VkDeviceSize size) {
-  TemporaryBufferStruct newBuffer = {VK_NULL_HANDLE, VK_NULL_HANDLE, VK_WHOLE_SIZE, nullptr};
+  // Get memory properties of the platform the (original) stream was recorded on
+  // If there are none, get memory properties of the current platform
+  auto& physicalDeviceState = SD()._devicestates[device]->physicalDeviceStateStore;
   static VkPhysicalDeviceMemoryProperties memoryProperties =
-      SD()._devicestates[device]->physicalDeviceStateStore->memoryPropertiesCurrent;
+      physicalDeviceState->memoryPropertiesOriginal;
+  if (memoryProperties.memoryHeapCount == 0) {
+    drvVk.vkGetPhysicalDeviceMemoryProperties(physicalDeviceState->physicalDeviceHandle,
+                                              &memoryProperties);
+  }
+
+  TemporaryBufferStruct newBuffer = {VK_NULL_HANDLE, VK_NULL_HANDLE, VK_WHOLE_SIZE, nullptr};
   VkMemoryRequirements bufferMemoryRequirements = {0, 0, 0};
   VkMemoryAllocateInfo memoryAllocateInfo = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr, 0,
                                              UINT32_MAX};
@@ -351,11 +359,17 @@ void gits::Vulkan::RestoreVkDevices(CScheduler& scheduler, CStateDynamic& sd) {
       }
     }
 
+    // Get memory properties if there are none, otherwise pass properties from
+    // the original platform
     {
-      VkPhysicalDeviceMemoryProperties memoryProperties;
-      drvVk.vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
-      scheduler.Register(
-          new CvkPassPhysicalDeviceMemoryPropertiesGITS(physicalDevice, &memoryProperties));
+      auto& physicalDeviceState = SD()._physicaldevicestates[physicalDevice];
+      if (physicalDeviceState->memoryPropertiesOriginal.memoryHeapCount == 0) {
+        VkPhysicalDeviceMemoryProperties memoryProperties;
+        drvVk.vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
+        vkPassPhysicalDeviceMemoryPropertiesGITS_SD(physicalDevice, &memoryProperties);
+      }
+      scheduler.Register(new CvkPassPhysicalDeviceMemoryPropertiesGITS(
+          physicalDevice, &physicalDeviceState->memoryPropertiesOriginal));
     }
     scheduler.Register(new CvkCreateDevice(VK_SUCCESS, physicalDevice,
                                            deviceState.second->deviceCreateInfoData.Value(),

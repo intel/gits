@@ -251,6 +251,17 @@ inline void vkEnumeratePhysicalDeviceGroupsKHR_SD(
                                      pPhysicalDeviceGroupProperties);
 }
 
+inline void vkPassPhysicalDeviceMemoryPropertiesGITS_SD(
+    VkPhysicalDevice physicalDevice, const VkPhysicalDeviceMemoryProperties* pMemoryProperties) {
+  if (pMemoryProperties == nullptr) {
+    throw std::runtime_error(EXCEPTION_MESSAGE);
+  }
+
+  SD()._physicaldevicestates[physicalDevice]->memoryPropertiesOriginal = *pMemoryProperties;
+  SD()._physicaldevicestates[physicalDevice]->correspondingMemoryTypeIndexes =
+      matchCorrespondingMemoryTypeIndexes(physicalDevice);
+}
+
 // Surface
 
 inline void vkCreateWin32SurfaceKHR_SD(VkResult return_value,

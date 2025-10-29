@@ -977,6 +977,15 @@ inline void vkUnmapMemory_RECWRAP(VkDevice device, VkDeviceMemory memory, CRecor
   vkUnmapMemory_SD(device, memory);
 }
 
+inline void vkPassPhysicalDeviceMemoryPropertiesGITS_RECWRAP(
+    VkPhysicalDevice physicalDevice,
+    const VkPhysicalDeviceMemoryProperties* pMemoryProperties,
+    CRecorder& recorder) {
+  // Here we pass memory properties recorded on original platform to the recorder of a (sub)stream
+  // Token is scheduled only once through vkCreateDevice_RECWRAP() function or in state restore
+  vkPassPhysicalDeviceMemoryPropertiesGITS_SD(physicalDevice, pMemoryProperties);
+}
+
 inline void vkCreateDevice_RECWRAP(VkResult return_value,
                                    VkPhysicalDevice physicalDevice,
                                    const VkDeviceCreateInfo* pCreateInfo,
@@ -984,10 +993,15 @@ inline void vkCreateDevice_RECWRAP(VkResult return_value,
                                    VkDevice* pDevice,
                                    CRecorder& recorder) {
   if (recorder.Running()) {
-    VkPhysicalDeviceMemoryProperties memoryProperties;
-    drvVk.vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
-    recorder.Schedule(
-        new CvkPassPhysicalDeviceMemoryPropertiesGITS(physicalDevice, &memoryProperties));
+    auto& physicalDeviceState = SD()._physicaldevicestates[physicalDevice];
+    if (physicalDeviceState->memoryPropertiesOriginal.memoryHeapCount == 0) {
+      VkPhysicalDeviceMemoryProperties memoryProperties;
+      drvVk.vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
+      vkPassPhysicalDeviceMemoryPropertiesGITS_SD(physicalDevice, &memoryProperties);
+    }
+
+    recorder.Schedule(new CvkPassPhysicalDeviceMemoryPropertiesGITS(
+        physicalDevice, &physicalDeviceState->memoryPropertiesOriginal));
     recorder.Schedule(
         new CvkCreateDevice(return_value, physicalDevice, pCreateInfo, pAllocator, pDevice));
   }

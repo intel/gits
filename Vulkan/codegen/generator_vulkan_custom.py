@@ -10,10 +10,10 @@
 
 from generator_vulkan_base import *
 
-Function(name='vkPassPhysicalDeviceMemoryPropertiesGITS', enabled=True, type=FuncType.PARAM, runWrap=True, customDriver=True, level=FuncLevel.INSTANCE,
+Function(name='vkPassPhysicalDeviceMemoryPropertiesGITS', enabled=True, type=FuncType.PARAM, stateTrack=True, runWrap=True, recWrap=True, customDriver=True, level=FuncLevel.INSTANCE,
 retV=RetDef(type='void'),
 arg1=ArgDef(name='physicalDevice', type='VkPhysicalDevice'),
-arg2=ArgDef(name='pMemoryProperties', type='VkPhysicalDeviceMemoryProperties*')
+arg2=ArgDef(name='pMemoryProperties', type='const VkPhysicalDeviceMemoryProperties*')
 )
 
 Function(name='vkGetBufferDeviceAddressUnifiedGITS', enabled=True, type=FuncType.PARAM, stateTrack=True, recWrap=True, runWrap=True,
