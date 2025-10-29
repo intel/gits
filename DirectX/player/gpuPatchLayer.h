@@ -16,6 +16,7 @@
 #include "gpuPatchCommandListService.h"
 #include "capturePlayerDescriptorHandleService.h"
 #include "gpuPatchDumpService.h"
+#include "resourceStateTracker.h"
 
 #include <d3d12.h>
 #include <map>
@@ -70,6 +71,10 @@ public:
   void post(ID3D12Device4CreateCommittedResource1Command& c) override;
   void post(ID3D12Device8CreateCommittedResource2Command& c) override;
   void post(ID3D12Device10CreateCommittedResource3Command& c) override;
+  void post(ID3D12DeviceCreateReservedResourceCommand& c) override;
+  void post(ID3D12Device4CreateReservedResource1Command& c) override;
+  void post(ID3D12Device10CreateReservedResource2Command& c) override;
+  void post(ID3D12GraphicsCommandListResourceBarrierCommand& c) override;
 
 private:
   void initialize(ID3D12GraphicsCommandList* commandList);
@@ -184,11 +189,11 @@ private:
   ExecuteIndirectShaderPatchService executeIndirectShaderPatchService_;
   GpuPatchCommandListService commandListService_;
   GpuPatchDumpService dumpService_;
+  ResourceStateTracker resourceStateTracker_;
 
   std::unordered_map<unsigned, std::unique_ptr<PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>>>
       commandSignatures_;
   std::unordered_map<unsigned, D3D12_DISPATCH_RAYS_DESC> executeIndirectDispatchRays_;
-  std::unordered_set<unsigned> genericReadResources_;
   std::unordered_map<unsigned, std::vector<D3D12_GPU_VIRTUAL_ADDRESS>> instancesArraysOfPointers_;
 
   std::unordered_map<unsigned, ID3D12Resource*> resourceByKey_;

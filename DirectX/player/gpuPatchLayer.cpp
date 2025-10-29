@@ -32,7 +32,7 @@ void GpuPatchLayer::pre(IUnknownReleaseCommand& c) {
     addressService_.destroyInterface(c.object_.key);
     descriptorHandleService_.destroyHeap(c.object_.key);
     commandListService_.remove(c.object_.key);
-    genericReadResources_.erase(c.object_.key);
+    resourceStateTracker_.destroyResource(c.object_.key);
   }
 }
 
@@ -124,16 +124,30 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
       barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
       commandList->ResourceBarrier(1, &barrier);
 
-      // workaround for improper mapping gpu address to buffer in capture
-      D3D12_RESOURCE_DESC desc = instanceDescs->GetDesc();
-      bool denyShaderResource = desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
-      bool setSourceBarrier =
-          genericReadResources_.find(instanceDescsKey) == genericReadResources_.end() &&
-          !denyShaderResource;
-      if (setSourceBarrier) {
+      D3D12_RESOURCE_STATES instanceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+      D3D12_RESOURCE_STATES trackedState =
+          resourceStateTracker_.getResourceState(c.object_.value, instanceDescsKey, 0);
+      if (trackedState == D3D12_RESOURCE_STATE_GENERIC_READ ||
+          trackedState == D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
+        instanceState = trackedState;
+      } else if (trackedState != D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
+        CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
+            addressService_.getResourceInfoByCaptureAddress(c.pDesc_.value->Inputs.InstanceDescs);
+        if (resourceInfo && resourceInfo->overlapping()) {
+          instanceState = trackedState;
+          static bool logged = false;
+          if (!logged) {
+            LOG_WARNING << "GPU patching - tracked state of overlapped resource different than "
+                           "D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE.";
+            logged = true;
+          }
+        }
+      }
+
+      if (instanceState != D3D12_RESOURCE_STATE_GENERIC_READ) {
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         barrier.Transition.pResource = instanceDescs;
-        barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+        barrier.Transition.StateBefore = instanceState;
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
         commandList->ResourceBarrier(1, &barrier);
       }
@@ -147,11 +161,11 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
       barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
       commandList->ResourceBarrier(1, &barrier);
 
-      if (setSourceBarrier) {
+      if (instanceState != D3D12_RESOURCE_STATE_GENERIC_READ) {
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         barrier.Transition.pResource = instanceDescs;
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
-        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+        barrier.Transition.StateAfter = instanceState;
         commandList->ResourceBarrier(1, &barrier);
       }
     }
@@ -247,9 +261,25 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
 
     {
       D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-      if (genericReadResources_.find(instanceDescsKey) != genericReadResources_.end()) {
-        resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
+      D3D12_RESOURCE_STATES trackedState =
+          resourceStateTracker_.getResourceState(c.object_.value, instanceDescsKey, 0);
+      if (trackedState == D3D12_RESOURCE_STATE_GENERIC_READ ||
+          trackedState == D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
+        resourceState = trackedState;
+      } else if (trackedState != D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
+        CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
+            addressService_.getResourceInfoByCaptureAddress(c.pDesc_.value->Inputs.InstanceDescs);
+        if (resourceInfo && resourceInfo->overlapping()) {
+          resourceState = trackedState;
+          static bool logged = false;
+          if (!logged) {
+            LOG_WARNING << "GPU patching - tracked state of overlapped resource different than "
+                           "D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE.";
+            logged = true;
+          }
+        }
       }
+
       unsigned offset = c.pDesc_.inputOffsets[0];
       dumpService_.dumpInstancesArrayOfPointers(commandList, instanceDescs, instanceDescsKey,
                                                 offset, size, resourceState, c.key, true);
@@ -327,13 +357,27 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
         commandList->ResourceBarrier(1, &barrier);
 
-        // workaround for improper mapping gpu address to buffer in capture
-        D3D12_RESOURCE_DESC desc = instanceInfo.resource->GetDesc();
-        bool denyShaderResource = desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
-        bool setSourceBarrier =
-            genericReadResources_.find(instanceInfo.resourceKey) == genericReadResources_.end() &&
-            !denyShaderResource;
-        if (setSourceBarrier) {
+        D3D12_RESOURCE_STATES instanceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+        D3D12_RESOURCE_STATES trackedState =
+            resourceStateTracker_.getResourceState(c.object_.value, instanceDescsKey, 0);
+        if (trackedState == D3D12_RESOURCE_STATE_GENERIC_READ ||
+            trackedState == D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
+          instanceState = trackedState;
+        } else if (trackedState != D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
+          CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
+              addressService_.getResourceInfoByCaptureAddress(c.pDesc_.value->Inputs.InstanceDescs);
+          if (resourceInfo && resourceInfo->overlapping()) {
+            instanceState = trackedState;
+            static bool logged = false;
+            if (!logged) {
+              LOG_WARNING << "GPU patching - tracked state of overlapped resource different than "
+                             "D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE.";
+              logged = true;
+            }
+          }
+        }
+
+        if (instanceState != D3D12_RESOURCE_STATE_GENERIC_READ) {
           barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
           barrier.Transition.pResource = instanceInfo.resource;
           barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
@@ -350,7 +394,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
         commandList->ResourceBarrier(1, &barrier);
 
-        if (setSourceBarrier) {
+        if (instanceState != D3D12_RESOURCE_STATE_GENERIC_READ) {
           barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
           barrier.Transition.pResource = instanceInfo.resource;
           barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
@@ -471,13 +515,27 @@ void GpuPatchLayer::patchDispatchRays(ID3D12GraphicsCommandList* commandList,
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
         commandList->ResourceBarrier(1, &barrier);
 
-        // workaround for improper mapping gpu address to buffer in capture
-        D3D12_RESOURCE_DESC desc = info->resource->GetDesc();
-        bool denyShaderResource = desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
-        bool setSourceBarrier =
-            genericReadResources_.find(info->key) == genericReadResources_.end() &&
-            !denyShaderResource;
-        if (setSourceBarrier) {
+        D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+        D3D12_RESOURCE_STATES trackedState =
+            resourceStateTracker_.getResourceState(commandList, info->key, 0);
+        if (trackedState == D3D12_RESOURCE_STATE_GENERIC_READ ||
+            trackedState == D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
+          resourceState = trackedState;
+        } else if (trackedState != D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) {
+          CapturePlayerGpuAddressService::ResourceInfo* resourceInfo =
+              addressService_.getResourceInfoByCaptureAddress(startAddress);
+          if (resourceInfo && resourceInfo->overlapping()) {
+            resourceState = trackedState;
+            static bool logged = false;
+            if (!logged) {
+              LOG_WARNING << "GPU patching - tracked state of overlapped resource different than "
+                             "D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE.";
+              logged = true;
+            }
+          }
+        }
+
+        if (resourceState != D3D12_RESOURCE_STATE_GENERIC_READ) {
           barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
           barrier.Transition.pResource = info->resource;
           barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
@@ -494,7 +552,7 @@ void GpuPatchLayer::patchDispatchRays(ID3D12GraphicsCommandList* commandList,
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
         commandList->ResourceBarrier(1, &barrier);
 
-        if (setSourceBarrier) {
+        if (resourceState != D3D12_RESOURCE_STATE_GENERIC_READ) {
           barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
           barrier.Transition.pResource = info->resource;
           barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
@@ -994,6 +1052,10 @@ void GpuPatchLayer::pre(ID3D12CommandQueueExecuteCommandListsCommand& c) {
     memcpy(data, &mappingCount, sizeof(MappingCount));
     mappingCountStagingBuffers_[index]->Unmap(0, nullptr);
   }
+
+  resourceStateTracker_.executeCommandLists(
+      reinterpret_cast<ID3D12GraphicsCommandList**>(c.ppCommandLists_.value),
+      c.NumCommandLists_.value);
 }
 
 void GpuPatchLayer::post(ID3D12CommandQueueExecuteCommandListsCommand& c) {
@@ -1316,9 +1378,7 @@ void GpuPatchLayer::post(ID3D12DeviceCreatePlacedResourceCommand& c) {
     return;
   }
   addressService_.createPlacedResource(c.pHeap_.key, c.ppvResource_.key, c.pDesc_.value->Flags);
-  if (c.InitialState_.value == D3D12_RESOURCE_STATE_GENERIC_READ) {
-    genericReadResources_.insert(c.ppvResource_.key);
-  }
+  resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialState_.value);
 }
 
 void GpuPatchLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
@@ -1326,9 +1386,7 @@ void GpuPatchLayer::post(ID3D12Device8CreatePlacedResource1Command& c) {
     return;
   }
   addressService_.createPlacedResource(c.pHeap_.key, c.ppvResource_.key, c.pDesc_.value->Flags);
-  if (c.result_.value != S_OK || c.InitialState_.value == D3D12_RESOURCE_STATE_GENERIC_READ) {
-    genericReadResources_.insert(c.ppvResource_.key);
-  }
+  resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialState_.value);
 }
 
 void GpuPatchLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
@@ -1336,45 +1394,61 @@ void GpuPatchLayer::post(ID3D12Device10CreatePlacedResource2Command& c) {
     return;
   }
   addressService_.createPlacedResource(c.pHeap_.key, c.ppvResource_.key, c.pDesc_.value->Flags);
-  if (c.InitialLayout_.value == D3D12_BARRIER_LAYOUT_GENERIC_READ) {
-    genericReadResources_.insert(c.ppvResource_.key);
-  }
+  resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialLayout_.value);
 }
 
 void GpuPatchLayer::post(ID3D12DeviceCreateCommittedResourceCommand& c) {
   if (c.result_.value != S_OK || c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
-  if (c.InitialResourceState_.value == D3D12_RESOURCE_STATE_GENERIC_READ) {
-    genericReadResources_.insert(c.ppvResource_.key);
-  }
+  resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialResourceState_.value);
 }
 
 void GpuPatchLayer::post(ID3D12Device4CreateCommittedResource1Command& c) {
   if (c.result_.value != S_OK || c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
-  if (c.InitialResourceState_.value == D3D12_RESOURCE_STATE_GENERIC_READ) {
-    genericReadResources_.insert(c.ppvResource_.key);
-  }
+  resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialResourceState_.value);
 }
 
 void GpuPatchLayer::post(ID3D12Device8CreateCommittedResource2Command& c) {
   if (c.result_.value != S_OK || c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
-  if (c.InitialResourceState_.value == D3D12_RESOURCE_STATE_GENERIC_READ) {
-    genericReadResources_.insert(c.ppvResource_.key);
-  }
+  resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialResourceState_.value);
 }
 
 void GpuPatchLayer::post(ID3D12Device10CreateCommittedResource3Command& c) {
   if (c.result_.value != S_OK || c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
-  if (c.InitialLayout_.value == D3D12_BARRIER_LAYOUT_GENERIC_READ) {
-    genericReadResources_.insert(c.ppvResource_.key);
+  resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialLayout_.value);
+}
+
+void GpuPatchLayer::post(ID3D12DeviceCreateReservedResourceCommand& c) {
+  if (c.result_.value != S_OK || c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+    return;
   }
+  resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialState_.value);
+}
+
+void GpuPatchLayer::post(ID3D12Device4CreateReservedResource1Command& c) {
+  if (c.result_.value != S_OK || c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+    return;
+  }
+  resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialState_.value);
+}
+
+void GpuPatchLayer::post(ID3D12Device10CreateReservedResource2Command& c) {
+  if (c.result_.value != S_OK || c.pDesc_.value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+    return;
+  }
+  resourceStateTracker_.addResource(c.ppvResource_.key, c.InitialLayout_.value);
+}
+
+void GpuPatchLayer::post(ID3D12GraphicsCommandListResourceBarrierCommand& c) {
+  resourceStateTracker_.resourceBarrier(c.object_.value, c.pBarriers_.value, c.NumBarriers_.value,
+                                        c.pBarriers_.resourceKeys.data());
 }
 
 void GpuPatchLayer::getPatchOffsets(const D3D12_COMMAND_SIGNATURE_DESC& commandSignature,
