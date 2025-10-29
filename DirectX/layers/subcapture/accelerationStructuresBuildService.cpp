@@ -27,8 +27,6 @@ AccelerationStructuresBuildService::AccelerationStructuresBuildService(
       recorder_(recorder),
       reservedResourcesService_(reservedResourcesService),
       bufferContentRestore_(stateService) {
-  commandListCopyKey_ = stateService_.getUniqueObjectKey();
-  commandListDirectKey_ = stateService_.getUniqueObjectKey();
   serializeMode_ = Configurator::Get().directx.features.subcapture.serializeAccelerationStructures;
   restoreTLASes_ = Configurator::Get().directx.features.subcapture.restoreTLASes;
   optimize_ = Configurator::Get().directx.features.subcapture.optimize;
@@ -796,6 +794,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
     stateService_.getRecorder().record(
         new ID3D12DeviceCreateCommandAllocatorWriter(createCommandAllocator));
 
+    commandListCopyKey_ = stateService_.getUniqueObjectKey();
     ID3D12DeviceCreateCommandListCommand createCommandList;
     createCommandList.key = stateService_.getUniqueCommandKey();
     createCommandList.object_.key = deviceKey_;
@@ -830,6 +829,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
     stateService_.getRecorder().record(
         new ID3D12DeviceCreateCommandAllocatorWriter(createCommandAllocator));
 
+    commandListDirectKey_ = stateService_.getUniqueObjectKey();
     ID3D12DeviceCreateCommandListCommand createCommandList;
     createCommandList.key = stateService_.getUniqueCommandKey();
     createCommandList.object_.key = deviceKey_;
@@ -1474,17 +1474,54 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
   }
 
   {
-    IUnknownReleaseCommand release{};
-    release.key = stateService_.getUniqueCommandKey();
-    release.object_.key = scratchResourceKey;
-    stateService_.getRecorder().record(new IUnknownReleaseWriter(release));
+    IUnknownReleaseCommand releaseScratchResource{};
+    releaseScratchResource.key = stateService_.getUniqueCommandKey();
+    releaseScratchResource.object_.key = scratchResourceKey;
+    stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseScratchResource));
   }
+  {
+    IUnknownReleaseCommand releaseFence{};
+    releaseFence.key = stateService_.getUniqueCommandKey();
+    releaseFence.object_.key = fenceKey_;
+    stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseFence));
+  }
+  {
+    IUnknownReleaseCommand releaseCommandList{};
+    releaseCommandList.key = stateService_.getUniqueCommandKey();
+    releaseCommandList.object_.key = commandListDirectKey_;
+    stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommandList));
 
+    IUnknownReleaseCommand releaseCommandAllocator{};
+    releaseCommandAllocator.key = stateService_.getUniqueCommandKey();
+    releaseCommandAllocator.object_.key = commandAllocatorDirectKey_;
+    stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommandAllocator));
+
+    IUnknownReleaseCommand releaseCommandQueue{};
+    releaseCommandQueue.key = stateService_.getUniqueCommandKey();
+    releaseCommandQueue.object_.key = commandQueueDirectKey_;
+    stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommandQueue));
+  }
+  {
+    IUnknownReleaseCommand releaseCommandList{};
+    releaseCommandList.key = stateService_.getUniqueCommandKey();
+    releaseCommandList.object_.key = commandListCopyKey_;
+    stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommandList));
+
+    IUnknownReleaseCommand releaseCommandAllocator{};
+    releaseCommandAllocator.key = stateService_.getUniqueCommandKey();
+    releaseCommandAllocator.object_.key = commandAllocatorCopyKey_;
+    stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommandAllocator));
+
+    IUnknownReleaseCommand releaseCommandQueue{};
+    releaseCommandQueue.key = stateService_.getUniqueCommandKey();
+    releaseCommandQueue.object_.key = commandQueueCopyKey_;
+    stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseCommandQueue));
+  }
   if (uploadBufferKey_) {
-    IUnknownReleaseCommand release{};
-    release.key = stateService_.getUniqueCommandKey();
-    release.object_.key = uploadBufferKey_;
-    stateService_.getRecorder().record(new IUnknownReleaseWriter(release));
+    IUnknownReleaseCommand releaseUploadBuffer{};
+    releaseUploadBuffer.key = stateService_.getUniqueCommandKey();
+    releaseUploadBuffer.object_.key = uploadBufferKey_;
+    stateService_.getRecorder().record(new IUnknownReleaseWriter(releaseUploadBuffer));
   }
 
   restored_ = true;
