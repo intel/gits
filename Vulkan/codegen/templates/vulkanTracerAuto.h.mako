@@ -30,7 +30,7 @@ namespace gits {
 
 % for token in vk_functions:
 <%
-    params: str = args_to_str(token.args, '{type} {name}{array}, ', ', ')
+    params: str = args_to_str(token.args, 'const {type} {name}{array}, ', ', ').replace('const const ', 'const ').replace('**', '* const *')
 %>\
   void ${token.name}_trace(${params});
 % endfor

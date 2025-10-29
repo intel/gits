@@ -5173,8 +5173,7 @@ arg3=ArgDef(name='pUpdateInfo', type='const VkVideoSessionParametersUpdateInfoKH
 )
 
 Function(name='vkVoidFunction', enabled=False, type=FuncType.PARAM, level=FuncLevel.PROTOTYPE,
-retV=RetDef(type='void'),
-arg1=ArgDef(name='', type='void')
+retV=RetDef(type='void')
 )
 
 Function(name='vkWaitForFences', enabled=True, type=FuncType.PARAM, runWrap=True, recExecWrap=True,
