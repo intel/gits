@@ -9,7 +9,7 @@
 #include "log.h"
 
 // Plog
-#include <plog/Appenders/ConsoleAppender.h>
+#include <plog/Appenders/ColorConsoleAppender.h>
 #include <plog/Appenders/DynamicAppender.h>
 #include <plog/Appenders/RollingFileAppender.h>
 #include <plog/Formatters/MessageOnlyFormatter.h>
@@ -106,7 +106,7 @@ namespace gits {
 namespace log {
 
 namespace {
-static plog::ConsoleAppender<plog::GitsFormatter> consoleAppender;
+static plog::ColorConsoleAppender<plog::GitsFormatter> consoleAppender;
 static plog::DynamicAppender dynamicAppender;
 } // namespace
 
