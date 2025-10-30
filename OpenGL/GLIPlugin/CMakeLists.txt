@@ -55,12 +55,21 @@ add_library(OpenGL_interceptor SHARED
   ${OpenGL_DEF}
 )
 
+if(WIN32)
+    target_compile_definitions(OpenGL_interceptor PRIVATE PLOG_IMPORT)
+else()
+    target_compile_definitions(OpenGL_interceptor PRIVATE PLOG_GLOBAL)
+endif()
+
 target_include_directories(OpenGL_interceptor PRIVATE ${OPENGL_INTERCEPTOR_HEADER_DIR})
 
 source_group("External Files" FILES ${OpenGL_interceptor_external_cpps})
 source_group("Generated Files" FILES ${OpenGL_DEF} REGULAR_EXPRESSION ".*Auto.*")
 
-target_link_libraries(OpenGL_interceptor PRIVATE gits_recorder_interface OpenGL_recorder_interface common configuration)
+target_link_libraries(OpenGL_interceptor PRIVATE gits_recorder_interface gits_recorder OpenGL_recorder_interface common configuration)
+if(WIN32)
+    target_link_options(OpenGL_interceptor PRIVATE "/DELAYLOAD:gitsRecorder.dll")
+endif()
 
 if(NOT MSVC)
   target_link_libraries(OpenGL_interceptor PRIVATE pthread dl)
