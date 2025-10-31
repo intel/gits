@@ -1,0 +1,16 @@
+## ===================== begin_copyright_notice ============================
+##
+## Copyright (C) 2023-2025 Intel Corporation
+##
+## SPDX-License-Identifier: MIT
+##
+## ===================== end_copyright_notice ==============================
+
+Info:
+  Name: 'AdapterSpoof'
+  Description: 'Spoof the DXGIAdapter description returned by IDXGIAdapter::GetDesc.'
+
+Config:
+  Description: ''
+  VendorId: 0x0000
+  DeviceId: 0x0000
