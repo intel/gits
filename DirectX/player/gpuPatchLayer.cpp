@@ -137,8 +137,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
           instanceState = trackedState;
           static bool logged = false;
           if (!logged) {
-            LOG_WARNING << "GPU patching - tracked state of overlapped resource different than "
-                           "D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE.";
+            LOG_WARNING << "Gpu patching - state of overlapped resource different than expected";
             logged = true;
           }
         }
@@ -273,8 +272,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
           resourceState = trackedState;
           static bool logged = false;
           if (!logged) {
-            LOG_WARNING << "GPU patching - tracked state of overlapped resource different than "
-                           "D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE.";
+            LOG_WARNING << "Gpu patching - state of overlapped resource different than expected";
             logged = true;
           }
         }
@@ -370,8 +368,7 @@ void GpuPatchLayer::pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
             instanceState = trackedState;
             static bool logged = false;
             if (!logged) {
-              LOG_WARNING << "GPU patching - tracked state of overlapped resource different than "
-                             "D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE.";
+              LOG_WARNING << "Gpu patching - state of overlapped resource different than expected";
               logged = true;
             }
           }
@@ -528,8 +525,7 @@ void GpuPatchLayer::patchDispatchRays(ID3D12GraphicsCommandList* commandList,
             resourceState = trackedState;
             static bool logged = false;
             if (!logged) {
-              LOG_WARNING << "GPU patching - tracked state of overlapped resource different than "
-                             "D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE.";
+              LOG_WARNING << "Gpu patching - state of overlapped resource different than expected";
               logged = true;
             }
           }

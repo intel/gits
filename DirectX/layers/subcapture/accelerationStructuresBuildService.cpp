@@ -111,8 +111,7 @@ void AccelerationStructuresBuildService::buildAccelerationStructure(
         resourceState = trackedState;
         static bool logged = false;
         if (!logged) {
-          LOG_WARNING << "Subcapture state restore - tracked state of overlapped resource "
-                         "different than D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE.";
+          LOG_WARNING << "State restore - state of overlapped resource different than expected";
           logged = true;
         }
       }
@@ -390,8 +389,7 @@ void AccelerationStructuresBuildService::nvapiBuildAccelerationStructureEx(
         resourceState = trackedState;
         static bool logged = false;
         if (!logged) {
-          LOG_WARNING << "Subcapture state restore - tracked state of overlapped resource "
-                         "different than D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE.";
+          LOG_WARNING << "State restore - state of overlapped resource different than expected";
           logged = true;
         }
       }
@@ -748,8 +746,7 @@ void AccelerationStructuresBuildService::nvapiBuildOpacityMicromapArray(
         resourceState = trackedState;
         static bool logged = false;
         if (!logged) {
-          LOG_WARNING << "Subcapture state restore - tracked state of overlapped resource "
-                         "different than D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE.";
+          LOG_WARNING << "State restore - state of overlapped resource different than expected";
           logged = true;
         }
       }

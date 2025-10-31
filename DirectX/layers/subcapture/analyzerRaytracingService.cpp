@@ -180,8 +180,7 @@ void AnalyzerRaytracingService::buildTlas(
         resourceState = trackedState;
         static bool logged = false;
         if (!logged) {
-          LOG_WARNING << "Subcapture analysis - tracked state of overlapped resource "
-                         "different than D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE.";
+          LOG_WARNING << "Analysis - state of overlapped resource different than expected";
           logged = true;
         }
       }
@@ -250,8 +249,7 @@ void AnalyzerRaytracingService::buildTlas(
           resourceState = trackedState;
           static bool logged = false;
           if (!logged) {
-            LOG_WARNING << "Subcapture analysis - tracked state of overlapped resource "
-                           "different than D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE.";
+            LOG_WARNING << "Analysis - state of overlapped resource different than expected";
             logged = true;
           }
         }
@@ -317,8 +315,7 @@ void AnalyzerRaytracingService::dumpBindingTable(ID3D12GraphicsCommandList* comm
       resourceState = trackedState;
       static bool logged = false;
       if (!logged) {
-        LOG_WARNING << "Subcapture analysis - tracked state of overlapped resource "
-                       "different than D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE.";
+        LOG_WARNING << "Analysis - state of overlapped resource different than expected";
         logged = true;
       }
     }
