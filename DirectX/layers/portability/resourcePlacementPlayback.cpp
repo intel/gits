@@ -21,6 +21,9 @@ void ResourcePlacementPlayback::createHeap(ID3D12Device* device, unsigned heapKe
   if (!initialized_) {
     calculateResourcePlacement(device);
     initialized_ = true;
+    if (!changedHeapSizes_.empty()) {
+      LOG_INFO << "Resource placement changed for " << changedHeapSizes_.size() << " heaps";
+    }
   }
   auto it = changedHeapSizes_.find(heapKey);
   if (it != changedHeapSizes_.end()) {
@@ -108,6 +111,10 @@ void ResourcePlacementPlayback::calculateResourcePlacement(
     UINT64 alignedShift = currentInfo.increment + alignmentAdjustment;
 
     for (auto& it = itShift; itShift != infos.end(); ++itShift) {
+      if (it->alignment > shiftInfo.alignment) {
+        UINT64 alignmentAdjustment = getAlignedOffset(it->alignment, alignedShift) - alignedShift;
+        alignedShift += alignmentAdjustment;
+      }
       it->shift += alignedShift;
     }
   }
