@@ -60,3 +60,7 @@ GITS_PLUGIN_API IPlugin* createPlugin(gits::CGits& gits, const char* pluginPath)
   }
   return g_benchmark.get();
 }
+
+GITS_PLUGIN_API void destroyPlugin() {
+  g_benchmark.reset();
+}

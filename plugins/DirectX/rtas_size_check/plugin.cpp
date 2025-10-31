@@ -56,3 +56,7 @@ GITS_PLUGIN_API IPlugin* createPlugin(gits::CGits& gits, const char* pluginPath)
   }
   return g_RtasSizeCheckPlugin.get();
 }
+
+GITS_PLUGIN_API void destroyPlugin() {
+  g_RtasSizeCheckPlugin.reset();
+}
