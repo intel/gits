@@ -122,6 +122,9 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
   }
   uint instancesIndex = dtId.x;
   uint64_t captureAddress = instances[instancesIndex].blas;
+  if (!captureAddress) {
+    return;
+  }
   int first = 0;
   int last = gpuAddressCount - 1;
   while (first <= last) {
@@ -243,6 +246,9 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
   }
   uint instancesIndex = instancesOffsets[dtId.x];
   uint64_t captureAddress = instances[instancesIndex].blas;
+  if (!captureAddress) {
+    return;
+  }
   int first = 0;
   int last = gpuAddressCount - 1;
   while (first <= last) {

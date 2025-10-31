@@ -37,6 +37,9 @@ void CapturePlayerGpuAddressService::GpuAddressService::addGpuCaptureAddress(
     unsigned resourceKey,
     unsigned size,
     D3D12_GPU_VIRTUAL_ADDRESS captureAddress) {
+  if (!captureAddress) {
+    return;
+  }
   auto itHeap = heapsByResourceKey_.find(resourceKey);
   if (itHeap != heapsByResourceKey_.end()) {
     auto it = placedResourcesByKey_.find(resourceKey);
@@ -112,8 +115,11 @@ void CapturePlayerGpuAddressService::GpuAddressService::addGpuPlayerAddress(
       heapInfo->captureEnd = info->captureStart + info->size;
     }
   } else {
-    ResourceInfo* info = resourcesByKey_[resourceKey].get();
-    info->playerStart = playerAddress;
+    auto it = resourcesByKey_.find(resourceKey);
+    if (it != resourcesByKey_.end()) {
+      ResourceInfo* info = resourcesByKey_[resourceKey].get();
+      it->second->playerStart = playerAddress;
+    }
   }
 }
 
