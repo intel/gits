@@ -21,10 +21,8 @@
 #include <regex>
 #include <fstream>
 
-#ifndef BUILD_FOR_CCODE
 #include "MemorySniffer.h"
 #include "token.h"
-#endif
 #ifdef GITS_PLATFORM_WINDOWS
 #include <Windows.h>
 #include <process.h>
@@ -36,7 +34,7 @@
 #include <pngpriv.h>
 #include <pnginfo.h>
 
-#if !defined GITS_ARCH_ARM && !defined GITS_ARCH_A64 && !defined BUILD_FOR_CCODE
+#if !defined GITS_ARCH_ARM && !defined GITS_ARCH_A64
 
 #include <smmintrin.h>
 
@@ -298,7 +296,6 @@ bool SavePng(const std::string& filename,
   return true;
 }
 
-#ifndef BUILD_FOR_CCODE
 void SaveJsonFile(const nlohmann::ordered_json& json, const std::filesystem::path& path) {
   try {
     std::filesystem::create_directory(path.parent_path());
@@ -310,7 +307,6 @@ void SaveJsonFile(const nlohmann::ordered_json& json, const std::filesystem::pat
     LOG_ERROR << "Exception during creating directory. System error code: " << fe.code();
   }
 }
-#endif
 
 void CheckMinimumAvailableDiskSize() {
   auto& config = Configurator::Get();
@@ -520,7 +516,6 @@ const std::filesystem::path GetDumpPath(const Configuration& cfg) {
 
 } //namespace gits
 
-#ifndef BUILD_FOR_CCODE
 gits::ShadowBuffer::~ShadowBuffer() {
   if (_shadow.get() != nullptr && _shadow.use_count() == 1) {
     if (_pagealigned) {
@@ -703,7 +698,6 @@ void gits::GetMemoryDiffSubRange(const void* oldData,
   offset = minNewPtr - (const uint8_t*)newRangeData;
   length = maxOldPtr - minOldPtr;
 }
-#endif
 
 uint64_t gits::LZ4StreamCompressor::Compress(const char* uncompressedData,
                                              const uint64_t uncompressedDataSize,

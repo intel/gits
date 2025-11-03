@@ -27,11 +27,11 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <string>
 
 namespace gits {
 class CBinOStream;
 class CBinIStream;
-class CCodeOStream;
 
 /**
    * @brief Abstract base class for function call arguments wrappers
@@ -71,54 +71,13 @@ public:
      */
   virtual void Read(CBinIStream& stream) = 0;
 
-  /**
-     * @brief Saves argument data to a C code file
-     *
-     * Method saves argument data to a C code file.
-     *
-     * @param stream Output stream to use.
-     */
-  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {};
-
-  /**
-     * @brief Whether the output of Write needs to be prefixed with '&'
-     *
-     * If function expects a ptr and the argument we write is not a pointer, we
-     * need to add an ampersand. For example if function expects
-     * VkPresentInfoKHR* and we have a VkPresentInfoKHR then this method will
-     * return true. But if the the argument is a nullptr, the ampersand isn't
-     * needed (as nullptr is a pointer) and it will return false. It's used in
-     * Vulkan CCode.
-     */
-  virtual bool AmpersandNeeded() const {
-    return false;
-  }
-  virtual bool DeclarationNeeded() const {
-    return false;
-  }
-  virtual void DeclareValue([[maybe_unused]] CCodeOStream& stream) const {}
-  virtual void Declare([[maybe_unused]] CCodeOStream& stream) const {}
-  virtual bool PostActionNeeded() const {
-    return false;
-  }
-  virtual void PostAction([[maybe_unused]] CCodeOStream& stream) const {}
   virtual void* GetPtrType() {
     throw ENotImplemented(EXCEPTION_MESSAGE);
   }
-  virtual bool GlobalScopeVariable() const {
-    return false;
-  }
+
   static bool InitializedWithOriginal() {
     return false;
   }
-  virtual intptr_t ScopeKey() const {
-    return reinterpret_cast<intptr_t>(this);
-  }
-  virtual std::string VariableNamePrefix() const {
-    return Name();
-  }
-  virtual void VariableNameRegister([[maybe_unused]] CCodeOStream& stream,
-                                    [[maybe_unused]] bool returnValue) const {}
 
   virtual std::string ToString() const {
     return "";
@@ -134,43 +93,6 @@ inline CBinOStream& operator<<(CBinOStream& stream, const CArgument& argument) {
 
 inline CBinIStream& operator>>(CBinIStream& stream, CArgument& argument) {
   argument.Read(stream);
-  return stream;
-}
-
-namespace {
-template <typename T>
-struct use_write {
-  static const bool value = std::is_base_of<CArgument, T>::value || std::is_base_of<hex, T>::value;
-};
-
-template <typename T, typename std::enable_if<use_write<T>::value, bool>::type = true>
-void stream_output(CCodeOStream& s, const T& t) {
-  t.Write(s);
-}
-
-// stream argument cannot be CCodeOStream because it will create infinite loop
-template <typename T, typename std::enable_if<!use_write<T>::value, bool>::type = true>
-void stream_output(std::ostream& s, const T& t) {
-  s << t;
-}
-} // namespace
-
-/**
-   * @brief C code dumper of function argument
-   *
-   * Method that saves function argument data to a C code file.
-   * It uses Write method for CArgument derived classes and hex helper,
-   * and std::operator<< for other types, preserving CCodeStream as return type.
-   *
-   * @param stream Output stream to use
-   * @param argument Function argument to use
-   *
-   * @return Output stream
-   */
-template <typename T>
-gits::CCodeOStream& operator<<([[maybe_unused]] gits::CCodeOStream& stream,
-                               [[maybe_unused]] const T& t) {
-  // Do nothing (all CCode suport is being removed)
   return stream;
 }
 
@@ -210,7 +132,6 @@ public:
   }
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {};
 
   const std::string& FileName() const {
     return _fileName;
@@ -287,9 +208,6 @@ protected:
 template <class T, int N, class T_WRAP>
 class CArgumentFixedArray : public CArgument {
   T _array[N]; /**< @brief an array of library arguments */
-
-protected:
-  void Declare(CCodeOStream& stream, const std::string& declString) const;
 
 public:
   CArgumentFixedArray() {
@@ -382,7 +300,6 @@ public:
   *
   * gits::CArgumentSizedArray is divided using partial template specialization into
   * default CArgumentSizedArray<T, T_WRAP> and CArgumentSizedArray<char, T_WRAP>
-  * We made this split because of CCode char* readability (previously it was table of int's)
   */
 template <class T, class T_WRAP, class T_GET_MAPPED_POINTERS = uint64_t>
 class CArgumentSizedArray : public CArgument {
@@ -397,29 +314,6 @@ public:
   CArgumentSizedArray(const T* array, T terminator, int term_pos)
       : _sizedArray(array, terminator, term_pos) {}
   CArgumentSizedArray(const T* ptr) : _sizedArray(1, ptr) {}
-  virtual intptr_t ScopeKey() const {
-    return _sizedArray.ScopeKey();
-  }
-  virtual void DeclareValue(CCodeOStream& stream) const {
-    _sizedArray.DeclareValue(stream);
-  }
-  virtual bool PostActionNeeded() const {
-    return _sizedArray.PostActionNeeded();
-  }
-  virtual void PostAction(CCodeOStream& stream) const {
-    _sizedArray.PostAction(stream);
-  }
-
-  virtual bool GlobalScopeVariable() const {
-    return _sizedArray.GlobalScopeVariable();
-  }
-
-  virtual std::string VariableNamePrefix() const {
-    return _sizedArray.VariableNamePrefix();
-  }
-  virtual void VariableNameRegister(CCodeOStream& stream, bool returnValue) const {
-    _sizedArray.VariableNameRegister(stream, returnValue);
-  }
 
   virtual std::string ToString() const {
     return _sizedArray.ToString();
@@ -462,7 +356,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     _sizedArray.Read(stream);
   }
-  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
+
   virtual std::set<T_GET_MAPPED_POINTERS> GetMappedPointers() {
     return std::set<T_GET_MAPPED_POINTERS>();
   }
@@ -481,29 +375,6 @@ public:
   CArgumentSizedArray(const char* array, char terminator, int term_pos)
       : _sizedArray(array, terminator, term_pos) {}
   CArgumentSizedArray(const char* array) : _sizedArray(array, 0, 1) {}
-  virtual intptr_t ScopeKey() const {
-    return _sizedArray.ScopeKey();
-  }
-  virtual void DeclareValue(CCodeOStream& stream) const {
-    _sizedArray.DeclareValue(stream);
-  }
-  virtual bool PostActionNeeded() const {
-    return _sizedArray.PostActionNeeded();
-  }
-  virtual void PostAction(CCodeOStream& stream) const {
-    _sizedArray.PostAction(stream);
-  }
-
-  virtual bool GlobalScopeVariable() const {
-    return _sizedArray.GlobalScopeVariable();
-  }
-
-  virtual std::string VariableNamePrefix() const {
-    return _sizedArray.VariableNamePrefix();
-  }
-  virtual void VariableNameRegister(CCodeOStream& stream, bool returnValue) const {
-    _sizedArray.VariableNameRegister(stream, returnValue);
-  }
 
   virtual std::string ToString() const {
     if (Vector().empty()) {
@@ -556,7 +427,7 @@ public:
   virtual void Read(CBinIStream& stream) {
     _sizedArray.Read(stream);
   }
-  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
+
   virtual std::set<uint64_t> GetMappedPointers() {
     return std::set<uint64_t>();
   }
@@ -584,9 +455,6 @@ class CArgumentMappedSizedArray : public CArgument {
     ORIGS,
     NULLS,
   };
-  virtual void WriteArray(CCodeOStream& stream, std::string name, ValuesType valtype) const;
-  virtual void WritePartArray(
-      CCodeOStream& stream, std::string name, ValuesType valtype, size_t start, size_t end) const;
 
 public:
   MappedArrayAction Action() const {
@@ -690,17 +558,7 @@ public:
   }
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
-  virtual void Declare(CCodeOStream& stream) const;
-  virtual void Declare(CCodeOStream& stream, size_t start, size_t end) const;
-  virtual bool DeclarationNeeded() const {
-    return true;
-  }
-  virtual void PostAction(CCodeOStream& stream) const;
-  virtual void PostAction(CCodeOStream& stream, size_t start, size_t end) const;
-  virtual bool PostActionNeeded() const {
-    return true;
-  }
+
   virtual std::set<T> GetMappedPointers() {
     if (_array.size() == 0) {
       return std::set<T>();
@@ -747,7 +605,6 @@ public:
 
   virtual void Read(CBinIStream& stream);
   virtual void Write(CBinOStream& stream) const;
-  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {};
 };
 
 template <typename T>
@@ -925,21 +782,6 @@ public:
       }
     } else {
       throw std::runtime_error(EXCEPTION_MESSAGE);
-    }
-  }
-
-  virtual bool PostActionNeeded() const {
-    for (const auto& ptr : _cargs) {
-      if (ptr->PostActionNeeded()) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  virtual void PostAction(CCodeOStream& stream) const {
-    for (const auto& ptr : _cargs) {
-      ptr->PostAction(stream);
     }
   }
 
@@ -1136,32 +978,6 @@ public:
     }
   }
 
-  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
-  virtual bool DeclarationNeeded() const {
-    return true;
-  }
-
-  void Declare([[maybe_unused]] CCodeOStream& stream) const {}
-
-  virtual bool PostActionNeeded() const {
-    for (const auto& outer : _cargs) {
-      for (const auto& inner : outer) {
-        if (inner->PostActionNeeded()) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  virtual void PostAction(CCodeOStream& stream) const {
-    for (const auto& outer : _cargs) {
-      for (const auto& inner : outer) {
-        inner->PostAction(stream);
-      }
-    }
-  }
-
   virtual std::set<T_GET_MAPPED_POINTERS> GetMappedPointers() {
     std::set<T_GET_MAPPED_POINTERS> returnMap;
     for (unsigned outer = 0; outer < _cargs.size(); outer++) {
@@ -1209,7 +1025,6 @@ public:
 
   virtual void Read(CBinIStream& stream);
   virtual void Write(CBinOStream& stream) const;
-  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 //************************** Cuint64_t ***********************************
@@ -1236,7 +1051,6 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _uint64);
   }
-  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 //************************** Cint64_t ***********************************
@@ -1263,7 +1077,6 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _value);
   }
-  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 //************************** Cdouble ***********************************
@@ -1290,7 +1103,6 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _double);
   }
-  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 //************************** Cfloat ***********************************
@@ -1317,7 +1129,6 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _float);
   }
-  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 //************************** Cuint8_t ***********************************
@@ -1346,7 +1157,6 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _uint8);
   }
-  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 //************************** Cint32_t ***********************************
@@ -1375,7 +1185,6 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _value);
   }
-  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 //************************** Cuint16_t ***********************************
@@ -1404,7 +1213,6 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _uint16);
   }
-  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 //************************** Cint16_t ***********************************
@@ -1432,7 +1240,6 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _int);
   }
-  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 //************************** Cuint32_t ***********************************
@@ -1461,7 +1268,6 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _uint32);
   }
-  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 //************************** Cint32_t ***********************************
@@ -1489,7 +1295,6 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _int);
   }
-  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 //************************** Csize_t ***********************************
@@ -1518,7 +1323,6 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_size_t_from_stream(stream, _size);
   }
-  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 //**************************  CBOOL ***********************************
@@ -1546,7 +1350,6 @@ public:
   virtual void Read(CBinIStream& stream) {
     read_name_from_stream(stream, _BOOL);
   }
-  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 };
 
 // **************************  CMappedHandle  **************************
@@ -1571,7 +1374,6 @@ public:
 
   virtual void Write(CBinOStream& stream) const override;
   virtual void Read(CBinIStream& stream) override;
-  virtual void Write([[maybe_unused]] CCodeOStream& stream) const {}
 
   void* Original() const;
   void* Value() const;
@@ -1763,44 +1565,6 @@ void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::Read(CBinIStream& str
     }
   }
 }
-
-template <class T, class T_WRAP, gits::MappedArrayAction T_ACTION>
-void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::Write(
-    [[maybe_unused]] CCodeOStream& stream) const {}
-
-template <class T, class T_WRAP, gits::MappedArrayAction T_ACTION>
-void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::WriteArray(
-    [[maybe_unused]] CCodeOStream& stream,
-    [[maybe_unused]] std::string name,
-    [[maybe_unused]] ValuesType valtype) const {}
-
-template <class T, class T_WRAP, gits::MappedArrayAction T_ACTION>
-void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::WritePartArray(
-    [[maybe_unused]] CCodeOStream& stream,
-    [[maybe_unused]] std::string name,
-    [[maybe_unused]] ValuesType valtype,
-    [[maybe_unused]] size_t start,
-    [[maybe_unused]] size_t end) const {}
-
-template <class T, class T_WRAP, gits::MappedArrayAction T_ACTION>
-void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::Declare(
-    [[maybe_unused]] CCodeOStream& stream) const {}
-
-template <class T, class T_WRAP, gits::MappedArrayAction T_ACTION>
-void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::Declare(
-    [[maybe_unused]] CCodeOStream& stream,
-    [[maybe_unused]] size_t start,
-    [[maybe_unused]] size_t end) const {}
-
-template <class T, class T_WRAP, gits::MappedArrayAction T_ACTION>
-void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::PostAction(
-    [[maybe_unused]] CCodeOStream& stream) const {}
-
-template <class T, class T_WRAP, gits::MappedArrayAction T_ACTION>
-void gits::CArgumentMappedSizedArray<T, T_WRAP, T_ACTION>::PostAction(
-    [[maybe_unused]] CCodeOStream& stream,
-    [[maybe_unused]] size_t start,
-    [[maybe_unused]] size_t end) const {}
 
 template <class T, int N, class T_WRAP>
 void gits::CArgumentFixedArray<T, N, T_WRAP>::Read(CBinIStream& stream) {

@@ -86,15 +86,6 @@ std::string ToLowerCopy(const std::string& s) {
   return lowercase;
 }
 
-const std::string getVarName(const std::string prefix, const void* ptr) {
-  std::stringstream ss;
-  ss << ptr;
-  return prefix + ss.str();
-}
-const std::string getVarName(const void* ptr) {
-  return getVarName("var_", ptr);
-}
-
 // Non-Windows getline implementations cannot deal with specific line endings.
 std::istream& uniGetLine(std::istream& is, std::string& line) {
   line.clear();

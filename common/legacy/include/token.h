@@ -21,7 +21,6 @@
 namespace gits {
 class CBinOStream;
 class CBinIStream;
-class CCodeOStream;
 
 /**
    * @brief Capture/playback token
@@ -72,12 +71,10 @@ public:
   }
 
   void Serialize(CBinOStream& stream);
-  void Serialize(CCodeOStream& stream);
   static CToken* Deserialize(CBinIStream& stream, CToken* (*ctor)(CId));
 
 private:
   virtual void Write(CBinOStream& stream) const = 0;
-  virtual void Write(CCodeOStream& stream) const = 0;
   virtual void Read(CBinIStream& stream) = 0;
   bool _isSerialized = false;
 
@@ -99,7 +96,6 @@ public:
   }
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
   virtual void Run();
 };
 
@@ -118,7 +114,6 @@ public:
   }
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& /*stream*/) const {}
   virtual void Run();
   virtual uint64_t Size() const;
 };
@@ -133,7 +128,6 @@ public:
   }
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& /*stream*/) const {}
   virtual void Run();
   virtual uint64_t Size() const;
 };
@@ -151,7 +145,6 @@ public:
   }
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& /*stream*/) const {}
   virtual void Run();
   virtual uint64_t Size() const;
 };
@@ -169,7 +162,6 @@ public:
   }
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& /*stream*/) const {}
   virtual void Run();
   virtual uint64_t Size() const;
 };
@@ -186,7 +178,6 @@ public:
   }
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& /*stream*/) const {}
   virtual void Run();
   virtual uint64_t Size() const;
 };

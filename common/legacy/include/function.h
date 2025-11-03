@@ -104,11 +104,6 @@ public:
 
   virtual void Write(CBinOStream& stream) const;
   virtual void Read(CBinIStream& stream);
-  virtual void Write(CCodeOStream& stream) const;
-  virtual bool CCodePostActionNeeded() const {
-    return true;
-  }
-  virtual void WritePostCall(CCodeOStream& /*stream*/) const {}
 };
 
 template <class... Args>

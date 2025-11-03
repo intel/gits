@@ -169,15 +169,6 @@ public:
   static void consume_tokens(CScheduler::CTokenList& tokenList,
                              CScheduler& sched,
                              bool purgeTokens = true) {
-    // Write to code stream.
-    if (sched._oCodeStream) {
-      for (auto token : tokenList) {
-        if (!token->IsSerialized()) {
-          token->Serialize(*sched._oCodeStream);
-        }
-      }
-    }
-
     // Write to binary stream.
     if (sched._oBinStream) {
       for (auto token : tokenList) {
@@ -229,7 +220,6 @@ CScheduler::CScheduler(unsigned tokenLimit, unsigned tokenBurstNum)
       _checkpointSize(10000),
       _streamExhausted(false),
       _oBinStream(nullptr),
-      _oCodeStream(nullptr),
       _iBinStream(nullptr) {
   CGits::Instance().Timers().loading.Pause();
 }

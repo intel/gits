@@ -7,12 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #pragma once
-#ifndef BUILD_FOR_CCODE
 #include "streams.h"
-#else
-#include "openglArguments.h"
-#include "helper.h"
-#endif
 #include "pragmas.h"
 #include <fstream>
 #include <stdexcept>
@@ -22,7 +17,6 @@
 namespace gits {
 template <typename T>
 void write_map(const std::filesystem::path& filename, const T& m) {
-#ifndef BUILD_FOR_CCODE
   std::ofstream file(filename, std::ios::binary);
   if (!file.is_open()) {
     CheckMinimumAvailableDiskSize();
@@ -34,12 +28,10 @@ void write_map(const std::filesystem::path& filename, const T& m) {
     write_to_stream(file, iter->first);
     write_to_stream(file, iter->second);
   }
-#endif
 }
 
 template <typename KeyType, typename ValueType>
 void append_map(const std::filesystem::path& filename, const KeyType& key, const ValueType& value) {
-#ifndef BUILD_FOR_CCODE
   std::ofstream file(filename, std::ios::binary | std::ios::app);
   if (!file.is_open()) {
     CheckMinimumAvailableDiskSize();
@@ -49,7 +41,6 @@ void append_map(const std::filesystem::path& filename, const KeyType& key, const
   write_to_stream(file, key);
   write_to_stream(file, value);
   file.flush();
-#endif
 }
 
 template <typename T>

@@ -22,7 +22,6 @@
 #include "token.h"
 #include "function.h"
 #include "tools.h"
-#include "automateCCode.h"
 #include "diagnostic.h"
 #include "imGuiHUD.h"
 #include "yaml-cpp/yaml.h"
@@ -98,8 +97,6 @@ CGits::CGits(uint16_t v0, uint16_t v1, uint16_t v2, uint16_t v3)
       _glProgramsUnZipFile(nullptr),
       _frameNo(1),
       _restoringState(false),
-      _ccodePreRecord(false),
-      _ccodeStateRestore(false),
       _sc(nullptr),
       _currentLocalMemoryUsage(0),
       _maxLocalMemoryUsage(0),

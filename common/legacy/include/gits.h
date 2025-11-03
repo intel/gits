@@ -52,7 +52,6 @@ struct lua_State;
 
 namespace gits {
 class CScheduler;
-class CCodeOStream;
 class CBinOStream;
 class CBinIStream;
 class CBehavior;
@@ -133,7 +132,6 @@ struct Events {
 //
 struct StreamingContext {
   std::unique_ptr<CBinOStream> oBinStream;
-  std::unique_ptr<CCodeOStream> oCodeStream;
   std::shared_ptr<CBehavior> behavior;
 
   std::unique_ptr<CBinIStream> iBinStream;
@@ -203,8 +201,6 @@ private:
 
   uint32_t _frameNo;
   bool _restoringState;
-  bool _ccodePreRecord;
-  bool _ccodeStateRestore;
   std::vector<std::function<void()>> _endPlaybackEvents;
   std::vector<std::function<void()>> _luaFunctionsRegistrators;
   Events _playbackEvents;
@@ -347,26 +343,6 @@ public:
   }
   bool IsStateRestoration() {
     return _restoringState;
-  }
-
-  void CCodePreRecordStart() {
-    _ccodePreRecord = true;
-  }
-  void CCodePreRecordEnd() {
-    _ccodePreRecord = false;
-  }
-  bool IsCCodePreRecord() {
-    return _ccodePreRecord;
-  }
-
-  void CCodeStateRestoreStart() {
-    _ccodeStateRestore = true;
-  }
-  void CCodeStateRestoreEnd() {
-    _ccodeStateRestore = false;
-  }
-  bool IsCCodeStateRestore() {
-    return _ccodeStateRestore;
   }
 
   void SetApi3D(ApisIface::TApi newApi) {

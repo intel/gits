@@ -31,7 +31,6 @@ namespace gits {
 class CScheduler;
 class CToken;
 class CBinOStream;
-class CCodeOStream;
 class CRecorderWrapper;
 class CRecorder;
 class CBehavior;

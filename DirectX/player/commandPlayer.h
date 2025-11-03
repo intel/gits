@@ -24,7 +24,6 @@ public:
   }
   void Write(CBinOStream& stream) const override {}
   void Read(CBinIStream& stream) override {}
-  void Write(CCodeOStream& stream) const {}
 };
 
 class CommandPlayer : public CFunction {

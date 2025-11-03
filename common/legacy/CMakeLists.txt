@@ -46,8 +46,6 @@ list(APPEND common_SOURCES
   ${COMMON_HEADER_DIR}/tools_lite.h
   ${COMMON_HEADER_DIR}/tools.h
   ${COMMON_HEADER_DIR}/version.h
-  ${COMMON_HEADER_DIR}/automateCCode.h
-  ${COMMON_HEADER_DIR}/ccodeWriteWrap.h
   ${COMMON_HEADER_DIR}/intervalSet.h
   ${COMMON_HEADER_DIR}/controlHandler.h
   ${COMMON_HEADER_DIR}/recorderBehaviors.h
@@ -85,8 +83,6 @@ list(APPEND common_SOURCES
   ${COMMON_SOURCE_DIR}/InputListener.cpp
   ${COMMON_SOURCE_DIR}/keyEvents.cpp
   ${COMMON_SOURCE_DIR}/texture_converter.cpp
-  ${COMMON_SOURCE_DIR}/automateCCode.cpp
-  ${COMMON_SOURCE_DIR}/ccodeWriteWrap.cpp
   ${COMMON_SOURCE_DIR}/controlHandler.cpp
   ${COMMON_SOURCE_DIR}/recorderBehaviors.cpp
   ${COMMON_SOURCE_DIR}/recorder.cpp

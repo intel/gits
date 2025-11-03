@@ -71,15 +71,6 @@ void gits::CFunction::Read(CBinIStream& stream) {
 }
 
 /**
- * @brief Saves function data to a C code file
- *
- * Method saves function data to a C code file.
- *
- * @param stream Output stream to use.
- */
-void gits::CFunction::Write(CCodeOStream& stream) const {}
-
-/**
  * @brief Returns function argument
  *
  * Method returns function argument.

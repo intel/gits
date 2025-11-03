@@ -13,9 +13,7 @@
 #include "log.h"
 #include "platform.h"
 #include "pragmas.h"
-#ifndef BUILD_FOR_CCODE
 #include "gits.h"
-#endif
 #include <string>
 #include <algorithm>
 #include <memory>

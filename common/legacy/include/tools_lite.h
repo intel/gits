@@ -71,10 +71,6 @@ bool caseInsensitiveEquals(const std::string& a, const std::string& b);
 // Returns a lowercase copy of a given string.
 std::string ToLowerCopy(const std::string& s);
 
-// Returns a CCode variable name based on a pointer and an optional prefix.
-const std::string getVarName(const std::string prefix, const void* ptr);
-const std::string getVarName(const void* ptr);
-
 std::istream& uniGetLine(std::istream& is, std::string& line);
 
 void sleep_millisec(int duration);

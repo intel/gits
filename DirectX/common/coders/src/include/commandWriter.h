@@ -21,7 +21,6 @@ public:
   void Run() override {}
 
 private:
-  void Write(CCodeOStream& stream) const override {}
   void Read(CBinIStream& stream) override {}
 
   void Write(CBinOStream& stream) const {

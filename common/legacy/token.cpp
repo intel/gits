@@ -74,11 +74,6 @@ CToken* CToken::Deserialize(CBinIStream& stream, CToken* (*ctor)(CId)) {
   return token;
 }
 
-void CToken::Serialize(CCodeOStream& stream) {
-  this->_isSerialized = true;
-  this->Write(stream);
-}
-
 /* ******************************** MARKER ****************************** */
 
 CTokenMarker::CTokenMarker(TId id) : _id(id) {}
@@ -86,66 +81,6 @@ CTokenMarker::CTokenMarker(TId id) : _id(id) {}
 void CTokenMarker::Write(CBinOStream& stream) const {}
 
 void CTokenMarker::Read(CBinIStream& stream) {}
-
-void CTokenMarker::Write(CCodeOStream& stream) const {
-  // Frame number is only used by CCode and not encoded in binary stream
-  // Note: GITS starts frame numbering from 1
-  static unsigned frameNumber = 1;
-
-  std::stringstream functionName;
-  switch (_id) {
-  case CToken::ID_FRAME_START:
-    functionName << "RunFrame" << std::setfill('0') << std::setw(6) << std::dec << frameNumber
-                 << "()";
-    break;
-  case CToken::ID_INIT_START:
-    CGits::Instance().CCodeStateRestoreStart();
-    functionName << "PrepareFrame" << std::setfill('0') << std::setw(6) << std::dec << frameNumber
-                 << "()";
-    break;
-  case CToken::ID_PRE_RECORD_START:
-    CGits::Instance().CCodePreRecordStart();
-    functionName << "NativePreRecord" << std::setfill('0') << std::setw(6) << std::dec
-                 << frameNumber << "()";
-    break;
-    //some frame related function ended - close its '}'
-  case CToken::ID_PRE_RECORD_END:
-    stream.select(CCodeOStream::GITS_PRE_RECORDER_CPP);
-    stream.ScopeEnd();
-    stream << "}" << std::endl;
-    CGits::Instance().CCodePreRecordEnd();
-    break;
-  case CToken::ID_INIT_END:
-    stream.select(CCodeOStream::GITS_STATE_RESTORE_CPP);
-    stream.ScopeEnd();
-    stream << "}" << std::endl;
-    CGits::Instance().CCodeStateRestoreEnd();
-    break;
-  case CToken::ID_FRAME_END:
-  case CToken::ID_CCODE_FINISH:
-    stream.select(CCodeOStream::GITS_FRAMES_CPP);
-    stream.ScopeEnd();
-    stream << "}" << std::endl;
-    break;
-  default:;
-  }
-
-  auto fname = functionName.str();
-  if (!fname.empty()) {
-    //we need to add this function to state_restore.cpp or frames.cpp where its implementation is
-    stream.select(stream.selectCCodeFile());
-    stream << "void " << fname << "\n{" << std::endl;
-    stream.ScopeBegin();
-
-    //and we need to call it in main.cpp
-    stream.select(CCodeOStream::GITS_MAIN_CPP)
-        << "  extern void " << fname << ";\n  " << fname << ";" << std::endl;
-  }
-
-  if (_id == CToken::ID_FRAME_END) {
-    frameNumber++;
-  }
-}
 
 static void OnFrameBeginImpl() {
   auto& gits = CGits::Instance();

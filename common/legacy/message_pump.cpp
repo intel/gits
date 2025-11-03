@@ -7,9 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "platform.h"
-#ifndef BUILD_FOR_CCODE
 #include "apis_iface.h"
-#endif
 #if defined GITS_PLATFORM_WINDOWS
 #include <Windows.h>
 #include <windowsx.h>
@@ -246,10 +244,8 @@ void MessagePump::process_messages() {
     }
 
     if (leave_) {
-#ifndef BUILD_FOR_CCODE
       gits::CGits::Instance().SetPlayerFinish();
       gits::CGits::Instance().ProcessEndPlaybackEvents();
-#endif
       if (gits::Configurator::Get().common.player.windowMode ==
           gits::WindowMode::EXCLUSIVE_FULLSCREEN) {
         ShowCursor(TRUE);
@@ -269,7 +265,6 @@ static Bool accept_event(Display* display, XEvent* event, XPointer arg) {
 void MessagePump::process_messages() {
   native_disp_t disp = GetNativeDisplay();
   while (true) {
-#ifndef BUILD_FOR_CCODE
     XEvent event;
     if (gits::CGits::Instance().apis.Has3D() &&
         gits::CGits::Instance().apis.Iface3D().Api() == gits::ApisIface::OpenGL &&
@@ -281,9 +276,9 @@ void MessagePump::process_messages() {
           stop();
         }
       }
-    } else
-#endif
+    } else {
       idle();
+    }
     if (leave_) {
       break;
     }

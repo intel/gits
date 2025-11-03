@@ -41,9 +41,7 @@
 #include <X11/Xatom.h>
 #endif
 
-#ifndef BUILD_FOR_CCODE
 #include "nlohmann/json.hpp"
-#endif
 #include <zstd.h>
 #include <lz4.h>
 
@@ -88,9 +86,7 @@ bool SavePng(const std::string& filename,
              bool sRGB = false,
              bool bgr = false);
 
-#ifndef BUILD_FOR_CCODE
 void SaveJsonFile(const nlohmann::ordered_json& json, const std::filesystem::path& path);
-#endif
 
 void CheckMinimumAvailableDiskSize();
 
@@ -476,7 +472,6 @@ public:
   ~ImageWriter() = default;
 };
 
-#ifndef BUILD_FOR_CCODE
 class ShadowBuffer {
   void* _orig;
   size_t _size;
@@ -554,7 +549,6 @@ public:
     _tokensList.clear();
   }
 };
-#endif
 
 class StreamCompressor {
 public:

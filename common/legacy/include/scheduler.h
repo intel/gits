@@ -24,7 +24,6 @@ namespace gits {
 
 class CBinOStream;
 class CBinIStream;
-class CCodeOStream;
 
 /**
    * @brief Library function calls scheduler
@@ -58,7 +57,6 @@ private:
   bool _streamExhausted;
 
   CBinOStream* _oBinStream;
-  CCodeOStream* _oCodeStream;
   CBinIStream* _iBinStream;
 
   std::mutex _tokenRegisterMutex;
@@ -88,9 +86,6 @@ public:
     _oBinStream = stream;
   }
   void Stream(CBinIStream* stream);
-  void Stream(CCodeOStream* stream) {
-    _oCodeStream = stream;
-  }
 
   // Last chunk needs to be written by the owner of scheduler.
   void WriteChunk(bool purgeTokens = true);
