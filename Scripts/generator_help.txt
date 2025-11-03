@@ -34,7 +34,6 @@ Function description
 	stateTrack - default False - state tracking function name (generic for recorder and player).
 	runWrap - default False - function wrapping original function execution.
 	recWrap - default False - function wrapping original function schedule.
-	ccodeWrap - default False - function enables using wrapped API in ccode
 	runCond - default False - API execution condition function
 	recCond - default False - API recorder condition function
 
