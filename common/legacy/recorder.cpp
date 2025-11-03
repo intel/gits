@@ -592,7 +592,6 @@ void gits::CRecorder::Stop() {
         }
       }
     }
-    Scheduler().Register(new gits::CTokenMarker(CToken::ID_CCODE_FINISH));
   }
 
   _running = false;

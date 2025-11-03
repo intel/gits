@@ -205,6 +205,7 @@ CToken* CTokenCreate(CId id) {
   case CToken::ID_PRE_RECORD_END:
     return new CTokenMarker(CToken::ID_PRE_RECORD_END);
   case CToken::ID_CCODE_FINISH:
+    // DEPRECATED: Kept for backward compatibility only
     return new CTokenMarker(CToken::ID_CCODE_FINISH);
   case CToken::ID_PLAYER_RECORDER_SYNC:
     return new CTokenPlayerRecorderSync;
