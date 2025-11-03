@@ -577,6 +577,9 @@ Configuration:
       - Name: Recorder
         Type: Group
         Options:
+          - Name: enabled
+            Type: bool
+            Default: true
           - Name: logToConsole
             Type: bool
             Default: false
@@ -624,9 +627,6 @@ Configuration:
             Default: /usr/lib/{arch}-linux-gnu/libze_loader.so.1
             DefaultsPerPlatform:
               - win32: C:\Windows\System32\ze_loader.dll
-          - Name: recordingMode
-            Type: RecordingMode
-            Default: Binary
           - Name: exitKeysStr
             Type: std::vector<std::string>
             Default: []
@@ -665,10 +665,6 @@ Configuration:
           - Name: uniqueDumpDirectory
             Type: bool
             Default: true
-          - Name: enabled
-            Type: bool
-            Default: ""
-            Accessibility: Derived
           - Name: useEvents
             Type: bool
             Default: ""
@@ -736,10 +732,6 @@ Configuration:
       - Name: Capture
         Type: Group
         Options:
-          - Name: record
-            Type: bool
-            Default: true
-            Description: Record the API commands
           - Name: shadowMemory
             Type: bool
             Default: false

@@ -70,6 +70,6 @@ ${render_group(option, 0)}\
 #   MyApplication:
 #     Common:
 #       Recorder:
-#         RecordingMode: 'None'
+#         Enabled: false
 
 Overrides:

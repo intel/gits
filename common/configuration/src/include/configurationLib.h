@@ -15,7 +15,6 @@
 namespace gits {
 typedef Configuration Config;
 
-using TRecordingMode = RecordingMode;
 using TOpenGLRecorderMode = OpenGLRecorderMode;
 using TVulkanRecorderMode = VulkanRecorderMode;
 using TOpenCLRecorderMode = OpenCLRecorderMode;

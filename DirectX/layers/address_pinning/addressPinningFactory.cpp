@@ -17,7 +17,7 @@ namespace DirectX {
 
 AddressPinningFactory::AddressPinningFactory() {
 
-  if ((Configurator::IsRecorder() && Configurator::Get().directx.capture.record &&
+  if ((Configurator::IsRecorder() && Configurator::Get().common.recorder.enabled &&
        Configurator::Get().directx.capture.storeAddressPinning) ||
       (Configurator::IsPlayer() &&
        Configurator::Get().directx.player.addressPinning == AddressPinningMode::STORE)) {

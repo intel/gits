@@ -457,10 +457,10 @@ void gits::CRecorder::Register(std::unique_ptr<CBehavior> behavior) {
 #endif
   auto filePath = (outputpath / "stream").string();
 #if defined GITS_PLATFORM_WINDOWS
-  if ((Configurator::DumpBinary() && rec.enabled) ||
+  if ((Configurator::IsRecorder() && rec.enabled) ||
       (Configurator::IsPlayer() && directx.features.subcapture.enabled)) {
 #else
-  if (Configurator::DumpBinary() && rec.enabled) {
+  if (Configurator::IsRecorder() && rec.enabled) {
 #endif
     // create file
     std::string filename = filePath + ".gits2";

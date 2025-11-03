@@ -245,10 +245,6 @@ std::string PrepareDumpPath(const std::string& str, bool uniqueDump) {
 template <>
 void DeriveConfigData<Configuration::Common::Recorder>(Configuration::Common::Recorder& obj,
                                                        Configuration& config) {
-  if (config.common.recorder.recordingMode != RecordingMode::NONE) {
-    obj.enabled = true;
-  }
-
   if (!config.common.recorder.exitKeysStr.empty()) {
     obj.exitKeys = std::move(gits::parseKeys(config.common.recorder.exitKeysStr));
   }

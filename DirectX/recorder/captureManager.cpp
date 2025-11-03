@@ -151,7 +151,7 @@ void CaptureManager::createLayers() {
     globalSynchronizationLayer = std::make_unique<GlobalSynchronizationLayer>();
   }
 
-  if (cfg.directx.capture.record) {
+  if (cfg.common.recorder.enabled) {
     captureCustomizationLayer = std::make_unique<CaptureCustomizationLayer>(*this, *recorder_);
     captureSynchronizationLayer = std::make_unique<CaptureSynchronizationLayer>(*this);
     encoderLayer = std::make_unique<EncoderLayer>(*recorder_);

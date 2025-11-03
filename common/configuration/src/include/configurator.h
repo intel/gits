@@ -75,10 +75,6 @@ public:
   }
 #endif
 
-  static bool DumpBinary() {
-    return Get().common.recorder.recordingMode == RecordingMode::BINARY;
-  }
-
 #ifdef GITS_PLATFORM_WINDOWS
   static void PrepareSubcapturePath();
 #endif
