@@ -53,6 +53,7 @@ public:
   %endfor
   void pre(INTC_D3D12_CreateDeviceExtensionContextCommand& c) override;
   void pre(INTC_D3D12_CreateDeviceExtensionContext1Command& c) override;
+  void pre(INTC_D3D12_SetApplicationInfoCommand& c) override;
   void pre(INTC_DestroyDeviceExtensionContextCommand& c) override;
   void pre(INTC_D3D12_SetFeatureSupportCommand& c) override;
   void pre(INTC_D3D12_CreateComputePipelineStateCommand& c) override;

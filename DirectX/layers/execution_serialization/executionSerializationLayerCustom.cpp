@@ -249,6 +249,12 @@ void ExecutionSerializationLayer::pre(INTC_D3D12_CreateDeviceExtensionContext1Co
   }
 }
 
+void ExecutionSerializationLayer::pre(INTC_D3D12_SetApplicationInfoCommand& c) {
+  if (recorder_.isRunning()) {
+    recorder_.record(new INTC_D3D12_SetApplicationInfoWriter(c));
+  }
+}
+
 void ExecutionSerializationLayer::pre(INTC_DestroyDeviceExtensionContextCommand& c) {
   if (recorder_.isRunning()) {
     recorder_.record(new INTC_DestroyDeviceExtensionContextWriter(c));
