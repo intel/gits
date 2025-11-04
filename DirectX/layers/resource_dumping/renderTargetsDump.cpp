@@ -28,7 +28,7 @@ void RenderTargetsDump::dumpResource(ID3D12GraphicsCommandList* commandList,
   dumpInfo->subresource = subresource;
   dumpInfo->dumpName = dumpName;
   dumpInfo->mipLevel = mipLevel;
-  dumpInfo->format = format;
+  dumpInfo->subresourceFormat = format;
   dumpInfo->commandListDrawCount = commandListDrawCount;
 
   stageResource(commandList, resource, resourceState, *dumpInfo);

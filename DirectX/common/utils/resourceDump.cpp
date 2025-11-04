@@ -65,7 +65,7 @@ void ResourceDump::dumpResource(ID3D12GraphicsCommandList* commandList,
   dumpInfo->subresource = subresource;
   dumpInfo->dumpName = dumpName;
   dumpInfo->mipLevel = mipLevel;
-  dumpInfo->format = format;
+  dumpInfo->subresourceFormat = format;
 
   stageResource(commandList, resource, resourceState, *dumpInfo);
 }
@@ -81,11 +81,6 @@ void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
   GITS_ASSERT(hr == S_OK);
 
   dumpInfo.desc = resource->GetDesc();
-  if (dumpInfo.format != DXGI_FORMAT_UNKNOWN) {
-    dumpInfo.desc.Format = dumpInfo.format;
-  }
-  dumpInfo.desc.Format = getDumpableFormat(dumpInfo.desc.Format);
-
   D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint{};
   if (dumpInfo.desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     D3D12_RESOURCE_DESC desc = dumpInfo.desc;
@@ -99,6 +94,7 @@ void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
                                   &size);
     dumpInfo.size = size;
     dumpInfo.rowPitch = footprint.Footprint.RowPitch;
+    dumpInfo.subresourceFormat = getDumpableFormat(footprint.Footprint.Format);
   } else if (!dumpInfo.size) {
     dumpInfo.size = dumpInfo.desc.Width;
   }
@@ -178,7 +174,7 @@ void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
     }
 
     commandList->ResolveSubresource(dumpInfo.resolvedResource.Get(), dumpInfo.subresource, resource,
-                                    dumpInfo.subresource, dumpInfo.desc.Format);
+                                    dumpInfo.subresource, dumpInfo.subresourceFormat);
 
     if (resourceState != D3D12_RESOURCE_STATE_COPY_SOURCE) {
       barrier.Transition.StateAfter = barrier.Transition.StateBefore;
@@ -369,7 +365,7 @@ void ResourceDump::dumpBuffer(DumpInfo& dumpInfo, void* data) {
 }
 
 void ResourceDump::dumpTexture(DumpInfo& dumpInfo, void* data) {
-  DXGI_FORMAT format = dumpInfo.desc.Format;
+  DXGI_FORMAT format = dumpInfo.subresourceFormat;
   if (format == DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS) {
     format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
   } else if (format == DXGI_FORMAT_R24_UNORM_X8_TYPELESS) {
@@ -405,8 +401,9 @@ void ResourceDump::dumpTexture(DumpInfo& dumpInfo, void* data) {
     if (::DirectX::IsCompressed(image.format)) {
       HRESULT hr = ::DirectX::Decompress(image, destFormat, scratchImage);
       if (hr != S_OK) {
-        LOG_ERROR << "Dumping " + dumpNameA + " format " << formatToString(dumpInfo.desc.Format)
-                  << " failed in Decompress 0x" << std::hex << hr << std::dec;
+        LOG_ERROR << "Dumping " + dumpNameA + " format "
+                  << formatToString(dumpInfo.subresourceFormat) << " failed in Decompress 0x"
+                  << std::hex << hr << std::dec;
         return;
       }
       imageConverted = scratchImage.GetImage(0, 0, 0);
@@ -428,8 +425,9 @@ void ResourceDump::dumpTexture(DumpInfo& dumpInfo, void* data) {
         }
       }
       if (hr != S_OK) {
-        LOG_ERROR << "Dumping " + dumpNameA + " format " << formatToString(dumpInfo.desc.Format)
-                  << " failed 0x" << std::hex << hr << std::dec;
+        LOG_ERROR << "Dumping " + dumpNameA + " format "
+                  << formatToString(dumpInfo.subresourceFormat) << " failed 0x" << std::hex << hr
+                  << std::dec;
         return;
       }
 
@@ -458,7 +456,7 @@ void ResourceDump::dumpTexture(DumpInfo& dumpInfo, void* data) {
       initialized = true;
     }
     if (hr != S_OK) {
-      LOG_ERROR << "Dumping " + dumpNameA + " format " << formatToString(dumpInfo.desc.Format)
+      LOG_ERROR << "Dumping " + dumpNameA + " format " << formatToString(dumpInfo.subresourceFormat)
                 << " failed in SaveToWICFile 0x" << std::hex << hr << std::dec;
     }
   }

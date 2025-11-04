@@ -64,7 +64,7 @@ protected:
     Microsoft::WRL::ComPtr<ID3D12Resource> stagingBuffer{};
     Microsoft::WRL::ComPtr<ID3D12Resource> resolvedResource{};
     D3D12_RESOURCE_DESC desc{};
-    DXGI_FORMAT format{};
+    DXGI_FORMAT subresourceFormat{};
     unsigned rowPitch{};
   };
 

@@ -46,7 +46,7 @@ void ResourceDump::dumpResource(ID3D12GraphicsCommandList* commandList,
   dumpInfo->subresource = subresource;
   dumpInfo->dumpName = dumpName;
   dumpInfo->mipLevel = mipLevel;
-  dumpInfo->format = format;
+  dumpInfo->subresourceFormat = format;
 
   stageResource(commandList, resource, resourceState, *dumpInfo);
 }
@@ -62,10 +62,6 @@ void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
   assert(hr == S_OK);
 
   dumpInfo.desc = resource->GetDesc();
-  if (dumpInfo.format != DXGI_FORMAT_UNKNOWN) {
-    dumpInfo.desc.Format = dumpInfo.format;
-  }
-
   D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint{};
   if (dumpInfo.desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     D3D12_RESOURCE_DESC desc = dumpInfo.desc;
@@ -79,6 +75,7 @@ void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
                                   &size);
     dumpInfo.size = size;
     dumpInfo.rowPitch = footprint.Footprint.RowPitch;
+    dumpInfo.subresourceFormat = footprint.Footprint.Format;
   } else if (!dumpInfo.size) {
     dumpInfo.size = dumpInfo.desc.Width;
   }
@@ -139,7 +136,7 @@ void ResourceDump::stageResource(ID3D12GraphicsCommandList* commandList,
     }
 
     commandList->ResolveSubresource(dumpInfo.resolvedResource.Get(), dumpInfo.subresource, resource,
-                                    dumpInfo.subresource, dumpInfo.desc.Format);
+                                    dumpInfo.subresource, dumpInfo.subresourceFormat);
 
     if (resourceState != D3D12_RESOURCE_STATE_COPY_SOURCE) {
       barrier.Transition.StateAfter = barrier.Transition.StateBefore;
