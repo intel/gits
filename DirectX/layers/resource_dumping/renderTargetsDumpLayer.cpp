@@ -180,13 +180,18 @@ void RenderTargetsDumpLayer::onDraw(ID3D12GraphicsCommandList* commandList,
   auto itRenderTargets = renderTargetsByCommandList_.find(commandListKey);
   if (itRenderTargets != renderTargetsByCommandList_.end()) {
     for (RenderTarget& renderTarget : itRenderTargets->second) {
-      dumpRenderTarget(commandList, renderTarget, frame, commandListDrawCount, drawCount_);
+      if (renderTarget.resource) {
+        dumpRenderTarget(commandList, renderTarget, frame, commandListDrawCount, drawCount_);
+      }
     }
   }
 
   auto itDepthStencil = depthStencilByCommandList_.find(commandListKey);
   if (itDepthStencil != depthStencilByCommandList_.end()) {
-    dumpDepthStencil(commandList, itDepthStencil->second, frame, commandListDrawCount, drawCount_);
+    if (itDepthStencil->second.resource) {
+      dumpDepthStencil(commandList, itDepthStencil->second, frame, commandListDrawCount,
+                       drawCount_);
+    }
   }
 }
 
