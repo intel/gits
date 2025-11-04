@@ -263,7 +263,7 @@ void DescriptorService::restoreD3D12UnorderedAccessView(D3D12UnorderedAccessView
   c.key = stateService_->getUniqueCommandKey();
   c.object_.key = state->deviceKey;
   c.pResource_.key = state->resourceKey;
-  c.pCounterResource_.key = state->counterResourceKey;
+  c.pCounterResource_.key = state->auxiliaryResourceKey;
   c.pDesc_.value = state->isDesc ? &state->desc : nullptr;
   c.DestDescriptor_.value = state->destDescriptor;
   c.DestDescriptor_.interfaceKey = state->destDescriptorKey;
@@ -285,7 +285,7 @@ void DescriptorService::restoreD3D12ConstantBufferView(D3D12ConstantBufferViewSt
   c.key = stateService_->getUniqueCommandKey();
   c.object_.key = state->deviceKey;
   c.pDesc_.value = state->isDesc ? &state->desc : nullptr;
-  c.pDesc_.bufferLocationKey = state->bufferLocationKey;
+  c.pDesc_.bufferLocationKey = state->resourceKey;
   c.pDesc_.bufferLocationOffset = state->bufferLocationOffset;
   c.DestDescriptor_.value = state->destDescriptor;
   c.DestDescriptor_.interfaceKey = state->destDescriptorKey;

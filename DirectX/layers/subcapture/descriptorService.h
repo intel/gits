@@ -36,6 +36,7 @@ struct DescriptorState {
   unsigned destDescriptorKey{};
   unsigned destDescriptorIndex{};
   unsigned resourceKey{};
+  unsigned auxiliaryResourceKey{};
 };
 
 struct D3D12RenderTargetViewState : public DescriptorState {
@@ -59,7 +60,6 @@ struct D3D12ShaderResourceViewState : public DescriptorState {
 
 struct D3D12UnorderedAccessViewState : public DescriptorState {
   D3D12UnorderedAccessViewState() : DescriptorState(D3D12_UNORDEREDACCESSVIEW) {}
-  unsigned counterResourceKey{};
   bool isDesc{};
   D3D12_UNORDERED_ACCESS_VIEW_DESC desc{};
 };
@@ -68,7 +68,6 @@ struct D3D12ConstantBufferViewState : public DescriptorState {
   D3D12ConstantBufferViewState() : DescriptorState(D3D12_CONSTANTBUFFERVIEW) {}
   bool isDesc{};
   D3D12_CONSTANT_BUFFER_VIEW_DESC desc{};
-  unsigned bufferLocationKey{};
   unsigned bufferLocationOffset{};
 };
 

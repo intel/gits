@@ -283,14 +283,15 @@ void AnalyzerCommandListService::copyDescriptors(ID3D12DeviceCopyDescriptorsSimp
       DescriptorState* state = descriptorService_.getDescriptorState(
           c.SrcDescriptorRangeStart_.interfaceKey, c.SrcDescriptorRangeStart_.index + i);
       if (state) {
-        objectsForRestore_.insert(state->resourceKey);
+        addObjectForRestore(state->resourceKey);
+        addObjectForRestore(state->auxiliaryResourceKey);
       }
       descriptors_.insert(
           {c.SrcDescriptorRangeStart_.interfaceKey, c.SrcDescriptorRangeStart_.index + i});
     }
-    objectsForRestore_.insert(c.SrcDescriptorRangeStart_.interfaceKey);
+    addObjectForRestore(c.SrcDescriptorRangeStart_.interfaceKey);
 
-    objectsForRestore_.insert(c.DestDescriptorRangeStart_.interfaceKey);
+    addObjectForRestore(c.DestDescriptorRangeStart_.interfaceKey);
   }
 }
 
@@ -304,16 +305,17 @@ void AnalyzerCommandListService::copyDescriptors(ID3D12DeviceCopyDescriptorsComm
             descriptorService_.getDescriptorState(c.pSrcDescriptorRangeStarts_.interfaceKeys[i],
                                                   c.pSrcDescriptorRangeStarts_.indexes[i] + j);
         if (state) {
-          objectsForRestore_.insert(state->resourceKey);
+          addObjectForRestore(state->resourceKey);
+          addObjectForRestore(state->auxiliaryResourceKey);
         }
         descriptors_.insert({c.pSrcDescriptorRangeStarts_.interfaceKeys[i],
                              c.pSrcDescriptorRangeStarts_.indexes[i] + j});
       }
-      objectsForRestore_.insert(c.pSrcDescriptorRangeStarts_.interfaceKeys[i]);
+      addObjectForRestore(c.pSrcDescriptorRangeStarts_.interfaceKeys[i]);
     }
 
     for (unsigned key : c.pDestDescriptorRangeStarts_.interfaceKeys) {
-      objectsForRestore_.insert(key);
+      addObjectForRestore(key);
     }
   }
 }
@@ -334,11 +336,12 @@ void AnalyzerCommandListService::setBindlessDescriptors(unsigned rootSignatureKe
   for (unsigned index : indexes) {
     DescriptorState* state = descriptorService_.getDescriptorState(descriptorHeapKey, index);
     if (state) {
-      objectsForRestore_.insert(state->resourceKey);
+      addObjectForRestore(state->resourceKey);
+      addObjectForRestore(state->auxiliaryResourceKey);
     }
     descriptors_.insert({descriptorHeapKey, index});
   }
-  objectsForRestore_.insert(descriptorHeapKey);
+  addObjectForRestore(descriptorHeapKey);
 }
 
 bool AnalyzerCommandListService::inRange() {
@@ -346,12 +349,12 @@ bool AnalyzerCommandListService::inRange() {
 }
 
 void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListResetCommand& c) {
-  objectsForRestore_.insert(c.pAllocator_.key);
-  objectsForRestore_.insert(c.pInitialState_.key);
+  addObjectForRestore(c.pAllocator_.key);
+  addObjectForRestore(c.pInitialState_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListClearStateCommand& c) {
-  objectsForRestore_.insert(c.pPipelineState_.key);
+  addObjectForRestore(c.pPipelineState_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListDrawInstancedCommand& c) {
@@ -399,49 +402,49 @@ void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListDispat
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListCopyBufferRegionCommand& c) {
-  objectsForRestore_.insert(c.pDstBuffer_.key);
-  objectsForRestore_.insert(c.pSrcBuffer_.key);
+  addObjectForRestore(c.pDstBuffer_.key);
+  addObjectForRestore(c.pSrcBuffer_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListCopyTextureRegionCommand& c) {
-  objectsForRestore_.insert(c.pDst_.resourceKey);
-  objectsForRestore_.insert(c.pSrc_.resourceKey);
+  addObjectForRestore(c.pDst_.resourceKey);
+  addObjectForRestore(c.pSrc_.resourceKey);
 }
 
 void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListCopyResourceCommand& c) {
-  objectsForRestore_.insert(c.pDstResource_.key);
-  objectsForRestore_.insert(c.pSrcResource_.key);
+  addObjectForRestore(c.pDstResource_.key);
+  addObjectForRestore(c.pSrcResource_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListCopyTilesCommand& c) {
-  objectsForRestore_.insert(c.pTiledResource_.key);
-  objectsForRestore_.insert(c.pBuffer_.key);
+  addObjectForRestore(c.pTiledResource_.key);
+  addObjectForRestore(c.pBuffer_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListResolveSubresourceCommand& c) {
-  objectsForRestore_.insert(c.pDstResource_.key);
-  objectsForRestore_.insert(c.pSrcResource_.key);
+  addObjectForRestore(c.pDstResource_.key);
+  addObjectForRestore(c.pSrcResource_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListSetPipelineStateCommand& c) {
-  objectsForRestore_.insert(c.pPipelineState_.key);
+  addObjectForRestore(c.pPipelineState_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListResourceBarrierCommand& c) {
   for (unsigned key : c.pBarriers_.resourceKeys) {
-    objectsForRestore_.insert(key);
+    addObjectForRestore(key);
   }
   for (unsigned key : c.pBarriers_.resourceAfterKeys) {
-    objectsForRestore_.insert(key);
+    addObjectForRestore(key);
   }
 }
 
 void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListExecuteBundleCommand& c) {
-  objectsForRestore_.insert(c.pCommandList_.key);
+  addObjectForRestore(c.pCommandList_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
@@ -451,7 +454,7 @@ void AnalyzerCommandListService::commandAnalysis(
   commandListInfo.viewDescriptorHeap = 0;
   commandListInfo.samplerDescriptorHeap = 0;
   for (unsigned key : c.ppDescriptorHeaps_.keys) {
-    objectsForRestore_.insert(key);
+    addObjectForRestore(key);
     DescriptorHeapInfo& info = descriptorHeapInfos_[key];
     if (info.type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) {
       commandListInfo.viewDescriptorHeap = key;
@@ -464,13 +467,13 @@ void AnalyzerCommandListService::commandAnalysis(
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) {
   commandListInfos_[c.object_.key].computeRootSignature = c.pRootSignature_.key;
-  objectsForRestore_.insert(c.pRootSignature_.key);
+  addObjectForRestore(c.pRootSignature_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListSetGraphicsRootSignatureCommand& c) {
   commandListInfos_[c.object_.key].graphicsRootSignature = c.pRootSignature_.key;
-  objectsForRestore_.insert(c.pRootSignature_.key);
+  addObjectForRestore(c.pRootSignature_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
@@ -486,11 +489,12 @@ void AnalyzerCommandListService::commandAnalysis(
     DescriptorState* state =
         descriptorService_.getDescriptorState(c.BaseDescriptor_.interfaceKey, index);
     if (state) {
-      objectsForRestore_.insert(state->resourceKey);
+      addObjectForRestore(state->resourceKey);
+      addObjectForRestore(state->auxiliaryResourceKey);
     }
     descriptors_.insert({c.BaseDescriptor_.interfaceKey, index});
   }
-  objectsForRestore_.insert(c.BaseDescriptor_.interfaceKey);
+  addObjectForRestore(c.BaseDescriptor_.interfaceKey);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
@@ -506,26 +510,27 @@ void AnalyzerCommandListService::commandAnalysis(
     DescriptorState* state =
         descriptorService_.getDescriptorState(c.BaseDescriptor_.interfaceKey, index);
     if (state) {
-      objectsForRestore_.insert(state->resourceKey);
+      addObjectForRestore(state->resourceKey);
+      addObjectForRestore(state->auxiliaryResourceKey);
     }
     descriptors_.insert({c.BaseDescriptor_.interfaceKey, index});
   }
-  objectsForRestore_.insert(c.BaseDescriptor_.interfaceKey);
+  addObjectForRestore(c.BaseDescriptor_.interfaceKey);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListSetComputeRootConstantBufferViewCommand& c) {
-  objectsForRestore_.insert(c.BufferLocation_.interfaceKey);
+  addObjectForRestore(c.BufferLocation_.interfaceKey);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListSetGraphicsRootConstantBufferViewCommand& c) {
-  objectsForRestore_.insert(c.BufferLocation_.interfaceKey);
+  addObjectForRestore(c.BufferLocation_.interfaceKey);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand& c) {
-  objectsForRestore_.insert(c.BufferLocation_.interfaceKey);
+  addObjectForRestore(c.BufferLocation_.interfaceKey);
 
   unsigned tlasBuildKey = raytracingService_.findTlas(AnalyzerRaytracingService::KeyOffset(
       c.BufferLocation_.interfaceKey, c.BufferLocation_.offset));
@@ -536,35 +541,35 @@ void AnalyzerCommandListService::commandAnalysis(
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListSetGraphicsRootShaderResourceViewCommand& c) {
-  objectsForRestore_.insert(c.BufferLocation_.interfaceKey);
+  addObjectForRestore(c.BufferLocation_.interfaceKey);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListSetComputeRootUnorderedAccessViewCommand& c) {
-  objectsForRestore_.insert(c.BufferLocation_.interfaceKey);
+  addObjectForRestore(c.BufferLocation_.interfaceKey);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListSetGraphicsRootUnorderedAccessViewCommand& c) {
-  objectsForRestore_.insert(c.BufferLocation_.interfaceKey);
+  addObjectForRestore(c.BufferLocation_.interfaceKey);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListIASetIndexBufferCommand& c) {
-  objectsForRestore_.insert(c.pView_.bufferLocationKey);
+  addObjectForRestore(c.pView_.bufferLocationKey);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListIASetVertexBuffersCommand& c) {
   for (unsigned i = 0; i < c.pViews_.size; ++i) {
-    objectsForRestore_.insert(c.pViews_.bufferLocationKeys[i]);
+    addObjectForRestore(c.pViews_.bufferLocationKeys[i]);
   }
 }
 
 void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListSOSetTargetsCommand& c) {
   for (unsigned i = 0; i < c.pViews_.size; ++i) {
-    objectsForRestore_.insert(c.pViews_.bufferLocationKeys[i]);
-    objectsForRestore_.insert(c.pViews_.bufferFilledSizeLocationKeys[i]);
+    addObjectForRestore(c.pViews_.bufferLocationKeys[i]);
+    addObjectForRestore(c.pViews_.bufferFilledSizeLocationKeys[i]);
   }
 }
 
@@ -575,10 +580,11 @@ void AnalyzerCommandListService::commandAnalysis(
       unsigned key = c.pRenderTargetDescriptors_.interfaceKeys[i];
       unsigned index = c.pRenderTargetDescriptors_.indexes[i];
       if (key) {
-        objectsForRestore_.insert(key);
+        addObjectForRestore(key);
         DescriptorState* state = descriptorService_.getDescriptorState(key, index);
         if (state) {
-          objectsForRestore_.insert(state->resourceKey);
+          addObjectForRestore(state->resourceKey);
+          addObjectForRestore(state->auxiliaryResourceKey);
         }
         descriptors_.insert({key, index});
       }
@@ -587,11 +593,12 @@ void AnalyzerCommandListService::commandAnalysis(
     unsigned key = c.pRenderTargetDescriptors_.interfaceKeys[0];
     unsigned index = c.pRenderTargetDescriptors_.indexes[0];
     if (key) {
-      objectsForRestore_.insert(key);
+      addObjectForRestore(key);
       for (unsigned i = 0; i < c.NumRenderTargetDescriptors_.value; ++i) {
         DescriptorState* state = descriptorService_.getDescriptorState(key, index);
         if (state) {
-          objectsForRestore_.insert(state->resourceKey);
+          addObjectForRestore(state->resourceKey);
+          addObjectForRestore(state->auxiliaryResourceKey);
         }
         descriptors_.insert({key, index});
         ++index;
@@ -602,10 +609,11 @@ void AnalyzerCommandListService::commandAnalysis(
     unsigned key = c.pDepthStencilDescriptor_.interfaceKeys[0];
     unsigned index = c.pDepthStencilDescriptor_.indexes[0];
     if (key) {
-      objectsForRestore_.insert(key);
+      addObjectForRestore(key);
       DescriptorState* state = descriptorService_.getDescriptorState(key, index);
       if (state) {
-        objectsForRestore_.insert(state->resourceKey);
+        addObjectForRestore(state->resourceKey);
+        addObjectForRestore(state->auxiliaryResourceKey);
       }
       descriptors_.insert({key, index});
     }
@@ -615,11 +623,12 @@ void AnalyzerCommandListService::commandAnalysis(
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListClearDepthStencilViewCommand& c) {
   if (c.DepthStencilView_.interfaceKey) {
-    objectsForRestore_.insert(c.DepthStencilView_.interfaceKey);
+    addObjectForRestore(c.DepthStencilView_.interfaceKey);
     DescriptorState* state = descriptorService_.getDescriptorState(c.DepthStencilView_.interfaceKey,
                                                                    c.DepthStencilView_.index);
     if (state) {
-      objectsForRestore_.insert(state->resourceKey);
+      addObjectForRestore(state->resourceKey);
+      addObjectForRestore(state->auxiliaryResourceKey);
     }
     descriptors_.insert({c.DepthStencilView_.interfaceKey, c.DepthStencilView_.index});
   }
@@ -628,11 +637,12 @@ void AnalyzerCommandListService::commandAnalysis(
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListClearRenderTargetViewCommand& c) {
   if (c.RenderTargetView_.interfaceKey) {
-    objectsForRestore_.insert(c.RenderTargetView_.interfaceKey);
+    addObjectForRestore(c.RenderTargetView_.interfaceKey);
     DescriptorState* state = descriptorService_.getDescriptorState(c.RenderTargetView_.interfaceKey,
                                                                    c.RenderTargetView_.index);
     if (state) {
-      objectsForRestore_.insert(state->resourceKey);
+      addObjectForRestore(state->resourceKey);
+      addObjectForRestore(state->auxiliaryResourceKey);
     }
     descriptors_.insert({c.RenderTargetView_.interfaceKey, c.RenderTargetView_.index});
   }
@@ -641,21 +651,23 @@ void AnalyzerCommandListService::commandAnalysis(
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListClearUnorderedAccessViewUintCommand& c) {
   if (c.ViewGPUHandleInCurrentHeap_.interfaceKey) {
-    objectsForRestore_.insert(c.ViewGPUHandleInCurrentHeap_.interfaceKey);
+    addObjectForRestore(c.ViewGPUHandleInCurrentHeap_.interfaceKey);
     DescriptorState* state = descriptorService_.getDescriptorState(
         c.ViewGPUHandleInCurrentHeap_.interfaceKey, c.ViewGPUHandleInCurrentHeap_.index);
     if (state) {
-      objectsForRestore_.insert(state->resourceKey);
+      addObjectForRestore(state->resourceKey);
+      addObjectForRestore(state->auxiliaryResourceKey);
     }
     descriptors_.insert(
         {c.ViewGPUHandleInCurrentHeap_.interfaceKey, c.ViewGPUHandleInCurrentHeap_.index});
   }
   if (c.ViewCPUHandle_.interfaceKey) {
-    objectsForRestore_.insert(c.ViewCPUHandle_.interfaceKey);
+    addObjectForRestore(c.ViewCPUHandle_.interfaceKey);
     DescriptorState* state = descriptorService_.getDescriptorState(c.ViewCPUHandle_.interfaceKey,
                                                                    c.ViewCPUHandle_.index);
     if (state) {
-      objectsForRestore_.insert(state->resourceKey);
+      addObjectForRestore(state->resourceKey);
+      addObjectForRestore(state->auxiliaryResourceKey);
     }
     descriptors_.insert({c.ViewCPUHandle_.interfaceKey, c.ViewCPUHandle_.index});
   }
@@ -664,21 +676,23 @@ void AnalyzerCommandListService::commandAnalysis(
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListClearUnorderedAccessViewFloatCommand& c) {
   if (c.ViewGPUHandleInCurrentHeap_.interfaceKey) {
-    objectsForRestore_.insert(c.ViewGPUHandleInCurrentHeap_.interfaceKey);
+    addObjectForRestore(c.ViewGPUHandleInCurrentHeap_.interfaceKey);
     DescriptorState* state = descriptorService_.getDescriptorState(
         c.ViewGPUHandleInCurrentHeap_.interfaceKey, c.ViewGPUHandleInCurrentHeap_.index);
     if (state) {
-      objectsForRestore_.insert(state->resourceKey);
+      addObjectForRestore(state->resourceKey);
+      addObjectForRestore(state->auxiliaryResourceKey);
     }
     descriptors_.insert(
         {c.ViewGPUHandleInCurrentHeap_.interfaceKey, c.ViewGPUHandleInCurrentHeap_.index});
   }
   if (c.ViewCPUHandle_.interfaceKey) {
-    objectsForRestore_.insert(c.ViewCPUHandle_.interfaceKey);
+    addObjectForRestore(c.ViewCPUHandle_.interfaceKey);
     DescriptorState* state = descriptorService_.getDescriptorState(c.ViewCPUHandle_.interfaceKey,
                                                                    c.ViewCPUHandle_.index);
     if (state) {
-      objectsForRestore_.insert(state->resourceKey);
+      addObjectForRestore(state->resourceKey);
+      addObjectForRestore(state->auxiliaryResourceKey);
     }
     descriptors_.insert({c.ViewCPUHandle_.interfaceKey, c.ViewCPUHandle_.index});
   }
@@ -686,26 +700,26 @@ void AnalyzerCommandListService::commandAnalysis(
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListDiscardResourceCommand& c) {
-  objectsForRestore_.insert(c.pResource_.key);
+  addObjectForRestore(c.pResource_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListBeginQueryCommand& c) {
-  objectsForRestore_.insert(c.pQueryHeap_.key);
+  addObjectForRestore(c.pQueryHeap_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandListEndQueryCommand& c) {
-  objectsForRestore_.insert(c.pQueryHeap_.key);
+  addObjectForRestore(c.pQueryHeap_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListResolveQueryDataCommand& c) {
-  objectsForRestore_.insert(c.pQueryHeap_.key);
-  objectsForRestore_.insert(c.pDestinationBuffer_.key);
+  addObjectForRestore(c.pQueryHeap_.key);
+  addObjectForRestore(c.pDestinationBuffer_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandListSetPredicationCommand& c) {
-  objectsForRestore_.insert(c.pBuffer_.key);
+  addObjectForRestore(c.pBuffer_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
@@ -744,38 +758,38 @@ void AnalyzerCommandListService::commandAnalysis(
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandList1AtomicCopyBufferUINTCommand& c) {
-  objectsForRestore_.insert(c.pDstBuffer_.key);
-  objectsForRestore_.insert(c.pSrcBuffer_.key);
+  addObjectForRestore(c.pDstBuffer_.key);
+  addObjectForRestore(c.pSrcBuffer_.key);
   for (unsigned key : c.ppDependentResources_.keys) {
-    objectsForRestore_.insert(key);
+    addObjectForRestore(key);
   }
 }
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandList1AtomicCopyBufferUINT64Command& c) {
-  objectsForRestore_.insert(c.pDstBuffer_.key);
-  objectsForRestore_.insert(c.pSrcBuffer_.key);
+  addObjectForRestore(c.pDstBuffer_.key);
+  addObjectForRestore(c.pSrcBuffer_.key);
   for (unsigned key : c.ppDependentResources_.keys) {
-    objectsForRestore_.insert(key);
+    addObjectForRestore(key);
   }
 }
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandList1ResolveSubresourceRegionCommand& c) {
-  objectsForRestore_.insert(c.pDstResource_.key);
-  objectsForRestore_.insert(c.pSrcResource_.key);
+  addObjectForRestore(c.pDstResource_.key);
+  addObjectForRestore(c.pSrcResource_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandList2WriteBufferImmediateCommand& c) {
   for (unsigned key : c.pParams_.destKeys) {
-    objectsForRestore_.insert(key);
+    addObjectForRestore(key);
   }
 }
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandList3SetProtectedResourceSessionCommand& c) {
-  objectsForRestore_.insert(c.pProtectedResourceSession_.key);
+  addObjectForRestore(c.pProtectedResourceSession_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
@@ -783,44 +797,46 @@ void AnalyzerCommandListService::commandAnalysis(
   for (unsigned i = 0; i < c.pRenderTargets_.size; ++i) {
     unsigned descriptorKey = c.pRenderTargets_.descriptorKeys[i];
     if (descriptorKey) {
-      objectsForRestore_.insert(descriptorKey);
+      addObjectForRestore(descriptorKey);
       DescriptorState* state = descriptorService_.getDescriptorState(
           descriptorKey, c.pRenderTargets_.descriptorIndexes[i]);
       if (state) {
-        objectsForRestore_.insert(state->resourceKey);
+        addObjectForRestore(state->resourceKey);
+        addObjectForRestore(state->auxiliaryResourceKey);
       }
       descriptors_.insert({descriptorKey, c.pRenderTargets_.descriptorIndexes[i]});
     }
   }
   for (unsigned key : c.pRenderTargets_.resolveSrcResourceKeys) {
-    objectsForRestore_.insert(key);
+    addObjectForRestore(key);
   }
   for (unsigned key : c.pRenderTargets_.resolveDstResourceKeys) {
-    objectsForRestore_.insert(key);
+    addObjectForRestore(key);
   }
   if (c.pDepthStencil_.descriptorKey) {
-    objectsForRestore_.insert(c.pDepthStencil_.descriptorKey);
+    addObjectForRestore(c.pDepthStencil_.descriptorKey);
     DescriptorState* state = descriptorService_.getDescriptorState(
         c.pDepthStencil_.descriptorKey, c.pDepthStencil_.descriptorIndex);
     if (state) {
-      objectsForRestore_.insert(state->resourceKey);
+      addObjectForRestore(state->resourceKey);
+      addObjectForRestore(state->auxiliaryResourceKey);
     }
     descriptors_.insert({c.pDepthStencil_.descriptorKey, c.pDepthStencil_.descriptorIndex});
   }
-  objectsForRestore_.insert(c.pDepthStencil_.resolveSrcDepthKey);
-  objectsForRestore_.insert(c.pDepthStencil_.resolveDstDepthKey);
-  objectsForRestore_.insert(c.pDepthStencil_.resolveSrcStencilKey);
-  objectsForRestore_.insert(c.pDepthStencil_.resolveDstStencilKey);
+  addObjectForRestore(c.pDepthStencil_.resolveSrcDepthKey);
+  addObjectForRestore(c.pDepthStencil_.resolveDstDepthKey);
+  addObjectForRestore(c.pDepthStencil_.resolveSrcStencilKey);
+  addObjectForRestore(c.pDepthStencil_.resolveDstStencilKey);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandList4InitializeMetaCommandCommand& c) {
-  objectsForRestore_.insert(c.pMetaCommand_.key);
+  addObjectForRestore(c.pMetaCommand_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandList4ExecuteMetaCommandCommand& c) {
-  objectsForRestore_.insert(c.pMetaCommand_.key);
+  addObjectForRestore(c.pMetaCommand_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(
@@ -854,15 +870,15 @@ void AnalyzerCommandListService::command(
   }
 
   if (optimize_) {
-    objectsForRestore_.insert(c.pDesc_.destAccelerationStructureKey);
+    addObjectForRestore(c.pDesc_.destAccelerationStructureKey);
     if (c.pDesc_.sourceAccelerationStructureKey) {
-      objectsForRestore_.insert(c.pDesc_.sourceAccelerationStructureKey);
+      addObjectForRestore(c.pDesc_.sourceAccelerationStructureKey);
     }
     if (!(c.pDesc_.scratchAccelerationStructureKey & Command::stateRestoreKeyMask)) {
-      objectsForRestore_.insert(c.pDesc_.scratchAccelerationStructureKey);
+      addObjectForRestore(c.pDesc_.scratchAccelerationStructureKey);
     }
     for (unsigned key : c.pDesc_.inputKeys) {
-      objectsForRestore_.insert(key);
+      addObjectForRestore(key);
     }
   }
 }
@@ -874,11 +890,11 @@ void AnalyzerCommandListService::commandAnalysis(
         c.pSourceAccelerationStructureData_.interfaceKeys[i],
         c.pSourceAccelerationStructureData_.offsets[i]);
     if (optimize_) {
-      objectsForRestore_.insert(c.pSourceAccelerationStructureData_.interfaceKeys[i]);
+      addObjectForRestore(c.pSourceAccelerationStructureData_.interfaceKeys[i]);
     }
   }
   if (optimize_) {
-    objectsForRestore_.insert(c.pDesc_.destBufferKey);
+    addObjectForRestore(c.pDesc_.destBufferKey);
   }
 }
 
@@ -895,8 +911,8 @@ void AnalyzerCommandListService::command(
   }
 
   if (optimize_) {
-    objectsForRestore_.insert(c.DestAccelerationStructureData_.interfaceKey);
-    objectsForRestore_.insert(c.SourceAccelerationStructureData_.interfaceKey);
+    addObjectForRestore(c.DestAccelerationStructureData_.interfaceKey);
+    addObjectForRestore(c.SourceAccelerationStructureData_.interfaceKey);
   }
 }
 
@@ -910,14 +926,14 @@ void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandList4SetPipelineState1Command& c) {
   raytracingService_.setPipelineState(c);
 
-  objectsForRestore_.insert(c.object_.key);
-  objectsForRestore_.insert(c.pStateObject_.key);
+  addObjectForRestore(c.object_.key);
+  addObjectForRestore(c.pStateObject_.key);
   if (checkedStateObjectSubobjects_.find(c.pStateObject_.key) ==
       checkedStateObjectSubobjects_.end()) {
     const std::set<unsigned> subobjects =
         raytracingService_.getStateObjectAllSubobjects(c.pStateObject_.key);
     for (unsigned key : subobjects) {
-      objectsForRestore_.insert(key);
+      addObjectForRestore(key);
     }
     checkedStateObjectSubobjects_.insert(c.pStateObject_.key);
   }
@@ -926,10 +942,10 @@ void AnalyzerCommandListService::commandAnalysis(
 void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
   dispatchRays_ = true;
   raytracingService_.dispatchRays(c);
-  objectsForRestore_.insert(c.pDesc_.rayGenerationShaderRecordKey);
-  objectsForRestore_.insert(c.pDesc_.missShaderTableKey);
-  objectsForRestore_.insert(c.pDesc_.hitGroupTableKey);
-  objectsForRestore_.insert(c.pDesc_.callableShaderTableKey);
+  addObjectForRestore(c.pDesc_.rayGenerationShaderRecordKey);
+  addObjectForRestore(c.pDesc_.missShaderTableKey);
+  addObjectForRestore(c.pDesc_.hitGroupTableKey);
+  addObjectForRestore(c.pDesc_.callableShaderTableKey);
 
   CommandListInfo& info = commandListInfos_[c.object_.key];
   if (info.viewDescriptorHeap) {
@@ -946,7 +962,7 @@ void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandList4Dispa
 
 void AnalyzerCommandListService::commandAnalysis(
     ID3D12GraphicsCommandList5RSSetShadingRateImageCommand& c) {
-  objectsForRestore_.insert(c.shadingRateImage_.key);
+  addObjectForRestore(c.shadingRateImage_.key);
 }
 
 void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandList6DispatchMeshCommand& c) {
@@ -965,7 +981,7 @@ void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandList6Dispa
 
 void AnalyzerCommandListService::commandAnalysis(ID3D12GraphicsCommandList7BarrierCommand& c) {
   for (unsigned key : c.pBarrierGroups_.resourceKeys) {
-    objectsForRestore_.insert(key);
+    addObjectForRestore(key);
   }
 }
 
@@ -985,15 +1001,15 @@ void AnalyzerCommandListService::command(
     LOG_ERROR << "NvAPI top level build not handled";
   }
 
-  objectsForRestore_.insert(c.pParams.destAccelerationStructureKey);
+  addObjectForRestore(c.pParams.destAccelerationStructureKey);
   if (c.pParams.sourceAccelerationStructureKey) {
-    objectsForRestore_.insert(c.pParams.sourceAccelerationStructureKey);
+    addObjectForRestore(c.pParams.sourceAccelerationStructureKey);
   }
   if (!(c.pParams.scratchAccelerationStructureKey & Command::stateRestoreKeyMask)) {
-    objectsForRestore_.insert(c.pParams.scratchAccelerationStructureKey);
+    addObjectForRestore(c.pParams.scratchAccelerationStructureKey);
   }
   for (unsigned key : c.pParams.inputKeys) {
-    objectsForRestore_.insert(key);
+    addObjectForRestore(key);
   }
 }
 
@@ -1013,15 +1029,15 @@ void AnalyzerCommandListService::commandAnalysis(
 
 void AnalyzerCommandListService::command(
     NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c) {
-  objectsForRestore_.insert(c.pParams.destOpacityMicromapArrayDataKey);
+  addObjectForRestore(c.pParams.destOpacityMicromapArrayDataKey);
   if (c.pParams.inputBufferKey) {
-    objectsForRestore_.insert(c.pParams.inputBufferKey);
+    addObjectForRestore(c.pParams.inputBufferKey);
   }
   if (c.pParams.perOMMDescsKey) {
-    objectsForRestore_.insert(c.pParams.perOMMDescsKey);
+    addObjectForRestore(c.pParams.perOMMDescsKey);
   }
   if (!(c.pParams.scratchOpacityMicromapArrayDataKey & Command::stateRestoreKeyMask)) {
-    objectsForRestore_.insert(c.pParams.scratchOpacityMicromapArrayDataKey);
+    addObjectForRestore(c.pParams.scratchOpacityMicromapArrayDataKey);
   }
 }
 

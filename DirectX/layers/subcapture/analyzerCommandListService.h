@@ -53,7 +53,7 @@ public:
   std::set<unsigned>& getTlases();
 
   void addObjectForRestore(unsigned key) {
-    if (optimize_) {
+    if (key && optimize_) {
       objectsForRestore_.insert(key);
     }
   }

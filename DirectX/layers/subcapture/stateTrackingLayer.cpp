@@ -1523,7 +1523,7 @@ void StateTrackingLayer::post(ID3D12DeviceCreateUnorderedAccessViewCommand& c) {
   D3D12UnorderedAccessViewState* state = new D3D12UnorderedAccessViewState();
   state->deviceKey = c.object_.key;
   state->resourceKey = c.pResource_.key;
-  state->counterResourceKey = c.pCounterResource_.key;
+  state->auxiliaryResourceKey = c.pCounterResource_.key;
   if (state->isDesc = c.pDesc_.value ? true : false) {
     state->desc = *c.pDesc_.value;
   }
@@ -1543,7 +1543,6 @@ void StateTrackingLayer::post(ID3D12DeviceCreateConstantBufferViewCommand& c) {
     state->desc = *c.pDesc_.value;
   }
   state->resourceKey = c.pDesc_.bufferLocationKey;
-  state->bufferLocationKey = c.pDesc_.bufferLocationKey;
   state->bufferLocationOffset = c.pDesc_.bufferLocationOffset;
   state->destDescriptor = c.DestDescriptor_.value;
   state->destDescriptorKey = c.DestDescriptor_.interfaceKey;
