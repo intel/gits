@@ -33,7 +33,7 @@ static std::string appInfoToStr(INTCExtensionAppInfo1* appInfo) {
   auto engineName = std::string(engineNameW.begin(), engineNameW.end());
 
   std::ostringstream oss;
-  oss << "Application :\"" << appName << "\" (" << appInfo->ApplicationVersion.major << "."
+  oss << "Application: \"" << appName << "\" (" << appInfo->ApplicationVersion.major << "."
       << appInfo->ApplicationVersion.minor << "." << appInfo->ApplicationVersion.patch << ")"
       << ", Engine: \"" << engineName << "\" (" << appInfo->EngineVersion.major << "."
       << appInfo->EngineVersion.minor << "." << appInfo->EngineVersion.patch << ")";

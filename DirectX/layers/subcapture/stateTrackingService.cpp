@@ -472,7 +472,6 @@ void StateTrackingService::restoreDXGISwapChain(ObjectState* state) {
 
 void StateTrackingService::restoreDXGIAdapter(ObjectState* state) {
   recorder_.record(createCommandWriter(state->creationCommand.get()));
-  restoreINTCApplicationInfo();
 }
 
 void StateTrackingService::restoreD3D12DescriptorHeap(ObjectState* state) {
@@ -489,6 +488,7 @@ void StateTrackingService::restoreD3D12DescriptorHeap(ObjectState* state) {
 }
 
 void StateTrackingService::restoreD3D12Device(ObjectState* state) {
+  restoreINTCApplicationInfo();
   restoreD3D12EnableExperimentalFeatures();
   deviceKey_ = state->key;
   recorder_.record(createCommandWriter(state->creationCommand.get()));
