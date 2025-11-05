@@ -112,7 +112,7 @@ target_link_libraries(gits_recorder PRIVATE ${recorderIfaceLibs} ${recorderCommo
 if(UNIX)
   target_link_libraries(gits_recorder PRIVATE pthread rt xcb X11-xcb X11 GL wayland-client wayland-egl)
 elseif(MSVC)
-  target_link_libraries(gits_recorder PRIVATE OpenGL32)
+  target_link_libraries(gits_recorder PRIVATE stackwalker OpenGL32)
 endif()
 
 if(WIN32)

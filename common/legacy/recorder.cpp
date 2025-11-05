@@ -16,6 +16,7 @@
 #include "platform.h"
 #ifdef GITS_PLATFORM_WINDOWS
 #include <Windows.h>
+#include "StackWalker.h"
 #endif
 
 #include "recorder.h"
@@ -106,10 +107,22 @@ void gits::CRecorder::Dispose() {
 
 #ifdef GITS_PLATFORM_WINDOWS
 namespace {
+void ShowCallstack(PEXCEPTION_POINTERS exceptionPtr) {
+  class StackWalkerToConsole : public StackWalker {
+  public:
+    StackWalkerToConsole() : StackWalker(OptionsAll, ".") {}
+    virtual void OnOutput(LPCSTR szText) {
+      LOG_ERROR << szText;
+    }
+  } sw;
+  sw.ShowCallstack(GetCurrentThread(), exceptionPtr->ContextRecord);
+}
 LONG WINAPI MyUnhandledExceptionFilter(_EXCEPTION_POINTERS* exceptionInfo) {
   using namespace gits;
   if (CRecorder::InstancePtr()) {
     LOG_ERROR << "Running user GITS unhandled exception callback";
+    ShowExceptionInfo(exceptionInfo);
+    ShowCallstack(exceptionInfo);
     CRecorder::Instance().Stop();
     CRecorder::Instance().Save();
   }
