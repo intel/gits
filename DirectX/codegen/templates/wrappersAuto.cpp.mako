@@ -42,7 +42,11 @@ ${generate_return(function)} ${function.name}Wrapper(${'' if params else ') {'}
   %endif
 
   auto& manager = CaptureManager::get();
-  if (auto atTopOfStack = AtTopOfStackGlobal()) { 
+  %if 'xess' in function.name:
+  if (auto atTopOfStack = AtTopOfStackLocal()) {
+  %else:
+  if (auto atTopOfStack = AtTopOfStackGlobal()) {
+  %endif
     ${function.name}Command command(
         GetCurrentThreadId()${',' if args_simple else ');'}
         %if args_simple:
