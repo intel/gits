@@ -290,20 +290,21 @@ void AnalyzerService::dumpAnalysisFile() {
     out << buildKey << "\n";
   }
 
-  out << "BLASES\n";
   raytracingService_.flush();
+  out << "BLASES\n";
   std::set<std::pair<unsigned, unsigned>> ases;
   for (unsigned buildKey : commandListService_.getTlases()) {
     for (auto& blas : raytracingService_.getBlases(buildKey)) {
       ases.insert(blas);
     }
   }
-
-  std::set<std::pair<unsigned, unsigned>>& sources = raytracingService_.getSources();
-  for (auto& it : sources) {
-    ases.insert(it);
-  }
   for (auto& [resourceKey, offset] : ases) {
+    out << resourceKey << " " << offset << "\n";
+  }
+
+  out << "AS_SOURCES\n";
+  std::set<std::pair<unsigned, unsigned>>& sources = raytracingService_.getSources();
+  for (auto& [resourceKey, offset] : sources) {
     out << resourceKey << " " << offset << "\n";
   }
 }

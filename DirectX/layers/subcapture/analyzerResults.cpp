@@ -25,6 +25,7 @@ AnalyzerResults::AnalyzerResults() {
     bool objects = false;
     bool descriptors = false;
     bool tlases = false;
+    bool blases = false;
     while (analysis >> str) {
       if (str == "COMMAND_QUEUE_COMMANDS") {
         commandLists = false;
@@ -40,6 +41,9 @@ AnalyzerResults::AnalyzerResults() {
         tlases = true;
       } else if (str == "BLASES") {
         tlases = false;
+        blases = true;
+      } else if (str == "AS_SOURCES") {
+        blases = false;
       } else {
         unsigned key = std::stoi(str);
         if (commandLists) {
@@ -54,10 +58,14 @@ AnalyzerResults::AnalyzerResults() {
           descriptors_.insert(std::make_pair(key, index));
         } else if (tlases) {
           tlases_.insert(key);
-        } else {
+        } else if (blases) {
           analysis >> str;
           unsigned offset = std::stoi(str);
           blases_.insert(std::make_pair(key, offset));
+        } else {
+          analysis >> str;
+          unsigned offset = std::stoi(str);
+          asSources_.insert(std::make_pair(key, offset));
         }
       }
     }

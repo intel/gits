@@ -152,6 +152,7 @@ private:
       size_t uploadBufferOffset);
   void optimize();
   void removeSourcesWithoutDestinations();
+  void completeSourcesFromAnalysis();
 };
 
 } // namespace DirectX

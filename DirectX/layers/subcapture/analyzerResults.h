@@ -32,6 +32,9 @@ public:
   bool restoreDescriptor(unsigned heapKey, unsigned index);
   bool restoreTlas(unsigned blasBuildKey);
   bool restoreBlas(std::pair<unsigned, unsigned> blas);
+  std::set<std::pair<unsigned, unsigned>>& getAsSources() {
+    return asSources_;
+  }
 
   static bool isAnalysis();
   static std::string getAnalysisFileName();
@@ -44,6 +47,7 @@ private:
   std::set<std::pair<unsigned, unsigned>> descriptors_;
   std::unordered_set<unsigned> tlases_;
   std::set<std::pair<unsigned, unsigned>> blases_;
+  std::set<std::pair<unsigned, unsigned>> asSources_;
 };
 
 } // namespace DirectX

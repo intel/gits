@@ -821,6 +821,7 @@ void AccelerationStructuresBuildService::restoreAccelerationStructures() {
     return;
   }
 
+  completeSourcesFromAnalysis();
   removeSourcesWithoutDestinations();
   optimize();
 
@@ -1861,6 +1862,18 @@ void AccelerationStructuresBuildService::removeSourcesWithoutDestinations() {
     if (itDests->second.empty()) {
       removeState(source, true);
       stateDestsBySource_.erase(itDests);
+    }
+  }
+}
+
+void AccelerationStructuresBuildService::completeSourcesFromAnalysis() {
+  std::set<std::pair<unsigned, unsigned>>& sources =
+      stateService_.getAnalyzerResults().getAsSources();
+  for (auto& keyOffset : sources) {
+    auto itStates = stateByKeyOffset_.find(keyOffset);
+    if (itStates != stateByKeyOffset_.end() && !itStates->second.empty()) {
+      unsigned lastState = *itStates->second.rbegin();
+      stateDestsBySource_[lastState].insert(UINT_MAX);
     }
   }
 }
